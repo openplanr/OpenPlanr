@@ -2,9 +2,11 @@ import { join } from 'node:path';
 import { capsuleDirectory } from './capsule.mjs';
 import { AdapterError, invokeProcess } from './generic.mjs';
 import {
+  createNativeProgress,
   knownDestination,
   NATIVE_CAPABILITIES,
   NATIVE_EXECUTION_POLICY,
+  nativeFailure,
   nativeObserver,
   nativeTurn,
   readNativeConfig,
@@ -48,6 +50,7 @@ async function execute({
     usage = null,
     errorText = '';
   let blockedByPermission = false;
+  const progress = createNativeProgress('codex', { cwd, capsuleDirectory: directory });
   const observer = nativeObserver(sessionId, onSessionId, onActivity, (event) => {
     if (event.type === 'item.completed' && event.item?.type === 'agent_message')
       summary = event.item.text;
@@ -59,7 +62,7 @@ async function execute({
     }
     if (event.type === 'turn.failed') {
       terminal = { type: event.type, success: false };
-      errorText = event.error?.message ?? '';
+      errorText = JSON.stringify(event.error ?? '');
     }
     if (event.type === 'error') errorText = event.message ?? event.error?.message ?? '';
     const command = event.item;
@@ -73,6 +76,7 @@ async function execute({
       blockedByPermission = true;
     const permission = blockedByPermission || /permission|approval|denied/iu.test(errorText);
     return {
+      ...progress(event),
       phase: permission ? 'attention' : 'native-execution',
       ...(permission ? { code: 'E_ADAPTER_PERMISSION' } : {}),
     };
@@ -86,7 +90,7 @@ async function execute({
     ...(sessionId ? [sessionId] : []),
     '-',
   ];
-  const { exitCode } = await invokeProcess(profile.executable, args, {
+  const { exitCode, output } = await invokeProcess(profile.executable, args, {
     cwd,
     env,
     input: prompt,
@@ -96,8 +100,9 @@ async function execute({
     onStdoutLine: observer.onLine,
     retainStdout: false,
     withExitCode: true,
+    captureStderr: true,
     maxOutputBytes: 8 * 1024 * 1024,
-  });
+  }).catch(nativeFailure);
   const result = nativeTurn({
     terminal,
     sessionId: observer.session() ?? sessionId,
@@ -105,7 +110,7 @@ async function execute({
     exitCode,
     summary,
     usage,
-    errorText,
+    errorText: `${errorText}\n${output}`,
   });
   if (
     blockedByPermission ||

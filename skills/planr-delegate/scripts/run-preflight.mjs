@@ -2,6 +2,8 @@
 import { createHash } from 'node:crypto';
 import { lstat, readFile, realpath, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
+import { AdapterError } from './adapters/generic.mjs';
+import { safeAdapterDetails } from './adapters/native.mjs';
 import { validateContextMirror } from './context.mjs';
 import { inspectWorktreeSetup, validateWorktreeCustody } from './custody.mjs';
 import { resolveSelectedChecks, runDelegateChecks } from './integration-checks.mjs';
@@ -168,6 +170,10 @@ export async function eligible(record, { runDirectory, profileDirectory, env, si
       timeoutMs,
     });
   } catch (error) {
+    const details =
+      error instanceof AdapterError
+        ? safeAdapterDetails(error.details, record.destination)
+        : error.details;
     if (signal?.aborted || error?.code === 'E_ADAPTER_CANCELLED') {
       throw new DelegateRunError(
         'E_DELEGATE_CANCELLED',
@@ -185,8 +191,9 @@ export async function eligible(record, { runDirectory, profileDirectory, env, si
     if (error?.code === 'E_DESTINATION_CHANGED') {
       throw new DelegateRunError(
         'E_DELEGATE_DESTINATION_CHANGED',
-        'Effective destination changed; re-enroll the profile and prepare a new preview.',
+        'Effective destination changed; inspect routing and prepare a new preview. The prepared run and any recorded session remain retained.',
         record.runId,
+        details,
       );
     }
     throw new DelegateRunError(
@@ -195,14 +202,16 @@ export async function eligible(record, { runDirectory, profileDirectory, env, si
         ? error.message
         : 'Profile eligibility failed; inspect enrollment and effective destination.',
       record.runId,
-      error?.details,
+      details,
     );
   }
   if (!profileMatches(record, prepared)) {
+    const changes = profileChanges(record, prepared);
     throw new DelegateRunError(
       'E_DELEGATE_PROFILE_CHANGED',
-      'The enrolled profile changed; inspect its destination and prepare a new preview.',
+      `The prepared selection changed (${changes.map((change) => change.field).join(', ')}). Inspect the before/after values and prepare a new preview; the prepared run and any recorded session remain retained.`,
       record.runId,
+      { changes, nextAction: 'prepare' },
     );
   }
   if (!record.nativeSelection) await assertBackendReady(prepared, record.runId);
@@ -260,8 +269,6 @@ export async function eligible(record, { runDirectory, profileDirectory, env, si
       'E_DELEGATE_PREPARATION',
       'Preparation failed. Fix the recorded prerequisite and retry prepare-worktree.',
     );
-  const capacity = await contextCapacity(record, prepared, env);
-  await updateRunRecord(record.runId, { contextCapacity: capacity }, { directory: runDirectory });
   const capsuleCheck = await capsuleIntegrity(record, runDirectory);
   if (!capsuleCheck.valid) {
     throw new DelegateRunError(
@@ -271,20 +278,86 @@ export async function eligible(record, { runDirectory, profileDirectory, env, si
       capsuleCheck.details,
     );
   }
+  const capacity = await contextCapacity(record, prepared, env);
+  await updateRunRecord(record.runId, { contextCapacity: capacity }, { directory: runDirectory });
   return prepared;
+}
+
+function profileChanges(record, prepared) {
+  const previous = record.nativeSelection;
+  const current = prepared.profile;
+  const candidates = [
+    ['profile', record.profileName, current.name],
+    ['engine', record.backend, current.kind],
+    ['destination', record.destination, prepared.destination],
+    ...(previous
+      ? [
+          ['model', previous.argv?.[1] ?? null, current.argv?.[1] ?? null],
+          ['configDir', previous.configDir ?? null, current.configDir ?? null],
+          ['executable', previous.executable, current.executable],
+        ]
+      : []),
+  ];
+  const changes = candidates
+    .filter(([, before, after]) => JSON.stringify(before) !== JSON.stringify(after))
+    .map(([field, before, after]) => ({ field, before, after }));
+  return changes.length
+    ? changes
+    : [
+        {
+          field: 'profile configuration',
+          before: 'prepared identity',
+          after: 'different identity',
+        },
+      ];
 }
 
 export async function contextCapacity(record, prepared, env) {
   const capsuleBytes = (await lstat(record.capsulePath)).size;
+  const capsule = JSON.parse(await readFile(record.capsulePath, 'utf8'));
+  const inventory = capsule.inventory ?? [];
+  const contextBytes = inventory.reduce((total, file) => total + file.bytes, 0);
+  const requiredFiles = inventory.filter((file) => file.required);
+  const metrics = {
+    capsuleBytes,
+    contextBytes,
+    requiredFileCount: requiredFiles.length,
+    optionalFileCount: inventory.length - requiredFiles.length,
+    requiredBytes: requiredFiles.reduce((total, file) => total + file.bytes, 0),
+    largestFiles: [...inventory]
+      .sort((a, b) => b.bytes - a.bytes)
+      .slice(0, 5)
+      .map(({ repositoryKey, path, bytes, required }) => ({
+        repositoryKey,
+        path,
+        bytes,
+        required,
+      })),
+    tokenEstimate: 'unverified: no matching tokenizer',
+    durationEstimate: 'unverified: no measured task throughput',
+    ...(prepared.destination.class === 'local'
+      ? {
+          guidance:
+            'Local inference speed depends on the model, hardware and tool loop. Select only relevant sources and split large tasks before preparing a new run. Required sources remain complete; optional background is read when needed.',
+        }
+      : {}),
+  };
   if (prepared.destination.class !== 'local' || prepared.profile.argv.length !== 2)
-    return { state: 'unverified', capsuleBytes, modelContextTokens: null };
-  const backend = await inspectEnrolledBackend(prepared.profile, { env });
+    return { state: 'unverified', ...metrics, modelContextTokens: null };
+  const backend = await inspectEnrolledBackend(prepared.profile, {
+    env,
+    cwd: record.worktreePath ?? record.repositoryRoot,
+  });
   const modelContextTokens = backend.contextLength ?? null;
-  if (!modelContextTokens) return { state: 'unverified', capsuleBytes, modelContextTokens: null };
-  // UTF-8 bytes are a conservative upper bound for capsule text tokens. Leave room
+  if (!modelContextTokens)
+    return { state: 'unverified', ...metrics, modelContextTokens: null, backend };
+  // The decoded mirror is read by native tools; serialized/base64 package bytes
+  // are not the prompt. UTF-8 bytes give a conservative pressure diagnostic, not
+  // an exact tokenizer result. Leave room
   // for the host's instructions, tool schemas, conversation, and model output.
   const reserveTokens = Math.max(4096, Math.ceil(modelContextTokens / 4));
-  if (!record.nativeSelection && capsuleBytes + reserveTokens > modelContextTokens)
+  const textByteBound = contextBytes + Buffer.byteLength(capsule.request ?? capsule.brief ?? '');
+  if (!record.nativeSelection && textByteBound + reserveTokens > modelContextTokens)
     throw new DelegateRunError(
       'E_DELEGATE_CONTEXT_CAPACITY',
       'The required capsule exceeds a conservative bound for the loaded model context; use a larger context or narrow the task before dispatch.',
@@ -292,12 +365,14 @@ export async function contextCapacity(record, prepared, env) {
     );
   return {
     state:
-      capsuleBytes + reserveTokens > modelContextTokens
+      textByteBound + reserveTokens > modelContextTokens
         ? 'context-pressure-diagnostic'
         : 'within-conservative-bound',
-    capsuleBytes,
+    ...metrics,
+    textByteBound,
     modelContextTokens,
     reserveTokens,
+    backend,
   };
 }
 

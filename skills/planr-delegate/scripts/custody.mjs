@@ -1,10 +1,12 @@
 import { execFile } from 'node:child_process';
 import { createHash, randomUUID } from 'node:crypto';
+import { constants } from 'node:fs';
 import {
   chmod,
   lstat,
   mkdir,
   mkdtemp,
+  open,
   readdir,
   readFile,
   readlink,
@@ -358,6 +360,62 @@ export function planWritableScopes({ repositories, contractOwnerKey } = {}) {
   }));
 }
 
+// Git may materialize filtered or CRLF checkout bytes that differ from the stored
+// blob. Preserve only those exact initial identities, without invoking a filter
+// again during cleanup. Selected paths have their own full starting-file evidence.
+async function preparedCheckoutSnapshot(root, path, objectFormat, expectedDigest) {
+  const location = await safeLocation(root, path);
+  const handle = await open(location, constants.O_RDONLY | constants.O_NOFOLLOW);
+  try {
+    const info = await handle.stat();
+    if (!info.isFile())
+      throw new CustodyError('E_CUSTODY_CHECKOUT', 'Prepared checkout is not a regular file.', {
+        path,
+      });
+    const blobHash = createHash(objectFormat).update(`blob ${info.size}\0`);
+    const rawHash = createHash('sha256');
+    let bytes = 0;
+    for await (const chunk of handle.createReadStream({ autoClose: false })) {
+      bytes += chunk.length;
+      blobHash.update(chunk);
+      rawHash.update(chunk);
+    }
+    const after = await handle.stat();
+    if (bytes !== info.size || after.mtimeMs !== info.mtimeMs || after.mode !== info.mode)
+      throw new CustodyError('E_CUSTODY_CHECKOUT', 'Prepared checkout changed during capture.', {
+        path,
+      });
+    return blobHash.digest('hex') === expectedDigest
+      ? null
+      : { kind: 'file', mode: info.mode & 0o777, bytes, digest: rawHash.digest('hex') };
+  } finally {
+    await handle.close();
+  }
+}
+
+async function initialCheckoutFiles(root, revision, selectedPaths) {
+  const objectFormat = (await git(root, ['rev-parse', '--show-object-format']))
+    .toString('utf8')
+    .trim();
+  if (!['sha1', 'sha256'].includes(objectFormat))
+    throw new CustodyError('E_CUSTODY_CHECKOUT', 'Unsupported Git object format.');
+  const tree = (await git(root, ['ls-tree', '-r', '-z', revision]))
+    .toString('utf8')
+    .split('\0')
+    .filter(Boolean);
+  const selected = new Set(selectedPaths);
+  const files = {};
+  for (const entry of tree) {
+    const separator = entry.indexOf('\t');
+    const metadata = /^(100644|100755) blob ([a-f0-9]+)$/u.exec(entry.slice(0, separator));
+    const path = entry.slice(separator + 1);
+    if (!metadata || selected.has(path)) continue;
+    const snapshot = await preparedCheckoutSnapshot(root, path, objectFormat, metadata[2]);
+    if (snapshot) files[path] = snapshot;
+  }
+  return files;
+}
+
 export async function createWorktreeCustody({
   repositoryRoot,
   capsule,
@@ -447,6 +505,9 @@ export async function createWorktreeCustody({
       { mode: 0o600, flag: 'wx' },
     );
     await git(root, ['worktree', 'add', '--detach', '--', worktreePath, initialHead]);
+    const checkoutFiles = native
+      ? await initialCheckoutFiles(worktreePath, initialHead, paths)
+      : {};
     const startingFiles = {};
     for (const path of paths) {
       const source = sourceFiles[path];
@@ -481,6 +542,7 @@ export async function createWorktreeCustody({
       selectedPaths: paths,
       sourceFiles,
       startingFiles,
+      ...(Object.keys(checkoutFiles).length ? { initialCheckoutFiles: checkoutFiles } : {}),
       preservePaths: protectedPaths,
       preservedFiles,
       ...(native ? {} : { engineConfiguration: await captureEngineConfiguration(worktreePath) }),
@@ -551,7 +613,10 @@ export async function inspectWorktreeSetup(record, options = {}) {
   return { files, digest: digest(Buffer.from(JSON.stringify(files))) };
 }
 
-export async function validateWorktreeCustody(record, { native = false } = {}) {
+export async function validateWorktreeCustody(
+  record,
+  { native = false, inspectStatus = true } = {},
+) {
   if (!record || record.kind !== 'openplanr-delegation-worktree-custody')
     throw new CustodyError('E_CUSTODY_RECORD', 'A custody record is required.');
   const root = await assertRepository(record.worktreePath);
@@ -572,7 +637,9 @@ export async function validateWorktreeCustody(record, { native = false } = {}) {
       )
         violations.push({ code: 'E_CUSTODY_ENGINE_CONFIGURATION', path });
   }
-  const currentStatus = await status(root);
+  // Abandonment supplies its own complete raw-byte filesystem inventory. Avoid
+  // Git status there because it may invoke configured clean filters as a side effect.
+  const currentStatus = inspectStatus ? await status(root) : { changedPaths: [], stagedPaths: [] };
   if (currentStatus.stagedPaths.length)
     violations.push({ code: 'E_CUSTODY_STAGED', paths: currentStatus.stagedPaths });
   for (const path of record.preservePaths) {

@@ -61,7 +61,7 @@ export async function terminateProcessGroup(identity, { graceMs = 100 } = {}) {
 }
 
 // Task text uses stdin; each line is bounded and observed with stream backpressure.
-export function invokeProcess(executable, args, options = {}) {
+export async function invokeProcess(executable, args, options = {}) {
   const {
     cwd,
     env,
@@ -93,6 +93,18 @@ export function invokeProcess(executable, args, options = {}) {
       'E_ADAPTER_OUTPUT_LIMIT',
       'Adapter output limit is outside the allowed range.',
     );
+  // A child cannot be recovered safely without process identity inspection.
+  // Fail before launch when the host prevents that inspection.
+  if (signal?.aborted) throw new AdapterError('E_ADAPTER_CANCELLED', 'Adapter run was cancelled.');
+  try {
+    if (!(await processIdentity())) throw new Error('unavailable');
+  } catch {
+    throw new AdapterError(
+      'E_ADAPTER_PROCESS_IDENTITY',
+      'Process identity inspection is unavailable; no adapter process was started.',
+    );
+  }
+  if (signal?.aborted) throw new AdapterError('E_ADAPTER_CANCELLED', 'Adapter run was cancelled.');
   return new Promise((resolve, reject) => {
     const child = spawn(executable, args, {
       cwd,
@@ -135,7 +147,7 @@ export function invokeProcess(executable, args, options = {}) {
       stopping ??= observeTermination(
         (async () => {
           if (!(await spawned)) return;
-          await launchWork;
+          await launchWork.catch(() => {});
           if (!Number.isSafeInteger(child.pid) || child.pid < 1) return;
           const leader = identity ?? (await processIdentity(child.pid));
           if (leader) await terminateProcessGroup({ ...leader, pgid: child.pid });
@@ -187,7 +199,10 @@ export function invokeProcess(executable, args, options = {}) {
         }
         if (signal?.aborted) abort();
         if (!failure) child.stdin.end(input);
-      })().catch(stop);
+      })();
+      // Keep the launch promise separate from its rejection handler. Otherwise
+      // stop() can wait on the very catch callback that is calling it.
+      void launchWork.catch(stop);
       spawnedResolve(true);
     });
     child.stdout.on('data', (chunk) => {
@@ -222,7 +237,7 @@ export function invokeProcess(executable, args, options = {}) {
     });
     child.on('close', (code, exitSignal) => {
       void (async () => {
-        await launchWork;
+        await launchWork.catch(() => {});
         await lineWork;
         await consumeLines(decoder.end(), true);
         if (stopping) {

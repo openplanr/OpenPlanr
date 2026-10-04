@@ -861,7 +861,7 @@
       "source": "skills/planr-delegate/openplanr.skill.json",
       "entrypoint": "skills/planr-delegate/SKILL.md",
       "description": "Coordinate an explicitly requested implementation with Claude Code, Codex or Cursor, then independently review and integrate its observed changes. Use when the user asks another coding agent to implement.",
-      "sourceDigest": "sha256:7af3dc5b802809fc26feb28113e6570df56466323b331638ea5200599e9e94ad",
+      "sourceDigest": "sha256:dc8ddd45cff3c0958afd9ae377479f31924ae151e6c6d694f6ab7d6d5b280997",
       "resources": [
         {
           "path": "agents/openai.yaml",
@@ -919,7 +919,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:dc4753788846e0da1b5bda2d8264242b0d201d8946983f941c618a724d24a4a1"
+          "digest": "sha256:8056ce6cc33f408b474be7daac80d1d2d711f0c7736f1d0c21378ed92e69b9c8"
         },
         {
           "path": "references/run-handoff.md",
@@ -955,7 +955,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:871d5c04298e633226e1df33642da15645c3dd777230f19ec5a8c32bc6641cfb"
+          "digest": "sha256:7f864c25d0d50c6e31d23be4ccbd6f9edb2a601b529a3652abdde28b4c7c6066"
         },
         {
           "path": "scripts/adapters/codex.mjs",
@@ -967,7 +967,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:4f77b6afcfe8614eef8a4b45a1c003391cb788321ce7d487062542934e4694fd"
+          "digest": "sha256:6e606a02058e725a4c4cfe9341db6bcfd402060d69dd2eb0f5210e2161816d3e"
         },
         {
           "path": "scripts/adapters/generic.mjs",
@@ -979,7 +979,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:67c48cf4604d93c23276a0637034c77d7003f4f80b1e00d001c42af3368ead76"
+          "digest": "sha256:90a22ee52f992c43a7432f6bfb56a25af34a23e43e5730cca1cefa49a893ee05"
         },
         {
           "path": "scripts/context.mjs",
@@ -1003,7 +1003,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:ed50565a28b24db9e5febd71b5f656f0d73cae8158f8f7430569e620abf88018"
+          "digest": "sha256:f9ce2ecad8bd7417091cd734691781b406abfff4ce94a93aa1a965dc685e70ab"
         },
         {
           "path": "scripts/helper-snapshot.mjs",
@@ -1039,7 +1039,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:91b227053cfd0c6a2ebec33ec3be8303f98b172ef67f77575c9448c9abdb3463"
+          "digest": "sha256:a3aca29d53b365c16dee25df7094f79c93425690b694ef5c2af9586becd60a03"
         },
         {
           "path": "scripts/profiles.mjs",
@@ -1051,7 +1051,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:0d61cba289e498a5f12ae8f5cfcb3dfa76d8af9f1e77d89e9fb69a23fd94a342"
+          "digest": "sha256:6162266e2a5e7b9a6fb38754156eafd76f742d0142df681c43f3dc42e36b6ff6"
         },
         {
           "path": "scripts/run-record.mjs",
@@ -1075,7 +1075,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:c26dc34b4867e337731d747fd3224e730c407567bb625538ee84918fbe5dcdc8"
+          "digest": "sha256:3fd196a6ac2073f217d888a1a95f40bc6c6ec7937ca7deced6257d00bfee10a4"
         },
         {
           "path": "scripts/run-contract.mjs",
@@ -1099,7 +1099,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:dd980ebb39c298f48f3bc40b9e1d8f5255376d7143b46c680f1f3f9c04db4871"
+          "digest": "sha256:81a36c610c8d5b422c392dc5d6384285ad125303b8ae4a3519ff44f14a3076dc"
         },
         {
           "path": "scripts/run-preparation.mjs",
@@ -1111,7 +1111,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:cd18116ca9494c57f3f5277986d2cbcf5fb0d1f8d65996593484be74d31a8fa5"
+          "digest": "sha256:59a0207b35590c00c7e9906fa9fded89c85b8e8ed28431d07741f874c10e1176"
         },
         {
           "path": "scripts/run-execution.mjs",
@@ -1123,7 +1123,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:cd36e97bff182125b9ab99da49864f553f1eb51da2a8a5163465b409205e615a"
+          "digest": "sha256:3e9333862d26b10307623d0fd715b7c4387d3788e3eb578326374cfd23682306"
         },
         {
           "path": "scripts/run-lifecycle.mjs",
@@ -1135,7 +1135,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:a15194204561f1efd268496d0e3e83c4be27220eaa81b8b242483b9a2a85218a"
+          "digest": "sha256:1b3dfe50152ef63bb174fb19aef9b3351f7d25be49c2557f6187cbba8db37317"
         },
         {
           "path": "scripts/integration-files.mjs",
@@ -1195,7 +1195,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:d60f5d259ae5ccb230be384e697d13d27b65b2a4c907f7afa7ee4bf1a5afaf15"
+          "digest": "sha256:f9b23fca75b3e174134ea9bfde1637fac975866ffba3c293525dfef59975d76c"
         },
         {
           "path": "scripts/adapters/native.mjs",
@@ -1207,7 +1207,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:eef4266f70ee89c9ed07cd2878bb660dabd4ff49faba91002fd458463980d888"
+          "digest": "sha256:cf4af84cdfcc05d906a51878dfd82e5a0b5e4acd6644bf93ebf708a6dd2f0130"
         },
         {
           "path": "scripts/backend-diagnostics.mjs",
@@ -1219,7 +1219,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:71f99ef24bc58f047f75bfb12ce587a495c2cedada97745da076dc21ffaab33d"
+          "digest": "sha256:ebd71da7567a41517bd10f041a4771e2f9e1f87c28820564fb0d73d82dafbc58"
         }
       ],
       "contracts": {

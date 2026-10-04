@@ -4,7 +4,8 @@ import { mkdir, realpath } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import { resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
-import { validateDestination } from './adapters/generic.mjs';
+import { AdapterError } from './adapters/generic.mjs';
+import { safeAdapterDetails } from './adapters/native.mjs';
 import { verifiedHelper } from './helper-snapshot.mjs';
 import {
   handoffPresentation,
@@ -24,6 +25,7 @@ import {
 import { DelegateRunError, integrationPaths, within } from './run-contract.mjs';
 import { dispatchDelegateRun, resumeDelegateRun } from './run-execution.mjs';
 import {
+  abandonDelegateRun,
   cleanupDelegateRun,
   delegateRunStatus,
   recoverDelegateRun,
@@ -43,6 +45,7 @@ import {
 export { DelegateRunError } from './run-contract.mjs';
 export { dispatchDelegateRun, resumeDelegateRun } from './run-execution.mjs';
 export {
+  abandonDelegateRun,
   cleanupDelegateRun,
   delegateRunStatus,
   recoverDelegateRun,
@@ -72,6 +75,7 @@ async function commandInput() {
 }
 
 function probeFailure(error) {
+  const details = error instanceof AdapterError ? safeAdapterDetails(error.details) : error.details;
   const code = typeof error?.code === 'string' ? error.code : 'E_DELEGATE_PROFILE';
   const state =
     code === 'E_DESTINATION_UNKNOWN'
@@ -85,6 +89,8 @@ function probeFailure(error) {
     state,
     dispatchable: false,
     code,
+    message: error.message,
+    ...(details ? { details } : {}),
     nextAction:
       state === 'endpoint-unknown'
         ? 'Configure an inspectable provider endpoint, then preview or renew the profile.'
@@ -117,7 +123,7 @@ async function probedChoice(choice, cwd, directory) {
   }
   try {
     const prepared = await prepareProfile(choice.name, { directory, cwd });
-    const backend = await inspectEnrolledBackend(prepared.profile);
+    const backend = await inspectEnrolledBackend(prepared.profile, { cwd });
     const readiness =
       prepared.profile.kind === 'generic'
         ? profileReadiness(prepared.destination, backend)
@@ -125,6 +131,7 @@ async function probedChoice(choice, cwd, directory) {
     return {
       ...choice,
       destination: prepared.destination,
+      ...(prepared.routing ? { routing: prepared.routing } : {}),
       ...(prepared.executionPolicy ? { executionPolicy: prepared.executionPolicy } : {}),
       backend,
       readiness,
@@ -180,7 +187,7 @@ async function probeCommand(input) {
       engine: input.engine,
       cwd: await realpath(input.repositoryRoot),
     });
-    const backend = await inspectEnrolledBackend(prepared.profile);
+    const backend = await inspectEnrolledBackend(prepared.profile, { cwd });
     const readiness =
       prepared.profile.kind === 'generic'
         ? profileReadiness(prepared.destination, backend)
@@ -190,6 +197,7 @@ async function probeCommand(input) {
       kind: prepared.profile.kind,
       ...(prepared.executionPolicy ? { executionPolicy: prepared.executionPolicy } : {}),
       destination: prepared.destination,
+      ...(prepared.routing ? { routing: prepared.routing } : {}),
       selectedModel: backend.selectedModel ?? null,
       backend,
       readiness,
@@ -213,6 +221,7 @@ async function previewProfileCommand(input) {
       selectedModel: preview.backend.selectedModel ?? null,
     },
     destination: preview.candidate.destination,
+    ...(preview.routing ? { routing: preview.routing } : {}),
     previousDestination: preview.previousDestination,
     capabilities: preview.capabilities,
     ...(preview.executionPolicy ? { executionPolicy: preview.executionPolicy } : {}),
@@ -359,6 +368,7 @@ async function executionCommand(action, input) {
   return {
     runId: outcome.runId,
     status: outcome.status,
+    diagnostic: outcome.record?.diagnostic ?? null,
     ...(outcome.result ? { result: outcome.result } : {}),
     ...(outcome.nextAction ? { nextAction: outcome.nextAction } : {}),
     record: publicRecordView(outcome.record),
@@ -380,6 +390,7 @@ const COMMANDS = Object.freeze({
   wait: waitDelegateRun,
   close: closeCommand,
   cleanup: cleanupDelegateRun,
+  abandon: abandonDelegateRun,
   prune: async (input) => ({
     removed: await pruneClosedRunRecords({ directory: input.runDirectory }),
   }),
@@ -398,6 +409,7 @@ export async function delegateRunnerCommand(action, input = {}) {
       'wait',
       'close',
       'cleanup',
+      'abandon',
       'prepare-worktree',
       'setup-preview',
       'setup-accept',
@@ -413,7 +425,12 @@ export async function delegateRunnerCommand(action, input = {}) {
   }
   const handler = COMMANDS[action];
   if (!Object.hasOwn(COMMANDS, action))
-    throw new DelegateRunError('E_DELEGATE_COMMAND', 'Unknown delegate runner action.');
+    throw new DelegateRunError(
+      'E_DELEGATE_COMMAND',
+      'Unknown delegate runner action. Use node runner.mjs <action> with one JSON object on stdin, or include action in that object.',
+      null,
+      { actions: Object.keys(COMMANDS) },
+    );
   return handler(input);
 }
 
@@ -467,12 +484,20 @@ if (
   process.once('SIGINT', interrupted);
   process.once('SIGTERM', interrupted);
   try {
-    const result = await delegateRunnerCommand(process.argv[2], {
-      ...(await commandInput()),
+    const input = await commandInput();
+    if (!input || typeof input !== 'object' || Array.isArray(input))
+      throw new DelegateRunError('E_DELEGATE_INPUT', 'Command input must be one JSON object.');
+    const action = process.argv[2] ?? input.action;
+    if (process.argv[2] && input.action !== undefined && input.action !== process.argv[2])
+      throw new DelegateRunError('E_DELEGATE_INPUT', 'Command-line and stdin actions disagree.');
+    const result = await delegateRunnerCommand(action, {
+      ...input,
       signal: interruption.signal,
     });
     process.stdout.write(`${JSON.stringify(result)}\n`);
   } catch (error) {
+    const details =
+      error instanceof AdapterError ? safeAdapterDetails(error.details) : error.details;
     process.stderr.write(
       `${JSON.stringify({
         code: typeof error?.code === 'string' ? error.code : 'E_DELEGATE_UNKNOWN',
@@ -481,7 +506,7 @@ if (
             ? error.message
             : 'Delegate command failed; inspect private run custody.',
         ...(error?.runId ? { runId: error.runId } : {}),
-        ...(error?.details ? { details: error.details } : {}),
+        ...(details ? { details } : {}),
       })}\n`,
     );
     process.exitCode = 1;

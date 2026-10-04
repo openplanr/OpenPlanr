@@ -156,7 +156,38 @@ function validateProfileFields(input) {
     workingDirectory,
     ...(kind === 'cursor' ? { trustNativeConfiguration: true } : {}),
     ...(configDir ? { configDir } : {}),
+    ...(input.destination !== undefined
+      ? {
+          destination:
+            kind !== 'generic' &&
+            input.destination?.class === 'native-managed' &&
+            input.destination?.origin === 'native-managed'
+              ? { class: 'native-managed', origin: 'native-managed' }
+              : validateDestination(input.destination),
+        }
+      : {}),
   };
+}
+
+function assertDestination(profile, found) {
+  const declared = profile.destination;
+  if (!declared || declared.class === 'native-managed') return;
+  if (declared.class === found.destination.class && declared.origin === found.destination.origin)
+    return;
+  throw new AdapterError(
+    found.destination.class === 'native-managed'
+      ? 'E_DESTINATION_UNKNOWN'
+      : 'E_DESTINATION_CHANGED',
+    found.destination.class === 'native-managed'
+      ? 'The declared destination cannot be confirmed from native routing. Inspect configuration before dispatch.'
+      : 'The declared destination differs from observed native routing. Inspect configuration before dispatch.',
+    {
+      declaredDestination: declared,
+      effectiveDestination: found.destination,
+      ...(found.routing ? { routing: found.routing } : {}),
+      nextAction: 'Reconcile the profile and native routing sources, then prepare a fresh preview.',
+    },
+  );
 }
 
 function validateProfile(input, now = Date.now(), enrollment = false, allowExpired = false) {
@@ -181,7 +212,7 @@ function validateProfile(input, now = Date.now(), enrollment = false, allowExpir
           expiresAt: enrollment ? now + PROFILE_LIFETIME_MS : input.expiresAt,
         }
       : {
-          ...(input.destination ? { destination: input.destination } : {}),
+          ...(fields.destination ? { destination: fields.destination } : {}),
           ...(version === 1 ? { enrolledAt: input.enrolledAt, expiresAt: input.expiresAt } : {}),
         }),
   };
@@ -382,8 +413,8 @@ export async function listProfiles({ directory, now = Date.now() } = {}) {
   return choices.sort((a, b) => a.name.localeCompare(b.name));
 }
 
-export async function inspectEnrolledBackend(profile, { env = process.env } = {}) {
-  return inspectLocalBackend(profile, { env: childEnvironment(profile, env) });
+export async function inspectEnrolledBackend(profile, { env = process.env, cwd } = {}) {
+  return inspectLocalBackend(profile, { env: childEnvironment(profile, env), cwd });
 }
 
 // Inspect a candidate before enrollment. No task text, capsule, worktree, or profile write is involved.
@@ -401,6 +432,7 @@ export async function previewProfileCandidate(
   const raw = adapterFor(profile.kind);
   const effectiveEnv = childEnvironment(profile, env);
   const found = await raw.probe({ profile, cwd, env: effectiveEnv, signal, timeoutMs });
+  if (profile.kind !== 'generic') assertDestination(profile, found);
   if (
     !(
       profile.kind === 'generic' ? Object.keys(CAPABILITIES) : ['implementation', 'exactResume']
@@ -413,12 +445,16 @@ export async function previewProfileCandidate(
   }
   const destination =
     profile.kind === 'generic' ? validateDestination(found.destination) : found.destination;
-  const backend = await inspectLocalBackend({ ...profile, destination }, { env: effectiveEnv });
+  const backend = await inspectLocalBackend(
+    { ...profile, destination },
+    { env: effectiveEnv, cwd },
+  );
   return {
     candidate: { ...profile, destination },
     previousDestination: existing?.destination ?? null,
     capabilities: found.capabilities,
     ...(found.executionPolicy ? { executionPolicy: found.executionPolicy } : {}),
+    ...(found.routing ? { routing: found.routing } : {}),
     backend,
     readiness:
       profile.kind === 'generic'
@@ -591,30 +627,34 @@ export async function prepareProfile(choice, options = {}) {
       'E_ADAPTER_INCOMPATIBLE',
       'Agent lacks implementation or exact continuation.',
     );
-  if (
-    !native &&
-    (found.destination.class !== profile.destination.class ||
-      found.destination.origin !== profile.destination.origin)
-  )
-    throw new AdapterError('E_DESTINATION_CHANGED', 'Experimental generic destination changed.');
+  assertDestination(profile, found);
   profile.destination = found.destination;
   Object.defineProperty(profile, 'recordDigest', { value: profileIdentity(profile) });
-  async function verifyGeneric(args) {
+  async function verifyRouting(args) {
     const current = await raw.probe({ ...args, profile, env: effectiveEnv });
     if (
       current.destination.class !== profile.destination.class ||
       current.destination.origin !== profile.destination.origin
     )
-      throw new AdapterError('E_DESTINATION_CHANGED', 'Experimental generic destination changed.');
+      throw new AdapterError(
+        'E_DESTINATION_CHANGED',
+        'Observed routing changed after preparation.',
+        {
+          declaredDestination: profile.destination,
+          effectiveDestination: current.destination,
+          ...(current.routing ? { routing: current.routing } : {}),
+          nextAction: 'Inspect native routing, then prepare a fresh preview.',
+        },
+      );
   }
   const adapter = Object.freeze({
     kind: raw.kind,
     async run(args) {
-      if (!native) await verifyGeneric(args);
+      await verifyRouting(args);
       return raw.run({ ...args, profile, env: effectiveEnv });
     },
     async resume(args) {
-      if (!native) await verifyGeneric(args);
+      await verifyRouting(args);
       return raw.resume({ ...args, profile, env: effectiveEnv });
     },
   });
@@ -624,6 +664,7 @@ export async function prepareProfile(choice, options = {}) {
     capabilities: found.capabilities,
     adapter,
     ...(found.executionPolicy ? { executionPolicy: found.executionPolicy } : {}),
+    ...(found.routing ? { routing: found.routing } : {}),
   };
 }
 

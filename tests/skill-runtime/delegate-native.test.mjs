@@ -258,7 +258,7 @@ test('optional native profiles have no renewal and legacy profile bytes remain u
   const native = await prepareProfile(f.profile.name, {
     directory: f.profileDirectory,
     cwd: f.root,
-    env: f.env,
+    env: { ...f.env, OPENAI_BASE_URL: old.destination.origin },
   });
   assert.equal(native.profile.kind, 'codex');
   assert.equal(await readFile(path, 'utf8'), bytes);
@@ -392,10 +392,13 @@ test('native silence has no default deadline; an explicit deadline retains workt
     runId: pending.runId,
     runDirectory: hanging.runDirectory,
     env: hanging.env,
-    timeoutMs: 200,
+    timeoutMs: 1000,
   });
   assert.equal(timed.status, 'blocked');
   assert.equal(timed.record.diagnostic.code, 'E_DELEGATE_TIMEOUT');
+  assert.equal(timed.record.executionTiming.attempts, 1);
+  assert.equal(timed.record.sessionEvidence, 'observed');
+  assert.equal(timed.record.delegateTerminationConfirmed, true);
   assert.equal(await readFile(join(pending.record.worktreePath, 'source.txt'), 'utf8'), 'base\n');
 });
 
@@ -779,6 +782,7 @@ test('explicit Claude configuration governs preview, execution and exact continu
     );
   }
   const env = { ...f.env, CLAUDE_CONFIG_DIR: alternate };
+  delete env.ANTHROPIC_BASE_URL;
   for (const [configDir, expected, origin] of [
     [defaultConfig, defaultConfig, 'https://default.example.test'],
     [alternate, alternate, 'https://alternate.example.test'],
