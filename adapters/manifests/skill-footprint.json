@@ -1,0 +1,256 @@
+{
+  "kind": "openplanr-skill-footprint",
+  "schemaVersion": "1.0.0",
+  "canonical": [
+    {
+      "skillId": "planr-artifact",
+      "files": 6,
+      "bytes": 16856,
+      "uniqueFiles": 6,
+      "uniqueBytes": 16856,
+      "duplicateBytes": 0
+    },
+    {
+      "skillId": "planr-browser-qa",
+      "files": 3,
+      "bytes": 3076,
+      "uniqueFiles": 3,
+      "uniqueBytes": 3076,
+      "duplicateBytes": 0
+    },
+    {
+      "skillId": "planr-ceo-review",
+      "files": 8,
+      "bytes": 46832,
+      "uniqueFiles": 8,
+      "uniqueBytes": 46832,
+      "duplicateBytes": 0
+    },
+    {
+      "skillId": "planr-chair-review",
+      "files": 7,
+      "bytes": 43490,
+      "uniqueFiles": 7,
+      "uniqueBytes": 43490,
+      "duplicateBytes": 0
+    },
+    {
+      "skillId": "planr-challenger-review",
+      "files": 7,
+      "bytes": 43034,
+      "uniqueFiles": 7,
+      "uniqueBytes": 43034,
+      "duplicateBytes": 0
+    },
+    {
+      "skillId": "planr-cmo-review",
+      "files": 8,
+      "bytes": 46779,
+      "uniqueFiles": 8,
+      "uniqueBytes": 46779,
+      "duplicateBytes": 0
+    },
+    {
+      "skillId": "planr-coo-review",
+      "files": 8,
+      "bytes": 46732,
+      "uniqueFiles": 8,
+      "uniqueBytes": 46732,
+      "duplicateBytes": 0
+    },
+    {
+      "skillId": "planr-cpo-review",
+      "files": 8,
+      "bytes": 46916,
+      "uniqueFiles": 8,
+      "uniqueBytes": 46916,
+      "duplicateBytes": 0
+    },
+    {
+      "skillId": "planr-cto-review",
+      "files": 8,
+      "bytes": 46758,
+      "uniqueFiles": 8,
+      "uniqueBytes": 46758,
+      "duplicateBytes": 0
+    },
+    {
+      "skillId": "planr-dashboard",
+      "files": 3,
+      "bytes": 2037,
+      "uniqueFiles": 3,
+      "uniqueBytes": 2037,
+      "duplicateBytes": 0
+    },
+    {
+      "skillId": "planr-delegate",
+      "files": 32,
+      "bytes": 356245,
+      "uniqueFiles": 32,
+      "uniqueBytes": 356245,
+      "duplicateBytes": 0
+    },
+    {
+      "skillId": "planr-design",
+      "files": 76,
+      "bytes": 3307411,
+      "uniqueFiles": 73,
+      "uniqueBytes": 3286419,
+      "duplicateBytes": 20992
+    },
+    {
+      "skillId": "planr-design-loop",
+      "files": 76,
+      "bytes": 3306961,
+      "uniqueFiles": 73,
+      "uniqueBytes": 3285969,
+      "duplicateBytes": 20992
+    },
+    {
+      "skillId": "planr-design-review",
+      "files": 76,
+      "bytes": 3306878,
+      "uniqueFiles": 73,
+      "uniqueBytes": 3285886,
+      "duplicateBytes": 20992
+    },
+    {
+      "skillId": "planr-diagram",
+      "files": 7,
+      "bytes": 20446,
+      "uniqueFiles": 7,
+      "uniqueBytes": 20446,
+      "duplicateBytes": 0
+    },
+    {
+      "skillId": "planr-doctor",
+      "files": 4,
+      "bytes": 10482,
+      "uniqueFiles": 4,
+      "uniqueBytes": 10482,
+      "duplicateBytes": 0
+    },
+    {
+      "skillId": "planr-investigate",
+      "files": 3,
+      "bytes": 2789,
+      "uniqueFiles": 3,
+      "uniqueBytes": 2789,
+      "duplicateBytes": 0
+    },
+    {
+      "skillId": "planr-land",
+      "files": 3,
+      "bytes": 3102,
+      "uniqueFiles": 3,
+      "uniqueBytes": 3102,
+      "duplicateBytes": 0
+    },
+    {
+      "skillId": "planr-openplanr",
+      "files": 3,
+      "bytes": 4702,
+      "uniqueFiles": 3,
+      "uniqueBytes": 4702,
+      "duplicateBytes": 0
+    },
+    {
+      "skillId": "planr-operate",
+      "files": 7,
+      "bytes": 48017,
+      "uniqueFiles": 7,
+      "uniqueBytes": 48017,
+      "duplicateBytes": 0
+    },
+    {
+      "skillId": "planr-plan",
+      "files": 13,
+      "bytes": 307236,
+      "uniqueFiles": 13,
+      "uniqueBytes": 307236,
+      "duplicateBytes": 0
+    },
+    {
+      "skillId": "planr-plan-review",
+      "files": 3,
+      "bytes": 2900,
+      "uniqueFiles": 3,
+      "uniqueBytes": 2900,
+      "duplicateBytes": 0
+    },
+    {
+      "skillId": "planr-release",
+      "files": 9,
+      "bytes": 36118,
+      "uniqueFiles": 9,
+      "uniqueBytes": 36118,
+      "duplicateBytes": 0
+    },
+    {
+      "skillId": "planr-ship",
+      "files": 6,
+      "bytes": 13728,
+      "uniqueFiles": 6,
+      "uniqueBytes": 13728,
+      "duplicateBytes": 0
+    },
+    {
+      "skillId": "planr-spec",
+      "files": 4,
+      "bytes": 5270,
+      "uniqueFiles": 4,
+      "uniqueBytes": 5270,
+      "duplicateBytes": 0
+    },
+    {
+      "skillId": "planr-sprint",
+      "files": 6,
+      "bytes": 28728,
+      "uniqueFiles": 6,
+      "uniqueBytes": 28728,
+      "duplicateBytes": 0
+    },
+    {
+      "skillId": "planr-status",
+      "files": 3,
+      "bytes": 2415,
+      "uniqueFiles": 3,
+      "uniqueBytes": 2415,
+      "duplicateBytes": 0
+    },
+    {
+      "skillId": "planr-sync",
+      "files": 4,
+      "bytes": 9317,
+      "uniqueFiles": 4,
+      "uniqueBytes": 9317,
+      "duplicateBytes": 0
+    }
+  ],
+  "suites": [
+    {
+      "host": "openai",
+      "files": 266,
+      "bytes": 4421918,
+      "uniqueFiles": 220,
+      "uniqueBytes": 4208274,
+      "duplicateBytes": 213644
+    },
+    {
+      "host": "claude",
+      "files": 247,
+      "bytes": 4498463,
+      "uniqueFiles": 200,
+      "uniqueBytes": 4281336,
+      "duplicateBytes": 217127
+    },
+    {
+      "host": "cursor",
+      "files": 210,
+      "bytes": 4367100,
+      "uniqueFiles": 164,
+      "uniqueBytes": 4153456,
+      "duplicateBytes": 213644
+    }
+  ]
+}

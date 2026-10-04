@@ -6,6 +6,7 @@ import {
   existsSync,
   mkdirSync,
   mkdtempSync,
+  readdirSync,
   readFileSync,
   realpathSync,
   rmSync,
@@ -17,16 +18,19 @@ import test from 'node:test';
 import { resolveArtifactHtml } from '../../packages/artifact/lib/artifact/artifact-sources.mjs';
 import { digestArtifactEnvelope } from '../../packages/artifact/lib/artifact/envelope.mjs';
 import { createArtifactReview } from '../../packages/artifact/lib/artifact/review.mjs';
+import { readSkillSourceRegistry } from '../../packages/skill-runtime/src/catalog.mjs';
 import {
   createDeterministicZip,
   readDeterministicZip,
 } from '../../packages/skill-runtime/src/packaging/index.mjs';
 import {
   buildDesignSkillResources,
+  buildPlanSkillResources,
   DESIGN_SKILL_IDS,
 } from '../../scripts/skills/design-resources.mjs';
 import { projectedSkillName } from '../../scripts/skills/host-invocations.mjs';
 import { resourceBytes } from '../../scripts/skills/resource-bytes.mjs';
+import { buildStandaloneSkillEntries } from '../../scripts/skills/standalone-resources.mjs';
 
 const root = resolve(import.meta.dirname, '../..');
 const pixel = Buffer.from(
@@ -130,9 +134,11 @@ function install(directory, skillId, host = 'openai', { suite = false } = {}) {
     return join(destination, 'skills', hostSkillName, 'scripts/design.mjs');
   }
   const destination = join(directory, 'installed', skillId);
-  cpSync(join(root, `dist/plugins/${host}/openplanr/skills`, hostSkillName), destination, {
-    recursive: true,
-  });
+  const registryRow = readSkillSourceRegistry({ repoRoot: root }).skills.find(
+    (row) => row.skillId === skillId,
+  );
+  for (const entry of buildStandaloneSkillEntries({ repoRoot: root, registryRow }))
+    write(join(destination, entry.path), entry.bytes);
   return join(destination, 'scripts/design.mjs');
 }
 
@@ -505,7 +511,7 @@ test('design runtime bundling and release archives preserve binary assets withou
         ({ path }) =>
           path === `scripts/runtime/packages/protocol/schemas/v1.11.0/${name}.schema.json`,
       ),
-      `portable Design and Plan resources include ${name}`,
+      `portable Design resources include ${name}`,
     );
   }
   for (const sourcePath of [
@@ -593,6 +599,83 @@ test('every installed design helper loads its split modules outside the source c
         const help = run(install(join(directory, host), skillId, host), directory, ['--help']);
         assert.match(help.usage, /^design\.mjs /u, `${host} ${skillId}`);
       }
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
+});
+
+test('Plan carries only handoff inspection and rejects authoring operations offline', async () => {
+  const directory = realpathSync(mkdtempSync(join(tmpdir(), 'openplanr-plan-handoff-only-')));
+  try {
+    const resources = await buildPlanSkillResources({ repoRoot: root });
+    assert.equal(resources.filter(({ kind }) => kind === 'script').length, 1);
+    assert.ok(
+      resources.every(({ path }) => !/templates|\.css$|artifact-shell|design-share/u.test(path)),
+    );
+    const installed = join(directory, 'plan');
+    for (const { path, bytes } of resources) write(join(installed, path), bytes);
+    const script = join(installed, 'scripts/design.mjs');
+    const help = run(script, directory, ['--help']);
+    assert.match(help.usage, /handoff.*inspect/u);
+    assert.doesNotMatch(help.usage, /render|publish|studio/u);
+    const source = fixture(directory);
+    const rendered = run(install(directory, 'planr-design'), directory, ['render', source.path]);
+    const inspected = run(script, directory, [
+      'handoff',
+      source.path,
+      '--action',
+      'inspect',
+      '--json',
+    ]);
+    assert.equal(inspected.revision, rendered.revision);
+    assert.equal(inspected.draft, null);
+    const before = readFileSync(join(source.design, '.design/current.json'));
+    for (const args of [
+      ['render', source.path],
+      ['handoff', source.path, '--action', 'approve'],
+    ])
+      run(script, directory, args, { success: false });
+    assert.deepEqual(readFileSync(join(source.design, '.design/current.json')), before);
+    const directoryBytes = (path) =>
+      readdirSync(path, { withFileTypes: true })
+        .sort((a, b) => a.name.localeCompare(b.name))
+        .flatMap((entry) => {
+          const child = join(path, entry.name);
+          return entry.isDirectory()
+            ? directoryBytes(child)
+            : [{ path: child, bytes: readFileSync(child) }];
+        });
+    const journalPath = join(source.design, '.design/publication.json');
+    const journal = JSON.stringify({
+      revision: rendered.revision,
+      previousRevision: null,
+      previousManifest: null,
+      manifest: json(join(source.design, 'finalized.json')),
+    });
+    for (const bytes of [journal, 'null\n', '{malformed']) {
+      writeFileSync(journalPath, bytes);
+      const unchanged = directoryBytes(directory);
+      const failure = run(script, directory, ['handoff', source.path], { success: false });
+      assert.match(failure.stderr, /E_DESIGN_PUBLICATION_PENDING/u);
+      assert.match(failure.stderr, /Design utility/u);
+      assert.deepEqual(
+        directoryBytes(directory),
+        unchanged,
+        'Plan inspection leaves every file byte unchanged when publication recovery is pending',
+      );
+    }
+    writeFileSync(journalPath, journal);
+    run(install(directory, 'planr-design'), directory, [
+      'handoff',
+      source.path,
+      '--action',
+      'inspect',
+    ]);
+    assert.equal(
+      existsSync(journalPath),
+      false,
+      'the existing Design reader retains its recovery default',
+    );
   } finally {
     rmSync(directory, { recursive: true, force: true });
   }

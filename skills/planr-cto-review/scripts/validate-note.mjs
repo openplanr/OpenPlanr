@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 
+import { existsSync, realpathSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -26,7 +27,11 @@ export async function runOperateReviewNoteValidator(argv = process.argv.slice(2)
   return result;
 }
 
-if (process.argv[1] && resolve(process.argv[1]) === resolve(fileURLToPath(import.meta.url))) {
+if (
+  process.argv[1] &&
+  existsSync(resolve(process.argv[1])) &&
+  realpathSync(resolve(process.argv[1])) === realpathSync(fileURLToPath(import.meta.url))
+) {
   runOperateReviewNoteValidator().catch((error) => {
     process.stderr.write(`${error.code ?? 'E_OPERATE_NOTE'}: ${error.message}\n`);
     process.exitCode = 1;

@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
@@ -11,6 +11,8 @@ import {
   compareDeclarations,
   compareJavaScript,
   compareTokens,
+  compareTrees,
+  listSkillBundles,
 } from '../../scripts/typescript/verify-migration.mjs';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
@@ -85,6 +87,79 @@ test('identifier normalization fails a renamed export or script global', () => {
   const global = 'var OpenPlanrDraft = (() => {\n  const size = 2;\n  return size;\n})();\n';
   assert.equal(tierOf(global, global.replace('OpenPlanrDraft', 'OpenPlanrPlan')).tier, 'different');
   assert.equal(tierOf(global, global.replaceAll('size', 'width')).tier, 'identifier-normalized');
+});
+
+test('skill migration coverage includes declared scripts, suite launchers and shared runtime chunks', (t) => {
+  const directory = mkdtempSync(join(tmpdir(), 'openplanr-skill-migration-'));
+  t.after(() => rmSync(directory, { recursive: true, force: true }));
+  const put = (path, text) => {
+    mkdirSync(dirname(join(directory, path)), { recursive: true });
+    writeFileSync(join(directory, path), text);
+  };
+  put(
+    'skills/planr-plan/openplanr.skill.json',
+    JSON.stringify({
+      resources: [
+        { path: 'scripts/handoff.mjs', kind: 'script' },
+        { path: 'scripts/runtime/studio.js.part-001', kind: 'asset' },
+        { path: 'references/craft.md', kind: 'reference' },
+      ],
+    }),
+  );
+  const expected = [
+    'dist/plugins/claude/openplanr/runtime/shared-chunk.mjs',
+    'dist/plugins/claude/openplanr/skills/plan/scripts/handoff.mjs',
+    'packages/cli/lib/host-packages/openai/openplanr/runtime/shared-chunk.mjs',
+    'skills/planr-plan/scripts/handoff.mjs',
+    'skills/planr-plan/scripts/runtime/studio.js.part-001',
+  ];
+  for (const path of expected) put(path, 'export const value = 1;\n');
+  put('skills/planr-plan/references/craft.md', '# Guidance\n');
+  assert.deepEqual(listSkillBundles(directory), expected);
+});
+
+test('skill and shared-chunk comparisons retain tiers and flag top-level binding changes', (t) => {
+  const directory = mkdtempSync(join(tmpdir(), 'openplanr-skill-migration-'));
+  t.after(() => rmSync(directory, { recursive: true, force: true }));
+  const baseTree = join(directory, 'base');
+  const headTree = join(directory, 'head');
+  for (const tree of [baseTree, headTree]) mkdirSync(tree);
+  // This is a comparison-tool fixture, not an installed skill; both trees use the tested tool.
+  symlinkSync(join(root, 'node_modules'), join(headTree, 'node_modules'));
+  const put = (tree, path, text) => {
+    mkdirSync(dirname(join(tree, path)), { recursive: true });
+    writeFileSync(join(tree, path), text);
+  };
+  const paths = [
+    'dist/plugins/claude/openplanr/skills/plan/scripts/handoff.mjs',
+    'dist/plugins/claude/openplanr/runtime/local-chunk.mjs',
+    'dist/plugins/claude/openplanr/runtime/top-level-chunk.mjs',
+  ];
+  for (const path of paths) put(baseTree, path, bundle);
+  put(headTree, paths[0], bundle.replace('    const scale', '    // unchanged\n    const scale'));
+  put(headTree, paths[1], renamed);
+  const topLevel = 'const provider = 1; export { provider as value };\n';
+  put(baseTree, paths[2], topLevel);
+  put(headTree, paths[2], topLevel.replaceAll('provider', 'client'));
+  const result = compareTrees(headTree, baseTree);
+  assert.equal(result.skillBundles.length, 3);
+  const statuses = new Map(result.skillBundles.map(({ path, status }) => [path, status]));
+  assert.equal(statuses.get(paths[0]), 'comment-only');
+  assert.equal(statuses.get(paths[1]), 'identifier-normalized');
+  assert.equal(statuses.get(paths[2]), 'different');
+  assert.ok(result.skillBundles.find(({ path }) => path === paths[2]).firstDifference);
+});
+
+test('skill migration collection rejects traversal instead of comparing unrelated files', (t) => {
+  const directory = mkdtempSync(join(tmpdir(), 'openplanr-skill-migration-'));
+  t.after(() => rmSync(directory, { recursive: true, force: true }));
+  const skill = join(directory, 'skills/planr-plan');
+  mkdirSync(skill, { recursive: true });
+  writeFileSync(
+    join(skill, 'openplanr.skill.json'),
+    JSON.stringify({ resources: [{ path: '../outside.mjs', kind: 'script' }] }),
+  );
+  assert.throws(() => listSkillBundles(directory), /Unsafe skill resource/u);
 });
 
 test('identifier normalization fails a reference that resolves to another binding', () => {

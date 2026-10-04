@@ -12,15 +12,12 @@ import {
   linkSync,
   mkdirSync,
   openSync,
-  realpathSync,
   unlinkSync,
   writeFileSync,
 } from 'node:fs';
-import { homedir } from 'node:os';
-import { basename, dirname, isAbsolute, join, relative, resolve } from 'node:path';
+import { basename, dirname, join, resolve } from 'node:path';
 import { digestArtifactEnvelope } from '@openplanr/artifact/envelope.mjs';
 import { resolveArtifactReviewDestination } from '@openplanr/artifact/import.mjs';
-import { configuredPlanrHome, planrHome } from '@openplanr/artifact/internal/planr-home.mjs';
 import { acquireStartLock } from '@openplanr/artifact/internal/server-util.mjs';
 import { createReviewLedger } from '@openplanr/artifact/merge.mjs';
 import {
@@ -35,11 +32,13 @@ import {
 } from '@openplanr/artifact/review.mjs';
 import { canonicalizeJson } from '@openplanr/protocol/canonical-json';
 import { bundleDesignRevision } from './context.mjs';
-import { atomicJson, currentDesign, hash, readJson } from './document.mjs';
+import { atomicJson, currentDesign, hash, readJson } from './document-state.mjs';
+import { custodyLocation, FORMAT, presentationFingerprint, safeStatus } from './share-status.mjs';
 import * as workspace from './workspace-client.mjs';
 import { mergeWorkspaceFeedback } from './workspace-feedback.mjs';
 
-const FORMAT = 'openplanr-design-owner-custody';
+export { getDesignShareStatus } from './share-status.mjs';
+
 /** Never upload source paths, local provenance, arbitrary state, or owner credentials. */
 export function prepareDesignShareBundle(file) {
   const current = currentDesign(file);
@@ -47,40 +46,6 @@ export function prepareDesignShareBundle(file) {
   return bundleDesignRevision(current, saved);
 }
 
-function custodyLocation(file, options = {}, { allowMissing = false } = {}) {
-  const current = currentDesign(file);
-  const env = options.env ?? process.env;
-  const root = resolve(options.custodyRoot ?? join(planrHome(env), 'design-shares'));
-  let project = current.root;
-  for (
-    let candidate = current.root;
-    dirname(candidate) !== candidate;
-    candidate = dirname(candidate)
-  ) {
-    if (existsSync(join(candidate, '.git')) || existsSync(join(candidate, '.planr'))) {
-      project = candidate;
-      break;
-    }
-  }
-  const key = hash(`${current.root}\n${current.document.id}`);
-  const path = join(root, `${key}.json`);
-  const within = relative(project, root);
-  if (
-    (!allowMissing || existsSync(path)) &&
-    (within === '' ||
-      (!within.startsWith(`..${process.platform === 'win32' ? '\\' : '/'}`) &&
-        within !== '..' &&
-        !isAbsolute(within)))
-  )
-    throw new Error(
-      'Design owner credentials must be stored outside the project. Set PLANR_HOME to a private user-level directory.',
-    );
-  const legacyPath =
-    !options.custodyRoot && !configuredPlanrHome(env)
-      ? join(realpathSync(env.HOME || homedir()), '.openplanr', 'design-shares', `${key}.json`)
-      : null;
-  return { root, path, current, legacyPath };
-}
 async function withCustody(file, options, action) {
   const location = custodyLocation(file, options);
   ensurePrivateDirectory(location.root, { label: 'Design' });
@@ -175,57 +140,6 @@ async function commitMutation(record, save, options) {
     }
     throw error;
   }
-}
-function presentationFingerprint(current) {
-  const state = readJson(join(current.root, '.design/studio-state.json'), { state: {} }).state;
-  return hash(
-    JSON.stringify({
-      revision: current.revision,
-      selectedVariant: state.selectedVariant ?? current.document.selectedVariant,
-      positions: state.positions ?? {},
-      verification: current.verification.status,
-    }),
-  );
-}
-const safeStatus = (record, current) => ({
-  ok: true,
-  shared: Boolean(record),
-  title: current.document.title,
-  localRevision: current.revision,
-  retention: 'until-revoked',
-  ...(record
-    ? {
-        id: record.custody.id,
-        url: workspace.workspaceReviewUrl(record.custody),
-        revision: record.custody.currentRevision ?? record.publishedRevision ?? null,
-        publishedRevision: record.publishedRevision ?? null,
-        hasUpdate:
-          record.publishedRevision !== current.revision ||
-          record.publishedPresentation !== presentationFingerprint(current),
-        epoch: record.custody.epoch,
-        commentsPaused: Boolean(record.custody.commentsPaused ?? record.commentsPaused),
-        revoked: Boolean(record.revoked),
-        deleted: Boolean(record.deleted),
-        pending: Boolean(
-          record.custody.pendingCreate ||
-            record.custody.pendingMutation ||
-            record.pendingReviewMetadata?.length,
-        ),
-        pendingAction: record.custody.pendingCreate
-          ? 'create'
-          : (record.custody.pendingMutation?.action ??
-            (record.pendingReviewMetadata?.length ? 'review-metadata' : null)),
-        pendingReviewMetadata: Boolean(record.pendingReviewMetadata?.length),
-      }
-    : {}),
-});
-
-export function getDesignShareStatus(file, options = {}) {
-  const { path, current, legacyPath } = custodyLocation(file, options);
-  const record =
-    readCustody(path, { label: 'Design', format: FORMAT }) ??
-    (legacyPath ? readCustody(legacyPath, { label: 'Design', format: FORMAT }) : null);
-  return safeStatus(record, current);
 }
 export async function shareDesign(file, options = {}) {
   return withCustody(file, options, async ({ record, current, save, root }) => {

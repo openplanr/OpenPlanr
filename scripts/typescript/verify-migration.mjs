@@ -2,7 +2,8 @@
 // Proves that a TypeScript migration group changed no shipped behaviour, against a base ref.
 // The base tree is rebuilt from `git archive` with a copy of this checkout's node_modules and
 // regenerated, then three proofs run:
-//   1. every templates/**/*.js bundle and every projected planr-pipeline file hashes the same;
+//   1. every browser bundle, skill script, shared runtime chunk and projected pipeline file
+//      hashes the same;
 //      a JavaScript file that differs passes as "comment-only" when it is token-identical, or as
 //      "identifier-normalized" when it is token-identical once every function-local binding is
 //      renamed to a canonical name, and the report names the tier;
@@ -583,6 +584,48 @@ function listBundles(tree) {
     .map((path) => posix(relative(tree, path)));
 }
 
+const isSkillBundle = (path) => /\.(?:mjs|js)(?:\.part-\d+|\.parts\.json)?$/u.test(path);
+
+function declaredSkillBundles(tree, packageRoot) {
+  const manifestPath = join(packageRoot, 'openplanr.skill.json');
+  if (!existsSync(manifestPath)) return [];
+  const manifest = JSON.parse(readFileSync(manifestPath, 'utf8'));
+  return (manifest.resources ?? []).flatMap((resource) => {
+    if (!['script', 'asset'].includes(resource.kind) || !isSkillBundle(resource.path)) return [];
+    if (
+      typeof resource.path !== 'string' ||
+      resource.path.includes('\\') ||
+      resource.path.split('/').some((part) => !part || part === '.' || part === '..') ||
+      resource.path.startsWith('/')
+    )
+      throw new MigrationProofError(
+        'E_MIGRATION_SKILL_PATH',
+        `Unsafe skill resource: ${String(resource.path)}`,
+      );
+    return [posix(relative(tree, resolve(packageRoot, resource.path)))];
+  });
+}
+
+/** Canonical skill closures and their generated suite projections, including shared chunks. */
+export function listSkillBundles(tree) {
+  const paths = new Set();
+  const skills = resolve(tree, 'skills');
+  if (existsSync(skills)) {
+    for (const entry of readdirSync(skills, { withFileTypes: true })) {
+      if (!entry.isDirectory()) continue;
+      for (const path of declaredSkillBundles(tree, join(skills, entry.name))) paths.add(path);
+    }
+  }
+  // Host package roots are generated from the same canonical inputs; the runtime directory
+  // is deliberately outside each thin skill folder and must receive the same comparison.
+  for (const target of ['dist/plugins', 'packages/cli/lib/host-packages']) {
+    const directory = resolve(tree, target);
+    if (!existsSync(directory)) continue;
+    for (const path of walkFiles(directory, isSkillBundle)) paths.add(posix(relative(tree, path)));
+  }
+  return [...paths].sort();
+}
+
 function listProjectedFiles(tree) {
   const directory = resolve(tree, PROJECTION_MANIFESTS);
   if (!existsSync(directory)) return { files: [], sources: new Map() };
@@ -696,15 +739,26 @@ function proveSource(root, entry) {
 }
 
 /** Proof 1: hash every bundle and projected file in both trees. */
-function compareTrees(root, baseTree, migratedDeclarations, newDeclarations) {
+export function compareTrees(
+  root,
+  baseTree,
+  migratedDeclarations = new Set(),
+  newDeclarations = new Set(),
+) {
   const bundlePaths = [...new Set([...listBundles(baseTree), ...listBundles(root)])].sort();
+  const skillPaths = [
+    ...new Set([...listSkillBundles(baseTree), ...listSkillBundles(root)]),
+  ].sort();
   const baseProjection = listProjectedFiles(baseTree);
   const headProjection = listProjectedFiles(root);
   const projectedPaths = [...new Set([...baseProjection.files, ...headProjection.files])]
-    .filter((path) => !bundlePaths.includes(path))
+    .filter((path) => !bundlePaths.includes(path) && !skillPaths.includes(path))
     .sort();
   return {
     bundles: bundlePaths.map((path) =>
+      classify({ root, baseTree, path, isMigratedDeclaration: false, isNewDeclaration: false }),
+    ),
+    skillBundles: skillPaths.map((path) =>
       classify({ root, baseTree, path, isMigratedDeclaration: false, isNewDeclaration: false }),
     ),
     projected: projectedPaths.map((path) => {
@@ -747,7 +801,7 @@ export function verifyMigration({ root = repositoryRoot, baseRef }) {
   } finally {
     rmSync(base.scratch, { recursive: true, force: true });
   }
-  for (const bundle of trees.bundles)
+  for (const bundle of [...trees.bundles, ...trees.skillBundles])
     if (!ACCEPTED_TIERS.includes(bundle.status))
       failures.push(
         `bundle ${bundle.path} is ${bundle.status}${bundle.reason ? ` (${bundle.reason})` : ''}${bundle.firstDifference ? ` ${describeDifference(bundle.firstDifference)}` : ''}`,
@@ -797,8 +851,8 @@ function renderDeclarations(declarations) {
   ];
 }
 
-function renderBundles(bundles) {
-  return [`Bundles (${bundles.length}): ${tierCounts(bundles)}`, ...bundles.flatMap(row)];
+function renderBundles(bundles, label = 'Bundles') {
+  return [`${label} (${bundles.length}): ${tierCounts(bundles)}`, ...bundles.flatMap(row)];
 }
 
 function renderProjected(projected, reviewed) {
@@ -824,6 +878,8 @@ export function renderReport(report) {
     ...renderDeclarations(report.declarations),
     '',
     ...renderBundles(report.bundles),
+    '',
+    ...renderBundles(report.skillBundles ?? [], 'Skill bundles and shared chunks'),
     '',
     ...renderProjected(report.projected, report.reviewed),
     '',

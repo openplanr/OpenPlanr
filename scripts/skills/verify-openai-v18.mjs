@@ -7,6 +7,7 @@ import { fileURLToPath } from 'node:url';
 import { parseMarkdownAsset } from '../../packages/skill-runtime/src/compiler/index.mjs';
 import { linkSkillProjection } from '../../packages/skill-runtime/src/linker/index.mjs';
 import { projectedSkillName } from './host-invocations.mjs';
+import { verifySuiteResources } from './suite-verification.mjs';
 
 const root = resolve(fileURLToPath(new URL('../..', import.meta.url)));
 const pluginRoot = resolve(root, 'dist/plugins/openai/openplanr');
@@ -56,5 +57,12 @@ for (const hostSkillName of skillIds) {
   });
   if (!metadata.bytes.includes(`$planr:${hostSkillName}`))
     throw new Error(`${skillId} lacks native OpenAI invocation metadata.`);
+  verifySuiteResources({
+    repoRoot: root,
+    registryRow: registry.skills.find((row) => row.skillId === skillId),
+    host: 'codex',
+    pluginRoot,
+    skillRoot: `skills/${hostSkillName}`,
+  });
 }
 process.stdout.write(`OpenAI plugin content PASS: ${skillIds.length} canonical skills.\n`);

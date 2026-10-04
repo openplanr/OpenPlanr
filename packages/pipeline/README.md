@@ -61,7 +61,7 @@ lists every skill.
 - [Spec](https://github.com/openplanr/OpenPlanr/blob/main/packages/pipeline/docs/spec-anatomy.md), [story](https://github.com/openplanr/OpenPlanr/blob/main/packages/pipeline/docs/us-anatomy.md), and [task](https://github.com/openplanr/OpenPlanr/blob/main/packages/pipeline/docs/task-anatomy.md) anatomy, and the [pipeline overview](https://github.com/openplanr/OpenPlanr/blob/main/packages/pipeline/docs/pipeline-overview.md)
 - [Artifact review](docs/artifact-review.md), [design loop](https://github.com/openplanr/OpenPlanr/blob/main/packages/pipeline/docs/design-loop.md), [design review](https://github.com/openplanr/OpenPlanr/blob/main/packages/pipeline/docs/design-review.md), [dashboard](https://github.com/openplanr/OpenPlanr/blob/main/packages/pipeline/docs/dashboard.md)
 - [Doctor](docs/doctor.md) and the [ecosystem guide](docs/ecosystem-guide.md)
-- Maintainer references: [ownership map](docs/ownership-map.md), [release checklist](docs/release-checklist.md), [release ledger](docs/release-ledger.md), [skill evaluation](docs/skill-evaluation.md)
+- Maintainer guides live in the source workspace under `docs/maintainers/pipeline/`; they are not required by the installed runtime.
 
 Project-level documentation, getting started, and support live in the
 [OpenPlanr repository](https://github.com/openplanr/OpenPlanr/blob/main/docs/README.md).

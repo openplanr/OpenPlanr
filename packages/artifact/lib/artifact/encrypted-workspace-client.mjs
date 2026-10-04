@@ -1,4 +1,5 @@
 import { canonicalizeJson, sha256Hex } from '@openplanr/protocol/canonical-json';
+import { createWorkspaceAddress } from './internal/workspace-address.mjs';
 
 /** Domain-specific codecs and validators sit above this encrypted capability transport. */
 export function createEncryptedWorkspaceClient({
@@ -55,28 +56,11 @@ export function createEncryptedWorkspaceClient({
   function newWorkspaceId() {
     return encodeWorkspaceBytes(crypto.getRandomValues(new Uint8Array(18)));
   }
-  function normalizeWorkspaceBase(baseUrl = defaultBaseUrl) {
-    const url = new URL(baseUrl);
-    if (
-      url.username ||
-      url.password ||
-      url.search ||
-      url.hash ||
-      url.pathname !== '/' ||
-      (url.protocol !== 'https:' &&
-        !(url.protocol === 'http:' && ['localhost', '127.0.0.1', '[::1]'].includes(url.hostname)))
-    ) {
-      throw new TypeError(
-        `${label} sharing requires an HTTPS origin or a local development server.`,
-      );
-    }
-    return url.origin;
-  }
-  function workspaceReviewUrl(access) {
-    if (!idPattern.test(access.id))
-      throw new TypeError(`Invalid ${label.toLowerCase()} workspace identity.`);
-    return `${normalizeWorkspaceBase(access.baseUrl)}${reviewPath}/${access.id}`;
-  }
+  const { normalizeWorkspaceBase, workspaceReviewUrl } = createWorkspaceAddress({
+    label,
+    reviewPath,
+    defaultBaseUrl,
+  });
 
   async function tokenMaterial(token, id, purpose) {
     if (

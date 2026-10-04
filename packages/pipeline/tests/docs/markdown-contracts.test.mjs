@@ -111,30 +111,23 @@ test('Claude role agents inherit the host model and are generated only for Claud
   assert.equal(existsSync(join(WORKSPACE_ROOT, 'dist/plugins/openai/openplanr/agents')), false);
 });
 
-test('ownership map names every consolidated domain and the external web boundary', () => {
-  const ownership = readPipeline('docs/ownership-map.md');
-  for (const domain of [
-    'packages/cli',
-    'packages/pipeline',
-    'packages/protocol',
-    'packages/operate',
-    'packages/artifact',
-    'packages/design',
-    'packages/skill-runtime',
+test('maintainer guides stay outside installed runtime boundaries', () => {
+  const manifest = JSON.parse(readPipeline('package.json'));
+  for (const name of [
+    'ownership-map',
+    'release-checklist',
+    'release-ledger',
+    'skill-evaluation',
+    'unified-dashboard-migration',
   ]) {
-    assert.match(ownership, new RegExp(domain.replace('/', '\\/'), 'u'));
+    assert.ok(existsSync(join(WORKSPACE_ROOT, 'docs/maintainers/pipeline', `${name}.md`)), name);
+    assert.equal(existsSync(join(PIPELINE_ROOT, 'docs', `${name}.md`)), false, name);
+    assert.equal(manifest.files.includes(`docs/${name}.md`), false, name);
   }
-  assert.match(ownership, /external hosted service/u);
-  assert.doesNotMatch(ownership, /five OpenPlanr repositories/u);
-});
-
-test('release checklist covers the consolidated public release train and external web', () => {
-  const checklist = readPipeline('docs/release-checklist.md');
-  assert.match(checklist, /complete OpenPlanr workspace/u);
-  assert.match(checklist, /pack both public packages/u);
-  assert.match(checklist, /Publish `planr-pipeline`/u);
-  assert.match(checklist, /Publish `openplanr`/u);
-  assert.match(checklist, /do not publish packages or deploy services/u);
+  // Reader and recovery documentation remains available without a source checkout.
+  for (const path of ['docs/doctor.md', 'docs/compatibility-matrix.md', 'docs/protocol/']) {
+    assert.ok(manifest.files.includes(path), path);
+  }
 });
 
 test('doctor and ecosystem docs describe the prompt-free consolidated boundary', () => {

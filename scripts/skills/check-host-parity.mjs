@@ -10,6 +10,7 @@ import {
   renderCursorSkillBody,
   renderNamespacedSkill,
 } from './host-invocations.mjs';
+import { verifySuiteResources } from './suite-verification.mjs';
 
 const root = resolve(fileURLToPath(new URL('../..', import.meta.url)));
 const canonical = JSON.parse(
@@ -62,16 +63,13 @@ for (const host of ['openai', 'claude']) {
       );
     }
     const resourceHost = host === 'openai' ? 'codex' : 'claude-code';
-    for (const resource of skill.resources.filter(({ hosts }) => hosts.includes(resourceHost))) {
-      if (host === 'openai' && resource.path === 'agents/openai.yaml') continue;
-      const installed = join(root, pluginRoot, 'skills', hostSkillName, resource.path);
-      const original = join(root, 'skills', skillId, resource.path);
-      if (!existsSync(installed) || !readFileSync(original).equals(readFileSync(installed))) {
-        throw new Error(
-          `${host}/${skillId}/${resource.path} does not preserve its canonical resource bytes.`,
-        );
-      }
-    }
+    verifySuiteResources({
+      repoRoot: root,
+      registryRow: registry.skills.find((row) => row.skillId === skillId),
+      host: resourceHost,
+      pluginRoot: join(root, pluginRoot),
+      skillRoot: `skills/${hostSkillName}`,
+    });
   }
   for (const obsolete of ['commands', 'codex-skills']) {
     if (existsSync(join(root, pluginRoot, obsolete))) {
@@ -129,15 +127,13 @@ for (const skill of canonical.skills) {
     throw new Error(
       `cursor/${skill.id} does not preserve its resource-aware canonical projection.`,
     );
-  for (const resource of skill.resources.filter(({ hosts }) => hosts.includes('cursor'))) {
-    const installed = join(root, 'dist/plugins/cursor/openplanr/rules', skill.id, resource.path);
-    const original = join(root, 'skills', skill.id, resource.path);
-    if (!existsSync(installed) || !readFileSync(original).equals(readFileSync(installed))) {
-      throw new Error(
-        `cursor/${skill.id}/${resource.path} does not preserve its canonical resource bytes.`,
-      );
-    }
-  }
+  verifySuiteResources({
+    repoRoot: root,
+    registryRow: registry.skills.find((row) => row.skillId === skill.id),
+    host: 'cursor',
+    pluginRoot: join(root, 'dist/plugins/cursor/openplanr'),
+    skillRoot: `rules/${skill.id}`,
+  });
 }
 
 for (const generatedRoot of [

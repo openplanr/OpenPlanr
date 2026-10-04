@@ -1,9 +1,7 @@
-import { createHash, randomUUID } from 'node:crypto';
+import { randomUUID } from 'node:crypto';
 import {
-  closeSync,
   existsSync,
   mkdirSync,
-  openSync,
   readFileSync,
   realpathSync,
   renameSync,
@@ -22,13 +20,21 @@ import {
   digestArtifactEnvelope,
   resolveArtifactHtml,
 } from '@openplanr/artifact/envelope.mjs';
-import { acquireStartLock, isProcessAlive } from '@openplanr/artifact/internal/server-util.mjs';
+import { acquireStartLock } from '@openplanr/artifact/internal/server-util.mjs';
 import {
   bundleLocalDocument,
   resolveLocalDocumentFile,
 } from '@openplanr/artifact/local-document.mjs';
 import { assertDesignDocument } from '@openplanr/protocol/design-contracts';
 import { loadReviewContext, reviewDigest, reviewFingerprints } from './context.mjs';
+import {
+  atomicJson,
+  designSpecPath,
+  hash,
+  json,
+  readJson,
+  recoverDesignPublication,
+} from './document-state.mjs';
 import { lintDesign } from './lint.mjs';
 import { buildManifest } from './manifest.mjs';
 import {
@@ -38,81 +44,19 @@ import {
   renderDesignStudio,
 } from './studio.mjs';
 
+export {
+  atomicJson,
+  currentDesign,
+  designSpecPath,
+  hash,
+  json,
+  readJson,
+  recoverDesignPublication,
+} from './document-state.mjs';
+
 export const DESIGN_VIEWS = Object.freeze(['canvas', 'prototype', 'walkthrough']);
 // Bump when renderer/bridge implementation changes outside the hashed runtime assets.
 export const DESIGN_RENDERER_VERSION = '1.3.0';
-export const hash = (value) => createHash('sha256').update(value).digest('hex');
-export const json = (value) => `${JSON.stringify(value, null, 2)}\n`;
-export function readJson(path, fallback = undefined) {
-  try {
-    return JSON.parse(readFileSync(path, 'utf8'));
-  } catch (error) {
-    if (error.code === 'ENOENT' && fallback !== undefined) return fallback;
-    throw error;
-  }
-}
-export function atomicJson(path, value) {
-  atomicBytes(path, json(value));
-}
-function atomicBytes(path, bytes) {
-  mkdirSync(dirname(path), { recursive: true });
-  const temporary = `${path}.${randomUUID()}.tmp`;
-  try {
-    writeFileSync(temporary, bytes, { mode: 0o600, flag: 'wx' });
-    renameSync(temporary, path);
-  } finally {
-    rmSync(temporary, { force: true });
-  }
-}
-
-/** Recover the compatibility projection after a dead publisher; current.json is authoritative. */
-export function recoverDesignPublication(root, { ownsRenderLock = false } = {}) {
-  const journalPath = join(root, '.design/publication.json');
-  let journal = readJson(journalPath, null);
-  if (!journal) return;
-  const lockPath = join(root, '.design/render.lock');
-  let recoveryOwner;
-  if (!ownsRenderLock) {
-    const lock = readJson(lockPath, null);
-    if (lock && isProcessAlive(lock.pid)) return;
-    if (lock) rmSync(lockPath, { force: true });
-    recoveryOwner = randomUUID();
-    let descriptor;
-    try {
-      descriptor = openSync(lockPath, 'wx', 0o600);
-      writeFileSync(
-        descriptor,
-        json({ pid: process.pid, owner: recoveryOwner, createdAt: Date.now() }),
-      );
-    } catch (error) {
-      if (error.code === 'EEXIST') return;
-      throw error;
-    } finally {
-      if (descriptor !== undefined) closeSync(descriptor);
-    }
-  }
-  try {
-    journal = readJson(journalPath, null);
-    if (!journal) return;
-    const pointer = readJson(join(root, '.design/current.json'), null);
-    const manifestPath = join(root, 'finalized.json');
-    if (pointer?.revision === journal.revision) atomicJson(manifestPath, journal.manifest);
-    else if ((pointer?.revision ?? null) === journal.previousRevision) {
-      if (journal.previousManifest === null) rmSync(manifestPath, { force: true });
-      else atomicBytes(manifestPath, Buffer.from(journal.previousManifest, 'base64'));
-    } else if (pointer?.revision && /^[a-f0-9]{64}$/u.test(pointer.revision)) {
-      atomicJson(
-        manifestPath,
-        readJson(join(root, '.design/revisions', pointer.revision, 'render.json')).manifest,
-      );
-    } else
-      throw new Error('Design publication recovery could not identify the committed revision.');
-    rmSync(journalPath, { force: true });
-  } finally {
-    if (recoveryOwner && readJson(lockPath, null)?.owner === recoveryOwner)
-      rmSync(lockPath, { force: true });
-  }
-}
 export function loadDesignDocument(file, { readSource } = {}) {
   const checked = readSource?.(file, process.cwd());
   const path = checked?.file ?? realpathSync(resolve(file));
@@ -120,11 +64,6 @@ export function loadDesignDocument(file, { readSource } = {}) {
     checked ? JSON.parse(checked.value.toString('utf8')) : readJson(path),
   );
   return { path, root: dirname(path), document };
-}
-export function designSpecPath(root) {
-  return /(?:^|\/)output\/feats\/feat-[^/]+\/design$/u.test(root.replaceAll('\\', '/'))
-    ? join(dirname(root), 'design-spec.md')
-    : join(root, 'design-spec.md');
 }
 export function inspectDesignDocument(file, { readSource } = {}) {
   const { path, root, document } = loadDesignDocument(file, { readSource });
@@ -292,28 +231,6 @@ export function prepareDesignDocument(file, { readSource, passive = false, maxBy
     lint,
     sourceFiles: [...sourceFiles],
     sourceContents,
-  };
-}
-
-export function currentDesign(file) {
-  // Review reads the committed revision even while an author is midway through
-  // replacing the editable JSON, or its next draft is temporarily invalid.
-  const root = realpathSync(dirname(resolve(file)));
-  recoverDesignPublication(root);
-  const pointer = readJson(join(root, '.design/current.json'), null);
-  if (!pointer || !/^[a-f0-9]{64}$/u.test(pointer.revision))
-    throw new Error('Design has no completed render. Run the render utility first.');
-  const directory = join(root, '.design/revisions', pointer.revision);
-  const prepared = readJson(join(directory, 'render.json'));
-  return {
-    ...prepared,
-    root,
-    directory,
-    file: resolve(file),
-    verification: readJson(join(root, '.design/verification', `${pointer.revision}.json`), {
-      status: 'unverified',
-      revision: pointer.revision,
-    }),
   };
 }
 

@@ -144,6 +144,17 @@
       ]
     },
     {
+      "path": "scripts/design-artifact-sources.mjs",
+      "kind": "script",
+      "executable": false,
+      "hosts": [
+        "claude-code",
+        "codex",
+        "chatgpt",
+        "cursor"
+      ]
+    },
+    {
       "path": "scripts/design-bounded-json-data.mjs",
       "kind": "script",
       "executable": false,
@@ -177,7 +188,29 @@
       ]
     },
     {
-      "path": "scripts/design-generated-864393b693434d75.mjs",
+      "path": "scripts/design-escape.mjs",
+      "kind": "script",
+      "executable": false,
+      "hosts": [
+        "claude-code",
+        "codex",
+        "chatgpt",
+        "cursor"
+      ]
+    },
+    {
+      "path": "scripts/design-generated-b0798298053515fd.mjs",
+      "kind": "script",
+      "executable": false,
+      "hosts": [
+        "claude-code",
+        "codex",
+        "chatgpt",
+        "cursor"
+      ]
+    },
+    {
+      "path": "scripts/design-handoff.mjs",
       "kind": "script",
       "executable": false,
       "hosts": [
@@ -232,7 +265,7 @@
       ]
     },
     {
-      "path": "scripts/design-review-handoff.mjs",
+      "path": "scripts/design-review.mjs",
       "kind": "script",
       "executable": false,
       "hosts": [

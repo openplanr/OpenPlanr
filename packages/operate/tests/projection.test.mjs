@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { execFileSync, spawnSync } from 'node:child_process';
-import { existsSync, mkdtempSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { test } from 'node:test';
@@ -23,8 +23,9 @@ function walk(root) {
   return paths;
 }
 
-test('domain projections are deterministic, private-package-free ordinary files', () => {
+test('domain projections are deterministic, private-package-free ordinary files', (t) => {
   const target = mkdtempSync(join(tmpdir(), 'openplanr-domain-projection-'));
+  t.after(() => rmSync(target, { recursive: true, force: true }));
   execFileSync(process.execPath, [projector, '--write', '--target', target], { stdio: 'pipe' });
   const check = JSON.parse(
     execFileSync(process.execPath, [projector, '--check', '--target', target], {
@@ -68,9 +69,16 @@ test('domain projections are deterministic, private-package-free ordinary files'
   });
   assert.equal(staleCheck.status, 1);
   assert.equal(
-    JSON.parse(staleCheck.stdout).drift.some((entry) => entry.stale === true),
+    JSON.parse(staleCheck.stdout).conflicts.some(
+      (entry) => entry.target === 'lib/operate/retired-projection.mjs',
+    ),
     true,
   );
-  execFileSync(process.execPath, [projector, '--write', '--target', target], { stdio: 'pipe' });
-  assert.equal(existsSync(staleTarget), false);
+  const result = spawnSync(process.execPath, [projector, '--write', '--target', target], {
+    encoding: 'utf8',
+  });
+  assert.equal(result.status, 1);
+  assert.equal(JSON.parse(result.stdout).ok, false);
+  assert.equal(existsSync(staleTarget), true);
+  assert.equal(readFileSync(staleTarget, 'utf8'), 'export const retired = true;\n');
 });

@@ -9,7 +9,7 @@ verification binds the three generated package identities to their packed
 archives through `ecosystem.json` and the packed-workspace proof; this capability
 matrix does not duplicate release numbers. `skills/` and marketplace metadata
 are generated catalog domains, and the hosted service remains an independent
-consumer. See [`release-ledger.md`](release-ledger.md) for proof boundaries and
+consumer. See [`release-ledger.md`](https://github.com/openplanr/OpenPlanr/blob/main/docs/maintainers/pipeline/release-ledger.md) for proof boundaries and
 historical release compatibility.
 
 ## TL;DR
@@ -169,7 +169,7 @@ contract.
 
 The skill evaluation laboratory grades every public skill in the frozen catalog
 against each registered host profile and issues one readiness receipt per skill.
-See [`skill-evaluation.md`](skill-evaluation.md) for corpora, journeys, gates,
+See [`skill-evaluation.md`](https://github.com/openplanr/OpenPlanr/blob/main/docs/maintainers/pipeline/skill-evaluation.md) for corpora, journeys, gates,
 and waiver rules.
 
 Read a certified skill-host result narrowly:
@@ -191,7 +191,7 @@ The laboratory supersedes the frozen catalog record's ad-hoc skill/host/canary c
 measurement and certification only. The frozen catalog membership, canonical
 skill sources, generated host assets, command grammar, and specialist roster
 remain the frozen catalog record's and are read unchanged. See
-[`ownership-map.md`](ownership-map.md).
+[`ownership-map.md`](https://github.com/openplanr/OpenPlanr/blob/main/docs/maintainers/pipeline/ownership-map.md).
 
 ## Caveats
 
@@ -232,7 +232,7 @@ For runtime-operated fixtures, use `conformance/runner.mjs` with `--setup`, then
 - `protocol/commands.md` - PLAN and SHIP contracts
 - `protocol/runtime-adapters.md` - adapter details
 - `artifact-review.md` - artifact engine, CLI, privacy, and integration contract
-- `skill-evaluation.md` - skill certification corpora, journeys, gates, and waivers
+- [Maintainer evaluation guide](https://github.com/openplanr/OpenPlanr/blob/main/docs/maintainers/pipeline/skill-evaluation.md) - skill certification corpora, journeys, gates, and waivers
 - `../conformance/README.md` - conformance workflow
 
 ---

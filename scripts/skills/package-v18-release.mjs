@@ -1,24 +1,13 @@
 #!/usr/bin/env node
 
 import { createHash } from 'node:crypto';
-import {
-  chmodSync,
-  existsSync,
-  lstatSync,
-  mkdirSync,
-  mkdtempSync,
-  readdirSync,
-  readFileSync,
-  renameSync,
-  rmSync,
-  writeFileSync,
-} from 'node:fs';
-import { tmpdir } from 'node:os';
+import { existsSync, lstatSync, readdirSync, readFileSync } from 'node:fs';
 import { dirname, join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { createDeterministicZip } from '../../packages/skill-runtime/src/packaging/index.mjs';
-import { projectedSkillName } from './host-invocations.mjs';
+import { syncSkillRelease } from './release-custody.mjs';
+import { buildStandaloneSkillEntries } from './standalone-resources.mjs';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const releaseRoot = resolve(root, 'release');
@@ -63,8 +52,14 @@ function add(path, bytes, fileMode = 0o644) {
   tree.set(path, { bytes: Buffer.isBuffer(bytes) ? bytes : Buffer.from(bytes), mode: fileMode });
 }
 
-function addProduct({ id, kind, host, source, destination }) {
-  const sourceEntries = entries(resolve(root, source));
+function addProduct({
+  id,
+  kind,
+  host,
+  source,
+  sourceEntries = entries(resolve(root, source)),
+  destination,
+}) {
   for (const entry of sourceEntries) add(`${destination}/${entry.path}`, entry.bytes, entry.mode);
   const archive = createDeterministicZip(
     sourceEntries.map((entry) => ({
@@ -88,13 +83,12 @@ function addProduct({ id, kind, host, source, destination }) {
 
 const products = [];
 for (const row of registry.skills) {
-  const source = `dist/plugins/openai/openplanr/skills/${projectedSkillName(row.skillId)}`;
   products.push(
     addProduct({
       id: row.skillId,
       kind: 'individual-skill',
       host: 'openai',
-      source,
+      sourceEntries: buildStandaloneSkillEntries({ repoRoot: root, registryRow: row }),
       destination: `skills/${row.skillId}`,
     }),
   );
@@ -144,15 +138,6 @@ add(
   }),
 );
 
-function writeTree(directory) {
-  for (const [path, entry] of tree) {
-    const absolute = resolve(directory, path);
-    mkdirSync(dirname(absolute), { recursive: true });
-    writeFileSync(absolute, entry.bytes, { mode: entry.mode });
-    chmodSync(absolute, entry.mode);
-  }
-}
-
 function compare() {
   const expected = [...tree.keys()].sort();
   const actual = existsSync(releaseRoot)
@@ -179,15 +164,9 @@ if (mode === '--check') {
   if (drift.length > 0) throw new Error(`Release package drift:\n${json(drift)}`);
   process.stdout.write(`Checked ${products.length} release products.\n`);
 } else {
-  if (existsSync(releaseRoot)) {
-    const marker = resolve(releaseRoot, '.openplanr-release.json');
-    if (!existsSync(marker))
-      throw new Error(`Refusing to replace unowned release directory: ${releaseRoot}`);
-  }
-  const staging = mkdtempSync(join(tmpdir(), 'openplanr-release-v18-'));
-  writeTree(staging);
-  if (existsSync(releaseRoot)) rmSync(releaseRoot, { recursive: true });
-  renameSync(staging, releaseRoot);
+  // A marker does not prove byte ownership. Unknown legacy products are preserved as
+  // conflicts; retain that old tree explicitly before creating a fresh release candidate.
+  syncSkillRelease({ root, tree, mode: 'write' });
   process.stdout.write(
     `Packaged ${registry.skills.length} skills, three host plugins, and nine Claude agents.\n`,
   );

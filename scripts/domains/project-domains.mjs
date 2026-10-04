@@ -1,20 +1,14 @@
 #!/usr/bin/env node
 
 import { createHash } from 'node:crypto';
-import {
-  chmodSync,
-  existsSync,
-  lstatSync,
-  mkdirSync,
-  readdirSync,
-  readFileSync,
-  renameSync,
-  statSync,
-  unlinkSync,
-  writeFileSync,
-} from 'node:fs';
+import { existsSync, lstatSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import {
+  GeneratedOwnership,
+  generatedPath,
+  writeGeneratedOutput,
+} from '../lib/generated-ownership.mjs';
 
 const scriptRoot = dirname(fileURLToPath(import.meta.url));
 const workspaceRoot = resolve(scriptRoot, '..', '..');
@@ -48,25 +42,11 @@ const DOMAIN_PROJECTIONS = Object.freeze({
   ]),
 });
 
-// Targets a domain no longer projects. A checkout that pulls the new manifest never sees them in
-// its previous manifest, so they are removed by name as well.
-const RETIRED_TARGETS = Object.freeze({
-  design: Object.freeze([
-    'lib/design-engine/canvas-wrap.mjs',
-    'templates/design/DesignCanvas.jsx',
-    'templates/design/README.md',
-    'templates/design/canvas-shell.html',
-    'templates/design/prototype-shell.html',
-    'templates/design/vendor/DesignCanvas.js',
-    'templates/design/vendor/fetch-vendor.mjs',
-    'templates/design/vendor/pretext.js',
-    'templates/design/vendor/react-dom.production.min.js',
-    'templates/design/vendor/react.production.min.js',
-    'templates/design/walkthrough-shell.html',
-    'templates/studio/enhancements.js',
-    'templates/studio/handoff-center.js',
-  ]),
-});
+// Historical digest evidence bootstraps checkouts that predate the local ownership ledger.
+// New retirements are recorded by the ledger, rather than added to a path-only cleanup list.
+const legacyOwnership = JSON.parse(
+  readFileSync(resolve(scriptRoot, 'legacy-projection-ownership.json'), 'utf8'),
+).entries;
 
 const PROTOCOL_TARGETS = Object.freeze({
   'large-object-contracts': 'lib/protocol/large-object-contracts.mjs',
@@ -203,7 +183,7 @@ function projectBytes(bytes, targetRelativeFile) {
   const source = bytes.toString('utf8');
   const projected = source.replace(
     /(['"])(@openplanr\/(?:protocol|artifact)(?:\/[^'"\s]+)?)\1/gu,
-    (match, quote, specifier) =>
+    (_match, quote, specifier) =>
       `${quote}${projectedSpecifier(specifier, targetRelativeFile)}${quote}`,
   );
   if (/(['"])@openplanr\//u.test(projected)) {
@@ -249,7 +229,7 @@ function isOwnedTarget(domain, target) {
   );
 }
 
-function previousManifestTargets(targetRoot, domain) {
+function previousManifestEntries(targetRoot, domain) {
   const path = resolve(targetRoot, manifestTarget(domain));
   if (!existsSync(path) || lstatSync(path).isSymbolicLink()) return [];
   try {
@@ -262,19 +242,11 @@ function previousManifestTargets(targetRoot, domain) {
     )
       return [];
     return manifest.entries
-      .map((entry) => entry?.target)
-      .filter((target) => typeof target === 'string' && isOwnedTarget(domain, target));
+      .filter((entry) => typeof entry?.target === 'string' && isOwnedTarget(domain, entry.target))
+      .map((entry) => ({ owner: domain, target: entry.target, sha256: entry.sha256 }));
   } catch {
     return [];
   }
-}
-
-function atomicWrite(path, bytes, mode) {
-  mkdirSync(dirname(path), { recursive: true });
-  const temporary = `${path}.${process.pid}.tmp`;
-  writeFileSync(temporary, bytes, { mode });
-  renameSync(temporary, path);
-  chmodSync(path, mode);
 }
 
 // A TypeScript source ships as the .mjs and .d.mts compiled beside it. Shipping the source
@@ -374,37 +346,41 @@ function main() {
     const drift = [];
     let changed = 0;
     const currentTargets = new Set(entries.map((entry) => entry.target));
-    for (const domain of options.domains) {
-      const staleTargets = new Set([
-        ...previousManifestTargets(options.target, domain),
-        ...(RETIRED_TARGETS[domain] ?? []),
-      ]);
-      for (const staleTarget of staleTargets) {
-        if (currentTargets.has(staleTarget)) continue;
-        const stalePath = resolve(options.target, staleTarget);
-        const containment = relative(options.target, stalePath);
-        if (containment.startsWith('..') || isAbsolute(containment)) {
-          throw new Error(`Recorded stale projection escapes target root: ${staleTarget}`);
-        }
-        if (!existsSync(stalePath)) continue;
-        const staleStat = lstatSync(stalePath);
-        if (staleStat.isSymbolicLink() || !staleStat.isFile()) {
-          throw new Error(`Refusing to remove non-file stale projection: ${staleTarget}`);
-        }
-        drift.push({ domain, target: staleTarget, stale: true });
-        if (options.mode === 'write') {
-          unlinkSync(stalePath);
-          changed += 1;
-        }
-      }
-    }
+    const custody = new GeneratedOwnership({
+      root: options.target,
+      scope: 'domain-projections',
+      owns: (domain, target) =>
+        Object.hasOwn(DOMAIN_PROJECTIONS, domain) &&
+        (isOwnedTarget(domain, target) ||
+          legacyOwnership.some((entry) => entry.owner === domain && entry.target === target)),
+    }).bootstrap([
+      ...options.domains.flatMap((domain) => previousManifestEntries(options.target, domain)),
+      ...legacyOwnership.filter((entry) => options.domains.includes(entry.owner)),
+    ]);
+    const overwriteConflicts = custody.verifyWrites(
+      entries.map(({ domain, target, sha256 }) => ({ owner: domain, target, sha256 })),
+    );
+    const retirement = custody.retire({
+      owners: options.domains,
+      expectedPaths: currentTargets,
+      write: options.mode === 'write' && overwriteConflicts.length === 0,
+    });
+    drift.push(
+      ...retirement.retired.map(({ owner, target }) => ({ domain: owner, target, stale: true })),
+    );
+    if (options.mode === 'write') changed += retirement.retired.length;
+    const conflicts = [...overwriteConflicts, ...retirement.conflicts].map(
+      ({ owner, target, reason }) => ({ domain: owner, target, reason }),
+    );
+    let mayWrite = options.mode === 'write' && conflicts.length === 0;
     for (const entry of entries) {
+      generatedPath(options.target, entry.target);
       const actual =
         existsSync(entry.targetPath) && !lstatSync(entry.targetPath).isSymbolicLink()
           ? readFileSync(entry.targetPath)
           : null;
       const actualMode = actual === null ? null : statSync(entry.targetPath).mode & 0o777;
-      const matches = actual !== null && actual.equals(entry.bytes) && actualMode === entry.mode;
+      const matches = actual?.equals(entry.bytes) && actualMode === entry.mode;
       if (matches) continue;
       drift.push({
         domain: entry.domain,
@@ -414,23 +390,47 @@ function main() {
         expectedMode: entry.mode.toString(8),
         actualMode: actualMode === null ? null : actualMode.toString(8),
       });
-      if (options.mode === 'write') {
+      if (mayWrite) {
+        const concurrent = custody.verifyWrites([
+          { owner: entry.domain, target: entry.target, sha256: entry.sha256 },
+        ]);
+        if (concurrent.length > 0) {
+          conflicts.push(
+            ...concurrent.map(({ owner, target, reason }) => ({ domain: owner, target, reason })),
+          );
+          mayWrite = false;
+          continue;
+        }
         if (existsSync(entry.targetPath) && lstatSync(entry.targetPath).isSymbolicLink()) {
           throw new Error(`Refusing to replace symlinked projection: ${entry.target}`);
         }
-        atomicWrite(entry.targetPath, entry.bytes, entry.mode);
+        writeGeneratedOutput({
+          root: options.target,
+          target: entry.target,
+          bytes: entry.bytes,
+          mode: entry.mode,
+          recheck: () => {
+            const concurrent = custody.verifyWrites([
+              { owner: entry.domain, target: entry.target, sha256: entry.sha256 },
+            ]);
+            if (concurrent.length > 0)
+              throw new Error(
+                `Generated projection changed before replacement: ${JSON.stringify(concurrent)}`,
+              );
+          },
+        });
         changed += 1;
       }
     }
     for (const domain of options.domains) {
       const target = manifestTarget(domain);
-      const targetPath = resolve(options.target, target);
+      const targetPath = generatedPath(options.target, target);
       const expected = renderManifest(domain, entries);
       const actual =
         existsSync(targetPath) && !lstatSync(targetPath).isSymbolicLink()
           ? readFileSync(targetPath)
           : null;
-      if (actual !== null && actual.equals(expected)) continue;
+      if (actual?.equals(expected)) continue;
       drift.push({
         domain,
         target,
@@ -438,16 +438,21 @@ function main() {
         actualSha256: actual === null ? null : sha256(actual),
         manifest: true,
       });
-      if (options.mode === 'write') {
+      if (mayWrite) {
         if (existsSync(targetPath) && lstatSync(targetPath).isSymbolicLink()) {
           throw new Error(`Refusing to replace symlinked projection manifest: ${target}`);
         }
-        atomicWrite(targetPath, expected, 0o644);
+        writeGeneratedOutput({ root: options.target, target, bytes: expected, mode: 0o644 });
         changed += 1;
       }
     }
+    if (mayWrite) {
+      custody
+        .record(entries.map(({ domain, target, sha256 }) => ({ owner: domain, target, sha256 })))
+        .save();
+    }
     const report = {
-      ok: options.mode === 'write' || drift.length === 0,
+      ok: conflicts.length === 0 && (options.mode === 'write' || drift.length === 0),
       mode: options.mode,
       target: options.target,
       domains: options.domains,
@@ -456,9 +461,10 @@ function main() {
       changedFiles: changed,
       driftFiles: options.mode === 'check' ? drift.length : 0,
       drift: options.mode === 'check' ? drift : [],
+      conflicts,
     };
     process.stdout.write(`${JSON.stringify(report, null, 2)}\n`);
-    if (options.mode === 'check' && drift.length > 0) process.exitCode = 1;
+    if (!report.ok) process.exitCode = 1;
   } catch (error) {
     process.stderr.write(`${error.stack ?? error.message}\n`);
     process.exitCode = 1;

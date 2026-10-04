@@ -26,9 +26,7 @@ export const REQUIRED_RELEASE_DOCUMENTS = Object.freeze([
   'docs/compatibility-matrix.md',
   'docs/doctor.md',
   'docs/ecosystem-guide.md',
-  'docs/ownership-map.md',
   'docs/protocol/README.md',
-  'docs/release-checklist.md',
 ]);
 
 function fail(message) {

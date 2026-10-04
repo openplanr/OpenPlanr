@@ -374,25 +374,30 @@ export async function designUtility(
   return result;
 }
 
-const main = process.argv[1] && fileURLToPath(import.meta.url) === realpathSync(process.argv[1]);
-if (main)
-  designUtility(process.argv.slice(2), {
-    openUrl: async (url) => {
-      const command =
-        process.platform === 'darwin'
-          ? 'open'
-          : process.platform === 'win32'
-            ? 'explorer.exe'
-            : 'xdg-open';
-      const child = spawn(command, [url], { stdio: 'ignore' });
-      child.on('error', () => {});
-      child.unref();
-    },
-  })
-    .then((result) => {
-      if (result?.ok === false || result?.status === 'failed') process.exitCode = 1;
-    })
-    .catch((error) => {
-      process.stderr.write(`${error.message}\n`);
-      process.exitCode = 1;
+/** Entry used by both the standalone utility and package-relative suite launchers. */
+export async function main(argv = process.argv.slice(2)) {
+  try {
+    const result = await designUtility(argv, {
+      openUrl: async (url) => {
+        const command =
+          process.platform === 'darwin'
+            ? 'open'
+            : process.platform === 'win32'
+              ? 'explorer.exe'
+              : 'xdg-open';
+        const child = spawn(command, [url], { stdio: 'ignore' });
+        child.on('error', () => {});
+        child.unref();
+      },
     });
+    if (result?.ok === false || result?.status === 'failed') process.exitCode = 1;
+    return result;
+  } catch (error) {
+    process.stderr.write(`${error.message}\n`);
+    process.exitCode = 1;
+  }
+}
+
+const invokedDirectly =
+  process.argv[1] && fileURLToPath(import.meta.url) === realpathSync(process.argv[1]);
+if (invokedDirectly) await main();
