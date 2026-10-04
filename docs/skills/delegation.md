@@ -13,6 +13,11 @@ local models use the same workflow; local compatibility probes are diagnostic.
 
 Before dispatch, review the engine/model selection, known provider or native-managed
 routing, trusted configuration, context inventory and owned working directory.
+Pinned destinations must match inspected routing. Conflicting environment and
+configuration sources block dispatch with their source names and safe origins;
+OpenPlanr does not silently reset native routing. Local probes use bounded,
+authenticated model metadata reads. They do not generate completions or load models,
+and their latency is not an estimate of task duration.
 Trusted native hooks/plugins/MCP can execute or contact additional services.
 OpenPlanr does not claim to sandbox those operations. Scope limits accepted changes.
 
@@ -35,6 +40,16 @@ destination compare-and-swap and recovery journal. Concurrent user edits are pre
 Accepted changes remain an uncommitted local diff. Successful integration removes
 only its owned worktree unless retained, keeping context, patch, evidence, report and
 native session reference. Failed/interrupted worktrees remain inspectable.
+
+Status reports live elapsed time and observed native tool activity when the harness
+provides it. This is activity evidence, not proof that every reported file was read
+or every proposed change was verified. Errors include recognized native reasons,
+HTTP status and the inspected destination without exposing raw output or credentials.
+
+Use the runner's explicit `abandon` action for a prepared or blocked run that has
+never executed. It checks ownership, the initial checkout and all surrounding
+resources before cleanup. Modified or unknown files, ignored dependencies, existing
+sessions and recovery work prevent removal. The record and evidence remain available.
 
 Private v2 records describe this behavior. Existing profiles are unchanged and retained
 runs use their original pinned helpers. Generic adapters remain experimental under

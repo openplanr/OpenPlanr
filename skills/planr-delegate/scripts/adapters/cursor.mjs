@@ -3,9 +3,11 @@ import { resolve } from 'node:path';
 import { capsuleDirectory } from './capsule.mjs';
 import { AdapterError, invokeProcess, parseJson } from './generic.mjs';
 import {
+  createNativeProgress,
   knownDestination,
   NATIVE_CAPABILITIES,
   NATIVE_EXECUTION_POLICY,
+  nativeFailure,
   nativeTurn,
 } from './native.mjs';
 
@@ -40,13 +42,14 @@ function assistantText(event) {
   return text;
 }
 
-function streamObserver(cwd, expectedSessionId, onSessionId, onActivity) {
+function streamObserver(cwd, expectedSessionId, onSessionId, onActivity, directory) {
   let sessionId = null;
   let terminal = null;
   let finalText = null;
   let model = null;
   const rejectedCommands = new Set();
   const commandByCall = new Map();
+  const progress = createNativeProgress('cursor', { cwd, capsuleDirectory: directory });
   return {
     async onLine(line) {
       const event = parseJson(line);
@@ -96,11 +99,12 @@ function streamObserver(cwd, expectedSessionId, onSessionId, onActivity) {
           JSON.stringify(event.error ?? (event.is_error ? event.result : '')),
         );
       await onActivity?.({
+        ...progress(event),
         phase: permission ? 'attention' : 'native-execution',
         ...(permission ? { code: 'E_ADAPTER_PERMISSION' } : {}),
       });
     },
-    result(exitCode) {
+    result(exitCode, errorOutput = '') {
       try {
         const result = nativeTurn({
           terminal: terminal
@@ -113,10 +117,7 @@ function streamObserver(cwd, expectedSessionId, onSessionId, onActivity) {
           expectedSessionId,
           exitCode,
           summary: finalText ?? terminal?.result,
-          errorText: JSON.stringify([
-            terminal?.error ?? '',
-            terminal?.is_error ? terminal?.result : '',
-          ]),
+          errorText: `${JSON.stringify({ error: terminal?.error ?? '', result: terminal?.is_error ? terminal?.result : '', api_error_status: terminal?.api_error_status })}\n${errorOutput}`,
           usage: terminal?.usage,
           model,
         });
@@ -148,8 +149,8 @@ async function execute({
 }) {
   const directory = await capsuleDirectory(capsulePath);
 
-  const observer = streamObserver(cwd, sessionId, onSessionId, onActivity);
-  const { exitCode } = await invokeProcess(
+  const observer = streamObserver(cwd, sessionId, onSessionId, onActivity, directory);
+  const { exitCode, output } = await invokeProcess(
     profile.executable,
     [
       ...(profile.argv.length ? ['--model', profile.argv[1]] : []),
@@ -171,11 +172,12 @@ async function execute({
       timeoutMs: timeoutMs ?? null,
       onProcess,
       withExitCode: true,
+      captureStderr: true,
       retainStdout: false,
       onStdoutLine: observer.onLine,
     },
-  );
-  return observer.result(exitCode);
+  ).catch(nativeFailure);
+  return observer.result(exitCode, output);
 }
 
 export const cursorAdapter = Object.freeze({

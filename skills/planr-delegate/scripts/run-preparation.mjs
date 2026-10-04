@@ -302,10 +302,9 @@ export async function prepareDelegateRun({
     });
     const worktreeIdentity = profileIdentity(worktreeProfile);
     if (
-      prepared.profile.kind === 'generic' &&
-      (worktreeIdentity.enrollmentId !== identity.enrollmentId ||
-        worktreeIdentity.destination.class !== identity.destination.class ||
-        worktreeIdentity.destination.origin !== identity.destination.origin)
+      worktreeIdentity.enrollmentId !== identity.enrollmentId ||
+      worktreeIdentity.destination.class !== identity.destination.class ||
+      worktreeIdentity.destination.origin !== identity.destination.origin
     ) {
       throw new DelegateRunError(
         'E_DELEGATE_DESTINATION_CHANGED',
@@ -368,6 +367,7 @@ export async function prepareDelegateRun({
           ? 'native-managed'
           : identity.destination.origin,
       destination: identity.destination,
+      ...(worktreeProfile.routing ? { routing: worktreeProfile.routing } : {}),
       contextCapacity: capacity,
       worktreeDependencies,
       preparationTiming: ready.preparationTiming,

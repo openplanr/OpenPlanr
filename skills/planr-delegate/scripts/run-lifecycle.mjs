@@ -1,12 +1,20 @@
 // Inspect and recover retained execution, report integration, and explicitly clean closed worktrees.
+import { createHash } from 'node:crypto';
+import { lstat, readdir, readFile, realpath } from 'node:fs/promises';
+import { basename, dirname, join } from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
 import { terminateProcessGroup } from './adapters/generic.mjs';
-import { cleanupWorktreeCustody } from './custody.mjs';
-import { treeIdentity } from './integration-files.mjs';
-import { implementationReport, runStatusPresentation } from './presentation.mjs';
+import { captureFileState, cleanupWorktreeCustody, validateWorktreeCustody } from './custody.mjs';
+import { git, treeIdentity } from './integration-files.mjs';
+import {
+  implementationReport,
+  liveExecutionTiming,
+  runStatusPresentation,
+} from './presentation.mjs';
 import { blocked, DelegateRunError, sessionId } from './run-contract.mjs';
 import { custodyAt } from './run-preflight.mjs';
 import {
+  closeRunRecord,
   defaultRunDirectory,
   processIdentityState,
   readRunRecord,
@@ -14,6 +22,223 @@ import {
   verifyIntegrationState,
   withRunTransitionLock,
 } from './run-record.mjs';
+
+function abandonError(record, message) {
+  return new DelegateRunError(
+    'E_DELEGATE_ABANDON',
+    `${message} The run and its worktree are retained for inspection.`,
+    record.runId,
+  );
+}
+
+function assertNeverStarted(record) {
+  const closedAbandonment =
+    record.status === 'closed' &&
+    record.disposition === 'abandoned' &&
+    record.abandonment?.kind === 'never-started';
+  if (
+    !(['prepared', 'blocked'].includes(record.status) || closedAbandonment) ||
+    (record.sessionEvidence && record.sessionEvidence !== 'unavailable') ||
+    record.delegateTerminationConfirmed === false ||
+    [
+      record.executionTiming,
+      record.backendSessionId,
+      record.activePid,
+      record.hostProcess,
+      record.delegateProcess,
+      record.preparationHost,
+      record.preparationProcess,
+      record.preparationProvenance,
+      record.setup,
+      record.verification,
+      record.integration,
+      record.nativeProgress,
+      record.completionEvidence,
+    ].some(Boolean)
+  )
+    throw abandonError(
+      record,
+      'Only a run with no execution, session, setup or recovery work may be abandoned automatically.',
+    );
+}
+
+async function abandonmentWorktreeExists(record, custody) {
+  const target = custody.worktreePath;
+  const parent = dirname(target);
+  let physicalParent;
+  try {
+    physicalParent = await realpath(parent);
+  } catch (error) {
+    if (error.code === 'ENOENT' && record.status === 'closed') return false;
+    throw error;
+  }
+  if (
+    basename(target) !== 'worktree' ||
+    !basename(parent).startsWith(`planr-delegate-${record.runId}-`) ||
+    physicalParent !== parent
+  )
+    throw abandonError(record, 'The managed worktree location cannot be verified.');
+  const ownerPath = join(parent, 'ownership.json');
+  const ownerInfo = await lstat(ownerPath);
+  if (
+    !ownerInfo.isFile() ||
+    ownerInfo.isSymbolicLink() ||
+    ownerInfo.size > 4096 ||
+    ownerInfo.mode & 0o077
+  )
+    throw abandonError(record, 'The managed worktree ownership file is unsafe.');
+  const owner = JSON.parse(await readFile(ownerPath, 'utf8'));
+  if (
+    owner.runId !== record.runId ||
+    owner.custodyToken !== custody.custodyToken ||
+    owner.repositoryRoot !== custody.repositoryRoot ||
+    owner.worktreePath !== target ||
+    (await readdir(parent)).some((name) => !['ownership.json', 'worktree'].includes(name))
+  )
+    throw abandonError(record, 'The worktree ownership or surrounding resources changed.');
+  try {
+    if ((await realpath(target)) !== target)
+      throw abandonError(record, 'The managed worktree location changed.');
+  } catch (error) {
+    if (error.code === 'ENOENT' && record.status === 'closed') return false;
+    throw error;
+  }
+  return true;
+}
+
+async function initialAbandonmentInventory(record, custody) {
+  const target = custody.worktreePath;
+  const check = await validateWorktreeCustody(custody, {
+    native: Boolean(record.nativeSelection),
+    inspectStatus: false,
+  });
+  if (
+    !check.valid ||
+    (record.initialHead && record.initialHead !== custody.initialHead) ||
+    (record.initialIndex && record.initialIndex !== custody.initialIndex)
+  )
+    throw abandonError(record, 'The initial worktree HEAD, index or protected contents changed.');
+  const entries = new Map(
+    (await git(target, 'ls-tree', '-r', '-z', custody.initialHead))
+      .toString('utf8')
+      .split('\0')
+      .filter(Boolean)
+      .map((entry) => {
+        const separator = entry.indexOf('\t');
+        return [entry.slice(separator + 1), entry.slice(0, separator)];
+      }),
+  );
+  const paths = new Set(entries.keys());
+  for (const path of Object.keys(custody.startingFiles ?? {})) paths.add(path);
+  const directories = new Set();
+  for (const path of paths) {
+    let ancestor = dirname(path);
+    while (ancestor !== '.') {
+      directories.add(ancestor);
+      ancestor = dirname(ancestor);
+    }
+  }
+  return { entries, paths, directories };
+}
+
+async function assertNoUnknownResources(record, inventory, directory = '') {
+  for (const entry of await readdir(join(record.worktreePath, directory), {
+    withFileTypes: true,
+  })) {
+    const path = directory ? `${directory}/${entry.name}` : entry.name;
+    if (path === '.git') continue;
+    const expected = entry.isDirectory() ? inventory.directories : inventory.paths;
+    if (!expected.has(path)) throw abandonError(record, `An unrecorded resource remains: ${path}.`);
+    if (entry.isDirectory()) await assertNoUnknownResources(record, inventory, path);
+  }
+}
+
+// Reconstruct the initial checkout without trusting Git's untracked/ignored filtering.
+// Any unknown resource is retained, including empty directories and ignored dependencies.
+async function assertUnchangedAbandonment(record, custody) {
+  assertNeverStarted(record);
+  if (!(await abandonmentWorktreeExists(record, custody))) return;
+  const target = custody.worktreePath;
+  const inventory = await initialAbandonmentInventory(record, custody);
+  await assertNoUnknownResources(record, inventory);
+  const objectFormat = (await git(target, 'rev-parse', '--show-object-format'))
+    .toString('utf8')
+    .trim();
+  if (!['sha1', 'sha256'].includes(objectFormat))
+    throw abandonError(record, 'The initial Git object format is unsupported.');
+  for (const path of inventory.paths) {
+    const actual = await captureFileState(target, path);
+    if (
+      !initialContentMatches(
+        actual,
+        custody.startingFiles?.[path],
+        inventory.entries.get(path),
+        objectFormat,
+        custody.initialCheckoutFiles?.[path],
+      )
+    )
+      throw abandonError(record, `Worktree content changed: ${path}.`);
+  }
+}
+
+function initialContentMatches(actual, captured, treeEntry, objectFormat, checkout) {
+  if (captured)
+    return (
+      actual.kind === captured.kind &&
+      (actual.kind === 'absent' ||
+        (actual.kind === 'file' &&
+          actual.contentBase64 === captured.contentBase64 &&
+          Boolean(actual.mode & 0o100) === Boolean(captured.mode & 0o100)) ||
+        (actual.kind === 'symlink' && actual.target === captured.target))
+    );
+  if (checkout)
+    return (
+      actual.kind === 'file' &&
+      checkout.kind === 'file' &&
+      actual.bytes === checkout.bytes &&
+      actual.digest === checkout.digest &&
+      Boolean(actual.mode & 0o100) === Boolean(checkout.mode & 0o100)
+    );
+  const entry = /^(100644|100755|120000) blob ([a-f0-9]+)$/u.exec(treeEntry ?? '');
+  if (!entry) return false;
+  const symlink = entry[1] === '120000';
+  if (actual.kind !== (symlink ? 'symlink' : 'file')) return false;
+  if (!symlink && Boolean(actual.mode & 0o100) !== (entry[1] === '100755')) return false;
+  const bytes = symlink ? Buffer.from(actual.target) : Buffer.from(actual.contentBase64, 'base64');
+  const digest = createHash(objectFormat)
+    .update(`blob ${bytes.length}\0`)
+    .update(bytes)
+    .digest('hex');
+  return digest === entry[2];
+}
+
+export async function abandonDelegateRun({ runId, runDirectory = defaultRunDirectory() } = {}) {
+  return withRunTransitionLock(runId, { directory: runDirectory }, async () => {
+    let record = await readRunRecord(runId, { directory: runDirectory });
+    assertNeverStarted(record);
+    if (record.cleanup?.status === 'removed' || record.cleanup?.status === 'not-created')
+      return record;
+    if (record.worktreePath || record.custodyPath) {
+      if (!record.worktreePath || !record.custodyPath)
+        throw abandonError(record, 'Worktree custody preparation is incomplete.');
+      await assertUnchangedAbandonment(record, await custodyAt(record, runDirectory));
+    }
+    record = await updateRunRecord(
+      runId,
+      { abandonment: { kind: 'never-started', checkedAt: new Date().toISOString() } },
+      { directory: runDirectory },
+    );
+    record = await closeRunRecord(runId, { disposition: 'abandoned', directory: runDirectory });
+    if (record.worktreePath) await cleanupAcceptedWorktree(record, runDirectory);
+    else
+      await updateRunRecord(
+        runId,
+        { cleanup: { status: 'not-created', at: new Date().toISOString() } },
+        { directory: runDirectory },
+      );
+    return readRunRecord(runId, { directory: runDirectory });
+  });
+}
 
 async function executionProcessState(record) {
   const deadlineExpired =
@@ -121,11 +346,17 @@ export async function cleanupAcceptedWorktree(record, runDirectory) {
       'E_DELEGATE_CLEANUP',
       'Only closed runs may remove their owned worktree.',
     );
-  await recoverOwnedProcesses(record, runDirectory);
-  if (record.delegateProcess) await terminateProcessGroup(record.delegateProcess);
+  const unstarted = record.abandonment?.kind === 'never-started';
+  if (unstarted) await assertUnchangedAbandonment(record, await custodyAt(record, runDirectory));
+  else {
+    await recoverOwnedProcesses(record, runDirectory);
+    if (record.delegateProcess) await terminateProcessGroup(record.delegateProcess);
+  }
   const result = await cleanupWorktreeCustody(await custodyAt(record, runDirectory), {
     disposition,
     beforeRemove: async (target) => {
+      if (unstarted)
+        await assertUnchangedAbandonment(record, await custodyAt(record, runDirectory));
       if (
         record.nativeSelection &&
         record.integration?.worktreeIdentity &&
@@ -186,7 +417,7 @@ export async function delegateRunStatus({ runId, runDirectory = defaultRunDirect
     ),
     timings: {
       preparation: record.preparationTiming ?? null,
-      execution: record.executionTiming ?? null,
+      execution: liveExecutionTiming(record),
       verification: record.verification
         ? {
             durationMs: record.verification.durationMs ?? null,

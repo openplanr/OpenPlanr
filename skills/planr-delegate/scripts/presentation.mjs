@@ -1,5 +1,24 @@
 const MAX_VISIBLE_PATHS = 12;
 
+// Persisted totals cover finished attempts. A running attempt contributes its
+// live wall time only to this read projection, never to the stored accumulator.
+export function liveExecutionTiming(record, now = Date.now()) {
+  const timing = record.executionTiming;
+  if (!timing) return null;
+  const started = Date.parse(timing.last?.startedAt);
+  const active =
+    ['running', 'resuming'].includes(record.status) &&
+    timing.last?.status === 'running' &&
+    !timing.last?.finishedAt &&
+    Number.isFinite(started);
+  const liveDurationMs = active ? Math.max(0, now - started) : 0;
+  return {
+    ...timing,
+    durationMs: (Number.isFinite(timing.durationMs) ? timing.durationMs : 0) + liveDurationMs,
+    ...(active ? { live: true, last: { ...timing.last, durationMs: liveDurationMs } } : {}),
+  };
+}
+
 function taskLabel(selector) {
   return selector === undefined
     ? 'Task unavailable'
@@ -59,6 +78,8 @@ export function handoffPresentation(outcome) {
     timing: outcome.record?.executionTiming ?? null,
     status,
     headline,
+    diagnostic: outcome.record?.diagnostic ?? null,
+    progress: outcome.record?.nativeProgress ?? null,
     ...(status === 'question' && outcome.result?.question
       ? { question: outcome.result.question }
       : {}),
@@ -147,6 +168,15 @@ export function runStatusPresentation(record, integration, processState, verific
       nextAction:
         'Source integration is unresolved; run the integration helper recover action for this run before dispatch, resume, review, apply, or abandon.',
     };
+  if (record.abandonment?.kind === 'never-started') {
+    const cleaned = ['removed', 'not-created'].includes(record.cleanup?.status);
+    return {
+      phase: cleaned ? 'abandoned' : 'abandon-cleanup-pending',
+      nextAction: cleaned
+        ? 'The never-started run is closed. Its run record and capsule remain available; prepare a fresh run for new work.'
+        : 'The never-started run is closed, but its worktree remains retained. Inspect the cleanup diagnostic and retry the abandon action after resolving it.',
+    };
+  }
   if (integration.recorded) {
     if (integration.driftPaths.length)
       return {

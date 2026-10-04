@@ -3,6 +3,7 @@
 import { randomUUID } from 'node:crypto';
 import { join } from 'node:path';
 import { AdapterError } from './adapters/generic.mjs';
+import { safeAdapterDetails, safeNativeDiagnostic } from './adapters/native.mjs';
 import {
   blocked,
   boundedText,
@@ -23,6 +24,10 @@ import {
 } from './run-record.mjs';
 
 const SAFE_ADAPTER_DIAGNOSTICS = Object.freeze({
+  E_DESTINATION_UNKNOWN:
+    'Native routing could not be confirmed. Inspect the displayed sources and prepare a fresh preview before dispatch.',
+  E_DESTINATION_CHANGED:
+    'Native routing changed. Compare the displayed destinations and prepare a fresh preview before dispatch.',
   E_ADAPTER_BACKEND_UNAVAILABLE:
     'The configured backend could not serve this run; check model availability and endpoint health.',
   E_ADAPTER_CONFIG:
@@ -34,6 +39,8 @@ const SAFE_ADAPTER_DIAGNOSTICS = Object.freeze({
   E_ADAPTER_LAUNCH: 'The enrolled adapter executable could not start.',
   E_ADAPTER_OUTPUT_LIMIT:
     'Adapter output exceeded its private size limit; inspect the retained worktree.',
+  E_ADAPTER_PROCESS_IDENTITY:
+    'Process identity inspection is unavailable. Restore normal host process inspection before retrying; native permissions were not changed.',
   E_ADAPTER_PERMISSION:
     'Native permission needs attention. Resolve it in the native configuration, then continue this exact session; permissions are never weakened automatically.',
   E_ADAPTER_RESULT:
@@ -41,7 +48,7 @@ const SAFE_ADAPTER_DIAGNOSTICS = Object.freeze({
   E_ADAPTER_MODEL_TEMPLATE:
     'The local backend rejected its chat template. Fix the backend configuration and continue the same session; OpenPlanr does not rewrite messages or templates.',
   E_ADAPTER_AUTHENTICATION:
-    'Authenticate the selected native CLI/provider in your normal terminal, then continue the same session.',
+    'The native CLI reported an authentication failure. Confirm the displayed destination and selected configuration before signing in or continuing this exact session.',
   E_ADAPTER_QUOTA:
     'The native provider reported a quota or rate limit. Retry this exact session when capacity is available.',
   E_ADAPTER_MODEL_UNAVAILABLE:
@@ -146,6 +153,28 @@ function executionDiagnostic(error) {
   };
 }
 
+function eligibilityDiagnostic(error, record) {
+  if (error instanceof DelegateRunError)
+    return {
+      code: error.code,
+      message: error.message,
+      ...(error.details ? { details: error.details } : {}),
+    };
+  if (error instanceof AdapterError) {
+    return {
+      code: error.code,
+      message:
+        SAFE_ADAPTER_DIAGNOSTICS[error.code] ??
+        'The selected native configuration or routing could not be verified. Inspect the displayed sources and prepared selection before retrying.',
+      details: safeAdapterDetails(error.details, record.destination),
+    };
+  }
+  return {
+    code: 'E_DELEGATE_PROFILE',
+    message: 'Profile eligibility failed; inspect enrollment and effective destination.',
+  };
+}
+
 async function execute(record, prepared, options) {
   const startedAt = new Date().toISOString();
   const prior = record.executionTiming ?? { attempts: 0, durationMs: 0 };
@@ -197,6 +226,7 @@ async function executeAttempt(
   const startedAt = Date.now();
   const idleMs = timeout(timeoutMs);
   let lastPersistedActivity = 0;
+  let lastProgressIdentity = null;
   await updateRunRecord(
     record.runId,
     {
@@ -262,8 +292,18 @@ async function executeAttempt(
         timeoutMs,
         onActivity: async (progress) => {
           const now = Date.now();
-          if (progress?.phase !== 'attention' && now - lastPersistedActivity < 5_000) return;
+          const tool = progress?.latestTool;
+          const identity = JSON.stringify([progress?.phase, tool?.name, tool?.state, tool?.files]);
+          const terminal = ['result', 'turn.completed', 'turn.failed'].includes(progress?.event);
+          if (
+            progress?.phase !== 'attention' &&
+            !terminal &&
+            identity === lastProgressIdentity &&
+            now - lastPersistedActivity < 5_000
+          )
+            return;
           lastPersistedActivity = now;
+          lastProgressIdentity = identity;
           await updateRunRecord(
             record.runId,
             {
@@ -299,6 +339,14 @@ async function executeAttempt(
     retained = await updateRunRecord(
       record.runId,
       {
+        diagnostic: {
+          ...diagnostic,
+          ...(error instanceof AdapterError
+            ? {
+                details: safeAdapterDetails(error.details, record.destination),
+              }
+            : {}),
+        },
         delegateTerminationConfirmed: error.processTerminationConfirmed !== false,
         ...(error.ownedProcess ? { delegateProcess: error.ownedProcess } : {}),
       },
@@ -381,6 +429,13 @@ async function finishExecution(record, result, { directory, expectedSession, ret
               message:
                 SAFE_ADAPTER_DIAGNOSTICS[accepted.diagnosticCode] ??
                 'Delegate reported a blocker; inspect its summary and worktree.',
+              ...(accepted.nativeDiagnostic
+                ? {
+                    details: {
+                      native: safeNativeDiagnostic(accepted.nativeDiagnostic, record.destination),
+                    },
+                  }
+                : {}),
             }
           : null,
     },
@@ -409,17 +464,9 @@ async function dispatchRun({
   try {
     prepared = await eligible(record, { runDirectory, profileDirectory, env, signal, timeoutMs });
   } catch (error) {
-    const code = error instanceof DelegateRunError ? error.code : 'E_DELEGATE_PROFILE';
-    const message =
-      error instanceof DelegateRunError
-        ? error.message
-        : 'Profile eligibility failed; inspect enrollment and effective destination.';
-    const retained = await updateRunRecord(
-      runId,
-      { diagnostic: { code, message, ...(error?.details ? { details: error.details } : {}) } },
-      { directory: runDirectory },
-    );
-    return { status: retained.status, runId, record: retained, nextAction: message };
+    const diagnostic = eligibilityDiagnostic(error, record);
+    const retained = await updateRunRecord(runId, { diagnostic }, { directory: runDirectory });
+    return { status: retained.status, runId, record: retained, nextAction: diagnostic.message };
   }
   return execute(record, prepared, {
     directory: runDirectory,
@@ -472,17 +519,9 @@ async function resumeRun({
   try {
     prepared = await eligible(record, { runDirectory, profileDirectory, env, signal, timeoutMs });
   } catch (error) {
-    const code = error instanceof DelegateRunError ? error.code : 'E_DELEGATE_PROFILE';
-    const message =
-      error instanceof DelegateRunError
-        ? error.message
-        : 'Profile eligibility failed; inspect enrollment and effective destination.';
-    const retained = await updateRunRecord(
-      runId,
-      { diagnostic: { code, message, ...(error?.details ? { details: error.details } : {}) } },
-      { directory: runDirectory },
-    );
-    return { status: retained.status, runId, record: retained, nextAction: message };
+    const diagnostic = eligibilityDiagnostic(error, record);
+    const retained = await updateRunRecord(runId, { diagnostic }, { directory: runDirectory });
+    return { status: retained.status, runId, record: retained, nextAction: diagnostic.message };
   }
   await updateRunRecord(
     runId,
