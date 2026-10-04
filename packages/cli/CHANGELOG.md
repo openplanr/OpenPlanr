@@ -1,5 +1,42 @@
 # Changelog
 
+## 2.2640.7
+
+### Patch Changes
+
+- 390d731: New backlog items now end with the supported closing command `planr backlog update <id> --status closed` instead of nonexistent close/promote commands.
+- bd60e33: Keep Codex setup and repairs in the selected native profile, report installed skill paths and separate package/skill versions, and distinguish cached upgrade evidence from a fresh registry check.
+  
+  Runtime updates refresh only the selected coding agent and preserve its saved scope and Codex discovery mode unless a scope change is explicitly requested. Other agents and native profiles keep their managed files and recovery records.
+  
+  Setup failure recovery checks captured and applied file identities before restoring anything, preserving unexpected concurrent edits for inspection.
+- 390d731: Show concise company sign-in and sign-out confirmations, with a simple logout instruction when a sign-in already exists. Keep detailed results available through `--json` and retain recovery warnings.
+- 390d731: Delegate an implementation scope through the signed-in Claude Code, Codex or Cursor CLI. New native runs inherit the selected CLI's trusted configuration, tools, permissions and sandbox controls. Show the engine, model selection, routing, configuration trust and working directory before dispatch. Profiles are optional, native summaries remain readable, and permission requests or denials require attention without weakening the CLI's safeguards. Ordinary Ship remains host-native, and no public delegate CLI command is added.
+  
+  Prepare dependencies once, keep complete readable task context, save focused independent check evidence and show phase timings. Continue only the recorded native session, integrate reviewed changes as an uncommitted diff while preserving concurrent edits, and remove the run's owned worktree after successful integration unless retention was requested. Retained legacy runs use their pinned helpers unchanged; generic adapters remain experimental under their existing protocol.
+- c9c2cf6: Report a Codex session that permits only filesystem reads as needing native permission resolution, retaining its exact session for continuation.
+- f27d487: Make Design Studio notifications dismissible, keep repeated dismissed sync warnings closed, and clear save warnings after a successful retry while preserving unsaved drafts.
+- f27d487: Make local Design Studio previews load selected screens with bounded frames, phase diagnostics and retry. Share authored sources across responsive views, support protected Studio routes and exact service lifecycle, preserve durable feedback and explicit offline imports, and add screen search, actual-size inspection and navigation links. Keep legacy artifact contracts and hosted publication limits compatible.
+- 390d731: Display rendered diagram shapes directly on the studio canvas, remove the white page and shadow, and strengthen neutral shape fills while preserving saved geometry and export bytes.
+- 390d731: Preserve saved skill discovery and installation scopes during doctor repair, reconcile stale managed Codex plugin registrations through native commands, and show grouped repair previews with exact JSON evidence and host restart guidance.
+  
+  Retire the managed Codex plugin when switching both user and project scopes to project skills, while preserving global plugins during project-only setup.
+- 390d731: Use native Claude Code, Codex and Cursor execution for delegation, with optional profiles, plain summaries, focused independent verification and safe owned-worktree cleanup.
+  
+  Allow source expressions and explicit dummy values in delegation context while retaining credential file and token detection.
+  
+  Honor explicit Claude configuration during dispatch and continuation, and safely integrate into linked worktrees on a different filesystem from Git metadata.
+- bd60e33: Keep `planr context` stdout valid JSON for scripts, with its evidence summary on stderr. Limit scoped planning export evidence to stories and tasks under the selected epic while retaining complete unscoped exports.
+- f27d487: Share large designs through resumable, authenticated resource uploads and load only the selected view's resources. Use one compact Studio header with accessible menus, colorful artifact labels, stable canvas mounts and dismissible notices. Preserve drafts and exact feedback retries across interruption, offline use and concurrent tabs. Add separate room read, write and management capabilities, owned server lifecycle commands, safe company publication recovery, a versioned diagram palette and measured text and connector quality diagnostics. Existing saved revisions remain readable; hosted services must adopt the new formats before new clients create them.
+  
+  CLI credentials and company sign-in metadata now honor `PLANR_HOME`. When the selected home has no prior record, private legacy files are copied without changing the originals; existing destination records stay authoritative. Migration receipts prevent deleted records from being imported again. Unsafe or incomplete records require recovery rather than being treated as absent.
+  
+  Trusted preview hosts can opt into review selection without remounting the authored prototype or interrupting its local form state, including canonical Diagram element targets. Native taps on passive Diagram SVG select elements while Review is enabled; returning to Interact restores authored behavior.
+  
+  Keep large canvases responsive across browsers while preserving layout, camera controls and preview state.
+- 390d731: Simplify setup around OpenPlanr skills, show installation destinations and backed-up file replacements, and provide scope-aware recovery guidance without changing existing installation IDs or flags. Project-only Codex setup preserves the existing global plugin configuration.
+- bd60e33: Correct supported Node.js versions to match the installed production dependencies. The CLI now checks support before loading prompt modules and gives an actionable error in startup, setup, doctor, and installers. Pipeline, Artifact, and Design declare their parser's Node.js 20.19 minimum. Standalone Protocol retains its Node.js 20 import contract.
+
 ## 2.2640.6
 ### Patch Changes
 
