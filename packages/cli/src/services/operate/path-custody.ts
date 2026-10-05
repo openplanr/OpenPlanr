@@ -1,6 +1,7 @@
 import type { Dirent, Stats } from 'node:fs';
 import { lstat, readdir, realpath } from 'node:fs/promises';
 import path from 'node:path';
+import { PLANNING_FOLDER } from '../../utils/constants.js';
 
 type CustodyOptions = Readonly<{
   code: string;
@@ -34,7 +35,7 @@ export async function assertOperatePathCustody(
 ): Promise<void> {
   const project = path.resolve(projectDir);
   const selected = path.resolve(target);
-  const planrRoot = path.join(project, '.planr');
+  const planrRoot = path.join(project, PLANNING_FOLDER);
   if (selected !== planrRoot && !selected.startsWith(`${planrRoot}${path.sep}`)) {
     throw custodyError(options);
   }

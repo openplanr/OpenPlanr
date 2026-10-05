@@ -1,4 +1,5 @@
 import type { LinearConfig, OpenPlanrConfig } from '../models/types.js';
+import { CLI_COMMAND } from '../utils/constants.js';
 
 export interface ConfiguredLinearTeam {
   id: string;
@@ -35,7 +36,7 @@ export function resolveConfiguredLinearTeam(
     .map((team) => (team.key ? `${team.name ?? team.key} (${team.key})` : (team.name ?? team.id)))
     .join(', ');
   throw new Error(
-    `Linear team "${selector}" is not configured for this project. Available teams: ${available}. Run \`planr linear init\` to change team access.`,
+    `Linear team "${selector}" is not configured for this project. Available teams: ${available}. Run \`${CLI_COMMAND} linear init\` to change team access.`,
   );
 }
 

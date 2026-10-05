@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto';
 import path from 'node:path';
 import { assertOperatingPlanningProposalV1 } from 'planr-pipeline/operate/planning-bridge-v2';
 import type { OpenPlanrConfig } from '../../models/types.js';
+import { CLI_COMMAND } from '../../utils/constants.js';
 import { loadConfig } from '../config-service.js';
 import { prepareOperatingSpecDraft, resolveSpecDir } from '../spec-service.js';
 import {
@@ -272,7 +273,7 @@ export function buildPlanningHandoffCreation(input: {
     origin: structuredClone(input.origin),
     progress: buildPlanningDeliveryProgress(input.origin),
     nextCommands: Object.freeze([
-      `planr spec show ${input.receipt.specId}`,
+      `${CLI_COMMAND} spec show ${input.receipt.specId}`,
       `$planr:plan ${input.receipt.specId}`,
       `/planr:plan ${input.receipt.specId}`,
     ]),
@@ -344,7 +345,7 @@ export async function readPlanningHandoffTrace(input: {
     origin: structuredClone(origin),
     progress: buildPlanningDeliveryProgress(origin),
     nextCommands: Object.freeze([
-      `planr spec show ${input.specId}`,
+      `${CLI_COMMAND} spec show ${input.specId}`,
       `$planr:plan ${input.specId}`,
       `/planr:plan ${input.specId}`,
     ]),

@@ -829,7 +829,7 @@
     {
       "source": "packages/artifact/lib/artifact/diagram/runtime.mjs",
       "target": "lib/artifact/diagram/runtime.mjs",
-      "sha256": "7dbefc820079e2dfcd655527d005a531b07f81b286c7083c8b9f807037acd750",
+      "sha256": "29152039454c4ce7c82dba66f9f2857f44619e705b531bfc4857f9e091a45494",
       "mode": "644"
     },
     {
@@ -847,7 +847,7 @@
     {
       "source": "packages/artifact/lib/artifact/diagram/share.mjs",
       "target": "lib/artifact/diagram/share.mjs",
-      "sha256": "2c07c58175767809d1595d6cd3101cc4cef233edd65a3800a2ced8bbc755ebad",
+      "sha256": "72599a096a767c639a17ff3c4d41a720b1c22ae0e753de0813767269ee648636",
       "mode": "644"
     },
     {
@@ -901,7 +901,7 @@
     {
       "source": "packages/artifact/lib/artifact/import.mjs",
       "target": "lib/artifact/import.mjs",
-      "sha256": "217309376ff503feb9a610fd007309a5cca00b3f4dc787b219521917fd12c123",
+      "sha256": "10f39342321404d5a2b07aaca94a500137f61b2239e23ed2da5cab4296531eef",
       "mode": "644"
     },
     {
@@ -1057,7 +1057,7 @@
     {
       "source": "packages/artifact/lib/artifact/owner-custody.mjs",
       "target": "lib/artifact/owner-custody.mjs",
-      "sha256": "6779b1a5c314645e86a4eed550b9fbb4c4d28de7fd2ada5134964553d8bc5946",
+      "sha256": "035fcdeb5585de8ae07950d7c08b29438372f4acfd210d970e450f70ce74d893",
       "mode": "644"
     },
     {
@@ -1075,7 +1075,7 @@
     {
       "source": "packages/artifact/lib/artifact/review-server.mjs",
       "target": "lib/artifact/review-server.mjs",
-      "sha256": "205dc6e881a19e346d1e0237bbce8518853ee54bba5489d4e383eacce1b433c1",
+      "sha256": "1626ee12e8adb83f221e1ea728c8c8a6e8c835fee5b3fb0c13fb8673cc229945",
       "mode": "644"
     },
     {

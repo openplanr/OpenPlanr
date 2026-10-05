@@ -5,6 +5,7 @@ import { access, readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { promisify } from 'node:util';
+import { CLI_COMMAND, PLANNING_FOLDER } from './names.mjs';
 
 const execFileAsync = promisify(execFile);
 const LINEAR_UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu;
@@ -109,7 +110,7 @@ async function readJsonInput(value, stdin) {
 }
 
 async function inspectLocal(cwd) {
-  const candidates = ['.planr/config.json', '.openplanr/config.json'];
+  const candidates = [`${PLANNING_FOLDER}/config.json`, '.openplanr/config.json'];
   const roots = [];
   for (const candidate of candidates) {
     try {
@@ -146,7 +147,7 @@ export async function runPortableSync(
   } else if (args.provider === 'linear') {
     throw new IntegrationError(
       'E_SYNC_USAGE',
-      'Linear synchronization runs through a Linear connector or the planr CLI (planr linear push, planr linear sync).',
+      `Linear synchronization runs through a Linear connector or the ${CLI_COMMAND} CLI (${CLI_COMMAND} linear push, ${CLI_COMMAND} linear sync).`,
     );
   } else {
     throw new IntegrationError(

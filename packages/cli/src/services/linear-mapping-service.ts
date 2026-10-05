@@ -3,6 +3,7 @@
  */
 
 import type { LinearMappingTableRow, OpenPlanrConfig } from '../models/types.js';
+import { CLI_COMMAND } from '../utils/constants.js';
 import { listArtifacts, readArtifact } from './artifact-service.js';
 import { buildCascadeOrder } from './cascade-service.js';
 import { isLikelyLinearIssueId } from './linear-service.js';
@@ -23,7 +24,7 @@ function staleNoteForIssueId(raw: string | undefined): string | undefined {
     return undefined;
   }
   if (!isLikelyLinearIssueId(raw)) {
-    return 'stale-id (value does not look like a Linear issue id; re-run `planr linear push`)';
+    return `stale-id (value does not look like a Linear issue id; re-run \`${CLI_COMMAND} linear push\`)`;
   }
   return undefined;
 }

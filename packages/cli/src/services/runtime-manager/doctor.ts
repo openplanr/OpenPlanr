@@ -1,5 +1,6 @@
 import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
+import { CLI_COMMAND, PLANNING_FOLDER } from '../../utils/constants.js';
 import type { OwnedFile } from './global-state.js';
 
 export type RuntimeDoctorDiagnostic = Readonly<{
@@ -55,14 +56,16 @@ export function diagnoseManagedRuntimeFiles(
         ? `${missing.length} managed file(s) are missing`
         : 'Managed runtime files match recorded ownership hashes',
     ...(conflicts.length || missing.length
-      ? { fix: 'Run `planr setup --dry-run`, then explicitly approve repair or rollback.' }
+      ? {
+          fix: `Run \`${CLI_COMMAND} setup --dry-run\`, then explicitly approve repair or rollback.`,
+        }
       : {}),
   };
 }
 
 /** Validates the append-only public provenance surface without inventing repairs. */
 export function diagnoseRuntimeProvenance(projectDir: string): RuntimeDoctorDiagnostic | null {
-  const provenancePath = path.join(projectDir, '.planr', 'provenance.jsonl');
+  const provenancePath = path.join(projectDir, PLANNING_FOLDER, 'provenance.jsonl');
   if (!existsSync(provenancePath)) return null;
   const invalidLines: number[] = [];
   const lines = readFileSync(provenancePath, 'utf8').split(/\r?\n/);

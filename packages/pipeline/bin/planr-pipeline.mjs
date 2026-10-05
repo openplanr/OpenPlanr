@@ -35,6 +35,7 @@ import {
 import { issueInvestigationFixStartCapability } from '../lib/pipeline/investigation-runtime.mjs';
 import { composeRuntimePrompt } from '../lib/pipeline/runtime.mjs';
 import { buildGraph } from '../lib/dashboard/graph-engine.mjs';
+import { CLI_COMMAND, PLANNING_FOLDER } from '../lib/protocol/names.mjs';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const argv = process.argv.slice(2);
@@ -220,14 +221,14 @@ try {
     process.exitCode = result.status ?? 1;
   } else if (command === 'status') {
     closedArguments({ '--json': 'boolean' }, { maxPositionals: 0 });
-    output(buildGraph(join(process.cwd(), '.planr'), { preferNative: true }));
+    output(buildGraph(join(process.cwd(), PLANNING_FOLDER), { preferNative: true }));
   } else if (command === 'sync') {
     closedArguments({ '--json': 'boolean' }, { maxPositionals: 0 });
     output(runSyncAudit({ projectRoot: process.cwd() }));
   } else if (command === 'dashboard') {
     const options = closedArguments({ '--port': 'value', '--no-watch': 'boolean', '--json': 'boolean' }, { maxPositionals: 0 });
     const { startDashboard } = await import('planr-pipeline/dashboard');
-    const dashboard = startDashboard({ planrDir: join(process.cwd(), '.planr'), watch: !options.has('--no-watch'), planningActorId: 'dashboard-local' });
+    const dashboard = startDashboard({ planrDir: join(process.cwd(), PLANNING_FOLDER), watch: !options.has('--no-watch'), planningActorId: 'dashboard-local' });
     const requestedPort = Number(options.get('--port')) || Number(process.env.DASHBOARD_PORT) || 7473;
     const port = await dashboard.listen(requestedPort);
     output({ ok: true, url: `http://127.0.0.1:${port}/`, pid: dashboard.ownerPid, reused: dashboard.reused });
@@ -384,13 +385,13 @@ try {
         throw new PipelineError(
           'E_LANDING_OWNER_INTERACTIVE_REQUIRED',
           'Landing advance is owner-only and requires one trusted interactive non-JSON process.',
-          'Run `planr land advance` directly through OpenPlanr in an attached terminal.',
+          `Run \`${CLI_COMMAND} land advance\` directly through OpenPlanr in an attached terminal.`,
         );
       }
       trustedRuntimeRequired(
         'E_LANDING_TRUSTED_HOST_REQUIRED',
         'Landing advance',
-        'Run `planr land advance` through OpenPlanr so trusted local custody can persist intent before issuing the bounded runtime capability.',
+        `Run \`${CLI_COMMAND} land advance\` through OpenPlanr so trusted local custody can persist intent before issuing the bounded runtime capability.`,
       );
     }
     const receiptHash = parsed.get('--receipt-hash');

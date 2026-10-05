@@ -39,6 +39,7 @@ function buildCheckout(version) {
     'lib/artifact/internal/planr-home.mjs',
     'lib/ecosystem',
     'lib/protocol/jcs.mjs',
+    'lib/protocol/names.mjs',
     'schemas/v1.0.0',
     'scripts/doctor.mjs',
   ]) {

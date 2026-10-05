@@ -4,6 +4,7 @@ import { lstatSync, readdirSync, readFileSync, readlinkSync, realpathSync } from
 import { basename, isAbsolute, join, relative, resolve, sep } from 'node:path';
 
 import { sha256Jcs } from '../protocol/jcs.mjs';
+import { PLANNING_FOLDER } from '../protocol/names.mjs';
 import { PipelineError } from './errors.mjs';
 
 function fail(code, message, fix = '', details = undefined) {
@@ -25,7 +26,9 @@ function compareCanonical(left, right) {
 function isPlanningArtifact(path) {
   const normalized = posix(path);
   if (
-    !(normalized.startsWith('.planr/specs/') || normalized.startsWith('output/feats/')) ||
+    !(
+      normalized.startsWith(`${PLANNING_FOLDER}/specs/`) || normalized.startsWith('output/feats/')
+    ) ||
     !normalized.endsWith('.md')
   )
     return false;
@@ -207,9 +210,9 @@ const INTERNAL_CANDIDATE_NAMES = new Set([
 function isInternalCandidatePath(path) {
   const normalized = posix(path);
   const planningRuntimePath =
-    normalized.startsWith('.planr/specs/') || normalized.startsWith('output/feats/');
+    normalized.startsWith(`${PLANNING_FOLDER}/specs/`) || normalized.startsWith('output/feats/');
   return (
-    normalized === '.planr/provenance.jsonl' ||
+    normalized === `${PLANNING_FOLDER}/provenance.jsonl` ||
     (planningRuntimePath &&
       (normalized.includes('/.ship/') || INTERNAL_CANDIDATE_NAMES.has(basename(normalized))))
   );

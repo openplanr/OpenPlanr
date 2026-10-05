@@ -16,6 +16,7 @@
 import { appendFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import type { ReviseAudit, ReviseAuditEntry, ReviseAuditFormat } from '../models/types.js';
+import { PLANNING_FOLDER } from '../utils/constants.js';
 
 export interface AuditLogWriterOptions {
   projectDir: string;
@@ -96,7 +97,7 @@ function defaultAuditPath(options: AuditLogWriterOptions): string {
   const date = options.dateStamp ?? toIsoDate(new Date());
   const ext = options.format === 'json' ? 'json' : 'md';
   const file = `revise-${options.scope}-${date}.${ext}`;
-  return path.join(options.projectDir, '.planr', 'reports', file);
+  return path.join(options.projectDir, PLANNING_FOLDER, 'reports', file);
 }
 
 function toIsoDate(d: Date): string {

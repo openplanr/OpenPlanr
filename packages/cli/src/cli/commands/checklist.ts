@@ -11,6 +11,7 @@ import {
 } from '../../services/checklist-service.js';
 import { loadConfig } from '../../services/config-service.js';
 import { promptCheckbox } from '../../services/prompt-service.js';
+import { CLI_COMMAND } from '../../utils/constants.js';
 import { writeFile } from '../../utils/fs.js';
 import { display, logger } from '../../utils/logger.js';
 
@@ -47,7 +48,9 @@ export function registerChecklistCommand(program: Command) {
 
   checklist
     .command('toggle [items...]')
-    .description('Toggle checklist items (e.g., `planr checklist toggle 1 3 5` or interactive)')
+    .description(
+      `Toggle checklist items (e.g., \`${CLI_COMMAND} checklist toggle 1 3 5\` or interactive)`,
+    )
     .action(async (itemArgs: string[]) => {
       const projectDir = program.opts().projectDir as string;
       const config = await loadConfig(projectDir);
@@ -82,7 +85,7 @@ export function registerChecklistCommand(program: Command) {
           logger.warn(`Ignored invalid item(s): ${invalid.join(', ')}`);
         }
         if (toToggle.size === 0) {
-          logger.error('No valid item numbers. Use: planr checklist toggle 1 3 5');
+          logger.error(`No valid item numbers. Use: ${CLI_COMMAND} checklist toggle 1 3 5`);
           return;
         }
       } else {

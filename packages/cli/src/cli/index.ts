@@ -4,6 +4,7 @@ import { ConfigNotFoundError, findProjectRoot, loadConfig } from '../services/co
 import { setNonInteractive } from '../services/interactive-state.js';
 import { RuntimeManagerError } from '../services/runtime-manager-service.js';
 import { maybeOfferUpgrade, upgradeOfferReachable } from '../services/upgrade-offer-service.js';
+import { CLI_COMMAND } from '../utils/constants.js';
 import { display, logger, setVerbose } from '../utils/logger.js';
 import { OPENPLANR_VERSION } from '../utils/package-version.js';
 import { registerCliCommands } from './commands/index.js';
@@ -13,7 +14,7 @@ const version = OPENPLANR_VERSION;
 
 const program = new Command();
 program
-  .name('planr')
+  .name(CLI_COMMAND)
   .description('OpenPlanr deterministic utilities and integration CLI')
   .version(version)
   .option('--project-dir <path>', 'project root directory', findProjectRoot())
@@ -120,7 +121,7 @@ program.parseAsync(process.argv).catch((err) => {
     display.line('');
     logger.warn('No OpenPlanr project found in this directory.');
     display.line('');
-    display.line('  Run `planr init` to get started.');
+    display.line(`  Run \`${CLI_COMMAND} init\` to get started.`);
     display.line('');
     process.exitCode = 1;
     return;

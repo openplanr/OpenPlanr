@@ -20,6 +20,7 @@ import {
 } from 'node:fs/promises';
 import path from 'node:path';
 import { performance } from 'node:perf_hooks';
+import { PLANNING_FOLDER } from '../../utils/constants.js';
 import { assertOperatePathCustody, assertOperateTreeCustody } from './path-custody.js';
 import { withOperateProjectTransaction } from './project-transaction-lock.js';
 
@@ -625,12 +626,12 @@ export class OperateStore {
     this.projectDir = path.resolve(projectDir);
     this.root = options.root
       ? path.resolve(options.root)
-      : path.join(this.projectDir, '.planr', 'operate', 'state');
-    const planrRoot = path.join(this.projectDir, '.planr');
+      : path.join(this.projectDir, PLANNING_FOLDER, 'operate', 'state');
+    const planrRoot = path.join(this.projectDir, PLANNING_FOLDER);
     if (this.root !== planrRoot && !this.root.startsWith(`${planrRoot}${path.sep}`)) {
       throw new OperateStoreError(
         'OPERATE_STORE_INCOMPATIBLE',
-        'Operate storage roots must remain inside the project-local .planr boundary.',
+        `Operate storage roots must remain inside the project-local ${PLANNING_FOLDER} boundary.`,
       );
     }
   }
@@ -638,8 +639,7 @@ export class OperateStore {
   private async assertStorageCustody(requireDirectory = false): Promise<void> {
     const options = {
       code: 'OPERATE_STORE_INCOMPATIBLE',
-      message:
-        'Operate storage custody cannot traverse symbolic links or leave project-local .planr.',
+      message: `Operate storage custody cannot traverse symbolic links or leave project-local ${PLANNING_FOLDER}.`,
       requireDirectory,
     } as const;
     await assertOperatePathCustody(this.projectDir, this.root, options);
@@ -1458,11 +1458,10 @@ export class OperateStore {
 
   private async projectIdentity(): Promise<string> {
     const resolved = await realpath(this.projectDir).catch(() => this.projectDir);
-    const configPath = path.join(this.projectDir, '.planr', 'config.json');
+    const configPath = path.join(this.projectDir, PLANNING_FOLDER, 'config.json');
     await assertOperatePathCustody(this.projectDir, configPath, {
       code: 'OPERATE_STORE_INCOMPATIBLE',
-      message:
-        'Operate project identity cannot read configuration through symbolic links or outside project-local .planr.',
+      message: `Operate project identity cannot read configuration through symbolic links or outside project-local ${PLANNING_FOLDER}.`,
       requireFile: true,
     });
     let config: unknown = null;

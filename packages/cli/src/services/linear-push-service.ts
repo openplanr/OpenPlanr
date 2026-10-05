@@ -8,6 +8,7 @@
 
 import type { LinearClient } from '@linear/sdk';
 import type { LinearMappingStrategy, OpenPlanrConfig, TaskStatus } from '../models/types.js';
+import { CLI_COMMAND, PLANNING_FOLDER } from '../utils/constants.js';
 import { logger } from '../utils/logger.js';
 import {
   findArtifactTypeById,
@@ -760,13 +761,13 @@ async function pushEpicScope(
   // migrate an epic to a different mapping.
   if (stored && override?.strategy && override.strategy !== stored) {
     throw new Error(
-      `Epic ${epic.id} is already mapped as '${stored}'. Re-strategizing to '${override.strategy}' is not supported in this release. Use \`planr linear unlink ${epic.id}\` + re-push once that command arrives.`,
+      `Epic ${epic.id} is already mapped as '${stored}'. Re-strategizing to '${override.strategy}' is not supported in this release. Use \`${CLI_COMMAND} linear unlink ${epic.id}\` + re-push once that command arrives.`,
     );
   }
 
   if (updateOnly && !epic.linearProjectId) {
     throw new Error(
-      'Cannot use --update-only: this epic has no `linearProjectId` in frontmatter. Run `planr linear push` without --update-only once to create the Linear project.',
+      `Cannot use --update-only: this epic has no \`linearProjectId\` in frontmatter. Run \`${CLI_COMMAND} linear push\` without --update-only once to create the Linear project.`,
     );
   }
 
@@ -840,7 +841,7 @@ async function pushEpicScope(
     const label = await ensureIssueLabel(client, {
       teamId,
       name: epicName,
-      description: `OpenPlanr epic ${epic.id} (auto-created by \`planr linear push\`).`,
+      description: `OpenPlanr epic ${epic.id} (auto-created by \`${CLI_COMMAND} linear push\`).`,
     });
     await updateArtifactFields(projectDir, config, 'epic', epic.id, {
       linearProjectId: targetProjectId,
@@ -975,7 +976,7 @@ async function pushFeatureScope(
       }
     } else {
       throw new Error(
-        `Parent epic ${ctx.epic.id} has not been pushed to Linear yet. Run \`planr linear push ${ctx.epic.id}\` first, or re-run with \`--push-parents\`.`,
+        `Parent epic ${ctx.epic.id} has not been pushed to Linear yet. Run \`${CLI_COMMAND} linear push ${ctx.epic.id}\` first, or re-run with \`--push-parents\`.`,
       );
     }
   }
@@ -1041,7 +1042,7 @@ async function pushStoryScope(
       }
     } else {
       throw new Error(
-        `Parent feature ${ctx.sf.data.id} has not been pushed to Linear yet. Run \`planr linear push ${ctx.sf.data.id}\` first, or re-run with \`--push-parents\`.`,
+        `Parent feature ${ctx.sf.data.id} has not been pushed to Linear yet. Run \`${CLI_COMMAND} linear push ${ctx.sf.data.id}\` first, or re-run with \`--push-parents\`.`,
       );
     }
   }
@@ -1049,7 +1050,7 @@ async function pushStoryScope(
   // Ensure parent epic also has a Linear project — required for the story's `projectId`.
   if (!ctx.epic.linearProjectId) {
     throw new Error(
-      `Parent epic ${ctx.epic.id} has no \`linearProjectId\`. Run \`planr linear push ${ctx.epic.id}\` first.`,
+      `Parent epic ${ctx.epic.id} has no \`linearProjectId\`. Run \`${CLI_COMMAND} linear push ${ctx.epic.id}\` first.`,
     );
   }
 
@@ -1121,13 +1122,13 @@ async function pushTaskFileScope(
       }
     } else {
       throw new Error(
-        `Parent feature ${ctx.sf.data.id} has not been pushed to Linear yet. Run \`planr linear push ${ctx.sf.data.id}\` first, or re-run with \`--push-parents\`.`,
+        `Parent feature ${ctx.sf.data.id} has not been pushed to Linear yet. Run \`${CLI_COMMAND} linear push ${ctx.sf.data.id}\` first, or re-run with \`--push-parents\`.`,
       );
     }
   }
   if (!ctx.epic.linearProjectId) {
     throw new Error(
-      `Parent epic ${ctx.epic.id} has no \`linearProjectId\`. Run \`planr linear push ${ctx.epic.id}\` first.`,
+      `Parent epic ${ctx.epic.id} has no \`linearProjectId\`. Run \`${CLI_COMMAND} linear push ${ctx.epic.id}\` first.`,
     );
   }
 
@@ -1214,13 +1215,13 @@ async function resolveQuickOrBacklogContext(
         const refreshed = await loadLinearPushScope(projectDir, config, linkedEpicId);
         if (!refreshed?.epic.linearProjectId) {
           throw new Error(
-            `Pushed epic ${linkedEpicId} via --push-parents but no linearProjectId was written back. Re-run \`planr linear push ${linkedEpicId}\` to repair.`,
+            `Pushed epic ${linkedEpicId} via --push-parents but no linearProjectId was written back. Re-run \`${CLI_COMMAND} linear push ${linkedEpicId}\` to repair.`,
           );
         }
         return { kind: 'resolved', ctx: contextFromMappedEpic(refreshed.epic, config) };
       }
       throw new Error(
-        `${artifactId} is linked to epic ${linkedEpicId}, which has not been pushed to Linear yet. Run \`planr linear push ${linkedEpicId}\` first, or re-run with \`--push-parents\`.`,
+        `${artifactId} is linked to epic ${linkedEpicId}, which has not been pushed to Linear yet. Run \`${CLI_COMMAND} linear push ${linkedEpicId}\` first, or re-run with \`--push-parents\`.`,
       );
     }
     return { kind: 'resolved', ctx: contextFromMappedEpic(epicScope.epic, config) };
@@ -1230,7 +1231,7 @@ async function resolveQuickOrBacklogContext(
   const standaloneId = config.linear?.standaloneProjectId;
   if (!standaloneId) {
     throw new Error(
-      `No Linear container resolved for ${artifactId}: no \`epicId\` on the artifact and no \`linear.standaloneProjectId\` configured. Either add \`epicId: "EPIC-XXX"\` to the frontmatter (and push that epic first), or run \`planr linear push ${artifactId}\` interactively once to pick a standalone project, or set \`linear.standaloneProjectId\` in \`.planr/config.json\`.`,
+      `No Linear container resolved for ${artifactId}: no \`epicId\` on the artifact and no \`linear.standaloneProjectId\` configured. Either add \`epicId: "EPIC-XXX"\` to the frontmatter (and push that epic first), or run \`${CLI_COMMAND} linear push ${artifactId}\` interactively once to pick a standalone project, or set \`linear.standaloneProjectId\` in \`${PLANNING_FOLDER}/config.json\`.`,
     );
   }
   return { kind: 'resolved', ctx: { strategy: 'project', projectId: standaloneId } };
@@ -1516,7 +1517,7 @@ export async function runLinearPush(
 ): Promise<LinearPushPlan | null> {
   const teamId = config.linear?.teamId;
   if (!teamId) {
-    throw new Error('`linear.teamId` is not set. Run `planr linear init` first.');
+    throw new Error(`\`linear.teamId\` is not set. Run \`${CLI_COMMAND} linear init\` first.`);
   }
   const leadId = config.linear?.defaultProjectLead;
   const opts: LinearPushOptions = options ?? {};
@@ -1539,7 +1540,7 @@ export async function runLinearPush(
   }
   if (type === 'sprint' || type === 'adr' || type === 'checklist') {
     throw new Error(
-      `planr linear push does not support ${type}s in this release. Push its parent epic instead: planr linear push <EPIC-ID>.`,
+      `${CLI_COMMAND} linear push does not support ${type}s in this release. Push its parent epic instead: ${CLI_COMMAND} linear push <EPIC-ID>.`,
     );
   }
 

@@ -25,6 +25,17 @@
       "executable": true
     },
     {
+      "path": "scripts/names.mjs",
+      "kind": "script",
+      "hosts": [
+        "claude-code",
+        "codex",
+        "chatgpt",
+        "cursor"
+      ],
+      "executable": false
+    },
+    {
       "path": "agents/openai.yaml",
       "kind": "agent-metadata",
       "hosts": [

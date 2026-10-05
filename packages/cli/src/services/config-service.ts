@@ -2,7 +2,7 @@ import { existsSync } from 'node:fs';
 import path from 'node:path';
 import { configSchema } from '../models/schema.js';
 import type { OpenPlanrConfig } from '../models/types.js';
-import { CONFIG_FILENAME } from '../utils/constants.js';
+import { CLI_COMMAND, CONFIG_FILENAME, PLANNING_FOLDER } from '../utils/constants.js';
 import { describeSchemaIssues } from '../utils/external-json.js';
 import { fileExists, readFile, writeFile } from '../utils/fs.js';
 import { logger } from '../utils/logger.js';
@@ -52,7 +52,7 @@ export async function loadConfig(projectDir: string): Promise<OpenPlanrConfig> {
     throw new ConfigInvalidError(
       'E_CONFIG_INVALID',
       `${configPath} does not satisfy the OpenPlanr config schema — ${describeSchemaIssues(result.error)}`,
-      'Add the field(s) named above, or re-create the file with `planr init`.',
+      `Add the field(s) named above, or re-create the file with \`${CLI_COMMAND} init\`.`,
     );
   }
   return result.data;
@@ -90,7 +90,7 @@ export function createDefaultConfig(projectName: string): OpenPlanrConfig {
     projectName,
     targets: ['cursor', 'claude', 'codex'],
     outputPaths: {
-      agile: '.planr',
+      agile: PLANNING_FOLDER,
       cursorRules: '.cursor/rules',
       claudeConfig: '.',
       codexConfig: '.',

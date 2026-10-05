@@ -12,6 +12,7 @@ import {
   recordRefinement,
   SprintRefinementError,
 } from '../../services/sprint-refinement-service.js';
+import { CLI_COMMAND } from '../../utils/constants.js';
 import { display, logger } from '../../utils/logger.js';
 import { requireArtifactId } from '../helpers/artifact-id.js';
 
@@ -133,7 +134,7 @@ export function registerSprintRefinementCommands(
         throw new SprintRefinementError(
           'E_SPRINT_REFINEMENT_MISSING',
           `No refinement document for ${missing.join(' and ')}.`,
-          'Run planr sprint refinement <id> --data <refinement.json> for each sprint first.',
+          `Run ${CLI_COMMAND} sprint refinement <id> --data <refinement.json> for each sprint first.`,
         );
       }
       const diff = diffRefinements(before, after);

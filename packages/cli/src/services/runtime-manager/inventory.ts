@@ -2,6 +2,7 @@ import { spawnSync } from 'node:child_process';
 import { accessSync, constants, existsSync, readFileSync, statSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { PLANNING_FOLDER } from '../../utils/constants.js';
 
 export type RuntimeId = 'claude-code' | 'codex' | 'cursor';
 
@@ -89,7 +90,7 @@ function detectCommand(command: string): boolean {
 /** Owns project and installed-runtime discovery without mutating setup state. */
 export function inspectRuntimeProjectContext(projectDir: string): RuntimeProjectContext {
   const resolved = path.resolve(projectDir);
-  if (existsSync(path.join(resolved, '.planr', 'config.json'))) {
+  if (existsSync(path.join(resolved, PLANNING_FOLDER, 'config.json'))) {
     return { valid: true, path: resolved, reason: 'planr' };
   }
   const git = spawnSync('git', ['rev-parse', '--is-inside-work-tree'], {

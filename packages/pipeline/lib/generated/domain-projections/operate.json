@@ -61,7 +61,7 @@
     {
       "source": "packages/operate/lib/operate/contracts/operate-adapter-skills.mjs",
       "target": "lib/operate/contracts/operate-adapter-skills.mjs",
-      "sha256": "511fb33289f1e4e6d3f2fd0ed2493324c1e78b2420b94d8fde355ef44eb0d8c7",
+      "sha256": "e65311acc3bea52f4802f7469e5967e3e091c392a500b7ceb27dd2f34c1f0197",
       "mode": "644"
     },
     {
@@ -91,7 +91,7 @@
     {
       "source": "packages/operate/lib/operate/evidence-filesystem-v2.mjs",
       "target": "lib/operate/evidence-filesystem-v2.mjs",
-      "sha256": "622c3091430789af6915c798d7dd5ef27fd0b3f46f0769060ba272c05574460e",
+      "sha256": "b2c4ac14aef53e92a9162df79c5df35c03dbaa5f539d198bdf5feb357551a2ca",
       "mode": "644"
     },
     {
@@ -115,7 +115,7 @@
     {
       "source": "packages/operate/lib/operate/evidence-planr-v2.mjs",
       "target": "lib/operate/evidence-planr-v2.mjs",
-      "sha256": "3b5e783fc72a298f4449bc070eaaa1c9f68aa6eb5bf1b4bc93dc0f6a8bef4268",
+      "sha256": "e042aaaec9492331e01499bdd8db234a7724a4f1842948825769c459f9f73969",
       "mode": "644"
     },
     {

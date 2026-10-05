@@ -2,6 +2,7 @@ import { createHash, randomUUID } from 'node:crypto';
 import { lstat, readFile, realpath } from 'node:fs/promises';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
+import { CLI_COMMAND } from '../utils/constants.js';
 import { openDiagramOwner } from './diagram-artifact-service.js';
 import { DiagramCommandError } from './diagram-pipeline-service.js';
 import { resolvePipelinePackage } from './pipeline-package-service.js';
@@ -303,7 +304,7 @@ export async function applyDiagramTransaction(
       previewToken,
       diff: preview.diff,
       impact: preview.impact,
-      nextAction: `planr diagram apply ${input} --transaction ${transactionFile} --accept ${previewToken}`,
+      nextAction: `${CLI_COMMAND} diagram apply ${input} --transaction ${transactionFile} --accept ${previewToken}`,
     };
   if (accept !== previewToken)
     throw new DiagramAuthoringError(

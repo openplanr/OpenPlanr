@@ -1,6 +1,7 @@
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { CliBoundaryError, toCliFailureEnvelope } from '../cli/error-boundary.js';
+import { CLI_COMMAND } from '../utils/constants.js';
 import { resolvePipelinePackage } from './pipeline-package-service.js';
 
 export interface ManagedStudioInstance {
@@ -56,7 +57,7 @@ async function runtime(): Promise<StudioApi> {
   const pipeline = resolvePipelinePackage(true);
   if (!pipeline)
     throw new CliBoundaryError('E_SERVER_RUNTIME_MISSING', 'The Studio runtime is unavailable.', {
-      recovery: 'Run planr doctor to inspect your installation.',
+      recovery: `Run ${CLI_COMMAND} doctor to inspect your installation.`,
     });
   const api = (await import(
     pathToFileURL(path.join(pipeline.root, 'lib/artifact/review-server.mjs')).href
@@ -93,7 +94,7 @@ export async function stopManagedServer(instanceId: string): Promise<Record<stri
   if (!/^[A-Za-z0-9_-]{22}$/u.test(instanceId))
     throw new CliBoundaryError(
       'E_SERVER_INSTANCE_REQUIRED',
-      'Choose the Studio instance shown by planr server list.',
+      `Choose the Studio instance shown by ${CLI_COMMAND} server list.`,
       { recovery: 'Use its instance ID; ports and process IDs are not shutdown authority.' },
     );
   const daemon = await designRuntime();
@@ -103,7 +104,7 @@ export async function stopManagedServer(instanceId: string): Promise<Record<stri
       throw new CliBoundaryError(
         'E_SERVER_INSTANCE_CHANGED',
         'The design daemon instance changed before it could be stopped.',
-        { recovery: 'Run planr server list and choose its current instance ID.' },
+        { recovery: `Run ${CLI_COMMAND} server list and choose its current instance ID.` },
       );
     return { status: 'stopping' };
   }
@@ -136,15 +137,16 @@ function validateSelection(selection: ManagedServerSelection): void {
     throw new CliBoundaryError(
       'E_SERVER_SELECTOR_INVALID',
       'Choose one recorded instance or port, --all, or --project <directory>.',
-      { recovery: 'Run planr server list to inspect owned services before choosing a selector.' },
+      {
+        recovery: `Run ${CLI_COMMAND} server list to inspect owned services before choosing a selector.`,
+      },
     );
   if (selection.all && selection.project === undefined && !selection.yes)
     throw new CliBoundaryError(
       'E_SERVER_CONFIRMATION_REQUIRED',
       'Stopping all owned local services requires --yes.',
       {
-        recovery:
-          'Inspect planr server list, then use server stop --all --yes or filter by --project.',
+        recovery: `Inspect ${CLI_COMMAND} server list, then use server stop --all --yes or filter by --project.`,
       },
     );
   if (
@@ -155,7 +157,7 @@ function validateSelection(selection: ManagedServerSelection): void {
     throw new CliBoundaryError(
       'E_SERVER_SELECTOR_INVALID',
       'The server selector must be a recorded instance ID or a port from 1 to 65535.',
-      { recovery: 'Run planr server list and choose its instance ID or recorded port.' },
+      { recovery: `Run ${CLI_COMMAND} server list and choose its instance ID or recorded port.` },
     );
 }
 
@@ -177,13 +179,15 @@ export function selectManagedServerInstances(
       throw new CliBoundaryError(
         'E_SERVER_SELECTOR_AMBIGUOUS',
         'More than one owned instance matches this selector.',
-        { recovery: 'Run planr server list and stop the exact instance ID instead.' },
+        { recovery: `Run ${CLI_COMMAND} server list and stop the exact instance ID instead.` },
       );
     if (!selected.length)
       throw new CliBoundaryError(
         'E_SERVER_SELECTION_EMPTY',
         'No currently owned local service matches this selector.',
-        { recovery: 'Run planr server list again; never stop another process by its port or PID.' },
+        {
+          recovery: `Run ${CLI_COMMAND} server list again; never stop another process by its port or PID.`,
+        },
       );
   } else if (selection.project !== undefined) {
     const projectRoot = path.resolve(selection.project);
@@ -210,8 +214,7 @@ export async function stopManagedServers(
     } catch (error) {
       const failure = toCliFailureEnvelope(error, {
         code: 'E_SERVER_STOP_FAILED',
-        problem:
-          'The owned service could not be stopped. Run planr server list and retry its current instance.',
+        problem: `The owned service could not be stopped. Run ${CLI_COMMAND} server list and retry its current instance.`,
       });
       batch.failures.push({
         instanceId: instance.instanceId,

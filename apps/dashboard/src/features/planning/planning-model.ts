@@ -1,3 +1,4 @@
+import { PLANNING_FOLDER } from '@openplanr/protocol/names';
 import { canonicalDashboardHref } from '../../app/router.js';
 
 /**
@@ -747,7 +748,7 @@ export function planningActivityEntry<Node extends PlanningModelNode>(
       status: activityStatus(node.status),
       id: node.id,
       text: `${node.id} → ${node.status || (added ? 'added' : 'updated')}`,
-      actor: actor ? String(actor) : '.planr/ change',
+      actor: actor ? String(actor) : `${PLANNING_FOLDER}/ change`,
     });
   }
   const removed = patch.removed[0];
@@ -758,7 +759,7 @@ export function planningActivityEntry<Node extends PlanningModelNode>(
     status: 'outstanding',
     id,
     text: `${id} removed`,
-    actor: '.planr/ change',
+    actor: `${PLANNING_FOLDER}/ change`,
   });
 }
 

@@ -14,12 +14,13 @@ import { isAbsolute, join, relative, resolve, sep } from 'node:path';
 
 import { verifyDocumentDigest, withDocumentDigest } from '@openplanr/protocol/canonical-json';
 import { validateProtocolArtifact } from '@openplanr/protocol/contracts';
+import { PLANNING_FOLDER } from '@openplanr/protocol/names';
 
 import { resolveDataFeatureConsent } from './consent.mjs';
 import { prepareLifecycleEnvironment } from './environment.mjs';
 import { assertIsoDate, assertNonBlank, freezeJson, hasOwn } from './internal.mjs';
 
-export const LOCAL_LEARNING_PATH = '.planr/runtime/skill-learning.jsonl';
+export const LOCAL_LEARNING_PATH = `${PLANNING_FOLDER}/runtime/skill-learning.jsonl`;
 
 const CATEGORIES = new Set(['context', 'review', 'implementation', 'diagnostic']);
 const PREPARED_LEARNING_RESULTS = new WeakSet();
@@ -255,7 +256,7 @@ export function persistLearningRecord({
   let descriptor;
   try {
     const root = realpathSync(resolve(environment.projectRoot));
-    const directory = prepareLocalDirectory(root, '.planr/runtime');
+    const directory = prepareLocalDirectory(root, `${PLANNING_FOLDER}/runtime`);
     if (!directory) {
       return freezeJson({ status: 'blocked', path: null, reason: 'learning-destination-denied' });
     }

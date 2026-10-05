@@ -25,6 +25,7 @@ import {
   listArtifactReviewServers,
 } from '@openplanr/artifact/review-server.mjs';
 import { ARTIFACT_ERROR_CODES, PipelineError } from '@openplanr/protocol/errors';
+import { PLANNING_FOLDER } from '@openplanr/protocol/names';
 import { listDesignRevisions, readDesignRevision, reviewDigest } from './context.mjs';
 import { prepareDesignPlanHandoff } from './design-plan-handoff.mjs';
 import {
@@ -292,7 +293,7 @@ function validateState(value, current) {
 function projectRoot(root) {
   let candidate = root;
   while (true) {
-    if (existsSync(join(candidate, '.planr')) || existsSync(join(candidate, '.git')))
+    if (existsSync(join(candidate, PLANNING_FOLDER)) || existsSync(join(candidate, '.git')))
       return candidate;
     const parent = dirname(candidate);
     if (parent === candidate) return root;
@@ -399,7 +400,7 @@ function proposeImplementationPackage(file, env) {
 }
 
 async function persistDesignTaste(current, state) {
-  const path = join(projectRoot(current.root), '.planr/design-system/taste.json');
+  const path = join(projectRoot(current.root), `${PLANNING_FOLDER}/design-system/taste.json`);
   const release = await acquireStartLock(`${path}.lock`);
   try {
     const taste = readJson(path, { designs: {} });

@@ -23,6 +23,7 @@ import {
 import { tmpdir } from 'node:os';
 import { dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { PLANNING_FOLDER } from '../lib/protocol/names.mjs';
 
 const repositoryRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -394,7 +395,7 @@ const textExtensions = new Set([
   '.yml',
 ]);
 const privatePathFragments = [
-  ['.planr', 'products', 'operate-2.0'].join('/'),
+  [PLANNING_FOLDER, 'products', 'operate-2.0'].join('/'),
   ['docs', 'operate-2.0'].join('/'),
 ];
 const privateContentPatterns = [
@@ -792,7 +793,7 @@ export function checkOperateRuntimePurity(root = repositoryRoot) {
     const relativePath = entry.path.replaceAll('\\', '/');
     try {
       if (
-        relativePath.startsWith('.planr/') ||
+        relativePath.startsWith(`${PLANNING_FOLDER}/`) ||
         relativePath.startsWith('tests/') ||
         relativePath.startsWith('node_modules/') ||
         relativePath.startsWith('.env') ||

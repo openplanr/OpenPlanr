@@ -1,3 +1,4 @@
+import type { PLANNING_FOLDER } from '@openplanr/protocol/names';
 import type {
   GuidedQuestion,
   HeadlessQuestionPolicy,
@@ -8,6 +9,8 @@ import type {
   RepositoryContext,
   RuntimeCapabilityReport,
 } from '../resolver/index.mjs';
+
+type RuntimeDirectory = `${typeof PLANNING_FOLDER}/runtime`;
 
 export type CompletionStatus = 'completed' | 'partial' | 'blocked' | 'unavailable' | 'cancelled';
 export type CheckStatus = 'passed' | 'failed' | 'not-run';
@@ -208,7 +211,7 @@ export interface LifecycleEnvironment {
   readonly status: 'completed' | 'partial';
   readonly projectRoot: string;
   readonly repository: boolean;
-  readonly runtimePath: '.planr/runtime';
+  readonly runtimePath: RuntimeDirectory;
   readonly runtimeIgnored: boolean;
   readonly stateExists: boolean;
   readonly stateAvailable: boolean;
@@ -285,11 +288,11 @@ export declare const COMPLETION_STATUSES: readonly CompletionStatus[];
 export declare const DATA_FEATURES: readonly DataFeature[];
 export declare const OPERATION_CLASSES: readonly OperationClass[];
 export declare const DEFAULT_LIFECYCLE_SETTINGS: Readonly<LifecycleSettings>;
-export declare const LOCAL_LEARNING_PATH: '.planr/runtime/skill-learning.jsonl';
-export declare const LIFECYCLE_CONFIGURATION_PATH: '.planr/runtime/skill-runtime.json';
-export declare const LIFECYCLE_IGNORE_RULE: '.planr/runtime/';
-export declare const LIFECYCLE_RUNTIME_DIRECTORY: '.planr/runtime';
-export declare const LIFECYCLE_SESSION_DIRECTORY: '.planr/runtime/skill-sessions';
+export declare const LOCAL_LEARNING_PATH: `${RuntimeDirectory}/skill-learning.jsonl`;
+export declare const LIFECYCLE_CONFIGURATION_PATH: `${RuntimeDirectory}/skill-runtime.json`;
+export declare const LIFECYCLE_IGNORE_RULE: `${RuntimeDirectory}/`;
+export declare const LIFECYCLE_RUNTIME_DIRECTORY: RuntimeDirectory;
+export declare const LIFECYCLE_SESSION_DIRECTORY: `${RuntimeDirectory}/skill-sessions`;
 export declare const LIFECYCLE_RUNTIME_VERSION: '0.1.0';
 export declare const LIFECYCLE_PROTOCOL_VERSION: '1.6.0';
 export declare const LIFECYCLE_STATE_VERSION: '1.0.0';

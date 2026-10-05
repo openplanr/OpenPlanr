@@ -10,6 +10,7 @@ import {
   realpathSync,
 } from 'node:fs';
 import { isAbsolute, relative, resolve, sep } from 'node:path';
+import { PLANNING_FOLDER } from '@openplanr/protocol/names';
 
 export const LOCAL_FILESYSTEM_EVIDENCE_PROVIDER_ID_V2 = 'local-filesystem-evidence-provider';
 export const LOCAL_FILESYSTEM_EVIDENCE_RESOLVER_ID_V2 = 'local-filesystem-evidence-resolver';
@@ -106,7 +107,7 @@ function restrictedRepositoryPath(path) {
   if (normalized.some((segment) => PRIVATE_PATH_SEGMENTS.has(segment)))
     return 'SENSITIVITY_BLOCKED';
   for (let index = 0; index < normalized.length; index += 1) {
-    if (normalized[index] !== '.planr') continue;
+    if (normalized[index] !== PLANNING_FOLDER) continue;
     if (normalized[index + 1] === 'operate-v2' || normalized[index + 1] === 'operate-legacy') {
       return 'SENSITIVITY_BLOCKED';
     }

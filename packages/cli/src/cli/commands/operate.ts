@@ -6,6 +6,7 @@ import type { Command } from 'commander';
 import { verifyDashboardAssets } from '../../../lib/dashboard-verifier.mjs';
 import type { OperateCommandGateway } from '../../services/operate/command-gateway.js';
 import type { OperatePlanningGateway } from '../../services/operate/planning-handoff-gateway.js';
+import { PLANNING_FOLDER } from '../../utils/constants.js';
 import { CliBoundaryError } from '../error-boundary.js';
 import {
   type OperateNoteContractVersionSelector,
@@ -268,7 +269,7 @@ export async function startOperateDashboard(input: {
   const startDashboard = input.startDashboard ?? (await installedDashboardStarter());
   const staticRoot = installedOpenPlanrDashboardRoot();
   const dashboard = startDashboard({
-    planrDir: join(input.projectDir, '.planr'),
+    planrDir: join(input.projectDir, PLANNING_FOLDER),
     staticRoot,
     dashboardBuildId: installedOpenPlanrDashboardBuildId(),
     watch: input.watch ?? true,

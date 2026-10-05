@@ -54,6 +54,7 @@ import { createPlanningState } from './server/planning-state.mjs';
 import {
   createWatcher,
   listenLoopback,
+  PLANNING_FOLDER,
   planrHome,
   probeLoopbackJson,
   writePidFile,
@@ -91,7 +92,7 @@ export const DEFAULT_PORT = 7473;
 
 /** Resolve the `.planr/` directory for a project root (default: <cwd>/.planr). */
 export function resolvePlanrDir(projectRoot = process.cwd()) {
-  return join(projectRoot, '.planr');
+  return join(projectRoot, PLANNING_FOLDER);
 }
 
 /** Per-process state dir for the dashboard daemon (mirrors design-daemon). */

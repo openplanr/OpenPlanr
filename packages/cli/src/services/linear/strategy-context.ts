@@ -11,6 +11,7 @@
 
 import type { LinearClient } from '@linear/sdk';
 import type { Epic, LinearMappingStrategy, OpenPlanrConfig } from '../../models/types.js';
+import { CLI_COMMAND } from '../../utils/constants.js';
 import { ensureIssueLabel } from '../linear-service.js';
 import { withLinearRetry } from './errors.js';
 
@@ -37,11 +38,11 @@ const TYPE_LABEL_COLORS: Record<LinearLabeledArtifactType, string> = {
 };
 
 const TYPE_LABEL_DESCRIPTIONS: Record<LinearLabeledArtifactType, string> = {
-  feature: 'OpenPlanr features (auto-applied by `planr linear push FEAT-*`).',
-  story: 'OpenPlanr user stories (auto-applied by `planr linear push US-*`).',
-  task: 'OpenPlanr task lists (auto-applied by `planr linear push TASK-*`).',
-  quick: 'OpenPlanr quick tasks (auto-applied by `planr linear push QT-*`).',
-  backlog: 'OpenPlanr backlog items (auto-applied by `planr linear push BL-*`).',
+  feature: `OpenPlanr features (auto-applied by \`${CLI_COMMAND} linear push FEAT-*\`).`,
+  story: `OpenPlanr user stories (auto-applied by \`${CLI_COMMAND} linear push US-*\`).`,
+  task: `OpenPlanr task lists (auto-applied by \`${CLI_COMMAND} linear push TASK-*\`).`,
+  quick: `OpenPlanr quick tasks (auto-applied by \`${CLI_COMMAND} linear push QT-*\`).`,
+  backlog: `OpenPlanr backlog items (auto-applied by \`${CLI_COMMAND} linear push BL-*\`).`,
 };
 
 export function resolveTypeLabelName(

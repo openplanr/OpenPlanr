@@ -4,6 +4,7 @@ import { homedir } from 'node:os';
 import { dirname, isAbsolute, join, relative, resolve } from 'node:path';
 import { configuredPlanrHome, planrHome } from '@openplanr/artifact/internal/planr-home.mjs';
 import { readCustody } from '@openplanr/artifact/owner-custody.mjs';
+import { PLANNING_FOLDER } from '@openplanr/protocol/names';
 import { currentDesign, hash, readJson } from './document-state.mjs';
 import { workspaceReviewUrl } from './workspace-address.mjs';
 
@@ -18,7 +19,7 @@ export function custodyLocation(file, options = {}, { allowMissing = false } = {
     dirname(candidate) !== candidate;
     candidate = dirname(candidate)
   ) {
-    if (existsSync(join(candidate, '.git')) || existsSync(join(candidate, '.planr'))) {
+    if (existsSync(join(candidate, '.git')) || existsSync(join(candidate, PLANNING_FOLDER))) {
       project = candidate;
       break;
     }

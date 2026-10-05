@@ -14,6 +14,7 @@ import {
   reconcileInstalledTuple,
   upgradeNextSteps,
 } from '../../services/upgrade-service.js';
+import { CLI_COMMAND } from '../../utils/constants.js';
 import { display, logger } from '../../utils/logger.js';
 
 /**
@@ -104,7 +105,7 @@ export function registerUpgradeCommand(program: Command, _cliVersion: string) {
       // unattended without an explicit `--yes`.
       const approved = opts.yes || (program.opts().yes as boolean | undefined) === true;
       if (!approved && isNonInteractive()) {
-        const message = `An upgrade to ${plan.targetCliVersion} is available. Re-run \`planr upgrade apply --yes\` to proceed.`;
+        const message = `An upgrade to ${plan.targetCliVersion} is available. Re-run \`${CLI_COMMAND} upgrade apply --yes\` to proceed.`;
         if (opts.json) {
           display.line(JSON.stringify({ applied: false, reason: message, reconciliation }));
         } else {

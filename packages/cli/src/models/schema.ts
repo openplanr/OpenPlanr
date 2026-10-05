@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { PLANNING_FOLDER } from '../utils/constants.js';
 import { messageOf } from '../utils/error-message.js';
 
 export const targetCLISchema = z.enum(['cursor', 'claude', 'codex']);
@@ -139,7 +140,7 @@ export const configSchema = z.object({
   projectName: z.string().min(1),
   targets: z.array(targetCLISchema).min(1),
   outputPaths: z.object({
-    agile: z.string().default('.planr'),
+    agile: z.string().default(PLANNING_FOLDER),
     cursorRules: z.string().default('.cursor/rules'),
     claudeConfig: z.string().default('.'),
     codexConfig: z.string().default('.'),

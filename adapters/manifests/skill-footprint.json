@@ -93,25 +93,25 @@
     {
       "skillId": "planr-design",
       "files": 96,
-      "bytes": 3502540,
+      "bytes": 3502987,
       "uniqueFiles": 93,
-      "uniqueBytes": 3481548,
+      "uniqueBytes": 3481995,
       "duplicateBytes": 20992
     },
     {
       "skillId": "planr-design-loop",
       "files": 96,
-      "bytes": 3502090,
+      "bytes": 3502537,
       "uniqueFiles": 93,
-      "uniqueBytes": 3481098,
+      "uniqueBytes": 3481545,
       "duplicateBytes": 20992
     },
     {
       "skillId": "planr-design-review",
       "files": 96,
-      "bytes": 3502007,
+      "bytes": 3502454,
       "uniqueFiles": 93,
-      "uniqueBytes": 3481015,
+      "uniqueBytes": 3481462,
       "duplicateBytes": 20992
     },
     {
@@ -165,9 +165,9 @@
     {
       "skillId": "planr-plan",
       "files": 14,
-      "bytes": 307514,
+      "bytes": 307721,
       "uniqueFiles": 14,
-      "uniqueBytes": 307514,
+      "uniqueBytes": 307721,
       "duplicateBytes": 0
     },
     {
@@ -220,37 +220,37 @@
     },
     {
       "skillId": "planr-sync",
-      "files": 4,
-      "bytes": 9317,
-      "uniqueFiles": 4,
-      "uniqueBytes": 9317,
+      "files": 5,
+      "bytes": 9914,
+      "uniqueFiles": 5,
+      "uniqueBytes": 9914,
       "duplicateBytes": 0
     }
   ],
   "suites": [
     {
       "host": "openai",
-      "files": 287,
-      "bytes": 4663225,
-      "uniqueFiles": 241,
-      "uniqueBytes": 4449580,
-      "duplicateBytes": 213645
+      "files": 288,
+      "bytes": 4664626,
+      "uniqueFiles": 242,
+      "uniqueBytes": 4450887,
+      "duplicateBytes": 213739
     },
     {
       "host": "claude",
-      "files": 268,
-      "bytes": 4742431,
-      "uniqueFiles": 221,
-      "uniqueBytes": 4525303,
-      "duplicateBytes": 217128
+      "files": 269,
+      "bytes": 4743632,
+      "uniqueFiles": 222,
+      "uniqueBytes": 4526410,
+      "duplicateBytes": 217222
     },
     {
       "host": "cursor",
-      "files": 231,
-      "bytes": 4608407,
-      "uniqueFiles": 185,
-      "uniqueBytes": 4394762,
-      "duplicateBytes": 213645
+      "files": 232,
+      "bytes": 4609613,
+      "uniqueFiles": 186,
+      "uniqueBytes": 4395874,
+      "duplicateBytes": 213739
     }
   ]
 }

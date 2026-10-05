@@ -3,6 +3,7 @@
  */
 
 import type { DistributionResult, OpenPlanrConfig } from '../models/types.js';
+import { PLANNING_FOLDER } from '../utils/constants.js';
 import { messageOf } from '../utils/error-message.js';
 import { createIssue, ensureLabel } from './github-service.js';
 
@@ -56,8 +57,7 @@ export async function pushReportToSlack(
       return {
         channel: 'slack',
         ok: true,
-        message:
-          'Dry run: no Slack webhook in config (no POST). Add `distribution.slackWebhookUrl` to .planr/config.json, then run without --dry-run to send.',
+        message: `Dry run: no Slack webhook in config (no POST). Add \`distribution.slackWebhookUrl\` to ${PLANNING_FOLDER}/config.json, then run without --dry-run to send.`,
       };
     }
     return {
@@ -71,8 +71,7 @@ export async function pushReportToSlack(
     return {
       channel: 'slack',
       ok: false,
-      message:
-        'Slack is not configured. Set `distribution.slackWebhookUrl` in .planr/config.json (or use --push github).',
+      message: `Slack is not configured. Set \`distribution.slackWebhookUrl\` in ${PLANNING_FOLDER}/config.json (or use --push github).`,
     };
   }
 
@@ -116,8 +115,7 @@ export async function pushReportByEmail(
     return {
       channel: 'email',
       ok: false,
-      message:
-        'Email is not configured. Set `distribution.emailSmtpHost` and related fields in .planr/config.json.',
+      message: `Email is not configured. Set \`distribution.emailSmtpHost\` and related fields in ${PLANNING_FOLDER}/config.json.`,
     };
   }
   return {

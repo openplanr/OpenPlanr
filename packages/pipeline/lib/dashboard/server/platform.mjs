@@ -9,5 +9,6 @@ export {
   probeLoopbackJson,
   writePidFile,
 } from '../../design-engine/server-util.mjs';
+export { PLANNING_FOLDER } from '../../protocol/names.mjs';
 export { resolvePackagedDashboardRoot } from '../resolve-packaged-dashboard-root.mjs';
 export { createWatcher } from '../watcher.mjs';

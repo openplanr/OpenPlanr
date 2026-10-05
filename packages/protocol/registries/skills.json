@@ -694,7 +694,7 @@
       "lifecycle": "active",
       "authorityClass": "planning-write",
       "source": "skills/planr-design/openplanr.skill.json",
-      "sourceDigest": "sha256:3ad25c43189aa5a08c0806c8e205696ea3e366a5c8cb23911b4d4563020a66c9",
+      "sourceDigest": "sha256:67ac584611593b660a263f0f11c03b38fc53609bf9c1750232cfc5687406da9c",
       "triggerPolicy": {
         "include": [
           "Create an initial product design direction",
@@ -755,7 +755,7 @@
       "lifecycle": "active",
       "authorityClass": "planning-write",
       "source": "skills/planr-design-loop/openplanr.skill.json",
-      "sourceDigest": "sha256:a02d77a43e7e30fd5c55467a76ac042cf85d36c1853b67ef345bcd96b98b165f",
+      "sourceDigest": "sha256:53d985a52c2517432d1ee614823c25d1c5183336eb04c46b91aa4b728c314e1c",
       "triggerPolicy": {
         "include": [
           "Explore multiple design directions or variants",
@@ -816,7 +816,7 @@
       "lifecycle": "active",
       "authorityClass": "review-evidence",
       "source": "skills/planr-design-review/openplanr.skill.json",
-      "sourceDigest": "sha256:75c88efb5f0644cca22ebfe5abe01850d1594ac66e90a61461122e6add2e6744",
+      "sourceDigest": "sha256:0573a499e90521c8cb3acbcc5c8c6cbeda22ac5a21977fc3d20fb2fac4d3b357",
       "triggerPolicy": {
         "include": [
           "Review or critique an existing OpenPlanr design",
@@ -1686,7 +1686,7 @@
       "lifecycle": "active",
       "authorityClass": "planning-write",
       "source": "skills/planr-sync/openplanr.skill.json",
-      "sourceDigest": "sha256:91ca70391749f812be9ee23bc5b0d9f95f89846c6775de964e1cb53e250ca5ab",
+      "sourceDigest": "sha256:e0578f02e6ec23d948101392972cb373f3601de3d4a53f9fe526b527f0d8147d",
       "triggerPolicy": {
         "include": [
           "Audit planning artifacts for graph, schema, or protocol drift",
@@ -1742,5 +1742,5 @@
     }
   ],
   "compatibilityAliases": [],
-  "documentDigest": "sha256:73a42dcbe597841275c4a48cc6c254f11b11a3fff949b06981668c28d3da653d"
+  "documentDigest": "sha256:0d37a5d1afdaaf844deeb5b86e9644d1cbbf29987bd6a0f45edb54b0f757efe6"
 }

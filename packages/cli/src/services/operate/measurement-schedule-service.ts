@@ -11,6 +11,7 @@ import {
   unlink,
 } from 'node:fs/promises';
 import path from 'node:path';
+import { PLANNING_FOLDER } from '../../utils/constants.js';
 import { sha256CanonicalJson } from '../canonical-json.js';
 import type { JsonRecord, OperateComposition } from './composition.js';
 import { assertOperatePathCustody, assertOperateTreeCustody } from './path-custody.js';
@@ -217,7 +218,7 @@ export class ProjectMeasurementScheduleStore implements MeasurementScheduleStore
     lockTtlMs?: number;
   }) {
     this.#projectDir = path.resolve(input.projectDir);
-    this.#root = path.join(this.#projectDir, '.planr', 'operate', 'measurement-schedules');
+    this.#root = path.join(this.#projectDir, PLANNING_FOLDER, 'operate', 'measurement-schedules');
     this.#contracts = input.contracts;
     this.#now = input.now ?? Date.now;
     this.#lockTtlMs = input.lockTtlMs ?? 30_000;

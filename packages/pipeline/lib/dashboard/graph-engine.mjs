@@ -19,6 +19,7 @@ import { dirname } from 'node:path';
 
 import { validate } from '../design/schema-loader.mjs';
 import { deepFreeze } from '../protocol/jcs.mjs';
+import { CLI_COMMAND } from '../protocol/names.mjs';
 import { readGraph, readNode } from './graph-reader.mjs';
 
 /** Lowest planr CLI version that emits the graph/status --json the dashboard consumes. */
@@ -50,7 +51,7 @@ function gte(a, b) {
 export function detectCli(run = defaultRun) {
   let res;
   try {
-    res = run('planr', ['--version']);
+    res = run(CLI_COMMAND, ['--version']);
   } catch {
     return null;
   }
@@ -97,7 +98,7 @@ export function tryDelegate(planrDir, run = defaultRun) {
       // process cwd is not the project being displayed. Bind the delegated CLI
       // read to the project that owns this exact .planr directory. Test doubles
       // with the historical two-argument signature safely ignore this option.
-      res = run('planr', args, { cwd: dirname(planrDir) });
+      res = run(CLI_COMMAND, args, { cwd: dirname(planrDir) });
     } catch {
       continue;
     }

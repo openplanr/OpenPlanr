@@ -28,7 +28,7 @@ status: "planning"
 - [{{this.id}}](../stories/{{this.filename}}.md)
 {{/each}}
 {{else}}
-_No user stories created yet. Run `planr story create --feature {{id}}` to create user stories._
+_No user stories created yet. Run `{{cliCommand}} story create --feature {{id}}` to create user stories._
 {{/if}}
 
 ## Dependencies

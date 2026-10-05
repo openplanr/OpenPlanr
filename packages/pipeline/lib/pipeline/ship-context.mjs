@@ -1,7 +1,7 @@
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-
+import { PLANNING_FOLDER } from '../protocol/names.mjs';
 import { buildContextEnvelope, renderContextEnvelope } from './context-envelope.mjs';
 import { resolveDesignPlanningLineage } from './design-lineage.mjs';
 import { preparePlan, prepareShipContext } from './engine.mjs';
@@ -375,7 +375,7 @@ function stackHostRoot(runtime) {
 }
 
 function projectDefaultStackHostRoot(projectRoot, readFile) {
-  const config = readOptional(join(projectRoot, '.planr', 'config.json'), readFile);
+  const config = readOptional(join(projectRoot, PLANNING_FOLDER, 'config.json'), readFile);
   if (config === null) return null;
   try {
     return stackHostRoot(JSON.parse(config).defaultAgent);
@@ -409,7 +409,7 @@ function stackContext({ projectRoot, readFile, runtime }) {
     }
 
     const candidates = [
-      join(projectRoot, '.planr', 'stacks', logical),
+      join(projectRoot, PLANNING_FOLDER, 'stacks', logical),
       ...(hostRoot ? [join(projectRoot, hostRoot, 'stacks', logical)] : []),
       join(projectRoot, '.openplanr', 'stacks', logical),
     ].flatMap((path) => {
@@ -702,7 +702,7 @@ export function buildPlanContext({ projectRoot, feature, runtime, readFile = rea
   // but happens to protect nothing inside.
   let declared = [];
   try {
-    const config = JSON.parse(readFile(join(projectRoot, '.planr', 'config.json'), 'utf8'));
+    const config = JSON.parse(readFile(join(projectRoot, PLANNING_FOLDER, 'config.json'), 'utf8'));
     declared = config.shipClosure?.repositories ?? [];
   } catch {
     declared = [];

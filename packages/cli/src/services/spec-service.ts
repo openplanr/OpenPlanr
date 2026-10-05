@@ -31,6 +31,7 @@ import { randomUUID } from 'node:crypto';
 import fsPromises from 'node:fs/promises';
 import path from 'node:path';
 import type { ArtifactFrontmatter, OpenPlanrConfig } from '../models/types.js';
+import { CLI_COMMAND } from '../utils/constants.js';
 import { messageOf } from '../utils/error-message.js';
 import { escapeRegExp } from '../utils/escape-regexp.js';
 import { ensureDir, fileExists, listFiles, readFile, writeFile } from '../utils/fs.js';
@@ -228,7 +229,7 @@ export async function createSpec(
     const collision = entries.find((e) => e.isDirectory() && slugRe.test(e.name));
     if (collision) {
       throw new Error(
-        `A spec with slug "${slug}" already exists at ${collision.name}. Use a different --slug or delete the existing spec with \`planr spec destroy ${collision.name.split('-').slice(0, 2).join('-')}\`.`,
+        `A spec with slug "${slug}" already exists at ${collision.name}. Use a different --slug or delete the existing spec with \`${CLI_COMMAND} spec destroy ${collision.name.split('-').slice(0, 2).join('-')}\`.`,
       );
     }
   }
@@ -239,7 +240,7 @@ export async function createSpec(
 
   if (await fileExists(specDir)) {
     throw new Error(
-      `Spec directory ${dirName} already exists. Use a different --slug or delete the existing spec with \`planr spec destroy ${id}\`.`,
+      `Spec directory ${dirName} already exists. Use a different --slug or delete the existing spec with \`${CLI_COMMAND} spec destroy ${id}\`.`,
     );
   }
 
@@ -468,7 +469,7 @@ function operatingOriginSection(input: OperatingSpecDraftInput): string {
     '',
     '### Continue in Operate',
     '',
-    `Run ${markdownCode(`planr operate dashboard ${origin.cycleId} --actor <authorizedActorId>`)}, then [open this Action in Planning](${actionPath}).`,
+    `Run ${markdownCode(`${CLI_COMMAND} operate dashboard ${origin.cycleId} --actor <authorizedActorId>`)}, then [open this Action in Planning](${actionPath}).`,
   ].join('\n');
 }
 
@@ -2278,7 +2279,7 @@ export async function validateSpecForPromotion(
   // Spec body should be non-trivial (> placeholder)
   if (spec.content.trim().length < 100) {
     issues.push(
-      `Spec body is very short (< 100 chars). Run \`planr spec shape ${specId}\` to flesh it out.`,
+      `Spec body is very short (< 100 chars). Run \`${CLI_COMMAND} spec shape ${specId}\` to flesh it out.`,
     );
   }
 

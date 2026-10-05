@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto';
 import { lstat, readdir } from 'node:fs/promises';
 import path from 'node:path';
+import { PLANNING_FOLDER } from '../../utils/constants.js';
 import type { JsonRecord, ScreenedEvidenceResolverSource } from './composition.js';
 import {
   readScreenedRepositoryText,
@@ -91,18 +92,18 @@ async function safeEntries(projectDir: string, relativeDirectory: string) {
 
 async function discoverPlanningPaths(projectDir: string): Promise<string[]> {
   const discovered: string[] = [];
-  for (const entry of await safeEntries(projectDir, '.planr/specs')) {
+  for (const entry of await safeEntries(projectDir, `${PLANNING_FOLDER}/specs`)) {
     if (!entry.isDirectory() || entry.isSymbolicLink()) continue;
-    const directory = `.planr/specs/${entry.name}`;
+    const directory = `${PLANNING_FOLDER}/specs/${entry.name}`;
     const document = (await safeEntries(projectDir, directory)).find(
       (candidate) => candidate.isFile() && /^SPEC-[0-9]+.*\.md$/u.test(candidate.name),
     );
     if (document) discovered.push(`${directory}/${document.name}`);
   }
-  const story = (await safeEntries(projectDir, '.planr/stories')).find(
+  const story = (await safeEntries(projectDir, `${PLANNING_FOLDER}/stories`)).find(
     (entry) => entry.isFile() && /-gherkin\.feature$/u.test(entry.name),
   );
-  if (story) discovered.push(`.planr/stories/${story.name}`);
+  if (story) discovered.push(`${PLANNING_FOLDER}/stories/${story.name}`);
   return discovered.sort().slice(0, 2);
 }
 

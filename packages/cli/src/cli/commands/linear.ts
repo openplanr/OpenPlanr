@@ -36,6 +36,7 @@ import {
   promptSelect,
   promptStandaloneProject,
 } from '../../services/prompt-service.js';
+import { CLI_COMMAND, PLANNING_FOLDER } from '../../utils/constants.js';
 import { display, logger } from '../../utils/logger.js';
 import { requireArtifactId } from '../helpers/artifact-id.js';
 
@@ -85,13 +86,13 @@ ${chalk.bold('Common flags:')}
   --team <id|key>   push: target any team selected during linear init
 
 ${chalk.dim('Examples:')}
-  planr linear sync
-  planr linear sync --dry-run
-  planr linear push EPIC-001 --dry-run
-  planr linear push FEAT-XXX --dry-run
-  planr linear push US-054
-  planr linear push TASK-015 --push-parents
-  planr linear status --scope EPIC-001
+  ${CLI_COMMAND} linear sync
+  ${CLI_COMMAND} linear sync --dry-run
+  ${CLI_COMMAND} linear push EPIC-001 --dry-run
+  ${CLI_COMMAND} linear push FEAT-XXX --dry-run
+  ${CLI_COMMAND} linear push US-054
+  ${CLI_COMMAND} linear push TASK-015 --push-parents
+  ${CLI_COMMAND} linear status --scope EPIC-001
 `;
 
 export function registerLinearCommand(program: Command) {
@@ -109,7 +110,7 @@ export function registerLinearCommand(program: Command) {
       try {
         config = await loadConfig(projectDir);
       } catch {
-        logger.error('No OpenPlanr project in this directory. Run `planr init` first.');
+        logger.error(`No OpenPlanr project in this directory. Run \`${CLI_COMMAND} init\` first.`);
         process.exit(1);
         return;
       }
@@ -118,7 +119,7 @@ export function registerLinearCommand(program: Command) {
       if (!token) {
         if (isNonInteractive()) {
           logger.error(
-            `Set PLANR_LINEAR_TOKEN or store a key with the credentials service after a successful interactive \`planr linear init\`. ${PAT_HINT}`,
+            `Set PLANR_LINEAR_TOKEN or store a key with the credentials service after a successful interactive \`${CLI_COMMAND} linear init\`. ${PAT_HINT}`,
           );
           process.exit(1);
           return;
@@ -158,7 +159,7 @@ export function registerLinearCommand(program: Command) {
 
       if (teams.length === 0) {
         logger.error(
-          'No teams found for this account. Create or join a team in Linear, then run `planr linear init` again.',
+          `No teams found for this account. Create or join a team in Linear, then run \`${CLI_COMMAND} linear init\` again.`,
         );
         process.exit(1);
         return;
@@ -172,7 +173,7 @@ export function registerLinearCommand(program: Command) {
       } else {
         if (isNonInteractive()) {
           logger.error(
-            'Multiple teams are available. Run `planr linear init` in an interactive terminal to choose allowed teams and a default, or configure `linear.teams` and `linear.teamId` in `.planr/config.json`.',
+            `Multiple teams are available. Run \`${CLI_COMMAND} linear init\` in an interactive terminal to choose allowed teams and a default, or configure \`linear.teams\` and \`linear.teamId\` in \`${PLANNING_FOLDER}/config.json\`.`,
           );
           process.exit(1);
           return;
@@ -262,10 +263,12 @@ export function registerLinearCommand(program: Command) {
       display.line('');
       display.line(`  teams:   ${validatedTeams.map((team) => team.key).join(', ')}`);
       display.line(`  default: ${defaultTeam.name} (${defaultTeam.key})`);
-      display.line('  config:  .planr/config.json (linear.teams, linear.teamId)');
+      display.line(`  config:  ${PLANNING_FOLDER}/config.json (linear.teams, linear.teamId)`);
       display.line('  token:  credentials service (key: linear) or PLANR_LINEAR_TOKEN');
       display.line('');
-      logger.dim('Next: `planr linear sync`, `planr linear push <epic>`, or `planr linear status`');
+      logger.dim(
+        `Next: \`${CLI_COMMAND} linear sync\`, \`${CLI_COMMAND} linear push <epic>\`, or \`${CLI_COMMAND} linear status\``,
+      );
     });
 
   linear
@@ -297,12 +300,14 @@ export function registerLinearCommand(program: Command) {
         try {
           config = await loadConfig(projectDir);
         } catch {
-          logger.error('No OpenPlanr project in this directory. Run `planr init` first.');
+          logger.error(
+            `No OpenPlanr project in this directory. Run \`${CLI_COMMAND} init\` first.`,
+          );
           process.exit(1);
           return;
         }
         if (!config.linear?.teamId) {
-          logger.error('Linear is not configured. Run `planr linear init` first.');
+          logger.error(`Linear is not configured. Run \`${CLI_COMMAND} linear init\` first.`);
           process.exit(1);
           return;
         }
@@ -316,7 +321,7 @@ export function registerLinearCommand(program: Command) {
         if (!token) {
           if (isNonInteractive()) {
             logger.error(
-              `Set PLANR_LINEAR_TOKEN or run \`planr linear init\` to store a token. ${PAT_HINT}`,
+              `Set PLANR_LINEAR_TOKEN or run \`${CLI_COMMAND} linear init\` to store a token. ${PAT_HINT}`,
             );
             process.exit(1);
             return;
@@ -401,7 +406,7 @@ export function registerLinearCommand(program: Command) {
       try {
         config = await loadConfig(projectDir);
       } catch {
-        logger.error('No OpenPlanr project in this directory. Run `planr init` first.');
+        logger.error(`No OpenPlanr project in this directory. Run \`${CLI_COMMAND} init\` first.`);
         process.exit(1);
         return;
       }
@@ -451,7 +456,7 @@ export function registerLinearCommand(program: Command) {
       'Push only the target artifact (and minimum parent chain when --push-parents is set). EPIC/FEAT pushes skip their descendants.',
       false,
     )
-    .option('--team <id-or-key>', 'Target a team selected during `planr linear init`')
+    .option('--team <id-or-key>', `Target a team selected during \`${CLI_COMMAND} linear init\``)
     .option(
       '--as <strategy>',
       'Epic-only: mapping strategy. One of: project | milestone-of:<projectId> | label-on:<projectId>',
@@ -478,12 +483,14 @@ export function registerLinearCommand(program: Command) {
         try {
           config = await loadConfig(projectDir);
         } catch {
-          logger.error('No OpenPlanr project in this directory. Run `planr init` first.');
+          logger.error(
+            `No OpenPlanr project in this directory. Run \`${CLI_COMMAND} init\` first.`,
+          );
           process.exit(1);
           return;
         }
         if (!config.linear?.teamId) {
-          logger.error('Linear is not configured. Run `planr linear init` first.');
+          logger.error(`Linear is not configured. Run \`${CLI_COMMAND} linear init\` first.`);
           process.exit(1);
           return;
         }
@@ -543,7 +550,7 @@ export function registerLinearCommand(program: Command) {
         if (!token) {
           if (isNonInteractive()) {
             logger.error(
-              `Set PLANR_LINEAR_TOKEN or run \`planr linear init\` to store a token. ${PAT_HINT}`,
+              `Set PLANR_LINEAR_TOKEN or run \`${CLI_COMMAND} linear init\` to store a token. ${PAT_HINT}`,
             );
             process.exit(1);
             return;
@@ -627,7 +634,7 @@ export function registerLinearCommand(program: Command) {
               await saveConfig(projectDir, next);
               config = next;
               logger.success(
-                `Saved to .planr/config.json → linear.standaloneProjectId = ${picked.projectName}.`,
+                `Saved to ${PLANNING_FOLDER}/config.json → linear.standaloneProjectId = ${picked.projectName}.`,
               );
             }
           } catch (e) {
@@ -697,12 +704,14 @@ export function registerLinearCommand(program: Command) {
         try {
           config = await loadConfig(projectDir);
         } catch {
-          logger.error('No OpenPlanr project in this directory. Run `planr init` first.');
+          logger.error(
+            `No OpenPlanr project in this directory. Run \`${CLI_COMMAND} init\` first.`,
+          );
           process.exit(1);
           return;
         }
         if (!config.linear?.teamId) {
-          logger.error('Linear is not configured. Run `planr linear init` first.');
+          logger.error(`Linear is not configured. Run \`${CLI_COMMAND} linear init\` first.`);
           process.exit(1);
           return;
         }
@@ -715,7 +724,7 @@ export function registerLinearCommand(program: Command) {
         if (!token) {
           if (isNonInteractive()) {
             logger.error(
-              `Set PLANR_LINEAR_TOKEN or run \`planr linear init\` to store a token. ${PAT_HINT}`,
+              `Set PLANR_LINEAR_TOKEN or run \`${CLI_COMMAND} linear init\` to store a token. ${PAT_HINT}`,
             );
             process.exit(1);
             return;

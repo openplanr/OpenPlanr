@@ -2,6 +2,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { mkdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import type { OpenPlanrConfig } from '../models/types.js';
+import { CLI_COMMAND } from '../utils/constants.js';
 import { logger } from '../utils/logger.js';
 import { saveConfig } from './config-service.js';
 import { isNonInteractive } from './interactive-state.js';
@@ -74,7 +75,7 @@ const BACKOFF_MS: Record<0 | 1 | 2, number> = {
  * `planr config set-upgrade-policy --never-ask`, so a permanent opt-out is never
  * a trap the user cannot find how to undo.
  */
-export const UPGRADE_REENABLE_COMMAND = 'planr config set-upgrade-policy --ask-again';
+export const UPGRADE_REENABLE_COMMAND = `${CLI_COMMAND} config set-upgrade-policy --ask-again`;
 
 /** Where the machine-local snooze/never-ask state lives (under the runtime root). */
 export function upgradeStatePath(): string {

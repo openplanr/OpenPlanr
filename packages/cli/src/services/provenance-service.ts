@@ -3,6 +3,7 @@ import { constants, existsSync, readFileSync } from 'node:fs';
 import { mkdir, open } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { PLANNING_FOLDER } from '../utils/constants.js';
 
 export interface ProvenanceInput {
   projectDir: string;
@@ -79,7 +80,7 @@ export async function appendOpenPlanrProvenance(
   input: ProvenanceInput,
   hooks: ProvenanceAppendHooks = {},
 ): Promise<OpenPlanrProvenanceEvent> {
-  const target = path.join(input.projectDir, '.planr', 'provenance.jsonl');
+  const target = path.join(input.projectDir, PLANNING_FOLDER, 'provenance.jsonl');
   const event = createOpenPlanrProvenanceEvent(input);
   const serialized = Buffer.from(`${JSON.stringify(event)}\n`, 'utf8');
   const conflict = (message: string): never => {

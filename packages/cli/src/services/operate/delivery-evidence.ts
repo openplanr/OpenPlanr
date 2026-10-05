@@ -23,6 +23,7 @@ import {
   validateProtocolArtifact as validatePipelineProtocolArtifact,
 } from 'planr-pipeline/protocol';
 import YAML from 'yaml';
+import { PLANNING_FOLDER } from '../../utils/constants.js';
 import { loadConfig } from '../config-service.js';
 import { getSpecsRootDir } from '../spec-service.js';
 import type { JsonRecord, OperateComposition } from './composition.js';
@@ -171,7 +172,7 @@ async function validateRunReceipts(
   origin: JsonRecord,
   input: DeliveryInput,
 ): Promise<{ events: JsonRecord[]; shipEvent: JsonRecord }> {
-  const provenancePath = path.join(projectRoot, '.planr', 'provenance.jsonl');
+  const provenancePath = path.join(projectRoot, PLANNING_FOLDER, 'provenance.jsonl');
   let events: JsonRecord[];
   try {
     events = (await readFile(provenancePath, 'utf8'))

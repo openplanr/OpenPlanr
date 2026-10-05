@@ -14,6 +14,7 @@ import {
   type SetupPreview,
 } from '../../services/runtime-manager-service.js';
 import { listManagedServers } from '../../services/server-lifecycle-service.js';
+import { CLI_COMMAND } from '../../utils/constants.js';
 import { display, isVerbose, logger } from '../../utils/logger.js';
 
 type Diagnosis = Awaited<ReturnType<typeof runtimeDoctor>>;
@@ -191,7 +192,7 @@ export function registerDoctorCommand(program: Command, cliVersion: string) {
           message: `${servers.length} owned local service${servers.length === 1 ? '' : 's'} running.`,
           ...(servers.length
             ? {
-                fix: 'Use planr server list to inspect them and planr server stop <instance> to stop one.',
+                fix: `Use ${CLI_COMMAND} server list to inspect them and ${CLI_COMMAND} server stop <instance> to stop one.`,
               }
             : {}),
         };
@@ -200,7 +201,7 @@ export function registerDoctorCommand(program: Command, cliVersion: string) {
           code: 'owned-local-servers',
           status: 'warn',
           message: 'Local service discovery is unavailable.',
-          fix: 'Run planr server list for the recovery details.',
+          fix: `Run ${CLI_COMMAND} server list for the recovery details.`,
         };
       }
       const result = {

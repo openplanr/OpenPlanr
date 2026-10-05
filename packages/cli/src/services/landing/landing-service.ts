@@ -1,4 +1,5 @@
 import path from 'node:path';
+import { PLANNING_FOLDER } from '../../utils/constants.js';
 import type { VerifiedLandingPackageHandoff } from '../pipeline-package-service.js';
 import {
   type LandingOperationAdapterV1,
@@ -137,7 +138,9 @@ export class LandingServiceV1 {
     this.#handoff = input.handoff;
     this.#custody =
       input.custody ??
-      new LandingReceiptCustodyV1({ root: path.join(this.#projectDir, '.planr', 'landing') });
+      new LandingReceiptCustodyV1({
+        root: path.join(this.#projectDir, PLANNING_FOLDER, 'landing'),
+      });
     this.#operations = new LandingOperationRegistryV1({
       operationRegistry: input.handoff.registryValues.operationRegistry,
       adapters: input.adapters,

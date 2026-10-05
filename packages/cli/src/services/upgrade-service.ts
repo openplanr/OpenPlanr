@@ -12,6 +12,7 @@ import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { z } from 'zod';
+import { CLI_COMMAND } from '../utils/constants.js';
 import { parseExternalJson } from '../utils/external-json.js';
 import { logger } from '../utils/logger.js';
 import {
@@ -39,7 +40,7 @@ import {
  * `planr@openplanr-local` from it. Prescribed instead of `planr runtime update` when
  * Claude Code has no such marketplace yet, because only setup records the installation.
  */
-export const CLAUDE_PLUGIN_SETUP_COMMAND = 'planr setup --runtime claude --scope user';
+export const CLAUDE_PLUGIN_SETUP_COMMAND = `${CLI_COMMAND} setup --runtime claude --scope user`;
 
 /**
  * One component of the published compatibility manifest (`ecosystem.json`'s
@@ -754,9 +755,9 @@ function nextStepCommand(
   }
   // `runtime update` has no skill-mode flag and would move a unified-plugin install to direct skills.
   if (runtime === 'codex' && skillMode === 'unified-plugin') {
-    return `planr setup --runtime codex --scope ${scope} --skill-mode unified-plugin --yes`;
+    return `${CLI_COMMAND} setup --runtime codex --scope ${scope} --skill-mode unified-plugin --yes`;
   }
-  return `planr runtime update ${RUNTIME_COMMAND_NAMES[runtime]} --scope ${scope} --yes`;
+  return `${CLI_COMMAND} runtime update ${RUNTIME_COMMAND_NAMES[runtime]} --scope ${scope} --yes`;
 }
 
 type NextStepCandidate = Awaited<ReturnType<typeof installedRuntimeScopes>>[number];
@@ -825,7 +826,7 @@ export async function upgradeNextSteps(
     steps.push({
       ...(runtime ? { runtime } : {}),
       host: runtime ? RUNTIME_LABELS[runtime] : 'OpenPlanr',
-      command: 'planr doctor',
+      command: `${CLI_COMMAND} doctor`,
       detail: error.message,
     });
   };
@@ -922,7 +923,11 @@ export function readInstalledCliNextSteps(
   }
   const report = result.stdout.trim().split(/\r?\n/).pop() ?? '';
   try {
-    const parsed = parseExternalJson(report, installedStatusSchema, 'planr upgrade status --json');
+    const parsed = parseExternalJson(
+      report,
+      installedStatusSchema,
+      `${CLI_COMMAND} upgrade status --json`,
+    );
     if ('nextSteps' in parsed) return { nextSteps: parsed.nextSteps };
     return {
       nextSteps: [],
@@ -1025,7 +1030,7 @@ export async function executeCliHalfUpgrade(
     const restoredVersion = readOpenPlanrVersion();
     const restored = !restore.error && restore.status === 0 && restoredVersion === previousVersion;
     const message = restored
-      ? `npm reported success but installed ${verifiedVersion}, not ${input.targetCliVersion}. Restored the previous version ${previousVersion}. Retry with \`planr upgrade apply\` once the registry serves ${input.targetCliVersion}.`
+      ? `npm reported success but installed ${verifiedVersion}, not ${input.targetCliVersion}. Restored the previous version ${previousVersion}. Retry with \`${CLI_COMMAND} upgrade apply\` once the registry serves ${input.targetCliVersion}.`
       : `npm reported success but installed ${verifiedVersion}, not ${input.targetCliVersion}, and the automatic restore did not complete (now ${restoredVersion}). Reinstall manually: \`npm install -g openplanr@${previousVersion}\`.`;
     return {
       ok: false,
@@ -1070,7 +1075,7 @@ export async function executeCliHalfUpgrade(
       migrations,
       failure: {
         step: 'migration',
-        message: `The CLI upgraded to ${verifiedVersion}, but the post-upgrade migration \`${failedMigration.id}\` failed: ${failedMigration.failure}. Each migration takes its own restorable backup before mutating; re-run \`planr upgrade apply\` to retry it.`,
+        message: `The CLI upgraded to ${verifiedVersion}, but the post-upgrade migration \`${failedMigration.id}\` failed: ${failedMigration.failure}. Each migration takes its own restorable backup before mutating; re-run \`${CLI_COMMAND} upgrade apply\` to retry it.`,
       },
     };
   }

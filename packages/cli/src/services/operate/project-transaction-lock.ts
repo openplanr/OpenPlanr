@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { chmod, lstat, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
+import { PLANNING_FOLDER } from '../../utils/constants.js';
 import { assertOperatePathCustody } from './path-custody.js';
 
 const TRANSACTION_LOCK_FILE = '.operate-transaction-lock.json';
@@ -92,7 +93,7 @@ export async function withOperateProjectTransaction<T>(
   options: Readonly<{ timeoutMs?: number; pollMs?: number }> = {},
 ): Promise<T> {
   const canonicalProject = path.resolve(projectDir);
-  const planrRoot = path.join(canonicalProject, '.planr');
+  const planrRoot = path.join(canonicalProject, PLANNING_FOLDER);
   const lockPath = path.join(planrRoot, TRANSACTION_LOCK_FILE);
   await assertOperatePathCustody(canonicalProject, lockPath, {
     code: 'OPERATE_STORE_INCOMPATIBLE',

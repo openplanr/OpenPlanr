@@ -10,6 +10,7 @@
  */
 
 import { LinearError, LinearErrorType, RatelimitedLinearError } from '@linear/sdk';
+import { CLI_COMMAND } from '../../utils/constants.js';
 import { logger } from '../../utils/logger.js';
 
 const DEFAULT_RETRIES = 3;
@@ -82,7 +83,7 @@ export function mapLinearError(err: unknown, context: string): Error {
     const t = (err as { type?: string }).type ?? LinearErrorType.Unknown;
     if (t === LinearErrorType.AuthenticationError) {
       return new Error(
-        `Linear rejected this token while ${context}. Create a new PAT at https://linear.app/settings/account/security (app, read, write as needed) and run \`planr linear init\` again.`,
+        `Linear rejected this token while ${context}. Create a new PAT at https://linear.app/settings/account/security (app, read, write as needed) and run \`${CLI_COMMAND} linear init\` again.`,
       );
     }
     if (t === LinearErrorType.NetworkError) {

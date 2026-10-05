@@ -74,7 +74,7 @@
       "version": "0.10.1",
       "path": "packages/protocol",
       "publication": "public",
-      "manifestDigest": "sha256:56f591a876dc8b58d3f5af0a9a69573aedd57e9099d1d20bff05a80f7e455afa"
+      "manifestDigest": "sha256:3346253d6c369c0a1d15e795d9a812cfcdfde3bb0b8ea393f74da417dcbd4d0f"
     },
     "operate": {
       "package": "@openplanr/operate",
@@ -147,7 +147,7 @@
   "catalogs": {
     "commands": {
       "path": "packages/protocol/registries/commands.json",
-      "digest": "sha256:b36beec6603f3a7e3a046eb9e70044af6364c77e5681f4d60c4f32377ab7eec6",
+      "digest": "sha256:fc8a26bf71dacf6c67366d5ef20468d8aa7897ebfe58d4266bc6a1d374bf6bbd",
       "rootCommands": 39,
       "pipelineMachineLeaves": 31,
       "frozenClaudeDocuments": 8,
@@ -250,7 +250,7 @@
     },
     "skills": {
       "path": "packages/protocol/registries/skills.json",
-      "digest": "sha256:59a93a90d8d10288202fecd7f31eaff067676f511172021ff6de056a056a6272",
+      "digest": "sha256:254ef127ab132201e34b955a06ea15c9fbb0f5a4831beb8b0e808dc3d25c96a2",
       "count": 28,
       "ids": [
         "planr-artifact",
@@ -348,8 +348,8 @@
     ],
     "generatedAssets": {
       "path": "adapters/manifests/generated-assets.json",
-      "digest": "sha256:0b23e953b8878cf22f4f1af3d85dfec2d52bb7ac8071692d8e7e6bf7d0827575",
-      "count": 1586
+      "digest": "sha256:0acc1b46e6b5530729eefe0650eb44c587c4d4735a9c1659d5f16a201592b039",
+      "count": 1592
     }
   },
   "schemas": {
@@ -448,7 +448,7 @@
       },
       "generatedAssets": {
         "path": "packages/pipeline/conformance/fixtures/landing-workflow/generated-assets.json",
-        "digest": "sha256:7b33e8c8a28459476effa22b3f01f6b836cb7240165cf4390948a696e77661af",
+        "digest": "sha256:5c935f12edaed94a574bef5270b7b57807e9f22f96266c4385d86d7f1082fdf3",
         "assetCount": 4,
         "workflowCatalogDigest": "sha256:7bff6d6150b6cef7d46603216d4225bc9000f9f286a203c65e668a077b3ead80"
       }
