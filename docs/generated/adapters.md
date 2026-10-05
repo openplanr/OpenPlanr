@@ -5,9 +5,9 @@ All host packages are generated from the Protocol 1.8.0 standard skill packages 
 
 | Host | Adapter version | Capability level |
 |---|---:|---|
-| `claude-code` | 0.55.10 | product |
-| `codex` | 0.55.10 | workflow |
-| `cursor` | 0.55.10 | workflow |
+| `claude-code` | 0.55.11 | product |
+| `codex` | 0.55.11 | workflow |
+| `cursor` | 0.55.11 | workflow |
 
 The ignored `dist/plugins/` tree contains the canonical skills for OpenAI, Claude Code, and Cursor. Claude Code additionally receives host-native role agents. No generated commands, compatibility aliases, pipeline-owned prompt copies, or legacy role aliases are packaged.
 
