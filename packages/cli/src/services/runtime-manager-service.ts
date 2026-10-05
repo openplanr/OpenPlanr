@@ -60,7 +60,10 @@ import {
 import {
   classifyComponentDrift as classifyRuntimeComponentDrift,
   diagnoseManagedRuntimeFiles,
+  diagnoseRetiredCommandSkills,
   diagnoseRuntimeProvenance,
+  type InstalledDocument,
+  pluginDocuments,
 } from './runtime-manager/doctor.js';
 import {
   type CommandPrefix,
@@ -3373,6 +3376,8 @@ export async function runtimeDoctor(
     pipelineRepair?: 'preview' | 'apply';
     claudeCommandRunner?: ClaudeCommandRunner;
     codexCommandRunner?: CodexCommandRunner;
+    /** CLI root commands; enables the check for installed skills that still run `planr`. */
+    commandRoots?: readonly string[];
   } = {},
 ): Promise<{
   ok: boolean;
@@ -3485,6 +3490,7 @@ export async function runtimeDoctor(
           inferRuntimeScope(project.ownedFiles, 'claude-code'),
       ),
   );
+  const pluginSkillDocuments: InstalledDocument[] = [];
   const claudeDetected =
     Boolean(options.claudeCommandRunner) ||
     (detectedRuntimes.find((runtime) => runtime.runtime === 'claude-code')?.installed ?? false);
@@ -3501,6 +3507,12 @@ export async function runtimeDoctor(
         fix: `Update Claude Code, then run \`${CLI_COMMAND} runtime update claude --scope user\`.`,
       });
     } else {
+      for (const root of [
+        ...inspection.plugins.flatMap((plugin) => plugin.installPath ?? []),
+        ...inspection.duplicatePluginPaths,
+      ]) {
+        pluginSkillDocuments.push(...pluginDocuments('claude-code', root));
+      }
       const drift = inspection.plugins.filter(
         (plugin) =>
           !plugin.installed ||
@@ -3692,6 +3704,12 @@ export async function runtimeDoctor(
   ];
   const managedFileDiagnostic = diagnoseManagedRuntimeFiles(managedFiles, ownershipHash);
   if (managedFileDiagnostic) diagnostics.push(managedFileDiagnostic);
+  const commandDiagnostic = diagnoseRetiredCommandSkills(
+    [...managedFiles, ...pluginSkillDocuments],
+    options.commandRoots ?? [],
+    managedBlockBytes,
+  );
+  if (commandDiagnostic) diagnostics.push(commandDiagnostic);
   const verifiedPackages = new Map<string, string>();
   const closureFailures: string[] = [];
   for (const file of managedFiles) {

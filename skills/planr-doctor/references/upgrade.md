@@ -128,7 +128,9 @@ not judge. A `runtime-claude-duplicate-plugin` warning means a second `planr`
 plugin (usually `planr@openplanr`, installed from the public marketplace) sits
 beside the setup-managed one, and both expose the same `/planr` commands. Its `fix`
 carries the exact `claude plugin uninstall` command: relay it, and run it only
-when the user asks — nothing removes a duplicate automatically.
+when the user asks — nothing removes a duplicate automatically. An
+`installed-skill-commands` warning means installed skills still use the old
+command name; relay its `fix`, which names the setup command that refreshes them.
 
 State the outcome from this second reading, never from the commands you ran. If
 a component did not move, say so plainly and name the likely cause (most often a

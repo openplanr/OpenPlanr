@@ -524,6 +524,12 @@ function verifyCliAliases({
   const expectedBins = {
     openplanr: './bin/openplanr.js',
     opr: './bin/openplanr.js',
+    planr: './bin/planr.js',
+  };
+  const expectedStderrPrefix = {
+    opr: '',
+    planr:
+      'planr is now openplanr (short alias: opr). The planr command will be removed in the next release.\n',
   };
   if (JSON.stringify(stableJson(manifest.bin)) !== JSON.stringify(stableJson(expectedBins))) {
     throw new ProofFailure(
@@ -563,7 +569,7 @@ function verifyCliAliases({
       );
     }
     if (testCase.output === 'json') assertJsonOutput(baseline, testCase.id);
-    for (const alias of ['opr']) {
+    for (const alias of ['opr', 'planr']) {
       const candidate = commandResult(nodeExecutable, [entrypoints[alias], ...testCase.args], {
         cwd: project,
         env: environment,
@@ -572,7 +578,7 @@ function verifyCliAliases({
       if (
         candidate.status !== baseline.status ||
         candidate.stdout !== baseline.stdout ||
-        candidate.stderr !== baseline.stderr
+        candidate.stderr !== `${expectedStderrPrefix[alias]}${baseline.stderr}`
       ) {
         throw new ProofFailure(
           'E_CLI_ALIAS_PARITY',

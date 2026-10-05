@@ -125,9 +125,9 @@
     {
       "skillId": "planr-doctor",
       "files": 4,
-      "bytes": 10583,
+      "bytes": 10744,
       "uniqueFiles": 4,
-      "uniqueBytes": 10583,
+      "uniqueBytes": 10744,
       "duplicateBytes": 0
     },
     {
@@ -231,25 +231,25 @@
     {
       "host": "openai",
       "files": 288,
-      "bytes": 4667687,
+      "bytes": 4667848,
       "uniqueFiles": 242,
-      "uniqueBytes": 4453754,
+      "uniqueBytes": 4453915,
       "duplicateBytes": 213933
     },
     {
       "host": "claude",
       "files": 269,
-      "bytes": 4746725,
+      "bytes": 4746886,
       "uniqueFiles": 222,
-      "uniqueBytes": 4529309,
+      "uniqueBytes": 4529470,
       "duplicateBytes": 217416
     },
     {
       "host": "cursor",
       "files": 232,
-      "bytes": 4612674,
+      "bytes": 4612835,
       "uniqueFiles": 186,
-      "uniqueBytes": 4398741,
+      "uniqueBytes": 4398902,
       "duplicateBytes": 213933
     }
   ]

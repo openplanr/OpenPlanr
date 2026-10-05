@@ -1,7 +1,7 @@
 ---
-'openplanr': major
+'openplanr': minor
 'planr-pipeline': patch
 '@openplanr/protocol': patch
 ---
 
-The command is now `openplanr`, with `opr` as its short alias, and the `planr` command is removed so the CLI has one name. Replace `planr` with `openplanr` or `opr` in scripts, shell aliases and CI; after an upgrade started with `planr upgrade apply`, run `openplanr upgrade status` for the remaining steps. Skill names such as `/planr:plan`, the `planr` plugin and the `.planr/` folder are unchanged.
+The command is now `openplanr`, with `opr` as its short alias. `planr` keeps working in this release and prints a one-line notice; it will be removed in the next release, so switch scripts, shell aliases and CI to `openplanr` or `opr`. `openplanr doctor` reports installed skills that still use the old command and how to refresh them. Skill names such as `/planr:plan`, the `planr` plugin and the `.planr/` folder are unchanged.

@@ -61,6 +61,7 @@ test('local ecosystem derives component versions and preserved public parity in-
   assert.deepEqual(ecosystem.binaries.cli, {
     openplanr: './bin/openplanr.js',
     opr: './bin/openplanr.js',
+    planr: './bin/planr.js',
   });
 });
 

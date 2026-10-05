@@ -330,7 +330,7 @@ async function buildOutputs() {
   );
   assertEqual(
     cliManifest.bin,
-    { openplanr: './bin/openplanr.js', opr: './bin/openplanr.js' },
+    { openplanr: './bin/openplanr.js', opr: './bin/openplanr.js', planr: './bin/planr.js' },
     'E_ECOSYSTEM_CLI_BINS',
     'CLI aliases must resolve to one parser.',
   );

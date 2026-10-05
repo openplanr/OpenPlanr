@@ -44,6 +44,8 @@ export interface ClaudePluginInspection {
   legacyPluginIds: string[];
   /** `planr` plugins installed from another marketplace; reported, never removed. */
   duplicatePluginIds: string[];
+  /** Install folders of those duplicate plugins, when Claude reports them. */
+  duplicatePluginPaths: string[];
   error?: string;
 }
 
@@ -291,6 +293,7 @@ export function inspectBundledClaudePluginIntegration(
       plugins: [],
       legacyPluginIds: [],
       duplicatePluginIds: [],
+      duplicatePluginPaths: [],
       error: versionCheck.error?.message || versionCheck.stderr.trim() || 'Claude Code unavailable',
     };
   }
@@ -328,15 +331,16 @@ export function inspectBundledClaudePluginIntegration(
     // A `planr` plugin from another marketplace (`/plugin install planr@openplanr`) exposes the
     // same `/planr` commands as the bundled one. Removing it is the user's call, so it is only
     // reported: it neither blocks `ready` nor becomes a remove operation like a legacy id.
-    const duplicatePluginIds = installed
-      .filter(
-        (candidate) =>
-          candidate.scope === 'user' &&
-          Boolean(candidate.id) &&
-          candidate.id !== plugin.id &&
-          candidate.id?.startsWith(`${OPENPLANR_CLAUDE_PLUGIN}@`),
-      )
-      .map((candidate) => candidate.id as string)
+    const duplicates = installed.filter(
+      (candidate) =>
+        candidate.scope === 'user' &&
+        Boolean(candidate.id) &&
+        candidate.id !== plugin.id &&
+        candidate.id?.startsWith(`${OPENPLANR_CLAUDE_PLUGIN}@`),
+    );
+    const duplicatePluginIds = duplicates.map((candidate) => candidate.id as string).sort();
+    const duplicatePluginPaths = duplicates
+      .flatMap((candidate) => (candidate.installPath ? [candidate.installPath] : []))
       .sort();
     const marketplaceOperation: ClaudePluginOperation = {
       runtime: 'claude-code',
@@ -371,6 +375,7 @@ export function inspectBundledClaudePluginIntegration(
       plugins: [plugin],
       legacyPluginIds,
       duplicatePluginIds,
+      duplicatePluginPaths,
     };
   } catch (cause) {
     return {
@@ -381,6 +386,7 @@ export function inspectBundledClaudePluginIntegration(
       plugins: [],
       legacyPluginIds: [],
       duplicatePluginIds: [],
+      duplicatePluginPaths: [],
       error: cause instanceof Error ? cause.message : String(cause),
     };
   }

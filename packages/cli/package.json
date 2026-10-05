@@ -20,7 +20,8 @@
   },
   "bin": {
     "openplanr": "./bin/openplanr.js",
-    "opr": "./bin/openplanr.js"
+    "opr": "./bin/openplanr.js",
+    "planr": "./bin/planr.js"
   },
   "publishConfig": {
     "access": "public",

@@ -107,6 +107,7 @@ function fixture() {
         binAliases: {
           openplanr: './bin/openplanr.js',
           opr: './bin/openplanr.js',
+          planr: './bin/planr.js',
         },
         ...packageCustody.cli,
       },
