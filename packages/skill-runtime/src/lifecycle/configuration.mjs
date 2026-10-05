@@ -1,9 +1,10 @@
+import { PLANNING_FOLDER } from '@openplanr/protocol/names';
 import { DEFAULT_LIFECYCLE_SETTINGS } from './consent.mjs';
 import { prepareLifecycleEnvironment } from './environment.mjs';
 import { freezeJson } from './internal.mjs';
 import { readStateJson, writeStateJson } from './storage.mjs';
 
-export const LIFECYCLE_CONFIGURATION_PATH = '.planr/runtime/skill-runtime.json';
+export const LIFECYCLE_CONFIGURATION_PATH = `${PLANNING_FOLDER}/runtime/skill-runtime.json`;
 
 const SETTING_KEYS = Object.freeze(Object.keys(DEFAULT_LIFECYCLE_SETTINGS));
 

@@ -1,3 +1,4 @@
+import { CLI_COMMAND } from '@openplanr/protocol/names';
 import { BUSINESS_EXECUTIVE_SKILL_BINDINGS } from './role-skills.mjs';
 
 const SKILL_FRONTMATTER = /^---\n([\s\S]*?)\n---\n([\s\S]*)$/u;
@@ -62,7 +63,7 @@ The native plugin keeps slash-command compatibility and host-native agents.
 Canonical skills provide deterministic context, output conventions, and useful
 diagnostics for the requested work.
 
-Artifact review always routes through \`planr artifact\`. Generic HTML uses the
+Artifact review always routes through \`${CLI_COMMAND} artifact\`. Generic HTML uses the
 headless \`document\` presentation by default; design boards and spatial variant
 workflows use \`canvas\`. Private review sharing never publishes the artifact as a
 standalone website.
@@ -129,7 +130,7 @@ own file and returns only a short status summary; an absent lens is recorded
 absent and never synthesised. The board returns prioritized advice and concrete
 next actions; it does not govern implementation.
 Artifact review must invoke the public
-\`planr artifact\` route: generic HTML defaults to the headless \`document\`
+\`${CLI_COMMAND} artifact\` route: generic HTML defaults to the headless \`document\`
 presentation, while design boards and spatial variants use \`canvas\`. Verify
 work in proportion to risk and fix relevant failures directly.
 <!-- openplanr:runtime:end -->
@@ -155,7 +156,7 @@ requests stop after the plan; implementation requests continue through the
 relevant code changes and checks. Verify work in proportion to risk and fix
 relevant failures directly.
 
-Invoke artifact review through \`planr artifact\`. Generic HTML defaults to the
+Invoke artifact review through \`${CLI_COMMAND} artifact\`. Generic HTML defaults to the
 headless \`document\` presentation; design boards and spatial variant reviews
 use \`canvas\`.
 

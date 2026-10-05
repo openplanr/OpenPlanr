@@ -1,5 +1,6 @@
 import type { OperateApiEnvelopeV2 } from '../../../services/operate/client.js';
 import type { PublicOperatingDomain } from '../../../services/operate/domain-catalog-service.js';
+import { CLI_COMMAND } from '../../../utils/constants.js';
 import { display } from '../../../utils/logger.js';
 
 export type OperateExperienceSurfaceData = {
@@ -185,7 +186,7 @@ export function renderOperateEnvelope(envelope: OperateApiEnvelopeV2, json = fal
     display.line(`Confirm digest: ${String(preview.digest)}`);
     display.line(`Expires: ${String(preview.expiresAt)}`);
     display.line(
-      `Create: planr operate planning create-spec ${String(proposal.proposalId)} --actor ${String((proposal.actor as Record<string, unknown>).actorId)} --confirm ${String(preview.digest)}`,
+      `Create: ${CLI_COMMAND} operate planning create-spec ${String(proposal.proposalId)} --actor ${String((proposal.actor as Record<string, unknown>).actorId)} --confirm ${String(preview.digest)}`,
     );
     return;
   }

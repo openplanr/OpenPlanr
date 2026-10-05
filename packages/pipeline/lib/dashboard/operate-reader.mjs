@@ -2,6 +2,7 @@ import { existsSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 
 import { assertProtocolArtifact } from '../protocol/contracts.mjs';
+import { PLANNING_FOLDER } from '../protocol/names.mjs';
 
 const PROJECTION_RELATIVE_PATH = 'operate/projections/runtime-state.json';
 const CHECKPOINT_RELATIVE_PATH = 'operate/checkpoints/current.json';
@@ -13,7 +14,7 @@ function result(status, extra = {}) {
     available: status !== 'absent',
     readOnly: true,
     status,
-    path: `.planr/${PROJECTION_RELATIVE_PATH}`,
+    path: `${PLANNING_FOLDER}/${PROJECTION_RELATIVE_PATH}`,
     ...extra,
   };
 }

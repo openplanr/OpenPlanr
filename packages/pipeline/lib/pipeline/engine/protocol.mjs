@@ -5,4 +5,5 @@ export { parseFrontmatter, splitFrontmatter } from '../../dashboard/graph-reader
 export { validateProtocolArtifact as validateCanonicalProtocolArtifact } from '../../protocol/contracts.mjs';
 export { canonicalizeJson, sha256Jcs } from '../../protocol/jcs.mjs';
 export { validateJson } from '../../protocol/json-schema.mjs';
+export { PLANNING_FOLDER } from '../../protocol/names.mjs';
 export { normalizePlanningTask } from '../../protocol/planning-contracts.mjs';

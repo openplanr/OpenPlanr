@@ -6,6 +6,7 @@ import { fileURLToPath } from 'node:url';
 
 import { planrHome } from '../artifact/internal/planr-home.mjs';
 import { validateProtocolArtifact } from '../protocol/contracts.mjs';
+import { CLI_COMMAND, PLANNING_FOLDER } from '../protocol/names.mjs';
 import { PipelineError } from './errors.mjs';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
@@ -39,7 +40,7 @@ export function detectInstalledRuntimes(run = spawnSync) {
 }
 
 function readProjectDefault(projectRoot) {
-  const configPath = join(projectRoot, '.planr', 'config.json');
+  const configPath = join(projectRoot, PLANNING_FOLDER, 'config.json');
   if (!existsSync(configPath)) return null;
   try {
     return normalizeRuntime(JSON.parse(readFileSync(configPath, 'utf8')).defaultAgent);
@@ -49,7 +50,7 @@ function readProjectDefault(projectRoot) {
 }
 
 export function validateRuntimeLock(projectRoot, runtimeId) {
-  const lockPath = join(projectRoot, '.planr', 'runtime-lock.json');
+  const lockPath = join(projectRoot, PLANNING_FOLDER, 'runtime-lock.json');
   if (!existsSync(lockPath)) return null;
   let lock;
   try {
@@ -58,7 +59,7 @@ export function validateRuntimeLock(projectRoot, runtimeId) {
     throw new PipelineError(
       'E_LOCK_INVALID',
       `Could not parse ${lockPath}: ${error.message}`,
-      'Review the lock, then run `planr setup --scope project`.',
+      `Review the lock, then run \`${CLI_COMMAND} setup --scope project\`.`,
     );
   }
   const errors = validateProtocolArtifact('runtime-lock', lock, { protocolVersion: '1.18.0' });
@@ -66,7 +67,7 @@ export function validateRuntimeLock(projectRoot, runtimeId) {
     throw new PipelineError(
       'E_LOCK_INVALID',
       `Runtime lock does not match the supported contract: ${errors[0].path} ${errors[0].detail}`,
-      'Review the lock, then run `planr setup --scope project`.',
+      `Review the lock, then run \`${CLI_COMMAND} setup --scope project\`.`,
     );
   }
   const adapter = lock.adapters?.find((entry) => entry.runtime === runtimeId);
@@ -80,7 +81,7 @@ export function validateRuntimeLock(projectRoot, runtimeId) {
     throw new PipelineError(
       'E_LOCK_INCOMPATIBLE',
       `Project lock is incompatible with pipeline ${registry.pipelineVersion} and adapter ${runtimeId} ${expected?.version}.`,
-      `Run \`planr runtime update ${runtimeId} --scope project\`.`,
+      `Run \`${CLI_COMMAND} runtime update ${runtimeId} --scope project\`.`,
     );
   }
   return lock;
@@ -161,7 +162,7 @@ export function resolveRuntimeAdapter({
     throw new PipelineError(
       'E_RUNTIME_NOT_FOUND',
       'No supported coding runtime was detected.',
-      'Install Claude Code, Codex, or Cursor, then run `planr setup`.',
+      `Install Claude Code, Codex, or Cursor, then run \`${CLI_COMMAND} setup\`.`,
     );
   }
   throw new PipelineError(

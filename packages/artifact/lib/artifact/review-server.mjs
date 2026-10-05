@@ -10,6 +10,7 @@ import { createServer } from 'node:http';
 import { dirname, isAbsolute, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { ARTIFACT_ERROR_CODES, PipelineError } from '@openplanr/protocol/errors';
+import { CLI_COMMAND } from '@openplanr/protocol/names';
 import { resolveArtifactHtml } from './artifact-sources.mjs';
 import {
   createArtifactBridgeNonce,
@@ -1378,7 +1379,7 @@ function readReviewServerState(path) {
     throw artifactError(
       ARTIFACT_ERROR_CODES.LOOPBACK_STATE,
       'Local Studio owner state is unsafe or malformed. The original record was preserved.',
-      'Run planr doctor and recover the owner record before starting or stopping this service.',
+      `Run ${CLI_COMMAND} doctor and recover the owner record before starting or stopping this service.`,
     );
   }
 }

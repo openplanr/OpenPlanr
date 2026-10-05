@@ -3,6 +3,7 @@ import { mkdtemp, readFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
+import { CLI_COMMAND } from '../utils/constants.js';
 import { messageOf } from '../utils/error-message.js';
 import { resolvePipelinePackage } from './pipeline-package-service.js';
 import { inspectRuntimeProjectContext } from './runtime-manager/inventory.js';
@@ -336,7 +337,7 @@ function manifestEnvelope(
     // An invalid set is not reviewable, so it gets no handover action.
     nextAction:
       html && quality.summary?.status !== 'invalid'
-        ? `planr artifact open ${JSON.stringify(manifestPath)} --json`
+        ? `${CLI_COMMAND} artifact open ${JSON.stringify(manifestPath)} --json`
         : null,
   };
 }
@@ -386,7 +387,7 @@ export async function renderDiagramInput(options: {
       throw new DiagramCommandError(
         'E_DIAGRAM_SCENE_NEEDS_MANIFEST',
         'An editable scene needs its canonical diagram manifest before it can own a rerender.',
-        'Place the edited scene in an existing diagram set and run planr diagram rerender <manifest> --accept excalidraw.',
+        `Place the edited scene in an existing diagram set and run ${CLI_COMMAND} diagram rerender <manifest> --accept excalidraw.`,
       );
     }
     document =
@@ -470,7 +471,7 @@ async function inspectSource(
       fidelity: { import: String(imported.fidelity.status ?? 'partial') },
       omissions: [],
       warnings: [],
-      nextAction: `planr diagram render ${JSON.stringify(input)} --json`,
+      nextAction: `${CLI_COMMAND} diagram render ${JSON.stringify(input)} --json`,
     };
   }
   const value = await readJsonObject(input);
@@ -501,7 +502,7 @@ async function inspectSource(
     fidelity: {},
     omissions: [],
     warnings: [],
-    nextAction: `planr diagram render ${JSON.stringify(input)} --json`,
+    nextAction: `${CLI_COMMAND} diagram render ${JSON.stringify(input)} --json`,
   };
 }
 
@@ -560,7 +561,7 @@ export async function diagramGallery(type?: string): Promise<Record<string, unkn
     throw new DiagramCommandError(
       'E_DIAGRAM_GRAMMAR_UNKNOWN',
       `No diagram grammar or layout family matches ${type}.`,
-      'Run planr diagram gallery --json to list supported types.',
+      `Run ${CLI_COMMAND} diagram gallery --json to list supported types.`,
     );
   }
   return {

@@ -12,6 +12,7 @@ import { homedir } from 'node:os';
 import { join, posix, relative, resolve } from 'node:path';
 
 import { sha256Jcs } from '../protocol/jcs.mjs';
+import { PLANNING_FOLDER } from '../protocol/names.mjs';
 
 export const RELEASE_REPOSITORY_KEYS = Object.freeze([
   'pipeline',
@@ -830,7 +831,7 @@ export function createPackagePayloadProof({
   for (const path of archiveFiles) {
     const normalized = portablePath(path, 'archive path');
     if (
-      ['.git', '.planr', 'node_modules', 'tests'].some(
+      ['.git', PLANNING_FOLDER, 'node_modules', 'tests'].some(
         (prefix) => normalized === prefix || normalized.startsWith(`${prefix}/`),
       )
     ) {

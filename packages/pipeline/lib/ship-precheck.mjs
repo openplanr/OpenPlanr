@@ -5,13 +5,14 @@
 
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
+import { PLANNING_FOLDER } from './protocol/names.mjs';
 
 const US_FILE = /^US-.*\.md$/i;
 
 /** @returns {boolean} */
 export function isSpecDrivenWorkspace(projectRoot) {
   try {
-    const p = join(projectRoot, '.planr', 'config.json');
+    const p = join(projectRoot, PLANNING_FOLDER, 'config.json');
     if (!existsSync(p)) return false;
     const cfg = JSON.parse(readFileSync(p, 'utf-8'));
     const specPrefix = cfg?.idPrefix?.spec;
@@ -23,7 +24,7 @@ export function isSpecDrivenWorkspace(projectRoot) {
 
 /** Lexicographically first subdirectory of `.planr/specs/` matching `^[A-Z]+-\\d{3}-${slug}$`. */
 export function resolveSpecDirectoryForSlug(projectRoot, slug) {
-  const root = join(projectRoot, '.planr', 'specs');
+  const root = join(projectRoot, PLANNING_FOLDER, 'specs');
   if (!existsSync(root)) return null;
   const slugRePart = slug.replace(/[|\\{}()[\]^$+*?.]/g, '\\$&');
   const re = new RegExp(`^[A-Z]+-\\d{3}-${slugRePart}$`);
@@ -60,7 +61,7 @@ export function assertShipStoriesReady(projectRoot, slug) {
     return {
       ok: false,
       code: 'NOT_SPEC_DRIVEN',
-      message: 'Spec-driven workspace not detected (.planr/config.json + idPrefix.spec).',
+      message: `Spec-driven workspace not detected (${PLANNING_FOLDER}/config.json + idPrefix.spec).`,
     };
   }
   const specDir = resolveSpecDirectoryForSlug(projectRoot, slug);
@@ -68,7 +69,7 @@ export function assertShipStoriesReady(projectRoot, slug) {
     return {
       ok: false,
       code: 'SPEC_DIR_MISSING',
-      message: `No spec directory under .planr/specs/ matches slug "${slug}" for this workspace.`,
+      message: `No spec directory under ${PLANNING_FOLDER}/specs/ matches slug "${slug}" for this workspace.`,
     };
   }
   const storiesPath = join(specDir, 'stories');

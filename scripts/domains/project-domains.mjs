@@ -53,6 +53,7 @@ const PROTOCOL_TARGETS = Object.freeze({
   'sharing-security-contracts': 'lib/protocol/sharing-security-contracts.mjs',
   'studio-presentation-contracts': 'lib/protocol/studio-presentation-contracts.mjs',
   errors: 'lib/protocol/errors.mjs',
+  names: 'lib/protocol/names.mjs',
   'canonical-json': 'lib/protocol/canonical-json.mjs',
   'json-schema': 'lib/protocol/json-schema.mjs',
   contracts: 'lib/protocol/contracts.mjs',

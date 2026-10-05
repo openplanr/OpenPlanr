@@ -10,6 +10,7 @@ import {
   realpathSync,
 } from 'node:fs';
 import { isAbsolute, relative, resolve, sep } from 'node:path';
+import { PLANNING_FOLDER } from '@openplanr/protocol/names';
 
 export const LOCAL_PLANR_EVIDENCE_PROVIDER_ID_V2 = 'local-planr-evidence-provider';
 export const LOCAL_PLANR_EVIDENCE_RESOLVER_ID_V2 = 'local-planr-evidence-resolver';
@@ -62,8 +63,8 @@ function hasCapability(capabilities, capability) {
 function safePlanrPath(path) {
   return (
     typeof path === 'string' &&
-    path.startsWith('.planr/') &&
-    path.length > '.planr/'.length &&
+    path.startsWith(`${PLANNING_FOLDER}/`) &&
+    path.length > `${PLANNING_FOLDER}/`.length &&
     !isAbsolute(path) &&
     !path.includes('\\') &&
     path.split('/').every((segment) => segment.length > 0 && segment !== '.' && segment !== '..')

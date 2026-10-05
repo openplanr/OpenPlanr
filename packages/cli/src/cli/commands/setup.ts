@@ -16,6 +16,7 @@ import {
   runtimeRoot,
   type SkillInstallMode,
 } from '../../services/runtime-manager-service.js';
+import { CLI_COMMAND } from '../../utils/constants.js';
 import { display, isVerbose, logger } from '../../utils/logger.js';
 import { printRuntimeChanges } from './runtime-output.js';
 
@@ -75,7 +76,7 @@ function printPreview(preview: Awaited<ReturnType<typeof previewSetup>>, cliVers
   if (preview.minimal) {
     display.line('  Agent integration skipped; no setup files will be changed.');
     display.line(
-      '  The installed CLI already provides planning utilities. Use `planr init` in your project.',
+      `  The installed CLI already provides planning utilities. Use \`${CLI_COMMAND} init\` in your project.`,
     );
     return;
   }
@@ -328,7 +329,7 @@ export function registerSetupCommand(program: Command, cliVersion: string) {
         throw new RuntimeManagerError(
           'E_CONFIRMATION_REQUIRED',
           'Setup cannot apply changes without confirmation in a non-interactive terminal.',
-          'Review `planr setup --dry-run`, then rerun with explicit choices and `--yes`.',
+          `Review \`${CLI_COMMAND} setup --dry-run\`, then rerun with explicit choices and \`--yes\`.`,
         );
       }
       const confirmed =
@@ -354,11 +355,11 @@ export function registerSetupCommand(program: Command, cliVersion: string) {
         }
         display.blank();
         display.line('Verify:');
-        display.line('  planr doctor');
+        display.line(`  ${CLI_COMMAND} doctor`);
         display.blank();
         display.line('Start:');
         if (preview.projectContext.reason !== 'planr')
-          display.line('  In your project, run: planr init');
+          display.line(`  In your project, run: ${CLI_COMMAND} init`);
         display.line('  Open your coding agent and ask OpenPlanr to plan your feature.');
       }
     });

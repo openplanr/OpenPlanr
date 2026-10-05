@@ -19,7 +19,7 @@ import {
   toSchemaDiagnostics,
 } from '../models/sprint-refinement-schema.js';
 import type { ArtifactType, OpenPlanrConfig } from '../models/types.js';
-import { isValidStatus, VALID_STATUSES } from '../utils/constants.js';
+import { CLI_COMMAND, isValidStatus, VALID_STATUSES } from '../utils/constants.js';
 import { escapeRegExp } from '../utils/escape-regexp.js';
 import { fileExists, readFile } from '../utils/fs.js';
 import {
@@ -269,7 +269,7 @@ export function parseRefinementDocument(
     throw sprintError(
       'E_SPRINT_REFINEMENT_INVALID',
       'The refinement document does not match the refinement contract.',
-      'Fix the listed paths and re-run; the contract is documented under planr sprint refinement --help.',
+      `Fix the listed paths and re-run; the contract is documented under ${CLI_COMMAND} sprint refinement --help.`,
       { diagnostics: toSchemaDiagnostics(parsed.error) },
     );
   }
@@ -307,7 +307,7 @@ export async function readRefinement(
     throw sprintError(
       'E_SPRINT_REFINEMENT_INVALID',
       `${relative} is not valid JSON.`,
-      'Restore the file from git or re-run planr sprint refinement.',
+      `Restore the file from git or re-run ${CLI_COMMAND} sprint refinement.`,
       { cause },
     );
   }
@@ -324,7 +324,7 @@ async function requireRefinement(
     throw sprintError(
       'E_SPRINT_REFINEMENT_MISSING',
       `${sprintId} has no refinement document at ${refinementPaths(config, sprintId).json}.`,
-      'Run planr sprint refinement <id> --data <refinement.json> first.',
+      `Run ${CLI_COMMAND} sprint refinement <id> --data <refinement.json> first.`,
     );
   }
   return document;
@@ -340,7 +340,7 @@ async function requireSprint(
     throw sprintError(
       'E_SPRINT_NOT_FOUND',
       `Sprint ${sprintId} was not found.`,
-      'Run planr sprint list to see the available sprints.',
+      `Run ${CLI_COMMAND} sprint list to see the available sprints.`,
     );
   }
   return {
@@ -425,7 +425,7 @@ export async function prepareSprintCreation(
     throw inputError(
       'status',
       `A new sprint is planned or active, not "${status}".`,
-      'Use planr sprint close <id> to close a sprint.',
+      `Use ${CLI_COMMAND} sprint close <id> to close a sprint.`,
     );
   }
   const releaseCut = optionalDate(input.releaseCut, 'releaseCut');
@@ -454,7 +454,7 @@ export async function prepareSprintCreation(
           throw inputError(
             'batches',
             `Sprint item ${item.id} was not found.`,
-            'Create the artifact first (planr backlog add, planr quick create) or remove it from the batch.',
+            `Create the artifact first (${CLI_COMMAND} backlog add, ${CLI_COMMAND} quick create) or remove it from the batch.`,
           );
         }
         items.push({
@@ -622,7 +622,7 @@ export async function recordRefinement(
     throw sprintError(
       'E_SPRINT_CLOSED',
       `${sprintId} is closed and cannot be refined.`,
-      'Create a new sprint with planr sprint create and refine that one.',
+      `Create a new sprint with ${CLI_COMMAND} sprint create and refine that one.`,
     );
   }
   const document = parseRefinementDocument(input, sprintId);
@@ -719,7 +719,7 @@ export async function closeSprint(
     throw sprintError(
       'E_SPRINT_ALREADY_CLOSED',
       `${sprintId} is already closed.`,
-      'Nothing to do; open the next sprint with planr sprint create.',
+      `Nothing to do; open the next sprint with ${CLI_COMMAND} sprint create.`,
     );
   }
   const checkboxes = new Map(parseSprintCheckboxes(sprint.content).map((line) => [line.id, line]));
@@ -829,7 +829,7 @@ export async function applyRefinement(
     throw sprintError(
       'E_SPRINT_APPLY_STATUS_INVALID',
       'Some target statuses are outside the repository status vocabulary.',
-      'Use each type’s vocabulary from planr update --help, or pass --force.',
+      `Use each type’s vocabulary from ${CLI_COMMAND} update --help, or pass --force.`,
       { diagnostics: invalid },
     );
   }

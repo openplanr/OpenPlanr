@@ -50,6 +50,7 @@ import {
   updateSpecFields,
   validateSpecForPromotion,
 } from '../../services/spec-service.js';
+import { CLI_COMMAND, PLANNING_FOLDER } from '../../utils/constants.js';
 import { messageOf } from '../../utils/error-message.js';
 import { display, logger } from '../../utils/logger.js';
 import { CliBoundaryError } from '../error-boundary.js';
@@ -231,7 +232,9 @@ export function registerSpecCommand(program: Command) {
   // ------------------------------------------------------------------------
   spec
     .command('init')
-    .description('Activate spec-driven mode in this project (creates .planr/specs/ root)')
+    .description(
+      `Activate spec-driven mode in this project (creates ${PLANNING_FOLDER}/specs/ root)`,
+    )
     .action(async () => {
       const projectDir = program.opts().projectDir as string;
       const config = await loadConfig(projectDir);
@@ -264,11 +267,13 @@ export function registerSpecCommand(program: Command) {
       }
       logger.dim('');
       display.line('Next steps:');
-      display.line('  1. Author a spec:    planr spec create --title "<feature title>"');
-      display.line('  2. Optional: attach: planr spec attach-design <SPEC-id> --files <png>...');
+      display.line(`  1. Author a spec:    ${CLI_COMMAND} spec create --title "<feature title>"`);
+      display.line(
+        `  2. Optional: attach: ${CLI_COMMAND} spec attach-design <SPEC-id> --files <png>...`,
+      );
       display.line('  3. Plan:             invoke planr-plan in the active host agent');
-      display.line('  4. Review:           planr spec show <SPEC-id>');
-      display.line('  5. Promote:          planr spec promote <SPEC-id>');
+      display.line(`  4. Review:           ${CLI_COMMAND} spec show <SPEC-id>`);
+      display.line(`  5. Promote:          ${CLI_COMMAND} spec promote <SPEC-id>`);
       display.line('  6. Start delivery:  invoke $planr:ship with the selected T-NNN task');
     });
 
@@ -290,7 +295,9 @@ export function registerSpecCommand(program: Command) {
 
       const title = (opts.title as string | undefined) || titleParts.join(' ').trim();
       if (!title) {
-        logger.error('Provide a title: planr spec create "Auth flow"  OR  --title "Auth flow"');
+        logger.error(
+          `Provide a title: ${CLI_COMMAND} spec create "Auth flow"  OR  --title "Auth flow"`,
+        );
         process.exit(1);
       }
 
@@ -308,12 +315,12 @@ export function registerSpecCommand(program: Command) {
         logger.dim('');
         display.line('Next steps:');
         display.line(`  - Edit the spec body:           ${specFile}`);
-        display.line(`  - Or use guided authoring:      planr spec shape ${id}`);
+        display.line(`  - Or use guided authoring:      ${CLI_COMMAND} spec shape ${id}`);
         display.line(
-          `  - Attach UI mockups (optional): planr spec attach-design ${id} --files <png>...`,
+          `  - Attach UI mockups (optional): ${CLI_COMMAND} spec attach-design ${id} --files <png>...`,
         );
         display.line(`  - Create stories and tasks:    invoke planr-plan for ${id}`);
-        display.line(`  - Review the tree:              planr spec show ${id}`);
+        display.line(`  - Review the tree:              ${CLI_COMMAND} spec show ${id}`);
       } catch (err) {
         logger.error(messageOf(err));
         process.exit(1);
@@ -340,7 +347,7 @@ export function registerSpecCommand(program: Command) {
           'E_PROFESSIONAL_SPEC_NOT_FOUND',
           'The requested spec was not found.',
           {
-            recovery: 'Run `planr spec list` and retry with one existing spec ID.',
+            recovery: `Run \`${CLI_COMMAND} spec list\` and retry with one existing spec ID.`,
           },
         );
       }
@@ -401,7 +408,7 @@ export function registerSpecCommand(program: Command) {
       const specs = await listSpecs(projectDir, config);
 
       if (specs.length === 0) {
-        logger.info('No specs found. Run `planr spec create "<title>"` to create one.');
+        logger.info(`No specs found. Run \`${CLI_COMMAND} spec create "<title>"\` to create one.`);
         return;
       }
 
@@ -498,7 +505,9 @@ export function registerSpecCommand(program: Command) {
 
       const report = await getSpecStatus(projectDir, config);
       if (report.specCount === 0) {
-        logger.info('No specs found. Run `planr spec init` then `planr spec create "<title>"`.');
+        logger.info(
+          `No specs found. Run \`${CLI_COMMAND} spec init\` then \`${CLI_COMMAND} spec create "<title>"\`.`,
+        );
         return;
       }
       logger.heading('Spec-driven mode status');

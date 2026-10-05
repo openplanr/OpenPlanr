@@ -19,6 +19,7 @@
 import { createHash } from 'node:crypto';
 import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
+import { PLANNING_FOLDER } from '../utils/constants.js';
 import { atomicWriteFile } from './atomic-write-service.js';
 
 export interface ReviseCacheEntry {
@@ -36,7 +37,7 @@ export interface ReviseCache {
 const EMPTY: ReviseCache = { entries: {} };
 
 export function defaultCachePath(projectDir: string): string {
-  return path.join(projectDir, '.planr', 'reports', '.revise-cache.json');
+  return path.join(projectDir, PLANNING_FOLDER, 'reports', '.revise-cache.json');
 }
 
 export function loadCache(projectDir: string): ReviseCache {

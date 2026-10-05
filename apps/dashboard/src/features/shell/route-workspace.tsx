@@ -14,7 +14,11 @@ import { isCurrentDashboardQuery } from '../../lib/binding/query-identity.js';
 import type { DashboardSearchSources } from '../search/search-index.js';
 import { ProjectionBoundary } from './ProjectionBoundary.js';
 import { type OperateReviewNavigation, operateRouteRegistry } from './routes/operate/index.js';
-import { PlanningSearchWorkspace, resolvePlanningRoutePage } from './routes/planning/index.js';
+import {
+  PLANNING_FOLDER,
+  PlanningSearchWorkspace,
+  resolvePlanningRoutePage,
+} from './routes/planning/index.js';
 
 type DashboardContext = ReturnType<typeof useDashboard>;
 type PlanningPageProps = Readonly<{
@@ -93,7 +97,7 @@ function PendingRouteFrame({
         description={
           operate
             ? 'Reading the Operate projection. The route is already resolved.'
-            : 'Reading the graph from .planr/. The route is already resolved.'
+            : `Reading the graph from ${PLANNING_FOLDER}/. The route is already resolved.`
         }
       />
       {operate ? (

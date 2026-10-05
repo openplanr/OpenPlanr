@@ -3,6 +3,7 @@
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { PLANNING_FOLDER } from '../lib/protocol/names.mjs';
 
 const COMMAND_PREFIX =
   /^(?:npm|npx|pnpm|yarn|bun|node|deno|cargo|go|make|just|pytest|python(?:3)?\s+-m|dotnet|mvn|gradle|\.\/gradlew)\b/u;
@@ -107,7 +108,7 @@ function configuredChecks(projectRoot) {
 }
 
 function instructionChecks(projectRoot) {
-  return ['AGENTS.md', 'CLAUDE.md', '.planr/rules.md']
+  return ['AGENTS.md', 'CLAUDE.md', `${PLANNING_FOLDER}/rules.md`]
     .map((path) => resolve(projectRoot, path))
     .filter(existsSync)
     .flatMap((path) => commandCandidates(read(path)));

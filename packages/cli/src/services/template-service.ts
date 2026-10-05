@@ -1,12 +1,16 @@
 import path from 'node:path';
 import Handlebars from 'handlebars';
-import { getTemplatesDir } from '../utils/constants.js';
+import { CLI_COMMAND, getTemplatesDir, PLANNING_FOLDER } from '../utils/constants.js';
 import { fileExists, readFile } from '../utils/fs.js';
 import { logger } from '../utils/logger.js';
 
 const compiledCache = new Map<string, HandlebarsTemplateDelegate>();
 
 Handlebars.registerHelper('date', () => new Date().toISOString().split('T')[0]);
+
+Handlebars.registerHelper('cliCommand', () => CLI_COMMAND);
+
+Handlebars.registerHelper('planningFolder', () => PLANNING_FOLDER);
 
 Handlebars.registerHelper('uppercase', (str: string) =>
   typeof str === 'string' ? str.toUpperCase() : '',

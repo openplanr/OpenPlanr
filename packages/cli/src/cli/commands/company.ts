@@ -21,6 +21,7 @@ import {
   pushCompanyBinding,
   resolveCompanyOrigin,
 } from '../../services/company-sync-service.js';
+import { CLI_COMMAND } from '../../utils/constants.js';
 import { logger } from '../../utils/logger.js';
 
 function print(value: unknown) {
@@ -56,8 +57,8 @@ function printPublicationPreview(
         : []),
       '',
       result.action === 'company.preview'
-        ? `Publish: planr company publish ${result.preview.id}`
-        : `Publish update: planr company push ${result.preview.id}`,
+        ? `Publish: ${CLI_COMMAND} company publish ${result.preview.id}`
+        : `Publish update: ${CLI_COMMAND} company push ${result.preview.id}`,
       '',
     ].join('\n'),
   );

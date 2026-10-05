@@ -27,6 +27,10 @@
       "types": "./src/semver.d.mts",
       "import": "./src/semver.mjs"
     },
+    "./names": {
+      "types": "./src/names.d.mts",
+      "import": "./src/names.mjs"
+    },
     "./contracts": {
       "types": "./src/contracts.d.mts",
       "import": "./src/contracts.mjs"

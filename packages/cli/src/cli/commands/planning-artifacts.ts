@@ -15,6 +15,7 @@ import {
 import { loadConfig } from '../../services/config-service.js';
 import { prepareSprintCreation } from '../../services/sprint-refinement-service.js';
 import { renderTemplate } from '../../services/template-service.js';
+import { CLI_COMMAND } from '../../utils/constants.js';
 import { writeFile } from '../../utils/fs.js';
 import { display, logger } from '../../utils/logger.js';
 import { parseMarkdown } from '../../utils/markdown.js';
@@ -170,7 +171,8 @@ async function creationData(
   const title = String(
     options.title ?? options.description ?? input.title ?? input.name ?? '',
   ).trim();
-  if (!title) throw new Error(`planr ${type} create requires --title or JSON input with a title.`);
+  if (!title)
+    throw new Error(`${CLI_COMMAND} ${type} create requires --title or JSON input with a title.`);
   const base = { ...input, title };
 
   if (type === 'epic')

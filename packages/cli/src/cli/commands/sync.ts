@@ -19,6 +19,7 @@ import {
   updateArtifact,
 } from '../../services/artifact-service.js';
 import { loadConfig } from '../../services/config-service.js';
+import { CLI_COMMAND } from '../../utils/constants.js';
 import { display, logger } from '../../utils/logger.js';
 
 export function registerSyncCommand(program: Command) {
@@ -255,7 +256,7 @@ async function buildLinksSection(
     };
     const cmd = dirMap[childType] || childType;
     const parentFlag = `--${parentType === 'story' ? 'story' : parentType}`;
-    return `_No ${childType}s created yet. Run \`planr ${cmd} create ${parentFlag} ${parentId}\` to create ${childType}s._`;
+    return `_No ${childType}s created yet. Run \`${CLI_COMMAND} ${cmd} create ${parentFlag} ${parentId}\` to create ${childType}s._`;
   }
 
   const relDir: Record<string, string> = {

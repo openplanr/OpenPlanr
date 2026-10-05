@@ -3,6 +3,7 @@ import { existsSync, lstatSync, readdirSync, readFileSync, realpathSync } from '
 import path from 'node:path';
 import { parse } from 'smol-toml';
 import { z } from 'zod';
+import { CLI_COMMAND } from '../utils/constants.js';
 import { parseExternalJson } from '../utils/external-json.js';
 import { effectiveCodexHome } from './runtime-manager/codex-discovery.js';
 
@@ -185,8 +186,7 @@ export function inspectCodexPluginIntegration(
       installedVersion: null,
       duplicates: [],
       operations: [],
-      error:
-        'The CLI bundled Codex host package is missing its OpenPlanr marketplace. Run planr setup --runtime codex to repair it.',
+      error: `The CLI bundled Codex host package is missing its OpenPlanr marketplace. Run ${CLI_COMMAND} setup --runtime codex to repair it.`,
     };
   }
   const marketplace = JSON.parse(readFileSync(marketplacePath, 'utf8')) as {
@@ -206,7 +206,7 @@ export function inspectCodexPluginIntegration(
       installedVersion: null,
       duplicates: [],
       operations: [],
-      error: `The CLI bundled Codex host marketplace does not declare ${HOST_PLUGIN_NAME}. Run planr setup --runtime codex to repair it.`,
+      error: `The CLI bundled Codex host marketplace does not declare ${HOST_PLUGIN_NAME}. Run ${CLI_COMMAND} setup --runtime codex to repair it.`,
     };
   const version = runner(['--version']);
   if (version.error || version.status !== 0)

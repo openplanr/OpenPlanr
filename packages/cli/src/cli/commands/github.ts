@@ -33,6 +33,7 @@ import {
   verifyGitHubRepo,
 } from '../../services/github-service.js';
 import { promptSelect } from '../../services/prompt-service.js';
+import { CLI_COMMAND } from '../../utils/constants.js';
 import { messageOf } from '../../utils/error-message.js';
 import { escapeRegExp } from '../../utils/escape-regexp.js';
 import { display, logger } from '../../utils/logger.js';
@@ -248,9 +249,9 @@ export function registerGitHubCommand(program: Command) {
         artifactIds = [artifactId];
       } else {
         logger.error('Provide an artifact ID, --epic, or --all');
-        logger.dim('Usage: planr github push TASK-001');
-        logger.dim('       planr github push --epic EPIC-001');
-        logger.dim('       planr github push --all');
+        logger.dim(`Usage: ${CLI_COMMAND} github push TASK-001`);
+        logger.dim(`       ${CLI_COMMAND} github push --epic EPIC-001`);
+        logger.dim(`       ${CLI_COMMAND} github push --all`);
         process.exit(1);
       }
 
@@ -338,7 +339,9 @@ export function registerGitHubCommand(program: Command) {
       }
 
       if (linkedArtifacts.length === 0) {
-        logger.warn('No artifacts linked to GitHub Issues. Run `planr github push` first.');
+        logger.warn(
+          `No artifacts linked to GitHub Issues. Run \`${CLI_COMMAND} github push\` first.`,
+        );
         return;
       }
 

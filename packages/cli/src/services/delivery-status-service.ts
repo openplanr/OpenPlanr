@@ -16,6 +16,7 @@
 
 import { parseTaskMarkdown } from '../agents/task-parser.js';
 import type { ArtifactType, OpenPlanrConfig } from '../models/types.js';
+import { CLI_COMMAND } from '../utils/constants.js';
 import { escapeRegExp } from '../utils/escape-regexp.js';
 import { logger } from '../utils/logger.js';
 import { listArtifacts, readArtifact, readArtifactRaw } from './artifact-service.js';
@@ -246,7 +247,7 @@ async function enrichLinear(items: DeliveryItem[], warnings: string[]): Promise<
     const token = (await resolveApiKey(LINEAR_CREDENTIAL_KEY))?.trim();
     if (!token) {
       warnings.push(
-        '--linear: no Linear token (run `planr linear init` or set PLANR_LINEAR_TOKEN); using reconciled state.',
+        `--linear: no Linear token (run \`${CLI_COMMAND} linear init\` or set PLANR_LINEAR_TOKEN); using reconciled state.`,
       );
       return;
     }

@@ -13,6 +13,7 @@ import {
 } from '../../services/evidence-service.js';
 import { lintWithProjectConfig } from '../../services/report-linter-service.js';
 import { generateStakeholderReport, writeReportOutputs } from '../../services/report-service.js';
+import { CLI_COMMAND, PLANNING_FOLDER } from '../../utils/constants.js';
 import { display, logger } from '../../utils/logger.js';
 
 function parseReportType(raw: string): StakeholderReportType | null {
@@ -41,7 +42,7 @@ export function registerReportCommand(program: Command) {
     .option('--days <n>', 'GitHub lookback days', '7')
     .option('--no-github', 'skip GitHub commit/PR signals')
     .option('--format <fmt>', 'markdown | html', 'markdown')
-    .option('--output <dir>', 'directory under project (default: .planr/reports)')
+    .option('--output <dir>', `directory under project (default: ${PLANNING_FOLDER}/reports)`)
     .option('--stdout', 'print markdown to stdout instead of writing file')
     .option('--lint', 'run report linter on generated markdown')
     .option(
@@ -156,7 +157,7 @@ export function registerReportCommand(program: Command) {
             .filter(Boolean);
           for (const t of targets) {
             if (t === 'github') {
-              const title = `[planr report] ${config.projectName} — ${reportType} (${new Date().toISOString().split('T')[0]})`;
+              const title = `[${CLI_COMMAND} report] ${config.projectName} — ${reportType} (${new Date().toISOString().split('T')[0]})`;
               const res = await pushReportAsGitHubIssue({
                 title,
                 body: markdown,

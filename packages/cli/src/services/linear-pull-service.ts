@@ -11,6 +11,7 @@ import { reconcileStatus } from '../../lib/integrations.mjs';
 import type { ParsedSubtask } from '../agents/task-parser.js';
 import { parseTaskMarkdown } from '../agents/task-parser.js';
 import type { BacklogStatus, OpenPlanrConfig, TaskStatus } from '../models/types.js';
+import { CLI_COMMAND, PLANNING_FOLDER } from '../utils/constants.js';
 import { messageOf } from '../utils/error-message.js';
 import { isVerbose, logger } from '../utils/logger.js';
 import {
@@ -286,7 +287,7 @@ export async function syncLinearStatusIntoArtifacts(
       // Same validation as checkbox sync: don't feed malformed ids to the API.
       if (!isLikelyLinearIssueId(linearId)) {
         logger.warn(
-          `${type} ${row.id}: linearIssueId "${linearId}" is not a valid Linear id (expected uuid or \`ENG-42\` identifier). Skipping status sync — re-run \`planr linear push\` to repair.`,
+          `${type} ${row.id}: linearIssueId "${linearId}" is not a valid Linear id (expected uuid or \`ENG-42\` identifier). Skipping status sync — re-run \`${CLI_COMMAND} linear push\` to repair.`,
         );
         summary.skippedNoId++;
         continue;
@@ -468,7 +469,7 @@ async function appendStatusSyncConflictAudit(
   const path = await import('node:path');
   const { existsSync } = await import('node:fs');
   const today = new Date().toISOString().slice(0, 10);
-  const dir = path.join(projectDir, '.planr', 'reports');
+  const dir = path.join(projectDir, PLANNING_FOLDER, 'reports');
   await mkdir(dir, { recursive: true });
   const file = path.join(dir, `linear-sync-conflicts-${today}.md`);
   const isNew = !existsSync(file);
@@ -480,7 +481,7 @@ async function appendStatusSyncConflictAudit(
     )
     .join('\n');
   const header = isNew
-    ? `# Linear sync conflict audit — ${today}\n\n> Auto-resolved conflicts from non-interactive \`planr linear sync\` runs. Each row is one artifact where local and Linear disagreed and the default resolution was picked without human confirmation.\n\n| timestamp | kind | artifact | base | local | remote | chosen |\n| --- | --- | --- | --- | --- | --- | --- |\n`
+    ? `# Linear sync conflict audit — ${today}\n\n> Auto-resolved conflicts from non-interactive \`${CLI_COMMAND} linear sync\` runs. Each row is one artifact where local and Linear disagreed and the default resolution was picked without human confirmation.\n\n| timestamp | kind | artifact | base | local | remote | chosen |\n| --- | --- | --- | --- | --- | --- | --- |\n`
     : '';
   await appendFile(file, `${header}${rows}\n`, 'utf-8');
   logger.dim(
@@ -813,7 +814,7 @@ export async function runLinearTaskCheckboxSync(
     if (!isLikelyLinearIssueId(issueId)) {
       summary.skippedStaleId++;
       logger.warn(
-        `Task ${t.id}: linearIssueId "${issueId}" is not a valid Linear issue id (expected uuid or \`ENG-42\` identifier). Re-run \`planr linear push\` to repair.`,
+        `Task ${t.id}: linearIssueId "${issueId}" is not a valid Linear issue id (expected uuid or \`ENG-42\` identifier). Re-run \`${CLI_COMMAND} linear push\` to repair.`,
       );
       continue;
     }
@@ -871,7 +872,7 @@ export async function runLinearTaskCheckboxSync(
         const expected = Math.max(localMap.size, remoteMap.size);
         if (expected > 0 && baseMap.size * 2 < expected) {
           logger.warn(
-            `Task ${taskFileId}: linearChecklistReconciled looks corrupted (${baseMap.size} parsed vs ${expected} expected). Re-run \`planr linear push\` to restore the reconciliation baseline.`,
+            `Task ${taskFileId}: linearChecklistReconciled looks corrupted (${baseMap.size} parsed vs ${expected} expected). Re-run \`${CLI_COMMAND} linear push\` to restore the reconciliation baseline.`,
           );
         }
       }
@@ -947,7 +948,7 @@ async function appendSyncConflictAudit(
   const path = await import('node:path');
   const { existsSync } = await import('node:fs');
   const today = new Date().toISOString().slice(0, 10);
-  const dir = path.join(projectDir, '.planr', 'reports');
+  const dir = path.join(projectDir, PLANNING_FOLDER, 'reports');
   await mkdir(dir, { recursive: true });
   const file = path.join(dir, `linear-sync-conflicts-${today}.md`);
   const isNew = !existsSync(file);
@@ -959,7 +960,7 @@ async function appendSyncConflictAudit(
     )
     .join('\n');
   const header = isNew
-    ? `# Linear sync conflict audit — ${today}\n\n> Auto-resolved conflicts from non-interactive \`planr linear sync\` runs. Each row is one checkbox where local and Linear disagreed and the default resolution was picked without human confirmation.\n\n| timestamp | task file | task id | base | local | remote | chosen |\n| --- | --- | --- | --- | --- | --- | --- |\n`
+    ? `# Linear sync conflict audit — ${today}\n\n> Auto-resolved conflicts from non-interactive \`${CLI_COMMAND} linear sync\` runs. Each row is one checkbox where local and Linear disagreed and the default resolution was picked without human confirmation.\n\n| timestamp | task file | task id | base | local | remote | chosen |\n| --- | --- | --- | --- | --- | --- | --- |\n`
     : '';
   await appendFile(file, `${header}${rows}\n`, 'utf-8');
   logger.dim(

@@ -36,6 +36,7 @@ import {
   validateArtifactEnvelope,
   validateArtifactReview,
 } from '@openplanr/artifact/envelope.mjs';
+import { CLI_COMMAND } from '@openplanr/protocol/names';
 import { assertSharingSecurityContract } from '@openplanr/protocol/sharing-security-contracts';
 import { MIME } from '../design/mime-types.mjs';
 import { resolveContainedRealPath, serveStaticFile } from '../design/path-util.mjs';
@@ -1149,7 +1150,7 @@ function verifiedInstance(env, health, port) {
 export function daemonNeedsRestart(running) {
   const error = new Error(
     running?.instanceId
-      ? `A design daemon needs a restart. Run planr server stop ${running.instanceId}, then launch daemon --serve again.`
+      ? `A design daemon needs a restart. Run ${CLI_COMMAND} server stop ${running.instanceId}, then launch daemon --serve again.`
       : 'A legacy design daemon is still running. Stop its original tracked background task, then launch daemon --serve again. Existing daemon and board tokens were preserved.',
   );
   error.code = 'E_DESIGN_DAEMON_RESTART_REQUIRED';

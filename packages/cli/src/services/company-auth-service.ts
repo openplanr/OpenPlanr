@@ -10,6 +10,7 @@
 import { spawn } from 'node:child_process';
 import { createHash, randomBytes, randomUUID, timingSafeEqual } from 'node:crypto';
 import { createServer } from 'node:http';
+import { CLI_COMMAND } from '../utils/constants.js';
 import {
   CompanyAuthStore,
   type CompanyCredentialStore,
@@ -668,7 +669,7 @@ export function createCompanyAuth(dependencies: AuthDependencies = {}) {
       if (existing && existing.status !== 'signed-out' && existing.status !== 'manual')
         return reject(
           'E_COMPANY_AUTH_EXISTS',
-          'Sign out first with `planr company logout`, then sign in again.',
+          `Sign out first with \`${CLI_COMMAND} company logout\`, then sign in again.`,
         );
       const config = await discovery(origin);
       const verifier = randomBytes(32).toString('base64url');

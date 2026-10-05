@@ -1,6 +1,7 @@
 import { constants } from 'node:fs';
 import { lstat, open, realpath, stat } from 'node:fs/promises';
 import path from 'node:path';
+import { PLANNING_FOLDER } from '../../utils/constants.js';
 
 const BLOCKED_SEGMENTS = new Set([
   '.git',
@@ -25,10 +26,10 @@ const SECRET_FILE_PATTERNS = Object.freeze([
 ]);
 
 const PRIVATE_OPERATE_PREFIXES = Object.freeze([
-  ['.planr', 'operate', 'state'],
-  ['.planr', 'operate', 'packets'],
-  ['.planr', 'operate', 'archive'],
-  ['.planr', 'operate-v2'],
+  [PLANNING_FOLDER, 'operate', 'state'],
+  [PLANNING_FOLDER, 'operate', 'packets'],
+  [PLANNING_FOLDER, 'operate', 'archive'],
+  [PLANNING_FOLDER, 'operate-v2'],
 ]);
 
 function refuse(message: string, context: Record<string, unknown> = {}): never {

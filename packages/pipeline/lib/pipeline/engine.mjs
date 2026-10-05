@@ -28,6 +28,7 @@ import {
   buildGraph,
   canonicalizeJson,
   normalizePlanningTask,
+  PLANNING_FOLDER,
   parseFrontmatter,
   sha256Jcs,
   splitFrontmatter,
@@ -278,7 +279,7 @@ function slugify(value) {
 }
 
 export function detectPipelineMode(projectRoot) {
-  const configPath = join(projectRoot, '.planr', 'config.json');
+  const configPath = join(projectRoot, PLANNING_FOLDER, 'config.json');
   if (existsSync(configPath)) {
     try {
       const config = JSON.parse(readFileSync(configPath, 'utf8'));
@@ -294,7 +295,7 @@ export function detectPipelineMode(projectRoot) {
 }
 
 function nextSpecId(projectRoot) {
-  const specsRoot = join(projectRoot, '.planr', 'specs');
+  const specsRoot = join(projectRoot, PLANNING_FOLDER, 'specs');
   if (!existsSync(specsRoot)) return 'SPEC-001';
   const numbers = readdirSync(specsRoot)
     .map((name) => name.match(/^SPEC-(\d{3})-/)?.[1])
@@ -304,7 +305,7 @@ function nextSpecId(projectRoot) {
 }
 
 function resolveSpecDir(projectRoot, slug) {
-  const specsRoot = join(projectRoot, '.planr', 'specs');
+  const specsRoot = join(projectRoot, PLANNING_FOLDER, 'specs');
   if (!existsSync(specsRoot)) return null;
   const match = readdirSync(specsRoot)
     .sort()
@@ -314,7 +315,7 @@ function resolveSpecDir(projectRoot, slug) {
 
 function scaffoldSpec(projectRoot, slug) {
   const id = nextSpecId(projectRoot);
-  const specDir = join(projectRoot, '.planr', 'specs', `${id}-${slug}`);
+  const specDir = join(projectRoot, PLANNING_FOLDER, 'specs', `${id}-${slug}`);
   for (const child of ['stories', 'tasks', 'design'])
     mkdirSync(join(specDir, child), { recursive: true });
   const today = new Date().toISOString().slice(0, 10);
@@ -740,7 +741,7 @@ function configuredShipGates(projectRoot) {
 }
 
 function configuredShipClosure(projectRoot, { ignoreGates = false } = {}) {
-  const configPath = join(projectRoot, '.planr', 'config.json');
+  const configPath = join(projectRoot, PLANNING_FOLDER, 'config.json');
   if (!existsSync(configPath)) return { repositories: undefined, gates: undefined };
   assertPathCustody(projectRoot, configPath, { expectedKind: 'file' });
   let config;
@@ -830,8 +831,8 @@ function configuredShipClosure(projectRoot, { ignoreGates = false } = {}) {
 
 function assertShipPlanningCustody(projectRoot) {
   for (const path of [
-    join(projectRoot, '.planr'),
-    join(projectRoot, '.planr', 'specs'),
+    join(projectRoot, PLANNING_FOLDER),
+    join(projectRoot, PLANNING_FOLDER, 'specs'),
     join(projectRoot, 'output'),
     join(projectRoot, 'output', 'feats'),
   ])
@@ -863,7 +864,8 @@ export function prepareShipContext({ projectRoot = process.cwd(), feature, taskI
   assertShipPlanningCustody(projectRoot);
   const prepared = preparePlan({ projectRoot, feature });
   const root =
-    featureRoot(prepared) ?? join(projectRoot, '.planr', 'specs', `SPEC-NNN-${prepared.slug}`);
+    featureRoot(prepared) ??
+    join(projectRoot, PLANNING_FOLDER, 'specs', `SPEC-NNN-${prepared.slug}`);
   const diagnostics = [];
   if (!existsSync(root))
     diagnostics.push({
@@ -1463,7 +1465,7 @@ export function validateProtocolArtifact(kind, value) {
 }
 
 export function runSyncAudit({ projectRoot = process.cwd() } = {}) {
-  const planrDir = join(projectRoot, '.planr');
+  const planrDir = join(projectRoot, PLANNING_FOLDER);
   const graph = buildGraph(planrDir, { preferNative: true });
   const counts = Object.fromEntries(
     ['spec', 'story', 'task', 'quick', 'backlog'].map((type) => [

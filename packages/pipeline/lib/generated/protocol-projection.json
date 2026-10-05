@@ -304,6 +304,18 @@
       "mode": "644"
     },
     {
+      "source": "packages/protocol/projections/pipeline/lib/protocol/names.d.mts",
+      "target": "lib/protocol/names.d.mts",
+      "sha256": "4628f5564ad82a482ac88be714dc36f6fedbf0a9383966d3e361209ef93031db",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/projections/pipeline/lib/protocol/names.mjs",
+      "target": "lib/protocol/names.mjs",
+      "sha256": "33c5f002fa6fbe4c4930a4f92c06cd7f35c720fb2c9db024e0d860f8b8fc962c",
+      "mode": "644"
+    },
+    {
       "source": "packages/protocol/projections/pipeline/lib/protocol/operate-experience-live-patch.mjs",
       "target": "lib/protocol/operate-experience-live-patch.mjs",
       "sha256": "77135be126709047fed17bda773407e4821b22f42ba9864551c3b6f450e95769",
@@ -450,13 +462,13 @@
     {
       "source": "packages/protocol/registry/v1.17.0/commands.json",
       "target": "registry/v1.17.0/commands.json",
-      "sha256": "6fab6a3c045d3315e70058ac711e18fa4ab4eb17d3bc335b983f1f1a94607478",
+      "sha256": "37976400ec59976a8358d36d6a900e09ab61707a0e926e89451244f335af7b96",
       "mode": "644"
     },
     {
       "source": "packages/protocol/registries/commands.json",
       "target": "registry/v1.5.0/commands.json",
-      "sha256": "b36beec6603f3a7e3a046eb9e70044af6364c77e5681f4d60c4f32377ab7eec6",
+      "sha256": "fc8a26bf71dacf6c67366d5ef20468d8aa7897ebfe58d4266bc6a1d374bf6bbd",
       "mode": "644"
     },
     {
@@ -486,7 +498,7 @@
     {
       "source": "packages/protocol/registries/skills.json",
       "target": "registry/v1.5.0/skills.json",
-      "sha256": "59a93a90d8d10288202fecd7f31eaff067676f511172021ff6de056a056a6272",
+      "sha256": "254ef127ab132201e34b955a06ea15c9fbb0f5a4831beb8b0e808dc3d25c96a2",
       "mode": "644"
     },
     {

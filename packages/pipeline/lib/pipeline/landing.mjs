@@ -14,6 +14,7 @@ import { fileURLToPath } from 'node:url';
 
 import { assertProtocolArtifact } from '../protocol/contracts.mjs';
 import { sha256Jcs } from '../protocol/jcs.mjs';
+import { CLI_COMMAND } from '../protocol/names.mjs';
 import { PipelineError } from './errors.mjs';
 import {
   assertLandingConfirmation,
@@ -616,7 +617,7 @@ function requireLiveOwnerTerminal() {
     fail(
       'E_LANDING_OWNER_INTERACTIVE_REQUIRED',
       'Landing authority requires a live same-process owner terminal; JSON, --yes, hooks, and callbacks cannot authorize effects.',
-      'Run planr land advance from an interactive terminal and answer the no-default owner prompt.',
+      `Run ${CLI_COMMAND} land advance from an interactive terminal and answer the no-default owner prompt.`,
     );
   }
 }
@@ -665,7 +666,7 @@ async function confirmLandingFromOwnerTerminal(request) {
     fail(
       'E_LANDING_OWNER_INTERACTIVE_REQUIRED',
       'The live owner terminal closed before an explicit landing decision was recorded.',
-      'Run planr land advance again from an interactive terminal.',
+      `Run ${CLI_COMMAND} land advance again from an interactive terminal.`,
       { cause: cause?.code ?? cause?.message ?? 'unknown' },
     );
   } finally {

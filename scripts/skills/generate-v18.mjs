@@ -118,6 +118,18 @@ const sharedSkillResources = Object.freeze([
       executable: false,
     })),
   ),
+  ...['packages/cli/lib', 'packages/integrations/src'].flatMap((directory) => [
+    {
+      source: 'packages/protocol/src/names.mjs',
+      destination: `${directory}/names.mjs`,
+      executable: false,
+    },
+    {
+      source: 'packages/protocol/src/names.d.mts',
+      destination: `${directory}/names.d.mts`,
+      executable: false,
+    },
+  ]),
   {
     source: 'packages/integrations/src/portable-sync.mjs',
     destination: 'packages/cli/lib/integrations.mjs',
@@ -148,6 +160,11 @@ const sharedSkillResources = Object.freeze([
     source: 'packages/integrations/src/portable-sync.mjs',
     destination: 'skills/planr-sync/scripts/sync.mjs',
     executable: true,
+  },
+  {
+    source: 'packages/protocol/src/names.mjs',
+    destination: 'skills/planr-sync/scripts/names.mjs',
+    executable: false,
   },
   ...operateValidatorDestinations.flatMap((skillId) => [
     {
@@ -198,7 +215,12 @@ syncGeneratedOutputs({
   scope: 'source-projections',
   outputs: sourceProjections,
   executable: sourceExecutables,
-  ownedRoots: ['skills', 'packages/cli/lib', 'agents/shared/modes/shared'],
+  ownedRoots: [
+    'skills',
+    'packages/cli/lib',
+    'packages/integrations/src',
+    'agents/shared/modes/shared',
+  ],
   bootstrap: [
     ...priorCanonicalResourceDigests.filter(({ target }) => sourceProjections.has(target)),
     ...historicalCustody.copies,

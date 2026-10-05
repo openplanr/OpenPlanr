@@ -16,6 +16,7 @@ import { fileURLToPath } from 'node:url';
 import { isDeepStrictEqual } from 'node:util';
 
 import { validateJson } from '../protocol/json-schema.mjs';
+import { CLI_COMMAND, PLANNING_FOLDER } from '../protocol/names.mjs';
 import { PipelineError } from './errors.mjs';
 import { atomicWrite, withLock } from './ship-closure-persistence.mjs';
 
@@ -23,7 +24,7 @@ const root = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const schemaPath = join(root, 'schemas/v1.1.0/provenance-event.schema.json');
 const schema = JSON.parse(readFileSync(schemaPath, 'utf8'));
 const supportedSchemaVersion = '1.0.0';
-const repairCommand = 'planr doctor --json';
+const repairCommand = `${CLI_COMMAND} doctor --json`;
 const maxHistoryBytes = 64 * 1024 * 1024;
 const lockTimeoutMs = 10_000;
 const lockRetryMs = 10;
@@ -385,7 +386,7 @@ export function createProvenanceEvent({
 
 export function appendProvenanceEvent(projectRoot, event, { hooks = {} } = {}) {
   const normalized = normalizeIncomingEvent(event);
-  const planrDir = join(projectRoot, '.planr');
+  const planrDir = join(projectRoot, PLANNING_FOLDER);
   const target = join(planrDir, 'provenance.jsonl');
   const stage = join(planrDir, 'provenance.jsonl.stage');
   const lock = join(planrDir, 'provenance.lock');

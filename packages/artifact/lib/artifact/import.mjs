@@ -13,6 +13,7 @@ import {
 import { homedir } from 'node:os';
 import { dirname, isAbsolute, join, relative, resolve } from 'node:path';
 import { ARTIFACT_ERROR_CODES, PipelineError } from '@openplanr/protocol/errors';
+import { PLANNING_FOLDER } from '@openplanr/protocol/names';
 import {
   digestArtifactEnvelope,
   validateArtifactEnvelope,
@@ -63,7 +64,7 @@ function inside(base, candidate) {
 }
 
 function parseablePlanrConfig(root) {
-  const path = join(root, '.planr', 'config.json');
+  const path = join(root, PLANNING_FOLDER, 'config.json');
   if (!existsSync(path)) return false;
   try {
     if (lstatSync(path).isSymbolicLink()) return false;
@@ -219,7 +220,11 @@ export function resolveArtifactReviewDestination({
   }
   const projectRoot = findArtifactProjectRoot(cwd, { env });
   if (projectRoot) {
-    const directory = assertSafeDestination(projectRoot, ['.planr', 'artifacts', artifactId]);
+    const directory = assertSafeDestination(projectRoot, [
+      PLANNING_FOLDER,
+      'artifacts',
+      artifactId,
+    ]);
     return Object.freeze({
       kind: 'project',
       artifactId,

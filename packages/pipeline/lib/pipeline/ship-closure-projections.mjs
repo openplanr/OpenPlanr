@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url';
 
 import { parseFrontmatter, splitFrontmatter } from '../dashboard/graph-reader.mjs';
 import { validateProtocolArtifact } from '../protocol/contracts.mjs';
+import { PLANNING_FOLDER } from '../protocol/names.mjs';
 import { PipelineError } from './errors.mjs';
 import { createProvenanceEvent } from './provenance.mjs';
 import { captureCandidate, pathsIntersect } from './ship-closure-identity.mjs';
@@ -455,7 +456,7 @@ function canonicalClosureProvenanceEvents(
 function projectShipCompatibilityLocked(receipt, { projectRoot, prepared }) {
   const featureRoot = prepared.root;
   assertPathCustody(projectRoot, featureRoot, { expectedKind: 'directory' });
-  assertPathCustody(projectRoot, join(projectRoot, '.planr'), { expectedKind: 'directory' });
+  assertPathCustody(projectRoot, join(projectRoot, PLANNING_FOLDER), { expectedKind: 'directory' });
   const manifestPath = join(featureRoot, '.run-manifest.jsonl');
   assertProjectionFile(manifestPath);
   const existingManifest = readManifest(manifestPath);
@@ -514,7 +515,7 @@ function projectShipCompatibilityLocked(receipt, { projectRoot, prepared }) {
   if (ownsLatestProjection) atomicWrite(markerPath, markerBytes);
   const spec = statusProjection.spec;
   if (spec) {
-    const provenancePath = join(projectRoot, '.planr', 'provenance.jsonl');
+    const provenancePath = join(projectRoot, PLANNING_FOLDER, 'provenance.jsonl');
     assertProjectionFile(provenancePath);
     const provenance = existsSync(provenancePath)
       ? readFileSync(provenancePath, 'utf8')
@@ -573,7 +574,7 @@ export function verifyShipCompatibilityProjection(receipt, { projectRoot, prepar
   const manifestPath = join(featureRoot, '.run-manifest.jsonl');
   const qaReportPath = join(featureRoot, 'qa-report.md');
   const markerPath = join(featureRoot, '.pipeline-shipped');
-  const provenancePath = join(projectRoot, '.planr', 'provenance.jsonl');
+  const provenancePath = join(projectRoot, PLANNING_FOLDER, 'provenance.jsonl');
   try {
     assertProjectionFile(manifestPath, { allowMissing: false });
     assertProjectionFile(provenancePath, { allowMissing: false });

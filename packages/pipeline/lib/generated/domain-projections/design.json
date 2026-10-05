@@ -43,7 +43,7 @@
     {
       "source": "packages/design/lib/design-engine/daemon.mjs",
       "target": "lib/design-engine/daemon.mjs",
-      "sha256": "40bd4958f8d54f957982a0722fbdf66419f9edaae7ab186ed261c9a6085a69e2",
+      "sha256": "fc0d2f6780c25238fe39599da878d1c541f4c944d43966b0d15753cb6bf5c07f",
       "mode": "644"
     },
     {
@@ -313,7 +313,7 @@
     {
       "source": "packages/design/lib/design/review.mjs",
       "target": "lib/design/review.mjs",
-      "sha256": "4758043e7b07f30095f40db7ec769a5d2e903cc7546805f01e2b9bc1b49a301e",
+      "sha256": "235c23fb22740d41f24b1d02c78a9b2907473383cc5537c9607d0e963bbfdb1b",
       "mode": "644"
     },
     {
@@ -331,7 +331,7 @@
     {
       "source": "packages/design/lib/design/share-status.mjs",
       "target": "lib/design/share-status.mjs",
-      "sha256": "3dbfa92ce2bc143e7baecc1cdebc5796c5516e587f593b16cb1d82d58b64582f",
+      "sha256": "0ff68ffda80f6b60462e456fcce8fa07df84d1d7db6ae9eab75705dc98f5cbc3",
       "mode": "644"
     },
     {

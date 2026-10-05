@@ -1,3 +1,4 @@
+import { CLI_COMMAND } from '../utils/constants.js';
 import { display, logger } from '../utils/logger.js';
 import { joinNames } from './runtime-change-summary.js';
 import type {
@@ -72,7 +73,7 @@ export function printNextSteps(steps: UpgradeNextStep[], error?: string): void {
   display.blank();
   display.heading('Next');
   if (error) {
-    logger.warn(`${error} Run \`planr upgrade status\` to see what else needs updating.`);
+    logger.warn(`${error} Run \`${CLI_COMMAND} upgrade status\` to see what else needs updating.`);
     return;
   }
   if (steps.length === 0) {
@@ -86,8 +87,8 @@ export function printNextSteps(steps: UpgradeNextStep[], error?: string): void {
   const hosts = [...new Set(steps.filter((step) => step.runtime).map((step) => step.host))];
   display.line(
     hosts.length > 0
-      ? `  Then restart ${joinNames(hosts)} and check with \`planr upgrade status\`.`
-      : '  Then check with `planr upgrade status`.',
+      ? `  Then restart ${joinNames(hosts)} and check with \`${CLI_COMMAND} upgrade status\`.`
+      : `  Then check with \`${CLI_COMMAND} upgrade status\`.`,
   );
 }
 

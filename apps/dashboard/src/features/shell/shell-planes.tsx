@@ -12,6 +12,7 @@ import {
   SkeletonTable,
 } from '../../design-system/components/index.js';
 import './console-shell.css';
+import { PLANNING_FOLDER } from '@openplanr/protocol/names';
 
 /** Below this the inspector floats over the plane instead of taking layout width. */
 export const INSPECTOR_DOCK_WIDTH = 1180;
@@ -82,7 +83,7 @@ export function TransitScreen({ route, note }: TransitScreenProps) {
   const description =
     route.product === 'operate'
       ? 'Reading the Operate projection. The route is already resolved.'
-      : 'Reading the graph from .planr/. The route is already resolved.';
+      : `Reading the graph from ${PLANNING_FOLDER}/. The route is already resolved.`;
   return (
     <div className="pc-transit" aria-busy="true">
       <SectionHeader eyebrow={shape.eyebrow} title={title} count={note} description={description} />
@@ -181,8 +182,8 @@ export function BootScreen({ route, phase, detail }: BootScreenProps) {
                 >
                   {detail ??
                     (phase === 'incompatible'
-                      ? 'The .planr/ schema on disk is a version this dashboard does not read. Nothing was opened, and nothing on disk was touched.'
-                      : 'The dashboard started, but there is no .planr/ directory to read. Planning fills in as soon as one exists.')}
+                      ? `The ${PLANNING_FOLDER}/ schema on disk is a version this dashboard does not read. Nothing was opened, and nothing on disk was touched.`
+                      : `The dashboard started, but there is no ${PLANNING_FOLDER}/ directory to read. Planning fills in as soon as one exists.`)}
                 </InlineAlert>
                 <CommandHint
                   command={phase === 'incompatible' ? '/planr-doctor' : '/planr-plan'}
@@ -231,7 +232,7 @@ export function IncompatibleNotice({ detail }: Readonly<{ detail: string | null 
     <div className="pc-incompatible">
       <InlineAlert tone="danger" title="This build cannot read the graph on disk">
         {detail ??
-          'The .planr/ schema is a version the dashboard does not understand. It stopped rather than render a partial or wrong reading of the plan.'}
+          `The ${PLANNING_FOLDER}/ schema is a version the dashboard does not understand. It stopped rather than render a partial or wrong reading of the plan.`}
       </InlineAlert>
       <CommandHint command="/planr-doctor" label="report the schema version on disk" size="sm" />
       <InlineAlert tone="info" title="Nothing was changed">

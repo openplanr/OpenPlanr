@@ -17,6 +17,7 @@ import {
 import { homedir } from 'node:os';
 import { basename, dirname, isAbsolute, join, relative, resolve } from 'node:path';
 import { sha256Hex } from '@openplanr/protocol/canonical-json';
+import { PLANNING_FOLDER } from '@openplanr/protocol/names';
 import { configuredPlanrHome } from './internal/planr-home.mjs';
 import { acquireStartLock } from './internal/server-util.mjs';
 
@@ -43,7 +44,7 @@ export function ownerCustodyLocation({
   );
   let project = resolve(sourceRoot);
   for (let candidate = project; dirname(candidate) !== candidate; candidate = dirname(candidate)) {
-    if (existsSync(join(candidate, '.git')) || existsSync(join(candidate, '.planr'))) {
+    if (existsSync(join(candidate, '.git')) || existsSync(join(candidate, PLANNING_FOLDER))) {
       project = candidate;
       break;
     }

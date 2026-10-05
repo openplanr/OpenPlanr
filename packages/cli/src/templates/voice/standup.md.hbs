@@ -6,13 +6,13 @@
 
 ```bash
 # Transcript file → markdown on stdout
-planr voice standup --file ./transcript.txt
+{{cliCommand}} voice standup --file ./transcript.txt
 
 # Save, lint, and attach to a story
-planr voice standup --file ./transcript.txt --write .planr/last-standup.md --lint --append-story US-028
+{{cliCommand}} voice standup --file ./transcript.txt --write {{planningFolder}}/last-standup.md --lint --append-story US-028
 
 # Same as above via story command
-planr story standup --story US-028 --file ./transcript.txt --lint
+{{cliCommand}} story standup --story US-028 --file ./transcript.txt --lint
 ```
 
 ## Microphone capture

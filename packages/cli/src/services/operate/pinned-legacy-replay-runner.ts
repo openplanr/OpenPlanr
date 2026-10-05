@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto';
 import { lstat, readdir, readFile, realpath } from 'node:fs/promises';
 import path from 'node:path';
+import { PLANNING_FOLDER } from '../../utils/constants.js';
 import type { OperateLegacyReplayProof } from './storage-layout.js';
 
 const VERIFIER_VERSION = '1.0.0';
@@ -241,7 +242,7 @@ function proofPayload(proof: Omit<OperateLegacyReplayProof, 'receiptHash'>): str
 }
 
 async function readProjectIdentity(canonicalProject: string): Promise<string> {
-  const configPath = path.join(canonicalProject, '.planr', 'config.json');
+  const configPath = path.join(canonicalProject, PLANNING_FOLDER, 'config.json');
   let config: unknown = null;
   try {
     const metadata = await lstat(configPath);
@@ -379,7 +380,7 @@ export async function runPinnedLegacyReplayVerifier(
 ): Promise<OperateLegacyReplayProof> {
   try {
     const canonicalProject = await realpath(path.resolve(projectDir));
-    const legacyRoot = path.join(canonicalProject, '.planr', 'operate-v2');
+    const legacyRoot = path.join(canonicalProject, PLANNING_FOLDER, 'operate-v2');
     const metadata = await lstat(legacyRoot);
     if (metadata.isSymbolicLink() || !metadata.isDirectory()) {
       throw incompatible('The legacy version 2 Operate Store is not one real directory.');

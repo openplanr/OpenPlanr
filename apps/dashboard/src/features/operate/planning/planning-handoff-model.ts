@@ -1,3 +1,4 @@
+import { CLI_COMMAND } from '@openplanr/protocol/names';
 import type { DashboardProductState } from '../../../lib/api/product-state.js';
 import { isValidatedDashboardProductState } from '../../../lib/api/product-state.js';
 import type { DashboardQueryIdentity } from '../../../lib/binding/query-identity.js';
@@ -169,7 +170,7 @@ export function isExactPlanningNextCommands(
 ): boolean {
   const specId = String(receipt.specId);
   const expected = [
-    `planr spec show ${specId}`,
+    `${CLI_COMMAND} spec show ${specId}`,
     `$planr:plan ${specId}`,
     `/planr:plan ${specId}`,
   ] as const;

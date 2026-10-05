@@ -29,6 +29,7 @@ import {
 } from '../../services/diagram-artifact-service.js';
 import { isNonInteractive } from '../../services/interactive-state.js';
 import { promptConfirm } from '../../services/prompt-service.js';
+import { CLI_COMMAND } from '../../utils/constants.js';
 import { display, logger } from '../../utils/logger.js';
 
 type Theme = 'auto' | 'light' | 'dark';
@@ -248,7 +249,7 @@ async function shareArtifact(program: Command, file: string, options: ShareOptio
     throw new ArtifactCommandError(
       'E_ARTIFACT_INPUT_INVALID',
       '`--short` selects encrypted snapshot transport and requires `--snapshot`.',
-      'Use `planr artifact share <file> --snapshot --short --yes`, or omit both options to create a live room.',
+      `Use \`${CLI_COMMAND} artifact share <file> --snapshot --short --yes\`, or omit both options to create a live room.`,
     );
   }
   if (options.snapshot && options.open === false && !options.secretOutput && !options.resume) {
@@ -292,7 +293,7 @@ async function shareArtifact(program: Command, file: string, options: ShareOptio
         throw new ArtifactCommandError(
           'E_ARTIFACT_CONFIRMATION_REQUIRED',
           'Live review rooms upload encrypted ciphertext and require explicit confirmation.',
-          'Rerun with `planr artifact share <file> --yes`.',
+          `Rerun with \`${CLI_COMMAND} artifact share <file> --yes\`.`,
         );
       }
       display.keyValue('Expiry', options.ttl ?? '7d');
@@ -342,7 +343,7 @@ async function shareArtifact(program: Command, file: string, options: ShareOptio
     throw new ArtifactCommandError(
       'E_ARTIFACT_SHORT_CONFIRMATION_REQUIRED',
       'This artifact is too large for a private fragment link.',
-      'Rerun with `planr artifact share <file> --short --yes` to upload encrypted ciphertext.',
+      `Rerun with \`${CLI_COMMAND} artifact share <file> --short --yes\` to upload encrypted ciphertext.`,
     );
   }
   const needsConsent = Boolean(options.short || !preview.fragmentEligible);
@@ -437,7 +438,7 @@ async function importArtifactReviews(
     throw new ArtifactCommandError(
       'E_ARTIFACT_SECRET_INPUT',
       'Capability-bearing artifact URLs are not accepted in ordinary process arguments.',
-      'Use `planr artifact import --secret-input <private-file|->`.',
+      `Use \`${CLI_COMMAND} artifact import --secret-input <private-file|->\`.`,
     );
   }
   const inputPath =

@@ -2,6 +2,7 @@ import { existsSync, lstatSync, readFileSync, realpathSync, writeFileSync } from
 import { basename, dirname, join, resolve } from 'node:path';
 import { canonicalizeJson } from '@openplanr/protocol/canonical-json';
 import { diagramReviewBundleDigest } from '@openplanr/protocol/diagram-review-contracts';
+import { PLANNING_FOLDER } from '@openplanr/protocol/names';
 import {
   ensurePrivateDirectory,
   ownerCustodyLocation,
@@ -26,7 +27,7 @@ function sourceRoot(file) {
   const parent = dirname(directory);
   if (basename(parent) === 'diagrams') return dirname(parent);
   for (let candidate = directory; ; candidate = dirname(candidate)) {
-    if (existsSync(join(candidate, '.git')) || existsSync(join(candidate, '.planr')))
+    if (existsSync(join(candidate, '.git')) || existsSync(join(candidate, PLANNING_FOLDER)))
       return candidate;
     if (dirname(candidate) === candidate) return directory;
   }

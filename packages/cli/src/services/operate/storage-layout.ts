@@ -20,6 +20,7 @@ import {
   writeFile,
 } from 'node:fs/promises';
 import path from 'node:path';
+import { PLANNING_FOLDER } from '../../utils/constants.js';
 import { assertOperatePathCustody } from './path-custody.js';
 import { withOperateProjectTransaction } from './project-transaction-lock.js';
 import { OperateStore } from './store.js';
@@ -484,7 +485,7 @@ export async function verifyOperateLegacyReplayProof(
   projectDir: string,
   value: unknown,
 ): Promise<OperateLegacyReplayProof> {
-  const legacyRoot = path.join(path.resolve(projectDir), '.planr', LEGACY_OPERATE_DIRECTORY);
+  const legacyRoot = path.join(path.resolve(projectDir), PLANNING_FOLDER, LEGACY_OPERATE_DIRECTORY);
   await assertOperatePathCustody(projectDir, legacyRoot, {
     code: 'OPERATE_STORE_INCOMPATIBLE',
     message: 'Legacy Operate proof custody cannot traverse symbolic links.',
@@ -601,7 +602,7 @@ async function recoverPreActivationMigration(
   projectDir: string,
   onArchive?: (archive: OperateStorageArchive) => Promise<void>,
 ): Promise<OperateStorageMigrationReceipt> {
-  const planrRoot = path.join(path.resolve(projectDir), '.planr');
+  const planrRoot = path.join(path.resolve(projectDir), PLANNING_FOLDER);
   const entries = await readdir(planrRoot, { withFileTypes: true });
   const stageEntries = entries
     .filter((entry) => entry.isDirectory() && /^\.operate-stage-[a-f0-9]+$/u.test(entry.name))
@@ -748,7 +749,7 @@ async function completeInterruptedMigration(
   progress: MigrationProgress,
   onArchive?: (archive: OperateStorageArchive) => Promise<void>,
 ): Promise<OperateStorageMigrationReceipt> {
-  const planrRoot = path.join(path.resolve(projectDir), '.planr');
+  const planrRoot = path.join(path.resolve(projectDir), PLANNING_FOLDER);
   const root = path.join(planrRoot, 'operate');
   const parkedNeutral = path.join(planrRoot, `.operate-legacy-${progress.nonce}`);
   const archives: OperateStorageArchive[] = [];
@@ -808,7 +809,7 @@ async function completeInterruptedMigration(
 }
 
 export async function inspectOperateStorage(projectDir: string): Promise<OperateStorageInspection> {
-  const planrRoot = path.join(path.resolve(projectDir), '.planr');
+  const planrRoot = path.join(path.resolve(projectDir), PLANNING_FOLDER);
   const root = path.join(planrRoot, 'operate');
   const legacyV2Root = path.join(planrRoot, LEGACY_OPERATE_DIRECTORY);
   for (const candidate of [planrRoot, root, legacyV2Root]) {
@@ -1228,7 +1229,7 @@ async function readRollbackProgress(projectDir: string): Promise<{
   path: string;
   value: RollbackProgress;
 } | null> {
-  const planrRoot = path.join(path.resolve(projectDir), '.planr');
+  const planrRoot = path.join(path.resolve(projectDir), PLANNING_FOLDER);
   const entries = await readdir(planrRoot, { withFileTypes: true }).catch((error) => {
     if ((error as NodeJS.ErrnoException).code === 'ENOENT') return [];
     throw error;
@@ -1279,7 +1280,7 @@ async function completeInterruptedRollback(
   progress: RollbackProgress,
   hooks: RollbackHooks = {},
 ): Promise<OperateStorageRollbackReceipt> {
-  const planrRoot = path.join(path.resolve(projectDir), '.planr');
+  const planrRoot = path.join(path.resolve(projectDir), PLANNING_FOLDER);
   const root = path.join(planrRoot, 'operate');
   const legacyRoot = path.join(planrRoot, LEGACY_OPERATE_DIRECTORY);
   const stagedV2 = path.join(planrRoot, `.operate-v2-restore-${progress.nonce}`);
@@ -1386,7 +1387,7 @@ async function rollbackOperateStorageMigrationUnlocked(
       hooks,
     );
   }
-  const planrRoot = path.join(path.resolve(projectDir), '.planr');
+  const planrRoot = path.join(path.resolve(projectDir), PLANNING_FOLDER);
   const orphanedRestoreEntries = (
     await readdir(planrRoot, { withFileTypes: true }).catch((error) => {
       if ((error as NodeJS.ErrnoException).code === 'ENOENT') return [];

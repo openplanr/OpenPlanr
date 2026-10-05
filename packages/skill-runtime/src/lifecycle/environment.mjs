@@ -9,14 +9,15 @@ import {
 } from 'node:fs';
 import { isAbsolute, relative, resolve, sep } from 'node:path';
 
+import { PLANNING_FOLDER } from '@openplanr/protocol/names';
 import { freezeJson } from './internal.mjs';
 import { ensureStateDirectory, resolveProjectRoot, resolveStatePath } from './storage.mjs';
 
-export const LIFECYCLE_RUNTIME_DIRECTORY = '.planr/runtime';
-export const LIFECYCLE_SESSION_DIRECTORY = '.planr/runtime/skill-sessions';
-export const LIFECYCLE_IGNORE_RULE = '.planr/runtime/';
+export const LIFECYCLE_RUNTIME_DIRECTORY = `${PLANNING_FOLDER}/runtime`;
+export const LIFECYCLE_SESSION_DIRECTORY = `${PLANNING_FOLDER}/runtime/skill-sessions`;
+export const LIFECYCLE_IGNORE_RULE = `${PLANNING_FOLDER}/runtime/`;
 
-const IGNORE_PROBE = '.planr/runtime/.openplanr-ignore-probe';
+const IGNORE_PROBE = `${PLANNING_FOLDER}/runtime/.openplanr-ignore-probe`;
 
 function git(root, arguments_, stdio = 'pipe') {
   return spawnSync('git', ['-C', root, ...arguments_], {

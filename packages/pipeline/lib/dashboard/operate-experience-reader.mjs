@@ -15,6 +15,7 @@ import {
   assertProtocolArtifact,
 } from '../protocol/contracts.mjs';
 import { sha256Jcs } from '../protocol/jcs.mjs';
+import { PLANNING_FOLDER } from '../protocol/names.mjs';
 import { issueOperateExperienceAuditDisplaySurfaceV1 } from './operate-experience-audit-display-contract.mjs';
 import {
   issueOperateActionDisplayWorkspaceV1,
@@ -433,7 +434,7 @@ export function readOperateExperienceProjection(
       available: false,
       readOnly: true,
       status: 'absent',
-      path: `.planr/${relativePath}`,
+      path: `${PLANNING_FOLDER}/${relativePath}`,
       view: null,
       reasonCodes: ['OPERATE_PROJECTION_ABSENT'],
     });
@@ -444,7 +445,7 @@ export function readOperateExperienceProjection(
       available: true,
       readOnly: true,
       status: view.status,
-      path: `.planr/${relativePath}`,
+      path: `${PLANNING_FOLDER}/${relativePath}`,
       view,
       reasonCodes: STATUS_REASON[view.status] ?? ['OPERATE_PROJECTION_UNAVAILABLE'],
     });
@@ -453,7 +454,7 @@ export function readOperateExperienceProjection(
       available: true,
       readOnly: true,
       status: 'invalid',
-      path: `.planr/${relativePath}`,
+      path: `${PLANNING_FOLDER}/${relativePath}`,
       view: null,
       reasonCodes: ['OPERATE_PROJECTION_INVALID'],
       recovery: 'Refresh through OpenPlanr. Do not edit durable operating state by hand.',

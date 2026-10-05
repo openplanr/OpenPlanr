@@ -19,6 +19,7 @@ import type {
   GitHubCommitSummary,
   GitHubPullRequestSummary,
 } from '../models/types.js';
+import { CLI_COMMAND } from '../utils/constants.js';
 import { messageOf } from '../utils/error-message.js';
 import { parseExternalJson } from '../utils/external-json.js';
 import { logger } from '../utils/logger.js';
@@ -152,7 +153,7 @@ async function ensureGhCli(): Promise<string> {
       'GitHub CLI (gh) is not installed.\n\n' +
         `  1. Install it from ${GH_CLI_INSTALL_URL}\n` +
         '  2. Run `gh auth login` to authenticate\n' +
-        '  3. Re-run your planr github command',
+        `  3. Re-run your ${CLI_COMMAND} github command`,
     );
   }
   return ghPath;
@@ -165,7 +166,7 @@ async function ensureGhAuth(ghPath: string): Promise<void> {
     logger.debug('GitHub CLI auth check failed', err);
     throw new Error(
       'GitHub CLI is not authenticated.\n\n' +
-        '  Run `gh auth login` to sign in, then re-run your planr github command.',
+        `  Run \`gh auth login\` to sign in, then re-run your ${CLI_COMMAND} github command.`,
     );
   }
 }
@@ -182,7 +183,7 @@ async function gh(args: string[]): Promise<string> {
     if (stderr.includes('auth login') || stderr.includes('not logged')) {
       throw new Error(
         'GitHub CLI is not authenticated.\n\n' +
-          '  Run `gh auth login` to sign in, then re-run your planr github command.',
+          `  Run \`gh auth login\` to sign in, then re-run your ${CLI_COMMAND} github command.`,
       );
     }
     if (stderr.includes('not a git repository')) {
@@ -323,7 +324,7 @@ function buildFooter(artifactId: string, artifactType: string): string {
   return [
     '',
     '---',
-    `> **OpenPlanr** | \`${artifactId}\` (${artifactType}) | Synced by \`planr github\``,
+    `> **OpenPlanr** | \`${artifactId}\` (${artifactType}) | Synced by \`${CLI_COMMAND} github\``,
   ].join('\n');
 }
 

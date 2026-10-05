@@ -11,6 +11,7 @@ import {
   unlink,
 } from 'node:fs/promises';
 import path from 'node:path';
+import { PLANNING_FOLDER } from '../../utils/constants.js';
 import { sha256CanonicalJson } from '../canonical-json.js';
 
 export type LandingReceiptCustodyErrorCode =
@@ -142,8 +143,8 @@ export class LandingReceiptCustodyV1 {
     const lockTtlMs = input.lockTtlMs ?? 30_000;
     if (
       !path.isAbsolute(root) ||
-      !portableRoot.endsWith('/.planr/landing') ||
-      portableRoot.includes('/.planr/operate/') ||
+      !portableRoot.endsWith(`/${PLANNING_FOLDER}/landing`) ||
+      portableRoot.includes(`/${PLANNING_FOLDER}/operate/`) ||
       !Number.isSafeInteger(lockTtlMs) ||
       lockTtlMs < 1_000 ||
       lockTtlMs > 300_000

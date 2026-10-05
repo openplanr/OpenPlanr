@@ -25,6 +25,7 @@ import {
   operatingResultSchemaDependenciesV2,
 } from 'planr-pipeline/operate/result-packet-v2';
 import { type OperatingIntelligenceAssignmentV2, sha256Jcs } from 'planr-pipeline/protocol';
+import { PLANNING_FOLDER } from '../../utils/constants.js';
 import { createOperateClient, type OperateActorV2, type OperateClient } from './client.js';
 import { assertOperatePathCustody, assertOperateTreeCustody } from './path-custody.js';
 import { ensureOperateStorageLayout } from './storage-layout.js';
@@ -734,8 +735,7 @@ export class OperateAssignmentPacketService {
   private async assertPacketCustody(target: string, requireDirectory = false): Promise<void> {
     await assertOperatePathCustody(this.projectDir, target, {
       code: 'E_OPERATE_PACKET_CORRUPT',
-      message:
-        'Prepared packet custody cannot traverse symbolic links or leave project-local .planr.',
+      message: `Prepared packet custody cannot traverse symbolic links or leave project-local ${PLANNING_FOLDER}.`,
       requireDirectory,
     });
   }

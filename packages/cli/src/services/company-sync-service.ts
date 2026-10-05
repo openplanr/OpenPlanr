@@ -23,6 +23,7 @@ import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import type { CompanyResourceManifest } from 'planr-pipeline/resource-contracts';
 import { LARGE_OBJECT_LIMITS } from '../../lib/resource-limits.mjs';
+import { CLI_COMMAND } from '../utils/constants.js';
 import { resolveCompanyAccessToken } from './company-auth-service.js';
 import { CompanySyncError, normalizeCompanyOrigin, releasedLock } from './company-common.js';
 import {
@@ -580,7 +581,7 @@ async function prepareCompanyContent(
   if (!pipeline)
     return fail(
       'E_COMPANY_DESIGN_RUNTIME',
-      'The design publication runtime is unavailable. Run planr doctor to inspect the installed runtime.',
+      `The design publication runtime is unavailable. Run ${CLI_COMMAND} doctor to inspect the installed runtime.`,
     );
   let prepareDesign: PrepareDesignPublication;
   try {
@@ -590,14 +591,14 @@ async function prepareCompanyContent(
   } catch (cause) {
     return fail(
       'E_COMPANY_DESIGN_RUNTIME',
-      'The resolved pipeline does not provide design publication. Run planr doctor to inspect the installed runtime.',
+      `The resolved pipeline does not provide design publication. Run ${CLI_COMMAND} doctor to inspect the installed runtime.`,
       cause,
     );
   }
   if (typeof prepareDesign !== 'function')
     return fail(
       'E_COMPANY_DESIGN_RUNTIME',
-      'The resolved pipeline does not provide design publication. Run planr doctor to inspect the installed runtime.',
+      `The resolved pipeline does not provide design publication. Run ${CLI_COMMAND} doctor to inspect the installed runtime.`,
     );
   const resourceTransport = detectDesign || source.transport === 'resources-v2';
   const prepared = await prepareDesign(file, {
@@ -766,7 +767,7 @@ async function companyResponse(
   if (!token)
     return fail(
       'E_COMPANY_AUTH',
-      'Sign in using `planr company login`. Developer endpoint and token overrides remain available.',
+      `Sign in using \`${CLI_COMMAND} company login\`. Developer endpoint and token overrides remain available.`,
     );
   const headers: Record<string, string> = {
     Authorization: `Bearer ${token}`,
@@ -2284,7 +2285,7 @@ async function companyResourceContracts(): Promise<CompanyResourceContracts> {
   if (!resolved)
     return fail(
       'E_COMPANY_RUNTIME',
-      'The resource publication runtime is unavailable. Run planr doctor.',
+      `The resource publication runtime is unavailable. Run ${CLI_COMMAND} doctor.`,
     );
   try {
     const contracts = await import(
@@ -2299,7 +2300,7 @@ async function companyResourceContracts(): Promise<CompanyResourceContracts> {
   } catch (cause) {
     return fail(
       'E_COMPANY_RUNTIME',
-      'The installed resource publication contracts are unavailable. Run planr doctor.',
+      `The installed resource publication contracts are unavailable. Run ${CLI_COMMAND} doctor.`,
       cause,
     );
   }
@@ -2319,7 +2320,7 @@ async function companyResourceRuntime(): Promise<CompanyResourceRuntime> {
   if (!resolved)
     return fail(
       'E_COMPANY_RUNTIME',
-      'The resource publication runtime is unavailable. Run planr doctor.',
+      `The resource publication runtime is unavailable. Run ${CLI_COMMAND} doctor.`,
     );
   const moduleUrl = (name: string) =>
     pathToFileURL(path.join(resolved.root, 'lib/artifact', name)).href;
@@ -2337,7 +2338,7 @@ async function companyResourceRuntime(): Promise<CompanyResourceRuntime> {
     if (typeof runtime[name] !== 'function')
       return fail(
         'E_COMPANY_RUNTIME',
-        'The installed resource publication helper is incomplete. Run planr doctor.',
+        `The installed resource publication helper is incomplete. Run ${CLI_COMMAND} doctor.`,
       );
   return runtime as CompanyResourceRuntime;
 }

@@ -51,5 +51,5 @@ project: "{{projectName}}"
 - [{{this.id}}](../features/{{this.filename}}.md)
 {{/each}}
 {{else}}
-_No features created yet. Run `planr feature create --epic {{id}}` to break this epic into features._
+_No features created yet. Run `{{cliCommand}} feature create --epic {{id}}` to break this epic into features._
 {{/if}}

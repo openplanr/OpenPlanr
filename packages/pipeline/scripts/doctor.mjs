@@ -19,6 +19,7 @@ import {
   discoverEcosystemRepositories,
   resolveWorkspaceRoot,
 } from '../lib/ecosystem/workspace-discovery.mjs';
+import { CLI_COMMAND } from '../lib/protocol/names.mjs';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const projectRoot = process.cwd();
@@ -219,7 +220,7 @@ function handleStaleDaemon(id, label, stateDir, message) {
     `${id}.health`,
     'Daemons',
     message,
-    'Run `planr doctor --fix` to preview and remove this Planr-owned stale state.',
+    `Run \`${CLI_COMMAND} doctor --fix\` to preview and remove this Planr-owned stale state.`,
   );
 }
 

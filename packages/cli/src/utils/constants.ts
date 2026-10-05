@@ -1,13 +1,16 @@
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { CLI_COMMAND, PLANNING_FOLDER } from '../../lib/names.mjs';
 import type { ArtifactType } from '../models/types.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-export const CONFIG_FILENAME = '.planr/config.json';
+export { CLI_COMMAND, PLANNING_FOLDER };
 
-export const DEFAULT_AGILE_DIR = '.planr';
+export const CONFIG_FILENAME = `${PLANNING_FOLDER}/config.json`;
+
+export const DEFAULT_AGILE_DIR = PLANNING_FOLDER;
 export const DEFAULT_CURSOR_RULES_DIR = '.cursor/rules';
 
 /**
@@ -102,4 +105,9 @@ export const VALID_SPEC_TASK_STATUSES = ['pending', 'in-progress', 'done', 'bloc
 
 export function getTemplatesDir(): string {
   return path.resolve(__dirname, '..', 'templates');
+}
+
+/** Root of the installed CLI package. */
+export function getPackageRoot(): string {
+  return path.resolve(__dirname, '..', '..');
 }

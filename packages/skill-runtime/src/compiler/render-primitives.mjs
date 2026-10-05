@@ -1,3 +1,4 @@
+import { PLANNING_FOLDER } from '@openplanr/protocol/names';
 import { SkillRuntimeError } from '../errors.mjs';
 import { sha256Bytes } from './source-map.mjs';
 
@@ -181,28 +182,28 @@ const HOST_SUBSTITUTIONS = Object.freeze({
   pipeline: Object.freeze({
     AGENTS_ROOT: 'agents',
     PIPELINE_PACKAGE_ROOT: 'the installed planr-pipeline package root',
-    PROJECT_STACKS_ROOT: '.planr/stacks',
+    PROJECT_STACKS_ROOT: `${PLANNING_FOLDER}/stacks`,
     LEGACY_PROJECT_STACKS_ROOT: 'the selected runtime legacy project stack directory',
     WORKFLOW_PREFIX: 'planr-',
   }),
   'claude-code': Object.freeze({
     AGENTS_ROOT: 'agents',
     PIPELINE_PACKAGE_ROOT: '${CLAUDE_PLUGIN_ROOT}',
-    PROJECT_STACKS_ROOT: '.planr/stacks',
+    PROJECT_STACKS_ROOT: `${PLANNING_FOLDER}/stacks`,
     LEGACY_PROJECT_STACKS_ROOT: '.claude/stacks',
     WORKFLOW_PREFIX: '/planr-pipeline:',
   }),
   codex: Object.freeze({
     AGENTS_ROOT: 'agents',
     PIPELINE_PACKAGE_ROOT: 'the installed `planr-pipeline` package root',
-    PROJECT_STACKS_ROOT: '.planr/stacks',
+    PROJECT_STACKS_ROOT: `${PLANNING_FOLDER}/stacks`,
     LEGACY_PROJECT_STACKS_ROOT: '.codex/stacks',
     WORKFLOW_PREFIX: '$planr-',
   }),
   cursor: Object.freeze({
     AGENTS_ROOT: 'agents',
     PIPELINE_PACKAGE_ROOT: 'the installed `planr-pipeline` package root',
-    PROJECT_STACKS_ROOT: '.planr/stacks',
+    PROJECT_STACKS_ROOT: `${PLANNING_FOLDER}/stacks`,
     LEGACY_PROJECT_STACKS_ROOT: '.cursor/stacks',
     WORKFLOW_PREFIX: 'planr-',
   }),

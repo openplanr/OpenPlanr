@@ -15,7 +15,7 @@ import { createArtifact, readArtifactRaw } from '../../services/artifact-service
 import { atomicWriteFile } from '../../services/atomic-write-service.js';
 import { loadConfig } from '../../services/config-service.js';
 import { promptConfirm, promptText } from '../../services/prompt-service.js';
-import { getTemplatesDir } from '../../utils/constants.js';
+import { CLI_COMMAND, getTemplatesDir } from '../../utils/constants.js';
 import { ensureDir, fileExists, listFiles, readFile } from '../../utils/fs.js';
 import { display, logger } from '../../utils/logger.js';
 import { CliBoundaryError } from '../error-boundary.js';
@@ -83,7 +83,7 @@ export function registerTemplateCommand(program: Command) {
       }
 
       display.blank();
-      logger.dim('Use: planr template use <name> --title "My Task"');
+      logger.dim(`Use: ${CLI_COMMAND} template use <name> --title "My Task"`);
     });
 
   // -----------------------------------------------------------------------
@@ -100,7 +100,7 @@ export function registerTemplateCommand(program: Command) {
       const tpl = await findTemplate(name, projectDir, config);
       if (!tpl) {
         logger.error(
-          `Template "${name}" not found. Run \`planr template list\` to see available templates.`,
+          `Template "${name}" not found. Run \`${CLI_COMMAND} template list\` to see available templates.`,
         );
         return;
       }
@@ -261,7 +261,7 @@ export function registerTemplateCommand(program: Command) {
       logger.dim(`  ${filePath}`);
       logger.dim(`  ${taskGroups.length} task groups, ${parsed.length} total items`);
       logger.dim('');
-      logger.dim(`  Use it: planr template use ${templateName} --title "My Task"`);
+      logger.dim(`  Use it: ${CLI_COMMAND} template use ${templateName} --title "My Task"`);
     });
 
   // -----------------------------------------------------------------------

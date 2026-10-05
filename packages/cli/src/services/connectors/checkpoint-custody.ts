@@ -12,7 +12,14 @@ import {
   unlink,
 } from 'node:fs/promises';
 import path from 'node:path';
+import { PLANNING_FOLDER } from '../../utils/constants.js';
+import { escapeRegExp } from '../../utils/escape-regexp.js';
 import { sha256CanonicalJson } from '../canonical-json.js';
+
+const OPERATE_SEGMENT = new RegExp(
+  `(?:^|[/\\\\])${escapeRegExp(PLANNING_FOLDER)}[/\\\\]operate(?:[/\\\\]|$)`,
+  'u',
+);
 
 export type ConnectorCheckpointCustodyErrorCode =
   | 'LIVE_EVIDENCE_CHECKPOINT_CUSTODY_INVALID'
@@ -207,7 +214,7 @@ export class ConnectorCheckpointCustodyV2 {
     const root = path.resolve(input.root);
     if (
       !path.isAbsolute(root) ||
-      /(?:^|[/\\])\.planr[/\\]operate(?:[/\\]|$)/u.test(root) ||
+      OPERATE_SEGMENT.test(root) ||
       !Number.isSafeInteger(input.lockTtlMs ?? 30_000) ||
       (input.lockTtlMs ?? 30_000) < 1_000 ||
       (input.lockTtlMs ?? 30_000) > 300_000
