@@ -19,12 +19,12 @@ import {
   writeFile,
 } from 'node:fs/promises';
 import path from 'node:path';
-import { OPEN_REFERENCE_OPERATE_EXTENSIONS_V2 } from 'planr-pipeline/operate/extensions-v2';
+import { OPEN_REFERENCE_OPERATE_EXTENSIONS_V2 } from '@openplanr/pipeline/operate/extensions-v2';
 import {
   createOperatingResultTemplateV2,
   operatingResultSchemaDependenciesV2,
-} from 'planr-pipeline/operate/result-packet-v2';
-import { type OperatingIntelligenceAssignmentV2, sha256Jcs } from 'planr-pipeline/protocol';
+} from '@openplanr/pipeline/operate/result-packet-v2';
+import { type OperatingIntelligenceAssignmentV2, sha256Jcs } from '@openplanr/pipeline/protocol';
 import { PLANNING_FOLDER } from '../../utils/constants.js';
 import { createOperateClient, type OperateActorV2, type OperateClient } from './client.js';
 import { assertOperatePathCustody, assertOperateTreeCustody } from './path-custody.js';

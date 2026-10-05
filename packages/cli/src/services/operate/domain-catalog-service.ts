@@ -1,4 +1,4 @@
-const OPERATING_DOMAINS_MODULE = 'planr-pipeline/operate/operating-domains-v2';
+const OPERATING_DOMAINS_MODULE = '@openplanr/pipeline/operate/operating-domains-v2';
 
 export type PublicOperatingDomainRole = Readonly<{
   roleId: string;
@@ -112,11 +112,11 @@ async function loadInstalledOperatingDomainsModule(): Promise<unknown> {
     const message = typeof candidate?.message === 'string' ? candidate.message : '';
     if (
       (candidate?.code === 'ERR_MODULE_NOT_FOUND' || candidate?.code === 'MODULE_NOT_FOUND') &&
-      message.includes('planr-pipeline')
+      message.includes('@openplanr/pipeline')
     ) {
       throw Object.assign(
         new Error(
-          'Operate requires the optional planr-pipeline package. Reinstall OpenPlanr with optional dependencies (do not use --omit=optional).',
+          'Operate requires the optional @openplanr/pipeline package. Reinstall OpenPlanr with optional dependencies (do not use --omit=optional).',
         ),
         { code: 'E_OPERATE_PIPELINE_MISSING' },
       );
@@ -135,7 +135,7 @@ export async function listInstalledPublicOperatingDomains(
   const imported = (await loadModule()) as Partial<OperatingDomainsModule>;
   if (typeof imported.listPublicOperatingDomainsV2 !== 'function') {
     invalidCatalog(
-      'The installed planr-pipeline package does not expose its public domain catalog.',
+      'The installed @openplanr/pipeline package does not expose its public domain catalog.',
     );
   }
   const value = imported.listPublicOperatingDomainsV2();

@@ -133,7 +133,7 @@ async function loadDiagramArtifactRuntime(): Promise<DiagramArtifactRuntime> {
   const runtime = (await import(pathToFileURL(entry).href)) as Partial<DiagramArtifactRuntime>;
   if (typeof runtime.createDiagramArtifactEnvelope !== 'function') {
     throw new Error(
-      `Installed planr-pipeline ${pipeline.version} does not support diagram review manifests. Update OpenPlanr first.`,
+      `Installed @openplanr/pipeline ${pipeline.version} does not support diagram review manifests. Update OpenPlanr first.`,
     );
   }
   return runtime as DiagramArtifactRuntime;

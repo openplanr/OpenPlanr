@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
 import path from 'node:path';
-import { assertOperatingPlanningProposalV1 } from 'planr-pipeline/operate/planning-bridge-v2';
+import { assertOperatingPlanningProposalV1 } from '@openplanr/pipeline/operate/planning-bridge-v2';
 import type { OpenPlanrConfig } from '../../models/types.js';
 import { CLI_COMMAND } from '../../utils/constants.js';
 import { loadConfig } from '../config-service.js';

@@ -13,8 +13,8 @@ import {
   runShipGates,
   type ShipClosureRecord,
   startShip,
-} from 'planr-pipeline';
-import { sha256Jcs } from 'planr-pipeline/protocol';
+} from '@openplanr/pipeline';
+import { sha256Jcs } from '@openplanr/pipeline/protocol';
 import { describe, expect, it } from 'vitest';
 import YAML from 'yaml';
 import type { JsonRecord } from '../../src/services/operate/composition.js';

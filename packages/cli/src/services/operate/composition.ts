@@ -1,5 +1,5 @@
 /**
- * Typed adapter over the installed planr-pipeline Operate subpaths (runtime, extensions, domains,
+ * Typed adapter over the installed @openplanr/pipeline Operate subpaths (runtime, extensions, domains,
  * experience, Planning bridge, evidence, executive board, measurement): replay, reduction,
  * scheduling, materializations, authority checks and experience projection behind one class.
  * Entry points: `createOperateComposition`, `loadOperateCompositionModules`, `OperateComposition`.
@@ -10,16 +10,16 @@ import { createHash } from 'node:crypto';
 import type {
   OperatingAssignmentClaimV2,
   OperatingSubmissionAcceptanceV2,
-} from 'planr-pipeline/protocol';
+} from '@openplanr/pipeline/protocol';
 
-const RUNTIME_MODULE = 'planr-pipeline/operate/runtime-v2';
-const EXTENSIONS_MODULE = 'planr-pipeline/operate/extensions-v2';
-const DOMAINS_MODULE = 'planr-pipeline/operate/operating-domains-v2';
-const EXPERIENCE_MODULE = 'planr-pipeline/operate/experience-projection-v2';
-const PLANNING_BRIDGE_MODULE = 'planr-pipeline/operate/planning-bridge-v2';
-const EVIDENCE_MODULE = 'planr-pipeline/operate/evidence-v2';
-const EXECUTIVE_BOARD_MODULE = 'planr-pipeline/operate/executive-board-materialization-v2';
-const MEASUREMENT_MODULE = 'planr-pipeline';
+const RUNTIME_MODULE = '@openplanr/pipeline/operate/runtime-v2';
+const EXTENSIONS_MODULE = '@openplanr/pipeline/operate/extensions-v2';
+const DOMAINS_MODULE = '@openplanr/pipeline/operate/operating-domains-v2';
+const EXPERIENCE_MODULE = '@openplanr/pipeline/operate/experience-projection-v2';
+const PLANNING_BRIDGE_MODULE = '@openplanr/pipeline/operate/planning-bridge-v2';
+const EVIDENCE_MODULE = '@openplanr/pipeline/operate/evidence-v2';
+const EXECUTIVE_BOARD_MODULE = '@openplanr/pipeline/operate/executive-board-materialization-v2';
+const MEASUREMENT_MODULE = '@openplanr/pipeline';
 
 export type JsonRecord = Record<string, unknown>;
 

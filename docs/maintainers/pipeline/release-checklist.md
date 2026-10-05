@@ -10,7 +10,7 @@ the hosted service keep independent release identities:
 
 1. Verify the complete OpenPlanr workspace and pack both public packages.
 2. Deploy a backward-compatible hosted-service change when the service changed.
-3. Publish `planr-pipeline` when its packed artifact changed.
+3. Publish `@openplanr/pipeline` when its packed artifact changed.
 4. Publish `openplanr` when its packed artifact changed.
 5. Update generated host-distribution metadata in the OpenPlanr repository.
 
@@ -60,17 +60,17 @@ Do not stage local planning documents:
 After merge and tag creation, run the release audit from the pipeline workspace:
 
 ```bash
-npm run doctor --workspace=planr-pipeline -- --release --strict
+npm run doctor --workspace=@openplanr/pipeline -- --release --strict
 ```
 
 The release audit checks:
 
-- `planr-pipeline` package, plugin manifest, stack metadata, protocol docs, and
+- `@openplanr/pipeline` package, plugin manifest, stack metadata, protocol docs, and
   compatibility matrix agree.
 - The hosted service retains its independent package identity and required build,
   test, and hosted-service drift checks.
 - root marketplace metadata and `ecosystem.json` match the workspace packages and canonical skills.
-- `openplanr` and `planr-pipeline` keep their independent public versions.
+- `openplanr` and `@openplanr/pipeline` keep their independent public versions.
 - `CHANGELOG.md` carries a `## [<version>]` section for the version being
   released. A tag and a published release are not evidence that a version was
   documented — v0.37.0, v0.37.1, and v0.37.2 were tagged and published while the

@@ -6,7 +6,7 @@ function inside(parent, candidate) {
   return rel.length > 0 && rel !== '..' && !rel.startsWith(`..${sep}`) && !isAbsolute(rel);
 }
 
-/** Resolve every Vite planr-pipeline import from the disposable packed install. */
+/** Resolve every Vite @openplanr/pipeline import from the disposable packed install. */
 export function packedPipelineVitePlugin() {
   const configured = process.env.OPENPLANR_PACKED_PIPELINE_ROOT;
   if (!configured) return null;
@@ -15,16 +15,18 @@ export function packedPipelineVitePlugin() {
   }
   const packageRoot = realpathSync(configured);
   const manifest = JSON.parse(readFileSync(join(packageRoot, 'package.json'), 'utf8'));
-  if (manifest.name !== 'planr-pipeline') {
-    throw new Error('OPENPLANR_PACKED_PIPELINE_ROOT is not planr-pipeline.');
+  if (manifest.name !== '@openplanr/pipeline') {
+    throw new Error('OPENPLANR_PACKED_PIPELINE_ROOT is not @openplanr/pipeline.');
   }
   const source = process.env.OPENPLANR_PACKED_PIPELINE_SOURCE_ROOT;
   if (source && realpathSync(source) === packageRoot) {
-    throw new Error('Vite resolved planr-pipeline back to sibling source.');
+    throw new Error('Vite resolved @openplanr/pipeline back to sibling source.');
   }
   const exportedPath = (specifier) => {
     const subpath =
-      specifier === 'planr-pipeline' ? '.' : `./${specifier.slice('planr-pipeline/'.length)}`;
+      specifier === '@openplanr/pipeline'
+        ? '.'
+        : `./${specifier.slice('@openplanr/pipeline/'.length)}`;
     let target = manifest.exports?.[subpath];
     if (target === undefined) {
       const pattern = Object.entries(manifest.exports ?? {}).find(([key]) => {
@@ -53,7 +55,8 @@ export function packedPipelineVitePlugin() {
     name: 'openplanr-packed-pipeline-custody',
     enforce: 'pre',
     resolveId(specifier) {
-      if (specifier !== 'planr-pipeline' && !specifier.startsWith('planr-pipeline/')) return null;
+      if (specifier !== '@openplanr/pipeline' && !specifier.startsWith('@openplanr/pipeline/'))
+        return null;
       const resolved = realpathSync(join(packageRoot, exportedPath(specifier)));
       if (!inside(packageRoot, resolved)) {
         throw new Error(`Packed pipeline import escaped installed custody: ${specifier}`);
@@ -63,7 +66,7 @@ export function packedPipelineVitePlugin() {
     },
     buildEnd(error) {
       if (!error && resolvedImports === 0) {
-        throw new Error('Vite did not resolve any planr-pipeline import from packed custody.');
+        throw new Error('Vite did not resolve any @openplanr/pipeline import from packed custody.');
       }
     },
   };

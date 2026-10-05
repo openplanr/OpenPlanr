@@ -3,7 +3,10 @@ import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'nod
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { assertDashboardBootstrapV1, validateDashboardBootstrapV1 } from 'planr-pipeline/protocol';
+import {
+  assertDashboardBootstrapV1,
+  validateDashboardBootstrapV1,
+} from '@openplanr/pipeline/protocol';
 import { describe, expect, it, vi } from 'vitest';
 import {
   assertCompatibleDashboardBootstrap,
@@ -41,7 +44,7 @@ function bootstrap() {
     },
     project: {
       projectId: HASH_B,
-      name: 'planr-pipeline',
+      name: '@openplanr/pipeline',
       branch: 'main',
       products: ['planning', 'operate'],
     },

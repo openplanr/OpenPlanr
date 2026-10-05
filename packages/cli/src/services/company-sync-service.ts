@@ -21,7 +21,7 @@ import {
 } from 'node:fs/promises';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
-import type { CompanyResourceManifest } from 'planr-pipeline/resource-contracts';
+import type { CompanyResourceManifest } from '@openplanr/pipeline/resource-contracts';
 import { LARGE_OBJECT_LIMITS } from '../../lib/resource-limits.mjs';
 import { CLI_COMMAND } from '../utils/constants.js';
 import { resolveCompanyAccessToken } from './company-auth-service.js';
@@ -2276,7 +2276,7 @@ export async function pushCompanyBinding(root: string, bindingId: string) {
 }
 
 type CompanyResourceContracts = Pick<
-  typeof import('planr-pipeline/resource-contracts'),
+  typeof import('@openplanr/pipeline/resource-contracts'),
   'assertLargeObjectContract' | 'canonicalizeJson'
 >;
 /** Load optional validation only for an actual resource operation, never CLI registration. */

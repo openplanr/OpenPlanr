@@ -55,19 +55,19 @@ export function resolvePipelineCandidateSourceRoot({ openPlanrRoot, candidateLoc
     } catch {
       candidateFailure(`The ${location.kind} pipeline candidate manifest is invalid.`);
     }
-    if (manifest?.name !== 'planr-pipeline' || typeof manifest.version !== 'string') {
-      candidateFailure(`The ${location.kind} checkout is not a planr-pipeline candidate.`);
+    if (manifest?.name !== '@openplanr/pipeline' || typeof manifest.version !== 'string') {
+      candidateFailure(`The ${location.kind} checkout is not a @openplanr/pipeline candidate.`);
     }
     resolved.push({ kind: location.kind, root: sourceRoot, manifest });
   }
   if (resolved.length === 0) {
     candidateFailure(
-      'No repository-bound planr-pipeline candidate exists in the consolidated workspace.',
+      'No repository-bound @openplanr/pipeline candidate exists in the consolidated workspace.',
     );
   }
   if (resolved.length !== 1) {
     candidateFailure(
-      'More than one bounded planr-pipeline candidate exists; candidate custody is ambiguous.',
+      'More than one bounded @openplanr/pipeline candidate exists; candidate custody is ambiguous.',
     );
   }
   return resolved[0];

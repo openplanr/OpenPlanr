@@ -12,10 +12,10 @@ flowchart TB
     subgraph public["Published to npm"]
         direction LR
         cli["openplanr<br/>packages/cli"]
-        pipeline["planr-pipeline<br/>packages/pipeline"]
+        pipeline["@openplanr/pipeline<br/>packages/pipeline"]
         protocol["@openplanr/protocol<br/>packages/protocol"]
     end
-    subgraph internal["Private workspaces, projected into planr-pipeline by npm run generate"]
+    subgraph internal["Private workspaces, projected into @openplanr/pipeline by npm run generate"]
         direction LR
         operate["operate"]
         artifact["artifact"]

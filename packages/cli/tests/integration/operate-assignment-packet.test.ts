@@ -11,7 +11,7 @@ import {
 } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
-import { sha256Jcs } from 'planr-pipeline/protocol';
+import { sha256Jcs } from '@openplanr/pipeline/protocol';
 import { describe, expect, it, vi } from 'vitest';
 
 vi.mock('../../src/services/operate/client.js', () => ({

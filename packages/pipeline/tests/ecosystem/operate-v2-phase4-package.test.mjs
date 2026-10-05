@@ -84,7 +84,7 @@ test('Phase 4 packed consumer imports only the declared local evidence facade', 
   }
 
   const consumer = join(temporaryRoot, 'consumer');
-  const installedPackage = join(consumer, 'node_modules', 'planr-pipeline');
+  const installedPackage = join(consumer, 'node_modules', '@openplanr/pipeline');
   mkdirSync(installedPackage, { recursive: true });
   run('tar', ['-xzf', packed.tarballPath, '-C', installedPackage, '--strip-components=1']);
   writeFileSync(join(consumer, 'package.json'), JSON.stringify({ type: 'module' }));
@@ -125,10 +125,10 @@ test('Phase 4 packed consumer imports only the declared local evidence facade', 
       OPEN_REFERENCE_EVIDENCE_REGISTRY_V2,
       createOperateEvidenceRegistryV2,
       dispatchOperateEvidenceResolverV2,
-    } from 'planr-pipeline/operate/evidence-v2';
-    import { buildOperatingEvidenceMaterializationV2 } from 'planr-pipeline/operate/evidence-materialization-v2';
-    import { buildOperatingEvidenceGraphV2 } from 'planr-pipeline/operate/evidence-projections-v2';
-    import { createEmptyOperatingRuntimeStateV2 } from 'planr-pipeline/operate/runtime-v2';
+    } from '@openplanr/pipeline/operate/evidence-v2';
+    import { buildOperatingEvidenceMaterializationV2 } from '@openplanr/pipeline/operate/evidence-materialization-v2';
+    import { buildOperatingEvidenceGraphV2 } from '@openplanr/pipeline/operate/evidence-projections-v2';
+    import { createEmptyOperatingRuntimeStateV2 } from '@openplanr/pipeline/operate/runtime-v2';
 
     const scope = { scopeId: 'scope-acme', domainId: 'business', domainVersion: '1.0.0' };
     const candidate = {

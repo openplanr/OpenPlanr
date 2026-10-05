@@ -3,8 +3,8 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
-import { createOperateExtensionRegistryV2 } from 'planr-pipeline/operate/extensions-v2';
-import { resolvePublicOperatingDomainV2 } from 'planr-pipeline/operate/operating-domains-v2';
+import { createOperateExtensionRegistryV2 } from '@openplanr/pipeline/operate/extensions-v2';
+import { resolvePublicOperatingDomainV2 } from '@openplanr/pipeline/operate/operating-domains-v2';
 import {
   compileOperateContractRegistry,
   OperateContractCompileError,

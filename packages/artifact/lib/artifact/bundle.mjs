@@ -1,7 +1,7 @@
 /**
  * Artifact bundler: packages one HTML entry and its local or public HTTPS dependencies into
  * self-contained UTF-8 HTML, inlining scripts, styles and assets and rejecting unsafe markup and
- * private content. Entry point: `bundleArtifact`, re-exported from the `planr-pipeline` root.
+ * private content. Entry point: `bundleArtifact`, re-exported from the `@openplanr/pipeline` root.
  * Artifact envelope construction belongs to `envelope.mjs`.
  */
 

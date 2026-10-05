@@ -82,8 +82,8 @@ const runtimeRoots = Object.freeze({
   'apps/dashboard': ['src'],
 });
 const allowedInternalImports = Object.freeze({
-  'packages/cli': new Set(),
-  'packages/pipeline': new Set(),
+  'packages/cli': new Set(['@openplanr/pipeline']),
+  'packages/pipeline': new Set(['@openplanr/pipeline']),
   'packages/protocol': new Set(),
   'packages/operate': new Set(['@openplanr/protocol']),
   'packages/artifact': new Set(['@openplanr/protocol']),

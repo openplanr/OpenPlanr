@@ -5,9 +5,9 @@ import {
   buildOperatingPlanningProposalV1,
   confirmOperatingPlanningProposalV1,
   createOperatingDeliveryRouteV1,
-} from 'planr-pipeline/operate/planning-bridge-v2';
-import { deriveOperatingIntelligenceAssignmentIdV2 } from 'planr-pipeline/operate/scheduler-v2';
-import { sha256Jcs } from 'planr-pipeline/protocol';
+} from '@openplanr/pipeline/operate/planning-bridge-v2';
+import { deriveOperatingIntelligenceAssignmentIdV2 } from '@openplanr/pipeline/operate/scheduler-v2';
+import { sha256Jcs } from '@openplanr/pipeline/protocol';
 import { loadConfig } from '../config-service.js';
 import { assertPlanningFraming } from './planning-handoff-service.js';
 import { createSpecFromOperatingProposal } from './spec-operating-origin-service.js';

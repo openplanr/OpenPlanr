@@ -172,7 +172,7 @@ describe('root release proof and public package artifacts', () => {
     expect(releaseArtifactVerifier).toContain("require.resolve('openplanr/dashboard')");
     expect(releaseArtifactVerifier).toContain("require.resolve('openplanr/dashboard-verifier')");
     expect(releaseArtifactVerifier).toContain(
-      "openPlanrRequire.resolve('planr-pipeline/package.json')",
+      "openPlanrRequire.resolve('@openplanr/pipeline/package.json')",
     );
     expect(releaseArtifactVerifier).toContain('verifier.verifyDashboardAssets()');
     expect(releaseArtifactVerifier).toContain('delete environment[key]');
@@ -253,7 +253,7 @@ describe('root release proof and public package artifacts', () => {
     expect(bundledOperateVerifier).toContain('verifyJournal');
     expect(bundledOperateVerifier).toContain('replayIndexProjection');
     expect(bundledOperateVerifier).not.toMatch(
-      /(?:from ['"]\.\/store\.js['"]|from ['"]\.\/composition\.js['"]|planr-pipeline\/protocol)/u,
+      /(?:from ['"]\.\/store\.js['"]|from ['"]\.\/composition\.js['"]|@openplanr\/pipeline\/protocol)/u,
     );
     expect(bundledOperateVerifier).not.toMatch(
       /(?:child_process|execFile|spawn|git|npm|VERIFIER_SOURCE_ROOT)/u,
@@ -285,7 +285,7 @@ describe('root release proof and public package artifacts', () => {
       mkdirSync(sibling, { recursive: true });
       writeFileSync(
         join(sibling, 'package.json'),
-        '{"name":"planr-pipeline","version":"0.44.0"}\n',
+        '{"name":"@openplanr/pipeline","version":"0.44.0"}\n',
       );
       const candidate = resolvePipelineCandidateSourceRoot({ openPlanrRoot });
       expect(candidate.kind).toBe('workspace-package');
@@ -297,7 +297,7 @@ describe('root release proof and public package artifacts', () => {
       mkdirSync(ciCandidate, { recursive: true });
       writeFileSync(
         join(ciCandidate, 'package.json'),
-        '{"name":"planr-pipeline","version":"0.44.0"}\n',
+        '{"name":"@openplanr/pipeline","version":"0.44.0"}\n',
       );
       expect(() =>
         resolvePipelineCandidateSourceRoot({
@@ -308,7 +308,7 @@ describe('root release proof and public package artifacts', () => {
           ],
         }),
       ).toThrow(
-        'More than one bounded planr-pipeline candidate exists; candidate custody is ambiguous.',
+        'More than one bounded @openplanr/pipeline candidate exists; candidate custody is ambiguous.',
       );
     } finally {
       rmSync(directory, { recursive: true, force: true });

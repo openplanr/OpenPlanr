@@ -1,9 +1,9 @@
 # Shared diagram editor session
 
-The portable `planr-pipeline/diagram-editor` entry point owns editing state for
+The portable `@openplanr/pipeline/diagram-editor` entry point owns editing state for
 local and future hosted shells. It uses the existing typed edit kernel and one
 semantic/presentation bundle. It contains no filesystem, Design, company identity
-or model client. `planr-pipeline/diagram-owner` is its separate Node-only local
+or model client. `@openplanr/pipeline/diagram-owner` is its separate Node-only local
 transport. Both have TypeScript declarations.
 
 These APIs provide editing state, shared browser controls and local persistence.
@@ -13,8 +13,8 @@ infers company authority from document content.
 ## Local use
 
 ```js
-import { createDiagramAuthoringStore } from 'planr-pipeline/diagram-authoring-store';
-import { createDiagramEditorDraft, openDiagramEditorSession } from 'planr-pipeline/diagram-editor';
+import { createDiagramAuthoringStore } from '@openplanr/pipeline/diagram-authoring-store';
+import { createDiagramEditorDraft, openDiagramEditorSession } from '@openplanr/pipeline/diagram-editor';
 
 const store = createDiagramAuthoringStore({ root: process.cwd(), slug: 'checkout' });
 const draft = createDiagramEditorDraft({ diagramId: 'checkout', title: 'Checkout' });
@@ -31,7 +31,7 @@ editor.dispose();
 
 `mountDiagramEditor({root, session, host})` mounts the framework-neutral canvas,
 outline and inspector used by local and hosted owner shells. Import its stylesheet
-from `planr-pipeline/diagram-editor.css`. The returned controller exposes
+from `@openplanr/pipeline/diagram-editor.css`. The returned controller exposes
 `openSourcePanel({tab})` so a host can open the same Mermaid copy workflow without
 reimplementing conversion or fidelity decisions.
 
@@ -66,7 +66,7 @@ uploaded Mermaid are unlinked snapshots: M1 provides no repository path, watch o
 write authority. A copy may initialize only a new, empty, unsaved diagram, and a
 partial conversion requires acknowledgement tied to that exact preview. Bundle,
 Mermaid and SVG downloads remain separate because they preserve different data.
-Load `planr-pipeline/diagram-editor.css` with this direct mount. The controller adds the scoped `planr-diagram-source-panel` class when the
+Load `@openplanr/pipeline/diagram-editor.css` with this direct mount. The controller adds the scoped `planr-diagram-source-panel` class when the
 root is outside the full editor, giving company shells the same responsive light,
 dark, forced-color and reduced-motion treatment without styling the surrounding
 page. The class is removed when the controller is disposed.

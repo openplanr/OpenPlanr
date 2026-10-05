@@ -1,5 +1,5 @@
 {
-  "name": "planr-pipeline",
+  "name": "@openplanr/pipeline",
   "version": "0.55.11",
   "private": false,
   "type": "module",
@@ -232,7 +232,7 @@
     }
   },
   "bin": {
-    "planr-pipeline": "bin/planr-pipeline.mjs"
+    "openplanr-pipeline": "bin/openplanr-pipeline.mjs"
   },
   "files": [
     "bin/",

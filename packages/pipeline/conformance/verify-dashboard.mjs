@@ -114,16 +114,16 @@ const publicModule = await import(pathToFileURL(join(root, packageRootImport)).h
 assert.equal(
   Object.hasOwn(publicModule, 'startDashboard'),
   false,
-  'package root must not export startDashboard; planr-pipeline/dashboard does',
+  'package root must not export startDashboard; @openplanr/pipeline/dashboard does',
 );
-const dashboardEntry = await import('planr-pipeline/dashboard');
+const dashboardEntry = await import('@openplanr/pipeline/dashboard');
 assert.equal(
   typeof dashboardEntry.startDashboard,
   'function',
   'dashboard export must expose startDashboard',
 );
 
-const verifiedJson = await import('planr-pipeline/dashboard/verified-json');
+const verifiedJson = await import('@openplanr/pipeline/dashboard/verified-json');
 assert.equal(
   typeof verifiedJson.canonicalizeJson,
   'function',

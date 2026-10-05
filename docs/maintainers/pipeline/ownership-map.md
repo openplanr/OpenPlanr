@@ -9,7 +9,7 @@ projection.
 | Domain | Owns | Projects into |
 |---|---|---|
 | `packages/cli` | Planning, setup, runtime lifecycle, routing, locks, rollback, and unified Doctor | Public `openplanr` package |
-| `packages/pipeline` | PO–Design–DEV engine and self-contained public compatibility surface | Public `planr-pipeline` package |
+| `packages/pipeline` | PO–Design–DEV engine and self-contained public compatibility surface | Public `@openplanr/pipeline` package |
 | `packages/protocol` | Canonical schemas, registries, catalogs, and browser-safe contracts | CLI, pipeline, adapters, and dashboard projections |
 | `packages/operate` | Operate runtime | Pipeline and CLI compatibility projections |
 | `packages/artifact` and `packages/design` | Artifact review and design runtimes | Pipeline, CLI, and dashboard projections |

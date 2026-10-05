@@ -67,7 +67,7 @@ test('Phase 3 packed consumer exposes durable-work readers without a legacy or e
     assert.doesNotMatch(path, /(?:compatibility-v1_4|records-migration|operating-provider-kit)/);
   }
 
-  const installedPackage = join(temporaryRoot, 'consumer', 'node_modules', 'planr-pipeline');
+  const installedPackage = join(temporaryRoot, 'consumer', 'node_modules', '@openplanr/pipeline');
   mkdirSync(installedPackage, { recursive: true });
   run('tar', ['-xzf', packed.tarballPath, '-C', installedPackage, '--strip-components=1']);
   const metadata = JSON.parse(readFileSync(join(installedPackage, 'package.json'), 'utf8'));

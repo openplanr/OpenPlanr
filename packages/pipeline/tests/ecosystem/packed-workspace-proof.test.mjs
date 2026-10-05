@@ -35,9 +35,9 @@ function fixture() {
     cli: {
       name: 'openplanr',
       version: '1.25.3',
-      optionalDependencies: { 'planr-pipeline': '0.44.0' },
+      optionalDependencies: { '@openplanr/pipeline': '0.44.0' },
     },
-    pipeline: { name: 'planr-pipeline', version: '0.44.0' },
+    pipeline: { name: '@openplanr/pipeline', version: '0.44.0' },
     protocol: { name: '@openplanr/protocol', version: '0.1.0' },
   };
   const manifestDigests = {

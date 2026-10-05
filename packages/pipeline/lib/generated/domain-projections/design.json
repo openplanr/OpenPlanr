@@ -43,7 +43,7 @@
     {
       "source": "packages/design/lib/design-engine/daemon.mjs",
       "target": "lib/design-engine/daemon.mjs",
-      "sha256": "fc0d2f6780c25238fe39599da878d1c541f4c944d43966b0d15753cb6bf5c07f",
+      "sha256": "e2bd6b3d9cd6567b36fe18567e7dc716c2d5587bac586174668845532f5ab32f",
       "mode": "644"
     },
     {
@@ -319,7 +319,7 @@
     {
       "source": "packages/design/lib/design/schema-loader.mjs",
       "target": "lib/design/schema-loader.mjs",
-      "sha256": "1b1674a20715c582db8e4e388d1f95a61bf3659002f3a369d58279842d774049",
+      "sha256": "767be59d7b1d4e7ae2af87143ea50e53684d36bcaa8bdae484e32ac920fb61ab",
       "mode": "644"
     },
     {

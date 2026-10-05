@@ -46,7 +46,10 @@ test('the Codex artifact skill routes through planr without executing the nested
     'utf8',
   );
   assert.match(skill, /\bopenplanr artifact\b/);
-  assert.doesNotMatch(skill, /(?:^|[`\s])planr-pipeline\s+(?:artifact|plan|ship)(?:[`\s]|$)/m);
+  assert.doesNotMatch(
+    skill,
+    /(?:^|[`\s])(?:open)?planr-pipeline\s+(?:artifact|plan|ship)(?:[`\s]|$)/m,
+  );
   assert.match(skill, /never publishes it automatically/i);
 });
 

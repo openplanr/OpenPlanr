@@ -17,7 +17,7 @@ import {
   OPERATE_GUARD_TABLE_V2,
   OPERATING_ASSIGNMENT_TRANSITIONS_V2,
   OPERATING_REVIEW_TRANSITIONS_V2,
-} from 'planr-pipeline/operate/runtime-v2';
+} from '@openplanr/pipeline/operate/runtime-v2';
 import {
   listProtocolSchemas,
   loadOperateExperienceContract,
@@ -33,7 +33,7 @@ import {
   OPERATING_DELIVERY_ROUTES_V1,
   validateOperateExperienceArtifactV2,
   validateProtocolArtifact,
-} from 'planr-pipeline/protocol';
+} from '@openplanr/pipeline/protocol';
 import {
   compileOperateContractRegistry,
   renderOperateContractCatalogModule,
@@ -413,12 +413,12 @@ try {
       `${subpath}: declared export targets must exist`,
     );
     pass(
-      documentation.includes(`\`planr-pipeline${subpath.slice(1)}\``),
+      documentation.includes(`\`@openplanr/pipeline${subpath.slice(1)}\``),
       `${subpath}: protocol documentation must list the declared export`,
     );
   }
   const documentedSubpaths = [
-    ...documentation.matchAll(/`planr-pipeline(\/operate\/[a-z0-9-]+)`/gu),
+    ...documentation.matchAll(/`@openplanr\/pipeline(\/operate\/[a-z0-9-]+)`/gu),
   ].map(([, path]) => `.${path}`);
   for (const subpath of new Set(documentedSubpaths)) {
     pass(

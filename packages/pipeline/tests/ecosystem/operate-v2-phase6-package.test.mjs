@@ -73,7 +73,7 @@ test('Phase 6 packs and runs the complete governed loop in an isolated public co
   }
 
   const consumer = join(temporaryRoot, 'consumer');
-  const installedPackage = join(consumer, 'node_modules', 'planr-pipeline');
+  const installedPackage = join(consumer, 'node_modules', '@openplanr/pipeline');
   mkdirSync(installedPackage, { recursive: true });
   run('tar', ['-xzf', packed.tarballPath, '-C', installedPackage, '--strip-components=1']);
   writeFileSync(join(consumer, 'package.json'), JSON.stringify({ type: 'module' }));
@@ -125,9 +125,9 @@ test('Phase 6 packs and runs the complete governed loop in an isolated public co
     'the governed verifier has no source checkout, private path, or credential dependency',
   );
   for (const [, specifier] of verifierSource.matchAll(/from '([^']+)'/gu)) {
-    if (!specifier.startsWith('planr-pipeline/')) continue;
+    if (!specifier.startsWith('@openplanr/pipeline/')) continue;
     assert.notEqual(
-      metadata.exports[`./${specifier.slice('planr-pipeline/'.length)}`],
+      metadata.exports[`./${specifier.slice('@openplanr/pipeline/'.length)}`],
       undefined,
       `${specifier}: declared package export`,
     );
@@ -136,7 +136,7 @@ test('Phase 6 packs and runs the complete governed loop in an isolated public co
   writeFileSync(
     runnerPath,
     [
-      "import { verifyOperateV2GovernedExecution } from './node_modules/planr-pipeline/conformance/verify-operate-v2-governed-execution.mjs';",
+      "import { verifyOperateV2GovernedExecution } from './node_modules/@openplanr/pipeline/conformance/verify-operate-v2-governed-execution.mjs';",
       'process.stdout.write(JSON.stringify(await verifyOperateV2GovernedExecution()));',
     ].join('\n'),
   );

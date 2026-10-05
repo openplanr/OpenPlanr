@@ -137,7 +137,7 @@ test('Operate reset inventory is schema-valid, deterministic, portable, and agre
 test('inventory rejects the required destructive-decision mutation fixtures', () => {
   const first = buildOperateSurfaceInventory({ root });
   throwsMutation((inventory) => {
-    inventory.repositories[0].identity = 'planr-pipeline (/private/tmp/leak/OpenPlanr)';
+    inventory.repositories[0].identity = '@openplanr/pipeline (/private/tmp/leak/OpenPlanr)';
   }, 'embedded absolute repository identity is rejected');
 
   throwsMutation((inventory) => {

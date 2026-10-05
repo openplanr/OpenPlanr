@@ -49,7 +49,7 @@ test('domain projections are deterministic, private-package-free ordinary files'
   for (const { path, entry } of walk(target)) {
     assert.equal(entry.isSymbolicLink(), false, path);
     if (/\.(?:mjs|mts)$/u.test(path)) {
-      assert.doesNotMatch(readFileSync(path, 'utf8'), /(['"])@openplanr\//u, path);
+      assert.doesNotMatch(readFileSync(path, 'utf8'), /(['"])@openplanr\/(?!pipeline[/'"])/u, path);
     }
   }
 

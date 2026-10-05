@@ -7,34 +7,34 @@ import { fileURLToPath } from 'node:url';
 import {
   createOperatingApprovalRecordV2,
   createOperatingApprovalRequirementV2,
-} from 'planr-pipeline/operate/approvals-v2';
-import { evaluateOperateAuthorityV2 } from 'planr-pipeline/operate/authorization-v2';
+} from '@openplanr/pipeline/operate/approvals-v2';
+import { evaluateOperateAuthorityV2 } from '@openplanr/pipeline/operate/authorization-v2';
 import {
   buildOperatingExecutionLifecycleV2,
   deriveOperatingExecutionVerificationStatusV2,
   deriveOperatingVerificationFeedbackV2,
   selectOperatingTerminalVerificationAssignmentV2,
-} from 'planr-pipeline/operate/execution-verification-v2';
-import { createOperatingGovernedExecutionRuntimeV2 } from 'planr-pipeline/operate/governed-execution-v2';
-import { OPEN_REFERENCE_OPERATE_GOVERNED_EXTENSIONS_V2 } from 'planr-pipeline/operate/governed-extensions-v2';
+} from '@openplanr/pipeline/operate/execution-verification-v2';
+import { createOperatingGovernedExecutionRuntimeV2 } from '@openplanr/pipeline/operate/governed-execution-v2';
+import { OPEN_REFERENCE_OPERATE_GOVERNED_EXTENSIONS_V2 } from '@openplanr/pipeline/operate/governed-extensions-v2';
 import {
   buildOperatingRollbackPlanV2,
   classifyOperatingGovernedRecoveryV2,
   createOperatingGovernedRecoveryRuntimeV2,
   recordOperatingRollbackPlanV2,
-} from 'planr-pipeline/operate/governed-recovery-v2';
-import { derivePersistentOperatingActionRevisionHashV2 } from 'planr-pipeline/operate/persistent-work-v2';
+} from '@openplanr/pipeline/operate/governed-recovery-v2';
+import { derivePersistentOperatingActionRevisionHashV2 } from '@openplanr/pipeline/operate/persistent-work-v2';
 import {
   createOperatingActionPolicyV2,
   evaluateOperatingActionPolicyV2,
-} from 'planr-pipeline/operate/policy-v2';
+} from '@openplanr/pipeline/operate/policy-v2';
 import {
   createDisposableLocalProjectTargetV2,
   createSyntheticNoNetworkTargetV2,
   evaluateOpenReferencePolicyProviderV2,
   OPEN_REFERENCE_CONTAINMENT_EXECUTOR_HOST_V2,
   OPEN_REFERENCE_PROJECT_EXECUTOR_HOST_V2,
-} from 'planr-pipeline/operate/reference-governed-executors-v2';
+} from '@openplanr/pipeline/operate/reference-governed-executors-v2';
 import {
   createOperatingRuntimeEventV2,
   deriveOperatingRuntimeDeltaV2,
@@ -43,12 +43,12 @@ import {
   recordOperatingIntelligenceStateV2,
   reduceOperatingRuntimeEventsV2,
   transitionOperatingActionLifecycleV2,
-} from 'planr-pipeline/operate/runtime-v2';
+} from '@openplanr/pipeline/operate/runtime-v2';
 import {
   OPERATE_RUNTIME_CONTRACT_KINDS,
   sha256Jcs,
   validateProtocolArtifact,
-} from 'planr-pipeline/protocol';
+} from '@openplanr/pipeline/protocol';
 import { runOperatingIntelligenceJourneyV2 } from './verify-operate-v2-operating-intelligence.mjs';
 
 const VERSION = '2.0.0';

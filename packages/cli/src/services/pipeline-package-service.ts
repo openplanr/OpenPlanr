@@ -1,5 +1,5 @@
 /**
- * Locates the installed planr-pipeline package for the CLI, loads its guided-interaction
+ * Locates the installed @openplanr/pipeline package for the CLI, loads its guided-interaction
  * validators, and verifies explicit digest-bound pipeline and landing package handoffs and the
  * exports each must provide, without consulting any other installed copy.
  * Entry points: `resolvePipelinePackage`, `resolveGuidedInteractionValidators`,
@@ -558,7 +558,7 @@ async function verifyPipelinePackageHandoffInternal(
 
   const manifestPath = safePackageFile(root, 'package.json', inventory.paths);
   const manifest = parseJsonAsset(manifestPath);
-  if (manifest.name !== 'planr-pipeline') {
+  if (manifest.name !== '@openplanr/pipeline') {
     failHandoff('E_PIPELINE_HANDOFF_INCOMPATIBLE', 'Pipeline package identity is incompatible.');
   }
   const rootEntry = publicExportPath(root, manifest.exports, '.', inventory.paths);
@@ -1066,7 +1066,7 @@ async function verifyLandingPackageHandoffInternal(
     );
   }
   const packageManifest = parseJsonAsset(safePackageFile(root, 'package.json', inventory.paths));
-  if (packageManifest.name !== 'planr-pipeline') {
+  if (packageManifest.name !== '@openplanr/pipeline') {
     failLandingHandoff('E_LANDING_HANDOFF_INCOMPATIBLE', 'Landing package identity changed.');
   }
   const workflowManifest = safePackageFile(
@@ -1261,7 +1261,7 @@ function candidateRoots(): string[] {
   const roots: string[] = [];
 
   try {
-    const packageManifest = require.resolve('planr-pipeline/package.json');
+    const packageManifest = require.resolve('@openplanr/pipeline/package.json');
     roots.push(path.dirname(packageManifest));
   } catch {
     // Optional dependency may be omitted by the minimal installer.
@@ -1272,7 +1272,7 @@ function candidateRoots(): string[] {
 export function resolvePipelinePackage(required = true): PipelinePackage | null {
   for (const root of candidateRoots()) {
     const packagePath = path.join(root, 'package.json');
-    const binPath = path.join(root, 'bin', 'planr-pipeline.mjs');
+    const binPath = path.join(root, 'bin', 'openplanr-pipeline.mjs');
     const adapterRegistryPath = path.join(root, 'registry', 'adapters.json');
     const roleRegistryPath = path.join(root, 'registry', 'roles.json');
     if (![packagePath, binPath, adapterRegistryPath, roleRegistryPath].every(existsSync)) continue;
@@ -1337,7 +1337,7 @@ export async function resolveGuidedInteractionValidators(): Promise<GuidedIntera
   }
   const versions = [...new Set(candidates.map((candidate) => candidate.version))].join(', ');
   const error = new Error(
-    `Installed planr-pipeline version(s) ${versions} do not provide the Protocol v1.2 guided interaction validators. Install the compatible full package with \`npm install -g openplanr@latest\`.`,
+    `Installed @openplanr/pipeline version(s) ${versions} do not provide the Protocol v1.2 guided interaction validators. Install the compatible full package with \`npm install -g openplanr@latest\`.`,
   );
   error.name = 'E_PIPELINE_VERSION_INCOMPATIBLE';
   throw error;

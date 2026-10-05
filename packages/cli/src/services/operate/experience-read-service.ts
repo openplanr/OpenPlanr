@@ -4,16 +4,16 @@
  * executive-board and audit display surfaces and command previews through the installed reader.
  * Entry points: `readOperateExperience`, `readOperateCycleWorkspace`, `readOperateActionWorkspace`,
  * `readOperateAuditDisplay`, `createOperateExperiencePreview`. Surface selection belongs to
- * planr-pipeline's `operate-experience-reader`.
+ * @openplanr/pipeline's `operate-experience-reader`.
  */
 
-import { evaluateOperatingApprovalSetV2 } from 'planr-pipeline/operate/approvals-v2';
+import { evaluateOperatingApprovalSetV2 } from '@openplanr/pipeline/operate/approvals-v2';
 import {
   deriveOperateAuthorityAllowedActionsV2,
   OPERATE_AUTHORITY_TOOL_CAPABILITIES_V2,
-} from 'planr-pipeline/operate/authorization-v2';
-import { buildOperatingTerminalVerificationInsufficientEvidenceV2 } from 'planr-pipeline/operate/runtime-v2';
-import { sha256Jcs } from 'planr-pipeline/protocol';
+} from '@openplanr/pipeline/operate/authorization-v2';
+import { buildOperatingTerminalVerificationInsufficientEvidenceV2 } from '@openplanr/pipeline/operate/runtime-v2';
+import { sha256Jcs } from '@openplanr/pipeline/protocol';
 import { OperateClientError } from './client-error.js';
 import {
   findBy,
@@ -44,7 +44,7 @@ import { isOperatePublicId } from './identity-contract.js';
 import { readOperateReview } from './review-lifecycle-service.js';
 import type { OperateStoredRuntime } from './store.js';
 
-const EXPERIENCE_READER_MODULE = 'planr-pipeline/dashboard/operate-experience-reader';
+const EXPERIENCE_READER_MODULE = '@openplanr/pipeline/dashboard/operate-experience-reader';
 const REVIEW_SUBMIT_CAPABILITY = Object.freeze({
   id: 'operate-review-submit',
   version: PROTOCOL_VERSION,

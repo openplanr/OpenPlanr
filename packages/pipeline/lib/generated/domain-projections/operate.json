@@ -7,7 +7,7 @@
     {
       "source": "packages/operate/lib/operate/action-verification-v2.d.mts",
       "target": "lib/operate/action-verification-v2.d.mts",
-      "sha256": "381744567147a1ffee97ffc8286167f7d4a893561f664aba82ee0aaeef6b8045",
+      "sha256": "284452cd47ee1f93a8643afc90f17fb1ff888e0bb20ef4cac72504ef689744ae",
       "mode": "644"
     },
     {
@@ -19,7 +19,7 @@
     {
       "source": "packages/operate/lib/operate/approvals-v2.d.mts",
       "target": "lib/operate/approvals-v2.d.mts",
-      "sha256": "9092adbb5592cca0dd6d3f7514bee144c9f4fe00a855bc4b513f0f32f7167e25",
+      "sha256": "9f622934b8178d550cf7a7e1d64adf25b3b18a2e728667cb9765a0242e6539a5",
       "mode": "644"
     },
     {
@@ -37,7 +37,7 @@
     {
       "source": "packages/operate/lib/operate/authorization-v2.d.mts",
       "target": "lib/operate/authorization-v2.d.mts",
-      "sha256": "84f56b0ab443f60cfce7fe48d224b8ea42aee797bef793442d3cef4d84bf6f24",
+      "sha256": "a1b1d3927efb2abc5ff0ceda12a835dab1ee1be2fadf71d85b8137b19eb5a65b",
       "mode": "644"
     },
     {
@@ -49,7 +49,7 @@
     {
       "source": "packages/operate/lib/operate/contracts/compiler.mjs",
       "target": "lib/operate/contracts/compiler.mjs",
-      "sha256": "09fe449dc221acea8416e1c67ddf3d7ed65ac72211d9c4fd6380fa8570d237bc",
+      "sha256": "323145296829beec8798d6ae9a9bc48e4c24eb6a042a84387d0b60b19326bc46",
       "mode": "644"
     },
     {
@@ -73,7 +73,7 @@
     {
       "source": "packages/operate/lib/operate/cycle-closure-v2.d.mts",
       "target": "lib/operate/cycle-closure-v2.d.mts",
-      "sha256": "988bf84371eb4a8d1f4b039810067bca862b79e52a95f3e69f17c8563287d528",
+      "sha256": "43bdd5e64b025da49f406b0b3ee8ef1e4e381b8806d62babf98dbaa9b92b2021",
       "mode": "644"
     },
     {
@@ -103,7 +103,7 @@
     {
       "source": "packages/operate/lib/operate/evidence-materialization-v2.d.mts",
       "target": "lib/operate/evidence-materialization-v2.d.mts",
-      "sha256": "459d448e47d4888f5c22ef756e50f1a4655daa792ddc3397424dc0fdf30f4eec",
+      "sha256": "387fada5ba3cb41a12d2ded6629c2b3a2fb228c7f732b5abcfa75903a55f7065",
       "mode": "644"
     },
     {
@@ -121,7 +121,7 @@
     {
       "source": "packages/operate/lib/operate/evidence-projections-v2.d.mts",
       "target": "lib/operate/evidence-projections-v2.d.mts",
-      "sha256": "eba0486f87fcad81596f285e0ed143da5e55341745fdf1b69a93d4cc5257f09f",
+      "sha256": "648a275c7b31ee44a78a3c33ac49fea2e0515f77e653eea34c1030f399cf2a75",
       "mode": "644"
     },
     {
@@ -133,7 +133,7 @@
     {
       "source": "packages/operate/lib/operate/evidence-registry-v2.d.mts",
       "target": "lib/operate/evidence-registry-v2.d.mts",
-      "sha256": "86d11e7f6d90360fc6922a8f95ef3a2b69e3d1e3ef433bf8e9e6d2f20fd4c472",
+      "sha256": "10d84211ecef50780e61db4c4958393d6d3052fd547f8c7f86fbb7d34229a129",
       "mode": "644"
     },
     {
@@ -145,7 +145,7 @@
     {
       "source": "packages/operate/lib/operate/evidence-v2.d.mts",
       "target": "lib/operate/evidence-v2.d.mts",
-      "sha256": "0cb70e5c0837a910abe8270f1116d53e4a041334298dad321365c80be6351896",
+      "sha256": "66c2707262d74cef4477d2dba2d3955a2f7066133fca6702610ade49f8239631",
       "mode": "644"
     },
     {
@@ -157,7 +157,7 @@
     {
       "source": "packages/operate/lib/operate/execution-verification-v2.d.mts",
       "target": "lib/operate/execution-verification-v2.d.mts",
-      "sha256": "da253e564dfda87160fd3a86d91d8ac1840cacdec824cced7a22600ed2ca5d64",
+      "sha256": "b78d1344cd7dc1b4fcd1a1e03a6aad160775ab39573162cbdeeb1962db9222f4",
       "mode": "644"
     },
     {
@@ -169,7 +169,7 @@
     {
       "source": "packages/operate/lib/operate/executive-board-compatibility-v2.d.mts",
       "target": "lib/operate/executive-board-compatibility-v2.d.mts",
-      "sha256": "f9b291606c40c5e75069fb42cf88e3896dc48a07d36d7cacc81763ad51c70f94",
+      "sha256": "3b1ec06ef2a25bfcf40b8e15ef97463cef33651015837cede8a4c8df3b6e8576",
       "mode": "644"
     },
     {
@@ -181,7 +181,7 @@
     {
       "source": "packages/operate/lib/operate/executive-board-materialization-v2.d.mts",
       "target": "lib/operate/executive-board-materialization-v2.d.mts",
-      "sha256": "8c9dccdd0346812cfc6a85be597846204b8272a53e321f4e775cc3fc5c942061",
+      "sha256": "aed54c5b6688c9760cd18d85178711d13a74380c39acca133701a3d740f998b3",
       "mode": "644"
     },
     {
@@ -199,7 +199,7 @@
     {
       "source": "packages/operate/lib/operate/experience-projection-v2.d.mts",
       "target": "lib/operate/experience-projection-v2.d.mts",
-      "sha256": "3b1eb94397bc596ec6e9585ea74cd98168cf4432f1b1c667ed039f7101afdd92",
+      "sha256": "70eea3085538b9a7e7b7569889d474e3f0313dc4de5d95faf4dded4b957b1b3d",
       "mode": "644"
     },
     {
@@ -211,7 +211,7 @@
     {
       "source": "packages/operate/lib/operate/extensions-v2.d.mts",
       "target": "lib/operate/extensions-v2.d.mts",
-      "sha256": "61ed762c25ee3a9fb28abd7810dc987c4a1ac0e8adabf74ef672a074efa70898",
+      "sha256": "c4e2be8a75629d4ba8b8c7694032c9257ff82674ede44054e5990483e7e53fda",
       "mode": "644"
     },
     {
@@ -223,7 +223,7 @@
     {
       "source": "packages/operate/lib/operate/governed-execution-v2.d.mts",
       "target": "lib/operate/governed-execution-v2.d.mts",
-      "sha256": "2fe12beca0827055213804658ea64b34623955cd0e948f00a1d04f77837b633f",
+      "sha256": "7b340e33ecbdb0716902b392253666490b6c8bc433bdd7cc226acbd824640f5d",
       "mode": "644"
     },
     {
@@ -235,7 +235,7 @@
     {
       "source": "packages/operate/lib/operate/governed-extensions-v2.d.mts",
       "target": "lib/operate/governed-extensions-v2.d.mts",
-      "sha256": "98abc6cf60c31cf9fca679cbdc892fe2571d217b3ae63827e63e40e6ab85d3a3",
+      "sha256": "702fac540393b2728b9a3278fcb20c31732ef35d78b07fa55d78ae531bbe2660",
       "mode": "644"
     },
     {
@@ -247,7 +247,7 @@
     {
       "source": "packages/operate/lib/operate/governed-recovery-v2.d.mts",
       "target": "lib/operate/governed-recovery-v2.d.mts",
-      "sha256": "193661bdce460bcebfaef8ff8b7c4fb09fda2d73fc4508f760ac5887f50037ec",
+      "sha256": "c44251b26540c7cbfc3bd48034cb354ce76a03df313bc46ff00c159f46c9833d",
       "mode": "644"
     },
     {
@@ -289,7 +289,7 @@
     {
       "source": "packages/operate/lib/operate/intelligence-router-v2.d.mts",
       "target": "lib/operate/intelligence-router-v2.d.mts",
-      "sha256": "01c88e65225393198195d166db11ab43849f62be2fa361d0bebee23e4e4aee93",
+      "sha256": "830963d9cff56071a67afcbe0401e8bebb399c2a4fef71bfd30e9f22f5a430d4",
       "mode": "644"
     },
     {
@@ -301,7 +301,7 @@
     {
       "source": "packages/operate/lib/operate/operating-delta-v2.d.mts",
       "target": "lib/operate/operating-delta-v2.d.mts",
-      "sha256": "d1eee5db810491193a0d1ea63eb49f54c9382f799f0df66f87127e957bf8b282",
+      "sha256": "a5718f9f845187c259b394a8b8fb17051fe7a587b4889e16f5e5e9767486de7b",
       "mode": "644"
     },
     {
@@ -313,7 +313,7 @@
     {
       "source": "packages/operate/lib/operate/operating-domains-v2.d.mts",
       "target": "lib/operate/operating-domains-v2.d.mts",
-      "sha256": "de6152e5caca74e6a93750e89ca121f541b96556ffd7808deab126b610bf43e1",
+      "sha256": "08fc4b374b3570a7813b443712f5fcb77b045b3c3fdd8aecc6dd71f6aeaa91b0",
       "mode": "644"
     },
     {
@@ -325,7 +325,7 @@
     {
       "source": "packages/operate/lib/operate/operating-intelligence-state-v2.d.mts",
       "target": "lib/operate/operating-intelligence-state-v2.d.mts",
-      "sha256": "1ab758dc354f6109b78736fe0da6c07bacddc5ba1f3138ab6671297a62d455b4",
+      "sha256": "82bac2d5ca30d4469095e8ab50a4225641aa333e501e2127b0e93e2f2c9509a9",
       "mode": "644"
     },
     {
@@ -337,7 +337,7 @@
     {
       "source": "packages/operate/lib/operate/operating-signal-providers-v2.d.mts",
       "target": "lib/operate/operating-signal-providers-v2.d.mts",
-      "sha256": "294f22c1caf7e17d1deedba47c8f9d04d8e0352df4f4458ac674e0ae72b2c3f7",
+      "sha256": "4a27ac57237239e06e338fb8698af3dc83a5f0ec4061a29c31852eccd57539ca",
       "mode": "644"
     },
     {
@@ -349,7 +349,7 @@
     {
       "source": "packages/operate/lib/operate/operating-snapshots-v2.d.mts",
       "target": "lib/operate/operating-snapshots-v2.d.mts",
-      "sha256": "72fa44b0e3bdf50ef5e931038c1138cc8dd5a8e4d2059f7fd928f950c6ff3152",
+      "sha256": "ffd8c2eaa00c1d3bafab27f8a38945dc7bca79d240f0ec6367f9daa79afde77b",
       "mode": "644"
     },
     {
@@ -361,7 +361,7 @@
     {
       "source": "packages/operate/lib/operate/operating-state-v2.d.mts",
       "target": "lib/operate/operating-state-v2.d.mts",
-      "sha256": "44050ea39c4be2f445506940cb6e63a89573783a449da371fd5334c9cb1e479c",
+      "sha256": "41bd9254797d5d5abc8bdc4e015a835d20024e0183bae9cf102e188e6c95869a",
       "mode": "644"
     },
     {
@@ -373,7 +373,7 @@
     {
       "source": "packages/operate/lib/operate/operating-triggers-v2.d.mts",
       "target": "lib/operate/operating-triggers-v2.d.mts",
-      "sha256": "6e985c263265b2636401ca877e15367bdb3febdce11652e072542bb926a27a20",
+      "sha256": "c99b60413a8a1c6e6bbd4c09297c5a709f1c4c8c26264ca2f1b945756f942d32",
       "mode": "644"
     },
     {
@@ -385,7 +385,7 @@
     {
       "source": "packages/operate/lib/operate/persistent-work-projections-v2.d.mts",
       "target": "lib/operate/persistent-work-projections-v2.d.mts",
-      "sha256": "3b1c774be2d1c4be5a0a06423a825b709c2b741471193b8c434450ad7c6d8d23",
+      "sha256": "b29179bbed0015f0c81fe8018bfc3f9bcb1ab1713b866ebd6582d7062567c900",
       "mode": "644"
     },
     {
@@ -397,7 +397,7 @@
     {
       "source": "packages/operate/lib/operate/persistent-work-v2.d.mts",
       "target": "lib/operate/persistent-work-v2.d.mts",
-      "sha256": "a0488bc4e2c0e9028e20f97128ce3c592604c16d5f656e23c5c6b39dffc7a0fb",
+      "sha256": "ae929a65639f79423db02a1f66e3307ca44bd21b765c1690446b2030b7d0845c",
       "mode": "644"
     },
     {
@@ -409,7 +409,7 @@
     {
       "source": "packages/operate/lib/operate/planning-bridge-v2.d.mts",
       "target": "lib/operate/planning-bridge-v2.d.mts",
-      "sha256": "7b9bd1b7666c95e35ce1c1fe3ca953ed7988ceb507fa6f577c33bee7d5d61642",
+      "sha256": "a5d885800190178f7d933a25f506306c522f29aa0992a9f4cb1778eb22a247f7",
       "mode": "644"
     },
     {
@@ -421,7 +421,7 @@
     {
       "source": "packages/operate/lib/operate/policy-v2.d.mts",
       "target": "lib/operate/policy-v2.d.mts",
-      "sha256": "910b6d1689a39452fbba8c1915ab4d8ca596f23bcb8f34a4ff49762cbf81fd29",
+      "sha256": "0687997ebfca954f75b58f34589d445cb0a2f06de31e9754cf7c56cb2fa93e1e",
       "mode": "644"
     },
     {
@@ -433,7 +433,7 @@
     {
       "source": "packages/operate/lib/operate/reference-governed-executors-v2.d.mts",
       "target": "lib/operate/reference-governed-executors-v2.d.mts",
-      "sha256": "a89248648441106546dd9b72d2f8d056a1d9b5e4186348f3faceb16a95a2cf3f",
+      "sha256": "5f2090ab2389162f7d0d2b5eb54e166d5544dd44161cd69b737cf4a12def427b",
       "mode": "644"
     },
     {
@@ -445,7 +445,7 @@
     {
       "source": "packages/operate/lib/operate/result-packet-v2.d.mts",
       "target": "lib/operate/result-packet-v2.d.mts",
-      "sha256": "7d29008ebdcc469d722e077bdd85c0f59f005d9258233c849d3f4cb88867d2d6",
+      "sha256": "2b55517b0d6dfa7554f50cb71fac700c95eeaa9cbf8cb9559ddaff4c6bc5527a",
       "mode": "644"
     },
     {
@@ -457,7 +457,7 @@
     {
       "source": "packages/operate/lib/operate/review-bound-submission-v2.d.mts",
       "target": "lib/operate/review-bound-submission-v2.d.mts",
-      "sha256": "899a633b9efab5ea88044d39877308e55d21cd68ced0699caf971981d803ed22",
+      "sha256": "bcb7e8133c7711b08881e4e2adb8448c9326c0d53aea055d40a8cc8adbc774bc",
       "mode": "644"
     },
     {
@@ -475,7 +475,7 @@
     {
       "source": "packages/operate/lib/operate/runtime-foundation.d.mts",
       "target": "lib/operate/runtime-foundation.d.mts",
-      "sha256": "03f2be0636e7eb082df73722fd8428a63015f24e005ea99edf893cb2887a74bb",
+      "sha256": "7603df95351f8afef0837cc3b6fe72074871b49195dc0cdec524f26f0e97a2c5",
       "mode": "644"
     },
     {
@@ -547,7 +547,7 @@
     {
       "source": "packages/operate/lib/operate/scheduler-v2.d.mts",
       "target": "lib/operate/scheduler-v2.d.mts",
-      "sha256": "a196515ea9cf71d9b9f3b2b519847bdb4325d646aa2bea04e6a9c1f52c9300c9",
+      "sha256": "7b2350af17c431b10a70bef88fb80f76dab7b2e64ec5d36d6f5bb0986fd9458a",
       "mode": "644"
     },
     {
@@ -559,13 +559,13 @@
     {
       "source": "packages/operate/lib/operate/trace-matrix-v2.d.mts",
       "target": "lib/operate/trace-matrix-v2.d.mts",
-      "sha256": "0a77ff80f8c5214aadd18e3604c46ea372c277b9669ff01d26d7561ea4f7aeb9",
+      "sha256": "d6401bc6749f0b145bb848cd6c91c91cdaefeb91ec2f862a112bcd5ff9ef2323",
       "mode": "644"
     },
     {
       "source": "packages/operate/lib/operate/trace-matrix-v2.mjs",
       "target": "lib/operate/trace-matrix-v2.mjs",
-      "sha256": "dc10005db3709e027cc736d9e894437d2851bf7d7dcf3bc1e123dd57651132e9",
+      "sha256": "27077cb57e97d5802eeea62fc0fd2438090654f04b8b97ad90cab54fa3c0f96e",
       "mode": "644"
     }
   ]

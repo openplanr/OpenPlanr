@@ -35,7 +35,7 @@ test('dashboard app is a private 0.1 workspace with protocol-only internal depen
   assert.equal(manifest.private, true);
   assert.equal(manifest.dependencies['@openplanr/protocol'], '0.1.0');
   assert.equal(manifest.dependencies.openplanr, undefined);
-  assert.equal(manifest.dependencies['planr-pipeline'], undefined);
+  assert.equal(manifest.dependencies['@openplanr/pipeline'], undefined);
 });
 
 test('built app and CLI copy retain exact digest custody', () => {

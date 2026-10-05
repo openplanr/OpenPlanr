@@ -223,7 +223,7 @@ test('a compatibility declaration resolves against payload bytes, never against 
   );
   assert.equal(
     codeOf(() =>
-      assertPipelineCompatibilityDeclaration('planr-pipeline', {
+      assertPipelineCompatibilityDeclaration('@openplanr/pipeline', {
         ledger,
         pipelinePayloadDigest: pipeline.payloadDigest,
       }),
@@ -284,7 +284,7 @@ test('an unreadable or unsupplied input is a named absence, never a passing clai
 
 test('rows assembled from proofs carry the digests those proofs already computed', () => {
   const packageProof = {
-    package: { name: 'planr-pipeline', version: '0.42.0' },
+    package: { name: '@openplanr/pipeline', version: '0.42.0' },
     archive: { digest: ledger.rows[0].payloadDigest },
     sourceDigest: ledger.rows[0].sourceInventoryDigest,
     exports: [
@@ -306,7 +306,7 @@ test('rows assembled from proofs carry the digests those proofs already computed
       ],
     },
     packageProof,
-    packages: { pipeline: { name: 'planr-pipeline', version: '0.42.0' } },
+    packages: { pipeline: { name: '@openplanr/pipeline', version: '0.42.0' } },
     terminalReceipts: { pipeline: ledger.rows[0].terminalReceipt },
   });
   assert.equal(assembled.rows.length, 1);
@@ -386,12 +386,18 @@ test('a ledger, claim set, and receipt rebuild byte-identically from unchanged i
 
 test('a version projection is rendered once and reused by every reader', () => {
   assert.equal(
-    renderLedgerVersionProjection({ packageName: 'planr-pipeline', declaredVersion: '0.42.0' }),
-    'planr-pipeline v0.42.0',
+    renderLedgerVersionProjection({
+      packageName: '@openplanr/pipeline',
+      declaredVersion: '0.42.0',
+    }),
+    '@openplanr/pipeline v0.42.0',
   );
   assert.equal(
     codeOf(() =>
-      renderLedgerVersionProjection({ packageName: 'planr-pipeline', declaredVersion: 'next' }),
+      renderLedgerVersionProjection({
+        packageName: '@openplanr/pipeline',
+        declaredVersion: 'next',
+      }),
     ),
     'E_RELEASE_LEDGER_CONTRACT_INVALID',
   );

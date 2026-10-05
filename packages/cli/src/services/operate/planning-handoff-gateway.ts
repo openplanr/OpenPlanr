@@ -1,5 +1,5 @@
 import { readFile } from 'node:fs/promises';
-import { assertOperateExperienceArtifactV2 } from 'planr-pipeline/protocol';
+import { assertOperateExperienceArtifactV2 } from '@openplanr/pipeline/protocol';
 import { parseMarkdown } from '../../utils/markdown.js';
 import type { OperateClient } from './client.js';
 import type { JsonRecord } from './composition.js';

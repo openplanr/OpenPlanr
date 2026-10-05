@@ -31,7 +31,7 @@ export const DEFAULT_CURSOR_RULES_DIR = '.cursor/rules';
  *   - ClaudeGenerator (renders into the sibling `planr-pipeline.md` reference card)
  *   - CodexGenerator  (renders into the AGENTS.md pipeline section)
  *
- * See `planr-pipeline/docs/protocol/` for the full protocol spec.
+ * See `@openplanr/pipeline/docs/protocol/` for the full protocol spec.
  */
 export const OPENPLANR_PROTOCOL_VERSION = '1.0.0';
 
@@ -77,14 +77,14 @@ export function isValidStatus(type: ArtifactType, status: string): boolean {
 /**
  * Spec-driven mode (third planning posture) uses a richer status lifecycle
  * because each phase corresponds to a different role transition:
- * PO authoring → AI decomposition → human review → handoff to planr-pipeline.
+ * PO authoring → AI decomposition → human review → handoff to @openplanr/pipeline.
  *
  * - pending             — SPEC created, body not yet written
  * - shaping             — SPEC body authored (manually or via `openplanr spec shape`)
  * - decomposing         — the active host agent is authoring user stories and tasks
  * - decomposed          — US + Task files written, awaiting human review
- * - ready-for-pipeline  — `openplanr spec promote` validated; ready for planr-pipeline
- * - in-pipeline         — planr-pipeline `/plan` or `/ship` is running
+ * - ready-for-pipeline  — `openplanr spec promote` validated; ready for @openplanr/pipeline
+ * - in-pipeline         — @openplanr/pipeline `/plan` or `/ship` is running
  * - done                — DEV phase complete, code shipped
  */
 export const VALID_SPEC_STATUSES = [

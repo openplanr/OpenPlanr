@@ -151,7 +151,7 @@ function packInstalledConsumer(temporaryRoot) {
   );
   const [{ filename }] = JSON.parse(packed.stdout);
   const consumer = join(temporaryRoot, 'consumer');
-  const installedPackage = join(consumer, 'node_modules', 'planr-pipeline');
+  const installedPackage = join(consumer, 'node_modules', '@openplanr/pipeline');
   mkdirSync(installedPackage, { recursive: true });
   run('tar', [
     '-xzf',
@@ -225,7 +225,7 @@ test('display verifier source, packed runtime, and declarations have exact publi
       [
         '--input-type=module',
         '--eval',
-        "Promise.all([import('planr-pipeline/schemas/v1.2.0/operate-experience-display-surface.mjs'), import('planr-pipeline/schemas/v1.2.0/operate-cycle-display-workspace.mjs'), import('planr-pipeline/schemas/v1.2.0/operate-executive-board-display-surface.mjs')]);",
+        "Promise.all([import('@openplanr/pipeline/schemas/v1.2.0/operate-experience-display-surface.mjs'), import('@openplanr/pipeline/schemas/v1.2.0/operate-cycle-display-workspace.mjs'), import('@openplanr/pipeline/schemas/v1.2.0/operate-executive-board-display-surface.mjs')]);",
       ],
       { cwd: consumer },
     );
@@ -233,10 +233,10 @@ test('display verifier source, packed runtime, and declarations have exact publi
     writeFileSync(
       join(consumer, 'index.mts'),
       [
-        "import * as surface from 'planr-pipeline/schemas/v1.2.0/operate-experience-display-surface.mjs';",
-        "import * as workspace from 'planr-pipeline/schemas/v1.2.0/operate-cycle-display-workspace.mjs';",
-        "import * as board from 'planr-pipeline/schemas/v1.2.0/operate-executive-board-display-surface.mjs';",
-        "import * as contract from './node_modules/planr-pipeline/lib/dashboard/operate-experience-display-contract.mjs';",
+        "import * as surface from '@openplanr/pipeline/schemas/v1.2.0/operate-experience-display-surface.mjs';",
+        "import * as workspace from '@openplanr/pipeline/schemas/v1.2.0/operate-cycle-display-workspace.mjs';",
+        "import * as board from '@openplanr/pipeline/schemas/v1.2.0/operate-executive-board-display-surface.mjs';",
+        "import * as contract from './node_modules/@openplanr/pipeline/lib/dashboard/operate-experience-display-contract.mjs';",
         `const surfaceNames = ${JSON.stringify(SURFACE_EXPORTS)} as const;`,
         `const workspaceNames = ${JSON.stringify(WORKSPACE_EXPORTS)} as const;`,
         `const boardNames = ${JSON.stringify(BOARD_EXPORTS)} as const;`,
@@ -292,7 +292,7 @@ test('packed display verification bundles synchronously without Node built-ins',
     writeFileSync(
       entry,
       [
-        "import { assertOperateExperienceDisplaySurfaceV1 } from 'planr-pipeline/schemas/v1.2.0/operate-experience-display-surface.mjs';",
+        "import { assertOperateExperienceDisplaySurfaceV1 } from '@openplanr/pipeline/schemas/v1.2.0/operate-experience-display-surface.mjs';",
         `const display = ${JSON.stringify(display)};`,
         `const binding = ${JSON.stringify(binding)};`,
         'globalThis.__operateDisplay = assertOperateExperienceDisplaySurfaceV1(display, binding);',
@@ -334,7 +334,7 @@ test('packed display verifier executes under exact Node 20.0.0', {
     writeFileSync(
       join(consumer, 'verify.mjs'),
       [
-        "import { assertOperateExperienceDisplaySurfaceV1 } from 'planr-pipeline/schemas/v1.2.0/operate-experience-display-surface.mjs';",
+        "import { assertOperateExperienceDisplaySurfaceV1 } from '@openplanr/pipeline/schemas/v1.2.0/operate-experience-display-surface.mjs';",
         `const display = ${JSON.stringify(display)};`,
         `const binding = ${JSON.stringify(binding)};`,
         'assertOperateExperienceDisplaySurfaceV1(display, binding);',

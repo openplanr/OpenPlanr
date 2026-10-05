@@ -645,7 +645,7 @@
       "assets": [
         {
           "path": "skills/diagram/SKILL.md",
-          "digest": "sha256:ea0409f295e1ca33e14c03bef00012d89a471c517a76258a9b486cab2d7ddba7"
+          "digest": "sha256:a0d0ed24701ff9214aa8f2be5d60d5ac5b975db1763926df77205be1079d9de7"
         },
         {
           "path": "skills/diagram/openplanr.skill.json",
@@ -811,7 +811,7 @@
         },
         {
           "path": "skills/plan/references/design-handoff.md",
-          "digest": "sha256:b918cc16855412a75028e1a014832c2ced59b0349461a24d9e1fdcfc336b9f5f"
+          "digest": "sha256:3e6f803c100df241d3d0e36a765a6ae2188b4452d21e606457450739b05dad3c"
         },
         {
           "path": "skills/plan/scripts/planning-ids.mjs",

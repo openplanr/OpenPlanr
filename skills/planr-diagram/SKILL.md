@@ -11,7 +11,7 @@ fidelity reporting, and source custody. Do not reproduce renderer or manifest
 logic in the prompt.
 
 Treat a successful `openplanr diagram gallery --json` call as proof that the runtime
-is ready. Never locate or import `planr-pipeline`, inspect `node_modules`, search
+is ready. Never locate or import `@openplanr/pipeline`, inspect `node_modules`, search
 the filesystem for schemas or examples, or call internal runtime modules. The
 CLI and this skill's bundled references are the complete supported boundary.
 

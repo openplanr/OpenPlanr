@@ -34,12 +34,12 @@ function pipelineSourceRoot() {
   const manifestPath = join(candidate, 'package.json');
   if (!existsSync(manifestPath)) {
     throw new Error(
-      'Dashboard browser QA needs a planr-pipeline checkout as npm-pack input. Set OPENPLANR_PIPELINE_SOURCE.',
+      'Dashboard browser QA needs a @openplanr/pipeline checkout as npm-pack input. Set OPENPLANR_PIPELINE_SOURCE.',
     );
   }
   const manifest = JSON.parse(readFileSync(manifestPath, 'utf8'));
-  if (manifest.name !== 'planr-pipeline') {
-    throw new Error('OPENPLANR_PIPELINE_SOURCE does not identify planr-pipeline.');
+  if (manifest.name !== '@openplanr/pipeline') {
+    throw new Error('OPENPLANR_PIPELINE_SOURCE does not identify @openplanr/pipeline.');
   }
   return candidate;
 }
@@ -98,7 +98,7 @@ function installPackedPipeline(temporaryRoot) {
   );
   const filename = packReport[0]?.filename;
   if (typeof filename !== 'string' || filename.length === 0) {
-    throw new Error('npm pack did not report a planr-pipeline tarball.');
+    throw new Error('npm pack did not report a @openplanr/pipeline tarball.');
   }
   const archivePath = join(archives, filename);
   runNpm(
@@ -114,13 +114,15 @@ function installPackedPipeline(temporaryRoot) {
     cache,
   );
 
-  const installedPath = join(consumer, 'node_modules', 'planr-pipeline');
+  const installedPath = join(consumer, 'node_modules', '@openplanr/pipeline');
   if (lstatSync(installedPath).isSymbolicLink()) {
-    throw new Error('Dashboard browser QA refuses a symlinked planr-pipeline install.');
+    throw new Error('Dashboard browser QA refuses a symlinked @openplanr/pipeline install.');
   }
   const packageRoot = realpathSync(installedPath);
   if (packageRoot === realpathSync(sourceRoot)) {
-    throw new Error('Dashboard browser QA resolved planr-pipeline back to its source checkout.');
+    throw new Error(
+      'Dashboard browser QA resolved @openplanr/pipeline back to its source checkout.',
+    );
   }
   assertNoSymlinks(packageRoot);
   return { archivePath, consumer, packageRoot, sourceRoot: realpathSync(sourceRoot) };
@@ -160,8 +162,8 @@ function writePackedTypecheckConfig(temporaryRoot, packageRoot) {
           ],
           paths: {
             '@dashboard/*': [join(workspaceRoot, 'apps', 'dashboard', 'src', '*')],
-            'planr-pipeline': [join(packageRoot, 'lib/pipeline/index.d.mts')],
-            'planr-pipeline/*': [`${packageRoot}/*`],
+            '@openplanr/pipeline': [join(packageRoot, 'lib/pipeline/index.d.mts')],
+            '@openplanr/pipeline/*': [`${packageRoot}/*`],
           },
         },
         include: [
@@ -195,11 +197,11 @@ function writePackageResolver(temporaryRoot, consumer, playwrightCliPath) {
     hookPath,
     [
       "import { pathToFileURL } from 'node:url';",
-      `const pipelineRoot = ${JSON.stringify(realpathSync(join(consumer, 'node_modules', 'planr-pipeline')))};`,
-      `const pipelineManifest = ${JSON.stringify(JSON.parse(readFileSync(join(consumer, 'node_modules', 'planr-pipeline', 'package.json'), 'utf8')))};`,
+      `const pipelineRoot = ${JSON.stringify(realpathSync(join(consumer, 'node_modules', '@openplanr/pipeline')))};`,
+      `const pipelineManifest = ${JSON.stringify(JSON.parse(readFileSync(join(consumer, 'node_modules', '@openplanr/pipeline', 'package.json'), 'utf8')))};`,
       `const playwrightEntry = ${JSON.stringify(playwrightEntry)};`,
       'function pipelineTarget(specifier) {',
-      "  const subpath = specifier === 'planr-pipeline' ? '.' : `./${specifier.slice('planr-pipeline/'.length)}`;",
+      "  const subpath = specifier === '@openplanr/pipeline' ? '.' : `./${specifier.slice('@openplanr/pipeline/'.length)}`;",
       '  let target = pipelineManifest.exports?.[subpath];',
       '  if (target === undefined) {',
       '    const pattern = Object.entries(pipelineManifest.exports ?? {}).find(([key]) => {',
@@ -218,7 +220,7 @@ function writePackageResolver(temporaryRoot, consumer, playwrightCliPath) {
       '  return new URL(selected, pathToFileURL(`${pipelineRoot}/`)).href;',
       '}',
       'export async function resolve(specifier, context, nextResolve) {',
-      "  if (specifier === 'planr-pipeline' || specifier.startsWith('planr-pipeline/')) {",
+      "  if (specifier === '@openplanr/pipeline' || specifier.startsWith('@openplanr/pipeline/')) {",
       '    return { url: pipelineTarget(specifier), shortCircuit: true };',
       '  }',
       "  if (specifier === '@playwright/test') {",

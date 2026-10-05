@@ -145,7 +145,7 @@ Current skills reason inside the host and never launch a model process. Rerun se
 from this checkout and restart the host.
 
 **CLI and plugin disagree.** Compare `"$PLANR_BIN" --version`, the exact optional
-`planr-pipeline` version in the workspace, and doctor output; rebuild and rerun setup
+`@openplanr/pipeline` version in the workspace, and doctor output; rebuild and rerun setup
 from the same checkout so the CLI, plugin, adapters, and runtime lock share one
 generated catalog. `"$PLANR_BIN" upgrade status` reports the same comparison against
 the published set.

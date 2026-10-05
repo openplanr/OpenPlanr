@@ -1,4 +1,4 @@
-import { sha256Jcs } from 'planr-pipeline/protocol';
+import { sha256Jcs } from '@openplanr/pipeline/protocol';
 
 type RecordValue = Record<string, unknown>;
 

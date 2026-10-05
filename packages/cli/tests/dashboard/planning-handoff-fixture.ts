@@ -1,9 +1,9 @@
 import {
   buildOperateExperienceTransportView,
   selectOperateActionDisplayWorkspace,
-} from 'planr-pipeline/dashboard/operate-experience-reader';
-import { sha256Jcs } from 'planr-pipeline/protocol';
-import type { OperateActionDisplayWorkspaceV1 } from 'planr-pipeline/schemas/v1.2.0/operate-action-display-workspace.mjs';
+} from '@openplanr/pipeline/dashboard/operate-experience-reader';
+import { sha256Jcs } from '@openplanr/pipeline/protocol';
+import type { OperateActionDisplayWorkspaceV1 } from '@openplanr/pipeline/schemas/v1.2.0/operate-action-display-workspace.mjs';
 import { createOperateActionDisplayWorkspaceValidator } from '../../../../apps/dashboard/src/features/operate/actions/action-model.js';
 import type {
   PlanningHandoffCreation,

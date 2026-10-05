@@ -13,6 +13,10 @@ import { dirname, resolve } from 'node:path';
 import { performance } from 'node:perf_hooks';
 import { fileURLToPath } from 'node:url';
 import {
+  assertOperateReviewDisplayWorkspaceV1,
+  assertOperatingReviewReceiptV2,
+} from '@openplanr/pipeline/dashboard/operate-review-contract';
+import {
   expect,
   type Locator,
   type Page,
@@ -21,10 +25,6 @@ import {
   test,
 } from '@playwright/test';
 import axe from 'axe-core';
-import {
-  assertOperateReviewDisplayWorkspaceV1,
-  assertOperatingReviewReceiptV2,
-} from 'planr-pipeline/dashboard/operate-review-contract';
 import {
   dashboardRouteDefinition,
   parseDashboardRoute,

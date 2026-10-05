@@ -1,5 +1,5 @@
 ---
-description: "Create Features from Epic — break down an epic into features for planr-pipeline"
+description: "Create Features from Epic — break down an epic into features for @openplanr/pipeline"
 globs: ""
 alwaysApply: false
 ---

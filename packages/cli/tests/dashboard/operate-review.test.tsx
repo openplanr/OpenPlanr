@@ -1,9 +1,9 @@
 // @vitest-environment jsdom
 
+import { sha256Jcs } from '@openplanr/pipeline/dashboard/verified-json';
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 import axe from 'axe-core';
-import { sha256Jcs } from 'planr-pipeline/dashboard/verified-json';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ReviewPage } from '../../../../apps/dashboard/src/features/operate/review/ReviewPage.js';
 import type {

@@ -1,5 +1,5 @@
 ---
-description: "Implement Task List — guidance-first implementation for planr-pipeline"
+description: "Implement Task List — guidance-first implementation for @openplanr/pipeline"
 globs: ""
 alwaysApply: false
 ---

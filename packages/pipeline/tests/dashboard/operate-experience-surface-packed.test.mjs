@@ -45,7 +45,7 @@ test('packed consumer resolves and executes the public dashboard surface asserti
       { cwd: root },
     );
     const [{ filename }] = JSON.parse(packed.stdout);
-    const installedPackage = join(temporaryRoot, 'consumer', 'node_modules', 'planr-pipeline');
+    const installedPackage = join(temporaryRoot, 'consumer', 'node_modules', '@openplanr/pipeline');
     mkdirSync(installedPackage, { recursive: true });
     run('tar', [
       '-xzf',
@@ -65,9 +65,9 @@ test('packed consumer resolves and executes the public dashboard surface asserti
       import {
         assertOperateExperienceSurfaceV1,
         validateOperateExperienceSurfaceV1,
-      } from 'planr-pipeline/schemas/v1.2.0/operate-experience-surface.mjs';
-      import { deriveOperateSharedTruthSummaryV1 } from 'planr-pipeline/operate/review-workspace-projection-v2';
-      const root = resolve('node_modules/planr-pipeline');
+      } from '@openplanr/pipeline/schemas/v1.2.0/operate-experience-surface.mjs';
+      import { deriveOperateSharedTruthSummaryV1 } from '@openplanr/pipeline/operate/review-workspace-projection-v2';
+      const root = resolve('node_modules/@openplanr/pipeline');
       const view = JSON.parse(readFileSync(resolve(
         root, 'conformance/fixtures/operating-runtime-v2/experience-bridge-valid.json'
       ), 'utf8'))['operate-experience-view'];

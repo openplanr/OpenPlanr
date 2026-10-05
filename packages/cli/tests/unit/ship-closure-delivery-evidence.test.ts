@@ -10,8 +10,8 @@ import {
   buildShipClosureRunEvidence,
   renderShipClosureMarker,
   renderShipClosureQaReport,
-} from 'planr-pipeline';
-import { sha256Jcs } from 'planr-pipeline/protocol';
+} from '@openplanr/pipeline';
+import { sha256Jcs } from '@openplanr/pipeline/protocol';
 import { describe, expect, it, vi } from 'vitest';
 import YAML from 'yaml';
 import {
@@ -19,8 +19,8 @@ import {
   validateShipClosureDeliveryEvidence,
 } from '../../src/services/operate/delivery-evidence.js';
 
-vi.mock('planr-pipeline', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('planr-pipeline')>();
+vi.mock('@openplanr/pipeline', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@openplanr/pipeline')>();
   return {
     ...actual,
     prepareShip: () => ({ root: `/repo/${FEATURE_ROOT}` }),
@@ -32,7 +32,7 @@ const RUN_ID = `ship_${'1'.repeat(32)}`;
 const RECEIPT_PATH = `.ship/receipts/${RUN_ID}.json`;
 const FEATURE_ROOT = '.planr/specs/SPEC-001-retention-workflow';
 const NOW = '2026-08-21T12:00:00.000Z';
-const pipelineVersion = createRequire(import.meta.url)('planr-pipeline/package.json')
+const pipelineVersion = createRequire(import.meta.url)('@openplanr/pipeline/package.json')
   .version as string;
 
 function digest(value: unknown): string {

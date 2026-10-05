@@ -37,7 +37,7 @@ function loadRasterAssets() {
         {
           actual: digest,
           expected: INTER_REGULAR_DIGEST,
-          repair: 'Reinstall planr-pipeline with optional dependencies enabled.',
+          repair: 'Reinstall @openplanr/pipeline with optional dependencies enabled.',
         },
       );
     }
@@ -46,7 +46,7 @@ function loadRasterAssets() {
     if (error?.name === 'DiagramError') throw error;
     diagramFail(DIAGRAM_ERROR_CODES.RENDER_FAILED, 'The offline diagram renderer is unavailable.', {
       cause: error instanceof Error ? error.message : String(error),
-      repair: 'Reinstall planr-pipeline with optional dependencies enabled.',
+      repair: 'Reinstall @openplanr/pipeline with optional dependencies enabled.',
     });
   }
 }

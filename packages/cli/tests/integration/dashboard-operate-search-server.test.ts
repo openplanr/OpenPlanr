@@ -2,7 +2,7 @@ import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'nod
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { sha256Jcs } from 'planr-pipeline/protocol';
+import { sha256Jcs } from '@openplanr/pipeline/protocol';
 import { describe, expect, it } from 'vitest';
 import { fetchOperateSearchHits } from '../../../../apps/dashboard/src/features/search/operate-search-api.js';
 import { createDashboardQueryIdentity } from '../../../../apps/dashboard/src/lib/binding/query-identity.js';

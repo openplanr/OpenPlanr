@@ -1,7 +1,7 @@
 # Changesets
 
 OpenPlanr uses independent package versions. Public targets are `openplanr`,
-`planr-pipeline`, and `@openplanr/protocol`. Other workspaces are versioned for
+`@openplanr/pipeline`, and `@openplanr/protocol`. Other workspaces are versioned for
 integration but cannot be published to npm. All local product source remains MIT.
 Package versions are separate from schema/document versions.
 

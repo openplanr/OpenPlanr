@@ -276,7 +276,7 @@ async function shareArtifact(program: Command, file: string, options: ShareOptio
     ) {
       throw new ArtifactCommandError(
         'E_PIPELINE_VERSION_INCOMPATIBLE',
-        'The installed planr-pipeline does not support signed encrypted live review rooms.',
+        'The installed @openplanr/pipeline does not support signed encrypted live review rooms.',
         'Run `npm install -g openplanr@latest` after the compatible pipeline release is available, or use `--snapshot`.',
       );
     }
@@ -451,7 +451,7 @@ async function importArtifactReviews(
         if (typeof api.hydrateLiveReviewRoom !== 'function') {
           throw new ArtifactCommandError(
             'E_PIPELINE_VERSION_INCOMPATIBLE',
-            'The installed planr-pipeline does not support live review import.',
+            'The installed @openplanr/pipeline does not support live review import.',
           );
         }
         const room = await api.hydrateLiveReviewRoom(source);

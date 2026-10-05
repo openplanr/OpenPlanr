@@ -87,7 +87,7 @@ test(`packed ${packageVersion} package contains the portable artifact release bo
     assert.doesNotMatch(path, /^(?:\.env(?:\.|\/|$)|\.planr\/|tests\/)/);
   }
   assert.equal(packed.version, packageVersion);
-  assert.equal(packed.name, 'planr-pipeline');
+  assert.equal(packed.name, '@openplanr/pipeline');
 
   const installRoot = join(temp, 'install');
   const dependencyRoot = join(temp, 'dependencies');
@@ -147,7 +147,7 @@ test(`packed ${packageVersion} package contains the portable artifact release bo
     { cwd: installRoot },
   );
 
-  const packageRoot = join(installRoot, 'node_modules', 'planr-pipeline');
+  const packageRoot = join(installRoot, 'node_modules', '@openplanr/pipeline');
   const installedManifest = JSON.parse(readFileSync(join(packageRoot, 'package.json'), 'utf8'));
   const installedReactTypes = JSON.parse(
     readFileSync(join(installRoot, 'node_modules/@types/react/package.json'), 'utf8'),
@@ -157,7 +157,7 @@ test(`packed ${packageVersion} package contains the portable artifact release bo
     manifest.dependencies['@types/react'],
   );
   assert.equal(installedReactTypes.version, installedManifest.dependencies['@types/react']);
-  const installedBin = join(packageRoot, 'bin', 'planr-pipeline.mjs');
+  const installedBin = join(packageRoot, 'bin', 'openplanr-pipeline.mjs');
   const binSmoke = run(process.execPath, [installedBin, '--help'], { cwd: installRoot });
   assert.match(binSmoke.stdout, /planr-pipeline/);
   const importSmoke = run(
@@ -165,7 +165,7 @@ test(`packed ${packageVersion} package contains the portable artifact release bo
     [
       '--input-type=module',
       '--eval',
-      "import fs from 'node:fs'; import * as p from 'planr-pipeline'; const root=new URL('./node_modules/planr-pipeline/', import.meta.url); const diagram=await import(new URL('lib/artifact/diagram/index.mjs', root)); const names=['bundleArtifact','createArtifactEnvelope','encodeArtifactFragment','decodeArtifactFragment','encryptArtifactPayload','decryptArtifactPayload','startArtifactReview','exportArtifactReviewSession','createReviewLink','createReviewLinkPreview','decodeReviewLink','importArtifactReview','mergeArtifactFeedback','createLiveReviewRoom','appendLiveRoomEvent','hydrateLiveReviewRoom','reduceLiveRoomEvents']; if(names.some((name)=>typeof p[name]!=='function') || typeof diagram.renderDiagramOutputs!=='function') process.exit(2); const document=JSON.parse(fs.readFileSync(new URL('fixtures/diagram/grammars/flowchart.planr-diagram.json', root))); const output=diagram.renderDiagramOutputs(document); const png=diagram.inspectDiagramPng(output.png.bytes); if(!output.svg.startsWith('<svg') || png.width<320 || png.height<320) process.exit(3);",
+      "import fs from 'node:fs'; import * as p from '@openplanr/pipeline'; const root=new URL('./node_modules/@openplanr/pipeline/', import.meta.url); const diagram=await import(new URL('lib/artifact/diagram/index.mjs', root)); const names=['bundleArtifact','createArtifactEnvelope','encodeArtifactFragment','decodeArtifactFragment','encryptArtifactPayload','decryptArtifactPayload','startArtifactReview','exportArtifactReviewSession','createReviewLink','createReviewLinkPreview','decodeReviewLink','importArtifactReview','mergeArtifactFeedback','createLiveReviewRoom','appendLiveRoomEvent','hydrateLiveReviewRoom','reduceLiveRoomEvents']; if(names.some((name)=>typeof p[name]!=='function') || typeof diagram.renderDiagramOutputs!=='function') process.exit(2); const document=JSON.parse(fs.readFileSync(new URL('fixtures/diagram/grammars/flowchart.planr-diagram.json', root))); const output=diagram.renderDiagramOutputs(document); const png=diagram.inspectDiagramPng(output.png.bytes); if(!output.svg.startsWith('<svg') || png.width<320 || png.height<320) process.exit(3);",
     ],
     {
       cwd: installRoot,

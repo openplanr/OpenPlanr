@@ -22,7 +22,7 @@ import {
   OPERATE_RUNTIME_PROTOCOL_VERSION,
   readOperatingRuntimeStateV2,
   validateProtocolArtifact,
-} from 'planr-pipeline/protocol';
+} from '@openplanr/pipeline/protocol';
 import { validateJson } from '../../conformance/json-schema-validate.mjs';
 
 const fixture = (name) =>

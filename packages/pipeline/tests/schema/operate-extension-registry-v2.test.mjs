@@ -9,17 +9,17 @@ import {
   findOperateSnapshotProviderRegistrationV2,
   findOperateVerificationProviderRegistrationV2,
   OPEN_REFERENCE_OPERATE_EXTENSIONS_V2,
-} from 'planr-pipeline/operate/extensions-v2';
+} from '@openplanr/pipeline/operate/extensions-v2';
 import {
   findOperateCapabilityProviderRegistrationV2,
   findOperateExecutorRegistrationV2,
   findOperatePolicyProviderRegistrationV2,
-} from 'planr-pipeline/operate/governed-extensions-v2';
+} from '@openplanr/pipeline/operate/governed-extensions-v2';
 import {
   assertProtocolArtifact,
   loadOperateExtensionContract,
   OPERATE_EXTENSION_CONTRACT_KINDS_V2,
-} from 'planr-pipeline/protocol';
+} from '@openplanr/pipeline/protocol';
 
 const fixture = (name) =>
   JSON.parse(

@@ -22,7 +22,7 @@ evidence is on the [releases page](https://github.com/openplanr/OpenPlanr/releas
 release per published version, and in npm's provenance panel on each package page:
 
 - [`openplanr`](https://www.npmjs.com/package/openplanr)
-- [`planr-pipeline`](https://www.npmjs.com/package/planr-pipeline)
+- [`@openplanr/pipeline`](https://www.npmjs.com/package/@openplanr/pipeline)
 - [`@openplanr/protocol`](https://www.npmjs.com/package/@openplanr/protocol)
 
 To rebuild an archive yourself, check out the tag, run `npm ci && npm run generate && npm run build`,

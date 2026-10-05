@@ -22,7 +22,7 @@ import {
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const targets = {
   '@openplanr/protocol': 'packages/protocol',
-  'planr-pipeline': 'packages/pipeline',
+  '@openplanr/pipeline': 'packages/pipeline',
   openplanr: 'packages/cli',
 };
 const name = process.env.RELEASE_PACKAGE;
@@ -91,7 +91,7 @@ if (name === 'openplanr') {
     );
   }
 }
-if (name === 'planr-pipeline') {
+if (name === '@openplanr/pipeline') {
   // Recompute expected output from tracked owners before trusting any generated
   // manifest. A broad lib/ exemption would accidentally admit ignored source.
   for (const args of [

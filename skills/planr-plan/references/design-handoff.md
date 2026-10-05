@@ -18,7 +18,7 @@ mapped task must name the matching acceptance ID in its Test Requirements.
 When an approved package is used, validate the entire decomposition before writing
 the first target artifact. Commit the generated story/task bytes and the sibling
 `design-lineage.json` with `writeDesignPlanningArtifacts` from
-`planr-pipeline/design-lineage`.
+`@openplanr/pipeline/design-lineage`.
 The helper validates the Protocol 1.11 lineage, ordinary planning coverage, exact
 package identity, repository-relative paths, and a recoverable all-or-nothing
 filesystem transaction. Incomplete coverage must leave no newly generated plan

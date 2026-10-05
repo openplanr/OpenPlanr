@@ -181,7 +181,7 @@ export function renderCursorSkill(bytes, id, template, { quoteDescription = fals
 const HOST_SUBSTITUTIONS = Object.freeze({
   pipeline: Object.freeze({
     AGENTS_ROOT: 'agents',
-    PIPELINE_PACKAGE_ROOT: 'the installed planr-pipeline package root',
+    PIPELINE_PACKAGE_ROOT: 'the installed @openplanr/pipeline package root',
     PROJECT_STACKS_ROOT: `${PLANNING_FOLDER}/stacks`,
     LEGACY_PROJECT_STACKS_ROOT: 'the selected runtime legacy project stack directory',
     WORKFLOW_PREFIX: 'planr-',
@@ -195,14 +195,14 @@ const HOST_SUBSTITUTIONS = Object.freeze({
   }),
   codex: Object.freeze({
     AGENTS_ROOT: 'agents',
-    PIPELINE_PACKAGE_ROOT: 'the installed `planr-pipeline` package root',
+    PIPELINE_PACKAGE_ROOT: 'the installed `@openplanr/pipeline` package root',
     PROJECT_STACKS_ROOT: `${PLANNING_FOLDER}/stacks`,
     LEGACY_PROJECT_STACKS_ROOT: '.codex/stacks',
     WORKFLOW_PREFIX: '$planr-',
   }),
   cursor: Object.freeze({
     AGENTS_ROOT: 'agents',
-    PIPELINE_PACKAGE_ROOT: 'the installed `planr-pipeline` package root',
+    PIPELINE_PACKAGE_ROOT: 'the installed `@openplanr/pipeline` package root',
     PROJECT_STACKS_ROOT: `${PLANNING_FOLDER}/stacks`,
     LEGACY_PROJECT_STACKS_ROOT: '.cursor/stacks',
     WORKFLOW_PREFIX: 'planr-',

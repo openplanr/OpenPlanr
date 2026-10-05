@@ -3,7 +3,7 @@ import { existsSync, mkdtempSync, rmSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
-import { detectPipelineMode } from 'planr-pipeline';
+import { detectPipelineMode } from '@openplanr/pipeline';
 import { afterEach, describe, expect, it } from 'vitest';
 
 const CLI = resolve('src/cli/index.ts');

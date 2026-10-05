@@ -20,7 +20,7 @@ import { createRequire } from 'node:module';
 import { tmpdir } from 'node:os';
 import { dirname, join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { validateProtocolArtifact } from 'planr-pipeline/protocol';
+import { validateProtocolArtifact } from '@openplanr/pipeline/protocol';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { ClaudeCommandRunner } from '../../src/services/claude-plugin-service.js';
 import {

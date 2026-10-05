@@ -13,7 +13,7 @@ import {
   writeFile,
 } from 'node:fs/promises';
 import { join, relative, resolve, sep } from 'node:path';
-import { sha256Jcs } from 'planr-pipeline/protocol';
+import { sha256Jcs } from '@openplanr/pipeline/protocol';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 const pinnedVerifierMock = vi.hoisted(() => vi.fn());

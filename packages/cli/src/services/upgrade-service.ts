@@ -100,7 +100,7 @@ export interface ReconcileOptions {
 
 /**
  * The published compatible set is the npm registry's `latest` document for the
- * CLI: its version is what a global install lands, and its exact `planr-pipeline`
+ * CLI: its version is what a global install lands, and its exact `@openplanr/pipeline`
  * pin is the pipeline it bundles. The unified host plugin ships with the CLI, so
  * no separate manifest describes it. `OPENPLANR_ECOSYSTEM_SOURCE` overrides the
  * location with an `http(s)` URL (a local stub server) or a filesystem path (a
@@ -184,13 +184,14 @@ function parseTupleManifest(data: RawPublishedDocument): EcosystemComponents | n
 
 /**
  * The npm registry document for the CLI. The pipeline component is the exact
- * `planr-pipeline` pin the published CLI bundles; the skills component is the
+ * `@openplanr/pipeline` pin the published CLI bundles; the skills component is the
  * host plugin generated from that same CLI version.
  */
 function parseRegistryDocument(data: RawPublishedDocument): EcosystemComponents | null {
   if (data.name !== 'openplanr' || typeof data.version !== 'string') return null;
   const pin =
-    data.optionalDependencies?.['planr-pipeline'] ?? data.dependencies?.['planr-pipeline'];
+    data.optionalDependencies?.['@openplanr/pipeline'] ??
+    data.dependencies?.['@openplanr/pipeline'];
   if (typeof pin !== 'string' || !stableVersionParts(pin)) return null;
   return {
     cli: { version: data.version },

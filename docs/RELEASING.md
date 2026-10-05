@@ -1,6 +1,6 @@
 # Releasing OpenPlanr
 
-`openplanr`, `planr-pipeline`, and `@openplanr/protocol` are versioned independently
+`openplanr`, `@openplanr/pipeline`, and `@openplanr/protocol` are versioned independently
 with [Changesets](https://changesets.dev/guide/getting-started); every other workspace
 is private MIT source. Package versions never rename or reset schema and document
 versions. Published versions are immutable: a correction is a new version.
@@ -96,7 +96,7 @@ version PR and approving the `npm-release` environment once per release.
   count from npm, and fails rather than produce a version below one already published.
   The numbering cannot be reverted: after `2.2639.0`, returning to small minor numbers
   needs a new major.
-- **Library numbering.** `planr-pipeline` and `@openplanr/protocol` keep ordinary SemVer.
+- **Library numbering.** `@openplanr/pipeline` and `@openplanr/protocol` keep ordinary SemVer.
 - **Cadence.** Merge the version PR once a week. An urgent fix can still be released on
   another day; it becomes the next patch of that week's number.
 - **Bump types.** Write `patch` changesets by default, `minor` only for a milestone the

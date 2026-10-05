@@ -35,7 +35,7 @@ import { createShipClosure, finalizeStoredShipClosure } from '../../lib/pipeline
 import { sha256Jcs } from '../../lib/protocol/jcs.mjs';
 
 const repositoryRoot = dirname(dirname(dirname(fileURLToPath(import.meta.url))));
-const cliPath = join(repositoryRoot, 'bin', 'planr-pipeline.mjs');
+const cliPath = join(repositoryRoot, 'bin', 'openplanr-pipeline.mjs');
 const pipelineModuleUrl = pathToFileURL(join(repositoryRoot, 'lib', 'pipeline', 'index.mjs')).href;
 
 function git(root, ...args) {

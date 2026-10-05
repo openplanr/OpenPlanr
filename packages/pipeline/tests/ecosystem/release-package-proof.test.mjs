@@ -284,7 +284,7 @@ test('the proof exposes the per-repository digests a release ledger binds', () =
     ],
   };
   const packageProof = {
-    package: { name: 'planr-pipeline', version: '0.42.0' },
+    package: { name: '@openplanr/pipeline', version: '0.42.0' },
     archive: { digest: `sha256:${'e'.repeat(64)}` },
     sourceDigest: `sha256:${'f'.repeat(64)}`,
     exports,

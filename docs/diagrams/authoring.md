@@ -187,7 +187,7 @@ npm run test:focused
 npm run verify:packed:strict
 ```
 
-The packed proof installs the three public `openplanr`, `planr-pipeline`, and
+The packed proof installs the three public `openplanr`, `@openplanr/pipeline`, and
 `@openplanr/protocol` tarballs,
 runs `openplanr diagram gallery`, renders and checks a fixture, verifies aliases and
 exports, and proves the packages do not depend on private workspaces or sibling

@@ -2,9 +2,9 @@
 
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { deriveOperateSharedTruthSummaryV1 } from 'planr-pipeline/operate/review-workspace-projection-v2';
-import { sha256Jcs } from 'planr-pipeline/protocol';
-import { validateOperateExperienceSurfaceV1 } from 'planr-pipeline/schemas/v1.2.0/operate-experience-surface.mjs';
+import { deriveOperateSharedTruthSummaryV1 } from '@openplanr/pipeline/operate/review-workspace-projection-v2';
+import { sha256Jcs } from '@openplanr/pipeline/protocol';
+import { validateOperateExperienceSurfaceV1 } from '@openplanr/pipeline/schemas/v1.2.0/operate-experience-surface.mjs';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it, vi } from 'vitest';
 import { parseDashboardRoute } from '../../../../apps/dashboard/src/app/router.js';

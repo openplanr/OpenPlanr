@@ -140,7 +140,7 @@ test('package release bumps preserve schema versions without rewriting documenta
   ];
   const before = documents.map((path) => readFileSync(join(checkout, path), 'utf8'));
   for (const text of before) {
-    assert.equal(text.includes(`planr-pipeline v${nextVersion}`), false);
+    assert.equal(text.includes(`@openplanr/pipeline v${nextVersion}`), false);
     assert.equal(text.split('\n').includes(`Version: "${nextVersion}"`), false);
   }
 
@@ -190,7 +190,7 @@ test('release version independence still refuses incompatible stack and missing 
   assert.equal(versionCheck(runDoctor(checkout), 'versions.stack').status, 'fail');
   writeFileSync(
     stackPath,
-    stack.replace('AppName: "planr-pipeline"', 'AppName: "unrelated-package"'),
+    stack.replace('AppName: "@openplanr/pipeline"', 'AppName: "unrelated-package"'),
   );
   assert.equal(versionCheck(runDoctor(checkout), 'versions.stack').status, 'fail');
   writeFileSync(stackPath, stack);

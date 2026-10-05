@@ -2,7 +2,7 @@
   <img alt="OpenPlanr" width="72" src="https://raw.githubusercontent.com/openplanr/OpenPlanr/main/docs/assets/brand/openplanr-mark.svg">
 </p>
 
-<h1 align="center">planr-pipeline</h1>
+<h1 align="center">@openplanr/pipeline</h1>
 
 <p align="center">
   The OpenPlanr delivery pipeline: PO, design, review, implementation, QA, and delivery outputs,<br>
@@ -10,7 +10,7 @@
 </p>
 
 <p align="center">
-  <a href="https://www.npmjs.com/package/planr-pipeline"><img alt="npm version" src="https://img.shields.io/npm/v/planr-pipeline?style=flat-square&labelColor=08080C&color=237A72&label=planr-pipeline"></a>
+  <a href="https://www.npmjs.com/package/@openplanr/pipeline"><img alt="npm version" src="https://img.shields.io/npm/v/planr-pipeline?style=flat-square&labelColor=08080C&color=237A72&label=@openplanr/pipeline"></a>
   <a href="https://github.com/openplanr/OpenPlanr/actions/workflows/ci.yml"><img alt="Workspace CI" src="https://img.shields.io/github/actions/workflow/status/openplanr/OpenPlanr/ci.yml?branch=main&style=flat-square&labelColor=08080C&color=237A72&label=CI"></a>
   <a href="https://nodejs.org"><img alt="Supported Node.js versions" src="https://img.shields.io/node/v/planr-pipeline?style=flat-square&labelColor=08080C&color=237A72"></a>
   <a href="https://github.com/openplanr/OpenPlanr/blob/main/LICENSE"><img alt="MIT license" src="https://img.shields.io/badge/license-MIT-237A72?style=flat-square&labelColor=08080C"></a>
@@ -18,14 +18,14 @@
 
 ## Who installs this
 
-Most people do not install `planr-pipeline` directly. The
+Most people do not install `@openplanr/pipeline` directly. The
 [`openplanr`](https://www.npmjs.com/package/openplanr) CLI depends on the exact matching
 version and installs it with `openplanr setup`; the skills that run in Claude Code, Codex, and
 Cursor call into it for deterministic work. Install it yourself when you integrate with the
 Protocol, the Operate runtime, or the dashboard contracts from your own code:
 
 ```bash
-npm install planr-pipeline
+npm install @openplanr/pipeline
 ```
 
 Requires a supported Node.js version (see [package metadata](package.json)). The package never calls a model; reasoning stays in the
@@ -36,10 +36,10 @@ and bundling; the optional ones add PNG rasterization and the diagram font.
 
 | Area | Entry points | Purpose |
 | --- | --- | --- |
-| Protocol | `planr-pipeline/protocol`, `planr-pipeline/schemas/*`, `planr-pipeline/registry/*` | Spec, story, task, design, QA, and provenance contracts; command and role registries; JSON Schemas from 1.0.0 to 2.0.0 |
-| Pipeline | `planr-pipeline`, `planr-pipeline/professional-skills` | Feature-local PO planning, stack conventions, nine role definitions, verification discovery, and the shipped-marker proof |
-| Operate runtime | `planr-pipeline/operate/*-v2` | Durable operating cycles: assignments, authorization, policy, approvals, governed execution and recovery, evidence, projections, scheduling |
-| Dashboard contracts | `planr-pipeline/dashboard/*` | Verified JSON readers and display contracts for the local planning and Operate dashboard |
+| Protocol | `@openplanr/pipeline/protocol`, `@openplanr/pipeline/schemas/*`, `@openplanr/pipeline/registry/*` | Spec, story, task, design, QA, and provenance contracts; command and role registries; JSON Schemas from 1.0.0 to 2.0.0 |
+| Pipeline | `@openplanr/pipeline`, `@openplanr/pipeline/professional-skills` | Feature-local PO planning, stack conventions, nine role definitions, verification discovery, and the shipped-marker proof |
+| Operate runtime | `@openplanr/pipeline/operate/*-v2` | Durable operating cycles: assignments, authorization, policy, approvals, governed execution and recovery, evidence, projections, scheduling |
+| Dashboard contracts | `@openplanr/pipeline/dashboard/*` | Verified JSON readers and display contracts for the local planning and Operate dashboard |
 | Assets | `stacks/`, `templates/`, `references/`, `procedures/`, `gallery/`, `fixtures/`, `conformance/` | Stack conventions, output templates, diagram grammar references, procedures, and conformance fixtures |
 
 Every export is listed in `package.json`; the [Protocol documentation](docs/protocol/README.md)
@@ -70,7 +70,7 @@ Project-level documentation, getting started, and support live in the
 
 Pre-1.0 semantic versioning: minor versions may change behavior, patch versions are
 fixes and documentation. Package versions are independent of the Protocol schema and
-document versions they ship. The `openplanr` CLI pins the exact `planr-pipeline` version
+document versions they ship. The `openplanr` CLI pins the exact `@openplanr/pipeline` version
 it was released with.
 
 ## License

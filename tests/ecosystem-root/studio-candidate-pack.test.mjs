@@ -16,7 +16,7 @@ async function fixture(t) {
   );
   for (const [scope, name, version] of [
     ['protocol', '@openplanr/protocol', '0.8.0'],
-    ['pipeline', 'planr-pipeline', '0.55.7'],
+    ['pipeline', '@openplanr/pipeline', '0.55.7'],
   ]) {
     const directory = join(root, 'packages', scope);
     await mkdir(directory, { recursive: true });
@@ -114,7 +114,7 @@ test('Studio CI archives bind the exact committed source and archive bytes', asy
   assert.equal(manifest.commit, git('rev-parse', 'HEAD'));
   assert.deepEqual(
     manifest.packages.map(({ name }) => name),
-    ['@openplanr/protocol', 'planr-pipeline'],
+    ['@openplanr/protocol', '@openplanr/pipeline'],
   );
   for (const archive of manifest.packages) {
     const bytes = await readFile(join(output, archive.file));
@@ -153,7 +153,11 @@ test('Studio CI refuses changed source and a different requested commit', async 
 
 async function pipelineArchive(root) {
   const manifest = JSON.parse(await readFile(join(root, 'packed/manifest.json'), 'utf8'));
-  return join(root, 'packed', manifest.packages.find(({ name }) => name === 'planr-pipeline').file);
+  return join(
+    root,
+    'packed',
+    manifest.packages.find(({ name }) => name === '@openplanr/pipeline').file,
+  );
 }
 test('an ambient ignored arbitrary module cannot enter the archive claiming HEAD', async (t) => {
   const { root, git, env, script } = await fixture(t);

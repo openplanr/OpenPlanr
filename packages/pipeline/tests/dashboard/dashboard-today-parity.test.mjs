@@ -221,7 +221,7 @@ test('packed and installed Today reader matches source bytes and behavior', {
     );
     assert.equal(packed.status, 0, packed.stderr);
     const [{ filename }] = JSON.parse(packed.stdout);
-    const installedRoot = join(temporaryRoot, 'consumer', 'node_modules', 'planr-pipeline');
+    const installedRoot = join(temporaryRoot, 'consumer', 'node_modules', '@openplanr/pipeline');
     mkdirSync(installedRoot, { recursive: true });
     const extracted = spawnSync(
       'tar',

@@ -10,5 +10,5 @@ export function resolvePipelinePackageRoot(): string {
   ]) {
     if (candidate?.trim()) return resolve(candidate);
   }
-  return dirname(testRequire.resolve('planr-pipeline/package.json'));
+  return dirname(testRequire.resolve('@openplanr/pipeline/package.json'));
 }

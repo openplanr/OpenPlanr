@@ -69,7 +69,7 @@ test('resolvePackagedDashboardRoot finds an installed OpenPlanr dashboard withou
           type: 'module',
           dependencies: {
             openplanr: `file:${openPlanrTarball}`,
-            'planr-pipeline': `file:${pipelineTarball}`,
+            '@openplanr/pipeline': `file:${pipelineTarball}`,
           },
         },
         null,
@@ -84,7 +84,7 @@ test('resolvePackagedDashboardRoot finds an installed OpenPlanr dashboard withou
       realpathSync(openPlanrRoot),
     );
     assert.notEqual(
-      realpathSync(join(consumerDir, 'node_modules', 'planr-pipeline')),
+      realpathSync(join(consumerDir, 'node_modules', '@openplanr/pipeline')),
       realpathSync(root),
     );
     const probe = spawnSync(
@@ -93,7 +93,7 @@ test('resolvePackagedDashboardRoot finds an installed OpenPlanr dashboard withou
         '--input-type=module',
         '-e',
         `
-      import { resolvePackagedDashboardRoot } from 'planr-pipeline/dashboard/resolve-packaged-dashboard-root';
+      import { resolvePackagedDashboardRoot } from '@openplanr/pipeline/dashboard/resolve-packaged-dashboard-root';
       console.log(resolvePackagedDashboardRoot({ OPENPLANR_DASHBOARD_ROOT: '' }));
     `,
       ],

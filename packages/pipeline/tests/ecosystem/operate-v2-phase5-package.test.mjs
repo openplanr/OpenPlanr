@@ -110,7 +110,7 @@ test('Phase 5 packs every declared public operating-loop surface without a priva
   }
 
   const consumer = join(temporaryRoot, 'consumer');
-  const installedPackage = join(consumer, 'node_modules', 'planr-pipeline');
+  const installedPackage = join(consumer, 'node_modules', '@openplanr/pipeline');
   mkdirSync(installedPackage, { recursive: true });
   run('tar', ['-xzf', packed.tarballPath, '-C', installedPackage, '--strip-components=1']);
   writeFileSync(join(consumer, 'package.json'), JSON.stringify({ type: 'module' }));
@@ -167,8 +167,8 @@ test('Phase 5 packs every declared public operating-loop surface without a priva
     'the package verifier has no source-checkout or private import path',
   );
   for (const [, specifier] of verifierSource.matchAll(/from '([^']+)'/gu)) {
-    if (!specifier.startsWith('planr-pipeline/')) continue;
-    const exportName = `./${specifier.slice('planr-pipeline/'.length)}`;
+    if (!specifier.startsWith('@openplanr/pipeline/')) continue;
+    const exportName = `./${specifier.slice('@openplanr/pipeline/'.length)}`;
     assert.notEqual(
       metadata.exports[exportName],
       undefined,

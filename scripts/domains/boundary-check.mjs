@@ -68,7 +68,7 @@ export function checkPackageBoundaries(
         }
         continue;
       }
-      if (specifier === 'planr-pipeline' || specifier.startsWith('planr-pipeline/')) {
+      if (specifier === '@openplanr/pipeline' || specifier.startsWith('@openplanr/pipeline/')) {
         violations.push(`${label} imports the public compatibility package`);
         continue;
       }

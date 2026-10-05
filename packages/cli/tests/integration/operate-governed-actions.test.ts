@@ -1,4 +1,4 @@
-import { sha256Jcs } from 'planr-pipeline/protocol';
+import { sha256Jcs } from '@openplanr/pipeline/protocol';
 import { describe, expect, it, vi } from 'vitest';
 import type { OperateApiEnvelopeV2, OperateClient } from '../../src/services/operate/client.js';
 import {

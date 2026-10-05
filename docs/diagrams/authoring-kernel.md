@@ -11,7 +11,7 @@ file persistence, company authorization, Mermaid conversion or live collaboratio
 
 ## Import and preview
 
-The public package boundary is `planr-pipeline/diagram-authoring`. Monorepo
+The public package boundary is `@openplanr/pipeline/diagram-authoring`. Monorepo
 consumers use `@openplanr/artifact/diagram-authoring`; generation produces the
 same self-contained runtime and declarations inside pipeline.
 
@@ -22,7 +22,7 @@ import {
   createConditionalInverse,
   diffDiagramBundles,
   validateAuthoringBundle,
-} from 'planr-pipeline/diagram-authoring';
+} from '@openplanr/pipeline/diagram-authoring';
 
 export function previewMove(bundle, ids, transactionId) {
   return compileDiagramCommand(

@@ -1,7 +1,7 @@
-import { selectOperateExperienceDisplaySurface } from 'planr-pipeline/dashboard/operate-experience-reader';
-import { sha256Jcs } from 'planr-pipeline/protocol';
-import type { OperateCycleDisplayWorkspaceV1 } from 'planr-pipeline/schemas/v1.2.0/operate-cycle-display-workspace.mjs';
-import type { OperateExperienceDisplaySurfaceV1 } from 'planr-pipeline/schemas/v1.2.0/operate-experience-display-surface.mjs';
+import { selectOperateExperienceDisplaySurface } from '@openplanr/pipeline/dashboard/operate-experience-reader';
+import { sha256Jcs } from '@openplanr/pipeline/protocol';
+import type { OperateCycleDisplayWorkspaceV1 } from '@openplanr/pipeline/schemas/v1.2.0/operate-cycle-display-workspace.mjs';
+import type { OperateExperienceDisplaySurfaceV1 } from '@openplanr/pipeline/schemas/v1.2.0/operate-experience-display-surface.mjs';
 import { afterEach, describe, expect, it } from 'vitest';
 import { createOperateCyclesDisplayValidator } from '../../../../apps/dashboard/src/features/operate/cycles/CyclesPage.js';
 import {

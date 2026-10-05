@@ -15,8 +15,9 @@ import { resolveWorkspaceDependencyRoot } from '../helpers/workspace-dependency.
 const root = fileURLToPath(new URL('../..', import.meta.url));
 const { typescript, vite } = pairedOpenPlanrTools();
 const node20Executable = process.env.PLANR_NODE20_EXECUTABLE;
-const SCHEMA_SUBPATH = 'planr-pipeline/schemas/v1.2.0/operate-experience-audit-display-surface.mjs';
-const CONTRACT_SUBPATH = 'planr-pipeline/dashboard/operate-experience-audit-display-contract';
+const SCHEMA_SUBPATH =
+  '@openplanr/pipeline/schemas/v1.2.0/operate-experience-audit-display-surface.mjs';
+const CONTRACT_SUBPATH = '@openplanr/pipeline/dashboard/operate-experience-audit-display-contract';
 const SCHEMA_EXPORTS = Object.freeze(
   [
     'OPERATE_EXPERIENCE_AUDIT_DISPLAY_SURFACE_SCHEMA_V1',
@@ -102,7 +103,7 @@ function packInstalledConsumer(temporaryRoot) {
   );
   const [{ filename }] = JSON.parse(packed.stdout);
   const consumer = join(temporaryRoot, 'consumer');
-  const installedPackage = join(consumer, 'node_modules', 'planr-pipeline');
+  const installedPackage = join(consumer, 'node_modules', '@openplanr/pipeline');
   mkdirSync(installedPackage, { recursive: true });
   run('tar', [
     '-xzf',

@@ -43,12 +43,12 @@ function sourceRoot(): string {
   const manifestPath = join(candidate, 'package.json');
   if (!existsSync(manifestPath)) {
     throw new Error(
-      'A planr-pipeline source checkout is required only as npm-pack input. Set OPENPLANR_PIPELINE_SOURCE.',
+      'A @openplanr/pipeline source checkout is required only as npm-pack input. Set OPENPLANR_PIPELINE_SOURCE.',
     );
   }
   const manifest = JSON.parse(readFileSync(manifestPath, 'utf8')) as { name?: unknown };
-  if (manifest.name !== 'planr-pipeline') {
-    throw new Error('OPENPLANR_PIPELINE_SOURCE does not identify planr-pipeline.');
+  if (manifest.name !== '@openplanr/pipeline') {
+    throw new Error('OPENPLANR_PIPELINE_SOURCE does not identify @openplanr/pipeline.');
   }
   return candidate;
 }
@@ -167,7 +167,7 @@ export async function installPackedPipeline(): Promise<PackedPipelineInstall> {
       cache,
     );
 
-    const installedPackageRoot = join(consumer, 'node_modules', 'planr-pipeline');
+    const installedPackageRoot = join(consumer, 'node_modules', '@openplanr/pipeline');
     rmSync(installedPackageRoot, { recursive: true, force: true });
     mkdirSync(installedPackageRoot, { recursive: true });
     execFileSync('tar', ['-xzf', tarball, '-C', installedPackageRoot, '--strip-components=1'], {
@@ -198,7 +198,7 @@ export async function installPackedPipeline(): Promise<PackedPipelineInstall> {
             (dashboardExport as Record<string, unknown>).default)
           : undefined;
     if (typeof dashboardEntry !== 'string') {
-      throw new Error('Installed planr-pipeline has no ./dashboard export.');
+      throw new Error('Installed @openplanr/pipeline has no ./dashboard export.');
     }
     const dashboardModule = (await import(
       pathToFileURL(resolve(packageRoot, dashboardEntry)).href
@@ -206,7 +206,7 @@ export async function installPackedPipeline(): Promise<PackedPipelineInstall> {
       startDashboard?: unknown;
     };
     if (typeof dashboardModule.startDashboard !== 'function') {
-      throw new Error('Installed planr-pipeline/dashboard does not export startDashboard.');
+      throw new Error('Installed @openplanr/pipeline/dashboard does not export startDashboard.');
     }
 
     return Object.freeze({

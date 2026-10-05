@@ -14,7 +14,7 @@ const PIPELINE_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const WORKSPACE_ROOT = resolve(PIPELINE_ROOT, '../..');
 const readWorkspace = (path) => readFileSync(join(WORKSPACE_ROOT, path), 'utf8');
 const FORBIDDEN_DELEGATION =
-  /\b(?:planr-pipeline|planr plan|planr spec decompose|ANTHROPIC_API_KEY|OPENAI_API_KEY|OLLAMA_HOST)\b/iu;
+  /@openplanr\/pipeline\b|\b(?:(?:open)?planr-pipeline|planr plan|planr spec decompose|ANTHROPIC_API_KEY|OPENAI_API_KEY|OLLAMA_HOST)\b/iu;
 const RETIRED_GOVERNANCE =
   /receipt|sha-?256|digest-bound|correction (?:counter|loop|attempt)|one task per invocation|one-subtask approval|snapshot-pending/iu;
 

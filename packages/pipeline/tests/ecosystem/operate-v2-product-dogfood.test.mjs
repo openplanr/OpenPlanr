@@ -20,7 +20,7 @@ test('external installed package certifies both contained product domains offlin
     sourceRoot,
   });
   const consumer = join(temporaryRoot, 'external-consumer');
-  const installed = join(consumer, 'node_modules', 'planr-pipeline');
+  const installed = join(consumer, 'node_modules', '@openplanr/pipeline');
   mkdirSync(installed, { recursive: true });
   const extracted = spawnSync(
     'tar',
@@ -33,7 +33,7 @@ test('external installed package certifies both contained product domains offlin
   writeFileSync(
     runner,
     [
-      "import { verifyOperateV2ProductExperience } from './node_modules/planr-pipeline/conformance/verify-operate-v2-product-experience.mjs';",
+      "import { verifyOperateV2ProductExperience } from './node_modules/@openplanr/pipeline/conformance/verify-operate-v2-product-experience.mjs';",
       'process.stdout.write(JSON.stringify(await verifyOperateV2ProductExperience()));',
     ].join('\n'),
   );

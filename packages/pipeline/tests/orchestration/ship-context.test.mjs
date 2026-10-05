@@ -126,7 +126,7 @@ test('the coding context carries the active task, parent acceptance, stack, desi
   assert.match(startingPoints, /Project stack override: \.codex\/stacks\/backend\/nestjs\.md/u);
   assert.match(
     startingPoints,
-    /Installed stack conventions: planr-pipeline\/stacks\/backend\/nestjs\.md/u,
+    /Installed stack conventions: @openplanr\/pipeline\/stacks\/backend\/nestjs\.md/u,
   );
   assert.doesNotMatch(startingPoints, /\/Users\/|\/home\//u);
   assert.deepEqual(

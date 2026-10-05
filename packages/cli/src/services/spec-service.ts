@@ -969,16 +969,16 @@ type PlanningProtocolValidator = (
 
 async function loadPlanningProtocolValidator(): Promise<PlanningProtocolValidator | null> {
   try {
-    const protocol = await import('planr-pipeline/protocol');
+    const protocol = await import('@openplanr/pipeline/protocol');
     return protocol.validateProtocolArtifact as PlanningProtocolValidator;
   } catch (error) {
     const moduleError = error as NodeJS.ErrnoException;
     if (
       moduleError.code === 'ERR_MODULE_NOT_FOUND' &&
-      moduleError.message.includes('planr-pipeline')
+      moduleError.message.includes('@openplanr/pipeline')
     ) {
       logger.warn(
-        'Full Protocol frontmatter validation is unavailable because optional planr-pipeline is not installed. Install the matching planr-pipeline version before promoting this spec.',
+        'Full Protocol frontmatter validation is unavailable because optional @openplanr/pipeline is not installed. Install the matching @openplanr/pipeline version before promoting this spec.',
       );
       return null;
     }
@@ -2055,7 +2055,7 @@ export async function createSpecTask(
   await ensureDir(tasksDir);
 
   // Task ID prefix: 'T' (single letter) by convention in spec mode
-  // (vs agile mode's 'TASK'). Matches planr-pipeline schema.
+  // (vs agile mode's 'TASK'). Matches @openplanr/pipeline schema.
   const id = (await reservePlanningIds(projectDir, config, { T: 1 })).T[0];
   const { slug, content } = await renderSpecTaskContent(config, specId, id, input);
   const filename = `${id}-${slug}.md`;

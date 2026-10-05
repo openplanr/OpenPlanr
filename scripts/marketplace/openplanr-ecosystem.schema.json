@@ -125,7 +125,7 @@
           "$ref": "#/$defs/component",
           "properties": {
             "package": {
-              "const": "planr-pipeline"
+              "const": "@openplanr/pipeline"
             },
             "path": {
               "const": "packages/pipeline"
@@ -246,7 +246,7 @@
           "required": ["package", "version", "exact"],
           "properties": {
             "package": {
-              "const": "planr-pipeline"
+              "const": "@openplanr/pipeline"
             },
             "version": {
               "$ref": "#/$defs/semver"
@@ -295,10 +295,10 @@
         "pipeline": {
           "type": "object",
           "additionalProperties": false,
-          "required": ["planr-pipeline"],
+          "required": ["openplanr-pipeline"],
           "properties": {
-            "planr-pipeline": {
-              "const": "bin/planr-pipeline.mjs"
+            "openplanr-pipeline": {
+              "const": "bin/openplanr-pipeline.mjs"
             }
           }
         }

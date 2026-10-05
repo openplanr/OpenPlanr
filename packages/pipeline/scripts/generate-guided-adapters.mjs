@@ -465,8 +465,8 @@ function assertPortableAsset(path, bytes, labels) {
   for (const label of labels) {
     if (bytes.includes(label)) failures.push(`copied CLI question: ${label}`);
   }
-  if (/^\s*(?:[$>]\s*)?planr-pipeline(?:\s|$)/mu.test(bytes)) {
-    failures.push('invokes the nested planr-pipeline executable');
+  if (/^\s*(?:[$>]\s*)?(?:open)?planr-pipeline(?:\s|$)/mu.test(bytes)) {
+    failures.push('invokes the nested openplanr-pipeline executable');
   }
   if (/^\s*(?:[$>]\s*)?(?:claude|codex|cursor)\s+(?:run|exec|--)/mu.test(bytes)) {
     failures.push('launches a nested coding runtime');

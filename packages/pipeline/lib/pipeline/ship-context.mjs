@@ -405,7 +405,7 @@ function stackContext({ projectRoot, readFile, runtime }) {
     const installedBytes = readOptional(installed, readFile);
     if (installedBytes !== null) {
       architecture.push(`Installed stack conventions (${logical}): ${compact(installedBytes)}`);
-      startingPoints.push(`Installed stack conventions: planr-pipeline/stacks/${logical}`);
+      startingPoints.push(`Installed stack conventions: @openplanr/pipeline/stacks/${logical}`);
     }
 
     const candidates = [

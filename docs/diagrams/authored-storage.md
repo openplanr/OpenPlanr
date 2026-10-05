@@ -12,14 +12,14 @@ a browser editor, hosted storage, Mermaid conversion, or live collaboration.
 
 | Import | Consumer | Behavior |
 | --- | --- | --- |
-| `planr-pipeline/diagram-authoring` | Browser, Worker, Node | Validate and preview edits; resolve the authored scene; render SVG; preview selected layout and route reset |
-| `planr-pipeline/diagram-authoring-store` | Local Node adapter | Read, initialize, preview, commit typed edits or an exact-base reviewed successor, and recover a canonical bundle; inspect history and legacy migration |
-| `planr-pipeline/diagram-authoring-export` | Local Node adapter | Export and verify an immutable bundle snapshot using the packaged offline rasterizer |
+| `@openplanr/pipeline/diagram-authoring` | Browser, Worker, Node | Validate and preview edits; resolve the authored scene; render SVG; preview selected layout and route reset |
+| `@openplanr/pipeline/diagram-authoring-store` | Local Node adapter | Read, initialize, preview, commit typed edits or an exact-base reviewed successor, and recover a canonical bundle; inspect history and legacy migration |
+| `@openplanr/pipeline/diagram-authoring-export` | Local Node adapter | Export and verify an immutable bundle snapshot using the packaged offline rasterizer |
 
 ## Save and recover
 
 ```js
-import { createDiagramAuthoringStore } from 'planr-pipeline/diagram-authoring-store';
+import { createDiagramAuthoringStore } from '@openplanr/pipeline/diagram-authoring-store';
 
 const store = createDiagramAuthoringStore({ root: workspaceRoot, slug: bundle.diagramId });
 const initialized = await store.initialize(bundle, { transactionId: 'create-checkout' });
@@ -62,7 +62,7 @@ An ordinary edit never triggers automatic layout. `previewAutomaticLayout` and
 
 ```js
 import { exportAuthoredDiagram, verifyAuthoredDiagramExports }
-  from 'planr-pipeline/diagram-authoring-export';
+  from '@openplanr/pipeline/diagram-authoring-export';
 
 const result = await exportAuthoredDiagram(savedBundle, { root: workspaceRoot });
 if (result.ok) {

@@ -219,7 +219,7 @@ ${rows}
 
 Compatibility invariants:
 
-- \`openplanr\` uses the exact optional \`planr-pipeline@${ecosystem.compatibility.cliOptionalPipeline.version}\` dependency.
+- \`openplanr\` uses the exact optional \`@openplanr/pipeline@${ecosystem.compatibility.cliOptionalPipeline.version}\` dependency.
 - The public pipeline retains ${ecosystem.publicCompatibility.pipelineExportKeys} export keys and ${ecosystem.publicCompatibility.pipelineRootSymbols} root symbols.
 - Historical schemas and registries remain accounted for; additive Protocol contracts retain versioned readers.
 - Commands, skills, roles, and output contracts are catalog-bound.
@@ -323,7 +323,7 @@ async function buildOutputs() {
   const cliManifest = readJson('packages/cli/package.json');
   const pipelineManifest = readJson('packages/pipeline/package.json');
   assertEqual(
-    cliManifest.optionalDependencies?.['planr-pipeline'],
+    cliManifest.optionalDependencies?.['@openplanr/pipeline'],
     components.pipeline.version,
     'E_ECOSYSTEM_PIPELINE_PIN',
     'CLI optional pipeline dependency must be exact and match the in-repo pipeline.',
@@ -336,7 +336,7 @@ async function buildOutputs() {
   );
   assertEqual(
     pipelineManifest.bin,
-    { 'planr-pipeline': 'bin/planr-pipeline.mjs' },
+    { 'openplanr-pipeline': 'bin/openplanr-pipeline.mjs' },
     'E_ECOSYSTEM_PIPELINE_BIN',
     'Pipeline binary drifted.',
   );
@@ -706,7 +706,7 @@ async function buildOutputs() {
     components,
     compatibility: {
       cliOptionalPipeline: {
-        package: 'planr-pipeline',
+        package: '@openplanr/pipeline',
         version: components.pipeline.version,
         exact: true,
       },

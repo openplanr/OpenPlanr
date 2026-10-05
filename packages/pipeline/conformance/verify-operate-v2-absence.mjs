@@ -11,7 +11,7 @@ import {
   loadOperateRuntimeContract,
   loadProtocolContract,
   OPERATE_RUNTIME_CONTRACT_KINDS,
-} from 'planr-pipeline/protocol';
+} from '@openplanr/pipeline/protocol';
 
 const root = dirname(fileURLToPath(new URL('../package.json', import.meta.url)));
 const removedPaths = [
@@ -64,7 +64,7 @@ function assertClosedOperateCliBoundary(source, label) {
   const commandLines = source
     .split('\n')
     .map((line) => line.trim())
-    .filter((line) => /^(?:planr|planr-pipeline|openplanr|opr)\s+/u.test(line));
+    .filter((line) => /^(?:planr|planr-pipeline|openplanr-pipeline|openplanr|opr)\s+/u.test(line));
   const profiles = [];
   for (const line of commandLines) {
     const match = line.match(OPERATE_VALIDATE_NOTE_LINE);
@@ -94,7 +94,7 @@ function assertClosedOperateCliBoundary(source, label) {
   );
   assert.doesNotMatch(
     source,
-    /\bplanr-pipeline\s+|\/planr-pipeline:planr-operate\b|commands\/operate\.md|skills\/operate(?:-|\/)/u,
+    /\b(?:open)?planr-pipeline\s+|\/planr-pipeline:planr-operate\b|commands\/operate\.md|skills\/operate(?:-|\/)/u,
     `${label}: retired pipeline and plugin Operate commands are forbidden`,
   );
   assert.doesNotMatch(

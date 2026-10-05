@@ -1,13 +1,13 @@
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { Command } from 'commander';
 import {
   assertOperatingMeasurementScheduleReceiptV2,
   assertOperatingMeasurementScheduleV2,
   reduceOperatingMeasurementScheduleV2,
-} from 'planr-pipeline';
-import { sha256Jcs } from 'planr-pipeline/protocol';
+} from '@openplanr/pipeline';
+import { sha256Jcs } from '@openplanr/pipeline/protocol';
+import { Command } from 'commander';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { registerOperateCommandDefinition } from '../../src/cli/commands/operate/registration.js';
 import { createOperateClient } from '../../src/services/operate/client.js';

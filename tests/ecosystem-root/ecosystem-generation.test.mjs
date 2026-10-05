@@ -50,7 +50,7 @@ test('local ecosystem derives component versions and preserved public parity in-
   );
   assert.equal(
     ecosystem.compatibility.cliOptionalPipeline.version,
-    json('packages/cli/package.json').optionalDependencies['planr-pipeline'],
+    json('packages/cli/package.json').optionalDependencies['@openplanr/pipeline'],
   );
   assert.equal(ecosystem.compatibility.cliOptionalPipeline.exact, true);
   assert.equal(

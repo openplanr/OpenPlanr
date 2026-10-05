@@ -38,7 +38,7 @@ const LEGACY_OPERATE_SKILL_IDS = [
   'planr-operate-chair',
 ];
 const FORBIDDEN_EXECUTION =
-  /\b(?:planr-pipeline|planr plan|planr spec decompose|ANTHROPIC_API_KEY|OPENAI_API_KEY|OLLAMA_HOST)\b/iu;
+  /@openplanr\/pipeline\b|\b(?:(?:open)?planr-pipeline|planr plan|planr spec decompose|ANTHROPIC_API_KEY|OPENAI_API_KEY|OLLAMA_HOST)\b/iu;
 
 function readWorkspace(path) {
   return readFileSync(join(WORKSPACE_ROOT, path), 'utf8');

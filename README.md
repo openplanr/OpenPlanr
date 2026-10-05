@@ -42,7 +42,7 @@
   reports, installs the skills into each host, diagnoses installations, and syncs with GitHub
   Issues and Linear.
 - **One repository, MIT licensed.** Three npm packages: [`openplanr`](packages/cli) (the CLI and
-  host packages), [`planr-pipeline`](packages/pipeline) (the delivery pipeline), and
+  host packages), [`@openplanr/pipeline`](packages/pipeline) (the delivery pipeline), and
   [`@openplanr/protocol`](packages/protocol) (schemas and registries).
 
 OpenPlanr is not a hosted project tracker and does not replace your issue tracker. It closes the
@@ -183,7 +183,7 @@ flowchart LR
     subgraph packages["Published packages"]
         direction TB
         cli["openplanr<br/>CLI + host packages"]
-        pipeline["planr-pipeline<br/>delivery pipeline"]
+        pipeline["@openplanr/pipeline<br/>delivery pipeline"]
     end
     subgraph hosts["Installed into hosts"]
         direction TB

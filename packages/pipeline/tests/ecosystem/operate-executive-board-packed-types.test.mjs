@@ -42,7 +42,7 @@ test('packed trace and Executive Board declarations reject invalid proof, relati
     );
     const [{ filename }] = JSON.parse(packed.stdout);
     const consumerRoot = join(temporaryRoot, 'consumer');
-    const installedRoot = join(consumerRoot, 'node_modules', 'planr-pipeline');
+    const installedRoot = join(consumerRoot, 'node_modules', '@openplanr/pipeline');
     mkdirSync(installedRoot, { recursive: true });
     run('tar', [
       '-xzf',
@@ -55,9 +55,9 @@ test('packed trace and Executive Board declarations reject invalid proof, relati
     writeFileSync(
       join(consumerRoot, 'index.mts'),
       [
-        "import type { OperatingEventV2 } from 'planr-pipeline/protocol';",
-        "import type { OperatingTraceEdgeV2, OperatingTraceNodeV2 } from 'planr-pipeline/operate/trace-matrix-v2';",
-        "import type { OperatingExecutiveBoardCompatibilityV2, OperatingExecutiveBoardMaterializedV2 } from 'planr-pipeline/operate/executive-board-materialization-v2';",
+        "import type { OperatingEventV2 } from '@openplanr/pipeline/protocol';",
+        "import type { OperatingTraceEdgeV2, OperatingTraceNodeV2 } from '@openplanr/pipeline/operate/trace-matrix-v2';",
+        "import type { OperatingExecutiveBoardCompatibilityV2, OperatingExecutiveBoardMaterializedV2 } from '@openplanr/pipeline/operate/executive-board-materialization-v2';",
         "type RequirementProof = Extract<OperatingTraceNodeV2, { locator: { kind: 'requirement' } }>['proofState'];",
         "type DeclaresEdge = Extract<OperatingTraceEdgeV2, { relation: 'declares' }>;",
         "const validProof: RequirementProof = 'pending';",

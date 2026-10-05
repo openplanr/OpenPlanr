@@ -298,8 +298,8 @@ try {
     readFileSync(join(pipelinePackageRoot, 'package.json'), 'utf8'),
   );
   must(
-    'repository-bound pipeline candidate is planr-pipeline',
-    pipelineManifest.name === 'planr-pipeline',
+    'repository-bound pipeline candidate is @openplanr/pipeline',
+    pipelineManifest.name === '@openplanr/pipeline',
   );
   must(
     'packed pipeline identity matches the selected repository candidate',
@@ -307,9 +307,9 @@ try {
   );
   must(
     'OpenPlanr declares the exact packed pipeline candidate version',
-    packedManifest.optionalDependencies?.['planr-pipeline'] === pipelineManifest.version,
+    packedManifest.optionalDependencies?.['@openplanr/pipeline'] === pipelineManifest.version,
     [
-      `expected ${String(packedManifest.optionalDependencies?.['planr-pipeline'])}`,
+      `expected ${String(packedManifest.optionalDependencies?.['@openplanr/pipeline'])}`,
       `candidate ${String(pipelineManifest.version)}`,
     ].join(', '),
   );
@@ -342,9 +342,9 @@ try {
   const readManifest = (...segments) =>
     JSON.parse(readFileSync(join(prefix, 'node_modules', ...segments, 'package.json'), 'utf8'));
   const installedOpenPlanr = readManifest('openplanr');
-  const installedPipeline = readManifest('planr-pipeline');
+  const installedPipeline = readManifest('@openplanr/pipeline');
   const installedOpenPlanrRoot = installedPackageRoot(prefix, 'openplanr');
-  const installedPipelineRoot = installedPackageRoot(prefix, 'planr-pipeline');
+  const installedPipelineRoot = installedPackageRoot(prefix, '@openplanr/pipeline');
   must('installed OpenPlanr manifest names openplanr', installedOpenPlanr.name === 'openplanr');
   must(
     'installed OpenPlanr bytes exactly match the packed candidate',
@@ -413,7 +413,7 @@ try {
       "const dashboardPath = require.resolve('openplanr/dashboard');",
       "const verifierPath = require.resolve('openplanr/dashboard-verifier');",
       "const openPlanrRequire = createRequire(require.resolve('openplanr/package.json'));",
-      "const pipelinePath = openPlanrRequire.resolve('planr-pipeline/package.json');",
+      "const pipelinePath = openPlanrRequire.resolve('@openplanr/pipeline/package.json');",
       'const verifier = await import(pathToFileURL(verifierPath).href);',
       'const report = verifier.verifyDashboardAssets();',
       "const manifest = JSON.parse(readFileSync(dashboardPath, 'utf8'));",

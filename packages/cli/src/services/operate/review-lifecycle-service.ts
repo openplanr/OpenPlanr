@@ -4,8 +4,8 @@ import {
   readOperatingReviewV2,
   submitBoundOperatingReviewV2,
   submitOperatingReviewV2,
-} from 'planr-pipeline/operate/runtime-v2';
-import { sha256Jcs } from 'planr-pipeline/protocol';
+} from '@openplanr/pipeline/operate/runtime-v2';
+import { sha256Jcs } from '@openplanr/pipeline/protocol';
 import type { JsonRecord } from './composition.js';
 import {
   retryReplaySafeGenerationConflict,

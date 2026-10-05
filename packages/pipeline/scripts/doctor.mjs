@@ -1,10 +1,10 @@
 #!/usr/bin/env node
 
 /**
- * planr-pipeline doctor: checks the Node engine, package identity and Protocol assets, the artifact
+ * openplanr-pipeline doctor: checks the Node engine, package identity and Protocol assets, the artifact
  * surface, the ecosystem and workspace layout, the local design and dashboard daemons and project
  * `.env` keys; `--release` adds a release audit and `--fix` removes stale daemon state.
- * Run as `planr-pipeline doctor [--versions-only] [--strict] [--json]`; exits 1 when a check fails.
+ * Run as `openplanr-pipeline doctor [--versions-only] [--strict] [--json]`; exits 1 when a check fails.
  */
 
 import { spawnSync } from 'node:child_process';
@@ -350,7 +350,8 @@ function runVersionAndProtocolChecks(pkg) {
   // Validate the declared identity without requiring tutorial prose to repeat it.
   try {
     renderLedgerVersionProjection({ packageName: pkg.name, declaredVersion: version });
-    if (pkg.name !== 'planr-pipeline') throw new Error('expected the planr-pipeline package');
+    if (pkg.name !== '@openplanr/pipeline')
+      throw new Error('expected the @openplanr/pipeline package');
     ok(
       'versions.runtime-package',
       'Versions',
@@ -361,7 +362,7 @@ function runVersionAndProtocolChecks(pkg) {
       'versions.runtime-package',
       'Versions',
       `Invalid pipeline package identity: ${error.message}`,
-      'Declare planr-pipeline and an exact semantic version in package.json.',
+      'Declare @openplanr/pipeline and an exact semantic version in package.json.',
     );
   }
 
@@ -457,7 +458,7 @@ function runVersionAndProtocolChecks(pkg) {
 
   if (
     protocol.includes('packages/protocol/schemas/') &&
-    protocol.includes('planr-pipeline/schemas/')
+    protocol.includes('@openplanr/pipeline/schemas/')
   ) {
     ok(
       'protocol.ownership-reference',
@@ -626,7 +627,7 @@ function runConsolidatedWorkspaceChecks(pkg) {
     ok(
       'ecosystem.pipeline-version',
       'Ecosystem',
-      `workspace manifest maps planr-pipeline ${pkg.version} to packages/pipeline`,
+      `workspace manifest maps @openplanr/pipeline ${pkg.version} to packages/pipeline`,
     );
   } else {
     fail(
@@ -943,7 +944,7 @@ function runCredentialChecks() {
 
 async function runArtifactChecks() {
   const required = [
-    'bin/planr-pipeline.mjs',
+    'bin/openplanr-pipeline.mjs',
     'conformance/verify-artifact-review.mjs',
     'docs/artifact-review.md',
     'lib/artifact/bundle.mjs',
@@ -1065,21 +1066,21 @@ async function runArtifactChecks() {
     );
   }
 
-  if (readText('bin/planr-pipeline.mjs').startsWith('#!/usr/bin/env node')) {
+  if (readText('bin/openplanr-pipeline.mjs').startsWith('#!/usr/bin/env node')) {
     ok('artifact.package-bin', 'Artifact review', 'package executable has a portable Node shebang');
   } else {
     fail(
       'artifact.package-bin',
       'Artifact review',
       'package executable is missing its portable Node shebang',
-      'Restore bin/planr-pipeline.mjs and its package.json bin entry.',
+      'Restore bin/openplanr-pipeline.mjs and its package.json bin entry.',
     );
   }
 }
 
 function runReleaseChecks(pkg) {
   checkChangelogEntry(pkg.version);
-  checkRelease('release.pipeline', 'planr-pipeline', root, pkg.version);
+  checkRelease('release.pipeline', '@openplanr/pipeline', root, pkg.version);
 
   const skillsRoot = ecosystem.repositories.skills?.path;
   const skillsManifest = skillsRoot ? join(skillsRoot, '.claude-plugin/marketplace.json') : null;
@@ -1171,7 +1172,7 @@ if (options.release && sourceCheckout) {
     'release.source-required',
     'Releases',
     'release audit requires a source checkout',
-    'Run the release audit from the planr-pipeline repository.',
+    'Run the release audit from the OpenPlanr repository.',
   );
 }
 

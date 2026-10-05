@@ -184,7 +184,7 @@ Every command accepts `--json`. Failures use bounded codes such as `E_SPRINT_NOT
 
 ### `openplanr spec`
 
-Spec-driven planning mode — third posture alongside agile + QT, designed for **planning *for* AI coding agents**. Each spec is a self-contained directory at `.planr/specs/SPEC-NNN-{slug}/` containing the spec doc, decomposed User Stories, decomposed Tasks, and any UI design assets. The artifact schema mirrors the [planr-pipeline](https://github.com/openplanr/OpenPlanr/tree/main/packages/pipeline) canonical protocol schemas under `schemas/v1.0.0/` — file Create/Modify/Preserve lists, Type=UI|Tech, agent assignment, DoD with build/test commands. The two products use one artifact contract; no conversion adapter ever.
+Spec-driven planning mode — third posture alongside agile + QT, designed for **planning *for* AI coding agents**. Each spec is a self-contained directory at `.planr/specs/SPEC-NNN-{slug}/` containing the spec doc, decomposed User Stories, decomposed Tasks, and any UI design assets. The artifact schema mirrors the [@openplanr/pipeline](https://github.com/openplanr/OpenPlanr/tree/main/packages/pipeline) canonical protocol schemas under `schemas/v1.0.0/` — file Create/Modify/Preserve lists, Type=UI|Tech, agent assignment, DoD with build/test commands. The two products use one artifact contract; no conversion adapter ever.
 
 The generated artifact contract and command examples in this section are the
 packaged source of truth for spec-driven mode.
@@ -322,7 +322,7 @@ openplanr spec attach-design SPEC-001 --files login.png signup.png
 
 #### `openplanr spec promote`
 
-Validate that a spec is ready for handoff to `planr-pipeline` (has stories, tasks, non-trivial body) and print the next-step pipeline command. Updates SPEC frontmatter `status: ready-for-pipeline`.
+Validate that a spec is ready for handoff to `@openplanr/pipeline` (has stories, tasks, non-trivial body) and print the next-step pipeline command. Updates SPEC frontmatter `status: ready-for-pipeline`.
 
 ```bash
 openplanr spec promote SPEC-001
@@ -596,7 +596,7 @@ Use `openplanr upgrade status`, then `openplanr upgrade apply` when doctor repor
 incompatible installed CLI. `upgrade apply` prints the new version, up to five
 highlights per release (`--notes full` prints every entry), and the command that
 updates each installed coding agent. The published compatible set is read from the npm
-registry's `latest` CLI document (its version and the exact `planr-pipeline` it
+registry's `latest` CLI document (its version and the exact `@openplanr/pipeline` it
 bundles); `OPENPLANR_ECOSYSTEM_SOURCE` points the check at another URL or file.
 
 ### `openplanr artifact`
@@ -657,7 +657,7 @@ Generate AI agent rule files for Cursor, Claude Code, and/or Codex. Two flags: *
 ```bash
 openplanr rules generate                                       # all targets, agile scope (default)
 openplanr rules generate --target cursor                       # cursor only, agile scope
-openplanr rules generate --target cursor --scope pipeline      # cursor pipeline rules (Cursor adapter for planr-pipeline)
+openplanr rules generate --target cursor --scope pipeline      # cursor pipeline rules (Cursor adapter for @openplanr/pipeline)
 openplanr rules generate --target codex --scope pipeline       # AGENTS.md with pipeline orchestration section
 openplanr rules generate --target all --scope all              # everything for everyone
 openplanr rules generate --dry-run                             # preview without writing
@@ -671,7 +671,7 @@ openplanr rules generate --dry-run                             # preview without
 
 **`--scope agile` (default — preserves existing behaviour):** generates the agile-mode rules for epic → feature → story → task workflows.
 
-**`--scope pipeline`:** generates rule files that drive the [planr-pipeline](https://github.com/openplanr/OpenPlanr/tree/main/packages/pipeline) two-phase spec-driven workflow on the chosen runtime. Cross-runtime parity with the Claude Code plugin.
+**`--scope pipeline`:** generates rule files that drive the [@openplanr/pipeline](https://github.com/openplanr/OpenPlanr/tree/main/packages/pipeline) two-phase spec-driven workflow on the chosen runtime. Cross-runtime parity with the Claude Code plugin.
 
 **Generated files by `target × scope`:**
 
@@ -746,7 +746,7 @@ openplanr status --all
 ### `openplanr graph`
 
 Emit the OpenPlanr artifact graph. `--json` is the stable machine-readable
-contract consumed by `planr-pipeline` dashboard and ecosystem conformance.
+contract consumed by `@openplanr/pipeline` dashboard and ecosystem conformance.
 
 ```bash
 openplanr graph --json
@@ -756,7 +756,7 @@ openplanr graph --json
 | -------- | ----------------------------------- | ------- |
 | `--json` | Output `{ nodes, edges }` as JSON   | `false` |
 
-The JSON output follows `planr-pipeline/schemas/v1.0.0/graph.schema.json`.
+The JSON output follows `@openplanr/pipeline/schemas/v1.0.0/graph.schema.json`.
 
 ---
 

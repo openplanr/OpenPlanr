@@ -117,9 +117,9 @@
     {
       "skillId": "planr-diagram",
       "files": 7,
-      "bytes": 20526,
+      "bytes": 20531,
       "uniqueFiles": 7,
-      "uniqueBytes": 20526,
+      "uniqueBytes": 20531,
       "duplicateBytes": 0
     },
     {
@@ -165,9 +165,9 @@
     {
       "skillId": "planr-plan",
       "files": 14,
-      "bytes": 308151,
+      "bytes": 308156,
       "uniqueFiles": 14,
-      "uniqueBytes": 308151,
+      "uniqueBytes": 308156,
       "duplicateBytes": 0
     },
     {
@@ -231,25 +231,25 @@
     {
       "host": "openai",
       "files": 288,
-      "bytes": 4667848,
+      "bytes": 4667858,
       "uniqueFiles": 242,
-      "uniqueBytes": 4453915,
+      "uniqueBytes": 4453925,
       "duplicateBytes": 213933
     },
     {
       "host": "claude",
       "files": 269,
-      "bytes": 4746886,
+      "bytes": 4746896,
       "uniqueFiles": 222,
-      "uniqueBytes": 4529470,
+      "uniqueBytes": 4529480,
       "duplicateBytes": 217416
     },
     {
       "host": "cursor",
       "files": 232,
-      "bytes": 4612835,
+      "bytes": 4612845,
       "uniqueFiles": 186,
-      "uniqueBytes": 4398902,
+      "uniqueBytes": 4398912,
       "duplicateBytes": 213933
     }
   ]

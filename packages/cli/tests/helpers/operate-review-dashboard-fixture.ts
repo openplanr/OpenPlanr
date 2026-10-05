@@ -1,14 +1,14 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { issueOperateReviewDisplayWorkspaceV1 } from 'planr-pipeline/dashboard/operate-review-display-workspace-contract';
-import { sha256Jcs } from 'planr-pipeline/dashboard/verified-json';
-import { buildOperateReviewWorkspacePayloadV1 } from 'planr-pipeline/operate/review-workspace-projection-v2';
+import { issueOperateReviewDisplayWorkspaceV1 } from '@openplanr/pipeline/dashboard/operate-review-display-workspace-contract';
+import { sha256Jcs } from '@openplanr/pipeline/dashboard/verified-json';
+import { buildOperateReviewWorkspacePayloadV1 } from '@openplanr/pipeline/operate/review-workspace-projection-v2';
 import {
   buildOperatingReviewBoundSubmissionV1,
   type OperatingReviewBoundSubmissionV1,
-} from 'planr-pipeline/operate/runtime-v2';
-import type { OperatingReviewReceiptV2 } from 'planr-pipeline/protocol';
-import type { OperateReviewDisplayWorkspaceV1 } from 'planr-pipeline/schemas/v2.0.0/operate-review-display-workspace.mjs';
+} from '@openplanr/pipeline/operate/runtime-v2';
+import type { OperatingReviewReceiptV2 } from '@openplanr/pipeline/protocol';
+import type { OperateReviewDisplayWorkspaceV1 } from '@openplanr/pipeline/schemas/v2.0.0/operate-review-display-workspace.mjs';
 import { resolvePipelinePackageRoot } from './pipeline-package-root.js';
 
 type RecordValue = Record<string, unknown>;

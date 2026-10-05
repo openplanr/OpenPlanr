@@ -11,13 +11,13 @@ import { createHash } from 'node:crypto';
 import {
   assertAcceptedLiveEvidenceBridgeV2,
   assertOperatingLiveEvidenceIngestionV2,
-} from 'planr-pipeline';
-import { createOperatingActionReviewV2 } from 'planr-pipeline/operate/approvals-v2';
+} from '@openplanr/pipeline';
+import { createOperatingActionReviewV2 } from '@openplanr/pipeline/operate/approvals-v2';
 import {
   promoteOperatingActionAuthorityV2,
   recordOperatingTerminalVerificationInsufficientEvidenceV2,
-} from 'planr-pipeline/operate/runtime-v2';
-import { sha256Jcs } from 'planr-pipeline/protocol';
+} from '@openplanr/pipeline/operate/runtime-v2';
+import { sha256Jcs } from '@openplanr/pipeline/protocol';
 import { stageRuntimeAssignmentSubmission } from './assignment-lifecycle-service.js';
 import { OperateClientError } from './client-error.js';
 import {

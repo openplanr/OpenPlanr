@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Release journey proof: builds and packs OpenPlanr and the planr-pipeline candidate, installs both
+ * Release journey proof: builds and packs OpenPlanr and the @openplanr/pipeline candidate, installs both
  * into a disposable prefix and home, then drives one Operate Cycle through the installed `openplanr`,
  * from setup through Advisor, Challenger and Chair submissions to the owner Review, exports and a
  * dashboard probe, using only the executor-facing prepare, validate and submit commands.
@@ -486,7 +486,7 @@ try {
   };
 
   console.log('\nJourney:');
-  const installedPipelineRoot = realpathSync(join(prefix, 'node_modules', 'planr-pipeline'));
+  const installedPipelineRoot = realpathSync(join(prefix, 'node_modules', '@openplanr/pipeline'));
   check(
     'installed pipeline resolves inside the disposable prefix',
     isPathInside(prefix, installedPipelineRoot),

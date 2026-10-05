@@ -14,7 +14,7 @@ export type TargetCLI = 'cursor' | 'claude' | 'codex';
  *
  *  - `agile`    — the existing agile-mode templates (epic → feature → story → task,
  *                 sprint, backlog). Default; preserves byte-for-byte legacy output.
- *  - `pipeline` — additional rule files that drive the planr-pipeline two-phase
+ *  - `pipeline` — additional rule files that drive the @openplanr/pipeline two-phase
  *                 spec-driven flow (host-native `planr-plan`, `planr-ship` skills)
  *                 on the chosen runtime. Cross-runtime parity with the Claude Code plugin.
  *  - `all`      — both sets, side-by-side.

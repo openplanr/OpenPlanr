@@ -286,7 +286,7 @@ test('Operate 2.0 development package installs the clean typed contract without 
   const packageDestination = join(temporaryRoot, 'package');
   const packed = packOperateV2DevelopmentSnapshot(packageDestination, { sourceRoot: root });
   assert.equal(packed.ok, true);
-  assert.equal(packed.packageName, 'planr-pipeline');
+  assert.equal(packed.packageName, '@openplanr/pipeline');
   assert.equal(packed.version, packageVersion);
   assert.match(packed.integrity, /^sha512-/);
   assert.match(packed.sha256, /^[a-f0-9]{64}$/);
@@ -520,7 +520,7 @@ test('Operate 2.0 development package installs the clean typed contract without 
     { cwd: installRoot },
   );
 
-  const installedPackage = join(installRoot, 'node_modules', 'planr-pipeline');
+  const installedPackage = join(installRoot, 'node_modules', '@openplanr/pipeline');
   const installedMetadata = JSON.parse(
     readFileSync(join(installedPackage, 'package.json'), 'utf8'),
   );
@@ -530,7 +530,7 @@ test('Operate 2.0 development package installs the clean typed contract without 
     assert.equal(
       existsSync(join(installedPackage, retiredPromptRoot)),
       false,
-      `${retiredPromptRoot} must remain in host plugin packages, not planr-pipeline`,
+      `${retiredPromptRoot} must remain in host plugin packages, not @openplanr/pipeline`,
     );
   }
   const rootDeclarations = readFileSync(join(installedPackage, 'lib/pipeline/index.d.mts'), 'utf8');
@@ -685,7 +685,7 @@ test('Operate 2.0 development package installs the clean typed contract without 
     const declarations = readFileSync(join(installedPackage, target.types), 'utf8');
     assert.doesNotMatch(declarations, /\.\.\/protocol\/index\.d\.ts/);
     if (subpath.endsWith('runtime-v2')) {
-      assert.match(declarations, /from 'planr-pipeline\/protocol'/);
+      assert.match(declarations, /from '@openplanr\/pipeline\/protocol'/);
       for (const symbol of [
         'OPERATING_ASSIGNMENT_TRANSITIONS_V2',
         'evaluateOperateGuardV2',
@@ -774,41 +774,41 @@ test('Operate 2.0 development package installs the clean typed contract without 
       loadOperateLiveEvidenceContract,
       loadProtocolContract,
       loadOperateRuntimeContract,
-    } from 'planr-pipeline/protocol';
+    } from '@openplanr/pipeline/protocol';
     import {
       OPERATING_ASSIGNMENT_TRANSITIONS_V2,
       createEmptyOperatingRuntimeStateV2,
-    } from 'planr-pipeline/operate/runtime-v2';
+    } from '@openplanr/pipeline/operate/runtime-v2';
     import {
       createOperatingResultTemplateV2,
       operatingResultSchemaDependenciesV2,
-    } from 'planr-pipeline/operate/result-packet-v2';
-    import { deriveOperatingAssignmentReleaseIntentsV2 } from 'planr-pipeline/operate/scheduler-v2';
-    import { OPEN_REFERENCE_OPERATE_EXTENSIONS_V2 } from 'planr-pipeline/operate/extensions-v2';
-    import { buildOperateExperienceViewV2 } from 'planr-pipeline/operate/experience-projection-v2';
-    import { createOperatingDeliveryRouteV1 } from 'planr-pipeline/operate/planning-bridge-v2';
+    } from '@openplanr/pipeline/operate/result-packet-v2';
+    import { deriveOperatingAssignmentReleaseIntentsV2 } from '@openplanr/pipeline/operate/scheduler-v2';
+    import { OPEN_REFERENCE_OPERATE_EXTENSIONS_V2 } from '@openplanr/pipeline/operate/extensions-v2';
+    import { buildOperateExperienceViewV2 } from '@openplanr/pipeline/operate/experience-projection-v2';
+    import { createOperatingDeliveryRouteV1 } from '@openplanr/pipeline/operate/planning-bridge-v2';
     import {
       OPERATING_GOVERNED_EXECUTION_TERMINAL_STATES_V2,
       createOperatingGovernedExecutionRuntimeV2,
-    } from 'planr-pipeline/operate/governed-execution-v2';
+    } from '@openplanr/pipeline/operate/governed-execution-v2';
     import {
       OPERATING_GOVERNED_RECOVERY_CLASSIFICATIONS_V2,
       createOperatingGovernedRecoveryRuntimeV2,
-    } from 'planr-pipeline/operate/governed-recovery-v2';
+    } from '@openplanr/pipeline/operate/governed-recovery-v2';
     import {
       OPERATING_EXECUTION_VERIFICATION_STATUSES_V2,
       deriveOperatingVerificationFeedbackV2,
-    } from 'planr-pipeline/operate/execution-verification-v2';
-    import { buildPersistentWorkMaterializationPayloadV2 } from 'planr-pipeline/operate/persistent-work-v2';
-    import { buildOperatingWorkLedgerV2 } from 'planr-pipeline/operate/persistent-work-projections-v2';
+    } from '@openplanr/pipeline/operate/execution-verification-v2';
+    import { buildPersistentWorkMaterializationPayloadV2 } from '@openplanr/pipeline/operate/persistent-work-v2';
+    import { buildOperatingWorkLedgerV2 } from '@openplanr/pipeline/operate/persistent-work-projections-v2';
     import {
       OPEN_REFERENCE_EVIDENCE_REGISTRY_V2,
       createOperateEvidenceRegistryV2,
       dispatchOperateEvidenceResolverV2,
-    } from 'planr-pipeline/operate/evidence-v2';
-    import { buildOperatingEvidenceMaterializationV2 } from 'planr-pipeline/operate/evidence-materialization-v2';
-    import { buildOperatingEvidenceGraphV2 } from 'planr-pipeline/operate/evidence-projections-v2';
-    import { assertOperateExperienceSurfaceV1 } from 'planr-pipeline/schemas/v1.2.0/operate-experience-surface.mjs';
+    } from '@openplanr/pipeline/operate/evidence-v2';
+    import { buildOperatingEvidenceMaterializationV2 } from '@openplanr/pipeline/operate/evidence-materialization-v2';
+    import { buildOperatingEvidenceGraphV2 } from '@openplanr/pipeline/operate/evidence-projections-v2';
+    import { assertOperateExperienceSurfaceV1 } from '@openplanr/pipeline/schemas/v1.2.0/operate-experience-surface.mjs';
     import {
       ARTIFACT_ERROR_CODES,
       createLiveRoomDescriptor,
@@ -817,7 +817,7 @@ test('Operate 2.0 development package installs the clean typed contract without 
       assertLandingPlan,
       assertLiveEvidenceProviderRegistrationV2,
       projectPipelineOperatingOriginCorrelation,
-    } from 'planr-pipeline';
+    } from '@openplanr/pipeline';
     const require = createRequire(import.meta.url);
     assert.equal(new Set(OPERATE_RUNTIME_CONTRACT_KINDS).size, OPERATE_RUNTIME_CONTRACT_KINDS.length);
     assert.equal(OPERATING_ASSIGNMENT_TRANSITIONS_V2.pending[0], 'available');
@@ -852,7 +852,7 @@ test('Operate 2.0 development package installs the clean typed contract without 
     for (const kind of ['artifact-room-descriptor', 'artifact-room-event', 'artifact-room-signed-event']) {
       const contract = loadProtocolContract(kind, { protocolVersion: '1.1.0' });
       assert.equal(contract.kind, kind);
-      require.resolve('planr-pipeline/' + contract.path);
+      require.resolve('@openplanr/pipeline/' + contract.path);
     }
     assert.deepEqual(projectPipelineOperatingOriginCorrelation({
       correlationId: 'corr_1234567890abcdef',
@@ -869,15 +869,15 @@ test('Operate 2.0 development package installs the clean typed contract without 
     });
     for (const kind of OPERATE_RUNTIME_CONTRACT_KINDS) {
       const contract = loadOperateRuntimeContract(kind, { protocolVersion: '2.0.0' });
-      require.resolve('planr-pipeline/schemas/v2.0.0/' + contract.path.split('/').at(-1));
+      require.resolve('@openplanr/pipeline/schemas/v2.0.0/' + contract.path.split('/').at(-1));
     }
     for (const kind of OPERATE_LIVE_EVIDENCE_CONTRACT_KINDS_V2) {
       const contract = loadOperateLiveEvidenceContract(kind, { protocolVersion: '2.0.0' });
-      require.resolve('planr-pipeline/' + contract.path);
+      require.resolve('@openplanr/pipeline/' + contract.path);
     }
     for (const kind of LANDING_CONTRACT_KINDS_V1) {
       const contract = loadLandingContract(kind, { protocolVersion: '1.2.0' });
-      require.resolve('planr-pipeline/' + contract.path);
+      require.resolve('@openplanr/pipeline/' + contract.path);
     }
   `;
   run(process.execPath, ['--input-type=module', '--eval', importSmoke], { cwd: installRoot });
@@ -941,7 +941,7 @@ test('Operate 2.0 development package installs the clean typed contract without 
 
   assert.deepEqual(
     packed.cleanSnapshot.excludedProof.map(({ path }) => path),
-    ['bin/planr-pipeline.mjs', 'tests/pipeline/engine.test.mjs'],
+    ['bin/openplanr-pipeline.mjs', 'tests/pipeline/engine.test.mjs'],
     'only the unrelated user-owned executable and engine test remain excluded',
   );
 

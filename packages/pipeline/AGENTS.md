@@ -1,4 +1,4 @@
-# planr-pipeline — Agent Instructions
+# @openplanr/pipeline — Agent Instructions
 
 > Generated from the OpenPlanr instruction source on 2026-08-30
 

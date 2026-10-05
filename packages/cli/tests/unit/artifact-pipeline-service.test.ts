@@ -17,7 +17,7 @@ import {
   exportLiveRoomRecoveryBundle,
   importLiveRoomRecoveryBundle,
   prepareLiveReviewRoom as prepareVersionedLiveReviewRoom,
-} from 'planr-pipeline';
+} from '@openplanr/pipeline';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   type ArtifactPipelineApi,

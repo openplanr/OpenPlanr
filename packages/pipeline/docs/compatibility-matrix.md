@@ -139,7 +139,7 @@ runtime launches or hands off the package-owned tooling.
 
 Artifact review is a package-owned workflow exposed through the public `openplanr`
 router on every certified runtime. Only `openplanr` is required on `PATH`; generated
-skills and rules never invoke the nested `planr-pipeline` binary.
+skills and rules never invoke the nested `openplanr-pipeline` binary.
 
 The portable contract includes:
 
@@ -218,7 +218,7 @@ npm run conformance:check
 
 For consolidated release custody, generate the root packed-workspace proof and
 pass it to the pipeline ledger verifier with `--strict --proof`. This proves the
-public `openplanr`, `planr-pipeline`, and `@openplanr/protocol` artifacts without requiring local
+public `openplanr`, `@openplanr/pipeline`, and `@openplanr/protocol` artifacts without requiring local
 package rows for the generated skills/marketplace catalogs or the external web
 deployment.
 

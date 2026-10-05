@@ -1,7 +1,7 @@
 # OpenPlanr Doctor
 
 `openplanr doctor` is the user-facing health check. The pipeline package also
-provides `npm run doctor --workspace=planr-pipeline` for source and package
+provides `npm run doctor --workspace=@openplanr/pipeline` for source and package
 diagnostics. The default check does not mutate files. The CLI also reports the number of
 healthy owned local dashboards and Studios. Inspect them with `openplanr server list
 --json`; request an authenticated stop with `openplanr server stop <instance>`.
@@ -15,9 +15,9 @@ validating workspace-wide compatibility.
 ```bash
 openplanr doctor
 openplanr doctor --strict --json
-npm run doctor --workspace=planr-pipeline -- --json
-npm run doctor --workspace=planr-pipeline -- --repair-preview --json
-npm run doctor --workspace=planr-pipeline -- --fix --json
+npm run doctor --workspace=@openplanr/pipeline -- --json
+npm run doctor --workspace=@openplanr/pipeline -- --repair-preview --json
+npm run doctor --workspace=@openplanr/pipeline -- --fix --json
 ```
 
 ## Modes
@@ -40,7 +40,7 @@ Doctor resolves source custody in this order:
 1. `--workspace-root <path>`
 2. `OPENPLANR_ECOSYSTEM_ROOT`
 3. An ancestor `openplanr-workspace` containing `packages/pipeline`
-4. The parent directory of a legacy standalone `planr-pipeline` checkout
+4. The parent directory of a legacy standalone `@openplanr/pipeline` checkout
 
 In the consolidated workspace, Doctor checks `packages/cli`,
 `packages/pipeline`, canonical `skills/`, root marketplace metadata, and
@@ -69,7 +69,7 @@ readable for historical release work.
       "id": "versions.runtime-package",
       "status": "ok",
       "severity": "info",
-      "message": "planr-pipeline is a prompt-free runtime package"
+      "message": "@openplanr/pipeline is a prompt-free runtime package"
     }
   ]
 }

@@ -1,13 +1,13 @@
 import {
   assertOperateExperienceTransportView,
   selectOperateExperienceAuditDisplaySurface,
-} from 'planr-pipeline/dashboard/operate-experience-reader';
-import { sha256Jcs } from 'planr-pipeline/protocol';
+} from '@openplanr/pipeline/dashboard/operate-experience-reader';
+import { sha256Jcs } from '@openplanr/pipeline/protocol';
 import {
   assertOperateExperienceAuditDisplaySurfaceV1,
   type OperateAuditDisplayBindingV1,
   type OperateExperienceAuditDisplaySurfaceV1,
-} from 'planr-pipeline/schemas/v1.2.0/operate-experience-audit-display-surface.mjs';
+} from '@openplanr/pipeline/schemas/v1.2.0/operate-experience-audit-display-surface.mjs';
 import { describe, expect, it } from 'vitest';
 import {
   createOperateEvidenceDisplayValidator,

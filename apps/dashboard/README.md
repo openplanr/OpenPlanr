@@ -27,7 +27,7 @@ route by its hash (`/#/board`) and switch presentation with `?theme=dark`,
 | `npm run build --workspace apps/dashboard` | Production build into `dist/`, with `dashboard-manifest.json` |
 | `npm run typecheck --workspace apps/dashboard` | TypeScript over `src/` and `vite.config.ts` |
 | `npm test --workspace apps/dashboard` | Architecture tests: import boundaries, responsive shell, list scalability |
-| `npm run test:browser --workspace openplanr` | Chromium visual regression against the fixture, with `planr-pipeline` installed from a packed tarball |
+| `npm run test:browser --workspace openplanr` | Chromium visual regression against the fixture, with `@openplanr/pipeline` installed from a packed tarball |
 | `npm run lint` | The root Biome gate, which covers `src/` and `tests/` |
 
 The browser suite needs Playwright's Chromium (`./node_modules/.bin/playwright install

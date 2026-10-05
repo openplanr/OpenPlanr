@@ -79,7 +79,7 @@ export function comparePackageExports({ repoRoot, packageJson }) {
 /**
  * Package-owned evaluation metadata against what the packed `files` inventory
  * carries. Host prompts are distributed by the root host-package generator and
- * intentionally are not members of the planr-pipeline npm archive.
+ * intentionally are not members of the @openplanr/pipeline npm archive.
  */
 export function comparePackedMembership({ repoRoot, packageJson, installedRoot = null }) {
   const catalog = readProfessionalSkillsCatalog({ projectRoot: repoRoot, view: 'legacy' });

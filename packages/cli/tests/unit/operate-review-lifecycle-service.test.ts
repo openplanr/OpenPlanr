@@ -18,7 +18,7 @@ const { readCommittedReviewReceipt, submitBoundOperatingReview, submitOperatingR
     })),
   }));
 
-vi.mock('planr-pipeline/operate/runtime-v2', () => ({
+vi.mock('@openplanr/pipeline/operate/runtime-v2', () => ({
   readCommittedOperatingReviewReceiptV2: readCommittedReviewReceipt,
   readOperatingReviewV2: vi.fn(),
   submitBoundOperatingReviewV2: submitBoundOperatingReview,

@@ -1,9 +1,9 @@
-import { sha256Jcs } from 'planr-pipeline/protocol';
+import { sha256Jcs } from '@openplanr/pipeline/protocol';
 import {
   assertOperateExperienceAuditDisplaySurfaceV1,
   type OperateAuditDisplayBindingV1,
-} from 'planr-pipeline/schemas/v1.2.0/operate-experience-audit-display-surface.mjs';
-import type { OperateExperienceDisplaySurfaceV1 } from 'planr-pipeline/schemas/v1.2.0/operate-experience-display-surface.mjs';
+} from '@openplanr/pipeline/schemas/v1.2.0/operate-experience-audit-display-surface.mjs';
+import type { OperateExperienceDisplaySurfaceV1 } from '@openplanr/pipeline/schemas/v1.2.0/operate-experience-display-surface.mjs';
 import { afterEach, describe, expect, it } from 'vitest';
 import {
   createOperateTodayDisplayValidator,
@@ -22,7 +22,7 @@ import {
 import { createTestProject, type TestProject } from '../helpers/test-project.js';
 
 const projects: TestProject[] = [];
-const OPERATE_READER_MODULE = 'planr-pipeline/dashboard/operate-experience-reader';
+const OPERATE_READER_MODULE = '@openplanr/pipeline/dashboard/operate-experience-reader';
 
 async function ownerReader() {
   return (await import(OPERATE_READER_MODULE)) as {

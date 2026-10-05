@@ -238,7 +238,7 @@ describe('packed openplanr upgrade status', () => {
       ok: false,
       code: 'E_OPERATE_PIPELINE_MISSING',
       problem:
-        'Operate requires the optional planr-pipeline package. Reinstall OpenPlanr with optional dependencies (do not use --omit=optional).',
+        'Operate requires the optional @openplanr/pipeline package. Reinstall OpenPlanr with optional dependencies (do not use --omit=optional).',
     });
     expect(`${domains.stdout}${domains.stderr}`).not.toContain('ERR_MODULE_NOT_FOUND');
     expect(`${domains.stdout}${domains.stderr}`).not.toContain(packageRoot);

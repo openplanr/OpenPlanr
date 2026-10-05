@@ -37,7 +37,7 @@ test('a clean public consumer completes deterministic synthetic business and sof
     sourceRoot: root,
   });
   const consumer = join(temporaryRoot, 'consumer');
-  const installedPackage = join(consumer, 'node_modules', 'planr-pipeline');
+  const installedPackage = join(consumer, 'node_modules', '@openplanr/pipeline');
   mkdirSync(installedPackage, { recursive: true });
   const extracted = spawnSync(
     'tar',

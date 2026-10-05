@@ -1,6 +1,6 @@
 import { cp, readFile, rm } from 'node:fs/promises';
 import { join } from 'node:path';
-import { sha256Jcs, validateProtocolArtifact } from 'planr-pipeline/protocol';
+import { sha256Jcs, validateProtocolArtifact } from '@openplanr/pipeline/protocol';
 import { afterEach, describe, expect, it } from 'vitest';
 import { createOperateClient } from '../../src/services/operate/client.js';
 import {

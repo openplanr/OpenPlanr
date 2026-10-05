@@ -1,8 +1,8 @@
 import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { deriveOperateSharedTruthSummaryV1 } from 'planr-pipeline/operate/review-workspace-projection-v2';
-import { canonicalizeJson } from 'planr-pipeline/protocol';
+import { deriveOperateSharedTruthSummaryV1 } from '@openplanr/pipeline/operate/review-workspace-projection-v2';
+import { canonicalizeJson } from '@openplanr/pipeline/protocol';
 import { describe, expect, it, vi } from 'vitest';
 import {
   connectDashboardSse,

@@ -1,7 +1,7 @@
 # `/planr:dashboard`
 
 > This document describes the current unified OpenPlanr React dashboard and its
-> loopback-only planr-pipeline server contract.
+> loopback-only @openplanr/pipeline server contract.
 
 > Launch the local openplanr dashboard — a live, read-only visual projection of the
 > `.planr/` graph (Overview · Graph · Board · List · Sprints · Activity) and

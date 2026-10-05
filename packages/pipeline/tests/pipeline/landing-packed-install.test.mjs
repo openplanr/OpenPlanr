@@ -212,7 +212,7 @@ test('fresh packed landing install is regular-file, root-API exact, ambient-isol
   assert.equal(packedOwnerResult.answeredChoicePrompts, 1);
 
   const exportConsumer = join(temporary, 'export-consumer');
-  const installedPackage = join(exportConsumer, 'node_modules', 'planr-pipeline');
+  const installedPackage = join(exportConsumer, 'node_modules', '@openplanr/pipeline');
   mkdirSync(dirname(installedPackage), { recursive: true });
   cpSync(packageRoot, installedPackage, { dereference: true, recursive: true });
   writeFileSync(
@@ -229,7 +229,7 @@ test('fresh packed landing install is regular-file, root-API exact, ambient-isol
       '--input-type=module',
       '-e',
       [
-        "try { await import('planr-pipeline/lib/pipeline/landing.mjs'); process.exit(2); }",
+        "try { await import('@openplanr/pipeline/lib/pipeline/landing.mjs'); process.exit(2); }",
         "catch (error) { if (error.code !== 'ERR_PACKAGE_PATH_NOT_EXPORTED') process.exit(3); }",
       ].join('\n'),
     ],
@@ -243,7 +243,7 @@ test('fresh packed landing install is regular-file, root-API exact, ambient-isol
     writeFileSync(
       rootImportPath,
       [
-        "import { createLandingTrustedRuntimeHost } from 'planr-pipeline';",
+        "import { createLandingTrustedRuntimeHost } from '@openplanr/pipeline';",
         'void createLandingTrustedRuntimeHost;',
         '',
       ].join('\n'),
@@ -271,12 +271,12 @@ test('fresh packed landing install is regular-file, root-API exact, ambient-isol
     );
   }
 
-  const poisonRoot = join(temporary, 'consumer', 'node_modules', 'planr-pipeline');
+  const poisonRoot = join(temporary, 'consumer', 'node_modules', '@openplanr/pipeline');
   mkdirSync(poisonRoot, { recursive: true });
   writeFileSync(
     join(poisonRoot, 'package.json'),
     JSON.stringify({
-      name: 'planr-pipeline',
+      name: '@openplanr/pipeline',
       version: '99.0.0',
       type: 'module',
       exports: './index.mjs',

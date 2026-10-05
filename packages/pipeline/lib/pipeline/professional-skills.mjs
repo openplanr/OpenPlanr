@@ -33,7 +33,7 @@ const FORBIDDEN_PORTABLE_PATTERNS = Object.freeze([
   Object.freeze({ label: 'sibling traversal', pattern: /(?:^|[\s`'"])(?:\.\.\/)+/mu }),
   Object.freeze({
     label: 'nested pipeline executable',
-    pattern: /^\s*(?:[$>]\s*)?planr-pipeline(?:\s|$)/mu,
+    pattern: /^\s*(?:[$>]\s*)?(?:open)?planr-pipeline(?:\s|$)/mu,
   }),
   Object.freeze({
     label: 'nested coding runtime',

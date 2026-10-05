@@ -402,7 +402,7 @@ function pipelineFixture() {
   writeFileSync(
     join(pipeline, 'package.json'),
     JSON.stringify({
-      name: 'planr-pipeline',
+      name: '@openplanr/pipeline',
       version: '0.49.1',
       type: 'module',
       license: 'MIT',
@@ -460,7 +460,7 @@ function preparePipeline(f, environment = {}) {
       timeout: 30000,
       env: {
         ...process.env,
-        RELEASE_PACKAGE: 'planr-pipeline',
+        RELEASE_PACKAGE: '@openplanr/pipeline',
         RELEASE_VERSION: '0.49.1',
         npm_config_audit: 'false',
         npm_config_fund: 'false',

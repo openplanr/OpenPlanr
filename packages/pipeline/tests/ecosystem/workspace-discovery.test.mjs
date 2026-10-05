@@ -30,9 +30,9 @@ function addRepo(workspace, name, signature, remote) {
   return repo;
 }
 
-function addPipeline(workspace, name = 'planr-pipeline', remote) {
+function addPipeline(workspace, name = '@openplanr/pipeline', remote) {
   const pipeline = addRepo(workspace, name, 'package.json', remote);
-  write(join(pipeline, 'package.json'), '{"name":"planr-pipeline"}\n');
+  write(join(pipeline, 'package.json'), '{"name":"@openplanr/pipeline"}\n');
   return pipeline;
 }
 
@@ -52,7 +52,7 @@ test('discovers the portable pipeline package without a standalone plugin manife
 
 test('does not identify another package as the pipeline by checkout name alone', () => {
   const workspace = makeWorkspace();
-  const pipeline = addRepo(workspace, 'planr-pipeline', 'package.json');
+  const pipeline = addRepo(workspace, '@openplanr/pipeline', 'package.json');
   write(join(pipeline, 'package.json'), '{"name":"unrelated-package"}\n');
   const result = discoverEcosystemRepositories({
     pipelineRoot: pipeline,
@@ -148,7 +148,7 @@ test('discovers canonical domains inside the consolidated OpenPlanr workspace', 
   write(join(workspace, '.claude-plugin', 'marketplace.json'), '{}\n');
   write(join(workspace, 'skills', 'planr-plan', 'SKILL.md'));
   write(join(workspace, 'packages', 'cli', 'package.json'), '{}\n');
-  write(join(pipeline, 'package.json'), '{"name":"planr-pipeline"}\n');
+  write(join(pipeline, 'package.json'), '{"name":"@openplanr/pipeline"}\n');
 
   const root = resolveWorkspaceRoot({ pipelineRoot: pipeline, env: {} });
   const result = discoverEcosystemRepositories({
@@ -173,7 +173,7 @@ test('recognizes a consolidated workspace before generated assets exist', () => 
     join(workspace, 'package.json'),
     `${JSON.stringify({ name: 'openplanr-workspace', private: true, workspaces: ['packages/cli', 'packages/pipeline'] })}\n`,
   );
-  write(join(pipeline, 'package.json'), '{"name":"planr-pipeline"}\n');
+  write(join(pipeline, 'package.json'), '{"name":"@openplanr/pipeline"}\n');
 
   assert.deepEqual(resolveWorkspaceRoot({ pipelineRoot: pipeline, env: {} }), {
     path: workspace,
@@ -195,7 +195,7 @@ test('an ancestor workspace boundary retains consolidated domains and discovers 
   write(join(workspace, '.claude-plugin', 'marketplace.json'), '{}\n');
   write(join(workspace, 'skills', 'planr-plan', 'SKILL.md'));
   write(join(workspace, 'packages', 'cli', 'package.json'), '{}\n');
-  write(join(pipeline, 'package.json'), '{"name":"planr-pipeline"}\n');
+  write(join(pipeline, 'package.json'), '{"name":"@openplanr/pipeline"}\n');
 
   const result = discoverEcosystemRepositories({ pipelineRoot: pipeline, workspaceRoot: boundary });
 
@@ -217,7 +217,7 @@ test('an unrelated workspace boundary does not inherit consolidated domains', ()
     join(workspace, 'package.json'),
     `${JSON.stringify({ name: 'openplanr-workspace', private: true, workspaces: ['packages/cli', 'packages/pipeline'] })}\n`,
   );
-  write(join(pipeline, 'package.json'), '{"name":"planr-pipeline"}\n');
+  write(join(pipeline, 'package.json'), '{"name":"@openplanr/pipeline"}\n');
   write(join(unrelated, '.keep'), '');
 
   const result = discoverEcosystemRepositories({

@@ -87,7 +87,7 @@ export async function appendOpenPlanrProvenance(
     throw Object.assign(new Error(message), { code: 'E_PROVENANCE_CONFLICT' });
   };
   const validateProtocolArtifact = input.correlation
-    ? (await import('planr-pipeline/protocol')).validateProtocolArtifact
+    ? (await import('@openplanr/pipeline/protocol')).validateProtocolArtifact
     : null;
   const validateRecord = (candidate: unknown): OpenPlanrProvenanceEvent => {
     if (validateProtocolArtifact) {

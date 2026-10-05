@@ -1,4 +1,4 @@
-import { sha256Jcs } from 'planr-pipeline/protocol';
+import { sha256Jcs } from '@openplanr/pipeline/protocol';
 import { describe, expect, it, vi } from 'vitest';
 import { createActionActions } from '../../../../apps/dashboard/src/features/operate/actions/action-actions.js';
 import { createDashboardQueryIdentity } from '../../../../apps/dashboard/src/lib/binding/query-identity.js';

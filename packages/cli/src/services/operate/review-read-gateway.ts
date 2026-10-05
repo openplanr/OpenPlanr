@@ -1,14 +1,14 @@
-import { selectOperateReviewDisplayWorkspace } from 'planr-pipeline/dashboard/operate-experience-reader';
+import { selectOperateReviewDisplayWorkspace } from '@openplanr/pipeline/dashboard/operate-experience-reader';
 import {
   assertOperateReviewDisplayWorkspaceV1,
   type OperateReviewDisplayWorkspaceV1,
-} from 'planr-pipeline/dashboard/operate-review-display-workspace-contract';
+} from '@openplanr/pipeline/dashboard/operate-review-display-workspace-contract';
 import type {
   OperateExperienceViewV1,
   OperatingReviewReadV2,
   OperatingReviewReceiptV2,
-} from 'planr-pipeline/protocol';
-import { sha256Jcs } from 'planr-pipeline/protocol';
+} from '@openplanr/pipeline/protocol';
+import { sha256Jcs } from '@openplanr/pipeline/protocol';
 import type { OperateActorV2, OperateApiEnvelopeV2, OperateClient } from './client.js';
 import type { JsonRecord } from './composition.js';
 

@@ -8,7 +8,7 @@ import {
   OPERATE_OPERATING_PROJECTION_IDENTITIES_V2,
   OPERATE_OPERATING_PROVIDER_REGISTRATION_CONTRACT_KINDS_V2,
   validateProtocolArtifact,
-} from 'planr-pipeline/protocol';
+} from '@openplanr/pipeline/protocol';
 
 const fixture = (name) =>
   JSON.parse(

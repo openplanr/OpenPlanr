@@ -11,9 +11,9 @@ import {
   assertOperatingReviewBoundSubmissionV1,
   buildOperatingReviewBoundSubmissionV1,
   type OperateReviewBoundSubmissionV1,
-} from 'planr-pipeline/operate/runtime-v2';
-import type { OperatingReviewReceiptV2 } from 'planr-pipeline/protocol';
-import { assertOperateExperienceArtifactV2, sha256Jcs } from 'planr-pipeline/protocol';
+} from '@openplanr/pipeline/operate/runtime-v2';
+import type { OperatingReviewReceiptV2 } from '@openplanr/pipeline/protocol';
+import { assertOperateExperienceArtifactV2, sha256Jcs } from '@openplanr/pipeline/protocol';
 import type { OperateActorV2, OperateApiEnvelopeV2, OperateClient } from './client.js';
 import type { JsonRecord } from './composition.js';
 import { isOperatePublicId } from './identity-contract.js';

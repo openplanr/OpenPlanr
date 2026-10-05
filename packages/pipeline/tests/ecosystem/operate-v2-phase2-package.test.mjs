@@ -119,7 +119,7 @@ test('Phase 2 packed consumer uses only declared v2 exports for Assignment, Revi
     { cwd: installRoot },
   );
 
-  const installedPackage = join(installRoot, 'node_modules', 'planr-pipeline');
+  const installedPackage = join(installRoot, 'node_modules', '@openplanr/pipeline');
   assert.equal(existsSync(join(installedPackage, 'lib/operate/scheduler-v2.mjs')), true);
   assert.equal(existsSync(join(installedPackage, 'lib/operate/extensions-v2.mjs')), true);
   assert.equal(checkOperateRuntimePurity(installedPackage).ok, true);
@@ -130,25 +130,25 @@ test('Phase 2 packed consumer uses only declared v2 exports for Assignment, Revi
     import {
       OPERATE_RUNTIME_CONTRACT_KINDS,
       loadOperateRuntimeContract,
-    } from 'planr-pipeline/protocol';
+    } from '@openplanr/pipeline/protocol';
     import {
       acceptOperatingAssignmentSubmissionV2,
       createEmptyOperatingRuntimeStateV2,
       deriveOperateAllowedActionsV2,
       readOperatingReviewV2,
-    } from 'planr-pipeline/operate/runtime-v2';
-    import { deriveOperatingAssignmentReleaseIntentsV2 } from 'planr-pipeline/operate/scheduler-v2';
+    } from '@openplanr/pipeline/operate/runtime-v2';
+    import { deriveOperatingAssignmentReleaseIntentsV2 } from '@openplanr/pipeline/operate/scheduler-v2';
     import {
       OPEN_REFERENCE_OPERATE_EXTENSIONS_V2,
       selectAgentRuntimeManifestV2,
-    } from 'planr-pipeline/operate/extensions-v2';
+    } from '@openplanr/pipeline/operate/extensions-v2';
 
     const TIME = '2026-08-08T12:00:00.000Z';
     const require = createRequire(import.meta.url);
     assert.equal(new Set(OPERATE_RUNTIME_CONTRACT_KINDS).size, OPERATE_RUNTIME_CONTRACT_KINDS.length);
     for (const kind of OPERATE_RUNTIME_CONTRACT_KINDS) {
       const contract = loadOperateRuntimeContract(kind, { protocolVersion: '2.0.0' });
-      require.resolve('planr-pipeline/schemas/v2.0.0/' + contract.path.split('/').at(-1));
+      require.resolve('@openplanr/pipeline/schemas/v2.0.0/' + contract.path.split('/').at(-1));
     }
 
     const assignment = ({ assignmentId, state, dependsOn, dependencyPolicy, roleId }) => ({

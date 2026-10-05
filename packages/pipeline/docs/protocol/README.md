@@ -6,8 +6,8 @@
 > runtime-lock, role-registry, provenance, and artifact-review contracts.
 > Operate Runtime 2.0 adds the durable Assignment/tool/replay foundation.
 > Ownership: `packages/protocol/schemas/` is canonical in the OpenPlanr workspace;
-> `planr-pipeline/schemas/` is its self-contained public-package projection.
-> Package releases: `openplanr`, `planr-pipeline`, and `@openplanr/protocol`
+> `@openplanr/pipeline/schemas/` is its self-contained public-package projection.
+> Package releases: `openplanr`, `@openplanr/pipeline`, and `@openplanr/protocol`
 > have independent package versions declared in their package manifests.
 > Package updates do not change artifact or schema versions automatically.
 
@@ -33,7 +33,7 @@ OpenPlanr ships across multiple workspace domains and three first-class AI codin
 | Component | Role | Canonical source |
 |---|---|---|
 | `openplanr` CLI | Dedicated planning, artifact lifecycle, setup, routing, and Doctor | `packages/cli` |
-| `planr-pipeline` | Complete PO, Design, DEV, and QA public compatibility package | `packages/pipeline` |
+| `@openplanr/pipeline` | Complete PO, Design, DEV, and QA public compatibility package | `packages/pipeline` |
 | `@openplanr/protocol` | Schemas, registries, and portable contracts | `packages/protocol` |
 | runtime skills | Reusable planning and delivery workflows | `skills/` and `agents/` |
 | marketplace | Generated Claude metadata and resolved compatibility manifest | `.claude-plugin/` and `ecosystem.json` |
@@ -138,7 +138,7 @@ See [`../compatibility-matrix.md`](../compatibility-matrix.md) for the per-capab
 
 ## Conformance
 
-The `planr-pipeline/conformance/` directory ships runtime-agnostic fixtures and
+The `@openplanr/pipeline/conformance/` directory ships runtime-agnostic fixtures and
 verifiers. Delivery adapters use `runner.mjs`; Operate Runtime 2.0 uses
 `verify-operating-runtime-v2.mjs` through `npm run conformance:operate-v2`.
 The v2 runner consumes only declared package exports and proves strict readers,

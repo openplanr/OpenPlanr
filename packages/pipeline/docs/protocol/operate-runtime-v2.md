@@ -3,7 +3,7 @@
 > Package: local `planr-pipeline@0.44.0` development baseline
 > Protocol: `2.0.0`
 > Status: development baseline
-> Contract owner: `planr-pipeline`
+> Contract owner: `@openplanr/pipeline`
 
 This is the technical protocol reference, not the single source for product
 vision or dashboard completion. Follow the authority precedence in the Operate
@@ -27,41 +27,41 @@ Consumers use declared package exports only:
 
 | Export | Contract |
 |---|---|
-| `planr-pipeline/protocol` | Protocol catalog, strict v2 validators, binding checks, canonical hashing, and shared types |
-| `planr-pipeline/dashboard/operate-experience-reader` | Owner-side, access-safe experience and verified display selection; no browser authority |
-| `planr-pipeline/dashboard/operate-experience-audit-display-contract` | Browser-safe verifier for the owner-issued Evidence, Outcomes, History, Search, and Export display envelope |
-| `planr-pipeline/operate/runtime-v2` | Assignment transitions, guards/actions, event-chain verification, deterministic replay, failure envelopes, and byte-proven challenged-ledger materialization |
-| `planr-pipeline/operate/intelligence-router-v2` | Pure deterministic Delta-to-plan routing and exact plan-to-Assignment graph validation; never role dispatch or authority |
-| `planr-pipeline/operate/persistent-work-v2` | Runtime-only deterministic payload builder for the legacy work-change-set compatibility contract; the current board path uses a Decision Ledger and bounded Action materialization |
-| `planr-pipeline/operate/persistent-work-projections-v2` | Read-only scope ledger and Cycle work-view rebuilders |
-| `planr-pipeline/operate/execution-verification-v2` | Exact execution-result, verification-plan, observation, Outcome, and Learning correlation; execution is never inferred to be success |
-| `planr-pipeline/operate/authorization-v2` | Pure, deterministic, fail-closed authority evaluation shared by allowed-action derivation, refusals, and review/approve/execute/rollback guards; no target access or effects |
-| `planr-pipeline/operate/policy-v2` | Immutable versioned ActionPolicy construction and deterministic core → project → narrowing domain evaluation; no provider dispatch or effects |
-| `planr-pipeline/operate/approvals-v2` | Exact Action-scoped approval requirement/record, quorum, replay, consumption, supersession-history, and Review functions; no execution authority |
-| `planr-pipeline/operate/governed-extensions-v2` | Exact governed provider/Executor discovery plus closed request-fingerprint, Executor-envelope, and trusted host-binding contracts |
-| `planr-pipeline/operate/reference-governed-executors-v2` | Contained disposable-local and synthetic reference targets/hosts with no ambient filesystem, network, process, credential, or provider reach |
-| `planr-pipeline/operate/governed-execution-v2` | Stateful at-most-once Action execution journal: one execution Assignment, one-use grant, pre-effect dispatch intent, contained effect, exact accepted result, and pure terminal replay |
-| `planr-pipeline/operate/governed-recovery-v2` | Deterministic crash reconciliation and separately governed exact-baseline rollback with immutable plan/result history and no blind redispatch |
-| `planr-pipeline/operate/scheduler-v2` | Compiler-bound dependency graph validation and deterministic release-intent derivation |
-| `planr-pipeline/operate/extensions-v2` | Authority-free public domain and agent-runtime registration declarations |
-| `planr-pipeline/operate/operating-domains-v2` | Pure business/software projection facade over one immutable core state and exact snapshot sources |
-| `planr-pipeline/operate/experience-projection-v2` | Access-safe Today/Cycle/Inbox/Audit source view, preview, and live-patch projection over validated owner state |
-| `planr-pipeline/operate/planning-bridge-v2` | Governed Action-to-Planning proposal, origin, and delivery-evidence correlation with the PLAN-to-SHIP gate intact |
-| `planr-pipeline/operate/operating-signal-providers-v2` | Closed reference Snapshot, Metric, and Verification candidate validation; never a connected provider or executor |
-| `planr-pipeline/operate/evidence-v2` | Deterministic, capability-checked registration and explicit built-in evidence dispatch |
-| `planr-pipeline/operate/evidence-materialization-v2` | Runtime-only builder for one resolved/rejected evidence transaction; it never exposes a normal-agent write path |
-| `planr-pipeline/operate/evidence-projections-v2` | Read-only, deterministic scope/domain evidence graph rebuilder |
-| `planr-pipeline/operate/executive-board-materialization-v2` | Executive board record construction, closed validation, and deterministic materialization from accepted Artifacts |
-| `planr-pipeline/operate/result-packet-v2` | Role result template construction and the exact schema dependency set a result must satisfy |
-| `planr-pipeline/operate/review-workspace-projection-v2` | Shared-truth summary derivation and review workspace payload construction for the human review gate |
-| `planr-pipeline/operate/trace-matrix-v2` | Closed trace-matrix construction and validation, with typed identities for roles omitted from a Cycle |
-| `planr-pipeline` | The closed pipeline API, including the live-evidence companion validators/reducers and governed-landing contract validators; these portable contracts grant no provider or landing authority |
-| `planr-pipeline/schemas/*` | Versioned schema/data modules, including the compiler-derived runtime-kernel catalog, nine product-experience contracts, and Protocol 1.2 governed-landing companions |
-| `planr-pipeline/registry/*` | Versioned public registry data, including the canonical Operate contract and role registrations |
+| `@openplanr/pipeline/protocol` | Protocol catalog, strict v2 validators, binding checks, canonical hashing, and shared types |
+| `@openplanr/pipeline/dashboard/operate-experience-reader` | Owner-side, access-safe experience and verified display selection; no browser authority |
+| `@openplanr/pipeline/dashboard/operate-experience-audit-display-contract` | Browser-safe verifier for the owner-issued Evidence, Outcomes, History, Search, and Export display envelope |
+| `@openplanr/pipeline/operate/runtime-v2` | Assignment transitions, guards/actions, event-chain verification, deterministic replay, failure envelopes, and byte-proven challenged-ledger materialization |
+| `@openplanr/pipeline/operate/intelligence-router-v2` | Pure deterministic Delta-to-plan routing and exact plan-to-Assignment graph validation; never role dispatch or authority |
+| `@openplanr/pipeline/operate/persistent-work-v2` | Runtime-only deterministic payload builder for the legacy work-change-set compatibility contract; the current board path uses a Decision Ledger and bounded Action materialization |
+| `@openplanr/pipeline/operate/persistent-work-projections-v2` | Read-only scope ledger and Cycle work-view rebuilders |
+| `@openplanr/pipeline/operate/execution-verification-v2` | Exact execution-result, verification-plan, observation, Outcome, and Learning correlation; execution is never inferred to be success |
+| `@openplanr/pipeline/operate/authorization-v2` | Pure, deterministic, fail-closed authority evaluation shared by allowed-action derivation, refusals, and review/approve/execute/rollback guards; no target access or effects |
+| `@openplanr/pipeline/operate/policy-v2` | Immutable versioned ActionPolicy construction and deterministic core → project → narrowing domain evaluation; no provider dispatch or effects |
+| `@openplanr/pipeline/operate/approvals-v2` | Exact Action-scoped approval requirement/record, quorum, replay, consumption, supersession-history, and Review functions; no execution authority |
+| `@openplanr/pipeline/operate/governed-extensions-v2` | Exact governed provider/Executor discovery plus closed request-fingerprint, Executor-envelope, and trusted host-binding contracts |
+| `@openplanr/pipeline/operate/reference-governed-executors-v2` | Contained disposable-local and synthetic reference targets/hosts with no ambient filesystem, network, process, credential, or provider reach |
+| `@openplanr/pipeline/operate/governed-execution-v2` | Stateful at-most-once Action execution journal: one execution Assignment, one-use grant, pre-effect dispatch intent, contained effect, exact accepted result, and pure terminal replay |
+| `@openplanr/pipeline/operate/governed-recovery-v2` | Deterministic crash reconciliation and separately governed exact-baseline rollback with immutable plan/result history and no blind redispatch |
+| `@openplanr/pipeline/operate/scheduler-v2` | Compiler-bound dependency graph validation and deterministic release-intent derivation |
+| `@openplanr/pipeline/operate/extensions-v2` | Authority-free public domain and agent-runtime registration declarations |
+| `@openplanr/pipeline/operate/operating-domains-v2` | Pure business/software projection facade over one immutable core state and exact snapshot sources |
+| `@openplanr/pipeline/operate/experience-projection-v2` | Access-safe Today/Cycle/Inbox/Audit source view, preview, and live-patch projection over validated owner state |
+| `@openplanr/pipeline/operate/planning-bridge-v2` | Governed Action-to-Planning proposal, origin, and delivery-evidence correlation with the PLAN-to-SHIP gate intact |
+| `@openplanr/pipeline/operate/operating-signal-providers-v2` | Closed reference Snapshot, Metric, and Verification candidate validation; never a connected provider or executor |
+| `@openplanr/pipeline/operate/evidence-v2` | Deterministic, capability-checked registration and explicit built-in evidence dispatch |
+| `@openplanr/pipeline/operate/evidence-materialization-v2` | Runtime-only builder for one resolved/rejected evidence transaction; it never exposes a normal-agent write path |
+| `@openplanr/pipeline/operate/evidence-projections-v2` | Read-only, deterministic scope/domain evidence graph rebuilder |
+| `@openplanr/pipeline/operate/executive-board-materialization-v2` | Executive board record construction, closed validation, and deterministic materialization from accepted Artifacts |
+| `@openplanr/pipeline/operate/result-packet-v2` | Role result template construction and the exact schema dependency set a result must satisfy |
+| `@openplanr/pipeline/operate/review-workspace-projection-v2` | Shared-truth summary derivation and review workspace payload construction for the human review gate |
+| `@openplanr/pipeline/operate/trace-matrix-v2` | Closed trace-matrix construction and validation, with typed identities for roles omitted from a Cycle |
+| `@openplanr/pipeline` | The closed pipeline API, including the live-evidence companion validators/reducers and governed-landing contract validators; these portable contracts grant no provider or landing authority |
+| `@openplanr/pipeline/schemas/*` | Versioned schema/data modules, including the compiler-derived runtime-kernel catalog, nine product-experience contracts, and Protocol 1.2 governed-landing companions |
+| `@openplanr/pipeline/registry/*` | Versioned public registry data, including the canonical Operate contract and role registrations |
 
 The Operate implementation exports have adjacent, narrowly scoped type
 declarations. Their declarations import shared contract types from
-`planr-pipeline/protocol`; they do not expose package-internal source paths.
+`@openplanr/pipeline/protocol`; they do not expose package-internal source paths.
 
 ## Contract identities
 
@@ -934,7 +934,7 @@ the operation-replay and authority-history hashes together or omit both.
 
 ### Integrated execution and verification lifecycle
 
-`planr-pipeline/operate/execution-verification-v2` keeps effect truth and
+`@openplanr/pipeline/operate/execution-verification-v2` keeps effect truth and
 hypothesis truth separate. An approved Action follows
 `approved → queued → in_progress → completed | blocked | cancelled`; only a
 blocked Action can re-enter execution, and its Event must retain the prior
@@ -1123,7 +1123,7 @@ effects. Those remain separate governed runtime responsibilities.
 
 ### Contained governed extensions
 
-`planr-pipeline/operate/governed-extensions-v2` owns deterministic public
+`@openplanr/pipeline/operate/governed-extensions-v2` owns deterministic public
 discovery for CapabilityProvider, PolicyProvider, and Executor registrations.
 Each identity is selected only by its exact package contract version,
 Protocol 2.0, a compatible runtime version, an explicit decision time inside
@@ -1201,7 +1201,7 @@ delivery, publication, or customer-contact effects.
 
 ### At-most-once governed execution runtime
 
-`planr-pipeline/operate/governed-execution-v2` is the contained forward-effect
+`@openplanr/pipeline/operate/governed-execution-v2` is the contained forward-effect
 boundary for an approved Action; the separately authorized rollback effect
 boundary belongs to `governed-recovery-v2`. The execution request carries only an Action ID, one
 reviewed payload Artifact identity/hash/closed value, and an explicit
@@ -1357,7 +1357,7 @@ claim.
 
 ### Governed recovery and rollback
 
-`planr-pipeline/operate/governed-recovery-v2` exposes the closed recovery
+`@openplanr/pipeline/operate/governed-recovery-v2` exposes the closed recovery
 classifications `applied`, `not-applied`, `partial`, and `unknown`. Durable
 terminal Event/Artifact history is sufficient to classify completed operations
 without a model, connector, Executor, host, or target. Live reconciliation is
@@ -1661,8 +1661,8 @@ selection, evidence privacy, lifecycle, or graph authority.
 
 Pure consumers use `buildOperateExperienceViewV2`,
 `createOperateExperiencePreviewV1`, and the live-patch functions from
-`planr-pipeline/operate/experience-projection-v2`. The Planning bridge functions
-are exported from `planr-pipeline/operate/planning-bridge-v2`. Both business and
+`@openplanr/pipeline/operate/experience-projection-v2`. The Planning bridge functions
+are exported from `@openplanr/pipeline/operate/planning-bridge-v2`. Both business and
 software domains use the same projection code and explicit public domain
 bindings. No function in this family invokes PLAN, SHIP, a provider, an
 executor, a browser, or an external effect; authorization remains with the

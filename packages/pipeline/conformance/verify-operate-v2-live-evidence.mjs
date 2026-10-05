@@ -8,8 +8,8 @@ import { fileURLToPath } from 'node:url';
 import {
   assertOperatingMeasurementScheduleV2,
   reduceOperatingMeasurementScheduleV2,
-} from 'planr-pipeline';
-import { validateProtocolArtifact } from 'planr-pipeline/protocol';
+} from '@openplanr/pipeline';
+import { validateProtocolArtifact } from '@openplanr/pipeline/protocol';
 
 const VERSION = '2.0.0';
 const root = dirname(fileURLToPath(new URL('../package.json', import.meta.url)));

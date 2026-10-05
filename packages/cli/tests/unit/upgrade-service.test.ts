@@ -988,7 +988,7 @@ process.exit(0);
 
 describe('reconcileInstalledTuple against the npm registry document (BL-026)', () => {
   const pipelinePin = JSON.parse(readFileSync(resolve('package.json'), 'utf8'))
-    .optionalDependencies['planr-pipeline'] as string;
+    .optionalDependencies['@openplanr/pipeline'] as string;
 
   function registryFetch(document: Record<string, unknown>): typeof fetch {
     return (async () =>
@@ -999,7 +999,7 @@ describe('reconcileInstalledTuple against the npm registry document (BL-026)', (
   }
 
   function registryDocument(version: string, pin = pipelinePin): Record<string, unknown> {
-    return { name: 'openplanr', version, optionalDependencies: { 'planr-pipeline': pin } };
+    return { name: 'openplanr', version, optionalDependencies: { '@openplanr/pipeline': pin } };
   }
 
   it('defaults to the registry document of the published CLI, not a repository manifest', () => {

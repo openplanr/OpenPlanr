@@ -211,7 +211,7 @@ function launch(adapter, phase, slug, context, diagnostics = []) {
 try {
   if (!command || ['help', '--help', '-h'].includes(command)) {
     output([
-      'Usage: planr-pipeline <plan|plan-context|design|design-loop|design-review|ship|ship-context|status|dashboard|sync|doctor> [feature] [--runtime <id>] [--task <T-NNN>] [--json] [--no-launch]',
+      'Usage: openplanr-pipeline <plan|plan-context|design|design-loop|design-review|ship|ship-context|status|dashboard|sync|doctor> [feature] [--runtime <id>] [--task <T-NNN>] [--json] [--no-launch]',
       'Advanced release and machine commands remain available; see docs/protocol/commands.md.',
     ].join('\n'));
   } else if (command === '--version' || command === 'version') {
@@ -227,7 +227,7 @@ try {
     output(runSyncAudit({ projectRoot: process.cwd() }));
   } else if (command === 'dashboard') {
     const options = closedArguments({ '--port': 'value', '--no-watch': 'boolean', '--json': 'boolean' }, { maxPositionals: 0 });
-    const { startDashboard } = await import('planr-pipeline/dashboard');
+    const { startDashboard } = await import('@openplanr/pipeline/dashboard');
     const dashboard = startDashboard({ planrDir: join(process.cwd(), PLANNING_FOLDER), watch: !options.has('--no-watch'), planningActorId: 'dashboard-local' });
     const requestedPort = Number(options.get('--port')) || Number(process.env.DASHBOARD_PORT) || 7473;
     const port = await dashboard.listen(requestedPort);
@@ -488,7 +488,7 @@ try {
       }
     }
   } else {
-    throw new PipelineError('E_COMMAND_UNKNOWN', 'Unknown pipeline command. Run planr-pipeline help for legal commands.');
+    throw new PipelineError('E_COMMAND_UNKNOWN', 'Unknown pipeline command. Run openplanr-pipeline help for legal commands.');
   }
 } catch (error) {
   fail(error);

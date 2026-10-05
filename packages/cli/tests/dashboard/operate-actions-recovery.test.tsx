@@ -3,23 +3,23 @@
 import { readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { cleanup, render, screen, waitFor, within } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
-import axe from 'axe-core';
 import {
   buildOperateExperienceTransportView,
   selectOperateActionDisplayWorkspace,
   selectOperateExperienceDisplaySurface,
   selectOperateRecoveryDisplay,
-} from 'planr-pipeline/dashboard/operate-experience-reader';
-import { sha256Jcs } from 'planr-pipeline/protocol';
-import type { OperateActionDisplayWorkspaceV1 } from 'planr-pipeline/schemas/v1.2.0/operate-action-display-workspace.mjs';
+} from '@openplanr/pipeline/dashboard/operate-experience-reader';
+import { sha256Jcs } from '@openplanr/pipeline/protocol';
+import type { OperateActionDisplayWorkspaceV1 } from '@openplanr/pipeline/schemas/v1.2.0/operate-action-display-workspace.mjs';
 import {
   assertOperateExperienceDisplaySurfaceV1,
   assertOperateExperiencePreviewV1,
   type OperateExperienceDisplaySurfaceV1,
-} from 'planr-pipeline/schemas/v1.2.0/operate-experience-display-surface.mjs';
-import type { OperateRecoveryDisplaySurfaceV1 } from 'planr-pipeline/schemas/v1.2.0/operate-recovery-display-surface.mjs';
+} from '@openplanr/pipeline/schemas/v1.2.0/operate-experience-display-surface.mjs';
+import type { OperateRecoveryDisplaySurfaceV1 } from '@openplanr/pipeline/schemas/v1.2.0/operate-recovery-display-surface.mjs';
+import { cleanup, render, screen, waitFor, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import axe from 'axe-core';
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import { DashboardProviders } from '../../../../apps/dashboard/src/app/providers.js';
 import { ActionDetailPage } from '../../../../apps/dashboard/src/features/operate/actions/ActionDetailPage.js';

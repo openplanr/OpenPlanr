@@ -5,7 +5,7 @@ design-loop engine. It depends on `@openplanr/artifact` and
 `@openplanr/protocol`; shared primitives are re-exported from artifact to keep
 the dependency graph acyclic.
 
-Public `planr-pipeline` compatibility files are deterministic projections, not
+Public `@openplanr/pipeline` compatibility files are deterministic projections, not
 an independent implementation.
 
 This workspace is npm-private; its source remains part of the public MIT monorepo.

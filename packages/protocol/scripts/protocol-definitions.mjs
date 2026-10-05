@@ -1782,8 +1782,8 @@ function buildCommands() {
         commandId: `pipeline-${tokens.join('-')}`,
         surface: 'pipeline-machine',
         argv: ['pipeline', ...tokens],
-        ownerPackage: 'planr-pipeline',
-        sourcePath: 'packages/pipeline/bin/planr-pipeline.mjs',
+        ownerPackage: '@openplanr/pipeline',
+        sourcePath: 'packages/pipeline/bin/openplanr-pipeline.mjs',
         machineJson: true,
         lifecycle: DEPRECATED_PLANNING_REVIEW_ACTIONS.has(tokens.join('-'))
           ? 'deprecated'
@@ -1795,7 +1795,7 @@ function buildCommands() {
         commandId: `frozen-${slug}`,
         surface: 'frozen-host-alias',
         argv: [`/planr-pipeline:${slug}`],
-        ownerPackage: 'planr-pipeline',
+        ownerPackage: '@openplanr/pipeline',
         sourcePath: `skills/${skillForFrozen(slug)}/SKILL.md`,
         authorityClass: 'compatibility-router',
         machineJson: false,

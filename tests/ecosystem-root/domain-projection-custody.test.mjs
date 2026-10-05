@@ -34,7 +34,7 @@ function fixture(t) {
     mkdirSync(dirname(join(root, path)), { recursive: true });
     copyFileSync(join(repositoryRoot, path), join(root, path));
   }
-  put('packages/pipeline/package.json', JSON.stringify({ name: 'planr-pipeline' }));
+  put('packages/pipeline/package.json', JSON.stringify({ name: '@openplanr/pipeline' }));
   put('packages/operate/lib/operate/current.mjs', 'export const current = true;\n');
   const target = join(root, 'packages/pipeline');
   const run = (mode = 'write', domain = 'operate') => {

@@ -9,7 +9,7 @@ import {
   findOperateEvidenceResolverRegistrationV2,
   OPEN_REFERENCE_EVIDENCE_REGISTRY_V2,
   prepareOperateEvidenceDispatchV2,
-} from 'planr-pipeline/operate/evidence-v2';
+} from '@openplanr/pipeline/operate/evidence-v2';
 
 const fixture = (name) =>
   JSON.parse(

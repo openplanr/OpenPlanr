@@ -5,7 +5,7 @@ import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { loadEvaluationContract, validateProtocolArtifact } from 'planr-pipeline/protocol';
+import { loadEvaluationContract, validateProtocolArtifact } from '@openplanr/pipeline/protocol';
 import {
   assertEvaluationAggregateReport,
   assertEvaluationBudget,

@@ -24,12 +24,12 @@ function workspace() {
     JSON.stringify({
       name: 'openplanr',
       version: '2.2.1',
-      optionalDependencies: { 'planr-pipeline': '0.45.3' },
+      optionalDependencies: { '@openplanr/pipeline': '0.45.3' },
     }),
   );
   writeFileSync(
     join(dir, 'packages/pipeline/package.json'),
-    JSON.stringify({ name: 'planr-pipeline', version: '0.45.3' }),
+    JSON.stringify({ name: '@openplanr/pipeline', version: '0.45.3' }),
   );
   const lock = {
     name: 'openplanr-workspace',
@@ -40,9 +40,9 @@ function workspace() {
       'packages/cli': {
         name: 'openplanr',
         version: '2.2.0',
-        optionalDependencies: { 'planr-pipeline': '0.45.2' },
+        optionalDependencies: { '@openplanr/pipeline': '0.45.2' },
       },
-      'packages/pipeline': { name: 'planr-pipeline', version: '0.45.2' },
+      'packages/pipeline': { name: '@openplanr/pipeline', version: '0.45.2' },
       // A nested third-party tree the refresh must never touch.
       'packages/cli/node_modules/@esbuild/darwin-arm64': {
         version: '0.28.2',
@@ -72,9 +72,12 @@ test('carries workspace versions and internal ranges into the lockfile, leaving 
     const output = run(dir);
     const after = JSON.parse(readFileSync(join(dir, 'package-lock.json'), 'utf8'));
     assert.match(output, /packages\/cli 2\.2\.0 -> 2\.2\.1/u);
-    assert.match(output, /optionalDependencies\.planr-pipeline 0\.45\.2 -> 0\.45\.3/u);
+    assert.match(output, /optionalDependencies\.@openplanr\/pipeline 0\.45\.2 -> 0\.45\.3/u);
     assert.equal(after.packages['packages/cli'].version, '2.2.1');
-    assert.equal(after.packages['packages/cli'].optionalDependencies['planr-pipeline'], '0.45.3');
+    assert.equal(
+      after.packages['packages/cli'].optionalDependencies['@openplanr/pipeline'],
+      '0.45.3',
+    );
     assert.equal(after.packages['packages/pipeline'].version, '0.45.3');
     assert.deepEqual(Object.keys(after.packages), Object.keys(before.packages));
     assert.deepEqual(

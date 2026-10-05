@@ -1,10 +1,10 @@
 /**
- * CLI bridge to the planr-pipeline artifact API: loads it from the installed package, prepares
+ * CLI bridge to the @openplanr/pipeline artifact API: loads it from the installed package, prepares
  * HTML, design and diagram artifact envelopes, opens browser URLs (capability URLs through a
  * one-shot loopback handoff), and keeps live-room and share secrets in owner-only files.
  * Entry points: `loadArtifactPipeline`, `prepareArtifactEnvelope`, `openArtifactSecretUrl`,
  * `createLiveReviewRoomWithSecretCustody`, `reserveArtifactSecretExport`.
- * Bundling, encryption and review sessions belong to planr-pipeline.
+ * Bundling, encryption and review sessions belong to @openplanr/pipeline.
  */
 
 import { spawn } from 'node:child_process';
@@ -272,7 +272,7 @@ export function loadArtifactPipeline(): Promise<ArtifactPipelineApi> {
     if (missing.length > 0) {
       throw new ArtifactCommandError(
         'E_PIPELINE_VERSION_INCOMPATIBLE',
-        `Installed planr-pipeline ${pipeline.version} lacks: ${missing.join(', ')}.`,
+        `Installed @openplanr/pipeline ${pipeline.version} lacks: ${missing.join(', ')}.`,
         'Run `npm install -g openplanr@latest` to install the compatible pipeline.',
       );
     }
@@ -995,7 +995,7 @@ export async function createLiveReviewRoomWithSecretCustody(options: {
   ) {
     throw new ArtifactCommandError(
       'E_PIPELINE_VERSION_INCOMPATIBLE',
-      'The installed planr-pipeline does not support preflighted signed live-room custody.',
+      'The installed @openplanr/pipeline does not support preflighted signed live-room custody.',
     );
   }
   if (!['1d', '7d', '30d'].includes(options.ttl)) {
@@ -1596,7 +1596,7 @@ export async function verifyLiveRoomRecoveryCustody(
   if (typeof api.importLiveRoomRecoveryBundle !== 'function') {
     throw new ArtifactCommandError(
       'E_PIPELINE_VERSION_INCOMPATIBLE',
-      'The installed planr-pipeline cannot authenticate live-room recovery custody.',
+      'The installed @openplanr/pipeline cannot authenticate live-room recovery custody.',
     );
   }
   const descriptor = room.descriptor as Record<string, unknown> | undefined;

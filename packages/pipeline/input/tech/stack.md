@@ -3,7 +3,7 @@
 > **Owner:** Tech Lead
 > **Purpose:** Single source of truth for technology choices. Read by every agent.
 >
-> **Note for this codebase:** planr-pipeline is a portable Node ESM engine with
+> **Note for this codebase:** @openplanr/pipeline is a portable Node ESM engine with
 > runtime-native adapters and generated browser assets. The artifact engine has
 > pinned runtime dependencies for standards-based HTML parsing, deterministic
 > local bundling, and browser-compatible raw DEFLATE. The base conformance runner
@@ -18,7 +18,7 @@ the stack document contract and changes only when that contract changes.
 
 ```yaml
 schemaVersion: "1.0.0"
-AppName: "planr-pipeline"
+AppName: "@openplanr/pipeline"
 Description: "Portable OpenPlanr PO, Design, Review, DEV, QA, artifact review, and delivery pipeline (Protocol v1.0 artifacts + additive v1.1/v1.2 capabilities)"
 Repository: "https://github.com/openplanr/OpenPlanr"
 ```
@@ -131,7 +131,7 @@ DoNotUse:
   - "Third-party npm packages in conformance/runner.mjs (stdlib only — preserves zero-dep posture)"
   - "TypeScript or compiled build steps for the plugin itself"
   - "Remote artifact dependencies, plaintext short-link storage, or allow-same-origin artifact sandboxes"
-  - "Runtime skills invoking a globally installed planr-pipeline binary; use openplanr artifact"
+  - "Runtime skills invoking a globally installed openplanr-pipeline binary; use openplanr artifact"
 
 MustPreserve:
   - "agents/*.md YAML frontmatter `tools:` field — manifest-enforced security boundary"

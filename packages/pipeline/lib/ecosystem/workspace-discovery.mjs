@@ -10,7 +10,7 @@ export const ECOSYSTEM_REPOSITORIES = {
     aliases: ['planr-pipeline'],
     remoteNames: ['planr-pipeline'],
     signature: 'package.json',
-    packageName: 'planr-pipeline',
+    packageName: '@openplanr/pipeline',
   },
   marketplace: {
     label: 'marketplace',

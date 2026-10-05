@@ -1,8 +1,8 @@
 // @vitest-environment node
 
-import { sha256Jcs } from 'planr-pipeline/protocol';
-import type { OperateCycleDisplayWorkspaceV1 } from 'planr-pipeline/schemas/v1.2.0/operate-cycle-display-workspace.mjs';
-import type { OperateExecutiveBoardDisplaySurfaceV1 } from 'planr-pipeline/schemas/v1.2.0/operate-executive-board-display-surface.mjs';
+import { sha256Jcs } from '@openplanr/pipeline/protocol';
+import type { OperateCycleDisplayWorkspaceV1 } from '@openplanr/pipeline/schemas/v1.2.0/operate-cycle-display-workspace.mjs';
+import type { OperateExecutiveBoardDisplaySurfaceV1 } from '@openplanr/pipeline/schemas/v1.2.0/operate-executive-board-display-surface.mjs';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { CycleDetailPage } from '../../../../apps/dashboard/src/features/operate/cycles/CycleDetailPage.js';

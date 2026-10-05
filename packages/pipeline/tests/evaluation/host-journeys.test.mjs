@@ -93,7 +93,7 @@ test('a real CLI journey answers typed in both human and strict output', () => {
   const cliRoot = createDisposableCliRoot();
   try {
     const driver = createCliDriver({
-      executable: join(root, 'bin/planr-pipeline.mjs'),
+      executable: join(root, 'bin/openplanr-pipeline.mjs'),
       cwd: cliRoot.root,
     });
     const journey = runCliJourney({

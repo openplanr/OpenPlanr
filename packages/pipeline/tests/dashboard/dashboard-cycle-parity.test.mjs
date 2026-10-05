@@ -1108,7 +1108,7 @@ test('packed installed Node 20 Cycle reader matches source bytes and behavior', 
     );
     assert.equal(packed.status, 0, packed.stderr);
     const [{ filename }] = JSON.parse(packed.stdout);
-    const installedRoot = join(temporaryRoot, 'consumer', 'node_modules', 'planr-pipeline');
+    const installedRoot = join(temporaryRoot, 'consumer', 'node_modules', '@openplanr/pipeline');
     mkdirSync(installedRoot, { recursive: true });
     const extracted = spawnSync(
       'tar',
@@ -1144,7 +1144,7 @@ test('packed installed Node 20 Cycle reader matches source bytes and behavior', 
       [
         '--input-type=module',
         '--eval',
-        `Promise.all([import('planr-pipeline/dashboard/operate-experience-reader'), import('planr-pipeline/dashboard/operate-review-display-workspace-contract'), import('planr-pipeline/operate/review-workspace-projection-v2')]).then(([reader, contract, projection]) => { const expectedReader = ${JSON.stringify(EXPECTED_READER_EXPORTS)}; const expectedContract = ${JSON.stringify(EXPECTED_REVIEW_CONTRACT_EXPORTS)}; const expectedProjection = ${JSON.stringify(EXPECTED_REVIEW_PROJECTION_EXPORTS)}; if (JSON.stringify(Object.keys(reader).sort()) !== JSON.stringify(expectedReader)) process.exit(2); if (JSON.stringify(Object.keys(contract).sort()) !== JSON.stringify(expectedContract)) process.exit(3); if (JSON.stringify(Object.keys(projection).sort()) !== JSON.stringify(expectedProjection)) process.exit(4); })`,
+        `Promise.all([import('@openplanr/pipeline/dashboard/operate-experience-reader'), import('@openplanr/pipeline/dashboard/operate-review-display-workspace-contract'), import('@openplanr/pipeline/operate/review-workspace-projection-v2')]).then(([reader, contract, projection]) => { const expectedReader = ${JSON.stringify(EXPECTED_READER_EXPORTS)}; const expectedContract = ${JSON.stringify(EXPECTED_REVIEW_CONTRACT_EXPORTS)}; const expectedProjection = ${JSON.stringify(EXPECTED_REVIEW_PROJECTION_EXPORTS)}; if (JSON.stringify(Object.keys(reader).sort()) !== JSON.stringify(expectedReader)) process.exit(2); if (JSON.stringify(Object.keys(contract).sort()) !== JSON.stringify(expectedContract)) process.exit(3); if (JSON.stringify(Object.keys(projection).sort()) !== JSON.stringify(expectedProjection)) process.exit(4); })`,
       ],
       { cwd: consumerRoot, encoding: 'utf8' },
     );
@@ -1152,11 +1152,11 @@ test('packed installed Node 20 Cycle reader matches source bytes and behavior', 
     writeFileSync(
       join(consumerRoot, 'index.mts'),
       [
-        "import * as reader from 'planr-pipeline/dashboard/operate-experience-reader';",
-        "import * as reviewContract from 'planr-pipeline/dashboard/operate-review-display-workspace-contract';",
-        "import * as reviewProjection from 'planr-pipeline/operate/review-workspace-projection-v2';",
-        "import type { OperateReviewDisplayWorkspaceV1 } from 'planr-pipeline/dashboard/operate-review-display-workspace-contract';",
-        "import type { OperateReviewWorkspacePayloadV1, OperateSharedTruthSummaryV1 } from 'planr-pipeline/operate/review-workspace-projection-v2';",
+        "import * as reader from '@openplanr/pipeline/dashboard/operate-experience-reader';",
+        "import * as reviewContract from '@openplanr/pipeline/dashboard/operate-review-display-workspace-contract';",
+        "import * as reviewProjection from '@openplanr/pipeline/operate/review-workspace-projection-v2';",
+        "import type { OperateReviewDisplayWorkspaceV1 } from '@openplanr/pipeline/dashboard/operate-review-display-workspace-contract';",
+        "import type { OperateReviewWorkspacePayloadV1, OperateSharedTruthSummaryV1 } from '@openplanr/pipeline/operate/review-workspace-projection-v2';",
         `const expected = ${JSON.stringify(EXPECTED_READER_EXPORTS)} as const;`,
         'type Expected = (typeof expected)[number];',
         'type Actual = keyof typeof reader;',

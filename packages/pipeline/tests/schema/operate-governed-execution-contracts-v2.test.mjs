@@ -10,7 +10,7 @@ import {
   OPERATE_GOVERNED_POLICY_OUTCOMES_V2,
   OPERATE_GOVERNED_PROVIDER_REGISTRATION_CONTRACT_KINDS_V2,
   validateProtocolArtifact,
-} from 'planr-pipeline/protocol';
+} from '@openplanr/pipeline/protocol';
 
 const fixture = (name) =>
   JSON.parse(

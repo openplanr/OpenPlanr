@@ -6,12 +6,12 @@ import { mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSy
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { OPEN_REFERENCE_EVIDENCE_REGISTRY_V2 } from 'planr-pipeline/operate/evidence-v2';
-import { OPEN_REFERENCE_OPERATE_EXTENSIONS_V2 } from 'planr-pipeline/operate/extensions-v2';
+import { OPEN_REFERENCE_EVIDENCE_REGISTRY_V2 } from '@openplanr/pipeline/operate/evidence-v2';
+import { OPEN_REFERENCE_OPERATE_EXTENSIONS_V2 } from '@openplanr/pipeline/operate/extensions-v2';
 import {
   projectPublicOperatingDomainV2,
   resolvePublicOperatingDomainV2,
-} from 'planr-pipeline/operate/operating-domains-v2';
+} from '@openplanr/pipeline/operate/operating-domains-v2';
 import {
   createOperatingMetricObservationCandidateV2,
   createOperatingSnapshotCandidateV2,
@@ -19,8 +19,8 @@ import {
   selectOperatingMetricProviderV2,
   selectOperatingSnapshotProviderV2,
   selectOperatingVerificationProviderV2,
-} from 'planr-pipeline/operate/operating-signal-providers-v2';
-import { createOperatingResultTemplateV2 } from 'planr-pipeline/operate/result-packet-v2';
+} from '@openplanr/pipeline/operate/operating-signal-providers-v2';
+import { createOperatingResultTemplateV2 } from '@openplanr/pipeline/operate/result-packet-v2';
 import {
   acceptOperatingAssignmentSubmissionV2,
   createEmptyOperatingRuntimeStateV2,
@@ -39,13 +39,16 @@ import {
   recordOperatingIntelligenceStateV2,
   recordOperatingTriggerScenarioV2,
   reduceOperatingRuntimeEventsV2,
-} from 'planr-pipeline/operate/runtime-v2';
+} from '@openplanr/pipeline/operate/runtime-v2';
 import {
   assertOperatingValidatedDependencyProofV2,
   deriveOperatingAssignmentReleaseIntentsV2,
   validateOperatingIntelligenceAssignmentGraphV2,
-} from 'planr-pipeline/operate/scheduler-v2';
-import { OPERATE_RUNTIME_CONTRACT_KINDS, validateProtocolArtifact } from 'planr-pipeline/protocol';
+} from '@openplanr/pipeline/operate/scheduler-v2';
+import {
+  OPERATE_RUNTIME_CONTRACT_KINDS,
+  validateProtocolArtifact,
+} from '@openplanr/pipeline/protocol';
 
 const VERSION = '2.0.0';
 const root = dirname(fileURLToPath(new URL('../package.json', import.meta.url)));

@@ -10,7 +10,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import {
   assertOperateExperienceSurfaceV1,
   validateOperateExperienceSurfaceV1,
-} from 'planr-pipeline/schemas/v1.2.0/operate-experience-surface.mjs';
+} from '@openplanr/pipeline/schemas/v1.2.0/operate-experience-surface.mjs';
 import { selectOperateExperienceSurface } from '../../lib/dashboard/operate-experience-reader.mjs';
 import { deriveDashboardSchemaGenerationValues } from '../../scripts/generate-dashboard-surface-schema-data.mjs';
 

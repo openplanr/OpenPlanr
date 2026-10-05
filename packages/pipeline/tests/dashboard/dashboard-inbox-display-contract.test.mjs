@@ -406,7 +406,7 @@ function packInstalledConsumer(temporaryRoot) {
   );
   const [{ filename }] = JSON.parse(packed.stdout);
   const consumer = join(temporaryRoot, 'consumer');
-  const installedPackage = join(consumer, 'node_modules', 'planr-pipeline');
+  const installedPackage = join(consumer, 'node_modules', '@openplanr/pipeline');
   mkdirSync(installedPackage, { recursive: true });
   run('tar', [
     '-xzf',
@@ -769,7 +769,7 @@ test('Inbox display and preview verifier have source, packed, public-import, and
       [
         '--input-type=module',
         '--eval',
-        "import('planr-pipeline/schemas/v1.2.0/operate-experience-display-surface.mjs').then((m) => { if (typeof m.assertOperateExperiencePreviewV1 !== 'function') process.exit(2); });",
+        "import('@openplanr/pipeline/schemas/v1.2.0/operate-experience-display-surface.mjs').then((m) => { if (typeof m.assertOperateExperiencePreviewV1 !== 'function') process.exit(2); });",
       ],
       { cwd: consumer },
     );
@@ -780,7 +780,7 @@ test('Inbox display and preview verifier have source, packed, public-import, and
     writeFileSync(
       entry,
       [
-        "import { assertOperateExperienceDisplaySurfaceV1, assertOperateExperiencePreviewV1 } from 'planr-pipeline/schemas/v1.2.0/operate-experience-display-surface.mjs';",
+        "import { assertOperateExperienceDisplaySurfaceV1, assertOperateExperiencePreviewV1 } from '@openplanr/pipeline/schemas/v1.2.0/operate-experience-display-surface.mjs';",
         `const display = ${JSON.stringify(display)};`,
         `const binding = ${JSON.stringify(binding)};`,
         `const preview = ${JSON.stringify(preview)};`,

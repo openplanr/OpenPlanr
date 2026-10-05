@@ -46,7 +46,7 @@ test('packed dogfood executes exact business and software governed-loop vectors'
     sourceRoot: root,
   });
   const consumer = join(temporaryRoot, 'consumer');
-  const installedPackage = join(consumer, 'node_modules', 'planr-pipeline');
+  const installedPackage = join(consumer, 'node_modules', '@openplanr/pipeline');
   mkdirSync(installedPackage, { recursive: true });
   const extracted = spawnSync(
     'tar',
@@ -59,7 +59,7 @@ test('packed dogfood executes exact business and software governed-loop vectors'
   writeFileSync(
     runnerPath,
     [
-      "import { verifyOperateV2GovernedExecution } from './node_modules/planr-pipeline/conformance/verify-operate-v2-governed-execution.mjs';",
+      "import { verifyOperateV2GovernedExecution } from './node_modules/@openplanr/pipeline/conformance/verify-operate-v2-governed-execution.mjs';",
       'process.stdout.write(JSON.stringify(await verifyOperateV2GovernedExecution()));',
     ].join('\n'),
   );

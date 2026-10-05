@@ -32,7 +32,7 @@ test('packed package is an isolated Operate 2.0 contract consumer', { timeout: 1
     );
     const [{ filename }] = JSON.parse(packed.stdout);
     const consumer = join(temporaryRoot, 'consumer');
-    const installedPackage = join(consumer, 'node_modules', 'planr-pipeline');
+    const installedPackage = join(consumer, 'node_modules', '@openplanr/pipeline');
     mkdirSync(installedPackage, { recursive: true });
     run('tar', [
       '-xzf',
@@ -57,28 +57,28 @@ test('packed package is an isolated Operate 2.0 contract consumer', { timeout: 1
         readOperatingRollbackPlanV2,
         validateDashboardBootstrapV1,
         validateProtocolArtifact,
-      } from 'planr-pipeline/protocol';
+      } from '@openplanr/pipeline/protocol';
       import {
         OPEN_REFERENCE_OPERATE_GOVERNED_EXTENSIONS_V2,
         selectOperateExecutorV2,
-      } from 'planr-pipeline/operate/governed-extensions-v2';
+      } from '@openplanr/pipeline/operate/governed-extensions-v2';
       import {
         OPEN_REFERENCE_CONTAINMENT_EXECUTOR_HOST_V2,
         createSyntheticNoNetworkTargetV2,
-      } from 'planr-pipeline/operate/reference-governed-executors-v2';
+      } from '@openplanr/pipeline/operate/reference-governed-executors-v2';
       import {
         OPERATING_GOVERNED_EXECUTION_TERMINAL_STATES_V2,
         createOperatingGovernedExecutionRuntimeV2,
-      } from 'planr-pipeline/operate/governed-execution-v2';
+      } from '@openplanr/pipeline/operate/governed-execution-v2';
       import {
         OPERATING_GOVERNED_RECOVERY_CLASSIFICATIONS_V2,
         createOperatingGovernedRecoveryRuntimeV2,
-      } from 'planr-pipeline/operate/governed-recovery-v2';
+      } from '@openplanr/pipeline/operate/governed-recovery-v2';
 
       const require = createRequire(import.meta.url);
-      const loaderPath = fileURLToPath(import.meta.resolve('planr-pipeline/protocol'));
+      const loaderPath = fileURLToPath(import.meta.resolve('@openplanr/pipeline/protocol'));
       const packageRoot = resolve(dirname(loaderPath), '..', '..');
-      assert.ok(packageRoot.includes('node_modules/planr-pipeline'));
+      assert.ok(packageRoot.includes('node_modules/@openplanr/pipeline'));
       assert.equal(new Set(OPERATE_RUNTIME_CONTRACT_KINDS).size, OPERATE_RUNTIME_CONTRACT_KINDS.length);
       assert.equal(findOperateCoreProhibitionV2('release-public'), 'publication');
       assert.equal(findOperateCoreProhibitionV2(['money', 'transfer']), 'funds-transfer');
@@ -124,7 +124,7 @@ test('packed package is an isolated Operate 2.0 contract consumer', { timeout: 1
         const contract = loadOperateRuntimeContract(kind, { protocolVersion: '2.0.0' });
         assert.equal(contract.protocolVersion, '2.0.0');
         const schemaPath = require.resolve(
-          'planr-pipeline/schemas/v2.0.0/' + contract.path.split('/').at(-1),
+          '@openplanr/pipeline/schemas/v2.0.0/' + contract.path.split('/').at(-1),
         );
         assert.equal(JSON.parse(readFileSync(schemaPath, 'utf8')).$schema,
           'https://json-schema.org/draft/2020-12/schema');
@@ -343,7 +343,7 @@ test('packed package is an isolated Operate 2.0 contract consumer', { timeout: 1
     run(process.execPath, [verificationPath], { cwd: consumer });
 
     assert.ok(
-      readFileSync(join(installedPackage, 'package.json'), 'utf8').includes('planr-pipeline'),
+      readFileSync(join(installedPackage, 'package.json'), 'utf8').includes('@openplanr/pipeline'),
     );
   } finally {
     rmSync(temporaryRoot, { recursive: true, force: true });

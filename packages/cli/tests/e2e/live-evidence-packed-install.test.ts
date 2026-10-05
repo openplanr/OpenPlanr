@@ -239,14 +239,14 @@ beforeAll(async () => {
 
   poisonRoot = mkdtempSync(join(tmpdir(), 'openplanr-poison-pipeline-'));
   poisonMarker = join(poisonRoot, 'imported.marker');
-  const poisonPackage = join(poisonRoot, 'node_modules', 'planr-pipeline');
+  const poisonPackage = join(poisonRoot, 'node_modules', '@openplanr/pipeline');
   mkdirSync(join(poisonPackage, 'lib'), { recursive: true });
   mkdirSync(join(poisonPackage, 'bin'), { recursive: true });
   mkdirSync(join(poisonPackage, 'registry'), { recursive: true });
   writeFileSync(
     join(poisonPackage, 'package.json'),
     JSON.stringify({
-      name: 'planr-pipeline',
+      name: '@openplanr/pipeline',
       type: 'module',
       exports: {
         '.': './lib/index.mjs',
@@ -261,7 +261,7 @@ beforeAll(async () => {
     "throw new Error('poison pipeline imported');\n";
   writeFileSync(join(poisonPackage, 'lib', 'index.mjs'), poisonSource);
   writeFileSync(join(poisonPackage, 'lib', 'protocol.mjs'), poisonSource);
-  writeFileSync(join(poisonPackage, 'bin', 'planr-pipeline.mjs'), poisonSource);
+  writeFileSync(join(poisonPackage, 'bin', 'openplanr-pipeline.mjs'), poisonSource);
   writeFileSync(join(poisonPackage, 'registry', 'adapters.json'), '{"adapters":[]}\n');
   writeFileSync(join(poisonPackage, 'registry', 'roles.json'), '{"roles":[]}\n');
   process.env.OPENPLANR_PIPELINE_ROOT = poisonPackage;

@@ -241,7 +241,7 @@ jobs:
       - name: Restore the generated runtime from the build job
         run: tar -xzmf "$RUNNER_TEMP/build-outputs.tgz"
       - name: Run pipeline suite
-        run: npm run ${{ matrix.script }} --workspace=planr-pipeline
+        run: npm run ${{ matrix.script }} --workspace=@openplanr/pipeline
 
   cli-tests:
     name: Node 24 CLI tests (shard ${{ matrix.shard }}/6)

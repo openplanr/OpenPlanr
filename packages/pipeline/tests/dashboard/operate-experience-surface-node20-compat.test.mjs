@@ -32,7 +32,7 @@ test('complete clean packed surface assertion executes under exact Node 20.0.0',
       sourceRoot: root,
     });
     const consumer = join(temporaryRoot, 'consumer');
-    const installedPackage = join(consumer, 'node_modules', 'planr-pipeline');
+    const installedPackage = join(consumer, 'node_modules', '@openplanr/pipeline');
     mkdirSync(installedPackage, { recursive: true });
     run('tar', ['-xzf', packed.tarballPath, '-C', installedPackage, '--strip-components=1']);
     writeFileSync(join(consumer, 'package.json'), JSON.stringify({ type: 'module' }));
@@ -45,9 +45,9 @@ test('complete clean packed surface assertion executes under exact Node 20.0.0',
           import {
             assertOperateExperienceSurfaceV1,
             validateOperateExperienceSurfaceV1,
-          } from 'planr-pipeline/schemas/v1.2.0/operate-experience-surface.mjs';
+          } from '@openplanr/pipeline/schemas/v1.2.0/operate-experience-surface.mjs';
 
-          const packageRoot = resolve('node_modules/planr-pipeline');
+          const packageRoot = resolve('node_modules/@openplanr/pipeline');
           const view = JSON.parse(readFileSync(resolve(
             packageRoot,
             'conformance/fixtures/operating-runtime-v2/experience-bridge-valid.json',

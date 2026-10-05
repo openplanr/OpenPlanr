@@ -1,4 +1,4 @@
-# planr-pipeline & OpenPlanr — Master Codebase Audit Prompt
+# @openplanr/pipeline & OpenPlanr — Master Codebase Audit Prompt
 # For use in Claude Code / any agentic coding environment
 # Drop this as a slash command or paste directly into Claude Code
 

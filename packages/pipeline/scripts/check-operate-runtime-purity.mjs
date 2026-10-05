@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 /**
- * Purity gate over the planr-pipeline pack: refuses private planning material, machine paths,
+ * Purity gate over the @openplanr/pipeline pack: refuses private planning material, machine paths,
  * symlinks, non-registry dependencies, escaping imports and vendor model names in portable assets.
  * Entry points: `checkOperateRuntimePurity`, `packOperateV2DevelopmentSnapshot`.
  * Run as `node scripts/check-operate-runtime-purity.mjs [--root <dir>] [--pack-clean <out-dir>]`.
@@ -371,7 +371,7 @@ const OPERATE_V2_EXACT_LEGACY_REMOVALS = Object.freeze([
 ]);
 
 export const USER_OWNED_EXCLUDED_PATHS = Object.freeze([
-  'bin/planr-pipeline.mjs',
+  'bin/openplanr-pipeline.mjs',
   'tests/pipeline/engine.test.mjs',
 ]);
 

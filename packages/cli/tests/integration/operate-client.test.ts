@@ -1,12 +1,12 @@
 import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
-import { type OperatingAssignmentClaimV2, sha256Jcs } from 'planr-pipeline/protocol';
-import { assertOperateExecutiveBoardDisplaySurfaceV1 } from 'planr-pipeline/schemas/v1.2.0/operate-executive-board-display-surface.mjs';
+import { type OperatingAssignmentClaimV2, sha256Jcs } from '@openplanr/pipeline/protocol';
+import { assertOperateExecutiveBoardDisplaySurfaceV1 } from '@openplanr/pipeline/schemas/v1.2.0/operate-executive-board-display-surface.mjs';
 import {
   assertOperateExperienceAuditDisplaySurfaceV1,
   type OperateAuditDisplayBindingV1,
   type OperateExperienceAuditDisplaySurfaceV1,
-} from 'planr-pipeline/schemas/v1.2.0/operate-experience-audit-display-surface.mjs';
+} from '@openplanr/pipeline/schemas/v1.2.0/operate-experience-audit-display-surface.mjs';
 import { afterEach, describe, expect, it } from 'vitest';
 import {
   createOperateClient,

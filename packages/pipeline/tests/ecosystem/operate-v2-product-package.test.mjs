@@ -41,6 +41,6 @@ test('product package has complete public assets and no private or workspace cus
   }
   const archive = lstatSync(packed.tarballPath);
   assert.equal(archive.isFile(), true);
-  assert.equal(packed.packageName, 'planr-pipeline');
+  assert.equal(packed.packageName, '@openplanr/pipeline');
   assert.equal(packed.version, packageVersion);
 });

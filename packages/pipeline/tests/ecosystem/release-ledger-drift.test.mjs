@@ -381,7 +381,7 @@ test('the reconciliation reaches no network, credential, git write, or publicati
     'node:fs',
     'node:path',
     'node:url',
-    'planr-pipeline/protocol',
+    '@openplanr/pipeline/protocol',
   ]);
   for (const path of sources) {
     const text = bytes(path).toString('utf8');

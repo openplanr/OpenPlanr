@@ -4,7 +4,7 @@ This is the file-level reference for spec-driven mode: what the `planr-spec`,
 `planr-plan`, and `planr-ship` skills write under `.planr/specs/`, and what the
 `openplanr spec` commands validate. The canonical JSON Schemas live in
 [`packages/protocol/schemas/v1.0.0`](https://github.com/openplanr/OpenPlanr/tree/main/packages/protocol/schemas/v1.0.0);
-the CLI and the `planr-pipeline` package read the same contract with no
+the CLI and the `@openplanr/pipeline` package read the same contract with no
 conversion layer.
 
 When authoring these files by hand, use the templates below verbatim.
@@ -277,7 +277,7 @@ pending → shaping → shaped → decomposing → decomposed → in-pipeline �
 
 ## Schema version compatibility
 
-The CLI, the skills, and the `planr-pipeline` package produce and consume schema
+The CLI, the skills, and the `@openplanr/pipeline` package produce and consume schema
 `1.0.0`. Breaking changes bump `schemaVersion` in lockstep. Keep them aligned:
 
 ```bash
@@ -292,5 +292,5 @@ openplanr upgrade status
 
 - [`openplanr` package README](../../README.md)
 - [CLI reference](../CLI.md)
-- [`planr-pipeline` package](https://github.com/openplanr/OpenPlanr/tree/main/packages/pipeline)
+- [`@openplanr/pipeline` package](https://github.com/openplanr/OpenPlanr/tree/main/packages/pipeline)
 - [Pipeline rules](https://github.com/openplanr/OpenPlanr/blob/main/packages/pipeline/docs/rules.md)

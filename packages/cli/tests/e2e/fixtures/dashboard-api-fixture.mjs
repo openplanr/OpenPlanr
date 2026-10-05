@@ -6,17 +6,17 @@ import {
   selectOperateExperienceAuditDisplaySurface,
   selectOperateExperienceDisplaySurface,
   selectOperateRecoveryDisplay,
-} from 'planr-pipeline/dashboard/operate-experience-reader';
-import { sha256Jcs } from 'planr-pipeline/dashboard/verified-json';
-import { validateProtocolArtifact } from 'planr-pipeline/protocol';
-import { assertOperateActionDisplayWorkspaceV1 } from 'planr-pipeline/schemas/v1.2.0/operate-action-display-workspace.mjs';
-import { assertOperateCycleDisplayWorkspaceV1 } from 'planr-pipeline/schemas/v1.2.0/operate-cycle-display-workspace.mjs';
+} from '@openplanr/pipeline/dashboard/operate-experience-reader';
+import { sha256Jcs } from '@openplanr/pipeline/dashboard/verified-json';
+import { validateProtocolArtifact } from '@openplanr/pipeline/protocol';
+import { assertOperateActionDisplayWorkspaceV1 } from '@openplanr/pipeline/schemas/v1.2.0/operate-action-display-workspace.mjs';
+import { assertOperateCycleDisplayWorkspaceV1 } from '@openplanr/pipeline/schemas/v1.2.0/operate-cycle-display-workspace.mjs';
 import {
   assertOperateExperienceAuditDisplaySurfaceV1,
   validateOperateExperienceAuditDisplaySurfaceV1,
-} from 'planr-pipeline/schemas/v1.2.0/operate-experience-audit-display-surface.mjs';
-import { assertOperateExperienceDisplaySurfaceV1 } from 'planr-pipeline/schemas/v1.2.0/operate-experience-display-surface.mjs';
-import { assertOperateRecoveryDisplaySurfaceV1 } from 'planr-pipeline/schemas/v1.2.0/operate-recovery-display-surface.mjs';
+} from '@openplanr/pipeline/schemas/v1.2.0/operate-experience-audit-display-surface.mjs';
+import { assertOperateExperienceDisplaySurfaceV1 } from '@openplanr/pipeline/schemas/v1.2.0/operate-experience-display-surface.mjs';
+import { assertOperateRecoveryDisplaySurfaceV1 } from '@openplanr/pipeline/schemas/v1.2.0/operate-recovery-display-surface.mjs';
 import {
   createPendingReviewDisplay,
   createTerminalReviewDisplay,

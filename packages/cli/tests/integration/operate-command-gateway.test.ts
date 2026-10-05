@@ -1,31 +1,31 @@
-import { assertOperateReviewDisplayWorkspaceV1 } from 'planr-pipeline/dashboard/operate-review-contract';
-import { issueOperateReviewDisplayWorkspaceV1 } from 'planr-pipeline/dashboard/operate-review-display-workspace-contract';
+import { assertOperateReviewDisplayWorkspaceV1 } from '@openplanr/pipeline/dashboard/operate-review-contract';
+import { issueOperateReviewDisplayWorkspaceV1 } from '@openplanr/pipeline/dashboard/operate-review-display-workspace-contract';
 import {
   createOperatingApprovalRecordV2,
   createOperatingApprovalRequirementV2,
-} from 'planr-pipeline/operate/approvals-v2';
-import { createOperatingGovernedExecutionRuntimeV2 } from 'planr-pipeline/operate/governed-execution-v2';
+} from '@openplanr/pipeline/operate/approvals-v2';
+import { createOperatingGovernedExecutionRuntimeV2 } from '@openplanr/pipeline/operate/governed-execution-v2';
 import {
   buildOperatingRollbackPlanV2,
   recordOperatingRollbackPlanV2,
-} from 'planr-pipeline/operate/governed-recovery-v2';
-import { derivePersistentOperatingActionRevisionHashV2 } from 'planr-pipeline/operate/persistent-work-v2';
+} from '@openplanr/pipeline/operate/governed-recovery-v2';
+import { derivePersistentOperatingActionRevisionHashV2 } from '@openplanr/pipeline/operate/persistent-work-v2';
 import {
   createOperatingActionPolicyV2,
   evaluateOperatingActionPolicyV2,
-} from 'planr-pipeline/operate/policy-v2';
+} from '@openplanr/pipeline/operate/policy-v2';
 import {
   createDisposableLocalProjectTargetV2,
   OPEN_REFERENCE_PROJECT_EXECUTOR_HOST_V2,
-} from 'planr-pipeline/operate/reference-governed-executors-v2';
-import { buildOperateReviewWorkspacePayloadV1 } from 'planr-pipeline/operate/review-workspace-projection-v2';
+} from '@openplanr/pipeline/operate/reference-governed-executors-v2';
+import { buildOperateReviewWorkspacePayloadV1 } from '@openplanr/pipeline/operate/review-workspace-projection-v2';
 import {
   buildOperatingReviewBoundSubmissionV1,
   createEmptyOperatingRuntimeStateV2,
-} from 'planr-pipeline/operate/runtime-v2';
-import { sha256Jcs } from 'planr-pipeline/protocol';
-import { assertOperateCycleDisplayWorkspaceV1 } from 'planr-pipeline/schemas/v1.2.0/operate-cycle-display-workspace.mjs';
-import { assertOperateExperienceDisplaySurfaceV1 } from 'planr-pipeline/schemas/v1.2.0/operate-experience-display-surface.mjs';
+} from '@openplanr/pipeline/operate/runtime-v2';
+import { sha256Jcs } from '@openplanr/pipeline/protocol';
+import { assertOperateCycleDisplayWorkspaceV1 } from '@openplanr/pipeline/schemas/v1.2.0/operate-cycle-display-workspace.mjs';
+import { assertOperateExperienceDisplaySurfaceV1 } from '@openplanr/pipeline/schemas/v1.2.0/operate-experience-display-surface.mjs';
 import { describe, expect, it, vi } from 'vitest';
 import {
   renderOperateExperienceSurfaceHuman,

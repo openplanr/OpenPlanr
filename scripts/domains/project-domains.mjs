@@ -147,21 +147,21 @@ function projectedSpecifier(specifier, targetRelativeFile) {
   const targetDirectory = dirname(targetRelativeFile);
   if (specifier === '@openplanr/protocol') {
     return targetRelativeFile.endsWith('.d.mts')
-      ? 'planr-pipeline/protocol'
+      ? '@openplanr/pipeline/protocol'
       : posixRelative(targetDirectory, 'lib/protocol/loader.mjs');
   }
-  if (specifier === '@openplanr/protocol/package.json') return 'planr-pipeline/package.json';
+  if (specifier === '@openplanr/protocol/package.json') return '@openplanr/pipeline/package.json';
   if (specifier.startsWith('@openplanr/protocol/schemas/')) {
-    return `planr-pipeline/schemas/${specifier.slice('@openplanr/protocol/schemas/'.length)}`;
+    return `@openplanr/pipeline/schemas/${specifier.slice('@openplanr/protocol/schemas/'.length)}`;
   }
   if (specifier.startsWith('@openplanr/protocol/registry/')) {
-    return `planr-pipeline/registry/${specifier.slice('@openplanr/protocol/registry/'.length)}`;
+    return `@openplanr/pipeline/registry/${specifier.slice('@openplanr/protocol/registry/'.length)}`;
   }
   if (specifier.startsWith('@openplanr/protocol/registries/')) {
     const file = specifier.slice('@openplanr/protocol/registries/'.length);
     if (!Object.hasOwn(PROTOCOL_REGISTRY_TARGETS, file))
       throw new Error(`No pipeline projection for protocol registry ${specifier}`);
-    return `planr-pipeline/${PROTOCOL_REGISTRY_TARGETS[file]}`;
+    return `@openplanr/pipeline/${PROTOCOL_REGISTRY_TARGETS[file]}`;
   }
   if (specifier.startsWith('@openplanr/protocol/')) {
     const subpath = specifier.slice('@openplanr/protocol/'.length);
@@ -172,7 +172,7 @@ function projectedSpecifier(specifier, targetRelativeFile) {
   if (specifier === '@openplanr/artifact') {
     return posixRelative(targetDirectory, 'lib/artifact/index.mjs');
   }
-  if (specifier === '@openplanr/artifact/package.json') return 'planr-pipeline/package.json';
+  if (specifier === '@openplanr/artifact/package.json') return '@openplanr/pipeline/package.json';
   if (specifier.startsWith('@openplanr/artifact/')) {
     const subpath = specifier.slice('@openplanr/artifact/'.length);
     return posixRelative(targetDirectory, `lib/artifact/${subpath}`);
@@ -188,7 +188,7 @@ function projectBytes(bytes, targetRelativeFile) {
     (_match, quote, specifier) =>
       `${quote}${projectedSpecifier(specifier, targetRelativeFile)}${quote}`,
   );
-  if (/(['"])@openplanr\//u.test(projected)) {
+  if (/(['"])@openplanr\/(?!pipeline[/'"])/u.test(projected)) {
     throw new Error(`Unprojected private workspace import remains in ${targetRelativeFile}`);
   }
   return Buffer.from(projected);
@@ -333,8 +333,10 @@ function validateTargetRoot(targetRoot) {
   const packagePath = join(targetRoot, 'package.json');
   if (existsSync(packagePath)) {
     const manifest = JSON.parse(readFileSync(packagePath, 'utf8'));
-    if (manifest.name !== 'planr-pipeline') {
-      throw new Error(`Projection target must be planr-pipeline, got ${String(manifest.name)}`);
+    if (manifest.name !== '@openplanr/pipeline') {
+      throw new Error(
+        `Projection target must be @openplanr/pipeline, got ${String(manifest.name)}`,
+      );
     }
   }
 }

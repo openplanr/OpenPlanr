@@ -2,7 +2,7 @@
 import type {
   OperatingAssignmentClaimV2,
   OperatingSubmissionAcceptanceV2,
-} from 'planr-pipeline/protocol';
+} from '@openplanr/pipeline/protocol';
 import type { OperateErrorCodeV2 } from './client-error.js';
 import type { JsonRecord } from './composition.js';
 import type { MeasurementSchedule } from './measurement-schedule-service.js';

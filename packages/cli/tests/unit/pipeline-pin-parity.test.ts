@@ -7,7 +7,7 @@ import { SEMVER_REGEX } from '../../../protocol/src/semver.mjs';
 /**
  * The CLI pins its public pipeline compatibility package exactly in
  * `optionalDependencies`. At runtime
- * `resolvePipelinePackage()` reads the *installed* `node_modules/planr-pipeline`
+ * `resolvePipelinePackage()` reads the *installed* `node_modules/@openplanr/pipeline`
  * manifest and that version becomes the version the Claude plugin is expected to
  * be — compared by strict equality.
  *
@@ -49,12 +49,12 @@ const cliManifest = JSON.parse(readFileSync(resolve(cliRoot, 'package.json'), 'u
   scripts?: Record<string, string>;
 };
 const pipelineManifest = readJson(resolve(pipelineRoot, 'package.json'));
-const declaredPin = cliManifest.optionalDependencies?.['planr-pipeline'];
+const declaredPin = cliManifest.optionalDependencies?.['@openplanr/pipeline'];
 
 const installedPipelineManifest = resolve(
   workspaceRoot,
   'node_modules',
-  'planr-pipeline',
+  '@openplanr/pipeline',
   'package.json',
 );
 
@@ -69,11 +69,11 @@ describe('the CLI pipeline pin tracks the pipeline it is released against', () =
   });
 
   it('projects the exact pairing through the one root lockfile', () => {
-    expect(rootLock.packages['packages/cli']?.optionalDependencies?.['planr-pipeline']).toBe(
+    expect(rootLock.packages['packages/cli']?.optionalDependencies?.['@openplanr/pipeline']).toBe(
       declaredPin,
     );
     expect(rootLock.packages['packages/pipeline']?.version).toBe(declaredPin);
-    expect(rootLock.packages['node_modules/planr-pipeline']).toEqual({
+    expect(rootLock.packages['node_modules/@openplanr/pipeline']).toEqual({
       resolved: 'packages/pipeline',
       link: true,
     });

@@ -35,12 +35,12 @@ test('release notes carry the changelog section and the publication evidence', (
     runUrl: 'https://github.com/openplanr/OpenPlanr/actions/runs/1',
     commit: 'd'.repeat(40),
     fileCount: 1750,
-    bundled: 'planr-pipeline@0.45.3',
+    bundled: '@openplanr/pipeline@0.45.3',
   });
   assert.match(notes, /^## 2\.2\.1\n/u);
   assert.match(
     notes,
-    /https:\/\/www\.npmjs\.com\/package\/openplanr\/v\/2\.2\.1 — integrity `sha512-abc==`; bundles `planr-pipeline@0\.45\.3`/u,
+    /https:\/\/www\.npmjs\.com\/package\/openplanr\/v\/2\.2\.1 — integrity `sha512-abc==`; bundles `@openplanr\/pipeline@0\.45\.3`/u,
   );
   assert.match(
     notes,

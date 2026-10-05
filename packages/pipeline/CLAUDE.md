@@ -1,4 +1,4 @@
-# planr-pipeline — Agile Planning & Implementation Guide
+# @openplanr/pipeline — Agile Planning & Implementation Guide
 
 > Generated from the OpenPlanr instruction source on 2026-08-30
 

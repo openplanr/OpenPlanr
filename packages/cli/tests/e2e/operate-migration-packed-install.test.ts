@@ -201,7 +201,7 @@ describe('packed Operate storage migration', () => {
         'utf8',
       );
       expect(pinnedReader).not.toMatch(/from ["']\.\/(?:store|composition)\.js["']/u);
-      expect(pinnedReader).not.toContain('planr-pipeline/protocol');
+      expect(pinnedReader).not.toContain('@openplanr/pipeline/protocol');
       const compositionModule = await import(
         pathToFileURL(join(installedCli, 'dist', 'services', 'operate', 'composition.js')).href
       );

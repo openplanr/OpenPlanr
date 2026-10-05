@@ -83,7 +83,7 @@ describe('dashboard workspace boundary', () => {
     })) {
       expect(version).not.toMatch(/^(?:file:|link:|workspace:)/u);
     }
-    expect(packageJson.dependencies).not.toHaveProperty('planr-pipeline');
+    expect(packageJson.dependencies).not.toHaveProperty('@openplanr/pipeline');
     expect(packageJson.dependencies).not.toHaveProperty('openplanr');
   });
 
@@ -111,8 +111,8 @@ describe('dashboard workspace boundary', () => {
         importSpecifiers(readFileSync(path, 'utf8'))
           .filter(
             (specifier) =>
-              specifier === 'planr-pipeline' ||
-              specifier.startsWith('planr-pipeline/') ||
+              specifier === '@openplanr/pipeline' ||
+              specifier.startsWith('@openplanr/pipeline/') ||
               specifier === 'openplanr' ||
               specifier.startsWith('openplanr/') ||
               specifier.includes('/packages/cli/') ||

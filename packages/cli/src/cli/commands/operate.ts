@@ -49,7 +49,7 @@ type DashboardStarter = (options: {
   getOperatingPlanningGateway?: () => OperatePlanningGateway;
 }) => DashboardHandle;
 
-const PIPELINE_DASHBOARD_MODULE = 'planr-pipeline/dashboard';
+const PIPELINE_DASHBOARD_MODULE = '@openplanr/pipeline/dashboard';
 const OPERATE_CLIENT_MODULE = '../../services/operate/client.js';
 const OPERATE_GATEWAY_MODULE = '../../services/operate/command-gateway.js';
 const OPERATE_PACKET_MODULE = '../../services/operate/assignment-packet-service.js';
@@ -118,12 +118,12 @@ function operateDependencyUnavailable(error: unknown): Error {
   const message = typeof candidate?.message === 'string' ? candidate.message : '';
   const missingModule =
     candidate?.code === 'ERR_MODULE_NOT_FOUND' || candidate?.code === 'MODULE_NOT_FOUND';
-  if (!missingModule || !message.includes('planr-pipeline')) {
+  if (!missingModule || !message.includes('@openplanr/pipeline')) {
     return error instanceof Error ? error : new Error('The Operate runtime could not be loaded.');
   }
   return Object.assign(
     new Error(
-      'Operate requires the optional planr-pipeline package. Reinstall OpenPlanr with optional dependencies (do not use --omit=optional).',
+      'Operate requires the optional @openplanr/pipeline package. Reinstall OpenPlanr with optional dependencies (do not use --omit=optional).',
     ),
     { code: 'E_OPERATE_PIPELINE_MISSING' },
   );
@@ -191,7 +191,7 @@ async function installedDashboardStarter(): Promise<DashboardStarter> {
   };
   if (typeof installed.startDashboard !== 'function') {
     throw Object.assign(
-      new Error('The installed planr-pipeline package does not expose the Operate dashboard.'),
+      new Error('The installed @openplanr/pipeline package does not expose the Operate dashboard.'),
       { code: 'E_OPERATE_DASHBOARD_UNAVAILABLE' },
     );
   }

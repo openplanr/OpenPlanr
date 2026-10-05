@@ -4,8 +4,8 @@ import { test } from 'node:test';
 import {
   canonicalizeOperateExtensionRegistryV2,
   createOperateExtensionRegistryV2,
-} from 'planr-pipeline/operate/extensions-v2';
-import { assertProtocolArtifact, validateProtocolArtifact } from 'planr-pipeline/protocol';
+} from '@openplanr/pipeline/operate/extensions-v2';
+import { assertProtocolArtifact, validateProtocolArtifact } from '@openplanr/pipeline/protocol';
 
 const fixture = (name) =>
   JSON.parse(

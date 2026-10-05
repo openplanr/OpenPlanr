@@ -21,7 +21,7 @@
  * This runner ships with two small in-file parsers/validators rather than
  * vendoring a third-party dependency. Rationale:
  *
- *   - planr-pipeline declares esbuild, parse5, pako and @noble/hashes, but
+ *   - @openplanr/pipeline declares esbuild, parse5, pako and @noble/hashes, but
  *     the runner imports only Node built-ins and the dependency-free
  *     `lib/design/cli-parser.mjs`, so it needs none of them installed.
  *   - The YAML surface we care about is restricted to frontmatter blocks
@@ -104,7 +104,7 @@ const assertNotExists = (label, path) => {
 
 // ── minimal YAML parser ─────────────────────────────────────────────────
 //
-// Supports the subset used by planr-pipeline frontmatter, .pipeline-shipped,
+// Supports the subset used by @openplanr/pipeline frontmatter, .pipeline-shipped,
 // and the YAML blocks inside stack.md:
 //   - Block-style maps with string/integer/boolean/null scalars
 //   - Quoted strings ("..." and '...')

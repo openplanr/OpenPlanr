@@ -50,7 +50,7 @@ jobs:
       - name: Generate workspace package assets
         run: npm run generate
       - name: Install the selected browser
-        run: npm exec --workspace=planr-pipeline -- playwright install --with-deps ${{ matrix.browser }}
+        run: npm exec --workspace=@openplanr/pipeline -- playwright install --with-deps ${{ matrix.browser }}
       - name: Run hostile sandbox certification
         run: node --test packages/pipeline/tests/artifact/sandbox-hostile.test.mjs
         env:

@@ -6,7 +6,7 @@
   "inputs": [
     {
       "path": "adapters/manifests/generated-assets.json",
-      "digest": "sha256:c78fc02a6b05879f4e622ad802d39644214c264158ce3b6661bf38a94aca57d9"
+      "digest": "sha256:f0ee35dc2a76bc18b574ac8737531b9cc23c4dde6b5e8b3721c47a6fc33874f1"
     },
     {
       "path": "apps/dashboard/package.json",
@@ -14,7 +14,7 @@
     },
     {
       "path": "conformance/packed-surface-baseline.json",
-      "digest": "sha256:19a9a3dc3ad91038250938742dae2890a389055fc7ae5b87220733545659077c"
+      "digest": "sha256:c08fde68c43ba5d723d6ca9ead8367aa561aa6d00bc1b23256d7c33109f76b6e"
     },
     {
       "path": "package.json",
@@ -26,7 +26,7 @@
     },
     {
       "path": "packages/cli/package.json",
-      "digest": "sha256:f08c2adf530100bf9911809af6281ddc79116d3d37c383a85d674bd62e587748"
+      "digest": "sha256:03b9e23c766ae23d384eed0e4dfbfc2aefa2463c20b3ffe1c3f8cc1187deb336"
     },
     {
       "path": "packages/design/package.json",
@@ -42,7 +42,7 @@
     },
     {
       "path": "packages/pipeline/package.json",
-      "digest": "sha256:406dbb422ca2463fba3a5f447f7544df10a64a9d151fb6403c73f72e597309e0"
+      "digest": "sha256:8bd7bcc449915e77e035828e98c1b98a74029f720865056feaf56533584a4126"
     },
     {
       "path": "packages/protocol/package.json",
@@ -50,7 +50,7 @@
     },
     {
       "path": "packages/protocol/registries/commands.json",
-      "digest": "sha256:aa8522e81ed3117554a7608ef8c7d056a46cb0d270e380a5d82879826d136af8"
+      "digest": "sha256:5011ec8fcb0e090b4639c265f5a6db374209a7d64bded329daf5195b4a119335"
     },
     {
       "path": "packages/protocol/registries/output-paths.json",
@@ -98,15 +98,15 @@
     },
     {
       "path": "scripts/lib/workspace-release-policy.mjs",
-      "digest": "sha256:67eb405151d64bcf3b6a10606457810ec7795d8ae866692b20920127e0d50590"
+      "digest": "sha256:95fe8dac329568fb169c073290296a50462e60ce9d02db5e290992b72299b26c"
     },
     {
       "path": "scripts/marketplace/generate-ecosystem.mjs",
-      "digest": "sha256:e559ae30d1da6d9154479b808825453e93165e0e2b6f6be293c46f2ce795acea"
+      "digest": "sha256:a2b05f998a57529e0edf79878271d84288f809746e0e6097cba7eae017f0d562"
     },
     {
       "path": "scripts/marketplace/openplanr-ecosystem.schema.json",
-      "digest": "sha256:b151c6fae276621caece06ea3cce1ab1de098c0b183eb4350a25448d57e05960"
+      "digest": "sha256:baf1f56b06dd1a2e0da03fb03d81ac7c346cd759967394e0e9558b5d9326fb77"
     },
     {
       "path": "skills/planr-artifact/SKILL.md",
@@ -166,7 +166,7 @@
     },
     {
       "path": "skills/planr-diagram/SKILL.md",
-      "digest": "sha256:0ab3025c07936d555e81bef50d71fbc49ffaab0a418ff019ca3163318fd6d33f"
+      "digest": "sha256:3f94505beff2306b9c597fde5a9d64919bf164a44e14da73431fe3d94402bcf3"
     },
     {
       "path": "skills/planr-doctor/SKILL.md",
@@ -236,7 +236,7 @@
     },
     {
       "path": "adapters/manifests/codex-plugin-content.json",
-      "digest": "sha256:59888eb1b1df61629a17f23d4907643e9ec779f5b49e62e8f796f94578e81f1c"
+      "digest": "sha256:7bbac16b62b7aac36067176b06edac8b4431d0c2cf5ea1b1754391886ef529f8"
     },
     {
       "path": "docs/generated/adapters.md",
@@ -244,7 +244,7 @@
     },
     {
       "path": "docs/generated/ecosystem.md",
-      "digest": "sha256:6fc34a51535cfd3fa206f394a81eb6194fee3d9d7a337d9a52e5aefb5803c86b"
+      "digest": "sha256:7493943440f0308e22bc34e4f852bd7a23c46529e1640244002d67e26335dcfb"
     },
     {
       "path": "docs/generated/skills.md",
@@ -252,7 +252,7 @@
     },
     {
       "path": "ecosystem.json",
-      "digest": "sha256:b5df41769de2a38fe76c0c7e92c2909ace3d32011bcd178291536103c349640c"
+      "digest": "sha256:9b4e729cb045571a46dbf10d792f3287a1fe13d047be47ce9b81421496844726"
     }
   ]
 }

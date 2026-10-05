@@ -94,7 +94,7 @@ before(() => {
         type: 'module',
         dependencies: {
           openplanr: `file:${openPlanrTarball}`,
-          'planr-pipeline': `file:${pipelineTarball}`,
+          '@openplanr/pipeline': `file:${pipelineTarball}`,
         },
       },
       null,
@@ -107,7 +107,7 @@ before(() => {
     npmCache,
   );
   installedOpenPlanrRoot = realpathSync(join(consumerDir, 'node_modules', 'openplanr'));
-  installedPipelineRoot = realpathSync(join(consumerDir, 'node_modules', 'planr-pipeline'));
+  installedPipelineRoot = realpathSync(join(consumerDir, 'node_modules', '@openplanr/pipeline'));
   assert.notEqual(installedOpenPlanrRoot, realpathSync(openPlanrRoot));
   assert.notEqual(installedPipelineRoot, realpathSync(root));
   installedVerifierPath = realpathSync(

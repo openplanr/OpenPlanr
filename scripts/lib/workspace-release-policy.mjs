@@ -2,7 +2,7 @@ import { SEMVER_REGEX } from '../../packages/protocol/src/semver.mjs';
 
 export const WORKSPACE_IDENTITIES = Object.freeze({
   'packages/cli': 'openplanr',
-  'packages/pipeline': 'planr-pipeline',
+  'packages/pipeline': '@openplanr/pipeline',
   'packages/protocol': '@openplanr/protocol',
   'packages/operate': '@openplanr/operate',
   'packages/artifact': '@openplanr/artifact',
@@ -21,7 +21,7 @@ export const PUBLIC_PACKAGE_PATHS = Object.freeze([
 // This allowlist describes ownership, not the current release's version numbers.
 // Changesets may update an edge's exact pin, but may not add a new dependency edge.
 const internalDependencies = Object.freeze({
-  'packages/cli': { optionalDependencies: ['planr-pipeline'] },
+  'packages/cli': { optionalDependencies: ['@openplanr/pipeline'] },
   'packages/pipeline': {},
   'packages/protocol': {},
   'packages/operate': { dependencies: ['@openplanr/protocol'] },

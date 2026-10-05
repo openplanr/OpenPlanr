@@ -200,7 +200,7 @@ function releaseOperationInput(
       'openplanr/planr-pipeline',
       'SPEC-002',
       '0.30.0',
-      'planr-pipeline',
+      '@openplanr/pipeline',
     ),
     releaseParticipant('cli', 'openplanr/OpenPlanr', 'SPEC-002', '1.14.0', 'openplanr'),
   ],
@@ -341,7 +341,7 @@ test('release operations reject duplicate participants and incoherent aggregate 
     'openplanr/planr-pipeline',
     'SPEC-002',
     '0.30.0',
-    'planr-pipeline',
+    '@openplanr/pipeline',
   );
   assert.throws(
     () =>

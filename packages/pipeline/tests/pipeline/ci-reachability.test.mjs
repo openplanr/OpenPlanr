@@ -13,9 +13,12 @@ const { scripts } = JSON.parse(read('packages/pipeline/package.json'));
 const workflow = read('.github/workflows/ci.yml');
 const matrixJob = workflow
   .slice(workflow.indexOf('\n  pipeline-tests:'))
-  .split(/\n  (?=[a-z][a-z0-9-]+:)/u)[1];
+  .split(/\n {2}(?=[a-z][a-z0-9-]+:)/u)[1];
 assert.ok(matrixJob, 'Workspace CI must retain its pipeline test job');
-assert.match(matrixJob, /run: npm run \$\{\{ matrix\.script \}\} --workspace=planr-pipeline/u);
+assert.match(
+  matrixJob,
+  /run: npm run \$\{\{ matrix\.script \}\} --workspace=@openplanr\/pipeline/u,
+);
 const entrypoints = [...matrixJob.matchAll(/^\s+script: ([a-z][a-z0-9:-]+)\s*$/gmu)].map(
   ([, script]) => script,
 );
@@ -107,7 +110,7 @@ test('local CI parity runs the same pipeline entrypoints as Workspace CI', () =>
   assert.ok(pipelineJob, 'Local parity must retain the pipeline job');
   assert.deepEqual(
     pipelineJob.instances.map(({ steps }) => steps.map(({ script }) => script)),
-    entrypoints.map((script) => [`npm run ${script} --workspace=planr-pipeline`]),
+    entrypoints.map((script) => [`npm run ${script} --workspace=@openplanr/pipeline`]),
   );
   assert.doesNotMatch(workflow, /check:preservation/u);
 });

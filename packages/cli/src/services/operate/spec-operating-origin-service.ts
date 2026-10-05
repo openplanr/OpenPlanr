@@ -16,8 +16,8 @@ import {
   assertOperatingOriginV1,
   assertOperatingPlanningProposalV1,
   createOperatingOriginV1,
-} from 'planr-pipeline/operate/planning-bridge-v2';
-import { sha256Jcs, validateProtocolArtifact } from 'planr-pipeline/protocol';
+} from '@openplanr/pipeline/operate/planning-bridge-v2';
+import { sha256Jcs, validateProtocolArtifact } from '@openplanr/pipeline/protocol';
 import type { OpenPlanrConfig } from '../../models/types.js';
 import { parseMarkdown } from '../../utils/markdown.js';
 import {

@@ -16,7 +16,7 @@ import {
   OPERATE_LIVE_EVIDENCE_CONTRACT_KINDS_V2,
   OPERATE_RUNTIME_CONTRACT_KINDS,
   validateDashboardBootstrapV1,
-} from 'planr-pipeline/protocol';
+} from '@openplanr/pipeline/protocol';
 
 const root = fileURLToPath(new URL('../..', import.meta.url));
 

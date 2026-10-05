@@ -3,7 +3,7 @@
  * exact current Action, executes an approved contained Action and issues its terminal verification
  * Assignment, and rolls a completed Action back against its approved plan and process-local target.
  * Entry points: `approveOperateAction`, `executeOperateAction`, `rollbackOperateAction`. The
- * execution journal and recovery runtime come from planr-pipeline's governed execution subpaths.
+ * execution journal and recovery runtime come from @openplanr/pipeline's governed execution subpaths.
  */
 
 import { createHash } from 'node:crypto';
@@ -12,23 +12,23 @@ import {
   createOperatingApprovalRecordV2,
   createOperatingApprovalRequirementV2,
   evaluateOperatingApprovalSetV2,
-} from 'planr-pipeline/operate/approvals-v2';
-import { createOperatingGovernedExecutionRuntimeV2 } from 'planr-pipeline/operate/governed-execution-v2';
+} from '@openplanr/pipeline/operate/approvals-v2';
+import { createOperatingGovernedExecutionRuntimeV2 } from '@openplanr/pipeline/operate/governed-execution-v2';
 import {
   buildOperatingRollbackPlanV2,
   createOperatingGovernedRecoveryRuntimeV2,
   recordOperatingRollbackPlanV2,
-} from 'planr-pipeline/operate/governed-recovery-v2';
+} from '@openplanr/pipeline/operate/governed-recovery-v2';
 import {
   createOperatingActionPolicyV2,
   evaluateOperatingActionPolicyV2,
-} from 'planr-pipeline/operate/policy-v2';
+} from '@openplanr/pipeline/operate/policy-v2';
 import {
   createDisposableLocalProjectTargetV2,
   OPEN_REFERENCE_PROJECT_EXECUTOR_HOST_V2,
-} from 'planr-pipeline/operate/reference-governed-executors-v2';
-import { resolveOperatingLatestActionEvaluationV2 } from 'planr-pipeline/operate/runtime-v2';
-import { sha256Jcs } from 'planr-pipeline/protocol';
+} from '@openplanr/pipeline/operate/reference-governed-executors-v2';
+import { resolveOperatingLatestActionEvaluationV2 } from '@openplanr/pipeline/operate/runtime-v2';
+import { sha256Jcs } from '@openplanr/pipeline/protocol';
 import { OperateClientError } from './client-error.js';
 import {
   type Commit,

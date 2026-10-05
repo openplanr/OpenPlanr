@@ -54,5 +54,5 @@ test('repository and host plugin manifests share one identity', () => {
 
 test('the pipeline is a package consumer of the unified plugin, not another plugin', () => {
   assert.equal(existsSync(resolve(root, 'packages/pipeline/.claude-plugin/plugin.json')), false);
-  assert.equal(json('packages/pipeline/package.json').name, 'planr-pipeline');
+  assert.equal(json('packages/pipeline/package.json').name, '@openplanr/pipeline');
 });

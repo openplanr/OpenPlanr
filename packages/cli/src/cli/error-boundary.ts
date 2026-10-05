@@ -21,10 +21,16 @@ export type CliFailureEnvelope = {
 
 function boundedPublicText(value: unknown, fallback: string): string {
   const source = typeof value === 'string' && value.trim() ? value.trim() : fallback;
-  return source
-    .split(/\n\s*at\s/u, 1)[0]
-    .replace(/(?:[A-Za-z]:\\|\/)(?:[^\s"'`,:]+[\\/])*[^\s"'`,:]*/gu, '<path>')
-    .slice(0, MAX_PUBLIC_TEXT);
+  return (
+    source
+      .split(/\n\s*at\s/u, 1)[0]
+      // A slash inside a scoped package name such as `@openplanr/pipeline` does not start a path.
+      .replace(
+        /(?:[A-Za-z]:\\|(?<!@[a-z0-9][a-z0-9_-]*(?:\/[a-z0-9._-]+)*)\/)(?:[^\s"'`,:]+[\\/])*[^\s"'`,:]*/gu,
+        '<path>',
+      )
+      .slice(0, MAX_PUBLIC_TEXT)
+  );
 }
 
 export class CliBoundaryError extends Error {

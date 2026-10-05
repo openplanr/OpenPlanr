@@ -277,7 +277,7 @@ function verifyReleasePackage() {
             ...repository,
             label:
               key === 'pipeline'
-                ? 'planr-pipeline'
+                ? '@openplanr/pipeline'
                 : key === 'cli'
                   ? 'OpenPlanr'
                   : key === 'web'

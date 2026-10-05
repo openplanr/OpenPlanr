@@ -29,9 +29,9 @@ if (!existsSync(archivePath) || !lstatSync(archivePath).isFile()) {
 }
 if (lstatSync(archivePath).isSymbolicLink()) fail('candidate tarball must not be a symbolic link');
 
-const installedPath = resolve(repositoryRoot, 'node_modules', 'planr-pipeline');
+const installedPath = resolve(repositoryRoot, 'node_modules', '@openplanr/pipeline');
 if (!existsSync(installedPath) || !lstatSync(installedPath).isDirectory()) {
-  fail('node_modules/planr-pipeline is not an installed directory');
+  fail('node_modules/@openplanr/pipeline is not an installed directory');
 }
 if (lstatSync(installedPath).isSymbolicLink())
   fail('installed candidate must not be a symbolic link');
@@ -39,7 +39,7 @@ if (lstatSync(installedPath).isSymbolicLink())
 const resolvedInstalledPath = realpathSync(installedPath);
 const expectedInstalledPath = join(
   realpathSync(join(repositoryRoot, 'node_modules')),
-  'planr-pipeline',
+  '@openplanr/pipeline',
 );
 if (resolvedInstalledPath !== expectedInstalledPath) {
   fail(`resolved outside the exact installed package path: ${resolvedInstalledPath}`);
@@ -58,15 +58,17 @@ for (const sourcePath of [
 assertNoSymlinks(resolvedInstalledPath);
 const manifestPath = join(resolvedInstalledPath, 'package.json');
 const manifest = JSON.parse(readFileSync(manifestPath, 'utf8'));
-if (manifest.name !== 'planr-pipeline') fail('installed manifest is not planr-pipeline');
+if (manifest.name !== '@openplanr/pipeline') fail('installed manifest is not @openplanr/pipeline');
 
 const require = createRequire(join(repositoryRoot, 'package.json'));
-if (realpathSync(require.resolve('planr-pipeline/package.json')) !== realpathSync(manifestPath)) {
-  fail('Node does not resolve planr-pipeline to the asserted installed candidate');
+if (
+  realpathSync(require.resolve('@openplanr/pipeline/package.json')) !== realpathSync(manifestPath)
+) {
+  fail('Node does not resolve @openplanr/pipeline to the asserted installed candidate');
 }
 
 const candidateRuntimePath = realpathSync(
-  require.resolve('planr-pipeline/schemas/v1.2.0/operate-experience-display-surface.mjs'),
+  require.resolve('@openplanr/pipeline/schemas/v1.2.0/operate-experience-display-surface.mjs'),
 );
 const candidateRuntimeRelative = relative(resolvedInstalledPath, candidateRuntimePath);
 if (candidateRuntimeRelative.startsWith('..') || isAbsolute(candidateRuntimeRelative)) {

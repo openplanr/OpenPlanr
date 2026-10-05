@@ -123,15 +123,15 @@ export function loadDiagramPipeline(): Promise<DiagramRuntimeApi> {
       throw new DiagramCommandError(
         'E_PIPELINE_NOT_INSTALLED',
         'Diagram rendering requires the full OpenPlanr workflow package.',
-        'Install OpenPlanr with its optional planr-pipeline dependency, then retry.',
+        'Install OpenPlanr with its optional @openplanr/pipeline dependency, then retry.',
       );
     }
     const entry = path.join(pipeline.root, 'lib', 'artifact', 'diagram', 'index.mjs');
     if (!existsSync(entry)) {
       throw new DiagramCommandError(
         'E_PIPELINE_VERSION_INCOMPATIBLE',
-        `Installed planr-pipeline ${pipeline.version} does not include the diagram runtime.`,
-        'Install a compatible OpenPlanr and planr-pipeline version pair.',
+        `Installed @openplanr/pipeline ${pipeline.version} does not include the diagram runtime.`,
+        'Install a compatible OpenPlanr and @openplanr/pipeline version pair.',
       );
     }
     const loaded = (await import(pathToFileURL(entry).href)) as Partial<DiagramRuntimeApi>;
@@ -153,8 +153,8 @@ export function loadDiagramPipeline(): Promise<DiagramRuntimeApi> {
     if (missing.length > 0) {
       throw new DiagramCommandError(
         'E_PIPELINE_VERSION_INCOMPATIBLE',
-        `Installed planr-pipeline ${pipeline.version} lacks diagram APIs: ${missing.join(', ')}.`,
-        'Install a compatible OpenPlanr and planr-pipeline version pair.',
+        `Installed @openplanr/pipeline ${pipeline.version} lacks diagram APIs: ${missing.join(', ')}.`,
+        'Install a compatible OpenPlanr and @openplanr/pipeline version pair.',
       );
     }
     return loaded as DiagramRuntimeApi;

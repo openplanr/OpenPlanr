@@ -1,5 +1,5 @@
 ---
-description: "Create User Stories — generate user stories with Gherkin acceptance criteria for planr-pipeline"
+description: "Create User Stories — generate user stories with Gherkin acceptance criteria for @openplanr/pipeline"
 globs: ""
 alwaysApply: false
 ---

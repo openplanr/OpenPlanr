@@ -1,8 +1,8 @@
 import { createHash } from 'node:crypto';
 import { appendFile, mkdir, readFile, rename, stat, symlink, writeFile } from 'node:fs/promises';
 import path from 'node:path';
-import { confirmOperatingPlanningProposalV1 } from 'planr-pipeline/operate/planning-bridge-v2';
-import { sha256Jcs } from 'planr-pipeline/protocol';
+import { confirmOperatingPlanningProposalV1 } from '@openplanr/pipeline/operate/planning-bridge-v2';
+import { sha256Jcs } from '@openplanr/pipeline/protocol';
 import { afterEach, describe, expect, it } from 'vitest';
 import {
   createOperateClient,
@@ -1232,7 +1232,7 @@ describe('real Operate planning bridge lifecycle', () => {
       }),
     ).toMatchObject({ ok: false, error: { code: 'E_OPERATE_PLANNING_CUSTODY' } });
     await writeFile(provenancePath, beforeRollbackProvenance);
-    const pipeline = (await import('planr-pipeline')) as {
+    const pipeline = (await import('@openplanr/pipeline')) as {
       appendProvenanceEvent: (projectRoot: string, event: RecordValue) => string;
     };
     pipeline.appendProvenanceEvent(lifecycle.project.dir, rollbackProvenance);

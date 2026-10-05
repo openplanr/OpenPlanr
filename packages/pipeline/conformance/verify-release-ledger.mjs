@@ -5,7 +5,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { loadReleaseLedgerContract, validateProtocolArtifact } from 'planr-pipeline/protocol';
+import { loadReleaseLedgerContract, validateProtocolArtifact } from '@openplanr/pipeline/protocol';
 import {
   assertEcosystemManifestProjection,
   assertPipelineCompatibilityDeclaration,

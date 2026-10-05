@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 /**
- * Packed-workspace proof: packs `openplanr`, `planr-pipeline` and `@openplanr/protocol`, checks
+ * Packed-workspace proof: packs `openplanr`, `@openplanr/pipeline` and `@openplanr/protocol`, checks
  * payload purity, verifies full and CLI-only consumer installs and prints a JSON proof report.
  * Run as `npm run verify:packed` (CI runs it via `verify:packed:strict`); exits 1 on failure.
  * Exports `readPackedSurfaceBaseline`, `assertPackedSurfaceCompatibility`, `countProtocolAssets`.
@@ -645,12 +645,12 @@ try {
     }
   }
 
-  const pipeline = await import('planr-pipeline');
+  const pipeline = await import('@openplanr/pipeline');
   const rootSymbols = Object.keys(pipeline).sort();
-  const { readProfessionalSkillsCatalog } = await import('planr-pipeline/professional-skills');
+  const { readProfessionalSkillsCatalog } = await import('@openplanr/pipeline/professional-skills');
   const skillCatalog = readProfessionalSkillsCatalog();
   if (!skillCatalog.skills.length) throw new Error('Installed professional skill compatibility catalog is empty');
-  const authoring = await import('planr-pipeline/diagram-authoring');
+  const authoring = await import('@openplanr/pipeline/diagram-authoring');
   const contracts = await import('@openplanr/protocol/diagram-authoring-contracts');
   const meta = kind => ({ kind, schemaVersion: '1.0.0', protocolVersion: '1.13.0' });
   const document = {
@@ -692,8 +692,8 @@ try {
   }
 
 
-  const { createDiagramAuthoringStore, previewLegacyDiagramDocument } = await import('planr-pipeline/diagram-authoring-store');
-  const { exportAuthoredDiagram, verifyAuthoredDiagramExports } = await import('planr-pipeline/diagram-authoring-export');
+  const { createDiagramAuthoringStore, previewLegacyDiagramDocument } = await import('@openplanr/pipeline/diagram-authoring-store');
+  const { exportAuthoredDiagram, verifyAuthoredDiagramExports } = await import('@openplanr/pipeline/diagram-authoring-export');
   if (typeof previewLegacyDiagramDocument !== 'function') throw new Error('Packed migration export is missing');
   const authoredRoot = fs.realpathSync(fs.mkdtempSync(path.join(path.dirname(inputPath), 'authored-consumer-')));
   try {
@@ -712,17 +712,17 @@ try {
     const exported = await exportAuthoredDiagram(reopened.bundle, options);
     if (!exported.ok || !(await verifyAuthoredDiagramExports(reopened.bundle, options)).ok) throw new Error('Packed authored export failed: ' + JSON.stringify(exported));
     if (fs.readFileSync(path.join(exported.directory, 'diagram.png')).byteLength < 32) throw new Error('Packed PNG was not rasterized');
-    const { prepareDiagramShareBundle } = await import('planr-pipeline/diagram-review-bundle');
+    const { prepareDiagramShareBundle } = await import('@openplanr/pipeline/diagram-review-bundle');
     const reviewContracts = await import('@openplanr/protocol/diagram-review-contracts');
-    const reviewShell = await import('planr-pipeline/diagram-shared-review');
+    const reviewShell = await import('@openplanr/pipeline/diagram-shared-review');
     const shareBundle = await prepareDiagramShareBundle(path.join(authoredRoot, 'diagrams', authored.diagramId, authored.diagramId + '.planr-diagram-bundle.json'));
     reviewContracts.assertDiagramReviewBundle(shareBundle);
     if (typeof reviewShell.mountDiagramSharedReview !== 'function' || shareBundle.authored.originalSource !== null || shareBundle.authored.sourceMap !== null || shareBundle.authored.presentation.elements[0].bounds.x !== 20) {
       throw new Error('Packed native review projection or shell lost its source boundary or saved geometry');
     }
-    if (!fs.existsSync(require.resolve('planr-pipeline/diagram-shared-review.css'))) throw new Error('Packed review stylesheet is missing');
+    if (!fs.existsSync(require.resolve('@openplanr/pipeline/diagram-shared-review.css'))) throw new Error('Packed review stylesheet is missing');
 
-    const editorApi = await import('planr-pipeline/diagram-editor');
+    const editorApi = await import('@openplanr/pipeline/diagram-editor');
     if (typeof editorApi.mountDiagramSourcePanel !== 'function') throw new Error('Packed source-panel export is missing');
     const editor = await editorApi.openDiagramEditorSession({ transport: restarted });
     if (typeof editor.adoptInitialCopy !== 'function') throw new Error('Packed initial-copy adoption is missing');
@@ -731,7 +731,7 @@ try {
     const editorRead = await editorApi.openDiagramEditorSession({ transport: restarted });
     if (editorRead.getState().bundle.document.nodes[0].label !== 'Edited from installed package') throw new Error('Packed editor reopen failed');
     if (!editorRead.query({ x: 50, y: 50 }).hits.some(hit => hit.id === 'step-one')) throw new Error('Packed indexed editor hit failed');
-    const { startDiagramOwner } = await import('planr-pipeline/diagram-owner');
+    const { startDiagramOwner } = await import('@openplanr/pipeline/diagram-owner');
     const owner = await startDiagramOwner(options);
     try {
       const response = await fetch(owner.apiBase + 'read', { headers: owner.headers });
@@ -752,15 +752,15 @@ try {
   const dashboard = verifier.verifyDashboardAssets();
   const dashboardManifest = JSON.parse(fs.readFileSync(dashboardPath, 'utf8'));
   const packageRequire = createRequire(require.resolve('openplanr/package.json'));
-  const pipelineManifestPath = fs.realpathSync(packageRequire.resolve('planr-pipeline/package.json'));
+  const pipelineManifestPath = fs.realpathSync(packageRequire.resolve('@openplanr/pipeline/package.json'));
   if (!inside(pipelineRoot, pipelineManifestPath)) throw new Error('OpenPlanr resolved pipeline outside installed custody');
 
   const wildcardAssets = [
-    'planr-pipeline/schemas/v1.0.0/task.schema.json',
-    'planr-pipeline/schemas/v1.5.0/role-registry.schema.json',
-    'planr-pipeline/schemas/v2.0.0/operating-runtime-state.schema.json',
-    'planr-pipeline/registry/roles.json',
-    'planr-pipeline/registry/v1.5.0/roles.json',
+    '@openplanr/pipeline/schemas/v1.0.0/task.schema.json',
+    '@openplanr/pipeline/schemas/v1.5.0/role-registry.schema.json',
+    '@openplanr/pipeline/schemas/v2.0.0/operating-runtime-state.schema.json',
+    '@openplanr/pipeline/registry/roles.json',
+    '@openplanr/pipeline/registry/v1.5.0/roles.json',
   ].map((specifier) => {
     const resolved = fs.realpathSync(require.resolve(specifier));
     if (!inside(pipelineRoot, resolved)) throw new Error('wildcard asset escaped: ' + specifier);
@@ -800,7 +800,7 @@ function runExportProof({
     openplanrRoot: cliRoot,
     packages: [
       { name: 'openplanr', packageRoot: cliRoot, probes: cliProbes },
-      { name: 'planr-pipeline', packageRoot: pipelineRoot, probes: pipelineProbes },
+      { name: '@openplanr/pipeline', packageRoot: pipelineRoot, probes: pipelineProbes },
     ],
     pipelineRoot,
   });
@@ -817,10 +817,10 @@ function runExportProof({
   compileDiagramCommand, createConditionalInverse, previewDiagramTransaction, diffDiagramBundles,
   resolveDiagramScene, renderAuthoredDiagramSvg, previewAutomaticLayout, previewResetRoute,
   type DiagramAuthoringBundle, type DiagramCommand, type DiagramEditPreview,
-} from 'planr-pipeline/diagram-authoring';
-import { createDiagramAuthoringStore, previewLegacyDiagramMigration } from 'planr-pipeline/diagram-authoring-store';
-import { exportAuthoredDiagram, verifyAuthoredDiagramExports } from 'planr-pipeline/diagram-authoring-export';
-import { createDiagramEditorSession, openDiagramEditorSession, createDiagramEditorDraft, createDiagramEditorRecovery, copyDiagramSelection, pasteDiagramSelection, createDiagramLocalOwnerTransport, mountDiagramSourcePanel, type DiagramSourcePanelController, type DiagramSourcePanelOptions } from 'planr-pipeline/diagram-editor';
+} from '@openplanr/pipeline/diagram-authoring';
+import { createDiagramAuthoringStore, previewLegacyDiagramMigration } from '@openplanr/pipeline/diagram-authoring-store';
+import { exportAuthoredDiagram, verifyAuthoredDiagramExports } from '@openplanr/pipeline/diagram-authoring-export';
+import { createDiagramEditorSession, openDiagramEditorSession, createDiagramEditorDraft, createDiagramEditorRecovery, copyDiagramSelection, pasteDiagramSelection, createDiagramLocalOwnerTransport, mountDiagramSourcePanel, type DiagramSourcePanelController, type DiagramSourcePanelOptions } from '@openplanr/pipeline/diagram-editor';
 declare const bundle: DiagramAuthoringBundle;
 declare const root: HTMLElement;
 const move: DiagramCommand = { type: 'move', ids: ['step-one'], dx: 20, dy: 0 };
@@ -918,7 +918,7 @@ export function readPackedSurfaceBaseline() {
   if (
     baseline.kind !== 'openplanr-packed-surface-baseline' ||
     baseline.schemaVersion !== '1.0.0' ||
-    baseline.package !== 'planr-pipeline' ||
+    baseline.package !== '@openplanr/pipeline' ||
     !distinctStrings(baseline.baselineExportKeys, 37) ||
     !distinctStrings(baseline.baselineRootSymbols, 228) ||
     !distinctStrings(baseline.protocolAssets?.originalRegistryPaths, 12) ||
@@ -1000,7 +1000,7 @@ export function countProtocolAssets(inventory, baseline) {
 function verifyRetiredPipelineOperate({ nodeExecutable, pipelineRoot, project, environment }) {
   const binary = commandResult(
     nodeExecutable,
-    [path.join(pipelineRoot, 'bin', 'planr-pipeline.mjs'), 'operate', '--json'],
+    [path.join(pipelineRoot, 'bin', 'openplanr-pipeline.mjs'), 'operate', '--json'],
     { cwd: project, env: environment },
   );
   const error = assertJsonOutput(
@@ -1010,7 +1010,7 @@ function verifyRetiredPipelineOperate({ nodeExecutable, pipelineRoot, project, e
   if (binary.status !== 1 || error.code !== 'E_COMMAND_UNKNOWN') {
     throw new ProofFailure(
       'E_RETIRED_PIPELINE_OPERATE_PRESENT',
-      'planr-pipeline still accepts the retired operate command.',
+      '@openplanr/pipeline still accepts the retired operate command.',
     );
   }
   const absence = commandResult(
@@ -1060,9 +1060,13 @@ function verifyFullInstall({
     environment,
   });
   const cliRoot = installedPackageRoot(project, 'openplanr');
-  const pipelineRoot = installedPackageRoot(project, 'planr-pipeline');
+  const pipelineRoot = installedPackageRoot(project, '@openplanr/pipeline');
   assertEquivalentInventory(cliPack.inventory, inventoryTree(cliRoot), 'openplanr');
-  assertEquivalentInventory(pipelinePack.inventory, inventoryTree(pipelineRoot), 'planr-pipeline');
+  assertEquivalentInventory(
+    pipelinePack.inventory,
+    inventoryTree(pipelineRoot),
+    '@openplanr/pipeline',
+  );
   const protocolRoot = installedPackageRoot(project, '@openplanr/protocol');
   assertEquivalentInventory(
     protocolPack.inventory,
@@ -1232,10 +1236,10 @@ function verifyCliOnlyInstall({
   });
   const cliRoot = installedPackageRoot(project, 'openplanr');
   assertEquivalentInventory(cliPack.inventory, inventoryTree(cliRoot), 'CLI-only openplanr');
-  if (fs.existsSync(path.join(project, 'node_modules', 'planr-pipeline'))) {
+  if (fs.existsSync(path.join(project, 'node_modules', '@openplanr/pipeline'))) {
     throw new ProofFailure(
       'E_OPTIONAL_PIPELINE_INSTALLED',
-      'CLI-only install unexpectedly contains planr-pipeline.',
+      'CLI-only install unexpectedly contains @openplanr/pipeline.',
     );
   }
   const version = runCli(nodeExecutable, cliRoot, ['--version'], {
@@ -1388,7 +1392,11 @@ function main() {
     const cliInventory = inventoryTree(cliPackageRoot);
     const pipelineInventory = inventoryTree(pipelinePackageRoot);
     const cliProof = packageProof(cliPackageRoot, cliInventory, 'openplanr');
-    const pipelineProof = packageProof(pipelinePackageRoot, pipelineInventory, 'planr-pipeline');
+    const pipelineProof = packageProof(
+      pipelinePackageRoot,
+      pipelineInventory,
+      '@openplanr/pipeline',
+    );
     const expectedExportKeys = Object.keys(pipelineProof.manifest.exports ?? {}).sort();
     assertPackedSurfaceCompatibility(packedSurfaceBaseline, { exportKeys: expectedExportKeys });
     const protocolAssets = countProtocolAssets(pipelineInventory, packedSurfaceBaseline);
@@ -1414,10 +1422,10 @@ function main() {
       );
     }
     if (
-      cliProof.manifest.optionalDependencies?.['planr-pipeline'] !==
+      cliProof.manifest.optionalDependencies?.['@openplanr/pipeline'] !==
         pipelineProof.manifest.version ||
       !/^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/u.test(
-        cliProof.manifest.optionalDependencies['planr-pipeline'],
+        cliProof.manifest.optionalDependencies['@openplanr/pipeline'],
       )
     ) {
       throw new ProofFailure(

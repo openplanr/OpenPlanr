@@ -9,7 +9,7 @@ function workspace({ changesets = [] } = {}) {
   const root = mkdtempSync(join(tmpdir(), 'openplanr-release-plan-'));
   const manifests = {
     'packages/protocol': { name: '@openplanr/protocol', version: '0.4.0' },
-    'packages/pipeline': { name: 'planr-pipeline', version: '0.45.3' },
+    'packages/pipeline': { name: '@openplanr/pipeline', version: '0.45.3' },
     'packages/cli': { name: 'openplanr', version: '2.2.1' },
   };
   for (const [path, manifest] of Object.entries(manifests)) {
@@ -32,13 +32,13 @@ test('plans the unpublished packages in dependency order and reports untagged pu
         name === '@openplanr/protocol' && version === '0.4.0',
       lookupTag: async () => false,
     });
-    assert.deepEqual(plan.pending, ['planr-pipeline', 'openplanr']);
+    assert.deepEqual(plan.pending, ['@openplanr/pipeline', 'openplanr']);
     assert.deepEqual(plan.untagged, ['@openplanr/protocol']);
     assert.deepEqual(plan.blockers, []);
     assert.equal(plan.releasable, true);
     assert.deepEqual(
       plan.packages.map((entry) => entry.tag),
-      ['@openplanr/protocol@0.4.0', 'planr-pipeline@0.45.3', 'openplanr@2.2.1'],
+      ['@openplanr/protocol@0.4.0', '@openplanr/pipeline@0.45.3', 'openplanr@2.2.1'],
     );
   } finally {
     rmSync(root, { recursive: true, force: true });
@@ -63,7 +63,7 @@ test('nothing pending means nothing releasable, and unconsumed changesets block 
       lookupPublished: async () => false,
       lookupTag: async () => false,
     });
-    assert.deepEqual(plan.pending, ['@openplanr/protocol', 'planr-pipeline', 'openplanr']);
+    assert.deepEqual(plan.pending, ['@openplanr/protocol', '@openplanr/pipeline', 'openplanr']);
     assert.equal(plan.releasable, false);
     assert.match(plan.blockers[0], /brave-otters\.md/u);
   } finally {

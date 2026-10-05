@@ -42,7 +42,7 @@ for (const [component, version] of Object.entries(expected)) {
   }
 }
 
-await requireVersion('planr-pipeline', expected.pipeline);
+await requireVersion('@openplanr/pipeline', expected.pipeline);
 await requireVersion('openplanr', expected.cli);
 
 const skillsRelease = await json(

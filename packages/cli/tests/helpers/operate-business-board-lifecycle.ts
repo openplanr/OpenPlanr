@@ -1,13 +1,13 @@
-import { OPEN_REFERENCE_OPERATE_EXTENSIONS_V2 } from 'planr-pipeline/operate/extensions-v2';
+import { OPEN_REFERENCE_OPERATE_EXTENSIONS_V2 } from '@openplanr/pipeline/operate/extensions-v2';
 import {
   createOperatingResultTemplateV2,
   type OperatingResultInputArtifactV2,
-} from 'planr-pipeline/operate/result-packet-v2';
+} from '@openplanr/pipeline/operate/result-packet-v2';
 import {
   deriveOperatingChairLedgerIdV2,
   deriveOperatingRoleLocalClaimIdV2,
-} from 'planr-pipeline/operate/runtime-v2';
-import type { OperatingIntelligenceAssignmentV2 } from 'planr-pipeline/protocol';
+} from '@openplanr/pipeline/operate/runtime-v2';
+import type { OperatingIntelligenceAssignmentV2 } from '@openplanr/pipeline/protocol';
 
 type RecordValue = Record<string, unknown>;
 type Assignment = { assignmentId: string; roleId: string };

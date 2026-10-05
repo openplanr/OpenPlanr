@@ -1,9 +1,9 @@
 // @vitest-environment jsdom
 
+import { selectOperateExperienceDisplaySurface } from '@openplanr/pipeline/dashboard/operate-experience-reader';
+import { sha256Jcs } from '@openplanr/pipeline/protocol';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import axe from 'axe-core';
-import { selectOperateExperienceDisplaySurface } from 'planr-pipeline/dashboard/operate-experience-reader';
-import { sha256Jcs } from 'planr-pipeline/protocol';
 import { StrictMode, useState } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 import { parseDashboardRoute } from '../../../../apps/dashboard/src/app/router.js';

@@ -1,4 +1,4 @@
-import { sha256Jcs } from 'planr-pipeline/dashboard/verified-json';
+import { sha256Jcs } from '@openplanr/pipeline/dashboard/verified-json';
 import {
   createDashboardApiFixture,
   createDashboardReviewTerminal,

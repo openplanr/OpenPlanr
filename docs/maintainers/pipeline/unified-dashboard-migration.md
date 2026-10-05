@@ -37,7 +37,7 @@ OpenPlanr React build from `dist/dashboard`. The legacy direct-DOM client under
 Rollback is package-level only:
 
 1. Reinstall the previous OpenPlanr release whose `dist/dashboard` you trust.
-2. Reinstall the matching `planr-pipeline` release if server contracts changed.
+2. Reinstall the matching `@openplanr/pipeline` release if server contracts changed.
 3. Restart the loopback dashboard process.
 
 No durable project migration runs during cutover. `.planr/` data, Operate

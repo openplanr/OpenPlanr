@@ -1,5 +1,5 @@
 ---
-description: "Create an Epic — conversational epic creation for planr-pipeline"
+description: "Create an Epic — conversational epic creation for @openplanr/pipeline"
 globs: ""
 alwaysApply: false
 ---

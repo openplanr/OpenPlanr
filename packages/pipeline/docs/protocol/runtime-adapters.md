@@ -15,7 +15,7 @@ A runtime adapter implements the protocol if and only if:
    task status, provenance, and legacy delivery files are runtime-derived projections.
 6. The terminal receipt and compatibility marker identify the exact runtime and candidate.
 
-The conformance test fixture (`planr-pipeline/conformance/`) verifies items 5 and 6 mechanically. Items 1-4 require human inspection of the runtime's behaviour against the fixture.
+The conformance test fixture (`@openplanr/pipeline/conformance/`) verifies items 5 and 6 mechanically. Items 1-4 require human inspection of the runtime's behaviour against the fixture.
 
 ## Claude Code adapter (canonical)
 
@@ -61,7 +61,7 @@ then drains newly ready dependents without ending the user invocation.
 - **Role files:** nine generated contracts sourced from `registry/roles.json`.
 - **Execution:** the router returns a machine-readable Composer handoff; the
   adapter uses host dispatch when supported and sequential fallback otherwise.
-- **Compatibility aliases:** legacy `planr-pipeline*.mdc` files remain as
+- **Compatibility aliases:** legacy `@openplanr/pipeline*.mdc` files remain as
   deprecation stubs for two pipeline minor releases.
 
 ### Strengths

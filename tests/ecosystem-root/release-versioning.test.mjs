@@ -56,7 +56,7 @@ const fixtureManifests = () => {
   // A future, coherent package set must pass without rewriting the release gate.
   const releases = {
     openplanr: '3.2.1',
-    'planr-pipeline': '1.4.2',
+    '@openplanr/pipeline': '1.4.2',
     '@openplanr/protocol': '2.3.0',
   };
   for (const manifest of manifests.values()) {
@@ -78,13 +78,13 @@ test('release boundaries accept new coherent versions and reject drifted pins an
   const rootManifest = readJson(join(root, 'package.json'));
   const manifests = fixtureManifests();
   assert.deepEqual(validateWorkspaceManifests(rootManifest, manifests), []);
-  manifests.get('packages/cli').optionalDependencies['planr-pipeline'] = '^1.4.2';
+  manifests.get('packages/cli').optionalDependencies['@openplanr/pipeline'] = '^1.4.2';
   assert.ok(
     validateWorkspaceManifests(rootManifest, manifests).some((message) =>
-      /pin planr-pipeline exactly/u.test(message),
+      /pin @openplanr\/pipeline exactly/u.test(message),
     ),
   );
-  manifests.get('packages/cli').optionalDependencies['planr-pipeline'] = '1.4.2';
+  manifests.get('packages/cli').optionalDependencies['@openplanr/pipeline'] = '1.4.2';
   manifests.get('packages/protocol').version = '2.03.0';
   assert.ok(
     validateWorkspaceManifests(rootManifest, manifests).some((message) =>
@@ -296,7 +296,7 @@ test('a real package version operation regenerates current runtime projections w
     const previous = readJson(join(directory, 'packages/pipeline/package.json')).version;
     writeFileSync(
       join(directory, '.changeset/runtime-version-regression.md'),
-      '---\n"openplanr": minor\n"planr-pipeline": minor\n"@openplanr/protocol": minor\n---\n\nExercise runtime release projections after a real version operation.\n',
+      '---\n"openplanr": minor\n"@openplanr/pipeline": minor\n"@openplanr/protocol": minor\n---\n\nExercise runtime release projections after a real version operation.\n',
     );
     run(process.execPath, [join(root, 'node_modules/@changesets/cli/bin.js'), 'version']);
     run(process.execPath, ['scripts/generate-all.mjs']);

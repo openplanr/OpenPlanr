@@ -1,4 +1,4 @@
-import { assertProtocolArtifact } from 'planr-pipeline/protocol';
+import { assertProtocolArtifact } from '@openplanr/pipeline/protocol';
 import { OperateClientError } from './client-error.js';
 import type { OperateStartRequestV2 } from './client-types.js';
 import type { JsonRecord, OperateComposition } from './composition.js';

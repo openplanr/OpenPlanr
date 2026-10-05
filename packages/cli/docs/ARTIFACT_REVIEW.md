@@ -141,6 +141,6 @@ full distribution with `npm install -g openplanr@latest`. Local review and
 export work offline after installation. Creating or opening a remote review
 link requires network access.
 
-The shell assets and Protocol v1.1 schemas are shipped by `planr-pipeline`.
+The shell assets and Protocol v1.1 schemas are shipped by `@openplanr/pipeline`.
 Self-hosters can point `OPENPLANR_SHARE_BASE` at their own HTTPS origin serving the
 static viewer and share Worker.

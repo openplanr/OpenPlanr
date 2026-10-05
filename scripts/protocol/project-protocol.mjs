@@ -155,8 +155,8 @@ const { mode, target } = parseArgs(process.argv.slice(2));
 if (!existsSync(join(target, 'package.json')))
   throw new Error(`Pipeline package is missing: ${target}`);
 const targetManifest = JSON.parse(readFileSync(join(target, 'package.json'), 'utf8'));
-if (targetManifest.name !== 'planr-pipeline')
-  throw new Error('Protocol projection target is not planr-pipeline.');
+if (targetManifest.name !== '@openplanr/pipeline')
+  throw new Error('Protocol projection target is not @openplanr/pipeline.');
 
 const entries = [];
 for (const mapping of mappings) {
@@ -194,7 +194,7 @@ const unownedDashboardFiles = [...protocolDashboardFiles].filter(
 );
 if (unownedDashboardFiles.length > 0) {
   throw new Error(
-    `packages/protocol/lib/dashboard files are neither projected into planr-pipeline lib/dashboard nor listed in PIPELINE_OWNED_DASHBOARD_FILES: ${unownedDashboardFiles.join(', ')}. Project each through DASHBOARD_CONTRACT_FILES, or through dashboardRuntimeContracts in packages/protocol/scripts/generate-protocol-assets.mjs when it imports ../../src/, instead of copying it into the pipeline.`,
+    `packages/protocol/lib/dashboard files are neither projected into @openplanr/pipeline lib/dashboard nor listed in PIPELINE_OWNED_DASHBOARD_FILES: ${unownedDashboardFiles.join(', ')}. Project each through DASHBOARD_CONTRACT_FILES, or through dashboardRuntimeContracts in packages/protocol/scripts/generate-protocol-assets.mjs when it imports ../../src/, instead of copying it into the pipeline.`,
   );
 }
 const staleOwnedDashboardFiles = [...PIPELINE_OWNED_DASHBOARD_FILES].filter(
@@ -280,5 +280,5 @@ if (mode === 'write') {
 }
 
 process.stdout.write(
-  `${mode === 'check' ? 'Checked' : 'Projected'} ${entries.length} Protocol files into planr-pipeline.\n`,
+  `${mode === 'check' ? 'Checked' : 'Projected'} ${entries.length} Protocol files into @openplanr/pipeline.\n`,
 );

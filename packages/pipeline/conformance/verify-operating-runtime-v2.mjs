@@ -9,18 +9,18 @@ import {
   createOperatingApprovalRecordV2,
   createOperatingApprovalRequirementV2,
   evaluateOperatingApprovalSetV2,
-} from 'planr-pipeline/operate/approvals-v2';
+} from '@openplanr/pipeline/operate/approvals-v2';
 import {
   createOperateEvidenceRegistryV2,
   dispatchOperateEvidenceResolverV2,
   prepareOperateEvidenceDispatchV2,
-} from 'planr-pipeline/operate/evidence-v2';
-import { OPEN_REFERENCE_OPERATE_EXTENSIONS_V2 } from 'planr-pipeline/operate/extensions-v2';
+} from '@openplanr/pipeline/operate/evidence-v2';
+import { OPEN_REFERENCE_OPERATE_EXTENSIONS_V2 } from '@openplanr/pipeline/operate/extensions-v2';
 import {
   createOperatingGovernedExecutionRuntimeV2,
   executeOperatingGovernedActionV2,
   OPERATING_GOVERNED_EXECUTION_TERMINAL_STATES_V2,
-} from 'planr-pipeline/operate/governed-execution-v2';
+} from '@openplanr/pipeline/operate/governed-execution-v2';
 import {
   createContainedExecutorInputEnvelopeV2,
   createOperateGovernedExtensionRegistryV2,
@@ -31,7 +31,7 @@ import {
   selectOperateCapabilityProviderV2,
   selectOperateExecutorV2,
   selectOperatePolicyProviderV2,
-} from 'planr-pipeline/operate/governed-extensions-v2';
+} from '@openplanr/pipeline/operate/governed-extensions-v2';
 import {
   buildOperatingRollbackPlanV2,
   classifyOperatingGovernedRecoveryV2,
@@ -40,24 +40,24 @@ import {
   reconcileOperatingGovernedDispatchV2,
   recordOperatingRollbackPlanV2,
   rollbackOperatingGovernedActionV2,
-} from 'planr-pipeline/operate/governed-recovery-v2';
-import { assertOperatingIntelligencePlanV2 } from 'planr-pipeline/operate/intelligence-router-v2';
+} from '@openplanr/pipeline/operate/governed-recovery-v2';
+import { assertOperatingIntelligencePlanV2 } from '@openplanr/pipeline/operate/intelligence-router-v2';
 import {
   createOperatingVerificationCandidateV2,
   selectOperatingMetricProviderV2,
   selectOperatingSnapshotProviderV2,
   selectOperatingVerificationProviderV2,
-} from 'planr-pipeline/operate/operating-signal-providers-v2';
+} from '@openplanr/pipeline/operate/operating-signal-providers-v2';
 import {
   assertOperatingPolicyEvaluationV2,
   createOperatingActionPolicyV2,
   evaluateOperatingActionPolicyV2,
-} from 'planr-pipeline/operate/policy-v2';
+} from '@openplanr/pipeline/operate/policy-v2';
 import {
   createDisposableLocalProjectTargetV2,
   createOpenReferenceCapabilityAvailabilityV2,
   OPEN_REFERENCE_PROJECT_EXECUTOR_HOST_V2,
-} from 'planr-pipeline/operate/reference-governed-executors-v2';
+} from '@openplanr/pipeline/operate/reference-governed-executors-v2';
 import {
   acceptOperatingAssignmentSubmissionV2,
   assertOperateAuthorizedV2,
@@ -77,8 +77,8 @@ import {
   transitionOperatingAssignmentV2,
   transitionOperatingReviewV2,
   verifyOperatingRuntimeEventChainV2,
-} from 'planr-pipeline/operate/runtime-v2';
-import { deriveOperatingAssignmentReleaseIntentsV2 } from 'planr-pipeline/operate/scheduler-v2';
+} from '@openplanr/pipeline/operate/runtime-v2';
+import { deriveOperatingAssignmentReleaseIntentsV2 } from '@openplanr/pipeline/operate/scheduler-v2';
 import {
   assertOperateIntelligencePlanContractV2,
   assertOperateRoleOutputContract,
@@ -106,7 +106,7 @@ import {
   readOperatingRuntimeStateV2,
   sha256Jcs,
   validateProtocolArtifact,
-} from 'planr-pipeline/protocol';
+} from '@openplanr/pipeline/protocol';
 
 const VERSION = '2.0.0';
 const TIME = '2026-08-08T08:00:00.000Z';

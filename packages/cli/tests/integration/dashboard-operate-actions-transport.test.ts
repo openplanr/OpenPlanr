@@ -1,17 +1,17 @@
 import { createHash } from 'node:crypto';
 import { realpathSync } from 'node:fs';
 import { join } from 'node:path';
-import { startDashboard } from 'planr-pipeline/dashboard';
+import { startDashboard } from '@openplanr/pipeline/dashboard';
 import {
   assertOperateExperienceTransportView,
   buildOperateExperienceTransportView,
-} from 'planr-pipeline/dashboard/operate-experience-reader';
-import { assertOperateExperienceArtifactV2, sha256Jcs } from 'planr-pipeline/protocol';
+} from '@openplanr/pipeline/dashboard/operate-experience-reader';
+import { assertOperateExperienceArtifactV2, sha256Jcs } from '@openplanr/pipeline/protocol';
 import {
   assertOperateExperienceDisplaySurfaceV1,
   assertOperateExperiencePreviewV1,
   type OperateExperienceDisplaySurfaceV1,
-} from 'planr-pipeline/schemas/v1.2.0/operate-experience-display-surface.mjs';
+} from '@openplanr/pipeline/schemas/v1.2.0/operate-experience-display-surface.mjs';
 import { describe, expect, it, vi } from 'vitest';
 import {
   createOperateActionsSurfaceValidator,

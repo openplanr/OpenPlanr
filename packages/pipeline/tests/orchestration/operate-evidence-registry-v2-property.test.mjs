@@ -5,7 +5,7 @@ import { test } from 'node:test';
 import {
   createOperateEvidenceRegistryV2,
   prepareOperateEvidenceDispatchV2,
-} from 'planr-pipeline/operate/evidence-v2';
+} from '@openplanr/pipeline/operate/evidence-v2';
 
 const fixture = (name) =>
   JSON.parse(

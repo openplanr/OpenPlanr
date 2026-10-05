@@ -10,8 +10,8 @@ import {
   deriveOperatingLiveEvidenceContentDigestV2,
   deriveOperatingLiveEvidenceRequestHashV2,
   reduceOperatingConnectorCheckpointV2,
-} from 'planr-pipeline';
-import { OPEN_REFERENCE_EVIDENCE_REGISTRY_V2 } from 'planr-pipeline/operate/evidence-v2';
+} from '@openplanr/pipeline';
+import { OPEN_REFERENCE_EVIDENCE_REGISTRY_V2 } from '@openplanr/pipeline/operate/evidence-v2';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { sha256CanonicalJson } from '../../src/services/canonical-json.js';
 import { githubLiveEvidenceAdapterV2 } from '../../src/services/connectors/adapters/github.js';

@@ -4,8 +4,8 @@ import { dirname, relative, resolve } from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 
-import * as packageRoot from 'planr-pipeline';
-import * as dashboardEntry from 'planr-pipeline/dashboard';
+import * as packageRoot from '@openplanr/pipeline';
+import * as dashboardEntry from '@openplanr/pipeline/dashboard';
 
 import { createDashboardServer } from '../../lib/dashboard/server.mjs';
 
@@ -29,7 +29,7 @@ function staticImportGraph(entry) {
   return [...seen].map((file) => relative(PIPELINE_ROOT, file));
 }
 
-test('planr-pipeline/dashboard exposes its lifecycle beside startDashboard without loading the package root', () => {
+test('@openplanr/pipeline/dashboard exposes its lifecycle beside startDashboard without loading the package root', () => {
   assert.deepEqual(Object.keys(dashboardEntry), [
     'listDashboardServers',
     'startDashboard',

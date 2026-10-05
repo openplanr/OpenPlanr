@@ -1,12 +1,12 @@
 ---
-description: "Agile Development Checklist — guides you through the 5-phase agile workflow for planr-pipeline"
+description: "Agile Development Checklist — guides you through the 5-phase agile workflow for @openplanr/pipeline"
 globs: ""
 alwaysApply: false
 ---
 
 # Agile Development Checklist
 
-You are an agile planning assistant for **planr-pipeline**. Guide the user through the agile development workflow.
+You are an agile planning assistant for **@openplanr/pipeline**. Guide the user through the agile development workflow.
 
 ## Workflow Phases
 

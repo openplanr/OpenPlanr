@@ -1,14 +1,14 @@
 import { createHash } from 'node:crypto';
 import { realpathSync } from 'node:fs';
 import { join } from 'node:path';
-import { startDashboard } from 'planr-pipeline/dashboard';
-import { buildOperatingReviewBoundSubmissionV1 } from 'planr-pipeline/operate/runtime-v2';
-import { sha256Jcs } from 'planr-pipeline/protocol';
+import { startDashboard } from '@openplanr/pipeline/dashboard';
+import { buildOperatingReviewBoundSubmissionV1 } from '@openplanr/pipeline/operate/runtime-v2';
+import { sha256Jcs } from '@openplanr/pipeline/protocol';
 import {
   assertOperateExperienceDisplaySurfaceV1,
   assertOperateExperiencePreviewV1,
   type OperateExperienceDisplaySurfaceV1,
-} from 'planr-pipeline/schemas/v1.2.0/operate-experience-display-surface.mjs';
+} from '@openplanr/pipeline/schemas/v1.2.0/operate-experience-display-surface.mjs';
 import { describe, expect, it, vi } from 'vitest';
 import { createInboxActions } from '../../../../apps/dashboard/src/features/operate/inbox/inbox-actions.js';
 import {

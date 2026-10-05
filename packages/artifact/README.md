@@ -6,7 +6,7 @@ escaping, contrast, and feedback primitives live here so the dependency remains
 one-way: design may use artifact, but artifact never imports design.
 
 Protocol schemas, registries, validation, canonical errors, and JSON contracts
-come from `@openplanr/protocol`. Public `planr-pipeline` compatibility files are
+come from `@openplanr/protocol`. Public `@openplanr/pipeline` compatibility files are
 generated as ordinary files without symlinks.
 
 This workspace is npm-private; its source remains part of the public MIT monorepo.
@@ -45,7 +45,7 @@ source-text fidelity separately before a new unsaved diagram can adopt the copy.
 Exports keep the complete editable bundle, Mermaid copy and SVG snapshot distinct;
 uploads never grant repository link, watch or write authority.
 Direct company-shell mounts of `mountDiagramSourcePanel()` must also load
-`planr-pipeline/diagram-editor.css`, the published copy of this stylesheet. The controller applies an isolated
+`@openplanr/pipeline/diagram-editor.css`, the published copy of this stylesheet. The controller applies an isolated
 `planr-diagram-source-panel` scope outside the full editor, so the shared controls
 and responsive light/dark theme do not change host-page typography or layout.
 

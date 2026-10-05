@@ -3,10 +3,10 @@
 import { readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { sha256Jcs } from '@openplanr/pipeline/protocol';
 import { fireEvent, render } from '@testing-library/react';
 import axe from 'axe-core';
 import { JSDOM } from 'jsdom';
-import { sha256Jcs } from 'planr-pipeline/protocol';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 import { DashboardProviders } from '../../../../apps/dashboard/src/app/providers.js';

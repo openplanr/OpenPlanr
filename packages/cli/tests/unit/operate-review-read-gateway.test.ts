@@ -1,5 +1,5 @@
 import { readFileSync } from 'node:fs';
-import { sha256Jcs } from 'planr-pipeline/protocol';
+import { sha256Jcs } from '@openplanr/pipeline/protocol';
 import { describe, expect, it, vi } from 'vitest';
 
 const { assertWorkspace, selectWorkspace } = vi.hoisted(() => ({
@@ -7,11 +7,11 @@ const { assertWorkspace, selectWorkspace } = vi.hoisted(() => ({
   selectWorkspace: vi.fn(),
 }));
 
-vi.mock('planr-pipeline/dashboard/operate-review-display-workspace-contract', () => ({
+vi.mock('@openplanr/pipeline/dashboard/operate-review-display-workspace-contract', () => ({
   assertOperateReviewDisplayWorkspaceV1: assertWorkspace,
 }));
 
-vi.mock('planr-pipeline/dashboard/operate-experience-reader', () => ({
+vi.mock('@openplanr/pipeline/dashboard/operate-experience-reader', () => ({
   selectOperateReviewDisplayWorkspace: selectWorkspace,
 }));
 

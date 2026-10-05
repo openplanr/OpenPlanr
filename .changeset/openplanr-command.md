@@ -1,6 +1,6 @@
 ---
 'openplanr': minor
-'planr-pipeline': patch
+'@openplanr/pipeline': patch
 '@openplanr/protocol': patch
 ---
 

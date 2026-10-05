@@ -98,8 +98,8 @@ for (const entry of published) {
     runUrl,
     commit,
     fileCount,
-    bundled: entry.publicDependencies?.['planr-pipeline']
-      ? `planr-pipeline@${entry.publicDependencies['planr-pipeline']}`
+    bundled: entry.publicDependencies?.['@openplanr/pipeline']
+      ? `@openplanr/pipeline@${entry.publicDependencies['@openplanr/pipeline']}`
       : null,
   });
   ensureRelease(tag, `${entry.name} ${entry.version}`, notes, target.tagLatestRelease);
