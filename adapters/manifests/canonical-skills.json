@@ -1807,7 +1807,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:a33f15eb7ca18b8f5789b108f15d387d19e3e62d9b63751af6cb23763a7c37ff"
+          "digest": "sha256:3ef4c3a109054cd25e56d5dda2393977cff81641f62b3db0231d802d652e5aff"
         },
         {
           "path": "scripts/runtime/packages/design/templates/studio/enhancements.css",
@@ -2969,7 +2969,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:a33f15eb7ca18b8f5789b108f15d387d19e3e62d9b63751af6cb23763a7c37ff"
+          "digest": "sha256:3ef4c3a109054cd25e56d5dda2393977cff81641f62b3db0231d802d652e5aff"
         },
         {
           "path": "scripts/runtime/packages/design/templates/studio/enhancements.css",
@@ -4131,7 +4131,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:a33f15eb7ca18b8f5789b108f15d387d19e3e62d9b63751af6cb23763a7c37ff"
+          "digest": "sha256:3ef4c3a109054cd25e56d5dda2393977cff81641f62b3db0231d802d652e5aff"
         },
         {
           "path": "scripts/runtime/packages/design/templates/studio/enhancements.css",

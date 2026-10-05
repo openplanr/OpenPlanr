@@ -1,5 +1,13 @@
 # @openplanr/design
 
+## 0.4.3
+
+### Patch Changes
+
+- 9b44c2d: Align Design Studio mode controls with header actions, including consistent phone touch targets and visible hover, selected and keyboard-focus states.
+- Updated dependencies [9b44c2d]
+  - @openplanr/artifact@0.6.3
+
 ## 0.4.2
 
 ### Patch Changes
