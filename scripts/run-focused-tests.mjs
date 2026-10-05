@@ -72,6 +72,7 @@ const steps = Object.freeze([
       'packages/design/tests/workspace-client.test.mjs',
       'packages/design/tests/studio.test.mjs',
       'packages/design/tests/studio.browser.test.mjs',
+      'packages/design/tests/studio-toolbar-alignment.browser.test.mjs',
       'packages/design/tests/walkthrough-transitions.browser.test.mjs',
       'packages/design/tests/reviewer-workflow.browser.test.mjs',
       'packages/design/tests/mobile-loading.browser.test.mjs',
