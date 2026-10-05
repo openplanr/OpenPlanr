@@ -7,7 +7,7 @@
   "canonicalization": "rfc8785",
   "diagramId": "delivery-loop",
   "title": "The OpenPlanr delivery loop",
-  "summary": "How a request becomes shipped code: skills you invoke inside your coding agent write plans beside the code, the planr CLI validates and syncs them, and review and operate skills return evidence for the next request.",
+  "summary": "How a request becomes shipped code: skills you invoke inside your coding agent write plans beside the code, the openplanr CLI validates and syncs them, and review and operate skills return evidence for the next request.",
   "audience": "engineer",
   "grammar": {
     "id": "architecture",
@@ -78,7 +78,7 @@
     },
     {
       "id": "cli",
-      "label": "planr CLI\nvalidate · render · sync",
+      "label": "openplanr CLI\nvalidate · render · sync",
       "kind": "primary-item",
       "description": "Deterministic: stores and validates planning files, renders diagrams and reports, syncs trackers, and diagnoses installations. It never calls a model.",
       "semanticPosition": null
@@ -247,7 +247,7 @@
   ],
   "accessibility": {
     "title": "The OpenPlanr delivery loop",
-    "description": "You invoke the spec, plan, ship, and land skills inside your coding agent. Spec and plan write the plans under .planr/ in your repository; ship reads the plan first and implements one task in the source code; land assesses release readiness before you merge. The planr CLI validates the planning files offline, never by a model, and keeps GitHub Issues or Linear in step. Review skills check the change, and operate readouts return to you as evidence for the next request, which closes the loop.",
+    "description": "You invoke the spec, plan, ship, and land skills inside your coding agent. Spec and plan write the plans under .planr/ in your repository; ship reads the plan first and implements one task in the source code; land assesses release readiness before you merge. The openplanr CLI validates the planning files offline, never by a model, and keeps GitHub Issues or Linear in step. Review skills check the change, and operate readouts return to you as evidence for the next request, which closes the loop.",
     "readingOrder": [
       "you",
       "spec",

@@ -75,7 +75,7 @@ describe('gherkin.feature.hbs rendering', () => {
         {
           name: 'Happy path',
           given: 'no Linear PAT is configured',
-          when: 'I run `planr linear init`',
+          when: 'I run `openplanr linear init`',
           then: 'the PAT prompt appears',
         },
       ],
@@ -88,7 +88,7 @@ describe('gherkin.feature.hbs rendering', () => {
     expect(rendered).toContain('    Given no Linear PAT is configured');
     expect(rendered).not.toContain('Given Given');
 
-    expect(rendered).toContain('    When I run `planr linear init`');
+    expect(rendered).toContain('    When I run `openplanr linear init`');
     expect(rendered).not.toContain('When When');
 
     expect(rendered).toContain('    Then the PAT prompt appears');

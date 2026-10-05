@@ -1,5 +1,5 @@
 /**
- * `planr sync` command.
+ * `openplanr sync` command.
  *
  * Validates and repairs cross-references across all artifacts:
  *   - Removes links to non-existent artifacts

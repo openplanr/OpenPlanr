@@ -57,8 +57,8 @@ for (const path of cliSources) {
 }
 
 const semanticPatterns = [
-  /`planr\s+plan(?:\s|`)/iu,
-  /`planr\s+spec\s+decompose(?:\s|`)/iu,
+  /`(?:open)?planr\s+plan(?:\s|`)/iu,
+  /`(?:open)?planr\s+spec\s+decompose(?:\s|`)/iu,
   /`planr-pipeline(?:\s|`)/iu,
   /\b(?:ANTHROPIC_API_KEY|OPENAI_API_KEY|OLLAMA_HOST)\b/u,
   /\b(?:anthropic|openai|ollama)\s+(?:client|provider|model)\b/iu,

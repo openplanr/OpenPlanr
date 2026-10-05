@@ -72,7 +72,7 @@ export function validateReportMarkdown(
           severity: 'warning',
           ruleId: 'evidence-density',
           message: 'Few evidence anchors (URLs or #issues) detected.',
-          suggestion: 'Link each major claim to a PR, commit, or planr artifact id.',
+          suggestion: 'Link each major claim to a PR, commit, or openplanr artifact id.',
         });
       }
     }

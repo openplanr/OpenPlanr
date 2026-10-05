@@ -27,6 +27,7 @@ import {
 } from '../lib/pipeline/professional-skills.mjs';
 import { assertProtocolArtifact } from '../lib/protocol/contracts.mjs';
 import { sha256Jcs } from '../lib/protocol/jcs.mjs';
+import { CLI_COMMAND } from '../lib/protocol/names.mjs';
 
 const REGISTRY_PATH = 'registry/operate-v2-contracts.json';
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
@@ -471,7 +472,7 @@ function assertPortableAsset(path, bytes, labels) {
     failures.push('launches a nested coding runtime');
   }
   if (/(?:sonnet|opus)/iu.test(bytes)) failures.push('contains a vendor model name');
-  if (/^\s*(?:[$>]\s*)?planr\s+[^\n]*--yes(?:\s|$)/mu.test(bytes)) {
+  if (/^\s*(?:[$>]\s*)?(?:open)?planr\s+[^\n]*--yes(?:\s|$)/mu.test(bytes)) {
     failures.push('adds implicit --yes to an executable command');
   }
   if (path.includes('/codex/') && /\$\{?CLAUDE_PLUGIN_ROOT\}?|~\/\.claude\//u.test(bytes)) {
@@ -642,7 +643,7 @@ function renderOperateManifest(registry, assetBytesByPath, labels, skillCustody)
       generator: 'scripts/generate-guided-adapters.mjs',
       skillDistribution: renderCodexSkillDistribution(skillCustody),
       cliRequirements: {
-        executable: 'planr',
+        executable: CLI_COMMAND,
         protocolVersion: '2.0.0',
         output: 'json',
         commands: canonicalCliRequirements(skillCustody.skillRegistry),

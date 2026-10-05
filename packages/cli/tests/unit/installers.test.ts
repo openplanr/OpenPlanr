@@ -11,16 +11,16 @@ describe('web installers', () => {
       expect(installer).toContain('--no-audit');
       expect(installer).toContain('--no-fund');
       expect(installer).toContain('--loglevel=error');
-      expect(installer).toContain('planr setup');
+      expect(installer).toContain('openplanr setup');
     }
-    expect(sh).not.toMatch(/^planr setup(?:\s|$)/m);
-    expect(ps1).not.toMatch(/^& planr .*setup/m);
+    expect(sh).not.toMatch(/^openplanr setup(?:\s|$)/m);
+    expect(ps1).not.toMatch(/^& openplanr .*setup/m);
   });
 
   it('keeps the minimal installation escape hatch', () => {
     expect(sh).toContain('--omit=optional');
     expect(ps1).toContain('--omit=optional');
-    expect(sh).toContain('planr setup --minimal');
-    expect(ps1).toContain('planr setup --minimal');
+    expect(sh).toContain('openplanr setup --minimal');
+    expect(ps1).toContain('openplanr setup --minimal');
   });
 });

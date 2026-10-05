@@ -125,7 +125,7 @@ test('board preserves a running daemon with invalid registry until explicit owne
   );
 
   await assert.rejects(runCli(['board', '--dir', fixture.boardDir], fixture.env), (error) =>
-    error.stderr.includes(`planr server stop ${identified.instanceId}`),
+    error.stderr.includes(`openplanr server stop ${identified.instanceId}`),
   );
   assert.equal(first.child.exitCode, null, 'the original tracked daemon survives');
   assert.equal(readFileSync(regPath, 'utf8'), truncated, 'unreadable registry was preserved');

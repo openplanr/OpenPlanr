@@ -306,13 +306,13 @@
     {
       "source": "packages/protocol/projections/pipeline/lib/protocol/names.d.mts",
       "target": "lib/protocol/names.d.mts",
-      "sha256": "4628f5564ad82a482ac88be714dc36f6fedbf0a9383966d3e361209ef93031db",
+      "sha256": "90b6f64bd3876f08389d1285639098464b922b041d4cb34e5b05d1ed5f45e968",
       "mode": "644"
     },
     {
       "source": "packages/protocol/projections/pipeline/lib/protocol/names.mjs",
       "target": "lib/protocol/names.mjs",
-      "sha256": "33c5f002fa6fbe4c4930a4f92c06cd7f35c720fb2c9db024e0d860f8b8fc962c",
+      "sha256": "85d080c6a4a0ed31cb60daaf0dc8739a0d9ddbd060e63126d81a3b2b84294bd9",
       "mode": "644"
     },
     {
@@ -331,6 +331,18 @@
       "source": "packages/protocol/projections/pipeline/lib/protocol/planning-contracts.mjs",
       "target": "lib/protocol/planning-contracts.mjs",
       "sha256": "8a3c46f63fdb225af6649522227a7cc35bb8b49e56830099941a59cfccd5d74a",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/projections/pipeline/lib/protocol/planning-folder.d.mts",
+      "target": "lib/protocol/planning-folder.d.mts",
+      "sha256": "3fc1d12c41dd8b4c651608bf943cb8d07cec959efeafc6829039e268eed9e6da",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/projections/pipeline/lib/protocol/planning-folder.mjs",
+      "target": "lib/protocol/planning-folder.mjs",
+      "sha256": "10660491193a33dadca466f2dfefafbc276653d4e0727849f197727976362c3d",
       "mode": "644"
     },
     {
@@ -468,7 +480,7 @@
     {
       "source": "packages/protocol/registries/commands.json",
       "target": "registry/v1.5.0/commands.json",
-      "sha256": "fc8a26bf71dacf6c67366d5ef20468d8aa7897ebfe58d4266bc6a1d374bf6bbd",
+      "sha256": "46ff9a47a64e8a46d53e23e24e529b723f1dedd18a9cd35065d9189fa64569fd",
       "mode": "644"
     },
     {
@@ -498,7 +510,7 @@
     {
       "source": "packages/protocol/registries/skills.json",
       "target": "registry/v1.5.0/skills.json",
-      "sha256": "254ef127ab132201e34b955a06ea15c9fbb0f5a4831beb8b0e808dc3d25c96a2",
+      "sha256": "c9c1a38f5ae964258d1e04a56acaefce8f7b53ce6f37f36032fabdb1f9b6010e",
       "mode": "644"
     },
     {

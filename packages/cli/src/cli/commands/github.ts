@@ -1,5 +1,5 @@
 /**
- * `planr github` command.
+ * `openplanr github` command.
  *
  * Push planning artifacts to GitHub Issues and sync status bi-directionally.
  */
@@ -194,7 +194,7 @@ export function registerGitHubCommand(program: Command) {
     .command('github')
     .description('Sync planning artifacts with GitHub Issues');
 
-  // --- planr github push ---
+  // --- openplanr github push ---
   github
     .command('push')
     .description('Push artifacts to GitHub Issues')
@@ -290,7 +290,7 @@ export function registerGitHubCommand(program: Command) {
       logger.success(`Done: ${created} created, ${updated} updated`);
     });
 
-  // --- planr github sync ---
+  // --- openplanr github sync ---
   github
     .command('sync')
     .description('Sync artifact status with GitHub Issues (bi-directional)')
@@ -459,7 +459,7 @@ export function registerGitHubCommand(program: Command) {
       }
     });
 
-  // --- planr github status ---
+  // --- openplanr github status ---
   github
     .command('status')
     .description('Show sync status of all linked artifacts')

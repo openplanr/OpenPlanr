@@ -7,7 +7,7 @@ const CLI = resolve('src/cli/index.ts');
 const TSX = createRequire(import.meta.url).resolve('tsx/cli');
 const fixtureRoot = resolve('tests/fixtures/graph-project');
 
-describe('planr graph', () => {
+describe('openplanr graph', () => {
   it('emits stable graph JSON', () => {
     const output = execFileSync(
       process.execPath,

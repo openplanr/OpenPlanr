@@ -44,14 +44,14 @@ async function backlog(...args: string[]): Promise<void> {
   await program.parseAsync(['node', 'planr', '--project-dir', projectDir, 'backlog', ...args]);
 }
 
-/** Run `planr backlog add --json` and return the id it reports for `title`. */
+/** Run `openplanr backlog add --json` and return the id it reports for `title`. */
 async function add(title: string, ...extra: string[]): Promise<string> {
   await backlog('add', title, '--json', ...extra);
   const created = printed
     .filter((line) => line.startsWith('{'))
     .map((line) => JSON.parse(line) as { id: string; title: string })
     .find((result) => result.title === title);
-  if (!created) throw new Error(`planr backlog add printed no result for "${title}"`);
+  if (!created) throw new Error(`openplanr backlog add printed no result for "${title}"`);
   return created.id;
 }
 

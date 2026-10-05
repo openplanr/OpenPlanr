@@ -2,10 +2,10 @@
 
 The refinement document is the durable record of one run: what was read, how
 each item was judged, what was selected and what the refuters changed. The CLI
-validates it (`planr sprint refinement <id> --data`), stores it as
+validates it (`openplanr sprint refinement <id> --data`), stores it as
 `.planr/sprints/SPRINT-NNN/refinement.json`, renders `refinement.md` from it
-and fills the sprint body from its batches. `planr sprint diff`, `planr sprint
-close` and `planr sprint apply` read it back.
+and fills the sprint body from its batches. `openplanr sprint diff`, `openplanr sprint
+close` and `openplanr sprint apply` read it back.
 
 ## Item record
 
@@ -26,7 +26,7 @@ One entry per open item, whether or not it is selected.
 | `bucket` | `inProgress`, `planNext`, `blocked` or `closeOrDemote`. |
 | `reason` | One clause: why the item sits in that bucket. |
 | `evidence` | For close-or-demote rows: `file:line`, PR number or date. |
-| `targetStatus` / `targetPriority` | What `planr sprint apply` writes, in the repository's own vocabulary (`planr update --help`). Priority applies to backlog items only. |
+| `targetStatus` / `targetPriority` | What `openplanr sprint apply` writes, in the repository's own vocabulary (`openplanr update --help`). Priority applies to backlog items only. |
 
 ## Scoring
 
@@ -149,6 +149,6 @@ A pick that fails a lens moves or drops, and the correction is recorded in
 
 `inputs.sources` names what was read; `inputs.defaulted` names every value
 taken from a default instead of the repository or the user. The CLI adds
-`leftovers[]` on `planr sprint close` and `applied` on `planr sprint apply`;
+`leftovers[]` on `openplanr sprint close` and `applied` on `openplanr sprint apply`;
 never write those yourself. Unknown fields are rejected, so keep notes in
 `inputs.notes` or in the item's `reason`.

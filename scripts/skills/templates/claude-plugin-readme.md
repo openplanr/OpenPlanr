@@ -16,24 +16,24 @@ Follow with `/planr:plan` to decompose the specification into stories and tasks,
 
 ## Install the CLI
 
-Several skills call the deterministic `planr` CLI from the `openplanr` npm package, which ships
+Several skills call the deterministic `openplanr` CLI from the `openplanr` npm package, which ships
 this plugin at the same version ({{PLUGIN_VERSION}}):
 
 ```bash
 npm install -g openplanr
 cd your-project
-planr init
+openplanr init
 ```
 
-`planr setup --runtime claude --scope user` installs the same plugin from the marketplace bundled
-with the CLI. Use one Claude Code channel per machine: this listing or `planr setup`, not both.
+`openplanr setup --runtime claude --scope user` installs the same plugin from the marketplace bundled
+with the CLI. Use one Claude Code channel per machine: this listing or `openplanr setup`, not both.
 The same skills ship for Codex and Cursor through the `openplanr` package.
 
 ## What the plugin runs, sends, and fetches
 
 - Skills run inside Claude Code. The plugin makes no model calls of its own and sends no
   telemetry. It has no hooks and no MCP servers.
-- Skills call the `planr` CLI, bundled Node.js scripts, `git`, and the GitHub CLI (`gh`). They
+- Skills call the `openplanr` CLI, bundled Node.js scripts, `git`, and the GitHub CLI (`gh`). They
   read and write files in your repository.
 - The planning dashboard and local artifact reviews bind to loopback only.
 - Bundled scripts are readable JavaScript. The design studio and review stage pages ship as
@@ -59,7 +59,7 @@ The same skills ship for Codex and Cursor through the `openplanr` package.
   same address, its configured `ANTHROPIC_AUTH_TOKEN`. Tokens are never saved or reported.
 - Only when you ask:
   - `sync` reconciles planning files with GitHub Issues through `gh` (writes need `--apply`),
-    or with Linear through your Linear connector or the `planr linear` CLI, which keeps its own
+    or with Linear through your Linear connector or the `openplanr linear` CLI, which keeps its own
     token.
   - `artifact` and the design skills share an encrypted review through `share.openplanr.dev`.
   - The CLI's optional design engine calls OpenAI only when you select its OpenAI provider and

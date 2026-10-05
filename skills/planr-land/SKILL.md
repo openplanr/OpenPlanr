@@ -11,8 +11,8 @@ user wants to assess readiness or prepare a clear landing sequence.
 
 1. Read the current branch, worktree status, requested target, completed checks,
    and release constraints already available in the repository or conversation.
-2. Inspect the installed CLI help, then use `planr land prepare`, `planr land
-   show`, or `planr land status` only when that command adds useful local state.
+2. Inspect the installed CLI help, then use `openplanr land prepare`, `openplanr land
+   show`, or `openplanr land status` only when that command adds useful local state.
 3. Identify blockers, missing checks, ordering constraints, recovery options,
    and the exact merge, publication, or deployment commands the user would run.
 4. If a real release choice is missing, use the host's native structured question

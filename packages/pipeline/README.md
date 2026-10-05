@@ -20,7 +20,7 @@
 
 Most people do not install `planr-pipeline` directly. The
 [`openplanr`](https://www.npmjs.com/package/openplanr) CLI depends on the exact matching
-version and installs it with `planr setup`; the skills that run in Claude Code, Codex, and
+version and installs it with `openplanr setup`; the skills that run in Claude Code, Codex, and
 Cursor call into it for deterministic work. Install it yourself when you integrate with the
 Protocol, the Operate runtime, or the dashboard contracts from your own code:
 

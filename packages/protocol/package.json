@@ -31,6 +31,10 @@
       "types": "./src/names.d.mts",
       "import": "./src/names.mjs"
     },
+    "./planning-folder": {
+      "types": "./src/planning-folder.d.mts",
+      "import": "./src/planning-folder.mjs"
+    },
     "./contracts": {
       "types": "./src/contracts.d.mts",
       "import": "./src/contracts.mjs"

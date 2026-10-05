@@ -25,7 +25,7 @@ import {
   listArtifactReviewServers,
 } from '@openplanr/artifact/review-server.mjs';
 import { ARTIFACT_ERROR_CODES, PipelineError } from '@openplanr/protocol/errors';
-import { PLANNING_FOLDER } from '@openplanr/protocol/names';
+import { PLANNING_FOLDER, planningFolderConflict } from '@openplanr/protocol/planning-folder';
 import { listDesignRevisions, readDesignRevision, reviewDigest } from './context.mjs';
 import { prepareDesignPlanHandoff } from './design-plan-handoff.mjs';
 import {
@@ -400,7 +400,10 @@ function proposeImplementationPackage(file, env) {
 }
 
 async function persistDesignTaste(current, state) {
-  const path = join(projectRoot(current.root), `${PLANNING_FOLDER}/design-system/taste.json`);
+  const root = projectRoot(current.root);
+  const conflict = planningFolderConflict(root);
+  if (conflict) throw new PipelineError(conflict.code, conflict.problem, conflict.fix);
+  const path = join(root, `${PLANNING_FOLDER}/design-system/taste.json`);
   const release = await acquireStartLock(`${path}.lock`);
   try {
     const taste = readJson(path, { designs: {} });

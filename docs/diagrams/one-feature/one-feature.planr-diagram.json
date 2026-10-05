@@ -7,7 +7,7 @@
   "canonicalization": "rfc8785",
   "diagramId": "one-feature",
   "title": "One feature, end to end",
-  "summary": "Passwordless sign-in from request to readout: who acts at each step when you, your coding agent, the planr CLI, and GitHub share one delivery loop.",
+  "summary": "Passwordless sign-in from request to readout: who acts at each step when you, your coding agent, the openplanr CLI, and GitHub share one delivery loop.",
   "audience": "engineer",
   "grammar": {
     "id": "sequence",
@@ -50,7 +50,7 @@
     },
     {
       "id": "cli",
-      "label": "planr CLI",
+      "label": "openplanr CLI",
       "kind": "primary-item",
       "description": "Deterministic validation, rendering, and sync. It never calls a model.",
       "semanticPosition": null
@@ -109,7 +109,7 @@
       "from": "you",
       "to": "cli",
       "kind": "message",
-      "label": "planr sync",
+      "label": "openplanr sync",
       "weight": null
     },
     {
@@ -241,7 +241,7 @@
   ],
   "accessibility": {
     "title": "One feature, end to end",
-    "description": "You ask the coding agent for a specification for passwordless sign-in; it asks only the questions that change the outcome and writes the specification under .planr/. You ask for a plan; it writes user stories and tasks, and the planr CLI validates the cross-references offline. You ship one task at a time: the agent reads the plan first, implements and verifies the task, and records provenance; you open one pull request per task, GitHub runs CI and review, land prepares the exact merge commands, and you merge. Release writes the release entry and operate returns a readout that becomes evidence for the next specification.",
+    "description": "You ask the coding agent for a specification for passwordless sign-in; it asks only the questions that change the outcome and writes the specification under .planr/. You ask for a plan; it writes user stories and tasks, and the openplanr CLI validates the cross-references offline. You ship one task at a time: the agent reads the plan first, implements and verifies the task, and records provenance; you open one pull request per task, GitHub runs CI and review, land prepares the exact merge commands, and you merge. Release writes the release entry and operate returns a readout that becomes evidence for the next specification.",
     "readingOrder": [
       "you",
       "agent",

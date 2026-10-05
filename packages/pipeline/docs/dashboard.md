@@ -3,7 +3,7 @@
 > This document describes the current unified OpenPlanr React dashboard and its
 > loopback-only planr-pipeline server contract.
 
-> Launch the local planr dashboard — a live, read-only visual projection of the
+> Launch the local openplanr dashboard — a live, read-only visual projection of the
 > `.planr/` graph (Overview · Graph · Board · List · Sprints · Activity) and
 > the optional read-only Operate runtime projection.
 
@@ -52,8 +52,8 @@ The graph data path is `lib/dashboard/graph-engine.mjs`, which mirrors the
 `/planr:status` A.1/A.2 contract so the two surfaces can never drift
 ("one engine, one truth"):
 
-- **A.1 — delegate:** when the planr CLI is installed AND new enough, the engine
-  shells out to `planr graph --json` (preferred) or `planr status --json`, parses
+- **A.1 — delegate:** when the openplanr CLI is installed AND new enough, the engine
+  shells out to `openplanr graph --json` (preferred) or `openplanr status --json`, parses
   stdout, and validates the result against `schemas/v1.0.0/graph.schema.json`.
 - **A.2 — fallback:** otherwise the native frontmatter reader
   (`lib/dashboard/graph-reader.mjs`) walks `.planr/` on disk and produces an
@@ -74,12 +74,12 @@ port and start time; control credentials are never returned by discovery.
 A second launch reuses a live dashboard only when its project, watch configuration,
 runtime and package identity agree. An unrelated occupant remains untouched.
 
-`planr server list [--json]` lists healthy owned dashboards and Studios.
-`planr server stop <instance> [--json]` authenticates the exact instance before
+`openplanr server list [--json]` lists healthy owned dashboards and Studios.
+`openplanr server stop <instance> [--json]` authenticates the exact instance before
 requesting shutdown. The dashboard ends its watcher and streams, drains in-flight
 HTTP work and removes only its own custody. Its waiting CLI parent then exits.
 Neither a port nor a PID authorizes shutdown. Older services without an instance
-record are not adopted or killed. `planr doctor` reports the owned-service count.
+record are not adopted or killed. `openplanr doctor` reports the owned-service count.
 
 **Bootstrap query roots.** `GET /api/bootstrap` returns closed, owner-issued
 `queryRoots` for `planning` and `operate`. Either product root may be `null`.
@@ -195,7 +195,7 @@ OpenPlanr may inject one process-local gateway into the loopback server. The
 browser then uses this three-step exchange:
 
 ```bash
-planr operate dashboard <cycleId> --actor <authorizedActorId>
+openplanr operate dashboard <cycleId> --actor <authorizedActorId>
 ```
 
 That OpenPlanr-owned command activates the actor-bound gateway in-process and

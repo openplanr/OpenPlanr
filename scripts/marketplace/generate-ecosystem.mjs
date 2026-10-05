@@ -223,8 +223,8 @@ Compatibility invariants:
 - The public pipeline retains ${ecosystem.publicCompatibility.pipelineExportKeys} export keys and ${ecosystem.publicCompatibility.pipelineRootSymbols} root symbols.
 - Historical schemas and registries remain accounted for; additive Protocol contracts retain versioned readers.
 - Commands, skills, roles, and output contracts are catalog-bound.
-- \`planr\`, \`openplanr\`, and deprecated \`opr\` resolve to one CLI parser.
-- \`planr operate ...\` remains supported; \`planr pipeline operate ...\` and pipeline plugin Operate assets remain retired.
+- \`openplanr\` and its \`opr\` alias resolve to one CLI parser.
+- \`openplanr operate ...\` remains supported; \`openplanr pipeline operate ...\` and pipeline plugin Operate assets remain retired.
 `;
 }
 
@@ -330,7 +330,7 @@ async function buildOutputs() {
   );
   assertEqual(
     cliManifest.bin,
-    { planr: './bin/planr.js', openplanr: './bin/planr.js', opr: './bin/planr.js' },
+    { openplanr: './bin/openplanr.js', opr: './bin/openplanr.js' },
     'E_ECOSYSTEM_CLI_BINS',
     'CLI aliases must resolve to one parser.',
   );

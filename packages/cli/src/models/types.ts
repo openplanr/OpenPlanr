@@ -10,7 +10,7 @@ export type ArtifactType =
   | 'checklist';
 export type TargetCLI = 'cursor' | 'claude' | 'codex';
 /**
- * Which set of rule files `planr rules generate` should produce:
+ * Which set of rule files `openplanr rules generate` should produce:
  *
  *  - `agile`    — the existing agile-mode templates (epic → feature → story → task,
  *                 sprint, backlog). Default; preserves byte-for-byte legacy output.
@@ -28,7 +28,7 @@ export type LinearMappingStrategy = 'project' | 'milestone-of' | 'label-on';
 
 /**
  * Linear integration config. `teamId` is persisted in `.planr/config.json`
- * after `planr linear init`. The PAT is stored via `credentials-service`
+ * after `openplanr linear init`. The PAT is stored via `credentials-service`
  * (provider key `linear`), never in the config file — use optional `token`
  * only for in-memory flows.
  */
@@ -104,7 +104,7 @@ export type LinearIssueEstimationType =
   | 'exponential'
   | 'tShirt';
 
-/** Options for `planr linear sync` and related flows. */
+/** Options for `openplanr linear sync` and related flows. */
 export interface LinearSyncOptions {
   /**
    * When true, compute and print what would change without writing local files or mutating Linear issue bodies.
@@ -112,15 +112,15 @@ export interface LinearSyncOptions {
    */
   dryRun?: boolean;
   /**
-   * For `planr linear push`: skip creating new Linear projects/issues; only update existing linked entities.
-   * For `planr linear sync`: only affects flows that would create remote entities (sync is update-only by default).
+   * For `openplanr linear push`: skip creating new Linear projects/issues; only update existing linked entities.
+   * For `openplanr linear sync`: only affects flows that would create remote entities (sync is update-only by default).
    */
   updateOnly?: boolean;
   /** Checkbox merge strategy for the tasklist step. */
   onConflict?: 'prompt' | 'local' | 'linear';
 }
 
-/** One row for `planr linear status` (local mapping table). */
+/** One row for `openplanr linear status` (local mapping table). */
 export interface LinearMappingTableRow {
   kind: 'epic' | 'feature' | 'story' | 'task' | 'quick' | 'backlog';
   openPlanrId: string;
@@ -175,7 +175,7 @@ export interface OpenPlanrConfig {
     weeklyRecipientAllowlist?: string[];
   };
   reportLinter?: ReportLinterConfig;
-  /** Set after `planr linear init`; token is not saved in JSON. */
+  /** Set after `openplanr linear init`; token is not saved in JSON. */
   linear?: LinearConfig;
   /**
    * Upgrade-offer policy. Team-shared and additive; neither field is
@@ -206,7 +206,7 @@ export interface Epic extends BaseArtifact {
   dependencies: string;
   risks: string;
   featureIds: string[];
-  /** Linear project id (UUID) after a successful `planr linear push`. */
+  /** Linear project id (UUID) after a successful `openplanr linear push`. */
   linearProjectId?: string;
   /** Human-readable project label in Linear (e.g. name or slug). */
   linearProjectIdentifier?: string;
@@ -239,7 +239,7 @@ export interface Feature extends BaseArtifact {
   linearLabelIds?: string[];
   /**
    * Last reconciled status value, used as the `base` in the three-way status
-   * merge run by `planr linear sync`. Missing = no prior sync; the merge
+   * merge run by `openplanr linear sync`. Missing = no prior sync; the merge
    * treats that as a conflict when local and Linear disagree, resolved per
    * `--on-conflict`.
    */
@@ -311,7 +311,7 @@ export interface BacklogItem extends BaseArtifact {
   acceptanceCriteria?: string;
   notes?: string;
   /**
-   * Optional parent epic link. When set, `planr linear push` attaches this
+   * Optional parent epic link. When set, `openplanr linear push` attaches this
    * backlog item to the epic's Linear container (project / milestone / label)
    * instead of the standalone bucket.
    */
@@ -344,7 +344,7 @@ export interface Sprint extends BaseArtifact {
   capacityDays?: number;
   /** ISO date of the last backlog refinement that produced the buckets. */
   refinedAt?: string;
-  /** ISO date set by `planr sprint close`. */
+  /** ISO date set by `openplanr sprint close`. */
   closedAt?: string;
 }
 
@@ -428,7 +428,7 @@ export interface SprintContextSlice {
   taskIds: string[];
 }
 
-/** Serializable context used by report templates and `planr context`. */
+/** Serializable context used by report templates and `openplanr context`. */
 export interface StakeholderReportContext {
   projectName: string;
   generatedAt: string;

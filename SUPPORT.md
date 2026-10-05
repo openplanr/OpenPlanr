@@ -14,8 +14,8 @@ Open an issue through the [issue forms](https://github.com/openplanr/OpenPlanr/i
 Include:
 
 ```bash
-planr --version
-planr doctor --json
+openplanr --version
+openplanr doctor --json
 ```
 
 plus the host (Claude Code, Codex, or Cursor) and its version, the scope you installed
@@ -25,7 +25,7 @@ Doctor output redacts secrets; check it anyway before pasting.
 ## A skill misbehaves
 
 Use the **Skill behavior** form. Say which skill, what you asked, what it produced, and
-which files under `.planr/` it touched. Rerun `planr setup` and restart the host first;
+which files under `.planr/` it touched. Rerun `openplanr setup` and restart the host first;
 a same-version plugin that carries old content is replaced by setup.
 
 ## Security

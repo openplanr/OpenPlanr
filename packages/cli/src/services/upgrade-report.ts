@@ -92,7 +92,7 @@ export function printNextSteps(steps: UpgradeNextStep[], error?: string): void {
   );
 }
 
-/** How `planr upgrade apply` and the inline upgrade offer report an upgrade. */
+/** How `openplanr upgrade apply` and the inline upgrade offer report an upgrade. */
 export function printUpgradeReport(
   result: ExecuteCliHalfUpgradeResult,
   mode: ReleaseNotesMode,

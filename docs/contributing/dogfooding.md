@@ -23,11 +23,11 @@ check mode, because check mode validates existing output and never bootstraps it
 
 ## Use the checkout's CLI
 
-Call the workspace binary explicitly so a globally installed `planr` is never
+Call the workspace binary explicitly so a globally installed `openplanr` is never
 confused with the one you are testing:
 
 ```bash
-PLANR_BIN="$PWD/node_modules/.bin/planr"
+PLANR_BIN="$PWD/node_modules/.bin/openplanr"
 "$PLANR_BIN" --version
 ```
 
@@ -69,10 +69,10 @@ To use the checkout against another project, keep calling the explicit binary:
 ```bash
 OPENPLANR_REPO=/path/to/OpenPlanr
 cd /path/to/project
-"$OPENPLANR_REPO/node_modules/.bin/planr" status --md
+"$OPENPLANR_REPO/node_modules/.bin/openplanr" status --md
 ```
 
-Plan and ship must work when `planr` is absent from `PATH` and the network is
+Plan and ship must work when `openplanr` is absent from `PATH` and the network is
 unavailable: the host agent authors and implements; the CLI provides no semantic
 fallback.
 

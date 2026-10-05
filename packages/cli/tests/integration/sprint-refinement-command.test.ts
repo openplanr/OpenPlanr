@@ -135,7 +135,7 @@ async function writeJson(dir: string, name: string, value: unknown): Promise<str
   return file;
 }
 
-describe('planr sprint refinement lifecycle', () => {
+describe('openplanr sprint refinement lifecycle', () => {
   it('creates a sprint with the cut and capacity, then fills it from the refinement document', async () => {
     const project = await seed();
     const sprintInput = await writeJson(project.dir, 'sprint.json', {

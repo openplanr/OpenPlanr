@@ -76,7 +76,7 @@ export function registerChecklistCommand(program: Command) {
       let toToggle: Set<number>;
 
       if (itemArgs.length > 0) {
-        // Direct toggle: planr checklist toggle 1 3 5
+        // Direct toggle: openplanr checklist toggle 1 3 5
         const validIndices = new Set(items.map((i) => i.index));
         const parsed = itemArgs.map(Number).filter((n) => !Number.isNaN(n));
         const invalid = parsed.filter((n) => !validIndices.has(n));

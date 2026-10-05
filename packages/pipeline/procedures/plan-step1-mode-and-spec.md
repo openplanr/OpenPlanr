@@ -8,7 +8,7 @@ Executed from `commands/plan.md` after Step 0. Uses `SLUG` and `BRIEF` from argu
 
 The argument `$ARGUMENTS` was the invocation string; **`SLUG`** is bound from its first token. Use `SLUG` for path resolution; use `BRIEF` for content authoring during auto-scaffolding.
 
-### 1a — Detect planr spec mode
+### 1a — Detect openplanr spec mode
 
 Run procedure: `${CLAUDE_PLUGIN_ROOT}/procedures/mode-detection.md`. After it executes, `MODE` and (for spec-driven mode) `SPEC_DIR` are bound. The procedure also handles the self-heal-on-missing-`stack.md` pathway and the path-resolution table.
 
@@ -16,7 +16,7 @@ Run procedure: `${CLAUDE_PLUGIN_ROOT}/procedures/mode-detection.md`. After it ex
 
 The procedure file at `${CLAUDE_PLUGIN_ROOT}/procedures/mode-detection.md` (section **Required inputs (per command) → /plan**) covers the required-inputs validation for both modes. After it returns:
 
-- If MODE is `spec-driven` AND `<SPEC_DIR>/SPEC-NNN-${SLUG}.md` is missing, do NOT abort — run `${CLAUDE_PLUGIN_ROOT}/procedures/auto-scaffold-spec.md` (the pipeline plugin is self-sufficient and does not require the planr CLI; the procedure decides whether to continue to Step 2 or abort gracefully based on whether `BRIEF` was substantive).
+- If MODE is `spec-driven` AND `<SPEC_DIR>/SPEC-NNN-${SLUG}.md` is missing, do NOT abort — run `${CLAUDE_PLUGIN_ROOT}/procedures/auto-scaffold-spec.md` (the pipeline plugin is self-sufficient and does not require the openplanr CLI; the procedure decides whether to continue to Step 2 or abort gracefully based on whether `BRIEF` was substantive).
 - Otherwise, proceed to Step 2.
 
 ---

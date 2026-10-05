@@ -22,9 +22,9 @@ const SAMPLE_CHECKLIST = `# Agile Development Guide — TestProject
 
 | # | Activity | Command | Status |
 |---|----------|---------|--------|
-| 1 | Create Epic | \`planr epic create\` | [x] |
-| 2 | Create Features from Epic | \`planr feature create --epic <ID>\` | [x] |
-| 3 | Create User Stories from Features | \`planr story create --feature <ID>\` | [ ] |
+| 1 | Create Epic | \`openplanr epic create\` | [x] |
+| 2 | Create Features from Epic | \`openplanr feature create --epic <ID>\` | [x] |
+| 3 | Create User Stories from Features | \`openplanr story create --feature <ID>\` | [ ] |
 
 ## Phase 2: Technical Design
 

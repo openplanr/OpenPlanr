@@ -41,7 +41,7 @@ reuse another project's welcome copy.
 Use [utilities.md](references/utilities.md) for the bundled deterministic helper
 at [scripts/design.mjs](scripts/design.mjs). It inspects, validates, renders, opens,
 exports and records feedback without a separate CLI installation. When available,
-use the public `planr artifact` route to open the design document.
+use the public `openplanr artifact` route to open the design document.
 
 Inspect browser screenshots and exercise the primary journey and keyboard behavior
 at declared frames. Correct observed failures, then record evidence. Static lint

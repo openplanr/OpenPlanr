@@ -1,6 +1,6 @@
 # Procedure: Auto-scaffold the spec shell (invoked from Step 1)
 
-Executed from `procedures/plan-step1-mode-and-spec.md` when `MODE` is `spec-driven` AND `<SPEC_DIR>/SPEC-NNN-${SLUG}.md` is missing. Scaffolds the spec body instead of aborting; the pipeline plugin is self-sufficient and does not require the planr CLI.
+Executed from `procedures/plan-step1-mode-and-spec.md` when `MODE` is `spec-driven` AND `<SPEC_DIR>/SPEC-NNN-${SLUG}.md` is missing. Scaffolds the spec body instead of aborting; the pipeline plugin is self-sufficient and does not require the openplanr CLI.
 
 1. **Ensure `.planr/config.json` exists.** Step 0 strategies already handled this in greenfield projects. If still absent (rare), run `${CLAUDE_PLUGIN_ROOT}/procedures/write-planr-dirs.md`.
 2. **Ensure `.planr/specs/` exists.** Same as step 1; create if absent.
@@ -32,4 +32,4 @@ Executed from `procedures/plan-step1-mode-and-spec.md` when `MODE` is `spec-driv
 
 If the spec body already exists but contains only placeholder text (detect via the literal token `_Describe the problem this feature solves` or any unfilled `_…_` template hint), apply the same abort — the user authored the spec themselves and left it incomplete; respect that.
 
-Schema reference: `OpenPlanr/docs/reference/spec-schema.md` v1.0.0. Specs scaffolded here are interchangeable with `planr spec create` output.
+Schema reference: `OpenPlanr/docs/reference/spec-schema.md` v1.0.0. Specs scaffolded here are interchangeable with `openplanr spec create` output.

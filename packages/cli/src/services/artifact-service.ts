@@ -107,7 +107,7 @@ const parseWarningsEmitted = new Set<string>();
  *   2. The file exists but its frontmatter can't be parsed (malformed YAML,
  *      duplicate keys, stray `---` markers, etc.). A clear warning is emitted
  *      so the operator knows which file is broken and why; batch commands
- *      (`planr linear push`, `status`, `sync`) continue past the skip
+ *      (`openplanr linear push`, `status`, `sync`) continue past the skip
  *      instead of aborting the whole run. The warning is deduped per file
  *      so re-reading the same broken file doesn't log twice.
  */
@@ -219,7 +219,7 @@ export async function updateArtifactFields(
 
   const today = new Date().toISOString().split('T')[0];
   // When a caller changes `status`, invalidate the Linear-status sync
-  // baseline so the next `planr linear sync` recognizes the local change
+  // baseline so the next `openplanr linear sync` recognizes the local change
   // and pushes it up (or flags as a conflict if Linear also changed).
   // The sync itself opts out by passing its own `linearStatusReconciled`
   // value — we honor that over the auto-clear.

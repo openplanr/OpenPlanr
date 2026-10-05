@@ -6,23 +6,23 @@ license: MIT
 
 # OpenPlanr Artifact
 
-Use the deterministic `planr artifact` utility when it is installed. Never
+Use the deterministic `openplanr artifact` utility when it is installed. Never
 relaunch the active coding agent from inside this skill.
 
-1. For local review, run `planr artifact <file>` or
-   `planr artifact open <file>`. Use `--no-open --json` in headless sessions.
+1. For local review, run `openplanr artifact <file>` or
+   `openplanr artifact open <file>`. Use `--no-open --json` in headless sessions.
    Generic artifacts default to the edge-to-edge `document` presentation. Use
    `--presentation canvas` only for an explicitly spatial or zoomable review,
    or `--presentation document` to force the reading surface.
 2. For a diagram manifest or authored bundle, read
-   [diagram-sharing.md](references/diagram-sharing.md). `planr artifact share
+   [diagram-sharing.md](references/diagram-sharing.md). `openplanr artifact share
    <manifest-or-bundle>` creates a native permanent encrypted review with a stable
    URL and a separately entered access token. Use the local **Share diagram**
-   dialog to copy it. Publish only an explicitly requested update with `planr
-   artifact publish <manifest-or-bundle>`; synchronize feedback with `planr
+   dialog to copy it. Publish only an explicitly requested update with `openplanr
+   artifact publish <manifest-or-bundle>`; synchronize feedback with `openplanr
    artifact sync <manifest-or-bundle>`. Verify the actual shared native canvas,
    fonts and source revision before describing the hosted result as verified.
-   Sharing is always explicit. Run `planr artifact share <file>` only after the
+   Sharing is always explicit. Run `openplanr artifact share <file>` only after the
    user asks to share. Before sharing or publishing a design document, read
    [design-sharing.md](references/design-sharing.md) and author or refresh its
    sibling `review-context.json` in this active host session. Ground the welcome
@@ -33,20 +33,20 @@ relaunch the active coding agent from inside this skill.
    token. Owner credentials save privately outside the project; copy the reviewer
    token through the studio's Share dialog, never put it in a URL or ordinary
    command output. Publish an explicitly requested update with
-   `planr artifact publish <design-document.json>`; synchronize reviewer feedback
-   with `planr artifact sync <design-document.json>`. Hosted sharing requires the
+   `openplanr artifact publish <design-document.json>`; synchronize reviewer feedback
+   with `openplanr artifact sync <design-document.json>`. Hosted sharing requires the
    configured compatible service. An unavailable service must be reported, not
    described as a successful share. Generic HTML retains its existing expiring
    live-room and `--snapshot` fragment/short-link behavior; reviewer, owner-verdict,
    and management authority remain separate.
-3. For returned feedback, run `planr artifact import <review-url>`. Do not add
+3. For returned feedback, run `openplanr artifact import <review-url>`. Do not add
    `--allow-stale` by default. Show the stale-review preview and, when the user
    has not already chosen, use the host's native question UI to offer import or
    skip.
 4. Export a completed local session with
-   `planr artifact export <session-id> --format json|markdown`.
+   `openplanr artifact export <session-id> --format json|markdown`.
 5. If the pipeline package is unavailable, report the exact corrective command
-   printed by `planr`; do not bypass the runtime lock or managed state.
+   printed by `openplanr`; do not bypass the runtime lock or managed state.
 
 Local review is loopback-only. Opening, approving, finishing, or importing an
 artifact never publishes it automatically.

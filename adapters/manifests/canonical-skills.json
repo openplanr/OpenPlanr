@@ -41,7 +41,7 @@
       "source": "skills/planr-artifact/openplanr.skill.json",
       "entrypoint": "skills/planr-artifact/SKILL.md",
       "description": "Open, share, import, or export an OpenPlanr diagram, design, or HTML artifact review. Use when feedback must move between a local artifact and its review board.",
-      "sourceDigest": "sha256:f1e8d2719427c2e9565a82698eed53994da437676bcd8c3734a50f52090417be",
+      "sourceDigest": "sha256:667d6be08c6b1fdc9660698f828ee51752ed20be23345b192d69da4074671d34",
       "resources": [
         {
           "path": "references/design-sharing.md",
@@ -53,7 +53,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:452c7e11b3366b026d9e90b664980b3b5bdf8359ccb1a2bab090b43ae3addd72"
+          "digest": "sha256:ceea82f5e1edcc4bebb6885b1a480c0da96f5e4acaa1f71eba131bdb37c4eb65"
         },
         {
           "path": "references/company-review.md",
@@ -65,7 +65,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:b31bb74501fd24ae388294a4ccf2b9161b128f0288b2fb03c99a762595e0eaba"
+          "digest": "sha256:38fbf85cd7e3342de16933debde9ffb39468b283e3c70bdcf2beffdd0ebee147"
         },
         {
           "path": "agents/openai.yaml",
@@ -87,7 +87,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:343e5e6d67e9ec120e5c8095f909e4f18d17afd9f669d9725ab9a99be850d9f7"
+          "digest": "sha256:b0cdad978a5ce2a8be27f072361e40cba10eac64d1bed8f224545dd5810c87ea"
         }
       ],
       "contracts": {
@@ -815,7 +815,7 @@
       "source": "skills/planr-dashboard/openplanr.skill.json",
       "entrypoint": "skills/planr-dashboard/SKILL.md",
       "description": "Start or inspect the loopback-only OpenPlanr planning dashboard. Use when the user wants to view local planning or Operate state in the browser.",
-      "sourceDigest": "sha256:c34b53355e7b8c565534c9ae2343b29312b8d7bcc9bb6cc72ab4dada0d4591b2",
+      "sourceDigest": "sha256:e53691aece3b00e345d5acc2f56fb2b09833750b64717218d2bb47f45aae4a67",
       "resources": [
         {
           "path": "agents/openai.yaml",
@@ -919,7 +919,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:8056ce6cc33f408b474be7daac80d1d2d711f0c7736f1d0c21378ed92e69b9c8"
+          "digest": "sha256:026655594840b990ba5c840e58056bfc5be35d719d0b7b6f2c5a629d8eda044d"
         },
         {
           "path": "references/run-handoff.md",
@@ -1245,7 +1245,7 @@
       "source": "skills/planr-design/openplanr.skill.json",
       "entrypoint": "skills/planr-design/SKILL.md",
       "description": "Design a polished product interface through adaptive consultation, a shared canvas/prototype/walkthrough studio, and an implementation-ready specification. Use for a new design or an existing interface that needs a coherent direction.",
-      "sourceDigest": "sha256:edd9799d15991ea7757e8ff0828c70a6bc5cf558cca3b4c11932874d383fb853",
+      "sourceDigest": "sha256:234ec0b1c7a983590982462a59df017647ed8d76e45727417534e483e2f5ab5b",
       "resources": [
         {
           "path": "agents/openai.yaml",
@@ -1351,7 +1351,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:1f4b37947e8fc27a43b9d3df564df9a1aec510e24f62c632502ad2734ce4024a"
+          "digest": "sha256:df4414af1974d8268af25cfb33ce27d967e0a7f0ca29e75de82b91f3dacf2543"
         },
         {
           "path": "references/team-review.md",
@@ -1363,7 +1363,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:b1a12e06fecc679fe0109c88ceea5c9b461ece215de489a092e2fc212626fe5e"
+          "digest": "sha256:086389a07d8c4de55f6c26205d3a2c48befc792e66adc654566e6b7f363e6831"
         },
         {
           "path": "scripts/design.mjs",
@@ -1483,7 +1483,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:afaf731c07e340890b711ea862cee4b3dcfa3c665d982967cc53462541dffceb"
+          "digest": "sha256:8361262f71332911d3a0145365b55f64056faf085b420c8c48bf278673b10292"
         },
         {
           "path": "scripts/design-parse5-parser.mjs",
@@ -1531,7 +1531,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:8778856a60f3b4db1cd9431bfa00866199032238788b8ecf9c4c85fb6e685bab"
+          "digest": "sha256:79a543666f5b87c14edaeff59bc65ebe384c4b72851a398524afb6ba52def65e"
         },
         {
           "path": "scripts/design-runtime-home.mjs",
@@ -1546,7 +1546,7 @@
           "digest": "sha256:c338765d9f5746bf375377bdd25e94490ac31985bab0b0335e49f9faadb5c08b"
         },
         {
-          "path": "scripts/design-runtime-support-4033c679a627.mjs",
+          "path": "scripts/design-runtime-support-336900df0d39.mjs",
           "kind": "script",
           "executable": false,
           "hosts": [
@@ -1579,7 +1579,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:72b7d8d7745d2e828f527d9cac7b14e6517fc2664f0f7c83a240e33936853b5b"
+          "digest": "sha256:aaf6ff42d68340a27ded2afff52c65a88e524aa66dc06ec52190fb0b94edec29"
         },
         {
           "path": "scripts/design-shared-artifact-support-dependencies-design-support-protocol-contracts-3d9b1a86.mjs",
@@ -2095,7 +2095,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:3346253d6c369c0a1d15e795d9a812cfcdfde3bb0b8ea393f74da417dcbd4d0f"
+          "digest": "sha256:7be3872503e46535cddf230ab13919bcd823f694b1681262a97430715424ad92"
         },
         {
           "path": "scripts/runtime/packages/protocol/registries/artifact-theme.json",
@@ -2407,7 +2407,7 @@
       "source": "skills/planr-design-loop/openplanr.skill.json",
       "entrypoint": "skills/planr-design-loop/SKILL.md",
       "description": "Compare three materially different product design directions in a live review studio, collect pins and ratings, and develop the selected direction. Use for visual alternatives, comparison or a remix.",
-      "sourceDigest": "sha256:1b741868e5a5ca01b52bbd7d8af3c0424fc9f6f9efc081211f463bc37c6b75ff",
+      "sourceDigest": "sha256:3aeaaec08e55d75377c211c0b2689bb85adf4457939fd8ca6ba3833815a0505b",
       "resources": [
         {
           "path": "agents/openai.yaml",
@@ -2513,7 +2513,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:1f4b37947e8fc27a43b9d3df564df9a1aec510e24f62c632502ad2734ce4024a"
+          "digest": "sha256:df4414af1974d8268af25cfb33ce27d967e0a7f0ca29e75de82b91f3dacf2543"
         },
         {
           "path": "references/team-review.md",
@@ -2525,7 +2525,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:b1a12e06fecc679fe0109c88ceea5c9b461ece215de489a092e2fc212626fe5e"
+          "digest": "sha256:086389a07d8c4de55f6c26205d3a2c48befc792e66adc654566e6b7f363e6831"
         },
         {
           "path": "scripts/design.mjs",
@@ -2645,7 +2645,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:afaf731c07e340890b711ea862cee4b3dcfa3c665d982967cc53462541dffceb"
+          "digest": "sha256:8361262f71332911d3a0145365b55f64056faf085b420c8c48bf278673b10292"
         },
         {
           "path": "scripts/design-parse5-parser.mjs",
@@ -2693,7 +2693,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:8778856a60f3b4db1cd9431bfa00866199032238788b8ecf9c4c85fb6e685bab"
+          "digest": "sha256:79a543666f5b87c14edaeff59bc65ebe384c4b72851a398524afb6ba52def65e"
         },
         {
           "path": "scripts/design-runtime-home.mjs",
@@ -2708,7 +2708,7 @@
           "digest": "sha256:c338765d9f5746bf375377bdd25e94490ac31985bab0b0335e49f9faadb5c08b"
         },
         {
-          "path": "scripts/design-runtime-support-4033c679a627.mjs",
+          "path": "scripts/design-runtime-support-336900df0d39.mjs",
           "kind": "script",
           "executable": false,
           "hosts": [
@@ -2741,7 +2741,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:72b7d8d7745d2e828f527d9cac7b14e6517fc2664f0f7c83a240e33936853b5b"
+          "digest": "sha256:aaf6ff42d68340a27ded2afff52c65a88e524aa66dc06ec52190fb0b94edec29"
         },
         {
           "path": "scripts/design-shared-artifact-support-dependencies-design-support-protocol-contracts-3d9b1a86.mjs",
@@ -3257,7 +3257,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:3346253d6c369c0a1d15e795d9a812cfcdfde3bb0b8ea393f74da417dcbd4d0f"
+          "digest": "sha256:7be3872503e46535cddf230ab13919bcd823f694b1681262a97430715424ad92"
         },
         {
           "path": "scripts/runtime/packages/protocol/registries/artifact-theme.json",
@@ -3569,7 +3569,7 @@
       "source": "skills/planr-design-review/openplanr.skill.json",
       "entrypoint": "skills/planr-design-review/SKILL.md",
       "description": "Review and revise an existing product design using stable board pins and scoped browser-verified changes. Use for focused improvements while preserving unrelated screens and feedback.",
-      "sourceDigest": "sha256:f0dac82f8626e4c83abfd7f47fe2dbafddba4dc7a7ebcfae4aa51225454f9594",
+      "sourceDigest": "sha256:981117d807042f5f1a1be5c4c3c773dde94bc0c5243b75c17d5e493c0ff3ce90",
       "resources": [
         {
           "path": "agents/openai.yaml",
@@ -3675,7 +3675,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:1f4b37947e8fc27a43b9d3df564df9a1aec510e24f62c632502ad2734ce4024a"
+          "digest": "sha256:df4414af1974d8268af25cfb33ce27d967e0a7f0ca29e75de82b91f3dacf2543"
         },
         {
           "path": "references/team-review.md",
@@ -3687,7 +3687,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:b1a12e06fecc679fe0109c88ceea5c9b461ece215de489a092e2fc212626fe5e"
+          "digest": "sha256:086389a07d8c4de55f6c26205d3a2c48befc792e66adc654566e6b7f363e6831"
         },
         {
           "path": "scripts/design.mjs",
@@ -3807,7 +3807,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:afaf731c07e340890b711ea862cee4b3dcfa3c665d982967cc53462541dffceb"
+          "digest": "sha256:8361262f71332911d3a0145365b55f64056faf085b420c8c48bf278673b10292"
         },
         {
           "path": "scripts/design-parse5-parser.mjs",
@@ -3855,7 +3855,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:8778856a60f3b4db1cd9431bfa00866199032238788b8ecf9c4c85fb6e685bab"
+          "digest": "sha256:79a543666f5b87c14edaeff59bc65ebe384c4b72851a398524afb6ba52def65e"
         },
         {
           "path": "scripts/design-runtime-home.mjs",
@@ -3870,7 +3870,7 @@
           "digest": "sha256:c338765d9f5746bf375377bdd25e94490ac31985bab0b0335e49f9faadb5c08b"
         },
         {
-          "path": "scripts/design-runtime-support-4033c679a627.mjs",
+          "path": "scripts/design-runtime-support-336900df0d39.mjs",
           "kind": "script",
           "executable": false,
           "hosts": [
@@ -3903,7 +3903,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:72b7d8d7745d2e828f527d9cac7b14e6517fc2664f0f7c83a240e33936853b5b"
+          "digest": "sha256:aaf6ff42d68340a27ded2afff52c65a88e524aa66dc06ec52190fb0b94edec29"
         },
         {
           "path": "scripts/design-shared-artifact-support-dependencies-design-support-protocol-contracts-3d9b1a86.mjs",
@@ -4419,7 +4419,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:3346253d6c369c0a1d15e795d9a812cfcdfde3bb0b8ea393f74da417dcbd4d0f"
+          "digest": "sha256:7be3872503e46535cddf230ab13919bcd823f694b1681262a97430715424ad92"
         },
         {
           "path": "scripts/runtime/packages/protocol/registries/artifact-theme.json",
@@ -4731,7 +4731,7 @@
       "source": "skills/planr-diagram/openplanr.skill.json",
       "entrypoint": "skills/planr-diagram/SKILL.md",
       "description": "Create, edit, inspect, verify, or rerender professional offline diagrams. Use for architecture, process, sequence, data, state, or relationship visuals from intent or source.",
-      "sourceDigest": "sha256:201db5c2d96041138e3017ffd78ee9dbf09070853b47a295a31c8c3fb819ef7c",
+      "sourceDigest": "sha256:0ab3025c07936d555e81bef50d71fbc49ffaab0a418ff019ca3163318fd6d33f",
       "resources": [
         {
           "path": "agents/openai.yaml",
@@ -4753,7 +4753,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:4d303f1e333a0e278bbe4a5dcbefd8c578a6cfda27211f9b1f3b687938ff0248"
+          "digest": "sha256:d025bf8bb00b0d8d59f453cae21211a5138e1870ba5503d84cf527756d49c0c2"
         },
         {
           "path": "references/diagram-fidelity.md",
@@ -4777,7 +4777,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:ff8179545fb8aa017acff90cca81896b295682beacc53a82dac8a32f4fb1e005"
+          "digest": "sha256:c6042fdcba4afea6ff2eac710fbb69718cc1c8d2644d0a6941668c437c8d0961"
         },
         {
           "path": "references/diagram-sharing.md",
@@ -4789,7 +4789,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:343e5e6d67e9ec120e5c8095f909e4f18d17afd9f669d9725ab9a99be850d9f7"
+          "digest": "sha256:b0cdad978a5ce2a8be27f072361e40cba10eac64d1bed8f224545dd5810c87ea"
         }
       ],
       "contracts": {
@@ -4830,7 +4830,7 @@
       "source": "skills/planr-doctor/openplanr.skill.json",
       "entrypoint": "skills/planr-doctor/SKILL.md",
       "description": "Diagnose OpenPlanr CLI, pipeline, runtime-adapter, installation, and lock health. Use when setup, discovery, versions, generated assets, or runtime behavior seems wrong.",
-      "sourceDigest": "sha256:5368902f43821853d3ae55cb23b907ab3fbcd23a28012c2dc8ecbbd694575471",
+      "sourceDigest": "sha256:188f9dec0d7d0f6a1b70efd2decfff832e0fc57b175522e471fca6436705321f",
       "resources": [
         {
           "path": "agents/openai.yaml",
@@ -4852,7 +4852,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:415456942ec2c3f13a71ba9ea44e07533a7871acf072d677b59d410ab5704ad8"
+          "digest": "sha256:f96bb88b1825357c88e0d83b2a60b495aab287763520390b65f1d421288207cc"
         }
       ],
       "contracts": {
@@ -4933,7 +4933,7 @@
       "source": "skills/planr-land/openplanr.skill.json",
       "entrypoint": "skills/planr-land/SKILL.md",
       "description": "Assess release readiness and prepare or inspect an OpenPlanr landing sequence. Use after implementation and checks are complete, before merge, publication, or deployment.",
-      "sourceDigest": "sha256:06d04a20f05f5bab613357256bc7af709e5eb1435867832fa9b24547ac857c27",
+      "sourceDigest": "sha256:c1546a60c686f3686a918d459293de0a0275d4e1136969c63ee59af2371b5433",
       "resources": [
         {
           "path": "agents/openai.yaml",
@@ -5132,7 +5132,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:b120b3f0380776db2a126cb05e2cd917710389bdd665574fe014aa5d6222914e"
+          "digest": "sha256:34a9fd929f5a30b060b95a617e7162b10998e85e28f391f1ff4e587f5d86bf8f"
         },
         {
           "path": "references/design-handoff.md",
@@ -5228,7 +5228,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:3346253d6c369c0a1d15e795d9a812cfcdfde3bb0b8ea393f74da417dcbd4d0f"
+          "digest": "sha256:7be3872503e46535cddf230ab13919bcd823f694b1681262a97430715424ad92"
         },
         {
           "path": "scripts/runtime/packages/protocol/schemas/v1.1.0/artifact-review.schema.json",
@@ -5515,7 +5515,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:c64ae73e88eff2cd2456b418add6de2658a10ec3230e99f37e298386cb8bba4b"
+          "digest": "sha256:69a9610202cbaa4b2f1b53ea7b3d76793603f987c19c702f29fa36a6dcd70d04"
         }
       ],
       "contracts": {
@@ -5540,7 +5540,7 @@
       "source": "skills/planr-sprint/openplanr.skill.json",
       "entrypoint": "skills/planr-sprint/SKILL.md",
       "description": "Refine every open backlog item against the code and the calendar, refute the picks, and select a sprint that fits capacity and the release cut. Use before a cut or sprint; not for decomposing one specification or reporting status.",
-      "sourceDigest": "sha256:44fe839dc90143809866d9ed8fefb6fbe1aca09a2b0e1ff7a964376f64ce717a",
+      "sourceDigest": "sha256:5127dbe840f63389c0e4546904d1aaae6b4a45c8a428ef54204fe2ad1e6a71f2",
       "resources": [
         {
           "path": "agents/openai.yaml",
@@ -5562,7 +5562,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:0e2e621c0aa735b756187f28310f265be6a0330c790ecf71e27c527bad13cdcd"
+          "digest": "sha256:2b90da8bdc319fbcac58542b09ce993ef0af47743dbdea859f77a026ecd8c057"
         },
         {
           "path": "references/sprint-formats.md",
@@ -5574,7 +5574,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:b2b583dd7de321f11236caefd7dc69a84dffdf16797fb7a86a8c493689073830"
+          "digest": "sha256:547bda354869f1aef26398e77e956f43116305f8dcc0d827dd5fb061ec98504a"
         },
         {
           "path": "schemas/refinement.schema.json",
@@ -5586,7 +5586,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:591bcd9bb94bbcbae0e3494f2e7f42a7ea953c90076254c1b290fa399901b690"
+          "digest": "sha256:31494ba4a83f9b7b3aeffc8423135404026ba07c02106be3ba99d6fc75852b12"
         }
       ],
       "contracts": {
@@ -5622,7 +5622,7 @@
       "source": "skills/planr-status/openplanr.skill.json",
       "entrypoint": "skills/planr-status/SKILL.md",
       "description": "Inspect project delivery or one feature's pipeline status without changing state. Use when the user asks what is done, pending, blocked, or next.",
-      "sourceDigest": "sha256:12f20dddbb382b72eeda55bdf036393b0bee1a9bcecc7be30ec53ed24e62a432",
+      "sourceDigest": "sha256:442befdcb911e4f577e0cf6213cf5cfdbdc97f7093dcad301399b710d4f6e3f3",
       "resources": [
         {
           "path": "agents/openai.yaml",
@@ -5668,7 +5668,7 @@
       "source": "skills/planr-sync/openplanr.skill.json",
       "entrypoint": "skills/planr-sync/SKILL.md",
       "description": "Audit OpenPlanr planning artifacts for graph and protocol drift. Use when statuses, references, schemas, or generated planning views may be inconsistent.",
-      "sourceDigest": "sha256:dd758dfe6e080fb5b0360bc7708b2948dbf77e819eaf01633f5ec5208b5f6ee4",
+      "sourceDigest": "sha256:b5a239b26d4946a4c144622eca31d64e743c6dd00a96efa68eca2bc05e65e3ff",
       "resources": [
         {
           "path": "scripts/sync.mjs",
@@ -5692,7 +5692,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:33c5f002fa6fbe4c4930a4f92c06cd7f35c720fb2c9db024e0d860f8b8fc962c"
+          "digest": "sha256:85d080c6a4a0ed31cb60daaf0dc8739a0d9ddbd060e63126d81a3b2b84294bd9"
         },
         {
           "path": "agents/openai.yaml",

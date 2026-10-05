@@ -80,7 +80,11 @@ describe('dashboard planning handoff transport', () => {
         decision: { id: 'dec_planning_0001' },
       },
       progress: { nodes: [{ kind: 'spec', state: 'shaping' }] },
-      nextCommands: ['planr spec show SPEC-001', '$planr:plan SPEC-001', '/planr:plan SPEC-001'],
+      nextCommands: [
+        'openplanr spec show SPEC-001',
+        '$planr:plan SPEC-001',
+        '/planr:plan SPEC-001',
+      ],
     };
     const calls: string[] = [];
     let losePreviewProof = false;

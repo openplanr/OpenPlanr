@@ -239,7 +239,10 @@ test('the rendered context carries no execution supervision', () => {
     rendered,
     /Use the specification, active task details, repository context, and conventions above/u,
   );
-  assert.ok(!/^\s*\d+\.\s+Run `planr pipeline/mu.test(rendered), 'must not script CLI steps');
+  assert.ok(
+    !/^\s*\d+\.\s+Run `(?:open)?planr pipeline/mu.test(rendered),
+    'must not script CLI steps',
+  );
   assert.doesNotMatch(rendered, /approval|authorization|stopping point/iu);
 });
 

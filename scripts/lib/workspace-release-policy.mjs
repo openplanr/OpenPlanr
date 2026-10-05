@@ -106,9 +106,8 @@ export function validateWorkspaceManifests(rootManifest, manifestByPath) {
   check(
     JSON.stringify(cli?.bin) ===
       JSON.stringify({
-        planr: './bin/planr.js',
-        openplanr: './bin/planr.js',
-        opr: './bin/planr.js',
+        openplanr: './bin/openplanr.js',
+        opr: './bin/openplanr.js',
       }),
     'CLI aliases must resolve to the exact shared parser',
   );

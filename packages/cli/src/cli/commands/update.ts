@@ -1,5 +1,5 @@
 /**
- * `planr update` command.
+ * `openplanr update` command.
  *
  * Update artifact fields (status, owner, priority) from the CLI.
  * Auto-detects artifact type from the ID prefix.

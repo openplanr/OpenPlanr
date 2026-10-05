@@ -14,8 +14,8 @@ run guided setup:
 
 ```bash
 cd my-project
-planr setup
-planr doctor
+openplanr setup
+openplanr doctor
 ```
 
 Setup configures the OpenPlanr skills bundled with the installed CLI. Your coding
@@ -27,9 +27,9 @@ already provides planning utilities.
 ## Preview, apply, and migrate
 
 ```bash
-planr setup --dry-run
-planr setup
-planr doctor
+openplanr setup --dry-run
+openplanr setup
+openplanr doctor
 ```
 
 Guided setup detects Claude Code, Codex, and Cursor, explains unavailable shell
@@ -58,29 +58,29 @@ does this on its own. Restart Claude Code when setup says a plugin changed.
 
 | Channel | Purpose | Status |
 | --- | --- | --- |
-| `npm i -g openplanr`, then `planr setup` | Primary installation; the plugin is pinned to the CLI | Available |
+| `npm i -g openplanr`, then `openplanr setup` | Primary installation; the plugin is pinned to the CLI | Available |
 | `openplanr/marketplace` | Optional direct Claude Code installation | Available; can trail the npm release |
 | Anthropic marketplace listing | Vendor discovery and trust | Not yet listed |
 | OpenAI Plugins Directory | Vendor discovery for Codex and supported ChatGPT surfaces | Not yet listed |
 
 The release workflow projects each published `openplanr` Claude plugin into
 `openplanr/marketplace`; the source stays in this repository. Use one Claude Code
-channel per machine: either `planr setup` or
+channel per machine: either `openplanr setup` or
 `/plugin marketplace add openplanr/marketplace`, not both.
 
 For CI and provisioning, supply choices explicitly:
 
 ```bash
-planr setup --runtime auto --scope user --yes
-planr setup --runtime codex --scope project --yes
-planr setup --runtime all --scope both --yes
-planr runtime update claude --scope user --yes
+openplanr setup --runtime auto --scope user --yes
+openplanr setup --runtime codex --scope project --yes
+openplanr setup --runtime all --scope both --yes
+openplanr runtime update claude --scope user --yes
 ```
 
 Repeated setup is idempotent. To restore the last pre-setup state:
 
 ```bash
-planr runtime rollback
+openplanr runtime rollback
 ```
 
 Installing or updating one adapter is additive: it keeps every other managed
@@ -88,7 +88,7 @@ adapter and preserves each adapter's existing scope. For example, adding Codex
 at user scope does not widen an existing project-only Cursor installation.
 
 Setup installs the bundled OpenPlanr skills for the selected coding agents.
-`planr doctor` reports managed-file drift and runtime availability.
+`openplanr doctor` reports managed-file drift and runtime availability.
 
 ### Exact runtime packages and thin project entries
 
@@ -146,7 +146,7 @@ scopes adds project policy pointing to that discovery instead of duplicate skill
 An existing saved project-only choice remains recorded for later scope changes.
 Guided setup asks once to confirm the listed replacement and apply setup. For
 non-interactive use, review `--dry-run --verbose`, then add `--replace-managed`.
-Use `planr runtime rollback` to restore the previous file state.
+Use `openplanr runtime rollback` to restore the previous file state.
 
 ## Project stack overrides
 
@@ -169,20 +169,20 @@ reports a missing lens as a visible issue instead of blocking the rest of the re
 The validator is optional editing help for any generated note:
 
 ```bash
-planr operate validate-note <note.md> --profile advisor|challenger|chair|board-report --contract-version 2.0.0 --json
+openplanr operate validate-note <note.md> --profile advisor|challenger|chair|board-report --contract-version 2.0.0 --json
 ```
 
 Omit `--contract-version` to auto-detect current v2 and historical v1 notes.
 
 The durable Operate runtime is separate. Discover its exact registered domain
-identity with `planr operate domains --json`; neither setup nor the runtime
+identity with `openplanr operate domains --json`; neither setup nor the runtime
 guesses a domain version. Its issued executors receive a prepared packet and use
 only:
 
 ```bash
-planr operate assignment prepare <assignmentId> --actor <agentId> --runtime codex --json
-planr operate assignment validate <packetId> --content-file <resultPath|-> --json
-planr operate assignment submit <packetId> --content-file <resultPath|-> --json
+openplanr operate assignment prepare <assignmentId> --actor <agentId> --runtime codex --json
+openplanr operate assignment validate <packetId> --content-file <resultPath|-> --json
+openplanr operate assignment submit <packetId> --content-file <resultPath|-> --json
 ```
 
 The packet contains exact issued inputs, schema paths, evidence matrix, rubric,
@@ -198,24 +198,24 @@ other managed project installation depends on them.
 ## Troubleshooting and upgrades
 
 ```bash
-planr doctor --strict --json
-planr setup --dry-run
-planr upgrade status
-planr upgrade apply
+openplanr doctor --strict --json
+openplanr setup --dry-run
+openplanr upgrade status
+openplanr upgrade apply
 ```
 
-- Missing or stale skills: inspect doctor output, then re-run `planr setup`.
+- Missing or stale skills: inspect doctor output, then re-run `openplanr setup`.
   Known owned bytes are repaired transactionally; unknown or modified files are
   preserved and reported as `E_MIGRATION_CONFLICT`.
-- First Cycle rejects `--domain-version`: run `planr operate domains --json`
+- First Cycle rejects `--domain-version`: run `openplanr operate domains --json`
   and copy the exact domain identity. Operate Protocol `2.0.0` is not a domain
   version.
 - Assignment prepare/validate/submit fails: use the returned machine `code` and
   `problem`. The CLI intentionally omits host paths and stacks; author only the
   returned `resultPath` and keep `packetId` unchanged.
-- CLI/skill parity is incompatible: run `planr upgrade status`, then the
-  explicit `planr upgrade apply`, then the commands it lists for your coding
-  agents, and `planr doctor --strict --json` again.
+- CLI/skill parity is incompatible: run `openplanr upgrade status`, then the
+  explicit `openplanr upgrade apply`, then the commands it lists for your coding
+  agents, and `openplanr doctor --strict --json` again.
 
 ## Offline, remote, and SSH use
 
@@ -264,7 +264,7 @@ default-profile bundle stays in place. A repair in one profile
 cannot retire another profile's direct skills. Run the command with the same
 `CODEX_HOME` as the Codex session you want to configure.
 
-`planr doctor --json` includes `codexDiscovery`: the effective profile, configuration
+`openplanr doctor --json` includes `codexDiscovery`: the effective profile, configuration
 and ownership paths, saved discovery mode, and each installed OpenPlanr skill's
 entrypoint, complete source hash, skill version and Protocol version. Thin entries
 also pin the complete package inventory digest; shared support is verified against
@@ -274,19 +274,19 @@ reported without claiming which one an already-open Codex session loaded. Disabl
 or historical plugin cache copies are evidence of previous installations, not
 proof of enabled duplicate skills.
 
-Use `planr setup --runtime codex --dry-run` or `planr doctor --fix` to preview
+Use `openplanr setup --runtime codex --dry-run` or `openplanr doctor --fix` to preview
 installer-owned repairs in that profile. Review the changes and restart Codex to
 reload its skills. Do not manually delete native plugin caches. Unknown files and
 hand edits retain the existing ownership/conflict protections.
 
-`planr upgrade status` labels its release-metadata source. `stale-cache` means the
+`openplanr upgrade status` labels its release-metadata source. `stale-cache` means the
 registry request failed and a previous result was reused; compatibility with that
 cached set does not confirm the latest release. `cache` means recently cached
 metadata was used without a new registry request. Only `network` is a fresh check.
 
-`planr runtime update <agent>` refreshes only the named agent, retaining its saved
+`openplanr runtime update <agent>` refreshes only the named agent, retaining its saved
 scope and Codex discovery mode. An explicit `--scope` changes that agent's scope;
 the preview includes any retirement of unchanged managed project files and keeps
 their exact backup for rollback. Shared project lock records and other agents' owned
-files remain present. To deliberately change a Codex mode, use `planr setup` with
+files remain present. To deliberately change a Codex mode, use `openplanr setup` with
 `--skill-mode` and review its transition preview.

@@ -182,7 +182,7 @@ test('catalog floors classify commands, skills, rules, and Class A-D outputs', (
 test('every declared skill CLI binding resolves to a registered command visible from root help', () => {
   const commands = CANONICAL_REGISTRIES['commands.json'];
   const byId = new Map(commands.commands.map((command) => [command.commandId, command]));
-  const cli = fileURLToPath(new URL('../../packages/cli/bin/planr.js', import.meta.url));
+  const cli = fileURLToPath(new URL('../../packages/cli/bin/openplanr.js', import.meta.url));
   const result = spawnSync(process.execPath, [cli, '--help'], { encoding: 'utf8' });
   assert.equal(result.status, 0, result.stderr);
 

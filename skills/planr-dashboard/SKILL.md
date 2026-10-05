@@ -7,7 +7,7 @@ license: MIT
 # OpenPlanr Dashboard
 
 Start or inspect the local OpenPlanr dashboard as a deterministic utility. Prefer
-the packaged dashboard helper when present; otherwise use `planr dashboard` from
+the packaged dashboard helper when present; otherwise use `openplanr dashboard` from
 the optional utility CLI. Do not route dashboard startup through a semantic or
 model subprocess.
 

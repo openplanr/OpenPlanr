@@ -1,7 +1,11 @@
 import path from 'node:path';
 import { type Command, Option } from 'commander';
 import { createChecklist } from '../../services/checklist-service.js';
-import { createDefaultConfig, saveConfig } from '../../services/config-service.js';
+import {
+  assertPlanningFolderWritable,
+  createDefaultConfig,
+  saveConfig,
+} from '../../services/config-service.js';
 import { getSpecsRootDir } from '../../services/spec-service.js';
 import { renderTemplate } from '../../services/template-service.js';
 import { ARTIFACT_DIRS, CONFIG_FILENAME } from '../../utils/constants.js';
@@ -29,6 +33,7 @@ export function registerInitCommand(program: Command) {
             'OpenPlanr is already initialized; pass --force to replace its configuration.',
           );
       }
+      assertPlanningFolderWritable(projectDir);
       const projectName = options.name?.trim() || path.basename(projectDir);
       const config = createDefaultConfig(projectName);
       const agileDir = path.join(projectDir, config.outputPaths.agile);

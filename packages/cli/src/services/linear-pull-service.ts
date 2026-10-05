@@ -1,5 +1,5 @@
 /**
- * Linear reconciliation behind `planr linear sync` and `tasklist-sync`: three-way merges the
+ * Linear reconciliation behind `openplanr linear sync` and `tasklist-sync`: three-way merges the
  * workflow status of linked Features, Stories, Quick tasks and Backlog items, and task checkboxes
  * against their Linear task-list issue bodies, writing the winning side locally or to Linear.
  * Entry points: `syncLinearStatusIntoArtifacts`, `runLinearTaskCheckboxSync`.
@@ -938,7 +938,7 @@ export async function runLinearTaskCheckboxSync(
  * Append a Markdown audit entry for non-interactive conflict auto-resolutions
  * (M4). File is created on first write per day at
  * `.planr/reports/linear-sync-conflicts-<YYYY-MM-DD>.md`. Appends preserve
- * prior entries across multiple `planr linear sync` runs on the same day.
+ * prior entries across multiple `openplanr linear sync` runs on the same day.
  */
 async function appendSyncConflictAudit(
   projectDir: string,

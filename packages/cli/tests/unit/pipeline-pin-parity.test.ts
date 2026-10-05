@@ -12,7 +12,7 @@ import { SEMVER_REGEX } from '../../../protocol/src/semver.mjs';
  * be — compared by strict equality.
  *
  * When a pipeline release advances without this pin advancing with it, every
- * `planr setup` fails with `E_CLAUDE_PLUGIN_UPDATE_FAILED` and rolls back: the
+ * `openplanr setup` fails with `E_CLAUDE_PLUGIN_UPDATE_FAILED` and rolls back: the
  * user's correctly-installed newer plugin reads as drift against the CLI's stale
  * expectation. That is exactly what shipped in 1.25.0 (pin 0.40.0, published
  * pipeline 0.41.0), and it broke the front door for every user.

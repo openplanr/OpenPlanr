@@ -1,5 +1,5 @@
 /**
- * Regression coverage — `planr linear tasklist-sync` must accept healthy
+ * Regression coverage — `openplanr linear tasklist-sync` must accept healthy
  * UUID issue ids and only reject values that don't match a valid Linear
  * issue form.
  *

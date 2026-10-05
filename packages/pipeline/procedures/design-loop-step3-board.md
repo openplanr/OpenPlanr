@@ -41,7 +41,7 @@ URL in the question text:
 
 (A and B both proceed to D.3 — the file disambiguates; the split exists so the user can
 say what they did.) If a remote reviewer returns a review URL, the user must first run
-`planr artifact import "<returned-review-url>"`; that explicit import merges into the durable
+`openplanr artifact import "<returned-review-url>"`; that explicit import merges into the durable
 feedback file, after which A follows the normal path. A URL pasted in chat is not feedback, and
 Share/import never imply approval or continue into `/plan` or `/ship`.
 

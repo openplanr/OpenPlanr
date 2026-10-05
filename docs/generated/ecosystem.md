@@ -21,5 +21,5 @@ Compatibility invariants:
 - The public pipeline retains 58 export keys and 228 root symbols.
 - Historical schemas and registries remain accounted for; additive Protocol contracts retain versioned readers.
 - Commands, skills, roles, and output contracts are catalog-bound.
-- `planr`, `openplanr`, and deprecated `opr` resolve to one CLI parser.
-- `planr operate ...` remains supported; `planr pipeline operate ...` and pipeline plugin Operate assets remain retired.
+- `openplanr` and its `opr` alias resolve to one CLI parser.
+- `openplanr operate ...` remains supported; `openplanr pipeline operate ...` and pipeline plugin Operate assets remain retired.

@@ -40,7 +40,7 @@ export class CursorGenerator extends BaseGenerator {
     }
 
     // Pipeline scope contributes concise project guidance only. The complete
-    // canonical skill rules are installed by `planr setup` from the bundled
+    // canonical skill rules are installed by `openplanr setup` from the bundled
     // Protocol 1.8 host package.
     if (this.includesPipeline()) {
       files.push({

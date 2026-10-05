@@ -5,9 +5,9 @@
     {
       "skillId": "planr-artifact",
       "files": 6,
-      "bytes": 16856,
+      "bytes": 16976,
       "uniqueFiles": 6,
-      "uniqueBytes": 16856,
+      "uniqueBytes": 16976,
       "duplicateBytes": 0
     },
     {
@@ -77,57 +77,57 @@
     {
       "skillId": "planr-dashboard",
       "files": 3,
-      "bytes": 2037,
+      "bytes": 2041,
       "uniqueFiles": 3,
-      "uniqueBytes": 2037,
+      "uniqueBytes": 2041,
       "duplicateBytes": 0
     },
     {
       "skillId": "planr-delegate",
       "files": 32,
-      "bytes": 402924,
+      "bytes": 402928,
       "uniqueFiles": 32,
-      "uniqueBytes": 402924,
+      "uniqueBytes": 402928,
       "duplicateBytes": 0
     },
     {
       "skillId": "planr-design",
       "files": 96,
-      "bytes": 3502987,
+      "bytes": 3504749,
       "uniqueFiles": 93,
-      "uniqueBytes": 3481995,
+      "uniqueBytes": 3483757,
       "duplicateBytes": 20992
     },
     {
       "skillId": "planr-design-loop",
       "files": 96,
-      "bytes": 3502537,
+      "bytes": 3504299,
       "uniqueFiles": 93,
-      "uniqueBytes": 3481545,
+      "uniqueBytes": 3483307,
       "duplicateBytes": 20992
     },
     {
       "skillId": "planr-design-review",
       "files": 96,
-      "bytes": 3502454,
+      "bytes": 3504216,
       "uniqueFiles": 93,
-      "uniqueBytes": 3481462,
+      "uniqueBytes": 3483224,
       "duplicateBytes": 20992
     },
     {
       "skillId": "planr-diagram",
       "files": 7,
-      "bytes": 20446,
+      "bytes": 20526,
       "uniqueFiles": 7,
-      "uniqueBytes": 20446,
+      "uniqueBytes": 20526,
       "duplicateBytes": 0
     },
     {
       "skillId": "planr-doctor",
       "files": 4,
-      "bytes": 10482,
+      "bytes": 10583,
       "uniqueFiles": 4,
-      "uniqueBytes": 10482,
+      "uniqueBytes": 10583,
       "duplicateBytes": 0
     },
     {
@@ -141,9 +141,9 @@
     {
       "skillId": "planr-land",
       "files": 3,
-      "bytes": 3102,
+      "bytes": 3114,
       "uniqueFiles": 3,
-      "uniqueBytes": 3102,
+      "uniqueBytes": 3114,
       "duplicateBytes": 0
     },
     {
@@ -165,9 +165,9 @@
     {
       "skillId": "planr-plan",
       "files": 14,
-      "bytes": 307721,
+      "bytes": 308148,
       "uniqueFiles": 14,
-      "uniqueBytes": 307721,
+      "uniqueBytes": 308148,
       "duplicateBytes": 0
     },
     {
@@ -197,33 +197,33 @@
     {
       "skillId": "planr-spec",
       "files": 4,
-      "bytes": 5270,
+      "bytes": 5573,
       "uniqueFiles": 4,
-      "uniqueBytes": 5270,
+      "uniqueBytes": 5573,
       "duplicateBytes": 0
     },
     {
       "skillId": "planr-sprint",
       "files": 6,
-      "bytes": 28728,
+      "bytes": 28864,
       "uniqueFiles": 6,
-      "uniqueBytes": 28728,
+      "uniqueBytes": 28864,
       "duplicateBytes": 0
     },
     {
       "skillId": "planr-status",
       "files": 3,
-      "bytes": 2415,
+      "bytes": 2419,
       "uniqueFiles": 3,
-      "uniqueBytes": 2415,
+      "uniqueBytes": 2419,
       "duplicateBytes": 0
     },
     {
       "skillId": "planr-sync",
       "files": 5,
-      "bytes": 9914,
+      "bytes": 9946,
       "uniqueFiles": 5,
-      "uniqueBytes": 9914,
+      "uniqueBytes": 9946,
       "duplicateBytes": 0
     }
   ],
@@ -231,26 +231,26 @@
     {
       "host": "openai",
       "files": 288,
-      "bytes": 4664626,
+      "bytes": 4667677,
       "uniqueFiles": 242,
-      "uniqueBytes": 4450887,
-      "duplicateBytes": 213739
+      "uniqueBytes": 4453744,
+      "duplicateBytes": 213933
     },
     {
       "host": "claude",
       "files": 269,
-      "bytes": 4743632,
+      "bytes": 4746715,
       "uniqueFiles": 222,
-      "uniqueBytes": 4526410,
-      "duplicateBytes": 217222
+      "uniqueBytes": 4529299,
+      "duplicateBytes": 217416
     },
     {
       "host": "cursor",
       "files": 232,
-      "bytes": 4609613,
+      "bytes": 4612664,
       "uniqueFiles": 186,
-      "uniqueBytes": 4395874,
-      "duplicateBytes": 213739
+      "uniqueBytes": 4398731,
+      "duplicateBytes": 213933
     }
   ]
 }

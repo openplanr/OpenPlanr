@@ -1,5 +1,5 @@
 /**
- * `planr upgrade`: reconciles the installed CLI, bundled pipeline and host plugin with the
+ * `openplanr upgrade`: reconciles the installed CLI, bundled pipeline and host plugin with the
  * published compatible set (npm `latest`, cached, short fetch timeout), upgrades the CLI half
  * with verify-after-install and restore, runs crossed migrations and reports the command that
  * updates each installed coding agent. Entry points: `reconcileInstalledTuple`, `planCliUpgrade`,
@@ -37,7 +37,7 @@ import {
 
 /**
  * The command that registers the bundled `openplanr-local` marketplace and installs
- * `planr@openplanr-local` from it. Prescribed instead of `planr runtime update` when
+ * `planr@openplanr-local` from it. Prescribed instead of `openplanr runtime update` when
  * Claude Code has no such marketplace yet, because only setup records the installation.
  */
 export const CLAUDE_PLUGIN_SETUP_COMMAND = `${CLI_COMMAND} setup --runtime claude --scope user`;
@@ -118,7 +118,7 @@ const CACHE_TTL_MS = 15 * 60 * 1000;
 
 /**
  * A short hard ceiling on the fetch. A captive portal, a VPN, or an airplane
- * must never make `planr` hang: past this, the fetch is abandoned and the CLI
+ * must never make `openplanr` hang: past this, the fetch is abandoned and the CLI
  * falls back to cache (or reports the manifest unavailable).
  */
 const DEFAULT_FETCH_TIMEOUT_MS = 2_000;
@@ -371,7 +371,7 @@ function isBehind(installed: string | null, published: string | undefined): bool
 }
 
 /**
- * The host plugin `planr setup` manages, judged against the marketplace bundled with this
+ * The host plugin `openplanr setup` manages, judged against the marketplace bundled with this
  * CLI. Doctor and setup read the same inspection, so the three surfaces never disagree
  * about which plugin is the OpenPlanr one.
  */
@@ -814,7 +814,7 @@ async function planNextStep(
 
 /**
  * One command per installed coding agent whose OpenPlanr files or plugin trail this CLI,
- * planned with the same preview `planr runtime update` applies.
+ * planned with the same preview `openplanr runtime update` applies.
  */
 export async function upgradeNextSteps(
   projectDir: string,
@@ -912,7 +912,7 @@ const installedStatusSchema = z.union([
   z.object({ ok: z.literal(false), problem: z.string() }),
 ]);
 
-/** The next steps as the upgraded CLI reports them from `planr upgrade status --json`. */
+/** The next steps as the upgraded CLI reports them from `openplanr upgrade status --json`. */
 export function readInstalledCliNextSteps(
   projectDir: string,
   runner: InstalledCliRunner = defaultInstalledCliRunner,

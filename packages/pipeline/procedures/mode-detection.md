@@ -36,7 +36,7 @@ Bind:
 Fatal aborts surfaced by callers SHOULD follow **`fatal-error-format.md`** (two-line convention).
 | QA report | `output/feats/feat-${SLUG}/qa-report.md` | `<SPEC_DIR>/qa-report.md` |
 
-In spec-driven mode, the spec body has typically already been authored via `planr spec shape`, and decomposition may have already happened via `planr spec decompose` — in which case the specification-agent step becomes a *no-op or refresh* depending on whether US/T files exist. Treat existing US/T files as authoritative (don't overwrite without explicit user intent).
+In spec-driven mode, the spec body has typically already been authored via `openplanr spec shape`, and decomposition may have already happened via `planr spec decompose` — in which case the specification-agent step becomes a *no-op or refresh* depending on whether US/T files exist. Treat existing US/T files as authoritative (don't overwrite without explicit user intent).
 
 ## Self-heal on missing stack.md
 
@@ -63,7 +63,7 @@ Each calling command verifies these exist after detection. If any required input
 ### /plan
 
 Required (default mode):
-- `input/specs/spec-${SLUG}.md` — fail with: "spec-${SLUG}.md not found in input/specs/. Create the file (or use spec-driven mode by initializing with `planr spec init` and re-running)."
+- `input/specs/spec-${SLUG}.md` — fail with: "spec-${SLUG}.md not found in input/specs/. Create the file (or use spec-driven mode by initializing with `openplanr spec init` and re-running)."
 - `input/tech/stack.md` — fail with: "input/tech/stack.md not found. Create it from `${CLAUDE_PLUGIN_ROOT}/templates/stack.md.tpl`."
 
 Required (spec-driven mode):
@@ -79,7 +79,7 @@ Required (default mode):
 - `input/tech/stack.md`
 
 Required (spec-driven mode):
-- `<SPEC_DIR>/` — fail with: "Spec for slug '${SLUG}' not found under .planr/specs/. Run `planr spec create --slug ${SLUG}` then `planr spec decompose` first."
+- `<SPEC_DIR>/` — fail with: "Spec for slug '${SLUG}' not found under .planr/specs/. Run `openplanr spec create --slug ${SLUG}` then `planr spec decompose` first."
 - At least one `<SPEC_DIR>/stories/US-*.md`
 - At least one `<SPEC_DIR>/tasks/T-*.md`
 - `input/tech/stack.md` — covered by the self-heal pathway above.

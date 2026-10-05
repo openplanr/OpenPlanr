@@ -198,7 +198,7 @@ export function claudePluginUninstallCommand(id: string): string {
 /**
  * Render the exact `claude` shell command a plugin operation maps to — the same
  * argv `applyBundledClaudePluginIntegration`'s `runOrThrow` calls use, only as a
- * printable string. `planr upgrade apply` prescribes (never executes) the plugin
+ * printable string. `openplanr upgrade apply` prescribes (never executes) the plugin
  * half from these, so the printed commands can never drift from what an apply
  * would actually run. `marketplaceRoot` is the bundled directory an
  * `add-marketplace` registers. A pure formatter: it never touches the host.

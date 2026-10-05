@@ -14,6 +14,13 @@ const allowlist = JSON.parse(
 );
 const registry = JSON.parse(readFileSync(path.join(repoRoot, 'skills/registry.json'), 'utf8'));
 const skillCount = registry.skills.length;
+const commandRoots = [
+  ...new Set(
+    JSON.parse(
+      readFileSync(path.join(repoRoot, 'docs/generated/utility-command-catalog.json'), 'utf8'),
+    ).active.map(({ path: command }) => command.split(' ')[0]),
+  ),
+];
 
 // Changelogs are release history; CLAUDE.md and AGENTS.md are generated host guidance.
 const HOST_AND_CHANGELOG = (root) => [
@@ -63,7 +70,15 @@ const RULES = [
     id: 'retired-command',
     message: 'retired CLI command; skills reason in the host and call only deterministic utilities',
     pattern:
-      /`planr (?:plan|spec decompose)(?:\s|`)|planr pipeline plan|\/planr-pipeline:|\$planr-pipeline:/gu,
+      /`(?:open)?planr (?:plan|spec decompose)(?:\s|`)|(?:open)?planr pipeline plan|\/planr-pipeline:|\$planr-pipeline:/gu,
+  },
+  {
+    id: 'retired-binary',
+    message: 'the command is `openplanr` (alias `opr`); `planr` is no longer installed',
+    pattern: new RegExp(
+      `(?<![\\w./@:$#~-])planr(?=[ \\t]+(?:${commandRoots.join('|')})(?![\\w-])|[ \\t]+--?[a-z])`,
+      'gu',
+    ),
   },
   {
     id: 'retired-repository',
@@ -74,7 +89,7 @@ const RULES = [
   {
     id: 'model-provider',
     message:
-      'the planr CLI and the skills have no model provider; remove provider keys and provider language',
+      'the openplanr CLI and the skills have no model provider; remove provider keys and provider language',
     pattern: /OPENAI_API_KEY|ANTHROPIC_API_KEY|OLLAMA_HOST|\bAI provider\b|--provider\b/gu,
   },
   {
@@ -98,7 +113,7 @@ const RULES = [
   },
   {
     id: 'product-name-casing',
-    message: 'the product is OpenPlanr and the binary is `planr`; `Planr` is not a name',
+    message: 'the product is OpenPlanr and the binary is `openplanr`; `Planr` is not a name',
     pattern: /(?<![\w/`.-])Planr(?![\w-])/gu,
   },
   {

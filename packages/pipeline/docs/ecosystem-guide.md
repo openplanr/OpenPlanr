@@ -2,7 +2,7 @@
 
 OpenPlanr is organized as focused domains in one npm workspace:
 
-- **`packages/cli` is the dedicated planning control plane.** The `planr` CLI owns
+- **`packages/cli` is the dedicated planning control plane.** The `openplanr` CLI owns
   project/portfolio planning, artifact lifecycle, setup, runtime routing, and doctor.
 - **`packages/pipeline` is the public delivery package.** It owns feature-local
   PO planning, Design, Review, DEV, QA, and self-contained compatibility projections.
@@ -31,7 +31,7 @@ adapter projections. Generate it from the repository root and use
 | Generate or review design artifacts | `/planr:design`, `/planr:design-loop`, `/planr:design-review` |
 | Serve a hosted review shell or opaque encrypted room transport | hosted service |
 | Decide which OpenPlanr tool to use | `openplanr` skill |
-| Install or migrate certified runtimes | `planr setup` |
+| Install or migrate certified runtimes | `openplanr setup` |
 
 ## Drift Rule
 

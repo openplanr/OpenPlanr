@@ -51,7 +51,7 @@ afterEach(() => {
 
 /**
  * A `claude` runner with the bundled `openplanr-local` marketplace registered (what
- * `planr setup` leaves behind) and the given user-scope plugins installed, mirroring
+ * `openplanr setup` leaves behind) and the given user-scope plugins installed, mirroring
  * `claude plugin marketplace list --json` and `claude plugin list --json`.
  */
 function installedRunner(
@@ -495,7 +495,7 @@ describe('executeCliHalfUpgrade', () => {
     const step = {
       runtime: 'claude-code',
       host: 'Claude Code',
-      command: 'planr runtime update claude --scope user --yes',
+      command: 'openplanr runtime update claude --scope user --yes',
       detail: `OpenPlanr plugin 1.0.0 → ${cliVersion}`,
     };
     const installedCli = recordingNpm(() => ({
@@ -631,7 +631,7 @@ describe('upgradeNextSteps', () => {
     const steps = await upgradeNextSteps(root, { claudeCommandRunner: claude.runner });
 
     expect(steps.map((step) => step.command)).toEqual([
-      'planr runtime update claude --scope user --yes',
+      'openplanr runtime update claude --scope user --yes',
     ]);
     expect(steps[0]).toMatchObject({ runtime: 'claude-code', host: 'Claude Code' });
     expect(steps[0].detail).toContain(`OpenPlanr plugin 1.0.0 → ${bundledPlanrVersion()}`);
@@ -728,7 +728,7 @@ describe('upgradeNextSteps', () => {
         expect(steps).toEqual([
           {
             host: 'OpenPlanr',
-            command: 'planr doctor',
+            command: 'openplanr doctor',
             detail: expect.stringContaining(detail),
           },
         ]);
@@ -755,7 +755,7 @@ describe('upgradeNextSteps', () => {
       expect(steps).toEqual([
         {
           host: 'OpenPlanr',
-          command: 'planr doctor',
+          command: 'openplanr doctor',
           detail: expect.stringContaining('traverses symbolic component'),
         },
       ]);
@@ -977,9 +977,9 @@ process.exit(0);
 
     // The promise in the reason string must be kept by the same invocation.
     expect(output).toContain("a coding agent's plugin is behind it. Run the commands below.");
-    expect(output).toContain('1. planr runtime update claude --scope user --yes');
+    expect(output).toContain('1. openplanr runtime update claude --scope user --yes');
     expect(output).toContain('Claude Code: OpenPlanr plugin 1.25.0 → ');
-    expect(output).toContain('Then restart Claude Code and check with `planr upgrade status`.');
+    expect(output).toContain('Then restart Claude Code and check with `openplanr upgrade status`.');
     // The advice never names the retired remote plugins setup itself marks as legacy.
     expect(output).not.toContain('openplanr@openplanr');
     expect(output).not.toContain('planr-pipeline@openplanr');
@@ -1034,7 +1034,7 @@ describe('reconcileInstalledTuple against the npm registry document (BL-026)', (
       claudeCommandRunner: installedRunner([{ id: 'planr@openplanr-local', version: '1.0.0' }]),
       fetchImpl: registryFetch(registryDocument(cliVersion)),
     });
-    // The plugin `planr setup` installs is the host plugin, never a legacy one.
+    // The plugin `openplanr setup` installs is the host plugin, never a legacy one.
     expect(result.installed.skills).toBe('1.0.0');
     expect(result.legacyPlugins).toEqual([]);
     // A current CLI cannot fix a trailing plugin; doctor's classification makes that a

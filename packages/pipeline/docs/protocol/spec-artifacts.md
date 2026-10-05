@@ -16,7 +16,7 @@ Every spec is a self-contained directory under `.planr/specs/`:
 .planr/specs/SPEC-NNN-{slug}/
 ├── SPEC-NNN-{slug}.md              # the functional spec (one per directory)
 ├── design/                         # optional — UI mockups + design-spec
-│   ├── *.png                       # PNGs attached via `planr spec attach-design`
+│   ├── *.png                       # PNGs attached via `openplanr spec attach-design`
 │   └── design-spec.md              # written by designer-agent
 ├── stories/
 │   └── US-NNN-{slug}.md            # user stories scoped to this spec
@@ -37,7 +37,7 @@ parent SPEC; child frontmatter cannot duplicate or override it.
 
 ## SPEC frontmatter
 
-Identifies the functional spec and carries the fields used by `planr spec shape`,
+Identifies the functional spec and carries the fields used by `openplanr spec shape`,
 the `planr-plan` skill, and the pipeline specification-agent.
 
 **Canonical schema:** [`spec.schema.json`](../../schemas/v1.0.0/spec.schema.json)
@@ -63,7 +63,7 @@ tech_dependencies: []
 
 ## SPEC body sections (in order)
 
-The spec body uses these H2 sections. `planr spec shape` writes them from interactive questions; the `planr-plan` skill and the pipeline's specification-agent both read them.
+The spec body uses these H2 sections. `openplanr spec shape` writes them from interactive questions; the `planr-plan` skill and the pipeline's specification-agent both read them.
 
 1. **`## Context & Goal`** — user need and intended outcome
 2. **`## Audience`** — primary and affected users
@@ -266,13 +266,13 @@ canonical schema under `schemas/v1.0.0/`. Exit code is 0 only when every artifac
 
 ## Schema version compatibility
 
-Both planr CLI and planr-pipeline produce and consume schema `1.0.0`. Future breaking changes will bump `schemaVersion` in lockstep across all runtime adapters. Keep them aligned via:
+Both openplanr CLI and planr-pipeline produce and consume schema `1.0.0`. Future breaking changes will bump `schemaVersion` in lockstep across all runtime adapters. Keep them aligned via:
 
 ```bash
 /plugin marketplace update openplanr           # for the pipeline plugin (Claude Code)
-npm i -g openplanr@latest                      # for the planr CLI
-planr rules generate --target cursor --scope pipeline   # regenerate Cursor rules after upgrade
-planr rules generate --target codex --scope pipeline    # regenerate AGENTS.md after upgrade
+npm i -g openplanr@latest                      # for the openplanr CLI
+openplanr rules generate --target cursor --scope pipeline   # regenerate Cursor rules after upgrade
+openplanr rules generate --target codex --scope pipeline    # regenerate AGENTS.md after upgrade
 ```
 
 ## Additive Protocol v1.1 artifact-review contracts
@@ -315,7 +315,7 @@ an atomic merge.
 - `agent-roles.md` — 9 role contracts (inputs, outputs, tool guardrails)
 - `commands.md` — PLAN and SHIP command contracts
 - `runtime-adapters.md` — per-runtime adapter specs
-- `OpenPlanr/docs/reference/spec-schema.md` — companion schema reference generated for the planr CLI; `schemas/v1.0.0/` in this repo remains canonical for this cleanup cycle
+- `OpenPlanr/docs/reference/spec-schema.md` — companion schema reference generated for the openplanr CLI; `schemas/v1.0.0/` in this repo remains canonical for this cleanup cycle
 
 ---
 

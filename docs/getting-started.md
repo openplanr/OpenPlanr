@@ -13,10 +13,10 @@ your coding agent. It takes about five minutes.
 
 ```bash
 npm install -g openplanr
-planr --version
+openplanr --version
 ```
 
-The package installs three equivalent commands: `planr`, `openplanr`, and `opr`.
+The package installs two equivalent commands: `openplanr` and its short alias `opr`.
 
 Alternatives:
 
@@ -30,20 +30,20 @@ The installers require Node.js and never install or upgrade it silently.
 
 ## 2. Install the skills into your coding agent
 
-`planr setup` detects the agents on the machine, shows exactly what it will write,
+`openplanr setup` detects the agents on the machine, shows exactly what it will write,
 and installs the skills for the host and scope you choose. Preview first:
 
 ```bash
-planr setup --runtime claude --scope user --dry-run
-planr setup --runtime claude --scope user
+openplanr setup --runtime claude --scope user --dry-run
+openplanr setup --runtime claude --scope user
 ```
 
 | Host | Command | What it writes |
 | --- | --- | --- |
-| Claude Code | `planr setup --runtime claude --scope user` | A generated local marketplace and the unified `planr` plugin, registered with Claude Code |
-| Codex | `planr setup --runtime codex --scope user --skill-mode unified-plugin` | The unified `planr` plugin, registered through Codex's plugin marketplace |
-| Cursor | `planr setup --runtime cursor --scope project` | Thin `.mdc` discovery rules under `.cursor/rules/openplanr/` |
-| Everything | `planr setup --runtime all --scope both` | All of the above |
+| Claude Code | `openplanr setup --runtime claude --scope user` | A generated local marketplace and the unified `planr` plugin, registered with Claude Code |
+| Codex | `openplanr setup --runtime codex --scope user --skill-mode unified-plugin` | The unified `planr` plugin, registered through Codex's plugin marketplace |
+| Cursor | `openplanr setup --runtime cursor --scope project` | Thin `.mdc` discovery rules under `.cursor/rules/openplanr/` |
+| Everything | `openplanr setup --runtime all --scope both` | All of the above |
 
 User scope installs once per machine and is the default; project scope installs into
 the current repository and is required for Cursor. Codex can also install each skill
@@ -60,14 +60,14 @@ rather than installing the same Claude or Codex skills twice. Regenerate local
 loaders on each machine instead of committing their absolute cache paths.
 
 In Claude Code you can install the same plugin from the public OpenPlanr marketplace
-instead of `planr setup --runtime claude`. Use one path, not both:
+instead of `openplanr setup --runtime claude`. Use one path, not both:
 
 ```text
 /plugin marketplace add openplanr/marketplace
 /plugin install planr@openplanr
 ```
 
-Several skills call the `planr` CLI, so keep the CLI from step 1 installed.
+Several skills call the `openplanr` CLI, so keep the CLI from step 1 installed.
 
 Restart the coding agent after setup so it loads the new skills.
 
@@ -75,17 +75,17 @@ Restart the coding agent after setup so it loads the new skills.
 
 ```bash
 cd your-project
-planr init
+openplanr init
 ```
 
-`planr init` creates `.planr/config.json`, the artifact directories (`epics/`,
+`openplanr init` creates `.planr/config.json`, the artifact directories (`epics/`,
 `features/`, `stories/`, `tasks/`, `quick/`, `backlog/`, `sprints/`, `adrs/`,
 `checklists/`, `diagrams/`), an agile checklist, and an estimation guide. Commit `.planr/` with your code.
 
 To let the agent see every skill and when to use it, generate the host guidance:
 
 ```bash
-planr rules generate --target claude   # or codex, cursor, all
+openplanr rules generate --target claude   # or codex, cursor, all
 ```
 
 This adds an `## OpenPlanr capabilities` section to `CLAUDE.md` or `AGENTS.md` between
@@ -111,32 +111,32 @@ Then:
 | Plan | `plan` | User stories and tasks under the specification, with acceptance criteria and file-level change lists |
 | Review the plan | `plan-review` | Product, engineering, design, and developer-experience findings |
 | Implement | `ship` | One task implemented in the repository, verified, and recorded in `.planr/provenance.jsonl` |
-| Check status | `status` or `planr status --md` | Every specification, story, and task by status |
+| Check status | `status` or `openplanr status --md` | Every specification, story, and task by status |
 
 Plan and ship are separate steps. The agent never chains them on its own.
 
 ## 5. Keep it healthy
 
 ```bash
-planr doctor            # installation, adapters, and project health
-planr doctor --fix      # preview and repair owned installation drift
-planr sync              # validate and repair cross-references between artifacts
-planr upgrade status    # compare the installed CLI and plugin with the published set
+openplanr doctor            # installation, adapters, and project health
+openplanr doctor --fix      # preview and repair owned installation drift
+openplanr sync              # validate and repair cross-references between artifacts
+openplanr upgrade status    # compare the installed CLI and plugin with the published set
 ```
 
-`planr runtime update codex` refreshes only that agent and keeps its saved scope
+`openplanr runtime update codex` refreshes only that agent and keeps its saved scope
 and discovery mode. Repairs preserve user edits, other agents, native profiles
 and retained runs. Cursor integration requires a valid project; user scope is
 not a supported recovery alternative.
 
-When a skill misbehaves, start with `planr doctor --json` and the
+When a skill misbehaves, start with `openplanr doctor --json` and the
 [troubleshooting guide](../packages/cli/docs/TROUBLESHOOTING.md).
 
 ## Undo
 
 ```bash
-planr runtime rollback           # restore the last pre-setup state for every managed adapter
-planr runtime remove claude      # remove one host's OpenPlanr-owned files (hashes must still match)
+openplanr runtime rollback           # restore the last pre-setup state for every managed adapter
+openplanr runtime remove claude      # remove one host's OpenPlanr-owned files (hashes must still match)
 npm uninstall -g openplanr
 ```
 

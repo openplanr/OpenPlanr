@@ -15,17 +15,17 @@ Resolution order:
 
 1. use a host-native GitHub or Linear connector when available;
 2. otherwise, for GitHub, use the packaged deterministic helper;
-3. otherwise, for Linear, use the `planr linear` terminal utility when the user has
-   installed it; `planr github` and `planr sync` are optional equivalents for the rest.
+3. otherwise, for Linear, use the `openplanr linear` terminal utility when the user has
+   installed it; `openplanr github` and `openplanr sync` are optional equivalents for the rest.
 
 Linear through the CLI:
 
-- the user runs `planr linear init` in a terminal once; it prompts for a personal
+- the user runs `openplanr linear init` in a terminal once; it prompts for a personal
   access token, which the CLI stores;
-- audit with `planr linear sync --dry-run`, which reads Linear without writing;
-- before a real `planr linear sync`, ask how conflicts should resolve and pass
+- audit with `openplanr linear sync --dry-run`, which reads Linear without writing;
+- before a real `openplanr linear sync`, ask how conflicts should resolve and pass
   `--on-conflict local` or `--on-conflict linear`; without a prompt it favors Linear;
-- `planr linear push <artifact-id>` creates or updates Linear issues; preview with
+- `openplanr linear push <artifact-id>` creates or updates Linear issues; preview with
   `--dry-run`. Quick tasks and backlog items need `linear.standaloneProjectId` in the
   project config when no terminal prompt is available.
 

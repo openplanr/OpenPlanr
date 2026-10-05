@@ -1,5 +1,5 @@
 /**
- * Runtime adapter manager behind `planr setup`, `planr doctor` and `planr runtime`: previews and
+ * Runtime adapter manager behind `openplanr setup`, `openplanr doctor` and `openplanr runtime`: previews and
  * applies project or user installs of the OpenPlanr skills for Claude Code, Codex and Cursor,
  * records owned files in `<planrHome>/runtime/state.json` with per-project backups, and diagnoses
  * drift. Entry points: `previewSetup`, `applySetup`, `rollbackRuntime`, `removeRuntime`,
@@ -80,6 +80,7 @@ import {
   detectInstalledRuntimes,
   inspectRuntimeProjectContext,
   listInstalledRuntimeAdapters,
+  planningFolderConflict,
   type RuntimeId,
 } from './runtime-manager/inventory.js';
 import {
@@ -193,7 +194,7 @@ export interface SetupPreview {
   /**
    * The command-naming scheme this run will use, resolved from the flag or the
    * persisted per-project choice. Surfaced so the preview can state it: a user
-   * re-running plain `planr setup` on a project that persisted `bare` otherwise had no
+   * re-running plain `openplanr setup` on a project that persisted `bare` otherwise had no
    * way to see which names they were about to get.
    */
   commandPrefix: CommandPrefix;
@@ -2158,6 +2159,12 @@ export async function previewSetup(options: SetupOptions): Promise<SetupPreview>
       `Change into your project and rerun this command, or run \`${CLI_COMMAND} init\` here to initialize one.${canUseUserScope ? ' To install across projects instead, rerun this command with --scope user.' : ''}`,
     );
   }
+  const folderConflict =
+    !options.minimal && (scope === 'project' || scope === 'both')
+      ? planningFolderConflict(options.projectDir)
+      : null;
+  if (folderConflict)
+    throw new RuntimeManagerError(folderConflict.code, folderConflict.problem, folderConflict.fix);
   let scopeIncompatibleRuntimes: RuntimeId[] = [];
   if (!options.minimal && (options.runtime ?? 'auto') === 'auto' && !options.runtimes) {
     const adapters = listRuntimeAdapters();
@@ -3605,7 +3612,7 @@ export async function runtimeDoctor(
       // digest/adapter drift, or a component drift that does not include the CLI
       // (for example a pinned obsolete skill bundle), remains a genuine `fail`.
       // The warn/fail derivation lives in the single `classifyComponentDrift`
-      // helper so `planr upgrade status` reuses this exact distinction rather
+      // helper so `openplanr upgrade status` reuses this exact distinction rather
       // than re-deriving it; a digest/adapter drift is doctor's
       // flavour of an incompatible tuple.
       const { drift, genuineDrift, upgradeOnlyDrift, status } = classifyRuntimeComponentDrift({

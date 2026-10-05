@@ -8,7 +8,7 @@ license: MIT
 
 Inspect delivery state read-only in the active session. Read the repository's
 planning artifacts, task statuses, dependency graph, current branch, and relevant
-runtime markers directly. Use the optional deterministic `planr status --json`
+runtime markers directly. Use the optional deterministic `openplanr status --json`
 utility when available, but do not require it or a semantic subprocess.
 
 Add GitHub or Linear lookups only when the user requests live remote state. Keep

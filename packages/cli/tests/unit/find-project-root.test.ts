@@ -64,7 +64,7 @@ describe('findProjectRoot', () => {
   });
 
   it('returns startDir when no .planr/config.json found', () => {
-    // root exists but has no .planr/ — simulates `planr init` on a fresh project
+    // root exists but has no .planr/ — simulates `openplanr init` on a fresh project
     expect(findProjectRoot(root)).toBe(root);
   });
 

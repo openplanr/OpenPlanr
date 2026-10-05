@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://openplanr.dev/schemas/skills/planr-sprint/refinement.schema.json",
   "title": "OpenPlanr sprint refinement document",
-  "description": "One backlog refinement run: inputs, every open item's judgement, the four buckets, the in-progress batches and the refuter corrections. Written by the planr-sprint skill and validated by planr sprint refinement.",
+  "description": "One backlog refinement run: inputs, every open item's judgement, the four buckets, the in-progress batches and the refuter corrections. Written by the planr-sprint skill and validated by openplanr sprint refinement.",
   "type": "object",
   "additionalProperties": false,
   "required": ["schemaVersion", "sprintId", "refinedAt", "inputs", "items", "buckets"],
@@ -102,7 +102,7 @@
       }
     },
     "leftovers": {
-      "description": "Written by planr sprint close.",
+      "description": "Written by openplanr sprint close.",
       "type": "array",
       "items": {
         "type": "object",
@@ -115,7 +115,7 @@
       }
     },
     "applied": {
-      "description": "Written by planr sprint apply.",
+      "description": "Written by openplanr sprint apply.",
       "type": "object",
       "additionalProperties": false,
       "required": ["at", "updates"],

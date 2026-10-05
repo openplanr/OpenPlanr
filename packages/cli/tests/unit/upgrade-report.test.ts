@@ -32,13 +32,13 @@ const steps: UpgradeNextStep[] = [
   {
     runtime: 'claude-code',
     host: 'Claude Code',
-    command: 'planr runtime update claude --scope user --yes',
+    command: 'openplanr runtime update claude --scope user --yes',
     detail: 'planr plugin 2.6.0 → 2.2640.2',
   },
   {
     runtime: 'codex',
     host: 'Codex',
-    command: 'planr runtime update codex --scope user --yes',
+    command: 'openplanr runtime update codex --scope user --yes',
     detail: '40 files to update, 18 to add',
   },
 ];
@@ -92,23 +92,25 @@ describe('printNextSteps', () => {
     expect(printed).toEqual([
       '',
       'Next',
-      '    1. planr runtime update claude --scope user --yes',
+      '    1. openplanr runtime update claude --scope user --yes',
       '       Claude Code: planr plugin 2.6.0 → 2.2640.2',
-      '    2. planr runtime update codex --scope user --yes',
+      '    2. openplanr runtime update codex --scope user --yes',
       '       Codex: 40 files to update, 18 to add',
-      '  Then restart Claude Code and Codex and check with `planr upgrade status`.',
+      '  Then restart Claude Code and Codex and check with `openplanr upgrade status`.',
     ]);
   });
 
   it('asks for no restart when no step concerns a coding agent', () => {
-    printNextSteps([{ host: 'OpenPlanr', command: 'planr doctor', detail: 'state unreadable' }]);
-    expect(printed.at(-1)).toBe('  Then check with `planr upgrade status`.');
+    printNextSteps([
+      { host: 'OpenPlanr', command: 'openplanr doctor', detail: 'state unreadable' },
+    ]);
+    expect(printed.at(-1)).toBe('  Then check with `openplanr upgrade status`.');
   });
 
   it('points at upgrade status when the steps could not be listed', () => {
     printNextSteps([], 'The upgraded CLI could not be run: boom.');
     expect(printed.at(-1)).toBe(
-      '⚠ The upgraded CLI could not be run: boom. Run `planr upgrade status` to see what else needs updating.',
+      '⚠ The upgraded CLI could not be run: boom. Run `openplanr upgrade status` to see what else needs updating.',
     );
   });
 });
@@ -129,9 +131,9 @@ describe('printUpgradeReport', () => {
     printUpgradeReport(result, 'highlights');
     expect(printed[0]).toBe('✓ Upgraded OpenPlanr from 2.0.0 to 2.1.0.');
     expect(printed).toContain('    • Adds a thing.');
-    expect(printed).toContain('    1. planr runtime update claude --scope user --yes');
+    expect(printed).toContain('    1. openplanr runtime update claude --scope user --yes');
     expect(printed.at(-1)).toBe(
-      '  Then restart Claude Code and check with `planr upgrade status`.',
+      '  Then restart Claude Code and check with `openplanr upgrade status`.',
     );
   });
 });

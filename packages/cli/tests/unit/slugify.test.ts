@@ -34,7 +34,7 @@ describe('slugify', () => {
 
   it('truncates at whole-word boundary', () => {
     const text =
-      'when generating tasks for a feature with the feature flag the tasks generated file name should match the id of the feat passed so if it is planr task create';
+      'when generating tasks for a feature with the feature flag the tasks generated file name should match the id of the feat passed so if it is openplanr task create';
     const result = slugify(text);
     expect(result.length).toBeLessThanOrEqual(80);
     expect(result.endsWith('-')).toBe(false); // no trailing dash

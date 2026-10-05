@@ -1,5 +1,5 @@
 /**
- * `planr template` command group.
+ * `openplanr template` command group.
  *
  * Reusable task patterns for common development tasks.
  * Ships with 5 built-in templates and supports custom templates
@@ -39,7 +39,7 @@ export function registerTemplateCommand(program: Command) {
     .description('Reusable task patterns for common development tasks');
 
   // -----------------------------------------------------------------------
-  // planr template list
+  // openplanr template list
   // -----------------------------------------------------------------------
   template
     .command('list')
@@ -87,7 +87,7 @@ export function registerTemplateCommand(program: Command) {
     });
 
   // -----------------------------------------------------------------------
-  // planr template show <name>
+  // openplanr template show <name>
   // -----------------------------------------------------------------------
   template
     .command('show')
@@ -122,7 +122,7 @@ export function registerTemplateCommand(program: Command) {
     });
 
   // -----------------------------------------------------------------------
-  // planr template use <name>
+  // openplanr template use <name>
   // -----------------------------------------------------------------------
   template
     .command('use')
@@ -193,7 +193,7 @@ export function registerTemplateCommand(program: Command) {
     });
 
   // -----------------------------------------------------------------------
-  // planr template save <taskId>
+  // openplanr template save <taskId>
   // -----------------------------------------------------------------------
   template
     .command('save')
@@ -265,7 +265,7 @@ export function registerTemplateCommand(program: Command) {
     });
 
   // -----------------------------------------------------------------------
-  // planr template delete <name>
+  // openplanr template delete <name>
   // -----------------------------------------------------------------------
   template
     .command('delete')

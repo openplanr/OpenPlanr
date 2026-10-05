@@ -262,7 +262,7 @@ describe('addChildReference', () => {
     const parentContent = `# Epic
 
 ## Features
-_No features created yet. Run \`planr feature create\` to generate._
+_No features created yet. Run \`openplanr feature create\` to generate._
 `;
     // readArtifactRaw for parent
     mockListFiles.mockResolvedValueOnce(['EPIC-001-test.md']); // readArtifactRaw -> listFiles

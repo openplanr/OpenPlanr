@@ -42,7 +42,7 @@ afterEach(() => {
   for (const root of temporaryRoots.splice(0)) rmSync(root, { recursive: true, force: true });
 });
 
-describe('planr diagram public machine surface', () => {
+describe('openplanr diagram public machine surface', () => {
   it('exposes rendering and scoped authoring operations with the complete searchable gallery', () => {
     const project = temporary();
     const help = run(project, ['diagram', '--help']);
@@ -160,7 +160,7 @@ describe('planr diagram public machine surface', () => {
         }),
       ]),
     );
-    expect(value.nextAction).toContain('planr artifact');
+    expect(value.nextAction).toContain('openplanr artifact');
     expect(value.nextAction).toContain('flowchart-fixture.manifest.json');
     expect(value.nextAction).not.toContain('flowchart-fixture.html');
     expect(value.quality).toMatchObject({ status: 'pass', failedChecks: [], warningChecks: [] });
@@ -188,7 +188,7 @@ describe('planr diagram public machine surface', () => {
     const value = JSON.parse(rendered.stdout);
     expect(value).toMatchObject({ ok: true, action: 'diagram.rendered' });
     expect(value.quality).toMatchObject({ status: 'pass', failedChecks: [] });
-    expect(value.nextAction).toContain('planr artifact');
+    expect(value.nextAction).toContain('openplanr artifact');
     const svg = readFileSync(
       value.artifacts.find((artifact: { path: string }) => artifact.path.endsWith('.svg')).path,
       'utf8',

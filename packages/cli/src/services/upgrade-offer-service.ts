@@ -72,7 +72,7 @@ const BACKOFF_MS: Record<0 | 1 | 2, number> = {
 /**
  * The exact re-enable command — stated verbatim both when the user chooses
  * "never ask again" in the offer and when they set it via
- * `planr config set-upgrade-policy --never-ask`, so a permanent opt-out is never
+ * `openplanr config set-upgrade-policy --never-ask`, so a permanent opt-out is never
  * a trap the user cannot find how to undo.
  */
 export const UPGRADE_REENABLE_COMMAND = `${CLI_COMMAND} config set-upgrade-policy --ask-again`;
@@ -338,7 +338,7 @@ async function enableAutoUpgrade(
 /**
  * Delegate the CLI-owned half to the upgrade executor and render its result. This
  * re-uses `executeCliHalfUpgrade` and `printUpgradeReport` verbatim, so the offer
- * reads exactly like `planr upgrade apply`.
+ * reads exactly like `openplanr upgrade apply`.
  */
 async function performUpgrade(
   projectDir: string,

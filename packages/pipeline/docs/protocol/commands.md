@@ -19,7 +19,7 @@ within the requested scope.
 - `feature` — slug (no `feat-` or `spec-` prefix)
 - Project root with one of:
   - **Default mode:** `input/specs/spec-{feature}.md` (Tech Lead-authored)
-  - **Spec-driven mode:** `.planr/specs/SPEC-NNN-{feature}/SPEC-NNN-{feature}.md` (planr CLI- or pipeline-scaffolded)
+  - **Spec-driven mode:** `.planr/specs/SPEC-NNN-{feature}/SPEC-NNN-{feature}.md` (openplanr CLI- or pipeline-scaffolded)
 - `input/tech/stack.md` (project tech stack)
 - Optional: PNGs for designer-agent
 - Optional: DB env vars for db-agent

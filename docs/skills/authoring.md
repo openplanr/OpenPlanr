@@ -40,7 +40,7 @@ coding agent. A semantic skill never launches a planning CLI, a provider SDK, or
 second model. Helpers are appropriate for deterministic work such as ID inspection,
 schema validation, verification discovery, rendering, and sync.
 
-The optional `planr` CLI remains the terminal surface for deterministic project
+The optional `openplanr` CLI remains the terminal surface for deterministic project
 CRUD, setup, diagnostics, status, dashboard and artifact services, diagrams,
 and GitHub/Linear integration. Skills must still work when it is absent.
 

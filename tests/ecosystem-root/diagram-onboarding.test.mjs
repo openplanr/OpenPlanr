@@ -20,11 +20,11 @@ test('diagram contributor onboarding names every authoring and drift operation',
   const guide = read('docs/diagrams/authoring.md');
   const packageManifest = JSON.parse(read('package.json'));
   for (const command of [
-    'planr diagram gallery',
-    'planr diagram render',
-    'planr diagram inspect',
-    'planr diagram check',
-    'planr diagram rerender',
+    'openplanr diagram gallery',
+    'openplanr diagram render',
+    'openplanr diagram inspect',
+    'openplanr diagram check',
+    'openplanr diagram rerender',
     'npm run skill:lint',
     'npm run skill:preview',
     'npm run skill:evaluate',

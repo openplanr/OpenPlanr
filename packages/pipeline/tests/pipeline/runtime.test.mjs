@@ -116,7 +116,7 @@ test('an incompatible project lock blocks execution with an exact update command
     () => resolveRuntimeAdapter({ projectRoot, explicit: 'codex', installed: ['codex'] }),
     (error) =>
       error.code === 'E_LOCK_INCOMPATIBLE' &&
-      error.fix === 'Run `planr runtime update codex --scope project`.',
+      error.fix === 'Run `openplanr runtime update codex --scope project`.',
   );
 });
 

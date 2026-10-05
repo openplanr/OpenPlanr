@@ -5,7 +5,7 @@
 <h1 align="center">openplanr</h1>
 
 <p align="center">
-  The <code>planr</code> CLI: planning files, validation, diagrams, host setup, diagnostics, and tracker sync for OpenPlanr.<br>
+  The <code>openplanr</code> CLI: planning files, validation, diagrams, host setup, diagnostics, and tracker sync for OpenPlanr.<br>
   Close the loop from intent to delivery with Claude Code, Codex, and Cursor.
 </p>
 
@@ -19,7 +19,7 @@
 
 OpenPlanr gives your coding agent 25+ skills for specifying, planning, reviewing, designing,
 diagramming, shipping, and operating work from plans stored in your repository under
-`.planr/`. This package is the deterministic half: the `planr` command that stores and
+`.planr/`. This package is the deterministic half: the `openplanr` command that stores and
 validates those files, renders diagrams and reports, installs the skills into each host,
 diagnoses the installation, and syncs with GitHub Issues and Linear. It never calls a
 model. Reasoning happens in the agent; the CLI keeps the record straight.
@@ -28,7 +28,7 @@ model. Reasoning happens in the agent; the CLI keeps the record straight.
 
 ```bash
 npm install -g openplanr
-planr --version
+openplanr --version
 ```
 
 Also available as `openplanr` and `opr`. Alternatives: `npx openplanr@latest setup`, or
@@ -38,13 +38,13 @@ the installers `curl -fsSL https://openplanr.dev/install.sh | sh` and
 ## Quick start
 
 ```bash
-planr setup --runtime claude --scope user
-# Codex:  planr setup --runtime codex --scope user --skill-mode unified-plugin
-# Cursor: planr setup --runtime cursor --scope project
+openplanr setup --runtime claude --scope user
+# Codex:  openplanr setup --runtime codex --scope user --skill-mode unified-plugin
+# Cursor: openplanr setup --runtime cursor --scope project
 
 cd your-project
-planr init
-planr rules generate --target claude   # adds the skill map to CLAUDE.md (or codex → AGENTS.md)
+openplanr init
+openplanr rules generate --target claude   # adds the skill map to CLAUDE.md (or codex → AGENTS.md)
 ```
 
 Restart the coding agent, then ask for a specification: `/planr:spec "…"` in Claude Code,
@@ -52,8 +52,8 @@ Restart the coding agent, then ask for a specification: `/planr:spec "…"` in C
 `plan` to decompose it into stories and tasks and `ship` to implement one task. Plan and
 ship stay separate steps that you invoke.
 
-`planr setup --dry-run` previews every file before anything is written; existing files
-are backed up byte for byte and `planr runtime rollback` restores them. See the
+`openplanr setup --dry-run` previews every file before anything is written; existing files
+are backed up byte for byte and `openplanr runtime rollback` restores them. See the
 [setup guide](docs/CROSS_RUNTIME_SETUP.md).
 
 ## What the CLI does
@@ -74,15 +74,15 @@ Every command supports `--yes` for non-interactive use and most support `--json`
 The skills (`spec`, `plan`, `plan-review`, `sprint`, `ship`, `browser-qa`, `design`,
 `design-loop`, `design-review`, `diagram`, `artifact`, `land`, `release`, `doctor`,
 `investigate`, `status`, `sync`, `dashboard`, `openplanr`, `operate`, and the seven Operate
-reviews) ship inside this package and are installed by `planr setup`. The
+reviews) ship inside this package and are installed by `openplanr setup`. The
 [skill catalog](https://github.com/openplanr/OpenPlanr/blob/main/docs/generated/skills.md)
 lists each skill's triggers, deferrals, and packaged references.
 
 | Host | Install | Invoke |
 | --- | --- | --- |
-| Claude Code | `planr setup --runtime claude --scope user` | `/planr:<skill>`; `ship` dispatches nine role agents |
-| Codex | `planr setup --runtime codex --scope user --skill-mode unified-plugin` | `$planr:<skill>` |
-| Cursor | `planr setup --runtime cursor --scope project` | mention the `planr-<skill>` rule in Composer |
+| Claude Code | `openplanr setup --runtime claude --scope user` | `/planr:<skill>`; `ship` dispatches nine role agents |
+| Codex | `openplanr setup --runtime codex --scope user --skill-mode unified-plugin` | `$planr:<skill>` |
+| Cursor | `openplanr setup --runtime cursor --scope project` | mention the `planr-<skill>` rule in Composer |
 
 ## Documentation
 

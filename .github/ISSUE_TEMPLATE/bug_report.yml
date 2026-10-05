@@ -1,12 +1,12 @@
 name: Bug report
-description: Something in the planr CLI or an installed skill does not behave as documented.
+description: Something in the openplanr CLI or an installed skill does not behave as documented.
 title: "bug: "
 labels: [bug]
 body:
   - type: markdown
     attributes:
       value: |
-        Thanks for the report. Run `planr doctor --json` first; it explains most installation problems and its output is the fastest way for us to help.
+        Thanks for the report. Run `openplanr doctor --json` first; it explains most installation problems and its output is the fastest way for us to help.
   - type: dropdown
     id: host
     attributes:
@@ -32,14 +32,14 @@ body:
   - type: input
     id: version
     attributes:
-      label: planr --version
+      label: openplanr --version
       placeholder: "2.2.1"
     validations:
       required: true
   - type: textarea
     id: doctor
     attributes:
-      label: planr doctor --json
+      label: openplanr doctor --json
       description: Paste the output. Doctor redacts secrets; check it anyway.
       render: json
   - type: textarea
@@ -48,7 +48,7 @@ body:
       label: Steps to reproduce
       description: The exact commands or skill invocations, in order.
       placeholder: |
-        1. planr setup --runtime claude --scope user
+        1. openplanr setup --runtime claude --scope user
         2. /planr:spec "…"
     validations:
       required: true

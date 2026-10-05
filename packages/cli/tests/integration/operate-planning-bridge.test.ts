@@ -335,7 +335,7 @@ describe('real Operate planning bridge lifecycle', () => {
     expect(published.content).toContain(`- **Target:** ${String(verification.target)}`);
     expect(published.content).toContain(`- **Window:** ${String(verification.window)}`);
     expect(published.content).toContain(
-      `planr operate dashboard ${String(proposal.cycleId)} --actor <authorizedActorId>`,
+      `openplanr operate dashboard ${String(proposal.cycleId)} --actor <authorizedActorId>`,
     );
     const deepLink = published.content.match(/\]\(#\/operate\/actions\/([^/]+)\/planning\)/u);
     expect(deepLink).not.toBeNull();

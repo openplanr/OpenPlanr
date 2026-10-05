@@ -24,7 +24,7 @@ node lib/design/utility.mjs open /path/to/design-document.json --no-open
 node lib/design/utility.mjs export /path/to/design-document.json --view prototype --output /path/to/review.html
 ```
 
-The public CLI accepts the same document with `planr artifact open`. All three
+The public CLI accepts the same document with `openplanr artifact open`. All three
 views render the same authored local HTML/CSS/JavaScript. Protocol owns the
 additive `v1.9.0/design-document.schema.json` contract; this package owns source
 validation, rendering and the studio. Shared review serving, iframe isolation,
@@ -98,7 +98,7 @@ across the local review and hosted viewer. Author review purpose, questions,
 and share-safe implementation guidance in sibling `review-context.json`.
 Product and guidance fingerprints are independent of studio runtime changes.
 
-Use `planr artifact handoff design-document.json` or the skill's bundled
+Use `openplanr artifact handoff design-document.json` or the skill's bundled
 `design.mjs handoff design-document.json --action draft` to prepare a factual
 handoff. The active host agent refines it, preserving reviewer quotations and
 source citations. The owner reviews and approves the exact draft in the local
@@ -144,7 +144,7 @@ service budget.
 
 ### Local opening, navigation and storage
 
-`open` and `planr artifact open` return the actual `/studio/<design-id>/` address.
+`open` and `openplanr artifact open` return the actual `/studio/<design-id>/` address.
 The root redirects to Studio or a design selector. Reopening the same revision and
 configuration reuses the healthy owned service. Use the bundled utility's `studio
 <document> --action status` or `--action stop` to inspect or stop that exact instance;

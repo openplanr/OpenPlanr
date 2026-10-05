@@ -1,4 +1,4 @@
-/** Explicit CLI interaction surface for `planr story`. */
+/** Explicit CLI interaction surface for `openplanr story`. */
 export { loadConfig } from '../../../services/config-service.js';
 export { printDeprecationNotice } from '../../../services/deprecation-notices.js';
 export { requireInteractiveForManual } from '../../../services/interactive-state.js';

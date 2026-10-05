@@ -99,7 +99,7 @@ afterEach(() => {
   rmSync(projectDir, { recursive: true, force: true });
 });
 
-describe.skipIf(process.platform === 'win32')('planr github sync reads gh issue states', () => {
+describe.skipIf(process.platform === 'win32')('openplanr github sync reads gh issue states', () => {
   it('pulls a closed issue as done and an open one as pending', async () => {
     await runGitHub('sync', '--direction', 'pull');
 
@@ -134,7 +134,7 @@ describe.skipIf(process.platform === 'win32')('planr github sync reads gh issue 
     expect(stateChanges()).toEqual([]);
   });
 
-  it('shows each issue state in planr github status and marks an unreadable issue out of sync', async () => {
+  it('shows each issue state in openplanr github status and marks an unreadable issue out of sync', async () => {
     stubGh(LINKED.slice(0, 3));
 
     await runGitHub('status');

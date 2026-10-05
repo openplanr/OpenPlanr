@@ -1,5 +1,5 @@
 /**
- * `planr linear push`: creates or updates the Linear entities for one artifact and its scope. An
+ * `openplanr linear push`: creates or updates the Linear entities for one artifact and its scope. An
  * Epic maps to a project, milestone or label by its strategy, Features to project issues with
  * Stories and task lists as sub-issues, and Quick tasks and Backlog items stand alone or join
  * their Epic. Entry point: `runLinearPush`. Scope loading, bodies and plans live in `./linear/`,
@@ -176,7 +176,7 @@ function asTaskStatus(s: unknown): TaskStatus {
 
 /**
  * Derive a default status→stateId map from a team's workflow states. Used
- * when the user hasn't configured `linear.pushStateIds` — lets `planr linear
+ * when the user hasn't configured `linear.pushStateIds` — lets `openplanr linear
  * push` set workflow state out of the box.
  *
  * We pick the first state of each canonical Linear type so a team with
@@ -853,7 +853,7 @@ async function pushEpicScope(
 
   // `--no-cascade` short-circuits the downward push of features (and the
   // QT/BL cascade below). The epic's Linear project is still created/updated
-  // so descendants can attach to it later via individual `planr linear push
+  // so descendants can attach to it later via individual `openplanr linear push
   // FEAT-XXX` / `US-XXX` calls.
   if (noCascade) {
     return plan;

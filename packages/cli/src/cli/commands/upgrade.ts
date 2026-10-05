@@ -18,7 +18,7 @@ import { CLI_COMMAND } from '../../utils/constants.js';
 import { display, logger } from '../../utils/logger.js';
 
 /**
- * `planr upgrade` — reconcile the installed tuple against the published
+ * `openplanr upgrade` — reconcile the installed tuple against the published
  * compatible set (`status`) and, for the half the CLI owns, perform the npm
  * upgrade, then list the command that updates each installed coding agent (`apply`).
  */

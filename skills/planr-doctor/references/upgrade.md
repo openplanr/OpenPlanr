@@ -1,9 +1,9 @@
 # Driving an OpenPlanr upgrade
 
-`planr doctor` diagnoses; this reference is how to *act* once the tuple has
-drifted. An OpenPlanr install has two parts: the npm CLI, and what `planr setup`
+`openplanr doctor` diagnoses; this reference is how to *act* once the tuple has
+drifted. An OpenPlanr install has two parts: the npm CLI, and what `openplanr setup`
 installed into each coding agent from that CLI — the `planr@openplanr-local`
-Claude Code plugin, Codex skills, Cursor rules. `planr upgrade apply` moves the
+Claude Code plugin, Codex skills, Cursor rules. `openplanr upgrade apply` moves the
 npm CLI itself and never changes a coding agent; the upgraded CLI then hands back
 one command per installed agent, and this skill runs them and confirms the result.
 
@@ -11,15 +11,15 @@ The cardinal rule: **name the actions, let the engine own the list.** Every
 command you run comes from the CLI's own output. The skill never carries its own
 copy of those commands — the moment it did, it would drift from the CLI the first
 time the integration changed. The upgraded CLI plans them with the same preview
-`planr runtime update` and `planr setup` apply, so they cannot diverge. A retired
+`openplanr runtime update` and `openplanr setup` apply, so they cannot diverge. A retired
 remote plugin (`openplanr@openplanr`, `planr-pipeline@openplanr`) only ever leaves
-through the `planr setup … --replace-managed` command the list carries; an
+through the `openplanr setup … --replace-managed` command the list carries; an
 instruction to install one did not come from the CLI.
 
 ## 1. Decide whether to act
 
 ```bash
-planr upgrade status --json
+openplanr upgrade status --json
 ```
 
 Shape (the fields this skill reads):
@@ -41,7 +41,7 @@ Shape (the fields this skill reads):
 ```
 
 - `installed.skills` is the installed version of `planr@openplanr-local`; `null`
-  means Claude Code was not detected or `planr setup` has not installed the
+  means Claude Code was not detected or `openplanr setup` has not installed the
   plugin. `installed.pipeline` is always `null` — the pipeline ships inside the
   CLI, and `bundledPipeline` reports it.
 - `nextSteps` lists what each coding agent needs to match the installed CLI,
@@ -58,7 +58,7 @@ Shape (the fields this skill reads):
 Confirm with the user first (this upgrades the npm CLI), then:
 
 ```bash
-planr upgrade apply --yes --json
+openplanr upgrade apply --yes --json
 ```
 
 On success the output carries `nextSteps`, planned by the newly installed CLI:
@@ -74,7 +74,7 @@ On success the output carries `nextSteps`, planned by the newly installed CLI:
     {
       "runtime": "claude-code",
       "host": "Claude Code",
-      "command": "<one planr command>",
+      "command": "<one openplanr command>",
       "detail": "<what it changes>"
     }
   ]
@@ -87,9 +87,9 @@ this file.** Other shapes:
 
 - An empty array: every installed coding agent already matches the new CLI.
 - `nextStepsError` instead of steps: the upgraded CLI could not be asked. Run
-  `planr upgrade status --json` and use its `nextSteps`.
-- A `planr doctor` command: planning that agent's update failed, and `detail`
-  says why. Relay it and run `planr doctor --json`.
+  `openplanr upgrade status --json` and use its `nextSteps`.
+- An `openplanr doctor` command: planning that agent's update failed, and `detail`
+  says why. Relay it and run `openplanr doctor --json`.
 
 `pluginHalfCommands` repeats the commands for older readers; read `nextSteps`.
 
@@ -111,8 +111,8 @@ keeps the old plugin and skills until it restarts.
 ## 4. Verify, then report what actually changed
 
 ```bash
-planr upgrade status --json
-planr doctor --json
+openplanr upgrade status --json
+openplanr doctor --json
 ```
 
 Compare the new `installed` block against the before state you recorded, and
@@ -123,7 +123,7 @@ CLI                     2.2638.0 → 2.2639.1   moved
 planr@openplanr-local   2.2638.0 → 2.2639.1   moved
 ```
 
-`nextSteps` should now be empty. `planr doctor` adds what `upgrade status` does
+`nextSteps` should now be empty. `openplanr doctor` adds what `upgrade status` does
 not judge. A `runtime-claude-duplicate-plugin` warning means a second `planr`
 plugin (usually `planr@openplanr`, installed from the public marketplace) sits
 beside the setup-managed one, and both expose the same `/planr` commands. Its `fix`

@@ -482,7 +482,7 @@ function commandDigest(result, redactedRoots = []) {
 }
 
 function runCli(nodeExecutable, cliRoot, args, options) {
-  return commandResult(nodeExecutable, [path.join(cliRoot, 'bin', 'planr.js'), ...args], options);
+  return commandResult(nodeExecutable, [path.join(cliRoot, 'bin', 'openplanr.js'), ...args], options);
 }
 
 function installedAliasEntrypoint({ consumerRoot, cliRoot, manifest, alias }) {
@@ -518,9 +518,8 @@ function verifyCliAliases({
   environment,
 }) {
   const expectedBins = {
-    openplanr: './bin/planr.js',
-    opr: './bin/planr.js',
-    planr: './bin/planr.js',
+    openplanr: './bin/openplanr.js',
+    opr: './bin/openplanr.js',
   };
   if (JSON.stringify(stableJson(manifest.bin)) !== JSON.stringify(stableJson(expectedBins))) {
     throw new ProofFailure(
@@ -548,7 +547,7 @@ function verifyCliAliases({
   );
   const reports = [];
   for (const testCase of cases) {
-    const baseline = commandResult(nodeExecutable, [entrypoints.planr, ...testCase.args], {
+    const baseline = commandResult(nodeExecutable, [entrypoints.openplanr, ...testCase.args], {
       cwd: project,
       env: environment,
       timeout: testCase.id === 'diagnostics' ? 2 * 60 * 1000 : undefined,
@@ -556,11 +555,11 @@ function verifyCliAliases({
     if (testCase.expectedExit !== undefined && baseline.status !== testCase.expectedExit) {
       throw new ProofFailure(
         'E_CLI_ALIAS_CASE_FAILED',
-        `planr alias case ${testCase.id} exited ${String(baseline.status)}.`,
+        `openplanr alias case ${testCase.id} exited ${String(baseline.status)}.`,
       );
     }
     if (testCase.output === 'json') assertJsonOutput(baseline, testCase.id);
-    for (const alias of ['openplanr', 'opr']) {
+    for (const alias of ['opr']) {
       const candidate = commandResult(nodeExecutable, [entrypoints[alias], ...testCase.args], {
         cwd: project,
         env: environment,
@@ -573,7 +572,7 @@ function verifyCliAliases({
       ) {
         throw new ProofFailure(
           'E_CLI_ALIAS_PARITY',
-          `${alias} differs from planr for ${testCase.id}.`,
+          `${alias} differs from openplanr for ${testCase.id}.`,
         );
       }
     }
@@ -1106,7 +1105,7 @@ function verifyFullInstall({
     cwd: operateProject,
     env: environment,
   });
-  const inspectionReport = assertJsonOutput(inspection, 'planr operate recovery inspect');
+  const inspectionReport = assertJsonOutput(inspection, 'openplanr operate recovery inspect');
   if (
     inspection.status !== 0 ||
     inspectionReport.ok !== true ||
@@ -1115,7 +1114,7 @@ function verifyFullInstall({
     inspectionReport.data?.allowedRecovery !== 'none' ||
     inspectionReport.data?.integrityBoundary?.model !== 'project-local-integrity'
   ) {
-    throw new ProofFailure('E_CLI_OPERATE_FAILED', 'Packed planr operate is not functional.');
+    throw new ProofFailure('E_CLI_OPERATE_FAILED', 'Packed openplanr operate is not functional.');
   }
 
   const aliases = verifyCliAliases({
@@ -1145,7 +1144,7 @@ function verifyFullInstall({
     cwd: diagramProject,
     env: environment,
   });
-  const gallery = assertJsonOutput(galleryResult, 'planr diagram gallery');
+  const gallery = assertJsonOutput(galleryResult, 'openplanr diagram gallery');
   if (
     galleryResult.status !== 0 ||
     gallery.ok !== true ||
@@ -1153,7 +1152,7 @@ function verifyFullInstall({
   ) {
     throw new ProofFailure(
       'E_CLI_DIAGRAM_GALLERY_FAILED',
-      'Packed planr diagram gallery is incomplete.',
+      'Packed openplanr diagram gallery is incomplete.',
     );
   }
   const renderResult = runCli(
@@ -1162,14 +1161,17 @@ function verifyFullInstall({
     ['diagram', 'render', diagramInput, '--output', '.', '--json'],
     { cwd: diagramProject, env: environment },
   );
-  const rendered = assertJsonOutput(renderResult, 'planr diagram render');
+  const rendered = assertJsonOutput(renderResult, 'openplanr diagram render');
   if (
     renderResult.status !== 0 ||
     rendered.ok !== true ||
     rendered.validation?.status !== 'passed' ||
     typeof rendered.manifest?.path !== 'string'
   ) {
-    throw new ProofFailure('E_CLI_DIAGRAM_RENDER_FAILED', 'Packed planr diagram render failed.');
+    throw new ProofFailure(
+      'E_CLI_DIAGRAM_RENDER_FAILED',
+      'Packed openplanr diagram render failed.',
+    );
   }
   const checkResult = runCli(
     nodeExecutable,
@@ -1177,9 +1179,9 @@ function verifyFullInstall({
     ['diagram', 'check', rendered.manifest.path, '--json'],
     { cwd: diagramProject, env: environment },
   );
-  const checked = assertJsonOutput(checkResult, 'planr diagram check');
+  const checked = assertJsonOutput(checkResult, 'openplanr diagram check');
   if (checkResult.status !== 0 || checked.ok !== true || checked.validation?.status !== 'passed') {
-    throw new ProofFailure('E_CLI_DIAGRAM_CHECK_FAILED', 'Packed planr diagram check failed.');
+    throw new ProofFailure('E_CLI_DIAGRAM_CHECK_FAILED', 'Packed openplanr diagram check failed.');
   }
   return {
     protocol: protocolConsumers,

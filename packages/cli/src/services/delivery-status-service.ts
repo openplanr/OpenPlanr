@@ -1,5 +1,5 @@
 /**
- * Delivery-status aggregation — the deterministic core behind `planr status`
+ * Delivery-status aggregation — the deterministic core behind `openplanr status`
  * (no slug → whole-project delivery report). Rolls up every Spec / Backlog /
  * Quick Task (or the agile tree) by status and OPTIONALLY cross-references
  * GitHub PRs and Linear issue state.

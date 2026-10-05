@@ -29,6 +29,8 @@
       "!packages/cli/lib/integrations.d.mts",
       "!packages/cli/lib/names.mjs",
       "!packages/cli/lib/names.d.mts",
+      "!packages/cli/lib/planning-folder.mjs",
+      "!packages/cli/lib/planning-folder.d.mts",
       "!packages/cli/lib/planr-home.mjs",
       "!packages/cli/lib/planr-home.d.mts",
       "!packages/integrations/src/names.mjs",

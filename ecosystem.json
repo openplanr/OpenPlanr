@@ -60,7 +60,7 @@
       "version": "2.2641.0",
       "path": "packages/cli",
       "publication": "public",
-      "manifestDigest": "sha256:9a8b011240e91780d6df1af448426aca861ab3f6604f317b5d46eff55151597f"
+      "manifestDigest": "sha256:40f88bf7710f3fae13567d42023e51e116d84ca53533003d92bbba4ff086e8de"
     },
     "pipeline": {
       "package": "planr-pipeline",
@@ -74,7 +74,7 @@
       "version": "0.10.1",
       "path": "packages/protocol",
       "publication": "public",
-      "manifestDigest": "sha256:3346253d6c369c0a1d15e795d9a812cfcdfde3bb0b8ea393f74da417dcbd4d0f"
+      "manifestDigest": "sha256:7be3872503e46535cddf230ab13919bcd823f694b1681262a97430715424ad92"
     },
     "operate": {
       "package": "@openplanr/operate",
@@ -132,9 +132,8 @@
   },
   "binaries": {
     "cli": {
-      "planr": "./bin/planr.js",
-      "openplanr": "./bin/planr.js",
-      "opr": "./bin/planr.js"
+      "openplanr": "./bin/openplanr.js",
+      "opr": "./bin/openplanr.js"
     },
     "pipeline": {
       "planr-pipeline": "bin/planr-pipeline.mjs"
@@ -147,7 +146,7 @@
   "catalogs": {
     "commands": {
       "path": "packages/protocol/registries/commands.json",
-      "digest": "sha256:fc8a26bf71dacf6c67366d5ef20468d8aa7897ebfe58d4266bc6a1d374bf6bbd",
+      "digest": "sha256:46ff9a47a64e8a46d53e23e24e529b723f1dedd18a9cd35065d9189fa64569fd",
       "rootCommands": 39,
       "pipelineMachineLeaves": 31,
       "frozenClaudeDocuments": 8,
@@ -250,7 +249,7 @@
     },
     "skills": {
       "path": "packages/protocol/registries/skills.json",
-      "digest": "sha256:254ef127ab132201e34b955a06ea15c9fbb0f5a4831beb8b0e808dc3d25c96a2",
+      "digest": "sha256:c9c1a38f5ae964258d1e04a56acaefce8f7b53ce6f37f36032fabdb1f9b6010e",
       "count": 28,
       "ids": [
         "planr-artifact",
@@ -348,7 +347,7 @@
     ],
     "generatedAssets": {
       "path": "adapters/manifests/generated-assets.json",
-      "digest": "sha256:0acc1b46e6b5530729eefe0650eb44c587c4d4735a9c1659d5f16a201592b039",
+      "digest": "sha256:1b85782c4ee707ecdf3e3277aa4aa1879a56c519244b9ee1fa109b644621fa6d",
       "count": 1592
     }
   },

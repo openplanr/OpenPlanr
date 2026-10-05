@@ -25,7 +25,7 @@ describe('formatLinearMappingTable', () => {
         linearIdentifier: 'ENG-12',
         linearUrl: 'https://linear.app/i/1',
         lastKnownState: 'in-progress',
-        note: 'stale-id (value does not look like a Linear issue id; re-run `planr linear push`)',
+        note: 'stale-id (value does not look like a Linear issue id; re-run `openplanr linear push`)',
       },
     ];
     const out = formatLinearMappingTable(rows);

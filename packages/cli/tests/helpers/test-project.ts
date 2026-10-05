@@ -57,7 +57,7 @@ export async function writeSampleEpic(
   const featuresSection =
     featureLinks.length > 0
       ? featureLinks.join('\n')
-      : `_No features created yet. Run \`planr feature create --epic ${id}\` to create features._`;
+      : `_No features created yet. Run \`openplanr feature create --epic ${id}\` to create features._`;
 
   const content = `---
 id: "${id}"
@@ -122,7 +122,7 @@ export async function writeSampleFeature(
   const storiesSection =
     storyLinks.length > 0
       ? storyLinks.join('\n')
-      : `_No user stories created yet. Run \`planr story create --feature ${id}\` to create user stories._`;
+      : `_No user stories created yet. Run \`openplanr story create --feature ${id}\` to create user stories._`;
 
   const content = `---
 id: "${id}"
@@ -182,7 +182,7 @@ export async function writeSampleStory(
   const tasksSection =
     taskLinks.length > 0
       ? taskLinks.join('\n')
-      : `_Run \`planr task create --story ${id}\` to generate tasks._`;
+      : `_Run \`openplanr task create --story ${id}\` to generate tasks._`;
 
   const content = `---
 id: "${id}"

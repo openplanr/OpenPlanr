@@ -16,12 +16,12 @@
     {
       "id": "label-length",
       "status": "pass",
-      "message": "Longest label is 36 characters."
+      "message": "Longest label is 38 characters."
     },
     {
       "id": "crossings",
       "status": "pass",
-      "message": "0 estimated crossings; 12 allowed."
+      "message": "4 estimated crossings; 12 allowed."
     },
     {
       "id": "fan-in",
@@ -31,12 +31,27 @@
     {
       "id": "contrast",
       "status": "pass",
-      "message": "Contrast ratio is 18.88:1."
+      "message": "Contrast ratio is 5.19:1."
     },
     {
       "id": "clipping",
       "status": "pass",
       "message": "No clipping reported."
+    },
+    {
+      "id": "edge-title-overlap",
+      "status": "pass",
+      "message": "Connection paths keep clear of measured group and lane titles."
+    },
+    {
+      "id": "annotation-connector-overlap",
+      "status": "pass",
+      "message": "Annotation connectors keep clear of unrelated nodes, relation labels and container titles."
+    },
+    {
+      "id": "edge-label-overlap",
+      "status": "pass",
+      "message": "Connection paths keep clear of unrelated relation labels."
     },
     {
       "id": "svg-validated",
@@ -106,7 +121,7 @@
     {
       "id": "png-decoded",
       "status": "pass",
-      "message": "PNG decoded at 868×1042 (57986 bytes)."
+      "message": "PNG decoded at 870×1042 (58494 bytes)."
     },
     {
       "id": "offline-runtime",
@@ -115,5 +130,5 @@
     }
   ],
   "splitPlan": null,
-  "documentDigest": "sha256:b4fc1b5c6f8c2ddc8301472bfb8374dd4332e6a67c5e66005f18ff22403cdd49"
+  "documentDigest": "sha256:019975dc5d0e9cfed8267c79bc09b92dac4eb5afc611aeeb9db1aa56da6c949c"
 }

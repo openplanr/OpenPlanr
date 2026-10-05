@@ -21,7 +21,7 @@
     {
       "id": "crossings",
       "status": "pass",
-      "message": "0 estimated crossings; 12 allowed."
+      "message": "10 estimated crossings; 12 allowed."
     },
     {
       "id": "fan-in",
@@ -31,12 +31,27 @@
     {
       "id": "contrast",
       "status": "pass",
-      "message": "Contrast ratio is 18.88:1."
+      "message": "Contrast ratio is 5.19:1."
     },
     {
       "id": "clipping",
       "status": "pass",
       "message": "No clipping reported."
+    },
+    {
+      "id": "edge-title-overlap",
+      "status": "pass",
+      "message": "Connection paths keep clear of measured group and lane titles."
+    },
+    {
+      "id": "annotation-connector-overlap",
+      "status": "pass",
+      "message": "Annotation connectors keep clear of unrelated nodes, relation labels and container titles."
+    },
+    {
+      "id": "edge-label-overlap",
+      "status": "pass",
+      "message": "Connection paths keep clear of unrelated relation labels."
     },
     {
       "id": "svg-validated",
@@ -106,7 +121,7 @@
     {
       "id": "png-decoded",
       "status": "pass",
-      "message": "PNG decoded at 1175×1268 (95484 bytes)."
+      "message": "PNG decoded at 1178×1268 (95867 bytes)."
     },
     {
       "id": "offline-runtime",
@@ -115,5 +130,5 @@
     }
   ],
   "splitPlan": null,
-  "documentDigest": "sha256:3ed2c85e52beaa96540f47677ade430d767f4c512a8e2589c85333721f39ff33"
+  "documentDigest": "sha256:84ad93d5d5a7699b8bfca885b8ef0f0f4f51b6068cd1c5472b62175f2ed1289a"
 }

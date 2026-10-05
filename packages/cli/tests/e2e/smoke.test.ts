@@ -59,7 +59,7 @@ describe('CLI smoke tests', () => {
   );
 
   it(
-    'initializes a project with planr init',
+    'initializes a project with openplanr init',
     () => {
       const dir = makeTempDir();
       run('init --name test-project --no-ai', { cwd: dir });
@@ -82,7 +82,7 @@ describe('CLI smoke tests', () => {
     SMOKE_TIMEOUT_MS,
   );
 
-  it('runs planr status in an initialized project without error', () => {
+  it('runs openplanr status in an initialized project without error', () => {
     const dir = makeTempDir();
     run('init --name test-project --no-ai', { cwd: dir });
 

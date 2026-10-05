@@ -1,4 +1,4 @@
-/** Explicit planning-project persistence surface for `planr quick`. */
+/** Explicit planning-project persistence surface for `openplanr quick`. */
 export {
   addChildReference,
   createArtifact,

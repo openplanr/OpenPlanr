@@ -41,6 +41,18 @@ function provenanceEvent(root, eventId, overrides = {}) {
   };
 }
 
+test('a provenance append refuses a planning folder another tool owns', () => {
+  const paths = project();
+  writeFileSync(join(paths.root, '.planr', 'planr.config.json'), '{}\n');
+  const failure = failureFor(() =>
+    appendProvenanceEvent(paths.root, provenanceEvent(paths.root, 'foreign')),
+  );
+  assert.equal(failure.code, 'E_PLANNING_FOLDER_FOREIGN');
+  assert.match(failure.message, /belongs to another tool/u);
+  assert.equal(existsSync(paths.target), false);
+  assert.equal(existsSync(paths.lock), false);
+});
+
 function row(value) {
   return `${JSON.stringify(value)}\n`;
 }
@@ -204,7 +216,7 @@ test('invalid provenance history fails closed at the exact safe record context',
       },
       fixture.name,
     );
-    assert.equal(failure.details?.repairCommand, 'planr doctor --json', fixture.name);
+    assert.equal(failure.details?.repairCommand, 'openplanr doctor --json', fixture.name);
     assert.doesNotMatch(JSON.stringify(failure.toJSON()), new RegExp(SECRET), fixture.name);
     assert.equal(
       JSON.stringify(failure.toJSON()).includes(fixtureProject.root),

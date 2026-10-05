@@ -6,6 +6,11 @@ frontmatter: `id`, `title`, `slug`, `schemaVersion`, `status`, `priority`,
 `created`, `updated`, `ui_files`, and `tech_dependencies`. Preserve supported
 optional fields used by the repository.
 
+Before writing under `.planr/`, confirm it belongs to OpenPlanr. When it has no
+`config.json` but holds `planr.config.json`, `board.html`, or `*-goal.md` files in
+`tasks/` or `plans/`, another tool owns it: write nothing there, tell the user what
+you found, and ask them to move or rename that folder.
+
 Use these body sections, in this order, when the repository has no stronger
 template:
 

@@ -4,8 +4,8 @@
  * Mirrors the /planr-pipeline:status A.1/A.2 contract so the dashboard and the CLI can
  * never drift ("one engine, one truth"):
  *
- *   A.1 delegate — when the planr CLI is installed AND new enough, shell out to
- *       `planr graph --json` (preferred) or `planr status --json`, parse stdout,
+ *   A.1 delegate — when the openplanr CLI is installed AND new enough, shell out to
+ *       `openplanr graph --json` (preferred) or `openplanr status --json`, parse stdout,
  *       validate against schemas/v1.0.0/graph.schema.json, and return it.
  *   A.2 fallback — otherwise, call the native frontmatter reader (graph-reader.mjs),
  *       which produces an equivalent, schema-valid graph from disk.
@@ -22,12 +22,12 @@ import { deepFreeze } from '../protocol/jcs.mjs';
 import { CLI_COMMAND } from '../protocol/names.mjs';
 import { readGraph, readNode } from './graph-reader.mjs';
 
-/** Lowest planr CLI version that emits the graph/status --json the dashboard consumes. */
+/** Lowest openplanr CLI version that emits the graph/status --json the dashboard consumes. */
 export const CLI_GRAPH_MIN_VERSION = '1.7.2';
 
 // ── Version-floor check (same semantics as commands/status.md A.1) ──────────
 
-/** Parse the first `N.N.N`-shaped token out of a `planr --version` string. */
+/** Parse the first `N.N.N`-shaped token out of an `openplanr --version` string. */
 function parseSemver(raw) {
   const m = String(raw ?? '').match(/(\d+)\.(\d+)\.(\d+)/);
   if (!m) return null;
@@ -44,7 +44,7 @@ function gte(a, b) {
 }
 
 /**
- * Detect the planr CLI: returns its parsed version triple when present and
+ * Detect the openplanr CLI: returns its parsed version triple when present and
  * new enough (>= CLI_GRAPH_MIN_VERSION), else null.
  * @param {(cmd: string, args: string[]) => { status: number|null, stdout: string }} [run]
  */
@@ -87,7 +87,7 @@ export function tryDelegate(planrDir, run = defaultRun) {
   const version = detectCli(run);
   if (!version) return null;
 
-  // Prefer `planr graph --json`; fall back to `planr status --json`.
+  // Prefer `openplanr graph --json`; fall back to `openplanr status --json`.
   for (const args of [
     ['graph', '--json'],
     ['status', '--json'],

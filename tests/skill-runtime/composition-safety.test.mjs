@@ -260,7 +260,7 @@ test('composed portability rejects undeclared tools, runtime operations, and imp
     caught(() =>
       assertPortableAsset(
         'skills/x/SKILL.md',
-        'Run planr status --md.\n',
+        'Run openplanr status --md.\n',
         'claude-code',
         authority,
       ),
@@ -271,7 +271,7 @@ test('composed portability rejects undeclared tools, runtime operations, and imp
   assert.doesNotThrow(() =>
     assertPortableAsset(
       'skills/x/SKILL.md',
-      'Run planr artifact report.html.\n',
+      'Run openplanr artifact report.html.\n',
       'claude-code',
       artifactAuthority,
     ),

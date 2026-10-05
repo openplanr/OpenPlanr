@@ -5,8 +5,8 @@ Common issues and how to resolve them.
 Start with the unified health check:
 
 ```bash
-planr doctor --json
-planr setup --dry-run
+openplanr doctor --json
+openplanr setup --dry-run
 ```
 
 `doctor --fix` preserves each managed coding agent's saved installation scope and
@@ -38,13 +38,13 @@ actually selected it. A selected runtime that disappears remains a warning.
   project before selecting project scope. Use `--scope user` only for an integration
   that supports it; Cursor requires a valid project.
 - `E_RUNTIME_AMBIGUOUS`: pass `--runtime` or set a project default.
-- `E_LOCK_INCOMPATIBLE`: run the exact `planr runtime update ...` command shown.
+- `E_LOCK_INCOMPATIBLE`: run the exact `openplanr runtime update ...` command shown.
 - `E_MIGRATION_CONFLICT`: a managed file changed after setup; preview, preserve
-  the edit, or use `planr runtime rollback`.
+  the edit, or use `openplanr runtime rollback`.
 - `E_CLAUDE_PLUGIN_INSPECTION_FAILED`: update Claude Code so its plugin manager
-  is available, then rerun `planr setup --runtime claude --scope user`.
+  is available, then rerun `openplanr setup --runtime claude --scope user`.
 - `E_CLAUDE_PLUGIN_UPDATE_FAILED`: verify GitHub/marketplace connectivity, run
-  `planr runtime update claude --scope user`, and restart Claude Code.
+  `openplanr runtime update claude --scope user`, and restart Claude Code.
 - `E_PROVENANCE_WRITE`: repair permissions, then append an explicit recovery
   event; doctor never invents history silently.
 
@@ -52,7 +52,7 @@ If doctor reports `runtime-claude-plugins`, the installed plugin version or
 manifest identity does not match the compatible release. Run:
 
 ```bash
-planr runtime update claude --scope user
+openplanr runtime update claude --scope user
 ```
 
 Review and confirm the listed marketplace and plugin operations, then restart
@@ -66,8 +66,8 @@ state and paths live under `~/.planr/runtime/state.json`; the committed project
 lock contains only versions and compatibility capabilities.
 
 If an older installer created `~/CLAUDE.md`, `~/AGENTS.md`, Cursor rules, or a
-home-directory runtime lock, `planr doctor` reports `home-project-install`.
-Run `planr doctor --fix` to preview removal. Only recorded OpenPlanr-owned bytes
+home-directory runtime lock, `openplanr doctor` reports `home-project-install`.
+Run `openplanr doctor --fix` to preview removal. Only recorded OpenPlanr-owned bytes
 are removed; user-scope adapters and hand-written content are retained.
 
 ---
@@ -76,23 +76,23 @@ are removed; user-scope adapters and hand-written content are retained.
 
 ### A skill is not found in the host
 
-Confirm setup targeted that host and scope (`planr doctor --json` lists every
+Confirm setup targeted that host and scope (`openplanr doctor --json` lists every
 managed installation), then restart the host so it reloads its skills. Codex uses
-one install mode at a time; preview with `planr setup --runtime codex --dry-run`
+one install mode at a time; preview with `openplanr setup --runtime codex --dry-run`
 before switching modes.
 
 ### A skill asks for an API key or runs a planning command
 
 That is an old projection. Current skills reason inside the coding agent and call
-only deterministic `planr` utilities. Run `planr setup` again, restart the host, and
-check `planr upgrade status`.
+only deterministic `openplanr` utilities. Run `openplanr setup` again, restart the host, and
+check `openplanr upgrade status`.
 
 ### The agent does not pick the right skill
 
 Generate the host guidance so the agent sees every skill and its triggers:
 
 ```bash
-planr rules generate --target claude   # or codex, cursor, all
+openplanr rules generate --target claude   # or codex, cursor, all
 ```
 
 Then ask for `/planr:openplanr` (Claude Code) or `$planr:openplanr` (Codex), which
@@ -103,13 +103,13 @@ routes a request to the best skill.
 Initialize OpenPlanr in the project first:
 
 ```bash
-planr init
+openplanr init
 ```
 
 If you're running from a subdirectory, use `--project-dir`:
 
 ```bash
-planr status --project-dir /path/to/project
+openplanr status --project-dir /path/to/project
 ```
 
 ---
@@ -123,7 +123,7 @@ with `--minimal` omits it. Install the full package and verify again:
 
 ```bash
 npm install -g openplanr@latest
-planr doctor
+openplanr doctor
 ```
 
 ### `E_ARTIFACT_STALE_REVIEW`
@@ -134,7 +134,7 @@ silently. If the older feedback is still useful, rerun the import with
 
 ### A remote or SSH browser cannot reach the local review
 
-`planr artifact` intentionally binds to `127.0.0.1`. Use `--no-open --json`,
+`openplanr artifact` intentionally binds to `127.0.0.1`. Use `--no-open --json`,
 then forward the printed port over SSH. Do not bind the review server publicly.
 
 ### An artifact dependency is rejected
@@ -157,17 +157,17 @@ privacy and sharing model.
 If artifacts were renamed or moved manually, cross-references may break. Run:
 
 ```bash
-planr sync --dry-run    # preview what would change
-planr sync              # fix broken links
+openplanr sync --dry-run    # preview what would change
+openplanr sync              # fix broken links
 ```
 
 ### "Stale link" warnings
 
-A parent artifact links to a child that no longer exists on disk. `planr sync` removes these automatically.
+A parent artifact links to a child that no longer exists on disk. `openplanr sync` removes these automatically.
 
 ### "Missing link" warnings
 
-A child artifact references a parent, but the parent doesn't list the child. `planr sync` adds the missing link.
+A child artifact references a parent, but the parent doesn't list the child. `openplanr sync` adds the missing link.
 
 ---
 
@@ -191,7 +191,7 @@ The override directory must mirror the default template structure (e.g., `my-tem
 
 ### "GitHub CLI (gh) is not installed"
 
-The `planr github` commands require the GitHub CLI. Install it:
+The `openplanr github` commands require the GitHub CLI. Install it:
 
 ```bash
 # macOS
@@ -221,7 +221,7 @@ git remote add origin https://github.com/your-org/your-repo.git
 The linked GitHub issue was deleted. The CLI creates a new issue on the next push. If you see this error during sync, re-push the artifact:
 
 ```bash
-planr github push EPIC-001
+openplanr github push EPIC-001
 ```
 
 ### Push creates duplicate issues
@@ -244,7 +244,7 @@ issue through the [issue forms](https://github.com/openplanr/OpenPlanr/issues/ne
 with:
 
 - the command or skill invocation and the full output
-- `planr --version` and `planr doctor --json` (doctor redacts secrets; check anyway)
+- `openplanr --version` and `openplanr doctor --json` (doctor redacts secrets; check anyway)
 - the host and its version, your operating system, and `node --version`
 
 
@@ -255,10 +255,10 @@ selected `PLANR_HOME` (default `~/.planr`). Keep that cache available when worki
 offline, and regenerate local entries with setup when moving machines or changing
 homes. Native plugin packages and downloaded standalone skills remain complete.
 
-Run `planr doctor --json` to distinguish discovery metadata drift from a missing
-or changed package closure. `planr doctor --fix` uses the same preview, backup,
+Run `openplanr doctor --json` to distinguish discovery metadata drift from a missing
+or changed package closure. `openplanr doctor --fix` uses the same preview, backup,
 ownership checks and transaction as setup. It preserves the saved scope and
-Codex mode. `planr runtime update <agent>` updates only that agent.
+Codex mode. `openplanr runtime update <agent>` updates only that agent.
 
 A partially copied exact cache can resume from the installed CLI. Modified cache
 bytes, edited discovery entries and unknown files are preserved as conflicts;

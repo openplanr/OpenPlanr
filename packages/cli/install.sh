@@ -42,12 +42,12 @@ else
   npm install --global --no-audit --no-fund --loglevel=error "openplanr@$VERSION"
 fi
 
-INSTALLED_VERSION=$(planr --version)
+INSTALLED_VERSION=$(openplanr --version)
 printf '\n%s\n\n' "OpenPlanr $INSTALLED_VERSION installed successfully."
 printf '%s\n' 'Next:'
 printf '%s\n' '  cd /path/to/your/project'
 if [ "$MINIMAL" -eq 1 ]; then
-  printf '%s\n' '  planr setup --minimal'
+  printf '%s\n' '  openplanr setup --minimal'
 else
-  printf '%s\n' '  planr setup'
+  printf '%s\n' '  openplanr setup'
 fi

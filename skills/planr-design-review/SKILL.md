@@ -15,7 +15,7 @@ intent and recorded feedback.
    [scripts/design.mjs](scripts/design.mjs). Legacy HTML, canvas and image artifacts
    remain reviewable; preserve originals and distinguish static images from
    working interaction. Preserve the [document contract](schemas/design-document.schema.json).
-   Use the public `planr artifact` route when available.
+   Use the public `openplanr artifact` route when available.
 2. Consult [discovery.md](references/discovery.md) only for missing context or
    consequential ambiguity. Read the project's components and tokens using
    [design-system.md](references/design-system.md). Ask through native structured

@@ -1,7 +1,7 @@
 # Native onboarding and private helper inputs
 
 Run `node <installed-skill>/scripts/runner.mjs <action>` with one JSON object on
-stdin. The helper is private skill infrastructure, not a public `planr` command.
+stdin. The helper is private skill infrastructure, not a public `openplanr` command.
 The equivalent stdin form includes `"action":"probe"` without a command-line
 action. When both forms supply an action they must agree. Unknown actions return
 the supported action list and usage.

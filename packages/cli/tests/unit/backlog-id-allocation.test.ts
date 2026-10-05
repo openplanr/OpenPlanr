@@ -17,14 +17,14 @@ async function backlog(...args: string[]): Promise<void> {
   await program.parseAsync(['node', 'planr', '--project-dir', projectDir, 'backlog', ...args]);
 }
 
-/** Run `planr backlog add --json` and return the id it reports for `title`. */
+/** Run `openplanr backlog add --json` and return the id it reports for `title`. */
 async function add(title: string): Promise<string> {
   await backlog('add', title, '--json');
   const created = printed
     .filter((line) => line.startsWith('{'))
     .map((line) => JSON.parse(line) as { id: string; title: string })
     .find((result) => result.title === title);
-  if (!created) throw new Error(`planr backlog add printed no result for "${title}"`);
+  if (!created) throw new Error(`openplanr backlog add printed no result for "${title}"`);
   return created.id;
 }
 
@@ -50,7 +50,7 @@ afterEach(() => {
   rmSync(projectDir, { recursive: true, force: true });
 });
 
-describe('planr backlog add id allocation', () => {
+describe('openplanr backlog add id allocation', () => {
   it('does not reissue the ids of removed items', async () => {
     expect([await add('one'), await add('two'), await add('three')]).toEqual([
       'BL-001',

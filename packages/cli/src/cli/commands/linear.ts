@@ -1,7 +1,7 @@
 /**
- * `planr linear` — Linear.app integration command tree.
+ * `openplanr linear` — Linear.app integration command tree.
  * `init` stores a PAT, validates it, and saves the allowed + default teams in
- * `.planr/config.json`. See `planr linear --help` for the full subcommand list.
+ * `.planr/config.json`. See `openplanr linear --help` for the full subcommand list.
  */
 
 import chalk from 'chalk';

@@ -16,12 +16,12 @@
  *
  * Why directory-per-spec:
  *  - Self-contained / portable / `rm -rf` clean
- *  - `PREFIX-NNN-slug` naming consistent with every other planr artifact
+ *  - `PREFIX-NNN-slug` naming consistent with every other openplanr artifact
  *  - SPEC-NNN, US-NNN, and T-NNN IDs are project-global and monotonic. The
  *    sequence never reuses gaps; `specId` and `storyId` retain the hierarchy.
  *  - Schemas are owned by the OpenPlanr Protocol package and shared by all hosts.
  *
- * This service owns dedicated planning inside the planr CLI. The pipeline
+ * This service owns dedicated planning inside the openplanr CLI. The pipeline
  * independently provides feature-local PO planning as part of its complete
  * PO → Design → Review → DEV → QA flow. Both producers share the artifact
  * contract and record provenance so their intentional overlap stays clear.
@@ -215,7 +215,7 @@ export async function createSpec(
 
   // Cross-spec slug-collision check. Two specs with the same slug would be
   // ambiguous in host-native planning handoffs (`planr-plan {slug}` —
-  // which spec?), and they'd be hard to distinguish in `planr spec list`.
+  // which spec?), and they'd be hard to distinguish in `openplanr spec list`.
   // Refuse early with a clear suggestion.
   {
     const fs = await import('node:fs/promises');
@@ -1704,7 +1704,7 @@ export function parseProfessionalSpecAnswers(value: unknown): ShapeSpecAnswers {
 
 /**
  * Re-render the SPEC body from a structured set of answers and write it back
- * atomically. Preserves frontmatter values that the user (or `planr spec
+ * atomically. Preserves frontmatter values that the user (or `openplanr spec
  * create`) already set: priority, milestone, po, ui_files, created, etc.
  *
  * Updates `status` to `shaping` so subsequent commands (`decompose`, `promote`)
@@ -2118,7 +2118,7 @@ export async function attachSpecDesigns(
 // ---------------------------------------------------------------------------
 
 /**
- * Snapshot of all specs + their decomposition state. Used by `planr spec status`.
+ * Snapshot of all specs + their decomposition state. Used by `openplanr spec status`.
  */
 export interface SpecStatusReport {
   specCount: number;

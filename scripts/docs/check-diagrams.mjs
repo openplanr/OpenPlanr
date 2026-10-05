@@ -8,7 +8,7 @@ import { fileURLToPath } from 'node:url';
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const diagramsRoot = path.join(repoRoot, 'docs/diagrams');
-const cli = path.join(repoRoot, 'packages/cli/bin/planr.js');
+const cli = path.join(repoRoot, 'packages/cli/bin/openplanr.js');
 
 if (!existsSync(path.join(repoRoot, 'packages/cli/dist'))) {
   console.error('check:diagrams needs the built CLI. Run `npm run build` first.');

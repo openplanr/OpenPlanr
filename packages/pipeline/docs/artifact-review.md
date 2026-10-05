@@ -3,7 +3,7 @@
 > planr-pipeline 0.30.0 · Protocol v1.0 planning artifacts with additive
 > Protocol v1.1 artifact-review contracts
 
-Artifact review is the portable engine behind `planr artifact`. It turns a
+Artifact review is the portable engine behind `openplanr artifact`. It turns a
 project-local HTML file or an existing OpenPlanr design board into a
 self-contained, digest-addressed review envelope. The same generated shell is
 used for local annotation and by the hosted viewer at
@@ -17,11 +17,11 @@ locally never uploads it.
 ## CLI contract
 
 The public command belongs to the OpenPlanr CLI. Runtime skills and adapters
-invoke `planr`, never the nested `planr-pipeline` executable.
+invoke `openplanr`, never the nested `planr-pipeline` executable.
 
 ```text
-planr artifact <file>                 # alias for artifact open
-planr artifact open <file>
+openplanr artifact <file>                 # alias for artifact open
+openplanr artifact open <file>
   --title <title>
   --root <asset-root>
   --theme auto|light|dark
@@ -30,7 +30,7 @@ planr artifact open <file>
   --no-open
   --json
 
-planr artifact share <file>
+openplanr artifact share <file>
   --title <title>
   --presentation auto|document|canvas
   --short
@@ -39,12 +39,12 @@ planr artifact share <file>
   --json
   --yes
 
-planr artifact import <review-url>...
+openplanr artifact import <review-url>...
   --output <path>
   --allow-stale
   --json
 
-planr artifact export <session-id>
+openplanr artifact export <session-id>
   --format json|markdown
   --output <path>
 ```
@@ -145,7 +145,7 @@ console.log(session.url);
 
 ## Live encrypted review rooms
 
-`planr artifact share <file>` creates an encrypted live review room by default.
+`openplanr artifact share <file>` creates an encrypted live review room by default.
 The ordinary `/r/<id>#k=…&w=…` link lets anyone who receives it read and add
 comments; pins, replies, and review state synchronize in open tabs without
 creating replacement URLs. Owner decisions use a separate `o=…` URL plus the
@@ -164,7 +164,7 @@ digest/tombstone that prevents deleted or expired rooms from being resurrected.
 Use `--snapshot` to
 deliberately create the older immutable fragment/short-link form instead.
 
-Live-room imports use the same `planr artifact import <url>` command and write
+Live-room imports use the same `openplanr artifact import <url>` command and write
 generic comments beneath `.planr/artifacts/<artifact-id>/`; they never mutate
 the reviewed HTML. Existing immutable links remain readable and importable.
 
@@ -275,7 +275,7 @@ metadata and ciphertext to the service, but not plaintext or the decryption key.
 
 ### Live encrypted review rooms
 
-New generic `planr artifact share <file>` links create one stable live room by
+New generic `openplanr artifact share <file>` links create one stable live room by
 default. The review URL has a decryption key and a write capability in its
 fragment, so anyone who has that link can view and comment. The creator also
 receives a pre-effect private recovery bundle with the owner-verdict URL, its
@@ -315,9 +315,9 @@ authors, threads, decisions, and the reviewed digest.
 
 Artifact review is available across the three certified adapters:
 
-- Claude Code: native pipeline assets; public invocation is `planr artifact`.
-- Codex: installed `$planr-artifact` skill; the skill invokes only `planr`.
-- Cursor: generated portable project guidance with `planr artifact` handoff.
+- Claude Code: native pipeline assets; public invocation is `openplanr artifact`.
+- Codex: installed `$planr-artifact` skill; the skill invokes only `openplanr`.
+- Cursor: generated portable project guidance with `openplanr artifact` handoff.
 
 Adapter assets are generated from `registry/adapters.json`. Portable assets must
 not contain `${CLAUDE_PLUGIN_ROOT}`, vendor model names, Claude-only commands,

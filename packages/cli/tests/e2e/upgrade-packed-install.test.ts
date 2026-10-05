@@ -167,7 +167,7 @@ beforeAll(async () => {
   );
 
   packageRoot = join(installRoot, 'node_modules', 'openplanr');
-  cli = join(packageRoot, 'bin', 'planr.js');
+  cli = join(packageRoot, 'bin', 'openplanr.js');
   pipelineInstall = await installPackedPipeline();
 }, 600_000);
 
@@ -176,7 +176,7 @@ afterAll(() => {
   rmSync(root, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 });
 });
 
-describe('packed planr upgrade status', () => {
+describe('packed openplanr upgrade status', () => {
   it('keeps global help available without the optional pipeline package', () => {
     const help = run(['--help']);
     expect(help.status, help.stderr || help.stdout).toBe(0);
@@ -247,7 +247,7 @@ describe('packed planr upgrade status', () => {
 
 // This block runs after the `status` block and mutates the packed install's
 // package.json version through a stubbed npm, so it is intentionally last.
-describe('packed planr upgrade apply', () => {
+describe('packed openplanr upgrade apply', () => {
   let higherVersion: string;
   let claudeBinDir: string;
   let fakeNpm: string;
@@ -394,11 +394,11 @@ describe('packed planr upgrade apply', () => {
       {
         runtime: 'claude-code',
         host: 'Claude Code',
-        command: 'planr doctor',
+        command: 'openplanr doctor',
         detail: expect.stringContaining('The pipeline package is not installed'),
       },
     ]);
-    expect(report.pluginHalfCommands).toEqual(['planr doctor']);
+    expect(report.pluginHalfCommands).toEqual(['openplanr doctor']);
   });
 
   // The versioned migration registry must be reachable through the

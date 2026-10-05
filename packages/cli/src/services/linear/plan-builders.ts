@@ -1,5 +1,5 @@
 /**
- * Pure plan-building for `planr linear push --dry-run`. Takes loaded scopes
+ * Pure plan-building for `openplanr linear push --dry-run`. Takes loaded scopes
  * and returns `LinearPushPlan` objects with per-kind row counts. No Linear
  * API calls; no mutations. Epic-scope plans cascade rows for linked QT/BL.
  */
@@ -41,7 +41,7 @@ export interface LinearPushPlanRow {
 }
 
 export interface LinearPushPlan {
-  /** The artifact the user pointed `planr linear push` at (any supported prefix). */
+  /** The artifact the user pointed `openplanr linear push` at (any supported prefix). */
   rootArtifactId: string;
   /** The epic that owns this push's subtree; `undefined` for standalone QT/BL pushes. */
   epicId?: string;
@@ -248,7 +248,7 @@ export async function buildEpicPlanRows(
 }
 
 /**
- * Build a push preview (and counts) for `planr linear push --dry-run` at any
+ * Build a push preview (and counts) for `openplanr linear push --dry-run` at any
  * granularity. Accepts any supported artifact id prefix (EPIC/FEAT/US/TASK/
  * QT/BL); returns `null` when the artifact can't be resolved or is not
  * pushable (ADR/SPRINT/checklist).

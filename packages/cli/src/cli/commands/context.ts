@@ -1,5 +1,5 @@
 /**
- * `planr context` — emit stakeholder report context as JSON (for scripting / pipes).
+ * `openplanr context` — emit stakeholder report context as JSON (for scripting / pipes).
  */
 
 import type { Command } from 'commander';
