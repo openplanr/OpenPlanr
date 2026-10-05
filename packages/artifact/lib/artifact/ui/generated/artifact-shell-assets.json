@@ -24,7 +24,7 @@
     {
       "path": "lib/artifact/ui/diagram-editor.css",
       "bytes": 79444,
-      "sha256": "9de64fac120954766b621522d0a0501d9972aebb8f6800d1696b9a712bed6ca3",
+      "sha256": "2df299fccefe84dca5b9b27b9ade0834b9095890cda8081942a83134278aca53",
       "budget": {
         "bytes": 98304,
         "gzipBytes": 20480
@@ -51,7 +51,7 @@
     {
       "path": "templates/artifact-review-shell.html",
       "bytes": 68544,
-      "sha256": "a23a1276f2ba5e1a9ff40b2b3d73de433d975b88667d2ae3f36b1ad642ab0d0e",
+      "sha256": "9ba65d5cb1fee64e8d51c7b64ebc7f57b1c333298b4f472c098b812c45e03fe4",
       "budget": {
         "bytes": 68608,
         "gzipBytes": 13312

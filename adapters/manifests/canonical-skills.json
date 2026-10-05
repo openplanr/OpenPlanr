@@ -1687,7 +1687,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:1a1dd09e283b5790a222160d0694e81267ee0037b280ab8960de42a8f28c961f"
+          "digest": "sha256:4449fbe06d25ae0ad9b2faf15a4558f1c6fc8506d357e785dfdbc8befe69df59"
         },
         {
           "path": "scripts/runtime/packages/artifact/templates/artifact-review-stage.js.sources.json",
@@ -1867,7 +1867,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:ecb86a5f5517262f8dc71e518163ca55074404c6823d5f989edad5e9f71293af"
+          "digest": "sha256:c9291e20366315b23c73e920ec5426d4c33d0880863d39650d4c535956984b1c"
         },
         {
           "path": "scripts/runtime/packages/design/templates/studio/studio.js.sources.json",
@@ -2849,7 +2849,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:1a1dd09e283b5790a222160d0694e81267ee0037b280ab8960de42a8f28c961f"
+          "digest": "sha256:4449fbe06d25ae0ad9b2faf15a4558f1c6fc8506d357e785dfdbc8befe69df59"
         },
         {
           "path": "scripts/runtime/packages/artifact/templates/artifact-review-stage.js.sources.json",
@@ -3029,7 +3029,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:ecb86a5f5517262f8dc71e518163ca55074404c6823d5f989edad5e9f71293af"
+          "digest": "sha256:c9291e20366315b23c73e920ec5426d4c33d0880863d39650d4c535956984b1c"
         },
         {
           "path": "scripts/runtime/packages/design/templates/studio/studio.js.sources.json",
@@ -4011,7 +4011,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:1a1dd09e283b5790a222160d0694e81267ee0037b280ab8960de42a8f28c961f"
+          "digest": "sha256:4449fbe06d25ae0ad9b2faf15a4558f1c6fc8506d357e785dfdbc8befe69df59"
         },
         {
           "path": "scripts/runtime/packages/artifact/templates/artifact-review-stage.js.sources.json",
@@ -4191,7 +4191,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:ecb86a5f5517262f8dc71e518163ca55074404c6823d5f989edad5e9f71293af"
+          "digest": "sha256:c9291e20366315b23c73e920ec5426d4c33d0880863d39650d4c535956984b1c"
         },
         {
           "path": "scripts/runtime/packages/design/templates/studio/studio.js.sources.json",

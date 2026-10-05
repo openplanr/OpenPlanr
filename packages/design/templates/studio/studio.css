@@ -62,14 +62,14 @@
  background: var(--planr-color-raised); color:var(--planr-color-primary);
 }
 .design-view-picker {
- align-self:stretch; height:auto; gap:8px; padding:0; border:0; border-radius:0; background:transparent;
+ align-self:center; height:32px; gap:8px; padding:0; border:0; border-radius:0; background:transparent;
 }
 .design-view-picker button {
- position:relative; display:flex; align-items:center; gap:7px; height:100%; padding:0 10px; border-radius:0;
+ position:relative; display:flex; align-items:center; gap:7px; height:100%; padding:0 10px; border-radius:6px;
  font-size:12px; font-weight:550;
 }
 .design-view-picker button[aria-pressed="true"], .design-view-picker button:not(:disabled):hover {
- background:transparent; color:var(--planr-color-text);
+ background:var(--planr-color-raised); color:var(--planr-color-text);
 }
 .design-view-picker button[aria-pressed="true"]::after {
  content:""; position:absolute; bottom:0; left:10px; right:10px; height:2px; background:var(--planr-color-primary);
