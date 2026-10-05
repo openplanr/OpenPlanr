@@ -10,10 +10,10 @@
   tasks/T-NNN-{slug}.md
 ```
 
-Before writing under `.planr/`, confirm it belongs to OpenPlanr. When it has no
+Before writing under `.planr/`, confirm OpenPlanr created it. When it has no
 `config.json` but holds `planr.config.json`, `board.html`, or `*-goal.md` files in
-`tasks/` or `plans/`, another tool owns it: write nothing there, tell the user what
-you found, and ask them to move or rename that folder.
+`tasks/` or `plans/`, OpenPlanr didn't create it: write nothing there, tell the user
+what you found, and ask them to move or rename that folder.
 
 Use Protocol `1.7.0` frontmatter for stories and tasks. Story frontmatter has
 `id`, `title`, `specId`, `slug`, `schemaVersion`, `status`, dates, and

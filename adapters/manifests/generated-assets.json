@@ -6,7 +6,7 @@
   "assets": [
     {
       "path": "adapters/manifests/canonical-skills.json",
-      "digest": "sha256:360bf2853c1e64a6e03f36aafc29de8750276c737ca00caa10bc8520fb6e56de",
+      "digest": "sha256:0c22e6881b1d676da3863768e12efdbaec7448b3532f63a39862e736d521c472",
       "generated": false
     },
     {
@@ -16,7 +16,7 @@
     },
     {
       "path": "adapters/manifests/skill-footprint.json",
-      "digest": "sha256:b49d04df155f4223af679fb8c0deb9c005ee6a57027a76d855b2ce814d033cdb",
+      "digest": "sha256:8047ef27fffbcd42f11fe420ff4145a9bca4d287425886eb17cbb4606dc78255",
       "generated": false
     },
     {
@@ -36,7 +36,7 @@
     },
     {
       "path": "dist/plugins/claude/openplanr/.openplanr-content.json",
-      "digest": "sha256:562f78de9033531d438e46b1ba604b9cde91d4739cbbbb3084da1f3ea6129482",
+      "digest": "sha256:3112b37579f80c5940cabf1eed53dcc90903518a47b57b329165ea24fa43b390",
       "generated": true
     },
     {
@@ -286,7 +286,7 @@
     },
     {
       "path": "dist/plugins/claude/openplanr/runtime/design/scripts/design-review.mjs",
-      "digest": "sha256:79a543666f5b87c14edaeff59bc65ebe384c4b72851a398524afb6ba52def65e",
+      "digest": "sha256:3085283fb94cc2df9bd2630ba9bc0704523efdfda2e0dddb20c1dc5025941140",
       "generated": true
     },
     {
@@ -1226,7 +1226,7 @@
     },
     {
       "path": "dist/plugins/claude/openplanr/skills/plan/references/artifact-contract.md",
-      "digest": "sha256:34a9fd929f5a30b060b95a617e7162b10998e85e28f391f1ff4e587f5d86bf8f",
+      "digest": "sha256:79914583ab6f668eaef24cbe8a498a3d08d07da84ec80f5160b42f1719b5c7b2",
       "generated": true
     },
     {
@@ -1321,7 +1321,7 @@
     },
     {
       "path": "dist/plugins/claude/openplanr/skills/spec/references/specification-contract.md",
-      "digest": "sha256:69a9610202cbaa4b2f1b53ea7b3d76793603f987c19c702f29fa36a6dcd70d04",
+      "digest": "sha256:55ecc8361256073324d2507097862f6222589e22887dffe5b5e25cdc89199df5",
       "generated": true
     },
     {
@@ -1371,7 +1371,7 @@
     },
     {
       "path": "dist/plugins/cursor/openplanr/.openplanr-content.json",
-      "digest": "sha256:6d1a5fd8032e4da7f6c38a4e08d30f81a333794c4ffe7768b1380654c331c19d",
+      "digest": "sha256:0f68ec5f99cc4e75ee3f0a3c506616c931f204565b90cf20fea981c1e34fea32",
       "generated": true
     },
     {
@@ -1941,7 +1941,7 @@
     },
     {
       "path": "dist/plugins/cursor/openplanr/rules/planr-plan/references/artifact-contract.md",
-      "digest": "sha256:34a9fd929f5a30b060b95a617e7162b10998e85e28f391f1ff4e587f5d86bf8f",
+      "digest": "sha256:79914583ab6f668eaef24cbe8a498a3d08d07da84ec80f5160b42f1719b5c7b2",
       "generated": true
     },
     {
@@ -2036,7 +2036,7 @@
     },
     {
       "path": "dist/plugins/cursor/openplanr/rules/planr-spec/references/specification-contract.md",
-      "digest": "sha256:69a9610202cbaa4b2f1b53ea7b3d76793603f987c19c702f29fa36a6dcd70d04",
+      "digest": "sha256:55ecc8361256073324d2507097862f6222589e22887dffe5b5e25cdc89199df5",
       "generated": true
     },
     {
@@ -2141,7 +2141,7 @@
     },
     {
       "path": "dist/plugins/cursor/openplanr/runtime/design/scripts/design-review.mjs",
-      "digest": "sha256:79a543666f5b87c14edaeff59bc65ebe384c4b72851a398524afb6ba52def65e",
+      "digest": "sha256:3085283fb94cc2df9bd2630ba9bc0704523efdfda2e0dddb20c1dc5025941140",
       "generated": true
     },
     {
@@ -2541,7 +2541,7 @@
     },
     {
       "path": "dist/plugins/openai/openplanr/.openplanr-content.json",
-      "digest": "sha256:5b00658dc224bdebc05748cd5804948bcd49302c4edb3cb7d72e46094da93617",
+      "digest": "sha256:0b1e4961feb246ae4c41f1ef90873230e69a98df904c4fc8741e36944425e129",
       "generated": true
     },
     {
@@ -2611,7 +2611,7 @@
     },
     {
       "path": "dist/plugins/openai/openplanr/runtime/design/scripts/design-review.mjs",
-      "digest": "sha256:79a543666f5b87c14edaeff59bc65ebe384c4b72851a398524afb6ba52def65e",
+      "digest": "sha256:3085283fb94cc2df9bd2630ba9bc0704523efdfda2e0dddb20c1dc5025941140",
       "generated": true
     },
     {
@@ -3771,7 +3771,7 @@
     },
     {
       "path": "dist/plugins/openai/openplanr/skills/plan/references/artifact-contract.md",
-      "digest": "sha256:34a9fd929f5a30b060b95a617e7162b10998e85e28f391f1ff4e587f5d86bf8f",
+      "digest": "sha256:79914583ab6f668eaef24cbe8a498a3d08d07da84ec80f5160b42f1719b5c7b2",
       "generated": true
     },
     {
@@ -3896,7 +3896,7 @@
     },
     {
       "path": "dist/plugins/openai/openplanr/skills/spec/references/specification-contract.md",
-      "digest": "sha256:69a9610202cbaa4b2f1b53ea7b3d76793603f987c19c702f29fa36a6dcd70d04",
+      "digest": "sha256:55ecc8361256073324d2507097862f6222589e22887dffe5b5e25cdc89199df5",
       "generated": true
     },
     {
@@ -4001,7 +4001,7 @@
     },
     {
       "path": "packages/cli/lib/host-packages/claude/openplanr/.openplanr-content.json",
-      "digest": "sha256:562f78de9033531d438e46b1ba604b9cde91d4739cbbbb3084da1f3ea6129482",
+      "digest": "sha256:3112b37579f80c5940cabf1eed53dcc90903518a47b57b329165ea24fa43b390",
       "generated": true
     },
     {
@@ -4251,7 +4251,7 @@
     },
     {
       "path": "packages/cli/lib/host-packages/claude/openplanr/runtime/design/scripts/design-review.mjs",
-      "digest": "sha256:79a543666f5b87c14edaeff59bc65ebe384c4b72851a398524afb6ba52def65e",
+      "digest": "sha256:3085283fb94cc2df9bd2630ba9bc0704523efdfda2e0dddb20c1dc5025941140",
       "generated": true
     },
     {
@@ -5191,7 +5191,7 @@
     },
     {
       "path": "packages/cli/lib/host-packages/claude/openplanr/skills/plan/references/artifact-contract.md",
-      "digest": "sha256:34a9fd929f5a30b060b95a617e7162b10998e85e28f391f1ff4e587f5d86bf8f",
+      "digest": "sha256:79914583ab6f668eaef24cbe8a498a3d08d07da84ec80f5160b42f1719b5c7b2",
       "generated": true
     },
     {
@@ -5286,7 +5286,7 @@
     },
     {
       "path": "packages/cli/lib/host-packages/claude/openplanr/skills/spec/references/specification-contract.md",
-      "digest": "sha256:69a9610202cbaa4b2f1b53ea7b3d76793603f987c19c702f29fa36a6dcd70d04",
+      "digest": "sha256:55ecc8361256073324d2507097862f6222589e22887dffe5b5e25cdc89199df5",
       "generated": true
     },
     {
@@ -5336,7 +5336,7 @@
     },
     {
       "path": "packages/cli/lib/host-packages/cursor/openplanr/.openplanr-content.json",
-      "digest": "sha256:6d1a5fd8032e4da7f6c38a4e08d30f81a333794c4ffe7768b1380654c331c19d",
+      "digest": "sha256:0f68ec5f99cc4e75ee3f0a3c506616c931f204565b90cf20fea981c1e34fea32",
       "generated": true
     },
     {
@@ -5906,7 +5906,7 @@
     },
     {
       "path": "packages/cli/lib/host-packages/cursor/openplanr/rules/planr-plan/references/artifact-contract.md",
-      "digest": "sha256:34a9fd929f5a30b060b95a617e7162b10998e85e28f391f1ff4e587f5d86bf8f",
+      "digest": "sha256:79914583ab6f668eaef24cbe8a498a3d08d07da84ec80f5160b42f1719b5c7b2",
       "generated": true
     },
     {
@@ -6001,7 +6001,7 @@
     },
     {
       "path": "packages/cli/lib/host-packages/cursor/openplanr/rules/planr-spec/references/specification-contract.md",
-      "digest": "sha256:69a9610202cbaa4b2f1b53ea7b3d76793603f987c19c702f29fa36a6dcd70d04",
+      "digest": "sha256:55ecc8361256073324d2507097862f6222589e22887dffe5b5e25cdc89199df5",
       "generated": true
     },
     {
@@ -6106,7 +6106,7 @@
     },
     {
       "path": "packages/cli/lib/host-packages/cursor/openplanr/runtime/design/scripts/design-review.mjs",
-      "digest": "sha256:79a543666f5b87c14edaeff59bc65ebe384c4b72851a398524afb6ba52def65e",
+      "digest": "sha256:3085283fb94cc2df9bd2630ba9bc0704523efdfda2e0dddb20c1dc5025941140",
       "generated": true
     },
     {
@@ -6506,7 +6506,7 @@
     },
     {
       "path": "packages/cli/lib/host-packages/openai/openplanr/.openplanr-content.json",
-      "digest": "sha256:5b00658dc224bdebc05748cd5804948bcd49302c4edb3cb7d72e46094da93617",
+      "digest": "sha256:0b1e4961feb246ae4c41f1ef90873230e69a98df904c4fc8741e36944425e129",
       "generated": true
     },
     {
@@ -6576,7 +6576,7 @@
     },
     {
       "path": "packages/cli/lib/host-packages/openai/openplanr/runtime/design/scripts/design-review.mjs",
-      "digest": "sha256:79a543666f5b87c14edaeff59bc65ebe384c4b72851a398524afb6ba52def65e",
+      "digest": "sha256:3085283fb94cc2df9bd2630ba9bc0704523efdfda2e0dddb20c1dc5025941140",
       "generated": true
     },
     {
@@ -7736,7 +7736,7 @@
     },
     {
       "path": "packages/cli/lib/host-packages/openai/openplanr/skills/plan/references/artifact-contract.md",
-      "digest": "sha256:34a9fd929f5a30b060b95a617e7162b10998e85e28f391f1ff4e587f5d86bf8f",
+      "digest": "sha256:79914583ab6f668eaef24cbe8a498a3d08d07da84ec80f5160b42f1719b5c7b2",
       "generated": true
     },
     {
@@ -7861,7 +7861,7 @@
     },
     {
       "path": "packages/cli/lib/host-packages/openai/openplanr/skills/spec/references/specification-contract.md",
-      "digest": "sha256:69a9610202cbaa4b2f1b53ea7b3d76793603f987c19c702f29fa36a6dcd70d04",
+      "digest": "sha256:55ecc8361256073324d2507097862f6222589e22887dffe5b5e25cdc89199df5",
       "generated": true
     },
     {

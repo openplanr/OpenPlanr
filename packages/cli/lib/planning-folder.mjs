@@ -1,5 +1,5 @@
 // @ts-check
-// Recognizes a planning folder that another tool created, so OpenPlanr never writes into it.
+// Recognizes a planning folder OpenPlanr didn't create, so OpenPlanr never writes into it.
 import { existsSync, readdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { CLI_COMMAND, PLANNING_FOLDER } from './names.mjs';
@@ -33,7 +33,7 @@ export function planningFolderConflict(projectRoot) {
   if (signs.length === 0) return null;
   return Object.freeze({
     code: 'E_PLANNING_FOLDER_FOREIGN',
-    problem: `The ${PLANNING_FOLDER} folder in this project belongs to another tool: it has ${signs.join(', ')} and no OpenPlanr config.json. OpenPlanr wrote nothing there.`,
+    problem: `The ${PLANNING_FOLDER} folder in this project wasn't created by OpenPlanr: it has ${signs.join(', ')} and no OpenPlanr config.json. OpenPlanr wrote nothing there.`,
     fix: `Move or rename that folder, or use ${CLI_COMMAND} in a project without it, then retry.`,
     signs: Object.freeze(signs),
   });

@@ -482,7 +482,11 @@ function commandDigest(result, redactedRoots = []) {
 }
 
 function runCli(nodeExecutable, cliRoot, args, options) {
-  return commandResult(nodeExecutable, [path.join(cliRoot, 'bin', 'openplanr.js'), ...args], options);
+  return commandResult(
+    nodeExecutable,
+    [path.join(cliRoot, 'bin', 'openplanr.js'), ...args],
+    options,
+  );
 }
 
 function installedAliasEntrypoint({ consumerRoot, cliRoot, manifest, alias }) {

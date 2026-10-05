@@ -807,7 +807,7 @@
         },
         {
           "path": "skills/plan/references/artifact-contract.md",
-          "digest": "sha256:34a9fd929f5a30b060b95a617e7162b10998e85e28f391f1ff4e587f5d86bf8f"
+          "digest": "sha256:79914583ab6f668eaef24cbe8a498a3d08d07da84ec80f5160b42f1719b5c7b2"
         },
         {
           "path": "skills/plan/references/design-handoff.md",
@@ -955,7 +955,7 @@
         },
         {
           "path": "skills/spec/references/specification-contract.md",
-          "digest": "sha256:69a9610202cbaa4b2f1b53ea7b3d76793603f987c19c702f29fa36a6dcd70d04"
+          "digest": "sha256:55ecc8361256073324d2507097862f6222589e22887dffe5b5e25cdc89199df5"
         }
       ]
     },

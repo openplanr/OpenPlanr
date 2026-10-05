@@ -41,7 +41,7 @@ test("OpenPlanr's own planning folder is never foreign, whatever else it holds",
   assert.equal(planningFolderConflict(root), null);
 });
 
-test('a folder another tool owns is refused with what was found and what to do', (t) => {
+test('a folder OpenPlanr did not create is refused with what was found and what to do', (t) => {
   const root = project(t, [
     '.planr/planr.config.json',
     '.planr/board.html',
@@ -56,7 +56,7 @@ test('a folder another tool owns is refused with what was found and what to do',
     '*-goal.md files in tasks',
     '*-goal.md files in plans',
   ]);
-  assert.match(conflict.problem, /belongs to another tool/u);
+  assert.match(conflict.problem, /wasn't created by OpenPlanr/u);
   assert.match(conflict.problem, /planr\.config\.json, board\.html/u);
   assert.match(conflict.problem, /OpenPlanr wrote nothing there/u);
   assert.match(conflict.fix, /^Move or rename that folder/u);
@@ -64,7 +64,7 @@ test('a folder another tool owns is refused with what was found and what to do',
   assert.doesNotMatch(`${conflict.problem} ${conflict.fix}`, /\//u);
 });
 
-test('each sign of another tool is enough on its own', (t) => {
+test('each sign is enough on its own', (t) => {
   for (const [file, sign] of [
     ['.planr/planr.config.json', 'planr.config.json'],
     ['.planr/board.html', 'board.html'],

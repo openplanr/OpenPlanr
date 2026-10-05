@@ -41,14 +41,14 @@ function provenanceEvent(root, eventId, overrides = {}) {
   };
 }
 
-test('a provenance append refuses a planning folder another tool owns', () => {
+test('a provenance append refuses a planning folder OpenPlanr did not create', () => {
   const paths = project();
   writeFileSync(join(paths.root, '.planr', 'planr.config.json'), '{}\n');
   const failure = failureFor(() =>
     appendProvenanceEvent(paths.root, provenanceEvent(paths.root, 'foreign')),
   );
   assert.equal(failure.code, 'E_PLANNING_FOLDER_FOREIGN');
-  assert.match(failure.message, /belongs to another tool/u);
+  assert.match(failure.message, /wasn't created by OpenPlanr/u);
   assert.equal(existsSync(paths.target), false);
   assert.equal(existsSync(paths.lock), false);
 });

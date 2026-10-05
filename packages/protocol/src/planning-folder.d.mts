@@ -8,7 +8,7 @@ export interface PlanningFolderConflict {
   readonly signs: readonly string[];
 }
 
-/** Another tool's files in `<projectRoot>/.planr` that lacks OpenPlanr's config.json; empty when OpenPlanr may write there. */
+/** Signs that `<projectRoot>/.planr`, which lacks OpenPlanr's config.json, is a folder OpenPlanr didn't create; empty when OpenPlanr may write there. */
 export declare function foreignPlanningFolderSigns(projectRoot: string): string[];
-/** The refusal for writing into another tool's planning folder, or null when OpenPlanr may write there. */
+/** The refusal for writing into a planning folder OpenPlanr didn't create, or null when OpenPlanr may write there. */
 export declare function planningFolderConflict(projectRoot: string): PlanningFolderConflict | null;

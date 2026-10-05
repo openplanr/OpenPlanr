@@ -49,7 +49,7 @@ describe('planning folder guard', { timeout: 60_000 }, () => {
     expect(JSON.parse(result.stdout)).toMatchObject({ ok: true });
   });
 
-  it('refuses to write into a planning folder another tool owns', () => {
+  it('refuses to write into a planning folder OpenPlanr did not create', () => {
     const files = ['.planr/planr.config.json', '.planr/board.html', '.planr/tasks/launch-goal.md'];
     const root = repository(files);
     const before = readdirSync(path.join(root, '.planr')).sort();
@@ -58,7 +58,7 @@ describe('planning folder guard', { timeout: 60_000 }, () => {
     expect(init.status).toBe(1);
     const output = `${init.stdout}${init.stderr}`;
     expect(output).toContain('E_PLANNING_FOLDER_FOREIGN');
-    expect(output).toContain('belongs to another tool');
+    expect(output).toContain("wasn't created by OpenPlanr");
     expect(output).toContain('planr.config.json, board.html, *-goal.md files in tasks');
     expect(output).toContain('Move or rename that folder');
     expect(readdirSync(path.join(root, '.planr')).sort()).toEqual(before);

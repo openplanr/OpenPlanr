@@ -40,7 +40,7 @@ export class ConfigInvalidError extends Error {
   }
 }
 
-/** The refusal to write when another tool owns the planning folder at `projectDir`, or null. */
+/** The refusal to write into a planning folder at `projectDir` that OpenPlanr didn't create, or null. */
 export function foreignPlanningFolder(projectDir: string): CliBoundaryError | null {
   const conflict = planningFolderConflict(projectDir);
   return conflict
@@ -48,7 +48,7 @@ export function foreignPlanningFolder(projectDir: string): CliBoundaryError | nu
     : null;
 }
 
-/** Throw before a write when another tool owns the planning folder at `projectDir`. */
+/** Throw before a write when OpenPlanr didn't create the planning folder at `projectDir`. */
 export function assertPlanningFolderWritable(projectDir: string): void {
   const refusal = foreignPlanningFolder(projectDir);
   if (refusal) throw refusal;

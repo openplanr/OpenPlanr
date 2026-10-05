@@ -167,7 +167,7 @@ describe('runtime Node.js diagnostics', () => {
 });
 
 describe('runtime setup', () => {
-  it('refuses project-scoped setup when another tool owns the planning folder', async () => {
+  it('refuses project-scoped setup when OpenPlanr did not create the planning folder', async () => {
     rmSync(join(projectDir, '.planr', 'config.json'));
     writeFileSync(join(projectDir, '.planr', 'planr.config.json'), '{}\n');
     execFileSync('git', ['init', '-q'], { cwd: projectDir });
