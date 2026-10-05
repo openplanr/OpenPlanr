@@ -39,7 +39,7 @@ Exploration stays in user space; the repo receives the approved artifact:
 
 Print where everything lives + the natural next commands — and STOP. Never auto-chain and
 never publish/share as a side effect of approval; Share remains a separate explicit board or
-`planr artifact share` action:
+`openplanr artifact share` action:
 
 ```
 ✓ design-loop approved: <target> variant <X> (<provider>)

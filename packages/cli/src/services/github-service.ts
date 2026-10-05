@@ -352,7 +352,7 @@ function buildTaskBody(content: string, frontmatter: ArtifactFrontmatter): strin
   // Strip standalone parent reference lines (already in metadata table)
   body = body.replace(/^\*\*(User Story|Feature|Story):\*\*.*\n?/gm, '');
 
-  // Remove Notes section (references planr CLI, irrelevant on GitHub)
+  // Remove Notes section (references openplanr CLI, irrelevant on GitHub)
   body = removeSection(body, 'Notes');
 
   // Extract sections to reorder: Tasks → AC Mapping → Relevant Files → Artifact Sources
@@ -586,7 +586,7 @@ export function statusToIssueState(status: string): GitHubIssueState {
 }
 
 /**
- * Extract the planr artifact type from issue labels.
+ * Extract the openplanr artifact type from issue labels.
  */
 export function getTypeFromLabels(labels: Array<{ name: string }>): ArtifactType | null {
   const reverseMap: Record<string, ArtifactType> = {};

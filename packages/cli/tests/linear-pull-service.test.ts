@@ -212,8 +212,8 @@ describe('resolveStatusFinalState — three-way merge decision matrix', () => {
   });
 
   it('pushes local when base matches remote (local changed since last sync)', () => {
-    // This is the whole point of the fix: `planr quick update --status done`
-    // followed by `planr linear sync` no longer silently loses the local
+    // This is the whole point of the fix: `openplanr quick update --status done`
+    // followed by `openplanr linear sync` no longer silently loses the local
     // change.
     const r = resolveStatusFinalState(
       { base: 'in-progress', local: 'done', remote: 'in-progress' },

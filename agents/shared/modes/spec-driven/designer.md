@@ -7,7 +7,7 @@
 
 The orchestrator (`/plan`) passes `MODE=spec-driven` and `SPEC_DIR`:
 
-- Read PNGs from `<SPEC_DIR>/design/*.png` (the user attached them via `planr spec attach-design`).
+- Read PNGs from `<SPEC_DIR>/design/*.png` (the user attached them via `openplanr spec attach-design`).
 - Write `<SPEC_DIR>/design/design-spec.md` (same `design/` subfolder).
 
 `<SPEC_DIR> = .planr/specs/SPEC-NNN-${ARGUMENTS}/`. The 10-section design-spec content is identical in both modes.
@@ -45,7 +45,7 @@ If a referenced path doesn't exist after expansion, try the unexpanded form as a
 
 ## PNG Resolution (spec-driven mode)
 
-In spec-driven mode the canonical PNG location is `<SPEC_DIR>/design/*.png`. The user attaches PNGs via `planr spec attach-design`. If `<SPEC_DIR>/design/` is empty, the agent falls back through this priority order: `UIFiles:` block in the spec frontmatter, then `input/ui/feat-{slug}/`, then top-level `input/ui/*.png` under the single-feature exception.
+In spec-driven mode the canonical PNG location is `<SPEC_DIR>/design/*.png`. The user attaches PNGs via `openplanr spec attach-design`. If `<SPEC_DIR>/design/` is empty, the agent falls back through this priority order: `UIFiles:` block in the spec frontmatter, then `input/ui/feat-{slug}/`, then top-level `input/ui/*.png` under the single-feature exception.
 
 If all sources are empty: skip silently (do not write design-spec.md, do not error).
 

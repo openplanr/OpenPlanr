@@ -37,7 +37,7 @@ undocumented guidance. Keep any existing documented token values, component
 states, responsive rules and accessibility requirements. Never copy local paths,
 repository notes, credentials or an entire specification into shared context.
 
-Open the design with `planr artifact <design-document.json>` after editing context;
+Open the design with `openplanr artifact <design-document.json>` after editing context;
 the route validates and renders it. If it reports a draft error and falls back to
 the previous working revision, fix that error before sharing the changed context.
 When working through an installed design

@@ -105,9 +105,9 @@ function fixture() {
         name: manifests.cli.name,
         version: manifests.cli.version,
         binAliases: {
+          openplanr: './bin/openplanr.js',
+          opr: './bin/openplanr.js',
           planr: './bin/planr.js',
-          openplanr: './bin/planr.js',
-          opr: './bin/planr.js',
         },
         ...packageCustody.cli,
       },

@@ -261,9 +261,9 @@ describe('syncLinearStatusIntoArtifacts — bidirectional sync (three-way merge)
   });
 
   it('pushes local to Linear when base=remote (local changed since last sync)', async () => {
-    // This is the whole point of the fix: user runs `planr quick update
+    // This is the whole point of the fix: user runs `openplanr quick update
     // QT-200 --status done` (which clears linearStatusReconciled), then
-    // `planr linear sync`. Previously Linear's stale `in-progress` silently
+    // `openplanr linear sync`. Previously Linear's stale `in-progress` silently
     // overwrote local `done`. Now we push local up.
     const linearId = 'aaaaaaaa-1111-4111-8111-111111111111';
     // base matches remote (no local change since last sync from Linear's POV),

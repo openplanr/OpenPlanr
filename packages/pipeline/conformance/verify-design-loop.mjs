@@ -83,7 +83,7 @@ const loopBoardProcedure = readFileSync(
   'utf8',
 );
 assert(
-  loopBoardProcedure.includes('planr artifact import') &&
+  loopBoardProcedure.includes('openplanr artifact import') &&
     loopBoardProcedure.includes('Share** as an optional, explicit control'),
   'board procedure exposes explicit Share and returned-review import through planr',
 );

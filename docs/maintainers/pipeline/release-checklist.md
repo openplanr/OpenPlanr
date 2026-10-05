@@ -32,7 +32,7 @@ npm run test:focused
 npm run build
 npm run lint
 npm run verify:packed:strict
-planr doctor --strict --json
+openplanr doctor --strict --json
 git diff --check
 ```
 

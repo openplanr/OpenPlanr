@@ -148,7 +148,7 @@ function install(directory, skillId, host = 'openai', { suite = false } = {}) {
 }
 
 function environment(directory) {
-  // Child utilities cannot resolve the source checkout or a global planr CLI.
+  // Child utilities cannot resolve the source checkout or a global openplanr CLI.
   return {
     HOME: directory,
     PLANR_HOME: join(directory, '.runtime-home'),

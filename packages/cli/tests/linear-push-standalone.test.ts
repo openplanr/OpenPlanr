@@ -69,7 +69,7 @@ async function writeBacklogItem(
   id: string,
   opts: { linearIssueId?: string; status?: string } = {},
 ): Promise<void> {
-  // Match the real `planr backlog add` template: description / acceptance
+  // Match the real `openplanr backlog add` template: description / acceptance
   // criteria / notes live in the BODY, not in frontmatter. The fixture
   // intentionally does NOT put `description:` in frontmatter so we don't
   // mask the bug where the push reader was looking in the wrong place.
@@ -81,7 +81,7 @@ async function writeBacklogItem(
     `status: "${opts.status ?? 'open'}"`,
   ];
   if (opts.linearIssueId) fm.push(`linearIssueId: "${opts.linearIssueId}"`);
-  const body = `---\n${fm.join('\n')}\n---\n\n# ${id}: ${id} title\n\n## Priority\nHIGH\n\n## Tags\n\n- feature\n- dx\n\n## Description\nBacklog item description text.\n\n## Acceptance Criteria\n- AC line 1\n- AC line 2\n\n## Notes\nSome notes.\n\n---\n_Promote to agile hierarchy: \`planr backlog promote ${id} --story\` or \`planr backlog promote ${id} --quick\`_\n_Close when done: \`planr backlog close ${id}\`_\n`;
+  const body = `---\n${fm.join('\n')}\n---\n\n# ${id}: ${id} title\n\n## Priority\nHIGH\n\n## Tags\n\n- feature\n- dx\n\n## Description\nBacklog item description text.\n\n## Acceptance Criteria\n- AC line 1\n- AC line 2\n\n## Notes\nSome notes.\n\n---\n_Promote to agile hierarchy: \`openplanr backlog promote ${id} --story\` or \`openplanr backlog promote ${id} --quick\`_\n_Close when done: \`openplanr backlog close ${id}\`_\n`;
   await writeFile(join(dir, '.planr', 'backlog', `${id}-test.md`), body);
 }
 

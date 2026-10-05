@@ -20,7 +20,7 @@ The conformance test fixture (`planr-pipeline/conformance/`) verifies items 5 an
 ## Claude Code adapter (canonical)
 
 **Repo:** `openplanr/OpenPlanr` (`packages/pipeline`)
-**Install:** `planr setup --runtime claude`
+**Install:** `openplanr setup --runtime claude`
 **Adapter version:** independently versioned and locked through the compatibility manifest
 
 ### Implementation
@@ -51,7 +51,7 @@ then drains newly ready dependents without ending the user invocation.
 
 ## Cursor adapter
 
-**Installed by:** `planr setup --runtime cursor`
+**Installed by:** `openplanr setup --runtime cursor`
 **Lives at:** `.cursor/rules/openplanr.mdc` + `.cursor/rules/openplanr-roles/*.md`
 **Minimum runtime version:** Cursor 1.x with Composer subagent dispatch
 
@@ -78,7 +78,7 @@ then drains newly ready dependents without ending the user invocation.
 
 ## Codex adapter
 
-**Installed by:** `planr setup --runtime codex`
+**Installed by:** `openplanr setup --runtime codex`
 **Lives at:** user-scope `$planr-*` skills plus a concise managed policy block in `AGENTS.md`
 
 ### Implementation
@@ -93,7 +93,7 @@ then drains newly ready dependents without ending the user invocation.
 
 - Small, inspectable user-scope skill install
 - Same artifact contract as other adapters
-- Coexists with planr CLI's agile-mode AGENTS.md content (concatenation, not overwrite, when `--scope all`)
+- Coexists with openplanr CLI's agile-mode AGENTS.md content (concatenation, not overwrite, when `--scope all`)
 
 ### Caveats
 
@@ -117,7 +117,7 @@ Three motivations, in order:
 
 1. **Per-invocation token reduction (~30%).** Only the active mode's content loads into the agent's context — the entry file plus the matched per-mode file plus any shared topics it references. The inactive mode's prompt body is not read.
 2. **Clearer separation of mode-specific content.** Path mappings, ID-scoping rules, and artifact conventions that differ between modes now live in physically separate files instead of being interleaved with conditional language inside one prompt.
-3. **Both modes stay first-class.** Default mode remains the lightweight solo-dev fast-feedback path (`output/feats/feat-{name}/` layout, no planr CLI required); spec-driven mode remains the formal team / PO-handoff path (`.planr/specs/SPEC-NNN-{slug}/` layout, planr CLI compatible). The refactor preserves both as primary user surfaces — see `docs/audit/2026-05-audit.md` Errata for the framing rationale.
+3. **Both modes stay first-class.** Default mode remains the lightweight solo-dev fast-feedback path (`output/feats/feat-{name}/` layout, no openplanr CLI required); spec-driven mode remains the formal team / PO-handoff path (`.planr/specs/SPEC-NNN-{slug}/` layout, openplanr CLI compatible). The refactor preserves both as primary user surfaces — see `docs/audit/2026-05-audit.md` Errata for the framing rationale.
 
 ### How adapters mirror it
 
@@ -160,7 +160,7 @@ To add a fourth runtime (e.g., Aider, Cline, Continue):
 2. Add an adapter entry to `registry/adapters.json` with capabilities, assets,
    health checks, and lifecycle drivers.
 3. Generate runtime assets from the shared role and command registries.
-4. Add detection, migration, rollback, and uninstall drivers to `planr`.
+4. Add detection, migration, rollback, and uninstall drivers to `openplanr`.
 5. Run the conformance test fixture against the new adapter.
 6. Submit a PR to `openplanr/OpenPlanr` with the adapter spec and matrix entry.
 

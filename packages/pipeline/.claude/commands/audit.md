@@ -264,7 +264,7 @@ Audit every command and interaction surface. For each issue found, produce a spe
 **Error messages:**
 - Does every error tell the user: what went wrong, why it happened, and what to do next?
 - Example of bad error: `Error: ENOENT: no such file or directory`
-- Example of good error: `Spec file not found at .planr/specs/SPEC-001-auth/. Run 'planr spec init' first, then 'planr spec create auth'.`
+- Example of good error: `Spec file not found at .planr/specs/SPEC-001-auth/. Run 'openplanr spec init' first, then 'openplanr spec create auth'.`
 
 **Onboarding:**
 - Can a new user go from `git clone` to a successful `/planr-pipeline:ship` with zero prior knowledge?

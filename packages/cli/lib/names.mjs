@@ -5,4 +5,4 @@
 export const PLANNING_FOLDER = '.planr';
 
 /** @type {typeof import('./names.d.mts').CLI_COMMAND} */
-export const CLI_COMMAND = 'planr';
+export const CLI_COMMAND = 'openplanr';

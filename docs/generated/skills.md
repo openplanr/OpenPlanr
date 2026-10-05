@@ -172,7 +172,7 @@ Create, edit, inspect, verify, or rerender professional offline diagrams. Use fo
 
 Diagnose OpenPlanr CLI, pipeline, runtime-adapter, installation, and lock health. Use when setup, discovery, versions, generated assets, or runtime behavior seems wrong.
 
-- Select for: Diagnose OpenPlanr installation, runtime, adapter, version, or lock health; Check why planr setup or upgrade is unhealthy.
+- Select for: Diagnose OpenPlanr installation, runtime, adapter, version, or lock health; Check why openplanr setup or upgrade is unhealthy.
 - Defer for: Diagnose an application bug; Implement a feature.
 - Invocation from the plugin: `$planr:doctor` in Codex/ChatGPT; `/planr:doctor` in Claude Code.
 - Hosts: Claude Code, Codex, ChatGPT, and Cursor where supported by the package manifest.

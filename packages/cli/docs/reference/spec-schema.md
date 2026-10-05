@@ -2,7 +2,7 @@
 
 This is the file-level reference for spec-driven mode: what the `planr-spec`,
 `planr-plan`, and `planr-ship` skills write under `.planr/specs/`, and what the
-`planr spec` commands validate. The canonical JSON Schemas live in
+`openplanr spec` commands validate. The canonical JSON Schemas live in
 [`packages/protocol/schemas/v1.0.0`](https://github.com/openplanr/OpenPlanr/tree/main/packages/protocol/schemas/v1.0.0);
 the CLI and the `planr-pipeline` package read the same contract with no
 conversion layer.
@@ -24,7 +24,7 @@ Every spec is a self-contained directory under `.planr/specs/`:
 .planr/specs/SPEC-NNN-{slug}/
 ├── SPEC-NNN-{slug}.md            # the functional spec (one per directory)
 ├── design/                       # optional — UI mockups + design-spec
-│   ├── *.png                     # PNG mockups attached via `planr spec attach-design`
+│   ├── *.png                     # PNG mockups attached via `openplanr spec attach-design`
 │   └── design-spec.md            # written by the designer agent
 ├── stories/
 │   └── US-NNN-{slug}.md          # user stories scoped to this spec
@@ -72,13 +72,13 @@ tech_dependencies: []             # required · array of strings; informational 
 | `priority` | enum | `P0` (must) / `P1` (should) / `P2` (nice) / `P3` (defer). |
 | `milestone` | string? | Optional release/milestone tag. |
 | `po` | string? | Optional Product Owner identifier (email or username). |
-| `created` / `updated` | string | ISO 8601 date. Bumped automatically by `planr spec` commands. |
+| `created` / `updated` | string | ISO 8601 date. Bumped automatically by `openplanr spec` commands. |
 | `ui_files` | array | List of PNG file paths under `design/`. Non-empty lists route the designer agent. |
 | `tech_dependencies` | array | Free-form list of upstream tech dependencies. Informational; not consumed automatically. |
 
 ### SPEC body sections (in order)
 
-The spec body uses the following H2 sections. `planr spec shape` writes them
+The spec body uses the following H2 sections. `openplanr spec shape` writes them
 from interactive questions; the `planr-plan` skill reads them.
 
 1. **`## Context & Goal`** — 2-5 sentences on the user need + outcome
@@ -265,9 +265,9 @@ pending → shaping → shaped → decomposing → decomposed → in-pipeline �
 
 | State | Set by | Meaning |
 |---|---|---|
-| `pending` | `planr spec create` | Spec directory exists; body is the empty template |
-| `shaping` | `planr spec shape` (in progress) | Q&A flow active |
-| `shaped` | `planr spec shape` (complete) | Spec body has Context/FRs/Rules/AC sections filled |
+| `pending` | `openplanr spec create` | Spec directory exists; body is the empty template |
+| `shaping` | `openplanr spec shape` (in progress) | Q&A flow active |
+| `shaped` | `openplanr spec shape` (complete) | Spec body has Context/FRs/Rules/AC sections filled |
 | `decomposing` | `planr-plan` skill (in progress) | Stories and tasks are being written |
 | `decomposed` | `planr-plan` skill (complete) | `stories/` and `tasks/` are populated |
 | `in-pipeline` | `planr-ship` skill (in progress) | Implementation running |
@@ -282,8 +282,8 @@ The CLI, the skills, and the `planr-pipeline` package produce and consume schema
 
 ```bash
 npm install -g openplanr@latest
-planr setup
-planr upgrade status
+openplanr setup
+openplanr upgrade status
 ```
 
 ---

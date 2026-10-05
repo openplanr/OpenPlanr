@@ -3,8 +3,8 @@
   "schemaVersion": "1.0.0",
   "renderer": {
     "id": "openplanr-semantic-svg-resvg",
-    "version": "1.4.0",
-    "digest": "sha256:7df41291284984aef9c4c9df3d43e6e8bbd520920fbc146313b94ef1d60e688a"
+    "version": "1.5.0",
+    "digest": "sha256:204158d9f19407c54ed7cdaa94314049b6015a4d4e1bf6b217b138123b874952"
   },
   "rasterizer": {
     "package": "@resvg/resvg-js",

@@ -1,4 +1,4 @@
-/** Explicit CLI interaction surface for `planr quick`. */
+/** Explicit CLI interaction surface for `openplanr quick`. */
 export { loadConfig } from '../../../services/config-service.js';
 export { printDeprecationNotice } from '../../../services/deprecation-notices.js';
 export {

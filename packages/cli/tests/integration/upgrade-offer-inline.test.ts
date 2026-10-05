@@ -15,7 +15,7 @@ import { createDefaultConfig } from '../../src/services/config-service.js';
 
 /**
  * Trap-A proof: the offer, its escalating snooze, and its permanent
- * never-ask are exercised through *real* `planr` subprocesses that read and
+ * never-ask are exercised through *real* `openplanr` subprocesses that read and
  * write an on-disk `upgrade-state.json` — not an in-memory fixture — and the
  * offer/snooze/never-ask state is proven to persist across two separate process
  * invocations. The CLI source is run through the `tsx` loader so the test always
@@ -25,7 +25,7 @@ import { createDefaultConfig } from '../../src/services/config-service.js';
 const repoRoot = resolve('.');
 const cliEntry = join(repoRoot, 'src', 'cli', 'index.ts');
 const OFFER_MARKER = 'An OpenPlanr upgrade is available';
-const COMMAND_MARKER = 'Planr Configuration'; // `planr config show`'s own heading
+const COMMAND_MARKER = 'Planr Configuration'; // `openplanr config show`'s own heading
 
 let root: string;
 let projectRoot: string;
@@ -56,7 +56,7 @@ function isolatedPath(): string {
 }
 
 /**
- * Run a real `planr` invocation. Each caller supplies its own OPENPLANR_HOME so
+ * Run a real `openplanr` invocation. Each caller supplies its own OPENPLANR_HOME so
  * the snooze/never-ask state file is isolated per scenario but shared across the
  * two invocations of a scenario — that shared on-disk file is the persistence
  * proof.
@@ -86,7 +86,7 @@ beforeAll(() => {
   projectRoot = join(root, 'project');
   mkdirSync(join(projectRoot, '.planr'), { recursive: true });
 
-  // A valid project config so `planr config show` (the "original command") runs
+  // A valid project config so `openplanr config show` (the "original command") runs
   // and prints its own output after the offer.
   writeFileSync(
     join(projectRoot, '.planr', 'config.json'),
@@ -192,7 +192,7 @@ describe('inline upgrade offer through a real preAction subprocess', () => {
     expect(first.status, first.stderr || first.stdout).toBe(0);
     expect(first.stdout).toContain(OFFER_MARKER);
     // Trap E: the exact reversal command is stated.
-    expect(first.stdout).toContain('planr config set-upgrade-policy --ask-again');
+    expect(first.stdout).toContain('openplanr config set-upgrade-policy --ask-again');
     expect(JSON.parse(readFileSync(statePath, 'utf8')).neverAsk).toBe(true);
 
     // Invocation 2 — a fresh process. Even though the injected choice is

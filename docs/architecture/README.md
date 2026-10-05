@@ -36,7 +36,7 @@ flowchart TB
 | --- | --- |
 | `packages/protocol` | Schemas, registries, catalogs, browser-safe contracts, canonical JSON, validation, shared typed errors |
 | `packages/pipeline` | The delivery pipeline and self-contained projections of Protocol, Operate, artifact, and design |
-| `packages/cli` | The `planr` command, host packages, setup and diagnostics, GitHub and Linear sync, a digest-verified copy of the dashboard |
+| `packages/cli` | The `openplanr` command, host packages, setup and diagnostics, GitHub and Linear sync, a digest-verified copy of the dashboard |
 | `packages/operate`, `packages/artifact`, `packages/design` | Their runtimes, in that dependency order |
 | `packages/skill-runtime` | Skill composition and host generation over declarative contribution manifests |
 | `packages/integrations` | Portable integration behavior |

@@ -4,6 +4,8 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { PLANNING_FOLDER } from '../../utils/constants.js';
 
+export { planningFolderConflict } from '../../../lib/planning-folder.mjs';
+
 export type RuntimeId = 'claude-code' | 'codex' | 'cursor';
 
 export interface AdapterRegistryEntry {

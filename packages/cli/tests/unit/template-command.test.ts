@@ -62,7 +62,7 @@ afterEach(() => {
   rmSync(root, { recursive: true, force: true });
 });
 
-describe('planr template save', () => {
+describe('openplanr template save', () => {
   it('saves a kebab-case name as one file in the templates directory', async () => {
     await run('save', 'TASK-001', '--name', 'my-pattern');
     const saved = JSON.parse(readFileSync(path.join(templatesDir, 'my-pattern.json'), 'utf8'));
@@ -122,7 +122,7 @@ describe('planr template save', () => {
   });
 });
 
-describe('planr template delete', () => {
+describe('openplanr template delete', () => {
   it('deletes a template by its name', async () => {
     mkdirSync(templatesDir);
     writeFileSync(path.join(templatesDir, 'old-pattern.json'), '{}\n');

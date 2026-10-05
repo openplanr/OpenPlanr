@@ -17,7 +17,7 @@ node scripts/design.mjs studio <design-document.json> --action stop --json
 ```
 
 Use `--view prototype` or `--view walkthrough` to select the initial presentation.
-When a `planr` CLI is available, prefer its public `planr artifact` route for
+When an `openplanr` CLI is available, prefer its public `openplanr artifact` route for
 opening the document; otherwise use this bundled script. Both compose the same
 design and artifact runtime, preserving feedback and view behavior.
 
@@ -96,8 +96,8 @@ The bundled utility supports `share`, `publish`, and `sync` with the same design
 document argument. `share` creates or retries a review, `publish` sends an explicitly
 requested new revision to the existing URL, and `sync` retrieves authenticated
 feedback. Run `--help` for access-management and recovery options. The public CLI
-equivalents are `planr artifact share`, `planr artifact publish`, and
-`planr artifact sync`. No global CLI is required for the bundled helper.
+equivalents are `openplanr artifact share`, `openplanr artifact publish`, and
+`openplanr artifact sync`. No global CLI is required for the bundled helper.
 
 Retention is until the owner revokes or deletes the review, while the service is
 maintained. The owner can pause comments and rotate access tokens. Rotation blocks
@@ -107,7 +107,7 @@ saved operation and use its retry path. Report service unavailability explicitly
 
 ## Team review and handoff
 
-`planr artifact handoff <design-document.json>` and the bundled
+`openplanr artifact handoff <design-document.json>` and the bundled
 `node scripts/design.mjs handoff <design-document.json>` prepare or refresh a
 factual review handoff. Use `--json` for structured results and consult `--help`
 for inspection, update and approval actions. Follow [team-review.md](team-review.md)

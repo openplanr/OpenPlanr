@@ -1,6 +1,6 @@
 # Artifact review and private sharing
 
-`planr artifact` opens native diagrams, authored designs, and HTML artifacts for
+`openplanr artifact` opens native diagrams, authored designs, and HTML artifacts for
 local review or explicit encrypted sharing. Generic HTML sessions support
 comments, pins, threads, and Approve or Request changes decisions.
 JavaScript inside the artifact remains interactive in an opaque-origin,
@@ -14,10 +14,10 @@ the default for design boards and multi-variant workflows.
 ## Local review
 
 ```bash
-planr artifact ./artifact.html
-planr artifact open /absolute/path/to/artifact.html --theme auto
-planr artifact open ./artifact.html --presentation canvas
-planr artifact export <session-id> --format markdown --output review.md
+openplanr artifact ./artifact.html
+openplanr artifact open /absolute/path/to/artifact.html --theme auto
+openplanr artifact open ./artifact.html --presentation canvas
+openplanr artifact export <session-id> --format markdown --output review.md
 ```
 
 The bundler packages local CSS, scripts, modules, images, SVG, fonts, `srcset`,
@@ -49,10 +49,10 @@ part of this command.
 ## Native diagram sharing
 
 ```bash
-planr artifact open ./diagrams/handover/handover.manifest.json
-planr artifact share ./diagrams/handover/handover.manifest.json --yes --no-open
-planr artifact publish ./diagrams/handover/handover.manifest.json --yes
-planr artifact sync ./diagrams/handover/handover.manifest.json
+openplanr artifact open ./diagrams/handover/handover.manifest.json
+openplanr artifact share ./diagrams/handover/handover.manifest.json --yes --no-open
+openplanr artifact publish ./diagrams/handover/handover.manifest.json --yes
+openplanr artifact sync ./diagrams/handover/handover.manifest.json
 ```
 
 An authored `diagrams/<slug>/<slug>.planr-diagram-bundle.json` is also accepted.
@@ -84,9 +84,9 @@ HTML first and explicitly use the generic snapshot route.
 ## Private links
 
 ```bash
-planr artifact share ./artifact.html --secret-output ./room.private.json
-planr artifact share ./artifact.html --presentation document --secret-output ./room.private.json
-planr artifact share ./artifact.html --snapshot --short --ttl 7d --yes
+openplanr artifact share ./artifact.html --secret-output ./room.private.json
+openplanr artifact share ./artifact.html --presentation document --secret-output ./room.private.json
+openplanr artifact share ./artifact.html --snapshot --short --ttl 7d --yes
 ```
 
 By default, sharing creates one stable encrypted live review room. The normal
@@ -123,7 +123,7 @@ snapshot sharing, a reviewer still returns a new immutable review URL. Import
 one or more room or snapshot URLs non-destructively:
 
 ```bash
-planr artifact import "<review-url>" "<second-review-url>"
+openplanr artifact import "<review-url>" "<second-review-url>"
 ```
 
 Changed-artifact feedback is rejected with `E_ARTIFACT_STALE_REVIEW`. To retain

@@ -1,9 +1,9 @@
 # `@openplanr/dashboard-app`
 
-The browser app behind `planr dashboard`: a read-only React view of a project's planning
+The browser app behind `openplanr dashboard`: a read-only React view of a project's planning
 artifacts and Operate state. It imports only browser dependencies and `@openplanr/protocol`.
 The CLI build copies `dist/` into `packages/cli/dist/dashboard` under a digest manifest, and
-`planr dashboard` serves that copy on a loopback port.
+`openplanr dashboard` serves that copy on a loopback port.
 
 This workspace is npm-private; it ships only inside the CLI.
 

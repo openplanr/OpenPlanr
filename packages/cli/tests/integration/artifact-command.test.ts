@@ -62,7 +62,7 @@ afterEach(() => {
     rmSync(dir, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 });
 });
 
-describe('planr artifact and retired pipeline facade', { timeout: 30_000 }, () => {
+describe('openplanr artifact and retired pipeline facade', { timeout: 30_000 }, () => {
   it('prepares an unapproved design handoff without starting Plan or publishing', async () => {
     const dir = temporary();
     const { designFixture } = await import(
@@ -214,7 +214,7 @@ describe('planr artifact and retired pipeline facade', { timeout: 30_000 }, () =
     expect(`${result.stdout}${result.stderr}`).toContain('requires `--snapshot`');
   });
 
-  it('creates a private fragment link through the public planr artifact command', () => {
+  it('creates a private fragment link through the public openplanr artifact command', () => {
     const dir = temporary();
     writeFileSync(
       join(dir, 'artifact.html'),

@@ -94,7 +94,7 @@ describe('rules generate --scope pipeline', () => {
       }
       const guidance = readFileSync(join(rulesRoot, 'openplanr.mdc'), 'utf8');
       expect(guidance).toContain('OpenPlanr host-native workflows');
-      expect(guidance).toContain('planr setup --runtime cursor --scope project');
+      expect(guidance).toContain('openplanr setup --runtime cursor --scope project');
       expect(existsSync(join(rulesRoot, 'openplanr-roles'))).toBe(false);
     },
     TIMEOUT_MS,
@@ -106,7 +106,7 @@ describe('rules generate --scope pipeline', () => {
       const dir = makeTempDir();
       run('init --name pipe-cursor-only --no-ai --yes', { cwd: dir });
 
-      // `planr init` auto-generates the 6 agile rules. Delete them to verify
+      // `openplanr init` auto-generates the 6 agile rules. Delete them to verify
       // that `--scope pipeline` produces only pipeline files (not agile ones).
       const rulesRoot = join(dir, '.cursor', 'rules');
       for (const name of [

@@ -1,5 +1,5 @@
 /**
- * Storage behind `planr sprint refinement|diff|close|apply` and the batched
+ * Storage behind `openplanr sprint refinement|diff|close|apply` and the batched
  * sprint body: validates the refinement document a host skill produces,
  * renders the sprint tasks and the refinement note, records leftovers on
  * close and writes approved status changes back to the artifacts.
@@ -409,7 +409,7 @@ function daysBetween(from: string, to: string): number {
   return Math.max(0, Math.round(ms / 86_400_000));
 }
 
-/** Template data for `planr sprint create`, including the rendered `## Tasks` section. */
+/** Template data for `openplanr sprint create`, including the rendered `## Tasks` section. */
 export async function prepareSprintCreation(
   projectDir: string,
   config: OpenPlanrConfig,
@@ -610,7 +610,7 @@ async function writeRefinement(
   return { refinementPath: paths.json, notePath: paths.note };
 }
 
-/** `planr sprint refinement <id> --data`: store the document and fill the sprint from it. */
+/** `openplanr sprint refinement <id> --data`: store the document and fill the sprint from it. */
 export async function recordRefinement(
   projectDir: string,
   config: OpenPlanrConfig,
@@ -658,7 +658,7 @@ export async function recordRefinement(
   };
 }
 
-/** `planr sprint diff <from> <to>`: bucket moves, additions, removals and score changes. */
+/** `openplanr sprint diff <from> <to>`: bucket moves, additions, removals and score changes. */
 export function diffRefinements(from: RefinementDocument, to: RefinementDocument): RefinementDiff {
   const before = new Map(from.items.map((item) => [item.id, item]));
   const after = new Map(to.items.map((item) => [item.id, item]));
@@ -708,7 +708,7 @@ function emptyRefinement(sprintId: string, refinedAt: string): RefinementDocumen
   };
 }
 
-/** `planr sprint close <id>`: mark the sprint closed and record what was not finished. */
+/** `openplanr sprint close <id>`: mark the sprint closed and record what was not finished. */
 export async function closeSprint(
   projectDir: string,
   config: OpenPlanrConfig,
@@ -767,7 +767,7 @@ export async function closeSprint(
   };
 }
 
-/** `planr sprint apply <id>`: write the approved status changes, then optionally commit them. */
+/** `openplanr sprint apply <id>`: write the approved status changes, then optionally commit them. */
 export async function applyRefinement(
   projectDir: string,
   config: OpenPlanrConfig,

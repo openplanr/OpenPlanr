@@ -34,7 +34,7 @@ Generate the epic document at `.planr/epics/` using this structure:
 
 ### Phase 3: Next Steps
 
-Recommend creating features from this epic using `planr feature create --epic <ID>`.
+Recommend creating features from this epic using `openplanr feature create --epic <ID>`.
 
 ## Existing Epics
 

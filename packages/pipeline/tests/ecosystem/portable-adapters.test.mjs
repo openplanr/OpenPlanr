@@ -45,7 +45,7 @@ test('the Codex artifact skill routes through planr without executing the nested
     join(root, 'dist/plugins/openai/openplanr/skills/artifact/SKILL.md'),
     'utf8',
   );
-  assert.match(skill, /\bplanr artifact\b/);
+  assert.match(skill, /\bopenplanr artifact\b/);
   assert.doesNotMatch(skill, /(?:^|[`\s])planr-pipeline\s+(?:artifact|plan|ship)(?:[`\s]|$)/m);
   assert.match(skill, /never publishes it automatically/i);
 });
@@ -77,7 +77,7 @@ test('Operate clients dispatch lens skills without foreign runtime paths', () =>
     }
     assert.doesNotMatch(
       bytes,
-      /JSON\.parse|--json\b|\bplanr operate validate-note\b|\.planr\/products|\/Users\/|\/home\/|\bplanr-pipeline\s+(?:operate|plan|ship)\b|\/planr-pipeline:/u,
+      /JSON\.parse|--json\b|\b(?:open)?planr operate validate-note\b|\.planr\/products|\/Users\/|\/home\/|\bplanr-pipeline\s+(?:operate|plan|ship)\b|\/planr-pipeline:/u,
       relativePath,
     );
   }

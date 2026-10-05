@@ -1,4 +1,4 @@
-/** Explicit planning-project persistence surface for `planr story`. */
+/** Explicit planning-project persistence surface for `openplanr story`. */
 export {
   addChildReference,
   createArtifact,

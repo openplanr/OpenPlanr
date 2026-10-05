@@ -207,7 +207,7 @@ function requestLoop(
     node('ship', 'Ship\none task, verified'),
     node('plans', 'Plans under .planr/'),
     node('code', 'Source code and tests'),
-    node('cli', 'planr CLI'),
+    node('cli', 'openplanr CLI'),
     node('review', 'Review'),
     node('operate', 'Operate readout'),
   ];
@@ -283,7 +283,7 @@ function releaseHandoff(direction = 'left-right') {
     lanes: [
       { id: 'owner', label: 'Product owner', members: ['request', 'review', 'approve'] },
       { id: 'agent', label: 'Host agent', members: ['build'] },
-      { id: 'cli', label: 'planr CLI', members: ['verify', 'publish'] },
+      { id: 'cli', label: 'openplanr CLI', members: ['verify', 'publish'] },
     ],
     emphasis: [{ targetId: 'agent', level: 'primary' }],
     accessibility: {

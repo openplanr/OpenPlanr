@@ -74,7 +74,7 @@ describe('loadConfig', () => {
     expect(error.message).toContain('createdAt');
     expect(error.message).toContain('config.json');
     // And how to fix it — surfaced by the CLI's top-level handler for `E_` codes.
-    expect(error.fix).toContain('planr init');
+    expect(error.fix).toContain('openplanr init');
   });
 
   it('throws on invalid target value', async () => {

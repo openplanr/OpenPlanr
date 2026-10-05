@@ -10,7 +10,7 @@
 <p align="center">
   OpenPlanr is the shared delivery loop for product teams and their AI agents.<br>
   Plan, design, build, review, and operate from durable context in your repository:<br>
-  25+ skills for Claude Code, Codex, and Cursor, plus the deterministic <code>planr</code> CLI.
+  25+ skills for Claude Code, Codex, and Cursor, plus the deterministic <code>openplanr</code> CLI.
 </p>
 
 <p align="center">
@@ -34,11 +34,11 @@
 ## What it is
 
 - **Skills, not a second model.** Every skill runs inside the coding agent you already use.
-  Skills and the planr CLI add no model calls or telemetry; the optional design engine calls
+  Skills and the openplanr CLI add no model calls or telemetry; the optional design engine calls
   OpenAI only when you select its OpenAI provider and supply your own key.
 - **Plans are files.** Specifications, user stories, tasks, and provenance live under `.planr/`
   in your repository, reviewed and versioned like code.
-- **A deterministic CLI.** `planr` stores and validates planning files, renders diagrams and
+- **A deterministic CLI.** `openplanr` stores and validates planning files, renders diagrams and
   reports, installs the skills into each host, diagnoses installations, and syncs with GitHub
   Issues and Linear.
 - **One repository, MIT licensed.** Three npm packages: [`openplanr`](packages/cli) (the CLI and
@@ -54,11 +54,11 @@ for the next review.
 ```bash
 npm install -g openplanr
 
-planr setup --runtime claude --scope user
-# Codex:  planr setup --runtime codex --scope user --skill-mode unified-plugin
-# Cursor: planr setup --runtime cursor --scope project
+openplanr setup --runtime claude --scope user
+# Codex:  openplanr setup --runtime codex --scope user --skill-mode unified-plugin
+# Cursor: openplanr setup --runtime cursor --scope project
 cd your-project
-planr init
+openplanr init
 ```
 
 Restart the coding agent so it loads the new skills, then start with a specification:
@@ -79,7 +79,7 @@ on Windows). OpenPlanr requires a supported Node.js version (see [package metada
 undo it.
 
 In Claude Code you can install the plugin from the public marketplace instead of running
-`planr setup --runtime claude`. Several skills call the `planr` CLI, so install it first:
+`openplanr setup --runtime claude`. Several skills call the `openplanr` CLI, so install it first:
 
 ```text
 /plugin marketplace add openplanr/marketplace
@@ -90,7 +90,7 @@ In Claude Code you can install the plugin from the public marketplace instead of
 
 <p align="center">
   <a href="docs/diagrams/delivery-loop/delivery-loop.svg">
-    <img alt="The OpenPlanr delivery loop: you invoke the spec, plan, ship, and land skills in your coding agent; spec and plan write the plans under .planr/ in your repository, ship reads the plan first and implements one task, and land assesses release readiness before you merge; the planr CLI validates the planning files offline and keeps GitHub Issues or Linear in step; review skills and operate readouts return the evidence for the next request" width="880" src="docs/diagrams/delivery-loop/delivery-loop.svg">
+    <img alt="The OpenPlanr delivery loop: you invoke the spec, plan, ship, and land skills in your coding agent; spec and plan write the plans under .planr/ in your repository, ship reads the plan first and implements one task, and land assesses release readiness before you merge; the openplanr CLI validates the planning files offline and keeps GitHub Issues or Linear in step; review skills and operate readouts return the evidence for the next request" width="880" src="docs/diagrams/delivery-loop/delivery-loop.svg">
   </a>
 </p>
 
@@ -101,7 +101,7 @@ wrote, renders it, and keeps trackers in step.
 
 <p align="center">
   <a href="docs/diagrams/one-feature/one-feature.svg">
-    <img alt="One feature from specification to operate readout: you invoke spec, plan, ship, land, release, and operate in your coding agent; the agent writes the specification, stories, and tasks into your repository, reads the plan before it implements each task, and returns the merge commands; planr sync validates the planning files offline; you open the PR and merge on GitHub" width="880" src="docs/diagrams/one-feature/one-feature.svg">
+    <img alt="One feature from specification to operate readout: you invoke spec, plan, ship, land, release, and operate in your coding agent; the agent writes the specification, stories, and tasks into your repository, reads the plan before it implements each task, and returns the merge commands; openplanr sync validates the planning files offline; you open the PR and merge on GitHub" width="880" src="docs/diagrams/one-feature/one-feature.svg">
   </a>
 </p>
 
@@ -116,16 +116,16 @@ description, or that you invoke by name.
 
 | Family | Skills | CLI utility the skill may call |
 | --- | --- | --- |
-| Plan and specify | `spec`, `plan`, `plan-review`, `sprint` | `planr spec`, `planr sprint` |
+| Plan and specify | `spec`, `plan`, `plan-review`, `sprint` | `openplanr spec`, `openplanr sprint` |
 | Implement | `ship` (dispatches 9 role agents in Claude Code) | — |
 | Review and QA | `browser-qa` | — |
-| Design | `design`, `design-loop`, `design-review` | `planr artifact` |
-| Diagrams | `diagram` | `planr diagram` |
-| Artifact reviews | `artifact` | `planr artifact` |
-| Land and release | `land`, `release` | `planr land` |
-| Setup and diagnostics | `doctor`, `investigate` | `planr doctor`, `planr upgrade` |
-| Status, routing, and sync | `status`, `sync`, `dashboard`, `openplanr` (routes a request to the best skill) | `planr status`, `planr sync`, `planr dashboard` |
-| Operate | `operate` with `ceo`, `cto`, `cpo`, `cmo`, `coo`, `challenger`, and `chair` reviews | `planr operate` |
+| Design | `design`, `design-loop`, `design-review` | `openplanr artifact` |
+| Diagrams | `diagram` | `openplanr diagram` |
+| Artifact reviews | `artifact` | `openplanr artifact` |
+| Land and release | `land`, `release` | `openplanr land` |
+| Setup and diagnostics | `doctor`, `investigate` | `openplanr doctor`, `openplanr upgrade` |
+| Status, routing, and sync | `status`, `sync`, `dashboard`, `openplanr` (routes a request to the best skill) | `openplanr status`, `openplanr sync`, `openplanr dashboard` |
+| Operate | `operate` with `ceo`, `cto`, `cpo`, `cmo`, `coo`, `challenger`, and `chair` reviews | `openplanr operate` |
 
 Invoke a skill as `/planr:<skill>` in Claude Code or `$planr:<skill>` in Codex; in Cursor,
 mention the `planr-<skill>` rule. The [skill catalog](docs/generated/skills.md) is generated from
@@ -135,13 +135,13 @@ the registry and lists every trigger, deferral, and packaged reference.
 
 <p align="center">
   <a href="docs/diagrams/planning-artifacts/planning-artifacts.svg">
-    <img alt="Planning artifacts: the spec, plan, and ship skills write the specification, the stories and tasks, and the provenance log under .planr/; the planr CLI validates them offline and keeps GitHub Issues and Linear in step" width="880" src="docs/diagrams/planning-artifacts/planning-artifacts.svg">
+    <img alt="Planning artifacts: the spec, plan, and ship skills write the specification, the stories and tasks, and the provenance log under .planr/; the openplanr CLI validates them offline and keeps GitHub Issues and Linear in step" width="880" src="docs/diagrams/planning-artifacts/planning-artifacts.svg">
   </a>
 </p>
 
-<p align="center"><sub>Rendered by <code>planr diagram render</code> from
+<p align="center"><sub>Rendered by <code>openplanr diagram render</code> from
 <a href="docs/diagrams/planning-artifacts/planning-artifacts.planr-diagram.json">a canonical document</a>,
-as are the diagrams under How it works; verified in CI by <code>planr diagram check</code>.
+as are the diagrams under How it works; verified in CI by <code>openplanr diagram check</code>.
 The <code>openplanr</code> theme adapts each SVG to the viewer's light or dark scheme.</sub></p>
 
 `planr-diagram` turns intent into a canonical semantic document, and the offline engine lays
@@ -150,9 +150,9 @@ Wardley, and more). Every render produces SVG, PNG, accessible HTML, quality and
 reports, and a manifest that binds the set.
 
 ```bash
-planr diagram gallery                                          # list grammars
-planr diagram render ./architecture.planr-diagram.json --json  # render a set
-planr diagram check ./diagrams/architecture/architecture.manifest.json --json
+openplanr diagram gallery                                          # list grammars
+openplanr diagram render ./architecture.planr-diagram.json --json  # render a set
+openplanr diagram check ./diagrams/architecture/architecture.manifest.json --json
 ```
 
 See [authoring and verifying diagrams](docs/diagrams/authoring.md).
@@ -161,11 +161,11 @@ See [authoring and verifying diagrams](docs/diagrams/authoring.md).
 
 | Host | Install | Invoke | Notes |
 | --- | --- | --- | --- |
-| Claude Code | `planr setup --runtime claude --scope user` | `/planr:<skill>` | OpenPlanr plugin; `ship` dispatches 9 role agents |
-| Codex | `planr setup --runtime codex --scope user --skill-mode unified-plugin` | `$planr:<skill>` | OpenPlanr plugin; `--skill-mode direct` installs individual skills instead |
-| Cursor | `planr setup --runtime cursor --scope project` | mention the `planr-<skill>` rule | Project rules under `.cursor/rules/` |
+| Claude Code | `openplanr setup --runtime claude --scope user` | `/planr:<skill>` | OpenPlanr plugin; `ship` dispatches 9 role agents |
+| Codex | `openplanr setup --runtime codex --scope user --skill-mode unified-plugin` | `$planr:<skill>` | OpenPlanr plugin; `--skill-mode direct` installs individual skills instead |
+| Cursor | `openplanr setup --runtime cursor --scope project` | mention the `planr-<skill>` rule | Project rules under `.cursor/rules/` |
 
-`planr rules generate` adds an `## OpenPlanr capabilities` section to `CLAUDE.md` or `AGENTS.md`
+`openplanr rules generate` adds an `## OpenPlanr capabilities` section to `CLAUDE.md` or `AGENTS.md`
 so the agent knows every skill and when to reach for it. See the
 [host matrix](docs/skills/host-matrix.md) for what each projection may and may not change.
 
@@ -182,7 +182,7 @@ flowchart LR
     generate(["npm run generate"])
     subgraph packages["Published packages"]
         direction TB
-        cli["openplanr<br/>planr CLI + host packages"]
+        cli["openplanr<br/>CLI + host packages"]
         pipeline["planr-pipeline<br/>delivery pipeline"]
     end
     subgraph hosts["Installed into hosts"]

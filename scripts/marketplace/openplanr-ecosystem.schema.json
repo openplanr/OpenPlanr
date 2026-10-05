@@ -279,15 +279,15 @@
         "cli": {
           "type": "object",
           "additionalProperties": false,
-          "required": ["planr", "openplanr", "opr"],
+          "required": ["openplanr", "opr", "planr"],
           "properties": {
-            "planr": {
-              "const": "./bin/planr.js"
-            },
             "openplanr": {
-              "const": "./bin/planr.js"
+              "const": "./bin/openplanr.js"
             },
             "opr": {
+              "const": "./bin/openplanr.js"
+            },
+            "planr": {
               "const": "./bin/planr.js"
             }
           }

@@ -24,8 +24,8 @@ describe('extractBacklogSpec', () => {
       '- Threat model: see `docs/security/threat-model.md`.',
       '',
       '---',
-      '_Promote to agile hierarchy: `planr backlog promote BL-003 --story` or `planr backlog promote BL-003 --quick`_',
-      '_Close when done: `planr backlog close BL-003`_',
+      '_Promote to agile hierarchy: `openplanr backlog promote BL-003 --story` or `openplanr backlog promote BL-003 --quick`_',
+      '_Close when done: `openplanr backlog close BL-003`_',
     ].join('\n');
 
     const spec = extractBacklogSpec(raw, 'BL-003', 'Fix RAG proxy host header spoofing', 'short');
@@ -70,8 +70,8 @@ describe('extractBacklogSpec', () => {
       'Real spec content.',
       '',
       '---',
-      '_Promote to agile hierarchy: `planr backlog promote BL-011 --story` or `planr backlog promote BL-011 --quick`_',
-      '_Close when done: `planr backlog close BL-011`_',
+      '_Promote to agile hierarchy: `openplanr backlog promote BL-011 --story` or `openplanr backlog promote BL-011 --quick`_',
+      '_Close when done: `openplanr backlog close BL-011`_',
     ].join('\n');
 
     const spec = extractBacklogSpec(raw, 'BL-011', 'Promote hint gets stripped', 'fallback');

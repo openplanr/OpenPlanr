@@ -36,7 +36,7 @@ projection.
 | CLI graph output | `packages/cli` | CLI tests against the graph schema |
 | Skill routing language | `skills/` | generation, stale-reference, and adapter parity checks |
 | Marketplace metadata and compatibility manifest | root generators | `npm run generate && npm run check:generated` |
-| Ecosystem health | pipeline Doctor plus root checks | `planr doctor --strict` and `npm run verify` |
+| Ecosystem health | pipeline Doctor plus root checks | `openplanr doctor --strict` and `npm run verify` |
 | Skill evaluation | `evaluation/` | evaluation and skill conformance tests |
 
 ## Skill Certification Boundary
@@ -61,7 +61,7 @@ release, publish, deploy, promotion, or activation authority.
 1. Change the canonical owner domain.
 2. Add or update its focused check.
 3. Run `npm run generate` from the workspace root.
-4. Run `npm run check:generated`, focused tests, and `planr doctor --strict`.
+4. Run `npm run check:generated`, focused tests, and `openplanr doctor --strict`.
 5. Follow `release-checklist.md` only for a separately scheduled release.
 
 ## Current Protocol Decision

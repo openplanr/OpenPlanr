@@ -6,7 +6,7 @@ workflows, and governed collaboration for companies.
 ## What this repository is
 
 Everything in this repository is [MIT licensed](LICENSE), subject to the component
-notices retained with their source: the `planr` CLI, the Protocol contracts, the
+notices retained with their source: the `openplanr` CLI, the Protocol contracts, the
 host-native skills, deterministic validation and rendering, the local dashboard and
 review studios, and the public clients that talk to a hosted workspace when you ask
 them to. The MIT license permits commercial use, modification, distribution, and
@@ -20,7 +20,7 @@ search, audit, enterprise identity, billing, and support around the same plannin
 files. Access and capabilities are enforced by the service and governed by its own
 subscription and service terms.
 
-The public client code (`planr company`) and the Protocol contracts describe how local
+The public client code (`openplanr company`) and the Protocol contracts describe how local
 tools communicate with the service. They contain no credentials, tenant data, or hosted
 infrastructure, and they grant no entitlement to an operated deployment. The service
 implementation lives in separate repositories. Accepted repository content always stays

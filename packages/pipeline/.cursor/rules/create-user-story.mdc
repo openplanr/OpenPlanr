@@ -34,4 +34,4 @@ Generate two files per story:
 
 ### Phase 4: Next Steps
 
-Recommend creating tasks with `planr task create --story <ID>`.
+Recommend creating tasks with `openplanr task create --story <ID>`.

@@ -31,12 +31,27 @@
     {
       "id": "contrast",
       "status": "pass",
-      "message": "Contrast ratio is 18.88:1."
+      "message": "Contrast ratio is 4.77:1."
     },
     {
       "id": "clipping",
       "status": "pass",
       "message": "No clipping reported."
+    },
+    {
+      "id": "edge-title-overlap",
+      "status": "pass",
+      "message": "Connection paths keep clear of measured group and lane titles."
+    },
+    {
+      "id": "annotation-connector-overlap",
+      "status": "pass",
+      "message": "Annotation connectors keep clear of unrelated nodes, relation labels and container titles."
+    },
+    {
+      "id": "edge-label-overlap",
+      "status": "pass",
+      "message": "Connection paths keep clear of unrelated relation labels."
     },
     {
       "id": "svg-validated",
@@ -106,7 +121,7 @@
     {
       "id": "png-decoded",
       "status": "pass",
-      "message": "PNG decoded at 1208×1832 (105263 bytes)."
+      "message": "PNG decoded at 1208×1832 (105905 bytes)."
     },
     {
       "id": "offline-runtime",
@@ -115,5 +130,5 @@
     }
   ],
   "splitPlan": null,
-  "documentDigest": "sha256:c11318f59f59bc9dce090074d9a08fdf3c2198dde41f139c9aeeed7881af7bab"
+  "documentDigest": "sha256:f7fbfad1fd943a746689046e8d3ab86949bfe1aae89e4208d1fbd83c4b2d580c"
 }

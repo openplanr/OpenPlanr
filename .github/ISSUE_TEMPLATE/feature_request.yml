@@ -23,7 +23,7 @@ body:
       label: Area
       options:
         - Skills (planning, review, design, diagrams, operate)
-        - planr CLI
+        - openplanr CLI
         - Host integration (Claude Code, Codex, Cursor)
         - Trackers (GitHub Issues, Linear)
         - Protocol or packages

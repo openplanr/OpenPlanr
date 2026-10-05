@@ -22,7 +22,7 @@ Run subagents sequentially. Each subagent's output is consumed by the next.
     1. PNGs listed in `input/specs/spec-$ARGUMENTS.md` under the `UIFiles:` YAML block
     2. PNGs in `input/ui/feat-$ARGUMENTS/*.png` (feature-namespaced subfolder)
     3. PNGs in `input/ui/*.png` (only if a single feature exists; logs warning)
-  - **Spec-driven mode** — PNGs come from `<SPEC_DIR>/design/*.png` (already there because the user attached them via `planr spec attach-design`)
+  - **Spec-driven mode** — PNGs come from `<SPEC_DIR>/design/*.png` (already there because the user attached them via `openplanr spec attach-design`)
 - **Skip silently** if zero PNGs resolve.
 - Otherwise: delegate to the **designer-agent** subagent with feature name `$ARGUMENTS` AND the resolved MODE/SPEC_DIR context.
 - Output:
@@ -125,7 +125,7 @@ After the contract passes, print:
 |---|---|
 | `$ARGUMENTS` malformed (>12000 chars or contains nested invocation) | Abort at Step 0.0 with sanitization message |
 | Project root contains unrecognized non-asset files (SCAFFOLD_NODE) | Abort at SCAFFOLD_NODE checklist step 3, suggest cleanup |
-| Spec missing (default mode, no BRIEF) | Abort at Step 1, suggest creating `input/specs/spec-${SLUG}.md` or `planr spec init` |
+| Spec missing (default mode, no BRIEF) | Abort at Step 1, suggest creating `input/specs/spec-${SLUG}.md` or `openplanr spec init` |
 | `stack.md` missing (default mode) | Abort at Step 1, suggest copying from `${CLAUDE_PLUGIN_ROOT}/templates/stack.md.tpl` |
 | Scaffolder fails (SCAFFOLD_NODE) | Run failure path from `restore-design-assets.md`; abort with underlying error |
 | db-agent fails (connection) | Continue without schema, flag in summary |

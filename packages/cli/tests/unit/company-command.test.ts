@@ -96,7 +96,7 @@ describe('company authentication output', () => {
   it('gives a short logout instruction for an existing sign-in and keeps a failing exit', async () => {
     const error = new CompanySyncError(
       'E_COMPANY_AUTH_EXISTS',
-      'Sign out first with `planr company logout`, then sign in again.',
+      'Sign out first with `openplanr company logout`, then sign in again.',
     );
     vi.mocked(loginCompany).mockRejectedValueOnce(error);
     const signals = ['SIGINT', 'SIGTERM'] as const;

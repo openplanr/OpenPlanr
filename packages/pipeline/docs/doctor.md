@@ -1,10 +1,10 @@
 # OpenPlanr Doctor
 
-`planr doctor` is the user-facing health check. The pipeline package also
+`openplanr doctor` is the user-facing health check. The pipeline package also
 provides `npm run doctor --workspace=planr-pipeline` for source and package
 diagnostics. The default check does not mutate files. The CLI also reports the number of
-healthy owned local dashboards and Studios. Inspect them with `planr server list
---json`; request an authenticated stop with `planr server stop <instance>`.
+healthy owned local dashboards and Studios. Inspect them with `openplanr server list
+--json`; request an authenticated stop with `openplanr server stop <instance>`.
 Unreachable or legacy unowned processes are never killed from a port/PID guess.
 
 Use the root conformance and generated-asset checks alongside Doctor when
@@ -13,8 +13,8 @@ validating workspace-wide compatibility.
 ## Commands
 
 ```bash
-planr doctor
-planr doctor --strict --json
+openplanr doctor
+openplanr doctor --strict --json
 npm run doctor --workspace=planr-pipeline -- --json
 npm run doctor --workspace=planr-pipeline -- --repair-preview --json
 npm run doctor --workspace=planr-pipeline -- --fix --json
@@ -86,6 +86,6 @@ them.
 | Versions | Correct the package identity in `package.json` and regenerate workspace metadata. Package releases do not require version edits in prose or stack documents; host plugin versions are owned by the workspace. |
 | Protocol | Restore the self-contained schema projection from `packages/protocol/schemas/`. Keep stack `schemaVersion` aligned with its schema and use `qa_gate_status` values `passed`, `failed`, `skipped`. |
 | Ecosystem | Regenerate workspace metadata after internal domain changes; point Doctor at the hosted-service checkout only when checking that service. |
-| Daemons | Run `planr doctor --fix`; it previews, confirms, rechecks, and removes only stale Planr-owned daemon state. |
+| Daemons | Run `openplanr doctor --fix`; it previews, confirms, rechecks, and removes only stale Planr-owned daemon state. |
 | Credentials | Keep project `.env` files with `OPENAI_API_KEY` ignored, or move the key to user-level credentials. A key is only used when the design engine runs with `--provider openai`, continues a session opened with it (`iterate`), or runs `planr-design setup`; its default `claude-svg` provider makes no model calls. |
 | Releases | Add the `## [<version>]` section to `CHANGELOG.md`, create the missing tag or GitHub release, then rerun `npm run doctor -- --release --strict`. |

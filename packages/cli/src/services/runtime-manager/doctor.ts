@@ -1,4 +1,4 @@
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { CLI_COMMAND, PLANNING_FOLDER } from '../../utils/constants.js';
 import type { OwnedFile } from './global-state.js';
@@ -9,6 +9,19 @@ export type RuntimeDoctorDiagnostic = Readonly<{
   message: string;
   fix?: string;
 }>;
+
+export type InstalledDocument = Readonly<{
+  runtime: string;
+  target: string;
+  kind?: OwnedFile['kind'];
+  marker?: string;
+}>;
+
+const SETUP_RUNTIMES: Readonly<Record<string, string>> = {
+  'claude-code': 'claude',
+  codex: 'codex',
+  cursor: 'cursor',
+};
 
 export function classifyComponentDrift(input: {
   cliDrift: boolean;
@@ -92,5 +105,50 @@ export function diagnoseRuntimeProvenance(projectDir: string): RuntimeDoctorDiag
           fix: 'Repair the invalid bytes, then explicitly append a recovery event. Doctor will not invent history.',
         }
       : {}),
+  };
+}
+
+/** Markdown and rule documents under an installed plugin folder. */
+export function pluginDocuments(runtime: string, root: string): InstalledDocument[] {
+  if (!existsSync(root)) return [];
+  return readdirSync(root, { recursive: true, encoding: 'utf8' })
+    .filter((entry) => /\.mdc?$/u.test(entry))
+    .map((entry) => ({ runtime, target: path.join(root, entry) }));
+}
+
+/**
+ * Flags installed skills and rules that still tell the agent to run `planr <command>`.
+ * In a shared file, only the block setup manages is read.
+ */
+export function diagnoseRetiredCommandSkills(
+  documents: readonly InstalledDocument[],
+  commandRoots: readonly string[],
+  managedBlock: (content: Buffer, marker?: string) => Buffer,
+): RuntimeDoctorDiagnostic | null {
+  const readable = documents.filter(({ target }) => /\.mdc?$/u.test(target) && existsSync(target));
+  const roots = commandRoots.filter((root) => /^[a-z][a-z0-9-]*$/u.test(root));
+  if (readable.length === 0 || roots.length === 0) return null;
+  const retired = new RegExp(`(?<![\\w./@:$#~-])planr[ \\t]+(?:${roots.join('|')})(?![\\w-])`, 'u');
+  const stale = readable.filter(({ target, kind, marker }) => {
+    const content = readFileSync(target);
+    return retired.test(
+      (kind === 'managed-block' ? managedBlock(content, marker) : content).toString('utf8'),
+    );
+  });
+  if (stale.length === 0) {
+    return {
+      code: 'installed-skill-commands',
+      status: 'pass',
+      message: `Installed skills and rules run ${CLI_COMMAND}`,
+    };
+  }
+  const hosts = [...new Set(stale.flatMap(({ runtime }) => SETUP_RUNTIMES[runtime] ?? []))].sort();
+  return {
+    code: 'installed-skill-commands',
+    status: 'warn',
+    message: `${stale.length} installed skill or rule file(s) still tell the agent to run planr`,
+    fix: hosts.length
+      ? `Rerun ${hosts.map((host) => `\`${CLI_COMMAND} setup --runtime ${host}\``).join(' and ')}, or update the plugin, then restart the agent.`
+      : `Rerun \`${CLI_COMMAND} setup\`, then restart the agent.`,
   };
 }

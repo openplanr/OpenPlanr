@@ -1,5 +1,5 @@
 /**
- * `planr export` command.
+ * `openplanr export` command.
  *
  * Generates consolidated reports in markdown, JSON, or HTML format.
  */

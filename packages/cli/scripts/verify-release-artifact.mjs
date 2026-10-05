@@ -42,7 +42,7 @@ import { isPathInside, resolvePipelineCandidateSourceRoot } from './release-pack
  *
  *   - a pipeline pin that only resolves through `node_modules`, which every test
  *     bypasses by setting OPENPLANR_PIPELINE_ROOT to a source checkout, so
- *     `planr setup` failed on every correctly-installed machine while CI passed
+ *     `openplanr setup` failed on every correctly-installed machine while CI passed
  *   - a release smoke probe calling a removed Operate inspection command
  *   - the Node CLI importing a runtime value from Vite-owned dashboard output
  *
@@ -330,7 +330,7 @@ try {
     { cwd: prefix, env: environment, stdio: 'pipe' },
   );
 
-  const cli = join(prefix, 'node_modules', '.bin', 'planr');
+  const cli = join(prefix, 'node_modules', '.bin', 'openplanr');
 
   const cliOutput = (args, options = {}) =>
     run(cli, args, { cwd: project, env: environment, ...options });
@@ -487,7 +487,7 @@ try {
     setupExit = error.status ?? 1;
     notes.push(`setup stderr: ${String(error.stderr ?? '').slice(0, 400)}`);
   }
-  check('planr setup completes on a clean machine', setupExit === 0);
+  check('openplanr setup completes on a clean machine', setupExit === 0);
 
   const skills = (() => {
     try {

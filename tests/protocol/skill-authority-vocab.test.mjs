@@ -35,10 +35,12 @@ function canonicalSkillInvocations() {
     .flatMap((entry) => {
       const path = join(skillRoot, entry.name, 'SKILL.md');
       const source = readFileSync(path, 'utf8');
-      return [...source.matchAll(/\bplanr\s+([a-z][a-z0-9-]*)\b/gu)].map((match) => ({
-        path,
-        verb: match[1],
-      }));
+      return [...source.matchAll(/(?<![\w-])openplanr[ \t]+([a-z][a-z0-9-]*)\b/gu)].map(
+        (match) => ({
+          path,
+          verb: match[1],
+        }),
+      );
     });
 }
 

@@ -22,7 +22,7 @@ const sortedIds = (graph) => graph.nodes.map((n) => n.id).sort();
 const sortedEdges = (graph) => graph.edges.map((e) => `${e.kind} ${e.from} ${e.to}`).sort();
 
 /**
- * A CLI `run` stub that emulates `planr` for the delegate path: `--version`
+ * A CLI `run` stub that emulates `openplanr` for the delegate path: `--version`
  * answers a sufficiently-new version, and `graph --json` returns the exact
  * native graph (the contract is that both paths yield the same data). This is
  * the spine of the equivalence proof: if the engine's two paths ever drift, the assertions below
@@ -35,7 +35,7 @@ function makeDelegateRun() {
   const fixtureGraph = readGraph(planrDir);
   const payload = JSON.stringify({ nodes: fixtureGraph.nodes, edges: fixtureGraph.edges });
   return (cmd, args) => {
-    if (cmd !== 'planr') return { status: 1, stdout: '' };
+    if (cmd !== 'openplanr') return { status: 1, stdout: '' };
     if (args[0] === '--version') return { status: 0, stdout: '2.0.0\n' };
     if (args[0] === 'graph' && args[1] === '--json') return { status: 0, stdout: payload };
     // Force the engine to prefer `graph --json`; refuse the status fallback.
@@ -46,7 +46,7 @@ function makeDelegateRun() {
 /** A CLI `run` stub that simulates the CLI being absent (delegate unavailable). */
 function absentCliRun() {
   return () => {
-    throw new Error('command not found: planr');
+    throw new Error('command not found: openplanr');
   };
 }
 
@@ -81,7 +81,7 @@ test('the equivalence assertion catches drift between the two paths', () => {
     edges: fixtureGraph.edges,
   };
   const driftRun = (cmd, args) => {
-    if (cmd !== 'planr') return { status: 1, stdout: '' };
+    if (cmd !== 'openplanr') return { status: 1, stdout: '' };
     if (args[0] === '--version') return { status: 0, stdout: '2.0.0\n' };
     if (args[0] === 'graph' && args[1] === '--json') {
       return { status: 0, stdout: JSON.stringify(dropped) };

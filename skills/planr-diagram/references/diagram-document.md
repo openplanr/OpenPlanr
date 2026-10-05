@@ -83,7 +83,7 @@ renderer draws each lane as a titled band holding those nodes.
 Write the draft to `<slug>.planr-diagram.json`, then run:
 
 ```sh
-planr diagram render <slug>.planr-diagram.json --json
+openplanr diagram render <slug>.planr-diagram.json --json
 ```
 
 If validation fails, use the returned diagnostics to correct the draft. Do not

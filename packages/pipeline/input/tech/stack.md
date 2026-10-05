@@ -131,7 +131,7 @@ DoNotUse:
   - "Third-party npm packages in conformance/runner.mjs (stdlib only — preserves zero-dep posture)"
   - "TypeScript or compiled build steps for the plugin itself"
   - "Remote artifact dependencies, plaintext short-link storage, or allow-same-origin artifact sandboxes"
-  - "Runtime skills invoking a globally installed planr-pipeline binary; use planr artifact"
+  - "Runtime skills invoking a globally installed planr-pipeline binary; use openplanr artifact"
 
 MustPreserve:
   - "agents/*.md YAML frontmatter `tools:` field — manifest-enforced security boundary"

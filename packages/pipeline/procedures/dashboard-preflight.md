@@ -18,7 +18,7 @@
    `procedures/fatal-error-format.md`:
    ```
    No .planr/ directory found in the current project.
-   Initialize planr first, then re-run /planr-pipeline:dashboard.
+   Initialize OpenPlanr first (`openplanr init`), then re-run /planr-pipeline:dashboard.
    ```
 2. Do not require any spec/feature slug — the dashboard reads the whole project.
 

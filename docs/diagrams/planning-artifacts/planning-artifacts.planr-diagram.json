@@ -7,7 +7,7 @@
   "canonicalization": "rfc8785",
   "diagramId": "planning-artifacts",
   "title": "OpenPlanr planning artifacts",
-  "summary": "What the skills write under .planr/ in your repository, and where the deterministic planr CLI validates those files and keeps your tracker in step.",
+  "summary": "What the skills write under .planr/ in your repository, and where the deterministic openplanr CLI validates those files and keeps your tracker in step.",
   "audience": "engineer",
   "grammar": {
     "id": "architecture",
@@ -71,7 +71,7 @@
     },
     {
       "id": "cli",
-      "label": "planr CLI\nvalidate · render · sync",
+      "label": "openplanr CLI\nvalidate · render · sync",
       "kind": "primary-item",
       "description": "Deterministic: validates planning files, renders diagrams and reports, and syncs trackers. It never calls a model.",
       "semanticPosition": null
@@ -193,7 +193,7 @@
   ],
   "accessibility": {
     "title": "OpenPlanr planning artifacts",
-    "description": "The spec, plan, and ship skills run inside your coding agent. Spec writes the specification, plan writes the user stories and tasks that ship reads before it changes code, and ship appends each shipped task to the provenance log. All of them live under .planr/ in your repository, written by the agent and reviewed like code. The planr CLI validates those files offline, never by a model, and keeps GitHub Issues or Linear in step.",
+    "description": "The spec, plan, and ship skills run inside your coding agent. Spec writes the specification, plan writes the user stories and tasks that ship reads before it changes code, and ship appends each shipped task to the provenance log. All of them live under .planr/ in your repository, written by the agent and reviewed like code. The openplanr CLI validates those files offline, never by a model, and keeps GitHub Issues or Linear in step.",
     "readingOrder": [
       "spec-skill",
       "plan-skill",

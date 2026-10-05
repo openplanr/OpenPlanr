@@ -5,7 +5,7 @@ Use this reference only when turning natural-language intent into a Protocol 1.6
 
 1. Identify the audience, the question the visual must answer, and the semantic
    relationships that must remain visible.
-2. Use `planr diagram gallery --json` to select the narrowest grammar that
+2. Use `openplanr diagram gallery --json` to select the narrowest grammar that
    represents those relationships. Prefer an explicit user choice over an
    inferred one.
 3. Choose `simplified`, `balanced`, or `faithful` detail from the requested use:

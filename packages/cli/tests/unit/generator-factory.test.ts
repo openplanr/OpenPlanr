@@ -100,7 +100,7 @@ describe('CursorGenerator.generate file-list per scope', () => {
     expect(files).toHaveLength(1);
     const master = files.find((file) => file.path.endsWith('openplanr.mdc'));
     expect(master?.content).toContain('OpenPlanr host-native workflows');
-    expect(master?.content).toContain('planr setup --runtime cursor --scope project');
+    expect(master?.content).toContain('openplanr setup --runtime cursor --scope project');
     expect(master?.content).toMatch(/never launch\s+a second model-backed CLI/iu);
     expect(master?.content).not.toMatch(/planr-pipeline/iu);
   });

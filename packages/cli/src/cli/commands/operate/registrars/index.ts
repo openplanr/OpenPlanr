@@ -14,7 +14,7 @@ import { registerPlanningCommands } from './planning.js';
 import { registerRecoveryCommands } from './recovery.js';
 import { registerArtifactAndReviewCommands } from './reviews.js';
 
-/** The single ordered composition boundary for the public `planr operate` grammar. */
+/** The single ordered composition boundary for the public `openplanr operate` grammar. */
 export function registerOperateCommandDefinition(
   program: Command,
   dependencies: OperateCommandRegistrationDependencies,

@@ -130,6 +130,11 @@ const sharedSkillResources = Object.freeze([
       executable: false,
     },
   ]),
+  ...['planning-folder.mjs', 'planning-folder.d.mts'].map((name) => ({
+    source: `packages/protocol/src/${name}`,
+    destination: `packages/cli/lib/${name}`,
+    executable: false,
+  })),
   {
     source: 'packages/integrations/src/portable-sync.mjs',
     destination: 'packages/cli/lib/integrations.mjs',
@@ -313,8 +318,8 @@ function assertCanonicalSkill(packageInfo) {
   }
   if (['planr-plan', 'planr-spec', 'planr-ship', ...DESIGN_SKILL_IDS].includes(row.skillId)) {
     const forbidden = [
-      /`planr\s+plan(?:\s|`)/u,
-      /`planr\s+spec\s+decompose(?:\s|`)/u,
+      /`(?:open)?planr\s+plan(?:\s|`)/u,
+      /`(?:open)?planr\s+spec\s+decompose(?:\s|`)/u,
       /`planr-pipeline(?:\s|`)/u,
       /ANTHROPIC_API_KEY|OPENAI_API_KEY|OLLAMA/iu,
     ];

@@ -304,7 +304,7 @@ export function createPlanningHandoffModelFixture(actorId = 'owner-planning-hand
         { kind: 'plan', label: 'PLAN', state: 'not-started', owner: 'Planning' },
       ],
     },
-    nextCommands: ['planr spec show SPEC-042', '$planr:plan SPEC-042', '/planr:plan SPEC-042'],
+    nextCommands: ['openplanr spec show SPEC-042', '$planr:plan SPEC-042', '/planr:plan SPEC-042'],
   });
   const current: PlanningPreviewCurrent = {
     actorId,

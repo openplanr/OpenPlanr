@@ -1,7 +1,7 @@
 # Spec Anatomy
 
 > What every valid `spec-{name}.md` file must contain for the Specification Agent to decompose it correctly.
-> Written by: Product Owner — manually, or via the planr CLI (`planr spec create + shape` for spec-driven mode).
+> Written by: Product Owner — manually, or via the openplanr CLI (`openplanr spec create + shape` for spec-driven mode).
 
 ---
 
@@ -134,4 +134,4 @@ The Specification Agent evaluates spec completeness before decomposing:
 
 *Written by: Product Owner*
 *Default-mode template: `${CLAUDE_PLUGIN_ROOT}/templates/spec.md.tpl`*
-*Spec-driven mode: `planr spec create + shape` produces a body that satisfies this anatomy.*
+*Spec-driven mode: `openplanr spec create + shape` produces a body that satisfies this anatomy.*

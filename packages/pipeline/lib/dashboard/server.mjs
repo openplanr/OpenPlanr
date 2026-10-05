@@ -1,7 +1,7 @@
 /**
  * Dashboard HTTP server.
  *
- * A persistent localhost server for the planr dashboard, following the same
+ * A persistent localhost server for the openplanr dashboard, following the same
  * agent-independent daemon pattern as lib/design-engine/daemon.mjs: the dashboard
  * keeps serving if the launching agent dies, and a second launch on the same port
  * reuses the running server instead of double-binding.

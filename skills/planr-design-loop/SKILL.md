@@ -27,7 +27,7 @@ Generate three alternatives by default; honor an explicit requested count.
    directions' actual tradeoffs, without implying a winner or inventing requirements.
 3. Build the comparison from those sources using
    [utilities.md](references/utilities.md) and
-   [scripts/design.mjs](scripts/design.mjs), or the public `planr artifact` route
+   [scripts/design.mjs](scripts/design.mjs), or the public `openplanr artifact` route
    when the CLI is present. All variants use the same screen identities and frame
    coverage. Show failures explicitly without inventing results or discarding
    completed variants. Canvas, Prototype and Walkthrough share one document and

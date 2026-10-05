@@ -27,8 +27,8 @@ silently migrate it.
 Create a local authored diagram and open its owner studio:
 
 ```bash
-planr diagram new diagrams/checkout/checkout.planr-diagram-bundle.json --title "Checkout" --json
-planr diagram edit diagrams/checkout/checkout.planr-diagram-bundle.json
+openplanr diagram new diagrams/checkout/checkout.planr-diagram-bundle.json --title "Checkout" --json
+openplanr diagram edit diagrams/checkout/checkout.planr-diagram-bundle.json
 ```
 
 An agent can propose a typed `diagram-edit-transaction` with explicit IDs and
@@ -36,18 +36,18 @@ the exact current bundle base. The CLI validates and previews the change without
 replacing the bundle. Apply only the reviewed preview token in a later command:
 
 ```bash
-planr diagram apply diagrams/checkout/checkout.planr-diagram-bundle.json --transaction change.json --dry-run --json
-planr diagram apply diagrams/checkout/checkout.planr-diagram-bundle.json --transaction change.json --accept <previewToken> --json
+openplanr diagram apply diagrams/checkout/checkout.planr-diagram-bundle.json --transaction change.json --dry-run --json
+openplanr diagram apply diagrams/checkout/checkout.planr-diagram-bundle.json --transaction change.json --accept <previewToken> --json
 ```
 
 The preview reports semantic and presentation changes. A stale base or changed
 transaction is rejected. Review comments are untrusted input; they never trigger
 commands, model subprocesses, or a Plan/Ship phase.
 
-For a complete company diagram bundle, preview publication with `planr company
+For a complete company diagram bundle, preview publication with `openplanr company
 preview <canonical-path> --kind diagram --project <id>`, then explicitly publish
 the returned preview ID. To bring a selected authorized company revision into
-a fresh local project, preview `planr company adopt <artifact-id> --project <id>
+a fresh local project, preview `openplanr company adopt <artifact-id> --project <id>
 --revision <id> --path <canonical-path> --json`; inspect the scope and collision
 result, then repeat with its `--accept <previewToken>`. `company pull` continues
 to retrieve an inspection copy without modifying repository authority.
@@ -57,8 +57,8 @@ to retrieve an inspection copy without modifying repository authority.
 Discover the registry-owned grammars, then render a canonical document:
 
 ```bash
-planr diagram gallery
-planr diagram render ./architecture.planr-diagram.json --json
+openplanr diagram gallery
+openplanr diagram render ./architecture.planr-diagram.json --json
 ```
 
 In a Git repository the default output is `diagrams/{slug}/`. Outside a
@@ -73,14 +73,14 @@ as omissions; they are never presented as lossless.
 Inspect or verify an existing set with its manifest:
 
 ```bash
-planr diagram inspect ./diagrams/architecture/architecture.manifest.json --json
-planr diagram check ./diagrams/architecture/architecture.manifest.json --json
+openplanr diagram inspect ./diagrams/architecture/architecture.manifest.json --json
+openplanr diagram check ./diagrams/architecture/architecture.manifest.json --json
 ```
 
 After editing a supported source projection, rerender from that explicit source:
 
 ```bash
-planr diagram rerender ./diagrams/architecture/architecture.manifest.json --accept excalidraw --json
+openplanr diagram rerender ./diagrams/architecture/architecture.manifest.json --accept excalidraw --json
 ```
 
 `check` reports source or generated drift without rewriting files. `rerender`
@@ -118,7 +118,7 @@ is rejected at render time.
 The CLI imports the supported Mermaid flowchart subset directly:
 
 ```bash
-planr diagram render ./flow.mmd --json
+openplanr diagram render ./flow.mmd --json
 ```
 
 For natural-language intent, invoke `planr-diagram` in the active coding agent
@@ -137,7 +137,7 @@ canonical document before invoking the deterministic CLI. Its progressive refere
 Open the generated HTML on the existing canvas review surface:
 
 ```bash
-planr artifact ./diagrams/architecture/architecture.html --presentation canvas
+openplanr artifact ./diagrams/architecture/architecture.html --presentation canvas
 ```
 
 The artifact integration binds review pins to the exact manifest and envelope
@@ -189,6 +189,6 @@ npm run verify:packed:strict
 
 The packed proof installs the three public `openplanr`, `planr-pipeline`, and
 `@openplanr/protocol` tarballs,
-runs `planr diagram gallery`, renders and checks a fixture, verifies aliases and
+runs `openplanr diagram gallery`, renders and checks a fixture, verifies aliases and
 exports, and proves the packages do not depend on private workspaces or sibling
 repositories.

@@ -8,7 +8,7 @@
   "diagramId": "one-feature",
   "source": {
     "path": "diagrams/one-feature/one-feature.planr-diagram.json",
-    "digest": "sha256:da363d01df77be927898cc12b0f93d3906e865180ef1052469cb9af623e5beb3"
+    "digest": "sha256:c10b3218f0ecbdaacdcf027bbba33eecc4888aaa2d2db993ad3b5d1aa7d9a5df"
   },
   "registry": {
     "path": "registry/v1.6.0/diagram-grammars.json",
@@ -18,7 +18,7 @@
   },
   "renderer": {
     "id": "openplanr-semantic-svg-resvg",
-    "version": "1.4.0"
+    "version": "1.5.0"
   },
   "theme": {
     "id": "openplanr",
@@ -28,13 +28,13 @@
     {
       "path": "diagrams/one-feature/one-feature.assets.json",
       "mediaType": "application/vnd.openplanr.diagram-assets+json",
-      "digest": "sha256:70e8fa72ff0b0f904e6a2773ad1dd6cc6a6147fabe7ba54b7f5b8cf043e29d22",
+      "digest": "sha256:c766542c7f28dae8062fa4b6d104638b6688526b160c27eef628591e83f0f880",
       "fidelity": "render-only"
     },
     {
       "path": "diagrams/one-feature/one-feature.excalidraw",
       "mediaType": "application/vnd.excalidraw+json",
-      "digest": "sha256:12872658580145a7e39a6f62830a027844de37d3606f45529db6a83a0cd0ee52",
+      "digest": "sha256:aeb631846a0a9775f8fdc2eab2f037c2cba6015b7e71ac7c9e8b8a2daab2414e",
       "fidelity": "editable"
     },
     {
@@ -52,39 +52,39 @@
     {
       "path": "diagrams/one-feature/one-feature.html",
       "mediaType": "text/html; charset=utf-8",
-      "digest": "sha256:8798695dee00b696c4f80b5890ef1444245c6d35b6579c51d5c3af169ce24aed",
+      "digest": "sha256:b1ab411100fa04e29f804a0b7881e61f3a6c1e2b72434ab9df6ad42ea1d61d61",
       "fidelity": "render-only"
     },
     {
       "path": "diagrams/one-feature/one-feature.mmd",
       "mediaType": "text/vnd.mermaid; charset=utf-8",
-      "digest": "sha256:e9ee3537b835cdccc7cada9a72b17d63aeed7281fca344dfa9885c14dbb85738",
+      "digest": "sha256:27ce582dde9dd1a704043876a68466a22bd4ddf7d00256c7eac878c9e965d313",
       "fidelity": "partial"
     },
     {
       "path": "diagrams/one-feature/one-feature.planr-diagram.json",
       "mediaType": "application/vnd.openplanr.diagram+json",
-      "digest": "sha256:da363d01df77be927898cc12b0f93d3906e865180ef1052469cb9af623e5beb3",
+      "digest": "sha256:c10b3218f0ecbdaacdcf027bbba33eecc4888aaa2d2db993ad3b5d1aa7d9a5df",
       "fidelity": "editable"
     },
     {
       "path": "diagrams/one-feature/one-feature.png",
       "mediaType": "image/png",
-      "digest": "sha256:494677240bde55d0e1f664ac8b9dd14b517cb3d5f02db072d89c59ca74eb2bfe",
+      "digest": "sha256:6cd914b7d70039b81e613160bc42edb52d927359fb57382edc361a819ff8fe29",
       "fidelity": "render-only"
     },
     {
       "path": "diagrams/one-feature/one-feature.quality.json",
       "mediaType": "application/vnd.openplanr.diagram-quality+json",
-      "digest": "sha256:7f1fb9a03d4357f32fb62ad0b2fc3854e794759d556d82d1d45acbc697f41229",
+      "digest": "sha256:6bc9adcbc75ae52f7f7b339fea1d52d4a3408cb00d202bc656e21f5101e992d1",
       "fidelity": "render-only"
     },
     {
       "path": "diagrams/one-feature/one-feature.svg",
       "mediaType": "image/svg+xml; charset=utf-8",
-      "digest": "sha256:b74b885894101ac2fe2383a2bbf77f57b6a99434436fef776fb7e47b192fe9dc",
+      "digest": "sha256:94bebbc048276dda810027e670c7c7a92cd1a8ba5f64b8a8937cc5a9c76e373a",
       "fidelity": "render-only"
     }
   ],
-  "documentDigest": "sha256:484ae2d27e08262a29009fe67964d43564e000e218dbc5e086050904c7b2f9e2"
+  "documentDigest": "sha256:9f9049ca720d99948783ea7348c1b712a721713771ec528461a6aa34ad8605fb"
 }

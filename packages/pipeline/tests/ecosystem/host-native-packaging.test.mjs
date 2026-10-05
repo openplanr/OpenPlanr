@@ -53,7 +53,7 @@ test('Plan and Ship packages are host-native and provider-independent', () => {
     const bytes = readFileSync(join(workspace, 'skills', skillId, 'SKILL.md'), 'utf8');
     assert.doesNotMatch(
       bytes,
-      /`planr\s+(?:plan|spec\s+decompose)(?:\s|`)|`planr-pipeline(?:\s|`)/iu,
+      /`(?:open)?planr\s+(?:plan|spec\s+decompose)(?:\s|`)|`planr-pipeline(?:\s|`)/iu,
     );
     assert.doesNotMatch(bytes, /ANTHROPIC_API_KEY|OPENAI_API_KEY|OLLAMA/iu);
     assert.match(bytes, /active\s+(?:coding\s+session|host\s+agent)|current coding session/iu);

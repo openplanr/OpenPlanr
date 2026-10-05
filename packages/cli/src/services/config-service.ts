@@ -1,5 +1,7 @@
 import { existsSync } from 'node:fs';
 import path from 'node:path';
+import { planningFolderConflict } from '../../lib/planning-folder.mjs';
+import { CliBoundaryError } from '../cli/error-boundary.js';
 import { configSchema } from '../models/schema.js';
 import type { OpenPlanrConfig } from '../models/types.js';
 import { CLI_COMMAND, CONFIG_FILENAME, PLANNING_FOLDER } from '../utils/constants.js';
@@ -38,6 +40,20 @@ export class ConfigInvalidError extends Error {
   }
 }
 
+/** The refusal to write into a planning folder at `projectDir` that OpenPlanr didn't create, or null. */
+export function foreignPlanningFolder(projectDir: string): CliBoundaryError | null {
+  const conflict = planningFolderConflict(projectDir);
+  return conflict
+    ? new CliBoundaryError(conflict.code, conflict.problem, { recovery: conflict.fix })
+    : null;
+}
+
+/** Throw before a write when OpenPlanr didn't create the planning folder at `projectDir`. */
+export function assertPlanningFolderWritable(projectDir: string): void {
+  const refusal = foreignPlanningFolder(projectDir);
+  if (refusal) throw refusal;
+}
+
 /** Load and validate the OpenPlanr config file from the given project directory. */
 export async function loadConfig(projectDir: string): Promise<OpenPlanrConfig> {
   const configPath = path.join(projectDir, CONFIG_FILENAME);
@@ -66,7 +82,7 @@ export async function saveConfig(projectDir: string, config: OpenPlanrConfig): P
 
 /**
  * Walk up from `startDir` looking for a directory containing `.planr/config.json`.
- * Returns the first match, or `startDir` if none found (so `planr init` still works).
+ * Returns the first match, or `startDir` if none found (so `openplanr init` still works).
  */
 export function findProjectRoot(startDir: string = process.cwd()): string {
   let dir = path.resolve(startDir);

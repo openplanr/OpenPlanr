@@ -11,7 +11,7 @@ item in full and judges it against the default branch and the calendar.
 **Select** fits the surviving items to the stated capacity and the next release
 cut, refutes the picks with three independent lenses, and writes the sprint.
 Perform the reasoning in this session; never delegate it to a model subprocess.
-The CLI (`planr sprint …`) stores what this skill decides. It is optional: when
+The CLI (`openplanr sprint …`) stores what this skill decides. It is optional: when
 it is unavailable, write the same files by hand in the shapes given in
 [sprint formats](references/sprint-formats.md).
 
@@ -34,7 +34,7 @@ capability; it never blocks the run. Name every degraded input in `Issues`.
 | Git history and the code paths items cite | Evidence lens: stale, already fixed, premise false | Buckets rest on the items' own dates; say "not verified against code" |
 | Release profile (`.release/profile.md`: cut date, cadence, freezes) | Size the In-progress bucket to the cut; the sprint gets `releaseCut` | Ask once for a horizon; default to a two-week sprint from today |
 | Capacity (engineers × working days) | Fit the list and name the overflow | Ask once; default 1 engineer × 10 days, stated in the return |
-| Previous sprint or refinement note (`.planr/sprints/SPRINT-NNN/refinement.json`) | Carry `leftovers`; `planr sprint diff` is possible | First run, no diff |
+| Previous sprint or refinement note (`.planr/sprints/SPRINT-NNN/refinement.json`) | Carry `leftovers`; `openplanr sprint diff` is possible | First run, no diff |
 | Last Operate cycle | Rank its unfinished actions alongside | Skipped silently |
 | Linear or GitHub connector | Push statuses on approval, read PR state | Local files only; report the external step as not run |
 
@@ -90,7 +90,7 @@ the cheapest refutations.
 
 Carry the previous Operate cycle's unfinished actions explicitly. Include the
 release cut itself as work; when it has no artifact yet, file it with
-`planr quick create "Release cut <date>"` so the sprint contains only artifact
+`openplanr quick create "Release cut <date>"` so the sprint contains only artifact
 ids.
 
 ## Step 4: Refute the In-progress bucket
@@ -114,9 +114,9 @@ Write the three durable outputs (formats in
 them.
 
 ```bash
-planr sprint create --data sprint.json --json                  # name, releaseCut, capacityDays, startDate
-planr sprint refinement SPRINT-NNN --data refinement.json --json # validates, stores the note and JSON, fills the sprint body
-planr sprint diff SPRINT-MMM SPRINT-NNN                          # when a previous run exists
+openplanr sprint create --data sprint.json --json                  # name, releaseCut, capacityDays, startDate
+openplanr sprint refinement SPRINT-NNN --data refinement.json --json # validates, stores the note and JSON, fills the sprint body
+openplanr sprint diff SPRINT-MMM SPRINT-NNN                          # when a previous run exists
 ```
 
 `refinement.json` must satisfy [the schema](schemas/refinement.schema.json); the
@@ -131,16 +131,16 @@ write-back, or leave the proposal as written.
 ## Step 6: On approval, apply
 
 ```bash
-planr sprint apply SPRINT-NNN --dry-run          # show the status and priority changes
-planr sprint apply SPRINT-NNN --yes --commit     # one commit: chore(planr): refine backlog for SPRINT-NNN
+openplanr sprint apply SPRINT-NNN --dry-run          # show the status and priority changes
+openplanr sprint apply SPRINT-NNN --yes --commit     # one commit: chore(planr): refine backlog for SPRINT-NNN
 ```
 
 Where a connector is configured, push each changed item afterwards
-(`planr linear push <id>`, `planr github push <id>`) and report the ones that
+(`openplanr linear push <id>`, `openplanr github push <id>`) and report the ones that
 were not pushed. When the CLI is unavailable, apply the same status changes with
 the repository's own vocabulary and commit them with the same message.
 
-Close a finished sprint with `planr sprint close SPRINT-NNN`; it records the
+Close a finished sprint with `openplanr sprint close SPRINT-NNN`; it records the
 leftovers the next run carries.
 
 ## Rules from production use
@@ -152,7 +152,7 @@ leftovers the next run carries.
   the question that unblocks them.
 - The list must fit the stated capacity; if it does not, say what was cut.
 - No new migration in a hand deploy unless the sprint says so explicitly.
-- Use the repository's own status vocabulary (`planr update --help` lists it);
+- Use the repository's own status vocabulary (`openplanr update --help` lists it);
   never introduce a second one.
 - The note and the JSON are the durable output; the chat return is a view of
   them. That is what keeps the third run from re-arguing the first two.
@@ -179,7 +179,7 @@ and identify incomplete evidence or blocked inputs with their recovery action.
 The note and JSON remain complete and unchanged in shape. Omit empty chat sections;
 different summary wording never causes another sprint creation or write-back.
 
-`planr status` shows the active sprint with its cut and progress; the dashboard
+`openplanr status` shows the active sprint with its cut and progress; the dashboard
 (`planr-dashboard`) renders the sprint from the same frontmatter and checkboxes.
 
 ## Reference files

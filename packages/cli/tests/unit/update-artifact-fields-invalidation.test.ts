@@ -3,7 +3,7 @@
  *
  * Whenever a caller updates `status` WITHOUT explicitly writing a new
  * `linearStatusReconciled`, the write should clear the baseline so the
- * next `planr linear sync` treats it as "local changed since last sync"
+ * next `openplanr linear sync` treats it as "local changed since last sync"
  * and pushes it to Linear. The sync itself opts out by passing its own
  * `linearStatusReconciled` value — that path must not be clobbered.
  *

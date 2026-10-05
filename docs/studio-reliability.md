@@ -76,8 +76,8 @@ ordinary variables or mock placeholders.
 custody is safely read/moved only when the destination is absent. CLI credential
 and sign-in copies retain their originals; private receipts prevent a later deletion
 from re-importing old credentials. Existing destination records stay authoritative. Credential
-writers and server startup use shared cross-process locks. `planr server list`
-reports owned dashboards/Studios; `planr server stop <instance>` authenticates that
+writers and server startup use shared cross-process locks. `openplanr server list`
+reports owned dashboards/Studios; `openplanr server stop <instance>` authenticates that
 instance and drains work. It never kills a process from a port or reused PID.
 Malformed state receives an actionable diagnosis and is not treated as missing.
 

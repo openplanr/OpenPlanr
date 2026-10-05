@@ -682,7 +682,7 @@ function planningTraceFixture(view) {
       ]),
     }),
     nextCommands: Object.freeze([
-      'planr spec show SPEC-020',
+      'openplanr spec show SPEC-020',
       '$planr:plan SPEC-020',
       '/planr:plan SPEC-020',
     ]),

@@ -104,7 +104,7 @@ describe('installed Node.js support', () => {
       mkdirSync(join(directory, 'lib'));
       mkdirSync(join(directory, 'dist/cli'), { recursive: true });
       writeFileSync(join(directory, 'package.json'), '{"type":"module"}\n');
-      copyFileSync(resolve('bin/planr.js'), join(directory, 'bin/planr.js'));
+      copyFileSync(resolve('bin/openplanr.js'), join(directory, 'bin/openplanr.js'));
       copyFileSync(resolve('lib/node-runtime.mjs'), join(directory, 'lib/node-runtime.mjs'));
       writeFileSync(
         join(directory, 'dist/cli/index.js'),
@@ -115,7 +115,7 @@ describe('installed Node.js support', () => {
         [
           '--input-type=module',
           '-e',
-          `Object.defineProperty(process.versions, 'node', { value: ${JSON.stringify(version)} }); await import(${JSON.stringify(pathToFileURL(join(directory, 'bin/planr.js')).href)});`,
+          `Object.defineProperty(process.versions, 'node', { value: ${JSON.stringify(version)} }); await import(${JSON.stringify(pathToFileURL(join(directory, 'bin/openplanr.js')).href)});`,
         ],
         { encoding: 'utf8' },
       );
@@ -208,8 +208,9 @@ describe('installed Node.js support', () => {
         join(directory, 'npm'),
         `#!/bin/sh\nprintf '%s\\n' installed > ${JSON.stringify(marker)}\n`,
       );
-      writeFileSync(join(directory, 'planr'), '#!/bin/sh\nprintf "%s\\n" fixture-version\n');
-      for (const filename of ['node', 'npm', 'planr']) chmodSync(join(directory, filename), 0o755);
+      writeFileSync(join(directory, 'openplanr'), '#!/bin/sh\nprintf "%s\\n" fixture-version\n');
+      for (const filename of ['node', 'npm', 'openplanr'])
+        chmodSync(join(directory, filename), 0o755);
       const result = spawnSync('/bin/sh', [resolve('install.sh'), '--minimal'], {
         env: { ...process.env, PATH: directory },
         encoding: 'utf8',

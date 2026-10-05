@@ -80,10 +80,10 @@ export function isValidStatus(type: ArtifactType, status: string): boolean {
  * PO authoring → AI decomposition → human review → handoff to planr-pipeline.
  *
  * - pending             — SPEC created, body not yet written
- * - shaping             — SPEC body authored (manually or via `planr spec shape`)
+ * - shaping             — SPEC body authored (manually or via `openplanr spec shape`)
  * - decomposing         — the active host agent is authoring user stories and tasks
  * - decomposed          — US + Task files written, awaiting human review
- * - ready-for-pipeline  — `planr spec promote` validated; ready for planr-pipeline
+ * - ready-for-pipeline  — `openplanr spec promote` validated; ready for planr-pipeline
  * - in-pipeline         — planr-pipeline `/plan` or `/ship` is running
  * - done                — DEV phase complete, code shipped
  */

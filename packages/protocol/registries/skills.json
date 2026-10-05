@@ -694,7 +694,7 @@
       "lifecycle": "active",
       "authorityClass": "planning-write",
       "source": "skills/planr-design/openplanr.skill.json",
-      "sourceDigest": "sha256:67ac584611593b660a263f0f11c03b38fc53609bf9c1750232cfc5687406da9c",
+      "sourceDigest": "sha256:ec8ec0d5e7abf163604ba3932112c626480bc49613ec07bf2e9046f03633db2c",
       "triggerPolicy": {
         "include": [
           "Create an initial product design direction",
@@ -755,7 +755,7 @@
       "lifecycle": "active",
       "authorityClass": "planning-write",
       "source": "skills/planr-design-loop/openplanr.skill.json",
-      "sourceDigest": "sha256:53d985a52c2517432d1ee614823c25d1c5183336eb04c46b91aa4b728c314e1c",
+      "sourceDigest": "sha256:8ef5762d5a6618b4ed0352d03e751f02fc99b7219a797650a538b284e09ef604",
       "triggerPolicy": {
         "include": [
           "Explore multiple design directions or variants",
@@ -816,7 +816,7 @@
       "lifecycle": "active",
       "authorityClass": "review-evidence",
       "source": "skills/planr-design-review/openplanr.skill.json",
-      "sourceDigest": "sha256:0573a499e90521c8cb3acbcc5c8c6cbeda22ac5a21977fc3d20fb2fac4d3b357",
+      "sourceDigest": "sha256:ffea22b6ec59f0d48cfc3cc02689f62e59e69f33eba9135e6a2427515d722377",
       "triggerPolicy": {
         "include": [
           "Review or critique an existing OpenPlanr design",
@@ -947,7 +947,7 @@
       "triggerPolicy": {
         "include": [
           "Diagnose OpenPlanr installation, runtime, adapter, version, or lock health",
-          "Check why planr setup or upgrade is unhealthy"
+          "Check why openplanr setup or upgrade is unhealthy"
         ],
         "exclude": [
           "Diagnose an application bug",
@@ -1742,5 +1742,5 @@
     }
   ],
   "compatibilityAliases": [],
-  "documentDigest": "sha256:0d37a5d1afdaaf844deeb5b86e9644d1cbbf29987bd6a0f45edb54b0f757efe6"
+  "documentDigest": "sha256:27b4d07edf7508fec9ae3f38692e0942cb457dfcce46acc65a48491fa066d8e1"
 }

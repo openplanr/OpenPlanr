@@ -24,7 +24,9 @@ function invoke(args) {
     env: { ...process.env, CI: '1', NO_COLOR: '1' },
   });
   if (result.status !== 0) {
-    throw new Error(`Could not inspect planr ${args.join(' ')}: ${result.stderr || result.stdout}`);
+    throw new Error(
+      `Could not inspect openplanr ${args.join(' ')}: ${result.stderr || result.stdout}`,
+    );
   }
   return result.stdout;
 }
@@ -62,7 +64,7 @@ if (JSON.stringify(activeRoots) !== JSON.stringify(classifiedRoots)) {
 }
 for (const retired of Object.keys(source.retired)) {
   if (activePaths.includes(retired))
-    throw new Error(`Retired command is still callable: planr ${retired}`);
+    throw new Error(`Retired command is still callable: openplanr ${retired}`);
 }
 
 const output = `${JSON.stringify(

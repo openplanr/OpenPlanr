@@ -64,13 +64,14 @@ for (const [key, target] of Object.entries(manifest.exports)) {
   }
 }
 
-// Compatibility adapters intentionally use the explicit Node schema loader.
+// Compatibility adapters use the explicit Node schema loader; the planning folder check reads files.
 const nodeOnly = new Set(
   [
     './contracts',
     './operate-experience-live-patch',
     './live-evidence-v2',
     './operating-planning-contracts',
+    './planning-folder',
   ].map((key) => `${manifest.name}${key.slice(1)}`),
 );
 const portable = exports.filter(({ name }) => !nodeOnly.has(name));

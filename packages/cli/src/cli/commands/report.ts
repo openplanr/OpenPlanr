@@ -1,5 +1,5 @@
 /**
- * `planr report` — stakeholder reports from `.planr/` + optional GitHub signals.
+ * `openplanr report` — stakeholder reports from `.planr/` + optional GitHub signals.
  */
 
 import path from 'node:path';
@@ -36,7 +36,7 @@ export function registerReportCommand(program: Command) {
   program
     .command('report <type>')
     .description(
-      'Generate stakeholder report (sprint, weekly, executive, standup, retro, release) from planr + GitHub',
+      'Generate stakeholder report (sprint, weekly, executive, standup, retro, release) from OpenPlanr + GitHub',
     )
     .option('--sprint <id>', 'sprint id, e.g. SPRINT-001')
     .option('--days <n>', 'GitHub lookback days', '7')

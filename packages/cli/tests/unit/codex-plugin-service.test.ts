@@ -133,10 +133,10 @@ describe('Codex plugin integration', () => {
         ready: false,
         operations: [],
         error:
-          'The CLI bundled Codex host package is missing its OpenPlanr marketplace. Run planr setup --runtime codex to repair it.',
+          'The CLI bundled Codex host package is missing its OpenPlanr marketplace. Run openplanr setup --runtime codex to repair it.',
       });
       expect(() => applyCodexPluginIntegration(hostPackageRoot, inspection, runner)).toThrow(
-        'Run planr setup --runtime codex to repair it.',
+        'Run openplanr setup --runtime codex to repair it.',
       );
       expect(calls).toEqual([]);
     } finally {
@@ -162,7 +162,7 @@ describe('Codex plugin integration', () => {
         ready: false,
         operations: [],
         error:
-          'The CLI bundled Codex host marketplace does not declare planr. Run planr setup --runtime codex to repair it.',
+          'The CLI bundled Codex host marketplace does not declare planr. Run openplanr setup --runtime codex to repair it.',
       });
       expect(state.calls).toEqual([]);
     } finally {

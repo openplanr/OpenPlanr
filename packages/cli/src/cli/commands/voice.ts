@@ -1,5 +1,5 @@
 /**
- * `planr voice` — standup from transcript file or stdin (microphone capture is future work).
+ * `openplanr voice` — standup from transcript file or stdin (microphone capture is future work).
  */
 
 import path from 'node:path';

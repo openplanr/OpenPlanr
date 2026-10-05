@@ -1,6 +1,11 @@
 import { Command, CommanderError } from 'commander';
 import type { OpenPlanrConfig } from '../models/types.js';
-import { ConfigNotFoundError, findProjectRoot, loadConfig } from '../services/config-service.js';
+import {
+  ConfigNotFoundError,
+  findProjectRoot,
+  foreignPlanningFolder,
+  loadConfig,
+} from '../services/config-service.js';
 import { setNonInteractive } from '../services/interactive-state.js';
 import { RuntimeManagerError } from '../services/runtime-manager-service.js';
 import { maybeOfferUpgrade, upgradeOfferReachable } from '../services/upgrade-offer-service.js';
@@ -105,6 +110,8 @@ program.parseAsync(process.argv).catch((err) => {
     return;
   }
   logger.debug('The command failed:', err);
+  if (err instanceof ConfigNotFoundError)
+    err = foreignPlanningFolder(program.opts().projectDir as string) ?? err;
   if (err instanceof ConfigNotFoundError) {
     if (json) {
       display.line(

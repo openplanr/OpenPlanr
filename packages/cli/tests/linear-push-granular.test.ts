@@ -1,7 +1,7 @@
 /**
  * Granular push tests (Phase 1 of EPIC-LINEAR-GRANULAR-PUSH).
  *
- * These lock in `planr linear push <artifactId>` behavior at each scope:
+ * These lock in `openplanr linear push <artifactId>` behavior at each scope:
  *   - Dry-run plans for FEAT-/US-/TASK- ids are correctly scoped (no project row, right row counts).
  *   - The router refuses unsupported prefixes (ADR/SPRINT) and not-yet-supported ones (QT/BL).
  *   - Parent-chain pre-flight fails fast without API calls when `--push-parents` is not set.

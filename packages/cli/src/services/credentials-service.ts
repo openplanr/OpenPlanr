@@ -41,7 +41,7 @@ function readEnvKey(provider: string): string | undefined {
 // Migration
 // ---------------------------------------------------------------------------
 
-/** Keys the CLI stores credentials under; older `planr config set-key` wrote `anthropic` and `openai`. */
+/** Keys the CLI stores credentials under; older `openplanr config set-key` wrote `anthropic` and `openai`. */
 const CLI_CREDENTIAL_KEYS = new Set(['linear', 'anthropic', 'openai']);
 const CLI_CREDENTIAL_PREFIXES = ['company:', 'company-oauth:'];
 

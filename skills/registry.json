@@ -715,7 +715,7 @@
       "triggerPolicy": {
         "include": [
           "Diagnose OpenPlanr installation, runtime, adapter, version, or lock health",
-          "Check why planr setup or upgrade is unhealthy"
+          "Check why openplanr setup or upgrade is unhealthy"
         ],
         "exclude": [
           "Diagnose an application bug",

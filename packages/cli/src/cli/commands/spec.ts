@@ -1,5 +1,5 @@
 /**
- * `planr spec` command group — spec-driven planning mode.
+ * `openplanr spec` command group — spec-driven planning mode.
  *
  * The third planning posture alongside agile (epic/feature/story/task) and
  * QT (quick task). The host-native `planr-plan` skill decomposes specs into
@@ -9,16 +9,16 @@
  * schema — no conversion layer ever.
  *
  * Subcommands:
- *   - planr spec init                    Activate spec-driven mode
- *   - planr spec create <title>          Create a new SPEC artifact (self-contained dir)
- *   - planr spec shape <id>              Professional interactive or JSON authoring
- *   - planr spec sync [id]               Validate integrity + auto-fix safe issues
- *   - planr spec list                    List all specs
- *   - planr spec show <id>               Print a spec + its US/Task tree
- *   - planr spec status [id]             Decomposition state per spec
- *   - planr spec destroy <id>            rm -rf one self-contained spec dir
- *   - planr spec attach-design <id> --files <png>...   Attach UI mockups
- *   - planr spec promote <id>            Validate + print pipeline handoff
+ *   - openplanr spec init                    Activate spec-driven mode
+ *   - openplanr spec create <title>          Create a new SPEC artifact (self-contained dir)
+ *   - openplanr spec shape <id>              Professional interactive or JSON authoring
+ *   - openplanr spec sync [id]               Validate integrity + auto-fix safe issues
+ *   - openplanr spec list                    List all specs
+ *   - openplanr spec show <id>               Print a spec + its US/Task tree
+ *   - openplanr spec status [id]             Decomposition state per spec
+ *   - openplanr spec destroy <id>            rm -rf one self-contained spec dir
+ *   - openplanr spec attach-design <id> --files <png>...   Attach UI mockups
+ *   - openplanr spec promote <id>            Validate + print pipeline handoff
  */
 
 import { readFile as readBinaryFile, stat } from 'node:fs/promises';
@@ -228,7 +228,7 @@ export function registerSpecCommand(program: Command) {
     );
 
   // ------------------------------------------------------------------------
-  // planr spec init
+  // openplanr spec init
   // ------------------------------------------------------------------------
   spec
     .command('init')
@@ -278,7 +278,7 @@ export function registerSpecCommand(program: Command) {
     });
 
   // ------------------------------------------------------------------------
-  // planr spec create
+  // openplanr spec create
   // ------------------------------------------------------------------------
   spec
     .command('create')
@@ -328,7 +328,7 @@ export function registerSpecCommand(program: Command) {
     });
 
   // ------------------------------------------------------------------------
-  // planr spec shape <id>
+  // openplanr spec shape <id>
   // ------------------------------------------------------------------------
   spec
     .command('shape')
@@ -397,7 +397,7 @@ export function registerSpecCommand(program: Command) {
     });
 
   // ------------------------------------------------------------------------
-  // planr spec list
+  // openplanr spec list
   // ------------------------------------------------------------------------
   spec
     .command('list')
@@ -420,7 +420,7 @@ export function registerSpecCommand(program: Command) {
     });
 
   // ------------------------------------------------------------------------
-  // planr spec show <id>
+  // openplanr spec show <id>
   // ------------------------------------------------------------------------
   spec
     .command('show')
@@ -477,7 +477,7 @@ export function registerSpecCommand(program: Command) {
     });
 
   // ------------------------------------------------------------------------
-  // planr spec status [id]
+  // openplanr spec status [id]
   // ------------------------------------------------------------------------
   spec
     .command('status')
@@ -523,7 +523,7 @@ export function registerSpecCommand(program: Command) {
     });
 
   // ------------------------------------------------------------------------
-  // planr spec destroy <id>
+  // openplanr spec destroy <id>
   // ------------------------------------------------------------------------
   spec
     .command('destroy')
@@ -555,7 +555,7 @@ export function registerSpecCommand(program: Command) {
     });
 
   // ------------------------------------------------------------------------
-  // planr spec attach-design <id> --files ...
+  // openplanr spec attach-design <id> --files ...
   // ------------------------------------------------------------------------
   spec
     .command('attach-design')
@@ -595,7 +595,7 @@ export function registerSpecCommand(program: Command) {
     });
 
   // ------------------------------------------------------------------------
-  // planr spec promote <id>
+  // openplanr spec promote <id>
   // ------------------------------------------------------------------------
   spec
     .command('promote')
@@ -629,7 +629,7 @@ export function registerSpecCommand(program: Command) {
     });
 
   // ------------------------------------------------------------------------
-  // planr spec sync [specId]
+  // openplanr spec sync [specId]
   // ------------------------------------------------------------------------
   spec
     .command('sync')

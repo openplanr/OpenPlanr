@@ -18,7 +18,7 @@ OpenPlanr React build from `dist/dashboard`. The legacy direct-DOM client under
 ## Supported upgrade path
 
 1. Build or install OpenPlanr with a current dashboard manifest.
-2. Start the dashboard through `planr operate dashboard` or any caller that passes
+2. Start the dashboard through `openplanr operate dashboard` or any caller that passes
    `staticRoot` + `dashboardBuildId` from the installed product build.
 3. Verify `GET /api/bootstrap` returns `compatibility.status = "compatible"` and a
    `ui.buildId` that matches `dashboard-manifest.json`.

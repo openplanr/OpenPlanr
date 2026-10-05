@@ -19,9 +19,9 @@
     }
   },
   "bin": {
-    "planr": "./bin/planr.js",
-    "openplanr": "./bin/planr.js",
-    "opr": "./bin/planr.js"
+    "openplanr": "./bin/openplanr.js",
+    "opr": "./bin/openplanr.js",
+    "planr": "./bin/planr.js"
   },
   "publishConfig": {
     "access": "public",

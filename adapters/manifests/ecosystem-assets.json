@@ -6,7 +6,7 @@
   "inputs": [
     {
       "path": "adapters/manifests/generated-assets.json",
-      "digest": "sha256:0acc1b46e6b5530729eefe0650eb44c587c4d4735a9c1659d5f16a201592b039"
+      "digest": "sha256:c78fc02a6b05879f4e622ad802d39644214c264158ce3b6661bf38a94aca57d9"
     },
     {
       "path": "apps/dashboard/package.json",
@@ -26,7 +26,7 @@
     },
     {
       "path": "packages/cli/package.json",
-      "digest": "sha256:9a8b011240e91780d6df1af448426aca861ab3f6604f317b5d46eff55151597f"
+      "digest": "sha256:f08c2adf530100bf9911809af6281ddc79116d3d37c383a85d674bd62e587748"
     },
     {
       "path": "packages/design/package.json",
@@ -46,11 +46,11 @@
     },
     {
       "path": "packages/protocol/package.json",
-      "digest": "sha256:3346253d6c369c0a1d15e795d9a812cfcdfde3bb0b8ea393f74da417dcbd4d0f"
+      "digest": "sha256:7be3872503e46535cddf230ab13919bcd823f694b1681262a97430715424ad92"
     },
     {
       "path": "packages/protocol/registries/commands.json",
-      "digest": "sha256:fc8a26bf71dacf6c67366d5ef20468d8aa7897ebfe58d4266bc6a1d374bf6bbd"
+      "digest": "sha256:aa8522e81ed3117554a7608ef8c7d056a46cb0d270e380a5d82879826d136af8"
     },
     {
       "path": "packages/protocol/registries/output-paths.json",
@@ -70,7 +70,7 @@
     },
     {
       "path": "packages/protocol/registries/skills.json",
-      "digest": "sha256:254ef127ab132201e34b955a06ea15c9fbb0f5a4831beb8b0e808dc3d25c96a2"
+      "digest": "sha256:c9c1a38f5ae964258d1e04a56acaefce8f7b53ce6f37f36032fabdb1f9b6010e"
     },
     {
       "path": "packages/protocol/registries/task-kinds.json",
@@ -98,19 +98,19 @@
     },
     {
       "path": "scripts/lib/workspace-release-policy.mjs",
-      "digest": "sha256:a43438f46cbf7d2003c6b21c9c050ad02aed6be241294195450228b8c79c4f95"
+      "digest": "sha256:67eb405151d64bcf3b6a10606457810ec7795d8ae866692b20920127e0d50590"
     },
     {
       "path": "scripts/marketplace/generate-ecosystem.mjs",
-      "digest": "sha256:a0db4a87a5c4ac593aa96c016fd13373f6d95cad0897649c41db98dd85f98a42"
+      "digest": "sha256:e559ae30d1da6d9154479b808825453e93165e0e2b6f6be293c46f2ce795acea"
     },
     {
       "path": "scripts/marketplace/openplanr-ecosystem.schema.json",
-      "digest": "sha256:0ac7b733b21f8c817ebb215f4b50544cc980a89f13b5f033ab1da7f16d27467c"
+      "digest": "sha256:b151c6fae276621caece06ea3cce1ab1de098c0b183eb4350a25448d57e05960"
     },
     {
       "path": "skills/planr-artifact/SKILL.md",
-      "digest": "sha256:f1e8d2719427c2e9565a82698eed53994da437676bcd8c3734a50f52090417be"
+      "digest": "sha256:667d6be08c6b1fdc9660698f828ee51752ed20be23345b192d69da4074671d34"
     },
     {
       "path": "skills/planr-browser-qa/SKILL.md",
@@ -146,7 +146,7 @@
     },
     {
       "path": "skills/planr-dashboard/SKILL.md",
-      "digest": "sha256:c34b53355e7b8c565534c9ae2343b29312b8d7bcc9bb6cc72ab4dada0d4591b2"
+      "digest": "sha256:e53691aece3b00e345d5acc2f56fb2b09833750b64717218d2bb47f45aae4a67"
     },
     {
       "path": "skills/planr-delegate/SKILL.md",
@@ -154,23 +154,23 @@
     },
     {
       "path": "skills/planr-design-loop/SKILL.md",
-      "digest": "sha256:1b741868e5a5ca01b52bbd7d8af3c0424fc9f6f9efc081211f463bc37c6b75ff"
+      "digest": "sha256:3aeaaec08e55d75377c211c0b2689bb85adf4457939fd8ca6ba3833815a0505b"
     },
     {
       "path": "skills/planr-design-review/SKILL.md",
-      "digest": "sha256:f0dac82f8626e4c83abfd7f47fe2dbafddba4dc7a7ebcfae4aa51225454f9594"
+      "digest": "sha256:981117d807042f5f1a1be5c4c3c773dde94bc0c5243b75c17d5e493c0ff3ce90"
     },
     {
       "path": "skills/planr-design/SKILL.md",
-      "digest": "sha256:edd9799d15991ea7757e8ff0828c70a6bc5cf558cca3b4c11932874d383fb853"
+      "digest": "sha256:234ec0b1c7a983590982462a59df017647ed8d76e45727417534e483e2f5ab5b"
     },
     {
       "path": "skills/planr-diagram/SKILL.md",
-      "digest": "sha256:201db5c2d96041138e3017ffd78ee9dbf09070853b47a295a31c8c3fb819ef7c"
+      "digest": "sha256:0ab3025c07936d555e81bef50d71fbc49ffaab0a418ff019ca3163318fd6d33f"
     },
     {
       "path": "skills/planr-doctor/SKILL.md",
-      "digest": "sha256:5368902f43821853d3ae55cb23b907ab3fbcd23a28012c2dc8ecbbd694575471"
+      "digest": "sha256:188f9dec0d7d0f6a1b70efd2decfff832e0fc57b175522e471fca6436705321f"
     },
     {
       "path": "skills/planr-investigate/SKILL.md",
@@ -178,7 +178,7 @@
     },
     {
       "path": "skills/planr-land/SKILL.md",
-      "digest": "sha256:06d04a20f05f5bab613357256bc7af709e5eb1435867832fa9b24547ac857c27"
+      "digest": "sha256:c1546a60c686f3686a918d459293de0a0275d4e1136969c63ee59af2371b5433"
     },
     {
       "path": "skills/planr-openplanr/SKILL.md",
@@ -210,19 +210,19 @@
     },
     {
       "path": "skills/planr-sprint/SKILL.md",
-      "digest": "sha256:44fe839dc90143809866d9ed8fefb6fbe1aca09a2b0e1ff7a964376f64ce717a"
+      "digest": "sha256:5127dbe840f63389c0e4546904d1aaae6b4a45c8a428ef54204fe2ad1e6a71f2"
     },
     {
       "path": "skills/planr-status/SKILL.md",
-      "digest": "sha256:12f20dddbb382b72eeda55bdf036393b0bee1a9bcecc7be30ec53ed24e62a432"
+      "digest": "sha256:442befdcb911e4f577e0cf6213cf5cfdbdc97f7093dcad301399b710d4f6e3f3"
     },
     {
       "path": "skills/planr-sync/SKILL.md",
-      "digest": "sha256:dd758dfe6e080fb5b0360bc7708b2948dbf77e819eaf01633f5ec5208b5f6ee4"
+      "digest": "sha256:b5a239b26d4946a4c144622eca31d64e743c6dd00a96efa68eca2bc05e65e3ff"
     },
     {
       "path": "skills/registry.json",
-      "digest": "sha256:98c3f9d6b0687e7707d95133d704b2386e1cdd3817fd8d4e034f056db42740aa"
+      "digest": "sha256:8d4b39eb1c17e78644ec8a103d2ab56cbf1c275809b112c0cd28bf7dbad5346d"
     }
   ],
   "outputs": [
@@ -236,7 +236,7 @@
     },
     {
       "path": "adapters/manifests/codex-plugin-content.json",
-      "digest": "sha256:cf0fbf1d8f074c15403a6e7b17ac75aebdeb803a92bb16cd8c24f2596e344695"
+      "digest": "sha256:59888eb1b1df61629a17f23d4907643e9ec779f5b49e62e8f796f94578e81f1c"
     },
     {
       "path": "docs/generated/adapters.md",
@@ -244,15 +244,15 @@
     },
     {
       "path": "docs/generated/ecosystem.md",
-      "digest": "sha256:461fe69c237b01adaf6f6b82fe3069bb2cd0863322baf2301106c730127c2c16"
+      "digest": "sha256:6fc34a51535cfd3fa206f394a81eb6194fee3d9d7a337d9a52e5aefb5803c86b"
     },
     {
       "path": "docs/generated/skills.md",
-      "digest": "sha256:cef500ceaef546fc68f2d1e3a183ad03e024a8e70b5840359f831f48efd27d7b"
+      "digest": "sha256:a03d358f79ff6fe64bc8729a1e50ed9113a9faed44f7fe63b146a01076c06fed"
     },
     {
       "path": "ecosystem.json",
-      "digest": "sha256:f3874bdb2221b1bd273bbe6085e7bcd3de0d21879e0f19da3b98dcd0def67748"
+      "digest": "sha256:b5df41769de2a38fe76c0c7e92c2909ace3d32011bcd178291536103c349640c"
     }
   ]
 }

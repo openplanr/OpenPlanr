@@ -188,7 +188,7 @@ describe('sync: update artifact content', () => {
     // Replace stale link section
     const fixed = raw?.replace(
       '- [US-999: Ghost](../stories/US-999-ghost.md)',
-      '_No user stories created yet. Run `planr story create --feature FEAT-001` to create user stories._',
+      '_No user stories created yet. Run `openplanr story create --feature FEAT-001` to create user stories._',
     );
     await updateArtifact(project.dir, project.config, 'feature', 'FEAT-001', fixed);
 

@@ -30,7 +30,7 @@ const read = (path) => readFileSync(resolve(root, path), 'utf8');
 const registry = readSkillSourceRegistry({ repoRoot: root });
 const skillIds = registry.skills.map(({ skillId }) => skillId);
 const forbiddenSemanticCli =
-  /`planr\s+(?:plan|spec\s+decompose)(?:\s|`)|`planr-pipeline(?:\s|`)|PIPELINE_PACKAGE_ROOT|ANTHROPIC_API_KEY|OPENAI_API_KEY|OLLAMA/u;
+  /`(?:open)?planr\s+(?:plan|spec\s+decompose)(?:\s|`)|`planr-pipeline(?:\s|`)|PIPELINE_PACKAGE_ROOT|ANTHROPIC_API_KEY|OPENAI_API_KEY|OLLAMA/u;
 
 function directories(path) {
   return readdirSync(resolve(root, path), { withFileTypes: true })

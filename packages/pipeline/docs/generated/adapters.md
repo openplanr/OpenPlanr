@@ -3,6 +3,6 @@
 
 | Runtime | Version | Level | Plan entrypoint | Artifact entrypoint | Operate entrypoint | Land entrypoint | Guided interaction ceiling | Tool isolation |
 |---|---:|---|---|---|---|---|---|---|
-| claude-code | 0.44.0 | product | /planr-pipeline:plan | planr artifact | /planr-pipeline:planr-operate | /planr-pipeline:planr-land | native | enforced |
+| claude-code | 0.44.0 | product | /planr-pipeline:plan | openplanr artifact | /planr-pipeline:planr-operate | /planr-pipeline:planr-land | native | enforced |
 | codex | 0.44.0 | workflow | $planr-plan | $planr-artifact | $planr-operate | $planr-land | native | advisory |
-| cursor | 0.44.0 | workflow | plan {feature} | planr artifact | operate with planr | land with planr | chat | advisory |
+| cursor | 0.44.0 | workflow | plan {feature} | openplanr artifact | operate with planr | land with planr | chat | advisory |

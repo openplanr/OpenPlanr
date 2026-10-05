@@ -21,8 +21,8 @@ $installArgs += "openplanr@$Version"
 & npm @installArgs
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
-$installedVersion = (& planr --version).Trim()
+$installedVersion = (& openplanr --version).Trim()
 Write-Host "`nOpenPlanr $installedVersion installed successfully.`n"
 Write-Host 'Next:'
 Write-Host '  cd C:\path\to\your\project'
-if ($Minimal) { Write-Host '  planr setup --minimal' } else { Write-Host '  planr setup' }
+if ($Minimal) { Write-Host '  openplanr setup --minimal' } else { Write-Host '  openplanr setup' }

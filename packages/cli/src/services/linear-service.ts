@@ -392,7 +392,7 @@ export interface LinearWorkflowStateSummary {
 }
 
 /**
- * Fetch the team's workflow states in one round-trip. Used by `planr linear
+ * Fetch the team's workflow states in one round-trip. Used by `openplanr linear
  * push` to auto-derive a status→stateId map when the user has no explicit
  * `linear.pushStateIds` config.
  */
@@ -412,7 +412,7 @@ export async function fetchTeamWorkflowStates(
 }
 
 /**
- * Fetch the team's `issueEstimationType` in one round-trip. Used by `planr
+ * Fetch the team's `issueEstimationType` in one round-trip. Used by `openplanr
  * linear push` to decide whether (and how) to map OpenPlanr `storyPoints` to
  * Linear's native estimate field.
  *

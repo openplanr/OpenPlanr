@@ -32,7 +32,7 @@ OpenPlanr ships across multiple workspace domains and three first-class AI codin
 
 | Component | Role | Canonical source |
 |---|---|---|
-| `planr` CLI | Dedicated planning, artifact lifecycle, setup, routing, and Doctor | `packages/cli` |
+| `openplanr` CLI | Dedicated planning, artifact lifecycle, setup, routing, and Doctor | `packages/cli` |
 | `planr-pipeline` | Complete PO, Design, DEV, and QA public compatibility package | `packages/pipeline` |
 | `@openplanr/protocol` | Schemas, registries, and portable contracts | `packages/protocol` |
 | runtime skills | Reusable planning and delivery workflows | `skills/` and `agents/` |
@@ -53,7 +53,7 @@ The protocol is the contract. Runtimes are adapters.
 | `agent-roles.md` | 9 roles, including optional entity-scaffold. Inputs, outputs, tool guardrails, capability tier. |
 | `commands.md` | `PLAN` and `SHIP` as command contracts. Mode detection, validation, orchestration, exits. R1 normative. |
 | `runtime-adapters.md` | How Claude Code plugin, Cursor MDC rules, and Codex AGENTS.md implement this protocol. |
-| `../artifact-review.md` | Engine API, `planr artifact` commands, sandbox, privacy, sharing, and design-board integration. |
+| `../artifact-review.md` | Engine API, `openplanr artifact` commands, sandbox, privacy, sharing, and design-board integration. |
 | `operate-runtime-v2.md` | Technical Protocol 2.0 reference: contract identities, bounded lifecycle, guards/actions, replay, exact-byte metadata, and package exports.  |
 | `../generated/roles.md` | Generated nine-role registry table. |
 | `../generated/adapters.md` | Generated certified-adapter capability table. |
@@ -117,7 +117,7 @@ read, translate, or migrate a prior Operate runtime. See
 
 ## Artifact review workflow
 
-The public entrypoint is `planr artifact`; runtime guidance must not call a
+The public entrypoint is `openplanr artifact`; runtime guidance must not call a
 globally installed nested pipeline executable. Local review is loopback-only and
 sharing is always explicit. New generic shares use an encrypted live room: the
 ordinary URL can view and comment; a separate owner-verdict URL plus its

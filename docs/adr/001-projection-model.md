@@ -9,7 +9,7 @@ status: "accepted"
 
 Operate, artifact and design are developed as the workspaces `packages/operate`,
 `packages/artifact` and `packages/design`, each with its own dependencies and tests. Users never
-install them: the `planr` CLI pins `planr-pipeline` exactly and runs all three from it, Operate
+install them: the `openplanr` CLI pins `planr-pipeline` exactly and runs all three from it, Operate
 through its export subpaths and artifact and design from its files.
 
 ## Decision Drivers

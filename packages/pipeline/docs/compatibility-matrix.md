@@ -18,9 +18,9 @@ OpenPlanr ships three runtime adapters that all consume the same protocol artifa
 
 | Runtime | Install | Adapter |
 |---|---|---|
-| Claude Code | `planr setup --runtime claude` | Native skills and agents generated from the canonical workspace sources |
-| Cursor | `planr setup --runtime cursor` | Portable project rules, nine role files, and Composer handoff |
-| Codex | `planr setup --runtime codex` | User skills, concise project policy, and dynamic subagent fallback |
+| Claude Code | `openplanr setup --runtime claude` | Native skills and agents generated from the canonical workspace sources |
+| Cursor | `openplanr setup --runtime cursor` | Portable project rules, nine role files, and Composer handoff |
+| Codex | `openplanr setup --runtime codex` | User skills, concise project policy, and dynamic subagent fallback |
 
 Same `.planr/specs/` directories. Same SPEC, US, Task, stack, graph, and `.pipeline-shipped` schemas. Runtime adapters differ in orchestration capabilities, but artifacts remain portable.
 
@@ -28,7 +28,7 @@ Same `.planr/specs/` directories. Same SPEC, US, Task, stack, graph, and `.pipel
 
 | Capability | Claude Code | Cursor | Codex |
 |---|---|---|---|
-| Operate machine client | `/planr:operate` skill over `planr operate ... --json` | `openplanr-operate.mdc` over the same machine commands | Installed `$planr-operate` skill over the same machine commands |
+| Operate machine client | `/planr:operate` skill over `openplanr operate ... --json` | `openplanr-operate.mdc` over the same machine commands | Installed `$planr-operate` skill over the same machine commands |
 | Operate public domains | Installed `business@1.0.0` and `software@1.0.0` registrations through one OpenPlanr composition | Same installed registrations and composition | Same installed registrations and composition |
 | Operate Planning handoff | Exact preview, separate human confirmation, exact create-SPEC digest | Same machine result and gate | Same machine result and gate |
 | PLAN orchestration | Native slash command or router | Composer handoff from router | Installed `$planr-plan` skill or headless router |
@@ -47,7 +47,7 @@ Same `.planr/specs/` directories. Same SPEC, US, Task, stack, graph, and `.pipel
 | Project memory | Orchestrator-managed read/write | Prompt-driven read/write | Prompt-driven read/write |
 | Design generation command | Native and `planr pipeline design` | Router handoff | `$planr-design` / router |
 | Design loop / review board | Available | Available through router handoff | Available through installed skill/router |
-| Universal HTML artifact review | `planr artifact` | `planr artifact` handoff | Installed `$planr-artifact` skill invoking `planr` |
+| Universal HTML artifact review | `openplanr artifact` | `openplanr artifact` handoff | Installed `$planr-artifact` skill invoking `openplanr` |
 | Headless document / canvas presentation | Same generated renderer | Same generated renderer | Same generated renderer |
 | Local pins, threads, and decisions | Supported | Supported | Supported |
 | Fragment sharing | Supported | Supported | Supported |
@@ -137,8 +137,8 @@ runtime launches or hands off the package-owned tooling.
 
 ## Artifact Review Parity
 
-Artifact review is a package-owned workflow exposed through the public `planr`
-router on every certified runtime. Only `planr` is required on `PATH`; generated
+Artifact review is a package-owned workflow exposed through the public `openplanr`
+router on every certified runtime. Only `openplanr` is required on `PATH`; generated
 skills and rules never invoke the nested `planr-pipeline` binary.
 
 The portable contract includes:

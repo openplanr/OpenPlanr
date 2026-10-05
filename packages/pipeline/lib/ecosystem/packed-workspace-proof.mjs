@@ -362,8 +362,8 @@ function assertGeneratedEcosystem(custody) {
 
 function assertPackageProof(proof, custody, packageCustody) {
   const expectedAliases = {
-    openplanr: './bin/planr.js',
-    opr: './bin/planr.js',
+    openplanr: './bin/openplanr.js',
+    opr: './bin/openplanr.js',
     planr: './bin/planr.js',
   };
   const cli = proof.packages.cli;

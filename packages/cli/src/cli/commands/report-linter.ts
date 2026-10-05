@@ -1,5 +1,5 @@
 /**
- * `planr report-linter` — validate stakeholder markdown before sending.
+ * `openplanr report-linter` — validate stakeholder markdown before sending.
  */
 
 import { readFile } from 'node:fs/promises';

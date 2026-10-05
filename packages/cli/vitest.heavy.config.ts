@@ -6,8 +6,8 @@ export default defineConfig({
     root: '.',
     setupFiles: ['tests/setup/isolate-user-state.ts'],
     include: [
-      // Packs and installs a real tarball, then runs the real `bin/planr.js`
-      // against it — the SPEC-006 Trap-A proof that `planr upgrade status`
+      // Packs and installs a real tarball, then runs the real `bin/openplanr.js`
+      // against it — the SPEC-006 Trap-A proof that `openplanr upgrade status`
       // reads the actual installed CLI version, not an in-memory fixture.
       'tests/e2e/upgrade-packed-install.test.ts',
       'tests/e2e/operate-migration-packed-install.test.ts',

@@ -51,7 +51,7 @@ const removedPaths = [
   'adapters/cursor/rules/openplanr-operate-chair.mdc',
 ];
 const OPERATE_VALIDATE_NOTE_LINE =
-  /^planr operate validate-note "(<absolute-(?:advisor-output|challenger-output|chair-output|board-report-path)>)" --profile (advisor|challenger|chair|board-report) --contract-version 2\.0\.0 --json$/u;
+  /^openplanr operate validate-note "(<absolute-(?:advisor-output|challenger-output|chair-output|board-report-path)>)" --profile (advisor|challenger|chair|board-report) --contract-version 2\.0\.0 --json$/u;
 const VALIDATION_PROFILE_PLACEHOLDERS = new Map([
   ['advisor', '<absolute-advisor-output>'],
   ['challenger', '<absolute-challenger-output>'],
@@ -78,9 +78,9 @@ function assertClosedOperateCliBoundary(source, label) {
     profiles.push(profile);
   }
   assert.equal(
-    [...source.matchAll(/\bplanr operate\b/gu)].length,
+    [...source.matchAll(/\bopenplanr operate\b/gu)].length,
     profiles.length,
-    `${label}: every planr operate mention must be one complete validate-note command`,
+    `${label}: every openplanr operate mention must be one complete validate-note command`,
   );
   assert.equal(
     [...source.matchAll(/--json\b/gu)].length,
@@ -89,7 +89,7 @@ function assertClosedOperateCliBoundary(source, label) {
   );
   assert.doesNotMatch(
     source,
-    /\bplanr\s+(?!operate validate-note\b)[a-z][a-z0-9-]*|\b(?:openplanr|opr)\s+[a-z][a-z0-9-]*|\bnpx\s+(?:planr|openplanr)\b/iu,
+    /\bopenplanr\s+(?!operate validate-note\b)[a-z][a-z0-9-]*|\b(?:planr|opr)\s+[a-z][a-z0-9-]*|\bnpx\s+(?:planr|openplanr)\b/iu,
     `${label}: other CLI invocations are forbidden`,
   );
   assert.doesNotMatch(
@@ -118,12 +118,13 @@ for (const relativePath of removedPaths) {
 }
 
 for (const hostile of [
-  'planr operate status --json',
-  'planr operate validate-note "<absolute-advisor-output>" --profile owner --json',
-  'planr operate validate-note "<absolute-advisor-output>" --profile advisor --json --force',
-  'planr pipeline operate status --json',
+  'openplanr operate status --json',
+  'openplanr operate validate-note "<absolute-advisor-output>" --profile owner --json',
+  'openplanr operate validate-note "<absolute-advisor-output>" --profile advisor --json --force',
+  'planr operate validate-note "<absolute-advisor-output>" --profile advisor --contract-version 2.0.0 --json',
+  'openplanr pipeline operate status --json',
   '/planr-pipeline:planr-operate',
-  'planr doctor --json',
+  'openplanr doctor --json',
   'Use the governed choice from the start/resume Planning phase.',
 ]) {
   assert.throws(

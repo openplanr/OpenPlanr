@@ -17,6 +17,7 @@ import { isDeepStrictEqual } from 'node:util';
 
 import { validateJson } from '../protocol/json-schema.mjs';
 import { CLI_COMMAND, PLANNING_FOLDER } from '../protocol/names.mjs';
+import { planningFolderConflict } from '../protocol/planning-folder.mjs';
 import { PipelineError } from './errors.mjs';
 import { atomicWrite, withLock } from './ship-closure-persistence.mjs';
 
@@ -386,6 +387,8 @@ export function createProvenanceEvent({
 
 export function appendProvenanceEvent(projectRoot, event, { hooks = {} } = {}) {
   const normalized = normalizeIncomingEvent(event);
+  const conflict = planningFolderConflict(projectRoot);
+  if (conflict) throw new PipelineError(conflict.code, conflict.problem, conflict.fix);
   const planrDir = join(projectRoot, PLANNING_FOLDER);
   const target = join(planrDir, 'provenance.jsonl');
   const stage = join(planrDir, 'provenance.jsonl.stage');

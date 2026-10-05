@@ -1,5 +1,5 @@
 /**
- * Local-only Linear ↔ OpenPlanr mapping table for `planr linear status`.
+ * Local-only Linear ↔ OpenPlanr mapping table for `openplanr linear status`.
  */
 
 import type { LinearMappingTableRow, OpenPlanrConfig } from '../models/types.js';

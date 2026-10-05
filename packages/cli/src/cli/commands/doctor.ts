@@ -101,7 +101,7 @@ async function repairInstallation(
   projectDir: string,
   cliVersion: string,
   diagnosis: Diagnosis,
-  { json, yes }: { json: boolean; yes: boolean },
+  { json, yes, commandRoots }: { json: boolean; yes: boolean; commandRoots: string[] },
 ) {
   const { repairPreview, setupOptions } = await previewRepairs(projectDir, cliVersion, diagnosis);
   if (!json) printRepairPreview(repairPreview);
@@ -142,7 +142,7 @@ async function repairInstallation(
     return untouched;
   }
   const restartRequired = await applyRepairs(repairPreview, setupOptions, integrationRepairs);
-  const result = await runtimeDoctor(projectDir);
+  const result = await runtimeDoctor(projectDir, { commandRoots });
   if (!json && restartRequired) {
     logger.warn('Restart the affected coding agent to reload its plugin and skill list.');
   }
@@ -172,14 +172,16 @@ export function registerDoctorCommand(program: Command, cliVersion: string) {
     )
     .action(async (opts) => {
       const projectDir = program.opts().projectDir as string;
-      const diagnosis = await runtimeDoctor(
-        projectDir,
-        opts.fix ? { pipelineRepair: 'preview' } : undefined,
-      );
+      const commandRoots = program.commands.map((command) => command.name());
+      const diagnosis = await runtimeDoctor(projectDir, {
+        commandRoots,
+        ...(opts.fix ? { pipelineRepair: 'preview' } : {}),
+      });
       const repaired = opts.fix
         ? await repairInstallation(projectDir, cliVersion, diagnosis, {
             json: opts.json,
             yes: opts.yes || program.opts().yes,
+            commandRoots,
           })
         : diagnosis;
       let serverDiagnostic: Diagnosis['diagnostics'][number];

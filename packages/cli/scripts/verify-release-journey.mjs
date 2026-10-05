@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * Release journey proof: builds and packs OpenPlanr and the planr-pipeline candidate, installs both
- * into a disposable prefix and home, then drives one Operate Cycle through the installed `planr`,
+ * into a disposable prefix and home, then drives one Operate Cycle through the installed `openplanr`,
  * from setup through Advisor, Challenger and Chair submissions to the owner Review, exports and a
  * dashboard probe, using only the executor-facing prepare, validate and submit commands.
  * Run as `npm run verify:release-journey`; exits 1 on a failed assertion, 2 when it cannot run.
@@ -459,7 +459,7 @@ try {
     { cwd: prefix, stdio: 'pipe' },
   );
 
-  const cli = join(prefix, 'node_modules', '.bin', 'planr');
+  const cli = join(prefix, 'node_modules', '.bin', 'openplanr');
   const environment = { ...process.env, HOME: home, USERPROFILE: home };
   delete environment.OPENPLANR_PIPELINE_ROOT;
   delete environment.OPENPLANR_ECOSYSTEM_SOURCE;

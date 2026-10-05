@@ -31,7 +31,7 @@ afterEach(() => {
   tempDirs = [];
 });
 
-describe('planr report integration', { timeout: 60000 }, () => {
+describe('openplanr report integration', { timeout: 60000 }, () => {
   it('rejects pdf format with exit code 1', () => {
     const dir = makeTempDir();
     const init = runPlanr(['init', '--name', 'rp', '--no-ai'], dir);

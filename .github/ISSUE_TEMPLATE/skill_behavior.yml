@@ -43,7 +43,7 @@ body:
   - type: input
     id: version
     attributes:
-      label: planr --version
+      label: openplanr --version
     validations:
       required: true
   - type: textarea
@@ -71,6 +71,6 @@ body:
     attributes:
       label: Before filing
       options:
-        - label: I re-ran `planr setup` for this host and restarted it.
+        - label: I re-ran `openplanr setup` for this host and restarted it.
         - label: The pasted content contains no credentials or private customer content.
           required: true

@@ -86,7 +86,7 @@ for (const [surface, entrypoint, helper] of surfaces) {
     assert.deepEqual(readdirSync(project), [], 'preview must not write project files');
   });
 
-  test(`${surface}: the helper sends Linear to a connector or the planr CLI`, (t) => {
+  test(`${surface}: the helper sends Linear to a connector or the openplanr CLI`, (t) => {
     const project = mkdtempSync(join(tmpdir(), 'openplanr-sync-linear-'));
     t.after(() => rmSync(project, { recursive: true, force: true }));
     const result = spawnSync(process.execPath, [join(root, helper), 'linear', 'sync'], {
@@ -97,7 +97,7 @@ for (const [surface, entrypoint, helper] of surfaces) {
       timeout: 5_000,
     });
     assert.equal(result.status, 1);
-    assert.match(result.stderr, /^E_SYNC_USAGE: .*planr linear push, planr linear sync/u);
+    assert.match(result.stderr, /^E_SYNC_USAGE: .*openplanr linear push, openplanr linear sync/u);
     assert.deepEqual(readdirSync(project), []);
   });
 }

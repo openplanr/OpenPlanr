@@ -1,13 +1,7 @@
 #!/usr/bin/env node
-import {
-  CLI_NODE_REMEDIATION,
-  cliNodeVersionMessage,
-  supportsCliNodeVersion,
-} from '../lib/node-runtime.mjs';
+import { CLI_COMMAND } from '../lib/names.mjs';
 
-if (!supportsCliNodeVersion(process.versions.node)) {
-  console.error(`E_NODE_VERSION: ${cliNodeVersionMessage(process.versions.node)}`);
-  console.error(CLI_NODE_REMEDIATION);
-  process.exit(1);
-}
-await import('../dist/cli/index.js');
+process.stderr.write(
+  `planr is now ${CLI_COMMAND} (short alias: opr). The planr command will be removed in the next release.\n`,
+);
+await import('./openplanr.js');

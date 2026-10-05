@@ -222,6 +222,8 @@ const projectionFiles = new Map([
   ['errors.mjs', read('src/errors.mjs')],
   ['names.mjs', read('src/names.mjs')],
   ['names.d.mts', read('src/names.d.mts')],
+  ['planning-folder.mjs', read('src/planning-folder.mjs')],
+  ['planning-folder.d.mts', read('src/planning-folder.d.mts')],
   ['browser-contracts.d.mts', read('src/browser-contracts.d.mts')],
   [
     'browser-contracts.mjs',
