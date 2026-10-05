@@ -1272,7 +1272,7 @@ function candidateRoots(): string[] {
 export function resolvePipelinePackage(required = true): PipelinePackage | null {
   for (const root of candidateRoots()) {
     const packagePath = path.join(root, 'package.json');
-    const binPath = path.join(root, 'bin', 'planr-pipeline.mjs');
+    const binPath = path.join(root, 'bin', 'openplanr-pipeline.mjs');
     const adapterRegistryPath = path.join(root, 'registry', 'adapters.json');
     const roleRegistryPath = path.join(root, 'registry', 'roles.json');
     if (![packagePath, binPath, adapterRegistryPath, roleRegistryPath].every(existsSync)) continue;

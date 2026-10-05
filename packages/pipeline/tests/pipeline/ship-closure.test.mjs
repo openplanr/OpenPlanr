@@ -1047,7 +1047,7 @@ test('config-owned multi-repository gates round-trip through CLI start, block, f
     ],
   };
   writeFileSync(configPath, JSON.stringify(config));
-  const cli = join(process.cwd(), 'bin', 'planr-pipeline.mjs');
+  const cli = join(process.cwd(), 'bin', 'openplanr-pipeline.mjs');
   const run = (...args) =>
     JSON.parse(
       execFileSync(process.execPath, [cli, ...args, '--json'], { cwd: root, encoding: 'utf8' }),

@@ -261,7 +261,7 @@ beforeAll(async () => {
     "throw new Error('poison pipeline imported');\n";
   writeFileSync(join(poisonPackage, 'lib', 'index.mjs'), poisonSource);
   writeFileSync(join(poisonPackage, 'lib', 'protocol.mjs'), poisonSource);
-  writeFileSync(join(poisonPackage, 'bin', 'planr-pipeline.mjs'), poisonSource);
+  writeFileSync(join(poisonPackage, 'bin', 'openplanr-pipeline.mjs'), poisonSource);
   writeFileSync(join(poisonPackage, 'registry', 'adapters.json'), '{"adapters":[]}\n');
   writeFileSync(join(poisonPackage, 'registry', 'roles.json'), '{"roles":[]}\n');
   process.env.OPENPLANR_PIPELINE_ROOT = poisonPackage;

@@ -52,7 +52,7 @@ test('active pipeline docs do not carry stale release-version claims', () => {
 
 test('semantic skills execute in-session without model-backed CLI delegation', () => {
   const forbidden =
-    /`(?:open)?planr\s+(?:plan|spec\s+decompose)(?:\s|`)|`planr-pipeline(?:\s|`)|ANTHROPIC_API_KEY|OPENAI_API_KEY|OLLAMA_HOST/u;
+    /`(?:open)?planr\s+(?:plan|spec\s+decompose)(?:\s|`)|`(?:open)?planr-pipeline(?:\s|`)|ANTHROPIC_API_KEY|OPENAI_API_KEY|OLLAMA_HOST/u;
   for (const skillId of [
     'planr-plan',
     'planr-spec',

@@ -42,7 +42,7 @@
     },
     {
       "path": "packages/pipeline/package.json",
-      "digest": "sha256:406dbb422ca2463fba3a5f447f7544df10a64a9d151fb6403c73f72e597309e0"
+      "digest": "sha256:71ef4bef9c78c8c8ca63819bf224b4b1609f33b10086f63b98c22d1db11451a5"
     },
     {
       "path": "packages/protocol/package.json",
@@ -50,7 +50,7 @@
     },
     {
       "path": "packages/protocol/registries/commands.json",
-      "digest": "sha256:aa8522e81ed3117554a7608ef8c7d056a46cb0d270e380a5d82879826d136af8"
+      "digest": "sha256:487253f3bb42b22c0195e92dd8e60a9bb3e65113f3cf228020c9786cdbffa948"
     },
     {
       "path": "packages/protocol/registries/output-paths.json",
@@ -102,11 +102,11 @@
     },
     {
       "path": "scripts/marketplace/generate-ecosystem.mjs",
-      "digest": "sha256:e559ae30d1da6d9154479b808825453e93165e0e2b6f6be293c46f2ce795acea"
+      "digest": "sha256:e34f9cf8c51a172a94306de06f4f8318651ab13b9b954e89b42c76aa39b78552"
     },
     {
       "path": "scripts/marketplace/openplanr-ecosystem.schema.json",
-      "digest": "sha256:b151c6fae276621caece06ea3cce1ab1de098c0b183eb4350a25448d57e05960"
+      "digest": "sha256:50d497e0bf747069be37dd14817eb4e72eddabc8a0abc4dcad086c672ba04dd9"
     },
     {
       "path": "skills/planr-artifact/SKILL.md",
@@ -252,7 +252,7 @@
     },
     {
       "path": "ecosystem.json",
-      "digest": "sha256:b5df41769de2a38fe76c0c7e92c2909ace3d32011bcd178291536103c349640c"
+      "digest": "sha256:38f7c6b35f9b66cd78f8a5ebcf876dfe1fc06d1f824c730f0ae4ad29d9bb9705"
     }
   ]
 }

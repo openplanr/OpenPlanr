@@ -28,7 +28,7 @@ const RETIRED_CEREMONY =
 const GOVERNANCE_PROSE =
   /Human gate|named cycle owner|correction (?:pass|loop|attempt)|retry loop|Evidence index|Audit note|receipt|sha-?256|digest-bound/iu;
 const MODEL_OR_PIPELINE_SUBPROCESS =
-  /\b(?:planr-pipeline|planr plan|planr spec decompose|ANTHROPIC_API_KEY|OPENAI_API_KEY|OLLAMA_HOST)\b/iu;
+  /\b(?:(?:open)?planr-pipeline|planr plan|planr spec decompose|ANTHROPIC_API_KEY|OPENAI_API_KEY|OLLAMA_HOST)\b/iu;
 
 function readWorkspace(path) {
   return readFileSync(join(WORKSPACE_ROOT, path), 'utf8');

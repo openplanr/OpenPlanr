@@ -25,7 +25,7 @@ test('the installed package doctor accepts a package release bump without source
     'conformance/verify-artifact-review.mjs',
     'docs/artifact-review.md',
     'docs/protocol',
-    'bin/planr-pipeline.mjs',
+    'bin/openplanr-pipeline.mjs',
     'lib/artifact',
     'lib/design-engine/artifact-adapter.mjs',
     'lib/design-engine/board-adapter.mjs',

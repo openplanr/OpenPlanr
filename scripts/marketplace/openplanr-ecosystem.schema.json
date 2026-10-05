@@ -295,8 +295,11 @@
         "pipeline": {
           "type": "object",
           "additionalProperties": false,
-          "required": ["planr-pipeline"],
+          "required": ["openplanr-pipeline", "planr-pipeline"],
           "properties": {
+            "openplanr-pipeline": {
+              "const": "bin/openplanr-pipeline.mjs"
+            },
             "planr-pipeline": {
               "const": "bin/planr-pipeline.mjs"
             }

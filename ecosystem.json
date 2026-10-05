@@ -67,7 +67,7 @@
       "version": "0.55.11",
       "path": "packages/pipeline",
       "publication": "public",
-      "manifestDigest": "sha256:406dbb422ca2463fba3a5f447f7544df10a64a9d151fb6403c73f72e597309e0"
+      "manifestDigest": "sha256:71ef4bef9c78c8c8ca63819bf224b4b1609f33b10086f63b98c22d1db11451a5"
     },
     "protocol": {
       "package": "@openplanr/protocol",
@@ -137,6 +137,7 @@
       "planr": "./bin/planr.js"
     },
     "pipeline": {
+      "openplanr-pipeline": "bin/openplanr-pipeline.mjs",
       "planr-pipeline": "bin/planr-pipeline.mjs"
     }
   },
@@ -147,7 +148,7 @@
   "catalogs": {
     "commands": {
       "path": "packages/protocol/registries/commands.json",
-      "digest": "sha256:aa8522e81ed3117554a7608ef8c7d056a46cb0d270e380a5d82879826d136af8",
+      "digest": "sha256:487253f3bb42b22c0195e92dd8e60a9bb3e65113f3cf228020c9786cdbffa948",
       "rootCommands": 39,
       "pipelineMachineLeaves": 31,
       "frozenClaudeDocuments": 8,

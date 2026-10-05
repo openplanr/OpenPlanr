@@ -232,6 +232,7 @@
     }
   },
   "bin": {
+    "openplanr-pipeline": "bin/openplanr-pipeline.mjs",
     "planr-pipeline": "bin/planr-pipeline.mjs"
   },
   "files": [

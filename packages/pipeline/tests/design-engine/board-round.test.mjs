@@ -1,5 +1,5 @@
 /**
- * Design-engine rounds end to end through `planr-pipeline design-engine`: variants are
+ * Design-engine rounds end to end through `openplanr-pipeline design-engine`: variants are
  * generated (GPT Image through a stubbed OpenAI API, or recorded claude-svg), boarded on a real
  * daemon, and checked in the documents the board shows the reviewer.
  */
@@ -24,7 +24,7 @@ import {
 
 const execFileP = promisify(execFile);
 const here = dirname(fileURLToPath(import.meta.url));
-const PIPELINE_BIN = join(here, '..', '..', 'bin', 'planr-pipeline.mjs');
+const PIPELINE_BIN = join(here, '..', '..', 'bin', 'openplanr-pipeline.mjs');
 const OPENAI_STUB = pathToFileURL(join(here, 'openai-stub.mjs')).href;
 const runBrowser = process.env.PLANR_BROWSER_TESTS === '1';
 

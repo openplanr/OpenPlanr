@@ -10,7 +10,7 @@ import { composeRuntimePrompt, runtimeHandoff } from '../../lib/pipeline/runtime
 import { materializePlanrFixture } from '../helpers/planr-fixture.mjs';
 
 const root = fileURLToPath(new URL('../..', import.meta.url));
-const bin = join(root, 'bin/planr-pipeline.mjs');
+const bin = join(root, 'bin/openplanr-pipeline.mjs');
 const FEATURE = 'live-evidence-outcomes-and-governed-landing';
 const projectRoot = materializePlanrFixture('native-agent-handoff');
 execFileSync('git', ['init', '-q'], { cwd: projectRoot });

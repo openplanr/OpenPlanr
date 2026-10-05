@@ -2326,8 +2326,8 @@ export const CANONICAL_REGISTRIES = deepFreeze({
         "lifecycle": "deprecated",
         "ownerPackage": "planr-pipeline",
         "source": {
-          "path": "packages/pipeline/bin/planr-pipeline.mjs",
-          "digest": "sha256:037e9c753eb1cb82884acc1168945586757bbad968ab471ab8ae7e74a46cf43f"
+          "path": "packages/pipeline/bin/openplanr-pipeline.mjs",
+          "digest": "sha256:a5f2874b2fc8ce7f8a2db5934923bfc54dd90914b6c1ba1b8c6ddc66cc92153f"
         },
         "authorityClass": "workflow",
         "machineJson": true,
@@ -2348,8 +2348,8 @@ export const CANONICAL_REGISTRIES = deepFreeze({
         "lifecycle": "active",
         "ownerPackage": "planr-pipeline",
         "source": {
-          "path": "packages/pipeline/bin/planr-pipeline.mjs",
-          "digest": "sha256:037e9c753eb1cb82884acc1168945586757bbad968ab471ab8ae7e74a46cf43f"
+          "path": "packages/pipeline/bin/openplanr-pipeline.mjs",
+          "digest": "sha256:a5f2874b2fc8ce7f8a2db5934923bfc54dd90914b6c1ba1b8c6ddc66cc92153f"
         },
         "authorityClass": "workflow",
         "machineJson": true,
@@ -2370,8 +2370,8 @@ export const CANONICAL_REGISTRIES = deepFreeze({
         "lifecycle": "active",
         "ownerPackage": "planr-pipeline",
         "source": {
-          "path": "packages/pipeline/bin/planr-pipeline.mjs",
-          "digest": "sha256:037e9c753eb1cb82884acc1168945586757bbad968ab471ab8ae7e74a46cf43f"
+          "path": "packages/pipeline/bin/openplanr-pipeline.mjs",
+          "digest": "sha256:a5f2874b2fc8ce7f8a2db5934923bfc54dd90914b6c1ba1b8c6ddc66cc92153f"
         },
         "authorityClass": "workflow",
         "machineJson": true,
@@ -2392,8 +2392,8 @@ export const CANONICAL_REGISTRIES = deepFreeze({
         "lifecycle": "active",
         "ownerPackage": "planr-pipeline",
         "source": {
-          "path": "packages/pipeline/bin/planr-pipeline.mjs",
-          "digest": "sha256:037e9c753eb1cb82884acc1168945586757bbad968ab471ab8ae7e74a46cf43f"
+          "path": "packages/pipeline/bin/openplanr-pipeline.mjs",
+          "digest": "sha256:a5f2874b2fc8ce7f8a2db5934923bfc54dd90914b6c1ba1b8c6ddc66cc92153f"
         },
         "authorityClass": "workflow",
         "machineJson": true,
@@ -2414,8 +2414,8 @@ export const CANONICAL_REGISTRIES = deepFreeze({
         "lifecycle": "deprecated",
         "ownerPackage": "planr-pipeline",
         "source": {
-          "path": "packages/pipeline/bin/planr-pipeline.mjs",
-          "digest": "sha256:037e9c753eb1cb82884acc1168945586757bbad968ab471ab8ae7e74a46cf43f"
+          "path": "packages/pipeline/bin/openplanr-pipeline.mjs",
+          "digest": "sha256:a5f2874b2fc8ce7f8a2db5934923bfc54dd90914b6c1ba1b8c6ddc66cc92153f"
         },
         "authorityClass": "workflow",
         "machineJson": true,
@@ -2436,8 +2436,8 @@ export const CANONICAL_REGISTRIES = deepFreeze({
         "lifecycle": "active",
         "ownerPackage": "planr-pipeline",
         "source": {
-          "path": "packages/pipeline/bin/planr-pipeline.mjs",
-          "digest": "sha256:037e9c753eb1cb82884acc1168945586757bbad968ab471ab8ae7e74a46cf43f"
+          "path": "packages/pipeline/bin/openplanr-pipeline.mjs",
+          "digest": "sha256:a5f2874b2fc8ce7f8a2db5934923bfc54dd90914b6c1ba1b8c6ddc66cc92153f"
         },
         "authorityClass": "workflow",
         "machineJson": true,
@@ -2458,8 +2458,8 @@ export const CANONICAL_REGISTRIES = deepFreeze({
         "lifecycle": "active",
         "ownerPackage": "planr-pipeline",
         "source": {
-          "path": "packages/pipeline/bin/planr-pipeline.mjs",
-          "digest": "sha256:037e9c753eb1cb82884acc1168945586757bbad968ab471ab8ae7e74a46cf43f"
+          "path": "packages/pipeline/bin/openplanr-pipeline.mjs",
+          "digest": "sha256:a5f2874b2fc8ce7f8a2db5934923bfc54dd90914b6c1ba1b8c6ddc66cc92153f"
         },
         "authorityClass": "workflow",
         "machineJson": true,
@@ -2480,8 +2480,8 @@ export const CANONICAL_REGISTRIES = deepFreeze({
         "lifecycle": "active",
         "ownerPackage": "planr-pipeline",
         "source": {
-          "path": "packages/pipeline/bin/planr-pipeline.mjs",
-          "digest": "sha256:037e9c753eb1cb82884acc1168945586757bbad968ab471ab8ae7e74a46cf43f"
+          "path": "packages/pipeline/bin/openplanr-pipeline.mjs",
+          "digest": "sha256:a5f2874b2fc8ce7f8a2db5934923bfc54dd90914b6c1ba1b8c6ddc66cc92153f"
         },
         "authorityClass": "workflow",
         "machineJson": true,
@@ -2502,8 +2502,8 @@ export const CANONICAL_REGISTRIES = deepFreeze({
         "lifecycle": "active",
         "ownerPackage": "planr-pipeline",
         "source": {
-          "path": "packages/pipeline/bin/planr-pipeline.mjs",
-          "digest": "sha256:037e9c753eb1cb82884acc1168945586757bbad968ab471ab8ae7e74a46cf43f"
+          "path": "packages/pipeline/bin/openplanr-pipeline.mjs",
+          "digest": "sha256:a5f2874b2fc8ce7f8a2db5934923bfc54dd90914b6c1ba1b8c6ddc66cc92153f"
         },
         "authorityClass": "workflow",
         "machineJson": true,
@@ -2524,8 +2524,8 @@ export const CANONICAL_REGISTRIES = deepFreeze({
         "lifecycle": "active",
         "ownerPackage": "planr-pipeline",
         "source": {
-          "path": "packages/pipeline/bin/planr-pipeline.mjs",
-          "digest": "sha256:037e9c753eb1cb82884acc1168945586757bbad968ab471ab8ae7e74a46cf43f"
+          "path": "packages/pipeline/bin/openplanr-pipeline.mjs",
+          "digest": "sha256:a5f2874b2fc8ce7f8a2db5934923bfc54dd90914b6c1ba1b8c6ddc66cc92153f"
         },
         "authorityClass": "workflow",
         "machineJson": true,
@@ -2546,8 +2546,8 @@ export const CANONICAL_REGISTRIES = deepFreeze({
         "lifecycle": "active",
         "ownerPackage": "planr-pipeline",
         "source": {
-          "path": "packages/pipeline/bin/planr-pipeline.mjs",
-          "digest": "sha256:037e9c753eb1cb82884acc1168945586757bbad968ab471ab8ae7e74a46cf43f"
+          "path": "packages/pipeline/bin/openplanr-pipeline.mjs",
+          "digest": "sha256:a5f2874b2fc8ce7f8a2db5934923bfc54dd90914b6c1ba1b8c6ddc66cc92153f"
         },
         "authorityClass": "workflow",
         "machineJson": true,
@@ -2569,8 +2569,8 @@ export const CANONICAL_REGISTRIES = deepFreeze({
         "lifecycle": "active",
         "ownerPackage": "planr-pipeline",
         "source": {
-          "path": "packages/pipeline/bin/planr-pipeline.mjs",
-          "digest": "sha256:037e9c753eb1cb82884acc1168945586757bbad968ab471ab8ae7e74a46cf43f"
+          "path": "packages/pipeline/bin/openplanr-pipeline.mjs",
+          "digest": "sha256:a5f2874b2fc8ce7f8a2db5934923bfc54dd90914b6c1ba1b8c6ddc66cc92153f"
         },
         "authorityClass": "workflow",
         "machineJson": true,
@@ -2592,8 +2592,8 @@ export const CANONICAL_REGISTRIES = deepFreeze({
         "lifecycle": "active",
         "ownerPackage": "planr-pipeline",
         "source": {
-          "path": "packages/pipeline/bin/planr-pipeline.mjs",
-          "digest": "sha256:037e9c753eb1cb82884acc1168945586757bbad968ab471ab8ae7e74a46cf43f"
+          "path": "packages/pipeline/bin/openplanr-pipeline.mjs",
+          "digest": "sha256:a5f2874b2fc8ce7f8a2db5934923bfc54dd90914b6c1ba1b8c6ddc66cc92153f"
         },
         "authorityClass": "workflow",
         "machineJson": true,
@@ -2615,8 +2615,8 @@ export const CANONICAL_REGISTRIES = deepFreeze({
         "lifecycle": "active",
         "ownerPackage": "planr-pipeline",
         "source": {
-          "path": "packages/pipeline/bin/planr-pipeline.mjs",
-          "digest": "sha256:037e9c753eb1cb82884acc1168945586757bbad968ab471ab8ae7e74a46cf43f"
+          "path": "packages/pipeline/bin/openplanr-pipeline.mjs",
+          "digest": "sha256:a5f2874b2fc8ce7f8a2db5934923bfc54dd90914b6c1ba1b8c6ddc66cc92153f"
         },
         "authorityClass": "workflow",
         "machineJson": true,
@@ -2638,8 +2638,8 @@ export const CANONICAL_REGISTRIES = deepFreeze({
         "lifecycle": "active",
         "ownerPackage": "planr-pipeline",
         "source": {
-          "path": "packages/pipeline/bin/planr-pipeline.mjs",
-          "digest": "sha256:037e9c753eb1cb82884acc1168945586757bbad968ab471ab8ae7e74a46cf43f"
+          "path": "packages/pipeline/bin/openplanr-pipeline.mjs",
+          "digest": "sha256:a5f2874b2fc8ce7f8a2db5934923bfc54dd90914b6c1ba1b8c6ddc66cc92153f"
         },
         "authorityClass": "workflow",
         "machineJson": true,
@@ -2660,8 +2660,8 @@ export const CANONICAL_REGISTRIES = deepFreeze({
         "lifecycle": "active",
         "ownerPackage": "planr-pipeline",
         "source": {
-          "path": "packages/pipeline/bin/planr-pipeline.mjs",
-          "digest": "sha256:037e9c753eb1cb82884acc1168945586757bbad968ab471ab8ae7e74a46cf43f"
+          "path": "packages/pipeline/bin/openplanr-pipeline.mjs",
+          "digest": "sha256:a5f2874b2fc8ce7f8a2db5934923bfc54dd90914b6c1ba1b8c6ddc66cc92153f"
         },
         "authorityClass": "workflow",
         "machineJson": true,
@@ -2682,8 +2682,8 @@ export const CANONICAL_REGISTRIES = deepFreeze({
         "lifecycle": "active",
         "ownerPackage": "planr-pipeline",
         "source": {
-          "path": "packages/pipeline/bin/planr-pipeline.mjs",
-          "digest": "sha256:037e9c753eb1cb82884acc1168945586757bbad968ab471ab8ae7e74a46cf43f"
+          "path": "packages/pipeline/bin/openplanr-pipeline.mjs",
+          "digest": "sha256:a5f2874b2fc8ce7f8a2db5934923bfc54dd90914b6c1ba1b8c6ddc66cc92153f"
         },
         "authorityClass": "workflow",
         "machineJson": true,
@@ -2704,8 +2704,8 @@ export const CANONICAL_REGISTRIES = deepFreeze({
         "lifecycle": "active",
         "ownerPackage": "planr-pipeline",
         "source": {
-          "path": "packages/pipeline/bin/planr-pipeline.mjs",
-          "digest": "sha256:037e9c753eb1cb82884acc1168945586757bbad968ab471ab8ae7e74a46cf43f"
+          "path": "packages/pipeline/bin/openplanr-pipeline.mjs",
+          "digest": "sha256:a5f2874b2fc8ce7f8a2db5934923bfc54dd90914b6c1ba1b8c6ddc66cc92153f"
         },
         "authorityClass": "workflow",
         "machineJson": true,
@@ -2726,8 +2726,8 @@ export const CANONICAL_REGISTRIES = deepFreeze({
         "lifecycle": "active",
         "ownerPackage": "planr-pipeline",
         "source": {
-          "path": "packages/pipeline/bin/planr-pipeline.mjs",
-          "digest": "sha256:037e9c753eb1cb82884acc1168945586757bbad968ab471ab8ae7e74a46cf43f"
+          "path": "packages/pipeline/bin/openplanr-pipeline.mjs",
+          "digest": "sha256:a5f2874b2fc8ce7f8a2db5934923bfc54dd90914b6c1ba1b8c6ddc66cc92153f"
         },
         "authorityClass": "workflow",
         "machineJson": true,
@@ -2748,8 +2748,8 @@ export const CANONICAL_REGISTRIES = deepFreeze({
         "lifecycle": "active",
         "ownerPackage": "planr-pipeline",
         "source": {
-          "path": "packages/pipeline/bin/planr-pipeline.mjs",
-          "digest": "sha256:037e9c753eb1cb82884acc1168945586757bbad968ab471ab8ae7e74a46cf43f"
+          "path": "packages/pipeline/bin/openplanr-pipeline.mjs",
+          "digest": "sha256:a5f2874b2fc8ce7f8a2db5934923bfc54dd90914b6c1ba1b8c6ddc66cc92153f"
         },
         "authorityClass": "workflow",
         "machineJson": true,
@@ -2770,8 +2770,8 @@ export const CANONICAL_REGISTRIES = deepFreeze({
         "lifecycle": "deprecated",
         "ownerPackage": "planr-pipeline",
         "source": {
-          "path": "packages/pipeline/bin/planr-pipeline.mjs",
-          "digest": "sha256:037e9c753eb1cb82884acc1168945586757bbad968ab471ab8ae7e74a46cf43f"
+          "path": "packages/pipeline/bin/openplanr-pipeline.mjs",
+          "digest": "sha256:a5f2874b2fc8ce7f8a2db5934923bfc54dd90914b6c1ba1b8c6ddc66cc92153f"
         },
         "authorityClass": "workflow",
         "machineJson": true,
@@ -2792,8 +2792,8 @@ export const CANONICAL_REGISTRIES = deepFreeze({
         "lifecycle": "active",
         "ownerPackage": "planr-pipeline",
         "source": {
-          "path": "packages/pipeline/bin/planr-pipeline.mjs",
-          "digest": "sha256:037e9c753eb1cb82884acc1168945586757bbad968ab471ab8ae7e74a46cf43f"
+          "path": "packages/pipeline/bin/openplanr-pipeline.mjs",
+          "digest": "sha256:a5f2874b2fc8ce7f8a2db5934923bfc54dd90914b6c1ba1b8c6ddc66cc92153f"
         },
         "authorityClass": "workflow",
         "machineJson": true,
@@ -2814,8 +2814,8 @@ export const CANONICAL_REGISTRIES = deepFreeze({
         "lifecycle": "active",
         "ownerPackage": "planr-pipeline",
         "source": {
-          "path": "packages/pipeline/bin/planr-pipeline.mjs",
-          "digest": "sha256:037e9c753eb1cb82884acc1168945586757bbad968ab471ab8ae7e74a46cf43f"
+          "path": "packages/pipeline/bin/openplanr-pipeline.mjs",
+          "digest": "sha256:a5f2874b2fc8ce7f8a2db5934923bfc54dd90914b6c1ba1b8c6ddc66cc92153f"
         },
         "authorityClass": "workflow",
         "machineJson": true,
@@ -2836,8 +2836,8 @@ export const CANONICAL_REGISTRIES = deepFreeze({
         "lifecycle": "active",
         "ownerPackage": "planr-pipeline",
         "source": {
-          "path": "packages/pipeline/bin/planr-pipeline.mjs",
-          "digest": "sha256:037e9c753eb1cb82884acc1168945586757bbad968ab471ab8ae7e74a46cf43f"
+          "path": "packages/pipeline/bin/openplanr-pipeline.mjs",
+          "digest": "sha256:a5f2874b2fc8ce7f8a2db5934923bfc54dd90914b6c1ba1b8c6ddc66cc92153f"
         },
         "authorityClass": "workflow",
         "machineJson": true,
@@ -2858,8 +2858,8 @@ export const CANONICAL_REGISTRIES = deepFreeze({
         "lifecycle": "active",
         "ownerPackage": "planr-pipeline",
         "source": {
-          "path": "packages/pipeline/bin/planr-pipeline.mjs",
-          "digest": "sha256:037e9c753eb1cb82884acc1168945586757bbad968ab471ab8ae7e74a46cf43f"
+          "path": "packages/pipeline/bin/openplanr-pipeline.mjs",
+          "digest": "sha256:a5f2874b2fc8ce7f8a2db5934923bfc54dd90914b6c1ba1b8c6ddc66cc92153f"
         },
         "authorityClass": "workflow",
         "machineJson": true,
@@ -2880,8 +2880,8 @@ export const CANONICAL_REGISTRIES = deepFreeze({
         "lifecycle": "active",
         "ownerPackage": "planr-pipeline",
         "source": {
-          "path": "packages/pipeline/bin/planr-pipeline.mjs",
-          "digest": "sha256:037e9c753eb1cb82884acc1168945586757bbad968ab471ab8ae7e74a46cf43f"
+          "path": "packages/pipeline/bin/openplanr-pipeline.mjs",
+          "digest": "sha256:a5f2874b2fc8ce7f8a2db5934923bfc54dd90914b6c1ba1b8c6ddc66cc92153f"
         },
         "authorityClass": "workflow",
         "machineJson": true,
@@ -2902,8 +2902,8 @@ export const CANONICAL_REGISTRIES = deepFreeze({
         "lifecycle": "active",
         "ownerPackage": "planr-pipeline",
         "source": {
-          "path": "packages/pipeline/bin/planr-pipeline.mjs",
-          "digest": "sha256:037e9c753eb1cb82884acc1168945586757bbad968ab471ab8ae7e74a46cf43f"
+          "path": "packages/pipeline/bin/openplanr-pipeline.mjs",
+          "digest": "sha256:a5f2874b2fc8ce7f8a2db5934923bfc54dd90914b6c1ba1b8c6ddc66cc92153f"
         },
         "authorityClass": "workflow",
         "machineJson": true,
@@ -2924,8 +2924,8 @@ export const CANONICAL_REGISTRIES = deepFreeze({
         "lifecycle": "deprecated",
         "ownerPackage": "planr-pipeline",
         "source": {
-          "path": "packages/pipeline/bin/planr-pipeline.mjs",
-          "digest": "sha256:037e9c753eb1cb82884acc1168945586757bbad968ab471ab8ae7e74a46cf43f"
+          "path": "packages/pipeline/bin/openplanr-pipeline.mjs",
+          "digest": "sha256:a5f2874b2fc8ce7f8a2db5934923bfc54dd90914b6c1ba1b8c6ddc66cc92153f"
         },
         "authorityClass": "workflow",
         "machineJson": true,
@@ -2946,8 +2946,8 @@ export const CANONICAL_REGISTRIES = deepFreeze({
         "lifecycle": "active",
         "ownerPackage": "planr-pipeline",
         "source": {
-          "path": "packages/pipeline/bin/planr-pipeline.mjs",
-          "digest": "sha256:037e9c753eb1cb82884acc1168945586757bbad968ab471ab8ae7e74a46cf43f"
+          "path": "packages/pipeline/bin/openplanr-pipeline.mjs",
+          "digest": "sha256:a5f2874b2fc8ce7f8a2db5934923bfc54dd90914b6c1ba1b8c6ddc66cc92153f"
         },
         "authorityClass": "workflow",
         "machineJson": true,
@@ -2968,8 +2968,8 @@ export const CANONICAL_REGISTRIES = deepFreeze({
         "lifecycle": "active",
         "ownerPackage": "planr-pipeline",
         "source": {
-          "path": "packages/pipeline/bin/planr-pipeline.mjs",
-          "digest": "sha256:037e9c753eb1cb82884acc1168945586757bbad968ab471ab8ae7e74a46cf43f"
+          "path": "packages/pipeline/bin/openplanr-pipeline.mjs",
+          "digest": "sha256:a5f2874b2fc8ce7f8a2db5934923bfc54dd90914b6c1ba1b8c6ddc66cc92153f"
         },
         "authorityClass": "workflow",
         "machineJson": true,
@@ -2990,8 +2990,8 @@ export const CANONICAL_REGISTRIES = deepFreeze({
         "lifecycle": "active",
         "ownerPackage": "planr-pipeline",
         "source": {
-          "path": "packages/pipeline/bin/planr-pipeline.mjs",
-          "digest": "sha256:037e9c753eb1cb82884acc1168945586757bbad968ab471ab8ae7e74a46cf43f"
+          "path": "packages/pipeline/bin/openplanr-pipeline.mjs",
+          "digest": "sha256:a5f2874b2fc8ce7f8a2db5934923bfc54dd90914b6c1ba1b8c6ddc66cc92153f"
         },
         "authorityClass": "workflow",
         "machineJson": true,
@@ -3099,7 +3099,7 @@ export const CANONICAL_REGISTRIES = deepFreeze({
         ]
       }
     ],
-    "documentDigest": "sha256:c3ecfb8c3159557e8f75416acbd60f2c4ec999c29f30fd8cd57325ada8b8f5a4"
+    "documentDigest": "sha256:427a38529099813d3ff17e31cabb4de1f7289f26e8e2525b2cf71cac3d1114ea"
   },
   "skills.json": {
     "kind": "skill-catalog",
