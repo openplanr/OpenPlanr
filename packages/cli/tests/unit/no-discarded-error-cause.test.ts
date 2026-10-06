@@ -11,8 +11,8 @@ const SOURCE_ROOT = path.resolve('src');
 const REPORTING_CATCH = /\}\s*catch\s*\{(?:[^{}]|\{[^{}]*\})*?\bfail[A-Za-z]*\s*\(/gsu;
 
 /**
- * Known offenders at the time this guard landed. Five sit inside the Operate runtime scheduled
- * for deletion and resolve by being deleted; the three connector files are the real remainder.
+ * Known offenders at the time this guard landed. They sit inside the Operate runtime scheduled
+ * for deletion and resolve by being deleted.
  * Nothing may be added here — the guard exists to stop the pattern spreading, not to bless it.
  */
 const KNOWN_OFFENDERS = [
@@ -20,9 +20,6 @@ const KNOWN_OFFENDERS = [
   // `operate-v2/` to `operate/`, and the guard must pass on either.
   'src/services/operate-v2/delivery-evidence.ts',
   'src/services/operate-v2/spec-operating-origin-service.ts',
-  'src/services/connectors/checkpoint-custody.ts',
-  'src/services/connectors/connector-runtime.ts',
-  'src/services/connectors/credential-custody.ts',
   'src/services/operate/delivery-evidence.ts',
   'src/services/operate/spec-operating-origin-service.ts',
 ];
