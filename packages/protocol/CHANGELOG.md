@@ -1,5 +1,17 @@
 # @openplanr/protocol
 
+## 0.10.3
+
+### Patch Changes
+
+- ac4c5c4: The database agent no longer reads `DB_PASSWORD` or passes any password or connection string. It connects only where the database client signs in on its own: a PostgreSQL service with `~/.pgpass`, a MySQL login path, MongoDB OIDC, X.509 or AWS authentication or a local server without authentication, or a trusted MSSQL connection. Without one, it asks you to set one up or run the scan yourself.
+- 96f616b: `delegate` classifies credentials by syntax. Member references such as `config!.apiKey` in code, type annotations ending in `;` or `,`, and self-describing test values such as `test_secret_must_be_…` now reach the delegated agent unchanged, while recognizable credentials, private keys and credential files stay blocked. A blocked source lists masked findings with location, rule and confidence; for an optional source they appear only in the prepare preview, never in the delegated context. After you confirm that a specific finding is not a credential, `prepare` accepts it through `credentialResolutions` for those exact bytes only, and the preview lists every accepted resolution.
+- ac4c5c4: `delegate` checks a local model server without sending a token: it no longer reads or sends `LM_STUDIO_API_KEY`, `LM_API_TOKEN` or the Claude `ANTHROPIC_AUTH_TOKEN`. A server that requires sign-in is reported as not checked, and the run can still start with the delegated agent's own sign-in.
+- ac4c5c4: The sync, sprint and status skills reach GitHub and Linear through your coding agent's own connection, or the GitHub CLI when it is signed in, and name the connection to add when one is missing. They no longer use the Linear token that `openplanr linear` stores; `openplanr linear` keeps working in a terminal. After `openplanr sprint apply`, the sprint skill updates the issue linked to each changed item.
+- d2ef7a8: The Claude Code plugin pre-approves no tools: the seven Operate review skills drop their `allowed-tools` grant, so the package qualifies as instructions-only and every write follows your normal permission prompts. An Operate lens run on its own now creates the same `.planr/operate/<date>-<slug>/` cycle `planr-operate` creates, with a one-lens roster, so the dashboard lists it.
+  
+  Role agents are simpler and current: descriptions no longer route by task file names or pipeline step numbers, legacy role names are gone, and most roles inherit the session's tools. The QA agent denies the file-editing tools and the DevOps agent keeps no shell; both boundaries are documented as what the host enforces. Plan decomposes a story into coherent, independently verifiable tasks split by ownership instead of a fixed one-or-two-task count.
+
 ## 0.10.2
 
 ### Patch Changes

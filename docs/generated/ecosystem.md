@@ -5,19 +5,19 @@ This is the deterministic local-candidate ledger for OpenPlanr 0.1.0. It reads o
 
 | Package | Version | Path | Publication |
 |---|---:|---|---|
-| `openplanr` | 2.2641.1 | `packages/cli` | public |
-| `planr-pipeline` | 0.56.0 | `packages/pipeline` | public |
-| `@openplanr/protocol` | 0.10.2 | `packages/protocol` | public |
-| `@openplanr/operate` | 0.1.16 | `packages/operate` | private |
-| `@openplanr/artifact` | 0.6.4 | `packages/artifact` | private |
-| `@openplanr/design` | 0.4.4 | `packages/design` | private |
-| `@openplanr/skill-runtime` | 0.2.15 | `packages/skill-runtime` | private |
+| `openplanr` | 2.2641.2 | `packages/cli` | public |
+| `planr-pipeline` | 0.57.0 | `packages/pipeline` | public |
+| `@openplanr/protocol` | 0.10.3 | `packages/protocol` | public |
+| `@openplanr/operate` | 0.1.17 | `packages/operate` | private |
+| `@openplanr/artifact` | 0.6.5 | `packages/artifact` | private |
+| `@openplanr/design` | 0.4.5 | `packages/design` | private |
+| `@openplanr/skill-runtime` | 0.2.16 | `packages/skill-runtime` | private |
 | `@openplanr/integrations` | 0.1.0 | `packages/integrations` | private |
-| `@openplanr/dashboard-app` | 0.1.16 | `apps/dashboard` | private |
+| `@openplanr/dashboard-app` | 0.1.17 | `apps/dashboard` | private |
 
 Compatibility invariants:
 
-- `openplanr` uses the exact optional `planr-pipeline@0.56.0` dependency.
+- `openplanr` uses the exact optional `planr-pipeline@0.57.0` dependency.
 - The public pipeline retains 58 export keys and 228 root symbols.
 - Historical schemas and registries remain accounted for; additive Protocol contracts retain versioned readers.
 - Commands, skills, roles, and output contracts are catalog-bound.
