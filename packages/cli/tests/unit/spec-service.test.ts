@@ -16,7 +16,9 @@ import {
   listSpecs,
   listSpecTasks,
   readSpec,
+  syncSpec,
 } from '../../src/services/spec-service.js';
+import { parseMarkdown } from '../../src/utils/markdown.js';
 
 function makeConfig(): OpenPlanrConfig {
   return {
@@ -213,6 +215,82 @@ describe('deterministic specification storage', () => {
     expect((await listSpecs(projectDir, config)).map(({ id }) => id)).toEqual(['SPEC-001']);
     await destroySpec(projectDir, config, 'SPEC-001');
     expect(await listSpecs(projectDir, config)).toEqual([]);
+  });
+});
+
+describe('spec sync specId repair', () => {
+  const story =
+    '---\nid: US-001\ntitle: Priority API\nspecId: SPEC-001\nstatus: pending\n---\nBody.\n';
+  const unquotedTask = (id: string, specIdLine: string) =>
+    `---\nid: ${id}\ntitle: Priority\nstoryId: US-001\n${specIdLine}type: Tech\n---\nBody.\n`;
+
+  async function writeSpecFiles(files: Record<string, string>): Promise<string> {
+    await createSpec(projectDir, config, 'Task priority');
+    const spec = await readSpec(projectDir, config, 'SPEC-001');
+    if (!spec) throw new Error('SPEC-001 was not created');
+    for (const [relative, content] of Object.entries(files)) {
+      await fs.mkdir(path.dirname(path.join(spec.specDir, relative)), { recursive: true });
+      await fs.writeFile(path.join(spec.specDir, relative), content);
+    }
+    return spec.specDir;
+  }
+
+  it('accepts an unquoted specId and adds a missing one after an unquoted id', async () => {
+    const present = unquotedTask('T-001', 'specId: SPEC-001\n');
+    const specDir = await writeSpecFiles({
+      'stories/US-001-priority-api.md': story,
+      'tasks/T-001-priority-api.md': present,
+      'tasks/T-002-priority-web.md': unquotedTask('T-002', ''),
+    });
+
+    const report = await syncSpec(projectDir, config, 'SPEC-001');
+
+    expect(report.fixed).toEqual(['Task T-002: added missing specId frontmatter.']);
+    expect(await fs.readFile(path.join(specDir, 'stories/US-001-priority-api.md'), 'utf8')).toBe(
+      story,
+    );
+    expect(await fs.readFile(path.join(specDir, 'tasks/T-001-priority-api.md'), 'utf8')).toBe(
+      present,
+    );
+    const repaired = await fs.readFile(path.join(specDir, 'tasks/T-002-priority-web.md'), 'utf8');
+    expect(repaired).toBe(
+      unquotedTask('T-002', '').replace('id: T-002\n', 'id: T-002\nspecId: "SPEC-001"\n'),
+    );
+    expect(parseMarkdown(repaired).data.specId).toBe('SPEC-001');
+    expect((await syncSpec(projectDir, config, 'SPEC-001')).fixed).toEqual([]);
+  });
+
+  it('reports a dry-run repair without writing', async () => {
+    const missing = unquotedTask('T-001', '');
+    const specDir = await writeSpecFiles({
+      'stories/US-001-priority-api.md': story,
+      'tasks/T-001-priority-api.md': missing,
+    });
+
+    const report = await syncSpec(projectDir, config, 'SPEC-001', { dryRun: true });
+
+    expect(report.fixed).toEqual(['Task T-001: added missing specId frontmatter [dry-run].']);
+    expect(await fs.readFile(path.join(specDir, 'tasks/T-001-priority-api.md'), 'utf8')).toBe(
+      missing,
+    );
+  });
+
+  it('warns instead of claiming a repair when no frontmatter id line exists', async () => {
+    const withoutId = '---\ntitle: Priority\nstoryId: US-001\n---\nid: not frontmatter\n';
+    const specDir = await writeSpecFiles({
+      'stories/US-001-priority-api.md': story,
+      'tasks/T-001-priority-api.md': withoutId,
+    });
+
+    const report = await syncSpec(projectDir, config, 'SPEC-001');
+
+    expect(report.fixed).toEqual([]);
+    expect(report.warnings).toContain(
+      'Task T-001 has no specId and no frontmatter id line to add it after; add specId: "SPEC-001" by hand.',
+    );
+    expect(await fs.readFile(path.join(specDir, 'tasks/T-001-priority-api.md'), 'utf8')).toBe(
+      withoutId,
+    );
   });
 });
 
