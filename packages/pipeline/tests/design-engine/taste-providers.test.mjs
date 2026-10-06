@@ -43,7 +43,7 @@ test('decay: exactly one week → confidence × 0.95; two weeks → × 0.95²', 
 
 test('decay is computed AT READ TIME — raw confidence is what persists', () => {
   const path = join(tmp(), 'taste-profile.json');
-  let p = updateTaste(emptyProfile(), {
+  const p = updateTaste(emptyProfile(), {
     verdict: 'approved',
     attributes: { aesthetics: ['minimal'] },
     sessionId: 's',
@@ -118,11 +118,11 @@ test('resolveProvider: auto and claude-svg resolve to claude-svg; any other name
     assert.equal(picked.name, 'claude-svg');
     assert.equal(picked.degraded, false, 'the default is not a degradation');
   }
-  for (const requested of ['openai', 'midjourney'])
-    assert.throws(
-      () => resolveProvider({ requested }),
-      new RegExp(`unknown provider "${requested}"`),
-    );
+  assert.throws(() => resolveProvider({ requested: 'openai' }), /openai provider was removed/);
+  assert.throws(
+    () => resolveProvider({ requested: 'midjourney' }),
+    /unknown provider "midjourney"/,
+  );
 });
 
 // ── claude-svg sheet contract ────────────────────────────────────────────────

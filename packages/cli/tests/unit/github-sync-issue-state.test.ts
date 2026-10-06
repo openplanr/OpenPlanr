@@ -142,6 +142,31 @@ describe.skipIf(process.platform === 'win32')('openplanr github sync reads gh is
     expect(stateChanges()).toEqual([]);
   });
 
+  it('keeps a planning epic with an open issue and closes out one whose issue closed', async () => {
+    const epicsDir = join(projectDir, '.planr', 'epics');
+    mkdirSync(epicsDir, { recursive: true });
+    const epics = [
+      { id: 'EPIC-001', status: 'planning', issue: 11, state: 'OPEN' },
+      { id: 'EPIC-002', status: 'planning', issue: 12, state: 'CLOSED' },
+    ];
+    for (const { id, status, issue } of epics) {
+      writeFileSync(
+        join(epicsDir, `${id}-linked.md`),
+        `---\nid: "${id}"\ntitle: "Linked epic"\nstatus: "${status}"\ngithubIssue: ${issue}\n---\n# ${id}: Linked epic\n`,
+      );
+    }
+    stubGh([...LINKED, ...epics]);
+
+    await runGitHub('sync', '--direction', 'pull');
+
+    const epicStatus = (id: string) =>
+      parseMarkdown(readFileSync(join(epicsDir, `${id}-linked.md`), 'utf8')).data.status;
+    expect(epics.map(({ id }) => [id, epicStatus(id)])).toEqual([
+      ['EPIC-001', 'planning'],
+      ['EPIC-002', 'done'],
+    ]);
+  });
+
   it('shows each issue state in openplanr github status and marks an unreadable issue out of sync', async () => {
     stubGh(LINKED.filter(({ issue }) => issue !== 4));
 

@@ -116,7 +116,6 @@ async function cmdGenerate(args) {
   if (!args.brief) fail('--brief required');
   const variant = String(args.variant || 'A');
   const target = args.target || 'design';
-  const sessionDir = resolveSessionDir(args);
   const { name } = resolveProvider({ requested: args.provider || 'auto' });
   // claude-svg authors from the brief alone; a reference image would otherwise be dropped silently.
   if (args['from-image']) {
@@ -124,6 +123,7 @@ async function cmdGenerate(args) {
       'reference images are not supported: claude-svg authors from the brief, so drop --from-image',
     );
   }
+  const sessionDir = resolveSessionDir(args);
   // The CLI defines the contract; the CALLING AGENT authors the SVG and then
   // runs `check`. Print the contract + exact output path — never a dead-end.
   const contract = sheetContract(target);
@@ -190,6 +190,11 @@ async function cmdRecord(args) {
   const sessionDir = resolveSessionDir(args);
   const brief = args.brief || '';
   let session = loadSession(sessionDir, variant);
+  if (session && session.provider !== 'claude-svg') {
+    fail(
+      `session-${variant}.json was made with the ${session.provider} provider, which this engine no longer runs; record into a new --session-dir or variant`,
+    );
+  }
   if (!session) {
     if (!brief) fail('--brief required on the first record for a variant');
     session = createSession({
@@ -550,8 +555,16 @@ const COMMANDS = {
   taste: cmdTaste,
 };
 
+const REMOVED_COMMANDS = {
+  setup: () =>
+    `setup was removed: the design engine no longer uses an OpenAI key. If you saved one with setup, delete openai_api_key from ${join(planrHome(), 'credentials.json')}.`,
+  evolve: () =>
+    'evolve was removed with the openai provider: author new SVG variants with generate.',
+};
+
 const args = parseArgs(process.argv.slice(2));
 const cmd = args._[0];
+if (Object.hasOwn(REMOVED_COMMANDS, cmd)) fail(REMOVED_COMMANDS[cmd]());
 if (!cmd || !COMMANDS[cmd]) {
   errLine(`planr-design <${Object.keys(COMMANDS).join('|')}>`);
   process.exit(cmd ? 1 : 0);

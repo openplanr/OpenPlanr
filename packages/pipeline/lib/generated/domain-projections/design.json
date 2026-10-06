@@ -31,7 +31,7 @@
     {
       "source": "packages/design/lib/design-engine/cli.mjs",
       "target": "lib/design-engine/cli.mjs",
-      "sha256": "6ef3814fed4c72c9f178f9a048822f7d5f5b5909d6bd5d5b1962b143d8884d05",
+      "sha256": "60e4b15fa2de66cd3087d707faa7f84c7f972b9dead3187d7bc8f4f4154e7818",
       "mode": "644"
     },
     {
@@ -61,7 +61,7 @@
     {
       "source": "packages/design/lib/design-engine/providers/index.mjs",
       "target": "lib/design-engine/providers/index.mjs",
-      "sha256": "b5ac6977b1cf0853cd0f2ffc407dcc3590590f9075f7b10d7b27501452aaf159",
+      "sha256": "72c784ac415e28c2c956b3f83b6c73fa8688fb93107d3a2ee150a570459efcaf",
       "mode": "644"
     },
     {

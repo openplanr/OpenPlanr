@@ -650,7 +650,7 @@
       "ownerPackage": "openplanr",
       "source": {
         "path": "packages/cli/src/cli/commands/report.ts",
-        "digest": "sha256:1ab2e5d541a397c51c622a04bd8238db64b751f398e4c78056ac6c56019cee9d"
+        "digest": "sha256:503b71cfd582f8dea83f9af0f1f7a033802aa5cf3b88ba22b86bf412bb6698d0"
       },
       "authorityClass": "workflow",
       "machineJson": false,
@@ -1948,5 +1948,5 @@
       ]
     }
   ],
-  "documentDigest": "sha256:1299d4285e277676f3af63b28b811188cda496ef3391386acccb4d7e7eb4291c"
+  "documentDigest": "sha256:5f251d753713eb083582cbb7474e3d82fb995e94896c1f0735916f75efe54ee1"
 }

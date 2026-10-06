@@ -102,7 +102,10 @@ try {
 } catch (e) {
   removedProvider = e.message;
 }
-assert(removedProvider.includes('unknown provider'), 'a removed provider is rejected');
+assert(
+  removedProvider.includes('openai provider was removed'),
+  'the removed openai provider says so',
+);
 const providerGuidance = [
   'procedures/design-loop-step0-context.md',
   'procedures/design-loop-step1-gate.md',
