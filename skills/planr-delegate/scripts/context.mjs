@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto';
 import { lstat, mkdir, readdir, readFile, realpath, stat, writeFile } from 'node:fs/promises';
 import { basename, dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
+import { classifyCredentials, credentialSyntax, resolveFindings } from './credentials.mjs';
 
 export const CAPSULE_SCHEMA_VERSION = '1.0.0';
 
@@ -12,19 +13,14 @@ const DEFAULT_LIMITS = Object.freeze({
 const SECRET_NAME =
   /^(?:\.env(?:\..*)?|\.envrc|\.netrc|\.git-credentials|\.npmrc|\.pypirc|id_(?:rsa|dsa|ecdsa|ed25519)(?:\.pub)?|credentials(?:\.[^.]+)?|service[-_]?account(?:\.[^.]+)?|.*\.(?:pem|p12|pfx|key|tfvars)(?:\.json)?)$/iu;
 const SECRET_SEGMENT = /^(?:\.ssh|\.aws|\.gnupg|\.kube)$/iu;
-const SECRET_VALUE =
-  /-----BEGIN (?:[A-Z ]* )?PRIVATE KEY-----|\bAKIA[0-9A-Z]{16}\b|\bgh[pousr]_[A-Za-z0-9_]{20,}\b|\bgithub_pat_[A-Za-z0-9_]{20,}\b|\bsk-(?:proj-)?[A-Za-z0-9_-]{24,}\b|\bxox[baprs]-[A-Za-z0-9-]{20,}\b|"private_key"\s*:\s*"-----BEGIN/iu;
-const SECRET_ASSIGNMENT =
-  /(?:^|[^A-Za-z0-9_])(?:[A-Za-z_][A-Za-z0-9_-]*?)?(?:API[_-]?KEY|ACCESS[_-]?TOKEN|AUTH[_-]?TOKEN|CLIENT[_-]?SECRET|PRIVATE[_-]?KEY|PASSWORD|TOKEN|SECRET(?:[_-]?KEY)?)["']?\s*[:=]\s*(["'`])((?:(?!\1|\$\{)[^\r\n\\]|\\.){16,})\1/giu;
-const SECRET_CONFIG_ASSIGNMENT =
-  /^[ \t]*(?:export[ \t]+)?(?:[A-Za-z_][A-Za-z0-9_-]*?)?(?:API[_-]?KEY|ACCESS[_-]?TOKEN|AUTH[_-]?TOKEN|CLIENT[_-]?SECRET|PRIVATE[_-]?KEY|PASSWORD|TOKEN|SECRET(?:[_-]?KEY)?)[ \t]*[:=][ \t]*(?!process\.env(?:\.|\[)|import\.meta\.env(?:\.|\[)|Deno\.env\.|os\.environ|env\.)([^\s"'`#()\[\]{}$]{16,})[ \t]*(?:#[^\r\n]*)?\r?$/gimu;
-const CREDENTIAL_PLACEHOLDER =
-  /^(?:example(?:[-_].*)?|placeholder(?:[-_].*)?|your[-_].*|(?:change|replace)[-_]me(?:[-_].*)?|(?:dummy|fake|mock|test|never[-_]return)[-_](?:api[-_]?key|access[-_]?token|auth[-_]?token|client[-_]?secret|password|token|secret(?:[-_]?key)?))$/iu;
 const TASK_ID = /^(?:T|TASK|QT)-\d{3,}$/u;
 const STORY_ID = /^US-\d{3,}$/u;
 const SPEC_ID = /^SPEC-\d{3,}$/u;
 const FEATURE_ID = /^FEAT-\d{3,}$/u;
 const EPIC_ID = /^EPIC-\d{3,}$/u;
+// Credential findings of an optional omission, keyed by the omission entry. The delegate reads
+// the written capsule, so they reach only the parent's preview.
+const OMISSION_FINDINGS = new WeakMap();
 
 export class CapsuleError extends Error {
   constructor(code, message, details = {}) {
@@ -68,14 +64,9 @@ function isSecretPath(path) {
   return parts.some((part) => SECRET_SEGMENT.test(part)) || SECRET_NAME.test(parts.at(-1));
 }
 
+/** True when free text holds credential material; source files are classified by their syntax. */
 export function containsSecret(bytes) {
-  const content = bytes.toString('utf8');
-  if (SECRET_VALUE.test(content)) return true;
-  for (const match of content.matchAll(SECRET_ASSIGNMENT))
-    if (!CREDENTIAL_PLACEHOLDER.test(match[2])) return true;
-  for (const match of content.matchAll(SECRET_CONFIG_ASSIGNMENT))
-    if (!CREDENTIAL_PLACEHOLDER.test(match[1])) return true;
-  return false;
+  return classifyCredentials(bytes).findings.length > 0;
 }
 
 export function assertCredentialFreeText(
@@ -84,10 +75,34 @@ export function assertCredentialFreeText(
 ) {
   if (typeof value !== 'string')
     throw new CapsuleError('E_CAPSULE_INPUT', `${label} must be text.`);
-  if (containsSecret(Buffer.from(value, 'utf8')))
+  const { contentDigest, findings } = classifyCredentials(Buffer.from(value, 'utf8'), {
+    label,
+    resolvable: false,
+  });
+  if (findings.length)
     throw new CapsuleError(
       code,
       `${label} contains credential material; use native configuration or credential environment references instead.`,
+      { findings, contentDigest },
+    );
+  return value;
+}
+
+function credentialResolutionList(value) {
+  if (
+    !Array.isArray(value) ||
+    value.length > 64 ||
+    value.some(
+      (resolution) =>
+        !resolution ||
+        typeof resolution !== 'object' ||
+        !/^cred_[a-f0-9]{16}$/u.test(resolution.id ?? '') ||
+        !/^sha256:[a-f0-9]{64}$/u.test(resolution.contentDigest ?? ''),
+    )
+  )
+    throw new CapsuleError(
+      'E_CAPSULE_INPUT',
+      'Credential resolutions must list at most 64 { id, contentDigest } entries from reported findings.',
     );
   return value;
 }
@@ -312,8 +327,22 @@ export async function buildContextCapsule({
   optionalFiles = [],
   readOnlyRepositories = [],
   limits,
+  credentialResolutions = [],
 } = {}) {
   if (!repositoryRoot) throw new CapsuleError('E_CAPSULE_SOURCE', 'repositoryRoot is required.');
+  const resolutions = credentialResolutionList(credentialResolutions);
+  const appliedResolutions = [];
+  const credentialCheck = (bytes, origin) => {
+    const classification = classifyCredentials(bytes, origin);
+    return {
+      ...resolveFindings(classification, resolutions),
+      contentDigest: classification.contentDigest,
+    };
+  };
+  const recordResolutions = ({ applied, contentDigest }, source) => {
+    for (const { id, rule, location } of applied)
+      appliedResolutions.push({ id, contentDigest, ...source, rule, location });
+  };
   if (request !== undefined && typeof request !== 'string')
     throw new CapsuleError('E_CAPSULE_INPUT', 'A direct request must be text.');
   if (Boolean(taskSelector) === Boolean(request?.trim())) {
@@ -354,8 +383,18 @@ export async function buildContextCapsule({
   if (request && Buffer.byteLength(request, 'utf8') > bounds.maxFileBytes) {
     throw new CapsuleError('E_CAPSULE_LIMIT', 'The direct request exceeds the capsule text limit.');
   }
-  if (request && containsSecret(Buffer.from(request, 'utf8'))) {
-    throw new CapsuleError('E_CAPSULE_SECRET', 'The direct request contains credential material.');
+  if (request) {
+    const credentials = credentialCheck(Buffer.from(request, 'utf8'), { label: 'request' });
+    if (credentials.remaining.length)
+      throw new CapsuleError(
+        'E_CAPSULE_SECRET',
+        'The direct request contains credential material.',
+        {
+          findings: credentials.remaining,
+          contentDigest: credentials.contentDigest,
+        },
+      );
+    recordResolutions(credentials, { source: 'request' });
   }
   const roots = await sourceRoots(repositoryRoot, readOnlyRepositories);
   const project = roots.get('project').physical;
@@ -381,9 +420,16 @@ export async function buildContextCapsule({
       return prior;
     }
     const optionalOmission = (reason) => {
-      if (required) throw new CapsuleError(reason.code, reason.message, { repositoryKey, path });
+      if (required)
+        throw new CapsuleError(reason.code, reason.message, {
+          repositoryKey,
+          path,
+          ...reason.details,
+        });
       if (!omitted.has(key)) {
-        omissions.push({ repositoryKey, path, role, reason: reason.code });
+        const omission = { repositoryKey, path, role, reason: reason.code };
+        if (reason.details) OMISSION_FINDINGS.set(omission, reason.details);
+        omissions.push(omission);
         omitted.add(key);
       }
       return null;
@@ -467,11 +513,20 @@ export async function buildContextCapsule({
         message: `Required source exceeds capsule limits: ${path}`,
       });
     }
-    if (containsSecret(bytes))
+    // A link reads as its target's syntax, or as configuration when either path is configuration.
+    const syntaxes = [path, relative(allowed, physical).split(sep).join('/')].map(credentialSyntax);
+    const credentials = credentialCheck(bytes, {
+      path,
+      label: `${repositoryKey}/${path}`,
+      syntax: syntaxes.includes('config') ? 'config' : syntaxes[1],
+    });
+    if (credentials.remaining.length)
       return optionalOmission({
         code: 'E_CAPSULE_SECRET',
         message: `Credential material detected in source: ${path}`,
+        details: { findings: credentials.remaining, contentDigest: credentials.contentDigest },
       });
+    recordResolutions(credentials, { repositoryKey, path });
     const copy = {
       repositoryKey,
       path,
@@ -686,6 +741,7 @@ export async function buildContextCapsule({
     inventory,
     files,
     omissions,
+    ...(appliedResolutions.length ? { credentialResolutions: appliedResolutions } : {}),
     planning: {
       logicalPath: join(project, '.planr'),
       physicalPath: roots.get('project').planning,
@@ -731,7 +787,13 @@ export function previewContextCapsule(capsule) {
     mode: capsule.mode,
     selector: capsule.selector,
     inventory: capsule.inventory,
-    omissions: capsule.omissions,
+    omissions: capsule.omissions.map((omission) => ({
+      ...omission,
+      ...OMISSION_FINDINGS.get(omission),
+    })),
+    ...(capsule.credentialResolutions
+      ? { credentialResolutions: capsule.credentialResolutions }
+      : {}),
     blockers: [],
     planning: capsule.planning ?? null,
     sourceKeys: capsule.sourceKeys,

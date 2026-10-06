@@ -133,6 +133,17 @@
       "executable": false
     },
     {
+      "path": "scripts/credentials.mjs",
+      "kind": "script",
+      "hosts": [
+        "claude-code",
+        "codex",
+        "chatgpt",
+        "cursor"
+      ],
+      "executable": false
+    },
+    {
       "path": "scripts/custody.mjs",
       "kind": "script",
       "hosts": [

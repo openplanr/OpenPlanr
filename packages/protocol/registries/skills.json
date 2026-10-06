@@ -624,7 +624,7 @@
       "lifecycle": "active",
       "authorityClass": "implementation",
       "source": "skills/planr-delegate/openplanr.skill.json",
-      "sourceDigest": "sha256:10489d6f04acd360db631f4f7b2adf59cf6b34df8fe1985552166802d47e8d47",
+      "sourceDigest": "sha256:01c074a24328c5eeba8571f75bea5d51e1b6f27a702e390c680055684a105717",
       "triggerPolicy": {
         "include": [
           "Delegate implementation to another coding agent",
@@ -1563,7 +1563,7 @@
       "lifecycle": "active",
       "authorityClass": "planning-write",
       "source": "skills/planr-sprint/openplanr.skill.json",
-      "sourceDigest": "sha256:1b891f3ccb84357f37f17e7214b85a440cd0945a5e2f759ca6839ad5af46b705",
+      "sourceDigest": "sha256:62a62e58bc27242c36c06e170bd875d38ceb1457e467556839e1a80e26a459c9",
       "triggerPolicy": {
         "include": [
           "Refine the open backlog and select what fits the next sprint or release cut",
@@ -1625,7 +1625,7 @@
       "lifecycle": "active",
       "authorityClass": "read-only-view",
       "source": "skills/planr-status/openplanr.skill.json",
-      "sourceDigest": "sha256:a9eabf20675b8a13692cc0f8e826b2e58c3a92626b3cbb5cf1431e9f0debf029",
+      "sourceDigest": "sha256:414afb2187111d04a1c3030f28c7b20a58ad7b4eb3e0e724852a34e152ecceae",
       "triggerPolicy": {
         "include": [
           "Report current OpenPlanr delivery status or outstanding work",
@@ -1686,7 +1686,7 @@
       "lifecycle": "active",
       "authorityClass": "planning-write",
       "source": "skills/planr-sync/openplanr.skill.json",
-      "sourceDigest": "sha256:e0578f02e6ec23d948101392972cb373f3601de3d4a53f9fe526b527f0d8147d",
+      "sourceDigest": "sha256:e45162758f758bae447c126d121ec1a220b40e03bd09a14b9b4fc2e6643f53da",
       "triggerPolicy": {
         "include": [
           "Audit planning artifacts for graph, schema, or protocol drift",
@@ -1742,5 +1742,5 @@
     }
   ],
   "compatibilityAliases": [],
-  "documentDigest": "sha256:27b4d07edf7508fec9ae3f38692e0942cb457dfcce46acc65a48491fa066d8e1"
+  "documentDigest": "sha256:163ce04f19cd71e9f2ed50eaa85085cd0c0e061570bda19c9c925350982b5764"
 }

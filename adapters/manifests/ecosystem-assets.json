@@ -6,7 +6,7 @@
   "inputs": [
     {
       "path": "adapters/manifests/generated-assets.json",
-      "digest": "sha256:a59781dcecf04f97ba8f929b4681dfdfd63378476ded9553e75ddbc3c222e2ad"
+      "digest": "sha256:6aa88d1c5d9a87d87fc406749e680c76d6d6b7b70e69a21c3e07616f0bc0402b"
     },
     {
       "path": "apps/dashboard/package.json",
@@ -50,7 +50,7 @@
     },
     {
       "path": "packages/protocol/registries/commands.json",
-      "digest": "sha256:487253f3bb42b22c0195e92dd8e60a9bb3e65113f3cf228020c9786cdbffa948"
+      "digest": "sha256:7b8e2bcbdccfab4628564f7c905cb6f6d8d31d2afea93ca74f78703c966a2723"
     },
     {
       "path": "packages/protocol/registries/output-paths.json",
@@ -62,19 +62,19 @@
     },
     {
       "path": "packages/protocol/registries/roles.json",
-      "digest": "sha256:e135a1dc550dc8ec9bd6ed00cf7560603c25f5ea3b910ede14fe219a185b15b2"
+      "digest": "sha256:cd06e8ab4ff8b6334820a600f548c87368f3a979a082d9c13d22e33cd1e24f6a"
     },
     {
       "path": "packages/protocol/registries/rules.json",
-      "digest": "sha256:91c1d7aef6a0bd0c44224ff84d43cacedb916f2dc353af0505ccf252dbf5aa7a"
+      "digest": "sha256:f47ed322259ac19fae8caa43e6af5736bec05c07f9a6d24dad313a06ae0d35b8"
     },
     {
       "path": "packages/protocol/registries/skills.json",
-      "digest": "sha256:c9c1a38f5ae964258d1e04a56acaefce8f7b53ce6f37f36032fabdb1f9b6010e"
+      "digest": "sha256:31de2a72fb3a8f8916db47e418c6f26aa3a3a931f4f1c388916278c3554a0d52"
     },
     {
       "path": "packages/protocol/registries/task-kinds.json",
-      "digest": "sha256:123ceaeeadb2c3c1dfabf0b47c06ec67ace8a3d8a30289798903be43180eb49a"
+      "digest": "sha256:6393b1c4d1c3e2371ee4290fab44bc9cc4d21d819e28adf6271de43f434300b2"
     },
     {
       "path": "packages/protocol/registry/adapters.json",
@@ -110,7 +110,7 @@
     },
     {
       "path": "skills/planr-artifact/SKILL.md",
-      "digest": "sha256:667d6be08c6b1fdc9660698f828ee51752ed20be23345b192d69da4074671d34"
+      "digest": "sha256:f932ce29b1266a01ceb8bfa0af9cc50bf0ebf744c611601e5e3fb15972e02b60"
     },
     {
       "path": "skills/planr-browser-qa/SKILL.md",
@@ -118,31 +118,31 @@
     },
     {
       "path": "skills/planr-ceo-review/SKILL.md",
-      "digest": "sha256:b32f4af72eeea04556441e9fb6cf6538c169cf3caee1605bc3000271944439e8"
+      "digest": "sha256:34634aad17c400e2d283288c586fed7e26fde1dfa02ea90b737a4675d0f5ce12"
     },
     {
       "path": "skills/planr-chair-review/SKILL.md",
-      "digest": "sha256:2077f0ce15fef1f99aabcd35bcd04549324c2d6a47db7609c1edd4de715f1681"
+      "digest": "sha256:4fced17b54363f75adf5fc398ecbcd8b71d9312e6a50d200141479709941c18a"
     },
     {
       "path": "skills/planr-challenger-review/SKILL.md",
-      "digest": "sha256:8a144b7738268d904f4c122b357ca640e7c8a9e21193fdf7eaed26758002f347"
+      "digest": "sha256:efe067213aa85ab7857fe4afd397e9daadf0a5569dc6587ed0c5e18a12424a81"
     },
     {
       "path": "skills/planr-cmo-review/SKILL.md",
-      "digest": "sha256:d4997975cbe0dff35abf641461df79fefaf7b7541d877147f93026a00565454e"
+      "digest": "sha256:2b620dcf9e5e8802fd9760d137318b869289d42bd49abd81a541aef521b539eb"
     },
     {
       "path": "skills/planr-coo-review/SKILL.md",
-      "digest": "sha256:0e2a68abfe9df64e0efe14277790858b31609448897235021acf5601fce54748"
+      "digest": "sha256:82c8045e520e6ac2e0d5ae562fdab8ad12db48e32e5ddcdf69c04e36dc29e429"
     },
     {
       "path": "skills/planr-cpo-review/SKILL.md",
-      "digest": "sha256:da2b8a054f9b888377aebe59cbee61aa1a199d3d633350dfa18fe0b0fb0fdf4c"
+      "digest": "sha256:f8b6e6c2c672b7136443d14bc3e1dfbcdb52b7f55b497442f401b37b06126d6a"
     },
     {
       "path": "skills/planr-cto-review/SKILL.md",
-      "digest": "sha256:e32aa4ce50ad0b947d3723b9d33c77049feb945d4a95ef830fe8f727dcbd8c4b"
+      "digest": "sha256:5fedb6d5d54d0d3762ff7ced1adcfb2c66bf237961991be290535f0b2027bce5"
     },
     {
       "path": "skills/planr-dashboard/SKILL.md",
@@ -150,7 +150,7 @@
     },
     {
       "path": "skills/planr-delegate/SKILL.md",
-      "digest": "sha256:dc8ddd45cff3c0958afd9ae377479f31924ae151e6c6d694f6ab7d6d5b280997"
+      "digest": "sha256:dba897dd091da52a53d40d4ecce9183176f038cfa6162f8363882de4cab44177"
     },
     {
       "path": "skills/planr-design-loop/SKILL.md",
@@ -186,7 +186,7 @@
     },
     {
       "path": "skills/planr-operate/SKILL.md",
-      "digest": "sha256:acdf3fb3516b9f1ff26f360d3d5ffcff271935ebac5d3d19384d0d33563c5ba1"
+      "digest": "sha256:29e49eb4e992c13cfdbccba3e217240a14dc5ab0fcb9d16e74685d1f188b4c88"
     },
     {
       "path": "skills/planr-plan-review/SKILL.md",
@@ -194,7 +194,7 @@
     },
     {
       "path": "skills/planr-plan/SKILL.md",
-      "digest": "sha256:28597e1374f16e10bff6972a3166d0575ce6144e4d1d58bae7fceba2b1545da2"
+      "digest": "sha256:ab8db47be4d4334dec7c55ddebf7fdc777c12f9efdc4116c3d25b6439d113587"
     },
     {
       "path": "skills/planr-release/SKILL.md",
@@ -210,15 +210,15 @@
     },
     {
       "path": "skills/planr-sprint/SKILL.md",
-      "digest": "sha256:5127dbe840f63389c0e4546904d1aaae6b4a45c8a428ef54204fe2ad1e6a71f2"
+      "digest": "sha256:2dca1abeafb11a4d33a7ec58d3a52b4db5ba8b59db940374912f4b7c0ef7c983"
     },
     {
       "path": "skills/planr-status/SKILL.md",
-      "digest": "sha256:442befdcb911e4f577e0cf6213cf5cfdbdc97f7093dcad301399b710d4f6e3f3"
+      "digest": "sha256:d1d4ef34075312827cf9a4a67896977ed1608c1bf8881b8a8ed164340034c0cc"
     },
     {
       "path": "skills/planr-sync/SKILL.md",
-      "digest": "sha256:b5a239b26d4946a4c144622eca31d64e743c6dd00a96efa68eca2bc05e65e3ff"
+      "digest": "sha256:0e63252ba06b2842f7d6005782056100930a1559ae393164d7afd615df63384b"
     },
     {
       "path": "skills/registry.json",
@@ -236,7 +236,7 @@
     },
     {
       "path": "adapters/manifests/codex-plugin-content.json",
-      "digest": "sha256:bb7ce576830bb330795e14a66d673cd9d93eb785d65263f260c7df11d2400c2d"
+      "digest": "sha256:96c1ef1469dd9b25be529471f2a62a0ad1f7509277b436f50e5813ece7a85701"
     },
     {
       "path": "docs/generated/adapters.md",
@@ -248,11 +248,11 @@
     },
     {
       "path": "docs/generated/skills.md",
-      "digest": "sha256:a03d358f79ff6fe64bc8729a1e50ed9113a9faed44f7fe63b146a01076c06fed"
+      "digest": "sha256:bfd17fff8ff599a3de8dc36621f1cd05f4e228cbdfe8702089047cb435741f1d"
     },
     {
       "path": "ecosystem.json",
-      "digest": "sha256:52e0a1d154e4a34eb236e689548644e236c5107a09d849d5d1c7dca9841e8aaf"
+      "digest": "sha256:43228206ad74bb70bac940924b835d642588691eb9c61438f8d88881803e6e8d"
     }
   ]
 }

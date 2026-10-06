@@ -45,6 +45,13 @@ Capacity and duration remain unverified without matching measurements. For a lar
 local task, select only relevant sources or split the task before a new preparation;
 never silently omit, truncate or replace a required source with a summary.
 
+If `prepare` reports `E_CAPSULE_SECRET`, show its masked findings (path, line, rule,
+confidence); never edit, redact or drop a required source to pass the check. For a
+resolvable finding, ask whether that exact value is a credential. Only when the user
+confirms it is not, prepare again with `credentialResolutions` naming that finding's
+`id` and `contentDigest`. Recognizable credential formats, private keys and credential
+files are never resolvable: ask the user to remove the credential from the source.
+
 Call `prepare` with the engine/profile, context and explicit integration scope.
 Show its engine, model selection, known provider or native-managed routing,
 trusted configuration, working directory and context inventory once before

@@ -1,4 +1,4 @@
-/* Trusted local adapter. Owner credentials never enter this runtime. */
+/* Trusted local adapter. Owner keys never enter this runtime. */
 (() => {
   'use strict';
   const options = globalThis.__OPENPLANR_DESIGN_STUDIO_OPTIONS__ || {};

@@ -97,6 +97,7 @@ const operateAdvisorDestinations = Object.freeze([
   'planr-cmo-review',
   'planr-coo-review',
 ]);
+const trackerConnectionDestinations = Object.freeze(['planr-sync', 'planr-sprint', 'planr-status']);
 const operateValidatorDestinations = Object.freeze([
   'planr-operate',
   'planr-chair-review',
@@ -159,6 +160,11 @@ const sharedSkillResources = Object.freeze([
   ...operateAdvisorDestinations.map((skillId) => ({
     source: 'skills/shared/operate-advisor-contract.md',
     destination: `skills/${skillId}/references/operate-advisor-contract.md`,
+    executable: false,
+  })),
+  ...trackerConnectionDestinations.map((skillId) => ({
+    source: 'skills/shared/tracker-connections.md',
+    destination: `skills/${skillId}/references/tracker-connections.md`,
     executable: false,
   })),
   {
@@ -573,7 +579,7 @@ const CAPABILITY_FAMILY_TITLES = new Map([
 const roleDescriptions = new Map(
   roleRows.map(({ id, source }) => [
     id,
-    /^description:\s*([^\n]+)$/mu.exec(read(source))?.[1]?.replace(/["']/gu, '').trim() ?? '',
+    parseMarkdownAsset(read(source), { expectedName: id }).fields.description,
   ]),
 );
 // The compact inventory the CLI renders into CLAUDE.md and AGENTS.md so a host agent

@@ -14,6 +14,7 @@ import {
 import { homedir } from 'node:os';
 import { join, resolve, sep } from 'node:path';
 import { promisify } from 'node:util';
+import { CREDENTIAL_FORMAT } from './credentials.mjs';
 import { captureFileState } from './custody.mjs';
 
 export const RUN_RECORD_SCHEMA_VERSION = '2.0.0';
@@ -21,8 +22,6 @@ export const MAX_RUN_RECORD_BYTES = 64 * 1024;
 export const CLOSED_RETENTION_MS = 30 * 24 * 60 * 60 * 1000;
 
 const RUN_ID = /^[a-zA-Z0-9][a-zA-Z0-9-]{0,99}$/u;
-const CREDENTIAL =
-  /-----BEGIN (?:[A-Z ]* )?PRIVATE KEY-----|\bAKIA[0-9A-Z]{16}\b|\bgh[pousr]_[A-Za-z0-9_]{20,}\b|\bgithub_pat_[A-Za-z0-9_]{20,}\b|\bsk-(?:proj-)?[A-Za-z0-9_-]{24,}\b|\bxox[baprs]-[A-Za-z0-9-]{20,}/iu;
 
 const execute = promisify(execFile);
 
@@ -74,7 +73,7 @@ function encoded(record) {
   if (bytes.length > MAX_RUN_RECORD_BYTES) {
     throw new RunRecordError('E_RUN_LIMIT', 'Delegated run record exceeds its private size limit.');
   }
-  if (CREDENTIAL.test(bytes.toString('utf8'))) {
+  if (CREDENTIAL_FORMAT.test(bytes.toString('utf8'))) {
     throw new RunRecordError('E_RUN_CREDENTIAL', 'Credential material cannot enter a run record.');
   }
   return bytes;

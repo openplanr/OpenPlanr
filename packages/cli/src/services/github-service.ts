@@ -124,17 +124,6 @@ const ARTIFACT_TO_ISSUE_TYPE: Record<string, string> = {
   feature: 'Feature',
 };
 
-const ISSUE_STATE_TO_STATUS: Record<GitHubIssueState, string> = {
-  open: 'pending',
-  closed: 'done',
-};
-
-const STATUS_TO_ISSUE_STATE: Record<string, GitHubIssueState> = {
-  pending: 'open',
-  'in-progress': 'open',
-  done: 'closed',
-};
-
 // ---------------------------------------------------------------------------
 // Error message constants
 // ---------------------------------------------------------------------------
@@ -572,17 +561,28 @@ export async function ensureMilestone(title: string): Promise<string> {
 }
 
 /**
- * Map GitHub issue state to artifact status.
+ * The issue state a local status maps to: closed for done and closed, open otherwise.
+ * Undefined for a promoted backlog item, which is local-only and leaves its issue as it is.
  */
-export function issueStateToStatus(state: GitHubIssueState): string {
-  return ISSUE_STATE_TO_STATUS[state];
+export function statusToIssueState(status: string): GitHubIssueState | undefined {
+  if (status === 'promoted') return undefined;
+  return status === 'done' || status === 'closed' ? 'closed' : 'open';
 }
 
 /**
- * Map artifact status to GitHub issue state.
+ * The local status an issue's state calls for, or undefined when they already agree.
+ * A backlog item takes the issue's state, open or closed, and keeps promoted; other items
+ * become done when the issue closes and in-progress when the issue of a done item reopens.
  */
-export function statusToIssueState(status: string): GitHubIssueState {
-  return STATUS_TO_ISSUE_STATE[status] || 'open';
+export function statusFromIssueState(
+  state: GitHubIssueState,
+  localStatus: string,
+  type: ArtifactType,
+): string | undefined {
+  const current = statusToIssueState(localStatus);
+  if (current === undefined || current === state) return undefined;
+  if (type === 'backlog') return state;
+  return state === 'closed' ? 'done' : 'in-progress';
 }
 
 /**

@@ -21,6 +21,7 @@ import {
   writeArtifactReviewState,
 } from '@openplanr/artifact/review.mjs';
 import {
+  artifactReviewControlHeaders,
   createArtifactReviewServer,
   listArtifactReviewServers,
 } from '@openplanr/artifact/review-server.mjs';
@@ -1016,7 +1017,7 @@ async function startDesignReviewUnlocked(
     const registered = await fetchImpl(`${origin}/internal/v1/sessions`, {
       method: 'POST',
       headers: {
-        authorization: `Bearer ${server.controlToken}`,
+        ...artifactReviewControlHeaders(server.controlToken),
         'content-type': 'application/json',
       },
       body: JSON.stringify({

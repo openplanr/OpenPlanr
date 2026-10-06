@@ -100,11 +100,13 @@ for a new native v2 run; retained runs still use their original pinned helper an
 policy. Saving over a legacy native profile is refused; use a new optional name.
 Experimental generic adapters retain their versioned enrollment/protocol.
 
-Local server/model/authentication probes are diagnostic and send no task content.
-They use bounded, authenticated read-only model metadata requests; model load
-state is reported only when the backend exposes it. They never load a model or
-submit a completion automatically. An unsupported metadata endpoint remains
-unverified rather than proof that native execution cannot work.
+Local server/model probes are diagnostic and send no task content and no
+credentials. They use bounded read-only model metadata requests; model load
+state is reported only when the backend exposes it. A server that requires
+sign-in is reported as not checked; the delegated CLI still signs in with its own
+configuration. Probes never load a model or submit a completion automatically. An
+unsupported metadata endpoint remains unverified rather than proof that native
+execution cannot work.
 Template failures require fixing the backend itself. OpenPlanr does not rewrite
 messages/templates, load models automatically or silently change providers.
 When changing a local model, use the exact model ID advertised by that backend;

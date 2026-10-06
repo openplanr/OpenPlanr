@@ -1,7 +1,6 @@
-<!-- {{AGENTS_ROOT}}/shared/modes/default/designer.md: default-mode-only content for designer-agent. Loaded by agents/designer-agent.md when MODE=default. T-002 of SPEC-002. -->
+<!-- Default-mode paths for planr-designer. Loaded when the caller passes MODE=default. -->
 
-> **Mode:** default
-> **Loaded by:** `agents/designer-agent.md` when the orchestrator passes `MODE=default` (no `SPEC_DIR`).
+> **Mode:** default (no `SPEC_DIR`).
 
 ## Path Resolution
 
@@ -43,7 +42,7 @@ Before resolving any PNG path from `UIFiles:`, frontmatter, the orchestrator's b
 
 If a referenced path doesn't exist after expansion, try the unexpanded form as a fallback. If neither resolves, log the expected path and continue with the next priority source — do not error.
 
-## PNG Resolution (default mode — avoids cross-feature collisions)
+## PNG Resolution (default mode)
 
 Resolve PNGs for the target feature `feat-{name}` in this priority order. The first non-empty source wins. Apply path expansion (above) to every candidate path.
 
@@ -53,7 +52,7 @@ Resolve PNGs for the target feature `feat-{name}` in this priority order. The fi
 
 If all sources are empty: skip silently (do not write design-spec.md, do not error).
 
-If multiple specs share `input/ui/*.png` (collision risk), the orchestrator MUST refuse to invoke designer-agent for any of them and surface an error advising migration to feature-namespaced folders.
+If multiple specs share `input/ui/*.png` (collision risk), Plan must not run this role for any of them and surface an error advising migration to feature-namespaced folders.
 
 ---
 
@@ -87,4 +86,4 @@ If multiple specs share `input/ui/*.png` (collision risk), the orchestrator MUST
 
 *Reads: `input/ui/*.png` · `input/tech/stack.md`*
 *Writes: `output/feats/feat-{name}/design-spec.md`*
-*Chained to: specification-agent*
+*Read by: planr-specification*

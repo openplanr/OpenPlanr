@@ -17,14 +17,8 @@ const HOST_OUTPUT_ROOTS = Object.freeze({
   cursor: 'dist/plugins/cursor/openplanr/rules',
 });
 
-const DORMANT_COMPOSED_FILES = new Set([
-  'compatibility.json',
-  'host-profiles.json',
-  'modules.json',
-]);
-
-function isDormantComposedFile(path) {
-  return DORMANT_COMPOSED_FILES.has(path) || path.startsWith('dist/');
+function isGeneratedOutput(path) {
+  return path.startsWith('dist/');
 }
 
 function packageContext(skillDir) {
@@ -78,8 +72,7 @@ function inspectPackage(skillDir) {
     ...packageInfo.resources.map(({ path }) => path),
   ]);
   const actual = listRegularFiles(packageInfo.skillDir, { relativeTo: packageInfo.skillDir });
-  const legacyFiles = actual.filter(isDormantComposedFile);
-  const undeclared = actual.filter((path) => !declared.has(path) && !isDormantComposedFile(path));
+  const undeclared = actual.filter((path) => !declared.has(path) && !isGeneratedOutput(path));
   const missing = [...declared].filter((path) => !actual.includes(path));
   if (undeclared.length > 0 || missing.length > 0) {
     throw new SkillAuthoringError(
@@ -109,7 +102,6 @@ function inspectPackage(skillDir) {
     execution: packageInfo.manifest.execution,
     hosts: [...packageInfo.manifest.hosts],
     resources,
-    legacyFiles,
   };
 }
 

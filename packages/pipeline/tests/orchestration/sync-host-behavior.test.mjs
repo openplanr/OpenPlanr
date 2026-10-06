@@ -54,15 +54,24 @@ for (const [surface, entrypoint, helper] of surfaces) {
     );
     assert.match(
       guidance,
-      /If credentials are unavailable, complete local reconciliation\s+and report only the external step that could not run/,
+      /If a connection is unavailable, complete local reconciliation\s+and report only the external step that could not run/,
     );
     assert.match(
       guidance.replace(/\s+/gu, ' '),
       /Summarize aligned, locally repairable, conflict and unavailable counts/u,
     );
-    assert.match(guidance, /Local and GitHub work never require the OpenPlanr CLI/);
-    assert.match(guidance, /planr linear sync --dry-run/);
+    assert.match(guidance, /Local and GitHub work never require\s+the OpenPlanr CLI/);
+    assert.match(guidance, /Linear: the host's Linear connection\./);
+    assert.doesNotMatch(guidance, /planr linear|access\s+token|PLANR_LINEAR_TOKEN/u);
     assert.doesNotMatch(guidance, /procedures\/sync-workflow\.md|commands\/sync\.md/);
+  });
+
+  test(`${surface}: the connection guide names each host's connection and no token`, () => {
+    const guide = read(helper.replace('scripts/sync.mjs', 'references/tracker-connections.md'));
+    assert.match(guide, /These skills store and read no GitHub or Linear credentials/);
+    for (const host of ['Claude Code', 'Codex', 'Cursor'])
+      assert.match(guide, new RegExp(`^\\| ${host} \\|`, 'mu'));
+    assert.doesNotMatch(guide, /Bearer|Authorization|_TOKEN|personal access token/iu);
   });
 
   test(`${surface}: github synchronization previews without credentials or installed tools`, (t) => {
@@ -86,7 +95,7 @@ for (const [surface, entrypoint, helper] of surfaces) {
     assert.deepEqual(readdirSync(project), [], 'preview must not write project files');
   });
 
-  test(`${surface}: the helper sends Linear to a connector or the openplanr CLI`, (t) => {
+  test(`${surface}: the helper sends Linear to the host's Linear connection`, (t) => {
     const project = mkdtempSync(join(tmpdir(), 'openplanr-sync-linear-'));
     t.after(() => rmSync(project, { recursive: true, force: true }));
     const result = spawnSync(process.execPath, [join(root, helper), 'linear', 'sync'], {
@@ -97,7 +106,10 @@ for (const [surface, entrypoint, helper] of surfaces) {
       timeout: 5_000,
     });
     assert.equal(result.status, 1);
-    assert.match(result.stderr, /^E_SYNC_USAGE: .*openplanr linear push, openplanr linear sync/u);
+    assert.match(
+      result.stderr,
+      /^E_SYNC_USAGE: Linear synchronization runs through the host's Linear connection\./u,
+    );
     assert.deepEqual(readdirSync(project), []);
   });
 }

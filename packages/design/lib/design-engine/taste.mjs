@@ -64,8 +64,7 @@ export function saveProfile(path, profile) {
 /**
  * Apply a verdict. `attributes` = { fonts: [..], colors: [..], layouts: [..], aesthetics: [..] }
  * (any subset). Approve: +count, confidence toward 1. Reject: +rejected, confidence toward 0.
- * For claude-svg sessions the attributes are EXACT (the agent authored them) — better
- * than vision extraction; for openai they come from the vision pass or flags.
+ * The attributes are exact: the agent authored the artifact or passed them as flags.
  */
 export function updateTaste(
   profile,

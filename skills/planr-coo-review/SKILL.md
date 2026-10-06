@@ -2,7 +2,6 @@
 name: planr-coo-review
 description: "Produce a grounded operations and customer-health review for an Operate cycle. Use when readiness, service delivery, capacity, or customer health needs a COO lens."
 license: MIT
-allowed-tools: "Read, Grep, Glob, Edit(./.planr/operate/**)"
 ---
 
 # OpenPlanr COO Review

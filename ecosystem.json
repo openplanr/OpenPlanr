@@ -148,7 +148,7 @@
   "catalogs": {
     "commands": {
       "path": "packages/protocol/registries/commands.json",
-      "digest": "sha256:487253f3bb42b22c0195e92dd8e60a9bb3e65113f3cf228020c9786cdbffa948",
+      "digest": "sha256:7b8e2bcbdccfab4628564f7c905cb6f6d8d31d2afea93ca74f78703c966a2723",
       "rootCommands": 39,
       "pipelineMachineLeaves": 31,
       "frozenClaudeDocuments": 8,
@@ -251,7 +251,7 @@
     },
     "skills": {
       "path": "packages/protocol/registries/skills.json",
-      "digest": "sha256:c9c1a38f5ae964258d1e04a56acaefce8f7b53ce6f37f36032fabdb1f9b6010e",
+      "digest": "sha256:31de2a72fb3a8f8916db47e418c6f26aa3a3a931f4f1c388916278c3554a0d52",
       "count": 28,
       "ids": [
         "planr-artifact",
@@ -288,7 +288,7 @@
     },
     "roles": {
       "path": "packages/protocol/registries/roles.json",
-      "digest": "sha256:e135a1dc550dc8ec9bd6ed00cf7560603c25f5ea3b910ede14fe219a185b15b2",
+      "digest": "sha256:cd06e8ab4ff8b6334820a600f548c87368f3a979a082d9c13d22e33cd1e24f6a",
       "count": 9,
       "ids": [
         "planr-backend",
@@ -305,12 +305,12 @@
     },
     "rules": {
       "path": "packages/protocol/registries/rules.json",
-      "digest": "sha256:91c1d7aef6a0bd0c44224ff84d43cacedb916f2dc353af0505ccf252dbf5aa7a",
+      "digest": "sha256:f47ed322259ac19fae8caa43e6af5736bec05c07f9a6d24dad313a06ae0d35b8",
       "count": 10
     },
     "taskKinds": {
       "path": "packages/protocol/registries/task-kinds.json",
-      "digest": "sha256:123ceaeeadb2c3c1dfabf0b47c06ec67ace8a3d8a30289798903be43180eb49a",
+      "digest": "sha256:6393b1c4d1c3e2371ee4290fab44bc9cc4d21d819e28adf6271de43f434300b2",
       "count": 7
     },
     "outputs": {
@@ -349,8 +349,8 @@
     ],
     "generatedAssets": {
       "path": "adapters/manifests/generated-assets.json",
-      "digest": "sha256:a59781dcecf04f97ba8f929b4681dfdfd63378476ded9553e75ddbc3c222e2ad",
-      "count": 1592
+      "digest": "sha256:6aa88d1c5d9a87d87fc406749e680c76d6d6b7b70e69a21c3e07616f0bc0402b",
+      "count": 1616
     }
   },
   "schemas": {
@@ -434,7 +434,7 @@
   "generatedSurfaces": {
     "artifactShell": {
       "path": "packages/artifact/lib/artifact/ui/generated/artifact-shell-assets.json",
-      "digest": "sha256:59b6ad03dea805b0e24c57400d0ab6a382cb8c944ffd1977b7e957cfadb2cc0c",
+      "digest": "sha256:9468c5ef204a26460a5048198a1c6a6762197b8e45bbd9dff74701a9516f6ead",
       "shellVersion": "1.2.1",
       "assetCount": 8
     },

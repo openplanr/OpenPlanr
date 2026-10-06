@@ -30,7 +30,7 @@ import {
 
 test('unloaded models and authentication retain recognized reasons and numeric status without raw native output', () => {
   assert.equal(failureCode('500 {"message":"Model is unloaded."}'), 'E_ADAPTER_MODEL_UNAVAILABLE');
-  const secret = `sk-${'x'.repeat(30)}`;
+  const secret = `sk-${'xY'.repeat(15)}`;
   const result = parseClaudeOutput(
     {
       subtype: 'error',
@@ -190,7 +190,7 @@ test('Codex and Cursor progress expose bounded file-change or file-tool paths wi
   const hidden = cursor({
     type: 'tool_call',
     subtype: 'started',
-    tool_call: { readToolCall: { args: { path: `sk-${'x'.repeat(30)}` } } },
+    tool_call: { readToolCall: { args: { path: `sk-${'xY'.repeat(15)}` } } },
   });
   assert.equal(hidden.latestTool.files, undefined);
 });
@@ -262,7 +262,7 @@ async function syntheticAdapter(t, engine, mode) {
   await writeFile(
     executable,
     `#!${process.execPath}
-if(process.argv.includes('--help')) { if(process.env.FIXTURE_PROBE_FAILURE) { console.log('Not logged in sk-'+ 'x'.repeat(30)); process.exit(1); } console.log('--print --output-format stream-json --resume --session-id --add-dir --json resume'); process.exit(0); }
+if(process.argv.includes('--help')) { if(process.env.FIXTURE_PROBE_FAILURE) { console.log('Not logged in sk-'+ 'xY'.repeat(15)); process.exit(1); } console.log('--print --output-format stream-json --resume --session-id --add-dir --json resume'); process.exit(0); }
 const emit = event => console.log(JSON.stringify(event));
 process.stdin.resume(); process.stdin.on('end', () => {
 const engine = ${JSON.stringify(engine)}, mode = ${JSON.stringify(mode)};
@@ -349,7 +349,7 @@ test('dispatch returns the recognized native failure and exact destination direc
     denied.diagnostic.details.native.reason,
     'Native CLI reported that it is not logged in.',
   );
-  assert.ok(!JSON.stringify(denied).includes(`sk-${'x'.repeat(30)}`));
+  assert.ok(!JSON.stringify(denied).includes(`sk-${'xY'.repeat(15)}`));
   const started = await delegateRunnerCommand('dispatch', {
     runId: fresh.runId,
     runDirectory,
@@ -368,7 +368,7 @@ test('dispatch returns the recognized native failure and exact destination direc
     resumed.diagnostic.details.native.reason,
     'Native CLI reported that it is not logged in.',
   );
-  assert.ok(!JSON.stringify(resumed).includes(`sk-${'x'.repeat(30)}`));
+  assert.ok(!JSON.stringify(resumed).includes(`sk-${'xY'.repeat(15)}`));
   assert.equal(resumed.presentation.timing.attempts, 1);
 });
 

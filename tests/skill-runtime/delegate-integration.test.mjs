@@ -109,6 +109,23 @@ test('presentation distinguishes delegate claims, observed changes, checks, and 
   });
   assert.equal(preview.phase, 'preview');
   assert.equal(preview.destination.origin, 'http://127.0.0.1:1234');
+  assert.deepEqual(preview.credentialResolutions, []);
+  const resolution = {
+    id: 'cred_0123456789abcdef',
+    contentDigest: `sha256:${'0'.repeat(64)}`,
+    repositoryKey: 'project',
+    path: 'source.txt',
+    rule: 'credential-assignment',
+    location: { path: 'source.txt', line: 2, column: 3 },
+  };
+  const resolved = preparationPresentation({
+    selector: 'T-071',
+    inventory: [{ path: 'source.txt' }],
+    omissions: [],
+    credentialResolutions: [resolution],
+  });
+  assert.deepEqual(resolved.credentialResolutions, [resolution]);
+  assert.match(resolved.context, /1 accepted credential resolution/u);
   assert.match(handoffPresentation({ status: 'completed' }).headline, /still required/u);
   assert.equal(
     handoffPresentation({ status: 'question', result: { question: { text: 'Which API?' } } })

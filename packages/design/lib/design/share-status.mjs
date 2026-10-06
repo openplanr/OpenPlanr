@@ -35,7 +35,7 @@ export function custodyLocation(file, options = {}, { allowMissing = false } = {
         !isAbsolute(within)))
   )
     throw new Error(
-      'Design owner credentials must be stored outside the project. Set PLANR_HOME to a private user-level directory.',
+      'Design owner keys must be stored outside the project. Set PLANR_HOME to a private user-level directory.',
     );
   const legacyPath =
     !options.custodyRoot && !configuredPlanrHome(env)

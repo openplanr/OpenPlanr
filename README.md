@@ -34,8 +34,7 @@
 ## What it is
 
 - **Skills, not a second model.** Every skill runs inside the coding agent you already use.
-  Skills and the openplanr CLI add no model calls or telemetry; the optional design engine calls
-  OpenAI only when you select its OpenAI provider and supply your own key.
+  Skills and the openplanr CLI add no model calls or telemetry.
 - **Plans are files.** Specifications, user stories, tasks, and provenance live under `.planr/`
   in your repository, reviewed and versioned like code.
 - **A deterministic CLI.** `openplanr` stores and validates planning files, renders diagrams and
@@ -117,7 +116,7 @@ description, or that you invoke by name.
 | Family | Skills | CLI utility the skill may call |
 | --- | --- | --- |
 | Plan and specify | `spec`, `plan`, `plan-review`, `sprint` | `openplanr spec`, `openplanr sprint` |
-| Implement | `ship` (dispatches 9 role agents in Claude Code) | — |
+| Implement | `ship` (dispatches native role agents in Claude Code) | — |
 | Review and QA | `browser-qa` | — |
 | Design | `design`, `design-loop`, `design-review` | `openplanr artifact` |
 | Diagrams | `diagram` | `openplanr diagram` |
@@ -161,7 +160,7 @@ See [authoring and verifying diagrams](docs/diagrams/authoring.md).
 
 | Host | Install | Invoke | Notes |
 | --- | --- | --- | --- |
-| Claude Code | `openplanr setup --runtime claude --scope user` | `/planr:<skill>` | OpenPlanr plugin; `ship` dispatches 9 role agents |
+| Claude Code | `openplanr setup --runtime claude --scope user` | `/planr:<skill>` | OpenPlanr plugin with native role agents for `plan` and `ship` |
 | Codex | `openplanr setup --runtime codex --scope user --skill-mode unified-plugin` | `$planr:<skill>` | OpenPlanr plugin; `--skill-mode direct` installs individual skills instead |
 | Cursor | `openplanr setup --runtime cursor --scope project` | mention the `planr-<skill>` rule | Project rules under `.cursor/rules/` |
 

@@ -26,12 +26,12 @@ The conformance test fixture (`planr-pipeline/conformance/`) verifies items 5 an
 ### Implementation
 
 - **Slash commands:** `commands/plan.md` and `commands/ship.md` registered via Claude Code plugin manifest
-- **Subagents:** `agents/{role}.md` files with YAML frontmatter declaring `name`, `description`, `tools`, `model`. Tool restrictions enforced at the manifest layer — agent literally cannot invoke disallowed tools.
+- **Subagents:** `agents/{role}.md` files with YAML frontmatter declaring `name` and `description`. Two roles also declare a tool boundary the host enforces by removing whole tools (`devops-agent` has no Bash; `qa-agent` denies Edit, Write, and NotebookEdit); the rest inherit the session's tools.
 - **Templates:** `templates/{spec,spec-driven,stack,error-report}.tpl` referenced via `${CLAUDE_PLUGIN_ROOT}` from commands and agents.
 
 ### Strengths
 
-- Full manifest-enforced tool restrictions (R8, R9 enforced at the runtime layer, not just prompt)
+- Native subagents with two host-enforced tool boundaries (no shell for DevOps, no file edits for QA); R8 and R9 otherwise rely on the session's permission rules
 - First-class slash command surface; no naming collision with built-ins (after v0.5.0 cleanup)
 
 ### Caveats
@@ -105,7 +105,7 @@ then drains newly ready dependents without ending the user invocation.
 
 ### What it is
 
-Each agent prompt is now a thin **entry loader** (≤60 lines) at `agents/<role>-agent.md`. The entry file preserves frontmatter (`name`, `description`, `tools`, `model`) verbatim and adds a `Read` directive listing the mode-specific files to load.
+Each agent prompt is now a thin **entry loader** (≤60 lines) at `agents/<role>-agent.md`. The entry file preserves frontmatter (`name`, `description`, and any `tools` or `disallowedTools` boundary) verbatim and adds a `Read` directive listing the mode-specific files to load.
 
 Per-mode prompt content lives at `agents/modes/{spec-driven,default}/<role>.md` (≤120 lines each). Truly identical content — the create/modify/preserve contract, the correction-loop protocols — lives at `agents/modes/shared/<topic>.md` and is referenced from both per-mode files.
 
@@ -126,7 +126,7 @@ Three motivations, in order:
   workflow router and `.cursor/rules/openplanr-roles/<role>.md` contains the
   registry-derived role guidance. The retired `planr-pipeline-*.mdc` aliases and
   `.cursor/rules/agents/` copies are not active sources. Frontmatter handling
-  differs from Claude Code (Cursor uses `globs`, not manifest-enforced `tools`),
+  differs from Claude Code (Cursor uses `globs`; it has no subagent tool lists),
   while the role and closure contracts remain portable.
 - **Codex adapter:** Codex's `AGENTS.md` persona section can either (a) replicate the loader pattern with mode-specific persona blocks if Codex supports per-persona file inclusion, or (b) keep the larger combined persona block as a Codex-specific tradeoff and document the bloat clearly. The conformance fixture coverage (the default-mode fixture under `conformance/fixtures/default-mode/` plus the mode-detecting runner) catches behaviour drift either way, so the adapter is free to choose based on Codex runtime constraints.
 

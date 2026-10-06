@@ -45,7 +45,7 @@ function readEnvKey(provider: string): string | undefined {
 const CLI_CREDENTIAL_KEYS = new Set(['linear', 'anthropic', 'openai']);
 const CLI_CREDENTIAL_PREFIXES = ['company:', 'company-oauth:'];
 
-/** Other tools keep entries in the legacy file too, such as the design engine's `openai_api_key`. */
+/** Entries the CLI does not own, such as `openai_api_key`, stay in the legacy file. */
 function isCliCredential(provider: string): boolean {
   return (
     CLI_CREDENTIAL_KEYS.has(provider) ||

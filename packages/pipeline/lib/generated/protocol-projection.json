@@ -474,13 +474,13 @@
     {
       "source": "packages/protocol/registry/v1.17.0/commands.json",
       "target": "registry/v1.17.0/commands.json",
-      "sha256": "37976400ec59976a8358d36d6a900e09ab61707a0e926e89451244f335af7b96",
+      "sha256": "a14b610aab86636fcae0ce4862676d6d7941281c36ff07e0abb1dbdebea8285a",
       "mode": "644"
     },
     {
       "source": "packages/protocol/registries/commands.json",
       "target": "registry/v1.5.0/commands.json",
-      "sha256": "487253f3bb42b22c0195e92dd8e60a9bb3e65113f3cf228020c9786cdbffa948",
+      "sha256": "7b8e2bcbdccfab4628564f7c905cb6f6d8d31d2afea93ca74f78703c966a2723",
       "mode": "644"
     },
     {
@@ -498,25 +498,25 @@
     {
       "source": "packages/protocol/registries/roles.json",
       "target": "registry/v1.5.0/roles.json",
-      "sha256": "e135a1dc550dc8ec9bd6ed00cf7560603c25f5ea3b910ede14fe219a185b15b2",
+      "sha256": "cd06e8ab4ff8b6334820a600f548c87368f3a979a082d9c13d22e33cd1e24f6a",
       "mode": "644"
     },
     {
       "source": "packages/protocol/registries/rules.json",
       "target": "registry/v1.5.0/rules.json",
-      "sha256": "91c1d7aef6a0bd0c44224ff84d43cacedb916f2dc353af0505ccf252dbf5aa7a",
+      "sha256": "f47ed322259ac19fae8caa43e6af5736bec05c07f9a6d24dad313a06ae0d35b8",
       "mode": "644"
     },
     {
       "source": "packages/protocol/registries/skills.json",
       "target": "registry/v1.5.0/skills.json",
-      "sha256": "c9c1a38f5ae964258d1e04a56acaefce8f7b53ce6f37f36032fabdb1f9b6010e",
+      "sha256": "31de2a72fb3a8f8916db47e418c6f26aa3a3a931f4f1c388916278c3554a0d52",
       "mode": "644"
     },
     {
       "source": "packages/protocol/registries/task-kinds.json",
       "target": "registry/v1.5.0/task-kinds.json",
-      "sha256": "123ceaeeadb2c3c1dfabf0b47c06ec67ace8a3d8a30289798903be43180eb49a",
+      "sha256": "6393b1c4d1c3e2371ee4290fab44bc9cc4d21d819e28adf6271de43f434300b2",
       "mode": "644"
     },
     {

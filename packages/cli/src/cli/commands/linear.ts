@@ -517,7 +517,7 @@ export function registerLinearCommand(program: Command) {
             });
             if (!plan) {
               logger.error(
-                `Artifact not found or not supported for push: ${artifactId}. Supported prefixes: EPIC-/FEAT-/US-/TASK-.`,
+                `Artifact not found or not supported for push: ${artifactId}. Supported prefixes: EPIC-/FEAT-/US-/TASK-/QT-/BL-.`,
               );
               process.exit(1);
               return;

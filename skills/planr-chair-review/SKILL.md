@@ -2,7 +2,6 @@
 name: planr-chair-review
 description: "Synthesize an Operate cycle into a prioritized decision queue and action plan. Use after specialist reviews when leadership needs one coherent brief."
 license: MIT
-allowed-tools: "Read, Grep, Glob, Edit(./.planr/operate/**)"
 ---
 
 # OpenPlanr Chair Review
@@ -18,7 +17,12 @@ and its decision impact; continue when the remaining notes still support useful 
 selected roster from the scope or brief and label an intentionally unselected lens `omitted by
 scope`; do not turn that omission into an issue or decision-changing gap.
 
-Write only `<output-path>`.
+Write only `<output-path>`. Writes follow the host's normal permission rules; this skill
+pre-approves nothing.
+
+Invoked without `<cycle-dir>`, offer the most recent cycle under `.planr/operate/` that holds
+advisor notes and use its `chair.md` as the output path. When there is none, say so and point to
+`planr-operate`; never create an empty cycle.
 
 ## Synthesis standard
 

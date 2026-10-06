@@ -80,7 +80,7 @@ lists each skill's triggers, deferrals, and packaged references.
 
 | Host | Install | Invoke |
 | --- | --- | --- |
-| Claude Code | `openplanr setup --runtime claude --scope user` | `/planr:<skill>`; `ship` dispatches nine role agents |
+| Claude Code | `openplanr setup --runtime claude --scope user` | `/planr:<skill>`; `plan` and `ship` dispatch native role agents |
 | Codex | `openplanr setup --runtime codex --scope user --skill-mode unified-plugin` | `$planr:<skill>` |
 | Cursor | `openplanr setup --runtime cursor --scope project` | mention the `planr-<skill>` rule in Composer |
 
