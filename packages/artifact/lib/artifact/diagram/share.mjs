@@ -364,9 +364,7 @@ export async function importDiagramShareRecovery(file, { input, ...options } = {
         canonicalizeJson(record.custody.ownerPublicKey) !==
           canonicalizeJson(custody.ownerPublicKey))
     )
-      throw new Error(
-        'Different owner keys already exist; recovery will not overwrite them.',
-      );
+      throw new Error('Different owner keys already exist; recovery will not overwrite them.');
     if (record && record.custody.version > custody.version)
       throw new Error('The recovery file is older than local owner keys.');
     if (!custody.pendingCreate && !recovered.deleted && !recovered.revoked) {

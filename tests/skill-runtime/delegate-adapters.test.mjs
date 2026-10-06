@@ -249,10 +249,7 @@ test('local probes never forward environment tokens', async () => {
       fetchImpl,
       env: { ANTHROPIC_AUTH_TOKEN: 'unrelated-anthropic-token', LM_API_TOKEN: 'local-token' },
     });
-    assert.ok(
-      headers.length > 0 && headers.every((header) => header === null),
-      String(kind),
-    );
+    assert.ok(headers.length > 0 && headers.every((header) => header === null), String(kind));
     assert.equal(JSON.stringify([ambient, scoped]).includes('token'), false, String(kind));
   }
 });

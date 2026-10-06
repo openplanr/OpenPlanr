@@ -847,7 +847,7 @@
     {
       "source": "packages/artifact/lib/artifact/diagram/share.mjs",
       "target": "lib/artifact/diagram/share.mjs",
-      "sha256": "d4f5e4bc1ce9769e914e0d9d42ef04704184ce0adb7e0ed152c15aa76d2bb5bd",
+      "sha256": "e38c2f4e3aa336dff91b834c88315fa30a1adb59082c7dac2e3196d4001a0d31",
       "mode": "644"
     },
     {
