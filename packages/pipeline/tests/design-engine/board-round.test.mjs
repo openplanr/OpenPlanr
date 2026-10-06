@@ -59,8 +59,12 @@ function roundFixture(t) {
   const env = { ...process.env, PLANR_HOME: paths.home };
   delete env.OPENAI_API_KEY;
   t.after(async () => {
-    await killRunningDaemon(await findRunningDaemon({ env }));
-    rmSync(root, { recursive: true, force: true });
+    try {
+      const running = await findRunningDaemon({ env });
+      if (running) assert.equal(await killRunningDaemon(running, { env }), true);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
   });
   return { ...paths, env };
 }

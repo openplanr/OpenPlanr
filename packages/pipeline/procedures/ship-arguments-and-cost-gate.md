@@ -22,13 +22,13 @@ gate selection. Do not infer authority to PLAN, publish, deploy, reopen, or rele
 After mode detection, read the exact output from:
 
 ```bash
-planr pipeline prepare-ship "${SLUG}" --json
+openplanr-pipeline prepare-ship "${SLUG}" --json
 ```
 
 When `${SHIP_TASK_ID}` is set, use the bounded form instead:
 
 ```bash
-planr pipeline prepare-ship "${SLUG}" --task "${SHIP_TASK_ID}" --json
+openplanr-pipeline prepare-ship "${SLUG}" --task "${SHIP_TASK_ID}" --json
 ```
 
 Pass the same exact selector to `start-ship`; the runtime, not the prompt, binds
