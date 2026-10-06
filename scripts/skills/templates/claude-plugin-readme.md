@@ -60,8 +60,6 @@ The same skills ship for Codex and Cursor through the `openplanr` package.
   - `sync`, `sprint` and `status` reach GitHub and Linear through your coding agent's own
     GitHub or Linear connection, or through the GitHub CLI (`gh`) when it is signed in.
   - `artifact` and the design skills share an encrypted review through `share.openplanr.dev`.
-  - The CLI's optional design engine calls OpenAI only when you select its OpenAI provider and
-    supply your own key.
   - Company workspaces, a pre-release hosted service, are used only when you configure one.
 
 ## Links

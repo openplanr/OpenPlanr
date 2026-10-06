@@ -11,12 +11,6 @@
       "mode": "644"
     },
     {
-      "source": "packages/design/lib/design-engine/auth.mjs",
-      "target": "lib/design-engine/auth.mjs",
-      "sha256": "7a6d3d4ece32bd294ca7b59155961c3575213f0a34aea172be8e7bcdd0e5e883",
-      "mode": "644"
-    },
-    {
       "source": "packages/design/lib/design-engine/board-adapter.mjs",
       "target": "lib/design-engine/board-adapter.mjs",
       "sha256": "c92683d863d440f4dd903e4ad08e1c9a5948ad25eeee2d3b06301e984b7e5c23",
@@ -37,7 +31,7 @@
     {
       "source": "packages/design/lib/design-engine/cli.mjs",
       "target": "lib/design-engine/cli.mjs",
-      "sha256": "b3f306be1637e6ea87b7b440fec3a3e136ef2c99a5a6efa29c9a72cc54051d4b",
+      "sha256": "6ef3814fed4c72c9f178f9a048822f7d5f5b5909d6bd5d5b1962b143d8884d05",
       "mode": "644"
     },
     {
@@ -67,13 +61,7 @@
     {
       "source": "packages/design/lib/design-engine/providers/index.mjs",
       "target": "lib/design-engine/providers/index.mjs",
-      "sha256": "201ddc02a0f691914e64632f46f179b28e2bd21e1dd2dd8057b39c8d0df0f5dd",
-      "mode": "644"
-    },
-    {
-      "source": "packages/design/lib/design-engine/providers/openai.mjs",
-      "target": "lib/design-engine/providers/openai.mjs",
-      "sha256": "b51e8feef72a3bf65242160a88a4a1ec35e71b655aff82d7b224b22102398283",
+      "sha256": "b5ac6977b1cf0853cd0f2ffc407dcc3590590f9075f7b10d7b27501452aaf159",
       "mode": "644"
     },
     {
@@ -91,7 +79,7 @@
     {
       "source": "packages/design/lib/design-engine/taste.mjs",
       "target": "lib/design-engine/taste.mjs",
-      "sha256": "d48c752705683542c18bed47df53a224695b215a1fb1e1fe4ae5341871e1bb0a",
+      "sha256": "220656ab5a85066553f728cdc7d40086f412bf7555fa00cfa153da589d8ef60f",
       "mode": "644"
     },
     {

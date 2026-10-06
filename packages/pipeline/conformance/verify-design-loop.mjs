@@ -53,9 +53,6 @@ const { emptyProfile, updateTaste, saveProfile, loadProfile } = await import(
   moduleUrl('lib/design-engine/taste.mjs')
 );
 const { resolveProvider } = await import(moduleUrl('lib/design-engine/providers/index.mjs'));
-const { DEFAULT_MODEL, DEFAULT_IMAGE_MODEL } = await import(
-  moduleUrl('lib/design-engine/providers/openai.mjs')
-);
 
 log('OpenPlanr design-loop conformance (mocked full loop, $0)\n');
 
@@ -96,22 +93,16 @@ assert(
   'board procedure uses the public artifact route',
 );
 
-// openai is opt-in: a resolved key never selects it, and the guidance says so.
-log('\nprovider opt-in:');
-assert(
-  resolveProvider({ requested: 'auto', auth: { apiKey: 'sk-present' } }).name === 'claude-svg',
-  'auto resolves to claude-svg even when a key resolves',
-);
-let openaiWithoutKey = '';
+// claude-svg is the only provider; the engine makes no model calls of its own.
+log('\nprovider:');
+assert(resolveProvider({ requested: 'auto' }).name === 'claude-svg', 'auto resolves to claude-svg');
+let removedProvider = '';
 try {
-  resolveProvider({ requested: 'openai', auth: { apiKey: null } });
+  resolveProvider({ requested: 'openai' });
 } catch (e) {
-  openaiWithoutKey = e.message;
+  removedProvider = e.message;
 }
-assert(
-  openaiWithoutKey.includes('planr-design setup'),
-  'openai without a key fails and names setup',
-);
+assert(removedProvider.includes('unknown provider'), 'a removed provider is rejected');
 const providerGuidance = [
   'procedures/design-loop-step0-context.md',
   'procedures/design-loop-step1-gate.md',
@@ -122,16 +113,9 @@ const providerGuidance = [
 ].map((rel) => readFileSync(join(root, rel), 'utf8'));
 assert(
   providerGuidance.every(
-    (text) => !/HAS_KEY=true`?\s*→\s*`?openai|openai when a key resolves/u.test(text),
+    (text) => !/OPENAI_API_KEY|--provider openai|planr-design setup/u.test(text),
   ),
-  'no design-loop guidance lets a key alone pick openai',
-);
-const loopDoc = providerGuidance[providerGuidance.length - 1];
-assert(
-  loopDoc.includes('--provider openai') &&
-    loopDoc.includes(DEFAULT_MODEL) &&
-    loopDoc.includes(DEFAULT_IMAGE_MODEL),
-  'design-loop.md documents the openai opt-in flag and the default models',
+  'design-loop guidance names no provider key or key setup',
 );
 assert(
   !/\$\d+\.\d{2}/u.test(providerGuidance.join('\n')),

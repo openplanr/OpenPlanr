@@ -16,9 +16,7 @@ deliberately keeps `approved.json` tracked-eligible.
 - Approved variant:
   `node "$PLUG/lib/design-engine/cli.mjs" taste approved <approvedPath> --project <PROJECT> \
    --session <sessionId> --fonts … --colors … --layouts … --aesthetics …`
-  — claude-svg: pass the EXACT attributes you authored (better than vision). openai PNG:
-  pass the attributes from the concept you briefed; only with `--provider openai` and no
-  attribute flags does the engine vision-extract them (billed to the user's OpenAI account).
+  — pass the EXACT attributes you authored.
 - Every OTHER variant that reached the board: `taste rejected <path> …` the same way.
 - Surface what changed: "taste: +minimal (0.65→0.76), +mono-mark; playful rejected ×2".
 
@@ -27,8 +25,7 @@ deliberately keeps `approved.json` tracked-eligible.
 Exploration stays in user space; the repo receives the approved artifact:
 
 - `target=logo` → `input/design-system/` (default mode) or `.planr/design-system/`
-  (spec-driven), as `logo.svg` (claude-svg) or `logo.png` — **plus, for SVG marks, the
-  production set**: `logo-mark.svg` (mark only), and a favicon set rendered FROM the mark
+  (spec-driven), as `logo.svg` — **plus the production set**: `logo-mark.svg` (mark only), and a favicon set rendered FROM the mark
   (`favicon.svg` + sizes note; raster favicons only if a rasterizer is available — never
   fake them, say what was emitted).
 - `target=screen` for a feature slug → `<SPEC_DIR>/design/` (or `output/feats/feat-<slug>/design/`).
