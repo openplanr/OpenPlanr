@@ -40,8 +40,7 @@ The same skills ship for Codex and Cursor through the `openplanr` package.
   readable source files; the local review server joins them after checking their recorded
   SHA-256 digests, without downloading or decoding code.
 - OpenPlanr does not harvest unrelated credentials or send native agent credentials to OpenPlanr
-  services. Coding-agent runs you request and local model checks use the configured
-  authentication described below.
+  services. Coding-agent runs you request use that agent's own sign-in, described below.
 - Sharing a design or diagram review creates owner access keys for that review and stores them,
   readable only by you, in `design-shares` or `diagram-shares` under `~/.planr` (or
   `PLANR_HOME`; earlier installs used `~/.openplanr`). Design reviews and handoffs read the
@@ -54,9 +53,8 @@ The same skills ship for Codex and Cursor through the `openplanr` package.
   review metadata; it never publishes local design changes.
 - When you ask `delegate` to run another coding agent, that agent's own CLI runs with its normal
   sign-in, environment, model routing, and trusted hooks or plugins. Checking a profile that
-  uses a local model server reads its model list from that server's address, sending
-  `LM_STUDIO_API_KEY` or `LM_API_TOKEN` if set, or, for Claude Code confirmed to route to that
-  same address, its configured `ANTHROPIC_AUTH_TOKEN`. Tokens are never saved or reported.
+  uses a local model server reads its model list from that server's address without
+  credentials; a server that requires sign-in is reported as not checked.
 - Only when you ask:
   - `sync` reconciles planning files with GitHub Issues through `gh` (writes need `--apply`),
     or with Linear through your Linear connector or the `openplanr linear` CLI, which keeps its own

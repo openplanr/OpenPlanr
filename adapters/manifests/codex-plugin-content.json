@@ -313,7 +313,7 @@
         },
         {
           "path": "skills/delegate/references/operator-guide.md",
-          "digest": "sha256:026655594840b990ba5c840e58056bfc5be35d719d0b7b6f2c5a629d8eda044d"
+          "digest": "sha256:436c12e8ff06e67a529df1aaeb736407d85a63c636260f4a193f458c94fd2ec4"
         },
         {
           "path": "skills/delegate/references/run-handoff.md",
@@ -325,7 +325,7 @@
         },
         {
           "path": "skills/delegate/scripts/adapters/claude.mjs",
-          "digest": "sha256:7f864c25d0d50c6e31d23be4ccbd6f9edb2a601b529a3652abdde28b4c7c6066"
+          "digest": "sha256:98dae19b18c18b372edc77985a889303e595b0fc4556f1f42dcfd69d5f037acc"
         },
         {
           "path": "skills/delegate/scripts/adapters/codex.mjs",
@@ -409,11 +409,11 @@
         },
         {
           "path": "skills/delegate/scripts/adapters/native.mjs",
-          "digest": "sha256:cf4af84cdfcc05d906a51878dfd82e5a0b5e4acd6644bf93ebf708a6dd2f0130"
+          "digest": "sha256:ff2a8c9365264c4065b8be742ba98ba7b5c8269779c66f217140e9fbf6609727"
         },
         {
           "path": "skills/delegate/scripts/backend-diagnostics.mjs",
-          "digest": "sha256:74b327c6de0e581e2b238ea1e7d5f8ddaa15a7091f717b9a4c66192e60e9ef9c"
+          "digest": "sha256:989c307c6a42c19f799b17bbe7067211b5d9435a6ebabd2609d15d312d3d2715"
         }
       ]
     },

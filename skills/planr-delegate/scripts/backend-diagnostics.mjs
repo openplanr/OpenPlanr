@@ -1,39 +1,7 @@
 // Local probes are diagnostics; native CLI execution remains authoritative.
 
-import { readClaudeSettingsEnvironment, resolveClaudeRouting } from './adapters/claude.mjs';
+import { resolveClaudeRouting } from './adapters/claude.mjs';
 import { AdapterError, validateDestination } from './adapters/generic.mjs';
-
-async function localProbeToken(profile, env, cwd) {
-  const sources = [{ source: 'parent environment', env }];
-  const names = ['LM_STUDIO_API_KEY', 'LM_API_TOKEN'];
-  // Only Claude routing confirmed to this local origin may present its Anthropic token.
-  if (profile.kind === 'claude') {
-    sources.push(...(await readClaudeSettingsEnvironment(profile, env, cwd)));
-    names.push('ANTHROPIC_AUTH_TOKEN');
-  }
-  for (const name of names) {
-    const candidates = sources.filter(
-      (source) => source.env[name] !== undefined && source.env[name] !== '',
-    );
-    if (!candidates.length) continue;
-    const values = candidates.map((source) => source.env[name]);
-    if (
-      values.some(
-        (value) => typeof value !== 'string' || value.length >= 4096 || /[\r\n]/u.test(value),
-      ) ||
-      new Set(values).size !== 1
-    )
-      throw new AdapterError(
-        'E_BACKEND_AUTH_CONFIG',
-        'Local metadata authentication could not be confirmed.',
-        {
-          sources: candidates.map((source) => `${source.source}: ${name}`),
-        },
-      );
-    return values[0];
-  }
-  return null;
-}
 
 async function withinDeadline(operation, signal) {
   if (signal.aborted)
@@ -106,9 +74,8 @@ export async function inspectLocalBackend(
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   const signal = controller.signal;
   try {
-    let token;
-    try {
-      if (profile.kind === 'claude') {
+    if (profile.kind === 'claude') {
+      try {
         const resolved = await resolveClaudeRouting(profile, env, cwd);
         if (
           resolved.destination.class !== 'local' ||
@@ -122,22 +89,21 @@ export async function inspectLocalBackend(
               routing: resolved.routing,
             },
           );
+      } catch (error) {
+        return {
+          status: 'not-checked',
+          modelStatus: 'unverified',
+          selectedModel,
+          visibleModels: [],
+          diagnostic: { code: error.code ?? 'E_DESTINATION_UNKNOWN', ...error.details },
+        };
       }
-      token = await localProbeToken(profile, env, cwd);
-    } catch (error) {
-      return {
-        status: 'not-checked',
-        modelStatus: 'unverified',
-        selectedModel,
-        visibleModels: [],
-        diagnostic: { code: error.code ?? 'E_BACKEND_AUTH_CONFIG', ...error.details },
-      };
     }
+    // Sends no credentials: a server that requires sign-in reports authentication-required.
     const readModels = async (path) => {
       const response = await withinDeadline(
         fetchImpl(new URL(path, profile.destination.origin), {
           method: 'GET',
-          ...(token ? { headers: { Authorization: `Bearer ${token}` } } : {}),
           signal,
           redirect: 'error',
         }),
@@ -269,9 +235,9 @@ export function profileReadiness(destination, backend) {
   if (backend.status === 'authentication-required') {
     return {
       state: 'authentication-required',
-      dispatchable: false,
+      dispatchable: true,
       nextAction:
-        'Provide the local server token through an allowed environment variable, then probe again.',
+        'The local server requires sign-in, so its models were not checked. The delegated CLI signs in with its own configuration.',
     };
   }
   if (backend.modelStatus === 'not-listed') {

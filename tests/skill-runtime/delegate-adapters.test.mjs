@@ -187,9 +187,9 @@ test('local backend preflight distinguishes unreachable, visible and absent sele
   assert.equal(JSON.stringify(authenticationRequired).includes('Credential needed'), false);
   assert.deepEqual(profileReadiness(local, authenticationRequired), {
     state: 'authentication-required',
-    dispatchable: false,
+    dispatchable: true,
     nextAction:
-      'Provide the local server token through an allowed environment variable, then probe again.',
+      'The local server requires sign-in, so its models were not checked. The delegated CLI signs in with its own configuration.',
   });
   assert.deepEqual(await inspectLocalBackend({ destination: external, argv: [] }), {
     status: 'not-checked',
@@ -198,7 +198,7 @@ test('local backend preflight distinguishes unreachable, visible and absent sele
     visibleModels: [],
   });
   const nativeFetch = (loaded) => async (url, options) => {
-    assert.equal(options.headers.Authorization, 'Bearer private-token');
+    assert.equal(options.headers, undefined);
     if (new URL(url).pathname === '/v1/models')
       return new Response(JSON.stringify({ data: [{ id: 'local-test' }] }));
     return new Response(
@@ -230,7 +230,7 @@ test('local backend preflight distinguishes unreachable, visible and absent sele
   assert.equal(visible.loadStatus, 'unverified');
 });
 
-test('non-Claude local probes never inspect or forward an ambient Anthropic token', async () => {
+test('local probes never forward environment tokens', async () => {
   for (const kind of ['codex', 'cursor', 'generic', undefined]) {
     const headers = [];
     const fetchImpl = async (url, options) => {
@@ -250,7 +250,7 @@ test('non-Claude local probes never inspect or forward an ambient Anthropic toke
       env: { ANTHROPIC_AUTH_TOKEN: 'unrelated-anthropic-token', LM_API_TOKEN: 'local-token' },
     });
     assert.ok(
-      headers.every((header) => header === 'Bearer local-token'),
+      headers.length > 0 && headers.every((header) => header === null),
       String(kind),
     );
     assert.equal(JSON.stringify([ambient, scoped]).includes('token'), false, String(kind));
