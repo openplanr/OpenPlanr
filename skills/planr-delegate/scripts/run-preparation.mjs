@@ -58,7 +58,7 @@ async function inspectWorktreeDependencies(worktreePath) {
 }
 
 export async function probeDelegateHost({ repositoryRoot, env = process.env } = {}) {
-  const nodeReady = Number(process.versions.node.split('.')[0]) >= 20;
+  const nodeReady = Number(process.versions.node.split('.')[0]) >= 22;
   const options = {
     env: { PATH: env.PATH, HOME: env.HOME, USER: env.USER, TMPDIR: env.TMPDIR },
     cwd: repositoryRoot,
@@ -128,7 +128,7 @@ export async function probeDelegateHost({ repositoryRoot, env = process.env } = 
   }
   return {
     ready: nodeReady && gitReady,
-    node: { ready: nodeReady, minimumMajor: 20 },
+    node: { ready: nodeReady, minimumMajor: 22 },
     git: { ready: gitReady, ...(gitDiagnostic ? { diagnostic: gitDiagnostic } : {}) },
     repository,
     engines,
@@ -167,7 +167,7 @@ export async function prepareDelegateRun({
   if (!host.ready || !host.repository?.ready)
     throw new DelegateRunError(
       'E_DELEGATE_PREREQUISITE',
-      'Node 20+, Git, and a repository with a commit are required before task collection.',
+      'Node 22+, Git, and a repository with a commit are required before task collection.',
       null,
       host,
     );

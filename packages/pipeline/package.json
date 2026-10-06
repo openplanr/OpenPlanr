@@ -274,7 +274,7 @@
     "provenance": true
   },
   "engines": {
-    "node": ">=20.19.0"
+    "node": ">=22.13.0"
   },
   "dependencies": {
     "@noble/hashes": "1.8.0",

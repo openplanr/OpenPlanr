@@ -72,7 +72,7 @@
     "LICENSE"
   ],
   "engines": {
-    "node": ">=20.19.0"
+    "node": ">=22.13.0"
   },
   "dependencies": {
     "@expo-google-fonts/inter": "0.4.2",

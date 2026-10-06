@@ -2,7 +2,7 @@
 
 Run the linked design helper from the skill entrypoint relative to the skill's
 directory. It contains deterministic operations and all required assets. It needs
-Node 20 or later, with no global CLI, provider credentials or runtime downloads.
+Node.js 22.13 or later, with no global CLI, provider credentials or runtime downloads.
 Use `--help` to inspect the installed command interface before writing documents
 or invoking operations; the installed contract is authoritative.
 

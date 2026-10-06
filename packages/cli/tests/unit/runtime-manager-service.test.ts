@@ -123,7 +123,7 @@ afterEach(() => {
 });
 
 describe('runtime Node.js diagnostics', () => {
-  it.each(['20.18.9', '21.7.0', '22.12.9', '23.4.9'])(
+  it.each(['20.18.9', '20.19.0', '21.7.0', '22.12.9', '23.4.9'])(
     'rejects setup for %s without creating installation custody and reports the same doctor failure',
     async (version) => {
       const descriptor = Object.getOwnPropertyDescriptor(process.versions, 'node');
@@ -146,7 +146,7 @@ describe('runtime Node.js diagnostics', () => {
       }
     },
   );
-  it.each(['20.19.0', '22.13.0', '23.5.0', '24.0.0'])(
+  it.each(['22.13.0', '23.5.0', '24.0.0'])(
     'uses the same accepted branch for setup and doctor on %s',
     async (version) => {
       const descriptor = Object.getOwnPropertyDescriptor(process.versions, 'node');

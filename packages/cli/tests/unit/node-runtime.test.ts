@@ -18,8 +18,8 @@ const boundaries = [
   ['18.20.8', false],
   ['20.0.0', false],
   ['20.18.9', false],
-  ['20.19.0', true],
-  ['20.20.2', true],
+  ['20.19.0', false],
+  ['20.20.2', false],
   ['21.7.0', false],
   ['21.99.0', false],
   ['22.12.9', false],
@@ -86,14 +86,11 @@ describe('installed Node.js support', () => {
     expect(JSON.parse(readFileSync(join(root, 'package.json'), 'utf8')).engines.node).toBe(
       '^22.13.0 || ^24.0.0 || >=26.0.0',
     );
-    for (const name of ['artifact', 'design', 'pipeline']) {
+    for (const name of ['artifact', 'design', 'pipeline', 'protocol']) {
       expect(
         JSON.parse(readFileSync(join(root, 'packages', name, 'package.json'), 'utf8')).engines.node,
-      ).toBe('>=20.19.0');
+      ).toBe('>=22.13.0');
     }
-    expect(
-      JSON.parse(readFileSync(join(root, 'packages/protocol/package.json'), 'utf8')).engines.node,
-    ).toBe('>=20');
   });
 
   it.each(boundaries)(

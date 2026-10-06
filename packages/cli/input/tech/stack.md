@@ -37,7 +37,7 @@ MigrationTool: ""
 ```yaml
 Language: "TypeScript"
 Framework: "Node.js CLI (commander)"
-RuntimeVersion: "node ^20.19.0 || ^22.13.0 || >=23.5.0"
+RuntimeVersion: "node ^22.13.0 || >=23.5.0"
 AuthStrategy: ""
 APIStyle: "CLI + JSON envelopes"
 TestFramework: "Vitest"

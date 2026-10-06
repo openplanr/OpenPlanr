@@ -45,7 +45,7 @@ MigrationTool: ""
 ```yaml
 Language: "JavaScript (Node ESM)"
 Framework: "Portable Node engine with runtime adapters and loopback artifact-review server"
-RuntimeVersion: "Node 20+"
+RuntimeVersion: "Node 22.13+"
 AuthStrategy: ""
 APIStyle: ""
 TestFramework: "node:test; Playwright browser security/visual coverage"

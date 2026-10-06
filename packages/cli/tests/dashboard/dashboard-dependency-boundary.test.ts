@@ -73,7 +73,7 @@ describe('dashboard workspace boundary', () => {
     expect(packageJson).toMatchObject({
       name: '@openplanr/dashboard-app',
       private: true,
-      engines: { node: '>=20.0.0' },
+      engines: { node: '>=22.13.0' },
       dependencies: EXPECTED_RUNTIME,
     });
     expect(packageJson.version).toMatch(SEMVER_REGEX);

@@ -14,8 +14,8 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  node20-floor:
-    name: Protocol imports on Node 20.0.0
+  runtime-floor:
+    name: Protocol imports on Node 22.13.0
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -30,8 +30,8 @@ jobs:
         run: node packages/protocol/scripts/generate-protocol-assets.mjs
       - uses: actions/setup-node@v5
         with:
-          node-version: '20.0.0'
+          node-version: '22.13.0'
       - name: Verify imports, schema generation and validation on the advertised minimum
         env:
-          OPENPLANR_PROTOCOL_NODE20_EXECUTABLE: node
+          OPENPLANR_PROTOCOL_FLOOR_EXECUTABLE: node
         run: node --test tests/protocol/protocol-runtime-floor.test.mjs

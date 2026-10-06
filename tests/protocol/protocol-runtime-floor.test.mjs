@@ -13,18 +13,23 @@ import { assertArtifactEnvelopeMetadata } from '../../packages/protocol/src/larg
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const protocol = join(root, 'packages/protocol');
 const metadataPath = 'src/generated/artifact-envelope-metadata.mjs';
-const node20 = process.env.OPENPLANR_PROTOCOL_NODE20_EXECUTABLE;
+const floorNode = process.env.OPENPLANR_PROTOCOL_FLOOR_EXECUTABLE;
+// The advertised minimum, as package metadata declares it: ">=<version>".
+const floor = JSON.parse(readFileSync(join(protocol, 'package.json'), 'utf8')).engines.node.replace(
+  /^>=/u,
+  '',
+);
 
-test('minimum-runtime CI creates ignored Protocol projections before switching to Node 20.0', () => {
+test('minimum-runtime CI creates ignored Protocol projections before switching to the floor', () => {
   const workflow = load(
     readFileSync(join(root, '.github/workflows/protocol-runtime-floor.yml'), 'utf8'),
   );
-  const steps = workflow.jobs['node20-floor'].steps;
+  const steps = workflow.jobs['runtime-floor'].steps;
   const install = steps.findIndex((step) => step.run === 'npm ci');
   const generation = steps.findIndex(
     (step) => step.run === 'node packages/protocol/scripts/generate-protocol-assets.mjs',
   );
-  const minimum = steps.findIndex((step) => step.with?.['node-version'] === '20.0.0');
+  const minimum = steps.findIndex((step) => step.with?.['node-version'] === floor);
   assert.ok(steps.slice(0, install).some((step) => Number(step.with?.['node-version']) === 24));
   assert.ok(install >= 0 && generation > install && minimum > generation);
   assert.ok(
@@ -32,7 +37,7 @@ test('minimum-runtime CI creates ignored Protocol projections before switching t
       .slice(minimum + 1)
       .some(
         (step) =>
-          step.env?.OPENPLANR_PROTOCOL_NODE20_EXECUTABLE === 'node' &&
+          step.env?.OPENPLANR_PROTOCOL_FLOOR_EXECUTABLE === 'node' &&
           step.run === 'node --test tests/protocol/protocol-runtime-floor.test.mjs',
       ),
   );
@@ -90,17 +95,18 @@ test('metadata assertions reject accessors and non-JSON fields before version di
   assert.throws(() => assertArtifactEnvelopeMetadata(sparse), TypeError);
 });
 
-test('Protocol root and browser exports import and validate on the advertised Node 20.0 floor', {
-  skip: !node20 && 'Set OPENPLANR_PROTOCOL_NODE20_EXECUTABLE to the actual Node 20.0 executable.',
+test('Protocol root and browser exports import and validate on the advertised Node floor', {
+  skip:
+    !floorNode && `Set OPENPLANR_PROTOCOL_FLOOR_EXECUTABLE to the actual Node ${floor} executable.`,
 }, () => {
   const proof = execFileSync(
-    node20,
+    floorNode,
     [
       '--input-type=module',
       '-e',
       `
     import assert from 'node:assert/strict';
-    assert.equal(process.version, 'v20.0.0', 'The minimum-runtime proof requires actual Node 20.0.0.');
+    assert.equal(process.version, 'v${floor}', 'The minimum-runtime proof requires actual Node ${floor}.');
     const root = await import('@openplanr/protocol');
     const browser = await import('@openplanr/protocol/browser-contracts');
     const resources = await import('@openplanr/protocol/large-object-contracts');
@@ -116,8 +122,8 @@ test('Protocol root and browser exports import and validate on the advertised No
     ],
     { cwd: protocol, encoding: 'utf8' },
   );
-  assert.match(proof, /v20\.0\.0 root\/browser\/package exports PASS/);
-  const output = execFileSync(node20, ['scripts/generate-protocol-assets.mjs', '--check'], {
+  assert.ok(proof.includes(`v${floor} root/browser/package exports PASS`), proof);
+  const output = execFileSync(floorNode, ['scripts/generate-protocol-assets.mjs', '--check'], {
     cwd: protocol,
     encoding: 'utf8',
   });
@@ -142,7 +148,7 @@ test('clean generation bootstraps metadata without ambient generated inputs or e
     const generated = join(copy, metadataPath);
     const expected = readFileSync(join(protocol, metadataPath));
     rmSync(generated);
-    const executable = node20 || process.execPath;
+    const executable = floorNode || process.execPath;
     execFileSync(executable, ['scripts/generate-protocol-assets.mjs'], { cwd: copy });
     assert.deepEqual(readFileSync(generated), expected);
     const commandRegistry = 'registry/v1.17.0/commands.json';

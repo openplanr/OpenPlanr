@@ -108,7 +108,7 @@ const RULES = [
   {
     id: 'node-version',
     message:
-      'only the supported Node.js statement (20 or later; CI on 20, 22, 24) belongs in public docs',
+      'only the supported Node.js statement (22.13 or later; CI on 22 and 24) belongs in public docs',
     pattern: /\bNode(?:\.js)? (?:1\d|2[13]|2[5-9]|[3-9]\d)\b/gu,
   },
   {

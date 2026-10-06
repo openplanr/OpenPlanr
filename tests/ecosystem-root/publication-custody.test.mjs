@@ -325,7 +325,7 @@ test('publication requires consumed changesets and an output outside the source 
 test('every isolated packed CI runner installs the declared Protocol browser dependency', () => {
   const workflow = readFileSync(join(repository, '.github/workflows/ci.yml'), 'utf8');
   const packed = workflow.slice(workflow.indexOf('  packed-public-packages:'));
-  assert.match(packed, /node: \[20, 22, 24\]/u);
+  assert.match(packed, /node: \[22, 24\]/u);
   const browser = packed.indexOf(
     'npm exec --workspace=@openplanr/protocol -- playwright install --with-deps chromium',
   );
@@ -359,7 +359,7 @@ test('CI prepares contributor tooling before switching to published consumer run
   assert.deepEqual(ci.jobs.compatibility.strategy.matrix.node, [22, 24]);
   assert.match(ci.jobs.compatibility.name, /contributor/u);
   for (const job of [ci.jobs['packed-public-packages'], workflow('release-proof.yml').jobs.proof]) {
-    assert.deepEqual(job.strategy.matrix.node, [20, 22, 24]);
+    assert.deepEqual(job.strategy.matrix.node, [22, 24]);
     const runtime = setups(job);
     assert.deepEqual(
       runtime.map(({ version }) => version),

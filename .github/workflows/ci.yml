@@ -427,7 +427,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        node: [20, 22, 24]
+        node: [22, 24]
     steps:
       - name: Require the Build generated outputs job to have succeeded
         env:
