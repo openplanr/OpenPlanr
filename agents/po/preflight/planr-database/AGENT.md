@@ -22,7 +22,24 @@ scan.
 | Input | Source | Required |
 |-------|--------|----------|
 | `input/tech/stack.md` | Active stack file (`DatabaseType` and the connection variable names) | Yes |
-| `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD` | Environment variables | Yes |
+| `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER` | Environment variables | Unless a service or login path supplies them |
+
+Connect only through a route where the database client authenticates on its own:
+
+- PostgreSQL: a service in `~/.pg_service.conf` selected with `PGSERVICE`, with its password
+  in `~/.pgpass`. Pass `-w` so `psql` fails instead of prompting.
+- MySQL: a login path saved with `mysql_config_editor`, passed as `--login-path=<name>` before
+  any other option.
+- MongoDB: `mongosh` with `MONGODB-OIDC`, X.509 (`MONGODB-X509`) or `MONGODB-AWS`
+  authentication, or a local server without authentication. Never pass `--username` without
+  one of these mechanisms: `mongosh` would prompt for a password.
+- MSSQL: `sqlcmd -E`, a trusted connection.
+- SQLite: the database file.
+
+When none of these is set up, for example when the project only has a `DATABASE_URL` that
+holds a password, stop and tell the user they can set up one of these routes or run the
+scan themselves. Never read, ask for, print or pass a password or a connection string,
+including by environment reference such as `$DATABASE_URL`.
 
 ## Output
 
@@ -83,7 +100,8 @@ re-scanning. Always include a `generatedAt` timestamp.
 ## Scan
 
 1. Read `input/tech/stack.md` for `DatabaseType` and the connection variables.
-2. Connect read-only and introspect with the technique for the configured type:
+2. Connect read-only through one of the routes above and introspect with the technique for
+   the configured type:
    - PostgreSQL: `information_schema.tables`, `columns`, constraints, and `pg_indexes`
    - MySQL: `information_schema.tables`, `columns`, `key_column_usage`, and `statistics`
    - MSSQL: `sys.tables`, `sys.columns`, `sys.foreign_keys`, and `sys.indexes`
@@ -105,6 +123,7 @@ re-scanning. Always include a `generatedAt` timestamp.
 | Error | Response |
 |-------|----------|
 | Connection refused | Report the error and write no partial output |
-| Missing environment variable | List every missing variable and stop |
+| Missing connection variable and no service or login path | List every missing variable and stop |
+| Authentication failed or no route set up | Stop and tell the user they can set up one of the routes above or run the scan themselves |
 | Empty schema (0 tables) | Write an empty `tables` array and report the warning |
 | Partial scan failure | Write the partial snapshot and mark affected tables `"scanError": true` |

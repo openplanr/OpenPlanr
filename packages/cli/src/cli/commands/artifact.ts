@@ -604,7 +604,7 @@ async function runPersistentSharing(
     if (result.reviewPath) display.keyValue('Feedback', result.reviewPath);
     if (action !== 'sync')
       logger.dim(
-        `Owner credentials are saved privately. Open the local studio’s Share ${noun} dialog to copy the reviewer access token.`,
+        `Owner keys are saved privately. Open the local studio’s Share ${noun} dialog to copy the reviewer access token.`,
       );
   }
   if (action === 'share' && options.open !== false && result.url) await openExternalUrl(result.url);

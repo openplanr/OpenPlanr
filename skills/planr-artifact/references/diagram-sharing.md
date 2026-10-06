@@ -13,7 +13,7 @@ review. Preview the exact diagram title, source revision, elements, connections,
 destination and retention before creating it. Use `--yes` only when the user has
 already authorized that publication. The stable URL and generated access token
 are separate; copy the token through the local studio's **Share diagram** dialog,
-never into a URL, prompt, ordinary output or repository file. Owner credentials
+never into a URL, prompt, ordinary output or repository file. Owner keys
 are saved privately outside the project. The review remains available until the
 owner revokes or deletes it and works while the local studio is stopped.
 

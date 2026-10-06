@@ -6,7 +6,7 @@ import path from 'node:path';
 import type { Command } from 'commander';
 import type { StakeholderReportFormat, StakeholderReportType } from '../../models/types.js';
 import { loadConfig } from '../../services/config-service.js';
-import { pushReportAsGitHubIssue, pushReportToSlack } from '../../services/distribution-service.js';
+import { pushReportAsGitHubIssue } from '../../services/distribution-service.js';
 import {
   validateClaimsHaveAnchors,
   validateRemoteEvidence,
@@ -50,7 +50,7 @@ export function registerReportCommand(program: Command) {
       'fail if bullet claims under ## headings lack URLs or #issue references',
       false,
     )
-    .option('--push <targets>', 'comma-separated destinations: github, slack')
+    .option('--push <targets>', 'comma-separated destinations: github')
     .option('--dry-run', 'with --push: show actions only', false)
     .action(
       async (
@@ -90,6 +90,23 @@ export function registerReportCommand(program: Command) {
           process.exit(1);
         }
         const fmt = fmtRaw as StakeholderReportFormat;
+        // Validate every target before writing or pushing anything, so a rejected one never follows a push.
+        const pushTargets = (opts.push ?? '')
+          .split(/,\s*/)
+          .map((target) => target.trim().toLowerCase())
+          .filter(Boolean);
+        for (const target of pushTargets) {
+          if (target === 'slack') {
+            logger.error(
+              '--push slack was removed in this version; OpenPlanr no longer keeps a Slack webhook. Use --push github, or post the written report yourself.',
+            );
+            process.exit(1);
+          }
+          if (target !== 'github') {
+            logger.error(`Unknown --push target "${target}". Use: github`);
+            process.exit(1);
+          }
+        }
 
         logger.heading(`Report: ${reportType}`);
 
@@ -150,30 +167,15 @@ export function registerReportCommand(program: Command) {
         if (mdPath) logger.success(`Wrote ${path.relative(projectDir, mdPath)}`);
         if (htmlPath) logger.success(`Wrote ${path.relative(projectDir, htmlPath)}`);
 
-        if (opts.push) {
-          const targets = opts.push
-            .split(/,\s*/)
-            .map((s) => s.trim().toLowerCase())
-            .filter(Boolean);
-          for (const t of targets) {
-            if (t === 'github') {
-              const title = `[${CLI_COMMAND} report] ${config.projectName} — ${reportType} (${new Date().toISOString().split('T')[0]})`;
-              const res = await pushReportAsGitHubIssue({
-                title,
-                body: markdown,
-                dryRun: opts.dryRun,
-              });
-              if (res.ok) logger.success(res.message + (res.url ? ` ${res.url}` : ''));
-              else logger.error(res.message);
-            } else if (t === 'slack') {
-              const res = await pushReportToSlack(config, markdown, { dryRun: opts.dryRun });
-              if (res.ok) logger.success(res.message);
-              else logger.error(res.message);
-            } else {
-              logger.error(`Unknown --push target "${t}". Use: github, slack`);
-              process.exit(1);
-            }
-          }
+        if (pushTargets.includes('github')) {
+          const title = `[${CLI_COMMAND} report] ${config.projectName} — ${reportType} (${new Date().toISOString().split('T')[0]})`;
+          const res = await pushReportAsGitHubIssue({
+            title,
+            body: markdown,
+            dryRun: opts.dryRun,
+          });
+          if (res.ok) logger.success(res.message + (res.url ? ` ${res.url}` : ''));
+          else logger.error(res.message);
         }
       },
     );

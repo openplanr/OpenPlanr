@@ -3,12 +3,9 @@
 /**
  * planr-design — the design-loop engine CLI (vendored in the plugin, zero deps).
  *
- *   setup     store an OpenAI key (0600) + REAL smoke test with printed proof (billed)
- *   doctor    auth + daemon + a $0 dry-run (claude-svg contract validation)
- *   generate  one variant (claude-svg, the default: prints the contract;
- *             --provider openai: image → tmp → cp, billed to the user's account)
+ *   doctor    daemon + a $0 dry-run (claude-svg contract validation)
+ *   generate  one variant: prints the claude-svg contract the calling agent authors against
  *   variants  N sequential variants (the agents run parallel `generate`s instead)
- *   evolve    variants FROM an existing image ("I don't like THIS")
  *   iterate   continue a session chain with feedback text (refine, not regenerate)
  *   check     quality-gate an artifact against its brief / sheet contract
  *   daemon    --status (is a board daemon up?) | --serve (reuse or run it; for a background task)
@@ -17,13 +14,12 @@
  *   taste     read | approved <artifact> | rejected <artifact> (updates the profile)
  *
  * Outputs one JSON result line on stdout per command (agent-parseable); humans
- * get the same JSON pretty-printed. Keys are NEVER echoed.
+ * get the same JSON pretty-printed. The engine makes no model calls.
  */
 
 import { spawn } from 'node:child_process';
 import {
   closeSync,
-  copyFileSync,
   existsSync,
   fstatSync,
   mkdirSync,
@@ -33,13 +29,10 @@ import {
   writeFileSync,
 } from 'node:fs';
 import { basename, join, resolve } from 'node:path';
-import { createInterface } from 'node:readline';
 import { setTimeout as delay } from 'node:timers/promises';
 import { fileURLToPath } from 'node:url';
-import { withCredentialWriteLock } from '@openplanr/artifact/internal/credential-writer.mjs';
 import { parseArgs } from '../design/cli-parser.mjs';
 import { createDesignBoardArtifactEnvelope, discoverVariants } from './artifact-adapter.mjs';
-import { resolveAuth } from './auth.mjs';
 import {
   DESIGN_BOARD_ENVELOPE_FILE,
   DESIGN_BOARD_SOURCES_FILE,
@@ -56,7 +49,6 @@ import {
 } from './daemon.mjs';
 import {
   ARTIFACT_GITIGNORE,
-  credentialsPath,
   daemonDir,
   planrHome,
   projectDesignsDir,
@@ -65,8 +57,7 @@ import {
 } from './paths.mjs';
 import { contractInstructions, sheetContract, validateSheet } from './providers/claude-svg.mjs';
 import { DEFAULT_PROVIDER, resolveProvider } from './providers/index.mjs';
-import * as openai from './providers/openai.mjs';
-import { acquireStartLock, writePrivateJsonState } from './server-util.mjs';
+import { acquireStartLock } from './server-util.mjs';
 import { appendRound, createSession, loadSession, saveSession } from './session.mjs';
 import { detectConflicts, loadProfile, saveProfile, updateTaste } from './taste.mjs';
 
@@ -94,140 +85,9 @@ function resolveSessionDir(args) {
   return ensureArtifactDir(join(projectDesignsDir(project), sessionDirName(target)));
 }
 
-/** A flag's value, or undefined when absent; a bare flag (no value) is an error, never a silent default. */
-function stringFlag(args, name) {
-  const value = args[name];
-  if (value === undefined) return undefined;
-  if (typeof value !== 'string' || !value.trim()) fail(`--${name} needs a value`);
-  return value.trim();
-}
-
-/** The openai provider's per-call options from the CLI flags; unset flags leave the provider defaults in place. */
-function openaiOptions(args, apiKey) {
-  return {
-    apiKey,
-    model: stringFlag(args, 'model'),
-    imageModel: stringFlag(args, 'image-model'),
-    size: stringFlag(args, 'size'),
-    quality: stringFlag(args, 'quality'),
-  };
-}
-
-// Billed vision calls (png check, taste extraction) run only behind the same explicit
-// opt-in as generation: a resolved key alone never selects openai.
-function requireOpenAIOptIn(args, what, alternative) {
-  if (args.provider !== 'openai') {
-    fail(
-      `${what} calls OpenAI (billed to your OpenAI account) — pass --provider openai to opt in, or ${alternative}`,
-    );
-  }
-  const auth = resolveAuth({ cwd: process.cwd() });
-  for (const w of auth.warnings) errLine(`⚠ ${w}`);
-  if (!auth.apiKey) {
-    fail(
-      '--provider openai needs an API key: run `planr-design setup` (stores it with mode 0600) or export OPENAI_API_KEY',
-    );
-  }
-  return auth;
-}
-
-async function promptHidden(question) {
-  return new Promise((resolveAns) => {
-    const rl = createInterface({ input: process.stdin, output: process.stderr, terminal: true });
-    // mute echo: readline writes the prompt; we swallow the keystrokes' rendering
-    const onData = () => {};
-    process.stdin.on('data', onData);
-    rl.question(`${question} `, (ans) => {
-      process.stdin.off('data', onData);
-      rl.close();
-      errLine(''); // newline after hidden input
-      resolveAns(ans.trim());
-    });
-    rl._writeToOutput = () => {}; // do not echo the key
-    process.stderr.write(`${question} `);
-  });
-}
-
 // ── commands ────────────────────────────────────────────────────────────────
 
-async function cmdSetup(args) {
-  const key = args.key
-    ? String(args.key)
-    : await promptHidden('Paste your OpenAI API key (input hidden):');
-  if (!key || !key.startsWith('sk-')) fail('that does not look like an OpenAI key (sk-…)');
-
-  const credsFile = credentialsPath();
-  // Other tools keep their own keys in this file, so only a missing file starts empty.
-  const unreadable = (reason) =>
-    fail(
-      `${credsFile} is unreadable (${reason}); it was left unchanged. Repair it or move it aside, then retry.`,
-    );
-  await withCredentialWriteLock(
-    planrHome(),
-    async () => {
-      let stored;
-      try {
-        stored = readFileSync(credsFile);
-      } catch (error) {
-        if (error?.code !== 'ENOENT') unreadable(error.code);
-      }
-      let creds = {};
-      if (stored) {
-        try {
-          creds = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(stored));
-        } catch {
-          // A parse message quotes the file, which holds API keys.
-          unreadable('not valid JSON');
-        }
-      }
-      if (!creds || typeof creds !== 'object' || Array.isArray(creds))
-        unreadable('not a JSON object');
-      creds.openai_api_key = key;
-      writePrivateJsonState(credsFile, creds);
-    },
-    15000,
-    'legacy',
-  );
-  errLine(`✓ key stored in ${credsFile} (0600). It will never be echoed.`);
-
-  if (args['no-smoke']) {
-    out({ ok: true, stored: true, smoke: 'skipped' });
-    return;
-  }
-
-  errLine(
-    'Running a real smoke generation (one 1024x1024 low-quality image, billed to your OpenAI account) so you see the key work before a full run…',
-  );
-  const t0 = Date.now();
-  const smokeDir = ensureArtifactDir(join(projectDesignsDir('_smoke'), sessionDirName('smoke')));
-  const { imagePath, responseId, bytes } = await openai.generateVariant(
-    'A tiny abstract geometric mark, two shapes, flat indigo on cream. Minimal.',
-    { ...openaiOptions(args, key), size: '1024x1024', quality: 'low' },
-  );
-  const outputPath = join(smokeDir, 'smoke.png');
-  copyFileSync(imagePath, outputPath); // tmp → final
-  let session = createSession({
-    id: 'smoke',
-    provider: 'openai',
-    target: 'smoke',
-    brief: 'smoke test',
-  });
-  session = appendRound(session, { outputPath, responseId });
-  saveSession(smokeDir, 'smoke', session);
-  const proof = {
-    outputPath,
-    sessionFile: join(smokeDir, 'session-smoke.json'),
-    responseId,
-    elapsed: `${((Date.now() - t0) / 1000).toFixed(1)}s`,
-    bytes,
-  };
-  out({ ok: true, smoke: 'PASSED', proof });
-  errLine('✓ Smoke test PASSED');
-}
-
 async function cmdDoctor(args) {
-  const auth = resolveAuth({ cwd: process.cwd() });
-  for (const w of auth.warnings) errLine(`⚠ ${w}`);
   const daemon = await findRunningDaemon();
   // $0 dry-run: validate a known-good sheet against the logo contract — proves
   // the claude-svg pipeline end-to-end with zero network and zero spend.
@@ -243,14 +103,7 @@ async function cmdDoctor(args) {
   const dryRun = validateSheet(sample, contract);
   const report = {
     ok: true,
-    auth: { source: auth.source, hasKey: Boolean(auth.apiKey), warnings: auth.warnings },
-    providers: { default: DEFAULT_PROVIDER, openai: Boolean(auth.apiKey), 'claude-svg': true },
-    openai: {
-      optIn: '--provider openai',
-      model: openai.DEFAULT_MODEL,
-      imageModel: openai.DEFAULT_IMAGE_MODEL,
-      cost: 'billed to your OpenAI account',
-    },
+    providers: { default: DEFAULT_PROVIDER, 'claude-svg': true },
     daemon: daemon ? { running: true, port: daemon.port } : { running: false },
     dryRun: { provider: 'claude-svg', pass: dryRun.pass, issues: dryRun.issues, cost: '$0' },
     home: planrHome(),
@@ -260,69 +113,29 @@ async function cmdDoctor(args) {
 }
 
 async function cmdGenerate(args) {
-  const brief = args.brief || fail('--brief required');
+  if (!args.brief) fail('--brief required');
   const variant = String(args.variant || 'A');
   const target = args.target || 'design';
-  const sessionDir = resolveSessionDir(args);
-  const auth = resolveAuth({ cwd: process.cwd() });
-  for (const w of auth.warnings) errLine(`⚠ ${w}`);
-  const { name, provider, degraded, reason } = resolveProvider({
-    requested: args.provider || 'auto',
-    auth,
-  });
-  if (degraded) errLine(`provider: ${name} (${reason})`);
+  const { name } = resolveProvider({ requested: args.provider || 'auto' });
   // claude-svg authors from the brief alone; a reference image would otherwise be dropped silently.
-  if (name === 'claude-svg' && args['from-image']) {
+  if (args['from-image']) {
     fail(
-      'a reference image (--from / --from-image) needs the openai provider — pass --provider openai (billed to your OpenAI account), or drop the image and let claude-svg author from the brief',
+      'reference images are not supported: claude-svg authors from the brief, so drop --from-image',
     );
   }
-
-  if (name === 'claude-svg') {
-    // The CLI defines the contract; the CALLING AGENT authors the SVG and then
-    // runs `check`. Print the contract + exact output path — never a dead-end.
-    const contract = sheetContract(target);
-    out({
-      ok: true,
-      provider: name,
-      action: 'author',
-      variant,
-      sessionDir,
-      writeTo: join(sessionDir, `variant-${variant}.svg`),
-      contract,
-      instructions: contractInstructions(contract),
-    });
-    return;
-  }
-
-  const t0 = Date.now();
-  const { imagePath, responseId, bytes } = await provider.generateVariant(brief, {
-    ...openaiOptions(args, auth.apiKey),
-    imageInputPath: args['from-image'] || null,
-  });
-  const outputPath = join(sessionDir, `variant-${variant}.png`);
-  copyFileSync(imagePath, outputPath); // tmp → final
-
-  let session =
-    loadSession(sessionDir, variant) ??
-    createSession({
-      id: `${basename(sessionDir)}-${variant}`,
-      provider: name,
-      target,
-      project: args.project || '',
-      brief,
-    });
-  session = appendRound(session, { outputPath, responseId, brief });
-  saveSession(sessionDir, variant, session);
-
+  const sessionDir = resolveSessionDir(args);
+  // The CLI defines the contract; the CALLING AGENT authors the SVG and then
+  // runs `check`. Print the contract + exact output path — never a dead-end.
+  const contract = sheetContract(target);
   out({
     ok: true,
     provider: name,
+    action: 'author',
     variant,
-    outputPath,
-    responseId,
-    bytes,
-    elapsed: `${((Date.now() - t0) / 1000).toFixed(1)}s`,
+    sessionDir,
+    writeTo: join(sessionDir, `variant-${variant}.svg`),
+    contract,
+    instructions: contractInstructions(contract),
   });
 }
 
@@ -335,20 +148,10 @@ async function cmdVariants(args) {
       await cmdGenerate({ ...args, variant });
       results.push({ variant, ok: true });
     } catch (e) {
-      results.push({
-        variant,
-        ok: false,
-        error: e.message,
-        rateLimited: e.code === 'RATE_LIMITED',
-      });
+      results.push({ variant, ok: false, error: e.message });
     }
   }
   out({ ok: results.every((r) => r.ok), results });
-}
-
-async function cmdEvolve(args) {
-  if (!args.from) fail('--from <imagePath> required (the design you want variants OF)');
-  return cmdGenerate({ ...args, 'from-image': args.from });
 }
 
 async function cmdIterate(args) {
@@ -357,41 +160,23 @@ async function cmdIterate(args) {
   const sessionDir = resolveSessionDir(args);
   const session =
     loadSession(sessionDir, variant) ?? fail(`no session-${variant}.json in ${sessionDir}`);
-
-  if (session.provider === 'claude-svg') {
-    // The agent edits the SVG itself; the engine records the round for lineage.
-    const current = session.outputPaths[session.outputPaths.length - 1];
-    out({
-      ok: true,
-      provider: 'claude-svg',
-      action: 'edit',
-      variant,
-      editFile: current,
-      feedback,
-      note: 'apply the feedback by editing the SVG in place (or write a -vN sibling), then run: planr-design check + record',
-    });
-    return;
-  }
-
-  // The session was opened with --provider openai; that opt-in carries through its chain.
-  const auth = resolveAuth({ cwd: process.cwd() });
-  for (const w of auth.warnings) errLine(`⚠ ${w}`);
-  if (!auth.apiKey) {
+  if (session.provider !== 'claude-svg') {
     fail(
-      'iterate on an openai session needs the API key that created it (billed to your OpenAI account): run `planr-design setup` or export OPENAI_API_KEY',
+      `session-${variant}.json was made with the ${session.provider} provider, which this engine no longer runs; start a new claude-svg session`,
     );
   }
-  const { imagePath, responseId, bytes } = await openai.iterate(
-    session,
+
+  // The agent edits the SVG itself; the engine records the round for lineage.
+  const current = session.outputPaths[session.outputPaths.length - 1];
+  out({
+    ok: true,
+    provider: 'claude-svg',
+    action: 'edit',
+    variant,
+    editFile: current,
     feedback,
-    openaiOptions(args, auth.apiKey),
-  );
-  const round = session.outputPaths.length + 1;
-  const outputPath = join(sessionDir, `variant-${variant}-v${round}.png`);
-  copyFileSync(imagePath, outputPath);
-  const next = appendRound(session, { outputPath, responseId, feedback });
-  saveSession(sessionDir, variant, next);
-  out({ ok: true, provider: 'openai', variant, round, outputPath, responseId, bytes });
+    note: 'apply the feedback by editing the SVG in place (or write a -vN sibling), then run: planr-design check + record',
+  });
 }
 
 /**
@@ -405,6 +190,11 @@ async function cmdRecord(args) {
   const sessionDir = resolveSessionDir(args);
   const brief = args.brief || '';
   let session = loadSession(sessionDir, variant);
+  if (session && session.provider !== 'claude-svg') {
+    fail(
+      `session-${variant}.json was made with the ${session.provider} provider, which this engine no longer runs; record into a new --session-dir or variant`,
+    );
+  }
   if (!session) {
     if (!brief) fail('--brief required on the first record for a variant');
     session = createSession({
@@ -434,19 +224,10 @@ async function cmdRecord(args) {
 async function cmdCheck(args) {
   const file = args.file || fail('--file required');
   const target = args.target || 'design';
-  if (file.endsWith('.svg')) {
-    const verdict = validateSheet(readFileSync(file, 'utf-8'), sheetContract(target));
-    out({ ok: true, provider: 'claude-svg', ...verdict });
-    process.exitCode = verdict.pass ? 0 : 2;
-    return;
-  }
-  const brief = args.brief || fail('--brief required for image checks');
-  const auth = requireOpenAIOptIn(args, 'an image quality check', 'check an svg ($0)');
-  const verdict = await openai.checkQuality(file, brief, {
-    apiKey: auth.apiKey,
-    model: stringFlag(args, 'model'),
-  });
-  out({ ok: true, provider: 'openai', ...verdict });
+  if (!file.endsWith('.svg'))
+    fail('check validates an SVG sheet against its contract; pass an .svg file');
+  const verdict = validateSheet(readFileSync(file, 'utf-8'), sheetContract(target));
+  out({ ok: true, provider: 'claude-svg', ...verdict });
   process.exitCode = verdict.pass ? 0 : 2;
 }
 
@@ -736,25 +517,15 @@ async function cmdTaste(args) {
   if (sub === 'approved' || sub === 'rejected') {
     const artifact =
       args._[2] || fail(`usage: taste ${sub} <artifact> --project <p> [--fonts a,b …]`);
-    let attributes = {
+    const attributes = {
       fonts: (args.fonts || '').split(',').filter(Boolean),
       colors: (args.colors || '').split(',').filter(Boolean),
       layouts: (args.layouts || '').split(',').filter(Boolean),
       aesthetics: (args.aesthetics || '').split(',').filter(Boolean),
     };
     const flagged = Object.values(attributes).some((a) => a.length > 0);
-    if (!flagged && artifact.endsWith('.png')) {
-      const auth = requireOpenAIOptIn(
-        args,
-        'vision attribute extraction',
-        'pass --fonts/--colors/--layouts/--aesthetics',
-      );
-      errLine('no attribute flags — vision-extracting from the PNG…');
-      attributes = await openai.extractAttributes(artifact, {
-        apiKey: auth.apiKey,
-        model: stringFlag(args, 'model'),
-      });
-    }
+    if (!flagged && artifact.endsWith('.png'))
+      fail(`taste ${sub} for an image needs --fonts, --colors, --layouts or --aesthetics`);
     const profile = loadProfile(path);
     const next = updateTaste(profile, {
       verdict: sub,
@@ -772,11 +543,9 @@ async function cmdTaste(args) {
 
 // ── router ──────────────────────────────────────────────────────────────────
 const COMMANDS = {
-  setup: cmdSetup,
   doctor: cmdDoctor,
   generate: cmdGenerate,
   variants: cmdVariants,
-  evolve: cmdEvolve,
   iterate: cmdIterate,
   record: cmdRecord,
   check: cmdCheck,
@@ -786,8 +555,16 @@ const COMMANDS = {
   taste: cmdTaste,
 };
 
+const REMOVED_COMMANDS = {
+  setup: () =>
+    `setup was removed: the design engine no longer uses an OpenAI key. If you saved one with setup, delete openai_api_key from ${join(planrHome(), 'credentials.json')}.`,
+  evolve: () =>
+    'evolve was removed with the openai provider: author new SVG variants with generate.',
+};
+
 const args = parseArgs(process.argv.slice(2));
 const cmd = args._[0];
+if (Object.hasOwn(REMOVED_COMMANDS, cmd)) fail(REMOVED_COMMANDS[cmd]());
 if (!cmd || !COMMANDS[cmd]) {
   errLine(`planr-design <${Object.keys(COMMANDS).join('|')}>`);
   process.exit(cmd ? 1 : 0);

@@ -208,7 +208,7 @@ test('routing is rechecked in the execution working directory before native disp
   await assert.rejects(readFile(join(f.cwd, 'unexpected-execution.txt')), { code: 'ENOENT' });
 });
 
-test('local metadata uses installed authentication and recognizes exact loaded instance IDs', async (t) => {
+test('local metadata sends no credentials and recognizes exact loaded instance IDs', async (t) => {
   const f = await fixture(t);
   const calls = [];
   const server = createServer((request, response) => {
@@ -256,33 +256,33 @@ test('local metadata uses installed authentication and recognizes exact loaded i
       ['GET', '/api/v1/models'],
     ],
   );
-  assert.ok(calls.every(({ authorization }) => authorization === 'Bearer private-local-token'));
+  assert.ok(calls.every(({ authorization }) => authorization === undefined));
   assert.equal(JSON.stringify(backend).includes('private-local-token'), false);
 });
 
-test('unconfirmed local authentication and changed routing do not send metadata requests', async (t) => {
+test('configured Anthropic tokens are never sent and changed routing sends no metadata requests', async (t) => {
   const f = await fixture(t);
   await f.settings({ ANTHROPIC_BASE_URL: local.origin, ANTHROPIC_AUTH_TOKEN: 'config-token' });
-  let calls = 0;
+  const headers = [];
   const options = {
     cwd: f.cwd,
     env: { ...f.env, ANTHROPIC_AUTH_TOKEN: 'different-shell-token' },
-    fetchImpl: async () => {
-      calls += 1;
-      throw new Error('should not fetch');
+    fetchImpl: async (_url, init) => {
+      headers.push(init.headers);
+      return new Response('Sign-in required', { status: 401 });
     },
   };
   const backend = await inspectLocalBackend({ ...f.profile, destination: local }, options);
-  assert.equal(backend.diagnostic.code, 'E_BACKEND_AUTH_CONFIG');
-  assert.equal(calls, 0);
-  assert.equal(JSON.stringify(backend).includes('config-token'), false);
+  assert.equal(backend.status, 'authentication-required');
+  assert.deepEqual(headers, [undefined]);
+  assert.equal(JSON.stringify(backend).includes('token'), false);
   await f.settings({ ANTHROPIC_BASE_URL: external.origin });
   const changed = await inspectLocalBackend(
     { ...f.profile, destination: local },
     { ...options, env: f.env },
   );
   assert.equal(changed.diagnostic.code, 'E_DESTINATION_CHANGED');
-  assert.equal(calls, 0);
+  assert.equal(headers.length, 1);
 });
 
 test('local metadata deadline also bounds a stalled response body', async () => {

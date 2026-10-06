@@ -166,9 +166,6 @@ export interface OpenPlanrConfig {
   reports?: ReportBranding;
   /** Optional delivery channel settings */
   distribution?: {
-    slackWebhookUrl?: string;
-    /** Reserved: Incoming Webhooks encode the channel in the URL; not read by v1 `push slack`. */
-    slackChannel?: string;
     emailFrom?: string;
     emailSmtpHost?: string;
     /** Reserved for future SMTP allowlists; not read while email delivery is stubbed. */
@@ -535,7 +532,7 @@ export interface ReportLinterConfig {
 // Distribution / export (stakeholder deliverables)
 // ---------------------------------------------------------------------------
 
-export type DistributionChannel = 'github_issue' | 'slack' | 'email' | 'file';
+export type DistributionChannel = 'github_issue' | 'email' | 'file';
 
 export interface DistributionResult {
   channel: DistributionChannel;

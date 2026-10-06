@@ -1,10 +1,10 @@
 # The Design Loop Engine
 
-> `openplanr-pipeline design-engine` runs the separate image/SVG exploration loop:
-> providers, sessions, a board daemon, feedback files and taste memory. Its board
+> `openplanr-pipeline design-engine` runs the separate SVG exploration loop:
+> sessions, a board daemon, feedback files and taste memory. Its board
 > adapter uses the artifact runtime, including esbuild and parse5. Standard Design,
 > Design Loop and Design Review skills use their packaged Studio utilities; they do
-> not share this engine's provider or file-handshake loop.
+> not share this engine's file-handshake loop.
 
 ## Architecture
 
@@ -14,7 +14,7 @@ agent (Claude session)                    browser (the user)
   │  generate/iterate/check/record           │
   ▼                                          ▼
 session dir (USER space, ~/.planr/designs/<project>/<target>-<date>/)
-  variant-X.png|svg   session-X.json   progress.json   board.html
+  variant-X.svg       session-X.json   progress.json   board.html
   feedback.json       feedback-pending.json            approved.json
   ▲                                          ▲
   │            board daemon (localhost)      │
@@ -78,50 +78,27 @@ Shape (`schemas/v1.0.0/design-feedback.schema.json`):
 drag = box). In review mode each pin auto-maps to the nearest `<section id>` /
 `[data-screen]` of the artifact, so the agent regenerates only that screen.
 
-## The provider interface
+## The provider
 
-`lib/design-engine/providers/` — one shape per provider:
-`generateVariant(brief, opts) → { imagePath(tmp), responseId }`,
-`iterate(session, feedback, opts)`, `checkQuality(artifact, brief, opts) → { pass, issues }`.
+`lib/design-engine/providers/` holds one provider, `claude-svg`: the calling agent authors SVG
+against the engine's sheet contract, so the engine makes no model calls and needs no key.
 
-| | `claude-svg` (default) | `openai` (opt-in) |
-|---|---|---|
-| Needs | nothing — always available | an explicit `--provider openai` **and** your own API key (`setup`) |
-| Generation | the **agent authors SVG** to a validated sheet contract | Responses API: `gpt-5.5` carrying the `image_generation` tool with `gpt-image-2.5-sunburst` |
-| Iteration | the agent edits the SVG; `record` keeps lineage | `previous_response_id` chain — refines, never regenerates |
-| Quality gate | structural contract validation ($0) | `gpt-5.5` vision vs brief (`check --provider openai`) |
-| Cost | $0 | billed to your OpenAI account |
-| Best at | **logos + UI**: exact hex, real type, vector output | photographic/moodboard, og-images |
+| | `claude-svg` |
+|---|---|
+| Generation | the **agent authors SVG** to a validated sheet contract |
+| Iteration | the agent edits the SVG; `record` keeps lineage |
+| Quality gate | structural contract validation (`check` on an `.svg`) |
+| Cost | $0 beyond the agent's own session |
+| Best at | **logos + UI**: exact hex, real type, vector output |
 
-`resolveProvider({ requested, auth })`: `auto` (the default) → claude-svg, always. openai
-runs only when requested with `--provider openai`; a key in the environment never selects
-it, so nothing is billed unless you asked for openai. Requesting `openai` without a key
-errors and names the setup path (`openplanr-pipeline design-engine setup` or `OPENAI_API_KEY`) plus the $0
-default. The same opt-in guards the billed vision calls: `check` on a PNG and `taste
-approved|rejected <png>` without attribute flags need `--provider openai` too.
-
-### openai flags
-
-| Flag | Default | Accepted values |
-|---|---|---|
-| `--model` | `gpt-5.5` | a mainline model that supports the `image_generation` tool (also answers the vision checks) |
-| `--image-model` | `gpt-image-2.5-sunburst` | `gpt-image-2.5-sunburst` (most capable, editing precision), `gpt-image-2.5-flare` (fast everyday generation), `gpt-image-2` |
-| `--size` | `1024x1024` | `auto`, `1024x1024`, `1024x1536`, `1536x1024`, or `WIDTHxHEIGHT` in multiples of 16 with an aspect between 1:3 and 3:1 and no edge over 3840 |
-| `--quality` | `high` | `low`, `medium`, `high`, `auto`, `xhigh`, `max` |
-
-`generate`, `variants`, `evolve` and `iterate` take all four; `check` and `taste` take
-`--model`. Invalid sizes and qualities are rejected before any request is sent.
-`doctor --json` reports the defaults under `openai`.
-
-Auth order: `~/.planr/credentials.json` → `OPENAI_API_KEY` env (with the **silent-billing
-disclosure** when that key also sits in the cwd's `.env`, + a warning if that `.env` isn't
-gitignored) → none. Keys are never echoed anywhere, and a resolved key only reports
-`hasKey: true` in `doctor` — it never changes which provider runs.
+`resolveProvider({ requested })`: `auto` (the default) and `claude-svg` resolve to claude-svg;
+any other name is rejected. `taste approved|rejected` on a PNG needs attribute flags
+(`--fonts`, `--colors`, `--layouts`, `--aesthetics`).
 
 ## Sessions + taste
 
 - `session-<variant>.json` (`design-session.schema.json`): provider, `briefVersions[]`,
-  `feedbackHistory[]`, `outputPaths[]` (oldest→newest), `regionEdits[]`, `lastResponseId`.
+  `feedbackHistory[]`, `outputPaths[]` (oldest→newest), `regionEdits[]`.
 - `taste-profile.json` (`taste-profile.schema.json`): per-project; dimensions
   fonts/colors/layouts/aesthetics, entries `{value, confidence, approved_count,
   rejected_count, last_seen}`. Updated on **both** approve and reject; **5%/week decay is
@@ -135,7 +112,7 @@ PLUG=~/.claude/plugins/…/planr-pipeline        # or the repo checkout
 node $PLUG/lib/design-engine/cli.mjs doctor    # expect: dryRun.pass=true, cost $0
 
 # 1. ask for the authoring contract
-node $PLUG/lib/design-engine/cli.mjs generate --provider claude-svg \
+node $PLUG/lib/design-engine/cli.mjs generate \
   --brief "geometric W mark, indigo on cream" --target logo --project demo --variant A
 # → prints the sheet contract + the exact writeTo path
 
@@ -150,14 +127,6 @@ node $PLUG/lib/design-engine/cli.mjs board --dir <dir> --id demo-logo
 # open it: pin a region, rate, Submit → feedback.json appears next to board.html
 # (in a terminal the daemon `board` spawns survives on its own; inside a sandboxed agent,
 #  bring it up first as a background task — `cli.mjs daemon --serve` — then `board` reuses it.)
-
-# opting in to openai instead (billed to your OpenAI account):
-node $PLUG/lib/design-engine/cli.mjs setup
-# → stores your key (0600) + runs one small low-quality smoke generation and prints the proof:
-#   { outputPath, sessionFile, responseId, elapsed, bytes } + "Smoke test PASSED"
-node $PLUG/lib/design-engine/cli.mjs generate --provider openai \
-  --brief "geometric W mark, indigo on cream" --target logo --project demo --variant A
-# → gpt-5.5 + gpt-image-2.5-sunburst by default; add --model / --image-model / --size / --quality to override
 ```
 
 Conformance proof without touching anything: `npm run conformance:design-loop` runs the

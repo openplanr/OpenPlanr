@@ -5,12 +5,11 @@
 
 ## D.1 — Reveal + serve
 
-> Nothing extra to run: the board shows each variant as its own image — `variant-{X}.png`
-> (openai) or `variant-{X}.svg` (claude-svg) — framed at the image's size, with the board's
-> zoom, Single/Variants/Split views and pins. Keep the source `variant-{X}.{svg,png}` on disk for
-> lineage/export.
+> Nothing extra to run: the board shows each variant as its own image — `variant-{X}.svg` —
+> framed at the image's size, with the board's zoom, Single/Variants/Split views and pins. Keep
+> the source `variant-{X}.svg` on disk for lineage/export.
 
-1. Show the variants inline in chat (Read the PNGs / SVGs) — a quick visual index.
+1. Show the variants inline in chat (Read the SVGs) — a quick visual index.
 2. Serve the board. The daemon is a long-running server that must OUTLIVE the short-lived
    `board` command — a sandboxed agent runtime reaps a detached child when the launching command
    exits, so bring the daemon up as a tracked **background task** first, then register the board:
@@ -66,20 +65,12 @@ Build the round brief from the feedback: `overall` + per-variant `comments` + **
 (quote each pin: `[fix] "thicker strokes" @ (x,y)` — pins are the user pointing at exact
 regions; address every `fix`/`improve` pin explicitly, answer `question` pins in chat).
 
-The openai commands below apply only to sessions opened with `--provider openai` (the
-session file records the provider); each one is billed to the user's OpenAI account.
-
-- **iterate** — per session chain, refine don't regenerate:
-  claude-svg → edit the SVG to satisfy each pin, `… check`, then `… record --feedback …`;
-  openai session → `… iterate --variant X --feedback "<round brief>" --session-dir <…>`
-  (chains `previous_response_id`, same models unless `--model` / `--image-model` are passed).
-- **more-like** — `preferred` variant becomes the anchor: claude-svg → author N new SVGs
-  varying ONLY the non-anchored dimensions; openai session → `iterate` on that session
-  asking for N sibling takes (or `evolve --provider openai --from <its png>`).
-- **remix** — `remixSpec {layoutFrom, colorsFrom, note}`: claude-svg → compose a new SVG
-  taking layout geometry from one + palette from the other; openai session →
-  `evolve --provider openai --from <layout variant's png>` with a brief importing the
-  other's palette.
+- **iterate** — per session chain, refine don't regenerate: edit the SVG to satisfy each
+  pin, `… check`, then `… record --feedback …`.
+- **more-like** — `preferred` variant becomes the anchor: author N new SVGs varying ONLY
+  the non-anchored dimensions.
+- **remix** — `remixSpec {layoutFrom, colorsFrom, note}`: compose a new SVG taking layout
+  geometry from one + palette from the other.
 
 Then: update `progress.json` (`versions` gains each new file per variant — the board's
 versions rail + A/B diff feed off it), and

@@ -529,7 +529,7 @@ test('definite publication conflict preserves intent and allows an authenticated
   assert.notEqual(state.workspace.currentRevision, original);
 });
 
-test('ordinary unshared feedback does not create or require owner credentials', async (t) => {
+test('ordinary unshared feedback does not create or require owner keys', async (t) => {
   const { root, file, options } = await fixture(t);
   const result = await syncDesignShare(file, {
     env: { ...options.env, PLANR_HOME: join(root, 'project-state') },

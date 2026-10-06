@@ -13,17 +13,22 @@ vi.mock('../../src/services/prompt-service.js', () => ({
 
 import { registerGitHubCommand } from '../../src/cli/commands/github.js';
 import { createDefaultConfig, saveConfig } from '../../src/services/config-service.js';
-import { getIssue } from '../../src/services/github-service.js';
+import {
+  getIssue,
+  statusFromIssueState,
+  statusToIssueState,
+} from '../../src/services/github-service.js';
 import { promptSelect } from '../../src/services/prompt-service.js';
 import { parseMarkdown } from '../../src/utils/markdown.js';
 import { fakeGh, fakeGhCalls } from '../helpers/fake-gh.js';
 
-/** Linked tasks and the issue state `gh` reports for each: two agree, two differ. */
+/** Linked tasks and the issue state `gh` reports for each: three agree, two differ. */
 const LINKED = [
   { id: 'TASK-001', status: 'done', issue: 1, state: 'CLOSED' },
   { id: 'TASK-002', status: 'pending', issue: 2, state: 'CLOSED' },
   { id: 'TASK-003', status: 'done', issue: 3, state: 'OPEN' },
   { id: 'TASK-004', status: 'pending', issue: 4, state: 'OPEN' },
+  { id: 'TASK-005', status: 'in-progress', issue: 5, state: 'OPEN' },
 ];
 
 let bin: string;
@@ -48,6 +53,7 @@ function stubGh(issues: Array<{ issue: number; state: string }>): void {
     ...Object.fromEntries(
       issues.map(({ issue, state }) => [`issue view ${issue} `, issueJson(issue, state)]),
     ),
+    'issue edit ': '',
     'issue close ': '',
     'issue reopen ': '',
   });
@@ -100,14 +106,15 @@ afterEach(() => {
 });
 
 describe.skipIf(process.platform === 'win32')('openplanr github sync reads gh issue states', () => {
-  it('pulls a closed issue as done and an open one as pending', async () => {
+  it('pulls a closed issue as done and a reopened one as in-progress, leaving open work as it is', async () => {
     await runGitHub('sync', '--direction', 'pull');
 
     expect(LINKED.map(({ id }) => [id, localStatus(id)])).toEqual([
       ['TASK-001', 'done'],
       ['TASK-002', 'done'],
-      ['TASK-003', 'pending'],
+      ['TASK-003', 'in-progress'],
       ['TASK-004', 'pending'],
+      ['TASK-005', 'in-progress'],
     ]);
   });
 
@@ -115,7 +122,13 @@ describe.skipIf(process.platform === 'win32')('openplanr github sync reads gh is
     await runGitHub('sync', '--direction', 'push');
 
     expect(stateChanges()).toEqual(['issue reopen 2', 'issue close 3']);
-    expect(LINKED.map(({ id }) => localStatus(id))).toEqual(['done', 'pending', 'done', 'pending']);
+    expect(LINKED.map(({ id }) => localStatus(id))).toEqual([
+      'done',
+      'pending',
+      'done',
+      'pending',
+      'in-progress',
+    ]);
   });
 
   it('reports a conflict only where the local status and the issue state differ', async () => {
@@ -123,19 +136,67 @@ describe.skipIf(process.platform === 'win32')('openplanr github sync reads gh is
 
     expect(printed.filter((line) => line.includes('local:'))).toEqual([
       '  ! TASK-002 — local: pending, GitHub #2: closed (done)',
-      '  ! TASK-003 — local: done, GitHub #3: open (pending)',
+      '  ! TASK-003 — local: done, GitHub #3: open (in-progress)',
     ]);
     expect(
       vi.mocked(promptSelect).mock.calls.map(([message, choices]) => [message, choices[0]]),
     ).toEqual([
       ['  Resolve TASK-002:', { name: 'Use GitHub status (done)', value: 'pull' }],
-      ['  Resolve TASK-003:', { name: 'Use GitHub status (pending)', value: 'pull' }],
+      ['  Resolve TASK-003:', { name: 'Use GitHub status (in-progress)', value: 'pull' }],
     ]);
     expect(stateChanges()).toEqual([]);
   });
 
+  it('keeps a planning epic with an open issue and closes out one whose issue closed', async () => {
+    const epicsDir = join(projectDir, '.planr', 'epics');
+    mkdirSync(epicsDir, { recursive: true });
+    const epics = [
+      { id: 'EPIC-001', status: 'planning', issue: 11, state: 'OPEN' },
+      { id: 'EPIC-002', status: 'planning', issue: 12, state: 'CLOSED' },
+    ];
+    for (const { id, status, issue } of epics) {
+      writeFileSync(
+        join(epicsDir, `${id}-linked.md`),
+        `---\nid: "${id}"\ntitle: "Linked epic"\nstatus: "${status}"\ngithubIssue: ${issue}\n---\n# ${id}: Linked epic\n`,
+      );
+    }
+    stubGh([...LINKED, ...epics]);
+
+    await runGitHub('sync', '--direction', 'pull');
+
+    const epicStatus = (id: string) =>
+      parseMarkdown(readFileSync(join(epicsDir, `${id}-linked.md`), 'utf8')).data.status;
+    expect(epics.map(({ id }) => [id, epicStatus(id)])).toEqual([
+      ['EPIC-001', 'planning'],
+      ['EPIC-002', 'done'],
+    ]);
+  });
+
+  it('pushes a closed backlog item as a closed issue and leaves a promoted item’s issue as it is', async () => {
+    const backlogDir = join(projectDir, '.planr', 'backlog');
+    mkdirSync(backlogDir, { recursive: true });
+    const items = [
+      { id: 'BL-001', status: 'closed', issue: 21, state: 'OPEN' },
+      { id: 'BL-002', status: 'open', issue: 22, state: 'CLOSED' },
+      { id: 'BL-003', status: 'promoted', issue: 23, state: 'CLOSED' },
+      { id: 'BL-004', status: 'promoted', issue: 24, state: 'OPEN' },
+    ];
+    for (const { id, status, issue } of items) {
+      writeFileSync(
+        join(backlogDir, `${id}-linked.md`),
+        `---\nid: "${id}"\ntitle: "Linked item"\nstatus: "${status}"\ngithubIssue: ${issue}\n---\n# ${id}: Linked item\n`,
+      );
+    }
+    stubGh(items);
+
+    for (const { id } of items) await runGitHub('push', id);
+
+    expect(fakeGhCalls(bin).filter((call) => call.startsWith('issue edit ')).length).toBe(4);
+    expect(stateChanges()).toEqual(['issue close 21', 'issue reopen 22']);
+  });
+
   it('shows each issue state in openplanr github status and marks an unreadable issue out of sync', async () => {
-    stubGh(LINKED.slice(0, 3));
+    stubGh(LINKED.filter(({ issue }) => issue !== 4));
 
     await runGitHub('status');
 
@@ -146,6 +207,7 @@ describe.skipIf(process.platform === 'win32')('openplanr github sync reads gh is
       ['TASK-002', 'pending', '#2', 'closed', '✗'],
       ['TASK-003', 'done', '#3', 'open', '✗'],
       ['TASK-004', 'pending', '#4', 'error', '✗'],
+      ['TASK-005', 'in-progress', '#5', 'open', '✓'],
     ]);
   });
 
@@ -167,5 +229,35 @@ describe.skipIf(process.platform === 'win32')('openplanr github sync reads gh is
     await expect(getIssue(1)).rejects.toThrow(
       'gh issue view has an unexpected shape: state: Invalid option: expected one of "open"|"closed"|"merged"',
     );
+  });
+});
+
+describe('issue states for backlog items', () => {
+  it('maps open and closed to the matching issue state and leaves promoted unmapped', () => {
+    expect(['open', 'closed', 'promoted'].map((status) => statusToIssueState(status))).toEqual([
+      'open',
+      'closed',
+      undefined,
+    ]);
+  });
+
+  it('reads an issue state back as open or closed and never overwrites promoted', () => {
+    const readBack = (
+      [
+        ['closed', 'open'],
+        ['open', 'closed'],
+        ['closed', 'closed'],
+        ['open', 'open'],
+        ['closed', 'promoted'],
+        ['open', 'promoted'],
+      ] as const
+    ).map(([state, status]) => statusFromIssueState(state, status, 'backlog'));
+
+    expect(readBack).toEqual(['closed', 'open', undefined, undefined, undefined, undefined]);
+  });
+
+  it('keeps done and in-progress for the other item types', () => {
+    expect(statusFromIssueState('closed', 'planning', 'story')).toBe('done');
+    expect(statusFromIssueState('open', 'done', 'task')).toBe('in-progress');
   });
 });
