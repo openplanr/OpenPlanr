@@ -1,5 +1,18 @@
 # Changelog
 
+## 2.2641.1
+
+### Minor Changes
+
+- d4f1cc8: The command is now `openplanr`, with `opr` as its short alias. `planr` keeps working in this release and prints a one-line notice; it will be removed in the next release, so switch scripts, shell aliases and CI to `openplanr` or `opr`. `openplanr doctor` reports installed skills that still use the old command and how to refresh them. Skill names such as `/planr:plan`, the `planr` plugin and the `.planr/` folder are unchanged.
+
+### Patch Changes
+
+- 9557ccf: `@openplanr/protocol/names` exports `PLANNING_FOLDER` and `CLI_COMMAND`, the planning folder and command names. The CLI, the pipeline and the bundled sync skill read them from there instead of spelling them out. Output is unchanged.
+- 28bee48: The pipeline command is now `openplanr-pipeline`. `planr-pipeline` keeps working in this release and prints a one-line notice; it will be removed in the next release, so switch scripts to `openplanr-pipeline`.
+- d4f1cc8: OpenPlanr no longer writes into a `.planr/` folder it didn't create. When that folder has no OpenPlanr `config.json` but holds other planning files, `openplanr init`, project setup, provenance appends and design taste updates stop and list what they found. Move or rename that folder, or use OpenPlanr in another repository.
+- 54dda4d: The estimation guide that `openplanr init` writes no longer documents the removed `estimate` command, and the pipeline's SHIP procedure and docs call `openplanr-pipeline` instead of the removed pipeline command.
+
 ## 2.2641.0
 
 ### Patch Changes
