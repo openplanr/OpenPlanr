@@ -895,7 +895,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:a5696771f3e17afabd99ac02c16a68227d70372013a28936f3fddd47ea5b9a4f"
+          "digest": "sha256:2e0ce9eaa9e7e2fc638a2a99303eec3c9df8b619cfa393782e65591ed7c68eeb"
         },
         {
           "path": "references/integration-review.md",
@@ -1003,7 +1003,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:8ff6bc42f01fa78c44416cbb3106b7b0385f2a60a367bca6f2185466a7484d55"
+          "digest": "sha256:4a318751dbac600e9ee73b77c9b4befab7fbdb5a85b9d8039e41b749fdd77761"
         },
         {
           "path": "scripts/custody.mjs",

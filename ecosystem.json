@@ -349,7 +349,7 @@
     ],
     "generatedAssets": {
       "path": "adapters/manifests/generated-assets.json",
-      "digest": "sha256:14a7fb43fad1b3ce080b907955475ee551729bc05d86a7351834cb6e8a7e3959",
+      "digest": "sha256:f3880db4effe65235103d8f24713f5995a936caab356c66f1ad5f871ef9cd6eb",
       "count": 1616
     }
   },

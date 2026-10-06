@@ -1,9 +1,12 @@
 // Credential classification for delegated context. Findings never carry the matched value.
 import { createHash } from 'node:crypto';
 
-/** Recognizable credential formats; rejected everywhere, including tests and placeholders. */
+/**
+ * Recognizable credential formats; rejected everywhere, including tests and placeholders.
+ * Case-sensitive: each prefix has a fixed case, and an `sk-` body needs an uppercase letter or digit.
+ */
 export const CREDENTIAL_FORMAT =
-  /-----BEGIN (?:[A-Z ]* )?PRIVATE KEY(?: BLOCK)?-----|"private_key"\s*:\s*"-----BEGIN|(?<![A-Za-z0-9])AKIA[0-9A-Z]{16}\b|(?<![A-Za-z0-9])gh[pousr]_[A-Za-z0-9_]{20,}\b|(?<![A-Za-z0-9])github_pat_[A-Za-z0-9_]{20,}\b|(?<![A-Za-z0-9])sk-(?:proj-)?[A-Za-z0-9_-]{24,}\b|(?<![A-Za-z0-9])xox[baprs]-[A-Za-z0-9-]{20,}\b/iu;
+  /-----BEGIN (?:[A-Z ]* )?PRIVATE KEY(?: BLOCK)?-----|"private_key"\s*:\s*"-----BEGIN|(?<![A-Za-z0-9])AKIA[0-9A-Z]{16}\b|(?<![A-Za-z0-9])gh[pousr]_[A-Za-z0-9]{20,}(?![A-Za-z0-9])|(?<![A-Za-z0-9])github_pat_[A-Za-z0-9_]{20,}\b|(?<![A-Za-z0-9])sk-(?:proj-)?(?=[A-Za-z0-9_-]*[A-Z0-9])[A-Za-z0-9_-]{24,}\b|(?<![A-Za-z0-9])xox[baprs]-[A-Za-z0-9-]{20,}/u;
 
 // `word` is the credential word findings report as `key`; the rest of a name may hold a value.
 const CREDENTIAL_NAME =
@@ -13,7 +16,7 @@ const QUOTED_ASSIGNMENT = new RegExp(
   'giu',
 );
 const UNQUOTED_ASSIGNMENT = new RegExp(
-  `^[ \\t]*(?:export[ \\t]+)?${CREDENTIAL_NAME}[ \\t]*(?<operator>[:=])[ \\t]*(?!process\\.env(?:\\.|\\[)|import\\.meta\\.env(?:\\.|\\[)|Deno\\.env\\.|os\\.environ|env\\.)(?<value>[^\\s"'\`#()\\[\\]{}$]{16,})[ \\t]*(?:#[^\\r\\n]*)?\\r?$`,
+  `^[ \\t]*(?<exported>export[ \\t]+)?${CREDENTIAL_NAME}(?<before>[ \\t]*)(?<operator>[:=])(?<after>[ \\t]*)(?!process\\.env(?:\\.|\\[)|import\\.meta\\.env(?:\\.|\\[)|Deno\\.env\\.|os\\.environ|env\\.)(?<value>[^\\s"'\`#()\\[\\]{}$]{16,})[ \\t]*(?:#[^\\r\\n]*)?\\r?$`,
   'gimu',
 );
 const PLACEHOLDER =
@@ -21,7 +24,8 @@ const PLACEHOLDER =
 // A lowercase marker followed only by words and short numbers, one of them a credential noun.
 const DESCRIBED_PLACEHOLDER =
   /^(?:dummy|fake|mock|test|fixture|synthetic|never[-_]return)(?:[-_. ](?:[a-z]+|\d{1,4}))+[-_.]?$/u;
-const CREDENTIAL_NOUN = /[-_. ](?:secret|key|token|password)(?=[-_. ]|$)/u;
+const CREDENTIAL_NOUN = /[-_. ](?:secret|key|token|password|credential)s?(?=[-_. ]|$)/u;
+const SHELL_NAME = /^[A-Z][A-Z0-9_]*$/u;
 const IDENTIFIER_WORD = /[A-Z]{2,}(?![a-z])\d{0,2}|[A-Z]?[a-z]+\d{0,2}|[A-Z]\d{0,2}|\d{1,2}/gu;
 
 const CODE_EXTENSIONS = new Set(
@@ -83,6 +87,11 @@ function unquotedLiteral(raw, operator, syntax) {
   return !(terminated && codeIdentifier(value));
 }
 
+// `export NAME=` and an uppercase `NAME=value` without spaces are shell or env lines in any file.
+function shellAssignment({ exported, name, before, operator, after }) {
+  return Boolean(exported) || (operator === '=' && !before && !after && SHELL_NAME.test(name));
+}
+
 function placeholder(value) {
   return (
     PLACEHOLDER.test(value) || (DESCRIBED_PLACEHOLDER.test(value) && CREDENTIAL_NOUN.test(value))
@@ -111,7 +120,7 @@ export function classifyCredentials(bytes, origin = {}) {
       ...(key ? { key } : {}),
     });
   };
-  for (const match of content.matchAll(new RegExp(CREDENTIAL_FORMAT.source, 'giu')))
+  for (const match of content.matchAll(new RegExp(CREDENTIAL_FORMAT.source, 'gu')))
     add('credential-format', match.index, null, {
       classification: 'credential',
       confidence: 'high',
@@ -130,7 +139,8 @@ export function classifyCredentials(bytes, origin = {}) {
     if (!placeholder(match.groups.value)) literal(match);
   for (const match of content.matchAll(UNQUOTED_ASSIGNMENT)) {
     const { operator, value } = match.groups;
-    if (unquotedLiteral(value, operator, syntax) && !placeholder(value.replace(/[;,]$/u, '')))
+    const lineSyntax = shellAssignment(match.groups) ? 'config' : syntax;
+    if (unquotedLiteral(value, operator, lineSyntax) && !placeholder(value.replace(/[;,]$/u, '')))
       literal(match);
   }
   return { contentDigest: `sha256:${sha256(buffer)}`, syntax, findings };

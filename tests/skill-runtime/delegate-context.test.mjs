@@ -937,6 +937,7 @@ test('recognizable formats after a marker or under a private_key field are not r
     '{"private_key": "-----BEGIN PGP PRIVATE KEY BLOCK-----\\nAAAA"}\n',
     '{"private_key": "-----BEGIN ENCRYPTED DATA-----"}\n',
     '-----BEGIN PGP PRIVATE KEY BLOCK-----\n',
+    `const token = "xoxb-${'A'.repeat(25)}_x";\n`,
   ]) {
     await put(root, 'src/fixture.ts', content);
     const { details } = await blockedWithout(
@@ -976,8 +977,60 @@ test('a described placeholder needs a credential noun', async (t) => {
     'apiSecret: "test_secret_must_be_at_least_32_bytes_long_",',
     'password: "fixture-password-for-login-tests"',
     'TOKEN=mock.token.value.for.tests.only',
+    'token: "fixture-read-credential",',
+    'password: "fixture-alternate-credential",',
+    'secret: "mock-shared-secrets-for-tests",',
   ])
     assert.equal(assertCredentialFreeText(text), text);
+});
+
+test('identifiers and slugs that contain a token prefix are not credential formats', async (t) => {
+  const root = await fixture(t);
+  const names = [
+    'parse_ghs_installation_token_header',
+    'MAX_GHS_TOKEN_LENGTH_FOR_INSTALLATIONS = 40',
+    'strip_ghp_prefix_from_token_value',
+    'how_to_use_sk-learn_pipelines_for_production',
+  ];
+  for (const name of names) assert.equal(assertCredentialFreeText(name), name);
+  const source = `${names.map((name) => `# ${name}`).join('\n')}\n`;
+  await put(root, 'src/names.py', source);
+  const capsule = await buildContextCapsule({
+    repositoryRoot: root,
+    request: 'Review names.',
+    selectedFiles: ['src/names.py'],
+  });
+  assert.deepEqual(
+    Buffer.from(copied(capsule, 'src/names.py').contentBase64, 'base64'),
+    Buffer.from(source),
+  );
+});
+
+test('shell and env assignment lines are literals in any file', async (t) => {
+  const root = await fixture(t);
+  for (const [path, content, value] of [
+    [
+      'src/deploy.rb',
+      'script = <<~SH\n  export DB_PASSWORD=CorrectHorseBatteryStaple;\nSH\n',
+      'CorrectHorse',
+    ],
+    ['src/env.js', 'const env = `\nAPI_TOKEN=QzWxEcRvTbYnUmIoPa;\n`;\n', 'QzWx'],
+  ]) {
+    await put(root, path, content);
+    await blockedWithout(
+      buildContextCapsule({ repositoryRoot: root, request: 'Review.', selectedFiles: [path] }),
+      value,
+    );
+  }
+  const call =
+    'client = Client(\n    api_key=settings.api_key,\n    token=credentials.access_token,\n)\n';
+  await put(root, 'src/client.py', call);
+  const capsule = await buildContextCapsule({
+    repositoryRoot: root,
+    request: 'Review.',
+    selectedFiles: ['src/client.py'],
+  });
+  assert.ok(copied(capsule, 'src/client.py'));
 });
 
 test('a link is classified by its target, and configuration wins', async (t) => {
