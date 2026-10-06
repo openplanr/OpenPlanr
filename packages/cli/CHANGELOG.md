@@ -1,5 +1,26 @@
 # Changelog
 
+## 2.2641.2
+
+### Minor Changes
+
+- ac4c5c4: The sync, sprint and status skills reach GitHub and Linear through your coding agent's own connection, or the GitHub CLI when it is signed in, and name the connection to add when one is missing. They no longer use the Linear token that `openplanr linear` stores; `openplanr linear` keeps working in a terminal. After `openplanr sprint apply`, the sprint skill updates the issue linked to each changed item.
+- ac4c5c4: **Breaking:** `openplanr report --push slack` is removed, together with the `distribution.slackWebhookUrl` and `distribution.slackChannel` settings, so the repository config holds no webhook secret. It ships in a minor release as a deliberate exception to the major-release rule, because the push kept a webhook secret in a committed file. `--push github` is unchanged, and a rejected target now stops the command before anything is written or pushed. If your config had a webhook URL, revoke the webhook in Slack, since the URL sat in a committed file, then delete it from `.planr/config.json`.
+
+### Patch Changes
+
+- f91ca0a: `openplanr rules generate` keeps apostrophes in the agent descriptions it lists in `CLAUDE.md`, so "the project's stack" no longer renders as "the projects stack".
+- ac4c5c4: The database agent no longer reads `DB_PASSWORD` or passes any password or connection string. It connects only where the database client signs in on its own: a PostgreSQL service with `~/.pgpass`, a MySQL login path, MongoDB OIDC, X.509 or AWS authentication or a local server without authentication, or a trusted MSSQL connection. Without one, it asks you to set one up or run the scan yourself.
+- 96f616b: `delegate` classifies credentials by syntax. Member references such as `config!.apiKey` in code, type annotations ending in `;` or `,`, and self-describing test values such as `test_secret_must_be_…` now reach the delegated agent unchanged, while recognizable credentials, private keys and credential files stay blocked. A blocked source lists masked findings with location, rule and confidence; for an optional source they appear only in the prepare preview, never in the delegated context. After you confirm that a specific finding is not a credential, `prepare` accepts it through `credentialResolutions` for those exact bytes only, and the preview lists every accepted resolution.
+- ac4c5c4: `delegate` checks a local model server without sending a token: it no longer reads or sends `LM_STUDIO_API_KEY`, `LM_API_TOKEN` or the Claude `ANTHROPIC_AUTH_TOKEN`. A server that requires sign-in is reported as not checked, and the run can still start with the delegated agent's own sign-in.
+- d2ef7a8: The Claude Code plugin pre-approves no tools: the seven Operate review skills drop their `allowed-tools` grant, so the package qualifies as instructions-only and every write follows your normal permission prompts. An Operate lens run on its own now creates the same `.planr/operate/<date>-<slug>/` cycle `planr-operate` creates, with a one-lens roster, so the dashboard lists it.
+  
+  Role agents are simpler and current: descriptions no longer route by task file names or pipeline step numbers, legacy role names are gone, and most roles inherit the session's tools. The QA agent denies the file-editing tools and the DevOps agent keeps no shell; both boundaries are documented as what the host enforces. Plan decomposes a story into coherent, independently verifiable tasks split by ownership instead of a fixed one-or-two-task count.
+- ac4c5c4: Local Studio and review servers take their control token in a dedicated header. A Studio started by the previous version is still listed, reused, exported from and stopped. Older OpenPlanr versions cannot use a Studio started by this one, so stop running Studios with `openplanr server stop --all --yes` before switching to an older version, including an older `npx` run or a project-local install. If an older version reports "Local Studio owner state is unsafe or malformed", stop the Studio with this version. If no Studio is running, delete the `state-*.json` and `instance-*.json` files in `~/.planr/artifact-daemon/` (under `PLANR_HOME` when it is set).
+- b347c06: `openplanr spec sync` recognizes a `specId` written without quotes, adds a missing one after an unquoted `id`, and reports a repair only when it makes one. It previously reported adding `specId` to every story and task the plan skill writes while leaving the files unchanged.
+- 58430d8: Local Studio previews now give prototypes the bounded prototype-state API and each screen's logical id, so prototypes that keep state across screens work in local review. Stored artifacts are unchanged.
+- ac4c5c4: `openplanr github sync` treats an open issue as matching every status except `done`, so pulling no longer resets in-progress or planning items to `pending`. A closed issue marks its item `done`, and an issue reopened after its item was done marks it `in-progress`. `openplanr github push` closes the issue of a closed backlog item instead of reopening it, and leaves the issue of a promoted one as it is. `openplanr linear push` errors list every pushable prefix, including `QT-` and `BL-`.
+
 ## 2.2641.1
 
 ### Minor Changes
