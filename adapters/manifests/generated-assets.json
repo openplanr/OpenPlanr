@@ -3981,7 +3981,7 @@
     },
     {
       "path": "packages/cli/lib/host-packages/capability-map.json",
-      "digest": "sha256:1dc660df98a36d4641be94585d9d844db68fb907f076e5e58721efc6a565922d",
+      "digest": "sha256:ad0ee9987faf0001c8f0d756ead9681438827f88c3d539f82e4ea2c04b67b63d",
       "generated": true
     },
     {
