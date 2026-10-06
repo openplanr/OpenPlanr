@@ -1,10 +1,10 @@
 #!/usr/bin/env node
 
 /**
- * planr-pipeline doctor: checks the Node engine, package identity and Protocol assets, the artifact
+ * openplanr-pipeline doctor: checks the Node engine, package identity and Protocol assets, the artifact
  * surface, the ecosystem and workspace layout, the local design and dashboard daemons and project
  * `.env` keys; `--release` adds a release audit and `--fix` removes stale daemon state.
- * Run as `planr-pipeline doctor [--versions-only] [--strict] [--json]`; exits 1 when a check fails.
+ * Run as `openplanr-pipeline doctor [--versions-only] [--strict] [--json]`; exits 1 when a check fails.
  */
 
 import { spawnSync } from 'node:child_process';
@@ -943,7 +943,7 @@ function runCredentialChecks() {
 
 async function runArtifactChecks() {
   const required = [
-    'bin/planr-pipeline.mjs',
+    'bin/openplanr-pipeline.mjs',
     'conformance/verify-artifact-review.mjs',
     'docs/artifact-review.md',
     'lib/artifact/bundle.mjs',
@@ -1065,14 +1065,14 @@ async function runArtifactChecks() {
     );
   }
 
-  if (readText('bin/planr-pipeline.mjs').startsWith('#!/usr/bin/env node')) {
+  if (readText('bin/openplanr-pipeline.mjs').startsWith('#!/usr/bin/env node')) {
     ok('artifact.package-bin', 'Artifact review', 'package executable has a portable Node shebang');
   } else {
     fail(
       'artifact.package-bin',
       'Artifact review',
       'package executable is missing its portable Node shebang',
-      'Restore bin/planr-pipeline.mjs and its package.json bin entry.',
+      'Restore bin/openplanr-pipeline.mjs and its package.json bin entry.',
     );
   }
 }

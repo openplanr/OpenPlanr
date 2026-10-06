@@ -46,7 +46,10 @@ test('the Codex artifact skill routes through planr without executing the nested
     'utf8',
   );
   assert.match(skill, /\bopenplanr artifact\b/);
-  assert.doesNotMatch(skill, /(?:^|[`\s])planr-pipeline\s+(?:artifact|plan|ship)(?:[`\s]|$)/m);
+  assert.doesNotMatch(
+    skill,
+    /(?:^|[`\s])(?:open)?planr-pipeline\s+(?:artifact|plan|ship)(?:[`\s]|$)/m,
+  );
   assert.match(skill, /never publishes it automatically/i);
 });
 
@@ -77,7 +80,7 @@ test('Operate clients dispatch lens skills without foreign runtime paths', () =>
     }
     assert.doesNotMatch(
       bytes,
-      /JSON\.parse|--json\b|\b(?:open)?planr operate validate-note\b|\.planr\/products|\/Users\/|\/home\/|\bplanr-pipeline\s+(?:operate|plan|ship)\b|\/planr-pipeline:/u,
+      /JSON\.parse|--json\b|\b(?:open)?planr operate validate-note\b|\.planr\/products|\/Users\/|\/home\/|\b(?:open)?planr-pipeline\s+(?:operate|plan|ship)\b|\/planr-pipeline:/u,
       relativePath,
     );
   }

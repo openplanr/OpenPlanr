@@ -1000,7 +1000,7 @@ export function countProtocolAssets(inventory, baseline) {
 function verifyRetiredPipelineOperate({ nodeExecutable, pipelineRoot, project, environment }) {
   const binary = commandResult(
     nodeExecutable,
-    [path.join(pipelineRoot, 'bin', 'planr-pipeline.mjs'), 'operate', '--json'],
+    [path.join(pipelineRoot, 'bin', 'openplanr-pipeline.mjs'), 'operate', '--json'],
     { cwd: project, env: environment },
   );
   const error = assertJsonOutput(

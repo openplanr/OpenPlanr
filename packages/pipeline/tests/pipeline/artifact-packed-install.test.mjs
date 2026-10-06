@@ -157,7 +157,7 @@ test(`packed ${packageVersion} package contains the portable artifact release bo
     manifest.dependencies['@types/react'],
   );
   assert.equal(installedReactTypes.version, installedManifest.dependencies['@types/react']);
-  const installedBin = join(packageRoot, 'bin', 'planr-pipeline.mjs');
+  const installedBin = join(packageRoot, 'bin', 'openplanr-pipeline.mjs');
   const binSmoke = run(process.execPath, [installedBin, '--help'], { cwd: installRoot });
   assert.match(binSmoke.stdout, /planr-pipeline/);
   const importSmoke = run(

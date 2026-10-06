@@ -7,7 +7,7 @@ import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 
 const repositoryRoot = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
-const cli = join(repositoryRoot, 'bin', 'planr-pipeline.mjs');
+const cli = join(repositoryRoot, 'bin', 'openplanr-pipeline.mjs');
 
 function temporaryRoot() {
   return mkdtempSync(join(tmpdir(), 'planr-cli-boundary-'));

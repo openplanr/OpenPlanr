@@ -139,7 +139,7 @@ runtime launches or hands off the package-owned tooling.
 
 Artifact review is a package-owned workflow exposed through the public `openplanr`
 router on every certified runtime. Only `openplanr` is required on `PATH`; generated
-skills and rules never invoke the nested `planr-pipeline` binary.
+skills and rules never invoke the nested `openplanr-pipeline` binary.
 
 The portable contract includes:
 

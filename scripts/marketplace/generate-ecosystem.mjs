@@ -336,7 +336,10 @@ async function buildOutputs() {
   );
   assertEqual(
     pipelineManifest.bin,
-    { 'planr-pipeline': 'bin/planr-pipeline.mjs' },
+    {
+      'openplanr-pipeline': 'bin/openplanr-pipeline.mjs',
+      'planr-pipeline': 'bin/planr-pipeline.mjs',
+    },
     'E_ECOSYSTEM_PIPELINE_BIN',
     'Pipeline binary drifted.',
   );

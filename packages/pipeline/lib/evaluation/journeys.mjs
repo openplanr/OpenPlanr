@@ -347,7 +347,7 @@ export function createCliDriver({ executable, cwd, cache = new Map() } = {}) {
     fail(
       'E_EVALUATION_JOURNEY_INVALID',
       'The CLI driver needs the absolute path of the command entrypoint.',
-      'Resolve bin/planr-pipeline.mjs from the repository root.',
+      'Resolve bin/openplanr-pipeline.mjs from the repository root.',
     );
   }
   const invoke = (argv, mode) => {

@@ -941,7 +941,7 @@ test('Operate 2.0 development package installs the clean typed contract without 
 
   assert.deepEqual(
     packed.cleanSnapshot.excludedProof.map(({ path }) => path),
-    ['bin/planr-pipeline.mjs', 'tests/pipeline/engine.test.mjs'],
+    ['bin/openplanr-pipeline.mjs', 'tests/pipeline/engine.test.mjs'],
     'only the unrelated user-owned executable and engine test remain excluded',
   );
 

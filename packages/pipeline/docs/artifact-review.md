@@ -17,7 +17,7 @@ locally never uploads it.
 ## CLI contract
 
 The public command belongs to the OpenPlanr CLI. Runtime skills and adapters
-invoke `openplanr`, never the nested `planr-pipeline` executable.
+invoke `openplanr`, never the nested `openplanr-pipeline` executable.
 
 ```text
 openplanr artifact <file>                 # alias for artifact open
@@ -321,7 +321,7 @@ Artifact review is available across the three certified adapters:
 
 Adapter assets are generated from `registry/adapters.json`. Portable assets must
 not contain `${CLAUDE_PLUGIN_ROOT}`, vendor model names, Claude-only commands,
-or calls to a globally installed `planr-pipeline` binary.
+or calls to a globally installed `openplanr-pipeline` binary.
 
 ## Verification
 

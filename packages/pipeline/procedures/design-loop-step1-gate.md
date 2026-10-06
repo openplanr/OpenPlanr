@@ -25,7 +25,7 @@ When the run needs authorization, issue one question that shows, in the question
     `openai — gpt-5.5 with the gpt-image-2.5-sunburst image model (or the --model /
     --image-model overrides), ~N images at <size>/<quality>, billed to your OpenAI account`.
     Never quote a price. With `HAS_KEY=false`, say so and **offer both repairs, never
-    dead-end** (hard rule 9): `planr-pipeline design-engine setup` (stores the key + one billed smoke image)
+    dead-end** (hard rule 9): `openplanr-pipeline design-engine setup` (stores the key + one billed smoke image)
     or claude-svg;
 - where artifacts will live (the user-space session dir).
 

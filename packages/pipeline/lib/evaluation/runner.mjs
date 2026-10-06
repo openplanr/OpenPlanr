@@ -391,7 +391,7 @@ export async function runEvaluation({
 
   const cliRoot = createDisposableCliRoot();
   const cliDriver = createCliDriver({
-    executable: join(repoRoot, 'bin/planr-pipeline.mjs'),
+    executable: join(repoRoot, 'bin/openplanr-pipeline.mjs'),
     cwd: cliRoot.root,
   });
 

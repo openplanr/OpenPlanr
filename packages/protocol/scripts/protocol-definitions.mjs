@@ -1783,7 +1783,7 @@ function buildCommands() {
         surface: 'pipeline-machine',
         argv: ['pipeline', ...tokens],
         ownerPackage: 'planr-pipeline',
-        sourcePath: 'packages/pipeline/bin/planr-pipeline.mjs',
+        sourcePath: 'packages/pipeline/bin/openplanr-pipeline.mjs',
         machineJson: true,
         lifecycle: DEPRECATED_PLANNING_REVIEW_ACTIONS.has(tokens.join('-'))
           ? 'deprecated'

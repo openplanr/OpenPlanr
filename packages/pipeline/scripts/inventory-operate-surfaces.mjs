@@ -48,7 +48,7 @@ export const INVENTORY_CLASSIFICATIONS = Object.freeze([
 // Update only with verified changes to these files. Historical source evidence
 // remains immutable; current bytes are verified independently below.
 export const PROTECTED_USER_OWNED_PATHS = Object.freeze({
-  'bin/planr-pipeline.mjs': '037e9c753eb1cb82884acc1168945586757bbad968ab471ab8ae7e74a46cf43f',
+  'bin/openplanr-pipeline.mjs': 'a5f2874b2fc8ce7f8a2db5934923bfc54dd90914b6c1ba1b8c6ddc66cc92153f',
   'lib/pipeline/engine.mjs': '1edc792a90cbeb01b0884b3f9579efe9ade94aaa3903f5e041572d837c51114c',
   'tests/pipeline/engine.test.mjs':
     '4e6eb657beac4ce0d2f2df4c7532e38467d22c4bf49b502e2291fff3a6351e3f',

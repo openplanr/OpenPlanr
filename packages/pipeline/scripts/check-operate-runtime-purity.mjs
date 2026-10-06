@@ -371,7 +371,7 @@ const OPERATE_V2_EXACT_LEGACY_REMOVALS = Object.freeze([
 ]);
 
 export const USER_OWNED_EXCLUDED_PATHS = Object.freeze([
-  'bin/planr-pipeline.mjs',
+  'bin/openplanr-pipeline.mjs',
   'tests/pipeline/engine.test.mjs',
 ]);
 

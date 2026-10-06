@@ -1,6 +1,6 @@
 # The Design Loop Engine
 
-> `planr-pipeline design-engine` runs the separate image/SVG exploration loop:
+> `openplanr-pipeline design-engine` runs the separate image/SVG exploration loop:
 > providers, sessions, a board daemon, feedback files and taste memory. Its board
 > adapter uses the artifact runtime, including esbuild and parse5. Standard Design,
 > Design Loop and Design Review skills use their packaged Studio utilities; they do
@@ -96,7 +96,7 @@ drag = box). In review mode each pin auto-maps to the nearest `<section id>` /
 `resolveProvider({ requested, auth })`: `auto` (the default) → claude-svg, always. openai
 runs only when requested with `--provider openai`; a key in the environment never selects
 it, so nothing is billed unless you asked for openai. Requesting `openai` without a key
-errors and names the setup path (`planr-pipeline design-engine setup` or `OPENAI_API_KEY`) plus the $0
+errors and names the setup path (`openplanr-pipeline design-engine setup` or `OPENAI_API_KEY`) plus the $0
 default. The same opt-in guards the billed vision calls: `check` on a PNG and `taste
 approved|rejected <png>` without attribute flags need `--provider openai` too.
 

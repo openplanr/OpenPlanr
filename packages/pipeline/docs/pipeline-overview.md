@@ -37,7 +37,7 @@ review, feedback and export controllers.
 Use Design Loop to compare directions and record the selected one. Local feedback
 stays local until the user requests sharing. Encrypted review links and company
 publication use staged resource uploads; published revisions remain immutable.
-The separate `planr-pipeline design-engine` image/SVG exploration loop still supports
+The separate `openplanr-pipeline design-engine` image/SVG exploration loop still supports
 variant generation and taste memory. It is not the standard Studio renderer.
 
 Planning can consume `design-spec.md` or existing mockups. Design intent produces

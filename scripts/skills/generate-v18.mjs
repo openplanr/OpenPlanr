@@ -320,7 +320,7 @@ function assertCanonicalSkill(packageInfo) {
     const forbidden = [
       /`(?:open)?planr\s+plan(?:\s|`)/u,
       /`(?:open)?planr\s+spec\s+decompose(?:\s|`)/u,
-      /`planr-pipeline(?:\s|`)/u,
+      /`(?:open)?planr-pipeline(?:\s|`)/u,
       /ANTHROPIC_API_KEY|OPENAI_API_KEY|OLLAMA/iu,
     ];
     if (forbidden.some((pattern) => pattern.test(markdown))) {
