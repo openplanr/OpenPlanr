@@ -356,7 +356,7 @@
       "ownerPackage": "openplanr",
       "source": {
         "path": "skills/planr-plan/SKILL.md",
-        "digest": "sha256:28597e1374f16e10bff6972a3166d0575ce6144e4d1d58bae7fceba2b1545da2"
+        "digest": "sha256:ab8db47be4d4334dec7c55ddebf7fdc777c12f9efdc4116c3d25b6439d113587"
       },
       "authorityClass": "workflow",
       "machineJson": false,
@@ -587,7 +587,7 @@
       "ownerPackage": "openplanr",
       "source": {
         "path": "skills/planr-plan/SKILL.md",
-        "digest": "sha256:28597e1374f16e10bff6972a3166d0575ce6144e4d1d58bae7fceba2b1545da2"
+        "digest": "sha256:ab8db47be4d4334dec7c55ddebf7fdc777c12f9efdc4116c3d25b6439d113587"
       },
       "authorityClass": "workflow",
       "machineJson": false,
@@ -1091,7 +1091,7 @@
       "ownerPackage": "planr-pipeline",
       "source": {
         "path": "skills/planr-plan/SKILL.md",
-        "digest": "sha256:28597e1374f16e10bff6972a3166d0575ce6144e4d1d58bae7fceba2b1545da2"
+        "digest": "sha256:ab8db47be4d4334dec7c55ddebf7fdc777c12f9efdc4116c3d25b6439d113587"
       },
       "authorityClass": "compatibility-router",
       "machineJson": false,
@@ -1948,5 +1948,5 @@
       ]
     }
   ],
-  "documentDigest": "sha256:427a38529099813d3ff17e31cabb4de1f7289f26e8e2525b2cf71cac3d1114ea"
+  "documentDigest": "sha256:5b15ecab18a64d920170a8c5188e9af6e5ab08c4a4523bef39b8f52cf5ccb615"
 }

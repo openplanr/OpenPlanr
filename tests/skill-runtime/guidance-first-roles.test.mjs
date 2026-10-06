@@ -51,8 +51,14 @@ test('ordinary QA is direct, read-only, and free of release bookkeeping', () => 
   const qa = read('agents/qa/planr-qa/AGENT.md');
   const ordinary = qa.slice(0, qa.indexOf('## Explicit release-certification compatibility'));
   const frontmatter = qa.split('---')[1];
+  const denied = (/^disallowedTools:\s*(.+)$/mu.exec(frontmatter)?.[1] ?? '')
+    .split(',')
+    .map((tool) => tool.trim());
 
-  assert.doesNotMatch(frontmatter, /(?:^|,)\s*Write(?:,|$)/u);
+  for (const tool of ['Edit', 'Write', 'NotebookEdit'])
+    assert.ok(denied.includes(tool), `qa denies ${tool}`);
+  assert.doesNotMatch(frontmatter, /^tools:/mu, 'qa inherits the remaining tools');
+  assert.match(ordinary, /read-only checks/iu);
   assert.match(ordinary, /human-readable review/iu);
   assert.match(ordinary, /acceptance criteria/iu);
   assert.match(ordinary, /security/iu);
@@ -183,7 +189,7 @@ test('Ship implementation roles deterministically recover task and parent contex
     const mode = read(path);
     assert.match(mode, /input\/specs\/spec-\{name\}\.md/u, path);
     assert.match(mode, /output\/feats\/feat-\{name\}\/us-\{N\}\/tasks/u, path);
-    assert.match(mode, /Default-mode task IDs are story-scoped/u, path);
+    assert.match(mode, /Task IDs are project-global/u, path);
   }
 
   assert.match(read('agents/shared/modes/spec-driven/backend.md'), /output\/db\/schema\.json/u);

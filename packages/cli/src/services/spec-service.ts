@@ -862,41 +862,6 @@ export interface SpecDecompositionInput {
   decompositionNotes: string;
 }
 
-async function resolveDesignContext(
-  projectDir: string,
-  spec: SpecArtifact,
-): Promise<{ hasDesign: boolean; context?: string }> {
-  const designDir = getSpecDesignDir(spec.specDir);
-  const designSpecPath = path.join(designDir, 'design-spec.md');
-  const hasDesignSpec = await fileExists(designSpecPath);
-  const pngFiles = (await listFiles(designDir, /\.png$/iu)).sort();
-  const declaredUiFiles = Array.isArray(spec.data.ui_files)
-    ? spec.data.ui_files.filter(
-        (file): file is string => typeof file === 'string' && file.trim().length > 0,
-      )
-    : [];
-  const sections: string[] = [];
-  if (declaredUiFiles.length > 0) {
-    sections.push(`Declared UI files:\n${declaredUiFiles.map((file) => `- ${file}`).join('\n')}`);
-  }
-  if (pngFiles.length > 0) {
-    sections.push(
-      `PNG inputs present:\n${pngFiles
-        .map((file) => `- ${path.relative(projectDir, path.join(designDir, file))}`)
-        .join('\n')}`,
-    );
-  }
-  if (hasDesignSpec) {
-    sections.push(
-      `Design specification (${path.relative(projectDir, designSpecPath)}):\n${await readFile(designSpecPath)}`,
-    );
-  }
-  return {
-    hasDesign: declaredUiFiles.length > 0 || pngFiles.length > 0 || hasDesignSpec,
-    ...(sections.length > 0 ? { context: sections.join('\n\n') } : {}),
-  };
-}
-
 type AcceptanceCriterion = { id: string; statement: string };
 
 function specTaskInput(
@@ -1185,42 +1150,22 @@ function invalidDecomposition(message: string): Error & { code: string } {
 
 /**
  * Enforce the deterministic parts of the planning contract before any story or
- * task is written. Semantic dependency need is established by the prompt; this
+ * task is written. Semantic decomposition is established by the host agent; this
  * boundary verifies that the declared graph is addressable and executable.
  */
-function validateDecompositionContract(
-  stories: SpecDecompositionStory[],
-  hasDesign: boolean,
-): void {
+function validateDecompositionContract(stories: SpecDecompositionStory[]): void {
   const flattened: SpecDecompositionTask[] = [];
 
   for (const [storyIndex, story] of stories.entries()) {
     const location = `story ${storyIndex + 1} (${story.title})`;
-    if (hasDesign) {
-      if (story.tasks.length !== 2) {
+    if (story.tasks.length === 0) {
+      throw invalidDecomposition(`${location} must contain at least one task.`);
+    }
+    for (const task of story.tasks) {
+      const expectedAgent = task.type === 'UI' ? 'frontend-agent' : 'backend-agent';
+      if (task.agent !== expectedAgent) {
         throw invalidDecomposition(
-          `${location} must contain exactly two tasks because design context exists: UI then Tech.`,
-        );
-      }
-      const [uiTask, techTask] = story.tasks;
-      if (uiTask.type !== 'UI' || uiTask.agent !== 'frontend-agent') {
-        throw invalidDecomposition(
-          `${location} task 1 must use type UI with frontend-agent when design context exists.`,
-        );
-      }
-      if (techTask.type !== 'Tech' || techTask.agent !== 'backend-agent') {
-        throw invalidDecomposition(`${location} task 2 must use type Tech with backend-agent.`);
-      }
-    } else {
-      if (story.tasks.length !== 1) {
-        throw invalidDecomposition(
-          `${location} must contain exactly one Tech task because no design context exists.`,
-        );
-      }
-      const [techTask] = story.tasks;
-      if (techTask.type !== 'Tech' || techTask.agent !== 'backend-agent') {
-        throw invalidDecomposition(
-          `${location} must use type Tech with backend-agent when no design context exists.`,
+          `${location} task ${task.id} uses type ${task.type} with ${task.agent}; expected ${expectedAgent}.`,
         );
       }
     }
@@ -1307,11 +1252,9 @@ export async function decomposeSpec(
     throw error;
   }
 
-  // Resolve design context for deterministic one-vs-two task validation.
-  const design = await resolveDesignContext(projectDir, spec);
   const result = opts.decomposition;
 
-  validateDecompositionContract(result.stories, design.hasDesign);
+  validateDecompositionContract(result.stories);
 
   const flatTasks = result.stories.flatMap((story) => story.tasks);
   const counts = { US: result.stories.length, T: flatTasks.length } as const;

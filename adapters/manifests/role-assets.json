@@ -19,55 +19,55 @@
       "id": "planr-backend",
       "source": "agents/dev/planr-backend/AGENT.md",
       "path": "dist/plugins/claude/openplanr/agents/planr-backend.md",
-      "digest": "sha256:61210f2c0829c2836e41c47ad62f3a1954f5a970f5b3bdf3fa34d1c8f9430c77"
+      "digest": "sha256:820702b23d204ae7cf138bb972a43a9e23868d98970b6c7caf9ba980809a9ede"
     },
     {
       "id": "planr-database",
       "source": "agents/po/preflight/planr-database/AGENT.md",
       "path": "dist/plugins/claude/openplanr/agents/planr-database.md",
-      "digest": "sha256:9f26efbd3980c92618f395c4137713b8b39fa56ddfe4cb2f85fc1edc8ef93115"
+      "digest": "sha256:bb62ec377d500d0b1ce5452573d177708a658247ddc913e908ddd2354f73f07b"
     },
     {
       "id": "planr-designer",
       "source": "agents/po/planr-designer/AGENT.md",
       "path": "dist/plugins/claude/openplanr/agents/planr-designer.md",
-      "digest": "sha256:3990b4e9ed4d2184f0f11dd088269f3b73129227adc89c5c91be17c775972a61"
+      "digest": "sha256:b1904484c8c4ee12ac6ecdad723b5985321c84e7f780d898774e185e94f596cc"
     },
     {
       "id": "planr-devops",
       "source": "agents/post-build/planr-devops/AGENT.md",
       "path": "dist/plugins/claude/openplanr/agents/planr-devops.md",
-      "digest": "sha256:1f294d527a8b8d71203117e03439106c6e22896d82be57e58b4e9b3464c9f33a"
+      "digest": "sha256:7661e865d41bea1a1d96db961b02f61cd2b769819346020aa75c0f423cb765d2"
     },
     {
       "id": "planr-documentation",
       "source": "agents/post-build/planr-documentation/AGENT.md",
       "path": "dist/plugins/claude/openplanr/agents/planr-documentation.md",
-      "digest": "sha256:7374a7f2b4a57c15347d51f5a938c32d88a8da4fac49e6bb966465463a7e5a7f"
+      "digest": "sha256:1e6ac787349e7852d90e0ac069f216cf4f6681d6bb0da2193b73f582ce8176f4"
     },
     {
       "id": "planr-entity-scaffold",
       "source": "agents/po/preflight/planr-entity-scaffold/AGENT.md",
       "path": "dist/plugins/claude/openplanr/agents/planr-entity-scaffold.md",
-      "digest": "sha256:612dfd614734b90387fd9614324a0d8d2f1104cdb960d803107761cdd4872aac"
+      "digest": "sha256:b26cd113aef079e591ae11a90d052a827b6ef7544709a2c35d2f6d18f69f3a69"
     },
     {
       "id": "planr-frontend",
       "source": "agents/dev/planr-frontend/AGENT.md",
       "path": "dist/plugins/claude/openplanr/agents/planr-frontend.md",
-      "digest": "sha256:7c622e1e2c94227ca8816a6173d00c633378cddd009df4d529ddc76fd7cf4cb1"
+      "digest": "sha256:d35b3114935f81808c51f635a7de617d4c951b35ad5f10c0fee318b1dd5ee393"
     },
     {
       "id": "planr-qa",
       "source": "agents/qa/planr-qa/AGENT.md",
       "path": "dist/plugins/claude/openplanr/agents/planr-qa.md",
-      "digest": "sha256:9dda1414cac5fe4c0155f750c05f60810afde2b581766b99dab358fd66b73dd6"
+      "digest": "sha256:ea6adf72cf5dd7667d31b0dc9501646ed7211d85392efe826beefb52edc0b938"
     },
     {
       "id": "planr-specification",
       "source": "agents/po/planr-specification/AGENT.md",
       "path": "dist/plugins/claude/openplanr/agents/planr-specification.md",
-      "digest": "sha256:bbeca127a8f6d6fd0d3a1ad167effbbc277db3331e2891d378a060160c665f53"
+      "digest": "sha256:c3c69f000b6a3d046a20d145901018850f12183223a8f7fc4dfa3c9b80ff90f9"
     }
   ]
 }

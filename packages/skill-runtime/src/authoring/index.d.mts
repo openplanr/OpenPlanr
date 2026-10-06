@@ -283,7 +283,6 @@ export interface StandardSkillReport {
   execution: 'host-agent' | 'deterministic-utility';
   hosts: string[];
   resources: Array<Record<string, unknown>>;
-  legacyFiles: string[];
   outputs: Array<{ host: string; root: string; entrypoint: string }>;
 }
 

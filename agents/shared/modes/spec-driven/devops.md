@@ -1,7 +1,6 @@
-<!-- {{AGENTS_ROOT}}/shared/modes/spec-driven/devops.md: spec-driven-mode-only content for devops-agent. Loaded by agents/devops-agent.md when MODE=spec-driven. T-002 of SPEC-002. -->
+<!-- Spec-driven context for planr-devops. Loaded when the caller passes MODE=spec-driven and SPEC_DIR. -->
 
-> **Mode:** spec-driven
-> **Loaded by:** `agents/devops-agent.md` when the orchestrator passes `MODE=spec-driven` and `SPEC_DIR`.
+> **Mode:** spec-driven (`SPEC_DIR` supplied).
 
 ## Context locations
 

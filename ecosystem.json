@@ -148,7 +148,7 @@
   "catalogs": {
     "commands": {
       "path": "packages/protocol/registries/commands.json",
-      "digest": "sha256:487253f3bb42b22c0195e92dd8e60a9bb3e65113f3cf228020c9786cdbffa948",
+      "digest": "sha256:7c0737ed016e3a5bfd4a81bcc4450c44faee0a334c30ee4867320d6c6d2aabfe",
       "rootCommands": 39,
       "pipelineMachineLeaves": 31,
       "frozenClaudeDocuments": 8,
@@ -288,7 +288,7 @@
     },
     "roles": {
       "path": "packages/protocol/registries/roles.json",
-      "digest": "sha256:e135a1dc550dc8ec9bd6ed00cf7560603c25f5ea3b910ede14fe219a185b15b2",
+      "digest": "sha256:7b1382929c437948e57a03484177ca5a9cfbbe2757a7cd9735dc02bef082da1d",
       "count": 9,
       "ids": [
         "planr-backend",
@@ -305,12 +305,12 @@
     },
     "rules": {
       "path": "packages/protocol/registries/rules.json",
-      "digest": "sha256:91c1d7aef6a0bd0c44224ff84d43cacedb916f2dc353af0505ccf252dbf5aa7a",
+      "digest": "sha256:f47ed322259ac19fae8caa43e6af5736bec05c07f9a6d24dad313a06ae0d35b8",
       "count": 10
     },
     "taskKinds": {
       "path": "packages/protocol/registries/task-kinds.json",
-      "digest": "sha256:123ceaeeadb2c3c1dfabf0b47c06ec67ace8a3d8a30289798903be43180eb49a",
+      "digest": "sha256:f146160e6253c37b523a9a892141c8652cb75b19662749df82cb7146757a5044",
       "count": 7
     },
     "outputs": {
@@ -349,7 +349,7 @@
     ],
     "generatedAssets": {
       "path": "adapters/manifests/generated-assets.json",
-      "digest": "sha256:47cc82fb5ce59198b80a0862b6d02fb17daa25d2b6164f52d53b85907b4667cd",
+      "digest": "sha256:618c6224a3e8791c7c473a84c4f3b542c650ccbcf9f7e25268b2a215b35847a0",
       "count": 1592
     }
   },

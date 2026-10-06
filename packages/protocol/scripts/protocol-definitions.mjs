@@ -1547,8 +1547,8 @@ const RULES = [
   ],
   [
     'R2',
-    'Bounded story decomposition',
-    'A story produces at most two implementation tasks: frontend and backend when design or UI input exists, otherwise one backend task.',
+    'Coherent story decomposition',
+    'A story decomposes into coherent, independently verifiable tasks split by ownership: UI work goes to the frontend role and server or data work to the backend role; every acceptance criterion maps to a task and dependencies are explicit.',
     'task-decomposition',
   ],
   [

@@ -1,7 +1,6 @@
-<!-- {{AGENTS_ROOT}}/shared/modes/default/doc-gen.md: default-mode-only content for doc-gen-agent. Loaded by agents/doc-gen-agent.md when MODE=default. T-002 of SPEC-002. -->
+<!-- Default-mode context for planr-documentation. Loaded when the caller passes MODE=default. -->
 
-> **Mode:** default
-> **Loaded by:** `agents/doc-gen-agent.md` when the orchestrator passes `MODE=default` (no `SPEC_DIR`).
+> **Mode:** default (no `SPEC_DIR`).
 
 ## Path Resolution
 
@@ -34,7 +33,7 @@ Output to `Docs/feat-${ARGUMENTS}/` is mode-agnostic.
 |--------|------|-------------|
 | Feature index | `Docs/feat-{name}/README.md` | Overview, US list, links |
 | US summary | `Docs/feat-{name}/us-{N}.md` | Per-US plain-language summary + acceptance criteria |
-| API reference | `Docs/feat-{name}/api.md` | All endpoints with request/response shapes (from task-2 + actual handlers) |
+| API reference | `Docs/feat-{name}/api.md` | All endpoints with request/response shapes (from Tech tasks + actual handlers) |
 | Architecture note | `Docs/feat-{name}/architecture.md` | High-level diagram-as-text, file map, key abstractions |
 
 ---

@@ -1,8 +1,8 @@
 # Shared Operate advisor contract
 
-This contract supplies the common context method and output shape for the five executive advisor
-skills. The invoking skill supplies the lens, review questions, useful sources, and decision
-standard. Follow both.
+This contract supplies the common context method and output shape for the executive advisor
+skills (CEO, CTO, CPO, CMO, and COO). The invoking skill supplies the lens, review questions,
+useful sources, and decision standard. Follow both.
 
 ## Outcome
 
@@ -21,7 +21,28 @@ not the whole context boundary. Inspect relevant original repository and Git sou
 drawing conclusions. If an input is unavailable, report the exact problem and continue when the
 remaining context still supports a useful note.
 
-Write the review only to `<output-path>`.
+Write the review only to `<output-path>`. Writes follow the host's normal permission rules; this
+skill pre-approves nothing.
+
+### Running without `planr-operate`
+
+When no `<output-path>` was supplied, this lens creates the cycle itself, in the layout
+`planr-operate` uses, under the repository root:
+
+```text
+.planr/operate/<YYYY-MM-DD>-<subject-slug>/
+  cycle.md          the request wording, the effective scope, and a one-lens roster
+  brief.md          compact orientation for this lens only, including what was searched for and not found
+  <lens>.md         this note: ceo.md, cto.md, cpo.md, cmo.md, or coo.md
+  board-report.md   an unsynthesized lens summary
+```
+
+Take the subject, window, and requested decision from the request. Use the first unused directory
+name; append `-02`, `-03`, and so on when the base name exists. In `board-report.md`, use the
+`planr-operate` report sections, mark this lens `reported` and every other lens `omitted by scope`
+under Review coverage, and write `No decision-ready proposal was established.` and
+`No proposed actions.` unless this note states a directly supported proposal. Write nothing outside
+that cycle directory. The dashboard lists a cycle only when `board-report.md` exists.
 
 ## Grounding
 

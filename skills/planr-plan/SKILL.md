@@ -79,8 +79,14 @@ Write stories and tasks directly in the repository's active planning mode.
   deleted ID. The packaged [planning ID helper](scripts/planning-ids.mjs) may
   inspect or reserve IDs; it never generates content.
 - Give each story stable acceptance IDs starting at `AC-001`.
-- Create one Tech task when no design surface applies; create one UI and one
-  Tech task when it does. Never exceed two tasks for one story.
+- Split each story into tasks that are coherent and independently verifiable.
+  Separate by ownership first: UI work is a `UI` task for the frontend role and
+  server, data, or integration work is a `Tech` task for the backend role.
+  Within one owner, split further only for a real output dependency, a distinct
+  verification surface, or reviewable size. Most stories need one Tech task,
+  plus one UI task when a design surface applies; never fragment one coherent
+  change into tasks that cannot be verified alone, and never fold unrelated work
+  into one task.
 - Map every acceptance ID through `acceptanceRefs` and name it with a concrete
   verification statement under `## Test Requirements`.
 - Set `reviewRisks` and `browserSurfaces` from repository evidence; use empty

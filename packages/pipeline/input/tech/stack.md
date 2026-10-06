@@ -134,7 +134,7 @@ DoNotUse:
   - "Runtime skills invoking a globally installed openplanr-pipeline binary; use openplanr artifact"
 
 MustPreserve:
-  - "agents/*.md YAML frontmatter `tools:` field — manifest-enforced security boundary"
+  - "agents/**/AGENT.md frontmatter tool boundaries — DevOps has no shell, QA denies file edits"
   - "schemas/v1.0.0/ as the self-contained projection of packages/protocol/schemas/v1.0.0/"
   - "conformance/expected/*.json fixture goldens"
   - "registry/artifact-theme.json as the established artifact design token source"

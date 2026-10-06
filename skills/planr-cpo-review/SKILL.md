@@ -2,7 +2,6 @@
 name: planr-cpo-review
 description: "Produce a grounded product and activation review for an Operate cycle. Use when customer value, activation, prioritization, or adoption needs a CPO lens."
 license: MIT
-allowed-tools: "Read, Grep, Glob, Edit(./.planr/operate/**)"
 ---
 
 # OpenPlanr CPO Review

@@ -1,7 +1,6 @@
-<!-- {{AGENTS_ROOT}}/shared/modes/spec-driven/specification.md: spec-driven-mode-only content for specification-agent. Loaded by agents/specification-agent.md when MODE=spec-driven. T-002 of SPEC-002. -->
+<!-- Spec-driven paths for planr-specification. Loaded when the caller passes MODE=spec-driven and SPEC_DIR. -->
 
-> **Mode:** spec-driven
-> **Loaded by:** `agents/specification-agent.md` when the orchestrator passes `MODE=spec-driven` and `SPEC_DIR`.
+> **Mode:** spec-driven (`SPEC_DIR` supplied).
 
 ## Path Resolution
 
@@ -69,14 +68,13 @@ The flat `tasks/` directory is intentional — `storyId` frontmatter on each tas
 5. Decompose the source into independently valuable User Stories and write each
    story to `<SPEC_DIR>/stories/US-NNN-{slug}.md`. Use `specId: "SPEC-NNN"` and
    allocate story IDs from the project-global sequence.
-6. Apply R2 to each story while assigning the next task IDs under the flat
-   `<SPEC_DIR>/tasks/` directory:
-   a. `has_design = true`: write one `type: "UI"` /
-      `agent: "frontend-agent"` task and one `type: "Tech"` /
-      `agent: "backend-agent"` task;
-   b. `has_design = false`: write one `type: "Tech"` /
-      `agent: "backend-agent"` task;
-   c. never write a third task for the story.
+6. Apply R2 to each story (coherent, independently verifiable tasks split by
+   ownership) while assigning the next task IDs under the flat
+   `<SPEC_DIR>/tasks/` directory: UI work is a `type: "UI"` /
+   `agent: "frontend-agent"` task and server or data work is a `type: "Tech"` /
+   `agent: "backend-agent"` task. Most stories get one Tech task, plus one UI
+   task when `has_design = true`; add a task only for a real output dependency,
+   a distinct verification surface, or reviewable size.
 7. Populate every task with its required schema fields, `storyId`, mode parent
    `specId`, 1–3 sentence `rationale`, concrete Create/Modify paths,
    verification, and `preserve` block maps with exact `repositoryKey` and `path`

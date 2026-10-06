@@ -2,7 +2,6 @@
 name: planr-cto-review
 description: "Produce a grounded technology and delivery-risk review for an Operate cycle. Use when architecture, reliability, security, or execution risk needs a CTO lens."
 license: MIT
-allowed-tools: "Read, Grep, Glob, Edit(./.planr/operate/**)"
 ---
 
 # OpenPlanr CTO Review

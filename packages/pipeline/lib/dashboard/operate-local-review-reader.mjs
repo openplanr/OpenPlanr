@@ -269,6 +269,7 @@ function parseLenses(files, board) {
       const note = files[filename] ?? '';
       const row = coverage.get(name.toLowerCase()) ?? {};
       const outcome = row.outcome || (note ? 'reported' : 'missing');
+      const omitted = /omitted by scope/iu.test(outcome);
       const signalMatch =
         /(?:signal|verdict):\s*([^)]+)/iu.exec(outcome) ??
         /\*\*(?:Signal|Verdict):\*\*\s*([^\n]+)/iu.exec(note);
@@ -278,7 +279,9 @@ function parseLenses(files, board) {
         filename,
         present: Boolean(note),
         outcome,
-        signal: cleanInlineMarkdown(signalMatch?.[1] ?? (note ? 'reported' : 'missing')),
+        signal: cleanInlineMarkdown(
+          signalMatch?.[1] ?? (note ? 'reported' : omitted ? 'omitted' : 'missing'),
+        ),
         informed: row.informed || '',
         findings: note ? findingCount(note, prefix) : 0,
         recommendation: note ? sectionText(note, 'recommended next move', 520) : '',
@@ -348,7 +351,14 @@ function buildStructuredReview(cycleId, cycle) {
   const lenses = parseLenses(cycle.files, markdown);
   const evidence = parseEvidence(cycle.files, decisions);
   const presentFiles = REVIEW_FILES.filter((filename) => typeof cycle.files[filename] === 'string');
-  const expectedFiles = REVIEW_FILES.filter((filename) => filename !== 'brief.md');
+  // A lens the board report marks "omitted by scope" was never on the roster, so its note
+  // is not a missing record.
+  const omittedFiles = new Set(
+    lenses.filter((lens) => /omitted by scope/iu.test(lens.outcome)).map((lens) => lens.filename),
+  );
+  const expectedFiles = REVIEW_FILES.filter(
+    (filename) => filename !== 'brief.md' && !omittedFiles.has(filename),
+  );
   const missingFiles = expectedFiles.filter((filename) => !presentFiles.includes(filename));
   const scope = parseScope(markdown);
   const summary = sectionText(markdown, 'executive summary', 1200);

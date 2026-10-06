@@ -1,7 +1,6 @@
-<!-- {{AGENTS_ROOT}}/shared/modes/spec-driven/doc-gen.md: spec-driven-mode-only content for doc-gen-agent. Loaded by agents/doc-gen-agent.md when MODE=spec-driven. T-002 of SPEC-002. -->
+<!-- Spec-driven context for planr-documentation. Loaded when the caller passes MODE=spec-driven and SPEC_DIR. -->
 
-> **Mode:** spec-driven
-> **Loaded by:** `agents/doc-gen-agent.md` when the orchestrator passes `MODE=spec-driven` and `SPEC_DIR`.
+> **Mode:** spec-driven (`SPEC_DIR` supplied).
 
 ## Path Resolution
 
