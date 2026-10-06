@@ -58,7 +58,10 @@ const STAGE_RUNTIME_PATH = join(here, '..', '..', 'templates', 'artifact-review-
 export const ARTIFACT_REVIEW_SERVER_VERSION = 3;
 export const ARTIFACT_REVIEW_SERVER_KIND = 'artifact-review';
 const CONTROL_HEADER = 'x-openplanr-control';
-const LEGACY_SERVER_VERSIONS = new Set([1, 2]);
+// Version 2 servers stay controllable; version 1 servers only export their exact sessions.
+const CONTROLLABLE_SERVER_VERSIONS = new Set([2, ARTIFACT_REVIEW_SERVER_VERSION]);
+const EXPORT_ONLY_SERVER_VERSIONS = new Set([1]);
+const AUTHORIZATION_CONTROL_VERSIONS = new Set([1, 2]);
 // Legacy registration reserves space for ordinary JSON escaping and review state,
 // rounded to a 64 MiB control window. Large hosted publications use resource chunks.
 const CONTROL_WINDOW_BYTES = 64 * 1024 * 1024;
@@ -133,7 +136,7 @@ export function artifactReviewControlHeaders(controlToken) {
 
 function stateControlHeaders(state) {
   // Servers before version 3 read the control token from the Authorization header.
-  return LEGACY_SERVER_VERSIONS.has(state.serverVersion)
+  return AUTHORIZATION_CONTROL_VERSIONS.has(state.serverVersion)
     ? { authorization: `Bearer ${state.controlToken}` }
     : artifactReviewControlHeaders(state.controlToken);
 }
@@ -1371,8 +1374,8 @@ function validState(value, requestedPort, { allowLegacy = false } = {}) {
   return (
     value?.schemaVersion === '1.0.0' &&
     value.kind === ARTIFACT_REVIEW_SERVER_KIND &&
-    (value.serverVersion === ARTIFACT_REVIEW_SERVER_VERSION ||
-      (allowLegacy && LEGACY_SERVER_VERSIONS.has(value.serverVersion))) &&
+    (CONTROLLABLE_SERVER_VERSIONS.has(value.serverVersion) ||
+      (allowLegacy && EXPORT_ONLY_SERVER_VERSIONS.has(value.serverVersion))) &&
     Number.isInteger(value.pid) &&
     value.pid > 0 &&
     Number.isInteger(value.port) &&
@@ -1537,7 +1540,7 @@ async function controlRequest(descriptor, path, { method, body, fetchImpl } = {}
   const response = await fetchImpl(`http://${LOOPBACK_HOST}:${descriptor.state.port}${path}`, {
     method,
     headers: {
-      ...artifactReviewControlHeaders(descriptor.state.controlToken),
+      ...stateControlHeaders(descriptor.state),
       ...(body === undefined ? {} : { 'content-type': 'application/json' }),
     },
     ...(body === undefined ? {} : { body: JSON.stringify(body) }),
@@ -1558,7 +1561,7 @@ async function controlRequest(descriptor, path, { method, body, fetchImpl } = {}
 async function controlTextRequest(descriptor, path, { fetchImpl } = {}) {
   const response = await fetchImpl(`http://${LOOPBACK_HOST}:${descriptor.state.port}${path}`, {
     method: 'GET',
-    headers: artifactReviewControlHeaders(descriptor.state.controlToken),
+    headers: stateControlHeaders(descriptor.state),
     signal: AbortSignal.timeout(15_000),
   });
   const value = await response.text();

@@ -521,6 +521,87 @@ test('new services retain healthy v1 custody for exact-session exports without r
   assert.equal(shutdownRequests, 0);
 });
 
+test('a running version 2 service stays listed, reused, exported and stopped through its own header', async (t) => {
+  const context = await fixture(t);
+  const instanceId = mintCapabilityToken({ bytes: 16 });
+  const controlToken = mintCapabilityToken({ bytes: 32 });
+  const sessionId = mintCapabilityToken({ bytes: 16 });
+  const requests = [];
+  const previous = createServer((req, res) => {
+    res.setHeader('content-type', 'application/json');
+    if (req.url === '/health') {
+      res.end(
+        JSON.stringify({
+          ok: true,
+          kind: 'artifact-review',
+          version: 2,
+          pid: process.pid,
+          instanceId,
+        }),
+      );
+      return;
+    }
+    requests.push(`${req.method} ${req.url}`);
+    if (
+      req.headers.authorization !== `Bearer ${controlToken}` ||
+      req.headers['x-openplanr-control'] !== undefined
+    ) {
+      res.writeHead(403);
+      res.end('{}');
+    } else if (req.method === 'POST' && req.url === '/internal/v1/sessions')
+      res.end(JSON.stringify({ sessionId, path: `/r/${sessionId}/${'B'.repeat(43)}/` }));
+    else if (req.url === `/internal/v1/sessions/${sessionId}/export/json`)
+      res.end(JSON.stringify({ previous: 2 }));
+    else if (req.method === 'POST' && req.url === '/internal/v1/shutdown')
+      res.end(JSON.stringify({ ok: true, instanceId, status: 'stopping' }));
+    else {
+      res.writeHead(404);
+      res.end('{}');
+    }
+  });
+  await new Promise((resolveListen) => previous.listen(0, '127.0.0.1', resolveListen));
+  t.after(() => new Promise((resolveClose) => previous.close(resolveClose)));
+  const port = previous.address().port;
+  writePrivateJsonState(artifactReviewStatePath(0, context.env), {
+    schemaVersion: '1.0.0',
+    kind: 'artifact-review',
+    serverVersion: 2,
+    pid: process.pid,
+    port,
+    instanceId,
+    controlToken,
+  });
+
+  assert.deepEqual(
+    (await listArtifactReviewServers({ env: context.env })).map((server) => [
+      server.instanceId,
+      server.port,
+    ]),
+    [[instanceId, port]],
+  );
+  const reused = await startArtifactReview({
+    envelope: envelope(),
+    env: context.env,
+    cwd: context.root,
+  });
+  assert.equal(reused.port, port);
+  assert.equal(reused.sessionId, sessionId);
+  assert.equal(
+    JSON.parse((await exportArtifactReviewSession(sessionId, { env: context.env })).content)
+      .previous,
+    2,
+  );
+  assert.equal(
+    (await stopArtifactReviewServer(instanceId, { env: context.env })).status,
+    'stopping',
+  );
+  assert.deepEqual(requests, [
+    'POST /internal/v1/sessions',
+    `GET /internal/v1/sessions/${sessionId}/export/json`,
+    'POST /internal/v1/shutdown',
+  ]);
+});
+
 for (const variant of ['malformed', 'invalid-schema', 'oversized', 'symlink', 'public-mode']) {
   test(`owner-state ${variant} blocks startup, discovery and export without discarding custody`, async (t) => {
     const context = await fixture(t);
