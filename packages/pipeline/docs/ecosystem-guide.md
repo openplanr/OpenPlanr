@@ -26,7 +26,7 @@ adapter projections. Generate it from the repository root and use
 |---|---|
 | Create epics, features, stories, tasks, sprints, or backlog | `OpenPlanr` CLI |
 | Shape or decompose a spec for agent execution | `OpenPlanr` CLI or `/planr:plan` |
-| Move a feature through PO, Design, DEV, and QA | `planr pipeline ...` |
+| Move a feature through PO, Design, DEV, and QA | `openplanr-pipeline ...` |
 | Review local project state | `/planr:dashboard` |
 | Generate or review design artifacts | `/planr:design`, `/planr:design-loop`, `/planr:design-review` |
 | Serve a hosted review shell or opaque encrypted room transport | hosted service |

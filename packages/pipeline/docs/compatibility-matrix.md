@@ -45,7 +45,7 @@ Same `.planr/specs/` directories. Same SPEC, US, Task, stack, graph, and `.pipel
 | Coherent invocation | Drains the ready graph | Drains sequentially in one invocation | Drains with native subagents when exposed |
 | Preserve protection | Engine-verified repository boundaries | Same engine verification | Same engine verification |
 | Project memory | Orchestrator-managed read/write | Prompt-driven read/write | Prompt-driven read/write |
-| Design generation command | Native and `planr pipeline design` | Router handoff | `$planr-design` / router |
+| Design generation command | Native and `openplanr-pipeline design` | Router handoff | `$planr-design` / router |
 | Design loop / review board | Available | Available through router handoff | Available through installed skill/router |
 | Universal HTML artifact review | `openplanr artifact` | `openplanr artifact` handoff | Installed `$planr-artifact` skill invoking `openplanr` |
 | Headless document / canvas presentation | Same generated renderer | Same generated renderer | Same generated renderer |
