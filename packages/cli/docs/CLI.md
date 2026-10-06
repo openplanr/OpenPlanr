@@ -1065,7 +1065,6 @@ openplanr report weekly --stdout                          # print to stdout, no 
 openplanr report weekly --no-github                       # skip the gh API calls
 openplanr report weekly --lint                            # run the quality linter on the output
 openplanr report weekly --strict-evidence                 # fail if bullet claims lack URLs or #issue refs
-openplanr report weekly --push slack --dry-run            # show what would be posted to Slack
 openplanr report sprint --push github                     # archive as a planr:report GitHub issue
 ```
 
@@ -1080,8 +1079,8 @@ openplanr report sprint --push github                     # archive as a planr:r
 | `--stdout`            | Print markdown to stdout instead of writing a file                                       | `false`            |
 | `--lint`              | Run the report quality linter on the generated markdown                                  | `false`            |
 | `--strict-evidence`   | Fail if substantive bullets under `##` (except **Evidence**) lack URLs or `#NNN` refs; skips full-line `_placeholder_` bullets | `false`            |
-| `--push <targets>`    | Comma-separated channels: `github`, `slack`                                              | None               |
-| `--dry-run`           | With `--push`, show actions without sending (Slack dry-run works without a webhook)      | `false`            |
+| `--push <targets>`    | Comma-separated channels: `github`                                                       | None               |
+| `--dry-run`           | With `--push`, show actions without sending                                              | `false`            |
 
 **Output files:** `.planr/reports/<YYYY-MM-DD>-<reportType>-report.md` (and `.html` when `--format html`, same basename). Example: `2026-04-19-weekly-report.md`.
 
@@ -1097,15 +1096,11 @@ openplanr report sprint --push github                     # archive as a planr:r
       "Compliance": "SOC2 controls verified weekly."
     }
   },
-  "templateOverrides": "./reports-overrides",
-  "distribution": {
-    "slackWebhookUrl": "https://hooks.slack.com/services/...",
-    "slackChannel": "#eng-updates"
-  }
+  "templateOverrides": "./reports-overrides"
 }
 ```
 
-`slackChannel` is reserved for future use; Incoming Webhooks target the channel encoded in the webhook URL. All blocks are optional; the command works against a freshly initialized project.
+All blocks are optional; the command works against a freshly initialized project.
 
 ---
 

@@ -6,7 +6,7 @@ import path from 'node:path';
 import type { Command } from 'commander';
 import type { StakeholderReportFormat, StakeholderReportType } from '../../models/types.js';
 import { loadConfig } from '../../services/config-service.js';
-import { pushReportAsGitHubIssue, pushReportToSlack } from '../../services/distribution-service.js';
+import { pushReportAsGitHubIssue } from '../../services/distribution-service.js';
 import {
   validateClaimsHaveAnchors,
   validateRemoteEvidence,
@@ -50,7 +50,7 @@ export function registerReportCommand(program: Command) {
       'fail if bullet claims under ## headings lack URLs or #issue references',
       false,
     )
-    .option('--push <targets>', 'comma-separated destinations: github, slack')
+    .option('--push <targets>', 'comma-separated destinations: github')
     .option('--dry-run', 'with --push: show actions only', false)
     .action(
       async (
@@ -165,12 +165,8 @@ export function registerReportCommand(program: Command) {
               });
               if (res.ok) logger.success(res.message + (res.url ? ` ${res.url}` : ''));
               else logger.error(res.message);
-            } else if (t === 'slack') {
-              const res = await pushReportToSlack(config, markdown, { dryRun: opts.dryRun });
-              if (res.ok) logger.success(res.message);
-              else logger.error(res.message);
             } else {
-              logger.error(`Unknown --push target "${t}". Use: github, slack`);
+              logger.error(`Unknown --push target "${t}". Use: github`);
               process.exit(1);
             }
           }
