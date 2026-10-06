@@ -39,7 +39,7 @@ export function preparationPresentation(preview) {
   return {
     phase: 'preview',
     headline: `${taskLabel(preview.selector)} is ready for review before dispatch.`,
-    context: `${preview.inventory.length} copied file(s); ${preview.omissions.length} omission(s).`,
+    context: `${preview.inventory.length} copied file(s); ${preview.omissions.length} omission(s); ${preview.credentialResolutions?.length ?? 0} accepted credential resolution(s).`,
     writableRepository: preview.writableRepository,
     worktreePath: preview.worktreePath,
     selectedPaths: preview.selectedPaths,
@@ -49,6 +49,7 @@ export function preparationPresentation(preview) {
       : 'Legacy run has no recorded integration scope; supply explicit paths at review. The worktree is not a filesystem sandbox.',
     inventory: preview.inventory,
     omissions: preview.omissions,
+    credentialResolutions: preview.credentialResolutions ?? [],
     blockers: preview.blockers ?? [],
     planning: preview.planning ?? null,
     helper: preview.helper ?? null,
@@ -61,7 +62,7 @@ export function preparationPresentation(preview) {
     destination: preview.destination,
     ...(preview.executionPolicy ? { executionPolicy: preview.executionPolicy } : {}),
     nextAction:
-      'Review required sources, optional omissions, planning location, integration scope, and destination before dispatch.',
+      'Review required sources, optional omissions, accepted credential resolutions, planning location, integration scope, and destination before dispatch.',
   };
 }
 

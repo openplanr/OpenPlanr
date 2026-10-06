@@ -6,7 +6,7 @@
   "inputs": [
     {
       "path": "adapters/manifests/generated-assets.json",
-      "digest": "sha256:b5b6cc170fc58d6247f58b15b5095a51e4eb72f3c6094e964de19ecb3b4c0252"
+      "digest": "sha256:539a8b70638f2ebc0adbf0e75dc6302983e4fca51e4cb752bf45aed001d52732"
     },
     {
       "path": "apps/dashboard/package.json",
@@ -236,7 +236,7 @@
     },
     {
       "path": "adapters/manifests/codex-plugin-content.json",
-      "digest": "sha256:f03d2fdbcf27cf2056028f3db628b2f2e57ff2948b4f6ab301a523ae2634be68"
+      "digest": "sha256:a18aebb62475c8be8fe6b55bd561233bd83fd9fecfeea84023de1ad977f98e8f"
     },
     {
       "path": "docs/generated/adapters.md",
@@ -252,7 +252,7 @@
     },
     {
       "path": "ecosystem.json",
-      "digest": "sha256:b7531be56b4e55a0567d808fc60c7e52300408df0bfcc1293ab1e8aa7877a180"
+      "digest": "sha256:fc5b23b31b6534ea53fce33bce6617a9ab9d568405f6ea36e096dd4885083284"
     }
   ]
 }

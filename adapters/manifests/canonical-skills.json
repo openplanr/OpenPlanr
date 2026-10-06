@@ -895,7 +895,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:e89611bcb247a31597ff35f7413e29ab7ea065f55dc705a715a5514dfad0aee1"
+          "digest": "sha256:a5696771f3e17afabd99ac02c16a68227d70372013a28936f3fddd47ea5b9a4f"
         },
         {
           "path": "references/integration-review.md",
@@ -991,7 +991,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:c92cdcd4c7f94a5c96dc80af277041cc92f684280c14600918b8b511ff37df44"
+          "digest": "sha256:632a59c12d8fc4b6b738279cbee5f8d001e76d9ef379fc065f62031647462d42"
         },
         {
           "path": "scripts/credentials.mjs",
@@ -1003,7 +1003,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:185a19738b2b15e5e0b7274c127697fd68cee4c730ed14a4ca74b17a6f4bbdd5"
+          "digest": "sha256:8ff6bc42f01fa78c44416cbb3106b7b0385f2a60a367bca6f2185466a7484d55"
         },
         {
           "path": "scripts/custody.mjs",
@@ -1051,7 +1051,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:a3aca29d53b365c16dee25df7094f79c93425690b694ef5c2af9586becd60a03"
+          "digest": "sha256:32ca0c561e99bb02dc8f88e0823a0b826a24cd61404b165fe306bbbce9ee99b9"
         },
         {
           "path": "scripts/profiles.mjs",

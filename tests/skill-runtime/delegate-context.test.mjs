@@ -734,10 +734,55 @@ test('a blocked source reports masked findings with location, rule, classificati
     request: 'Review keys.',
     optionalFiles: ['src/mixed.ts'],
   });
-  const omission = optional.omissions.find(({ path }) => path === 'src/mixed.ts');
-  assert.equal(omission.reason, 'E_CAPSULE_SECRET');
-  assert.deepEqual(omission.findings, error.details.findings);
+  const written = {
+    repositoryKey: 'project',
+    path: 'src/mixed.ts',
+    role: 'selected-source',
+    reason: 'E_CAPSULE_SECRET',
+  };
+  assert.deepEqual(
+    optional.omissions.find(({ path }) => path === 'src/mixed.ts'),
+    written,
+  );
+  assert.deepEqual(
+    previewContextCapsule(optional).omissions.find(({ path }) => path === 'src/mixed.ts'),
+    { ...written, findings: error.details.findings, contentDigest: error.details.contentDigest },
+  );
   assert.ok(!JSON.stringify(optional).includes('Xk8sP2m'));
+  const parent = await mkdtemp(join(tmpdir(), 'planr-omission-test-'));
+  t.after(() => rm(parent, { recursive: true, force: true }));
+  const path = await writeContextCapsule(optional, {
+    repositoryRoot: root,
+    directory: join(parent, 'capsule'),
+  });
+  for (const file of [path, join(parent, 'capsule/readable/index.json')]) {
+    const { omissions } = JSON.parse(await readFile(file, 'utf8'));
+    assert.deepEqual(
+      omissions.find(({ path }) => path === 'src/mixed.ts'),
+      written,
+      file,
+    );
+    assert.ok(!(await readFile(file, 'utf8')).includes(error.details.contentDigest), file);
+  }
+});
+
+test('a finding names only the credential word, never the rest of the name', () => {
+  let details;
+  assert.throws(
+    () => assertCredentialFreeText(`ghp_${'D'.repeat(30)}_TOKEN = "abcdefghijklmnopqrstuvwxyz"`),
+    (error) => {
+      ({ details } = error);
+      return error.code === 'E_CAPSULE_SECRET';
+    },
+  );
+  assert.deepEqual(
+    details.findings.map(({ rule, key }) => [rule, key]),
+    [
+      ['credential-format', undefined],
+      ['credential-assignment', 'TOKEN'],
+    ],
+  );
+  assert.ok(!JSON.stringify(details).includes('D'.repeat(30)));
 });
 
 test('a recorded resolution covers only its finding in the exact content', async (t) => {
@@ -833,4 +878,134 @@ test('file syntax decides whether an unquoted value is a reference or a literal'
     'token: a8f3k2j9d0s7h6g5;',
   ])
     assert.equal(containsSecret(Buffer.from(text)), true, text);
+});
+
+async function blockedWithout(promise, value) {
+  const error = await secretError(promise);
+  assert.ok(!JSON.stringify({ ...error.details, message: error.message }).includes(value));
+  return error;
+}
+
+const STRING_BLOCKS = {
+  'src/app.py': 'DOC = """\n    password: CorrectHorseBatteryStaple\n"""\n',
+  'src/raw.py': 'DOC = rf"""\n    password: CorrectHorseBatteryStaple\n"""\n',
+  'src/doc.js': 'const doc = `\npassword: CorrectHorseBatteryStaple\n`;\n',
+  'src/doc.go': 'var doc = `\npassword: CorrectHorseBatteryStaple\n`\n',
+  'src/Doc.java': 'String doc = """\n    password: CorrectHorseBatteryStaple\n    """;\n',
+  'src/doc.php': '<?php\n$doc = <<<EOT\npassword: CorrectHorseBatteryStaple\nEOT;\n',
+  'src/doc.rb': 'doc = <<~ENV\n  password: CorrectHorseBatteryStaple\nENV\n',
+  'src/Doc.vue': '<i18n lang="yaml">\npassword: CorrectHorseBatteryStaple\n</i18n>\n',
+};
+
+test('identifier-shaped values in strings, free-text assignments and text files are literals', async (t) => {
+  const root = await fixture(t);
+  for (const [path, content] of Object.entries(STRING_BLOCKS)) {
+    await put(root, path, content);
+    await blockedWithout(
+      buildContextCapsule({ repositoryRoot: root, request: 'Review.', selectedFiles: [path] }),
+      'CorrectHorse',
+    );
+  }
+  for (const text of [
+    'export DB_PASSWORD=CorrectHorseBatteryStaple;',
+    'API_TOKEN=correct.horse.battery.staple',
+  ]) {
+    assert.throws(() => assertCredentialFreeText(text, { label: 'Correction' }), {
+      code: 'E_CAPSULE_SECRET',
+    });
+    await blockedWithout(buildContextCapsule({ repositoryRoot: root, request: text }), 'orrect');
+  }
+  for (const [path, content] of [
+    ['bin/deploy', '#!/bin/sh\nAPI_TOKEN=correct.horse.battery.staple\n'],
+    ['docs/deploy.md', '---\nAPI_TOKEN=correct.horse.battery.staple\n---\n# Deploy\n'],
+    ['docs/notes.md', '---\napi_token: correct.horse.battery.staple\n---\n# Notes\n'],
+  ]) {
+    await put(root, path, content);
+    await blockedWithout(
+      buildContextCapsule({ repositoryRoot: root, request: 'Review.', selectedFiles: [path] }),
+      'horse',
+    );
+  }
+});
+
+test('recognizable formats after a marker or under a private_key field are not resolvable', async (t) => {
+  const root = await fixture(t);
+  for (const content of [
+    `const token = "mock_ghp_${'A'.repeat(36)}";\n`,
+    `client("mock_ghp_${'A'.repeat(36)}");\n`,
+    `const key = "test_sk-proj-${'A'.repeat(40)}";\n`,
+    '{"private_key": "-----BEGIN PGP PRIVATE KEY BLOCK-----\\nAAAA"}\n',
+    '{"private_key": "-----BEGIN ENCRYPTED DATA-----"}\n',
+    '-----BEGIN PGP PRIVATE KEY BLOCK-----\n',
+  ]) {
+    await put(root, 'src/fixture.ts', content);
+    const { details } = await blockedWithout(
+      buildContextCapsule({
+        repositoryRoot: root,
+        request: 'Review.',
+        selectedFiles: ['src/fixture.ts'],
+      }),
+      'AAAA',
+    );
+    assert.ok(
+      details.findings.some(
+        ({ rule, resolvable }) => rule === 'credential-format' && resolvable === false,
+      ),
+      content,
+    );
+  }
+  assert.equal(containsSecret(Buffer.from(`const id = "task-${'A'.repeat(40)}";`)), false);
+});
+
+test('a described placeholder needs a credential noun', async (t) => {
+  const root = await fixture(t);
+  for (const [path, content] of [
+    ['src/settings.ts', 'password = "test-cobalt-river-lamp-9127"\n'],
+    ['config/settings.yaml', 'password: fixture.cobalt.river.lamp.9127\n'],
+  ]) {
+    await put(root, path, content);
+    await blockedWithout(
+      buildContextCapsule({ repositoryRoot: root, request: 'Review.', selectedFiles: [path] }),
+      'cobalt',
+    );
+  }
+  assert.throws(() => assertCredentialFreeText('password: "mock correct horse battery staple"'), {
+    code: 'E_CAPSULE_SECRET',
+  });
+  for (const text of [
+    'apiSecret: "test_secret_must_be_at_least_32_bytes_long_",',
+    'password: "fixture-password-for-login-tests"',
+    'TOKEN=mock.token.value.for.tests.only',
+  ])
+    assert.equal(assertCredentialFreeText(text), text);
+});
+
+test('a link is classified by its target, and configuration wins', async (t) => {
+  const root = await fixture(t);
+  await put(root, 'config/settings.yaml', 'api_key: recording.secretAccessKey\n');
+  await symlink(join(root, 'config/settings.yaml'), join(root, 'src/settings.ts'));
+  await secretError(
+    buildContextCapsule({
+      repositoryRoot: root,
+      request: 'Review settings.',
+      selectedFiles: ['src/settings.ts'],
+    }),
+  );
+});
+
+test('findings in text that takes no resolution are not resolvable', () => {
+  assert.throws(
+    () =>
+      assertCredentialFreeText('API_KEY=Xk8sP2mQ9vR4tL7wYz2N', {
+        code: 'E_DELEGATE_INPUT',
+        label: 'Correction',
+      }),
+    ({ code, details }) =>
+      code === 'E_DELEGATE_INPUT' &&
+      details.findings.length === 1 &&
+      details.findings.every(
+        ({ resolvable, explanation }) =>
+          resolvable === false && !/resolve this finding/u.test(explanation),
+      ),
+  );
 });

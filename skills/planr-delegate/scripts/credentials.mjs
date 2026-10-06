@@ -3,23 +3,25 @@ import { createHash } from 'node:crypto';
 
 /** Recognizable credential formats; rejected everywhere, including tests and placeholders. */
 export const CREDENTIAL_FORMAT =
-  /-----BEGIN (?:[A-Z ]* )?PRIVATE KEY-----|\bAKIA[0-9A-Z]{16}\b|\bgh[pousr]_[A-Za-z0-9_]{20,}\b|\bgithub_pat_[A-Za-z0-9_]{20,}\b|\bsk-(?:proj-)?[A-Za-z0-9_-]{24,}\b|\bxox[baprs]-[A-Za-z0-9-]{20,}/iu;
+  /-----BEGIN (?:[A-Z ]* )?PRIVATE KEY(?: BLOCK)?-----|"private_key"\s*:\s*"-----BEGIN|(?<![A-Za-z0-9])AKIA[0-9A-Z]{16}\b|(?<![A-Za-z0-9])gh[pousr]_[A-Za-z0-9_]{20,}\b|(?<![A-Za-z0-9])github_pat_[A-Za-z0-9_]{20,}\b|(?<![A-Za-z0-9])sk-(?:proj-)?[A-Za-z0-9_-]{24,}\b|(?<![A-Za-z0-9])xox[baprs]-[A-Za-z0-9-]{20,}\b/iu;
 
+// `word` is the credential word findings report as `key`; the rest of a name may hold a value.
 const CREDENTIAL_NAME =
-  '(?:[A-Za-z_][A-Za-z0-9_-]*?)?(?:API[_-]?KEY|ACCESS[_-]?TOKEN|AUTH[_-]?TOKEN|CLIENT[_-]?SECRET|PRIVATE[_-]?KEY|PASSWORD|TOKEN|SECRET(?:[_-]?KEY)?)';
+  '(?<name>(?:[A-Za-z_][A-Za-z0-9_-]*?)?(?<word>API[_-]?KEY|ACCESS[_-]?TOKEN|AUTH[_-]?TOKEN|CLIENT[_-]?SECRET|PRIVATE[_-]?KEY|PASSWORD|TOKEN|SECRET(?:[_-]?KEY)?))';
 const QUOTED_ASSIGNMENT = new RegExp(
-  `(?:^|[^A-Za-z0-9_])(${CREDENTIAL_NAME})["']?\\s*[:=]\\s*(["'\`])((?:(?!\\2|\\$\\{)[^\\r\\n\\\\]|\\\\.){16,})\\2`,
+  `(?:^|[^A-Za-z0-9_])${CREDENTIAL_NAME}["']?\\s*[:=]\\s*(?<quote>["'\`])(?<value>(?:(?!\\k<quote>|\\$\\{)[^\\r\\n\\\\]|\\\\.){16,})\\k<quote>`,
   'giu',
 );
 const UNQUOTED_ASSIGNMENT = new RegExp(
-  `^[ \\t]*(?:export[ \\t]+)?(${CREDENTIAL_NAME})[ \\t]*[:=][ \\t]*(?!process\\.env(?:\\.|\\[)|import\\.meta\\.env(?:\\.|\\[)|Deno\\.env\\.|os\\.environ|env\\.)([^\\s"'\`#()\\[\\]{}$]{16,})[ \\t]*(?:#[^\\r\\n]*)?\\r?$`,
+  `^[ \\t]*(?:export[ \\t]+)?${CREDENTIAL_NAME}[ \\t]*(?<operator>[:=])[ \\t]*(?!process\\.env(?:\\.|\\[)|import\\.meta\\.env(?:\\.|\\[)|Deno\\.env\\.|os\\.environ|env\\.)(?<value>[^\\s"'\`#()\\[\\]{}$]{16,})[ \\t]*(?:#[^\\r\\n]*)?\\r?$`,
   'gimu',
 );
 const PLACEHOLDER =
   /^(?:example(?:[-_].*)?|placeholder(?:[-_].*)?|your[-_].*|(?:change|replace)[-_]me(?:[-_].*)?|(?:dummy|fake|mock|test|never[-_]return)[-_](?:api[-_]?key|access[-_]?token|auth[-_]?token|client[-_]?secret|password|token|secret(?:[-_]?key)?))$/iu;
-// A lowercase marker followed only by words and short numbers describes a test value.
+// A lowercase marker followed only by words and short numbers, one of them a credential noun.
 const DESCRIBED_PLACEHOLDER =
   /^(?:dummy|fake|mock|test|fixture|synthetic|never[-_]return)(?:[-_. ](?:[a-z]+|\d{1,4}))+[-_.]?$/u;
+const CREDENTIAL_NOUN = /[-_. ](?:secret|key|token|password)(?=[-_. ]|$)/u;
 const IDENTIFIER_WORD = /[A-Z]{2,}(?![a-z])\d{0,2}|[A-Z]?[a-z]+\d{0,2}|[A-Z]\d{0,2}|\d{1,2}/gu;
 
 const CODE_EXTENSIONS = new Set(
@@ -72,28 +74,32 @@ function memberPath(value) {
 }
 
 // An unquoted value is a literal unless its syntax makes it a reference, type or expression.
-function unquotedLiteral(raw, syntax) {
-  if (syntax === 'config') return true;
+// Multi-line strings in code read like text, so an unterminated identifier stays a literal.
+function unquotedLiteral(raw, operator, syntax) {
+  if (syntax === 'config' || (syntax === 'text' && operator === '=')) return true;
   const terminated = /[;,]$/u.test(raw);
   const value = terminated ? raw.slice(0, -1) : raw;
-  if (memberPath(value)) return false;
-  if (codeIdentifier(value) && (syntax === 'code' || terminated)) return false;
-  return true;
+  if (memberPath(value)) return !(terminated || syntax === 'code');
+  return !(terminated && codeIdentifier(value));
 }
 
 function placeholder(value) {
-  return PLACEHOLDER.test(value) || DESCRIBED_PLACEHOLDER.test(value);
+  return (
+    PLACEHOLDER.test(value) || (DESCRIBED_PLACEHOLDER.test(value) && CREDENTIAL_NOUN.test(value))
+  );
 }
 
 /**
- * Classifies credential material in `bytes` from `origin` ({ path?, label?, syntax? }).
+ * Classifies credential material in `bytes` from `origin` ({ path?, label?, syntax?, resolvable? }).
  * Findings report location, rule, classification, confidence and explanation, never values.
+ * `resolvable: false` marks text that no resolution can admit, such as a correction.
  */
 export function classifyCredentials(bytes, origin = {}) {
   const buffer = Buffer.isBuffer(bytes) ? bytes : Buffer.from(String(bytes), 'utf8');
   const content = buffer.toString('utf8');
   const label = origin.label ?? origin.path ?? 'text';
   const syntax = origin.syntax ?? credentialSyntax(origin.path);
+  const resolvable = origin.resolvable !== false;
   const findings = [];
   const add = (rule, index, key, details) => {
     const { line, column } = position(content, index);
@@ -113,18 +119,20 @@ export function classifyCredentials(bytes, origin = {}) {
       explanation:
         'A recognizable credential or private key format cannot be delegated; remove it from the source.',
     });
-  const literal = (key, index) =>
-    add('credential-assignment', index, key, {
+  const literal = ({ index, 0: text, groups: { name, word } }) =>
+    add('credential-assignment', index + text.indexOf(name), word, {
       classification: 'possible-credential',
       confidence: 'medium',
-      resolvable: true,
-      explanation: `${key} is assigned a literal that is neither a reference nor a recognized placeholder; resolve this finding only if the value is not a credential.`,
+      resolvable,
+      explanation: `${word} is assigned a literal that is neither a reference nor a recognized placeholder; ${resolvable ? 'resolve this finding only if the value is not a credential' : 'remove the value or replace it with a reference'}.`,
     });
   for (const match of content.matchAll(QUOTED_ASSIGNMENT))
-    if (!placeholder(match[3])) literal(match[1], match.index + match[0].indexOf(match[1]));
-  for (const match of content.matchAll(UNQUOTED_ASSIGNMENT))
-    if (unquotedLiteral(match[2], syntax) && !placeholder(match[2].replace(/[;,]$/u, '')))
-      literal(match[1], match.index + match[0].indexOf(match[1]));
+    if (!placeholder(match.groups.value)) literal(match);
+  for (const match of content.matchAll(UNQUOTED_ASSIGNMENT)) {
+    const { operator, value } = match.groups;
+    if (unquotedLiteral(value, operator, syntax) && !placeholder(value.replace(/[;,]$/u, '')))
+      literal(match);
+  }
   return { contentDigest: `sha256:${sha256(buffer)}`, syntax, findings };
 }
 

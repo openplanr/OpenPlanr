@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto';
 import { lstat, mkdir, readdir, readFile, realpath, stat, writeFile } from 'node:fs/promises';
 import { basename, dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
-import { classifyCredentials, resolveFindings } from './credentials.mjs';
+import { classifyCredentials, credentialSyntax, resolveFindings } from './credentials.mjs';
 
 export const CAPSULE_SCHEMA_VERSION = '1.0.0';
 
@@ -18,6 +18,9 @@ const STORY_ID = /^US-\d{3,}$/u;
 const SPEC_ID = /^SPEC-\d{3,}$/u;
 const FEATURE_ID = /^FEAT-\d{3,}$/u;
 const EPIC_ID = /^EPIC-\d{3,}$/u;
+// Credential findings of an optional omission, keyed by the omission entry. The delegate reads
+// the written capsule, so they reach only the parent's preview.
+const OMISSION_FINDINGS = new WeakMap();
 
 export class CapsuleError extends Error {
   constructor(code, message, details = {}) {
@@ -72,7 +75,10 @@ export function assertCredentialFreeText(
 ) {
   if (typeof value !== 'string')
     throw new CapsuleError('E_CAPSULE_INPUT', `${label} must be text.`);
-  const { contentDigest, findings } = classifyCredentials(Buffer.from(value, 'utf8'), { label });
+  const { contentDigest, findings } = classifyCredentials(Buffer.from(value, 'utf8'), {
+    label,
+    resolvable: false,
+  });
   if (findings.length)
     throw new CapsuleError(
       code,
@@ -421,7 +427,9 @@ export async function buildContextCapsule({
           ...reason.details,
         });
       if (!omitted.has(key)) {
-        omissions.push({ repositoryKey, path, role, reason: reason.code, ...reason.details });
+        const omission = { repositoryKey, path, role, reason: reason.code };
+        if (reason.details) OMISSION_FINDINGS.set(omission, reason.details);
+        omissions.push(omission);
         omitted.add(key);
       }
       return null;
@@ -505,7 +513,13 @@ export async function buildContextCapsule({
         message: `Required source exceeds capsule limits: ${path}`,
       });
     }
-    const credentials = credentialCheck(bytes, { path, label: `${repositoryKey}/${path}` });
+    // A link reads as its target's syntax, or as configuration when either path is configuration.
+    const syntaxes = [path, relative(allowed, physical).split(sep).join('/')].map(credentialSyntax);
+    const credentials = credentialCheck(bytes, {
+      path,
+      label: `${repositoryKey}/${path}`,
+      syntax: syntaxes.includes('config') ? 'config' : syntaxes[1],
+    });
     if (credentials.remaining.length)
       return optionalOmission({
         code: 'E_CAPSULE_SECRET',
@@ -773,7 +787,10 @@ export function previewContextCapsule(capsule) {
     mode: capsule.mode,
     selector: capsule.selector,
     inventory: capsule.inventory,
-    omissions: capsule.omissions,
+    omissions: capsule.omissions.map((omission) => ({
+      ...omission,
+      ...OMISSION_FINDINGS.get(omission),
+    })),
     ...(capsule.credentialResolutions
       ? { credentialResolutions: capsule.credentialResolutions }
       : {}),
