@@ -579,7 +579,7 @@ const CAPABILITY_FAMILY_TITLES = new Map([
 const roleDescriptions = new Map(
   roleRows.map(({ id, source }) => [
     id,
-    /^description:\s*([^\n]+)$/mu.exec(read(source))?.[1]?.replace(/["']/gu, '').trim() ?? '',
+    parseMarkdownAsset(read(source), { expectedName: id }).fields.description,
   ]),
 );
 // The compact inventory the CLI renders into CLAUDE.md and AGENTS.md so a host agent

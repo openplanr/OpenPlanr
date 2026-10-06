@@ -730,34 +730,34 @@ export async function syncSpec(
   }
 
   // ── Check 3: missing specId in US/Task frontmatter ────────────────────
-  // (auto-fixable; fix from path)
+  // (auto-fixable; inserted after the id line so the rest of the frontmatter keeps its formatting)
   const fs = await import('node:fs/promises');
-  for (const s of stories) {
-    const raw = await readFile(s.filePath);
-    if (!/^specId:\s*"/m.test(raw)) {
-      if (!opts.dryRun) {
-        const insertion = `\nspecId: "${specId}"`;
-        const fixedContent = raw.replace(/^id:\s*"[^"]+"$/m, (m) => m + insertion);
-        await fs.writeFile(s.filePath, fixedContent);
-      }
-      fixed.push(
-        `Story ${s.id}: added missing specId frontmatter${opts.dryRun ? ' [dry-run]' : ''}.`,
-      );
+  const addMissingSpecId = async (label: string, filePath: string): Promise<void> => {
+    const raw = await readFile(filePath);
+    let declared: unknown;
+    try {
+      declared = parseMarkdown(raw).data.specId;
+    } catch (error) {
+      const reason = error instanceof Error ? error.message : String(error);
+      warnings.push(`${label} frontmatter is not valid YAML (${reason}); specId was not checked.`);
+      return;
     }
-  }
-  for (const t of tasks) {
-    const raw = await readFile(t.filePath);
-    if (!/^specId:\s*"/m.test(raw)) {
-      if (!opts.dryRun) {
-        const insertion = `\nspecId: "${specId}"`;
-        const fixedContent = raw.replace(/^id:\s*"[^"]+"$/m, (m) => m + insertion);
-        await fs.writeFile(t.filePath, fixedContent);
-      }
-      fixed.push(
-        `Task ${t.id}: added missing specId frontmatter${opts.dryRun ? ' [dry-run]' : ''}.`,
+    if (typeof declared === 'string') return;
+    const fixedContent = raw.replace(
+      /^id:[^\S\n]*\S.*$/m,
+      (line) => `${line}\nspecId: "${specId}"`,
+    );
+    if (parseMarkdown(fixedContent).data.specId !== specId) {
+      warnings.push(
+        `${label} has no specId and no frontmatter id line to add it after; add specId: "${specId}" by hand.`,
       );
+      return;
     }
-  }
+    if (!opts.dryRun) await fs.writeFile(filePath, fixedContent);
+    fixed.push(`${label}: added missing specId frontmatter${opts.dryRun ? ' [dry-run]' : ''}.`);
+  };
+  for (const s of stories) await addMissingSpecId(`Story ${s.id}`, s.filePath);
+  for (const t of tasks) await addMissingSpecId(`Task ${t.id}`, t.filePath);
 
   // ── Check 4: schema version drift ─────────────────────────────────────
   const CURRENT_SCHEMA_VERSION = '1.7.0';
