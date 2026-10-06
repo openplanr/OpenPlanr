@@ -3727,7 +3727,7 @@ export const CANONICAL_REGISTRIES = deepFreeze({
         "lifecycle": "active",
         "authorityClass": "implementation",
         "source": "skills/planr-delegate/openplanr.skill.json",
-        "sourceDigest": "sha256:10489d6f04acd360db631f4f7b2adf59cf6b34df8fe1985552166802d47e8d47",
+        "sourceDigest": "sha256:01c074a24328c5eeba8571f75bea5d51e1b6f27a702e390c680055684a105717",
         "triggerPolicy": {
           "include": [
             "Delegate implementation to another coding agent",
@@ -4845,7 +4845,7 @@ export const CANONICAL_REGISTRIES = deepFreeze({
       }
     ],
     "compatibilityAliases": [],
-    "documentDigest": "sha256:27b4d07edf7508fec9ae3f38692e0942cb457dfcce46acc65a48491fa066d8e1"
+    "documentDigest": "sha256:73290f2664d241ebeebce97f775386e3fe6f72fb06174a116791801311688c3a"
   },
   "outputs.json": {
     "kind": "output-catalog",

@@ -649,3 +649,188 @@ test('reading order prioritizes requirements without removing or truncating any 
   });
   assert.equal((await validateContextMirror(legacy, capsule)).status, 'verified');
 });
+
+const REPORTED_SOURCE = [
+  'export const recording = {',
+  '  secret: recording.secretAccessKey,',
+  '};',
+  'interface Booking {',
+  '  issueLiveKitToken: TIssueLiveKitBookingToken;',
+  '}',
+  'export const settings = {',
+  '  apiKey: configValidation.config!.apiKey,',
+  '  apiSecret: configValidation.config!.apiSecret,',
+  '};',
+  'export const fixture = {',
+  '  apiSecret: "test_secret_must_be_at_least_32_bytes_long_",',
+  '};',
+  '',
+].join('\n');
+
+async function secretError(promise) {
+  let caught;
+  await assert.rejects(promise, (error) => {
+    caught = error;
+    return error.code === 'E_CAPSULE_SECRET';
+  });
+  assert.ok(!JSON.stringify({ ...caught.details, message: caught.message }).includes('Xk8sP2m'));
+  return caught;
+}
+
+test('reported references, type annotations and a synthetic fixture are delegated unchanged', async (t) => {
+  const root = await fixture(t);
+  for (const line of REPORTED_SOURCE.split('\n'))
+    assert.equal(assertCredentialFreeText(line), line);
+  await put(root, 'src/booking.ts', REPORTED_SOURCE);
+  const capsule = await buildContextCapsule({
+    repositoryRoot: root,
+    request: 'Review booking credentials.',
+    selectedFiles: ['src/booking.ts'],
+  });
+  assert.deepEqual(
+    Buffer.from(copied(capsule, 'src/booking.ts').contentBase64, 'base64'),
+    Buffer.from(REPORTED_SOURCE),
+  );
+  assert.equal(capsule.credentialResolutions, undefined);
+});
+
+test('a blocked source reports masked findings with location, rule, classification and confidence', async (t) => {
+  const root = await fixture(t);
+  const mixed = `${REPORTED_SOURCE}export const live = {\n  apiKey: "Xk8sP2mQ9vR4tL7wYz2N",\n};\n`;
+  await put(root, 'src/mixed.ts', mixed);
+  const error = await secretError(
+    buildContextCapsule({
+      repositoryRoot: root,
+      request: 'Review keys.',
+      selectedFiles: ['src/mixed.ts'],
+    }),
+  );
+  assert.deepEqual(
+    error.details.findings.map(
+      ({ rule, classification, confidence, resolvable, key, location }) => ({
+        rule,
+        classification,
+        confidence,
+        resolvable,
+        key,
+        location,
+      }),
+    ),
+    [
+      {
+        rule: 'credential-assignment',
+        classification: 'possible-credential',
+        confidence: 'medium',
+        resolvable: true,
+        key: 'apiKey',
+        location: { path: 'src/mixed.ts', line: 15, column: 3 },
+      },
+    ],
+  );
+  assert.match(error.details.findings[0].explanation, /apiKey is assigned a literal/u);
+  assert.match(error.details.contentDigest, /^sha256:[a-f0-9]{64}$/u);
+  const optional = await buildContextCapsule({
+    repositoryRoot: root,
+    request: 'Review keys.',
+    optionalFiles: ['src/mixed.ts'],
+  });
+  const omission = optional.omissions.find(({ path }) => path === 'src/mixed.ts');
+  assert.equal(omission.reason, 'E_CAPSULE_SECRET');
+  assert.deepEqual(omission.findings, error.details.findings);
+  assert.ok(!JSON.stringify(optional).includes('Xk8sP2m'));
+});
+
+test('a recorded resolution covers only its finding in the exact content', async (t) => {
+  const root = await fixture(t);
+  const content = 'export const live = {\n  apiKey: "Xk8sP2mQ9vR4tL7wYz2N",\n};\n';
+  await put(root, 'src/live.ts', content);
+  const input = { repositoryRoot: root, request: 'Review keys.', selectedFiles: ['src/live.ts'] };
+  const { details } = await secretError(buildContextCapsule(input));
+  const resolution = { id: details.findings[0].id, contentDigest: details.contentDigest };
+  const capsule = await buildContextCapsule({ ...input, credentialResolutions: [resolution] });
+  assert.deepEqual(
+    Buffer.from(copied(capsule, 'src/live.ts').contentBase64, 'base64'),
+    Buffer.from(content),
+  );
+  assert.deepEqual(capsule.credentialResolutions, [
+    {
+      ...resolution,
+      repositoryKey: 'project',
+      path: 'src/live.ts',
+      rule: 'credential-assignment',
+      location: { path: 'src/live.ts', line: 2, column: 3 },
+    },
+  ]);
+  assert.deepEqual(
+    previewContextCapsule(capsule).credentialResolutions,
+    capsule.credentialResolutions,
+  );
+
+  await put(root, 'src/live.ts', `${content}// changed\n`);
+  await secretError(buildContextCapsule({ ...input, credentialResolutions: [resolution] }));
+  await put(root, 'src/live.ts', content);
+  await secretError(
+    buildContextCapsule({
+      ...input,
+      credentialResolutions: [{ ...resolution, id: 'cred_0000000000000000' }],
+    }),
+  );
+
+  const recognizable = `export const token = "ghp_${'A'.repeat(30)}";\n`;
+  await put(root, 'src/live.ts', recognizable);
+  const format = await secretError(buildContextCapsule(input));
+  assert.equal(format.details.findings[0].resolvable, false);
+  await secretError(
+    buildContextCapsule({
+      ...input,
+      credentialResolutions: format.details.findings.map(({ id }) => ({
+        id,
+        contentDigest: format.details.contentDigest,
+      })),
+    }),
+  );
+  await rejectCode(
+    buildContextCapsule({ ...input, credentialResolutions: [{ id: 'all' }] }),
+    'E_CAPSULE_INPUT',
+  );
+});
+
+test('a direct request uses the same findings and resolutions', async (t) => {
+  const root = await fixture(t);
+  const request = 'Rotate the staging key.\nAPI_KEY=Xk8sP2mQ9vR4tL7wYz2N\n';
+  const { details } = await secretError(buildContextCapsule({ repositoryRoot: root, request }));
+  assert.deepEqual(details.findings[0].location, { line: 2, column: 1 });
+  const capsule = await buildContextCapsule({
+    repositoryRoot: root,
+    request,
+    credentialResolutions: [{ id: details.findings[0].id, contentDigest: details.contentDigest }],
+  });
+  assert.equal(capsule.request, request);
+  assert.equal(capsule.credentialResolutions[0].source, 'request');
+});
+
+test('file syntax decides whether an unquoted value is a reference or a literal', async (t) => {
+  const root = await fixture(t);
+  const line = 'api_key: recording.secretAccessKey\n';
+  await put(root, 'src/settings.ts', line);
+  await put(root, 'config/settings.yaml', line);
+  const code = await buildContextCapsule({
+    repositoryRoot: root,
+    request: 'Review settings.',
+    selectedFiles: ['src/settings.ts'],
+  });
+  assert.ok(copied(code, 'src/settings.ts'));
+  await secretError(
+    buildContextCapsule({
+      repositoryRoot: root,
+      request: 'Review settings.',
+      selectedFiles: ['config/settings.yaml'],
+    }),
+  );
+  for (const text of [
+    'PASSWORD: correcthorsebatterystaple',
+    'API_KEY=Xk8sP2mQ9vR4tL7wYz2N',
+    'token: a8f3k2j9d0s7h6g5;',
+  ])
+    assert.equal(containsSecret(Buffer.from(text)), true, text);
+});

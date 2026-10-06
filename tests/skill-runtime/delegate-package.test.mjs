@@ -82,6 +82,56 @@ test('installed helpers can be imported from a stdin script without executing a 
   }
 });
 
+test('copied installations classify the reported sources and still reject a recognizable credential', () => {
+  const temporary = mkdtempSync(join(tmpdir(), 'openplanr-delegate-credentials-'));
+  const source = [
+    '  secret: recording.secretAccessKey,',
+    '  issueLiveKitToken: TIssueLiveKitBookingToken;',
+    '  apiKey: configValidation.config!.apiKey,',
+    '  apiSecret: configValidation.config!.apiSecret,',
+    '  apiSecret: "test_secret_must_be_at_least_32_bytes_long_",',
+    '',
+  ].join('\n');
+  try {
+    for (const [host, projection] of [
+      ['claude', 'dist/plugins/claude/openplanr/skills/delegate'],
+      ['openai', 'dist/plugins/openai/openplanr/skills/delegate'],
+      ['cursor', 'dist/plugins/cursor/openplanr/rules/planr-delegate'],
+    ]) {
+      const copied = join(temporary, host);
+      cpSync(resolve(root, projection), copied, { recursive: true });
+      const repository = join(temporary, `${host}-repository`);
+      mkdirSync(join(repository, 'src'), { recursive: true });
+      writeFileSync(join(repository, 'src/booking.ts'), source);
+      writeFileSync(join(repository, 'src/token.ts'), `const token = "ghp_${'A'.repeat(30)}";\n`);
+      const context = pathToFileURL(join(copied, 'scripts/context.mjs')).href;
+      const result = spawnSync(process.execPath, ['--input-type=module', '-'], {
+        cwd: repository,
+        input: [
+          `const { assertCredentialFreeText, buildContextCapsule } = await import(${JSON.stringify(context)});`,
+          `const lines = ${JSON.stringify(source.split('\n'))};`,
+          'for (const line of lines) assertCredentialFreeText(line);',
+          `const capsule = await buildContextCapsule({ repositoryRoot: ${JSON.stringify(repository)}, request: 'Review.', selectedFiles: ['src/booking.ts'] });`,
+          'let rejected;',
+          `try { await buildContextCapsule({ repositoryRoot: ${JSON.stringify(repository)}, request: 'Review.', selectedFiles: ['src/token.ts'] }); } catch (error) { rejected = error; }`,
+          'console.log(JSON.stringify({ copied: capsule.files.some((file) => file.path === "src/booking.ts"), code: rejected?.code, finding: rejected?.details?.findings?.[0], leaked: JSON.stringify(rejected?.details ?? {}).includes("ghp_") }));',
+        ].join('\n'),
+        encoding: 'utf8',
+        env: { PATH: '/usr/bin:/bin', HOME: repository, NO_COLOR: '1' },
+      });
+      assert.equal(result.status, 0, `${host}: ${result.stderr}`);
+      const observed = JSON.parse(result.stdout);
+      assert.equal(observed.copied, true, host);
+      assert.equal(observed.code, 'E_CAPSULE_SECRET', host);
+      assert.equal(observed.finding.rule, 'credential-format', host);
+      assert.equal(observed.finding.resolvable, false, host);
+      assert.equal(observed.leaked, false, host);
+    }
+  } finally {
+    rmSync(temporary, { recursive: true, force: true });
+  }
+});
+
 test('delegate is a canonical opt-in package with installed Claude and Codex resources', () => {
   assert.equal(manifest.skillId, 'planr-delegate');
   assert.equal(manifest.execution, 'host-agent');

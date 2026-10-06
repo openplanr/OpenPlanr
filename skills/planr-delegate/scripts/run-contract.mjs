@@ -2,6 +2,7 @@
 import { createHash } from 'node:crypto';
 import { isAbsolute, sep } from 'node:path';
 import { assertCredentialFreeText } from './context.mjs';
+import { CREDENTIAL_FORMAT } from './credentials.mjs';
 import { updateRunRecord } from './run-record.mjs';
 
 const MAX_HANDOFF_TEXT = 4096;
@@ -15,9 +16,6 @@ const SESSION_ID = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,199}$/u;
 export const SHA256 = /^[a-f0-9]{64}$/u;
 
 const RESULT_STATES = new Set(['completed', 'blocked', 'question']);
-
-const CREDENTIAL =
-  /-----BEGIN (?:[A-Z ]* )?PRIVATE KEY-----|\bAKIA[0-9A-Z]{16}\b|\bgh[pousr]_[A-Za-z0-9_]{20,}\b|\bgithub_pat_[A-Za-z0-9_]{20,}\b|\bsk-(?:proj-)?[A-Za-z0-9_-]{24,}\b|\bxox[baprs]-[A-Za-z0-9-]{20,}/iu;
 
 export class DelegateRunError extends Error {
   constructor(code, message, runId = null, details = null) {
@@ -68,7 +66,7 @@ export function boundedText(value, label) {
     typeof value !== 'string' ||
     !value.trim() ||
     Buffer.byteLength(value, 'utf8') > MAX_HANDOFF_TEXT ||
-    CREDENTIAL.test(value)
+    CREDENTIAL_FORMAT.test(value)
   ) {
     throw new DelegateRunError(
       'E_DELEGATE_INPUT',
@@ -152,7 +150,7 @@ function validQuestion(question) {
     typeof question.text !== 'string' ||
     !question.text.trim() ||
     Buffer.byteLength(question.text, 'utf8') > MAX_HANDOFF_TEXT ||
-    CREDENTIAL.test(question.text) ||
+    CREDENTIAL_FORMAT.test(question.text) ||
     (question.options !== undefined &&
       (!Array.isArray(question.options) ||
         question.options.length > 12 ||
@@ -160,7 +158,7 @@ function validQuestion(question) {
           (option) =>
             typeof option !== 'string' ||
             Buffer.byteLength(option, 'utf8') > 256 ||
-            CREDENTIAL.test(option),
+            CREDENTIAL_FORMAT.test(option),
         )))
   )
     return false;
@@ -181,7 +179,7 @@ export function resultShape(result, expectedSessionId = null) {
   ) {
     return null;
   }
-  if (CREDENTIAL.test(result.summary)) return null;
+  if (CREDENTIAL_FORMAT.test(result.summary)) return null;
   if (result.status === 'blocked' && !result.summary.trim()) return null;
   if (result.status === 'question' && !validQuestion(result.question)) return null;
   if (

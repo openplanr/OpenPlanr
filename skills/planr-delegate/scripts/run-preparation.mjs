@@ -143,6 +143,7 @@ export async function prepareDelegateRun({
   selectedFiles = [],
   optionalFiles = [],
   readOnlyRepositories = [],
+  credentialResolutions = [],
   selectedPaths,
   scopePaths,
   preservePaths = [],
@@ -199,6 +200,7 @@ export async function prepareDelegateRun({
     selectedFiles,
     optionalFiles,
     readOnlyRepositories,
+    credentialResolutions,
   });
   const integrationScopePaths = scopePaths === undefined ? null : integrationPaths(scopePaths);
   let identity = profileIdentity(prepared);
