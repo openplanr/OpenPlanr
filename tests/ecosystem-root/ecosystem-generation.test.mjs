@@ -176,6 +176,13 @@ test('the local marketplace points at one registry-complete Claude package with 
   );
 });
 
+test('the capability map carries each agent description verbatim', () => {
+  for (const agent of json('packages/cli/lib/host-packages/capability-map.json').agents) {
+    const shipped = read(`dist/plugins/claude/openplanr/agents/${agent.id}.md`).toString('utf8');
+    assert.equal(agent.description, /^description: (.+)$/mu.exec(shipped)?.[1], agent.id);
+  }
+});
+
 test('OpenAI plugin exposes readable content for every canonical skill and no aliases', () => {
   const plugin = json('dist/plugins/openai/openplanr/.codex-plugin/plugin.json');
   const content = json('adapters/manifests/codex-plugin-content.json');
