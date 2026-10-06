@@ -624,7 +624,7 @@
       "lifecycle": "active",
       "authorityClass": "implementation",
       "source": "skills/planr-delegate/openplanr.skill.json",
-      "sourceDigest": "sha256:10489d6f04acd360db631f4f7b2adf59cf6b34df8fe1985552166802d47e8d47",
+      "sourceDigest": "sha256:01c074a24328c5eeba8571f75bea5d51e1b6f27a702e390c680055684a105717",
       "triggerPolicy": {
         "include": [
           "Delegate implementation to another coding agent",
@@ -1742,5 +1742,5 @@
     }
   ],
   "compatibilityAliases": [],
-  "documentDigest": "sha256:56f1e4d3657efaf61e853d6922e13678c2d5444052bd03e81ac6b31818fd40e4"
+  "documentDigest": "sha256:163ce04f19cd71e9f2ed50eaa85085cd0c0e061570bda19c9c925350982b5764"
 }

@@ -649,3 +649,432 @@ test('reading order prioritizes requirements without removing or truncating any 
   });
   assert.equal((await validateContextMirror(legacy, capsule)).status, 'verified');
 });
+
+const REPORTED_SOURCE = [
+  'export const recording = {',
+  '  secret: recording.secretAccessKey,',
+  '};',
+  'interface Booking {',
+  '  issueLiveKitToken: TIssueLiveKitBookingToken;',
+  '}',
+  'export const settings = {',
+  '  apiKey: configValidation.config!.apiKey,',
+  '  apiSecret: configValidation.config!.apiSecret,',
+  '};',
+  'export const fixture = {',
+  '  apiSecret: "test_secret_must_be_at_least_32_bytes_long_",',
+  '};',
+  '',
+].join('\n');
+
+async function secretError(promise) {
+  let caught;
+  await assert.rejects(promise, (error) => {
+    caught = error;
+    return error.code === 'E_CAPSULE_SECRET';
+  });
+  assert.ok(!JSON.stringify({ ...caught.details, message: caught.message }).includes('Xk8sP2m'));
+  return caught;
+}
+
+test('reported references, type annotations and a synthetic fixture are delegated unchanged', async (t) => {
+  const root = await fixture(t);
+  for (const line of REPORTED_SOURCE.split('\n'))
+    assert.equal(assertCredentialFreeText(line), line);
+  await put(root, 'src/booking.ts', REPORTED_SOURCE);
+  const capsule = await buildContextCapsule({
+    repositoryRoot: root,
+    request: 'Review booking credentials.',
+    selectedFiles: ['src/booking.ts'],
+  });
+  assert.deepEqual(
+    Buffer.from(copied(capsule, 'src/booking.ts').contentBase64, 'base64'),
+    Buffer.from(REPORTED_SOURCE),
+  );
+  assert.equal(capsule.credentialResolutions, undefined);
+});
+
+test('a blocked source reports masked findings with location, rule, classification and confidence', async (t) => {
+  const root = await fixture(t);
+  const mixed = `${REPORTED_SOURCE}export const live = {\n  apiKey: "Xk8sP2mQ9vR4tL7wYz2N",\n};\n`;
+  await put(root, 'src/mixed.ts', mixed);
+  const error = await secretError(
+    buildContextCapsule({
+      repositoryRoot: root,
+      request: 'Review keys.',
+      selectedFiles: ['src/mixed.ts'],
+    }),
+  );
+  assert.deepEqual(
+    error.details.findings.map(
+      ({ rule, classification, confidence, resolvable, key, location }) => ({
+        rule,
+        classification,
+        confidence,
+        resolvable,
+        key,
+        location,
+      }),
+    ),
+    [
+      {
+        rule: 'credential-assignment',
+        classification: 'possible-credential',
+        confidence: 'medium',
+        resolvable: true,
+        key: 'apiKey',
+        location: { path: 'src/mixed.ts', line: 15, column: 3 },
+      },
+    ],
+  );
+  assert.match(error.details.findings[0].explanation, /apiKey is assigned a literal/u);
+  assert.match(error.details.contentDigest, /^sha256:[a-f0-9]{64}$/u);
+  const optional = await buildContextCapsule({
+    repositoryRoot: root,
+    request: 'Review keys.',
+    optionalFiles: ['src/mixed.ts'],
+  });
+  const written = {
+    repositoryKey: 'project',
+    path: 'src/mixed.ts',
+    role: 'selected-source',
+    reason: 'E_CAPSULE_SECRET',
+  };
+  assert.deepEqual(
+    optional.omissions.find(({ path }) => path === 'src/mixed.ts'),
+    written,
+  );
+  assert.deepEqual(
+    previewContextCapsule(optional).omissions.find(({ path }) => path === 'src/mixed.ts'),
+    { ...written, findings: error.details.findings, contentDigest: error.details.contentDigest },
+  );
+  assert.ok(!JSON.stringify(optional).includes('Xk8sP2m'));
+  const parent = await mkdtemp(join(tmpdir(), 'planr-omission-test-'));
+  t.after(() => rm(parent, { recursive: true, force: true }));
+  const path = await writeContextCapsule(optional, {
+    repositoryRoot: root,
+    directory: join(parent, 'capsule'),
+  });
+  for (const file of [path, join(parent, 'capsule/readable/index.json')]) {
+    const { omissions } = JSON.parse(await readFile(file, 'utf8'));
+    assert.deepEqual(
+      omissions.find(({ path }) => path === 'src/mixed.ts'),
+      written,
+      file,
+    );
+    assert.ok(!(await readFile(file, 'utf8')).includes(error.details.contentDigest), file);
+  }
+});
+
+test('a finding names only the credential word, never the rest of the name', () => {
+  let details;
+  assert.throws(
+    () => assertCredentialFreeText(`ghp_${'D'.repeat(30)}_TOKEN = "abcdefghijklmnopqrstuvwxyz"`),
+    (error) => {
+      ({ details } = error);
+      return error.code === 'E_CAPSULE_SECRET';
+    },
+  );
+  assert.deepEqual(
+    details.findings.map(({ rule, key }) => [rule, key]),
+    [
+      ['credential-format', undefined],
+      ['credential-assignment', 'TOKEN'],
+    ],
+  );
+  assert.ok(!JSON.stringify(details).includes('D'.repeat(30)));
+});
+
+test('a recorded resolution covers only its finding in the exact content', async (t) => {
+  const root = await fixture(t);
+  const content = 'export const live = {\n  apiKey: "Xk8sP2mQ9vR4tL7wYz2N",\n};\n';
+  await put(root, 'src/live.ts', content);
+  const input = { repositoryRoot: root, request: 'Review keys.', selectedFiles: ['src/live.ts'] };
+  const { details } = await secretError(buildContextCapsule(input));
+  const resolution = { id: details.findings[0].id, contentDigest: details.contentDigest };
+  const capsule = await buildContextCapsule({ ...input, credentialResolutions: [resolution] });
+  assert.deepEqual(
+    Buffer.from(copied(capsule, 'src/live.ts').contentBase64, 'base64'),
+    Buffer.from(content),
+  );
+  assert.deepEqual(capsule.credentialResolutions, [
+    {
+      ...resolution,
+      repositoryKey: 'project',
+      path: 'src/live.ts',
+      rule: 'credential-assignment',
+      location: { path: 'src/live.ts', line: 2, column: 3 },
+    },
+  ]);
+  assert.deepEqual(
+    previewContextCapsule(capsule).credentialResolutions,
+    capsule.credentialResolutions,
+  );
+
+  await put(root, 'src/live.ts', `${content}// changed\n`);
+  await secretError(buildContextCapsule({ ...input, credentialResolutions: [resolution] }));
+  await put(root, 'src/live.ts', content);
+  await secretError(
+    buildContextCapsule({
+      ...input,
+      credentialResolutions: [{ ...resolution, id: 'cred_0000000000000000' }],
+    }),
+  );
+
+  const recognizable = `export const token = "ghp_${'A'.repeat(30)}";\n`;
+  await put(root, 'src/live.ts', recognizable);
+  const format = await secretError(buildContextCapsule(input));
+  assert.equal(format.details.findings[0].resolvable, false);
+  await secretError(
+    buildContextCapsule({
+      ...input,
+      credentialResolutions: format.details.findings.map(({ id }) => ({
+        id,
+        contentDigest: format.details.contentDigest,
+      })),
+    }),
+  );
+  await rejectCode(
+    buildContextCapsule({ ...input, credentialResolutions: [{ id: 'all' }] }),
+    'E_CAPSULE_INPUT',
+  );
+});
+
+test('a direct request uses the same findings and resolutions', async (t) => {
+  const root = await fixture(t);
+  const request = 'Rotate the staging key.\nAPI_KEY=Xk8sP2mQ9vR4tL7wYz2N\n';
+  const { details } = await secretError(buildContextCapsule({ repositoryRoot: root, request }));
+  assert.deepEqual(details.findings[0].location, { line: 2, column: 1 });
+  const capsule = await buildContextCapsule({
+    repositoryRoot: root,
+    request,
+    credentialResolutions: [{ id: details.findings[0].id, contentDigest: details.contentDigest }],
+  });
+  assert.equal(capsule.request, request);
+  assert.equal(capsule.credentialResolutions[0].source, 'request');
+});
+
+test('file syntax decides whether an unquoted value is a reference or a literal', async (t) => {
+  const root = await fixture(t);
+  const line = 'api_key: recording.secretAccessKey\n';
+  await put(root, 'src/settings.ts', line);
+  await put(root, 'config/settings.yaml', line);
+  const code = await buildContextCapsule({
+    repositoryRoot: root,
+    request: 'Review settings.',
+    selectedFiles: ['src/settings.ts'],
+  });
+  assert.ok(copied(code, 'src/settings.ts'));
+  await secretError(
+    buildContextCapsule({
+      repositoryRoot: root,
+      request: 'Review settings.',
+      selectedFiles: ['config/settings.yaml'],
+    }),
+  );
+  for (const text of [
+    'PASSWORD: correcthorsebatterystaple',
+    'API_KEY=Xk8sP2mQ9vR4tL7wYz2N',
+    'token: a8f3k2j9d0s7h6g5;',
+  ])
+    assert.equal(containsSecret(Buffer.from(text)), true, text);
+});
+
+async function blockedWithout(promise, value) {
+  const error = await secretError(promise);
+  assert.ok(!JSON.stringify({ ...error.details, message: error.message }).includes(value));
+  return error;
+}
+
+const STRING_BLOCKS = {
+  'src/app.py': 'DOC = """\n    password: CorrectHorseBatteryStaple\n"""\n',
+  'src/raw.py': 'DOC = rf"""\n    password: CorrectHorseBatteryStaple\n"""\n',
+  'src/doc.js': 'const doc = `\npassword: CorrectHorseBatteryStaple\n`;\n',
+  'src/doc.go': 'var doc = `\npassword: CorrectHorseBatteryStaple\n`\n',
+  'src/Doc.java': 'String doc = """\n    password: CorrectHorseBatteryStaple\n    """;\n',
+  'src/doc.php': '<?php\n$doc = <<<EOT\npassword: CorrectHorseBatteryStaple\nEOT;\n',
+  'src/doc.rb': 'doc = <<~ENV\n  password: CorrectHorseBatteryStaple\nENV\n',
+  'src/Doc.vue': '<i18n lang="yaml">\npassword: CorrectHorseBatteryStaple\n</i18n>\n',
+};
+
+test('identifier-shaped values in strings, free-text assignments and text files are literals', async (t) => {
+  const root = await fixture(t);
+  for (const [path, content] of Object.entries(STRING_BLOCKS)) {
+    await put(root, path, content);
+    await blockedWithout(
+      buildContextCapsule({ repositoryRoot: root, request: 'Review.', selectedFiles: [path] }),
+      'CorrectHorse',
+    );
+  }
+  for (const text of [
+    'export DB_PASSWORD=CorrectHorseBatteryStaple;',
+    'API_TOKEN=correct.horse.battery.staple',
+  ]) {
+    assert.throws(() => assertCredentialFreeText(text, { label: 'Correction' }), {
+      code: 'E_CAPSULE_SECRET',
+    });
+    await blockedWithout(buildContextCapsule({ repositoryRoot: root, request: text }), 'orrect');
+  }
+  for (const [path, content] of [
+    ['bin/deploy', '#!/bin/sh\nAPI_TOKEN=correct.horse.battery.staple\n'],
+    ['docs/deploy.md', '---\nAPI_TOKEN=correct.horse.battery.staple\n---\n# Deploy\n'],
+    ['docs/notes.md', '---\napi_token: correct.horse.battery.staple\n---\n# Notes\n'],
+  ]) {
+    await put(root, path, content);
+    await blockedWithout(
+      buildContextCapsule({ repositoryRoot: root, request: 'Review.', selectedFiles: [path] }),
+      'horse',
+    );
+  }
+});
+
+test('recognizable formats after a marker or under a private_key field are not resolvable', async (t) => {
+  const root = await fixture(t);
+  for (const content of [
+    `const token = "mock_ghp_${'A'.repeat(36)}";\n`,
+    `client("mock_ghp_${'A'.repeat(36)}");\n`,
+    `const key = "test_sk-proj-${'A'.repeat(40)}";\n`,
+    '{"private_key": "-----BEGIN PGP PRIVATE KEY BLOCK-----\\nAAAA"}\n',
+    '{"private_key": "-----BEGIN ENCRYPTED DATA-----"}\n',
+    '-----BEGIN PGP PRIVATE KEY BLOCK-----\n',
+    `const token = "xoxb-${'A'.repeat(25)}_x";\n`,
+  ]) {
+    await put(root, 'src/fixture.ts', content);
+    const { details } = await blockedWithout(
+      buildContextCapsule({
+        repositoryRoot: root,
+        request: 'Review.',
+        selectedFiles: ['src/fixture.ts'],
+      }),
+      'AAAA',
+    );
+    assert.ok(
+      details.findings.some(
+        ({ rule, resolvable }) => rule === 'credential-format' && resolvable === false,
+      ),
+      content,
+    );
+  }
+  assert.equal(containsSecret(Buffer.from(`const id = "task-${'A'.repeat(40)}";`)), false);
+});
+
+test('a described placeholder needs a credential noun', async (t) => {
+  const root = await fixture(t);
+  for (const [path, content] of [
+    ['src/settings.ts', 'password = "test-cobalt-river-lamp-9127"\n'],
+    ['config/settings.yaml', 'password: fixture.cobalt.river.lamp.9127\n'],
+  ]) {
+    await put(root, path, content);
+    await blockedWithout(
+      buildContextCapsule({ repositoryRoot: root, request: 'Review.', selectedFiles: [path] }),
+      'cobalt',
+    );
+  }
+  assert.throws(() => assertCredentialFreeText('password: "mock correct horse battery staple"'), {
+    code: 'E_CAPSULE_SECRET',
+  });
+  for (const text of [
+    'apiSecret: "test_secret_must_be_at_least_32_bytes_long_",',
+    'password: "fixture-password-for-login-tests"',
+    'TOKEN=mock.token.value.for.tests.only',
+    'token: "fixture-read-credential",',
+    'password: "fixture-alternate-credential",',
+    'secret: "mock-shared-secrets-for-tests",',
+  ])
+    assert.equal(assertCredentialFreeText(text), text);
+});
+
+test('identifiers and slugs that contain a token prefix are not credential formats', async (t) => {
+  const root = await fixture(t);
+  const names = [
+    'parse_ghs_installation_token_header',
+    'MAX_GHS_TOKEN_LENGTH_FOR_INSTALLATIONS = 40',
+    'strip_ghp_prefix_from_token_value',
+    'how_to_use_sk-learn_pipelines_for_production',
+    'strip_github_pat_prefix_from_user_input',
+  ];
+  for (const name of names) assert.equal(assertCredentialFreeText(name), name);
+  const source = `${names.map((name) => `# ${name}`).join('\n')}\n`;
+  await put(root, 'src/names.py', source);
+  const capsule = await buildContextCapsule({
+    repositoryRoot: root,
+    request: 'Review names.',
+    selectedFiles: ['src/names.py'],
+  });
+  assert.deepEqual(
+    Buffer.from(copied(capsule, 'src/names.py').contentBase64, 'base64'),
+    Buffer.from(source),
+  );
+});
+
+test('shell and env assignment lines are literals in any file', async (t) => {
+  const root = await fixture(t);
+  for (const [path, content, value] of [
+    [
+      'src/deploy.rb',
+      'script = <<~SH\n  export DB_PASSWORD=CorrectHorseBatteryStaple;\nSH\n',
+      'CorrectHorse',
+    ],
+    ['src/env.js', 'const env = `\nAPI_TOKEN=QzWxEcRvTbYnUmIoPa;\n`;\n', 'QzWx'],
+    ['src/env.py', 'ENV = """\nAPI_TOKEN=correct.horse.battery.staple\n"""\n', 'horse'],
+  ]) {
+    await put(root, path, content);
+    await blockedWithout(
+      buildContextCapsule({ repositoryRoot: root, request: 'Review.', selectedFiles: [path] }),
+      value,
+    );
+  }
+  const call = [
+    'client = Client(',
+    '    api_key=settings.api_key,',
+    '    token=credentials.access_token,',
+    ')',
+    'logger = ArgillaLogger(',
+    '    ARGILLA_API_KEY=_credentials_api_key,',
+    ')',
+    'galaxy = GalaxyProvider(',
+    '    GALAXY_PASSWORD=galaxy_password,',
+    ')',
+    'app.config.update(',
+    '    SECRET_KEY=settings.FLASK_SECRET_KEY,',
+    ')',
+    '',
+  ].join('\n');
+  await put(root, 'src/client.py', call);
+  const capsule = await buildContextCapsule({
+    repositoryRoot: root,
+    request: 'Review.',
+    selectedFiles: ['src/client.py'],
+  });
+  assert.ok(copied(capsule, 'src/client.py'));
+});
+
+test('a link is classified by its target, and configuration wins', async (t) => {
+  const root = await fixture(t);
+  await put(root, 'config/settings.yaml', 'api_key: recording.secretAccessKey\n');
+  await symlink(join(root, 'config/settings.yaml'), join(root, 'src/settings.ts'));
+  await secretError(
+    buildContextCapsule({
+      repositoryRoot: root,
+      request: 'Review settings.',
+      selectedFiles: ['src/settings.ts'],
+    }),
+  );
+});
+
+test('findings in text that takes no resolution are not resolvable', () => {
+  assert.throws(
+    () =>
+      assertCredentialFreeText('API_KEY=Xk8sP2mQ9vR4tL7wYz2N', {
+        code: 'E_DELEGATE_INPUT',
+        label: 'Correction',
+      }),
+    ({ code, details }) =>
+      code === 'E_DELEGATE_INPUT' &&
+      details.findings.length === 1 &&
+      details.findings.every(
+        ({ resolvable, explanation }) =>
+          resolvable === false && !/resolve this finding/u.test(explanation),
+      ),
+  );
+});

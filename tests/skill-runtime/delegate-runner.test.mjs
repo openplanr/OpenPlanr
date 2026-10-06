@@ -109,7 +109,7 @@ async function fakeProfile({ base, profileDirectory, origin = 'http://127.0.0.1:
       "const prompt = packet.prompt ?? '';",
       "const promptContract = { jsonOnly: prompt.includes('exactly one valid JSON object') && prompt.includes('no Markdown fence'), status: prompt.includes('\"completed\", \"blocked\", or \"question\"'), summary: prompt.includes('\"summary\"'), question: prompt.includes('\"question\"'), checks: prompt.includes('\"checks\"'), issues: prompt.includes('\"issues\"'), adapterSession: prompt.includes('Do not include \"sessionId\"'), noCapsuleBytes: !prompt.includes('SENSITIVE_SOURCE_MARKER'), noBackendSession: !packet.sessionId || !prompt.includes(packet.sessionId) };",
       "appendFileSync(process.env.FAKE_LOG_PATH, JSON.stringify({ operation, sessionId: packet.sessionId ?? null, cwd: packet.cwd, capsulePath: packet.capsulePath ?? null, promptContract }) + '\\n');",
-      "if (process.env.FAKE_MODE === 'exit') { process.stderr.write('sk-' + 'x'.repeat(28)); process.exit(7); }",
+      "if (process.env.FAKE_MODE === 'exit') { process.stderr.write('sk-' + 'xY'.repeat(14)); process.exit(7); }",
       "if (process.env.FAKE_MODE === 'partial') { process.stdout.write('{\"status\":'); process.exit(0); }",
       "if (process.env.FAKE_MODE === 'edit-capsule') appendFileSync(packet.capsulePath, 'tampered');",
       "if (process.env.FAKE_MODE === 'edit-worktree') writeFileSync(packet.cwd + '/source.txt', operation === '--planr-resume' ? 'corrected by generic adapter\\n' : 'edited by generic adapter\\n');",
@@ -619,7 +619,7 @@ test('private records are bounded, credential-free, and retained until explicit 
   await assert.rejects(
     updateRunRecord(
       'active',
-      { lastHandoff: { text: `sk-${'x'.repeat(28)}` } },
+      { lastHandoff: { text: `sk-${'xY'.repeat(14)}` } },
       { directory: runDirectory },
     ),
     (error) => error.code === 'E_RUN_CREDENTIAL',
@@ -1117,7 +1117,7 @@ test('timeout, cancellation, exit, partial output and restart recovery keep priv
     });
     assert.equal(outcome.status, 'blocked');
     assert.equal(outcome.record.diagnostic.code, expected);
-    assert.ok(!outcome.record.diagnostic.message.includes(`sk-${'x'.repeat(28)}`));
+    assert.ok(!outcome.record.diagnostic.message.includes(`sk-${'xY'.repeat(14)}`));
     assert.ok((await stat(outcome.record.capsulePath)).isFile());
     assert.ok((await stat(outcome.record.worktreePath)).isDirectory());
     assert.ok((await stat(outcome.record.custodyPath)).isFile());
