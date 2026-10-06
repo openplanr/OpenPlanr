@@ -21,6 +21,17 @@
         "chatgpt"
       ],
       "executable": false
+    },
+    {
+      "path": "references/tracker-connections.md",
+      "kind": "reference",
+      "hosts": [
+        "claude-code",
+        "codex",
+        "chatgpt",
+        "cursor"
+      ],
+      "executable": false
     }
   ]
 }

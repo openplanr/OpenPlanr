@@ -5540,7 +5540,7 @@
       "source": "skills/planr-sprint/openplanr.skill.json",
       "entrypoint": "skills/planr-sprint/SKILL.md",
       "description": "Refine every open backlog item against the code and the calendar, refute the picks, and select a sprint that fits capacity and the release cut. Use before a cut or sprint; not for decomposing one specification or reporting status.",
-      "sourceDigest": "sha256:5127dbe840f63389c0e4546904d1aaae6b4a45c8a428ef54204fe2ad1e6a71f2",
+      "sourceDigest": "sha256:2dca1abeafb11a4d33a7ec58d3a52b4db5ba8b59db940374912f4b7c0ef7c983",
       "resources": [
         {
           "path": "agents/openai.yaml",
@@ -5575,6 +5575,18 @@
           ],
           "executable": false,
           "digest": "sha256:547bda354869f1aef26398e77e956f43116305f8dcc0d827dd5fb061ec98504a"
+        },
+        {
+          "path": "references/tracker-connections.md",
+          "kind": "reference",
+          "hosts": [
+            "claude-code",
+            "codex",
+            "chatgpt",
+            "cursor"
+          ],
+          "executable": false,
+          "digest": "sha256:8a2e3e8a9abbcd9ee616fb93c609995b195cb731224b6124462b31199fc60311"
         },
         {
           "path": "schemas/refinement.schema.json",
@@ -5622,7 +5634,7 @@
       "source": "skills/planr-status/openplanr.skill.json",
       "entrypoint": "skills/planr-status/SKILL.md",
       "description": "Inspect project delivery or one feature's pipeline status without changing state. Use when the user asks what is done, pending, blocked, or next.",
-      "sourceDigest": "sha256:442befdcb911e4f577e0cf6213cf5cfdbdc97f7093dcad301399b710d4f6e3f3",
+      "sourceDigest": "sha256:d1d4ef34075312827cf9a4a67896977ed1608c1bf8881b8a8ed164340034c0cc",
       "resources": [
         {
           "path": "agents/openai.yaml",
@@ -5633,6 +5645,18 @@
           ],
           "executable": false,
           "digest": "sha256:a9b84c422fb918329e7819a3a8dd74e609aaad8965842d23cc53d62815331181"
+        },
+        {
+          "path": "references/tracker-connections.md",
+          "kind": "reference",
+          "hosts": [
+            "claude-code",
+            "codex",
+            "chatgpt",
+            "cursor"
+          ],
+          "executable": false,
+          "digest": "sha256:8a2e3e8a9abbcd9ee616fb93c609995b195cb731224b6124462b31199fc60311"
         }
       ],
       "contracts": {
@@ -5668,8 +5692,20 @@
       "source": "skills/planr-sync/openplanr.skill.json",
       "entrypoint": "skills/planr-sync/SKILL.md",
       "description": "Audit OpenPlanr planning artifacts for graph and protocol drift. Use when statuses, references, schemas, or generated planning views may be inconsistent.",
-      "sourceDigest": "sha256:b5a239b26d4946a4c144622eca31d64e743c6dd00a96efa68eca2bc05e65e3ff",
+      "sourceDigest": "sha256:cfa47e09cb3b93f2f35bafb75c89ef57509e29098066f382775728a1058035bc",
       "resources": [
+        {
+          "path": "references/tracker-connections.md",
+          "kind": "reference",
+          "hosts": [
+            "claude-code",
+            "codex",
+            "chatgpt",
+            "cursor"
+          ],
+          "executable": false,
+          "digest": "sha256:8a2e3e8a9abbcd9ee616fb93c609995b195cb731224b6124462b31199fc60311"
+        },
         {
           "path": "scripts/sync.mjs",
           "kind": "script",
@@ -5680,7 +5716,7 @@
             "cursor"
           ],
           "executable": true,
-          "digest": "sha256:37c7caaea892e296aa9329a52f75144355555120d6254e8dd8019d1366907376"
+          "digest": "sha256:7ef90127444f270dc30d119c88a41c898fe7e0b82b1d72d95b1bffc9393a1492"
         },
         {
           "path": "scripts/names.mjs",

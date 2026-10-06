@@ -39,8 +39,9 @@ The same skills ship for Codex and Cursor through the `openplanr` package.
 - Bundled scripts are readable JavaScript. The design studio and review stage pages ship as
   readable source files; the local review server joins them after checking their recorded
   SHA-256 digests, without downloading or decoding code.
-- OpenPlanr does not harvest unrelated credentials or send native agent credentials to OpenPlanr
-  services. Coding-agent runs you request use that agent's own sign-in, described below.
+- Skills and bundled scripts store and read no GitHub, Linear or model-provider credentials and
+  send no agent credentials to OpenPlanr services. Coding-agent runs you request use that
+  agent's own sign-in, described below.
 - Sharing a design or diagram review creates owner access keys for that review and stores them,
   readable only by you, in `design-shares` or `diagram-shares` under `~/.planr` (or
   `PLANR_HOME`; earlier installs used `~/.openplanr`). Design reviews and handoffs read the
@@ -56,9 +57,8 @@ The same skills ship for Codex and Cursor through the `openplanr` package.
   uses a local model server reads its model list from that server's address without
   credentials; a server that requires sign-in is reported as not checked.
 - Only when you ask:
-  - `sync` reconciles planning files with GitHub Issues through `gh` (writes need `--apply`),
-    or with Linear through your Linear connector or the `openplanr linear` CLI, which keeps its own
-    token.
+  - `sync`, `sprint` and `status` reach GitHub and Linear through your coding agent's own
+    GitHub or Linear connection, or through the GitHub CLI (`gh`) when it is signed in.
   - `artifact` and the design skills share an encrypted review through `share.openplanr.dev`.
   - The CLI's optional design engine calls OpenAI only when you select its OpenAI provider and
     supply your own key.

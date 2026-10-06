@@ -204,53 +204,53 @@
     },
     {
       "skillId": "planr-sprint",
-      "files": 6,
-      "bytes": 28864,
-      "uniqueFiles": 6,
-      "uniqueBytes": 28864,
+      "files": 7,
+      "bytes": 31582,
+      "uniqueFiles": 7,
+      "uniqueBytes": 31582,
       "duplicateBytes": 0
     },
     {
       "skillId": "planr-status",
-      "files": 3,
-      "bytes": 2419,
-      "uniqueFiles": 3,
-      "uniqueBytes": 2419,
+      "files": 4,
+      "bytes": 5098,
+      "uniqueFiles": 4,
+      "uniqueBytes": 5098,
       "duplicateBytes": 0
     },
     {
       "skillId": "planr-sync",
-      "files": 5,
-      "bytes": 9946,
-      "uniqueFiles": 5,
-      "uniqueBytes": 9946,
+      "files": 6,
+      "bytes": 11842,
+      "uniqueFiles": 6,
+      "uniqueBytes": 11842,
       "duplicateBytes": 0
     }
   ],
   "suites": [
     {
       "host": "openai",
-      "files": 288,
-      "bytes": 4667173,
-      "uniqueFiles": 242,
-      "uniqueBytes": 4453247,
-      "duplicateBytes": 213926
+      "files": 291,
+      "bytes": 4674968,
+      "uniqueFiles": 243,
+      "uniqueBytes": 4456354,
+      "duplicateBytes": 218614
     },
     {
       "host": "claude",
-      "files": 269,
-      "bytes": 4746591,
-      "uniqueFiles": 222,
-      "uniqueBytes": 4529182,
-      "duplicateBytes": 217409
+      "files": 272,
+      "bytes": 4753742,
+      "uniqueFiles": 223,
+      "uniqueBytes": 4531645,
+      "duplicateBytes": 222097
     },
     {
       "host": "cursor",
-      "files": 232,
-      "bytes": 4612160,
-      "uniqueFiles": 186,
-      "uniqueBytes": 4398234,
-      "duplicateBytes": 213926
+      "files": 235,
+      "bytes": 4619363,
+      "uniqueFiles": 187,
+      "uniqueBytes": 4400749,
+      "duplicateBytes": 218614
     }
   ]
 }
