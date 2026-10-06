@@ -59,7 +59,7 @@ export function ownerCustodyLocation({
         !isAbsolute(within)))
   )
     throw custodyError(
-      `${label} owner credentials must be stored outside the project. Set PLANR_HOME to a private user-level directory.`,
+      `${label} owner keys must be stored outside the project. Set PLANR_HOME to a private user-level directory.`,
     );
   const legacyPath =
     !options.custodyRoot && !configuredPlanrHome(env)

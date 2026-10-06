@@ -474,13 +474,13 @@
     {
       "source": "packages/protocol/registry/v1.17.0/commands.json",
       "target": "registry/v1.17.0/commands.json",
-      "sha256": "37976400ec59976a8358d36d6a900e09ab61707a0e926e89451244f335af7b96",
+      "sha256": "a14b610aab86636fcae0ce4862676d6d7941281c36ff07e0abb1dbdebea8285a",
       "mode": "644"
     },
     {
       "source": "packages/protocol/registries/commands.json",
       "target": "registry/v1.5.0/commands.json",
-      "sha256": "487253f3bb42b22c0195e92dd8e60a9bb3e65113f3cf228020c9786cdbffa948",
+      "sha256": "d5c96d9aa6182dd1071f4b39feb64c1a508a1cc94a2b78e97eafa48a4700f3fc",
       "mode": "644"
     },
     {

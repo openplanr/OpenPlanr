@@ -67,7 +67,7 @@ async function fixture(t) {
       const response = await fetch(`${origin}/internal/v1/sessions`, {
         method: 'POST',
         headers: {
-          authorization: `Bearer ${server.controlToken}`,
+          'x-openplanr-control': server.controlToken,
           'content-type': 'application/json',
         },
         body: JSON.stringify({ envelope: envelope(), cwd: root, studioId: 'product', ...options }),
@@ -288,7 +288,7 @@ test('owned local service discovery preserves every instance and authenticated s
     (
       await fetch(`${first.origin}/internal/v1/shutdown`, {
         method: 'POST',
-        headers: { authorization: `Bearer ${'A'.repeat(43)}` },
+        headers: { 'x-openplanr-control': 'A'.repeat(43) },
       })
     ).status,
     403,
@@ -493,7 +493,7 @@ test('new services retain healthy v1 custody for exact-session exports without r
   });
   t.after(() => current.close());
   assert.notEqual(current.port, state.port);
-  assert.equal(JSON.parse(readFileSync(statePath, 'utf8')).serverVersion, 2);
+  assert.equal(JSON.parse(readFileSync(statePath, 'utf8')).serverVersion, 3);
   assert.deepEqual(
     JSON.parse(
       readFileSync(

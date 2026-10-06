@@ -365,10 +365,10 @@ export async function importDiagramShareRecovery(file, { input, ...options } = {
           canonicalizeJson(custody.ownerPublicKey))
     )
       throw new Error(
-        'Different owner credentials already exist; recovery will not overwrite them.',
+        'Different owner keys already exist; recovery will not overwrite them.',
       );
     if (record && record.custody.version > custody.version)
-      throw new Error('The recovery file is older than local owner credentials.');
+      throw new Error('The recovery file is older than local owner keys.');
     if (!custody.pendingCreate && !recovered.deleted && !recovered.revoked) {
       await workspace.getWorkspace(custody, { fetchImpl: options.fetchImpl });
       const remote = await workspace.decryptWorkspaceRevision(custody, undefined, {

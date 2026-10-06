@@ -30,7 +30,7 @@ relaunch the active coding agent from inside this skill.
    preserve existing guidance and never invent requirements. Render and inspect
    the updated context before sharing. For a design document this creates a permanent encrypted
    design review with a stable URL and a separately entered generated access
-   token. Owner credentials save privately outside the project; copy the reviewer
+   token. Owner keys save privately outside the project; copy the reviewer
    token through the studio's Share dialog, never put it in a URL or ordinary
    command output. Publish an explicitly requested update with
    `openplanr artifact publish <design-document.json>`; synchronize reviewer feedback
@@ -67,7 +67,7 @@ separate permissions and storage from encrypted token shares.
 
 Lead with what was opened, shared, imported or exported and the confirmed revision
 or session. Link the actual review URL or exported file; never print capability
-tokens or private owner credentials. Distinguish successful service operations
+tokens or private owner keys. Distinguish successful service operations
 from preparation and browser verification from validation alone. For partial or
 blocked work, name the remaining step and exact retry or recovery action, retaining
 the useful local result. Keep detailed diagnostics in their existing records;

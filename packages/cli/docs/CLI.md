@@ -616,7 +616,7 @@ openplanr artifact export <session-id> [--format json|markdown] [--output <path>
 Diagram manifests and authoring bundles share directly to one permanent native
 review per stable `/diagram/<id>` link, with a separate reviewer access token.
 The local studio's **Share diagram** dialog copies the link and token separately.
-Owner credentials stay privately outside the repository. Publish revisions
+Owner keys stay privately outside the repository. Publish revisions
 explicitly; `sync` imports revision-bound feedback without changing the diagram.
 Native diagram sharing does not accept `--snapshot`, `--short`, or `--ttl`;
 export HTML first to choose the generic snapshot transport.

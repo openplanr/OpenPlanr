@@ -164,7 +164,7 @@ test('browser studio boots through the protected artifact server and supports a 
     const response = await fetch(`http://127.0.0.1:${port}/internal/v1/sessions`, {
       method: 'POST',
       headers: {
-        authorization: `Bearer ${server.controlToken}`,
+        'x-openplanr-control': server.controlToken,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
@@ -800,7 +800,7 @@ test('journey-start thumbnails capture later screens when they become visible wi
         const response = await fetch(`http://127.0.0.1:${port}/internal/v1/sessions`, {
           method: 'POST',
           headers: {
-            authorization: `Bearer ${server.controlToken}`,
+            'x-openplanr-control': server.controlToken,
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({

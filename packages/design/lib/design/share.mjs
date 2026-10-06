@@ -39,7 +39,7 @@ import { mergeWorkspaceFeedback } from './workspace-feedback.mjs';
 
 export { getDesignShareStatus } from './share-status.mjs';
 
-/** Never upload source paths, local provenance, arbitrary state, or owner credentials. */
+/** Never upload source paths, local provenance, arbitrary state, or owner keys. */
 export function prepareDesignShareBundle(file) {
   const current = currentDesign(file);
   const saved = readJson(join(current.root, '.design/studio-state.json'), { state: {} }).state;
@@ -360,10 +360,10 @@ export async function importDesignShareRecovery(file, { input, ...options } = {}
         JSON.stringify(record.custody.ownerPublicKey) !== JSON.stringify(custody.ownerPublicKey))
     )
       throw new Error(
-        'This design already has different owner credentials. Recovery will not overwrite them.',
+        'This design already has different owner keys. Recovery will not overwrite them.',
       );
     if (record && record.custody.version > custody.version)
-      throw new Error('This recovery file is older than the locally saved owner credentials.');
+      throw new Error('This recovery file is older than the locally saved owner keys.');
     // Validate published identity before installing recovery from another machine.
     if (!custody.pendingCreate && !recovered.deleted && !recovered.revoked) {
       await workspace.getWorkspace(custody, { fetchImpl: options.fetchImpl });

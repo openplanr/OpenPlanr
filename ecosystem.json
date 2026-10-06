@@ -148,7 +148,7 @@
   "catalogs": {
     "commands": {
       "path": "packages/protocol/registries/commands.json",
-      "digest": "sha256:487253f3bb42b22c0195e92dd8e60a9bb3e65113f3cf228020c9786cdbffa948",
+      "digest": "sha256:d5c96d9aa6182dd1071f4b39feb64c1a508a1cc94a2b78e97eafa48a4700f3fc",
       "rootCommands": 39,
       "pipelineMachineLeaves": 31,
       "frozenClaudeDocuments": 8,
@@ -349,7 +349,7 @@
     ],
     "generatedAssets": {
       "path": "adapters/manifests/generated-assets.json",
-      "digest": "sha256:7c2a82dc6041627796aadebb9a8a18e305f7633d8b957368c3f0335536f602f2",
+      "digest": "sha256:a12267d123fd1a34f3a9e338876744d7b08202964f9a1facbd6c01ea3bf0d250",
       "count": 1592
     }
   },
@@ -434,7 +434,7 @@
   "generatedSurfaces": {
     "artifactShell": {
       "path": "packages/artifact/lib/artifact/ui/generated/artifact-shell-assets.json",
-      "digest": "sha256:59b6ad03dea805b0e24c57400d0ab6a382cb8c944ffd1977b7e957cfadb2cc0c",
+      "digest": "sha256:9468c5ef204a26460a5048198a1c6a6762197b8e45bbd9dff74701a9516f6ead",
       "shellVersion": "1.2.1",
       "assetCount": 8
     },

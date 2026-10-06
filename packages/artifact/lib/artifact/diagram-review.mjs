@@ -7,7 +7,7 @@ import { createDiagramShareLocalHandler } from './diagram/share-local.mjs';
 import { digestArtifactEnvelope } from './envelope.mjs';
 import { resolveArtifactReviewDestination } from './import.mjs';
 import { embedJson, escapeHtml } from './internal/escape.mjs';
-import { createArtifactReviewServer } from './review-server.mjs';
+import { artifactReviewControlHeaders, createArtifactReviewServer } from './review-server.mjs';
 import { renderDiagramReviewShell } from './ui/diagram-shell.mjs';
 import { renderArtifactRail, renderPlanrMark } from './ui/renderers.mjs';
 import { ARTIFACT_SHELL_CSS } from './ui/shell.mjs';
@@ -307,7 +307,7 @@ export async function startDiagramReview(
     const response = await fetch(`${origin}/internal/v1/sessions`, {
       method: 'POST',
       headers: {
-        authorization: `Bearer ${server.controlToken}`,
+        ...artifactReviewControlHeaders(server.controlToken),
         'content-type': 'application/json',
       },
       body: JSON.stringify({
