@@ -1503,10 +1503,9 @@ async function pushBacklogItemScope(
 }
 
 /**
- * Granular push entry point: dispatches on the artifact-id prefix. Accepts any
- * supported artifact type (EPIC/FEAT/US/TASK); errors with an actionable
- * message for types that are not pushable (ADR/SPRINT/checklist) or not yet
- * supported (QT/BL go through the same router too).
+ * Granular push entry point: dispatches on the artifact-id prefix. Pushes epics,
+ * features, stories, task files, quick tasks and backlog items; sprints and ADRs
+ * fail with an actionable message.
  */
 export async function runLinearPush(
   projectDir: string,
@@ -1535,10 +1534,10 @@ export async function runLinearPush(
   const type = findArtifactTypeById(artifactId);
   if (!type) {
     throw new Error(
-      `Unknown artifact id: ${artifactId}. Expected an EPIC-/FEAT-/US-/TASK- prefix.`,
+      `Unknown artifact id: ${artifactId}. Expected an EPIC-/FEAT-/US-/TASK-/QT-/BL- prefix.`,
     );
   }
-  if (type === 'sprint' || type === 'adr' || type === 'checklist') {
+  if (type === 'sprint' || type === 'adr') {
     throw new Error(
       `${CLI_COMMAND} linear push does not support ${type}s in this release. Push its parent epic instead: ${CLI_COMMAND} linear push <EPIC-ID>.`,
     );

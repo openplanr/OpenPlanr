@@ -5,7 +5,7 @@
   "documentVersion": "1.0.0",
   "digestAlgorithm": "sha256",
   "canonicalization": "rfc8785",
-  "roleRegistryDigest": "sha256:5f513e29bf7db4d1eceb5346d8afc46dff8165b432a7e07643d4984e1094fb89",
+  "roleRegistryDigest": "sha256:21b377788335a0d855afb9709011a3b4fb102abe693897fce0d300a4266125bb",
   "bindings": [
     {
       "taskKind": "backend",
@@ -216,5 +216,5 @@
       "precedence": 4
     }
   ],
-  "documentDigest": "sha256:70efeb79e215d786d5f202a8a1d6267484a5c5cd26c3deb6acc902d0d3f30676"
+  "documentDigest": "sha256:6c6ac8986526299307ca65501dd313d33a38ed5997c2b27badf8697fa66b6baf"
 }

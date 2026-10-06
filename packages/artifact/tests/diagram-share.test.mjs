@@ -309,7 +309,7 @@ test('share and publish bind to the reviewed bytes before any network mutation',
   assert.equal(f.state.requests.length, count);
 });
 
-test('a source alias cannot move owner credentials inside its physical project', async (t) => {
+test('a source alias cannot move owner keys inside its physical project', async (t) => {
   const f = fixture(t),
     alias = join(f.outer, 'project-alias');
   symlinkSync(f.root, alias);

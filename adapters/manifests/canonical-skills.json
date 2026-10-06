@@ -41,7 +41,7 @@
       "source": "skills/planr-artifact/openplanr.skill.json",
       "entrypoint": "skills/planr-artifact/SKILL.md",
       "description": "Open, share, import, or export an OpenPlanr diagram, design, or HTML artifact review. Use when feedback must move between a local artifact and its review board.",
-      "sourceDigest": "sha256:667d6be08c6b1fdc9660698f828ee51752ed20be23345b192d69da4074671d34",
+      "sourceDigest": "sha256:f932ce29b1266a01ceb8bfa0af9cc50bf0ebf744c611601e5e3fb15972e02b60",
       "resources": [
         {
           "path": "references/design-sharing.md",
@@ -87,7 +87,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:b0cdad978a5ce2a8be27f072361e40cba10eac64d1bed8f224545dd5810c87ea"
+          "digest": "sha256:84c9ba89680dcbacc4f1ad8b871980e7e6ed73fae8d086c0d148c8ce84510f84"
         }
       ],
       "contracts": {
@@ -919,7 +919,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:026655594840b990ba5c840e58056bfc5be35d719d0b7b6f2c5a629d8eda044d"
+          "digest": "sha256:436c12e8ff06e67a529df1aaeb736407d85a63c636260f4a193f458c94fd2ec4"
         },
         {
           "path": "references/run-handoff.md",
@@ -955,7 +955,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:7f864c25d0d50c6e31d23be4ccbd6f9edb2a601b529a3652abdde28b4c7c6066"
+          "digest": "sha256:98dae19b18c18b372edc77985a889303e595b0fc4556f1f42dcfd69d5f037acc"
         },
         {
           "path": "scripts/adapters/codex.mjs",
@@ -1219,7 +1219,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:cf4af84cdfcc05d906a51878dfd82e5a0b5e4acd6644bf93ebf708a6dd2f0130"
+          "digest": "sha256:ff2a8c9365264c4065b8be742ba98ba7b5c8269779c66f217140e9fbf6609727"
         },
         {
           "path": "scripts/backend-diagnostics.mjs",
@@ -1231,7 +1231,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:74b327c6de0e581e2b238ea1e7d5f8ddaa15a7091f717b9a4c66192e60e9ef9c"
+          "digest": "sha256:989c307c6a42c19f799b17bbe7067211b5d9435a6ebabd2609d15d312d3d2715"
         }
       ],
       "contracts": {
@@ -1543,7 +1543,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:3085283fb94cc2df9bd2630ba9bc0704523efdfda2e0dddb20c1dc5025941140"
+          "digest": "sha256:79fb900f3effc3d5a218b961ee04f39ce12241ac936238679eaf18afd704c018"
         },
         {
           "path": "scripts/design-runtime-home.mjs",
@@ -1591,7 +1591,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:aaf6ff42d68340a27ded2afff52c65a88e524aa66dc06ec52190fb0b94edec29"
+          "digest": "sha256:76a313211315e67b1fc9a216ce5b4ae415f472a34216a059fdbb4c9870ae9db7"
         },
         {
           "path": "scripts/design-shared-artifact-support-dependencies-design-support-protocol-contracts-3d9b1a86.mjs",
@@ -1867,7 +1867,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:3be9bf9b8810a1eed5b22f05af33721e6a50d2a814d3d4309d1592b386f80c4f"
+          "digest": "sha256:b388471dccec997c49ce9638ff9a312037d311d63cbe980dceeb9c3c02ca037b"
         },
         {
           "path": "scripts/runtime/packages/design/templates/studio/studio.css",
@@ -2705,7 +2705,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:3085283fb94cc2df9bd2630ba9bc0704523efdfda2e0dddb20c1dc5025941140"
+          "digest": "sha256:79fb900f3effc3d5a218b961ee04f39ce12241ac936238679eaf18afd704c018"
         },
         {
           "path": "scripts/design-runtime-home.mjs",
@@ -2753,7 +2753,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:aaf6ff42d68340a27ded2afff52c65a88e524aa66dc06ec52190fb0b94edec29"
+          "digest": "sha256:76a313211315e67b1fc9a216ce5b4ae415f472a34216a059fdbb4c9870ae9db7"
         },
         {
           "path": "scripts/design-shared-artifact-support-dependencies-design-support-protocol-contracts-3d9b1a86.mjs",
@@ -3029,7 +3029,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:3be9bf9b8810a1eed5b22f05af33721e6a50d2a814d3d4309d1592b386f80c4f"
+          "digest": "sha256:b388471dccec997c49ce9638ff9a312037d311d63cbe980dceeb9c3c02ca037b"
         },
         {
           "path": "scripts/runtime/packages/design/templates/studio/studio.css",
@@ -3867,7 +3867,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:3085283fb94cc2df9bd2630ba9bc0704523efdfda2e0dddb20c1dc5025941140"
+          "digest": "sha256:79fb900f3effc3d5a218b961ee04f39ce12241ac936238679eaf18afd704c018"
         },
         {
           "path": "scripts/design-runtime-home.mjs",
@@ -3915,7 +3915,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:aaf6ff42d68340a27ded2afff52c65a88e524aa66dc06ec52190fb0b94edec29"
+          "digest": "sha256:76a313211315e67b1fc9a216ce5b4ae415f472a34216a059fdbb4c9870ae9db7"
         },
         {
           "path": "scripts/design-shared-artifact-support-dependencies-design-support-protocol-contracts-3d9b1a86.mjs",
@@ -4191,7 +4191,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:3be9bf9b8810a1eed5b22f05af33721e6a50d2a814d3d4309d1592b386f80c4f"
+          "digest": "sha256:b388471dccec997c49ce9638ff9a312037d311d63cbe980dceeb9c3c02ca037b"
         },
         {
           "path": "scripts/runtime/packages/design/templates/studio/studio.css",
@@ -4801,7 +4801,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:b0cdad978a5ce2a8be27f072361e40cba10eac64d1bed8f224545dd5810c87ea"
+          "digest": "sha256:84c9ba89680dcbacc4f1ad8b871980e7e6ed73fae8d086c0d148c8ce84510f84"
         }
       ],
       "contracts": {
@@ -5180,7 +5180,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:0a56528539c52e60bef50970bbfb8ccd761d66668ace739bd72b4c95e13cbe4a"
+          "digest": "sha256:d56e399ebb6a522e1b3a1aa82548334fd9137fc6573edfa2989d0dc5d3e3e4ab"
         },
         {
           "path": "scripts/design-protocol-contracts.mjs",
@@ -5552,7 +5552,7 @@
       "source": "skills/planr-sprint/openplanr.skill.json",
       "entrypoint": "skills/planr-sprint/SKILL.md",
       "description": "Refine every open backlog item against the code and the calendar, refute the picks, and select a sprint that fits capacity and the release cut. Use before a cut or sprint; not for decomposing one specification or reporting status.",
-      "sourceDigest": "sha256:5127dbe840f63389c0e4546904d1aaae6b4a45c8a428ef54204fe2ad1e6a71f2",
+      "sourceDigest": "sha256:2dca1abeafb11a4d33a7ec58d3a52b4db5ba8b59db940374912f4b7c0ef7c983",
       "resources": [
         {
           "path": "agents/openai.yaml",
@@ -5587,6 +5587,18 @@
           ],
           "executable": false,
           "digest": "sha256:547bda354869f1aef26398e77e956f43116305f8dcc0d827dd5fb061ec98504a"
+        },
+        {
+          "path": "references/tracker-connections.md",
+          "kind": "reference",
+          "hosts": [
+            "claude-code",
+            "codex",
+            "chatgpt",
+            "cursor"
+          ],
+          "executable": false,
+          "digest": "sha256:5f7d7126ca0db062c2b14c8ac35ca9758e44433329da610d7e75ad83b9417707"
         },
         {
           "path": "schemas/refinement.schema.json",
@@ -5634,7 +5646,7 @@
       "source": "skills/planr-status/openplanr.skill.json",
       "entrypoint": "skills/planr-status/SKILL.md",
       "description": "Inspect project delivery or one feature's pipeline status without changing state. Use when the user asks what is done, pending, blocked, or next.",
-      "sourceDigest": "sha256:442befdcb911e4f577e0cf6213cf5cfdbdc97f7093dcad301399b710d4f6e3f3",
+      "sourceDigest": "sha256:d1d4ef34075312827cf9a4a67896977ed1608c1bf8881b8a8ed164340034c0cc",
       "resources": [
         {
           "path": "agents/openai.yaml",
@@ -5645,6 +5657,18 @@
           ],
           "executable": false,
           "digest": "sha256:a9b84c422fb918329e7819a3a8dd74e609aaad8965842d23cc53d62815331181"
+        },
+        {
+          "path": "references/tracker-connections.md",
+          "kind": "reference",
+          "hosts": [
+            "claude-code",
+            "codex",
+            "chatgpt",
+            "cursor"
+          ],
+          "executable": false,
+          "digest": "sha256:5f7d7126ca0db062c2b14c8ac35ca9758e44433329da610d7e75ad83b9417707"
         }
       ],
       "contracts": {
@@ -5680,8 +5704,20 @@
       "source": "skills/planr-sync/openplanr.skill.json",
       "entrypoint": "skills/planr-sync/SKILL.md",
       "description": "Audit OpenPlanr planning artifacts for graph and protocol drift. Use when statuses, references, schemas, or generated planning views may be inconsistent.",
-      "sourceDigest": "sha256:b5a239b26d4946a4c144622eca31d64e743c6dd00a96efa68eca2bc05e65e3ff",
+      "sourceDigest": "sha256:0e63252ba06b2842f7d6005782056100930a1559ae393164d7afd615df63384b",
       "resources": [
+        {
+          "path": "references/tracker-connections.md",
+          "kind": "reference",
+          "hosts": [
+            "claude-code",
+            "codex",
+            "chatgpt",
+            "cursor"
+          ],
+          "executable": false,
+          "digest": "sha256:5f7d7126ca0db062c2b14c8ac35ca9758e44433329da610d7e75ad83b9417707"
+        },
         {
           "path": "scripts/sync.mjs",
           "kind": "script",
@@ -5692,7 +5728,7 @@
             "cursor"
           ],
           "executable": true,
-          "digest": "sha256:37c7caaea892e296aa9329a52f75144355555120d6254e8dd8019d1366907376"
+          "digest": "sha256:7ef90127444f270dc30d119c88a41c898fe7e0b82b1d72d95b1bffc9393a1492"
         },
         {
           "path": "scripts/names.mjs",

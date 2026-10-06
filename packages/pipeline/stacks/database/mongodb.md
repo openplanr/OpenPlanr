@@ -36,11 +36,11 @@ DB_HOST: "${MONGO_HOST}"             # e.g. cluster0.mongodb.net or localhost
 DB_PORT: "${MONGO_PORT}"             # 27017 default
 DB_NAME: "${MONGO_DB}"
 DB_USER: "${MONGO_USER}"
-DB_PASSWORD: "${MONGO_PASSWORD}"
-
-# Connection string assembled by the application:
-# mongodb+srv://USER:PASS@HOST/DB?retryWrites=true&w=majority
 ```
+
+The application reads its full connection string from its own runtime environment
+(`DATABASE_URL`), as the Prisma variant below does. Generated code never assembles,
+logs or commits credentials.
 
 ---
 

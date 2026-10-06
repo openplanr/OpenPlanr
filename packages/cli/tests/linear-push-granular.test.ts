@@ -272,11 +272,37 @@ describe('buildLinearPushPlan — per-scope plans', () => {
     expect(await buildLinearPushPlan(projectDir, config, 'US-999')).toBeNull();
   });
 
-  it('returns null for unsupported prefixes (ADR/SPRINT/QT/BL in Phase 1)', async () => {
+  it('returns null for prefixes that cannot be pushed (ADR, SPRINT)', async () => {
     expect(await buildLinearPushPlan(projectDir, config, 'ADR-001')).toBeNull();
     expect(await buildLinearPushPlan(projectDir, config, 'SPRINT-001')).toBeNull();
+  });
+
+  it('returns null for quick task and backlog ids that cannot be resolved', async () => {
     expect(await buildLinearPushPlan(projectDir, config, 'QT-001')).toBeNull();
     expect(await buildLinearPushPlan(projectDir, config, 'BL-001')).toBeNull();
+  });
+
+  it('plans a quick task and a backlog item as single issues', async () => {
+    await ensureDir(join(projectDir, '.planr', 'quick'));
+    await ensureDir(join(projectDir, '.planr', 'backlog'));
+    await writeFile(
+      join(projectDir, '.planr', 'quick', 'QT-001-test.md'),
+      '---\nid: "QT-001"\ntitle: "QT-001 title"\nstatus: "pending"\n---\n\n# QT-001: QT-001 title\n',
+    );
+    await writeFile(
+      join(projectDir, '.planr', 'backlog', 'BL-001-test.md'),
+      '---\nid: "BL-001"\ntitle: "BL-001 title"\nstatus: "open"\nlinearIssueId: "issue-uuid-1"\n---\n\n# BL-001: BL-001 title\n',
+    );
+    const quick = await buildLinearPushPlan(projectDir, config, 'QT-001');
+    expect(quick?.scope).toBe('quick');
+    expect(quick?.rows.map(({ kind, action }) => [kind, action])).toEqual([
+      ['quickTask', 'create'],
+    ]);
+    const backlog = await buildLinearPushPlan(projectDir, config, 'BL-001');
+    expect(backlog?.scope).toBe('backlog');
+    expect(backlog?.rows.map(({ kind, action }) => [kind, action])).toEqual([
+      ['backlogItem', 'update'],
+    ]);
   });
 });
 

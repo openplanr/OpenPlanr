@@ -10,7 +10,7 @@
 import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { existsSync, readFileSync, rmSync } from 'node:fs';
-import { dirname, join, relative, resolve } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { planrHome } from '../lib/artifact/internal/planr-home.mjs';
@@ -22,7 +22,6 @@ import {
 import { CLI_COMMAND } from '../lib/protocol/names.mjs';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const projectRoot = process.cwd();
 const sourceCheckout =
   process.env.OPENPLANR_DOCTOR_PACKAGE_MODE !== '1' &&
   existsSync(join(root, 'input/tech/stack.md'));
@@ -141,12 +140,6 @@ function satisfiesNodeEngine(current, range) {
   if (!actual) return false;
 
   return compareVersions(actual, minimum) >= 0;
-}
-
-function gitIgnored(absPath, base = root) {
-  const relPath = relative(base, absPath);
-  const result = run('git', ['check-ignore', '-q', relPath], base);
-  return result.status === 0;
 }
 
 function checkLocalhostHealth(id, label, dirName) {
@@ -909,38 +902,6 @@ function runDaemonChecks() {
   checkLocalhostHealth('daemon.dashboard', 'Dashboard', 'dashboard-daemon');
 }
 
-function runCredentialChecks() {
-  const envFiles = ['.env', '.env.local'];
-  let found = false;
-
-  for (const file of envFiles) {
-    const absPath = join(projectRoot, file);
-    if (!existsSync(absPath)) continue;
-    const text = readFileSync(absPath, 'utf8');
-    if (!/^\s*OPENAI_API_KEY\s*=/m.test(text)) continue;
-    found = true;
-
-    if (gitIgnored(absPath, projectRoot)) {
-      ok(`credentials.${file}`, 'Credentials', `${file} contains OPENAI_API_KEY and is gitignored`);
-    } else {
-      warn(
-        `credentials.${file}`,
-        'Credentials',
-        `${file} contains OPENAI_API_KEY and is not gitignored`,
-        `Add ${file} to .gitignore or move the key to user-level credentials.`,
-      );
-    }
-  }
-
-  if (!found) {
-    ok(
-      'credentials.project-env',
-      'Credentials',
-      'project .env files do not contain OPENAI_API_KEY',
-    );
-  }
-}
-
 async function runArtifactChecks() {
   const required = [
     'bin/openplanr-pipeline.mjs',
@@ -1129,7 +1090,6 @@ function printHumanSummary(summary) {
     'Artifact review',
     'Ecosystem',
     'Daemons',
-    'Credentials',
     'Releases',
   ];
   for (const category of order) {
@@ -1161,7 +1121,6 @@ if (sourceCheckout) {
 
 if (!options.versionsOnly) {
   runDaemonChecks();
-  runCredentialChecks();
 }
 
 if (options.release && sourceCheckout) {

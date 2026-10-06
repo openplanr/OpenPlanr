@@ -56,8 +56,6 @@ export const stakeholderReportsConfigSchema = z.object({
 });
 
 export const distributionConfigSchema = z.object({
-  slackWebhookUrl: z.string().optional(),
-  slackChannel: z.string().optional(),
   emailFrom: z.string().optional(),
   emailSmtpHost: z.string().optional(),
   weeklyRecipientAllowlist: z.array(z.string()).optional(),

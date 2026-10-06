@@ -54,12 +54,12 @@ that QT's status mirrors the spec's *evidenced* state, and it is pushed to the c
    creation are plain `.planr/` file edits (frontmatter + a new `quick/QT-*.md`) — no CLI needed,
    so the audit + SAFE local fixes always work. Spec status changes by editing the spec's
    frontmatter `status:` (+ bump `updated:`); the `openplanr` CLI does **not** status-update SPEC ids.
-   The tracker push is the one networked step — see Step 6 for runtime surface discovery.
+   The tracker push is the one networked step — see Step 6 for the connection it uses.
 
 ## Steps
 1. **Branch** — resolve + fast-forward per Rule 1.
-2. **Detect tracker(s)** — infer from `.planr/config.json`, the encrypted credential store, and
-   existing `linearIssueIdentifier` vs `githubIssue` frontmatter (or `--tracker`). Bind the target
+2. **Detect tracker(s)** — infer from `.planr/config.json` and existing
+   `linearIssueIdentifier` vs `githubIssue` frontmatter (or `--tracker`). Bind the target
    tracker(s). If none is configured, still run the audit + report, but skip the push class and say so.
 3. **Audit (read-only).** Run `${CLAUDE_PLUGIN_ROOT}/procedures/mode-detection.md`. For every `.planr/specs/SPEC-*`
    (spec-driven) / feature dir (default): read `status`, count `done/total` tasks (exclude
@@ -80,18 +80,18 @@ that QT's status mirrors the spec's *evidenced* state, and it is pushed to the c
    - ⚙️ **meta** — auto-excluded per Rule 5.
 5. **Apply** — only with `--apply`, only the 🟢 class, after printing the dry-run diff. All edits
    are native file writes to `.planr/` (frontmatter + new `quick/QT-*.md`).
-6. **Push** — only with `--push` (or confirmation). **Discover the push surface at runtime** (don't
-   assume a verb): run `command -v openplanr && openplanr --help` and look for the QT/tracker push
-   subcommand; use it for the configured tracker (Linear via the OpenPlanr Linear integration — the PAT
-   is read from the encrypted credential store; GitHub via the OpenPlanr GitHub path, else `gh issue`).
+6. **Push** — only with `--push` (or confirmation). Push through the host's own connection for the
+   configured tracker: Linear through the host's Linear connection; GitHub through the host's GitHub
+   connection, else `gh issue` when the GitHub CLI is signed in. Never ask for, read or pass a
+   tracker token.
    Push only `QT/EPIC/FEAT/US/TASK` ids — **never** a SPEC (the SPEC has no tracker issue; its QT
-   does). If no push surface is available, print each changed QT + the exact command to run and
+   does). If no connection is available, print each changed QT + the connection to set up and
    **stop short of pushing** (never fail the run). After a successful push: `git add` ONLY the
    touched `.planr/` files (never `-A`), commit (no AI-assistant metadata), and push to the
    canonical branch.
 7. **Report** — counts (specs/QTs total + done + newly-aligned), the 🟢 changes made, the 🟡 list
    with a one-line rationale each, any newly-minted tracker ids, and a `next:` hint (re-run with
-   `--apply` / `--push`, or the specific command for an undiscovered push surface). STOP.
+   `--apply` / `--push`, or the connection to set up when none was available). STOP.
 
 ## Termination
 Done when the report prints. Never push without `--push`/confirmation. Never assert "done" without

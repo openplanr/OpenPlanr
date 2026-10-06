@@ -128,8 +128,8 @@ export function mountDiagramShareControl({
       summary.append(term, detail);
     }
     publication.textContent = status.contents
-      ? `Includes the saved scene, ${status.contents.elements} elements, ${status.contents.connections} connections, labels and reviewable details. Original source bytes, local paths and owner credentials are excluded.`
-      : 'Includes the saved scene, labels, connections and reviewable details. Original source bytes, local paths and owner credentials are excluded.';
+      ? `Includes the saved scene, ${status.contents.elements} elements, ${status.contents.connections} connections, labels and reviewable details. Original source bytes, local paths and owner keys are excluded.`
+      : 'Includes the saved scene, labels, connections and reviewable details. Original source bytes, local paths and owner keys are excluded.';
     detailsBody.textContent = `Published review digest: ${status.localRevision}. Source revision: ${status.sourceDigest ?? 'Unavailable'}.`;
     if (status.deleted || status.revoked) {
       state.textContent = 'This review is no longer accessible.';

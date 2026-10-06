@@ -36,7 +36,7 @@ capability; it never blocks the run. Name every degraded input in `Issues`.
 | Capacity (engineers × working days) | Fit the list and name the overflow | Ask once; default 1 engineer × 10 days, stated in the return |
 | Previous sprint or refinement note (`.planr/sprints/SPRINT-NNN/refinement.json`) | Carry `leftovers`; `openplanr sprint diff` is possible | First run, no diff |
 | Last Operate cycle | Rank its unfinished actions alongside | Skipped silently |
-| Linear or GitHub connector | Push statuses on approval, read PR state | Local files only; report the external step as not run |
+| Linear or GitHub connection ([tracker connections](references/tracker-connections.md)) | Update linked issues on approval, read PR state | Local files only; report the external step as not run and name the connection to add |
 
 ## Step 0: Frame the run
 
@@ -135,9 +135,10 @@ openplanr sprint apply SPRINT-NNN --dry-run          # show the status and prior
 openplanr sprint apply SPRINT-NNN --yes --commit     # one commit: chore(planr): refine backlog for SPRINT-NNN
 ```
 
-Where a connector is configured, push each changed item afterwards
-(`openplanr linear push <id>`, `openplanr github push <id>`) and report the ones that
-were not pushed. When the CLI is unavailable, apply the same status changes with
+Then update the issue linked to each changed item through the host's Linear or
+GitHub connection, with the status mapping in
+[tracker connections](references/tracker-connections.md), and report the items that
+were not updated. When the CLI is unavailable, apply the same status changes with
 the repository's own vocabulary and commit them with the same message.
 
 Close a finished sprint with `openplanr sprint close SPRINT-NNN`; it records the

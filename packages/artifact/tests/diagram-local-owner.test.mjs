@@ -272,7 +272,7 @@ test('review capability and HTTP registration cannot acquire owner read or write
   });
   const registered = await request(`${origin}/internal/v1/sessions`, {
     method: 'POST',
-    headers: { authorization: `Bearer ${server.controlToken}`, 'content-type': 'application/json' },
+    headers: { 'x-openplanr-control': server.controlToken, 'content-type': 'application/json' },
     body: JSON.stringify({ envelope, cwd: root, owner: true, root, slug: 'checkout' }),
   });
   assert.equal(registered.status, 201);
@@ -310,7 +310,7 @@ test('review capability and HTTP registration cannot acquire owner read or write
       await request(`${origin}/internal/v1/owner-sessions`, {
         method: 'POST',
         headers: {
-          authorization: `Bearer ${server.controlToken}`,
+          'x-openplanr-control': server.controlToken,
           'content-type': 'application/json',
         },
         body: '{}',

@@ -162,7 +162,7 @@ describe('legacy plaintext migration', () => {
   });
 });
 
-it('serializes CLI migration with a separate Design setup process without losing either owner', async () => {
+it('serializes CLI migration with another legacy credential writer without losing either owner', async () => {
   const directory = await mkdtemp(join(tmpdir(), 'planr-credential-race-'));
   await chmod(directory, 0o700);
   const credentials = join(directory, 'credentials.json');
@@ -185,11 +185,9 @@ it('serializes CLI migration with a separate Design setup process without losing
     child = spawn(
       process.execPath,
       [
-        resolve('../pipeline/lib/design-engine/cli.mjs'),
-        'setup',
-        '--key',
+        resolve('tests/fixtures/legacy-credential-writer.mjs'),
+        'openai_api_key',
         'sk-test-owner-only',
-        '--no-smoke',
       ],
       {
         env: { ...process.env, PLANR_HOME: directory },
@@ -208,7 +206,7 @@ it('serializes CLI migration with a separate Design setup process without losing
       )
     ) {
       if (Date.now() >= deadline)
-        throw new Error('Design setup did not join the shared credential queue.');
+        throw new Error('The other writer did not join the shared credential queue.');
       await delay(20);
     }
     // Keep migration suspended while the other process attempts its full read/modify/write.

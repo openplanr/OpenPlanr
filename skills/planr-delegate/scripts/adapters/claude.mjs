@@ -18,9 +18,16 @@ const PROVIDER_VARIABLES = [
   'CLAUDE_CODE_USE_VERTEX',
   'CLAUDE_CODE_USE_FOUNDRY',
 ];
+const ROUTING_VARIABLES = ['ANTHROPIC_BASE_URL', ...PROVIDER_VARIABLES];
 
-// These values stay in trusted memory. Callers expose only source labels and origins.
-export async function readClaudeSettingsEnvironment(profile, env, cwd, options = {}) {
+function routingVariables(env) {
+  return Object.fromEntries(
+    ROUTING_VARIABLES.filter((name) => Object.hasOwn(env, name)).map((name) => [name, env[name]]),
+  );
+}
+
+// Keeps only routing variables from settings files; callers expose source labels and origins.
+async function readClaudeRoutingSettings(profile, env, cwd, options = {}) {
   const managedRoot =
     options.managedRoot ??
     (process.platform === 'darwin'
@@ -100,7 +107,7 @@ export async function readClaudeSettingsEnvironment(profile, env, cwd, options =
         throw new AdapterError('E_DESTINATION_UNKNOWN', 'Claude routing environment is malformed.');
       inspected.push({
         source,
-        env: settings.env ?? {},
+        env: routingVariables(settings.env ?? {}),
         ...(settings.policyHelper ? { opaqueRouting: true } : {}),
       });
     } catch (error) {
@@ -122,7 +129,7 @@ export async function readClaudeSettingsEnvironment(profile, env, cwd, options =
 }
 
 export async function resolveClaudeRouting(profile, env, cwd, options) {
-  const settings = await readClaudeSettingsEnvironment(profile, env, cwd, options);
+  const settings = await readClaudeRoutingSettings(profile, env, cwd, options);
   const sources = [{ source: 'parent environment', env }, ...settings];
   const candidates = [];
   const providerSources = [];

@@ -1,37 +1,30 @@
 /**
  * Design-engine rounds end to end through `openplanr-pipeline design-engine`: variants are
- * generated (GPT Image through a stubbed OpenAI API, or recorded claude-svg), boarded on a real
- * daemon, and checked in the documents the board shows the reviewer.
+ * recorded claude-svg sheets or PNG images placed in the session, boarded on a real daemon, and
+ * checked in the documents the board shows the reviewer.
  */
 
 import assert from 'node:assert/strict';
 import { execFile } from 'node:child_process';
-import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { test } from 'node:test';
-import { fileURLToPath, pathToFileURL } from 'node:url';
+import { fileURLToPath } from 'node:url';
 import { promisify } from 'node:util';
 import { PNG } from 'pngjs';
 
 import { findRunningDaemon, killRunningDaemon } from '../../lib/design-engine/daemon.mjs';
-import {
-  DEFAULT_IMAGE_MODEL,
-  DEFAULT_MODEL,
-  DEFAULT_QUALITY,
-  DEFAULT_SIZE,
-} from '../../lib/design-engine/providers/openai.mjs';
 
 const execFileP = promisify(execFile);
 const here = dirname(fileURLToPath(import.meta.url));
 const PIPELINE_BIN = join(here, '..', '..', 'bin', 'openplanr-pipeline.mjs');
-const OPENAI_STUB = pathToFileURL(join(here, 'openai-stub.mjs')).href;
 const runBrowser = process.env.PLANR_BROWSER_TESTS === '1';
 
-const GPT_IMAGE_VARIANTS = [
-  { id: 'A', brief: 'Pricing hero, three tiers, calm indigo', width: 1024, height: 1024 },
-  { id: 'B', brief: 'Pricing hero, comparison table first', width: 1536, height: 1024 },
-  { id: 'C', brief: 'Pricing hero, one plan and a calculator', width: 1024, height: 1536 },
+const IMAGE_VARIANTS = [
+  { id: 'A', width: 1024, height: 1024 },
+  { id: 'B', width: 1536, height: 1024 },
+  { id: 'C', width: 1024, height: 1536 },
 ];
 const COLORS = { A: [79, 70, 229], B: [13, 148, 136], C: [234, 88, 12] };
 
@@ -53,11 +46,9 @@ function roundFixture(t) {
     home: join(root, 'home'),
     cwd: join(root, 'cwd'),
     session: join(root, 'session'),
-    stub: join(root, 'openai'),
   };
-  for (const dir of [paths.home, paths.cwd, paths.stub]) mkdirSync(dir);
+  for (const dir of [paths.home, paths.cwd]) mkdirSync(dir);
   const env = { ...process.env, PLANR_HOME: paths.home };
-  delete env.OPENAI_API_KEY;
   t.after(async () => {
     try {
       const running = await findRunningDaemon({ env });
@@ -82,53 +73,21 @@ async function designEngine(args, { env, cwd }) {
   }
 }
 
-/** Generates the three variants in parallel, as the loop's per-variant agents do, then boards them. */
-async function gptImageRound(t) {
+/** Places one PNG per variant in the session directory, as images from any tool, then boards them. */
+async function imageRound(t) {
   const round = roundFixture(t);
+  mkdirSync(round.session);
   const pngs = {};
-  const images = {};
-  for (const { id, brief, width, height } of GPT_IMAGE_VARIANTS) {
+  for (const { id, width, height } of IMAGE_VARIANTS) {
     pngs[id] = solidPng(width, height, COLORS[id]);
-    writeFileSync(join(round.stub, `${id}.png`), pngs[id]);
-    images[brief] = `${id}.png`;
+    writeFileSync(join(round.session, `variant-${id}.png`), pngs[id]);
   }
-  writeFileSync(join(round.stub, 'images.json'), `${JSON.stringify(images)}\n`);
-  const env = {
-    ...round.env,
-    OPENAI_API_KEY: 'sk-openplanr-test-stub',
-    OPENPLANR_OPENAI_STUB_DIR: round.stub,
-    NODE_OPTIONS: [process.env.NODE_OPTIONS, `--import=${OPENAI_STUB}`].filter(Boolean).join(' '),
-  };
-  const generated = await Promise.all(
-    GPT_IMAGE_VARIANTS.map(({ id, brief, width, height }) =>
-      designEngine(
-        [
-          'generate',
-          '--provider',
-          'openai',
-          '--brief',
-          brief,
-          '--variant',
-          id,
-          '--target',
-          'pricing',
-          '--project',
-          'round',
-          '--session-dir',
-          round.session,
-          ...(`${width}x${height}` === DEFAULT_SIZE ? [] : ['--size', `${width}x${height}`]),
-        ],
-        { env, cwd: round.cwd },
-      ),
-    ),
-  );
-  const sessionFiles = readdirSync(round.session).sort();
   const board = await designEngine(['board', '--dir', round.session, '--id', 'round-pricing'], {
-    env,
+    env: round.env,
     cwd: round.cwd,
   });
   const url = /^BOARD_URL: (\S+)$/m.exec(board.stderr)?.[1];
-  return { round, pngs, generated, sessionFiles, board, url };
+  return { pngs, board, url };
 }
 
 async function boardArtifacts(url) {
@@ -155,71 +114,14 @@ async function assertBoardShowsImages(url, expected) {
   }
 }
 
-test('a GPT Image round reaches the board as one image per variant', async (t) => {
-  const { round, pngs, generated, sessionFiles, board, url } = await gptImageRound(t);
-
-  for (const [index, result] of generated.entries()) {
-    const { id } = GPT_IMAGE_VARIANTS[index];
-    assert.equal(result.code, 0, `generate ${id} failed: ${result.stderr}`);
-    const { ok, provider, variant, outputPath } = JSON.parse(result.stdout);
-    assert.deepEqual(
-      { ok, provider, variant, outputPath },
-      {
-        ok: true,
-        provider: 'openai',
-        variant: id,
-        outputPath: join(round.session, `variant-${id}.png`),
-      },
-    );
-  }
-  const requests = readFileSync(join(round.stub, 'requests.jsonl'), 'utf8')
-    .trim()
-    .split('\n')
-    .map((line) => JSON.parse(line))
-    .sort((left, right) => left.brief.localeCompare(right.brief));
-  assert.deepEqual(
-    requests,
-    [...GPT_IMAGE_VARIANTS]
-      .sort((left, right) => left.brief.localeCompare(right.brief))
-      .map(({ brief, width, height }) => ({
-        model: DEFAULT_MODEL,
-        tool: {
-          type: 'image_generation',
-          model: DEFAULT_IMAGE_MODEL,
-          size: `${width}x${height}`,
-          quality: DEFAULT_QUALITY,
-        },
-        brief,
-        previousResponseId: null,
-      })),
-    'one image-generation request per variant, on the default models',
-  );
-  assert.deepEqual(
-    sessionFiles,
-    [
-      '.gitignore',
-      'session-A.json',
-      'session-B.json',
-      'session-C.json',
-      'variant-A.png',
-      'variant-B.png',
-      'variant-C.png',
-    ],
-    'generate writes each image and its session, and no viewer files',
-  );
-  for (const { id } of GPT_IMAGE_VARIANTS) {
-    assert.ok(
-      readFileSync(join(round.session, `variant-${id}.png`)).equals(pngs[id]),
-      `variant-${id}.png holds the generated image`,
-    );
-  }
-
+test('an image round reaches the board as one image per variant', async (t) => {
+  const { pngs, board, url } = await imageRound(t);
   assert.equal(board.code, 0, `board failed: ${board.stderr}`);
   assert.ok(url, `board printed no BOARD_URL: ${board.stderr}`);
   assert.deepEqual(JSON.parse(board.stdout).variants, ['A', 'B', 'C']);
   await assertBoardShowsImages(
     url,
-    GPT_IMAGE_VARIANTS.map(({ id, width, height }) => ({
+    IMAGE_VARIANTS.map(({ id, width, height }) => ({
       id,
       width,
       height,
@@ -230,14 +132,14 @@ test('a GPT Image round reaches the board as one image per variant', async (t) =
   const { sources } = await (await fetch(new URL('api/sources', url))).json();
   assert.deepEqual(
     sources.map(({ artifactId, kind }) => [artifactId, kind]),
-    GPT_IMAGE_VARIANTS.map(({ id }) => [id, 'png']),
+    IMAGE_VARIANTS.map(({ id }) => [id, 'png']),
   );
   for (const source of sources) {
     const download = await fetch(new URL(source.url, url));
     assert.equal(download.status, 200, `variant ${source.artifactId} source downloads`);
     assert.ok(
       Buffer.from(await download.arrayBuffer()).equals(pngs[source.artifactId]),
-      `variant ${source.artifactId} downloads the generated PNG`,
+      `variant ${source.artifactId} downloads its PNG`,
     );
   }
 });
@@ -289,11 +191,11 @@ test('a recorded claude-svg round reaches the board as the SVG', async (t) => {
   ]);
 });
 
-test('the board shows every GPT Image variant in the browser', {
+test('the board shows every image variant in the browser', {
   skip: runBrowser ? false : 'browser-gated: set PLANR_BROWSER_TESTS=1',
   timeout: 90_000,
 }, async (t) => {
-  const { board, url } = await gptImageRound(t);
+  const { board, url } = await imageRound(t);
   assert.equal(board.code, 0, `board failed: ${board.stderr}`);
   const { launchBrowser } = await import('../../../../tests/support/browser-launcher.mjs');
   const browser = await launchBrowser({ engine: 'chromium' });
@@ -302,7 +204,7 @@ test('the board shows every GPT Image variant in the browser', {
     const errors = [];
     page.on('pageerror', (error) => errors.push(error.message));
     await page.goto(url);
-    for (const { id, width, height } of GPT_IMAGE_VARIANTS) {
+    for (const { id, width, height } of IMAGE_VARIANTS) {
       await page.locator(`[role="tab"][data-artifact-id="${id}"]`).click();
       const frame = page.locator(
         `iframe[data-planr-artifact-frame="${id}"][data-planr-bridge-trusted="true"]`,

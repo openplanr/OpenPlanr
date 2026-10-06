@@ -367,14 +367,21 @@ test('control endpoints require the private token and enforce byte-counted body 
 
   const wrong = await request(port, '/internal/v1/sessions', {
     method: 'POST',
-    headers: { authorization: `Bearer ${'A'.repeat(43)}`, 'content-type': 'application/json' },
+    headers: { 'x-openplanr-control': 'A'.repeat(43), 'content-type': 'application/json' },
     body: '{}',
   });
   assert.equal(wrong.status, 403);
 
-  const invalid = await request(port, '/internal/v1/sessions', {
+  const authorizationHeader = await request(port, '/internal/v1/sessions', {
     method: 'POST',
     headers: { authorization: `Bearer ${state.controlToken}`, 'content-type': 'application/json' },
+    body: '{}',
+  });
+  assert.equal(authorizationHeader.status, 403);
+
+  const invalid = await request(port, '/internal/v1/sessions', {
+    method: 'POST',
+    headers: { 'x-openplanr-control': state.controlToken, 'content-type': 'application/json' },
     body: '{',
   });
   assert.equal(invalid.status, 400);
@@ -382,7 +389,7 @@ test('control endpoints require the private token and enforce byte-counted body 
   const oversized = await request(port, '/internal/v1/sessions', {
     method: 'POST',
     headers: {
-      authorization: `Bearer ${state.controlToken}`,
+      'x-openplanr-control': state.controlToken,
       'content-type': 'application/json',
       'content-length': String(ARTIFACT_REVIEW_MAX_CONTROL_BYTES + 1),
     },

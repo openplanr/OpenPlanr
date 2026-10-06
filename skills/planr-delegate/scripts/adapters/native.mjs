@@ -122,7 +122,7 @@ export function safeNativeDiagnostic(value, destination) {
 }
 
 const ROUTING_SOURCE =
-  /^(?:parent environment|user settings|project settings|project local settings|managed file settings|managed fragment settings(?: \d{1,2})?)(?:: (?:ANTHROPIC_BASE_URL|CLAUDE_CODE_USE_BEDROCK|CLAUDE_CODE_USE_VERTEX|CLAUDE_CODE_USE_FOUNDRY|policyHelper|ANTHROPIC_AUTH_TOKEN|ANTHROPIC_API_KEY))?$/u;
+  /^(?:parent environment|user settings|project settings|project local settings|managed file settings|managed fragment settings(?: \d{1,2})?)(?:: (?:ANTHROPIC_BASE_URL|CLAUDE_CODE_USE_BEDROCK|CLAUDE_CODE_USE_VERTEX|CLAUDE_CODE_USE_FOUNDRY|policyHelper))?$/u;
 
 function safeRoutingDestination(value) {
   if (value?.class === 'native-managed' && value.origin === 'native-managed')

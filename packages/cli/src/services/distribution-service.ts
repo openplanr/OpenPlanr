@@ -1,19 +1,11 @@
 /**
- * Delivery channels for stakeholder reports (GitHub issue push; Slack webhooks; email stub).
+ * Delivery channels for stakeholder reports (GitHub issue push; email stub).
  */
 
 import type { DistributionResult, OpenPlanrConfig } from '../models/types.js';
 import { PLANNING_FOLDER } from '../utils/constants.js';
 import { messageOf } from '../utils/error-message.js';
 import { createIssue, ensureLabel } from './github-service.js';
-
-const SLACK_TEXT_MAX = 12000;
-
-function truncateForSlack(text: string): string {
-  const t = text.trim();
-  if (t.length <= SLACK_TEXT_MAX) return t;
-  return `${t.slice(0, SLACK_TEXT_MAX)}\n\n…(truncated; full report saved locally)`;
-}
 
 export async function pushReportAsGitHubIssue(args: {
   title: string;
@@ -41,68 +33,6 @@ export async function pushReportAsGitHubIssue(args: {
       channel: 'github_issue',
       ok: false,
       message: messageOf(err),
-    };
-  }
-}
-
-export async function pushReportToSlack(
-  config: OpenPlanrConfig,
-  markdown: string,
-  args?: { dryRun?: boolean },
-): Promise<DistributionResult> {
-  const url = config.distribution?.slackWebhookUrl;
-
-  if (args?.dryRun) {
-    if (!url) {
-      return {
-        channel: 'slack',
-        ok: true,
-        message: `Dry run: no Slack webhook in config (no POST). Add \`distribution.slackWebhookUrl\` to ${PLANNING_FOLDER}/config.json, then run without --dry-run to send.`,
-      };
-    }
-    return {
-      channel: 'slack',
-      ok: true,
-      message: `Dry run: would POST ~${Math.min(markdown.length, SLACK_TEXT_MAX)} chars to your Slack webhook (no request sent).`,
-    };
-  }
-
-  if (!url) {
-    return {
-      channel: 'slack',
-      ok: false,
-      message: `Slack is not configured. Set \`distribution.slackWebhookUrl\` in ${PLANNING_FOLDER}/config.json (or use --push github).`,
-    };
-  }
-
-  try {
-    const payload = { text: truncateForSlack(markdown) };
-
-    const res = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-    });
-
-    const bodyText = await res.text().catch(() => '');
-    if (!res.ok) {
-      return {
-        channel: 'slack',
-        ok: false,
-        message: `Slack webhook failed (${res.status}): ${bodyText || res.statusText}. Check the webhook URL and app permissions.`,
-      };
-    }
-
-    return {
-      channel: 'slack',
-      ok: true,
-      message: 'Posted report to Slack.',
-    };
-  } catch (err) {
-    return {
-      channel: 'slack',
-      ok: false,
-      message: `Slack request failed: ${messageOf(err)}`,
     };
   }
 }

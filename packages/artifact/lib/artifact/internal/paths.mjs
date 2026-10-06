@@ -4,7 +4,6 @@
  * Exploration artifacts live in USER space, never the repo:
  *   ~/.planr/designs/<project>/<target>-<date>/   ← sessions, variants, boards, approved.json
  *   ~/.planr/designs/<project>/taste-profile.json ← per-project taste memory
- *   ~/.planr/credentials.json                     ← provider keys (0600)
  *   ~/.planr/design-daemon/                       ← daemon port + board registry
  *
  * Only APPROVED outputs are copied into the repo by the loop procedures.
@@ -15,10 +14,6 @@ import { join } from 'node:path';
 import { planrHome } from './planr-home.mjs';
 
 export { planrHome };
-
-export function credentialsPath(env = process.env) {
-  return join(planrHome(env), 'credentials.json');
-}
 
 export function designsRoot(env = process.env) {
   return join(planrHome(env), 'designs');

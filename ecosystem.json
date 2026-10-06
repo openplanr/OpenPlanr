@@ -148,7 +148,7 @@
   "catalogs": {
     "commands": {
       "path": "packages/protocol/registries/commands.json",
-      "digest": "sha256:7c0737ed016e3a5bfd4a81bcc4450c44faee0a334c30ee4867320d6c6d2aabfe",
+      "digest": "sha256:7b8e2bcbdccfab4628564f7c905cb6f6d8d31d2afea93ca74f78703c966a2723",
       "rootCommands": 39,
       "pipelineMachineLeaves": 31,
       "frozenClaudeDocuments": 8,
@@ -251,7 +251,7 @@
     },
     "skills": {
       "path": "packages/protocol/registries/skills.json",
-      "digest": "sha256:d41cba8ea6c0eae042f2d1878b23c8366c3c609b39ca558315053726de84c0cd",
+      "digest": "sha256:31de2a72fb3a8f8916db47e418c6f26aa3a3a931f4f1c388916278c3554a0d52",
       "count": 28,
       "ids": [
         "planr-artifact",
@@ -288,7 +288,7 @@
     },
     "roles": {
       "path": "packages/protocol/registries/roles.json",
-      "digest": "sha256:7b1382929c437948e57a03484177ca5a9cfbbe2757a7cd9735dc02bef082da1d",
+      "digest": "sha256:cd06e8ab4ff8b6334820a600f548c87368f3a979a082d9c13d22e33cd1e24f6a",
       "count": 9,
       "ids": [
         "planr-backend",
@@ -310,7 +310,7 @@
     },
     "taskKinds": {
       "path": "packages/protocol/registries/task-kinds.json",
-      "digest": "sha256:f146160e6253c37b523a9a892141c8652cb75b19662749df82cb7146757a5044",
+      "digest": "sha256:6393b1c4d1c3e2371ee4290fab44bc9cc4d21d819e28adf6271de43f434300b2",
       "count": 7
     },
     "outputs": {
@@ -349,8 +349,8 @@
     ],
     "generatedAssets": {
       "path": "adapters/manifests/generated-assets.json",
-      "digest": "sha256:539a8b70638f2ebc0adbf0e75dc6302983e4fca51e4cb752bf45aed001d52732",
-      "count": 1598
+      "digest": "sha256:14a7fb43fad1b3ce080b907955475ee551729bc05d86a7351834cb6e8a7e3959",
+      "count": 1616
     }
   },
   "schemas": {
@@ -434,7 +434,7 @@
   "generatedSurfaces": {
     "artifactShell": {
       "path": "packages/artifact/lib/artifact/ui/generated/artifact-shell-assets.json",
-      "digest": "sha256:59b6ad03dea805b0e24c57400d0ab6a382cb8c944ffd1977b7e957cfadb2cc0c",
+      "digest": "sha256:9468c5ef204a26460a5048198a1c6a6762197b8e45bbd9dff74701a9516f6ead",
       "shellVersion": "1.2.1",
       "assetCount": 8
     },

@@ -6,7 +6,7 @@
   "inputs": [
     {
       "path": "adapters/manifests/generated-assets.json",
-      "digest": "sha256:539a8b70638f2ebc0adbf0e75dc6302983e4fca51e4cb752bf45aed001d52732"
+      "digest": "sha256:14a7fb43fad1b3ce080b907955475ee551729bc05d86a7351834cb6e8a7e3959"
     },
     {
       "path": "apps/dashboard/package.json",
@@ -50,7 +50,7 @@
     },
     {
       "path": "packages/protocol/registries/commands.json",
-      "digest": "sha256:7c0737ed016e3a5bfd4a81bcc4450c44faee0a334c30ee4867320d6c6d2aabfe"
+      "digest": "sha256:7b8e2bcbdccfab4628564f7c905cb6f6d8d31d2afea93ca74f78703c966a2723"
     },
     {
       "path": "packages/protocol/registries/output-paths.json",
@@ -62,7 +62,7 @@
     },
     {
       "path": "packages/protocol/registries/roles.json",
-      "digest": "sha256:7b1382929c437948e57a03484177ca5a9cfbbe2757a7cd9735dc02bef082da1d"
+      "digest": "sha256:cd06e8ab4ff8b6334820a600f548c87368f3a979a082d9c13d22e33cd1e24f6a"
     },
     {
       "path": "packages/protocol/registries/rules.json",
@@ -70,11 +70,11 @@
     },
     {
       "path": "packages/protocol/registries/skills.json",
-      "digest": "sha256:d41cba8ea6c0eae042f2d1878b23c8366c3c609b39ca558315053726de84c0cd"
+      "digest": "sha256:31de2a72fb3a8f8916db47e418c6f26aa3a3a931f4f1c388916278c3554a0d52"
     },
     {
       "path": "packages/protocol/registries/task-kinds.json",
-      "digest": "sha256:f146160e6253c37b523a9a892141c8652cb75b19662749df82cb7146757a5044"
+      "digest": "sha256:6393b1c4d1c3e2371ee4290fab44bc9cc4d21d819e28adf6271de43f434300b2"
     },
     {
       "path": "packages/protocol/registry/adapters.json",
@@ -110,7 +110,7 @@
     },
     {
       "path": "skills/planr-artifact/SKILL.md",
-      "digest": "sha256:667d6be08c6b1fdc9660698f828ee51752ed20be23345b192d69da4074671d34"
+      "digest": "sha256:f932ce29b1266a01ceb8bfa0af9cc50bf0ebf744c611601e5e3fb15972e02b60"
     },
     {
       "path": "skills/planr-browser-qa/SKILL.md",
@@ -210,15 +210,15 @@
     },
     {
       "path": "skills/planr-sprint/SKILL.md",
-      "digest": "sha256:5127dbe840f63389c0e4546904d1aaae6b4a45c8a428ef54204fe2ad1e6a71f2"
+      "digest": "sha256:2dca1abeafb11a4d33a7ec58d3a52b4db5ba8b59db940374912f4b7c0ef7c983"
     },
     {
       "path": "skills/planr-status/SKILL.md",
-      "digest": "sha256:442befdcb911e4f577e0cf6213cf5cfdbdc97f7093dcad301399b710d4f6e3f3"
+      "digest": "sha256:d1d4ef34075312827cf9a4a67896977ed1608c1bf8881b8a8ed164340034c0cc"
     },
     {
       "path": "skills/planr-sync/SKILL.md",
-      "digest": "sha256:b5a239b26d4946a4c144622eca31d64e743c6dd00a96efa68eca2bc05e65e3ff"
+      "digest": "sha256:0e63252ba06b2842f7d6005782056100930a1559ae393164d7afd615df63384b"
     },
     {
       "path": "skills/registry.json",
@@ -236,7 +236,7 @@
     },
     {
       "path": "adapters/manifests/codex-plugin-content.json",
-      "digest": "sha256:a18aebb62475c8be8fe6b55bd561233bd83fd9fecfeea84023de1ad977f98e8f"
+      "digest": "sha256:1d269eb26eba6defceedf4714ce9edd8f3bf7f2a280ddf5637a8f2e27eff2e64"
     },
     {
       "path": "docs/generated/adapters.md",
@@ -248,11 +248,11 @@
     },
     {
       "path": "docs/generated/skills.md",
-      "digest": "sha256:a03d358f79ff6fe64bc8729a1e50ed9113a9faed44f7fe63b146a01076c06fed"
+      "digest": "sha256:bfd17fff8ff599a3de8dc36621f1cd05f4e228cbdfe8702089047cb435741f1d"
     },
     {
       "path": "ecosystem.json",
-      "digest": "sha256:fc5b23b31b6534ea53fce33bce6617a9ab9d568405f6ea36e096dd4885083284"
+      "digest": "sha256:992b47d32fe8e81a8e4e8e67d2b684d6e8bdf107583e4d1ed8f4ecbe621f3f4a"
     }
   ]
 }

@@ -97,6 +97,7 @@ const operateAdvisorDestinations = Object.freeze([
   'planr-cmo-review',
   'planr-coo-review',
 ]);
+const trackerConnectionDestinations = Object.freeze(['planr-sync', 'planr-sprint', 'planr-status']);
 const operateValidatorDestinations = Object.freeze([
   'planr-operate',
   'planr-chair-review',
@@ -159,6 +160,11 @@ const sharedSkillResources = Object.freeze([
   ...operateAdvisorDestinations.map((skillId) => ({
     source: 'skills/shared/operate-advisor-contract.md',
     destination: `skills/${skillId}/references/operate-advisor-contract.md`,
+    executable: false,
+  })),
+  ...trackerConnectionDestinations.map((skillId) => ({
+    source: 'skills/shared/tracker-connections.md',
+    destination: `skills/${skillId}/references/tracker-connections.md`,
     executable: false,
   })),
   {
