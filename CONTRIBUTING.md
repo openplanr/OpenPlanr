@@ -146,10 +146,11 @@ Before pushing a branch that touches several packages, `npm run verify:ci` reads
 (`--only` and `--skip` take the workflow's job ids, which `--list` prints). It runs the
 build job's `npm run generate` and `npm run build` once in place of restoring its outputs,
 runs every matrix entry in turn, and runs a job with a Node matrix once: its entry for your
-Node, else its entry for the build job's Node, so `compatibility` runs only on Node 20 or
-22. It is slower than `npm run verify` and catches the suites `verify` does not run:
-workspace lint, the full CLI test tree, the heavy and Operate suites, and the package tests
-of every workspace.
+Node, else its entry for the build job's Node, so `compatibility` runs its Node 22 entry on
+Node 22 and its Node 24 entry otherwise. It does not replay `CI passed`, the job that fails
+unless every other Workspace CI job succeeded. It is slower than `npm run verify` and
+catches the suites `verify` does not run: workspace lint, the full CLI test tree, the heavy
+and Operate suites, and the package tests of every workspace.
 
 ### Browser tests
 

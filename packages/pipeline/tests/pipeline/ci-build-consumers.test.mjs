@@ -1,14 +1,16 @@
 import assert from 'node:assert/strict';
+import { spawnSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 import { load } from 'js-yaml';
+import { AGGREGATE_JOB } from '../../../../scripts/run-ci-parity.mjs';
 
 const root = fileURLToPath(new URL('../../../../', import.meta.url));
 const { jobs } = load(readFileSync(resolve(root, '.github/workflows/ci.yml'), 'utf8'));
-const consumers = Object.entries(jobs).filter(([, job]) =>
-  [job.needs ?? []].flat().includes('build'),
+const consumers = Object.entries(jobs).filter(
+  ([id, job]) => id !== AGGREGATE_JOB && [job.needs ?? []].flat().includes('build'),
 );
 const GUARD =
   /^if \[ "\$BUILD_RESULT" != success \]; then\n\s+echo "::error::[^\n]+"\n\s+exit 1\nfi\n?$/u;
@@ -45,4 +47,25 @@ test('every job that needs the build restores its outputs before any test comman
       assert.match(step.run.trim(), SETUP, `${id} runs "${step.run.trim()}" before the restore`);
     }
   }
+});
+
+test('the CI passed gate needs every blocking job and fails unless each one succeeded', () => {
+  const gate = jobs[AGGREGATE_JOB];
+  assert.equal(gate.name, 'CI passed');
+  assert.equal(gate.if, '${{ always() }}', 'A cancelled run must still report a failed gate');
+  const blocking = Object.entries(jobs)
+    .filter(([id, job]) => id !== AGGREGATE_JOB && job['continue-on-error'] !== true)
+    .map(([id]) => id);
+  assert.deepEqual([...gate.needs].sort(), blocking.sort());
+  const [check] = gate.steps;
+  const verdict = (needs) =>
+    spawnSync('bash', ['-e', '-c', check.run], {
+      env: { ...process.env, NEEDS: JSON.stringify(needs, null, 2) },
+      encoding: 'utf8',
+    }).status;
+  const all = Object.fromEntries(gate.needs.map((id) => [id, { result: 'success', outputs: {} }]));
+  assert.equal(verdict(all), 0);
+  for (const result of ['failure', 'cancelled', 'skipped'])
+    assert.equal(verdict({ ...all, [gate.needs.at(-1)]: { result, outputs: {} } }), 1, result);
+  assert.equal(verdict({}), 1, 'A gate that reads no results must fail');
 });

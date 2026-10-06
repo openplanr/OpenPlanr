@@ -4,7 +4,11 @@ import { resolve } from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 import { load } from 'js-yaml';
-import { assertContributorRuntime, planLocalCi } from '../../../../scripts/run-ci-parity.mjs';
+import {
+  AGGREGATE_JOB,
+  assertContributorRuntime,
+  planLocalCi,
+} from '../../../../scripts/run-ci-parity.mjs';
 
 const root = fileURLToPath(new URL('../../../../', import.meta.url));
 const workflow = load(readFileSync(resolve(root, '.github/workflows/ci.yml'), 'utf8'));
@@ -25,13 +29,13 @@ const withStep = (step) => {
   return changed;
 };
 
-test('local parity plans every Workspace CI job except the build producer', () => {
+test('local parity plans every Workspace CI job except the build producer and the gate', () => {
   const plan = planLocalCi(workflow, 24);
   assert.equal(plan.producer, 'build');
   assert.deepEqual(plan.prepare, ['npm run generate', 'npm run build']);
   assert.deepEqual(
     plan.jobs.map(({ id }) => id),
-    Object.keys(workflow.jobs).filter((id) => id !== 'build'),
+    Object.keys(workflow.jobs).filter((id) => id !== 'build' && id !== AGGREGATE_JOB),
   );
 });
 

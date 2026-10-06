@@ -31,6 +31,8 @@ const NODE_AXIS = /^\$\{\{\s*matrix\.([\w-]+)\s*\}\}$/u;
 const CONSUMER_NODE_TEST = /^node --test(?:\s+[\w./=-]+)*$/u;
 const CONTRIBUTOR_NODE_RANGE = JSON.parse(readFileSync(resolve(root, 'package.json'), 'utf8'))
   .engines.node;
+/** The required status job: it only reads the other jobs' results, so it is not replayed. */
+export const AGGREGATE_JOB = 'ci-passed';
 
 /** The local command runner needs the contributor runtime, even for a consumer CI job. */
 export function assertContributorRuntime(version) {
@@ -87,7 +89,9 @@ export function planLocalCi(workflow, nodeMajor) {
     producer,
     buildNode: context.buildNode,
     prepare: context.prepare,
-    jobs: entries.filter(([id]) => id !== producer).map(([id, job]) => planJob(id, job, context)),
+    jobs: entries
+      .filter(([id]) => id !== producer && id !== AGGREGATE_JOB)
+      .map(([id, job]) => planJob(id, job, context)),
   };
 }
 
