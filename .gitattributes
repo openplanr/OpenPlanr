@@ -3,7 +3,6 @@ adapters/** linguist-generated=true
 packages/pipeline/lib/generated/** linguist-generated=true
 packages/pipeline/registry/generated-skill-assets.json linguist-generated=true
 packages/protocol/src/generated/** linguist-generated=true
-skills/planr-*/contribution.json linguist-generated=true
 
 # Markdown uses trailing spaces for intentional hard line breaks.
 *.md whitespace=-blank-at-eol

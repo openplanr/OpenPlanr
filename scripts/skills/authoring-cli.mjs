@@ -129,11 +129,6 @@ export function runAuthoringCommand(command) {
       ? [
           `${command} ok: ${result.skillId}@${result.skillVersion} (${result.sourceFormat})`,
           `  ${result.hosts.length} hosts, ${result.resources.length} support resources, ${result.entrypointBytes} entrypoint bytes`,
-          ...(result.legacyFiles.length > 0
-            ? [
-                `  ${result.legacyFiles.length} dormant composed-v1 files excluded from host packages`,
-              ]
-            : []),
           ...result.outputs.map(({ host, entrypoint }) => `  ${host} ${entrypoint}`),
         ]
       : selected.format(result);

@@ -1,7 +1,6 @@
-<!-- {{AGENTS_ROOT}}/shared/modes/default/devops.md: default-mode-only content for devops-agent. Loaded by agents/devops-agent.md when MODE=default. T-002 of SPEC-002. -->
+<!-- Default-mode context for planr-devops. Loaded when the caller passes MODE=default. -->
 
-> **Mode:** default
-> **Loaded by:** `agents/devops-agent.md` when the orchestrator passes `MODE=default` (no `SPEC_DIR`).
+> **Mode:** default (no `SPEC_DIR`).
 
 ## Context locations
 

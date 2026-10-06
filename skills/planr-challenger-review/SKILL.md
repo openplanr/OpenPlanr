@@ -2,7 +2,6 @@
 name: planr-challenger-review
 description: "Challenge an Operate cycle's claims, alternatives, downside, and confidence. Use when assumptions or executive consensus need an independent stress test."
 license: MIT
-allowed-tools: "Read, Grep, Glob, Edit(./.planr/operate/**)"
 ---
 
 # OpenPlanr Challenger Review
@@ -18,7 +17,12 @@ Use `<cycle-dir>`, `<brief-path>`, `<output-path>`, and `<scope>`. Inspect the a
 is `omitted by scope`, not unavailable, and creates no gap by itself. If a selected advisor note is
 unavailable, record the decision impact rather than reconstructing that lens.
 
-Write only `<output-path>`.
+Write only `<output-path>`. Writes follow the host's normal permission rules; this skill
+pre-approves nothing.
+
+Invoked without `<cycle-dir>`, offer the most recent cycle under `.planr/operate/` that holds
+advisor notes and use its `challenger.md` as the output path. When there is none, say so and point
+to `planr-operate`; never create an empty cycle.
 
 ## Material exceptions
 

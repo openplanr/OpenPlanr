@@ -1,7 +1,7 @@
 # OpenPlanr Protocol — Agent Roles (v1.0.0)
 
 > The 9 named roles defined as input/output contracts, runtime-agnostic. Claude
-> Code uses manifest-enforced agents, Cursor uses host dispatch with sequential
+> Code uses native subagents, Cursor uses host dispatch with sequential
 > fallback, and Codex uses native subagents when exposed plus sequential fallback.
 
 ## Role index
@@ -26,64 +26,30 @@
 
 Each runtime adapter maps these tiers to its model picker. The contract is "use the runtime's strongest available model for codegen, its fast tier for analysis."
 
-## Tool guardrails (canonical — runtime adapters enforce as they can)
+## Tool boundaries
 
-### `db-agent` — read-only DB introspection
+Role ownership (R9) is an instruction every host follows; only a few boundaries are
+also expressed through the host's own tool model, and each is stated where it holds:
 
-- **Allowed:** Read, Grep, Glob, DB clients (`psql`, `mysql`, `sqlite3`, `mongosh`, `mongo`), single Write to `output/db/schema.json`
-- **Forbidden:** any DDL/DML, any non-DB shell, Edit anywhere, Write outside `output/db/`
+- `devops-agent` declares a `tools` allowlist without Bash, so the Claude Code
+  subagent has no shell and cannot run a deploy, image push, or cloud CLI.
+- `qa-agent` declares `disallowedTools: Edit, Write, NotebookEdit`, so the Claude
+  Code subagent cannot edit files; the shell commands it runs follow the session's
+  permission rules.
+- Every other role inherits the session's tools. Command-specific entries such as
+  `Bash(npm:*)` in a subagent `tools` list grant the whole Bash tool, not a command
+  subset, so no role claims one.
 
-### `designer-agent` — vision-based design extraction
-
-- **Allowed:** Read, Glob, Write to `design-spec.md`
-- **Forbidden:** shell access, code generation, modifying input files
-
-### `specification-agent` — spec → US + Task decomposition
-
-- **Allowed:** Read, Glob, Grep, Write to US/Task files
-- **Forbidden:** shell, code generation, modifying spec body
-
-### `entity-scaffold-agent` — Step 0.2 ORM scaffold (manual)
-
-- **Allowed:** Read, Glob, Grep, Edit, Write, Bash limited to npm/npx/node (no arbitrary shell)
-- **Forbidden:** feature task driven output under `src/features/`, frontend/UI files, HTTP controllers/services (use `backend-agent` at ship time)
-
-### `frontend-agent` — UI codegen
-
-- **Allowed:** Read, Edit, Write, Bash for npm/pnpm/yarn/npx
-- **Forbidden:** Writing to services, DTOs, entities, controllers (any "Tech" file)
-
-### `backend-agent` — backend codegen
-
-- **Allowed:** Read, Edit, Write, Bash for npm/pnpm/yarn/npx + ORM tools (`prisma`, `node`)
-- **Forbidden:** Writing to UI files (components, pages, *.tsx components, *.css UI)
-
-### `qa-agent` — consolidated professional reviewer
-
-- **Allowed:** Read, Glob, Grep, Bash for build/test commands, `git diff` (read-only)
-- **Forbidden:** Edit or Write; implementation dispatch; roster/gate changes;
-  reopening or finalizing SHIP. The runtime derives `qa-report.md`.
-
-### `devops-agent` — infra config generation
-
-- **Allowed:** Read, Glob, Write, Edit
-- **Forbidden:** **Bash entirely.** Generates files only — never deploys, never calls cloud APIs.
-
-### `doc-gen-agent` — documentation generation
-
-- **Allowed:** Read, Glob, Grep, Write to `Docs/feat-{name}/`
-- **Forbidden:** Edit existing files, shell access
+No role pre-approves tools (`allowed-tools`); the host's permission prompts govern
+every write and command.
 
 ## Per-runtime enforcement
 
 | Runtime | Enforcement layer | Notes |
 |---|---|---|
-| **Claude Code (canonical)** | Plugin manifest (`tools:` YAML frontmatter on each agent file) | Hard enforcement — agent literally cannot invoke disallowed tools |
+| **Claude Code (canonical)** | Agent frontmatter `tools` / `disallowedTools` for the two boundaries above; session permissions for everything else | Removes whole tools from a subagent; never scopes a tool to specific commands |
 | **Cursor** | Prompt-level only (master rule + role body documentation) | Advisory — model is asked to honour; conformance harness's git-diff check on Preserve list catches violations |
 | **Codex** | Capability-dependent; skills are durable, tool isolation may be advisory | Preserve verification + conformance |
-
-Manifest-level enforcement remains a Claude Code differentiator. Other adapters
-report their actual capability and use conformance rather than claiming identical security.
 
 ## See also
 
