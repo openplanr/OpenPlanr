@@ -480,7 +480,7 @@
     {
       "source": "packages/protocol/registries/commands.json",
       "target": "registry/v1.5.0/commands.json",
-      "sha256": "a1ca9a442d1c9d4c37092870a24d11d5de8ec41cc760d091e8e46ab627142de8",
+      "sha256": "7b8e2bcbdccfab4628564f7c905cb6f6d8d31d2afea93ca74f78703c966a2723",
       "mode": "644"
     },
     {
@@ -498,7 +498,7 @@
     {
       "source": "packages/protocol/registries/roles.json",
       "target": "registry/v1.5.0/roles.json",
-      "sha256": "ac35ffe229d7ad2149b0ed7cb40cbe452df09d88afa9b021f3638eb52ea67a5b",
+      "sha256": "cd06e8ab4ff8b6334820a600f548c87368f3a979a082d9c13d22e33cd1e24f6a",
       "mode": "644"
     },
     {
@@ -516,7 +516,7 @@
     {
       "source": "packages/protocol/registries/task-kinds.json",
       "target": "registry/v1.5.0/task-kinds.json",
-      "sha256": "806aedb94a1793a660489202c0f6dccb981bb496eb2fa59e9a91d56e0b81349e",
+      "sha256": "6393b1c4d1c3e2371ee4290fab44bc9cc4d21d819e28adf6271de43f434300b2",
       "mode": "644"
     },
     {

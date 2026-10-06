@@ -560,20 +560,28 @@ export async function ensureMilestone(title: string): Promise<string> {
   return title;
 }
 
-/** The issue state a local status maps to: closed for done, open for every other status. */
-export function statusToIssueState(status: string): GitHubIssueState {
-  return status === 'done' ? 'closed' : 'open';
+/**
+ * The issue state a local status maps to: closed for done and closed, open otherwise.
+ * Undefined for a promoted backlog item, which is local-only and leaves its issue as it is.
+ */
+export function statusToIssueState(status: string): GitHubIssueState | undefined {
+  if (status === 'promoted') return undefined;
+  return status === 'done' || status === 'closed' ? 'closed' : 'open';
 }
 
 /**
- * The local status an issue's state calls for, or undefined when they already agree:
- * done for a closed issue, in-progress for an issue reopened after its item was done.
+ * The local status an issue's state calls for, or undefined when they already agree.
+ * A backlog item takes the issue's state, open or closed, and keeps promoted; other items
+ * become done when the issue closes and in-progress when the issue of a done item reopens.
  */
 export function statusFromIssueState(
   state: GitHubIssueState,
   localStatus: string,
+  type: ArtifactType,
 ): string | undefined {
-  if (statusToIssueState(localStatus) === state) return undefined;
+  const current = statusToIssueState(localStatus);
+  if (current === undefined || current === state) return undefined;
+  if (type === 'backlog') return state;
   return state === 'closed' ? 'done' : 'in-progress';
 }
 

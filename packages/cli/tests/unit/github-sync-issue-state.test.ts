@@ -13,7 +13,11 @@ vi.mock('../../src/services/prompt-service.js', () => ({
 
 import { registerGitHubCommand } from '../../src/cli/commands/github.js';
 import { createDefaultConfig, saveConfig } from '../../src/services/config-service.js';
-import { getIssue } from '../../src/services/github-service.js';
+import {
+  getIssue,
+  statusFromIssueState,
+  statusToIssueState,
+} from '../../src/services/github-service.js';
 import { promptSelect } from '../../src/services/prompt-service.js';
 import { parseMarkdown } from '../../src/utils/markdown.js';
 import { fakeGh, fakeGhCalls } from '../helpers/fake-gh.js';
@@ -49,6 +53,7 @@ function stubGh(issues: Array<{ issue: number; state: string }>): void {
     ...Object.fromEntries(
       issues.map(({ issue, state }) => [`issue view ${issue} `, issueJson(issue, state)]),
     ),
+    'issue edit ': '',
     'issue close ': '',
     'issue reopen ': '',
   });
@@ -167,6 +172,29 @@ describe.skipIf(process.platform === 'win32')('openplanr github sync reads gh is
     ]);
   });
 
+  it('pushes a closed backlog item as a closed issue and leaves a promoted item’s issue as it is', async () => {
+    const backlogDir = join(projectDir, '.planr', 'backlog');
+    mkdirSync(backlogDir, { recursive: true });
+    const items = [
+      { id: 'BL-001', status: 'closed', issue: 21, state: 'OPEN' },
+      { id: 'BL-002', status: 'open', issue: 22, state: 'CLOSED' },
+      { id: 'BL-003', status: 'promoted', issue: 23, state: 'CLOSED' },
+      { id: 'BL-004', status: 'promoted', issue: 24, state: 'OPEN' },
+    ];
+    for (const { id, status, issue } of items) {
+      writeFileSync(
+        join(backlogDir, `${id}-linked.md`),
+        `---\nid: "${id}"\ntitle: "Linked item"\nstatus: "${status}"\ngithubIssue: ${issue}\n---\n# ${id}: Linked item\n`,
+      );
+    }
+    stubGh(items);
+
+    for (const { id } of items) await runGitHub('push', id);
+
+    expect(fakeGhCalls(bin).filter((call) => call.startsWith('issue edit ')).length).toBe(4);
+    expect(stateChanges()).toEqual(['issue close 21', 'issue reopen 22']);
+  });
+
   it('shows each issue state in openplanr github status and marks an unreadable issue out of sync', async () => {
     stubGh(LINKED.filter(({ issue }) => issue !== 4));
 
@@ -201,5 +229,35 @@ describe.skipIf(process.platform === 'win32')('openplanr github sync reads gh is
     await expect(getIssue(1)).rejects.toThrow(
       'gh issue view has an unexpected shape: state: Invalid option: expected one of "open"|"closed"|"merged"',
     );
+  });
+});
+
+describe('issue states for backlog items', () => {
+  it('maps open and closed to the matching issue state and leaves promoted unmapped', () => {
+    expect(['open', 'closed', 'promoted'].map((status) => statusToIssueState(status))).toEqual([
+      'open',
+      'closed',
+      undefined,
+    ]);
+  });
+
+  it('reads an issue state back as open or closed and never overwrites promoted', () => {
+    const readBack = (
+      [
+        ['closed', 'open'],
+        ['open', 'closed'],
+        ['closed', 'closed'],
+        ['open', 'open'],
+        ['closed', 'promoted'],
+        ['open', 'promoted'],
+      ] as const
+    ).map(([state, status]) => statusFromIssueState(state, status, 'backlog'));
+
+    expect(readBack).toEqual(['closed', 'open', undefined, undefined, undefined, undefined]);
+  });
+
+  it('keeps done and in-progress for the other item types', () => {
+    expect(statusFromIssueState('closed', 'planning', 'story')).toBe('done');
+    expect(statusFromIssueState('open', 'done', 'task')).toBe('in-progress');
   });
 });

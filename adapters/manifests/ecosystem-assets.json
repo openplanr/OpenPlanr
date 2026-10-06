@@ -6,7 +6,7 @@
   "inputs": [
     {
       "path": "adapters/manifests/generated-assets.json",
-      "digest": "sha256:018ecffb25a1f926e1c717449f1e9f93f79f4d3957c925f2e03eedb9456f1029"
+      "digest": "sha256:53ffdb9f1f1553716b2ac002e8443ca49880c7b0c0cb3f4b97d9321ec3e5cfa6"
     },
     {
       "path": "apps/dashboard/package.json",
@@ -50,7 +50,7 @@
     },
     {
       "path": "packages/protocol/registries/commands.json",
-      "digest": "sha256:a1ca9a442d1c9d4c37092870a24d11d5de8ec41cc760d091e8e46ab627142de8"
+      "digest": "sha256:7b8e2bcbdccfab4628564f7c905cb6f6d8d31d2afea93ca74f78703c966a2723"
     },
     {
       "path": "packages/protocol/registries/output-paths.json",
@@ -62,7 +62,7 @@
     },
     {
       "path": "packages/protocol/registries/roles.json",
-      "digest": "sha256:ac35ffe229d7ad2149b0ed7cb40cbe452df09d88afa9b021f3638eb52ea67a5b"
+      "digest": "sha256:cd06e8ab4ff8b6334820a600f548c87368f3a979a082d9c13d22e33cd1e24f6a"
     },
     {
       "path": "packages/protocol/registries/rules.json",
@@ -74,7 +74,7 @@
     },
     {
       "path": "packages/protocol/registries/task-kinds.json",
-      "digest": "sha256:806aedb94a1793a660489202c0f6dccb981bb496eb2fa59e9a91d56e0b81349e"
+      "digest": "sha256:6393b1c4d1c3e2371ee4290fab44bc9cc4d21d819e28adf6271de43f434300b2"
     },
     {
       "path": "packages/protocol/registry/adapters.json",
@@ -218,7 +218,7 @@
     },
     {
       "path": "skills/planr-sync/SKILL.md",
-      "digest": "sha256:cfa47e09cb3b93f2f35bafb75c89ef57509e29098066f382775728a1058035bc"
+      "digest": "sha256:0e63252ba06b2842f7d6005782056100930a1559ae393164d7afd615df63384b"
     },
     {
       "path": "skills/registry.json",
@@ -236,7 +236,7 @@
     },
     {
       "path": "adapters/manifests/codex-plugin-content.json",
-      "digest": "sha256:c8fd331122b3520456367998a553fb14708e6c547b1c0ae14c0460ae468a1ae1"
+      "digest": "sha256:1d645707ebcaf7a8c85db3ba2c7549428c256f730b0a3ddd36e7d7f98ef0f5d3"
     },
     {
       "path": "docs/generated/adapters.md",
@@ -252,7 +252,7 @@
     },
     {
       "path": "ecosystem.json",
-      "digest": "sha256:18c281dc3de728c60fb8c89a01774482386a7d142f517b0f422947a72bc91f15"
+      "digest": "sha256:69b3691c8df1b288db027c3b0d6227559804017885f86d54571b6d993bbca277"
     }
   ]
 }

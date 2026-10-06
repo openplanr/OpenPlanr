@@ -988,7 +988,7 @@
         },
         {
           "path": "skills/sprint/references/tracker-connections.md",
-          "digest": "sha256:8a2e3e8a9abbcd9ee616fb93c609995b195cb731224b6124462b31199fc60311"
+          "digest": "sha256:5f7d7126ca0db062c2b14c8ac35ca9758e44433329da610d7e75ad83b9417707"
         },
         {
           "path": "skills/sprint/schemas/refinement.schema.json",
@@ -1017,7 +1017,7 @@
         },
         {
           "path": "skills/status/references/tracker-connections.md",
-          "digest": "sha256:8a2e3e8a9abbcd9ee616fb93c609995b195cb731224b6124462b31199fc60311"
+          "digest": "sha256:5f7d7126ca0db062c2b14c8ac35ca9758e44433329da610d7e75ad83b9417707"
         }
       ]
     },
@@ -1030,7 +1030,7 @@
       "assets": [
         {
           "path": "skills/sync/SKILL.md",
-          "digest": "sha256:e094f59647ea09a87ce50633abdbe17ea2a2e0462d82bdcf2583e5d10fa5aeba"
+          "digest": "sha256:a90f713ac4cda7fc0df0c2b40256ddba3cfa1ee8ea809705f1cf735324952022"
         },
         {
           "path": "skills/sync/openplanr.skill.json",
@@ -1038,7 +1038,7 @@
         },
         {
           "path": "skills/sync/references/tracker-connections.md",
-          "digest": "sha256:8a2e3e8a9abbcd9ee616fb93c609995b195cb731224b6124462b31199fc60311"
+          "digest": "sha256:5f7d7126ca0db062c2b14c8ac35ca9758e44433329da610d7e75ad83b9417707"
         },
         {
           "path": "skills/sync/scripts/sync.mjs",

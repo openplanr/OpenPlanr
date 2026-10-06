@@ -205,25 +205,25 @@
     {
       "skillId": "planr-sprint",
       "files": 7,
-      "bytes": 31582,
+      "bytes": 32848,
       "uniqueFiles": 7,
-      "uniqueBytes": 31582,
+      "uniqueBytes": 32848,
       "duplicateBytes": 0
     },
     {
       "skillId": "planr-status",
       "files": 4,
-      "bytes": 5098,
+      "bytes": 6364,
       "uniqueFiles": 4,
-      "uniqueBytes": 5098,
+      "uniqueBytes": 6364,
       "duplicateBytes": 0
     },
     {
       "skillId": "planr-sync",
       "files": 6,
-      "bytes": 11842,
+      "bytes": 13213,
       "uniqueFiles": 6,
-      "uniqueBytes": 11842,
+      "uniqueBytes": 13213,
       "duplicateBytes": 0
     }
   ],
@@ -231,26 +231,26 @@
     {
       "host": "openai",
       "files": 291,
-      "bytes": 4682212,
+      "bytes": 4686115,
       "uniqueFiles": 243,
-      "uniqueBytes": 4458742,
-      "duplicateBytes": 223470
+      "uniqueBytes": 4460113,
+      "duplicateBytes": 226002
     },
     {
       "host": "claude",
       "files": 272,
-      "bytes": 4744447,
+      "bytes": 4749166,
       "uniqueFiles": 223,
-      "uniqueBytes": 4517494,
-      "duplicateBytes": 226953
+      "uniqueBytes": 4519681,
+      "duplicateBytes": 229485
     },
     {
       "host": "cursor",
       "files": 235,
-      "bytes": 4627034,
+      "bytes": 4630937,
       "uniqueFiles": 187,
-      "uniqueBytes": 4403564,
-      "duplicateBytes": 223470
+      "uniqueBytes": 4404935,
+      "duplicateBytes": 226002
     }
   ]
 }

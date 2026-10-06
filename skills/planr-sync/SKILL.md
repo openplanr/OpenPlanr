@@ -15,8 +15,9 @@ Remote steps run through the host's own connections, as described in
 mapping and what to tell the user when a connection is missing:
 
 - GitHub: the host's GitHub connection, or, when the GitHub CLI is signed in, the
-  packaged [sync helper](scripts/sync.mjs), which applies issue operations through `gh`.
-  `openplanr github` and `openplanr sync` are optional equivalents.
+  packaged [sync helper](scripts/sync.mjs), which creates and edits issues through `gh`;
+  close or reopen an issue with `gh issue close` or `gh issue reopen`. `openplanr github`
+  is an optional equivalent; `openplanr sync` only repairs local cross-references.
 - Linear: the host's Linear connection.
 
 Audit is read-only by default. Apply local changes only when the request asks for

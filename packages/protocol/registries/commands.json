@@ -440,7 +440,7 @@
       "ownerPackage": "openplanr",
       "source": {
         "path": "packages/cli/src/cli/commands/github.ts",
-        "digest": "sha256:98a3508642cf027a0c71c6cd278be6d6469e98857a69525a7e6a6837a91bf56b"
+        "digest": "sha256:067763c31b54c69707c309ccffd41abc3cdde46de4079d654ee6d547b6e844b7"
       },
       "authorityClass": "workflow",
       "machineJson": false,
@@ -1154,7 +1154,7 @@
       "ownerPackage": "planr-pipeline",
       "source": {
         "path": "skills/planr-sync/SKILL.md",
-        "digest": "sha256:cfa47e09cb3b93f2f35bafb75c89ef57509e29098066f382775728a1058035bc"
+        "digest": "sha256:0e63252ba06b2842f7d6005782056100930a1559ae393164d7afd615df63384b"
       },
       "authorityClass": "compatibility-router",
       "machineJson": false,
@@ -1948,5 +1948,5 @@
       ]
     }
   ],
-  "documentDigest": "sha256:5f251d753713eb083582cbb7474e3d82fb995e94896c1f0735916f75efe54ee1"
+  "documentDigest": "sha256:494c4cf70fe5322ad69bb454105b4e3aa49b260e177f2bdc2cd134ecd2591c4e"
 }

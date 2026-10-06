@@ -68,7 +68,7 @@ for (const [surface, entrypoint, helper] of surfaces) {
 
   test(`${surface}: the connection guide names each host's connection and no token`, () => {
     const guide = read(helper.replace('scripts/sync.mjs', 'references/tracker-connections.md'));
-    assert.match(guide, /stores and reads no GitHub or Linear credentials/);
+    assert.match(guide, /These skills store and read no GitHub or Linear credentials/);
     for (const host of ['Claude Code', 'Codex', 'Cursor'])
       assert.match(guide, new RegExp(`^\\| ${host} \\|`, 'mu'));
     assert.doesNotMatch(guide, /Bearer|Authorization|_TOKEN|personal access token/iu);

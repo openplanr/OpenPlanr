@@ -5586,7 +5586,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:8a2e3e8a9abbcd9ee616fb93c609995b195cb731224b6124462b31199fc60311"
+          "digest": "sha256:5f7d7126ca0db062c2b14c8ac35ca9758e44433329da610d7e75ad83b9417707"
         },
         {
           "path": "schemas/refinement.schema.json",
@@ -5656,7 +5656,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:8a2e3e8a9abbcd9ee616fb93c609995b195cb731224b6124462b31199fc60311"
+          "digest": "sha256:5f7d7126ca0db062c2b14c8ac35ca9758e44433329da610d7e75ad83b9417707"
         }
       ],
       "contracts": {
@@ -5692,7 +5692,7 @@
       "source": "skills/planr-sync/openplanr.skill.json",
       "entrypoint": "skills/planr-sync/SKILL.md",
       "description": "Audit OpenPlanr planning artifacts for graph and protocol drift. Use when statuses, references, schemas, or generated planning views may be inconsistent.",
-      "sourceDigest": "sha256:cfa47e09cb3b93f2f35bafb75c89ef57509e29098066f382775728a1058035bc",
+      "sourceDigest": "sha256:0e63252ba06b2842f7d6005782056100930a1559ae393164d7afd615df63384b",
       "resources": [
         {
           "path": "references/tracker-connections.md",
@@ -5704,7 +5704,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:8a2e3e8a9abbcd9ee616fb93c609995b195cb731224b6124462b31199fc60311"
+          "digest": "sha256:5f7d7126ca0db062c2b14c8ac35ca9758e44433329da610d7e75ad83b9417707"
         },
         {
           "path": "scripts/sync.mjs",

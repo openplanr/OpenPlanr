@@ -101,7 +101,7 @@ async function pushSingleArtifact(
 
       const status = (artifact.data.status as string) || 'pending';
       const targetState = statusToIssueState(status);
-      if (currentIssue.state !== targetState) {
+      if (targetState && currentIssue.state !== targetState) {
         await updateIssue(existingIssueNumber, { state: targetState });
       }
 
@@ -363,7 +363,7 @@ export function registerGitHubCommand(program: Command) {
         try {
           const issue = await getIssue(artifact.issueNumber);
           const localStatus = artifact.status;
-          const remoteStatus = statusFromIssueState(issue.state, localStatus);
+          const remoteStatus = statusFromIssueState(issue.state, localStatus, artifact.type);
           if (remoteStatus === undefined) continue;
 
           if (opts.direction === 'pull') {
