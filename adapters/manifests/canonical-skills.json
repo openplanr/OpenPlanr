@@ -1543,7 +1543,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:79fb900f3effc3d5a218b961ee04f39ce12241ac936238679eaf18afd704c018"
+          "digest": "sha256:943d2fc37557f50df80ee00036e3ca844b022b7db373158578a2b3d72373b7a0"
         },
         {
           "path": "scripts/design-runtime-home.mjs",
@@ -2705,7 +2705,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:79fb900f3effc3d5a218b961ee04f39ce12241ac936238679eaf18afd704c018"
+          "digest": "sha256:943d2fc37557f50df80ee00036e3ca844b022b7db373158578a2b3d72373b7a0"
         },
         {
           "path": "scripts/design-runtime-home.mjs",
@@ -3867,7 +3867,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:79fb900f3effc3d5a218b961ee04f39ce12241ac936238679eaf18afd704c018"
+          "digest": "sha256:943d2fc37557f50df80ee00036e3ca844b022b7db373158578a2b3d72373b7a0"
         },
         {
           "path": "scripts/design-runtime-home.mjs",
