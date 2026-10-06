@@ -1,7 +1,6 @@
-<!-- {{AGENTS_ROOT}}/shared/modes/default/specification.md: default-mode-only content for specification-agent. Loaded by agents/specification-agent.md when MODE=default. T-002 of SPEC-002. -->
+<!-- Default-mode paths for planr-specification. Loaded when the caller passes MODE=default. -->
 
-> **Mode:** default
-> **Loaded by:** `agents/specification-agent.md` when the orchestrator passes `MODE=default` (no `SPEC_DIR`).
+> **Mode:** default (no `SPEC_DIR`).
 
 ## Path Resolution
 
@@ -31,8 +30,7 @@ names retain their established feature-local layout.
 | Output | Path | Description |
 |--------|------|-------------|
 | User Story N | `output/feats/feat-{name}/us-{N}/us-{N}.md` | One file per US |
-| Task M (UI) | `output/feats/feat-{name}/us-{N}/tasks/task-1.md` | UI layer task |
-| Task M (Tech) | `output/feats/feat-{name}/us-{N}/tasks/task-1.md` without design; `task-2.md` with design | Tech layer task |
+| Task M | `output/feats/feat-{name}/us-{N}/tasks/task-{M}.md` | One file per task, numbered from `task-1.md` in the order written; `type` and `agent` in the frontmatter say which role implements it |
 
 ---
 
@@ -69,13 +67,13 @@ names retain their established feature-local layout.
 5. Decompose the source into independently valuable User Stories and write each
    story to `output/feats/feat-$ARGUMENTS/us-{N}/us-{N}.md` using the canonical
    story frontmatter and body shape.
-6. For each story, create its `tasks/` directory and apply R2:
-   a. `has_design = true`: write one `task-1.md` as `type: "UI"` /
-      `agent: "frontend-agent"`, and one `task-2.md` as `type: "Tech"` /
-      `agent: "backend-agent"`;
-   b. `has_design = false`: write one `task-1.md` as `type: "Tech"` /
-      `agent: "backend-agent"`;
-   c. never write a third task for the story.
+6. For each story, create its `tasks/` directory and apply R2 (coherent,
+   independently verifiable tasks split by ownership): UI work is a
+   `type: "UI"` / `agent: "frontend-agent"` task and server or data work is a
+   `type: "Tech"` / `agent: "backend-agent"` task. Most stories get one Tech
+   task, plus one UI task when `has_design = true`; add a task only for a real
+   output dependency, a distinct verification surface, or reviewable size.
+   Number files `task-1.md`, `task-2.md`, ... in the order written.
 7. Populate every task with its required Protocol 1.7 schema fields, mode parent
    `featureSlug`, 1–3 sentence `rationale`, concrete Create/Modify paths,
    verification, and `preserve` block maps with exact `repositoryKey` and `path`

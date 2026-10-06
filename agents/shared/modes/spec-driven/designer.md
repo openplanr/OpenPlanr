@@ -1,7 +1,6 @@
-<!-- {{AGENTS_ROOT}}/shared/modes/spec-driven/designer.md: spec-driven-mode-only content for designer-agent. Loaded by agents/designer-agent.md when MODE=spec-driven. T-002 of SPEC-002. -->
+<!-- Spec-driven paths for planr-designer. Loaded when the caller passes MODE=spec-driven and SPEC_DIR. -->
 
-> **Mode:** spec-driven
-> **Loaded by:** `agents/designer-agent.md` when the orchestrator passes `MODE=spec-driven` and `SPEC_DIR`.
+> **Mode:** spec-driven (`SPEC_DIR` supplied).
 
 ## Path Resolution
 
@@ -80,4 +79,4 @@ If all sources are empty: skip silently (do not write design-spec.md, do not err
 
 *Reads: `<SPEC_DIR>/design/*.png` · `input/tech/stack.md`*
 *Writes: `<SPEC_DIR>/design/design-spec.md`*
-*Chained to: specification-agent*
+*Read by: planr-specification*

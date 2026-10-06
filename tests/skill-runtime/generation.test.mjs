@@ -50,7 +50,14 @@ test('canonical source exposes registry-owned directly readable Protocol 1.8 pac
     assert.equal(packageInfo.manifest.entrypoint, 'SKILL.md');
     assert.equal(packageInfo.manifest.execution, 'host-agent');
     assert.ok(packageInfo.markdown.startsWith('---\nname: '));
-    for (const legacy of ['SKILL.md.tmpl', 'skill.json', 'contribution.json']) {
+    for (const legacy of [
+      'SKILL.md.tmpl',
+      'skill.json',
+      'contribution.json',
+      'modules.json',
+      'host-profiles.json',
+      'compatibility.json',
+    ]) {
       assert.equal(
         existsSync(resolve(packageInfo.skillDir, legacy)),
         false,
@@ -146,7 +153,7 @@ test('the Claude plugin ships a directory-ready README and discovery metadata', 
   );
 });
 
-test('the Claude plugin ships independently parseable source and scoped tool grants', () => {
+test('the Claude plugin ships independently parseable source and pre-approves no tools', () => {
   const pluginRoot = resolve(root, 'dist/plugins/claude/openplanr');
   const files = readdirSync(pluginRoot, { recursive: true, withFileTypes: true })
     .filter((entry) => entry.isFile())
@@ -164,18 +171,31 @@ test('the Claude plugin ships independently parseable source and scoped tool gra
     if (/\.(?:mjs|js)$/u.test(file))
       assert.doesNotThrow(() => transformSync(readFileSync(file, 'utf8'), { loader: 'js' }), file);
   }
-  for (const skillId of skillIds) {
-    const skill = read(
-      `dist/plugins/claude/openplanr/skills/${projectedSkillName(skillId)}/SKILL.md`,
-    );
-    const allowed = skill.match(/^allowed-tools:\s*"([^"]*)"/mu)?.[1] ?? '';
-    for (const grant of allowed.split(',').map((tool) => tool.trim()))
-      assert.doesNotMatch(
-        grant,
-        /^(?:Write|Edit|MultiEdit)$/u,
-        `${skillId} grants unscoped ${grant}`,
-      );
+  // Anthropic's directory classifies a plugin as privileged when any Markdown frontmatter
+  // pre-approves tools, or when it declares hooks, monitors, MCP or LSP servers, settings,
+  // or executables. The plugin stays instructions-only.
+  const codexRoot = resolve(root, 'dist/plugins/openai/openplanr');
+  const codexFiles = readdirSync(codexRoot, { recursive: true, withFileTypes: true })
+    .filter((entry) => entry.isFile())
+    .map((entry) => join(entry.parentPath, entry.name));
+  for (const file of [...files, ...codexFiles].filter((path) => path.endsWith('.md'))) {
+    const frontmatter = readFileSync(file, 'utf8').split('\n---\n')[0];
+    assert.doesNotMatch(frontmatter, /^allowed-tools:/mu, `${file} pre-approves tools`);
   }
+  for (const component of [
+    'hooks',
+    'hooks.json',
+    'monitors',
+    '.mcp.json',
+    '.lsp.json',
+    'settings.json',
+    'bin',
+    'commands',
+  ])
+    assert.equal(existsSync(resolve(pluginRoot, component)), false, `${component} is shipped`);
+  const manifest = JSON.parse(read('dist/plugins/claude/openplanr/.claude-plugin/plugin.json'));
+  for (const key of ['hooks', 'mcpServers', 'lspServers', 'settings', 'experimental'])
+    assert.equal(key in manifest, false, `plugin.json declares ${key}`);
 });
 
 test('Plan, Spec, and Ship are host-native and independent of CLI or provider credentials', () => {

@@ -172,7 +172,7 @@ approve content digests by hand.
 
 Use the companion guides for the rest of the skill fabric:
 
-- [composed skill modules and generation](../skills/authoring.md);
+- [skill authoring and generation](../skills/authoring.md);
 - [host matching, structured questions, and lifecycle](../skills/host-runtime.md);
 - [versioning, impact analysis, and learning proposals](../skills/versioning-and-impact.md).
 

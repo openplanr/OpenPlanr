@@ -14,7 +14,7 @@ package.
 - `spikes/diagram-renderer/` retains a runnable renderer benchmark and its recorded
   decision. Its README explains the manual entry point and measured limits.
 
-`npm run skill:evaluate:catalog` runs the composed projections plus routing and
+`npm run skill:evaluate:catalog` evaluates every skill package plus the routing and
 resilience checks. `npm run skill:impact` computes affected consumers before a
 shared source is edited; see [versioning and impact](../docs/skills/versioning-and-impact.md).
 

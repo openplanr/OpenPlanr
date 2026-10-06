@@ -160,7 +160,7 @@
       "source": "skills/planr-ceo-review/openplanr.skill.json",
       "entrypoint": "skills/planr-ceo-review/SKILL.md",
       "description": "Produce a grounded strategy and finance review for an Operate cycle. Use when direction, runway, margin, investment, or cost of delay needs a CEO lens.",
-      "sourceDigest": "sha256:b32f4af72eeea04556441e9fb6cf6538c169cf3caee1605bc3000271944439e8",
+      "sourceDigest": "sha256:34634aad17c400e2d283288c586fed7e26fde1dfa02ea90b737a4675d0f5ce12",
       "resources": [
         {
           "path": "references/operate-advisor-contract.md",
@@ -172,7 +172,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:467c4437430f656d37827c9035b7e3dec324735e1c7ac080776141a2e305e534"
+          "digest": "sha256:3153403563d422f395add6a2afd6d249737b8807e4ab31db5b830d82d7814fc5"
         },
         {
           "path": "scripts/validate-note.mjs",
@@ -257,7 +257,7 @@
       "source": "skills/planr-chair-review/openplanr.skill.json",
       "entrypoint": "skills/planr-chair-review/SKILL.md",
       "description": "Synthesize an Operate cycle into a prioritized decision queue and action plan. Use after specialist reviews when leadership needs one coherent brief.",
-      "sourceDigest": "sha256:2077f0ce15fef1f99aabcd35bcd04549324c2d6a47db7609c1edd4de715f1681",
+      "sourceDigest": "sha256:4fced17b54363f75adf5fc398ecbcd8b71d9312e6a50d200141479709941c18a",
       "resources": [
         {
           "path": "scripts/validate-note.mjs",
@@ -342,7 +342,7 @@
       "source": "skills/planr-challenger-review/openplanr.skill.json",
       "entrypoint": "skills/planr-challenger-review/SKILL.md",
       "description": "Challenge an Operate cycle's claims, alternatives, downside, and confidence. Use when assumptions or executive consensus need an independent stress test.",
-      "sourceDigest": "sha256:8a144b7738268d904f4c122b357ca640e7c8a9e21193fdf7eaed26758002f347",
+      "sourceDigest": "sha256:efe067213aa85ab7857fe4afd397e9daadf0a5569dc6587ed0c5e18a12424a81",
       "resources": [
         {
           "path": "scripts/validate-note.mjs",
@@ -427,7 +427,7 @@
       "source": "skills/planr-cmo-review/openplanr.skill.json",
       "entrypoint": "skills/planr-cmo-review/SKILL.md",
       "description": "Produce a grounded market and growth review for an Operate cycle. Use when acquisition, positioning, demand, retention, or missing measurement needs a CMO lens.",
-      "sourceDigest": "sha256:d4997975cbe0dff35abf641461df79fefaf7b7541d877147f93026a00565454e",
+      "sourceDigest": "sha256:2b620dcf9e5e8802fd9760d137318b869289d42bd49abd81a541aef521b539eb",
       "resources": [
         {
           "path": "references/operate-advisor-contract.md",
@@ -439,7 +439,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:467c4437430f656d37827c9035b7e3dec324735e1c7ac080776141a2e305e534"
+          "digest": "sha256:3153403563d422f395add6a2afd6d249737b8807e4ab31db5b830d82d7814fc5"
         },
         {
           "path": "scripts/validate-note.mjs",
@@ -524,7 +524,7 @@
       "source": "skills/planr-coo-review/openplanr.skill.json",
       "entrypoint": "skills/planr-coo-review/SKILL.md",
       "description": "Produce a grounded operations and customer-health review for an Operate cycle. Use when readiness, service delivery, capacity, or customer health needs a COO lens.",
-      "sourceDigest": "sha256:0e2a68abfe9df64e0efe14277790858b31609448897235021acf5601fce54748",
+      "sourceDigest": "sha256:82c8045e520e6ac2e0d5ae562fdab8ad12db48e32e5ddcdf69c04e36dc29e429",
       "resources": [
         {
           "path": "references/operate-advisor-contract.md",
@@ -536,7 +536,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:467c4437430f656d37827c9035b7e3dec324735e1c7ac080776141a2e305e534"
+          "digest": "sha256:3153403563d422f395add6a2afd6d249737b8807e4ab31db5b830d82d7814fc5"
         },
         {
           "path": "scripts/validate-note.mjs",
@@ -621,7 +621,7 @@
       "source": "skills/planr-cpo-review/openplanr.skill.json",
       "entrypoint": "skills/planr-cpo-review/SKILL.md",
       "description": "Produce a grounded product and activation review for an Operate cycle. Use when customer value, activation, prioritization, or adoption needs a CPO lens.",
-      "sourceDigest": "sha256:da2b8a054f9b888377aebe59cbee61aa1a199d3d633350dfa18fe0b0fb0fdf4c",
+      "sourceDigest": "sha256:f8b6e6c2c672b7136443d14bc3e1dfbcdb52b7f55b497442f401b37b06126d6a",
       "resources": [
         {
           "path": "references/operate-advisor-contract.md",
@@ -633,7 +633,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:467c4437430f656d37827c9035b7e3dec324735e1c7ac080776141a2e305e534"
+          "digest": "sha256:3153403563d422f395add6a2afd6d249737b8807e4ab31db5b830d82d7814fc5"
         },
         {
           "path": "scripts/validate-note.mjs",
@@ -718,7 +718,7 @@
       "source": "skills/planr-cto-review/openplanr.skill.json",
       "entrypoint": "skills/planr-cto-review/SKILL.md",
       "description": "Produce a grounded technology and delivery-risk review for an Operate cycle. Use when architecture, reliability, security, or execution risk needs a CTO lens.",
-      "sourceDigest": "sha256:e32aa4ce50ad0b947d3723b9d33c77049feb945d4a95ef830fe8f727dcbd8c4b",
+      "sourceDigest": "sha256:5fedb6d5d54d0d3762ff7ced1adcfb2c66bf237961991be290535f0b2027bce5",
       "resources": [
         {
           "path": "references/operate-advisor-contract.md",
@@ -730,7 +730,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:467c4437430f656d37827c9035b7e3dec324735e1c7ac080776141a2e305e534"
+          "digest": "sha256:3153403563d422f395add6a2afd6d249737b8807e4ab31db5b830d82d7814fc5"
         },
         {
           "path": "scripts/validate-note.mjs",
@@ -5016,7 +5016,7 @@
       "source": "skills/planr-operate/openplanr.skill.json",
       "entrypoint": "skills/planr-operate/SKILL.md",
       "description": "Run a focused operating review across seven executive lenses and produce a decision and action brief. Use for periodic product or company-level leadership review.",
-      "sourceDigest": "sha256:acdf3fb3516b9f1ff26f360d3d5ffcff271935ebac5d3d19384d0d33563c5ba1",
+      "sourceDigest": "sha256:a05b25d02fe6c1c175d72e8ed11ebd9a078c74959c12cba79661be0611406fd3",
       "resources": [
         {
           "path": "scripts/validate-note.mjs",
@@ -5110,7 +5110,7 @@
       "source": "skills/planr-plan/openplanr.skill.json",
       "entrypoint": "skills/planr-plan/SKILL.md",
       "description": "Turn a Protocol-compatible specification or product intent into schema-compatible OpenPlanr stories and implementation tasks. Use for planning and decomposition, not implementation.",
-      "sourceDigest": "sha256:28597e1374f16e10bff6972a3166d0575ce6144e4d1d58bae7fceba2b1545da2",
+      "sourceDigest": "sha256:ab8db47be4d4334dec7c55ddebf7fdc777c12f9efdc4116c3d25b6439d113587",
       "resources": [
         {
           "path": "agents/openai.yaml",

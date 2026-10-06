@@ -54,22 +54,25 @@ test('mode guidance loads stack, design, and database context deterministically'
   }
 });
 
-test('R2 and output paths stay stable in both modes', () => {
+test('R2 decomposes by ownership and verifiability in both modes', () => {
   const agent = read(agentPath);
   const defaultMode = read(defaultPath);
   const specMode = read(specDrivenPath);
 
   for (const guidance of [agent, defaultMode, specMode]) {
-    assert.match(guidance, /one.*UI.*frontend-agent.*one.*Tech.*backend-agent/isu);
-    assert.match(
+    assert.match(guidance, /R2/u);
+    assert.match(guidance, /independently verifiable/iu);
+    assert.match(guidance, /UI.*frontend-agent.*Tech.*backend-agent/isu);
+    assert.match(guidance, /output dependency.*verification surface.*reviewable size/isu);
+    assert.doesNotMatch(
       guidance,
-      /without design.*one Tech task.*backend-agent|has_design = false.*one.*Tech/isu,
+      /exactly (?:one|two) tasks?|never (?:emit|write|exceed) (?:more than two|a third|two) task|no more than two tasks/iu,
     );
-    assert.match(guidance, /never (?:emit|write) (?:more than two|a third) task/iu);
+    assert.doesNotMatch(guidance, /task-1 = UI|task-2 = Tech|sole task-1/iu);
   }
 
   assert.match(defaultMode, /output\/feats\/feat-\$ARGUMENTS\/us-\{N\}\/us-\{N\}\.md/u);
-  assert.match(defaultMode, /task-1\.md.*frontend-agent.*task-2\.md.*backend-agent/isu);
+  assert.match(defaultMode, /task-\{M\}\.md.*in the order written/isu);
   assert.match(specMode, /<SPEC_DIR>\/stories\/US-NNN-\{slug\}\.md/u);
   assert.match(specMode, /flat\s+`<SPEC_DIR>\/tasks\/` directory/iu);
   assert.match(specMode, /storyId/u);

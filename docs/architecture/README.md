@@ -38,7 +38,7 @@ flowchart TB
 | `packages/pipeline` | The delivery pipeline and self-contained projections of Protocol, Operate, artifact, and design |
 | `packages/cli` | The `openplanr` command, host packages, setup and diagnostics, GitHub and Linear sync, a digest-verified copy of the dashboard |
 | `packages/operate`, `packages/artifact`, `packages/design` | Their runtimes, in that dependency order |
-| `packages/skill-runtime` | Skill composition and host generation over declarative contribution manifests |
+| `packages/skill-runtime` | Skill package validation, catalog, and host generation |
 | `packages/integrations` | Portable integration behavior |
 | `apps/dashboard` | Browser code for the local planning and Operate dashboard |
 | `skills/planr-*`, `agents/{po,dev,qa,post-build}` | Canonical skill sources and role definitions |

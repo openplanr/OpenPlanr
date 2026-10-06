@@ -59,9 +59,9 @@
     {
       "ruleId": "R2",
       "ruleVersion": "1.0.0",
-      "title": "Bounded story decomposition",
+      "title": "Coherent story decomposition",
       "status": "active",
-      "normativeText": "A story produces at most two implementation tasks: frontend and backend when design or UI input exists, otherwise one backend task.",
+      "normativeText": "A story decomposes into coherent, independently verifiable tasks split by ownership: UI work goes to the frontend role and server or data work to the backend role; every acceptance criterion maps to a task and dependencies are explicit.",
       "enforcementPoints": [
         {
           "package": "@openplanr/pipeline",
@@ -257,5 +257,5 @@
       }
     }
   ],
-  "documentDigest": "sha256:b66d52fcdafac4eac1f7d11f54666d32bdcc78a55662550305e88ccb3f429480"
+  "documentDigest": "sha256:49d634ace17dae6f40650d1ec9db15cdb231cfefd3ff3554f40d6a8d44c01810"
 }

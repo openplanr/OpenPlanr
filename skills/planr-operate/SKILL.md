@@ -47,9 +47,11 @@ matches. Never overwrite a prior cycle implicitly.
 ```
 
 `cycle.md` records the effective scope, roster, repository revision when relevant, and the outcome
-of each lens. If the directory is ignored by Git, continue locally and mention that in the report;
-do not ask the user to change ignore rules. Report an exact filesystem error only when the cycle
-workspace cannot be created or written.
+of each lens. An advisor lens run on its own creates the same layout with a one-lens roster and an
+unsynthesized `board-report.md`, so every review the dashboard lists has one shape. If the
+directory is ignored by Git, continue locally and mention that in the report; do not ask the user
+to change ignore rules. Report an exact filesystem error only when the cycle workspace cannot be
+created or written.
 
 ## Build shared context once
 

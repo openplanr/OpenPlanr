@@ -32,28 +32,23 @@ persisted to the project
 
 ---
 
-### R2 — Task Count Per US
+### R2 — Coherent Task Decomposition Per US
 ```
-IF a design exists for the feature — a design-spec.md (authored by
-/planr:design, or extracted by designer-agent) OR input/ui/*.png:
-  tasks_per_us = 2
-  task-1 = UI task → Frontend Agent
-  task-2 = Tech task → Backend Agent
-
-IF no design (no design-spec.md AND no PNG):
-  tasks_per_us = 1
-  task-1 = Tech task → Backend Agent (or combined UI+Tech)
-
-NEVER: 3 or more tasks per US
+Split each US into tasks that are coherent and independently verifiable:
+  by ownership first — UI work   → UI task   → Frontend Agent
+                       server/data → Tech task → Backend Agent
+  within one owner, split only for a real output dependency, a distinct
+  verification surface, or reviewable size
+Typical shape: one Tech task, plus one UI task when design intent exists
+Every acceptance criterion maps to a task; dependsOn is explicit
+NEVER: fragment one coherent change into tasks that cannot be verified alone,
+       or fold unrelated work into one task
 ```
-Rationale: More than 2 tasks per US creates coordination complexity and ambiguous agent ownership.
-
-The trigger is **design intent existing**, not specifically a PNG. `design-spec.md` is the
-canonical signal — `specification-agent` already keys its `has_design` branch on it, so
-keying R2 on the same artifact keeps the rule and the agent consistent. This is what lets
-`/planr:design` close the loop: generate a design → `design-spec.md` exists → the
-UI task is born, instead of degrading to a Tech-only ship. (Without this, a generated design
-with no PNG would still yield `tasks_per_us = 1` and no UI task.)
+Design intent means a `design-spec.md` (authored by `/planr:design` or extracted by the
+designer role) or mockup images for the feature. `specification-agent` keys its `has_design`
+branch on the same artifacts, which is what lets `/planr:design` close the loop: a generated
+design produces a `design-spec.md`, so the UI task exists instead of degrading to a Tech-only
+ship.
 
 ---
 
