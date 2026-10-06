@@ -124,17 +124,6 @@ const ARTIFACT_TO_ISSUE_TYPE: Record<string, string> = {
   feature: 'Feature',
 };
 
-const ISSUE_STATE_TO_STATUS: Record<GitHubIssueState, string> = {
-  open: 'pending',
-  closed: 'done',
-};
-
-const STATUS_TO_ISSUE_STATE: Record<string, GitHubIssueState> = {
-  pending: 'open',
-  'in-progress': 'open',
-  done: 'closed',
-};
-
 // ---------------------------------------------------------------------------
 // Error message constants
 // ---------------------------------------------------------------------------
@@ -571,18 +560,21 @@ export async function ensureMilestone(title: string): Promise<string> {
   return title;
 }
 
-/**
- * Map GitHub issue state to artifact status.
- */
-export function issueStateToStatus(state: GitHubIssueState): string {
-  return ISSUE_STATE_TO_STATUS[state];
+/** The issue state a local status maps to: closed for done, open for every other status. */
+export function statusToIssueState(status: string): GitHubIssueState {
+  return status === 'done' ? 'closed' : 'open';
 }
 
 /**
- * Map artifact status to GitHub issue state.
+ * The local status an issue's state calls for, or undefined when they already agree:
+ * done for a closed issue, in-progress for an issue reopened after its item was done.
  */
-export function statusToIssueState(status: string): GitHubIssueState {
-  return STATUS_TO_ISSUE_STATE[status] || 'open';
+export function statusFromIssueState(
+  state: GitHubIssueState,
+  localStatus: string,
+): string | undefined {
+  if (statusToIssueState(localStatus) === state) return undefined;
+  return state === 'closed' ? 'done' : 'in-progress';
 }
 
 /**

@@ -1033,10 +1033,11 @@ openplanr github sync --direction both      # both with interactive conflict res
 
 **Status mapping:**
 
-- GitHub `open` → local `in-progress` / `draft`
-- GitHub `closed` → local `done` / `accepted`
-- Local `done` → closes the GitHub issue
-- Conflicts (both changed) → interactive prompt to choose which side wins
+- An issue is closed when its item is `done` and open for every other status.
+- `--direction pull`: a closed issue marks its item `done`, and an open issue for a `done` item
+  marks it `in-progress`. Other statuses stay as they are.
+- `--direction push`: a `done` item closes its issue; any other status reopens it.
+- `--direction both`: asks which side wins for each item whose status and issue state disagree.
 
 ---
 

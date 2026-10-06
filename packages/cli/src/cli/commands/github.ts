@@ -26,8 +26,8 @@ import {
   getIssue,
   getIssueTypeForArtifact,
   getLabelForType,
-  issueStateToStatus,
   setIssueType,
+  statusFromIssueState,
   statusToIssueState,
   updateIssue,
   verifyGitHubRepo,
@@ -355,19 +355,16 @@ export function registerGitHubCommand(program: Command) {
         id: string;
         localStatus: string;
         remoteState: GitHubIssueState;
+        remoteStatus: string;
         issueNumber: number;
       }> = [];
 
       for (const artifact of linkedArtifacts) {
         try {
           const issue = await getIssue(artifact.issueNumber);
-          const remoteStatus = issueStateToStatus(issue.state);
           const localStatus = artifact.status;
-
-          if (remoteStatus === localStatus) {
-            // Already in sync
-            continue;
-          }
+          const remoteStatus = statusFromIssueState(issue.state, localStatus);
+          if (remoteStatus === undefined) continue;
 
           if (opts.direction === 'pull') {
             // GitHub → local
@@ -394,6 +391,7 @@ export function registerGitHubCommand(program: Command) {
               id: artifact.id,
               localStatus,
               remoteState: issue.state,
+              remoteStatus,
               issueNumber: artifact.issueNumber,
             });
           }
@@ -409,7 +407,7 @@ export function registerGitHubCommand(program: Command) {
         display.blank();
 
         for (const conflict of conflicts) {
-          const remoteStatus = issueStateToStatus(conflict.remoteState);
+          const { remoteStatus } = conflict;
           display.line(
             `  ${chalk.red('!')} ${conflict.id} — local: ${chalk.yellow(conflict.localStatus)}, GitHub #${conflict.issueNumber}: ${chalk.cyan(conflict.remoteState)} (${remoteStatus})`,
           );
@@ -503,10 +501,7 @@ export function registerGitHubCommand(program: Command) {
               issueState = 'error';
             }
 
-            const inSync =
-              issueState !== 'error' &&
-              (issueStateToStatus(issueState) === status ||
-                statusToIssueState(status) === issueState);
+            const inSync = issueState !== 'error' && statusToIssueState(status) === issueState;
             const syncIcon = inSync ? chalk.green('✓') : chalk.red('✗');
 
             display.line(

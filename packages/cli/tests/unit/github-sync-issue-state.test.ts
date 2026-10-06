@@ -18,12 +18,13 @@ import { promptSelect } from '../../src/services/prompt-service.js';
 import { parseMarkdown } from '../../src/utils/markdown.js';
 import { fakeGh, fakeGhCalls } from '../helpers/fake-gh.js';
 
-/** Linked tasks and the issue state `gh` reports for each: two agree, two differ. */
+/** Linked tasks and the issue state `gh` reports for each: three agree, two differ. */
 const LINKED = [
   { id: 'TASK-001', status: 'done', issue: 1, state: 'CLOSED' },
   { id: 'TASK-002', status: 'pending', issue: 2, state: 'CLOSED' },
   { id: 'TASK-003', status: 'done', issue: 3, state: 'OPEN' },
   { id: 'TASK-004', status: 'pending', issue: 4, state: 'OPEN' },
+  { id: 'TASK-005', status: 'in-progress', issue: 5, state: 'OPEN' },
 ];
 
 let bin: string;
@@ -100,14 +101,15 @@ afterEach(() => {
 });
 
 describe.skipIf(process.platform === 'win32')('openplanr github sync reads gh issue states', () => {
-  it('pulls a closed issue as done and an open one as pending', async () => {
+  it('pulls a closed issue as done and a reopened one as in-progress, leaving open work as it is', async () => {
     await runGitHub('sync', '--direction', 'pull');
 
     expect(LINKED.map(({ id }) => [id, localStatus(id)])).toEqual([
       ['TASK-001', 'done'],
       ['TASK-002', 'done'],
-      ['TASK-003', 'pending'],
+      ['TASK-003', 'in-progress'],
       ['TASK-004', 'pending'],
+      ['TASK-005', 'in-progress'],
     ]);
   });
 
@@ -115,7 +117,13 @@ describe.skipIf(process.platform === 'win32')('openplanr github sync reads gh is
     await runGitHub('sync', '--direction', 'push');
 
     expect(stateChanges()).toEqual(['issue reopen 2', 'issue close 3']);
-    expect(LINKED.map(({ id }) => localStatus(id))).toEqual(['done', 'pending', 'done', 'pending']);
+    expect(LINKED.map(({ id }) => localStatus(id))).toEqual([
+      'done',
+      'pending',
+      'done',
+      'pending',
+      'in-progress',
+    ]);
   });
 
   it('reports a conflict only where the local status and the issue state differ', async () => {
@@ -123,19 +131,19 @@ describe.skipIf(process.platform === 'win32')('openplanr github sync reads gh is
 
     expect(printed.filter((line) => line.includes('local:'))).toEqual([
       '  ! TASK-002 — local: pending, GitHub #2: closed (done)',
-      '  ! TASK-003 — local: done, GitHub #3: open (pending)',
+      '  ! TASK-003 — local: done, GitHub #3: open (in-progress)',
     ]);
     expect(
       vi.mocked(promptSelect).mock.calls.map(([message, choices]) => [message, choices[0]]),
     ).toEqual([
       ['  Resolve TASK-002:', { name: 'Use GitHub status (done)', value: 'pull' }],
-      ['  Resolve TASK-003:', { name: 'Use GitHub status (pending)', value: 'pull' }],
+      ['  Resolve TASK-003:', { name: 'Use GitHub status (in-progress)', value: 'pull' }],
     ]);
     expect(stateChanges()).toEqual([]);
   });
 
   it('shows each issue state in openplanr github status and marks an unreadable issue out of sync', async () => {
-    stubGh(LINKED.slice(0, 3));
+    stubGh(LINKED.filter(({ issue }) => issue !== 4));
 
     await runGitHub('status');
 
@@ -146,6 +154,7 @@ describe.skipIf(process.platform === 'win32')('openplanr github sync reads gh is
       ['TASK-002', 'pending', '#2', 'closed', '✗'],
       ['TASK-003', 'done', '#3', 'open', '✗'],
       ['TASK-004', 'pending', '#4', 'error', '✗'],
+      ['TASK-005', 'in-progress', '#5', 'open', '✓'],
     ]);
   });
 
