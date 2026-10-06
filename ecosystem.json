@@ -288,7 +288,7 @@
     },
     "roles": {
       "path": "packages/protocol/registries/roles.json",
-      "digest": "sha256:e135a1dc550dc8ec9bd6ed00cf7560603c25f5ea3b910ede14fe219a185b15b2",
+      "digest": "sha256:aad3a7795a50bd9b5befe4fb8463ff3b95b7dddbc7291f8fd4b3a7b0b5e82ca0",
       "count": 9,
       "ids": [
         "planr-backend",
@@ -310,7 +310,7 @@
     },
     "taskKinds": {
       "path": "packages/protocol/registries/task-kinds.json",
-      "digest": "sha256:123ceaeeadb2c3c1dfabf0b47c06ec67ace8a3d8a30289798903be43180eb49a",
+      "digest": "sha256:d8fc711906ac3839398abbea0d70a0bcf87b715d65980120719578a3bb708d83",
       "count": 7
     },
     "outputs": {
@@ -349,7 +349,7 @@
     ],
     "generatedAssets": {
       "path": "adapters/manifests/generated-assets.json",
-      "digest": "sha256:a12267d123fd1a34f3a9e338876744d7b08202964f9a1facbd6c01ea3bf0d250",
+      "digest": "sha256:d09846ac5a62b04fcf1b980592b5bfdde2b2f64a87d597dc0e8d689c366c44aa",
       "count": 1592
     }
   },
