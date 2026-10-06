@@ -595,7 +595,15 @@ async function startDesignReviewUnlocked(
   server = createArtifactReviewServer({
     env,
     serverMetadata: { kind: 'design', projectRoot: current.root },
-    prepareSource: (options) => prepareArtifactDocument({ ...options, allowLocalForms: true }),
+    prepareSource: (options) =>
+      prepareArtifactDocument({
+        ...options,
+        allowLocalForms: true,
+        prototypeState: true,
+        screenId:
+          current.entries.find((entry) => entry.artifactId === options.artifactId)?.screenId ??
+          options.artifactId,
+      }),
     async refreshSession(session) {
       current = currentDesign(file);
       if (session.designRevision === current.revision) return;

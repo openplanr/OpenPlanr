@@ -81,6 +81,32 @@ async function mutate(session, route, value, method = 'PUT') {
   });
 }
 
+test('local Studio previews enable bounded prototype state with logical screen identities', async (t) => {
+  const context = await fixture(t);
+  const session = await context.start();
+  const current = currentDesign(context.file);
+  for (const entry of current.entries) {
+    const response = await fetch(`${session.url}artifacts/${entry.artifactId}`);
+    assert.equal(response.status, 200);
+    const html = await response.text();
+    assert.ok(
+      html.includes('__OPENPLANR_PROTOTYPE_STATE__'),
+      'Local preview must install the bounded prototype API.',
+    );
+    assert.ok(html.includes(`"screenId":"${entry.screenId}"`));
+    assert.ok(html.includes(`"artifactId":"${entry.artifactId}"`));
+    assert.ok(html.includes(`"parentOrigin":"${new URL(session.url).origin}"`));
+    assert.match(response.headers.get('content-security-policy'), /form-action 'none'/u);
+    assert.match(response.headers.get('content-security-policy'), /sandbox allow-scripts;/u);
+    assert.doesNotMatch(response.headers.get('content-security-policy'), /allow-same-origin/u);
+    const artifact = current.envelope.artifacts.find(({ id }) => id === entry.artifactId);
+    assert.doesNotMatch(
+      resolveArtifactHtml(current.envelope, artifact),
+      /__OPENPLANR_PROTOTYPE_STATE__/u,
+    );
+  }
+});
+
 test('pins, ratings, selected direction and arrangement survive server restart', async (t) => {
   const context = await fixture(t);
   const first = await context.start();
