@@ -43,7 +43,7 @@ Known secret paths and credential values are rejected when required, or recorded
 
 - Recognizable credential formats, private keys and credential file paths are always rejected, including in tests and inside placeholder text.
 - A credential-named key such as `apiKey`, `client_secret` or `PASSWORD` assigned a literal of 16 or more characters is a possible credential unless the literal is a placeholder: `example-…`, `placeholder-…`, `your-…`, `change-me…`, `replace-me…`, or a lowercase marker (`test`, `mock`, `fake`, `dummy`, `fixture`, `synthetic`, `never-return`) followed by words and short numbers that include `secret`, `key`, `token`, `password` or `credential`, singular or plural.
-- An unquoted value is a literal in configuration files (`.env`, YAML, TOML, INI, JSON, shell), in a free-text `=` assignment, and in a shell or env line (`export NAME=…`, or an uppercase `NAME=value` without spaces) in any file.
+- An unquoted value is a literal in configuration files (`.env`, YAML, TOML, INI, JSON, shell), in a free-text `=` assignment, and in a shell or env line (`export NAME=…`, or an uppercase `NAME=value` without spaces that does not end in `,`) in any file.
 - Elsewhere, an identifier such as `TIssueToken;` is a reference only when it ends in `,` or `;`, and a member path such as `config!.apiKey` only in a code file or when it ends in `,` or `;`. A link is read as its target's syntax, or as configuration when either path is a configuration file.
 - Environment lookups, function calls and template interpolation are source code. Any other value counts as a possible credential.
 

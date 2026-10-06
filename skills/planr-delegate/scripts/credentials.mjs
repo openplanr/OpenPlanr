@@ -3,10 +3,11 @@ import { createHash } from 'node:crypto';
 
 /**
  * Recognizable credential formats; rejected everywhere, including tests and placeholders.
- * Case-sensitive: each prefix has a fixed case, and an `sk-` body needs an uppercase letter or digit.
+ * Case-sensitive: each prefix has a fixed case, and `github_pat_` and `sk-` bodies need an
+ * uppercase letter or digit.
  */
 export const CREDENTIAL_FORMAT =
-  /-----BEGIN (?:[A-Z ]* )?PRIVATE KEY(?: BLOCK)?-----|"private_key"\s*:\s*"-----BEGIN|(?<![A-Za-z0-9])AKIA[0-9A-Z]{16}\b|(?<![A-Za-z0-9])gh[pousr]_[A-Za-z0-9]{20,}(?![A-Za-z0-9])|(?<![A-Za-z0-9])github_pat_[A-Za-z0-9_]{20,}\b|(?<![A-Za-z0-9])sk-(?:proj-)?(?=[A-Za-z0-9_-]*[A-Z0-9])[A-Za-z0-9_-]{24,}\b|(?<![A-Za-z0-9])xox[baprs]-[A-Za-z0-9-]{20,}/u;
+  /-----BEGIN (?:[A-Z ]* )?PRIVATE KEY(?: BLOCK)?-----|"private_key"\s*:\s*"-----BEGIN|(?<![A-Za-z0-9])AKIA[0-9A-Z]{16}\b|(?<![A-Za-z0-9])gh[pousr]_[A-Za-z0-9]{20,}(?![A-Za-z0-9])|(?<![A-Za-z0-9])github_pat_(?=[A-Za-z0-9_]*[A-Z0-9])[A-Za-z0-9_]{20,}\b|(?<![A-Za-z0-9])sk-(?:proj-)?(?=[A-Za-z0-9_-]*[A-Z0-9])[A-Za-z0-9_-]{24,}\b|(?<![A-Za-z0-9])xox[baprs]-[A-Za-z0-9-]{20,}/u;
 
 // `word` is the credential word findings report as `key`; the rest of a name may hold a value.
 const CREDENTIAL_NAME =
@@ -87,9 +88,11 @@ function unquotedLiteral(raw, operator, syntax) {
   return !(terminated && codeIdentifier(value));
 }
 
-// `export NAME=` and an uppercase `NAME=value` without spaces are shell or env lines in any file.
-function shellAssignment({ exported, name, before, operator, after }) {
-  return Boolean(exported) || (operator === '=' && !before && !after && SHELL_NAME.test(name));
+// `export NAME=` is a shell line in any file, and so is an uppercase `NAME=value` without spaces
+// unless it ends in `,` like a keyword argument.
+function shellAssignment({ exported, name, before, operator, after, value }) {
+  if (exported) return true;
+  return operator === '=' && !before && !after && SHELL_NAME.test(name) && !value.endsWith(',');
 }
 
 function placeholder(value) {

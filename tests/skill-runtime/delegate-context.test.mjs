@@ -991,6 +991,7 @@ test('identifiers and slugs that contain a token prefix are not credential forma
     'MAX_GHS_TOKEN_LENGTH_FOR_INSTALLATIONS = 40',
     'strip_ghp_prefix_from_token_value',
     'how_to_use_sk-learn_pipelines_for_production',
+    'strip_github_pat_prefix_from_user_input',
   ];
   for (const name of names) assert.equal(assertCredentialFreeText(name), name);
   const source = `${names.map((name) => `# ${name}`).join('\n')}\n`;
@@ -1015,6 +1016,7 @@ test('shell and env assignment lines are literals in any file', async (t) => {
       'CorrectHorse',
     ],
     ['src/env.js', 'const env = `\nAPI_TOKEN=QzWxEcRvTbYnUmIoPa;\n`;\n', 'QzWx'],
+    ['src/env.py', 'ENV = """\nAPI_TOKEN=correct.horse.battery.staple\n"""\n', 'horse'],
   ]) {
     await put(root, path, content);
     await blockedWithout(
@@ -1022,8 +1024,22 @@ test('shell and env assignment lines are literals in any file', async (t) => {
       value,
     );
   }
-  const call =
-    'client = Client(\n    api_key=settings.api_key,\n    token=credentials.access_token,\n)\n';
+  const call = [
+    'client = Client(',
+    '    api_key=settings.api_key,',
+    '    token=credentials.access_token,',
+    ')',
+    'logger = ArgillaLogger(',
+    '    ARGILLA_API_KEY=_credentials_api_key,',
+    ')',
+    'galaxy = GalaxyProvider(',
+    '    GALAXY_PASSWORD=galaxy_password,',
+    ')',
+    'app.config.update(',
+    '    SECRET_KEY=settings.FLASK_SECRET_KEY,',
+    ')',
+    '',
+  ].join('\n');
   await put(root, 'src/client.py', call);
   const capsule = await buildContextCapsule({
     repositoryRoot: root,

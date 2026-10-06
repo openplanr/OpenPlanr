@@ -305,7 +305,7 @@
         },
         {
           "path": "skills/delegate/references/capsule-contract.md",
-          "digest": "sha256:2e0ce9eaa9e7e2fc638a2a99303eec3c9df8b619cfa393782e65591ed7c68eeb"
+          "digest": "sha256:9bd80db920018a43cecc02f4996d65d5eb54a121fce6caa3c9198cb0ca01bf6a"
         },
         {
           "path": "skills/delegate/references/integration-review.md",
@@ -341,7 +341,7 @@
         },
         {
           "path": "skills/delegate/scripts/credentials.mjs",
-          "digest": "sha256:4a318751dbac600e9ee73b77c9b4befab7fbdb5a85b9d8039e41b749fdd77761"
+          "digest": "sha256:a7b55c9598a8a5301c4e0ff79f3471a587a5f26686c9a7d97fe662ee0babb49d"
         },
         {
           "path": "skills/delegate/scripts/custody.mjs",
