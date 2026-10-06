@@ -66,7 +66,7 @@ test('the documented planr-diagram lint, preview, and evaluation journey passes'
 
 test('public onboarding states the supported Node.js line once and links the diagram guide', () => {
   const statement =
-    /Use Node\.js 24 \(`\.nvmrc`\) for development\. Supported versions are declared in\s+\[package metadata\]\([^\n)]*package\.json\); CI verifies published packages on their supported Node\.js 22 and 24 lines\./u;
+    /Use Node\.js 24 \(`\.nvmrc`\) for development\. Supported versions are declared in\s+\[package metadata\]\([^\n)]*package\.json\); CI verifies published packages on their supported Node\.js 22 and 24 lines, and on Node\.js 26\s+without blocking until it becomes LTS\./u;
   assert.match(read('README.md'), /requires a supported Node\.js version/u);
   assert.match(read('README.md'), /packages\/cli\/package\.json/u);
   assert.match(read('README.md'), /docs\/diagrams\/authoring\.md/u);

@@ -24,7 +24,8 @@ npm run changeset -- status
 ```
 
 Use Node.js 24 (`.nvmrc`) for development. Supported versions are declared in
-[package metadata](../package.json); CI verifies published packages on their supported Node.js 22 and 24 lines. `release-proof.yml` (manual) repeats the immutable package
+[package metadata](../package.json); CI verifies published packages on their supported Node.js 22 and 24 lines, and on Node.js 26
+without blocking until it becomes LTS. `release-proof.yml` (manual) repeats the immutable package
 proof on both lines. Do not freeze checks to historical version strings or edit
 old schema versions to match a package bump.
 

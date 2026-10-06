@@ -14,11 +14,14 @@ const JOB_KEYS = new Set([
   'name',
   'needs',
   'if',
+  'continue-on-error',
   'strategy',
   'runs-on',
   'timeout-minutes',
   'steps',
 ]);
+// Jobs that prepare on the contributor runtime, then prove the packed packages on another.
+const PACKED_JOBS = new Set(['packed-public-packages', 'packed-public-packages-current']);
 const STRATEGY_KEYS = new Set(['fail-fast', 'matrix']);
 const STEP_KEYS = new Set(['name', 'uses', 'with', 'run', 'env', 'working-directory']);
 const CONSUMER_IF = /^\$\{\{\s*!cancelled\(\)\s*\}\}$/u;
@@ -119,7 +122,7 @@ function setupNodeVersion(id, job) {
     .filter((step) => step.run !== undefined)
     .map((step) => step.run.trim());
   if (
-    id !== 'packed-public-packages' ||
+    !PACKED_JOBS.has(id) ||
     setups.length !== 2 ||
     String(preparation.with?.['node-version']) !== '24' ||
     !axis ||

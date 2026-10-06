@@ -84,6 +84,8 @@ test('a Node-matrix job runs once, on this Node when CI covers it and otherwise 
   assert.deepEqual(nodesFor(24, 'packed-public-packages'), ['24']);
   assert.deepEqual(nodesFor(24, 'compatibility'), ['24']);
   assert.deepEqual(nodesFor(26, 'packed-public-packages'), ['24']);
+  assert.deepEqual(nodesFor(26, 'packed-public-packages-current'), ['26']);
+  assert.deepEqual(nodesFor(24, 'packed-public-packages-current'), []);
   assert.deepEqual(nodesFor(20, 'quality'), ['24']);
 });
 

@@ -4,7 +4,8 @@ Use this guide to build OpenPlanr from source, install the skills it generates i
 your own coding agent, and verify that what you built is what runs.
 
 Use Node.js 24 (`.nvmrc`) for development. Supported versions are declared in
-[package metadata](../../package.json); CI verifies published packages on their supported Node.js 22 and 24 lines.
+[package metadata](../../package.json); CI verifies published packages on their supported Node.js 22 and 24 lines, and on Node.js 26
+without blocking until it becomes LTS.
 
 ## Build
 

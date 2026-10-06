@@ -108,8 +108,8 @@ const RULES = [
   {
     id: 'node-version',
     message:
-      'only the supported Node.js statement (22.13 or later; CI on 22 and 24) belongs in public docs',
-    pattern: /\bNode(?:\.js)? (?:1\d|2[13]|2[5-9]|[3-9]\d)\b/gu,
+      'only the supported Node.js statement (22.13 or later; CI on 22 and 24, 26 without blocking) belongs in public docs',
+    pattern: /\bNode(?:\.js)? (?:1\d|2[1357-9]|[3-9]\d)\b/gu,
   },
   {
     id: 'product-name-casing',

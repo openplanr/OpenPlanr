@@ -9,7 +9,8 @@ privately as described in [SECURITY.md](SECURITY.md). Participation follows the
 ## Development setup
 
 Use Node.js 24 (`.nvmrc`) for development. Supported versions are declared in
-[package metadata](package.json); CI verifies published packages on their supported Node.js 22 and 24 lines. Run these commands from the repository root:
+[package metadata](package.json); CI verifies published packages on their supported Node.js 22 and 24 lines, and on Node.js 26
+without blocking until it becomes LTS. Run these commands from the repository root:
 
 ```bash
 npm ci
