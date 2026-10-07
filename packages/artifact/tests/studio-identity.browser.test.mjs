@@ -281,7 +281,7 @@ for (const surface of ['design', 'diagram', 'presentation', 'authoring']) {
             `${JSON.stringify(observations, null, 2)}\n`,
           );
       });
-      for (const width of [375, 390, 680, 681, 768, 1440]) {
+      for (const width of [375, 390, 680, 681, 700, 701, 768, 1440]) {
         await page.setViewportSize({ width, height: 900 });
         for (const theme of ['light', 'dark']) {
           await page.emulateMedia({
@@ -330,7 +330,19 @@ for (const surface of ['design', 'diagram', 'presentation', 'authoring']) {
               record.title.visibleWidth >= 36,
               `${context}: title is visible and may truncate`,
             );
-            if (
+            if (scale === 1 && surface === 'authoring' && width <= 700) {
+              assert.equal(
+                await page
+                  .locator('.planr-diagram-editor')
+                  .evaluate((node) => node.dataset.layout.split(' ').includes('compact')),
+                true,
+                `${context}: native editor uses its compact container breakpoint`,
+              );
+              assert.ok(
+                record.toolbar.height >= 88 && record.toolbar.height <= 110,
+                `${context}: two compact rows retain comfortable targets without a tall header`,
+              );
+            } else if (
               scale === 1 &&
               width >= 681 &&
               (await page.locator('.studio-toolbar').getAttribute('data-studio-layout')) ===
