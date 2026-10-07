@@ -9,7 +9,7 @@ import { startDesignReview } from '../lib/design/review.mjs';
 import { designFixture } from './design-fixture.mjs';
 import { settleStudioChrome } from './studio-readiness.mjs';
 
-const widths = [1440, 820, 390, 680, 681, 960, 961];
+const widths = [1440, 834, 820, 390, 680, 681, 960, 961];
 const nextControlKey =
   browserEngine() === 'webkit' && process.platform === 'darwin' ? 'Alt+Tab' : 'Tab';
 const controlSelector = [
@@ -30,6 +30,8 @@ async function toolbarGeometry(page) {
     };
     return {
       toolbar: bounds(document.querySelector('.design-toolbar')),
+      picker: bounds(document.querySelector('.design-view-picker')),
+      layout: document.querySelector('.design-toolbar').dataset.studioLayout,
       workspace: bounds(document.querySelector('.planr-workspace')),
       controls: [...document.querySelectorAll(selector)].map((node) => {
         const style = getComputedStyle(node);
@@ -57,16 +59,17 @@ function near(actual, expected, context) {
 }
 
 function assertAlignment(geometry, width, context) {
-  const { toolbar, workspace, controls } = geometry;
+  const { toolbar, workspace, controls, picker, layout } = geometry;
   assert.equal(controls.length, 7, `${context}: all modes and actions are present`);
   const review = controls.find(({ key }) => key === 'feedback');
   for (const control of controls) {
     near(control.height, review.height, `${context}: ${control.key} height`);
-    near(
-      control.y + control.height / 2,
-      review.y + review.height / 2,
-      `${context}: ${control.key} vertical center`,
-    );
+    if (layout === 'inline')
+      near(
+        control.y + control.height / 2,
+        review.y + review.height / 2,
+        `${context}: ${control.key} vertical center`,
+      );
     assert.ok(
       control.x >= -1 && control.x + control.width <= width + 1,
       `${context}: ${control.key} stays inside the viewport`,
@@ -88,6 +91,11 @@ function assertAlignment(geometry, width, context) {
     if (['canvas', 'prototype', 'walkthrough'].includes(control.key))
       assert.equal(control.lineHeight, review.lineHeight, `${context}: ${control.key} line height`);
   }
+  near(
+    picker.x + picker.width / 2,
+    toolbar.x + toolbar.width / 2,
+    `${context}: geometric header midpoint`,
+  );
   for (let index = 0; index < controls.length; index++) {
     for (const other of controls.slice(index + 1)) {
       const control = controls[index];

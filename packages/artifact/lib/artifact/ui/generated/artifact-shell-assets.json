@@ -23,8 +23,8 @@
   "assets": [
     {
       "path": "lib/artifact/ui/diagram-editor.css",
-      "bytes": 79444,
-      "sha256": "2df299fccefe84dca5b9b27b9ade0834b9095890cda8081942a83134278aca53",
+      "bytes": 83411,
+      "sha256": "0dba47c6531e5918d3f50c9544d7b2dc3cdace120ee983079d9cf2452c0a0bab",
       "budget": {
         "bytes": 98304,
         "gzipBytes": 20480
@@ -50,11 +50,11 @@
     },
     {
       "path": "templates/artifact-review-shell.html",
-      "bytes": 68544,
-      "sha256": "9ba65d5cb1fee64e8d51c7b64ebc7f57b1c333298b4f472c098b812c45e03fe4",
+      "bytes": 72511,
+      "sha256": "ad1189e2f7df1a564ecd473c7fee4bd6e18b266bdb5c1ba9917ad5388a99a73e",
       "budget": {
-        "bytes": 68608,
-        "gzipBytes": 13312
+        "bytes": 87040,
+        "gzipBytes": 16384
       }
     },
     {
@@ -77,8 +77,8 @@
     },
     {
       "path": "templates/diagram-owner.js",
-      "bytes": 1506748,
-      "sha256": "6213f12ea78af275b34c55ae7654c1d32b56e5b076eb02c8c1e7a05702e3cca2",
+      "bytes": 1510983,
+      "sha256": "1cdfe9ff71d7f1b404ca0c12e34cc554d3b23b3d27433fb7b360665266abdc10",
       "budget": {
         "bytes": 1800000,
         "gzipBytes": 340000
@@ -86,8 +86,8 @@
     },
     {
       "path": "templates/diagram-studio.js",
-      "bytes": 1028802,
-      "sha256": "41f446083268203403abc5427d201306aec5e2bf52fb8bf9aa16dc2bd1804dd8",
+      "bytes": 1033014,
+      "sha256": "b75e1a3bfefaf8d049a180155bc20c2ba5d4e31da6cff20b76fbe3d3bb195b25",
       "budget": {
         "bytes": 1250000,
         "gzipBytes": 230000

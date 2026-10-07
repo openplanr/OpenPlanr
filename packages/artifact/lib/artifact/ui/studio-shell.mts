@@ -2,6 +2,7 @@ export type { StudioKind, StudioMenuItem, StudioToolbarProps } from './studio-sh
 export {
   StudioBadge,
   StudioButton,
+  StudioDialog,
   StudioMark,
   StudioMenu,
   StudioPanelDialog,
