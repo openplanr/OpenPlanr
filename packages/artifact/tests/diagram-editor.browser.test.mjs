@@ -648,6 +648,46 @@ test(
       align.every(({ width }) => Math.abs(width - align[0].width) < 0.5),
       'Align buttons share their row equally',
     );
+    for (const font of ['monospace', 'Arial, sans-serif']) {
+      for (const scale of [1, 2]) {
+        const rows = await pane
+          .locator('.de-inspector-group')
+          .first()
+          .getByRole('button')
+          .evaluateAll(
+            (buttons, { font, scale }) => {
+              for (const button of buttons) {
+                button.style.fontFamily = font;
+                button.style.fontSize = `${14 * scale}px`;
+              }
+              return buttons.map((button) => ({
+                width: button.getBoundingClientRect().width,
+                scroll: button.scrollWidth,
+                client: button.clientWidth,
+              }));
+            },
+            { font, scale },
+          );
+        assert.ok(
+          rows.every((row) => Math.abs(row.width - rows[0].width) < 0.5),
+          `Equal columns with ${font} at ${scale}x`,
+        );
+        assert.ok(
+          rows.every((row) => row.scroll <= row.client + 1),
+          'Action text wraps within its complete column',
+        );
+      }
+    }
+    await pane
+      .locator('.de-inspector-group')
+      .first()
+      .getByRole('button')
+      .evaluateAll((buttons) =>
+        buttons.forEach((button) => {
+          button.style.removeProperty('font-family');
+          button.style.removeProperty('font-size');
+        }),
+      );
     assert.equal(
       await page.getByRole('button', { name: 'Align left', exact: true }).isEnabled(),
       true,
@@ -2473,7 +2513,7 @@ test(
       'A fresh phone editor opens at readable scale; Fit remains an explicit overview',
     );
     const captures = join(
-      process.env.PLANR_BROWSER_DIAGNOSTIC_DIR || '/private/tmp/company-diagram-interface-browser',
+      process.env.PLANR_BROWSER_DIAGNOSTIC_DIR || join(tmpdir(), 'company-diagram-interface-browser'),
       browserEngine(),
     );
     await mkdir(captures, { recursive: true });

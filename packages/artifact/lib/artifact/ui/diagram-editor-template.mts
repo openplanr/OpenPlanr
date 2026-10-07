@@ -18,6 +18,7 @@ export interface DiagramEditorSkeleton {
   barStart: HTMLElement;
   barCenter: HTMLElement;
   barEnd: HTMLElement;
+  barInspect: HTMLElement;
   mark: HTMLElement;
   title: HTMLElement;
   subtitle: HTMLElement;
@@ -97,7 +98,8 @@ export function renderEditorSkeleton(
 
   const barStart = group('Document navigation'),
     barCenter = group('History'),
-    barEnd = group('Save and inspect');
+    barEnd = group('Save'),
+    barInspect = group('Inspect');
   const mark = node('span', { className: 'de-mark', 'aria-hidden': 'true' }),
     title = node('strong', { className: 'de-title' }),
     subtitle = node('small', { className: 'de-subtitle' }),
@@ -117,7 +119,7 @@ export function renderEditorSkeleton(
         node('div', { className: 'de-identity' }, title, subtitle),
       ),
     ),
-    node('div', { className: 'de-bar-end' }, saveState, barCenter, barEnd, moreWrap),
+    node('div', { className: 'de-bar-end' }, saveState, barCenter, barInspect, barEnd, moreWrap),
   );
 
   const drawerBackdrop = node('button', {
@@ -257,6 +259,7 @@ export function renderEditorSkeleton(
     barStart,
     barCenter,
     barEnd,
+    barInspect,
     mark,
     title,
     subtitle,
@@ -340,7 +343,7 @@ export function renderEditorControls(
     title: 'Redo · Ctrl or Command Shift Z',
     icon: 'redo',
   });
-  commandButton(dom.barEnd, 'Inspector', 'Inspector', 'properties', {
+  commandButton(dom.barInspect, 'Inspector', 'Inspector', 'properties', {
     title: 'Show or hide the inspector',
     icon: 'properties',
   });
