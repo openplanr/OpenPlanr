@@ -22,6 +22,7 @@
 </p>
 
 <p align="center">
+  <a href="https://openplanr.dev/docs">Docs</a> ·
   <a href="docs/getting-started.md">Getting started</a> ·
   <a href="docs/generated/skills.md">Skills</a> ·
   <a href="packages/cli/docs/CLI.md">CLI reference</a> ·
@@ -210,6 +211,7 @@ generation time. See the [architecture guide](docs/architecture/README.md).
 ## Documentation
 
 **Use**
+[Docs](https://openplanr.dev/docs) ·
 [Getting started](docs/getting-started.md) ·
 [Skill catalog](docs/generated/skills.md) ·
 [CLI reference](packages/cli/docs/CLI.md) ·
