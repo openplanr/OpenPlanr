@@ -18,8 +18,23 @@ const reviewQuery: EnterpriseReviewProjection['query'] = {
   filter,
 };
 const projectReviewQuery = { ...artifactQuery, scope: 'project-reviews' as const };
+const planQuery: EnterpriseArtifactPage['query'] = {
+  ...artifactQuery,
+  filter: { ...filter, contentFormat: 'planning-document' },
+};
+const emptyRevision: EnterpriseArtifactPage['items'][number]['revisionId'] = null;
+// @ts-expect-error Content formats are declared, not arbitrary artifact labels.
+const wrongFormat: EnterpriseArtifactPage['query']['filter']['contentFormat'] = 'handoff';
 // @ts-expect-error Artifact pages do not accept review queries.
 const wrongArtifact: EnterpriseArtifactPage['query'] = projectReviewQuery;
 // @ts-expect-error Review projections do not accept artifact catalog queries.
 const wrongReview: EnterpriseReviewProjection['query'] = artifactQuery;
-void [artifactQuery, reviewQuery, wrongArtifact, wrongReview];
+void [
+  artifactQuery,
+  reviewQuery,
+  planQuery,
+  emptyRevision,
+  wrongFormat,
+  wrongArtifact,
+  wrongReview,
+];

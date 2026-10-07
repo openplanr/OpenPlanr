@@ -430,6 +430,28 @@ export function enterpriseJourneyProof() {
   invalid('cursor filters bound', f.page, 'enterprise-artifact-page', (x) => {
     x.query.filter.search = 'new query';
   });
+  invalid('cursor content format bound', f.page, 'enterprise-artifact-page', (x) => {
+    x.query.filter.contentFormat = 'planning-document';
+  });
+  invalid('unknown content format denied', f.page, 'enterprise-artifact-page', (x) => {
+    x.query.filter.contentFormat = 'handoff';
+    x.nextCursor = null;
+  });
+  check('Plan filter is declared and cursor bound', () => {
+    const page = structuredClone(f.page);
+    page.query.filter.contentFormat = 'planning-document';
+    page.nextCursor.queryDigest = enterprisePageQueryDigest(page.query);
+    assertEnterpriseJourneyContract(page, 'enterprise-artifact-page');
+  });
+  check('empty artifact has no invented revision', () => {
+    const page = structuredClone(f.page);
+    page.items[0].revisionId = null;
+    page.items[0].capabilities = ['artifact.author'];
+    assertEnterpriseJourneyContract(page, 'enterprise-artifact-page');
+  });
+  invalid('empty revision sentinel denied', f.page, 'enterprise-artifact-page', (x) => {
+    x.items[0].revisionId = '';
+  });
   invalid('cross-project row denied', f.page, 'enterprise-artifact-page', (x) => {
     x.items[0].projectId = 'other_project';
   });

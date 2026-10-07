@@ -48,6 +48,15 @@
                 "artifact"
               ]
             },
+            "contentFormat": {
+              "enum": [
+                "all",
+                "diagram-authoring",
+                "design-review",
+                "planning-document",
+                "generic-artifact"
+              ]
+            },
             "status": {
               "enum": [
                 "all",
@@ -114,8 +123,15 @@
             "maxLength": 240
           },
           "revisionId": {
-            "type": "string",
-            "pattern": "^[A-Za-z0-9_-]{1,128}(?![\\s\\S])"
+            "oneOf": [
+              {
+                "type": "string",
+                "pattern": "^[A-Za-z0-9_-]{1,128}(?![\\s\\S])"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "status": {
             "enum": [

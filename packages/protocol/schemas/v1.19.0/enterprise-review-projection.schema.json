@@ -46,6 +46,15 @@
                     "artifact"
                   ]
                 },
+                "contentFormat": {
+                  "enum": [
+                    "all",
+                    "diagram-authoring",
+                    "design-review",
+                    "planning-document",
+                    "generic-artifact"
+                  ]
+                },
                 "status": {
                   "enum": [
                     "all",
@@ -101,6 +110,15 @@
                     "diagram",
                     "design",
                     "artifact"
+                  ]
+                },
+                "contentFormat": {
+                  "enum": [
+                    "all",
+                    "diagram-authoring",
+                    "design-review",
+                    "planning-document",
+                    "generic-artifact"
                   ]
                 },
                 "status": {

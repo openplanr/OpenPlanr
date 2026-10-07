@@ -222,13 +222,13 @@
     {
       "source": "packages/protocol/projections/pipeline/lib/protocol/enterprise-journey-contracts.d.mts",
       "target": "lib/protocol/enterprise-journey-contracts.d.mts",
-      "sha256": "0d957229f60d69b82c5f3209f1d8a594f94832be1e745966f3b7a86dbb6a855c",
+      "sha256": "e6515edc81ef4a84b8768f377806ab1eeb2e5590e6ea22e0df686053abe48961",
       "mode": "644"
     },
     {
       "source": "packages/protocol/projections/pipeline/lib/protocol/enterprise-journey-contracts.mjs",
       "target": "lib/protocol/enterprise-journey-contracts.mjs",
-      "sha256": "0e45d8fdd5004eaf1562e102c027c875d266456c69a92679e37824ba4a7653ae",
+      "sha256": "87bd71f9c80b50b5889fa56458e591a3564846b538d5d9dc5969f9b433f46f3b",
       "mode": "644"
     },
     {
@@ -1266,7 +1266,7 @@
     {
       "source": "packages/protocol/schemas/v1.19.0/enterprise-artifact-page.schema.json",
       "target": "schemas/v1.19.0/enterprise-artifact-page.schema.json",
-      "sha256": "ecc08dff6bad6dbae9c5e1559c267b32923c3d037c6fd2b90fc8091d497a1b44",
+      "sha256": "d3aa9c9368c946bd5b02f3a028a7718b8646e64bf49042dcbf6e9d002f7ef5b8",
       "mode": "644"
     },
     {
@@ -1314,7 +1314,7 @@
     {
       "source": "packages/protocol/schemas/v1.19.0/enterprise-review-projection.schema.json",
       "target": "schemas/v1.19.0/enterprise-review-projection.schema.json",
-      "sha256": "8dbea07d69a1dddda6778581f76d4b8c34ca6c5422b0408b5d38ff2df969926c",
+      "sha256": "62ceb8526e7d050d3fe364386be9cc9a73835c722cd7ad911fb1cf43571deae6",
       "mode": "644"
     },
     {

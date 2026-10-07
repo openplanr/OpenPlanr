@@ -93,6 +93,12 @@ export type EnterpriseReviewQuery =
 export type EnterprisePageQuery = EnterpriseCatalogQuery | EnterpriseReviewQuery;
 export interface EnterpriseArtifactFilter {
   kind: 'all' | 'diagram' | 'design' | 'artifact';
+  contentFormat?:
+    | 'all'
+    | 'diagram-authoring'
+    | 'design-review'
+    | 'planning-document'
+    | 'generic-artifact';
   status: 'all' | 'active' | 'archived';
   search: string;
 }
@@ -118,7 +124,8 @@ export interface EnterpriseArtifactPage extends EnterpriseJourneyEnvelope {
     kind: 'diagram' | 'design' | 'artifact';
     contentFormat: 'diagram-authoring' | 'design-review' | 'planning-document' | 'generic-artifact';
     title: string;
-    revisionId: string;
+    /** Null until the artifact has a saved revision. */
+    revisionId: string | null;
     status: 'active' | 'archived';
     capabilities: import('./enterprise-contracts.mjs').EnterpriseAction[];
   })[];

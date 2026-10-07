@@ -133,11 +133,23 @@ const artifactQuery = closed({
   ...scope,
   actorId: id,
   scope: { const: 'artifacts' },
-  filter: closed({
-    kind: { enum: ['all', 'diagram', 'design', 'artifact'] },
-    status: { enum: ['all', 'active', 'archived'] },
-    search: { type: 'string', maxLength: 240 },
-  }),
+  filter: closed(
+    {
+      kind: { enum: ['all', 'diagram', 'design', 'artifact'] },
+      contentFormat: {
+        enum: [
+          'all',
+          'diagram-authoring',
+          'design-review',
+          'planning-document',
+          'generic-artifact',
+        ],
+      },
+      status: { enum: ['all', 'active', 'archived'] },
+      search: { type: 'string', maxLength: 240 },
+    },
+    ['kind', 'status', 'search'],
+  ),
 });
 const reviewQuery = {
   oneOf: [
@@ -188,7 +200,7 @@ const artifactSummary = closed({
     enum: ['diagram-authoring', 'design-review', 'planning-document', 'generic-artifact'],
   },
   title: { type: 'string', minLength: 1, maxLength: 240 },
-  revisionId,
+  revisionId: { oneOf: [revisionId, { type: 'null' }] },
   status: { enum: ['active', 'archived'] },
   capabilities,
 });
