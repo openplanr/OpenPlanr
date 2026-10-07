@@ -31,7 +31,7 @@ Run subagents sequentially. Each subagent's output is consumed by the next.
 
 ### 2.3 — Use the **specification-agent** subagent (always)
 
-- **Spec-driven mode optimization:** if `<SPEC_DIR>/stories/` is non-empty (i.e., the user already ran `planr spec decompose`), this step is a NO-OP — the decomposition is already complete. Skip subagent invocation; print "Decomposition already exists (from `planr spec decompose`); skipping specification-agent."
+- **Spec-driven mode optimization:** if `<SPEC_DIR>/stories/` is non-empty (i.e., the user already ran `/planr:plan`), this step is a NO-OP — the decomposition is already complete. Skip subagent invocation; print "Decomposition already exists (from `planr spec decompose`); skipping specification-agent."
 - Otherwise: delegate to the **specification-agent** subagent with feature name `$ARGUMENTS` AND the resolved MODE/SPEC_DIR context.
 - Reads (default mode): `input/specs/spec-$ARGUMENTS.md`, `input/tech/stack.md`, optional `output/feats/feat-$ARGUMENTS/design-spec.md`, optional `output/db/schema.json`, plus stack files (plugin defaults at `${CLAUDE_PLUGIN_ROOT}/stacks/...` overlaid by user `.claude/stacks/...`).
 - Reads (spec-driven mode): `<SPEC_DIR>/SPEC-NNN-${ARGUMENTS}.md`, `input/tech/stack.md`, optional `<SPEC_DIR>/design/design-spec.md`, optional `output/db/schema.json`, plus stack files (same precedence).
@@ -108,7 +108,7 @@ After the contract passes, print:
   Mode:        <default | spec-driven>
   Strategy:    <CONTINUE | BOOTSTRAP_ONLY | SCAFFOLD_NODE>
   Output dir:  <output/feats/feat-${SLUG}/ | .planr/specs/SPEC-NNN-${SLUG}/>
-  Design spec: <created | skipped (no PNGs) | reused (from planr spec decompose)>
+  Design spec: <created | skipped (no PNGs) | reused (from /planr:plan)>
   DB schema:   <created | reused | skipped>
   US created:  N
   Tasks:       M

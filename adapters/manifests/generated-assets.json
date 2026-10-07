@@ -6,7 +6,7 @@
   "assets": [
     {
       "path": "adapters/manifests/canonical-skills.json",
-      "digest": "sha256:d9f6aaf0746989374b07d166094781d38d61f393cb5ab46686f4f2f1cbc63943",
+      "digest": "sha256:be86a66ea7555cfa84da7e5f2431a4224a3fe2d368a9437162bfe3baa93323bb",
       "generated": false
     },
     {
@@ -16,7 +16,7 @@
     },
     {
       "path": "adapters/manifests/skill-footprint.json",
-      "digest": "sha256:08a32f048d028a41c783ce8b1b21f62ba6a0a53e25cbf564219731ed69ed6a96",
+      "digest": "sha256:1fe14a5df68c50b1aa43b4edb25e92d7c715eb0e978417b34fe91ea6a091e222",
       "generated": false
     },
     {
@@ -36,7 +36,7 @@
     },
     {
       "path": "dist/plugins/claude/openplanr/.openplanr-content.json",
-      "digest": "sha256:d71d6e6e5476b3fdf37688fef7b589bf5d6f1584fe11d7e6b6a6d69087d29750",
+      "digest": "sha256:bb8e892cedd3c02ffaeb975759020943fa8684ba42125b63dbf0249cfa00c2e6",
       "generated": true
     },
     {
@@ -1266,7 +1266,7 @@
     },
     {
       "path": "dist/plugins/claude/openplanr/skills/plan/SKILL.md",
-      "digest": "sha256:6cfa23c318f29fbd5c6f34541c43a84bf7681376563170cfd241d99b49951f16",
+      "digest": "sha256:a2e82ebfbc71ceff6186779a60ba1a3b47ec8a6c42444a6953abb0bebbfa8c54",
       "generated": true
     },
     {
@@ -1391,7 +1391,7 @@
     },
     {
       "path": "dist/plugins/cursor/openplanr/.openplanr-content.json",
-      "digest": "sha256:19cad68a9f5f22e7bf3ced413f2ac5b2a5620d7410766da683fab8ef72688a53",
+      "digest": "sha256:ffc4a09f1b1e596eda1a3f137361212e3047d4593ada88ac45afafeb2a949d8b",
       "generated": true
     },
     {
@@ -1961,7 +1961,7 @@
     },
     {
       "path": "dist/plugins/cursor/openplanr/rules/planr-plan.mdc",
-      "digest": "sha256:fc5cca02f9aa4b1b799381b7fba4fbbd98ccf3f0ed86704a4bec4c72d2970201",
+      "digest": "sha256:952f63ebe7ad028043e1c25e12737f2e56db6216efa09346fd6bd14f071a5223",
       "generated": true
     },
     {
@@ -2581,7 +2581,7 @@
     },
     {
       "path": "dist/plugins/openai/openplanr/.openplanr-content.json",
-      "digest": "sha256:619649b6d7c9e0b9d8519b385c6fa6885fd53f95c38216a1bbeab17cab198c20",
+      "digest": "sha256:dd819da3197bf496b72984b86cf25026c404691b77d4a55b814bdb7dd221df78",
       "generated": true
     },
     {
@@ -3851,7 +3851,7 @@
     },
     {
       "path": "dist/plugins/openai/openplanr/skills/plan/SKILL.md",
-      "digest": "sha256:6cfa23c318f29fbd5c6f34541c43a84bf7681376563170cfd241d99b49951f16",
+      "digest": "sha256:a2e82ebfbc71ceff6186779a60ba1a3b47ec8a6c42444a6953abb0bebbfa8c54",
       "generated": true
     },
     {
@@ -4061,7 +4061,7 @@
     },
     {
       "path": "packages/cli/lib/host-packages/claude/openplanr/.openplanr-content.json",
-      "digest": "sha256:d71d6e6e5476b3fdf37688fef7b589bf5d6f1584fe11d7e6b6a6d69087d29750",
+      "digest": "sha256:bb8e892cedd3c02ffaeb975759020943fa8684ba42125b63dbf0249cfa00c2e6",
       "generated": true
     },
     {
@@ -5291,7 +5291,7 @@
     },
     {
       "path": "packages/cli/lib/host-packages/claude/openplanr/skills/plan/SKILL.md",
-      "digest": "sha256:6cfa23c318f29fbd5c6f34541c43a84bf7681376563170cfd241d99b49951f16",
+      "digest": "sha256:a2e82ebfbc71ceff6186779a60ba1a3b47ec8a6c42444a6953abb0bebbfa8c54",
       "generated": true
     },
     {
@@ -5416,7 +5416,7 @@
     },
     {
       "path": "packages/cli/lib/host-packages/cursor/openplanr/.openplanr-content.json",
-      "digest": "sha256:19cad68a9f5f22e7bf3ced413f2ac5b2a5620d7410766da683fab8ef72688a53",
+      "digest": "sha256:ffc4a09f1b1e596eda1a3f137361212e3047d4593ada88ac45afafeb2a949d8b",
       "generated": true
     },
     {
@@ -5986,7 +5986,7 @@
     },
     {
       "path": "packages/cli/lib/host-packages/cursor/openplanr/rules/planr-plan.mdc",
-      "digest": "sha256:fc5cca02f9aa4b1b799381b7fba4fbbd98ccf3f0ed86704a4bec4c72d2970201",
+      "digest": "sha256:952f63ebe7ad028043e1c25e12737f2e56db6216efa09346fd6bd14f071a5223",
       "generated": true
     },
     {
@@ -6606,7 +6606,7 @@
     },
     {
       "path": "packages/cli/lib/host-packages/openai/openplanr/.openplanr-content.json",
-      "digest": "sha256:619649b6d7c9e0b9d8519b385c6fa6885fd53f95c38216a1bbeab17cab198c20",
+      "digest": "sha256:dd819da3197bf496b72984b86cf25026c404691b77d4a55b814bdb7dd221df78",
       "generated": true
     },
     {
@@ -7876,7 +7876,7 @@
     },
     {
       "path": "packages/cli/lib/host-packages/openai/openplanr/skills/plan/SKILL.md",
-      "digest": "sha256:6cfa23c318f29fbd5c6f34541c43a84bf7681376563170cfd241d99b49951f16",
+      "digest": "sha256:a2e82ebfbc71ceff6186779a60ba1a3b47ec8a6c42444a6953abb0bebbfa8c54",
       "generated": true
     },
     {

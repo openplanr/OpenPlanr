@@ -165,9 +165,9 @@
     {
       "skillId": "planr-plan",
       "files": 14,
-      "bytes": 308574,
+      "bytes": 308606,
       "uniqueFiles": 14,
-      "uniqueBytes": 308574,
+      "uniqueBytes": 308606,
       "duplicateBytes": 0
     },
     {
@@ -231,25 +231,25 @@
     {
       "host": "openai",
       "files": 292,
-      "bytes": 4710957,
+      "bytes": 4710989,
       "uniqueFiles": 244,
-      "uniqueBytes": 4484938,
+      "uniqueBytes": 4484970,
       "duplicateBytes": 226019
     },
     {
       "host": "claude",
       "files": 273,
-      "bytes": 4773802,
+      "bytes": 4773834,
       "uniqueFiles": 224,
-      "uniqueBytes": 4544300,
+      "uniqueBytes": 4544332,
       "duplicateBytes": 229502
     },
     {
       "host": "cursor",
       "files": 236,
-      "bytes": 4655578,
+      "bytes": 4655610,
       "uniqueFiles": 188,
-      "uniqueBytes": 4429559,
+      "uniqueBytes": 4429591,
       "duplicateBytes": 226019
     }
   ]

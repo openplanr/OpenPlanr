@@ -349,7 +349,7 @@
     {
       "source": "packages/design/lib/design/tokens.mjs",
       "target": "lib/design/tokens.mjs",
-      "sha256": "56f9b1cff2e083fe86ba87f6b7eac83473bb56175fd7a8b0f0a357779706c665",
+      "sha256": "b8a19b5cbca42a43ea7505ff0e37969756243154058d5e8a4919946573db6402",
       "mode": "644"
     },
     {
