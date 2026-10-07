@@ -357,6 +357,7 @@ async function buildOutputs() {
     './diagram-editor.css',
     './diagram-owner',
     './diagram-review-bundle',
+    './diagram-review-bundle/browser',
     './diagram-shared-review',
     './diagram-shared-review.css',
     './studio-shell',

@@ -61,6 +61,12 @@ Run `npm run generate:diagram` after changing a diagram definition and
 
 ## Native encrypted diagram reviews
 
+`planr-pipeline/diagram-review-bundle/browser` exposes
+`prepareAuthoredDiagramReviewBundle()` for verified in-memory authored copies.
+It preserves graph and geometry, validates source identity, and excludes private
+source bytes and correspondence. Browser callers use the same projection as the
+file-based sharing wrapper without filesystem or Node dependencies.
+
 The `diagram/review-bundle` builder projects verified manifests and authored
 bundles into a whitelisted review scene. Geometry and connections remain intact;
 source bytes, local paths and private provenance are excluded. The portable

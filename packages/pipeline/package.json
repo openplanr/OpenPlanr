@@ -201,6 +201,10 @@
       "types": "./lib/artifact/diagram/review-bundle.d.mts",
       "import": "./lib/artifact/diagram/review-bundle.mjs"
     },
+    "./diagram-review-bundle/browser": {
+      "types": "./lib/artifact/diagram/review-bundle-browser.d.mts",
+      "import": "./lib/artifact/diagram/review-bundle-browser.mjs"
+    },
     "./diagram-sharing": {
       "types": "./lib/artifact/diagram/share.d.mts",
       "import": "./lib/artifact/diagram/share.mjs"
