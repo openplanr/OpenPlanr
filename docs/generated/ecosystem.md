@@ -18,7 +18,7 @@ This is the deterministic local-candidate ledger for OpenPlanr 0.1.0. It reads o
 Compatibility invariants:
 
 - `openplanr` uses the exact optional `planr-pipeline@0.57.0` dependency.
-- The public pipeline retains 58 export keys and 228 root symbols.
+- The public pipeline retains 59 export keys and 228 root symbols.
 - Historical schemas and registries remain accounted for; additive Protocol contracts retain versioned readers.
 - Commands, skills, roles, and output contracts are catalog-bound.
 - `openplanr` and its `opr` alias resolve to one CLI parser.

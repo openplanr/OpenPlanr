@@ -809,6 +809,18 @@
       "mode": "644"
     },
     {
+      "source": "packages/artifact/lib/artifact/diagram/review-bundle-browser.d.mts",
+      "target": "lib/artifact/diagram/review-bundle-browser.d.mts",
+      "sha256": "c05a5a7c68f8768457ce83f18065d2b75f2ba35a93184268b3fee6184baf013d",
+      "mode": "644"
+    },
+    {
+      "source": "packages/artifact/lib/artifact/diagram/review-bundle-browser.mjs",
+      "target": "lib/artifact/diagram/review-bundle-browser.mjs",
+      "sha256": "2a139e0ee7f1cc3954c55cf948f37e70d4012469ab20aa29e3505901918b95e4",
+      "mode": "644"
+    },
+    {
       "source": "packages/artifact/lib/artifact/diagram/review-bundle.d.mts",
       "target": "lib/artifact/diagram/review-bundle.d.mts",
       "sha256": "d5b0739761ee573b4c3c6d390ec9f45a4f2d8e1605914ace5396065b93730a81",
@@ -817,7 +829,7 @@
     {
       "source": "packages/artifact/lib/artifact/diagram/review-bundle.mjs",
       "target": "lib/artifact/diagram/review-bundle.mjs",
-      "sha256": "015ea09b59e0500a36a1f931235f346fcbb74c6c21ab0e484a9082b9b0dbc3e9",
+      "sha256": "7552e5f64220888ec685b71f07da2d144543e2b7a293730a1fd56eb082b7091c",
       "mode": "644"
     },
     {
