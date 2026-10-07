@@ -14,11 +14,14 @@ const JOB_KEYS = new Set([
   'name',
   'needs',
   'if',
+  'continue-on-error',
   'strategy',
   'runs-on',
   'timeout-minutes',
   'steps',
 ]);
+// Jobs that prepare on the contributor runtime, then prove the packed packages on another.
+const PACKED_JOBS = new Set(['packed-public-packages', 'packed-public-packages-current']);
 const STRATEGY_KEYS = new Set(['fail-fast', 'matrix']);
 const STEP_KEYS = new Set(['name', 'uses', 'with', 'run', 'env', 'working-directory']);
 const CONSUMER_IF = /^\$\{\{\s*!cancelled\(\)\s*\}\}$/u;
@@ -31,6 +34,8 @@ const NODE_AXIS = /^\$\{\{\s*matrix\.([\w-]+)\s*\}\}$/u;
 const CONSUMER_NODE_TEST = /^node --test(?:\s+[\w./=-]+)*$/u;
 const CONTRIBUTOR_NODE_RANGE = JSON.parse(readFileSync(resolve(root, 'package.json'), 'utf8'))
   .engines.node;
+/** The required status job: it only reads the other jobs' results, so it is not replayed. */
+export const AGGREGATE_JOB = 'ci-passed';
 
 /** The local command runner needs the contributor runtime, even for a consumer CI job. */
 export function assertContributorRuntime(version) {
@@ -87,7 +92,9 @@ export function planLocalCi(workflow, nodeMajor) {
     producer,
     buildNode: context.buildNode,
     prepare: context.prepare,
-    jobs: entries.filter(([id]) => id !== producer).map(([id, job]) => planJob(id, job, context)),
+    jobs: entries
+      .filter(([id]) => id !== producer && id !== AGGREGATE_JOB)
+      .map(([id, job]) => planJob(id, job, context)),
   };
 }
 
@@ -115,7 +122,7 @@ function setupNodeVersion(id, job) {
     .filter((step) => step.run !== undefined)
     .map((step) => step.run.trim());
   if (
-    id !== 'packed-public-packages' ||
+    !PACKED_JOBS.has(id) ||
     setups.length !== 2 ||
     String(preparation.with?.['node-version']) !== '24' ||
     !axis ||

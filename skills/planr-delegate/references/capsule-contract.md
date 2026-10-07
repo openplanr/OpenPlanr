@@ -1,6 +1,6 @@
 # Delegation context capsule v1
 
-`context.mjs` is an internal, Node 20+ package resource. It gathers **work context** only. It does not select a profile, grant a writable path, launch an agent, or authorize publication. The orchestrator must show `previewContextCapsule` alongside the selected writable repository, native engine/model selection, configuration trust and known provider or native-managed routing before dispatch.
+`context.mjs` is an internal, Node 22+ package resource. It gathers **work context** only. It does not select a profile, grant a writable path, launch an agent, or authorize publication. The orchestrator must show `previewContextCapsule` alongside the selected writable repository, native engine/model selection, configuration trust and known provider or native-managed routing before dispatch.
 
 ## API
 

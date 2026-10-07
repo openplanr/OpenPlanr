@@ -24,15 +24,17 @@ npm run changeset -- status
 ```
 
 Use Node.js 24 (`.nvmrc`) for development. Supported versions are declared in
-[package metadata](../package.json); CI verifies published packages on their supported Node.js 20, 22, and 24 lines. `release-proof.yml` (manual) repeats the immutable package
-proof on all three lines. Do not freeze checks to historical version strings or edit
+[package metadata](../package.json); CI verifies published packages on their supported Node.js 22 and 24 lines, and on Node.js 26
+without blocking until it becomes LTS. `release-proof.yml` (manual) repeats the immutable package
+proof on both lines. Do not freeze checks to historical version strings or edit
 old schema versions to match a package bump.
 
 The [published CLI](../packages/cli/package.json) and
 [workspace tooling](../package.json) declare their own dependency compatibility.
 Workspace tooling has a narrower range because of its development dependencies. Standalone
-[Protocol](../packages/protocol/package.json) retains its independent Node.js 20
-import contract. Use the latest supported LTS patch for routine work.
+[Protocol](../packages/protocol/package.json) declares Node.js 22.13 as its floor, and
+`protocol-runtime-floor.yml` imports it on exactly that release. Use the latest supported
+LTS patch for routine work.
 
 ## Publication gates
 

@@ -332,7 +332,7 @@ function runEnvironmentChecks(pkg) {
       'environment.node-engine',
       'Environment',
       `Node ${process.versions.node} does not satisfy engines.node ${nodeRange}`,
-      'Use Node 20 or newer.',
+      `Use a Node.js version that satisfies ${nodeRange}.`,
     );
   }
 }

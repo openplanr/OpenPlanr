@@ -289,7 +289,7 @@
       "assets": [
         {
           "path": "skills/delegate/SKILL.md",
-          "digest": "sha256:e3bc67ad5506a9d360344a4071e9cad1667e0481603789c5fb7b45ae0e39f826"
+          "digest": "sha256:344d272793e81025c73d2c62333e786f4a073dec30f1ac8eb8ed560bea2c8e4f"
         },
         {
           "path": "skills/delegate/openplanr.skill.json",
@@ -305,7 +305,7 @@
         },
         {
           "path": "skills/delegate/references/capsule-contract.md",
-          "digest": "sha256:9bd80db920018a43cecc02f4996d65d5eb54a121fce6caa3c9198cb0ca01bf6a"
+          "digest": "sha256:22e5daac9ad9cb0951222fef4d0f45ae35de4a6b7ee2b47d660cc6b672188fff"
         },
         {
           "path": "skills/delegate/references/integration-review.md",
@@ -381,7 +381,7 @@
         },
         {
           "path": "skills/delegate/scripts/run-preparation.mjs",
-          "digest": "sha256:dbc03621c77946ad77e97db84d826714d2fe75eccd15963756791b1439b46589"
+          "digest": "sha256:746630b00e1c252cae6dd7e78cde4b2d6c65e75f1ef19a092111e1e4de5152e3"
         },
         {
           "path": "skills/delegate/scripts/run-execution.mjs",
@@ -470,7 +470,7 @@
         },
         {
           "path": "skills/design/references/utilities.md",
-          "digest": "sha256:df4414af1974d8268af25cfb33ce27d967e0a7f0ca29e75de82b91f3dacf2543"
+          "digest": "sha256:cedeae549cda5434a768846dc3d83a1baddfa74940276485db6fba1c649301b5"
         },
         {
           "path": "skills/design/references/team-review.md",
@@ -543,7 +543,7 @@
         },
         {
           "path": "skills/design-loop/references/utilities.md",
-          "digest": "sha256:df4414af1974d8268af25cfb33ce27d967e0a7f0ca29e75de82b91f3dacf2543"
+          "digest": "sha256:cedeae549cda5434a768846dc3d83a1baddfa74940276485db6fba1c649301b5"
         },
         {
           "path": "skills/design-loop/references/team-review.md",
@@ -616,7 +616,7 @@
         },
         {
           "path": "skills/design-review/references/utilities.md",
-          "digest": "sha256:df4414af1974d8268af25cfb33ce27d967e0a7f0ca29e75de82b91f3dacf2543"
+          "digest": "sha256:cedeae549cda5434a768846dc3d83a1baddfa74940276485db6fba1c649301b5"
         },
         {
           "path": "skills/design-review/references/team-review.md",

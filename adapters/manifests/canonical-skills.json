@@ -861,7 +861,7 @@
       "source": "skills/planr-delegate/openplanr.skill.json",
       "entrypoint": "skills/planr-delegate/SKILL.md",
       "description": "Coordinate an explicitly requested implementation with Claude Code, Codex or Cursor, then independently review and integrate its observed changes. Use when the user asks another coding agent to implement.",
-      "sourceDigest": "sha256:dba897dd091da52a53d40d4ecce9183176f038cfa6162f8363882de4cab44177",
+      "sourceDigest": "sha256:c2e536cdfed1616c505d2cd1142febf6c7da796aad77309e1f6e4739a9f5647e",
       "resources": [
         {
           "path": "agents/openai.yaml",
@@ -895,7 +895,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:9bd80db920018a43cecc02f4996d65d5eb54a121fce6caa3c9198cb0ca01bf6a"
+          "digest": "sha256:22e5daac9ad9cb0951222fef4d0f45ae35de4a6b7ee2b47d660cc6b672188fff"
         },
         {
           "path": "references/integration-review.md",
@@ -1123,7 +1123,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:dbc03621c77946ad77e97db84d826714d2fe75eccd15963756791b1439b46589"
+          "digest": "sha256:746630b00e1c252cae6dd7e78cde4b2d6c65e75f1ef19a092111e1e4de5152e3"
         },
         {
           "path": "scripts/run-execution.mjs",
@@ -1363,7 +1363,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:df4414af1974d8268af25cfb33ce27d967e0a7f0ca29e75de82b91f3dacf2543"
+          "digest": "sha256:cedeae549cda5434a768846dc3d83a1baddfa74940276485db6fba1c649301b5"
         },
         {
           "path": "references/team-review.md",
@@ -1819,7 +1819,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:b3d397b4bb27c37799f143ee6a83c7000f3d1a38aba3e321778ed6cc8916d702"
+          "digest": "sha256:c1dd1d38f90e49ea8eb145b7ccd55bf7c0d16841d9e61a3fd96eb9208b32fe86"
         },
         {
           "path": "scripts/runtime/packages/design/templates/studio/enhancements.css",
@@ -2107,7 +2107,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:037b4f8f4fd2f1db03d5106ec974e250502d1a4ce39a018e668ab7e07d93de43"
+          "digest": "sha256:c0434bbb484e6830db91bc5138ee5215335d4011f22bfd55607274bf6589aa12"
         },
         {
           "path": "scripts/runtime/packages/protocol/registries/artifact-theme.json",
@@ -2525,7 +2525,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:df4414af1974d8268af25cfb33ce27d967e0a7f0ca29e75de82b91f3dacf2543"
+          "digest": "sha256:cedeae549cda5434a768846dc3d83a1baddfa74940276485db6fba1c649301b5"
         },
         {
           "path": "references/team-review.md",
@@ -2981,7 +2981,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:b3d397b4bb27c37799f143ee6a83c7000f3d1a38aba3e321778ed6cc8916d702"
+          "digest": "sha256:c1dd1d38f90e49ea8eb145b7ccd55bf7c0d16841d9e61a3fd96eb9208b32fe86"
         },
         {
           "path": "scripts/runtime/packages/design/templates/studio/enhancements.css",
@@ -3269,7 +3269,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:037b4f8f4fd2f1db03d5106ec974e250502d1a4ce39a018e668ab7e07d93de43"
+          "digest": "sha256:c0434bbb484e6830db91bc5138ee5215335d4011f22bfd55607274bf6589aa12"
         },
         {
           "path": "scripts/runtime/packages/protocol/registries/artifact-theme.json",
@@ -3687,7 +3687,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:df4414af1974d8268af25cfb33ce27d967e0a7f0ca29e75de82b91f3dacf2543"
+          "digest": "sha256:cedeae549cda5434a768846dc3d83a1baddfa74940276485db6fba1c649301b5"
         },
         {
           "path": "references/team-review.md",
@@ -4143,7 +4143,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:b3d397b4bb27c37799f143ee6a83c7000f3d1a38aba3e321778ed6cc8916d702"
+          "digest": "sha256:c1dd1d38f90e49ea8eb145b7ccd55bf7c0d16841d9e61a3fd96eb9208b32fe86"
         },
         {
           "path": "scripts/runtime/packages/design/templates/studio/enhancements.css",
@@ -4431,7 +4431,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:037b4f8f4fd2f1db03d5106ec974e250502d1a4ce39a018e668ab7e07d93de43"
+          "digest": "sha256:c0434bbb484e6830db91bc5138ee5215335d4011f22bfd55607274bf6589aa12"
         },
         {
           "path": "scripts/runtime/packages/protocol/registries/artifact-theme.json",
@@ -5240,7 +5240,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:037b4f8f4fd2f1db03d5106ec974e250502d1a4ce39a018e668ab7e07d93de43"
+          "digest": "sha256:c0434bbb484e6830db91bc5138ee5215335d4011f22bfd55607274bf6589aa12"
         },
         {
           "path": "scripts/runtime/packages/protocol/schemas/v1.1.0/artifact-review.schema.json",

@@ -16,7 +16,7 @@ Ordinary implementation remains with `planr-ship`.
 Resolve [runner.mjs](scripts/runner.mjs) from this installed skill. Call it through
 Node as `node <installed-skill>/scripts/runner.mjs <action>`, with one JSON object
 on stdin. Alternatively, include `action` in that object and omit the command-line
-action; conflicting actions are rejected. `probe` discovers Node 20+, Git, installed
+action; conflicting actions are rejected. `probe` discovers Node 22+, Git, installed
 CLIs and optional profiles; an OpenPlanr checkout or public CLI command is not
 needed. Reuse normal signed-in authentication. Preserve selection precedence:
 explicit engine/profile, saved choice, then a sole compatible native choice; ask

@@ -60,63 +60,63 @@
       "version": "2.2641.2",
       "path": "packages/cli",
       "publication": "public",
-      "manifestDigest": "sha256:c2d7691a848f4e88788cec342239510f159fa456c4b0f378a7bbba15367c1465"
+      "manifestDigest": "sha256:5ee43eaf62723fa5e51b91a99cf56d7b0b7d3b85a164b370b7cce4da703626c3"
     },
     "pipeline": {
       "package": "planr-pipeline",
       "version": "0.57.0",
       "path": "packages/pipeline",
       "publication": "public",
-      "manifestDigest": "sha256:163c57e6246985c0d54a98e6ed8d7c2b131ae20409a2f861c6826abb084e23bb"
+      "manifestDigest": "sha256:954ab1127d0acb5931a8f79f89ee067e613ae12271759d8273bb56891b4091d9"
     },
     "protocol": {
       "package": "@openplanr/protocol",
       "version": "0.10.3",
       "path": "packages/protocol",
       "publication": "public",
-      "manifestDigest": "sha256:037b4f8f4fd2f1db03d5106ec974e250502d1a4ce39a018e668ab7e07d93de43"
+      "manifestDigest": "sha256:c0434bbb484e6830db91bc5138ee5215335d4011f22bfd55607274bf6589aa12"
     },
     "operate": {
       "package": "@openplanr/operate",
       "version": "0.1.17",
       "path": "packages/operate",
       "publication": "private",
-      "manifestDigest": "sha256:1ef33433dc1dd664c6113c13898f415deb9699618ed86a1d245afa72389bd1af"
+      "manifestDigest": "sha256:2a60e6c1cf1d821c70bc8b6d24b82e7daca2faa7d3f92cd9b743b288c63a941e"
     },
     "artifact": {
       "package": "@openplanr/artifact",
       "version": "0.6.5",
       "path": "packages/artifact",
       "publication": "private",
-      "manifestDigest": "sha256:123b38ab649f927eb8278df7df4434f7e892456e15f666e192caf70bb92e2b77"
+      "manifestDigest": "sha256:da7924bd08b09cf619dece24db3d4194161eed641848efb19ddf54c209771f18"
     },
     "design": {
       "package": "@openplanr/design",
       "version": "0.4.5",
       "path": "packages/design",
       "publication": "private",
-      "manifestDigest": "sha256:b3d397b4bb27c37799f143ee6a83c7000f3d1a38aba3e321778ed6cc8916d702"
+      "manifestDigest": "sha256:c1dd1d38f90e49ea8eb145b7ccd55bf7c0d16841d9e61a3fd96eb9208b32fe86"
     },
     "skillRuntime": {
       "package": "@openplanr/skill-runtime",
       "version": "0.2.16",
       "path": "packages/skill-runtime",
       "publication": "private",
-      "manifestDigest": "sha256:c08dd444722c74e1a1b8db38a528879938cebf90f758cca67d15a8ddc6fdc1cc"
+      "manifestDigest": "sha256:9352848854a1aa5541463e8bfdb9967e1ba3c63bf7f34e397d408ee86b1addfe"
     },
     "integrations": {
       "package": "@openplanr/integrations",
       "version": "0.1.0",
       "path": "packages/integrations",
       "publication": "private",
-      "manifestDigest": "sha256:c09ec2ac09e307abca9cd89efd7c7885df42a0ac63cd5fb83ff3d23793be5460"
+      "manifestDigest": "sha256:8c41c7c0177dff121d11b596b3839a1945fcc496da182011af2d27e9eba02245"
     },
     "dashboard": {
       "package": "@openplanr/dashboard-app",
       "version": "0.1.17",
       "path": "apps/dashboard",
       "publication": "private",
-      "manifestDigest": "sha256:67f89c0e122b7f92212c38dfb8f86c8b52348904accef8afe3192d7d105682a6"
+      "manifestDigest": "sha256:06b74eb9721944b7c6d2be931beec4c4ad1048cfde72f8a858c60744ac2572d0"
     }
   },
   "compatibility": {
@@ -349,7 +349,7 @@
     ],
     "generatedAssets": {
       "path": "adapters/manifests/generated-assets.json",
-      "digest": "sha256:927fe4ce605880f4180a509ff292dd6297e06c86100a421675ba0f3faeab627b",
+      "digest": "sha256:0b0b0196802468baf7606af7f31007ac6ad7ba11b497f3a8ebbd160dca9d80ce",
       "count": 1616
     }
   },
