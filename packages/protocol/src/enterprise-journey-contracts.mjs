@@ -184,7 +184,7 @@ export const ENTERPRISE_PROJECT_PAGE_SCHEMA = deepFreeze(
       closed({
         organizationId: id,
         projectId: id,
-        slug: { type: 'string', pattern: '^[a-z0-9]+(?:-[a-z0-9]+)*$', maxLength: 128 },
+        slug: { type: 'string', pattern: '^[A-Za-z0-9_-]{1,150}(?![\\s\\S])' },
         name: { type: 'string', minLength: 1, maxLength: 240 },
         status: { enum: ['active', 'archiving', 'archived', 'restoring'] },
         capabilities,

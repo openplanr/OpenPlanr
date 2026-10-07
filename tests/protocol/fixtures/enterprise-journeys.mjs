@@ -427,6 +427,23 @@ export function enterpriseJourneyProof() {
   invalid('cursor actor bound', f.page, 'enterprise-artifact-page', (x) => {
     x.query.actorId = 'other_actor';
   });
+  check('existing project slug writer bounds remain readable', () => {
+    for (const slug of ['project_000', '_legacy--project', 'a'.repeat(150)]) {
+      const page = structuredClone(f.projects);
+      page.items[0].slug = slug;
+      assertEnterpriseJourneyContract(page, 'enterprise-project-page');
+    }
+  });
+  for (const slug of ['project/path', 'a'.repeat(151), 'project\n']) {
+    invalid(
+      `unsafe or oversized slug denied ${slug.length}`,
+      f.projects,
+      'enterprise-project-page',
+      (x) => {
+        x.items[0].slug = slug;
+      },
+    );
+  }
   invalid('cursor filters bound', f.page, 'enterprise-artifact-page', (x) => {
     x.query.filter.search = 'new query';
   });

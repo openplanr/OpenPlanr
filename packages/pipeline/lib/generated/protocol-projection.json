@@ -228,7 +228,7 @@
     {
       "source": "packages/protocol/projections/pipeline/lib/protocol/enterprise-journey-contracts.mjs",
       "target": "lib/protocol/enterprise-journey-contracts.mjs",
-      "sha256": "87bd71f9c80b50b5889fa56458e591a3564846b538d5d9dc5969f9b433f46f3b",
+      "sha256": "be16521c55977eaac10413efe76e0ab52233e582369ea6bb773529c3f4015395",
       "mode": "644"
     },
     {
@@ -1296,7 +1296,7 @@
     {
       "source": "packages/protocol/schemas/v1.19.0/enterprise-project-page.schema.json",
       "target": "schemas/v1.19.0/enterprise-project-page.schema.json",
-      "sha256": "e43eae2acfcd27e67181b80ab28d16e00c850e015492181a44412bdb181ca66c",
+      "sha256": "098b84248605505b0f606437a3859c4f151cbbc6696a930661dec030c7ca3e18",
       "mode": "644"
     },
     {

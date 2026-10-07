@@ -77,8 +77,7 @@
           },
           "slug": {
             "type": "string",
-            "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
-            "maxLength": 128
+            "pattern": "^[A-Za-z0-9_-]{1,150}(?![\\s\\S])"
           },
           "name": {
             "type": "string",
