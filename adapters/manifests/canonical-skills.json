@@ -1699,7 +1699,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:61e3736cd81f15162d877bb29481e96538d8a32f19cc4a6718026e549e193c48"
+          "digest": "sha256:6f1e3fffb767ca0392664750421214297c8591742bb9bb8bfd83fb98902f3823"
         },
         {
           "path": "scripts/runtime/packages/artifact/templates/artifact-review-stage.js.sources.json",
@@ -1891,7 +1891,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:049804a57ae1b40c3d9828d155012aaa7f04e6d3572dc94ca18b2631cd5f567c"
+          "digest": "sha256:d10e28a5363e12e89ef264c5695e1de0f18c6fb26c59b70eb6e4e95090a0cf1b"
         },
         {
           "path": "scripts/runtime/packages/design/templates/studio/studio.js.sources/01-module-runtime.js",
@@ -2083,7 +2083,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:93bde0add2b1121865d19f768226ee439e0351487d7559e44ad2294fa1efd57c"
+          "digest": "sha256:29180bf1daa93ec11d86ad2ca7c9ba49abe5332a1cbfed68eb9e030e9353ace2"
         },
         {
           "path": "scripts/runtime/packages/design/templates/studio/studio.js.sources/17-design-studio.js",
@@ -2861,7 +2861,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:61e3736cd81f15162d877bb29481e96538d8a32f19cc4a6718026e549e193c48"
+          "digest": "sha256:6f1e3fffb767ca0392664750421214297c8591742bb9bb8bfd83fb98902f3823"
         },
         {
           "path": "scripts/runtime/packages/artifact/templates/artifact-review-stage.js.sources.json",
@@ -3053,7 +3053,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:049804a57ae1b40c3d9828d155012aaa7f04e6d3572dc94ca18b2631cd5f567c"
+          "digest": "sha256:d10e28a5363e12e89ef264c5695e1de0f18c6fb26c59b70eb6e4e95090a0cf1b"
         },
         {
           "path": "scripts/runtime/packages/design/templates/studio/studio.js.sources/01-module-runtime.js",
@@ -3245,7 +3245,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:93bde0add2b1121865d19f768226ee439e0351487d7559e44ad2294fa1efd57c"
+          "digest": "sha256:29180bf1daa93ec11d86ad2ca7c9ba49abe5332a1cbfed68eb9e030e9353ace2"
         },
         {
           "path": "scripts/runtime/packages/design/templates/studio/studio.js.sources/17-design-studio.js",
@@ -4023,7 +4023,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:61e3736cd81f15162d877bb29481e96538d8a32f19cc4a6718026e549e193c48"
+          "digest": "sha256:6f1e3fffb767ca0392664750421214297c8591742bb9bb8bfd83fb98902f3823"
         },
         {
           "path": "scripts/runtime/packages/artifact/templates/artifact-review-stage.js.sources.json",
@@ -4215,7 +4215,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:049804a57ae1b40c3d9828d155012aaa7f04e6d3572dc94ca18b2631cd5f567c"
+          "digest": "sha256:d10e28a5363e12e89ef264c5695e1de0f18c6fb26c59b70eb6e4e95090a0cf1b"
         },
         {
           "path": "scripts/runtime/packages/design/templates/studio/studio.js.sources/01-module-runtime.js",
@@ -4407,7 +4407,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:93bde0add2b1121865d19f768226ee439e0351487d7559e44ad2294fa1efd57c"
+          "digest": "sha256:29180bf1daa93ec11d86ad2ca7c9ba49abe5332a1cbfed68eb9e030e9353ace2"
         },
         {
           "path": "scripts/runtime/packages/design/templates/studio/studio.js.sources/17-design-studio.js",
