@@ -44,6 +44,8 @@ export interface DiagramEditorHostOptions {
   colorScheme?: 'light' | 'dark' | null;
   /** Trusted host controls mounted in the single canonical toolbar. */
   toolbarControls?: HTMLElement;
+  /** Trusted navigation controls before the document identity. */
+  toolbarLeadingControls?: HTMLElement;
   exportActions?: StudioMenuItem[];
   actions?: DiagramEditorHostAction[];
   panels?: DiagramEditorHostPanel[];

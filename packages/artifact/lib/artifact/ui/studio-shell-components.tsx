@@ -21,6 +21,7 @@ export interface StudioToolbarProps {
   viewPicker?: ReactNode;
   status?: ReactNode;
   actions?: ReactNode;
+  secondaryActions?: ReactNode;
   className?: string;
 }
 export const StudioButton = forwardRef<
@@ -111,6 +112,7 @@ export function StudioToolbar({
   viewPicker,
   status,
   actions,
+  secondaryActions,
   className = '',
 }: StudioToolbarProps) {
   const toolbar = useRef<HTMLElement>(null);
@@ -122,6 +124,7 @@ export function StudioToolbar({
     const center = element.querySelector<HTMLElement>('.studio-toolbar-center');
     const trailing = element.querySelector<HTMLElement>('.studio-toolbar-trailing');
     const leading = element.querySelector<HTMLElement>('.studio-toolbar-leading');
+    const secondary = element.querySelector<HTMLElement>('.studio-toolbar-secondary');
     if (!center || !trailing || !leading) return;
     const measure = () => {
       const width = element.getBoundingClientRect().width;
@@ -139,7 +142,10 @@ export function StudioToolbar({
       // Compact chrome can wrap; summing the visible controls retains its intrinsic floor
       // so resizing back to desktop does not oscillate between layouts.
       const controlSelector = 'button,a,summary,input,select,output,[role="status"]';
-      const controls = [...trailing.querySelectorAll<HTMLElement>(controlSelector)].filter(
+      const controls = [
+        ...trailing.querySelectorAll<HTMLElement>(controlSelector),
+        ...(secondary?.querySelectorAll<HTMLElement>(controlSelector) ?? []),
+      ].filter(
         (control) =>
           control.getClientRects().length &&
           !control.closest('[role="menu"],.studio-tooltip,[role="dialog"]') &&
@@ -147,7 +153,23 @@ export function StudioToolbar({
           !control.parentElement?.closest(controlSelector),
       );
       const actionWidth =
-        controls.reduce((total, control) => total + control.getBoundingClientRect().width, 0) +
+        controls.reduce((total, control) => {
+          // A secondary status expands into spare compact-row space. Measure its
+          // text rather than that expansion so desktop can return to one row.
+          if (secondary?.contains(control) && control.getAttribute('role') === 'status') {
+            const range = element.ownerDocument.createRange();
+            range.selectNodeContents(control);
+            const textWidth = range.getBoundingClientRect().width;
+            const controlStyle = window.getComputedStyle(control);
+            return (
+              total +
+              textWidth +
+              (parseFloat(controlStyle.paddingLeft) || 0) +
+              (parseFloat(controlStyle.paddingRight) || 0)
+            );
+          }
+          return total + control.getBoundingClientRect().width;
+        }, 0) +
         Math.max(0, controls.length - 1) * (parseFloat(window.getComputedStyle(trailing).gap) || 8);
       const leadingFloor = measureLeadingFloor(leading);
       const outerWidth = Math.max(leadingFloor, actionWidth);
@@ -174,7 +196,7 @@ export function StudioToolbar({
       typeof window.ResizeObserver === 'function'
         ? new window.ResizeObserver(scheduleMeasure)
         : null;
-    for (const node of [element, center, trailing]) resize?.observe(node);
+    for (const node of [element, center, trailing, secondary]) if (node) resize?.observe(node);
     const mutations = new window.MutationObserver(scheduleMeasure);
     mutations.observe(element, {
       subtree: true,
@@ -241,6 +263,7 @@ export function StudioToolbar({
         <div className="studio-toolbar-status">{status}</div>
         <div className="studio-toolbar-actions">{actions}</div>
       </div>
+      {secondaryActions && <div className="studio-toolbar-secondary">{secondaryActions}</div>}
     </Tag>
   );
 }

@@ -1551,9 +1551,11 @@ body.planr-diagram-owner-page #diagram-owner-editor {
   margin: var(--de-space-2) 0 var(--de-space-4);
 }
 
-/* Equal-width buttons; one whose label would not fit wraps to a new line instead of truncating. */
+/* Equal-width buttons wrap long label text inside its column instead of truncating. */
 .planr-diagram-editor .de-inspector-action-row > button {
-  min-width: max-content;
+  min-width: 0;
+  white-space: normal;
+  overflow-wrap: anywhere;
   display: flex;
   flex: 1 1 0;
   align-items: center;
@@ -1894,7 +1896,7 @@ body.planr-diagram-owner-page #diagram-owner-editor {
 
 .planr-diagram-editor[data-layout~="compact"]
   .de-bar
-  :is([data-action="undo"], [data-action="redo"], [data-action="layout"], [data-action="save"]) {
+  :is([data-action="undo"], [data-action="redo"], [data-action="layout"]) {
   display: none;
 }
 
