@@ -41,6 +41,11 @@ async function fixture(t, surface) {
           window.__identity.editor = editor;
           window.__identity.session = session;
           window.__identity.canvas = root.querySelector('[data-editor-svg]');
+          const edit = session.submit({type:'rename',id:'node-a',label:'Accepted Studio edit'});
+          if (!edit.ok) throw new Error('The real editor rejected the fixture edit.');
+          session.setView({selection:['node-a']});
+          window.__identity.acceptedBundle = JSON.stringify(session.getState().bundle);
+          window.__identity.acceptedSession = session;
         } else if (${JSON.stringify(surface)} === 'design') {
           window.__identity.chrome = mountDesignStudioChrome({ root, title: ${JSON.stringify(title)}, state: { view: 'canvas', navOpen: false, reviewOpen: false } });
         } else {
@@ -250,6 +255,12 @@ async function observe(page) {
             );
           })()
         : null,
+      acceptedEditRetained: window.__identity.session
+        ? window.__identity.session === window.__identity.acceptedSession &&
+          JSON.stringify(window.__identity.session.getState().bundle) ===
+            window.__identity.acceptedBundle &&
+          window.__identity.session.getState().view.selection.includes('node-a')
+        : null,
       stage: rect(document.querySelector('.de-canvas,.planr-workspace')),
     };
   });
@@ -319,7 +330,12 @@ for (const surface of ['design', 'diagram', 'presentation', 'authoring']) {
               record.title.visibleWidth >= 36,
               `${context}: title is visible and may truncate`,
             );
-            if (scale === 1 && width >= 681)
+            if (
+              scale === 1 &&
+              width >= 681 &&
+              (await page.locator('.studio-toolbar').getAttribute('data-studio-layout')) ===
+                'inline'
+            )
               assert.equal(record.toolbar.height, 60, `${context}: compact desktop/tablet header`);
             assert.ok(
               record.badge.textTop >= record.toolbar.top - 1 &&
@@ -363,6 +379,12 @@ for (const surface of ['design', 'diagram', 'presentation', 'authoring']) {
                 record.cameraRetained,
                 true,
                 `${context}: actual editor retains the camera scale and world center through layout changes`,
+              );
+            if (surface === 'authoring')
+              assert.equal(
+                record.acceptedEditRetained,
+                true,
+                `${context}: accepted bundle and selection survive`,
               );
             if (surface !== 'authoring') {
               assert.equal(record.draft, 'Pending review draft', context);
@@ -464,7 +486,10 @@ test(
               path: join(evidenceRoot, `${browserEngine()}-diagram-681-${font}-${theme}.png`),
             });
           const context = `diagram ${width}px ${theme} native ${font}`;
-          assert.equal(record.toolbar.height, 60, `${context}: compact tablet header`);
+          if (
+            (await page.locator('.studio-toolbar').getAttribute('data-studio-layout')) === 'inline'
+          )
+            assert.equal(record.toolbar.height, 60, `${context}: compact tablet header`);
           assert.equal(record.badge.value, 'Diagram', context);
           assert.ok(
             record.badge.visibleWidth >= record.badge.glyphWidth - 1,

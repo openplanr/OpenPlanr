@@ -1,5 +1,11 @@
 import { Dialog, DropdownMenu, Tooltip } from 'radix-ui';
-import { type ComponentPropsWithoutRef, forwardRef, type ReactNode, useRef } from 'react';
+import {
+  type ComponentPropsWithoutRef,
+  forwardRef,
+  type ReactNode,
+  useLayoutEffect,
+  useRef,
+} from 'react';
 
 /** Trusted Studio chrome only. Authored frames and canvas controllers own their DOM separately. */
 export type StudioKind = 'design' | 'diagram' | 'artifact';
@@ -66,8 +72,111 @@ export function StudioToolbar({
   actions,
   className = '',
 }: StudioToolbarProps) {
+  const toolbar = useRef<HTMLElement>(null);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: changing the host tag replaces the observed DOM element.
+  useLayoutEffect(() => {
+    const element = toolbar.current;
+    const window = element?.ownerDocument.defaultView;
+    if (!element || !window) return;
+    const center = element.querySelector<HTMLElement>('.studio-toolbar-center');
+    const trailing = element.querySelector<HTMLElement>('.studio-toolbar-trailing');
+    const leading = element.querySelector<HTMLElement>('.studio-toolbar-leading');
+    if (!center || !trailing || !leading) return;
+    const measure = () => {
+      const width = element.getBoundingClientRect().width;
+      if (!width) return;
+      // Measure the actual host container, including portals inside a narrower application.
+      // Density changes labels first; a second read then measures those real control widths.
+      element.dataset.studioDensity = width <= 680 ? 'narrow' : 'regular';
+      const style = window.getComputedStyle(element);
+      const available = width - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight);
+      const gap = parseFloat(style.columnGap) || 0;
+      element.dataset.studioCenter = 'true';
+      const centerWidth = center.scrollWidth;
+      element.dataset.studioCenter = String(centerWidth > 0);
+      // Leave useful title space, while the right side owns its natural action widths.
+      // Compact chrome can wrap; summing the visible controls retains its intrinsic floor
+      // so resizing back to desktop does not oscillate between layouts.
+      const controlSelector = 'button,a,summary,input,select,output,[role="status"]';
+      const controls = [...trailing.querySelectorAll<HTMLElement>(controlSelector)].filter(
+        (control) =>
+          control.getClientRects().length &&
+          !control.closest('[role="menu"],.studio-tooltip,[role="dialog"]') &&
+          (!control.closest('details') || !!control.closest('summary')) &&
+          !control.parentElement?.closest(controlSelector),
+      );
+      const actionWidth =
+        controls.reduce((total, control) => total + control.getBoundingClientRect().width, 0) +
+        Math.max(0, controls.length - 1) * (parseFloat(window.getComputedStyle(trailing).gap) || 8);
+      const leadingControl = leading.firstElementChild;
+      const branding = [
+        ...leading.querySelectorAll<HTMLElement>('.planr-mark,.design-wordmark'),
+      ].filter((node) => node.getClientRects().length);
+      const brandingWidth = branding.reduce(
+        (total, node) => total + node.getBoundingClientRect().width + 8,
+        0,
+      );
+      const leadingFloor =
+        128 +
+        brandingWidth +
+        (leadingControl instanceof window.HTMLElement &&
+        !leadingControl.classList.contains('planr-brand')
+          ? leadingControl.getBoundingClientRect().width + 8
+          : 0);
+      const outerWidth = Math.max(leadingFloor, actionWidth);
+      element.dataset.studioLayout =
+        centerWidth > 0
+          ? width <= 680 || centerWidth + outerWidth * 2 + gap * 2 > available
+            ? 'compact'
+            : 'inline'
+          : leadingFloor + actionWidth + gap > available
+            ? 'compact'
+            : 'inline';
+    };
+    measure();
+    let frame = 0;
+    const scheduleMeasure = () => {
+      if (frame) return;
+      // ResizeObserver delivery must remain read-only; write layout in the next frame.
+      frame = window.requestAnimationFrame(() => {
+        frame = 0;
+        measure();
+      });
+    };
+    const resize =
+      typeof window.ResizeObserver === 'function'
+        ? new window.ResizeObserver(scheduleMeasure)
+        : null;
+    for (const node of [element, center, trailing]) resize?.observe(node);
+    const mutations = new window.MutationObserver(scheduleMeasure);
+    mutations.observe(element, {
+      subtree: true,
+      childList: true,
+      characterData: true,
+      attributes: true,
+      attributeFilter: ['hidden'],
+    });
+    window.addEventListener('resize', scheduleMeasure);
+    let active = true;
+    void element.ownerDocument.fonts?.ready.then(() => {
+      if (active) scheduleMeasure();
+    });
+    return () => {
+      active = false;
+      resize?.disconnect();
+      mutations.disconnect();
+      window.cancelAnimationFrame(frame);
+      window.removeEventListener('resize', scheduleMeasure);
+    };
+  }, [Tag]);
   return (
-    <Tag className={`planr-toolbar studio-toolbar ${className}`} data-studio-react-chrome="true">
+    <Tag
+      ref={(node) => {
+        toolbar.current = node;
+      }}
+      className={`planr-toolbar studio-toolbar ${className}`}
+      data-studio-react-chrome="true"
+    >
       <div className="studio-toolbar-leading design-toolbar-leading">
         {leading}
         <div className="planr-brand">
@@ -100,10 +209,10 @@ export function StudioToolbar({
           </div>
         </div>
       </div>
-      {viewPicker}
+      <div className="studio-toolbar-center">{viewPicker}</div>
       <div className="studio-toolbar-trailing design-toolbar-trailing">
-        {status}
-        {actions}
+        <div className="studio-toolbar-status">{status}</div>
+        <div className="studio-toolbar-actions">{actions}</div>
       </div>
     </Tag>
   );
@@ -259,6 +368,97 @@ export function StudioPanelDialog({
               ×
             </StudioButton>
           </Dialog.Close>
+          {children}
+        </Dialog.Content>
+      </Dialog.Portal>
+    </Dialog.Root>
+  );
+}
+
+/** Standard modal chrome; application callbacks and authored content remain host-owned. */
+export function StudioDialog({
+  open,
+  onOpenChange,
+  title,
+  description,
+  children,
+  container,
+  className = '',
+  showCloseButton = true,
+  onCloseAutoFocus,
+  onOpenAutoFocus,
+  'aria-labelledby': labelledBy,
+  'aria-describedby': describedBy,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  title?: ReactNode;
+  description?: ReactNode;
+  children: ReactNode;
+  container?: HTMLElement;
+  className?: string;
+  showCloseButton?: boolean;
+  onCloseAutoFocus?: (event: Event) => void;
+  onOpenAutoFocus?: (event: Event) => void;
+  'aria-labelledby'?: string;
+  'aria-describedby'?: string;
+}) {
+  const opener = useRef<HTMLElement | null>(null);
+  return (
+    <Dialog.Root open={open} onOpenChange={onOpenChange}>
+      <Dialog.Portal container={container}>
+        <Dialog.Overlay className="studio-dialog-overlay" />
+        <Dialog.Content
+          className={`studio-dialog ${className}`}
+          {...(labelledBy ? { 'aria-labelledby': labelledBy } : {})}
+          {...(describedBy ? { 'aria-describedby': describedBy } : {})}
+          onCloseAutoFocus={(event) => {
+            if (onCloseAutoFocus) return onCloseAutoFocus(event);
+            const target = opener.current;
+            if (
+              target?.isConnected &&
+              !target.matches(':disabled,[aria-disabled="true"]') &&
+              !target.closest('[inert]') &&
+              target !== target.ownerDocument.body &&
+              target !== target.ownerDocument.documentElement
+            ) {
+              event.preventDefault();
+              target.focus({ preventScroll: true });
+            }
+          }}
+          onOpenAutoFocus={(event) => {
+            const document = (event.target as HTMLElement)?.ownerDocument;
+            const active = document?.activeElement;
+            const Element = document?.defaultView?.HTMLElement;
+            opener.current = Element && active instanceof Element ? active : null;
+            onOpenAutoFocus?.(event);
+          }}
+        >
+          {title && <Dialog.Title className="studio-dialog-title">{title}</Dialog.Title>}
+          {/* Radix checks its generated structural IDs even when the accessible name
+              belongs to existing host content. Keep those IDs distinct and silent. */}
+          {!title && labelledBy && (
+            <Dialog.Title className="planr-visually-hidden" aria-hidden="true" />
+          )}
+          {description && (
+            <Dialog.Description className="studio-dialog-description">
+              {description}
+            </Dialog.Description>
+          )}
+          {!description && describedBy && (
+            <Dialog.Description className="planr-visually-hidden" aria-hidden="true" />
+          )}
+          {showCloseButton && (
+            <Dialog.Close asChild>
+              <StudioButton
+                className="studio-panel-close"
+                variant="ghost"
+                aria-label="Close dialog"
+              >
+                ×
+              </StudioButton>
+            </Dialog.Close>
+          )}
           {children}
         </Dialog.Content>
       </Dialog.Portal>

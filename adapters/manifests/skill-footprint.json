@@ -93,25 +93,25 @@
     {
       "skillId": "planr-design",
       "files": 96,
-      "bytes": 3505486,
+      "bytes": 3517580,
       "uniqueFiles": 93,
-      "uniqueBytes": 3484494,
+      "uniqueBytes": 3496588,
       "duplicateBytes": 20992
     },
     {
       "skillId": "planr-design-loop",
       "files": 96,
-      "bytes": 3505036,
+      "bytes": 3517130,
       "uniqueFiles": 93,
-      "uniqueBytes": 3484044,
+      "uniqueBytes": 3496138,
       "duplicateBytes": 20992
     },
     {
       "skillId": "planr-design-review",
       "files": 96,
-      "bytes": 3504953,
+      "bytes": 3517047,
       "uniqueFiles": 93,
-      "uniqueBytes": 3483961,
+      "uniqueBytes": 3496055,
       "duplicateBytes": 20992
     },
     {
@@ -231,25 +231,25 @@
     {
       "host": "openai",
       "files": 292,
-      "bytes": 4698863,
+      "bytes": 4710957,
       "uniqueFiles": 244,
-      "uniqueBytes": 4472844,
+      "uniqueBytes": 4484938,
       "duplicateBytes": 226019
     },
     {
       "host": "claude",
       "files": 273,
-      "bytes": 4761708,
+      "bytes": 4773802,
       "uniqueFiles": 224,
-      "uniqueBytes": 4532206,
+      "uniqueBytes": 4544300,
       "duplicateBytes": 229502
     },
     {
       "host": "cursor",
       "files": 236,
-      "bytes": 4643484,
+      "bytes": 4655578,
       "uniqueFiles": 188,
-      "uniqueBytes": 4417465,
+      "uniqueBytes": 4429559,
       "duplicateBytes": 226019
     }
   ]

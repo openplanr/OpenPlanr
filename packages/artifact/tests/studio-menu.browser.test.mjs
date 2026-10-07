@@ -18,7 +18,13 @@ async function fixture(t) {
     response.end('<!doctype html>');
   });
   await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
-  t.after(() => new Promise((resolve) => server.close(resolve)));
+  t.after(
+    () =>
+      new Promise((resolve) => {
+        server.closeAllConnections();
+        server.close(resolve);
+      }),
+  );
   const origin = `http://127.0.0.1:${server.address().port}`;
   const compiled = await build({
     stdin: {
@@ -26,12 +32,13 @@ async function fixture(t) {
         import { createElement as h, useEffect, useState } from 'react';
         import { createRoot } from 'react-dom/client';
         import { assertPreviewBridgeMessage } from ${JSON.stringify(new URL('../../protocol/src/sharing-security-contracts.mjs', import.meta.url).pathname)};
-        import { StudioToolbar, StudioMenu, StudioButton, StudioPanelDialog } from ${JSON.stringify(new URL('../lib/artifact/ui/studio-shell-components.mjs', import.meta.url).pathname)};
+        import { StudioToolbar, StudioMenu, StudioButton, StudioPanelDialog, StudioDialog } from ${JSON.stringify(new URL('../lib/artifact/ui/studio-shell-components.mjs', import.meta.url).pathname)};
         const operations = [];
         let selected = () => {};
         function App() {
           const [open, setOpen] = useState(false);
           const [actionsOpen, setActionsOpen] = useState(false);
+          const [standard, setStandard] = useState('');
           useEffect(() => {
             selected = () => setActionsOpen(false);
             return () => { selected = () => {}; };
@@ -44,6 +51,8 @@ async function fixture(t) {
                 { id: 'last', label: 'Last action', onSelect: () => operations.push('last') },
               ] }),
               h(StudioButton, { 'data-planr-action': 'feedback', onClick: () => setOpen(true) }, 'Open review dialog')) }),
+            h(StudioButton, { onClick: () => setStandard('generated') }, 'Open standard dialog'),
+            h(StudioButton, { onClick: () => setStandard('host') }, 'Open host-labelled dialog'),
             h(StudioPanelDialog, { open, onOpenChange: setOpen, title: 'Review',
               // Like mountStudioPanelDialogs, this controlled caller owns its stable return target.
               onCloseAutoFocus: event => {
@@ -51,6 +60,12 @@ async function fixture(t) {
                 document.querySelector('[data-planr-action=feedback]')?.focus({ preventScroll: true });
               },
               children: h('button', null, 'Review action') }),
+            standard ? h(StudioDialog, { open: true, onOpenChange: value => { if (!value) setStandard(''); },
+              ...(standard === 'host' ? { 'aria-labelledby':'publication-title', 'aria-describedby':'publication-description' } : { title:'Publish snapshot',description:'Keep the selected revision.' }),
+              children:h('div',null,
+                standard === 'host' ? h('h2',{id:'publication-title'},'Publish snapshot') : null,
+                standard === 'host' ? h('p',{id:'publication-description'},'Keep the selected revision.') : null,
+                h('button',null,'Publish selected revision')) }) : null,
           );
         }
         window.fixture = { operations, frame: document.querySelector('#preview'), messages: [] };
@@ -104,6 +119,10 @@ async function fixture(t) {
   });
   page.setDefaultTimeout(7_000);
   page.on('pageerror', (error) => errors.push(error.message));
+  page.on('console', (message) => {
+    if (/requires a.*DialogTitle|Missing.*Description/.test(message.text()))
+      errors.push(message.text());
+  });
   await page.route(`${origin}/menu`, (route) =>
     route.fulfill({
       contentType: 'text/html',
@@ -185,6 +204,34 @@ test(
       () => document.activeElement?.getAttribute('aria-label') === 'Actions',
     );
     assert.deepEqual(await page.evaluate(() => fixture.operations), ['last']);
+  },
+);
+
+test(
+  'standard Radix dialogs retain generated and host accessible names, focus and Escape return',
+  options,
+  async (t) => {
+    const page = await fixture(t);
+    for (const name of ['Open standard dialog', 'Open host-labelled dialog']) {
+      const trigger = page.getByRole('button', { name, exact: true });
+      await trigger.press('Enter');
+      const dialog = page.getByRole('dialog', { name: 'Publish snapshot', exact: true });
+      await dialog.waitFor();
+      assert.equal((await dialog.getAttribute('aria-describedby')) !== null, true);
+      await page
+        .getByRole('button', { name: 'Publish selected revision', exact: true })
+        .press('Tab');
+      await page.waitForFunction(
+        () => document.activeElement?.getAttribute('aria-label') === 'Close dialog',
+      );
+      await page.keyboard.press('Escape');
+      await dialog.waitFor({ state: 'hidden' });
+      await page.waitForFunction((label) => document.activeElement?.textContent === label, name);
+      assert.equal(
+        await page.locator('#preview').evaluate((frame) => frame === fixture.frame),
+        true,
+      );
+    }
   },
 );
 

@@ -1086,6 +1086,8 @@ test(
           pending = new Map();
         let next = 1_000_000;
         window.requestAnimationFrame = (callback) => {
+          // Hold drag rendering only; independent toolbar layout keeps its native frames.
+          if (callback.name !== 'previewDrag') return request.call(window, callback);
           const id = next++;
           pending.set(id, callback);
           return id;
@@ -1997,6 +1999,10 @@ test(
     const snap = page.getByRole('button', { name: 'Snap', exact: true });
     const snapIcon = () => snap.locator('svg path').count();
     assert.equal(await snap.getAttribute('aria-pressed'), 'true');
+    // Hydrated controls retain their native color transition; compare its completed state.
+    await snap.evaluate((node) =>
+      Promise.all(node.getAnimations().map((animation) => animation.finished)),
+    );
     assert.deepEqual(
       await colours('Snap'),
       [await token('--de-text'), await token('--de-raised')],

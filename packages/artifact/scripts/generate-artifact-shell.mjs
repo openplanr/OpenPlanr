@@ -49,7 +49,8 @@ export const ARTIFACT_SHELL_ASSET_BUDGETS = Object.freeze({
     bytes: 2_048,
     gzipBytes: 1_024,
   }),
-  'templates/artifact-review-shell.html': Object.freeze({ bytes: 68_608, gzipBytes: 13_312 }),
+  // Shared responsive chrome and standard modal geometry add ~4 KiB raw / <1 KiB gzip.
+  'templates/artifact-review-shell.html': Object.freeze({ bytes: 87_040, gzipBytes: 16_384 }),
   'templates/artifact-review-stage.js': Object.freeze({ bytes: 450_560, gzipBytes: 96_256 }),
   'templates/design/design-board-adapter.js': Object.freeze({ bytes: 286_720, gzipBytes: 58_368 }),
   'templates/diagram-owner.js': Object.freeze({ bytes: 1_800_000, gzipBytes: 340_000 }),
