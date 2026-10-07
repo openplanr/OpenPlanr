@@ -1699,7 +1699,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:0fd11449c76ed5726e32b71821ec6bb86d96e88deff27c8f86cde64eba364a7d"
+          "digest": "sha256:61e3736cd81f15162d877bb29481e96538d8a32f19cc4a6718026e549e193c48"
         },
         {
           "path": "scripts/runtime/packages/artifact/templates/artifact-review-stage.js.sources.json",
@@ -1831,7 +1831,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:df58a7ee4ffcadac780d3170abbeb00cfecb1f42db692ba62eb6f66a251bd0ea"
+          "digest": "sha256:710a8a5f2c4885ceb9510b4810e92251f9084c6d9a2aa15bbd1da8590fc55f5c"
         },
         {
           "path": "scripts/runtime/packages/design/templates/studio/handoff-center.css",
@@ -1879,7 +1879,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:c9291e20366315b23c73e920ec5426d4c33d0880863d39650d4c535956984b1c"
+          "digest": "sha256:75ca0c3036d5c281e60a4155765ad8c2e9373bd39d34d4facebfe9bf26278c88"
         },
         {
           "path": "scripts/runtime/packages/design/templates/studio/studio.js.sources.json",
@@ -2861,7 +2861,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:0fd11449c76ed5726e32b71821ec6bb86d96e88deff27c8f86cde64eba364a7d"
+          "digest": "sha256:61e3736cd81f15162d877bb29481e96538d8a32f19cc4a6718026e549e193c48"
         },
         {
           "path": "scripts/runtime/packages/artifact/templates/artifact-review-stage.js.sources.json",
@@ -2993,7 +2993,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:df58a7ee4ffcadac780d3170abbeb00cfecb1f42db692ba62eb6f66a251bd0ea"
+          "digest": "sha256:710a8a5f2c4885ceb9510b4810e92251f9084c6d9a2aa15bbd1da8590fc55f5c"
         },
         {
           "path": "scripts/runtime/packages/design/templates/studio/handoff-center.css",
@@ -3041,7 +3041,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:c9291e20366315b23c73e920ec5426d4c33d0880863d39650d4c535956984b1c"
+          "digest": "sha256:75ca0c3036d5c281e60a4155765ad8c2e9373bd39d34d4facebfe9bf26278c88"
         },
         {
           "path": "scripts/runtime/packages/design/templates/studio/studio.js.sources.json",
@@ -4023,7 +4023,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:0fd11449c76ed5726e32b71821ec6bb86d96e88deff27c8f86cde64eba364a7d"
+          "digest": "sha256:61e3736cd81f15162d877bb29481e96538d8a32f19cc4a6718026e549e193c48"
         },
         {
           "path": "scripts/runtime/packages/artifact/templates/artifact-review-stage.js.sources.json",
@@ -4155,7 +4155,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:df58a7ee4ffcadac780d3170abbeb00cfecb1f42db692ba62eb6f66a251bd0ea"
+          "digest": "sha256:710a8a5f2c4885ceb9510b4810e92251f9084c6d9a2aa15bbd1da8590fc55f5c"
         },
         {
           "path": "scripts/runtime/packages/design/templates/studio/handoff-center.css",
@@ -4203,7 +4203,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:c9291e20366315b23c73e920ec5426d4c33d0880863d39650d4c535956984b1c"
+          "digest": "sha256:75ca0c3036d5c281e60a4155765ad8c2e9373bd39d34d4facebfe9bf26278c88"
         },
         {
           "path": "scripts/runtime/packages/design/templates/studio/studio.js.sources.json",

@@ -421,7 +421,7 @@
     {
       "source": "packages/design/templates/studio/enhancements.css",
       "target": "templates/studio/enhancements.css",
-      "sha256": "df58a7ee4ffcadac780d3170abbeb00cfecb1f42db692ba62eb6f66a251bd0ea",
+      "sha256": "710a8a5f2c4885ceb9510b4810e92251f9084c6d9a2aa15bbd1da8590fc55f5c",
       "mode": "644"
     },
     {
@@ -445,7 +445,7 @@
     {
       "source": "packages/design/templates/studio/studio.css",
       "target": "templates/studio/studio.css",
-      "sha256": "c9291e20366315b23c73e920ec5426d4c33d0880863d39650d4c535956984b1c",
+      "sha256": "75ca0c3036d5c281e60a4155765ad8c2e9373bd39d34d4facebfe9bf26278c88",
       "mode": "644"
     },
     {

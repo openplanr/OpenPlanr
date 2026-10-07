@@ -286,14 +286,14 @@ html[data-design-theme="light"] .design-export > div { box-shadow:0 12px 30px #1
     font-size:var(--design-type-control); line-height:1.4; min-height:var(--design-touch-target);
     min-width:0; max-width:100%; border-radius:8px; padding:10px 12px; scroll-margin-block:16px;
   }
-  :root[data-design-studio] body select { height:var(--design-touch-target); }
+  :root[data-design-studio] body select { height:auto; min-height:var(--design-touch-target); }
   :root[data-design-studio] body :is(button:not(.planr-pin):not(.design-minimap-close),.design-export > summary,.design-tools-menu > summary,.design-guidance > summary) {
     min-height:var(--design-touch-target); min-width:var(--design-touch-target); touch-action:manipulation;
   }
   :root[data-design-studio] body :is(.design-dialog-close,.design-nav-close,.planr-rail-close,.planr-composer-header button) {
     width:var(--design-touch-target); height:var(--design-touch-target); flex-basis:var(--design-touch-target);
   }
-  :root[data-design-studio] .design-canvas-tools button { height:var(--design-touch-target); white-space:nowrap; }
+  :root[data-design-studio] .design-canvas-tools button { height:auto; min-height:var(--design-touch-target); white-space:nowrap; }
   :root[data-design-studio] :is(.design-dialog-content,.design-inspector,.planr-thread-comment,.planr-reply) { font-size:var(--design-type-body); }
   :root[data-design-studio] :is(.design-profile-form > label,.planr-annotation-composer label,.planr-identity label,.design-profile-form legend) { font-size:var(--design-type-label); }
   :root[data-design-studio] :is(.design-muted,.design-profile-form > .design-muted,.design-dialog-status) { font-size:var(--design-type-label); }

@@ -126,6 +126,209 @@ function assertStable(before, after, context, { horizontal = false } = {}) {
   }
 }
 
+test('computed 200% text fits header and floating canvas controls', {
+  timeout: 60_000,
+}, async () => {
+  const root = await mkdtemp(join(tmpdir(), 'openplanr-studio-text-size-'));
+  const screenshotDirectory = process.env.STUDIO_TOOLBAR_SCREENSHOT_DIR;
+  let browser, session;
+  try {
+    if (screenshotDirectory) await mkdir(screenshotDirectory, { recursive: true });
+    const { file } = designFixture(root, { count: 2 });
+    await renderDesignDocument(file);
+    session = await startDesignReview(file, {
+      env: { ...process.env, PLANR_HOME: join(root, 'home') },
+      noOpen: true,
+    });
+    browser = await launchBrowser({ engine: browserEngine() });
+    for (const width of [1440, 834, 390]) {
+      for (const theme of ['light', 'dark']) {
+        for (const view of ['canvas', 'prototype', 'walkthrough']) {
+          const page = await browser.newPage({ viewport: { width, height: 1000 } });
+          try {
+            await page.goto(session.url);
+            await page.waitForSelector('[data-design-ready="true"]');
+            await settleStudioChrome(page);
+            await page.evaluate(
+              ({ preference, mode }) => {
+                window.__openPlanrDesignExperience.setTheme(preference);
+                window.__openPlanrDesignStudio.setPanels({ navOpen: false, reviewOpen: false });
+                window.__openPlanrDesignStudio.setView(mode);
+              },
+              { preference: theme, mode: view },
+            );
+            await page.evaluate(() => window.__openPlanrDesignStudio.flush());
+            await page.evaluate(() => {
+              const status = document.querySelector('[data-design-save-state]');
+              status.textContent = 'Changes saved · independent varied review status';
+              document.querySelector('[data-design-focus]').textContent = 'Focus screen';
+            });
+            await settleStudioChrome(page);
+            await page.evaluate(() => {
+              // Capture every computed size before writing, including fixed-pixel rules.
+              // A root font-size alone misses the controls that caused this regression.
+              const fonts = [...document.querySelectorAll('.planr-shell,.planr-shell *')].map(
+                (node) => [node, parseFloat(getComputedStyle(node).fontSize)],
+              );
+              for (const [node, size] of fonts)
+                node.style.setProperty('font-size', `${size * 2}px`, 'important');
+            });
+            await settleStudioChrome(page);
+            const geometry = await page.evaluate(() => {
+              const rect = (node) => {
+                const b = node.getBoundingClientRect();
+                return {
+                  left: b.left,
+                  right: b.right,
+                  top: b.top,
+                  bottom: b.bottom,
+                  width: b.width,
+                  height: b.height,
+                };
+              };
+              const toolbar = document.querySelector('.design-toolbar');
+              const status = document.querySelector('[data-design-save-state]');
+              const framePicker = document.querySelector('.design-frame-picker select');
+              const frameStyle = getComputedStyle(framePicker);
+              const statusText = status.firstChild;
+              const words = [...statusText.textContent.matchAll(/\S+/g)].map((word) => {
+                const range = document.createRange();
+                range.setStart(statusText, word.index);
+                range.setEnd(statusText, word.index + word[0].length);
+                return { word: word[0], fragments: range.getClientRects().length };
+              });
+              return {
+                toolbar: rect(toolbar),
+                picker: rect(document.querySelector('.design-view-picker')),
+                footer: rect(document.querySelector('.design-canvas-tools')),
+                framePicker: {
+                  ...rect(framePicker),
+                  minimumTextHeight:
+                    parseFloat(frameStyle.fontSize) +
+                    parseFloat(frameStyle.paddingTop) +
+                    parseFloat(frameStyle.paddingBottom) +
+                    parseFloat(frameStyle.borderTopWidth) +
+                    parseFloat(frameStyle.borderBottomWidth),
+                },
+                overflow: document.documentElement.scrollWidth > innerWidth,
+                status: {
+                  ...rect(status),
+                  lineHeight: parseFloat(getComputedStyle(status).lineHeight),
+                  words,
+                },
+                controls: [
+                  ...document.querySelectorAll(
+                    '.design-toolbar button,.design-canvas-tools > button,.design-interaction-picker button,.design-tools-menu > summary',
+                  ),
+                ]
+                  .filter(
+                    (node) =>
+                      node.getClientRects().length &&
+                      getComputedStyle(node).visibility !== 'hidden',
+                  )
+                  .map((node) => {
+                    const text = [];
+                    const walker = document.createTreeWalker(node, NodeFilter.SHOW_TEXT);
+                    for (let part = walker.nextNode(); part; part = walker.nextNode()) {
+                      if (
+                        !/[\p{L}\p{N}]/u.test(part.textContent) ||
+                        !part.parentElement.getClientRects().length
+                      )
+                        continue;
+                      const range = document.createRange();
+                      range.selectNodeContents(part);
+                      for (const box of range.getClientRects())
+                        text.push({
+                          value: part.textContent.trim(),
+                          left: box.left,
+                          right: box.right,
+                          top: box.top,
+                          bottom: box.bottom,
+                        });
+                    }
+                    return {
+                      name: node.getAttribute('aria-label') || node.textContent.trim(),
+                      group: node.closest('.design-toolbar') ? 'toolbar' : 'footer',
+                      font: parseFloat(getComputedStyle(node).fontSize),
+                      ...rect(node),
+                      text,
+                    };
+                  }),
+              };
+            });
+            const label = `${browserEngine()} ${width}px ${theme} ${view} computed 200% text`;
+            assert.equal(geometry.overflow, false, `${label}: no page overflow`);
+            assert.ok(
+              geometry.framePicker.height >= geometry.framePicker.minimumTextHeight,
+              `${label}: native frame picker reserves text and padding height`,
+            );
+            near(
+              geometry.picker.left + geometry.picker.width / 2,
+              geometry.toolbar.left + geometry.toolbar.width / 2,
+              `${label}: geometric header midpoint`,
+            );
+            assert.ok(geometry.controls.find(({ name }) => name === 'Canvas').font >= 26, label);
+            assert.ok(
+              geometry.status.height <= geometry.status.lineHeight * (width >= 834 ? 2 : 4) + 1,
+              `${label}: status remains a coherent bounded row ${JSON.stringify(geometry.status)}`,
+            );
+            for (const word of geometry.status.words)
+              assert.equal(
+                word.fragments,
+                1,
+                `${label}: status retains complete word ${word.word}`,
+              );
+            assert.ok(
+              geometry.controls.some(({ name }) => name === 'Focus on the preview'),
+              label,
+            );
+            assert.ok(
+              geometry.footer.left >= -1 &&
+                geometry.footer.right <= width + 1 &&
+                geometry.footer.top >= 0 &&
+                geometry.footer.bottom <= 1001,
+              `${label}: floating controls fit the viewport`,
+            );
+            for (const control of geometry.controls) {
+              const container = geometry[control.group];
+              assert.ok(
+                control.left >= -1 && control.right <= width + 1 && control.bottom <= 1001,
+                `${label}: ${control.name} fits the viewport`,
+              );
+              assert.ok(
+                control.left >= container.left - 1 &&
+                  control.right <= container.right + 1 &&
+                  control.top >= container.top - 1 &&
+                  control.bottom <= container.bottom + 1,
+                `${label}: ${control.name} remains inside ${control.group}`,
+              );
+              for (const text of control.text)
+                assert.ok(
+                  text.left >= control.left - 1 &&
+                    text.right <= control.right + 1 &&
+                    text.top >= control.top - 1 &&
+                    text.bottom <= control.bottom + 1,
+                  `${label}: ${control.name} contains ${JSON.stringify(text)} within ${JSON.stringify(control)}`,
+                );
+            }
+            if (screenshotDirectory && theme === 'light' && view === 'prototype' && width !== 834)
+              await page.screenshot({
+                path: join(screenshotDirectory, `studio-text2-${browserEngine()}-${width}.png`),
+                animations: 'disabled',
+              });
+          } finally {
+            await page.close();
+          }
+        }
+      }
+    }
+  } finally {
+    await browser?.close();
+    await session?.close();
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
 test('Studio toolbar modes align with actions across themes, widths and interactive states', {
   timeout: 90_000,
 }, async () => {
