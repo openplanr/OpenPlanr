@@ -291,11 +291,68 @@ export function StudioMenu({
   onOpenChange?: (open: boolean) => void;
 }) {
   const trigger = useRef<HTMLButtonElement>(null);
+  const mousePosition = useRef<{ x: number; y: number } | null>(null);
+  const keyboardPosition = useRef<{ x: number; y: number } | null>(null);
+  useLayoutEffect(() => {
+    const ownerDocument = trigger.current?.ownerDocument;
+    if (!ownerDocument) return;
+    const move = (event: PointerEvent) => {
+      if (event.pointerType !== 'mouse') return;
+      const position = { x: event.clientX, y: event.clientY };
+      const previous = keyboardPosition.current;
+      // Layout can move an item under a stationary mouse. Only a change in actual
+      // coordinates hands keyboard navigation back to hover; movementX is unreliable.
+      if (previous && (previous.x !== position.x || previous.y !== position.y))
+        keyboardPosition.current = null;
+      mousePosition.current = position;
+    };
+    const down = (event: PointerEvent) => {
+      keyboardPosition.current = null;
+      if (event.pointerType === 'mouse')
+        mousePosition.current = { x: event.clientX, y: event.clientY };
+    };
+    ownerDocument.addEventListener('pointermove', move, true);
+    ownerDocument.addEventListener('pointerdown', down, true);
+    return () => {
+      ownerDocument.removeEventListener('pointermove', move, true);
+      ownerDocument.removeEventListener('pointerdown', down, true);
+    };
+  }, []);
+  const retainKeyboardFocus = (event: {
+    pointerType: string;
+    clientX: number;
+    clientY: number;
+    preventDefault: () => void;
+  }) => {
+    const position = keyboardPosition.current;
+    if (
+      event.pointerType === 'mouse' &&
+      position?.x === event.clientX &&
+      position.y === event.clientY
+    )
+      event.preventDefault();
+  };
+  const keyboardInput = () => {
+    keyboardPosition.current = mousePosition.current;
+  };
   return (
-    <DropdownMenu.Root modal={false} open={open} onOpenChange={onOpenChange}>
+    <DropdownMenu.Root
+      modal={false}
+      open={open}
+      onOpenChange={(value) => {
+        if (!value) keyboardPosition.current = null;
+        onOpenChange?.(value);
+      }}
+    >
       <span className={`studio-menu ${className}`}>
         <DropdownMenu.Trigger asChild>
-          <StudioButton aria-label={label} title={label} {...triggerAttributes} ref={trigger}>
+          <StudioButton
+            aria-label={label}
+            title={label}
+            {...triggerAttributes}
+            ref={trigger}
+            onKeyDownCapture={keyboardInput}
+          >
             {label}
             <span aria-hidden="true">⌄</span>
           </StudioButton>
@@ -305,6 +362,7 @@ export function StudioMenu({
           align="end"
           sideOffset={8}
           collisionPadding={8}
+          onKeyDownCapture={keyboardInput}
           onCloseAutoFocus={(event) => {
             // Own the deferred return so preserving newer focus cannot leave Radix's
             // outside-interaction flag stale for the next close.
@@ -328,6 +386,8 @@ export function StudioMenu({
               key={item.id}
               disabled={item.disabled}
               onSelect={item.onSelect}
+              onPointerMove={retainKeyboardFocus}
+              onPointerLeave={retainKeyboardFocus}
             >
               <button
                 type="button"

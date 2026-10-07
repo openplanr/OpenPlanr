@@ -77,8 +77,8 @@
     },
     {
       "path": "templates/diagram-owner.js",
-      "bytes": 1521482,
-      "sha256": "3edb738608005af82c0397ffad69dc41bd759ae9e37091c40c280f2b3ef86bcc",
+      "bytes": 1523635,
+      "sha256": "e05f68787b12507d727f82f369557c8656e721cb28077356258390b841ea5844",
       "budget": {
         "bytes": 1800000,
         "gzipBytes": 340000
@@ -86,8 +86,8 @@
     },
     {
       "path": "templates/diagram-studio.js",
-      "bytes": 1034844,
-      "sha256": "ad957e62213b4a989b2050e3eeee03ffacc1ea54d3f8bc4005b286f5ba4b8e23",
+      "bytes": 1036997,
+      "sha256": "c1bf9b4f764bb9968f612855ea9147c54effd673e5214e259378b50ae37298e0",
       "budget": {
         "bytes": 1250000,
         "gzipBytes": 230000

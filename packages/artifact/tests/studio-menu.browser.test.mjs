@@ -12,7 +12,7 @@ const options = { skip: process.env.PLANR_BROWSER_TESTS !== '1', timeout: 30_000
 const { build } = createRequire(new URL('../../protocol/package.json', import.meta.url))('esbuild');
 const nonce = Buffer.alloc(32, 22).toString('base64url');
 
-async function fixture(t) {
+async function fixture(t, { hasTouch = false } = {}) {
   const server = createServer((_request, response) => {
     response.setHeader('content-type', 'text/html');
     response.end('<!doctype html>');
@@ -44,6 +44,11 @@ async function fixture(t) {
             return () => { selected = () => {}; };
           }, []);
           return h('div', null,
+            h('div', { style: { position: 'absolute', left: 160, top: 140 } },
+              h(StudioMenu, { label: 'Intent actions', className: 'intent-menu', items:
+                ['Interact', 'Annotate', 'Review', 'Inspect'].map(label => ({
+                  id: label.toLowerCase(), label, onSelect: () => operations.push(label),
+                })) })),
             h(StudioToolbar, { kind: 'design', title: 'Canvas review', actions: h('div', { style: { display: 'flex', gap: 8 } },
               h(StudioMenu, { label: 'Actions', open: actionsOpen, onOpenChange: setActionsOpen, items: [
                 { id: 'first', label: 'First action', onSelect: () => operations.push('first') },
@@ -68,7 +73,10 @@ async function fixture(t) {
                 h('button',null,'Publish selected revision')) }) : null,
           );
         }
-        window.fixture = { operations, frame: document.querySelector('#preview'), messages: [] };
+        window.fixture = { operations, frame: document.querySelector('#preview'), messages: [], reflows: [] };
+        addEventListener('pointermove', event => {
+          if (fixture.reflow && event.isTrusted) fixture.reflows.push({ x:event.clientX, y:event.clientY, movementX:event.movementX, movementY:event.movementY });
+        }, true);
         document.querySelector('#canvas').addEventListener('click', () => operations.push('canvas'));
         addEventListener('message', event => {
           if (event.source === fixture.frame.contentWindow && event.origin === 'null') {
@@ -103,7 +111,7 @@ async function fixture(t) {
     assert.deepEqual(errors, []);
   });
   t.diagnostic(`${browserEngine()}: ${browser.version()}`);
-  page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+  page = await browser.newPage({ viewport: { width: 1440, height: 900 }, hasTouch });
   await page.addInitScript(() => {
     // Observe this gesture's native focus before the prepared selection handler;
     // Firefox may focus the document rather than its clicked button.
@@ -131,7 +139,16 @@ async function fixture(t) {
   );
   await page.goto(`${origin}/menu`);
   await page.addStyleTag({
-    content: renderArtifactThemeCss(loadArtifactTheme()) + ARTIFACT_SHELL_CSS,
+    content:
+      renderArtifactThemeCss(loadArtifactTheme()) +
+      ARTIFACT_SHELL_CSS +
+      `
+      .intent-menu > button { width:120px; height:37px }
+      .intent-menu .studio-menu-content { width:208px; min-width:0 }
+      .intent-menu .studio-menu-item { height:54px }
+      .intent-menu.expanded .studio-menu-content { width:320px; font-size:24px }
+      .intent-menu.expanded .studio-menu-item { height:80px }
+    `,
   });
   await page.addScriptTag({ content: compiled.outputFiles[0].text });
   await page.getByRole('button', { name: 'Actions', exact: true }).waitFor();
@@ -178,6 +195,146 @@ async function openMenu(page) {
   await page.getByRole('menu').waitFor();
   await page.waitForFunction(() => document.activeElement?.textContent === 'First action');
 }
+
+test('stationary reflow preserves keyboard intent and real pointer handoff', {
+  ...options,
+  timeout: 90_000,
+}, async (t) => {
+  // Two concurrent pages retain their real pointer history throughout ten runs each.
+  const pages = await Promise.all([fixture(t), fixture(t)]);
+  await Promise.all(
+    pages.map(async (page) => {
+      const trigger = page.getByRole('button', { name: 'Intent actions', exact: true });
+      const menu = page.locator('.intent-menu [role="menu"]');
+      const active = async (label) =>
+        page.waitForFunction((label) => document.activeElement?.textContent === label, label);
+      for (let run = 0; run < 10; run += 1) {
+        await trigger.press('ArrowDown');
+        await active('Interact');
+        const review = menu.getByRole('menuitem', { name: 'Review', exact: true });
+        const before = await menu.boundingBox();
+        const box = await menu
+          .getByRole('menuitem', { name: 'Inspect', exact: true })
+          .boundingBox();
+        const position = { x: box.x + box.width / 2, y: box.y + box.height / 2 };
+        await page.mouse.move(position.x, position.y);
+        await active('Inspect');
+        await page.keyboard.press('Home');
+        await active('Interact');
+        await page.keyboard.press('ArrowDown');
+        await active('Annotate');
+        await page.locator('.intent-menu').evaluate((element) => {
+          fixture.reflow = true;
+          element.classList.add('expanded');
+        });
+        await page.waitForFunction(
+          (x) => document.querySelector('.intent-menu [role="menu"]').getBoundingClientRect().x < x,
+          before.x,
+        );
+        await page.evaluate(
+          () =>
+            new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))),
+        );
+        await page.evaluate(() => {
+          fixture.reflow = false;
+        });
+        // Native browsers differ in emitting hover on reflow. Exercise the same
+        // stationary event explicitly as well, without relocating the actual mouse.
+        await review.evaluate(
+          (element, point) =>
+            element.dispatchEvent(
+              new PointerEvent('pointermove', {
+                bubbles: true,
+                cancelable: true,
+                pointerType: 'mouse',
+                clientX: point.x,
+                clientY: point.y,
+                movementX: 0,
+                movementY: 0,
+              }),
+            ),
+          position,
+        );
+        await active('Annotate');
+        await menu.getByRole('menuitem', { name: 'Annotate', exact: true }).evaluate(
+          (element, point) =>
+            element.dispatchEvent(
+              new PointerEvent('pointerout', {
+                bubbles: true,
+                cancelable: true,
+                pointerType: 'mouse',
+                clientX: point.x,
+                clientY: point.y,
+                relatedTarget: element.parentElement.querySelector('[role="menuitem"]'),
+              }),
+            ),
+          position,
+        );
+        await active('Annotate');
+        await page.keyboard.press('ArrowDown');
+        await active('Review');
+        // Real coordinate movement wins even when the platform reports zero deltas.
+        const inspect = await menu
+          .getByRole('menuitem', { name: 'Inspect', exact: true })
+          .boundingBox();
+        await page.mouse.move(inspect.x + inspect.width / 2, inspect.y + inspect.height / 2);
+        await active('Inspect');
+        await page.keyboard.press('Home');
+        await active('Interact');
+        await page.keyboard.press('r');
+        await active('Review');
+        // A real displacement must also work when a mouse driver reports no deltas.
+        await menu.getByRole('menuitem', { name: 'Inspect', exact: true }).evaluate(
+          (element, point) =>
+            element.dispatchEvent(
+              new PointerEvent('pointermove', {
+                bubbles: true,
+                cancelable: true,
+                pointerType: 'mouse',
+                clientX: point.x + 1,
+                clientY: point.y,
+                movementX: 0,
+                movementY: 0,
+              }),
+            ),
+          position,
+        );
+        await active('Inspect');
+        await page.keyboard.press('Escape');
+        await menu.waitFor({ state: 'hidden' });
+        await page.waitForFunction(
+          () => document.activeElement?.getAttribute('aria-label') === 'Intent actions',
+        );
+        await page
+          .locator('.intent-menu')
+          .evaluate((element) => element.classList.remove('expanded'));
+      }
+      t.diagnostic(
+        `Trusted pointer events during stationary reflow: ${JSON.stringify(await page.evaluate(() => fixture.reflows))}`,
+      );
+    }),
+  );
+});
+
+test(
+  'touch selection hands off from keyboard intent without losing the selected action',
+  options,
+  async (t) => {
+    const page = await fixture(t, { hasTouch: true });
+    const trigger = page.getByRole('button', { name: 'Intent actions', exact: true });
+    await trigger.press('ArrowDown');
+    const menu = page.locator('.intent-menu [role="menu"]');
+    const review = menu.getByRole('menuitem', { name: 'Review', exact: true });
+    const box = await review.boundingBox();
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+    await page.keyboard.press('Home');
+    await page.keyboard.press('ArrowDown');
+    await page.waitForFunction(() => document.activeElement?.textContent === 'Annotate');
+    await review.tap();
+    await menu.waitFor({ state: 'hidden' });
+    assert.deepEqual(await page.evaluate(() => fixture.operations), ['Review']);
+  },
+);
 
 test(
   'canonical toolbar actions retain Arrow, Enter, Escape and trigger focus',
