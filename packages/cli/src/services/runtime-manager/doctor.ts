@@ -146,7 +146,7 @@ export function diagnoseRetiredCommandSkills(
   return {
     code: 'installed-skill-commands',
     status: 'warn',
-    message: `${stale.length} installed skill or rule file(s) still tell the agent to run planr`,
+    message: `${stale.length} installed skill or rule file(s) still tell the agent to run planr, which is no longer installed`,
     fix: hosts.length
       ? `Rerun ${hosts.map((host) => `\`${CLI_COMMAND} setup --runtime ${host}\``).join(' and ')}, or update the plugin, then restart the agent.`
       : `Rerun \`${CLI_COMMAND} setup\`, then restart the agent.`,

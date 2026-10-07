@@ -60,14 +60,14 @@
       "version": "2.2641.2",
       "path": "packages/cli",
       "publication": "public",
-      "manifestDigest": "sha256:5ee43eaf62723fa5e51b91a99cf56d7b0b7d3b85a164b370b7cce4da703626c3"
+      "manifestDigest": "sha256:cecb1cdd3d0a7724bcfec6893ca627a951947aa1ca4dd5c6e284fb63e7aff146"
     },
     "pipeline": {
       "package": "planr-pipeline",
       "version": "0.57.0",
       "path": "packages/pipeline",
       "publication": "public",
-      "manifestDigest": "sha256:954ab1127d0acb5931a8f79f89ee067e613ae12271759d8273bb56891b4091d9"
+      "manifestDigest": "sha256:fa806e113c9e47ea7b589d1f0ff2fec63e77a6c2cfbb33ed5e229986fa6378c8"
     },
     "protocol": {
       "package": "@openplanr/protocol",
@@ -133,12 +133,10 @@
   "binaries": {
     "cli": {
       "openplanr": "./bin/openplanr.js",
-      "opr": "./bin/openplanr.js",
-      "planr": "./bin/planr.js"
+      "opr": "./bin/openplanr.js"
     },
     "pipeline": {
-      "openplanr-pipeline": "bin/openplanr-pipeline.mjs",
-      "planr-pipeline": "bin/planr-pipeline.mjs"
+      "openplanr-pipeline": "bin/openplanr-pipeline.mjs"
     }
   },
   "publicCompatibility": {

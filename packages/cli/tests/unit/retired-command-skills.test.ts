@@ -59,7 +59,8 @@ describe('installed skills that still run planr', () => {
     ).toEqual({
       code: 'installed-skill-commands',
       status: 'warn',
-      message: '1 installed skill or rule file(s) still tell the agent to run planr',
+      message:
+        '1 installed skill or rule file(s) still tell the agent to run planr, which is no longer installed',
       fix: 'Rerun `openplanr setup --runtime codex`, or update the plugin, then restart the agent.',
     });
   });

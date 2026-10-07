@@ -330,16 +330,13 @@ async function buildOutputs() {
   );
   assertEqual(
     cliManifest.bin,
-    { openplanr: './bin/openplanr.js', opr: './bin/openplanr.js', planr: './bin/planr.js' },
+    { openplanr: './bin/openplanr.js', opr: './bin/openplanr.js' },
     'E_ECOSYSTEM_CLI_BINS',
     'CLI aliases must resolve to one parser.',
   );
   assertEqual(
     pipelineManifest.bin,
-    {
-      'openplanr-pipeline': 'bin/openplanr-pipeline.mjs',
-      'planr-pipeline': 'bin/planr-pipeline.mjs',
-    },
+    { 'openplanr-pipeline': 'bin/openplanr-pipeline.mjs' },
     'E_ECOSYSTEM_PIPELINE_BIN',
     'Pipeline binary drifted.',
   );

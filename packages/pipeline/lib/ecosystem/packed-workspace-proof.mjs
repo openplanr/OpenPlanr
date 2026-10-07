@@ -364,7 +364,6 @@ function assertPackageProof(proof, custody, packageCustody) {
   const expectedAliases = {
     openplanr: './bin/openplanr.js',
     opr: './bin/openplanr.js',
-    planr: './bin/planr.js',
   };
   const cli = proof.packages.cli;
   const pipeline = proof.packages.pipeline;
