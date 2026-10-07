@@ -2,14 +2,14 @@ import { execFileSync } from 'node:child_process';
 import { lstatSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { mkdir } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { join, resolve } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   type ClaudeCommandRunner,
   inspectBundledClaudePluginIntegration,
   OPENPLANR_CLAUDE_PLUGIN,
 } from '../../src/services/claude-plugin-service.js';
-import { bundledHostRoot } from '../../src/services/runtime-manager-service.js';
+import { applySetup, bundledHostRoot } from '../../src/services/runtime-manager-service.js';
 import {
   CLAUDE_PLUGIN_SETUP_COMMAND,
   DEFAULT_ECOSYSTEM_SOURCE,
@@ -24,6 +24,7 @@ import {
   summarizeReleaseNotes,
   type UpgradeReconciliation,
   upgradeNextSteps,
+  withAgentNextSteps,
 } from '../../src/services/upgrade-service.js';
 import { setVerbose } from '../../src/utils/logger.js';
 
@@ -676,6 +677,66 @@ describe('upgradeNextSteps', () => {
     expect(steps.map((step) => step.detail)).toEqual([`repair the OpenPlanr plugin ${version}`]);
   });
 
+  it('points a changed runtime package at doctor --fix and names the file', async () => {
+    const installed = await applySetup({
+      projectDir: root,
+      cliVersion,
+      runtime: 'codex',
+      scope: 'user',
+      skillMode: 'direct',
+      manageExternalRuntimes: false,
+    });
+    const script = installed.actions.find(
+      (action) => action.target.includes('/runtime/packages/') && action.target.endsWith('.mjs'),
+    );
+    const inventory = installed.actions.find((action) =>
+      action.target.endsWith('.openplanr-content.json'),
+    );
+    if (!script || !inventory) throw new Error('No runtime package was installed.');
+    writeFileSync(script.target, 'owner edit\n');
+    const file = script.target.slice(dirname(inventory.target).length + 1);
+
+    const steps = await upgradeNextSteps(root, {
+      claudeCommandRunner: makeRunner({ available: false }),
+    });
+    expect(steps).toEqual([
+      {
+        runtime: 'codex',
+        host: 'Codex',
+        command: 'openplanr doctor --fix',
+        detail: expect.stringContaining(`were changed outside OpenPlanr: ${file}.`),
+      },
+    ]);
+    expect(readFileSync(script.target, 'utf8')).toBe('owner edit\n');
+  });
+
+  it('points a failed native check at doctor instead of an update that would refuse', async () => {
+    await applySetup({
+      projectDir: root,
+      cliVersion,
+      runtime: 'claude-code',
+      scope: 'user',
+      manageExternalRuntimes: false,
+    });
+    const listing = installedRunner([]);
+    const failingList: ClaudeCommandRunner = (args) =>
+      args.join(' ') === 'plugin list --json'
+        ? { status: 1, stdout: '', stderr: 'plugin list failed' }
+        : listing(args);
+
+    const steps = await upgradeNextSteps(root, { claudeCommandRunner: failingList });
+    expect(steps).toEqual([
+      {
+        runtime: 'claude-code',
+        host: 'Claude Code',
+        command: 'openplanr doctor',
+        detail: expect.stringMatching(
+          /^Claude plugin state could not be inspected: .+ Update Claude Code, then rerun/,
+        ),
+      },
+    ]);
+  });
+
   it('lists nothing when Claude Code is absent and no coding agent is recorded', async () => {
     const steps = await upgradeNextSteps(root, {
       claudeCommandRunner: makeRunner({ available: false }),
@@ -764,6 +825,40 @@ describe('upgradeNextSteps', () => {
     } finally {
       delete process.env.PLANR_HOME;
     }
+  });
+});
+
+describe('withAgentNextSteps', () => {
+  const aligned: UpgradeReconciliation = {
+    status: 'aligned',
+    installed: { cli: '1.23.0', skills: null, pipeline: null },
+    published: null,
+    ecosystemSource: 'network',
+  };
+  const step = { host: 'Codex', command: 'openplanr runtime update codex', detail: '' };
+
+  it('reports a current CLI with agent updates left as agents-behind', () => {
+    expect(withAgentNextSteps(aligned, [{ ...step, runtime: 'codex' }]).status).toBe(
+      'agents-behind',
+    );
+  });
+
+  it('keeps aligned when the only agent steps are repairs', () => {
+    expect(
+      withAgentNextSteps(aligned, [
+        { ...step, runtime: 'codex', command: 'openplanr doctor --fix' },
+        { ...step, runtime: 'claude-code', command: 'openplanr doctor' },
+      ]).status,
+    ).toBe('aligned');
+  });
+
+  it('keeps aligned for OpenPlanr-only steps and never masks another status', () => {
+    expect(withAgentNextSteps(aligned, [step]).status).toBe('aligned');
+    expect(
+      withAgentNextSteps({ ...aligned, status: 'upgrade-available' }, [
+        { ...step, runtime: 'codex' },
+      ]).status,
+    ).toBe('upgrade-available');
   });
 });
 
@@ -886,6 +981,14 @@ describe('planCliUpgrade (FR4 — execute what it can)', () => {
     expect(plan.targetCliVersion).toBe('1.23.0');
   });
 
+  it('leaves a current CLI alone when only the coding agents trail it', () => {
+    const plan = planCliUpgrade(reconciliation('agents-behind', '1.23.0', '1.23.0'));
+    expect(plan.proceed).toBe(false);
+    expect(plan.reason).toBe(
+      'OpenPlanr 1.23.0 is up to date. Update your coding agents with the commands below.',
+    );
+  });
+
   it('upgrades an incompatible tuple only when the CLI is the one behind', () => {
     expect(planCliUpgrade(reconciliation('incompatible', '1.22.0', '1.23.0')).proceed).toBe(true);
     // CLI ahead of the published set cannot be fixed by upgrading it.
@@ -951,9 +1054,8 @@ process.exit(0);
     const claudeStub = join(root, 'claude-stub.cjs');
     stubClaude(claudeStub, { skills: '1.25.0' });
 
-    // `apply` sets exit code 1 on an incompatible tuple — correctly, since the tuple is
-    // not resolved by this command. `execFileSync` throws on that, so the stdout it
-    // captured is read off the error. The output is the assertion target either way.
+    // `execFileSync` throws on a non-zero exit, so the stdout it captured is read off the
+    // error. The output is the assertion target either way.
     let output: string;
     try {
       output = execFileSync(
@@ -976,7 +1078,9 @@ process.exit(0);
     }
 
     // The promise in the reason string must be kept by the same invocation.
-    expect(output).toContain("a coding agent's plugin is behind it. Run the commands below.");
+    expect(output).toContain(
+      `OpenPlanr ${cliVersion} is up to date. Update your coding agents with the commands below.`,
+    );
     expect(output).toContain('1. openplanr runtime update claude --scope user --yes');
     expect(output).toContain('Claude Code: OpenPlanr plugin 1.25.0 → ');
     expect(output).toContain('Then restart Claude Code and check with `openplanr upgrade status`.');
@@ -1029,7 +1133,7 @@ describe('reconcileInstalledTuple against the npm registry document (BL-026)', (
     expect(result.published?.cli.version).toBe(higherCli);
   });
 
-  it('reports incompatible when planr@openplanr-local trails the bundled marketplace (the plugin half must move)', async () => {
+  it('reports agents-behind when planr@openplanr-local trails the bundled marketplace (the plugin half must move)', async () => {
     const result = await reconcileInstalledTuple('/tmp/project', {
       claudeCommandRunner: installedRunner([{ id: 'planr@openplanr-local', version: '1.0.0' }]),
       fetchImpl: registryFetch(registryDocument(cliVersion)),
@@ -1037,9 +1141,9 @@ describe('reconcileInstalledTuple against the npm registry document (BL-026)', (
     // The plugin `openplanr setup` installs is the host plugin, never a legacy one.
     expect(result.installed.skills).toBe('1.0.0');
     expect(result.legacyPlugins).toEqual([]);
-    // A current CLI cannot fix a trailing plugin; doctor's classification makes that a
-    // failure so `upgrade apply` prints the plugin-half prescription instead of reinstalling.
-    expect(result.status).toBe('incompatible');
+    // A current CLI cannot fix a trailing plugin, so `upgrade apply` prints the plugin-half
+    // commands instead of reinstalling the CLI.
+    expect(result.status).toBe('agents-behind');
     expect(planCliUpgrade(result).proceed).toBe(false);
   });
 

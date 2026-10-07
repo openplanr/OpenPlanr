@@ -77,7 +77,8 @@ export interface EcosystemComponents {
 export type EcosystemSource = 'network' | 'cache' | 'stale-cache' | 'unavailable';
 
 export interface UpgradeReconciliation {
-  status: 'aligned' | 'upgrade-available' | 'incompatible' | 'unknown';
+  /** `agents-behind`: the CLI is current and a coding agent's OpenPlanr install needs updating. */
+  status: 'aligned' | 'upgrade-available' | 'agents-behind' | 'incompatible' | 'unknown';
   installed: { cli: string; skills: string | null; pipeline: string | null };
   published: EcosystemComponents | null;
   ecosystemSource: EcosystemSource;
@@ -382,7 +383,8 @@ function inspectBundledHostPlugin(runner?: ClaudeCommandRunner) {
 /**
  * Read the published compatibility manifest, compare it against the real
  * installed tuple (this CLI's version plus the host plugin), and report whether
- * the tuple is aligned, has an upgrade available, or is genuinely incompatible.
+ * the tuple is aligned, has an upgrade available, has a coding agent behind the
+ * CLI, or is genuinely incompatible.
  * The warn-vs-fail call is delegated to `classifyComponentDrift` so it is
  * doctor's exact distinction, not a re-derivation.
  */
@@ -417,6 +419,8 @@ export async function reconcileInstalledTuple(
   // that merely trails an upgrade", so a direction check is what that input was always
   // meant to carry — an installed component ahead of the registry has nothing to upgrade.
   const cliDrift = isBehind(installed.cli, published.cli.version);
+  let agentsBehind: boolean;
+  let pipelineBehind: boolean;
   let componentDrift: boolean;
   let incompatibleDrift: boolean;
   if (published.shape === 'registry') {
@@ -424,20 +428,17 @@ export async function reconcileInstalledTuple(
     // the pipeline against the pin the published CLI bundles. A registry-described set
     // declares no mutual ranges, so it cannot be incompatible; leftover legacy plugins are
     // reported for doctor's warning, not judged here.
-    const pluginTrailing = inspection.plugins.some(
+    agentsBehind = inspection.plugins.some(
       (plugin) =>
         plugin.installed && isBehind(plugin.installedVersion ?? null, plugin.expectedVersion),
     );
-    componentDrift =
-      cliDrift ||
-      pluginTrailing ||
-      isBehind(installed.pipeline ?? bundledPipeline, published.pipeline.version);
+    pipelineBehind = isBehind(installed.pipeline ?? bundledPipeline, published.pipeline.version);
+    componentDrift = cliDrift || agentsBehind || pipelineBehind;
     incompatibleDrift = false;
   } else {
-    componentDrift =
-      cliDrift ||
-      isBehind(installed.skills, published.skills.version) ||
-      isBehind(installed.pipeline, published.pipeline.version);
+    agentsBehind = isBehind(installed.skills, published.skills.version);
+    pipelineBehind = isBehind(installed.pipeline, published.pipeline.version);
+    componentDrift = cliDrift || agentsBehind || pipelineBehind;
     // A real mutual-compatibility violation: an installed component sits outside
     // the range its published sibling declares. Absent (uninstalled) plugins are
     // not violations — that is a different condition from incompatibility.
@@ -448,12 +449,15 @@ export async function reconcileInstalledTuple(
   }
 
   const classification = classifyComponentDrift({ cliDrift, componentDrift, incompatibleDrift });
+  // A current CLI with an agent install behind it is an update to run, not an incompatibility.
   const status =
     classification.status === 'pass'
       ? 'aligned'
       : classification.status === 'warn'
         ? 'upgrade-available'
-        : 'incompatible';
+        : !classification.genuineDrift && agentsBehind && !pipelineBehind
+          ? 'agents-behind'
+          : 'incompatible';
 
   return { status, installed, published, ecosystemSource, bundledPipeline, legacyPlugins };
 }
@@ -554,6 +558,13 @@ export function planCliUpgrade(reconciliation: UpgradeReconciliation): UpgradePl
       proceed: true,
       targetCliVersion: target,
       reason: `OpenPlanr ${target} is available; ${installed.cli} is installed.`,
+    };
+  }
+  if (status === 'agents-behind') {
+    return {
+      proceed: false,
+      targetCliVersion: null,
+      reason: `OpenPlanr ${installed.cli} is up to date. Update your coding agents with the commands below.`,
     };
   }
   if (status === 'incompatible' && compareStableVersions(installed.cli, target) < 0) {
@@ -760,6 +771,22 @@ function nextStepCommand(
   return `${CLI_COMMAND} runtime update ${RUNTIME_COMMAND_NAMES[runtime]} --scope ${scope} --yes`;
 }
 
+/** A step that runs doctor to diagnose or repair an install instead of updating it. */
+export function isRepairStep(step: UpgradeNextStep): boolean {
+  return step.command.startsWith(`${CLI_COMMAND} doctor`);
+}
+
+/** An `aligned` CLI whose coding agents still have updates to run reads as `agents-behind`. */
+export function withAgentNextSteps(
+  reconciliation: UpgradeReconciliation,
+  nextSteps: readonly UpgradeNextStep[],
+): UpgradeReconciliation {
+  return reconciliation.status === 'aligned' &&
+    nextSteps.some((step) => step.runtime && !isRepairStep(step))
+    ? { ...reconciliation, status: 'agents-behind' }
+    : reconciliation;
+}
+
 type NextStepCandidate = Awaited<ReturnType<typeof installedRuntimeScopes>>[number];
 
 /** Recorded installs, plus a Claude plugin installed without a record of it. */
@@ -799,6 +826,18 @@ async function planNextStep(
     ...(skillMode ? { skillMode } : {}),
     ...(claudeCommandRunner ? { claudeCommandRunner } : {}),
   });
+  // `runtime update` refuses to apply a preview with a failed check, so point at doctor instead.
+  const failure = preview.runtimeDiagnostics.find(
+    (diagnostic) => diagnostic.runtime === runtime && diagnostic.status === 'fail',
+  );
+  if (failure) {
+    return {
+      runtime,
+      host: RUNTIME_LABELS[runtime],
+      command: `${CLI_COMMAND} doctor`,
+      detail: failure.fix ? `${failure.message} ${failure.fix}` : failure.message,
+    };
+  }
   const change = summarizeRuntimeChanges(preview, {
     bookkeepingRoot: runtimeRoot(),
     applied: false,
@@ -823,10 +862,12 @@ export async function upgradeNextSteps(
   const steps: UpgradeNextStep[] = [];
   const doctorStep = (error: Error, runtime?: RuntimeId) => {
     if (steps.some((step) => step.detail === error.message)) return;
+    const repairable =
+      error instanceof RuntimeManagerError && error.code === 'E_RUNTIME_PACKAGE_CHANGED';
     steps.push({
       ...(runtime ? { runtime } : {}),
       host: runtime ? RUNTIME_LABELS[runtime] : 'OpenPlanr',
-      command: `${CLI_COMMAND} doctor`,
+      command: `${CLI_COMMAND} doctor${repairable ? ' --fix' : ''}`,
       detail: error.message,
     });
   };

@@ -686,7 +686,7 @@
       "assets": [
         {
           "path": "skills/doctor/SKILL.md",
-          "digest": "sha256:417b1d1f860db1ccd59820c52cfd6873c7feed80a639537c43babea8d76ef3d3"
+          "digest": "sha256:ae1c90830273a51d54c60a846ea00e8c4412f50e43ad8172a2e112e2b51e6412"
         },
         {
           "path": "skills/doctor/openplanr.skill.json",
@@ -698,7 +698,7 @@
         },
         {
           "path": "skills/doctor/references/upgrade.md",
-          "digest": "sha256:7370954450db1bac591d4f90b58df9022f6edac5b32d05051f93dbd35b0e35b9"
+          "digest": "sha256:b137e82d63ceeecef4e5c1cac72acbaaa2edbc29798214507ab9613d16088fde"
         }
       ]
     },

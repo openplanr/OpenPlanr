@@ -37,6 +37,7 @@ async function previewRepairs(projectDir: string, cliVersion: string, diagnosis:
     preserveExistingScopes: !isOpenPlanrHome(projectDir),
     skillMode: installed.find((entry) => entry.runtime === 'codex')?.skillMode,
     replaceManaged: true,
+    restoreRuntimePackages: true,
   };
   const integrations = setupOptions.runtimes?.length
     ? await applySetup({ ...setupOptions, dryRun: true })
@@ -80,14 +81,19 @@ async function applyRepairs(
   preview: RepairPreview,
   setupOptions: SetupOptions,
   integrations: boolean,
-) {
+): Promise<{ restartRequired: boolean; packageBackupDir?: string }> {
   if (preview.daemon.length) {
     await runtimeDoctor(setupOptions.projectDir, { pipelineRepair: 'apply' });
   }
   if (preview.homeCleanup.length) await cleanupHomeProjectInstall();
-  if (!integrations) return false;
+  if (!integrations) return { restartRequired: false };
   const applied = await applySetup(setupOptions);
-  return applied.restartRequired ?? false;
+  return {
+    restartRequired: applied.restartRequired ?? false,
+    ...(applied.runtimePackageRestores?.length && applied.backupDir
+      ? { packageBackupDir: applied.backupDir }
+      : {}),
+  };
 }
 
 function hasIntegrationRepairs(preview: SetupPreview | null): boolean {
@@ -141,12 +147,25 @@ async function repairInstallation(
       logger.warn('Repairs were not applied; rerun with --yes after reviewing the preview.');
     return untouched;
   }
-  const restartRequired = await applyRepairs(repairPreview, setupOptions, integrationRepairs);
+  const { restartRequired, packageBackupDir } = await applyRepairs(
+    repairPreview,
+    setupOptions,
+    integrationRepairs,
+  );
   const result = await runtimeDoctor(projectDir, { commandRoots });
+  if (!json && packageBackupDir) {
+    logger.info(`Your changed runtime package files are saved in ${packageBackupDir}.`);
+  }
   if (!json && restartRequired) {
     logger.warn('Restart the affected coding agent to reload its plugin and skill list.');
   }
-  return { ...result, repairPreview, repairsApplied: true, restartRequired };
+  return {
+    ...result,
+    repairPreview,
+    repairsApplied: true,
+    restartRequired,
+    ...(packageBackupDir ? { packageBackupDir } : {}),
+  };
 }
 
 function printDiagnosis(result: Diagnosis): void {

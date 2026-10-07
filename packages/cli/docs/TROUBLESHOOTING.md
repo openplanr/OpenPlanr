@@ -260,9 +260,12 @@ or changed package closure. `openplanr doctor --fix` uses the same preview, back
 ownership checks and transaction as setup. It preserves the saved scope and
 Codex mode. `openplanr runtime update <agent>` updates only that agent.
 
-A partially copied exact cache can resume from the installed CLI. Modified cache
-bytes, edited discovery entries and unknown files are preserved as conflicts;
-inspect them instead of deleting the cache or relaxing ownership checks. Retained
-packages are not cleaned up during repair. If a concurrent edit prevents rollback,
-the edit and migration backup remain available and the error names the affected
-paths.
+A partially copied exact cache can resume from the installed CLI. When a file in
+the package for the installed CLI version was changed or added, setup and
+`openplanr runtime update` stop and name it. `openplanr doctor --fix` previews
+restoring that package from the installed CLI and, after you confirm, backs up the
+changed files before it replaces or removes them. Edited discovery entries are
+preserved as conflicts; inspect them instead of deleting the cache or relaxing
+ownership checks. Packages retained for other versions are never changed or
+cleaned up during repair. If a concurrent edit prevents rollback, the edit and
+migration backup remain available and the error names the affected paths.

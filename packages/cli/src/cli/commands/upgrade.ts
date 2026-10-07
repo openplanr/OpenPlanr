@@ -13,6 +13,7 @@ import {
   planCliUpgrade,
   reconcileInstalledTuple,
   upgradeNextSteps,
+  withAgentNextSteps,
 } from '../../services/upgrade-service.js';
 import { CLI_COMMAND } from '../../utils/constants.js';
 import { display, logger } from '../../utils/logger.js';
@@ -29,12 +30,12 @@ export function registerUpgradeCommand(program: Command, _cliVersion: string) {
 
   upgrade
     .command('status')
-    .description('Report whether the installed tuple is aligned, upgradable, or incompatible')
+    .description('Report whether the CLI and coding agents are aligned, behind, or incompatible')
     .option('--json', 'machine-readable output', false)
     .action(async (opts) => {
       const projectDir = program.opts().projectDir as string;
-      const result = await reconcileInstalledTuple(projectDir);
       const nextSteps = await upgradeNextSteps(projectDir);
+      const result = withAgentNextSteps(await reconcileInstalledTuple(projectDir), nextSteps);
 
       if (opts.json) {
         display.line(JSON.stringify({ ...result, nextSteps }));
@@ -56,7 +57,7 @@ export function registerUpgradeCommand(program: Command, _cliVersion: string) {
           display.keyValue('Published host package', result.published.skills.version);
           display.keyValue('Published pipeline', result.published.pipeline.version);
         }
-        printReconciliationStatus(result);
+        printReconciliationStatus(result, nextSteps);
         if (nextSteps.length > 0) printNextSteps(nextSteps);
       }
 
@@ -79,25 +80,27 @@ export function registerUpgradeCommand(program: Command, _cliVersion: string) {
       const reconciliation = await reconcileInstalledTuple(projectDir);
       const plan = planCliUpgrade(reconciliation);
 
-      // Nothing for the CLI to install. The coding agents can still trail it, which is
-      // what an incompatible tuple with a current CLI means, so their commands are listed.
+      // Nothing for the CLI to install. The coding agents can still trail it, so their
+      // commands are listed.
       if (!plan.proceed || !plan.targetCliVersion) {
         const nextSteps = await upgradeNextSteps(projectDir);
+        const current = withAgentNextSteps(reconciliation, nextSteps);
+        const reason = planCliUpgrade(current).reason;
         if (opts.json) {
           display.line(
             JSON.stringify({
               applied: false,
-              reason: plan.reason,
+              reason,
               nextSteps,
               pluginHalfCommands: nextSteps.map((step) => step.command),
-              reconciliation,
+              reconciliation: current,
             }),
           );
         } else {
-          logger.info(plan.reason);
+          logger.info(reason);
           if (nextSteps.length > 0) printNextSteps(nextSteps);
         }
-        if (reconciliation.status === 'incompatible') process.exitCode = 1;
+        if (current.status === 'incompatible') process.exitCode = 1;
         return;
       }
 

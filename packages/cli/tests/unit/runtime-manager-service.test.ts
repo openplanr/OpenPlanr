@@ -11,6 +11,7 @@ import {
   readdirSync,
   readFileSync,
   realpathSync,
+  renameSync,
   rmSync,
   symlinkSync,
   unlinkSync,
@@ -2668,6 +2669,143 @@ describe('Codex profile and named update custody', () => {
     await expect(applySetup(options)).rejects.toMatchObject({ code: 'E_MIGRATION_CONFLICT' });
     expect(readFileSync(file.target)).toEqual(changed);
     expect(readFileSync(stateFile())).toEqual(originalState);
+  });
+});
+
+/** Whether names that differ only by case are separate files in the temporary directory. */
+function caseSensitiveFileSystem(): boolean {
+  const probe = mkdtempSync(join(tmpdir(), 'openplanr-case-'));
+  try {
+    writeFileSync(join(probe, 'a'), '');
+    return !existsSync(join(probe, 'A'));
+  } finally {
+    rmSync(probe, { recursive: true, force: true });
+  }
+}
+
+describe('changed runtime packages', () => {
+  const options = {
+    runtime: 'codex' as const,
+    scope: 'user' as const,
+    skillMode: 'direct' as const,
+    manageExternalRuntimes: false,
+  };
+
+  async function changePackage() {
+    const installed = await applySetup({ projectDir, cliVersion, ...options });
+    const script = installed.actions.find(
+      (action) =>
+        action.target.includes(`${sep}runtime${sep}packages${sep}`) &&
+        action.target.endsWith('.mjs'),
+    );
+    if (!script) throw new Error('No packaged script was installed.');
+    const packageRoot = dirname(
+      installed.actions.find((action) => action.target.endsWith('.openplanr-content.json'))
+        ?.target ?? '',
+    );
+    const file = relative(packageRoot, script.target).split(sep).join('/');
+    const original = readFileSync(script.target);
+    appendFileSync(script.target, '\n// local edit\n');
+    writeFileSync(join(packageRoot, 'notes.txt'), 'kept by the owner\n');
+    return { packageRoot, file, target: script.target, original };
+  }
+
+  it('names the changed files and leaves them untouched without a restore', async () => {
+    const changed = await changePackage();
+    const edited = readFileSync(changed.target);
+    for (const run of [previewSetup, applySetup]) {
+      await expect(run({ projectDir, cliVersion, ...options })).rejects.toMatchObject({
+        code: 'E_RUNTIME_PACKAGE_CHANGED',
+        message: expect.stringContaining(`${changed.file}, notes.txt (added)`),
+        recovery: expect.stringContaining('openplanr doctor --fix'),
+      });
+    }
+    expect(readFileSync(changed.target)).toEqual(edited);
+    expect(existsSync(join(changed.packageRoot, 'notes.txt'))).toBe(true);
+  });
+
+  it.runIf(!caseSensitiveFileSystem())(
+    'never deletes a packaged file renamed only by letter case',
+    async () => {
+      const installed = await applySetup({ projectDir, cliVersion, ...options });
+      const entry = installed.actions.find(
+        (action) =>
+          action.target.includes(`${sep}runtime${sep}packages${sep}`) &&
+          action.target.endsWith(`${sep}SKILL.md`),
+      );
+      if (!entry) throw new Error('No packaged skill entry was installed.');
+      const original = readFileSync(entry.target);
+      const renamed = join(dirname(entry.target), 'skill.md');
+      renameSync(entry.target, renamed);
+      const restoreOptions = { projectDir, cliVersion, ...options, restoreRuntimePackages: true };
+
+      const preview = await previewSetup(restoreOptions);
+      expect(preview.actions.filter((action) => action.operation === 'retire')).toEqual([]);
+      await applySetup(restoreOptions);
+      // Both names open the same file here, so it must still hold the packaged bytes.
+      expect(readFileSync(entry.target)).toEqual(original);
+      expect(readFileSync(renamed)).toEqual(original);
+    },
+  );
+
+  it.runIf(caseSensitiveFileSystem())(
+    'refuses to remove an added file whose name differs from a packaged file only by case',
+    async () => {
+      const installed = await applySetup({ projectDir, cliVersion, ...options });
+      const entry = installed.actions.find(
+        (action) =>
+          action.target.includes(`${sep}runtime${sep}packages${sep}`) &&
+          action.target.endsWith(`${sep}SKILL.md`),
+      );
+      if (!entry) throw new Error('No packaged skill entry was installed.');
+      const variant = join(dirname(entry.target), 'skill.md');
+      writeFileSync(variant, 'owner copy\n');
+      await expect(
+        previewSetup({ projectDir, cliVersion, ...options, restoreRuntimePackages: true }),
+      ).rejects.toMatchObject({
+        code: 'E_RUNTIME_PACKAGE_CHANGED',
+        message: expect.stringContaining('only by letter case'),
+      });
+      expect(readFileSync(variant, 'utf8')).toBe('owner copy\n');
+    },
+  );
+
+  it('restores the package from the bundled copy after backing up the changed files', async () => {
+    const changed = await changePackage();
+    const edited = readFileSync(changed.target);
+    const restoreOptions = { projectDir, cliVersion, ...options, restoreRuntimePackages: true };
+
+    const preview = await previewSetup(restoreOptions);
+    expect(preview.runtimePackageRestores).toEqual([
+      expect.objectContaining({
+        runtime: 'codex',
+        root: changed.packageRoot,
+        changed: [changed.file],
+        unexpected: ['notes.txt'],
+      }),
+    ]);
+    expect(preview.actions).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ target: changed.target, operation: 'update' }),
+        expect.objectContaining({
+          target: join(changed.packageRoot, 'notes.txt'),
+          operation: 'retire',
+        }),
+      ]),
+    );
+    expect(readFileSync(changed.target)).toEqual(edited);
+
+    const applied = await applySetup(restoreOptions);
+    expect(readFileSync(changed.target)).toEqual(changed.original);
+    expect(existsSync(join(changed.packageRoot, 'notes.txt'))).toBe(false);
+    const backups = regularFiles(applied.backupDir ?? '').map((file) => readFileSync(file));
+    expect(backups).toContainEqual(edited);
+    expect(backups).toContainEqual(Buffer.from('kept by the owner\n'));
+    expect(
+      (await runtimeDoctor(projectDir)).diagnostics.find(
+        (entry) => entry.code === 'runtime-package-custody',
+      )?.status,
+    ).toBe('pass');
   });
 });
 

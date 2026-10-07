@@ -2,6 +2,10 @@ import path from 'node:path';
 import type { ClaudePluginOperation, ClaudePluginOperationKind } from './claude-plugin-service.js';
 import type { CodexPluginOperation } from './codex-plugin-service.js';
 import type { RuntimeId } from './runtime-manager/inventory.js';
+import {
+  describePackageDrift,
+  type RuntimePackageDrift,
+} from './runtime-manager/runtime-package.js';
 
 export const RUNTIME_LABELS: Record<RuntimeId, string> = {
   'claude-code': 'Claude Code',
@@ -21,6 +25,7 @@ interface RuntimePlan {
   runtimes: RuntimeId[];
   actions: Array<{ runtime: string; target: string; operation: string }>;
   runtimeOperations: Array<ClaudePluginOperation | CodexPluginOperation>;
+  runtimePackageRestores?: Array<RuntimePackageDrift & { runtime: RuntimeId }>;
 }
 
 function isInside(target: string, root: string): boolean {
@@ -103,7 +108,15 @@ export function summarizeRuntimeChanges(
     const operations = plan.runtimeOperations.filter(
       (operation) => operation.runtime === runtime && operation.kind !== 'refresh-marketplace',
     );
+    const restores = (plan.runtimePackageRestores ?? [])
+      .filter((restore) => restore.runtime === runtime)
+      .map((restore) =>
+        applied
+          ? `runtime package restored (${describePackageDrift(restore)})`
+          : `restore the runtime package (${describePackageDrift(restore)}); changed files are backed up first`,
+      );
     const parts = [
+      ...restores,
       ...operations.map((operation) => describeOperation(operation, applied)),
       ...describeFiles(files, applied),
     ];

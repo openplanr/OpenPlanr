@@ -314,7 +314,7 @@
       "ownerPackage": "openplanr",
       "source": {
         "path": "packages/cli/src/cli/commands/doctor.ts",
-        "digest": "sha256:c03316bca1826b22f59c74cc8f0587fee15e46a284bc5b8c9542e64a0f90c85f"
+        "digest": "sha256:11a1b5732b15ab42862719f0924c57cd6c07b925b10bbe49a3b1c6356c7a3f8d"
       },
       "authorityClass": "workflow",
       "machineJson": false,
@@ -965,7 +965,7 @@
       "ownerPackage": "openplanr",
       "source": {
         "path": "packages/cli/src/cli/commands/upgrade.ts",
-        "digest": "sha256:805478c75b56729e25ee80b2dc28ee86c391ec62f30b9eee5b9154f7144b9b15"
+        "digest": "sha256:755b7908e57d39215ba13a26727691ef95d40f9078c066902962f2d58151c382"
       },
       "authorityClass": "workflow",
       "machineJson": false,
@@ -1948,5 +1948,5 @@
       ]
     }
   ],
-  "documentDigest": "sha256:f76e439f3c7cff01b611a0c676499ecfe16950ec3321a91103a7b9f2dc66d403"
+  "documentDigest": "sha256:d459cc3eccf1f0772dae75b1366b254e5542cd26b44f108301d146ba9c3d3577"
 }

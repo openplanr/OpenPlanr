@@ -1,11 +1,12 @@
 import { CLI_COMMAND } from '../utils/constants.js';
 import { display, logger } from '../utils/logger.js';
 import { joinNames } from './runtime-change-summary.js';
-import type {
-  ExecuteCliHalfUpgradeResult,
-  ReleaseNoteSection,
-  UpgradeNextStep,
-  UpgradeReconciliation,
+import {
+  type ExecuteCliHalfUpgradeResult,
+  isRepairStep,
+  type ReleaseNoteSection,
+  type UpgradeNextStep,
+  type UpgradeReconciliation,
 } from './upgrade-service.js';
 
 export type ReleaseNotesMode = 'highlights' | 'full';
@@ -84,7 +85,11 @@ export function printNextSteps(steps: UpgradeNextStep[], error?: string): void {
     display.numbered(index + 1, step.command);
     display.line(`       ${step.host}: ${step.detail}`);
   });
-  const hosts = [...new Set(steps.filter((step) => step.runtime).map((step) => step.host))];
+  const hosts = [
+    ...new Set(
+      steps.filter((step) => step.runtime && !isRepairStep(step)).map((step) => step.host),
+    ),
+  ];
   display.line(
     hosts.length > 0
       ? `  Then restart ${joinNames(hosts)} and check with \`${CLI_COMMAND} upgrade status\`.`
@@ -111,7 +116,10 @@ export function printUpgradeReport(
 }
 
 /** Cached compatibility evidence is useful, but is never a fresh latest-release check. */
-export function printReconciliationStatus(result: UpgradeReconciliation): void {
+export function printReconciliationStatus(
+  result: UpgradeReconciliation,
+  nextSteps: readonly UpgradeNextStep[] = [],
+): void {
   if (result.ecosystemSource === 'stale-cache') {
     logger.warn(
       'The registry could not be reached. Results use stale cached release metadata; the latest release is not confirmed.',
@@ -129,8 +137,16 @@ export function printReconciliationStatus(result: UpgradeReconciliation): void {
     logger.info(
       'An upgrade is available in the release metadata; the installed components are still mutually compatible.',
     );
+  } else if (result.status === 'agents-behind') {
+    logger.info(
+      `The OpenPlanr CLI is up to date (${result.installed.cli}). Update your coding agents with the commands below.`,
+    );
   } else if (result.status === 'incompatible') {
     logger.warn('The installed components are on mutually incompatible versions.');
+  } else if (nextSteps.some(isRepairStep)) {
+    logger.warn(
+      'The installed versions are current, but an installation needs a repair; run the commands below.',
+    );
   } else if (result.ecosystemSource === 'network') {
     logger.success('The installed components match the freshly checked published compatible set.');
   } else {

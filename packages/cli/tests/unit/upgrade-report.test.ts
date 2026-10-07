@@ -107,6 +107,13 @@ describe('printNextSteps', () => {
     expect(printed.at(-1)).toBe('  Then check with `openplanr upgrade status`.');
   });
 
+  it('asks for no restart when the agent steps are repairs', () => {
+    printNextSteps([
+      { runtime: 'codex', host: 'Codex', command: 'openplanr doctor --fix', detail: 'changed' },
+    ]);
+    expect(printed.at(-1)).toBe('  Then check with `openplanr upgrade status`.');
+  });
+
   it('points at upgrade status when the steps could not be listed', () => {
     printNextSteps([], 'The upgraded CLI could not be run: boom.');
     expect(printed.at(-1)).toBe(
@@ -135,6 +142,25 @@ describe('printUpgradeReport', () => {
     expect(printed.at(-1)).toBe(
       '  Then restart Claude Code and check with `openplanr upgrade status`.',
     );
+  });
+});
+
+describe('printReconciliationStatus', () => {
+  const current = {
+    installed: { cli: '2.2641.2', skills: '2.2641.2', pipeline: null },
+    published: null,
+    ecosystemSource: 'network' as const,
+  };
+
+  it('tells agent updates apart from repairs', () => {
+    printReconciliationStatus({ ...current, status: 'agents-behind' }, steps);
+    printReconciliationStatus({ ...current, status: 'aligned' }, [
+      { runtime: 'codex', host: 'Codex', command: 'openplanr doctor --fix', detail: 'changed' },
+    ]);
+    expect(printed).toEqual([
+      'ℹ The OpenPlanr CLI is up to date (2.2641.2). Update your coding agents with the commands below.',
+      '⚠ The installed versions are current, but an installation needs a repair; run the commands below.',
+    ]);
   });
 });
 

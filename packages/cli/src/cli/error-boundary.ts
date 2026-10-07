@@ -21,9 +21,10 @@ export type CliFailureEnvelope = {
 
 function boundedPublicText(value: unknown, fallback: string): string {
   const source = typeof value === 'string' && value.trim() ? value.trim() : fallback;
+  // Only absolute paths are private; a relative path such as `skills/x.mjs` stays readable.
   return source
     .split(/\n\s*at\s/u, 1)[0]
-    .replace(/(?:[A-Za-z]:\\|\/)(?:[^\s"'`,:]+[\\/])*[^\s"'`,:]*/gu, '<path>')
+    .replace(/(?<![\w.~@-])(?:[A-Za-z]:\\|\/)(?:[^\s"'`,:]+[\\/])*[^\s"'`,:]*/gu, '<path>')
     .slice(0, MAX_PUBLIC_TEXT);
 }
 

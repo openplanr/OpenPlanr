@@ -52,6 +52,10 @@ Shape (the fields this skill reads):
 - `upgrade-available` or `incompatible` → act. First **record the `installed`
   block as the before state** — the honest diff at the end depends on it. When
   only `nextSteps` is non-empty, skip to step 3.
+- `agents-behind` → the CLI is current and a coding agent's OpenPlanr install
+  needs updating. Record the `installed` block, then skip to step 3.
+- `aligned` with non-empty `nextSteps` → the versions match, but an install needs
+  the `openplanr doctor` commands listed. Skip to step 3.
 
 ## 2. Upgrade the CLI and obtain the next steps
 
@@ -90,6 +94,10 @@ this file.** Other shapes:
   `openplanr upgrade status --json` and use its `nextSteps`.
 - An `openplanr doctor` command: planning that agent's update failed, and `detail`
   says why. Relay it and run `openplanr doctor --json`.
+- An `openplanr doctor --fix` command: a file in that agent's runtime package was
+  changed outside OpenPlanr, and `detail` names it. Run it, show the user the
+  repair preview, and rerun it with `--yes` only after they confirm. The changed
+  files are backed up before they are replaced.
 
 `pluginHalfCommands` repeats the commands for older readers; read `nextSteps`.
 

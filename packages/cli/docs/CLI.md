@@ -593,7 +593,10 @@ Failures from packet commands are bounded in both human and `--json` output;
 machine output contains `ok`, `code`, and `problem` without stack traces or host
 paths. For setup or command parity failures, run `openplanr doctor --strict --json`.
 Use `openplanr upgrade status`, then `openplanr upgrade apply` when doctor reports an
-incompatible installed CLI. `upgrade apply` prints the new version, up to five
+incompatible installed CLI. `upgrade status` reports `aligned`, `upgrade-available`
+(a newer CLI is published), `agents-behind` (the CLI is current; run the commands it
+lists to update your coding agents) or `incompatible`.
+`upgrade apply` prints the new version, up to five
 highlights per release (`--notes full` prints every entry), and the command that
 updates each installed coding agent. The published compatible set is read from the npm
 registry's `latest` CLI document (its version and the exact `planr-pipeline` it
