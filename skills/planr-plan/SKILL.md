@@ -118,8 +118,8 @@ instead of repeating every path in chat.
 - **Checks:** frontmatter, ID and acceptance coverage checks actually performed.
 - **Issues:** unresolved inputs or material assumptions, with their impact and recovery step; omit when empty.
 - **Next:** the exact ready task selector and a copy-ready host-native
-  invocation such as `$planr-ship T-NNN` (Codex/ChatGPT) or
-  `/planr-ship T-NNN` (Claude Code).
+  invocation such as `/planr:ship T-NNN` (Claude Code), `$planr:ship T-NNN`
+  (Codex/ChatGPT) or the `planr-ship` rule (Cursor).
 
 Mention the planning layout or consulted lenses only when they explain a material
 choice. Different summary wording never requires another planning run.

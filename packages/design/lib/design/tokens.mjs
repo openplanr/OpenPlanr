@@ -1,5 +1,5 @@
 /**
- * Design tokens — the FIXED vocabulary the `/planr-pipeline:design` generator
+ * Design tokens — the FIXED vocabulary the `/planr:design` generator
  * authors with, and the scale `lib/design/lint.mjs` validates against.
  *
  * This is the engineering answer to "how do designers keep sizing/spacing
