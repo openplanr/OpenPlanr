@@ -279,29 +279,23 @@
         "cli": {
           "type": "object",
           "additionalProperties": false,
-          "required": ["openplanr", "opr", "planr"],
+          "required": ["openplanr", "opr"],
           "properties": {
             "openplanr": {
               "const": "./bin/openplanr.js"
             },
             "opr": {
               "const": "./bin/openplanr.js"
-            },
-            "planr": {
-              "const": "./bin/planr.js"
             }
           }
         },
         "pipeline": {
           "type": "object",
           "additionalProperties": false,
-          "required": ["openplanr-pipeline", "planr-pipeline"],
+          "required": ["openplanr-pipeline"],
           "properties": {
             "openplanr-pipeline": {
               "const": "bin/openplanr-pipeline.mjs"
-            },
-            "planr-pipeline": {
-              "const": "bin/planr-pipeline.mjs"
             }
           }
         }

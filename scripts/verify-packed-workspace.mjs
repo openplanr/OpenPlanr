@@ -524,12 +524,6 @@ function verifyCliAliases({
   const expectedBins = {
     openplanr: './bin/openplanr.js',
     opr: './bin/openplanr.js',
-    planr: './bin/planr.js',
-  };
-  const expectedStderrPrefix = {
-    opr: '',
-    planr:
-      'planr is now openplanr (short alias: opr). The planr command will be removed in the next release.\n',
   };
   if (JSON.stringify(stableJson(manifest.bin)) !== JSON.stringify(stableJson(expectedBins))) {
     throw new ProofFailure(
@@ -569,22 +563,20 @@ function verifyCliAliases({
       );
     }
     if (testCase.output === 'json') assertJsonOutput(baseline, testCase.id);
-    for (const alias of ['opr', 'planr']) {
-      const candidate = commandResult(nodeExecutable, [entrypoints[alias], ...testCase.args], {
-        cwd: project,
-        env: environment,
-        timeout: testCase.id === 'diagnostics' ? 2 * 60 * 1000 : undefined,
-      });
-      if (
-        candidate.status !== baseline.status ||
-        candidate.stdout !== baseline.stdout ||
-        candidate.stderr !== `${expectedStderrPrefix[alias]}${baseline.stderr}`
-      ) {
-        throw new ProofFailure(
-          'E_CLI_ALIAS_PARITY',
-          `${alias} differs from openplanr for ${testCase.id}.`,
-        );
-      }
+    const candidate = commandResult(nodeExecutable, [entrypoints.opr, ...testCase.args], {
+      cwd: project,
+      env: environment,
+      timeout: testCase.id === 'diagnostics' ? 2 * 60 * 1000 : undefined,
+    });
+    if (
+      candidate.status !== baseline.status ||
+      candidate.stdout !== baseline.stdout ||
+      candidate.stderr !== baseline.stderr
+    ) {
+      throw new ProofFailure(
+        'E_CLI_ALIAS_PARITY',
+        `opr differs from openplanr for ${testCase.id}.`,
+      );
     }
     reports.push({ id: testCase.id, ...commandDigest(baseline, [consumerRoot, project]) });
   }
