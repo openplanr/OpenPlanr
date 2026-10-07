@@ -6,7 +6,7 @@
   "inputs": [
     {
       "path": "adapters/manifests/generated-assets.json",
-      "digest": "sha256:dca3ec7d646cc97ee1b66f2fd20542c9321f151e03ede6599f55739cdebbb0b0"
+      "digest": "sha256:f73fa068e738aabbd3583fa07ef5590c79c8a53ca9ad0cab9a33be7a11f66d75"
     },
     {
       "path": "apps/dashboard/package.json",
@@ -50,7 +50,7 @@
     },
     {
       "path": "packages/protocol/registries/commands.json",
-      "digest": "sha256:ceb91bcf85c6d8b3bbdaa759321f4dc3970dd249fcd1459b46b77a914910a605"
+      "digest": "sha256:873c5fe7d18b71d5fe5770c1dd1efe81461856f7cf863a731b8e3ebf69d1470e"
     },
     {
       "path": "packages/protocol/registries/output-paths.json",
@@ -170,7 +170,7 @@
     },
     {
       "path": "skills/planr-doctor/SKILL.md",
-      "digest": "sha256:188f9dec0d7d0f6a1b70efd2decfff832e0fc57b175522e471fca6436705321f"
+      "digest": "sha256:53d180655e81a99317fb2b1a9a2acc112195ebaef4655264a0b763a44909eafb"
     },
     {
       "path": "skills/planr-investigate/SKILL.md",
@@ -236,7 +236,7 @@
     },
     {
       "path": "adapters/manifests/codex-plugin-content.json",
-      "digest": "sha256:752ca5251b5c5df16bd28eac62be94f1bfaa5874ff37881a8f8518388c701b28"
+      "digest": "sha256:763315f4204cdd558c1942d5e09af91abc9aa446bd5c7efccb396bba912c139a"
     },
     {
       "path": "docs/generated/adapters.md",
@@ -252,7 +252,7 @@
     },
     {
       "path": "ecosystem.json",
-      "digest": "sha256:27ec37a5a83af687fbccf85f8b0edf41f7cd21455fcea4aa74ef03bbde26bb7e"
+      "digest": "sha256:7a6cceae9d1a38d0887c37b642056a3fb38af95cb38e304cc20aee2eeda2803e"
     }
   ]
 }
