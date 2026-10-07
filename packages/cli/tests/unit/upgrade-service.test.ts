@@ -710,6 +710,33 @@ describe('upgradeNextSteps', () => {
     expect(readFileSync(script.target, 'utf8')).toBe('owner edit\n');
   });
 
+  it('points a failed native check at doctor instead of an update that would refuse', async () => {
+    await applySetup({
+      projectDir: root,
+      cliVersion,
+      runtime: 'claude-code',
+      scope: 'user',
+      manageExternalRuntimes: false,
+    });
+    const listing = installedRunner([]);
+    const failingList: ClaudeCommandRunner = (args) =>
+      args.join(' ') === 'plugin list --json'
+        ? { status: 1, stdout: '', stderr: 'plugin list failed' }
+        : listing(args);
+
+    const steps = await upgradeNextSteps(root, { claudeCommandRunner: failingList });
+    expect(steps).toEqual([
+      {
+        runtime: 'claude-code',
+        host: 'Claude Code',
+        command: 'openplanr doctor',
+        detail: expect.stringMatching(
+          /^Claude plugin state could not be inspected: .+ Update Claude Code, then rerun/,
+        ),
+      },
+    ]);
+  });
+
   it('lists nothing when Claude Code is absent and no coding agent is recorded', async () => {
     const steps = await upgradeNextSteps(root, {
       claudeCommandRunner: makeRunner({ available: false }),
@@ -814,6 +841,15 @@ describe('withAgentNextSteps', () => {
     expect(withAgentNextSteps(aligned, [{ ...step, runtime: 'codex' }]).status).toBe(
       'agents-behind',
     );
+  });
+
+  it('keeps aligned when the only agent steps are repairs', () => {
+    expect(
+      withAgentNextSteps(aligned, [
+        { ...step, runtime: 'codex', command: 'openplanr doctor --fix' },
+        { ...step, runtime: 'claude-code', command: 'openplanr doctor' },
+      ]).status,
+    ).toBe('aligned');
   });
 
   it('keeps aligned for OpenPlanr-only steps and never masks another status', () => {

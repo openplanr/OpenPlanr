@@ -113,8 +113,40 @@ export function retainedPackageDrift(runtimePackage: RuntimePackage): RuntimePac
         return existsSync(target) && digest(readFileSync(target)) !== digest(content);
       })
       .map(([relativePath]) => relativePath),
-    unexpected: installed.filter((file) => !expected.has(file)).sort(),
+    unexpected: addedPackageFiles(installed, [...expected.keys()], (file) =>
+      existsSync(path.join(runtimePackage.root, file)),
+    ),
   };
+}
+
+const foldedName = (file: string) => file.normalize('NFC').toLowerCase();
+
+/**
+ * Installed files the reviewed package does not list. A name that opens a reviewed file only
+ * because the file system ignores case is that file, not an addition.
+ */
+export function addedPackageFiles(
+  installed: readonly string[],
+  reviewed: readonly string[],
+  opens: (relativePath: string) => boolean,
+): string[] {
+  const listed = new Set(installed);
+  const reviewedNames = new Set(reviewed);
+  const byFoldedName = new Map(reviewed.map((file) => [foldedName(file), file]));
+  return installed
+    .filter((file) => {
+      if (reviewedNames.has(file)) return false;
+      const packaged = byFoldedName.get(foldedName(file));
+      return !packaged || listed.has(packaged) || !opens(packaged);
+    })
+    .sort();
+}
+
+/** The reviewed file `file` differs from only by letter case, if any. */
+export function caseVariantOf(file: string, reviewed: readonly string[]): string | undefined {
+  return reviewed.find(
+    (candidate) => candidate !== file && foldedName(candidate) === foldedName(file),
+  );
 }
 
 /** The files a retained runtime package changed or gained, for one line of output. */

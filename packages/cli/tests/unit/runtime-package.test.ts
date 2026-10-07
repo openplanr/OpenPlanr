@@ -12,6 +12,8 @@ import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import {
+  addedPackageFiles,
+  caseVariantOf,
   inspectRuntimeLocator,
   inspectRuntimePackage,
   inspectThinRule,
@@ -104,6 +106,20 @@ describe('immutable runtime packages', () => {
     expect(() => inspectRuntimePackage(sourceRoot, cacheRoot, 'openai', '1.2.3')).toThrow(
       'The immutable runtime package was changed: skills/plan/SKILL.md, runtime/design/main.mjs.',
     );
+  });
+  it('treats a name that opens a packaged file on a case-insensitive file system as that file', () => {
+    const reviewed = ['skills/plan/SKILL.md', 'skills/plan/references/contract.md'];
+    const caseInsensitive = (file: string) => reviewed.includes(file);
+    expect(addedPackageFiles(['skills/plan/skill.md'], reviewed, caseInsensitive)).toEqual([]);
+    // On a case-sensitive file system the same name is a separate file.
+    expect(addedPackageFiles(['skills/plan/skill.md'], reviewed, () => false)).toEqual([
+      'skills/plan/skill.md',
+    ]);
+    expect(
+      addedPackageFiles(['skills/plan/SKILL.md', 'skills/plan/skill.md'], reviewed, () => true),
+    ).toEqual(['skills/plan/skill.md']);
+    expect(caseVariantOf('skills/plan/skill.md', reviewed)).toBe('skills/plan/SKILL.md');
+    expect(caseVariantOf('skills/plan/notes.md', reviewed)).toBeUndefined();
   });
   it('rejects links, unknown files, bad digests and unsafe catalog paths', () => {
     writeFileSync(join(sourceRoot, 'unexpected.mjs'), 'unknown');

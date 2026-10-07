@@ -57,7 +57,7 @@ export function registerUpgradeCommand(program: Command, _cliVersion: string) {
           display.keyValue('Published host package', result.published.skills.version);
           display.keyValue('Published pipeline', result.published.pipeline.version);
         }
-        printReconciliationStatus(result);
+        printReconciliationStatus(result, nextSteps);
         if (nextSteps.length > 0) printNextSteps(nextSteps);
       }
 

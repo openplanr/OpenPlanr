@@ -771,12 +771,18 @@ function nextStepCommand(
   return `${CLI_COMMAND} runtime update ${RUNTIME_COMMAND_NAMES[runtime]} --scope ${scope} --yes`;
 }
 
-/** An `aligned` CLI whose coding agents still have steps to run reads as `agents-behind`. */
+/** A step that runs doctor to diagnose or repair an install instead of updating it. */
+export function isRepairStep(step: UpgradeNextStep): boolean {
+  return step.command.startsWith(`${CLI_COMMAND} doctor`);
+}
+
+/** An `aligned` CLI whose coding agents still have updates to run reads as `agents-behind`. */
 export function withAgentNextSteps(
   reconciliation: UpgradeReconciliation,
   nextSteps: readonly UpgradeNextStep[],
 ): UpgradeReconciliation {
-  return reconciliation.status === 'aligned' && nextSteps.some((step) => step.runtime)
+  return reconciliation.status === 'aligned' &&
+    nextSteps.some((step) => step.runtime && !isRepairStep(step))
     ? { ...reconciliation, status: 'agents-behind' }
     : reconciliation;
 }

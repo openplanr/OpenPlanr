@@ -54,6 +54,8 @@ Shape (the fields this skill reads):
   only `nextSteps` is non-empty, skip to step 3.
 - `agents-behind` → the CLI is current and a coding agent's OpenPlanr install
   needs updating. Record the `installed` block, then skip to step 3.
+- `aligned` with non-empty `nextSteps` → the versions match, but an install needs
+  the `openplanr doctor` commands listed. Skip to step 3.
 
 ## 2. Upgrade the CLI and obtain the next steps
 

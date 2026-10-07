@@ -87,6 +87,7 @@ import {
   type RuntimeId,
 } from './runtime-manager/inventory.js';
 import {
+  caseVariantOf,
   describePackageDrift,
   inspectRuntimeLocator,
   inspectRuntimePackage,
@@ -1487,6 +1488,16 @@ function buildActions(
             'E_RUNTIME_PACKAGE_CHANGED',
             `Files in the ${runtime} runtime package ${runtimePackage.version} were changed outside OpenPlanr: ${describePackageDrift(drift)}.`,
             `Run \`${CLI_COMMAND} doctor --fix\` to restore the package from this CLI; the changed files are backed up first.`,
+          );
+        }
+        // A restore never deletes a name that could open a packaged file.
+        const reviewed = runtimePackage.files.map((file) => file.relativePath);
+        const caseVariants = drift.unexpected.filter((file) => caseVariantOf(file, reviewed));
+        if (caseVariants.length > 0) {
+          throw new RuntimeManagerError(
+            'E_RUNTIME_PACKAGE_CHANGED',
+            `Files in the ${runtime} runtime package ${runtimePackage.version} differ from packaged files only by letter case: ${caseVariants.join(', ')}.`,
+            `OpenPlanr does not delete them. Remove them by hand, then rerun \`${CLI_COMMAND} doctor --fix\`.`,
           );
         }
         packageRestores.push({
