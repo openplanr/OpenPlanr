@@ -12,7 +12,7 @@ test('Plan defines Protocol 1.7 decomposition and an exact non-chaining Ship han
   assert.match(plan, /planning ID helper.*inspect or reserve IDs/isu);
   assert.match(plan, /reviewRisks.*browserSurfaces/isu);
   assert.match(plan, /map every acceptance ID.*acceptanceRefs/isu);
-  assert.match(plan, /\$planr-ship T-NNN[\s\S]*\/planr-ship T-NNN/u);
+  assert.match(plan, /\/planr:ship T-NNN[\s\S]*\$planr:ship T-NNN[\s\S]*`planr-ship` rule/u);
   assert.match(plan, /never starts implementation|never starts Ship|Do not start Ship/iu);
   assert.match(contract, /Protocol `1\.7\.0` frontmatter/u);
 });
