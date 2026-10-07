@@ -115,6 +115,10 @@
     "./sharing-security-contracts": {
       "types": "./src/sharing-security-contracts.d.mts",
       "import": "./src/sharing-security-contracts.mjs"
+    },
+    "./enterprise-journey-contracts": {
+      "types": "./src/enterprise-journey-contracts.d.mts",
+      "import": "./src/enterprise-journey-contracts.mjs"
     }
   },
   "files": [

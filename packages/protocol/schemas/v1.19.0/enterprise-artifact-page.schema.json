@@ -1,0 +1,251 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://openplanr.dev/schemas/v1.19.0/enterprise-artifact-page.schema.json",
+  "x-openplanr-contract": {
+    "id": "enterprise-artifact-page",
+    "version": "1.19.0"
+  },
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "kind": {
+      "const": "openplanr-enterprise-artifact-page"
+    },
+    "schemaVersion": {
+      "const": "1.0.0"
+    },
+    "protocolVersion": {
+      "const": "1.19.0"
+    },
+    "query": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "organizationId": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}(?![\\s\\S])"
+        },
+        "projectId": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}(?![\\s\\S])"
+        },
+        "actorId": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}(?![\\s\\S])"
+        },
+        "scope": {
+          "const": "artifacts"
+        },
+        "filter": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "kind": {
+              "enum": [
+                "all",
+                "diagram",
+                "design",
+                "artifact"
+              ]
+            },
+            "status": {
+              "enum": [
+                "all",
+                "active",
+                "archived"
+              ]
+            },
+            "search": {
+              "type": "string",
+              "maxLength": 240
+            }
+          },
+          "required": [
+            "kind",
+            "status",
+            "search"
+          ]
+        }
+      },
+      "required": [
+        "organizationId",
+        "projectId",
+        "actorId",
+        "scope",
+        "filter"
+      ]
+    },
+    "items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "organizationId": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}(?![\\s\\S])"
+          },
+          "projectId": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}(?![\\s\\S])"
+          },
+          "artifactId": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}(?![\\s\\S])"
+          },
+          "kind": {
+            "enum": [
+              "diagram",
+              "design",
+              "artifact"
+            ]
+          },
+          "contentFormat": {
+            "enum": [
+              "diagram-authoring",
+              "design-review",
+              "planning-document",
+              "generic-artifact"
+            ]
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 240
+          },
+          "revisionId": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]{1,128}(?![\\s\\S])"
+          },
+          "status": {
+            "enum": [
+              "active",
+              "archived"
+            ]
+          },
+          "capabilities": {
+            "type": "array",
+            "items": {
+              "enum": [
+                "organization.manage",
+                "ownership.transfer",
+                "billing.manage",
+                "audit.read",
+                "project.create",
+                "project.manage",
+                "artifact.read",
+                "artifact.author",
+                "artifact.export",
+                "review.write",
+                "review.resolve"
+              ]
+            },
+            "maxItems": 11,
+            "minItems": 0,
+            "uniqueItems": true
+          }
+        },
+        "required": [
+          "organizationId",
+          "projectId",
+          "artifactId",
+          "kind",
+          "contentFormat",
+          "title",
+          "revisionId",
+          "status",
+          "capabilities"
+        ],
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "kind": {
+                  "const": "diagram"
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "contentFormat": {
+                  "const": "diagram-authoring"
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "kind": {
+                  "const": "design"
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "contentFormat": {
+                  "const": "design-review"
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "kind": {
+                  "const": "artifact"
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "contentFormat": {
+                  "enum": [
+                    "planning-document",
+                    "generic-artifact"
+                  ]
+                }
+              }
+            }
+          }
+        ]
+      },
+      "maxItems": 100,
+      "minItems": 0
+    },
+    "nextCursor": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "token": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 2048
+            },
+            "queryDigest": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{64}(?![\\s\\S])"
+            }
+          },
+          "required": [
+            "token",
+            "queryDigest"
+          ]
+        },
+        {
+          "type": "null"
+        }
+      ]
+    }
+  },
+  "required": [
+    "kind",
+    "schemaVersion",
+    "protocolVersion",
+    "query",
+    "items",
+    "nextCursor"
+  ]
+}

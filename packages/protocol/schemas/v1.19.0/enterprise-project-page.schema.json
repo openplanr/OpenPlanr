@@ -1,0 +1,165 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://openplanr.dev/schemas/v1.19.0/enterprise-project-page.schema.json",
+  "x-openplanr-contract": {
+    "id": "enterprise-project-page",
+    "version": "1.19.0"
+  },
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "kind": {
+      "const": "openplanr-enterprise-project-page"
+    },
+    "schemaVersion": {
+      "const": "1.0.0"
+    },
+    "protocolVersion": {
+      "const": "1.19.0"
+    },
+    "query": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "organizationId": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}(?![\\s\\S])"
+        },
+        "actorId": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}(?![\\s\\S])"
+        },
+        "scope": {
+          "const": "projects"
+        },
+        "filter": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "status": {
+              "enum": [
+                "all",
+                "active",
+                "archived"
+              ]
+            },
+            "search": {
+              "type": "string",
+              "maxLength": 240
+            }
+          },
+          "required": [
+            "status",
+            "search"
+          ]
+        }
+      },
+      "required": [
+        "organizationId",
+        "actorId",
+        "scope",
+        "filter"
+      ]
+    },
+    "items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "organizationId": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}(?![\\s\\S])"
+          },
+          "projectId": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}(?![\\s\\S])"
+          },
+          "slug": {
+            "type": "string",
+            "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+            "maxLength": 128
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 240
+          },
+          "status": {
+            "enum": [
+              "active",
+              "archiving",
+              "archived",
+              "restoring"
+            ]
+          },
+          "capabilities": {
+            "type": "array",
+            "items": {
+              "enum": [
+                "organization.manage",
+                "ownership.transfer",
+                "billing.manage",
+                "audit.read",
+                "project.create",
+                "project.manage",
+                "artifact.read",
+                "artifact.author",
+                "artifact.export",
+                "review.write",
+                "review.resolve"
+              ]
+            },
+            "maxItems": 11,
+            "minItems": 0,
+            "uniqueItems": true
+          }
+        },
+        "required": [
+          "organizationId",
+          "projectId",
+          "slug",
+          "name",
+          "status",
+          "capabilities"
+        ]
+      },
+      "maxItems": 100,
+      "minItems": 0
+    },
+    "nextCursor": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "token": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 2048
+            },
+            "queryDigest": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{64}(?![\\s\\S])"
+            }
+          },
+          "required": [
+            "token",
+            "queryDigest"
+          ]
+        },
+        {
+          "type": "null"
+        }
+      ]
+    }
+  },
+  "required": [
+    "kind",
+    "schemaVersion",
+    "protocolVersion",
+    "query",
+    "items",
+    "nextCursor"
+  ]
+}

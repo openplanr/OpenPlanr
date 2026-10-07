@@ -31,6 +31,7 @@ export {
 } from './diagram-contracts.mjs';
 export * from './diagram-review-contracts.mjs';
 export * from './enterprise-contracts.mjs';
+export * from './enterprise-journey-contracts.mjs';
 export * from './enterprise-resource-contracts.mjs';
 export {
   ARTIFACT_ERROR_CODES,
@@ -58,7 +59,6 @@ export {
   validateCanonicalRegistries,
 } from './registries.mjs';
 export * from './sharing-security-contracts.mjs';
-
 export {
   assertDiagramPresentation as assertDiagramReviewPresentation,
   assertDiagramReviewBundleV11,

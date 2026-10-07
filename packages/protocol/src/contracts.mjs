@@ -20,6 +20,10 @@ import {
   validateDiagramAuthoringArtifact,
 } from './diagram-authoring-contracts.mjs';
 import { ENTERPRISE_SCHEMAS } from './enterprise-contracts.mjs';
+import {
+  assertEnterpriseJourneyContract,
+  ENTERPRISE_JOURNEY_SCHEMAS,
+} from './enterprise-journey-contracts.mjs';
 import { PipelineError } from './errors.mjs';
 import { OPERATE_CONTRACT_CATALOG_V2 } from './generated/contract-catalog-v2.mjs';
 import { validateJson } from './json-schema.mjs';
@@ -265,6 +269,13 @@ const foundationPaths = {
 };
 
 // Authoring successors are additive; preserve every legacy diagram registration.
+for (const kind of Object.keys(ENTERPRISE_JOURNEY_SCHEMAS)) {
+  foundationPaths[kind] = {
+    ...foundationPaths[kind],
+    '1.19.0': `schemas/v1.19.0/${kind}.schema.json`,
+  };
+}
+
 for (const [kind, filename] of Object.entries(DIAGRAM_AUTHORING_CONTRACT_FILES)) {
   foundationPaths[kind] = { ...foundationPaths[kind], '1.13.0': `schemas/v1.13.0/${filename}` };
 }
@@ -1235,6 +1246,8 @@ function guidedQuestionnaireCompatibilityErrors(value) {
 
 /** @type {typeof import('./contracts.d.mts').validateProtocolArtifact} */
 export function validateProtocolArtifact(kind, value, { protocolVersion } = {}) {
+  const journeyErrors = validateCompanyJourneyArtifact(kind, value, protocolVersion);
+  if (journeyErrors) return journeyErrors;
   const studioKind = Object.hasOwn(LARGE_OBJECT_SCHEMAS, kind);
   if (studioKind && protocolVersion === '1.17.0') {
     return validateStudioArtifact(kind, value, sharedProtocolSchema(kind, protocolVersion));
@@ -1286,6 +1299,31 @@ export function validateProtocolArtifact(kind, value, { protocolVersion } = {}) 
     return validateDiagramAuthoringArtifact(kind, value);
   }
   return validateGenericArtifact(kind, value, sharedProtocolSchema(kind, version));
+}
+function validateCompanyJourneyArtifact(kind, value, protocolVersion) {
+  if (Object.hasOwn(ENTERPRISE_JOURNEY_SCHEMAS, kind)) {
+    try {
+      assertLargeObjectData(value);
+      if (
+        protocolVersion === '1.19.0' ||
+        (!protocolVersion &&
+          Object.getOwnPropertyDescriptor(value ?? {}, 'protocolVersion')?.value === '1.19.0')
+      ) {
+        sharedProtocolSchema(kind, '1.19.0');
+        assertEnterpriseJourneyContract(value, kind);
+        return [];
+      }
+    } catch (error) {
+      return [
+        {
+          path: '$',
+          rule: 'company-journey-contract',
+          detail: error instanceof Error ? error.message : 'Invalid company journey data.',
+        },
+      ];
+    }
+  }
+  return null;
 }
 function invalidStudioData() {
   return [

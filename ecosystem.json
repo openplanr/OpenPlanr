@@ -74,7 +74,7 @@
       "version": "0.10.3",
       "path": "packages/protocol",
       "publication": "public",
-      "manifestDigest": "sha256:c0434bbb484e6830db91bc5138ee5215335d4011f22bfd55607274bf6589aa12"
+      "manifestDigest": "sha256:50b96f7e50585f4d45706821fd224cc55eb57792ca8a0f21941f84d3ae8f57df"
     },
     "operate": {
       "package": "@openplanr/operate",
@@ -349,7 +349,7 @@
     ],
     "generatedAssets": {
       "path": "adapters/manifests/generated-assets.json",
-      "digest": "sha256:38f6428a2535142ca762cf074da4d512ba93eaae9734a4e7104ca12a32d9c930",
+      "digest": "sha256:4f0593476a206acb851b61273e1c92960ec35755dc9ce5a7c31929dbaf53f8eb",
       "count": 1616
     }
   },
@@ -384,7 +384,7 @@
         "v1.18.0": 1
       }
     },
-    "total": 305
+    "total": 317
   },
   "registries": {
     "preserved": {

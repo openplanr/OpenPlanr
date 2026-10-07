@@ -1,0 +1,260 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://openplanr.dev/schemas/v1.19.0/enterprise-review-projection.schema.json",
+  "x-openplanr-contract": {
+    "id": "enterprise-review-projection",
+    "version": "1.19.0"
+  },
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "kind": {
+      "const": "openplanr-enterprise-review-projection"
+    },
+    "schemaVersion": {
+      "const": "1.0.0"
+    },
+    "protocolVersion": {
+      "const": "1.19.0"
+    },
+    "query": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "organizationId": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}(?![\\s\\S])"
+            },
+            "actorId": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}(?![\\s\\S])"
+            },
+            "scope": {
+              "const": "organization-reviews"
+            },
+            "filter": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "kind": {
+                  "enum": [
+                    "all",
+                    "diagram",
+                    "design",
+                    "artifact"
+                  ]
+                },
+                "status": {
+                  "enum": [
+                    "all",
+                    "active",
+                    "archived"
+                  ]
+                },
+                "search": {
+                  "type": "string",
+                  "maxLength": 240
+                }
+              },
+              "required": [
+                "kind",
+                "status",
+                "search"
+              ]
+            }
+          },
+          "required": [
+            "organizationId",
+            "actorId",
+            "scope",
+            "filter"
+          ]
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "organizationId": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}(?![\\s\\S])"
+            },
+            "projectId": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}(?![\\s\\S])"
+            },
+            "actorId": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}(?![\\s\\S])"
+            },
+            "scope": {
+              "const": "project-reviews"
+            },
+            "filter": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "kind": {
+                  "enum": [
+                    "all",
+                    "diagram",
+                    "design",
+                    "artifact"
+                  ]
+                },
+                "status": {
+                  "enum": [
+                    "all",
+                    "active",
+                    "archived"
+                  ]
+                },
+                "search": {
+                  "type": "string",
+                  "maxLength": 240
+                }
+              },
+              "required": [
+                "kind",
+                "status",
+                "search"
+              ]
+            }
+          },
+          "required": [
+            "organizationId",
+            "projectId",
+            "actorId",
+            "scope",
+            "filter"
+          ]
+        }
+      ]
+    },
+    "items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "organizationId": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}(?![\\s\\S])"
+          },
+          "projectId": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}(?![\\s\\S])"
+          },
+          "artifactId": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}(?![\\s\\S])"
+          },
+          "threadId": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}(?![\\s\\S])"
+          },
+          "revisionId": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]{1,128}(?![\\s\\S])"
+          },
+          "publicationId": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}(?![\\s\\S])"
+          },
+          "category": {
+            "enum": [
+              "question",
+              "suggestion",
+              "change-request",
+              "blocker"
+            ]
+          },
+          "status": {
+            "enum": [
+              "open",
+              "addressed",
+              "resolved"
+            ]
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "maxLength": 40,
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{3})?Z(?![\\s\\S])"
+          }
+        },
+        "required": [
+          "organizationId",
+          "projectId",
+          "artifactId",
+          "threadId",
+          "revisionId",
+          "publicationId",
+          "category",
+          "status",
+          "updatedAt"
+        ]
+      },
+      "maxItems": 100,
+      "minItems": 0
+    },
+    "nextCursor": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "token": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 2048
+            },
+            "queryDigest": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{64}(?![\\s\\S])"
+            }
+          },
+          "required": [
+            "token",
+            "queryDigest"
+          ]
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "index": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "status": {
+          "enum": [
+            "current",
+            "lagging"
+          ]
+        },
+        "watermark": {
+          "type": "string",
+          "format": "date-time",
+          "maxLength": 40,
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{3})?Z(?![\\s\\S])"
+        }
+      },
+      "required": [
+        "status",
+        "watermark"
+      ]
+    }
+  },
+  "required": [
+    "kind",
+    "schemaVersion",
+    "protocolVersion",
+    "query",
+    "items",
+    "nextCursor",
+    "index"
+  ]
+}
