@@ -63,8 +63,8 @@ version PR and approving the `npm-release` environment once per release.
 1. **Version PR.** `version-pr.yml` runs on every push to `main`. When changesets are
    pending it opens or refreshes `chore(release): version packages` (branch
    `changeset-release/main`) with `npm run version-packages:ci`: `changeset version`,
-   `scripts/release-train/cli-version.mjs` (which numbers a pending CLI release by its
-   release week, see [Versions and cadence](#versions-and-cadence)),
+   `scripts/release-train/cli-version.mjs` (which fails unless the new CLI version is
+   above every published one, see [Versions and cadence](#versions-and-cadence)),
    `scripts/release-train/sync-lockfile.mjs` (which copies the new workspace versions and
    internal ranges into `package-lock.json` without re-resolving third-party packages, so
    `npm ci` still accepts it on every supported Node line), and `npm run generate` so the
@@ -90,19 +90,14 @@ version PR and approving the `npm-release` environment once per release.
 
 ## Versions and cadence
 
-- **CLI numbering.** `openplanr` releases are `<major>.<YYWW>.<n>`. `YYWW` is the ISO
-  week-year and week the version PR was prepared in, and `n` counts earlier releases in
-  that week. For example, 2026 week 39 gives `2.2639.0`, and a second release that week
-  gives `2.2639.1`. Changesets still decides whether the CLI releases and whether it is a
-  new major; `cli-version.mjs` then takes the week number from the UTC date and the patch
-  count from npm, and fails rather than produce a version below one already published.
-  The numbering cannot be reverted: after `2.2639.0`, returning to small minor numbers
-  needs a new major.
-- **Library numbering.** `planr-pipeline` and `@openplanr/protocol` keep ordinary SemVer.
-- **Cadence.** Merge the version PR once a week. An urgent fix can still be released on
-  another day; it becomes the next patch of that week's number.
-- **Bump types.** Write `patch` changesets by default, `minor` only for a milestone the
-  maintainers call out, and `major` for a breaking change.
+- **Numbering.** `openplanr`, `planr-pipeline` and `@openplanr/protocol` use plain SemVer,
+  taken from the changesets: `patch` for fixes, `minor` for features, `major` for breaking
+  changes. `cli-version.mjs` fails the version step rather than produce a CLI version at
+  or below one already published.
+- **History.** `openplanr` 2.2639.0 to 2.2641.x used `<major>.<YYWW>.<n>`, numbered by
+  release week; 3.0.0 returned to plain SemVer.
+- **Cadence.** Merge the version PR once a week. Release a patch on another day only for
+  an urgent fix.
 
 ## After publication
 
