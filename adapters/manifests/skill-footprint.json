@@ -239,9 +239,9 @@
     {
       "host": "claude",
       "files": 273,
-      "bytes": 4774618,
+      "bytes": 4774572,
       "uniqueFiles": 224,
-      "uniqueBytes": 4545116,
+      "uniqueBytes": 4545070,
       "duplicateBytes": 229502
     },
     {
