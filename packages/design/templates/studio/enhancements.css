@@ -370,6 +370,11 @@ html[data-design-theme="light"] .design-export > div { box-shadow:0 12px 30px #1
   :root[data-design-studio] .planr-shell { height:var(--design-frozen-shell-height,100%); }
   :root[data-design-studio] .design-toolbar { grid-template-columns:auto minmax(0,1fr) auto; grid-template-rows:52px; padding:0 max(8px,env(safe-area-inset-right,0px)) 0 max(8px,env(safe-area-inset-left,0px)); }
   :root[data-design-studio] .design-toolbar .planr-brand { display:none; }
+  :root[data-design-studio] .planr-shell[data-studio-framework="react"] .design-toolbar[data-studio-layout="compact"] { grid-template-columns:auto minmax(0,1fr); }
+  :root[data-design-studio] .planr-shell[data-studio-framework="react"] .design-toolbar[data-studio-layout="compact"] .studio-toolbar-leading { grid-column:1; grid-row:1; width:auto; }
+  :root[data-design-studio] .planr-shell[data-studio-framework="react"] .design-toolbar[data-studio-layout="compact"] .studio-toolbar-trailing { grid-column:2; grid-row:1; width:auto; flex-wrap:nowrap; }
+  :root[data-design-studio] .planr-shell[data-studio-framework="react"] .design-toolbar[data-studio-layout="compact"] .studio-toolbar-center { grid-column:1 / -1; grid-row:2; }
+  :root[data-design-studio] .planr-shell[data-studio-framework="react"] .design-toolbar[data-studio-layout="compact"] .studio-toolbar-status { width:auto; flex-basis:auto; max-width:128px; }
   :root[data-design-studio] .design-toolbar-trailing { grid-column:3; }
   :root[data-design-studio] .design-view-picker { grid-column:2; grid-row:1; }
   :root[data-design-studio] .design-stage-context { flex-wrap:nowrap; padding:4px 12px; }

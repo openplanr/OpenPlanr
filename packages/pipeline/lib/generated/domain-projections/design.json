@@ -421,7 +421,7 @@
     {
       "source": "packages/design/templates/studio/enhancements.css",
       "target": "templates/studio/enhancements.css",
-      "sha256": "0b81cbd78c86ce913192d6244e2ab8c31fb06ea21cd56359593cb0f6026cdfa2",
+      "sha256": "bdb55a9464e96fba112aad73354d54b6ccb8ac5d9bc100a90b51df4633ff11f7",
       "mode": "644"
     },
     {
