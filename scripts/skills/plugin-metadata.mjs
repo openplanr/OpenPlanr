@@ -14,7 +14,7 @@ export const CLAUDE_PLUGIN_LISTING = Object.freeze({
   termsOfServiceUrl: 'https://openplanr.dev/terms',
   supportUrl: 'https://github.com/openplanr/OpenPlanr/blob/main/SUPPORT.md',
   // Not openplanr.dev/get-started, which is reserved for campaign traffic.
-  documentationUrl: 'https://github.com/openplanr/OpenPlanr/blob/main/docs/getting-started.md',
+  documentationUrl: 'https://openplanr.dev/docs',
 });
 
 /** Square app icon the plugin directory shows beside the listing. */
