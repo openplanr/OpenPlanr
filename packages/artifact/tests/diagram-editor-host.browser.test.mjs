@@ -445,8 +445,11 @@ test(
 
     await host('700px');
     await page.locator('.planr-diagram-editor[data-layout~="compact"]').waitFor();
-    assert.equal(await editor.getAttribute('data-editable'), 'false', 'Editing ends at 700px');
-    assert.equal(await page.locator('.de-mobile-message').isVisible(), true);
+    assert.equal(
+      await editor.getAttribute('data-editable'),
+      'true',
+      'Editing survives narrow hosts',
+    );
 
     await host('');
     await page.locator('.planr-diagram-editor[data-layout="desktop"]').waitFor();
