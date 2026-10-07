@@ -150,12 +150,15 @@ test('computed 200% text fits header and floating canvas controls', {
             await page.waitForSelector('[data-design-ready="true"]');
             await settleStudioChrome(page);
             await page.evaluate(
-              ({ preference, mode }) => {
+              ({ preference, mode, containerWidth }) => {
                 window.__openPlanrDesignExperience.setTheme(preference);
+                const shell = document.querySelector('.planr-shell');
+                shell.style.width = containerWidth > 800 ? 'calc(100% - 64px)' : '100%';
+                shell.style.marginInline = containerWidth > 800 ? '32px' : '0';
                 window.__openPlanrDesignStudio.setPanels({ navOpen: false, reviewOpen: false });
                 window.__openPlanrDesignStudio.setView(mode);
               },
-              { preference: theme, mode: view },
+              { preference: theme, mode: view, containerWidth: width },
             );
             await page.evaluate(() => window.__openPlanrDesignStudio.flush());
             await page.evaluate(() => {
@@ -201,6 +204,24 @@ test('computed 200% text fits header and floating canvas controls', {
                 toolbar: rect(toolbar),
                 picker: rect(document.querySelector('.design-view-picker')),
                 footer: rect(document.querySelector('.design-canvas-tools')),
+                context: rect(document.querySelector('.design-stage-context')),
+                actions: rect(document.querySelector('.design-stage-actions')),
+                contextTitle: rect(
+                  document.querySelector('.design-stage-context > div:first-child'),
+                ),
+                frameGroup: rect(document.querySelector('.design-frame-picker')),
+                contentViewport: rect(document.querySelector('.planr-stage-scroll')),
+                stageControls: [
+                  ...document.querySelectorAll(
+                    '.design-stage-actions > button,.design-stage-actions > .design-guidance > summary,.design-stage-actions > label select',
+                  ),
+                ]
+                  .filter(
+                    (node) =>
+                      node.getClientRects().length &&
+                      (!node.closest('details:not([open])') || node.closest('summary')),
+                  )
+                  .map(rect),
                 framePicker: {
                   ...rect(framePicker),
                   minimumTextHeight:
@@ -262,6 +283,24 @@ test('computed 200% text fits header and floating canvas controls', {
               geometry.framePicker.height >= geometry.framePicker.minimumTextHeight,
               `${label}: native frame picker reserves text and padding height`,
             );
+            assert.ok(
+              geometry.contentViewport.top >= geometry.context.bottom - 1,
+              `${label}: content viewport follows the intrinsic context height`,
+            );
+            for (const control of [
+              geometry.contextTitle,
+              geometry.actions,
+              geometry.frameGroup,
+              geometry.framePicker,
+              ...geometry.stageControls,
+            ])
+              assert.ok(
+                control.left >= geometry.context.left - 1 &&
+                  control.right <= geometry.context.right + 1 &&
+                  control.top >= geometry.context.top - 1 &&
+                  control.bottom <= geometry.context.bottom + 1,
+                `${label}: stage action fits its actual context ${JSON.stringify({ control, context: geometry.context })}`,
+              );
             near(
               geometry.picker.left + geometry.picker.width / 2,
               geometry.toolbar.left + geometry.toolbar.width / 2,
@@ -311,11 +350,17 @@ test('computed 200% text fits header and floating canvas controls', {
                   `${label}: ${control.name} contains ${JSON.stringify(text)} within ${JSON.stringify(control)}`,
                 );
             }
-            if (screenshotDirectory && theme === 'light' && view === 'prototype' && width !== 834)
+            if (screenshotDirectory && theme === 'light' && view === 'prototype')
               await page.screenshot({
                 path: join(screenshotDirectory, `studio-text2-${browserEngine()}-${width}.png`),
                 animations: 'disabled',
               });
+            await page.evaluate(() => {
+              const shell = document.querySelector('.planr-shell');
+              shell.dispatchEvent(new Event('planr:design-destroy'));
+              if (shell.style.getPropertyValue('--design-stage-context-measured-height'))
+                throw new Error('Stage context measurement survived disposal.');
+            });
           } finally {
             await page.close();
           }
@@ -419,6 +464,13 @@ test('Studio toolbar modes align with actions across themes, widths and interact
           await settleStudioChrome(page);
           const baseline = await toolbarGeometry(page);
           assertAlignment(baseline, width, label);
+          if (width <= 680) {
+            const frameTarget = await page.locator('.design-frame-picker select').boundingBox();
+            assert.ok(
+              frameTarget.width >= 44 && frameTarget.height >= 44,
+              `${label}: native frame picker retains a phone touch target`,
+            );
+          }
           for (const view of ['canvas', 'prototype', 'walkthrough']) {
             await page.locator(`button[data-design-view="${view}"]`).click();
             await page.waitForFunction(
