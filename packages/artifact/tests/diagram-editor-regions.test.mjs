@@ -159,7 +159,7 @@ test('the command table routes each action to one handler and ignores unknown ac
   assert.deepEqual(calls, [
     ['zoom', 1.2],
     ['zoom', 1 / 1.2],
-    ['fit'],
+    ['fit', 0],
     ['openLayout', 'horizontal'],
   ]);
 });

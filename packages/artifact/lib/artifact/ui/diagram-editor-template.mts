@@ -37,6 +37,7 @@ export interface DiagramEditorSkeleton {
   overlays: SVGGElement;
   empty: HTMLElement;
   canvasTools: HTMLElement;
+  contextTools: HTMLElement;
   footer: HTMLElement;
   right: HTMLElement;
   rightTabs: HTMLElement;
@@ -172,6 +173,18 @@ export function renderEditorSkeleton(
       'aria-label': 'Canvas tools',
     }),
     footer = node('div', { className: 'de-stage-footer' });
+  const contextTools = node(
+    'div',
+    {
+      className: 'de-context-tools',
+      role: 'toolbar',
+      'aria-label': 'Selected shape actions',
+      hidden: true,
+    },
+    iconButton(doc, 'Add connected step', 'quick-add', { icon: 'plus', iconOnly: true }),
+    iconButton(doc, 'Connect to shape…', 'connect', { icon: 'kind-connector', iconOnly: true }),
+    iconButton(doc, 'Duplicate shape', 'duplicate', { icon: 'duplicate', iconOnly: true }),
+  );
   const stage = node(
     'div',
     {
@@ -184,7 +197,7 @@ export function renderEditorSkeleton(
     svg,
     empty,
     canvasTools,
-    node('div', { className: 'de-mobile-message' }, 'Review on mobile. Open on desktop to edit.'),
+    contextTools,
   );
   const stageRegion = node(
     'section',
@@ -263,6 +276,7 @@ export function renderEditorSkeleton(
     overlays,
     empty,
     canvasTools,
+    contextTools,
     footer,
     right,
     rightTabs,
@@ -354,6 +368,11 @@ export function renderEditorControls(
     hidden: true,
   });
   for (const [name, action] of [
+    ['Undo', 'menu-undo'],
+    ['Redo', 'menu-redo'],
+    ['Save diagram', 'menu-save'],
+    ['Zoom in', 'menu-zoom-in'],
+    ['Zoom out', 'menu-zoom-out'],
     ['Auto layout…', 'layout'],
     ['Mermaid copies', 'source-panel'],
     ['Show source', 'show-source'],

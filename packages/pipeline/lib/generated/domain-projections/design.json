@@ -447,12 +447,6 @@
       "target": "templates/studio/studio.css",
       "sha256": "75ca0c3036d5c281e60a4155765ad8c2e9373bd39d34d4facebfe9bf26278c88",
       "mode": "644"
-    },
-    {
-      "source": "packages/design/templates/studio/studio.js",
-      "target": "templates/studio/studio.js",
-      "sha256": "c4455e3b205af38c28bff97d793121e3d2639aac1731367487a79a34c68ddca2",
-      "mode": "644"
     }
   ]
 }

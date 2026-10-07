@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { mkdtemp, realpath, rm } from 'node:fs/promises';
+import { mkdir, mkdtemp, realpath, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
@@ -17,7 +17,12 @@ const enabled = process.env.PLANR_BROWSER_TESTS === '1';
 const options = { skip: !enabled, timeout: 60_000 };
 async function fixture(
   t,
-  { bundle, viewport = { width: 1440, height: 900 }, storageBlocked = false } = {},
+  {
+    bundle,
+    viewport = { width: 1440, height: 900 },
+    storageBlocked = false,
+    hasTouch = false,
+  } = {},
 ) {
   const root = await realpath(await mkdtemp(join(tmpdir(), 'planr-editor-ui-')));
   const store = createDiagramAuthoringStore({ root, slug: 'checkout' });
@@ -39,7 +44,7 @@ async function fixture(
     assert.deepEqual(external, [], 'Local authoring requires no remote account or assets');
   });
   browser = await launchBrowser({ firefoxUserPrefs: FIREFOX_COOP_PAGE_PREFS });
-  const page = await browser.newPage({ viewport });
+  const page = await browser.newPage({ viewport, hasTouch });
   page.setDefaultTimeout(7000);
   page.on('pageerror', (error) => errors.push(error.message));
   page.on('request', (request) => {
@@ -563,11 +568,11 @@ test(
   },
 );
 
-test('no inspector label truncates in the 288px rail', options, async (t) => {
+test('no inspector label truncates in the compact 248px rail', options, async (t) => {
   const { page } = await fixture(t, { bundle: makeBundle('process') });
   assert.equal(
     await page.locator('.de-right').evaluate((rail) => rail.getBoundingClientRect().width),
-    288,
+    248,
   );
   const outlineRow = (id) => page.locator(`[data-action=select-id][data-id="${id}"]`);
   // Every section is opened so each control is laid out at the rail width.
@@ -2063,7 +2068,7 @@ test(
 );
 
 test(
-  'desktop chrome, tablet drawers and mobile review remain usable without page overflow',
+  'desktop chrome, tablet drawers and mobile authoring remain usable without page overflow',
   options,
   async (t) => {
     const { page, read } = await fixture(t, { bundle: makeBundle('process') });
@@ -2124,10 +2129,10 @@ test(
             `1280px canvas occupies ${dimensions.canvas.width / dimensions.width}`,
           );
         if (viewport.width <= 700) {
-          await page
-            .getByText(/desktop.*edit|edit.*desktop/iu)
-            .first()
-            .waitFor();
+          assert.equal(
+            await page.locator('.planr-diagram-editor').getAttribute('data-editable'),
+            'true',
+          );
         }
       }
     }
@@ -2138,8 +2143,8 @@ test(
     await page.getByRole('tab', { name: 'Shapes', exact: true }).click();
     assert.equal(
       await page.getByRole('button', { name: 'Create process', exact: true }).isDisabled(),
-      true,
-      'Editing is disabled at the mobile breakpoint',
+      false,
+      'Editing remains available at the mobile breakpoint',
     );
     await page.getByRole('button', { name: 'Close outline', exact: true }).click();
 
@@ -2150,7 +2155,7 @@ test(
     assert.equal(
       await page.getByRole('button', { name: 'Create process', exact: true }).isEnabled(),
       true,
-      'Editing starts immediately above the mobile breakpoint',
+      'Editing remains available above the mobile breakpoint',
     );
     await page.getByRole('button', { name: 'Close outline', exact: true }).click();
 
@@ -2337,3 +2342,284 @@ test(
     }
   },
 );
+
+test(
+  'phone authors insert, edit and use canonical history through exclusive sheets',
+  options,
+  async (t) => {
+    const { page, read } = await fixture(t, {
+      bundle: makeBundle('process'),
+      viewport: { width: 390, height: 844 },
+    });
+    const before = await read();
+    const shell = page.locator('.planr-diagram-editor');
+    assert.equal(await shell.getAttribute('data-editable'), 'true');
+    await page.getByRole('button', { name: 'Outline', exact: true }).click();
+    const id = await create(page, 'process');
+    assert.equal(
+      await page.locator('.de-left').getAttribute('aria-hidden'),
+      'true',
+      'Insertion returns focus to canvas',
+    );
+    assert.equal(await drawing(page, id).count(), 1);
+    await page.getByRole('button', { name: 'More', exact: true }).click();
+    const undo = page.getByRole('menuitem', { name: 'Undo', exact: true });
+    assert.ok((await undo.boundingBox()).height >= 44);
+    await undo.click();
+    assert.equal(await drawing(page, id).count(), 0);
+    await page.getByRole('button', { name: 'More', exact: true }).click();
+    const redo = page.getByRole('menuitem', { name: 'Redo', exact: true });
+    assert.ok((await redo.boundingBox()).height >= 44);
+    await redo.click();
+    assert.equal(await drawing(page, id).count(), 1);
+    await select(page, id);
+    await page.getByRole('button', { name: 'Inspector', exact: true }).click();
+    const label = page.getByLabel('Label', { exact: true });
+    await label.fill('Phone authoring');
+    await label.press('ArrowRight');
+    await label.press('Backspace');
+    assert.equal(
+      await drawing(page, id).count(),
+      1,
+      'Text shortcuts cannot delete the selected shape',
+    );
+    await page.getByRole('button', { name: 'Apply changes', exact: true }).click();
+    await page.getByRole('button', { name: 'Close properties', exact: true }).click();
+    await page.getByRole('button', { name: 'Outline', exact: true }).click();
+    assert.equal(await page.locator('.de-right').getAttribute('aria-hidden'), 'true');
+    await page.keyboard.press('Escape');
+    await page.getByRole('button', { name: 'More', exact: true }).click();
+    await page.getByRole('menuitem', { name: 'Save diagram', exact: true }).click();
+    await page.locator('.de-save-state[data-state="saved"]').waitFor({ state: 'attached' });
+    const after = await read();
+    assert.equal(after.document.nodes.length, before.document.nodes.length + 1);
+    assert.equal(after.document.nodes.find((node) => node.id === id).label, 'Phone authorin');
+  },
+);
+
+test(
+  'connection handles bind endpoints and quick-add uses one canonical undo transaction',
+  options,
+  async (t) => {
+    const { page, read } = await fixture(t, { bundle: makeBundle('process') });
+    const before = await read();
+    await select(page, 'node-b');
+    const handle = page.locator(
+      '[data-handle="connect"][data-handle-id="node-b"][data-side="left"]',
+    );
+    const start = await handle.boundingBox();
+    const target = await drawing(page, 'node-a').boundingBox();
+    await page.mouse.move(start.x + start.width / 2, start.y + start.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(target.x + target.width / 2, target.y + target.height / 2, { steps: 8 });
+    await page.mouse.up();
+    await save(page);
+    const connected = await read();
+    assert.equal(connected.document.relations.length, before.document.relations.length + 1);
+    const edge = connected.document.relations.find((item) => item.id !== 'edge-a');
+    assert.equal(edge.from, 'node-b');
+    assert.equal(edge.to, 'node-a');
+    assert.equal(
+      connected.presentation.elements.find((item) => item.elementId === edge.id).route.from.side,
+      'left',
+    );
+    await page.getByRole('button', { name: 'Undo', exact: true }).click();
+    assert.equal(await drawing(page, edge.id).count(), 0);
+    await page.getByRole('button', { name: 'Redo', exact: true }).click();
+    assert.equal(await drawing(page, edge.id).count(), 1);
+    await drawing(page, 'node-b').click({ position: { x: 20, y: 15 } });
+    await settle(page);
+    const toolbar = page.getByRole('toolbar', { name: 'Selected shape actions', exact: true });
+    await toolbar.getByRole('button', { name: 'Add connected step', exact: true }).click();
+    const id = await page
+      .locator('[data-editor-svg] [data-element-id][data-selected="true"]')
+      .getAttribute('data-element-id');
+    await save(page);
+    const expanded = await read();
+    assert.equal(expanded.document.nodes.length, before.document.nodes.length + 1);
+    const attached = expanded.document.relations.find((item) => item.to === id);
+    assert.equal(attached.from, 'node-b');
+    await page.getByRole('button', { name: 'Undo', exact: true }).click();
+    assert.equal(await drawing(page, id).count(), 0, 'One Undo removes the new shape');
+    assert.equal(await drawing(page, attached.id).count(), 0, 'The same Undo removes its edge');
+    await page.getByRole('button', { name: 'Redo', exact: true }).click();
+    assert.equal(await drawing(page, id).count(), 1);
+    assert.equal(await drawing(page, attached.id).count(), 1);
+    await drawing(page, 'node-a').click({ position: { x: 20, y: 15 } });
+    await settle(page);
+    await page.locator('[data-handle="connect"][data-side="right"]').focus();
+    await page.keyboard.press('Enter');
+    assert.equal(
+      await page.getByRole('dialog', { name: 'Connect objects', exact: true }).isVisible(),
+      true,
+    );
+    assert.equal(await page.getByLabel('From', { exact: true }).inputValue(), 'node-a');
+    await page.getByRole('button', { name: 'Cancel', exact: true }).click();
+  },
+);
+
+test(
+  'authoring chrome stays reachable at phone text scale and retains graph through themes',
+  options,
+  async (t) => {
+    const { page, read } = await fixture(t, {
+      bundle: makeBundle('process'),
+      viewport: { width: 390, height: 844 },
+    });
+    const before = await read();
+    assert.equal(
+      await page.getByLabel('Zoom level', { exact: true }).textContent(),
+      '100%',
+      'A fresh phone editor opens at readable scale; Fit remains an explicit overview',
+    );
+    const captures = join(
+      process.env.PLANR_BROWSER_DIAGNOSTIC_DIR || '/private/tmp/company-diagram-interface-browser',
+      browserEngine(),
+    );
+    await mkdir(captures, { recursive: true });
+    for (const scheme of ['light', 'dark']) {
+      await page.emulateMedia({ colorScheme: scheme });
+      await select(page, 'node-b');
+      await page.screenshot({ path: join(captures, `canvas-${scheme}-390.png`) });
+      await page.getByRole('button', { name: 'Outline', exact: true }).click();
+      await page.getByRole('tab', { name: 'Shapes', exact: true }).click();
+      await page.screenshot({ path: join(captures, `palette-${scheme}-390.png`) });
+      await page.keyboard.press('Escape');
+      await page.getByRole('button', { name: 'Inspector', exact: true }).click();
+      await page.screenshot({ path: join(captures, `inspector-${scheme}-390.png`) });
+      await page.keyboard.press('Escape');
+    }
+    await page.evaluate(() => {
+      const shell = document.querySelector('.planr-diagram-editor');
+      for (const [name, value] of [
+        ['sm', 24],
+        ['md', 28],
+        ['lg', 32],
+        ['xl', 40],
+      ])
+        shell.style.setProperty(`--de-text-${name}`, `${value}px`);
+    });
+    await settle(page);
+    const dock = await page.locator('.de-canvas-tools').evaluate((element) => ({
+      width: element.clientWidth,
+      scroll: element.scrollWidth,
+      controls: [...element.querySelectorAll('button')]
+        .filter((button) => button.checkVisibility())
+        .map((button) => {
+          const bounds = button.getBoundingClientRect();
+          return {
+            name: button.getAttribute('aria-label') || button.textContent,
+            x: bounds.x,
+            right: bounds.right,
+            height: bounds.height,
+          };
+        }),
+    }));
+    assert.ok(
+      dock.scroll <= dock.width,
+      `The compact dock must not hide controls in horizontal scrolling: ${JSON.stringify(dock)}`,
+    );
+    for (const control of dock.controls) {
+      assert.ok(control.x >= 0 && control.right <= 390, control.name);
+      assert.ok(control.height >= 44, control.name);
+    }
+    await page.screenshot({ path: join(captures, 'canvas-dark-390-text2x.png') });
+    assert.equal(
+      (await read()).bundleDigest,
+      before.bundleDigest,
+      'Theme/text/rail changes cannot rewrite the graph or its saved palette',
+    );
+  },
+);
+
+test(
+  'captured-pointer cancellation discards a preview without adding history',
+  options,
+  async (t) => {
+    const { page, read } = await fixture(t, { bundle: makeBundle('process') });
+    const before = await read();
+    const node = await drawing(page, 'node-b').boundingBox();
+    await page.mouse.move(node.x + 20, node.y + 15);
+    await page.mouse.down();
+    await page.mouse.move(node.x - 35, node.y - 20, { steps: 6 });
+    const stage = page.getByLabel('Diagram canvas', { exact: true });
+    await stage.dispatchEvent('pointercancel', { pointerId: 1, pointerType: 'mouse' });
+    await page.mouse.up();
+    await settle(page);
+    assert.equal(await page.getByRole('button', { name: 'Undo', exact: true }).isDisabled(), true);
+    assert.equal((await read()).bundleDigest, before.bundleDigest);
+  },
+);
+
+test('touch drag commits one edit and touch cancellation retains the original graph', {
+  ...options,
+  skip: !enabled || browserEngine() !== 'chromium',
+}, async (t) => {
+  const { page, read } = await fixture(t, {
+    bundle: makeBundle('process'),
+    viewport: { width: 390, height: 844 },
+    hasTouch: true,
+  });
+  const before = await read();
+  assert.equal(
+    await page.getByRole('button', { name: 'Snap', exact: true }).getAttribute('aria-pressed'),
+    'true',
+  );
+  assert.equal(await page.locator('.de-zoom-value').textContent(), '100%');
+  const cdp = await page.context().newCDPSession(page);
+  await page.evaluate(() => {
+    window.__touchEvents = [];
+    document
+      .querySelector('.de-canvas')
+      .addEventListener('pointerdown', (event) => window.__touchEvents.push(event.pointerType));
+    document
+      .querySelector('.de-canvas')
+      .addEventListener('pointercancel', () => window.__touchEvents.push('cancel'));
+  });
+  const gesture = async (cancel) => {
+    const node = await drawing(page, 'node-b').boundingBox();
+    const x = node.x + 20,
+      y = node.y + 15;
+    await cdp.send('Input.dispatchTouchEvent', {
+      type: 'touchStart',
+      touchPoints: [{ x, y, id: 1 }],
+    });
+    for (let step = 1; step <= 6; step++)
+      await cdp.send('Input.dispatchTouchEvent', {
+        type: 'touchMove',
+        touchPoints: [{ x: x - step * 4, y: y + step * 3, id: 1 }],
+      });
+    await cdp.send('Input.dispatchTouchEvent', {
+      type: cancel ? 'touchCancel' : 'touchEnd',
+      touchPoints: [],
+    });
+    await settle(page);
+  };
+  await gesture(true);
+  assert.equal(
+    await page.locator('[data-action="menu-undo"]').isDisabled(),
+    true,
+    'Cancelled touch adds no history',
+  );
+  assert.equal((await read()).bundleDigest, before.bundleDigest);
+  assert.deepEqual(await page.evaluate(() => window.__touchEvents), ['touch', 'cancel']);
+  await gesture(false);
+  assert.equal(await page.locator('[data-action="menu-undo"]').isEnabled(), true);
+  await page.getByRole('button', { name: 'More', exact: true }).click();
+  await page.getByRole('menuitem', { name: 'Save diagram', exact: true }).click();
+  await page.locator('.de-save-state[data-state="saved"]').waitFor({ state: 'attached' });
+  const after = await read();
+  const origin = before.presentation.elements.find((item) => item.elementId === 'node-b').bounds;
+  const moved = after.presentation.elements.find((item) => item.elementId === 'node-b').bounds;
+  assert.equal(moved.x, origin.x - 24);
+  assert.equal(moved.y, origin.y + 16, 'Snap rounds the 18px touch displacement to 16 world units');
+  await page.getByRole('button', { name: 'More', exact: true }).click();
+  await page.getByRole('menuitem', { name: 'Undo', exact: true }).click();
+  await page.getByRole('button', { name: 'More', exact: true }).click();
+  assert.equal(
+    await page.getByRole('menuitem', { name: 'Undo', exact: true }).isDisabled(),
+    true,
+    'One touch gesture produces exactly one history entry',
+  );
+  await page.keyboard.press('Escape');
+});
