@@ -510,7 +510,7 @@ test(
 );
 
 test(
-  'the command bar is one right-aligned cluster whose names match their visible labels',
+  'the command bar separates document identity, view controls and right-aligned actions',
   options,
   async (t) => {
     const { page } = await fixture(t, { bundle: makeBundle('process') });
@@ -523,10 +523,21 @@ test(
           element.getBoundingClientRect().width > 0,
       );
       const rects = controls.map((element) => element.getBoundingClientRect());
+      const order = (selector) =>
+        controls
+          .filter((element) => element.closest(selector))
+          .map((element) => element.dataset.action ?? 'save-state');
+      const leading = node.querySelector('.studio-toolbar-leading').getBoundingClientRect();
+      const secondary = node.querySelector('.studio-toolbar-secondary').getBoundingClientRect();
+      const trailing = node.querySelector('.studio-toolbar-trailing').getBoundingClientRect();
       return {
         left: Math.min(...rects.map((rect) => rect.left)) - box.left,
         right: box.right - Math.max(...rects.map((rect) => rect.right)),
-        order: controls.map((element) => element.dataset.action ?? 'save-state'),
+        viewOrder: order('.studio-toolbar-secondary'),
+        actionOrder: order('.studio-toolbar-trailing'),
+        identityLeft: leading.left - box.left,
+        identityBeforeViews: leading.right <= secondary.left,
+        viewsBeforeActions: secondary.right <= trailing.left,
         names: controls
           .filter((element) => element.matches('button'))
           .map((element) => ({
@@ -535,13 +546,11 @@ test(
           })),
       };
     });
-    assert.deepEqual(bar.order, [
-      'outline',
-      'save-state',
+    assert.deepEqual(bar.viewOrder, ['save-state', 'outline', 'properties']);
+    assert.deepEqual(bar.actionOrder, [
       'undo',
       'redo',
       'save-state', // React palette menu precedes the preserved action controls.
-      'properties',
       'save',
       'host-action',
       'more',
@@ -551,7 +560,10 @@ test(
       1,
       'The local owner exposes native sharing beside Save',
     );
-    assert.equal(bar.left, 16, 'The outline toggle sits on the 16px gutter');
+    assert.equal(bar.identityLeft, 16, 'Document identity sits on the 16px gutter');
+    assert.ok(bar.left >= 16, 'Controls remain inside the header gutter');
+    assert.equal(bar.identityBeforeViews, true, 'View controls do not overlap identity');
+    assert.equal(bar.viewsBeforeActions, true, 'Document actions do not overlap view controls');
     assert.equal(bar.right, 16, 'More sits on the 16px gutter');
     for (const { name, label } of bar.names)
       if (label) assert.ok(name.startsWith(label), `${name} is named by its visible label`);
@@ -2125,6 +2137,16 @@ test(
         { width: 320, height: 640 },
       ]) {
         await page.setViewportSize(viewport);
+        await page.waitForFunction(() => {
+          const shell = document.querySelector('.planr-diagram-editor');
+          const width = shell.getBoundingClientRect().width;
+          const tiers = shell.dataset.layout.split(' ');
+          return (
+            tiers.includes('drawer') === width <= 1100 &&
+            tiers.includes('compact') === width <= 700 &&
+            tiers.includes('narrow') === width <= 420
+          );
+        });
         await settle(page);
         const dimensions = await page.evaluate(() => ({
           width: innerWidth,
@@ -2513,7 +2535,8 @@ test(
       'A fresh phone editor opens at readable scale; Fit remains an explicit overview',
     );
     const captures = join(
-      process.env.PLANR_BROWSER_DIAGNOSTIC_DIR || join(tmpdir(), 'company-diagram-interface-browser'),
+      process.env.PLANR_BROWSER_DIAGNOSTIC_DIR ||
+        join(tmpdir(), 'company-diagram-interface-browser'),
       browserEngine(),
     );
     await mkdir(captures, { recursive: true });
