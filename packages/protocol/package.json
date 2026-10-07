@@ -1,6 +1,6 @@
 {
   "name": "@openplanr/protocol",
-  "version": "0.10.3",
+  "version": "0.11.0",
   "type": "module",
   "description": "Canonical OpenPlanr schemas, registries, typed errors, and portable contract validation",
   "license": "MIT",
