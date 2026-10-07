@@ -1,5 +1,18 @@
 # @openplanr/design
 
+## 0.4.5
+
+### Patch Changes
+
+- 58430d8: Local Studio previews now give prototypes the bounded prototype-state API and each screen's logical id, so prototypes that keep state across screens work in local review. Stored artifacts are unchanged.
+- Updated dependencies [ac4c5c4]
+- Updated dependencies [96f616b]
+- Updated dependencies [ac4c5c4]
+- Updated dependencies [ac4c5c4]
+- Updated dependencies [d2ef7a8]
+  - @openplanr/protocol@0.10.3
+  - @openplanr/artifact@0.6.5
+
 ## 0.4.4
 
 ### Patch Changes

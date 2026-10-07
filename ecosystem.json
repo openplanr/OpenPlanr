@@ -57,52 +57,52 @@
   "components": {
     "cli": {
       "package": "openplanr",
-      "version": "2.2641.1",
+      "version": "2.2641.2",
       "path": "packages/cli",
       "publication": "public",
-      "manifestDigest": "sha256:b741ec9eeeffcd334d68acc4ab9340d11cf86dd52f346760de0ea729fb03bb5a"
+      "manifestDigest": "sha256:5ee43eaf62723fa5e51b91a99cf56d7b0b7d3b85a164b370b7cce4da703626c3"
     },
     "pipeline": {
       "package": "planr-pipeline",
-      "version": "0.56.0",
+      "version": "0.57.0",
       "path": "packages/pipeline",
       "publication": "public",
-      "manifestDigest": "sha256:8c176e7e3a27ee084414a19290f701de691dd85dd9e497aefa6c951fdf3019ed"
+      "manifestDigest": "sha256:954ab1127d0acb5931a8f79f89ee067e613ae12271759d8273bb56891b4091d9"
     },
     "protocol": {
       "package": "@openplanr/protocol",
-      "version": "0.10.2",
+      "version": "0.10.3",
       "path": "packages/protocol",
       "publication": "public",
-      "manifestDigest": "sha256:e4aaf55f57053c48b9a764e8d4ef26909384b0446dccd7c7600f728cd51bd21f"
+      "manifestDigest": "sha256:c0434bbb484e6830db91bc5138ee5215335d4011f22bfd55607274bf6589aa12"
     },
     "operate": {
       "package": "@openplanr/operate",
-      "version": "0.1.16",
+      "version": "0.1.17",
       "path": "packages/operate",
       "publication": "private",
-      "manifestDigest": "sha256:13baab9223d5623c516d99467282c7de96cdb58ba13d8d25ebb82edb48c71c46"
+      "manifestDigest": "sha256:2a60e6c1cf1d821c70bc8b6d24b82e7daca2faa7d3f92cd9b743b288c63a941e"
     },
     "artifact": {
       "package": "@openplanr/artifact",
-      "version": "0.6.4",
+      "version": "0.6.5",
       "path": "packages/artifact",
       "publication": "private",
-      "manifestDigest": "sha256:0a17ac6b96b3ccb1626ee2a4ca34b717cb3c680e1ccc3fbf45408a9c02bbb1c4"
+      "manifestDigest": "sha256:da7924bd08b09cf619dece24db3d4194161eed641848efb19ddf54c209771f18"
     },
     "design": {
       "package": "@openplanr/design",
-      "version": "0.4.4",
+      "version": "0.4.5",
       "path": "packages/design",
       "publication": "private",
-      "manifestDigest": "sha256:0c602b003062ae4eab6f744f21ade878db114044ff8c6b8e6bc79b06b30f51f1"
+      "manifestDigest": "sha256:c1dd1d38f90e49ea8eb145b7ccd55bf7c0d16841d9e61a3fd96eb9208b32fe86"
     },
     "skillRuntime": {
       "package": "@openplanr/skill-runtime",
-      "version": "0.2.15",
+      "version": "0.2.16",
       "path": "packages/skill-runtime",
       "publication": "private",
-      "manifestDigest": "sha256:4ac9ee8d96a800ecd183d7e22c208b0767ff1e5779daf52105727fd205003667"
+      "manifestDigest": "sha256:9352848854a1aa5541463e8bfdb9967e1ba3c63bf7f34e397d408ee86b1addfe"
     },
     "integrations": {
       "package": "@openplanr/integrations",
@@ -113,16 +113,16 @@
     },
     "dashboard": {
       "package": "@openplanr/dashboard-app",
-      "version": "0.1.16",
+      "version": "0.1.17",
       "path": "apps/dashboard",
       "publication": "private",
-      "manifestDigest": "sha256:d6fd05738cb76182ba015e072439e368494842b8c077accdbd71b1f73ea0a3d4"
+      "manifestDigest": "sha256:06b74eb9721944b7c6d2be931beec4c4ad1048cfde72f8a858c60744ac2572d0"
     }
   },
   "compatibility": {
     "cliOptionalPipeline": {
       "package": "planr-pipeline",
-      "version": "0.56.0",
+      "version": "0.57.0",
       "exact": true
     },
     "publicArtifacts": {
@@ -333,23 +333,23 @@
     "hosts": [
       {
         "id": "claude-code",
-        "version": "0.56.0",
+        "version": "0.57.0",
         "capabilityLevel": "product"
       },
       {
         "id": "codex",
-        "version": "0.56.0",
+        "version": "0.57.0",
         "capabilityLevel": "workflow"
       },
       {
         "id": "cursor",
-        "version": "0.56.0",
+        "version": "0.57.0",
         "capabilityLevel": "workflow"
       }
     ],
     "generatedAssets": {
       "path": "adapters/manifests/generated-assets.json",
-      "digest": "sha256:3ff4733fd68b331d6cf104a1c3c50b6ac2d6205b08cbb747972e16e9c68fbca7",
+      "digest": "sha256:0b0b0196802468baf7606af7f31007ac6ad7ba11b497f3a8ebbd160dca9d80ce",
       "count": 1616
     }
   },

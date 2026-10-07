@@ -6,11 +6,11 @@
   "inputs": [
     {
       "path": "adapters/manifests/generated-assets.json",
-      "digest": "sha256:3ff4733fd68b331d6cf104a1c3c50b6ac2d6205b08cbb747972e16e9c68fbca7"
+      "digest": "sha256:0b0b0196802468baf7606af7f31007ac6ad7ba11b497f3a8ebbd160dca9d80ce"
     },
     {
       "path": "apps/dashboard/package.json",
-      "digest": "sha256:d6fd05738cb76182ba015e072439e368494842b8c077accdbd71b1f73ea0a3d4"
+      "digest": "sha256:06b74eb9721944b7c6d2be931beec4c4ad1048cfde72f8a858c60744ac2572d0"
     },
     {
       "path": "conformance/packed-surface-baseline.json",
@@ -22,15 +22,15 @@
     },
     {
       "path": "packages/artifact/package.json",
-      "digest": "sha256:0a17ac6b96b3ccb1626ee2a4ca34b717cb3c680e1ccc3fbf45408a9c02bbb1c4"
+      "digest": "sha256:da7924bd08b09cf619dece24db3d4194161eed641848efb19ddf54c209771f18"
     },
     {
       "path": "packages/cli/package.json",
-      "digest": "sha256:b741ec9eeeffcd334d68acc4ab9340d11cf86dd52f346760de0ea729fb03bb5a"
+      "digest": "sha256:5ee43eaf62723fa5e51b91a99cf56d7b0b7d3b85a164b370b7cce4da703626c3"
     },
     {
       "path": "packages/design/package.json",
-      "digest": "sha256:0c602b003062ae4eab6f744f21ade878db114044ff8c6b8e6bc79b06b30f51f1"
+      "digest": "sha256:c1dd1d38f90e49ea8eb145b7ccd55bf7c0d16841d9e61a3fd96eb9208b32fe86"
     },
     {
       "path": "packages/integrations/package.json",
@@ -38,15 +38,15 @@
     },
     {
       "path": "packages/operate/package.json",
-      "digest": "sha256:13baab9223d5623c516d99467282c7de96cdb58ba13d8d25ebb82edb48c71c46"
+      "digest": "sha256:2a60e6c1cf1d821c70bc8b6d24b82e7daca2faa7d3f92cd9b743b288c63a941e"
     },
     {
       "path": "packages/pipeline/package.json",
-      "digest": "sha256:8c176e7e3a27ee084414a19290f701de691dd85dd9e497aefa6c951fdf3019ed"
+      "digest": "sha256:954ab1127d0acb5931a8f79f89ee067e613ae12271759d8273bb56891b4091d9"
     },
     {
       "path": "packages/protocol/package.json",
-      "digest": "sha256:e4aaf55f57053c48b9a764e8d4ef26909384b0446dccd7c7600f728cd51bd21f"
+      "digest": "sha256:c0434bbb484e6830db91bc5138ee5215335d4011f22bfd55607274bf6589aa12"
     },
     {
       "path": "packages/protocol/registries/commands.json",
@@ -94,7 +94,7 @@
     },
     {
       "path": "packages/skill-runtime/package.json",
-      "digest": "sha256:4ac9ee8d96a800ecd183d7e22c208b0767ff1e5779daf52105727fd205003667"
+      "digest": "sha256:9352848854a1aa5541463e8bfdb9967e1ba3c63bf7f34e397d408ee86b1addfe"
     },
     {
       "path": "scripts/lib/workspace-release-policy.mjs",
@@ -228,23 +228,23 @@
   "outputs": [
     {
       "path": ".claude-plugin/marketplace.json",
-      "digest": "sha256:5c7d529477871fb7532b1ca2529893459620f5b8e15d94ac6ef6d6f85d7986f9"
+      "digest": "sha256:d75f4186756935bb0a5d3479fd172d23e74b7ff13f53e536df630cc4514c2330"
     },
     {
       "path": ".claude-plugin/plugin.json",
-      "digest": "sha256:e4ba021ba667e1fd8d4446b4cd8a7162beb5339c1f7a547cb4572df72270c4f0"
+      "digest": "sha256:373e8fc643ca753b463740b914387e490ca441f9879a580a5314a24c857adf04"
     },
     {
       "path": "adapters/manifests/codex-plugin-content.json",
-      "digest": "sha256:d72a3d37e6d2e729d6e25316b995a6589f2402951b42ad8afe1501298a9236f5"
+      "digest": "sha256:c62a44bb78b824c56dfa76cc8cf5d3181380b81d0ed4a5df0b8d81c50cf463ee"
     },
     {
       "path": "docs/generated/adapters.md",
-      "digest": "sha256:ef5d22e482b6ce45a957cf52bca42ad8caa0fbaded7e6aa833087d17d6e71cd9"
+      "digest": "sha256:d951ffe3b17582fee66a7b5f6fdff43822358197fccc5dafca2b55834a5cc90c"
     },
     {
       "path": "docs/generated/ecosystem.md",
-      "digest": "sha256:03119ead3d59213fdba607d4f814fd489a926f9c82d9bda44fcb4d4993c20d53"
+      "digest": "sha256:aeec1a489402ecd73ab83b7cfd2fede8a7216ddfcdf4196b00a48da3b27b3c63"
     },
     {
       "path": "docs/generated/skills.md",
@@ -252,7 +252,7 @@
     },
     {
       "path": "ecosystem.json",
-      "digest": "sha256:e6259302c94d41a7f258789c6c0934a20ad6ec7220fa91a4d10dff0ccccbd0ea"
+      "digest": "sha256:58d08c5fadd53306e79eb43e6c7437100f9eaa8637e602f5cb079d90e249e8a4"
     }
   ]
 }

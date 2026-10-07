@@ -1,5 +1,28 @@
 # Changelog
 
+## 0.57.0
+
+### Minor Changes
+
+- ac4c5c4: The design engine's OpenAI provider is removed, together with `design-engine setup`, `evolve`, `--provider openai`, image quality checks and vision attribute extraction. claude-svg, already the default, remains: your coding agent authors the SVG and the engine reads no API key.
+  
+  - `--model`, `--image-model`, `--size`, `--quality` and `--from-image` are gone.
+  - `iterate` and `record` refuse sessions made with the OpenAI provider; start a new session for those designs.
+  - `doctor --json` no longer reports `auth`, `openai` or `providers.openai`.
+  - If you saved a key with `design-engine setup`, delete `openai_api_key` from `~/.planr/credentials.json`.
+  - Doctor no longer reads project `.env` files.
+
+### Patch Changes
+
+- ac4c5c4: The database agent no longer reads `DB_PASSWORD` or passes any password or connection string. It connects only where the database client signs in on its own: a PostgreSQL service with `~/.pgpass`, a MySQL login path, MongoDB OIDC, X.509 or AWS authentication or a local server without authentication, or a trusted MSSQL connection. Without one, it asks you to set one up or run the scan yourself.
+- 96f616b: `delegate` classifies credentials by syntax. Member references such as `config!.apiKey` in code, type annotations ending in `;` or `,`, and self-describing test values such as `test_secret_must_be_…` now reach the delegated agent unchanged, while recognizable credentials, private keys and credential files stay blocked. A blocked source lists masked findings with location, rule and confidence; for an optional source they appear only in the prepare preview, never in the delegated context. After you confirm that a specific finding is not a credential, `prepare` accepts it through `credentialResolutions` for those exact bytes only, and the preview lists every accepted resolution.
+- ac4c5c4: The sync, sprint and status skills reach GitHub and Linear through your coding agent's own connection, or the GitHub CLI when it is signed in, and name the connection to add when one is missing. They no longer use the Linear token that `openplanr linear` stores; `openplanr linear` keeps working in a terminal. After `openplanr sprint apply`, the sprint skill updates the issue linked to each changed item.
+- d2ef7a8: The Claude Code plugin pre-approves no tools: the seven Operate review skills drop their `allowed-tools` grant, so the package qualifies as instructions-only and every write follows your normal permission prompts. An Operate lens run on its own now creates the same `.planr/operate/<date>-<slug>/` cycle `planr-operate` creates, with a one-lens roster, so the dashboard lists it.
+  
+  Role agents are simpler and current: descriptions no longer route by task file names or pipeline step numbers, legacy role names are gone, and most roles inherit the session's tools. The QA agent denies the file-editing tools and the DevOps agent keeps no shell; both boundaries are documented as what the host enforces. Plan decomposes a story into coherent, independently verifiable tasks split by ownership instead of a fixed one-or-two-task count.
+- ac4c5c4: Local Studio and review servers take their control token in a dedicated header. A Studio started by the previous version is still listed, reused, exported from and stopped. Older OpenPlanr versions cannot use a Studio started by this one, so stop running Studios with `openplanr server stop --all --yes` before switching to an older version, including an older `npx` run or a project-local install. If an older version reports "Local Studio owner state is unsafe or malformed", stop the Studio with this version. If no Studio is running, delete the `state-*.json` and `instance-*.json` files in `~/.planr/artifact-daemon/` (under `PLANR_HOME` when it is set).
+- 58430d8: Local Studio previews now give prototypes the bounded prototype-state API and each screen's logical id, so prototypes that keep state across screens work in local review. Stored artifacts are unchanged.
+
 ## 0.56.0
 
 ### Minor Changes
