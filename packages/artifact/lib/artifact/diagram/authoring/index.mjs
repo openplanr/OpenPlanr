@@ -3,8 +3,9 @@ export { adoptMermaidCopy, exportMermaidCopy, previewMermaidCopy } from '../sour
 export { compileDiagramCommand } from './commands.mjs';
 export { diffDiagramBundles } from './diff.mjs';
 export { previewAutomaticLayout, previewResetRoute } from './layout.mjs';
+export { previewDiagramMerge } from './merge.mjs';
 export { validateAuthoringBundle } from './model.mjs';
 export { renderAuthoredDiagramSvg } from './renderer.mjs';
 export { resolveDiagramScene } from './scene.mjs';
 export { previewDiagramTransaction } from './transactions.mjs';
-export { createConditionalInverse } from './undo.mjs';
+export { compileDiagramBundleTransaction, createConditionalInverse } from './undo.mjs';
