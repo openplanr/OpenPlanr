@@ -174,3 +174,93 @@ test(
     );
   },
 );
+
+test(
+  'all leading controls retain useful identity space across fallback metrics and text enlargement',
+  options,
+  async (t) => {
+    const bundle = await build({
+      stdin: {
+        contents: `
+        import {createElement as h, Fragment} from 'react';
+        import {createRoot} from 'react-dom/client';
+        import {StudioToolbar,StudioButton,StudioStatus} from ${JSON.stringify(new URL('../lib/artifact/ui/studio-shell-components.mjs', import.meta.url).pathname)};
+        createRoot(document.querySelector('#fixture')).render(h(StudioToolbar, {
+          kind:'diagram',title:'Resource diagram review with a published attachment',
+          hierarchy:[{label:'Synthetic review team'}],
+          leading:h(Fragment,null,
+            h('a',{'aria-label':'Back',href:'#',style:{display:'inline-flex',width:44,height:44,flexShrink:0}},'←'),
+            h(StudioButton,{'aria-label':'Navigation',style:{minWidth:100}},'Navigation')),
+          status:h(StudioStatus,{label:'Interact · Project access'}),
+          actions:h('div',{style:{display:'flex',gap:8}},h(StudioButton,{'aria-label':'Theme'},'◐'),h(StudioButton,null,'Actions'),h(StudioButton,{style:{minWidth:129}},'Account'))
+        }));`,
+        resolveDir: import.meta.dirname,
+        sourcefile: 'leading-controls-fixture.mjs',
+      },
+      bundle: true,
+      format: 'iife',
+      platform: 'browser',
+      target: 'es2022',
+      write: false,
+      logLevel: 'silent',
+    });
+    const browser = await launchBrowser();
+    const page = await browser.newPage({ viewport: { width: 768, height: 900 } });
+    t.after(() => browser.close());
+    await page.setContent(
+      '<!doctype html><html><body style="margin:0"><div id="fixture"></div></body></html>',
+    );
+    await page.addStyleTag({
+      content: renderArtifactThemeCss(loadArtifactTheme()) + ARTIFACT_SHELL_CSS,
+    });
+    await page.addScriptTag({ content: bundle.outputFiles[0].text });
+    await page.getByRole('button', { name: 'Navigation' }).waitFor();
+    for (const font of ['sans-serif', 'monospace']) {
+      for (const scale of [1, 2]) {
+        await page.evaluate(
+          ({ font, scale }) => {
+            const toolbar = document.querySelector('.studio-toolbar');
+            toolbar.style.fontFamily = font;
+            toolbar.style.setProperty('--planr-font-body', font);
+            for (const node of toolbar.querySelectorAll('button,a,strong,span,output')) {
+              if (!node.dataset.baselineSize)
+                node.dataset.baselineSize = parseFloat(getComputedStyle(node).fontSize);
+              node.style.fontSize = `${Number(node.dataset.baselineSize) * scale}px`;
+            }
+            window.dispatchEvent(new Event('resize'));
+          },
+          { font, scale },
+        );
+        await page.evaluate(() => document.fonts.ready);
+        for (const width of [768, 1440, 768, 1440]) {
+          await page.setViewportSize({ width, height: 900 });
+          await page.waitForFunction(
+            () =>
+              document.querySelector('.studio-identity strong').getBoundingClientRect().width >= 36,
+          );
+          await page.evaluate(
+            () =>
+              new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))),
+          );
+          const state = await page.evaluate(() => ({
+            layout: document.querySelector('.studio-toolbar').dataset.studioLayout,
+            title: document.querySelector('.studio-identity strong').getBoundingClientRect().width,
+            overflow: document.documentElement.scrollWidth > innerWidth,
+            controls: [...document.querySelectorAll('.studio-toolbar-leading :is(button,a)')].map(
+              (n) => n.getBoundingClientRect().toJSON(),
+            ),
+          }));
+          assert.ok(state.title >= 36, `${font} ${scale}x ${width}: title remains useful`);
+          assert.equal(state.overflow, false, `${font} ${scale}x ${width}: no overflow`);
+          assert.equal(state.controls.length, 2, 'both leading controls remain visible');
+          if (width === 1440)
+            assert.equal(
+              state.layout,
+              'inline',
+              `${font} ${scale}x: wide layout recovers without oscillation`,
+            );
+        }
+      }
+    }
+  },
+);

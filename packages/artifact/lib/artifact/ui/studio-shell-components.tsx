@@ -58,6 +58,47 @@ export function StudioMark() {
     </span>
   );
 }
+function inlineGap(element: HTMLElement | null): number {
+  const view = element?.ownerDocument.defaultView;
+  return view && element ? parseFloat(view.getComputedStyle(element).gap) || 0 : 0;
+}
+
+/** Intrinsic leading widths must not depend on title space left by the active layout. */
+function measureLeadingFloor(leading: HTMLElement): number {
+  const view = leading.ownerDocument.defaultView;
+  if (!view) return 128;
+  const leadingControls = [...leading.children].filter(
+    (node): node is HTMLElement =>
+      node instanceof view.HTMLElement &&
+      !node.classList.contains('planr-brand') &&
+      node.getClientRects().length > 0,
+  );
+  const branding = [
+    ...leading.querySelectorAll<HTMLElement>('.planr-mark,.design-wordmark'),
+  ].filter((node) => node.getClientRects().length);
+  const brandGap = inlineGap(leading.querySelector<HTMLElement>('.planr-brand'));
+  const brandingWidth = branding.reduce(
+    (total, node) => total + node.getBoundingClientRect().width + brandGap,
+    0,
+  );
+  const titleBlock = leading.querySelector<HTMLElement>('.planr-title-block');
+  const badge = titleBlock?.querySelector<HTMLElement>('.studio-type-badge');
+  const title = titleBlock?.querySelector<HTMLElement>('strong,.de-title');
+  // The badge retains its natural width. Reserve readable title space at the
+  // current text size, independently of the width left by a compact layout.
+  const titleFloor = Math.max(36, parseFloat(view.getComputedStyle(title ?? leading).fontSize) * 3);
+  const identityFloor = Math.max(
+    128,
+    (badge?.getBoundingClientRect().width || 0) + inlineGap(titleBlock) + titleFloor,
+  );
+  return (
+    identityFloor +
+    brandingWidth +
+    leadingControls.reduce((total, control) => total + control.getBoundingClientRect().width, 0) +
+    leadingControls.length * inlineGap(leading)
+  );
+}
+
 export function StudioToolbar({
   title,
   titleNode,
@@ -108,21 +149,7 @@ export function StudioToolbar({
       const actionWidth =
         controls.reduce((total, control) => total + control.getBoundingClientRect().width, 0) +
         Math.max(0, controls.length - 1) * (parseFloat(window.getComputedStyle(trailing).gap) || 8);
-      const leadingControl = leading.firstElementChild;
-      const branding = [
-        ...leading.querySelectorAll<HTMLElement>('.planr-mark,.design-wordmark'),
-      ].filter((node) => node.getClientRects().length);
-      const brandingWidth = branding.reduce(
-        (total, node) => total + node.getBoundingClientRect().width + 8,
-        0,
-      );
-      const leadingFloor =
-        128 +
-        brandingWidth +
-        (leadingControl instanceof window.HTMLElement &&
-        !leadingControl.classList.contains('planr-brand')
-          ? leadingControl.getBoundingClientRect().width + 8
-          : 0);
+      const leadingFloor = measureLeadingFloor(leading);
       const outerWidth = Math.max(leadingFloor, actionWidth);
       element.dataset.studioLayout =
         centerWidth > 0
