@@ -37,7 +37,9 @@ skill's job, then reporting what actually changed — never what was merely
 attempted.
 
 1. **Decide.** Run `openplanr upgrade status --json` and read `status`. If it is
-   `aligned` or `unknown`, there is nothing to drive — report it and stop.
+   `aligned` or `unknown`, there is nothing to drive — report it and stop. If it
+   is `agents-behind`, the CLI is already current: run its `nextSteps` commands
+   in order, as step 3 describes, without upgrading the CLI.
    Record the reported `installed` versions; that is the before state.
 2. **Own half, prescribe half.** If `status` is `upgrade-available` or
    `incompatible`, confirm with the user (this upgrades the npm CLI), then run

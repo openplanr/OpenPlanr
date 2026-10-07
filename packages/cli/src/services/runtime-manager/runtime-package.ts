@@ -10,6 +10,7 @@ export type RuntimePackage = Readonly<{
   version: string;
   files: Array<{ relativePath: string; content: Buffer }>;
 }>;
+export type RuntimePackageDrift = Readonly<{ changed: string[]; unexpected: string[] }>;
 export type RuntimeLocator = Readonly<{
   kind: 'openplanr-installed-skill';
   schemaVersion: '1.0.0';
@@ -85,21 +86,40 @@ export function inspectRuntimePackage(
   files.push({ relativePath: inventoryName, content: manifestBytes });
   const packageDigest = digest(manifestBytes);
   const root = path.join(cacheRoot, host, version, packageDigest.slice('sha256:'.length));
-  if (inspectInstalled && existsSync(root)) {
-    const installed = regularFiles(root).map((file) =>
-      path.relative(root, file).split(path.sep).join('/'),
-    );
-    if (installed.some((file) => !files.some((expected) => expected.relativePath === file)))
-      throw new Error('The immutable runtime package contains unexpected files.');
-    for (const file of files) {
-      if (
-        existsSync(path.join(root, file.relativePath)) &&
-        digest(readFileSync(path.join(root, file.relativePath))) !== digest(file.content)
-      )
-        throw new Error(`The immutable runtime package was changed: ${file.relativePath}.`);
-    }
+  const runtimePackage = { sourceRoot, root, digest: packageDigest, version, files };
+  if (inspectInstalled) {
+    const drift = retainedPackageDrift(runtimePackage);
+    if (drift.unexpected.length)
+      throw new Error(
+        `The immutable runtime package contains unexpected files: ${drift.unexpected.join(', ')}.`,
+      );
+    if (drift.changed.length)
+      throw new Error(`The immutable runtime package was changed: ${drift.changed.join(', ')}.`);
   }
-  return { sourceRoot, root, digest: packageDigest, version, files };
+  return runtimePackage;
+}
+
+/** Files of the retained copy at `root` that differ from the reviewed package bytes. */
+export function retainedPackageDrift(runtimePackage: RuntimePackage): RuntimePackageDrift {
+  if (!existsSync(runtimePackage.root)) return { changed: [], unexpected: [] };
+  const expected = new Map(runtimePackage.files.map((file) => [file.relativePath, file.content]));
+  const installed = regularFiles(runtimePackage.root).map((file) =>
+    path.relative(runtimePackage.root, file).split(path.sep).join('/'),
+  );
+  return {
+    changed: [...expected]
+      .filter(([relativePath, content]) => {
+        const target = path.join(runtimePackage.root, relativePath);
+        return existsSync(target) && digest(readFileSync(target)) !== digest(content);
+      })
+      .map(([relativePath]) => relativePath),
+    unexpected: installed.filter((file) => !expected.has(file)).sort(),
+  };
+}
+
+/** The files a retained runtime package changed or gained, for one line of output. */
+export function describePackageDrift(drift: RuntimePackageDrift): string {
+  return [...drift.changed, ...drift.unexpected.map((file) => `${file} (added)`)].join(', ');
 }
 
 /** Bare direct discovery uses the host's short skill invocation while native suites retain their namespace. */

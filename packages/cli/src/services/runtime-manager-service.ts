@@ -87,10 +87,13 @@ import {
   type RuntimeId,
 } from './runtime-manager/inventory.js';
 import {
+  describePackageDrift,
   inspectRuntimeLocator,
   inspectRuntimePackage,
   inspectThinRule,
   type RuntimePackage,
+  type RuntimePackageDrift,
+  retainedPackageDrift,
   runtimeLocator,
   thinDiscoveryMetadata,
   thinSkillEntry,
@@ -180,6 +183,8 @@ export interface SetupOptions {
   userScopeRuntimes?: RuntimeId[];
   /** Permit replacement of only manifest-owned content when changing modes. */
   replaceManaged?: boolean;
+  /** Restore a changed retained runtime package from the bundled copy after backing it up. */
+  restoreRuntimePackages?: boolean;
   /** Injectable Claude command boundary for deterministic runtime integration tests. */
   claudeCommandRunner?: ClaudeCommandRunner;
   /** Injectable Codex command boundary for deterministic plugin integration tests. */
@@ -226,7 +231,13 @@ export interface SetupPreview {
     message: string;
     fix?: string;
   }>;
+  /** Retained runtime packages a repair restores to their reviewed bytes. */
+  runtimePackageRestores?: RuntimePackageRestore[];
 }
+
+/** A retained runtime package whose files differ from the bytes bundled with this CLI. */
+export type RuntimePackageRestore = RuntimePackageDrift &
+  Readonly<{ runtime: RuntimeId; version: string; root: string }>;
 
 export class RuntimeManagerError extends Error {
   constructor(
@@ -1164,7 +1175,7 @@ function duplicateClaudePluginDiagnostic(inspection: ClaudePluginInspection): {
   };
 }
 
-function bundledRuntimePackage(runtime: RuntimeId, inspectInstalled = false): RuntimePackage {
+function bundledRuntimePackage(runtime: RuntimeId): RuntimePackage {
   const host = runtime === 'claude-code' ? 'claude' : runtime === 'codex' ? 'openai' : 'cursor';
   try {
     return inspectRuntimePackage(
@@ -1172,13 +1183,29 @@ function bundledRuntimePackage(runtime: RuntimeId, inspectInstalled = false): Ru
       path.join(runtimeRoot(), 'packages'),
       host,
       readRegistry().pluginVersion,
-      inspectInstalled,
+      false,
     );
   } catch (cause) {
     throw new RuntimeManagerError(
       'E_RUNTIME_PACKAGE_INVALID',
       `The exact ${runtime} runtime package could not be verified: ${cause instanceof Error ? cause.message : String(cause)}`,
-      'Preserve changed cached files and reinstall the reviewed CLI package; setup never rewrites an immutable runtime.',
+      'Reinstall the OpenPlanr CLI or regenerate its host packages.',
+    );
+  }
+}
+
+/** Compares the retained copy of the bundled package with its reviewed bytes. */
+function retainedRuntimePackageDrift(
+  runtime: RuntimeId,
+  runtimePackage: RuntimePackage,
+): RuntimePackageDrift {
+  try {
+    return retainedPackageDrift(runtimePackage);
+  } catch (cause) {
+    throw new RuntimeManagerError(
+      'E_RUNTIME_PACKAGE_INVALID',
+      `The ${runtime} runtime package ${runtimePackage.version} at ${runtimePackage.root} could not be inspected: ${cause instanceof Error ? cause.message : String(cause)}`,
+      'Remove the symbolic link or other unsupported entry it names, then rerun the command.',
     );
   }
 }
@@ -1410,6 +1437,7 @@ function buildActions(
   runtimes: RuntimeId[],
   runtimeScopes: Partial<Record<RuntimeId, InstallScope>>,
   retainedProject?: RuntimeState['projects'][string],
+  packageRestores: RuntimePackageRestore[] = [],
 ): FileAction[] {
   if (options.minimal) return [];
   const { version, registry } = readRegistry();
@@ -1442,8 +1470,33 @@ function buildActions(
     let skillAssets: BundledHostAsset[];
     let runtimePackage: RuntimePackage;
     try {
-      runtimePackage = bundledRuntimePackage(runtime, usesThinEntries);
-      for (const file of usesThinEntries ? runtimePackage.files : []) {
+      runtimePackage = bundledRuntimePackage(runtime);
+      skillAssets = bundledSkillAssets(runtime, runtimePackage);
+    } catch (cause) {
+      throw new RuntimeManagerError(
+        'E_SKILL_DISTRIBUTION_INVALID',
+        `The generated ${runtime} skill distribution is invalid: ${cause instanceof Error ? cause.message : String(cause)}`,
+        'Reinstall the OpenPlanr utility CLI or regenerate the host packages.',
+      );
+    }
+    if (usesThinEntries) {
+      const drift = retainedRuntimePackageDrift(runtime, runtimePackage);
+      if (drift.changed.length > 0 || drift.unexpected.length > 0) {
+        if (!options.restoreRuntimePackages) {
+          throw new RuntimeManagerError(
+            'E_RUNTIME_PACKAGE_CHANGED',
+            `Files in the ${runtime} runtime package ${runtimePackage.version} were changed outside OpenPlanr: ${describePackageDrift(drift)}.`,
+            `Run \`${CLI_COMMAND} doctor --fix\` to restore the package from this CLI; the changed files are backed up first.`,
+          );
+        }
+        packageRestores.push({
+          runtime,
+          version: runtimePackage.version,
+          root: runtimePackage.root,
+          ...drift,
+        });
+      }
+      for (const file of runtimePackage.files) {
         actions.push({
           runtime: 'core',
           scope: 'user',
@@ -1454,13 +1507,6 @@ function buildActions(
           description: `Retain exact ${runtime} runtime package ${file.relativePath}`,
         });
       }
-      skillAssets = bundledSkillAssets(runtime, runtimePackage);
-    } catch (cause) {
-      throw new RuntimeManagerError(
-        'E_SKILL_DISTRIBUTION_INVALID',
-        `The generated ${runtime} skill distribution is invalid: ${cause instanceof Error ? cause.message : String(cause)}`,
-        'Reinstall the OpenPlanr utility CLI or regenerate the host packages.',
-      );
     }
     if (installUser) {
       if (runtime === 'codex') {
@@ -1696,6 +1742,24 @@ function planRetiredCursorProjectRules(
       },
     ];
   });
+}
+
+/** Files added to a retained runtime package; a restore removes them after the backup. */
+function planPackageRetirements(restores: readonly RuntimePackageRestore[]): FileAction[] {
+  return restores.flatMap((restore) =>
+    restore.unexpected.map((file) => {
+      const target = path.join(restore.root, file);
+      return {
+        runtime: 'core' as const,
+        scope: 'user' as const,
+        target,
+        content: readFileSync(target),
+        kind: 'file' as const,
+        custody: 'runtime-package' as const,
+        description: `Remove ${file}, which was added to the exact ${restore.runtime} runtime package`,
+      };
+    }),
+  );
 }
 
 function inventoryRegularFiles(root: string): string[] {
@@ -2252,8 +2316,10 @@ export async function previewSetup(options: SetupOptions): Promise<SetupPreview>
   const retainedProject = options.preserveExistingScopes
     ? (await loadState()).projects[projectKey(options.projectDir)]
     : undefined;
-  const actions = buildActions(options, runtimes, runtimeScopes, retainedProject);
-  assertActionCustody(actions, options.projectDir);
+  const packageRestores: RuntimePackageRestore[] = [];
+  const actions = buildActions(options, runtimes, runtimeScopes, retainedProject, packageRestores);
+  const packageRetirements = planPackageRetirements(packageRestores);
+  assertActionCustody([...actions, ...packageRetirements], options.projectDir);
   const scopeRetirements = planScopeRetirements(
     options,
     (await loadState()).projects[projectKey(options.projectDir)],
@@ -2425,6 +2491,13 @@ export async function previewSetup(options: SetupOptions): Promise<SetupPreview>
         operation: operationFor(action),
         description: action.description,
       })),
+      ...packageRetirements.map((action) => ({
+        runtime: action.runtime,
+        scope: action.scope,
+        target: action.target,
+        operation: 'retire' as const,
+        description: action.description,
+      })),
       ...retiredProjectRules.map((action) => ({
         runtime: action.runtime,
         scope: action.scope,
@@ -2454,6 +2527,7 @@ export async function previewSetup(options: SetupOptions): Promise<SetupPreview>
       ...(codexInspection?.operations ?? []),
     ],
     runtimeDiagnostics,
+    ...(packageRestores.length > 0 ? { runtimePackageRestores: packageRestores } : {}),
   };
 }
 
@@ -2509,8 +2583,21 @@ export async function applySetup(options: SetupOptions): Promise<
     const retainedProject = options.preserveExistingScopes
       ? state.projects[projectKey(options.projectDir)]
       : undefined;
-    const actions = buildActions(options, preview.runtimes, preview.runtimeScopes, retainedProject);
-    assertActionCustody(actions, options.projectDir);
+    const packageRestores: RuntimePackageRestore[] = [];
+    const actions = buildActions(
+      options,
+      preview.runtimes,
+      preview.runtimeScopes,
+      retainedProject,
+      packageRestores,
+    );
+    const packageRetirements = planPackageRetirements(packageRestores);
+    assertActionCustody([...actions, ...packageRetirements], options.projectDir);
+    const restoredPackageTargets = new Set(
+      packageRestores.flatMap((restore) =>
+        restore.changed.map((file) => path.join(restore.root, file)),
+      ),
+    );
     const scopeRetirements = planScopeRetirements(
       options,
       state.projects[projectKey(options.projectDir)],
@@ -2589,6 +2676,7 @@ export async function applySetup(options: SetupOptions): Promise<
       ...changed,
       ...retirementActions,
       ...retiredProjectRules,
+      ...packageRetirements,
       ...scopeRetirements,
       stateAction,
     ].filter(
@@ -2628,6 +2716,7 @@ export async function applySetup(options: SetupOptions): Promise<
         const content = actionBytes(action);
         if (
           action.custody === 'runtime-package' &&
+          !restoredPackageTargets.has(action.target) &&
           existsSync(action.target) &&
           !readFileSync(action.target).equals(content)
         ) {
@@ -2729,6 +2818,24 @@ export async function applySetup(options: SetupOptions): Promise<
             'E_MIGRATION_CONFLICT',
             `Retired Cursor workflow bytes changed during setup: ${retired.target}.`,
             'The setup transaction restored the pre-setup bytes; inspect the file and rerun.',
+          );
+        }
+        await unlink(retired.target);
+        retiredTargets.add(retired.target);
+      }
+      for (const retired of packageRetirements) {
+        assertMutableOwnedTarget(retired.target, options.projectDir, 'E_MIGRATION_CONFLICT');
+        if (!existsSync(retired.target)) continue;
+        const metadata = lstatSync(retired.target);
+        if (
+          metadata.isSymbolicLink() ||
+          !metadata.isFile() ||
+          hash(readFileSync(retired.target)) !== hash(retired.content)
+        ) {
+          throw new RuntimeManagerError(
+            'E_MIGRATION_CONFLICT',
+            `Runtime package bytes changed during setup: ${retired.target}.`,
+            'The concurrent edit was preserved; inspect it before rerunning setup.',
           );
         }
         await unlink(retired.target);
@@ -3733,7 +3840,7 @@ export async function runtimeDoctor(
         : 'Pinned runtime packages match their complete content inventories',
       ...(closureFailures.length
         ? {
-            fix: `Run \`${CLI_COMMAND} doctor --fix\` to preview exact-package repair; preserve modified cache bytes for inspection.`,
+            fix: `Run \`${CLI_COMMAND} doctor --fix\` to preview the repair; changed package files are backed up before anything is replaced.`,
           }
         : {}),
     });

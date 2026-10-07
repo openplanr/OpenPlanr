@@ -129,6 +129,10 @@ export function printReconciliationStatus(result: UpgradeReconciliation): void {
     logger.info(
       'An upgrade is available in the release metadata; the installed components are still mutually compatible.',
     );
+  } else if (result.status === 'agents-behind') {
+    logger.info(
+      `The OpenPlanr CLI is up to date (${result.installed.cli}). Update your coding agents with the commands below.`,
+    );
   } else if (result.status === 'incompatible') {
     logger.warn('The installed components are on mutually incompatible versions.');
   } else if (result.ecosystemSource === 'network') {

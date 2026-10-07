@@ -15,6 +15,7 @@ import {
   inspectRuntimeLocator,
   inspectRuntimePackage,
   inspectThinRule,
+  retainedPackageDrift,
   runtimeLocator,
   thinDiscoveryMetadata,
   thinSkillEntry,
@@ -85,6 +86,24 @@ describe('immutable runtime packages', () => {
       'immutable runtime package was changed',
     );
     expect(readFileSync(join(runtime.root, 'skills/plan/SKILL.md'), 'utf8')).toBe('owner edit\n');
+  });
+  it('names every changed and added file of a retained package', () => {
+    const runtime = seed();
+    expect(retainedPackageDrift(runtime)).toEqual({ changed: [], unexpected: [] });
+    writeFileSync(join(runtime.root, 'runtime/design/main.mjs'), 'export const version = 2;\n');
+    writeFileSync(join(runtime.root, 'skills/plan/SKILL.md'), 'owner edit\n');
+    writeFileSync(join(runtime.root, '.DS_Store'), 'finder');
+    expect(retainedPackageDrift(runtime)).toEqual({
+      changed: ['skills/plan/SKILL.md', 'runtime/design/main.mjs'],
+      unexpected: ['.DS_Store'],
+    });
+    expect(() => inspectRuntimePackage(sourceRoot, cacheRoot, 'openai', '1.2.3')).toThrow(
+      'The immutable runtime package contains unexpected files: .DS_Store.',
+    );
+    rmSync(join(runtime.root, '.DS_Store'));
+    expect(() => inspectRuntimePackage(sourceRoot, cacheRoot, 'openai', '1.2.3')).toThrow(
+      'The immutable runtime package was changed: skills/plan/SKILL.md, runtime/design/main.mjs.',
+    );
   });
   it('rejects links, unknown files, bad digests and unsafe catalog paths', () => {
     writeFileSync(join(sourceRoot, 'unexpected.mjs'), 'unknown');

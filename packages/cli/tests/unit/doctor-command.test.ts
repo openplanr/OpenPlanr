@@ -29,7 +29,7 @@ vi.mock('../../src/services/runtime-manager-service.js', () => ({
 vi.mock('../../src/utils/logger.js', () => ({
   isVerbose: () => false,
   display: { line: vi.fn(), bullet: vi.fn() },
-  logger: { heading: vi.fn(), warn: vi.fn(), success: vi.fn() },
+  logger: { heading: vi.fn(), warn: vi.fn(), success: vi.fn(), info: vi.fn() },
 }));
 
 let preview: SetupPreview;
@@ -77,6 +77,47 @@ beforeEach(() => {
 });
 
 describe('doctor repair command', () => {
+  it('restores a changed runtime package and says where the changed files are kept', async () => {
+    const root = '/home/user/.planr/runtime/packages/openai/2.2640.6/abc';
+    preview.runtimePackageRestores = [
+      {
+        runtime: 'codex',
+        version: '2.2640.6',
+        root,
+        changed: ['skills/delegate/scripts/context.mjs'],
+        unexpected: [],
+      },
+    ];
+    preview.actions = [
+      {
+        runtime: 'core',
+        scope: 'user',
+        target: `${root}/skills/delegate/scripts/context.mjs`,
+        operation: 'update',
+        description: 'Retain exact codex runtime package skills/delegate/scripts/context.mjs',
+      },
+    ];
+    const backupDir = '/home/user/.planr/backups/abc/2026-10-07T08-00-00.000Z';
+    vi.mocked(applySetup).mockImplementation(async (options) => ({
+      ...preview,
+      dryRun: Boolean(options.dryRun),
+      ...(options.dryRun ? {} : { backupDir }),
+    }));
+
+    await doctor('--fix', '--yes');
+
+    expect(vi.mocked(applySetup).mock.calls.map(([options]) => options)).toEqual([
+      expect.objectContaining({ dryRun: true, restoreRuntimePackages: true }),
+      expect.objectContaining({ restoreRuntimePackages: true }),
+    ]);
+    expect(display.bullet).toHaveBeenCalledWith(
+      'Codex (user): restore the runtime package (skills/delegate/scripts/context.mjs); changed files are backed up first',
+    );
+    expect(logger.info).toHaveBeenCalledWith(
+      `Your changed runtime package files are saved in ${backupDir}.`,
+    );
+  });
+
   it('reports owned servers without stopping them or revealing control credentials', async () => {
     vi.mocked(listManagedServers).mockResolvedValue([
       { instanceId: 'a'.repeat(22), pid: 123, port: 7474, kind: 'dashboard', status: 'running' },

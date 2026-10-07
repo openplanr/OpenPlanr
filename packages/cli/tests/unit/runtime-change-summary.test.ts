@@ -39,6 +39,24 @@ const plan = {
 };
 
 describe('summarizeRuntimeChanges', () => {
+  it('names the files a runtime package restore replaces or removes', () => {
+    const restore = {
+      runtimes: ['codex' as const],
+      actions: [],
+      runtimeOperations: [],
+      runtimePackageRestores: [
+        { runtime: 'codex' as const, changed: ['skills/a/run.mjs'], unexpected: ['.DS_Store'] },
+      ],
+    };
+    expect(summarizeRuntimeChanges(restore, { bookkeepingRoot, applied: false })[0].summary).toBe(
+      'restore the runtime package (skills/a/run.mjs, .DS_Store (added)); changed files are backed up first',
+    );
+    expect(summarizeRuntimeChanges(restore, { bookkeepingRoot, applied: true })[0]).toMatchObject({
+      changed: true,
+      summary: 'runtime package restored (skills/a/run.mjs, .DS_Store (added))',
+    });
+  });
+
   it('summarizes each agent without counting OpenPlanr records or the routine marketplace refresh', () => {
     expect(
       summarizeRuntimeChanges(
