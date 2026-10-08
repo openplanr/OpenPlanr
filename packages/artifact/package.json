@@ -1,6 +1,6 @@
 {
   "name": "@openplanr/artifact",
-  "version": "0.6.6",
+  "version": "0.6.7",
   "private": true,
   "type": "module",
   "description": "Canonical OpenPlanr artifact review, sharing, and rendering runtime",
@@ -80,7 +80,7 @@
   },
   "dependencies": {
     "@expo-google-fonts/inter": "0.4.2",
-    "@openplanr/protocol": "0.11.0",
+    "@openplanr/protocol": "0.12.0",
     "@resvg/resvg-js": "2.6.2",
     "@types/react": "19.2.18",
     "esbuild": "0.28.1",

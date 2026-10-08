@@ -1,5 +1,11 @@
 # @openplanr/protocol
 
+## 0.12.0
+
+### Minor Changes
+
+- 0b4992c: Add revision-aware company workspace contracts for project and artifact catalogs, fixed-revision guest access, publication recovery, and project archive and restore. Browser consumers can validate these records while existing contracts remain readable.
+
 ## 0.11.0
 
 ### Minor Changes
