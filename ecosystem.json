@@ -146,7 +146,7 @@
   "catalogs": {
     "commands": {
       "path": "packages/protocol/registries/commands.json",
-      "digest": "sha256:873c5fe7d18b71d5fe5770c1dd1efe81461856f7cf863a731b8e3ebf69d1470e",
+      "digest": "sha256:26d38782e8da80a56eea3d167109f68fbbdb40a1b9fb6c1d08c603f2d821d76f",
       "rootCommands": 39,
       "pipelineMachineLeaves": 31,
       "frozenClaudeDocuments": 8,
