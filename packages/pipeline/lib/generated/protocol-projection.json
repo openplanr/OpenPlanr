@@ -108,13 +108,13 @@
     {
       "source": "packages/protocol/projections/pipeline/lib/protocol/browser-contracts.d.mts",
       "target": "lib/protocol/browser-contracts.d.mts",
-      "sha256": "d6f5d5702ee90bf64e7ceddb6ce593d3603584634c7cf258b0b36b8e4ad05721",
+      "sha256": "345af287393f2172a2fc5e633ee3ca87d8cb4c6f648e754909abaa55f8668917",
       "mode": "644"
     },
     {
       "source": "packages/protocol/projections/pipeline/lib/protocol/browser-contracts.mjs",
       "target": "lib/protocol/browser-contracts.mjs",
-      "sha256": "737ba850973d2611fc6cd3865398afe83511950d06155d7677a9c85b30a6a217",
+      "sha256": "12ae0bc19ac400020e1cbd3567edd16aa0f2b476a31580c7b1b7a8985eed53ff",
       "mode": "644"
     },
     {
@@ -132,7 +132,7 @@
     {
       "source": "packages/protocol/projections/pipeline/lib/protocol/contracts.mjs",
       "target": "lib/protocol/contracts.mjs",
-      "sha256": "54cef977472b1f8ab05b1bf4bcc240296607f78ad8fa678830f60669afd3018b",
+      "sha256": "774706c4e92551dc7b60f39157a1ce0e62136c7f5a96a6d58ef59dfcc1b60495",
       "mode": "644"
     },
     {
@@ -217,6 +217,18 @@
       "source": "packages/protocol/projections/pipeline/lib/protocol/enterprise-contracts.mjs",
       "target": "lib/protocol/enterprise-contracts.mjs",
       "sha256": "04a29c5a60c92a2b40c34d877bcf3583ebb9779456c6117a47ac7ffbd94231bd",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/projections/pipeline/lib/protocol/enterprise-journey-contracts.d.mts",
+      "target": "lib/protocol/enterprise-journey-contracts.d.mts",
+      "sha256": "e6515edc81ef4a84b8768f377806ab1eeb2e5590e6ea22e0df686053abe48961",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/projections/pipeline/lib/protocol/enterprise-journey-contracts.mjs",
+      "target": "lib/protocol/enterprise-journey-contracts.mjs",
+      "sha256": "be16521c55977eaac10413efe76e0ab52233e582369ea6bb773529c3f4015395",
       "mode": "644"
     },
     {
@@ -1231,6 +1243,78 @@
       "source": "packages/protocol/schemas/v1.18.0/runtime-lock.schema.json",
       "target": "schemas/v1.18.0/runtime-lock.schema.json",
       "sha256": "7a1409cbaf8ac98aad7739bfc7d89ad50669df60f18174bc61bb4def45255aa3",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.19.0/company-resource-upload-prepare.schema.json",
+      "target": "schemas/v1.19.0/company-resource-upload-prepare.schema.json",
+      "sha256": "e37e988feb0437c0f42d5bf3801f37b2bda2344964869e69108af8b47583c9fb",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.19.0/company-resource-upload-receipt.schema.json",
+      "target": "schemas/v1.19.0/company-resource-upload-receipt.schema.json",
+      "sha256": "ea83327ed0e119bf468bfd08bb669ee238c05dbcafbbe2d47aade7c83a4cfd90",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.19.0/company-resource-upload-status.schema.json",
+      "target": "schemas/v1.19.0/company-resource-upload-status.schema.json",
+      "sha256": "35e37f2b73afba4986ae865c5085449c3a3700bc309c7c123827e8ec36698b31",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.19.0/enterprise-artifact-page.schema.json",
+      "target": "schemas/v1.19.0/enterprise-artifact-page.schema.json",
+      "sha256": "d3aa9c9368c946bd5b02f3a028a7718b8646e64bf49042dcbf6e9d002f7ef5b8",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.19.0/enterprise-guest-authorization.schema.json",
+      "target": "schemas/v1.19.0/enterprise-guest-authorization.schema.json",
+      "sha256": "de9f81733e882d732fb6b1346706e68b33234fc57f0b177acb25eb0527463acb",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.19.0/enterprise-guest-invitation.schema.json",
+      "target": "schemas/v1.19.0/enterprise-guest-invitation.schema.json",
+      "sha256": "4b6ac3b26ab0130f7c3599fdec870169903ff5c505264c1f6dc9150dff237363",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.19.0/enterprise-journey-capabilities.schema.json",
+      "target": "schemas/v1.19.0/enterprise-journey-capabilities.schema.json",
+      "sha256": "e8d6da7ab0608947dd30481807efcda05b5e7bae9e45ef9d62d8e84bce6b489a",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.19.0/enterprise-project-lifecycle.schema.json",
+      "target": "schemas/v1.19.0/enterprise-project-lifecycle.schema.json",
+      "sha256": "58c949932719c364156a068d86196c099dc66e8113b69cc4f6fed80709ceb0f3",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.19.0/enterprise-project-page.schema.json",
+      "target": "schemas/v1.19.0/enterprise-project-page.schema.json",
+      "sha256": "098b84248605505b0f606437a3859c4f151cbbc6696a930661dec030c7ca3e18",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.19.0/enterprise-project-transition.schema.json",
+      "target": "schemas/v1.19.0/enterprise-project-transition.schema.json",
+      "sha256": "e759de4ba0fd5b94a9093e3aab3e90f4344a2a7917215c8adcec81a8d796b4f9",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.19.0/enterprise-review-mention.schema.json",
+      "target": "schemas/v1.19.0/enterprise-review-mention.schema.json",
+      "sha256": "a009c8a984262472f58ede098c11bba712f02fd9980bca11629ca1509f64d65f",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.19.0/enterprise-review-projection.schema.json",
+      "target": "schemas/v1.19.0/enterprise-review-projection.schema.json",
+      "sha256": "62ceb8526e7d050d3fe364386be9cc9a73835c722cd7ad911fb1cf43571deae6",
       "mode": "644"
     },
     {

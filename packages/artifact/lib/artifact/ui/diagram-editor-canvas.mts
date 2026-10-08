@@ -34,7 +34,7 @@ export interface DiagramEditorCanvas {
   dragging(): boolean;
   cancelDrag(): void;
   draw(event?: DrawEvent): void;
-  fit(): void;
+  fit(minimumScale?: number): void;
   zoom(factor: number, around?: DiagramEditorPoint): void;
   cameraPatch(camera: Camera): void;
   worldPoint(point: DiagramEditorPoint, camera?: Camera): DiagramEditorPoint;
@@ -70,6 +70,7 @@ type Drag =
       origin: DiagramAuthoringBundle | null;
       active: boolean;
     })
+  | (DragPoints & { type: 'connect'; id: string; side: string; active?: false })
   | HandleDrag;
 
 const SVG = 'http://www.w3.org/2000/svg';
@@ -114,6 +115,8 @@ export function createEditorCanvas(ctx: DiagramEditorContext): DiagramEditorCanv
     raf = 0,
     tempPan = false;
   let tool: DiagramEditorTool = 'select';
+  // Initial phone framing favors readable labels; the explicit Fit command requests an overview.
+  let fitMinimumScale = ctx.layout.compact() ? 1 : 0;
 
   const editorTheme = (bundle: DiagramAuthoringBundle) =>
     ctx.prefersDark()
@@ -130,7 +133,8 @@ export function createEditorCanvas(ctx: DiagramEditorContext): DiagramEditorCanv
     y: (point.y - camera.y) / camera.scale,
   });
   const cameraPatch = (camera: Camera) => session.setView({ camera });
-  function fit() {
+  function fit(minimumScale = fitMinimumScale) {
+    fitMinimumScale = minimumScale;
     const state = current();
     if (!state.bundle) return;
     const rect = stage.getBoundingClientRect(),
@@ -139,7 +143,7 @@ export function createEditorCanvas(ctx: DiagramEditorContext): DiagramEditorCanv
     const scale = Math.min(
       1.6,
       Math.max(
-        0.04,
+        Math.max(0.04, minimumScale),
         Math.min((rect.width - pad * 2) / bounds.width, (rect.height - pad * 2) / bounds.height),
       ),
     );
@@ -333,6 +337,32 @@ export function createEditorCanvas(ctx: DiagramEditorContext): DiagramEditorCanv
     selection: Set<string>,
   ) {
     overlays.replaceChildren();
+    const selectedId = state.view.selection.length === 1 ? state.view.selection[0] : null;
+    const selectedBounds = selectedId ? session.geometry(selectedId)?.bounds : null;
+    const showContext =
+      !drag &&
+      ctx.editable(state) &&
+      !!selectedBounds &&
+      bundle.document.nodes.some((node) => node.id === selectedId);
+    dom.contextTools.hidden = !showContext;
+    if (showContext && selectedBounds) {
+      const camera = state.view.camera;
+      const width = dom.contextTools.getBoundingClientRect().width;
+      dom.contextTools.style.left = `${Math.max(
+        8,
+        Math.min(
+          stage.clientWidth - width - 8,
+          camera.x + (selectedBounds.x + selectedBounds.width / 2) * camera.scale - width / 2,
+        ),
+      )}px`;
+      dom.contextTools.style.top = `${Math.max(
+        8,
+        Math.min(
+          stage.clientHeight - 132,
+          camera.y + (selectedBounds.y + selectedBounds.height) * camera.scale + 12,
+        ),
+      )}px`;
+    }
     const scale = state.view.camera.scale,
       byPlacement = new Map(bundle.presentation.elements.map((item) => [item.elementId, item]));
     for (const id of selection) {
@@ -367,9 +397,42 @@ export function createEditorCanvas(ctx: DiagramEditorContext): DiagramEditorCanv
             });
           overlays.append(
             handleGroup({ 'data-handle': 'resize', 'data-handle-id': id }, [
-              square(24 / scale, { class: 'de-handle-hit' }),
+              square((ctx.layout.compact() ? 44 : 24) / scale, { class: 'de-handle-hit' }),
               square(8 / scale, { class: 'de-resize-handle', 'stroke-width': 1.5 / scale }),
             ]),
+          );
+        }
+      }
+      if (
+        rect &&
+        selection.size === 1 &&
+        ctx.editable(state) &&
+        bundle.document.nodes.some((node) => node.id === id)
+      ) {
+        const ports = [
+          ['top', rect.x + rect.width / 2, rect.y - 12 / scale],
+          ['right', rect.x + rect.width + 12 / scale, rect.y + rect.height / 2],
+          ['bottom', rect.x + rect.width / 2, rect.y + rect.height + 12 / scale],
+          ['left', rect.x - 12 / scale, rect.y + rect.height / 2],
+        ] as const;
+        for (const [side, x, y] of ports) {
+          const circle = (radius: number, attributes: Record<string, string | number>) =>
+            svgElement('circle', { cx: x, cy: y, r: radius / scale, ...attributes });
+          overlays.append(
+            handleGroup(
+              {
+                'data-handle': 'connect',
+                'data-handle-id': id,
+                'data-side': side,
+                role: 'button',
+                tabindex: 0,
+                'aria-label': `Connect from ${side} of ${displayName(elementIndex(bundle.document), id)}`,
+              },
+              [
+                circle(ctx.layout.compact() ? 22 : 14, { class: 'de-handle-hit' }),
+                circle(6, { class: 'de-connection-port', 'stroke-width': 1.5 / scale }),
+              ],
+            ),
           );
         }
       }
@@ -380,11 +443,26 @@ export function createEditorCanvas(ctx: DiagramEditorContext): DiagramEditorCanv
             svgElement('circle', { cx: point.x, cy: point.y, r: radius, ...attributes });
           overlays.append(
             handleGroup({ 'data-handle': 'bend', 'data-index': index, 'data-handle-id': id }, [
-              circle(12 / scale, { class: 'de-handle-hit' }),
+              circle((ctx.layout.compact() ? 22 : 12) / scale, { class: 'de-handle-hit' }),
               circle(4 / scale, { class: 'de-bend-handle', 'stroke-width': 1.5 / scale }),
             ]),
           );
         }
+    }
+    if (drag?.type === 'connect') {
+      const a = worldPoint(drag.start),
+        b = worldPoint(drag.last);
+      overlays.append(
+        svgElement('line', {
+          x1: a.x,
+          y1: a.y,
+          x2: b.x,
+          y2: b.y,
+          class: 'de-connection-preview',
+          'stroke-width': 2 / scale,
+          'pointer-events': 'none',
+        }),
+      );
     }
     if (drag?.type === 'marquee') {
       const a = worldPoint(drag.start),
@@ -432,7 +510,15 @@ export function createEditorCanvas(ctx: DiagramEditorContext): DiagramEditorCanv
       ctx.inspector.guardDraft();
       return;
     }
-    if (handle) {
+    if (handle?.dataset.handle === 'connect') {
+      drag = {
+        type: 'connect',
+        id: id as string,
+        side: handle.dataset.side ?? 'right',
+        start,
+        last: start,
+      };
+    } else if (handle) {
       // Every handle carries its element id, and renderOverlays draws only resize and bend handles.
       if (!state.view.selection.includes(id as string) && !select([id as string]).ok) return;
       drag = {
@@ -470,7 +556,14 @@ export function createEditorCanvas(ctx: DiagramEditorContext): DiagramEditorCanv
   }
   function previewDrag() {
     raf = 0;
-    if (!drag || !drag.active || drag.type === 'marquee' || drag.type === 'pan') return;
+    if (
+      !drag ||
+      drag.type === 'connect' ||
+      !drag.active ||
+      drag.type === 'marquee' ||
+      drag.type === 'pan'
+    )
+      return;
     const state = current(),
       scale = state.view.camera.scale;
     const dx = (drag.last.x - drag.start.x) / scale,
@@ -529,7 +622,7 @@ export function createEditorCanvas(ctx: DiagramEditorContext): DiagramEditorCanv
       });
       return;
     }
-    if (drag.type === 'marquee') {
+    if (drag.type === 'marquee' || drag.type === 'connect') {
       // A marquee starts only on a readable diagram.
       // biome-ignore format: bundles keep these one-line arguments; wrapping would change their bytes.
       renderOverlays(current(), ctx.displayed(current()) as DiagramAuthoringBundle, new Set(current().view.selection));
@@ -558,7 +651,20 @@ export function createEditorCanvas(ctx: DiagramEditorContext): DiagramEditorCanv
     }
     const finished = drag;
     drag = null;
-    if (finished.active) {
+    if (finished.type === 'connect' && !cancel) {
+      const query = session.query({ x: finished.last.x, y: finished.last.y, tolerance: 8 });
+      const bundle = current().bundle;
+      const target =
+        query.ok && bundle
+          ? query.hits.find((hit) => bundle.document.nodes.some((node) => node.id === hit.id))?.id
+          : null;
+      if (target)
+        ctx.commands.act('connect-drag', { from: finished.id, to: target, side: finished.side });
+      else
+        ctx.notice(
+          'Release on another shape to connect. Use the inspector for keyboard connections.',
+        );
+    } else if (finished.active) {
       const result = cancel ? session.cancelGesture('cancelled') : session.completeGesture();
       if (!result.ok) {
         // The session keeps a refused gesture open; a released pointer can no longer retain it.

@@ -1,0 +1,128 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://openplanr.dev/schemas/v1.19.0/enterprise-guest-invitation.schema.json",
+  "x-openplanr-contract": {
+    "id": "enterprise-guest-invitation",
+    "version": "1.19.0"
+  },
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "kind": {
+      "const": "openplanr-enterprise-guest-invitation"
+    },
+    "schemaVersion": {
+      "const": "1.0.0"
+    },
+    "protocolVersion": {
+      "const": "1.19.0"
+    },
+    "organizationId": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}(?![\\s\\S])"
+    },
+    "projectId": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}(?![\\s\\S])"
+    },
+    "artifactId": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}(?![\\s\\S])"
+    },
+    "invitationId": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}(?![\\s\\S])"
+    },
+    "deliveryOperationId": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_-]{22,64}(?![\\s\\S])"
+    },
+    "inviterId": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}(?![\\s\\S])"
+    },
+    "recipientId": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}(?![\\s\\S])"
+    },
+    "role": {
+      "enum": [
+        "reviewer",
+        "viewer"
+      ]
+    },
+    "binding": {
+      "const": "fixed"
+    },
+    "pin": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "revisionId": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9_-]{1,128}(?![\\s\\S])"
+        },
+        "contentDigest": {
+          "type": "string",
+          "pattern": "^sha256:[a-f0-9]{64}(?![\\s\\S])"
+        },
+        "publicationId": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}(?![\\s\\S])"
+        }
+      },
+      "required": [
+        "revisionId",
+        "contentDigest",
+        "publicationId"
+      ]
+    },
+    "deliveryStatus": {
+      "enum": [
+        "queued",
+        "failed",
+        "delivered",
+        "expired"
+      ]
+    },
+    "grantStatus": {
+      "enum": [
+        "pending",
+        "active",
+        "denied",
+        "revoked"
+      ]
+    },
+    "createdAt": {
+      "type": "string",
+      "format": "date-time",
+      "maxLength": 40,
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{3})?Z(?![\\s\\S])"
+    },
+    "expiresAt": {
+      "type": "string",
+      "format": "date-time",
+      "maxLength": 40,
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{3})?Z(?![\\s\\S])"
+    }
+  },
+  "required": [
+    "kind",
+    "schemaVersion",
+    "protocolVersion",
+    "organizationId",
+    "projectId",
+    "artifactId",
+    "invitationId",
+    "deliveryOperationId",
+    "inviterId",
+    "recipientId",
+    "role",
+    "binding",
+    "pin",
+    "deliveryStatus",
+    "grantStatus",
+    "createdAt",
+    "expiresAt"
+  ]
+}

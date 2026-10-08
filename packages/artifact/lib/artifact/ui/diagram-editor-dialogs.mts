@@ -59,6 +59,8 @@ export function createEditorDialogs(ctx: DiagramEditorContext): DiagramEditorDia
     if (sourceMount) report('');
     sourceMount?.dispose();
     sourceMount = null;
+    conflictMount?.dispose();
+    conflictMount = null;
     dialog.remove();
     dialog = null;
     dialogOpener = null;
@@ -360,6 +362,26 @@ export function createEditorDialogs(ctx: DiagramEditorContext): DiagramEditorDia
     openDialog(title, body);
   }
   function compareRevisions() {
+    const state = current();
+    if (ctx.isDisposed() || state.disposed || !state.bundle || !state.comparison) return;
+    if (ctx.host.onCompareRevisions) {
+      const trigger = ctx.commands.trigger();
+      const active = trigger?.isConnected
+        ? trigger
+        : (doc.activeElement as HTMLElement | SVGElement | null);
+      const opener = active?.closest?.('.de-more-menu') ? dom.moreButton : active;
+      closeDialog({ restoreFocus: false });
+      conflictMount?.dispose();
+      conflictMount = null;
+      ctx.chrome.setOverflow(false, { restoreFocus: false });
+      try {
+        ctx.host.onCompareRevisions({ session, opener });
+      } catch {
+        // The host may already have mounted its dialog; a fallback could create two.
+        report('The host comparison could not be opened. Your draft remains unchanged.');
+      }
+      return;
+    }
     const wrap = element(doc, 'div');
     openDialog('Compare revisions', wrap);
     conflictMount?.dispose();

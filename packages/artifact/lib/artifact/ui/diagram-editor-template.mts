@@ -18,6 +18,7 @@ export interface DiagramEditorSkeleton {
   barStart: HTMLElement;
   barCenter: HTMLElement;
   barEnd: HTMLElement;
+  barInspect: HTMLElement;
   mark: HTMLElement;
   title: HTMLElement;
   subtitle: HTMLElement;
@@ -37,6 +38,7 @@ export interface DiagramEditorSkeleton {
   overlays: SVGGElement;
   empty: HTMLElement;
   canvasTools: HTMLElement;
+  contextTools: HTMLElement;
   footer: HTMLElement;
   right: HTMLElement;
   rightTabs: HTMLElement;
@@ -96,7 +98,8 @@ export function renderEditorSkeleton(
 
   const barStart = group('Document navigation'),
     barCenter = group('History'),
-    barEnd = group('Save and inspect');
+    barEnd = group('Save'),
+    barInspect = group('Inspect');
   const mark = node('span', { className: 'de-mark', 'aria-hidden': 'true' }),
     title = node('strong', { className: 'de-title' }),
     subtitle = node('small', { className: 'de-subtitle' }),
@@ -116,7 +119,7 @@ export function renderEditorSkeleton(
         node('div', { className: 'de-identity' }, title, subtitle),
       ),
     ),
-    node('div', { className: 'de-bar-end' }, saveState, barCenter, barEnd, moreWrap),
+    node('div', { className: 'de-bar-end' }, saveState, barCenter, barInspect, barEnd, moreWrap),
   );
 
   const drawerBackdrop = node('button', {
@@ -172,6 +175,18 @@ export function renderEditorSkeleton(
       'aria-label': 'Canvas tools',
     }),
     footer = node('div', { className: 'de-stage-footer' });
+  const contextTools = node(
+    'div',
+    {
+      className: 'de-context-tools',
+      role: 'toolbar',
+      'aria-label': 'Selected shape actions',
+      hidden: true,
+    },
+    iconButton(doc, 'Add connected step', 'quick-add', { icon: 'plus', iconOnly: true }),
+    iconButton(doc, 'Connect to shape…', 'connect', { icon: 'kind-connector', iconOnly: true }),
+    iconButton(doc, 'Duplicate shape', 'duplicate', { icon: 'duplicate', iconOnly: true }),
+  );
   const stage = node(
     'div',
     {
@@ -184,7 +199,7 @@ export function renderEditorSkeleton(
     svg,
     empty,
     canvasTools,
-    node('div', { className: 'de-mobile-message' }, 'Review on mobile. Open on desktop to edit.'),
+    contextTools,
   );
   const stageRegion = node(
     'section',
@@ -244,6 +259,7 @@ export function renderEditorSkeleton(
     barStart,
     barCenter,
     barEnd,
+    barInspect,
     mark,
     title,
     subtitle,
@@ -263,6 +279,7 @@ export function renderEditorSkeleton(
     overlays,
     empty,
     canvasTools,
+    contextTools,
     footer,
     right,
     rightTabs,
@@ -326,7 +343,7 @@ export function renderEditorControls(
     title: 'Redo · Ctrl or Command Shift Z',
     icon: 'redo',
   });
-  commandButton(dom.barEnd, 'Inspector', 'Inspector', 'properties', {
+  commandButton(dom.barInspect, 'Inspector', 'Inspector', 'properties', {
     title: 'Show or hide the inspector',
     icon: 'properties',
   });
@@ -354,6 +371,11 @@ export function renderEditorControls(
     hidden: true,
   });
   for (const [name, action] of [
+    ['Undo', 'menu-undo'],
+    ['Redo', 'menu-redo'],
+    ['Save diagram', 'menu-save'],
+    ['Zoom in', 'menu-zoom-in'],
+    ['Zoom out', 'menu-zoom-out'],
     ['Auto layout…', 'layout'],
     ['Mermaid copies', 'source-panel'],
     ['Show source', 'show-source'],

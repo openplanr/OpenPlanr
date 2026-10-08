@@ -21,6 +21,7 @@ export interface StudioToolbarProps {
   viewPicker?: ReactNode;
   status?: ReactNode;
   actions?: ReactNode;
+  secondaryActions?: ReactNode;
   className?: string;
 }
 export const StudioButton = forwardRef<
@@ -58,6 +59,47 @@ export function StudioMark() {
     </span>
   );
 }
+function inlineGap(element: HTMLElement | null): number {
+  const view = element?.ownerDocument.defaultView;
+  return view && element ? parseFloat(view.getComputedStyle(element).gap) || 0 : 0;
+}
+
+/** Intrinsic leading widths must not depend on title space left by the active layout. */
+function measureLeadingFloor(leading: HTMLElement): number {
+  const view = leading.ownerDocument.defaultView;
+  if (!view) return 128;
+  const leadingControls = [...leading.children].filter(
+    (node): node is HTMLElement =>
+      node instanceof view.HTMLElement &&
+      !node.classList.contains('planr-brand') &&
+      node.getClientRects().length > 0,
+  );
+  const branding = [
+    ...leading.querySelectorAll<HTMLElement>('.planr-mark,.design-wordmark'),
+  ].filter((node) => node.getClientRects().length);
+  const brandGap = inlineGap(leading.querySelector<HTMLElement>('.planr-brand'));
+  const brandingWidth = branding.reduce(
+    (total, node) => total + node.getBoundingClientRect().width + brandGap,
+    0,
+  );
+  const titleBlock = leading.querySelector<HTMLElement>('.planr-title-block');
+  const badge = titleBlock?.querySelector<HTMLElement>('.studio-type-badge');
+  const title = titleBlock?.querySelector<HTMLElement>('strong,.de-title');
+  // The badge retains its natural width. Reserve readable title space at the
+  // current text size, independently of the width left by a compact layout.
+  const titleFloor = Math.max(36, parseFloat(view.getComputedStyle(title ?? leading).fontSize) * 3);
+  const identityFloor = Math.max(
+    128,
+    (badge?.getBoundingClientRect().width || 0) + inlineGap(titleBlock) + titleFloor,
+  );
+  return (
+    identityFloor +
+    brandingWidth +
+    leadingControls.reduce((total, control) => total + control.getBoundingClientRect().width, 0) +
+    leadingControls.length * inlineGap(leading)
+  );
+}
+
 export function StudioToolbar({
   title,
   titleNode,
@@ -70,6 +112,7 @@ export function StudioToolbar({
   viewPicker,
   status,
   actions,
+  secondaryActions,
   className = '',
 }: StudioToolbarProps) {
   const toolbar = useRef<HTMLElement>(null);
@@ -81,6 +124,7 @@ export function StudioToolbar({
     const center = element.querySelector<HTMLElement>('.studio-toolbar-center');
     const trailing = element.querySelector<HTMLElement>('.studio-toolbar-trailing');
     const leading = element.querySelector<HTMLElement>('.studio-toolbar-leading');
+    const secondary = element.querySelector<HTMLElement>('.studio-toolbar-secondary');
     if (!center || !trailing || !leading) return;
     const measure = () => {
       const width = element.getBoundingClientRect().width;
@@ -90,7 +134,8 @@ export function StudioToolbar({
       element.dataset.studioDensity = width <= 680 ? 'narrow' : 'regular';
       const style = window.getComputedStyle(element);
       const available = width - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight);
-      const gap = parseFloat(style.columnGap) || 0;
+      // Compact row gaps must not lower the inline fit requirement on the next measurement.
+      const gap = Math.max(12, parseFloat(style.columnGap) || 0);
       element.dataset.studioCenter = 'true';
       const centerWidth = center.scrollWidth;
       element.dataset.studioCenter = String(centerWidth > 0);
@@ -98,7 +143,10 @@ export function StudioToolbar({
       // Compact chrome can wrap; summing the visible controls retains its intrinsic floor
       // so resizing back to desktop does not oscillate between layouts.
       const controlSelector = 'button,a,summary,input,select,output,[role="status"]';
-      const controls = [...trailing.querySelectorAll<HTMLElement>(controlSelector)].filter(
+      const controls = [
+        ...trailing.querySelectorAll<HTMLElement>(controlSelector),
+        ...(secondary?.querySelectorAll<HTMLElement>(controlSelector) ?? []),
+      ].filter(
         (control) =>
           control.getClientRects().length &&
           !control.closest('[role="menu"],.studio-tooltip,[role="dialog"]') &&
@@ -106,23 +154,25 @@ export function StudioToolbar({
           !control.parentElement?.closest(controlSelector),
       );
       const actionWidth =
-        controls.reduce((total, control) => total + control.getBoundingClientRect().width, 0) +
+        controls.reduce((total, control) => {
+          // A secondary status expands into spare compact-row space. Measure its
+          // text rather than that expansion so desktop can return to one row.
+          if (secondary?.contains(control) && control.getAttribute('role') === 'status') {
+            const range = element.ownerDocument.createRange();
+            range.selectNodeContents(control);
+            const textWidth = range.getBoundingClientRect().width;
+            const controlStyle = window.getComputedStyle(control);
+            return (
+              total +
+              textWidth +
+              (parseFloat(controlStyle.paddingLeft) || 0) +
+              (parseFloat(controlStyle.paddingRight) || 0)
+            );
+          }
+          return total + control.getBoundingClientRect().width;
+        }, 0) +
         Math.max(0, controls.length - 1) * (parseFloat(window.getComputedStyle(trailing).gap) || 8);
-      const leadingControl = leading.firstElementChild;
-      const branding = [
-        ...leading.querySelectorAll<HTMLElement>('.planr-mark,.design-wordmark'),
-      ].filter((node) => node.getClientRects().length);
-      const brandingWidth = branding.reduce(
-        (total, node) => total + node.getBoundingClientRect().width + 8,
-        0,
-      );
-      const leadingFloor =
-        128 +
-        brandingWidth +
-        (leadingControl instanceof window.HTMLElement &&
-        !leadingControl.classList.contains('planr-brand')
-          ? leadingControl.getBoundingClientRect().width + 8
-          : 0);
+      const leadingFloor = measureLeadingFloor(leading);
       const outerWidth = Math.max(leadingFloor, actionWidth);
       element.dataset.studioLayout =
         centerWidth > 0
@@ -147,7 +197,7 @@ export function StudioToolbar({
       typeof window.ResizeObserver === 'function'
         ? new window.ResizeObserver(scheduleMeasure)
         : null;
-    for (const node of [element, center, trailing]) resize?.observe(node);
+    for (const node of [element, center, trailing, secondary]) if (node) resize?.observe(node);
     const mutations = new window.MutationObserver(scheduleMeasure);
     mutations.observe(element, {
       subtree: true,
@@ -214,6 +264,7 @@ export function StudioToolbar({
         <div className="studio-toolbar-status">{status}</div>
         <div className="studio-toolbar-actions">{actions}</div>
       </div>
+      {secondaryActions && <div className="studio-toolbar-secondary">{secondaryActions}</div>}
     </Tag>
   );
 }
@@ -241,11 +292,68 @@ export function StudioMenu({
   onOpenChange?: (open: boolean) => void;
 }) {
   const trigger = useRef<HTMLButtonElement>(null);
+  const mousePosition = useRef<{ x: number; y: number } | null>(null);
+  const keyboardPosition = useRef<{ x: number; y: number } | null>(null);
+  useLayoutEffect(() => {
+    const ownerDocument = trigger.current?.ownerDocument;
+    if (!ownerDocument) return;
+    const move = (event: PointerEvent) => {
+      if (event.pointerType !== 'mouse') return;
+      const position = { x: event.clientX, y: event.clientY };
+      const previous = keyboardPosition.current;
+      // Layout can move an item under a stationary mouse. Only a change in actual
+      // coordinates hands keyboard navigation back to hover; movementX is unreliable.
+      if (previous && (previous.x !== position.x || previous.y !== position.y))
+        keyboardPosition.current = null;
+      mousePosition.current = position;
+    };
+    const down = (event: PointerEvent) => {
+      keyboardPosition.current = null;
+      if (event.pointerType === 'mouse')
+        mousePosition.current = { x: event.clientX, y: event.clientY };
+    };
+    ownerDocument.addEventListener('pointermove', move, true);
+    ownerDocument.addEventListener('pointerdown', down, true);
+    return () => {
+      ownerDocument.removeEventListener('pointermove', move, true);
+      ownerDocument.removeEventListener('pointerdown', down, true);
+    };
+  }, []);
+  const retainKeyboardFocus = (event: {
+    pointerType: string;
+    clientX: number;
+    clientY: number;
+    preventDefault: () => void;
+  }) => {
+    const position = keyboardPosition.current;
+    if (
+      event.pointerType === 'mouse' &&
+      position?.x === event.clientX &&
+      position.y === event.clientY
+    )
+      event.preventDefault();
+  };
+  const keyboardInput = () => {
+    keyboardPosition.current = mousePosition.current;
+  };
   return (
-    <DropdownMenu.Root modal={false} open={open} onOpenChange={onOpenChange}>
+    <DropdownMenu.Root
+      modal={false}
+      open={open}
+      onOpenChange={(value) => {
+        if (!value) keyboardPosition.current = null;
+        onOpenChange?.(value);
+      }}
+    >
       <span className={`studio-menu ${className}`}>
         <DropdownMenu.Trigger asChild>
-          <StudioButton aria-label={label} title={label} {...triggerAttributes} ref={trigger}>
+          <StudioButton
+            aria-label={label}
+            title={label}
+            {...triggerAttributes}
+            ref={trigger}
+            onKeyDownCapture={keyboardInput}
+          >
             {label}
             <span aria-hidden="true">⌄</span>
           </StudioButton>
@@ -255,6 +363,7 @@ export function StudioMenu({
           align="end"
           sideOffset={8}
           collisionPadding={8}
+          onKeyDownCapture={keyboardInput}
           onCloseAutoFocus={(event) => {
             // Own the deferred return so preserving newer focus cannot leave Radix's
             // outside-interaction flag stale for the next close.
@@ -278,6 +387,8 @@ export function StudioMenu({
               key={item.id}
               disabled={item.disabled}
               onSelect={item.onSelect}
+              onPointerMove={retainKeyboardFocus}
+              onPointerLeave={retainKeyboardFocus}
             >
               <button
                 type="button"

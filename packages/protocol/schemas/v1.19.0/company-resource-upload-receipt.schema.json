@@ -1,0 +1,184 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://openplanr.dev/schemas/v1.19.0/company-resource-upload-receipt.schema.json",
+  "x-openplanr-contract": {
+    "id": "company-resource-upload-receipt",
+    "version": "1.19.0"
+  },
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "schemaVersion": {
+      "const": "2.1.0"
+    },
+    "organizationId": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+    },
+    "projectId": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+    },
+    "artifactId": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+    },
+    "operationId": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_-]{22,64}$"
+    },
+    "revisionId": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_-]{22,64}$"
+    },
+    "manifestSha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "contentDigest": {
+      "type": "string",
+      "pattern": "^sha256:[a-f0-9]{64}$"
+    },
+    "status": {
+      "const": "committed"
+    },
+    "committedAt": {
+      "type": "string",
+      "format": "date-time",
+      "maxLength": 40
+    },
+    "protocolVersion": {
+      "const": "1.19.0"
+    },
+    "intent": {
+      "enum": [
+        "draft",
+        "publish"
+      ]
+    },
+    "baseRevisionId": {
+      "oneOf": [
+        {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9_-]{22,64}$"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "version": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 9007199254740991
+    },
+    "lifecycleEpoch": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 9007199254740991
+    },
+    "effect": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "kind": {
+              "const": "draft"
+            },
+            "authorHeadRevisionId": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_-]{1,128}(?![\\s\\S])"
+            },
+            "publicationHeadUnchanged": {
+              "const": true
+            }
+          },
+          "required": [
+            "kind",
+            "authorHeadRevisionId",
+            "publicationHeadUnchanged"
+          ]
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "kind": {
+              "const": "publication"
+            },
+            "authorHeadRevisionId": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_-]{1,128}(?![\\s\\S])"
+            },
+            "publicationId": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}(?![\\s\\S])"
+            },
+            "publicationRevisionId": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_-]{1,128}(?![\\s\\S])"
+            }
+          },
+          "required": [
+            "kind",
+            "authorHeadRevisionId",
+            "publicationId",
+            "publicationRevisionId"
+          ]
+        }
+      ]
+    }
+  },
+  "required": [
+    "schemaVersion",
+    "organizationId",
+    "projectId",
+    "artifactId",
+    "operationId",
+    "revisionId",
+    "manifestSha256",
+    "contentDigest",
+    "status",
+    "committedAt",
+    "protocolVersion",
+    "intent",
+    "baseRevisionId",
+    "version",
+    "lifecycleEpoch",
+    "effect"
+  ],
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "intent": {
+            "const": "draft"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "effect": {
+            "properties": {
+              "kind": {
+                "const": "draft"
+              }
+            }
+          }
+        }
+      },
+      "else": {
+        "properties": {
+          "effect": {
+            "properties": {
+              "kind": {
+                "const": "publication"
+              }
+            }
+          }
+        }
+      }
+    }
+  ]
+}

@@ -467,6 +467,9 @@
   .de-bar {
     display: block;
     padding: 0;
+    /* The React toolbar owns its intrinsic height. A measured prior height must
+       not keep an empty row when a narrow host grows back to desktop. */
+    min-height: 0;
     height: auto;
     overflow: visible;
     border-bottom: 0;
@@ -704,4 +707,150 @@
     min-width: 44px;
     min-height: 44px;
   }
+}
+
+/* Diagram authoring separates document navigation, primary commands and panel tools. */
+.planr-diagram-editor[data-studio-framework="react"] .diagram-authoring-toolbar {
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  .planr-title-block strong {
+    max-width: none;
+  }
+  .studio-toolbar-leading {
+    grid-column: 1;
+    grid-row: 1;
+  }
+  .studio-toolbar-center {
+    display: none;
+  }
+  .studio-toolbar-secondary {
+    grid-column: 3;
+    grid-row: 1;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    min-width: 0;
+  }
+  .studio-toolbar-trailing {
+    grid-column: 2;
+    grid-row: 1;
+    width: auto;
+  }
+  .studio-toolbar-actions {
+    flex-wrap: nowrap;
+  }
+  .de-icon-button {
+    min-width: 44px;
+    min-height: 44px;
+  }
+  button,
+  a {
+    border-radius: 8px;
+  }
+  button svg,
+  a svg {
+    width: 18px;
+    height: 18px;
+  }
+  [data-action="outline"] {
+    background: transparent;
+    border-color: transparent;
+  }
+}
+.planr-diagram-editor[data-studio-framework="react"]
+  .diagram-authoring-toolbar[data-studio-layout="compact"] {
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0 8px;
+  padding-block: 0;
+  .studio-toolbar-leading {
+    grid-column: 1;
+    grid-row: 1;
+    width: auto;
+  }
+  .studio-toolbar-trailing {
+    grid-column: 2;
+    grid-row: 1;
+    flex-wrap: nowrap;
+    width: auto;
+  }
+  .studio-toolbar-secondary {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    border-top: 0;
+    padding-top: 0;
+  }
+  .de-save-state {
+    display: inline-block;
+    flex: 1;
+    max-width: none;
+    overflow: visible;
+    white-space: normal;
+    font-size: 12px;
+    line-height: 1.3;
+  }
+  .planr-brand {
+    flex: 1;
+  }
+  .de-title {
+    max-width: none;
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 1.3;
+  }
+  .studio-type-badge {
+    font-size: 10px;
+  }
+  .studio-toolbar-actions {
+    flex-wrap: nowrap;
+  }
+}
+
+/* The inset surface keeps compact commands quiet without shrinking their hit areas. */
+.planr-diagram-editor[data-studio-framework="react"]
+  .diagram-authoring-toolbar[data-studio-layout="compact"][data-studio-density="narrow"]
+  :is(.de-icon-button, button:has(> svg), a:has(> svg)):not([role="menuitem"]) {
+  position: relative;
+  isolation: isolate;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0;
+  border-color: transparent;
+  background: transparent;
+  box-shadow: none;
+  &::before {
+    content: "";
+    position: absolute;
+    z-index: -1;
+    inset: 6px;
+    border: 1px solid transparent;
+    border-radius: 8px;
+  }
+  &:is(:hover, [aria-expanded="true"], [aria-pressed="true"])::before {
+    background: var(--de-raised);
+    border-color: var(--de-rule);
+  }
+  &.de-primary:not(:disabled)::before {
+    background: var(--de-primary);
+    border-color: var(--de-primary);
+  }
+  &.de-primary:hover:not(:disabled)::before {
+    background: var(--de-primary-hover);
+    border-color: var(--de-primary-hover);
+  }
+  &.de-primary:disabled::before {
+    background: var(--de-raised);
+    border-color: var(--de-rule);
+  }
+  &:focus-visible {
+    outline: none;
+  }
+  &:focus-visible::before {
+    outline: 2px solid var(--de-primary);
+    outline-offset: 1px;
+  }
+}
+
+.planr-diagram-editor[data-studio-framework="react"]
+  .diagram-authoring-toolbar[data-studio-layout="compact"][data-studio-density="narrow"]
+  .de-save-state {
+  font-size: 11px;
 }

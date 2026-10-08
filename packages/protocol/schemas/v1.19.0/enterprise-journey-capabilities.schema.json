@@ -1,0 +1,83 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://openplanr.dev/schemas/v1.19.0/enterprise-journey-capabilities.schema.json",
+  "x-openplanr-contract": {
+    "id": "enterprise-journey-capabilities",
+    "version": "1.19.0"
+  },
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "kind": {
+      "const": "openplanr-enterprise-journey-capabilities"
+    },
+    "schemaVersion": {
+      "const": "1.0.0"
+    },
+    "protocolVersion": {
+      "const": "1.19.0"
+    },
+    "readers": {
+      "type": "array",
+      "items": {
+        "enum": [
+          "resource-draft",
+          "resource-publication",
+          "fixed-guest",
+          "project-lifecycle",
+          "review-mentions",
+          "scoped-pages"
+        ]
+      },
+      "maxItems": 6,
+      "minItems": 0,
+      "uniqueItems": true
+    },
+    "writers": {
+      "type": "array",
+      "items": {
+        "enum": [
+          "resource-draft",
+          "resource-publication",
+          "fixed-guest",
+          "project-lifecycle",
+          "review-mentions",
+          "scoped-pages"
+        ]
+      },
+      "maxItems": 6,
+      "minItems": 0,
+      "uniqueItems": true
+    },
+    "rollbackFloor": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "protocolVersion": {
+          "const": "1.19.0"
+        },
+        "serviceVersion": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}(?![\\s\\S])"
+        },
+        "candidateDigest": {
+          "type": "string",
+          "pattern": "^sha256:[a-f0-9]{64}(?![\\s\\S])"
+        }
+      },
+      "required": [
+        "protocolVersion",
+        "serviceVersion",
+        "candidateDigest"
+      ]
+    }
+  },
+  "required": [
+    "kind",
+    "schemaVersion",
+    "protocolVersion",
+    "readers",
+    "writers",
+    "rollbackFloor"
+  ]
+}
