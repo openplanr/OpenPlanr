@@ -347,7 +347,7 @@
     ],
     "generatedAssets": {
       "path": "adapters/manifests/generated-assets.json",
-      "digest": "sha256:24ec47167b6635db188305b273fda7c26c5d5d0a650d74149013e6c88cb5e9ea",
+      "digest": "sha256:d2aa6396a1948a5f7d0745f6a84708df746262a9be01e8889b8063d081b90bf4",
       "count": 1616
     }
   },
@@ -432,7 +432,7 @@
   "generatedSurfaces": {
     "artifactShell": {
       "path": "packages/artifact/lib/artifact/ui/generated/artifact-shell-assets.json",
-      "digest": "sha256:d968f357de3337c9dd942df4c78dd5559ef0c2fd60cce7ca2d2885ebb48aef04",
+      "digest": "sha256:2a9628ab10c915e074b28d4828051a6af18c3e79e138c35be63223ee011444bf",
       "shellVersion": "1.2.1",
       "assetCount": 8
     },

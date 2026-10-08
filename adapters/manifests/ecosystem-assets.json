@@ -6,7 +6,7 @@
   "inputs": [
     {
       "path": "adapters/manifests/generated-assets.json",
-      "digest": "sha256:24ec47167b6635db188305b273fda7c26c5d5d0a650d74149013e6c88cb5e9ea"
+      "digest": "sha256:d2aa6396a1948a5f7d0745f6a84708df746262a9be01e8889b8063d081b90bf4"
     },
     {
       "path": "apps/dashboard/package.json",
@@ -252,7 +252,7 @@
     },
     {
       "path": "ecosystem.json",
-      "digest": "sha256:d2452f25c60031c4b9ed4fc57cdd61d1a8c08805e7280e81d135a935400ff1c1"
+      "digest": "sha256:a137bc5b2ce3cff280c2ff53bd4e4b6b74793ecd4d42d77763257062f849c0cf"
     }
   ]
 }
