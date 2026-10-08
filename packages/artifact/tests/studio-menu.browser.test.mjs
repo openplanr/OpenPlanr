@@ -328,6 +328,7 @@ test(
     const box = await review.boundingBox();
     await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
     await page.keyboard.press('Home');
+    await page.waitForFunction(() => document.activeElement?.textContent === 'Interact');
     await page.keyboard.press('ArrowDown');
     await page.waitForFunction(() => document.activeElement?.textContent === 'Annotate');
     await review.tap();
