@@ -60,7 +60,7 @@
       "version": "3.0.0",
       "path": "packages/cli",
       "publication": "public",
-      "manifestDigest": "sha256:8dcdf02ad62b39b390e05acbecd714214b44166f5ffab06a5c4c27905aadbeda"
+      "manifestDigest": "sha256:1b19c619aa4adfc3e12e982286130235315ebb8e6442cf31784f3be726347d0f"
     },
     "pipeline": {
       "package": "planr-pipeline",

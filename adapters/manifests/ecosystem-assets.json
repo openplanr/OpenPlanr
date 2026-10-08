@@ -26,7 +26,7 @@
     },
     {
       "path": "packages/cli/package.json",
-      "digest": "sha256:8dcdf02ad62b39b390e05acbecd714214b44166f5ffab06a5c4c27905aadbeda"
+      "digest": "sha256:1b19c619aa4adfc3e12e982286130235315ebb8e6442cf31784f3be726347d0f"
     },
     {
       "path": "packages/design/package.json",
@@ -252,7 +252,7 @@
     },
     {
       "path": "ecosystem.json",
-      "digest": "sha256:d2452f25c60031c4b9ed4fc57cdd61d1a8c08805e7280e81d135a935400ff1c1"
+      "digest": "sha256:296c8a8fa29bedd82548a9f75ec6dcb5a76d01e802d469f9624b32f82edc7ad1"
     }
   ]
 }
