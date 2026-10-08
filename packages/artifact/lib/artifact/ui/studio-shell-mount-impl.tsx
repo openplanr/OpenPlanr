@@ -529,13 +529,21 @@ export function mountDiagramEditorChrome(ctx: DiagramEditorContext) {
     return (
       <StudioToolbar
         as="div"
+        className="diagram-authoring-toolbar"
         title={current.bundle?.document.title ?? 'Diagram unavailable'}
         titleNode={<PreservedNode element={dom.title} />}
         subtitle={<PreservedNode element={dom.subtitle} />}
         kind="diagram"
         brand={ctx.host.brand !== false}
-        leading={<PreservedNode element={dom.barStart} />}
-        status={<PreservedNode element={dom.saveState} />}
+        leading={<PreservedNode element={ctx.host.toolbarLeadingControls ?? null} />}
+        secondaryActions={
+          <>
+            <PreservedNode element={dom.saveState} />
+            <PreservedNode element={dom.barStart} />
+            <PreservedNode element={dom.barInspect} />
+            <PreservedNode element={ctx.host.toolbarControls ?? null} />
+          </>
+        }
         actions={
           <>
             <PreservedNode element={dom.barCenter} />
@@ -555,7 +563,6 @@ export function mountDiagramEditorChrome(ctx: DiagramEditorContext) {
             <PreservedNode element={dom.barEnd} />
             <PreservedNode element={dom.moreWrap} />
             {ctx.host.exportActions && <StudioMenu label="Export" items={ctx.host.exportActions} />}
-            <PreservedNode element={ctx.host.toolbarControls ?? null} />
           </>
         }
       />
@@ -579,6 +586,23 @@ export function mountDiagramEditorChrome(ctx: DiagramEditorContext) {
   }
   let destroyed = false;
   dom.shell.dataset.studioFramework = 'react';
+  const view = dom.shell.ownerDocument.defaultView;
+  const toolbar = mount.querySelector<HTMLElement>('.diagram-authoring-toolbar');
+  const previousHeight = dom.shell.style.getPropertyValue('--de-bar-height');
+  let heightFrame = 0;
+  const measureHeight = () => {
+    heightFrame = 0;
+    if (!destroyed && toolbar)
+      dom.shell.style.setProperty('--de-bar-height', `${toolbar.getBoundingClientRect().height}px`);
+  };
+  const heightObserver =
+    view && typeof view.ResizeObserver === 'function'
+      ? new view.ResizeObserver(() => {
+          if (!heightFrame) heightFrame = view.requestAnimationFrame(measureHeight);
+        })
+      : null;
+  if (toolbar) heightObserver?.observe(toolbar);
+  measureHeight();
   return {
     update() {
       if (destroyed) return;
@@ -592,6 +616,10 @@ export function mountDiagramEditorChrome(ctx: DiagramEditorContext) {
     destroy() {
       if (destroyed) return;
       destroyed = true;
+      heightObserver?.disconnect();
+      if (heightFrame) view?.cancelAnimationFrame(heightFrame);
+      if (previousHeight) dom.shell.style.setProperty('--de-bar-height', previousHeight);
+      else dom.shell.style.removeProperty('--de-bar-height');
       release();
       dom.bar.replaceChildren(...old);
       delete dom.shell.dataset.studioFramework;

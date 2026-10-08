@@ -67,14 +67,14 @@
       "version": "0.58.0",
       "path": "packages/pipeline",
       "publication": "public",
-      "manifestDigest": "sha256:525677c4db8535e3bbe5b241992af778085f67871586b1714aa6e82c5b37bf99"
+      "manifestDigest": "sha256:27566476887209fea779b18fadc7ce1a7486d07064ee060f09d816d7bfe6ee1e"
     },
     "protocol": {
       "package": "@openplanr/protocol",
       "version": "0.11.0",
       "path": "packages/protocol",
       "publication": "public",
-      "manifestDigest": "sha256:2ef4fe15be8e2037dda6786e075a02b94b3484f30465aab3565022ff7f0321e4"
+      "manifestDigest": "sha256:34445a95ea13980b653f296ee029f815c0c99a415d513082df6ac57d84ff440b"
     },
     "operate": {
       "package": "@openplanr/operate",
@@ -88,7 +88,7 @@
       "version": "0.6.6",
       "path": "packages/artifact",
       "publication": "private",
-      "manifestDigest": "sha256:18ac4abc1c5d52c114a4a5f140d83dc65f7377679904d8b0dfce528fbd364066"
+      "manifestDigest": "sha256:20454a6d307ec660d95d6956c0dd814021ecf9bf89698064bf2e65927af2d797"
     },
     "design": {
       "package": "@openplanr/design",
@@ -140,7 +140,7 @@
     }
   },
   "publicCompatibility": {
-    "pipelineExportKeys": 58,
+    "pipelineExportKeys": 59,
     "pipelineRootSymbols": 228
   },
   "catalogs": {
@@ -347,7 +347,7 @@
     ],
     "generatedAssets": {
       "path": "adapters/manifests/generated-assets.json",
-      "digest": "sha256:24ec47167b6635db188305b273fda7c26c5d5d0a650d74149013e6c88cb5e9ea",
+      "digest": "sha256:a251365b6288f52fcf95ae183c610a924d469079e507c217698dd4438c03e078",
       "count": 1616
     }
   },
@@ -382,7 +382,7 @@
         "v1.18.0": 1
       }
     },
-    "total": 305
+    "total": 317
   },
   "registries": {
     "preserved": {
@@ -432,7 +432,7 @@
   "generatedSurfaces": {
     "artifactShell": {
       "path": "packages/artifact/lib/artifact/ui/generated/artifact-shell-assets.json",
-      "digest": "sha256:d968f357de3337c9dd942df4c78dd5559ef0c2fd60cce7ca2d2885ebb48aef04",
+      "digest": "sha256:1a236a69102b0c8ef7df1ad955751f5e2f65cb6294666b6f1758f78057079efa",
       "shellVersion": "1.2.1",
       "assetCount": 8
     },

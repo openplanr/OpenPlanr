@@ -208,6 +208,7 @@ const projectionFiles = new Map([
     'bounded-json-data',
     'enterprise-contract-validation',
     'enterprise-resource-contracts',
+    'enterprise-journey-contracts',
     'large-object-contracts',
     'large-object-limits',
     'studio-presentation-contracts',
@@ -318,7 +319,7 @@ function walk(root, prefix = '') {
 
 const originalSchemaFiles = walk(join(packageRoot, 'schemas')).filter(
   ({ key }) =>
-    !/^v1\.(?:[5-9]|10|11|12|13|14|15|16|17|18)\.0\//u.test(key) && key.endsWith('.json'),
+    !/^v1\.(?:[5-9]|10|11|12|13|14|15|16|17|18|19)\.0\//u.test(key) && key.endsWith('.json'),
 );
 const originalRegistryFiles = walk(join(packageRoot, 'registry')).filter(
   ({ key }) => !key.startsWith('v1.17.0/') && key.endsWith('.json'),
@@ -381,6 +382,9 @@ if (!check && !metadataMatches) {
   writeFileSync(envelopeMetadataAbsolute, envelopeMetadataSource);
 }
 const { LARGE_OBJECT_SCHEMAS } = await import('../src/large-object-contracts.mjs');
+const { ENTERPRISE_JOURNEY_SCHEMAS } = await import('../src/enterprise-journey-contracts.mjs');
+for (const [name, value] of Object.entries(ENTERPRISE_JOURNEY_SCHEMAS))
+  expected.set(`schemas/v1.19.0/${name}.schema.json`, json(value));
 for (const [name, value] of Object.entries(LARGE_OBJECT_SCHEMAS))
   expected.set(`schemas/v1.17.0/${name}.schema.json`, json(value));
 

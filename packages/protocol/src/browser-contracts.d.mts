@@ -30,3 +30,9 @@ export declare function validateDiagramReviewArtifact(
 export declare const PROTOCOL_V116_CONTRACTS: Readonly<Record<string, string>>;
 
 export declare const PROTOCOL_V117_CONTRACTS: Readonly<Record<string, string>>;
+
+export declare const PROTOCOL_V119_CONTRACTS: Readonly<Record<string, string>>;
+export declare function validateEnterpriseJourneyArtifact(
+  kind: string,
+  value: unknown,
+): { path: string; rule: string; detail: string }[];

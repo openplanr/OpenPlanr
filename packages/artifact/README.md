@@ -49,6 +49,19 @@ Direct company-shell mounts of `mountDiagramSourcePanel()` must also load
 `planr-diagram-source-panel` scope outside the full editor, so the shared controls
 and responsive light/dark theme do not change host-page typography or layout.
 
+Editor sessions retain local edits when the authoritative head changes.
+`previewConflict()` compares the retained base, current draft and observed head,
+returning explicit choices for overlapping fields and element deletion.
+`resolveConflict()` requires the observed local and head digests, preserves
+independent edits and prepares a fresh compare-and-swap transaction; it never
+saves automatically. Further editing or a newer head invalidates stale choices.
+Unknown save outcomes retain their exact retry bytes through recovery.
+
+Resolved source correspondence stays conservative and original source bytes
+remain intact. Unsupported collection reordering or source remapping fails
+without replacing the retained copies. Hosts should offer comparison and a
+labelled recovery export before any deliberate whole-draft replacement.
+
 Layered graph layouts wrap long layer sequences, including large strongly
 connected components, into bands along the cross axis once the flow axis
 exceeds 4,096 units, balancing the scene toward a square. Any scene wider or
@@ -60,6 +73,12 @@ Run `npm run generate:diagram` after changing a diagram definition and
 `npm run check:diagram && npm test` before integration.
 
 ## Native encrypted diagram reviews
+
+`planr-pipeline/diagram-review-bundle/browser` exposes
+`prepareAuthoredDiagramReviewBundle()` for verified in-memory authored copies.
+It preserves graph and geometry, validates source identity, and excludes private
+source bytes and correspondence. Browser callers use the same projection as the
+file-based sharing wrapper without filesystem or Node dependencies.
 
 The `diagram/review-bundle` builder projects verified manifests and authored
 bundles into a whitelisted review scene. Geometry and connections remain intact;

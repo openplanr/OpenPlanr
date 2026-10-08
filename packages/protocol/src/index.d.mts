@@ -6,6 +6,7 @@ export * from './diagram-authoring-contracts.mjs';
 export * from './diagram-contracts.mjs';
 export * from './diagram-review-contracts.mjs';
 export * from './enterprise-contracts.mjs';
+export * from './enterprise-journey-contracts.mjs';
 export * from './enterprise-resource-contracts.mjs';
 export * from './errors.mjs';
 export * from './json-schema.mjs';
@@ -13,7 +14,6 @@ export * from './large-object-contracts.mjs';
 export * from './planning-contracts.mjs';
 export * from './registries.mjs';
 export * from './sharing-security-contracts.mjs';
-
 export {
   assertDiagramPresentation as assertDiagramReviewPresentation,
   assertDiagramReviewBundleV11,

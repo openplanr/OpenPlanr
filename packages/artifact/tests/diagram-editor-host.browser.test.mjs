@@ -43,8 +43,10 @@ async function hostedFixture(t, { colorScheme = 'light', capabilities } = {}) {
         const session = createDiagramEditorSession({ bundle: window.__bundle, acknowledged: true, transport, retainRecoveryOnAccessLoss: true, capabilities: window.__capabilities ?? undefined });
         window.__session = session;
         window.__mountEditor = mountDiagramEditor;
+        const back = document.createElement('button'); back.type = 'button'; back.textContent = '←'; back.setAttribute('aria-label', 'Back to project');
+        back.className = 'de-icon-button'; back.dataset.hostBack = '';
         window.__mount = mountDiagramEditor({ root: document.querySelector('#host-editor'), session, host: {
-          brand: false, review: false, colorScheme: 'dark',
+          brand: false, review: false, colorScheme: 'dark', toolbarLeadingControls: back,
           labels: { subtitle: 'Checkout platform · Company diagram', emptyHint: 'Nothing is shared until you save and share a revision.', reviewUnavailable: 'Review is not available for this diagram yet.', readOnly: 'Revision 8 · Read only' },
           saveLabel: state => state.saveState === 'unsaved' ? state.pendingCount + ' unsaved edit' + (state.pendingCount === 1 ? '' : 's') : state.saveState === 'saved' ? 'Saved · revision 8' : null,
           actions: [{ id: 'share', label: 'Share', icon: 'share', disabled: state => state.saveState !== 'saved', onSelect: () => { window.__events.shared += 1; } }],
@@ -445,8 +447,11 @@ test(
 
     await host('700px');
     await page.locator('.planr-diagram-editor[data-layout~="compact"]').waitFor();
-    assert.equal(await editor.getAttribute('data-editable'), 'false', 'Editing ends at 700px');
-    assert.equal(await page.locator('.de-mobile-message').isVisible(), true);
+    assert.equal(
+      await editor.getAttribute('data-editable'),
+      'true',
+      'Editing survives narrow hosts',
+    );
 
     await host('');
     await page.locator('.planr-diagram-editor[data-layout="desktop"]').waitFor();
@@ -716,6 +721,80 @@ test(
       );
       await page.keyboard.press('Escape');
       await menu.waitFor({ state: 'hidden' });
+    }
+  },
+);
+
+test(
+  'compact diagram chrome gives navigation and primary save a coherent hierarchy',
+  options,
+  async (t) => {
+    const page = await hostedFixture(t);
+    for (const [width, expectedLayout] of [
+      [320, 'compact'],
+      [390, 'compact'],
+      [680, 'inline'],
+      [681, 'inline'],
+      [700, 'inline'],
+      [1440, 'inline'],
+    ]) {
+      await page.setViewportSize({ width, height: 900 });
+      await page.waitForTimeout(100);
+      const bounds = await page.evaluate(() => {
+        const rect = (selector) => {
+          const r = document.querySelector(selector).getBoundingClientRect();
+          return {
+            x: r.x,
+            y: r.y,
+            width: r.width,
+            height: r.height,
+            right: r.right,
+            bottom: r.bottom,
+          };
+        };
+        return {
+          back: rect('[data-host-back]'),
+          title: rect('.de-title'),
+          save: rect('[data-action="save"]'),
+          more: rect('[data-action="more"]'),
+          outline: rect('[data-action="outline"]'),
+          status: rect('.de-save-state'),
+          toolbar: rect('.studio-toolbar'),
+          layout: document.querySelector('.studio-toolbar').dataset.studioLayout,
+        };
+      });
+      if (process.env.PLANR_EDITOR_CHROME_EVIDENCE) t.diagnostic(JSON.stringify({ width, bounds }));
+      assert.equal(
+        bounds.layout,
+        expectedLayout,
+        `${width}px uses the layout that fits its controls`,
+      );
+      assert.ok(bounds.title.width >= 36, `${width}px retains useful title width`);
+      assert.ok(bounds.back.right <= bounds.title.x, 'Back precedes document identity');
+      assert.ok(bounds.title.right <= bounds.save.x, 'Document identity ends before primary save');
+      assert.ok(
+        bounds.save.width >= 44 && bounds.save.height >= 44,
+        `${width}px hit area ${JSON.stringify(bounds)}`,
+      );
+      assert.ok(bounds.save.x < bounds.more.x, 'Primary save precedes overflow');
+      assert.ok(bounds.more.right <= width, 'Primary controls fit the viewport');
+      assert.ok(
+        bounds.status.width > 0 && bounds.status.height > 0,
+        `Actual save state stays visible ${JSON.stringify(bounds)}`,
+      );
+      if (bounds.layout === 'compact') {
+        assert.ok(bounds.back.y < bounds.outline.y, 'Panel tools have a subordinate row');
+        assert.ok(
+          Math.abs(bounds.back.y - bounds.save.y) < 6,
+          'Navigation and primary save share one row',
+        );
+      } else {
+        assert.equal(bounds.toolbar.height, 60, `${width}px keeps one compact command row`);
+        assert.ok(
+          Math.abs(bounds.back.y - bounds.outline.y) < 1,
+          'Navigation and panel tools share one row when they fit',
+        );
+      }
     }
   },
 );

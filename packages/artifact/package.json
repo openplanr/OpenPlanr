@@ -34,6 +34,10 @@
       "types": "./lib/artifact/diagram/editor/local-owner.d.mts",
       "import": "./lib/artifact/diagram/editor/local-owner.mjs"
     },
+    "./diagram-review-bundle/browser": {
+      "types": "./lib/artifact/diagram/review-bundle-browser.d.mts",
+      "import": "./lib/artifact/diagram/review-bundle-browser.mjs"
+    },
     "./diagram-shared-review": {
       "types": "./lib/artifact/ui/diagram-shared-review.d.mts",
       "import": "./lib/artifact/ui/diagram-shared-review.mjs"

@@ -6,7 +6,7 @@
   "inputs": [
     {
       "path": "adapters/manifests/generated-assets.json",
-      "digest": "sha256:24ec47167b6635db188305b273fda7c26c5d5d0a650d74149013e6c88cb5e9ea"
+      "digest": "sha256:a251365b6288f52fcf95ae183c610a924d469079e507c217698dd4438c03e078"
     },
     {
       "path": "apps/dashboard/package.json",
@@ -22,7 +22,7 @@
     },
     {
       "path": "packages/artifact/package.json",
-      "digest": "sha256:18ac4abc1c5d52c114a4a5f140d83dc65f7377679904d8b0dfce528fbd364066"
+      "digest": "sha256:20454a6d307ec660d95d6956c0dd814021ecf9bf89698064bf2e65927af2d797"
     },
     {
       "path": "packages/cli/package.json",
@@ -42,11 +42,11 @@
     },
     {
       "path": "packages/pipeline/package.json",
-      "digest": "sha256:525677c4db8535e3bbe5b241992af778085f67871586b1714aa6e82c5b37bf99"
+      "digest": "sha256:27566476887209fea779b18fadc7ce1a7486d07064ee060f09d816d7bfe6ee1e"
     },
     {
       "path": "packages/protocol/package.json",
-      "digest": "sha256:2ef4fe15be8e2037dda6786e075a02b94b3484f30465aab3565022ff7f0321e4"
+      "digest": "sha256:34445a95ea13980b653f296ee029f815c0c99a415d513082df6ac57d84ff440b"
     },
     {
       "path": "packages/protocol/registries/commands.json",
@@ -102,7 +102,7 @@
     },
     {
       "path": "scripts/marketplace/generate-ecosystem.mjs",
-      "digest": "sha256:749ff6eb107257c6b84bc0dcf7fed05f233966b35edb168e4bcf810fa730fc17"
+      "digest": "sha256:2a38e9695c179daaeb5d432478338f30ceb6a637926fd556c0c2a03410ccbb7a"
     },
     {
       "path": "scripts/marketplace/openplanr-ecosystem.schema.json",
@@ -244,7 +244,7 @@
     },
     {
       "path": "docs/generated/ecosystem.md",
-      "digest": "sha256:5966bb1b28eb368bc7ce3abbe6405c0d9bc0d3094c897bf0df6d56217fa3dd88"
+      "digest": "sha256:e95e9405e1800a13dbd0ceb2e9d55d443109931c86609ed77388910810c2be62"
     },
     {
       "path": "docs/generated/skills.md",
@@ -252,7 +252,7 @@
     },
     {
       "path": "ecosystem.json",
-      "digest": "sha256:d2452f25c60031c4b9ed4fc57cdd61d1a8c08805e7280e81d135a935400ff1c1"
+      "digest": "sha256:42ff4ee167c79645f17e42bb4601ef7996db99e995d38c06c15a7fed03eb663e"
     }
   ]
 }

@@ -20,6 +20,15 @@ export interface DiagramEditorHostOptions {
   mountChrome?: (options: DiagramEditorChromeMount) => () => void;
   /** Re-read a verified owner revision after a rejected stale save. */
   readCurrent?: () => Promise<DiagramAuthoringBundle>;
+  /** Present the current comparison in the trusted host's own dialog instead of the
+   * standalone editor dialog. Called synchronously once per comparison action.
+   * The host owns focus, background isolation and disposal; no save is performed.
+   * An opener inside the overflow menu is represented by its stable More button.
+   */
+  onCompareRevisions?: (options: {
+    session: DiagramEditorSession;
+    opener: HTMLElement | SVGElement | null;
+  }) => void;
   /** Optional real reviewer adapter. Local-only pages show a truthful unavailable state. */
   mountReview?: (options: {
     /** Clicks inside this element never reach the editor's action dispatcher. */
@@ -44,6 +53,8 @@ export interface DiagramEditorHostOptions {
   colorScheme?: 'light' | 'dark' | null;
   /** Trusted host controls mounted in the single canonical toolbar. */
   toolbarControls?: HTMLElement;
+  /** Trusted navigation controls before the document identity. */
+  toolbarLeadingControls?: HTMLElement;
   exportActions?: StudioMenuItem[];
   actions?: DiagramEditorHostAction[];
   panels?: DiagramEditorHostPanel[];
@@ -149,6 +160,8 @@ export function readHostOptions(host: DiagramEditorHostOptions): DiagramEditorHo
     throw new TypeError('Host mountChrome must be a function.');
   if (host.review !== undefined && typeof host.review !== 'boolean')
     throw new TypeError('Host review must be true or false.');
+  if (host.onCompareRevisions !== undefined && typeof host.onCompareRevisions !== 'function')
+    throw new TypeError('Host onCompareRevisions must be a function.');
   if (host.saveLabel !== undefined && typeof host.saveLabel !== 'function')
     throw new TypeError('Host saveLabel must be a function.');
   const labels = hostLabels(host.labels),
