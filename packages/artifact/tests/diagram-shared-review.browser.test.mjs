@@ -522,7 +522,7 @@ test(
       () => document.querySelector('.diagram-shell').dataset.present === 'true',
     );
     await page.locator('[data-presentation-nav]').waitFor({ state: 'visible' });
-    assert.equal(await page.locator('[data-presentation-nav]').isVisible(), true);
+    await page.locator('[data-presentation-nav]').waitFor({ state: 'visible' });
     await page.keyboard.press('Escape');
     await page.waitForFunction(
       () => document.querySelector('.diagram-shell').dataset.present === 'false',

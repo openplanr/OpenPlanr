@@ -117,6 +117,28 @@ test(`canvas zoom preserves shell geometry, minimap focus and frame identity (${
       );
       const result = await page.evaluate(async () => {
         const studio = window.__openPlanrDesignStudio;
+        // The frame budget mounts the frames nearest the camera after a debounce, so compare
+        // frame identity only once that demand has settled at the same camera.
+        const camera = { x: 28.7, y: 62.3, zoom: 0.98 };
+        const settleFrames = async () => {
+          const mounted = () =>
+            [...document.querySelectorAll('[data-planr-artifact-frame]')]
+              .map((n) => `${n.dataset.planrArtifactFrame}:${n.dataset.planrFrameState}`)
+              .join('|');
+          const deadline = performance.now() + 10000;
+          let previous = mounted();
+          for (;;) {
+            await new Promise((resolve) => setTimeout(resolve, 250));
+            const current = mounted();
+            if (current === previous && !current.includes(':loading')) return;
+            if (performance.now() > deadline) {
+              throw new Error(`Artifact frames did not settle: ${current}`);
+            }
+            previous = current;
+          }
+        };
+        studio.setCamera(camera);
+        await settleFrames();
         const nodes = [
           ...document.querySelectorAll(
             '.design-toolbar,.design-navigator,.planr-review-rail,.design-stage-context,.design-canvas-tools',
@@ -143,8 +165,8 @@ test(`canvas zoom preserves shell geometry, minimap focus and frame identity (${
         const observer = new MutationObserver((records) => (rootChanges += records.length));
         observer.observe(shell, { attributes: true });
         const samples = [];
-        for (const zoom of [0.09, 0.1, 0.11, 0.99, 1, 1.11, 1.2, 0.98]) {
-          studio.setCamera({ x: 28.7, y: 62.3, zoom });
+        for (const zoom of [0.09, 0.1, 0.11, 0.99, 1, 1.11, 1.2, camera.zoom]) {
+          studio.setCamera({ ...camera, zoom });
           await new Promise((resolve) =>
             requestAnimationFrame(() => requestAnimationFrame(resolve)),
           );
@@ -152,6 +174,7 @@ test(`canvas zoom preserves shell geometry, minimap focus and frame identity (${
         }
         observer.disconnect();
         shell.removeEventListener('planr:design-render', onRender);
+        await settleFrames();
         return {
           initial,
           samples,
