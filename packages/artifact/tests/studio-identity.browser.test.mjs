@@ -24,7 +24,7 @@ const themeCss = renderArtifactThemeCss(loadArtifactTheme());
 const title = 'Checkout platform · Long artifact title retained for review';
 const evidenceRoot = process.env.PLANR_STUDIO_IDENTITY_EVIDENCE;
 
-async function fixture(t, surface) {
+async function fixture(t, surface, companyControls = false) {
   const diagram = surface === 'diagram' || surface === 'presentation';
   const compiled = await build({
     stdin: {
@@ -37,7 +37,20 @@ async function fixture(t, surface) {
         window.__identity = { canvas, draft, exports: 0 };
         if (${JSON.stringify(surface)} === 'authoring') {
           const session = createDiagramEditorSession({ bundle: window.__bundle });
-          const editor = mountDiagramEditor({ root, session, host: { colorScheme: 'light' } });
+          const host = { colorScheme: 'light' };
+          if (${JSON.stringify(companyControls)}) {
+            const control = label => {
+              const button = document.createElement('button');
+              button.className = 'studio-button';
+              button.setAttribute('aria-label', label);
+              button.innerHTML = '<svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 12h16"/></svg>';
+              return button;
+            };
+            host.brand = false;
+            host.toolbarLeadingControls = control('Back to project');
+            host.toolbarControls = control('Switch theme');
+          }
+          const editor = mountDiagramEditor({ root, session, host });
           window.__identity.editor = editor;
           window.__identity.session = session;
           window.__identity.canvas = root.querySelector('[data-editor-svg]');
@@ -623,6 +636,42 @@ test(
           assert.equal(record.draft, 'Pending review draft', context);
         }
       }
+    }
+  },
+);
+
+test(
+  'authoring chrome settles after enlarged-text phone-to-desktop navigation',
+  options,
+  async (t) => {
+    const page = await fixture(t, 'authoring', true);
+    await page.setViewportSize({ width: 320, height: 900 });
+    await textSize(page, 2);
+    for (const width of [1200, 1300, 1400, 1440]) {
+      await page.setViewportSize({ width, height: 900 });
+      await settle(page);
+      const samples = await page.evaluate(async () => {
+        const result = [];
+        for (let index = 0; index < 20; index++) {
+          await new Promise((resolve) => requestAnimationFrame(resolve));
+          const bar = document.querySelector('.diagram-authoring-toolbar');
+          result.push({
+            layout: bar.dataset.studioLayout,
+            height: bar.getBoundingClientRect().height,
+          });
+        }
+        return result.slice(3);
+      });
+      assert.equal(
+        new Set(samples.map((sample) => sample.layout)).size,
+        1,
+        `${width}px layout settles without alternating rows`,
+      );
+      assert.equal(
+        new Set(samples.map((sample) => sample.height)).size,
+        1,
+        `${width}px header height is stable`,
+      );
     }
   },
 );

@@ -134,7 +134,8 @@ export function StudioToolbar({
       element.dataset.studioDensity = width <= 680 ? 'narrow' : 'regular';
       const style = window.getComputedStyle(element);
       const available = width - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight);
-      const gap = parseFloat(style.columnGap) || 0;
+      // Compact row gaps must not lower the inline fit requirement on the next measurement.
+      const gap = Math.max(12, parseFloat(style.columnGap) || 0);
       element.dataset.studioCenter = 'true';
       const centerWidth = center.scrollWidth;
       element.dataset.studioCenter = String(centerWidth > 0);
