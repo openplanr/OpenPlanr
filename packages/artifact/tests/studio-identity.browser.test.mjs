@@ -233,6 +233,11 @@ async function observe(page) {
         label: element.getAttribute('aria-label') || element.textContent,
         color: getComputedStyle(element).color,
         background: getComputedStyle(element).backgroundColor,
+        glyph: element.querySelector('svg') ? rect(element.querySelector('svg')) : null,
+        surface: {
+          content: getComputedStyle(element, '::before').content,
+          inset: parseFloat(getComputedStyle(element, '::before').left),
+        },
         ...rect(element),
       })),
       bodyOverflow: document.documentElement.scrollWidth > innerWidth,
@@ -281,7 +286,9 @@ for (const surface of ['design', 'diagram', 'presentation', 'authoring']) {
             `${JSON.stringify(observations, null, 2)}\n`,
           );
       });
-      for (const width of [375, 390, 680, 681, 700, 768, 1440, 681]) {
+      for (const width of surface === 'authoring'
+        ? [320, 375, 390, 680, 681, 700, 768, 1440, 681]
+        : [375, 390, 680, 681, 700, 768, 1440, 681]) {
         await page.setViewportSize({ width, height: 900 });
         for (const theme of ['light', 'dark']) {
           await page.emulateMedia({
@@ -306,7 +313,7 @@ for (const surface of ['design', 'diagram', 'presentation', 'authoring']) {
               ...(await observe(page)),
             };
             observations.push(record);
-            if (evidenceRoot && [375, 681, 768, 1440].includes(width))
+            if (evidenceRoot && [320, 375, 681, 768, 1440].includes(width))
               await page.screenshot({
                 path: join(
                   evidenceRoot,
@@ -344,6 +351,79 @@ for (const surface of ['design', 'diagram', 'presentation', 'authoring']) {
                 'inline'
             )
               assert.equal(record.toolbar.height, 60, `${context}: compact desktop/tablet header`);
+            if (
+              surface === 'authoring' &&
+              width <= 390 &&
+              scale === 1 &&
+              (await page.locator('.studio-toolbar').getAttribute('data-studio-layout')) ===
+                'compact'
+            ) {
+              assert.equal(record.title.fontSize, 14, `${context}: compact title typography`);
+              assert.ok(record.toolbar.height <= 92, `${context}: two compact command rows`);
+              const save = page.getByRole('button', { name: 'Save diagram', exact: true });
+              await save.hover();
+              const hover = await save.evaluate((element) => {
+                // Resolve modern color-mix serialization through the browser's sRGB canvas.
+                const canvas = document.createElement('canvas');
+                canvas.width = canvas.height = 1;
+                const context = canvas.getContext('2d');
+                const color = (value) => {
+                  context.clearRect(0, 0, 1, 1);
+                  context.fillStyle = value;
+                  context.fillRect(0, 0, 1, 1);
+                  const [r, g, b] = context.getImageData(0, 0, 1, 1).data;
+                  return `rgb(${r}, ${g}, ${b})`;
+                };
+                return {
+                  disabled: element.disabled,
+                  color: color(getComputedStyle(element).color),
+                  background: color(getComputedStyle(element, '::before').backgroundColor),
+                };
+              });
+              if (!hover.disabled)
+                assert.ok(
+                  contrastRatio(hover.color, hover.background) >= 3,
+                  `${context}: Save hover glyph has readable contrast`,
+                );
+              const disabledSurface = await save.evaluate((element) => {
+                const wasDisabled = element.disabled;
+                element.disabled = true;
+                const fill = getComputedStyle(element, '::before').backgroundColor;
+                const raised = document.createElement('span');
+                raised.style.background = 'var(--de-raised)';
+                element.append(raised);
+                const expected = getComputedStyle(raised).backgroundColor;
+                raised.remove();
+                element.disabled = wasDisabled;
+                return { fill, expected };
+              });
+              assert.equal(
+                disabledSurface.fill,
+                disabledSurface.expected,
+                `${context}: disabled Save retains its neutral surface`,
+              );
+              await page.mouse.move(0, 899);
+              for (const button of record.buttons.filter((entry) => entry.glyph)) {
+                assert.ok(
+                  button.width >= 44 && button.height >= 44,
+                  `${context}: ${button.label} retains its touch target`,
+                );
+                assert.equal(
+                  button.glyph.width,
+                  18,
+                  `${context}: ${button.label} has a compact glyph`,
+                );
+                assert.equal(
+                  button.surface.inset,
+                  6,
+                  `${context}: ${button.label} has an inset visible surface`,
+                );
+                assert.ok(
+                  button.width - 2 * button.surface.inset <= 32,
+                  `${context}: ${button.label} surface is at most 32px`,
+                );
+              }
+            }
             assert.ok(
               record.badge.textTop >= record.toolbar.top - 1 &&
                 record.badge.textBottom <= record.toolbar.bottom + 1,
@@ -425,7 +505,8 @@ for (const surface of ['design', 'diagram', 'presentation', 'authoring']) {
               JSON.stringify(window.__identity.session.getState().view.camera),
             )
           : null;
-      await trigger.click();
+      await trigger.focus();
+      await page.keyboard.press('Enter');
       const item = page.getByRole('menuitem', {
         name: surface === 'design' ? 'Portable HTML' : 'Export JSON',
         exact: true,
@@ -443,6 +524,19 @@ for (const surface of ['design', 'diagram', 'presentation', 'authoring']) {
         true,
         'Escape restores the existing menu trigger',
       );
+      if (surface === 'authoring') {
+        const focus = await trigger.evaluate((element) => {
+          const surface = getComputedStyle(element, '::before');
+          return {
+            visible: element.matches(':focus-visible'),
+            style: surface.outlineStyle,
+            width: parseFloat(surface.outlineWidth),
+          };
+        });
+        assert.equal(focus.visible, true, 'Phone trigger visibly regains keyboard focus');
+        assert.equal(focus.style, 'solid');
+        assert.ok(focus.width >= 2, 'Inset phone surface carries a visible focus ring');
+      }
       const afterMenu = await observe(page);
       assert.equal(afterMenu.canvasRetained, true);
       assert.equal(afterMenu.draftRetained, true);
