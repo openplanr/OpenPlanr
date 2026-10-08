@@ -10,6 +10,7 @@ import {
 } from '../../services/upgrade-report.js';
 import {
   executeCliHalfUpgrade,
+  hostPluginSource,
   planCliUpgrade,
   reconcileInstalledTuple,
   upgradeNextSteps,
@@ -46,8 +47,10 @@ export function registerUpgradeCommand(program: Command, _cliVersion: string) {
         display.keyValue('Installed CLI', result.installed.cli);
         display.keyValue('Bundled pipeline', result.bundledPipeline ?? 'not resolved');
         display.keyValue(
-          'Installed host plugin (planr@openplanr-local)',
-          result.installed.skills ?? 'not installed',
+          'Claude plugin',
+          result.hostPlugin
+            ? `${result.hostPlugin.id} ${result.hostPlugin.version ?? 'version unknown'} (${hostPluginSource(result.hostPlugin)})`
+            : 'not installed',
         );
         if (result.legacyPlugins && result.legacyPlugins.length > 0) {
           display.keyValue('Legacy plugins', result.legacyPlugins.join(', '));

@@ -12,9 +12,12 @@ import {
 import { applySetup, bundledHostRoot } from '../../src/services/runtime-manager-service.js';
 import {
   CLAUDE_PLUGIN_SETUP_COMMAND,
+  claudeManagedPluginNote,
   DEFAULT_ECOSYSTEM_SOURCE,
   type EcosystemComponents,
   executeCliHalfUpgrade,
+  hostPluginSource,
+  type InstalledHostPlugin,
   type NpmCommandResult,
   type NpmCommandRunner,
   parseReleaseNotes,
@@ -56,7 +59,7 @@ afterEach(() => {
  * `claude plugin marketplace list --json` and `claude plugin list --json`.
  */
 function installedRunner(
-  installed: Array<{ id: string; version: string; installPath?: string }>,
+  installed: Array<{ id: string; version: string; installPath?: string; scope?: string }>,
 ): ClaudeCommandRunner {
   return (args) => {
     const key = args.join(' ');
@@ -72,7 +75,7 @@ function installedRunner(
       return {
         status: 0,
         stdout: JSON.stringify(
-          installed.map((plugin) => ({ ...plugin, scope: 'user', enabled: true })),
+          installed.map((plugin) => ({ scope: 'user', enabled: true, ...plugin })),
         ),
         stderr: '',
       };
@@ -737,6 +740,32 @@ describe('upgradeNextSteps', () => {
     ]);
   });
 
+  it('never prescribes a local plugin install beside a plugin synced from the directory', async () => {
+    const claude = recordingClaude([{ id: 'planr@synced', version: '1.0.0' }]);
+    const synced: ClaudeCommandRunner = (args) => {
+      const result = claude.runner(args);
+      return args.join(' ') === 'plugin list --json'
+        ? {
+            ...result,
+            stdout: JSON.stringify([
+              { id: 'planr@synced', version: '1.0.0', scope: 'synced', enabled: true },
+            ]),
+          }
+        : result;
+    };
+    await applySetup({
+      projectDir: root,
+      cliVersion,
+      runtime: 'claude-code',
+      scope: 'user',
+      manageExternalRuntimes: false,
+    });
+
+    const steps = await upgradeNextSteps(root, { claudeCommandRunner: synced });
+    expect(steps.filter((step) => step.runtime === 'claude-code')).toEqual([]);
+    expect(claude.calls.some(isMutatingClaudeCall)).toBe(false);
+  });
+
   it('lists nothing when Claude Code is absent and no coding agent is recorded', async () => {
     const steps = await upgradeNextSteps(root, {
       claudeCommandRunner: makeRunner({ available: false }),
@@ -1015,8 +1044,15 @@ describe('planCliUpgrade (FR4 — execute what it can)', () => {
 // ---------------------------------------------------------------------------
 describe('upgrade apply lists the agent updates when only the plugins trail', () => {
   const cliEntry = resolve('src/cli/index.ts');
+  const pipelineDeps = {
+    'planr-pipeline': JSON.parse(readFileSync(resolve('package.json'), 'utf8'))
+      .optionalDependencies['planr-pipeline'] as string,
+  };
 
-  function stubClaude(scriptPath: string, installed: { skills: string }): void {
+  function stubClaude(
+    scriptPath: string,
+    plugins: Array<{ id: string; version: string; scope: string }>,
+  ): void {
     writeFileSync(
       scriptPath,
       `const key = process.argv.slice(2).join(' ');
@@ -1026,9 +1062,7 @@ if (key === 'plugin marketplace list --json') {
   process.exit(0);
 }
 if (key === 'plugin list --json') {
-  process.stdout.write(JSON.stringify([
-    { id: 'planr@openplanr-local', version: ${JSON.stringify(installed.skills)}, scope: 'user', enabled: true },
-  ]));
+  process.stdout.write(JSON.stringify(${JSON.stringify(plugins.map((plugin) => ({ ...plugin, enabled: true })))}));
   process.exit(0);
 }
 process.stdout.write('[]');
@@ -1052,7 +1086,7 @@ process.exit(0);
     );
 
     const claudeStub = join(root, 'claude-stub.cjs');
-    stubClaude(claudeStub, { skills: '1.25.0' });
+    stubClaude(claudeStub, [{ id: 'planr@openplanr-local', version: '1.25.0', scope: 'user' }]);
 
     // `execFileSync` throws on a non-zero exit, so the stdout it captured is read off the
     // error. The output is the assertion target either way.
@@ -1087,6 +1121,42 @@ process.exit(0);
     // The advice never names the retired remote plugins setup itself marks as legacy.
     expect(output).not.toContain('openplanr@openplanr');
     expect(output).not.toContain('planr-pipeline@openplanr');
+  }, 30_000);
+
+  it('reports a plugin synced from the Claude plugin directory and prescribes no local install', () => {
+    const manifestPath = join(root, 'ecosystem.json');
+    writeFileSync(
+      manifestPath,
+      JSON.stringify({
+        name: 'openplanr',
+        version: cliVersion,
+        optionalDependencies: pipelineDeps,
+      }),
+    );
+    const claudeStub = join(root, 'claude-stub.cjs');
+    stubClaude(claudeStub, [{ id: 'planr@synced', version: '1.0.0', scope: 'synced' }]);
+
+    const output = execFileSync(
+      process.execPath,
+      ['--import', 'tsx', cliEntry, '--project-dir', root, 'upgrade', 'status'],
+      {
+        encoding: 'utf8',
+        env: {
+          ...process.env,
+          OPENPLANR_HOME: userHome,
+          OPENPLANR_ECOSYSTEM_SOURCE: manifestPath,
+          OPENPLANR_CLAUDE_BIN: claudeStub,
+          NO_COLOR: '1',
+        },
+        stdio: ['ignore', 'pipe', 'pipe'],
+      },
+    );
+
+    expect(output).toContain('Reconciliation:  agents-behind');
+    expect(output).toContain('Claude plugin:  planr@synced 1.0.0 (Claude plugin directory)');
+    expect(output).toContain('Claude updates it from the Claude plugin directory.');
+    expect(output).not.toContain('runtime update claude');
+    expect(output).not.toContain('install the OpenPlanr plugin');
   }, 30_000);
 });
 
@@ -1171,6 +1241,63 @@ describe('reconcileInstalledTuple against the npm registry document (BL-026)', (
     expect(result.installed.skills).toBe(cliVersion);
     // The duplicate is doctor's warning, not a legacy id and never an upgrade verdict.
     expect(result.legacyPlugins).toEqual([]);
+    expect(result.status).toBe('aligned');
+  });
+
+  it.each([
+    ['planr@synced', 'synced', 'Claude plugin directory'],
+    ['planr@openplanr', 'user', 'openplanr marketplace'],
+  ])(
+    'reports %s as a Claude-managed host plugin that trails the CLI as agents-behind',
+    async (id, scope, source) => {
+      const result = await reconcileInstalledTuple('/tmp/project', {
+        claudeCommandRunner: installedRunner([{ id, version: '1.0.0', scope }]),
+        fetchImpl: registryFetch(registryDocument(cliVersion)),
+      });
+      expect(result.installed.skills).toBe('1.0.0');
+      expect(result.hostPlugin).toEqual({
+        id,
+        version: '1.0.0',
+        managedBy: 'claude',
+        behind: true,
+      });
+      expect(hostPluginSource(result.hostPlugin as InstalledHostPlugin)).toBe(source);
+      expect(result.status).toBe('agents-behind');
+      const plan = planCliUpgrade(result);
+      expect(plan.proceed).toBe(false);
+      expect(plan.reason).toBe(
+        `OpenPlanr ${cliVersion} is up to date. Claude Code's ${id} 1.0.0 is older than this CLI; Claude updates it from the ${source}.`,
+      );
+    },
+  );
+
+  it('reports a directory plugin ahead of the CLI as an available CLI upgrade, not an error', async () => {
+    const result = await reconcileInstalledTuple('/tmp/project', {
+      claudeCommandRunner: installedRunner([
+        { id: 'planr@synced', version: higherCli, scope: 'synced' },
+      ]),
+      fetchImpl: registryFetch(registryDocument(higherCli)),
+    });
+    expect(result.hostPlugin).toMatchObject({ id: 'planr@synced', behind: false });
+    expect(result.status).toBe('upgrade-available');
+    expect(claudeManagedPluginNote(result)).toBeUndefined();
+  });
+
+  it('reports the plugin openplanr setup installed as managed by the CLI', async () => {
+    const result = await reconcileInstalledTuple('/tmp/project', {
+      claudeCommandRunner: installedRunner([
+        { id: 'planr@openplanr-local', version: cliVersion },
+        { id: 'planr@synced', version: '1.0.0', scope: 'synced' },
+      ]),
+      fetchImpl: registryFetch(registryDocument(cliVersion)),
+    });
+    expect(result.hostPlugin).toEqual({
+      id: 'planr@openplanr-local',
+      version: cliVersion,
+      managedBy: 'cli',
+      behind: false,
+    });
+    expect(hostPluginSource(result.hostPlugin as InstalledHostPlugin)).toBe('openplanr setup');
     expect(result.status).toBe('aligned');
   });
 

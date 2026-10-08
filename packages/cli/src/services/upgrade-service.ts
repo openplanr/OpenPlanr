@@ -17,6 +17,7 @@ import { parseExternalJson } from '../utils/external-json.js';
 import { logger } from '../utils/logger.js';
 import {
   type ClaudeCommandRunner,
+  type ClaudePluginInspection,
   inspectBundledClaudePluginIntegration,
   OPENPLANR_CLAUDE_PLUGIN,
 } from './claude-plugin-service.js';
@@ -86,6 +87,17 @@ export interface UpgradeReconciliation {
   bundledPipeline?: string | null;
   /** Retired host plugins (`openplanr@…`, `planr-pipeline@…`); informational, doctor warns about them. */
   legacyPlugins?: string[];
+  /** The `planr` plugin Claude Code loads, from whichever source installed it. */
+  hostPlugin?: InstalledHostPlugin;
+}
+
+export interface InstalledHostPlugin {
+  id: string;
+  version: string | null;
+  /** `cli` for this CLI's bundled marketplace; `claude` when Claude updates it (directory, synced, another marketplace). */
+  managedBy: 'cli' | 'claude';
+  /** Older than the plugin this CLI bundles. */
+  behind: boolean;
 }
 
 export interface ReconcileOptions {
@@ -380,6 +392,46 @@ function inspectBundledHostPlugin(runner?: ClaudeCommandRunner) {
   return inspectBundledClaudePluginIntegration(bundledHostRoot('claude'), runner);
 }
 
+/** The bundled plugin when installed, else an enabled `planr` plugin from another source. */
+function installedHostPlugin(inspection: ClaudePluginInspection): InstalledHostPlugin | undefined {
+  const bundled = inspection.plugins.find(
+    (plugin) => plugin.name === OPENPLANR_CLAUDE_PLUGIN && plugin.installed,
+  );
+  if (bundled) {
+    const version = bundled.installedVersion ?? null;
+    return {
+      id: bundled.id,
+      version,
+      managedBy: 'cli',
+      behind: isBehind(version, bundled.expectedVersion),
+    };
+  }
+  const external =
+    inspection.externalPlugins.find((plugin) => plugin.enabled) ?? inspection.externalPlugins[0];
+  if (!external) return undefined;
+  const version = external.version ?? null;
+  return {
+    id: external.id,
+    version,
+    managedBy: 'claude',
+    behind: isBehind(version, inspection.plugins[0]?.expectedVersion),
+  };
+}
+
+/** Where the plugin came from: the plugin directory, a marketplace, or this CLI. */
+export function hostPluginSource(plugin: InstalledHostPlugin): string {
+  if (plugin.managedBy === 'cli') return `${CLI_COMMAND} setup`;
+  const marketplace = plugin.id.slice(plugin.id.indexOf('@') + 1);
+  return marketplace === 'synced' ? 'Claude plugin directory' : `${marketplace} marketplace`;
+}
+
+/** How a plugin Claude manages catches up with this CLI, or `undefined` when it need not. */
+export function claudeManagedPluginNote(reconciliation: UpgradeReconciliation): string | undefined {
+  const plugin = reconciliation.hostPlugin;
+  if (plugin?.managedBy !== 'claude' || !plugin.behind) return undefined;
+  return `Claude Code's ${plugin.id} ${plugin.version} is older than this CLI; Claude updates it from the ${hostPluginSource(plugin)}.`;
+}
+
 /**
  * Read the published compatibility manifest, compare it against the real
  * installed tuple (this CLI's version plus the host plugin), and report whether
@@ -395,13 +447,14 @@ export async function reconcileInstalledTuple(
   const cliVersion = readOpenPlanrVersion();
   const bundledPipeline = resolvePipelinePackage(false)?.version ?? null;
   const inspection = inspectBundledHostPlugin(options.claudeCommandRunner);
-  const hostPlugin = inspection.plugins.find((plugin) => plugin.name === OPENPLANR_CLAUDE_PLUGIN);
+  const hostPlugin = installedHostPlugin(inspection);
   const installed = {
     cli: cliVersion,
-    skills: hostPlugin?.installedVersion ?? null,
+    skills: hostPlugin?.version ?? null,
     pipeline: null,
   };
   const legacyPlugins = inspection.legacyPluginIds;
+  const pluginReport = hostPlugin ? { hostPlugin } : {};
 
   const { components: published, source: ecosystemSource } = await loadEcosystem(options);
   if (!published) {
@@ -412,6 +465,7 @@ export async function reconcileInstalledTuple(
       ecosystemSource,
       bundledPipeline,
       legacyPlugins,
+      ...pluginReport,
     };
   }
 
@@ -428,10 +482,7 @@ export async function reconcileInstalledTuple(
     // the pipeline against the pin the published CLI bundles. A registry-described set
     // declares no mutual ranges, so it cannot be incompatible; leftover legacy plugins are
     // reported for doctor's warning, not judged here.
-    agentsBehind = inspection.plugins.some(
-      (plugin) =>
-        plugin.installed && isBehind(plugin.installedVersion ?? null, plugin.expectedVersion),
-    );
+    agentsBehind = hostPlugin?.behind === true;
     pipelineBehind = isBehind(installed.pipeline ?? bundledPipeline, published.pipeline.version);
     componentDrift = cliDrift || agentsBehind || pipelineBehind;
     incompatibleDrift = false;
@@ -459,7 +510,15 @@ export async function reconcileInstalledTuple(
           ? 'agents-behind'
           : 'incompatible';
 
-  return { status, installed, published, ecosystemSource, bundledPipeline, legacyPlugins };
+  return {
+    status,
+    installed,
+    published,
+    ecosystemSource,
+    bundledPipeline,
+    legacyPlugins,
+    ...pluginReport,
+  };
 }
 
 // ===========================================================================
@@ -561,10 +620,13 @@ export function planCliUpgrade(reconciliation: UpgradeReconciliation): UpgradePl
     };
   }
   if (status === 'agents-behind') {
+    const note = claudeManagedPluginNote(reconciliation);
     return {
       proceed: false,
       targetCliVersion: null,
-      reason: `OpenPlanr ${installed.cli} is up to date. Update your coding agents with the commands below.`,
+      reason: note
+        ? `OpenPlanr ${installed.cli} is up to date. ${note}`
+        : `OpenPlanr ${installed.cli} is up to date. Update your coding agents with the commands below.`,
     };
   }
   if (status === 'incompatible' && compareStableVersions(installed.cli, target) < 0) {
@@ -789,7 +851,10 @@ export function withAgentNextSteps(
 
 type NextStepCandidate = Awaited<ReturnType<typeof installedRuntimeScopes>>[number];
 
-/** Recorded installs, plus a Claude plugin installed without a record of it. */
+/**
+ * Recorded installs, plus a Claude plugin installed without a record of it. A user-scope Claude
+ * install is left out while Claude manages the `planr` plugin, since setup would add a second one.
+ */
 async function nextStepCandidates(
   projectDir: string,
   claudeCommandRunner: ClaudeCommandRunner | undefined,
@@ -802,11 +867,13 @@ async function nextStepCandidates(
     if (!(error instanceof RuntimeManagerError)) throw error;
     stateError = error;
   }
-  if (!candidates.some(({ runtime, scope }) => runtime === 'claude-code' && scope === 'user')) {
-    const plugin = inspectBundledHostPlugin(claudeCommandRunner).plugins.find(
-      (entry) => entry.name === OPENPLANR_CLAUDE_PLUGIN,
-    );
-    if (plugin?.installed) candidates.unshift({ runtime: 'claude-code', scope: 'user' });
+  const claudeUser = ({ runtime, scope }: NextStepCandidate) =>
+    runtime === 'claude-code' && scope === 'user';
+  const hostPlugin = installedHostPlugin(inspectBundledHostPlugin(claudeCommandRunner));
+  if (hostPlugin?.managedBy === 'claude') {
+    candidates = candidates.filter((candidate) => !claudeUser(candidate));
+  } else if (hostPlugin && !candidates.some(claudeUser)) {
+    candidates.unshift({ runtime: 'claude-code', scope: 'user' });
   }
   return { candidates, ...(stateError ? { stateError } : {}) };
 }

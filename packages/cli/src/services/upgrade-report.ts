@@ -2,6 +2,7 @@ import { CLI_COMMAND } from '../utils/constants.js';
 import { display, logger } from '../utils/logger.js';
 import { joinNames } from './runtime-change-summary.js';
 import {
+  claudeManagedPluginNote,
   type ExecuteCliHalfUpgradeResult,
   isRepairStep,
   type ReleaseNoteSection,
@@ -138,8 +139,11 @@ export function printReconciliationStatus(
       'An upgrade is available in the release metadata; the installed components are still mutually compatible.',
     );
   } else if (result.status === 'agents-behind') {
+    const note = claudeManagedPluginNote(result);
     logger.info(
-      `The OpenPlanr CLI is up to date (${result.installed.cli}). Update your coding agents with the commands below.`,
+      note
+        ? `The OpenPlanr CLI is up to date (${result.installed.cli}). ${note}`
+        : `The OpenPlanr CLI is up to date (${result.installed.cli}). Update your coding agents with the commands below.`,
     );
   } else if (result.status === 'incompatible') {
     logger.warn('The installed components are on mutually incompatible versions.');
