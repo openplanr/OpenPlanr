@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.59.0
+
+### Minor Changes
+
+- 0b4992c: Add revision-aware company workspace contracts for project and artifact catalogs, fixed-revision guest access, publication recovery, and project archive and restore. Browser consumers can validate these records while existing contracts remain readable.
+
+### Patch Changes
+
+- 0b4992c: Expose the shared authored diagram review projection for browser callers without filesystem dependencies, preserving graph, geometry and validated source identity while excluding private source correspondence.
+- 0b4992c: Studio and diagram toolbars switch to a compact layout when their controls stop fitting rather than at a fixed width, list actions before view tools so visual and keyboard order match, keep titles readable beside navigation controls, and return keyboard focus to the menu trigger when the layout reflows.
+- 0b4992c: Retain independent diagram edits during concurrent saves, require explicit overlap choices, and preserve exact retries through recovery. Trusted hosts can present one comparison dialog without changing standalone editing.
+
 ## 0.58.0
 
 ### Minor Changes
