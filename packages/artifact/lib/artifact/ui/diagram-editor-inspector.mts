@@ -56,8 +56,10 @@ export function createEditorInspector(ctx: DiagramEditorContext): DiagramEditorI
     propertiesDirty = !!dirty;
     dom.shell.dataset.propertyDirty = String(propertiesDirty);
     const status = state.saveState;
-    const saveControl = dom.bar.querySelector<HTMLButtonElement>('[data-action="save"]');
-    if (saveControl)
+    const saveControls = dom.bar.querySelectorAll<HTMLButtonElement>(
+      '[data-action="save"],[data-action="menu-save"]',
+    );
+    for (const saveControl of saveControls)
       saveControl.disabled =
         !ctx.editable(state) ||
         status === 'saving' ||

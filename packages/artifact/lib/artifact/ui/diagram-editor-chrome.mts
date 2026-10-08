@@ -256,8 +256,10 @@ export function createEditorChrome(ctx: DiagramEditorContext): DiagramEditorChro
       properties: !state.capabilities.read,
       outline: !state.capabilities.read,
     })) {
-      const control = barControl(action);
-      if (control) control.disabled = disabled;
+      for (const control of bar.querySelectorAll<HTMLButtonElement>(
+        `[data-action="${action}"],[data-action="menu-${action}"]`,
+      ))
+        control.disabled = disabled;
     }
     for (const entry of ctx.config.actions) {
       const control = bar.querySelector<HTMLButtonElement>('[data-host-action="' + entry.id + '"]');

@@ -225,3 +225,30 @@ export declare function exportMermaidCopy(bundle: DiagramAuthoringBundle):
       bundleUnchanged: true;
     }
   | { ok: false; diagnostics: MermaidCopyDiagnostic[] };
+
+/** An overlap identifies a stable content path, including absence separately from null. */
+export interface DiagramMergeConflict {
+  id: string;
+  path: string[];
+  base: DiagramJsonValue | null;
+  local: DiagramJsonValue | null;
+  remote: DiagramJsonValue | null;
+  present: { base: boolean; local: boolean; remote: boolean };
+}
+export type DiagramMergeChoices = Record<string, 'local' | 'remote'>;
+export type DiagramMergeResult =
+  | { ok: true; bundle: DiagramAuthoringBundle; conflicts: DiagramMergeConflict[] }
+  | (DiagramKernelFailure & { conflicts?: DiagramMergeConflict[] });
+/** Merge against the exact retained base; every overlap requires an explicit choice. */
+export function previewDiagramMerge(
+  base: DiagramAuthoringBundle,
+  local: DiagramAuthoringBundle,
+  remote: DiagramAuthoringBundle,
+  choices?: DiagramMergeChoices,
+): DiagramMergeResult;
+/** No save is performed; the caller must commit against this transaction's exact base. */
+export function compileDiagramBundleTransaction(
+  current: DiagramAuthoringBundle,
+  target: DiagramAuthoringBundle,
+  options: { transactionId: string },
+): { ok: true; transaction: DiagramEditTransaction } | DiagramKernelFailure;

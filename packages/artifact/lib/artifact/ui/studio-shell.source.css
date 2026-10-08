@@ -467,6 +467,9 @@
   .de-bar {
     display: block;
     padding: 0;
+    /* The React toolbar owns its intrinsic height. A measured prior height must
+       not keep an empty row when a narrow host grows back to desktop. */
+    min-height: 0;
     height: auto;
     overflow: visible;
     border-bottom: 0;
@@ -703,5 +706,96 @@
   .studio-menu-item {
     min-width: 44px;
     min-height: 44px;
+  }
+}
+
+/* Diagram authoring separates document navigation, primary commands and panel tools. */
+.planr-diagram-editor[data-studio-framework="react"] .diagram-authoring-toolbar {
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  .planr-title-block strong {
+    max-width: none;
+  }
+  .studio-toolbar-leading {
+    grid-column: 1;
+    grid-row: 1;
+  }
+  .studio-toolbar-center {
+    display: none;
+  }
+  .studio-toolbar-secondary {
+    grid-column: 3;
+    grid-row: 1;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    min-width: 0;
+  }
+  .studio-toolbar-trailing {
+    grid-column: 2;
+    grid-row: 1;
+    width: auto;
+  }
+  .studio-toolbar-actions {
+    flex-wrap: nowrap;
+  }
+  .de-icon-button {
+    min-width: 44px;
+    min-height: 44px;
+  }
+  button,
+  a {
+    border-radius: 8px;
+  }
+  button svg,
+  a svg {
+    width: 18px;
+    height: 18px;
+  }
+  [data-action="outline"] {
+    background: transparent;
+    border-color: transparent;
+  }
+}
+.planr-diagram-editor[data-studio-framework="react"]
+  .diagram-authoring-toolbar[data-studio-layout="compact"] {
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 2px 8px;
+  .studio-toolbar-leading {
+    grid-column: 1;
+    grid-row: 1;
+    width: auto;
+  }
+  .studio-toolbar-trailing {
+    grid-column: 2;
+    grid-row: 1;
+    flex-wrap: nowrap;
+    width: auto;
+  }
+  .studio-toolbar-secondary {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    border-top: 1px solid var(--de-rule);
+    padding-top: 2px;
+  }
+  .de-save-state {
+    display: inline-block;
+    flex: 1;
+    max-width: none;
+    overflow: visible;
+    white-space: normal;
+    font-size: 12px;
+    line-height: 1.3;
+  }
+  .planr-brand {
+    flex: 1;
+  }
+  .de-title {
+    max-width: none;
+  }
+  .studio-type-badge {
+    font-size: 10px;
+  }
+  .studio-toolbar-actions {
+    flex-wrap: nowrap;
   }
 }

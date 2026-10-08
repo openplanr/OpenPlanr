@@ -331,7 +331,7 @@ function compileCompensation(current, target, inverse, transactionId) {
         transactionId,
         base: snapshot(current),
         operations,
-        undoOf: inverse.transactionId,
+        undoOf: inverse?.transactionId ?? null,
       }),
   };
 }
@@ -435,6 +435,37 @@ export function createConditionalInverse(current, inverse, options) {
       '$.inverse',
       'inverse-conflict',
       'Compensation would alter content beyond the guarded inverse.',
+    );
+  return { ok: true, transaction: preview.transaction };
+}
+
+/** Compile a complete, validated resolved copy as an ordinary compare-and-swap edit.
+ * Unsupported metadata or ordering changes fail rather than disappearing from the copy.
+ * @type {typeof import('./index.d.mts').compileDiagramBundleTransaction}
+ */
+export function compileDiagramBundleTransaction(current, target, options) {
+  for (const bundle of [current, target]) {
+    const checked = validateAuthoringBundle(bundle);
+    if (!checked.ok) return checked;
+  }
+  if (
+    inspectPlainData(options).length ||
+    !options ||
+    Object.keys(options).some((key) => key !== 'transactionId') ||
+    typeof options.transactionId !== 'string'
+  )
+    return failure('$.options', 'transaction-id', 'Supply a fresh transaction identity.');
+  if (current.diagramId !== target.diagramId)
+    return failure('$.diagramId', 'diagram-id', 'The resolved copy belongs to another diagram.');
+  const compiled = compileCompensation(current, target, null, options.transactionId);
+  if (!compiled.ok) return compiled;
+  const preview = previewDiagramTransaction(current, compiled.transaction);
+  if (!preview.ok) return preview;
+  if (!same(preview.bundle, target))
+    return failure(
+      '$.target',
+      'unsupported-resolution',
+      'The resolved copy contains changes this editor cannot represent. Keep or export it before changing the resolution.',
     );
   return { ok: true, transaction: preview.transaction };
 }

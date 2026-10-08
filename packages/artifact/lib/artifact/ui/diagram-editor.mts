@@ -192,7 +192,6 @@ export function mountDiagramEditor({ root, session, host = {} }: MountOptions): 
   };
   // The capability lookup returns null for a missing grammar id, as when access changed.
   const editable = (state: DiagramEditorState) =>
-    !layout.compact() &&
     state.capabilities.read &&
     state.capabilities.write &&
     state.saveState !== 'access-changed' &&

@@ -534,6 +534,11 @@ export function renderDiagramProperties({
     ['Copy', 'copy', 'copy', { disabled: !editable }],
     ['Duplicate', 'duplicate', 'duplicate', { disabled: !editable }],
   ]);
+  if (entry.collection === 'nodes')
+    actionRow(document, objectActions.body, [
+      ['Add connected step', 'quick-add', 'plus', { disabled: !editable }],
+      ['Connect to shape…', 'connect', 'kind-connector', { disabled: !editable }],
+    ]);
   form.append(objectActions.details);
 
   const advanced = inspectorSection(document, 'Advanced', {

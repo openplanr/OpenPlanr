@@ -281,7 +281,7 @@ for (const surface of ['design', 'diagram', 'presentation', 'authoring']) {
             `${JSON.stringify(observations, null, 2)}\n`,
           );
       });
-      for (const width of [375, 390, 680, 681, 768, 1440]) {
+      for (const width of [375, 390, 680, 681, 700, 768, 1440, 681]) {
         await page.setViewportSize({ width, height: 900 });
         for (const theme of ['light', 'dark']) {
           await page.emulateMedia({
@@ -306,7 +306,7 @@ for (const surface of ['design', 'diagram', 'presentation', 'authoring']) {
               ...(await observe(page)),
             };
             observations.push(record);
-            if (evidenceRoot && [375, 768, 1440].includes(width))
+            if (evidenceRoot && [375, 681, 768, 1440].includes(width))
               await page.screenshot({
                 path: join(
                   evidenceRoot,
@@ -330,6 +330,13 @@ for (const surface of ['design', 'diagram', 'presentation', 'authoring']) {
               record.title.visibleWidth >= 36,
               `${context}: title is visible and may truncate`,
             );
+            if (surface === 'authoring') {
+              const available = record.identity.right - record.title.bounds.left;
+              assert.ok(
+                record.title.visibleWidth >= Math.min(record.title.glyphWidth, available) - 1,
+                `${context}: title uses its available identity column (${record.title.visibleWidth}/${available}px)`,
+              );
+            }
             if (
               scale === 1 &&
               width >= 681 &&

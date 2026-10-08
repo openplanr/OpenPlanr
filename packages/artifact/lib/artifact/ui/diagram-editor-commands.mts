@@ -1,4 +1,7 @@
-import type { DiagramPlacement } from '@openplanr/protocol/diagram-authoring-contracts';
+import {
+  type DiagramPlacement,
+  getDiagramAuthoringCapability,
+} from '@openplanr/protocol/diagram-authoring-contracts';
 import type {
   VersionedDiagramAuthoringBundle as DiagramAuthoringBundle,
   VersionedDiagramEditTransaction as DiagramEditTransaction,
@@ -13,6 +16,7 @@ import type { DiagramEditorSession, DiagramEditorState } from '../diagram/editor
 import {
   addOrthogonalDetour,
   arrangementCommand,
+  connector,
   createObject,
   type DiagramEditorPoint,
   type DiagramObjectKind,
@@ -318,15 +322,17 @@ export function createEditorCommands(ctx: DiagramEditorContext): DiagramEditorCo
     [
       'outline-tab',
       ({ state }) => {
-        ctx.outline.showTab('outline');
+        ctx.outline.preferTab('outline');
         ctx.chrome.render(state, { force: true });
+        ctx.outline.showTab('outline', { focus: true });
       },
     ],
     [
       'shapes-tab',
       ({ state }) => {
-        ctx.outline.showTab('shapes');
+        ctx.outline.preferTab('shapes');
         ctx.chrome.render(state, { force: true });
+        ctx.outline.showTab('shapes', { focus: true });
       },
     ],
     ['properties-tab', () => ctx.inspector.showTab(actionTrigger?.dataset.tab ?? 'properties')],
@@ -341,7 +347,7 @@ export function createEditorCommands(ctx: DiagramEditorContext): DiagramEditorCo
         notice(state.view.snap ? 'Snap off' : 'Snap on');
       },
     ],
-    ['fit', () => ctx.canvas.fit()],
+    ['fit', () => ctx.canvas.fit(0)],
     ['zoom-in', () => ctx.canvas.zoom(1.2)],
     ['zoom-out', () => ctx.canvas.zoom(1 / 1.2)],
     [
@@ -432,12 +438,41 @@ export function createEditorCommands(ctx: DiagramEditorContext): DiagramEditorCo
         if (result.ok) {
           ctx.chrome.dismissEmpty();
           if (state.view.camera.fit) ctx.canvas.fit();
+          ctx.chrome.closeDrawers({ restoreFocus: false });
           stage.focus();
         }
       },
     ],
+    ['quick-add', ({ bundle, ids }) => {
+      if (ids.length !== 1 || !bundle.document.nodes.some((node) => node.id === ids[0])) return;
+      const bounds = bundle.presentation.elements.find((item) => item.elementId === ids[0])?.bounds;
+      if (!bounds) return;
+      const capability = getDiagramAuthoringCapability(bundle.document.grammar.id);
+        const kind = capability?.nodeKinds.includes('process') ? 'process' : capability?.nodeKinds[0];
+        if (!kind) { report('Connected steps are unavailable for this grammar.'); return; }
+        const shape = createObject(kind, { x: bounds.x + bounds.width + 80, y: bounds.y });
+      const nextId = shape.elements[0].value.id;
+      const edge = connector(ids[0], nextId);
+      const result = submit({ type: 'create', elements: [...shape.elements, ...edge.elements],
+        presentation: [...shape.presentation, ...edge.presentation] }, [nextId]);
+      if (result.ok) {
+        ctx.chrome.closeDrawers({ restoreFocus: false });
+        if (current().view.camera.fit) ctx.canvas.fit();
+        dom.stage.focus();
+      }
+    }],
     ['select-id', selectObject],
     ['select-member', selectObject],
+    ['connect-drag', ({ bundle, value }) => {
+      const { from, to, side } = value as { from: string; to: string; side: 'left' | 'right' | 'top' | 'bottom' };
+      if (from === to) { report('Choose another shape to connect.'); return; }
+      if (bundle.document.relations.some((edge) => edge.from === from && edge.to === to)) {
+        report('These shapes are already connected. Choose another target.'); return;
+      }
+      const command = connector(from, to);
+      if (command.presentation[0].route) command.presentation[0].route.from.side = side;
+      submit(command, [command.elements[0].value.id]);
+    }],
     ['connect', () => ctx.dialogs.openConnect()],
     ['confirm-connect', () => ctx.dialogs.confirmConnect()],
     ['delete', () => ctx.dialogs.openDelete()],
@@ -578,6 +613,10 @@ export function createEditorCommands(ctx: DiagramEditorContext): DiagramEditorCo
     submit({ type: 'reorder-lanes', ids: order });
   }
   function act(action: string, value?: unknown, options: ActionOptions = {}) {
+    if (['menu-undo', 'menu-redo', 'menu-save', 'menu-zoom-in', 'menu-zoom-out'].includes(action)) {
+      ctx.chrome.setOverflow(false);
+      action = action.slice(5);
+    }
     const state = current(),
       bundle = state.bundle,
       ids = state.view.selection;

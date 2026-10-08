@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { mkdtemp, realpath, rm } from 'node:fs/promises';
+import { mkdir, mkdtemp, realpath, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
@@ -17,7 +17,12 @@ const enabled = process.env.PLANR_BROWSER_TESTS === '1';
 const options = { skip: !enabled, timeout: 60_000 };
 async function fixture(
   t,
-  { bundle, viewport = { width: 1440, height: 900 }, storageBlocked = false } = {},
+  {
+    bundle,
+    viewport = { width: 1440, height: 900 },
+    storageBlocked = false,
+    hasTouch = false,
+  } = {},
 ) {
   const root = await realpath(await mkdtemp(join(tmpdir(), 'planr-editor-ui-')));
   const store = createDiagramAuthoringStore({ root, slug: 'checkout' });
@@ -39,7 +44,7 @@ async function fixture(
     assert.deepEqual(external, [], 'Local authoring requires no remote account or assets');
   });
   browser = await launchBrowser({ firefoxUserPrefs: FIREFOX_COOP_PAGE_PREFS });
-  const page = await browser.newPage({ viewport });
+  const page = await browser.newPage({ viewport, hasTouch });
   page.setDefaultTimeout(7000);
   page.on('pageerror', (error) => errors.push(error.message));
   page.on('request', (request) => {
@@ -505,7 +510,7 @@ test(
 );
 
 test(
-  'the command bar is one right-aligned cluster whose names match their visible labels',
+  'the command bar follows visual reading order and names match visible labels',
   options,
   async (t) => {
     const { page } = await fixture(t, { bundle: makeBundle('process') });
@@ -519,9 +524,17 @@ test(
       );
       const rects = controls.map((element) => element.getBoundingClientRect());
       return {
-        left: Math.min(...rects.map((rect) => rect.left)) - box.left,
         right: box.right - Math.max(...rects.map((rect) => rect.right)),
-        order: controls.map((element) => element.dataset.action ?? 'save-state'),
+        identityLeft:
+          node.querySelector('.studio-toolbar-leading').getBoundingClientRect().left - box.left,
+        order: controls.map(
+          (element) =>
+            element.dataset.action ??
+            (element.hasAttribute('data-studio-palette-menu') ? 'palette' : 'save-state'),
+        ),
+        readingOrder: rects.every(
+          (rect, index) => index === 0 || rect.left >= rects[index - 1].right,
+        ),
         names: controls
           .filter((element) => element.matches('button'))
           .map((element) => ({
@@ -531,23 +544,32 @@ test(
       };
     });
     assert.deepEqual(bar.order, [
-      'outline',
-      'save-state',
       'undo',
       'redo',
-      'save-state', // React palette menu precedes the preserved action controls.
-      'properties',
+      'palette',
       'save',
       'host-action',
       'more',
+      'save-state',
+      'outline',
+      'properties',
     ]);
     assert.equal(
       await page.getByRole('button', { name: 'Share diagram', exact: true }).count(),
       1,
       'The local owner exposes native sharing beside Save',
     );
-    assert.equal(bar.left, 16, 'The outline toggle sits on the 16px gutter');
-    assert.equal(bar.right, 16, 'More sits on the 16px gutter');
+    assert.equal(bar.identityLeft, 16, 'Document identity sits on the 16px gutter');
+    assert.ok(
+      Math.abs(bar.right - 16) < 0.01,
+      `Panel controls finish on the 16px gutter (measured ${bar.right}px)`,
+    );
+    assert.equal(bar.readingOrder, true, 'DOM and keyboard order follow the visible command order');
+    assert.equal(
+      await page.locator('.de-bar .de-save-state').count(),
+      1,
+      'Save state appears once',
+    );
     for (const { name, label } of bar.names)
       if (label) assert.ok(name.startsWith(label), `${name} is named by its visible label`);
 
@@ -563,11 +585,11 @@ test(
   },
 );
 
-test('no inspector label truncates in the 288px rail', options, async (t) => {
+test('no inspector label truncates in the compact 248px rail', options, async (t) => {
   const { page } = await fixture(t, { bundle: makeBundle('process') });
   assert.equal(
     await page.locator('.de-right').evaluate((rail) => rail.getBoundingClientRect().width),
-    288,
+    248,
   );
   const outlineRow = (id) => page.locator(`[data-action=select-id][data-id="${id}"]`);
   // Every section is opened so each control is laid out at the rail width.
@@ -643,6 +665,46 @@ test(
       align.every(({ width }) => Math.abs(width - align[0].width) < 0.5),
       'Align buttons share their row equally',
     );
+    for (const font of ['monospace', 'Arial, sans-serif']) {
+      for (const scale of [1, 2]) {
+        const rows = await pane
+          .locator('.de-inspector-group')
+          .first()
+          .getByRole('button')
+          .evaluateAll(
+            (buttons, { font, scale }) => {
+              for (const button of buttons) {
+                button.style.fontFamily = font;
+                button.style.fontSize = `${14 * scale}px`;
+              }
+              return buttons.map((button) => ({
+                width: button.getBoundingClientRect().width,
+                scroll: button.scrollWidth,
+                client: button.clientWidth,
+              }));
+            },
+            { font, scale },
+          );
+        assert.ok(
+          rows.every((row) => Math.abs(row.width - rows[0].width) < 0.5),
+          `Equal columns with ${font} at ${scale}x`,
+        );
+        assert.ok(
+          rows.every((row) => row.scroll <= row.client + 1),
+          'Action text wraps within its complete column',
+        );
+      }
+    }
+    await pane
+      .locator('.de-inspector-group')
+      .first()
+      .getByRole('button')
+      .evaluateAll((buttons) =>
+        buttons.forEach((button) => {
+          button.style.removeProperty('font-family');
+          button.style.removeProperty('font-size');
+        }),
+      );
     assert.equal(
       await page.getByRole('button', { name: 'Align left', exact: true }).isEnabled(),
       true,
@@ -2063,7 +2125,7 @@ test(
 );
 
 test(
-  'desktop chrome, tablet drawers and mobile review remain usable without page overflow',
+  'desktop chrome, tablet drawers and mobile authoring remain usable without page overflow',
   options,
   async (t) => {
     const { page, read } = await fixture(t, { bundle: makeBundle('process') });
@@ -2084,14 +2146,43 @@ test(
         const dimensions = await page.evaluate(() => ({
           width: innerWidth,
           scrollWidth: document.documentElement.scrollWidth,
+          toolbarBottom: document.querySelector('.studio-toolbar').getBoundingClientRect().bottom,
           canvas: document
             .querySelector('[aria-label="Diagram canvas"]')
             .getBoundingClientRect()
             .toJSON(),
         }));
+        if (process.env.PLANR_EDITOR_CHROME_EVIDENCE) {
+          const directory = process.env.PLANR_EDITOR_CHROME_EVIDENCE;
+          await mkdir(directory, { recursive: true });
+          const name = `${browserEngine()}-${colorScheme}-${viewport.width}`;
+          const chrome = await page.locator('.studio-toolbar').evaluate((toolbar) => ({
+            layout: toolbar.dataset.studioLayout,
+            shellLayout: toolbar.closest('.planr-diagram-editor').dataset.layout,
+            regions: [toolbar, ...toolbar.children].map((element) => ({
+              name: element.className,
+              rect: element.getBoundingClientRect().toJSON(),
+              display: getComputedStyle(element).display,
+              gridTemplateColumns: getComputedStyle(element).gridTemplateColumns,
+              gridTemplateRows: getComputedStyle(element).gridTemplateRows,
+              gridColumn: getComputedStyle(element).gridColumn,
+              gridRow: getComputedStyle(element).gridRow,
+            })),
+          }));
+          await writeFile(
+            join(directory, `${name}.json`),
+            JSON.stringify({ dimensions, chrome }, null, 2),
+          );
+          await page.screenshot({ path: join(directory, `${name}.png`) });
+        }
         assert.ok(
           dimensions.scrollWidth <= dimensions.width,
           `${colorScheme} ${viewport.width}px must not overflow`,
+        );
+        assert.equal(
+          dimensions.canvas.top,
+          dimensions.toolbarBottom,
+          `${colorScheme} ${viewport.width}px canvas immediately follows the intrinsic toolbar height`,
         );
         const coveredControls = await page.locator('.studio-toolbar').evaluate((toolbar) =>
           [...toolbar.querySelectorAll('button')]
@@ -2111,6 +2202,24 @@ test(
           [],
           `${colorScheme} ${viewport.width}px toolbar controls must receive pointer input`,
         );
+        const visualOrder = await page.locator('.studio-toolbar').evaluate((toolbar) => {
+          const buttons = [...toolbar.querySelectorAll('button')]
+            .filter((button) => button.checkVisibility())
+            .map((button) => button.getBoundingClientRect());
+          return buttons.every((rect, index) => {
+            const previous = buttons[index - 1];
+            return (
+              !previous ||
+              rect.top >= previous.bottom ||
+              (Math.abs(rect.top - previous.top) < 16 && rect.left >= previous.right)
+            );
+          });
+        });
+        assert.equal(
+          visualOrder,
+          true,
+          `${colorScheme} ${viewport.width}px visual command order follows DOM and keyboard order`,
+        );
         if (viewport.width === 1440) {
           assert.ok(dimensions.canvas.top <= 60, `Top chrome is ${dimensions.canvas.top}px`);
           assert.ok(
@@ -2124,10 +2233,10 @@ test(
             `1280px canvas occupies ${dimensions.canvas.width / dimensions.width}`,
           );
         if (viewport.width <= 700) {
-          await page
-            .getByText(/desktop.*edit|edit.*desktop/iu)
-            .first()
-            .waitFor();
+          assert.equal(
+            await page.locator('.planr-diagram-editor').getAttribute('data-editable'),
+            'true',
+          );
         }
       }
     }
@@ -2138,8 +2247,8 @@ test(
     await page.getByRole('tab', { name: 'Shapes', exact: true }).click();
     assert.equal(
       await page.getByRole('button', { name: 'Create process', exact: true }).isDisabled(),
-      true,
-      'Editing is disabled at the mobile breakpoint',
+      false,
+      'Editing remains available at the mobile breakpoint',
     );
     await page.getByRole('button', { name: 'Close outline', exact: true }).click();
 
@@ -2150,7 +2259,7 @@ test(
     assert.equal(
       await page.getByRole('button', { name: 'Create process', exact: true }).isEnabled(),
       true,
-      'Editing starts immediately above the mobile breakpoint',
+      'Editing remains available above the mobile breakpoint',
     );
     await page.getByRole('button', { name: 'Close outline', exact: true }).click();
 
@@ -2337,3 +2446,285 @@ test(
     }
   },
 );
+
+test(
+  'phone authors insert, edit and use canonical history through exclusive sheets',
+  options,
+  async (t) => {
+    const { page, read } = await fixture(t, {
+      bundle: makeBundle('process'),
+      viewport: { width: 390, height: 844 },
+    });
+    const before = await read();
+    const shell = page.locator('.planr-diagram-editor');
+    assert.equal(await shell.getAttribute('data-editable'), 'true');
+    await page.getByRole('button', { name: 'Outline', exact: true }).click();
+    const id = await create(page, 'process');
+    assert.equal(
+      await page.locator('.de-left').getAttribute('aria-hidden'),
+      'true',
+      'Insertion returns focus to canvas',
+    );
+    assert.equal(await drawing(page, id).count(), 1);
+    await page.getByRole('button', { name: 'More', exact: true }).click();
+    const undo = page.getByRole('menuitem', { name: 'Undo', exact: true });
+    assert.ok((await undo.boundingBox()).height >= 44);
+    await undo.click();
+    assert.equal(await drawing(page, id).count(), 0);
+    await page.getByRole('button', { name: 'More', exact: true }).click();
+    const redo = page.getByRole('menuitem', { name: 'Redo', exact: true });
+    assert.ok((await redo.boundingBox()).height >= 44);
+    await redo.click();
+    assert.equal(await drawing(page, id).count(), 1);
+    await select(page, id);
+    await page.getByRole('button', { name: 'Inspector', exact: true }).click();
+    const label = page.getByLabel('Label', { exact: true });
+    await label.fill('Phone authoring');
+    await label.press('ArrowRight');
+    await label.press('Backspace');
+    assert.equal(
+      await drawing(page, id).count(),
+      1,
+      'Text shortcuts cannot delete the selected shape',
+    );
+    await page.getByRole('button', { name: 'Apply changes', exact: true }).click();
+    await page.getByRole('button', { name: 'Close properties', exact: true }).click();
+    await page.getByRole('button', { name: 'Outline', exact: true }).click();
+    assert.equal(await page.locator('.de-right').getAttribute('aria-hidden'), 'true');
+    await page.keyboard.press('Escape');
+    await page.getByRole('button', { name: 'More', exact: true }).click();
+    await page.getByRole('menuitem', { name: 'Save diagram', exact: true }).click();
+    await page.locator('.de-save-state[data-state="saved"]').waitFor({ state: 'attached' });
+    const after = await read();
+    assert.equal(after.document.nodes.length, before.document.nodes.length + 1);
+    assert.equal(after.document.nodes.find((node) => node.id === id).label, 'Phone authorin');
+  },
+);
+
+test(
+  'connection handles bind endpoints and quick-add uses one canonical undo transaction',
+  options,
+  async (t) => {
+    const { page, read } = await fixture(t, { bundle: makeBundle('process') });
+    const before = await read();
+    await select(page, 'node-b');
+    const handle = page.locator(
+      '[data-handle="connect"][data-handle-id="node-b"][data-side="left"]',
+    );
+    const start = await handle.boundingBox();
+    const target = await drawing(page, 'node-a').boundingBox();
+    await page.mouse.move(start.x + start.width / 2, start.y + start.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(target.x + target.width / 2, target.y + target.height / 2, { steps: 8 });
+    await page.mouse.up();
+    await save(page);
+    const connected = await read();
+    assert.equal(connected.document.relations.length, before.document.relations.length + 1);
+    const edge = connected.document.relations.find((item) => item.id !== 'edge-a');
+    assert.equal(edge.from, 'node-b');
+    assert.equal(edge.to, 'node-a');
+    assert.equal(
+      connected.presentation.elements.find((item) => item.elementId === edge.id).route.from.side,
+      'left',
+    );
+    await page.getByRole('button', { name: 'Undo', exact: true }).click();
+    assert.equal(await drawing(page, edge.id).count(), 0);
+    await page.getByRole('button', { name: 'Redo', exact: true }).click();
+    assert.equal(await drawing(page, edge.id).count(), 1);
+    await drawing(page, 'node-b').click({ position: { x: 20, y: 15 } });
+    await settle(page);
+    const toolbar = page.getByRole('toolbar', { name: 'Selected shape actions', exact: true });
+    await toolbar.getByRole('button', { name: 'Add connected step', exact: true }).click();
+    const id = await page
+      .locator('[data-editor-svg] [data-element-id][data-selected="true"]')
+      .getAttribute('data-element-id');
+    await save(page);
+    const expanded = await read();
+    assert.equal(expanded.document.nodes.length, before.document.nodes.length + 1);
+    const attached = expanded.document.relations.find((item) => item.to === id);
+    assert.equal(attached.from, 'node-b');
+    await page.getByRole('button', { name: 'Undo', exact: true }).click();
+    assert.equal(await drawing(page, id).count(), 0, 'One Undo removes the new shape');
+    assert.equal(await drawing(page, attached.id).count(), 0, 'The same Undo removes its edge');
+    await page.getByRole('button', { name: 'Redo', exact: true }).click();
+    assert.equal(await drawing(page, id).count(), 1);
+    assert.equal(await drawing(page, attached.id).count(), 1);
+    await drawing(page, 'node-a').click({ position: { x: 20, y: 15 } });
+    await settle(page);
+    await page.locator('[data-handle="connect"][data-side="right"]').focus();
+    await page.keyboard.press('Enter');
+    assert.equal(
+      await page.getByRole('dialog', { name: 'Connect objects', exact: true }).isVisible(),
+      true,
+    );
+    assert.equal(await page.getByLabel('From', { exact: true }).inputValue(), 'node-a');
+    await page.getByRole('button', { name: 'Cancel', exact: true }).click();
+  },
+);
+
+test(
+  'authoring chrome stays reachable at phone text scale and retains graph through themes',
+  options,
+  async (t) => {
+    const { page, read } = await fixture(t, {
+      bundle: makeBundle('process'),
+      viewport: { width: 390, height: 844 },
+    });
+    const before = await read();
+    assert.equal(
+      await page.getByLabel('Zoom level', { exact: true }).textContent(),
+      '100%',
+      'A fresh phone editor opens at readable scale; Fit remains an explicit overview',
+    );
+    const captures = join(
+      process.env.PLANR_BROWSER_DIAGNOSTIC_DIR ||
+        join(tmpdir(), 'company-diagram-interface-browser'),
+      browserEngine(),
+    );
+    await mkdir(captures, { recursive: true });
+    for (const scheme of ['light', 'dark']) {
+      await page.emulateMedia({ colorScheme: scheme });
+      await select(page, 'node-b');
+      await page.screenshot({ path: join(captures, `canvas-${scheme}-390.png`) });
+      await page.getByRole('button', { name: 'Outline', exact: true }).click();
+      await page.getByRole('tab', { name: 'Shapes', exact: true }).click();
+      await page.screenshot({ path: join(captures, `palette-${scheme}-390.png`) });
+      await page.keyboard.press('Escape');
+      await page.getByRole('button', { name: 'Inspector', exact: true }).click();
+      await page.screenshot({ path: join(captures, `inspector-${scheme}-390.png`) });
+      await page.keyboard.press('Escape');
+    }
+    await page.evaluate(() => {
+      const shell = document.querySelector('.planr-diagram-editor');
+      for (const [name, value] of [
+        ['sm', 24],
+        ['md', 28],
+        ['lg', 32],
+        ['xl', 40],
+      ])
+        shell.style.setProperty(`--de-text-${name}`, `${value}px`);
+    });
+    await settle(page);
+    const dock = await page.locator('.de-canvas-tools').evaluate((element) => ({
+      width: element.clientWidth,
+      scroll: element.scrollWidth,
+      controls: [...element.querySelectorAll('button')]
+        .filter((button) => button.checkVisibility())
+        .map((button) => {
+          const bounds = button.getBoundingClientRect();
+          return {
+            name: button.getAttribute('aria-label') || button.textContent,
+            x: bounds.x,
+            right: bounds.right,
+            height: bounds.height,
+          };
+        }),
+    }));
+    assert.ok(
+      dock.scroll <= dock.width,
+      `The compact dock must not hide controls in horizontal scrolling: ${JSON.stringify(dock)}`,
+    );
+    for (const control of dock.controls) {
+      assert.ok(control.x >= 0 && control.right <= 390, control.name);
+      assert.ok(control.height >= 44, control.name);
+    }
+    await page.screenshot({ path: join(captures, 'canvas-dark-390-text2x.png') });
+    assert.equal(
+      (await read()).bundleDigest,
+      before.bundleDigest,
+      'Theme/text/rail changes cannot rewrite the graph or its saved palette',
+    );
+  },
+);
+
+test(
+  'captured-pointer cancellation discards a preview without adding history',
+  options,
+  async (t) => {
+    const { page, read } = await fixture(t, { bundle: makeBundle('process') });
+    const before = await read();
+    const node = await drawing(page, 'node-b').boundingBox();
+    await page.mouse.move(node.x + 20, node.y + 15);
+    await page.mouse.down();
+    await page.mouse.move(node.x - 35, node.y - 20, { steps: 6 });
+    const stage = page.getByLabel('Diagram canvas', { exact: true });
+    await stage.dispatchEvent('pointercancel', { pointerId: 1, pointerType: 'mouse' });
+    await page.mouse.up();
+    await settle(page);
+    assert.equal(await page.getByRole('button', { name: 'Undo', exact: true }).isDisabled(), true);
+    assert.equal((await read()).bundleDigest, before.bundleDigest);
+  },
+);
+
+test('touch drag commits one edit and touch cancellation retains the original graph', {
+  ...options,
+  skip: !enabled || browserEngine() !== 'chromium',
+}, async (t) => {
+  const { page, read } = await fixture(t, {
+    bundle: makeBundle('process'),
+    viewport: { width: 390, height: 844 },
+    hasTouch: true,
+  });
+  const before = await read();
+  assert.equal(
+    await page.getByRole('button', { name: 'Snap', exact: true }).getAttribute('aria-pressed'),
+    'true',
+  );
+  assert.equal(await page.locator('.de-zoom-value').textContent(), '100%');
+  const cdp = await page.context().newCDPSession(page);
+  await page.evaluate(() => {
+    window.__touchEvents = [];
+    document
+      .querySelector('.de-canvas')
+      .addEventListener('pointerdown', (event) => window.__touchEvents.push(event.pointerType));
+    document
+      .querySelector('.de-canvas')
+      .addEventListener('pointercancel', () => window.__touchEvents.push('cancel'));
+  });
+  const gesture = async (cancel) => {
+    const node = await drawing(page, 'node-b').boundingBox();
+    const x = node.x + 20,
+      y = node.y + 15;
+    await cdp.send('Input.dispatchTouchEvent', {
+      type: 'touchStart',
+      touchPoints: [{ x, y, id: 1 }],
+    });
+    for (let step = 1; step <= 6; step++)
+      await cdp.send('Input.dispatchTouchEvent', {
+        type: 'touchMove',
+        touchPoints: [{ x: x - step * 4, y: y + step * 3, id: 1 }],
+      });
+    await cdp.send('Input.dispatchTouchEvent', {
+      type: cancel ? 'touchCancel' : 'touchEnd',
+      touchPoints: [],
+    });
+    await settle(page);
+  };
+  await gesture(true);
+  assert.equal(
+    await page.locator('[data-action="menu-undo"]').isDisabled(),
+    true,
+    'Cancelled touch adds no history',
+  );
+  assert.equal((await read()).bundleDigest, before.bundleDigest);
+  assert.deepEqual(await page.evaluate(() => window.__touchEvents), ['touch', 'cancel']);
+  await gesture(false);
+  assert.equal(await page.locator('[data-action="menu-undo"]').isEnabled(), true);
+  await page.getByRole('button', { name: 'More', exact: true }).click();
+  await page.getByRole('menuitem', { name: 'Save diagram', exact: true }).click();
+  await page.locator('.de-save-state[data-state="saved"]').waitFor({ state: 'attached' });
+  const after = await read();
+  const origin = before.presentation.elements.find((item) => item.elementId === 'node-b').bounds;
+  const moved = after.presentation.elements.find((item) => item.elementId === 'node-b').bounds;
+  assert.equal(moved.x, origin.x - 24);
+  assert.equal(moved.y, origin.y + 16, 'Snap rounds the 18px touch displacement to 16 world units');
+  await page.getByRole('button', { name: 'More', exact: true }).click();
+  await page.getByRole('menuitem', { name: 'Undo', exact: true }).click();
+  await page.getByRole('button', { name: 'More', exact: true }).click();
+  assert.equal(
+    await page.getByRole('menuitem', { name: 'Undo', exact: true }).isDisabled(),
+    true,
+    'One touch gesture produces exactly one history entry',
+  );
+  await page.keyboard.press('Escape');
+});

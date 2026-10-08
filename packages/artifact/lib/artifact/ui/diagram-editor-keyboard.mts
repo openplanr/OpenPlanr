@@ -301,6 +301,13 @@ export function createEditorKeyboard(ctx: DiagramEditorContext): DiagramEditorKe
     if (wrapDialogFocus(event) || cycleDrawerFocus(event as ElementKeyEvent)) return;
     if (!shell.contains(event.target as Node) && !canvas.dragging() && !dialogs.active()) return;
     for (const step of navigation) if (step(event as ElementKeyEvent)) return;
+    const connectionHandle = (event.target as Element).closest?.('[data-handle="connect"]');
+    if (connectionHandle && ['Enter', ' '].includes(event.key)) {
+      event.preventDefault();
+      commands.act('connect');
+      return;
+    }
+    if (connectionHandle) return;
     if (focusable(event.target) && event.target !== stage) return;
     runShortcut(event);
   }

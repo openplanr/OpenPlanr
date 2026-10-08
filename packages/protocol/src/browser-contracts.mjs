@@ -8,6 +8,10 @@ import {
   assertDiagramWorkspaceContract,
   DIAGRAM_REVIEW_SCHEMAS,
 } from './diagram-review-contracts.mjs';
+import {
+  assertEnterpriseJourneyContract,
+  ENTERPRISE_JOURNEY_SCHEMAS,
+} from './enterprise-journey-contracts.mjs';
 import { LARGE_OBJECT_SCHEMAS } from './large-object-contracts.mjs';
 import {
   PROTOCOL_V16_CONTRACT_FILES,
@@ -87,6 +91,27 @@ export const PROTOCOL_V117_CONTRACTS = Object.freeze(
   ),
 );
 
+export const PROTOCOL_V119_CONTRACTS = Object.freeze(
+  Object.fromEntries(
+    Object.keys(ENTERPRISE_JOURNEY_SCHEMAS).map((kind) => [kind, `${kind}.schema.json`]),
+  ),
+);
+
+export function validateEnterpriseJourneyArtifact(kind, value) {
+  try {
+    assertEnterpriseJourneyContract(value, kind);
+    return [];
+  } catch (error) {
+    return [
+      {
+        path: '$',
+        rule: 'company-journey-contract',
+        detail: error instanceof Error ? error.message : 'Invalid company journey data.',
+      },
+    ];
+  }
+}
+
 const PROTOCOL_CONTRACTS_BY_VERSION = Object.freeze({
   '1.5.0': PROTOCOL_V15_CONTRACTS,
   '1.6.0': PROTOCOL_V16_CONTRACTS,
@@ -97,6 +122,7 @@ const PROTOCOL_CONTRACTS_BY_VERSION = Object.freeze({
   '1.15.0': PROTOCOL_V115_CONTRACTS,
   '1.16.0': PROTOCOL_V116_CONTRACTS,
   '1.17.0': PROTOCOL_V117_CONTRACTS,
+  '1.19.0': PROTOCOL_V119_CONTRACTS,
 });
 
 /**

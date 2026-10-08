@@ -13,6 +13,7 @@ import { registerEditorStateReader } from './session-view.mjs';
 import type { DiagramAuthoringValidationError } from '@openplanr/protocol/diagram-authoring-contracts';
 import { compileDiagramCommandForEditor as compileDiagramCommand } from '../authoring/commands.mjs';
 import {
+  compileDiagramBundleTransaction,
   createConditionalInverse,
   type DiagramBundleDiff,
   type DiagramCommand,
@@ -21,9 +22,12 @@ import {
   type DiagramEditImpact,
   type DiagramEditPreview,
   type DiagramKernelFailure,
+  type DiagramMergeChoices,
+  type DiagramMergeResult,
   type DiagramPreviewResult,
   diffDiagramBundles,
   previewAutomaticLayout,
+  previewDiagramMerge,
   validateAuthoringBundle,
 } from '../authoring/index.mjs';
 import {
@@ -169,6 +173,15 @@ export interface DiagramEditorSession {
           | ({ ok: true; impact: DiagramEditImpact } & DiagramBundleDiff)
           | DiagramKernelFailure;
       });
+  /** Recompute overlaps from the current retained draft; this never changes or saves it. */
+  previewConflict(choices?: DiagramMergeChoices): DiagramMergeResult;
+  /** Retain a validated resolved draft against the exact observed head, without saving. */
+  resolveConflict(options: {
+    localDigest: string;
+    remoteDigest: string;
+    choices: DiagramMergeChoices;
+    transactionId?: string;
+  }): { ok: true; changed: boolean } | DiagramEditorFailure;
   save(): Promise<
     | { ok: true; status: DiagramEditorSaveState; bundle?: DiagramAuthoringBundle | null }
     | (DiagramEditorFailure & { status?: DiagramEditorSaveState })
@@ -729,6 +742,8 @@ export function createDiagramEditorSession({
       } else if (initialization) {
         const requestId = initialization;
         const expected: DiagramAuthoringBundle = clone(base);
+        uncertain = { count: 0, batchId: batchIdFor(initialization, []) };
+        persist();
         const result = await owner.initialize(clone(expected), { transactionId: requestId });
         if (!live())
           return fail(
@@ -737,6 +752,7 @@ export function createDiagramEditorSession({
           );
         if (!acknowledge(result, expected, requestId)) return await failureState(result);
         initialization = null;
+        uncertain = null;
         persist();
         emit('acknowledged');
       }
@@ -744,6 +760,8 @@ export function createDiagramEditorSession({
         for (let index = 0; index < count; index++) {
           const item = pending[0];
           if (!item) break;
+          uncertain = { count: 1, batchId: batchIdFor(null, [item.transaction]) };
+          persist();
           const result = await owner.commit(clone(item.transaction));
           if (!live())
             return fail(
@@ -756,6 +774,7 @@ export function createDiagramEditorSession({
           )
             return await failureState(result);
           pending.shift();
+          uncertain = null;
           persist();
           emit(
             'acknowledged',
@@ -794,6 +813,10 @@ export function createDiagramEditorSession({
     const blocked = guard();
     if (blocked) return Promise.resolve(blocked);
     if (saving) return saving;
+    if (comparison && !uncertain)
+      return Promise.resolve(
+        fail('unresolved-conflict', 'Resolve the current comparison before saving.'),
+      );
     if (!transport) {
       saveState = 'offline';
       emit('save');
@@ -959,6 +982,79 @@ export function createDiagramEditorSession({
       disposed,
     };
   }
+  function resolutionGuard(options: Parameters<DiagramEditorSession['resolveConflict']>[0]) {
+    const blocked = guard();
+    if (blocked) return blocked;
+    if (saving || gesture || uncertain)
+      return fail(
+        'resolution-pending',
+        'Finish the gesture or reconcile the exact outstanding save before resolving.',
+      );
+    if (!comparison) return fail('no-conflict', 'There is no authoritative comparison.');
+    if (
+      inspectPlainData(options).length ||
+      !options ||
+      Object.keys(options).some(
+        (key) => !['localDigest', 'remoteDigest', 'choices', 'transactionId'].includes(key),
+      ) ||
+      options.localDigest !== idOf(current) ||
+      options.remoteDigest !== idOf(comparison)
+    )
+      return fail(
+        'stale-comparison',
+        'The draft or head changed. Review the current comparison again.',
+      );
+    return null;
+  }
+  function prepareResolvedEdit(
+    target: DiagramAuthoringBundle,
+    resolved: DiagramAuthoringBundle,
+    requestedId?: string,
+  ):
+    | {
+        ok: true;
+        edit: DiagramEditPreview | null;
+        bundle: DiagramAuthoringBundle;
+        changed: boolean;
+      }
+    | DiagramEditorFailure {
+    if (idOf(target) === idOf(resolved))
+      return { ok: true, edit: null, bundle: target, changed: false };
+    const transactionId = requestedId ?? nextTransactionId();
+    const invalid = checkIdentity(transactionId);
+    if (invalid) return invalid;
+    const compiled = compileDiagramBundleTransaction(target, resolved, { transactionId });
+    if (!compiled.ok) return compiled;
+    const edit = previewDiagramTransaction(target, compiled.transaction);
+    if (!edit.ok) return edit;
+    const next = validatedPreviewSnapshot(edit) ?? validBundle(edit.bundle);
+    return { ok: true, edit, bundle: next, changed: true };
+  }
+  function retainResolution(
+    target: DiagramAuthoringBundle,
+    next: DiagramAuthoringBundle,
+    edit: DiagramEditPreview | null,
+  ) {
+    const touched = affectedIds(diffDiagramBundles(current, next));
+    updateGeometry(next, touched);
+    base = target;
+    saved = target;
+    current = next;
+    initialization = null;
+    pending = edit
+      ? [{ transaction: clone(edit.transaction), bundle: next, inverse: clone(edit.inverse) }]
+      : [];
+    // Old history belongs to the previous base; one valid inverse covers all retained changes.
+    undo = pending.map((item) => clone(item.inverse));
+    redo = [];
+    for (const item of pending) usedIds.add(item.transaction.transactionId);
+    comparison = null;
+    diagnostics = [];
+    saveState = edit ? 'unsaved' : 'saved';
+    pruneView();
+    persist();
+    emit('resolved', touched);
+  }
   const session: DiagramEditorSession = {
     getState() {
       return readState(true);
@@ -974,6 +1070,24 @@ export function createDiagramEditorSession({
     undo: (options = {}) => compensate(undo, redo, options.transactionId ?? nextTransactionId()),
     redo: (options = {}) => compensate(redo, undo, options.transactionId ?? nextTransactionId()),
     refresh,
+    previewConflict(choices = {}) {
+      if (disposed || !capability.read)
+        return fail('access-changed', 'This session cannot read its comparison.');
+      if (!comparison) return fail('no-conflict', 'There is no authoritative comparison.');
+      return previewDiagramMerge(base, current, comparison, choices);
+    },
+    resolveConflict(options) {
+      const blocked = resolutionGuard(options);
+      if (blocked) return blocked;
+      // resolutionGuard verifies the current comparison before any mutation.
+      const target = comparison as DiagramAuthoringBundle;
+      const merged = previewDiagramMerge(base, current, target, options.choices);
+      if (!merged.ok) return merged;
+      const prepared = prepareResolvedEdit(target, merged.bundle, options.transactionId);
+      if (!prepared.ok) return prepared;
+      retainResolution(target, prepared.bundle, prepared.edit);
+      return { ok: true, changed: prepared.changed };
+    },
     save,
     setView,
     query: (options) =>
