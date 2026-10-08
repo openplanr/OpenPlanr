@@ -1,5 +1,28 @@
 # Changelog
 
+## 3.0.0
+
+### Major Changes
+
+- 7dba887: `openplanr` versions return to plain SemVer from 3.0.0: patch releases for fixes, minor releases for features and major releases for breaking changes. Releases 2.2639.0 to 2.2641.x were numbered `<major>.<YYWW>.<n>` by release week. Version checks such as `openplanr upgrade` compare versions numerically, so 3.0.0 is newer than every 2.x release.
+- 625c09f: Drop Node.js 20, which reached end of life in April 2026. This is a breaking CLI change: `openplanr` now requires Node.js `^22.13.0 || >=23.5.0`, and the pipeline and Protocol require Node.js 22.13.0 or later.
+  
+  Run `node -v` to check your version. If it reports v20, or a 22 release below 22.13, install Node.js 24 LTS or Node.js 22.13 or later, then rerun the installer or `npm install --global openplanr`.
+  
+  On Node.js 20 the install scripts stop before installing anything with `E_NODE_VERSION: OpenPlanr requires Node.js ^22.13.0 || >=23.5.0; found v20.x.y.` `npm install --global openplanr` only warns about the engines range, and `openplanr` then stops before loading anything with `E_NODE_VERSION: OpenPlanr requires Node.js ^22.13.0 || >=23.5.0; found 20.x.y.` `openplanr-pipeline doctor` fails its Node.js check with `Node 20.x.y does not satisfy engines.node >=22.13.0`, and the delegate skill's probe reports that Node 22 or later is required.
+- a2f5967: Remove the `planr` and `planr-pipeline` commands. They were kept for one release after the rename to `openplanr`; this is a breaking change for anything that still runs them.
+  
+  Replace `planr <command>` with `openplanr <command>` or the short alias `opr <command>`, and `planr-pipeline <command>` with `openplanr-pipeline <command>`, in scripts, shell aliases and CI. Upgrading with `openplanr upgrade apply`, the installer or `npm install --global openplanr` removes the old `planr` and `planr-pipeline` links. Then run `openplanr doctor`: if it reports installed skills or rules that still run `planr`, rerun `openplanr setup` for the hosts it names, or update the plugin, and restart the agent. The `planr` npm package is a different product; don't install it to restore the old command.
+  
+  Skill names such as `/planr:plan`, the `planr` plugin, the `planr-pipeline` npm package and the `.planr/` folder are unchanged.
+
+### Patch Changes
+
+- 7038c01: Keep Studio view controls centered in their workspace and actions usable on narrow screens and with enlarged text. Shared dialogs, drawers and menus preserve keyboard focus, while changing views retains prototype state, camera position and annotation drafts.
+- 50fb215: The plan skill now ends with the host's ship command, `/planr:ship T-NNN` in Claude Code, `$planr:ship T-NNN` in Codex or the `planr-ship` rule in Cursor, instead of `/planr-ship` and `$planr-ship`. The pipeline's plan procedures point to `/planr:plan` instead of the retired `planr spec decompose` command.
+- 9c72b57: The Claude plugin's documentation link points to the OpenPlanr docs at https://openplanr.dev/docs instead of the getting-started guide on GitHub.
+- 2ed98ac: After a CLI upgrade, `openplanr upgrade status` reports `agents-behind` instead of `incompatible` when only your coding agents need updating, and lists the commands to run. When a file in an installed runtime package was edited, `openplanr runtime update` and `openplanr setup` name the file and stop, and `openplanr doctor --fix` restores the package from the CLI after you confirm, backing up the changed files first; `upgrade status` points there instead of at a step that would fail. Error messages keep relative paths such as `skills/delegate/scripts/context.mjs` intact.
+
 ## 2.2641.2
 
 ### Minor Changes

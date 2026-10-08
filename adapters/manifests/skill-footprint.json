@@ -231,25 +231,25 @@
     {
       "host": "openai",
       "files": 292,
-      "bytes": 4711773,
+      "bytes": 4711770,
       "uniqueFiles": 244,
-      "uniqueBytes": 4485754,
+      "uniqueBytes": 4485751,
       "duplicateBytes": 226019
     },
     {
       "host": "claude",
       "files": 273,
-      "bytes": 4774572,
+      "bytes": 4774566,
       "uniqueFiles": 224,
-      "uniqueBytes": 4545070,
+      "uniqueBytes": 4545064,
       "duplicateBytes": 229502
     },
     {
       "host": "cursor",
       "files": 236,
-      "bytes": 4656394,
+      "bytes": 4656391,
       "uniqueFiles": 188,
-      "uniqueBytes": 4430375,
+      "uniqueBytes": 4430372,
       "duplicateBytes": 226019
     }
   ]
