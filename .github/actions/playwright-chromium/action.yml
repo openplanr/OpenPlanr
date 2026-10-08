@@ -1,0 +1,27 @@
+name: Playwright Chromium
+description: >-
+  Install the workspace Playwright's Chromium and its system packages, with the browser
+  cached by Playwright version and each install bounded and retried once.
+runs:
+  using: composite
+  steps:
+    - id: playwright
+      shell: bash
+      run: |
+        version=$(npm exec --workspace=@openplanr/protocol -- playwright --version | awk '{print $2}')
+        . /etc/os-release
+        echo "key=playwright-$ID-$VERSION_ID-$version-chromium" >> "$GITHUB_OUTPUT"
+    - uses: actions/cache@v4
+      with:
+        path: ~/.cache/ms-playwright
+        key: ${{ steps.playwright.outputs.key }}
+    - shell: bash
+      run: |
+        # A stalled apt mirror or browser download fails here in minutes, not at the job timeout.
+        bounded() {
+          timeout --kill-after=30s 3m "$@" && return
+          echo "::warning::'$*' failed or timed out; retrying once."
+          timeout --kill-after=30s 3m "$@"
+        }
+        bounded npm exec --workspace=@openplanr/protocol -- playwright install-deps chromium
+        bounded npm exec --workspace=@openplanr/protocol -- playwright install chromium

@@ -153,7 +153,8 @@ jobs:
       - name: Install the root lockfile
         run: npm ci
       - name: Install Chromium for portable runtime tests
-        run: npm exec --workspace=@openplanr/protocol -- playwright install --with-deps chromium
+        uses: ./.github/actions/playwright-chromium
+        timeout-minutes: 10
       - uses: actions/download-artifact@v4
         with:
           name: build-outputs
@@ -200,7 +201,8 @@ jobs:
       - name: Restore the generated runtime from the build job
         run: tar -xzmf "$RUNNER_TEMP/build-outputs.tgz"
       - name: Install Chromium for design tests
-        run: npm exec --workspace=@openplanr/protocol -- playwright install --with-deps chromium
+        uses: ./.github/actions/playwright-chromium
+        timeout-minutes: 10
       - name: Test the design package
         run: npm test --workspace=@openplanr/design
 
@@ -404,7 +406,8 @@ jobs:
       - name: Install the root lockfile
         run: npm ci
       - name: Install Chromium for local studio tests
-        run: npm exec --workspace=@openplanr/protocol -- playwright install --with-deps chromium
+        uses: ./.github/actions/playwright-chromium
+        timeout-minutes: 10
       - name: Generate local distributions and verify tracked outputs
         run: |
           npm run generate
@@ -445,7 +448,8 @@ jobs:
       - name: Install the root lockfile
         run: npm ci
       - name: Install Chromium for packed Protocol browser verification
-        run: npm exec --workspace=@openplanr/protocol -- playwright install --with-deps chromium
+        uses: ./.github/actions/playwright-chromium
+        timeout-minutes: 10
       - uses: actions/download-artifact@v4
         with:
           name: build-outputs
@@ -497,7 +501,8 @@ jobs:
       - name: Install the root lockfile
         run: npm ci
       - name: Install Chromium for packed Protocol browser verification
-        run: npm exec --workspace=@openplanr/protocol -- playwright install --with-deps chromium
+        uses: ./.github/actions/playwright-chromium
+        timeout-minutes: 10
       - uses: actions/download-artifact@v4
         with:
           name: build-outputs
