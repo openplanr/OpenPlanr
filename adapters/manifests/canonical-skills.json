@@ -1942,7 +1942,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:fb0d23636597168f9f139c21ce9c5af63e225ad765231b1f0b7c2af2675d8cb6"
+          "digest": "sha256:6c9fd4de022d077d4f8953fc1ae75d9a10a969c44e638a612137ffa153a6e8ca"
         },
         {
           "path": "scripts/runtime/packages/design/templates/studio/studio.js.sources/01-module-runtime.js",
@@ -1966,7 +1966,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:bf350d5126e53d2eebc29c96ce4c38d007dc205aded91cc3bb964c1d68e469e5"
+          "digest": "sha256:3d07031b0e1ebfe8d00491d70eb876cdd9ec829801ec3df4fc5aa72205b5ea7f"
         },
         {
           "path": "scripts/runtime/packages/design/templates/studio/studio.js.sources/03-react-dom-client-fiber-foundations.js",
@@ -1978,7 +1978,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:f30ee0a7f2c9dbe1b13e64d33fd9f5a25bd816e60ca04eeda5153a1a3694cbb1"
+          "digest": "sha256:793a627a349d139397ff51c837c7cc911b08b34a49e5629af0c7967e5cb89715"
         },
         {
           "path": "scripts/runtime/packages/design/templates/studio/studio.js.sources/04-react-dom-client-reconciliation-hooks.js",
@@ -1990,7 +1990,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:0f5687e30eb5029375818768c47b407d48946ad420adec5b3d9453d4e6e9b751"
+          "digest": "sha256:3839e5bdcca072a612ec48fffb6e340083f4692c516a2aeb9c8c8896ab4ea6a4"
         },
         {
           "path": "scripts/runtime/packages/design/templates/studio/studio.js.sources/05-react-dom-client-render-phases.js",
@@ -2002,7 +2002,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:1fb2854c8642a5f9285fb5d30b015ef25006a5c2b433323eb6226173ec9f0d12"
+          "digest": "sha256:f057d07ab68567daebe124fe103d88157ee4ce68177e21d1a2166debf424309f"
         },
         {
           "path": "scripts/runtime/packages/design/templates/studio/studio.js.sources/06-react-dom-client-commit-effects.js",
@@ -2014,7 +2014,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:6038d1c4d96e123d9f9ab7ee2516878c97bdbe5bc6149732d1064444d38b3b57"
+          "digest": "sha256:67291903232cb09062344ef0770638c9882a76178adba57c9a67f72bbdb80cbb"
         },
         {
           "path": "scripts/runtime/packages/design/templates/studio/studio.js.sources/07-react-dom-client-work-loop-scheduling.js",
@@ -2026,7 +2026,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:89525ecc086cf31eff4fc4daf2e886ed603b301c8af6c855d409e9d6367df3e8"
+          "digest": "sha256:ed6b1c356c341efa060072cffa2a61fcbb425655bd00c8b58dc5b50a13d5a3ad"
         },
         {
           "path": "scripts/runtime/packages/design/templates/studio/studio.js.sources/08-react-dom-client-dom-events-properties-hydration.js",
@@ -2038,7 +2038,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:02670980a272f781deb8d9e9d67c0ca5ea62fd31c9fff6ea55a1ccc7ade93262"
+          "digest": "sha256:fae78a4ea2c320638ca51a504b26dba90440d72882afdf1edf7ac49fe24853b6"
         },
         {
           "path": "scripts/runtime/packages/design/templates/studio/studio.js.sources/09-react-dom-client-public-roots.js",
@@ -2050,7 +2050,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:631a2f59100373a07571b84cf75aeb8469d122721c32c5c30a85c26591721878"
+          "digest": "sha256:adca04c0e9079e354d467d17aaa6f49423611d290661f0cbbd7610545a98825e"
         },
         {
           "path": "scripts/runtime/packages/design/templates/studio/studio.js.sources/10-react.js",
@@ -2110,7 +2110,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:674115ab13d18062757b121898429a0ba0c6075d94cdc1318d3a1fd4d99252f7"
+          "digest": "sha256:4aab96d064581d9ab53258d1360a232498c868da1dab5a54af24d82d7e4d41b0"
         },
         {
           "path": "scripts/runtime/packages/design/templates/studio/studio.js.sources/15-interface-primitives.js",
@@ -2122,7 +2122,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:6228cf871238da64e48ae07c2998a754451462fdc0662137a15e99ce1c7408ee"
+          "digest": "sha256:4fe4835d0cc92c9db852e0b699eb0d90b6be11d79bdef6b755c29e5be2e52f60"
         },
         {
           "path": "scripts/runtime/packages/design/templates/studio/studio.js.sources/16-studio-shell.js",
@@ -2158,7 +2158,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:ad2e601d993087146fcd4d049ddd1cf7e06f7102eb178e2c65017624a2252393"
+          "digest": "sha256:0b2f8c9dc18f6c31e5fac583262a740c41b953372700ffe5a270a37a52562982"
         },
         {
           "path": "scripts/runtime/packages/protocol/registries/artifact-theme.json",
@@ -2434,7 +2434,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:2cd156e3285240dced643f0312875a23ec3681a0492bec96591bfc36c06256b9"
+          "digest": "sha256:838f0c2a6737103edda011c6ebb7bf30a2119323a3baf8dfc3a815258bc6b185"
         }
       ],
       "contracts": {
@@ -3104,7 +3104,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:fb0d23636597168f9f139c21ce9c5af63e225ad765231b1f0b7c2af2675d8cb6"
+          "digest": "sha256:6c9fd4de022d077d4f8953fc1ae75d9a10a969c44e638a612137ffa153a6e8ca"
         },
         {
           "path": "scripts/runtime/packages/design/templates/studio/studio.js.sources/01-module-runtime.js",
@@ -3128,7 +3128,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:bf350d5126e53d2eebc29c96ce4c38d007dc205aded91cc3bb964c1d68e469e5"
+          "digest": "sha256:3d07031b0e1ebfe8d00491d70eb876cdd9ec829801ec3df4fc5aa72205b5ea7f"
         },
         {
           "path": "scripts/runtime/packages/design/templates/studio/studio.js.sources/03-react-dom-client-fiber-foundations.js",
@@ -3140,7 +3140,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:f30ee0a7f2c9dbe1b13e64d33fd9f5a25bd816e60ca04eeda5153a1a3694cbb1"
+          "digest": "sha256:793a627a349d139397ff51c837c7cc911b08b34a49e5629af0c7967e5cb89715"
         },
         {
           "path": "scripts/runtime/packages/design/templates/studio/studio.js.sources/04-react-dom-client-reconciliation-hooks.js",
@@ -3152,7 +3152,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:0f5687e30eb5029375818768c47b407d48946ad420adec5b3d9453d4e6e9b751"
+          "digest": "sha256:3839e5bdcca072a612ec48fffb6e340083f4692c516a2aeb9c8c8896ab4ea6a4"
         },
         {
           "path": "scripts/runtime/packages/design/templates/studio/studio.js.sources/05-react-dom-client-render-phases.js",
@@ -3164,7 +3164,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:1fb2854c8642a5f9285fb5d30b015ef25006a5c2b433323eb6226173ec9f0d12"
+          "digest": "sha256:f057d07ab68567daebe124fe103d88157ee4ce68177e21d1a2166debf424309f"
         },
         {
           "path": "scripts/runtime/packages/design/templates/studio/studio.js.sources/06-react-dom-client-commit-effects.js",
@@ -3176,7 +3176,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:6038d1c4d96e123d9f9ab7ee2516878c97bdbe5bc6149732d1064444d38b3b57"
+          "digest": "sha256:67291903232cb09062344ef0770638c9882a76178adba57c9a67f72bbdb80cbb"
         },
         {
           "path": "scripts/runtime/packages/design/templates/studio/studio.js.sources/07-react-dom-client-work-loop-scheduling.js",
@@ -3188,7 +3188,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:89525ecc086cf31eff4fc4daf2e886ed603b301c8af6c855d409e9d6367df3e8"
+          "digest": "sha256:ed6b1c356c341efa060072cffa2a61fcbb425655bd00c8b58dc5b50a13d5a3ad"
         },
         {
           "path": "scripts/runtime/packages/design/templates/studio/studio.js.sources/08-react-dom-client-dom-events-properties-hydration.js",
@@ -3200,7 +3200,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:02670980a272f781deb8d9e9d67c0ca5ea62fd31c9fff6ea55a1ccc7ade93262"
+          "digest": "sha256:fae78a4ea2c320638ca51a504b26dba90440d72882afdf1edf7ac49fe24853b6"
         },
         {
           "path": "scripts/runtime/packages/design/templates/studio/studio.js.sources/09-react-dom-client-public-roots.js",
@@ -3212,7 +3212,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:631a2f59100373a07571b84cf75aeb8469d122721c32c5c30a85c26591721878"
+          "digest": "sha256:adca04c0e9079e354d467d17aaa6f49423611d290661f0cbbd7610545a98825e"
         },
         {
           "path": "scripts/runtime/packages/design/templates/studio/studio.js.sources/10-react.js",
@@ -3272,7 +3272,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:674115ab13d18062757b121898429a0ba0c6075d94cdc1318d3a1fd4d99252f7"
+          "digest": "sha256:4aab96d064581d9ab53258d1360a232498c868da1dab5a54af24d82d7e4d41b0"
         },
         {
           "path": "scripts/runtime/packages/design/templates/studio/studio.js.sources/15-interface-primitives.js",
@@ -3284,7 +3284,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:6228cf871238da64e48ae07c2998a754451462fdc0662137a15e99ce1c7408ee"
+          "digest": "sha256:4fe4835d0cc92c9db852e0b699eb0d90b6be11d79bdef6b755c29e5be2e52f60"
         },
         {
           "path": "scripts/runtime/packages/design/templates/studio/studio.js.sources/16-studio-shell.js",
@@ -3320,7 +3320,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:ad2e601d993087146fcd4d049ddd1cf7e06f7102eb178e2c65017624a2252393"
+          "digest": "sha256:0b2f8c9dc18f6c31e5fac583262a740c41b953372700ffe5a270a37a52562982"
         },
         {
           "path": "scripts/runtime/packages/protocol/registries/artifact-theme.json",
@@ -3596,7 +3596,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:2cd156e3285240dced643f0312875a23ec3681a0492bec96591bfc36c06256b9"
+          "digest": "sha256:838f0c2a6737103edda011c6ebb7bf30a2119323a3baf8dfc3a815258bc6b185"
         }
       ],
       "contracts": {
@@ -4266,7 +4266,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:fb0d23636597168f9f139c21ce9c5af63e225ad765231b1f0b7c2af2675d8cb6"
+          "digest": "sha256:6c9fd4de022d077d4f8953fc1ae75d9a10a969c44e638a612137ffa153a6e8ca"
         },
         {
           "path": "scripts/runtime/packages/design/templates/studio/studio.js.sources/01-module-runtime.js",
@@ -4290,7 +4290,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:bf350d5126e53d2eebc29c96ce4c38d007dc205aded91cc3bb964c1d68e469e5"
+          "digest": "sha256:3d07031b0e1ebfe8d00491d70eb876cdd9ec829801ec3df4fc5aa72205b5ea7f"
         },
         {
           "path": "scripts/runtime/packages/design/templates/studio/studio.js.sources/03-react-dom-client-fiber-foundations.js",
@@ -4302,7 +4302,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:f30ee0a7f2c9dbe1b13e64d33fd9f5a25bd816e60ca04eeda5153a1a3694cbb1"
+          "digest": "sha256:793a627a349d139397ff51c837c7cc911b08b34a49e5629af0c7967e5cb89715"
         },
         {
           "path": "scripts/runtime/packages/design/templates/studio/studio.js.sources/04-react-dom-client-reconciliation-hooks.js",
@@ -4314,7 +4314,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:0f5687e30eb5029375818768c47b407d48946ad420adec5b3d9453d4e6e9b751"
+          "digest": "sha256:3839e5bdcca072a612ec48fffb6e340083f4692c516a2aeb9c8c8896ab4ea6a4"
         },
         {
           "path": "scripts/runtime/packages/design/templates/studio/studio.js.sources/05-react-dom-client-render-phases.js",
@@ -4326,7 +4326,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:1fb2854c8642a5f9285fb5d30b015ef25006a5c2b433323eb6226173ec9f0d12"
+          "digest": "sha256:f057d07ab68567daebe124fe103d88157ee4ce68177e21d1a2166debf424309f"
         },
         {
           "path": "scripts/runtime/packages/design/templates/studio/studio.js.sources/06-react-dom-client-commit-effects.js",
@@ -4338,7 +4338,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:6038d1c4d96e123d9f9ab7ee2516878c97bdbe5bc6149732d1064444d38b3b57"
+          "digest": "sha256:67291903232cb09062344ef0770638c9882a76178adba57c9a67f72bbdb80cbb"
         },
         {
           "path": "scripts/runtime/packages/design/templates/studio/studio.js.sources/07-react-dom-client-work-loop-scheduling.js",
@@ -4350,7 +4350,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:89525ecc086cf31eff4fc4daf2e886ed603b301c8af6c855d409e9d6367df3e8"
+          "digest": "sha256:ed6b1c356c341efa060072cffa2a61fcbb425655bd00c8b58dc5b50a13d5a3ad"
         },
         {
           "path": "scripts/runtime/packages/design/templates/studio/studio.js.sources/08-react-dom-client-dom-events-properties-hydration.js",
@@ -4362,7 +4362,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:02670980a272f781deb8d9e9d67c0ca5ea62fd31c9fff6ea55a1ccc7ade93262"
+          "digest": "sha256:fae78a4ea2c320638ca51a504b26dba90440d72882afdf1edf7ac49fe24853b6"
         },
         {
           "path": "scripts/runtime/packages/design/templates/studio/studio.js.sources/09-react-dom-client-public-roots.js",
@@ -4374,7 +4374,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:631a2f59100373a07571b84cf75aeb8469d122721c32c5c30a85c26591721878"
+          "digest": "sha256:adca04c0e9079e354d467d17aaa6f49423611d290661f0cbbd7610545a98825e"
         },
         {
           "path": "scripts/runtime/packages/design/templates/studio/studio.js.sources/10-react.js",
@@ -4434,7 +4434,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:674115ab13d18062757b121898429a0ba0c6075d94cdc1318d3a1fd4d99252f7"
+          "digest": "sha256:4aab96d064581d9ab53258d1360a232498c868da1dab5a54af24d82d7e4d41b0"
         },
         {
           "path": "scripts/runtime/packages/design/templates/studio/studio.js.sources/15-interface-primitives.js",
@@ -4446,7 +4446,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:6228cf871238da64e48ae07c2998a754451462fdc0662137a15e99ce1c7408ee"
+          "digest": "sha256:4fe4835d0cc92c9db852e0b699eb0d90b6be11d79bdef6b755c29e5be2e52f60"
         },
         {
           "path": "scripts/runtime/packages/design/templates/studio/studio.js.sources/16-studio-shell.js",
@@ -4482,7 +4482,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:ad2e601d993087146fcd4d049ddd1cf7e06f7102eb178e2c65017624a2252393"
+          "digest": "sha256:0b2f8c9dc18f6c31e5fac583262a740c41b953372700ffe5a270a37a52562982"
         },
         {
           "path": "scripts/runtime/packages/protocol/registries/artifact-theme.json",
@@ -4758,7 +4758,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:2cd156e3285240dced643f0312875a23ec3681a0492bec96591bfc36c06256b9"
+          "digest": "sha256:838f0c2a6737103edda011c6ebb7bf30a2119323a3baf8dfc3a815258bc6b185"
         }
       ],
       "contracts": {
@@ -5291,7 +5291,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:ad2e601d993087146fcd4d049ddd1cf7e06f7102eb178e2c65017624a2252393"
+          "digest": "sha256:0b2f8c9dc18f6c31e5fac583262a740c41b953372700ffe5a270a37a52562982"
         },
         {
           "path": "scripts/runtime/packages/protocol/schemas/v1.1.0/artifact-review.schema.json",
