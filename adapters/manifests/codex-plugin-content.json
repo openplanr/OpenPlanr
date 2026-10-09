@@ -5,10 +5,10 @@
   "plugin": "planr",
   "version": "3.0.1",
   "skillRoot": "./skills/",
-  "canonicalSkillCount": 28,
+  "canonicalSkillCount": 30,
   "compatibilityAliasCount": 0,
-  "skillCount": 28,
-  "assetCount": 202,
+  "skillCount": 30,
+  "assetCount": 210,
   "skills": [
     {
       "skillId": "planr-artifact",
@@ -169,6 +169,31 @@
         {
           "path": "skills/cmo-review/agents/openai.yaml",
           "digest": "sha256:127cc7794210be7992c3fe32ef0123b5cdd512ceb7a3918af5528dece268277c"
+        }
+      ]
+    },
+    {
+      "skillId": "planr-connect",
+      "projectedName": "connect",
+      "invocation": "$planr:connect",
+      "description": "Report which chat, project tracker and source control connections the host has, and guide connecting the missing ones through the host. Use when the user wants to connect a service for OpenPlanr or asks what is connected.",
+      "entrypoint": "skills/connect/SKILL.md",
+      "assets": [
+        {
+          "path": "skills/connect/SKILL.md",
+          "digest": "sha256:c27a2c92d51f784c499ccdd1189eda662de5397e6779f39c920e3f00897f8af8"
+        },
+        {
+          "path": "skills/connect/openplanr.skill.json",
+          "digest": "sha256:e231e5a446e409f860079f4df07c7abb5d160f35b578c4252516094e100d3994"
+        },
+        {
+          "path": "skills/connect/agents/openai.yaml",
+          "digest": "sha256:e2235af9e0905b14d4f3ddc0d3637ad2aa75c8000b998f1db3fda12bc47fa381"
+        },
+        {
+          "path": "skills/connect/references/connectors.md",
+          "digest": "sha256:0e37a275e8bbd05fb4b5ff22184e9e2df81844f2bc569920880f6b1632ca63f1"
         }
       ]
     },
@@ -753,7 +778,7 @@
       "assets": [
         {
           "path": "skills/openplanr/SKILL.md",
-          "digest": "sha256:76c0cd19e98d91a4a273f7960629ac9a4c3f8a88b9066f0bfbc347c57e63c499"
+          "digest": "sha256:e81058f5a898978b7c503e8a3ee8334a614ca43270aafb6df94bb2411bf8e1cc"
         },
         {
           "path": "skills/openplanr/openplanr.skill.json",
@@ -906,6 +931,31 @@
       ]
     },
     {
+      "skillId": "planr-share",
+      "projectedName": "share",
+      "invocation": "$planr:share",
+      "description": "Share a status report, sprint note or release notes with the team as a chat message draft that the user approves and sends. Use when the user asks to post a planning update to chat.",
+      "entrypoint": "skills/share/SKILL.md",
+      "assets": [
+        {
+          "path": "skills/share/SKILL.md",
+          "digest": "sha256:608ea9b107762bd4c18a3eaed9f81998e7be53a8b150c4f4c5b05a9e3ee58d60"
+        },
+        {
+          "path": "skills/share/openplanr.skill.json",
+          "digest": "sha256:832195e643d77f5457d468a530c76512935b4df0d6acf7ab5f3d88b06338c4b2"
+        },
+        {
+          "path": "skills/share/agents/openai.yaml",
+          "digest": "sha256:6a8c0e38c4ebe8c3cf67a3451503bea7171c29d2a77b6de882d3c30d9156c4c4"
+        },
+        {
+          "path": "skills/share/references/connectors.md",
+          "digest": "sha256:0e37a275e8bbd05fb4b5ff22184e9e2df81844f2bc569920880f6b1632ca63f1"
+        }
+      ]
+    },
+    {
       "skillId": "planr-ship",
       "projectedName": "ship",
       "invocation": "$planr:ship",
@@ -992,7 +1042,7 @@
         },
         {
           "path": "skills/sprint/references/connectors.md",
-          "digest": "sha256:86ee0408c33bcfcfc757076e8ce89367abfa2f239789826b8fa1e31a8e70dda8"
+          "digest": "sha256:0e37a275e8bbd05fb4b5ff22184e9e2df81844f2bc569920880f6b1632ca63f1"
         },
         {
           "path": "skills/sprint/references/tracker-connections.md",
@@ -1025,7 +1075,7 @@
         },
         {
           "path": "skills/status/references/connectors.md",
-          "digest": "sha256:86ee0408c33bcfcfc757076e8ce89367abfa2f239789826b8fa1e31a8e70dda8"
+          "digest": "sha256:0e37a275e8bbd05fb4b5ff22184e9e2df81844f2bc569920880f6b1632ca63f1"
         },
         {
           "path": "skills/status/references/tracker-connections.md",
@@ -1050,7 +1100,7 @@
         },
         {
           "path": "skills/sync/references/connectors.md",
-          "digest": "sha256:86ee0408c33bcfcfc757076e8ce89367abfa2f239789826b8fa1e31a8e70dda8"
+          "digest": "sha256:0e37a275e8bbd05fb4b5ff22184e9e2df81844f2bc569920880f6b1632ca63f1"
         },
         {
           "path": "skills/sync/references/tracker-connections.md",

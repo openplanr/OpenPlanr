@@ -1,0 +1,6 @@
+interface:
+  display_name: "OpenPlanr Share"
+  short_description: "Share a status report, sprint note or release notes with the…"
+  default_prompt: "Use $planr-share to share a status report, sprint note or release notes with the team as a chat message draft that the user approves and sends. Use when the user asks to post a planning update to chat."
+policy:
+  allow_implicit_invocation: false

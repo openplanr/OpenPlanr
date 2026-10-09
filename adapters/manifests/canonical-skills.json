@@ -10,6 +10,7 @@
     "planr-chair-review",
     "planr-challenger-review",
     "planr-cmo-review",
+    "planr-connect",
     "planr-coo-review",
     "planr-cpo-review",
     "planr-cto-review",
@@ -27,6 +28,7 @@
     "planr-plan",
     "planr-plan-review",
     "planr-release",
+    "planr-share",
     "planr-ship",
     "planr-spec",
     "planr-sprint",
@@ -516,6 +518,55 @@
       ],
       "contribution": "operate",
       "authorityClass": "review-evidence",
+      "utilityRequirements": []
+    },
+    {
+      "id": "planr-connect",
+      "version": "1.0.0",
+      "source": "skills/planr-connect/openplanr.skill.json",
+      "entrypoint": "skills/planr-connect/SKILL.md",
+      "description": "Report which chat, project tracker and source control connections the host has, and guide connecting the missing ones through the host. Use when the user wants to connect a service for OpenPlanr or asks what is connected.",
+      "sourceDigest": "sha256:22fa2020978411e9ea0b22d0354e25c5af99b2a408e5ed71bc31b32dc17063c4",
+      "resources": [
+        {
+          "path": "agents/openai.yaml",
+          "kind": "agent-metadata",
+          "hosts": [
+            "codex",
+            "chatgpt"
+          ],
+          "executable": false,
+          "digest": "sha256:91c5e09b932639556255d0c2ec2411f1a6d4c53ac009193bc8a9e237f56b1910"
+        },
+        {
+          "path": "references/connectors.md",
+          "kind": "reference",
+          "hosts": [
+            "claude-code",
+            "codex",
+            "chatgpt",
+            "cursor"
+          ],
+          "executable": false,
+          "digest": "sha256:0e37a275e8bbd05fb4b5ff22184e9e2df81844f2bc569920880f6b1632ca63f1"
+        }
+      ],
+      "contracts": {
+        "inputs": [],
+        "outputs": [
+          {
+            "id": "connect-result",
+            "version": "1.0.0"
+          }
+        ]
+      },
+      "ruleIds": [
+        "R1",
+        "R5",
+        "R7"
+      ],
+      "contribution": "workflows",
+      "authorityClass": "diagnostic",
       "utilityRequirements": []
     },
     {
@@ -4991,7 +5042,7 @@
       "source": "skills/planr-openplanr/openplanr.skill.json",
       "entrypoint": "skills/planr-openplanr/SKILL.md",
       "description": "Route a planning, specification, delivery, delegation, design, review, diagram, release, or operating request to the best OpenPlanr skill. Use when the right skill is unclear or the request spans several.",
-      "sourceDigest": "sha256:748417fec791072b8b47aff9bc672f9f965b975bd6153f42f11f4976054b87ee",
+      "sourceDigest": "sha256:5c12ccc7c6d7df2a34771d40db325182eaebec5227bf956f824f01d4e174ddb7",
       "resources": [
         {
           "path": "agents/openai.yaml",
@@ -5428,6 +5479,64 @@
       "utilityRequirements": []
     },
     {
+      "id": "planr-share",
+      "version": "1.0.0",
+      "source": "skills/planr-share/openplanr.skill.json",
+      "entrypoint": "skills/planr-share/SKILL.md",
+      "description": "Share a status report, sprint note or release notes with the team as a chat message draft that the user approves and sends. Use when the user asks to post a planning update to chat.",
+      "sourceDigest": "sha256:928ebe0ce56f0dd11b8f2d89475098df4661438e71d0259759594183e13bb1a6",
+      "resources": [
+        {
+          "path": "agents/openai.yaml",
+          "kind": "agent-metadata",
+          "hosts": [
+            "codex",
+            "chatgpt"
+          ],
+          "executable": false,
+          "digest": "sha256:06417847e3c8e5862d4b6c5839e7790dff099d31b6bf9201500088126e58d487"
+        },
+        {
+          "path": "references/connectors.md",
+          "kind": "reference",
+          "hosts": [
+            "claude-code",
+            "codex",
+            "chatgpt",
+            "cursor"
+          ],
+          "executable": false,
+          "digest": "sha256:0e37a275e8bbd05fb4b5ff22184e9e2df81844f2bc569920880f6b1632ca63f1"
+        }
+      ],
+      "contracts": {
+        "inputs": [],
+        "outputs": [
+          {
+            "id": "share-result",
+            "version": "1.0.0"
+          }
+        ]
+      },
+      "ruleIds": [
+        "R1",
+        "R5",
+        "R7"
+      ],
+      "contribution": "workflows",
+      "authorityClass": "external-write",
+      "utilityRequirements": [
+        {
+          "commandId": "cli-status",
+          "argv": [
+            "status"
+          ],
+          "requiredOptions": [],
+          "optional": true
+        }
+      ]
+    },
+    {
       "id": "planr-ship",
       "version": "1.2.1",
       "source": "skills/planr-ship/openplanr.skill.json",
@@ -5598,7 +5707,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:86ee0408c33bcfcfc757076e8ce89367abfa2f239789826b8fa1e31a8e70dda8"
+          "digest": "sha256:0e37a275e8bbd05fb4b5ff22184e9e2df81844f2bc569920880f6b1632ca63f1"
         },
         {
           "path": "references/tracker-connections.md",
@@ -5680,7 +5789,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:86ee0408c33bcfcfc757076e8ce89367abfa2f239789826b8fa1e31a8e70dda8"
+          "digest": "sha256:0e37a275e8bbd05fb4b5ff22184e9e2df81844f2bc569920880f6b1632ca63f1"
         },
         {
           "path": "references/tracker-connections.md",
@@ -5740,7 +5849,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:86ee0408c33bcfcfc757076e8ce89367abfa2f239789826b8fa1e31a8e70dda8"
+          "digest": "sha256:0e37a275e8bbd05fb4b5ff22184e9e2df81844f2bc569920880f6b1632ca63f1"
         },
         {
           "path": "references/tracker-connections.md",
@@ -5817,5 +5926,5 @@
       ]
     }
   ],
-  "membershipDigest": "sha256:6696af3853f6ee5b399bf54bc079fc53320eafe7375a69b0abba2b58d9d1ed26"
+  "membershipDigest": "sha256:8658b186cd9d86cbf1f0373428cf527e13bfa4dfd8856e3f33acceb3510702e5"
 }

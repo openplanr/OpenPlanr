@@ -69,6 +69,17 @@ Produce a grounded market and growth review for an Operate cycle. Use when acqui
 - Aliases: none.
 - Packaged support: `references/operate-advisor-contract.md`, with packaged validators and runtime support. See the [resource inventory](../../skills/planr-cmo-review/openplanr.skill.json).
 
+## `planr-connect`
+
+Report which chat, project tracker and source control connections the host has, and guide connecting the missing ones through the host. Use when the user wants to connect a service for OpenPlanr or asks what is connected.
+
+- Select for: Connect chat, a project tracker or source control for OpenPlanr; Check which services OpenPlanr can reach through the host's connections.
+- Defer for: Diagnose OpenPlanr installation or runtime health; Synchronize planning artifacts with a tracker.
+- Invocation from the plugin: `$planr:connect` in Codex/ChatGPT; `/planr:connect` in Claude Code.
+- Hosts: Claude Code, Codex, ChatGPT, and Cursor where supported by the package manifest.
+- Aliases: none.
+- Packaged support: `references/connectors.md`. See the [resource inventory](../../skills/planr-connect/openplanr.skill.json).
+
 ## `planr-coo-review`
 
 Produce a grounded operations and customer-health review for an Operate cycle. Use when readiness, service delivery, capacity, or customer health needs a COO lens.
@@ -255,6 +266,17 @@ Choose and maintain a product's versioning scheme, classify shipped changes, and
 - Hosts: Claude Code, Codex, ChatGPT, and Cursor where supported by the package manifest.
 - Aliases: none.
 - Packaged support: `references/schemes.md`, `references/release-notes.md`, `references/cadence.md`, with packaged validators and runtime support. See the [resource inventory](../../skills/planr-release/openplanr.skill.json).
+
+## `planr-share`
+
+Share a status report, sprint note or release notes with the team as a chat message draft that the user approves and sends. Use when the user asks to post a planning update to chat.
+
+- Select for: Share the delivery status, sprint note or release notes with the team in chat; Post a planning update to a chat channel as a draft.
+- Defer for: Report delivery status without sharing it; Write or publish release notes.
+- Invocation from the plugin: `$planr:share` in Codex/ChatGPT; `/planr:share` in Claude Code.
+- Hosts: Claude Code, Codex, ChatGPT, and Cursor where supported by the package manifest.
+- Aliases: none.
+- Packaged support: `references/connectors.md`. See the [resource inventory](../../skills/planr-share/openplanr.skill.json).
 
 ## `planr-ship`
 

@@ -266,6 +266,49 @@
       "utilityRequirements": []
     },
     {
+      "skillId": "planr-connect",
+      "family": "diagnostics",
+      "contribution": "workflows",
+      "skillVersion": "1.0.0",
+      "description": "Report which chat, project tracker and source control connections the host has, and guide connecting the missing ones through the host. Use when the user wants to connect a service for OpenPlanr or asks what is connected.",
+      "lifecycle": "active",
+      "authorityClass": "diagnostic",
+      "invocation": "user-only",
+      "source": "skills/planr-connect/openplanr.skill.json",
+      "baseline": "skills/planr-connect/SKILL.md",
+      "triggerPolicy": {
+        "include": [
+          "Connect chat, a project tracker or source control for OpenPlanr",
+          "Check which services OpenPlanr can reach through the host's connections"
+        ],
+        "exclude": [
+          "Diagnose OpenPlanr installation or runtime health",
+          "Synchronize planning artifacts with a tracker"
+        ],
+        "deferTo": []
+      },
+      "contracts": {
+        "inputs": [],
+        "outputs": [
+          {
+            "id": "connect-result",
+            "version": "1.0.0"
+          }
+        ]
+      },
+      "cliRequirements": [],
+      "ruleIds": [
+        "R1",
+        "R5",
+        "R7"
+      ],
+      "certification": {
+        "migration": "evaluation/skills/migrations/planr-connect.json",
+        "matchingFamily": "diagnostics"
+      },
+      "utilityRequirements": []
+    },
+    {
       "skillId": "planr-coo-review",
       "family": "operate-advisor",
       "contribution": "operate",
@@ -1072,6 +1115,58 @@
         "matchingFamily": "release"
       },
       "utilityRequirements": []
+    },
+    {
+      "skillId": "planr-share",
+      "family": "planning-tools",
+      "contribution": "workflows",
+      "skillVersion": "1.0.0",
+      "description": "Share a status report, sprint note or release notes with the team as a chat message draft that the user approves and sends. Use when the user asks to post a planning update to chat.",
+      "lifecycle": "active",
+      "authorityClass": "external-write",
+      "invocation": "user-only",
+      "source": "skills/planr-share/openplanr.skill.json",
+      "baseline": "skills/planr-share/SKILL.md",
+      "triggerPolicy": {
+        "include": [
+          "Share the delivery status, sprint note or release notes with the team in chat",
+          "Post a planning update to a chat channel as a draft"
+        ],
+        "exclude": [
+          "Report delivery status without sharing it",
+          "Write or publish release notes"
+        ],
+        "deferTo": []
+      },
+      "contracts": {
+        "inputs": [],
+        "outputs": [
+          {
+            "id": "share-result",
+            "version": "1.0.0"
+          }
+        ]
+      },
+      "cliRequirements": [],
+      "ruleIds": [
+        "R1",
+        "R5",
+        "R7"
+      ],
+      "certification": {
+        "migration": "evaluation/skills/migrations/planr-share.json",
+        "matchingFamily": "planning-tools"
+      },
+      "utilityRequirements": [
+        {
+          "commandId": "cli-status",
+          "argv": [
+            "status"
+          ],
+          "requiredOptions": [],
+          "optional": true
+        }
+      ]
     },
     {
       "skillId": "planr-ship",
