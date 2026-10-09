@@ -763,7 +763,7 @@ const footprint = {
     ),
   })),
 };
-add('adapters/manifests/skill-footprint.json', json(footprint), { checkedIn: true });
+add('adapters/manifests/skill-footprint.json', json(footprint));
 
 const generatedAssets = [...outputs.entries()]
   .map(([path, bytes]) => ({
@@ -781,7 +781,6 @@ add(
     generator: 'scripts/skills/generate-v18.mjs',
     assets: generatedAssets,
   }),
-  { checkedIn: true },
 );
 
 const openAiAssets = [...outputs.entries()]
@@ -826,6 +825,7 @@ function write(path, bytes) {
 
 const generatedOutput = (path) =>
   generatedRoots.some((rootPath) => path.startsWith(`${rootPath}/`));
+// The previous run's ignored manifest; without it, the ownership ledger and historical baseline apply.
 const priorAssetPath = resolve(root, 'adapters/manifests/generated-assets.json');
 const priorAssets = existsSync(priorAssetPath)
   ? JSON.parse(readFileSync(priorAssetPath, 'utf8')).assets

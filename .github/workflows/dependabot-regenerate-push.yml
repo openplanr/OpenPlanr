@@ -23,9 +23,6 @@ env:
   REGENERATED_PATHS: |-
     adapters/manifests/canonical-skills.json
     adapters/manifests/codex-plugin-content.json
-    adapters/manifests/ecosystem-assets.json
-    adapters/manifests/generated-assets.json
-    ecosystem.json
 
 jobs:
   push:

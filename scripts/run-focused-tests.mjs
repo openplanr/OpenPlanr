@@ -24,6 +24,7 @@ const steps = Object.freeze([
       'tests/ecosystem-root/studio-candidate-pack.test.mjs',
       'tests/ecosystem-root/generator-graph.test.mjs',
       'tests/ecosystem-root/generated-ignore.test.mjs',
+      'tests/ecosystem-root/generated-aggregate-merge.test.mjs',
       'tests/ecosystem-root/studio-style-compiler.test.mjs',
       'tests/ecosystem-root/ecosystem-generation.test.mjs',
       'tests/ecosystem-root/diagram-onboarding.test.mjs',
