@@ -123,12 +123,12 @@ description, or that you invoke by name.
 | Diagrams | `diagram` | `openplanr diagram` |
 | Artifact reviews | `artifact` | `openplanr artifact` |
 | Land and release | `land`, `release` | `openplanr land` |
-| Setup and diagnostics | `doctor`, `investigate` | `openplanr doctor`, `openplanr upgrade` |
-| Status, routing, and sync | `status`, `sync`, `dashboard`, `openplanr` (routes a request to the best skill) | `openplanr status`, `openplanr sync`, `openplanr dashboard` |
+| Setup and diagnostics | `doctor`, `investigate`, `connect` | `openplanr doctor`, `openplanr upgrade` |
+| Status, routing, and sync | `status`, `sync`, `share`, `dashboard`, `openplanr` (routes a request to the best skill) | `openplanr status`, `openplanr sync`, `openplanr dashboard` |
 | Operate | `operate` with `ceo`, `cto`, `cpo`, `cmo`, `coo`, `challenger`, and `chair` reviews | `openplanr operate` |
 
 Invoke a skill as `/planr:<skill>` in Claude Code or `$planr:<skill>` in Codex; in Cursor,
-mention the `planr-<skill>` rule. The [skill catalog](docs/generated/skills.md) is generated from
+mention the `planr-<skill>` rule. `share` and `connect` run only when you invoke them. The [skill catalog](docs/generated/skills.md) is generated from
 the registry and lists every trigger, deferral, and packaged reference.
 
 ## Diagram engine
@@ -164,6 +164,14 @@ See [authoring and verifying diagrams](docs/diagrams/authoring.md).
 | Claude Code | `openplanr setup --runtime claude --scope user` | `/planr:<skill>` | OpenPlanr plugin with native role agents for `plan` and `ship` |
 | Codex | `openplanr setup --runtime codex --scope user --skill-mode unified-plugin` | `$planr:<skill>` | OpenPlanr plugin; `--skill-mode direct` installs individual skills instead |
 | Cursor | `openplanr setup --runtime cursor --scope project` | mention the `planr-<skill>` rule | Project rules under `.cursor/rules/` |
+
+### Connections
+
+Skills reach chat, project trackers and source control through connectors you add
+to your host; OpenPlanr ships none and stores no credentials. Run `connect` to see
+what is connected and how to add the rest, and `share` to post an update to chat
+as a draft you approve. See [connections](docs/connections.md) and the per-host
+[connect steps](docs/generated/connectors.md).
 
 `openplanr rules generate` adds an `## OpenPlanr capabilities` section to `CLAUDE.md` or `AGENTS.md`
 so the agent knows every skill and when to reach for it. See the
@@ -214,6 +222,7 @@ generation time. See the [architecture guide](docs/architecture/README.md).
 [Docs](https://openplanr.dev/docs) ·
 [Getting started](docs/getting-started.md) ·
 [Skill catalog](docs/generated/skills.md) ·
+[Connections](docs/connections.md) ·
 [CLI reference](packages/cli/docs/CLI.md) ·
 [Troubleshooting](packages/cli/docs/TROUBLESHOOTING.md) ·
 [Diagrams](docs/diagrams/authoring.md)

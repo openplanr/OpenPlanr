@@ -94,6 +94,7 @@ test('the catalog rejects a product without a step for every host or a verificat
 });
 
 test('every package root and connection skill ships the catalog rendering byte for byte', () => {
+  assert.equal(read('docs/generated/connectors.md'), rendered, 'docs copy drifted');
   for (const id of CONNECTION_SKILL_IDS)
     assert.equal(read(`skills/${id}/${CONNECTORS_REFERENCE}`), rendered, `${id} copy drifted`);
   for (const [host, pluginRoot, skillRoot] of packages) {

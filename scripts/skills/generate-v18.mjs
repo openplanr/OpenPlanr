@@ -720,6 +720,8 @@ for (const [path, bytes] of [...outputs.entries()]) {
   });
 }
 
+add('docs/generated/connectors.md', connectorsMarkdown, { checkedIn: true });
+
 const membership = {
   kind: 'canonical-skill-membership',
   schemaVersion: '1.0.0',
