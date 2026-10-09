@@ -83,6 +83,22 @@ async function geometry(page) {
     };
   });
 }
+// `data-ready` can precede the first rendered frame; the toolbar settles its layout and the canvas
+// refits only once frames run, so wait until both hold for consecutive frames.
+async function steady(page) {
+  await page.evaluate(async () => {
+    const canvas = document.querySelector('.diagram-canvas'),
+      scene = document.querySelector('.diagram-scene');
+    const snapshot = () => `${canvas.clientWidth}x${canvas.clientHeight} ${scene.style.transform}`;
+    let previous = snapshot();
+    for (let stable = 0; stable < 3; ) {
+      await new Promise((resolve) => requestAnimationFrame(resolve));
+      const current = snapshot();
+      stable = current === previous ? stable + 1 : 0;
+      previous = current;
+    }
+  });
+}
 async function settled(page) {
   await page.evaluate(
     () => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))),
@@ -163,6 +179,7 @@ test('native diagram fits the full scene, pans over content, zooms at the pointe
     page: 'rgba(0, 0, 0, 0)',
     shape: 'rgb(226, 232, 240)',
   });
+  await steady(page);
   const initial = await geometry(page);
   assert.ok(
     initial.scene.left >= initial.canvas.left && initial.scene.right <= initial.canvas.right,
@@ -540,6 +557,7 @@ test('Inspect is a keyboard-accessible active mode that selects semantic details
     await page.locator('.diagram-shell').getAttribute('data-planr-review-mode'),
     'inspect',
   );
+  await steady(page);
   const before = (await geometry(page)).transform;
   const item = await page.locator('[data-item-id="actor-0"]').boundingBox();
   await page.mouse.move(item.x + item.width / 2, item.y + item.height / 2);
