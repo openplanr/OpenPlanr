@@ -49,6 +49,17 @@ test('frontmatter owns descriptions and stale projections fail before resource g
       () => readSkillSourceRegistry({ repoRoot: fixture, verifyDescriptions: true }),
       (error) => error.code === 'E_SKILL_DESCRIPTION_DRIFT',
     );
+    const registryPath = resolve(fixture, 'skills/registry.json');
+    const registry = JSON.parse(readFileSync(registryPath, 'utf8'));
+    registry.skills[0].invocation = 'user-only';
+    writeFileSync(registryPath, JSON.stringify(registry));
+    assert.equal(readSkillSourceRegistry({ repoRoot: fixture }).skills[0].invocation, 'user-only');
+    registry.skills[0].invocation = 'model-only';
+    writeFileSync(registryPath, JSON.stringify(registry));
+    assert.throws(
+      () => readSkillSourceRegistry({ repoRoot: fixture }),
+      (error) => error.code === 'E_SKILL_REGISTRY_INVOCATION_INVALID',
+    );
   } finally {
     rmSync(fixture, { recursive: true, force: true });
   }

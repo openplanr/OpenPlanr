@@ -309,3 +309,25 @@ test('optional CLI is provider-free and exposes only the classified deterministi
   visit(resolve(root, 'packages/cli/src'));
   assert.deepEqual(providerSourceHits, []);
 });
+
+test('only registry user-only skills opt out of model invocation, in each host form', () => {
+  for (const row of registry.skills) {
+    const name = projectedSkillName(row.skillId);
+    const userOnly = row.invocation === 'user-only';
+    const claude = read(`dist/plugins/claude/openplanr/skills/${name}/SKILL.md`).split(
+      '\n---\n',
+    )[0];
+    assert.equal(/^disable-model-invocation: true$/mu.test(claude), userOnly, `${name} claude`);
+    const codex = read(`dist/plugins/openai/openplanr/skills/${name}/agents/openai.yaml`);
+    assert.match(
+      codex,
+      new RegExp(`^ {2}allow_implicit_invocation: ${!userOnly}$`, 'mu'),
+      `${name} codex`,
+    );
+    const cursor = read(`dist/plugins/cursor/openplanr/rules/${row.skillId}.mdc`).split(
+      '\n---\n',
+    )[0];
+    assert.equal(/^description:/mu.test(cursor), !userOnly, `${name} cursor`);
+    assert.match(cursor, /^alwaysApply: false$/mu, `${name} cursor`);
+  }
+});

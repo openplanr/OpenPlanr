@@ -29,7 +29,12 @@ function shortDescription(description) {
 }
 
 /** Render one Codex-native skill card from canonical skill identity. */
-export function renderOpenAiSkillMetadata({ skillId, description, invocation = `$${skillId}` }) {
+export function renderOpenAiSkillMetadata({
+  skillId,
+  description,
+  invocation = `$${skillId}`,
+  allowImplicitInvocation = true,
+}) {
   if (
     !/^[a-z0-9]+(?:-[a-z0-9]+)*$/u.test(skillId) ||
     typeof description !== 'string' ||
@@ -51,6 +56,13 @@ export function renderOpenAiSkillMetadata({ skillId, description, invocation = `
       { skillId, invocation },
     );
   }
+  if (typeof allowImplicitInvocation !== 'boolean') {
+    throw new SkillRuntimeError(
+      'E_SKILL_OPENAI_METADATA_INVALID',
+      'Codex skill metadata requires a boolean implicit invocation policy.',
+      { skillId, allowImplicitInvocation },
+    );
+  }
   const summary = shortDescription(description);
   const prompt = `Use ${invocation} to ${description.charAt(0).toLowerCase()}${description.slice(1)}`;
   return [
@@ -59,7 +71,7 @@ export function renderOpenAiSkillMetadata({ skillId, description, invocation = `
     `  short_description: ${serializeYamlScalar(summary)}`,
     `  default_prompt: ${serializeYamlScalar(prompt)}`,
     'policy:',
-    '  allow_implicit_invocation: true',
+    `  allow_implicit_invocation: ${allowImplicitInvocation}`,
     '',
   ].join('\n');
 }

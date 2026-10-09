@@ -49,9 +49,27 @@ describe('capabilityMapContext', () => {
       lead: 'Turn intent into stories and tasks.',
       useWhen: 'Break a specification into tasks; Plan a feature',
       notFor: 'Implement code',
+      userInvoked: false,
     });
+    expect(context.hasUserInvoked).toBe(false);
     expect(context.families[1].skills[0].notFor).toBe('');
     expect(context.prefix).toBe('/planr:');
+  });
+
+  it('marks user-invoked skills so guidance points to them instead of running them', () => {
+    const userOnly: CapabilityMap = {
+      ...map,
+      skills: [
+        ...map.skills,
+        { ...map.skills[1], id: 'planr-share', name: 'share', userInvoked: true },
+      ],
+    };
+    const context = capabilityMapContext(userOnly, { prefix: '/planr:', includeAgents: false });
+    expect(context.hasUserInvoked).toBe(true);
+    expect(context.families[1].skills.map(({ name, userInvoked }) => [name, userInvoked])).toEqual([
+      ['browser-qa', false],
+      ['share', true],
+    ]);
   });
 
   it('includes agents only for hosts that run them', () => {

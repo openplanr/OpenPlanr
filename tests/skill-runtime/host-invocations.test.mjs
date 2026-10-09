@@ -5,8 +5,47 @@ import {
   HOST_PLUGIN_NAME,
   namespacedInvocation,
   projectedSkillName,
+  renderCursorRule,
   renderNamespacedSkill,
+  renderUserOnlySkill,
 } from '../../scripts/skills/host-invocations.mjs';
+
+test('a user-only skill gains disable-model-invocation in its frontmatter only', () => {
+  const skill = '---\nname: share\ndescription: Share an update.\n---\n\n# Share\n';
+  const rendered = renderUserOnlySkill(skill, 'planr-share');
+  assert.equal(
+    rendered,
+    '---\nname: share\ndescription: Share an update.\ndisable-model-invocation: true\n---\n\n# Share\n',
+  );
+  assert.equal(renderUserOnlySkill(rendered, 'planr-share'), rendered);
+  assert.throws(
+    () => renderUserOnlySkill('# No frontmatter\n', 'planr-share'),
+    (error) =>
+      error.code === 'E_SKILL_USER_ONLY_FRONTMATTER_INVALID' && /planr-share/u.test(error.message),
+  );
+  assert.throws(
+    () =>
+      renderUserOnlySkill(
+        '---\nname: share\ndescription: Share.\ndisable-model-invocation: false\n---\n',
+        'planr-share',
+      ),
+    (error) =>
+      error.code === 'E_SKILL_USER_ONLY_FRONTMATTER_INVALID' &&
+      /declares disable-model-invocation: false/u.test(error.message),
+  );
+});
+
+test('a user-only Cursor rule omits its description so only a mention applies it', () => {
+  const body = '# OpenPlanr Share\n\nBuild the update.\n';
+  assert.equal(
+    renderCursorRule({ description: 'Share an update.', body }),
+    '---\ndescription: "Share an update."\nalwaysApply: false\n---\n\n# OpenPlanr Share\n\nBuild the update.\n',
+  );
+  assert.equal(
+    renderCursorRule({ description: 'Share an update.', body, userOnly: true }),
+    '---\nalwaysApply: false\n---\n\n# OpenPlanr Share\n\nShare an update.\n\nBuild the update.\n',
+  );
+});
 
 test('plugin projections remove the duplicated planr prefix without changing canonical identity', () => {
   assert.equal(HOST_PLUGIN_NAME, 'planr');

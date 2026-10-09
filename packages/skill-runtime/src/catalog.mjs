@@ -200,6 +200,12 @@ export function readSkillSourceRegistry({ repoRoot, verifyDescriptions = false }
         { source: row.source, expectedSource },
       );
     }
+    if (row.invocation !== undefined && row.invocation !== 'user-only') {
+      fail(
+        'E_SKILL_REGISTRY_INVOCATION_INVALID',
+        `${row.skillId} has invocation ${JSON.stringify(row.invocation)}; omit it or use "user-only".`,
+      );
+    }
     resolveRegularFile(root, row.source, `source for ${row.skillId}`);
     resolveRegularFile(root, row.baseline, `baseline for ${row.skillId}`);
   }
