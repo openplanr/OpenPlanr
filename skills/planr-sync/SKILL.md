@@ -26,6 +26,20 @@ reconciliation, and push remote changes only when the request asks for external
 synchronization. If a connection is unavailable, complete local reconciliation
 and report only the external step that could not run.
 
+## With nothing connected
+
+Audit and local reconciliation run in full. Report the remote step as not run,
+name ~~project tracker as the category it needs, and give the current host's step
+from [connectors](references/connectors.md).
+
+## If ~~project tracker is connected
+
+Before any remote write, list every issue change: each issue to create, update,
+close or reopen, with its title and the status it moves to. Write only when the
+request explicitly asked for that push or the user approves the list. Afterwards,
+report each item that was not updated and why, and name the category and product
+the changes went to.
+
 ## Return
 
 Lead with what is aligned, repaired or still blocked. Summarize aligned, locally

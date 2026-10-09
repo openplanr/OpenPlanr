@@ -135,11 +135,18 @@ openplanr sprint apply SPRINT-NNN --dry-run          # show the status and prior
 openplanr sprint apply SPRINT-NNN --yes --commit     # one commit: chore(planr): refine backlog for SPRINT-NNN
 ```
 
-Then update the issue linked to each changed item through the host's
-~~project tracker connection, with the status mapping in the
-[tracker sync reference](references/tracker-connections.md), and report the items that
-were not updated. When the CLI is unavailable, apply the same status changes with
-the repository's own vocabulary and commit them with the same message.
+Then, if ~~project tracker is connected, update the issue linked to each changed
+item through the host's connection, with the status mapping in the
+[tracker sync reference](references/tracker-connections.md). Before any remote write,
+list every issue change: each issue to create, update, close or reopen, with its
+title and the status it moves to. Write only when the request explicitly asked for
+that push or the user approves the list. Afterwards, report each item that was not
+updated and why, and name the category and product used. With nothing connected, the local apply is the whole step: report
+the tracker update as not run and give the current host's step from
+[connectors](references/connectors.md).
+
+When the CLI is unavailable, apply the same status changes with the repository's
+own vocabulary and commit them with the same message.
 
 Close a finished sprint with `openplanr sprint close SPRINT-NNN`; it records the
 leftovers the next run carries.
