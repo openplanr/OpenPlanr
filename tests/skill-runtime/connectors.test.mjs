@@ -83,6 +83,23 @@ test('the catalog covers chat, project tracker and source control with dated ste
   );
 });
 
+test('a chat product with a message format gives both the connector and the paste form', () => {
+  const slack = catalog.categories[0].products.find(({ format }) => format);
+  assert.match(
+    rendered,
+    new RegExp(`Message format for ${slack.name}, drafting through the connector: `),
+  );
+  assert.match(rendered, new RegExp(`Message format for ${slack.name}, text to paste: `));
+  assert.match(slack.format.connector, /`\*\*bold\*\*`/u);
+  assert.match(slack.format.paste, /`\*bold\*`/u);
+  const broken = structuredClone(catalog);
+  delete broken.categories[0].products.find(({ format }) => format).format.paste;
+  assert.throws(
+    () => validateConnectionsCatalog(broken),
+    /format needs non-empty connector and paste text/u,
+  );
+});
+
 test('the catalog rejects a product without a step for every host or a verification date', () => {
   const broken = structuredClone(catalog);
   const product = broken.categories[0].products.find(({ connect }) => connect);

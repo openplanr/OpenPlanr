@@ -70,3 +70,32 @@ test('neither skill names host tools, asks for credentials or edits host configu
     assert.match(text, /never edit host configuration|Never edit host configuration/u, name);
   }
 });
+
+test('share asks for a project when none is present and treats a chat product as the app', () => {
+  const text = flat(read('skills/planr-share/SKILL.md'));
+  assert.match(
+    text,
+    /has no OpenPlanr planning files for the chosen source, say so and ask which project to use, or stop/u,
+  );
+  assert.match(
+    text,
+    /When it names a chat product from \[connectors\]\(references\/connectors\.md\) instead, use that product's connection and still ask for the channel or person/u,
+  );
+});
+
+test('share formats for the connector input when drafting and for pasting otherwise', () => {
+  const text = flat(read('skills/planr-share/SKILL.md'));
+  assert.match(text, /when drafting through a connector, use the connector's input format/u);
+  assert.match(text, /for text the user pastes, use the paste format/u);
+});
+
+test('connect resolves a product argument and reports a configured connector awaiting sign-in', () => {
+  const source = read('skills/planr-connect/SKILL.md');
+  assert.match(source, /^argument-hint: "\[chat\|project-tracker\|source-control\|product\]"$/mu);
+  const text = flat(source);
+  assert.match(text, /a product name from connectors selects the category it belongs to/u);
+  assert.match(
+    text,
+    /report it as configured but not signed in, tell the user to sign in from the host's connector settings/u,
+  );
+});
