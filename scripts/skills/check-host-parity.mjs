@@ -7,8 +7,10 @@ import { fileURLToPath } from 'node:url';
 import {
   HOST_PLUGIN_NAME,
   projectedSkillName,
+  renderCursorRule,
   renderCursorSkillBody,
   renderNamespacedSkill,
+  renderUserOnlySkill,
 } from './host-invocations.mjs';
 import { verifySuiteResources } from './suite-verification.mjs';
 
@@ -21,6 +23,11 @@ const registry = JSON.parse(readFileSync(join(root, 'skills/registry.json'), 'ut
 const skillIds = canonical.skillIds;
 const expectedSkillIds = registry.skills.map(({ skillId }) => skillId);
 const expectedHostSkillNames = expectedSkillIds.map(projectedSkillName);
+const userOnlySkillIds = new Set(
+  registry.skills
+    .filter(({ invocation }) => invocation === 'user-only')
+    .map(({ skillId }) => skillId),
+);
 
 function read(path) {
   return readFileSync(join(root, path), 'utf8').replace(/\r\n/gu, '\n');
@@ -53,11 +60,12 @@ for (const host of ['openai', 'claude']) {
     const hostSkillName = projectedSkillName(skillId);
     const skill = canonical.skills.find(({ id }) => id === skillId);
     const source = skill?.entrypoint;
-    if (
-      !source ||
-      renderNamespacedSkill(read(source), skillId) !==
-        read(`${pluginRoot}/skills/${hostSkillName}/SKILL.md`)
-    ) {
+    const projected = source ? renderNamespacedSkill(read(source), skillId) : null;
+    const expected =
+      projected && host === 'claude' && userOnlySkillIds.has(skillId)
+        ? renderUserOnlySkill(projected, skillId)
+        : projected;
+    if (!expected || expected !== read(`${pluginRoot}/skills/${hostSkillName}/SKILL.md`)) {
       throw new Error(
         `${host}/${skillId} does not preserve its canonical namespaced skill projection.`,
       );
@@ -117,13 +125,16 @@ if (JSON.stringify(cursorRules) !== JSON.stringify([...skillIds].sort())) {
 
 for (const skill of canonical.skills) {
   const cursorPath = `dist/plugins/cursor/openplanr/rules/${skill.id}.mdc`;
-  const cursorBody = read(cursorPath).replace(/^---[\s\S]*?---\s*/u, '');
-  const expected = renderCursorSkillBody(
-    read(skill.entrypoint),
-    skill.id,
-    skill.resources.filter(({ hosts }) => hosts.includes('cursor')),
-  );
-  if (cursorBody !== expected)
+  const expected = renderCursorRule({
+    description: skill.description,
+    body: renderCursorSkillBody(
+      read(skill.entrypoint),
+      skill.id,
+      skill.resources.filter(({ hosts }) => hosts.includes('cursor')),
+    ),
+    userOnly: userOnlySkillIds.has(skill.id),
+  });
+  if (read(cursorPath) !== expected)
     throw new Error(
       `cursor/${skill.id} does not preserve its resource-aware canonical projection.`,
     );
