@@ -471,6 +471,27 @@ test('a narrow embed keeps the More menu and dialogs inside the editor', options
     }),
   );
   await page.locator('.planr-diagram-editor[data-layout~="compact"]').waitFor();
+  // The toolbar passes through a two-row layout while it re-measures; measure it once settled.
+  await page.evaluate(
+    () =>
+      new Promise((resolve) => {
+        let timer;
+        const settle = () => {
+          clearTimeout(timer);
+          timer = setTimeout(() => {
+            observer.disconnect();
+            resolve();
+          }, 250);
+        };
+        const observer = new MutationObserver(settle);
+        observer.observe(document.querySelector('.planr-diagram-editor'), {
+          subtree: true,
+          attributes: true,
+          attributeFilter: ['data-layout', 'data-studio-layout', 'data-studio-density'],
+        });
+        settle();
+      }),
+  );
   const host = await page.locator('#host-editor').boundingBox();
   const bar = await page.locator('.de-bar').boundingBox();
   await page.getByRole('button', { name: 'More', exact: true }).click();

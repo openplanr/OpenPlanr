@@ -375,13 +375,7 @@ for (const surface of ['design', 'diagram', 'presentation', 'authoring']) {
               assert.ok(record.toolbar.height <= 92, `${context}: two compact command rows`);
               const save = page.getByRole('button', { name: 'Save diagram', exact: true });
               await save.hover();
-              // The glyph color transitions while the hover fill switches at once; judge the settled state.
-              await save.evaluate((element) =>
-                Promise.all(
-                  element.getAnimations({ subtree: true }).map(({ finished }) => finished),
-                ),
-              );
-              const hover = await save.evaluate((element) => {
+              const hover = await save.evaluate(async (element) => {
                 // Resolve modern color-mix serialization through the browser's sRGB canvas.
                 const canvas = document.createElement('canvas');
                 canvas.width = canvas.height = 1;
@@ -393,17 +387,26 @@ for (const surface of ['design', 'diagram', 'presentation', 'authoring']) {
                   const [r, g, b] = context.getImageData(0, 0, 1, 1).data;
                   return `rgb(${r}, ${g}, ${b})`;
                 };
-                return {
-                  disabled: element.disabled,
-                  color: color(getComputedStyle(element).color),
-                  background: color(getComputedStyle(element, '::before').backgroundColor),
-                };
+                // Sample every frame through any hover transition, not only the settled state.
+                const frames = [];
+                for (const start = performance.now(); performance.now() - start < 200; ) {
+                  frames.push({
+                    color: color(getComputedStyle(element).color),
+                    background: color(getComputedStyle(element, '::before').backgroundColor),
+                  });
+                  await new Promise((resolve) => requestAnimationFrame(resolve));
+                }
+                return { disabled: element.disabled, frames };
               });
-              if (!hover.disabled)
-                assert.ok(
-                  contrastRatio(hover.color, hover.background) >= 3,
-                  `${context}: Save hover glyph has readable contrast`,
+              if (!hover.disabled) {
+                const lowest = Math.min(
+                  ...hover.frames.map((frame) => contrastRatio(frame.color, frame.background)),
                 );
+                assert.ok(
+                  lowest >= 3,
+                  `${context}: Save hover glyph has readable contrast in every frame (${lowest.toFixed(2)}:1)`,
+                );
+              }
               const disabledSurface = await save.evaluate((element) => {
                 const wasDisabled = element.disabled;
                 element.disabled = true;
