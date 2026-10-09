@@ -23,9 +23,18 @@ const JOB_KEYS = new Set([
 // Jobs that prepare on the contributor runtime, then prove the packed packages on another.
 const PACKED_JOBS = new Set(['packed-public-packages', 'packed-public-packages-current']);
 const STRATEGY_KEYS = new Set(['fail-fast', 'matrix']);
-const STEP_KEYS = new Set(['name', 'uses', 'with', 'run', 'env', 'working-directory']);
+const STEP_KEYS = new Set([
+  'name',
+  'uses',
+  'with',
+  'run',
+  'env',
+  'working-directory',
+  'timeout-minutes',
+]);
 const CONSUMER_IF = /^\$\{\{\s*!cancelled\(\)\s*\}\}$/u;
-const RUNNER_ACTIONS = /^actions\/(?:checkout|setup-node|upload-artifact|download-artifact)@/u;
+const RUNNER_ACTIONS =
+  /^(?:actions\/(?:checkout|setup-node|upload-artifact|download-artifact)@|\.\/\.github\/actions\/playwright-chromium$)/u;
 // Runner provisioning that a contributor's checkout already has after the CONTRIBUTING setup.
 const RUNNER_SETUP = /^(?:npm ci|npm exec --workspace=\S+ -- playwright install\b.*)$/u;
 const RESTORE = /^tar -xzmf "\$RUNNER_TEMP\/build-outputs\.tgz"$/u;
