@@ -96,7 +96,7 @@ test(`packed ${packageVersion} package contains the portable artifact release bo
   const localDependencies = {};
   const manifest = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8'));
   const artifactManifest = JSON.parse(readFileSync(join(root, '../artifact/package.json'), 'utf8'));
-  assert.equal(manifest.dependencies['@types/react'], '19.2.18');
+  assert.equal(manifest.dependencies['@types/react'], '19.3.0');
   assert.equal(
     artifactManifest.dependencies['@types/react'],
     manifest.dependencies['@types/react'],

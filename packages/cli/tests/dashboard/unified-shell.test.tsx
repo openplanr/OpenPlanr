@@ -148,7 +148,7 @@ describe('unified dashboard shell', () => {
       expect(html).not.toContain('scope-dashboard · business');
       expect(html).toContain('href="#/overview"');
       expect(html).toContain('href="#/operate/today"');
-      expect(html).toContain('Open the command palette');
+      expect(html).toContain('aria-keyshortcuts="Meta+K Control+K"');
       expect(html).toContain('role="status"');
       expect(html).toContain('title="connection: connected"');
       expect(html).toContain('watcher connected');

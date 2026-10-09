@@ -480,12 +480,11 @@ export function TopBar({
         type="button"
         className="pc-topbar__palette"
         onClick={onOpenPalette}
-        aria-label="Open the command palette"
         aria-keyshortcuts="Meta+K Control+K"
       >
         <PcIcon name="search" size={13} />
         <span className="pc-topbar__placeholder">Jump to a view or an artifact…</span>
-        <span className="pc-rail__keys">
+        <span className="pc-rail__keys" aria-hidden="true">
           <Kbd size="sm">⌘</Kbd>
           <Kbd size="sm">K</Kbd>
         </span>
