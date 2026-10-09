@@ -11,9 +11,11 @@ planning artifacts, task statuses, dependency graph, current branch, and relevan
 runtime markers directly. Use the optional deterministic `openplanr status --json`
 utility when available, but do not require it or a semantic subprocess.
 
-Add GitHub or Linear lookups only when the user requests live remote state, through
-the host's connections as described in [tracker connections](references/tracker-connections.md).
-Keep local results useful when a connection is unavailable, and name the one to add.
+Add ~~project tracker or ~~source control lookups only when the user requests live
+remote state, through the host's connections as described in the
+[tracker sync reference](references/tracker-connections.md). Keep local results useful
+when a connection is unavailable, and name the category to add with its step from
+[connectors](references/connectors.md).
 Report counts, ready and blocked work, dependency problems, and the most useful next
 action. Do not repair artifacts, start Plan or Ship, or change lifecycle state.
 

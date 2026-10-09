@@ -287,7 +287,7 @@ Refine every open backlog item against the code and the calendar, refute the pic
 - Invocation from the plugin: `$planr:sprint` in Codex/ChatGPT; `/planr:sprint` in Claude Code.
 - Hosts: Claude Code, Codex, ChatGPT, and Cursor where supported by the package manifest.
 - Aliases: none.
-- Packaged support: `references/refinement-contract.md`, `references/sprint-formats.md`, `references/tracker-connections.md`, with packaged validators and runtime support. See the [resource inventory](../../skills/planr-sprint/openplanr.skill.json).
+- Packaged support: `references/refinement-contract.md`, `references/sprint-formats.md`, `references/connectors.md`, `references/tracker-connections.md`, with packaged validators and runtime support. See the [resource inventory](../../skills/planr-sprint/openplanr.skill.json).
 
 ## `planr-status`
 
@@ -298,7 +298,7 @@ Inspect project delivery or one feature's pipeline status without changing state
 - Invocation from the plugin: `$planr:status` in Codex/ChatGPT; `/planr:status` in Claude Code.
 - Hosts: Claude Code, Codex, ChatGPT, and Cursor where supported by the package manifest.
 - Aliases: none.
-- Packaged support: `references/tracker-connections.md`. See the [resource inventory](../../skills/planr-status/openplanr.skill.json).
+- Packaged support: `references/connectors.md`, `references/tracker-connections.md`. See the [resource inventory](../../skills/planr-status/openplanr.skill.json).
 
 ## `planr-sync`
 
@@ -309,4 +309,4 @@ Audit OpenPlanr planning artifacts for graph and protocol drift. Use when status
 - Invocation from the plugin: `$planr:sync` in Codex/ChatGPT; `/planr:sync` in Claude Code.
 - Hosts: Claude Code, Codex, ChatGPT, and Cursor where supported by the package manifest.
 - Aliases: none.
-- Packaged support: `references/tracker-connections.md`, with packaged validators and runtime support. See the [resource inventory](../../skills/planr-sync/openplanr.skill.json).
+- Packaged support: `references/connectors.md`, `references/tracker-connections.md`, with packaged validators and runtime support. See the [resource inventory](../../skills/planr-sync/openplanr.skill.json).

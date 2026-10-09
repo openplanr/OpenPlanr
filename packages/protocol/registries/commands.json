@@ -1133,7 +1133,7 @@
       "ownerPackage": "planr-pipeline",
       "source": {
         "path": "skills/planr-status/SKILL.md",
-        "digest": "sha256:d1d4ef34075312827cf9a4a67896977ed1608c1bf8881b8a8ed164340034c0cc"
+        "digest": "sha256:2697c7b8bf87c1f02c48666623480d93a53119202036fcb702b786a89e10778d"
       },
       "authorityClass": "compatibility-router",
       "machineJson": false,
@@ -1154,7 +1154,7 @@
       "ownerPackage": "planr-pipeline",
       "source": {
         "path": "skills/planr-sync/SKILL.md",
-        "digest": "sha256:0e63252ba06b2842f7d6005782056100930a1559ae393164d7afd615df63384b"
+        "digest": "sha256:e02504c69e77ba715b399d1611022812e2df0fbc9582c301367d06523a1231c2"
       },
       "authorityClass": "compatibility-router",
       "machineJson": false,
@@ -1948,5 +1948,5 @@
       ]
     }
   ],
-  "documentDigest": "sha256:735f3c5f9f5e3b1a14ea614361083192768652bd993ea0e47cda9384f1c85da1"
+  "documentDigest": "sha256:18076bd88cfb26ce04e0c83a15ca681e897ba118f016e1f6acb2a4791c1f7609"
 }

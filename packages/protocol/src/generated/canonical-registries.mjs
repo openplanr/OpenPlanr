@@ -2284,7 +2284,7 @@ export const CANONICAL_REGISTRIES = deepFreeze({
         "ownerPackage": "planr-pipeline",
         "source": {
           "path": "skills/planr-status/SKILL.md",
-          "digest": "sha256:d1d4ef34075312827cf9a4a67896977ed1608c1bf8881b8a8ed164340034c0cc"
+          "digest": "sha256:2697c7b8bf87c1f02c48666623480d93a53119202036fcb702b786a89e10778d"
         },
         "authorityClass": "compatibility-router",
         "machineJson": false,
@@ -2305,7 +2305,7 @@ export const CANONICAL_REGISTRIES = deepFreeze({
         "ownerPackage": "planr-pipeline",
         "source": {
           "path": "skills/planr-sync/SKILL.md",
-          "digest": "sha256:0e63252ba06b2842f7d6005782056100930a1559ae393164d7afd615df63384b"
+          "digest": "sha256:e02504c69e77ba715b399d1611022812e2df0fbc9582c301367d06523a1231c2"
         },
         "authorityClass": "compatibility-router",
         "machineJson": false,
@@ -3099,7 +3099,7 @@ export const CANONICAL_REGISTRIES = deepFreeze({
         ]
       }
     ],
-    "documentDigest": "sha256:735f3c5f9f5e3b1a14ea614361083192768652bd993ea0e47cda9384f1c85da1"
+    "documentDigest": "sha256:18076bd88cfb26ce04e0c83a15ca681e897ba118f016e1f6acb2a4791c1f7609"
   },
   "skills.json": {
     "kind": "skill-catalog",
@@ -4666,7 +4666,7 @@ export const CANONICAL_REGISTRIES = deepFreeze({
         "lifecycle": "active",
         "authorityClass": "planning-write",
         "source": "skills/planr-sprint/openplanr.skill.json",
-        "sourceDigest": "sha256:62a62e58bc27242c36c06e170bd875d38ceb1457e467556839e1a80e26a459c9",
+        "sourceDigest": "sha256:95efe995ab6cd8ed38b09b6d503223d34ea4111de92117346c7984603502b895",
         "triggerPolicy": {
           "include": [
             "Refine the open backlog and select what fits the next sprint or release cut",
@@ -4728,7 +4728,7 @@ export const CANONICAL_REGISTRIES = deepFreeze({
         "lifecycle": "active",
         "authorityClass": "read-only-view",
         "source": "skills/planr-status/openplanr.skill.json",
-        "sourceDigest": "sha256:414afb2187111d04a1c3030f28c7b20a58ad7b4eb3e0e724852a34e152ecceae",
+        "sourceDigest": "sha256:e6c422eacd009a5db91e038fded747cfe25badae06e5cbde13775982dd258e01",
         "triggerPolicy": {
           "include": [
             "Report current OpenPlanr delivery status or outstanding work",
@@ -4789,7 +4789,7 @@ export const CANONICAL_REGISTRIES = deepFreeze({
         "lifecycle": "active",
         "authorityClass": "planning-write",
         "source": "skills/planr-sync/openplanr.skill.json",
-        "sourceDigest": "sha256:e45162758f758bae447c126d121ec1a220b40e03bd09a14b9b4fc2e6643f53da",
+        "sourceDigest": "sha256:c8061714181e6f4e330c65ba033a3586bf4118352e778865e3e3e0e802ad2cf6",
         "triggerPolicy": {
           "include": [
             "Audit planning artifacts for graph, schema, or protocol drift",
@@ -4845,7 +4845,7 @@ export const CANONICAL_REGISTRIES = deepFreeze({
       }
     ],
     "compatibilityAliases": [],
-    "documentDigest": "sha256:163ce04f19cd71e9f2ed50eaa85085cd0c0e061570bda19c9c925350982b5764"
+    "documentDigest": "sha256:25cad5c7ed0f1e73078bb9ff9cca68dae51983bbf3141f20c1b944ff20e785d3"
   },
   "outputs.json": {
     "kind": "output-catalog",

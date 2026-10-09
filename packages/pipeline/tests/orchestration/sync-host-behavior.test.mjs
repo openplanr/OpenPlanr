@@ -60,18 +60,21 @@ for (const [surface, entrypoint, helper] of surfaces) {
       guidance.replace(/\s+/gu, ' '),
       /Summarize aligned, locally repairable, conflict and unavailable counts/u,
     );
-    assert.match(guidance, /Local and GitHub work never require\s+the OpenPlanr CLI/);
-    assert.match(guidance, /Linear: the host's Linear connection\./);
+    assert.match(guidance, /Local and tracker work never require\s+the OpenPlanr CLI/);
+    assert.match(guidance, /Remote steps run through the host's own ~~project tracker connection/);
     assert.doesNotMatch(guidance, /planr linear|access\s+token|PLANR_LINEAR_TOKEN/u);
     assert.doesNotMatch(guidance, /procedures\/sync-workflow\.md|commands\/sync\.md/);
   });
 
-  test(`${surface}: the connection guide names each host's connection and no token`, () => {
+  test(`${surface}: the sync reference uses host connections and the catalog names each host`, () => {
     const guide = read(helper.replace('scripts/sync.mjs', 'references/tracker-connections.md'));
-    assert.match(guide, /These skills store and read no GitHub or Linear credentials/);
-    for (const host of ['Claude Code', 'Codex', 'Cursor'])
-      assert.match(guide, new RegExp(`^\\| ${host} \\|`, 'mu'));
+    assert.match(guide, /These skills store and read no tracker or source control credentials/);
+    assert.match(guide, /\*\*Linear:\*\* the host's Linear connection/);
     assert.doesNotMatch(guide, /Bearer|Authorization|_TOKEN|personal access token/iu);
+    const connectors = read(helper.replace('scripts/sync.mjs', 'references/connectors.md'));
+    for (const host of ['Claude Code', 'Codex', 'Cursor'])
+      assert.match(connectors, new RegExp(host));
+    assert.doesNotMatch(connectors, /Bearer|Authorization|_TOKEN/u);
   });
 
   test(`${surface}: github synchronization previews without credentials or installed tools`, (t) => {
