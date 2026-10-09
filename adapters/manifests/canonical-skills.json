@@ -5661,7 +5661,7 @@
       "source": "skills/planr-sprint/openplanr.skill.json",
       "entrypoint": "skills/planr-sprint/SKILL.md",
       "description": "Refine every open backlog item against the code and the calendar, refute the picks, and select a sprint that fits capacity and the release cut. Use before a cut or sprint; not for decomposing one specification or reporting status.",
-      "sourceDigest": "sha256:55e73f1bd6e3aa71e7bcca9ff11e37c4f84769d452b36568fbb7bc5c5ab1ca33",
+      "sourceDigest": "sha256:170a34027658a826fd8e709cffeee50f1626c6b9e7602a583d557b47816237b8",
       "resources": [
         {
           "path": "agents/openai.yaml",

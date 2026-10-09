@@ -141,8 +141,10 @@ item through the host's connection, with the status mapping in the
 list every issue change: each issue to create, update, close or reopen, with its
 title and the status it moves to. Write only when the request explicitly asked for
 that push or the user approves the list. Afterwards, report each item that was not
-updated and why, and name the category and product used. With nothing connected, the local apply is the whole step: report
-the tracker update as not run and give the current host's step from
+updated and why, and name the category and product used.
+
+With nothing connected, the local apply is the whole step: report the tracker
+update as not run and give the current host's step from
 [connectors](references/connectors.md).
 
 When the CLI is unavailable, apply the same status changes with the repository's

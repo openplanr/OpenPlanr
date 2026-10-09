@@ -1022,7 +1022,7 @@
       "assets": [
         {
           "path": "skills/sprint/SKILL.md",
-          "digest": "sha256:09c4994d8613d3718520de6de5a746ad38d378fa037d71b0f1042460d8619ba1"
+          "digest": "sha256:e21368479507c611fa2b8f547a320c8d0e387dacfe27f9dc38a6291dc8aecb27"
         },
         {
           "path": "skills/sprint/openplanr.skill.json",
