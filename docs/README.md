@@ -4,6 +4,7 @@
 
 - [Getting started](getting-started.md): install, set up a host, initialize a project, write the first specification.
 - [Skill catalog](generated/skills.md): every skill, when it is selected, and what it defers to.
+- [Connections](connections.md): connect chat, a project tracker or source control through your host; [connect steps per host](generated/connectors.md).
 - [CLI reference](../packages/cli/docs/CLI.md) and [troubleshooting](../packages/cli/docs/TROUBLESHOOTING.md).
 - [Cross-runtime setup](../packages/cli/docs/CROSS_RUNTIME_SETUP.md): scopes, migration, rollback, offline use.
 - [Diagrams](diagrams/authoring.md): author, render, and verify diagrams offline.
