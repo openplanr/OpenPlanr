@@ -1,5 +1,12 @@
 # @openplanr/artifact
 
+## 0.6.8
+
+### Patch Changes
+
+- Updated dependencies [9d60c2d]
+  - @openplanr/protocol@0.13.0
+
 ## 0.6.7
 
 ### Patch Changes

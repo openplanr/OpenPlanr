@@ -1,5 +1,11 @@
 # @openplanr/protocol
 
+## 0.13.0
+
+### Minor Changes
+
+- 9d60c2d: Recognize `planr-share` and `planr-connect` as canonical skills.
+
 ## 0.12.0
 
 ### Minor Changes
