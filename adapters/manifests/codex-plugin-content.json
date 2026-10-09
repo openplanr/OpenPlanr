@@ -1042,7 +1042,7 @@
       "assets": [
         {
           "path": "skills/sync/SKILL.md",
-          "digest": "sha256:21400a9579371c4649253e100eca8903154c745ead3e13cfd82d8ababa52fc34"
+          "digest": "sha256:3c026830d2560d05b3d852902171280030f09242746ace264e76cb5307ac6d8d"
         },
         {
           "path": "skills/sync/openplanr.skill.json",

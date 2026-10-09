@@ -16,9 +16,10 @@ use per tracker, the status mapping, link shapes and what to tell the user when 
 connection is missing; [connectors](references/connectors.md) lists the trackers
 OpenPlanr syncs with and how to connect each in the current host.
 
-When the tracker's own command-line tool is signed in, the packaged
-[sync helper](scripts/sync.mjs) creates and edits issues through it; close or reopen an
-issue with the same tool. `openplanr sync` only repairs local cross-references.
+When the GitHub CLI is signed in, the packaged [sync helper](scripts/sync.mjs) creates
+and edits issues through `gh`; close or reopen an issue with `gh issue close` or
+`gh issue reopen`. Other trackers go through the host's connection only.
+`openplanr sync` only repairs local cross-references.
 
 Audit is read-only by default. Apply local changes only when the request asks for
 reconciliation, and push remote changes only when the request asks for external

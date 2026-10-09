@@ -114,6 +114,8 @@ test('connection skills name categories, never a catalog product', () => {
     findProductMentions('Post the update to Slack and close the GitHub issue.', catalog).sort(),
     ['GitHub', 'Slack'],
   );
+  assert.deepEqual(findProductMentions('Run the sync helper through the GitHub CLI.', catalog), []);
+  assert.deepEqual(findProductMentions('Open a GitHub pull request.', catalog), ['GitHub']);
 });
 
 test('the tracker reference keeps sync semantics and leaves connect steps to the catalog', () => {

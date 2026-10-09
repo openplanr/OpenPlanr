@@ -47,6 +47,7 @@
         {
           "name": "GitHub Issues",
           "aliases": ["GitHub"],
+          "tools": ["GitHub CLI"],
           "use": "sync",
           "docs": "https://cli.github.com/manual/gh_auth_login",
           "verifiedOn": "2026-10-09",

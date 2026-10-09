@@ -2305,7 +2305,7 @@ export const CANONICAL_REGISTRIES = deepFreeze({
         "ownerPackage": "planr-pipeline",
         "source": {
           "path": "skills/planr-sync/SKILL.md",
-          "digest": "sha256:5c452dfaa9aa8cc328e4cd9ab349658b83b3d5c892d0017d742611652a92c413"
+          "digest": "sha256:e02504c69e77ba715b399d1611022812e2df0fbc9582c301367d06523a1231c2"
         },
         "authorityClass": "compatibility-router",
         "machineJson": false,
@@ -3099,7 +3099,7 @@ export const CANONICAL_REGISTRIES = deepFreeze({
         ]
       }
     ],
-    "documentDigest": "sha256:9d6a9ab837e78692d677213401738d9c17d79cba2249865cb4a6345b10a77164"
+    "documentDigest": "sha256:18076bd88cfb26ce04e0c83a15ca681e897ba118f016e1f6acb2a4791c1f7609"
   },
   "skills.json": {
     "kind": "skill-catalog",

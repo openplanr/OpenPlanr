@@ -34,6 +34,12 @@ function assertProduct(category, product) {
   if (typeof product.docs !== 'string' || !product.docs.startsWith('https://'))
     fail(`${where} needs an https documentation link.`);
   if (!ISO_DATE.test(product.verifiedOn ?? '')) fail(`${where} needs verifiedOn as YYYY-MM-DD.`);
+  for (const field of ['aliases', 'tools'])
+    if (
+      product[field] !== undefined &&
+      (!Array.isArray(product[field]) || product[field].some((v) => typeof v !== 'string'))
+    )
+      fail(`${where} ${field} must be a list of names.`);
   if (product.connect === undefined) return;
   for (const [host] of HOSTS)
     if (typeof product.connect[host] !== 'string' || product.connect[host].trim() === '')
@@ -79,11 +85,19 @@ export function connectedProductNames(catalog) {
   );
 }
 
-/** Returns the catalog product names that appear in skill text. */
+const escapeRegExp = (value) => value.replace(/[.*+?^${}()|[\]\\]/gu, '\\$&');
+
+/** Returns the catalog product names that appear in skill text, ignoring declared tool names. */
 export function findProductMentions(markdown, catalog) {
-  const text = String(markdown);
+  const tools = catalog.categories.flatMap(({ products }) =>
+    products.flatMap(({ tools = [] }) => tools),
+  );
+  const text = tools.reduce(
+    (result, tool) => result.replace(new RegExp(`\\b${escapeRegExp(tool)}\\b`, 'gu'), ''),
+    String(markdown),
+  );
   return [...new Set(connectedProductNames(catalog))].filter((name) =>
-    new RegExp(`\\b${name.replace(/[.*+?^${}()|[\]\\]/gu, '\\$&')}\\b`, 'u').test(text),
+    new RegExp(`\\b${escapeRegExp(name)}\\b`, 'u').test(text),
   );
 }
 
