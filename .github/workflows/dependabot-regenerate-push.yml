@@ -68,7 +68,7 @@ jobs:
           gh api "repos/$GITHUB_REPOSITORY/actions/artifacts/$artifact/zip" > "$RUNNER_TEMP/regenerated.zip"
           echo "archive=$RUNNER_TEMP/regenerated.zip" >> "$GITHUB_OUTPUT"
       - if: steps.download.outputs.archive != ''
-        uses: actions/checkout@v5
+        uses: actions/checkout@v7
         with:
           ref: ${{ github.event.workflow_run.head_sha }}
       # The upload comes from a job that ran the updated dependencies, so it is untrusted: only
