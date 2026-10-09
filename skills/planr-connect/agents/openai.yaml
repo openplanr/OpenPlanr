@@ -1,0 +1,6 @@
+interface:
+  display_name: "OpenPlanr Connect"
+  short_description: "Report which chat, project tracker and source control…"
+  default_prompt: "Use $planr-connect to report which chat, project tracker and source control connections the host has, and guide connecting the missing ones through the host. Use when the user wants to connect a service for OpenPlanr or asks what is connected."
+policy:
+  allow_implicit_invocation: false

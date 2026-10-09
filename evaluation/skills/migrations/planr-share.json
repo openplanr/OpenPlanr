@@ -1,0 +1,23 @@
+{
+  "kind": "openplanr-skill-adoption-report",
+  "schemaVersion": "1.0.0",
+  "skillId": "planr-share",
+  "family": "planning-tools",
+  "source": {
+    "format": "standard-skill-bundle",
+    "entrypoint": "skills/planr-share/SKILL.md",
+    "supportFiles": 1
+  },
+  "successor": {
+    "sourceFormat": "package-v1",
+    "path": "skills/planr-share/openplanr.skill.json",
+    "version": "1.0.0"
+  },
+  "classification": "adapted",
+  "intendedChanges": [
+    "Added planr-share to turn the status report, current sprint or release notes into a team update.",
+    "Previewed the full text and destination and created a chat draft only after approval; sending requires an explicit request.",
+    "Printed the update with the host's connect step when no chat connection is available.",
+    "Marked the skill user-invoked on every host."
+  ]
+}

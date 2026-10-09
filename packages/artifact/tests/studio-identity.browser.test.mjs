@@ -375,6 +375,12 @@ for (const surface of ['design', 'diagram', 'presentation', 'authoring']) {
               assert.ok(record.toolbar.height <= 92, `${context}: two compact command rows`);
               const save = page.getByRole('button', { name: 'Save diagram', exact: true });
               await save.hover();
+              // The glyph color transitions while the hover fill switches at once; judge the settled state.
+              await save.evaluate((element) =>
+                Promise.all(
+                  element.getAnimations({ subtree: true }).map(({ finished }) => finished),
+                ),
+              );
               const hover = await save.evaluate((element) => {
                 // Resolve modern color-mix serialization through the browser's sRGB canvas.
                 const canvas = document.createElement('canvas');

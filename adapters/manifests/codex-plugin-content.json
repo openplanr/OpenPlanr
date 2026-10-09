@@ -5,10 +5,10 @@
   "plugin": "planr",
   "version": "3.0.1",
   "skillRoot": "./skills/",
-  "canonicalSkillCount": 28,
+  "canonicalSkillCount": 30,
   "compatibilityAliasCount": 0,
-  "skillCount": 28,
-  "assetCount": 199,
+  "skillCount": 30,
+  "assetCount": 210,
   "skills": [
     {
       "skillId": "planr-artifact",
@@ -169,6 +169,31 @@
         {
           "path": "skills/cmo-review/agents/openai.yaml",
           "digest": "sha256:127cc7794210be7992c3fe32ef0123b5cdd512ceb7a3918af5528dece268277c"
+        }
+      ]
+    },
+    {
+      "skillId": "planr-connect",
+      "projectedName": "connect",
+      "invocation": "$planr:connect",
+      "description": "Report which chat, project tracker and source control connections the host has, and guide connecting the missing ones through the host. Use when the user wants to connect a service for OpenPlanr or asks what is connected.",
+      "entrypoint": "skills/connect/SKILL.md",
+      "assets": [
+        {
+          "path": "skills/connect/SKILL.md",
+          "digest": "sha256:b76c1a09f732243e151a02c0bd6931bfe91487eb2f66fe6ec2263188d6e98271"
+        },
+        {
+          "path": "skills/connect/openplanr.skill.json",
+          "digest": "sha256:e231e5a446e409f860079f4df07c7abb5d160f35b578c4252516094e100d3994"
+        },
+        {
+          "path": "skills/connect/agents/openai.yaml",
+          "digest": "sha256:e2235af9e0905b14d4f3ddc0d3637ad2aa75c8000b998f1db3fda12bc47fa381"
+        },
+        {
+          "path": "skills/connect/references/connectors.md",
+          "digest": "sha256:2711c2238eeaf8dfacb1dcb3093623ed88665afae0cc83dee27de2956470b576"
         }
       ]
     },
@@ -753,7 +778,7 @@
       "assets": [
         {
           "path": "skills/openplanr/SKILL.md",
-          "digest": "sha256:76c0cd19e98d91a4a273f7960629ac9a4c3f8a88b9066f0bfbc347c57e63c499"
+          "digest": "sha256:e81058f5a898978b7c503e8a3ee8334a614ca43270aafb6df94bb2411bf8e1cc"
         },
         {
           "path": "skills/openplanr/openplanr.skill.json",
@@ -906,6 +931,31 @@
       ]
     },
     {
+      "skillId": "planr-share",
+      "projectedName": "share",
+      "invocation": "$planr:share",
+      "description": "Share a status report, sprint note or release notes with the team as a chat message draft that the user approves and sends. Use when the user asks to post a planning update to chat.",
+      "entrypoint": "skills/share/SKILL.md",
+      "assets": [
+        {
+          "path": "skills/share/SKILL.md",
+          "digest": "sha256:3121b6d18c1dc6cdbc46f328aa0eed51f0349216fdf7f62aa236d32e403c7a87"
+        },
+        {
+          "path": "skills/share/openplanr.skill.json",
+          "digest": "sha256:832195e643d77f5457d468a530c76512935b4df0d6acf7ab5f3d88b06338c4b2"
+        },
+        {
+          "path": "skills/share/agents/openai.yaml",
+          "digest": "sha256:6a8c0e38c4ebe8c3cf67a3451503bea7171c29d2a77b6de882d3c30d9156c4c4"
+        },
+        {
+          "path": "skills/share/references/connectors.md",
+          "digest": "sha256:2711c2238eeaf8dfacb1dcb3093623ed88665afae0cc83dee27de2956470b576"
+        }
+      ]
+    },
+    {
       "skillId": "planr-ship",
       "projectedName": "ship",
       "invocation": "$planr:ship",
@@ -972,11 +1022,11 @@
       "assets": [
         {
           "path": "skills/sprint/SKILL.md",
-          "digest": "sha256:5c3b89308fb01454db92d7a93d166443054b645e223097649d1f52ad18dcb8c9"
+          "digest": "sha256:e21368479507c611fa2b8f547a320c8d0e387dacfe27f9dc38a6291dc8aecb27"
         },
         {
           "path": "skills/sprint/openplanr.skill.json",
-          "digest": "sha256:62a62e58bc27242c36c06e170bd875d38ceb1457e467556839e1a80e26a459c9"
+          "digest": "sha256:95efe995ab6cd8ed38b09b6d503223d34ea4111de92117346c7984603502b895"
         },
         {
           "path": "skills/sprint/agents/openai.yaml",
@@ -991,8 +1041,12 @@
           "digest": "sha256:547bda354869f1aef26398e77e956f43116305f8dcc0d827dd5fb061ec98504a"
         },
         {
+          "path": "skills/sprint/references/connectors.md",
+          "digest": "sha256:2711c2238eeaf8dfacb1dcb3093623ed88665afae0cc83dee27de2956470b576"
+        },
+        {
           "path": "skills/sprint/references/tracker-connections.md",
-          "digest": "sha256:5f7d7126ca0db062c2b14c8ac35ca9758e44433329da610d7e75ad83b9417707"
+          "digest": "sha256:f9617486a5e2ecc861566d7a7eaf1c97725f9acfcc6bc64cfda1f9b6fd3c4d36"
         },
         {
           "path": "skills/sprint/schemas/refinement.schema.json",
@@ -1009,19 +1063,23 @@
       "assets": [
         {
           "path": "skills/status/SKILL.md",
-          "digest": "sha256:35cc24a74739ae90e2a9f07c99a0f14652fe71c0827d2b4aa336966dbb8823e8"
+          "digest": "sha256:85d9327247810a5ca3df7e4c6638583d9e43fe8ae826ae72e936cb8480c53522"
         },
         {
           "path": "skills/status/openplanr.skill.json",
-          "digest": "sha256:414afb2187111d04a1c3030f28c7b20a58ad7b4eb3e0e724852a34e152ecceae"
+          "digest": "sha256:e6c422eacd009a5db91e038fded747cfe25badae06e5cbde13775982dd258e01"
         },
         {
           "path": "skills/status/agents/openai.yaml",
           "digest": "sha256:2b6c04c85ac55f1de56698edf09a0bdedf1bb08a29121fe3fcbdd178ea30b907"
         },
         {
+          "path": "skills/status/references/connectors.md",
+          "digest": "sha256:2711c2238eeaf8dfacb1dcb3093623ed88665afae0cc83dee27de2956470b576"
+        },
+        {
           "path": "skills/status/references/tracker-connections.md",
-          "digest": "sha256:5f7d7126ca0db062c2b14c8ac35ca9758e44433329da610d7e75ad83b9417707"
+          "digest": "sha256:f9617486a5e2ecc861566d7a7eaf1c97725f9acfcc6bc64cfda1f9b6fd3c4d36"
         }
       ]
     },
@@ -1034,15 +1092,19 @@
       "assets": [
         {
           "path": "skills/sync/SKILL.md",
-          "digest": "sha256:a90f713ac4cda7fc0df0c2b40256ddba3cfa1ee8ea809705f1cf735324952022"
+          "digest": "sha256:79cb62f3f8b0c36ef55c9424ca694a37448f90170183d13d0654d500613da414"
         },
         {
           "path": "skills/sync/openplanr.skill.json",
-          "digest": "sha256:e45162758f758bae447c126d121ec1a220b40e03bd09a14b9b4fc2e6643f53da"
+          "digest": "sha256:c8061714181e6f4e330c65ba033a3586bf4118352e778865e3e3e0e802ad2cf6"
+        },
+        {
+          "path": "skills/sync/references/connectors.md",
+          "digest": "sha256:2711c2238eeaf8dfacb1dcb3093623ed88665afae0cc83dee27de2956470b576"
         },
         {
           "path": "skills/sync/references/tracker-connections.md",
-          "digest": "sha256:5f7d7126ca0db062c2b14c8ac35ca9758e44433329da610d7e75ad83b9417707"
+          "digest": "sha256:f9617486a5e2ecc861566d7a7eaf1c97725f9acfcc6bc64cfda1f9b6fd3c4d36"
         },
         {
           "path": "skills/sync/scripts/sync.mjs",

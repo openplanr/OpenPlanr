@@ -69,6 +69,17 @@ Produce a grounded market and growth review for an Operate cycle. Use when acqui
 - Aliases: none.
 - Packaged support: `references/operate-advisor-contract.md`, with packaged validators and runtime support. See the [resource inventory](../../skills/planr-cmo-review/openplanr.skill.json).
 
+## `planr-connect`
+
+Report which chat, project tracker and source control connections the host has, and guide connecting the missing ones through the host. Use when the user wants to connect a service for OpenPlanr or asks what is connected.
+
+- Select for: Connect chat, a project tracker or source control for OpenPlanr; Check which services OpenPlanr can reach through the host's connections.
+- Defer for: Diagnose OpenPlanr installation or runtime health; Synchronize planning artifacts with a tracker.
+- Invocation from the plugin: `$planr:connect` in Codex/ChatGPT; `/planr:connect` in Claude Code.
+- Hosts: Claude Code, Codex, ChatGPT, and Cursor where supported by the package manifest.
+- Aliases: none.
+- Packaged support: `references/connectors.md`. See the [resource inventory](../../skills/planr-connect/openplanr.skill.json).
+
 ## `planr-coo-review`
 
 Produce a grounded operations and customer-health review for an Operate cycle. Use when readiness, service delivery, capacity, or customer health needs a COO lens.
@@ -256,6 +267,17 @@ Choose and maintain a product's versioning scheme, classify shipped changes, and
 - Aliases: none.
 - Packaged support: `references/schemes.md`, `references/release-notes.md`, `references/cadence.md`, with packaged validators and runtime support. See the [resource inventory](../../skills/planr-release/openplanr.skill.json).
 
+## `planr-share`
+
+Share a status report, sprint note or release notes with the team as a chat message draft that the user approves and sends. Use when the user asks to post a planning update to chat.
+
+- Select for: Share the delivery status, sprint note or release notes with the team in chat; Post a planning update to a chat channel as a draft.
+- Defer for: Report delivery status without sharing it; Write or publish release notes.
+- Invocation from the plugin: `$planr:share` in Codex/ChatGPT; `/planr:share` in Claude Code.
+- Hosts: Claude Code, Codex, ChatGPT, and Cursor where supported by the package manifest.
+- Aliases: none.
+- Packaged support: `references/connectors.md`. See the [resource inventory](../../skills/planr-share/openplanr.skill.json).
+
 ## `planr-ship`
 
 Implement an OpenPlanr plan, specification, task, or clearly stated request end to end in the current repository. Use when the user asks to build, implement, fix, finish, or ship local work.
@@ -287,7 +309,7 @@ Refine every open backlog item against the code and the calendar, refute the pic
 - Invocation from the plugin: `$planr:sprint` in Codex/ChatGPT; `/planr:sprint` in Claude Code.
 - Hosts: Claude Code, Codex, ChatGPT, and Cursor where supported by the package manifest.
 - Aliases: none.
-- Packaged support: `references/refinement-contract.md`, `references/sprint-formats.md`, `references/tracker-connections.md`, with packaged validators and runtime support. See the [resource inventory](../../skills/planr-sprint/openplanr.skill.json).
+- Packaged support: `references/refinement-contract.md`, `references/sprint-formats.md`, `references/connectors.md`, `references/tracker-connections.md`, with packaged validators and runtime support. See the [resource inventory](../../skills/planr-sprint/openplanr.skill.json).
 
 ## `planr-status`
 
@@ -298,7 +320,7 @@ Inspect project delivery or one feature's pipeline status without changing state
 - Invocation from the plugin: `$planr:status` in Codex/ChatGPT; `/planr:status` in Claude Code.
 - Hosts: Claude Code, Codex, ChatGPT, and Cursor where supported by the package manifest.
 - Aliases: none.
-- Packaged support: `references/tracker-connections.md`. See the [resource inventory](../../skills/planr-status/openplanr.skill.json).
+- Packaged support: `references/connectors.md`, `references/tracker-connections.md`. See the [resource inventory](../../skills/planr-status/openplanr.skill.json).
 
 ## `planr-sync`
 
@@ -309,4 +331,4 @@ Audit OpenPlanr planning artifacts for graph and protocol drift. Use when status
 - Invocation from the plugin: `$planr:sync` in Codex/ChatGPT; `/planr:sync` in Claude Code.
 - Hosts: Claude Code, Codex, ChatGPT, and Cursor where supported by the package manifest.
 - Aliases: none.
-- Packaged support: `references/tracker-connections.md`, with packaged validators and runtime support. See the [resource inventory](../../skills/planr-sync/openplanr.skill.json).
+- Packaged support: `references/connectors.md`, `references/tracker-connections.md`, with packaged validators and runtime support. See the [resource inventory](../../skills/planr-sync/openplanr.skill.json).

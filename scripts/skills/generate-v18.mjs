@@ -18,6 +18,14 @@ import { linkSkillProjection } from '../../packages/skill-runtime/src/linker/ind
 import { renderOpenAiSkillMetadata } from '../../packages/skill-runtime/src/packaging/index.mjs';
 import { CLI_GENERATED_RESOURCES } from './cli-resources.mjs';
 import {
+  CONNECTION_SKILL_IDS,
+  CONNECTIONS_CATALOG,
+  CONNECTORS_REFERENCE,
+  findProductMentions,
+  readConnectionsCatalog,
+  renderConnectors,
+} from './connectors.mjs';
+import {
   buildDesignSkillResources,
   buildPlanSkillResources,
   DESIGN_SKILL_IDS,
@@ -27,8 +35,10 @@ import {
   HOST_PLUGIN_NAME,
   namespacedInvocation,
   projectedSkillName,
+  renderCursorRule,
   renderCursorSkillBody,
   renderNamespacedSkill,
+  renderUserOnlySkill,
 } from './host-invocations.mjs';
 import {
   CLAUDE_PLUGIN_ICON,
@@ -98,6 +108,8 @@ const operateAdvisorDestinations = Object.freeze([
   'planr-coo-review',
 ]);
 const trackerConnectionDestinations = Object.freeze(['planr-sync', 'planr-sprint', 'planr-status']);
+const connectionsCatalog = readConnectionsCatalog(root);
+const connectorsMarkdown = renderConnectors(connectionsCatalog);
 const operateValidatorDestinations = Object.freeze([
   'planr-operate',
   'planr-chair-review',
@@ -210,6 +222,11 @@ const sourceProjections = new Map(
 const sourceExecutables = new Set(
   sharedSkillResources.filter(({ executable }) => executable).map(({ destination }) => destination),
 );
+for (const skillId of CONNECTION_SKILL_IDS)
+  sourceProjections.set(
+    `skills/${skillId}/${CONNECTORS_REFERENCE}`,
+    Buffer.from(connectorsMarkdown),
+  );
 for (const row of registry.skills) {
   sourceProjections.set(
     `skills/${row.skillId}/agents/openai.yaml`,
@@ -217,6 +234,7 @@ for (const row of registry.skills) {
       renderOpenAiSkillMetadata({
         skillId: row.skillId,
         description: row.description,
+        allowImplicitInvocation: row.invocation !== 'user-only',
       }),
     ),
   );
@@ -333,6 +351,13 @@ function assertCanonicalSkill(packageInfo) {
       throw new Error(`${row.skillId} contains a forbidden semantic subprocess dependency.`);
     }
   }
+  if (CONNECTION_SKILL_IDS.includes(row.skillId)) {
+    const products = findProductMentions(markdown, connectionsCatalog);
+    if (products.length > 0)
+      throw new Error(
+        `${row.skillId} names ${products.join(', ')}; name the category placeholder and keep products in ${CONNECTIONS_CATALOG}.`,
+      );
+  }
   const parsed = parseMarkdownAsset(markdown, { expectedName: row.skillId });
   const resourceAssets = packageInfo.resources.map((resource) => ({
     path: resource.path,
@@ -367,6 +392,7 @@ for (const row of registry.skills) {
   const packageInfo = readStandardSkillPackage({ repoRoot: root, registryRow: row });
   const parsed = assertCanonicalSkill(packageInfo);
   const hostSkillName = projectedSkillName(row.skillId);
+  const userOnly = row.invocation === 'user-only';
   const sourceDigest = sha256Bytes(packageInfo.markdown);
   const resources = packageInfo.resources.map(({ absolute, ...resource }) => ({
     ...resource,
@@ -379,7 +405,13 @@ for (const row of registry.skills) {
   ]) {
     const skillRoot = `skills/${hostSkillName}`;
     const destination = `${pluginRoot}/${skillRoot}`;
-    add(`${destination}/SKILL.md`, renderNamespacedSkill(packageInfo.markdown, row.skillId));
+    const hostMarkdown = renderNamespacedSkill(packageInfo.markdown, row.skillId);
+    add(
+      `${destination}/SKILL.md`,
+      userOnly && host === 'claude-code'
+        ? renderUserOnlySkill(hostMarkdown, row.skillId)
+        : hostMarkdown,
+    );
     const localResources = suiteLocalResources(packageInfo, host, skillRoot);
     // The native suite declaration lists local files; its complete closure is owned by
     // the exhaustive package content inventory, rather than a standalone skill directory.
@@ -401,6 +433,7 @@ for (const row of registry.skills) {
             skillId: row.skillId,
             description: row.description,
             invocation: namespacedInvocation(row.skillId, 'codex'),
+            allowImplicitInvocation: !userOnly,
           }),
         );
       } else
@@ -420,7 +453,7 @@ for (const row of registry.skills) {
   const cursorSkillRoot = `rules/${row.skillId}`;
   add(
     `${cursorPluginRoot}/rules/${row.skillId}.mdc`,
-    `---\ndescription: ${JSON.stringify(parsed.fields.description)}\nalwaysApply: false\n---\n\n${cursorBody}`,
+    renderCursorRule({ description: parsed.fields.description, body: cursorBody, userOnly }),
   );
   for (const resource of suiteLocalResources(packageInfo, 'cursor', cursorSkillRoot).filter(
     ({ path }) => !path.startsWith('agents/'),
@@ -540,6 +573,7 @@ for (const [host, prefix] of [
   ['cursor', 'dist/plugins/cursor/openplanr/'],
 ]) {
   add(`${prefix}LICENSE`, readFileSync(resolve(root, 'LICENSE')));
+  add(`${prefix}CONNECTORS.md`, connectorsMarkdown);
   const files = [...outputs.entries()]
     .filter(([path]) => path.startsWith(prefix))
     .map(([path, bytes]) => ({
@@ -603,6 +637,7 @@ add(
         useWhen: row.triggerPolicy.include,
         notFor: row.triggerPolicy.exclude,
         deferTo: row.triggerPolicy.deferTo,
+        userInvoked: row.invocation === 'user-only',
       };
     }),
     agents: roleRows.map(({ id }) => ({ id, description: roleDescriptions.get(id) })),
@@ -685,6 +720,8 @@ for (const [path, bytes] of [...outputs.entries()]) {
   });
 }
 
+add('docs/generated/connectors.md', connectorsMarkdown, { checkedIn: true });
+
 const membership = {
   kind: 'canonical-skill-membership',
   schemaVersion: '1.0.0',
@@ -763,7 +800,7 @@ const footprint = {
     ),
   })),
 };
-add('adapters/manifests/skill-footprint.json', json(footprint), { checkedIn: true });
+add('adapters/manifests/skill-footprint.json', json(footprint));
 
 const generatedAssets = [...outputs.entries()]
   .map(([path, bytes]) => ({
@@ -781,7 +818,6 @@ add(
     generator: 'scripts/skills/generate-v18.mjs',
     assets: generatedAssets,
   }),
-  { checkedIn: true },
 );
 
 const openAiAssets = [...outputs.entries()]
@@ -826,6 +862,7 @@ function write(path, bytes) {
 
 const generatedOutput = (path) =>
   generatedRoots.some((rootPath) => path.startsWith(`${rootPath}/`));
+// The previous run's ignored manifest; without it, the ownership ledger and historical baseline apply.
 const priorAssetPath = resolve(root, 'adapters/manifests/generated-assets.json');
 const priorAssets = existsSync(priorAssetPath)
   ? JSON.parse(readFileSync(priorAssetPath, 'utf8')).assets

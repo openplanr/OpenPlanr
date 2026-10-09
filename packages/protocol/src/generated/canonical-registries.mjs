@@ -2284,7 +2284,7 @@ export const CANONICAL_REGISTRIES = deepFreeze({
         "ownerPackage": "planr-pipeline",
         "source": {
           "path": "skills/planr-status/SKILL.md",
-          "digest": "sha256:d1d4ef34075312827cf9a4a67896977ed1608c1bf8881b8a8ed164340034c0cc"
+          "digest": "sha256:09683973f4415f5356e9ab57b61df93106c4a2bc886e8b64e409fcfb539ad885"
         },
         "authorityClass": "compatibility-router",
         "machineJson": false,
@@ -2305,7 +2305,7 @@ export const CANONICAL_REGISTRIES = deepFreeze({
         "ownerPackage": "planr-pipeline",
         "source": {
           "path": "skills/planr-sync/SKILL.md",
-          "digest": "sha256:0e63252ba06b2842f7d6005782056100930a1559ae393164d7afd615df63384b"
+          "digest": "sha256:4fb542bc7a0685904b6d6f58ec9fae3c539531793e1933474fbc3c3d34702e24"
         },
         "authorityClass": "compatibility-router",
         "machineJson": false,
@@ -3099,7 +3099,7 @@ export const CANONICAL_REGISTRIES = deepFreeze({
         ]
       }
     ],
-    "documentDigest": "sha256:735f3c5f9f5e3b1a14ea614361083192768652bd993ea0e47cda9384f1c85da1"
+    "documentDigest": "sha256:cac94570a2c61d0616f7bf68b08a87d0af1b31842090c1f5106273167098f321"
   },
   "skills.json": {
     "kind": "skill-catalog",
@@ -3474,6 +3474,67 @@ export const CANONICAL_REGISTRIES = deepFreeze({
         ],
         "certificationRefs": [
           "evaluation/skills/migrations/planr-cmo-review.json"
+        ]
+      },
+      {
+        "skillId": "planr-connect",
+        "skillVersion": "1.0.0",
+        "description": "Report which chat, project tracker and source control connections the host has, and guide connecting the missing ones through the host. Use when the user wants to connect a service for OpenPlanr or asks what is connected.",
+        "lifecycle": "active",
+        "authorityClass": "diagnostic",
+        "source": "skills/planr-connect/openplanr.skill.json",
+        "sourceDigest": "sha256:e231e5a446e409f860079f4df07c7abb5d160f35b578c4252516094e100d3994",
+        "triggerPolicy": {
+          "include": [
+            "Connect chat, a project tracker or source control for OpenPlanr",
+            "Check which services OpenPlanr can reach through the host's connections"
+          ],
+          "exclude": [
+            "Diagnose OpenPlanr installation or runtime health",
+            "Synchronize planning artifacts with a tracker"
+          ],
+          "deferTo": []
+        },
+        "contracts": {
+          "inputs": [],
+          "outputs": [
+            {
+              "id": "connect-result",
+              "version": "1.0.0"
+            }
+          ]
+        },
+        "cliRequirements": [],
+        "ruleIds": [
+          "R1",
+          "R5",
+          "R7"
+        ],
+        "contributionManifestRefs": [
+          "packages/skill-runtime/contributions/workflows.json"
+        ],
+        "hosts": [
+          {
+            "host": "claude-code",
+            "entrypoint": "/planr:connect",
+            "path": "dist/plugins/claude/openplanr/skills/connect/SKILL.md"
+          },
+          {
+            "host": "codex",
+            "entrypoint": "$planr:connect",
+            "path": "dist/plugins/openai/openplanr/skills/connect/SKILL.md"
+          },
+          {
+            "host": "cursor",
+            "entrypoint": "planr-connect",
+            "path": "dist/plugins/cursor/openplanr/rules/planr-connect.mdc"
+          }
+        ],
+        "testRefs": [
+          "tests/protocol/skill-catalog.test.mjs"
+        ],
+        "certificationRefs": [
+          "evaluation/skills/migrations/planr-connect.json"
         ]
       },
       {
@@ -4528,6 +4589,67 @@ export const CANONICAL_REGISTRIES = deepFreeze({
         ]
       },
       {
+        "skillId": "planr-share",
+        "skillVersion": "1.0.0",
+        "description": "Share a status report, sprint note or release notes with the team as a chat message draft that the user approves and sends. Use when the user asks to post a planning update to chat.",
+        "lifecycle": "active",
+        "authorityClass": "external-write",
+        "source": "skills/planr-share/openplanr.skill.json",
+        "sourceDigest": "sha256:832195e643d77f5457d468a530c76512935b4df0d6acf7ab5f3d88b06338c4b2",
+        "triggerPolicy": {
+          "include": [
+            "Share the delivery status, sprint note or release notes with the team in chat",
+            "Post a planning update to a chat channel as a draft"
+          ],
+          "exclude": [
+            "Report delivery status without sharing it",
+            "Write or publish release notes"
+          ],
+          "deferTo": []
+        },
+        "contracts": {
+          "inputs": [],
+          "outputs": [
+            {
+              "id": "share-result",
+              "version": "1.0.0"
+            }
+          ]
+        },
+        "cliRequirements": [],
+        "ruleIds": [
+          "R1",
+          "R5",
+          "R7"
+        ],
+        "contributionManifestRefs": [
+          "packages/skill-runtime/contributions/workflows.json"
+        ],
+        "hosts": [
+          {
+            "host": "claude-code",
+            "entrypoint": "/planr:share",
+            "path": "dist/plugins/claude/openplanr/skills/share/SKILL.md"
+          },
+          {
+            "host": "codex",
+            "entrypoint": "$planr:share",
+            "path": "dist/plugins/openai/openplanr/skills/share/SKILL.md"
+          },
+          {
+            "host": "cursor",
+            "entrypoint": "planr-share",
+            "path": "dist/plugins/cursor/openplanr/rules/planr-share.mdc"
+          }
+        ],
+        "testRefs": [
+          "tests/protocol/skill-catalog.test.mjs"
+        ],
+        "certificationRefs": [
+          "evaluation/skills/migrations/planr-share.json"
+        ]
+      },
+      {
         "skillId": "planr-ship",
         "skillVersion": "1.2.1",
         "description": "Implement an OpenPlanr plan, specification, task, or clearly stated request end to end in the current repository. Use when the user asks to build, implement, fix, finish, or ship local work.",
@@ -4666,7 +4788,7 @@ export const CANONICAL_REGISTRIES = deepFreeze({
         "lifecycle": "active",
         "authorityClass": "planning-write",
         "source": "skills/planr-sprint/openplanr.skill.json",
-        "sourceDigest": "sha256:62a62e58bc27242c36c06e170bd875d38ceb1457e467556839e1a80e26a459c9",
+        "sourceDigest": "sha256:95efe995ab6cd8ed38b09b6d503223d34ea4111de92117346c7984603502b895",
         "triggerPolicy": {
           "include": [
             "Refine the open backlog and select what fits the next sprint or release cut",
@@ -4728,7 +4850,7 @@ export const CANONICAL_REGISTRIES = deepFreeze({
         "lifecycle": "active",
         "authorityClass": "read-only-view",
         "source": "skills/planr-status/openplanr.skill.json",
-        "sourceDigest": "sha256:414afb2187111d04a1c3030f28c7b20a58ad7b4eb3e0e724852a34e152ecceae",
+        "sourceDigest": "sha256:e6c422eacd009a5db91e038fded747cfe25badae06e5cbde13775982dd258e01",
         "triggerPolicy": {
           "include": [
             "Report current OpenPlanr delivery status or outstanding work",
@@ -4789,7 +4911,7 @@ export const CANONICAL_REGISTRIES = deepFreeze({
         "lifecycle": "active",
         "authorityClass": "planning-write",
         "source": "skills/planr-sync/openplanr.skill.json",
-        "sourceDigest": "sha256:e45162758f758bae447c126d121ec1a220b40e03bd09a14b9b4fc2e6643f53da",
+        "sourceDigest": "sha256:c8061714181e6f4e330c65ba033a3586bf4118352e778865e3e3e0e802ad2cf6",
         "triggerPolicy": {
           "include": [
             "Audit planning artifacts for graph, schema, or protocol drift",
@@ -4845,7 +4967,7 @@ export const CANONICAL_REGISTRIES = deepFreeze({
       }
     ],
     "compatibilityAliases": [],
-    "documentDigest": "sha256:163ce04f19cd71e9f2ed50eaa85085cd0c0e061570bda19c9c925350982b5764"
+    "documentDigest": "sha256:843515daab14dfb561e6f091a067beb1687de349ba5313fb2fd9cf85c718d97c"
   },
   "outputs.json": {
     "kind": "output-catalog",

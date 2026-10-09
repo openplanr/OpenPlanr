@@ -1,7 +1,9 @@
-# GitHub and Linear connections
+# Tracker sync reference
 
-These skills store and read no GitHub or Linear credentials. Remote steps run through a
-connection the host already has; the planning files stay the source of truth.
+These skills store and read no tracker or source control credentials. Remote steps
+run through a connection the host already has; the planning files stay the source of
+truth. OpenPlanr syncs with the trackers marked "OpenPlanr syncs with it" in
+[connectors](connectors.md), and reads other products for context only.
 
 ## Use the host's connection
 
@@ -14,16 +16,10 @@ command, URL or file.
 
 ## When a connection is missing
 
-Finish the local work first. Then report the remote step as not run and give the one
-line for the current host:
-
-| Host | Linear | GitHub |
-| --- | --- | --- |
-| Claude Code | Run `/plugin install linear@claude-plugins-official`, then sign in to Linear from `/mcp`. | Install the GitHub CLI (cli.github.com) and run `gh auth login`. |
-| Codex | Run `codex mcp add linear --url https://mcp.linear.app/mcp`, then `codex mcp login linear`. | Install the GitHub plugin from `/plugins`, or run `gh auth login`. |
-| Cursor | Add Linear from the Cursor Marketplace and sign in to Linear. | Install the GitHub CLI (cli.github.com) and run `gh auth login`. |
-
-Ask the user to try again once connected; never retry the remote step on your own.
+Finish the local work first. Then report the remote step as not run, naming the
+category, and give the one connect step for the current host from
+[connectors](connectors.md). Ask the user to try again once connected; never retry the
+remote step on your own.
 
 ## Status mapping
 
