@@ -42,9 +42,11 @@ function assertProduct(category, product) {
   if (!ISO_DATE.test(product.verifiedOn ?? '')) fail(`${where} needs verifiedOn as YYYY-MM-DD.`);
   if (
     product.format !== undefined &&
-    (typeof product.format !== 'string' || product.format.trim() === '')
+    ['connector', 'paste'].some(
+      (key) => typeof product.format?.[key] !== 'string' || product.format[key].trim() === '',
+    )
   )
-    fail(`${where} format must be non-empty text.`);
+    fail(`${where} format needs non-empty connector and paste text.`);
   for (const field of ['aliases', 'tools'])
     if (
       product[field] !== undefined &&
@@ -131,7 +133,12 @@ function renderCategory(category) {
     '',
   ];
   for (const { name, format } of category.products.filter(({ format }) => format))
-    lines.push(`Message format for ${name}: ${format}`, '');
+    lines.push(
+      `Message format for ${name}, drafting through the connector: ${format.connector}`,
+      '',
+      `Message format for ${name}, text to paste: ${format.paste}`,
+      '',
+    );
   if (others.length > 0)
     lines.push(
       `Also works with: ${others.map(({ name, docs, use }) => `[${name}](${docs}) (${USES.get(use).toLowerCase()})`).join(', ')}. Add the vendor's connector in your host the same way.`,

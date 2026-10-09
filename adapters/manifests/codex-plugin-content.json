@@ -181,7 +181,7 @@
       "assets": [
         {
           "path": "skills/connect/SKILL.md",
-          "digest": "sha256:c27a2c92d51f784c499ccdd1189eda662de5397e6779f39c920e3f00897f8af8"
+          "digest": "sha256:b76c1a09f732243e151a02c0bd6931bfe91487eb2f66fe6ec2263188d6e98271"
         },
         {
           "path": "skills/connect/openplanr.skill.json",
@@ -193,7 +193,7 @@
         },
         {
           "path": "skills/connect/references/connectors.md",
-          "digest": "sha256:0e37a275e8bbd05fb4b5ff22184e9e2df81844f2bc569920880f6b1632ca63f1"
+          "digest": "sha256:2711c2238eeaf8dfacb1dcb3093623ed88665afae0cc83dee27de2956470b576"
         }
       ]
     },
@@ -939,7 +939,7 @@
       "assets": [
         {
           "path": "skills/share/SKILL.md",
-          "digest": "sha256:608ea9b107762bd4c18a3eaed9f81998e7be53a8b150c4f4c5b05a9e3ee58d60"
+          "digest": "sha256:3121b6d18c1dc6cdbc46f328aa0eed51f0349216fdf7f62aa236d32e403c7a87"
         },
         {
           "path": "skills/share/openplanr.skill.json",
@@ -951,7 +951,7 @@
         },
         {
           "path": "skills/share/references/connectors.md",
-          "digest": "sha256:0e37a275e8bbd05fb4b5ff22184e9e2df81844f2bc569920880f6b1632ca63f1"
+          "digest": "sha256:2711c2238eeaf8dfacb1dcb3093623ed88665afae0cc83dee27de2956470b576"
         }
       ]
     },
@@ -1042,7 +1042,7 @@
         },
         {
           "path": "skills/sprint/references/connectors.md",
-          "digest": "sha256:0e37a275e8bbd05fb4b5ff22184e9e2df81844f2bc569920880f6b1632ca63f1"
+          "digest": "sha256:2711c2238eeaf8dfacb1dcb3093623ed88665afae0cc83dee27de2956470b576"
         },
         {
           "path": "skills/sprint/references/tracker-connections.md",
@@ -1075,7 +1075,7 @@
         },
         {
           "path": "skills/status/references/connectors.md",
-          "digest": "sha256:0e37a275e8bbd05fb4b5ff22184e9e2df81844f2bc569920880f6b1632ca63f1"
+          "digest": "sha256:2711c2238eeaf8dfacb1dcb3093623ed88665afae0cc83dee27de2956470b576"
         },
         {
           "path": "skills/status/references/tracker-connections.md",
@@ -1100,7 +1100,7 @@
         },
         {
           "path": "skills/sync/references/connectors.md",
-          "digest": "sha256:0e37a275e8bbd05fb4b5ff22184e9e2df81844f2bc569920880f6b1632ca63f1"
+          "digest": "sha256:2711c2238eeaf8dfacb1dcb3093623ed88665afae0cc83dee27de2956470b576"
         },
         {
           "path": "skills/sync/references/tracker-connections.md",

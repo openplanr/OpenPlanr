@@ -13,7 +13,10 @@
           "use": "draft",
           "docs": "https://docs.slack.dev/ai/slack-mcp-server",
           "verifiedOn": "2026-10-09",
-          "format": "Slack mrkdwn ([formatting](https://docs.slack.dev/messaging/formatting-message-text)): `*bold*`, `_italic_`, `<https://example.com|link text>`, lines starting with `•` or `-` for lists, `>` for quotes; no headings or tables; escape `&`, `<` and `>` as `&amp;`, `&lt;` and `&gt;`.",
+          "format": {
+            "connector": "standard Markdown, which the connector converts on send ([Slack's messaging guidance](https://github.com/slackapi/slack-mcp-plugin/blob/main/skills/slack-messaging/SKILL.md)): `**bold**`, `_italic_`, `[link text](https://example.com)`, `-` lists, `>` quotes. Do not use mrkdwn's `*bold*` or `<url|text>` here.",
+            "paste": "Slack mrkdwn ([formatting](https://docs.slack.dev/messaging/formatting-message-text)): `*bold*`, `_italic_`, `<https://example.com|link text>`, lines starting with `•` or `-` for lists, `>` for quotes; no headings or tables; escape `&`, `<` and `>` as `&amp;`, `&lt;` and `&gt;`."
+          },
           "connect": {
             "claude-code": "Run `/plugin install slack@claude-plugins-official`, then sign in to Slack from `/mcp`. A workspace admin may need to approve the app.",
             "codex": "Install Slack from `/plugins` and sign in when asked. A workspace admin may need to approve the app.",

@@ -22,8 +22,13 @@ The first argument picks the source; default to `status`.
 - `release`: the newest release notes or changelog entry, or the version the
   user names.
 
-The second argument is the destination: a channel or person. When it is missing,
-ask for it. Never pick a destination yourself.
+When the working directory has no OpenPlanr planning files for the chosen source,
+say so and ask which project to use, or stop. Never build an update from guesses.
+
+The second argument is the destination: a channel or person. When it names a chat
+product from [connectors](references/connectors.md) instead, use that product's
+connection and still ask for the channel or person. When it is missing, ask for it.
+Never pick a destination yourself.
 
 ## Write it
 
@@ -33,9 +38,11 @@ Use counts and dates, link pull requests or issues when their URLs are known, an
 leave out local file paths, backlog IDs and internal detail the team cannot act
 on. Never include credentials or the contents of secret files.
 
-Format the text for the destination's message syntax as listed under "Message
-format" in [connectors](references/connectors.md); use plain text when none is
-listed.
+Format the text for where it goes, as listed under "Message format" in
+[connectors](references/connectors.md): when drafting through a connector, use the
+connector's input format, and follow the connector tool's own description when it
+states one; for text the user pastes, use the paste format. Use plain text when no
+format is listed.
 
 ## Preview, then ask
 

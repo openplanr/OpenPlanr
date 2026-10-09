@@ -526,7 +526,7 @@
       "source": "skills/planr-connect/openplanr.skill.json",
       "entrypoint": "skills/planr-connect/SKILL.md",
       "description": "Report which chat, project tracker and source control connections the host has, and guide connecting the missing ones through the host. Use when the user wants to connect a service for OpenPlanr or asks what is connected.",
-      "sourceDigest": "sha256:22fa2020978411e9ea0b22d0354e25c5af99b2a408e5ed71bc31b32dc17063c4",
+      "sourceDigest": "sha256:0134ec4b9f91854c80a9eeeac66599761ee958aabae2f542ffd4f2e0603d7d97",
       "resources": [
         {
           "path": "agents/openai.yaml",
@@ -548,7 +548,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:0e37a275e8bbd05fb4b5ff22184e9e2df81844f2bc569920880f6b1632ca63f1"
+          "digest": "sha256:2711c2238eeaf8dfacb1dcb3093623ed88665afae0cc83dee27de2956470b576"
         }
       ],
       "contracts": {
@@ -5484,7 +5484,7 @@
       "source": "skills/planr-share/openplanr.skill.json",
       "entrypoint": "skills/planr-share/SKILL.md",
       "description": "Share a status report, sprint note or release notes with the team as a chat message draft that the user approves and sends. Use when the user asks to post a planning update to chat.",
-      "sourceDigest": "sha256:928ebe0ce56f0dd11b8f2d89475098df4661438e71d0259759594183e13bb1a6",
+      "sourceDigest": "sha256:43d9b99ebc70e5d60ce3710e707cef1a42e01058c99a17e91fb6d44c19b8ff13",
       "resources": [
         {
           "path": "agents/openai.yaml",
@@ -5506,7 +5506,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:0e37a275e8bbd05fb4b5ff22184e9e2df81844f2bc569920880f6b1632ca63f1"
+          "digest": "sha256:2711c2238eeaf8dfacb1dcb3093623ed88665afae0cc83dee27de2956470b576"
         }
       ],
       "contracts": {
@@ -5707,7 +5707,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:0e37a275e8bbd05fb4b5ff22184e9e2df81844f2bc569920880f6b1632ca63f1"
+          "digest": "sha256:2711c2238eeaf8dfacb1dcb3093623ed88665afae0cc83dee27de2956470b576"
         },
         {
           "path": "references/tracker-connections.md",
@@ -5789,7 +5789,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:0e37a275e8bbd05fb4b5ff22184e9e2df81844f2bc569920880f6b1632ca63f1"
+          "digest": "sha256:2711c2238eeaf8dfacb1dcb3093623ed88665afae0cc83dee27de2956470b576"
         },
         {
           "path": "references/tracker-connections.md",
@@ -5849,7 +5849,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:0e37a275e8bbd05fb4b5ff22184e9e2df81844f2bc569920880f6b1632ca63f1"
+          "digest": "sha256:2711c2238eeaf8dfacb1dcb3093623ed88665afae0cc83dee27de2956470b576"
         },
         {
           "path": "references/tracker-connections.md",
