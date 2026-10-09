@@ -146,3 +146,9 @@ CLAUDE.md
 /packages/cli/lib/json-schema.mjs
 /packages/cli/lib/json-schema.d.mts
 /packages/cli/lib/runtime-lock.schema.json
+
+# Digest aggregates over generated skill outputs, written by `npm run generate`.
+/adapters/manifests/ecosystem-assets.json
+/adapters/manifests/generated-assets.json
+/adapters/manifests/skill-footprint.json
+/ecosystem.json

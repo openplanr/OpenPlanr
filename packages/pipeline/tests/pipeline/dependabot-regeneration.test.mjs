@@ -12,9 +12,6 @@ const push = readFileSync(resolve(root, PUSH), 'utf8');
 const MANIFESTS = [
   'adapters/manifests/canonical-skills.json',
   'adapters/manifests/codex-plugin-content.json',
-  'adapters/manifests/ecosystem-assets.json',
-  'adapters/manifests/generated-assets.json',
-  'ecosystem.json',
 ];
 
 // The repository declares no YAML parser for its tests, so these read the fixed layout.
