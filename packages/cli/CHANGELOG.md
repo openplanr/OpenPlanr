@@ -1,5 +1,19 @@
 # Changelog
 
+## 3.1.0
+
+### Minor Changes
+
+- c689d70: The status, sprint and sync skills say what they do with nothing connected and what a connected project tracker or source control adds. Before sprint or sync changes any tracker issue, they list every issue they will create, update, close or reopen, write only on your request or approval, and then report the items that were not updated.
+- 0cfc91e: The Claude, Codex and Cursor plugins include `CONNECTORS.md`, which lists the chat, project tracker and source control products OpenPlanr works with and the step to connect each one in your host. The status, sprint and sync skills now refer to a project tracker or source control connection and point to that list when one is missing.
+- 9d60c2d: Two new skills, both run only when you invoke them. `/planr:share` turns the status report, the current sprint or the latest release notes into a team update, shows you the exact text and destination, and creates a chat draft for you to send once you approve; with no chat connected it prints the update ready to paste. `/planr:connect` reports which chat, project tracker and source control connections your host has and shows how to connect the missing ones through the host. Neither asks for or stores a credential.
+- b9d672e: Skills can be marked as run only when you ask for them by name. Claude Code skills marked this way carry `disable-model-invocation: true`, Codex skills set `allow_implicit_invocation: false`, and Cursor rules apply only when you mention them. The generated `CLAUDE.md` and `AGENTS.md` list such skills as user-invoked, so the agent points you to them instead of running them.
+
+### Patch Changes
+
+- 17a7b18: The npm package keywords describe OpenPlanr as agent skills for Claude Code, Codex and Cursor.
+- 575e84c: `/planr:share` formats a Slack draft in the standard Markdown that Slack's connector expects, and keeps Slack's own syntax for text you paste. It treats a chat app name such as `slack` as the app rather than a channel and still asks where to post. With no OpenPlanr project in the folder, it asks which project to use instead of guessing. `/planr:connect` accepts a product name such as `linear`, and reports a connector that is set up but not signed in, with a pointer to the host's connector settings.
+
 ## 3.0.1
 
 ### Patch Changes

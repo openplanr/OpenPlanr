@@ -5,15 +5,15 @@ This is the deterministic local-candidate ledger for OpenPlanr 0.1.0. It reads o
 
 | Package | Version | Path | Publication |
 |---|---:|---|---|
-| `openplanr` | 3.0.1 | `packages/cli` | public |
+| `openplanr` | 3.1.0 | `packages/cli` | public |
 | `planr-pipeline` | 0.59.0 | `packages/pipeline` | public |
-| `@openplanr/protocol` | 0.12.0 | `packages/protocol` | public |
-| `@openplanr/operate` | 0.1.19 | `packages/operate` | private |
-| `@openplanr/artifact` | 0.6.7 | `packages/artifact` | private |
-| `@openplanr/design` | 0.4.7 | `packages/design` | private |
-| `@openplanr/skill-runtime` | 0.2.18 | `packages/skill-runtime` | private |
+| `@openplanr/protocol` | 0.13.0 | `packages/protocol` | public |
+| `@openplanr/operate` | 0.1.20 | `packages/operate` | private |
+| `@openplanr/artifact` | 0.6.8 | `packages/artifact` | private |
+| `@openplanr/design` | 0.4.8 | `packages/design` | private |
+| `@openplanr/skill-runtime` | 0.2.19 | `packages/skill-runtime` | private |
 | `@openplanr/integrations` | 0.1.1 | `packages/integrations` | private |
-| `@openplanr/dashboard-app` | 0.1.19 | `apps/dashboard` | private |
+| `@openplanr/dashboard-app` | 0.1.20 | `apps/dashboard` | private |
 
 Compatibility invariants:
 
