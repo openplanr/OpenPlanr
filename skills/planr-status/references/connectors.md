@@ -22,6 +22,8 @@ Share a status report, sprint note or release notes as a message draft that you 
 | --- | --- | --- | --- | --- |
 | Slack | Message drafts | Run `/plugin install slack@claude-plugins-official`, then sign in to Slack from `/mcp`. A workspace admin may need to approve the app. | Install Slack from `/plugins` and sign in when asked. A workspace admin may need to approve the app. | Run `/add-plugin slack`, or install Slack from Customize, then sign in when asked. A workspace admin may need to approve the app. |
 
+Message format for Slack: Slack mrkdwn ([formatting](https://docs.slack.dev/messaging/formatting-message-text)): `*bold*`, `_italic_`, `<https://example.com|link text>`, lines starting with `•` or `-` for lists, `>` for quotes; no headings or tables; escape `&`, `<` and `>` as `&amp;`, `&lt;` and `&gt;`.
+
 Also works with: [Microsoft Teams](https://learn.microsoft.com/en-us/microsoft-copilot-studio/mcp-teams-tools) (read for context). Add the vendor's connector in your host the same way.
 
 Verified: [Slack](https://docs.slack.dev/ai/slack-mcp-server) on 2026-10-09, [Microsoft Teams](https://learn.microsoft.com/en-us/microsoft-copilot-studio/mcp-teams-tools) on 2026-10-09.

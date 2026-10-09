@@ -202,6 +202,11 @@ test('OpenAI plugin exposes readable content for every canonical skill and no al
     canonical.skillIds,
   );
   assert.deepEqual(canonical.aliases, []);
+  const userOnlySkills = new Set(
+    json('skills/registry.json')
+      .skills.filter(({ invocation }) => invocation === 'user-only')
+      .map(({ skillId }) => skillId),
+  );
   for (const skill of content.skills) {
     assert.equal(skill.entrypoint, `skills/${skill.projectedName}/SKILL.md`);
     assert.ok(skill.description.length > 0, skill.skillId);
@@ -226,7 +231,12 @@ test('OpenAI plugin exposes readable content for every canonical skill and no al
       new RegExp(`default_prompt: .*\\$planr:${skill.projectedName}`, 'u'),
       metadataPath,
     );
-    assert.match(metadata, /allow_implicit_invocation: true/u, metadataPath);
+    const userOnly = userOnlySkills.has(skill.skillId);
+    assert.match(
+      metadata,
+      new RegExp(`allow_implicit_invocation: ${!userOnly}`, 'u'),
+      metadataPath,
+    );
   }
 });
 

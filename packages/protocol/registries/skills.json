@@ -374,6 +374,67 @@
       ]
     },
     {
+      "skillId": "planr-connect",
+      "skillVersion": "1.0.0",
+      "description": "Report which chat, project tracker and source control connections the host has, and guide connecting the missing ones through the host. Use when the user wants to connect a service for OpenPlanr or asks what is connected.",
+      "lifecycle": "active",
+      "authorityClass": "diagnostic",
+      "source": "skills/planr-connect/openplanr.skill.json",
+      "sourceDigest": "sha256:e231e5a446e409f860079f4df07c7abb5d160f35b578c4252516094e100d3994",
+      "triggerPolicy": {
+        "include": [
+          "Connect chat, a project tracker or source control for OpenPlanr",
+          "Check which services OpenPlanr can reach through the host's connections"
+        ],
+        "exclude": [
+          "Diagnose OpenPlanr installation or runtime health",
+          "Synchronize planning artifacts with a tracker"
+        ],
+        "deferTo": []
+      },
+      "contracts": {
+        "inputs": [],
+        "outputs": [
+          {
+            "id": "connect-result",
+            "version": "1.0.0"
+          }
+        ]
+      },
+      "cliRequirements": [],
+      "ruleIds": [
+        "R1",
+        "R5",
+        "R7"
+      ],
+      "contributionManifestRefs": [
+        "packages/skill-runtime/contributions/workflows.json"
+      ],
+      "hosts": [
+        {
+          "host": "claude-code",
+          "entrypoint": "/planr:connect",
+          "path": "dist/plugins/claude/openplanr/skills/connect/SKILL.md"
+        },
+        {
+          "host": "codex",
+          "entrypoint": "$planr:connect",
+          "path": "dist/plugins/openai/openplanr/skills/connect/SKILL.md"
+        },
+        {
+          "host": "cursor",
+          "entrypoint": "planr-connect",
+          "path": "dist/plugins/cursor/openplanr/rules/planr-connect.mdc"
+        }
+      ],
+      "testRefs": [
+        "tests/protocol/skill-catalog.test.mjs"
+      ],
+      "certificationRefs": [
+        "evaluation/skills/migrations/planr-connect.json"
+      ]
+    },
+    {
       "skillId": "planr-coo-review",
       "skillVersion": "2.0.1",
       "description": "Produce a grounded operations and customer-health review for an Operate cycle. Use when readiness, service delivery, capacity, or customer health needs a COO lens.",
@@ -1425,6 +1486,67 @@
       ]
     },
     {
+      "skillId": "planr-share",
+      "skillVersion": "1.0.0",
+      "description": "Share a status report, sprint note or release notes with the team as a chat message draft that the user approves and sends. Use when the user asks to post a planning update to chat.",
+      "lifecycle": "active",
+      "authorityClass": "external-write",
+      "source": "skills/planr-share/openplanr.skill.json",
+      "sourceDigest": "sha256:832195e643d77f5457d468a530c76512935b4df0d6acf7ab5f3d88b06338c4b2",
+      "triggerPolicy": {
+        "include": [
+          "Share the delivery status, sprint note or release notes with the team in chat",
+          "Post a planning update to a chat channel as a draft"
+        ],
+        "exclude": [
+          "Report delivery status without sharing it",
+          "Write or publish release notes"
+        ],
+        "deferTo": []
+      },
+      "contracts": {
+        "inputs": [],
+        "outputs": [
+          {
+            "id": "share-result",
+            "version": "1.0.0"
+          }
+        ]
+      },
+      "cliRequirements": [],
+      "ruleIds": [
+        "R1",
+        "R5",
+        "R7"
+      ],
+      "contributionManifestRefs": [
+        "packages/skill-runtime/contributions/workflows.json"
+      ],
+      "hosts": [
+        {
+          "host": "claude-code",
+          "entrypoint": "/planr:share",
+          "path": "dist/plugins/claude/openplanr/skills/share/SKILL.md"
+        },
+        {
+          "host": "codex",
+          "entrypoint": "$planr:share",
+          "path": "dist/plugins/openai/openplanr/skills/share/SKILL.md"
+        },
+        {
+          "host": "cursor",
+          "entrypoint": "planr-share",
+          "path": "dist/plugins/cursor/openplanr/rules/planr-share.mdc"
+        }
+      ],
+      "testRefs": [
+        "tests/protocol/skill-catalog.test.mjs"
+      ],
+      "certificationRefs": [
+        "evaluation/skills/migrations/planr-share.json"
+      ]
+    },
+    {
       "skillId": "planr-ship",
       "skillVersion": "1.2.1",
       "description": "Implement an OpenPlanr plan, specification, task, or clearly stated request end to end in the current repository. Use when the user asks to build, implement, fix, finish, or ship local work.",
@@ -1742,5 +1864,5 @@
     }
   ],
   "compatibilityAliases": [],
-  "documentDigest": "sha256:25cad5c7ed0f1e73078bb9ff9cca68dae51983bbf3141f20c1b944ff20e785d3"
+  "documentDigest": "sha256:843515daab14dfb561e6f091a067beb1687de349ba5313fb2fd9cf85c718d97c"
 }

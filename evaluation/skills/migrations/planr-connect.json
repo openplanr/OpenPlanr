@@ -1,0 +1,23 @@
+{
+  "kind": "openplanr-skill-adoption-report",
+  "schemaVersion": "1.0.0",
+  "skillId": "planr-connect",
+  "family": "diagnostics",
+  "source": {
+    "format": "standard-skill-bundle",
+    "entrypoint": "skills/planr-connect/SKILL.md",
+    "supportFiles": 1
+  },
+  "successor": {
+    "sourceFormat": "package-v1",
+    "path": "skills/planr-connect/openplanr.skill.json",
+    "version": "1.0.0"
+  },
+  "classification": "adapted",
+  "intendedChanges": [
+    "Added planr-connect to report connected service categories and guide connecting the missing ones through the host.",
+    "Used the host's connector suggestions when offered, otherwise the dated per-host step from the connections catalog.",
+    "Never requested, read or stored a credential or changed host configuration.",
+    "Marked the skill user-invoked on every host."
+  ]
+}

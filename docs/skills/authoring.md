@@ -33,6 +33,25 @@ for `script` resources, and scripts must be deterministic: they may inspect,
 validate, render, store, or synchronize data, but never call a model provider or
 make a product decision.
 
+## Outward actions and connections
+
+A skill that posts, sends or writes to a service outside the repository declares
+`"authorityClass": "external-write"` and `"invocation": "user-only"` in
+`skills/registry.json`. `external-write` permits one action: after showing the
+exact content and destination and receiving the user's approval, create a draft
+(or send, only on an explicit request) through a connection the host already has.
+It never permits storing or reading credentials. Authority classes are recorded
+identifiers, not enforced by a validator, so the skill text must carry the
+approval step itself.
+
+`invocation: "user-only"` generates `disable-model-invocation: true` for Claude
+Code, `allow_implicit_invocation: false` for Codex and a mention-only Cursor rule.
+
+Skills that use a connection name a category (`~~chat`, `~~project tracker`,
+`~~source control`), never a product. Products and per-host connect steps live in
+`skills/shared/connections.json`, which generates `CONNECTORS.md` and each
+connection skill's `references/connectors.md`.
+
 ## Semantic boundary
 
 Plan, spec, ship, Operate, design, and review reasoning runs inside the active

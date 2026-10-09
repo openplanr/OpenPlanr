@@ -20,6 +20,12 @@
       ]
     },
     {
+      "id": "planr-connect",
+      "source": "skills/planr-connect/openplanr.skill.json",
+      "authorityClass": "diagnostic",
+      "utilityRequirements": []
+    },
+    {
       "id": "planr-dashboard",
       "source": "skills/planr-dashboard/openplanr.skill.json",
       "authorityClass": "read-only-view",
@@ -134,6 +140,21 @@
       "source": "skills/planr-plan/openplanr.skill.json",
       "authorityClass": "planning-write",
       "utilityRequirements": []
+    },
+    {
+      "id": "planr-share",
+      "source": "skills/planr-share/openplanr.skill.json",
+      "authorityClass": "external-write",
+      "utilityRequirements": [
+        {
+          "commandId": "cli-status",
+          "argv": [
+            "status"
+          ],
+          "requiredOptions": [],
+          "optional": true
+        }
+      ]
     },
     {
       "id": "planr-ship",

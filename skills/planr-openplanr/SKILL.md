@@ -31,6 +31,8 @@ Claude Code and `$planr:plan` in Codex). Do not perform the routed work here.
 | Refine the open backlog and select the sprint for the next release cut | `planr-sprint` |
 | See planning or Operate state in the browser | `planr-dashboard` |
 | Check artifacts for graph, status, or schema drift | `planr-sync` |
+| Post a status, sprint, or release update to chat | `planr-share` (user-invoked) |
+| Connect chat, a tracker, or source control, or see what is connected | `planr-connect` (user-invoked) |
 | Judge release readiness or prepare a landing sequence | `planr-land` |
 | Pick a versioning scheme, bump versions, write release notes | `planr-release` |
 | Diagnose the CLI, plugins, installation, or upgrade state | `planr-doctor` |
@@ -47,6 +49,8 @@ Claude Code and `$planr:plan` in Codex). Do not perform the routed work here.
   review code does not request implementation delegation.
 - PLAN and SHIP are separate user-invoked workflows. Route to one; never chain
   `planr-plan` into `planr-ship` on the user's behalf.
+- `planr-share` and `planr-connect` run only when the user invokes them. When a
+  request matches one, name the command for the user to run instead of running it.
 - When a request spans several skills, route to the earliest step in that
   order (spec → plan → plan-review → ship → land → release) and name the rest.
 - When the request is not OpenPlanr work at all, say so and answer directly

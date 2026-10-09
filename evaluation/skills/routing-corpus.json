@@ -424,6 +424,44 @@
       "expectedReason": "explicit-name"
     },
     {
+      "id": "share-sprint-chat",
+      "kind": "positive",
+      "input": "Share the current sprint note with the team in chat",
+      "expectedSkillId": "planr-share"
+    },
+    {
+      "id": "share-release-draft",
+      "kind": "positive",
+      "input": "Post a planning update about the release to the team channel as a draft",
+      "expectedSkillId": "planr-share"
+    },
+    {
+      "id": "alias-planr-share",
+      "kind": "alias",
+      "input": "Use $planr-share for the status update",
+      "expectedSkillId": "planr-share",
+      "expectedReason": "explicit-name"
+    },
+    {
+      "id": "connect-tracker",
+      "kind": "positive",
+      "input": "Connect our project tracker so OpenPlanr can reach it",
+      "expectedSkillId": "planr-connect"
+    },
+    {
+      "id": "connect-check",
+      "kind": "positive",
+      "input": "Which services can OpenPlanr reach through the host's connections?",
+      "expectedSkillId": "planr-connect"
+    },
+    {
+      "id": "alias-planr-connect",
+      "kind": "alias",
+      "input": "Use $planr-connect for chat",
+      "expectedSkillId": "planr-connect",
+      "expectedReason": "explicit-name"
+    },
+    {
       "id": "delegate-external-agent",
       "kind": "positive",
       "input": "Delegate implementation to another coding agent",

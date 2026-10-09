@@ -3,7 +3,13 @@ import { resolve } from 'node:path';
 
 export const CONNECTIONS_CATALOG = 'skills/shared/connections.json';
 export const CONNECTORS_REFERENCE = 'references/connectors.md';
-export const CONNECTION_SKILL_IDS = Object.freeze(['planr-status', 'planr-sprint', 'planr-sync']);
+export const CONNECTION_SKILL_IDS = Object.freeze([
+  'planr-connect',
+  'planr-share',
+  'planr-status',
+  'planr-sprint',
+  'planr-sync',
+]);
 
 const HOSTS = Object.freeze([
   ['claude-code', 'Claude Code'],
@@ -34,6 +40,11 @@ function assertProduct(category, product) {
   if (typeof product.docs !== 'string' || !product.docs.startsWith('https://'))
     fail(`${where} needs an https documentation link.`);
   if (!ISO_DATE.test(product.verifiedOn ?? '')) fail(`${where} needs verifiedOn as YYYY-MM-DD.`);
+  if (
+    product.format !== undefined &&
+    (typeof product.format !== 'string' || product.format.trim() === '')
+  )
+    fail(`${where} format must be non-empty text.`);
   for (const field of ['aliases', 'tools'])
     if (
       product[field] !== undefined &&
@@ -119,6 +130,8 @@ function renderCategory(category) {
     ),
     '',
   ];
+  for (const { name, format } of category.products.filter(({ format }) => format))
+    lines.push(`Message format for ${name}: ${format}`, '');
   if (others.length > 0)
     lines.push(
       `Also works with: ${others.map(({ name, docs, use }) => `[${name}](${docs}) (${USES.get(use).toLowerCase()})`).join(', ')}. Add the vendor's connector in your host the same way.`,
