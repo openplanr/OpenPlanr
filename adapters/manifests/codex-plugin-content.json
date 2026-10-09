@@ -1022,7 +1022,7 @@
       "assets": [
         {
           "path": "skills/sprint/SKILL.md",
-          "digest": "sha256:cb1f5ec7b8958c52a41b8472f51a8ff6139c2e7917a1fe656bdd2f2a6c9e06af"
+          "digest": "sha256:e21368479507c611fa2b8f547a320c8d0e387dacfe27f9dc38a6291dc8aecb27"
         },
         {
           "path": "skills/sprint/openplanr.skill.json",
@@ -1063,7 +1063,7 @@
       "assets": [
         {
           "path": "skills/status/SKILL.md",
-          "digest": "sha256:0391e8521cae6eb9636d60d41bf0c9aa99c6c1552232d0b46bce2577bc110942"
+          "digest": "sha256:85d9327247810a5ca3df7e4c6638583d9e43fe8ae826ae72e936cb8480c53522"
         },
         {
           "path": "skills/status/openplanr.skill.json",
@@ -1092,7 +1092,7 @@
       "assets": [
         {
           "path": "skills/sync/SKILL.md",
-          "digest": "sha256:3c026830d2560d05b3d852902171280030f09242746ace264e76cb5307ac6d8d"
+          "digest": "sha256:79cb62f3f8b0c36ef55c9424ca694a37448f90170183d13d0654d500613da414"
         },
         {
           "path": "skills/sync/openplanr.skill.json",

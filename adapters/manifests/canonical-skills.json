@@ -5661,7 +5661,7 @@
       "source": "skills/planr-sprint/openplanr.skill.json",
       "entrypoint": "skills/planr-sprint/SKILL.md",
       "description": "Refine every open backlog item against the code and the calendar, refute the picks, and select a sprint that fits capacity and the release cut. Use before a cut or sprint; not for decomposing one specification or reporting status.",
-      "sourceDigest": "sha256:aabbe3f377e678144c79d9b50b4b2b867e5a5ae39bd2396378bef2a1b121dc74",
+      "sourceDigest": "sha256:170a34027658a826fd8e709cffeee50f1626c6b9e7602a583d557b47816237b8",
       "resources": [
         {
           "path": "agents/openai.yaml",
@@ -5767,7 +5767,7 @@
       "source": "skills/planr-status/openplanr.skill.json",
       "entrypoint": "skills/planr-status/SKILL.md",
       "description": "Inspect project delivery or one feature's pipeline status without changing state. Use when the user asks what is done, pending, blocked, or next.",
-      "sourceDigest": "sha256:2697c7b8bf87c1f02c48666623480d93a53119202036fcb702b786a89e10778d",
+      "sourceDigest": "sha256:09683973f4415f5356e9ab57b61df93106c4a2bc886e8b64e409fcfb539ad885",
       "resources": [
         {
           "path": "agents/openai.yaml",
@@ -5837,7 +5837,7 @@
       "source": "skills/planr-sync/openplanr.skill.json",
       "entrypoint": "skills/planr-sync/SKILL.md",
       "description": "Audit OpenPlanr planning artifacts for graph and protocol drift. Use when statuses, references, schemas, or generated planning views may be inconsistent.",
-      "sourceDigest": "sha256:e02504c69e77ba715b399d1611022812e2df0fbc9582c301367d06523a1231c2",
+      "sourceDigest": "sha256:4fb542bc7a0685904b6d6f58ec9fae3c539531793e1933474fbc3c3d34702e24",
       "resources": [
         {
           "path": "references/connectors.md",

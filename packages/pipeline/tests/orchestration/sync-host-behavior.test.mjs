@@ -116,3 +116,35 @@ for (const [surface, entrypoint, helper] of surfaces) {
     assert.deepEqual(readdirSync(project), []);
   });
 }
+
+const previewRule =
+  /Before any remote write, list every issue change: each issue to create, update, close or reopen, with its title and the status it moves to\. Write only when the request explicitly asked for that push or the user approves the list\. Afterwards, report each item that was not updated and why/u;
+const flat = (path) => read(path).replace(/\s+/gu, ' ');
+
+for (const skill of ['planr-status', 'planr-sprint', 'planr-sync']) {
+  test(`${skill}: works with nothing connected and names the category it would use`, () => {
+    const guidance = flat(`skills/${skill}/SKILL.md`);
+    assert.match(guidance, /With nothing connected/u);
+    assert.match(guidance, /not run/u);
+    assert.match(
+      guidance,
+      /give the current host's step from \[connectors\]\(references\/connectors\.md\)/u,
+    );
+    assert.match(guidance, /~~project tracker/u);
+  });
+}
+
+for (const skill of ['planr-sprint', 'planr-sync']) {
+  test(`${skill}: previews every issue change before a tracker write`, () => {
+    const guidance = flat(`skills/${skill}/SKILL.md`);
+    assert.match(guidance, previewRule);
+    assert.match(guidance, /name the category and product/u);
+  });
+}
+
+test('planr-status reads remote state only on request and never writes to a remote service', () => {
+  const guidance = flat('skills/planr-status/SKILL.md');
+  assert.match(guidance, /Add remote lookups only when the user requests live remote state/u);
+  assert.match(guidance, /Status never writes to a remote service/u);
+  assert.match(guidance, /Name the category each remote fact came from/u);
+});
