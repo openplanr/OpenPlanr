@@ -34,6 +34,25 @@ test('Codex metadata is concise, quoted, implicitly discoverable, and explicitly
   assert.equal(metadata.endsWith('\n'), true);
 });
 
+test('Codex metadata keeps a user-only skill out of implicit invocation', () => {
+  const metadata = renderOpenAiSkillMetadata({
+    skillId: 'planr-share',
+    description: 'Share an update.',
+    invocation: '$planr:share',
+    allowImplicitInvocation: false,
+  });
+  assert.match(metadata, /^policy:\n {2}allow_implicit_invocation: false$/mu);
+  assert.throws(
+    () =>
+      renderOpenAiSkillMetadata({
+        skillId: 'planr-share',
+        description: 'Share an update.',
+        allowImplicitInvocation: 'no',
+      }),
+    (error) => error.code === 'E_SKILL_OPENAI_METADATA_INVALID',
+  );
+});
+
 test('Codex metadata accepts a short namespaced plugin invocation', () => {
   const metadata = renderOpenAiSkillMetadata({
     skillId: 'planr-example',

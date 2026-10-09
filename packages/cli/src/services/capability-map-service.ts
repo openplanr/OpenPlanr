@@ -10,6 +10,8 @@ export interface CapabilitySkill {
   useWhen: string[];
   notFor: string[];
   deferTo: string[];
+  /** Runs only when the user invokes it; absent in maps generated before the flag existed. */
+  userInvoked?: boolean;
 }
 
 export interface CapabilityAgent {
@@ -29,9 +31,16 @@ export interface CapabilityMap {
 
 export interface CapabilityMapContext {
   prefix: string;
+  hasUserInvoked: boolean;
   families: Array<{
     title: string;
-    skills: Array<{ name: string; lead: string; useWhen: string; notFor: string }>;
+    skills: Array<{
+      name: string;
+      lead: string;
+      useWhen: string;
+      notFor: string;
+      userInvoked: boolean;
+    }>;
   }>;
   agents: Array<{ id: string; summary: string }>;
 }
@@ -86,11 +95,17 @@ export function capabilityMapContext(
           lead: leadSentence(skill.description),
           useWhen: skill.useWhen.join('; '),
           notFor: skill.notFor.join('; '),
+          userInvoked: skill.userInvoked === true,
         })),
     }))
     .filter((family) => family.skills.length > 0);
   const agents = options.includeAgents
     ? map.agents.map((agent) => ({ id: agent.id, summary: leadSentence(agent.description) }))
     : [];
-  return { prefix: options.prefix, families, agents };
+  return {
+    prefix: options.prefix,
+    hasUserInvoked: map.skills.some((skill) => skill.userInvoked === true),
+    families,
+    agents,
+  };
 }

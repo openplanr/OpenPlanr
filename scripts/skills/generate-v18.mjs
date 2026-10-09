@@ -35,8 +35,10 @@ import {
   HOST_PLUGIN_NAME,
   namespacedInvocation,
   projectedSkillName,
+  renderCursorRule,
   renderCursorSkillBody,
   renderNamespacedSkill,
+  renderUserOnlySkill,
 } from './host-invocations.mjs';
 import {
   CLAUDE_PLUGIN_ICON,
@@ -232,6 +234,7 @@ for (const row of registry.skills) {
       renderOpenAiSkillMetadata({
         skillId: row.skillId,
         description: row.description,
+        allowImplicitInvocation: row.invocation !== 'user-only',
       }),
     ),
   );
@@ -389,6 +392,7 @@ for (const row of registry.skills) {
   const packageInfo = readStandardSkillPackage({ repoRoot: root, registryRow: row });
   const parsed = assertCanonicalSkill(packageInfo);
   const hostSkillName = projectedSkillName(row.skillId);
+  const userOnly = row.invocation === 'user-only';
   const sourceDigest = sha256Bytes(packageInfo.markdown);
   const resources = packageInfo.resources.map(({ absolute, ...resource }) => ({
     ...resource,
@@ -401,7 +405,11 @@ for (const row of registry.skills) {
   ]) {
     const skillRoot = `skills/${hostSkillName}`;
     const destination = `${pluginRoot}/${skillRoot}`;
-    add(`${destination}/SKILL.md`, renderNamespacedSkill(packageInfo.markdown, row.skillId));
+    const hostMarkdown = renderNamespacedSkill(packageInfo.markdown, row.skillId);
+    add(
+      `${destination}/SKILL.md`,
+      userOnly && host === 'claude-code' ? renderUserOnlySkill(hostMarkdown) : hostMarkdown,
+    );
     const localResources = suiteLocalResources(packageInfo, host, skillRoot);
     // The native suite declaration lists local files; its complete closure is owned by
     // the exhaustive package content inventory, rather than a standalone skill directory.
@@ -423,6 +431,7 @@ for (const row of registry.skills) {
             skillId: row.skillId,
             description: row.description,
             invocation: namespacedInvocation(row.skillId, 'codex'),
+            allowImplicitInvocation: !userOnly,
           }),
         );
       } else
@@ -442,7 +451,7 @@ for (const row of registry.skills) {
   const cursorSkillRoot = `rules/${row.skillId}`;
   add(
     `${cursorPluginRoot}/rules/${row.skillId}.mdc`,
-    `---\ndescription: ${JSON.stringify(parsed.fields.description)}\nalwaysApply: false\n---\n\n${cursorBody}`,
+    renderCursorRule({ description: parsed.fields.description, body: cursorBody, userOnly }),
   );
   for (const resource of suiteLocalResources(packageInfo, 'cursor', cursorSkillRoot).filter(
     ({ path }) => !path.startsWith('agents/'),
@@ -626,6 +635,7 @@ add(
         useWhen: row.triggerPolicy.include,
         notFor: row.triggerPolicy.exclude,
         deferTo: row.triggerPolicy.deferTo,
+        userInvoked: row.invocation === 'user-only',
       };
     }),
     agents: roleRows.map(({ id }) => ({ id, description: roleDescriptions.get(id) })),

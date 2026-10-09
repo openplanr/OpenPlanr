@@ -1,6 +1,6 @@
 ## OpenPlanr capabilities
 
-Every skill below is model-invoked: reach for it as soon as a request matches,
+Every skill below is model-invoked{{#if hasUserInvoked}} unless marked user-invoked{{/if}}: reach for it as soon as a request matches,
 without waiting to be asked by name. When no single skill clearly fits, start
 with `{{prefix}}openplanr`, which routes to the best one. PLAN and SHIP stay
 separate user-invoked workflows.
@@ -9,7 +9,7 @@ separate user-invoked workflows.
 ### {{{this.title}}}
 
 {{#each this.skills}}
-- `{{@root.prefix}}{{this.name}}` — {{{this.lead}}} Use when: {{{this.useWhen}}}.{{#if this.notFor}} Not for: {{{this.notFor}}}.{{/if}}
+- `{{@root.prefix}}{{this.name}}` — {{{this.lead}}} Use when: {{{this.useWhen}}}.{{#if this.notFor}} Not for: {{{this.notFor}}}.{{/if}}{{#if this.userInvoked}} User-invoked: when a request matches, point the user to `{{@root.prefix}}{{this.name}}` instead of running it.{{/if}}
 {{/each}}
 {{/each}}
 {{#if agents}}
