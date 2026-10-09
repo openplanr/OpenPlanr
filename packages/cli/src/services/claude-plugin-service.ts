@@ -1,5 +1,5 @@
 import { spawnSync } from 'node:child_process';
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readFileSync, realpathSync } from 'node:fs';
 import path from 'node:path';
 import { z } from 'zod';
 import { parseExternalJson } from '../utils/external-json.js';
@@ -9,6 +9,7 @@ export const OPENPLANR_CLAUDE_PLUGIN = 'planr';
 export type ClaudePluginOperationKind =
   | 'add-marketplace'
   | 'refresh-marketplace'
+  | 'replace-marketplace'
   | 'install'
   | 'update'
   | 'enable'
@@ -21,6 +22,9 @@ export interface ClaudePluginOperation {
   scope: 'user';
   currentVersion?: string;
   targetVersion?: string;
+  /** Marketplace source paths of a `replace-marketplace`. */
+  currentPath?: string;
+  targetPath?: string;
   description: string;
 }
 
@@ -46,6 +50,8 @@ export interface ClaudePluginInspection {
   duplicatePluginIds: string[];
   /** Install folders of those duplicate plugins, when Claude reports them. */
   duplicatePluginPaths: string[];
+  /** Source of a same-named marketplace registered from another OpenPlanr install. */
+  staleMarketplacePath?: string;
   /** `planr` plugins from any other source, synced from the plugin directory included. */
   externalPlugins: ClaudeExternalPlugin[];
   error?: string;
@@ -74,7 +80,14 @@ export interface ClaudeCommandResult {
 
 export type ClaudeCommandRunner = (args: string[]) => ClaudeCommandResult;
 
-const marketplaceListSchema = z.array(z.object({ name: z.string().optional() }));
+const marketplaceListSchema = z.array(
+  z.object({ name: z.string().optional(), path: z.string().optional() }),
+);
+
+function canonicalPath(value: string): string {
+  const resolved = path.resolve(value);
+  return existsSync(resolved) ? realpathSync(resolved) : resolved;
+}
 
 const installedPluginSchema = z.object({
   id: z.string().optional(),
@@ -224,6 +237,8 @@ export function formatClaudePluginOperationCommand(
       return `claude plugin marketplace add ${marketplaceRoot}`;
     case 'refresh-marketplace':
       return `claude plugin marketplace update ${operation.id}`;
+    case 'replace-marketplace':
+      return `claude plugin marketplace remove ${operation.id} && claude plugin marketplace add ${marketplaceRoot}`;
     case 'install':
       return `claude plugin install ${operation.id} --scope user`;
     case 'update':
@@ -323,6 +338,10 @@ export function inspectBundledClaudePluginIntegration(
       ),
     );
     const configured = marketplaces.find(({ name }) => name === desired.name);
+    const staleMarketplacePath =
+      configured?.path && canonicalPath(configured.path) !== canonicalPath(marketplaceRoot)
+        ? configured.path
+        : undefined;
     const plugin = bundledPluginState(
       installed,
       desired.name,
@@ -365,20 +384,31 @@ export function inspectBundledClaudePluginIntegration(
         enabled: candidate.enabled === true,
       }))
       .sort((left, right) => left.id.localeCompare(right.id));
-    const marketplaceOperation: ClaudePluginOperation = {
-      runtime: 'claude-code',
-      kind: configured ? 'refresh-marketplace' : 'add-marketplace',
-      id: desired.name,
-      scope: 'user',
-      description: configured
-        ? 'Refresh the generated local OpenPlanr Claude marketplace'
-        : 'Add the generated local OpenPlanr Claude marketplace',
-    };
+    const marketplaceOperation: ClaudePluginOperation = staleMarketplacePath
+      ? {
+          runtime: 'claude-code',
+          kind: 'replace-marketplace',
+          id: desired.name,
+          scope: 'user',
+          currentPath: staleMarketplacePath,
+          targetPath: marketplaceRoot,
+          description: `Replace the local OpenPlanr Claude marketplace from ${staleMarketplacePath} with ${marketplaceRoot}`,
+        }
+      : {
+          runtime: 'claude-code',
+          kind: configured ? 'refresh-marketplace' : 'add-marketplace',
+          id: desired.name,
+          scope: 'user',
+          description: configured
+            ? 'Refresh the generated local OpenPlanr Claude marketplace'
+            : 'Add the generated local OpenPlanr Claude marketplace',
+        };
     return {
       available: true,
       marketplaceConfigured: Boolean(configured),
       ready:
         Boolean(configured) &&
+        !staleMarketplacePath &&
         plugin.installed &&
         plugin.enabled &&
         plugin.identityValid &&
@@ -400,6 +430,7 @@ export function inspectBundledClaudePluginIntegration(
       duplicatePluginIds,
       duplicatePluginPaths,
       externalPlugins,
+      ...(staleMarketplacePath ? { staleMarketplacePath } : {}),
     };
   } catch (cause) {
     return {
@@ -417,6 +448,12 @@ export function inspectBundledClaudePluginIntegration(
   }
 }
 
+const MARKETPLACE_KINDS: readonly ClaudePluginOperationKind[] = [
+  'add-marketplace',
+  'refresh-marketplace',
+  'replace-marketplace',
+];
+
 /** Apply and verify a local Claude package installation through Claude's native plugin manager. */
 export function applyBundledClaudePluginIntegration(
   marketplaceRoot: string,
@@ -428,9 +465,26 @@ export function applyBundledClaudePluginIntegration(
   }
   const performed: ClaudePluginOperation[] = [];
   const marketplaceOperation = inspection.operations.find((operation) =>
-    ['add-marketplace', 'refresh-marketplace'].includes(operation.kind),
+    MARKETPLACE_KINDS.includes(operation.kind),
   );
-  if (marketplaceOperation?.kind === 'add-marketplace') {
+  if (marketplaceOperation?.kind === 'replace-marketplace') {
+    // Removing a marketplace uninstalls its plugins; uninstall first so plugin data is kept.
+    const bundled = inspection.plugins.find(({ installed }) => installed);
+    if (bundled) {
+      runOrThrow(
+        runner,
+        ['plugin', 'uninstall', bundled.id, '--scope', 'user', '--keep-data', '--yes'],
+        marketplaceOperation,
+      );
+    }
+    runOrThrow(
+      runner,
+      ['plugin', 'marketplace', 'remove', marketplaceOperation.id],
+      marketplaceOperation,
+    );
+    runOrThrow(runner, ['plugin', 'marketplace', 'add', marketplaceRoot], marketplaceOperation);
+    performed.push(marketplaceOperation);
+  } else if (marketplaceOperation?.kind === 'add-marketplace') {
     runOrThrow(runner, ['plugin', 'marketplace', 'add', marketplaceRoot], marketplaceOperation);
     performed.push(marketplaceOperation);
   } else if (marketplaceOperation?.kind === 'refresh-marketplace') {
@@ -444,7 +498,7 @@ export function applyBundledClaudePluginIntegration(
   const refreshed = inspectBundledClaudePluginIntegration(marketplaceRoot, runner);
   if (refreshed.error) throw new Error(refreshed.error);
   for (const operation of refreshed.operations.filter(
-    ({ kind }) => !['add-marketplace', 'refresh-marketplace'].includes(kind),
+    ({ kind }) => !MARKETPLACE_KINDS.includes(kind),
   )) {
     const plugin = refreshed.plugins.find(({ id }) => id === operation.id);
     const replaceSameVersion =
@@ -472,7 +526,12 @@ export function applyBundledClaudePluginIntegration(
   }
   const finalInspection = inspectBundledClaudePluginIntegration(marketplaceRoot, runner);
   if (!finalInspection.ready) {
-    throw new Error(finalInspection.error ?? 'Claude local OpenPlanr plugin verification failed.');
+    throw new Error(
+      finalInspection.error ??
+        (finalInspection.staleMarketplacePath
+          ? `Claude local OpenPlanr plugin verification failed: marketplace ${marketplaceOperation?.id} still points to ${finalInspection.staleMarketplacePath}, not ${marketplaceRoot}.`
+          : 'Claude local OpenPlanr plugin verification failed.'),
+    );
   }
   return {
     operations: performed,

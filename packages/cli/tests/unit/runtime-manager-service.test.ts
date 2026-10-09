@@ -1234,7 +1234,9 @@ describe('runtime setup', () => {
       if (args[1] === 'marketplace' && args[2] === 'list') {
         return {
           status: 0,
-          stdout: JSON.stringify([{ name: 'openplanr-local', path: 'generated-local-package' }]),
+          stdout: JSON.stringify([
+            { name: 'openplanr-local', path: dirname(bundledClaudePluginRoot) },
+          ]),
           stderr: '',
         };
       }
@@ -1353,7 +1355,9 @@ describe('runtime setup', () => {
       if (args[1] === 'marketplace' && args[2] === 'list') {
         return {
           status: 0,
-          stdout: JSON.stringify([{ name: 'openplanr-local', path: 'generated-local-package' }]),
+          stdout: JSON.stringify([
+            { name: 'openplanr-local', path: dirname(bundledClaudePluginRoot) },
+          ]),
           stderr: '',
         };
       }
@@ -1464,7 +1468,9 @@ describe('runtime setup', () => {
       if (args[1] === 'marketplace' && args[2] === 'list') {
         return {
           status: 0,
-          stdout: JSON.stringify([{ name: 'openplanr-local', path: 'generated-local-package' }]),
+          stdout: JSON.stringify([
+            { name: 'openplanr-local', path: dirname(bundledClaudePluginRoot) },
+          ]),
           stderr: '',
         };
       }
@@ -1537,6 +1543,66 @@ describe('runtime setup', () => {
     expect(
       doctor.diagnostics.find((item) => item.code === 'runtime-claude-duplicate-plugin'),
     ).toMatchObject({ status: 'warn', fix: expect.stringContaining(uninstallCommand) });
+  });
+
+  it('fails doctor when openplanr-local points at another OpenPlanr install', async () => {
+    const installPath = join(root, 'claude-openplanr-current');
+    mkdirSync(join(installPath, '.claude-plugin'), { recursive: true });
+    writeFileSync(
+      join(installPath, '.claude-plugin', 'plugin.json'),
+      `${JSON.stringify({ name: 'planr', version: bundledAdapterRegistry.pluginVersion })}\n`,
+    );
+    copyFileSync(
+      join(bundledClaudePluginRoot, '.openplanr-content.json'),
+      join(installPath, '.openplanr-content.json'),
+    );
+    let marketplacePath = dirname(bundledClaudePluginRoot);
+    const runner: ClaudeCommandRunner = (args) => {
+      if (args[0] === '--version') return { status: 0, stdout: '2.1.0\n', stderr: '' };
+      if (args[1] === 'marketplace' && args[2] === 'list') {
+        return {
+          status: 0,
+          stdout: JSON.stringify([{ name: 'openplanr-local', path: marketplacePath }]),
+          stderr: '',
+        };
+      }
+      if (args[1] === 'list') {
+        return {
+          status: 0,
+          stdout: JSON.stringify([
+            {
+              id: 'planr@openplanr-local',
+              version: bundledAdapterRegistry.pluginVersion,
+              scope: 'user',
+              enabled: true,
+              installPath,
+            },
+          ]),
+          stderr: '',
+        };
+      }
+      if (args[1] === 'marketplace' && args[2] === 'update') {
+        return { status: 0, stdout: '', stderr: '' };
+      }
+      return { status: 1, stdout: '', stderr: `Unexpected Claude command: ${args.join(' ')}` };
+    };
+    await applySetup({
+      projectDir,
+      cliVersion,
+      runtime: 'claude-code',
+      scope: 'user',
+      claudeCommandRunner: runner,
+    });
+
+    marketplacePath = join(root, 'other-install', 'lib', 'host-packages', 'claude');
+    const doctor = await runtimeDoctor(projectDir, { claudeCommandRunner: runner });
+    expect(
+      doctor.diagnostics.find((item) => item.code === 'runtime-claude-marketplace-path'),
+    ).toMatchObject({
+      status: 'fail',
+      message: expect.stringContaining(marketplacePath),
+      fix: expect.stringContaining('openplanr setup --runtime claude --scope user'),
+    });
   });
 
   it('treats an unselected missing runtime as informational and a configured one as a warning', async () => {

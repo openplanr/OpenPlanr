@@ -823,7 +823,11 @@ function nextStepCommand(
     .filter((operation) => operation.runtime === 'claude-code')
     .map((operation) => operation.kind);
   // Only setup registers the local marketplace and may remove a retired plugin.
-  if (claudeKinds.includes('add-marketplace') || claudeKinds.includes('remove')) {
+  if (
+    claudeKinds.includes('add-marketplace') ||
+    claudeKinds.includes('replace-marketplace') ||
+    claudeKinds.includes('remove')
+  ) {
     return `${CLAUDE_PLUGIN_SETUP_COMMAND}${claudeKinds.includes('remove') ? ' --replace-managed' : ''} --yes`;
   }
   // `runtime update` has no skill-mode flag and would move a unified-plugin install to direct skills.

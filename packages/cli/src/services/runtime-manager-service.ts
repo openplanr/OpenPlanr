@@ -3659,6 +3659,14 @@ export async function runtimeDoctor(
             }
           : {}),
       });
+      if (inspection.staleMarketplacePath) {
+        diagnostics.push({
+          code: 'runtime-claude-marketplace-path',
+          status: 'fail',
+          message: `The local OpenPlanr Claude marketplace points to another install: ${inspection.staleMarketplacePath}, not ${bundledHostRoot('claude')}`,
+          fix: `Run \`${CLI_COMMAND} setup --runtime claude --scope user\` to point it at this install.`,
+        });
+      }
       if (inspection.legacyPluginIds.length > 0) {
         diagnostics.push({
           code: 'runtime-claude-legacy-plugin',

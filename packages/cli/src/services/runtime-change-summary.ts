@@ -60,6 +60,10 @@ function describeOperation(
       'refresh the local plugin marketplace',
       'local plugin marketplace refreshed',
     ],
+    'replace-marketplace': [
+      `point the local plugin marketplace at this install instead of ${versions?.currentPath ?? 'another install'}`,
+      'local plugin marketplace replaced',
+    ],
   };
   return phrases[operation.kind][applied ? 1 : 0];
 }
