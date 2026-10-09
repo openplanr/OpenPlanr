@@ -828,6 +828,10 @@
     background: var(--de-raised);
     border-color: var(--de-rule);
   }
+  /* The fill switches at once, so the glyph color must too, or contrast dips while it fades. */
+  &.de-primary {
+    transition: none;
+  }
   &.de-primary:not(:disabled)::before {
     background: var(--de-primary);
     border-color: var(--de-primary);
