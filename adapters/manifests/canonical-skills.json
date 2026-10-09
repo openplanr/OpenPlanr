@@ -5552,7 +5552,7 @@
       "source": "skills/planr-sprint/openplanr.skill.json",
       "entrypoint": "skills/planr-sprint/SKILL.md",
       "description": "Refine every open backlog item against the code and the calendar, refute the picks, and select a sprint that fits capacity and the release cut. Use before a cut or sprint; not for decomposing one specification or reporting status.",
-      "sourceDigest": "sha256:2dca1abeafb11a4d33a7ec58d3a52b4db5ba8b59db940374912f4b7c0ef7c983",
+      "sourceDigest": "sha256:aabbe3f377e678144c79d9b50b4b2b867e5a5ae39bd2396378bef2a1b121dc74",
       "resources": [
         {
           "path": "agents/openai.yaml",
@@ -5589,6 +5589,18 @@
           "digest": "sha256:547bda354869f1aef26398e77e956f43116305f8dcc0d827dd5fb061ec98504a"
         },
         {
+          "path": "references/connectors.md",
+          "kind": "reference",
+          "hosts": [
+            "claude-code",
+            "codex",
+            "chatgpt",
+            "cursor"
+          ],
+          "executable": false,
+          "digest": "sha256:86ee0408c33bcfcfc757076e8ce89367abfa2f239789826b8fa1e31a8e70dda8"
+        },
+        {
           "path": "references/tracker-connections.md",
           "kind": "reference",
           "hosts": [
@@ -5598,7 +5610,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:5f7d7126ca0db062c2b14c8ac35ca9758e44433329da610d7e75ad83b9417707"
+          "digest": "sha256:f9617486a5e2ecc861566d7a7eaf1c97725f9acfcc6bc64cfda1f9b6fd3c4d36"
         },
         {
           "path": "schemas/refinement.schema.json",
@@ -5646,7 +5658,7 @@
       "source": "skills/planr-status/openplanr.skill.json",
       "entrypoint": "skills/planr-status/SKILL.md",
       "description": "Inspect project delivery or one feature's pipeline status without changing state. Use when the user asks what is done, pending, blocked, or next.",
-      "sourceDigest": "sha256:d1d4ef34075312827cf9a4a67896977ed1608c1bf8881b8a8ed164340034c0cc",
+      "sourceDigest": "sha256:2697c7b8bf87c1f02c48666623480d93a53119202036fcb702b786a89e10778d",
       "resources": [
         {
           "path": "agents/openai.yaml",
@@ -5659,6 +5671,18 @@
           "digest": "sha256:a9b84c422fb918329e7819a3a8dd74e609aaad8965842d23cc53d62815331181"
         },
         {
+          "path": "references/connectors.md",
+          "kind": "reference",
+          "hosts": [
+            "claude-code",
+            "codex",
+            "chatgpt",
+            "cursor"
+          ],
+          "executable": false,
+          "digest": "sha256:86ee0408c33bcfcfc757076e8ce89367abfa2f239789826b8fa1e31a8e70dda8"
+        },
+        {
           "path": "references/tracker-connections.md",
           "kind": "reference",
           "hosts": [
@@ -5668,7 +5692,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:5f7d7126ca0db062c2b14c8ac35ca9758e44433329da610d7e75ad83b9417707"
+          "digest": "sha256:f9617486a5e2ecc861566d7a7eaf1c97725f9acfcc6bc64cfda1f9b6fd3c4d36"
         }
       ],
       "contracts": {
@@ -5704,8 +5728,20 @@
       "source": "skills/planr-sync/openplanr.skill.json",
       "entrypoint": "skills/planr-sync/SKILL.md",
       "description": "Audit OpenPlanr planning artifacts for graph and protocol drift. Use when statuses, references, schemas, or generated planning views may be inconsistent.",
-      "sourceDigest": "sha256:0e63252ba06b2842f7d6005782056100930a1559ae393164d7afd615df63384b",
+      "sourceDigest": "sha256:5c452dfaa9aa8cc328e4cd9ab349658b83b3d5c892d0017d742611652a92c413",
       "resources": [
+        {
+          "path": "references/connectors.md",
+          "kind": "reference",
+          "hosts": [
+            "claude-code",
+            "codex",
+            "chatgpt",
+            "cursor"
+          ],
+          "executable": false,
+          "digest": "sha256:86ee0408c33bcfcfc757076e8ce89367abfa2f239789826b8fa1e31a8e70dda8"
+        },
         {
           "path": "references/tracker-connections.md",
           "kind": "reference",
@@ -5716,7 +5752,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:5f7d7126ca0db062c2b14c8ac35ca9758e44433329da610d7e75ad83b9417707"
+          "digest": "sha256:f9617486a5e2ecc861566d7a7eaf1c97725f9acfcc6bc64cfda1f9b6fd3c4d36"
         },
         {
           "path": "scripts/sync.mjs",

@@ -1,0 +1,105 @@
+{
+  "kind": "openplanr-connections-catalog",
+  "schemaVersion": "1.0.0",
+  "categories": [
+    {
+      "id": "chat",
+      "placeholder": "~~chat",
+      "title": "Chat",
+      "adds": "Share a status report, sprint note or release notes as a message draft that you review and send yourself.",
+      "products": [
+        {
+          "name": "Slack",
+          "use": "draft",
+          "docs": "https://docs.slack.dev/ai/slack-mcp-server",
+          "verifiedOn": "2026-10-09",
+          "connect": {
+            "claude-code": "Run `/plugin install slack@claude-plugins-official`, then sign in to Slack from `/mcp`. A workspace admin may need to approve the app.",
+            "codex": "Install Slack from `/plugins` and sign in when asked. A workspace admin may need to approve the app.",
+            "cursor": "Run `/add-plugin slack`, or install Slack from Customize, then sign in when asked. A workspace admin may need to approve the app."
+          }
+        },
+        {
+          "name": "Microsoft Teams",
+          "use": "context",
+          "docs": "https://learn.microsoft.com/en-us/microsoft-copilot-studio/mcp-teams-tools",
+          "verifiedOn": "2026-10-09"
+        }
+      ]
+    },
+    {
+      "id": "project-tracker",
+      "placeholder": "~~project tracker",
+      "title": "Project tracker",
+      "adds": "Push planning status to linked issues after you approve each change, and read issue state back.",
+      "products": [
+        {
+          "name": "Linear",
+          "use": "sync",
+          "docs": "https://linear.app/docs/mcp",
+          "verifiedOn": "2026-10-09",
+          "connect": {
+            "claude-code": "Run `/plugin install linear@claude-plugins-official`, then sign in to Linear from `/mcp`.",
+            "codex": "Install Linear from `/plugins` and sign in when asked.",
+            "cursor": "Run `/add-plugin linear`, or install Linear from Customize, then sign in when asked."
+          }
+        },
+        {
+          "name": "GitHub Issues",
+          "aliases": ["GitHub"],
+          "use": "sync",
+          "docs": "https://cli.github.com/manual/gh_auth_login",
+          "verifiedOn": "2026-10-09",
+          "connect": {
+            "claude-code": "Install the GitHub CLI from cli.github.com and run `gh auth login`.",
+            "codex": "Install GitHub from `/plugins` and sign in when asked, or install the GitHub CLI and run `gh auth login`.",
+            "cursor": "Install the GitHub CLI from cli.github.com and run `gh auth login`."
+          }
+        },
+        {
+          "name": "Jira",
+          "use": "context",
+          "docs": "https://support.atlassian.com/atlassian-ai-gateway/docs/get-started-with-the-atlassian-remote-mcp-server/",
+          "verifiedOn": "2026-10-09"
+        },
+        {
+          "name": "Asana",
+          "use": "context",
+          "docs": "https://developers.asana.com/docs/using-asanas-mcp-server",
+          "verifiedOn": "2026-10-09"
+        }
+      ]
+    },
+    {
+      "id": "source-control",
+      "placeholder": "~~source control",
+      "title": "Source control",
+      "adds": "Read pull request and branch state for status reports and sprint reviews.",
+      "products": [
+        {
+          "name": "GitHub",
+          "use": "context",
+          "docs": "https://cli.github.com/manual/gh_auth_login",
+          "verifiedOn": "2026-10-09",
+          "connect": {
+            "claude-code": "Install the GitHub CLI from cli.github.com and run `gh auth login`.",
+            "codex": "Install GitHub from `/plugins` and sign in when asked, or install the GitHub CLI and run `gh auth login`.",
+            "cursor": "Install the GitHub CLI from cli.github.com and run `gh auth login`."
+          }
+        },
+        {
+          "name": "GitLab",
+          "use": "context",
+          "docs": "https://docs.gitlab.com/user/gitlab_duo/model_context_protocol/mcp_server/",
+          "verifiedOn": "2026-10-09"
+        },
+        {
+          "name": "Bitbucket",
+          "use": "context",
+          "docs": "https://support.atlassian.com/atlassian-ai-gateway/docs/get-started-with-the-atlassian-remote-mcp-server/",
+          "verifiedOn": "2026-10-09"
+        }
+      ]
+    }
+  ]
+}

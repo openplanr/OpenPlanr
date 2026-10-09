@@ -18,6 +18,14 @@ import { linkSkillProjection } from '../../packages/skill-runtime/src/linker/ind
 import { renderOpenAiSkillMetadata } from '../../packages/skill-runtime/src/packaging/index.mjs';
 import { CLI_GENERATED_RESOURCES } from './cli-resources.mjs';
 import {
+  CONNECTION_SKILL_IDS,
+  CONNECTIONS_CATALOG,
+  CONNECTORS_REFERENCE,
+  findProductMentions,
+  readConnectionsCatalog,
+  renderConnectors,
+} from './connectors.mjs';
+import {
   buildDesignSkillResources,
   buildPlanSkillResources,
   DESIGN_SKILL_IDS,
@@ -98,6 +106,8 @@ const operateAdvisorDestinations = Object.freeze([
   'planr-coo-review',
 ]);
 const trackerConnectionDestinations = Object.freeze(['planr-sync', 'planr-sprint', 'planr-status']);
+const connectionsCatalog = readConnectionsCatalog(root);
+const connectorsMarkdown = renderConnectors(connectionsCatalog);
 const operateValidatorDestinations = Object.freeze([
   'planr-operate',
   'planr-chair-review',
@@ -210,6 +220,11 @@ const sourceProjections = new Map(
 const sourceExecutables = new Set(
   sharedSkillResources.filter(({ executable }) => executable).map(({ destination }) => destination),
 );
+for (const skillId of CONNECTION_SKILL_IDS)
+  sourceProjections.set(
+    `skills/${skillId}/${CONNECTORS_REFERENCE}`,
+    Buffer.from(connectorsMarkdown),
+  );
 for (const row of registry.skills) {
   sourceProjections.set(
     `skills/${row.skillId}/agents/openai.yaml`,
@@ -332,6 +347,13 @@ function assertCanonicalSkill(packageInfo) {
     if (forbidden.some((pattern) => pattern.test(markdown))) {
       throw new Error(`${row.skillId} contains a forbidden semantic subprocess dependency.`);
     }
+  }
+  if (CONNECTION_SKILL_IDS.includes(row.skillId)) {
+    const products = findProductMentions(markdown, connectionsCatalog);
+    if (products.length > 0)
+      throw new Error(
+        `${row.skillId} names ${products.join(', ')}; name the category placeholder and keep products in ${CONNECTIONS_CATALOG}.`,
+      );
   }
   const parsed = parseMarkdownAsset(markdown, { expectedName: row.skillId });
   const resourceAssets = packageInfo.resources.map((resource) => ({
@@ -540,6 +562,7 @@ for (const [host, prefix] of [
   ['cursor', 'dist/plugins/cursor/openplanr/'],
 ]) {
   add(`${prefix}LICENSE`, readFileSync(resolve(root, 'LICENSE')));
+  add(`${prefix}CONNECTORS.md`, connectorsMarkdown);
   const files = [...outputs.entries()]
     .filter(([path]) => path.startsWith(prefix))
     .map(([path, bytes]) => ({
