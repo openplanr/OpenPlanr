@@ -408,7 +408,9 @@ for (const row of registry.skills) {
     const hostMarkdown = renderNamespacedSkill(packageInfo.markdown, row.skillId);
     add(
       `${destination}/SKILL.md`,
-      userOnly && host === 'claude-code' ? renderUserOnlySkill(hostMarkdown) : hostMarkdown,
+      userOnly && host === 'claude-code'
+        ? renderUserOnlySkill(hostMarkdown, row.skillId)
+        : hostMarkdown,
     );
     const localResources = suiteLocalResources(packageInfo, host, skillRoot);
     // The native suite declaration lists local files; its complete closure is owned by

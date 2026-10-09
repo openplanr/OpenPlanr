@@ -1,3 +1,5 @@
+import { SkillRuntimeError } from '../../packages/skill-runtime/src/errors.mjs';
+
 const CANONICAL_PREFIX = 'planr-';
 
 export const HOST_PLUGIN_NAME = 'planr';
@@ -38,12 +40,24 @@ export function renderCursorSkillBody(markdown, skillId, resources) {
     });
 }
 
-/** Adds the Claude Code and Cursor flag that keeps the model from invoking a skill itself. */
-export function renderUserOnlySkill(markdown) {
+/** Adds the Claude Code flag that keeps the model from invoking a skill itself. */
+export function renderUserOnlySkill(markdown, skillId) {
   const source = String(markdown);
   const frontmatter = /^---\n[\s\S]*?\n---\n/u.exec(source)?.[0];
-  if (!frontmatter) throw new Error('A user-only skill needs a closed frontmatter block.');
-  if (/^disable-model-invocation:/mu.test(frontmatter)) return source;
+  if (!frontmatter)
+    throw new SkillRuntimeError(
+      'E_SKILL_USER_ONLY_FRONTMATTER_INVALID',
+      `${skillId} is user-only but its SKILL.md has no closed frontmatter block.`,
+      { skillId },
+    );
+  const declared = /^disable-model-invocation:\s*(.*)$/mu.exec(frontmatter)?.[1].trim();
+  if (declared === 'true') return source;
+  if (declared !== undefined)
+    throw new SkillRuntimeError(
+      'E_SKILL_USER_ONLY_FRONTMATTER_INVALID',
+      `${skillId} is user-only in the registry but its SKILL.md declares disable-model-invocation: ${declared}.`,
+      { skillId, declared },
+    );
   return `${frontmatter.slice(0, -4)}disable-model-invocation: true\n---\n${source.slice(frontmatter.length)}`;
 }
 
