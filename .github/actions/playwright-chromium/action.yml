@@ -17,11 +17,16 @@ runs:
         key: ${{ steps.playwright.outputs.key }}
     - shell: bash
       run: |
-        # A stalled apt mirror or browser download fails here in minutes, not at the job timeout.
+        # apt retries a stalled mirror fetch itself; a retry waits for any apt-get left running.
+        printf '%s\n' 'Acquire::Retries "3";' 'Acquire::http::Timeout "30";' \
+          'Acquire::https::Timeout "30";' 'DPkg::Lock::Timeout "120";' |
+          sudo tee /etc/apt/apt.conf.d/80-playwright-ci > /dev/null
+        # sudo starts apt-get outside timeout's process group, so stop it explicitly.
         bounded() {
-          timeout --kill-after=30s 3m "$@" && return
+          timeout --kill-after=30s 4m "$@" && return
           echo "::warning::'$*' failed or timed out; retrying once."
-          timeout --kill-after=30s 3m "$@"
+          sudo pkill -TERM -x apt-get || true
+          timeout --kill-after=30s 4m "$@"
         }
         bounded npm exec --workspace=@openplanr/protocol -- playwright install-deps chromium
         bounded npm exec --workspace=@openplanr/protocol -- playwright install chromium

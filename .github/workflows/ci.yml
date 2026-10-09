@@ -154,7 +154,7 @@ jobs:
         run: npm ci
       - name: Install Chromium for portable runtime tests
         uses: ./.github/actions/playwright-chromium
-        timeout-minutes: 10
+        timeout-minutes: 12
       - uses: actions/download-artifact@v4
         with:
           name: build-outputs
@@ -202,7 +202,7 @@ jobs:
         run: tar -xzmf "$RUNNER_TEMP/build-outputs.tgz"
       - name: Install Chromium for design tests
         uses: ./.github/actions/playwright-chromium
-        timeout-minutes: 10
+        timeout-minutes: 12
       - name: Test the design package
         run: npm test --workspace=@openplanr/design
 
@@ -407,7 +407,7 @@ jobs:
         run: npm ci
       - name: Install Chromium for local studio tests
         uses: ./.github/actions/playwright-chromium
-        timeout-minutes: 10
+        timeout-minutes: 12
       - name: Generate local distributions and verify tracked outputs
         run: |
           npm run generate
@@ -449,7 +449,7 @@ jobs:
         run: npm ci
       - name: Install Chromium for packed Protocol browser verification
         uses: ./.github/actions/playwright-chromium
-        timeout-minutes: 10
+        timeout-minutes: 12
       - uses: actions/download-artifact@v4
         with:
           name: build-outputs
@@ -502,7 +502,7 @@ jobs:
         run: npm ci
       - name: Install Chromium for packed Protocol browser verification
         uses: ./.github/actions/playwright-chromium
-        timeout-minutes: 10
+        timeout-minutes: 12
       - uses: actions/download-artifact@v4
         with:
           name: build-outputs
