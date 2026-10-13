@@ -103,7 +103,7 @@ TestCoverage: "unit, integration, protocol conformance, packed-install, browser 
 > conformance scripts are release gates.
 
 ```yaml
-BuildCommand: "npm run check:artifact-shell && node --check conformance/runner.mjs && node --check conformance/json-schema-validate.mjs"
+BuildCommand: "npm run check:artifact-shell && node --check conformance/runner.mjs && node --check lib/protocol/json-schema.mjs"
 TestCommand: "npm test"
 LintCommand: ""
 TypeCheckCommand: ""

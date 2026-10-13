@@ -7,7 +7,6 @@ import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
-import { validate } from '../../conformance/json-schema-validate.mjs';
 import { assertOperateExperienceDisplaySurfaceV1 } from '../../lib/dashboard/operate-experience-display-contract.mjs';
 import { encodeOperateExperienceCheckpoint } from '../../lib/dashboard/operate-experience-reader.mjs';
 import { deriveOperateSharedTruthSummaryV1 } from '../../lib/dashboard/operate-review-workspace-projection-v2.mjs';
@@ -18,6 +17,7 @@ import {
   validateProtocolArtifact,
 } from '../../lib/protocol/contracts.mjs';
 import { sha256Jcs } from '../../lib/protocol/jcs.mjs';
+import { validate } from '../../lib/protocol/json-schema.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const root = join(here, '../..');

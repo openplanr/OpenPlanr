@@ -23,7 +23,7 @@ import {
   readOperatingRuntimeStateV2,
   validateProtocolArtifact,
 } from 'planr-pipeline/protocol';
-import { validateJson } from '../../conformance/json-schema-validate.mjs';
+import { validateJson } from '../../lib/protocol/json-schema.mjs';
 
 const fixture = (name) =>
   JSON.parse(

@@ -56,7 +56,6 @@ const OPERATE_V2_DEVELOPMENT_OVERLAYS = Object.freeze([
   'conformance/fixtures/operating-runtime-v2/live-evidence-contracts-invalid.json',
   'conformance/fixtures/operating-runtime-v2/live-evidence-contracts-valid.json',
   'conformance/fixtures/operating-runtime-v2',
-  'conformance/json-schema-validate.mjs',
   'conformance/verify-operate-v2-absence.mjs',
   'conformance/verify-operate-v2-clean-boundary.mjs',
   'conformance/verify-operate-v2-contract-compilation.mjs',

@@ -1,8 +1,6 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
-
-import { validateJson } from '../../conformance/json-schema-validate.mjs';
 import { contentHash } from '../../lib/dashboard/closed-json-contract.mjs';
 import * as slicedReviewSchemaData from '../../lib/dashboard/generated/operate-review-schema-data.mjs';
 import {
@@ -25,6 +23,7 @@ import {
 } from '../../lib/dashboard/operate-review-workspace-projection-v2.mjs';
 import { buildOperatingReviewBoundSubmissionV1 } from '../../lib/operate/review-bound-submission-v2.mjs';
 import { sha256Jcs } from '../../lib/protocol/jcs.mjs';
+import { validateJson } from '../../lib/protocol/json-schema.mjs';
 import { rehashExperienceView } from './experience-view-test-support.mjs';
 
 const TIME = '2026-08-23T08:00:00.000Z';

@@ -1,8 +1,6 @@
 import assert from 'node:assert/strict';
 import { webcrypto } from 'node:crypto';
 import { test } from 'node:test';
-
-import { validateJson } from '../../conformance/json-schema-validate.mjs';
 import {
   canonicalEnvelopeBytes,
   canonicalSerialize,
@@ -16,6 +14,7 @@ import {
 import { normalizeArtifactShellModel } from '../../lib/artifact/ui/renderers.mjs';
 import { loadSchema } from '../../lib/design/schema-loader.mjs';
 import { ARTIFACT_ERROR_CODES } from '../../lib/pipeline/errors.mjs';
+import { validateJson } from '../../lib/protocol/json-schema.mjs';
 
 const artifact = {
   id: 'checkout-light',

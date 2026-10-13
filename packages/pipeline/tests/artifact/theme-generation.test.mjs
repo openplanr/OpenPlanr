@@ -4,8 +4,6 @@ import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { afterEach, test } from 'node:test';
 import { fileURLToPath } from 'node:url';
-
-import { validateJson } from '../../conformance/json-schema-validate.mjs';
 import {
   ARTIFACT_THEME_ERROR_CODES,
   ArtifactThemeError,
@@ -15,6 +13,7 @@ import {
   renderArtifactThemeJson,
   validateArtifactTheme,
 } from '../../lib/artifact/ui/tokens.mjs';
+import { validateJson } from '../../lib/protocol/json-schema.mjs';
 import {
   ArtifactThemeGenerationError,
   renderArtifactThemeAssets,

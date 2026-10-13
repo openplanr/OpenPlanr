@@ -6,7 +6,7 @@ import { dirname, join, relative, resolve } from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 
-import { validateJson } from '../../conformance/json-schema-validate.mjs';
+import { validateJson } from '../../lib/protocol/json-schema.mjs';
 import {
   buildOperateSurfaceInventory,
   portableRepositoryRemote,

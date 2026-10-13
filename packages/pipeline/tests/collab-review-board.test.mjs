@@ -16,8 +16,6 @@ import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
-
-import { validate } from '../conformance/json-schema-validate.mjs';
 import { createDaemon, daemonControlHeaders } from '../lib/design-engine/daemon.mjs';
 import {
   DEFAULT_AUTHOR,
@@ -26,6 +24,7 @@ import {
   mergeFeedback,
   normalizeLegacy,
 } from '../lib/design-engine/feedback.mjs';
+import { validate } from '../lib/protocol/json-schema.mjs';
 import { isEvent, openSse } from './sse-client.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
