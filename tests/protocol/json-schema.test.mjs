@@ -150,6 +150,142 @@ test('a schema that is neither an object nor a boolean fails validation', () => 
   assert.deepEqual(rules(validateJson({ a: 1 }, { properties: { a: 'number' } })), ['schema']);
 });
 
+const hasRule = (errors, rule) => rules(errors).includes(rule);
+
+test('an unresolvable $ref is not swallowed by not, if or combinator branches', () => {
+  const missing = { $ref: '#/$defs/missing' };
+  for (const schema of [
+    missing,
+    { not: missing },
+    { if: missing, then: true, else: true },
+    { anyOf: [missing, true] },
+    { oneOf: [missing, { type: 'object' }] },
+    { allOf: [true, missing] },
+    { anyOf: [{ allOf: [{ not: missing }] }, true] },
+    { oneOf: [{ if: { anyOf: [{ not: missing }] }, then: true }, { type: 'string' }] },
+    { not: { not: { anyOf: [{ oneOf: [missing, true] }] } } },
+  ]) {
+    const errors = validateJson({}, schema);
+    assert.ok(hasRule(errors, '$ref'), JSON.stringify(schema));
+    assert.ok(
+      errors.some((error) => error.detail === 'could not resolve schema reference #/$defs/missing'),
+      JSON.stringify(errors),
+    );
+  }
+});
+
+test('an external $ref the resolver cannot resolve fails inside a negated branch', () => {
+  const errors = validateJson(1, { not: { $ref: 'urn:missing' } }, { resolveRef: () => undefined });
+  assert.ok(hasRule(errors, '$ref'), JSON.stringify(errors));
+});
+
+test('a circular $ref is not swallowed by a negated branch', () => {
+  const schema = { $defs: { loop: { $ref: '#/$defs/loop' } }, not: { $ref: '#/$defs/loop' } };
+  const errors = validateJson(1, schema);
+  assert.ok(
+    errors.some((error) => error.rule === '$ref' && /circular/.test(error.detail)),
+    JSON.stringify(errors),
+  );
+});
+
+test('an unresolvable $ref is reported once per schema node', () => {
+  const errors = validateJson([1, 2, 3], { items: { $ref: '#/$defs/missing' } });
+  assert.deepEqual(errors, [
+    { path: '$[0]', rule: '$ref', detail: 'could not resolve schema reference #/$defs/missing' },
+  ]);
+});
+
+test('a $ref to a boolean schema applies it instead of reporting it unresolved', () => {
+  const schema = { $defs: { never: false, always: true } };
+  assert.deepEqual(rules(validateJson(1, { ...schema, $ref: '#/$defs/never' })), ['schema:false']);
+  assert.deepEqual(validateJson(1, { ...schema, $ref: '#/$defs/always' }), []);
+  const notSchema = validateJson(1, { $defs: { n: 5 }, $ref: '#/$defs/n' });
+  assert.ok(
+    notSchema.some((error) => error.rule === '$ref' && /resolved to integer/.test(error.detail)),
+    JSON.stringify(notSchema),
+  );
+});
+
+const MALFORMED_KEYWORDS = [
+  ['$ref', 5],
+  ['type', 'strnig'],
+  ['type', []],
+  ['enum', 'a'],
+  ['minLength', '1'],
+  ['maxLength', -1],
+  ['pattern', '('],
+  ['minimum', '3'],
+  ['maximum', null],
+  ['exclusiveMinimum', '0'],
+  ['minItems', 1.5],
+  ['maxItems', '2'],
+  ['prefixItems', []],
+  ['items', 5],
+  ['uniqueItems', 'true'],
+  ['contains', 'x'],
+  ['minContains', -1],
+  ['maxContains', '1'],
+  ['required', 'id'],
+  ['required', ['id', 'id']],
+  ['properties', { a: 'number' }],
+  ['additionalProperties', 'no'],
+  ['maxProperties', '2'],
+  ['dependentRequired', { a: 'b' }],
+  ['unevaluatedProperties', 0],
+  ['oneOf', {}],
+  ['anyOf', []],
+  ['allOf', [5]],
+  ['if', 'x'],
+  ['then', 1],
+  ['else', null],
+  ['not', []],
+  ['$defs', { a: 1 }],
+];
+
+test('a supported keyword with a malformed value fails validation', () => {
+  for (const [keyword, malformed] of MALFORMED_KEYWORDS) {
+    const label = `${keyword}: ${JSON.stringify(malformed)}`;
+    const errors = validateJson(3, { [keyword]: malformed });
+    const shape = errors.filter((error) => error.rule === 'schema');
+    assert.equal(shape.length, 1, `${label} -> ${JSON.stringify(errors)}`);
+    assert.equal(shape[0].path, '$', label);
+    assert.ok(shape[0].detail.startsWith(`schema keyword '${keyword}' must be `), label);
+  }
+});
+
+test('a malformed keyword value is not swallowed by not, if or nested combinators', () => {
+  const malformed = { minimum: '3' };
+  for (const schema of [
+    { not: malformed },
+    { if: malformed, then: true },
+    { anyOf: [malformed, true] },
+    { oneOf: [malformed, { type: 'string' }] },
+    { allOf: [{ anyOf: [{ not: malformed }] }] },
+    { anyOf: [{ oneOf: [{ if: { not: malformed }, else: true }] }, true] },
+  ]) {
+    assert.ok(hasRule(validateJson(5, schema), 'schema'), JSON.stringify(schema));
+  }
+});
+
+test('a malformed subschema is reported even when no value reaches it', () => {
+  assert.deepEqual(rules(validateJson([], { items: 5 })), ['schema']);
+  assert.deepEqual(rules(validateJson({}, { properties: { a: 'number' } })), ['schema']);
+  assert.deepEqual(rules(validateJson('x', { required: 'id' })), ['schema']);
+});
+
+test('well-formed keyword values produce no schema errors', () => {
+  const schema = {
+    $defs: { s: { type: ['string', 'null'] } },
+    type: 'object',
+    required: ['a'],
+    properties: { a: { $ref: '#/$defs/s', pattern: '^a', minLength: 0, maxLength: 3 } },
+    dependentRequired: { a: [] },
+    maxProperties: 2,
+    additionalProperties: { type: 'array', minItems: 0, maxItems: 2, uniqueItems: false },
+  };
+  assert.deepEqual(validateJson({ a: 'ab', b: [1] }, schema), []);
+});
+
 const SCHEMA_MAPS = ['properties', '$defs', 'dependentSchemas', 'patternProperties'];
 const SCHEMA_VALUES = [
   'items',
@@ -179,7 +315,7 @@ function* schemaNodes(node, pointer) {
   }
 }
 
-test('every tracked schema uses only keywords and formats the validator enforces', () => {
+test('every tracked schema uses only keywords, formats and keyword values the validator enforces', () => {
   const files = execFileSync('git', ['ls-files', '*.schema.json'], { cwd: root, encoding: 'utf8' })
     .trim()
     .split('\n');
@@ -189,7 +325,10 @@ test('every tracked schema uses only keywords and formats the validator enforces
     const schema = JSON.parse(readFileSync(resolve(root, file), 'utf8'));
     for (const [node, pointer] of schemaNodes(schema, '#')) {
       for (const error of validateJson(null, node)) {
-        if (error.path === '$' && error.rule.startsWith('unsupported-')) {
+        if (
+          error.path === '$' &&
+          (error.rule.startsWith('unsupported-') || error.rule === 'schema')
+        ) {
           unsupported.push(`${file}${pointer}: ${error.detail}`);
         }
       }
