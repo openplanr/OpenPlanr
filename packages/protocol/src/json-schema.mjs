@@ -2,7 +2,8 @@
 /**
  * Minimal JSON Schema (draft 2020-12) subset extracted from conformance/runner.mjs.
  * Supports the constructs used by packaged Protocol schemas, including local
- * JSON-pointer and caller-resolved external `$ref` references.
+ * JSON-pointer and caller-resolved external `$ref` references. Any other keyword or
+ * format is reported as an error rather than ignored.
  *
  * Zero third-party deps. Safe to import from node:test suites.
  */
@@ -30,6 +31,56 @@ const matchesType = (v, t) => {
 
 const FORMAT_DATE = /^\d{4}-\d{2}-\d{2}$/;
 const FORMAT_DATETIME = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$/;
+const SUPPORTED_FORMATS = new Set(['date', 'date-time']);
+
+const ANNOTATION_KEYWORDS = [
+  '$schema',
+  '$id',
+  '$defs',
+  '$comment',
+  'title',
+  'description',
+  'default',
+  'examples',
+  'deprecated',
+  'readOnly',
+  'writeOnly',
+];
+const VALIDATION_KEYWORDS = [
+  '$ref',
+  'type',
+  'const',
+  'enum',
+  'minLength',
+  'maxLength',
+  'pattern',
+  'format',
+  'minimum',
+  'maximum',
+  'exclusiveMinimum',
+  'minItems',
+  'maxItems',
+  'prefixItems',
+  'items',
+  'uniqueItems',
+  'contains',
+  'minContains',
+  'maxContains',
+  'required',
+  'properties',
+  'additionalProperties',
+  'maxProperties',
+  'dependentRequired',
+  'unevaluatedProperties',
+  'oneOf',
+  'anyOf',
+  'allOf',
+  'if',
+  'then',
+  'else',
+  'not',
+];
+const KNOWN_KEYWORDS = new Set([...ANNOTATION_KEYWORDS, ...VALIDATION_KEYWORDS]);
 
 function resolveJsonPointer(root, reference) {
   if (reference === '#') return root;
@@ -41,12 +92,49 @@ function resolveJsonPointer(root, reference) {
     .reduce((value, part) => value?.[part], root);
 }
 
+/**
+ * Records keywords and formats this validator cannot enforce, once per schema node.
+ * They go to a shared sink so `not`, `if` and combinator branches cannot swallow them.
+ */
+const checkSchemaNode = (schema, path, context) => {
+  if (context.checkedSchemas.has(schema)) return;
+  context.checkedSchemas.add(schema);
+  for (const keyword of Object.keys(schema)) {
+    if (!KNOWN_KEYWORDS.has(keyword) && !keyword.startsWith('x-')) {
+      context.schemaErrors.push({
+        path,
+        rule: 'unsupported-keyword',
+        detail: `schema keyword '${keyword}' is not supported by this validator`,
+      });
+    }
+  }
+  if (Object.hasOwn(schema, 'format') && !SUPPORTED_FORMATS.has(schema.format)) {
+    context.schemaErrors.push({
+      path,
+      rule: 'unsupported-format',
+      detail: `schema format ${JSON.stringify(schema.format)} is not supported by this validator`,
+    });
+  }
+};
+
+/** Validates one node and returns the object property names it evaluated. */
 const validateNode = (value, schema, path, errs, context) => {
-  if (schema === true) return;
+  /** @type {Set<string>} */
+  const evaluated = new Set();
+  if (schema === true) return evaluated;
   if (schema === false) {
     errs.push({ path, rule: 'schema:false', detail: 'value not allowed' });
-    return;
+    return evaluated;
   }
+  if (schema === null || typeof schema !== 'object' || Array.isArray(schema)) {
+    context.schemaErrors.push({
+      path,
+      rule: 'schema',
+      detail: `expected a schema object or boolean, got ${typeOf(schema)}`,
+    });
+    return evaluated;
+  }
+  checkSchemaNode(schema, path, context);
 
   if (typeof schema?.$ref === 'string') {
     const reference = schema.$ref;
@@ -63,19 +151,20 @@ const validateNode = (value, schema, path, errs, context) => {
     }
     if (!resolved) {
       errs.push({ path, rule: '$ref', detail: `could not resolve schema reference ${reference}` });
-      return;
+      return evaluated;
     }
     const referenceKey = `${context.base ?? '<root>'}:${reference}`;
     if (context.referenceStack.includes(referenceKey)) {
       errs.push({ path, rule: '$ref', detail: `circular schema reference ${reference}` });
-      return;
+      return evaluated;
     }
-    validateNode(value, resolved, path, errs, {
+    const referenced = validateNode(value, resolved, path, errs, {
       ...context,
       rootSchema: nextRoot,
       base: resolvedBase,
       referenceStack: [...context.referenceStack, referenceKey],
     });
+    for (const key of referenced) evaluated.add(key);
   }
 
   if (schema.type !== undefined) {
@@ -86,7 +175,7 @@ const validateNode = (value, schema, path, errs, context) => {
         rule: 'type',
         detail: `expected ${types.join('|')}, got ${typeOf(value)}`,
       });
-      return;
+      return evaluated;
     }
   }
 
@@ -166,6 +255,13 @@ const validateNode = (value, schema, path, errs, context) => {
     if (typeof schema.maximum === 'number' && value > schema.maximum) {
       errs.push({ path, rule: 'maximum', detail: `value ${value} > ${schema.maximum}` });
     }
+    if (typeof schema.exclusiveMinimum === 'number' && value <= schema.exclusiveMinimum) {
+      errs.push({
+        path,
+        rule: 'exclusiveMinimum',
+        detail: `value ${value} <= ${schema.exclusiveMinimum}`,
+      });
+    }
   }
 
   if (Array.isArray(value)) {
@@ -231,8 +327,34 @@ const validateNode = (value, schema, path, errs, context) => {
         }
       }
     }
+    if (
+      typeof schema.maxProperties === 'number' &&
+      Object.keys(value).length > schema.maxProperties
+    ) {
+      errs.push({
+        path,
+        rule: 'maxProperties',
+        detail: `property count ${Object.keys(value).length} > ${schema.maxProperties}`,
+      });
+    }
+    if (schema.dependentRequired !== null && typeof schema.dependentRequired === 'object') {
+      for (const [trigger, dependencies] of Object.entries(schema.dependentRequired)) {
+        if (!Object.hasOwn(value, trigger) || !Array.isArray(dependencies)) continue;
+        for (const dependency of dependencies) {
+          if (!Object.hasOwn(value, dependency)) {
+            errs.push({
+              path,
+              rule: 'dependentRequired',
+              detail: `property '${trigger}' requires property '${dependency}'`,
+            });
+          }
+        }
+      }
+    }
     const props = schema.properties || {};
     for (const [k, v] of Object.entries(value)) {
+      if (Object.hasOwn(props, k)) evaluated.add(k);
+      else if (schema.additionalProperties !== undefined) evaluated.add(k);
       if (!Object.hasOwn(props, k)) {
         if (schema.additionalProperties === false) {
           errs.push({ path, rule: 'additionalProperties', detail: `unknown property '${k}'` });
@@ -253,8 +375,11 @@ const validateNode = (value, schema, path, errs, context) => {
     let matched = 0;
     for (const sub of schema.oneOf) {
       const e = [];
-      validateNode(value, sub, path, e, context);
-      if (e.length === 0) matched++;
+      const branch = validateNode(value, sub, path, e, context);
+      if (e.length === 0) {
+        matched++;
+        for (const key of branch) evaluated.add(key);
+      }
     }
     if (matched !== 1) {
       const titles = schema.oneOf.map((s) => s.title || '(unnamed)').join(' | ');
@@ -270,8 +395,11 @@ const validateNode = (value, schema, path, errs, context) => {
     let matched = 0;
     for (const sub of schema.anyOf) {
       const candidateErrors = [];
-      validateNode(value, sub, path, candidateErrors, context);
-      if (candidateErrors.length === 0) matched += 1;
+      const branch = validateNode(value, sub, path, candidateErrors, context);
+      if (candidateErrors.length === 0) {
+        matched += 1;
+        for (const key of branch) evaluated.add(key);
+      }
     }
     if (matched === 0) {
       const titles = schema.anyOf.map((sub) => sub.title || '(unnamed)').join(' | ');
@@ -285,15 +413,22 @@ const validateNode = (value, schema, path, errs, context) => {
 
   if (Array.isArray(schema.allOf)) {
     for (const sub of schema.allOf) {
-      validateNode(value, sub, path, errs, context);
+      for (const key of validateNode(value, sub, path, errs, context)) evaluated.add(key);
     }
   }
 
   if (schema.if !== undefined) {
     const conditionErrors = [];
-    validateNode(value, schema.if, path, conditionErrors, context);
-    const branch = conditionErrors.length === 0 ? schema.then : schema.else;
-    if (branch !== undefined) validateNode(value, branch, path, errs, context);
+    const condition = validateNode(value, schema.if, path, conditionErrors, context);
+    const passed = conditionErrors.length === 0;
+    if (passed) for (const key of condition) evaluated.add(key);
+    const branch = passed ? schema.then : schema.else;
+    if (branch !== undefined) {
+      const branchErrors = [];
+      const branchEvaluated = validateNode(value, branch, path, branchErrors, context);
+      errs.push(...branchErrors);
+      if (branchErrors.length === 0) for (const key of branchEvaluated) evaluated.add(key);
+    }
   }
 
   if (schema.not !== undefined) {
@@ -303,6 +438,24 @@ const validateNode = (value, schema, path, errs, context) => {
       errs.push({ path, rule: 'not', detail: 'value matched a forbidden subschema' });
     }
   }
+
+  if (
+    schema.unevaluatedProperties !== undefined &&
+    value !== null &&
+    typeof value === 'object' &&
+    !Array.isArray(value)
+  ) {
+    for (const [k, v] of Object.entries(value)) {
+      if (evaluated.has(k)) continue;
+      if (schema.unevaluatedProperties === false) {
+        errs.push({ path, rule: 'unevaluatedProperties', detail: `unevaluated property '${k}'` });
+      } else {
+        validateNode(v, schema.unevaluatedProperties, `${path}.${k}`, errs, context);
+      }
+      evaluated.add(k);
+    }
+  }
+  return evaluated;
 };
 
 /** @type {typeof import('./json-schema.d.mts').validateJson} */
@@ -315,13 +468,17 @@ export const validateJson = (
   } = {},
 ) => {
   const errs = [];
+  /** @type {{ path: string, rule: string, detail: string }[]} */
+  const schemaErrors = [];
   validateNode(value, schema, '$', errs, {
     rootSchema: schema,
     resolveRef,
     base,
     referenceStack: [],
+    schemaErrors,
+    checkedSchemas: new WeakSet(),
   });
-  return errs;
+  return [...schemaErrors, ...errs];
 };
 
 /**
