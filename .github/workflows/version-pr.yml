@@ -37,9 +37,9 @@ jobs:
       - name: Open or update the version PR
         uses: changesets/action@v2
         with:
-          version: npm run version-packages:ci
-          commit: 'chore(release): version packages'
-          title: 'chore(release): version packages'
-          createGithubReleases: false
+          version-script: npm run version-packages:ci
+          commit-message: 'chore(release): version packages'
+          pr-title: 'chore(release): version packages'
+          create-github-releases: false
         env:
           GITHUB_TOKEN: ${{ steps.app.outputs.token }}
