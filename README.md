@@ -170,13 +170,15 @@ See [authoring and verifying diagrams](docs/diagrams/authoring.md).
 ### Connections
 
 Skills reach chat, project trackers and source control through connectors you add
-to your host; those connectors and their credentials live in the host, not in OpenPlanr.
-OpenPlanr's own integrations, the Linear sync (`openplanr linear`) and company sign-in
-(`openplanr company login`), store their tokens in your OS keychain, or in an AES-256-GCM
-encrypted file at `~/.planr/credentials.enc` when no keychain is available. Run `connect` to see
-what is connected and how to add the rest, and `share` to post an update to chat
-as a draft you approve. See [connections](docs/connections.md) and the per-host
-[connect steps](docs/generated/connectors.md).
+to your host. OpenPlanr bundles no connectors; they and their credentials live in your host.
+Two optional features need a token: Linear sync (`openplanr linear`) and company sign-in
+(`openplanr company login`). Only when you use them does OpenPlanr store a token, in your OS
+keychain, or in an encrypted file at `~/.planr/credentials.enc` if you set
+`PLANR_CREDENTIAL_FILE_PASSPHRASE`. For Linear you can instead set `PLANR_LINEAR_TOKEN` and
+nothing is stored. Tokens are sent only to Linear or to the company server you sign in to.
+`openplanr company logout` removes company tokens. Run `connect` to see what is connected
+and how to add the rest, and `share` to post an update to chat as a draft you approve. See
+[connections](docs/connections.md) and the per-host [connect steps](docs/generated/connectors.md).
 
 `openplanr rules generate` adds an `## OpenPlanr capabilities` section to `CLAUDE.md` or `AGENTS.md`
 so the agent knows every skill and when to reach for it. See the
