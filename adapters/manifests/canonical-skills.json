@@ -1609,7 +1609,7 @@
           "digest": "sha256:c338765d9f5746bf375377bdd25e94490ac31985bab0b0335e49f9faadb5c08b"
         },
         {
-          "path": "scripts/design-runtime-support-336900df0d39.mjs",
+          "path": "scripts/design-runtime-support-f94b00eaa5e9.mjs",
           "kind": "script",
           "executable": false,
           "hosts": [
@@ -1642,7 +1642,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:76a313211315e67b1fc9a216ce5b4ae415f472a34216a059fdbb4c9870ae9db7"
+          "digest": "sha256:6057e30e1b368d5de4629091752a5d81136223c33f303efea6a1fc34f8dc8e9f"
         },
         {
           "path": "scripts/design-shared-artifact-support-dependencies-design-support-protocol-contracts-3d9b1a86.mjs",
@@ -1678,7 +1678,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:f411ea92c48db776e2911094efeb4d22de2471330332f34a737d8d6763995715"
+          "digest": "sha256:c73325059a5a3c80e47cd2ed2670c8470bef8348710d80e612d42f1a9cf8d3cf"
         },
         {
           "path": "scripts/design-shared-protocol-contracts-75a938cc.mjs",
@@ -1762,7 +1762,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:fc814562f0392d309efcb1232b72d0887e6815c0a5b0c26a2c658101acdd478c"
+          "digest": "sha256:056c79f4326dd89e4f2e516a6dabfe4a5908267cc3832e516a09573857e3a052"
         },
         {
           "path": "scripts/runtime/packages/artifact/templates/artifact-review-stage.js.sources/01-module-runtime.js",
@@ -1798,7 +1798,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:2222cb9544f49c3af6ee1255085450119cb0973bba4b63c610964835c2ed0d54"
+          "digest": "sha256:5a53c87440c79893c7f0a9830930303221334e47a3064bdcdd299683fa56eef2"
         },
         {
           "path": "scripts/runtime/packages/artifact/templates/artifact-review-stage.js.sources/04-compression.js",
@@ -2771,7 +2771,7 @@
           "digest": "sha256:c338765d9f5746bf375377bdd25e94490ac31985bab0b0335e49f9faadb5c08b"
         },
         {
-          "path": "scripts/design-runtime-support-336900df0d39.mjs",
+          "path": "scripts/design-runtime-support-f94b00eaa5e9.mjs",
           "kind": "script",
           "executable": false,
           "hosts": [
@@ -2804,7 +2804,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:76a313211315e67b1fc9a216ce5b4ae415f472a34216a059fdbb4c9870ae9db7"
+          "digest": "sha256:6057e30e1b368d5de4629091752a5d81136223c33f303efea6a1fc34f8dc8e9f"
         },
         {
           "path": "scripts/design-shared-artifact-support-dependencies-design-support-protocol-contracts-3d9b1a86.mjs",
@@ -2840,7 +2840,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:f411ea92c48db776e2911094efeb4d22de2471330332f34a737d8d6763995715"
+          "digest": "sha256:c73325059a5a3c80e47cd2ed2670c8470bef8348710d80e612d42f1a9cf8d3cf"
         },
         {
           "path": "scripts/design-shared-protocol-contracts-75a938cc.mjs",
@@ -2924,7 +2924,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:fc814562f0392d309efcb1232b72d0887e6815c0a5b0c26a2c658101acdd478c"
+          "digest": "sha256:056c79f4326dd89e4f2e516a6dabfe4a5908267cc3832e516a09573857e3a052"
         },
         {
           "path": "scripts/runtime/packages/artifact/templates/artifact-review-stage.js.sources/01-module-runtime.js",
@@ -2960,7 +2960,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:2222cb9544f49c3af6ee1255085450119cb0973bba4b63c610964835c2ed0d54"
+          "digest": "sha256:5a53c87440c79893c7f0a9830930303221334e47a3064bdcdd299683fa56eef2"
         },
         {
           "path": "scripts/runtime/packages/artifact/templates/artifact-review-stage.js.sources/04-compression.js",
@@ -3933,7 +3933,7 @@
           "digest": "sha256:c338765d9f5746bf375377bdd25e94490ac31985bab0b0335e49f9faadb5c08b"
         },
         {
-          "path": "scripts/design-runtime-support-336900df0d39.mjs",
+          "path": "scripts/design-runtime-support-f94b00eaa5e9.mjs",
           "kind": "script",
           "executable": false,
           "hosts": [
@@ -3966,7 +3966,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:76a313211315e67b1fc9a216ce5b4ae415f472a34216a059fdbb4c9870ae9db7"
+          "digest": "sha256:6057e30e1b368d5de4629091752a5d81136223c33f303efea6a1fc34f8dc8e9f"
         },
         {
           "path": "scripts/design-shared-artifact-support-dependencies-design-support-protocol-contracts-3d9b1a86.mjs",
@@ -4002,7 +4002,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:f411ea92c48db776e2911094efeb4d22de2471330332f34a737d8d6763995715"
+          "digest": "sha256:c73325059a5a3c80e47cd2ed2670c8470bef8348710d80e612d42f1a9cf8d3cf"
         },
         {
           "path": "scripts/design-shared-protocol-contracts-75a938cc.mjs",
@@ -4086,7 +4086,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:fc814562f0392d309efcb1232b72d0887e6815c0a5b0c26a2c658101acdd478c"
+          "digest": "sha256:056c79f4326dd89e4f2e516a6dabfe4a5908267cc3832e516a09573857e3a052"
         },
         {
           "path": "scripts/runtime/packages/artifact/templates/artifact-review-stage.js.sources/01-module-runtime.js",
@@ -4122,7 +4122,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:2222cb9544f49c3af6ee1255085450119cb0973bba4b63c610964835c2ed0d54"
+          "digest": "sha256:5a53c87440c79893c7f0a9830930303221334e47a3064bdcdd299683fa56eef2"
         },
         {
           "path": "scripts/runtime/packages/artifact/templates/artifact-review-stage.js.sources/04-compression.js",
@@ -5243,7 +5243,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:153160758bd6d789b015d788c0bb3a7767508763049374e4c7c75f3729dfe763"
+          "digest": "sha256:8dab2aebc7adf333b4678a25e323246e530ad9847c1327bb51db42794f9f0f1d"
         },
         {
           "path": "schemas/design-document.schema.json",
