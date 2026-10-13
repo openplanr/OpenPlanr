@@ -36,6 +36,8 @@
 
 - **Skills, not a second model.** Every skill runs inside the coding agent you already use.
   Skills and the openplanr CLI add no model calls or telemetry.
+  The CLI contacts the network only for features you invoke: Linear sync (linear.app), artifact
+  sharing (share.openplanr.dev) and company sign-in (api.openplanr.dev).
 - **Plans are files.** Specifications, user stories, tasks, and provenance live under `.planr/`
   in your repository, reviewed and versioned like code.
 - **A deterministic CLI.** `openplanr` stores and validates planning files, renders diagrams and
@@ -168,7 +170,10 @@ See [authoring and verifying diagrams](docs/diagrams/authoring.md).
 ### Connections
 
 Skills reach chat, project trackers and source control through connectors you add
-to your host; OpenPlanr ships none and stores no credentials. Run `connect` to see
+to your host; those connectors and their credentials live in the host, not in OpenPlanr.
+OpenPlanr's own integrations, the Linear sync (`openplanr linear`) and company sign-in
+(`openplanr company login`), store their tokens in your OS keychain, or in an AES-256-GCM
+encrypted file at `~/.planr/credentials.enc` when no keychain is available. Run `connect` to see
 what is connected and how to add the rest, and `share` to post an update to chat
 as a draft you approve. See [connections](docs/connections.md) and the per-host
 [connect steps](docs/generated/connectors.md).
