@@ -188,6 +188,88 @@ test('a circular $ref is not swallowed by a negated branch', () => {
   );
 });
 
+const tree = {
+  $defs: {
+    node: {
+      type: 'object',
+      required: ['name'],
+      properties: {
+        name: { type: 'string' },
+        children: { type: 'array', items: { $ref: '#/$defs/node' } },
+      },
+      additionalProperties: false,
+    },
+  },
+  $ref: '#/$defs/node',
+};
+const deepTree = {
+  name: 'a',
+  children: [{ name: 'b', children: [{ name: 'c', children: [] }] }, { name: 'd' }],
+};
+
+test('a recursive $ref validates an instance that recurses through nested data', () => {
+  assert.deepEqual(validateJson(deepTree, tree), []);
+  const errors = validateJson({ name: 'a', children: [{ name: 'b', children: [{}] }] }, tree);
+  assert.deepEqual(errors, [
+    {
+      path: '$.children[0].children[0]',
+      rule: 'required',
+      detail: "missing required property 'name'",
+    },
+  ]);
+});
+
+test('a recursive $ref validates inside not, oneOf and an external self-reference', () => {
+  assert.deepEqual(
+    rules(validateJson(deepTree, { $defs: tree.$defs, not: { $ref: '#/$defs/node' } })),
+    ['not'],
+  );
+  assert.deepEqual(
+    validateJson(deepTree, {
+      $defs: tree.$defs,
+      oneOf: [{ $ref: '#/$defs/node' }, { type: 'string' }],
+    }),
+    [],
+  );
+  const event = {
+    $id: 'urn:event',
+    oneOf: [
+      {
+        type: 'object',
+        required: ['kind', 'inner'],
+        properties: { kind: { const: 'wrap' }, inner: { $ref: 'urn:event' } },
+      },
+      { type: 'object', required: ['kind'], properties: { kind: { const: 'leaf' } } },
+    ],
+  };
+  const resolveRef = (reference) => (reference === 'urn:event' ? event : undefined);
+  const nested = { kind: 'wrap', inner: { kind: 'wrap', inner: { kind: 'leaf' } } };
+  assert.deepEqual(validateJson(nested, event, { resolveRef }), []);
+});
+
+test('a $ref loop at the same instance location fails, including inside not and oneOf', () => {
+  const loops = {
+    self: { $ref: '#/$defs/self' },
+    a: { $ref: '#/$defs/b' },
+    b: { allOf: [{ $ref: '#/$defs/a' }] },
+  };
+  for (const schema of [
+    { $defs: loops, $ref: '#/$defs/self' },
+    { $defs: loops, $ref: '#/$defs/a' },
+    { $defs: loops, not: { $ref: '#/$defs/self' } },
+    { $defs: loops, oneOf: [{ $ref: '#/$defs/a' }, true] },
+    { $defs: loops, anyOf: [{ not: { oneOf: [{ $ref: '#/$defs/self' }] } }, true] },
+  ]) {
+    const errors = validateJson({ x: [1] }, schema);
+    assert.ok(
+      errors.some(
+        (error) => error.rule === '$ref' && /^circular schema reference/.test(error.detail),
+      ),
+      `${JSON.stringify(schema)} -> ${JSON.stringify(errors)}`,
+    );
+  }
+});
+
 test('an unresolvable $ref is reported once per schema node', () => {
   const errors = validateJson([1, 2, 3], { items: { $ref: '#/$defs/missing' } });
   assert.deepEqual(errors, [

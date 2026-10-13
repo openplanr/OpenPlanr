@@ -245,7 +245,8 @@ const validateNode = (value, schema, path, errs, context) => {
       reportReference(schema, path, detail, context);
       return evaluated;
     }
-    const referenceKey = `${context.base ?? '<root>'}:${reference}`;
+    // Recursion that descends into the instance changes `path`; only a repeat at the same location loops.
+    const referenceKey = `${path} ${context.base ?? '<root>'}:${reference}`;
     if (context.referenceStack.includes(referenceKey)) {
       reportReference(schema, path, `circular schema reference ${reference}`, context);
       return evaluated;
