@@ -20,7 +20,7 @@ import {
 import { dirname, extname, isAbsolute, join, normalize, relative, resolve, sep } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
-import { validateJson } from '../conformance/json-schema-validate.mjs';
+import { validateJson } from '../lib/protocol/json-schema.mjs';
 
 const repositoryRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const canonicalOutputDirectory = '.planr/products/operate-2.0/phases';

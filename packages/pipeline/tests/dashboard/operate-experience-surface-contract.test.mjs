@@ -292,7 +292,7 @@ test('public surface assertion runtime is browser-safe JavaScript without import
     'lib/dashboard/generated/operate-experience-surface-schema-data.mjs',
     'lib/dashboard/generated/operate-review-schema-data.mjs',
     'lib/dashboard/generated/operate-schema-token-codec.mjs',
-    'conformance/json-schema-validate.mjs',
+    'lib/protocol/json-schema.mjs',
   ]) {
     const source = await readFile(join(root, path), 'utf8');
     assert.doesNotMatch(source, /\b(?:with|assert)\s*\{\s*type\s*:/, path);

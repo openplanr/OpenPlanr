@@ -49,7 +49,7 @@ import {
   resolveScreens,
 } from '../lib/design/index.mjs';
 import { createDesignBoardArtifactEnvelope } from '../lib/design-engine/artifact-adapter.mjs';
-import { validate } from './json-schema-validate.mjs';
+import { validate } from '../lib/protocol/json-schema.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const root = resolve(__dirname, '..');

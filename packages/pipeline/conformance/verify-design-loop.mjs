@@ -32,7 +32,7 @@ const HOME = mkdtempSync(join(tmpdir(), 'planr-loop-home-'));
 process.env.PLANR_HOME = HOME;
 
 const moduleUrl = (relativePath) => pathToFileURL(join(root, relativePath)).href;
-const { validate } = await import(moduleUrl('conformance/json-schema-validate.mjs'));
+const { validate } = await import(moduleUrl('lib/protocol/json-schema.mjs'));
 const { sheetContract, contractInstructions, validateSheet } = await import(
   moduleUrl('lib/design-engine/providers/claude-svg.mjs')
 );

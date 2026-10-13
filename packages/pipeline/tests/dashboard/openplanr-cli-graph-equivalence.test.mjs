@@ -5,9 +5,8 @@ import { createRequire } from 'node:module';
 import { dirname, join, resolve } from 'node:path';
 import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
-
-import { validateJson } from '../../conformance/json-schema-validate.mjs';
 import { readGraph } from '../../lib/dashboard/graph-reader.mjs';
+import { validateJson } from '../../lib/protocol/json-schema.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const root = join(here, '../..');

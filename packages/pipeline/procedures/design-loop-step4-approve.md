@@ -8,7 +8,7 @@ Write `<SESSION_DIR>/approved.json` to `schemas/v1.0.0/design-approved.schema.js
 `{ schema_version: "1.0.0", boardId, sessionId: "<sessionDir-basename>-<variant>",
 approvedVariant, approvedPath: <abs path of the variant's LAST round>, provider, target,
 approvedAt, copiedTo: [...E.3], notes: feedback.overall }`. Validate before writing
-(`validate()` from `conformance/json-schema-validate.mjs`); the scoped `.gitignore`
+(`validate()` from `lib/protocol/json-schema.mjs`); the scoped `.gitignore`
 deliberately keeps `approved.json` tracked-eligible.
 
 ## E.2 — Taste memory: BOTH verdicts (hard rule 11)

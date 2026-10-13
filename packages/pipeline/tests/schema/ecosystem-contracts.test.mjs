@@ -3,9 +3,8 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
-
-import { validate } from '../../conformance/json-schema-validate.mjs';
 import { validateProtocolArtifact } from '../../lib/pipeline/engine.mjs';
+import { validate } from '../../lib/protocol/json-schema.mjs';
 
 const root = fileURLToPath(new URL('../..', import.meta.url));
 const readJson = (path) => JSON.parse(readFileSync(join(root, path), 'utf8'));

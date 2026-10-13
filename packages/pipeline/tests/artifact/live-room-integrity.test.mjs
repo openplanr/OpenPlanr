@@ -1,8 +1,6 @@
 import assert from 'node:assert/strict';
 import { webcrypto } from 'node:crypto';
 import test from 'node:test';
-
-import { validateJson } from '../../conformance/json-schema-validate.mjs';
 import {
   ARTIFACT_ROOM_GENESIS_HASH,
   base64UrlToBytes,
@@ -21,6 +19,7 @@ import {
   verifySignedLiveRoomEvent,
 } from '../../lib/artifact/index.mjs';
 import { loadSchema } from '../../lib/design/schema-loader.mjs';
+import { validateJson } from '../../lib/protocol/json-schema.mjs';
 
 const roomId = 'room_123456789012';
 const reviewOf = 'a'.repeat(64);
