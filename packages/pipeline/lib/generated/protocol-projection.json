@@ -282,7 +282,7 @@
     {
       "source": "packages/protocol/projections/pipeline/lib/protocol/json-schema.mjs",
       "target": "lib/protocol/json-schema.mjs",
-      "sha256": "c666782888249a6c09174729d927be846ead3e645db792a8d314a2a0807e41e0",
+      "sha256": "28505aab2bafbb1df5fb0572524b583becfa53502cf5193d4697ebd9733d3da2",
       "mode": "644"
     },
     {
@@ -522,7 +522,7 @@
     {
       "source": "packages/protocol/registries/skills.json",
       "target": "registry/v1.5.0/skills.json",
-      "sha256": "4a9d6b6897ab0a430b579500ccc58b939cb8d7b04f89f33dc48a0cc594bf7569",
+      "sha256": "bff1ce37a03ef3032dcbc873141912ae11d137bac764dc2f22eb3d06192e3495",
       "mode": "644"
     },
     {
