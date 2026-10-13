@@ -6,8 +6,8 @@ you sign in through the host. OpenPlanr bundles no connectors; they and their cr
 live in your host. Two optional features need a token: Linear sync (`openplanr linear`) and
 company sign-in (`openplanr company login`). Only when you use them does OpenPlanr store a
 token, in your OS keychain, or in an encrypted file at `~/.planr/credentials.enc` if you set
-`PLANR_CREDENTIAL_FILE_PASSPHRASE`. For Linear you can instead set `PLANR_LINEAR_TOKEN` and
-nothing is stored. Tokens are sent only to Linear or to the company server you sign in to.
+`PLANR_CREDENTIAL_FILE_PASSPHRASE`. Tokens are sent only to Linear or to the company server
+you sign in to.
 `openplanr company logout` removes company tokens.
 Every skill also works with nothing connected and reports any remote step it skipped.
 
