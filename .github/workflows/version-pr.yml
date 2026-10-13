@@ -41,5 +41,4 @@ jobs:
           commit-message: 'chore(release): version packages'
           pr-title: 'chore(release): version packages'
           create-github-releases: false
-        env:
-          GITHUB_TOKEN: ${{ steps.app.outputs.token }}
+          github-token: ${{ steps.app.outputs.token }}
