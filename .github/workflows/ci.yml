@@ -281,9 +281,44 @@ jobs:
           path: ${{ runner.temp }}
       - name: Restore the generated runtime from the build job
         run: tar -xzmf "$RUNNER_TEMP/build-outputs.tgz"
+      # A shard covers only part of src, so thresholds are checked on the merged report in cli-coverage.
       - name: Run CLI test shard
         working-directory: packages/cli
-        run: npm run test:main -- --shard=${{ matrix.shard }}/6
+        run: >-
+          npm run test:main -- --shard=${{ matrix.shard }}/6
+          --coverage --coverage.reporter=text-summary
+          --coverage.thresholds.statements=0 --coverage.thresholds.branches=0
+          --coverage.thresholds.functions=0 --coverage.thresholds.lines=0
+          --reporter=default --reporter=blob
+      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        with:
+          name: cli-coverage-blob-${{ matrix.shard }}
+          path: packages/cli/.vitest-reports/
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 1
+
+  cli-coverage:
+    name: Node 24 CLI coverage
+    needs: cli-tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
+        with:
+          node-version: 24
+          cache: npm
+      - name: Install the root lockfile
+        run: npm ci
+      - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
+        with:
+          pattern: cli-coverage-blob-*
+          path: packages/cli/.vitest-reports
+          merge-multiple: true
+      - name: Merge shard coverage and check thresholds
+        working-directory: packages/cli
+        run: npx vitest run --merge-reports --coverage --reporter=dot
 
   cli-heavy-tests:
     name: Node 24 CLI heavy tests
@@ -533,6 +568,7 @@ jobs:
       - design-tests
       - pipeline-tests
       - cli-tests
+      - cli-coverage
       - cli-heavy-tests
       - cli-operate-boundary-tests
       - cli-runtime-integrity-tests
