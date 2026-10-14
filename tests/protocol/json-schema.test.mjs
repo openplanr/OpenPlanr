@@ -368,6 +368,66 @@ test('well-formed keyword values produce no schema errors', () => {
   assert.deepEqual(validateJson({ a: 'ab', b: [1] }, schema), []);
 });
 
+const deepFreeze = (value) => {
+  if (value !== null && typeof value === 'object') {
+    for (const child of Object.values(value)) deepFreeze(child);
+    Object.freeze(value);
+  }
+  return value;
+};
+
+test('a malformed schema fails on every call, frozen or mutable', () => {
+  for (const schema of [
+    { minimum: '3' },
+    deepFreeze({ minimum: '3' }),
+    deepFreeze({ type: 'object', properties: { a: { minimum: '3' } } }),
+    deepFreeze({ type: 'string', pattern: '(' }),
+  ]) {
+    const value = schema.properties ? { a: 5 } : 'x';
+    assert.deepEqual(rules(validateJson(value, schema)), ['schema'], JSON.stringify(schema));
+    assert.deepEqual(rules(validateJson(value, schema)), ['schema'], JSON.stringify(schema));
+  }
+});
+
+test('a mutable schema is re-checked after it changes between calls', () => {
+  const schema = { type: 'number', minimum: 3 };
+  assert.deepEqual(validateJson(5, schema), []);
+  schema.minimum = '3';
+  assert.deepEqual(rules(validateJson(5, schema)), ['schema']);
+
+  const required = ['a'];
+  const frozenParent = Object.freeze({ type: 'object', required });
+  assert.deepEqual(validateJson({ a: 1 }, frozenParent), []);
+  required.push('a');
+  assert.deepEqual(rules(validateJson({ a: 1 }, frozenParent)), ['schema']);
+
+  const dependencies = ['b'];
+  const nested = Object.freeze({ dependentRequired: Object.freeze({ a: dependencies }) });
+  assert.deepEqual(validateJson({ a: 1, b: 2 }, nested), []);
+  dependencies.push('b');
+  assert.deepEqual(rules(validateJson({ a: 1, b: 2 }, nested)), ['schema']);
+});
+
+test('a well-formed schema does not vouch for a distinct schema object', () => {
+  const valid = deepFreeze({ type: 'number', minimum: 3 });
+  assert.deepEqual(validateJson(5, valid), []);
+  assert.deepEqual(rules(validateJson(5, deepFreeze({ type: 'number', minimum: '3' }))), [
+    'schema',
+  ]);
+  const copy = { ...valid };
+  copy.minimum = '3';
+  assert.deepEqual(rules(validateJson(5, copy)), ['schema']);
+  assert.deepEqual(validateJson(5, valid), []);
+});
+
+test('a cached pattern keeps matching each value independently', () => {
+  const schema = deepFreeze({ type: 'string', pattern: '^a' });
+  for (let index = 0; index < 2; index += 1) {
+    assert.deepEqual(validateJson('ab', schema), []);
+    assert.deepEqual(rules(validateJson('b', schema)), ['pattern']);
+  }
+});
+
 const SCHEMA_MAPS = ['properties', '$defs', 'dependentSchemas', 'patternProperties'];
 const SCHEMA_VALUES = [
   'items',

@@ -97,13 +97,25 @@ const isUniqueStrings = (value) =>
   new Set(value).size === value.length;
 const isSchemaArray = (value) => Array.isArray(value) && value.length > 0 && value.every(isSchema);
 const isSchemaMap = (value) => isPlainObject(value) && Object.values(value).every(isSchema);
-const compilesAsPattern = (value) => {
+/** @type {Map<string, RegExp | null>} */
+const compiledPatterns = new Map();
+const MAX_COMPILED_PATTERNS = 1024;
+/** @type {(source: string) => RegExp | null} */
+const tryCompilePattern = (source) => {
   try {
-    new RegExp(value);
-    return true;
-  } catch {
-    return false;
+    return new RegExp(source);
+  } catch (error) {
+    if (error instanceof SyntaxError) return null;
+    throw error;
   }
+};
+/** Returns the compiled pattern, or null when it is not a valid regular expression. */
+const compilePattern = (source) => {
+  if (!compiledPatterns.has(source)) {
+    if (compiledPatterns.size >= MAX_COMPILED_PATTERNS) compiledPatterns.clear();
+    compiledPatterns.set(source, tryCompilePattern(source));
+  }
+  return compiledPatterns.get(source) ?? null;
 };
 
 const describeValue = (value) => {
@@ -129,7 +141,7 @@ const KEYWORD_SHAPES = {
   maxLength: ['a non-negative integer', isCount],
   pattern: [
     'a valid regular expression string',
-    (value) => typeof value === 'string' && compilesAsPattern(value),
+    (value) => typeof value === 'string' && compilePattern(value) !== null,
   ],
   minimum: ['a finite number', Number.isFinite],
   maximum: ['a finite number', Number.isFinite],
@@ -170,13 +182,24 @@ function resolveJsonPointer(root, reference) {
     .reduce((value, part) => value?.[part], root);
 }
 
+/** Frozen schema nodes that passed every node check; a mutable node is re-checked on each call. */
+const wellFormedSchemas = new WeakSet();
+
+/** True when the node and every keyword value its checks read can no longer change. */
+const isFrozenNode = (schema) =>
+  Object.isFrozen(schema) &&
+  Object.values(schema).every(Object.isFrozen) &&
+  (!isPlainObject(schema.dependentRequired) ||
+    Object.values(schema.dependentRequired).every(Object.isFrozen));
+
 /**
  * Records unsupported keywords and formats and malformed keyword values, once per schema node.
  * They go to a shared sink so `not`, `if` and combinator branches cannot swallow them.
  */
 const checkSchemaNode = (schema, path, context) => {
-  if (context.checkedSchemas.has(schema)) return;
+  if (wellFormedSchemas.has(schema) || context.checkedSchemas.has(schema)) return;
   context.checkedSchemas.add(schema);
+  const errorCount = context.schemaErrors.length;
   for (const keyword of Object.keys(schema)) {
     if (!KNOWN_KEYWORDS.has(keyword) && !keyword.startsWith('x-')) {
       context.schemaErrors.push({
@@ -201,6 +224,9 @@ const checkSchemaNode = (schema, path, context) => {
         detail: `schema keyword '${keyword}' must be ${expected}, got ${describeValue(schema[keyword])}`,
       });
     }
+  }
+  if (context.schemaErrors.length === errorCount && isFrozenNode(schema)) {
+    wellFormedSchemas.add(schema);
   }
 };
 
@@ -307,11 +333,8 @@ const validateNode = (value, schema, path, errs, context) => {
         detail: `length ${value.length} > ${schema.maxLength}`,
       });
     }
-    if (
-      typeof schema.pattern === 'string' &&
-      compilesAsPattern(schema.pattern) &&
-      !new RegExp(schema.pattern).test(value)
-    ) {
+    const pattern = typeof schema.pattern === 'string' ? compilePattern(schema.pattern) : null;
+    if (pattern && !pattern.test(value)) {
       errs.push({
         path,
         rule: 'pattern',
