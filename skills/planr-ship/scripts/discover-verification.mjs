@@ -5,6 +5,7 @@ import { resolve } from 'node:path';
 
 const COMMAND = /^(?:npm|npx|pnpm|yarn|bun|node|deno|cargo|go|make|just|pytest|python(?:3)?\s+-m|dotnet|mvn|gradle|\.\/gradlew)\b/u;
 const PRIORITY = Object.freeze(['test', 'test:unit', 'test:integration', 'typecheck', 'check', 'lint', 'build']);
+const USAGE = 'Usage: node discover-verification.mjs --project <repository-root> [--task <task-path>]';
 const read = (path) => readFileSync(path, 'utf8').replace(/\r\n/gu, '\n');
 
 function commands(markdown) {
@@ -57,7 +58,7 @@ function parseArgs(argv) {
   for (let index = 0; index < argv.length; index += 1) {
     if (argv[index] === '--project') options.project = argv[++index];
     else if (argv[index] === '--task') options.task = argv[++index];
-    else throw new Error(`Unknown argument: ${argv[index]}`);
+    else throw new Error(`Unknown argument: ${argv[index]}\n${USAGE}`);
   }
   return options;
 }
