@@ -15,20 +15,6 @@ on:
       - 'package.json'
       - 'package-lock.json'
       - '.github/workflows/dashboard-browser.yml'
-  push:
-    branches: [main]
-    paths:
-      - 'apps/dashboard/**'
-      - 'packages/cli/tests/dashboard/**'
-      - 'packages/cli/tests/e2e/**'
-      - 'packages/cli/scripts/run-dashboard-browser-tests.mjs'
-      - 'packages/operate/**'
-      - 'packages/pipeline/lib/dashboard/**'
-      - 'packages/protocol/**'
-      - 'scripts/dashboard/**'
-      - 'package.json'
-      - 'package-lock.json'
-      - '.github/workflows/dashboard-browser.yml'
 
 concurrency:
   group: dashboard-browser-${{ github.workflow }}-${{ github.ref }}

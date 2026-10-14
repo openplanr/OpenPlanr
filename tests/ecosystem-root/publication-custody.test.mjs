@@ -358,8 +358,12 @@ test('CI prepares contributor tooling before switching to published consumer run
     );
   }
   const ci = workflow('ci.yml');
-  assert.deepEqual(ci.jobs.compatibility.strategy.matrix.node, [22, 24]);
-  assert.match(ci.jobs.compatibility.name, /contributor/u);
+  const contributor = workflow('contributor-runtimes.yml').jobs['node-22-contributor'];
+  assert.deepEqual(
+    setups(contributor).map(({ version }) => version),
+    ['22'],
+  );
+  assert.match(contributor.name, /contributor/u);
   for (const job of [ci.jobs['packed-public-packages'], workflow('release-proof.yml').jobs.proof]) {
     assert.deepEqual(job.strategy.matrix.node, [22, 24]);
     const runtime = setups(job);

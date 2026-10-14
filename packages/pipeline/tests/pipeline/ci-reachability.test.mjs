@@ -13,7 +13,7 @@ const { scripts } = JSON.parse(read('packages/pipeline/package.json'));
 const workflow = read('.github/workflows/ci.yml');
 const matrixJob = workflow
   .slice(workflow.indexOf('\n  pipeline-tests:'))
-  .split(/\n  (?=[a-z][a-z0-9-]+:)/u)[1];
+  .split(/\n {2}(?=[a-z][a-z0-9-]+:)/u)[1];
 assert.ok(matrixJob, 'Workspace CI must retain its pipeline test job');
 assert.match(matrixJob, /run: npm run \$\{\{ matrix\.script \}\} --workspace=planr-pipeline/u);
 const entrypoints = [...matrixJob.matchAll(/^\s+script: ([a-z][a-z0-9:-]+)\s*$/gmu)].map(
@@ -101,13 +101,20 @@ test('ecosystem tests already exercise release reconciliation and installed cont
 });
 
 test('local CI parity runs the same pipeline entrypoints as Workspace CI', () => {
-  const pipelineJob = planLocalCi(load(workflow), 24).jobs.find(
-    ({ id }) => id === 'pipeline-tests',
-  );
+  const parsed = load(workflow);
+  const pipelineJob = planLocalCi(parsed, 24).jobs.find(({ id }) => id === 'pipeline-tests');
   assert.ok(pipelineJob, 'Local parity must retain the pipeline job');
+  const { include } = parsed.jobs['pipeline-tests'].strategy.matrix;
+  assert.deepEqual(
+    include.map(({ script }) => script),
+    entrypoints,
+  );
   assert.deepEqual(
     pipelineJob.instances.map(({ steps }) => steps.map(({ script }) => script)),
-    entrypoints.map((script) => [`npm run ${script} --workspace=planr-pipeline`]),
+    include.map(({ script, cli }) => [
+      `npm run ${script} --workspace=planr-pipeline`,
+      `npm run ${cli}`,
+    ]),
   );
   assert.doesNotMatch(workflow, /check:preservation/u);
 });
