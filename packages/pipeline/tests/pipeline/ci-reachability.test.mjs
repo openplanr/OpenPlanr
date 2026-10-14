@@ -101,20 +101,13 @@ test('ecosystem tests already exercise release reconciliation and installed cont
 });
 
 test('local CI parity runs the same pipeline entrypoints as Workspace CI', () => {
-  const parsed = load(workflow);
-  const pipelineJob = planLocalCi(parsed, 24).jobs.find(({ id }) => id === 'pipeline-tests');
-  assert.ok(pipelineJob, 'Local parity must retain the pipeline job');
-  const { include } = parsed.jobs['pipeline-tests'].strategy.matrix;
-  assert.deepEqual(
-    include.map(({ script }) => script),
-    entrypoints,
+  const pipelineJob = planLocalCi(load(workflow), 24).jobs.find(
+    ({ id }) => id === 'pipeline-tests',
   );
+  assert.ok(pipelineJob, 'Local parity must retain the pipeline job');
   assert.deepEqual(
     pipelineJob.instances.map(({ steps }) => steps.map(({ script }) => script)),
-    include.map(({ script, cli }) => [
-      `npm run ${script} --workspace=planr-pipeline`,
-      `npm run ${cli}`,
-    ]),
+    entrypoints.map((script) => [`npm run ${script} --workspace=planr-pipeline`]),
   );
   assert.doesNotMatch(workflow, /check:preservation/u);
 });

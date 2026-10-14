@@ -27,7 +27,7 @@ const nodesFor = (nodeMajor, id) =>
     .instances.map(({ node }) => node);
 const withStep = (step) => {
   const changed = structuredClone(workflow);
-  changed.jobs.quality.steps.push(step);
+  changed.jobs['design-tests'].steps.push(step);
   return changed;
 };
 
@@ -69,7 +69,7 @@ test('local parity runs each CI matrix entry under its CI check name', () => {
   const names = (id) => plan.jobs.find((job) => job.id === id).instances.map(({ name }) => name);
   assert.deepEqual(
     names('cli-tests'),
-    [1, 2, 3].map((shard) => `Node 24 CLI tests (shard ${shard}/3)`),
+    [1, 2, 3, 4].map((shard) => `Node 24 CLI tests (shard ${shard}/4)`),
   );
   assert.equal(
     names('pipeline-tests').length,
