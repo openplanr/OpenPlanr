@@ -3,8 +3,6 @@ name: Protocol minimum runtime
 on:
   pull_request:
     branches: ['**']
-  push:
-    branches: [main]
 
 permissions:
   contents: read

@@ -13,7 +13,7 @@ const { scripts } = JSON.parse(read('packages/pipeline/package.json'));
 const workflow = read('.github/workflows/ci.yml');
 const matrixJob = workflow
   .slice(workflow.indexOf('\n  pipeline-tests:'))
-  .split(/\n  (?=[a-z][a-z0-9-]+:)/u)[1];
+  .split(/\n {2}(?=[a-z][a-z0-9-]+:)/u)[1];
 assert.ok(matrixJob, 'Workspace CI must retain its pipeline test job');
 assert.match(matrixJob, /run: npm run \$\{\{ matrix\.script \}\} --workspace=planr-pipeline/u);
 const entrypoints = [...matrixJob.matchAll(/^\s+script: ([a-z][a-z0-9:-]+)\s*$/gmu)].map(

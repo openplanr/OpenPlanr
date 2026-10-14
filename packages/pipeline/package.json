@@ -366,6 +366,7 @@
     "test:orchestration:runtime": "node scripts/run-test-group.mjs tests/orchestration",
     "test:orchestration:ecosystem": "node --expose-gc --test tests/ecosystem/operate-v2-product-performance.test.mjs && node scripts/run-test-group.mjs tests/ecosystem --exclude tests/ecosystem/operate-v2-product-performance.test.mjs --exclude tests/ecosystem/unified-dashboard-consumer-install.test.mjs --exclude tests/ecosystem/unified-dashboard-package.test.mjs",
     "test:orchestration:pipeline": "node scripts/run-test-group.mjs tests/pipeline",
+    "test:fast": "npm run test:surface && npm run test:orchestration:runtime && npm run test:orchestration:pipeline",
     "test:operate-v2-development": "node --test tests/ecosystem/operate-v2-development-package.test.mjs",
     "test:operate-v2-phase2-package": "node --test tests/ecosystem/operate-v2-phase2-package.test.mjs",
     "test:operate-v2-phase3-package": "node --test tests/ecosystem/operate-v2-phase3-package.test.mjs",

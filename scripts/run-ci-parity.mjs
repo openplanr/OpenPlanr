@@ -21,7 +21,7 @@ const JOB_KEYS = new Set([
   'steps',
 ]);
 // Jobs that prepare on the contributor runtime, then prove the packed packages on another.
-const PACKED_JOBS = new Set(['packed-public-packages', 'packed-public-packages-current']);
+const PACKED_JOBS = new Set(['packed-public-packages']);
 const STRATEGY_KEYS = new Set(['fail-fast', 'matrix']);
 const STEP_KEYS = new Set([
   'name',

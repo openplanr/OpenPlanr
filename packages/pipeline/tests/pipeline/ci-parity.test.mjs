@@ -69,7 +69,7 @@ test('local parity runs each CI matrix entry under its CI check name', () => {
   const names = (id) => plan.jobs.find((job) => job.id === id).instances.map(({ name }) => name);
   assert.deepEqual(
     names('cli-tests'),
-    [1, 2, 3, 4, 5, 6].map((shard) => `Node 24 CLI tests (shard ${shard}/6)`),
+    [1, 2, 3, 4].map((shard) => `Node 24 CLI tests (shard ${shard}/4)`),
   );
   assert.equal(
     names('pipeline-tests').length,
@@ -84,11 +84,17 @@ test('a Node-matrix job runs once, on this Node when CI covers it and otherwise 
   assert.deepEqual(nodesFor(22, 'packed-public-packages'), ['22']);
   assert.deepEqual(nodesFor(22, 'compatibility'), ['22']);
   assert.deepEqual(nodesFor(24, 'packed-public-packages'), ['24']);
-  assert.deepEqual(nodesFor(24, 'compatibility'), ['24']);
+  assert.deepEqual(nodesFor(24, 'compatibility'), []);
   assert.deepEqual(nodesFor(26, 'packed-public-packages'), ['24']);
-  assert.deepEqual(nodesFor(26, 'packed-public-packages-current'), ['26']);
-  assert.deepEqual(nodesFor(24, 'packed-public-packages-current'), []);
   assert.deepEqual(nodesFor(20, 'quality'), ['24']);
+  const current = structuredClone(workflow);
+  current.jobs['packed-public-packages'].strategy.matrix.node = [26];
+  const currentNodes = (nodeMajor) =>
+    planLocalCi(current, nodeMajor)
+      .jobs.find((job) => job.id === 'packed-public-packages')
+      .instances.map(({ node }) => node);
+  assert.deepEqual(currentNodes(26), ['26']);
+  assert.deepEqual(currentNodes(24), []);
 });
 
 test('packed jobs distinguish contributor preparation from the selected consumer runtime', () => {
@@ -156,7 +162,7 @@ test('a job may need only the build and jobs defined before it', () => {
     return changed;
   };
   assert.doesNotThrow(() => planLocalCi(needing(['build', 'quality', 'cli-tests']), 24));
-  for (const needs of ['cli-heavy-tests', 'unknown-job', AGGREGATE_JOB]) {
+  for (const needs of ['cli-isolated-tests', 'unknown-job', AGGREGATE_JOB]) {
     assert.throws(
       () => planLocalCi(needing(needs), 24),
       /the local run orders jobs only after the build and earlier jobs/u,
