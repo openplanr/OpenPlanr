@@ -239,7 +239,8 @@ function deepFreeze<T>(value: T): T {
   return value;
 }
 
-function isContained(root: string, target: string): boolean {
+/** True when `target` is strictly inside `root`; the root itself is not contained. */
+export function isContained(root: string, target: string): boolean {
   const child = path.relative(root, target);
   return (
     child.length > 0 &&

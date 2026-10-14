@@ -131,3 +131,31 @@ test('filesystem evidence rejects capability gaps, root/path escapes, symlinks, 
     rmSync(roots.parent, { recursive: true, force: true });
   }
 });
+
+test('filesystem evidence rejects a sibling folder whose name extends the root name', () => {
+  const roots = createRoots();
+  const sibling = `${roots.root}-secrets`;
+  try {
+    mkdirSync(sibling);
+    writeFileSync(join(sibling, 'notes.txt'), 'sibling\n', 'utf8');
+    writeFileSync(join(roots.root, 'a.txt'), 'root file\n', 'utf8');
+    symlinkSync(sibling, join(roots.root, 'linked'), 'dir');
+    const valid = fixture('evidence-filesystem-valid.json');
+    const at = (path) => {
+      const candidate = clone(valid.candidate);
+      candidate.locator.path = path;
+      return candidate;
+    };
+
+    assert.equal(resolve(at('linked/notes.txt'), roots).error.code, 'SENSITIVITY_BLOCKED');
+    assert.equal(
+      resolveDirect(at('../root-secrets/notes.txt'), roots).error.code,
+      'EVIDENCE_LOCATOR_INVALID',
+    );
+    assert.equal(resolve(at('a.txt'), roots).status, 'resolved');
+    assert.equal(resolve(at('notes/evidence.txt'), roots).status, 'resolved');
+  } finally {
+    rmSync(sibling, { recursive: true, force: true });
+    rmSync(roots.parent, { recursive: true, force: true });
+  }
+});
