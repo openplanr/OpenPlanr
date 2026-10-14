@@ -16,6 +16,7 @@ import test from 'node:test';
 import {
   composeDesignPlanningLineage,
   readDesignPlanningLineage,
+  recoverDesignPlanningWrite,
   resolveDesignPlanningLineage,
   writeDesignPlanningArtifacts,
 } from '../../lib/pipeline/design-lineage.mjs';
@@ -241,5 +242,39 @@ test('Ship resolves only the selected task requirement and its exact source refe
     );
   } finally {
     rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('recovery rejects a journal entry in a sibling folder whose name extends the root', () => {
+  const recoverEntry = (entry) => {
+    const removed = [];
+    const journal = { entries: [{ existed: true, ...entry }] };
+    const recovered = recoverDesignPlanningWrite('/work/proj', {
+      existsSync: (path) => path.endsWith('.design-lineage-transaction.json'),
+      readFileSync: () => JSON.stringify(journal),
+      renameSync: () => {},
+      rmSync: (path) => removed.push(path),
+    });
+    return { recovered, removed };
+  };
+  const inside = { stage: '/work/proj/a.stage', backup: '/work/proj/a.backup' };
+
+  for (const target of [
+    '/work/proj-secrets/key.pem',
+    join('/work/proj', '../proj-secrets/key.pem'),
+  ]) {
+    assert.throws(() => recoverEntry({ ...inside, target }), /escaped its root/u, target);
+  }
+  assert.throws(
+    () =>
+      recoverEntry({
+        target: '/work/proj/a',
+        stage: '/work/proj-secrets/a',
+        backup: inside.backup,
+      }),
+    /escaped its root/u,
+  );
+  for (const target of ['/work/proj/a', join('/work/proj', './a'), '/work/proj']) {
+    assert.equal(recoverEntry({ ...inside, target }).recovered, true, target);
   }
 });

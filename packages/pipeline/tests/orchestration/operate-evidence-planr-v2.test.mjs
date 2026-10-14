@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
@@ -132,5 +132,24 @@ test('an attempted Git dispatch for a Planr artifact is a kind mismatch, not a f
     assert.equal(result.error.context.evidenceKind, 'planr');
   } finally {
     rmSync(project.root, { recursive: true, force: true });
+  }
+});
+
+test('Planr evidence rejects an artifact that resolves into a sibling folder of the project', () => {
+  const root = mkdtempSync(join(tmpdir(), 'operate-evidence-planr-'));
+  const sibling = `${root}-secrets`;
+  try {
+    mkdirSync(join(sibling, 'specs'), { recursive: true });
+    writeFileSync(join(sibling, 'specs/SPEC-016-evidence.md'), 'sibling evidence\n', 'utf8');
+    mkdirSync(join(root, '.planr'));
+    symlinkSync(join(sibling, 'specs'), join(root, '.planr/specs'), 'dir');
+    const valid = fixture('evidence-planr-valid.json');
+
+    const result = resolve(valid.candidate, root);
+    assert.equal(result.status, 'rejected');
+    assert.equal(result.error.code, 'SENSITIVITY_BLOCKED');
+  } finally {
+    rmSync(sibling, { recursive: true, force: true });
+    rmSync(root, { recursive: true, force: true });
   }
 });
