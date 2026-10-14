@@ -11,7 +11,7 @@ runs:
         version=$(npm exec --workspace=@openplanr/protocol -- playwright --version | awk '{print $2}')
         . /etc/os-release
         echo "key=playwright-$ID-$VERSION_ID-$version-chromium" >> "$GITHUB_OUTPUT"
-    - uses: actions/cache@v4
+    - uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
       with:
         path: ~/.cache/ms-playwright
         key: ${{ steps.playwright.outputs.key }}
