@@ -924,8 +924,7 @@ export async function runLinearTaskCheckboxSync(
   }
 
   // Persist any non-interactive auto-resolutions to a Markdown audit log.
-  // Matches the filename convention used by revise's audit-log-service so users
-  // find it in the same `.planr/reports/` directory they already look at.
+  // Written under `.planr/reports/` so users find it beside other run reports.
   // Never mutates anything in dry-run mode.
   if (!dryRun && autoResolvedConflicts.length > 0) {
     await appendSyncConflictAudit(projectDir, autoResolvedConflicts);
