@@ -1,8 +1,8 @@
 name: Contributor runtimes
 
-# Workspace CI verifies contributors on Node 24 and the packed packages on Node 22 and 24.
-# This covers the Node 22 contributor toolchain and the Node 26 consumer nightly, and on
-# pull requests that change dependencies, engines or generators. It is not a required check.
+# Workspace CI verifies contributors on Node 22 and 24 and the packed packages on Node 22 and
+# 24. This proves the packed packages on Node 26 nightly, and on pull requests that change
+# dependencies, engines or generators. It is not a required check.
 
 on:
   pull_request:
@@ -25,48 +25,6 @@ permissions:
   contents: read
 
 jobs:
-  node-22-contributor:
-    name: Node 22 contributor verification
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
-        with:
-          node-version: 22
-          cache: npm
-      - name: Install the root lockfile
-        run: npm ci
-      - name: Install Chromium for local studio tests
-        uses: ./.github/actions/playwright-chromium
-        timeout-minutes: 12
-      - name: Generate local distributions and verify tracked outputs
-        run: |
-          npm run generate
-          git diff --exit-code HEAD --
-      - name: Build in dependency order without tracked drift
-        run: |
-          npm run build
-          git diff --exit-code HEAD --
-      - name: Run the focused gates
-        run: npm run test:focused
-      # Workspace CI runs these suites on Node 24 only.
-      - name: Test the packages whose files the focused gates used to repeat
-        run: |
-          npm test --workspace=@openplanr/protocol
-          npm test --workspace=@openplanr/artifact
-          npm test --workspace=@openplanr/design
-          npm test --workspace=@openplanr/skill-runtime
-          npm test --workspace=@openplanr/integrations
-      - name: Run the CLI command, spec and credentials regressions
-        working-directory: packages/cli
-        run: >-
-          npm exec -- vitest run
-          tests/unit/command-registration-parity.test.ts
-          tests/unit/spec-command.test.ts
-          tests/unit/spec-service.test.ts
-          tests/unit/credentials-service.test.ts
-
   packed-public-packages-current:
     name: Node ${{ matrix.node }} packed public-package proof (non-blocking until LTS)
     # Node.js 26 is Current, not LTS, and the engines already admit it. Fold 26 into the
@@ -107,7 +65,7 @@ jobs:
 
   report:
     name: Report a failed nightly run
-    needs: [node-22-contributor, packed-public-packages-current]
+    needs: packed-public-packages-current
     if: failure() && github.event_name == 'schedule'
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -121,7 +79,7 @@ jobs:
           GH_REPO: ${{ github.repository }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
           HEAD_SHA: ${{ github.sha }}
-          TITLE: Nightly contributor runtime verification failed
+          TITLE: Nightly Node 26 packed proof failed
         run: |
           last_green=$(gh run list --workflow contributor-runtimes.yml --event schedule --status success --limit 1 --json headSha --jq '.[0].headSha // "none"')
           body=$(printf 'Scheduled run failed: %s\n\nCommit: %s\nLast green scheduled run commit: %s\n' "$RUN_URL" "$HEAD_SHA" "$last_green")

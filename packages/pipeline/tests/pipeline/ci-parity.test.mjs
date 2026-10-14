@@ -82,7 +82,9 @@ test('local parity runs each CI matrix entry under its CI check name', () => {
 
 test('a Node-matrix job runs once, on this Node when CI covers it and otherwise on the build Node', () => {
   assert.deepEqual(nodesFor(22, 'packed-public-packages'), ['22']);
+  assert.deepEqual(nodesFor(22, 'compatibility'), ['22']);
   assert.deepEqual(nodesFor(24, 'packed-public-packages'), ['24']);
+  assert.deepEqual(nodesFor(24, 'compatibility'), []);
   assert.deepEqual(nodesFor(26, 'packed-public-packages'), ['24']);
   assert.deepEqual(nodesFor(20, 'quality'), ['24']);
   const current = structuredClone(workflow);

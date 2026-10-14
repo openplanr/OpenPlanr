@@ -362,6 +362,51 @@ jobs:
         working-directory: packages/cli
         run: npm run ${{ matrix.script }}
 
+  # Node 24 contributors are covered by the build and package jobs above.
+  compatibility:
+    name: Node ${{ matrix.node }} contributor verification
+    strategy:
+      fail-fast: false
+      matrix:
+        node: [22]
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+      - name: Install the root lockfile
+        run: npm ci
+      - name: Install Chromium for local studio tests
+        uses: ./.github/actions/playwright-chromium
+        timeout-minutes: 12
+      - name: Generate local distributions and verify tracked outputs
+        run: |
+          npm run generate
+          git diff --exit-code HEAD --
+      - name: Build in dependency order without tracked drift
+        run: |
+          npm run build
+          git diff --exit-code HEAD --
+      - name: Run the focused gates
+        run: npm run test:focused
+      - name: Test the packages that own the contributor studio and skill suites
+        run: |
+          npm test --workspace=@openplanr/protocol
+          npm test --workspace=@openplanr/artifact
+          npm test --workspace=@openplanr/design
+          npm test --workspace=@openplanr/skill-runtime
+          npm test --workspace=@openplanr/integrations
+      - name: Run the CLI command, spec and credentials regressions
+        run: >-
+          npm exec --workspace=openplanr -- vitest run
+          tests/unit/command-registration-parity.test.ts
+          tests/unit/spec-command.test.ts
+          tests/unit/spec-service.test.ts
+          tests/unit/credentials-service.test.ts
+
   packed-public-packages:
     name: Node ${{ matrix.node }} packed public-package proof
     needs: build
@@ -421,6 +466,7 @@ jobs:
       - cli-tests
       - cli-coverage
       - cli-isolated-tests
+      - compatibility
       - packed-public-packages
     # always(), not !cancelled(): a skipped required check reports success, so this job
     # must run and fail when the workflow is cancelled.
