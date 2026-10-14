@@ -81,6 +81,96 @@ const VALIDATION_KEYWORDS = [
   'not',
 ];
 const KNOWN_KEYWORDS = new Set([...ANNOTATION_KEYWORDS, ...VALIDATION_KEYWORDS]);
+const TYPE_NAMES = new Set(['array', 'boolean', 'integer', 'null', 'number', 'object', 'string']);
+
+const isSchema = (value) =>
+  typeof value === 'boolean' ||
+  (value !== null && typeof value === 'object' && !Array.isArray(value));
+/** @type {(value: unknown) => value is Record<string, unknown>} */
+const isPlainObject = (value) =>
+  value !== null && typeof value === 'object' && !Array.isArray(value);
+const isCount = (value) => Number.isSafeInteger(value) && value >= 0;
+/** @type {(value: unknown) => value is string[]} */
+const isUniqueStrings = (value) =>
+  Array.isArray(value) &&
+  value.every((item) => typeof item === 'string') &&
+  new Set(value).size === value.length;
+const isSchemaArray = (value) => Array.isArray(value) && value.length > 0 && value.every(isSchema);
+const isSchemaMap = (value) => isPlainObject(value) && Object.values(value).every(isSchema);
+/** @type {Map<string, RegExp | null>} */
+const compiledPatterns = new Map();
+const MAX_COMPILED_PATTERNS = 1024;
+/** @type {(source: string) => RegExp | null} */
+const tryCompilePattern = (source) => {
+  try {
+    return new RegExp(source);
+  } catch (error) {
+    if (error instanceof SyntaxError) return null;
+    throw error;
+  }
+};
+/** Returns the compiled pattern, or null when it is not a valid regular expression. */
+const compilePattern = (source) => {
+  if (!compiledPatterns.has(source)) {
+    if (compiledPatterns.size >= MAX_COMPILED_PATTERNS) compiledPatterns.clear();
+    compiledPatterns.set(source, tryCompilePattern(source));
+  }
+  return compiledPatterns.get(source) ?? null;
+};
+
+const describeValue = (value) => {
+  const text = String(JSON.stringify(value));
+  return text.length > 80 ? `${text.slice(0, 77)}...` : text;
+};
+
+/**
+ * Expected value shape of each supported keyword, per draft 2020-12.
+ * @type {Record<string, [string, (value: unknown) => boolean]>}
+ */
+const KEYWORD_SHAPES = {
+  $ref: ['a string', (value) => typeof value === 'string'],
+  $defs: ['an object of schemas', isSchemaMap],
+  type: [
+    'a type name or a non-empty array of unique type names',
+    (value) =>
+      (typeof value === 'string' && TYPE_NAMES.has(value)) ||
+      (isUniqueStrings(value) && value.length > 0 && value.every((name) => TYPE_NAMES.has(name))),
+  ],
+  enum: ['an array', Array.isArray],
+  minLength: ['a non-negative integer', isCount],
+  maxLength: ['a non-negative integer', isCount],
+  pattern: [
+    'a valid regular expression string',
+    (value) => typeof value === 'string' && compilePattern(value) !== null,
+  ],
+  minimum: ['a finite number', Number.isFinite],
+  maximum: ['a finite number', Number.isFinite],
+  exclusiveMinimum: ['a finite number', Number.isFinite],
+  minItems: ['a non-negative integer', isCount],
+  maxItems: ['a non-negative integer', isCount],
+  prefixItems: ['a non-empty array of schemas', isSchemaArray],
+  items: ['a schema', isSchema],
+  uniqueItems: ['a boolean', (value) => typeof value === 'boolean'],
+  contains: ['a schema', isSchema],
+  minContains: ['a non-negative integer', isCount],
+  maxContains: ['a non-negative integer', isCount],
+  required: ['an array of unique strings', isUniqueStrings],
+  properties: ['an object of schemas', isSchemaMap],
+  additionalProperties: ['a schema', isSchema],
+  maxProperties: ['a non-negative integer', isCount],
+  dependentRequired: [
+    'an object of unique string arrays',
+    (value) => isPlainObject(value) && Object.values(value).every(isUniqueStrings),
+  ],
+  unevaluatedProperties: ['a schema', isSchema],
+  oneOf: ['a non-empty array of schemas', isSchemaArray],
+  anyOf: ['a non-empty array of schemas', isSchemaArray],
+  allOf: ['a non-empty array of schemas', isSchemaArray],
+  if: ['a schema', isSchema],
+  then: ['a schema', isSchema],
+  else: ['a schema', isSchema],
+  not: ['a schema', isSchema],
+};
 
 function resolveJsonPointer(root, reference) {
   if (reference === '#') return root;
@@ -92,13 +182,24 @@ function resolveJsonPointer(root, reference) {
     .reduce((value, part) => value?.[part], root);
 }
 
+/** Frozen schema nodes that passed every node check; a mutable node is re-checked on each call. */
+const wellFormedSchemas = new WeakSet();
+
+/** True when the node and every keyword value its checks read can no longer change. */
+const isFrozenNode = (schema) =>
+  Object.isFrozen(schema) &&
+  Object.values(schema).every(Object.isFrozen) &&
+  (!isPlainObject(schema.dependentRequired) ||
+    Object.values(schema.dependentRequired).every(Object.isFrozen));
+
 /**
- * Records keywords and formats this validator cannot enforce, once per schema node.
+ * Records unsupported keywords and formats and malformed keyword values, once per schema node.
  * They go to a shared sink so `not`, `if` and combinator branches cannot swallow them.
  */
 const checkSchemaNode = (schema, path, context) => {
-  if (context.checkedSchemas.has(schema)) return;
+  if (wellFormedSchemas.has(schema) || context.checkedSchemas.has(schema)) return;
   context.checkedSchemas.add(schema);
+  const errorCount = context.schemaErrors.length;
   for (const keyword of Object.keys(schema)) {
     if (!KNOWN_KEYWORDS.has(keyword) && !keyword.startsWith('x-')) {
       context.schemaErrors.push({
@@ -115,6 +216,25 @@ const checkSchemaNode = (schema, path, context) => {
       detail: `schema format ${JSON.stringify(schema.format)} is not supported by this validator`,
     });
   }
+  for (const [keyword, [expected, isValid]] of Object.entries(KEYWORD_SHAPES)) {
+    if (Object.hasOwn(schema, keyword) && !isValid(schema[keyword])) {
+      context.schemaErrors.push({
+        path,
+        rule: 'schema',
+        detail: `schema keyword '${keyword}' must be ${expected}, got ${describeValue(schema[keyword])}`,
+      });
+    }
+  }
+  if (context.schemaErrors.length === errorCount && isFrozenNode(schema)) {
+    wellFormedSchemas.add(schema);
+  }
+};
+
+/** Records an unresolvable or circular `$ref` once per schema node. */
+const reportReference = (schema, path, detail, context) => {
+  if (context.reportedReferences.has(schema)) return;
+  context.reportedReferences.add(schema);
+  context.schemaErrors.push({ path, rule: '$ref', detail });
 };
 
 /** Validates one node and returns the object property names it evaluated. */
@@ -126,14 +246,8 @@ const validateNode = (value, schema, path, errs, context) => {
     errs.push({ path, rule: 'schema:false', detail: 'value not allowed' });
     return evaluated;
   }
-  if (schema === null || typeof schema !== 'object' || Array.isArray(schema)) {
-    context.schemaErrors.push({
-      path,
-      rule: 'schema',
-      detail: `expected a schema object or boolean, got ${typeOf(schema)}`,
-    });
-    return evaluated;
-  }
+  // A non-schema child is reported by its parent's keyword-shape check.
+  if (!isSchema(schema)) return evaluated;
   checkSchemaNode(schema, path, context);
 
   if (typeof schema?.$ref === 'string') {
@@ -149,13 +263,18 @@ const validateNode = (value, schema, path, errs, context) => {
       nextRoot = result?.rootSchema ?? resolved;
       resolvedBase = result?.base ?? resolved?.$id ?? context.base;
     }
-    if (!resolved) {
-      errs.push({ path, rule: '$ref', detail: `could not resolve schema reference ${reference}` });
+    if (!isSchema(resolved)) {
+      const detail =
+        resolved === undefined || resolved === null
+          ? `could not resolve schema reference ${reference}`
+          : `schema reference ${reference} resolved to ${typeOf(resolved)}, not a schema`;
+      reportReference(schema, path, detail, context);
       return evaluated;
     }
-    const referenceKey = `${context.base ?? '<root>'}:${reference}`;
+    // Recursion that descends into the instance changes `path`; only a repeat at the same location loops.
+    const referenceKey = `${path} ${context.base ?? '<root>'}:${reference}`;
     if (context.referenceStack.includes(referenceKey)) {
-      errs.push({ path, rule: '$ref', detail: `circular schema reference ${reference}` });
+      reportReference(schema, path, `circular schema reference ${reference}`, context);
       return evaluated;
     }
     const referenced = validateNode(value, resolved, path, errs, {
@@ -214,22 +333,13 @@ const validateNode = (value, schema, path, errs, context) => {
         detail: `length ${value.length} > ${schema.maxLength}`,
       });
     }
-    if (typeof schema.pattern === 'string') {
-      try {
-        if (!new RegExp(schema.pattern).test(value)) {
-          errs.push({
-            path,
-            rule: 'pattern',
-            detail: `value ${JSON.stringify(value)} does not match /${schema.pattern}/`,
-          });
-        }
-      } catch (e) {
-        errs.push({
-          path,
-          rule: 'pattern',
-          detail: `invalid regex /${schema.pattern}/: ${e instanceof Error ? e.message : String(e)}`,
-        });
-      }
+    const pattern = typeof schema.pattern === 'string' ? compilePattern(schema.pattern) : null;
+    if (pattern && !pattern.test(value)) {
+      errs.push({
+        path,
+        rule: 'pattern',
+        detail: `value ${JSON.stringify(value)} does not match /${schema.pattern}/`,
+      });
     }
     if (typeof schema.format === 'string') {
       if (schema.format === 'date' && !FORMAT_DATE.test(value)) {
@@ -470,6 +580,15 @@ export const validateJson = (
   const errs = [];
   /** @type {{ path: string, rule: string, detail: string }[]} */
   const schemaErrors = [];
+  if (!isSchema(schema)) {
+    return [
+      {
+        path: '$',
+        rule: 'schema',
+        detail: `expected a schema object or boolean, got ${typeOf(schema)}`,
+      },
+    ];
+  }
   validateNode(value, schema, '$', errs, {
     rootSchema: schema,
     resolveRef,
@@ -477,6 +596,7 @@ export const validateJson = (
     referenceStack: [],
     schemaErrors,
     checkedSchemas: new WeakSet(),
+    reportedReferences: new WeakSet(),
   });
   return [...schemaErrors, ...errs];
 };

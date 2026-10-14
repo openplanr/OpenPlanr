@@ -150,6 +150,284 @@ test('a schema that is neither an object nor a boolean fails validation', () => 
   assert.deepEqual(rules(validateJson({ a: 1 }, { properties: { a: 'number' } })), ['schema']);
 });
 
+const hasRule = (errors, rule) => rules(errors).includes(rule);
+
+test('an unresolvable $ref is not swallowed by not, if or combinator branches', () => {
+  const missing = { $ref: '#/$defs/missing' };
+  for (const schema of [
+    missing,
+    { not: missing },
+    { if: missing, then: true, else: true },
+    { anyOf: [missing, true] },
+    { oneOf: [missing, { type: 'object' }] },
+    { allOf: [true, missing] },
+    { anyOf: [{ allOf: [{ not: missing }] }, true] },
+    { oneOf: [{ if: { anyOf: [{ not: missing }] }, then: true }, { type: 'string' }] },
+    { not: { not: { anyOf: [{ oneOf: [missing, true] }] } } },
+  ]) {
+    const errors = validateJson({}, schema);
+    assert.ok(hasRule(errors, '$ref'), JSON.stringify(schema));
+    assert.ok(
+      errors.some((error) => error.detail === 'could not resolve schema reference #/$defs/missing'),
+      JSON.stringify(errors),
+    );
+  }
+});
+
+test('an external $ref the resolver cannot resolve fails inside a negated branch', () => {
+  const errors = validateJson(1, { not: { $ref: 'urn:missing' } }, { resolveRef: () => undefined });
+  assert.ok(hasRule(errors, '$ref'), JSON.stringify(errors));
+});
+
+test('a circular $ref is not swallowed by a negated branch', () => {
+  const schema = { $defs: { loop: { $ref: '#/$defs/loop' } }, not: { $ref: '#/$defs/loop' } };
+  const errors = validateJson(1, schema);
+  assert.ok(
+    errors.some((error) => error.rule === '$ref' && /circular/.test(error.detail)),
+    JSON.stringify(errors),
+  );
+});
+
+const tree = {
+  $defs: {
+    node: {
+      type: 'object',
+      required: ['name'],
+      properties: {
+        name: { type: 'string' },
+        children: { type: 'array', items: { $ref: '#/$defs/node' } },
+      },
+      additionalProperties: false,
+    },
+  },
+  $ref: '#/$defs/node',
+};
+const deepTree = {
+  name: 'a',
+  children: [{ name: 'b', children: [{ name: 'c', children: [] }] }, { name: 'd' }],
+};
+
+test('a recursive $ref validates an instance that recurses through nested data', () => {
+  assert.deepEqual(validateJson(deepTree, tree), []);
+  const errors = validateJson({ name: 'a', children: [{ name: 'b', children: [{}] }] }, tree);
+  assert.deepEqual(errors, [
+    {
+      path: '$.children[0].children[0]',
+      rule: 'required',
+      detail: "missing required property 'name'",
+    },
+  ]);
+});
+
+test('a recursive $ref validates inside not, oneOf and an external self-reference', () => {
+  assert.deepEqual(
+    rules(validateJson(deepTree, { $defs: tree.$defs, not: { $ref: '#/$defs/node' } })),
+    ['not'],
+  );
+  assert.deepEqual(
+    validateJson(deepTree, {
+      $defs: tree.$defs,
+      oneOf: [{ $ref: '#/$defs/node' }, { type: 'string' }],
+    }),
+    [],
+  );
+  const event = {
+    $id: 'urn:event',
+    oneOf: [
+      {
+        type: 'object',
+        required: ['kind', 'inner'],
+        properties: { kind: { const: 'wrap' }, inner: { $ref: 'urn:event' } },
+      },
+      { type: 'object', required: ['kind'], properties: { kind: { const: 'leaf' } } },
+    ],
+  };
+  const resolveRef = (reference) => (reference === 'urn:event' ? event : undefined);
+  const nested = { kind: 'wrap', inner: { kind: 'wrap', inner: { kind: 'leaf' } } };
+  assert.deepEqual(validateJson(nested, event, { resolveRef }), []);
+});
+
+test('a $ref loop at the same instance location fails, including inside not and oneOf', () => {
+  const loops = {
+    self: { $ref: '#/$defs/self' },
+    a: { $ref: '#/$defs/b' },
+    b: { allOf: [{ $ref: '#/$defs/a' }] },
+  };
+  for (const schema of [
+    { $defs: loops, $ref: '#/$defs/self' },
+    { $defs: loops, $ref: '#/$defs/a' },
+    { $defs: loops, not: { $ref: '#/$defs/self' } },
+    { $defs: loops, oneOf: [{ $ref: '#/$defs/a' }, true] },
+    { $defs: loops, anyOf: [{ not: { oneOf: [{ $ref: '#/$defs/self' }] } }, true] },
+  ]) {
+    const errors = validateJson({ x: [1] }, schema);
+    assert.ok(
+      errors.some(
+        (error) => error.rule === '$ref' && /^circular schema reference/.test(error.detail),
+      ),
+      `${JSON.stringify(schema)} -> ${JSON.stringify(errors)}`,
+    );
+  }
+});
+
+test('an unresolvable $ref is reported once per schema node', () => {
+  const errors = validateJson([1, 2, 3], { items: { $ref: '#/$defs/missing' } });
+  assert.deepEqual(errors, [
+    { path: '$[0]', rule: '$ref', detail: 'could not resolve schema reference #/$defs/missing' },
+  ]);
+});
+
+test('a $ref to a boolean schema applies it instead of reporting it unresolved', () => {
+  const schema = { $defs: { never: false, always: true } };
+  assert.deepEqual(rules(validateJson(1, { ...schema, $ref: '#/$defs/never' })), ['schema:false']);
+  assert.deepEqual(validateJson(1, { ...schema, $ref: '#/$defs/always' }), []);
+  const notSchema = validateJson(1, { $defs: { n: 5 }, $ref: '#/$defs/n' });
+  assert.ok(
+    notSchema.some((error) => error.rule === '$ref' && /resolved to integer/.test(error.detail)),
+    JSON.stringify(notSchema),
+  );
+});
+
+const MALFORMED_KEYWORDS = [
+  ['$ref', 5],
+  ['type', 'strnig'],
+  ['type', []],
+  ['enum', 'a'],
+  ['minLength', '1'],
+  ['maxLength', -1],
+  ['pattern', '('],
+  ['minimum', '3'],
+  ['maximum', null],
+  ['exclusiveMinimum', '0'],
+  ['minItems', 1.5],
+  ['maxItems', '2'],
+  ['prefixItems', []],
+  ['items', 5],
+  ['uniqueItems', 'true'],
+  ['contains', 'x'],
+  ['minContains', -1],
+  ['maxContains', '1'],
+  ['required', 'id'],
+  ['required', ['id', 'id']],
+  ['properties', { a: 'number' }],
+  ['additionalProperties', 'no'],
+  ['maxProperties', '2'],
+  ['dependentRequired', { a: 'b' }],
+  ['unevaluatedProperties', 0],
+  ['oneOf', {}],
+  ['anyOf', []],
+  ['allOf', [5]],
+  ['if', 'x'],
+  ['then', 1],
+  ['else', null],
+  ['not', []],
+  ['$defs', { a: 1 }],
+];
+
+test('a supported keyword with a malformed value fails validation', () => {
+  for (const [keyword, malformed] of MALFORMED_KEYWORDS) {
+    const label = `${keyword}: ${JSON.stringify(malformed)}`;
+    const errors = validateJson(3, { [keyword]: malformed });
+    const shape = errors.filter((error) => error.rule === 'schema');
+    assert.equal(shape.length, 1, `${label} -> ${JSON.stringify(errors)}`);
+    assert.equal(shape[0].path, '$', label);
+    assert.ok(shape[0].detail.startsWith(`schema keyword '${keyword}' must be `), label);
+  }
+});
+
+test('a malformed keyword value is not swallowed by not, if or nested combinators', () => {
+  const malformed = { minimum: '3' };
+  for (const schema of [
+    { not: malformed },
+    { if: malformed, then: true },
+    { anyOf: [malformed, true] },
+    { oneOf: [malformed, { type: 'string' }] },
+    { allOf: [{ anyOf: [{ not: malformed }] }] },
+    { anyOf: [{ oneOf: [{ if: { not: malformed }, else: true }] }, true] },
+  ]) {
+    assert.ok(hasRule(validateJson(5, schema), 'schema'), JSON.stringify(schema));
+  }
+});
+
+test('a malformed subschema is reported even when no value reaches it', () => {
+  assert.deepEqual(rules(validateJson([], { items: 5 })), ['schema']);
+  assert.deepEqual(rules(validateJson({}, { properties: { a: 'number' } })), ['schema']);
+  assert.deepEqual(rules(validateJson('x', { required: 'id' })), ['schema']);
+});
+
+test('well-formed keyword values produce no schema errors', () => {
+  const schema = {
+    $defs: { s: { type: ['string', 'null'] } },
+    type: 'object',
+    required: ['a'],
+    properties: { a: { $ref: '#/$defs/s', pattern: '^a', minLength: 0, maxLength: 3 } },
+    dependentRequired: { a: [] },
+    maxProperties: 2,
+    additionalProperties: { type: 'array', minItems: 0, maxItems: 2, uniqueItems: false },
+  };
+  assert.deepEqual(validateJson({ a: 'ab', b: [1] }, schema), []);
+});
+
+const deepFreeze = (value) => {
+  if (value !== null && typeof value === 'object') {
+    for (const child of Object.values(value)) deepFreeze(child);
+    Object.freeze(value);
+  }
+  return value;
+};
+
+test('a malformed schema fails on every call, frozen or mutable', () => {
+  for (const schema of [
+    { minimum: '3' },
+    deepFreeze({ minimum: '3' }),
+    deepFreeze({ type: 'object', properties: { a: { minimum: '3' } } }),
+    deepFreeze({ type: 'string', pattern: '(' }),
+  ]) {
+    const value = schema.properties ? { a: 5 } : 'x';
+    assert.deepEqual(rules(validateJson(value, schema)), ['schema'], JSON.stringify(schema));
+    assert.deepEqual(rules(validateJson(value, schema)), ['schema'], JSON.stringify(schema));
+  }
+});
+
+test('a mutable schema is re-checked after it changes between calls', () => {
+  const schema = { type: 'number', minimum: 3 };
+  assert.deepEqual(validateJson(5, schema), []);
+  schema.minimum = '3';
+  assert.deepEqual(rules(validateJson(5, schema)), ['schema']);
+
+  const required = ['a'];
+  const frozenParent = Object.freeze({ type: 'object', required });
+  assert.deepEqual(validateJson({ a: 1 }, frozenParent), []);
+  required.push('a');
+  assert.deepEqual(rules(validateJson({ a: 1 }, frozenParent)), ['schema']);
+
+  const dependencies = ['b'];
+  const nested = Object.freeze({ dependentRequired: Object.freeze({ a: dependencies }) });
+  assert.deepEqual(validateJson({ a: 1, b: 2 }, nested), []);
+  dependencies.push('b');
+  assert.deepEqual(rules(validateJson({ a: 1, b: 2 }, nested)), ['schema']);
+});
+
+test('a well-formed schema does not vouch for a distinct schema object', () => {
+  const valid = deepFreeze({ type: 'number', minimum: 3 });
+  assert.deepEqual(validateJson(5, valid), []);
+  assert.deepEqual(rules(validateJson(5, deepFreeze({ type: 'number', minimum: '3' }))), [
+    'schema',
+  ]);
+  const copy = { ...valid };
+  copy.minimum = '3';
+  assert.deepEqual(rules(validateJson(5, copy)), ['schema']);
+  assert.deepEqual(validateJson(5, valid), []);
+});
+
+test('a cached pattern keeps matching each value independently', () => {
+  const schema = deepFreeze({ type: 'string', pattern: '^a' });
+  for (let index = 0; index < 2; index += 1) {
+    assert.deepEqual(validateJson('ab', schema), []);
+    assert.deepEqual(rules(validateJson('b', schema)), ['pattern']);
+  }
+});
+
 const SCHEMA_MAPS = ['properties', '$defs', 'dependentSchemas', 'patternProperties'];
 const SCHEMA_VALUES = [
   'items',
@@ -179,7 +457,7 @@ function* schemaNodes(node, pointer) {
   }
 }
 
-test('every tracked schema uses only keywords and formats the validator enforces', () => {
+test('every tracked schema uses only keywords, formats and keyword values the validator enforces', () => {
   const files = execFileSync('git', ['ls-files', '*.schema.json'], { cwd: root, encoding: 'utf8' })
     .trim()
     .split('\n');
@@ -189,7 +467,10 @@ test('every tracked schema uses only keywords and formats the validator enforces
     const schema = JSON.parse(readFileSync(resolve(root, file), 'utf8'));
     for (const [node, pointer] of schemaNodes(schema, '#')) {
       for (const error of validateJson(null, node)) {
-        if (error.path === '$' && error.rule.startsWith('unsupported-')) {
+        if (
+          error.path === '$' &&
+          (error.rule.startsWith('unsupported-') || error.rule === 'schema')
+        ) {
           unsupported.push(`${file}${pointer}: ${error.detail}`);
         }
       }
