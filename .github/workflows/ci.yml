@@ -326,14 +326,16 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - suite: heavy and Operate planning bridge
-            first: test:heavy
-            second: test:operate-planning-bridge
-          - suite: Operate command gateway and runtime integrity
-            first: test:operate-command-gateway
-            second: test:runtime-integrity
+          - suite: heavy
+            script: test:heavy
+          - suite: Operate planning bridge
+            script: test:operate-planning-bridge
+          - suite: Operate command gateway
+            script: test:operate-command-gateway
+          - suite: runtime integrity
+            script: test:runtime-integrity
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 15
     steps:
       - name: Require the Build generated outputs job to have succeeded
         env:
@@ -356,12 +358,9 @@ jobs:
           path: ${{ runner.temp }}
       - name: Restore the generated runtime from the build job
         run: tar -xzmf "$RUNNER_TEMP/build-outputs.tgz"
-      - name: Run the first suite in a fresh process
+      - name: Run the suite in a fresh process
         working-directory: packages/cli
-        run: npm run ${{ matrix.first }}
-      - name: Run the second suite in a fresh process
-        working-directory: packages/cli
-        run: npm run ${{ matrix.second }}
+        run: npm run ${{ matrix.script }}
 
   packed-public-packages:
     name: Node ${{ matrix.node }} packed public-package proof
