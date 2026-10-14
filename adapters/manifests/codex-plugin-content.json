@@ -964,7 +964,7 @@
       "assets": [
         {
           "path": "skills/ship/SKILL.md",
-          "digest": "sha256:c5d4678a944e15f611efc47c238212738e1610a646d8a23baf7a8e7630c431a5"
+          "digest": "sha256:fcaace9baa973c476b78768f89fe602fb75f14f7bc385779061911d5cf38653d"
         },
         {
           "path": "skills/ship/openplanr.skill.json",
@@ -984,7 +984,7 @@
         },
         {
           "path": "skills/ship/scripts/discover-verification.mjs",
-          "digest": "sha256:e6c2bf04fc400529362a4f4e0d6bee6b81e19642e78167cf4f546f5757920b28"
+          "digest": "sha256:8805ac8d814a1d94364d455df6da350983d4c8436faa3749717da5f1b3ae63b1"
         }
       ]
     },

@@ -62,13 +62,16 @@ Discover checks in this order:
 4. applicable CI and pre-commit configuration.
 
 The packaged read-only [verification discovery helper](scripts/discover-verification.mjs)
-may list candidates. Resolve it relative to this `SKILL.md`; pass the repository
-root and task path. It never executes checks or writes files. If it is unavailable,
+may list candidates. Resolve it relative to this `SKILL.md` and run
+`node <helper> --project <repository-root> --task <task-path>`; omit `--task` for a
+direct request. It never executes checks or writes files. If it is unavailable,
 inspect those four sources directly. Missing commands are diagnostics, not a
 reason to invent or skip all verification.
 
 Run the strongest applicable focused checks while working, then the relevant
-regression checks. Fix failures caused by the change and rerun affected checks.
+regression checks. Run each check on its own or under `set -o pipefail`, and judge
+it by its own exit code; to shorten output, write it to a log and read the tail.
+Fix failures caused by the change and rerun affected checks.
 Read [the result contract](references/result-contract.md) before reporting.
 
 Do not write progress into an approved design package. The studio derives

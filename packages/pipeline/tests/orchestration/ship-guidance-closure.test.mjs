@@ -57,6 +57,19 @@ test('Ship discovers verification in the specified order and treats risk metadat
   assert.match(skill, /`reviewRisks` and\s+`browserSurfaces` select useful checks/u);
   assert.match(skill, /neither field\s+is a workflow gate/u);
   assert.match(skill, /Missing commands are diagnostics/u);
+  assert.match(skill, /--project <repository-root> --task <task-path>/u);
+  assert.match(skill, /`set -o pipefail`/u);
+});
+
+test('the discovery helper rejects a positional path with its usage', () => {
+  const helper = join(WORKSPACE_ROOT, 'skills/planr-ship/scripts/discover-verification.mjs');
+  const result = spawnSync(process.execPath, [helper, '.', 'task.md'], { encoding: 'utf8' });
+  assert.equal(result.status, 1);
+  assert.match(result.stderr, /Unknown argument: \.\n/u);
+  assert.match(
+    result.stderr,
+    /Usage: node discover-verification\.mjs --project <repository-root> \[--task <task-path>\]/u,
+  );
 });
 
 test('the packaged discovery helper is read-only and returns ordered command candidates', () => {
