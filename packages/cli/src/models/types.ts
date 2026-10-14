@@ -621,67 +621,6 @@ export interface ReviseDecision {
   ambiguous: ReviseAmbiguity[];
 }
 
-/** Audit log output format. */
-export type ReviseAuditFormat = 'md' | 'json';
-
-/**
- * Terminal state recorded in the audit log for a single artifact in a
- * revise run. Superset of the agent's `ReviseAction` so we can also record
- * human overrides (skipped / quit) and system outcomes (failed / demoted).
- */
-export type ReviseAuditOutcome =
-  | 'applied'
-  | 'would-apply' // dry-run equivalent of 'applied'
-  | 'unchanged-by-agent' // agent returned revisedMarkdown equal to the original; no write
-  | 'skipped-by-agent'
-  | 'skipped-by-user'
-  | 'flagged'
-  | 'failed'
-  | 'demoted' // evidence verifier flipped revise → flag
-  | 'applied-from-plan' // written by the apply-from-audit replay path
-  | 'stale-skipped' // replay found artifact changed since dry-run; entry skipped
-  | 'conflict-skipped'; // replay diff did not apply cleanly; entry skipped
-
-/**
- * One row in the revise audit log. Flushed to disk as soon as it is
- * produced so an interrupted run still leaves an accurate on-disk record
- * of what was written.
- */
-export interface ReviseAuditEntry {
-  artifactId: string;
-  artifactPath?: string;
-  outcome: ReviseAuditOutcome;
-  rationale: string;
-  evidence: ReviseEvidence[];
-  ambiguous: ReviseAmbiguity[];
-  /** Cascade level the entry was produced at; omitted for single-artifact runs. */
-  cascadeLevel?: 'epic' | 'features' | 'stories' | 'tasks';
-  /** Unified diff against the pre-revise artifact body; present when outcome wrote content. */
-  diff?: string;
-  /** Present when outcome === 'failed'. */
-  error?: string;
-  timestamp: string;
-}
-
-/** Aggregate audit record covering a single revise run. */
-export interface ReviseAudit {
-  scope: string;
-  cascade: boolean;
-  dryRun: boolean;
-  startedAt: string;
-  completedAt?: string;
-  entries: ReviseAuditEntry[];
-  /** Populated when the run stopped before normal completion. */
-  interrupted?: {
-    reason: 'q' | 'sigint' | 'agent_error' | 'graph_rollback';
-    atArtifactId?: string;
-  };
-  tokenUsage?: {
-    inputTokens: number;
-    outputTokens: number;
-  };
-}
-
 /**
  * One level in a top-down cascade. Tracks which artifact type the level
  * covers and the ordered artifact ids processed at that level.
