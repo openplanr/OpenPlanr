@@ -118,6 +118,7 @@ async function ownerExperience(client: Client, cycleId: string): Promise<RecordV
 }
 
 describe('operate.action.approve records every human decision', () => {
+  // v8 coverage instrumentation in the CI shards pushes this test past the global timeout.
   it('commits approved, rejected and deferred decisions on separate Actions', async () => {
     const titles = decisions.map((decision) => `Contained Action to be ${decision}`);
     const { project, client, cycleId } = await proposedActions(titles);
@@ -169,5 +170,5 @@ describe('operate.action.approve records every human decision', () => {
         }),
       ]);
     }
-  });
+  }, 90_000);
 });

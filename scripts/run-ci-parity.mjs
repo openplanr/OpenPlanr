@@ -45,6 +45,30 @@ const CONTRIBUTOR_NODE_RANGE = JSON.parse(readFileSync(resolve(root, 'package.js
   .engines.node;
 /** The required status job: it only reads the other jobs' results, so it is not replayed. */
 export const AGGREGATE_JOB = 'ci-passed';
+// A shard reports partial coverage; thresholds apply only to the merged report.
+const SHARD_COVERAGE =
+  '--coverage --coverage.reporter=text-summary --coverage.thresholds.statements=0 ' +
+  '--coverage.thresholds.branches=0 --coverage.thresholds.functions=0 ' +
+  '--coverage.thresholds.lines=0 --reporter=default --reporter=blob';
+/** Merges the shard blob reports and checks coverage thresholds; it runs no tests. */
+export const COVERAGE_MERGE = 'npx vitest run --merge-reports --coverage --reporter=dot';
+
+/**
+ * Parses a CI command into the npm script and workspace it runs, or null for one that runs none.
+ * Throws on shard flags other than the exact coverage suffix.
+ */
+export function parseScriptRun(line) {
+  if (line === COVERAGE_MERGE) return null;
+  const run = /^npm run ([a-z][\w:-]*)(?: --workspace=(\S+))?(?: -- --shard=\d+\/\d+(.*))?$/u.exec(
+    line,
+  );
+  if (!run) return null;
+  const [, script, workspace, flags] = run;
+  if (flags && flags !== ` ${SHARD_COVERAGE}`) {
+    throw new Error(`"${line}" passes shard flags other than: ${SHARD_COVERAGE}`);
+  }
+  return { script, workspace };
+}
 
 /** The local command runner needs the contributor runtime, even for a consumer CI job. */
 export function assertContributorRuntime(version) {
@@ -88,6 +112,7 @@ export function planLocalCi(workflow, nodeMajor) {
   const [[producer, producerJob]] = producers;
   const context = {
     producer,
+    order: entries.map(([id]) => id),
     buildNode: setupNodeVersion(producer, producerJob),
     nodeMajor: String(nodeMajor),
     // The build job's npm commands stand in for restoring its outputs. Its drift checks stay
@@ -163,9 +188,11 @@ function planJob(id, job, context) {
   requireKnownKeys(id, job, JOB_KEYS);
   requireKnownKeys(`${id} strategy`, job.strategy, STRATEGY_KEYS);
   const needs = [job.needs ?? []].flat();
-  if (needs.some((need) => need !== context.producer)) {
+  // The local run replays jobs in workflow order, so only an earlier job can be a prerequisite.
+  const earlier = context.order.slice(0, context.order.indexOf(id));
+  if (needs.some((need) => need === AGGREGATE_JOB || !earlier.includes(need))) {
     throw new Error(
-      `${id} needs ${needs.join(', ')}; the local run orders jobs only after the build`,
+      `${id} needs ${needs.join(', ')}; the local run orders jobs only after the build and earlier jobs`,
     );
   }
   if (job.if !== undefined && !CONSUMER_IF.test(job.if)) {

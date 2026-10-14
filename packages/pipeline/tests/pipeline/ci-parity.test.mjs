@@ -7,6 +7,8 @@ import { load } from 'js-yaml';
 import {
   AGGREGATE_JOB,
   assertContributorRuntime,
+  COVERAGE_MERGE,
+  parseScriptRun,
   planLocalCi,
 } from '../../../../scripts/run-ci-parity.mjs';
 
@@ -147,6 +149,39 @@ test('a CI step the local run cannot reproduce fails the plan instead of being d
   assert.throws(() => planLocalCi(gated, 24), /quality runs under if: .*cannot evaluate/u);
 });
 
+test('a job may need only the build and jobs defined before it', () => {
+  const needing = (needs) => {
+    const changed = structuredClone(workflow);
+    changed.jobs['cli-coverage'].needs = needs;
+    return changed;
+  };
+  assert.doesNotThrow(() => planLocalCi(needing(['build', 'quality', 'cli-tests']), 24));
+  for (const needs of ['cli-heavy-tests', 'unknown-job', AGGREGATE_JOB]) {
+    assert.throws(
+      () => planLocalCi(needing(needs), 24),
+      /the local run orders jobs only after the build and earlier jobs/u,
+    );
+  }
+});
+
+test('a shard accepts only the exact coverage flags, and the coverage merge runs no script', () => {
+  const shard = workflow.jobs['cli-tests'].steps.find((step) => step.name === 'Run CLI test shard');
+  const line = expand(shard.run.trim(), { shard: 1 });
+  assert.deepEqual(parseScriptRun(line), { script: 'test:main', workspace: undefined });
+  assert.deepEqual(parseScriptRun('npm run test:main -- --shard=1/6'), {
+    script: 'test:main',
+    workspace: undefined,
+  });
+  for (const changed of [
+    `${line} --bail=1`,
+    line.replace('--coverage.thresholds.lines=0', '--coverage.thresholds.lines=50'),
+    'npm run test:main -- --shard=1/6 --coverage',
+  ]) {
+    assert.throws(() => parseScriptRun(changed), /passes shard flags other than/u);
+  }
+  assert.equal(parseScriptRun(COVERAGE_MERGE), null);
+});
+
 // Follows `npm run <script>` aliases in && chains down to the commands they run.
 function leaves(scripts, script) {
   assert.ok(Object.hasOwn(scripts, script), `missing script ${script}`);
@@ -165,11 +200,10 @@ test('every workspace npm test runs exactly the commands Workspace CI runs for i
     ),
   );
   for (const { line, workingDirectory } of commands) {
-    if (workingDirectory === '.') continue;
-    assert.match(
-      line,
-      /^npm run [a-z][\w:-]*(?: -- --shard=\d+\/\d+)?$/u,
-      `${workingDirectory} CI commands must name a workspace script so npm test can run them`,
+    if (workingDirectory === '.' || line === COVERAGE_MERGE) continue;
+    assert.ok(
+      parseScriptRun(line),
+      `${workingDirectory} CI commands must name a workspace script so npm test can run them: ${line}`,
     );
   }
   const { workspaces } = JSON.parse(readFileSync(resolve(root, 'package.json'), 'utf8'));
@@ -177,11 +211,9 @@ test('every workspace npm test runs exactly the commands Workspace CI runs for i
     const { name, scripts } = JSON.parse(readFileSync(resolve(root, path, 'package.json'), 'utf8'));
     const ci = commands.flatMap(({ line, workingDirectory }) => {
       if (line === `npm test --workspace=${name}`) return ['test'];
-      const run = /^npm run ([a-z][\w:-]*)(?: --workspace=(\S+))?(?: -- --shard=\d+\/\d+)?$/u.exec(
-        line,
-      );
+      const run = parseScriptRun(line);
       if (!run) return [];
-      const [, script, workspace] = run;
+      const { script, workspace } = run;
       return workspace === name || (workspace === undefined && workingDirectory === path)
         ? [script]
         : [];
