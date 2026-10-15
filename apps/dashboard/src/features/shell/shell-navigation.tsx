@@ -480,7 +480,6 @@ export function TopBar({
         type="button"
         className="pc-topbar__palette"
         onClick={onOpenPalette}
-        aria-label="Open the command palette"
         aria-keyshortcuts="Meta+K Control+K"
       >
         <PcIcon name="search" size={13} />
