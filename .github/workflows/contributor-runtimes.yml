@@ -29,7 +29,7 @@ jobs:
     name: Node ${{ matrix.node }} packed public-package proof (non-blocking until LTS)
     # Node.js 26 is Current, not LTS, and the engines already admit it. Fold 26 into the
     # Workspace CI packed matrix once it is LTS.
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 20
     strategy:
       fail-fast: false
@@ -67,7 +67,7 @@ jobs:
     name: Report a failed nightly run
     needs: packed-public-packages-current
     if: failure() && github.event_name == 'schedule'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 5
     permissions:
       actions: read

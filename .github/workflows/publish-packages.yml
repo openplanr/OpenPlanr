@@ -45,7 +45,7 @@ jobs:
        (github.event.workflow_run.conclusion == 'success' &&
         github.event.workflow_run.event == 'push' &&
         github.event.workflow_run.head_branch == 'main'))
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     outputs:
       commit: ${{ steps.plan.outputs.commit }}
@@ -76,7 +76,7 @@ jobs:
   verify:
     needs: plan
     if: needs.plan.outputs.has_pending == 'true'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 60
     steps:
       - name: Require the successful exact-commit main verification
@@ -136,7 +136,7 @@ jobs:
 
   publish:
     needs: [plan, verify]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 90
     environment: npm-release
     permissions:
@@ -173,7 +173,7 @@ jobs:
   marketplace:
     needs: [plan, publish]
     if: vars.RELEASE_APP_ID != '' && needs.plan.outputs.cli_pending == 'true'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
       - uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0

@@ -29,7 +29,7 @@ permissions:
 jobs:
   hostile-sandbox:
     name: ${{ matrix.browser }} hostile sandbox
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     strategy:
       fail-fast: false
@@ -81,7 +81,7 @@ jobs:
     name: Report a failed nightly run
     needs: hostile-sandbox
     if: failure() && github.event_name == 'schedule'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 5
     permissions:
       actions: read
