@@ -17,7 +17,7 @@ jobs:
     # Opens or refreshes the "chore(release): version packages" PR whenever pending
     # changesets reach main. Needs the release GitHub App so the PR triggers CI.
     if: github.repository == 'openplanr/OpenPlanr' && vars.RELEASE_APP_ID != ''
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 45
     steps:
       - uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0

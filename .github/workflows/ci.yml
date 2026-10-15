@@ -18,7 +18,7 @@ permissions:
 jobs:
   build:
     name: Build generated outputs
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -83,7 +83,7 @@ jobs:
     name: Node 24 generated, boundary, docs, lint, type, and focused checks
     needs: build
     if: ${{ !cancelled() }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
       - name: Require the Build generated outputs job to have succeeded
@@ -136,7 +136,7 @@ jobs:
     name: Node 24 design package tests
     needs: build
     if: ${{ !cancelled() }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
       - name: Require the Build generated outputs job to have succeeded
@@ -170,7 +170,7 @@ jobs:
     name: Node 24 supporting package tests
     needs: build
     if: ${{ !cancelled() }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
       - name: Require the Build generated outputs job to have succeeded
@@ -220,7 +220,7 @@ jobs:
             script: test:fast
           - suite: ecosystem orchestration
             script: test:orchestration:ecosystem
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
       - name: Require the Build generated outputs job to have succeeded
@@ -255,7 +255,7 @@ jobs:
       fail-fast: false
       matrix:
         shard: [1, 2, 3, 4]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
       - name: Require the Build generated outputs job to have succeeded
@@ -299,7 +299,7 @@ jobs:
   cli-coverage:
     name: Node 24 CLI coverage
     needs: cli-tests
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -334,7 +334,7 @@ jobs:
             script: test:operate-command-gateway
           - suite: runtime integrity
             script: test:runtime-integrity
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
       - name: Require the Build generated outputs job to have succeeded
@@ -369,7 +369,7 @@ jobs:
       fail-fast: false
       matrix:
         node: [22]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -411,7 +411,7 @@ jobs:
     name: Node ${{ matrix.node }} packed public-package proof
     needs: build
     if: ${{ !cancelled() }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 20
     strategy:
       fail-fast: false
@@ -471,7 +471,7 @@ jobs:
     # always(), not !cancelled(): a skipped required check reports success, so this job
     # must run and fail when the workflow is cancelled.
     if: ${{ always() }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
       - name: Require every Workspace CI job to have succeeded

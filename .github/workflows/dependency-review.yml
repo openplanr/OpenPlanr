@@ -11,7 +11,7 @@ permissions:
 jobs:
   dependency-review:
     name: Review dependency changes
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       # The review already ran on the pull request; the merge queue only needs the required check to report.
       - if: github.event_name == 'pull_request'
