@@ -175,22 +175,27 @@ export async function firstAddedDate(
   projectDir: string,
   relativePath: string,
 ): Promise<string | null> {
-  let stdout: string;
-  try {
-    ({ stdout } = await execFileAsync(
-      'git',
-      ['log', '--diff-filter=A', '--follow', '--format=%as', '--', relativePath],
-      { cwd: projectDir, maxBuffer: GIT_MAX_BUFFER },
-    ));
-  } catch (err) {
-    const reason = err instanceof Error ? err.message : String(err);
-    if (/not a git repository|does not have any commits|ENOENT|git: not found/i.test(reason)) {
-      return null;
-    }
-    throw err;
-  }
+  if (!(await gitSucceeds(projectDir, ['rev-parse', '--is-inside-work-tree']))) return null;
+  if (!(await gitSucceeds(projectDir, ['rev-parse', '--verify', '--quiet', 'HEAD']))) return null;
+  const { stdout } = await execFileAsync(
+    'git',
+    ['log', '--diff-filter=A', '--follow', '--format=%as', '--', relativePath],
+    { cwd: projectDir, maxBuffer: GIT_MAX_BUFFER },
+  );
   const dates = stdout.split('\n').filter((line) => line.trim().length > 0);
   return dates.at(-1)?.trim() ?? null;
+}
+
+/** Whether a git command exits 0; false when git is missing. Uses the exit status, so any git locale works. */
+async function gitSucceeds(projectDir: string, args: string[]): Promise<boolean> {
+  try {
+    await execFileAsync('git', args, { cwd: projectDir, maxBuffer: GIT_MAX_BUFFER });
+    return true;
+  } catch (err) {
+    if (err instanceof Error && 'code' in err && err.code === 'ENOENT') return false;
+    if (err instanceof Error && 'code' in err && typeof err.code === 'number') return false;
+    throw err;
+  }
 }
 
 export type GitCommitResult =
