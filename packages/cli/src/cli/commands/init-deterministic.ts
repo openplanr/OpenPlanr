@@ -2,15 +2,35 @@ import path from 'node:path';
 import { type Command, Option } from 'commander';
 import { createChecklist } from '../../services/checklist-service.js';
 import {
+  applyConfigRepair,
   assertPlanningFolderWritable,
   createDefaultConfig,
+  planConfigRepair,
   saveConfig,
 } from '../../services/config-service.js';
+import { promptConfirm } from '../../services/prompt-service.js';
 import { getSpecsRootDir } from '../../services/spec-service.js';
 import { renderTemplate } from '../../services/template-service.js';
-import { ARTIFACT_DIRS, CONFIG_FILENAME } from '../../utils/constants.js';
+import { ARTIFACT_DIRS, CLI_COMMAND, CONFIG_FILENAME } from '../../utils/constants.js';
 import { ensureDir, fileExists, writeFile } from '../../utils/fs.js';
 import { logger } from '../../utils/logger.js';
+import { CliBoundaryError } from '../error-boundary.js';
+
+async function repairConfig(projectDir: string): Promise<void> {
+  const plan = await planConfigRepair(projectDir);
+  if (plan.status === 'valid') {
+    logger.info(`Nothing to repair: ${CONFIG_FILENAME} is valid.`);
+    return;
+  }
+  logger.info(`${CONFIG_FILENAME} is missing required fields. The repair will add:`);
+  for (const line of plan.preview) logger.info(`  ${line}`);
+  if (!(await promptConfirm(`Add these fields to ${CONFIG_FILENAME}?`))) {
+    logger.info(`Repair cancelled; ${CONFIG_FILENAME} is unchanged.`);
+    return;
+  }
+  await applyConfigRepair(projectDir, plan);
+  logger.success(`Repaired ${CONFIG_FILENAME}.`);
+}
 
 export function registerInitCommand(program: Command) {
   program
@@ -19,19 +39,32 @@ export function registerInitCommand(program: Command) {
     .option('--name <name>', 'project name')
     .option('--force', 'replace the existing project configuration')
     .addOption(
+      new Option(
+        '--repair',
+        'add missing required fields to the existing configuration, keeping every other setting',
+      ).conflicts('force'),
+    )
+    .addOption(
       new Option('--no-ai', 'deprecated no-op; initialization is always deterministic').hideHelp(),
     )
     .addOption(
       new Option('-y, --yes', 'deprecated no-op retained for script compatibility').hideHelp(),
     )
-    .action(async (options: { name?: string; force?: boolean }) => {
+    .action(async (options: { name?: string; force?: boolean; repair?: boolean }) => {
       const projectDir = program.opts().projectDir as string;
+      if (options.repair) {
+        await repairConfig(projectDir);
+        return;
+      }
       const configPath = path.join(projectDir, CONFIG_FILENAME);
-      if (await fileExists(configPath)) {
-        if (!options.force)
-          throw new Error(
-            'OpenPlanr is already initialized; pass --force to replace its configuration.',
-          );
+      if ((await fileExists(configPath)) && !options.force) {
+        throw new CliBoundaryError(
+          'E_ALREADY_INITIALIZED',
+          `OpenPlanr is already initialized: ${CONFIG_FILENAME} exists.`,
+          {
+            recovery: `Run \`${CLI_COMMAND} init --repair\` to add missing fields and keep your settings, or \`${CLI_COMMAND} init --force\` to replace the configuration.`,
+          },
+        );
       }
       assertPlanningFolderWritable(projectDir);
       const projectName = options.name?.trim() || path.basename(projectDir);

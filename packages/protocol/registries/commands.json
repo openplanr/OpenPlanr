@@ -482,7 +482,7 @@
       "ownerPackage": "openplanr",
       "source": {
         "path": "packages/cli/src/cli/commands/init-deterministic.ts",
-        "digest": "sha256:1b0096935b968df8ee70985a7100dd39b6d79febbcdcf396e5b65466fe589a41"
+        "digest": "sha256:8f70a5a85a89c821141aa6522e2126efa32a8579f816908a9f8efb3045099d8f"
       },
       "authorityClass": "workflow",
       "machineJson": false,
@@ -1948,5 +1948,5 @@
       ]
     }
   ],
-  "documentDigest": "sha256:06b45fbc4b7688fdd0df8ba48115aaf6536b117c1ec44b05f2e14fb0ec491b10"
+  "documentDigest": "sha256:fc9d838b7a5c85898ef6f7529a4b7eab4d18233144588854e1b794b39a37b664"
 }

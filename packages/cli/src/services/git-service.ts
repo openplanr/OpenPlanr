@@ -167,6 +167,32 @@ export async function checkoutPaths(projectDir: string, relativePaths: string[])
   });
 }
 
+/**
+ * The `YYYY-MM-DD` date git first added `relativePath`, or null when it has no history.
+ * Null also covers a directory outside a repository, a repository without commits, and missing git.
+ */
+export async function firstAddedDate(
+  projectDir: string,
+  relativePath: string,
+): Promise<string | null> {
+  let stdout: string;
+  try {
+    ({ stdout } = await execFileAsync(
+      'git',
+      ['log', '--diff-filter=A', '--follow', '--format=%as', '--', relativePath],
+      { cwd: projectDir, maxBuffer: GIT_MAX_BUFFER },
+    ));
+  } catch (err) {
+    const reason = err instanceof Error ? err.message : String(err);
+    if (/not a git repository|does not have any commits|ENOENT|git: not found/i.test(reason)) {
+      return null;
+    }
+    throw err;
+  }
+  const dates = stdout.split('\n').filter((line) => line.trim().length > 0);
+  return dates.at(-1)?.trim() ?? null;
+}
+
 export type GitCommitResult =
   | { committed: true; sha: string; paths: string[] }
   | { committed: false; reason: string };
