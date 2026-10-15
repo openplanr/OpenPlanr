@@ -243,10 +243,17 @@ test('packaged Plan and Ship helpers run offline with no planr executable or mod
     const missingRoot = resolve(project, 'missing-plan');
     const rejected = previewIds(missingRoot);
     assert.equal(rejected.status, 1);
-    assert.match(rejected.stderr, /Planning root .*missing-plan does not exist/u);
+    assert.match(
+      rejected.stderr,
+      /Planning root .*missing-plan is not inside an OpenPlanr project/u,
+    );
     assert.equal(existsSync(missingRoot), false, 'preview must perform zero writes');
 
     mkdirSync(resolve(project, '.planr/specs/SPEC-001-demo/tasks'), { recursive: true });
+    writeFileSync(
+      resolve(project, '.planr/config.json'),
+      JSON.stringify({ outputPaths: { agile: '.planr' } }),
+    );
     writeFileSync(
       resolve(project, 'package.json'),
       JSON.stringify({ scripts: { test: 'node --test', lint: 'node lint.mjs' } }),
