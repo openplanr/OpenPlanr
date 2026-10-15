@@ -225,30 +225,35 @@ test('packaged Plan and Ship helpers run offline with no planr executable or mod
       OPENAI_API_KEY: '',
       OLLAMA_HOST: '',
     };
+    const previewIds = (planningRoot) =>
+      spawnSync(
+        process.execPath,
+        [
+          resolve(root, 'dist/plugins/openai/openplanr/skills/plan/scripts/planning-ids.mjs'),
+          '--root',
+          planningRoot,
+          '--stories',
+          '2',
+          '--tasks',
+          '2',
+          '--preview',
+        ],
+        { cwd: project, encoding: 'utf8', env },
+      );
     const missingRoot = resolve(project, 'missing-plan');
-    const ids = spawnSync(
-      process.execPath,
-      [
-        resolve(root, 'dist/plugins/openai/openplanr/skills/plan/scripts/planning-ids.mjs'),
-        '--root',
-        missingRoot,
-        '--stories',
-        '2',
-        '--tasks',
-        '2',
-        '--preview',
-      ],
-      { cwd: project, encoding: 'utf8', env },
+    const rejected = previewIds(missingRoot);
+    assert.equal(rejected.status, 1);
+    assert.match(
+      rejected.stderr,
+      /Planning root .*missing-plan is not inside an OpenPlanr project/u,
     );
-    assert.equal(ids.status, 0, ids.stderr);
-    assert.deepEqual(JSON.parse(ids.stdout).ids, {
-      SPEC: [],
-      US: ['US-001', 'US-002'],
-      T: ['T-001', 'T-002'],
-    });
     assert.equal(existsSync(missingRoot), false, 'preview must perform zero writes');
 
     mkdirSync(resolve(project, '.planr/specs/SPEC-001-demo/tasks'), { recursive: true });
+    writeFileSync(
+      resolve(project, '.planr/config.json'),
+      JSON.stringify({ outputPaths: { agile: '.planr' } }),
+    );
     writeFileSync(
       resolve(project, 'package.json'),
       JSON.stringify({ scripts: { test: 'node --test', lint: 'node lint.mjs' } }),
@@ -257,6 +262,13 @@ test('packaged Plan and Ship helpers run offline with no planr executable or mod
       resolve(project, '.planr/specs/SPEC-001-demo/tasks/T-001-demo.md'),
       '## Test Requirements\n\n- AC-001: npm test\n',
     );
+    const ids = previewIds(resolve(project, '.planr/specs'));
+    assert.equal(ids.status, 0, ids.stderr);
+    assert.deepEqual(JSON.parse(ids.stdout).ids, {
+      SPEC: [],
+      US: ['US-001', 'US-002'],
+      T: ['T-002', 'T-003'],
+    });
     const checks = spawnSync(
       process.execPath,
       [

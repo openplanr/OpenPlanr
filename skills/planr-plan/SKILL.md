@@ -77,7 +77,10 @@ Write stories and tasks directly in the repository's active planning mode.
 
 - Allocate project-global monotonic `US-NNN` and `T-NNN` IDs. Never reuse a
   deleted ID. The packaged [planning ID helper](scripts/planning-ids.mjs) may
-  inspect or reserve IDs; it never generates content.
+  inspect or reserve IDs; it never generates content. Pass `--root` with the
+  `specs` folder under the project's configured planning path (`.planr/specs`
+  by default). It exits non-zero when that folder is missing or is not the one
+  `.planr/config.json` configures; never fall back to `US-001` or `T-001`.
 - Give each story stable acceptance IDs starting at `AC-001`.
 - Split each story into tasks that are coherent and independently verifiable.
   Separate by ownership first: UI work is a `UI` task for the frontend role and

@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
-import { mkdir, open, readdir, readFile, rename, unlink, writeFile } from 'node:fs/promises';
-import { resolve } from 'node:path';
+import { open, readdir, readFile, rename, stat, unlink, writeFile } from 'node:fs/promises';
+import { dirname, join, resolve } from 'node:path';
 
 const KINDS = Object.freeze(['SPEC', 'US', 'T']);
 const EMPTY = Object.freeze({ SPEC: 1, US: 1, T: 1 });
@@ -71,9 +71,55 @@ function parseArgs(argv) {
   return options;
 }
 
+const shellQuote = (value) => (/^[\w./-]+$/u.test(value) ? value : `'${value.replaceAll("'", "'\\''")}'`);
+
+/** Returns the nearest `.planr/config.json` at or above `directory` and the specs folder it configures. */
+async function configuredRoot(directory) {
+  for (let current = directory; ; current = dirname(current)) {
+    const configPath = join(current, '.planr', 'config.json');
+    const raw = await readFile(configPath, 'utf8').catch((error) => {
+      if (error.code === 'ENOENT' || error.code === 'ENOTDIR') return null;
+      throw error;
+    });
+    if (raw !== null) {
+      let agile;
+      try {
+        agile = JSON.parse(raw).outputPaths?.agile ?? '.planr';
+      } catch (error) {
+        throw new Error(`Project config ${configPath} is not valid JSON: ${error.message}`);
+      }
+      if (typeof agile !== 'string') throw new Error(`Project config ${configPath} has a non-string outputPaths.agile.`);
+      return { configPath, expected: resolve(current, agile, 'specs') };
+    }
+    if (dirname(current) === current) return null;
+  }
+}
+
+/** Accepts only an existing directory that the nearest project config names as its planning folder. */
+async function assertPlanningRoot(planningRoot) {
+  const project = await configuredRoot(planningRoot);
+  if (!project) {
+    throw new Error(`Planning root ${planningRoot} is not inside an OpenPlanr project: no .planr/config.json in it or any parent directory.`);
+  }
+  const { configPath, expected } = project;
+  if (planningRoot !== expected) {
+    throw new Error(`Planning root ${planningRoot} is not the planning folder configured by ${configPath}, which expects ${expected}.`);
+  }
+  const status = await stat(planningRoot).catch((error) => {
+    if (error.code === 'ENOENT') return null;
+    throw error;
+  });
+  if (!status) {
+    throw new Error(
+      `Planning root ${planningRoot} does not exist; ${configPath} expects it. Create it with \`mkdir -p ${shellQuote(planningRoot)}\`, or fix outputPaths.agile in ${configPath}.`,
+    );
+  }
+  if (!status.isDirectory()) throw new Error(`Planning root ${planningRoot} is not a directory; ${configPath} expects a directory there.`);
+}
+
 async function reserve({ root, preview, counts }) {
   const planningRoot = resolve(root);
-  if (!preview) await mkdir(planningRoot, { recursive: true });
+  await assertPlanningRoot(planningRoot);
   const run = async () => {
     const sequence = await currentSequence(planningRoot);
     const ids = Object.fromEntries(
