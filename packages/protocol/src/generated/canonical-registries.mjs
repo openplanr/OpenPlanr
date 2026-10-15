@@ -1507,7 +1507,7 @@ export const CANONICAL_REGISTRIES = deepFreeze({
         "ownerPackage": "openplanr",
         "source": {
           "path": "skills/planr-plan/SKILL.md",
-          "digest": "sha256:1f4d7295484abacb0dbe8e0b59398248d9a7d272d9706a235d51bb3990ec9643"
+          "digest": "sha256:7c3ac0c29ce4f4a81ff9173a576117c7c940402e33c2426171d79eeaff3c2b25"
         },
         "authorityClass": "workflow",
         "machineJson": false,
@@ -1738,7 +1738,7 @@ export const CANONICAL_REGISTRIES = deepFreeze({
         "ownerPackage": "openplanr",
         "source": {
           "path": "skills/planr-plan/SKILL.md",
-          "digest": "sha256:1f4d7295484abacb0dbe8e0b59398248d9a7d272d9706a235d51bb3990ec9643"
+          "digest": "sha256:7c3ac0c29ce4f4a81ff9173a576117c7c940402e33c2426171d79eeaff3c2b25"
         },
         "authorityClass": "workflow",
         "machineJson": false,
@@ -2242,7 +2242,7 @@ export const CANONICAL_REGISTRIES = deepFreeze({
         "ownerPackage": "planr-pipeline",
         "source": {
           "path": "skills/planr-plan/SKILL.md",
-          "digest": "sha256:1f4d7295484abacb0dbe8e0b59398248d9a7d272d9706a235d51bb3990ec9643"
+          "digest": "sha256:7c3ac0c29ce4f4a81ff9173a576117c7c940402e33c2426171d79eeaff3c2b25"
         },
         "authorityClass": "compatibility-router",
         "machineJson": false,
@@ -3099,7 +3099,7 @@ export const CANONICAL_REGISTRIES = deepFreeze({
         ]
       }
     ],
-    "documentDigest": "sha256:d101f0ee9e8860db818570fb1be4f094ea1bac7f698632043bc64e79c29f3374"
+    "documentDigest": "sha256:c5620ccf7cdefbc6a4d672693d24149f91df7f40bc9852ac6767e12576b33d50"
   },
   "skills.json": {
     "kind": "skill-catalog",

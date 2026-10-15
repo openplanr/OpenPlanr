@@ -824,7 +824,7 @@
       "assets": [
         {
           "path": "skills/plan/SKILL.md",
-          "digest": "sha256:a2e82ebfbc71ceff6186779a60ba1a3b47ec8a6c42444a6953abb0bebbfa8c54"
+          "digest": "sha256:8066928db90362a8b19501b1910b475658fedb0f18d636dec8705f7934ecbd38"
         },
         {
           "path": "skills/plan/openplanr.skill.json",
@@ -844,7 +844,7 @@
         },
         {
           "path": "skills/plan/scripts/planning-ids.mjs",
-          "digest": "sha256:5962fb674a45ce1c67c0fd7aa3085151ff1c817f4004baaa865acbdff5757adb"
+          "digest": "sha256:c7b5fabfd455f191b1064b5873d17bed19469279616ee83f252aeba33a69738b"
         },
         {
           "path": "skills/plan/scripts/design.mjs",

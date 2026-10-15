@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { mkdir, open, readdir, readFile, rename, unlink, writeFile } from 'node:fs/promises';
+import { open, readdir, readFile, rename, stat, unlink, writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 
 const KINDS = Object.freeze(['SPEC', 'US', 'T']);
@@ -71,9 +71,24 @@ function parseArgs(argv) {
   return options;
 }
 
+/** Rejects a root that is missing, not a directory, or holds no sequence and no planning entries. */
+async function assertPlanningRoot(planningRoot) {
+  const status = await stat(planningRoot).catch((error) => {
+    if (error.code === 'ENOENT') throw new Error(`Planning root ${planningRoot} does not exist. Pass --root <project>/.planr/specs.`);
+    throw error;
+  });
+  if (!status.isDirectory()) throw new Error(`Planning root ${planningRoot} is not a directory. Pass --root <project>/.planr/specs.`);
+  const [stored, maxima] = await Promise.all([readSequence(planningRoot), scanMaxima(planningRoot)]);
+  if (!stored && KINDS.every((kind) => maxima[kind] === 0)) {
+    throw new Error(
+      `Planning root ${planningRoot} has no .id-sequence.json and no SPEC-, US- or T- entries, so it is not a planning folder. Pass --root <project>/.planr/specs.`,
+    );
+  }
+}
+
 async function reserve({ root, preview, counts }) {
   const planningRoot = resolve(root);
-  if (!preview) await mkdir(planningRoot, { recursive: true });
+  await assertPlanningRoot(planningRoot);
   const run = async () => {
     const sequence = await currentSequence(planningRoot);
     const ids = Object.fromEntries(
