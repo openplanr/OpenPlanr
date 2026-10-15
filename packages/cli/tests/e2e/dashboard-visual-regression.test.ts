@@ -944,7 +944,7 @@ test.describe('dashboard real-browser quality', () => {
       await expect(page.locator('[data-route-kind="operate.today"]')).toBeVisible();
 
       const paletteTrigger = page.getByRole('button', {
-        name: 'Open the command palette',
+        name: 'Jump to a view or an artifact',
       });
       await touchTap(page, paletteTrigger);
       const palette = page.locator('dialog.pc-palette');

@@ -1137,7 +1137,12 @@ export function mountDiagramStudio(
   };
   window.__openPlanrDiagramStudio = api;
   root.dataset.ready = 'false';
+  const nextFrame = () => new Promise((resolve) => window.requestAnimationFrame(resolve));
   void ensureDiagramFont(document)
+    // The toolbar re-measures in the frame after fonts settle; fit once that layout has landed.
+    .then(() => document.fonts.ready)
+    .then(nextFrame)
+    .then(nextFrame)
     .then(() => {
       if (destroyed) return;
       fit(initialFit());

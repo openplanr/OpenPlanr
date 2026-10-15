@@ -51,8 +51,7 @@ export function InboxTabs({
               key={category}
               aria-label={`${CATEGORY_LABEL[category]}, ${count} ${noun}`}
             >
-              <span>{CATEGORY_LABEL[category]}</span>
-              <strong aria-hidden="true">{count}</strong>
+              <span>{CATEGORY_LABEL[category]}</span> <strong aria-hidden="true">{count}</strong>
             </Tabs.Trigger>
           );
         })}
