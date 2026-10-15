@@ -28,8 +28,10 @@
  */
 
 import { randomUUID } from 'node:crypto';
+import { readFileSync } from 'node:fs';
 import fsPromises from 'node:fs/promises';
 import path from 'node:path';
+import { validateJson } from '../../lib/json-schema.mjs';
 import type { ArtifactFrontmatter, OpenPlanrConfig } from '../models/types.js';
 import { CLI_COMMAND } from '../utils/constants.js';
 import { messageOf } from '../utils/error-message.js';
@@ -925,41 +927,28 @@ function validateRenderedPlanningArtifact(
   }
 }
 
-type PlanningProtocolIssue = { path: string; rule: string; detail: string };
-type PlanningProtocolValidator = (
+/** Protocol frontmatter schemas are projected into the CLI so validation never needs planr-pipeline. */
+function planningProtocolSchema(
   kind: 'spec' | 'story' | 'task',
-  value: unknown,
-  options: { protocolVersion: '1.0.0' | '1.7.0' },
-) => PlanningProtocolIssue[];
-
-async function loadPlanningProtocolValidator(): Promise<PlanningProtocolValidator | null> {
-  try {
-    const protocol = await import('planr-pipeline/protocol');
-    return protocol.validateProtocolArtifact as PlanningProtocolValidator;
-  } catch (error) {
-    const moduleError = error as NodeJS.ErrnoException;
-    if (
-      moduleError.code === 'ERR_MODULE_NOT_FOUND' &&
-      moduleError.message.includes('planr-pipeline')
-    ) {
-      logger.warn(
-        'Full Protocol frontmatter validation is unavailable because optional planr-pipeline is not installed. Install the matching planr-pipeline version before promoting this spec.',
-      );
-      return null;
-    }
-    throw error;
-  }
+  protocolVersion: '1.0.0' | '1.7.0',
+): unknown {
+  const schemaUrl = new URL(
+    `../../lib/schemas/v${protocolVersion}/${kind}.schema.json`,
+    import.meta.url,
+  );
+  return JSON.parse(readFileSync(schemaUrl, 'utf8'));
 }
 
 function validatePlanningProtocolFrontmatter(
-  validator: PlanningProtocolValidator | null,
   kind: 'spec' | 'story' | 'task',
   content: string,
   artifactId: string,
   protocolVersion: '1.0.0' | '1.7.0' = '1.0.0',
 ): void {
-  if (!validator) return;
-  const issues = validator(kind, parseMarkdown(content).data, { protocolVersion });
+  const issues = validateJson(
+    parseMarkdown(content).data,
+    planningProtocolSchema(kind, protocolVersion),
+  );
   if (issues.length === 0) return;
   const summary = issues
     .slice(0, 8)
@@ -993,7 +982,6 @@ async function replaceSpecWithDecomposition(
   const specDirName = path.basename(spec.specDir);
   const stagedSpecDir = path.join(specParent, `.${specDirName}.decompose-stage-${transactionId}`);
   const backupSpecDir = path.join(specParent, `.${specDirName}.decompose-backup-${transactionId}`);
-  const protocolValidator = await loadPlanningProtocolValidator();
 
   try {
     await fsPromises.cp(spec.specDir, stagedSpecDir, {
@@ -1042,13 +1030,7 @@ async function replaceSpecWithDecomposition(
           specId: spec.id,
           storyId,
         });
-        validatePlanningProtocolFrontmatter(
-          protocolValidator,
-          'task',
-          rendered.content,
-          taskId,
-          '1.7.0',
-        );
+        validatePlanningProtocolFrontmatter('task', rendered.content, taskId, '1.7.0');
         renderedTasks.push({
           id: taskId,
           filename,
@@ -1080,13 +1062,7 @@ async function replaceSpecWithDecomposition(
         })),
       });
       validateRenderedPlanningArtifact(renderedStory.content, { id: storyId, specId: spec.id });
-      validatePlanningProtocolFrontmatter(
-        protocolValidator,
-        'story',
-        renderedStory.content,
-        storyId,
-        '1.7.0',
-      );
+      validatePlanningProtocolFrontmatter('story', renderedStory.content, storyId, '1.7.0');
       await writeFile(
         path.join(stagedStoriesDir, `${storyId}-${renderedStory.slug}.md`),
         renderedStory.content,
@@ -1107,7 +1083,6 @@ async function replaceSpecWithDecomposition(
       throw invalidDecomposition('rendered spec status update did not preserve its identity.');
     }
     validatePlanningProtocolFrontmatter(
-      protocolValidator,
       'spec',
       stagedSpecContent,
       spec.id,
