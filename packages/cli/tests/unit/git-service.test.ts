@@ -7,6 +7,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import {
   checkCleanTree,
   commitPaths,
+  firstAddedDate,
   GitUnavailableError,
   inspectGitTree,
 } from '../../src/services/git-service.js';
@@ -169,5 +170,49 @@ describe('git-service', () => {
     } finally {
       rmSync(plain, { recursive: true, force: true });
     }
+  });
+});
+
+describe('firstAddedDate', () => {
+  const dirs: string[] = [];
+  const tempDir = () => {
+    const dir = mkdtempSync(join(tmpdir(), 'planr-first-added-'));
+    dirs.push(dir);
+    return dir;
+  };
+
+  afterAll(() => {
+    for (const dir of dirs)
+      rmSync(dir, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 });
+  });
+
+  it('returns null outside a git repository', async () => {
+    expect(await firstAddedDate(tempDir(), 'config.json')).toBeNull();
+  });
+
+  it('returns null in a repository with no commits', async () => {
+    const dir = tempDir();
+    await gitInit(dir);
+    expect(await firstAddedDate(dir, 'config.json')).toBeNull();
+  });
+
+  it('returns null outside a repository even when git reports errors in another language', async () => {
+    const dir = tempDir();
+    const previous = process.env.LC_ALL;
+    process.env.LC_ALL = 'de_DE.UTF-8';
+    try {
+      expect(await firstAddedDate(dir, 'config.json')).toBeNull();
+    } finally {
+      if (previous === undefined) delete process.env.LC_ALL;
+      else process.env.LC_ALL = previous;
+    }
+  });
+
+  it('returns the date git first added the file', async () => {
+    const dir = tempDir();
+    await gitInit(dir);
+    writeFileSync(join(dir, 'config.json'), '{}');
+    await gitCommit(dir, 'add config');
+    expect(await firstAddedDate(dir, 'config.json')).toMatch(/^\d{4}-\d{2}-\d{2}$/);
   });
 });

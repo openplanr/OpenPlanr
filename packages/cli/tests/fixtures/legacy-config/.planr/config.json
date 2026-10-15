@@ -1,0 +1,9 @@
+{
+  "projectName": "legacy-project",
+  "outputPaths": {
+    "agile": ".planr"
+  },
+  "idPrefix": {
+    "spec": "RFC"
+  }
+}

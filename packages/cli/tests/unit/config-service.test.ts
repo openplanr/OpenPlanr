@@ -1,6 +1,12 @@
 import { join } from 'node:path';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { createDefaultConfig, loadConfig, saveConfig } from '../../src/services/config-service.js';
+import {
+  applyConfigRepair,
+  createDefaultConfig,
+  loadConfig,
+  planConfigRepair,
+  saveConfig,
+} from '../../src/services/config-service.js';
 
 vi.mock('../../src/utils/fs.js', () => ({
   fileExists: vi.fn(),
@@ -8,11 +14,17 @@ vi.mock('../../src/utils/fs.js', () => ({
   writeFile: vi.fn(),
 }));
 
+vi.mock('../../src/services/git-service.js', () => ({
+  firstAddedDate: vi.fn(),
+}));
+
+import { firstAddedDate } from '../../src/services/git-service.js';
 import { fileExists, readFile, writeFile } from '../../src/utils/fs.js';
 
 const mockFileExists = vi.mocked(fileExists);
 const mockReadFile = vi.mocked(readFile);
 const mockWriteFile = vi.mocked(writeFile);
+const mockFirstAddedDate = vi.mocked(firstAddedDate);
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -72,9 +84,11 @@ describe('loadConfig', () => {
     // What failed, with what input, and why.
     expect(error.message).toContain('targets');
     expect(error.message).toContain('createdAt');
-    expect(error.message).toContain('config.json');
+    // Relative, so the error boundary's absolute-path redaction cannot mask it as `<path>`.
+    expect(error.message).toContain('.planr/config.json');
+    expect(error.message).not.toContain('/project');
     // And how to fix it — surfaced by the CLI's top-level handler for `E_` codes.
-    expect(error.fix).toContain('openplanr init');
+    expect(error.fix).toContain('openplanr init --repair');
   });
 
   it('throws on invalid target value', async () => {
@@ -101,7 +115,7 @@ describe('loadConfig report-linter phrase patterns', () => {
     const error = await loadWithPattern('(unclosed');
 
     expect(error).toMatchObject({ name: 'ConfigInvalidError', code: 'E_CONFIG_INVALID' });
-    expect((error as Error).message).toContain(join('/project', '.planr', 'config.json'));
+    expect((error as Error).message).toContain('.planr/config.json');
     expect((error as Error).message).toContain(
       'reportLinter.vaguePhrases.0.pattern: "(unclosed" is not a valid regular expression',
     );
@@ -112,7 +126,7 @@ describe('loadConfig report-linter phrase patterns', () => {
       const error = await loadWithPattern(pattern);
 
       expect(error).toMatchObject({ name: 'ConfigInvalidError', code: 'E_CONFIG_INVALID' });
-      expect((error as Error).message).toContain(join('/project', '.planr', 'config.json'));
+      expect((error as Error).message).toContain('.planr/config.json');
       expect((error as Error).message).toContain(
         `reportLinter.vaguePhrases.0.pattern: ${JSON.stringify(pattern)} can match empty text`,
       );
@@ -125,6 +139,109 @@ describe('loadConfig report-linter phrase patterns', () => {
     expect(config).toMatchObject({
       reportLinter: { vaguePhrases: [{ alternatives: ['by Friday'] }] },
     });
+  });
+});
+
+describe('planConfigRepair', () => {
+  const legacyConfig = {
+    projectName: 'legacy',
+    outputPaths: { agile: 'docs/agile' },
+    idPrefix: { spec: 'RFC' },
+    customKey: { kept: true },
+  };
+
+  function project(files: string[], config: unknown): void {
+    const present = new Set([
+      join('/project', '.planr', 'config.json'),
+      ...files.map((file) => join('/project', file)),
+    ]);
+    mockFileExists.mockImplementation(async (filePath) => present.has(filePath));
+    mockReadFile.mockResolvedValue(typeof config === 'string' ? config : JSON.stringify(config));
+  }
+
+  it('adds only targets and createdAt, inferring targets from agent files and keeping every other key', async () => {
+    project(['CLAUDE.md', 'AGENTS.md'], legacyConfig);
+    mockFirstAddedDate.mockResolvedValue('2025-11-02');
+
+    const plan = await planConfigRepair('/project');
+
+    expect(plan).toMatchObject({
+      status: 'repair',
+      added: { targets: ['claude', 'codex'], createdAt: '2025-11-02' },
+    });
+    if (plan.status !== 'repair') throw new Error(`expected a repair plan, got ${plan.status}`);
+    await applyConfigRepair('/project', plan);
+    const written = JSON.parse(mockWriteFile.mock.calls[0][1]);
+    expect(written).toEqual({
+      ...legacyConfig,
+      targets: ['claude', 'codex'],
+      createdAt: '2025-11-02',
+    });
+    expect(mockWriteFile.mock.calls[0][0]).toBe(join('/project', '.planr', 'config.json'));
+  });
+
+  it('previews each added field with its value and source, without writing', async () => {
+    project(['.claude', '.cursor/rules'], legacyConfig);
+    mockFirstAddedDate.mockResolvedValue(null);
+    const today = new Date().toISOString().split('T')[0];
+
+    const plan = await planConfigRepair('/project');
+
+    expect(plan.status === 'repair' && plan.preview).toEqual([
+      'targets: ["cursor","claude"] (from agent files in the project)',
+      `createdAt: "${today}" (today; no git history for the config)`,
+    ]);
+    expect(mockWriteFile).not.toHaveBeenCalled();
+  });
+
+  it('falls back to the init default targets and labels them as default', async () => {
+    project([], legacyConfig);
+    mockFirstAddedDate.mockResolvedValue('2025-11-02');
+
+    const plan = await planConfigRepair('/project');
+
+    expect(plan).toMatchObject({ added: { targets: ['cursor', 'claude', 'codex'] } });
+    expect(plan.status === 'repair' && plan.preview[0]).toContain('default; no agent files found');
+  });
+
+  it('adds only the field that is missing', async () => {
+    project(['AGENTS.md'], { ...legacyConfig, createdAt: '2024-01-01' });
+
+    const plan = await planConfigRepair('/project');
+
+    expect(plan).toMatchObject({ status: 'repair', added: { targets: ['codex'] } });
+    expect(plan.status === 'repair' && plan.added).not.toHaveProperty('createdAt');
+    expect(mockFirstAddedDate).not.toHaveBeenCalled();
+  });
+
+  it('reports a valid config as nothing to repair', async () => {
+    project([], validConfig);
+    expect(await planConfigRepair('/project')).toEqual({ status: 'valid' });
+    expect(mockWriteFile).not.toHaveBeenCalled();
+  });
+
+  it('fails with the not-initialized error when the config is missing', async () => {
+    mockFileExists.mockResolvedValue(false);
+    await expect(planConfigRepair('/project')).rejects.toMatchObject({
+      name: 'ConfigNotFoundError',
+    });
+  });
+
+  it('refuses unparseable JSON, naming the file', async () => {
+    project([], '{ invalid json');
+    const error = await planConfigRepair('/project').catch((caught: unknown) => caught);
+    expect(error).toMatchObject({ code: 'E_CONFIG_INVALID' });
+    expect((error as Error).message).toContain('.planr/config.json is not valid JSON');
+    expect(mockWriteFile).not.toHaveBeenCalled();
+  });
+
+  it('refuses issues in fields it does not add, naming them', async () => {
+    project(['CLAUDE.md'], { ...validConfig, targets: ['invalid-target'] });
+    const error = await planConfigRepair('/project').catch((caught: unknown) => caught);
+    expect(error).toMatchObject({ code: 'E_CONFIG_INVALID' });
+    expect((error as Error).message).toContain('targets');
+    expect((error as { recovery?: string }).recovery).toContain('init --repair');
+    expect(mockWriteFile).not.toHaveBeenCalled();
   });
 });
 
