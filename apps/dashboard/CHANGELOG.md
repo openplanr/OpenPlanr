@@ -1,5 +1,18 @@
 # @openplanr/dashboard-app
 
+## 0.1.20
+
+### Patch Changes
+
+- 2c96482: - The dashboard's command palette button and Operate inbox tabs now have accessible names that match their visible text, so voice control and screen readers find them by what's on screen.
+  - The diagram studio fits the drawing after its toolbar finishes laying out, so the first view no longer opens slightly zoomed out.
+  - The dashboard and the diagram and design studios now bundle React 19.3 and radix-ui 1.8.
+- Updated dependencies [c3329c0]
+- Updated dependencies [9d60c2d]
+- Updated dependencies [299a81c]
+- Updated dependencies [08c8b4c]
+  - @openplanr/protocol@0.13.0
+
 ## 0.1.19
 
 ### Patch Changes

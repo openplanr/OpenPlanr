@@ -1,5 +1,23 @@
 # @openplanr/artifact
 
+## 0.6.8
+
+### Patch Changes
+
+- 2c96482: - The dashboard's command palette button and Operate inbox tabs now have accessible names that match their visible text, so voice control and screen readers find them by what's on screen.
+  - The diagram studio fits the drawing after its toolbar finishes laying out, so the first view no longer opens slightly zoomed out.
+  - The dashboard and the diagram and design studios now bundle React 19.3 and radix-ui 1.8.
+- b4583a7: In the dark compact diagram toolbar, the Save icon now changes color together with its hover background, so it stays readable throughout the hover.
+- 299a81c: The JSON Schema validator now enforces `exclusiveMinimum`, `maxProperties`, `dependentRequired` and `unevaluatedProperties`. Data that breaks these constraints in the packaged schemas is rejected. A schema keyword or `format` the validator doesn't support is now reported as an error instead of being ignored.
+- 08c8b4c: The JSON Schema validator now reports a `$ref` it cannot resolve, or one that loops, even inside `not`, `if`, `anyOf` or `oneOf`, where it used to pass silently. A supported keyword with a malformed value, such as `minimum: "3"` or `required: "id"`, is now an error instead of being ignored.
+  
+  A schema that refers to itself now validates data that nests through it, such as a tree of nodes, instead of reporting a circular reference.
+- Updated dependencies [c3329c0]
+- Updated dependencies [9d60c2d]
+- Updated dependencies [299a81c]
+- Updated dependencies [08c8b4c]
+  - @openplanr/protocol@0.13.0
+
 ## 0.6.7
 
 ### Patch Changes
