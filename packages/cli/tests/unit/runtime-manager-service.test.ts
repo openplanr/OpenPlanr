@@ -1154,6 +1154,27 @@ describe('runtime setup', () => {
     expect(doctor.diagnostics.find((item) => item.code === 'lock-drift')).toBeUndefined();
   });
 
+  it('accepts a user-scope setup from another directory without a project lock', async () => {
+    await applySetup({
+      projectDir,
+      cliVersion,
+      runtime: 'codex',
+      scope: 'user',
+      skillMode: 'direct',
+      manageExternalRuntimes: false,
+    });
+    const otherProject = join(root, 'other-project');
+    mkdirSync(otherProject);
+
+    const doctor = await runtimeDoctor(otherProject);
+
+    expect(doctor.diagnostics.find((item) => item.code === 'runtime-lock')).toEqual({
+      code: 'runtime-lock',
+      status: 'pass',
+      message: 'User-scope setup does not require a project runtime lock',
+    });
+  });
+
   it('reports a runtime lock that pins an obsolete skill bundle', async () => {
     await applySetup({
       projectDir,

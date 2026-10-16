@@ -3688,18 +3688,24 @@ export async function runtimeDoctor(
     installed?.ownedFiles.some((file) => file.scope === 'project') ?? false;
   const lock = path.join(projectDir, PLANNING_FOLDER, 'runtime-lock.json');
   if (!existsSync(lock)) {
-    const lockStatus = expectsProjectLock ? 'warn' : installed ? 'pass' : 'warn';
+    // User-scope setup is recorded under the directory it ran in but serves every project.
+    const managed =
+      Boolean(installed) ||
+      Object.values(state.projects).some((project) =>
+        project.runtimes.some((runtime) => projectUsesUserRuntime(project, runtime)),
+      );
+    const lockStatus = expectsProjectLock ? 'warn' : managed ? 'pass' : 'warn';
     diagnostics.push({
       code: 'runtime-lock',
       status: lockStatus,
       message: expectsProjectLock
         ? 'Project runtime lock missing'
-        : installed
+        : managed
           ? 'User-scope setup does not require a project runtime lock'
           : 'No managed runtime setup found for this directory',
       ...(expectsProjectLock
         ? { fix: `Run \`${CLI_COMMAND} setup --scope project\`.` }
-        : !installed
+        : !managed
           ? { fix: `Run \`${CLI_COMMAND} setup\`.` }
           : {}),
     });
