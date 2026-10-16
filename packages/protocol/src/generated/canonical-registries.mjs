@@ -1465,7 +1465,7 @@ export const CANONICAL_REGISTRIES = deepFreeze({
         "ownerPackage": "openplanr",
         "source": {
           "path": "packages/cli/src/cli/commands/doctor.ts",
-          "digest": "sha256:11a1b5732b15ab42862719f0924c57cd6c07b925b10bbe49a3b1c6356c7a3f8d"
+          "digest": "sha256:cdb7e033ae890130d47d06936d0e5b10f38a4b803c39f62abef72add38160e1e"
         },
         "authorityClass": "workflow",
         "machineJson": false,
@@ -3099,7 +3099,7 @@ export const CANONICAL_REGISTRIES = deepFreeze({
         ]
       }
     ],
-    "documentDigest": "sha256:0845b4b4bcc6cd45122ba6531c0c8793f05334012f18cfb58fb704940d3d9488"
+    "documentDigest": "sha256:9e1501ffe1fd7f46a38bb8fa23f4a74c5e14ad4524b54b57fbc971458163e114"
   },
   "skills.json": {
     "kind": "skill-catalog",

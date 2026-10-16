@@ -1,5 +1,14 @@
 import { execFileSync } from 'node:child_process';
-import { lstatSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
+import {
+  chmodSync,
+  lstatSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync,
+} from 'node:fs';
 import { mkdir } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
@@ -482,6 +491,33 @@ function isMutatingClaudeCall(args: string[]): boolean {
   return false;
 }
 
+/** A global-layout install at `<root>/<name>/lib/node_modules/openplanr` holding `version`. */
+function globalInstall(name = 'prefix', version = cliVersion): string {
+  const packageRoot = join(root, name, 'lib', 'node_modules', 'openplanr');
+  mkdirSync(join(root, name, 'bin'), { recursive: true });
+  mkdirSync(packageRoot, { recursive: true });
+  writeFileSync(
+    join(packageRoot, 'package.json'),
+    `${JSON.stringify({ name: 'openplanr', version })}\n`,
+  );
+  return packageRoot;
+}
+
+/** `recordingNpm` whose `npm root -g` reports `globalRoot`; other calls go to `behavior`, indexed among themselves. */
+function npmWithRoot(
+  globalRoot: string,
+  behavior: (args: string[], index: number) => NpmCommandResult,
+): { runner: NpmCommandRunner; calls: string[][] } {
+  let delegated = 0;
+  return recordingNpm((args) =>
+    args.join(' ') === 'root -g'
+      ? { status: 0, stdout: `${globalRoot}\n`, stderr: '' }
+      : behavior(args, delegated++),
+  );
+}
+
+const ok = (): NpmCommandResult => ({ status: 0, stdout: '', stderr: '' });
+
 describe('executeCliHalfUpgrade', () => {
   it('never imports applyBundledClaudePluginIntegration in the upgrade service or command (hard-constraint gate)', () => {
     // The literal "it upgrades the plugin too" reading (Trap E) can only pass by
@@ -493,9 +529,10 @@ describe('executeCliHalfUpgrade', () => {
   });
 
   it('upgrades the npm half, verifies the landed version, and takes the next steps from the upgraded CLI', async () => {
-    // Target the version already on disk so the real `readOpenPlanrVersion()`
-    // verify passes with a no-op npm; the mutation is stubbed, the verify is real.
-    const npm = recordingNpm(() => ({ status: 0, stdout: '', stderr: '' }));
+    // Target the version already on disk so the real on-disk verify passes with
+    // a no-op npm; the mutation is stubbed, the verify is real.
+    const cliPackageRoot = globalInstall();
+    const npm = npmWithRoot(dirname(cliPackageRoot), ok);
     const step = {
       runtime: 'claude-code',
       host: 'Claude Code',
@@ -511,6 +548,7 @@ describe('executeCliHalfUpgrade', () => {
       projectDir: '/tmp/project',
       targetCliVersion: cliVersion,
       npmCommandRunner: npm.runner,
+      cliPackageRoot,
       installedCliRunner: installedCli.runner,
     });
 
@@ -520,8 +558,11 @@ describe('executeCliHalfUpgrade', () => {
     expect(result.installedVersion).toBe(cliVersion);
     expect(result.restoredTo).toBeUndefined();
     expect(result.failure).toBeUndefined();
-    // Exactly one npm mutation: the global install of the target.
-    expect(npm.calls).toEqual([['install', '-g', `openplanr@${cliVersion}`]]);
+    // One read of npm's global folder, then exactly one mutation: the global install of the target.
+    expect(npm.calls).toEqual([
+      ['root', '-g'],
+      ['install', '-g', `openplanr@${cliVersion}`],
+    ]);
     // The previous version's code never plans the agents' updates; the upgraded CLI does.
     expect(installedCli.calls).toEqual([
       ['--project-dir', '/tmp/project', 'upgrade', 'status', '--json'],
@@ -532,11 +573,13 @@ describe('executeCliHalfUpgrade', () => {
   });
 
   it('reports, rather than guesses, when the upgraded CLI lists no next steps', async () => {
-    const npm = recordingNpm(() => ({ status: 0, stdout: '', stderr: '' }));
+    const cliPackageRoot = globalInstall();
+    const npm = npmWithRoot(dirname(cliPackageRoot), ok);
     const result = await executeCliHalfUpgrade({
       projectDir: '/tmp/project',
       targetCliVersion: cliVersion,
       npmCommandRunner: npm.runner,
+      cliPackageRoot,
       installedCliRunner: () => ({ status: 0, stdout: '{"status":"aligned"}\n', stderr: '' }),
     });
 
@@ -547,7 +590,8 @@ describe('executeCliHalfUpgrade', () => {
   });
 
   it('leaves the installed version unchanged and reports ok:false when npm install fails (no mutation)', async () => {
-    const npm = recordingNpm(() => ({
+    const cliPackageRoot = globalInstall();
+    const npm = npmWithRoot(dirname(cliPackageRoot), () => ({
       status: 1,
       stdout: '',
       stderr: 'npm ERR! code E404',
@@ -557,6 +601,7 @@ describe('executeCliHalfUpgrade', () => {
       projectDir: '/tmp/project',
       targetCliVersion: higherCli,
       npmCommandRunner: npm.runner,
+      cliPackageRoot,
       installedCliRunner: installedCli.runner,
     });
 
@@ -568,7 +613,10 @@ describe('executeCliHalfUpgrade', () => {
     expect(result.pluginHalfCommands).toEqual([]);
     expect(result.failure?.step).toBe('npm-install');
     // A failed install is not retried and no next steps are planned.
-    expect(npm.calls).toHaveLength(1);
+    expect(npm.calls).toEqual([
+      ['root', '-g'],
+      ['install', '-g', `openplanr@${higherCli}`],
+    ]);
     expect(installedCli.calls).toHaveLength(0);
   });
 
@@ -577,11 +625,13 @@ describe('executeCliHalfUpgrade', () => {
     // target — the decisive restore case. The guard is the restore call; its proof
     // is the second npm invocation. Revert that call in the source and this
     // `toHaveLength(2)` / `calls[1]` assertion goes red.
-    const npm = recordingNpm(() => ({ status: 0, stdout: '', stderr: '' }));
+    const cliPackageRoot = globalInstall();
+    const npm = npmWithRoot(dirname(cliPackageRoot), ok);
     const result = await executeCliHalfUpgrade({
       projectDir: '/tmp/project',
       targetCliVersion: higherCli,
       npmCommandRunner: npm.runner,
+      cliPackageRoot,
     });
 
     expect(result.ok).toBe(false);
@@ -590,11 +640,15 @@ describe('executeCliHalfUpgrade', () => {
     expect(result.installedVersion).toBe(cliVersion);
     expect(result.failure?.step).toBe('verify');
     expect(result.failure?.message).toContain('Restored the previous version');
-    // The observable proof of the restore: two npm calls, the second reinstalling
-    // the captured previous version.
-    expect(npm.calls).toHaveLength(2);
-    expect(npm.calls[0]).toEqual(['install', '-g', `openplanr@${higherCli}`]);
-    expect(npm.calls[1]).toEqual(['install', '-g', `openplanr@${cliVersion}`]);
+    // The observable proof of the restore: two installs, the second reinstalling
+    // the captured previous version, after checking whether the registry serves the target.
+    expect(npm.calls).toEqual([
+      ['root', '-g'],
+      ['install', '-g', `openplanr@${higherCli}`],
+      ['view', `openplanr@${higherCli}`, 'version'],
+      ['install', '-g', `openplanr@${cliVersion}`],
+    ]);
+    expect(result.failure?.message).toContain(`does not serve openplanr@${higherCli}`);
     // A partial upgrade never renders a summary or prescription.
     expect(result.changelogBullets).toEqual([]);
     expect(result.pluginHalfCommands).toEqual([]);
@@ -603,7 +657,8 @@ describe('executeCliHalfUpgrade', () => {
   it('reports the manual recovery command when the automatic restore also fails', async () => {
     // Install exits clean (wrong version), restore exits non-zero: the user must
     // be told exactly how to recover, never left thinking the machine is fine.
-    const npm = recordingNpm((_args, index) =>
+    const cliPackageRoot = globalInstall();
+    const npm = npmWithRoot(dirname(cliPackageRoot), (_args, index) =>
       index === 0
         ? { status: 0, stdout: '', stderr: '' }
         : { status: 1, stdout: '', stderr: 'registry unreachable' },
@@ -612,11 +667,122 @@ describe('executeCliHalfUpgrade', () => {
       projectDir: '/tmp/project',
       targetCliVersion: higherCli,
       npmCommandRunner: npm.runner,
+      cliPackageRoot,
     });
 
     expect(result.ok).toBe(false);
     expect(result.failure?.step).toBe('verify');
     expect(result.failure?.message).toContain(`npm install -g openplanr@${cliVersion}`);
+  });
+
+  it('installs into the running CLI prefix when npm on PATH uses another one', async () => {
+    const cliPackageRoot = globalInstall('cli-prefix');
+    const otherRoot = dirname(globalInstall('npm-prefix'));
+    const cliPrefix = join(root, 'cli-prefix');
+    const npm = npmWithRoot(otherRoot, (args) => {
+      if (args.join(' ') === `root -g --prefix ${cliPrefix}`)
+        return { status: 0, stdout: `${dirname(cliPackageRoot)}\n`, stderr: '' };
+      if (args[0] === 'install' && args.includes(cliPrefix)) {
+        writeFileSync(
+          join(cliPackageRoot, 'package.json'),
+          `${JSON.stringify({ name: 'openplanr', version: higherCli })}\n`,
+        );
+      }
+      return ok();
+    });
+    const result = await executeCliHalfUpgrade({
+      projectDir: '/tmp/project',
+      targetCliVersion: higherCli,
+      npmCommandRunner: npm.runner,
+      cliPackageRoot,
+      installedCliRunner: () => ({ status: 0, stdout: '{"status":"aligned"}\n', stderr: '' }),
+    });
+
+    expect(result.failure).toBeUndefined();
+    expect(result.installedVersion).toBe(higherCli);
+    expect(npm.calls.filter((args) => args[0] === 'install')).toEqual([
+      ['install', '-g', '--prefix', cliPrefix, `openplanr@${higherCli}`],
+    ]);
+    expect(
+      JSON.parse(readFileSync(join(otherRoot, 'openplanr', 'package.json'), 'utf8')).version,
+    ).toBe(cliVersion);
+  });
+
+  it.skipIf(process.platform === 'win32' || process.getuid?.() === 0)(
+    'refuses before changing anything when the running CLI prefix is not writable',
+    async () => {
+      const cliPackageRoot = globalInstall('cli-prefix');
+      const cliPrefix = join(root, 'cli-prefix');
+      const npm = npmWithRoot(dirname(globalInstall('npm-prefix')), (args) =>
+        args.join(' ') === `root -g --prefix ${cliPrefix}`
+          ? { status: 0, stdout: `${dirname(cliPackageRoot)}\n`, stderr: '' }
+          : ok(),
+      );
+      chmodSync(dirname(cliPackageRoot), 0o555);
+      try {
+        const result = await executeCliHalfUpgrade({
+          projectDir: '/tmp/project',
+          targetCliVersion: higherCli,
+          npmCommandRunner: npm.runner,
+          cliPackageRoot,
+        });
+
+        expect(result.ok).toBe(false);
+        expect(result.failure?.step).toBe('install-location');
+        expect(result.failure?.message).toContain(dirname(cliPackageRoot));
+        expect(result.failure?.message).toContain(
+          `npm install -g --prefix "${cliPrefix}" openplanr@${higherCli}`,
+        );
+        expect(npm.calls.some((args) => args[0] === 'install')).toBe(false);
+      } finally {
+        chmodSync(dirname(cliPackageRoot), 0o755);
+      }
+    },
+  );
+
+  it('refuses when the running CLI is not in an npm global folder and npm installs elsewhere', async () => {
+    const cliPackageRoot = join(root, 'checkout');
+    mkdirSync(cliPackageRoot, { recursive: true });
+    writeFileSync(
+      join(cliPackageRoot, 'package.json'),
+      `${JSON.stringify({ version: cliVersion })}\n`,
+    );
+    const npm = npmWithRoot(dirname(globalInstall('npm-prefix')), ok);
+    const result = await executeCliHalfUpgrade({
+      projectDir: '/tmp/project',
+      targetCliVersion: higherCli,
+      npmCommandRunner: npm.runner,
+      cliPackageRoot,
+    });
+
+    expect(result.failure?.step).toBe('install-location');
+    expect(result.failure?.message).toContain(cliPackageRoot);
+    expect(npm.calls).toEqual([['root', '-g']]);
+  });
+
+  it('does not blame the registry when it serves the target, and reports what it checked', async () => {
+    const cliPackageRoot = globalInstall();
+    const npm = npmWithRoot(dirname(cliPackageRoot), (args) =>
+      args[0] === 'view' ? { status: 0, stdout: `${higherCli}\n`, stderr: '' } : ok(),
+    );
+    const result = await executeCliHalfUpgrade({
+      projectDir: '/tmp/project',
+      targetCliVersion: higherCli,
+      npmCommandRunner: npm.runner,
+      cliPackageRoot,
+    });
+
+    expect(result.failure?.step).toBe('verify');
+    expect(result.failure?.message).toContain(`The registry serves ${higherCli}`);
+    expect(result.failure?.message).not.toContain('does not serve');
+    expect(result.failure?.diagnostics).toMatchObject({
+      npmGlobalRoot: dirname(cliPackageRoot),
+      cliPackageRoot,
+      installCommand: `npm install -g openplanr@${higherCli}`,
+      checkedPath: join(cliPackageRoot, 'package.json'),
+      versionRead: cliVersion,
+      registryVersion: higherCli,
+    });
   });
 });
 
