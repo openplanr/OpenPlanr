@@ -70,12 +70,13 @@ version PR and approving the `npm-release` environment once per release.
    `npm ci` still accepts it on every supported Node line), and `npm run generate` so the
    Protocol projections and plugin manifests are inside the PR. The
    PR is opened by the release GitHub App, so Workspace CI runs on it. Merging it is the release decision.
-2. **Publish.** `publish-packages.yml` runs after every green Workspace CI push run on
-   `main`. Its `plan` job lists the public package versions that commit declares but npm
-   does not have (`scripts/release-train/plan-release.mjs`); with nothing pending it ends
-   there. Otherwise `verify` rebuilds the exact commit, checks for tracked drift and packs
-   every pending package with its publication proof; `publish` waits for the one
-   `npm-release` approval, then publishes in dependency order (Protocol → pipeline →
+2. **Publish.** `publish-packages.yml` runs after every green Workspace CI merge queue
+   run for `main`, once that commit has landed on `main`; a commit that does not land
+   within 15 minutes publishes nothing. Its `plan` job lists the public package versions
+   that commit declares but npm does not have (`scripts/release-train/plan-release.mjs`);
+   with nothing pending it ends there. Otherwise `verify` rebuilds the exact commit,
+   checks for tracked drift and packs every pending package with its publication proof;
+   `publish` waits for the one `npm-release` approval, then publishes in dependency order (Protocol → pipeline →
    CLI) through npm trusted publishing, refusing any existing version with different
    bytes and waiting for each publication to be visible before its dependents
    (`scripts/release-train/publish-archives.mjs`). The same job creates the package-qualified

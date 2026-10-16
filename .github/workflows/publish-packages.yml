@@ -1,15 +1,16 @@
 name: Publish public packages
 
-# Runs after every green Workspace CI push run on main and publishes whatever public
-# package versions that commit declares but npm does not have yet, in dependency
-# order, behind the single npm-release approval. It then tags, releases, and projects
-# the Claude plugin into the public marketplace.
+# Runs after every green Workspace CI merge queue run for main, once that commit has
+# landed on main, and publishes whatever public package versions it declares but npm
+# does not have yet, in dependency order, behind the single npm-release approval. It
+# then tags, releases, and projects the Claude plugin into the public marketplace.
 # workflow_dispatch keeps the manual path for one package or for all pending ones.
 on:
   workflow_run:
     workflows: ['Workspace CI']
     types: [completed]
-    branches: [main]
+    # The merge queue tests the exact commit that lands, so publish from that run.
+    branches: ['gh-readonly-queue/main/**']
   workflow_dispatch:
     inputs:
       package:
@@ -43,10 +44,9 @@ jobs:
       github.repository == 'openplanr/OpenPlanr' && vars.NPM_PUBLISH_ENABLED == 'true' &&
       (github.event_name == 'workflow_dispatch' ||
        (github.event.workflow_run.conclusion == 'success' &&
-        github.event.workflow_run.event == 'push' &&
-        github.event.workflow_run.head_branch == 'main'))
+        github.event.workflow_run.event == 'merge_group'))
     runs-on: ubuntu-24.04
-    timeout-minutes: 10
+    timeout-minutes: 20
     outputs:
       commit: ${{ steps.plan.outputs.commit }}
       has_pending: ${{ steps.plan.outputs.has_pending }}
@@ -54,15 +54,50 @@ jobs:
       cli_pending: ${{ steps.plan.outputs.cli_pending }}
       tag: ${{ github.event.inputs.tag || 'latest' }}
     steps:
+      # Queue CI finishes before the merge, and an ejected group never lands. Skipping is
+      # safe: the next landed commit publishes everything still pending.
+      - name: Wait for the tested commit to land on main
+        id: landed
+        if: github.event_name == 'workflow_run'
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        env:
+          RELEASE_COMMIT: ${{ github.event.workflow_run.head_sha }}
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            const commit = process.env.RELEASE_COMMIT;
+            const deadline = Date.now() + 15 * 60 * 1000;
+            for (;;) {
+              const { data } = await github.rest.repos.compareCommitsWithBasehead({
+                owner,
+                repo,
+                basehead: `main...${commit}`,
+                per_page: 1,
+              });
+              if (data.status === 'identical' || data.status === 'behind') {
+                core.setOutput('landed', 'true');
+                return;
+              }
+              // Queue merges fast-forward, so a commit main has diverged from cannot land.
+              if (data.status === 'diverged' || Date.now() > deadline) {
+                core.notice(`${commit} did not land on main (compare status ${data.status}); nothing published`);
+                core.setOutput('landed', 'false');
+                return;
+              }
+              await new Promise((resolve) => setTimeout(resolve, 20 * 1000));
+            }
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        if: github.event_name == 'workflow_dispatch' || steps.landed.outputs.landed == 'true'
         with:
           ref: ${{ github.event.workflow_run.head_sha || github.sha }}
           persist-credentials: false
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        if: github.event_name == 'workflow_dispatch' || steps.landed.outputs.landed == 'true'
         with:
           node-version: 24
       - name: Decide which public packages still need publishing
         id: plan
+        if: github.event_name == 'workflow_dispatch' || steps.landed.outputs.landed == 'true'
         env:
           RELEASE_PACKAGE: ${{ github.event.inputs.package || 'all-pending' }}
           RELEASE_VERSION: ${{ github.event.inputs.version }}
@@ -79,7 +114,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 60
     steps:
-      - name: Require the successful exact-commit main verification
+      - name: Require the successful exact-commit merge queue verification on main
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         env:
           RELEASE_COMMIT: ${{ needs.plan.outputs.commit }}
@@ -90,8 +125,7 @@ jobs:
               owner,
               repo,
               workflow_id: 'ci.yml',
-              branch: 'main',
-              event: 'push',
+              event: 'merge_group',
               head_sha: process.env.RELEASE_COMMIT,
               per_page: 20,
             });
@@ -99,7 +133,17 @@ jobs:
               (run) => run.status === 'completed' && run.conclusion === 'success',
             );
             if (!verified) {
-              core.setFailed(`Workspace CI has not passed for exact main commit ${process.env.RELEASE_COMMIT}`);
+              core.setFailed(`Workspace CI has not passed a merge queue run for exact commit ${process.env.RELEASE_COMMIT}`);
+              return;
+            }
+            const { data: comparison } = await github.rest.repos.compareCommitsWithBasehead({
+              owner,
+              repo,
+              basehead: `main...${process.env.RELEASE_COMMIT}`,
+              per_page: 1,
+            });
+            if (comparison.status !== 'identical' && comparison.status !== 'behind') {
+              core.setFailed(`${process.env.RELEASE_COMMIT} is not on main (compare status ${comparison.status})`);
               return;
             }
             core.notice(`Reusing Workspace CI evidence from ${verified.html_url}`);

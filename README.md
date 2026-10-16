@@ -16,7 +16,7 @@
 <p align="center">
   <a href="https://www.npmjs.com/package/openplanr"><img alt="npm version" src="https://img.shields.io/npm/v/openplanr?style=flat-square&labelColor=08080C&color=237A72&label=openplanr"></a>
   <a href="https://www.npmjs.com/package/openplanr"><img alt="npm downloads" src="https://img.shields.io/npm/dm/openplanr?style=flat-square&labelColor=08080C&color=237A72"></a>
-  <a href="https://github.com/openplanr/OpenPlanr/actions/workflows/ci.yml"><img alt="Workspace CI" src="https://img.shields.io/github/actions/workflow/status/openplanr/OpenPlanr/ci.yml?branch=main&style=flat-square&labelColor=08080C&color=237A72&label=CI"></a>
+  <a href="https://github.com/openplanr/OpenPlanr/actions/workflows/ci.yml"><img alt="Workspace CI" src="https://img.shields.io/github/actions/workflow/status/openplanr/OpenPlanr/ci.yml?event=merge_group&style=flat-square&labelColor=08080C&color=237A72&label=CI"></a>
   <a href="packages/cli/package.json"><img alt="Supported Node.js versions" src="https://img.shields.io/node/v/openplanr?style=flat-square&labelColor=08080C&color=237A72"></a>
   <a href="LICENSE"><img alt="MIT license" src="https://img.shields.io/badge/license-MIT-237A72?style=flat-square&labelColor=08080C"></a>
 </p>

@@ -3,6 +3,7 @@ import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
+import YAML from 'yaml';
 import {
   isPathInside,
   resolvePipelineCandidateSourceRoot,
@@ -133,6 +134,31 @@ describe('root release proof and public package artifacts', () => {
     );
     expect(publishIfNeeded).toContain('rmSync(candidate.destination');
     expect(publishIfNeeded).not.toContain("spawnSync('npm', ['publish']");
+  });
+
+  it('gates publication on the Workspace CI event its workflow_run trigger selects', () => {
+    const workflow = YAML.parse(publishPackagesWorkflow) as {
+      on: { workflow_run: { branches: string[] } };
+      jobs: { plan: { if: string }; verify: { steps: { with?: { script?: string } }[] } };
+    };
+    // Queue runs report gh-readonly-queue/<base>/... as head_branch; push runs report the base.
+    const triggerEvents = [
+      ...new Set(
+        workflow.on.workflow_run.branches.map((branch) =>
+          branch.startsWith('gh-readonly-queue/') ? 'merge_group' : 'push',
+        ),
+      ),
+    ];
+    const gateEvents = [
+      ...workflow.jobs.plan.if.matchAll(/github\.event\.workflow_run\.event == '([^']+)'/gu),
+    ].map((match) => match[1]);
+    const lookupEvents = workflow.jobs.verify.steps.flatMap((step) =>
+      [...(step.with?.script ?? '').matchAll(/\bevent: '([^']+)'/gu)].map((match) => match[1]),
+    );
+
+    expect(triggerEvents).toEqual(['merge_group']);
+    expect(gateEvents).toEqual(triggerEvents);
+    expect(lookupEvents).toEqual(triggerEvents);
   });
 
   it('certifies one frozen build through deterministic packs and installed bytes', () => {
