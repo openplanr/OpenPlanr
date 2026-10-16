@@ -11,7 +11,7 @@
 
 <p align="center">
   <a href="https://www.npmjs.com/package/planr-pipeline"><img alt="npm version" src="https://img.shields.io/npm/v/planr-pipeline?style=flat-square&labelColor=08080C&color=237A72&label=planr-pipeline"></a>
-  <a href="https://github.com/openplanr/OpenPlanr/actions/workflows/ci.yml"><img alt="Workspace CI" src="https://img.shields.io/github/actions/workflow/status/openplanr/OpenPlanr/ci.yml?branch=main&style=flat-square&labelColor=08080C&color=237A72&label=CI"></a>
+  <a href="https://github.com/openplanr/OpenPlanr/actions/workflows/ci.yml"><img alt="Workspace CI" src="https://img.shields.io/github/actions/workflow/status/openplanr/OpenPlanr/ci.yml?event=merge_group&style=flat-square&labelColor=08080C&color=237A72&label=CI"></a>
   <a href="https://nodejs.org"><img alt="Supported Node.js versions" src="https://img.shields.io/node/v/planr-pipeline?style=flat-square&labelColor=08080C&color=237A72"></a>
   <a href="https://github.com/openplanr/OpenPlanr/blob/main/LICENSE"><img alt="MIT license" src="https://img.shields.io/badge/license-MIT-237A72?style=flat-square&labelColor=08080C"></a>
 </p>
