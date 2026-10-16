@@ -1,5 +1,19 @@
 # @openplanr/protocol
 
+## 0.13.0
+
+### Minor Changes
+
+- 9d60c2d: Recognize `planr-share` and `planr-connect` as canonical skills.
+
+### Patch Changes
+
+- c3329c0: The plan skill's ID helper now accepts only the planning folder your `.planr/config.json` configures, including an empty one in a new project. For any other folder it stops with an error naming the config it checked and the folder it expects, instead of offering `US-001` and `T-001`. It no longer creates the folder when reserving IDs.
+- 299a81c: The JSON Schema validator now enforces `exclusiveMinimum`, `maxProperties`, `dependentRequired` and `unevaluatedProperties`. Data that breaks these constraints in the packaged schemas is rejected. A schema keyword or `format` the validator doesn't support is now reported as an error instead of being ignored.
+- 08c8b4c: The JSON Schema validator now reports a `$ref` it cannot resolve, or one that loops, even inside `not`, `if`, `anyOf` or `oneOf`, where it used to pass silently. A supported keyword with a malformed value, such as `minimum: "3"` or `required: "id"`, is now an error instead of being ignored.
+  
+  A schema that refers to itself now validates data that nests through it, such as a tree of nodes, instead of reporting a circular reference.
+
 ## 0.12.0
 
 ### Minor Changes
