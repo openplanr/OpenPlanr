@@ -17,6 +17,13 @@ export const CLI_GENERATED_RESOURCES = Object.freeze([
       executable: false,
     },
   ]),
+  ...['v1.0.0', 'v1.7.0'].flatMap((version) =>
+    ['spec', 'story', 'task'].map((kind) => ({
+      source: `packages/protocol/schemas/${version}/${kind}.schema.json`,
+      destination: `packages/cli/lib/schemas/${version}/${kind}.schema.json`,
+      executable: false,
+    })),
+  ),
   {
     source: 'packages/protocol/schemas/v1.18.0/runtime-lock.schema.json',
     destination: 'packages/cli/lib/runtime-lock.schema.json',

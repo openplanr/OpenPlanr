@@ -2,7 +2,7 @@ import { existsSync } from 'node:fs';
 import fs from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { OpenPlanrConfig } from '../../src/models/types.js';
 import {
@@ -215,6 +215,58 @@ describe('deterministic specification storage', () => {
     expect((await listSpecs(projectDir, config)).map(({ id }) => id)).toEqual(['SPEC-001']);
     await destroySpec(projectDir, config, 'SPEC-001');
     expect(await listSpecs(projectDir, config)).toEqual([]);
+  });
+});
+
+describe('decomposition without the optional planr-pipeline', () => {
+  let specService: typeof import('../../src/services/spec-service.js');
+
+  beforeEach(async () => {
+    vi.resetModules();
+    vi.doMock('planr-pipeline/protocol', () => {
+      throw Object.assign(new Error("Cannot find package 'planr-pipeline'"), {
+        code: 'ERR_MODULE_NOT_FOUND',
+      });
+    });
+    specService = await import('../../src/services/spec-service.js');
+  });
+
+  afterEach(() => {
+    vi.doUnmock('planr-pipeline/protocol');
+    vi.resetModules();
+  });
+
+  it('rejects invalid Protocol frontmatter and writes nothing', async () => {
+    const { specFile } = await specService.createSpec(projectDir, config, 'Scoped access', {
+      slug: 'access',
+    });
+    const original = await fs.readFile(specFile, 'utf8');
+    await fs.writeFile(specFile, original.replace(/^---\n/u, '---\nunexpected: true\n'));
+    const withoutIdSequence = async () => {
+      const { '.planr/specs/.id-sequence.json': _, ...files } = await snapshot(projectDir);
+      return files;
+    };
+    const before = await withoutIdSequence();
+
+    await expect(
+      specService.decomposeSpec(projectDir, config, 'SPEC-001', {
+        decomposition: hostDecomposition,
+      }),
+    ).rejects.toThrow(/violates Protocol .* spec frontmatter: .*unknown property 'unexpected'/u);
+    expect(await withoutIdSequence()).toEqual(before);
+  });
+
+  it('still writes valid stories and tasks', async () => {
+    const { specDir } = await specService.createSpec(projectDir, config, 'Scoped access', {
+      slug: 'access',
+    });
+    await expect(
+      specService.decomposeSpec(projectDir, config, 'SPEC-001', {
+        decomposition: hostDecomposition,
+      }),
+    ).resolves.toMatchObject({ storiesCreated: 1, tasksCreated: 1 });
+    expect((await specService.listSpecStories(specDir)).map(({ id }) => id)).toEqual(['US-001']);
+    expect((await specService.listSpecTasks(specDir)).map(({ id }) => id)).toEqual(['T-001']);
   });
 });
 
