@@ -1,0 +1,61 @@
+name: First-run journeys
+
+# Installs the published openplanr from npm and runs install, init, doctor and upgrade from
+# the previous release, on Linux here and on Windows through the installer guard. The
+# journeys live in scripts/ci/first-run-journeys.mjs. It is not a required check.
+
+on:
+  schedule:
+    - cron: '11 4 * * *'
+  workflow_dispatch: {}
+
+concurrency:
+  group: first-run-journeys-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  linux:
+    name: Linux published-package first run and upgrade
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+      - name: Run the fresh, upgrade and two-prefix journeys
+        run: node scripts/ci/first-run-journeys.mjs
+
+  windows:
+    name: Windows installer guard and first run
+    uses: ./.github/workflows/installer-guard.yml
+
+  report:
+    name: Report a failed nightly run
+    needs: [linux, windows]
+    if: failure() && github.event_name == 'schedule'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      actions: read
+      issues: write
+    steps:
+      - name: Open or update the nightly failure issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          HEAD_SHA: ${{ github.sha }}
+          TITLE: Nightly first-run journeys failed
+        run: |
+          last_green=$(gh run list --workflow first-run-journeys.yml --event schedule --status success --limit 1 --json headSha --jq '.[0].headSha // "none"')
+          body=$(printf 'Scheduled run failed: %s\n\nCommit: %s\nLast green scheduled run commit: %s\n' "$RUN_URL" "$HEAD_SHA" "$last_green")
+          issue=$(gh issue list --state open --limit 500 --json number,title --jq "map(select(.title == \"$TITLE\")) | .[0].number // empty")
+          if [ -n "$issue" ]; then
+            gh issue comment "$issue" --body "$body"
+          else
+            gh issue create --title "$TITLE" --body "$body"
+          fi

@@ -13,6 +13,7 @@ through the root `package.json`; use the root lockfile.
 | `typescript/` | Compile `.mts` sources, check declared exports, prove a migration group behaviour-neutral against a base ref |
 | `run-focused-tests.mjs`, `workspace-command.mjs` | Repeatable workspace verification |
 | `verify-packed-workspace*.mjs` | Isolated public-package install proof |
+| `ci/first-run-journeys.mjs` | Nightly install, init, doctor and upgrade of the published CLI |
 | `migration/` | Executable legacy contract preservation checks |
 | `prepare-publication.mjs` | Validate and pack one reviewed public release; does not publish |
 
