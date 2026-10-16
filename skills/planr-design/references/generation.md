@@ -21,6 +21,7 @@ Place source in a sibling `source/` directory. Shared CSS and components belong 
 shared source; variants write disjoint directories. Preserve IDs during evolution.
 All document source paths are local and relative to its directory; import the
 required asset snapshots rather than referring outside it or to remote resources.
+Fonts are asset snapshots too; follow [design-system.md](design-system.md).
 Use stable `data-planr-id` attributes on meaningful review targets, including
 primary controls and reusable component instances. Avoid anchoring feedback to
 incidental array positions or rendered CSS selectors.

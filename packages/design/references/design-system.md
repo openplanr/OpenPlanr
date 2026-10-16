@@ -40,4 +40,26 @@ already decide them:
 
 Reusable component changes apply to each affected instance. Keep a short record
 of those instances so review can explain the scope and inspect their screenshots.
-Keep source references editable and local; no fonts or runtimes fetched on launch.
+Keep source references editable and local; nothing is fetched when a design opens.
+
+## Fonts
+
+Reuse the project's own fonts first. When a design needs a new family, snapshot it
+while authoring:
+
+- openly licensed families only (OFL or Apache);
+- `woff2` files, Latin subset, only the weights the design uses;
+- files under `source/assets/fonts/`, with each family's license file beside them;
+- local `@font-face` rules, with the upstream URLs in the brief references;
+- at most two families and three weights each; one variable file can cover a
+  family's weights.
+
+When a snapshot cannot be made, for example offline or with an unclear license, use
+the role's system stack and name that fallback in the return:
+
+| Role | System stack |
+| --- | --- |
+| Body, humanist sans | `Seravek, "Gill Sans Nova", Ubuntu, Calibri, "DejaVu Sans", source-sans-pro, sans-serif` |
+| Display, geometric sans | `Avenir, Montserrat, Corbel, "URW Gothic", source-sans-pro, sans-serif` |
+| Display or body, serif | `Charter, "Bitstream Charter", "Sitka Text", Cambria, serif` |
+| Mono | `ui-monospace, "Cascadia Code", "Source Code Pro", Menlo, Consolas, "DejaVu Sans Mono", monospace` |
