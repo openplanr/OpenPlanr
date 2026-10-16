@@ -74,6 +74,27 @@ test('hostile sandbox certification covers Chromium Firefox and WebKit', () => {
   assert.match(launcher, /playwright\[engine\]\.launch\(/);
 });
 
+test('nightly first-run journeys cover Linux and the Windows installer guard and report failures', () => {
+  const workflow = readWorkspace('.github/workflows/first-run-journeys.yml');
+  assert.match(workflow, /schedule:\s*\n\s*- cron:/);
+  assert.match(workflow, /workflow_dispatch: \{\}/);
+  assert.doesNotMatch(workflow, /runs-on: macos/);
+  assert.match(workflow, /run: node scripts\/ci\/first-run-journeys\.mjs\n/);
+  assert.match(workflow, /uses: \.\/\.github\/workflows\/installer-guard\.yml/);
+
+  const report = workflow.split(/\n(?= {2}\S)/).find((block) => block.startsWith('  report:'));
+  assert.ok(report, 'a failed nightly run must be reported');
+  assert.match(report, /needs: \[linux, windows\]/);
+  assert.match(report, /if: failure\(\) && github\.event_name == 'schedule'/);
+
+  const guard = readWorkspace('.github/workflows/installer-guard.yml');
+  assert.match(guard, /workflow_call: \{\}/);
+  assert.match(
+    guard,
+    /if: github\.event_name != 'pull_request'\s*\n\s*run: node scripts\/ci\/first-run-journeys\.mjs --scenario fresh/,
+  );
+});
+
 test('release stack metadata remains valid in spec-driven conformance', () => {
   for (const fixture of ['spec-driven-todo', 'spec-driven-todo-shipped']) {
     assert.doesNotThrow(() =>
