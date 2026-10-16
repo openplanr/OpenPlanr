@@ -76,6 +76,6 @@
   "scripts": {
     "generate": "node ../../scripts/skills/generate-v18.mjs --write",
     "generate:check": "node ../../scripts/skills/generate-v18.mjs --check",
-    "test": "node --test ../../tests/skill-runtime/*.test.mjs"
+    "test": "node --import ../../tests/support/isolate-user-state.mjs --test ../../tests/skill-runtime/*.test.mjs"
   }
 }
