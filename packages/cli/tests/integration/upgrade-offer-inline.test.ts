@@ -123,6 +123,10 @@ beforeAll(() => {
       'if (process.env.OPENPLANR_NPM_LOG) {',
       "  fs.appendFileSync(process.env.OPENPLANR_NPM_LOG, process.argv.slice(2).join(' ') + '\\n');",
       '}',
+      "// The upgrade reads npm's global folder first; report the folder that holds the running CLI.",
+      "if (process.argv.slice(2).join(' ') === 'root -g' && process.env.OPENPLANR_FAKE_NPM_ROOT) {",
+      "  process.stdout.write(process.env.OPENPLANR_FAKE_NPM_ROOT + '\\n');",
+      '}',
       'process.exit(0);',
       '',
     ].join('\n'),
@@ -220,6 +224,7 @@ describe('inline upgrade offer through a real preAction subprocess', () => {
       OPENPLANR_UPGRADE_OFFER_CHOICE: 'upgrade-now',
       OPENPLANR_NPM_BIN: fakeNpm,
       OPENPLANR_NPM_LOG: npmLog,
+      OPENPLANR_FAKE_NPM_ROOT: dirname(resolve('.')),
     });
     expect(result.status, result.stderr || result.stdout).toBe(0);
 

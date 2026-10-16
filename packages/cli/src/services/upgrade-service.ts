@@ -7,7 +7,7 @@
  */
 
 import { spawnSync } from 'node:child_process';
-import { existsSync, readFileSync } from 'node:fs';
+import { accessSync, existsSync, constants as fsConstants, readFileSync } from 'node:fs';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -21,6 +21,14 @@ import {
   inspectBundledClaudePluginIntegration,
   OPENPLANR_CLAUDE_PLUGIN,
 } from './claude-plugin-service.js';
+import {
+  npmPrefixOf,
+  type OpenPlanrOnPath,
+  openPlanrOnPath,
+  readPackageVersion,
+  runningPackageRoot,
+  samePath,
+} from './global-install-service.js';
 import { resolvePipelinePackage } from './pipeline-package-service.js';
 import { readOpenPlanrVersion } from './provenance-service.js';
 import { RUNTIME_LABELS, summarizeRuntimeChanges } from './runtime-change-summary.js';
@@ -1059,6 +1067,8 @@ export interface ExecuteCliHalfUpgradeInput {
   targetCliVersion: string;
   /** Injectable npm runner; defaults to the real (or `OPENPLANR_NPM_BIN`) npm. */
   npmCommandRunner?: NpmCommandRunner;
+  /** The installed package to upgrade; defaults to the running CLI's own package. */
+  cliPackageRoot?: string;
   /** Injectable runner for the upgraded CLI; defaults to a new process of this entry point. */
   installedCliRunner?: InstalledCliRunner;
   /**
@@ -1085,9 +1095,77 @@ export interface ExecuteCliHalfUpgradeResult {
   /** Per-migration results for every registered migration this upgrade crossed. */
   migrations: MigrationRunResult[];
   failure?: {
-    step: 'npm-install' | 'verify' | 'changelog' | 'migration';
+    step: 'install-location' | 'npm-install' | 'verify' | 'changelog' | 'migration';
     message: string;
+    diagnostics?: UpgradeInstallDiagnostics;
   };
+}
+
+/** Where the upgrade installed and what it read back, so a failed verify is diagnosable. */
+export interface UpgradeInstallDiagnostics {
+  npmGlobalRoot: string;
+  cliPackageRoot: string;
+  installCommand: string;
+  checkedPath: string;
+  versionRead: string;
+  registryVersion: string | null;
+  onPath: OpenPlanrOnPath[];
+}
+
+type InstallLocation =
+  | { ok: true; npmGlobalRoot: string; prefixArgs: string[]; checkedRoot: string }
+  | { ok: false; message: string };
+
+function npmOutput(result: NpmCommandResult): string | undefined {
+  return !result.error && result.status === 0 ? result.stdout.trim() || undefined : undefined;
+}
+
+function npmFailureDetail(result: NpmCommandResult): string {
+  return result.error?.message || result.stderr.trim() || `npm exited with status ${result.status}`;
+}
+
+/**
+ * Install into the running CLI's own npm prefix, so the copy the user ran is the one
+ * upgraded and verified. Refuses before any change when that prefix cannot be written.
+ */
+function resolveInstallLocation(
+  runNpm: NpmCommandRunner,
+  cliRoot: string,
+  target: string,
+): InstallLocation {
+  const rootResult = runNpm(['root', '-g']);
+  const npmGlobalRoot = npmOutput(rootResult);
+  if (!npmGlobalRoot) {
+    return {
+      ok: false,
+      message: `Could not read npm's global folder with \`npm root -g\`: ${npmFailureDetail(rootResult)}. Nothing was changed.`,
+    };
+  }
+  const cliFolder = path.dirname(cliRoot);
+  if (samePath(npmGlobalRoot, cliFolder)) {
+    return { ok: true, npmGlobalRoot, prefixArgs: [], checkedRoot: cliRoot };
+  }
+  const prefix = npmPrefixOf(cliRoot);
+  const prefixRoot = prefix ? npmOutput(runNpm(['root', '-g', '--prefix', prefix])) : undefined;
+  if (!prefix || !prefixRoot || !samePath(prefixRoot, cliFolder)) {
+    return {
+      ok: false,
+      message: `The running OpenPlanr at ${cliRoot} is not in an npm global folder that npm can install into, and npm on PATH installs into ${npmGlobalRoot}. Nothing was changed. Upgrade the copy you use with its own npm, for example \`npm install -g openplanr@${target}\`.`,
+    };
+  }
+  const command = `npm install -g --prefix "${prefix}" openplanr@${target}`;
+  const binFolder = process.platform === 'win32' ? prefix : path.join(prefix, 'bin');
+  for (const folder of [cliFolder, binFolder]) {
+    try {
+      accessSync(folder, fsConstants.W_OK);
+    } catch (error) {
+      return {
+        ok: false,
+        message: `The running OpenPlanr is in ${cliFolder}, but npm on PATH installs into ${npmGlobalRoot}, and ${folder} is not writable (${(error as NodeJS.ErrnoException).code ?? 'unknown error'}). Nothing was changed. Run \`${command}\` with permission to write there.`,
+      };
+    }
+  }
+  return { ok: true, npmGlobalRoot, prefixArgs: ['--prefix', prefix], checkedRoot: cliRoot };
 }
 
 /**
@@ -1106,20 +1184,41 @@ export async function executeCliHalfUpgrade(
   input: ExecuteCliHalfUpgradeInput,
 ): Promise<ExecuteCliHalfUpgradeResult> {
   const runNpm = input.npmCommandRunner ?? defaultNpmRunner;
+  const cliRoot = input.cliPackageRoot ?? runningPackageRoot();
   // The restorable backup, captured before any mutation: the version we can
   // always reinstall to undo a bad upgrade.
-  const previousVersion = readOpenPlanrVersion();
-
-  const install = runNpm(['install', '-g', `openplanr@${input.targetCliVersion}`]);
-  if (install.error || install.status !== 0) {
-    // A failed global install leaves the previous package in place — npm never
-    // half-replaces a package. Report honestly; render nothing.
-    const detail =
-      install.error?.message || install.stderr.trim() || `npm exited with status ${install.status}`;
+  const previousVersion = readPackageVersion(cliRoot);
+  const location = resolveInstallLocation(runNpm, cliRoot, input.targetCliVersion);
+  if (!location.ok) {
     return {
       ok: false,
       cliUpgraded: false,
-      installedVersion: readOpenPlanrVersion(),
+      installedVersion: previousVersion,
+      previousVersion,
+      changelogBullets: [],
+      releaseNotes: [],
+      nextSteps: [],
+      pluginHalfCommands: [],
+      migrations: [],
+      failure: { step: 'install-location', message: location.message },
+    };
+  }
+  const installArgs = (version: string) => [
+    'install',
+    '-g',
+    ...location.prefixArgs,
+    `openplanr@${version}`,
+  ];
+
+  const install = runNpm(installArgs(input.targetCliVersion));
+  if (install.error || install.status !== 0) {
+    // A failed global install leaves the previous package in place — npm never
+    // half-replaces a package. Report honestly; render nothing.
+    const detail = npmFailureDetail(install);
+    return {
+      ok: false,
+      cliUpgraded: false,
+      installedVersion: readPackageVersion(cliRoot),
       previousVersion,
       changelogBullets: [],
       releaseNotes: [],
@@ -1133,17 +1232,39 @@ export async function executeCliHalfUpgrade(
     };
   }
 
-  // Verify-after-write: re-read the on-disk version the install just wrote.
-  const verifiedVersion = readOpenPlanrVersion();
+  // Verify-after-write: re-read the package.json in the folder the install just wrote.
+  const checkedPath = path.join(location.checkedRoot, 'package.json');
+  const verifiedVersion = readPackageVersion(location.checkedRoot);
   if (verifiedVersion !== input.targetCliVersion) {
     // The decisive case: a clean exit that did NOT land the target. Restore
-    // the captured previous version and never report success.
-    const restore = runNpm(['install', '-g', `openplanr@${previousVersion}`]);
-    const restoredVersion = readOpenPlanrVersion();
+    // the captured previous version into the same folder and never report success.
+    const registryVersion =
+      npmOutput(runNpm(['view', `openplanr@${input.targetCliVersion}`, 'version'])) ?? null;
+    const restore = runNpm(installArgs(previousVersion));
+    const restoredVersion = readPackageVersion(location.checkedRoot);
     const restored = !restore.error && restore.status === 0 && restoredVersion === previousVersion;
+    const diagnostics: UpgradeInstallDiagnostics = {
+      npmGlobalRoot: location.npmGlobalRoot,
+      cliPackageRoot: cliRoot,
+      installCommand: `npm ${installArgs(input.targetCliVersion).join(' ')}`,
+      checkedPath,
+      versionRead: verifiedVersion,
+      registryVersion,
+      onPath: openPlanrOnPath(),
+    };
+    const onPath = diagnostics.onPath.length
+      ? diagnostics.onPath
+          .map((entry) => `${entry.command} (${entry.version ?? 'unknown version'})`)
+          .join(', ')
+      : 'none';
+    const found = `npm reported success, but ${checkedPath} has ${verifiedVersion}, not ${input.targetCliVersion}. npm's global folder is ${location.npmGlobalRoot}; openplanr on PATH: ${onPath}.`;
+    const cause =
+      registryVersion === input.targetCliVersion
+        ? `The registry serves ${input.targetCliVersion}, so the install went somewhere other than ${location.checkedRoot}.`
+        : `The registry does not serve openplanr@${input.targetCliVersion} yet; retry \`${CLI_COMMAND} upgrade apply\` once it does.`;
     const message = restored
-      ? `npm reported success but installed ${verifiedVersion}, not ${input.targetCliVersion}. Restored the previous version ${previousVersion}. Retry with \`${CLI_COMMAND} upgrade apply\` once the registry serves ${input.targetCliVersion}.`
-      : `npm reported success but installed ${verifiedVersion}, not ${input.targetCliVersion}, and the automatic restore did not complete (now ${restoredVersion}). Reinstall manually: \`npm install -g openplanr@${previousVersion}\`.`;
+      ? `${found} ${cause} Restored the previous version ${previousVersion}.`
+      : `${found} ${cause} The automatic restore did not complete (now ${restoredVersion}). Reinstall manually: \`npm ${installArgs(previousVersion).join(' ')}\`.`;
     return {
       ok: false,
       cliUpgraded: false,
@@ -1155,7 +1276,7 @@ export async function executeCliHalfUpgrade(
       nextSteps: [],
       pluginHalfCommands: [],
       migrations: [],
-      failure: { step: 'verify', message },
+      failure: { step: 'verify', message, diagnostics },
     };
   }
 

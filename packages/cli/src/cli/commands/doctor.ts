@@ -1,4 +1,5 @@
 import type { Command } from 'commander';
+import { openPlanrOnPath } from '../../services/global-install-service.js';
 import { isNonInteractive } from '../../services/interactive-state.js';
 import { promptConfirm } from '../../services/prompt-service.js';
 import { summarizeRuntimeChanges } from '../../services/runtime-change-summary.js';
@@ -168,6 +169,29 @@ async function repairInstallation(
   };
 }
 
+/** Warns when PATH holds more than one OpenPlanr, since upgrades and runs may then use different copies. */
+function globalInstallsDiagnostic(): Diagnosis['diagnostics'][number] {
+  const installs = openPlanrOnPath();
+  const listed = installs
+    .map((entry) => `${entry.command} (${entry.version ?? 'unknown version'})`)
+    .join(', ');
+  if (installs.length <= 1) {
+    return {
+      code: 'openplanr-global-installs',
+      status: 'pass',
+      message: installs.length
+        ? `One openplanr on PATH: ${listed}.`
+        : 'No openplanr found on PATH.',
+    };
+  }
+  return {
+    code: 'openplanr-global-installs',
+    status: 'warn',
+    message: `${installs.length} openplanr installs are on PATH; the first one runs: ${listed}.`,
+    fix: `Keep one: remove the others with their own npm (\`npm uninstall -g openplanr\`), or put the one you upgrade first on PATH.`,
+  };
+}
+
 function printDiagnosis(result: Diagnosis): void {
   logger.heading('OpenPlanr doctor');
   result.diagnostics.forEach((diagnostic) => {
@@ -228,7 +252,7 @@ export function registerDoctorCommand(program: Command, cliVersion: string) {
       const result = {
         ...repaired,
         servers,
-        diagnostics: [...repaired.diagnostics, serverDiagnostic],
+        diagnostics: [...repaired.diagnostics, serverDiagnostic, globalInstallsDiagnostic()],
       };
       if (opts.json) display.line(JSON.stringify(result));
       else printDiagnosis(result);
