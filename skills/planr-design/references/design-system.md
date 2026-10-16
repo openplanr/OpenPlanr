@@ -28,6 +28,16 @@ numerals, an editorial page needs deliberate type hierarchy, and a field workflo
 needs readable controls in narrow space. Match visual density to the task.
 Default to one coherent type scale and spacing rhythm; the project's scale wins.
 
+A greenfield system also fixes these, unless project families, palettes or tokens
+already decide them:
+
+- Type: one to three families with defined roles (display, body, and mono when
+  needed). Give each a fallback stack of close-metric faces so a missing font does
+  not reflow the layout.
+- Color: zero to two accents in `oklch()`. Two accents share lightness and chroma
+  and differ in hue. Tone whites and blacks toward the palette instead of pure
+  `#fff` and `#000`. Semantic roles and contrast requirements still apply.
+
 Reusable component changes apply to each affected instance. Keep a short record
 of those instances so review can explain the scope and inspect their screenshots.
 Keep source references editable and local; no fonts or runtimes fetched on launch.
