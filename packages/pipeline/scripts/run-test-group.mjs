@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import '../../../tests/support/isolate-user-state.mjs';
 
 import { spawnSync } from 'node:child_process';
 import { readdirSync, readFileSync, statSync } from 'node:fs';

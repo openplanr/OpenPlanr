@@ -1,4 +1,5 @@
 /** Node test client with the same short-route cookie handling as a browser. */
+import '../../../tests/support/isolate-user-state.mjs';
 import { startDesignReview as startNative } from '../lib/design/review.mjs';
 
 const cookies = new Map();

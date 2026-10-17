@@ -95,7 +95,7 @@
     "check": "node scripts/generate-artifact-shell.mjs --check",
     "generate:diagram": "node scripts/generate-diagram-assets.mjs",
     "check:diagram": "node scripts/generate-diagram-assets.mjs --check",
-    "test": "node --test tests/*.test.mjs",
+    "test": "node --import ../../tests/support/isolate-user-state.mjs --test tests/*.test.mjs",
     "check:boundaries": "node --test tests/boundaries.test.mjs"
   },
   "openplanr": {
