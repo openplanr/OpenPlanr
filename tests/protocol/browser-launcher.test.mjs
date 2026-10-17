@@ -15,8 +15,11 @@ test('browser launches are bounded below the shortest browser test timeout', () 
   assert.equal(browserLaunchOptions({ timeout: 5_000 }).timeout, 5_000);
 });
 
+// Playwright keeps the process alive about 30 s after a launch timeout, so this runs nightly.
 test('a browser that never starts fails its launch quickly with a named error', {
-  skip: process.platform === 'win32' && 'uses a POSIX shell script as the stuck browser',
+  skip:
+    (process.env.PLANR_STUCK_LAUNCH_TEST !== '1' && 'set PLANR_STUCK_LAUNCH_TEST=1 to run') ||
+    (process.platform === 'win32' && 'uses a POSIX shell script as the stuck browser'),
   timeout: 15_000,
 }, async (t) => {
   const root = mkdtempSync(join(tmpdir(), 'openplanr-stuck-browser-'));
