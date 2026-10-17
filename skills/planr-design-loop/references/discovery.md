@@ -50,7 +50,8 @@ remember. An existing brand sets the direction; name how this design applies it.
 For greenfield work with no governing brand or design system, first sketch two to
 four low-fidelity direction boards. Give each a stable name and one honest tradeoff,
 and let the user choose before building the high-fidelity design. Skip this step
-when a brand or existing system governs.
+when a brand or existing system governs, or when the user leaves the choice to you;
+then choose the strongest direction yourself.
 
 ## Record the useful outcome
 
@@ -59,8 +60,8 @@ journey, screen/state scope, named direction and memorable element, declared res
 answers, references actually inspected and remaining assumptions. Persist project
 design tokens and brand guidance using [design-system.md](design-system.md).
 
-Normal Design builds one direction, chosen from direction boards for unbranded
-greenfield work. Design Loop explores three full directions by default.
+Normal Design builds one direction, chosen from direction boards when the user wants
+to pick one for unbranded greenfield work. Design Loop explores three full directions by default.
 Existing work evolves by default; replacement keeps a recoverable original. Image
 references may guide authored interfaces or remain static reference boards. Name
 which capability was delivered; an image with pins is not a functional prototype.

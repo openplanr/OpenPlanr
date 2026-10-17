@@ -29,9 +29,10 @@ canvas shell does not compensate for a weak interface inside its artboards.
 
 Order a marketing or landing page as a hero with one offer and one primary action,
 proof such as customers, numbers or quotes, benefits that each answer a doubt the
-audience has, and a closing action. Mark facts only the owner can supply with
-bracketed placeholders such as `[YOUR PRICE]` or `[CUSTOMER QUOTE]` instead of
-inventing them. This exception to plausible content never applies to product screens.
+audience has, and a closing action. Facts only the owner can supply, such as prices
+or customer quotes, use realistic sample values with a small visible "sample" marker,
+and the brief lists each one for the owner to replace. Never present a sample as a
+real fact.
 
 ## Keep product and explanation separate
 

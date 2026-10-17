@@ -467,7 +467,7 @@
         },
         {
           "path": "skills/design/references/craft.md",
-          "digest": "sha256:f0ad237e279efc53f5bb7636bbd5286882480127e7c459d830ad51efee20f454"
+          "digest": "sha256:0b785f92238eb3b77fd770fcf70eb66676f7f2ddc08452f95de0193c3fd7e7e6"
         },
         {
           "path": "skills/design/references/design-spec-template.md",
@@ -475,11 +475,11 @@
         },
         {
           "path": "skills/design/references/design-system.md",
-          "digest": "sha256:90534fb26ec33497e9fb481757ce7d7189af11b7fc8df818d603f21050c8daf2"
+          "digest": "sha256:9438decdf6886fe137b3d233f4b8b85d1827c319030a5209940a5e0c58cf7ebf"
         },
         {
           "path": "skills/design/references/discovery.md",
-          "digest": "sha256:0083dd4a42b073997f26602d2902ea853788b201df0f48bf4a15dff177e3e397"
+          "digest": "sha256:082ad5a95fe303dca2a19843f6f3c22f4fbf3558d28f4c0e86493a405014c7f1"
         },
         {
           "path": "skills/design/references/generation.md",
@@ -540,7 +540,7 @@
         },
         {
           "path": "skills/design-loop/references/craft.md",
-          "digest": "sha256:f0ad237e279efc53f5bb7636bbd5286882480127e7c459d830ad51efee20f454"
+          "digest": "sha256:0b785f92238eb3b77fd770fcf70eb66676f7f2ddc08452f95de0193c3fd7e7e6"
         },
         {
           "path": "skills/design-loop/references/design-spec-template.md",
@@ -548,11 +548,11 @@
         },
         {
           "path": "skills/design-loop/references/design-system.md",
-          "digest": "sha256:90534fb26ec33497e9fb481757ce7d7189af11b7fc8df818d603f21050c8daf2"
+          "digest": "sha256:9438decdf6886fe137b3d233f4b8b85d1827c319030a5209940a5e0c58cf7ebf"
         },
         {
           "path": "skills/design-loop/references/discovery.md",
-          "digest": "sha256:0083dd4a42b073997f26602d2902ea853788b201df0f48bf4a15dff177e3e397"
+          "digest": "sha256:082ad5a95fe303dca2a19843f6f3c22f4fbf3558d28f4c0e86493a405014c7f1"
         },
         {
           "path": "skills/design-loop/references/generation.md",
@@ -613,7 +613,7 @@
         },
         {
           "path": "skills/design-review/references/craft.md",
-          "digest": "sha256:f0ad237e279efc53f5bb7636bbd5286882480127e7c459d830ad51efee20f454"
+          "digest": "sha256:0b785f92238eb3b77fd770fcf70eb66676f7f2ddc08452f95de0193c3fd7e7e6"
         },
         {
           "path": "skills/design-review/references/design-spec-template.md",
@@ -621,11 +621,11 @@
         },
         {
           "path": "skills/design-review/references/design-system.md",
-          "digest": "sha256:90534fb26ec33497e9fb481757ce7d7189af11b7fc8df818d603f21050c8daf2"
+          "digest": "sha256:9438decdf6886fe137b3d233f4b8b85d1827c319030a5209940a5e0c58cf7ebf"
         },
         {
           "path": "skills/design-review/references/discovery.md",
-          "digest": "sha256:0083dd4a42b073997f26602d2902ea853788b201df0f48bf4a15dff177e3e397"
+          "digest": "sha256:082ad5a95fe303dca2a19843f6f3c22f4fbf3558d28f4c0e86493a405014c7f1"
         },
         {
           "path": "skills/design-review/references/generation.md",
