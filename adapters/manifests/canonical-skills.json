@@ -1354,7 +1354,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:9438decdf6886fe137b3d233f4b8b85d1827c319030a5209940a5e0c58cf7ebf"
+          "digest": "sha256:d97ad4aca7c6a21d2e6208620d928beb3e34eac4460c64943b33f5835f9b432f"
         },
         {
           "path": "references/discovery.md",
@@ -2516,7 +2516,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:9438decdf6886fe137b3d233f4b8b85d1827c319030a5209940a5e0c58cf7ebf"
+          "digest": "sha256:d97ad4aca7c6a21d2e6208620d928beb3e34eac4460c64943b33f5835f9b432f"
         },
         {
           "path": "references/discovery.md",
@@ -3678,7 +3678,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:9438decdf6886fe137b3d233f4b8b85d1827c319030a5209940a5e0c58cf7ebf"
+          "digest": "sha256:d97ad4aca7c6a21d2e6208620d928beb3e34eac4460c64943b33f5835f9b432f"
         },
         {
           "path": "references/discovery.md",

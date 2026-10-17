@@ -54,12 +54,8 @@ while authoring:
 - at most two families and three weights each; one variable file can cover a
   family's weights.
 
-Snapshotting needs network access while authoring. When the host blocks it, ask
-once, with the other consultation questions when possible: name the families and
-weights, their total size, and the one command that downloads them into
-`source/assets/fonts/`, and ask the user to approve it or to continue with the role's
-system stack. Never fall back silently. When the user declines, or a license is
-unclear, use the role's system stack and name that fallback in the return:
+Snapshotting needs network access while authoring. When it is unavailable, or a
+license is unclear, use the role's system stack and name that fallback in the return:
 
 | Role | System stack |
 | --- | --- |
