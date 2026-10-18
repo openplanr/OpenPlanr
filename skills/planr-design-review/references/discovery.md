@@ -21,8 +21,9 @@ design. A clear brief is usable input; do not force a source/format questionnair
 
 ## Ask what remains consequential
 
-Use the host's native structured questions when callable. Otherwise ask one concise
-chat question at a time. Neither a missing question tool nor a thin screen list is
+Use the host's native structured questions when callable: one call with at most
+four questions, options written from the user's own brief, product and content, and
+the recommended option first. Otherwise ask one concise chat question at a time. Neither a missing question tool nor a thin screen list is
 a technical blocker. Do not ask the user to locate files that exploration can find.
 
 | Missing decision | Useful question | Evidence that settles it |
@@ -40,14 +41,27 @@ defaults, Canvas suits comparison, Prototype suits a single surface or interacti
 and Walkthrough suits a guided sequence. All three remain available from one source.
 If assumptions are authorized, state them and record them in the specification.
 
+## Commit to a direction
+
+Before authoring, name one direction in a few words that describe its character,
+such as "quiet ledger" or "field notebook", and the one element a viewer should
+remember. An existing brand sets the direction; name how this design applies it.
+
+For greenfield work with no governing brand or design system, first sketch two to
+four low-fidelity direction boards. Give each a stable name and one honest tradeoff,
+and let the user choose before building the high-fidelity design. Skip this step
+when a brand or existing system governs, or when the user leaves the choice to you;
+then choose the strongest direction yourself.
+
 ## Record the useful outcome
 
 Write a short brief/provenance record next to the editable source: audience, main
-journey, screen/state scope, visual direction, declared responsive frames, explicit
+journey, screen/state scope, named direction and memorable element, declared responsive frames, explicit
 answers, references actually inspected and remaining assumptions. Persist project
 design tokens and brand guidance using [design-system.md](design-system.md).
 
-Normal Design produces one direction. Design Loop explores three by default.
+Normal Design builds one direction, chosen from direction boards when the user wants
+to pick one for unbranded greenfield work. Design Loop explores three full directions by default.
 Existing work evolves by default; replacement keeps a recoverable original. Image
 references may guide authored interfaces or remain static reference boards. Name
 which capability was delivered; an image with pins is not a functional prototype.

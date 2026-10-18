@@ -17,11 +17,22 @@ interaction checks establish whether the design works.
 | Responsiveness | Content reflows at declared frames, controls remain reachable, no accidental horizontal overflow |
 | Accessibility | Semantic controls, accessible names, visible focus, logical keyboard order, reduced-motion support |
 
-Use the project's visual vocabulary. Avoid ornamental gradients, repeated generic
-cards or decorative imagery that does not serve the content; do not ban treatments
-the brand explicitly uses. Use the project icon set and appropriate real assets.
+Use the project's visual vocabulary. Avoid the defaults that make an interface look
+generic: Inter or Roboto as the display face, a reflexive editorial serif such as
+Fraunces, gradient heroes, cards with a colored left-border accent, emoji used as
+icons, ornamental gradients, repeated generic cards and decorative imagery that does
+not serve the content. Do not ban treatments the brand explicitly uses. Use the project icon set and appropriate real assets.
 Dense tools and branded pages need different hierarchy and density. A polished
 canvas shell does not compensate for a weak interface inside its artboards.
+
+## Landing pages
+
+Order a marketing or landing page as a hero with one offer and one primary action,
+proof such as customers, numbers or quotes, benefits that each answer a doubt the
+audience has, and a closing action. Facts only the owner can supply, such as prices
+or customer quotes, use realistic sample values with a small visible "sample" marker,
+and the brief lists each one for the owner to replace. Never present a sample as a
+real fact.
 
 ## Keep product and explanation separate
 

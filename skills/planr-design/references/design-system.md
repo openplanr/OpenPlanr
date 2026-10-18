@@ -28,6 +28,38 @@ numerals, an editorial page needs deliberate type hierarchy, and a field workflo
 needs readable controls in narrow space. Match visual density to the task.
 Default to one coherent type scale and spacing rhythm; the project's scale wins.
 
+A greenfield system also fixes these, unless project families, palettes or tokens
+already decide them:
+
+- Type: one to three families with defined roles (display, body, and mono when
+  needed). Give each a fallback stack of close-metric faces so a missing font does
+  not reflow the layout.
+- Color: zero to two accents in `oklch()`. Two accents share lightness and chroma
+  and differ in hue. Tone whites and blacks toward the palette instead of pure
+  `#fff` and `#000`. Semantic roles and contrast requirements still apply.
+
 Reusable component changes apply to each affected instance. Keep a short record
 of those instances so review can explain the scope and inspect their screenshots.
-Keep source references editable and local; no fonts or runtimes fetched on launch.
+Keep source references editable and local; nothing is fetched when a design opens.
+
+## Fonts
+
+Reuse the project's own fonts first. When a design needs a new family, snapshot it
+while authoring:
+
+- openly licensed families only (OFL or Apache);
+- `woff2` files, Latin subset, only the weights the design uses;
+- files under `source/assets/fonts/`, with each family's license file beside them;
+- local `@font-face` rules, with the upstream URLs in the brief references;
+- at most two families and three weights each; one variable file can cover a
+  family's weights.
+
+Snapshotting needs network access while authoring. When it is unavailable, or a
+license is unclear, use the role's system stack and name that fallback in the return:
+
+| Role | System stack |
+| --- | --- |
+| Body, humanist sans | `Seravek, "Gill Sans Nova", Ubuntu, Calibri, "DejaVu Sans", source-sans-pro, sans-serif` |
+| Display, geometric sans | `Avenir, Montserrat, Corbel, "URW Gothic", source-sans-pro, sans-serif` |
+| Display or body, serif | `Charter, "Bitstream Charter", "Sitka Text", Cambria, serif` |
+| Mono | `ui-monospace, "Cascadia Code", "Source Code Pro", Menlo, Consolas, "DejaVu Sans Mono", monospace` |
