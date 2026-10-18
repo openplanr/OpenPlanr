@@ -1065,7 +1065,7 @@
       "lifecycle": "active",
       "authorityClass": "diagnostic",
       "source": "skills/planr-investigate/openplanr.skill.json",
-      "sourceDigest": "sha256:7b594b78a18409eb195a7bb8a2c189c06cf9e8022361a82a2f7e344abb9e5f95",
+      "sourceDigest": "sha256:ad1422ac497f638b739d362a93af8eddc9cd0634c8a737a2c408023bd5cb9797",
       "triggerPolicy": {
         "include": [
           "Investigate a bug, regression, error, or unexplained behavior",
@@ -1553,7 +1553,7 @@
       "lifecycle": "active",
       "authorityClass": "implementation",
       "source": "skills/planr-ship/openplanr.skill.json",
-      "sourceDigest": "sha256:548373bee9817aa5649f53c6964b8911666c29aa9a55b5e6a7288ef12482179b",
+      "sourceDigest": "sha256:2fe2353469bb1fbb77029334fcc51b94240bb3baf56c69c5829b47908e2d7d33",
       "triggerPolicy": {
         "include": [
           "Implement a plan, specification, task, fix, or clearly stated local request",
@@ -1864,5 +1864,5 @@
     }
   ],
   "compatibilityAliases": [],
-  "documentDigest": "sha256:5db46f86c838f03bdf20e17067463b4281465a286a0c8ad276e05e3f0fefda93"
+  "documentDigest": "sha256:de0f62b6342054429143ce02737ac2bb5496a414b29aa867802fb0b61e3a4b4e"
 }

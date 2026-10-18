@@ -1,6 +1,7 @@
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import type { Command } from 'commander';
+import { backlogFields, writeBacklogItem } from '../../../lib/backlog-item.mjs';
 import type { ArtifactType, OpenPlanrConfig } from '../../models/types.js';
 import {
   addChildReference,
@@ -14,7 +15,7 @@ import {
 } from '../../services/artifact-service.js';
 import { loadConfig } from '../../services/config-service.js';
 import { prepareSprintCreation } from '../../services/sprint-refinement-service.js';
-import { renderTemplate } from '../../services/template-service.js';
+import { hasTemplateOverride, renderTemplate } from '../../services/template-service.js';
 import { CLI_COMMAND } from '../../utils/constants.js';
 import { writeFile } from '../../utils/fs.js';
 import { display, logger } from '../../utils/logger.js';
@@ -263,10 +264,12 @@ async function creationData(
   if (type === 'backlog')
     return {
       ...base,
-      priority: options.priority ?? input.priority ?? 'medium',
-      tags: strings(options.tag ?? input.tags),
-      description: input.description ?? title,
-      epicId: options.epic ?? input.epicId,
+      ...backlogFields({
+        ...base,
+        priority: options.priority ?? input.priority,
+        tags: options.tag ?? input.tags,
+        epicId: options.epic ?? input.epicId,
+      }),
     };
   return prepareSprintCreation(
     projectDir,
@@ -280,7 +283,16 @@ async function create(type: PlanningType, program: Command, options: Record<stri
   const projectDir = program.opts().projectDir as string;
   const config = await loadConfig(projectDir);
   const data = await creationData(type, projectDir, config, options);
-  const result = await createArtifact(projectDir, config, type, templates[type], data);
+  const result =
+    type === 'backlog' && !(await hasTemplateOverride(templates.backlog, config.templateOverrides))
+      ? await writeBacklogItem(
+          path.join(projectDir, getArtifactDir(config, 'backlog')),
+          config.idPrefix.backlog,
+          backlogFields(data),
+          new Date().toISOString().split('T')[0],
+        )
+      : await createArtifact(projectDir, config, type, templates[type], data);
+  const artifactPath = path.relative(projectDir, result.filePath).split(path.sep).join('/');
 
   if (type === 'feature')
     await addChildReference(
@@ -337,13 +349,13 @@ async function create(type: PlanningType, program: Command, options: Record<stri
         action: `${type}.created`,
         id: result.id,
         title: String(data.title),
-        artifactPath: path.relative(projectDir, result.filePath).split(path.sep).join('/'),
+        artifactPath,
       }),
     );
     return;
   }
   logger.success(`Created ${result.id}: ${String(data.title)}`);
-  logger.dim(`  ${result.filePath}`);
+  logger.dim(`  ${artifactPath}`);
 }
 
 function registerCommon(
@@ -406,8 +418,13 @@ function registerCommon(
     .description(`List ${type} artifacts`)
     .action(async () => {
       const projectDir = program.opts().projectDir as string;
-      const rows = await listArtifacts(projectDir, await loadConfig(projectDir), type);
-      for (const row of rows) display.line(`${row.id}\t${row.title}`);
+      const config = await loadConfig(projectDir);
+      const rows = await listArtifacts(projectDir, config, type);
+      for (const row of rows) {
+        const artifact = await readArtifact(projectDir, config, type, row.id);
+        const title = typeof artifact?.data.title === 'string' ? artifact.data.title : row.title;
+        display.line(`${row.id}\t${title}`);
+      }
       if (rows.length === 0) logger.info(`No ${type} artifacts found.`);
     });
 

@@ -1286,6 +1286,9 @@ For semantic decomposition, invoke the installed `planr:plan` skill. After revie
     "backlog": "BL",
     "sprint": "SPRINT"
   },
-  "createdAt": "2026-03-26"
+  "createdAt": "2026-03-26",
+  "findings": { "unattended": "report" }
 }
 ```
+
+`findings.unattended` decides what Ship and Investigate do with findings outside the task when nobody can answer: `report` (the default) lists them, `file` files each one as a backlog item. Settings OpenPlanr doesn't know are kept when it saves the file.

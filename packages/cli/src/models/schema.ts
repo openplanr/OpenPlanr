@@ -70,6 +70,12 @@ export const upgradeConfigSchema = z.object({
   updateCheck: z.boolean().optional(),
 });
 
+/** How Ship and Investigate treat out-of-scope findings when nobody can answer. */
+export const findingsConfigSchema = z.object({
+  unattended: z.enum(['report', 'file']).optional(),
+  cliHintShown: z.boolean().optional(),
+});
+
 /**
  * UUIDv4 regex — Linear workflow state ids follow this form. `/i` is defensive
  * against case-normalizing tools (Linear's API emits lowercase canonically).
@@ -134,7 +140,8 @@ export const linearConfigSchema = z.object({
     .optional(),
 });
 
-export const configSchema = z.object({
+/** Keeps unknown top-level keys so `saveConfig` writes back what it read. */
+export const configSchema = z.looseObject({
   projectName: z.string().min(1),
   targets: z.array(targetCLISchema).min(1),
   outputPaths: z.object({
@@ -162,6 +169,7 @@ export const configSchema = z.object({
   reportLinter: reportLinterConfigSchema.optional(),
   linear: linearConfigSchema.optional(),
   upgrade: upgradeConfigSchema.optional(),
+  findings: findingsConfigSchema.optional(),
 });
 
 export type ValidatedConfig = z.infer<typeof configSchema>;

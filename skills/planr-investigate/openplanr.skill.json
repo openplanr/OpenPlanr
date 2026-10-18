@@ -21,6 +21,28 @@
         "chatgpt"
       ],
       "executable": false
+    },
+    {
+      "path": "references/findings.md",
+      "kind": "reference",
+      "hosts": [
+        "claude-code",
+        "codex",
+        "chatgpt",
+        "cursor"
+      ],
+      "executable": false
+    },
+    {
+      "path": "scripts/backlog-item.mjs",
+      "kind": "script",
+      "hosts": [
+        "claude-code",
+        "codex",
+        "chatgpt",
+        "cursor"
+      ],
+      "executable": true
     }
   ]
 }

@@ -23,6 +23,14 @@ When the user asked for a fix, implement the smallest coherent correction within
 repository and run focused regression checks. Preserve unrelated work. Ask only when a missing
 product decision or an irreversible external action genuinely blocks progress.
 
+## Findings outside the cause
+
+Report other defects you notice as [findings](references/findings.md), and never
+fix them in this change unless they block the requested fix. The established cause
+is never a finding. The packaged [backlog helper](scripts/backlog-item.mjs) lists
+and files backlog items when no CLI is installed; resolve it relative to this
+`SKILL.md`.
+
 ## Return
 
 Lead with the established cause or clearly labeled remaining hypothesis. Link
@@ -34,7 +42,8 @@ existing report rather than returning raw tool transcripts.
 - **Cause:** established root cause, or the strongest remaining hypotheses.
 - **Change:** files and behavior changed, or none for diagnosis-only work.
 - **Checks:** commands and results.
-- **Issues:** unresolved uncertainty or blocker, or none.
+- **Issues:** unresolved uncertainty or blocker, or none; then findings outside
+  the cause, each with its disposition.
 
 Omit empty sections in the human summary. Different wording does not justify
 another experiment or corrective run.

@@ -1112,7 +1112,7 @@
       "ownerPackage": "planr-pipeline",
       "source": {
         "path": "skills/planr-ship/SKILL.md",
-        "digest": "sha256:828f3b7a6bd1b6c42d257315bc3fcfc29a5db5ac478c797bb26d2a7553d010b1"
+        "digest": "sha256:7c8ba9060b62e4adfbd79ada00f732e81e800c01ad0d66887e4c1b9aacb5afa5"
       },
       "authorityClass": "compatibility-router",
       "machineJson": false,
@@ -1948,5 +1948,5 @@
       ]
     }
   ],
-  "documentDigest": "sha256:9e1501ffe1fd7f46a38bb8fa23f4a74c5e14ad4524b54b57fbc971458163e114"
+  "documentDigest": "sha256:657d6739bd8f3c95888f4686725087f4972f6e7d9843b81c017a798b3af9184c"
 }

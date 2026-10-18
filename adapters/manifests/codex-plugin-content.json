@@ -8,7 +8,7 @@
   "canonicalSkillCount": 30,
   "compatibilityAliasCount": 0,
   "skillCount": 30,
-  "assetCount": 210,
+  "assetCount": 214,
   "skills": [
     {
       "skillId": "planr-artifact",
@@ -736,15 +736,23 @@
       "assets": [
         {
           "path": "skills/investigate/SKILL.md",
-          "digest": "sha256:9f4a6f6b5e535120c19592b3b678b8a334133db0ca4993cb6d94f146b47b0735"
+          "digest": "sha256:26c361a3851a2d7edb17156546d16e3811925f8d990b8a75643d0995b79f4d05"
         },
         {
           "path": "skills/investigate/openplanr.skill.json",
-          "digest": "sha256:7b594b78a18409eb195a7bb8a2c189c06cf9e8022361a82a2f7e344abb9e5f95"
+          "digest": "sha256:ad1422ac497f638b739d362a93af8eddc9cd0634c8a737a2c408023bd5cb9797"
         },
         {
           "path": "skills/investigate/agents/openai.yaml",
           "digest": "sha256:f9248c50312de3fced05e1f550ad9a539d8fbb97f62335f00d55cb0e08bb091c"
+        },
+        {
+          "path": "skills/investigate/references/findings.md",
+          "digest": "sha256:2bee6285c88650a81ae049541eb9a09549c0935210b5ca3eae0b1c99fd52f45f"
+        },
+        {
+          "path": "skills/investigate/scripts/backlog-item.mjs",
+          "digest": "sha256:ccded7cd9126aa631f8944a1c7ec23145db8fb3c972449f83c0c634e6a90016a"
         }
       ]
     },
@@ -964,11 +972,11 @@
       "assets": [
         {
           "path": "skills/ship/SKILL.md",
-          "digest": "sha256:fcaace9baa973c476b78768f89fe602fb75f14f7bc385779061911d5cf38653d"
+          "digest": "sha256:109c1e85dc7e77c41cfc3fde7d0626d86b2c4c9da0179c57e91a04d0f334b61f"
         },
         {
           "path": "skills/ship/openplanr.skill.json",
-          "digest": "sha256:548373bee9817aa5649f53c6964b8911666c29aa9a55b5e6a7288ef12482179b"
+          "digest": "sha256:2fe2353469bb1fbb77029334fcc51b94240bb3baf56c69c5829b47908e2d7d33"
         },
         {
           "path": "skills/ship/agents/openai.yaml",
@@ -976,7 +984,7 @@
         },
         {
           "path": "skills/ship/references/result-contract.md",
-          "digest": "sha256:41097451aaa44f7b56a3473fa3ec7921d3fe22fccaede46b873aaae790d0a53a"
+          "digest": "sha256:687f53f2d6682dbe628bb2bfd52edd5685d9611e2695497516d37a1ef355b57f"
         },
         {
           "path": "skills/ship/references/design-lineage.md",
@@ -985,6 +993,14 @@
         {
           "path": "skills/ship/scripts/discover-verification.mjs",
           "digest": "sha256:8805ac8d814a1d94364d455df6da350983d4c8436faa3749717da5f1b3ae63b1"
+        },
+        {
+          "path": "skills/ship/references/findings.md",
+          "digest": "sha256:2bee6285c88650a81ae049541eb9a09549c0935210b5ca3eae0b1c99fd52f45f"
+        },
+        {
+          "path": "skills/ship/scripts/backlog-item.mjs",
+          "digest": "sha256:ccded7cd9126aa631f8944a1c7ec23145db8fb3c972449f83c0c634e6a90016a"
         }
       ]
     },

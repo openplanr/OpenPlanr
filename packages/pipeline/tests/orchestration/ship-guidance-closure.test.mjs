@@ -130,6 +130,38 @@ test('Ship keeps the five-field result contract concise and non-governing', () =
   );
 });
 
+test('Ship and Investigate split issues into blockers and findings they offer to file', () => {
+  const contract = readWorkspace('skills/planr-ship/references/result-contract.md');
+  assert.match(contract, /`blockers`/u);
+  assert.match(contract, /`findings`/u);
+  for (const skillId of ['planr-ship', 'planr-investigate']) {
+    const skill = readWorkspace(`skills/${skillId}/SKILL.md`);
+    assert.match(skill, /\]\(references\/findings\.md\)/u, skillId);
+    assert.match(skill, /\]\(scripts\/backlog-item\.mjs\)/u, skillId);
+    assert.match(skill, /never\s+fix them in this change unless they block/u, skillId);
+    assert.equal(
+      readWorkspace(`skills/${skillId}/references/findings.md`),
+      readWorkspace('skills/shared/findings.md'),
+    );
+  }
+  const findings = readWorkspace('skills/shared/findings.md');
+  for (const rule of [
+    /"File all N \(Recommended\)"/u,
+    /"Don't file"/u,
+    /With\s+`report`, or no setting, do not run `add` at all/u,
+    /end the result with that line, word for word,\s+once/u,
+    /The request says to file findings, or not to: do that/u,
+    /never file or drop a finding\s+silently/u,
+    /list\s+--project <repository-root> --open/u,
+    /Already tracked as BL-/u,
+    /Paths are always repo-relative/u,
+    /Install only if the user says yes/u,
+    /never\s+`npx`/u,
+  ]) {
+    assert.match(findings, rule);
+  }
+});
+
 test('every host receives the canonical Ship package without compatibility commands', () => {
   const canonical = readWorkspace('skills/planr-ship/SKILL.md');
   const manifest = JSON.parse(readWorkspace('skills/planr-ship/openplanr.skill.json'));

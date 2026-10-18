@@ -108,6 +108,7 @@ const operateAdvisorDestinations = Object.freeze([
   'planr-coo-review',
 ]);
 const trackerConnectionDestinations = Object.freeze(['planr-sync', 'planr-sprint', 'planr-status']);
+const findingsDestinations = Object.freeze(['planr-ship', 'planr-investigate']);
 const connectionsCatalog = readConnectionsCatalog(root);
 const connectorsMarkdown = renderConnectors(connectionsCatalog);
 const operateValidatorDestinations = Object.freeze([
@@ -179,6 +180,23 @@ const sharedSkillResources = Object.freeze([
     destination: `skills/${skillId}/references/tracker-connections.md`,
     executable: false,
   })),
+  ...['backlog-item.mjs', 'backlog-item.d.mts'].map((name) => ({
+    source: `skills/shared/${name}`,
+    destination: `packages/cli/lib/${name}`,
+    executable: false,
+  })),
+  ...findingsDestinations.flatMap((skillId) => [
+    {
+      source: 'skills/shared/backlog-item.mjs',
+      destination: `skills/${skillId}/scripts/backlog-item.mjs`,
+      executable: true,
+    },
+    {
+      source: 'skills/shared/findings.md',
+      destination: `skills/${skillId}/references/findings.md`,
+      executable: false,
+    },
+  ]),
   {
     source: 'packages/integrations/src/portable-sync.mjs',
     destination: 'skills/planr-sync/scripts/sync.mjs',
