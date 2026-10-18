@@ -26,21 +26,6 @@ async function productFrame(page, artifactId) {
   ).contentFrame();
 }
 
-// Locator clicks misplace pointers across a scaled sandboxed frame; click its real screen point.
-async function clickProductButton(page, frame, artifactId, name) {
-  const button = frame.getByRole('button', { name, exact: true });
-  const position = await button.evaluate((node) => ({
-    rect: node.getBoundingClientRect().toJSON(),
-    width: innerWidth,
-    height: innerHeight,
-  }));
-  const bounds = await page.locator(`[data-planr-artifact-frame="${artifactId}"]`).boundingBox();
-  await page.mouse.click(
-    bounds.x + ((position.rect.x + position.rect.width / 2) * bounds.width) / position.width,
-    bounds.y + ((position.rect.y + position.rect.height / 2) * bounds.height) / position.height,
-  );
-}
-
 async function productState(frame) {
   return frame.evaluate(() => ({
     marked: window.__sameDocument === true,
@@ -106,8 +91,9 @@ test(`a focused view reloads only a frame that stayed live through Canvas commen
         false,
         `${host}: a frame that stayed live through Canvas comments gets a fresh document`,
       );
-      await frame.evaluate(() => scrollTo(0, 0));
-      await clickProductButton(page, frame, artifactId, 'Save product');
+      // Mouse routing right after a reload can still be lost under load; keyboard input reaches it.
+      await frame.getByRole('button', { name: 'Save product', exact: true }).focus();
+      await page.keyboard.press('Enter');
       await frame.getByText('Product saved', { exact: true }).waitFor();
 
       await frame.evaluate(() => {
