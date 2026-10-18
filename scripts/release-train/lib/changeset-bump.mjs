@@ -45,14 +45,18 @@ function minimumBump(type, breaking) {
   return null;
 }
 
+// Generated registries and projections in other packages ride along with a feature, so one
+// package reaching the bump is enough; the rest report only when none does.
 function bumpFindings({ label, rule, checked, declared, errors, warnings }) {
   const { minimum, missingIsError } = rule;
+  const reached = checked.some((name) => RANK[declared.get(name)?.bump] >= RANK[minimum]);
+  if (reached) return;
   for (const name of checked) {
     const found = declared.get(name);
     if (!found) {
       const message = `${label}: ${name} changes with no changeset; requires ${minimum}. Add a changeset with "${name}": ${minimum}.`;
       (missingIsError ? errors : warnings).push(message);
-    } else if (RANK[found.bump] < RANK[minimum]) {
+    } else {
       errors.push(
         `${label}: ${name} declares ${found.bump} in ${found.file}; requires ${minimum}. Change it to "${name}": ${minimum}.`,
       );
@@ -62,9 +66,18 @@ function bumpFindings({ label, rule, checked, declared, errors, warnings }) {
 
 /**
  * Checks a pull request's changesets against its title type and approval labels.
- * `files` are the paths the pull request changes; `targets` are the published packages.
+ * `files` are the paths the pull request changes; `targets` are the published packages and
+ * `bundled` maps a package name to the extra source roots it ships.
  */
-export function checkChangesetBumps({ title, body = '', labels, files, changesets, targets }) {
+export function checkChangesetBumps({
+  title,
+  body = '',
+  labels,
+  files,
+  changesets,
+  targets,
+  bundled = {},
+}) {
   const errors = [];
   const warnings = [];
   const parsed = parseTitle(title);
@@ -78,7 +91,11 @@ export function checkChangesetBumps({ title, body = '', labels, files, changeset
   const label = `${parsed.type}${breaking ? '!' : ''}`;
   const declared = declaredReleases(changesets, targets);
   const touched = targets
-    .filter((target) => files.some((file) => file.startsWith(`${target.path}/`)))
+    .filter((target) =>
+      [target.path, ...(bundled[target.name] ?? [])].some((root) =>
+        files.some((file) => file.startsWith(`${root}/`)),
+      ),
+    )
     .map((target) => target.name);
   const checked = [...new Set([...touched, ...declared.keys()])];
 

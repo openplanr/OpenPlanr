@@ -7,7 +7,7 @@ import { readFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { checkChangesetBumps, parseChangeset } from './lib/changeset-bump.mjs';
-import { PUBLIC_TARGETS } from './lib/targets.mjs';
+import { BUNDLED_SOURCES, PUBLIC_TARGETS } from './lib/targets.mjs';
 
 const args = process.argv.slice(2);
 const flag = (name) => {
@@ -40,6 +40,7 @@ const { errors, warnings } = checkChangesetBumps({
   files: files.map(({ filename }) => filename),
   changesets,
   targets: PUBLIC_TARGETS,
+  bundled: BUNDLED_SOURCES,
 });
 
 const annotate = process.env.GITHUB_ACTIONS === 'true';

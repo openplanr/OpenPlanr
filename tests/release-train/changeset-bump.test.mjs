@@ -10,7 +10,7 @@ import {
   parseChangeset,
   parseTitle,
 } from '../../scripts/release-train/lib/changeset-bump.mjs';
-import { PUBLIC_TARGETS } from '../../scripts/release-train/lib/targets.mjs';
+import { BUNDLED_SOURCES, PUBLIC_TARGETS } from '../../scripts/release-train/lib/targets.mjs';
 
 const script = resolve('scripts/release-train/check-changeset-bump.mjs');
 
@@ -23,6 +23,7 @@ function check({ title, body, labels = [], files = [], releases }) {
     files: releases ? [...files, '.changeset/change.md'] : files,
     changesets,
     targets: PUBLIC_TARGETS,
+    bundled: BUNDLED_SOURCES,
   });
 }
 
@@ -50,7 +51,7 @@ test('reads quoted and bare releases and rejects unreadable lines', () => {
   assert.throws(() => parseChangeset('No frontmatter', 'c.md'), /c\.md: no changeset frontmatter/u);
 });
 
-test('a feature needs at least a minor for every published package it changes', () => {
+test('a feature needs a minor for a published package it changes', () => {
   const patch = check({ title: 'feat(cli): add repair', releases: { openplanr: 'patch' } });
   assert.deepEqual(patch.errors, [
     'feat: openplanr declares patch in .changeset/change.md; requires minor. Change it to "openplanr": minor.',
@@ -62,6 +63,47 @@ test('a feature needs at least a minor for every published package it changes', 
   const missing = check({ title: 'feat(cli): add repair', files: ['packages/cli/src/index.ts'] });
   assert.deepEqual(missing.errors, [
     'feat: openplanr changes with no changeset; requires minor. Add a changeset with "openplanr": minor.',
+  ]);
+});
+
+test('skill and adapter sources count as changes to openplanr', () => {
+  const skillsOnly = check({
+    title: 'feat(skills): offer findings',
+    files: ['skills/planr-ship/SKILL.md'],
+  });
+  assert.deepEqual(skillsOnly.errors, [
+    'feat: openplanr changes with no changeset; requires minor. Add a changeset with "openplanr": minor.',
+  ]);
+  assert.deepEqual(
+    check({
+      title: 'feat(skills): offer findings',
+      files: ['skills/planr-ship/SKILL.md', 'adapters/manifests/canonical-skills.json'],
+      releases: { openplanr: 'minor' },
+    }).errors,
+    [],
+  );
+});
+
+test('one package reaching the bump covers generated changes in the others', () => {
+  const files = [
+    'packages/cli/src/index.ts',
+    'packages/pipeline/lib/generated/protocol-projection.json',
+    'packages/protocol/registries/skills.json',
+    'skills/planr-ship/SKILL.md',
+  ];
+  assert.deepEqual(
+    check({ title: 'feat: offer findings', files, releases: { openplanr: 'minor' } }),
+    { errors: [], warnings: [] },
+  );
+  const patches = check({
+    title: 'feat: offer findings',
+    files,
+    releases: { openplanr: 'patch', '@openplanr/protocol': 'patch' },
+  });
+  assert.deepEqual(patches.errors, [
+    'feat: @openplanr/protocol declares patch in .changeset/change.md; requires minor. Change it to "@openplanr/protocol": minor.',
+    'feat: planr-pipeline changes with no changeset; requires minor. Add a changeset with "planr-pipeline": minor.',
+    'feat: openplanr declares patch in .changeset/change.md; requires minor. Change it to "openplanr": minor.',
   ]);
 });
 
