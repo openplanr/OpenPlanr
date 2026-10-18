@@ -21,6 +21,7 @@ import {
 } from '../../lib/backlog-item.mjs';
 import { registerBacklogCommand } from '../../src/cli/commands/backlog.js';
 import { registerConfigCommand } from '../../src/cli/commands/config-deterministic.js';
+import { toCliFailureEnvelope } from '../../src/cli/error-boundary.js';
 import { createDefaultConfig, loadConfig, saveConfig } from '../../src/services/config-service.js';
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../../..');
@@ -180,9 +181,41 @@ describe('backlog priority', () => {
   const rejection =
     'Backlog priority "highest" is not valid; use one of critical, high, medium, low.';
 
-  it('rejects a priority outside the four accepted values, naming it', () => {
-    expect(() => backlogFields({ title: 'Item', priority: 'highest' })).toThrow(rejection);
+  const invalid = { code: 'E_BACKLOG_INVALID', message: rejection };
+
+  it('rejects a priority outside the four accepted values with an input code, naming it', () => {
+    expect(() => backlogFields({ title: 'Item', priority: 'highest' })).toThrow(
+      expect.objectContaining(invalid),
+    );
     expect(backlogFields({ title: 'Item' }).priority).toBe('medium');
+  });
+
+  it('reports bad input through the CLI boundary as an input error, not a crash', () => {
+    for (const [input, problem] of [
+      [{ title: 'Item', priority: 'highest' }, rejection],
+      [{ title: ' ' }, 'A backlog item needs a non-empty title.'],
+    ] as const) {
+      const error = (() => {
+        try {
+          backlogFields(input);
+        } catch (caught) {
+          return caught;
+        }
+        throw new Error(`backlogFields accepted ${JSON.stringify(input)}`);
+      })();
+      expect(toCliFailureEnvelope(error)).toMatchObject({ code: 'E_BACKLOG_INVALID', problem });
+    }
+  });
+
+  it('rejects an empty title from the CLI as an input error', async () => {
+    const dir = project();
+    await initProject(dir);
+    const data = path.join(dir, 'input.json');
+    writeFileSync(data, JSON.stringify({ title: '  ' }));
+    const error = await cli(dir, 'backlog', 'add', '--data', data, '--json').catch(
+      (caught: unknown) => caught,
+    );
+    expect(toCliFailureEnvelope(error)).toMatchObject({ code: 'E_PLANNING_INPUT_REQUIRED' });
   });
 
   it('rejects the same value from --priority and from --data without writing a file', async () => {
@@ -190,10 +223,12 @@ describe('backlog priority', () => {
     await initProject(dir);
     await expect(
       cli(dir, 'backlog', 'add', 'Item', '--priority', 'highest', '--json'),
-    ).rejects.toThrow(rejection);
+    ).rejects.toMatchObject(invalid);
     const data = path.join(dir, 'input.json');
     writeFileSync(data, JSON.stringify({ title: 'Item', priority: 'highest' }));
-    await expect(cli(dir, 'backlog', 'add', '--data', data, '--json')).rejects.toThrow(rejection);
+    await expect(cli(dir, 'backlog', 'add', '--data', data, '--json')).rejects.toMatchObject(
+      invalid,
+    );
     expect(readdirSync(path.join(dir, '.planr', 'backlog'))).toEqual([]);
   });
 

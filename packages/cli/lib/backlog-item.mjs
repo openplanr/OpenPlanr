@@ -74,13 +74,23 @@ function optionalText(value) {
 
 const PRIORITIES = Object.freeze(['critical', 'high', 'medium', 'low']);
 
+/** Bad backlog input; the code lets the CLI report it as an input error, not a crash. */
+class BacklogInputError extends Error {
+  /** @param {string} message */
+  constructor(message) {
+    super(message);
+    this.name = 'BacklogInputError';
+    this.code = 'E_BACKLOG_INVALID';
+  }
+}
+
 /** @type {typeof import('./backlog-item.d.mts').backlogFields} */
 export function backlogFields(input) {
   const title = String(input.title ?? input.name ?? '').trim();
-  if (!title) throw new Error('A backlog item needs a non-empty title.');
+  if (!title) throw new BacklogInputError('A backlog item needs a non-empty title.');
   const priority = String(input.priority ?? 'medium');
   if (!PRIORITIES.includes(priority))
-    throw new Error(
+    throw new BacklogInputError(
       `Backlog priority ${JSON.stringify(priority)} is not valid; use one of ${PRIORITIES.join(', ')}.`,
     );
   const criteria = optionalText(input.acceptanceCriteria);

@@ -173,7 +173,12 @@ async function creationData(
     options.title ?? options.description ?? input.title ?? input.name ?? '',
   ).trim();
   if (!title)
-    throw new Error(`${CLI_COMMAND} ${type} create requires --title or JSON input with a title.`);
+    throw planningInputError(
+      type,
+      'REQUIRED',
+      `${CLI_COMMAND} ${type} create requires --title or JSON input with a title.`,
+      'Pass a title, or a title field in --data.',
+    );
   const base = { ...input, title };
 
   if (type === 'epic')

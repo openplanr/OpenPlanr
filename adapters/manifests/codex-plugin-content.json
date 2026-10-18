@@ -752,7 +752,7 @@
         },
         {
           "path": "skills/investigate/scripts/backlog-item.mjs",
-          "digest": "sha256:f7810690a569271344621380fa636d649967696630ca8263563d40582686a55a"
+          "digest": "sha256:4d3ae483819acaa34ef79b1ee3b21f75ceb78bf290366d7a9e095021340a3b68"
         }
       ]
     },
@@ -1000,7 +1000,7 @@
         },
         {
           "path": "skills/ship/scripts/backlog-item.mjs",
-          "digest": "sha256:f7810690a569271344621380fa636d649967696630ca8263563d40582686a55a"
+          "digest": "sha256:4d3ae483819acaa34ef79b1ee3b21f75ceb78bf290366d7a9e095021340a3b68"
         }
       ]
     },
