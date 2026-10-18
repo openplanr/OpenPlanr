@@ -24,17 +24,21 @@ import axe from 'axe-core';
 import {
   assertOperateReviewDisplayWorkspaceV1,
   assertOperatingReviewReceiptV2,
+  type OperateReviewDisplayWorkspaceV1,
 } from 'planr-pipeline/dashboard/operate-review-contract';
 import {
   dashboardRouteDefinition,
   parseDashboardRoute,
 } from '../../../../apps/dashboard/src/app/router.js';
+import { registerDashboardPerformanceTraceTests } from './fixtures/dashboard-performance-trace.js';
 import {
   DASHBOARD_FIXTURE_CYCLE_ID,
   DASHBOARD_FIXTURE_REVIEW_ID,
   DASHBOARD_ROUTE_FIXTURES,
   dashboardRouteFixture,
 } from './fixtures/dashboard-route-catalog.js';
+
+registerDashboardPerformanceTraceTests();
 
 const TEST_ROOT = dirname(fileURLToPath(import.meta.url));
 const FIXTURE_ORIGIN = `http://127.0.0.1:${process.env.OPENPLANR_DASHBOARD_FIXTURE_PORT ?? '4173'}`;
@@ -624,7 +628,9 @@ test.describe('dashboard real-browser quality', () => {
       const envelope = (await response.json()) as Record<string, unknown>;
       const data = envelope.data as Record<string, unknown>;
       const receipt = assertOperatingReviewReceiptV2(data.receipt);
-      const workspace = assertOperateReviewDisplayWorkspaceV1(data.workspace);
+      const workspace = assertOperateReviewDisplayWorkspaceV1(
+        data.workspace,
+      ) as OperateReviewDisplayWorkspaceV1;
       expect(envelope).toMatchObject({
         ok: true,
         operation: 'operate.review.submit',

@@ -10,6 +10,11 @@ import {
   DASHBOARD_FIXTURE_PROJECT_ID,
   DASHBOARD_FIXTURE_REVIEW_ID,
 } from './dashboard-api-fixture.mjs';
+import {
+  premiumRequestState,
+  productionManifest,
+  servePremiumFixture,
+} from './premium-dashboard-server.ts';
 
 const fixture = createDashboardApiFixture();
 const streams = new Set();
@@ -38,6 +43,17 @@ function refuse(response, status = 400) {
 }
 
 function bootstrapForRequest(request) {
+  if (
+    new URL(request.headers.referer ?? DASHBOARD_FIXTURE_ORIGIN).pathname.startsWith(
+      '/__production/',
+    )
+  ) {
+    const manifest = productionManifest();
+    return {
+      ...fixture.bootstrap,
+      ui: { ...fixture.bootstrap.ui, buildId: manifest.buildId, expectedBuildId: manifest.buildId },
+    };
+  }
   try {
     const referer = new URL(request.headers.referer ?? DASHBOARD_FIXTURE_ORIGIN);
     const name = referer.searchParams.get('project');
@@ -63,6 +79,8 @@ function bootstrapForRequest(request) {
 }
 
 function planningForRequest(request) {
+  const premium = premiumRequestState(request, fixture.planning.binding);
+  if (premium) return premium.snapshot;
   try {
     const referer = new URL(request.headers.referer ?? DASHBOARD_FIXTURE_ORIGIN);
     if (referer.searchParams.get('planningScenario') !== 'delivery') return fixture.planning;
@@ -563,6 +581,17 @@ function openStream(request, response) {
   response.setHeader('connection', 'keep-alive');
   response.flushHeaders();
   response.write(': owner fixture stream ready\n\n');
+  const premium =
+    new URL(request.url, DASHBOARD_FIXTURE_ORIGIN).pathname === '/api/planning/events'
+      ? premiumRequestState(request, fixture.planning.binding)
+      : null;
+  if (premium) {
+    premium.streams.add(response);
+    response.write(
+      `event: ready\ndata: ${JSON.stringify({ kind: 'planning-live-event', schemaVersion: '1.0.0', event: 'ready', binding: premium.snapshot.binding, cursor: premium.snapshot.cursor, payload: { readOnly: true, reasonCodes: [] } })}\n\n`,
+    );
+    request.once('close', () => premium.streams.delete(response));
+  }
   streams.add(response);
   request.once('close', () => streams.delete(response));
 }
@@ -700,6 +729,16 @@ async function commandResponse(request, response, pathname) {
 async function routeApi(request, response, next) {
   const url = new URL(request.url, DASHBOARD_FIXTURE_ORIGIN);
   const { pathname } = url;
+  if (pathname.startsWith('/__production/') || pathname.startsWith('/__fixture/')) {
+    try {
+      servePremiumFixture(request, response, fixture.planning.binding);
+    } catch (error) {
+      responseJson(response, 500, {
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+    return;
+  }
   if (!pathname.startsWith('/api/')) return next();
   try {
     if (pathname === '/api/bootstrap') {

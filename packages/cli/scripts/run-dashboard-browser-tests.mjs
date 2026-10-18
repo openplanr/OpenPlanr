@@ -167,6 +167,10 @@ function writePackedTypecheckConfig(temporaryRoot, packageRoot) {
         include: [
           join(workspaceRoot, 'apps/dashboard/src/**/*'),
           join(repositoryRoot, 'tests/e2e/fixtures/dashboard-test-entry.tsx'),
+          join(repositoryRoot, 'tests/e2e/dashboard-visual-regression.test.ts'),
+          join(repositoryRoot, 'tests/e2e/dashboard-performance-trace.test.ts'),
+          join(repositoryRoot, 'tests/e2e/fixtures/dashboard-performance-trace.ts'),
+          join(repositoryRoot, 'tests/dashboard/fixtures/**/*.ts'),
         ],
       },
       null,
@@ -273,17 +277,24 @@ function reserveFixturePort() {
 
 let temporaryRoot;
 try {
-  const compileOnly = process.argv.includes('--compile-only');
+  const typecheckOnly = process.argv.includes('--typecheck-only');
+  const compileOnly = typecheckOnly || process.argv.includes('--compile-only');
   const playwrightArguments = process.argv
     .slice(2)
-    .filter((argument) => argument !== '--compile-only');
+    .filter((argument) => argument !== '--compile-only' && argument !== '--typecheck-only');
   temporaryRoot = mkdtempSync(join(tmpdir(), 'openplanr-dashboard-browser-custody-'));
-  const packed = installPackedPipeline(temporaryRoot);
-  preservePackedPipelineArchive(packed.archivePath);
+  const packed = typecheckOnly
+    ? { packageRoot: pipelineSourceRoot() }
+    : installPackedPipeline(temporaryRoot);
+  if (!typecheckOnly) preservePackedPipelineArchive(packed.archivePath);
   const environment = {
     ...process.env,
-    OPENPLANR_PACKED_PIPELINE_ROOT: packed.packageRoot,
-    OPENPLANR_PACKED_PIPELINE_SOURCE_ROOT: packed.sourceRoot,
+    ...(!typecheckOnly
+      ? {
+          OPENPLANR_PACKED_PIPELINE_ROOT: packed.packageRoot,
+          OPENPLANR_PACKED_PIPELINE_SOURCE_ROOT: packed.sourceRoot,
+        }
+      : {}),
   };
   let playwrightCliPath;
   if (!compileOnly) {
@@ -301,9 +312,12 @@ try {
     process.execPath,
     [join(installedPackageRoot('typescript'), 'bin', 'tsc'), '-p', packedTypecheck],
     environment,
-    'Packed-candidate dashboard typecheck',
+    typecheckOnly
+      ? 'Workspace dashboard fixture typecheck'
+      : 'Packed-candidate dashboard typecheck',
   );
-  runChecked('npm', ['run', 'build:dashboard'], environment, 'Packed-candidate dashboard build');
+  if (!typecheckOnly)
+    runChecked('npm', ['run', 'build:dashboard'], environment, 'Packed-candidate dashboard build');
   if (!compileOnly) {
     const args = [
       playwrightCliPath,
