@@ -2,4 +2,4 @@
 'openplanr': patch
 ---
 
-The connectors page now names Linear sync as the only optional feature that stores a token, and says that token is sent only to Linear.
+The connectors page now describes only the Linear sync token: where it is stored and that it is sent only to Linear.
