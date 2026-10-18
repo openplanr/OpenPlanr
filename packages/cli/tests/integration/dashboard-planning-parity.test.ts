@@ -726,3 +726,35 @@ describe('T-022 Planning owner/client parity', () => {
     }
   });
 });
+
+// Reader regressions share isolated source files, rather than a native-derived delegate payload.
+describe('planning artifact identity parity', async () => {
+  const { fileURLToPath } = await import('node:url');
+  const assert = await import('node:assert/strict');
+  const native = await import('../../../pipeline/lib/dashboard/graph-reader.mjs');
+  const engine = await import('../../../pipeline/lib/dashboard/graph-engine.mjs');
+  const cli = await import('../../src/services/graph-service.js');
+  const { fixtureContents, identityCases } = await import(
+    '../../../pipeline/tests/dashboard/planning-identity-cases.mjs'
+  );
+  const root = fileURLToPath(
+    new URL('../../../pipeline/conformance/fixtures/dashboard-identity/.planr/', import.meta.url),
+  );
+  for (const [name, check] of identityCases) {
+    it(name, () => {
+      const before = fixtureContents(root);
+      const graph = cli.readGraph(root);
+      check(graph, cli.readPlanningModel(root));
+      expect(graph).toEqual(native.readGraph(root));
+      expect(cli.readPlanningModel(root)).toEqual(native.readPlanningModel(root));
+      const delegated = engine.buildGraph(root, {
+        run: (_command: string, args: string[]) => ({
+          status: 0,
+          stdout: args[0] === '--version' ? '3.1.1' : JSON.stringify(graph),
+        }),
+      });
+      expect(delegated).toEqual(graph);
+      assert.deepEqual(fixtureContents(root), before);
+    });
+  }
+});

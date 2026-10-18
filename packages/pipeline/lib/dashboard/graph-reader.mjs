@@ -16,6 +16,7 @@ import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { basename, dirname, join, relative, sep } from 'node:path';
 
 import { validate } from '../design/schema-loader.mjs';
+import { createPlanningReadModel, createReferenceResolver } from './graph-read-model.mjs';
 
 // ── Minimal YAML frontmatter parser (stdlib only) ─────────────────────────
 //
@@ -69,7 +70,7 @@ function parseInlineArray(raw) {
  * the first two `---` fences. Returns null frontmatter when no fence is present.
  */
 export function splitFrontmatter(text) {
-  const normalized = text.replace(/\r\n/g, '\n');
+  const normalized = text.replace(/^\uFEFF/u, '').replace(/\r\n/g, '\n');
   if (!normalized.startsWith('---\n') && normalized !== '---') {
     return { raw: '', body: normalized, hasFrontmatter: false };
   }
@@ -246,7 +247,7 @@ function isArtifactFile(name) {
   if (name.startsWith('.')) return false;
   if (name.endsWith('-error-report.md')) return false;
   if (name.endsWith('-gherkin.feature')) return false;
-  return name.endsWith('.md');
+  return /^[A-Z][A-Z0-9]*-\d+(?:-[^/]*)?\.md$/u.test(name);
 }
 
 /** Recursively collect artifact `.md` paths under a flat agile dir (handles `us-NNN/` nesting). */
@@ -282,7 +283,7 @@ function collectSpecDir(specDir, acc) {
     const full = join(specDir, ent.name);
     if (ent.isFile()) {
       // Only the spec body — never qa-report.md / clarifications.md / dotfiles.
-      if (/^SPEC-\d+.*\.md$/.test(ent.name)) acc.push(full);
+      if (/^SPEC-\d+.*\.md$/.test(ent.name) && isArtifactFile(ent.name)) acc.push(full);
     } else if (ent.isDirectory() && (ent.name === 'stories' || ent.name === 'tasks')) {
       // ONLY stories/US-*.md and tasks/T-*.md — exclude design/, dotfiles, etc.
       const prefix = ent.name === 'stories' ? 'US-' : 'T-';
@@ -342,6 +343,22 @@ const PARENT_FIELDS = ['epicId', 'featureId', 'storyId', 'specId'];
 
 // ── Public API ──────────────────────────────────────────────────────────────
 
+function legacyAdrMetadata(filename, body) {
+  const id = /^(ADR-\d+)(?:-|\.md$)/u.exec(filename)?.[1];
+  if (!id) return {};
+  const metadata = { id };
+  const heading = /^#[ \t]+(ADR-\d+):[ \t]*(.+)$/mu.exec(body);
+  if (heading?.[1] === id) metadata.title = heading[2].trim();
+  for (const [label, field] of [
+    ['Status', 'status'],
+    ['Date', 'date'],
+  ]) {
+    const value = new RegExp(`^-[ \\t]+${label}:[ \\t]*(.*)$`, 'mu').exec(body)?.[1].trim();
+    if (value) metadata[field] = value;
+  }
+  return metadata;
+}
+
 /**
  * Build a node object from a single artifact file.
  * @param {string} absPath absolute file path
@@ -361,6 +378,9 @@ function buildNode(absPath, planrDir, includeBody) {
   // `.planr/`-relative dir, normalized via path.relative so a relative or a
   // trailing-slashed planrDir still yields a clean POSIX-style relative path.
   const relDir = relative(planrDir, dirname(absPath)).split(sep).join('/').replace(/^\//, '');
+  if (!hasFrontmatter && relDir.split('/')[0] === 'adrs') {
+    Object.assign(fm, legacyAdrMetadata(basename(absPath), body));
+  }
 
   let localId = fm.id != null ? String(fm.id) : '';
   if (localId === '') {
@@ -410,7 +430,7 @@ function buildNode(absPath, planrDir, includeBody) {
  * @param {{ includeBody?: boolean, validate?: boolean }} [opts]
  * @returns {{ nodes: object[], edges: object[] }}
  */
-export function readGraph(planrDir, opts = {}) {
+function readGraphData(planrDir, opts = {}, sourcePaths = new Map(), diagnostics = []) {
   const includeBody = opts.includeBody === true;
   const shouldValidate = opts.validate !== false;
 
@@ -436,7 +456,17 @@ export function readGraph(planrDir, opts = {}) {
     // Namespacing makes story/task ids globally unique, so the old silent
     // "first wins" collapse is gone. Guard only against a genuine exact-duplicate
     // global id (the schema requires unique ids; a true dup is a data error).
-    if (idSet.has(node.id)) continue;
+    if (idSet.has(node.id)) {
+      diagnostics.push({
+        nodeId: node.id,
+        sourcePath: relative(planrDir, file).split(sep).join('/'),
+        field: 'id',
+        reason: 'duplicate-identity',
+        classification: 'source-data',
+      });
+      continue;
+    }
+    sourcePaths.set(node.id, relative(planrDir, file).split(sep).join('/'));
     idSet.add(node.id);
     nodes.push(node);
   }
@@ -451,15 +481,7 @@ export function readGraph(planrDir, opts = {}) {
     edges.push({ from, to, kind });
   };
 
-  // Resolve a parent/dependency reference to its global node id using the same
-  // namespacing: under a spec scope, `specId` ("SPEC-NNN") points at the spec
-  // body (bare id) while local refs (US-003, T-001) namespace to `${scope}/...`.
-  const resolveRef = (rawRef, scope, field) => {
-    const ref = String(rawRef);
-    if (!scope) return ref; // agile top-level: bare ids
-    if (field === 'specId' || /^SPEC-\d+/.test(ref)) return ref; // spec body is bare
-    return `${scope}/${ref}`;
-  };
+  const resolveRef = createReferenceResolver({ nodes, edges: [] });
 
   for (const node of nodes) {
     const fm = node.frontmatter || {};
@@ -468,7 +490,7 @@ export function readGraph(planrDir, opts = {}) {
     for (const field of PARENT_FIELDS) {
       const parent = fm[field];
       if (parent == null || parent === '') continue;
-      const parentId = resolveRef(parent, scope, field);
+      const parentId = resolveRef(parent, scope, field).targetId;
       if (idSet.has(parentId)) addEdge(parentId, node.id, 'contains');
     }
     // depends_on: this node -> each prerequisite (only when the target exists)
@@ -476,7 +498,7 @@ export function readGraph(planrDir, opts = {}) {
     if (Array.isArray(deps)) {
       for (const dep of deps) {
         if (dep == null || dep === '') continue;
-        const depId = resolveRef(dep, scope, 'dependsOn');
+        const depId = resolveRef(dep, scope, 'dependsOn').targetId;
         if (idSet.has(depId)) addEdge(node.id, depId, 'depends_on');
       }
     }
@@ -489,13 +511,25 @@ export function readGraph(planrDir, opts = {}) {
     if (errs.length > 0) {
       const first = errs
         .slice(0, 3)
-        .map((e) => `${e.path}: ${e.rule} — ${e.detail}`)
+        .map((e) => `${e.path}: ${e.rule}: ${e.detail}`)
         .join('; ');
       throw new Error(`graph-reader produced a graph that fails graph.schema.json: ${first}`);
     }
   }
 
   return graph;
+}
+
+export function readGraph(planrDir, opts = {}) {
+  return readGraphData(planrDir, opts);
+}
+
+/** Diagnostic evidence stays separate from the closed graph wire projection. */
+export function readPlanningModel(planrDir) {
+  const sourcePaths = new Map();
+  const diagnostics = [];
+  const graph = readGraphData(planrDir, {}, sourcePaths, diagnostics);
+  return createPlanningReadModel(graph, sourcePaths, diagnostics);
 }
 
 /**

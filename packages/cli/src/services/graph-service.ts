@@ -2,6 +2,12 @@ import { type Dirent, existsSync, readdirSync, readFileSync, type Stats, statSyn
 import path from 'node:path';
 import type { ArtifactFrontmatter, OpenPlanrConfig } from '../models/types.js';
 import { parseMarkdown } from '../utils/markdown.js';
+import {
+  createPlanningReadModel,
+  createReferenceResolver,
+  type PlanningDiagnostic,
+  type PlanningReadModel,
+} from './graph-read-model.js';
 
 export type GraphNodeType =
   | 'epic'
@@ -64,7 +70,7 @@ function isArtifactFile(name: string): boolean {
   if (name.startsWith('.')) return false;
   if (name.endsWith('-error-report.md')) return false;
   if (name.endsWith('-gherkin.feature')) return false;
-  return name.endsWith('.md');
+  return /^[A-Z][A-Z0-9]*-\d+(?:-[^/]*)?\.md$/u.test(name);
 }
 
 function walkAgileDir(dir: string, acc: string[]): string[] {
@@ -98,7 +104,7 @@ function collectSpecDir(specDir: string, acc: string[]): string[] {
   for (const entry of entries) {
     const fullPath = path.join(specDir, entry.name);
     if (entry.isFile()) {
-      if (/^SPEC-\d+.*\.md$/.test(entry.name)) acc.push(fullPath);
+      if (/^SPEC-\d+.*\.md$/.test(entry.name) && isArtifactFile(entry.name)) acc.push(fullPath);
     } else if (entry.isDirectory() && (entry.name === 'stories' || entry.name === 'tasks')) {
       const prefix = entry.name === 'stories' ? 'US-' : 'T-';
       let inner: Dirent[];
@@ -197,6 +203,22 @@ export function classifyGraphStatus(rawStatus: unknown): GraphStatus {
   return 'outstanding';
 }
 
+function legacyAdrMetadata(filename: string, body: string): Record<string, string> {
+  const id = /^(ADR-\d+)(?:-|\.md$)/u.exec(filename)?.[1];
+  if (!id) return {};
+  const metadata: Record<string, string> = { id };
+  const heading = /^#[ \t]+(ADR-\d+):[ \t]*(.+)$/mu.exec(body);
+  if (heading?.[1] === id) metadata.title = heading[2].trim();
+  for (const [label, field] of [
+    ['Status', 'status'],
+    ['Date', 'date'],
+  ]) {
+    const value = new RegExp(`^-[ \\t]+${label}:[ \\t]*(.*)$`, 'mu').exec(body)?.[1].trim();
+    if (value) metadata[field] = value;
+  }
+  return metadata;
+}
+
 function buildNode(absPath: string, planrDir: string, includeBody: boolean): GraphNode | null {
   let raw: string;
   try {
@@ -205,13 +227,18 @@ function buildNode(absPath: string, planrDir: string, includeBody: boolean): Gra
     return null;
   }
 
-  const parsed = parseMarkdown(raw);
+  const normalized = raw.replace(/^\uFEFF/u, '');
+  const parsed = parseMarkdown(normalized);
   const frontmatter = { ...(parsed.data || {}) } as ArtifactFrontmatter;
   const relativeDir = path
     .relative(planrDir, path.dirname(absPath))
     .split(path.sep)
     .join('/')
     .replace(/^\//, '');
+  // Empty frontmatter still owns metadata, so detect the consumed fence rather than its keys.
+  if (parsed.content === normalized && relativeDir.split('/')[0] === 'adrs') {
+    Object.assign(frontmatter, legacyAdrMetadata(path.basename(absPath), parsed.content));
+  }
 
   const localId =
     frontmatter.id != null && String(frontmatter.id).trim() !== ''
@@ -246,14 +273,12 @@ function buildNode(absPath: string, planrDir: string, includeBody: boolean): Gra
   return node;
 }
 
-function resolveRef(rawRef: unknown, scope: string | null, field: string): string {
-  const ref = String(rawRef);
-  if (!scope) return ref;
-  if (field === 'specId' || /^SPEC-\d+/.test(ref)) return ref;
-  return `${scope}/${ref}`;
-}
-
-export function readGraph(planrDir: string, opts: ReadGraphOptions = {}): ProjectGraph {
+function readGraphData(
+  planrDir: string,
+  opts: ReadGraphOptions = {},
+  sourcePaths = new Map<string, string>(),
+  diagnostics: PlanningDiagnostic[] = [],
+): ProjectGraph {
   if (!planrDir || !existsSync(planrDir)) return { nodes: [], edges: [] };
 
   let stat: Stats;
@@ -268,7 +293,19 @@ export function readGraph(planrDir: string, opts: ReadGraphOptions = {}): Projec
   const idSet = new Set<string>();
   for (const file of collectArtifacts(planrDir)) {
     const node = buildNode(file, planrDir, opts.includeBody === true);
-    if (!node?.id || idSet.has(node.id)) continue;
+    if (!node?.id) continue;
+    const sourcePath = path.relative(planrDir, file).split(path.sep).join('/');
+    if (idSet.has(node.id)) {
+      diagnostics.push({
+        nodeId: node.id,
+        sourcePath,
+        field: 'id',
+        reason: 'duplicate-identity',
+        classification: 'source-data',
+      });
+      continue;
+    }
+    sourcePaths.set(node.id, sourcePath);
     nodes.push(node);
     idSet.add(node.id);
   }
@@ -283,27 +320,39 @@ export function readGraph(planrDir: string, opts: ReadGraphOptions = {}): Projec
     edges.push({ from, to, kind });
   };
 
+  const resolveRef = createReferenceResolver({ nodes, edges: [] });
   for (const node of nodes) {
     const scope =
       typeof node.frontmatter.specScope === 'string' ? node.frontmatter.specScope : null;
     for (const field of PARENT_FIELDS) {
       const parent = node.frontmatter[field];
       if (parent == null || parent === '') continue;
-      const parentId = resolveRef(parent, scope, field);
-      if (idSet.has(parentId)) addEdge(parentId, node.id, 'contains');
+      const parentId = resolveRef(parent, scope, field).targetId;
+      if (parentId && idSet.has(parentId)) addEdge(parentId, node.id, 'contains');
     }
 
     const dependsOn = node.frontmatter.dependsOn;
     if (Array.isArray(dependsOn)) {
       for (const dep of dependsOn) {
         if (dep == null || dep === '') continue;
-        const depId = resolveRef(dep, scope, 'dependsOn');
-        if (idSet.has(depId)) addEdge(node.id, depId, 'depends_on');
+        const depId = resolveRef(dep, scope, 'dependsOn').targetId;
+        if (depId && idSet.has(depId)) addEdge(node.id, depId, 'depends_on');
       }
     }
   }
 
   return { nodes, edges };
+}
+
+export function readGraph(planrDir: string, opts: ReadGraphOptions = {}): ProjectGraph {
+  return readGraphData(planrDir, opts);
+}
+
+export function readPlanningModel(planrDir: string): PlanningReadModel {
+  const sourcePaths = new Map<string, string>();
+  const diagnostics: PlanningDiagnostic[] = [];
+  const graph = readGraphData(planrDir, {}, sourcePaths, diagnostics);
+  return createPlanningReadModel(graph, sourcePaths, diagnostics);
 }
 
 export function readProjectGraph(
