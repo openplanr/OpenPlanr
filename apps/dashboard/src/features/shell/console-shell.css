@@ -15,6 +15,33 @@
   min-width: 0;
   flex-direction: column;
 }
+.pc-font-notice {
+  display: flex;
+  flex-shrink: 0;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--pc-space-2);
+  padding: var(--pc-space-2) var(--pc-gutter);
+  font: var(--pc-type-body-sm);
+  color: var(--pc-text-primary);
+  background: var(--pc-surface-raised);
+  border-bottom: 1px solid var(--pc-border-default);
+}
+.pc-font-notice button {
+  min-height: var(--op-density-control);
+  padding: var(--pc-space-2);
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  background: var(--pc-surface-panel);
+  border: 1px solid var(--op-control-border);
+  border-radius: var(--pc-radius-sm);
+}
+.pc-font-notice button:focus-visible {
+  outline: var(--op-focus-width) solid var(--op-focus);
+  outline-offset: var(--op-focus-offset);
+}
 .pc-shell__plane {
   position: relative;
   display: flex;

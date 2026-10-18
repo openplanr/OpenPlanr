@@ -8,16 +8,19 @@ declare const __OPENPLANR_DASHBOARD_BUILD_ID__: string;
 const root = document.querySelector<HTMLElement>('#root');
 if (!root) throw new Error('OpenPlanr dashboard root element is missing.');
 
-void loadDashboardFonts(document.fonts)
-  .then(() => {
-    createRoot(root).render(
-      <StrictMode>
-        <App buildId={__OPENPLANR_DASHBOARD_BUILD_ID__} />
-      </StrictMode>,
-    );
-  })
-  .catch((error: unknown) => {
-    root.setAttribute('role', 'alert');
-    root.textContent = 'Dashboard fonts could not load. Reload to retry the local assets.';
-    throw error;
-  });
+const renderApp = (fontLoadFailed = false) => {
+  createRoot(root).render(
+    <StrictMode>
+      <App buildId={__OPENPLANR_DASHBOARD_BUILD_ID__} fontLoadFailed={fontLoadFailed} />
+    </StrictMode>,
+  );
+};
+
+void loadDashboardFonts(document.fonts).then(
+  () => renderApp(),
+  (error: unknown) => {
+    // biome-ignore lint/suspicious/noConsole: missing local faces must remain diagnosable after startup.
+    console.error('Dashboard fonts could not load; continuing with fallback fonts.', error);
+    renderApp(true);
+  },
+);

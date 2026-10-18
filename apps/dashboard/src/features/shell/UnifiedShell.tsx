@@ -31,7 +31,7 @@ function readViewportWidth(): number {
   return typeof window === 'undefined' ? SERVER_VIEWPORT_WIDTH : window.innerWidth;
 }
 
-export function UnifiedShell() {
+export function UnifiedShell({ fontLoadFailed = false }: { fontLoadFailed?: boolean }) {
   const {
     route,
     identity,
@@ -48,6 +48,7 @@ export function UnifiedShell() {
     bootDetail,
   } = useDashboard();
   const search = useSearchCoordinator(planningProjection);
+  const [fontNoticeDismissed, setFontNoticeDismissed] = useState(false);
   const inspectorStore = useInspectorStore();
   const width = useSyncExternalStore(
     subscribeToResize,
@@ -122,6 +123,17 @@ export function UnifiedShell() {
           onToggleInspector={() => setInspectorOpen((open) => !open)}
           onOpenPalette={search.show}
         />
+        {fontLoadFailed && !fontNoticeDismissed ? (
+          <div className="pc-font-notice" role="status">
+            <span>
+              Some dashboard fonts could not load. You can keep working with fallback fonts. Reload
+              to retry.
+            </span>
+            <button type="button" onClick={() => setFontNoticeDismissed(true)}>
+              Dismiss font notice
+            </button>
+          </div>
+        ) : null}
         <div className="pc-shell__plane">
           <main
             id="main-content"

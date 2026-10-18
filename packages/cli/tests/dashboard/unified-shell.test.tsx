@@ -165,7 +165,9 @@ describe('unified dashboard shell', () => {
       'utf8',
     );
     expect(mainSource.match(/createRoot\s*\(/gu)).toHaveLength(1);
-    expect(mainSource).toContain('<App buildId={__OPENPLANR_DASHBOARD_BUILD_ID__} />');
+    expect(mainSource).toContain(
+      '<App buildId={__OPENPLANR_DASHBOARD_BUILD_ID__} fontLoadFailed={fontLoadFailed} />',
+    );
   });
 
   it('keeps contextual destinations reachable in the console navigation', () => {

@@ -5,11 +5,38 @@ const FONT_REQUESTS = [
 ];
 
 export async function loadDashboardFonts(fonts: FontFaceSet): Promise<void> {
+  const missing = new Set(FONT_REQUESTS);
+  const failures: string[] = [];
+  let timeout: ReturnType<typeof setTimeout> | undefined;
   // Mount with final metrics so a cold local font cache cannot move the interface.
-  await Promise.all(
+  const loading = Promise.all(
     FONT_REQUESTS.map(async (font) => {
-      const faces = await fonts.load(font);
-      if (faces.length === 0) throw new Error(`Dashboard font is unavailable: ${font}.`);
+      try {
+        const faces = await fonts.load(font);
+        if (faces.length > 0) missing.delete(font);
+      } catch (error: unknown) {
+        failures.push(`${font}: ${error instanceof Error ? error.message : String(error)}`);
+      }
     }),
-  );
+  ).then(() => {
+    if (missing.size > 0) {
+      throw new Error(
+        `Dashboard font is unavailable: ${[...missing].join(', ')}. ${failures.join('; ')}`.trim(),
+      );
+    }
+  });
+
+  try {
+    // A stalled local asset must not prevent access to the dashboard.
+    await Promise.race([
+      loading,
+      new Promise<never>((_resolve, reject) => {
+        timeout = setTimeout(() => {
+          reject(new Error(`Dashboard fonts timed out after 3000 ms: ${[...missing].join(', ')}.`));
+        }, 3000);
+      }),
+    ]);
+  } finally {
+    clearTimeout(timeout);
+  }
 }

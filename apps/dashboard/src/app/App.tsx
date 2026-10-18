@@ -25,6 +25,7 @@ export type AppProps = {
   bootstrap?: DashboardBootstrap | null;
   bootPhase?: DashboardBootPhase;
   bootDetail?: string | null;
+  fontLoadFailed?: boolean;
 };
 
 function currentHash(initialHash?: string): string {
@@ -47,6 +48,7 @@ export function App({
   bootstrap: bootstrapOverride,
   bootPhase: bootPhaseOverride,
   bootDetail: bootDetailOverride,
+  fontLoadFailed = false,
 }: AppProps) {
   const hash = useSyncExternalStore(
     (onChange) => subscribeToHashChange(initialHash, onChange),
@@ -115,7 +117,7 @@ export function App({
       refetchCurrent={runtime.refetchCurrent}
     >
       <RouteAnnouncer />
-      <UnifiedShell />
+      <UnifiedShell fontLoadFailed={fontLoadFailed} />
     </DashboardProviders>
   );
 }
