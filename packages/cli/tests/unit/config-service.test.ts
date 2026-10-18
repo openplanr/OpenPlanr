@@ -99,6 +99,47 @@ describe('loadConfig', () => {
   });
 });
 
+describe('loadConfig then saveConfig keeps unknown nested keys', () => {
+  const teamId = 'team-1';
+  it.each([
+    ['outputPaths', { outputPaths: { ...validConfig.outputPaths, extra: 'x' } }],
+    ['idPrefix', { idPrefix: { ...validConfig.idPrefix, extra: 'x' } }],
+    ['reports', { reports: { orgName: 'Org', extra: 'x' } }],
+    ['distribution', { distribution: { emailFrom: 'a@b.c', extra: 'x' } }],
+    ['upgrade', { upgrade: { autoUpgrade: false, extra: 'x' } }],
+    ['findings', { findings: { unattended: 'report', extra: 'x' } }],
+    ['linear', { linear: { teamId, extra: 'x' } }],
+    [
+      'linear.teams[]',
+      { linear: { teamId, teams: [{ id: teamId, key: 'T', name: 'T', extra: 'x' }] } },
+    ],
+    ['linear.typeLabels', { linear: { teamId, typeLabels: { task: 'Task', extra: 'x' } } }],
+    ['reportLinter', { reportLinter: { rules: [], vaguePhrases: [], extra: 'x' } }],
+    [
+      'reportLinter.rules[]',
+      { reportLinter: { rules: [{ id: 'r', enabled: true, extra: 'x' }], vaguePhrases: [] } },
+    ],
+    [
+      'reportLinter.vaguePhrases[]',
+      {
+        reportLinter: {
+          rules: [],
+          vaguePhrases: [{ pattern: 'soon', alternatives: [], extra: 'x' }],
+        },
+      },
+    ],
+  ])('%s', async (_block, nested) => {
+    const original = { ...validConfig, ...nested };
+    mockFileExists.mockResolvedValue(true);
+    mockReadFile.mockResolvedValue(JSON.stringify(original));
+
+    await saveConfig('/project', await loadConfig('/project'));
+
+    const written = JSON.parse(String(mockWriteFile.mock.calls[0]?.[1]));
+    expect(written).toMatchObject(original);
+  });
+});
+
 describe('loadConfig report-linter phrase patterns', () => {
   async function loadWithPattern(pattern: string): Promise<unknown> {
     mockFileExists.mockResolvedValue(true);
