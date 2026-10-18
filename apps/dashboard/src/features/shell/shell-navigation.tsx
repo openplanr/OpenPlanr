@@ -390,46 +390,45 @@ const THEME_ICON: Readonly<Record<ThemeChoice, PcIconName>> = Object.freeze({
   dark: 'moon',
 });
 
-function readStoredTheme(): ThemeChoice {
-  try {
-    const value = localStorage.getItem(THEME_STORAGE_KEY);
-    if (value === 'light' || value === 'dark' || value === 'system') return value;
-  } catch {
-    // localStorage can throw (private mode); fall through to the system default.
-  }
-  return 'system';
-}
-
 function applyTheme(choice: ThemeChoice): void {
-  const root = document.documentElement;
-  if (choice === 'system') root.removeAttribute('data-theme');
-  else root.setAttribute('data-theme', choice);
+  document.documentElement.setAttribute('data-theme', choice);
 }
 
 /** Cycles the theme system → light → dark and persists the choice. */
 export function ThemeToggle() {
-  const [choice, setChoice] = useState<ThemeChoice>('system');
-  useEffect(() => {
-    const stored = readStoredTheme();
-    setChoice(stored);
-    applyTheme(stored);
-  }, []);
+  const [choice, setChoice] = useState<ThemeChoice>(() => {
+    if (typeof document === 'undefined') return 'dark';
+    const theme = document.documentElement.getAttribute('data-theme');
+    return theme === 'light' || theme === 'system' ? theme : 'dark';
+  });
+  const [storageError, setStorageError] = useState(
+    () =>
+      typeof document !== 'undefined' &&
+      document.documentElement.hasAttribute('data-theme-storage-error'),
+  );
   return (
-    <IconButton
-      icon={THEME_ICON[choice]}
-      label={`Theme: ${choice}. Switch to ${NEXT_THEME[choice]}.`}
-      size="sm"
-      onClick={() => {
-        const next = NEXT_THEME[choice];
-        setChoice(next);
-        applyTheme(next);
-        try {
-          localStorage.setItem(THEME_STORAGE_KEY, next);
-        } catch {
-          // localStorage can throw (private mode); the in-memory choice still applies.
-        }
-      }}
-    />
+    <>
+      <IconButton
+        icon={THEME_ICON[choice]}
+        label={`Theme: ${choice}. Switch to ${NEXT_THEME[choice]}.`}
+        size="sm"
+        onClick={() => {
+          const next = NEXT_THEME[choice];
+          setChoice(next);
+          applyTheme(next);
+          try {
+            localStorage.setItem(THEME_STORAGE_KEY, next);
+            setStorageError(false);
+            document.documentElement.removeAttribute('data-theme-storage-error');
+          } catch {
+            setStorageError(true);
+          }
+        }}
+      />
+      {storageError && (
+        <span role="status">Theme preference could not be saved in this browser.</span>
+      )}
+    </>
   );
 }
 

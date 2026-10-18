@@ -1,5 +1,12 @@
-@import "@fontsource-variable/geist";
-@import "@fontsource-variable/geist-mono";
+@import "@fontsource/outfit/400.css";
+@import "@fontsource/outfit/500.css";
+@import "@fontsource/outfit/600.css";
+@import "@fontsource/outfit/700.css";
+@import "@fontsource/outfit/800.css";
+@import "@fontsource-variable/dm-sans/standard.css";
+@import "@fontsource/source-code-pro/400.css";
+@import "@fontsource/source-code-pro/500.css";
+@import "@fontsource/source-code-pro/600.css";
 @import "tailwindcss";
 @import "./planr-console-tokens.css";
 
@@ -28,22 +35,131 @@
 }
 
 :root {
-  color-scheme: light;
+  color-scheme: dark;
   text-size-adjust: 100%;
-  --op-canvas: #f6f3ec;
-  --op-surface: #fcfbf8;
-  --op-ink: #1b1815;
-  --op-muted: #726960;
-  --op-divider: #d9d2c7;
-  --op-control: #5c750c;
-  --op-selected: #f0fbce;
-  --op-verified: #1d6152;
-  --op-attention: #94600a;
-  --op-refusal: #9c2c15;
-  --op-code: #221f1b;
-  --op-on-control: #ffffff;
-  --op-on-code: #f6f3ec;
-  --op-focus: var(--op-control);
+  --op-bg: #08080c;
+  --op-panel: #0e0e14;
+  --op-card: #141420;
+  --op-raised: #1a1a2a;
+  --op-line: #222236;
+  --op-line-strong: #606c7f;
+  --op-text: #f4f4fa;
+  --op-heading: #e8e8f0;
+  --op-body: #9999b8;
+  --op-muted: #a4adbc;
+  --op-dim: #858d99;
+  --op-accent: #5eead4;
+  --op-accent-soft: #153a32;
+  --op-on-accent: #08080c;
+  --op-info: #78aef8;
+  --op-danger: #f87171;
+  --op-warning: #e7b85c;
+  --op-addressed: #b498ef;
+  --op-type-spec: #c084fc;
+  --op-type-us: #60a5fa;
+  --op-type-t: #22d3ee;
+  --op-type-bl: #fbbf24;
+  --op-type-adr: #f472b6;
+  --op-type-epic: #4ade80;
+  --op-type-sprint: #5eead4;
+  --op-type-qt: #a4adbc;
+  --op-graph-dot-grid: rgba(255, 255, 255, 0.05);
+  --op-shadow-menu: 0 1px 2px rgba(0, 0, 0, 0.28), 0 8px 24px rgba(0, 0, 0, 0.24);
+  --op-shadow-float: 0 2px 6px rgba(0, 0, 0, 0.32), 0 18px 44px rgba(0, 0, 0, 0.36);
+  --op-shadow-accent-edge: 0 0 0 1px rgba(94, 234, 212, 0.18);
+  --op-control-border: var(--op-line-strong);
+
+  --op-canvas: var(--op-bg);
+  --op-surface: var(--op-panel);
+  --op-ink: var(--op-text);
+  --op-divider: var(--op-line);
+  --op-control: var(--op-accent);
+  --op-selected: var(--op-accent-soft);
+  --op-verified: var(--op-accent);
+  --op-attention: var(--op-warning);
+  --op-refusal: var(--op-danger);
+  --op-code: var(--op-bg);
+  --op-on-control: var(--op-on-accent);
+  --op-on-code: var(--op-text);
+  --op-focus: var(--op-accent);
+  --op-elevation-sheet: var(--op-shadow-float);
+  --op-elevation-menu: var(--op-shadow-menu);
+  --op-status-outstanding-fg: var(--op-info);
+  --op-status-outstanding-bg-bg: color-mix(in srgb, var(--op-info) 8%, var(--op-bg) 92%);
+  --op-status-outstanding-bg-panel: color-mix(in srgb, var(--op-info) 8%, var(--op-panel) 92%);
+  --op-status-outstanding-bg-card: color-mix(in srgb, var(--op-info) 8%, var(--op-card) 92%);
+  --op-status-outstanding-bg-raised: color-mix(in srgb, var(--op-info) 8%, var(--op-raised) 92%);
+  --op-status-outstanding-bg: var(--op-status-outstanding-bg-panel);
+  --op-status-in-progress-fg: var(--op-accent);
+  --op-status-in-progress-bg-bg: color-mix(in srgb, var(--op-accent) 8%, var(--op-bg) 92%);
+  --op-status-in-progress-bg-panel: color-mix(in srgb, var(--op-accent) 8%, var(--op-panel) 92%);
+  --op-status-in-progress-bg-card: color-mix(in srgb, var(--op-accent) 8%, var(--op-card) 92%);
+  --op-status-in-progress-bg-raised: color-mix(in srgb, var(--op-accent) 8%, var(--op-raised) 92%);
+  --op-status-in-progress-bg: var(--op-status-in-progress-bg-panel);
+  --op-status-blocked-fg: var(--op-danger);
+  --op-status-blocked-bg-bg: color-mix(in srgb, var(--op-danger) 8%, var(--op-bg) 92%);
+  --op-status-blocked-bg-panel: color-mix(in srgb, var(--op-danger) 8%, var(--op-panel) 92%);
+  --op-status-blocked-bg-card: color-mix(in srgb, var(--op-danger) 8%, var(--op-card) 92%);
+  --op-status-blocked-bg-raised: color-mix(in srgb, var(--op-danger) 8%, var(--op-raised) 92%);
+  --op-status-blocked-bg: var(--op-status-blocked-bg-panel);
+  --op-status-addressed-fg: var(--op-addressed);
+  --op-status-addressed-bg-bg: color-mix(in srgb, var(--op-addressed) 8%, var(--op-bg) 92%);
+  --op-status-addressed-bg-panel: color-mix(in srgb, var(--op-addressed) 8%, var(--op-panel) 92%);
+  --op-status-addressed-bg-card: color-mix(in srgb, var(--op-addressed) 8%, var(--op-card) 92%);
+  --op-status-addressed-bg-raised: color-mix(in srgb, var(--op-addressed) 8%, var(--op-raised) 92%);
+  --op-status-addressed-bg: var(--op-status-addressed-bg-panel);
+  --op-status-done-fg: var(--op-dim);
+  --op-status-done-bg-bg: color-mix(in srgb, var(--op-dim) 8%, var(--op-bg) 92%);
+  --op-status-done-bg-panel: color-mix(in srgb, var(--op-dim) 8%, var(--op-panel) 92%);
+  --op-status-done-bg-card: color-mix(in srgb, var(--op-dim) 8%, var(--op-card) 92%);
+  --op-status-done-bg-raised: color-mix(in srgb, var(--op-dim) 8%, var(--op-raised) 92%);
+  --op-status-done-bg: var(--op-status-done-bg-panel);
+  --op-status-quiet-fg: var(--op-warning);
+  --op-status-quiet-bg-bg: color-mix(in srgb, var(--op-warning) 8%, var(--op-bg) 92%);
+  --op-status-quiet-bg-panel: color-mix(in srgb, var(--op-warning) 8%, var(--op-panel) 92%);
+  --op-status-quiet-bg-card: color-mix(in srgb, var(--op-warning) 8%, var(--op-card) 92%);
+  --op-status-quiet-bg-raised: color-mix(in srgb, var(--op-warning) 8%, var(--op-raised) 92%);
+  --op-status-quiet-bg: var(--op-status-quiet-bg-panel);
+  --op-type-spec-bg-bg: color-mix(in srgb, var(--op-type-spec) 8%, var(--op-bg) 92%);
+  --op-type-spec-bg-panel: color-mix(in srgb, var(--op-type-spec) 8%, var(--op-panel) 92%);
+  --op-type-spec-bg-card: color-mix(in srgb, var(--op-type-spec) 8%, var(--op-card) 92%);
+  --op-type-spec-bg-raised: color-mix(in srgb, var(--op-type-spec) 8%, var(--op-raised) 92%);
+  --op-type-spec-bg: var(--op-type-spec-bg-panel);
+  --op-type-us-bg-bg: color-mix(in srgb, var(--op-type-us) 8%, var(--op-bg) 92%);
+  --op-type-us-bg-panel: color-mix(in srgb, var(--op-type-us) 8%, var(--op-panel) 92%);
+  --op-type-us-bg-card: color-mix(in srgb, var(--op-type-us) 8%, var(--op-card) 92%);
+  --op-type-us-bg-raised: color-mix(in srgb, var(--op-type-us) 8%, var(--op-raised) 92%);
+  --op-type-us-bg: var(--op-type-us-bg-panel);
+  --op-type-t-bg-bg: color-mix(in srgb, var(--op-type-t) 8%, var(--op-bg) 92%);
+  --op-type-t-bg-panel: color-mix(in srgb, var(--op-type-t) 8%, var(--op-panel) 92%);
+  --op-type-t-bg-card: color-mix(in srgb, var(--op-type-t) 8%, var(--op-card) 92%);
+  --op-type-t-bg-raised: color-mix(in srgb, var(--op-type-t) 8%, var(--op-raised) 92%);
+  --op-type-t-bg: var(--op-type-t-bg-panel);
+  --op-type-bl-bg-bg: color-mix(in srgb, var(--op-type-bl) 8%, var(--op-bg) 92%);
+  --op-type-bl-bg-panel: color-mix(in srgb, var(--op-type-bl) 8%, var(--op-panel) 92%);
+  --op-type-bl-bg-card: color-mix(in srgb, var(--op-type-bl) 8%, var(--op-card) 92%);
+  --op-type-bl-bg-raised: color-mix(in srgb, var(--op-type-bl) 8%, var(--op-raised) 92%);
+  --op-type-bl-bg: var(--op-type-bl-bg-panel);
+  --op-type-adr-bg-bg: color-mix(in srgb, var(--op-type-adr) 8%, var(--op-bg) 92%);
+  --op-type-adr-bg-panel: color-mix(in srgb, var(--op-type-adr) 8%, var(--op-panel) 92%);
+  --op-type-adr-bg-card: color-mix(in srgb, var(--op-type-adr) 8%, var(--op-card) 92%);
+  --op-type-adr-bg-raised: color-mix(in srgb, var(--op-type-adr) 8%, var(--op-raised) 92%);
+  --op-type-adr-bg: var(--op-type-adr-bg-panel);
+  --op-type-epic-bg-bg: color-mix(in srgb, var(--op-type-epic) 8%, var(--op-bg) 92%);
+  --op-type-epic-bg-panel: color-mix(in srgb, var(--op-type-epic) 8%, var(--op-panel) 92%);
+  --op-type-epic-bg-card: color-mix(in srgb, var(--op-type-epic) 8%, var(--op-card) 92%);
+  --op-type-epic-bg-raised: color-mix(in srgb, var(--op-type-epic) 8%, var(--op-raised) 92%);
+  --op-type-epic-bg: var(--op-type-epic-bg-panel);
+  --op-type-sprint-bg-bg: color-mix(in srgb, var(--op-type-sprint) 8%, var(--op-bg) 92%);
+  --op-type-sprint-bg-panel: color-mix(in srgb, var(--op-type-sprint) 8%, var(--op-panel) 92%);
+  --op-type-sprint-bg-card: color-mix(in srgb, var(--op-type-sprint) 8%, var(--op-card) 92%);
+  --op-type-sprint-bg-raised: color-mix(in srgb, var(--op-type-sprint) 8%, var(--op-raised) 92%);
+  --op-type-sprint-bg: var(--op-type-sprint-bg-panel);
+  --op-type-qt-bg-bg: color-mix(in srgb, var(--op-type-qt) 8%, var(--op-bg) 92%);
+  --op-type-qt-bg-panel: color-mix(in srgb, var(--op-type-qt) 8%, var(--op-panel) 92%);
+  --op-type-qt-bg-card: color-mix(in srgb, var(--op-type-qt) 8%, var(--op-card) 92%);
+  --op-type-qt-bg-raised: color-mix(in srgb, var(--op-type-qt) 8%, var(--op-raised) 92%);
+  --op-type-qt-bg: var(--op-type-qt-bg-panel);
 
   --op-space-1: 4px;
   --op-space-2: 8px;
@@ -55,8 +171,10 @@
   --op-space-10: 40px;
   --op-space-12: 48px;
   --op-space-16: 64px;
+  --op-radius-tag: 6px;
   --op-radius-control: 8px;
   --op-radius-surface: 12px;
+  --op-radius-card: var(--op-radius-surface);
   --op-radius-sheet: 16px;
   --op-density-control: 44px;
   --op-density-row-block: var(--op-space-3);
@@ -75,10 +193,13 @@
   --op-size-spine-offset: -7px;
   --op-size-spinner: 16px;
   --op-measure-copy: 72ch;
-  --op-elevation-sheet: 0 16px 48px color-mix(in srgb, var(--op-ink) 18%, transparent);
   --op-elevation-focus: 0 0 0 3px color-mix(in srgb, var(--op-focus) 28%, transparent);
   --op-elevation-high-contrast: 0 0 0 2px var(--op-ink);
-  --op-motion-duration: 180ms;
+  --op-motion-duration: 120ms;
+  --op-motion-panel-duration: 200ms;
+  --op-motion-live-duration: 1600ms;
+  --op-motion-panel-distance: 24px;
+  --op-motion-hover-ease: ease-out;
   --op-motion-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
   --op-motion-reduced: 0.01ms;
   --op-focus-width: 3px;
@@ -93,43 +214,83 @@
   }
 }
 
-:root[data-theme="dark"] {
-  color-scheme: dark;
-  --op-canvas: #141210;
-  --op-surface: #221f1b;
-  --op-ink: #f6f3ec;
-  --op-muted: #b9afa3;
-  --op-divider: #3a342f;
-  --op-control: #bce633;
-  --op-selected: #2a2622;
-  --op-verified: #8fcfbb;
-  --op-attention: #f5c563;
-  --op-refusal: #f4a392;
-  --op-code: #0e0c0b;
-  --op-on-control: var(--op-canvas);
-  --op-on-code: var(--op-ink);
+:root[data-theme="light"] {
+  color-scheme: light;
+  --op-bg: #f5f7f7;
+  --op-panel: #ffffff;
+  --op-card: #ffffff;
+  --op-raised: #e9efed;
+  --op-line: #dce3e1;
+  --op-line-strong: #c7cdd5;
+  --op-text: #17191d;
+  --op-heading: #17191d;
+  --op-body: #4a525d;
+  --op-muted: #5c6470;
+  --op-dim: #5d6470;
+  --op-accent: #206e67;
+  --op-accent-soft: #e3f3ed;
+  --op-on-accent: #ffffff;
+  --op-info: #2664ac;
+  --op-danger: #b83142;
+  --op-warning: #8b5813;
+  --op-addressed: #6e53b0;
+  --op-type-spec: #7833ec;
+  --op-type-us: #1556e5;
+  --op-type-t: #0d6c86;
+  --op-type-bl: #8e5706;
+  --op-type-adr: #be185d;
+  --op-type-epic: #137237;
+  --op-type-sprint: #206e67;
+  --op-type-qt: #5c6470;
+  --op-graph-dot-grid: rgba(23, 25, 29, 0.07);
+  --op-shadow-menu: var(--op-shadow-float);
+  --op-shadow-float: 0 2px 6px rgba(23, 25, 29, 0.06), 0 16px 40px rgba(23, 25, 29, 0.1);
+  --op-shadow-accent-edge: none;
+  --op-control-border: var(--op-dim);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    color-scheme: dark;
-    --op-canvas: #141210;
-    --op-surface: #221f1b;
-    --op-ink: #f6f3ec;
-    --op-muted: #b9afa3;
-    --op-divider: #3a342f;
-    --op-control: #bce633;
-    --op-selected: #2a2622;
-    --op-verified: #8fcfbb;
-    --op-attention: #f5c563;
-    --op-refusal: #f4a392;
-    --op-code: #0e0c0b;
-    --op-on-control: var(--op-canvas);
-    --op-on-code: var(--op-ink);
+@media (prefers-color-scheme: light) {
+  :root[data-theme="system"] {
+    color-scheme: light;
+    --op-bg: #f5f7f7;
+    --op-panel: #ffffff;
+    --op-card: #ffffff;
+    --op-raised: #e9efed;
+    --op-line: #dce3e1;
+    --op-line-strong: #c7cdd5;
+    --op-text: #17191d;
+    --op-heading: #17191d;
+    --op-body: #4a525d;
+    --op-muted: #5c6470;
+    --op-dim: #5d6470;
+    --op-accent: #206e67;
+    --op-accent-soft: #e3f3ed;
+    --op-on-accent: #ffffff;
+    --op-info: #2664ac;
+    --op-danger: #b83142;
+    --op-warning: #8b5813;
+    --op-addressed: #6e53b0;
+    --op-type-spec: #7833ec;
+    --op-type-us: #1556e5;
+    --op-type-t: #0d6c86;
+    --op-type-bl: #8e5706;
+    --op-type-adr: #be185d;
+    --op-type-epic: #137237;
+    --op-type-sprint: #206e67;
+    --op-type-qt: #5c6470;
+    --op-graph-dot-grid: rgba(23, 25, 29, 0.07);
+    --op-shadow-menu: var(--op-shadow-float);
+    --op-shadow-float: 0 2px 6px rgba(23, 25, 29, 0.06), 0 16px 40px rgba(23, 25, 29, 0.1);
+    --op-shadow-accent-edge: none;
+    --op-control-border: var(--op-dim);
   }
 }
 
 :root[data-contrast="high"] {
+  --op-body: var(--op-text);
+  --op-dim: var(--op-text);
+  --op-line: var(--op-text);
+  --op-control-border: var(--op-text);
   --op-divider: var(--op-ink);
   --op-muted: var(--op-ink);
   --op-focus: var(--op-refusal);
@@ -139,26 +300,46 @@
 @media (prefers-reduced-motion: reduce) {
   :root {
     --op-motion-duration: var(--op-motion-reduced);
+    --op-motion-panel-duration: var(--op-motion-reduced);
+    --op-motion-live-duration: var(--op-motion-reduced);
+    --op-motion-panel-distance: 0px;
   }
 }
 
 @media (forced-colors: active) {
-  :root {
-    --op-canvas: Canvas;
-    --op-surface: Canvas;
-    --op-ink: CanvasText;
+  :root,
+  :root[data-theme] {
+    --op-bg: Canvas;
+    --op-panel: Canvas;
+    --op-card: Canvas;
+    --op-raised: Canvas;
+    --op-accent-soft: Canvas;
+    --op-text: CanvasText;
+    --op-heading: CanvasText;
+    --op-body: CanvasText;
     --op-muted: CanvasText;
-    --op-divider: ButtonText;
-    --op-control: Highlight;
-    --op-selected: SelectedItem;
-    --op-verified: LinkText;
-    --op-attention: Mark;
-    --op-refusal: VisitedText;
-    --op-code: CanvasText;
-    --op-on-control: HighlightText;
-    --op-on-code: Canvas;
-    --op-focus: Highlight;
-    --op-elevation-sheet: none;
+    --op-dim: CanvasText;
+    --op-line: ButtonText;
+    --op-line-strong: ButtonText;
+    --op-control-border: ButtonText;
+    --op-accent: Highlight;
+    --op-on-accent: HighlightText;
+    --op-info: LinkText;
+    --op-danger: VisitedText;
+    --op-warning: CanvasText;
+    --op-addressed: LinkText;
+    --op-graph-dot-grid: Canvas;
+    --op-shadow-menu: none;
+    --op-shadow-float: none;
+    --op-shadow-accent-edge: none;
+    --op-type-spec: LinkText;
+    --op-type-us: LinkText;
+    --op-type-t: LinkText;
+    --op-type-bl: LinkText;
+    --op-type-adr: LinkText;
+    --op-type-epic: LinkText;
+    --op-type-sprint: LinkText;
+    --op-type-qt: LinkText;
   }
 }
 
