@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { ArtifactTag, type ArtifactType, type ChipSurface, chipStyle } from './artifact-recipes.js';
 import { Badge, type BadgeTone, CommandHint } from './console-core.js';
 import { PcIcon, type PcIconName } from './console-icon.js';
 import './planr-console.css';
@@ -6,7 +7,7 @@ import './planr-console.css';
 /**
  * Planr-domain console components: artifact-status dots, governed-action and execution-result
  * badges, work-item and capability labels, the read-only governed action card, the dependency
- * graph with its outline view, sprint progress and page helpers. Components hold no state.
+ * graph with its outline view, sprint progress and page helpers.
  * Entry points: `WorkItemChip`, `ArtifactStatus`, `StateBadge`, `DependencyGraph`, `Absent`.
  */
 
@@ -26,6 +27,7 @@ const ARTIFACT_LABEL: Readonly<Record<string, string>> = Object.freeze({
   blocked: 'blocked',
   outstanding: 'outstanding',
   addressed: 'addressed',
+  quiet: 'quiet',
 });
 
 export type ArtifactStatusProps = Readonly<{
@@ -33,26 +35,52 @@ export type ArtifactStatusProps = Readonly<{
   size?: 'sm' | 'md';
   showLabel?: boolean;
   count?: number | string;
+  surface?: ChipSurface;
+  label?: string;
+  quiet?: boolean;
 }>;
 
-/**
- * Status of a planning artifact: a shape-varied dot plus a label, never a bordered chip, so
- * it can never be misread as a governed action state — including in greyscale or at 11px.
- */
+const STATUS_GLYPH: Readonly<Record<string, string>> = {
+  outstanding: 'ring',
+  'in-progress': 'half-ring',
+  blocked: 'diamond',
+  addressed: 'dotted-ring',
+  done: 'solid-dot',
+  quiet: 'pause',
+};
+
 export function ArtifactStatus({
   status,
   size = 'md',
   showLabel = true,
   count,
+  surface = 'panel',
+  label,
+  quiet = false,
 }: ArtifactStatusProps) {
-  const known = status in ARTIFACT_LABEL ? status : 'outstanding';
-  const label = ARTIFACT_LABEL[known] ?? status;
+  const known = Object.hasOwn(ARTIFACT_LABEL, status);
+  const text = label ?? (known ? ARTIFACT_LABEL[status] : status);
   return (
-    <span className="pc-artifact" data-status={known} data-size={size}>
-      <span className="pc-artifact__dot" aria-hidden="true" />
-      <span className={showLabel ? 'pc-artifact__label' : 'pc-visually-hidden'}>{label}</span>
-      {count !== undefined ? <span className="pc-artifact__count">{count}</span> : null}
-    </span>
+    <>
+      <span
+        className="pc-artifact"
+        data-status={status}
+        data-size={size}
+        data-surface={surface}
+        style={known ? chipStyle(`status-${status}`, surface) : undefined}
+      >
+        <span
+          className="pc-artifact__dot"
+          data-glyph={known ? STATUS_GLYPH[status] : 'unknown'}
+          aria-hidden="true"
+        />
+        <span className={showLabel ? 'pc-artifact__label' : 'pc-visually-hidden'}>{text}</span>
+        {count !== undefined ? <span className="pc-artifact__count">{count}</span> : null}
+      </span>
+      {quiet && status !== 'quiet' ? (
+        <ArtifactStatus status="quiet" size={size} surface={surface} />
+      ) : null}
+    </>
   );
 }
 
@@ -150,6 +178,9 @@ export type WorkItemChipProps = Readonly<{
   blocked?: boolean;
   interactive?: boolean;
   onClick?: () => void;
+  disabled?: boolean;
+  disabledReason?: string;
+  surface?: ChipSurface;
 }>;
 
 /** Identifies a node in the pipeline: type glyph on a filled square, mono id, optional title. */
@@ -160,15 +191,26 @@ export function WorkItemChip({
   blocked = false,
   interactive = false,
   onClick,
+  disabled = false,
+  disabledReason,
+  surface = 'panel',
 }: WorkItemChipProps) {
-  const known = type in WORK_ITEM_TYPES ? type : 'task';
-  const recipe = WORK_ITEM_TYPES[known];
+  const tagType =
+    ({ story: 'us', task: 't', backlog: 'bl', quick: 'qt' } as Record<string, ArtifactType>)[
+      type
+    ] ?? type;
+  const knownType = ['spec', 'us', 't', 'bl', 'adr', 'epic', 'sprint', 'qt'].includes(tagType);
   const inner = (
     <>
-      <span className="pc-work-item__type" data-type={known} aria-hidden="true">
-        <PcIcon name={recipe.icon} size={12} />
-      </span>
-      <span className="pc-work-item__id">{id}</span>
+      {knownType ? (
+        <ArtifactTag type={tagType as ArtifactType} surface={surface}>
+          {id}
+        </ArtifactTag>
+      ) : (
+        <span className="pc-work-item__id">
+          {id} ({type})
+        </span>
+      )}
       {title ? <span className="pc-work-item__title">{title}</span> : null}
       {blocked ? (
         <PcIcon name="circle-slash" size={13} color="var(--pc-astate-failed-fg)" title="Blocked" />
@@ -177,13 +219,25 @@ export function WorkItemChip({
   );
   if (onClick) {
     return (
-      <button type="button" className="pc-work-item" data-interactive onClick={onClick}>
+      <button
+        type="button"
+        className="pc-work-item"
+        data-interactive
+        disabled={disabled}
+        aria-disabled={disabled || undefined}
+        aria-description={disabledReason}
+        onClick={onClick}
+      >
         {inner}
       </button>
     );
   }
   return (
-    <span className="pc-work-item" data-interactive={interactive || undefined}>
+    <span
+      className="pc-work-item"
+      data-interactive={interactive || undefined}
+      aria-description={disabledReason}
+    >
       {inner}
     </span>
   );

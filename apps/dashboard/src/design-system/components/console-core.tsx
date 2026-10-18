@@ -1,20 +1,11 @@
-import {
-  type ChangeEvent,
-  type KeyboardEvent,
-  type ReactNode,
-  useEffect,
-  useId,
-  useState,
-} from 'react';
+import { type ChangeEvent, type KeyboardEvent, type ReactNode, useId } from 'react';
+import { Tabs as RadixTabs } from './composite-primitives.js';
 import { PcIcon, type PcIconName } from './console-icon.js';
-import './planr-console.css';
+import { Tooltip } from './tooltip.js';
 
-/*
- * Planr Console core kit, ported 1:1 from the design system's component sources
- * (Button, IconButton, Kbd, Badge, Card, EmptyState, Tabs, Skeleton, Toolbar,
- * SectionHeader, Input, Select, Switch, InlineAlert, CommandHint, DataTable).
- * Presentational only; every component renders exactly what it is given.
- */
+export { CommandHint, type CommandHintProps } from './command-hint.js';
+
+import './planr-console.css';
 
 // ---------------------------------------------------------------- Button
 
@@ -34,6 +25,7 @@ export type ButtonProps = Readonly<{
   type?: 'button' | 'submit';
   onClick?: () => void;
   ariaLabel?: string;
+  disabledReason?: string;
 }>;
 
 const BUTTON_ICON = { sm: 13, md: 14, lg: 16 } as const;
@@ -52,27 +44,39 @@ export function Button({
   type = 'button',
   onClick,
   ariaLabel,
+  disabledReason,
 }: ButtonProps) {
+  const reasonId = useId();
   return (
-    <button
-      type={type}
-      className="pc-button"
-      data-variant={variant}
-      data-size={size}
-      data-full={fullWidth || undefined}
-      disabled={disabled || loading}
-      aria-label={ariaLabel}
-      onClick={onClick}
-    >
-      {loading ? (
-        <PcIcon name="loader-circle" size={BUTTON_ICON[size]} spin />
-      ) : icon ? (
-        <PcIcon name={icon} size={BUTTON_ICON[size]} />
+    <>
+      <button
+        type={type}
+        className="pc-button"
+        data-variant={variant}
+        data-size={size}
+        data-full={fullWidth || undefined}
+        disabled={disabled || loading}
+        aria-disabled={disabled || loading || undefined}
+        aria-busy={loading || undefined}
+        aria-describedby={disabledReason ? reasonId : undefined}
+        aria-label={ariaLabel}
+        onClick={onClick}
+      >
+        {loading ? (
+          <PcIcon name="loader-circle" size={BUTTON_ICON[size]} spin />
+        ) : icon ? (
+          <PcIcon name={icon} size={BUTTON_ICON[size]} />
+        ) : null}
+        {children}
+        {iconAfter ? <PcIcon name={iconAfter} size={BUTTON_ICON[size]} /> : null}
+        {shortcut ? <span className="pc-button__shortcut">{shortcut}</span> : null}
+      </button>
+      {disabledReason ? (
+        <span className="pc-control-reason" id={reasonId}>
+          {disabledReason}
+        </span>
       ) : null}
-      {children}
-      {iconAfter ? <PcIcon name={iconAfter} size={BUTTON_ICON[size]} /> : null}
-      {shortcut ? <span className="pc-button__shortcut">{shortcut}</span> : null}
-    </button>
+    </>
   );
 }
 
@@ -83,6 +87,7 @@ export type IconButtonProps = Readonly<{
   active?: boolean;
   disabled?: boolean;
   tone?: 'default' | 'strong' | 'danger' | 'accent';
+  disabledReason?: string;
   onClick?: () => void;
 }>;
 
@@ -97,22 +102,32 @@ export function IconButton({
   disabled = false,
   tone = 'default',
   onClick,
+  disabledReason,
 }: IconButtonProps) {
+  const reasonId = useId();
   return (
-    <button
-      type="button"
-      className="pc-icon-button"
-      data-size={size}
-      data-tone={tone}
-      data-active={active || undefined}
-      title={label}
-      aria-label={label}
-      aria-pressed={active || undefined}
-      disabled={disabled}
-      onClick={onClick}
-    >
-      <PcIcon name={icon} size={ICON_BUTTON_ICON[size]} />
-    </button>
+    <Tooltip content={disabledReason ?? label}>
+      <button
+        type="button"
+        className="pc-icon-button"
+        data-size={size}
+        data-tone={tone}
+        data-active={active || undefined}
+        aria-label={label}
+        aria-pressed={active || undefined}
+        disabled={disabled}
+        aria-disabled={disabled || undefined}
+        aria-describedby={disabledReason ? reasonId : undefined}
+        onClick={onClick}
+      >
+        <PcIcon name={icon} size={ICON_BUTTON_ICON[size]} />
+        {disabledReason ? (
+          <span className="pc-visually-hidden" id={reasonId}>
+            {disabledReason}
+          </span>
+        ) : null}
+      </button>
+    </Tooltip>
   );
 }
 
@@ -222,6 +237,9 @@ export type TabDefinition = Readonly<{
   label: string;
   icon?: PcIconName;
   count?: number | string;
+  disabled?: boolean;
+  disabledReason?: string;
+  panelId?: string;
 }>;
 
 export type TabsProps = Readonly<{
@@ -235,26 +253,40 @@ export type TabsProps = Readonly<{
 /** Underlined view switcher for a single surface. */
 export function Tabs({ tabs, value, onChange, size = 'md', label }: TabsProps) {
   return (
-    <div className="pc-tabs" data-size={size} role="tablist" aria-label={label}>
-      {tabs.map((tab) => {
-        const active = tab.id === value;
-        return (
-          <button
+    <RadixTabs.Root value={value} onValueChange={onChange} activationMode="manual">
+      <RadixTabs.List className="pc-tabs" data-size={size} aria-label={label}>
+        {tabs.map((tab) => (
+          <RadixTabs.Trigger
             key={tab.id}
-            type="button"
-            role="tab"
+            value={tab.id}
             className="pc-tabs__tab"
-            aria-selected={active}
-            data-active={active || undefined}
-            onClick={() => onChange(tab.id)}
+            disabled={tab.disabled}
+            aria-disabled={tab.disabled || undefined}
+            aria-description={tab.disabledReason}
+            aria-controls={tab.panelId}
+            data-active={tab.id === value || undefined}
+            onMouseDown={(event) => {
+              // Preserve click activation while Radix owns roving focus and arrow keys.
+              event.preventDefault();
+              if (!tab.disabled) event.currentTarget.focus();
+            }}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault();
+                if (!tab.disabled) onChange(tab.id);
+              }
+            }}
+            onClick={() => {
+              if (!tab.disabled) onChange(tab.id);
+            }}
           >
             {tab.icon ? <PcIcon name={tab.icon} size={13} /> : null}
             {tab.label}
             {tab.count !== undefined ? <span className="pc-tabs__count">{tab.count}</span> : null}
-          </button>
-        );
-      })}
-    </div>
+          </RadixTabs.Trigger>
+        ))}
+      </RadixTabs.List>
+    </RadixTabs.Root>
   );
 }
 
@@ -427,6 +459,9 @@ export type InputProps = Readonly<{
   size?: ControlSize;
   mono?: boolean;
   width?: number;
+  disabled?: boolean;
+  disabledReason?: string;
+  error?: string;
 }>;
 
 /** Single-line text input at console density. */
@@ -440,20 +475,43 @@ export function Input({
   size = 'md',
   mono = false,
   width,
+  disabled = false,
+  disabledReason,
+  error,
 }: InputProps) {
+  const reasonId = useId();
   return (
-    <span className="pc-input" data-size={size} style={{ width }}>
-      {icon ? <PcIcon name={icon} size={14} color="var(--pc-text-tertiary)" /> : null}
-      <input
-        className="pc-input__field"
-        data-mono={mono || undefined}
-        type="text"
-        value={value}
-        placeholder={placeholder}
-        aria-label={ariaLabel}
-        onChange={(event: ChangeEvent<HTMLInputElement>) => onChange(event.target.value)}
-      />
-      {suffix ? <span className="pc-input__suffix">{suffix}</span> : null}
+    <span className="pc-field-control" style={{ width }}>
+      <span
+        className="pc-input"
+        data-size={size}
+        data-disabled={disabled || undefined}
+        data-invalid={Boolean(error) || undefined}
+        style={{ width }}
+      >
+        {icon ? <PcIcon name={icon} size={14} color="var(--pc-text-tertiary)" /> : null}
+        <input
+          className="pc-input__field"
+          data-mono={mono || undefined}
+          type="text"
+          value={value}
+          placeholder={placeholder}
+          aria-label={ariaLabel}
+          disabled={disabled}
+          aria-disabled={disabled || undefined}
+          aria-invalid={Boolean(error) || undefined}
+          aria-describedby={error || disabledReason ? reasonId : undefined}
+          onChange={(event: ChangeEvent<HTMLInputElement>) => {
+            if (!disabled) onChange(event.target.value);
+          }}
+        />
+        {suffix ? <span className="pc-input__suffix">{suffix}</span> : null}
+      </span>
+      {error || disabledReason ? (
+        <span className="pc-control-reason" id={reasonId} role={error ? 'alert' : undefined}>
+          {error ?? disabledReason}
+        </span>
+      ) : null}
     </span>
   );
 }
@@ -467,28 +525,61 @@ export type SelectProps = Readonly<{
   ariaLabel: string;
   size?: ControlSize;
   width?: number;
+  disabled?: boolean;
+  disabledReason?: string;
+  error?: string;
 }>;
 
 /** Native select in console dress. */
-export function Select({ value, onChange, options, ariaLabel, size = 'md', width }: SelectProps) {
+export function Select({
+  value,
+  onChange,
+  options,
+  ariaLabel,
+  size = 'md',
+  width,
+  disabled = false,
+  disabledReason,
+  error,
+}: SelectProps) {
+  const reasonId = useId();
   return (
-    <span className="pc-select" data-size={size} style={{ width }}>
-      <select
-        className="pc-select__field"
-        value={value}
-        aria-label={ariaLabel}
-        onChange={(event: ChangeEvent<HTMLSelectElement>) => onChange(event.target.value)}
+    <span className="pc-field-control" style={{ width }}>
+      <span
+        className="pc-select"
+        data-size={size}
+        data-disabled={disabled || undefined}
+        data-invalid={Boolean(error) || undefined}
+        style={{ width }}
       >
-        {options.map((option) => {
-          const item = typeof option === 'string' ? { value: option, label: option } : option;
-          return (
-            <option key={item.value} value={item.value}>
-              {item.label}
-            </option>
-          );
-        })}
-      </select>
-      <PcIcon name="chevron-down" size={13} color="var(--pc-text-tertiary)" />
+        <select
+          className="pc-select__field"
+          value={value}
+          aria-label={ariaLabel}
+          disabled={disabled}
+          aria-disabled={disabled || undefined}
+          aria-invalid={Boolean(error) || undefined}
+          aria-describedby={error || disabledReason ? reasonId : undefined}
+          onChange={(event: ChangeEvent<HTMLSelectElement>) => {
+            if (!disabled) onChange(event.target.value);
+          }}
+        >
+          {options.map((option) => {
+            const item = typeof option === 'string' ? { value: option, label: option } : option;
+            return (
+              <option key={item.value} value={item.value}>
+                {item.label}
+              </option>
+            );
+          })}
+        </select>
+        <PcIcon name="chevron-down" size={13} color="var(--pc-text-tertiary)" />
+      </span>
+      {error || disabledReason ? (
+        <span className="pc-control-reason" id={reasonId} role={error ? 'alert' : undefined}>
+          {error ?? disabledReason}
+        </span>
+      ) : null}
     </span>
   );
 }
@@ -499,6 +590,7 @@ export type SwitchProps = Readonly<{
   label?: string;
   ariaLabel?: string;
   disabled?: boolean;
+  disabledReason?: string;
   size?: 'sm' | 'md';
 }>;
 
@@ -510,7 +602,9 @@ export function Switch({
   ariaLabel,
   disabled = false,
   size = 'md',
+  disabledReason,
 }: SwitchProps) {
+  const reasonId = useId();
   return (
     <label className="pc-switch" data-size={size} data-disabled={disabled || undefined}>
       <input
@@ -520,13 +614,22 @@ export function Switch({
         checked={checked}
         aria-checked={checked}
         disabled={disabled}
+        aria-disabled={disabled || undefined}
+        aria-describedby={disabledReason ? reasonId : undefined}
         aria-label={label ? undefined : ariaLabel}
-        onChange={(event) => onChange(event.target.checked)}
+        onChange={(event) => {
+          if (!disabled) onChange(event.target.checked);
+        }}
       />
       <span className="pc-switch__track" aria-hidden="true">
         <span className="pc-switch__thumb" />
       </span>
       {label ? <span className="pc-switch__label">{label}</span> : null}
+      {disabledReason ? (
+        <span className="pc-control-reason" id={reasonId}>
+          {disabledReason}
+        </span>
+      ) : null}
     </label>
   );
 }
@@ -560,65 +663,6 @@ export function InlineAlert({ tone = 'warn', title, children, actions }: InlineA
         {children ? <span className="pc-alert__text">{children}</span> : null}
       </div>
       {actions ? <div className="pc-alert__actions">{actions}</div> : null}
-    </div>
-  );
-}
-
-export type CommandHintProps = Readonly<{
-  command: string;
-  label?: string;
-  size?: 'sm' | 'md';
-}>;
-
-/**
- * A copy-ready invocation. The console never mutates the graph; the clipboard write is
- * the only outbound effect a read-only surface gets, and a refused write is reported.
- */
-export function CommandHint({ command, label, size = 'md' }: CommandHintProps) {
-  const [state, setState] = useState<'idle' | 'copied' | 'blocked'>('idle');
-  useEffect(() => {
-    if (state === 'idle') return;
-    const timer = window.setTimeout(() => setState('idle'), 1400);
-    return () => window.clearTimeout(timer);
-  }, [state]);
-  const copy = () => {
-    if (!navigator.clipboard) {
-      setState('blocked');
-      return;
-    }
-    navigator.clipboard.writeText(command).then(
-      () => setState('copied'),
-      () => setState('blocked'),
-    );
-  };
-  const buttonLabel =
-    state === 'copied'
-      ? 'Command copied'
-      : state === 'blocked'
-        ? 'Copy was blocked'
-        : 'Copy command';
-  return (
-    <div className="pc-command-hint" data-size={size}>
-      {label ? <span className="pc-command-hint__label">{label}</span> : null}
-      <div className="pc-command-hint__row">
-        <span className="pc-command-hint__command">
-          <PcIcon name="terminal" size={12} color="var(--pc-text-tertiary)" />
-          {command}
-        </span>
-        <button
-          type="button"
-          className="pc-command-hint__copy"
-          data-state={state}
-          aria-label={buttonLabel}
-          onClick={copy}
-        >
-          <PcIcon
-            name={state === 'copied' ? 'check' : state === 'blocked' ? 'x' : 'copy'}
-            size={12}
-          />
-          {state === 'idle' ? null : state}
-        </button>
-      </div>
     </div>
   );
 }

@@ -1,4 +1,3 @@
-import { Tooltip } from 'radix-ui';
 import {
   type AriaAttributes,
   forwardRef,
@@ -8,6 +7,7 @@ import {
   useRef,
   useState,
 } from 'react';
+import { Tooltip } from './tooltip.js';
 
 type SharedProps = Readonly<{
   children: ReactNode;
@@ -58,6 +58,7 @@ export const GovernedButton = forwardRef<HTMLButtonElement, GovernedButtonProps>
     const inFlight = useRef(false);
     const mounted = useRef(true);
     const [pending, setPending] = useState(false);
+    const [failure, setFailure] = useState<string>();
 
     useEffect(() => {
       mounted.current = true;
@@ -73,8 +74,12 @@ export const GovernedButton = forwardRef<HTMLButtonElement, GovernedButtonProps>
       if (unavailable || inFlight.current || !onInvoke) return;
       inFlight.current = true;
       setPending(true);
+      setFailure(undefined);
       try {
         await onInvoke();
+      } catch {
+        if (mounted.current)
+          setFailure('The action could not complete. Check its current state before continuing.');
       } finally {
         inFlight.current = false;
         if (mounted.current) setPending(false);
@@ -91,6 +96,7 @@ export const GovernedButton = forwardRef<HTMLButtonElement, GovernedButtonProps>
         title={title}
         tabIndex={tabIndex}
         disabled={unavailable}
+        aria-disabled={unavailable || undefined}
         aria-label={ariaLabel}
         aria-controls={ariaControls}
         aria-expanded={ariaExpanded}
@@ -107,21 +113,22 @@ export const GovernedButton = forwardRef<HTMLButtonElement, GovernedButtonProps>
     return (
       <div className="op-governed-action" data-governed-action-state={pending ? 'pending' : 'idle'}>
         {visibleReason ? (
-          <Tooltip.Provider delayDuration={300}>
-            <Tooltip.Root>
-              <Tooltip.Trigger asChild>
-                <span>{control}</span>
-              </Tooltip.Trigger>
-              <Tooltip.Portal>
-                <Tooltip.Content className="op-governed-tooltip" sideOffset={8}>
-                  {visibleReason}
-                </Tooltip.Content>
-              </Tooltip.Portal>
-            </Tooltip.Root>
-          </Tooltip.Provider>
+          <Tooltip content={visibleReason}>
+            <span
+              tabIndex={unavailable ? 0 : undefined}
+              aria-describedby={unavailable ? reasonId : undefined}
+            >
+              {control}
+            </span>
+          </Tooltip>
         ) : (
           control
         )}
+        {failure ? (
+          <p className="op-governed-reason" role="alert">
+            {failure}
+          </p>
+        ) : null}
         {visibleReason ? (
           <p className="op-governed-reason" id={reasonId}>
             {visibleReason}
