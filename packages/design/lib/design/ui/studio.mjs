@@ -167,6 +167,7 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
   let compactViewport = false;
   let activeArtifactId = '';
   const framesUsedWithComments = new Set();
+  let frameReload = 0;
   let walkthroughTransition = null;
   let pendingScreen = null,
     screenRequest = 0,
@@ -470,24 +471,22 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
   function reloadFrameUsedWithComments(artifactId) {
     if (!framesUsedWithComments.delete(artifactId)) return;
     if (!stage.getLoadedArtifactIds().includes(artifactId)) return;
+    const reload = ++frameReload;
     root.dataset.designScreenLoading = 'true';
-    void stage.retryFrames([artifactId]).then(
-      () => {
-        if (destroyed) return;
-        delete root.dataset.designScreenLoading;
-        updateFramePlaceholders();
-      },
-      (error) => {
-        if (destroyed || error.name === 'AbortError') return;
-        delete root.dataset.designScreenLoading;
-        notice(
-          'This screen could not reload. Select it again to retry; your review is preserved.',
-          true,
-          `preview-load:${artifactId}`,
-        );
-        updateFramePlaceholders();
-      },
-    );
+    const settle = () => {
+      if (destroyed || reload !== frameReload) return false;
+      if (!pendingScreen) delete root.dataset.designScreenLoading;
+      updateFramePlaceholders();
+      return true;
+    };
+    void stage.retryFrames([artifactId]).then(settle, (error) => {
+      if (!settle() || error.name === 'AbortError') return;
+      notice(
+        'This screen could not reload. Select it again to retry; your review is preserved.',
+        true,
+        `preview-load:${artifactId}`,
+      );
+    });
   }
 
   function setTool(tool) {

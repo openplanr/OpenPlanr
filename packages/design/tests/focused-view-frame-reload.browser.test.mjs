@@ -18,7 +18,7 @@ async function productFrame(page, artifactId) {
     return (
       frame?.dataset.planrFrameState === 'ready' &&
       frame.dataset.planrBridgeTrusted === 'true' &&
-      !document.documentElement.hasAttribute('data-design-screen-loading')
+      !document.querySelector('[data-design-screen-loading]')
     );
   }, artifactId);
   return (
@@ -55,7 +55,7 @@ test(`a focused view reloads only a frame that stayed live through Canvas commen
   const root = await mkdtemp(join(tmpdir(), 'openplanr-focused-reload-'));
   let browser, session;
   try {
-    const { file, document } = designFixture(root, { count: 1 });
+    const { file, document } = designFixture(root, { count: 2 });
     writeFileSync(
       join(root, document.screens[0].source.html),
       `<!doctype html><html lang="en"><head><meta name="viewport" content="width=device-width,initial-scale=1"></head><body><label>Workspace name <input aria-label="Workspace name" value="Product team"></label>
@@ -120,6 +120,18 @@ test(`a focused view reloads only a frame that stayed live through Canvas commen
         true,
         `${host}: the reload happens once, not on every later switch`,
       );
+
+      await page.locator('[data-design-view="canvas"]').click();
+      await page.locator('[data-planr-mode="comment"]').click();
+      await page.locator('[data-design-view="prototype"]').click();
+      await page.evaluate(() => window.__openPlanrDesignStudio.selectScreen('screen-2'));
+      await page.waitForFunction(
+        () =>
+          window.__openPlanrDesignStudio.getState().screenId === 'screen-2' &&
+          !document.querySelector('[data-design-screen-loading]'),
+      );
+      await page.evaluate(() => window.__openPlanrDesignStudio.selectScreen('screen-1'));
+      await productFrame(page, artifactId);
     }
   } finally {
     await browser?.close();
