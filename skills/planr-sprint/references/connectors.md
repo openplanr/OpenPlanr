@@ -3,12 +3,10 @@
 OpenPlanr skills name a kind of service, such as `~~chat`, instead of a product. Connect
 the product your team uses through your host: the vendor publishes the connector, and
 you sign in through the host. OpenPlanr bundles no connectors; they and their credentials
-live in your host. Two optional features need a token: Linear sync (`openplanr linear`) and
-company sign-in (`openplanr company login`). Only when you use them does OpenPlanr store a
-token, in your OS keychain, or in an encrypted file at `~/.planr/credentials.enc` if you set
-`PLANR_CREDENTIAL_FILE_PASSPHRASE`. Tokens are sent only to Linear or to the company server
-you sign in to.
-`openplanr company logout` removes company tokens.
+live in your host. One optional feature needs a token: Linear sync (`openplanr linear`).
+Only when you use it does OpenPlanr store a token, in your OS keychain, or in an encrypted
+file at `~/.planr/credentials.enc` if you set `PLANR_CREDENTIAL_FILE_PASSPHRASE`. The token
+is sent only to Linear.
 Every skill also works with nothing connected and reports any remote step it skipped.
 
 | Category | Placeholder | Products |

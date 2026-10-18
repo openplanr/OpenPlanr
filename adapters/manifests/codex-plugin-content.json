@@ -193,7 +193,7 @@
         },
         {
           "path": "skills/connect/references/connectors.md",
-          "digest": "sha256:0b2062a01690bbb6b5e9688663fc3c38e8128361c9ddedea149b5bccd4620296"
+          "digest": "sha256:66b21a5127afc673f8e4acf6946c29f9f1e52d9d579c66cad46803e6052a4862"
         }
       ]
     },
@@ -959,7 +959,7 @@
         },
         {
           "path": "skills/share/references/connectors.md",
-          "digest": "sha256:0b2062a01690bbb6b5e9688663fc3c38e8128361c9ddedea149b5bccd4620296"
+          "digest": "sha256:66b21a5127afc673f8e4acf6946c29f9f1e52d9d579c66cad46803e6052a4862"
         }
       ]
     },
@@ -1058,7 +1058,7 @@
         },
         {
           "path": "skills/sprint/references/connectors.md",
-          "digest": "sha256:0b2062a01690bbb6b5e9688663fc3c38e8128361c9ddedea149b5bccd4620296"
+          "digest": "sha256:66b21a5127afc673f8e4acf6946c29f9f1e52d9d579c66cad46803e6052a4862"
         },
         {
           "path": "skills/sprint/references/tracker-connections.md",
@@ -1091,7 +1091,7 @@
         },
         {
           "path": "skills/status/references/connectors.md",
-          "digest": "sha256:0b2062a01690bbb6b5e9688663fc3c38e8128361c9ddedea149b5bccd4620296"
+          "digest": "sha256:66b21a5127afc673f8e4acf6946c29f9f1e52d9d579c66cad46803e6052a4862"
         },
         {
           "path": "skills/status/references/tracker-connections.md",
@@ -1116,7 +1116,7 @@
         },
         {
           "path": "skills/sync/references/connectors.md",
-          "digest": "sha256:0b2062a01690bbb6b5e9688663fc3c38e8128361c9ddedea149b5bccd4620296"
+          "digest": "sha256:66b21a5127afc673f8e4acf6946c29f9f1e52d9d579c66cad46803e6052a4862"
         },
         {
           "path": "skills/sync/references/tracker-connections.md",

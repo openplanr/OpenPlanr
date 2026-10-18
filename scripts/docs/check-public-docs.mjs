@@ -45,6 +45,7 @@ const ROOTS = [
     exclude: HOST_AND_CHANGELOG('packages/cli'),
   },
   { path: 'packages/cli/docs', recursive: true, extensions: ['.md'] },
+  { path: 'docs/generated', recursive: true, extensions: ['.md'], generated: true },
   {
     path: 'packages/pipeline',
     recursive: false,
@@ -124,6 +125,15 @@ const RULES = [
       match[2] ? Number(match[1]) <= skillCount : Number(match[1]) === skillCount,
   },
   {
+    id: 'company-workspace',
+    message: 'the company workspace is unannounced; generated docs must not mention it',
+    // Mirrors the openplanr-web docs sync guard, which refuses to publish a page that matches.
+    pattern:
+      /\bcompany[\s-]+(?:workspaces?|librar(?:y|ies)|sign[\s-]?(?:in|out)s?|log(?:in|out)s?|publications?|revisions?|authori[sz]ations?|api|diagrams?|bindings?|(?:review[\s-]+)?shar(?:e|es|ing))\b|\b(?:openplanr|planr|opr)\s+company\b|`company(?=[\s`])|\bapp\.openplanr\.dev\b/giu,
+    generated: true,
+    wholeFile: true,
+  },
+  {
     id: 'hedging-boilerplate',
     message: 'roadmap or hedging language; state what ships today',
     pattern:
@@ -163,15 +173,27 @@ function withoutCode(lines) {
   });
 }
 
+const generatedRoots = ROOTS.filter((root) => root.generated).map((root) => root.path);
 const files = [...new Set(ROOTS.flatMap(listFiles))].sort();
 const findings = [];
 for (const file of files) {
   const text = readFileSync(path.join(repoRoot, file), 'utf8');
   const lines = text.split('\n');
   const proseLines = withoutCode(lines);
+  const generated = generatedRoots.some((root) => file.startsWith(`${root}/`));
   for (const rule of RULES) {
     const allowed = allowlist[rule.id] ?? [];
     if (allowed.includes(file)) continue;
+    if (Boolean(rule.generated) !== generated) continue;
+    if (rule.wholeFile) {
+      // Matches across wrapped lines, as the publishing guard reads the whole page.
+      for (const match of text.matchAll(rule.pattern)) {
+        const line = text.slice(0, match.index).split('\n').length;
+        const found = match[0].replace(/\s+/gu, ' ');
+        findings.push(`${file}:${line}: [${rule.id}] "${found}" — ${rule.message}`);
+      }
+      continue;
+    }
     (rule.prose ? proseLines : lines).forEach((line, index) => {
       for (const match of line.matchAll(rule.pattern)) {
         if (rule.ignore?.test(match[0])) continue;
