@@ -60,6 +60,14 @@ test('hostile sandbox certification covers Chromium Firefox and WebKit', () => {
   assert.match(studio, /PLANR_BROWSER_ENGINE: \$\{\{ matrix\.browser \}\}/);
   assert.doesNotMatch(studio, /^\s+if:/m, 'the studio suites must run on every matrix engine');
 
+  const stuckLaunch = blocks.find((block) => block.includes('browser-launcher.test.mjs'));
+  assert.ok(stuckLaunch, 'a workflow step must run the stuck browser launch test');
+  assert.match(
+    stuckLaunch,
+    /if: github\.event_name != 'pull_request' && matrix\.browser == 'chromium'/,
+  );
+  assert.match(stuckLaunch, /PLANR_STUCK_LAUNCH_TEST: '1'/);
+
   const report = blocks.find((block) => block.startsWith('  report:'));
   assert.ok(report, 'a failed nightly run must be reported');
   assert.match(report, /needs: hostile-sandbox/);

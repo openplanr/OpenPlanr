@@ -44,6 +44,12 @@ export const FIREFOX_COOP_PAGE_PREFS = Object.freeze({
 });
 
 /**
+ * Bound on starting a browser, below the shortest browser test timeout, so a stuck launch fails
+ * the test with a named error instead of keeping its process alive until the CI job limit.
+ */
+export const BROWSER_LAUNCH_TIMEOUT_MS = 15_000;
+
+/**
  * Launch options for a headless loopback test in the selected engine.
  * Chromium always runs with --no-proxy-server so 127.0.0.1 fixtures never wait on proxy
  * auto-discovery; a pinned executable takes precedence over PLANR_BROWSER_CHANNEL.
@@ -55,6 +61,7 @@ export function browserLaunchOptions({ engine: requested, args = [], ...options 
     engine === 'chromium' && !executablePath ? process.env.PLANR_BROWSER_CHANNEL : undefined;
   return {
     headless: true,
+    timeout: BROWSER_LAUNCH_TIMEOUT_MS,
     ...options,
     args: engine === 'chromium' ? ['--no-proxy-server', ...args] : args,
     ...(executablePath ? { executablePath } : {}),
