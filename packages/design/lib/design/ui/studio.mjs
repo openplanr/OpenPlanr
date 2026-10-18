@@ -166,6 +166,8 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
   let previousStageZoom = 100;
   let compactViewport = false;
   let activeArtifactId = '';
+  const framesUsedWithComments = new Set();
+  let frameReload = 0;
   let walkthroughTransition = null;
   let pendingScreen = null,
     screenRequest = 0,
@@ -459,6 +461,34 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
     persist();
   }
 
+  // Chromium can stop routing pointer input into a sandboxed product document that stayed
+  // live on Canvas through comment mode, so a focused view reloads such a frame once.
+  function noteFramesUsedWithComments() {
+    if (state.view !== 'canvas' || activeTool !== 'annotate') return;
+    for (const id of stage.getLoadedArtifactIds()) framesUsedWithComments.add(id);
+  }
+
+  function reloadFrameUsedWithComments(artifactId) {
+    if (!framesUsedWithComments.delete(artifactId)) return;
+    if (!stage.getLoadedArtifactIds().includes(artifactId)) return;
+    const reload = ++frameReload;
+    root.dataset.designScreenLoading = 'true';
+    const settle = () => {
+      if (destroyed || reload !== frameReload) return false;
+      if (!pendingScreen) delete root.dataset.designScreenLoading;
+      updateFramePlaceholders();
+      return true;
+    };
+    void stage.retryFrames([artifactId]).then(settle, (error) => {
+      if (!settle() || error.name === 'AbortError') return;
+      notice(
+        'This screen could not reload. Select it again to retry; your review is preserved.',
+        true,
+        `preview-load:${artifactId}`,
+      );
+    });
+  }
+
   function setTool(tool) {
     if (!['interact', 'annotate', 'pan', 'inspect'].includes(tool)) return;
     if (tool === 'pan' && state.view !== 'canvas') return;
@@ -476,6 +506,7 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
     } finally {
       changingTool = false;
     }
+    noteFramesUsedWithComments();
     root.dispatchEvent(new CustomEvent('planr:design-tool-change', { detail: { tool } }));
     updatePan();
   }
@@ -763,6 +794,8 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
       updatePan();
       renderCamera();
       chrome?.update({ view: state.view, navOpen: state.navOpen, reviewOpen: stageState.railOpen });
+      if (state.view !== 'canvas' && activeArtifactId)
+        reloadFrameUsedWithComments(activeArtifactId);
       root.dispatchEvent(new CustomEvent('planr:design-render', { detail: clone(state) }));
     } finally {
       rendering = false;
@@ -913,7 +946,10 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
       frameDemandKey = key;
       void stage
         .ensureFrames(ids, () => !destroyed && generation === frameDemandGeneration)
-        .then(updateFramePlaceholders)
+        .then(() => {
+          noteFramesUsedWithComments();
+          updateFramePlaceholders();
+        })
         .catch((error) => {
           if (!destroyed && error.name !== 'AbortError') {
             frameDemandKey = '';
