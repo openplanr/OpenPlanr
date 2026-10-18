@@ -176,6 +176,54 @@ describe('shared backlog item writer', () => {
   });
 });
 
+describe('backlog priority', () => {
+  const rejection =
+    'Backlog priority "highest" is not valid; use one of critical, high, medium, low.';
+
+  it('rejects a priority outside the four accepted values, naming it', () => {
+    expect(() => backlogFields({ title: 'Item', priority: 'highest' })).toThrow(rejection);
+    expect(backlogFields({ title: 'Item' }).priority).toBe('medium');
+  });
+
+  it('rejects the same value from --priority and from --data without writing a file', async () => {
+    const dir = project();
+    await initProject(dir);
+    await expect(
+      cli(dir, 'backlog', 'add', 'Item', '--priority', 'highest', '--json'),
+    ).rejects.toThrow(rejection);
+    const data = path.join(dir, 'input.json');
+    writeFileSync(data, JSON.stringify({ title: 'Item', priority: 'highest' }));
+    await expect(cli(dir, 'backlog', 'add', '--data', data, '--json')).rejects.toThrow(rejection);
+    expect(readdirSync(path.join(dir, '.planr', 'backlog'))).toEqual([]);
+  });
+
+  it.each(helpers)('%s rejects it too', async (file) => {
+    const dir = project();
+    await initProject(dir);
+    const data = path.join(dir, 'input.json');
+    writeFileSync(data, JSON.stringify({ title: 'Item', priority: 'highest' }));
+    const result = spawnSync(process.execPath, [file, 'add', '--data', data, '--project', dir], {
+      encoding: 'utf8',
+    });
+    expect(result.status).not.toBe(0);
+    expect(result.stderr).toContain(rejection);
+  });
+
+  it('still lists an existing item whose priority predates the check', async () => {
+    const dir = project();
+    await initProject(dir);
+    writeFileSync(
+      path.join(dir, '.planr', 'backlog', 'BL-001-legacy.md'),
+      '---\nid: "BL-001"\ntitle: "Legacy"\npriority: "highest"\ntags: []\nstatus: "open"\ncreated: "2026-01-01"\nupdated: "2026-01-01"\n---\n\n# BL-001: Legacy\n',
+    );
+    expect(await listOpenBacklog(dir)).toEqual([
+      { id: 'BL-001', title: 'Legacy', status: 'open', path: '.planr/backlog/BL-001-legacy.md' },
+    ]);
+    await cli(dir, 'backlog', 'list');
+    expect(printed.join('\n')).toContain('BL-001\tLegacy');
+  });
+});
+
 describe('findings config', () => {
   it('keeps findings.unattended and unknown keys through a config write', async () => {
     const dir = project();

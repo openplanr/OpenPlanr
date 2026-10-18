@@ -72,16 +72,23 @@ function optionalText(value) {
   return value === undefined || value === null || value === '' ? undefined : value;
 }
 
+const PRIORITIES = Object.freeze(['critical', 'high', 'medium', 'low']);
+
 /** @type {typeof import('./backlog-item.d.mts').backlogFields} */
 export function backlogFields(input) {
   const title = String(input.title ?? input.name ?? '').trim();
   if (!title) throw new Error('A backlog item needs a non-empty title.');
+  const priority = String(input.priority ?? 'medium');
+  if (!PRIORITIES.includes(priority))
+    throw new Error(
+      `Backlog priority ${JSON.stringify(priority)} is not valid; use one of ${PRIORITIES.join(', ')}.`,
+    );
   const criteria = optionalText(input.acceptanceCriteria);
   const notes = optionalText(input.notes);
   const epicId = optionalText(input.epicId);
   return {
     title,
-    priority: String(input.priority ?? 'medium'),
+    priority,
     tags: strings(input.tags),
     description: String(input.description ?? title),
     ...(criteria === undefined
