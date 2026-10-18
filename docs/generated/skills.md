@@ -199,7 +199,7 @@ Diagnose a bug, regression, error, or unexplained behavior and optionally implem
 - Invocation from the plugin: `$planr:investigate` in Codex/ChatGPT; `/planr:investigate` in Claude Code.
 - Hosts: Claude Code, Codex, ChatGPT, and Cursor where supported by the package manifest.
 - Aliases: none.
-- Packaged support: none; the skill is intentionally single-file. See the [resource inventory](../../skills/planr-investigate/openplanr.skill.json).
+- Packaged support: `references/findings.md`, with packaged validators and runtime support. See the [resource inventory](../../skills/planr-investigate/openplanr.skill.json).
 
 ## `planr-land`
 
@@ -287,7 +287,7 @@ Implement an OpenPlanr plan, specification, task, or clearly stated request end 
 - Invocation from the plugin: `$planr:ship` in Codex/ChatGPT; `/planr:ship` in Claude Code.
 - Hosts: Claude Code, Codex, ChatGPT, and Cursor where supported by the package manifest.
 - Aliases: none.
-- Packaged support: `references/result-contract.md`, `references/design-lineage.md`, with packaged validators and runtime support. See the [resource inventory](../../skills/planr-ship/openplanr.skill.json).
+- Packaged support: `references/result-contract.md`, `references/design-lineage.md`, `references/findings.md`, with packaged validators and runtime support. See the [resource inventory](../../skills/planr-ship/openplanr.skill.json).
 
 ## `planr-spec`
 

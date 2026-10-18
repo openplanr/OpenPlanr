@@ -172,6 +172,12 @@ export interface OpenPlanrConfig {
     weeklyRecipientAllowlist?: string[];
   };
   reportLinter?: ReportLinterConfig;
+  /** Out-of-scope findings policy read by the Ship and Investigate skills. */
+  findings?: {
+    unattended?: 'report' | 'file';
+    /** Set once the CLI install hint has been shown in this project. */
+    cliHintShown?: boolean;
+  };
   /** Set after `openplanr linear init`; token is not saved in JSON. */
   linear?: LinearConfig;
   /**

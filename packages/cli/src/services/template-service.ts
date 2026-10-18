@@ -50,6 +50,14 @@ export async function renderTemplate(
   return compiled(data);
 }
 
+/** Whether `overrideDir` holds its own copy of `templatePath`. */
+export async function hasTemplateOverride(
+  templatePath: string,
+  overrideDir?: string,
+): Promise<boolean> {
+  return overrideDir ? fileExists(path.join(overrideDir, templatePath)) : false;
+}
+
 async function resolveTemplatePath(templatePath: string, overrideDir?: string): Promise<string> {
   if (overrideDir) {
     const overrideFull = path.join(overrideDir, templatePath);

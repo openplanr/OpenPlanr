@@ -74,6 +74,11 @@ it by its own exit code; to shorten output, write it to a log and read the tail.
 Fix failures caused by the change and rerun affected checks.
 Read [the result contract](references/result-contract.md) before reporting.
 
+Report defects you notice outside the task as [findings](references/findings.md),
+and never fix them in this change unless they block it. The packaged
+[backlog helper](scripts/backlog-item.mjs) lists and files backlog items when no
+CLI is installed; resolve it relative to this `SKILL.md`.
+
 Do not write progress into an approved design package. The studio derives
 approved, planned, implementing, and verified state from canonical planning and
 Ship artifacts after this separate invocation.
@@ -89,7 +94,8 @@ results instead of reproducing them in chat.
 - **Task:** task ID and path, or `direct-request`.
 - **Changed:** material paths grouped by purpose.
 - **Checks:** command, `passed`, `failed`, or `not-run`, plus a concise result.
-- **Issues:** problem, impact, and next action, or `none`.
+- **Issues:** blockers with problem, impact, and next action, or `none`; then
+  findings outside the task, each with its disposition.
 
 Keep the five machine fields unchanged. A human summary may omit empty or unavailable fields,
 but must make partial, blocked or unverified work clear and give the smallest

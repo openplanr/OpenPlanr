@@ -2263,7 +2263,7 @@ export const CANONICAL_REGISTRIES = deepFreeze({
         "ownerPackage": "planr-pipeline",
         "source": {
           "path": "skills/planr-ship/SKILL.md",
-          "digest": "sha256:828f3b7a6bd1b6c42d257315bc3fcfc29a5db5ac478c797bb26d2a7553d010b1"
+          "digest": "sha256:7c8ba9060b62e4adfbd79ada00f732e81e800c01ad0d66887e4c1b9aacb5afa5"
         },
         "authorityClass": "compatibility-router",
         "machineJson": false,
@@ -3099,7 +3099,7 @@ export const CANONICAL_REGISTRIES = deepFreeze({
         ]
       }
     ],
-    "documentDigest": "sha256:9e1501ffe1fd7f46a38bb8fa23f4a74c5e14ad4524b54b57fbc971458163e114"
+    "documentDigest": "sha256:657d6739bd8f3c95888f4686725087f4972f6e7d9843b81c017a798b3af9184c"
   },
   "skills.json": {
     "kind": "skill-catalog",
@@ -4168,7 +4168,7 @@ export const CANONICAL_REGISTRIES = deepFreeze({
         "lifecycle": "active",
         "authorityClass": "diagnostic",
         "source": "skills/planr-investigate/openplanr.skill.json",
-        "sourceDigest": "sha256:7b594b78a18409eb195a7bb8a2c189c06cf9e8022361a82a2f7e344abb9e5f95",
+        "sourceDigest": "sha256:ad1422ac497f638b739d362a93af8eddc9cd0634c8a737a2c408023bd5cb9797",
         "triggerPolicy": {
           "include": [
             "Investigate a bug, regression, error, or unexplained behavior",
@@ -4656,7 +4656,7 @@ export const CANONICAL_REGISTRIES = deepFreeze({
         "lifecycle": "active",
         "authorityClass": "implementation",
         "source": "skills/planr-ship/openplanr.skill.json",
-        "sourceDigest": "sha256:548373bee9817aa5649f53c6964b8911666c29aa9a55b5e6a7288ef12482179b",
+        "sourceDigest": "sha256:2fe2353469bb1fbb77029334fcc51b94240bb3baf56c69c5829b47908e2d7d33",
         "triggerPolicy": {
           "include": [
             "Implement a plan, specification, task, fix, or clearly stated local request",
@@ -4967,7 +4967,7 @@ export const CANONICAL_REGISTRIES = deepFreeze({
       }
     ],
     "compatibilityAliases": [],
-    "documentDigest": "sha256:5db46f86c838f03bdf20e17067463b4281465a286a0c8ad276e05e3f0fefda93"
+    "documentDigest": "sha256:de0f62b6342054429143ce02737ac2bb5496a414b29aa867802fb0b61e3a4b4e"
   },
   "outputs.json": {
     "kind": "output-catalog",

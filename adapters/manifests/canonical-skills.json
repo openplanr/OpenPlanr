@@ -4959,7 +4959,7 @@
       "source": "skills/planr-investigate/openplanr.skill.json",
       "entrypoint": "skills/planr-investigate/SKILL.md",
       "description": "Diagnose a bug, regression, error, or unexplained behavior and optionally implement a bounded fix. Use for root-cause investigation, not planned feature delivery.",
-      "sourceDigest": "sha256:9779c19e56fa08b9eb1572c80a23a0a663025d5b3a81f2b9f351670b9e54b3c1",
+      "sourceDigest": "sha256:08dcf60afb7d0934a25d35c0b1c37f853a4d49a4f23ba1847529165513045d78",
       "resources": [
         {
           "path": "agents/openai.yaml",
@@ -4970,6 +4970,30 @@
           ],
           "executable": false,
           "digest": "sha256:6a19c75f6c6c54d786fbae97a8b8916274ff32f0ebc4847d37db38ebdbfe04fb"
+        },
+        {
+          "path": "references/findings.md",
+          "kind": "reference",
+          "hosts": [
+            "claude-code",
+            "codex",
+            "chatgpt",
+            "cursor"
+          ],
+          "executable": false,
+          "digest": "sha256:2bee6285c88650a81ae049541eb9a09549c0935210b5ca3eae0b1c99fd52f45f"
+        },
+        {
+          "path": "scripts/backlog-item.mjs",
+          "kind": "script",
+          "hosts": [
+            "claude-code",
+            "codex",
+            "chatgpt",
+            "cursor"
+          ],
+          "executable": true,
+          "digest": "sha256:ccded7cd9126aa631f8944a1c7ec23145db8fb3c972449f83c0c634e6a90016a"
         }
       ],
       "contracts": {
@@ -5542,7 +5566,7 @@
       "source": "skills/planr-ship/openplanr.skill.json",
       "entrypoint": "skills/planr-ship/SKILL.md",
       "description": "Implement an OpenPlanr plan, specification, task, or clearly stated request end to end in the current repository. Use when the user asks to build, implement, fix, finish, or ship local work.",
-      "sourceDigest": "sha256:828f3b7a6bd1b6c42d257315bc3fcfc29a5db5ac478c797bb26d2a7553d010b1",
+      "sourceDigest": "sha256:7c8ba9060b62e4adfbd79ada00f732e81e800c01ad0d66887e4c1b9aacb5afa5",
       "resources": [
         {
           "path": "agents/openai.yaml",
@@ -5564,7 +5588,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:41097451aaa44f7b56a3473fa3ec7921d3fe22fccaede46b873aaae790d0a53a"
+          "digest": "sha256:687f53f2d6682dbe628bb2bfd52edd5685d9611e2695497516d37a1ef355b57f"
         },
         {
           "path": "references/design-lineage.md",
@@ -5589,6 +5613,30 @@
           ],
           "executable": true,
           "digest": "sha256:8805ac8d814a1d94364d455df6da350983d4c8436faa3749717da5f1b3ae63b1"
+        },
+        {
+          "path": "references/findings.md",
+          "kind": "reference",
+          "hosts": [
+            "claude-code",
+            "codex",
+            "chatgpt",
+            "cursor"
+          ],
+          "executable": false,
+          "digest": "sha256:2bee6285c88650a81ae049541eb9a09549c0935210b5ca3eae0b1c99fd52f45f"
+        },
+        {
+          "path": "scripts/backlog-item.mjs",
+          "kind": "script",
+          "hosts": [
+            "claude-code",
+            "codex",
+            "chatgpt",
+            "cursor"
+          ],
+          "executable": true,
+          "digest": "sha256:ccded7cd9126aa631f8944a1c7ec23145db8fb3c972449f83c0c634e6a90016a"
         }
       ],
       "contracts": {
