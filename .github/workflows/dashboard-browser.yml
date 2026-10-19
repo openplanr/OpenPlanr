@@ -11,6 +11,7 @@ on:
       - 'packages/operate/**'
       - 'packages/pipeline/lib/dashboard/**'
       - 'packages/protocol/**'
+      - 'packages/canvas/**'
       - 'scripts/dashboard/**'
       - 'package.json'
       - 'package-lock.json'

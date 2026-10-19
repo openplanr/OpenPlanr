@@ -6,6 +6,11 @@ export const PUBLIC_TARGETS = Object.freeze([
     tagLatestRelease: false,
   }),
   Object.freeze({
+    name: '@openplanr/canvas',
+    path: 'packages/canvas',
+    tagLatestRelease: false,
+  }),
+  Object.freeze({
     name: 'planr-pipeline',
     path: 'packages/pipeline',
     tagLatestRelease: false,

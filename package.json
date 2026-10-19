@@ -16,6 +16,7 @@
     "packages/cli",
     "packages/pipeline",
     "packages/protocol",
+    "packages/canvas",
     "packages/operate",
     "packages/artifact",
     "packages/design",

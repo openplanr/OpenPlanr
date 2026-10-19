@@ -197,11 +197,12 @@ jobs:
           path: ${{ runner.temp }}
       - name: Restore the generated runtime from the build job
         run: tar -xzmf "$RUNNER_TEMP/build-outputs.tgz"
-      - name: Test protocol, operate, artifact, integrations, skill runtime, and dashboard
+      - name: Test protocol, canvas, operate, artifact, integrations, skill runtime, and dashboard
         env:
           PLANR_BROWSER_TESTS: 1
         run: |
           npm test --workspace=@openplanr/protocol
+          npm test --workspace=@openplanr/canvas
           npm test --workspace=@openplanr/operate
           npm test --workspace=@openplanr/artifact
           npm test --workspace=@openplanr/integrations
@@ -395,6 +396,7 @@ jobs:
       - name: Test the packages that own the contributor studio and skill suites
         run: |
           npm test --workspace=@openplanr/protocol
+          npm test --workspace=@openplanr/canvas
           npm test --workspace=@openplanr/artifact
           npm test --workspace=@openplanr/design
           npm test --workspace=@openplanr/skill-runtime

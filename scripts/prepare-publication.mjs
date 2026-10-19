@@ -22,6 +22,7 @@ import {
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const targets = {
   '@openplanr/protocol': 'packages/protocol',
+  '@openplanr/canvas': 'packages/canvas',
   'planr-pipeline': 'packages/pipeline',
   openplanr: 'packages/cli',
 };
@@ -88,6 +89,19 @@ if (name === 'openplanr') {
     generatedFiles.set(
       relative(join(root, targets[name]), join(root, destination)).split(sep).join('/'),
       createHash('sha256').update(expected).digest('hex'),
+    );
+  }
+}
+if (name === '@openplanr/canvas') {
+  const { renderTypeScriptOutputs } = await import('./typescript/compile-sources.mjs');
+  const compiled = renderTypeScriptOutputs({ root });
+  for (const [target, bytes] of Object.entries(compiled)) {
+    if (!target.startsWith(`${targets[name]}/`)) continue;
+    if (!readFileSync(join(root, target)).equals(Buffer.from(bytes)))
+      throw new Error(`Generated package bytes changed: ${target}`);
+    generatedFiles.set(
+      relative(join(root, targets[name]), join(root, target)).split(sep).join('/'),
+      createHash('sha256').update(bytes).digest('hex'),
     );
   }
 }

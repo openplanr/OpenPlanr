@@ -4,6 +4,7 @@ export const WORKSPACE_IDENTITIES = Object.freeze({
   'packages/cli': 'openplanr',
   'packages/pipeline': 'planr-pipeline',
   'packages/protocol': '@openplanr/protocol',
+  'packages/canvas': '@openplanr/canvas',
   'packages/operate': '@openplanr/operate',
   'packages/artifact': '@openplanr/artifact',
   'packages/design': '@openplanr/design',
@@ -16,6 +17,7 @@ export const PUBLIC_PACKAGE_PATHS = Object.freeze([
   'packages/cli',
   'packages/pipeline',
   'packages/protocol',
+  'packages/canvas',
 ]);
 
 // This allowlist describes ownership, not the current release's version numbers.
@@ -24,6 +26,7 @@ const internalDependencies = Object.freeze({
   'packages/cli': { optionalDependencies: ['planr-pipeline'] },
   'packages/pipeline': {},
   'packages/protocol': {},
+  'packages/canvas': {},
   'packages/operate': { dependencies: ['@openplanr/protocol'] },
   'packages/artifact': { dependencies: ['@openplanr/protocol'] },
   'packages/design': { dependencies: ['@openplanr/artifact', '@openplanr/protocol'] },

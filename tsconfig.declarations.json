@@ -24,6 +24,7 @@
   },
   "include": [
     "packages/cli/lib/node-runtime.mjs",
+    "packages/canvas/src/**/*.mts",
     "packages/artifact/lib/artifact/ui/**/*.mjs",
     "packages/artifact/lib/artifact/diagram/authoring/**/*.mjs",
     "packages/artifact/lib/artifact/diagram/source-map.mjs",

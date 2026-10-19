@@ -17,7 +17,7 @@ on:
         type: choice
         required: true
         default: all-pending
-        options: ['all-pending', '@openplanr/protocol', 'planr-pipeline', 'openplanr']
+        options: ['all-pending', '@openplanr/protocol', '@openplanr/canvas', 'planr-pipeline', 'openplanr']
       version:
         description: Exact reviewed package version (required for one package)
         type: string
