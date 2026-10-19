@@ -132,7 +132,7 @@
 .op-diagnostics a:focus-visible,
 .op-diagnostics__bundle:focus-visible {
   outline: 2px solid var(--pc-focus-ring);
-  outline-offset: 3px;
+  outline-offset: 2px;
 }
 .op-diagnostics__bundle:hover {
   border-color: var(--pc-focus-ring);

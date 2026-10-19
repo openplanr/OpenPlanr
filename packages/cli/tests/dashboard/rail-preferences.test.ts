@@ -10,9 +10,9 @@ afterEach(() => {
 });
 
 describe('browser rail preference adapter', () => {
-  it('defaults to the expanded rail when there is no saved preference', () => {
+  it('leaves the route default intact when there is no saved preference', () => {
     expect(createBrowserShellAdapters().railPreference).toMatchObject({
-      initialCompact: false,
+      initialCompact: undefined,
       initialStorageError: false,
     });
   });
@@ -35,11 +35,11 @@ describe('browser rail preference adapter', () => {
   });
 
   it.each(['yes', '1', 'null', '{}', '"true"', 'TRUE', ''])(
-    'reports invalid saved value %j and defaults to expanded',
+    'reports invalid saved value %j and uses the route default',
     (stored) => {
       localStorage.setItem('op-rail-compact:v1', stored);
       expect(createBrowserShellAdapters().railPreference).toMatchObject({
-        initialCompact: false,
+        initialCompact: undefined,
         initialStorageError: true,
       });
       expect(localStorage.getItem('op-rail-compact:v1')).toBe(stored);
@@ -51,7 +51,7 @@ describe('browser rail preference adapter', () => {
       throw new DOMException('Storage denied', 'SecurityError');
     });
     expect(createBrowserShellAdapters().railPreference).toMatchObject({
-      initialCompact: false,
+      initialCompact: undefined,
       initialStorageError: true,
     });
   });
@@ -63,13 +63,13 @@ describe('browser rail preference adapter', () => {
       throw failure;
     });
     expect(() => preference?.save(true)).toThrow(failure);
-    expect(preference?.initialCompact).toBe(false);
+    expect(preference?.initialCompact).toBeUndefined();
   });
 
-  it('defaults to expanded when browser storage is unavailable', () => {
+  it('uses the route default when browser storage is unavailable', () => {
     vi.stubGlobal('localStorage', undefined);
     expect(createBrowserShellAdapters().railPreference).toMatchObject({
-      initialCompact: false,
+      initialCompact: undefined,
       initialStorageError: false,
     });
   });

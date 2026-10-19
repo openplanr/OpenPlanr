@@ -101,12 +101,13 @@
 }
 
 .op-governed-button,
-.op-governed-dialog :is(button, summary, textarea) {
-  min-height: 44px;
+.op-governed-dialog :is(button:not(.pc-icon-button), summary, textarea) {
+  min-height: var(--op-density-control);
 }
 
 .op-governed-button {
-  padding-block: 8px;
+  box-sizing: border-box;
+  padding-block: 0;
 }
 
 .op-governed-dialog :is(button, summary, textarea) {
@@ -120,7 +121,7 @@
 
 .op-governed-dialog summary {
   box-sizing: border-box;
-  padding: 8px;
+  padding: 4px 8px;
   border-radius: var(--pc-radius-sm);
   color: var(--pc-text-secondary);
   cursor: pointer;

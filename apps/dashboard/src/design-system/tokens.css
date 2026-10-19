@@ -43,6 +43,7 @@
   --op-raised: #1a1a2a;
   --op-line: #222236;
   --op-line-strong: #606c7f;
+  --op-line3: #383f4a;
   --op-text: #f4f4fa;
   --op-heading: #e8e8f0;
   --op-body: #9999b8;
@@ -176,7 +177,7 @@
   --op-radius-surface: 12px;
   --op-radius-card: var(--op-radius-surface);
   --op-radius-sheet: 16px;
-  --op-density-control: 44px;
+  --op-density-control: 36px;
   --op-density-row-block: var(--op-space-3);
   --op-density-surface-block: var(--op-space-6);
   --op-density-layout-gap: var(--op-space-8);
@@ -188,12 +189,12 @@
   --op-layout-mobile-nav-height: 68px;
   --op-size-project-mark: 40px;
   --op-size-project-mark-mobile: 32px;
-  --op-size-icon: 20px;
+  --op-size-icon: 16px;
   --op-size-spine-signal: 12px;
   --op-size-spine-offset: -7px;
   --op-size-spinner: 16px;
   --op-measure-copy: 72ch;
-  --op-elevation-focus: 0 0 0 3px color-mix(in srgb, var(--op-focus) 28%, transparent);
+  --op-elevation-focus: none;
   --op-elevation-high-contrast: 0 0 0 2px var(--op-ink);
   --op-motion-duration: 120ms;
   --op-motion-panel-duration: 200ms;
@@ -202,8 +203,14 @@
   --op-motion-hover-ease: ease-out;
   --op-motion-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
   --op-motion-reduced: 0.01ms;
-  --op-focus-width: 3px;
+  --op-focus-width: 2px;
   --op-focus-offset: 2px;
+}
+
+@media (max-width: 899px), (pointer: coarse) {
+  :root {
+    --op-density-control: 44px;
+  }
 }
 
 @media (min-width: 801px) {
@@ -222,6 +229,7 @@
   --op-raised: #e9efed;
   --op-line: #dce3e1;
   --op-line-strong: #c7cdd5;
+  --op-line3: #c7cdd5;
   --op-text: #17191d;
   --op-heading: #17191d;
   --op-body: #4a525d;
@@ -258,6 +266,7 @@
     --op-raised: #e9efed;
     --op-line: #dce3e1;
     --op-line-strong: #c7cdd5;
+    --op-line3: #c7cdd5;
     --op-text: #17191d;
     --op-heading: #17191d;
     --op-body: #4a525d;
@@ -290,10 +299,11 @@
   --op-body: var(--op-text);
   --op-dim: var(--op-text);
   --op-line: var(--op-text);
+  --op-line3: var(--op-text);
   --op-control-border: var(--op-text);
   --op-divider: var(--op-ink);
   --op-muted: var(--op-ink);
-  --op-focus: var(--op-refusal);
+  --op-focus: var(--op-accent);
   --op-elevation-sheet: var(--op-elevation-high-contrast);
 }
 
@@ -321,6 +331,7 @@
     --op-dim: CanvasText;
     --op-line: ButtonText;
     --op-line-strong: ButtonText;
+    --op-line3: ButtonText;
     --op-control-border: ButtonText;
     --op-accent: Highlight;
     --op-on-accent: HighlightText;

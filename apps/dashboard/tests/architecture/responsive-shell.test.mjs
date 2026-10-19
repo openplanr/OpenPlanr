@@ -18,7 +18,7 @@ const navigation = await readFile(
 test('small viewports keep the real application shell available', () => {
   assert.doesNotMatch(shell, /TooNarrow|SHELL_MIN_WIDTH/u);
   assert.doesNotMatch(planes, /TooNarrow|Use a wider window|desktop-only/u);
-  assert.match(shell, /floating=\{narrow\}/u);
+  assert.match(shell, /\bfloating\s+modal=\{narrow\}/u);
   assert.match(shell, /<NavRail/u);
   assert.match(shell, /<RouteWorkspace/u);
 });

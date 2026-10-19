@@ -441,26 +441,21 @@ test.describe('dashboard real-browser quality', () => {
         ).toBeVisible();
         await expect(workspace.getByText('Proposed', { exact: true })).toBeVisible();
         if (width === 1440) {
-          const inspector = page.getByRole('complementary', { name: 'Inspector' });
-          await expect(inspector).toContainText('Nothing selected');
+          await expect(page.locator('.pc-shell-inspector, .pc-inspector-sheet')).toHaveCount(0);
+          await expect(
+            page.getByRole('button', {
+              name: 'Show inspector: select an item first',
+              exact: true,
+            }),
+          ).toBeDisabled();
           const main = page.locator('#main-content');
-          const before = await main.boundingBox();
-          const dock = await inspector.boundingBox();
-          if (!before || !dock) throw new Error('Missing main content or inspector dock.');
-          expect(before.x + before.width).toBeLessThanOrEqual(dock.x + 1);
+          const [content, column] = await Promise.all([
+            main.boundingBox(),
+            page.locator('.pc-shell__column').boundingBox(),
+          ]);
+          if (!content || !column) throw new Error('Missing main content or shell column.');
+          expect(content.width).toBe(column.width);
           await expectControlsHitTestable(page);
-          await page.evaluate(() => window.__dashboardLayoutShifts.markPhase('inspector-toggle'));
-          await page.getByRole('button', { name: 'Hide inspector', exact: true }).click();
-          expect(await main.boundingBox()).toEqual(before);
-          await page.getByRole('button', { name: 'Show inspector', exact: true }).click();
-          expect(await main.boundingBox()).toEqual(before);
-          await expectControlsHitTestable(page);
-          const shifts = await page.evaluate(() =>
-            window.__dashboardLayoutShifts
-              .snapshot()
-              .shifts.filter((entry) => entry.phase === 'inspector-toggle'),
-          );
-          expect(shifts.reduce((sum, shift) => sum + shift.value, 0)).toBe(0);
         }
 
         await expect(workspace.locator('.op-today-focus, .pc-local-review__signal')).toHaveCount(0);
@@ -916,6 +911,7 @@ test.describe('dashboard real-browser quality', () => {
   test('turns a real delivery plan into staged graph, bounded board, and sprint intelligence', async ({
     page,
   }) => {
+    await page.addInitScript(installDashboardLayoutShifts);
     await page.setViewportSize({ width: 1440, height: 900 });
     await openFixture(page, '#/graph', { planningScenario: 'delivery' });
 
@@ -949,19 +945,31 @@ test.describe('dashboard real-browser quality', () => {
     expect(new Set(nodePositions).size).toBe(4);
     const canvasBounds = await graph.locator('.pc-graph').boundingBox();
     if (!canvasBounds) throw new Error('Missing fitted graph viewport.');
-    // The reserved dock changes the available width, so stage spacing follows the canvas.
+    // Stage spacing follows the available canvas at each viewport.
     expect(Math.max(...nodePositions) - Math.min(...nodePositions)).toBeGreaterThan(
       canvasBounds.width * 0.6,
     );
 
-    await graph
-      .getByRole('button', {
-        name: 'QT-071 Make failed CRM registrations visible and replayable',
-        exact: true,
-      })
-      .click();
-    const inspector = page.getByRole('complementary', { name: 'Inspector' });
+    await expect(page.locator('.pc-shell-inspector, .pc-inspector-sheet')).toHaveCount(0);
+    await expectControlsHitTestable(page, graph);
+    const main = page.locator('#main-content');
+    const scroll = page.locator('.pc-shell__scroll');
+    const before = { main: await main.boundingBox(), scroll: await scroll.boundingBox() };
+    if (!before.main || !before.scroll) throw new Error('Missing main or scroll region.');
+    await page.evaluate(() => window.__dashboardLayoutShifts.markPhase('inspector-toggle'));
+    const selectedNode = graph.getByRole('button', {
+      name: 'QT-071 Make failed CRM registrations visible and replayable',
+      exact: true,
+    });
+    await selectedNode.click();
+    const inspector = page.getByRole('dialog', { name: 'Inspector', exact: true });
     await expect(inspector).toContainText('Make failed CRM registrations visible and replayable');
+    expect(await main.boundingBox()).toEqual(before.main);
+    expect(await scroll.boundingBox()).toEqual(before.scroll);
+    const overlay = await inspector.boundingBox();
+    if (!overlay) throw new Error('Missing inspector overlay.');
+    expect(overlay.x).toBeLessThan(before.main.x + before.main.width);
+    expect(overlay.x + overlay.width).toBeGreaterThan(before.main.x + before.main.width - 1);
     await expect(inspector.locator('[data-artifact-id="QT-071"]')).toHaveAttribute(
       'data-detail-state',
       'ready',
@@ -976,10 +984,35 @@ test.describe('dashboard real-browser quality', () => {
       'pc-inspector-enter',
     );
 
+    await page.keyboard.press('Escape');
+    await expect(inspector).toHaveCount(0);
+    await expect(selectedNode).toBeFocused();
+    expect(await main.boundingBox()).toEqual(before.main);
+    await selectedNode.click();
+    await expect(inspector).toBeVisible();
+    await main.click({ position: { x: 8, y: 8 } });
+    await expect(inspector).toHaveCount(0);
+    await expect(selectedNode).toBeFocused();
+    expect(await main.boundingBox()).toEqual(before.main);
+    expect(await scroll.boundingBox()).toEqual(before.scroll);
+    await expectControlsHitTestable(page, graph);
+    const shifts = await page.evaluate(() =>
+      window.__dashboardLayoutShifts
+        .snapshot()
+        .shifts.filter((entry) => entry.phase === 'inspector-toggle'),
+    );
+    expect(shifts.reduce((sum, shift) => sum + shift.value, 0)).toBe(0);
+
+    await selectedNode.click();
+    await expect(inspector).toBeVisible();
+
     await page.evaluate(() => {
       window.location.hash = '#/list';
     });
     await expect(page.locator('[data-route-kind="planning.list"]')).toBeVisible();
+    await expect(inspector).toHaveCount(0);
+    await page.getByRole('button', { name: 'Show inspector', exact: true }).click();
+    await expect(inspector).toContainText('Make failed CRM registrations visible and replayable');
     expect(await inspector.evaluate((node) => getComputedStyle(node).animationName)).toBe(
       'pc-inspector-enter',
     );
@@ -1138,7 +1171,7 @@ test.describe('dashboard real-browser quality', () => {
         await card.focus();
         await page.keyboard.press('Enter');
         await expect(
-          page.getByRole(width < 900 ? 'dialog' : 'complementary', {
+          page.getByRole('dialog', {
             name: 'Inspector',
             exact: true,
           }),
@@ -1213,7 +1246,7 @@ test.describe('dashboard real-browser quality', () => {
             await page.keyboard.press('Enter');
           }
           await expect(
-            page.getByRole(width < 900 ? 'dialog' : 'complementary', {
+            page.getByRole('dialog', {
               name: 'Inspector',
               exact: true,
             }),
@@ -1279,6 +1312,7 @@ test.describe('dashboard real-browser quality', () => {
       const badgeBefore = await badge.boundingBox();
       expect(indicatorBefore).not.toBeNull();
       expect(badgeBefore).not.toBeNull();
+      expect(badgeBefore?.height).toBe(32);
       await page.evaluate(() => window.__dashboardLayoutShifts.markPhase('activity-disconnect'));
       await page.context().setOffline(true);
       await expect(activity.locator('.pc-activity__feed-head')).toContainText(
@@ -1580,7 +1614,15 @@ test.describe('dashboard real-browser quality', () => {
           }),
         );
 
+      // Expanded navigation keeps both product groups available (M2).
       expect(labels.map(({ text }) => text)).toEqual([
+        'Home',
+        'List',
+        'Graph',
+        'Board',
+        'Sprints',
+        'Activity',
+        'Search',
         'Today',
         'Inbox',
         'Actions',
@@ -1650,7 +1692,12 @@ test.describe('dashboard real-browser quality', () => {
 
       const status = page.getByRole('status', { name: 'watcher connected' });
       await expect(status).toBeVisible();
-      await expect(status.locator('.pc-watcher__label')).toHaveText('watcher connected');
+      // The mobile live pill uses its concise label (M3).
+      await expect(status.locator('.pc-watcher__label')).toHaveCount(1);
+      await expect(status.locator('.pc-watcher__label')).toBeVisible();
+      await expect(status.locator('.pc-watcher__label')).toHaveText(
+        width < 900 ? 'Live' : 'watcher connected',
+      );
       expect((await status.boundingBox())?.width ?? 0).toBeGreaterThan(0);
     }
   });
@@ -1774,7 +1821,10 @@ test.describe('dashboard real-browser quality', () => {
   }) => {
     const hostile = '<img src=x onerror="window.__fixtureXssFired=1"> Fixture';
     await openFixture(page, '#/overview', { project: hostile });
-    await expect(page.locator('.pc-topbar__crumb').first()).toHaveText(hostile);
+    // The breadcrumb displays Plan; project identity remains in its escaped title (T6).
+    const identity = page.locator('.pc-topbar__crumb').first();
+    await expect(identity).toHaveText('Plan');
+    await expect(identity).toHaveAttribute('title', hostile);
     expect(await page.locator('img[src="x"]').count()).toBe(0);
     expect(
       await page.evaluate(() =>

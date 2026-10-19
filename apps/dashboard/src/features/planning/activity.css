@@ -34,7 +34,7 @@
 }
 .pc-activity__feed-head {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 260px;
+  grid-template-columns: minmax(0, 1fr) max-content;
   align-items: center;
   gap: 12px;
   padding: 18px 20px 8px;
@@ -42,18 +42,28 @@
   overflow: auto;
 }
 .pc-activity__connection {
-  display: block;
-  width: 100%;
-  height: 44px;
+  display: inline-grid;
+  grid-template-areas: "state";
+  width: max-content;
+  height: 32px;
 }
-.pc-activity__connection > .pc-badge {
-  display: block;
+.pc-activity__connection > .pc-badge,
+.pc-activity__connection::before {
+  display: inline-flex;
+  grid-area: state;
+  justify-self: stretch;
   box-sizing: border-box;
-  width: 100%;
   height: 100%;
-  padding: 5px 6px;
+  padding: 0 10px;
   line-height: 16px;
-  white-space: normal;
+  font-size: var(--pc-text-2xs);
+  white-space: nowrap;
+}
+.pc-activity__connection::before {
+  content: attr(data-reserve-label);
+  visibility: hidden;
+  pointer-events: none;
+  border: 1px solid transparent;
 }
 .pc-activity__feed-head > div {
   display: flex;
@@ -127,7 +137,7 @@ a.pc-activity__item {
 }
 a.pc-activity__item:focus-visible {
   outline: 2px solid var(--pc-focus-ring);
-  outline-offset: 4px;
+  outline-offset: 2px;
 }
 .pc-activity__item[data-activity-unavailable] {
   display: grid;
@@ -194,6 +204,9 @@ a.pc-activity__item:active {
   outline-offset: 2px;
 }
 @media (width < 900px) {
+  .pc-activity__connection {
+    height: 44px;
+  }
   .op-planning.pc-activity {
     padding: 24px 16px 32px;
   }

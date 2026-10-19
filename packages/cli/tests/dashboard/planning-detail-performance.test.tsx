@@ -174,16 +174,17 @@ describe('Planning detail render work', () => {
         </Profiler>
       );
       const rendered = render(shell(0));
+      expect(screen.queryByRole('dialog', { name: 'Inspector', exact: true })).toBeNull();
       fireEvent.change(screen.getByRole('textbox', { name: 'Filter by id or title' }), {
         target: { value: current.selectedId },
       });
       const row = rendered.container.querySelector<HTMLElement>('.pc-list tbody tr[tabindex]');
       if (!row) throw new Error('Missing selected performance row');
       await act(async () => row.click());
-      await within(screen.getByRole('complementary', { name: 'Inspector' })).findByText(
+      await within(screen.getByRole('dialog', { name: 'Inspector', exact: true })).findByText(
         'Detail verified against the current planning snapshot.',
       );
-      const panel = screen.getByRole('complementary', { name: 'Inspector' });
+      const panel = screen.getByRole('dialog', { name: 'Inspector', exact: true });
       const initial = {
         projectionSelects: projectionSpy.mock.calls.length,
         markdown: markdownSpy.mock.calls.length,
@@ -209,9 +210,15 @@ describe('Planning detail render work', () => {
       markdownSpy.mockClear();
       phase = 'reopen';
       for (let iteration = 0; iteration < 5; iteration++) {
-        fireEvent.click(screen.getByRole('button', { name: 'Hide inspector', exact: true }));
+        fireEvent.click(
+          within(screen.getByRole('dialog', { name: 'Inspector', exact: true })).getByRole(
+            'button',
+            { name: 'Close inspector', exact: true },
+          ),
+        );
+        expect(screen.queryByRole('dialog', { name: 'Inspector', exact: true })).toBeNull();
         await act(async () => row.click());
-        await within(screen.getByRole('complementary', { name: 'Inspector' })).findByText(
+        await within(screen.getByRole('dialog', { name: 'Inspector', exact: true })).findByText(
           'Detail verified against the current planning snapshot.',
         );
       }

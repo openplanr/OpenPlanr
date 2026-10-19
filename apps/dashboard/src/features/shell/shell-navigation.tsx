@@ -41,7 +41,7 @@ const PLANNING_SECTIONS: readonly RailSection[] = Object.freeze([
   {
     label: 'Plan',
     items: [
-      { kind: 'planning.overview', icon: 'gauge' },
+      { kind: 'planning.overview', icon: 'house' },
       { kind: 'planning.list', icon: 'list' },
       { kind: 'planning.graph', icon: 'workflow' },
       { kind: 'planning.board', icon: 'columns-3' },
@@ -99,19 +99,31 @@ function navigationIsCurrent(
   return COLLECTION_FOR_DETAIL[route.kind] === definition.kind;
 }
 
-function RailLink({ item, route }: Readonly<{ item: RailItem; route: ParsedDashboardRoute }>) {
+export function defaultCompactRail(route: ParsedDashboardRoute): boolean {
+  return ['planning.graph', 'planning.board', 'planning.sprints', 'planning.activity'].includes(
+    route.kind,
+  );
+}
+
+function RailLink({
+  item,
+  route,
+  count,
+  compact = false,
+}: Readonly<{ item: RailItem; route: ParsedDashboardRoute; count?: number; compact?: boolean }>) {
   const definition = DEFINITION_BY_KIND.get(item.kind);
   if (!definition) return null;
   return (
     <a
       className="pc-rail__item"
-      aria-label={definition.label}
+      aria-label={compact ? definition.label : undefined}
       title={definition.label}
       href={definition.href}
       aria-current={navigationIsCurrent(definition, route) ? 'page' : undefined}
     >
-      <PcIcon name={item.icon} size={14} />
+      <PcIcon name={item.icon} size={16} />
       <span>{definition.label}</span>
+      {count === undefined ? null : <span className="pc-rail__count">{count}</span>}
     </a>
   );
 }
@@ -155,7 +167,7 @@ function MobileNavigation({
   // biome-ignore lint/correctness/useExhaustiveDependencies: every route change closes the secondary sheet.
   useEffect(() => setMoreOpen(false), [route.kind]);
   const primary: readonly RailItem[] = [
-    { kind: 'planning.overview', icon: 'gauge' },
+    { kind: 'planning.overview', icon: 'house' },
     { kind: 'planning.list', icon: 'list' },
     { kind: 'planning.activity', icon: 'activity' },
   ];
@@ -238,115 +250,127 @@ export type NavRailProps = Readonly<{
   compact?: boolean;
   onToggleCompact?: () => void;
   preferenceError?: string | null;
+  counts?: Partial<Record<DashboardRouteKind, number>>;
+  branch?: string | null;
 }>;
 
-/** Workspace switcher, the product's sections, and the palette entry point. */
 export function NavRail({
   product,
   route,
   operateAvailable,
   onOpenPalette,
-  compact = false,
+  compact = defaultCompactRail(route),
   onToggleCompact,
   preferenceError,
+  counts,
+  branch = null,
 }: NavRailProps) {
-  const sections = product === 'operate' ? OPERATE_SECTIONS : PLANNING_SECTIONS;
-  const operateUnavailable = !operateAvailable;
+  const detailRoute = route.kind === 'planning.detail' || route.kind === 'planning.spec';
+  const sections = compact
+    ? product === 'operate'
+      ? OPERATE_SECTIONS
+      : PLANNING_SECTIONS.map((section) => ({
+          ...section,
+          items: section.items.filter((item) => item.kind !== 'planning.search'),
+        }))
+    : [
+        ...PLANNING_SECTIONS,
+        { label: 'Operate', items: OPERATE_SECTIONS[0]?.items ?? [] },
+        ...OPERATE_SECTIONS.slice(1),
+      ];
   return (
     <>
-      <nav
-        className="pc-rail"
-        data-compact={compact || undefined}
-        aria-label="Dashboard navigation"
-      >
-        <div className="pc-rail__brand">
-          <span className="pc-rail__tile" aria-hidden="true">
-            P
-          </span>
-          <span className="pc-rail__wordmark">openplanr</span>
-          <PcIcon name="chevrons-up-down" size={13} color="var(--pc-text-tertiary)" />
-        </div>
-        <div className="pc-rail__products">
-          <a
-            className="pc-rail__product"
-            href="#/home"
-            aria-label="Plan"
-            title="Plan"
-            aria-current={product === 'planning' ? 'page' : undefined}
-          >
-            <PcIcon name="list-tree" size={12} />
-            <span>Plan</span>
-          </a>
-          <a
-            className="pc-rail__product"
-            href="#/operate/today"
-            aria-label="Operate"
-            aria-current={product === 'operate' ? 'page' : undefined}
-            data-unavailable={operateUnavailable || undefined}
-            title={
-              operateUnavailable
-                ? 'Local reviews available; actions require a command gateway'
-                : 'operate'
-            }
-          >
-            <PcIcon name={operateUnavailable ? 'unplug' : 'gauge'} size={12} />
-            <span>Operate</span>
-          </a>
-        </div>
-        <button
-          type="button"
-          className="pc-rail__palette"
-          onClick={onOpenPalette}
-          aria-keyshortcuts="Meta+K Control+K"
-          aria-label={compact ? RAIL_PALETTE_LABEL : undefined}
+      {!detailRoute ? (
+        <nav
+          className="pc-rail"
+          data-compact={compact || undefined}
+          aria-label="Dashboard navigation"
         >
-          <PcIcon name="search" size={13} />
-          {!compact ? (
-            <>
-              <span>{RAIL_PALETTE_LABEL}</span>
-              <span className="pc-rail__keys">
-                <Kbd size="sm">⌘</Kbd>
-                <Kbd size="sm">K</Kbd>
-              </span>
-            </>
-          ) : null}
-        </button>
-        <div className="pc-rail__sections">
-          {sections.map((section) => (
-            <div className="pc-rail__section" key={section.label}>
-              <div className="pc-rail__label">{section.label}</div>
-              <div className="pc-rail__items">
-                {section.items.map((item) => (
-                  <RailLink key={item.kind} item={item} route={route} />
-                ))}
-              </div>
-            </div>
-          ))}
-        </div>
-        <div className="pc-rail__footer">
-          {onToggleCompact ? (
-            <button
-              type="button"
-              className="pc-rail__toggle"
-              aria-label={compact ? 'Expand navigation' : 'Collapse navigation'}
-              aria-expanded={!compact}
-              onClick={onToggleCompact}
-              title={compact ? 'Expand navigation' : 'Collapse navigation'}
+          <div className="pc-rail__brand">
+            <svg
+              className="pc-rail__tile"
+              width="28"
+              height="28"
+              viewBox="0 0 160 160"
+              aria-hidden="true"
             >
-              <PcIcon name={compact ? 'chevron-right' : 'chevron-left'} size={14} />
-              <span>{compact ? 'Expand navigation' : 'Collapse navigation'}</span>
-            </button>
-          ) : null}
-          {preferenceError ? (
-            <p role="status" className="pc-rail__preference-error">
-              {preferenceError}
-            </p>
-          ) : null}
-          {REFERENCE_ITEMS.map((item) => (
-            <RailLink key={item.kind} item={item} route={route} />
-          ))}
-        </div>
-      </nav>
+              <g transform="rotate(-45 80 80)">
+                <path
+                  d="M125 50A52 52 0 1 0 125 110"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="12"
+                  strokeLinecap="round"
+                />
+                <rect x="127" y="71" width="18" height="18" rx="3" fill="currentColor" />
+              </g>
+            </svg>
+            <div className="pc-rail__identity">
+              <span className="pc-rail__wordmark">OpenPlanr</span>
+              <span className="pc-rail__branch">
+                {branch === null ? null : `${branch} · .planr/`}
+              </span>
+            </div>
+          </div>
+          <button
+            type="button"
+            className="pc-rail__palette"
+            onClick={onOpenPalette}
+            aria-keyshortcuts="Meta+K Control+K"
+            aria-label={compact ? RAIL_PALETTE_LABEL : undefined}
+          >
+            <PcIcon name="search" size={15} />
+            {!compact ? (
+              <>
+                <span>{RAIL_PALETTE_LABEL}</span>
+                <span className="pc-rail__keys">
+                  <Kbd>⌘K</Kbd>
+                </span>
+              </>
+            ) : null}
+          </button>
+          <div className="pc-rail__sections">
+            {sections.map((section) => (
+              <section className="pc-rail__section" key={section.label} aria-label={section.label}>
+                <div className="pc-rail__label">{section.label}</div>
+                <div className="pc-rail__items">
+                  {section.items.map((item) => (
+                    <RailLink
+                      key={item.kind}
+                      item={item}
+                      route={route}
+                      count={counts?.[item.kind]}
+                      compact={compact}
+                    />
+                  ))}
+                </div>
+              </section>
+            ))}
+          </div>
+          <div className="pc-rail__footer">
+            {onToggleCompact ? (
+              <button
+                type="button"
+                className="pc-rail__toggle"
+                aria-label={compact ? 'Expand navigation' : 'Collapse navigation'}
+                aria-expanded={!compact}
+                onClick={onToggleCompact}
+                title={compact ? 'Expand navigation' : 'Collapse navigation'}
+              >
+                <PcIcon name={compact ? 'chevron-right' : 'chevron-left'} size={14} />
+                <span>{compact ? 'Expand navigation' : 'Collapse navigation'}</span>
+              </button>
+            ) : null}
+            {preferenceError ? (
+              <p role="status" className="pc-rail__preference-error">
+                {preferenceError}
+              </p>
+            ) : null}
+            {!compact &&
+              REFERENCE_ITEMS.map((item) => <RailLink key={item.kind} item={item} route={route} />)}
+          </div>
+        </nav>
+      ) : null}
       <MobileNavigation
         key={route.kind}
         product={product}
@@ -420,20 +444,42 @@ export const CONNECTION_STATES: Readonly<Record<ConnectionState, ConnectionRecip
 
 export function ConnectionChip({ state }: Readonly<{ state: ConnectionState }>) {
   const recipe = CONNECTION_STATES[state];
+  const live = state === 'connected' || state === 'read-only';
   return (
-    <span className="pc-conn" data-tone={recipe.tone} title={`connection: ${recipe.label}`}>
-      <PcIcon name={recipe.icon} size={11} spin={state === 'booting'} />
-      {recipe.label}
+    <span
+      className="pc-conn pc-conn--watcher"
+      data-tone={recipe.tone}
+      title={`connection: ${recipe.label}`}
+    >
+      {live ? (
+        <span className="pc-conn__dot" aria-hidden="true" />
+      ) : (
+        <PcIcon name={recipe.icon} size={13} spin={state === 'booting'} />
+      )}
+      {state === 'booting' ? null : live ? 'Live · watching .planr/' : recipe.label}
     </span>
   );
 }
 
-export function WatcherDot({ state }: Readonly<{ state: ConnectionState }>) {
+export function WatcherDot({
+  state,
+  compact = false,
+}: Readonly<{ state: ConnectionState; compact?: boolean }>) {
   const recipe = CONNECTION_STATES[state];
   return (
     <span className="pc-watcher" role="status" aria-label={recipe.dotLabel}>
       <span className="pc-watcher__dot" data-dot={recipe.dot} aria-hidden="true" />
-      <span className="pc-watcher__label">{recipe.dotLabel}</span>
+      <span className="pc-watcher__label" aria-hidden="true">
+        {state === 'booting'
+          ? null
+          : !compact
+            ? recipe.dotLabel
+            : state === 'connected' || state === 'read-only'
+              ? 'Live'
+              : state === 'incompatible'
+                ? 'Stopped'
+                : recipe.label}
+      </span>
     </span>
   );
 }
@@ -523,21 +569,26 @@ export function TopBar({
   const product = route.product ?? 'system';
   const subject = !showSubject || route.kind === 'not-found' ? null : route.subjectId;
   return (
-    <header className="pc-topbar">
-      <span className="pc-topbar__crumb pc-topbar__project" title={projectName}>
-        {projectName ?? 'OpenPlanr'}
-      </span>
-      <span className="pc-topbar__crumb">{product}</span>
-      <PcIcon name="chevron-right" size={12} color="var(--pc-text-tertiary)" />
-      <span className="pc-topbar__view">{definition?.label ?? 'Closed route'}</span>
-      {subject ? (
-        <>
-          <PcIcon name="chevron-right" size={12} color="var(--pc-text-tertiary)" />
-          <span className="pc-topbar__subject" title={subject}>
-            {subject}
-          </span>
-        </>
-      ) : null}
+    <header className="pc-topbar" data-product={product}>
+      <div className="pc-topbar__breadcrumbs">
+        <span className="pc-topbar__crumb" title={projectName}>
+          {product === 'planning' ? 'Plan' : product === 'operate' ? 'Operate' : 'Reference'}
+        </span>
+        <span className="pc-topbar__separator" aria-hidden="true">
+          /
+        </span>
+        <span className="pc-topbar__view">{definition?.label ?? 'Closed route'}</span>
+        {subject ? (
+          <>
+            <span className="pc-topbar__separator" aria-hidden="true">
+              /
+            </span>
+            <span className="pc-topbar__subject" title={subject}>
+              {subject}
+            </span>
+          </>
+        ) : null}
+      </div>
       <button
         type="button"
         className="pc-topbar__palette"
@@ -545,50 +596,51 @@ export function TopBar({
         onClick={onOpenPalette}
         aria-keyshortcuts="Meta+K Control+K"
       >
-        <PcIcon name="search" size={13} />
+        <PcIcon name="search" size={15} />
         {!paletteIconOnly ? (
           <>
             <span className="pc-topbar__placeholder">{TOPBAR_PALETTE_LABEL}</span>
             <span className="pc-rail__keys">
-              <Kbd size="sm">⌘</Kbd>
-              <Kbd size="sm">K</Kbd>
+              <Kbd>⌘K</Kbd>
             </span>
           </>
         ) : null}
       </button>
-      <output className="pc-topbar__end" aria-live="polite">
-        {connectionState !== 'read-only' ? <ConnectionChip state={connectionState} /> : null}
-        <Tooltip
-          content={
-            product === 'operate'
-              ? 'Operate actions require confirmation and an authorized command gateway. Receipts record every governed change.'
-              : 'Plan is read-only. Planning commands copy a continuation without changing project files.'
+      <div className="pc-topbar__actions">
+        <output className="pc-topbar__end" aria-live="polite">
+          <ConnectionChip state={connectionState} />
+          <Tooltip
+            content={
+              product === 'operate'
+                ? 'Operate actions require confirmation and an authorized command gateway. Receipts record every governed change.'
+                : 'Plan is read-only. Planning commands copy a continuation without changing project files.'
+            }
+          >
+            <button type="button" className="pc-conn">
+              <PcIcon name={product === 'operate' ? 'shield' : 'lock'} size={13} />
+              <span className="pc-capability-label">
+                {product === 'operate' ? 'Governed actions' : 'Read-only'}
+              </span>
+            </button>
+          </Tooltip>
+        </output>
+        {shortcutHelp}
+        <ThemeToggle preference={themePreference} />
+        <IconButton
+          icon={inspectorOpen ? 'panel-right-close' : 'panel-left-close'}
+          label={
+            inspectorOpen
+              ? 'Hide inspector'
+              : inspectorAvailable
+                ? 'Show inspector'
+                : 'Show inspector: select an item first'
           }
-        >
-          <button type="button" className="pc-conn">
-            <PcIcon name={product === 'operate' ? 'shield' : 'lock'} size={11} />
-            <span className="pc-capability-label">
-              {product === 'operate' ? 'Governed actions' : 'Read-only'}
-            </span>
-          </button>
-        </Tooltip>
-      </output>
-      {shortcutHelp}
-      <ThemeToggle preference={themePreference} />
-      <IconButton
-        icon={inspectorOpen ? 'panel-right-close' : 'panel-left-close'}
-        label={
-          inspectorOpen
-            ? 'Hide inspector'
-            : inspectorAvailable
-              ? 'Show inspector'
-              : 'Show inspector: select an item first'
-        }
-        disabled={!inspectorAvailable}
-        size="sm"
-        active={inspectorOpen}
-        onClick={onToggleInspector}
-      />
+          disabled={!inspectorAvailable}
+          size="sm"
+          active={inspectorOpen}
+          onClick={onToggleInspector}
+        />
+      </div>
     </header>
   );
 }
@@ -601,6 +653,7 @@ export type StatusBarProps = Readonly<{
   edgeCount: number | null;
   connectionState: ConnectionState;
   buildId: string;
+  compact?: boolean;
 }>;
 
 export function StatusBar({
@@ -609,21 +662,22 @@ export function StatusBar({
   edgeCount,
   connectionState,
   buildId,
+  compact,
 }: StatusBarProps) {
   return (
     <footer className="pc-statusbar">
       <span className="pc-statusbar__item pc-statusbar__item--branch">
-        <PcIcon name="git-branch" size={11} />
-        <span className="pc-statusbar__text">{branch ?? <Absent>no branch</Absent>}</span>
+        <PcIcon name="git-branch" size={13} />
+        <span className="pc-statusbar__text">{branch}</span>
       </span>
       <span className="pc-statusbar__item pc-statusbar__item--totals">
         <span className="pc-statusbar__text">
-          {nodeCount === null
-            ? 'graph not read'
-            : `${nodeCount} nodes · ${edgeCount === null ? 'unknown' : edgeCount} edges`}
+          {nodeCount === null || edgeCount === null
+            ? null
+            : `${nodeCount} nodes · ${edgeCount} edges`}
         </span>
       </span>
-      <WatcherDot state={connectionState} />
+      <WatcherDot state={connectionState} compact={compact} />
       <span className="pc-statusbar__end" title="Served build">
         <span className="pc-statusbar__text">{buildId}</span>
       </span>
@@ -639,7 +693,9 @@ export type InspectorProps = Readonly<{
   mode: 'skeleton' | 'stub' | 'selection';
   selection: InspectorSelection;
   floating: boolean;
+  modal?: boolean;
   onClose?: () => void;
+  onRestoreFocus?: () => void;
   onPromote?: (href: string) => void;
   planningContent?: ReactNode;
 }>;
@@ -656,7 +712,9 @@ export function Inspector({
   mode,
   selection,
   floating,
+  modal = true,
   onClose,
+  onRestoreFocus,
   onPromote,
   planningContent,
 }: InspectorProps) {
@@ -773,11 +831,11 @@ export function Inspector({
     return (
       <InspectorSheet
         open
-        modal
+        modal={modal}
         onOpenChange={(open) => {
           if (!open) onClose?.();
         }}
-        onRestoreFocus={() => opener.current?.focus({ preventScroll: true })}
+        onRestoreFocus={onRestoreFocus ?? (() => opener.current?.focus({ preventScroll: true }))}
         title="Inspector"
         description="Selected item details. Open the item to continue on its full page."
       >

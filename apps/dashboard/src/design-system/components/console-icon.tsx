@@ -42,6 +42,7 @@ import {
   GitPullRequest,
   Hash,
   History,
+  House,
   Inbox,
   Info,
   Layers,
@@ -121,6 +122,7 @@ const GLYPHS = Object.freeze({
   flag: Flag,
   folder: Folder,
   gauge: Gauge,
+  house: House,
   'git-branch': GitBranch,
   'git-commit': GitCommitHorizontal,
   'git-pull-request': GitPullRequest,
@@ -174,24 +176,25 @@ export type PcIconProps = Readonly<{
   pulse?: boolean;
 }>;
 
-/** Inline glyph at 1.75 stroke on a 24-box; inherits `currentColor` unless a color is given. */
+/** Inline glyph on the shared 13, 15 and 16 px scale; inherits `currentColor`. */
 export function PcIcon({
   name,
   size = 16,
   color = 'currentColor',
-  strokeWidth = 1.75,
+  strokeWidth = 1.8,
   title,
   spin = false,
   pulse = false,
 }: PcIconProps) {
   const Glyph = GLYPHS[name];
+  const iconSize = size <= 13 ? 13 : size <= 15 ? 15 : 16;
   return (
     <Glyph
       className="pc-icon"
       data-icon={name}
       data-spin={spin || undefined}
       data-pulse={pulse || undefined}
-      size={size}
+      size={iconSize}
       color={color}
       strokeWidth={strokeWidth}
       aria-hidden={title ? undefined : true}

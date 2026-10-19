@@ -126,9 +126,8 @@ describe('premium inspector repeated selection', () => {
         <UnifiedShell adapters={adapters} />
       </DashboardProviders>,
     );
-    if (width < 900 && screen.queryByRole('dialog', { name: 'Inspector' })) {
-      fireEvent.click(screen.getByRole('button', { name: 'Close inspector', exact: true }));
-    }
+    expect(screen.queryByRole('dialog', { name: 'Inspector', exact: true })).toBeNull();
+    expect(rendered.container.querySelector('.pc-shell-inspector')).toBeNull();
     fireEvent.change(screen.getByRole('textbox', { name: 'Filter by id or title' }), {
       target: { value: current.manifest.selectedId },
     });
@@ -140,19 +139,20 @@ describe('premium inspector repeated selection', () => {
     // The performance probe's old selector now falls back to an empty expected title.
     expect(row.querySelector('.pc-work-item__title')).toBeNull();
     for (let iteration = 0; iteration < 20; iteration += 1) {
-      const existing = screen.queryByRole(width < 900 ? 'dialog' : 'complementary', {
+      const existing = screen.queryByRole('dialog', {
         name: 'Inspector',
       });
       if (existing) {
         fireEvent.click(
-          screen.getByRole('button', {
-            name: width < 900 ? 'Close inspector' : 'Hide inspector',
+          within(existing).getByRole('button', {
+            name: 'Close inspector',
             exact: true,
           }),
         );
       }
+      expect(screen.queryByRole('dialog', { name: 'Inspector', exact: true })).toBeNull();
       await act(async () => row.click());
-      const panel = screen.getByRole(width < 900 ? 'dialog' : 'complementary', {
+      const panel = screen.getByRole('dialog', {
         name: 'Inspector',
       });
       await within(panel).findByText('Detail verified against the current planning snapshot.');
@@ -171,8 +171,9 @@ describe('premium inspector repeated selection', () => {
       }
       expect(row.dataset.selected).toBe('true');
       expect(row.isConnected).toBe(true);
-      if (width < 900) expect(document.querySelector('[aria-label="Inspector"]')).toBeNull();
-      else expect(document.querySelector('[aria-label="Inspector"]')).toBe(panel);
+      expect(panel.classList.contains('pc-inspector-sheet')).toBe(true);
+      expect(panel.getAttribute('aria-modal')).toBe(width < 900 ? 'true' : null);
+      expect(rendered.container.contains(panel)).toBe(false);
     }
     expect(fetcher).toHaveBeenCalledTimes(1);
   });

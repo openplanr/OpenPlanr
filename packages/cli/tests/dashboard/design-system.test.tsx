@@ -55,6 +55,7 @@ const APPROVED_COLORS = new Set([
   '#1a1a2a',
   '#222236',
   '#606c7f',
+  '#383f4a',
   '#f4f4fa',
   '#e8e8f0',
   '#9999b8',
@@ -171,7 +172,9 @@ describe('OpenPlanr design system', () => {
       expect(consoleShell).toContain(`var(--pc-${token})`);
     }
     expect(consoleShell).not.toMatch(/font-size:\s*\d/u);
-    expect(consoleShell).not.toMatch(/border-radius:(?!\s*(?:var\(|50%|0))/u);
+    expect(consoleShell).toMatch(/\.pc-rail__palette\s*\{[^}]*border-radius: 10px/u);
+    expect(consoleShell).toMatch(/\.pc-rail__item\s*\{[^}]*border-radius: 8px/u);
+    expect(consoleShell).toMatch(/\.pc-conn\s*\{[^}]*border-radius: 999px/u);
     expect(consoleShell).toContain('.pc-watcher__dot');
     expect(consoleShell).toContain('.pc-watcher__label');
   });

@@ -12,8 +12,13 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { DashboardProviders } from '../../../../apps/dashboard/src/app/providers.js';
 import { parseDashboardRoute } from '../../../../apps/dashboard/src/app/router.js';
 import {
+  clearInspector,
+  selectInspector,
+} from '../../../../apps/dashboard/src/features/shell/inspector-selection.js';
+import {
   Inspector,
   NavRail,
+  StatusBar,
   ThemeToggle,
   TopBar,
 } from '../../../../apps/dashboard/src/features/shell/shell-navigation.js';
@@ -21,6 +26,7 @@ import { UnifiedShell } from '../../../../apps/dashboard/src/features/shell/Unif
 
 afterEach(() => {
   cleanup();
+  clearInspector();
   vi.restoreAllMocks();
   vi.unstubAllGlobals();
   document.documentElement.removeAttribute('data-theme');
@@ -79,9 +85,11 @@ describe('responsive navigation', () => {
   it.each([
     ['#/home', false],
     ['#/list', false],
-    ['#/graph', false],
-    ['#/board', false],
-  ])('keeps the default expanded rail on %s', (hash, compact) => {
+    ['#/graph', true],
+    ['#/board', true],
+    ['#/sprints', true],
+    ['#/activity', true],
+  ])('uses the artboard rail default on %s', (hash, compact) => {
     render(
       <NavRail
         route={parseDashboardRoute(hash)}
@@ -279,7 +287,7 @@ function assertLauncherNames(container: HTMLElement, width: number, compact: boo
       expect(name).toBe(button.getAttribute('aria-label'));
       expect(name.length).toBeGreaterThan(0);
     } else {
-      expect(text).toContain('⌘ K');
+      expect(text).toContain('⌘K');
       expect(
         name.startsWith(text),
         `computed name ${JSON.stringify(name)} must begin with visible text ${JSON.stringify(text)}`,
@@ -293,8 +301,8 @@ describe('shell accessible launcher names', () => {
   it.each([
     [1440, '#/home', false],
     [1440, '#/operate/today', false],
-    [1024, '#/graph', false],
-    [1120, '#/board', false],
+    [1024, '#/graph', true],
+    [1120, '#/board', true],
     [900, '#/operate/today', false],
     [899, '#/operate/today', false],
     [390, '#/operate/today', false],
@@ -445,7 +453,7 @@ describe('route-independent rail presentation', () => {
     ).toBeTruthy();
   });
 
-  it('reserves project, product, palette and connection tracks before bootstrap resolves', () => {
+  it('keeps breadcrumb, palette and connection tracks stable through bootstrap', () => {
     vi.stubGlobal('innerWidth', 1440);
     applyShellStyles(1440);
     const topbar = (projectName: string, connectionState: 'booting' | 'connected') => (
@@ -469,10 +477,102 @@ describe('route-independent rail presentation', () => {
         basis: getComputedStyle(element).flexBasis,
       }));
     const before = tracks();
-    expect(before.map((track) => track.basis)).toEqual(['12ch', '8ch', '300px', '38ch']);
+    const header = container.querySelector('header');
+    if (!header) throw new Error('Missing topbar');
+    expect(getComputedStyle(header).display).toBe('grid');
+    expect(getComputedStyle(header).gridTemplateColumns).toBe('minmax(0, 1fr) 300px 482px');
     rerender(topbar('app', 'connected'));
     expect(tracks()).toEqual(before);
   });
+});
+
+it.each([
+  [1440, 'minmax(0, 1fr) 300px 482px'],
+  [1024, 'minmax(0, 1fr) 44px 320px'],
+  [390, 'minmax(0, 1fr) 44px auto'],
+])('keeps the topbar grid independent of route text at %i px', (width, columns) => {
+  applyShellStyles(Number(width));
+  const topbar = (hash: string) => (
+    <TopBar
+      route={parseDashboardRoute(hash)}
+      connectionState="connected"
+      inspectorOpen={false}
+      showSubject
+      onToggleInspector={() => undefined}
+      onOpenPalette={() => undefined}
+    />
+  );
+  const { container, rerender } = render(topbar('#/list'));
+  for (const hash of ['#/list', '#/board', '#/graph', '#/operate/today', '#/detail/item-one']) {
+    rerender(topbar(hash));
+    const header = container.querySelector('header');
+    if (!header) throw new Error('Missing topbar');
+    expect(getComputedStyle(header).display).toBe('grid');
+    expect(getComputedStyle(header).gridTemplateColumns).toBe(columns);
+    expect([...header.children].map((element) => element.className)).toEqual([
+      'pc-topbar__breadcrumbs',
+      'pc-topbar__palette',
+      'pc-topbar__actions',
+    ]);
+  }
+});
+
+it('inserts shell bootstrap text into empty reserved slots without replacing placeholders', () => {
+  applyShellStyles(1440);
+  const route = parseDashboardRoute('#/list');
+  const shell = (branch: string | null, nodeCount: number | null, edgeCount: number | null) => (
+    <>
+      <NavRail
+        product="planning"
+        route={route}
+        operateAvailable
+        compact={false}
+        branch={branch}
+        onOpenPalette={() => undefined}
+      />
+      <TopBar
+        projectName={branch === null ? undefined : 'Verified project'}
+        route={route}
+        connectionState={branch === null ? 'booting' : 'connected'}
+        inspectorOpen={false}
+        onToggleInspector={() => undefined}
+        onOpenPalette={() => undefined}
+      />
+      <StatusBar
+        branch={branch}
+        nodeCount={nodeCount}
+        edgeCount={edgeCount}
+        connectionState={branch === null ? 'booting' : 'connected'}
+        buildId="bootstrap-test"
+      />
+    </>
+  );
+  const { container, rerender } = render(shell(null, null, null));
+  const branch = container.querySelector('.pc-rail__branch');
+  const totals = container.querySelector('.pc-statusbar__item--totals .pc-statusbar__text');
+  if (!branch || !totals) throw new Error('Missing reserved shell text slots');
+  for (const slot of container.querySelectorAll(
+    '.pc-rail__branch, .pc-statusbar__item .pc-statusbar__text, .pc-watcher__label',
+  )) {
+    expect(slot.childNodes.length).toBe(0);
+    expect(getComputedStyle(slot).height).toBe('16px');
+  }
+  const connection = container.querySelector('.pc-conn--watcher');
+  if (!connection) throw new Error('Missing connection chip');
+  expect([...connection.childNodes].filter((node) => node.nodeType === Node.TEXT_NODE)).toEqual([]);
+  const observer = new MutationObserver(() => undefined);
+  observer.observe(container, { childList: true, characterData: true, subtree: true });
+  rerender(shell('main', 12, null));
+  expect(branch.textContent).toBe('main · .planr/');
+  expect(branch.childNodes.length).toBe(1);
+  expect(totals.childNodes.length).toBe(0);
+  expect(container.querySelector('.pc-conn--watcher')?.textContent).toBe('Live · watching .planr/');
+  expect(container.querySelector('.pc-watcher__label')?.textContent).toBe('watcher connected');
+  expect(container.querySelector('.pc-topbar__crumb')?.textContent).toBe('Plan');
+  rerender(shell('main', 12, 0));
+  expect(totals.textContent).toBe('12 nodes · 0 edges');
+  expect(observer.takeRecords().filter((record) => record.type === 'characterData')).toEqual([]);
+  observer.disconnect();
 });
 
 it.each([900, 1024, 1120])('keeps the rail toggle separate from destinations at %i px', (width) => {
@@ -483,6 +583,13 @@ it.each([900, 1024, 1120])('keeps the rail toggle separate from destinations at 
       (element) => element.textContent,
     ),
   ).toEqual([
+    'Home',
+    'List',
+    'Graph',
+    'Board',
+    'Sprints',
+    'Activity',
+    'Search',
     'Today',
     'Inbox',
     'Actions',
@@ -508,34 +615,181 @@ it('constrains the mobile capability control to its 44 px hit slot', () => {
   expect(getComputedStyle(capability as HTMLElement).width).toBe('44px');
 });
 
-it('keeps the desktop inspector in its reserved column when toggled', async () => {
+it('opens only a selected inspector over the existing main content', async () => {
   const { container } = renderNamedShell(1440, '#/list');
-  const inspector = screen.getByRole('complementary', { name: 'Inspector' });
   const main = container.querySelector('.pc-shell__main');
-  const slot = container.querySelector('.pc-shell__inspector-slot');
-  expect(getComputedStyle(inspector).position).toBe('relative');
-  expect(inspector.parentElement).toBe(slot);
-  expect(slot?.parentElement).toBe(main?.parentElement);
-  expect(inspector.getAttribute('aria-modal')).toBeNull();
-  await userEvent.setup().click(screen.getByRole('button', { name: 'Hide inspector' }));
-  expect(screen.getByRole('complementary', { name: 'Inspector' }).textContent).toContain(
-    'Nothing selected',
+  expect(screen.queryByRole('dialog', { name: 'Inspector' })).toBeNull();
+  expect(container.querySelector('.pc-shell__inspector-slot')).toBeNull();
+  expect(
+    screen
+      .getByRole('button', { name: 'Show inspector: select an item first' })
+      .hasAttribute('disabled'),
+  ).toBe(true);
+  act(() =>
+    selectInspector({
+      kind: 'node',
+      id: 'QT-071',
+      type: 'quick',
+      title: 'Selected row',
+      status: 'outstanding',
+      sprintId: null,
+      updated: null,
+      dependsOn: [],
+      ref: null,
+      href: '#/detail/QT-071',
+    }),
   );
-  expect(container.querySelector('.pc-shell__inspector-slot')).toBe(slot);
+  const panel = screen.getByRole('dialog', { name: 'Inspector' });
+  expect(panel.getAttribute('aria-modal')).not.toBe('true');
+  expect(panel.closest('.pc-shell__plane')).toBeNull();
   expect(container.querySelector('.pc-shell__main')).toBe(main);
-  await userEvent.setup().click(screen.getByRole('button', { name: 'Show inspector' }));
-  expect(getComputedStyle(screen.getByRole('complementary', { name: 'Inspector' })).position).toBe(
-    'relative',
-  );
-  expect(container.querySelector('.pc-shell__inspector-slot')).toBe(slot);
+  await userEvent.setup().keyboard('{Escape}');
+  expect(screen.queryByRole('dialog', { name: 'Inspector' })).toBeNull();
   expect(container.querySelector('.pc-shell__main')).toBe(main);
 });
 
-it.each([390, 1024])('does not open an empty inspector overlay at %s px', (width) => {
+it.each([390, 1024, 1440])('does not open an empty inspector overlay at %s px', (width) => {
   const { container } = renderNamedShell(width, '#/operate/today');
   const toggle = screen.getByRole('button', { name: 'Show inspector: select an item first' });
   expect((toggle as HTMLButtonElement).disabled).toBe(true);
   fireEvent.click(toggle);
   expect(screen.queryByRole('dialog', { name: 'Inspector' })).toBeNull();
   expect(container.querySelector('.pc-shell-inspector')).toBeNull();
+});
+
+it.each([
+  ['#/graph', ['Home', 'List', 'Graph', 'Board', 'Sprints', 'Activity'], ['Plan']],
+  [
+    '#/operate/today',
+    ['Today', 'Inbox', 'Actions', 'Cycles', 'Evidence', 'Outcomes', 'History', 'Recovery'],
+    ['Work', 'Record'],
+  ],
+] as const)(
+  'limits the compact rail to the current product on %s and expands to every destination',
+  async (hash, labels, groups) => {
+    vi.stubGlobal('innerWidth', 1440);
+    applyShellStyles(1440);
+    render(
+      <DashboardProviders
+        initialHash={hash}
+        buildId="compact-product-test"
+        bootPhase="compatible"
+        connection={{ state: 'connected', label: 'Connected', reason: 'Validated fixture' }}
+      >
+        <UnifiedShell
+          adapters={{
+            loadSingleLetters: () => true,
+            saveSingleLetters: () => undefined,
+            copy: async () => undefined,
+            railPreference: { initialCompact: true, save: () => undefined },
+          }}
+        />
+      </DashboardProviders>,
+    );
+    const rail = screen.getByRole('navigation', { name: 'Dashboard navigation' });
+    expect(
+      within(rail)
+        .getAllByRole('link')
+        .map((link) => computeAccessibleName(link)),
+    ).toEqual([...labels]);
+    expect(
+      within(rail)
+        .getAllByRole('region')
+        .map((group) => computeAccessibleName(group)),
+    ).toEqual([...groups]);
+    expect(within(rail).getByRole('button', { name: 'Search or jump' })).toBeTruthy();
+    await userEvent.setup().click(within(rail).getByRole('button', { name: 'Expand navigation' }));
+    for (const label of ['Home', 'Search', 'Today', 'Evidence', 'Console', 'Diagnostics'])
+      expect(within(rail).getByRole('link', { name: label, exact: true })).toBeTruthy();
+  },
+);
+
+it('shows only the page title and consistent touch controls in the mobile topbar', () => {
+  const { container } = renderNamedShell(390, '#/home');
+  const topbar = container.querySelector<HTMLElement>('.pc-topbar');
+  if (!topbar) throw new Error('Missing topbar');
+  for (const element of topbar.querySelectorAll<HTMLElement>(
+    '.pc-topbar__crumb, .pc-topbar__separator, .pc-topbar__subject',
+  ))
+    expect(visibleText(element)).toBe('');
+  expect(visibleText(topbar.querySelector<HTMLElement>('.pc-topbar__view') as HTMLElement)).toBe(
+    'Home',
+  );
+  const controls = topbar.querySelectorAll<HTMLElement>(
+    '.pc-topbar__palette, .pc-topbar__end > button.pc-conn, .pc-icon-button',
+  );
+  expect(controls.length).toBeGreaterThanOrEqual(2);
+  const styles = [...controls].map((control) => getComputedStyle(control));
+  for (const style of styles) {
+    expect(style.width).toBe('44px');
+    expect(style.height).toBe('44px');
+    expect(style.borderRadius).toBe(styles[0].borderRadius);
+    expect(style.backgroundColor).toBe(styles[0].backgroundColor);
+    expect(style.border).toBe(styles[0].border);
+  }
+  const status = container.querySelector<HTMLElement>('.pc-statusbar .pc-watcher');
+  expect(visibleText(status as HTMLElement)).toBe('Live');
+  expect(computeAccessibleName(status as HTMLElement)).toBe('watcher connected');
+});
+
+it.each([false, true])(
+  'keeps counted rail names consistent with visible labels when compact=%s',
+  async (compact) => {
+    applyShellStyles(1440);
+    const { container } = render(
+      <NavRail
+        route={parseDashboardRoute('#/home')}
+        product="planning"
+        operateAvailable
+        compact={compact}
+        counts={{ 'planning.overview': 45, 'planning.list': 708, 'planning.activity': 18 }}
+        onOpenPalette={() => undefined}
+      />,
+    );
+    const rail = screen.getByRole('navigation', { name: 'Dashboard navigation' });
+    for (const link of within(rail).getAllByRole('link')) {
+      if (compact) expect(computeAccessibleName(link)).toBe(link.getAttribute('title'));
+      else expect(computeAccessibleName(link)).toBe(visibleText(link));
+    }
+    expect(
+      (
+        await axe.run(container, {
+          runOnly: { type: 'rule', values: ['label-content-name-mismatch'] },
+        })
+      ).violations,
+    ).toEqual([]);
+  },
+);
+
+it('keeps hostile project identity as an escaped title without executable elements', () => {
+  const hostile = '<img src=x onerror="window.__fixtureXssFired=1"> Fixture';
+  const { container } = render(
+    <TopBar
+      projectName={hostile}
+      route={parseDashboardRoute('#/home')}
+      connectionState="connected"
+      inspectorOpen={false}
+      onToggleInspector={() => undefined}
+      onOpenPalette={() => undefined}
+    />,
+  );
+  const identity = container.querySelector('.pc-topbar__crumb');
+  expect(identity?.textContent).toBe('Plan');
+  expect(identity?.getAttribute('title')).toBe(hostile);
+  expect(container.querySelector('img[src="x"]')).toBeNull();
+  expect(Reflect.get(window, '__fixtureXssFired')).toBeUndefined();
+});
+
+it('renders one live status label when crossing the mobile breakpoint', () => {
+  const { container } = renderNamedShell(1440, '#/home');
+  const status = within(container).getByRole('status', { name: 'watcher connected' });
+  expect(status.querySelectorAll('.pc-watcher__label')).toHaveLength(1);
+  expect(status.querySelector('.pc-watcher__label')?.textContent).toBe('watcher connected');
+  act(() => {
+    vi.stubGlobal('innerWidth', 390);
+    window.dispatchEvent(new Event('resize'));
+  });
+  expect(status.querySelectorAll('.pc-watcher__label')).toHaveLength(1);
+  expect(status.querySelector('.pc-watcher__label')?.textContent).toBe('Live');
+  expect(computeAccessibleName(status)).toBe('watcher connected');
 });

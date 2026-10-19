@@ -286,7 +286,7 @@
   position: relative;
   z-index: 1;
   outline: 2px solid var(--pc-focus-ring);
-  outline-offset: -2px;
+  outline-offset: 2px;
 }
 .pc-local-review__action-copy {
   display: grid;
@@ -637,7 +637,7 @@
   position: relative;
   z-index: 1;
   outline: 2px solid var(--pc-focus-ring);
-  outline-offset: -2px;
+  outline-offset: 2px;
 }
 .pc-local-review__item-glyph {
   display: grid;
@@ -885,7 +885,7 @@
     .pc-local-review__section > header a,
     .pc-local-review__cycle-nav a
   ) {
-  min-height: 44px;
+  min-height: var(--op-density-control);
 }
 
 .pc-local-review.pc-operate :is(.pc-local-review__item, .pc-local-review__action):active {

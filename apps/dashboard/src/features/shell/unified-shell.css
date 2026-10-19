@@ -49,16 +49,6 @@ a {
   line-height: var(--op-type-technical-leading);
 }
 
-.op-eyebrow {
-  margin: 0;
-  color: var(--op-control);
-  font-size: var(--op-type-eyebrow-size);
-  font-weight: var(--op-type-eyebrow-weight);
-  letter-spacing: var(--op-tracking-eyebrow);
-  line-height: var(--op-type-eyebrow-leading);
-  text-transform: uppercase;
-}
-
 .op-subject code {
   overflow-wrap: anywhere;
   font-family: var(--op-font-technical);
@@ -469,9 +459,10 @@ a {
   text-decoration: none;
 }
 
-:where(a, button, summary, input):focus-visible {
+:where(a, button, summary, input, select, textarea):focus-visible {
   outline: var(--op-focus-width) solid var(--op-focus);
   outline-offset: var(--op-focus-offset);
+  box-shadow: none;
 }
 
 @media (max-width: 1120px) and (min-width: 801px) {

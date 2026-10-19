@@ -126,8 +126,8 @@
 .op-review__breadcrumb a {
   display: inline-flex;
   align-items: center;
-  min-height: 44px;
-  padding: 8px;
+  min-height: var(--op-density-control);
+  padding: 4px 8px;
   border-radius: var(--pc-radius-sm);
 }
 

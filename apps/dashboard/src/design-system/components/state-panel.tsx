@@ -68,7 +68,7 @@ export function StatePanel({
       <div className="op-state-panel__body">
         <p className="op-eyebrow">{eyebrow}</p>
         <div className="op-state-panel__heading">
-          <Icon aria-hidden="true" />
+          <Icon size={16} strokeWidth={1.8} aria-hidden="true" />
           <h2 id={resolvedHeadingId}>{title}</h2>
         </div>
         <p>{description}</p>

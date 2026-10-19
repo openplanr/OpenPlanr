@@ -12,7 +12,7 @@
   min-width: 0;
   color: var(--op-heading);
 }
-.pc-detail__artifact h1 {
+.pc-detail .pc-detail__artifact h1 {
   margin: 0;
   max-width: 960px;
   font: 700 34px / 1.15 var(--pc-font-display);
@@ -246,7 +246,7 @@
 }
 .pc-detail__disclosure summary {
   cursor: pointer;
-  min-height: 44px;
+  min-height: var(--op-density-control);
   display: flex;
   align-items: center;
   font-size: 13px;
@@ -326,8 +326,28 @@
 }
 .pc-detail__artifact--panel h2 {
   font-size: 20px;
+  font-weight: 700;
   line-height: 1.25;
-  overflow-wrap: anywhere;
+  overflow-wrap: normal;
+  word-break: normal;
+}
+.pc-detail__artifact--panel .pc-card__head {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr) auto;
+  align-items: baseline;
+}
+.pc-detail__artifact--panel .pc-card__title {
+  grid-column: 1;
+  min-width: max-content;
+  white-space: nowrap;
+}
+.pc-detail__artifact--panel .pc-card__meta {
+  grid-column: 2;
+  min-width: 0;
+  overflow-wrap: normal;
+}
+.pc-detail__artifact--panel .pc-card__actions {
+  grid-column: 3;
 }
 .pc-shell-inspector .pc-detail__actions .pc-button {
   width: auto;
@@ -342,7 +362,7 @@
   .pc-detail__columns {
     grid-template-columns: minmax(0, 1fr);
   }
-  .pc-detail__artifact h1 {
+  .pc-detail .pc-detail__artifact h1 {
     font-size: 28px;
   }
   .pc-detail__criteria > li {

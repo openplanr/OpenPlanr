@@ -157,7 +157,9 @@ async function palettePaintLatencies(page: Page, id: string, title: string) {
 }
 
 async function warmRoute(page: Page, route: string, kind: string) {
-  return page.evaluate(
+  const rail = page.getByRole('navigation', { name: 'Dashboard navigation', exact: true });
+  await expect(rail).toHaveCSS('width', '236px');
+  const durationMs = await page.evaluate(
     async ({ route, kind }) => {
       window.__dashboardLayoutShifts.markPhase(`route-load ${route}`);
       const started = performance.now();
@@ -171,6 +173,8 @@ async function warmRoute(page: Page, route: string, kind: string) {
     },
     { route, kind },
   );
+  await expect(rail).toHaveCSS('width', '236px');
+  return durationMs;
 }
 
 async function interactionTrace(
@@ -349,6 +353,9 @@ export function registerDashboardPerformanceTraceTests() {
           assets.add(new URL(response.url()).pathname);
       });
       await installMetrics(page);
+      // S2 permits saved rail preferences. Keep performance comparisons on the same
+      // user-chosen width; the shell geometry guard covers the 64px and 236px defaults.
+      await page.addInitScript(() => localStorage.setItem('op-rail-compact:v1', 'false'));
       const reset = await page.request.post(`/__fixture/reset?dataset=${dataset}`);
       expect(reset.ok(), await reset.text()).toBe(true);
       await page.setViewportSize(fixture.manifest.artboard.layout.desktop);
@@ -419,8 +426,13 @@ export function registerDashboardPerformanceTraceTests() {
       const row = rows.first();
       for (let index = 0; index < 20; index += 1) {
         await markPhase(page, `inspector ${index + 1}`);
-        const hideInspector = page.getByRole('button', { name: 'Hide inspector', exact: true });
-        if (await hideInspector.count()) await hideInspector.click();
+        const closeInspector = page
+          .getByRole('dialog', { name: 'Inspector', exact: true })
+          .getByRole('button', { name: 'Close inspector', exact: true });
+        if (await closeInspector.count()) {
+          await closeInspector.click();
+          await expect(page.locator('.pc-inspector-sheet')).toHaveCount(0);
+        }
         const latency = await row.evaluate(async (element) => {
           const started = performance.now();
           if (!(element instanceof HTMLElement)) throw new Error('Expected an HTML artifact row.');

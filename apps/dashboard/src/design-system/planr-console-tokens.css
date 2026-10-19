@@ -148,7 +148,7 @@
   --pc-sidebar-width: 248px;
   --pc-inspector-width: 344px;
   --pc-topbar-height: 48px;
-  --pc-statusbar-height: 28px;
+  --pc-statusbar-height: 40px;
   --pc-content-max: 1600px;
   --pc-gutter: 20px;
   --pc-radius-none: 0;
@@ -233,6 +233,7 @@
   --pc-raised: var(--op-raised);
   --pc-line: var(--op-line);
   --pc-line-strong: var(--op-line-strong);
+  --pc-line3: var(--op-line3);
   --pc-text: var(--op-text);
   --pc-heading: var(--op-heading);
   --pc-body: var(--op-body);

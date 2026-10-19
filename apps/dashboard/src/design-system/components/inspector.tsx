@@ -39,6 +39,10 @@ export function Inspector({
           className="pc-inspector-sheet"
           aria-modal={modal || undefined}
           data-state={state}
+          onFocusOutside={(event) => {
+            // Row shortcuts move focus behind a nonmodal inspector without dismissing it.
+            if (!modal) event.preventDefault();
+          }}
           onCloseAutoFocus={
             onRestoreFocus
               ? (event) => {

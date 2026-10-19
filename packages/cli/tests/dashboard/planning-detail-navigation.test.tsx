@@ -1,7 +1,8 @@
 // @vitest-environment jsdom
 
 import { sha256Jcs } from '@openplanr/protocol/canonical-json';
-import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { useMemo, useSyncExternalStore } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { DashboardProviders } from '../../../../apps/dashboard/src/app/providers.js';
@@ -204,8 +205,8 @@ function rows(container: HTMLElement): HTMLElement[] {
   ];
 }
 
-function inspector(width = 1440) {
-  return screen.getByRole(width < 900 ? 'dialog' : 'complementary', { name: 'Inspector' });
+function inspector() {
+  return screen.getByRole('dialog', { name: 'Inspector', exact: true });
 }
 
 afterEach(() => {
@@ -306,6 +307,7 @@ describe('Planning detail shell navigation', () => {
     const view = render(<ShellHarness snapshot={snapshot} />);
     const tableRows = rows(view.container);
     expect(tableRows.map((row) => row.dataset.keyboardItem)).toEqual(taskIds);
+    tableRows[0].focus();
     fireEvent.click(tableRows[0]);
     await within(inspector()).findByText('Detail verified against the current planning snapshot.');
     const copy = within(inspector()).getByRole('button', { name: 'Copy link to item' });
@@ -317,6 +319,22 @@ describe('Planning detail shell navigation', () => {
     fireEvent.keyDown(document.activeElement ?? document.body, { key: 'k' });
     await within(inspector()).findByRole('heading', { name: 'Review artifact 3', exact: true });
     expect(document.activeElement).toBe(tableRows[0]);
+    fireEvent.keyDown(tableRows[0], { key: 'j' });
+    await within(inspector()).findByRole('heading', { name: 'Review artifact 2', exact: true });
+    const latestCopy = within(inspector()).getByRole('button', { name: 'Copy link to item' });
+    latestCopy.focus();
+    fireEvent.keyDown(latestCopy, { key: 'Escape' });
+    await waitFor(() => {
+      expect(screen.queryByRole('dialog', { name: 'Inspector', exact: true })).toBeNull();
+      expect(document.activeElement).toBe(tableRows[1]);
+    });
+    await act(async () => new Promise((resolve) => setTimeout(resolve, 0)));
+    expect(document.activeElement).toBe(tableRows[1]);
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('button', { name: 'Show inspector', exact: true }));
+    expect(inspector()).toBeTruthy();
+    await user.click(screen.getByRole('button', { name: 'Hide inspector', exact: true }));
+    expect(screen.queryByRole('dialog', { name: 'Inspector', exact: true })).toBeNull();
     expect(window.location.hash).toBe(sourceHref);
   });
 
@@ -412,7 +430,7 @@ describe('Planning detail shell navigation', () => {
       vi.stubGlobal('fetch', fetcher);
       const view = render(<ShellHarness snapshot={snapshot} />);
       fireEvent.click(rows(view.container)[0]);
-      const panel = inspector(width);
+      const panel = inspector();
       await within(panel).findByText('Detail verified against the current planning snapshot.');
       const article = panel.querySelector('[data-artifact-id]');
       const criteria = panel.querySelector<HTMLElement>(
@@ -431,7 +449,7 @@ describe('Planning detail shell navigation', () => {
       serveOldCursor = true;
       view.rerender(<ShellHarness snapshot={revised} />);
       await within(panel).findByText(/artifact detail could not be verified/iu);
-      expect(inspector(width)).toBe(panel);
+      expect(inspector()).toBe(panel);
       expect(panel.querySelector('[data-artifact-id]')).toBe(article);
       expect(panel.querySelector('[data-scroll-context="criteria"]')).toBe(criteria);
       expect(criteria.scrollTop).toBe(125);

@@ -344,14 +344,16 @@
 }
 .op-focused-graph__sidebar label {
   min-width: 0;
-  min-height: 44px;
+  min-height: var(--op-density-control);
 }
 .op-focused-graph__sidebar select {
+  box-sizing: border-box;
+  height: var(--op-density-control);
   display: block;
   width: 100%;
-  min-height: 44px;
+  min-height: var(--op-density-control);
   margin-top: 8px;
-  padding: 8px;
+  padding: 0 8px;
   border: 1px solid var(--op-accent);
   border-radius: 8px;
   background: var(--op-card);

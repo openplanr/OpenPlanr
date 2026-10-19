@@ -9,7 +9,7 @@ export type ShellAdapters = Readonly<{
     save: (choice: ThemeChoice) => void;
   }>;
   railPreference?: Readonly<{
-    initialCompact: boolean;
+    initialCompact?: boolean;
     initialStorageError?: boolean;
     save: (compact: boolean) => void;
   }>;
@@ -18,13 +18,14 @@ export type ShellAdapters = Readonly<{
 export function createBrowserShellAdapters(): ShellAdapters {
   const theme =
     typeof document === 'undefined' ? null : document.documentElement.getAttribute('data-theme');
-  let initialCompact = false;
+  let initialCompact: boolean | undefined;
   let initialRailStorageError = false;
   try {
     const stored =
       typeof localStorage === 'undefined' ? null : localStorage.getItem('op-rail-compact:v1');
     if (stored === 'true') initialCompact = true;
-    else if (stored !== null && stored !== 'false') initialRailStorageError = true;
+    else if (stored === 'false') initialCompact = false;
+    else if (stored !== null) initialRailStorageError = true;
   } catch {
     initialRailStorageError = true;
   }

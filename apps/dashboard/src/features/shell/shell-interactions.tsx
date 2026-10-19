@@ -10,6 +10,7 @@ import {
 export type { ShellAdapters } from '../../app/browser-preferences.js';
 export { PlanningPresentationProvider } from '../../lib/routing/planning-presentation.js';
 export { PlanningDetailInspector } from '../planning/DetailPage.js';
+export { selectPlanningAttention } from '../planning/planning-model.js';
 export { CommandPalette } from '../search/CommandPalette.js';
 export { useSearchCoordinator } from '../search/search-coordinator.js';
 
@@ -179,11 +180,14 @@ export function useShellInteractions({
       });
     };
   }, [contextKey]);
+  const restoreInspectorFocus = () => {
+    const item = originItem.current;
+    if (item?.isConnected) item.focus({ preventScroll: true });
+  };
   const closeInspector = () => {
     if (!inspectorOpen) return false;
     setInspectorOpen(false);
-    const item = originItem.current;
-    if (item?.isConnected) item.focus({ preventScroll: true });
+    restoreInspectorFocus();
     return true;
   };
   const latest = useRef<KeyboardContext | null>(null);
@@ -275,5 +279,13 @@ export function useShellInteractions({
       </Inspector>
     </>
   );
-  return { help, navigate, scrollRef, rootRef, closeInspector, singleLetters };
+  return {
+    help,
+    navigate,
+    scrollRef,
+    rootRef,
+    closeInspector,
+    restoreInspectorFocus,
+    singleLetters,
+  };
 }

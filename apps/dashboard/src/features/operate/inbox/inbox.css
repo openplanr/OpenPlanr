@@ -642,7 +642,7 @@
 
 .op-inbox-tabs__trigger.pc-tabs__tab {
   height: auto;
-  min-height: 44px;
+  min-height: var(--op-density-control);
   border: 1px solid transparent;
   border-radius: var(--pc-radius-sm);
   font-size: 13px;

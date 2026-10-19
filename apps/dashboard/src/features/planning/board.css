@@ -203,8 +203,10 @@
 
 .pc-status-board__empty,
 .pc-status-board__toggle {
-  min-height: 44px;
-  padding: 8px 12px;
+  box-sizing: border-box;
+  min-height: var(--op-density-control);
+  height: var(--op-density-control);
+  padding: 0 12px;
   border: 1px solid var(--pc-border-strong);
   border-radius: 8px;
   background: var(--pc-surface-card);
@@ -213,7 +215,6 @@
   color: var(--pc-text-secondary);
   cursor: pointer;
 }
-
 .pc-status-board__empty {
   width: 100%;
   border-style: dashed;

@@ -23,7 +23,7 @@
   min-width: 0;
 }
 
-.pc-sprints__header h1 {
+.pc-sprints .pc-sprints__header h1 {
   margin: 8px 0;
   font: 800 40px / 1.05 var(--op-font-display);
   letter-spacing: -0.03em;
@@ -40,13 +40,6 @@
   color: var(--op-body);
   font-size: 14px;
   line-height: 1.6;
-}
-
-.pc-sprints .op-eyebrow {
-  font: 600 12px / 1.5 var(--op-font-mono);
-  color: var(--op-accent);
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
 }
 
 .pc-sprints__panel {
@@ -241,7 +234,7 @@
 .pc-sprints__legend a {
   display: inline-flex;
   align-items: center;
-  min-height: 44px;
+  min-height: var(--op-density-control);
 }
 
 .pc-sprints__members {
@@ -254,7 +247,7 @@
   .op-planning.pc-sprints {
     padding: 24px 16px 32px;
   }
-  .pc-sprints__header h1 {
+  .pc-sprints .pc-sprints__header h1 {
     font-size: 30px;
   }
   .pc-sprints__header > .pc-card {

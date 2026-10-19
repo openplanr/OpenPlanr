@@ -40,7 +40,7 @@ export type ButtonProps = Readonly<{
   disabledReason?: string;
 }>;
 
-const BUTTON_ICON = { sm: 13, md: 14, lg: 16 } as const;
+const BUTTON_ICON = { sm: 15, md: 15, lg: 16 } as const;
 
 /** The console's action control. Primary is reserved for the one governed action per view. */
 export function Button({
@@ -109,7 +109,7 @@ export type IconButtonProps = Readonly<{
   onClick?: () => void;
 }>;
 
-const ICON_BUTTON_ICON = { sm: 13, md: 15, lg: 17 } as const;
+const ICON_BUTTON_ICON = { sm: 13, md: 16, lg: 16 } as const;
 
 /** Square icon-only control for toolbars and row affordances. `label` is the accessible name. */
 export function IconButton({

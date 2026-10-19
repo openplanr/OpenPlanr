@@ -24,14 +24,25 @@
   --op-type-label-size: 13px;
   --op-type-label-weight: 500;
   --op-type-eyebrow-size: 12px;
-  --op-type-eyebrow-leading: 16px;
+  --op-type-eyebrow-leading: normal;
   --op-type-eyebrow-weight: 600;
   --op-type-technical-size: 12px;
   --op-type-technical-leading: 18px;
   --op-type-technical-weight: 500;
   --op-tracking-display: -0.03em;
   --op-tracking-title: -0.02em;
-  --op-tracking-eyebrow: 0.08em;
+  --op-tracking-eyebrow: 0.14em;
+}
+
+.op-eyebrow[class] {
+  margin: 0;
+  color: var(--op-accent);
+  font-family: var(--op-font-technical);
+  font-size: var(--op-type-eyebrow-size);
+  font-weight: var(--op-type-eyebrow-weight);
+  line-height: var(--op-type-eyebrow-leading);
+  letter-spacing: var(--op-tracking-eyebrow);
+  text-transform: uppercase;
 }
 
 html {

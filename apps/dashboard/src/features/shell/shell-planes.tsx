@@ -14,9 +14,6 @@ import {
 import './console-shell.css';
 import { PLANNING_FOLDER } from '@openplanr/protocol/names';
 
-/** Below this the inspector floats over the plane instead of taking layout width. */
-export const INSPECTOR_DOCK_WIDTH = 1180;
-
 type TransitShape = 'overview' | 'table' | 'graph' | 'board' | 'cards' | 'detail';
 type RouteShape = Readonly<{
   eyebrow: string;

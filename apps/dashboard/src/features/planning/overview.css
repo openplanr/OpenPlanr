@@ -19,7 +19,7 @@
   min-width: 0;
 }
 
-.pc-home__header h1 {
+.pc-overview .pc-home__header h1 {
   margin: 8px 0;
   font-family: var(--op-font-display);
   font-size: 40px;
@@ -140,7 +140,7 @@
 .pc-home__card-heading > a {
   display: inline-flex;
   align-items: center;
-  min-height: 44px;
+  min-height: var(--op-density-control);
   margin-left: auto;
   color: var(--op-accent);
   font-size: 13px;
@@ -188,7 +188,7 @@
 
 .pc-home__row-main > a {
   display: flex;
-  min-height: 44px;
+  min-height: var(--op-density-control);
   align-items: center;
   text-decoration: none;
   color: var(--op-heading);
@@ -227,7 +227,7 @@
 .pc-home__dependencies a {
   display: inline-flex;
   align-items: center;
-  min-height: 44px;
+  min-height: var(--op-density-control);
 }
 
 .pc-home__row .pc-command-hint {
@@ -239,8 +239,8 @@
   font-size: 12px;
 }
 .pc-home__row .pc-command-hint__copy {
-  min-width: 44px;
-  min-height: 44px;
+  min-width: var(--op-density-control);
+  min-height: var(--op-density-control);
 }
 .pc-home__row .pc-command-hint__command {
   overflow-wrap: anywhere;
@@ -276,7 +276,7 @@
   display: flex;
   gap: 8px;
   align-items: center;
-  min-height: 44px;
+  min-height: var(--op-density-control);
   color: var(--op-heading);
   font-size: 13px;
   text-decoration: none;
@@ -316,7 +316,7 @@
 .pc-home__sprint a {
   display: flex;
   align-items: center;
-  min-height: 44px;
+  min-height: var(--op-density-control);
   color: var(--op-accent);
 }
 
@@ -334,7 +334,7 @@
   .pc-home__header {
     gap: 18px;
   }
-  .pc-home__header h1 {
+  .pc-overview .pc-home__header h1 {
     font-size: 30px;
   }
   .pc-home__summary {

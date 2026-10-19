@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { useDashboard } from '../../app/providers.js';
 import { CompatibilityPage } from '../diagnostics/CompatibilityPage.js';
 import { LocalOperateReviews } from '../operate/local-reviews/LocalOperateReviews.js';
@@ -14,16 +14,12 @@ import {
   PlanningDetailInspector,
   PlanningPresentationProvider,
   type ShellAdapters,
+  selectPlanningAttention,
   useSearchCoordinator,
   useShellInteractions,
 } from './shell-interactions.js';
-import { Inspector, NavRail, StatusBar, TopBar } from './shell-navigation.js';
-import {
-  BootScreen,
-  INSPECTOR_DOCK_WIDTH,
-  IncompatibleNotice,
-  PlaneBanner,
-} from './shell-planes.js';
+import { defaultCompactRail, Inspector, NavRail, StatusBar, TopBar } from './shell-navigation.js';
+import { BootScreen, IncompatibleNotice, PlaneBanner } from './shell-planes.js';
 import './unified-shell.css';
 
 const SERVER_VIEWPORT_WIDTH = 1440;
@@ -66,9 +62,8 @@ export function UnifiedShell({
   const search = useSearchCoordinator(planningProjection);
   const live = usePlanningLiveFeedback(planningProjection);
   const [fontNoticeDismissed, setFontNoticeDismissed] = useState(false);
-  const [compactRail, setCompactRail] = useState(
-    () => adapters?.railPreference?.initialCompact ?? false,
-  );
+  const [railChoice, setRailChoice] = useState(() => adapters?.railPreference?.initialCompact);
+  const compactRail = railChoice ?? defaultCompactRail(route);
   const [railPreferenceError, setRailPreferenceError] = useState(() =>
     adapters?.railPreference?.initialStorageError
       ? 'Navigation preference could not be read in this browser.'
@@ -76,7 +71,7 @@ export function UnifiedShell({
   );
   const toggleRail = () => {
     const next = !compactRail;
-    setCompactRail(next);
+    setRailChoice(next);
     try {
       adapters?.railPreference?.save(next);
       setRailPreferenceError(null);
@@ -92,15 +87,13 @@ export function UnifiedShell({
     readViewportWidth,
     () => SERVER_VIEWPORT_WIDTH,
   );
-  const narrow = width < INSPECTOR_DOCK_WIDTH;
-  const [inspectorOpen, setInspectorOpen] = useState(
-    () => readViewportWidth() >= INSPECTOR_DOCK_WIDTH,
-  );
+  const narrow = width < 900;
+  const [inspectorOpen, setInspectorOpen] = useState(false);
 
-  // A floating inspector is a transient overlay: it closes when the plane narrows or moves on.
+  // Selection overlays belong to their originating route, never a reserved layout column.
   // biome-ignore lint/correctness/useExhaustiveDependencies: every route change closes the floating inspector.
   useEffect(() => {
-    if (narrow) setInspectorOpen(false);
+    setInspectorOpen(false);
   }, [narrow, route]);
   const requestedInspectorTick = useRef(0);
   useEffect(() => {
@@ -110,8 +103,8 @@ export function UnifiedShell({
     }
   }, [inspectorStore.openTick, inspectorStore.selection]);
   useEffect(() => {
-    if (narrow && inspectorStore.selection === null) setInspectorOpen(false);
-  }, [narrow, inspectorStore.selection]);
+    if (inspectorStore.selection === null) setInspectorOpen(false);
+  }, [inspectorStore.selection]);
 
   const scope = binding
     ? JSON.stringify([
@@ -165,6 +158,27 @@ export function UnifiedShell({
       ? planningNodes.length
       : null;
   const edgeCount = planningModel ? planningModel.graph.edges.length : null;
+  const [attentionNow] = useState(() => new Date().toISOString());
+  const graph = planningModel?.graph;
+  const railCounts = useMemo(() => {
+    if (!graph) return undefined;
+    try {
+      const attention = selectPlanningAttention(graph, attentionNow);
+      return {
+        'planning.overview': new Set([
+          ...attention.waiting.map((item) => item.id),
+          ...attention.stale.map((item) => item.id),
+          ...attention.highPriorityNotStarted,
+        ]).size,
+        'planning.list': graph.nodes.length,
+        'planning.activity': attention.changedToday.ids.length,
+      };
+    } catch {
+      // Invalid attention data is explained by Home; the rail must not present it as zero.
+      return { 'planning.list': graph.nodes.length };
+    }
+  }, [graph, attentionNow]);
+  const detailRoute = route.kind === 'planning.detail' || route.kind === 'planning.spec';
 
   return (
     <div
@@ -172,6 +186,7 @@ export function UnifiedShell({
       data-dashboard-build-id={buildId}
       data-compact-rail={compactRail || undefined}
       data-product={route.product ?? 'system'}
+      data-detail-route={detailRoute || undefined}
     >
       {/* biome-ignore lint/a11y/useValidAnchor: a skip link must retain anchor semantics; the handler avoids hash-router navigation. */}
       <a
@@ -192,6 +207,8 @@ export function UnifiedShell({
         compact={compactRail}
         onToggleCompact={toggleRail}
         preferenceError={railPreferenceError}
+        counts={railCounts}
+        branch={bootstrap?.project.branch ?? null}
       />
       <div className="pc-shell__column">
         <TopBar
@@ -200,7 +217,7 @@ export function UnifiedShell({
           showSubject={hasCurrentRouteSubject({ route, projection, binding })}
           connectionState={connection.state}
           inspectorOpen={inspectorOpen}
-          inspectorAvailable={!narrow || inspectorStore.selection !== null}
+          inspectorAvailable={!detailRoute && inspectorStore.selection !== null}
           onToggleInspector={() => setInspectorOpen((open) => !open)}
           onOpenPalette={search.show}
           themePreference={adapters?.themePreference}
@@ -310,38 +327,38 @@ export function UnifiedShell({
               </>
             )}
           </main>
-          <div className="pc-shell__inspector-slot">
-            {!narrow || (inspectorOpen && inspectorStore.selection !== null) ? (
-              <Inspector
-                key={`${route.kind}:${route.subjectId ?? ''}`}
-                mode={inspectorOpen ? inspectorMode : 'selection'}
-                selection={inspectorOpen ? inspectorStore.selection : null}
-                floating={narrow}
-                onClose={inspectorOpen ? () => interactions.closeInspector() : undefined}
-                onPromote={interactions.navigate}
-                planningContent={
-                  inspectorOpen && planningModel && inspectorStore.selection?.kind === 'node' ? (
-                    <PlanningPresentationProvider
-                      scope={scope}
-                      view={null}
-                      onCopy={adapters?.copy}
-                      singleLetters={interactions.singleLetters}
-                    >
-                      <PlanningDetailInspector
-                        model={planningModel}
-                        nodeId={inspectorStore.selection.id}
-                        origin={
-                          bootstrap?.origin ??
-                          (typeof window === 'undefined' ? '' : window.location.origin)
-                        }
-                        onPromote={interactions.navigate}
-                      />
-                    </PlanningPresentationProvider>
-                  ) : undefined
-                }
-              />
-            ) : null}
-          </div>
+          {!detailRoute && inspectorOpen && inspectorStore.selection !== null ? (
+            <Inspector
+              key={`${route.kind}:${route.subjectId ?? ''}`}
+              mode={inspectorMode}
+              selection={inspectorStore.selection}
+              floating
+              modal={narrow}
+              onClose={() => interactions.closeInspector()}
+              onRestoreFocus={interactions.restoreInspectorFocus}
+              onPromote={interactions.navigate}
+              planningContent={
+                inspectorOpen && planningModel && inspectorStore.selection?.kind === 'node' ? (
+                  <PlanningPresentationProvider
+                    scope={scope}
+                    view={null}
+                    onCopy={adapters?.copy}
+                    singleLetters={interactions.singleLetters}
+                  >
+                    <PlanningDetailInspector
+                      model={planningModel}
+                      nodeId={inspectorStore.selection.id}
+                      origin={
+                        bootstrap?.origin ??
+                        (typeof window === 'undefined' ? '' : window.location.origin)
+                      }
+                      onPromote={interactions.navigate}
+                    />
+                  </PlanningPresentationProvider>
+                ) : undefined
+              }
+            />
+          ) : null}
         </div>
         <StatusBar
           branch={bootstrap?.project.branch ?? null}
@@ -349,6 +366,7 @@ export function UnifiedShell({
           edgeCount={edgeCount}
           connectionState={connection.state}
           buildId={buildId}
+          compact={narrow}
         />
       </div>
       <PlanningLiveFeedback

@@ -233,8 +233,8 @@
 }
 
 .pc-operate :is(.pc-operate__technical, details) > summary {
-  min-height: 44px;
-  padding-block: 8px;
+  min-height: var(--op-density-control);
+  padding-block: 4px;
   cursor: pointer;
   border-radius: var(--pc-radius-sm);
 }
@@ -258,9 +258,9 @@
 }
 
 .pc-operate a.pc-button {
-  min-height: 44px;
+  min-height: var(--op-density-control);
   height: auto;
-  padding-block: 8px;
+  padding-block: 0;
   border-color: var(--pc-border-strong);
   border-radius: var(--pc-radius-sm);
   color: var(--pc-text-primary);

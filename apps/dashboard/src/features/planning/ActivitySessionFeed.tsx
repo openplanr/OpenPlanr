@@ -15,6 +15,8 @@ import type {
   PlanningSessionActivityEntry,
 } from './planning-session-activity.js';
 
+const DISCONNECTED_LABEL = 'Disconnected · session retained';
+
 export function ActivitySessionFeed({
   activity,
   entries,
@@ -52,10 +54,10 @@ export function ActivitySessionFeed({
             <h2>Live</h2>
             <span>This session only</span>
           </div>
-          <span className="pc-activity__connection">
+          <span className="pc-activity__connection" data-reserve-label={DISCONNECTED_LABEL}>
             <Badge tone={paused ? 'warn' : 'info'} variant="outline">
               {paused
-                ? 'Disconnected · session retained'
+                ? DISCONNECTED_LABEL
                 : activity.connection === 'connected'
                   ? 'Watching'
                   : 'Connecting'}
