@@ -6,6 +6,7 @@ import {
   type PlanningModelGraph,
   type PlanningModelNode,
   planningAttentionIds,
+  planningSpecOf,
   selectPlanningAttention,
 } from './planning-model.js';
 
@@ -25,10 +26,14 @@ export function planningLabels(node: PlanningModelNode): readonly string[] {
   const values = Array.isArray(node.frontmatter.labels)
     ? node.frontmatter.labels
     : [node.frontmatter.label];
-  return values.filter((value): value is string => typeof value === 'string' && value.length > 0);
+  return [
+    ...new Set(
+      values.filter((value): value is string => typeof value === 'string' && value.length > 0),
+    ),
+  ];
 }
 
-function timestamp(value: unknown): number | null {
+export function authoredTimestamp(value: unknown): number | null {
   if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}(?:T|$)/u.test(value)) return null;
   const date = value.slice(0, 10);
   const day = Date.parse(date);
@@ -37,10 +42,12 @@ function timestamp(value: unknown): number | null {
   return Number.isFinite(parsed) ? parsed : null;
 }
 
-function withinDays(value: unknown, days: number | null, today: number): boolean {
+function withinDays(value: unknown, days: number | null, today: number, now: number): boolean {
   if (days === null) return true;
-  const parsed = timestamp(value);
-  return parsed !== null && parsed >= today - (days - 1) * DAY && parsed < today + DAY;
+  const parsed = authoredTimestamp(value);
+  return (
+    parsed !== null && parsed >= today - (days - 1) * DAY && parsed < today + DAY && parsed <= now
+  );
 }
 
 function compareValues(
@@ -55,7 +62,10 @@ function compareValues(
     );
   }
   if (field === 'updated') {
-    return (timestamp(left.frontmatter.updated) ?? 0) - (timestamp(right.frontmatter.updated) ?? 0);
+    return (
+      (authoredTimestamp(left.frontmatter.updated) ?? 0) -
+      (authoredTimestamp(right.frontmatter.updated) ?? 0)
+    );
   }
   return left[field].localeCompare(right[field], undefined, { numeric: true, sensitivity: 'base' });
 }
@@ -92,8 +102,8 @@ export function applyPlanningView<Node extends PlanningModelNode>(
       (!filters.priority.length || filters.priority.includes(String(node.frontmatter.priority))) &&
       (!filters.label.length ||
         filters.label.some((label) => planningLabels(node).includes(label))) &&
-      withinDays(node.frontmatter.created, filters.createdWithinDays, today) &&
-      withinDays(node.frontmatter.updated, filters.updatedWithinDays, today),
+      withinDays(node.frontmatter.created, filters.createdWithinDays, today, now.getTime()) &&
+      withinDays(node.frontmatter.updated, filters.updatedWithinDays, today, now.getTime()),
   );
   const direction = view.sort.direction === 'asc' ? 1 : -1;
   return matches.sort(
@@ -108,6 +118,24 @@ export function groupPresentationNodes<Node extends PlanningModelNode>(
   groupBy: PlanningView['groupBy'],
 ): readonly PlanningGroup<Node>[] {
   if (groupBy === 'none') return [{ key: 'all', label: 'All artifacts', nodes }];
+  if (groupBy === 'status')
+    return ['outstanding', 'in-progress', 'blocked', 'addressed', 'done']
+      .map((status) => ({
+        key: status,
+        label: status,
+        nodes: nodes.filter((node) => node.status === status),
+      }))
+      .filter((group) => group.nodes.length);
+  if (groupBy === 'spec') {
+    const backlog = nodes.filter((node) => node.type === 'backlog' && !planningSpecOf(node));
+    const others = nodes.filter((node) => node.type !== 'backlog' || planningSpecOf(node));
+    return [
+      ...groupPlanningNodes(others, groupBy),
+      ...(backlog.length
+        ? [{ key: 'unparented-backlog', label: 'Backlog, not in a spec', nodes: backlog }]
+        : []),
+    ];
+  }
   if (groupBy !== 'label') return groupPlanningNodes(nodes, groupBy);
   const groups = new Map<string, Node[]>();
   for (const node of nodes) {

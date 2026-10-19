@@ -139,12 +139,14 @@ function syncSelectionScope(state: CoordinatorState, context: KeyboardContext): 
   state.goAt = null;
   state.selectionScope = context.selectionScope;
   for (const row of items(context.root)) {
+    if (row.closest('[data-managed-rows]')) continue;
     if (row.hasAttribute('aria-selected')) row.setAttribute('aria-selected', 'false');
   }
 }
 
 function renderSelection(state: CoordinatorState, context: KeyboardContext): void {
   for (const row of items(context.root)) {
+    if (row.closest('[data-managed-rows]')) continue;
     row.setAttribute('aria-selected', String(state.selected.has(row.dataset.keyboardItem ?? '')));
   }
   context.announce(`${state.selected.size} selected`);
@@ -221,6 +223,12 @@ function focusedCanonicalId(target: Element | null): string | null {
 
 function copyFocused(stroke: KeyStroke): void {
   const { context, target } = stroke;
+  const commandButton = target?.closest<HTMLButtonElement>('button[data-copy-command]');
+  if (commandButton) {
+    if (!commandButton.disabled) commandButton.click();
+    else context.announce('This command is unavailable.');
+    return;
+  }
   const commandCard = target?.closest('.pc-command-hint');
   if (commandCard) {
     const button = commandCard.querySelector<HTMLButtonElement>('.pc-command-hint__copy');
@@ -253,6 +261,7 @@ function closeTopLayer(stroke: KeyStroke, state: CoordinatorState): void {
     consume(event);
     return;
   }
+  if (managedRows(stroke)) return;
   if (state.selected.size > 0) {
     consume(event);
     state.selected.clear();
@@ -456,6 +465,19 @@ function currentItem(stroke: KeyStroke, rows: HTMLElement[]): HTMLElement | unde
   return rows.find((row) => (row.dataset.canonicalId || row.dataset.keyboardItem) === id);
 }
 
+// Data windows own logical positions; the coordinator still arbitrates guards and top layers.
+function managedRows(stroke: KeyStroke): boolean {
+  const list = stroke.context.root.querySelector<HTMLElement>('[data-managed-rows]');
+  if (!list) return false;
+  const request = new CustomEvent('workspace-row-key', {
+    cancelable: true,
+    detail: { event: stroke.event, target: stroke.target },
+  });
+  if (list.dispatchEvent(request)) return false;
+  consume(stroke.event);
+  return true;
+}
+
 /** A single owner arbitrates global keys before component activation can conflict. */
 export function installKeyboardCoordinator(
   document: Document,
@@ -489,6 +511,7 @@ export function installKeyboardCoordinator(
       state.goAt = null;
       return;
     }
+    if (['j', 'k', 'arrowup', 'arrowdown', ' '].includes(stroke.key) && managedRows(stroke)) return;
     if (globalShortcut(stroke, state)) return;
     const rows = items(context.root);
     const current = currentItem(stroke, rows);

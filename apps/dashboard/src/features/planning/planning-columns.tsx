@@ -1,7 +1,9 @@
 import {
   Absent,
   ArtifactStatus,
+  ArtifactTag,
   type DataTableColumn,
+  PriorityChip,
   WorkItemChip,
 } from '../../design-system/components/index.js';
 import {
@@ -9,6 +11,8 @@ import {
   type PlanningModelNode,
   planningDisplayId,
 } from './planning-model.js';
+
+import { authoredTimestamp, planningLabels } from './presentation-view.js';
 
 /* Column recipes shared by the planning tables. Every cell renders a real field or Absent. */
 
@@ -112,3 +116,65 @@ export function dependencyCountColumn(
     },
   });
 }
+
+const TAG_TYPES = {
+  spec: 'spec',
+  story: 'us',
+  task: 't',
+  backlog: 'bl',
+  adr: 'adr',
+  epic: 'epic',
+  feature: 'epic',
+  sprint: 'sprint',
+  quick: 'qt',
+} as const;
+
+export const LIST_COLUMNS: readonly Column[] = [
+  {
+    key: 'id',
+    label: 'ID',
+    width: 150,
+    sortable: true,
+    render: (node) => (
+      <ArtifactTag type={TAG_TYPES[node.type]}>{planningDisplayId(node)}</ArtifactTag>
+    ),
+  },
+  {
+    key: 'title',
+    label: 'Title',
+    sortable: true,
+    render: (node) => (
+      <span className="pc-list__title" title={node.title}>
+        {node.title}
+      </span>
+    ),
+  },
+  { ...STATUS_COLUMN, sortable: true },
+  {
+    key: 'priority',
+    label: 'Priority',
+    width: 106,
+    sortable: true,
+    render: (node) => <PriorityChip priority={frontmatterString(node, 'priority') ?? undefined} />,
+  },
+  {
+    key: 'labels',
+    label: 'Labels',
+    width: 150,
+    render: (node) => (
+      <span className="pc-list__labels" title={planningLabels(node).join(', ')}>
+        {planningLabels(node).map((label) => (
+          <span key={label}>{label}</span>
+        ))}
+      </span>
+    ),
+  },
+  {
+    ...UPDATED_COLUMN,
+    sortable: true,
+    render: (node) =>
+      authoredTimestamp(node.frontmatter.updated) === null
+        ? 'Unknown'
+        : String(node.frontmatter.updated).slice(0, 10),
+  },
+];

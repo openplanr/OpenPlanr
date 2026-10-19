@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { PlanningView } from '../../lib/routing/planning-view-codec.js';
 import {
   clearInspector,
@@ -66,10 +66,10 @@ export function usePlanningViewFocus(
 /** Live patches update values in place; only a user presentation change reorders survivors. */
 export function useLiveListOrder(nodes: readonly PlanningModelNode[], presentationKey: string) {
   const previous = useRef<{ key: string; ids: readonly string[] } | null>(null);
-  const byId = new Map(nodes.map((node) => [node.id, node]));
-  const retained = previous.current;
-  const ordered =
-    retained?.key === presentationKey
+  const ordered = useMemo(() => {
+    const byId = new Map(nodes.map((node) => [node.id, node]));
+    const retained = previous.current;
+    return retained?.key === presentationKey
       ? [
           ...retained.ids.flatMap((id) => {
             const node = byId.get(id);
@@ -79,6 +79,7 @@ export function useLiveListOrder(nodes: readonly PlanningModelNode[], presentati
           ...byId.values(),
         ]
       : nodes;
+  }, [nodes, presentationKey]);
   useLayoutEffect(() => {
     previous.current = { key: presentationKey, ids: ordered.map((node) => node.id) };
   });

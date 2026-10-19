@@ -1,3 +1,4 @@
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ARTIFACT_STATUS_ORDER,
   Button,
@@ -13,29 +14,35 @@ import {
   ToolbarDivider,
 } from '../../design-system/components/index.js';
 import type { DashboardProductState } from '../../lib/api/product-state.js';
-import { useListPresentation } from '../../lib/routing/planning-presentation.js';
-import { useInspectorStore } from '../shell/inspector-selection.js';
-import {
-  dependencyCountColumn,
-  ITEM_COLUMN,
-  outgoingDependencyCounts,
-  REF_COLUMN,
-  SPRINT_COLUMN,
-  STATUS_COLUMN,
-  UPDATED_COLUMN,
-} from './planning-columns.js';
+import { LIST_COLUMNS } from './planning-columns.js';
 import {
   inspectPlanningNode,
   useLiveListOrder,
   useLiveListSelection,
   usePlanningViewFocus,
 } from './planning-inspector.js';
-import { takeListStatus } from './planning-list-filter.js';
 import {
-  filterPlanningNodes,
-  type PlanningArtifactStatus,
+  BACKLOG_STATUSES,
+  bulkListCommands,
+  LIST_PRESETS,
+  listPreset,
+  takeListStatus,
+} from './planning-list-filter.js';
+import {
+  browserListPreferences,
+  type ListPreferenceAdapter,
+  type PlanningView,
+  useInspectorStore,
+  useListKeyboardWindow,
+  useListPresentation,
+  useListScrollAnchor,
+  usePlanningCopy,
+} from './planning-list-window.js';
+import {
   type PlanningArtifactType,
-  sortPlanningNodes,
+  type PlanningModelNode,
+  planningDetailHref,
+  planningSpecOf,
 } from './planning-model.js';
 import {
   PlanningNotice,
@@ -43,15 +50,22 @@ import {
   type PlanningWorkspaceModel,
   resolvePlanningWorkspace,
 } from './planning-workspace.js';
-import { applyPlanningView, groupPresentationNodes } from './presentation-view.js';
+import {
+  applyPlanningView,
+  authoredTimestamp,
+  groupPresentationNodes,
+  planningLabels,
+} from './presentation-view.js';
 import './planning.css';
 import './list.css';
 
 export type ListPageProps = Readonly<{
   currentBinding: PlanningWorkspaceModel['binding'];
   current: DashboardProductState<unknown>;
+  preferences?: ListPreferenceAdapter;
 }>;
 
+const EMPTY_NODES: readonly PlanningModelNode[] = Object.freeze([]);
 const ALL = 'all';
 const PAGE_SIZE = 100;
 const TYPES: readonly PlanningArtifactType[] = Object.freeze([
@@ -73,24 +87,18 @@ const STATUS_OPTIONS = Object.freeze([
   { value: ALL, label: 'All statuses' },
   ...ARTIFACT_STATUS_ORDER.map((status) => ({ value: status, label: status })),
 ]);
-const UPDATED_SORTABLE = Object.freeze({ ...UPDATED_COLUMN, sortable: true });
+const PRIORITIES = ['P0', 'P1', 'P2', 'P3', 'critical', 'high', 'medium', 'low'];
 
-function isType(value: string): value is PlanningArtifactType {
-  return (TYPES as readonly string[]).includes(value);
-}
-
-function isStatus(value: string): value is PlanningArtifactStatus {
-  return (ARTIFACT_STATUS_ORDER as readonly string[]).includes(value);
-}
-
-export function ListPage({ currentBinding, current }: ListPageProps) {
+export function ListPage({
+  currentBinding,
+  current,
+  preferences = browserListPreferences,
+}: ListPageProps) {
   const {
     query,
     setQuery,
     type,
-    setType,
     status,
-    setStatus,
     compact,
     setCompact,
     sort,
@@ -103,20 +111,20 @@ export function ListPage({ currentBinding, current }: ListPageProps) {
     setCollapsedGroups,
     view,
     copyMessage,
+    sharePending,
     share,
     clearFilters,
+    setPresentation,
+    selected,
+    setSelected,
   } = useListPresentation(() => takeListStatus() ?? ALL);
   const inspector = useInspectorStore();
 
   const model = resolvePlanningWorkspace(current, currentBinding);
-  const focusNotice = usePlanningViewFocus(view, model?.graph.nodes);
-  const all = sortPlanningNodes(model?.graph.nodes ?? [], 'id');
-  const filteredByText = filterPlanningNodes(all, {
-    search: query.trim() || undefined,
-    typeFilter: isType(type) ? [type] : undefined,
-    statusFilter: isStatus(status) ? status : null,
-  });
-  const effectiveView = {
+  const graph = model?.graph;
+  const focusNotice = usePlanningViewFocus(view, graph?.nodes);
+  const all = graph?.nodes ?? EMPTY_NODES;
+  const draftView: PlanningView = {
     schemaVersion: '1.0.0' as const,
     route: 'list' as const,
     filters: {
@@ -147,25 +155,65 @@ export function ListPage({ currentBinding, current }: ListPageProps) {
     density: compact ? ('compact' as const) : ('comfortable' as const),
     focusId: inspector.selection?.kind === 'node' ? inspector.selection.id : null,
   };
-  const rows = useLiveListOrder(
-    model ? applyPlanningView(filteredByText, effectiveView, new Date(), model.graph) : [],
-    JSON.stringify({ ...effectiveView, focusId: null }),
+  const presentationKey = JSON.stringify({ ...draftView, focusId: null });
+  const effectiveView = useMemo(
+    () => JSON.parse(presentationKey) as PlanningView,
+    [presentationKey],
   );
-  const grouped = groupPresentationNodes(rows, effectiveView.groupBy);
-  const appearances = grouped.flatMap((group) => group.nodes.map((node) => ({ group, node })));
+  const projection = useMemo(
+    () => (graph ? applyPlanningView(graph.nodes, effectiveView, new Date(), graph) : EMPTY_NODES),
+    [graph, effectiveView],
+  );
+  const rows = useLiveListOrder(projection, presentationKey);
+  const grouped = useMemo(() => {
+    const specs = new Map(
+      all.filter((node) => node.type === 'spec').map((node) => [node.id, node]),
+    );
+    return groupPresentationNodes(rows, effectiveView.groupBy).map((group) => ({
+      ...group,
+      label:
+        effectiveView.groupBy === 'spec' && specs.has(group.key)
+          ? `${group.key} · ${specs.get(group.key)?.title}`
+          : group.label,
+    }));
+  }, [rows, effectiveView.groupBy, all]);
+  const appearances = useMemo(
+    () => grouped.flatMap((group) => group.nodes.map((node) => ({ group, node }))),
+    [grouped],
+  );
+  const positions = useMemo(() => {
+    const values = new Map<string, Map<string, number>>();
+    appearances.forEach((entry, index) => {
+      const group = values.get(entry.group.key) ?? new Map<string, number>();
+      group.set(entry.node.id, index + 1);
+      values.set(entry.group.key, group);
+    });
+    return values;
+  }, [appearances]);
   const pageCount = Math.max(1, Math.ceil(appearances.length / PAGE_SIZE));
   const currentPage = Math.min(page, pageCount - 1);
   const pageStart = currentPage * PAGE_SIZE;
   const visibleRows = appearances.slice(pageStart, pageStart + PAGE_SIZE);
-  const visibleGroups = grouped
-    .map((group) => ({
-      ...group,
-      nodes: visibleRows.filter((entry) => entry.group === group).map((entry) => entry.node),
-    }))
-    .filter((group) => group.nodes.length > 0);
+  const visibleGroups = useMemo(() => {
+    const groups = new Map<string, { key: string; label: string; nodes: PlanningModelNode[] }>();
+    for (const { group, node } of visibleRows) {
+      const current = groups.get(group.key);
+      if (current) current.nodes.push(node);
+      else groups.set(group.key, { key: group.key, label: group.label, nodes: [node] });
+    }
+    return [...groups.values()];
+  }, [visibleRows]);
   if (visibleGroups.length === 0)
     visibleGroups.push({ key: 'all', label: 'All artifacts', nodes: [] });
-  const dependencyCounts = outgoingDependencyCounts(model?.graph.edges ?? []);
+
+  const appliedFocus = useRef<PlanningView | null>(null);
+  useEffect(() => {
+    if (appliedFocus.current === view) return;
+    appliedFocus.current = view;
+    if (!view?.focusId) return;
+    const index = appearances.findIndex((entry) => entry.node.id === view.focusId);
+    if (index >= 0) setPage(Math.floor(index / PAGE_SIZE));
+  }, [view, appearances, setPage]);
   const resetPage = () => setPage(0);
   const selectedId = inspector.selection?.kind === 'node' ? inspector.selection.id : undefined;
 
@@ -174,6 +222,153 @@ export function ListPage({ currentBinding, current }: ListPageProps) {
     visibleRows.map((entry) => entry.node),
     selectedId,
   );
+  useListScrollAnchor(
+    rootRef,
+    `${presentationKey}:${currentPage}:${collapsed}:${collapsedGroups.join()}`,
+    graph,
+  );
+  const copy = usePlanningCopy();
+  const [copyState, setCopyState] = useState('');
+  const [copyPending, setCopyPending] = useState(false);
+  const copyLock = useRef(false);
+  const [bulkStatus, setBulkStatus] = useState('in-progress');
+  const [storageNotice, setStorageNotice] = useState('');
+  const [dateError, setDateError] = useState('');
+  const densityKey = `op-density:v1:${currentBinding.projectId}`;
+  useEffect(() => {
+    try {
+      const stored = preferences.load(densityKey);
+      if (stored !== null && stored !== 'compact' && stored !== 'comfortable')
+        throw new Error('Invalid density');
+      if (!view && stored !== null) setCompact(stored === 'compact');
+    } catch {
+      setStorageNotice(
+        'Browser density preference unavailable. You can still change density for this session.',
+      );
+    }
+  }, [densityKey, preferences, view, setCompact]);
+  const changeDensity = (value: boolean) => {
+    setCompact(value);
+    try {
+      preferences.save(densityKey, value ? 'compact' : 'comfortable');
+      setStorageNotice('');
+    } catch {
+      setStorageNotice('Density changed for this session. Browser storage is unavailable.');
+    }
+  };
+  const selectedSet = useMemo(() => new Set(selected), [selected]);
+  const selectedNodes = useMemo(
+    () => all.filter((node) => selectedSet.has(node.id)),
+    [all, selectedSet],
+  );
+  const bulk = useMemo(
+    () => bulkListCommands(selectedNodes, bulkStatus),
+    [selectedNodes, bulkStatus],
+  );
+  const keyboardAppearances = useMemo(
+    () =>
+      appearances
+        .map((entry, index) => ({ ...entry, index }))
+        .filter((entry) => !collapsed && !collapsedGroups.includes(entry.group.key)),
+    [appearances, collapsed, collapsedGroups],
+  );
+  const keyboardNotice = useListKeyboardWindow({
+    root: rootRef,
+    appearances: keyboardAppearances,
+    pageSize: PAGE_SIZE,
+    setPage,
+    selected,
+    setSelected,
+    selectedId,
+  });
+  const toggleSelection = (node: PlanningModelNode) =>
+    setSelected((ids) =>
+      ids.includes(node.id) ? ids.filter((id) => id !== node.id) : [...ids, node.id],
+    );
+  const copyText = async (text: string) => {
+    if (copyLock.current) return;
+    copyLock.current = true;
+    setCopyPending(true);
+    try {
+      if (!copy) throw new Error('Clipboard unavailable');
+      await copy(text);
+      setCopyState(`Copied: ${text}`);
+    } catch {
+      setCopyState(`Copy blocked. Select and copy manually: ${text}`);
+    } finally {
+      copyLock.current = false;
+      setCopyPending(false);
+    }
+  };
+  const updateFilters = (filters: Partial<PlanningView['filters']>) =>
+    setPresentation({
+      ...effectiveView,
+      focusId: null,
+      filters: { ...effectiveView.filters, ...filters },
+    });
+  const totals = useMemo(() => {
+    const now = new Date();
+    return new Map(
+      LIST_PRESETS.map(([key]) => [
+        key,
+        graph ? applyPlanningView(all, listPreset(key), now, graph).length : 0,
+      ]),
+    );
+  }, [graph, all]);
+  const labels = useMemo(() => [...new Set(all.flatMap(planningLabels))].sort(), [all]);
+  const progress = useMemo(() => {
+    const map = new Map<string, { total: number; done: number }>();
+    for (const node of all) {
+      if (node.type !== 'task') continue;
+      const spec = planningSpecOf(node) ?? '';
+      const value = map.get(spec) ?? { total: 0, done: 0 };
+      value.total++;
+      if (node.status === 'done') value.done++;
+      map.set(spec, value);
+    }
+    return map;
+  }, [all]);
+  const hiddenDone = useMemo(
+    () =>
+      graph && effectiveView.filters.status.length && !effectiveView.filters.status.includes('done')
+        ? applyPlanningView(
+            all,
+            { ...effectiveView, filters: { ...effectiveView.filters, status: ['done'] } },
+            new Date(),
+            graph,
+          ).length
+        : 0,
+    [all, effectiveView, graph],
+  );
+  const dateExcluded = useMemo(() => {
+    if (!graph) return 0;
+    const relevant = applyPlanningView(
+      all,
+      {
+        ...effectiveView,
+        filters: { ...effectiveView.filters, createdWithinDays: null, updatedWithinDays: null },
+      },
+      new Date(),
+      graph,
+    );
+    return relevant.filter((node) =>
+      ['created', 'updated'].some((field) => {
+        if (
+          !(field === 'created'
+            ? effectiveView.filters.createdWithinDays
+            : effectiveView.filters.updatedWithinDays)
+        )
+          return false;
+        const stamp = authoredTimestamp(node.frontmatter[field]);
+        return stamp === null || stamp > Date.now();
+      }),
+    ).length;
+  }, [all, effectiveView, graph]);
+  useEffect(() => {
+    const existing = new Set(all.map((node) => node.id));
+    if (selected.some((id) => !existing.has(id)))
+      setSelected(selected.filter((id) => existing.has(id)));
+  }, [all, selected, setSelected]);
   if (!model) {
     return <PlanningRefusal routeKind="planning.list" title="Planning cannot be trusted" />;
   }
@@ -183,6 +378,7 @@ export function ListPage({ currentBinding, current }: ListPageProps) {
       ref={rootRef}
       className="op-workspace op-planning pc-pipeline pc-list"
       data-route-kind="planning.list"
+      data-managed-rows="true"
     >
       <PlanningNotice presentation={model.presentation} />
       {removalNotice ? (
@@ -190,6 +386,9 @@ export function ListPage({ currentBinding, current }: ListPageProps) {
           {removalNotice}
         </p>
       ) : null}
+      <p className="pc-visually-hidden" role="status">
+        {keyboardNotice}
+      </p>
       {focusNotice ? <p role="status">{focusNotice}</p> : null}
       <SectionHeader
         headingLevel={1}
@@ -213,8 +412,27 @@ export function ListPage({ currentBinding, current }: ListPageProps) {
           className="pc-list__surface"
           aria-label="Planning artifact index"
         >
+          <fieldset className="pc-list__presets" aria-label="List presets">
+            {LIST_PRESETS.map(([key, label]) => {
+              const preset = listPreset(key);
+              const active =
+                JSON.stringify(effectiveView.filters) === JSON.stringify(preset.filters) &&
+                effectiveView.groupBy === preset.groupBy;
+              return (
+                <Button
+                  key={key}
+                  size="sm"
+                  variant="ghost"
+                  aria-pressed={active}
+                  onClick={() => setPresentation({ ...preset, density: effectiveView.density })}
+                >
+                  {label} <span className="pc-list__preset-count">{totals.get(key)}</span>
+                </Button>
+              );
+            })}
+          </fieldset>
           <Toolbar
-            right={<Switch size="sm" checked={compact} onChange={setCompact} label="Compact" />}
+            right={<Switch size="sm" checked={compact} onChange={changeDensity} label="Compact" />}
           >
             <Input
               size="sm"
@@ -224,7 +442,7 @@ export function ListPage({ currentBinding, current }: ListPageProps) {
               ariaLabel="Filter by id or title"
               value={query}
               onChange={(value) => {
-                setQuery(value);
+                setQuery(value.slice(0, 200));
                 resetPage();
               }}
             />
@@ -234,10 +452,14 @@ export function ListPage({ currentBinding, current }: ListPageProps) {
               ariaLabel="Filter by type"
               value={type}
               onChange={(value) => {
-                setType(value);
+                updateFilters({ type: value === ALL ? [] : [value] });
                 resetPage();
               }}
-              options={TYPE_OPTIONS}
+              options={TYPE_OPTIONS.map((option) =>
+                option.value === ALL && effectiveView.filters.type.length > 1
+                  ? { ...option, label: `Types: ${effectiveView.filters.type.join(', ')}` }
+                  : option,
+              )}
             />
             <Select
               size="sm"
@@ -245,17 +467,72 @@ export function ListPage({ currentBinding, current }: ListPageProps) {
               ariaLabel="Filter by status"
               value={status}
               onChange={(value) => {
-                setStatus(value);
+                updateFilters({ status: value === ALL ? [] : [value] });
                 resetPage();
               }}
-              options={STATUS_OPTIONS}
+              options={STATUS_OPTIONS.map((option) =>
+                option.value === ALL && effectiveView.filters.status.length > 1
+                  ? { ...option, label: `Status: ${effectiveView.filters.status.join(', ')}` }
+                  : option,
+              )}
+            />
+            <Select
+              size="sm"
+              ariaLabel="Filter by priority"
+              value={
+                effectiveView.filters.priority.length === 1
+                  ? effectiveView.filters.priority[0]
+                  : ALL
+              }
+              onChange={(value) => updateFilters({ priority: value === ALL ? [] : [value] })}
+              options={[
+                {
+                  value: ALL,
+                  label:
+                    effectiveView.filters.priority.length > 1
+                      ? `Priority: ${effectiveView.filters.priority.join(', ')}`
+                      : 'All priorities',
+                },
+                ...PRIORITIES.map((value) => ({ value, label: value })),
+              ]}
+            />
+            <Select
+              size="sm"
+              ariaLabel="Filter by label"
+              value={
+                effectiveView.filters.label.length === 1 ? effectiveView.filters.label[0] : ALL
+              }
+              onChange={(value) => updateFilters({ label: value === ALL ? [] : [value] })}
+              options={[
+                {
+                  value: ALL,
+                  label:
+                    effectiveView.filters.label.length > 1
+                      ? `Labels: ${effectiveView.filters.label.join(', ')}`
+                      : 'All labels',
+                },
+                ...labels.map((value) => ({ value, label: value })),
+              ]}
+            />
+            <Select
+              size="sm"
+              ariaLabel="Group by"
+              value={effectiveView.groupBy}
+              onChange={(value) =>
+                setPresentation({ ...effectiveView, groupBy: value as PlanningView['groupBy'] })
+              }
+              options={['none', 'spec', 'type', 'status', 'label'].map((value) => ({
+                value,
+                label: `Group: ${value}`,
+              }))}
             />
             <ToolbarDivider />
             <Button
               size="sm"
               variant="ghost"
+              disabled={sharePending}
               onClick={() => {
-                void share(effectiveView);
+                void share({ ...effectiveView, focusId: selectedId ?? null });
               }}
             >
               Copy filter link
@@ -267,6 +544,103 @@ export function ListPage({ currentBinding, current }: ListPageProps) {
             ) : null}
             <span className="pc-list__note">read-only view of .planr/</span>
           </Toolbar>
+          <fieldset className="pc-list__dates" aria-label="Relative date filters">
+            {(['createdWithinDays', 'updatedWithinDays'] as const).map((field) => (
+              <label className="pc-list__relative" key={field}>
+                {field === 'createdWithinDays' ? 'Created' : 'Updated'} within UTC days
+                <input
+                  type="number"
+                  min={1}
+                  max={365}
+                  step={1}
+                  placeholder="Any"
+                  aria-label={
+                    field === 'createdWithinDays'
+                      ? 'Created within UTC days'
+                      : 'Updated within UTC days'
+                  }
+                  value={effectiveView.filters[field] ?? ''}
+                  onChange={(event) => {
+                    const value = event.currentTarget.value;
+                    const days = value ? Number(value) : null;
+                    if (days !== null && (!Number.isInteger(days) || days < 1 || days > 365)) {
+                      setDateError('Relative dates must be whole UTC days from 1 to 365.');
+                      return;
+                    }
+                    setDateError('');
+                    updateFilters({ [field]: days });
+                  }}
+                />
+              </label>
+            ))}
+            <Button size="sm" variant="ghost" onClick={clearFilters}>
+              Clear filters
+            </Button>
+          </fieldset>
+          <fieldset className="pc-list__selection" aria-label="Bulk command copy">
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => setSelected(rows.map((node) => node.id))}
+            >
+              Select all {rows.length} filtered
+            </Button>
+            <Button size="sm" variant="ghost" onClick={() => setSelected([])}>
+              Clear selection
+            </Button>
+            <span className="pc-list__selection-count">
+              {selectedNodes.length} selected · {bulk.commands.length} eligible ·{' '}
+              {bulk.skipped.length} skipped
+            </span>
+            <Select
+              size="sm"
+              ariaLabel="Suggested backlog status"
+              value={bulkStatus}
+              onChange={setBulkStatus}
+              options={BACKLOG_STATUSES.map((value) => ({ value, label: value }))}
+            />
+            <Button
+              size="sm"
+              data-copy-command="true"
+              disabled={!bulk.commands.length || copyPending}
+              onClick={() => void copyText(bulk.commands.join('\n'))}
+            >
+              Copy bulk commands
+            </Button>
+            <Button
+              size="sm"
+              data-copy-command="true"
+              disabled={copyPending}
+              onClick={() => void copyText('/planr:sprint')}
+            >
+              Copy sprint command
+            </Button>
+          </fieldset>
+          <details className="pc-list__commands">
+            <summary>Review {bulk.commands.length} commands to copy</summary>
+            <pre>{bulk.commands.join('\n')}</pre>
+          </details>
+          <code className="pc-list__sprint-command">/planr:sprint</code>
+          <details className="pc-list__skipped">
+            <summary>Why {bulk.skipped.length} items are skipped</summary>
+            <ul>
+              {bulk.skipped.slice(0, 20).map((reason) => (
+                <li key={reason}>{reason}</li>
+              ))}
+            </ul>
+            {bulk.skipped.length > 20 ? (
+              <p>{bulk.skipped.length - 20} more items have no verified status writer.</p>
+            ) : null}
+          </details>
+          <p className="pc-list__feedback" role="status">
+            {dateError ||
+              storageNotice ||
+              copyState ||
+              copyMessage ||
+              (dateExcluded
+                ? `${dateExcluded} items excluded: unknown, invalid or future authored dates.`
+                : 'J/K move · Enter opens panel · Space selects · Shift+Up/Down extends · / filters · C copies ID')}
+          </p>
           <Button
             variant="ghost"
             size="sm"
@@ -275,8 +649,7 @@ export function ListPage({ currentBinding, current }: ListPageProps) {
           >
             {collapsed ? 'Expand artifacts' : 'Collapse artifacts'}
           </Button>
-          {copyMessage ? <p role="status">{copyMessage}</p> : null}
-          <div hidden={collapsed}>
+          <div className="pc-list__window" hidden={collapsed}>
             {visibleGroups.map((group) => (
               <section key={group.key} aria-label={group.label} data-keyboard-group={group.key}>
                 {effectiveView.groupBy !== 'none' ? (
@@ -295,11 +668,40 @@ export function ListPage({ currentBinding, current }: ListPageProps) {
                     {group.label}
                   </Button>
                 ) : null}
+                {effectiveView.groupBy !== 'none' ? (
+                  <span className="pc-list__group-meta">
+                    {grouped.find((entry) => entry.key === group.key)?.nodes.length} items
+                    {effectiveView.groupBy === 'spec'
+                      ? (() => {
+                          const value = progress.get(group.key);
+                          return value ? (
+                            <>
+                              {' '}
+                              ·{' '}
+                              <progress
+                                max={value.total}
+                                value={value.done}
+                                aria-label={`${group.label} task progress`}
+                              />{' '}
+                              {value.done}/{value.total} tasks
+                            </>
+                          ) : (
+                            ' · No tasks'
+                          );
+                        })()
+                      : ''}
+                  </span>
+                ) : null}
                 <div hidden={collapsedGroups.includes(group.key)}>
                   <DataTable
                     rows={group.nodes}
                     compact={compact}
                     selectedId={selectedId}
+                    selectedIds={selectedSet}
+                    onRowSelect={toggleSelection}
+                    rowCount={appearances.length}
+                    rowPosition={(node) => positions.get(group.key)?.get(node.id) ?? 1}
+                    rowHref={planningDetailHref}
                     sort={sort}
                     onSort={(key) => {
                       setSort((current) => ({
@@ -312,14 +714,7 @@ export function ListPage({ currentBinding, current }: ListPageProps) {
                     onRowFocus={(node) => inspectPlanningNode(node, false)}
                     caption="Planning artifacts"
                     emptyMessage="No node matches this filter."
-                    columns={[
-                      ITEM_COLUMN,
-                      STATUS_COLUMN,
-                      SPRINT_COLUMN,
-                      dependencyCountColumn(dependencyCounts),
-                      UPDATED_SORTABLE,
-                      REF_COLUMN,
-                    ]}
+                    columns={LIST_COLUMNS}
                   />
                 </div>
               </section>
@@ -333,9 +728,13 @@ export function ListPage({ currentBinding, current }: ListPageProps) {
               }
               description={`${all.length} planning artifacts searched. Clear the filters to see all available items.`}
               action={
-                <Button size="sm" onClick={clearFilters}>
-                  Clear filters
-                </Button>
+                <span>
+                  {hiddenDone ? (
+                    <Button size="sm" onClick={() => updateFilters({ status: ['done'] })}>
+                      Show {hiddenDone} done matches
+                    </Button>
+                  ) : null}
+                </span>
               }
             />
           ) : null}

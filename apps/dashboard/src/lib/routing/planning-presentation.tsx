@@ -4,6 +4,7 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useMemo,
   useRef,
   useState,
 } from 'react';
@@ -71,6 +72,8 @@ export function useListPresentation(initialStatus: () => string) {
   const copy = useContext(CopyContext);
   const invalidView = useContext(InvalidViewContext);
   const [copyMessage, setCopyMessage] = useState('');
+  const [sharePending, setSharePending] = useState(false);
+  const sharing = useRef(false);
   const initial = () => ({
     query: '',
     type: 'all',
@@ -81,6 +84,8 @@ export function useListPresentation(initialStatus: () => string) {
     collapsed: false,
     collapsedGroups: [] as string[],
     ignoreViewFilters: false,
+    presentation: null as PlanningView | null,
+    selected: [] as string[],
   });
   const [state, set] = usePlanningPresentation('list', initial);
   useEffect(() => {
@@ -95,6 +100,8 @@ export function useListPresentation(initialStatus: () => string) {
         collapsed: false,
         collapsedGroups: [] as string[],
         ignoreViewFilters: false,
+        presentation: null,
+        selected: [],
       });
       return;
     }
@@ -108,21 +115,35 @@ export function useListPresentation(initialStatus: () => string) {
       sort: { key: view.sort.field, dir: view.sort.direction },
       page: 0,
       ignoreViewFilters: false,
+      presentation: view,
     }));
   }, [view, invalidView, set]);
-  const field =
-    <K extends keyof typeof state>(key: K) =>
-    (value: (typeof state)[K] | ((current: (typeof state)[K]) => (typeof state)[K])) =>
-      set((current) => ({
-        ...current,
-        [key]:
-          typeof value === 'function'
-            ? (value as (current: (typeof state)[K]) => (typeof state)[K])(current[key])
-            : value,
-      }));
+  const fields = useMemo(() => {
+    const field =
+      <K extends keyof typeof state>(key: K) =>
+      (value: (typeof state)[K] | ((current: (typeof state)[K]) => (typeof state)[K])) =>
+        set((current) => ({
+          ...current,
+          [key]:
+            typeof value === 'function'
+              ? (value as (current: (typeof state)[K]) => (typeof state)[K])(current[key])
+              : value,
+        }));
+    return {
+      setQuery: field('query'),
+      setType: field('type'),
+      setStatus: field('status'),
+      setCompact: field('compact'),
+      setSort: field('sort'),
+      setPage: field('page'),
+      setCollapsed: field('collapsed'),
+      setCollapsedGroups: field('collapsedGroups'),
+      setSelected: field('selected'),
+    };
+  }, [set]);
   return {
     ...state,
-    view: state.ignoreViewFilters ? null : view,
+    view: state.ignoreViewFilters ? null : (state.presentation ?? view),
     clearFilters: () =>
       set((current) => ({
         ...current,
@@ -131,31 +152,62 @@ export function useListPresentation(initialStatus: () => string) {
         status: 'all',
         page: 0,
         ignoreViewFilters: true,
+        presentation: null,
       })),
     copyMessage,
+    sharePending,
     share: async (presentation: PlanningView) => {
-      const hash = serializePlanningViewHref(presentation);
-      const href =
-        typeof window === 'undefined' ? hash : `${window.location.href.split('#')[0]}${hash}`;
+      if (sharing.current) return;
+      sharing.current = true;
+      setSharePending(true);
+      let href = '';
       try {
+        const hash = serializePlanningViewHref(presentation);
+        href =
+          typeof window === 'undefined' ? hash : `${window.location.href.split('#')[0]}${hash}`;
         if (!copy) throw new Error('Clipboard adapter unavailable');
         await copy(href);
         setCopyMessage('Filter link copied.');
       } catch {
-        setCopyMessage(`Copy blocked. Select and copy this filter link manually: ${href}`);
+        setCopyMessage(
+          href
+            ? `Copy blocked. Select and copy this filter link manually: ${href}`
+            : 'These filters cannot be shared. Shorten the query or labels and try again.',
+        );
+      } finally {
+        sharing.current = false;
+        setSharePending(false);
       }
     },
-    setQuery: field('query'),
-    setType: field('type'),
-    setStatus: field('status'),
-    setCompact: field('compact'),
-    setSort: field('sort'),
-    setPage: field('page'),
-    setCollapsed: field('collapsed'),
-    setCollapsedGroups: field('collapsedGroups'),
+    setPresentation: (presentation: PlanningView) =>
+      set((current) => ({
+        ...current,
+        presentation,
+        query: presentation.filters.query,
+        type: presentation.filters.type.length === 1 ? presentation.filters.type[0] : 'all',
+        status: presentation.filters.status.length === 1 ? presentation.filters.status[0] : 'all',
+        sort: { key: presentation.sort.field, dir: presentation.sort.direction },
+        page: 0,
+        ignoreViewFilters: false,
+      })),
+    ...fields,
   };
 }
 
 export function usePlanningView(): PlanningView | null {
   return useContext(ViewContext);
 }
+
+export function usePlanningCopy() {
+  return useContext(CopyContext);
+}
+
+export type ListPreferenceAdapter = Readonly<{
+  load: (key: string) => string | null;
+  save: (key: string, value: string) => void;
+}>;
+
+export const browserListPreferences: ListPreferenceAdapter = {
+  load: (key) => (typeof localStorage === 'undefined' ? null : localStorage.getItem(key)),
+  save: (key, value) => localStorage.setItem(key, value),
+};

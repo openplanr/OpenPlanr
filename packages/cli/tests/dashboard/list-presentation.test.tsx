@@ -161,11 +161,16 @@ function View({
   view = FIXTURE_VIEW,
   invalidView = false,
   onCopy,
+  preferences,
 }: {
   nodes?: readonly PlanningNode[];
   view?: PlanningView | null;
   invalidView?: boolean;
   onCopy?: (text: string) => Promise<void>;
+  preferences?: {
+    load: (key: string) => string | null;
+    save: (key: string, value: string) => void;
+  };
 }) {
   const current = fixture(nodes);
   return (
@@ -175,7 +180,11 @@ function View({
       invalidView={invalidView}
       onCopy={onCopy}
     >
-      <ListPage currentBinding={current.binding} current={current.state} />
+      <ListPage
+        currentBinding={current.binding}
+        current={current.state}
+        preferences={preferences}
+      />
       <Selection />
     </PlanningPresentationProvider>
   );
@@ -622,4 +631,302 @@ describe('List live refetch retention', () => {
     await user.click(screen.getByRole('button', { name: 'Clear filters' }));
     expect(rowIds(container)).toHaveLength(FIXTURE_NODES.length);
   });
+});
+
+describe('List triage, bounded windows and command-only selection', () => {
+  function coordinate(container: HTMLElement, singleLetters = true) {
+    return installKeyboardCoordinator(document, () => ({
+      root: container,
+      selectionScope: 'list-window',
+      singleLetters,
+      paletteOpen: false,
+      togglePalette: () => undefined,
+      openHelp: () => undefined,
+      navigate: () => undefined,
+      closeInspector: () => false,
+      selectedId: () => null,
+      copy: async () => undefined,
+      announce: () => undefined,
+    }));
+  }
+
+  it.each(['representative', 'scaling'] as const)(
+    'offers every preset and bounded grouped windows on %s',
+    async (dataset) => {
+      const user = userEvent.setup();
+      const nodes = buildPremiumDashboardFixture(dataset).graph.nodes;
+      const { container } = render(<View nodes={nodes} view={null} />);
+      for (const name of [
+        'All',
+        'Open, by spec',
+        'High priority',
+        'Blocked',
+        'ADRs',
+        'Filed today',
+        'Filed since yesterday',
+      ]) {
+        await user.click(
+          screen.getByRole('button', {
+            name: new RegExp(`^${name.replace(',', ',')}(?: \\d+)?$`, 'u'),
+          }),
+        );
+        expect(rowIds(container).length).toBeLessThanOrEqual(100);
+        const ids = rowIds(container);
+        const shown = nodes.filter((node) => ids.includes(node.id));
+        if (name === 'ADRs') expect(shown.every((node) => node.type === 'adr')).toBe(true);
+        if (name === 'Blocked') expect(shown.every((node) => node.status === 'blocked')).toBe(true);
+        if (name === 'Open, by spec')
+          expect(shown.every((node) => !['done', 'addressed'].includes(node.status))).toBe(true);
+        expect(screen.queryByRole('button', { name: /Save view/u })).toBeNull();
+      }
+    },
+  );
+
+  it('walks across page boundaries, selects a range and retains the full position/count', () => {
+    const nodes = Array.from({ length: 110 }, (_, index) =>
+      node(`BL-${1000 + index}`, `Finding ${index}`, {}, 'outstanding', 'backlog'),
+    );
+    const { container } = render(
+      <View
+        nodes={nodes}
+        view={{
+          ...FIXTURE_VIEW,
+          filters: { ...FIXTURE_VIEW.filters, type: [], status: [], priority: [], query: '' },
+          sort: { field: 'id', direction: 'asc' },
+        }}
+      />,
+    );
+    const dispose = coordinate(container);
+    try {
+      const last = container.querySelector<HTMLElement>('[data-keyboard-item="BL-1099"]');
+      act(() => last?.focus());
+      fireEvent.keyDown(last ?? container, { key: ' ' });
+      fireEvent.keyDown(last ?? container, { key: 'ArrowDown', shiftKey: true });
+      const next = container.querySelector<HTMLElement>('[data-keyboard-item="BL-1100"]');
+      expect(document.activeElement).toBe(next);
+      expect(next?.getAttribute('aria-rowindex')).toBe('102');
+      expect(next?.closest('table')?.getAttribute('aria-rowcount')).toBe('111');
+      expect(next?.getAttribute('aria-selected')).toBe('true');
+      expect(screen.getByText('BL-1100, 101 of 110')).toBeTruthy();
+      expect(screen.getByText('2 selected · 2 eligible · 0 skipped')).toBeTruthy();
+      fireEvent.keyDown(next ?? container, { key: 'k' });
+      expect(document.activeElement?.getAttribute('data-keyboard-item')).toBe('BL-1099');
+      expect(document.activeElement?.getAttribute('aria-selected')).toBe('true');
+      fireEvent.keyDown(document.activeElement ?? container, { key: 'Escape' });
+      expect(screen.getByText('0 selected · 0 eligible · 0 skipped')).toBeTruthy();
+    } finally {
+      dispose();
+    }
+  });
+
+  it('copies registered backlog status commands once, skips scoped tasks, and exposes clipboard failure', async () => {
+    const user = userEvent.setup();
+    const copy = vi.fn(async () => {
+      throw new Error('denied');
+    });
+    const nodes = [
+      node('BL-910', 'Finding', {}, 'outstanding', 'backlog'),
+      node('SPEC-901/T-910', 'Task'),
+    ];
+    const { container } = render(<View nodes={nodes} view={null} onCopy={copy} />);
+    await user.click(screen.getByRole('button', { name: 'Select all 2 filtered' }));
+    expect(screen.getByText('2 selected · 1 eligible · 1 skipped')).toBeTruthy();
+    await user.click(screen.getByRole('button', { name: 'Copy bulk commands' }));
+    expect(copy).toHaveBeenCalledExactlyOnceWith(
+      'openplanr backlog update BL-910 --status in-progress',
+    );
+    expect(
+      screen.getByText(
+        'Copy blocked. Select and copy manually: openplanr backlog update BL-910 --status in-progress',
+      ),
+    ).toBeTruthy();
+    expect(container.textContent).not.toContain('openplanr task update');
+    await user.click(screen.getByRole('button', { name: 'Copy sprint command' }));
+    expect(copy).toHaveBeenLastCalledWith('/planr:sprint');
+  });
+
+  it('keeps Cmd/Ctrl-click native and preserves selection through patches/removals', async () => {
+    const user = userEvent.setup();
+    const nodes = [
+      node('BL-910', 'First', {}, 'outstanding', 'backlog'),
+      node('BL-911', 'Second', {}, 'outstanding', 'backlog'),
+    ];
+    const { container, rerender } = render(<View nodes={nodes} view={null} />);
+    await user.click(screen.getByRole('button', { name: 'Select all 2 filtered' }));
+    const row = container.querySelector('[data-keyboard-item="BL-910"]');
+    const link = row?.querySelector('a');
+    if (!link) throw new Error('Expected canonical item link');
+    expect(link.getAttribute('href')).toBe('#/detail/BL-910');
+    expect(fireEvent.click(link, { ctrlKey: true })).toBe(true);
+    rerender(<View nodes={[{ ...nodes[0], title: 'Patched' }, nodes[1]]} view={null} />);
+    expect(container.querySelector('[data-keyboard-item="BL-910"]')).toBe(row);
+    expect(row?.getAttribute('aria-selected')).toBe('true');
+    rerender(<View nodes={[nodes[1]]} view={null} />);
+    expect(screen.getByText('1 selected · 1 eligible · 0 skipped')).toBeTruthy();
+  });
+
+  it('recovers hidden done matches and distinguishes addressed groups', async () => {
+    const user = userEvent.setup();
+    const nodes = [
+      node('BL-910', 'Done finding', {}, 'done', 'backlog'),
+      node('BL-911', 'Addressed finding', {}, 'addressed', 'backlog'),
+    ];
+    const { container } = render(<View nodes={nodes} view={null} />);
+    await user.click(screen.getByRole('button', { name: /^Open, by spec/u }));
+    expect(screen.getByRole('button', { name: 'Show 1 done matches' })).toBeTruthy();
+    await user.click(screen.getByRole('button', { name: 'Show 1 done matches' }));
+    expect(rowIds(container)).toEqual(['BL-910']);
+    expect(container.querySelector('[data-done="true"]')).toBeTruthy();
+    await user.click(screen.getByRole('button', { name: 'Clear filters' }));
+    await user.selectOptions(screen.getByRole('combobox', { name: 'Group by' }), 'status');
+    expect(screen.getByRole('region', { name: 'addressed' })).toBeTruthy();
+    expect(screen.getByRole('region', { name: 'done' })).toBeTruthy();
+  });
+
+  it('diagnoses missing/future dates and clears multi-status preset constraints', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-10-19T12:00:00Z'));
+    const user = userEvent.setup();
+    const nodes = [
+      node('BL-910', 'Today', { created: '2026-10-19' }, 'done', 'backlog'),
+      node('BL-911', 'Unknown', {}, 'outstanding', 'backlog'),
+      node('BL-912', 'Future', { created: '2026-10-19T14:00:00Z' }, 'outstanding', 'backlog'),
+    ];
+    const { container } = render(<View nodes={nodes} view={null} />);
+    await user.click(screen.getByRole('button', { name: /^Filed today/u }));
+    expect(rowIds(container)).toEqual(['BL-910']);
+    expect(
+      screen.getByText('2 items excluded: unknown, invalid or future authored dates.'),
+    ).toBeTruthy();
+    await user.click(screen.getByRole('button', { name: /^Open, by spec/u }));
+    await user.selectOptions(screen.getByRole('combobox', { name: 'Filter by status' }), 'all');
+    expect(rowIds(container)).toHaveLength(3);
+  });
+});
+
+describe('List density and URL focus recovery', () => {
+  it('loads project-scoped density and handles denied storage without discarding the choice', async () => {
+    const user = userEvent.setup();
+    const preferences = {
+      load: vi.fn(() => 'compact'),
+      save: vi.fn(() => {
+        throw new Error('quota');
+      }),
+    };
+    const { container } = render(<View view={null} preferences={preferences} />);
+    expect(container.querySelector('table')?.getAttribute('data-compact')).toBe('true');
+    expect(preferences.load).toHaveBeenCalledWith(`op-density:v1:${fixture().binding.projectId}`);
+    await user.click(screen.getByRole('switch', { name: 'Compact' }));
+    expect(container.querySelector('table')?.hasAttribute('data-compact')).toBe(false);
+    expect(preferences.save).toHaveBeenCalledWith(
+      `op-density:v1:${fixture().binding.projectId}`,
+      'comfortable',
+    );
+    expect(
+      screen.getByText('Density changed for this session. Browser storage is unavailable.'),
+    ).toBeTruthy();
+  });
+
+  it('lets URL density override a stored preference and mounts a focused item beyond the first window', () => {
+    const nodes = Array.from({ length: 150 }, (_, index) =>
+      node(`T-${1000 + index}`, `Review ${index}`),
+    );
+    const view = {
+      ...FIXTURE_VIEW,
+      focusId: 'T-1149',
+      filters: { ...FIXTURE_VIEW.filters, query: '' },
+      sort: { field: 'id' as const, direction: 'asc' as const },
+    };
+    const { container } = render(
+      <View
+        nodes={nodes}
+        view={view}
+        preferences={{ load: () => 'comfortable', save: () => undefined }}
+      />,
+    );
+    expect(container.querySelector('table')?.getAttribute('data-compact')).toBe('true');
+    expect(
+      container.querySelector('[data-keyboard-item="T-1149"]')?.getAttribute('data-selected'),
+    ).toBe('true');
+    expect(
+      screen.getByRole('navigation', { name: 'Planning artifact pages' }).textContent,
+    ).toContain('Page 2');
+  });
+
+  it('uses canonical IDs to break equal sort values and reports full-spec task progress', async () => {
+    const user = userEvent.setup();
+    const nodes = [
+      node('SPEC-901', 'A spec', {}, 'outstanding', 'spec'),
+      node('SPEC-901/T-902', 'Same title', { specId: 'SPEC-901' }, 'done'),
+      node('SPEC-901/T-901', 'Same title', { specId: 'SPEC-901' }),
+    ];
+    const { container } = render(<View nodes={nodes} view={null} />);
+    await user.selectOptions(screen.getByRole('combobox', { name: 'Group by' }), 'spec');
+    expect(screen.getByText('1/2 tasks', { exact: false })).toBeTruthy();
+    await user.click(screen.getByRole('button', { name: 'Title' }));
+    expect(rowIds(container).filter((id) => id.includes('/'))).toEqual([
+      'SPEC-901/T-901',
+      'SPEC-901/T-902',
+    ]);
+  });
+});
+
+it('completes filed-findings triage with keyboard selection and copy precedence', async () => {
+  vi.useFakeTimers({ toFake: ['Date'] });
+  vi.setSystemTime(new Date('2026-10-19T12:00:00Z'));
+  const user = userEvent.setup();
+  const copy = vi.fn(async (_text: string) => undefined);
+  const nodes = [
+    node(
+      'BL-910',
+      'First finding',
+      { created: '2026-10-18', labels: ['ship'] },
+      'outstanding',
+      'backlog',
+    ),
+    node(
+      'BL-911',
+      'Second finding',
+      { created: '2026-10-19', labels: ['ship'] },
+      'outstanding',
+      'backlog',
+    ),
+  ];
+  const { container } = render(<View nodes={nodes} view={null} onCopy={copy} />);
+  const dispose = installKeyboardCoordinator(document, () => ({
+    root: container,
+    selectionScope: 'triage',
+    singleLetters: true,
+    paletteOpen: false,
+    togglePalette: () => undefined,
+    openHelp: () => undefined,
+    navigate: () => undefined,
+    closeInspector: () => false,
+    selectedId: () => null,
+    copy,
+    announce: () => undefined,
+  }));
+  try {
+    await user.click(screen.getByRole('button', { name: /^Filed since yesterday/u }));
+    expect(screen.getByRole('region', { name: 'ship' })).toBeTruthy();
+    const first = container.querySelector<HTMLElement>('[data-keyboard-item]');
+    act(() => first?.focus());
+    fireEvent.keyDown(first ?? container, { key: 'j' });
+    const selected = document.activeElement as HTMLElement;
+    fireEvent.keyDown(selected, { key: ' ' });
+    const bulk = screen.getByRole('button', { name: 'Copy bulk commands' });
+    act(() => bulk.focus());
+    fireEvent.keyDown(bulk, { key: 'c' });
+    await waitFor(() =>
+      expect(copy).toHaveBeenCalledWith(
+        `openplanr backlog update ${selected.dataset.keyboardItem} --status in-progress`,
+      ),
+    );
+    const sprint = screen.getByRole('button', { name: 'Copy sprint command' });
+    act(() => sprint.focus());
+    fireEvent.keyDown(sprint, { key: 'c' });
+    await waitFor(() => expect(copy).toHaveBeenLastCalledWith('/planr:sprint'));
+  } finally {
+    dispose();
+  }
 });

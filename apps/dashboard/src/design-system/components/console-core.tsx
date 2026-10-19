@@ -26,6 +26,8 @@ export type ButtonProps = Readonly<{
   onClick?: () => void;
   ariaLabel?: string;
   'aria-expanded'?: boolean;
+  'aria-pressed'?: boolean;
+  'data-copy-command'?: 'true';
   disabledReason?: string;
 }>;
 
@@ -46,6 +48,8 @@ export function Button({
   onClick,
   ariaLabel,
   'aria-expanded': ariaExpanded,
+  'aria-pressed': ariaPressed,
+  'data-copy-command': copyCommand,
   disabledReason,
 }: ButtonProps) {
   const reasonId = useId();
@@ -63,6 +67,8 @@ export function Button({
         aria-describedby={disabledReason ? reasonId : undefined}
         aria-label={ariaLabel}
         aria-expanded={ariaExpanded}
+        aria-pressed={ariaPressed}
+        data-copy-command={copyCommand}
         onClick={onClick}
       >
         {loading ? (
@@ -691,6 +697,11 @@ export type DataTableProps<Row extends { readonly id: string }> = Readonly<{
   caption?: string;
   emptyMessage?: string;
   selectedId?: string;
+  selectedIds?: ReadonlySet<string>;
+  onRowSelect?: (row: Row) => void;
+  rowCount?: number;
+  rowPosition?: (row: Row) => number;
+  rowHref?: (row: Row) => string | null;
   sort?: DataTableSort;
   onSort?: (key: string) => void;
   onRowClick?: (row: Row) => void;
@@ -713,6 +724,11 @@ export function DataTable<Row extends { readonly id: string }>({
   caption,
   emptyMessage = 'Nothing here yet.',
   selectedId,
+  selectedIds,
+  onRowSelect,
+  rowCount,
+  rowPosition,
+  rowHref,
   sort,
   onSort,
   onRowClick,
@@ -721,6 +737,12 @@ export function DataTable<Row extends { readonly id: string }>({
   const activate = (row: Row) => onRowClick?.(row);
   const onRowKey = (event: KeyboardEvent<HTMLTableRowElement>, row: Row) => {
     if (!onRowClick) return;
+    if (event.target !== event.currentTarget) return;
+    if (event.key === ' ' && onRowSelect) {
+      event.preventDefault();
+      onRowSelect(row);
+      return;
+    }
     if (event.key === 'Enter' || event.key === ' ') {
       event.preventDefault();
       activate(row);
@@ -730,6 +752,7 @@ export function DataTable<Row extends { readonly id: string }>({
     <div className="pc-table-wrap" data-scroll-context={caption ?? 'table'}>
       <table
         className="pc-table"
+        aria-rowcount={rowCount === undefined ? undefined : rowCount + 1}
         data-compact={compact || undefined}
         data-interactive={onRowClick ? true : undefined}
       >
@@ -793,6 +816,9 @@ export function DataTable<Row extends { readonly id: string }>({
             rows.map((row) => (
               <tr
                 key={row.id}
+                aria-rowindex={rowPosition ? rowPosition(row) + 1 : undefined}
+                aria-selected={selectedIds ? selectedIds.has(row.id) : undefined}
+                data-done={(row as { status?: string }).status === 'done' || undefined}
                 data-keyboard-item={onRowClick ? row.id : undefined}
                 data-selected={selectedId !== undefined && row.id === selectedId ? true : undefined}
                 tabIndex={onRowClick ? 0 : undefined}
@@ -822,7 +848,24 @@ export function DataTable<Row extends { readonly id: string }>({
                     data-mono={column.mono || undefined}
                     style={{ maxWidth: column.width }}
                   >
-                    {column.render ? column.render(row) : cellValue(row, column.key)}
+                    {rowHref && column.key === 'id' && rowHref(row) ? (
+                      <a
+                        href={rowHref(row) ?? undefined}
+                        onClick={(event) => {
+                          if (event.metaKey || event.ctrlKey || event.altKey || event.shiftKey)
+                            return;
+                          event.preventDefault();
+                          event.currentTarget.closest('tr')?.focus({ preventScroll: true });
+                          activate(row);
+                        }}
+                      >
+                        {column.render ? column.render(row) : cellValue(row, column.key)}
+                      </a>
+                    ) : column.render ? (
+                      column.render(row)
+                    ) : (
+                      cellValue(row, column.key)
+                    )}
                   </td>
                 ))}
               </tr>

@@ -79,3 +79,177 @@
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
 }
+
+.pc-list__presets,
+.pc-list__dates,
+.pc-list__selection {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.pc-list__presets button[aria-pressed="true"] {
+  color: var(--op-text);
+  background: var(--op-accent-soft);
+  box-shadow: inset 0 0 0 1px var(--op-accent);
+}
+
+.pc-list__preset-count {
+  display: inline-block;
+  min-width: 4ch;
+  font: var(--pc-type-mono-sm);
+  font-variant-numeric: tabular-nums;
+  color: var(--pc-text-tertiary);
+}
+
+.pc-list__window {
+  block-size: 560px;
+  overflow: auto;
+  overflow-anchor: none;
+  scroll-padding-block: 44px;
+}
+
+.pc-list__group-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font: var(--pc-type-mono-sm);
+  color: var(--pc-text-secondary);
+}
+
+.pc-list__group-meta progress {
+  width: 120px;
+  height: 5px;
+  accent-color: var(--op-accent);
+}
+
+.pc-list__title {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pc-list__labels {
+  display: flex;
+  gap: 4px;
+  overflow: hidden;
+}
+
+.pc-list__labels > span {
+  padding: 1px 7px;
+  border: 1px solid var(--pc-border-default);
+  border-radius: 999px;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.pc-list .pc-table td {
+  height: 46px;
+  padding-block: 0;
+}
+
+.pc-list .pc-table[data-compact] td {
+  height: 36px;
+}
+
+.pc-list .pc-table-wrap {
+  overflow: visible;
+}
+
+.pc-list .pc-table thead {
+  position: sticky;
+  inset-block-start: 0;
+  z-index: 1;
+  background: var(--pc-surface-panel);
+}
+
+.pc-list tr[data-done] td {
+  color: var(--pc-status-done-fg);
+}
+
+.pc-list tr[data-selected="true"] {
+  background: var(--op-accent-soft);
+  box-shadow: inset 3px 0 var(--op-accent);
+}
+
+.pc-list__feedback {
+  min-height: 2.8em;
+  margin: 0;
+  font: var(--pc-type-body-sm);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 899px) {
+  .pc-list .pc-table[data-compact] td,
+  .pc-list .pc-table td {
+    height: 46px;
+  }
+
+  .pc-list :is(button, select, input) {
+    min-height: 44px;
+  }
+}
+
+.pc-list fieldset {
+  min-inline-size: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.pc-list__commands pre {
+  max-height: 120px;
+  overflow: auto;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.pc-list__sprint-command {
+  font: var(--pc-type-mono-sm);
+  color: var(--pc-text-secondary);
+}
+
+.pc-list__selection-count {
+  inline-size: min(100%, 42ch);
+  font-variant-numeric: tabular-nums;
+}
+
+.pc-list__feedback {
+  block-size: 56px;
+  min-height: 56px;
+  overflow: auto;
+}
+
+.pc-list__commands pre,
+.pc-list__skipped ul {
+  block-size: 120px;
+  overflow: auto;
+}
+
+.pc-list__relative {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  font: var(--pc-type-body-sm);
+  color: var(--pc-text-secondary);
+}
+
+.pc-list__relative input {
+  inline-size: 80px;
+  min-height: 36px;
+  padding: 4px 8px;
+  color: var(--pc-text-primary);
+  background: var(--pc-surface-card);
+  border: 1px solid var(--op-accent);
+  border-radius: 8px;
+}
+
+@media (max-width: 899px) {
+  .pc-list .pc-list__relative input {
+    min-height: 44px;
+  }
+}
