@@ -20,6 +20,7 @@ import {
 import {
   handlePlanningDetail,
   handlePlanningEvents,
+  handlePlanningFileLink,
   handlePlanningGraph,
 } from './planning-routes.mjs';
 import { assertLoopbackRequest } from './platform.mjs';
@@ -73,6 +74,12 @@ export const DASHBOARD_ROUTES = Object.freeze(
       method: 'GET',
       match: pathPrefix('/api/planning/detail/'),
       handle: handlePlanningDetail,
+      family: 'planning',
+    },
+    {
+      method: 'GET',
+      match: pathPrefix('/api/planning/file-link/'),
+      handle: handlePlanningFileLink,
       family: 'planning',
     },
     {

@@ -1,5 +1,10 @@
 /** Planning routes: the bound graph snapshot, node detail and the live event stream. */
 
+import { dirname } from 'node:path';
+import {
+  assertPlanningFileLinkEnvelope,
+  validPlanningFilePath,
+} from '../planning-file-link-contracts.mjs';
 import { sha256Jcs } from './operate.mjs';
 import {
   assertPlanningDetailEnvelope,
@@ -15,6 +20,11 @@ import {
   validLiveBinding,
   validPlanningSubject,
 } from './planning.mjs';
+import {
+  declaredPlanningFiles,
+  readPlanningFileLinkArtifact,
+  resolvePlanningFileLink,
+} from './planning-file-links.mjs';
 import {
   planningBindingError,
   planningJson,
@@ -127,6 +137,80 @@ export function handlePlanningDetail(context) {
     nodeHash: sha256Jcs(node),
   });
   return planningJson(res, 200, envelope);
+}
+
+export function handlePlanningFileLink(context) {
+  const { dashboard, req, res, url, pathname } = context;
+  const params = new URLSearchParams(url.searchParams);
+  const extraKeys = ['file', 'sourceViewHash'];
+  if (extraKeys.some((key) => params.getAll(key).length !== 1))
+    return planningResponseError(res, 400);
+  const file = params.get('file');
+  const sourceViewHash = params.get('sourceViewHash');
+  for (const key of extraKeys) params.delete(key);
+  const binding = planningRequestBinding(
+    req,
+    params,
+    dashboard.project.projectId,
+    dashboard.planningActorId,
+  );
+  if (!binding) return planningBindingError(res);
+  const rawSubject = pathname.slice('/api/planning/file-link/'.length);
+  let nodeId;
+  try {
+    nodeId = decodeURIComponent(rawSubject);
+  } catch {
+    return planningResponseError(res, 400);
+  }
+  if (
+    !validPlanningSubject(nodeId) ||
+    rawSubject.includes('/') ||
+    encodeURIComponent(nodeId) !== rawSubject
+  )
+    return planningResponseError(res, 400);
+  const { planning } = dashboard;
+  const graph = planning.peekGraph();
+  if (!graph) return planningResponseError(res);
+  const cursor = planning.cursor();
+  if (sourceViewHash !== cursor.viewHash) return planningResponseError(res);
+  const summary = graph.nodes.find((node) => node.id === nodeId);
+  if (!summary) return planningResponseError(res, 404);
+  const respond = (result, path = null) =>
+    planningJson(
+      res,
+      200,
+      assertPlanningFileLinkEnvelope(
+        {
+          kind: 'planning-file-link',
+          schemaVersion: '1.0.0',
+          binding,
+          cursor,
+          sourceViewHash: cursor.viewHash,
+          nodeId,
+          path,
+          ...result,
+        },
+        { binding, cursor, nodeId },
+      ),
+    );
+  const refuse = (reason) =>
+    respond({ state: 'unavailable', reason, errorCode: null, editorUrl: null });
+  if (!validPlanningFilePath(file) || encodeURIComponent(file).length > 1024)
+    return refuse(
+      'The file path must be a repository-relative path without traversal, encoded segments or Windows separators, at most 1024 characters.',
+    );
+  const selected = readPlanningFileLinkArtifact(dashboard.planrDir, summary);
+  if (!selected.detail) return respond(selected.result);
+  const detail = selected.detail;
+  const summaryFields = Object.fromEntries(
+    Object.entries(detail.node).filter(([key]) => key !== 'body'),
+  );
+  if (sha256Jcs(summaryFields) !== sha256Jcs(summary) || !sameLiveCursor(cursor, planning.cursor()))
+    return planningResponseError(res);
+  const files = declaredPlanningFiles(detail.node);
+  if (validPlanningFilePath(detail.sourcePath)) files.add(detail.sourcePath);
+  if (!files.has(file)) return refuse('The selected artifact does not declare this file.');
+  return respond(resolvePlanningFileLink(dirname(dashboard.planrDir), file), file);
 }
 
 export function handlePlanningEvents(context) {

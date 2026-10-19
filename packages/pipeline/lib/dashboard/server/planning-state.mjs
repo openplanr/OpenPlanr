@@ -225,6 +225,7 @@ export function createPlanningState({ planrDir, getGraph, getNode: suppliedGetNo
     clients: new Set(),
     readFreshGraph,
     ensureGraph,
+    peekGraph: () => currentGraph,
     readNode,
     cursor: planningCursor,
     graphEnvelope: planningGraphEnvelope,

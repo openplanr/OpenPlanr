@@ -32,6 +32,8 @@ import { createPlanningReadModel, createReferenceResolver } from './graph-read-m
 // Arbitrary nested objects remain outside this dependency-free reader.
 
 const FLAT_MAP_ARRAY_KEYS = new Set(['acceptanceCriteria', 'preserve']);
+const sourceReads = new Map();
+const MAX_SOURCE_READS = 16;
 
 function stripQuotes(raw) {
   const s = raw.trim();
@@ -365,11 +367,12 @@ function legacyAdrMetadata(filename, body) {
  * @param {string} planrDir absolute path to the `.planr/` directory
  * @param {boolean} includeBody include the markdown body on the node
  */
-function buildNode(absPath, planrDir, includeBody) {
+function buildNode(absPath, planrDir, includeBody, throwOnReadError = false) {
   let text;
   try {
     text = readFileSync(absPath, 'utf-8');
-  } catch {
+  } catch (error) {
+    if (throwOnReadError) throw error;
     return null;
   }
   const { raw, body, hasFrontmatter } = splitFrontmatter(text);
@@ -517,6 +520,10 @@ function readGraphData(planrDir, opts = {}, sourcePaths = new Map(), diagnostics
     }
   }
 
+  // Reuse the source map already computed for diagnostics, including duplicate-ID precedence.
+  sourceReads.delete(planrDir);
+  sourceReads.set(planrDir, sourcePaths);
+  if (sourceReads.size > MAX_SOURCE_READS) sourceReads.delete(sourceReads.keys().next().value);
   return graph;
 }
 
@@ -542,4 +549,13 @@ export function readNode(planrDir, id) {
   if (!id) return null;
   const graph = readGraph(planrDir, { includeBody: true, validate: false });
   return graph.nodes.find((n) => n.id === id) ?? null;
+}
+
+export function findPlanningArtifactSource(planrDir, id) {
+  const source = sourceReads.get(planrDir)?.get(id);
+  return source ? join(planrDir, source) : null;
+}
+
+export function readPlanningArtifactNode(file, planrDir) {
+  return buildNode(file, planrDir, true, true);
 }

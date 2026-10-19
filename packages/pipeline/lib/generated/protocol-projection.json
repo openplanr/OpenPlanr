@@ -106,6 +106,18 @@
       "mode": "644"
     },
     {
+      "source": "packages/protocol/lib/dashboard/planning-file-link-contracts.d.mts",
+      "target": "lib/dashboard/planning-file-link-contracts.d.mts",
+      "sha256": "e4531ade4c7ef5cfd401efd69fbfb94e1ef3084e6466b5cc014a32a8f3a3a1dd",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/lib/dashboard/planning-file-link-contracts.mjs",
+      "target": "lib/dashboard/planning-file-link-contracts.mjs",
+      "sha256": "6869eb939e2d1f84618f1a1c4f92868260b3119a507e3c7ac5adfd14d1c2fd56",
+      "mode": "644"
+    },
+    {
       "source": "packages/protocol/projections/pipeline/lib/protocol/bounded-json-data.d.mts",
       "target": "lib/protocol/bounded-json-data.d.mts",
       "sha256": "f5a8d0c4df7a53e82f23cd6b857810f8cf761b17f6bdcc2d1dc3f0bb35538f60",
