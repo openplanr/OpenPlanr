@@ -8,7 +8,7 @@ import {
 } from './browser/trace-results';
 
 describe('trace budget selection', () => {
-  it('keeps local remount and rAF limits at the reference budgets', () => {
+  it('enforces local remount and rAF limits at the reference budgets', () => {
     expect(traceBudgetPolicy(false)).toEqual({
       budgetSet: 'local',
       remountRendererMainP95Ms: 16,
@@ -16,10 +16,10 @@ describe('trace budget selection', () => {
     });
   });
 
-  it('uses runner remount headroom and reports rAF without a failing limit', () => {
+  it('reports runner remount and rAF without failing limits', () => {
     expect(traceBudgetPolicy(true)).toEqual({
       budgetSet: 'runner',
-      remountRendererMainP95Ms: 24,
+      remountRendererMainP95Ms: null,
       rafIntervalP95Ms: null,
     });
   });

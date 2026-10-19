@@ -121,12 +121,14 @@ seeded screen points outside each interaction window. Each point repeats queries
 until its batch spans at least 1 ms; the report includes actual call counts and
 unrounded milliseconds per query. A separate 968-node remount trace gates its 16 ms main-thread
 p95 and checks at most 200 admissions per frame across at least five frames.
-Only `CI=true` selects runner budgets: the remount main-thread p95 limit is 24 ms,
-and rAF intervals remain recorded without a failing assertion because software GL
-can present at 30 fps. Every other budget and gate stays unchanged. The printed table,
+Only `CI=true` selects runner budgets: remount main-thread p95 and rAF intervals
+remain recorded without failing assertions because software GL has noisy remount
+timings and can present at 30 fps. Local remounts keep the 16 ms limit enforced.
+Every other budget and gate stays unchanged. The printed table,
 JSON report and its attachment identify the `local` or `runner` budget set and
-effective limits. The JSON retains reference limits; a `null` effective rAF limit
-means it is reported only.
+effective limits. Runner remounts show `reported (reference 16)` in the table,
+JSON report and attachment. The JSON retains reference limits; a `null` effective
+remount or rAF limit means it is reported only.
 The 5,000 SVG stress tier remains reported. Browser traces
 require the external browser runner; results depend on its GPU and rendering mode.
 The overview comparison records main-thread work, worst frames, bitmap bytes and

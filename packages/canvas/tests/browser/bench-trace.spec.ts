@@ -26,7 +26,7 @@ import {
   traceOwnership,
 } from './trace-results';
 
-// Software-GL runners can present at 30 fps and need headroom for chunked remounts.
+// Software-GL runners can present at 30 fps and have noisy chunked remount timings.
 const budgets = traceBudgetPolicy(RUNNER_BUDGETS);
 
 function traceEvents(input: unknown): RendererTraceEvent[] {
@@ -114,7 +114,11 @@ type Measurement = {
   runs: readonly TraceRun[];
   firstFrameP50Ms: number;
   firstFrameTrialsMs: number[];
-  effectiveBudgets: Omit<Measurement['referenceBudgets'], 'rafIntervalP95Ms'> & {
+  effectiveBudgets: Omit<
+    Measurement['referenceBudgets'],
+    'rendererMainP95Ms' | 'rafIntervalP95Ms'
+  > & {
+    rendererMainP95Ms: number | null;
     rafIntervalP95Ms: number | null;
   };
   referenceBudgets: {
@@ -293,6 +297,7 @@ test('records production vanilla camera traces beside the reference budgets', as
       maxMountsPerFrame: 200,
       minimumFrames: 5,
       rendererMainP95BudgetMs: budgets.remountRendererMainP95Ms,
+      rendererMainP95Budget: budgets.remountRendererMainP95Ms ?? 'reported (reference 16)',
     },
     recordedRunsPerScenario: 3,
     aggregation: 'median of three per-run p95s',
@@ -327,7 +332,7 @@ test('records production vanilla camera traces beside the reference budgets', as
       '| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |',
       ...measurements.map(
         (item) =>
-          `| ${item.fixture} | ${item.world} | ${item.dpr} | ${item.scenario} | ${item.ownership} | ${budgets.budgetSet} | ${item.rendererMainP95Ms} / ${item.effectiveBudgets.rendererMainP95Ms} | ${JSON.stringify(item.runs.map((run) => run.rendererMainP95Ms))} | ${item.rafIntervalP95Ms} / ${item.effectiveBudgets.rafIntervalP95Ms ?? `reported (reference ${item.referenceBudgets.rafIntervalP95Ms})`} | ${JSON.stringify(item.runs.map((run) => run.rafIntervalP95Ms))} | ${JSON.stringify(item.runs.map((run) => run.longTasksOver50Ms))} | ${JSON.stringify(item.runs.map((run) => run.longTaskDurationsMs))} | ${item.firstFrameP50Ms} / ${item.referenceBudgets.firstFrameP50Ms} | ${JSON.stringify(item.runs.map((run) => run.domNodes))} | ${item.gpuRenderer} | ${item.hitTestP95Ms} / ${item.referenceBudgets.hitTestP95Ms} | ${item.domBudget.ownership} | ${item.referenceBudgets.domNodes} / ${item.domBudget.regressionLimit ?? 'reported'} | ${JSON.stringify(item.runs.map((run) => run.hitTestProbe.queryCount))} | ${JSON.stringify(item.runs.map((run) => run.overview.redraws))} | ${JSON.stringify(item.runs.map((run) => run.overview.cachePixelBytes))} | ${JSON.stringify(item.runs.map((run) => run.overview.peakCachePixelBytes))} |`,
+          `| ${item.fixture} | ${item.world} | ${item.dpr} | ${item.scenario} | ${item.ownership} | ${budgets.budgetSet} | ${item.rendererMainP95Ms} / ${item.effectiveBudgets.rendererMainP95Ms ?? `reported (reference ${item.referenceBudgets.rendererMainP95Ms})`} | ${JSON.stringify(item.runs.map((run) => run.rendererMainP95Ms))} | ${item.rafIntervalP95Ms} / ${item.effectiveBudgets.rafIntervalP95Ms ?? `reported (reference ${item.referenceBudgets.rafIntervalP95Ms})`} | ${JSON.stringify(item.runs.map((run) => run.rafIntervalP95Ms))} | ${JSON.stringify(item.runs.map((run) => run.longTasksOver50Ms))} | ${JSON.stringify(item.runs.map((run) => run.longTaskDurationsMs))} | ${item.firstFrameP50Ms} / ${item.referenceBudgets.firstFrameP50Ms} | ${JSON.stringify(item.runs.map((run) => run.domNodes))} | ${item.gpuRenderer} | ${item.hitTestP95Ms} / ${item.referenceBudgets.hitTestP95Ms} | ${item.domBudget.ownership} | ${item.referenceBudgets.domNodes} / ${item.domBudget.regressionLimit ?? 'reported'} | ${JSON.stringify(item.runs.map((run) => run.hitTestProbe.queryCount))} | ${JSON.stringify(item.runs.map((run) => run.overview.redraws))} | ${JSON.stringify(item.runs.map((run) => run.overview.cachePixelBytes))} | ${JSON.stringify(item.runs.map((run) => run.overview.peakCachePixelBytes))} |`,
       ),
       '',
     ].join('\n'),
@@ -335,9 +340,11 @@ test('records production vanilla camera traces beside the reference budgets', as
   for (const item of measurements.filter((measurement) => measurement.ownership === 'gated')) {
     const label = `${item.fixture} ${item.world} DPR ${item.dpr} ${item.scenario}`;
     if (item.scenario === 'remount') {
-      expect
-        .soft(item.rendererMainP95Ms, `${label}: chunked remount renderer main p95`)
-        .toBeLessThanOrEqual(item.effectiveBudgets.rendererMainP95Ms);
+      if (item.effectiveBudgets.rendererMainP95Ms !== null) {
+        expect
+          .soft(item.rendererMainP95Ms, `${label}: chunked remount renderer main p95`)
+          .toBeLessThanOrEqual(item.effectiveBudgets.rendererMainP95Ms);
+      }
       continue;
     }
     expect

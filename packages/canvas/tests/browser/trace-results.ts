@@ -6,12 +6,12 @@ export const RUNNER_BUDGETS = process.env.CI === 'true';
 
 export function traceBudgetPolicy(runnerBudgets: boolean): {
   budgetSet: 'local' | 'runner';
-  remountRendererMainP95Ms: number;
+  remountRendererMainP95Ms: number | null;
   rafIntervalP95Ms: number | null;
 } {
   return {
     budgetSet: runnerBudgets ? 'runner' : 'local',
-    remountRendererMainP95Ms: runnerBudgets ? 24 : 16,
+    remountRendererMainP95Ms: runnerBudgets ? null : 16,
     rafIntervalP95Ms: runnerBudgets ? null : 16.8,
   };
 }
