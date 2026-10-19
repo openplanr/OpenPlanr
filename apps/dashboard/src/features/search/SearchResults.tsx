@@ -2,7 +2,7 @@
 import { PcIcon, type PcIconName } from '../../design-system/components/index.js';
 import type { DashboardSearchHit, DashboardUnsupportedIdentity } from './search-index.js';
 
-const GROUP_ORDER = Object.freeze(['route', 'planning', 'operate', 'command'] as const);
+const GROUP_ORDER = Object.freeze(['planning', 'route', 'operate', 'command'] as const);
 const GROUP_LABEL = Object.freeze({
   route: 'Go to',
   planning: 'Planning work',
@@ -77,7 +77,7 @@ export function SearchResults({
   }
 
   return (
-    <div className="pc-palette__results">
+    <div className="pc-palette__results" id={listId}>
       {GROUP_ORDER.map((source) => {
         const rows = grouped[source];
         const occurrences = new Map<string, number>();
@@ -121,6 +121,11 @@ export function SearchResults({
                       onClick={() => onSelect(hit)}
                     >
                       <PcIcon name={GROUP_ICON[source]} size={14} />
+                      {hit.source === 'planning' ? (
+                        <span className="pc-palette__row-id">
+                          {hit.id.slice('planning:'.length)}
+                        </span>
+                      ) : null}
                       <span className="pc-palette__row-title">{hit.title}</span>
                       <span className="pc-palette__row-hint">{humanLabel(hit.kind)}</span>
                     </button>

@@ -64,7 +64,10 @@ export function usePlanningViewFocus(
 }
 
 /** Live patches update values in place; only a user presentation change reorders survivors. */
-export function useLiveListOrder(nodes: readonly PlanningModelNode[], presentationKey: string) {
+export function useLiveListOrder<T extends Readonly<{ id: string }>>(
+  nodes: readonly T[],
+  presentationKey: string,
+) {
   const previous = useRef<{ key: string; ids: readonly string[] } | null>(null);
   const ordered = useMemo(() => {
     const byId = new Map(nodes.map((node) => [node.id, node]));

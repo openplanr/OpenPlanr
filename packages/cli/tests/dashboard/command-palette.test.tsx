@@ -3,7 +3,8 @@
 import { readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { userEvent } from '@testing-library/user-event';
 import axe from 'axe-core';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it, vi } from 'vitest';
@@ -22,6 +23,7 @@ import {
 } from '../../../../apps/dashboard/src/features/search/search-index.js';
 import { createSearchKeyNav } from '../../../../apps/dashboard/src/features/search/search-key-nav.js';
 import { useInspectorStore } from '../../../../apps/dashboard/src/features/shell/inspector-selection.js';
+import { buildPremiumDashboardFixture } from './fixtures/premium-dashboard-fixtures.js';
 
 const TEST_ROOT = dirname(fileURLToPath(import.meta.url));
 const PRODUCTION_SOURCE = [
@@ -587,6 +589,272 @@ describe('command palette and callable search UI', () => {
           rules: { 'color-contrast': { enabled: false } },
         })
       ).violations,
+    ).toEqual([]);
+  });
+
+  it('ranks an exact scoped ID first across the complete fixture and previews without navigation or reads', () => {
+    const fixture = buildPremiumDashboardFixture('artboard');
+    const graph = fixture.graph;
+    expect(graph.nodes).toHaveLength(708);
+    const onNavigate = vi.fn();
+    const originalHash = window.location.hash;
+    const onClose = vi.fn();
+    render(
+      <CommandPalette
+        open
+        onClose={onClose}
+        onNavigate={onNavigate}
+        sources={{ planningNodes: graph.nodes, planningGraph: graph }}
+        initialQuery="SPEC-014/T-046"
+      />,
+    );
+    const preview = screen.getByRole('complementary', { name: 'Search result preview' });
+    expect(preview.getAttribute('data-preview-id')).toBe('SPEC-014/T-046');
+    expect(preview.textContent).toContain('/planr:ship SPEC-014/T-046');
+    expect(within(preview).getByRole('region', { name: 'Structural trace' }).textContent).toContain(
+      'SPEC-014',
+    );
+    expect(
+      within(preview).getByRole('region', { name: 'Preview dependencies' }).textContent,
+    ).toContain('T-045');
+    const first = document.querySelector('[data-search-result]');
+    expect(first?.getAttribute('data-search-result')).toBe('planning:SPEC-014/T-046');
+    expect(onNavigate).not.toHaveBeenCalled();
+    expect(onClose).not.toHaveBeenCalled();
+    expect(window.location.hash).toBe(originalHash);
+  });
+
+  it('keeps exact identity ahead of a longer title match and deterministic ties', () => {
+    const index = buildDashboardSearchIndex({
+      planningNodes: [
+        { ...planningNodes[0], id: 'SPEC-001', title: 'SPEC-020 SPEC-020 SPEC-020' },
+        { ...planningNodes[0], title: 'Actual identity' },
+      ],
+    });
+    expect(queryDashboardSearchIndex(index, 'spec-020')[0].id).toBe('planning:SPEC-020');
+  });
+
+  it('changes the preview with arrows and trace links while retaining the route', () => {
+    const onNavigate = vi.fn();
+    render(
+      <CommandPalette
+        open
+        onClose={() => undefined}
+        onNavigate={onNavigate}
+        sources={sources}
+        initialQuery="@spec"
+      />,
+    );
+    const preview = screen.getByRole('complementary', { name: 'Search result preview' });
+    const query = screen.getByRole('searchbox');
+    expect(preview.getAttribute('data-preview-id')).toBe('SPEC-020');
+    fireEvent.click(within(preview).getByRole('link', { name: /US-013/u }));
+    expect(preview.getAttribute('data-preview-id')).toBe('SPEC-020/US-013');
+    expect((query as HTMLInputElement).value).toBe('SPEC-020/US-013');
+    fireEvent.change(query, { target: { value: '@view' } });
+    fireEvent.keyDown(query, { key: 'ArrowDown' });
+    fireEvent.keyDown(query, { key: 'ArrowDown' });
+    expect(preview.getAttribute('data-preview-id')).toBe(hitsFor('@view')[1].id);
+    expect(onNavigate).not.toHaveBeenCalled();
+  });
+
+  it('keeps selected identity, focus and both scroll positions through a live snapshot replacement', () => {
+    const fixture = buildPremiumDashboardFixture('artboard');
+    const graph = fixture.graph;
+    const subject = render(
+      <CommandPalette
+        open
+        onClose={() => undefined}
+        sources={{ planningNodes: graph.nodes, planningGraph: graph }}
+        initialQuery="handoff"
+      />,
+    );
+    const result = screen.getByRole('button', { name: /Design-to-Delivery Handoff Center/u });
+    act(() => result.focus());
+    const preview = screen.getByRole('complementary', { name: 'Search result preview' });
+    const list = subject.container.querySelector('.pc-palette__results') as HTMLElement;
+    preview.scrollTop = 70;
+    list.scrollTop = 42;
+    const nodes = graph.nodes.map((node) =>
+      node.id === 'SPEC-014' ? { ...node, status: 'done' as const } : node,
+    );
+    subject.rerender(
+      <CommandPalette
+        open
+        onClose={() => undefined}
+        sources={{ planningNodes: nodes, planningGraph: { ...graph, nodes } }}
+        initialQuery="handoff"
+      />,
+    );
+    expect(document.activeElement).toBe(result);
+    expect(result.getAttribute('data-active')).toBe('true');
+    expect(preview.getAttribute('data-preview-id')).toBe('SPEC-014');
+    expect(preview.textContent).toContain('Done');
+    expect(preview.scrollTop).toBe(70);
+    expect(list.scrollTop).toBe(42);
+  });
+
+  it('traps Tab around results and preview controls without using it as a type filter', async () => {
+    const user = userEvent.setup();
+    render(
+      <CommandPalette open onClose={() => undefined} sources={sources} initialQuery="Callable" />,
+    );
+    const input = screen.getByRole('searchbox');
+    const dialog = screen.getByRole('dialog');
+    const controls = [
+      ...dialog.querySelectorAll<HTMLElement>('button:not(:disabled), a[href], input'),
+    ];
+    await user.tab({ shift: true });
+    expect(document.activeElement).toBe(controls[controls.length - 1]);
+    await user.tab();
+    expect(document.activeElement).toBe(input);
+    await user.tab();
+    expect(document.activeElement).toBe(controls[1]);
+    expect((input as HTMLInputElement).value).toBe('Callable');
+  });
+
+  it('prioritizes the preview command when C is focused there instead of copying the selected ID', async () => {
+    const onCopy = vi.fn(async () => undefined);
+    render(
+      <CommandPalette
+        open
+        onClose={() => undefined}
+        onCopy={onCopy}
+        sources={sources}
+        initialQuery="Callable"
+      />,
+    );
+    const preview = screen.getByRole('complementary', { name: 'Search result preview' });
+    const copy = within(preview).getByRole('button', { name: /Copy command/u });
+    act(() => copy.focus());
+    fireEvent.keyDown(copy, { key: 'c' });
+    await waitFor(() =>
+      expect(onCopy).toHaveBeenCalledExactlyOnceWith('openplanr status SPEC-020/US-013 --md'),
+    );
+  });
+
+  it('copies the selected ID from trace focus while leaving editable fields alone', async () => {
+    const onCopy = vi.fn(async () => undefined);
+    render(
+      <CommandPalette
+        open
+        onClose={() => undefined}
+        onCopy={onCopy}
+        sources={sources}
+        initialQuery="Callable"
+      />,
+    );
+    const preview = screen.getByRole('complementary', { name: 'Search result preview' });
+    const traceLink = within(preview).getByRole('link', { name: /US-013/u });
+    act(() => traceLink.focus());
+    fireEvent.keyDown(traceLink, { key: 'c' });
+    await waitFor(() => expect(onCopy).toHaveBeenCalledExactlyOnceWith('SPEC-020/US-013'));
+    fireEvent.keyDown(screen.getByRole('searchbox'), { key: 'c' });
+    expect(onCopy).toHaveBeenCalledTimes(1);
+  });
+
+  it('guards preview command keys during composition and newer modals, and promotes with Cmd/Ctrl-Enter', () => {
+    const onCopy = vi.fn(async () => undefined);
+    const onNavigate = vi.fn();
+    render(
+      <CommandPalette
+        open
+        onClose={() => undefined}
+        onCopy={onCopy}
+        onNavigate={onNavigate}
+        sources={sources}
+        initialQuery="Callable"
+      />,
+    );
+    const preview = screen.getByRole('complementary', { name: 'Search result preview' });
+    const copy = within(preview).getByRole('button', { name: /Copy command/u });
+    const query = screen.getByRole('searchbox');
+    act(() => copy.focus());
+    fireEvent.compositionStart(query);
+    fireEvent.keyDown(copy, { key: 'c' });
+    fireEvent.compositionEnd(query);
+    for (const event of [
+      { key: 'c', isComposing: true },
+      { key: 'c', keyCode: 229 },
+      { key: 'C', shiftKey: true },
+    ])
+      fireEvent.keyDown(copy, event);
+    const modal = document.createElement('dialog');
+    modal.setAttribute('open', '');
+    document.body.append(modal);
+    fireEvent.keyDown(copy, { key: 'c' });
+    modal.remove();
+    expect(onCopy).not.toHaveBeenCalled();
+    fireEvent.keyDown(copy, { key: 'Enter', ctrlKey: true });
+    expect(onNavigate).toHaveBeenCalledExactlyOnceWith(hitsFor('Callable')[0].href);
+    expect(onCopy).not.toHaveBeenCalled();
+  });
+
+  it('discards clipboard feedback from a replaced source even when its write resolves late', async () => {
+    let finish: (() => void) | undefined;
+    const onCopy = vi.fn(
+      () =>
+        new Promise<void>((resolve) => {
+          finish = resolve;
+        }),
+    );
+    const subject = render(
+      <CommandPalette
+        open
+        onClose={() => undefined}
+        onCopy={onCopy}
+        sources={sources}
+        initialQuery="Callable"
+      />,
+    );
+    const result = screen.getByRole('button', { name: /Callable search/u });
+    fireEvent.keyDown(result, { key: 'c' });
+    expect(screen.getByRole('status').textContent).toContain('Copying ID');
+    subject.rerender(
+      <CommandPalette
+        open
+        onClose={() => undefined}
+        onCopy={onCopy}
+        sources={{ planningNodes: [] }}
+        initialQuery="@view"
+      />,
+    );
+    await act(async () => finish?.());
+    expect(screen.queryByRole('textbox', { name: 'Canonical ID to copy manually' })).toBeNull();
+    expect(subject.container.textContent).not.toContain('ID copied.');
+    expect(subject.container.textContent).not.toContain('SPEC-020/US-013');
+  });
+
+  it('keeps unavailable, empty and offline previews truthful and exposes full Search', () => {
+    const onNavigate = vi.fn();
+    const subject = render(
+      <CommandPalette
+        open
+        onClose={() => undefined}
+        onNavigate={onNavigate}
+        sources={{ ...sources, planningPresentation: 'offline' }}
+        initialQuery="Callable"
+      />,
+    );
+    const preview = screen.getByRole('complementary', { name: 'Search result preview' });
+    expect(preview.textContent).toContain('Last validated planning snapshot');
+    fireEvent.change(screen.getByRole('searchbox'), { target: { value: 'zzzzzzzzz' } });
+    expect(preview.getAttribute('data-preview-state')).toBe('unavailable');
+    expect(preview.textContent).toContain('Preview unavailable');
+    fireEvent.change(screen.getByRole('searchbox'), { target: { value: 'Unsupported' } });
+    expect(preview.textContent).not.toContain('/planr:ship');
+    expect(subject.container.textContent).not.toContain(PRIVATE_MARKER);
+    fireEvent.click(screen.getByRole('button', { name: 'Full Search' }));
+    expect(onNavigate).toHaveBeenCalledExactlyOnceWith('#/search');
+  });
+
+  it('keeps the open preview dialog axe-clean', async () => {
+    const subject = render(
+      <CommandPalette open onClose={() => undefined} sources={sources} initialQuery="Callable" />,
+    );
+    expect(
+      (await axe.run(subject.container, { rules: { 'color-contrast': { enabled: false } } }))
+        .violations,
     ).toEqual([]);
   });
 

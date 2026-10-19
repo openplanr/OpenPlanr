@@ -4,10 +4,16 @@ import {
   canonicalClosedDashboardHref,
   closedDashboardDestinations,
 } from '../../lib/routing/operate-routes.js';
-import type { PlanningModelNode } from '../planning/planning-model.js';
+import type {
+  PlanningModelGraph,
+  PlanningModelNode,
+  PlanningSearchIndex,
+} from '../planning/planning-model.js';
 import {
   buildPlanningSearchIndex,
   planningDetailHref,
+  planningDisplayId,
+  planningRouteSubjectId,
   queryPlanningSearchIndex,
 } from '../planning/planning-model.js';
 
@@ -15,7 +21,15 @@ export type DashboardSearchDestinationHit = Readonly<{
   id: string;
   title: string;
   href: string;
-  source: 'route' | 'planning' | 'operate';
+  source: 'route' | 'operate';
+  kind: string;
+}>;
+
+export type DashboardSearchPlanningHit = Readonly<{
+  id: string;
+  title: string;
+  href: string | null;
+  source: 'planning';
   kind: string;
 }>;
 
@@ -32,7 +46,10 @@ export type DashboardSearchCommandHit = DashboardSearchCommand &
     kind: 'command';
   }>;
 
-export type DashboardSearchHit = DashboardSearchDestinationHit | DashboardSearchCommandHit;
+export type DashboardSearchHit =
+  | DashboardSearchDestinationHit
+  | DashboardSearchPlanningHit
+  | DashboardSearchCommandHit;
 
 const DEFAULT_COMMANDS: readonly DashboardSearchCommand[] = Object.freeze([
   Object.freeze({
@@ -46,6 +63,8 @@ const DEFAULT_COMMANDS: readonly DashboardSearchCommand[] = Object.freeze([
 export type DashboardSearchIndex = Readonly<{
   routes: readonly ClosedDashboardDestination[];
   planningNodes: readonly PlanningModelNode[];
+  planningIndex: PlanningSearchIndex;
+  planningAliases: ReadonlyMap<string, readonly PlanningModelNode[]>;
   operateHits: readonly DashboardSearchDestinationHit[];
   commands: readonly DashboardSearchCommandHit[];
 }>;
@@ -59,6 +78,8 @@ export type DashboardUnsupportedIdentity = Readonly<{
 
 export type DashboardSearchSources = Readonly<{
   planningNodes?: readonly PlanningModelNode[];
+  planningGraph?: PlanningModelGraph;
+  planningPresentation?: string;
   commands?: readonly DashboardSearchCommand[];
   operateResults?: readonly AccessSafeOperateSearchHitV1[];
 }>;
@@ -94,6 +115,25 @@ function operateSearchHits(
   return Object.freeze(hits);
 }
 
+type PlanningSearch = Pick<DashboardSearchIndex, 'planningIndex' | 'planningAliases'>;
+const planningIndices = new WeakMap<readonly PlanningModelNode[], PlanningSearch>();
+
+function cachedPlanningIndex(nodes: readonly PlanningModelNode[]): PlanningSearch {
+  let index = planningIndices.get(nodes);
+  if (!index) {
+    const aliases = new Map<string, PlanningModelNode[]>();
+    for (const node of nodes) {
+      const alias = planningDisplayId(node).toLowerCase();
+      const matches = aliases.get(alias) ?? [];
+      matches.push(node);
+      aliases.set(alias, matches);
+    }
+    index = { planningIndex: buildPlanningSearchIndex(nodes), planningAliases: aliases };
+    planningIndices.set(nodes, index);
+  }
+  return index;
+}
+
 /** Merge route destinations, Planning trigrams, and owner-issued Operate hits. */
 export function buildDashboardSearchIndex(
   sources: DashboardSearchSources = Object.freeze({}),
@@ -103,6 +143,7 @@ export function buildDashboardSearchIndex(
   return Object.freeze({
     routes: closedDashboardDestinations(),
     planningNodes,
+    ...cachedPlanningIndex(sources.planningNodes ?? planningNodes),
     operateHits,
     commands: Object.freeze(
       (sources.commands ?? DEFAULT_COMMANDS)
@@ -142,13 +183,19 @@ function matchingPlanningNodes(
   query: TypedSearch,
 ): readonly PlanningModelNode[] {
   const nodes = query.term
-    ? queryPlanningSearchIndex(
-        buildPlanningSearchIndex(index.planningNodes),
-        query.term,
-        index.planningNodes.length,
-      )
-    : index.planningNodes;
-  return query.type ? nodes.filter((node) => query.type === node.type) : nodes;
+    ? queryPlanningSearchIndex(index.planningIndex, query.term, index.planningNodes.length)
+    : [...index.planningNodes].sort((left, right) => left.id.localeCompare(right.id));
+  const needle = query.term.toLowerCase();
+  const exact = nodes.find((node) => node.id.toLowerCase() === needle);
+  const aliases = [...(index.planningAliases.get(needle) ?? [])].sort((left, right) =>
+    left.id.localeCompare(right.id),
+  );
+  const seen = new Set<string>();
+  return [...(exact ? [exact] : []), ...aliases, ...nodes].filter((node) => {
+    if ((query.type && query.type !== node.type) || seen.has(node.id)) return false;
+    seen.add(node.id);
+    return true;
+  });
 }
 
 function matchingRouteHits(
@@ -166,7 +213,7 @@ function matchingRouteHits(
     .filter((hit): hit is DashboardSearchDestinationHit => hit !== null);
 }
 
-/** Query only access-safe titles and canonical hrefs. Missing destinations are omitted, not invented. */
+/** Route availability must not hide graph identities that can be inspected locally. */
 export function queryDashboardSearchIndex(
   index: DashboardSearchIndex,
   term: string,
@@ -177,17 +224,21 @@ export function queryDashboardSearchIndex(
   if ((!needle && !query.type) || !Number.isSafeInteger(maximumResults) || maximumResults < 0) {
     return Object.freeze([]);
   }
-  const hits: DashboardSearchHit[] = [...matchingRouteHits(index, query)];
+  const hits: DashboardSearchHit[] = [];
   for (const node of matchingPlanningNodes(index, query)) {
-    const hit = canonicalHit(
-      `planning:${node.id}`,
-      node.title,
-      planningDetailHref(node),
-      'planning',
-      node.type,
+    // A graph identity can be inspected even when the public route grammar cannot represent it.
+    if (planningRouteSubjectId(node) === null) continue;
+    hits.push(
+      Object.freeze({
+        id: `planning:${node.id}`,
+        title: node.title,
+        href: planningDetailHref(node),
+        source: 'planning',
+        kind: node.type,
+      }),
     );
-    if (hit) hits.push(hit);
   }
+  hits.push(...matchingRouteHits(index, query));
   for (const operate of index.operateHits) {
     if (!query.type && matches(`${operate.title} ${operate.kind} ${operate.id}`, needle))
       hits.push(operate);
@@ -203,7 +254,7 @@ export function queryDashboardSearchIndex(
   return Object.freeze(
     hits
       .filter((hit) => {
-        const key = hit.source === 'command' ? hit.id : hit.href;
+        const key = hit.source === 'command' || hit.source === 'planning' ? hit.id : hit.href;
         if (seen.has(key)) return false;
         seen.add(key);
         return true;
@@ -212,7 +263,7 @@ export function queryDashboardSearchIndex(
   );
 }
 
-/** Planning rows that match but cannot emit a closed destination remain visible identities only. */
+/** Malformed graph identities remain visible without an interactive destination. */
 export function queryUnsupportedPlanningIdentities(
   index: DashboardSearchIndex,
   term: string,
@@ -225,7 +276,7 @@ export function queryUnsupportedPlanningIdentities(
   }
   const unsupported: DashboardUnsupportedIdentity[] = [];
   for (const node of matchingPlanningNodes(index, query)) {
-    if (planningDetailHref(node) !== null) continue;
+    if (planningRouteSubjectId(node) !== null) continue;
     unsupported.push(
       Object.freeze({
         id: node.id,

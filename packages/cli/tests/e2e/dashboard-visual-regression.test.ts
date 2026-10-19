@@ -1352,6 +1352,99 @@ test.describe('dashboard real-browser quality', () => {
     );
   });
 
+  test('keeps palette preview named, reachable and trapped across themes and widths', async ({
+    page,
+  }, testInfo) => {
+    test.setTimeout(90_000);
+    await page.addInitScript(() => {
+      const theme = new URL(location.href).searchParams.get('evidenceTheme');
+      if (theme === 'light' || theme === 'dark') localStorage.setItem('op-theme', theme);
+    });
+    const writes: string[] = [];
+    page.on('request', (request) => {
+      const path = new URL(request.url()).pathname;
+      if (path.startsWith('/api/') && request.method() !== 'GET')
+        writes.push(`${request.method()} ${path}`);
+    });
+    for (const theme of ['dark', 'light']) {
+      for (const width of [1440, 390, 320]) {
+        await page.setViewportSize({ width, height: width === 320 ? 568 : 1000 });
+        expect((await page.request.post('/__fixture/reset?dataset=artboard')).ok()).toBe(true);
+        await page.goto(fixtureUrl('#/list', { dataset: 'artboard', evidenceTheme: theme }));
+        await expect(page.locator('.pc-list')).toBeVisible();
+        await page.evaluate(() => document.fonts.ready);
+        const launcher = page.getByRole('button', { name: 'Jump to a view or an artifact' });
+        await launcher.focus();
+        await page.keyboard.press('Control+K');
+        const palette = page.getByRole('dialog', { name: 'Command palette', exact: true });
+        const input = palette.getByRole('searchbox', { name: 'Search views and artifacts' });
+        await expect(input).toBeFocused();
+        await input.fill('SPEC-014/T-046');
+        const first = palette.locator('[data-search-result]').first();
+        await expect(first).toHaveAttribute('data-search-result', 'planning:SPEC-014/T-046');
+        const preview = palette.getByRole('complementary', { name: 'Search result preview' });
+        await expect(preview).toHaveAttribute('data-preview-id', 'SPEC-014/T-046');
+        await expect(preview).toHaveAttribute('data-preview-state', 'ready');
+        await expect(preview).toContainText('Connect Plan Ship company sync and release proof');
+        await expect(preview).toContainText('SPEC-014');
+        await expect(preview).toContainText('T-045');
+        await expect(page).toHaveURL(/#\/list$/u);
+        for (const control of await palette.locator(ACTIVE_TARGET_SELECTOR).all()) {
+          if (await control.isVisible()) await expect(control).toHaveAccessibleName(/\S/u);
+        }
+        await expectControlsHitTestable(page, palette);
+        await input.focus();
+        const steps = (await palette.locator(ACTIVE_TARGET_SELECTOR).count()) + 1;
+        for (const direction of ['Tab', 'Shift+Tab']) {
+          for (let step = 0; step < steps; step++) {
+            await page.keyboard.press(direction);
+            expect(
+              await palette.evaluate((element) => element.contains(document.activeElement)),
+              `Palette must retain focus after ${direction}`,
+            ).toBe(true);
+          }
+        }
+        await input.focus();
+        expect((await layoutReport(page)).horizontalOverflow).toBe(false);
+        expect(await axeViolations(page)).toEqual([]);
+        await attachScreenshot(
+          page,
+          `palette-${theme}-${width}.png`,
+          testInfo.attach.bind(testInfo),
+        );
+        await page.keyboard.press('Escape');
+        await expect(palette).not.toBeVisible();
+        await expect(launcher).toBeFocused();
+        await expect(page).toHaveURL(/#\/list$/u);
+      }
+    }
+    expect(writes).toEqual([]);
+  });
+
+  test('starts the handoff trace through palette search and promotes only on full-page activation', async ({
+    page,
+  }) => {
+    expect((await page.request.post('/__fixture/reset?dataset=artboard')).ok()).toBe(true);
+    await page.goto(fixtureUrl('#/list', { dataset: 'artboard' }));
+    await expect(page.locator('.pc-list')).toBeVisible();
+    await page.keyboard.press('Control+K');
+    const palette = page.getByRole('dialog', { name: 'Command palette', exact: true });
+    const input = palette.getByRole('searchbox', { name: 'Search views and artifacts' });
+    await input.fill('handoff');
+    const result = palette.getByRole('button', { name: /Design-to-Delivery Handoff Center/u });
+    await result.focus();
+    const preview = palette.getByRole('complementary', { name: 'Search result preview' });
+    await expect(preview).toHaveAttribute('data-preview-id', 'SPEC-014');
+    await expect(preview).toContainText('openplanr status SPEC-014 --md');
+    await expect(page).toHaveURL(/#\/list$/u);
+    await page.keyboard.press('Control+Enter');
+    await expect(palette).not.toBeVisible();
+    await expect(page).toHaveURL(/#\/detail\/SPEC-014$/u);
+    await expect(page.locator('[data-route-kind="planning.detail"]')).toContainText(
+      'Design-to-Delivery Handoff Center',
+    );
+  });
+
   test('returns focus after cancelling a runtime-issued governed Action preview', async ({
     page,
   }, testInfo) => {

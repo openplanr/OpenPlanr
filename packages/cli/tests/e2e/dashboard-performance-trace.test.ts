@@ -302,12 +302,12 @@ describe('offline dashboard trace contract smoke', () => {
       }),
     ).toMatchObject({
       passed: false,
-      status: 'pending',
-      failures: [],
-      pending: [{ scenario: 'palette-preview', reason: expect.any(String) }],
+      status: 'failed',
+      failures: ['Palette preview measurements are absent.'],
+      pending: [],
     });
   });
-  it('fails missing graph interactions while retaining unsupported palette preview as pending', () => {
+  it('fails missing graph interactions and missing palette preview independently', () => {
     const base = smokeMeasurements('representative');
     const metrics = {
       ...base,
@@ -320,16 +320,49 @@ describe('offline dashboard trace contract smoke', () => {
     expect(evaluateDashboardTrace('representative', metrics)).toMatchObject({
       status: 'failed',
       passed: false,
-      failures: ['graph interaction trace is incomplete.'],
-      pending: [{ scenario: 'palette-preview' }],
+      failures: [
+        'Palette preview measurements are absent.',
+        'graph interaction trace is incomplete.',
+      ],
+      pending: [],
     });
     expect(
       evaluateDashboardTrace('representative', { ...metrics, coldShellMs: 501 }),
     ).toMatchObject({
       status: 'failed',
       passed: false,
-      failures: ['graph interaction trace is incomplete.', 'Cold shell exceeds budget.'],
+      failures: [
+        'Palette preview measurements are absent.',
+        'graph interaction trace is incomplete.',
+        'Cold shell exceeds budget.',
+      ],
     });
+  });
+  it('enforces independent result and preview p95 budgets with complete preview samples', () => {
+    const base = smokeMeasurements('representative');
+    for (const field of ['paletteMs', 'palettePreviewMs'] as const) {
+      const result = evaluateDashboardTrace('representative', {
+        ...base,
+        [field]: Array(TRACE_PLAN.inputCount).fill(101),
+      });
+      expect(result.status).toBe('failed');
+      expect(result.pending).toEqual([]);
+      expect(result.failures).toEqual([
+        `${field === 'paletteMs' ? 'paletteP95Ms' : 'palettePreviewP95Ms'} exceeds budget.`,
+      ]);
+    }
+    expect(
+      evaluateDashboardTrace('representative', {
+        ...base,
+        palettePreviewMs: Array(TRACE_PLAN.inputCount - 1).fill(100),
+      }).failures,
+    ).toEqual(['Palette preview measurements are incomplete.']);
+    expect(() =>
+      evaluateDashboardTrace('representative', { ...base, palettePreviewMs: [] }),
+    ).toThrow();
+    expect(() =>
+      evaluateDashboardTrace('representative', { ...base, palettePreviewMs: [Number.NaN] }),
+    ).toThrow();
   });
   it('measures renderer work with overlapping task intervals counted once', () => {
     const result = rendererFrameWork([

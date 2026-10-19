@@ -3,6 +3,7 @@ export type SearchKeyNav<T> = Readonly<{
   activeIndex: number;
   moveDown: () => SearchKeyNav<T>;
   moveUp: () => SearchKeyNav<T>;
+  select: (index: number) => SearchKeyNav<T>;
   reset: (items: readonly T[]) => SearchKeyNav<T>;
   getActive: () => T | null;
 }>;
@@ -21,6 +22,12 @@ export function createSearchKeyNav<T>(items: readonly T[]): SearchKeyNav<T> {
     moveUp() {
       const next = this.activeIndex > 0 ? this.activeIndex - 1 : this.activeIndex;
       return createSearchKeyNavWithIndex(this.items, next);
+    },
+    select(index: number) {
+      return createSearchKeyNavWithIndex(
+        this.items,
+        Math.max(-1, Math.min(this.items.length - 1, index)),
+      );
     },
     reset(nextItems: readonly T[]) {
       return createSearchKeyNav(nextItems);
@@ -46,6 +53,9 @@ function createSearchKeyNavWithIndex<T>(items: readonly T[], activeIndex: number
     moveUp() {
       const next = activeIndex > 0 ? activeIndex - 1 : activeIndex;
       return createSearchKeyNavWithIndex(list, next);
+    },
+    select(index: number) {
+      return createSearchKeyNavWithIndex(list, Math.max(-1, Math.min(list.length - 1, index)));
     },
     reset(nextItems: readonly T[]) {
       return createSearchKeyNav(nextItems);

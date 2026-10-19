@@ -1,8 +1,16 @@
 import type { KeyboardEvent } from 'react';
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
-import { Input, Kbd, PcIcon, SectionHeader, Select } from '../../design-system/components/index.js';
+import {
+  Button,
+  Input,
+  Kbd,
+  PcIcon,
+  SectionHeader,
+  Select,
+} from '../../design-system/components/index.js';
 import type { DashboardQueryIdentity } from '../../lib/binding/query-identity.js';
-import { inspectPlanningNode } from '../planning/planning-inspector.js';
+import { inspectPlanningNode, useLiveListOrder } from '../planning/planning-inspector.js';
+import { SearchPreview } from './SearchPreview.js';
 import { SearchResults } from './SearchResults.js';
 import {
   buildDashboardSearchIndex,
@@ -99,10 +107,14 @@ type CopyFeedback = Readonly<{
   state: 'pending' | 'copied' | 'blocked';
 }>;
 
-function useCommandCopy(onCopy: CommandPaletteProps['onCopy']) {
-  const [feedback, setFeedback] = useState<CopyFeedback | null>(null);
+function useCommandCopy(onCopy: CommandPaletteProps['onCopy'], scope: DashboardSearchSources) {
+  const [feedback, setFeedback] = useState<
+    (CopyFeedback & { scope: DashboardSearchSources }) | null
+  >(null);
   const inFlight = useRef(false);
   const mounted = useRef(true);
+  const currentScope = useRef(scope);
+  currentScope.current = scope;
   useEffect(() => {
     mounted.current = true;
     return () => {
@@ -112,18 +124,20 @@ function useCommandCopy(onCopy: CommandPaletteProps['onCopy']) {
   const copy = async (command: string, kind: CopyFeedback['kind'] = 'command') => {
     if (inFlight.current) return;
     inFlight.current = true;
-    setFeedback({ command, kind, state: 'pending' });
+    setFeedback({ scope, command, kind, state: 'pending' });
     try {
       if (!onCopy) throw new Error('Clipboard unavailable');
       await onCopy(command);
-      if (mounted.current) setFeedback({ command, kind, state: 'copied' });
+      if (mounted.current && currentScope.current === scope)
+        setFeedback({ scope, command, kind, state: 'copied' });
     } catch {
-      if (mounted.current) setFeedback({ command, kind, state: 'blocked' });
+      if (mounted.current && currentScope.current === scope)
+        setFeedback({ scope, command, kind, state: 'blocked' });
     } finally {
       inFlight.current = false;
     }
   };
-  return { copy, feedback };
+  return { copy, feedback: feedback?.scope === scope ? feedback : null };
 }
 
 function CommandCopyFeedback({ feedback }: Readonly<{ feedback: CopyFeedback | null }>) {
@@ -166,14 +180,18 @@ function ignoresQueryShortcut(event: KeyboardEvent<HTMLElement>): boolean {
   );
 }
 
-function resultKeyTarget(event: KeyboardEvent<HTMLDialogElement>): HTMLButtonElement | null {
+function isEditableTarget(event: KeyboardEvent<HTMLElement>): boolean {
   const target = event.target instanceof Element ? event.target : null;
-  if (
+  return Boolean(
     target?.closest(
       'input, textarea, select, [contenteditable]:not([contenteditable="false"]), [role="textbox"], [role="combobox"]',
-    )
-  )
-    return null;
+    ),
+  );
+}
+
+function resultKeyTarget(event: KeyboardEvent<HTMLDialogElement>): HTMLButtonElement | null {
+  if (isEditableTarget(event)) return null;
+  const target = event.target instanceof Element ? event.target : null;
   const button = target?.closest<HTMLButtonElement>('[data-search-result]');
   return button && !button.disabled ? button : null;
 }
@@ -196,6 +214,23 @@ function moveResultFocus(
   ).filter((button) => !button.disabled);
   const index = results.indexOf(result);
   results[Math.max(0, Math.min(results.length - 1, index + direction))]?.focus();
+}
+
+function trapPaletteTab(event: KeyboardEvent<HTMLDialogElement>): void {
+  const controls = Array.from(
+    event.currentTarget.querySelectorAll<HTMLElement>(
+      'button:not(:disabled), a[href], input:not(:disabled), select:not(:disabled), textarea:not(:disabled), [tabindex="0"]',
+    ),
+  ).filter((control) => !control.closest('[hidden], [inert], [aria-hidden="true"]'));
+  const first = controls[0];
+  const last = controls[controls.length - 1];
+  if (event.shiftKey && document.activeElement === first) {
+    event.preventDefault();
+    last?.focus();
+  } else if (!event.shiftKey && document.activeElement === last) {
+    event.preventDefault();
+    first?.focus();
+  }
 }
 
 /** Search state shared by the modal palette and the `#/search` route. */
@@ -222,7 +257,14 @@ function useSearchState(
     [sources, operateSearch.hits],
   );
   const index = useMemo(() => buildDashboardSearchIndex(mergedSources), [mergedSources]);
-  const hits = useMemo(() => queryDashboardSearchIndex(index, query), [index, query]);
+  const matchingHits = useMemo(() => queryDashboardSearchIndex(index, query), [index, query]);
+  const stableHits = useLiveListOrder(matchingHits, query);
+  const hits = useMemo(() => {
+    const groups = ['planning', 'route', 'operate', 'command'];
+    return [...stableHits].sort(
+      (left, right) => groups.indexOf(left.source) - groups.indexOf(right.source),
+    );
+  }, [stableHits]);
   const unsupported = useMemo(
     () => queryUnsupportedPlanningIdentities(index, query),
     [index, query],
@@ -233,9 +275,7 @@ function useSearchState(
     setNav((current) => {
       const selectedId = retain ? current.getActive()?.id : null;
       const index = selectedId ? hits.findIndex((hit) => hit.id === selectedId) : -1;
-      let next = createSearchKeyNav(hits);
-      for (let position = 0; position <= index; position += 1) next = next.moveDown();
-      return next;
+      return createSearchKeyNav(hits).select(index);
     });
   }, [hits, query]);
 
@@ -252,16 +292,14 @@ function useSearchState(
       setNav((current) => current.moveUp());
     } else if (event.key === 'Enter') {
       event.preventDefault();
-      const selected = nav.getActive() ?? hits[0] ?? null;
+      const selected = hits.find((hit) => hit.id === nav.getActive()?.id) ?? hits[0] ?? null;
       if (selected) onEnter(selected, event.metaKey || event.ctrlKey);
     }
   };
 
   const activateHit = (hit: DashboardSearchHit) => {
     const index = hits.findIndex((candidate) => candidate.id === hit.id);
-    let next = createSearchKeyNav(hits);
-    for (let position = 0; position <= index; position += 1) next = next.moveDown();
-    setNav(next);
+    setNav(createSearchKeyNav(hits).select(index));
   };
 
   return {
@@ -270,7 +308,7 @@ function useSearchState(
     activateHit,
     hits,
     unsupported,
-    active: nav.getActive(),
+    active: hits.find((hit) => hit.id === nav.getActive()?.id) ?? null,
     selectedOperate,
     operateSearchState: operateSearch.state,
     onKeyDown,
@@ -302,7 +340,7 @@ export function CommandPalette({
     connectionState,
   );
   const { setQuery } = search;
-  const commandCopy = useCommandCopy(onCopy);
+  const commandCopy = useCommandCopy(onCopy, sources);
   const [copyHint, setCopyHint] = useState<string | null>(null);
   const selectedCommand = search.active ?? search.hits[0];
 
@@ -366,7 +404,13 @@ export function CommandPalette({
         ? sources.planningNodes?.find((candidate) => `planning:${candidate.id}` === hit.id)
         : null;
     if (node && !fullPage) inspectPlanningNode(node);
-    else onNavigate(hit.href);
+    else if (hit.href) onNavigate(hit.href);
+    else {
+      setCopyHint(
+        'A full-page destination is unavailable for this graph identity. Press Enter on its result to open the inspector.',
+      );
+      return;
+    }
     onClose();
   }
 
@@ -388,16 +432,39 @@ export function CommandPalette({
   }
 
   function onResultKeyDown(event: KeyboardEvent<HTMLDialogElement>): void {
-    if (composingRef.current || !isTopmost() || ignoresQueryShortcut(event)) return;
+    if (
+      composingRef.current ||
+      !isTopmost() ||
+      event.nativeEvent.isComposing ||
+      event.keyCode === 229
+    )
+      return;
+    if (event.key === 'Tab') {
+      trapPaletteTab(event);
+      return;
+    }
+    if (ignoresQueryShortcut(event)) return;
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      onClose();
+      return;
+    }
+    if (event.key === 'Enter' && (event.metaKey || event.ctrlKey) && selectedCommand) {
+      event.preventDefault();
+      selectHit(selectedCommand, true);
+      return;
+    }
     const result = resultKeyTarget(event);
-    if (!result) return;
-    const hit = search.hits.find((candidate) => candidate.id === result.dataset.searchResult);
-    if (!hit) return;
+    const hit = result
+      ? search.hits.find((candidate) => candidate.id === result.dataset.searchResult)
+      : selectedCommand;
+    if (!hit || isEditableTarget(event)) return;
     if (singleLetters && event.key.toLowerCase() === 'c') {
       event.preventDefault();
       copyResult(hit);
       return;
     }
+    if (!result) return;
     if (event.key === 'Enter') {
       event.preventDefault();
       selectHit(hit, event.metaKey || event.ctrlKey);
@@ -415,6 +482,21 @@ export function CommandPalette({
       className="pc-palette"
       aria-labelledby={`${listId}-label`}
       onKeyDown={onResultKeyDown}
+      onKeyDownCapture={(event) => {
+        const command =
+          event.target instanceof Element && event.target.closest('.pc-command-hint__copy');
+        if (!command) return;
+        if (
+          composingRef.current ||
+          event.nativeEvent.isComposing ||
+          event.keyCode === 229 ||
+          !isTopmost() ||
+          (event.shiftKey && event.key.toLowerCase() === 'c')
+        ) {
+          event.preventDefault();
+          event.stopPropagation();
+        }
+      }}
       onCancel={(event) => {
         event.preventDefault();
         if (!composingRef.current && isTopmost()) onClose();
@@ -424,99 +506,125 @@ export function CommandPalette({
       }}
     >
       <div className="pc-palette__panel" role="document">
-        <div className="pc-palette__input-row">
-          <PcIcon name="search" size={15} color="var(--pc-text-tertiary)" />
-          <span id={`${listId}-label`} className="pc-visually-hidden">
-            Command palette
-          </span>
-          <input
-            ref={inputRef}
-            id={`${listId}-input`}
-            className="pc-palette__input"
-            type="search"
-            value={search.query}
-            placeholder={PLACEHOLDER}
-            aria-label="Search views and artifacts"
-            aria-describedby={
-              selectedCommand?.source === 'command' ? `${listId}-command-reason` : undefined
-            }
-            autoComplete="off"
-            spellCheck={false}
-            onChange={(event) => setQuery(event.target.value)}
-            onCompositionStart={() => {
-              composingRef.current = true;
-            }}
-            onCompositionEnd={() => {
-              composingRef.current = false;
-            }}
-            onKeyDown={(event) => {
-              if (
-                event.defaultPrevented ||
-                composingRef.current ||
-                event.nativeEvent.isComposing ||
-                event.keyCode === 229 ||
-                !isTopmost()
-              )
-                return;
-              if (event.key === 'Escape') {
-                event.preventDefault();
-                onClose();
-                return;
+        <div className="pc-palette__search">
+          <div className="pc-palette__input-row">
+            <PcIcon name="search" size={15} color="var(--pc-text-tertiary)" />
+            <span id={`${listId}-label`} className="pc-visually-hidden">
+              Command palette
+            </span>
+            <input
+              ref={inputRef}
+              id={`${listId}-input`}
+              className="pc-palette__input"
+              type="search"
+              value={search.query}
+              placeholder={PLACEHOLDER}
+              aria-label="Search views and artifacts"
+              aria-controls={listId}
+              aria-describedby={
+                selectedCommand?.source === 'command' ? `${listId}-command-reason` : undefined
               }
-              search.onKeyDown(event, selectHit);
-            }}
-          />
-          <Kbd size="sm">esc</Kbd>
-        </div>
-        <OperateCycleSelector
-          bindings={operateBindings}
-          selectedCycleId={search.selectedOperate.selectedCycleId}
-          onSelect={search.selectedOperate.setSelectedCycleId}
-        />
-        {search.operateSearchState === 'error' ? (
-          <p className="pc-palette__command" role="status" aria-label="Operate search status">
-            Operate search could not be read. Local destinations and Planning results remain
-            available. Check the connection and try the query again.
-          </p>
-        ) : null}
-        <SearchResults
-          hits={search.hits}
-          unsupported={search.unsupported}
-          activeHref={search.active?.href ?? null}
-          activeId={search.active?.id ?? null}
-          commandBusy={commandCopy.feedback?.state === 'pending'}
-          listId={listId}
-          onSelect={selectHit}
-          onFocus={search.activateHit}
-        />
-        {selectedCommand?.source === 'command' ? (
-          <div className="pc-palette__command">
-            <p id={`${listId}-command-reason`}>
-              Enter copies this command. Commands cannot open a full page with Cmd/Ctrl-Enter.
-            </p>
-            <code>{selectedCommand.command}</code>
+              autoComplete="off"
+              spellCheck={false}
+              onChange={(event) => setQuery(event.target.value)}
+              onCompositionStart={() => {
+                composingRef.current = true;
+              }}
+              onCompositionEnd={() => {
+                composingRef.current = false;
+              }}
+              onKeyDown={(event) => {
+                if (
+                  event.defaultPrevented ||
+                  composingRef.current ||
+                  event.nativeEvent.isComposing ||
+                  event.keyCode === 229 ||
+                  !isTopmost()
+                )
+                  return;
+                if (event.key === 'Escape') {
+                  event.preventDefault();
+                  onClose();
+                  return;
+                }
+                search.onKeyDown(event, selectHit);
+              }}
+            />
+            <Kbd size="sm">esc</Kbd>
           </div>
-        ) : null}
-        {copyHint ? (
-          <p className="pc-palette__command" role="status">
-            {copyHint}
+          <p className="pc-palette__filter-help">
+            Search nodes, views and commands. Use @task, @spec, @view or @command to filter.
           </p>
-        ) : (
-          <CommandCopyFeedback feedback={commandCopy.feedback} />
-        )}
-        <div className="pc-palette__foot" aria-hidden="true">
-          <span className="pc-palette__key">
-            <Kbd size="sm">↑</Kbd>
-            <Kbd size="sm">↓</Kbd> move
-          </span>
-          <span className="pc-palette__key">
-            <Kbd size="sm">⏎</Kbd> inspect
-          </span>
-          <span className="pc-palette__key">
-            <Kbd size="sm">⌘/Ctrl ⏎</Kbd> full page
-          </span>
-          <span className="pc-palette__count">{search.hits.length} results</span>
+          <OperateCycleSelector
+            bindings={operateBindings}
+            selectedCycleId={search.selectedOperate.selectedCycleId}
+            onSelect={search.selectedOperate.setSelectedCycleId}
+          />
+          {search.operateSearchState === 'error' ? (
+            <p className="pc-palette__command" role="status" aria-label="Operate search status">
+              Operate search could not be read. Local destinations and Planning results remain
+              available. Check the connection and try the query again.
+            </p>
+          ) : null}
+          <SearchResults
+            hits={search.hits}
+            unsupported={search.unsupported}
+            activeHref={search.active?.href ?? null}
+            activeId={search.active?.id ?? null}
+            commandBusy={commandCopy.feedback?.state === 'pending'}
+            listId={listId}
+            onSelect={selectHit}
+            onFocus={search.activateHit}
+          />
+          <div className="pc-palette__feedback">
+            {selectedCommand?.source === 'command' ? (
+              <div className="pc-palette__command">
+                <p id={`${listId}-command-reason`}>
+                  Enter copies this command. Commands cannot open a full page with Cmd/Ctrl-Enter.
+                </p>
+                <code>{selectedCommand.command}</code>
+              </div>
+            ) : null}
+            {copyHint ? (
+              <p className="pc-palette__command" role="status">
+                {copyHint}
+              </p>
+            ) : (
+              <CommandCopyFeedback feedback={commandCopy.feedback} />
+            )}
+          </div>
+          <div className="pc-palette__foot">
+            <span className="pc-palette__key">
+              <Kbd size="sm">↑</Kbd>
+              <Kbd size="sm">↓</Kbd> move
+            </span>
+            <span className="pc-palette__key">
+              <Kbd size="sm">⏎</Kbd> inspect
+            </span>
+            <span className="pc-palette__key">
+              <Kbd size="sm">⌘/Ctrl ⏎</Kbd> full page
+            </span>
+            <span className="pc-palette__count">{search.hits.length} results</span>
+            <Button
+              size="sm"
+              onClick={() => {
+                onNavigate('#/search');
+                onClose();
+              }}
+            >
+              Full Search
+            </Button>
+          </div>
         </div>
+        {open ? (
+          <SearchPreview
+            hit={selectedCommand ?? null}
+            sources={sources}
+            onPreview={setQuery}
+            onCopy={onCopy}
+            singleLetters={singleLetters}
+          />
+        ) : null}
       </div>
     </dialog>
   );
@@ -549,11 +657,17 @@ export function SearchWorkspace({
     connectionState,
   );
 
-  const commandCopy = useCommandCopy(onCopy);
+  const commandCopy = useCommandCopy(onCopy, sources);
 
   const selectHit = (hit: DashboardSearchHit) => {
     if (hit.source === 'command') void commandCopy.copy(hit.command);
-    else navigateTo(hit.href);
+    else if (hit.href) navigateTo(hit.href);
+    else {
+      const node = sources.planningNodes?.find(
+        (candidate) => `planning:${candidate.id}` === hit.id,
+      );
+      if (node) inspectPlanningNode(node);
+    }
   };
 
   return (

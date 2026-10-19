@@ -1,38 +1,41 @@
-/* Command palette in Planr Console dress: scrim, 560px panel, grouped 32px rows, key footer. */
-
 .pc-palette {
   width: 100%;
   max-width: none;
   height: 100%;
   max-height: none;
-  padding: 88px 0 0;
+  padding: min(11vh, 110px) 0 0;
   background: transparent;
   border: none;
-  overflow: visible;
+  overflow: auto;
 }
 .pc-palette::backdrop {
   background: var(--pc-surface-scrim);
   backdrop-filter: var(--pc-blur-overlay);
 }
 .pc-palette__panel {
-  width: 560px;
+  width: 1000px;
   max-width: 92%;
   margin: 0 auto;
   overflow: hidden;
   font-family: var(--pc-font-sans);
   color: var(--pc-text-primary);
-  background: var(--pc-surface-card);
+  background: var(--pc-surface-raised);
   border: 1px solid var(--pc-border-default);
-  border-radius: var(--pc-radius-lg);
+  border-radius: var(--pc-radius-xl);
   box-shadow: var(--pc-shadow-lg);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  height: min(600px, 80dvh);
 }
 .pc-palette__input-row {
   display: flex;
   align-items: center;
   gap: 8px;
-  height: 44px;
+  height: 60px;
   padding: 0 12px;
   border-bottom: 1px solid var(--pc-border-subtle);
+  flex: none;
+  padding-inline: 18px;
 }
 .pc-palette__input {
   flex: 1;
@@ -42,6 +45,8 @@
   background: transparent;
   border: none;
   outline: none;
+  min-height: 44px;
+  font-size: 17px;
 }
 .pc-palette__input::placeholder {
   color: var(--pc-text-tertiary);
@@ -87,7 +92,7 @@
   align-items: center;
   gap: 9px;
   width: 100%;
-  height: 32px;
+  height: auto;
   padding: 0 8px;
   font: var(--pc-type-body-sm);
   color: var(--pc-text-primary);
@@ -96,6 +101,7 @@
   border: 1px solid transparent;
   border-radius: var(--pc-radius-sm);
   cursor: pointer;
+  min-height: 44px;
 }
 .pc-palette__row > .pc-icon {
   color: var(--pc-text-tertiary);
@@ -135,7 +141,7 @@
 .pc-palette__command {
   padding: 8px 12px;
   font: var(--pc-type-body-sm);
-  border-top: 1px solid var(--pc-border-subtle);
+  border-top: 0;
 }
 .pc-palette__command p {
   margin: 0 0 4px;
@@ -152,17 +158,22 @@
   background: transparent;
   border: 1px solid var(--pc-border-subtle);
   border-radius: var(--pc-radius-xs);
+  min-height: 44px;
 }
 .pc-palette__foot {
   display: flex;
   align-items: center;
-  gap: 10px;
-  height: 32px;
+  gap: 8px;
+  height: auto;
   padding: 0 12px;
   font: var(--pc-type-mono-sm);
   color: var(--pc-text-tertiary);
   background: var(--pc-surface-panel);
   border-top: 1px solid var(--pc-border-subtle);
+  flex: none;
+  flex-wrap: wrap;
+  min-height: 60px;
+  padding-block: 8px;
 }
 .pc-palette__key {
   display: inline-flex;
@@ -172,8 +183,6 @@
 .pc-palette__count {
   margin-left: auto;
 }
-
-/* the #/search route: the same results without modal chrome */
 .pc-search-page__query {
   padding: 12px 0 4px;
 }
@@ -185,7 +194,6 @@
   padding: 6px 0;
   border-bottom: 0;
 }
-
 @media (forced-colors: active) {
   .pc-palette__panel,
   .pc-palette__input-row {
@@ -195,7 +203,6 @@
     outline: 1px solid Highlight;
   }
 }
-
 .pc-palette__row:hover:not(:disabled):not([aria-disabled="true"]) {
   background: var(--pc-surface-hover);
 }
@@ -256,5 +263,136 @@
   .pc-palette__row:focus-visible {
     outline: 2px solid Highlight;
     box-shadow: none;
+  }
+}
+.pc-palette__search {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+}
+.pc-palette__input:focus-visible {
+  outline: 2px solid var(--pc-focus-ring);
+  outline-offset: 2px;
+  border-radius: var(--pc-radius-xs);
+}
+.pc-palette__filter-help {
+  margin: 0;
+  padding: 8px 18px;
+  font: var(--pc-type-body-sm);
+  color: var(--pc-text-secondary);
+}
+.pc-palette__search > .pc-palette__results,
+.pc-palette__search > .pc-palette__empty {
+  flex: 1;
+  min-height: 0;
+}
+.pc-palette__search > .pc-palette__results {
+  max-height: none;
+  overscroll-behavior: contain;
+  overflow-anchor: none;
+}
+.pc-palette__row-id {
+  flex: none;
+  max-width: 45%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font: var(--pc-type-mono-sm);
+  color: var(--pc-accent-ink);
+}
+.pc-palette__feedback {
+  flex: none;
+  height: 88px;
+  overflow: auto;
+}
+.pc-palette__command input:focus-visible {
+  outline: 2px solid var(--pc-focus-ring);
+}
+.pc-palette__foot > button {
+  min-height: 44px;
+}
+.pc-palette__preview {
+  min-width: 0;
+  min-height: 0;
+  padding: 20px;
+  overflow: auto;
+  overflow-wrap: anywhere;
+  overscroll-behavior: contain;
+  border-left: 1px solid var(--pc-border-default);
+  background: var(--pc-surface-panel);
+  font: var(--pc-type-body-sm);
+}
+.pc-palette__preview > h2 {
+  margin: 0 0 16px;
+  font: var(--pc-type-mono-sm);
+  text-transform: uppercase;
+  letter-spacing: var(--pc-tracking-wide);
+  color: var(--pc-text-secondary);
+}
+.pc-palette__preview h3 {
+  margin: 12px 0;
+  font: var(--pc-type-section);
+}
+.pc-palette__preview > h3 {
+  min-height: 72px;
+}
+.pc-palette__identity {
+  min-height: 64px;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.pc-palette__preview .pc-detail__trace {
+  flex-direction: column;
+  overflow: visible;
+}
+.pc-palette__preview .pc-detail__trace > li {
+  min-width: 0;
+}
+.pc-palette__preview .op-planning-trace__link {
+  min-height: 44px;
+}
+.pc-palette__preview .pc-command-hint__row {
+  flex-wrap: wrap;
+}
+.pc-palette__preview button,
+.pc-palette__cycle select {
+  min-height: 44px;
+}
+@media (max-width: 899px) {
+  .pc-palette {
+    padding-top: 16px;
+  }
+  .pc-palette__panel {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: minmax(280px, 3fr) minmax(0, 2fr);
+    height: calc(100dvh - 32px);
+  }
+  .pc-palette__preview {
+    padding: 16px;
+    border-left: 0;
+    border-top: 1px solid var(--pc-border-default);
+  }
+  .pc-palette__feedback {
+    height: 48px;
+  }
+  .pc-palette__row {
+    flex-wrap: wrap;
+    padding-block: 8px;
+  }
+  .pc-palette__row-title {
+    flex: 1;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+  .pc-palette__row-hint {
+    white-space: normal;
+  }
+}
+
+@media (max-width: 899px) {
+  .pc-palette__foot .pc-palette__key {
+    display: none;
   }
 }

@@ -4,6 +4,17 @@ import type {
 } from './dashboard-layout-shifts.js';
 
 export const TRACE_PLAN = Object.freeze({ durationMs: 10_000, inputCount: 100, patchCount: 50 });
+export function paletteTraceInputs<T extends Readonly<{ id: string; title: string }>>(
+  nodes: readonly T[],
+) {
+  if (nodes.length < TRACE_PLAN.inputCount)
+    throw new Error('Palette trace requires a complete fixture.');
+  return Array.from({ length: TRACE_PLAN.inputCount }, (_, index) => {
+    const node = nodes[index % 2 === 0 ? index : nodes.length - index];
+    return { node, query: index % 2 === 0 ? node.id : node.title };
+  });
+}
+
 export const TRACE_BUDGETS = Object.freeze({
   coldShellMs: 500,
   usefulSnapshotMs: 1_000,
@@ -236,11 +247,7 @@ export function evaluateDashboardTrace(
   require(metrics.browserErrors.length === 0, 'Browser errors or crashes occurred.');
   require(metrics.filterMs.length === TRACE_PLAN.inputCount &&
     metrics.paletteMs.length === TRACE_PLAN.inputCount, 'Input samples are incomplete.');
-  if (metrics.palettePreviewMs === null)
-    pending.push({
-      scenario: 'palette-preview',
-      reason: 'The current production palette has no preview surface.',
-    });
+  if (metrics.palettePreviewMs === null) require(false, 'Palette preview measurements are absent.');
   else
     require(metrics.palettePreviewMs.length ===
       TRACE_PLAN.inputCount, 'Palette preview measurements are incomplete.');
@@ -293,7 +300,7 @@ export function evaluateDashboardTrace(
     summaries: { ...summaries, warmRouteP95ByRouteMs },
     failures,
     pending,
-    status: failures.length > 0 ? 'failed' : pending.length > 0 ? 'pending' : 'passed',
+    status: failures.length > 0 ? 'failed' : 'passed',
     passed: failures.length === 0 && pending.length === 0,
   };
 }

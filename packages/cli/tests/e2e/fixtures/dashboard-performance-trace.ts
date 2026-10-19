@@ -8,6 +8,7 @@ import {
   evaluateDashboardTrace,
   type InteractionTrace,
   installFixedDashboardDate,
+  paletteTraceInputs,
   type RendererTraceEvent,
   rendererFrameWork,
   type SelectionSample,
@@ -114,6 +115,44 @@ async function paintLatency(
       return performance.now() - start;
     },
     { selector, expectedText, input },
+  );
+}
+
+async function palettePaintLatencies(page: Page, id: string, title: string) {
+  return page.evaluate(
+    async ({ id, title }) => {
+      const started = window.__dashboardMetrics.inputAt;
+      const measure = async (ready: () => boolean) => {
+        while (!ready()) {
+          if (performance.now() - started > 10_000)
+            throw new Error(`Palette result or preview did not render: ${id}`);
+          await new Promise(requestAnimationFrame);
+        }
+        await new Promise(requestAnimationFrame);
+        return performance.now() - started;
+      };
+      const [resultMs, previewMs] = await Promise.all([
+        measure(() => {
+          const result = document.querySelector<HTMLElement>(
+            '.pc-palette__results [data-search-result]',
+          );
+          return (
+            result?.dataset.searchResult === `planning:${id}` &&
+            result.textContent?.includes(title) === true
+          );
+        }),
+        measure(() => {
+          const preview = document.querySelector<HTMLElement>('.pc-palette__preview');
+          return (
+            preview?.dataset.previewId === id &&
+            preview.dataset.previewState === 'ready' &&
+            preview.textContent?.includes(title) === true
+          );
+        }),
+      ]);
+      return { resultMs, previewMs };
+    },
+    { id, title },
   );
 }
 
@@ -337,7 +376,7 @@ export function registerDashboardPerformanceTraceTests() {
       const panelsMs: number[] = [];
       const filterMs: number[] = [];
       const paletteMs: number[] = [];
-      let palettePreviewMs: number[] | null = [];
+      const palettePreviewMs: number[] = [];
       const patchesMs: number[] = [];
       for (let index = 0; index < 20; index += 1) {
         for (const [route, kind] of [
@@ -360,19 +399,17 @@ export function registerDashboardPerformanceTraceTests() {
       await markInputAction(page, 'palette open');
       await page.keyboard.press('Control+K');
       const palette = page.locator('dialog.pc-palette');
-      for (let index = 0; index < TRACE_PLAN.inputCount; index += 1) {
-        const node = fixture.graph.nodes[index];
+      for (const [index, { node, query }] of paletteTraceInputs(fixture.graph.nodes).entries()) {
         await markInputAction(page, `palette query ${index + 1}`);
-        await palette.getByRole('searchbox').fill(index % 2 === 0 ? node.id : node.title);
-        paletteMs.push(await paintLatency(page, '.pc-palette__results', node.title, true));
-        const previewSelector = '[data-palette-preview], .pc-palette__preview';
-        if (await palette.locator(previewSelector).count()) {
-          if (palettePreviewMs !== null)
-            palettePreviewMs.push(await paintLatency(page, previewSelector, node.title, true));
-        } else palettePreviewMs = null;
+        await palette.getByRole('searchbox').fill(query);
+        const latency = await palettePaintLatencies(page, node.id, node.title);
+        paletteMs.push(latency.resultMs);
+        palettePreviewMs.push(latency.previewMs);
+        await expect(page).toHaveURL(/#\/list$/u);
       }
-      const palettePreviewAvailable =
-        (await palette.locator('[data-palette-preview], .pc-palette__preview').count()) > 0;
+      await expect(
+        palette.getByRole('complementary', { name: 'Search result preview' }),
+      ).toBeVisible();
       await markInputAction(page, 'palette close');
       await page.keyboard.press('Escape');
       await markInputAction(page, 'filter-input selected item');
@@ -540,10 +577,8 @@ export function registerDashboardPerformanceTraceTests() {
               metadata,
               capabilities: {
                 palettePreview: {
-                  available: palettePreviewAvailable,
-                  reason: palettePreviewAvailable
-                    ? null
-                    : 'Production palette does not expose a preview surface.',
+                  available: true,
+                  reason: null,
                 },
                 graphPanZoom: {
                   available: graph.interactionObserved,
@@ -561,19 +596,7 @@ export function registerDashboardPerformanceTraceTests() {
       });
       expect([...assets].every((asset) => asset.startsWith('/__production/'))).toBe(true);
       expect(evaluation.failures).toEqual([]);
-      if (evaluation.pending.length > 0) {
-        for (const scenario of evaluation.pending)
-          testInfo.annotations.push({
-            type: 'pending',
-            description: `${scenario.scenario}: ${scenario.reason}`,
-          });
-        test.skip(
-          true,
-          evaluation.pending
-            .map((scenario) => `${scenario.scenario}: ${scenario.reason}`)
-            .join(' '),
-        );
-      }
+      expect(evaluation.pending).toEqual([]);
     });
   }
 }
