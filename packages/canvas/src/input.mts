@@ -55,6 +55,7 @@ export function bindInput(
   controller: CanvasController,
   getPointerMode: () => 'pan' | 'none',
   shortcutsEnabled: () => boolean,
+  setGesture: (active: boolean) => void = () => {},
 ): { dispose(): void } {
   const { stage } = elements;
   const document = stage.ownerDocument;
@@ -153,6 +154,7 @@ export function bindInput(
       (event.button === 0 && getPointerMode() === 'pan' && !occupied);
     if (!touch && !pan) return;
     pointers.set(event.pointerId, { x: event.clientX, y: event.clientY, touch });
+    setGesture(true);
     if (stage.setPointerCapture) stage.setPointerCapture(event.pointerId);
     if (touch || pan) {
       stage.focus({ preventScroll: true });
@@ -181,11 +183,15 @@ export function bindInput(
   function release(raw: Event): void {
     const event = raw as PointerEvent;
     pointers.delete(event.pointerId);
+    setGesture(pointers.size > 0);
     if (stage.hasPointerCapture?.(event.pointerId)) stage.releasePointerCapture(event.pointerId);
   }
   listen(stage, 'pointerup', release);
   listen(stage, 'pointercancel', release);
-  listen(stage, 'lostpointercapture', (raw) => pointers.delete((raw as PointerEvent).pointerId));
+  listen(stage, 'lostpointercapture', (raw) => {
+    pointers.delete((raw as PointerEvent).pointerId);
+    setGesture(pointers.size > 0);
+  });
   function reset(): void {
     space = false;
     composing = false;
@@ -193,6 +199,7 @@ export function bindInput(
       if (stage.hasPointerCapture?.(pointerId)) stage.releasePointerCapture(pointerId);
     }
     pointers.clear();
+    setGesture(false);
   }
   if (view) listen(view, 'blur', reset);
   listen(stage, 'blur', () => {
@@ -210,6 +217,7 @@ export function bindInput(
       'gesturestart',
       (event) => {
         gestureScale = 1;
+        setGesture(true);
         event.preventDefault();
       },
       { passive: false },
@@ -235,6 +243,7 @@ export function bindInput(
       (event) => {
         event.preventDefault();
         gestureScale = 1;
+        setGesture(false);
       },
       { passive: false },
     );

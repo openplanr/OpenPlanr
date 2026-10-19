@@ -53,9 +53,9 @@ describe('bench transform observations', () => {
     expect(writes).toHaveLength(2);
   });
 
-  it('counts SVG world and overlay independently without replacing native methods', async () => {
-    const world = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-    const overlay = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+  it('counts HTML world and overlay independently without replacing native methods', async () => {
+    const world = document.createElement('div');
+    const overlay = document.createElement('div');
     const original = world.setAttribute;
     const writes = { world: 0, overlay: 0 };
     observers.push(
@@ -69,10 +69,10 @@ describe('bench transform observations', () => {
       }),
     );
     world.style.willChange = 'transform';
-    world.setAttribute('transform', 'translate(-3 -4) scale(1)');
-    overlay.setAttribute('transform', 'translate(-3 -4) scale(1)');
-    world.setAttribute('transform', 'translate(-6 -8) scale(1)');
-    world.setAttribute('transform', 'translate(-6 -8) scale(1)');
+    world.style.transform = 'translate(-3px, -4px) scale(1)';
+    overlay.style.transform = 'translate(-3px, -4px) scale(1)';
+    world.style.transform = 'translate(-6px, -8px) scale(1)';
+    world.style.transform = 'translate(-6px, -8px) scale(1)';
     await Promise.resolve();
     expect(writes).toEqual({ world: 2, overlay: 1 });
     expect(world.setAttribute).toBe(original);

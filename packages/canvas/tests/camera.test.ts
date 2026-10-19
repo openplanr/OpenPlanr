@@ -35,12 +35,10 @@ function frame(step = 16) {
   callbacks.clear();
   for (const callback of pending) callback(time);
 }
-function make(options: Partial<CanvasOptions> = {}, svg = false) {
+function make(options: Partial<CanvasOptions> = {}) {
   const stage = document.createElement('div');
-  const world = svg
-    ? document.createElementNS('http://www.w3.org/2000/svg', 'g')
-    : document.createElement('div');
-  const overlay = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+  const world = document.createElement('div');
+  const overlay = document.createElement('div');
   stage.append(world, overlay);
   document.body.append(stage);
   vi.spyOn(stage, 'getBoundingClientRect').mockReturnValue(new DOMRect(10, 20, 800, 600));
@@ -175,6 +173,26 @@ describe('camera geometry', () => {
     controller.fit('all');
     expect(controller.getCamera()).toEqual(before);
   });
+  it('rejects SVG worlds and overlays by field name', () => {
+    const { controller, stage, world } = make();
+    const group = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+    expect(() => controller.attach({ stage, world: group as unknown as HTMLElement })).toThrow(
+      /elements.world/u,
+    );
+    expect(() =>
+      controller.attach({ stage, world, overlays: [group as unknown as HTMLElement] }),
+    ).toThrow(/elements.overlays\[0\]/u);
+  });
+  it('hit tests world bounds through the camera without depending on mounts', () => {
+    const { controller } = make();
+    controller.setNodes([node('a', 100, 200), node('far', 10000, 10000)]);
+    controller.setCamera({ x: 50, y: 150, zoom: 2 });
+    expect(controller.hitTest({ x: 100, y: 100 })).toBe('a');
+    expect(controller.hitTest({ x: 99, y: 100 })).toBeNull();
+    controller.setCamera({ x: 10000, y: 10000, zoom: 1 });
+    expect(controller.hitTest({ x: 0, y: 0 })).toBe('far');
+    expect(() => controller.hitTest({ x: NaN, y: 0 })).toThrow(/screenPoint.x/u);
+  });
   it('clamps pan to padded world bounds', () => {
     const { controller } = make({
       worldBounds: { rect: { x: 100, y: 200, width: 2000, height: 1600 }, padding: 50 },
@@ -282,14 +300,14 @@ describe('lifecycle and the frame writer', () => {
     }).not.toThrow();
   });
 
-  it.each([false, true])('writes once per layer and notifies after writing (svg=%s)', (svg) => {
-    const { controller, world, overlay } = make({}, svg);
+  it('writes CSS transforms once per layer and notifies after writing', () => {
+    const { controller, world, overlay } = make();
     frame();
     const writes = vi.spyOn(world, 'setAttribute');
     const notifications: Camera[] = [];
     controller.on('camera', (camera) => {
-      const expected = `translate(${-camera.x * camera.zoom} ${-camera.y * camera.zoom}) scale(${camera.zoom})`;
-      expect(overlay.getAttribute('transform')).toBe(expected);
+      const expected = `scale(${camera.zoom}) translate(${-camera.x}px, ${-camera.y}px)`;
+      expect(overlay.style.transform).toBe(expected);
       notifications.push(camera);
     });
     controller.panBy(5, 6);
@@ -297,8 +315,8 @@ describe('lifecycle and the frame writer', () => {
     expect(notifications).toHaveLength(0);
     frame();
     expect(notifications).toEqual([{ x: 12, y: 14, zoom: 1 }]);
-    if (svg) expect(writes.mock.calls.filter(([name]) => name === 'transform')).toHaveLength(1);
-    else expect(world.style.transform).toBe('scale(1) translate(-12px, -14px)');
+    expect(writes.mock.calls.filter(([name]) => name === 'transform')).toHaveLength(0);
+    expect(world.style.transform).toBe('scale(1) translate(-12px, -14px)');
     frame();
     expect(notifications).toHaveLength(1);
   });
@@ -381,6 +399,13 @@ describe('lifecycle and the frame writer', () => {
       () => controller.detach(),
       () => controller.destroy(),
       () => controller.setNodes([]),
+      () => controller.setEdges([]),
+      () => controller.registerNodeElement('a', null),
+      () => controller.setPinned('editing', []),
+      () => controller.getMountedIds(),
+      () => controller.getDiagnostics(),
+      () => controller.getBreakpoint(),
+      () => controller.hitTest({ x: 0, y: 0 }),
       () => controller.getCamera(),
       () => controller.setCamera({ x: 0, y: 0, zoom: 1 }),
       () => controller.panBy(1, 1),

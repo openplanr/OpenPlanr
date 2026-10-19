@@ -16,7 +16,13 @@ import {
   rendererFrameWork,
 } from '../../src/testing/index.mts';
 import { waitForBench } from './bench';
-import { aggregateTraceRuns, type TraceRun, traceOwnership } from './trace-results';
+import {
+  aggregateTraceRuns,
+  DOM_NODE_BUDGET,
+  domBudgetPolicy,
+  type TraceRun,
+  traceOwnership,
+} from './trace-results';
 
 function traceEvents(input: unknown): RendererTraceEvent[] {
   if (
@@ -92,19 +98,24 @@ type Measurement = {
   count: 708 | 5000;
   fixture: string;
   ownership: ReturnType<typeof traceOwnership>;
+  domBudget: ReturnType<typeof domBudgetPolicy>;
   world: 'html' | 'svg';
   dpr: number;
-  scenario: Scenario;
+  scenario: Scenario | 'remount';
+  gpuRenderer: string;
+  hitTestP95Ms: number;
   rendererMainP95Ms: number;
   rafIntervalP95Ms: number;
   runs: readonly TraceRun[];
   firstFrameP50Ms: number;
   firstFrameTrialsMs: number[];
   referenceBudgets: {
+    hitTestP95Ms: number;
     rendererMainP95Ms: number;
     rafIntervalP95Ms: number;
     longTasksOver50Ms: number;
     firstFrameP50Ms: number;
+    domNodes: number;
   };
 };
 
@@ -133,7 +144,7 @@ async function firstFrames(context: BrowserContext, url: string): Promise<number
 async function recordRuns(
   page: Page,
   session: CDPSession,
-  scenario: Scenario,
+  scenario: Scenario | 'remount',
 ): Promise<TraceRun[]> {
   const runs: TraceRun[] = [];
   for (let run = 1; run <= 3; run += 1) {
@@ -142,19 +153,33 @@ async function recordRuns(
         'toplevel,devtools.timeline,disabled-by-default-devtools.timeline,blink.user_timing',
       transferMode: 'ReturnAsStream',
     });
-    const sample = await page.evaluate((name) => window.bench.run(name), scenario);
+    const sample =
+      scenario === 'remount'
+        ? await page.evaluate(() => window.bench.remount())
+        : await page.evaluate((name) => window.bench.run(name), scenario);
     const events = await finishTrace(session);
     if (sample.longTasks === null)
       throw new Error('Long-task observations are unavailable for the Chromium trace');
-    const rendererSamples = rendererFrameWork(events);
+    const rendererSamples = rendererFrameWork(
+      events,
+      scenario === 'remount' ? { start: 'canvas-remount-start', end: 'canvas-remount-end' } : {},
+    );
+    if ('mountCounts' in sample) {
+      expect(sample.mountCounts.length).toBeGreaterThanOrEqual(5);
+      expect(Math.max(...sample.mountCounts)).toBeLessThanOrEqual(200);
+    }
     runs.push({
       run,
+      gpuRenderer: sample.gpuRenderer,
+      hitTestP95Ms: sample.hitTestP95Ms,
+      hitTestProbe: sample.hitTestProbe,
       rendererMainP95Ms: percentile95(rendererSamples),
       rafIntervalP95Ms: percentile95(sample.intervals),
       longTasksOver50Ms: sample.longTasks.length,
       longTaskDurationsMs: sample.longTasks,
       domNodes: sample.domNodes,
       rendererFrameSamples: rendererSamples.length,
+      ...('mountCounts' in sample ? { mountCounts: sample.mountCounts } : {}),
     });
   }
   return runs;
@@ -179,24 +204,34 @@ async function measureTier(browser: Browser, baseURL: string, tier: Tier): Promi
     const session = await context.newCDPSession(page);
     try {
       const measurements: Measurement[] = [];
-      const scenarios: Scenario[] = ['pan-100', 'pan-40', 'pan-fit', 'zoom-sweep'];
+      const scenarios: (Scenario | 'remount')[] = [
+        'pan-100',
+        'pan-40',
+        'pan-fit',
+        'zoom-sweep',
+        'remount',
+      ];
       for (const scenario of scenarios) {
         const runs = await recordRuns(page, session, scenario);
         measurements.push({
           count,
           fixture,
           ownership: traceOwnership({ count, world, scenario }),
+          domBudget: domBudgetPolicy({ count, world, scenario }),
           world,
           dpr,
           scenario,
+          gpuRenderer: runs[0].gpuRenderer,
           ...aggregateTraceRuns(runs),
           firstFrameP50Ms,
           firstFrameTrialsMs,
           referenceBudgets: {
-            rendererMainP95Ms: mainBudget,
+            rendererMainP95Ms: scenario === 'remount' ? 16 : mainBudget,
             rafIntervalP95Ms: 16.8,
             longTasksOver50Ms: 0,
             firstFrameP50Ms: 150,
+            domNodes: DOM_NODE_BUDGET,
+            hitTestP95Ms: 0.1,
           },
         });
       }
@@ -235,8 +270,15 @@ test('records production vanilla camera traces beside the reference budgets', as
     reference: 'Apple M5 Max; approved reference budgets, no runner adjustment',
     stage: { width: 1440, height: 900 },
     frames: 180,
+    remount: { nodes: 968, maxMountsPerFrame: 200, minimumFrames: 5, rendererMainP95BudgetMs: 16 },
     recordedRunsPerScenario: 3,
     aggregation: 'median of three per-run p95s',
+    hitTest: {
+      method: 'p95 of per-query means at 1000 seeded screen points',
+      minimumSampleDurationMs: 1,
+      units: 'milliseconds per query',
+      window: 'outside interaction marks',
+    },
     warmup: {
       count: 708,
       scenario: 'pan-100',
@@ -252,22 +294,26 @@ test('records production vanilla camera traces beside the reference budgets', as
   await testInfo.attach('bench-trace', { path: output, contentType: 'application/json' });
   process.stdout.write(
     [
-      '| Fixture | World | DPR | Scenario | Ownership | Main p95 median / budget ms | Raw main p95s ms | rAF p95 median / budget ms | Raw rAF p95s ms | Long tasks per run | Long-task durations per run ms | First frame p50 / budget ms | DOM nodes per run |',
-      '| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |',
+      '| Fixture | World | DPR | Scenario | Ownership | Main p95 median / budget ms | Raw main p95s ms | rAF p95 median / budget ms | Raw rAF p95s ms | Long tasks per run | Long-task durations per run ms | First frame p50 / budget ms | DOM nodes per run | GPU renderer | Hit-test p95 median / budget ms | DOM ownership | DOM reference budget / regression limit | Hit-test queries per run |',
+      '| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |',
       ...measurements.map(
         (item) =>
-          `| ${item.fixture} | ${item.world} | ${item.dpr} | ${item.scenario} | ${item.ownership} | ${item.rendererMainP95Ms} / ${item.referenceBudgets.rendererMainP95Ms} | ${JSON.stringify(item.runs.map((run) => run.rendererMainP95Ms))} | ${item.rafIntervalP95Ms} / ${item.referenceBudgets.rafIntervalP95Ms} | ${JSON.stringify(item.runs.map((run) => run.rafIntervalP95Ms))} | ${JSON.stringify(item.runs.map((run) => run.longTasksOver50Ms))} | ${JSON.stringify(item.runs.map((run) => run.longTaskDurationsMs))} | ${item.firstFrameP50Ms} / ${item.referenceBudgets.firstFrameP50Ms} | ${JSON.stringify(item.runs.map((run) => run.domNodes))} |`,
+          `| ${item.fixture} | ${item.world} | ${item.dpr} | ${item.scenario} | ${item.ownership} | ${item.rendererMainP95Ms} / ${item.referenceBudgets.rendererMainP95Ms} | ${JSON.stringify(item.runs.map((run) => run.rendererMainP95Ms))} | ${item.rafIntervalP95Ms} / ${item.referenceBudgets.rafIntervalP95Ms} | ${JSON.stringify(item.runs.map((run) => run.rafIntervalP95Ms))} | ${JSON.stringify(item.runs.map((run) => run.longTasksOver50Ms))} | ${JSON.stringify(item.runs.map((run) => run.longTaskDurationsMs))} | ${item.firstFrameP50Ms} / ${item.referenceBudgets.firstFrameP50Ms} | ${JSON.stringify(item.runs.map((run) => run.domNodes))} | ${item.gpuRenderer} | ${item.hitTestP95Ms} / ${item.referenceBudgets.hitTestP95Ms} | ${item.domBudget.ownership} | ${item.referenceBudgets.domNodes} / ${item.domBudget.regressionLimit ?? 'reported'} | ${JSON.stringify(item.runs.map((run) => run.hitTestProbe.queryCount))} |`,
       ),
       '',
     ].join('\n'),
   );
-  for (const item of measurements.filter(
-    (measurement) =>
-      measurement.count === 708 &&
-      measurement.world === 'html' &&
-      measurement.scenario === 'pan-100',
-  )) {
-    const label = `${item.fixture} ${item.world} DPR ${item.dpr}`;
+  for (const item of measurements.filter((measurement) => measurement.ownership === 'gated')) {
+    const label = `${item.fixture} ${item.world} DPR ${item.dpr} ${item.scenario}`;
+    if (item.scenario === 'remount') {
+      expect
+        .soft(item.rendererMainP95Ms, `${label}: chunked remount renderer main p95`)
+        .toBeLessThanOrEqual(item.referenceBudgets.rendererMainP95Ms);
+      continue;
+    }
+    expect
+      .soft(item.hitTestP95Ms, `${label}: batched hit-test p95 over 1000 seeded points`)
+      .toBeLessThanOrEqual(item.referenceBudgets.hitTestP95Ms);
     expect
       .soft(item.rendererMainP95Ms, `${label}: renderer main work`)
       .toBeLessThanOrEqual(item.referenceBudgets.rendererMainP95Ms);
@@ -275,6 +321,28 @@ test('records production vanilla camera traces beside the reference budgets', as
       .soft(item.rafIntervalP95Ms, `${label}: rAF interval`)
       .toBeLessThanOrEqual(item.referenceBudgets.rafIntervalP95Ms);
     for (const run of item.runs) {
+      expect.soft(run.hitTestProbe.sampleCount, `${label}: timed hit-test points`).toBe(1000);
+      expect
+        .soft(run.hitTestProbe.queryCount, `${label}: executed hit-test queries`)
+        .toBeGreaterThanOrEqual(1000);
+      expect
+        .soft(run.hitTestProbe.minSampleDurationMs, `${label}: hit-test batch duration`)
+        .toBeGreaterThanOrEqual(1);
+      expect.soft(run.hitTestP95Ms, `${label}: measurable hit-test latency`).toBeGreaterThan(0);
+      expect
+        .soft(
+          run.hitTestP95Ms,
+          `${label}: run ${run.run} batched hit-test p95 over 1000 seeded points`,
+        )
+        .toBeLessThanOrEqual(item.referenceBudgets.hitTestP95Ms);
+      if (item.domBudget.regressionLimit !== null) {
+        expect
+          .soft(
+            run.domNodes,
+            `${label}: run ${run.run} stage DOM nodes (${item.domBudget.ownership})`,
+          )
+          .toBeLessThanOrEqual(item.domBudget.regressionLimit);
+      }
       expect
         .soft(run.longTasksOver50Ms, `${label}: run ${run.run} long tasks`)
         .toBe(item.referenceBudgets.longTasksOver50Ms);

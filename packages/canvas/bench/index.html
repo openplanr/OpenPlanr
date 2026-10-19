@@ -20,8 +20,11 @@
       .card { position: absolute; box-sizing: border-box; border: 1px solid #b7bfca; border-radius: 6px; background: white; padding: 10px; }
       .card strong, .card span { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
       .card span { color: #536171; margin-top: 6px; }
-      .edges, .svg-stage { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+      .edges, .svg-content { position: absolute; }
+      .frame-card { padding: 0; }
+      #mounted-count { position: fixed; left: 16px; bottom: 16px; }
       .edges { pointer-events: none; }
+      .edges path { stroke: #aeb9c7; stroke-width: 1; }
       #editable { position: fixed; right: 16px; bottom: 16px; }
       .canvas-frame-done { z-index: 20; }
     </style>

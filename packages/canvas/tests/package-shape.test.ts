@@ -52,12 +52,15 @@ describe('package shape', () => {
       const types =
         specifier === '@openplanr/canvas'
           ? [
+              'Breakpoint',
               'Camera',
+              'CanvasEdge',
               'CanvasController',
               'CanvasElements',
               'CanvasEvents',
               'CanvasNode',
               'CanvasOptions',
+              'Diagnostic',
               'NodeId',
               'Point',
               'Rect',

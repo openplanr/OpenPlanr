@@ -1,5 +1,11 @@
 import { defineConfig } from '@playwright/test';
 
+const gpuMode = process.env.CANVAS_GPU_MODE ?? 'software';
+if (gpuMode !== 'software' && gpuMode !== 'metal')
+  throw new TypeError(`CANVAS_GPU_MODE: invalid value ${gpuMode}`);
+if (process.env.CI && gpuMode === 'metal')
+  throw new TypeError('CANVAS_GPU_MODE: metal is unavailable on the software CI runner');
+
 export default defineConfig({
   testDir: './tests/browser',
   fullyParallel: false,
@@ -13,6 +19,9 @@ export default defineConfig({
     baseURL: 'http://127.0.0.1:4178',
     viewport: { width: 1440, height: 900 },
     trace: 'retain-on-failure',
+    launchOptions: {
+      args: gpuMode === 'metal' ? ['--use-angle=metal', '--enable-gpu', '--ignore-gpu-blocklist'] : [],
+    },
   },
   projects: [{ name: 'chromium', use: { browserName: 'chromium' } }],
   webServer: {

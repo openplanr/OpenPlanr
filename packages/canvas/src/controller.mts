@@ -9,17 +9,23 @@ import {
   validateCamera,
   worldToScreen,
 } from './camera.mjs';
+import { createCulling } from './culling.mjs';
+import { buildEdgeRoutes, createEdgeLayer } from './edges.mjs';
+import { createFrameLoader } from './frame-loader.mjs';
 import { createFrames } from './frames.mjs';
 import { bindInput, isEditable } from './input.mjs';
 import type {
   Camera,
   CanvasController,
+  CanvasEdge,
   CanvasElements,
   CanvasEvents,
   CanvasNode,
   CanvasOptions,
+  Diagnostic,
   NodeId,
   Point,
+  Rect,
   WorldElement,
 } from './types.mjs';
 
@@ -29,10 +35,33 @@ function object(field: string, value: unknown): void {
 
 export function createCanvas(options: CanvasOptions): CanvasController {
   object('options', options);
+  if (options.culling !== undefined) object('culling', options.culling);
   if (options.zoom !== undefined) object('zoom', options.zoom);
   if (options.keyboard !== undefined) object('keyboard', options.keyboard);
   if (options.worldBounds !== undefined) object('worldBounds', options.worldBounds);
   if (typeof options.label !== 'string' || !options.label.trim()) invalid('label', options.label);
+  if (options.breakpoints !== undefined && !Array.isArray(options.breakpoints))
+    invalid('breakpoints', options.breakpoints);
+  const breakpoints = (options.breakpoints ?? [])
+    .map((entry, index) => {
+      object(`breakpoints[${index}]`, entry);
+      if (typeof entry.name !== 'string' || !entry.name.trim())
+        invalid(`breakpoints[${index}].name`, entry.name);
+      nonnegative(`breakpoints[${index}].minWidth`, entry.minWidth);
+      return { ...entry };
+    })
+    .sort((a, b) => a.minWidth - b.minWidth);
+  if (new Set(breakpoints.map((entry) => entry.name)).size !== breakpoints.length)
+    invalid(
+      'breakpoints duplicate name',
+      breakpoints.map((entry) => entry.name),
+    );
+  if (new Set(breakpoints.map((entry) => entry.minWidth)).size !== breakpoints.length)
+    invalid(
+      'breakpoints duplicate minWidth',
+      breakpoints.map((entry) => entry.minWidth),
+    );
+  const culling = createCulling(options.culling);
   const min = options.zoom?.min === undefined ? 0.04 : options.zoom.min;
   const max = options.zoom?.max === undefined ? 4 : options.zoom.max;
   positive('zoom.min', min);
@@ -61,8 +90,23 @@ export function createCanvas(options: CanvasOptions): CanvasController {
   let camera: Camera = { x: 0, y: 0, zoom: Math.max(min, Math.min(max, 1)) };
   let nodes = new Map<NodeId, CanvasNode>();
   let selection: readonly NodeId[] = [];
+  let edges: readonly CanvasEdge[] = [];
+  let diagnostics: readonly Diagnostic[] = [];
+  let breakpoint: string | null = null;
+  let focused: NodeId | null = null;
+  const registered = new Map<NodeId, Element>();
+  let inputGesture = false;
+  let zoomChanged = false;
+  let edgesDirty = true;
+  let loaderDirty = true;
+  let lastRegion: Rect | undefined;
+  let resumeTimer: number | undefined;
+  let loader: ReturnType<typeof createFrameLoader> | undefined;
+  let edgeLayer: ReturnType<typeof createEdgeLayer> | undefined;
   let activeFrame: NodeId | null = null;
   let destroyed = false;
+  let detaching = false;
+  let stageSize = { width: 0, height: 0 };
   let composing = false;
   let elements: CanvasElements | undefined;
   let view: Window | undefined;
@@ -77,16 +121,79 @@ export function createCanvas(options: CanvasOptions): CanvasController {
   let input: ReturnType<typeof bindInput> | undefined;
   let frames: ReturnType<typeof createFrames> | undefined;
   let restore: (() => void) | undefined;
-  const cameraListeners = new Set<(payload: Camera) => void>();
-  const frameListeners = new Set<(payload: NodeId | null) => void>();
+  const listeners: { [K in keyof CanvasEvents]: Set<(payload: CanvasEvents[K]) => void> } = {
+    camera: new Set(),
+    'active-frame': new Set(),
+    mount: new Set(),
+    geometry: new Set(),
+    selection: new Set(),
+    focus: new Set(),
+    breakpoint: new Set(),
+    diagnostics: new Set(),
+  };
+  let queued: (() => void)[] = [];
+  function emit<K extends keyof CanvasEvents>(event: K, payload: CanvasEvents[K]) {
+    const callbacks = listeners[event] as Set<(payload: CanvasEvents[K]) => void>;
+    for (const listener of callbacks) listener(payload);
+  }
+  function enqueue<K extends keyof CanvasEvents>(event: K, payload: CanvasEvents[K]) {
+    queued.push(() => emit(event, payload));
+    schedule();
+  }
+  function updateDiagnostics(next: readonly Diagnostic[]) {
+    if (JSON.stringify(next) === JSON.stringify(diagnostics)) return;
+    diagnostics = next;
+    enqueue(
+      'diagnostics',
+      next.map((entry) => ({ ...entry })),
+    );
+  }
+  function viewport(): Rect {
+    const stage = size();
+    return {
+      x: camera.x,
+      y: camera.y,
+      width: stage.width / camera.zoom,
+      height: stage.height / camera.zoom,
+    };
+  }
+  function budget() {
+    if (!breakpoints.length) return 10;
+    const index = breakpoints.findIndex((entry) => entry.name === breakpoint);
+    return index === breakpoints.length - 1 ? 10 : index === breakpoints.length - 2 ? 6 : 3;
+  }
+  function resize() {
+    const bounds = elements?.stage.getBoundingClientRect();
+    stageSize = { width: bounds?.width ?? 0, height: bounds?.height ?? 0 };
+    loaderDirty = true;
+    const width = stageSize.width;
+    const next = breakpoints.filter((entry) => entry.minWidth <= width).at(-1)?.name ?? null;
+    if (next !== breakpoint) {
+      breakpoint = next;
+      enqueue('breakpoint', next);
+    }
+    schedule();
+  }
+  function setGesture(value: boolean) {
+    if (inputGesture === value) return;
+    inputGesture = value;
+    loader?.setMoving(isMoving || value);
+    frames?.setMoving(isMoving || value);
+    schedule();
+  }
+  function setFocus(id: NodeId | null) {
+    if (focused === id) return;
+    focused = id;
+    culling.setPinned('focus', id === null ? [] : [id]);
+    enqueue('focus', id);
+  }
   const shortcutsEnabled = () => options.shortcutsEnabled?.() ?? true;
 
   function alive() {
     if (destroyed) throw new Error('Canvas controller is destroyed');
   }
   function size() {
-    const bounds = elements?.stage.getBoundingClientRect();
-    return { width: bounds?.width ?? 0, height: bounds?.height ?? 0 };
+    return stageSize;
   }
   function clamp(value: Camera): Camera {
     const zoom = Math.max(min, Math.min(max, value.zoom));
@@ -107,7 +214,7 @@ export function createCanvas(options: CanvasOptions): CanvasController {
     return elements ? [...new Set([elements.world, ...(elements.overlays ?? [])])] : [];
   }
   function schedule() {
-    if (view && frameId === undefined) frameId = view.requestAnimationFrame(write);
+    if (view && !detaching && frameId === undefined) frameId = view.requestAnimationFrame(write);
   }
   function moving() {
     if (!view) return;
@@ -116,6 +223,7 @@ export function createCanvas(options: CanvasOptions): CanvasController {
         if (layer.style.willChange !== 'transform') layer.style.willChange = 'transform';
       }
       frames?.setMoving(true);
+      loader?.setMoving(true);
     }
     isMoving = true;
     if (idleTimer !== undefined) view.clearTimeout(idleTimer);
@@ -125,14 +233,19 @@ export function createCanvas(options: CanvasOptions): CanvasController {
         if (layer.style.willChange) layer.style.removeProperty('will-change');
       }
       isMoving = false;
-      frames?.setMoving(false);
+      frames?.setMoving(inputGesture);
+      loader?.setMoving(inputGesture);
+      schedule();
     }, 150);
   }
   function change(value: Camera) {
-    camera = clamp(value);
+    const next = clamp(value);
+    const changed = next.x !== camera.x || next.y !== camera.y || next.zoom !== camera.zoom;
+    zoomChanged ||= next.zoom !== camera.zoom;
+    camera = next;
     dirty = true;
     cameraEvent = true;
-    moving();
+    if (changed) moving();
     schedule();
   }
   function zoomTo(value: number, screenPoint?: Point) {
@@ -164,26 +277,53 @@ export function createCanvas(options: CanvasOptions): CanvasController {
       dirty = false;
       const { x, y, zoom } = camera;
       for (const layer of layers()) {
-        if (layer.namespaceURI === 'http://www.w3.org/2000/svg') {
-          const transform = `translate(${-x * zoom} ${-y * zoom}) scale(${zoom})`;
-          if (layer.getAttribute('transform') !== transform)
-            layer.setAttribute('transform', transform);
-        } else {
-          const transform = `scale(${zoom}) translate(${-x}px, ${-y}px)`;
-          if (layer.style.transform !== transform) layer.style.transform = transform;
-        }
+        const transform = `scale(${zoom}) translate(${-x}px, ${-y}px)`;
+        if (layer.style.transform !== transform) layer.style.transform = transform;
       }
       if (activeFrame !== null) frames?.updatePosition();
     }
+    const update = culling.update(viewport(), time, inputGesture, zoomChanged);
+    zoomChanged = false;
+    const region = culling.getRegion();
+    if (edgesDirty || region !== lastRegion) {
+      if (region) {
+        const routes = buildEdgeRoutes(nodes.values(), edges, region, options.strict);
+        edgeLayer?.update(routes);
+        updateDiagnostics(routes.diagnostics);
+      }
+      lastRegion = region;
+      edgesDirty = false;
+    }
+    const events = queued;
+    queued = [];
     const notifyCamera = cameraEvent;
     const notifyFrame = activeFrameEvent;
     const framePayload = activeFrame;
     const cameraPayload = { ...camera };
     cameraEvent = false;
     activeFrameEvent = false;
-    if (notifyCamera) for (const listener of cameraListeners) listener(cameraPayload);
-    if (notifyFrame) for (const listener of frameListeners) listener(framePayload);
-    if (animation) schedule();
+    if (notifyCamera) emit('camera', cameraPayload);
+    if (notifyFrame) emit('active-frame', framePayload);
+    for (const event of events) event();
+    if (update.geometry.length) emit('geometry', new Set(update.geometry));
+    if (update.mount) {
+      loader?.refresh();
+      emit('mount', new Set(culling.getMountedIds()));
+      loader?.refresh();
+    } else if (update.geometry.length || loaderDirty) loader?.refresh();
+    loaderDirty = false;
+    if (animation || update.pending) schedule();
+    if (resumeTimer !== undefined) view?.clearTimeout(resumeTimer);
+    resumeTimer = undefined;
+    if (update.resumeAt !== undefined && view) {
+      resumeTimer = view.setTimeout(
+        () => {
+          resumeTimer = undefined;
+          schedule();
+        },
+        Math.max(0, update.resumeAt - time),
+      );
+    }
   }
   function validatePointerMode(mode: 'pan' | 'none') {
     if (mode !== 'pan' && mode !== 'none') invalid('pointerMode', mode);
@@ -195,32 +335,42 @@ export function createCanvas(options: CanvasOptions): CanvasController {
   }
   function validateWorld(field: string, value: WorldElement, stage: HTMLElement) {
     const realm = stage.ownerDocument.defaultView;
-    if (
-      !realm ||
-      !(value instanceof realm.Element) ||
-      (!(value instanceof realm.HTMLElement) &&
-        !(value.namespaceURI === 'http://www.w3.org/2000/svg' && value.localName === 'g'))
-    )
-      invalid(field, value);
+    if (!realm || !(value instanceof realm.HTMLElement)) invalid(field, value);
   }
   function detach() {
     alive();
     if (!elements) return;
+    detaching = true;
     if (frameId !== undefined) view?.cancelAnimationFrame(frameId);
     if (idleTimer !== undefined) view?.clearTimeout(idleTimer);
+    if (resumeTimer !== undefined) view?.clearTimeout(resumeTimer);
+    resumeTimer = undefined;
     frameId = undefined;
     idleTimer = undefined;
     isMoving = false;
     composing = false;
     animation = undefined;
     input?.dispose();
+    loader?.dispose();
+    edgeLayer?.dispose();
     frames?.dispose();
+    culling.reset();
+    registered.clear();
+    setFocus(null);
+    lastRegion = undefined;
+    edgesDirty = true;
+    zoomChanged = false;
+    inputGesture = false;
     restore?.();
     input = undefined;
     frames = undefined;
+    loader = undefined;
+    edgeLayer = undefined;
     restore = undefined;
     elements = undefined;
     view = undefined;
+    stageSize = { width: 0, height: 0 };
+    detaching = false;
   }
 
   const controller: CanvasController = {
@@ -230,6 +380,11 @@ export function createCanvas(options: CanvasOptions): CanvasController {
       const realm = stage?.ownerDocument?.defaultView;
       if (!realm || !(stage instanceof realm.HTMLElement)) invalid('elements.stage', stage);
       validateWorld('elements.world', next.world, stage);
+      if (
+        next.edges !== undefined &&
+        (!(next.edges instanceof realm.SVGElement) || !['svg', 'g'].includes(next.edges.localName))
+      )
+        invalid('elements.edges', next.edges);
       if (next.overlays !== undefined && !Array.isArray(next.overlays))
         invalid('elements.overlays', next.overlays);
       next.overlays?.forEach((overlay, index) => {
@@ -238,6 +393,7 @@ export function createCanvas(options: CanvasOptions): CanvasController {
       if (
         elements?.stage === stage &&
         elements.world === next.world &&
+        elements.edges === next.edges &&
         (elements.overlays ?? []).length === (next.overlays ?? []).length &&
         (elements.overlays ?? []).every((overlay, index) => overlay === next.overlays?.[index])
       )
@@ -254,7 +410,6 @@ export function createCanvas(options: CanvasOptions): CanvasController {
         transform: layer.style.transform,
         origin: layer.style.transformOrigin,
         willChange: layer.style.willChange,
-        attribute: layer.getAttribute('transform'),
       }));
       const compositionStart = () => {
         composing = true;
@@ -266,7 +421,29 @@ export function createCanvas(options: CanvasOptions): CanvasController {
       stage.addEventListener('compositionend', compositionEnd);
       stage.addEventListener('blur', compositionEnd);
       stage.addEventListener('focusout', compositionEnd);
+      const focusIn = (event: FocusEvent) => {
+        const target = event.target;
+        const id =
+          [...registered].find(([, element]) => event.composedPath().includes(element))?.[0] ??
+          (target instanceof realm.Element
+            ? target.closest('[data-canvas-node-id]')?.getAttribute('data-canvas-node-id')
+            : null);
+        setFocus(id && nodes.has(id) ? id : null);
+      };
+      const focusOut = (event: FocusEvent) => {
+        if (!(event.relatedTarget instanceof realm.Node) || !stage.contains(event.relatedTarget))
+          setFocus(null);
+      };
+      stage.addEventListener('focusin', focusIn);
+      stage.addEventListener('focusout', focusOut);
+      const observer = realm.ResizeObserver ? new realm.ResizeObserver(resize) : undefined;
+      observer?.observe(stage);
+      realm.addEventListener('resize', resize);
       restore = () => {
+        observer?.disconnect();
+        realm.removeEventListener('resize', resize);
+        stage.removeEventListener('focusin', focusIn);
+        stage.removeEventListener('focusout', focusOut);
         stage.removeEventListener('compositionstart', compositionStart);
         stage.removeEventListener('compositionend', compositionEnd);
         stage.removeEventListener('blur', compositionEnd);
@@ -280,8 +457,6 @@ export function createCanvas(options: CanvasOptions): CanvasController {
           entry.layer.style.transform = entry.transform;
           entry.layer.style.transformOrigin = entry.origin;
           entry.layer.style.willChange = entry.willChange;
-          if (entry.attribute === null) entry.layer.removeAttribute('transform');
-          else entry.layer.setAttribute('transform', entry.attribute);
         }
       };
       stage.tabIndex = 0;
@@ -296,7 +471,21 @@ export function createCanvas(options: CanvasOptions): CanvasController {
         () => controller.deactivateFrame(),
       );
       frames.setActive(activeFrame);
-      input = bindInput(elements, controller, () => pointerMode, shortcutsEnabled);
+      edgeLayer = next.edges ? createEdgeLayer(next.edges) : undefined;
+      loader = createFrameLoader(
+        elements,
+        () => nodes.values(),
+        () => controller.getMountedIds(),
+        () => {
+          const region = viewport();
+          return { x: region.x + region.width / 2, y: region.y + region.height / 2 };
+        },
+        budget,
+        () => frames?.refresh(),
+      );
+      loader.request(activeFrame);
+      input = bindInput(elements, controller, () => pointerMode, shortcutsEnabled, setGesture);
+      resize();
       change(camera);
     },
     detach,
@@ -304,8 +493,8 @@ export function createCanvas(options: CanvasOptions): CanvasController {
       alive();
       detach();
       destroyed = true;
-      cameraListeners.clear();
-      frameListeners.clear();
+      for (const callbacks of Object.values(listeners)) callbacks.clear();
+      queued = [];
       nodes.clear();
       selection = [];
     },
@@ -324,10 +513,84 @@ export function createCanvas(options: CanvasOptions): CanvasController {
           invalid(`nodes[${index}].kind`, node.kind);
         next.set(node.id, { ...node, bounds: { ...node.bounds } });
       }
+      const result = buildEdgeRoutes(next.values(), edges, viewport(), options.strict);
+      const changed = culling.setNodes(next);
       nodes = next;
-      selection = selection.filter((id) => nodes.has(id));
+      edgesDirty ||= changed.length > 0;
+      loaderDirty ||= changed.length > 0;
+      updateDiagnostics(result.diagnostics);
+      for (const id of registered.keys()) if (!nodes.has(id)) registered.delete(id);
+      const remaining = selection.filter((id) => nodes.has(id));
+      if (remaining.length !== selection.length) {
+        selection = remaining;
+        enqueue('selection', [...selection]);
+      }
+      culling.setPinned('selection', selection);
+      if (focused !== null && !nodes.has(focused)) setFocus(null);
       if (activeFrame !== null && !nodes.get(activeFrame)?.frame) controller.deactivateFrame();
       frames?.refresh();
+      schedule();
+    },
+    setEdges(values) {
+      alive();
+      if (!Array.isArray(values)) invalid('edges', values);
+      const ids = new Set<string>();
+      const next = values.map((edge: CanvasEdge, index: number) => {
+        object(`edges[${index}]`, edge);
+        for (const field of ['id', 'from', 'to', 'style'] as const)
+          if (typeof edge[field] !== 'string' || !edge[field].trim())
+            invalid(`edges[${index}].${field}`, edge[field]);
+        if (ids.has(edge.id)) invalid('edges.id duplicate', edge.id);
+        ids.add(edge.id);
+        if (edge.points !== undefined) {
+          if (!Array.isArray(edge.points) || edge.points.length < 2)
+            invalid(`edges[${index}].points`, edge.points);
+          edge.points.forEach((value, offset) => {
+            point(`edges[${index}].points[${offset}]`, value);
+          });
+        }
+        return { ...edge, points: edge.points?.map((value) => ({ ...value })) };
+      });
+      const result = buildEdgeRoutes(nodes.values(), next, viewport(), options.strict);
+      edges = next;
+      updateDiagnostics(result.diagnostics);
+      edgesDirty = true;
+      schedule();
+    },
+    registerNodeElement(id, element) {
+      alive();
+      if (element !== null) requireNode(id);
+      const realm = elements?.stage.ownerDocument.defaultView;
+      if (element !== null && (!realm || !(element instanceof realm.Element)))
+        invalid('element', element);
+      if (element === null) {
+        registered.delete(id);
+        if (focused === id) setFocus(null);
+      } else registered.set(id, element);
+      loaderDirty = true;
+      schedule();
+    },
+    setPinned(source, ids) {
+      alive();
+      if (typeof source !== 'string' || !source.trim()) invalid('source', source);
+      if (!Array.isArray(ids)) invalid('pinned', ids);
+      ids.forEach((id) => {
+        requireNode(id, 'pinned.id');
+      });
+      culling.setPinned(`product:${source}`, ids);
+      schedule();
+    },
+    getMountedIds() {
+      alive();
+      return new Set(culling.getMountedIds());
+    },
+    getDiagnostics() {
+      alive();
+      return diagnostics.map((entry) => ({ ...entry }));
+    },
+    getBreakpoint() {
+      alive();
+      return breakpoint;
     },
     getCamera() {
       alive();
@@ -432,6 +695,11 @@ export function createCanvas(options: CanvasOptions): CanvasController {
       point('point', value);
       return screenToWorld(camera, value);
     },
+    hitTest(value) {
+      alive();
+      point('screenPoint', value);
+      return culling.hitTest(screenToWorld(camera, value));
+    },
     setSelection(ids) {
       alive();
       if (!Array.isArray(ids)) invalid('selection', ids);
@@ -439,7 +707,11 @@ export function createCanvas(options: CanvasOptions): CanvasController {
         requireNode(id, 'selection.id');
       });
       if (new Set(ids).size !== ids.length) invalid('selection duplicate', ids.join(','));
+      if (selection.length === ids.length && selection.every((id, index) => id === ids[index]))
+        return;
       selection = [...ids];
+      culling.setPinned('selection', selection);
+      enqueue('selection', [...selection]);
     },
     getSelection() {
       alive();
@@ -499,8 +771,10 @@ export function createCanvas(options: CanvasOptions): CanvasController {
       if (id !== null && !requireNode(id).frame) invalid('frame.id', id);
       if (id === activeFrame) return;
       activeFrame = id;
+      culling.setPinned('active-frame', id === null ? [] : [id]);
       activeFrameEvent = true;
       frames?.setActive(id);
+      loader?.request(id);
       schedule();
     },
     getActiveFrame() {
@@ -514,21 +788,12 @@ export function createCanvas(options: CanvasOptions): CanvasController {
     on<K extends keyof CanvasEvents>(event: K, listener: (payload: CanvasEvents[K]) => void) {
       alive();
       if (typeof listener !== 'function') invalid('listener', listener);
-      if (event === 'camera') {
-        const callback = listener as (payload: Camera) => void;
-        cameraListeners.add(callback);
-        return () => {
-          cameraListeners.delete(callback);
-        };
-      }
-      if (event === 'active-frame') {
-        const callback = listener as (payload: NodeId | null) => void;
-        frameListeners.add(callback);
-        return () => {
-          frameListeners.delete(callback);
-        };
-      }
-      return invalid('event', event);
+      if (!Object.hasOwn(listeners, event)) return invalid('event', event);
+      const callbacks = listeners[event] as Set<(payload: CanvasEvents[K]) => void>;
+      callbacks.add(listener);
+      return () => {
+        callbacks.delete(listener);
+      };
     },
   };
   return controller;

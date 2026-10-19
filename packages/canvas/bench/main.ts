@@ -6,6 +6,7 @@ import {
 } from '../src/index.mts';
 import { generateLayeredGraph, generateSvgDiagram } from '../src/testing/index.mts';
 import '../src/styles.css';
+import { type HitTestProbe, measureHitTests } from './hit-test';
 import { observeTransformWrites } from './transform-writes';
 
 export type Scenario = 'pan-100' | 'pan-40' | 'pan-fit' | 'zoom-sweep';
@@ -19,14 +20,23 @@ export type ScenarioResult = {
   startCamera: Camera;
   endCamera: Camera;
   minimumZoom: number;
+  gpuRenderer: string;
+  hitTestP95Ms: number;
+  hitTestProbe: HitTestProbe;
 };
+export type RemountResult = Pick<
+  ScenarioResult,
+  'intervals' | 'longTasks' | 'domNodes' | 'gpuRenderer' | 'hitTestP95Ms' | 'hitTestProbe'
+> & { mountCounts: number[] };
 export interface Bench {
   ready: Promise<void>;
   firstFrameMs: number;
   transformWrites: WriteFrame[];
   fixture: string;
   world: 'html' | 'svg';
+  setNodes(nodes: readonly CanvasNode[]): void;
   run(scenario: Scenario): Promise<ScenarioResult>;
+  remount(): Promise<RemountResult>;
 }
 
 declare global {
@@ -64,96 +74,138 @@ function svgElement<K extends keyof SVGElementTagNameMap>(
   return element;
 }
 
-const world =
-  worldType === 'svg' ? svgElement('g', { 'data-world': '' }) : document.createElement('div');
-const overlay = svgElement('g', { 'data-overlay': '' });
+const world = document.createElement('div');
 world.classList.add('canvas-world');
-const rootSvg = svgElement('svg', { class: 'svg-stage', 'aria-hidden': 'true' });
-if (worldType === 'svg') {
-  rootSvg.append(world, overlay);
-  stage.append(rootSvg);
-} else {
-  rootSvg.append(overlay);
-  stage.append(world, rootSvg);
-  rootSvg.style.pointerEvents = 'none';
-}
-const edges = svgElement('path', {
-  d: fixture.edges
-    .map((edge) =>
-      edge.points
-        .map((point, index) => `${index === 0 ? 'M' : 'L'}${point.x} ${point.y}`)
-        .join(' '),
-    )
-    .join(' '),
-  fill: 'none',
-  stroke: '#aeb9c7',
-  'stroke-width': '1',
+world.dataset.world = '';
+const overlay = document.createElement('div');
+overlay.classList.add('canvas-world');
+overlay.dataset.overlay = '';
+overlay.style.pointerEvents = 'none';
+const edgeSvg = svgElement('svg', { class: 'edges', 'aria-hidden': 'true' });
+world.append(edgeSvg);
+const contentSvg = svgElement('svg', {
+  class: 'svg-content',
+  'aria-hidden': 'true',
+  viewBox: `${fixture.bounds.x} ${fixture.bounds.y} ${fixture.bounds.width} ${fixture.bounds.height}`,
+  width: String(fixture.bounds.width),
+  height: String(fixture.bounds.height),
 });
-if (worldType === 'svg') world.append(edges);
-else {
-  const edgeSvg = svgElement('svg', { class: 'edges' });
-  edgeSvg.append(edges);
-  world.append(edgeSvg);
+Object.assign(contentSvg.style, {
+  left: `${fixture.bounds.x}px`,
+  top: `${fixture.bounds.y}px`,
+});
+if (worldType === 'svg') world.append(contentSvg);
+const overlaySvg = contentSvg.cloneNode(false);
+overlay.append(overlaySvg);
+stage.append(world, overlay);
+const count = document.createElement('output');
+count.id = 'mounted-count';
+count.setAttribute('aria-label', 'Mounted nodes');
+document.body.append(count);
+
+let nodes: readonly CanvasNode[] = fixture.nodes.map(({ id, bounds }) => ({ id, bounds }));
+const frameCount = Number(params.get('frames') ?? (params.get('frame') === '1' ? 1 : 0));
+if (!Number.isInteger(frameCount) || frameCount < 0 || frameCount > 15)
+  throw new TypeError(`frames: ${frameCount}`);
+if (frameCount > 0) {
+  if (worldType !== 'html') throw new TypeError('frames: requires html world');
+  nodes = [
+    ...nodes,
+    ...Array.from({ length: frameCount }, (_, index) => ({
+      id: index === 0 ? 'preview-frame' : `preview-frame-${index + 1}`,
+      bounds: {
+        x: 80 + (index % 5) * 240,
+        y: 80 + Math.floor(index / 5) * 240,
+        width: frameCount === 1 ? 320 : 220,
+        height: 200,
+      },
+      frame: true,
+    })),
+  ];
 }
-for (const node of fixture.nodes) {
+let nodeById = new Map(nodes.map((node) => [node.id, node]));
+const fixtureById = new Map(fixture.nodes.map((node) => [node.id, node]));
+const rendered = new Map<string, Element>();
+function positionNode(element: Element, node: CanvasNode): void {
   const { x, y, width, height } = node.bounds;
-  if (worldType === 'svg') {
-    const group = svgElement('g', {
-      'data-canvas-node-id': node.id,
-      transform: `translate(${x} ${y})`,
-    });
-    group.append(
-      svgElement('rect', {
-        width: String(width),
-        height: String(height),
-        rx: '6',
-        fill: 'white',
-        stroke: '#b7bfca',
-      }),
-    );
-    const title = svgElement('text', { x: '10', y: '24', 'font-size': '13' });
-    title.textContent = node.title;
-    const detail = svgElement('text', { x: '10', y: '45', 'font-size': '11', fill: '#536171' });
-    detail.textContent = `${node.id} · Layer ${node.rank}`;
-    group.append(title, detail);
-    world.append(group);
-  } else {
-    const card = document.createElement('article');
-    card.className = 'card';
-    card.dataset.canvasNodeId = node.id;
-    Object.assign(card.style, {
+  if (element instanceof SVGElement) {
+    element.setAttribute('transform', `translate(${x} ${y})`);
+    const shape = element.querySelector('rect');
+    shape?.setAttribute('width', String(width));
+    shape?.setAttribute('height', String(height));
+  } else if (element instanceof HTMLElement)
+    Object.assign(element.style, {
       left: `${x}px`,
       top: `${y}px`,
       width: `${width}px`,
       height: `${height}px`,
     });
-    const title = document.createElement('strong');
-    title.textContent = node.title;
-    const detail = document.createElement('span');
-    detail.textContent = `${node.id} · Layer ${node.rank}`;
-    card.append(title, detail);
+}
+function renderNode(node: CanvasNode): void {
+  const { width, height } = node.bounds;
+  const fixtureNode = fixtureById.get(node.id);
+  const titleText = fixtureNode?.title ?? node.id;
+  let element: HTMLElement | SVGGElement;
+  if (worldType === 'svg') {
+    const group = svgElement('g', { 'data-canvas-node-id': node.id });
+    group.append(svgElement('rect', {
+      width: String(width), height: String(height), rx: '6', fill: 'white', stroke: '#b7bfca',
+    }));
+    const title = svgElement('text', { x: '10', y: '24', 'font-size': '13' });
+    title.textContent = titleText;
+    const detail = svgElement('text', { x: '10', y: '45', 'font-size': '11', fill: '#536171' });
+    detail.textContent = node.id;
+    group.append(title, detail);
+    contentSvg.append(group);
+    element = group;
+  } else {
+    const card = document.createElement('article');
+    card.className = 'card';
+    card.dataset.canvasNodeId = node.id;
+    if (node.frame) {
+      const frame = document.createElement('iframe');
+      frame.title = node.id === 'preview-frame' ? 'Preview frame' : node.id;
+      frame.srcdoc = '<label>Frame field <input id="frame-field"></label>';
+      Object.assign(frame.style, { width: '100%', height: '100%', border: '0' });
+      card.classList.add('frame-card');
+      card.append(frame);
+    } else {
+      const title = document.createElement('strong');
+      title.textContent = titleText;
+      const detail = document.createElement('span');
+      detail.textContent = `${node.id} · Layer ${fixtureNode?.rank ?? 0}`;
+      card.append(title, detail);
+    }
     world.append(card);
+    element = card;
   }
+  positionNode(element, node);
+  rendered.set(node.id, element);
+  controller.registerNodeElement(node.id, element);
 }
-const nodes: CanvasNode[] = fixture.nodes.map(({ id, bounds }) => ({ id, bounds }));
-if (params.get('frame') === '1') {
-  if (!(world instanceof HTMLElement)) throw new TypeError('frame: requires html world');
-  const bounds = { x: 80, y: 80, width: 320, height: 200 };
-  nodes.push({ id: 'preview-frame', bounds, frame: true });
-  const frame = document.createElement('iframe');
-  frame.title = 'Preview frame';
-  frame.dataset.canvasNodeId = 'preview-frame';
-  frame.srcdoc = '<label>Frame field <input id="frame-field"></label>';
-  Object.assign(frame.style, {
-    position: 'absolute',
-    left: '80px',
-    top: '80px',
-    width: '320px',
-    height: '200px',
-    background: 'white',
-  });
-  world.append(frame);
+function syncMounted(ids: ReadonlySet<string>): void {
+  for (const [id, element] of rendered) {
+    if (ids.has(id)) continue;
+    controller.registerNodeElement(id, null);
+    element.remove();
+    rendered.delete(id);
+  }
+  for (const id of ids) {
+    if (rendered.has(id)) continue;
+    const node = nodeById.get(id);
+    if (!node) throw new Error(`Mounted node ${id} has no bench geometry`);
+    renderNode(node);
+  }
+  count.value = `${ids.size} mounted / ${nodes.length} nodes`;
 }
+function gpuRenderer(): string {
+  const canvas = document.createElement('canvas');
+  const gl = canvas.getContext('webgl');
+  if (!gl) return 'WebGL unavailable';
+  const debug = gl.getExtension('WEBGL_debug_renderer_info');
+  return String(gl.getParameter(debug ? debug.UNMASKED_RENDERER_WEBGL : gl.RENDERER));
+}
+const renderer = gpuRenderer();
 
 let frameNumber = 0;
 let writes: WriteFrame[] = [];
@@ -179,12 +231,23 @@ const controller = createCanvas({
   label: 'Canvas engine bench',
   pointerMode,
   motion: 'auto',
+  breakpoints: [{ name: 'mobile', minWidth: 0 }, { name: 'tablet', minWidth: 768 }, { name: 'desktop', minWidth: 1280 }],
   shortcutsEnabled: () => params.get('shortcuts') !== 'off',
   zoom: { min: 0.0001, max: 4 },
 });
 window.canvas = controller;
+controller.on('mount', syncMounted);
+controller.on('geometry', (ids) => {
+  for (const id of ids) {
+    const element = rendered.get(id);
+    const node = nodeById.get(id);
+    if (element && node) positionNode(element, node);
+  }
+});
 controller.setNodes(nodes);
-controller.attach({ stage, world, overlays: [overlay] });
+controller.setEdges(fixture.edges.map((edge) => ({ ...edge, style: 'dependency' })));
+controller.attach({ stage, world, overlays: [overlay], edges: edgeSvg });
+syncMounted(new Set(controller.getMountedIds()));
 controller.setCamera({ x: 0, y: 0, zoom: Number(params.get('zoom') ?? 1) });
 const nextFrame = (): Promise<number> => new Promise((resolve) => requestAnimationFrame(resolve));
 let longTasks: PerformanceEntry[] = [];
@@ -196,6 +259,7 @@ const observer =
       })
     : null;
 observer?.observe({ type: 'longtask', buffered: true });
+const probeHitTests = () => measureHitTests((point) => controller.hitTest(point), stage.getBoundingClientRect());
 const bench: Bench = {
   ready: nextFrame().then(() => {
     bench.firstFrameMs = performance.now();
@@ -208,6 +272,61 @@ const bench: Bench = {
   },
   fixture: fixtureName,
   world: worldType,
+  setNodes(next) {
+    nodes = next;
+    nodeById = new Map(next.map((node) => [node.id, node]));
+    controller.setEdges([]);
+    controller.setNodes(next);
+  },
+  async remount() {
+    bench.setNodes([]);
+    controller.setCamera({ x: 0, y: 0, zoom: 1 });
+    await new Promise<void>((resolve) => window.setTimeout(resolve, 150));
+    await nextFrame();
+    const nodes = Array.from({ length: 968 }, (_, index) => ({
+      id: `remount-${index}`,
+      bounds: { x: (index % 44) * 30, y: Math.floor(index / 44) * 30, width: 20, height: 20 },
+    }));
+    const mountCounts: number[] = [];
+    let previousCount = 0;
+    const off = controller.on('mount', (ids) => {
+      mountCounts.push(ids.size - previousCount);
+      previousCount = ids.size;
+    });
+    const intervals: number[] = [];
+    longTasks = [];
+    performance.clearMarks('canvas-remount-start');
+    performance.clearMarks('canvas-remount-end');
+    let previous = await nextFrame();
+    const start = performance.now();
+    performance.mark('canvas-remount-start');
+    bench.setNodes(nodes);
+    for (let frame = 0; frame < 30 && controller.getMountedIds().size < nodes.length; frame += 1) {
+      const time = await nextFrame();
+      intervals.push(time - previous);
+      previous = time;
+    }
+    await nextFrame();
+    performance.mark('canvas-remount-end');
+    const end = performance.now();
+    off();
+    if (controller.getMountedIds().size !== nodes.length)
+      throw new Error(`Remount admitted ${controller.getMountedIds().size} of ${nodes.length} nodes`);
+    await nextFrame();
+    longTasks.push(...(observer?.takeRecords() ?? []));
+    const hitTestProbe = probeHitTests();
+    return {
+      intervals,
+      mountCounts,
+      longTasks: observer
+        ? longTasks.filter((entry) => entry.startTime >= start && entry.startTime < end && entry.duration > 50).map((entry) => entry.duration)
+        : null,
+      domNodes: stage.querySelectorAll('*').length,
+      gpuRenderer: renderer,
+      hitTestP95Ms: hitTestProbe.p95Ms,
+      hitTestProbe,
+    };
+  },
   async run(scenario) {
     controller.fit('all', { padding: 32, maxZoom: 1 });
     await new Promise<void>((resolve) => window.setTimeout(resolve, 220));
@@ -226,6 +345,7 @@ const bench: Bench = {
     const intervals: number[] = [];
     const startCamera = controller.getCamera();
     let minimumZoom = startCamera.zoom;
+    let domNodes = stage.querySelectorAll('*').length;
     let previous = await nextFrame();
     const start = performance.now();
     performance.mark('canvas-interaction-start');
@@ -239,6 +359,7 @@ const bench: Bench = {
         controller.panBy(1, 0.5);
       }
       minimumZoom = Math.min(minimumZoom, controller.getCamera().zoom);
+      domNodes = Math.max(domNodes, stage.querySelectorAll('*').length);
       const now = await nextFrame();
       intervals.push(now - previous);
       previous = now;
@@ -248,6 +369,7 @@ const bench: Bench = {
     await nextFrame();
     for (const observer of transformObservers) observer.flush();
     longTasks.push(...(observer?.takeRecords() ?? []));
+    const hitTestProbe = probeHitTests();
     return {
       intervals,
       writes: [...writes],
@@ -262,7 +384,10 @@ const bench: Bench = {
             )
             .map((entry) => entry.duration)
         : null,
-      domNodes: stage.querySelectorAll('*').length,
+      domNodes,
+      gpuRenderer: renderer,
+      hitTestP95Ms: hitTestProbe.p95Ms,
+      hitTestProbe,
     };
   },
 };

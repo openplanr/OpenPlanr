@@ -56,16 +56,13 @@ for (const world of ['html', 'svg']) {
       const world = document.querySelector('.canvas-world');
       const overlay = document.querySelector('[data-overlay]');
       if (!world || !overlay) throw new Error('Bench transform targets are missing');
-      if (world instanceof HTMLElement) {
-        world.style.transform = 'scale(2)';
-        world.style.willChange = '';
-        world.style.transform = 'scale(3)';
-      } else {
-        world.setAttribute('transform', 'scale(2)');
-        world.setAttribute('transform', 'scale(3)');
-      }
-      overlay.setAttribute('transform', 'scale(2)');
-      overlay.setAttribute('transform', 'scale(3)');
+      if (!(world instanceof HTMLElement) || !(overlay instanceof HTMLElement))
+        throw new Error('Bench camera targets must be HTML wrappers');
+      world.style.transform = 'scale(2)';
+      world.style.willChange = '';
+      world.style.transform = 'scale(3)';
+      overlay.style.transform = 'scale(2)';
+      overlay.style.transform = 'scale(3)';
       await Promise.resolve();
       const after = sum();
       return { world: after.world - before.world, overlay: after.overlay - before.overlay };
