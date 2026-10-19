@@ -27,7 +27,11 @@ import {
   resolvePlanningWorkspace,
 } from '../../../../apps/dashboard/src/features/planning/planning-workspace.js';
 import { SprintsPage } from '../../../../apps/dashboard/src/features/planning/SprintsPage.js';
-import { clearInspector } from '../../../../apps/dashboard/src/features/shell/inspector-selection.js';
+import {
+  clearInspector,
+  useInspectorStore,
+} from '../../../../apps/dashboard/src/features/shell/inspector-selection.js';
+import { installKeyboardCoordinator } from '../../../../apps/dashboard/src/features/shell/keyboard-coordinator.js';
 import { UnifiedShell } from '../../../../apps/dashboard/src/features/shell/UnifiedShell.js';
 import {
   type DashboardProductState,
@@ -38,7 +42,13 @@ import {
   createDashboardQueryIdentity,
   type DashboardQueryIdentity,
 } from '../../../../apps/dashboard/src/lib/binding/query-identity.js';
+import { PlanningPresentationProvider } from '../../../../apps/dashboard/src/lib/routing/planning-presentation.js';
+import type { PlanningView } from '../../../../apps/dashboard/src/lib/routing/planning-view-codec.js';
 import { deliveryPlanningGraph } from '../e2e/fixtures/dashboard-delivery-graph.js';
+import {
+  buildPremiumDashboardFixture,
+  fixtureHash,
+} from './fixtures/premium-dashboard-fixtures.js';
 
 beforeEach(() => {
   vi.spyOn(Element.prototype, 'clientWidth', 'get').mockImplementation(function (this: Element) {
@@ -55,6 +65,10 @@ const PRODUCTION_SOURCE = [
   'OverviewPage.tsx',
   'GraphPage.tsx',
   'BoardPage.tsx',
+  'BoardWorkspace.tsx',
+  'BoardColumn.tsx',
+  'planning-board-window.ts',
+  'planning-board-projection.ts',
   'ListPage.tsx',
   'SprintsPage.tsx',
   'ActivityPage.tsx',
@@ -185,8 +199,10 @@ function envelope(
         viewHash: sha256Jcs(planningGraph as never),
       }),
       mode: planningGraph.nodes.some((node) => node.type === 'spec')
-        ? 'spec'
-        : planningGraph.nodes.length
+        ? planningGraph.nodes.some((node) => node.type === 'epic' || node.type === 'feature')
+          ? 'mixed'
+          : 'spec'
+        : planningGraph.nodes.some((node) => node.type === 'epic' || node.type === 'feature')
           ? 'agile'
           : 'empty',
       graph: planningGraph,
@@ -257,9 +273,13 @@ describe('T-021 Planning workspace UI', () => {
     );
     expect(blockedCard?.textContent).toContain('Bound Planning transport');
     expect(boardDom.window.document.querySelectorAll('.pc-status-board__card')).toHaveLength(3);
-    boardDom.window.close();
     expect(boardHtml).not.toContain('comparison board');
-    expect(boardHtml).not.toContain('Done · 0');
+    expect(
+      boardDom.window.document.querySelector(
+        '[data-keyboard-column="done"] .pc-status-board__count',
+      )?.textContent,
+    ).toBe('0');
+    boardDom.window.close();
 
     const listBinding = identity('#/list');
     const listHtml = renderToStaticMarkup(
@@ -577,5 +597,473 @@ describe('T-021 Planning workspace UI', () => {
   it('does not introduce local mutation or browser authority', () => {
     expect(WORKSPACE_SOURCE).not.toMatch(/useState|useEffect/u);
     expect(PRODUCTION_SOURCE).not.toMatch(/fetchPlanningGraph|connectPlanningSse/u);
+  });
+});
+
+function BoardInspectorProbe() {
+  const store = useInspectorStore();
+  return <output data-testid="board-inspector">{JSON.stringify(store)}</output>;
+}
+
+function boardHarness(
+  source: PlanningGraph = graph,
+  copy = vi.fn(async (_text: string) => {}),
+  view: PlanningView | null = null,
+  singleLetters = true,
+) {
+  clearInspector();
+  let current = createDashboardQueryIdentity({
+    ...identity('#/board'),
+    viewHash: fixtureHash(source),
+  });
+  const ui = (next: PlanningGraph) => (
+    <PlanningPresentationProvider
+      scope="board-test"
+      view={view}
+      onCopy={copy}
+      singleLetters={singleLetters}
+    >
+      <main>
+        <BoardPage currentBinding={current} current={stateFor(current, envelope(current, next))} />
+        <BoardInspectorProbe />
+      </main>
+    </PlanningPresentationProvider>
+  );
+  const rendered = render(ui(source));
+  const announce = vi.fn();
+  const dispose = installKeyboardCoordinator(document, () => ({
+    root: rendered.container,
+    singleLetters,
+    paletteOpen: false,
+    togglePalette: vi.fn(),
+    openHelp: vi.fn(),
+    navigate: vi.fn(),
+    closeInspector: () => false,
+    selectedId: () =>
+      rendered.container.querySelector<HTMLElement>('[data-selected="true"]')?.dataset
+        .keyboardItem ?? null,
+    copy,
+    announce,
+  }));
+  return {
+    ...rendered,
+    copy,
+    announce,
+    card: (id: string) =>
+      Array.from(
+        rendered.container.querySelectorAll<HTMLButtonElement>('[data-keyboard-item]'),
+      ).find((node) => node.dataset.keyboardItem === id),
+    patch(next: PlanningGraph) {
+      current = createDashboardQueryIdentity({ ...current, viewHash: fixtureHash(next) });
+      rendered.rerender(ui(next));
+    },
+    close() {
+      dispose();
+      rendered.unmount();
+      clearInspector();
+    },
+  };
+}
+
+describe('read-only status Board', () => {
+  it('keeps addressed separate, traverses empty columns and reversibly expands Done with the keyboard', async () => {
+    const extra: PlanningGraph = {
+      ...graph,
+      nodes: [
+        ...graph.nodes,
+        {
+          id: 'BL-001',
+          type: 'backlog',
+          title: 'Resolved another way',
+          status: 'addressed',
+          frontmatter: {},
+        },
+        { id: 'BL-002', type: 'backlog', title: 'Completed work', status: 'done', frontmatter: {} },
+      ],
+    };
+    const board = boardHarness(extra);
+    try {
+      expect(board.container.querySelectorAll('.pc-status-board__column')).toHaveLength(5);
+      expect(board.card('BL-002')).toBeUndefined();
+      const blocked = board.card('SPEC-020/T-022');
+      if (!blocked) throw new Error('Missing blocked card.');
+      act(() => blocked.focus());
+      fireEvent.keyDown(blocked, { key: 'ArrowRight' });
+      expect(document.activeElement).toBe(board.card('BL-001'));
+      fireEvent.keyDown(document.activeElement as Element, { key: 'ArrowRight' });
+      expect((document.activeElement as HTMLElement).textContent).toContain('1 done');
+      fireEvent.keyDown(document.activeElement as Element, { key: 'Enter' });
+      expect(board.card('BL-002')).toBeTruthy();
+      const done = board.card('BL-002');
+      if (!done) throw new Error('Done card did not expand.');
+      act(() => done.focus());
+      fireEvent.keyDown(done, { key: 'Enter' });
+      expect(board.getByTestId('board-inspector').textContent).toContain('"id":"BL-002"');
+      expect(board.getByTestId('board-inspector').textContent).toMatch(/"openTick":[1-9]/u);
+      fireEvent.click(board.getByRole('button', { name: /Collapse Done/u }));
+      expect(board.card('BL-002')).toBeUndefined();
+      expect(
+        (await axe.run(board.container, { rules: { 'color-contrast': { enabled: false } } }))
+          .violations,
+      ).toEqual([]);
+    } finally {
+      board.close();
+    }
+    const sparse = boardHarness();
+    try {
+      const blocked = sparse.card('SPEC-020/T-022');
+      if (!blocked) throw new Error('Missing blocked card.');
+      act(() => blocked.focus());
+      fireEvent.keyDown(blocked, { key: 'ArrowRight' });
+      expect(document.activeElement).toBe(
+        sparse.getByRole('button', { name: 'addressed: no cards' }),
+      );
+      fireEvent.keyDown(document.activeElement as Element, { key: 'ArrowRight' });
+      expect(document.activeElement).toBe(sparse.getByRole('button', { name: 'done: no cards' }));
+      fireEvent.keyDown(document.activeElement as Element, { key: 'ArrowRight' });
+      expect(document.activeElement).toBe(sparse.getByRole('button', { name: 'done: no cards' }));
+      expect(sparse.container.textContent).toContain('No item in that direction.');
+    } finally {
+      sparse.close();
+    }
+  });
+
+  it.each(['representative', 'scaling'] as const)(
+    'windows %s cards while walking logical positions and retaining offscreen focus',
+    (tier) => {
+      const source = buildPremiumDashboardFixture(tier).graph;
+      const board = boardHarness(source);
+      try {
+        expect(board.container.querySelectorAll('.pc-status-board__card').length).toBeLessThan(32);
+        const column = board.container.querySelector<HTMLElement>(
+          '[data-keyboard-column="outstanding"]',
+        );
+        const scroller = column?.querySelector<HTMLElement>('.pc-status-board__cards');
+        const first = column?.querySelector<HTMLButtonElement>('.pc-status-board__card');
+        if (!first || !scroller) throw new Error('Missing Board window.');
+        act(() => first.focus());
+        for (let index = 0; index < 16; index++)
+          fireEvent.keyDown(document.activeElement as Element, { key: 'ArrowDown' });
+        const focused = document.activeElement as HTMLElement;
+        expect(focused.closest('[aria-posinset]')?.getAttribute('aria-posinset')).toBe('17');
+        expect(focused.closest('[aria-setsize]')?.getAttribute('aria-setsize')).toBe(
+          String(
+            source.nodes.filter((node) => node.type !== 'sprint' && node.status === 'outstanding')
+              .length,
+          ),
+        );
+        expect(scroller.scrollTop).toBeGreaterThan(0);
+        scroller.scrollTop = 0;
+        fireEvent.scroll(scroller);
+        expect(document.activeElement).toBe(focused);
+        expect(board.container.querySelectorAll('.pc-status-board__card').length).toBeLessThan(34);
+        fireEvent.keyDown(focused, { key: 'ArrowRight' });
+        expect(
+          (document.activeElement as HTMLElement)
+            .closest('[data-keyboard-column]')
+            ?.getAttribute('data-keyboard-column'),
+        ).toBe('in-progress');
+        expect(
+          (document.activeElement as HTMLElement)
+            .closest('[aria-posinset]')
+            ?.getAttribute('aria-posinset'),
+        ).toBe('17');
+      } finally {
+        board.close();
+      }
+    },
+  );
+
+  it('keeps focus and scroll across live edits, moves, and removal without reopening the inspector', () => {
+    const board = boardHarness();
+    try {
+      const first = board.card('SPEC-020/T-022');
+      if (!first) throw new Error('Missing Board card.');
+      act(() => first.focus());
+      const scroller = board.container.querySelector<HTMLElement>('.pc-status-board');
+      if (!scroller) throw new Error('Missing Board scroll context.');
+      scroller.scrollTop = 120;
+      scroller.scrollLeft = 240;
+      const changed: PlanningGraph = {
+        ...graph,
+        nodes: graph.nodes.map((node) =>
+          node.id === 'SPEC-020/T-022' ? { ...node, title: 'Patched title' } : node,
+        ),
+      };
+      board.patch(changed);
+      expect(document.activeElement).toBe(first);
+      expect(first.textContent).toContain('Patched title');
+      expect(scroller.scrollTop).toBe(120);
+      expect(scroller.scrollLeft).toBe(240);
+      const moved: PlanningGraph = {
+        ...changed,
+        nodes: changed.nodes.map((node) =>
+          node.id === 'SPEC-020/T-022' ? { ...node, status: 'done' as const } : node,
+        ),
+      };
+      board.patch(moved);
+      expect(document.activeElement).toBe(board.card('SPEC-020/T-022'));
+      expect(
+        (document.activeElement as HTMLElement)
+          .closest('[data-keyboard-column]')
+          ?.getAttribute('data-keyboard-column'),
+      ).toBe('done');
+      expect(
+        board.getByRole('button', { name: /Collapse Done/u }).getAttribute('aria-expanded'),
+      ).toBe('true');
+      const removed: PlanningGraph = {
+        ...moved,
+        nodes: moved.nodes.filter((node) => node.id !== 'SPEC-020/T-022'),
+        edges: [],
+      };
+      board.patch(removed);
+      expect(document.activeElement).not.toBe(document.body);
+      expect(board.container.textContent).toContain('was removed');
+      expect(board.getByTestId('board-inspector').textContent).not.toContain(
+        '"id":"SPEC-020/T-022"',
+      );
+    } finally {
+      board.close();
+    }
+  });
+
+  it('renders bounded spec lanes with truthful task progress and distinct unparented backlog', () => {
+    const source = buildPremiumDashboardFixture('artboard').graph;
+    const before = fixtureHash(source);
+    const board = boardHarness(source);
+    try {
+      fireEvent.change(board.getByRole('combobox', { name: 'Swimlanes' }), {
+        target: { value: 'spec' },
+      });
+      expect(board.container.querySelectorAll('.pc-status-board__lane').length).toBeLessThanOrEqual(
+        6,
+      );
+      expect(board.container.querySelectorAll('.pc-status-board__columns')).toHaveLength(6);
+      expect(board.container.textContent).toContain('No tasks');
+      let sawTaskProgress = false;
+      let attempts = 0;
+      while (
+        board.getByRole('button', { name: 'Next lanes' }).getAttribute('disabled') === null &&
+        attempts++ < 20
+      ) {
+        fireEvent.click(board.getByRole('button', { name: 'Next lanes' }));
+        sawTaskProgress ||= /\d+ of \d+ tasks done/u.test(board.container.textContent ?? '');
+      }
+      expect(sawTaskProgress).toBe(true);
+      expect(board.container.textContent).toContain('Backlog, not in a spec');
+      expect(fixtureHash(source)).toBe(before);
+      expect(board.container.querySelector('[draggable="true"]')).toBeNull();
+      expect(board.container.textContent).not.toContain('days quiet');
+    } finally {
+      board.close();
+    }
+  });
+
+  it('copies only a verified status command with C, keeps focused command precedence, and surfaces clipboard denial', async () => {
+    const source: PlanningGraph = {
+      ...graph,
+      nodes: [
+        ...graph.nodes,
+        {
+          id: 'BL-001',
+          type: 'backlog',
+          title: 'Ready backlog',
+          status: 'outstanding',
+          frontmatter: {},
+        },
+      ],
+    };
+    const copy = vi.fn(async (_value: string) => {
+      throw new Error('denied');
+    });
+    const board = boardHarness(source, copy);
+    try {
+      const card = board.card('BL-001');
+      if (!card) throw new Error('Missing backlog card.');
+      act(() => card.focus());
+      await act(async () => {
+        fireEvent.keyDown(card, { key: 'c' });
+      });
+      expect(copy).toHaveBeenCalledExactlyOnceWith(
+        'openplanr backlog update BL-001 --status outstanding',
+      );
+      expect(board.container.textContent).toContain('Select the command and copy it manually.');
+      const command = board.container.querySelector<HTMLButtonElement>(
+        '.pc-status-board__command .pc-command-hint__copy',
+      );
+      if (!command) throw new Error('Missing copy control.');
+      act(() => command.focus());
+      await act(async () => {
+        fireEvent.keyDown(command, { key: 'c' });
+      });
+      expect(copy).toHaveBeenCalledTimes(2);
+      const scoped = board.card('SPEC-020/T-022');
+      if (!scoped) throw new Error('Missing scoped task.');
+      act(() => scoped.focus());
+      fireEvent.keyDown(scoped, { key: 'c' });
+      expect(board.container.textContent).toContain('no verified status writer');
+      expect(copy).toHaveBeenCalledTimes(2);
+    } finally {
+      board.close();
+    }
+  });
+
+  it('reveals a focused deep link in a later spec lane and collapsed Done', () => {
+    const source: PlanningGraph = {
+      nodes: Array.from({ length: 10 }, (_, index) => {
+        const id = `SPEC-${String(index + 1).padStart(3, '0')}`;
+        return [
+          {
+            id,
+            type: 'spec' as const,
+            title: `Spec ${index + 1}`,
+            status: 'outstanding' as const,
+            frontmatter: {},
+          },
+          {
+            id: `${id}/T-001`,
+            type: 'task' as const,
+            title: `Done task ${index + 1}`,
+            status: 'done' as const,
+            frontmatter: {},
+          },
+        ];
+      }).flat(),
+      edges: [],
+    };
+    const view: PlanningView = {
+      schemaVersion: '1.0.0',
+      route: 'board',
+      groupBy: 'spec',
+      density: 'comfortable',
+      filters: {
+        type: [],
+        status: [],
+        priority: [],
+        label: [],
+        query: '',
+        createdWithinDays: null,
+        updatedWithinDays: null,
+      },
+      sort: { field: 'id', direction: 'asc' },
+      focusId: 'SPEC-010/T-001',
+    };
+    const board = boardHarness(source, undefined, view);
+    try {
+      expect(board.card('SPEC-010/T-001')).toBeTruthy();
+      expect(
+        board.getByRole('button', { name: /Collapse Done/u }).getAttribute('aria-expanded'),
+      ).toBe('true');
+      expect(board.container.textContent).toContain('Lanes 7-10 of 10');
+      expect(board.getByTestId('board-inspector').textContent).toContain('"id":"SPEC-010/T-001"');
+    } finally {
+      board.close();
+    }
+  });
+
+  it('restores the logical card scroll anchor when a preceding card disappears', () => {
+    const source: PlanningGraph = {
+      ...graph,
+      nodes: [
+        ...graph.nodes,
+        ...Array.from({ length: 40 }, (_, index) => ({
+          id: `BL-${String(index + 1).padStart(3, '0')}`,
+          type: 'backlog' as const,
+          title: `Backlog ${index}`,
+          status: 'outstanding' as const,
+          frontmatter: {},
+        })),
+      ],
+    };
+    const board = boardHarness(source);
+    try {
+      const scroller = board.container.querySelector<HTMLElement>(
+        '[data-keyboard-column="outstanding"] .pc-status-board__cards',
+      );
+      if (!scroller) throw new Error('Missing card scroll window.');
+      scroller.scrollTop = 10 * 164 + 7;
+      fireEvent.scroll(scroller);
+      board.patch({ ...source, nodes: source.nodes.filter((node) => node.id !== 'BL-001') });
+      expect(scroller.scrollTop).toBe(9 * 164 + 7);
+      expect(board.card('BL-010')).toBeTruthy();
+    } finally {
+      board.close();
+    }
+  });
+
+  it('honors typing, composition, modifier and single-letter guards for card copy', () => {
+    const source: PlanningGraph = {
+      ...graph,
+      nodes: [
+        ...graph.nodes,
+        {
+          id: 'BL-001',
+          type: 'backlog',
+          title: 'Ready backlog',
+          status: 'outstanding',
+          frontmatter: {},
+        },
+      ],
+    };
+    const board = boardHarness(source);
+    try {
+      const card = board.card('BL-001');
+      if (!card) throw new Error('Missing backlog card.');
+      act(() => card.focus());
+      fireEvent.keyDown(card, { key: 'c', ctrlKey: true });
+      fireEvent.keyDown(card, { key: 'c', isComposing: true });
+      const input = document.createElement('input');
+      board.container.append(input);
+      input.focus();
+      fireEvent.keyDown(input, { key: 'c' });
+      expect(board.copy).not.toHaveBeenCalled();
+    } finally {
+      board.close();
+    }
+    const disabled = boardHarness(source, undefined, null, false);
+    try {
+      const card = disabled.card('BL-001');
+      if (!card) throw new Error('Missing backlog card.');
+      act(() => card.focus());
+      fireEvent.keyDown(card, { key: 'c' });
+      expect(disabled.copy).not.toHaveBeenCalled();
+      fireEvent.keyDown(card, { key: 'ArrowRight' });
+      expect(
+        (document.activeElement as HTMLElement)
+          .closest('[data-keyboard-column]')
+          ?.getAttribute('data-keyboard-column'),
+      ).toBe('in-progress');
+    } finally {
+      disabled.close();
+    }
+  });
+
+  it('returns focus to the heading when the last card is removed', () => {
+    const board = boardHarness({
+      nodes: [
+        {
+          id: 'BL-001',
+          type: 'backlog',
+          title: 'Last card',
+          status: 'outstanding',
+          frontmatter: {},
+        },
+      ],
+      edges: [],
+    });
+    try {
+      const card = board.card('BL-001');
+      if (!card) throw new Error('Missing final card.');
+      act(() => card.focus());
+      board.patch({ nodes: [], edges: [] });
+      expect(document.activeElement).toBe(
+        board.getByRole('heading', { name: 'Board', exact: true }),
+      );
+      expect(board.container.querySelector('.pc-status-board__blank')).toBeTruthy();
+      expect(board.container.textContent).toContain('No artifacts yet');
+      expect(board.getByTestId('board-inspector').textContent).toContain('"selection":null');
+    } finally {
+      board.close();
+    }
   });
 });

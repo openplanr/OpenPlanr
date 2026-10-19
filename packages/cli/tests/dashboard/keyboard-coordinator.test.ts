@@ -642,3 +642,19 @@ describe('dashboard keyboard coordinator', () => {
     expect(context.togglePalette).not.toHaveBeenCalled();
   });
 });
+
+it('keeps Board copy and horizontal window requests out of managed List rows', async () => {
+  const { root, item, context } = fixture(`<div data-managed-rows>${list}</div>`);
+  const requests = vi.fn((request: Event) => request.preventDefault());
+  root.querySelector('[data-managed-rows]')?.addEventListener('workspace-row-key', requests);
+  item('b').focus();
+  key(item('b'), 'c');
+  await Promise.resolve();
+  expect(context.copy).toHaveBeenCalledExactlyOnceWith('b');
+  key(item('b'), 'ArrowLeft');
+  key(item('b'), 'ArrowRight');
+  expect(requests).not.toHaveBeenCalled();
+  expect(document.activeElement).toBe(item('b'));
+  key(item('b'), 'ArrowDown');
+  expect(requests).toHaveBeenCalledTimes(1);
+});

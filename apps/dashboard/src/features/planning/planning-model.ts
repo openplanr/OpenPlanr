@@ -93,6 +93,7 @@ const STATUS_COLUMN_ORDER = Object.freeze([
   'outstanding',
   'in-progress',
   'blocked',
+  'addressed',
   'done',
 ] as const);
 const STATUS_SORT_LABEL: Readonly<Record<PlanningArtifactStatus, string>> = Object.freeze({
@@ -208,7 +209,7 @@ export type PlanningStatusTally = Readonly<{
   done: number;
 }>;
 
-/** Count real artifact statuses; addressed folds into done exactly as the Board columns do. */
+/** Legacy sprint tally; addressed remains terminal in this summary. */
 export function tallyPlanningStatuses(nodes: readonly PlanningModelNode[]): PlanningStatusTally {
   let outstanding = 0;
   let inProgress = 0;
@@ -258,7 +259,6 @@ export function planningSpecsInGraph(nodes: readonly PlanningModelNode[]): reado
 }
 
 function statusColumnOf(status: PlanningArtifactStatus): string {
-  if (status === 'addressed') return 'done';
   return (STATUS_COLUMN_ORDER as readonly string[]).includes(status) ? status : 'outstanding';
 }
 
@@ -336,7 +336,7 @@ export type PlanningGroup<Node extends PlanningModelNode = PlanningModelNode> = 
   nodes: readonly Node[];
 }>;
 
-/** Ordered Board buckets. Addressed work folds into Done exactly as in the legacy Board. */
+/** Status buckets retain distinct terminal outcomes for comparison. */
 export function groupPlanningNodes<Node extends PlanningModelNode>(
   nodes: readonly Node[],
   dimension: string,

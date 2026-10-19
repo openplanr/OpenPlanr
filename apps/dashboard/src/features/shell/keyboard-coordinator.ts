@@ -19,6 +19,7 @@ export const SHORTCUT_MAP = [
   ['Cmd/Ctrl-Enter', 'Open the palette item as a full page'],
   ['@spec/@story/@task/@backlog/@adr/@sprint/@view/@command', 'Filter palette results by type'],
   ['C', 'Copy the focused command first, otherwise the selected canonical ID'],
+  ['C on a Board card', 'Copy its verified status command, or explain why it is unavailable'],
   ['/', 'Focus the current filter, or open search'],
   [
     'G then H/L/G/B/S/A/O',
@@ -236,6 +237,7 @@ function copyFocused(stroke: KeyStroke): void {
     else context.announce('This command is unavailable.');
     return;
   }
+  if (routeIs(context, 'board') && managedRows(stroke)) return;
   const id = focusedCanonicalId(target) || context.selectedId();
   if (!id) {
     context.announce('Select an item or focus a command to copy.');
@@ -517,7 +519,10 @@ export function installKeyboardCoordinator(
       state.goAt = null;
       return;
     }
-    if (['j', 'k', 'arrowup', 'arrowdown', ' '].includes(stroke.key) && managedRows(stroke)) return;
+    const vertical = ['j', 'k', 'arrowup', 'arrowdown', ' '].includes(stroke.key);
+    const boardHorizontal =
+      routeIs(context, 'board') && ['arrowleft', 'arrowright'].includes(stroke.key);
+    if ((vertical || boardHorizontal) && managedRows(stroke)) return;
     if (globalShortcut(stroke, state)) return;
     const rows = items(context.root);
     const current = currentItem(stroke, rows);

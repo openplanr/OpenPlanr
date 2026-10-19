@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   retainGraphRevision,
+  selectBoardLanes,
   selectBoardProjection,
 } from '../../../../apps/dashboard/src/features/planning/planning-board-projection.js';
 import type {
@@ -9,7 +10,10 @@ import type {
 } from '../../../../apps/dashboard/src/features/planning/planning-model.js';
 import type { DashboardQueryIdentity } from '../../../../apps/dashboard/src/lib/binding/query-identity.js';
 import type { PlanningView } from '../../../../apps/dashboard/src/lib/routing/planning-view-codec.js';
-import { fixtureHash } from './fixtures/premium-dashboard-fixtures.js';
+import {
+  buildPremiumDashboardFixture,
+  fixtureHash,
+} from './fixtures/premium-dashboard-fixtures.js';
 
 function node(
   id: string,
@@ -188,5 +192,69 @@ describe('cached board projections', () => {
     expect(selectBoardProjection(graph, null, 'status', tomorrow)).toBe(
       selectBoardProjection(graph, null, 'status', today),
     );
+  });
+});
+
+describe('status and spec lane membership', () => {
+  it.each(['representative', 'artboard', 'scaling'] as const)(
+    'preserves distinct source memberships and exact totals for %s',
+    (tier) => {
+      const graph = buildPremiumDashboardFixture(tier).graph;
+      const hash = fixtureHash(graph);
+      const projection = selectBoardProjection(graph, null, 'status');
+      const lanes = selectBoardLanes(graph, projection.items, true);
+      const memberships = lanes.flatMap((lane) =>
+        lane.columns.flatMap((column) =>
+          column.nodes.map((node) => ({ id: node.id, status: column.key })),
+        ),
+      );
+      expect(new Set(memberships.map((entry) => entry.id)).size).toBe(projection.items.length);
+      expect(memberships).toHaveLength(graph.nodes.filter((node) => node.type !== 'sprint').length);
+      for (const column of projection.columns) {
+        expect(
+          memberships
+            .filter((entry) => entry.status === column.key)
+            .map((entry) => entry.id)
+            .sort(),
+        ).toEqual(column.nodes.map((entry) => entry.id).sort());
+      }
+      for (const lane of lanes) {
+        expect(lane.columns.map((column) => column.key)).toEqual([
+          'outstanding',
+          'in-progress',
+          'blocked',
+          'addressed',
+          'done',
+        ]);
+        expect(lane.columns.flatMap((column) => column.nodes)).toHaveLength(lane.nodes.length);
+        if (lane.spec) {
+          const tasks = graph.nodes.filter(
+            (node) =>
+              node.type === 'task' &&
+              (node.frontmatter.specId === lane.key ||
+                node.frontmatter.specScope === lane.key ||
+                node.id.startsWith(`${lane.key}/`)),
+          );
+          expect(lane.progress ?? { total: 0, done: 0 }).toEqual({
+            total: tasks.length,
+            done: tasks.filter((node) => node.status === 'done').length,
+          });
+        }
+      }
+      expect(selectBoardLanes(graph, projection.items, true)).toBe(lanes);
+      expect(fixtureHash(graph)).toBe(hash);
+    },
+  );
+
+  it('keeps full-spec task progress under filtered cards, without counting addressed as done', () => {
+    const graph = graphFixture();
+    const filtered = { ...view, filters: { ...view.filters, status: ['addressed' as const] } };
+    const projection = selectBoardProjection(graph, filtered, 'status');
+    const lanes = selectBoardLanes(graph, projection.items, true);
+    expect(lanes).toHaveLength(1);
+    expect(lanes[0].key).toBe('SPEC-010');
+    expect(lanes[0].progress).toEqual({ total: 2, done: 0 });
+    expect(lanes[0].columns.find((column) => column.key === 'addressed')?.nodes).toHaveLength(1);
+    expect(lanes[0].columns.find((column) => column.key === 'done')?.nodes).toHaveLength(0);
   });
 });

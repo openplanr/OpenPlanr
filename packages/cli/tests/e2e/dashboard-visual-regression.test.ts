@@ -746,11 +746,15 @@ test.describe('dashboard real-browser quality', () => {
     );
 
     await openFixture(page, '#/board', { planningScenario: 'delivery' });
-    const doneCards = page
-      .locator('.pc-status-board__column')
-      .filter({ hasText: 'done' })
-      .locator('.pc-status-board__cards');
-    await expect(doneCards.locator('.pc-status-board__card')).toHaveCount(33);
+    const doneCards = page.locator('[data-keyboard-column="done"] .pc-status-board__cards');
+    await expect(doneCards.locator('.pc-status-board__card')).toHaveCount(0);
+    await page.getByRole('button', { name: /Expand Done/u }).click();
+    await expect(doneCards.locator('li[aria-setsize="33"]').first()).toBeAttached();
+    expect(await doneCards.locator('.pc-status-board__card').count()).toBeLessThan(10);
+    await doneCards.evaluate((element) => {
+      element.scrollTop = element.scrollHeight;
+    });
+    await expect(doneCards.locator('li[aria-posinset="33"]')).toBeAttached();
     const boardScroll = await doneCards.evaluate((element) => ({
       overflowY: getComputedStyle(element).overflowY,
       scrolls: element.scrollHeight > element.clientHeight,
@@ -866,6 +870,60 @@ test.describe('dashboard real-browser quality', () => {
         await expectSurfaceToUseRouteFrame(page, '[data-route-kind="planning.board"]');
       }
     }
+  });
+
+  test('keeps Board status lanes read-only and keyboard reachable in both themes and sizes', async ({
+    page,
+  }, testInfo) => {
+    const writes: string[] = [];
+    page.on('request', (request) => {
+      if (new URL(request.url()).pathname.startsWith('/api/') && request.method() !== 'GET')
+        writes.push(`${request.method()} ${request.url()}`);
+    });
+    await page.addInitScript(() => {
+      const theme = new URL(window.location.href).searchParams.get('boardTheme');
+      if (theme === 'dark' || theme === 'light') localStorage.setItem('op-theme', theme);
+    });
+    for (const theme of ['dark', 'light']) {
+      for (const width of [1440, 390]) {
+        await page.setViewportSize({ width, height: 960 });
+        await openFixture(page, '#/board', { planningScenario: 'delivery', boardTheme: theme });
+        await page.evaluate(() => document.fonts.ready);
+        expect(await page.evaluate(() => localStorage.getItem('op-theme'))).toBe(theme);
+        const board = page.locator('[data-route-kind="planning.board"]');
+        await expect(board.getByRole('button', { name: /Expand Done/u })).toHaveAttribute(
+          'aria-expanded',
+          'false',
+        );
+        const card = board.locator('.pc-status-board__card').first();
+        await card.focus();
+        await page.keyboard.press('Enter');
+        await expect(
+          page.getByRole(width < 900 ? 'dialog' : 'complementary', {
+            name: 'Inspector',
+            exact: true,
+          }),
+        ).toBeVisible();
+        await page.keyboard.press('Escape');
+        await expect(card).toBeFocused();
+        await page.keyboard.press('ArrowRight');
+        await expect(board.locator('[data-keyboard-item]:focus')).toHaveCount(1);
+        await board.getByRole('combobox', { name: 'Swimlanes' }).selectOption('spec');
+        await expect(board.locator('.pc-status-board__lane')).not.toHaveCount(0);
+        expect(await board.locator('[draggable="true"]').count()).toBe(0);
+        await board.locator('.pc-status-board__card').first().dispatchEvent('dragstart');
+        await board.locator('.pc-status-board__column').last().dispatchEvent('drop');
+        await expect(board).toContainText('Proposed for Phase 2');
+        expect((await layoutReport(page)).horizontalOverflow).toBe(false);
+        expect(await axeViolations(page)).toEqual([]);
+        await attachScreenshot(
+          page,
+          `planning-board-${theme}-${width}.png`,
+          testInfo.attach.bind(testInfo),
+        );
+      }
+    }
+    expect(writes).toEqual([]);
   });
 
   test('keeps Planning workspaces aligned to one shared application frame', async ({ page }) => {

@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { cleanup, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ActivityPage } from '../../../../apps/dashboard/src/features/planning/ActivityPage.js';
@@ -237,7 +237,17 @@ describe('presentation consumers', () => {
       expect.stringContaining('Alpha transport'),
       expect.stringContaining('Zulu transport'),
     ]);
-    expect(document.querySelectorAll('[data-keyboard-column]')).toHaveLength(1);
+    expect(
+      [...document.querySelectorAll<HTMLElement>('[data-keyboard-column]')].map(
+        (column) => column.dataset.keyboardColumn,
+      ),
+    ).toEqual(['outstanding', 'in-progress', 'blocked', 'addressed', 'done']);
+    expect(document.querySelector('[data-keyboard-column="in-progress"]')?.textContent).toContain(
+      'Alpha transport',
+    );
+    expect(document.querySelector('[data-keyboard-column="blocked"]')?.textContent).toContain(
+      'Zulu transport',
+    );
     expect(
       document.querySelector('[data-route-kind="planning.board"]')?.getAttribute('data-density'),
     ).toBe('compact');
@@ -276,6 +286,10 @@ describe('presentation consumers', () => {
         <BoardPage currentBinding={binding} current={current} />,
       ),
     );
+    expect(document.querySelectorAll('.pc-status-board__card')).toHaveLength(nodes.length - 1);
+    expect(screen.getByRole('button', { name: /Expand Done/u }).textContent).toContain('1');
+    fireEvent.click(screen.getByRole('button', { name: /Expand Done/u }));
     expect(document.querySelectorAll('.pc-status-board__card')).toHaveLength(nodes.length);
+    expect(document.body.textContent).toContain('Older story');
   });
 });
