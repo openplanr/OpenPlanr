@@ -1,8 +1,7 @@
 name: Workspace CI
 
+# No push trigger: the merge queue run already tests the exact commit that lands on main.
 on:
-  push:
-    branches: [main]
   pull_request:
     branches: ['**']
   merge_group:
