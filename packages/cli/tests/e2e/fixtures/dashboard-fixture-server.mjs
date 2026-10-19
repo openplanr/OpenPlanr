@@ -54,39 +54,37 @@ function refuse(response, status = 400) {
 }
 
 function bootstrapForRequest(request) {
-  if (
-    new URL(request.headers.referer ?? DASHBOARD_FIXTURE_ORIGIN).pathname.startsWith(
-      '/__production/',
-    )
-  ) {
-    const manifest = productionManifest();
-    return {
-      ...fixture.bootstrap,
-      ui: { ...fixture.bootstrap.ui, buildId: manifest.buildId, expectedBuildId: manifest.buildId },
-    };
-  }
+  let referer;
   try {
-    const referer = new URL(request.headers.referer ?? DASHBOARD_FIXTURE_ORIGIN);
-    const name = referer.searchParams.get('project');
-    const localOperate = referer.searchParams.get('localOperate') === '1';
-    const bootstrap = localOperate
-      ? {
-          ...fixture.bootstrap,
-          capabilities: {
-            ...fixture.bootstrap.capabilities,
-            operateCommands: {
-              ...fixture.bootstrap.capabilities.operateCommands,
-              available: false,
-            },
-          },
-          queryRoots: { ...fixture.bootstrap.queryRoots, operate: null },
-        }
-      : fixture.bootstrap;
-    if (name === null) return bootstrap;
-    return { ...bootstrap, project: { ...bootstrap.project, name } };
+    referer = new URL(request.headers.referer ?? DASHBOARD_FIXTURE_ORIGIN);
   } catch {
     return fixture.bootstrap;
   }
+  const name = referer.searchParams.get('project');
+  const production = referer.pathname.startsWith('/__production/');
+  const manifest = production ? productionManifest() : null;
+  const base = manifest
+    ? {
+        ...fixture.bootstrap,
+        ui: {
+          ...fixture.bootstrap.ui,
+          buildId: manifest.buildId,
+          expectedBuildId: manifest.buildId,
+        },
+      }
+    : fixture.bootstrap;
+  const bootstrap = localReviewRequest(request)
+    ? {
+        ...base,
+        capabilities: {
+          ...base.capabilities,
+          operateCommands: { ...base.capabilities.operateCommands, available: false },
+        },
+        queryRoots: { ...base.queryRoots, operate: null },
+      }
+    : base;
+  if (name === null) return bootstrap;
+  return { ...bootstrap, project: { ...bootstrap.project, name } };
 }
 
 function planningForRequest(request) {
@@ -278,7 +276,7 @@ const LOCAL_REVIEW_DETAIL = Object.freeze({
 function localReviewRequest(request) {
   try {
     const referer = new URL(request.headers.referer ?? DASHBOARD_FIXTURE_ORIGIN);
-    return referer.searchParams.get('localOperate') === '1';
+    return ['1', 'empty'].includes(referer.searchParams.get('localOperate'));
   } catch {
     return false;
   }
@@ -731,6 +729,10 @@ async function routeApi(request, response, next) {
       return valid ? openStream(request, response) : refuse(response);
     }
     if (pathname === '/api/operate/local-reviews') {
+      const empty =
+        new URL(request.headers.referer ?? DASHBOARD_FIXTURE_ORIGIN).searchParams.get(
+          'localOperate',
+        ) === 'empty';
       const embeddedRequest = exactQuery(url, { page: '1', pageSize: '1' });
       const routeRequest =
         localReviewRequest(request) && exactQuery(url, { page: '1', pageSize: '12' });
@@ -744,9 +746,9 @@ async function routeApi(request, response, next) {
               page: 1,
               pageSize: embeddedRequest ? 1 : 12,
               pageCount: 1,
-              total: 1,
+              total: empty ? 0 : 1,
             },
-            items: [LOCAL_REVIEW_ITEM],
+            items: empty ? [] : [LOCAL_REVIEW_ITEM],
           })
         : refuse(response);
     }

@@ -122,7 +122,11 @@ export function ReviewChoiceConfirmation({
               </p>
               <div className="op-inbox-dialog__actions">
                 <AlertDialog.Cancel asChild>
-                  <button type="button" className="op-inbox-dialog__cancel" disabled={confirming}>
+                  <button
+                    type="button"
+                    className="pc-button op-inbox-dialog__cancel"
+                    disabled={confirming}
+                  >
                     Keep reviewing
                   </button>
                 </AlertDialog.Cancel>

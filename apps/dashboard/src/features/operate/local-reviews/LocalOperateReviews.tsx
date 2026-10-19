@@ -19,6 +19,8 @@ import {
   SkeletonCards,
 } from '../../../design-system/components/index.js';
 import './local-operate-reviews.css';
+import { OperateSetup } from '../OperateSetup.js';
+import '../operate.css';
 
 type ReviewCounts = Readonly<{ decisions: number; actions: number; gaps: number; issues: number }>;
 type LocalReviewSummary = Readonly<{
@@ -1182,7 +1184,8 @@ function LocalRouteView({
   }
 }
 
-function EmptyReviews() {
+function EmptyReviews({ setup = false }: { setup?: boolean }) {
+  if (setup) return <OperateSetup />;
   return (
     <Card>
       <EmptyState
@@ -1263,15 +1266,16 @@ export function LocalOperateReviews({
       : (routeCopy?.[1] ?? 'Completed local operating review.');
 
   return (
-    <div className="pc-shell__scroll pc-local-review" data-route-kind={route.kind}>
+    <div className="pc-shell__scroll pc-local-review pc-operate" data-route-kind={route.kind}>
       <SectionHeader
+        headingLevel={1}
         eyebrow="planr-operate · local"
         title={title}
         count={listRoute ? index.pagination.total : undefined}
         description={description}
         actions={
           <Badge tone="info" variant="outline" icon="lock">
-            Read-only
+            Governed actions
           </Badge>
         }
       />
@@ -1288,13 +1292,15 @@ export function LocalOperateReviews({
             <ReviewList items={index.items} history={route.kind === 'operate.history'} />
             <Pagination index={index} onPage={setPage} />
           </>
-        ) : (
+        ) : indexState.status === 'ready' ? (
           <EmptyReviews />
-        )
+        ) : null
       ) : !selectedCycleId && indexState.status === 'loading' ? (
         <SkeletonCards count={2} />
       ) : !selectedCycleId ? (
-        <EmptyReviews />
+        indexState.status === 'ready' ? (
+          <EmptyReviews setup={route.kind === 'operate.today'} />
+        ) : null
       ) : detailState.status === 'loading' && !detail ? (
         <SkeletonCards count={3} />
       ) : !detail ? (

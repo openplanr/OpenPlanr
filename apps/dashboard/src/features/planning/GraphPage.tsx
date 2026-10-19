@@ -270,6 +270,7 @@ function FocusedWorkspace({
             <DependencyGraph
               nodes={nodes}
               edges={projection.edges}
+              focusedIds={lens === 'project' ? undefined : projection.ids}
               view={view}
               flow={lens === 'dependencies' ? 'target-to-source' : 'source-to-target'}
               selectedId={selectedId}

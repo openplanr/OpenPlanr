@@ -481,40 +481,54 @@ describe('T-021 Planning workspace UI', () => {
     }
   });
 
-  it('makes the delivery plan quick task clickable in the initial dependency lens', () => {
-    clearInspector();
-    const current = createDashboardQueryIdentity({
-      ...identity('#/graph'),
-      viewHash: sha256Jcs(deliveryPlanningGraph as never),
-    });
-    const rendered = render(
-      <GraphPage
-        currentBinding={current}
-        current={stateFor(current, envelope(current, deliveryPlanningGraph))}
-      />,
-    );
-    try {
-      expect(
-        rendered
-          .getByRole('button', { name: 'Dependencies', exact: true })
-          .getAttribute('aria-pressed'),
-      ).toBe('true');
-      const task = rendered.getByRole('button', {
-        name: 'QT-071 Make failed CRM registrations visible and replayable',
-        exact: true,
+  it.each([1000, 656])(
+    'keeps the delivery dependency component clickable in a %s px canvas',
+    (canvasWidth) => {
+      vi.spyOn(Element.prototype, 'clientWidth', 'get').mockImplementation(function (
+        this: Element,
+      ) {
+        return this.classList.contains('pc-graph') ? canvasWidth : 0;
       });
-      expect(task.getAttribute('aria-label')).toBeNull();
-      expect(rendered.container.querySelectorAll('.pc-graph-node')).toHaveLength(4);
-      fireEvent.click(task);
-      expect(task.getAttribute('aria-pressed')).toBe('true');
-      expect(
-        rendered.getByRole('region', { name: 'Graph selection preview' }).textContent,
-      ).toContain('Make failed CRM registrations visible and replayable');
-    } finally {
-      rendered.unmount();
       clearInspector();
-    }
-  });
+      const current = createDashboardQueryIdentity({
+        ...identity('#/graph'),
+        viewHash: sha256Jcs(deliveryPlanningGraph as never),
+      });
+      const rendered = render(
+        <GraphPage
+          currentBinding={current}
+          current={stateFor(current, envelope(current, deliveryPlanningGraph))}
+        />,
+      );
+      try {
+        expect(
+          rendered
+            .getByRole('button', { name: 'Dependencies', exact: true })
+            .getAttribute('aria-pressed'),
+        ).toBe('true');
+        const task = rendered.getByRole('button', {
+          name: 'QT-071 Make failed CRM registrations visible and replayable',
+          exact: true,
+        });
+        expect(task.getAttribute('aria-label')).toBeNull();
+        expect(rendered.container.querySelectorAll('.pc-graph-node')).toHaveLength(4);
+        const canvas = rendered.container.querySelector<HTMLElement>('.pc-graph__canvas');
+        if (!canvas) throw new Error('Missing focused canvas.');
+        expect(Number.parseFloat(canvas.style.width)).toBeLessThanOrEqual(canvasWidth);
+        expect(
+          rendered.container.querySelectorAll('.pc-graph-node[aria-hidden="true"]'),
+        ).toHaveLength(0);
+        fireEvent.click(task);
+        expect(task.getAttribute('aria-pressed')).toBe('true');
+        expect(
+          rendered.getByRole('region', { name: 'Graph selection preview' }).textContent,
+        ).toContain('Make failed CRM registrations visible and replayable');
+      } finally {
+        rendered.unmount();
+        clearInspector();
+      }
+    },
+  );
 
   it('retains Graph focus, camera and canonical selection across an accepted live revision', () => {
     clearInspector();

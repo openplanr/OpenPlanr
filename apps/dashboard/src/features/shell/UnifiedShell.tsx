@@ -102,9 +102,16 @@ export function UnifiedShell({
   useEffect(() => {
     if (narrow) setInspectorOpen(false);
   }, [narrow, route]);
+  const requestedInspectorTick = useRef(0);
   useEffect(() => {
-    if (inspectorStore.openTick > 0) setInspectorOpen(true);
-  }, [inspectorStore.openTick]);
+    if (requestedInspectorTick.current !== inspectorStore.openTick) {
+      requestedInspectorTick.current = inspectorStore.openTick;
+      if (inspectorStore.selection !== null) setInspectorOpen(true);
+    }
+  }, [inspectorStore.openTick, inspectorStore.selection]);
+  useEffect(() => {
+    if (narrow && inspectorStore.selection === null) setInspectorOpen(false);
+  }, [narrow, inspectorStore.selection]);
 
   const scope = binding
     ? JSON.stringify([
@@ -193,6 +200,7 @@ export function UnifiedShell({
           showSubject={hasCurrentRouteSubject({ route, projection, binding })}
           connectionState={connection.state}
           inspectorOpen={inspectorOpen}
+          inspectorAvailable={!narrow || inspectorStore.selection !== null}
           onToggleInspector={() => setInspectorOpen((open) => !open)}
           onOpenPalette={search.show}
           themePreference={adapters?.themePreference}
@@ -294,36 +302,38 @@ export function UnifiedShell({
               </>
             )}
           </main>
-          {inspectorOpen ? (
-            <Inspector
-              key={`${route.kind}:${route.subjectId ?? ''}`}
-              mode={inspectorMode}
-              selection={inspectorStore.selection}
-              floating={narrow}
-              onClose={() => interactions.closeInspector()}
-              onPromote={interactions.navigate}
-              planningContent={
-                planningModel && inspectorStore.selection?.kind === 'node' ? (
-                  <PlanningPresentationProvider
-                    scope={scope}
-                    view={null}
-                    onCopy={adapters?.copy}
-                    singleLetters={interactions.singleLetters}
-                  >
-                    <PlanningDetailInspector
-                      model={planningModel}
-                      nodeId={inspectorStore.selection.id}
-                      origin={
-                        bootstrap?.origin ??
-                        (typeof window === 'undefined' ? '' : window.location.origin)
-                      }
-                      onPromote={interactions.navigate}
-                    />
-                  </PlanningPresentationProvider>
-                ) : undefined
-              }
-            />
-          ) : null}
+          <div className="pc-shell__inspector-slot">
+            {!narrow || (inspectorOpen && inspectorStore.selection !== null) ? (
+              <Inspector
+                key={`${route.kind}:${route.subjectId ?? ''}`}
+                mode={inspectorOpen ? inspectorMode : 'selection'}
+                selection={inspectorOpen ? inspectorStore.selection : null}
+                floating={narrow}
+                onClose={inspectorOpen ? () => interactions.closeInspector() : undefined}
+                onPromote={interactions.navigate}
+                planningContent={
+                  inspectorOpen && planningModel && inspectorStore.selection?.kind === 'node' ? (
+                    <PlanningPresentationProvider
+                      scope={scope}
+                      view={null}
+                      onCopy={adapters?.copy}
+                      singleLetters={interactions.singleLetters}
+                    >
+                      <PlanningDetailInspector
+                        model={planningModel}
+                        nodeId={inspectorStore.selection.id}
+                        origin={
+                          bootstrap?.origin ??
+                          (typeof window === 'undefined' ? '' : window.location.origin)
+                        }
+                        onPromote={interactions.navigate}
+                      />
+                    </PlanningPresentationProvider>
+                  ) : undefined
+                }
+              />
+            ) : null}
+          </div>
         </div>
         <StatusBar
           branch={bootstrap?.project.branch ?? null}

@@ -1,4 +1,13 @@
-import { type ChangeEvent, type KeyboardEvent, type ReactNode, useId } from 'react';
+import {
+  type ChangeEvent,
+  type KeyboardEvent,
+  type ReactNode,
+  useCallback,
+  useId,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from 'react';
 import { Tabs as RadixTabs } from './composite-primitives.js';
 import { PcIcon, type PcIconName } from './console-icon.js';
 import { Tooltip } from './tooltip.js';
@@ -755,6 +764,34 @@ export function DataTable<Row extends { readonly id: string }>({
   onRowClick,
   onRowFocus,
 }: DataTableProps<Row>) {
+  const scrollRegion = useRef<HTMLDivElement>(null);
+  const [scrollable, setScrollable] = useState(false);
+  const scrollContext = caption ?? 'table';
+  const measureScrollRegion = useCallback(() => {
+    const region = scrollRegion.current;
+    if (region)
+      setScrollable(
+        region.scrollWidth > region.clientWidth || region.scrollHeight > region.clientHeight,
+      );
+  }, []);
+  useLayoutEffect(measureScrollRegion);
+  useLayoutEffect(() => {
+    const region = scrollRegion.current;
+    if (!region) return;
+    const observer =
+      typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(measureScrollRegion);
+    observer?.observe(region);
+    const table = region.querySelector('table');
+    if (table) observer?.observe(table);
+    window.addEventListener('resize', measureScrollRegion);
+    return () => {
+      observer?.disconnect();
+      window.removeEventListener('resize', measureScrollRegion);
+    };
+  }, [measureScrollRegion]);
+  const regionAccessibility = scrollable
+    ? { tabIndex: 0, role: 'region' as const, 'aria-label': scrollContext }
+    : {};
   const activate = (row: Row) => onRowClick?.(row);
   const onRowKey = (event: KeyboardEvent<HTMLTableRowElement>, row: Row) => {
     if (!onRowClick) return;
@@ -770,7 +807,12 @@ export function DataTable<Row extends { readonly id: string }>({
     }
   };
   return (
-    <div className="pc-table-wrap" data-scroll-context={caption ?? 'table'}>
+    <div
+      ref={scrollRegion}
+      className="pc-table-wrap"
+      data-scroll-context={scrollContext}
+      {...regionAccessibility}
+    >
       <table
         className="pc-table"
         aria-rowcount={rowCount === undefined ? undefined : rowCount + 1}

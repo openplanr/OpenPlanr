@@ -1,4 +1,4 @@
-/* Inbox: one ruled work ledger, with indigo reserved for current category and governed action. */
+/* Keep category selection separate from the governed item action. */
 .op-inbox {
   min-width: 0;
   overflow-wrap: anywhere;
@@ -625,5 +625,78 @@
   .op-inbox-dialog__overlay {
     background: Canvas;
     opacity: 0.8;
+  }
+}
+
+.op-inbox.pc-operate .op-inbox-tabs {
+  margin-top: 0;
+}
+
+.op-inbox-tabs__list.pc-tabs {
+  gap: 4px;
+  padding: 4px;
+  border: 1px solid var(--pc-border-subtle);
+  border-radius: var(--pc-radius-md);
+  background: var(--pc-surface-panel);
+}
+
+.op-inbox-tabs__trigger.pc-tabs__tab {
+  height: auto;
+  min-height: 44px;
+  border: 1px solid transparent;
+  border-radius: var(--pc-radius-sm);
+  font-size: 13px;
+}
+
+.op-inbox-tabs__trigger.pc-tabs__tab::after {
+  content: none;
+}
+
+.op-inbox-tabs__trigger.pc-tabs__tab[data-state="active"] {
+  border-color: var(--pc-accent);
+  background: var(--pc-accent-soft);
+  color: var(--pc-text-primary);
+}
+
+.op-inbox-tabs__trigger.pc-tabs__tab:hover {
+  background: var(--pc-surface-hover);
+}
+
+.op-inbox-tabs__trigger.pc-tabs__tab:active {
+  background: var(--pc-surface-active);
+}
+
+.op-inbox-tabs__trigger.pc-tabs__tab:focus-visible {
+  outline: 2px solid var(--pc-focus-ring);
+  outline-offset: 2px;
+}
+
+.op-inbox.pc-operate .op-inbox-queue {
+  display: grid;
+  gap: 12px;
+  margin-top: 16px;
+  border: 0;
+}
+
+.op-inbox.pc-operate .op-inbox-queue > li {
+  padding: 20px;
+  border: 1px solid var(--pc-border-subtle);
+  border-radius: 14px;
+  background: var(--pc-surface-panel);
+}
+
+.op-inbox.pc-operate .op-inbox-item {
+  padding: 0;
+}
+
+.op-inbox.pc-operate .op-inbox-item__state {
+  border-radius: var(--pc-radius-sm);
+  font-size: 12px;
+}
+
+@media (forced-colors: active) {
+  .op-inbox-tabs__trigger.pc-tabs__tab[data-state="active"] {
+    border-color: Highlight;
+    border-bottom-width: 3px;
   }
 }

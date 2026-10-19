@@ -166,6 +166,75 @@ describe('dependency graph navigation', () => {
     expect(canvas.style.cssText).toBe(geometry);
   });
 
+  it('refits a focused component when its canvas narrows without a window resize and never culls it', () => {
+    const nodes = Array.from({ length: 4 }, (_, index) => node(index));
+    const edges = nodes
+      .slice(1)
+      .map((item, index) => ({ from: required(nodes[index]).id, to: item.id }));
+    const focusedIds = new Set(nodes.map((item) => required(item.canonicalId)));
+    let width = 1000;
+    let notify: (() => void) | undefined;
+    const observe = vi.fn();
+    vi.stubGlobal('innerWidth', 1440);
+    vi.spyOn(Element.prototype, 'clientWidth', 'get').mockImplementation(function (this: Element) {
+      return this.classList.contains('pc-graph') ? width : 0;
+    });
+    vi.stubGlobal(
+      'ResizeObserver',
+      class {
+        observe = observe;
+        disconnect = vi.fn();
+        constructor(callback: ResizeObserverCallback) {
+          notify = () => callback([], this);
+        }
+      },
+    );
+    const rendered = render(
+      <DependencyGraph nodes={nodes} edges={edges} focusedIds={focusedIds} />,
+    );
+    const figure = rendered.getByRole('figure', { name: 'Dependency graph' });
+    const canvas = required(rendered.container.querySelector<HTMLElement>('.pc-graph__canvas'));
+    const content = required(rendered.container.querySelector<HTMLElement>('.pc-graph__content'));
+    expect(observe).toHaveBeenCalledExactlyOnceWith(figure, { box: 'border-box' });
+    expect(rendered.container.querySelectorAll('.pc-graph-node')).toHaveLength(4);
+    const initialZoom = content.style.transform;
+    width -= 344;
+    act(() => required(notify)());
+    expect(window.innerWidth).toBe(1440);
+    expect(content.style.transform).not.toBe(initialZoom);
+    expect(Number.parseFloat(canvas.style.width)).toBeLessThanOrEqual(width);
+    expect(Number.parseFloat(canvas.style.height)).toBeLessThanOrEqual(figure.clientHeight);
+    expect(figure.style.height).toBe('520px');
+    expect(rendered.container.querySelectorAll('.pc-graph-node')).toHaveLength(4);
+    for (const item of rendered.container.querySelectorAll<HTMLElement>('.pc-graph-node')) {
+      expect(item.style.visibility).toBe('');
+      expect(item.hasAttribute('inert')).toBe(false);
+    }
+    fireEvent.click(rendered.getByRole('button', { name: 'Zoom in', exact: true }));
+    flushFrames();
+    const manualZoom = content.style.transform;
+    Object.defineProperty(figure, 'clientHeight', { configurable: true, value: 500 });
+    figure.scrollLeft = 8000;
+    fireEvent.scroll(figure);
+    expect(content.style.transform).toBe(manualZoom);
+    expect(rendered.container.querySelectorAll('.pc-graph-node')).toHaveLength(4);
+    expect(rendered.container.querySelectorAll('.pc-graph-node[aria-hidden="true"]')).toHaveLength(
+      0,
+    );
+    const panned = figure.scrollLeft;
+    const zoom = content.style.transform;
+    rendered.rerender(
+      <DependencyGraph
+        nodes={nodes.map((item) => ({ ...item, label: `${item.label} updated` }))}
+        edges={edges}
+        focusedIds={new Set(focusedIds)}
+      />,
+    );
+    expect(figure.scrollLeft).toBe(panned);
+    expect(content.style.transform).toBe(zoom);
+    expect(figure.style.height).toBe('520px');
+  });
+
   it('retains painted geometry while culling content and keyboard access outside the viewport', () => {
     const nodes = Array.from({ length: 30 }, (_, index) => node(index));
     const rendered = render(

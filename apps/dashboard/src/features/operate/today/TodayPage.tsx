@@ -5,6 +5,7 @@ import {
 } from '../../../design-system/components/index.js';
 import type { DashboardQueryIdentity } from '../../../lib/binding/query-identity.js';
 import { OperatingSpine, operatingStageLabel } from '../cycles/OperatingSpine.js';
+import { OperateSetup } from '../OperateSetup.js';
 import { DecisionFocus, type OperateTodayContinuation } from './DecisionFocus.js';
 import { EvidenceDesk } from './EvidenceDesk.js';
 import {
@@ -73,20 +74,20 @@ function TodayContext({
         headingLevel={1}
         eyebrow={`planr-operate · today · ${model.vocabulary.context}`}
         title={model.vocabulary.title}
-        description="Choose a workspace to see what needs attention."
+        description="The current operating context for this project."
       />
-      <StatePanel
-        state="first-use"
-        eyebrow={firstUse ? 'First use' : 'Exact empty state'}
-        title={firstUse ? 'No active work yet' : 'Nothing active here yet'}
-        description={
-          firstUse
-            ? 'Choose a workspace from the available project context to get started.'
-            : 'There is no active work in this workspace right now.'
-        }
-      />
+      {firstUse ? (
+        <OperateSetup />
+      ) : (
+        <StatePanel
+          state="empty"
+          eyebrow="Exact empty state"
+          title="Nothing active here yet"
+          description="There is no active work in this workspace right now."
+        />
+      )}
       <p className="op-today__context-note">
-        No next step is available until work is returned for this workspace.
+        No governed next step is available until work is returned for this workspace.
       </p>
     </div>
   );

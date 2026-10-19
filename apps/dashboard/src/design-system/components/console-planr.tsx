@@ -462,6 +462,7 @@ export type DependencyGraphProps = Readonly<{
   edges: readonly GraphEdge[];
   view?: 'graph' | 'outline';
   flow?: 'source-to-target' | 'target-to-source';
+  focusedIds?: ReadonlySet<string>;
   selectedId?: string | null;
   onSelect?: (id: string) => void;
   onFocusSelect?: (id: string) => void;
@@ -820,6 +821,7 @@ export function DependencyGraph({
   edges,
   view = 'graph',
   flow = 'source-to-target',
+  focusedIds,
   selectedId,
   onSelect,
   onFocusSelect,
@@ -829,6 +831,7 @@ export function DependencyGraph({
   const figureRef = useRef<HTMLElement>(null);
   const [zoom, setZoom] = useState(1);
   const [focusedId, setFocusedId] = useState<string | null>(null);
+  const [canvasSize, setCanvasSize] = useState({ width: 0, height: 0 });
   const [viewport, setViewport] = useState({
     left: 0,
     top: 0,
@@ -858,15 +861,25 @@ export function DependencyGraph({
         : next,
     );
   }, []);
-  useLayoutEffect(() => {
-    if (view !== 'graph') return;
+  const measureCanvas = useCallback(() => {
     readViewport();
     const figure = figureRef.current;
+    if (!figure || figure.clientWidth <= 0 || figure.clientHeight <= 0) return;
+    const next = { width: figure.clientWidth, height: figure.clientHeight };
+    setCanvasSize((current) =>
+      current.width === next.width && current.height === next.height ? current : next,
+    );
+  }, [readViewport]);
+  useLayoutEffect(() => {
+    if (view !== 'graph') return;
+    measureCanvas();
+    const figure = figureRef.current;
     if (!figure || typeof ResizeObserver === 'undefined') return;
-    const observer = new ResizeObserver(readViewport);
-    observer.observe(figure);
+    const observer = new ResizeObserver(measureCanvas);
+    // Scrollbars from manual zoom must not turn into a new automatic fit.
+    observer.observe(figure, { box: 'border-box' });
     return () => observer.disconnect();
-  }, [readViewport, view]);
+  }, [measureCanvas, view]);
   const moveCamera = useCallback(
     (left: number, top: number) => {
       const figure = figureRef.current;
@@ -918,16 +931,35 @@ export function DependencyGraph({
       moveCamera(centerX * bounded - viewport.width / 2, centerY * bounded - viewport.height / 2),
     );
   };
+  const fittedZoom = Math.max(
+    GRAPH_MIN_ZOOM,
+    Math.min(1, viewport.width / layout.width, viewport.height / layout.height),
+  );
+  const fittedCanvasZoom = Math.max(
+    GRAPH_MIN_ZOOM,
+    Math.min(1, canvasSize.width / layout.width, canvasSize.height / layout.height),
+  );
+  const focusScope = useMemo(
+    () => (focusedIds?.size ? JSON.stringify([...focusedIds].sort()) : null),
+    [focusedIds],
+  );
+  // Canvas resizes need a new fit; unchanged live geometry must preserve the camera.
+  useLayoutEffect(() => {
+    if (focusScope === null || view !== 'graph' || canvasSize.width <= 0 || canvasSize.height <= 0)
+      return;
+    setZoom(fittedCanvasZoom);
+    moveCamera(0, 0);
+  }, [focusScope, view, fittedCanvasZoom, canvasSize.width, canvasSize.height, moveCamera]);
   const fit = () => {
-    const next = Math.max(
-      GRAPH_MIN_ZOOM,
-      Math.min(1, viewport.width / layout.width, viewport.height / layout.height),
-    );
-    setZoom(next);
+    setZoom(fittedZoom);
     moveCamera(0, 0);
   };
   const selectedDisplayId = selectedId ? (layout.displayId.get(selectedId) ?? selectedId) : null;
   const retained = new Set<string>();
+  for (const id of focusedIds ?? []) {
+    const displayId = layout.displayId.get(id) ?? id;
+    if (layout.position.has(displayId)) retained.add(displayId);
+  }
   for (const id of [selectedDisplayId, focusedId]) {
     if (!id) continue;
     retained.add(id);

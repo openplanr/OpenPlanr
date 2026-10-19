@@ -133,41 +133,66 @@ describe('injected theme preferences', () => {
   });
 });
 
-it('opens the mobile inspector as a modal and returns focus to the opener', async () => {
-  vi.stubGlobal('innerWidth', 390);
-  const user = userEvent.setup();
-  function Example() {
-    const [open, setOpen] = useState(false);
-    return (
-      <>
-        <button type="button" onClick={() => setOpen(true)}>
-          Inspect item
-        </button>
-        {open ? (
-          <Inspector mode="selection" selection={null} floating onClose={() => setOpen(false)} />
-        ) : null}
-      </>
-    );
-  }
-  render(<Example />);
-  const opener = screen.getByRole('button', { name: 'Inspect item' });
-  await user.click(opener);
-  expect(screen.getByRole('dialog').getAttribute('aria-modal')).toBe('true');
-  expect(screen.getByRole('heading', { name: 'Inspector' })).toBe(document.activeElement);
-  await user.tab();
-  const close = screen.getByRole('button', { name: 'Close inspector' });
-  expect(document.activeElement).toBe(close);
-  await user.tab();
-  expect(document.activeElement).toBe(close);
-  await user.click(screen.getByRole('button', { name: 'Close inspector' }));
-  await act(async () => undefined);
-  expect(screen.queryByRole('dialog')).toBeNull();
-  expect(document.activeElement).toBe(opener);
-  await user.click(opener);
-  await user.keyboard('{Escape}');
-  expect(screen.queryByRole('dialog')).toBeNull();
-  expect(document.activeElement).toBe(opener);
-});
+it.each([390, 1024])(
+  'opens the selected inspector as a modal at %s px and returns focus to the opener',
+  async (width) => {
+    vi.stubGlobal('innerWidth', width);
+    const user = userEvent.setup();
+    function Example() {
+      const [open, setOpen] = useState(false);
+      return (
+        <>
+          <button type="button" onClick={() => setOpen(true)}>
+            Inspect item
+          </button>
+          {open ? (
+            <Inspector
+              mode="selection"
+              selection={{
+                kind: 'node',
+                id: 'item-one',
+                type: 'task',
+                title: 'Selected item',
+                status: 'outstanding',
+                sprintId: null,
+                updated: null,
+                dependsOn: [],
+                ref: null,
+                href: null,
+              }}
+              floating
+              onClose={() => setOpen(false)}
+            />
+          ) : null}
+        </>
+      );
+    }
+    render(<Example />);
+    const opener = screen.getByRole('button', { name: 'Inspect item' });
+    await user.click(opener);
+    expect(screen.getByRole('dialog').getAttribute('aria-modal')).toBe('true');
+    expect(screen.getByRole('heading', { name: 'Inspector' })).toBe(document.activeElement);
+    await user.tab();
+    const close = screen.getByRole('button', { name: 'Close inspector' });
+    expect(document.activeElement).toBe(close);
+    await user.tab();
+    expect(document.activeElement).toBe(close);
+    await user.click(screen.getByRole('button', { name: 'Close inspector' }));
+    await act(async () => undefined);
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(document.activeElement).toBe(opener);
+    await user.click(opener);
+    await user.keyboard('{Escape}');
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(document.activeElement).toBe(opener);
+    await user.click(opener);
+    const overlay = document.querySelector('.pc-inspector-overlay');
+    if (!overlay) throw new Error('Missing inspector dismissal overlay.');
+    await user.click(overlay);
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(document.activeElement).toBe(opener);
+  },
+);
 
 const shellStyles = readFileSync(
   resolve(
@@ -483,19 +508,34 @@ it('constrains the mobile capability control to its 44 px hit slot', () => {
   expect(getComputedStyle(capability as HTMLElement).width).toBe('44px');
 });
 
-it('keeps the nonmodal inspector outside the main flex layout', async () => {
+it('keeps the desktop inspector in its reserved column when toggled', async () => {
   const { container } = renderNamedShell(1440, '#/list');
   const inspector = screen.getByRole('complementary', { name: 'Inspector' });
   const main = container.querySelector('.pc-shell__main');
-  expect(getComputedStyle(inspector).position).toBe('absolute');
-  expect(inspector.parentElement).toBe(main?.parentElement);
+  const slot = container.querySelector('.pc-shell__inspector-slot');
+  expect(getComputedStyle(inspector).position).toBe('relative');
+  expect(inspector.parentElement).toBe(slot);
+  expect(slot?.parentElement).toBe(main?.parentElement);
   expect(inspector.getAttribute('aria-modal')).toBeNull();
   await userEvent.setup().click(screen.getByRole('button', { name: 'Hide inspector' }));
-  expect(screen.queryByRole('complementary', { name: 'Inspector' })).toBeNull();
+  expect(screen.getByRole('complementary', { name: 'Inspector' }).textContent).toContain(
+    'Nothing selected',
+  );
+  expect(container.querySelector('.pc-shell__inspector-slot')).toBe(slot);
   expect(container.querySelector('.pc-shell__main')).toBe(main);
   await userEvent.setup().click(screen.getByRole('button', { name: 'Show inspector' }));
   expect(getComputedStyle(screen.getByRole('complementary', { name: 'Inspector' })).position).toBe(
-    'absolute',
+    'relative',
   );
+  expect(container.querySelector('.pc-shell__inspector-slot')).toBe(slot);
   expect(container.querySelector('.pc-shell__main')).toBe(main);
+});
+
+it.each([390, 1024])('does not open an empty inspector overlay at %s px', (width) => {
+  const { container } = renderNamedShell(width, '#/operate/today');
+  const toggle = screen.getByRole('button', { name: 'Show inspector: select an item first' });
+  expect((toggle as HTMLButtonElement).disabled).toBe(true);
+  fireEvent.click(toggle);
+  expect(screen.queryByRole('dialog', { name: 'Inspector' })).toBeNull();
+  expect(container.querySelector('.pc-shell-inspector')).toBeNull();
 });

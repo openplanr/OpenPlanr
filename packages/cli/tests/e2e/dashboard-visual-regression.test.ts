@@ -149,6 +149,36 @@ async function layoutReport(page: Page) {
   }, ACTIVE_TARGET_SELECTOR);
 }
 
+async function expectMainControlsHitTestable(page: Page) {
+  const controls = page
+    .locator('#main-content')
+    .locator(
+      `${ACTIVE_TARGET_SELECTOR}, [tabindex]:not([tabindex="-1"]), [contenteditable="true"]`,
+    );
+  let checked = 0;
+  for (const control of await controls.all()) {
+    if (
+      !(await control.isVisible()) ||
+      (await control.isDisabled()) ||
+      (await control.getAttribute('aria-disabled')) === 'true'
+    )
+      continue;
+    await control.scrollIntoViewIfNeeded();
+    const report = await control.evaluate((element) => {
+      const rect = element.getBoundingClientRect();
+      const hit = document.elementFromPoint(rect.x + rect.width / 2, rect.y + rect.height / 2);
+      return {
+        target: element.outerHTML,
+        hit: hit?.outerHTML,
+        reachable: hit !== null && (hit === element || element.contains(hit)),
+      };
+    });
+    expect(report.reachable, `Main control is covered: ${JSON.stringify(report)}`).toBe(true);
+    checked++;
+  }
+  expect(checked).toBeGreaterThan(0);
+}
+
 async function touchTap(page: Page, target: Locator): Promise<void> {
   await expect(target).toBeVisible();
   await target.scrollIntoViewIfNeeded();
@@ -273,6 +303,152 @@ test.describe('dashboard real-browser quality', () => {
     }
   });
 
+  test('uses the shared presentation across every Operate route in both themes', async ({
+    page,
+  }, testInfo) => {
+    test.setTimeout(180_000);
+    await page.addInitScript(() => {
+      const theme = new URL(location.href).searchParams.get('operateTheme');
+      if (theme === 'dark' || theme === 'light') localStorage.setItem('op-theme', theme);
+    });
+    const writes: string[] = [];
+    page.on('request', (request) => {
+      if (
+        new URL(request.url()).pathname.startsWith('/api/operate/') &&
+        !['GET', 'HEAD'].includes(request.method())
+      )
+        writes.push(`${request.method()} ${new URL(request.url()).pathname}`);
+    });
+    const routes = DASHBOARD_ROUTE_FIXTURES.filter(({ kind }) => kind.startsWith('operate.'));
+    expect(routes).toHaveLength(15);
+    for (const theme of ['dark', 'light']) {
+      for (const width of [1440, 390, 320]) {
+        await page.setViewportSize({ width, height: 1000 });
+        for (const { hash, kind } of routes) {
+          await openFixture(page, hash, { operateTheme: theme });
+          const workspace = page.locator(`[data-route-kind="${kind}"]`);
+          await expect(workspace).toHaveClass(/pc-operate/u);
+          await page.evaluate(() => document.fonts.ready);
+          const typography = await workspace.evaluate((element) => {
+            const heading = element.querySelector('h1, h2');
+            if (!heading) throw new Error('Missing Operate heading.');
+            const style = getComputedStyle(heading);
+            return {
+              body: getComputedStyle(element).fontFamily,
+              heading: style.fontFamily,
+              size: parseFloat(style.fontSize),
+              isPageTitle: heading.tagName === 'H1',
+              overflow: document.documentElement.scrollWidth > document.documentElement.clientWidth,
+            };
+          });
+          expect(typography.body).toContain('DM Sans');
+          expect(typography.heading).toContain('Outfit');
+          expect(typography.size).toBe(typography.isPageTitle ? 28 : 20);
+          expect(typography.overflow, `${kind} at ${width}px in ${theme}`).toBe(false);
+          if (kind === 'operate.recovery' && width === 390) {
+            const history = workspace.getByRole('region', { name: 'Immutable recovery history' });
+            await expect(history).toHaveAttribute('tabindex', '0');
+            await history.focus();
+            await expect(history).toBeFocused();
+            await expect(history).toHaveCSS('outline-style', 'solid');
+            await expect(history).toHaveCSS('outline-width', '2px');
+          }
+          const violations = await axeViolations(page);
+          expect(violations, `${kind} accessibility at ${width}px in ${theme}`).toEqual([]);
+          if (width === 1440) {
+            await attachScreenshot(page, `${kind}-${theme}.png`, testInfo.attach.bind(testInfo));
+          }
+          if (kind === 'operate.today' && width === 1440) {
+            const focus = workspace.locator('.op-today-focus');
+            const evidence = workspace.locator('.op-today-evidence--wide');
+            const [focusBox, evidenceBox] = await Promise.all([
+              focus.boundingBox(),
+              evidence.boundingBox(),
+            ]);
+            if (!focusBox || !evidenceBox) throw new Error('Missing focus or evidence desk.');
+            expect(evidenceBox.x - focusBox.x - focusBox.width).toBeCloseTo(24, 0);
+            await expect(focus).toHaveCSS('border-radius', '14px');
+            await expect(evidence).toHaveCSS('border-radius', '14px');
+          }
+        }
+      }
+    }
+    expect(writes).toEqual([]);
+  });
+
+  for (const theme of ['dark', 'light']) {
+    for (const width of [1440, 320]) {
+      test(`shows the truthful first-run Operate page with a copyable host command (${theme}, ${width}px)`, async ({
+        page,
+      }, testInfo) => {
+        await page.addInitScript(installDashboardLayoutShifts);
+        await page.context().grantPermissions(['clipboard-read', 'clipboard-write']);
+        await page.addInitScript(() => {
+          const theme = new URL(location.href).searchParams.get('operateTheme');
+          if (theme === 'dark' || theme === 'light') localStorage.setItem('op-theme', theme);
+        });
+        await page.setViewportSize({ width, height: 1000 });
+        const [bootstrapResponse, indexResponse] = await Promise.all([
+          page.waitForResponse((response) => new URL(response.url()).pathname === '/api/bootstrap'),
+          page.waitForResponse((response) => {
+            const url = new URL(response.url());
+            return (
+              url.pathname === '/api/operate/local-reviews' &&
+              url.searchParams.get('pageSize') === '12'
+            );
+          }),
+          page.goto(fixtureUrl('#/operate/today', { localOperate: 'empty', operateTheme: theme })),
+        ]);
+        expect(bootstrapResponse.ok()).toBe(true);
+        expect(await bootstrapResponse.json()).toMatchObject({
+          queryRoots: { operate: null },
+          capabilities: { operateCommands: { available: false } },
+        });
+        expect(indexResponse.ok()).toBe(true);
+        expect(await indexResponse.json()).toMatchObject({ pagination: { total: 0 }, items: [] });
+        const workspace = page.locator('[data-route-kind="operate.today"]');
+        await expect(
+          workspace.getByRole('heading', { name: 'Operate is not set up here yet' }),
+        ).toBeVisible();
+        await expect(workspace.getByText('Proposed', { exact: true })).toBeVisible();
+        if (width === 1440) {
+          const inspector = page.getByRole('complementary', { name: 'Inspector' });
+          await expect(inspector).toContainText('Nothing selected');
+          const main = page.locator('#main-content');
+          const before = await main.boundingBox();
+          const dock = await inspector.boundingBox();
+          if (!before || !dock) throw new Error('Missing main content or inspector dock.');
+          expect(before.x + before.width).toBeLessThanOrEqual(dock.x + 1);
+          await expectMainControlsHitTestable(page);
+          await page.evaluate(() => window.__dashboardLayoutShifts.markPhase('inspector-toggle'));
+          await page.getByRole('button', { name: 'Hide inspector', exact: true }).click();
+          expect(await main.boundingBox()).toEqual(before);
+          await page.getByRole('button', { name: 'Show inspector', exact: true }).click();
+          expect(await main.boundingBox()).toEqual(before);
+          await expectMainControlsHitTestable(page);
+          const shifts = await page.evaluate(() =>
+            window.__dashboardLayoutShifts
+              .snapshot()
+              .shifts.filter((entry) => entry.phase === 'inspector-toggle'),
+          );
+          expect(shifts.reduce((sum, shift) => sum + shift.value, 0)).toBe(0);
+        }
+
+        await expect(workspace.locator('.op-today-focus, .pc-local-review__signal')).toHaveCount(0);
+        await workspace.getByRole('button', { name: 'Copy command', exact: true }).click();
+        await expect(workspace.getByRole('button', { name: 'Copied', exact: true })).toBeVisible();
+        expect(await page.evaluate(() => navigator.clipboard.readText())).toBe('/planr:operate');
+        expect((await layoutReport(page)).horizontalOverflow).toBe(false);
+        expect(await axeViolations(page)).toEqual([]);
+        await attachScreenshot(
+          page,
+          `operate-first-run-${theme}-${width}.png`,
+          testInfo.attach.bind(testInfo),
+        );
+      });
+    }
+  }
+
   test('shows completed local operating reviews and keeps cycle and history routes distinct', async ({
     page,
   }) => {
@@ -296,7 +472,7 @@ test.describe('dashboard real-browser quality', () => {
     await expect(detail).toContainText('Run the CRM smoke test');
     await expect(detail.getByRole('heading', { name: 'Review coverage' })).toBeVisible();
     await expect(detail.getByRole('heading', { name: 'Decision record' })).toBeVisible();
-    await expect(detail.getByText('Read-only')).toBeVisible();
+    await expect(detail.getByText('Governed actions')).toBeVisible();
     await expect(detail).not.toContainText('No command gateway in this build');
 
     const navigation = page.getByRole('navigation', { name: 'Dashboard navigation' });
@@ -709,12 +885,34 @@ test.describe('dashboard real-browser quality', () => {
       'true',
     );
     await expect(graph.locator('.pc-graph-node')).toHaveCount(4);
+    const fittedNodes = await graph.locator('.pc-graph-node').evaluateAll((nodes) =>
+      nodes.map((node) => {
+        const canvas = node.closest('.pc-graph');
+        if (!canvas) throw new Error('Missing graph viewport.');
+        const bounds = canvas.getBoundingClientRect();
+        const rect = node.getBoundingClientRect();
+        return {
+          id: node.getAttribute('data-canonical-id'),
+          fits:
+            rect.left >= bounds.left - 2 &&
+            rect.right <= bounds.right + 2 &&
+            rect.top >= bounds.top - 2 &&
+            rect.bottom <= bounds.bottom + 2,
+        };
+      }),
+    );
+    expect(fittedNodes.filter((node) => !node.fits)).toEqual([]);
     await expect(graph.locator('.pc-graph__rank')).toHaveCount(4);
     const nodePositions = await graph
       .locator('.pc-graph-node')
       .evaluateAll((nodes) => nodes.map((node) => Math.round(node.getBoundingClientRect().x)));
     expect(new Set(nodePositions).size).toBe(4);
-    expect(Math.max(...nodePositions) - Math.min(...nodePositions)).toBeGreaterThan(500);
+    const canvasBounds = await graph.locator('.pc-graph').boundingBox();
+    if (!canvasBounds) throw new Error('Missing fitted graph viewport.');
+    // The reserved dock changes the available width, so stage spacing follows the canvas.
+    expect(Math.max(...nodePositions) - Math.min(...nodePositions)).toBeGreaterThan(
+      canvasBounds.width * 0.6,
+    );
 
     await graph
       .getByRole('button', {

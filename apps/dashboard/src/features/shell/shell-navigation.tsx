@@ -500,6 +500,7 @@ export type TopBarProps = Readonly<{
   route: ParsedDashboardRoute;
   connectionState: ConnectionState;
   inspectorOpen: boolean;
+  inspectorAvailable?: boolean;
   onToggleInspector: () => void;
   onOpenPalette: () => void;
 }>;
@@ -514,6 +515,7 @@ export function TopBar({
   route,
   connectionState,
   inspectorOpen,
+  inspectorAvailable = true,
   onToggleInspector,
   onOpenPalette,
 }: TopBarProps) {
@@ -575,7 +577,14 @@ export function TopBar({
       <ThemeToggle preference={themePreference} />
       <IconButton
         icon={inspectorOpen ? 'panel-right-close' : 'panel-left-close'}
-        label={inspectorOpen ? 'Hide inspector' : 'Show inspector'}
+        label={
+          inspectorOpen
+            ? 'Hide inspector'
+            : inspectorAvailable
+              ? 'Show inspector'
+              : 'Show inspector: select an item first'
+        }
+        disabled={!inspectorAvailable}
         size="sm"
         active={inspectorOpen}
         onClick={onToggleInspector}
@@ -651,17 +660,10 @@ export function Inspector({
   onPromote,
   planningContent,
 }: InspectorProps) {
-  const [mobile, setMobile] = useState(
-    () => typeof window !== 'undefined' && window.innerWidth < 900,
-  );
   const opener = useRef<HTMLElement | null>(
     typeof document === 'undefined' ? null : (document.activeElement as HTMLElement | null),
   );
-  useEffect(() => {
-    const update = () => setMobile(window.innerWidth < 900);
-    window.addEventListener('resize', update);
-    return () => window.removeEventListener('resize', update);
-  }, []);
+  if (floating && selection === null) return null;
 
   const content = (
     <>
@@ -767,7 +769,7 @@ export function Inspector({
       )}
     </>
   );
-  if (mobile && floating) {
+  if (floating) {
     return (
       <InspectorSheet
         open
@@ -775,7 +777,7 @@ export function Inspector({
         onOpenChange={(open) => {
           if (!open) onClose?.();
         }}
-        onRestoreFocus={() => opener.current?.focus()}
+        onRestoreFocus={() => opener.current?.focus({ preventScroll: true })}
         title="Inspector"
         description="Selected item details. Open the item to continue on its full page."
       >
@@ -784,12 +786,12 @@ export function Inspector({
     );
   }
   return (
-    <aside
-      className="pc-shell-inspector"
-      data-floating={floating || undefined}
-      aria-label="Inspector"
-    >
-      {onClose ? <IconButton icon="x" label="Close inspector" size="sm" onClick={onClose} /> : null}
+    <aside className="pc-shell-inspector" aria-label="Inspector">
+      <div className="pc-shell-inspector__controls">
+        {onClose ? (
+          <IconButton icon="x" label="Close inspector" size="sm" onClick={onClose} />
+        ) : null}
+      </div>
       {content}
     </aside>
   );

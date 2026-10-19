@@ -51,6 +51,19 @@
   flex: 1;
   min-height: 0;
 }
+/* Reserving the dock from first paint keeps selection from moving the work underneath it. */
+.pc-shell__inspector-slot {
+  display: none;
+}
+@media (min-width: 1180px) {
+  .pc-shell__inspector-slot {
+    display: flex;
+    flex: 0 0 var(--pc-inspector-width);
+    width: var(--pc-inspector-width);
+    min-width: 0;
+    overflow: hidden;
+  }
+}
 .pc-shell__main {
   position: relative;
   display: flex;
@@ -479,33 +492,26 @@
 
 /* ===== inspector ===== */
 .pc-shell-inspector {
-  position: absolute;
-  top: 0;
-  right: 0;
-  bottom: 0;
-  z-index: 40;
+  position: relative;
   display: flex;
-  flex: 0 0 auto;
+  flex: 1;
+  min-height: 0;
   flex-direction: column;
   gap: 14px;
-  width: var(--pc-inspector-width);
+  width: 100%;
   max-width: 100%;
   padding: 14px;
   overflow-y: auto;
   scrollbar-gutter: stable;
   background: var(--pc-surface-panel);
   border-left: 1px solid var(--pc-border-default);
-  box-shadow: var(--pc-shadow-lg);
   container-type: inline-size;
   animation: pc-inspector-enter 180ms var(--pc-ease-out, ease-out);
 }
-.pc-shell-inspector[data-floating="true"] {
-  position: absolute;
-  top: 0;
-  right: 0;
-  bottom: 0;
-  z-index: 40;
-  box-shadow: var(--pc-shadow-lg);
+.pc-shell-inspector__controls {
+  display: flex;
+  justify-content: flex-end;
+  min-height: 44px;
 }
 .pc-shell-inspector__head {
   display: flex;
@@ -774,12 +780,6 @@
   .pc-topbar .pc-icon-button {
     min-width: 44px;
     min-height: 44px;
-  }
-
-  .pc-shell-inspector[data-floating="true"] {
-    inset: 0;
-    width: 100%;
-    max-height: none;
   }
 
   .pc-inspector-sheet {

@@ -793,6 +793,15 @@
   border-radius: var(--pc-radius-md);
   background: var(--pc-surface-card);
 }
+.pc-table-wrap:focus-visible {
+  outline: 2px solid var(--pc-focus-ring);
+  outline-offset: 2px;
+}
+@media (forced-colors: active) {
+  .pc-table-wrap:focus-visible {
+    outline-color: Highlight;
+  }
+}
 .pc-table {
   width: 100%;
   border-collapse: collapse;

@@ -1,5 +1,4 @@
-/* Planr Console scope for the Operate surfaces. Consumes the shared --pc-* tokens
-   and the pc-* component classes; adds only the operate-specific layout helpers. */
+/* Keep Operate layouts on the same recipes as Plan while preserving governed controls. */
 
 .pc-operate {
   display: grid;
@@ -155,4 +154,303 @@
   flex-wrap: wrap;
   align-items: center;
   gap: 10px;
+}
+
+.pc-operate {
+  min-width: 0;
+  align-content: start;
+  gap: 24px;
+  overflow-wrap: anywhere;
+}
+
+.pc-operate > *,
+.pc-operate :is(section, article, aside, fieldset, pre) {
+  min-width: 0;
+}
+
+.pc-operate :is(h1, h2, h3, h4) {
+  font-family: var(--op-font-display);
+  color: var(--op-heading);
+}
+
+.pc-operate[data-route-kind] h1 {
+  font-size: 28px;
+  font-weight: 700;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+}
+
+.pc-operate[data-route-kind] h2 {
+  font-size: 20px;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.pc-operate[data-route-kind] h3 {
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.pc-operate p {
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.pc-operate :is(code, time, .op-eyebrow) {
+  font-family: var(--pc-font-mono);
+  font-size: 12px;
+}
+
+.pc-operate :is(dt, small, .pc-operate__record-index) {
+  font-size: 12px;
+  color: var(--pc-text-tertiary);
+}
+
+.pc-operate dd {
+  margin-inline-start: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.pc-operate :is(.pc-operate__panel, .pc-operate__record) {
+  padding: 20px;
+  border-radius: 14px;
+  background: var(--pc-surface-panel);
+}
+
+.pc-operate .pc-operate__panel :is(h2, h3) {
+  font-size: 17px;
+  letter-spacing: normal;
+  text-transform: none;
+  color: var(--op-heading);
+}
+
+.pc-operate .pc-operate__notice {
+  max-width: none;
+  margin: 0;
+  padding: 12px 16px;
+  border-radius: var(--pc-radius-sm);
+}
+
+.pc-operate :is(.pc-operate__technical, details) > summary {
+  min-height: 44px;
+  padding-block: 8px;
+  cursor: pointer;
+  border-radius: var(--pc-radius-sm);
+}
+
+.pc-operate :is(a, summary, input, select, textarea):focus-visible {
+  outline: 2px solid var(--pc-focus-ring);
+  outline-offset: 2px;
+}
+
+.pc-operate :is(a, summary) {
+  scroll-margin-block: 80px;
+  transition: var(--pc-transition-ui);
+}
+
+.pc-operate summary:hover {
+  background: var(--pc-surface-hover);
+}
+
+.pc-operate :is(a, summary):active {
+  background: var(--pc-surface-active);
+}
+
+.pc-operate a.pc-button {
+  min-height: 44px;
+  height: auto;
+  padding-block: 8px;
+  border-color: var(--pc-border-strong);
+  border-radius: var(--pc-radius-sm);
+  color: var(--pc-text-primary);
+  white-space: normal;
+}
+
+.pc-operate a.pc-button:hover {
+  background: var(--pc-surface-hover);
+}
+
+.pc-operate :is(.op-cycle-list__header, .op-cycle-detail__header, .op-inbox__header) {
+  flex-wrap: wrap;
+  gap: 24px;
+  padding-bottom: 20px;
+}
+
+.pc-operate :is(.op-cycle-list__rows, .op-action-list__rows) {
+  margin-top: 0;
+  border: 1px solid var(--pc-border-subtle);
+  border-radius: 14px;
+  background: var(--pc-surface-panel);
+}
+
+.pc-operate :is(.op-cycle-list__rows, .op-action-list__rows) > li {
+  padding: 20px;
+  gap: 20px;
+}
+
+.pc-operate :is(.op-cycle-list__rows, .op-action-list__rows) > li:last-child {
+  border-bottom: 0;
+}
+
+.pc-operate :is(.op-cycle-detail__workspace, .op-cycle-detail__primary) {
+  gap: 24px;
+}
+
+.pc-operate .op-cycle-spine {
+  padding: 20px;
+  border: 1px solid var(--pc-border-subtle);
+  border-radius: 14px;
+  background: var(--pc-surface-panel);
+}
+
+.pc-operate .op-cycle-spine__heading h2 {
+  font-size: 17px;
+}
+
+.pc-operate :is(.op-cycle-proof, .op-recovery__card, .op-planning-handoff__card) {
+  padding: 20px;
+  border: 1px solid var(--pc-border-subtle);
+  border-radius: 14px;
+  background: var(--pc-surface-panel);
+}
+
+.pc-operate .op-today__desk-layout {
+  grid-template-columns: minmax(0, 1.5fr) minmax(280px, 1fr);
+  gap: 24px;
+}
+
+.pc-operate .op-today__work {
+  gap: 24px;
+}
+
+.pc-operate .op-today-focus {
+  border: 1px solid color-mix(in srgb, var(--pc-accent) 40%, var(--pc-border-subtle));
+  border-radius: 14px;
+  background: var(--pc-surface-panel);
+}
+
+.pc-operate .op-today-focus__question h2 {
+  font-size: 24px;
+  font-weight: 700;
+  line-height: 1.25;
+  letter-spacing: -0.015em;
+}
+
+.pc-operate .op-today-focus__brief dd {
+  font-family: var(--pc-font-sans);
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.pc-operate .op-today-focus__actions {
+  flex-wrap: wrap;
+  background: var(--pc-accent-soft);
+}
+
+.pc-operate .op-today-focus__actions > small {
+  flex-basis: 100%;
+  margin: 0;
+  text-align: start;
+}
+
+.pc-operate .op-today-evidence {
+  padding: 20px;
+  border: 1px solid var(--pc-border-subtle);
+  border-radius: 14px;
+  background: var(--pc-surface-panel);
+}
+
+.pc-operate .op-today-evidence h2 {
+  font-size: 17px;
+}
+
+.pc-operate-setup {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(280px, 380px);
+  align-items: center;
+  gap: 28px;
+  padding: 24px;
+  border-radius: 14px;
+  background: var(--pc-surface-panel);
+}
+
+.pc-operate-setup.pc-card h2 {
+  margin: 12px 0 8px;
+  font-size: 26px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.pc-operate-setup p {
+  margin: 0;
+}
+
+.pc-operate-setup > div:last-child > p {
+  margin-top: 8px;
+  font-size: 12px;
+}
+
+.pc-operate .op-today-evidence--wide {
+  display: flex;
+}
+
+.pc-operate .op-today-evidence--compact {
+  display: none;
+}
+
+@media (max-width: 1120px) {
+  .pc-operate .op-today__desk-layout,
+  .pc-operate-setup {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .pc-operate .op-today-evidence--wide {
+    display: none;
+  }
+
+  .pc-operate .op-today-evidence--compact {
+    display: block;
+    padding: 0;
+  }
+}
+
+@media (max-width: 800px) {
+  .pc-operate__split {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .pc-operate .op-cycle-list__rows > li {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .pc-operate :is(.op-cycle-custody, .op-inbox__custody) {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .pc-operate-setup {
+    padding: 20px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pc-operate *,
+  .pc-operate *::before,
+  .pc-operate *::after {
+    animation: none;
+    transition: none;
+    scroll-behavior: auto;
+  }
+}
+
+@media (forced-colors: active) {
+  .pc-operate
+    :is(.pc-card, .pc-operate__record, .pc-operate__panel, .op-cycle-spine, .op-cycle-proof) {
+    border-color: CanvasText;
+  }
+
+  .pc-operate :is(a, summary, input, select, textarea):focus-visible {
+    outline-color: Highlight;
+  }
 }

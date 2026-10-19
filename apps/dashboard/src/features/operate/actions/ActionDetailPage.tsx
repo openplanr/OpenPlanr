@@ -448,7 +448,7 @@ function ActionWorkspace({
         aria-label={`Available actions for ${action.title}`}
       >
         {planningHref ? (
-          <a className="op-cycle-link" href={planningHref}>
+          <a className="pc-button op-cycle-link" href={planningHref}>
             Review Planning handoff
           </a>
         ) : null}
@@ -569,7 +569,7 @@ function ActionWorkspace({
       ) : null}
 
       <p className="op-action-detail__history-link">
-        <a className="op-cycle-link" href="#/operate/history">
+        <a className="pc-button op-cycle-link" href="#/operate/history">
           View activity and recovery details
         </a>
       </p>

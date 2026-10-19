@@ -180,11 +180,11 @@ function CreatedView({
           </p>
         </div>
         <div className="op-planning-handoff__actions">
-          <a className="op-cycle-link" href={actionHref(actionId)}>
+          <a className="pc-button op-cycle-link" href={actionHref(actionId)}>
             Return to source Action
           </a>
           {planningHref ? (
-            <a className="op-cycle-link op-cycle-link--primary" href={planningHref}>
+            <a className="pc-button op-cycle-link op-cycle-link--primary" href={planningHref}>
               Open in Planning
             </a>
           ) : null}
@@ -539,7 +539,7 @@ export function PlanningHandoffPage({
             Review the context, shape the draft, and confirm it before creating a Planning SPEC.
           </p>
         </div>
-        <a className="op-cycle-link" href={actionHref(model.action.actionId)}>
+        <a className="pc-button op-cycle-link" href={actionHref(model.action.actionId)}>
           Return to source Action
         </a>
       </header>

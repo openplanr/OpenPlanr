@@ -110,3 +110,124 @@
     grid-template-columns: 1fr;
   }
 }
+
+.op-review.pc-operate {
+  max-width: none;
+}
+
+.op-review__breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--pc-text-tertiary);
+  font-size: 13px;
+}
+
+.op-review__breadcrumb a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 8px;
+  border-radius: var(--pc-radius-sm);
+}
+
+.op-review__breadcrumb a:hover {
+  background: var(--pc-surface-hover);
+}
+
+.op-review__hero,
+.op-review__section {
+  padding: 24px;
+  border: 1px solid var(--pc-border-subtle);
+  border-radius: 14px;
+  background: var(--pc-surface-panel);
+}
+
+.op-review__hero {
+  border-color: color-mix(in srgb, var(--pc-accent) 40%, var(--pc-border-subtle));
+}
+
+.op-review__section-heading {
+  margin-bottom: 16px;
+}
+
+.op-review :is(.op-review__status div, .op-review__proof div, .op-review__challenge-grid section) {
+  border-radius: var(--pc-radius-sm);
+  background: var(--pc-surface-card);
+}
+
+.op-review :is(.op-review__choice, .op-review__choice-brief, .op-review__notice) {
+  border-radius: var(--pc-radius-sm);
+}
+
+.op-review__choice {
+  min-width: 0;
+  grid-template-columns: 24px minmax(0, 1fr);
+  border-color: var(--pc-border-strong);
+  background: var(--pc-surface-card);
+  transition: var(--pc-transition-ui);
+}
+
+.op-review__choice:hover {
+  background: var(--pc-surface-hover);
+}
+
+.op-review__choice:active {
+  background: var(--pc-surface-active);
+}
+
+.op-review__choice:has(input:focus-visible) {
+  outline: 2px solid var(--pc-focus-ring);
+  outline-offset: 2px;
+}
+
+.op-review__choice:has(input:disabled) {
+  cursor: not-allowed;
+  color: var(--pc-text-tertiary);
+}
+
+.op-review__choice input {
+  accent-color: var(--pc-accent);
+}
+
+.op-review__recommendations > li + li {
+  padding-top: 16px;
+  margin-top: 16px;
+  border-top: 1px solid var(--pc-border-subtle);
+}
+
+.op-review__table-scroll {
+  max-width: 100%;
+  border: 1px solid var(--pc-border-subtle);
+  border-radius: var(--pc-radius-sm);
+}
+
+.op-review :is(th, td) {
+  padding: 12px;
+  border-bottom: 1px solid var(--pc-border-subtle);
+  text-align: start;
+  vertical-align: top;
+}
+
+.op-review th {
+  background: var(--pc-surface-card);
+}
+
+@media (max-width: 480px) {
+  .op-review__hero,
+  .op-review__section {
+    padding: 16px;
+  }
+
+  .op-review__status,
+  .op-review__proof,
+  .op-review__recommendations dl {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (forced-colors: active) {
+  .op-review__choice:has(input:checked) {
+    border: 2px solid Highlight;
+  }
+}

@@ -46,6 +46,7 @@ import {
   parseDashboardProductState,
 } from '../../../../apps/dashboard/src/lib/api/product-state.js';
 import { createDashboardQueryIdentity } from '../../../../apps/dashboard/src/lib/binding/query-identity.js';
+import { DASHBOARD_ROUTE_FIXTURES } from '../e2e/fixtures/dashboard-route-catalog.js';
 import {
   buildPremiumDashboardFixture,
   type FixtureDataset,
@@ -53,6 +54,7 @@ import {
   fixturePatch,
   fixtureSnapshot,
 } from './fixtures/premium-dashboard-fixtures.js';
+import { operatePresentationFixture } from './operate-presentation-fixture.js';
 
 const normalise = (text: string) => text.replace(/\s+/gu, ' ').trim().toLowerCase();
 
@@ -271,6 +273,19 @@ describe('visible control names', () => {
     expect(failures.length).toBeGreaterThan(0);
     expect(failures.join('\n')).toContain(id);
   });
+
+  it.each(DASHBOARD_ROUTE_FIXTURES.filter(({ kind }) => kind.startsWith('operate.')))(
+    'keeps $kind names aligned with visible text',
+    async ({ kind, hash, readyText }) => {
+      const view = render(operatePresentationFixture(hash));
+      const workspace = view.container.querySelector(`[data-route-kind="${kind}"]`);
+      expect(workspace).toBeTruthy();
+      expect(workspace?.classList.contains('pc-operate')).toBe(true);
+      expect(workspace?.textContent).toContain(readyText);
+      expect(view.container.textContent).not.toContain('cannot be trusted');
+      expect(await nameFailures(view.container)).toEqual([]);
+    },
+  );
 
   for (const dataset of ['representative', 'artboard'] as const) {
     it(`keeps ${dataset} shared recipe names aligned with visible text`, async () => {

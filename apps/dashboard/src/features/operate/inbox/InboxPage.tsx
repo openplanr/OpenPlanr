@@ -594,7 +594,7 @@ export function InboxPage({ currentBinding, current, actions, onRefetch }: Inbox
           title="No matching Inbox item"
           description="Return to the Inbox to review the work that is currently available."
           actions={
-            <a className="op-inline-action" href="#/operate/inbox">
+            <a className="pc-button op-inline-action" href="#/operate/inbox">
               Return to Inbox
             </a>
           }
@@ -613,7 +613,7 @@ export function InboxPage({ currentBinding, current, actions, onRefetch }: Inbox
   return (
     <div
       ref={workspaceRef}
-      className="op-workspace op-inbox"
+      className="op-workspace op-inbox pc-operate"
       data-inbox-focus-workspace=""
       data-route-kind={model.detailRequested ? 'operate.inbox-item' : 'operate.inbox'}
       data-inbox-presentation={model.presentation}
@@ -841,7 +841,11 @@ export function InboxPage({ currentBinding, current, actions, onRefetch }: Inbox
 
                 <div className="op-inbox-dialog__actions">
                   <AlertDialog.Cancel asChild>
-                    <button type="button" className="op-inbox-dialog__cancel" disabled={confirming}>
+                    <button
+                      type="button"
+                      className="pc-button op-inbox-dialog__cancel"
+                      disabled={confirming}
+                    >
                       Cancel
                     </button>
                   </AlertDialog.Cancel>
