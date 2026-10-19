@@ -683,7 +683,9 @@ test.describe('dashboard real-browser quality', () => {
       const graph = page.locator('[data-route-kind="planning.graph"]');
       await expect(graph.getByRole('heading', { level: 1, name: 'Graph' })).toBeVisible();
       await expect(graph).toContainText('No depends_on edges in this plan');
-      await expect(graph).toContainText('an artifact without an edge of this kind is not shown');
+      await expect(graph).toContainText(
+        'Both views draw relationships. A shared focus can also keep its isolated artifact visible.',
+      );
       expect((await layoutReport(page)).horizontalOverflow).toBe(false);
 
       if (viewport.width >= 1024) {
@@ -795,12 +797,17 @@ test.describe('dashboard real-browser quality', () => {
     }
   });
 
-  test('keeps Planning Overview bounded and decision-focused', async ({ page }) => {
+  test('keeps Planning Home bounded and decision-focused through the Overview alias', async ({
+    page,
+  }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
     await openFixture(page, '#/overview');
 
     const overview = page.locator('[data-route-kind="planning.overview"]');
-    await expect(overview.getByRole('heading', { level: 1, name: 'Overview' })).toBeVisible();
+    await expect(page).toHaveURL(/#\/home$/u);
+    await expect(
+      overview.getByRole('heading', { level: 1, name: 'Home', exact: true }),
+    ).toBeVisible();
     await expect(overview).toContainText('1 artifact');
     await expect(overview).toContainText('Nothing is blocked');
     await expect(overview.getByRole('table', { name: 'Artifacts in progress' })).toContainText(
@@ -824,7 +831,14 @@ test.describe('dashboard real-browser quality', () => {
       await expect(columns).toHaveCount(5);
       const inProgress = columns.filter({ hasText: 'in progress' });
       await expect(inProgress).toContainText('Improve appointment reminder delivery');
-      await expect(columns.filter({ hasText: 'blocked' })).toContainText('empty');
+      for (const status of ['outstanding', 'blocked', 'addressed', 'done']) {
+        const emptySlot = board
+          .getByRole('region', { name: status, exact: true })
+          .getByRole('button', { name: `${status}: no cards`, exact: true });
+        await expect(emptySlot).toHaveText('No cards');
+        await emptySlot.focus();
+        await expect(emptySlot).toBeFocused();
+      }
       expect((await layoutReport(page)).horizontalOverflow).toBe(false);
 
       if (viewport.width >= 1024) {
@@ -930,18 +944,21 @@ test.describe('dashboard real-browser quality', () => {
       expect(await page.evaluate(() => navigator.maxTouchPoints)).toBeGreaterThan(0);
 
       const mobileNavigation = page.getByRole('navigation', { name: 'Mobile Operate navigation' });
-      await touchTap(page, mobileNavigation.getByRole('link', { name: 'Inbox' }));
-      await expect(page.locator('[data-route-kind="operate.inbox"]')).toBeVisible();
-
       const more = mobileNavigation.locator('summary[aria-label="More Operate destinations"]');
-      await touchTap(page, more);
       const moreSheet = mobileNavigation.locator('details.pc-mobile-more');
+      await touchTap(page, more);
+      await expect(moreSheet).toHaveAttribute('open', '');
+      await touchTap(page, moreSheet.getByRole('link', { name: 'Inbox', exact: true }));
+      await expect(page.locator('[data-route-kind="operate.inbox"]')).toBeVisible();
+      await expect(moreSheet).not.toHaveAttribute('open', '');
+
+      await touchTap(page, more);
       await expect(moreSheet).toHaveAttribute('open', '');
       await touchTap(page, moreSheet.getByRole('link', { name: 'Evidence' }));
       await expect(page.locator('[data-route-kind="operate.evidence"]')).toBeVisible();
       await expect(moreSheet).not.toHaveAttribute('open', '');
 
-      await touchTap(page, mobileNavigation.getByRole('link', { name: 'Planning' }));
+      await touchTap(page, mobileNavigation.getByRole('link', { name: 'Home', exact: true }));
       await expect(page.locator('[data-route-kind="planning.overview"]')).toBeVisible();
       const planningNavigation = page.getByRole('navigation', {
         name: 'Mobile Planning navigation',
@@ -977,12 +994,16 @@ test.describe('dashboard real-browser quality', () => {
     }
   });
 
-  test('keeps compact-rail destinations legible at tablet widths', async ({ page }) => {
-    for (const width of [801, 1024, 1120]) {
+  test('keeps desktop-rail destinations legible at tablet widths', async ({ page }) => {
+    for (const width of [900, 1024, 1120]) {
       await page.setViewportSize({ width, height: 768 });
       await openFixture(page, '#/operate/today');
 
       const navigation = page.getByRole('navigation', { name: 'Dashboard navigation' });
+      await expect(navigation).toBeVisible();
+      await expect(
+        page.getByRole('navigation', { name: 'Mobile Operate navigation' }),
+      ).not.toBeVisible();
       const labels = await navigation
         .locator('.pc-rail__item > span:last-child')
         .evaluateAll((elements) =>
@@ -1014,6 +1035,48 @@ test.describe('dashboard real-browser quality', () => {
         expect(label.height).toBeGreaterThan(10);
         expect(label.clipped).toBe('auto');
       }
+      expect((await layoutReport(page)).horizontalOverflow).toBe(false);
+    }
+  });
+
+  test('exposes every omitted destination in the mobile menu below the desktop breakpoint', async ({
+    page,
+  }) => {
+    for (const width of [801, 899]) {
+      await page.setViewportSize({ width, height: 768 });
+      await openFixture(page, '#/operate/today');
+      await expect(
+        page.getByRole('navigation', { name: 'Dashboard navigation' }),
+      ).not.toBeVisible();
+      const navigation = page.getByRole('navigation', { name: 'Mobile Operate navigation' });
+      await expect(navigation).toBeVisible();
+      expect(await navigation.getByRole('link').allTextContents()).toEqual([
+        'Home',
+        'List',
+        'Activity',
+        'Operate',
+      ]);
+      await navigation.locator('summary[aria-label="More Operate destinations"]').click();
+      const more = navigation.locator('details.pc-mobile-more');
+      await expect(more).toHaveAttribute('open', '');
+      expect(await more.getByRole('link').allTextContents()).toEqual([
+        'Graph',
+        'Board',
+        'Sprints',
+        'Search',
+        'Inbox',
+        'Actions',
+        'Cycles',
+        'Evidence',
+        'Outcomes',
+        'History',
+        'Recovery',
+        'Console',
+        'Diagnostics',
+      ]);
+      await more.getByRole('link', { name: 'Inbox', exact: true }).click();
+      await expect(page.locator('[data-route-kind="operate.inbox"]')).toBeVisible();
+      await expect(more).not.toHaveAttribute('open', '');
       expect((await layoutReport(page)).horizontalOverflow).toBe(false);
     }
   });

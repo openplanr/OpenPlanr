@@ -1,8 +1,10 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
+import { runInNewContext } from 'node:vm';
 import { describe, expect, it } from 'vitest';
 import {
   type DashboardTraceMeasurements,
   evaluateDashboardTrace,
+  installFixedDashboardDate,
   percentile95,
   rendererFrameWork,
   TRACE_PLAN,
@@ -47,6 +49,32 @@ function smokeMeasurements(tier: 'representative' | 'scaling'): DashboardTraceMe
 }
 
 describe('offline dashboard trace contract smoke', () => {
+  it('freezes only wall time while preserving native trace marks and scheduling', () => {
+    const now = Date.parse('2026-10-19T12:00:00Z');
+    const sandbox = {
+      Date,
+      performance,
+      requestAnimationFrame: () => {},
+      setTimeout,
+    };
+    const requestFrame = sandbox.requestAnimationFrame;
+    runInNewContext(`(${installFixedDashboardDate.toString()})(${now})`, sandbox);
+    expect(sandbox.Date.now()).toBe(now);
+    expect(new sandbox.Date().getTime()).toBe(now);
+    expect(sandbox.Date()).toBe(new Date(now).toString());
+    expect(new sandbox.Date(0).getTime()).toBe(0);
+    expect(new sandbox.Date(2020, 0, 2).getTime()).toBe(new Date(2020, 0, 2).getTime());
+    expect(sandbox.Date.parse('2020-01-02')).toBe(Date.parse('2020-01-02'));
+    expect(sandbox.Date.UTC(2020, 0, 2)).toBe(Date.UTC(2020, 0, 2));
+    expect(new sandbox.Date()).toBeInstanceOf(Date);
+    expect(sandbox.performance).toBe(performance);
+    expect(sandbox.setTimeout).toBe(setTimeout);
+    expect(sandbox.requestAnimationFrame).toBe(requestFrame);
+    const mark = sandbox.performance.mark('dashboard-clock-smoke');
+    expect(performance.getEntriesByName(mark.name)).toContain(mark);
+    performance.clearMarks(mark.name);
+  });
+
   it.each(['representative', 'scaling'] as const)(
     'serves isolated %s controls and emits stable task identities without a port',
     (dataset) => {
@@ -261,6 +289,16 @@ describe('offline dashboard trace contract smoke', () => {
       { name: 'RunTask', ph: 'X', ts: 0, dur: 50_000, pid: 9, tid: 9 },
     ]);
     expect(result).toEqual([6, 2]);
-    expect(() => rendererFrameWork([])).toThrow();
+    expect(() =>
+      rendererFrameWork([
+        { name: 'thread_name', ph: 'M', ts: 0, pid: 1, tid: 2, args: { name: 'CrRendererMain' } },
+      ]),
+    ).toThrow('Dashboard frame marks are absent. Preserve native performance.mark.');
+    expect(() =>
+      rendererFrameWork([
+        { name: 'thread_name', ph: 'M', ts: 0, pid: 9, tid: 9, args: { name: 'CrRendererMain' } },
+        { name: 'dashboard-frame', ph: 'I', ts: 0, pid: 1, tid: 2 },
+      ]),
+    ).toThrow('Renderer main thread metadata is absent.');
   });
 });

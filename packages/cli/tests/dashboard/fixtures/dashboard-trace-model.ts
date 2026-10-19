@@ -8,6 +8,18 @@ export const TRACE_BUDGETS = Object.freeze({
   cls: 0,
 });
 
+/** Freeze fixture wall time without replacing native performance marks, timers or frames. */
+export function installFixedDashboardDate(now: number): void {
+  const NativeDate = Date;
+  globalThis.Date = new Proxy(NativeDate, {
+    apply: () => new NativeDate(now).toString(),
+    construct: (target, args, newTarget) =>
+      Reflect.construct(target, args.length === 0 ? [now] : args, newTarget),
+    get: (target, property, receiver) =>
+      property === 'now' ? () => now : Reflect.get(target, property, receiver),
+  });
+}
+
 export function percentile95(values: readonly number[]): number {
   if (values.length === 0 || values.some((value) => !Number.isFinite(value) || value < 0))
     throw new TypeError('Trace samples must be nonempty finite nonnegative values.');
@@ -26,9 +38,12 @@ export type RendererTraceEvent = {
 
 export function rendererFrameWork(events: readonly RendererTraceEvent[]): number[] {
   const frame = events.find((event) => event.name === 'dashboard-frame');
+  if (!frame)
+    throw new Error('Dashboard frame marks are absent. Preserve native performance.mark.');
   const main = events.find(
     (event) =>
       event.name === 'thread_name' &&
+      event.ph === 'M' &&
       event.args?.name === 'CrRendererMain' &&
       event.pid === frame?.pid &&
       event.tid === frame?.tid,

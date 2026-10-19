@@ -170,7 +170,7 @@ function patchEvent(from: PlanningCursor, patch: PlanningPatch, nextGraph: Plann
   };
 }
 
-describe('T-022 Planning owner/client parity', () => {
+describe('Planning owner/client parity', () => {
   it('accepts the owner graph only when its single viewHash revision commitment matches', () => {
     const accepted = snapshot();
     expect(accepted.graph).toEqual(graph);
@@ -232,8 +232,8 @@ describe('T-022 Planning owner/client parity', () => {
     expect(fetchedGraph).toEqual(acceptedGraph);
     expect(graphCache).toBe('no-store');
     const detailIdentity = identity({
-      route: '#/detail/SPEC-020%3A2FT-022',
-      subjectId: 'SPEC-020:2FT-022',
+      route: '#/detail/SPEC-020%2FT-022',
+      subjectId: 'SPEC-020/T-022',
     });
     const node = {
       ...graph.nodes[2],
@@ -254,7 +254,10 @@ describe('T-022 Planning owner/client parity', () => {
       criteria: ['exact revision'],
       subtasks: [{ text: 'Validate binding', done: true }],
     });
-    expect(planningDetailHref(accepted.node)).toBe('#/detail/SPEC-020%3A2FT-022');
+    expect(planningDetailHref(accepted.node)).toBe('#/detail/SPEC-020%2FT-022');
+    expect(() =>
+      identity({ route: '#/detail/SPEC-020%3A2FT-022', subjectId: 'SPEC-020:2FT-022' }),
+    ).toThrow(/canonical closed dashboard route/u);
     expect(() =>
       parsePlanningDetailEnvelope(
         { ...wire, cursor: { ...cursor, viewHash: `sha256:${'1'.repeat(64)}` } },
@@ -333,10 +336,66 @@ describe('T-022 Planning owner/client parity', () => {
     const replacementSubject = planningRouteSubjectId('\uFFFD');
     expect(replacementSubject).not.toBeNull();
     expect(planningNodeIdFromRouteSubject(replacementSubject ?? '')).toBe('\uFFFD');
-    // The adapter does not broaden the closed router: encoded slash/backslash
-    // remain refused by the unchanged router grammar.
-    expect(parseDashboardRoute('#/detail/SPEC-020%2FT-022')).toMatchObject({ kind: 'not-found' });
-    expect(parseDashboardRoute('#/detail/SPEC-020%5CT-022')).toMatchObject({ kind: 'not-found' });
+  });
+
+  it('canonicalizes scoped Planning aliases while rejecting malformed and Operate subjects', () => {
+    for (const id of ['SPEC-020/T-022', 'SPEC-020/US-011']) {
+      const canonical = encodeURIComponent(id);
+      const legacy = encodeURIComponent(id.replace('/', ':2F'));
+      expect(planningDetailHref(id)).toBe(`#/detail/${canonical}`);
+      expect(planningNodeIdFromRouteSubject(id.replace('/', ':2F'))).toBe(id);
+      for (const [prefix, kind] of [
+        ['#/detail/', 'planning.detail'],
+        ['#/plan/specs/', 'planning.spec'],
+      ] as const) {
+        for (const segment of [canonical, legacy]) {
+          const route = parseDashboardRoute(`${prefix}${segment}`);
+          expect(route).toEqual({ kind, product: 'planning', subjectId: id });
+          if (route.kind === 'not-found') throw new Error('Scoped Planning subject refused.');
+          expect(serializeDashboardRoute(route)).toBe(`${prefix}${canonical}`);
+          expect(planningNodeIdFromRouteSubject(route.subjectId ?? '')).toBe(id);
+        }
+      }
+    }
+    const invalidSegments = [
+      'SPEC-020%252FT-022',
+      'SPEC-020%25252FT-022',
+      'SPEC-020%253A2FT-022',
+      'SPEC-020/T-022',
+      'SPEC-020%2FT-022%2F..',
+      'SPEC-020%2F..%2FT-022',
+      'SPEC-020%5CT-022',
+      'T-022%2FT-023',
+      '%2E%2E',
+      '..',
+    ];
+    for (const prefix of ['#/detail/', '#/plan/specs/']) {
+      for (const segment of invalidSegments) {
+        expect(parseDashboardRoute(`${prefix}${segment}`), `${prefix}${segment}`).toEqual({
+          kind: 'not-found',
+          product: null,
+          subjectId: null,
+        });
+      }
+    }
+    for (const segment of ['SPEC-020%2FT-022', 'SPEC-020%3A2FT-022', ...invalidSegments]) {
+      for (const route of [
+        `#/operate/cycles/${segment}`,
+        `#/operate/inbox/${segment}`,
+        `#/operate/actions/${segment}`,
+        `#/operate/actions/${segment}/planning`,
+        `#/operate/evidence/${segment}`,
+        `#/operate/outcomes/${segment}`,
+        `#/operate/cycles/${segment}/reviews/rev_fixture`,
+        `#/operate/cycles/cyc_fixture/reviews/${segment}`,
+      ]) {
+        expect(parseDashboardRoute(route), route).toEqual({
+          kind: 'not-found',
+          product: null,
+          subjectId: null,
+        });
+      }
+    }
   });
 
   it('reconciles replay exactly, deduplicates, and refetches gaps/restarts before callbacks', () => {
@@ -645,7 +704,7 @@ describe('T-022 Planning owner/client parity', () => {
       id: 'SPEC-020/T-022',
       hierarchyLevel: 3,
       containedBy: ['SPEC-020/US-011'],
-      detailHref: '#/detail/SPEC-020%3A2FT-022',
+      detailHref: '#/detail/SPEC-020%2FT-022',
     });
     expect(Object.isFrozen(rows)).toBe(true);
   });

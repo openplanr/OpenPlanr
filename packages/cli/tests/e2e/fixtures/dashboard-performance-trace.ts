@@ -5,6 +5,7 @@ import {
   type DashboardTraceMeasurements,
   evaluateDashboardTrace,
   type InteractionTrace,
+  installFixedDashboardDate,
   type RendererTraceEvent,
   rendererFrameWork,
   type SelectionSample,
@@ -33,7 +34,9 @@ declare global {
 }
 
 async function installMetrics(page: Page) {
-  await page.clock.setFixedTime(new Date(FIXTURE_CLOCK));
+  // Playwright's clock also fakes performance.mark and requestAnimationFrame,
+  // which removes the renderer marks needed to attribute real task work.
+  await page.addInitScript(installFixedDashboardDate, Date.parse(FIXTURE_CLOCK));
   await page.addInitScript(() => {
     const metrics: BrowserMetrics = {
       tracing: false,
@@ -232,9 +235,9 @@ async function selectionSample(page: Page, id: string): Promise<SelectionSample>
     const selected = document.querySelector<HTMLElement>('.pc-list tr[data-selected="true"]');
     const focused = document.activeElement;
     const canonicalId =
-      document.querySelector('[aria-label="Inspector"] .pc-work-item__id')?.textContent ?? null;
-    const matching =
-      canonicalId === id && (selected?.textContent?.includes(id.split('/').at(-1) ?? id) ?? false);
+      document.querySelector('[aria-label="Inspector"] .pc-shell-inspector__head .pc-artifact-tag')
+        ?.textContent ?? null;
+    const matching = canonicalId === id && selected?.getAttribute('data-keyboard-item') === id;
     let scrollTop = window.scrollY;
     for (let parent = selected?.parentElement; parent; parent = parent.parentElement)
       scrollTop += parent.scrollTop;
@@ -369,6 +372,10 @@ export function registerDashboardPerformanceTraceTests() {
         patchesMs.push(performance.now() - started);
         selectionAfter.push(await selectionSample(page, fixture.manifest.selectedId));
       }
+      await testInfo.attach('dashboard-patch-retention.json', {
+        body: Buffer.from(JSON.stringify({ selectionBefore, selectionAfter }, null, 2)),
+        contentType: 'application/json',
+      });
       await page.getByRole('combobox', { name: 'Filter by type' }).selectOption('all');
       await expect(page.locator('.pc-list')).toContainText(
         `${fixture.manifest.nodeCount} of ${fixture.manifest.nodeCount}`,
