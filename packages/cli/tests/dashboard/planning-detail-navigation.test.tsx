@@ -283,6 +283,10 @@ describe('Planning detail shell navigation', () => {
       render(<ShellHarness snapshot={snapshot} />);
       const main = screen.getByRole('main');
       await within(main).findByRole('heading', { name: 'Review artifact 2', level: 1 });
+      const navigation = within(main).getByRole('navigation', { name: 'Detail navigation' });
+      expect(
+        within(navigation).getByRole('link', { name: 'List', exact: true }).getAttribute('href'),
+      ).toBe('#/list');
       main.focus();
       fireEvent.keyDown(main, { key: 'c' });
       await waitFor(() => expect(copy).toHaveBeenCalledExactlyOnceWith(taskIds[1]));
@@ -337,7 +341,7 @@ describe('Planning detail shell navigation', () => {
   });
 
   it.each([false, true])(
-    'promotes and restores source context on Back with local edits=%s',
+    'promotes and restores source context through the List link with local edits=%s',
     async (localEdits) => {
       vi.stubGlobal('innerWidth', 1440);
       const snapshot = fixture();
@@ -376,7 +380,6 @@ describe('Planning detail shell navigation', () => {
       tableScroll.scrollTop = 145;
       tableScroll.scrollLeft = 87;
       listWindow.scrollTop = 268;
-      const back = vi.spyOn(window.history, 'back');
       fireEvent.click(within(inspector()).getByRole('button', { name: 'Open full page' }));
       await waitFor(() => expect(window.location.hash).toBe('#/detail/SPEC-026%2FT-002'));
       const main = screen.getByRole('main');
@@ -386,8 +389,12 @@ describe('Planning detail shell navigation', () => {
           'Current verified criterion for SPEC-026/T-002.',
         ),
       ).toBeTruthy();
-      fireEvent.click(within(main).getByRole('button', { name: 'Back', exact: true }));
-      expect(back).toHaveBeenCalledOnce();
+      const navigation = within(main).getByRole('navigation', { name: 'Detail navigation' });
+      const list = within(navigation).getByRole('link', { name: 'List', exact: true });
+      expect(list.getAttribute('href')).toBe(sourceHref);
+      expect(within(navigation).getAllByRole('link')).toHaveLength(1);
+      expect(within(navigation).queryByRole('button')).toBeNull();
+      fireEvent.click(list);
       await waitFor(() => expect(window.location.hash).toBe(sourceHref));
       await waitFor(() =>
         expect(rows(view.container).map((row) => row.dataset.keyboardItem)).toEqual(expectedOrder),
@@ -430,17 +437,13 @@ describe('Planning detail shell navigation', () => {
       const panel = inspector();
       await within(panel).findByText('Detail verified against the current planning snapshot.');
       const article = panel.querySelector('[data-artifact-id]');
-      const criteria = panel.querySelector<HTMLElement>(
-        '[data-scroll-context="criteria"]',
-      ) as HTMLElement;
-      const files = panel.querySelector<HTMLElement>(
-        '[data-scroll-context="files"]',
-      ) as HTMLElement;
+      const criteria = within(panel).getByRole('region', { name: 'Acceptance criteria' });
+      const files = within(panel).getByRole('region', { name: 'Declared files' });
+      const evidence = within(panel).getByRole('region', { name: 'Artifact evidence' });
       const scroller = panel.querySelector<HTMLElement>('.pc-inspector-sheet__body') ?? panel;
       const focused = within(panel).getByRole('button', { name: 'Copy link to item' });
       focused.focus();
-      criteria.scrollTop = 125;
-      files.scrollTop = 86;
+      evidence.scrollTop = 86;
       scroller.scrollTop = 420;
       current = revised;
       serveOldCursor = true;
@@ -448,9 +451,11 @@ describe('Planning detail shell navigation', () => {
       await within(panel).findByText(/artifact detail could not be verified/iu);
       expect(inspector()).toBe(panel);
       expect(panel.querySelector('[data-artifact-id]')).toBe(article);
-      expect(panel.querySelector('[data-scroll-context="criteria"]')).toBe(criteria);
-      expect(criteria.scrollTop).toBe(125);
-      expect(files.scrollTop).toBe(86);
+      expect(within(panel).getByRole('region', { name: 'Acceptance criteria' })).toBe(criteria);
+      expect(criteria.hasAttribute('data-scroll-context')).toBe(false);
+      expect(within(panel).getByRole('region', { name: 'Declared files' })).toBe(files);
+      expect(files.hasAttribute('data-scroll-context')).toBe(false);
+      expect(evidence.scrollTop).toBe(86);
       expect(scroller.scrollTop).toBe(420);
       expect(document.activeElement).toBe(focused);
       expect(
@@ -459,8 +464,9 @@ describe('Planning detail shell navigation', () => {
       serveOldCursor = false;
       fireEvent.click(within(panel).getByRole('button', { name: 'Retry detail' }));
       await within(panel).findByText('Detail verified against the current planning snapshot.');
-      expect(criteria.scrollTop).toBe(125);
-      expect(files.scrollTop).toBe(86);
+      expect(within(panel).getByRole('region', { name: 'Acceptance criteria' })).toBe(criteria);
+      expect(within(panel).getByRole('region', { name: 'Declared files' })).toBe(files);
+      expect(evidence.scrollTop).toBe(86);
       expect(scroller.scrollTop).toBe(420);
       expect(document.activeElement).toBe(focused);
       expect(fetcher).toHaveBeenCalledTimes(3);
@@ -571,6 +577,12 @@ describe('Planning detail shell navigation', () => {
     'keeps Graph QT-071 and its retarget focused and returns to the latest node through %s',
     async (method) => {
       const { user, view, complete } = pendingFocusShell('#/graph', focusGraph);
+      const controls = screen.getByRole('complementary', { name: 'Graph controls' });
+      expect(
+        within(controls)
+          .getAllByRole('heading', { level: 2 })
+          .map((heading) => heading.textContent),
+      ).toEqual(['Focus', 'Show', 'Edges']);
       const initial = graphNode(view.container, 'QT-071');
       await user.click(initial);
       expect(initial.getAttribute('aria-pressed')).toBe('true');

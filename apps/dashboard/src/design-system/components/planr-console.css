@@ -303,7 +303,7 @@
   padding: 0 20px;
   border-bottom: 1px solid var(--pc-border-subtle);
 }
-.pc-card__title {
+.pc-card__head .pc-card__title {
   margin: 0;
   min-width: 0;
   overflow: hidden;
@@ -319,6 +319,19 @@
   align-items: baseline;
   gap: 8px;
   min-width: 0;
+}
+.pc-card__glyph {
+  display: inline-flex;
+  align-items: center;
+  flex: none;
+  color: var(--pc-dim);
+}
+.pc-card__glyph[data-live="true"] {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--pc-accent);
+  box-shadow: 0 0 8px var(--pc-accent);
 }
 .pc-card__meta {
   font: 600 17px / 1.2 var(--pc-font-display);
@@ -398,6 +411,34 @@
 }
 .pc-empty__action {
   margin-top: 6px;
+}
+.pc-empty[data-variant="tile"] {
+  align-items: flex-start;
+  gap: 12px;
+  padding: 24px;
+  text-align: left;
+  background: var(--op-panel);
+  border: 1px solid var(--op-line);
+  border-radius: 16px;
+}
+.pc-empty[data-variant="tile"] .pc-empty__glyph {
+  display: none;
+}
+.pc-empty[data-variant="tile"] .pc-empty__title {
+  color: var(--op-heading);
+  font: 600 19px var(--op-font-display);
+}
+.pc-empty[data-variant="tile"] .pc-empty__desc {
+  max-width: none;
+  color: var(--op-body);
+  font-size: 13.5px;
+  line-height: 1.6;
+}
+.pc-empty[data-variant="tile"] .pc-empty__action {
+  margin-top: 0;
+}
+.pc-empty[data-variant="tile"] .pc-button {
+  padding-inline: 12px;
 }
 
 /* ===== tabs ===== */
@@ -535,6 +576,9 @@
   top: 0;
   z-index: 2;
   background: var(--pc-surface-app);
+}
+.pc-section-header[data-inset="true"] {
+  padding-inline: 20px;
 }
 .pc-section-header__text {
   min-width: 0;
@@ -1016,7 +1060,8 @@ a.pc-row-link:focus-visible {
 .pc-table a.pc-row-link:hover {
   border-bottom-color: currentColor;
 }
-.pc-table a.pc-row-link:focus-visible {
+.pc-table a.pc-row-link:focus-visible,
+.pc-table td a:focus-visible {
   outline: 2px solid var(--pc-focus-ring);
   outline-offset: 2px;
   border-radius: var(--pc-radius-xs);
@@ -1054,6 +1099,21 @@ a.pc-row-link:focus-visible {
 }
 .pc-artifact[data-size="sm"] {
   font-size: 12.5px;
+}
+.pc-artifact[data-variant="legend"],
+.pc-artifact[data-variant="glyph"] {
+  min-height: 0;
+  padding: 0;
+  border-radius: 0;
+  background: transparent;
+  font-weight: 400;
+  font-variant-numeric: tabular-nums;
+}
+.pc-artifact[data-variant="legend"] {
+  gap: 6px;
+}
+.pc-artifact[data-variant="legend"] .pc-artifact__label {
+  color: var(--pc-muted);
 }
 .pc-artifact__dot {
   box-sizing: border-box;

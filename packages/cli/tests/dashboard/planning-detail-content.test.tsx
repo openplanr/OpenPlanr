@@ -2,6 +2,7 @@
 
 import { sha256Jcs } from '@openplanr/protocol/canonical-json';
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { PlanningArtifactDetail } from '../../../../apps/dashboard/src/features/planning/DetailPage.js';
 import {
@@ -35,7 +36,7 @@ Verified detail body.
 `;
 let actorSequence = 0;
 
-function fixture() {
+function fixture(acceptanceRefs?: readonly string[]) {
   actorSequence += 1;
   const graph: PlanningGraph = {
     nodes: [
@@ -72,6 +73,9 @@ function fixture() {
           storyId: 'US-104',
           dependsOn: ['SPEC-026/T-120', 'SPEC-026/T-999'],
           sourcePath,
+          created: '2026-09-02',
+          updated: '2026-09-12',
+          ...(acceptanceRefs ? { acceptanceRefs } : {}),
           shipRef: 'https://example.com/evidence',
         },
       },
@@ -140,15 +144,15 @@ function fixture() {
   return model;
 }
 
-function detailEnvelope(model: PlanningWorkspaceModel, text = body) {
-  const summary = model.graph.nodes.find((entry) => entry.id === nodeId) as PlanningNode;
+function detailEnvelope(model: PlanningWorkspaceModel, text = body, subjectId = nodeId) {
+  const summary = model.graph.nodes.find((entry) => entry.id === subjectId) as PlanningNode;
   const node = { ...summary, body: text };
   return {
     kind: 'planning-detail',
     schemaVersion: '1.0.0',
     binding: model.envelope.binding,
     cursor: model.envelope.cursor,
-    subjectId: nodeId,
+    subjectId,
     node,
     nodeHash: sha256Jcs(node as never),
   };
@@ -175,11 +179,18 @@ function response(value: unknown) {
   return new Response(JSON.stringify(value), { headers: { 'content-type': 'application/json' } });
 }
 
-function nextRevision(model: PlanningWorkspaceModel): PlanningWorkspaceModel {
+function nextRevision(
+  model: PlanningWorkspaceModel,
+  selectedTitle?: string,
+): PlanningWorkspaceModel {
   const graph = {
     ...model.graph,
     nodes: model.graph.nodes.map((node) =>
-      node.id === 'SPEC-026/T-122' ? { ...node, title: 'Changed consumer' } : node,
+      node.id === nodeId && selectedTitle
+        ? { ...node, title: selectedTitle }
+        : node.id === 'SPEC-026/T-122'
+          ? { ...node, title: 'Changed consumer' }
+          : node,
     ),
   };
   const cursor = {
@@ -202,6 +213,208 @@ afterEach(() => {
 });
 
 describe('shared Planning artifact detail', () => {
+  it('waits for referenced criteria before the first verified column presentation', async () => {
+    const model = fixture(['AC-reference']);
+    let complete: ((value: Response) => void) | undefined;
+    const pending = new Promise<Response>((resolve) => {
+      complete = resolve;
+    });
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: RequestInfo | URL) =>
+        decodeURIComponent(new URL(String(input)).pathname.split('/').at(-1) ?? '') === 'SPEC-026'
+          ? pending
+          : response(detailEnvelope(model)),
+      ),
+    );
+    const view = render(
+      <PlanningArtifactDetail model={model} nodeId={nodeId} origin={origin} panel />,
+    );
+    await screen.findByText('Loading referenced criteria…');
+    expect(view.container.querySelector('.pc-detail__columns')).toBeNull();
+    await act(async () => {
+      if (!complete) throw new Error('The referenced detail resolver was not initialized.');
+      complete(
+        response(
+          detailEnvelope(
+            model,
+            '## Acceptance Criteria\n- AC-reference: Preserve the authored parent criterion.',
+            'SPEC-026',
+          ),
+        ),
+      );
+      await pending;
+    });
+    const criteria = await screen.findByRole('region', { name: 'Acceptance criteria' });
+    expect(within(criteria).getByText('Preserve the authored parent criterion.')).toBeTruthy();
+    expect(
+      screen.queryByText('Referenced criterion is unavailable in the current detail.'),
+    ).toBeNull();
+  });
+
+  it('retains focused verified columns and their file binding while the selected summary changes', async () => {
+    const model = fixture();
+    const revised = nextRevision(model, 'Changed selected artifact');
+    let complete: ((value: Response) => void) | undefined;
+    const pending = new Promise<Response>((resolve) => {
+      complete = resolve;
+    });
+    let detailReads = 0;
+    const fetcher = vi.fn(async (input: RequestInfo | URL) => {
+      if (String(input).includes('/file-link/')) return response(fileEnvelope(model));
+      detailReads += 1;
+      return detailReads === 1 ? response(detailEnvelope(model)) : pending;
+    });
+    vi.stubGlobal('fetch', fetcher);
+    const view = render(
+      <PlanningArtifactDetail model={model} nodeId={nodeId} origin={origin} panel />,
+    );
+    await screen.findByText('Detail verified against the current planning snapshot.');
+    const columns = view.container.querySelector('.pc-detail__columns');
+    const files = screen.getByRole('region', { name: 'Declared files' });
+    const evidence = screen.getByRole('region', { name: 'Artifact evidence' });
+    const copy = within(files).getByRole('button', { name: 'Copy path' });
+    act(() => copy.focus());
+    evidence.scrollTop = 86;
+    view.rerender(<PlanningArtifactDetail model={revised} nodeId={nodeId} origin={origin} panel />);
+    await screen.findByText('Updating verified detail…');
+    expect(view.container.querySelector('.pc-detail__columns')).toBe(columns);
+    expect(copy.isConnected).toBe(true);
+    expect(document.activeElement).toBe(copy);
+    expect(screen.getByRole('region', { name: 'Declared files' })).toBe(files);
+    expect(evidence.scrollTop).toBe(86);
+    fireEvent.click(within(files).getByRole('button', { name: 'Open in editor' }));
+    await within(files).findByRole('link', { name: 'Launch editor' });
+    const call = fetcher.mock.calls.find(([input]) => String(input).includes('/file-link/'));
+    expect(new URL(String(call?.[0])).searchParams.get('sourceViewHash')).toBe(
+      model.envelope.cursor.viewHash,
+    );
+    await act(async () => {
+      if (!complete) throw new Error('The updated detail resolver was not initialized.');
+      complete(response(detailEnvelope(revised)));
+      await pending;
+    });
+    await screen.findByText('Detail verified against the current planning snapshot.');
+    expect(view.container.querySelector('.pc-detail__columns')).toBe(columns);
+    expect(document.activeElement).toBe(copy);
+    expect(screen.getByRole('region', { name: 'Declared files' })).toBe(files);
+    expect(evidence.scrollTop).toBe(86);
+    expect(within(files).queryByRole('link', { name: 'Launch editor' })).toBeNull();
+  });
+
+  it('does not retain another binding’s verified columns while its detail is loading', async () => {
+    const model = fixture();
+    const foreign = fixture();
+    vi.stubGlobal(
+      'fetch',
+      vi
+        .fn()
+        .mockResolvedValueOnce(response(detailEnvelope(model)))
+        .mockReturnValueOnce(new Promise<Response>(() => {})),
+    );
+    const view = render(
+      <PlanningArtifactDetail model={model} nodeId={nodeId} origin={origin} panel />,
+    );
+    await screen.findByText('Detail verified against the current planning snapshot.');
+    expect(view.container.querySelector('.pc-detail__columns')).toBeTruthy();
+    view.rerender(<PlanningArtifactDetail model={foreign} nodeId={nodeId} origin={origin} panel />);
+    expect(screen.getByText('Loading verified detail…')).toBeTruthy();
+    expect(view.container.querySelector('.pc-detail__columns')).toBeNull();
+    expect(screen.queryByText('The trace is navigable.')).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Copy path' })).toBeNull();
+  });
+
+  it.each([false, true])(
+    'mounts verified criteria and file rows without waiting for visibility with panel=%s',
+    async (panel) => {
+      const model = fixture();
+      let complete: ((value: Response) => void) | undefined;
+      const pending = new Promise<Response>((resolve) => {
+        complete = resolve;
+      });
+      vi.stubGlobal(
+        'fetch',
+        vi.fn(() => pending),
+      );
+      vi.stubGlobal(
+        'IntersectionObserver',
+        class {
+          observe = vi.fn();
+          unobserve = vi.fn();
+          disconnect = vi.fn();
+        },
+      );
+      const view = render(
+        <PlanningArtifactDetail model={model} nodeId={nodeId} origin={origin} panel={panel} />,
+      );
+      expect(screen.getByText('Loading verified detail…')).toBeTruthy();
+      expect(view.container.querySelector('.pc-detail__columns')).toBeNull();
+      expect(view.container.querySelector('.pc-detail__files-card')).toBeNull();
+      await act(async () => {
+        if (!complete) throw new Error('The delayed detail resolver was not initialized.');
+        complete(response(detailEnvelope(model)));
+        await pending;
+      });
+      await screen.findByText('Detail verified against the current planning snapshot.');
+      const criteria = screen.getByRole('region', { name: 'Acceptance criteria' });
+      expect(within(criteria).getByText('The trace is navigable.')).toBeTruthy();
+      expect(view.container.querySelector('.pc-detail__files-card')).toBeTruthy();
+      const files = screen.getByRole('region', { name: 'Declared files' });
+      expect(files.querySelectorAll('.pc-detail__file')).toHaveLength(1);
+      expect(within(files).getByText(file)).toBeTruthy();
+      expect(within(files).getByRole('button', { name: 'Copy path' })).toBeTruthy();
+      expect(files.hasAttribute('tabindex')).toBe(false);
+      expect(criteria.hasAttribute('data-scroll-context')).toBe(false);
+      expect(screen.queryByText('Reading acceptance criteria…')).toBeNull();
+    },
+  );
+
+  it('renders descriptive file declarations without Markdown delimiters', async () => {
+    const model = fixture();
+    const text = `${body}\n## Files\n- \`.changeset/\`: Add a release note for the change.\n`;
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => response(detailEnvelope(model, text))),
+    );
+    render(<PlanningArtifactDetail model={model} nodeId={nodeId} origin={origin} />);
+    await screen.findByText('Detail verified against the current planning snapshot.');
+    const files = screen.getByRole('region', { name: 'Declared files' });
+    expect(files.textContent).not.toContain('`');
+    expect(within(files).getByText('.changeset/: Add a release note for the change.')).toBeTruthy();
+  });
+
+  it('keeps long criteria in page flow and compact file actions keyboard-operable', async () => {
+    const model = fixture();
+    const criteria = Array.from({ length: 12 }, (_, index) => `- Verify requirement ${index + 1}.`);
+    const text = ['## Acceptance Criteria', ...criteria, '## Files', `- \`${file}\``].join('\n');
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => response(detailEnvelope(model, text))),
+    );
+    const copy = vi.fn(async () => {});
+    const user = userEvent.setup();
+    render(
+      <PlanningPresentationProvider scope="compact-files" view={null} onCopy={copy}>
+        <PlanningArtifactDetail model={model} nodeId={nodeId} origin={origin} />
+      </PlanningPresentationProvider>,
+    );
+    await screen.findByText('Detail verified against the current planning snapshot.');
+    const region = screen.getByRole('region', { name: 'Acceptance criteria' });
+    expect(within(region).getAllByRole('listitem')).toHaveLength(12);
+    expect(within(region).getByText('Verify requirement 12.')).toBeTruthy();
+    expect(region.hasAttribute('data-scroll-context')).toBe(false);
+    expect(region.hasAttribute('tabindex')).toBe(false);
+    const files = screen.getByRole('region', { name: 'Declared files' });
+    expect(files.querySelector('.pc-detail__file-hint')).toBeNull();
+    const copyPath = within(files).getByRole('button', { name: 'Copy path' });
+    expect(copyPath.textContent).toBe('');
+    expect(within(files).getByRole('button', { name: 'Open in editor' }).textContent).toBe('');
+    act(() => copyPath.focus());
+    await user.keyboard('{Enter}');
+    await screen.findByText('Copied');
+    expect(copy).toHaveBeenCalledExactlyOnceWith(file);
+  });
+
   it.each([false, true])(
     'renders verified trace, criteria, files and both statuses with panel=%s',
     async (panel) => {
@@ -220,7 +433,21 @@ describe('shared Planning artifact detail', () => {
       expect(view.container.textContent).toContain('T-999');
       expect(view.container.textContent).toMatch(/unresolved|not in|missing/iu);
       expect(view.container.textContent).toContain(file);
-      expect(view.container.textContent).toContain('History');
+      const properties = view.container.querySelector('.pc-detail__properties');
+      expect(properties).toBeTruthy();
+      const property = (label: string) =>
+        [...(properties?.querySelectorAll('dt') ?? [])].find((term) => term.textContent === label)
+          ?.nextElementSibling;
+      expect(property('Status')?.textContent).toBe('pending in frontmatter');
+      expect(property('Depends on')?.textContent).toContain('T-120');
+      expect(property('Depends on')?.textContent).toContain('T-999');
+      expect(property('Unblocks')?.textContent).toContain('T-122');
+      expect(property('Story')?.textContent).toContain('US-104');
+      expect(property('Spec')?.textContent).toContain('SPEC-026');
+      expect(property('Created')?.textContent).toBe('2 Sept 2026');
+      expect(property('Updated')?.textContent).toBe('12 Sept 2026');
+      expect(property('File')?.textContent).toBe(sourcePath);
+      expect(screen.queryByRole('heading', { name: 'History', exact: true })).toBeNull();
       const hrefs = [...view.container.querySelectorAll<HTMLAnchorElement>('a[href]')].map((link) =>
         link.getAttribute('href'),
       );

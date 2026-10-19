@@ -137,7 +137,7 @@ export const LIST_COLUMNS: readonly Column[] = [
   {
     key: 'id',
     label: 'ID',
-    width: 'calc(var(--id-col) + 26px)',
+    width: 'max(92px, var(--id-col))',
     sortable: true,
     render: (node) => (
       <ArtifactTag type={TAG_TYPES[node.type]}>{planningDisplayId(node)}</ArtifactTag>
@@ -153,11 +153,11 @@ export const LIST_COLUMNS: readonly Column[] = [
       </span>
     ),
   },
-  { ...STATUS_COLUMN, sortable: true },
+  { ...STATUS_COLUMN, width: 138, sortable: true },
   {
     key: 'priority',
     label: 'Priority',
-    width: 106,
+    width: 74,
     sortable: true,
     render: (node) => <PriorityChip priority={frontmatterString(node, 'priority') ?? undefined} />,
   },
@@ -175,6 +175,7 @@ export const LIST_COLUMNS: readonly Column[] = [
   },
   {
     ...UPDATED_COLUMN,
+    width: 70,
     sortable: true,
     render: (node) => {
       const timestamp = authoredTimestamp(node.frontmatter.updated);
@@ -196,7 +197,7 @@ export function listCommandColumn(
   return {
     key: 'command',
     label: '',
-    width: 54,
+    width: 28,
     render: (node) => (
       <ArtifactRowCopy
         id={planningDisplayId(node)}

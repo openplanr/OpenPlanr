@@ -298,9 +298,9 @@ describe('T-021 Planning workspace UI', () => {
     expect(listDom.window.document.querySelectorAll('tbody tr[tabindex="0"]')).toHaveLength(
       graph.nodes.length,
     );
-    const rowLabels = [...listDom.window.document.querySelectorAll('tbody tr')].map(
-      (row) => row.textContent,
-    );
+    const rowLabels = [
+      ...listDom.window.document.querySelectorAll('tbody tr[data-keyboard-item]'),
+    ].map((row) => row.textContent);
     for (const node of graph.nodes) {
       expect(rowLabels.filter((label) => label?.includes(node.title))).toHaveLength(1);
     }

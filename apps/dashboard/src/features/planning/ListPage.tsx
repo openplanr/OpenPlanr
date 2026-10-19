@@ -13,7 +13,6 @@ import {
   Select,
   Tabs,
   Toolbar,
-  ToolbarDivider,
 } from '../../design-system/components/index.js';
 import type { DashboardProductState } from '../../lib/api/product-state.js';
 import { LIST_COLUMNS, listCommandColumn } from './planning-columns.js';
@@ -156,7 +155,7 @@ export function ListPage({
       createdWithinDays: view?.filters.createdWithinDays ?? null,
       updatedWithinDays: view?.filters.updatedWithinDays ?? null,
     },
-    groupBy: view?.groupBy ?? ('none' as const),
+    groupBy: view?.groupBy ?? ('spec' as const),
     sort: {
       field: sort.key as 'id' | 'title' | 'status' | 'priority' | 'updated',
       direction: sort.dir,
@@ -194,9 +193,6 @@ export function ListPage({
     }
     return [...groups.values()];
   }, [visibleRows]);
-  if (visibleGroups.length === 0)
-    visibleGroups.push({ key: 'all', label: 'All artifacts', nodes: [] });
-
   const appliedFocus = useRef<PlanningView | null>(null);
   useEffect(() => {
     if (appliedFocus.current === view) return;
@@ -316,6 +312,15 @@ export function ListPage({
   const progress = metadata?.progress;
   const hiddenDone = projection?.hiddenDone ?? 0;
   const dateExcluded = projection?.dateExcluded ?? 0;
+  const activeFilterCount =
+    effectiveView.filters.type.length +
+    effectiveView.filters.status.length +
+    effectiveView.filters.priority.length +
+    effectiveView.filters.label.length +
+    Number(Boolean(query.trim())) +
+    Number(effectiveView.filters.createdWithinDays !== null) +
+    Number(effectiveView.filters.updatedWithinDays !== null) +
+    Number(Boolean(effectiveView.filters.attention));
   useEffect(() => {
     const existing = metadata?.ids ?? new Set<string>();
     if (selected.some((id) => !existing.has(id)))
@@ -342,13 +347,16 @@ export function ListPage({
         {keyboardNotice}
       </p>
       {focusNotice ? <p role="status">{focusNotice}</p> : null}
-      <SectionHeader
-        headingLevel={1}
-        eyebrow="planr-plan · list"
-        title="List"
-        count={`${rows.length} of ${all.length}`}
-        description="Every node in the graph, filterable by text, type and status."
-      />
+      <div className="pc-visually-hidden">
+        <SectionHeader
+          inset
+          headingLevel={1}
+          eyebrow="planr-plan · list"
+          title="List"
+          count={`${rows.length} of ${all.length}`}
+          description="Every node in the graph, filterable by text, type and status."
+        />
+      </div>
       {all.length === 0 ? (
         <Card padding={0}>
           <EmptyState
@@ -391,9 +399,196 @@ export function ListPage({
           </div>
           <Toolbar
             right={
-              <ChipToggle checked={compact} onChange={changeDensity}>
-                Compact
-              </ChipToggle>
+              <>
+                <ChipToggle checked={compact} onChange={changeDensity}>
+                  Compact
+                </ChipToggle>
+                <details
+                  className="pc-list__options"
+                  onKeyDown={(event) => {
+                    if (
+                      shortcutsEnabled &&
+                      event.key.toLowerCase() === 'c' &&
+                      !event.metaKey &&
+                      !event.ctrlKey &&
+                      !event.altKey &&
+                      !event.nativeEvent.isComposing &&
+                      event.target instanceof Element
+                    ) {
+                      const command = event.target.closest<HTMLButtonElement>(
+                        'button[data-copy-command]',
+                      );
+                      if (command && !command.disabled) {
+                        event.preventDefault();
+                        command.click();
+                      }
+                    }
+                    if (
+                      event.key !== 'Escape' ||
+                      !(event.target instanceof Element) ||
+                      event.target.closest('details[open]') !== event.currentTarget
+                    )
+                      return;
+                    event.preventDefault();
+                    event.stopPropagation();
+                    event.currentTarget.open = false;
+                    event.currentTarget.querySelector('summary')?.focus();
+                  }}
+                >
+                  <summary>List options</summary>
+                  <div className="pc-list__options-panel">
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      disabled={sharePending}
+                      onClick={() => {
+                        void share({ ...effectiveView, focusId: selectedId ?? null });
+                      }}
+                    >
+                      Copy filter link
+                    </Button>
+                    {view?.filters.attention ? (
+                      <Button size="sm" variant="secondary" onClick={clearFilters}>
+                        Clear attention filter: {view.filters.attention}
+                      </Button>
+                    ) : null}
+                    <span className="pc-list__note">read-only view of .planr/</span>
+                    <fieldset className="pc-list__dates" aria-label="Relative date filters">
+                      <Select
+                        ariaLabel="Date preset"
+                        value={
+                          effectiveView.filters.createdWithinDays === 1
+                            ? 'today'
+                            : effectiveView.filters.createdWithinDays === 2
+                              ? 'yesterday'
+                              : 'none'
+                        }
+                        options={[
+                          { value: 'none', label: 'Any date' },
+                          { value: 'today', label: 'Filed today' },
+                          { value: 'yesterday', label: 'Filed since yesterday' },
+                        ]}
+                        onChange={(value) => {
+                          if (value === 'today' || value === 'yesterday')
+                            setPresentation({
+                              ...listPreset(value),
+                              density: effectiveView.density,
+                            });
+                          else updateFilters({ createdWithinDays: null });
+                        }}
+                        clearValue="none"
+                      />
+                      {(['createdWithinDays', 'updatedWithinDays'] as const).map((field) => (
+                        <label className="pc-list__relative" key={field}>
+                          {field === 'createdWithinDays' ? 'Created' : 'Updated'} within UTC days
+                          <input
+                            type="number"
+                            min={1}
+                            max={365}
+                            step={1}
+                            placeholder="Any"
+                            aria-label={
+                              field === 'createdWithinDays'
+                                ? 'Created within UTC days'
+                                : 'Updated within UTC days'
+                            }
+                            value={effectiveView.filters[field] ?? ''}
+                            onChange={(event) => {
+                              const value = event.currentTarget.value;
+                              const days = value ? Number(value) : null;
+                              if (
+                                days !== null &&
+                                (!Number.isInteger(days) || days < 1 || days > 365)
+                              ) {
+                                setDateError(
+                                  'Relative dates must be whole UTC days from 1 to 365.',
+                                );
+                                return;
+                              }
+                              setDateError('');
+                              updateFilters({ [field]: days });
+                            }}
+                          />
+                        </label>
+                      ))}
+                      <Button size="sm" variant="secondary" onClick={clearFilters}>
+                        Clear filters
+                      </Button>
+                    </fieldset>
+                    <fieldset className="pc-list__selection" aria-label="Bulk command copy">
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        onClick={() => setSelected(rows.map((node) => node.id))}
+                      >
+                        Select all {rows.length} filtered
+                      </Button>
+                      <Button size="sm" variant="secondary" onClick={() => setSelected([])}>
+                        Clear selection
+                      </Button>
+                      <span className="pc-list__selection-count">
+                        {selectedNodes.length} selected · {bulk.commands.length} eligible ·{' '}
+                        {bulk.skipped.length} skipped
+                      </span>
+                      <Select
+                        size="sm"
+                        ariaLabel="Suggested backlog status"
+                        value={bulkStatus}
+                        onChange={setBulkStatus}
+                        options={BACKLOG_STATUSES.map((value) => ({
+                          value,
+                          label:
+                            value === 'in-progress'
+                              ? 'In progress'
+                              : value.charAt(0).toUpperCase() + value.slice(1),
+                        }))}
+                      />
+                      <Button
+                        size="sm"
+                        data-copy-command="true"
+                        disabled={!bulk.commands.length || copyPending}
+                        onClick={() => void copyText(bulk.commands.join('\n'))}
+                      >
+                        Copy bulk commands
+                      </Button>
+                      <Button
+                        size="sm"
+                        data-copy-command="true"
+                        disabled={copyPending}
+                        onClick={() => void copyText('/planr:sprint')}
+                      >
+                        Copy sprint command
+                      </Button>
+                    </fieldset>
+                    <details className="pc-list__commands">
+                      <summary>Review {bulk.commands.length} commands to copy</summary>
+                      <pre>{bulk.commands.join('\n')}</pre>
+                    </details>
+                    <code className="pc-list__sprint-command">/planr:sprint</code>
+                    <details className="pc-list__skipped">
+                      <summary>Why {bulk.skipped.length} items are skipped</summary>
+                      <ul>
+                        {bulk.skipped.slice(0, 20).map((reason) => (
+                          <li key={reason}>{reason}</li>
+                        ))}
+                      </ul>
+                      {bulk.skipped.length > 20 ? (
+                        <p>{bulk.skipped.length - 20} more items have no verified status writer.</p>
+                      ) : null}
+                    </details>
+                    <div className="pc-list__utilities">
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        aria-expanded={!collapsed}
+                        onClick={() => setCollapsed((value) => !value)}
+                      >
+                        {collapsed ? 'Expand artifacts' : 'Collapse artifacts'}
+                      </Button>
+                    </div>
+                  </div>
+                </details>
+              </>
             }
           >
             <Input
@@ -483,259 +678,132 @@ export function ListPage({
                 label: `Group: ${value.charAt(0).toUpperCase() + value.slice(1)}`,
               }))}
             />
-            <ToolbarDivider />
-            <Button
-              size="sm"
-              variant="secondary"
-              disabled={sharePending}
-              onClick={() => {
-                void share({ ...effectiveView, focusId: selectedId ?? null });
-              }}
-            >
-              Copy filter link
-            </Button>
-            {view?.filters.attention ? (
-              <Button size="sm" variant="secondary" onClick={clearFilters}>
-                Clear attention filter: {view.filters.attention}
-              </Button>
-            ) : null}
-            <span className="pc-list__note">read-only view of .planr/</span>
           </Toolbar>
-          <fieldset className="pc-list__dates" aria-label="Relative date filters">
-            <Select
-              ariaLabel="Date preset"
-              value={
-                effectiveView.filters.createdWithinDays === 1
-                  ? 'today'
-                  : effectiveView.filters.createdWithinDays === 2
-                    ? 'yesterday'
-                    : 'none'
-              }
-              options={[
-                { value: 'none', label: 'Any date' },
-                { value: 'today', label: 'Filed today' },
-                { value: 'yesterday', label: 'Filed since yesterday' },
-              ]}
-              onChange={(value) => {
-                if (value === 'today' || value === 'yesterday')
-                  setPresentation({ ...listPreset(value), density: effectiveView.density });
-                else updateFilters({ createdWithinDays: null });
-              }}
-              clearValue="none"
-            />
-            {(['createdWithinDays', 'updatedWithinDays'] as const).map((field) => (
-              <label className="pc-list__relative" key={field}>
-                {field === 'createdWithinDays' ? 'Created' : 'Updated'} within UTC days
-                <input
-                  type="number"
-                  min={1}
-                  max={365}
-                  step={1}
-                  placeholder="Any"
-                  aria-label={
-                    field === 'createdWithinDays'
-                      ? 'Created within UTC days'
-                      : 'Updated within UTC days'
-                  }
-                  value={effectiveView.filters[field] ?? ''}
-                  onChange={(event) => {
-                    const value = event.currentTarget.value;
-                    const days = value ? Number(value) : null;
-                    if (days !== null && (!Number.isInteger(days) || days < 1 || days > 365)) {
-                      setDateError('Relative dates must be whole UTC days from 1 to 365.');
-                      return;
-                    }
-                    setDateError('');
-                    updateFilters({ [field]: days });
-                  }}
-                />
-              </label>
-            ))}
-            <Button size="sm" variant="secondary" onClick={clearFilters}>
-              Clear filters
-            </Button>
-          </fieldset>
-          <fieldset className="pc-list__selection" aria-label="Bulk command copy">
-            <Button
-              size="sm"
-              variant="secondary"
-              onClick={() => setSelected(rows.map((node) => node.id))}
-            >
-              Select all {rows.length} filtered
-            </Button>
-            <Button size="sm" variant="secondary" onClick={() => setSelected([])}>
-              Clear selection
-            </Button>
-            <span className="pc-list__selection-count">
-              {selectedNodes.length} selected · {bulk.commands.length} eligible ·{' '}
-              {bulk.skipped.length} skipped
-            </span>
-            <Select
-              size="sm"
-              ariaLabel="Suggested backlog status"
-              value={bulkStatus}
-              onChange={setBulkStatus}
-              options={BACKLOG_STATUSES.map((value) => ({
-                value,
-                label:
-                  value === 'in-progress'
-                    ? 'In progress'
-                    : value.charAt(0).toUpperCase() + value.slice(1),
-              }))}
-            />
-            <Button
-              size="sm"
-              data-copy-command="true"
-              disabled={!bulk.commands.length || copyPending}
-              onClick={() => void copyText(bulk.commands.join('\n'))}
-            >
-              Copy bulk commands
-            </Button>
-            <Button
-              size="sm"
-              data-copy-command="true"
-              disabled={copyPending}
-              onClick={() => void copyText('/planr:sprint')}
-            >
-              Copy sprint command
-            </Button>
-          </fieldset>
-          <details className="pc-list__commands">
-            <summary>Review {bulk.commands.length} commands to copy</summary>
-            <pre>{bulk.commands.join('\n')}</pre>
-          </details>
-          <code className="pc-list__sprint-command">/planr:sprint</code>
-          <details className="pc-list__skipped">
-            <summary>Why {bulk.skipped.length} items are skipped</summary>
-            <ul>
-              {bulk.skipped.slice(0, 20).map((reason) => (
-                <li key={reason}>{reason}</li>
-              ))}
-            </ul>
-            {bulk.skipped.length > 20 ? (
-              <p>{bulk.skipped.length - 20} more items have no verified status writer.</p>
+          <div
+            className="pc-list__window"
+            data-scroll-context="list-window"
+            style={artifactRowStyle(visibleRows.map(({ node }) => planningDisplayId(node)))}
+            data-empty={rows.length === 0 || undefined}
+            hidden={collapsed}
+          >
+            {rows.length > 0 ? (
+              <DataTable
+                rows={visibleRows.map((entry) => entry.node)}
+                compact={compact}
+                groups={visibleGroups.map((group) => {
+                  const headerOffset =
+                    effectiveView.groupBy === 'none'
+                      ? 0
+                      : grouped.findIndex((entry) => entry.key === group.key) + 1;
+                  return {
+                    ...group,
+                    rows: group.nodes,
+                    collapsed: collapsedGroups.includes(group.key),
+                    rowWindow: rowViewport.windows.get(group.key),
+                    rowPosition: (node: PlanningModelNode) =>
+                      (positions.get(group.key)?.get(node.id) ?? 1) + headerOffset,
+                    headerRowPosition:
+                      (positions.get(group.key)?.values().next().value ?? 1) + headerOffset,
+                    header:
+                      effectiveView.groupBy === 'none' ? undefined : (
+                        <div className="pc-list__group-header">
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            icon={
+                              collapsedGroups.includes(group.key) ? 'chevron-right' : 'chevron-down'
+                            }
+                            aria-expanded={!collapsedGroups.includes(group.key)}
+                            onClick={() =>
+                              setCollapsedGroups((groups) =>
+                                groups.includes(group.key)
+                                  ? groups.filter((key) => key !== group.key)
+                                  : [...groups, group.key],
+                              )
+                            }
+                          >
+                            <span className="pc-list__group-title">{group.label}</span>
+                          </Button>
+                          <span className="pc-list__group-meta">
+                            <span className="pc-list__group-item-count">
+                              {grouped.find((entry) => entry.key === group.key)?.nodes.length} items
+                            </span>
+                            {effectiveView.groupBy === 'spec'
+                              ? (() => {
+                                  const value = progress?.get(group.key);
+                                  return value ? (
+                                    <>
+                                      <progress
+                                        max={value.total}
+                                        value={value.done}
+                                        aria-label={`${group.label} task progress`}
+                                      />
+                                      <span className="pc-list__group-progress-count">
+                                        {value.done}/{value.total} tasks
+                                      </span>
+                                    </>
+                                  ) : (
+                                    ' · No tasks'
+                                  );
+                                })()
+                              : ''}
+                          </span>
+                        </div>
+                      ),
+                  };
+                })}
+                selectedId={selectedId}
+                selectedIds={selectedSet}
+                onRowSelect={toggleSelection}
+                rowCount={
+                  appearances.length + (effectiveView.groupBy === 'none' ? 0 : grouped.length)
+                }
+                rowHref={planningDetailHref}
+                sort={sort}
+                onSort={(key) => {
+                  setSort((current) => ({
+                    key,
+                    dir: current.key === key && current.dir === 'desc' ? 'asc' : 'desc',
+                  }));
+                  resetPage();
+                }}
+                onRowClick={inspectPlanningNode}
+                onRowFocus={(node) => inspectPlanningNode(node, false)}
+                caption="Planning artifacts"
+                columns={[...LIST_COLUMNS, listCommandColumn(copy, shortcutsEnabled)]}
+              />
             ) : null}
-          </details>
-          <p className="pc-list__feedback" role="status">
-            {dateError ||
-              storageNotice ||
-              copyState ||
-              copyMessage ||
-              (dateExcluded
-                ? `${dateExcluded} items excluded: unknown, invalid or future authored dates.`
-                : 'J/K move · Enter opens panel · Space selects · Shift+Up/Down extends · / filters · C copies ID')}
-          </p>
-          <div className="pc-list__utilities">
-            <Button
-              variant="secondary"
-              size="sm"
-              aria-expanded={!collapsed}
-              onClick={() => setCollapsed((value) => !value)}
-            >
-              {collapsed ? 'Expand artifacts' : 'Collapse artifacts'}
-            </Button>
-          </div>
-          <div className="pc-list__window" data-scroll-context="list-window" hidden={collapsed}>
-            {visibleGroups.map((group) => (
-              <section
-                key={group.key}
-                aria-label={group.label}
-                data-keyboard-group={group.key}
-                style={artifactRowStyle(group.nodes.map(planningDisplayId))}
-              >
-                <div className="pc-list__group-header" hidden={effectiveView.groupBy === 'none'}>
-                  {effectiveView.groupBy !== 'none' ? (
-                    <Button
-                      size="sm"
-                      variant="secondary"
-                      aria-expanded={!collapsedGroups.includes(group.key)}
-                      onClick={() =>
-                        setCollapsedGroups((groups) =>
-                          groups.includes(group.key)
-                            ? groups.filter((key) => key !== group.key)
-                            : [...groups, group.key],
-                        )
-                      }
-                    >
-                      {group.label}
-                    </Button>
-                  ) : null}
-                  {effectiveView.groupBy !== 'none' ? (
-                    <span className="pc-list__group-meta">
-                      {grouped.find((entry) => entry.key === group.key)?.nodes.length} items
-                      {effectiveView.groupBy === 'spec'
-                        ? (() => {
-                            const value = progress?.get(group.key);
-                            return value ? (
-                              <>
-                                {' '}
-                                ·{' '}
-                                <progress
-                                  max={value.total}
-                                  value={value.done}
-                                  aria-label={`${group.label} task progress`}
-                                />{' '}
-                                {value.done}/{value.total} tasks
-                              </>
-                            ) : (
-                              ' · No tasks'
-                            );
-                          })()
-                        : ''}
+            {rows.length === 0 ? (
+              <div className="pc-list__empty">
+                <EmptyState
+                  variant="tile"
+                  icon="search"
+                  title={
+                    query.trim()
+                      ? `Nothing matches “${query.trim()}”`
+                      : 'Nothing matches these filters'
+                  }
+                  description={`${all.length} planning artifacts searched. Clear the filters to see all available items.`}
+                  action={
+                    <span className="pc-list__empty-actions">
+                      <Button size="sm" onClick={clearFilters}>
+                        Clear {activeFilterCount} {activeFilterCount === 1 ? 'filter' : 'filters'}
+                      </Button>
+                      {hiddenDone ? (
+                        <Button size="sm" onClick={() => updateFilters({ status: ['done'] })}>
+                          Show {hiddenDone} done matches
+                        </Button>
+                      ) : null}
                     </span>
-                  ) : null}
-                </div>
-                <div hidden={collapsedGroups.includes(group.key)}>
-                  <DataTable
-                    rows={group.nodes}
-                    compact={compact}
-                    selectedId={selectedId}
-                    selectedIds={selectedSet}
-                    onRowSelect={toggleSelection}
-                    rowCount={appearances.length}
-                    rowWindow={rowViewport.windows.get(group.key)}
-                    rowPosition={(node) => positions.get(group.key)?.get(node.id) ?? 1}
-                    rowHref={planningDetailHref}
-                    sort={sort}
-                    onSort={(key) => {
-                      setSort((current) => ({
-                        key,
-                        dir: current.key === key && current.dir === 'desc' ? 'asc' : 'desc',
-                      }));
-                      resetPage();
-                    }}
-                    onRowClick={inspectPlanningNode}
-                    onRowFocus={(node) => inspectPlanningNode(node, false)}
-                    caption="Planning artifacts"
-                    emptyMessage="No node matches this filter."
-                    columns={[...LIST_COLUMNS, listCommandColumn(copy, shortcutsEnabled)]}
-                  />
-                </div>
-              </section>
-            ))}
+                  }
+                />
+              </div>
+            ) : null}
           </div>
-          {rows.length === 0 ? (
-            <EmptyState
-              icon="search"
-              title={
-                query.trim() ? `Nothing matches “${query.trim()}”` : 'Nothing matches these filters'
-              }
-              description={`${all.length} planning artifacts searched. Clear the filters to see all available items.`}
-              action={
-                <span>
-                  {hiddenDone ? (
-                    <Button size="sm" onClick={() => updateFilters({ status: ['done'] })}>
-                      Show {hiddenDone} done matches
-                    </Button>
-                  ) : null}
-                </span>
-              }
-            />
-          ) : null}
-          {appearances.length > PAGE_SIZE ? (
+          {all.length > PAGE_SIZE ? (
             <nav className="pc-list__pagination" aria-label="Planning artifact pages">
               <span className="pc-list__page-status" aria-live="polite">
-                Page {currentPage + 1} of {pageCount} · {pageStart + 1}–
+                Page {currentPage + 1} of {pageCount} · {appearances.length ? pageStart + 1 : 0}–
                 {Math.min(pageStart + PAGE_SIZE, appearances.length)} of {appearances.length}{' '}
                 appearances
               </span>
@@ -761,6 +829,44 @@ export function ListPage({
           ) : null}
         </section>
       )}
+      {all.length > 0 ? (
+        <section className="pc-list__hints" aria-label="List keyboard shortcuts">
+          <span>
+            <kbd>J</kbd> <kbd>K</kbd> move
+          </span>
+          <span>
+            <kbd>Enter</kbd> opens panel
+          </span>
+          <span>
+            <kbd>Space</kbd> selects
+          </span>
+          <span>
+            <kbd>Shift</kbd> + <kbd>↑</kbd> <kbd>↓</kbd> extends
+          </span>
+          <span>
+            <kbd>/</kbd> filters
+          </span>
+          <span>
+            <kbd>C</kbd> copies ID
+          </span>
+          <span>
+            <kbd>[</kbd> <kbd>]</kbd> collapse / expand group
+          </span>
+          <span className="pc-list__hint-count">
+            {rows.length} filtered items · {grouped.length}{' '}
+            {grouped.length === 1 ? 'group' : 'groups'}
+          </span>
+          <p className="pc-list__feedback" role="status">
+            {dateError ||
+              storageNotice ||
+              copyState ||
+              copyMessage ||
+              (dateExcluded
+                ? `${dateExcluded} items excluded: unknown, invalid or future authored dates.`
+                : '')}
+          </p>
+        </section>
+      ) : null}
     </div>
   );
 }

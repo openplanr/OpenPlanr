@@ -431,7 +431,7 @@ it('caps each Home card at five rows and keeps the full count reachable', () => 
   }
 });
 
-it('keeps every Home card on the shared row grid without tag and title overlap', () => {
+it('keeps single-line Home cards on the shared row grid without tag and title overlap', () => {
   const stylesheet = readFileSync(
     `${process.cwd()}/../../apps/dashboard/src/design-system/components/artifact-row.css`,
     'utf8',
@@ -467,6 +467,10 @@ it('keeps every Home card on the shared row grid without tag and title overlap',
         expect(title).toBeTruthy();
         expect(tag).toBeTruthy();
         expect(title?.parentElement?.classList.contains('pc-artifact-row__link')).toBe(true);
+        if (row.dataset.layout === 'stacked') {
+          expect(section.getAttribute('data-attention')).toBe('changed-today');
+          return padding;
+        }
         const ch = 7.2;
         const length = tag?.textContent?.length ?? 0;
         const tagRight = padding + length * (ch + 0.03 * 12) + 14;
@@ -479,6 +483,54 @@ it('keeps every Home card on the shared row grid without tag and title overlap',
     }
   }
   expect(new Set(titleColumns).size).toBe(1);
+});
+
+it('stacks changed-today titles below their tag and summary without truncation', () => {
+  const { container } = render(<Home />);
+  const changed = container.querySelector('[data-attention="changed-today"]');
+  const rows = [...(changed?.querySelectorAll('.pc-artifact-row') ?? [])];
+  expect(rows.length).toBeGreaterThan(0);
+  for (const row of rows) {
+    expect(row.getAttribute('data-layout')).toBe('stacked');
+    expect(row.querySelector('.pc-artifact-row__id')).toBeTruthy();
+    expect(row.querySelector('.pc-artifact-row__meta-value')?.textContent).toBeTruthy();
+    expect(row.querySelector('.pc-artifact-row__title')?.getAttribute('title')).toBe(
+      row.querySelector('.pc-artifact-row__title')?.textContent,
+    );
+  }
+  const stylesheet = readFileSync(
+    `${process.cwd()}/../../apps/dashboard/src/design-system/components/artifact-row.css`,
+    'utf8',
+  );
+  expect(stylesheet).toMatch(
+    /\[data-layout="stacked"\] \.pc-artifact-row__title\s*\{[^}]*grid-column:\s*1 \/ -1;[^}]*grid-row:\s*2;[^}]*white-space:\s*normal;[^}]*font-size:\s*13\.5px/u,
+  );
+});
+
+it('uses plain summary glyphs and compact attention metadata', () => {
+  const { container } = render(<Home />);
+  const legend = screen.getByRole('region', { name: 'Project status' });
+  for (const status of legend.querySelectorAll<HTMLElement>('.pc-artifact')) {
+    expect(status.dataset.variant).toBe('legend');
+    expect(status.style.background).toBe('');
+  }
+  for (const [filter, glyph] of [
+    ['waiting', 'diamond'],
+    ['stale', 'half-ring'],
+    ['high-not-started', 'ring'],
+  ]) {
+    expect(
+      container
+        .querySelector(`[data-attention="${filter}"] .pc-card__glyph [data-glyph]`)
+        ?.getAttribute('data-glyph'),
+    ).toBe(glyph);
+  }
+  expect(
+    container.querySelector('[data-attention="changed-today"] [data-live="true"]'),
+  ).toBeTruthy();
+  expect(container.querySelectorAll('.pc-home__dependency-tag')).toHaveLength(0);
+  const quiet = container.querySelector('[data-attention="stale"] .pc-artifact-row__meta-value');
+  expect(quiet?.textContent).toMatch(/^\d+d$/u);
 });
 
 it('summarizes multiple waiting dependencies with their full accessible ID list', () => {
@@ -522,7 +574,7 @@ it('keeps List titles in one column with room for every identifier', () => {
     </PlanningPresentationProvider>,
   );
   const groups = [
-    ...container.querySelectorAll<HTMLElement>('.pc-list__window > section[data-keyboard-group]'),
+    ...container.querySelectorAll<HTMLElement>('.pc-list__window tbody[data-keyboard-group]'),
   ];
   expect(groups.length).toBeGreaterThan(0);
   const stylesheet = readFileSync(
@@ -531,11 +583,15 @@ it('keeps List titles in one column with room for every identifier', () => {
   );
   expect(stylesheet).toMatch(/font-size:\s*12px/u);
   for (const group of groups) {
-    const idColumn = idColumnWidth(group.style.getPropertyValue('--id-col'));
+    const idColumn = idColumnWidth(
+      container
+        .querySelector<HTMLElement>('.pc-list__window')
+        ?.style.getPropertyValue('--id-col') ?? '',
+    );
     expect(idColumn).toBeGreaterThanOrEqual(9 * 7.2);
-    const header = group.querySelector<HTMLElement>('th[data-column="id"]');
-    expect(header?.style.width).toBe('calc(var(--id-col) + 26px)');
-    const rows = [...group.querySelectorAll<HTMLElement>('tbody tr[data-keyboard-item]')];
+    const header = container.querySelector<HTMLElement>('th[data-column="id"]');
+    expect(header?.style.width).toBe('max(92px, var(--id-col))');
+    const rows = [...group.querySelectorAll<HTMLElement>('tr[data-keyboard-item]')];
     expect(rows.length).toBeGreaterThan(0);
     const titlePositions = rows.map((row) => {
       const title = row.querySelector('.pc-list__title');

@@ -1,4 +1,12 @@
-import { type ReactNode, useEffect, useId, useMemo, useRef, useState } from 'react';
+import {
+  type ComponentProps,
+  type ReactNode,
+  useEffect,
+  useId,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 
 import {
   CardHeader as ArtifactCardHeader,
@@ -10,9 +18,11 @@ import {
   Card,
   CommandHint,
   EmptyState,
+  PcIcon,
   PriorityChip,
   Skeleton,
   StatePanel,
+  Tooltip,
   WorkItemChip,
 } from '../../design-system/components/index.js';
 import type { DashboardProductState } from '../../lib/api/product-state.js';
@@ -104,25 +114,35 @@ function NodeLink({
   keyboard = false,
   selected = false,
   className,
+  describedBy,
+  ...linkProps
 }: {
   node: PlanningModelNode;
   children: ReactNode;
   keyboard?: boolean;
   selected?: boolean;
   className?: string;
-}) {
+  describedBy?: string;
+} & Omit<ComponentProps<'a'>, 'children'>) {
   return (
     <a
+      {...linkProps}
       className={className}
+      aria-describedby={describedBy}
       data-keyboard-item={keyboard ? node.id : undefined}
       data-selected={selected || undefined}
       href={planningDetailHref(node) ?? undefined}
       onClick={(event) => {
+        linkProps.onClick?.(event);
+        if (event.defaultPrevented) return;
         if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
         event.preventDefault();
         inspectPlanningNode(node);
       }}
-      onFocus={() => inspectPlanningNode(node, false)}
+      onFocus={(event) => {
+        linkProps.onFocus?.(event);
+        inspectPlanningNode(node, false);
+      }}
     >
       {children}
     </a>
@@ -135,18 +155,26 @@ function HomeRow({
   commandNode,
   dependencies = [],
   selected,
+  layout,
 }: {
   node: PlanningModelNode;
   reason?: ReactNode;
   commandNode?: PlanningModelNode;
   dependencies?: readonly PlanningModelNode[];
   selected: boolean;
+  layout?: 'stacked';
 }) {
   const command = planningContinuation(commandNode ?? node);
   const onCopy = usePlanningCopy();
   const shortcutsEnabled = usePlanningShortcuts();
+  const dependencyDescriptionId = useId();
+  const dependencyLabel = `Waits on unfinished dependencies: ${dependencies.map(planningDisplayId).join(', ')}`;
   return (
-    <li className="pc-home__row pc-artifact-row" data-selected={selected || undefined}>
+    <li
+      className="pc-home__row pc-artifact-row"
+      data-selected={selected || undefined}
+      data-layout={layout}
+    >
       <NodeLink node={node} keyboard selected={selected} className="pc-artifact-row__link">
         <span className="pc-artifact-row__id">
           <WorkItemChip type={node.type} id={planningDisplayId(node)} />
@@ -157,17 +185,25 @@ function HomeRow({
         {reason}
         {dependencies.length ? (
           <span className="pc-home__dependencies">
-            <ArtifactRowMeta
-              icon="git-pull-request"
-              label={`Waits on unfinished dependencies: ${dependencies.map(planningDisplayId).join(', ')}`}
-            >
-              {dependencies.length}
-            </ArtifactRowMeta>
             {dependencies.length === 1 ? (
-              <NodeLink node={dependencies[0]} className="pc-home__dependency-tag">
-                <WorkItemChip type={dependencies[0].type} id={planningDisplayId(dependencies[0])} />
-              </NodeLink>
-            ) : null}
+              <Tooltip content={dependencyLabel}>
+                <NodeLink
+                  node={dependencies[0]}
+                  className="pc-artifact-row__meta"
+                  describedBy={dependencyDescriptionId}
+                >
+                  <PcIcon name="git-pull-request" size={13} />
+                  <span className="pc-artifact-row__meta-value">1</span>
+                  <span id={dependencyDescriptionId} className="pc-visually-hidden">
+                    {dependencyLabel}
+                  </span>
+                </NodeLink>
+              </Tooltip>
+            ) : (
+              <ArtifactRowMeta icon="git-pull-request" label={dependencyLabel}>
+                {dependencies.length}
+              </ArtifactRowMeta>
+            )}
           </span>
         ) : null}
       </span>
@@ -221,12 +257,27 @@ function AttentionCard({
       <ArtifactCardHeader
         id={headingId}
         title={title}
+        glyph={
+          filter === 'changed-today' ? (
+            <span className="pc-card__glyph" data-live="true" />
+          ) : (
+            <ArtifactStatus
+              status={
+                filter === 'waiting' ? 'blocked' : filter === 'stale' ? 'quiet' : 'outstanding'
+              }
+              variant="glyph"
+            />
+          )
+        }
         count={ids.length}
         description={description}
         href={serializePlanningViewHref(planningAttentionView(filter))}
       />
       {preview.length ? (
-        <ul className="pc-home__rows">
+        <ul
+          className="pc-home__rows pc-artifact-rows"
+          data-layout={filter === 'changed-today' ? 'stacked' : undefined}
+        >
           {preview.map((node) => {
             const item = attention.byId[node.id];
             const dependencies =
@@ -241,6 +292,7 @@ function AttentionCard({
                 key={node.id}
                 node={node}
                 selected={selectedId === node.id}
+                layout={filter === 'changed-today' ? 'stacked' : undefined}
                 reason={
                   ids.includes(node.id) ? reason(node) : 'No longer matches this attention list.'
                 }
@@ -366,11 +418,27 @@ function HomeContent({
             ))}
           </div>
           <div className="pc-home__legend">
-            <ArtifactStatus status="outstanding" label={`${totals.outstanding} outstanding`} />
-            <ArtifactStatus status="in-progress" label={`${totals.inProgress} in progress`} />
-            <ArtifactStatus status="blocked" label={`${totals.blocked} open items blocked`} />
-            <ArtifactStatus status="done" label={`${totals.done} done`} />
-            <ArtifactStatus status="addressed" label={`${totals.addressed} addressed`} />
+            <ArtifactStatus
+              variant="legend"
+              status="outstanding"
+              label={`${totals.outstanding} outstanding`}
+            />
+            <ArtifactStatus
+              variant="legend"
+              status="in-progress"
+              label={`${totals.inProgress} in progress`}
+            />
+            <ArtifactStatus
+              variant="legend"
+              status="blocked"
+              label={`${totals.blocked} open items blocked`}
+            />
+            <ArtifactStatus variant="legend" status="done" label={`${totals.done} done`} />
+            <ArtifactStatus
+              variant="legend"
+              status="addressed"
+              label={`${totals.addressed} addressed`}
+            />
             {totals.unknown ? <span>{totals.unknown} unknown</span> : null}
           </div>
         </section>
@@ -470,15 +538,21 @@ function HomeContent({
             reason={(node) => {
               const raw = String(node.frontmatter.updated ?? node.frontmatter.created);
               const date = new Date(raw);
+              const changedIds =
+                attention.changedToday.groups.find((group) => group.specId === node.id)?.ids ?? [];
+              const stories = changedIds.filter((id) => byId.get(id)?.type === 'story').length;
+              const tasks = changedIds.filter((id) => byId.get(id)?.type === 'task').length;
               return (
-                <ArtifactRowMeta icon="calendar-days" label={raw}>
-                  {Number.isFinite(date.getTime())
-                    ? date.toLocaleDateString('en-GB', {
-                        day: 'numeric',
-                        month: 'short',
-                        timeZone: 'UTC',
-                      })
-                    : 'Unknown'}
+                <ArtifactRowMeta label={raw}>
+                  {stories || tasks
+                    ? `+ ${stories} ${stories === 1 ? 'story' : 'stories'}, ${tasks} ${tasks === 1 ? 'task' : 'tasks'}`
+                    : Number.isFinite(date.getTime())
+                      ? date.toLocaleDateString('en-GB', {
+                          day: 'numeric',
+                          month: 'short',
+                          timeZone: 'UTC',
+                        })
+                      : 'Unknown'}
                 </ArtifactRowMeta>
               );
             }}
@@ -529,6 +603,7 @@ function HomeContent({
           >
             <ArtifactCardHeader
               title={activeSprint ? 'Active sprint' : 'No active sprint'}
+              glyph={<PcIcon name="calendar-days" size={18} />}
               count={activeSprint ? 1 : 0}
               href="#/sprints"
             />

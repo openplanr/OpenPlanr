@@ -202,6 +202,7 @@ export function Badge({
 
 export type CardHeaderProps = Readonly<{
   title?: ReactNode;
+  glyph?: ReactNode;
   count?: string | number;
   description?: string;
   actions?: ReactNode;
@@ -210,11 +211,24 @@ export type CardHeaderProps = Readonly<{
 }>;
 
 /** Fixed-height heading for artifact cards. */
-export function CardHeader({ title, count, description, actions, href, id }: CardHeaderProps) {
+export function CardHeader({
+  title,
+  glyph,
+  count,
+  description,
+  actions,
+  href,
+  id,
+}: CardHeaderProps) {
   const descriptionId = useId();
   return (
     <header className="pc-card__head">
       <div className="pc-card__heading">
+        {glyph ? (
+          <span className="pc-card__glyph" aria-hidden="true">
+            {glyph}
+          </span>
+        ) : null}
         <h2 className="pc-card__title" id={id}>
           {title}
         </h2>
@@ -254,6 +268,7 @@ export function CardHeader({ title, count, description, actions, href, id }: Car
 
 export type CardProps = Readonly<{
   children: ReactNode;
+  className?: string;
   title?: string;
   meta?: string;
   actions?: ReactNode;
@@ -265,6 +280,7 @@ export type CardProps = Readonly<{
 /** Hairline container for grouped content. Flat by default; `elevated` only for floating surfaces. */
 export function Card({
   children,
+  className,
   title,
   meta,
   actions,
@@ -273,7 +289,10 @@ export function Card({
   description,
 }: CardProps) {
   return (
-    <section className="pc-card" data-elevated={elevated || undefined}>
+    <section
+      className={className ? `pc-card ${className}` : 'pc-card'}
+      data-elevated={elevated || undefined}
+    >
       {title || actions ? (
         <CardHeader title={title} count={meta} description={description} actions={actions} />
       ) : null}
@@ -289,12 +308,19 @@ export type EmptyStateProps = Readonly<{
   title: string;
   description?: string;
   action?: ReactNode;
+  variant?: 'tile';
 }>;
 
 /** Empty state for a filtered table, a fresh workspace, or a cycle with nothing proposed. */
-export function EmptyState({ icon = 'inbox', title, description, action }: EmptyStateProps) {
+export function EmptyState({
+  icon = 'inbox',
+  title,
+  description,
+  action,
+  variant,
+}: EmptyStateProps) {
   return (
-    <div className="pc-empty">
+    <div className="pc-empty" data-variant={variant}>
       <span className="pc-empty__glyph" aria-hidden="true">
         <PcIcon name={icon} size={17} />
       </span>
@@ -507,6 +533,7 @@ export type SectionHeaderProps = Readonly<{
   actions?: ReactNode;
   sticky?: boolean;
   headingLevel?: 1 | 2 | 3;
+  inset?: boolean;
 }>;
 
 /** View header: eyebrow capability label, title, count, and the view's action cluster. */
@@ -518,10 +545,15 @@ export function SectionHeader({
   actions,
   sticky = false,
   headingLevel = 1,
+  inset = false,
 }: SectionHeaderProps) {
   const Heading = headingLevel === 1 ? 'h1' : headingLevel === 2 ? 'h2' : 'h3';
   return (
-    <header className="pc-section-header" data-sticky={sticky || undefined}>
+    <header
+      className="pc-section-header"
+      data-sticky={sticky || undefined}
+      data-inset={inset || undefined}
+    >
       <div className="pc-section-header__text">
         {eyebrow ? <span className="pc-section-header__eyebrow">{eyebrow}</span> : null}
         <div className="pc-section-header__row">
@@ -577,7 +609,6 @@ export function Input({
         data-size={size}
         data-disabled={disabled || undefined}
         data-invalid={Boolean(error) || undefined}
-        style={{ width }}
       >
         {icon ? <PcIcon name={icon} size={15} color="var(--pc-text-tertiary)" /> : null}
         <input
@@ -716,6 +747,16 @@ export type DataTableProps<Row extends { readonly id: string }> = Readonly<{
   rowCount?: number;
   rowPosition?: (row: Row) => number;
   rowWindow?: Readonly<{ start: number; end: number; rowHeight: number; retainedId?: string }>;
+  groups?: readonly Readonly<{
+    key: string;
+    label: string;
+    rows: readonly Row[];
+    header?: ReactNode;
+    headerRowPosition?: number;
+    collapsed?: boolean;
+    rowWindow?: DataTableProps<Row>['rowWindow'];
+    rowPosition?: (row: Row) => number;
+  }>[];
   rowHref?: (row: Row) => string | null;
   sort?: DataTableSort;
   onSort?: (key: string) => void;
@@ -763,6 +804,7 @@ export function DataTable<Row extends { readonly id: string }>({
   rowCount,
   rowPosition,
   rowWindow,
+  groups,
   rowHref,
   sort,
   onSort,
@@ -811,6 +853,9 @@ export function DataTable<Row extends { readonly id: string }>({
       activate(row);
     }
   };
+  const rowGroups: NonNullable<DataTableProps<Row>['groups']> = groups ?? [
+    { key: 'all', label: '', rows, rowWindow },
+  ];
   return (
     <div
       ref={scrollRegion}
@@ -874,90 +919,113 @@ export function DataTable<Row extends { readonly id: string }>({
             })}
           </tr>
         </thead>
-        <tbody>
-          {rows.length === 0 ? (
-            <tr>
-              <td className="pc-table__empty" colSpan={columns.length}>
-                {emptyMessage}
-              </td>
-            </tr>
-          ) : (
-            tableWindowEntries(rows, rowWindow).map((entry) => {
-              if ('gap' in entry)
+        {rowGroups.map((group) => (
+          <tbody
+            key={group.key}
+            aria-label={group.label || undefined}
+            data-keyboard-group={groups ? group.key : undefined}
+          >
+            {group.header ? (
+              <tr className="pc-table__group-header" aria-rowindex={group.headerRowPosition}>
+                <td colSpan={columns.length}>{group.header}</td>
+              </tr>
+            ) : null}
+            {rows.length === 0 ? (
+              <tr>
+                <td className="pc-table__empty" colSpan={columns.length}>
+                  {emptyMessage}
+                </td>
+              </tr>
+            ) : (
+              tableWindowEntries(group.rows, group.rowWindow).map((entry) => {
+                if ('gap' in entry)
+                  return (
+                    <tr
+                      key={`gap:${entry.index}`}
+                      inert
+                      className="pc-table__spacer"
+                      hidden={group.collapsed}
+                    >
+                      <td
+                        aria-hidden="true"
+                        colSpan={columns.length}
+                        style={{ height: entry.gap, padding: 0, border: 0 }}
+                      />
+                    </tr>
+                  );
+                const { row } = entry;
                 return (
-                  <tr key={`gap:${entry.index}`} inert className="pc-table__spacer">
-                    <td
-                      aria-hidden="true"
-                      colSpan={columns.length}
-                      style={{ height: entry.gap, padding: 0, border: 0 }}
-                    />
+                  <tr
+                    key={row.id}
+                    hidden={group.collapsed}
+                    aria-rowindex={
+                      group.rowPosition
+                        ? group.rowPosition(row) + 1
+                        : rowPosition
+                          ? rowPosition(row) + 1
+                          : undefined
+                    }
+                    aria-selected={selectedIds ? selectedIds.has(row.id) : undefined}
+                    data-done={(row as { status?: string }).status === 'done' || undefined}
+                    data-keyboard-item={onRowClick ? row.id : undefined}
+                    data-selected={
+                      selectedId !== undefined && row.id === selectedId ? true : undefined
+                    }
+                    tabIndex={onRowClick ? 0 : undefined}
+                    onFocus={onRowFocus ? () => onRowFocus(row) : undefined}
+                    onClick={
+                      onRowClick
+                        ? (event) => {
+                            if (
+                              event.metaKey ||
+                              event.ctrlKey ||
+                              event.altKey ||
+                              event.shiftKey ||
+                              (event.target instanceof Element &&
+                                event.target.closest('a, button, input, [role="combobox"]'))
+                            )
+                              return;
+                            event.currentTarget.focus({ preventScroll: true });
+                            activate(row);
+                          }
+                        : undefined
+                    }
+                    onKeyDown={onRowClick ? (event) => onRowKey(event, row) : undefined}
+                  >
+                    {columns.map((column) => (
+                      <td
+                        key={column.key}
+                        data-column={column.key}
+                        data-align={column.align ?? 'left'}
+                        data-mono={column.mono || undefined}
+                        style={{ maxWidth: column.width }}
+                      >
+                        {rowHref && column.key === 'id' && rowHref(row) ? (
+                          <a
+                            href={rowHref(row) ?? undefined}
+                            onClick={(event) => {
+                              if (event.metaKey || event.ctrlKey || event.altKey || event.shiftKey)
+                                return;
+                              event.preventDefault();
+                              event.currentTarget.closest('tr')?.focus({ preventScroll: true });
+                              activate(row);
+                            }}
+                          >
+                            {column.render ? column.render(row) : cellValue(row, column.key)}
+                          </a>
+                        ) : column.render ? (
+                          column.render(row)
+                        ) : (
+                          cellValue(row, column.key)
+                        )}
+                      </td>
+                    ))}
                   </tr>
                 );
-              const { row } = entry;
-              return (
-                <tr
-                  key={row.id}
-                  aria-rowindex={rowPosition ? rowPosition(row) + 1 : undefined}
-                  aria-selected={selectedIds ? selectedIds.has(row.id) : undefined}
-                  data-done={(row as { status?: string }).status === 'done' || undefined}
-                  data-keyboard-item={onRowClick ? row.id : undefined}
-                  data-selected={
-                    selectedId !== undefined && row.id === selectedId ? true : undefined
-                  }
-                  tabIndex={onRowClick ? 0 : undefined}
-                  onFocus={onRowFocus ? () => onRowFocus(row) : undefined}
-                  onClick={
-                    onRowClick
-                      ? (event) => {
-                          if (
-                            event.metaKey ||
-                            event.ctrlKey ||
-                            event.altKey ||
-                            event.shiftKey ||
-                            (event.target instanceof Element &&
-                              event.target.closest('a, button, input, [role="combobox"]'))
-                          )
-                            return;
-                          event.currentTarget.focus({ preventScroll: true });
-                          activate(row);
-                        }
-                      : undefined
-                  }
-                  onKeyDown={onRowClick ? (event) => onRowKey(event, row) : undefined}
-                >
-                  {columns.map((column) => (
-                    <td
-                      key={column.key}
-                      data-column={column.key}
-                      data-align={column.align ?? 'left'}
-                      data-mono={column.mono || undefined}
-                      style={{ maxWidth: column.width }}
-                    >
-                      {rowHref && column.key === 'id' && rowHref(row) ? (
-                        <a
-                          href={rowHref(row) ?? undefined}
-                          onClick={(event) => {
-                            if (event.metaKey || event.ctrlKey || event.altKey || event.shiftKey)
-                              return;
-                            event.preventDefault();
-                            event.currentTarget.closest('tr')?.focus({ preventScroll: true });
-                            activate(row);
-                          }}
-                        >
-                          {column.render ? column.render(row) : cellValue(row, column.key)}
-                        </a>
-                      ) : column.render ? (
-                        column.render(row)
-                      ) : (
-                        cellValue(row, column.key)
-                      )}
-                    </td>
-                  ))}
-                </tr>
-              );
-            })
-          )}
-        </tbody>
+              })
+            )}
+          </tbody>
+        ))}
       </table>
     </div>
   );

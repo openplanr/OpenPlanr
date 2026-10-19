@@ -1,12 +1,20 @@
 import { useEffect, useRef, useState } from 'react';
-import { Button, Toast } from '../../design-system/components/index.js';
+import { Button, IconButton, PcIcon, Toast } from '../../design-system/components/index.js';
 import { usePlanningCopy } from '../../lib/routing/planning-presentation.js';
 import { fetchPlanningFileLink } from './planning-api.js';
 import type { PlanningModelNode } from './planning-model.js';
 import type { PlanningWorkspaceModel } from './planning-workspace.js';
 import { planningDetailIdentity } from './use-planning-detail.js';
 
-export function CopyDetailValue({ value, label }: { value: string; label: string }) {
+export function CopyDetailValue({
+  value,
+  label,
+  compact = false,
+}: {
+  value: string;
+  label: string;
+  compact?: boolean;
+}) {
   const copy = usePlanningCopy();
   const [state, setState] = useState<'idle' | 'pending' | 'copied' | 'denied'>('idle');
   const inFlight = useRef(false);
@@ -41,15 +49,25 @@ export function CopyDetailValue({ value, label }: { value: string; label: string
   };
   return (
     <>
-      <Button
-        size="sm"
-        icon="copy"
-        loading={state === 'pending'}
-        ariaLabel={label}
-        onClick={() => void activate()}
-      >
-        {label}
-      </Button>
+      {compact ? (
+        <IconButton
+          size="sm"
+          icon={state === 'pending' ? 'loader-circle' : 'copy'}
+          disabled={state === 'pending'}
+          label={label}
+          onClick={() => void activate()}
+        />
+      ) : (
+        <Button
+          size="sm"
+          icon="copy"
+          loading={state === 'pending'}
+          ariaLabel={label}
+          onClick={() => void activate()}
+        >
+          {label}
+        </Button>
+      )}
       {state === 'copied' || state === 'denied' ? (
         <div className="pc-detail__feedback">
           <Toast
@@ -72,11 +90,13 @@ export function DeclaredFile({
   model,
   node,
   origin,
+  compact = false,
 }: {
   path: string;
   model: PlanningWorkspaceModel;
   node: PlanningModelNode;
   origin: string;
+  compact?: boolean;
 }) {
   const key = JSON.stringify([
     origin,
@@ -134,25 +154,47 @@ export function DeclaredFile({
   };
   const visible = result?.key === key ? result : null;
   return (
-    <div className="pc-detail__file-controls">
-      <code>{path}</code>
+    <div
+      className={`pc-detail__file-controls${compact ? ' pc-detail__file-controls--compact' : ''}`}
+      data-active={pending || visible ? true : undefined}
+    >
+      <code title={compact ? path : undefined}>{path}</code>
       <div className="pc-detail__actions">
-        <CopyDetailValue value={path} label="Copy path" />
-        <Button size="sm" loading={pending} onClick={() => void load()}>
-          Open in editor
-        </Button>
+        <CopyDetailValue value={path} label="Copy path" compact={compact} />
+        {compact ? (
+          <IconButton
+            size="sm"
+            icon={pending ? 'loader-circle' : 'external-link'}
+            label="Open in editor"
+            disabled={pending}
+            onClick={() => void load()}
+          />
+        ) : (
+          <Button size="sm" loading={pending} onClick={() => void load()}>
+            Open in editor
+          </Button>
+        )}
         {visible?.url ? (
-          <a className="op-inline-action" href={visible.url}>
-            Launch editor
+          <a
+            className={compact ? 'pc-detail__file-launch' : 'op-inline-action'}
+            href={visible.url}
+            aria-label={compact ? 'Launch editor' : undefined}
+          >
+            {compact ? <PcIcon name="external-link" size={13} /> : 'Launch editor'}
           </a>
         ) : null}
       </div>
-      <p className="pc-detail__file-hint" role="status">
-        {pending
-          ? 'Checking the declared file…'
-          : (visible?.reason ??
-            'If the editor is unavailable or permission is denied, copy the path and open it manually.')}
-      </p>
+      {!compact || pending || visible?.reason ? (
+        <p
+          className="pc-detail__file-hint"
+          role={visible?.reason && !visible.url ? 'alert' : 'status'}
+        >
+          {pending
+            ? 'Checking the declared file…'
+            : (visible?.reason ??
+              'If the editor is unavailable or permission is denied, copy the path and open it manually.')}
+        </p>
+      ) : null}
     </div>
   );
 }

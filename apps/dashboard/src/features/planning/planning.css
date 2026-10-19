@@ -329,12 +329,12 @@
   background: var(--op-panel);
   border-right: 1px solid var(--op-line);
 }
-.op-focused-graph__sidebar h2 {
-  margin: 4px 0;
-  font: var(--pc-type-mono-sm);
+.op-focused-graph .op-focused-graph__sidebar h2 {
+  margin: 0;
+  font: 600 11px var(--pc-font-mono);
   text-transform: uppercase;
   letter-spacing: 0.12em;
-  color: var(--op-muted);
+  color: var(--op-dim);
 }
 .op-focused-graph__sidebar p {
   margin: 0;

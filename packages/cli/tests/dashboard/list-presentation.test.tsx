@@ -161,12 +161,14 @@ function View({
   view = FIXTURE_VIEW,
   invalidView = false,
   onCopy,
+  singleLetters,
   preferences,
 }: {
   nodes?: readonly PlanningNode[];
   view?: PlanningView | null;
   invalidView?: boolean;
   onCopy?: (text: string) => Promise<void>;
+  singleLetters?: boolean;
   preferences?: {
     load: (key: string) => string | null;
     save: (key: string, value: string) => void;
@@ -179,6 +181,7 @@ function View({
       view={view}
       invalidView={invalidView}
       onCopy={onCopy}
+      singleLetters={singleLetters}
     >
       <ListPage
         currentBinding={current.binding}
@@ -196,6 +199,11 @@ function rowIds(container: HTMLElement): string[] {
   );
 }
 
+async function openListOptions(user: ReturnType<typeof userEvent.setup>) {
+  const summary = screen.getByText('List options');
+  if (!summary.closest('details')?.open) await user.click(summary);
+}
+
 afterEach(() => {
   cleanup();
   clearInspector();
@@ -205,6 +213,70 @@ afterEach(() => {
 });
 
 describe('List presentation tokens against validated projections', () => {
+  it('shows spec group headers by default and preserves an explicit ungrouped view', () => {
+    const nodes = [
+      node('SPEC-901', 'Delivery', {}, 'outstanding', 'spec'),
+      node('SPEC-901/T-901', 'Open task', { specId: 'SPEC-901' }),
+      node('SPEC-901/T-902', 'Completed task', { specId: 'SPEC-901' }, 'done'),
+    ];
+    const { container, rerender } = render(<View nodes={nodes} view={null} />);
+    const group = screen.getByRole('rowgroup', { name: 'SPEC-901 · Delivery' });
+    expect(
+      within(group)
+        .getByRole('button', { name: 'SPEC-901 · Delivery' })
+        .getAttribute('aria-expanded'),
+    ).toBe('true');
+    expect(within(group).getByRole('progressbar').getAttribute('value')).toBe('1');
+    expect(rowIds(container)).toHaveLength(3);
+    rerender(
+      <View
+        nodes={nodes}
+        view={{
+          ...FIXTURE_VIEW,
+          filters: {
+            ...FIXTURE_VIEW.filters,
+            type: [],
+            status: [],
+            priority: [],
+            label: [],
+            query: '',
+          },
+        }}
+      />,
+    );
+    expect(container.querySelector('.pc-list__group-header')).toBeNull();
+  });
+
+  it('renders one no-results state and clears every active filter through its counted action', async () => {
+    const user = userEvent.setup();
+    const { container } = render(
+      <View
+        view={{
+          ...FIXTURE_VIEW,
+          filters: {
+            ...FIXTURE_VIEW.filters,
+            query: 'no matching artifact',
+            createdWithinDays: 7,
+            updatedWithinDays: 7,
+          },
+        }}
+      />,
+    );
+    expect(container.querySelectorAll('.pc-empty[data-variant="tile"]')).toHaveLength(1);
+    expect(container.querySelector('table')).toBeNull();
+    expect(screen.queryByText('No node matches this filter.')).toBeNull();
+    await user.click(screen.getByRole('button', { name: 'Clear 8 filters', exact: true }));
+    expect(rowIds(container)).toHaveLength(FIXTURE_NODES.length);
+    expect(screen.queryByText('Nothing matches “no matching artifact”')).toBeNull();
+    expect(
+      (screen.getByRole('textbox', { name: 'Filter by id or title' }) as HTMLInputElement).value,
+    ).toBe('');
+    const hints = screen.getByRole('region', { name: 'List keyboard shortcuts' });
+    expect(hints.querySelectorAll('kbd')).toHaveLength(11);
+    expect(hints.textContent).toContain('collapse / expand group');
+    expect(hints.textContent).toContain('5 filtered items');
+  });
+
   it('applies URL filter, density, sorting and grouping without changing the bound graph', () => {
     const { container, rerender } = render(<View />);
     expect(rowIds(container)).toEqual([FIXTURE_SECOND, FIXTURE_FIRST]);
@@ -217,18 +289,68 @@ describe('List presentation tokens against validated projections', () => {
     expect(container.querySelector('table')?.getAttribute('data-compact')).toBe('true');
     expect(container.querySelector('h1')?.parentElement?.textContent).toContain('2 of 5');
     rerender(<View view={{ ...FIXTURE_VIEW, groupBy: 'label' }} />);
-    const ready = screen.getByRole('region', { name: 'ready' });
-    const review = screen.getByRole('region', { name: 'review' });
+    const ready = screen.getByRole('rowgroup', { name: 'ready' });
+    const review = screen.getByRole('rowgroup', { name: 'review' });
     expect(rowIds(ready)).toEqual([FIXTURE_SECOND, FIXTURE_FIRST]);
     expect(rowIds(review)).toEqual([FIXTURE_FIRST]);
+    expect(container.querySelectorAll('table')).toHaveLength(1);
+    expect(container.querySelectorAll('thead')).toHaveLength(1);
+    expect(screen.getAllByRole('button', { name: 'Updated', exact: true })).toHaveLength(1);
     expect(container.querySelector('h1')?.parentElement?.textContent).toContain('2 of 5');
     expect(screen.queryByText('Blocked review')).toBeNull();
   });
 
+  it('keeps advanced controls on demand and retains selection across closing and reopening them', async () => {
+    const user = userEvent.setup();
+    const { container } = render(<View view={null} />);
+    const options = screen.getByText('List options').closest('details');
+    expect(options?.open).toBe(false);
+    expect(screen.getByRole('button', { name: 'Copy bulk commands' }).closest('details')).toBe(
+      options,
+    );
+    const filter = screen.getByRole('textbox', { name: 'Filter by id or title' });
+    await user.type(filter, 'Alpha');
+    expect(options?.open).toBe(false);
+    expect(rowIds(container)).toEqual([FIXTURE_SECOND]);
+    await user.clear(filter);
+    expect(rowIds(container)).toHaveLength(FIXTURE_NODES.length);
+    await openListOptions(user);
+    await user.click(screen.getByRole('button', { name: 'Select all 5 filtered' }));
+    const summary = screen.getByText('List options');
+    fireEvent.keyDown(summary, { key: 'Escape' });
+    expect(options?.open).toBe(false);
+    expect(document.activeElement).toBe(summary);
+    await openListOptions(user);
+    expect(screen.getByText('5 selected · 0 eligible · 5 skipped')).toBeTruthy();
+    expect(rowIds(container)).toHaveLength(FIXTURE_NODES.length);
+  });
+
+  it('respects disabled single-letter shortcuts inside advanced command controls', async () => {
+    const user = userEvent.setup();
+    const copy = vi.fn(async (_text: string) => undefined);
+    render(
+      <View
+        nodes={[node('BL-910', 'Finding', {}, 'outstanding', 'backlog')]}
+        view={null}
+        singleLetters={false}
+        onCopy={copy}
+      />,
+    );
+    await openListOptions(user);
+    await user.click(screen.getByRole('button', { name: 'Select all 1 filtered' }));
+    const bulk = screen.getByRole('button', { name: 'Copy bulk commands' });
+    fireEvent.keyDown(bulk, { key: 'c' });
+    expect(copy).not.toHaveBeenCalled();
+    await user.click(bulk);
+    expect(copy).toHaveBeenCalledExactlyOnceWith(
+      'openplanr backlog update BL-910 --status in-progress',
+    );
+  });
+
   it('collapses and expands the focused List label group without affecting its neighbours', () => {
     const { container } = render(<View view={{ ...FIXTURE_VIEW, groupBy: 'label' }} />);
-    const ready = screen.getByRole('region', { name: 'ready' });
-    const review = screen.getByRole('region', { name: 'review' });
+    const ready = screen.getByRole('rowgroup', { name: 'ready' });
+    const review = screen.getByRole('rowgroup', { name: 'review' });
     const readyToggle = within(ready).getByRole('button', { name: 'ready' });
     const reviewToggle = within(review).getByRole('button', { name: 'review' });
     const row = ready.querySelector<HTMLElement>('[data-keyboard-item]');
@@ -337,6 +459,7 @@ describe('List presentation tokens against validated projections', () => {
     await user.clear(screen.getByRole('textbox'));
     await user.type(screen.getByRole('textbox'), 'Alpha');
     await user.click(screen.getByRole('button', { name: 'Compact', exact: true }));
+    await openListOptions(user);
     await user.click(screen.getByRole('button', { name: 'Copy filter link' }));
     expect(copy).toHaveBeenCalledTimes(1);
     const href = copy.mock.calls[0]?.[0] as string | undefined;
@@ -366,6 +489,7 @@ describe('List presentation tokens against validated projections', () => {
           }
         />,
       );
+      await openListOptions(user);
       await user.click(screen.getByRole('button', { name: 'Copy filter link' }));
       const message = await screen.findByText(
         /^Copy blocked\. Select and copy this filter link manually:/u,
@@ -432,6 +556,7 @@ describe('List presentation tokens against validated projections', () => {
         />
       </DashboardProviders>,
     );
+    await openListOptions(user);
     await user.click(screen.getByRole('button', { name: 'Copy filter link' }));
     expect(copy).toHaveBeenCalledTimes(1);
     expect(screen.getByText('Filter link copied.')).toBeTruthy();
@@ -642,12 +767,109 @@ describe('List live refetch retention', () => {
       <View view={{ ...FIXTURE_VIEW, filters: { ...FIXTURE_VIEW.filters, query: 'No match' } }} />,
     );
     expect(screen.getByText('Nothing matches “No match”')).toBeTruthy();
+    await openListOptions(user);
     await user.click(screen.getByRole('button', { name: 'Clear filters' }));
     expect(rowIds(container)).toHaveLength(FIXTURE_NODES.length);
   });
 });
 
 describe('List triage, bounded windows and command-only selection', () => {
+  it('virtualizes against shell scrolling and keeps its header aligned at a nonzero table offset', () => {
+    vi.spyOn(HTMLElement.prototype, 'clientHeight', 'get').mockImplementation(function (
+      this: HTMLElement,
+    ) {
+      return this.classList.contains('pc-shell__scroll') ? 600 : 0;
+    });
+    vi.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockImplementation(function (
+      this: HTMLElement,
+    ) {
+      return this.tagName === 'TABLE' ? 4436 : 0;
+    });
+    vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function (
+      this: HTMLElement,
+    ) {
+      const shell = this.closest<HTMLElement>('.pc-shell__scroll');
+      if (this.classList.contains('pc-shell__scroll')) return new DOMRect(0, 60, 900, 600);
+      if (this.classList.contains('pc-list__window'))
+        return new DOMRect(0, 380 - (shell?.scrollTop ?? 0), 900, 4436);
+      const id = this.dataset.keyboardItem;
+      if (id)
+        return new DOMRect(
+          0,
+          416 + (Number(id.slice(2)) - 1000) * 44 - (shell?.scrollTop ?? 0),
+          900,
+          44,
+        );
+      return new DOMRect();
+    });
+    const nodes = Array.from({ length: 150 }, (_, index) =>
+      node(`T-${1000 + index}`, `Task ${index}`),
+    );
+    const view: PlanningView = {
+      ...FIXTURE_VIEW,
+      filters: {
+        ...FIXTURE_VIEW.filters,
+        type: [],
+        status: [],
+        priority: [],
+        label: [],
+        query: '',
+      },
+      sort: { field: 'id', direction: 'asc' },
+    };
+    const content = (items: readonly PlanningNode[]) => (
+      <div className="pc-shell__scroll">
+        <View nodes={items} view={view} />
+      </div>
+    );
+    const { container, rerender } = render(content(nodes));
+    const shell = container.querySelector<HTMLElement>('.pc-shell__scroll');
+    const window = container.querySelector<HTMLElement>('.pc-list__window');
+    if (!shell || !window) throw new Error('Missing shell List viewport');
+    expect(rowIds(container)[0]).toBe('T-1000');
+    fireEvent.scroll(shell, { target: { scrollTop: 1200 } });
+    expect(rowIds(container)[0]).toBe('T-1015');
+    expect(rowIds(container).length).toBeLessThanOrEqual(24);
+    expect(window.scrollTop).toBe(0);
+    expect(container.querySelector('thead')?.style.transform).toBe('translateY(880px)');
+    const first = container.querySelector<HTMLElement>('[data-keyboard-item="T-1015"]');
+    if (!first) throw new Error('Expected a shell-visible List row');
+    act(() => first.focus());
+    rerender(
+      content(
+        nodes.map((item) => (item.id === 'T-1015' ? { ...item, title: 'Patched task' } : item)),
+      ),
+    );
+    expect(container.querySelector('[data-keyboard-item="T-1015"]')).toBe(first);
+    expect(document.activeElement).toBe(first);
+    expect(shell.scrollTop).toBe(1200);
+    expect(window.scrollTop).toBe(0);
+  });
+
+  it('counts grouped header rows consistently while virtualizing artifact rows', () => {
+    const nodes = [
+      node('SPEC-901', 'Delivery', {}, 'outstanding', 'spec'),
+      ...Array.from({ length: 150 }, (_, index) =>
+        node(`SPEC-901/T-${1000 + index}`, `Task ${index}`, { specId: 'SPEC-901' }),
+      ),
+    ];
+    const { container } = render(<View nodes={nodes} view={null} />);
+    const table = screen.getByRole('table', { name: 'Planning artifacts' });
+    expect(table.getAttribute('aria-rowcount')).toBe('153');
+    expect(table.querySelector('.pc-table__group-header')?.getAttribute('aria-rowindex')).toBe('2');
+    expect(table.querySelector('[data-keyboard-item]')?.getAttribute('aria-rowindex')).toBe('3');
+    expect(rowIds(container).length).toBeLessThanOrEqual(24);
+    const scroller = container.querySelector('.pc-list__window');
+    if (!scroller) throw new Error('Missing grouped List window');
+    fireEvent.scroll(scroller, { target: { scrollTop: 3000 } });
+    const index = Number(
+      table.querySelector('[data-keyboard-item]')?.getAttribute('aria-rowindex'),
+    );
+    expect(index).toBeGreaterThan(3);
+    expect(index).toBeLessThanOrEqual(153);
+    expect(table.getAttribute('aria-rowcount')).toBe('153');
+  });
+
   function coordinate(container: HTMLElement, singleLetters = true) {
     return installKeyboardCoordinator(document, () => ({
       root: container,
@@ -680,6 +902,7 @@ describe('List triage, bounded windows and command-only selection', () => {
         'Filed since yesterday',
       ]) {
         if (name.startsWith('Filed ')) {
+          await openListOptions(user);
           await user.click(screen.getByRole('combobox', { name: /^Date preset:/u }));
           await user.click(screen.getByRole('option', { name, exact: true }));
         } else {
@@ -791,6 +1014,7 @@ describe('List triage, bounded windows and command-only selection', () => {
       node('SPEC-901/T-910', 'Task'),
     ];
     const { container } = render(<View nodes={nodes} view={null} onCopy={copy} />);
+    await openListOptions(user);
     await user.click(screen.getByRole('button', { name: 'Select all 2 filtered' }));
     expect(screen.getByText('2 selected · 1 eligible · 1 skipped')).toBeTruthy();
     await user.click(screen.getByRole('button', { name: 'Copy bulk commands' }));
@@ -814,6 +1038,7 @@ describe('List triage, bounded windows and command-only selection', () => {
       node('BL-911', 'Second', {}, 'outstanding', 'backlog'),
     ];
     const { container, rerender } = render(<View nodes={nodes} view={null} />);
+    await openListOptions(user);
     await user.click(screen.getByRole('button', { name: 'Select all 2 filtered' }));
     const row = container.querySelector('[data-keyboard-item="BL-910"]');
     const link = row?.querySelector('a');
@@ -839,11 +1064,12 @@ describe('List triage, bounded windows and command-only selection', () => {
     await user.click(screen.getByRole('button', { name: 'Show 1 done matches' }));
     expect(rowIds(container)).toEqual(['BL-910']);
     expect(container.querySelector('[data-done="true"]')).toBeTruthy();
+    await openListOptions(user);
     await user.click(screen.getByRole('button', { name: 'Clear filters' }));
     await user.click(screen.getByRole('combobox', { name: /^Group by:/u }));
     await user.click(screen.getByRole('option', { name: 'Group: Status', exact: true }));
-    expect(screen.getByRole('region', { name: 'addressed' })).toBeTruthy();
-    expect(screen.getByRole('region', { name: 'done' })).toBeTruthy();
+    expect(screen.getByRole('rowgroup', { name: 'addressed' })).toBeTruthy();
+    expect(screen.getByRole('rowgroup', { name: 'done' })).toBeTruthy();
   });
 
   it('diagnoses missing/future dates and clears multi-status preset constraints', async () => {
@@ -856,6 +1082,7 @@ describe('List triage, bounded windows and command-only selection', () => {
       node('BL-912', 'Future', { created: '2026-10-19T14:00:00Z' }, 'outstanding', 'backlog'),
     ];
     const { container } = render(<View nodes={nodes} view={null} />);
+    await openListOptions(user);
     await user.click(screen.getByRole('combobox', { name: /^Date preset:/u }));
     await user.click(screen.getByRole('option', { name: 'Filed today', exact: true }));
     expect(rowIds(container)).toEqual(['BL-910']);
@@ -974,9 +1201,10 @@ it('completes filed-findings triage with keyboard selection and copy precedence'
     announce: () => undefined,
   }));
   try {
+    await openListOptions(user);
     await user.click(screen.getByRole('combobox', { name: /^Date preset:/u }));
     await user.click(screen.getByRole('option', { name: 'Filed since yesterday', exact: true }));
-    expect(screen.getByRole('region', { name: 'ship' })).toBeTruthy();
+    expect(screen.getByRole('rowgroup', { name: 'ship' })).toBeTruthy();
     const first = container.querySelector<HTMLElement>('[data-keyboard-item]');
     act(() => first?.focus());
     fireEvent.keyDown(first ?? container, { key: 'j' });

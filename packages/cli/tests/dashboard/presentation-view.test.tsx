@@ -6,10 +6,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ActivityPage } from '../../../../apps/dashboard/src/features/planning/ActivityPage.js';
 import { BoardPage } from '../../../../apps/dashboard/src/features/planning/BoardPage.js';
 import { GraphPage } from '../../../../apps/dashboard/src/features/planning/GraphPage.js';
+import { LIST_COLUMNS } from '../../../../apps/dashboard/src/features/planning/planning-columns.js';
+import { selectListMetadata } from '../../../../apps/dashboard/src/features/planning/planning-list-projection.js';
 import type { PlanningModelNode } from '../../../../apps/dashboard/src/features/planning/planning-model.js';
 import {
   applyPlanningView,
   groupPresentationNodes,
+  planningLabels,
 } from '../../../../apps/dashboard/src/features/planning/presentation-view.js';
 import { clearInspector } from '../../../../apps/dashboard/src/features/shell/inspector-selection.js';
 import type { DashboardProductState } from '../../../../apps/dashboard/src/lib/api/product-state.js';
@@ -137,6 +140,53 @@ afterEach(() => {
 });
 
 describe('shared presentation selectors', () => {
+  it('uses authored tags in label chips, filter options, filtering and grouping', () => {
+    const tagged: PlanningModelNode = {
+      ...nodes[0],
+      id: 'BL-440',
+      type: 'backlog',
+      frontmatter: { tags: ['dashboard', 'performance', 'dashboard'] },
+    };
+    const source = JSON.stringify(tagged);
+    expect(planningLabels(tagged)).toEqual(['dashboard', 'performance']);
+    expect(selectListMetadata({ nodes: [tagged], edges: [] }, now).labels).toEqual([
+      'dashboard',
+      'performance',
+    ]);
+    expect(applyPlanningView([tagged], view('list', { label: ['performance'] }), now)).toEqual([
+      tagged,
+    ]);
+    expect(groupPresentationNodes([tagged], 'label').map((group) => group.key)).toEqual([
+      'dashboard',
+      'performance',
+    ]);
+    const column = LIST_COLUMNS.find((entry) => entry.key === 'labels');
+    if (!column?.render) throw new Error('Labels column must render authored labels.');
+    const { container } = render(column.render(tagged));
+    expect(
+      [...container.querySelectorAll('.pc-list__labels > span')].map((chip) => chip.textContent),
+    ).toEqual(['dashboard', 'performance']);
+    expect(JSON.stringify(tagged)).toBe(source);
+  });
+
+  it('merges tags with legacy labels without duplicating or rendering non-string values', () => {
+    expect(
+      planningLabels({
+        ...nodes[0],
+        frontmatter: {
+          labels: ['dashboard', 'legacy', '', null],
+          tags: ['dashboard', 'performance', 42, false],
+        },
+      }),
+    ).toEqual(['dashboard', 'legacy', 'performance']);
+    expect(
+      planningLabels({
+        ...nodes[0],
+        frontmatter: { label: 'legacy', tags: ['dashboard'] },
+      }),
+    ).toEqual(['legacy', 'dashboard']);
+  });
+
   it('combines query, multiple types/statuses, priorities and labels without mutating the snapshot', () => {
     const input = JSON.stringify(nodes);
     const result = applyPlanningView(

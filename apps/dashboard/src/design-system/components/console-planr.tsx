@@ -39,6 +39,7 @@ export type ArtifactStatusProps = Readonly<{
   surface?: ChipSurface;
   label?: string;
   quiet?: boolean;
+  variant?: 'legend' | 'glyph';
 }>;
 
 const STATUS_GLYPH: Readonly<Record<string, string>> = {
@@ -58,6 +59,7 @@ export function ArtifactStatus({
   surface = 'panel',
   label,
   quiet = false,
+  variant,
 }: ArtifactStatusProps) {
   const known = Object.hasOwn(ARTIFACT_LABEL, status);
   const text = label ?? (known ? ARTIFACT_LABEL[status] : status);
@@ -68,14 +70,31 @@ export function ArtifactStatus({
         data-status={status}
         data-size={size}
         data-surface={surface}
-        style={known ? chipStyle(`status-${status}`, surface) : undefined}
+        data-variant={variant}
+        style={
+          known
+            ? variant
+              ? { color: `var(--pc-status-${status}-fg)` }
+              : chipStyle(`status-${status}`, surface)
+            : undefined
+        }
       >
         <span
           className="pc-artifact__dot"
-          data-glyph={known ? STATUS_GLYPH[status] : 'unknown'}
+          data-glyph={
+            variant === 'glyph' && status === 'quiet'
+              ? 'half-ring'
+              : known
+                ? STATUS_GLYPH[status]
+                : 'unknown'
+          }
           aria-hidden="true"
         />
-        <span className={showLabel ? 'pc-artifact__label' : 'pc-visually-hidden'}>{text}</span>
+        <span
+          className={showLabel && variant !== 'glyph' ? 'pc-artifact__label' : 'pc-visually-hidden'}
+        >
+          {text}
+        </span>
         {count !== undefined ? <span className="pc-artifact__count">{count}</span> : null}
       </span>
       {quiet && status !== 'quiet' ? (

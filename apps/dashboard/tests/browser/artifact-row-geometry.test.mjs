@@ -42,7 +42,7 @@ function bundleFixture() {
       contents: `
         import { createRoot } from 'react-dom/client';
         import { flushSync } from 'react-dom';
-        import { artifactRowStyle, DataTable } from './src/design-system/components/index.ts';
+        import { artifactRowStyle, DataTable, Input } from './src/design-system/components/index.ts';
         import { OverviewPage } from './src/features/planning/OverviewPage.tsx';
         import { BoardColumn } from './src/features/planning/BoardColumn.tsx';
         import { LIST_COLUMNS } from './src/features/planning/planning-columns.tsx';
@@ -65,12 +65,28 @@ function bundleFixture() {
         const hits = paletteNodes.map(node => ({id:'planning:' + node.id,title:node.title,href:'#/detail/' + node.id,source:'planning',kind:node.type}));
         flushSync(() => createRoot(document.getElementById('root')).render(<>
           <OverviewPage currentBinding={{}} current={{}} />
+          <div id="responsive-input" style={{display:'flex',width:280}}>
+            <Input ariaLabel="Responsive filter" width={340} value="" onChange={()=>undefined} suffix="/" />
+          </div>
           <section className="pc-palette__search" id="palette" style={{width:'min(100%, 650px)'}}>
             <div className="pc-palette__input-row"><input className="pc-palette__input" type="search" aria-label="Geometry query" /></div>
             <SearchResults hits={hits} activeHref={null} listId="row-results" onSelect={() => undefined} displayIdForHit={hit => searchHitDisplayId(hit,{planningNodes:paletteNodes})} />
           </section>
           <section className="op-workspace op-planning pc-list" id="list" style={artifactRowStyle(nodes.map(node=>node.id))}>
             <DataTable columns={LIST_COLUMNS} rows={nodes} caption="Geometry artifacts" />
+          </section>
+          <section className="op-workspace op-planning pc-list" id="grouped-list" style={artifactRowStyle(nodes.map(node=>node.id))}>
+            <div className="pc-list__window">
+              <DataTable columns={LIST_COLUMNS} rows={nodes} groups={[{
+                key:'specs',label:'Specifications',rows:nodes,
+                header:<div className="pc-list__group-header"><button type="button">Specifications</button><span className="pc-list__group-meta"><span>11 items</span><progress max="11" value="3"/><span>3/11 tasks</span></span></div>
+              }]} caption="Grouped geometry artifacts" />
+            </div>
+          </section>
+          <section className="op-workspace op-planning pc-list" id="short-list" style={artifactRowStyle([nodes[0].id])}>
+            <div className="pc-list__window">
+              <DataTable columns={LIST_COLUMNS} rows={[nodes[0]]} caption="One geometry artifact" />
+            </div>
           </section>
           <div id="board" style={{width:300}}>
             <BoardColumn group={{key:'in-progress',nodes}} laneKey="none" collapsed={false} expandDone={()=>undefined} target={null} />
@@ -133,6 +149,29 @@ test('keeps rows, complete tags, titles and copy hit targets inside their geomet
         await document.fonts.load('600 12px "Source Code Pro"');
         await document.fonts.ready;
       });
+      const inputBounds = await page.locator('#responsive-input').evaluate((element) => {
+        const parent = element.getBoundingClientRect();
+        const field = element.querySelector('.pc-input').getBoundingClientRect();
+        const suffix = element.querySelector('.pc-input__suffix').getBoundingClientRect();
+        return { edge: parent.right, fieldEdge: field.right, hintEdge: suffix.right };
+      });
+      assert(inputBounds.fieldEdge <= inputBounds.edge);
+      assert(inputBounds.hintEdge <= inputBounds.edge);
+      const group = await page.locator('#grouped-list .pc-list__window').evaluate((element) => {
+        const band = element.querySelector('.pc-list__group-header').getBoundingClientRect();
+        const table = element.querySelector('table').getBoundingClientRect();
+        return {
+          bandWidth: band.width,
+          tableWidth: table.width,
+          viewportWidth: element.clientWidth,
+        };
+      });
+      assert(Math.abs(group.bandWidth - Math.min(group.tableWidth, group.viewportWidth)) <= 4);
+      const short = await page.locator('#short-list .pc-list__window').evaluate((element) => ({
+        windowHeight: element.getBoundingClientRect().height,
+        tableHeight: element.querySelector('table').getBoundingClientRect().height,
+      }));
+      assert(short.windowHeight - short.tableHeight <= 4);
       for (const selector of ['.pc-home__card ul', '#palette .pc-palette__list']) {
         const geometry = await page.locator(selector).evaluateAll((lists) =>
           lists.map((list) =>
@@ -149,9 +188,13 @@ test('keeps rows, complete tags, titles and copy hit targets inside their geomet
                 top: r.top,
                 bottom: r.bottom,
                 height: r.height,
+                stacked: row.dataset.layout === 'stacked',
                 linkTop: l.top,
                 linkBottom: l.bottom,
                 tagRight: a.right,
+                tagBottom: a.bottom,
+                titleTop: b.top,
+                rowWidth: r.width,
                 titleLeft: b.left,
                 titleWidth: b.width,
                 titleHeight: b.height,
@@ -165,9 +208,15 @@ test('keeps rows, complete tags, titles and copy hit targets inside their geomet
           const titleXs = new Set(rows.map((row) => Math.round(row.titleLeft * 10)));
           assert(titleXs.size <= 1, `${selector}: titles have different columns`);
           rows.forEach((row, index) => {
-            assert.equal(row.height, 44);
+            if (row.stacked) {
+              assert(row.tagBottom <= row.titleTop);
+              assert(row.titleWidth >= row.rowWidth - (width < 600 ? 24 : 40) - 1);
+            } else {
+              assert.equal(row.height, 44);
+              assert(row.tagRight <= row.titleLeft);
+            }
             assert(row.linkTop >= row.top && row.linkBottom <= row.bottom + 0.5);
-            assert(row.tagRight <= row.titleLeft && row.tagFits);
+            assert(row.tagFits);
             assert(row.titleWidth > 0 && row.titleHeight > 0 && row.titleHint.length > 0);
             if (index) assert(rows[index - 1].bottom <= row.top);
           });
@@ -184,7 +233,9 @@ test('keeps rows, complete tags, titles and copy hit targets inside their geomet
       );
       assert.equal(await page.locator('.pc-home__specs > li').count(), 5);
       const homeTitleOffsets = await page
-        .locator('.pc-home__card .pc-artifact-row__title')
+        .locator(
+          '.pc-home__card .pc-artifact-row:not([data-layout="stacked"]) .pc-artifact-row__title',
+        )
         .evaluateAll((elements) =>
           elements.map((element) =>
             Math.round(
@@ -204,9 +255,25 @@ test('keeps rows, complete tags, titles and copy hit targets inside their geomet
           (child) => getComputedStyle(child).outlineStyle,
         ),
       }));
-      assert.equal(rings.row, 'solid');
-      assert.equal(rings.link, 'none');
+      assert.equal(rings.row, 'none');
+      assert.equal(rings.link, 'solid');
       assert(rings.children.every((outline) => outline === 'none'));
+      for (const selector of ['.pc-artifact-row__meta', '.pc-command-hint__copy']) {
+        const control = page.locator(`.pc-home__row ${selector}`).first();
+        await control.focus();
+        const outline = await control.evaluate((element) => ({
+          width: getComputedStyle(element).outlineWidth,
+          offset: getComputedStyle(element).outlineOffset,
+          style: getComputedStyle(element).outlineStyle,
+        }));
+        assert.deepEqual(outline, { width: '2px', offset: '2px', style: 'solid' });
+      }
+      const eyebrow = await page.locator('.pc-home__header .op-eyebrow').evaluate((element) => ({
+        size: getComputedStyle(element).fontSize,
+        weight: getComputedStyle(element).fontWeight,
+        spacing: getComputedStyle(element).letterSpacing,
+      }));
+      assert.deepEqual(eyebrow, { size: '12px', weight: '600', spacing: '1.68px' });
       if (width === 390) {
         const mobile = await page.locator('.pc-home__card').evaluateAll((cards) =>
           cards.map((card) => ({
@@ -231,7 +298,7 @@ test('keeps rows, complete tags, titles and copy hit targets inside their geomet
           assert.equal(card.heading.overflow, 'visible');
           assert.equal(card.heading.whiteSpace, 'normal');
           assert(card.heading.height <= 2 * card.heading.lineHeight + 1);
-          assert(card.meta.every((meta) => meta.width >= 24 && meta.value === 'none'));
+          assert(card.meta.every((meta) => meta.width >= 24 && meta.value !== 'none'));
         }
       }
       const homeCopy = page.locator('.pc-home__specs .pc-command-hint[data-variant="row"]').first();
@@ -254,13 +321,23 @@ test('keeps rows, complete tags, titles and copy hit targets inside their geomet
             align: getComputedStyle(element).alignItems,
             gap: getComputedStyle(element).columnGap,
             specsHeight: specs.getBoundingClientRect().height,
+            cardGaps: [...element.children].flatMap((column) => {
+              const cards = [...column.querySelectorAll(':scope > .pc-home__card')];
+              return cards
+                .slice(1)
+                .map(
+                  (card, index) =>
+                    card.getBoundingClientRect().top - cards[index].getBoundingClientRect().bottom,
+                );
+            }),
           };
         });
-        assert.equal(home.columns[0], home.columns[1]);
-        assert(home.columns[1] >= 480);
+        assert(Math.abs(home.columns[0] / home.columns[1] - 1.65) < 0.01);
+        assert(home.columns[1] >= 280);
         assert.equal(home.align, 'start');
         assert.equal(home.gap, '24px');
         assert(home.specsHeight <= 280);
+        assert(home.cardGaps.every((gap) => Math.abs(gap - 20) < 0.5));
       }
       const titles = page.locator('#palette [data-search-result]');
       for (let index = 0; index < (await titles.count()); index++) {

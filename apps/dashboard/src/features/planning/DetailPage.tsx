@@ -1,4 +1,4 @@
-import { Button, EmptyState } from '../../design-system/components/index.js';
+import { Button, EmptyState, PcIcon } from '../../design-system/components/index.js';
 import type { DashboardProductState } from '../../lib/api/product-state.js';
 import type { DashboardQueryIdentity } from '../../lib/binding/query-identity.js';
 import { PlanningArtifactDetail } from './PlanningArtifactDetail.js';
@@ -25,6 +25,18 @@ export type DetailPageProps = Readonly<{
 function DetailSelection({ node }: { node: PlanningModelNode }) {
   useEffect(() => inspectPlanningNode(node, false), [node]);
   return null;
+}
+
+function detailSourceHref(): string {
+  if (typeof window === 'undefined') return '#/list';
+  const state: unknown = window.history.state;
+  return state &&
+    typeof state === 'object' &&
+    'planningDetailOrigin' in state &&
+    typeof state.planningDetailOrigin === 'string' &&
+    state.planningDetailOrigin.startsWith('#/')
+    ? state.planningDetailOrigin
+    : '#/list';
 }
 
 export function DetailPage({ currentBinding, current }: DetailPageProps) {
@@ -57,12 +69,10 @@ export function DetailPage({ currentBinding, current }: DetailPageProps) {
       <DetailSelection node={node} />
       <PlanningNotice presentation={model.presentation} />
       <nav className="pc-detail__navigation" aria-label="Detail navigation">
-        <a className="op-inline-action" href="#/list">
+        <a className="pc-button" data-variant="ghost" data-size="sm" href={detailSourceHref()}>
+          <PcIcon name="chevron-left" size={15} />
           List
         </a>
-        <Button variant="ghost" size="sm" onClick={() => window.history.back()}>
-          Back
-        </Button>
       </nav>
       <PlanningArtifactDetail
         model={model}
@@ -98,7 +108,18 @@ export function PlanningDetailInspector({
           }
           onClick={() => {
             inspectPlanningNode(node, false);
-            if (href) onPromote(href);
+            if (href) {
+              const sourceHref = window.location.hash;
+              onPromote(href);
+              const state: unknown = window.history.state;
+              window.history.replaceState(
+                {
+                  ...(state && typeof state === 'object' ? state : {}),
+                  planningDetailOrigin: sourceHref,
+                },
+                '',
+              );
+            }
           }}
         >
           Open full page

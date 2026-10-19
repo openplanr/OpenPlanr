@@ -112,6 +112,12 @@ export {
 export type { PlanningView } from '../../lib/routing/planning-view-codec.js';
 export { useInspectorStore } from '../shell/inspector-selection.js';
 
+function listScrollElements(root: RefObject<HTMLDivElement | null>) {
+  const list = root.current?.querySelector<HTMLElement>('.pc-list__window');
+  const scroller = root.current?.closest<HTMLElement>('.pc-shell__scroll') ?? list;
+  return list && scroller ? { list, scroller } : null;
+}
+
 export function useListScrollAnchor(
   root: RefObject<HTMLDivElement | null>,
   presentationKey: string,
@@ -125,10 +131,10 @@ export function useListScrollAnchor(
     scrollTop: number;
   } | null>(null);
   useLayoutEffect(() => {
-    const scroller = root.current?.querySelector<HTMLElement>('.pc-list__window');
-    if (!scroller) return;
-    if (!revision) return;
-    const rows = Array.from(scroller.querySelectorAll<HTMLElement>('[data-keyboard-item]'));
+    const elements = listScrollElements(root);
+    if (!elements || !revision) return;
+    const { list, scroller } = elements;
+    const rows = Array.from(list.querySelectorAll<HTMLElement>('[data-keyboard-item]'));
     let frame: number | null = null;
     const record = () => {
       frame = null;
@@ -214,20 +220,21 @@ export function useListRowViewport({
   selectedId?: string;
   scope: string;
 }) {
-  const [viewport, setViewport] = useState({ scope, top: 0, height: 560, mobile: false });
+  const [viewport, setViewport] = useState({ scope, top: 0, height: 560, origin: 0 });
+  const previousScope = useRef(scope);
   const [target, setTarget] = useState<number | null>(null);
   const rowHeight = 44;
   const geometry = useMemo(() => {
-    let top = 0;
+    let top = 36;
     return groups.map((group) => {
       const header = grouped ? 44 : 0;
       const collapsed = collapsedGroups.includes(group.key);
-      const value = { key: group.key, top, body: top + header + 44, nodes: group.nodes, collapsed };
-      top += header + (collapsed ? 0 : 44 + group.nodes.length * rowHeight);
+      const value = { key: group.key, top, body: top + header, nodes: group.nodes, collapsed };
+      top += header + (collapsed ? 0 : group.nodes.length * rowHeight);
       return value;
     });
   }, [groups, grouped, collapsedGroups]);
-  const savedTop = viewport.scope === scope ? viewport.top : 0;
+  const savedTop = viewport.scope === scope ? viewport.top : -viewport.origin;
   let top = savedTop;
   if (target !== null && target >= pageStart) {
     for (const group of geometry) {
@@ -236,23 +243,47 @@ export function useListRowViewport({
       );
       if (index < 0) continue;
       const offset = group.body + index * rowHeight;
-      if (offset < top + 44) top = Math.max(0, offset - 44);
+      if (offset < top + 36) top = Math.max(0, offset - 36);
       else if (offset + rowHeight > top + viewport.height)
         top = offset + rowHeight - viewport.height;
       break;
     }
   }
   useLayoutEffect(() => {
-    const scroller = root.current?.querySelector<HTMLElement>('.pc-list__window');
-    if (!scroller) return;
-    scroller.scrollTop = top;
+    const elements = listScrollElements(root);
+    if (!elements) return;
+    const { list, scroller } = elements;
+    const table = list.querySelector('table');
+    const header = table?.querySelector('thead');
+    if (previousScope.current !== scope) scroller.scrollTop = 0;
+    previousScope.current = scope;
     const read = () => {
-      setViewport({
+      const origin =
+        scroller === list
+          ? 0
+          : list.getBoundingClientRect().top -
+            scroller.getBoundingClientRect().top +
+            scroller.scrollTop;
+      const next = {
         scope,
-        top: scroller.scrollTop,
+        top: scroller.scrollTop - origin,
         height: scroller.clientHeight || 560,
-        mobile: typeof matchMedia === 'function' && matchMedia('(max-width: 899px)').matches,
-      });
+        origin,
+      };
+      const headerOffset =
+        scroller === list ? 0 : Math.max(0, Math.min(next.top, (table?.offsetHeight ?? 36) - 36));
+      if (header) {
+        const transform = `translateY(${headerOffset}px)`;
+        if (header.style.transform !== transform) header.style.transform = transform;
+      }
+      setViewport((current) =>
+        current.scope === next.scope &&
+        current.top === next.top &&
+        current.height === next.height &&
+        current.origin === next.origin
+          ? current
+          : next,
+      );
     };
     read();
     const scroll = () => {
@@ -266,7 +297,20 @@ export function useListRowViewport({
       scroller.removeEventListener('scroll', scroll);
       observer?.disconnect();
     };
-  }, [root, scope, top]);
+  }, [root, scope]);
+  useLayoutEffect(() => {
+    if (target === null) return;
+    const elements = listScrollElements(root);
+    if (!elements) return;
+    const { list, scroller } = elements;
+    const origin =
+      scroller === list
+        ? 0
+        : list.getBoundingClientRect().top -
+          scroller.getBoundingClientRect().top +
+          scroller.scrollTop;
+    scroller.scrollTop = Math.max(0, origin + top);
+  }, [root, target, top]);
   const windows = new Map(
     geometry.map((group) => [
       group.key,

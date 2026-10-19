@@ -23,9 +23,12 @@ const PRIORITY_RANK: Readonly<Record<string, number>> = {
 };
 
 export function planningLabels(node: PlanningModelNode): readonly string[] {
-  const values = Array.isArray(node.frontmatter.labels)
-    ? node.frontmatter.labels
-    : [node.frontmatter.label];
+  const values = [
+    ...(Array.isArray(node.frontmatter.labels)
+      ? node.frontmatter.labels
+      : [node.frontmatter.label]),
+    ...(Array.isArray(node.frontmatter.tags) ? node.frontmatter.tags : []),
+  ];
   return [
     ...new Set(
       values.filter((value): value is string => typeof value === 'string' && value.length > 0),
