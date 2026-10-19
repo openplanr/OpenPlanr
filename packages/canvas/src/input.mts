@@ -1,5 +1,9 @@
 import type { CanvasController, CanvasElements, Point } from './types.mjs';
 
+const WHEEL_ZOOM_RATE = 0.01;
+const WHEEL_ZOOM_MIN_FACTOR = 0.8;
+const WHEEL_ZOOM_MAX_FACTOR = 1.25;
+
 function editable(target: EventTarget | null): boolean {
   if (!target || !('nodeType' in target)) return false;
   const element = target.nodeType === 1 ? (target as Element) : (target as Node).parentElement;
@@ -92,7 +96,10 @@ export function bindInput(
       event.preventDefault();
       if (event.ctrlKey || event.metaKey) {
         controller.zoomAt(
-          Math.exp(-delta.y * 0.002),
+          Math.min(
+            WHEEL_ZOOM_MAX_FACTOR,
+            Math.max(WHEEL_ZOOM_MIN_FACTOR, Math.exp(-delta.y * WHEEL_ZOOM_RATE)),
+          ),
           local({ x: event.clientX, y: event.clientY }),
         );
       } else {

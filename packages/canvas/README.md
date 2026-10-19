@@ -75,7 +75,9 @@ extent so their stroke remains visible. Unknown endpoints appear in
 `getDiagnostics()` and the `diagnostics` event; `strict: true` throws instead.
 
 `setPointerMode('pan' | 'none')` controls empty-stage drag. Wheel pans; Ctrl/Cmd
-plus wheel and pinch zoom at the pointer. Space on the focused stage and the
+plus wheel and trackpad pinch zoom at the pointer by `exp(-deltaY * 0.01)`,
+clamped to 0.8 to 1.25 per event after normalizing deltas to pixels. Safari
+gesture events use their own scale ratio. Space on the focused stage and the
 middle button pan in either mode. Frame previews are shielded until
 `setActiveFrame(id)` and while moving. The host Done button, outside click,
 `setActiveFrame(null)` or `deactivateFrame()` leave frame interaction.

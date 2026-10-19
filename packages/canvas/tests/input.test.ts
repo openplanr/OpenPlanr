@@ -143,7 +143,33 @@ describe('wheel input', () => {
         cancelable: true,
       }),
     );
-    expect(controller.zoomAt).toHaveBeenCalledWith(Math.exp(-48 * 0.002), { x: 100, y: 200 });
+    expect(controller.zoomAt).toHaveBeenCalledWith(0.8, { x: 100, y: 200 });
+    expect(controller.panBy).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    [0, 4, Math.exp(-0.04)],
+    [0, 100, 0.8],
+    [0, -100, 1.25],
+    [1, 1, Math.exp(-0.16)],
+    [1, 3, 0.8],
+    [1, -3, 1.25],
+    [2, 0.01, Math.exp(-0.06)],
+    [2, 1, 0.8],
+    [2, -1, 1.25],
+  ])('applies the zoom curve for delta mode %s and deltaY %s', (deltaMode, deltaY, factor) => {
+    const { stage, controller } = surface();
+    stage.dispatchEvent(
+      new WheelEvent('wheel', {
+        deltaY,
+        deltaMode,
+        ctrlKey: true,
+        clientX: 120,
+        clientY: 230,
+        cancelable: true,
+      }),
+    );
+    expect(controller.zoomAt).toHaveBeenCalledWith(factor, { x: 100, y: 200 });
     expect(controller.panBy).not.toHaveBeenCalled();
   });
 });
