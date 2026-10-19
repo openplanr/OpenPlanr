@@ -23,6 +23,17 @@
       "executable": false
     },
     {
+      "path": "references/hosted-canvas.md",
+      "kind": "reference",
+      "hosts": [
+        "claude-code",
+        "codex",
+        "chatgpt",
+        "cursor"
+      ],
+      "executable": false
+    },
+    {
       "path": "references/craft.md",
       "kind": "reference",
       "hosts": [

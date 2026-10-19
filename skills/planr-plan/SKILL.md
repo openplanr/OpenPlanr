@@ -35,6 +35,9 @@ For a studio-backed design, read its `.design/studio-state.json`: the recorded
 specification describe that same direction before decomposing UI work. If they
 disagree, synchronize the design handoff using the settled choice or report the
 specific unsynced inputs; do not silently plan the original preview direction.
+A hosted design canvas handoff has no `design-document.json` or studio state:
+its `design-spec.md` names the canvas URL and the local board sources, which are
+the design inputs; read the boards rather than the hosted canvas.
 Use stable screen IDs, component recipes, responsive frames, and interaction
 flows as UI-task context. Read the current render's verification result and
 unresolved feedback; carry relevant gaps into explicit task checks. Preserve
