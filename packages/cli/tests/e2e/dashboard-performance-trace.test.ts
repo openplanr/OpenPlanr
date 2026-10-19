@@ -179,6 +179,67 @@ describe('offline dashboard trace contract smoke', () => {
       summaries: { filterP95Ms: 100, graphFrameWorkP95Ms: 12 },
     });
   });
+  it('names a slow route even when its tail is hidden by the combined p95', () => {
+    const warmRouteSamples = [
+      ...Array.from({ length: 40 }, (_, index) => ({
+        route: index % 2 === 0 ? '#/board' : '#/list',
+        durationMs: 30,
+      })),
+      ...Array.from({ length: 20 }, (_, index) => ({
+        route: '#/graph',
+        durationMs: index < 18 ? 40 : 110,
+      })),
+    ];
+    const metrics = {
+      ...smokeMeasurements('representative'),
+      warmRouteSamples,
+      warmRoutesMs: warmRouteSamples.map((sample) => sample.durationMs),
+    };
+    expect(evaluateDashboardTrace('representative', metrics)).toMatchObject({
+      summaries: {
+        warmRouteP95Ms: 40,
+        warmRouteP95ByRouteMs: { '#/board': 30, '#/list': 30, '#/graph': 110 },
+      },
+      failures: ['#/graph warmRouteP95Ms exceeds budget.'],
+    });
+    expect(evaluateDashboardTrace('scaling', metrics)).toMatchObject({
+      summaries: { warmRouteP95ByRouteMs: { '#/graph': 110 } },
+      failures: ['Graph cardinality changed.'],
+    });
+    expect(
+      evaluateDashboardTrace('representative', {
+        ...metrics,
+        warmRouteSamples: warmRouteSamples.slice(1),
+      }).failures,
+    ).toContain('Warm route samples are inconsistent.');
+    for (const sample of [
+      { route: ' ', durationMs: 30 },
+      { route: '#/graph', durationMs: Number.NaN },
+    ])
+      expect(() =>
+        evaluateDashboardTrace('representative', {
+          ...metrics,
+          warmRouteSamples: [sample],
+        }),
+      ).toThrow(TypeError);
+  });
+  it('enforces List warm-load headroom on the representative tier', () => {
+    for (const [durationMs, passed] of [
+      [59.9, true],
+      [60, false],
+      [92.1, false],
+    ] as const) {
+      const samples = [{ route: '#/list', durationMs }];
+      const result = evaluateDashboardTrace('representative', {
+        ...smokeMeasurements('representative'),
+        warmRouteSamples: samples,
+        warmRoutesMs: [durationMs],
+      });
+      expect(result.passed).toBe(passed);
+      expect(result.failures).toEqual(passed ? [] : ['#/list warmRouteP95Ms exceeds budget.']);
+    }
+  });
+
   it('reports each latency, stability, integrity and interaction violation', () => {
     const base = smokeMeasurements('representative');
     const result = evaluateDashboardTrace('representative', {
@@ -246,7 +307,7 @@ describe('offline dashboard trace contract smoke', () => {
       pending: [{ scenario: 'palette-preview', reason: expect.any(String) }],
     });
   });
-  it('keeps unsupported graph and palette scenarios pending without hiding measured failures', () => {
+  it('fails missing graph interactions while retaining unsupported palette preview as pending', () => {
     const base = smokeMeasurements('representative');
     const metrics = {
       ...base,
@@ -254,21 +315,21 @@ describe('offline dashboard trace contract smoke', () => {
       graph: {
         ...base.graph,
         interactionObserved: false,
-        pendingReason: 'Graph zoom is not implemented.',
       },
     };
     expect(evaluateDashboardTrace('representative', metrics)).toMatchObject({
-      status: 'pending',
+      status: 'failed',
       passed: false,
-      failures: [],
-      pending: [
-        { scenario: 'palette-preview' },
-        { scenario: 'graph-interaction', reason: 'Graph zoom is not implemented.' },
-      ],
+      failures: ['graph interaction trace is incomplete.'],
+      pending: [{ scenario: 'palette-preview' }],
     });
     expect(
       evaluateDashboardTrace('representative', { ...metrics, coldShellMs: 501 }),
-    ).toMatchObject({ status: 'failed', passed: false, failures: ['Cold shell exceeds budget.'] });
+    ).toMatchObject({
+      status: 'failed',
+      passed: false,
+      failures: ['graph interaction trace is incomplete.', 'Cold shell exceeds budget.'],
+    });
   });
   it('measures renderer work with overlapping task intervals counted once', () => {
     const result = rendererFrameWork([

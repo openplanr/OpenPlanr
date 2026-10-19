@@ -8,6 +8,7 @@ export const TRACE_BUDGETS = Object.freeze({
   coldShellMs: 500,
   usefulSnapshotMs: 1_000,
   latencyP95Ms: 100,
+  listWarmRouteP95Ms: 60,
   frameWorkP95Ms: 16.7,
   longTaskMs: 50,
   cls: 0,
@@ -28,7 +29,8 @@ export function classifyDashboardLayoutShift(
   if (
     !phase ||
     phase.phase !== shift.phase ||
-    !/^(filter-input|palette)(?:\s|$)/u.test(phase.phase)
+    (!/^(filter-input|palette)(?:\s|$)/u.test(phase.phase) &&
+      phase.phase !== 'graph-lens whole project')
   )
     return { inputDriven: false, reason: 'counted' };
   const inputDriven = evidence.inputActions.some(
@@ -156,7 +158,8 @@ export type InteractionTrace = Readonly<{
   longTasksMs: readonly number[];
   cls: number;
   interactionObserved: boolean;
-  pendingReason?: string;
+  panObserved?: boolean;
+  zoomObserved?: boolean;
 }>;
 export type SelectionSample = Readonly<{
   id: string | null;
@@ -168,6 +171,7 @@ export type DashboardTraceMeasurements = Readonly<{
   coldShellMs: number;
   usefulSnapshotMs: number;
   warmRoutesMs: readonly number[];
+  warmRouteSamples?: readonly Readonly<{ route: string; durationMs: number }>[];
   panelsMs: readonly number[];
   filterMs: readonly number[];
   paletteMs: readonly number[];
@@ -199,6 +203,21 @@ export function evaluateDashboardTrace(
   };
   const expectedNodes = tier === 'representative' ? 708 : 5_000;
   const expectedEdges = tier === 'representative' ? 477 : 8_499;
+  const routeSamples = new Map<string, number[]>();
+  for (const sample of metrics.warmRouteSamples ?? []) {
+    if (!sample.route.trim()) throw new TypeError('Warm route identity must be present.');
+    const samples = routeSamples.get(sample.route) ?? [];
+    samples.push(sample.durationMs);
+    routeSamples.set(sample.route, samples);
+  }
+  const warmRouteP95ByRouteMs = Object.fromEntries(
+    [...routeSamples].map(([route, samples]) => [route, percentile95(samples)]),
+  );
+  if (metrics.warmRouteSamples)
+    require(metrics.warmRouteSamples.length === metrics.warmRoutesMs.length &&
+      metrics.warmRouteSamples.every(
+        (sample, index) => sample.durationMs === metrics.warmRoutesMs[index],
+      ), 'Warm route samples are inconsistent.');
   const summaries = {
     warmRouteP95Ms: percentile95(metrics.warmRoutesMs),
     panelP95Ms: percentile95(metrics.panelsMs),
@@ -241,11 +260,8 @@ export function evaluateDashboardTrace(
     ['graph', metrics.graph],
     ['list', metrics.list],
   ] as const) {
-    if (trace.pendingReason)
-      pending.push({ scenario: `${name}-interaction`, reason: trace.pendingReason });
-    else
-      require(trace.durationMs >= TRACE_PLAN.durationMs &&
-        trace.interactionObserved, `${name} interaction trace is incomplete.`);
+    require(trace.durationMs >= TRACE_PLAN.durationMs &&
+      trace.interactionObserved, `${name} interaction trace is incomplete.`);
     percentile95([trace.cls, trace.durationMs, ...trace.longTasksMs]);
   }
   percentile95([metrics.coldShellMs, metrics.usefulSnapshotMs, cls]);
@@ -257,24 +273,24 @@ export function evaluateDashboardTrace(
       ([name]) => !name.includes('Frame') && name !== 'patchP95Ms',
     ))
       if (value !== null) require(value <= TRACE_BUDGETS.latencyP95Ms, `${name} exceeds budget.`);
-    require((metrics.graph.pendingReason !== undefined ||
-      summaries.graphFrameWorkP95Ms <= TRACE_BUDGETS.frameWorkP95Ms) &&
+    for (const [route, value] of Object.entries(warmRouteP95ByRouteMs))
+      require(route === '#/list'
+        ? value < TRACE_BUDGETS.listWarmRouteP95Ms
+        : value <= TRACE_BUDGETS.latencyP95Ms, `${route} warmRouteP95Ms exceeds budget.`);
+    require(summaries.graphFrameWorkP95Ms <= TRACE_BUDGETS.frameWorkP95Ms &&
       summaries.listFrameWorkP95Ms <= TRACE_BUDGETS.frameWorkP95Ms, 'Frame work exceeds budget.');
-    require([
-      ...(metrics.graph.pendingReason ? [] : metrics.graph.longTasksMs),
-      ...metrics.list.longTasksMs,
-    ].every(
+    require([...metrics.graph.longTasksMs, ...metrics.list.longTasksMs].every(
       (value) => value <= TRACE_BUDGETS.longTaskMs,
     ), 'Steady interaction contains a long task.');
     require(cls === 0 &&
-      (metrics.graph.pendingReason !== undefined || metrics.graph.cls === 0) &&
+      metrics.graph.cls === 0 &&
       metrics.list.cls === 0, 'Unexpected layout shift occurred.');
   }
   return {
     cls,
     ...(layoutShifts ? { layoutShifts } : {}),
     policy: tier === 'representative' ? 'budget' : 'scaling-baseline',
-    summaries,
+    summaries: { ...summaries, warmRouteP95ByRouteMs },
     failures,
     pending,
     status: failures.length > 0 ? 'failed' : pending.length > 0 ? 'pending' : 'passed',

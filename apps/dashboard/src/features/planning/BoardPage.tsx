@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import {
   Absent,
-  ARTIFACT_STATUS_ORDER,
   ArtifactStatus,
   CommandHint,
   EmptyState,
@@ -13,16 +12,10 @@ import {
 import type { DashboardProductState } from '../../lib/api/product-state.js';
 import type { DashboardQueryIdentity } from '../../lib/binding/query-identity.js';
 import { usePlanningView } from '../../lib/routing/planning-presentation.js';
+import { retainGraphRevision, selectBoardProjection } from './planning-board-projection.js';
 import { inspectPlanningNode } from './planning-inspector.js';
-import {
-  groupPlanningNodes,
-  type PlanningGroup,
-  type PlanningModelNode,
-  planningDisplayId,
-  planningGroupingDimensions,
-} from './planning-model.js';
+import { type PlanningGroup, type PlanningModelNode, planningDisplayId } from './planning-model.js';
 import { PlanningNotice, PlanningRefusal, resolvePlanningWorkspace } from './planning-workspace.js';
-import { applyPlanningView, groupPresentationNodes } from './presentation-view.js';
 import './planning.css';
 import './board.css';
 
@@ -38,15 +31,6 @@ function frontmatterString(node: PlanningModelNode, key: string): string | null 
 
 function sprintOf(node: PlanningModelNode): string | null {
   return frontmatterString(node, 'sprintId') ?? frontmatterString(node, 'sprint');
-}
-
-/** Status columns follow the artifact vocabulary; every status gets a column, empty or not. */
-function statusColumns(items: readonly PlanningModelNode[]): readonly PlanningGroup[] {
-  return ARTIFACT_STATUS_ORDER.map((status) => ({
-    key: status,
-    label: status,
-    nodes: items.filter((node) => node.status === status),
-  }));
 }
 
 function artifactCount(total: number): string {
@@ -123,28 +107,12 @@ export function BoardPage({ currentBinding, current }: BoardPageProps) {
     return <PlanningRefusal routeKind="planning.board" title="Planning cannot be trusted" />;
   }
 
-  const items = applyPlanningView(
-    model.graph.nodes.filter((node) => node.type !== 'sprint'),
+  const graph = retainGraphRevision(model.graph, model.binding);
+  const { items, dimensions, activeKey, byStatus, columns, groupedBy } = selectBoardProjection(
+    graph,
     presentation,
+    dimension,
   );
-  const availableDimensions = planningGroupingDimensions(items);
-  const dimensions = [
-    { key: 'none', label: 'None' },
-    ...availableDimensions,
-    ...(!availableDimensions.some((entry) => entry.key === 'spec')
-      ? [{ key: 'spec', label: 'Spec' }]
-      : []),
-    { key: 'label', label: 'Label' },
-  ];
-  const active = dimensions.find((entry) => entry.key === dimension);
-  const activeKey = active?.key ?? 'status';
-  const byStatus = activeKey === 'status';
-  const columns = byStatus
-    ? statusColumns(items)
-    : activeKey === 'none' || activeKey === 'label'
-      ? groupPresentationNodes(items, activeKey)
-      : groupPlanningNodes(items, activeKey);
-  const groupedBy = active?.label.toLowerCase() ?? 'status';
 
   return (
     <div

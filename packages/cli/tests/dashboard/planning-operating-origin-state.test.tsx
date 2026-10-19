@@ -23,8 +23,16 @@ const root: DashboardQueryRoot = {
   generation: 1,
 };
 const binding = { projectId: root.projectId } as DashboardQueryIdentity;
-const firstSpec = 'SPEC-origin';
-const secondSpec = 'SPEC-next';
+const firstSpec = 'SPEC-001';
+const secondSpec = 'SPEC-002';
+const declaredNode = (specId: string) => ({
+  id: specId,
+  type: 'spec' as const,
+  title: specId,
+  status: 'outstanding' as const,
+  frontmatter: {},
+  body: '## Operating origin\n\nMachine authority remains in the adjacent `operating-origin.json` sidecar.\n\n[Open this Action in Planning](#/operate/actions/action-001/planning).',
+});
 const creation = (specId: string, source: DashboardQueryRoot = root) => ({
   origin: {
     spec: { specId },
@@ -45,7 +53,13 @@ afterEach(cleanup);
 describe('Planning operating origin read state', () => {
   it('shows an explicit unavailable state when Operate has no source root', () => {
     mocks.root = null;
-    render(<PlanningOperatingOriginSection specId={firstSpec} binding={binding} />);
+    render(
+      <PlanningOperatingOriginSection
+        specId={firstSpec}
+        binding={binding}
+        node={declaredNode(firstSpec)}
+      />,
+    );
     expect(screen.getByText('Operating origin unavailable')).toBeTruthy();
     expect(screen.getByText(/No operating origin can be read/)).toBeTruthy();
     expect(mocks.fetch).not.toHaveBeenCalled();
@@ -61,10 +75,20 @@ describe('Planning operating origin read state', () => {
         }),
     );
     const rendered = render(
-      <PlanningOperatingOriginSection specId={firstSpec} binding={binding} />,
+      <PlanningOperatingOriginSection
+        specId={firstSpec}
+        binding={binding}
+        node={declaredNode(firstSpec)}
+      />,
     );
     await screen.findByText(`Why ${firstSpec} exists`);
-    rendered.rerender(<PlanningOperatingOriginSection specId={secondSpec} binding={binding} />);
+    rendered.rerender(
+      <PlanningOperatingOriginSection
+        specId={secondSpec}
+        binding={binding}
+        node={declaredNode(secondSpec)}
+      />,
+    );
     expect(screen.queryByText(`Why ${firstSpec} exists`)).toBeNull();
     expect(screen.getByRole('status').textContent).toContain('Loading');
     await act(async () => rejectNext(new Error('Unavailable')));
@@ -85,13 +109,23 @@ describe('Planning operating origin read state', () => {
         }),
     );
     const rendered = render(
-      <PlanningOperatingOriginSection specId={firstSpec} binding={binding} />,
+      <PlanningOperatingOriginSection
+        specId={firstSpec}
+        binding={binding}
+        node={declaredNode(firstSpec)}
+      />,
     );
     await waitFor(() => expect(mocks.fetch).toHaveBeenCalledTimes(1));
     const oldSignal = mocks.fetch.mock.calls[0][0].signal as AbortSignal;
     mocks.root = { ...root, generation: root.generation + 1, actorId: 'actor-new-origin' };
     mocks.fetch.mockResolvedValueOnce(creation(secondSpec, mocks.root));
-    rendered.rerender(<PlanningOperatingOriginSection specId={secondSpec} binding={binding} />);
+    rendered.rerender(
+      <PlanningOperatingOriginSection
+        specId={secondSpec}
+        binding={binding}
+        node={declaredNode(secondSpec)}
+      />,
+    );
     await screen.findByText(`Why ${secondSpec} exists`);
     expect(oldSignal.aborted).toBe(true);
     await act(async () => resolveOld(creation(firstSpec)));
@@ -103,12 +137,22 @@ describe('Planning operating origin read state', () => {
   it('hides a ready origin when only its source generation changes', async () => {
     mocks.fetch.mockResolvedValueOnce(creation(firstSpec));
     const rendered = render(
-      <PlanningOperatingOriginSection specId={firstSpec} binding={binding} />,
+      <PlanningOperatingOriginSection
+        specId={firstSpec}
+        binding={binding}
+        node={declaredNode(firstSpec)}
+      />,
     );
     await screen.findByText(`Why ${firstSpec} exists`);
     mocks.root = { ...root, generation: root.generation + 1 };
     mocks.fetch.mockImplementationOnce(() => new Promise(() => {}));
-    rendered.rerender(<PlanningOperatingOriginSection specId={firstSpec} binding={binding} />);
+    rendered.rerender(
+      <PlanningOperatingOriginSection
+        specId={firstSpec}
+        binding={binding}
+        node={declaredNode(firstSpec)}
+      />,
+    );
     expect(screen.queryByText(`Why ${firstSpec} exists`)).toBeNull();
     expect(screen.getByRole('status').textContent).toContain('Loading');
     await waitFor(() => expect(mocks.fetch).toHaveBeenCalledTimes(2));
@@ -117,7 +161,13 @@ describe('Planning operating origin read state', () => {
 
   it('refuses origin custody that belongs to another actor and permits a fresh retry', async () => {
     mocks.fetch.mockResolvedValueOnce(creation(firstSpec, { ...root, actorId: 'actor-other' }));
-    render(<PlanningOperatingOriginSection specId={firstSpec} binding={binding} />);
+    render(
+      <PlanningOperatingOriginSection
+        specId={firstSpec}
+        binding={binding}
+        node={declaredNode(firstSpec)}
+      />,
+    );
     await screen.findByText('Operating origin unavailable');
     expect(screen.queryByText(`Why ${firstSpec} exists`)).toBeNull();
     expect(screen.getByText(/could not be verified for the current Spec/)).toBeTruthy();

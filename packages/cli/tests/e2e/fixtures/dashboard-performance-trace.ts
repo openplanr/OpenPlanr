@@ -87,6 +87,15 @@ async function markInputAction(page: Page, phase: string) {
   }, phase);
 }
 
+async function settlePaint(page: Page) {
+  await page.evaluate(
+    () =>
+      new Promise<void>((resolve) => {
+        requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
+      }),
+  );
+}
+
 async function paintLatency(
   page: Page,
   selector: string,
@@ -156,8 +165,12 @@ async function interactionTrace(
       scroll:
         element.scrollTop +
         element.scrollLeft +
-        (document.querySelector('.pc-shell__scroll')?.scrollTop ?? 0),
-      transform: element.querySelector('.pc-graph__canvas')?.getAttribute('style') ?? '',
+        (selector === '.pc-list'
+          ? (document.querySelector('.pc-shell__scroll')?.scrollTop ?? 0)
+          : 0),
+      transform: element.querySelector('.pc-graph__content')
+        ? getComputedStyle(element.querySelector('.pc-graph__content') as Element).transform
+        : '',
     };
   }, selector);
   const started = await page.evaluate(() => {
@@ -174,9 +187,16 @@ async function interactionTrace(
       const direction = Math.floor(step / 20) % 2 === 0 ? 1 : -1;
       await page.mouse.wheel(kind === 'graph' ? direction * 120 : 0, direction * 180);
       if (kind === 'graph' && step % 10 === 0) {
-        await page.keyboard.down('Control');
-        await page.mouse.wheel(0, direction * 60);
-        await page.keyboard.up('Control');
+        await page
+          .getByRole('button', {
+            name: direction > 0 ? 'Zoom in' : 'Zoom out',
+            exact: true,
+          })
+          .click();
+        await page.mouse.move(
+          box.x + Math.min(box.width / 2, 400),
+          box.y + Math.min(box.height / 2, 200),
+        );
       }
       const state = await page.evaluate((selector) => {
         const element = document.querySelector(selector);
@@ -185,8 +205,12 @@ async function interactionTrace(
           scroll:
             element.scrollTop +
             element.scrollLeft +
-            (document.querySelector('.pc-shell__scroll')?.scrollTop ?? 0),
-          transform: element.querySelector('.pc-graph__canvas')?.getAttribute('style') ?? '',
+            (selector === '.pc-list'
+              ? (document.querySelector('.pc-shell__scroll')?.scrollTop ?? 0)
+              : 0),
+          transform: element.querySelector('.pc-graph__content')
+            ? getComputedStyle(element.querySelector('.pc-graph__content') as Element).transform
+            : '',
         };
       }, selector);
       scrollObserved ||= state.scroll !== before.scroll;
@@ -229,12 +253,8 @@ async function interactionTrace(
     ...measured,
     frameWorkMs: rendererFrameWork(events),
     interactionObserved: scrollObserved && zoomObserved,
-    ...(kind === 'graph' && !zoomObserved
-      ? {
-          pendingReason:
-            'The current production graph has no working zoom interaction; pan measurements alone do not certify pan/zoom.',
-        }
-      : {}),
+    panObserved: scrollObserved,
+    ...(kind === 'graph' ? { zoomObserved } : {}),
   };
 }
 
@@ -313,14 +333,22 @@ export function registerDashboardPerformanceTraceTests() {
       await cdp.detach();
       await page.evaluate(() => document.fonts.ready);
       const warmRoutesMs: number[] = [];
+      const warmRouteSamples: { route: string; durationMs: number }[] = [];
       const panelsMs: number[] = [];
       const filterMs: number[] = [];
       const paletteMs: number[] = [];
       let palettePreviewMs: number[] | null = [];
       const patchesMs: number[] = [];
       for (let index = 0; index < 20; index += 1) {
-        warmRoutesMs.push(await warmRoute(page, '#/board', 'planning.board'));
-        warmRoutesMs.push(await warmRoute(page, '#/list', 'planning.list'));
+        for (const [route, kind] of [
+          ['#/board', 'planning.board'],
+          ['#/graph', 'planning.graph'],
+          ['#/list', 'planning.list'],
+        ]) {
+          const durationMs = await warmRoute(page, route, kind);
+          warmRoutesMs.push(durationMs);
+          warmRouteSamples.push({ route, durationMs });
+        }
       }
       const filter = page.getByRole('textbox', { name: 'Filter by id or title' });
       for (let index = 0; index < TRACE_PLAN.inputCount; index += 1) {
@@ -421,6 +449,25 @@ export function registerDashboardPerformanceTraceTests() {
         }),
       );
       await warmRoute(page, '#/graph', 'planning.graph');
+      await settlePaint(page);
+      const preLensShifts = aggregateDashboardLayoutShifts(
+        await page.evaluate(() => window.__dashboardLayoutShifts.snapshot()),
+      );
+      const routeLoadCls = preLensShifts.shifts
+        .filter((shift) => shift.phase.startsWith('route-load'))
+        .reduce((sum, shift) => sum + shift.value, 0);
+      await testInfo.attach('dashboard-pre-lens-layout-shifts.json', {
+        body: Buffer.from(JSON.stringify({ routeLoadCls, layoutShifts: preLensShifts }, null, 2)),
+        contentType: 'application/json',
+      });
+      if (dataset === 'representative')
+        expect(
+          routeLoadCls,
+          'Routes must settle without layout shifts before the lens changes.',
+        ).toBe(0);
+      await markInputAction(page, 'graph-lens whole project');
+      await page.getByRole('button', { name: 'Whole project', exact: true }).click();
+      await settlePaint(page);
       const graph = await interactionTrace(page, 'graph', async (events) =>
         testInfo.attach('graph-renderer-trace.json', {
           body: Buffer.from(JSON.stringify({ traceEvents: events })),
@@ -449,6 +496,7 @@ export function registerDashboardPerformanceTraceTests() {
         coldShellMs: cold.shellAt ?? Number.NaN,
         usefulSnapshotMs: cold.usefulAt ?? Number.NaN,
         warmRoutesMs,
+        warmRouteSamples,
         panelsMs,
         filterMs,
         paletteMs,

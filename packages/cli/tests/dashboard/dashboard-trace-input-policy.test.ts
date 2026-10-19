@@ -110,11 +110,15 @@ it('requires the same phase name and occurrence, including when a label is reuse
 
 it.each([
   'route-load #/list',
+  'route-load #/graph',
   'patch 1',
   'inspector 1',
   'pan-scroll list',
   'pan-scroll graph',
   'filter-inputs',
+  'graph-lens',
+  'graph-lens dependencies',
+  'graph-lens whole project extra',
 ])(
   'never excludes %s shifts, even with native recent-input evidence and a marked action',
   (phase) => {
@@ -129,7 +133,13 @@ it.each([
   },
 );
 
-it.each(['filter-input clear type', 'palette open', 'palette query 1', 'palette close'])(
+it.each([
+  'filter-input clear type',
+  'palette open',
+  'palette query 1',
+  'palette close',
+  'graph-lens whole project',
+])(
   'annotates native and harness exclusions separately in %s without dropping raw fields',
   (phase) => {
     const report = evidence(
@@ -152,6 +162,42 @@ it.each(['filter-input clear type', 'palette open', 'palette query 1', 'palette 
       expect(result.shifts[index]).toMatchObject(report.shifts[index]);
   },
 );
+
+it('requires a matching recent action for the explicit whole-project lens change', () => {
+  const phase = 'graph-lens whole project';
+  const sample = shift(200, phase, true);
+  const marked = evidence([sample], phase);
+  for (const inputActions of [
+    [],
+    [{ phase: 'palette open', phaseIndex: 0, startTime: 100 }],
+    [{ phase, phaseIndex: 1, startTime: 100 }],
+    [{ phase, phaseIndex: 0, startTime: -301 }],
+  ]) {
+    const report = { ...marked, inputActions };
+    expect(classifyDashboardLayoutShift(sample, report).reason).toBe('counted');
+    expect(aggregateDashboardLayoutShifts(report).admittedCls).toBe(0.125);
+  }
+  const base = measurements();
+  expect(
+    evaluateDashboardTrace('representative', {
+      ...base,
+      layoutShiftEvidence: marked,
+    }),
+  ).toMatchObject({ passed: true, cls: 0 });
+  expect(
+    evaluateDashboardTrace('representative', {
+      ...base,
+      layoutShiftEvidence: { ...marked, inputActions: [] },
+    }),
+  ).toMatchObject({ passed: false, cls: 0.125, failures: ['Unexpected layout shift occurred.'] });
+  const routePhase = 'route-load #/graph';
+  expect(
+    evaluateDashboardTrace('representative', {
+      ...base,
+      layoutShiftEvidence: evidence([shift(200, routePhase, true)], routePhase),
+    }),
+  ).toMatchObject({ passed: false, cls: 0.125, failures: ['Unexpected layout shift occurred.'] });
+});
 
 it('uses normalized evidence in the evaluator and retains the existing CLS gate without evidence', () => {
   const base = measurements();

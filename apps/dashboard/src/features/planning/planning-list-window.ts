@@ -1,4 +1,4 @@
-import { type RefObject, useLayoutEffect, useRef, useState } from 'react';
+import { type RefObject, useCallback, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { PlanningModelNode } from './planning-model.js';
 
 export function useListKeyboardWindow({
@@ -9,6 +9,7 @@ export function useListKeyboardWindow({
   selected,
   setSelected,
   selectedId,
+  onNavigate,
 }: {
   root: RefObject<HTMLDivElement | null>;
   appearances: readonly { node: PlanningModelNode; group: { key: string }; index: number }[];
@@ -17,6 +18,7 @@ export function useListKeyboardWindow({
   selected: readonly string[];
   setSelected: (ids: string[]) => void;
   selectedId?: string;
+  onNavigate?: (index: number) => void;
 }) {
   const anchor = useRef<number | null>(null);
   const pending = useRef<number | null>(null);
@@ -88,6 +90,7 @@ export function useListKeyboardWindow({
           ]);
         } else anchor.current = null;
         pending.current = next;
+        onNavigate?.(appearances[next].index);
         setPage(Math.floor(appearances[next].index / pageSize));
         announce(`${appearances[next].node.id}, ${next + 1} of ${appearances.length}`);
       }
@@ -95,7 +98,7 @@ export function useListKeyboardWindow({
     };
     element.addEventListener('workspace-row-key', key);
     return () => element.removeEventListener('workspace-row-key', key);
-  }, [root, appearances, pageSize, setPage, selected, selectedId, setSelected]);
+  }, [root, appearances, pageSize, setPage, selected, selectedId, setSelected, onNavigate]);
   return announcement;
 }
 
@@ -188,4 +191,98 @@ export function useListScrollAnchor(
       scroller.removeEventListener('scroll', scroll);
     };
   }, [root, presentationKey, revision]);
+}
+
+export function useListRowViewport({
+  root,
+  groups,
+  positions,
+  pageStart,
+  compact,
+  grouped,
+  collapsedGroups,
+  selectedId,
+  scope,
+}: {
+  root: RefObject<HTMLDivElement | null>;
+  groups: readonly { key: string; nodes: readonly PlanningModelNode[] }[];
+  positions: ReadonlyMap<string, ReadonlyMap<string, number>>;
+  pageStart: number;
+  compact: boolean;
+  grouped: boolean;
+  collapsedGroups: readonly string[];
+  selectedId?: string;
+  scope: string;
+}) {
+  const [viewport, setViewport] = useState({ scope, top: 0, height: 560, mobile: false });
+  const [target, setTarget] = useState<number | null>(null);
+  const rowHeight = compact && !viewport.mobile ? 36 : 46;
+  const geometry = useMemo(() => {
+    let top = 0;
+    return groups.map((group) => {
+      const header = grouped ? 44 : 0;
+      const collapsed = collapsedGroups.includes(group.key);
+      const value = { key: group.key, top, body: top + header + 44, nodes: group.nodes, collapsed };
+      top += header + (collapsed ? 0 : 44 + group.nodes.length * rowHeight);
+      return value;
+    });
+  }, [groups, grouped, collapsedGroups, rowHeight]);
+  const savedTop = viewport.scope === scope ? viewport.top : 0;
+  let top = savedTop;
+  if (target !== null && target >= pageStart) {
+    for (const group of geometry) {
+      const index = group.nodes.findIndex(
+        (node) => (positions.get(group.key)?.get(node.id) ?? 0) - 1 === target,
+      );
+      if (index < 0) continue;
+      const offset = group.body + index * rowHeight;
+      if (offset < top + 44) top = Math.max(0, offset - 44);
+      else if (offset + rowHeight > top + viewport.height)
+        top = offset + rowHeight - viewport.height;
+      break;
+    }
+  }
+  useLayoutEffect(() => {
+    const scroller = root.current?.querySelector<HTMLElement>('.pc-list__window');
+    if (!scroller) return;
+    scroller.scrollTop = top;
+    const read = () => {
+      setViewport({
+        scope,
+        top: scroller.scrollTop,
+        height: scroller.clientHeight || 560,
+        mobile: typeof matchMedia === 'function' && matchMedia('(max-width: 899px)').matches,
+      });
+    };
+    read();
+    const scroll = () => {
+      setTarget(null);
+      read();
+    };
+    scroller.addEventListener('scroll', scroll, { passive: true });
+    const observer = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(read);
+    observer?.observe(scroller);
+    return () => {
+      scroller.removeEventListener('scroll', scroll);
+      observer?.disconnect();
+    };
+  }, [root, scope, top]);
+  const windows = new Map(
+    geometry.map((group) => [
+      group.key,
+      {
+        start: Math.max(0, Math.floor((top - group.body) / rowHeight) - 4),
+        end: Math.max(
+          0,
+          Math.min(
+            group.nodes.length,
+            Math.ceil((top + viewport.height - group.body) / rowHeight) + 4,
+          ),
+        ),
+        rowHeight,
+        retainedId: selectedId,
+      },
+    ]),
+  );
+  return { windows, reveal: useCallback((index: number) => setTarget(index), []) };
 }

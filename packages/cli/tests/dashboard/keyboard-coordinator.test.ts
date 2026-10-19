@@ -571,23 +571,29 @@ describe('dashboard keyboard coordinator', () => {
 
   it('navigates only connected Graph neighbours with stable geometric and ID ordering', () => {
     const { item, context } = fixture(
-      `<section data-route-kind="planning.graph">${row('center', 'data-x="0" data-y="0" data-neighbours="left&#10;right-a&#10;right-b&#10;up&#10;down"')}${row('left', 'data-x="-2" data-y="0"')}${row('right-b', 'data-x="2" data-y="0"')}${row('right-a', 'data-x="2" data-y="0"')}${row('up', 'data-x="0" data-y="-2"')}${row('down', 'data-x="0" data-y="2"')}${row('unconnected', 'data-x="1" data-y="0"')}</section>`,
+      `<section data-route-kind="planning.graph" data-graph-focus="center">${row('center', 'data-x="0" data-y="0" data-neighbours="left&#10;right-a&#10;right-b&#10;up&#10;down"')}${row('left', 'data-x="-2" data-y="0"')}${row('right-b', 'data-x="2" data-y="0"')}${row('right-a', 'data-x="2" data-y="0"')}${row('up', 'data-x="0" data-y="-2"')}${row('down', 'data-x="0" data-y="2"')}${row('unconnected', 'data-x="1" data-y="0"')}</section>`,
     );
     key(item('center'), 'ArrowRight');
     expect(document.activeElement).toBe(item('right-a'));
     key(item('center'), 'ArrowLeft');
     expect(document.activeElement).toBe(item('left'));
+    const focused = vi.fn();
+    const cleared = vi.fn();
+    context.root.addEventListener('graph-focus', focused);
+    context.root.addEventListener('graph-clear-focus', cleared);
     key(item('center'), 'f');
-    expect(item('center').dataset.graphFocus).toBe('true');
+    expect(focused).toHaveBeenCalledOnce();
+    expect(focused.mock.calls[0][0].detail).toEqual({ id: 'center' });
     expect(document.activeElement).toBe(item('center'));
     key(item('center'), 'Escape');
-    expect(item('center').hasAttribute('data-graph-focus')).toBe(false);
+    expect(cleared).toHaveBeenCalledOnce();
+    expect(context.root.querySelector('[data-graph-focus]')).toBeNull();
     expect(context.announce).toHaveBeenLastCalledWith('Graph focus cleared');
   });
 
   it('orders vertical Graph neighbours by y then canonical ID and reports absent directions', () => {
     const { item, context } = fixture(
-      `<section data-route-kind="planning.graph">${row('center', 'data-x="0" data-y="0" data-neighbours="up&#10;down-b&#10;down-a"')}${row('up', 'data-x="0" data-y="-2"')}${row('down-b', 'data-x="0" data-y="2"')}${row('down-a', 'data-x="0" data-y="2"')}</section>`,
+      `<section data-route-kind="planning.graph" data-graph-focus="center">${row('center', 'data-x="0" data-y="0" data-neighbours="up&#10;down-b&#10;down-a"')}${row('up', 'data-x="0" data-y="-2"')}${row('down-b', 'data-x="0" data-y="2"')}${row('down-a', 'data-x="0" data-y="2"')}</section>`,
     );
     key(item('center'), 'ArrowUp');
     expect(document.activeElement).toBe(item('up'));

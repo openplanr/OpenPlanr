@@ -1826,6 +1826,7 @@ button.pc-tally__cell:focus-visible {
 
 /* ===== dependency graph + outline ===== */
 .pc-graph {
+  scroll-padding: 24px 180px 110px 24px;
   position: relative;
   margin: 0;
   overflow: auto;
@@ -1835,9 +1836,95 @@ button.pc-tally__cell:focus-visible {
   border: 1px solid var(--pc-border-default);
   border-radius: var(--pc-radius-md);
 }
-.pc-graph__canvas {
+.pc-graph-workspace {
   position: relative;
-  min-width: 100%;
+  min-width: 0;
+}
+.pc-graph-controls {
+  margin: 0;
+  padding: 0 0 8px;
+  border: 0;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  min-height: 44px;
+}
+.pc-graph-controls button {
+  min-width: 44px;
+  min-height: 44px;
+  padding: 5px 10px;
+  color: var(--pc-text-primary);
+  font: inherit;
+  background: var(--pc-surface-panel);
+  border: 1px solid var(--pc-border-default);
+  border-radius: var(--pc-radius-sm);
+  cursor: pointer;
+}
+.pc-graph-controls button:hover:not(:disabled) {
+  background: var(--pc-surface-hover);
+  border-color: var(--pc-border-strong);
+}
+.pc-graph-controls button:active:not(:disabled) {
+  background: var(--pc-surface-selected);
+}
+.pc-graph-controls button:disabled {
+  color: var(--pc-text-tertiary);
+  cursor: not-allowed;
+}
+.pc-graph-controls output {
+  min-width: 48px;
+  color: var(--pc-text-secondary);
+  font: var(--pc-type-mono-sm);
+  text-align: center;
+}
+.pc-graph:focus-visible,
+.pc-graph-controls button:focus-visible,
+.pc-graph-minimap:focus-visible {
+  outline: 2px solid var(--pc-focus-ring);
+  outline-offset: 2px;
+}
+.pc-graph__canvas,
+.pc-graph__content {
+  position: relative;
+}
+.pc-graph__content {
+  position: absolute;
+  top: 0;
+  left: 0;
+  transform-origin: top left;
+}
+.pc-graph-minimap {
+  position: absolute;
+  right: 14px;
+  bottom: 14px;
+  width: 148px;
+  height: 88px;
+  padding: 5px;
+  background: var(--pc-surface-panel);
+  border: 1px solid var(--pc-border-strong);
+  border-radius: var(--pc-radius-sm);
+  box-shadow: var(--pc-shadow-sm);
+  cursor: crosshair;
+}
+.pc-graph-minimap:hover {
+  border-color: var(--pc-border-accent);
+}
+.pc-graph-minimap:active {
+  background: var(--pc-surface-selected);
+}
+.pc-graph-minimap svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+.pc-graph-minimap__nodes {
+  fill: var(--pc-text-secondary);
+}
+.pc-graph-minimap__viewport {
+  fill: var(--pc-focus-halo);
+  stroke: var(--pc-accent);
+  stroke-width: 2px;
 }
 .pc-graph__ranks {
   position: absolute;
@@ -1889,27 +1976,51 @@ button.pc-tally__cell:focus-visible {
 .pc-graph-node {
   position: absolute;
   display: flex;
-  align-items: center;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: center;
   gap: 6px;
-  padding: 0 8px;
+  padding: 9px 12px;
   overflow: hidden;
+  box-sizing: border-box;
   font: inherit;
   text-align: left;
   color: inherit;
   background: var(--pc-surface-card);
   border: 1px solid var(--pc-border-default);
-  border-radius: var(--pc-radius-sm);
+  border-radius: 12px;
   box-shadow: var(--pc-shadow-hairline);
   cursor: pointer;
   transition: var(--pc-transition-ui);
 }
-.pc-graph[data-tracing="true"] .pc-graph-node:not([data-related="true"]) {
-  opacity: 0.38;
+.pc-graph[data-tracing="true"] .pc-graph-node:not([data-related="true"]),
+.pc-graph-node[data-dimmed="true"] {
+  border-style: dashed;
+  box-shadow: none;
 }
 .pc-graph-node:hover {
   background: var(--pc-surface-hover);
   border-color: var(--pc-border-strong);
   box-shadow: var(--pc-shadow-sm);
+}
+.pc-graph-node:active {
+  background: var(--pc-surface-selected);
+}
+.pc-graph-node__meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-width: 0;
+}
+:where(.pc-graph-node__meta) .pc-artifact-tag {
+  max-width: 175px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.pc-graph__edge[data-kind="depends_on"] {
+  stroke-dasharray: 5 4;
 }
 .pc-graph-node:focus-visible {
   border-color: var(--pc-accent);
@@ -1982,12 +2093,13 @@ button.pc-tally__cell:focus-visible {
 }
 .pc-graph-outline__row {
   display: flex;
-  align-items: center;
+  flex-direction: column;
+  align-items: stretch;
   gap: 8px;
   width: 100%;
   min-width: 0;
-  height: 28px;
-  padding: 0 6px;
+  min-height: 66px;
+  padding: 8px 12px;
   font: inherit;
   font-size: var(--pc-text-sm);
   text-align: left;
@@ -2003,8 +2115,8 @@ button.pc-graph-outline__row:hover {
   background: var(--pc-surface-hover);
 }
 button.pc-graph-outline__row:focus-visible {
-  outline: none;
-  box-shadow: inset 0 0 0 2px var(--pc-focus-ring);
+  outline: 2px solid var(--pc-focus-ring);
+  outline-offset: 2px;
 }
 .pc-graph-outline__row[data-selected="true"] {
   background: var(--pc-surface-selected);
@@ -2021,6 +2133,12 @@ button.pc-graph-outline__row:focus-visible {
   color: var(--pc-text-primary);
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+.pc-graph-outline__relationships {
+  margin: 0;
+  padding: 0 12px 10px;
+  color: var(--pc-text-secondary);
+  font-size: var(--pc-text-sm);
 }
 .pc-graph-outline__blocked {
   font-family: var(--pc-font-mono);
@@ -2648,4 +2766,13 @@ button.pc-work-item:disabled {
 }
 .pc-button[data-variant="inverse"]:active:not(:disabled) {
   background: color-mix(in srgb, var(--pc-surface-inverse) 88%, var(--pc-text-inverse) 12%);
+}
+
+@media (forced-colors: active) {
+  .pc-graph-node:focus-visible,
+  .pc-graph-outline__row:focus-visible,
+  .pc-graph-controls button:focus-visible,
+  .pc-graph-minimap:focus-visible {
+    outline-color: Highlight;
+  }
 }

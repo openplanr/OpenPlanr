@@ -3,12 +3,12 @@
 import { readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { fireEvent, render } from '@testing-library/react';
+import { act, fireEvent, render } from '@testing-library/react';
 import axe from 'axe-core';
 import { JSDOM } from 'jsdom';
 import { sha256Jcs } from 'planr-pipeline/protocol';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { DashboardProviders } from '../../../../apps/dashboard/src/app/providers.js';
 import { ActivityPage } from '../../../../apps/dashboard/src/features/planning/ActivityPage.js';
 import { BoardPage } from '../../../../apps/dashboard/src/features/planning/BoardPage.js';
@@ -27,6 +27,7 @@ import {
   resolvePlanningWorkspace,
 } from '../../../../apps/dashboard/src/features/planning/planning-workspace.js';
 import { SprintsPage } from '../../../../apps/dashboard/src/features/planning/SprintsPage.js';
+import { clearInspector } from '../../../../apps/dashboard/src/features/shell/inspector-selection.js';
 import { UnifiedShell } from '../../../../apps/dashboard/src/features/shell/UnifiedShell.js';
 import {
   type DashboardProductState,
@@ -37,6 +38,17 @@ import {
   createDashboardQueryIdentity,
   type DashboardQueryIdentity,
 } from '../../../../apps/dashboard/src/lib/binding/query-identity.js';
+import { deliveryPlanningGraph } from '../e2e/fixtures/dashboard-delivery-graph.js';
+
+beforeEach(() => {
+  vi.spyOn(Element.prototype, 'clientWidth', 'get').mockImplementation(function (this: Element) {
+    return this.classList.contains('pc-graph') ? 1000 : 0;
+  });
+  vi.spyOn(Element.prototype, 'clientHeight', 'get').mockImplementation(function (this: Element) {
+    return this.classList.contains('pc-graph') ? 600 : 0;
+  });
+});
+afterEach(() => vi.restoreAllMocks());
 
 const TEST_ROOT = dirname(fileURLToPath(import.meta.url));
 const PRODUCTION_SOURCE = [
@@ -172,7 +184,11 @@ function envelope(
         eventHead: cursor.eventHead,
         viewHash: sha256Jcs(planningGraph as never),
       }),
-      mode: planningGraph.nodes.some((node) => node.type === 'spec') ? 'spec' : 'empty',
+      mode: planningGraph.nodes.some((node) => node.type === 'spec')
+        ? 'spec'
+        : planningGraph.nodes.length
+          ? 'agile'
+          : 'empty',
       graph: planningGraph,
     },
     current,
@@ -224,7 +240,8 @@ describe('T-021 Planning workspace UI', () => {
       <GraphPage currentBinding={graphBinding} current={stateFor(graphBinding)} />,
     );
     expect(graphHtml).toContain('Graph view');
-    expect(graphHtml).toContain('No depends_on edges in this plan');
+    expect(graphHtml).toContain('3 of 4 nodes');
+    expect(graphHtml).toContain('depends_on · 0');
     expect(graphHtml).not.toContain('Accessible planning graph');
     expect(graphHtml).not.toContain('Inspect exact artifact');
 
@@ -397,8 +414,10 @@ describe('T-021 Planning workspace UI', () => {
         <UnifiedShell />
       </DashboardProviders>,
     );
-    expect(html).toContain('No depends_on edges in this plan');
-    expect(html).not.toContain('Unified boot and first use');
+    expect(html).toContain('3 of 4 nodes');
+    expect(html).toContain('Unified dashboard');
+    expect(html).not.toContain('class="pc-graph-node"');
+    expect(html).toContain('Everything outside the focus is hidden, not deleted.');
   });
 
   it('keeps graph and outline views keyboard-semantic and axe-clean', async () => {
@@ -409,8 +428,12 @@ describe('T-021 Planning workspace UI', () => {
       </main>,
     );
     try {
-      const edgeKind = rendered.getByRole('combobox', { name: 'Edge kind' });
-      fireEvent.change(edgeKind, { target: { value: 'contains' } });
+      expect(rendered.getByRole('button', { name: 'Lineage' }).getAttribute('aria-pressed')).toBe(
+        'true',
+      );
+      expect(
+        rendered.getByRole('switch', { name: /^contains/u }).getAttribute('aria-checked'),
+      ).toBe('true');
       expect(rendered.getByRole('figure', { name: 'Dependency graph' })).toBeTruthy();
       expect(rendered.container.querySelectorAll('.pc-graph-node')).toHaveLength(3);
       expect(rendered.container.querySelectorAll('.pc-graph__edge')).toHaveLength(
@@ -423,7 +446,7 @@ describe('T-021 Planning workspace UI', () => {
       expect(rendered.container.querySelector('figure')).toBeNull();
       const outline = rendered.container.querySelector('.pc-graph-outline');
       expect(outline?.querySelectorAll('button')).toHaveLength(3);
-      expect(outline?.querySelectorAll('li > ul')).toHaveLength(2);
+      expect(outline?.querySelectorAll('[data-keyboard-item]')).toHaveLength(3);
       expect(outline?.textContent).toContain('Bound Planning transport');
       expect(rendered.container.querySelectorAll('h1')).toHaveLength(1);
       expect(
@@ -435,6 +458,111 @@ describe('T-021 Planning workspace UI', () => {
       ).toEqual([]);
     } finally {
       rendered.unmount();
+    }
+  });
+
+  it('makes the delivery plan quick task clickable in the initial dependency lens', () => {
+    clearInspector();
+    const current = createDashboardQueryIdentity({
+      ...identity('#/graph'),
+      viewHash: sha256Jcs(deliveryPlanningGraph as never),
+    });
+    const rendered = render(
+      <GraphPage
+        currentBinding={current}
+        current={stateFor(current, envelope(current, deliveryPlanningGraph))}
+      />,
+    );
+    try {
+      expect(
+        rendered
+          .getByRole('button', { name: 'Dependencies', exact: true })
+          .getAttribute('aria-pressed'),
+      ).toBe('true');
+      const task = rendered.getByRole('button', {
+        name: 'QT-071 Make failed CRM registrations visible and replayable',
+        exact: true,
+      });
+      expect(task.getAttribute('aria-label')).toBeNull();
+      expect(rendered.container.querySelectorAll('.pc-graph-node')).toHaveLength(4);
+      fireEvent.click(task);
+      expect(task.getAttribute('aria-pressed')).toBe('true');
+      expect(
+        rendered.getByRole('region', { name: 'Graph selection preview' }).textContent,
+      ).toContain('Make failed CRM registrations visible and replayable');
+    } finally {
+      rendered.unmount();
+      clearInspector();
+    }
+  });
+
+  it('retains Graph focus, camera and canonical selection across an accepted live revision', () => {
+    clearInspector();
+    const current = identity('#/graph');
+    const rendered = render(<GraphPage currentBinding={current} current={stateFor(current)} />);
+    try {
+      const node = rendered.container.querySelector<HTMLButtonElement>(
+        '[data-keyboard-item="SPEC-020/T-022"]',
+      );
+      if (!node) throw new Error('Missing focused task.');
+      act(() => node.focus());
+      fireEvent(
+        node,
+        new CustomEvent('graph-focus', { bubbles: true, detail: { id: 'SPEC-020/T-022' } }),
+      );
+      expect(
+        rendered.container.querySelector('[data-graph-focus]')?.getAttribute('data-graph-focus'),
+      ).toBe('SPEC-020/T-022');
+      const camera = rendered.getByRole('figure', { name: 'Dependency graph' });
+      camera.scrollTop = 240;
+      camera.scrollLeft = 120;
+      fireEvent.scroll(camera);
+      const changed = Object.freeze({
+        ...graph,
+        nodes: Object.freeze(
+          graph.nodes.map((entry) =>
+            entry.id === 'SPEC-020/T-022'
+              ? Object.freeze({
+                  ...entry,
+                  title: 'Updated bound transport',
+                  status: 'done' as const,
+                })
+              : entry,
+          ),
+        ),
+      });
+      const patchedBinding = createDashboardQueryIdentity({
+        ...current,
+        viewHash: sha256Jcs(changed as never),
+      });
+      rendered.rerender(
+        <GraphPage
+          currentBinding={patchedBinding}
+          current={stateFor(patchedBinding, envelope(patchedBinding, changed))}
+        />,
+      );
+      expect(rendered.getByRole('figure', { name: 'Dependency graph' })).toBe(camera);
+      expect(camera.scrollTop).toBe(240);
+      expect(camera.scrollLeft).toBe(120);
+      expect(document.activeElement).toBe(node);
+      expect(node.getAttribute('aria-pressed')).toBe('true');
+      expect(node.textContent).toContain('Updated bound transport');
+      expect(
+        rendered.getByRole('region', { name: 'Graph selection preview' }).textContent,
+      ).toContain('Done');
+      const root = rendered.container.querySelector('[data-graph-focus]');
+      if (!root) throw new Error('Missing Graph focus.');
+      fireEvent(root, new CustomEvent('graph-clear-focus', { bubbles: true }));
+      expect(
+        rendered.getByRole('button', { name: 'Whole project' }).getAttribute('aria-pressed'),
+      ).toBe('true');
+      expect(rendered.container.querySelector('[data-graph-focus]')).toBeNull();
+      expect(rendered.getByRole('heading', { name: 'Graph' }).parentElement?.textContent).toContain(
+        '4 of 4 nodes',
+      );
+    } finally {
+      rendered.unmount();
+      clearInspector();
     }
   });
 

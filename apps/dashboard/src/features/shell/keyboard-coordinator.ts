@@ -271,6 +271,7 @@ function closeTopLayer(stroke: KeyStroke, state: CoordinatorState): void {
   const graph = context.root.querySelector<HTMLElement>('[data-graph-focus]');
   if (!graph) return;
   consume(event);
+  graph.dispatchEvent(new CustomEvent('graph-clear-focus', { bubbles: true }));
   delete graph.dataset.graphFocus;
   context.announce('Graph focus cleared');
 }
@@ -312,7 +313,12 @@ function focusGraph(stroke: KeyStroke, current: HTMLElement | undefined): void {
     stroke.context.announce('Select a Graph node to focus.');
     return;
   }
-  current.dataset.graphFocus = 'true';
+  current.dispatchEvent(
+    new CustomEvent('graph-focus', {
+      bubbles: true,
+      detail: { id: current.dataset.canonicalId || current.dataset.keyboardItem },
+    }),
+  );
   current.focus();
   current.scrollIntoView?.({ block: 'center', inline: 'center', behavior: 'instant' });
 }

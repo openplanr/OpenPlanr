@@ -2,7 +2,7 @@
 
 import { cleanup, render, screen } from '@testing-library/react';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ActivityPage } from '../../../../apps/dashboard/src/features/planning/ActivityPage.js';
 import { BoardPage } from '../../../../apps/dashboard/src/features/planning/BoardPage.js';
 import { GraphPage } from '../../../../apps/dashboard/src/features/planning/GraphPage.js';
@@ -16,6 +16,15 @@ import type { DashboardProductState } from '../../../../apps/dashboard/src/lib/a
 import type { DashboardQueryIdentity } from '../../../../apps/dashboard/src/lib/binding/query-identity.js';
 import { PlanningPresentationProvider } from '../../../../apps/dashboard/src/lib/routing/planning-presentation.js';
 import type { PlanningView } from '../../../../apps/dashboard/src/lib/routing/planning-view-codec.js';
+
+beforeEach(() => {
+  vi.spyOn(Element.prototype, 'clientWidth', 'get').mockImplementation(function (this: Element) {
+    return this.classList.contains('pc-graph') ? 1000 : 0;
+  });
+  vi.spyOn(Element.prototype, 'clientHeight', 'get').mockImplementation(function (this: Element) {
+    return this.classList.contains('pc-graph') ? 600 : 0;
+  });
+});
 
 const nodes: readonly PlanningModelNode[] = Object.freeze([
   Object.freeze({
@@ -68,13 +77,26 @@ const model = {
 };
 
 vi.mock('../../../../apps/dashboard/src/features/planning/planning-workspace.js', () => ({
-  resolvePlanningWorkspace: () => model,
+  resolvePlanningWorkspace: () => ({ ...model, binding }),
   PlanningNotice: () => null,
   PlanningRefusal: () => null,
 }));
 
 const current = {} as DashboardProductState<unknown>;
-const binding = {} as DashboardQueryIdentity;
+const binding: DashboardQueryIdentity = {
+  productArea: 'planning',
+  route: '#/graph',
+  actorId: 'presentation-reader',
+  projectId: `sha256:${'a'.repeat(64)}`,
+  scopeId: 'planning',
+  domainId: 'planning',
+  domainVersion: '1.0.0',
+  generation: 1,
+  cycleId: null,
+  subjectId: null,
+  viewHash: `sha256:${'b'.repeat(64)}`,
+  eventHead: { sequence: 0, hash: null },
+};
 const now = new Date('2026-10-19T12:00:00Z');
 function view(
   route: PlanningView['route'] = 'board',
@@ -109,6 +131,7 @@ function wrap(presentation: PlanningView, children: React.ReactNode) {
 }
 
 afterEach(() => {
+  vi.restoreAllMocks();
   cleanup();
   clearInspector();
 });
@@ -228,7 +251,8 @@ describe('presentation consumers', () => {
     expect(document.querySelector('[data-keyboard-item]')?.getAttribute('data-selected')).toBe(
       'true',
     );
-    expect(document.body.textContent).toContain('1 nodes · 0 edges');
+    expect(document.body.textContent).toContain('1 of 4 nodes');
+    expect(document.querySelectorAll('.pc-graph__edge')).toHaveLength(0);
     expect(document.body.textContent).not.toContain('Alpha transport');
   });
 

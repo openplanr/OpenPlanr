@@ -250,8 +250,8 @@ test.describe('dashboard real-browser quality', () => {
       if (route === '#/graph') {
         const graph = page.locator('[data-route-kind="planning.graph"]');
         await expect(graph.getByRole('heading', { level: 1, name: 'Graph' })).toBeVisible();
-        await expect(graph).toContainText('0 nodes · 0 edges');
-        await expect(graph).toContainText('No depends_on edges in this plan');
+        await expect(graph).toContainText('1 of 1 nodes');
+        await expect(graph).toContainText('Everything outside the focus is hidden, not deleted.');
         await expect(graph.getByRole('tab', { name: 'Graph' })).toHaveAttribute(
           'aria-selected',
           'true',
@@ -682,10 +682,8 @@ test.describe('dashboard real-browser quality', () => {
 
       const graph = page.locator('[data-route-kind="planning.graph"]');
       await expect(graph.getByRole('heading', { level: 1, name: 'Graph' })).toBeVisible();
-      await expect(graph).toContainText('No depends_on edges in this plan');
-      await expect(graph).toContainText(
-        'Both views draw relationships. A shared focus can also keep its isolated artifact visible.',
-      );
+      await expect(graph).toContainText('Everything outside the focus is hidden, not deleted.');
+      await expect(graph).toContainText('Arrows move to connected neighbours.');
       expect((await layoutReport(page)).horizontalOverflow).toBe(false);
 
       if (viewport.width >= 1024) {
@@ -705,6 +703,10 @@ test.describe('dashboard real-browser quality', () => {
     await openFixture(page, '#/graph', { planningScenario: 'delivery' });
 
     const graph = page.locator('[data-route-kind="planning.graph"]');
+    await expect(graph.getByRole('button', { name: 'Dependencies', exact: true })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
     await expect(graph.locator('.pc-graph-node')).toHaveCount(4);
     await expect(graph.locator('.pc-graph__rank')).toHaveCount(4);
     const nodePositions = await graph
@@ -713,7 +715,12 @@ test.describe('dashboard real-browser quality', () => {
     expect(new Set(nodePositions).size).toBe(4);
     expect(Math.max(...nodePositions) - Math.min(...nodePositions)).toBeGreaterThan(500);
 
-    await graph.getByRole('button', { name: /QT-071:/u }).click();
+    await graph
+      .getByRole('button', {
+        name: 'QT-071 Make failed CRM registrations visible and replayable',
+        exact: true,
+      })
+      .click();
     const inspector = page.getByRole('complementary', { name: 'Inspector' });
     await expect(inspector).toContainText('Make failed CRM registrations visible and replayable');
     await expect(inspector.locator('[data-artifact-id="QT-071"]')).toHaveAttribute(
@@ -794,7 +801,7 @@ test.describe('dashboard real-browser quality', () => {
     expect(transition).toEqual({ route: '#/graph', showedPlanningRefusal: false });
     await expect(page.locator('[data-route-kind="planning.graph"]')).toBeVisible();
     await expect(page.locator('[data-route-kind="planning.graph"]')).toContainText(
-      'No depends_on edges in this plan',
+      'Everything outside the focus is hidden, not deleted.',
     );
   });
 

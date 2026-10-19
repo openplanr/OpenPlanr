@@ -5,11 +5,27 @@ import type { DashboardQueryIdentity } from '../../lib/binding/query-identity.js
 import { createDashboardQueryIdentity } from '../../lib/binding/query-identity.js';
 import { fetchPlanningOperatingTrace } from '../operate/planning/planning-actions.js';
 import { OperatingOriginPanel } from './OperatingOriginPanel.js';
+import type { PlanningModelNode } from './planning-model.js';
 
 export type PlanningOperatingOriginSectionProps = Readonly<{
   specId: string;
   binding: DashboardQueryIdentity;
+  node?: PlanningModelNode | null;
 }>;
+
+function declaresOperatingOrigin(
+  node: PlanningModelNode | null | undefined,
+  specId: string,
+): boolean {
+  if (node?.type !== 'spec' || node.id !== specId || !node.body) return false;
+  const section = node.body
+    .split(/(?=^##\s)/mu)
+    .find((part) => /^## Operating origin[ \t]*\r?\n/u.test(part));
+  return Boolean(
+    section?.includes('`operating-origin.json`') &&
+      /\]\(#\/operate\/actions\/[A-Za-z0-9._:-]+\/planning\)/u.test(section),
+  );
+}
 
 type OriginRead = Readonly<{
   key: string;
@@ -22,13 +38,16 @@ type OriginRead = Readonly<{
 export function PlanningOperatingOriginSection({
   specId,
   binding,
+  node,
 }: PlanningOperatingOriginSectionProps) {
   const { bootstrap } = useDashboard();
   const sourceRoot = bootstrap?.queryRoots.operate ?? null;
   const [attempt, setAttempt] = useState(0);
+  const declared = declaresOperatingOrigin(node, specId);
   const key = JSON.stringify([
     attempt,
     specId,
+    declared,
     binding.projectId,
     sourceRoot?.actorId,
     sourceRoot?.projectId,
@@ -42,9 +61,11 @@ export function PlanningOperatingOriginSection({
     ? 'Operate is unavailable for this project. No operating origin can be read.'
     : sourceRoot.projectId !== binding.projectId
       ? 'The Operate source does not belong to the current Planning project.'
-      : typeof window === 'undefined'
-        ? 'Operating origin is available when this project is opened in the dashboard.'
-        : null;
+      : !declared
+        ? 'No operating origin is declared in the verified Spec.'
+        : typeof window === 'undefined'
+          ? 'Operating origin is available when this project is opened in the dashboard.'
+          : null;
 
   useEffect(() => {
     setRead({ key, status: 'loading', envelope: null });
@@ -134,9 +155,11 @@ export function PlanningOperatingOriginSection({
             tone="info"
             title="Operating origin unavailable"
             actions={
-              <Button size="sm" onClick={retry}>
-                Retry operating origin
-              </Button>
+              !unavailableReason ? (
+                <Button size="sm" onClick={retry}>
+                  Retry operating origin
+                </Button>
+              ) : undefined
             }
           >
             {reason}

@@ -253,3 +253,19 @@
     min-height: 44px;
   }
 }
+
+.pc-list__group-header:not([hidden]) {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 44px;
+  overflow: hidden;
+}
+.pc-list .pc-table th,
+.pc-list .pc-table__sort {
+  height: 44px;
+  padding-block: 0;
+}
+.pc-list .pc-table__spacer td {
+  line-height: 0;
+}

@@ -10,10 +10,10 @@ import {
   WorkItemChip,
 } from '../../design-system/components/index.js';
 import { usePlanningCopy, usePlanningShortcuts } from '../../lib/routing/planning-presentation.js';
-import { isCanonicalPlanningId } from '../../lib/routing/planning-view-codec.js';
 import { StructuralTrace } from './DeliveryTrace.js';
 import { CopyDetailValue, DeclaredFile } from './PlanningDetailActions.js';
 import { DeferredDetailContent, DetailDisclosure, PlanningMarkdown } from './PlanningMarkdown.js';
+import { PlanningOperatingOriginSection } from './PlanningOperatingOriginSection.js';
 import {
   type PlanningModelNode,
   planningContinuation,
@@ -150,7 +150,7 @@ function ArtifactDetail({
       : href;
   const spec = detail.trace.find((entry) => entry.node.type === 'spec')?.node;
   const command = planningContinuation(node);
-  const report = spec && isCanonicalPlanningId(spec.id) ? `openplanr status ${spec.id} --md` : null;
+  const report = spec ? planningContinuation(spec) : null;
   const sourceNode = read.node;
   return (
     <article
@@ -439,6 +439,9 @@ function ArtifactDetail({
           </Card>
         </div>
       </div>
+      {node.type === 'spec' ? (
+        <PlanningOperatingOriginSection specId={node.id} binding={model.binding} node={read.node} />
+      ) : null}
     </article>
   );
 }

@@ -29,12 +29,19 @@ import {
   takeListStatus,
 } from './planning-list-filter.js';
 import {
+  retainGraphRevision,
+  selectListGroups,
+  selectListMetadata,
+  selectListProjection,
+} from './planning-list-projection.js';
+import {
   browserListPreferences,
   type ListPreferenceAdapter,
   type PlanningView,
   useInspectorStore,
   useListKeyboardWindow,
   useListPresentation,
+  useListRowViewport,
   useListScrollAnchor,
   usePlanningCopy,
 } from './planning-list-window.js';
@@ -42,7 +49,6 @@ import {
   type PlanningArtifactType,
   type PlanningModelNode,
   planningDetailHref,
-  planningSpecOf,
 } from './planning-model.js';
 import {
   PlanningNotice,
@@ -50,12 +56,6 @@ import {
   type PlanningWorkspaceModel,
   resolvePlanningWorkspace,
 } from './planning-workspace.js';
-import {
-  applyPlanningView,
-  authoredTimestamp,
-  groupPresentationNodes,
-  planningLabels,
-} from './presentation-view.js';
 import './planning.css';
 import './list.css';
 
@@ -121,7 +121,7 @@ export function ListPage({
   const inspector = useInspectorStore();
 
   const model = resolvePlanningWorkspace(current, currentBinding);
-  const graph = model?.graph;
+  const graph = model ? retainGraphRevision(model.graph, model.binding) : undefined;
   const focusNotice = usePlanningViewFocus(view, graph?.nodes);
   const all = graph?.nodes ?? EMPTY_NODES;
   const draftView: PlanningView = {
@@ -160,40 +160,22 @@ export function ListPage({
     () => JSON.parse(presentationKey) as PlanningView,
     [presentationKey],
   );
-  const projection = useMemo(
-    () => (graph ? applyPlanningView(graph.nodes, effectiveView, new Date(), graph) : EMPTY_NODES),
-    [graph, effectiveView],
+  const projection = graph ? selectListProjection(graph, effectiveView) : null;
+  const rows = useLiveListOrder(projection?.rows ?? EMPTY_NODES, presentationKey);
+  const { grouped, appearances, positions } = useMemo(
+    () =>
+      graph
+        ? selectListGroups(graph, rows, effectiveView.groupBy)
+        : { grouped: [], appearances: [], positions: new Map<string, Map<string, number>>() },
+    [graph, rows, effectiveView.groupBy],
   );
-  const rows = useLiveListOrder(projection, presentationKey);
-  const grouped = useMemo(() => {
-    const specs = new Map(
-      all.filter((node) => node.type === 'spec').map((node) => [node.id, node]),
-    );
-    return groupPresentationNodes(rows, effectiveView.groupBy).map((group) => ({
-      ...group,
-      label:
-        effectiveView.groupBy === 'spec' && specs.has(group.key)
-          ? `${group.key} · ${specs.get(group.key)?.title}`
-          : group.label,
-    }));
-  }, [rows, effectiveView.groupBy, all]);
-  const appearances = useMemo(
-    () => grouped.flatMap((group) => group.nodes.map((node) => ({ group, node }))),
-    [grouped],
-  );
-  const positions = useMemo(() => {
-    const values = new Map<string, Map<string, number>>();
-    appearances.forEach((entry, index) => {
-      const group = values.get(entry.group.key) ?? new Map<string, number>();
-      group.set(entry.node.id, index + 1);
-      values.set(entry.group.key, group);
-    });
-    return values;
-  }, [appearances]);
   const pageCount = Math.max(1, Math.ceil(appearances.length / PAGE_SIZE));
   const currentPage = Math.min(page, pageCount - 1);
   const pageStart = currentPage * PAGE_SIZE;
-  const visibleRows = appearances.slice(pageStart, pageStart + PAGE_SIZE);
+  const visibleRows = useMemo(
+    () => appearances.slice(pageStart, pageStart + PAGE_SIZE),
+    [appearances, pageStart],
+  );
   const visibleGroups = useMemo(() => {
     const groups = new Map<string, { key: string; label: string; nodes: PlanningModelNode[] }>();
     for (const { group, node } of visibleRows) {
@@ -272,6 +254,17 @@ export function ListPage({
         .filter((entry) => !collapsed && !collapsedGroups.includes(entry.group.key)),
     [appearances, collapsed, collapsedGroups],
   );
+  const rowViewport = useListRowViewport({
+    root: rootRef,
+    groups: visibleGroups,
+    positions,
+    pageStart,
+    compact,
+    grouped: effectiveView.groupBy !== 'none',
+    collapsedGroups,
+    selectedId,
+    scope: `${presentationKey}:${currentPage}`,
+  });
   const keyboardNotice = useListKeyboardWindow({
     root: rootRef,
     appearances: keyboardAppearances,
@@ -280,6 +273,7 @@ export function ListPage({
     selected,
     setSelected,
     selectedId,
+    onNavigate: rowViewport.reveal,
   });
   const toggleSelection = (node: PlanningModelNode) =>
     setSelected((ids) =>
@@ -306,69 +300,17 @@ export function ListPage({
       focusId: null,
       filters: { ...effectiveView.filters, ...filters },
     });
-  const totals = useMemo(() => {
-    const now = new Date();
-    return new Map(
-      LIST_PRESETS.map(([key]) => [
-        key,
-        graph ? applyPlanningView(all, listPreset(key), now, graph).length : 0,
-      ]),
-    );
-  }, [graph, all]);
-  const labels = useMemo(() => [...new Set(all.flatMap(planningLabels))].sort(), [all]);
-  const progress = useMemo(() => {
-    const map = new Map<string, { total: number; done: number }>();
-    for (const node of all) {
-      if (node.type !== 'task') continue;
-      const spec = planningSpecOf(node) ?? '';
-      const value = map.get(spec) ?? { total: 0, done: 0 };
-      value.total++;
-      if (node.status === 'done') value.done++;
-      map.set(spec, value);
-    }
-    return map;
-  }, [all]);
-  const hiddenDone = useMemo(
-    () =>
-      graph && effectiveView.filters.status.length && !effectiveView.filters.status.includes('done')
-        ? applyPlanningView(
-            all,
-            { ...effectiveView, filters: { ...effectiveView.filters, status: ['done'] } },
-            new Date(),
-            graph,
-          ).length
-        : 0,
-    [all, effectiveView, graph],
-  );
-  const dateExcluded = useMemo(() => {
-    if (!graph) return 0;
-    const relevant = applyPlanningView(
-      all,
-      {
-        ...effectiveView,
-        filters: { ...effectiveView.filters, createdWithinDays: null, updatedWithinDays: null },
-      },
-      new Date(),
-      graph,
-    );
-    return relevant.filter((node) =>
-      ['created', 'updated'].some((field) => {
-        if (
-          !(field === 'created'
-            ? effectiveView.filters.createdWithinDays
-            : effectiveView.filters.updatedWithinDays)
-        )
-          return false;
-        const stamp = authoredTimestamp(node.frontmatter[field]);
-        return stamp === null || stamp > Date.now();
-      }),
-    ).length;
-  }, [all, effectiveView, graph]);
+  const metadata = graph ? selectListMetadata(graph) : null;
+  const totals = metadata?.totals;
+  const labels = metadata?.labels ?? [];
+  const progress = metadata?.progress;
+  const hiddenDone = projection?.hiddenDone ?? 0;
+  const dateExcluded = projection?.dateExcluded ?? 0;
   useEffect(() => {
-    const existing = new Set(all.map((node) => node.id));
+    const existing = metadata?.ids ?? new Set<string>();
     if (selected.some((id) => !existing.has(id)))
       setSelected(selected.filter((id) => existing.has(id)));
-  }, [all, selected, setSelected]);
+  }, [metadata, selected, setSelected]);
   if (!model) {
     return <PlanningRefusal routeKind="planning.list" title="Planning cannot be trusted" />;
   }
@@ -426,7 +368,7 @@ export function ListPage({
                   aria-pressed={active}
                   onClick={() => setPresentation({ ...preset, density: effectiveView.density })}
                 >
-                  {label} <span className="pc-list__preset-count">{totals.get(key)}</span>
+                  {label} <span className="pc-list__preset-count">{totals?.get(key)}</span>
                 </Button>
               );
             })}
@@ -652,46 +594,48 @@ export function ListPage({
           <div className="pc-list__window" data-scroll-context="list-window" hidden={collapsed}>
             {visibleGroups.map((group) => (
               <section key={group.key} aria-label={group.label} data-keyboard-group={group.key}>
-                {effectiveView.groupBy !== 'none' ? (
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    aria-expanded={!collapsedGroups.includes(group.key)}
-                    onClick={() =>
-                      setCollapsedGroups((groups) =>
-                        groups.includes(group.key)
-                          ? groups.filter((key) => key !== group.key)
-                          : [...groups, group.key],
-                      )
-                    }
-                  >
-                    {group.label}
-                  </Button>
-                ) : null}
-                {effectiveView.groupBy !== 'none' ? (
-                  <span className="pc-list__group-meta">
-                    {grouped.find((entry) => entry.key === group.key)?.nodes.length} items
-                    {effectiveView.groupBy === 'spec'
-                      ? (() => {
-                          const value = progress.get(group.key);
-                          return value ? (
-                            <>
-                              {' '}
-                              ·{' '}
-                              <progress
-                                max={value.total}
-                                value={value.done}
-                                aria-label={`${group.label} task progress`}
-                              />{' '}
-                              {value.done}/{value.total} tasks
-                            </>
-                          ) : (
-                            ' · No tasks'
-                          );
-                        })()
-                      : ''}
-                  </span>
-                ) : null}
+                <div className="pc-list__group-header" hidden={effectiveView.groupBy === 'none'}>
+                  {effectiveView.groupBy !== 'none' ? (
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      aria-expanded={!collapsedGroups.includes(group.key)}
+                      onClick={() =>
+                        setCollapsedGroups((groups) =>
+                          groups.includes(group.key)
+                            ? groups.filter((key) => key !== group.key)
+                            : [...groups, group.key],
+                        )
+                      }
+                    >
+                      {group.label}
+                    </Button>
+                  ) : null}
+                  {effectiveView.groupBy !== 'none' ? (
+                    <span className="pc-list__group-meta">
+                      {grouped.find((entry) => entry.key === group.key)?.nodes.length} items
+                      {effectiveView.groupBy === 'spec'
+                        ? (() => {
+                            const value = progress?.get(group.key);
+                            return value ? (
+                              <>
+                                {' '}
+                                ·{' '}
+                                <progress
+                                  max={value.total}
+                                  value={value.done}
+                                  aria-label={`${group.label} task progress`}
+                                />{' '}
+                                {value.done}/{value.total} tasks
+                              </>
+                            ) : (
+                              ' · No tasks'
+                            );
+                          })()
+                        : ''}
+                    </span>
+                  ) : null}
+                </div>
                 <div hidden={collapsedGroups.includes(group.key)}>
                   <DataTable
                     rows={group.nodes}
@@ -700,6 +644,7 @@ export function ListPage({
                     selectedIds={selectedSet}
                     onRowSelect={toggleSelection}
                     rowCount={appearances.length}
+                    rowWindow={rowViewport.windows.get(group.key)}
                     rowPosition={(node) => positions.get(group.key)?.get(node.id) ?? 1}
                     rowHref={planningDetailHref}
                     sort={sort}

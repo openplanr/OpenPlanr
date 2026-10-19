@@ -285,7 +285,7 @@ describe('List presentation tokens against validated projections', () => {
     expect(rowIds(container)).toEqual([FIXTURE_FIRST]);
   });
 
-  it('caps all grouped table appearances at 100 per page while global counts deduplicate labels', async () => {
+  it('windows each grouped page while all appearances remain reachable and counts deduplicate labels', async () => {
     const user = userEvent.setup();
     const nodes = Array.from({ length: 105 }, (_, index) =>
       node(`T-${1000 + index}`, `Review ${index}`, { labels: ['ready', 'review'] }),
@@ -296,23 +296,38 @@ describe('List presentation tokens against validated projections', () => {
       filters: { ...FIXTURE_VIEW.filters, query: '' },
     };
     const { container } = render(<View nodes={nodes} view={view} />);
-    const visited = [...rowIds(container)];
-    expect(visited).toHaveLength(100);
+    const visited = new Map<string, string>();
+    const scrollPage = (expected: number) => {
+      const page = new Map<string, string>();
+      const scroller = container.querySelector<HTMLElement>('.pc-list__window');
+      if (!scroller) throw new Error('Missing list window.');
+      for (let top = 0; top <= 5000; top += 300) {
+        fireEvent.scroll(scroller, { target: { scrollTop: top } });
+        const rows = Array.from(container.querySelectorAll<HTMLElement>('[data-keyboard-item]'));
+        expect(rows.length).toBeLessThanOrEqual(26);
+        for (const row of rows) {
+          const id = row.dataset.keyboardItem ?? '';
+          const group = row.closest<HTMLElement>('[data-keyboard-group]')?.dataset.keyboardGroup;
+          page.set(`${group}:${id}`, id);
+        }
+      }
+      expect(page.size).toBe(expected);
+      for (const [key, id] of page) visited.set(key, id);
+    };
+    scrollPage(100);
     expect(
       screen.getByRole('navigation', { name: 'Planning artifact pages' }).textContent,
     ).toContain('Page 1 of 3');
     expect(container.querySelector('h1')?.parentElement?.textContent).toContain('105 of 105');
     await user.click(screen.getByRole('button', { name: 'Next' }));
-    expect(rowIds(container)).toHaveLength(100);
-    visited.push(...rowIds(container));
+    scrollPage(100);
     await user.click(screen.getByRole('button', { name: 'Next' }));
-    expect(rowIds(container)).toHaveLength(10);
-    visited.push(...rowIds(container));
-    expect(visited).toHaveLength(210);
-    expect(new Set(visited).size).toBe(105);
+    scrollPage(10);
+    expect(visited.size).toBe(210);
+    expect(new Set(visited.values()).size).toBe(105);
     expect((screen.getByRole('button', { name: 'Next' }) as HTMLButtonElement).disabled).toBe(true);
-    for (const id of new Set(visited))
-      expect(visited.filter((entry) => entry === id)).toHaveLength(2);
+    for (const id of new Set(visited.values()))
+      expect([...visited.values()].filter((entry) => entry === id)).toHaveLength(2);
   });
 
   it('copies current presentation through the injected adapter, without binding or authority', async () => {
@@ -682,6 +697,45 @@ describe('List triage, bounded windows and command-only selection', () => {
     },
   );
 
+  it.each(['representative', 'scaling'] as const)(
+    'bounds mounted %s rows and retains the focused row outside the viewport through a patch',
+    (dataset) => {
+      const nodes = buildPremiumDashboardFixture(dataset).graph.nodes;
+      const view = {
+        ...FIXTURE_VIEW,
+        filters: {
+          ...FIXTURE_VIEW.filters,
+          type: [],
+          status: [],
+          priority: [],
+          label: [],
+          query: '',
+        },
+        sort: { field: 'id' as const, direction: 'asc' as const },
+      };
+      const { container, rerender } = render(<View nodes={nodes} view={view} />);
+      expect(rowIds(container).length).toBeLessThanOrEqual(24);
+      const first = container.querySelector<HTMLElement>('[data-keyboard-item]');
+      const scroller = container.querySelector<HTMLElement>('.pc-list__window');
+      if (!first || !scroller) throw new Error('Missing list viewport.');
+      const id = first.dataset.keyboardItem;
+      act(() => first.focus());
+      fireEvent.scroll(scroller, { target: { scrollTop: 3000 } });
+      expect(rowIds(container).length).toBeLessThanOrEqual(25);
+      expect(document.activeElement).toBe(first);
+      expect(first.isConnected).toBe(true);
+      expect(first.closest('table')?.getAttribute('aria-rowcount')).toBe(String(nodes.length + 1));
+      const patched = nodes.map((node) =>
+        node.id === id ? { ...node, title: 'Accepted live title' } : node,
+      );
+      rerender(<View nodes={patched} view={view} />);
+      expect(container.querySelector(`[data-keyboard-item="${id}"]`)).toBe(first);
+      expect(document.activeElement).toBe(first);
+      expect(first.textContent).toContain('Accepted live title');
+      expect(scroller.scrollTop).toBe(3000);
+    },
+  );
+
   it('walks across page boundaries, selects a range and retains the full position/count', () => {
     const nodes = Array.from({ length: 110 }, (_, index) =>
       node(`BL-${1000 + index}`, `Finding ${index}`, {}, 'outstanding', 'backlog'),
@@ -698,7 +752,11 @@ describe('List triage, bounded windows and command-only selection', () => {
     );
     const dispose = coordinate(container);
     try {
+      const scroller = container.querySelector<HTMLElement>('.pc-list__window');
+      if (!scroller) throw new Error('Missing list window.');
+      fireEvent.scroll(scroller, { target: { scrollTop: 3200 } });
       const last = container.querySelector<HTMLElement>('[data-keyboard-item="BL-1099"]');
+      expect(last).not.toBeNull();
       act(() => last?.focus());
       fireEvent.keyDown(last ?? container, { key: ' ' });
       fireEvent.keyDown(last ?? container, { key: 'ArrowDown', shiftKey: true });

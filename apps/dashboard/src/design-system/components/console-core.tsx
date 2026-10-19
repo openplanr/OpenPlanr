@@ -701,6 +701,7 @@ export type DataTableProps<Row extends { readonly id: string }> = Readonly<{
   onRowSelect?: (row: Row) => void;
   rowCount?: number;
   rowPosition?: (row: Row) => number;
+  rowWindow?: Readonly<{ start: number; end: number; rowHeight: number; retainedId?: string }>;
   rowHref?: (row: Row) => string | null;
   sort?: DataTableSort;
   onSort?: (key: string) => void;
@@ -711,6 +712,25 @@ export type DataTableProps<Row extends { readonly id: string }> = Readonly<{
 function cellValue<Row>(row: Row, key: string): ReactNode {
   const value = (row as Record<string, unknown>)[key];
   return value === null || value === undefined ? null : String(value);
+}
+
+type TableWindowEntry<Row> = { row: Row; index: number } | { gap: number; index: number };
+function tableWindowEntries<Row extends { readonly id: string }>(
+  rows: readonly Row[],
+  window: DataTableProps<Row>['rowWindow'],
+): TableWindowEntry<Row>[] {
+  if (!window) return rows.map((row, index) => ({ row, index }));
+  const result: TableWindowEntry<Row>[] = [];
+  let gap = 0;
+  rows.forEach((row, index) => {
+    if ((index >= window.start && index < window.end) || row.id === window.retainedId) {
+      if (gap) result.push({ gap: gap * window.rowHeight, index: index - gap });
+      gap = 0;
+      result.push({ row, index });
+    } else gap++;
+  });
+  if (gap) result.push({ gap: gap * window.rowHeight, index: rows.length - gap });
+  return result;
 }
 
 /**
@@ -728,6 +748,7 @@ export function DataTable<Row extends { readonly id: string }>({
   onRowSelect,
   rowCount,
   rowPosition,
+  rowWindow,
   rowHref,
   sort,
   onSort,
@@ -813,63 +834,78 @@ export function DataTable<Row extends { readonly id: string }>({
               </td>
             </tr>
           ) : (
-            rows.map((row) => (
-              <tr
-                key={row.id}
-                aria-rowindex={rowPosition ? rowPosition(row) + 1 : undefined}
-                aria-selected={selectedIds ? selectedIds.has(row.id) : undefined}
-                data-done={(row as { status?: string }).status === 'done' || undefined}
-                data-keyboard-item={onRowClick ? row.id : undefined}
-                data-selected={selectedId !== undefined && row.id === selectedId ? true : undefined}
-                tabIndex={onRowClick ? 0 : undefined}
-                onFocus={onRowFocus ? () => onRowFocus(row) : undefined}
-                onClick={
-                  onRowClick
-                    ? (event) => {
-                        if (
-                          event.metaKey ||
-                          event.ctrlKey ||
-                          event.altKey ||
-                          event.shiftKey ||
-                          (event.target instanceof Element && event.target.closest('a'))
-                        )
-                          return;
-                        event.currentTarget.focus({ preventScroll: true });
-                        activate(row);
-                      }
-                    : undefined
-                }
-                onKeyDown={onRowClick ? (event) => onRowKey(event, row) : undefined}
-              >
-                {columns.map((column) => (
-                  <td
-                    key={column.key}
-                    data-align={column.align ?? 'left'}
-                    data-mono={column.mono || undefined}
-                    style={{ maxWidth: column.width }}
-                  >
-                    {rowHref && column.key === 'id' && rowHref(row) ? (
-                      <a
-                        href={rowHref(row) ?? undefined}
-                        onClick={(event) => {
-                          if (event.metaKey || event.ctrlKey || event.altKey || event.shiftKey)
+            tableWindowEntries(rows, rowWindow).map((entry) => {
+              if ('gap' in entry)
+                return (
+                  <tr key={`gap:${entry.index}`} inert className="pc-table__spacer">
+                    <td
+                      aria-hidden="true"
+                      colSpan={columns.length}
+                      style={{ height: entry.gap, padding: 0, border: 0 }}
+                    />
+                  </tr>
+                );
+              const { row } = entry;
+              return (
+                <tr
+                  key={row.id}
+                  aria-rowindex={rowPosition ? rowPosition(row) + 1 : undefined}
+                  aria-selected={selectedIds ? selectedIds.has(row.id) : undefined}
+                  data-done={(row as { status?: string }).status === 'done' || undefined}
+                  data-keyboard-item={onRowClick ? row.id : undefined}
+                  data-selected={
+                    selectedId !== undefined && row.id === selectedId ? true : undefined
+                  }
+                  tabIndex={onRowClick ? 0 : undefined}
+                  onFocus={onRowFocus ? () => onRowFocus(row) : undefined}
+                  onClick={
+                    onRowClick
+                      ? (event) => {
+                          if (
+                            event.metaKey ||
+                            event.ctrlKey ||
+                            event.altKey ||
+                            event.shiftKey ||
+                            (event.target instanceof Element && event.target.closest('a'))
+                          )
                             return;
-                          event.preventDefault();
-                          event.currentTarget.closest('tr')?.focus({ preventScroll: true });
+                          event.currentTarget.focus({ preventScroll: true });
                           activate(row);
-                        }}
-                      >
-                        {column.render ? column.render(row) : cellValue(row, column.key)}
-                      </a>
-                    ) : column.render ? (
-                      column.render(row)
-                    ) : (
-                      cellValue(row, column.key)
-                    )}
-                  </td>
-                ))}
-              </tr>
-            ))
+                        }
+                      : undefined
+                  }
+                  onKeyDown={onRowClick ? (event) => onRowKey(event, row) : undefined}
+                >
+                  {columns.map((column) => (
+                    <td
+                      key={column.key}
+                      data-align={column.align ?? 'left'}
+                      data-mono={column.mono || undefined}
+                      style={{ maxWidth: column.width }}
+                    >
+                      {rowHref && column.key === 'id' && rowHref(row) ? (
+                        <a
+                          href={rowHref(row) ?? undefined}
+                          onClick={(event) => {
+                            if (event.metaKey || event.ctrlKey || event.altKey || event.shiftKey)
+                              return;
+                            event.preventDefault();
+                            event.currentTarget.closest('tr')?.focus({ preventScroll: true });
+                            activate(row);
+                          }}
+                        >
+                          {column.render ? column.render(row) : cellValue(row, column.key)}
+                        </a>
+                      ) : column.render ? (
+                        column.render(row)
+                      ) : (
+                        cellValue(row, column.key)
+                      )}
+                    </td>
+                  ))}
+                </tr>
+              );
+            })
           )}
         </tbody>
       </table>

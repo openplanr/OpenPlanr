@@ -2,7 +2,6 @@ import { Button, EmptyState } from '../../design-system/components/index.js';
 import type { DashboardProductState } from '../../lib/api/product-state.js';
 import type { DashboardQueryIdentity } from '../../lib/binding/query-identity.js';
 import { PlanningArtifactDetail } from './PlanningArtifactDetail.js';
-import { PlanningOperatingOriginSection } from './PlanningOperatingOriginSection.js';
 import { inspectPlanningNode } from './planning-inspector.js';
 import {
   type PlanningModelNode,
@@ -70,9 +69,6 @@ export function DetailPage({ currentBinding, current }: DetailPageProps) {
         nodeId={node.id}
         origin={typeof window === 'undefined' ? '' : window.location.origin}
       />
-      {node.type === 'spec' ? (
-        <PlanningOperatingOriginSection specId={node.id} binding={currentBinding} />
-      ) : null}
     </div>
   );
 }
@@ -109,9 +105,6 @@ export function PlanningDetailInspector({
         </Button>
       ) : null}
       <PlanningArtifactDetail model={model} nodeId={nodeId} origin={origin} panel />
-      {node?.type === 'spec' ? (
-        <PlanningOperatingOriginSection specId={node.id} binding={model.binding} />
-      ) : null}
     </>
   );
 }
