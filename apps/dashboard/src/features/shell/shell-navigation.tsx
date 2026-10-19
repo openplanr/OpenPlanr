@@ -626,20 +626,22 @@ export function TopBar({
         </output>
         {shortcutHelp}
         <ThemeToggle preference={themePreference} />
-        <IconButton
-          icon={inspectorOpen ? 'panel-right-close' : 'panel-left-close'}
-          label={
-            inspectorOpen
-              ? 'Hide inspector'
-              : inspectorAvailable
-                ? 'Show inspector'
-                : 'Show inspector: select an item first'
-          }
-          disabled={!inspectorAvailable}
-          size="sm"
-          active={inspectorOpen}
-          onClick={onToggleInspector}
-        />
+        <span data-inspector-toggle style={{ display: 'contents' }}>
+          <IconButton
+            icon={inspectorOpen ? 'panel-right-close' : 'panel-left-close'}
+            label={
+              inspectorOpen
+                ? 'Hide inspector'
+                : inspectorAvailable
+                  ? 'Show inspector'
+                  : 'Show inspector: select an item first'
+            }
+            disabled={!inspectorAvailable}
+            size="sm"
+            active={inspectorOpen}
+            onClick={onToggleInspector}
+          />
+        </span>
       </div>
     </header>
   );

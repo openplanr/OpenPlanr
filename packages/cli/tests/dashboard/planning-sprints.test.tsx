@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { act, cleanup, fireEvent, render, within } from '@testing-library/react';
+import { act, cleanup, fireEvent, render } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { parsePlanningGraphEnvelope } from '../../../../apps/dashboard/src/features/planning/planning-api.js';
 import type {
@@ -123,11 +123,19 @@ describe('sprint evidence', () => {
       </>,
     );
     expect(view.getByRole('heading', { name: 'No active sprint' })).toBeTruthy();
-    const launch = view.getByRole('heading', { name: 'Launch sprint 1' }).closest('article');
-    expect(launch?.textContent).toContain('78 of 82 sprint items done');
+    const launch = view.getByRole('article', { name: 'SPRINT-001: Launch sprint 1', exact: true });
+    expect(launch.textContent).toContain('78 of 82 sprint items done');
+    const completion = view.getByRole('progressbar', {
+      name: 'Launch sprint 1: sprint items done',
+    });
+    expect(completion.getAttribute('value')).toBe('78');
+    expect(completion.getAttribute('max')).toBe('82');
+    const members = view.getByRole('list', { name: 'Members of SPRINT-001' });
+    expect(members.querySelectorAll('li')).toHaveLength(82);
+    expect(members.textContent).toContain('QT-006');
     const carry = view.getByRole('region', { name: 'Carry-over from SPRINT-001' });
     expect(carry.textContent).toContain('Still open after close');
-    const links = within(carry).getAllByRole('link');
+    const links = Array.from(carry.querySelectorAll<HTMLAnchorElement>('a[data-keyboard-item]'));
     expect(links.map((link) => link.getAttribute('href'))).toEqual([
       '#/detail/QT-006',
       '#/detail/BL-007',
@@ -253,7 +261,7 @@ describe('sprint evidence', () => {
       announce: vi.fn(),
     }));
     const carry = view.getByRole('region', { name: 'Carry-over from SPRINT-001' });
-    const links = within(carry).getAllByRole('link');
+    const links = Array.from(carry.querySelectorAll<HTMLAnchorElement>('a[data-keyboard-item]'));
     fireEvent.focus(links[0]);
     act(() => links[0].focus());
     fireEvent.keyDown(links[0], { key: 'j' });

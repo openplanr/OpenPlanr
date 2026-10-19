@@ -1,15 +1,27 @@
 import { useMemo, useState } from 'react';
 import {
+  ArtifactRowCopy,
+  ArtifactRowMeta,
+  artifactRowStyle,
+} from '../../design-system/components/artifact-row.js';
+import {
+  ArtifactRowTitle,
   ArtifactStatus,
   Badge,
   Card,
+  CardHeader,
   EmptyState,
-  Tooltip,
   WorkItemChip,
 } from '../../design-system/components/index.js';
+import { usePlanningCopy, usePlanningShortcuts } from '../../lib/routing/planning-presentation.js';
 import { useInspectorStore } from '../shell/inspector-selection.js';
 import { inspectPlanningNode, useLiveListSelection } from './planning-inspector.js';
-import { type PlanningModelNode, planningDetailHref, planningDisplayId } from './planning-model.js';
+import {
+  type PlanningModelNode,
+  planningContinuation,
+  planningDetailHref,
+  planningDisplayId,
+} from './planning-model.js';
 import type {
   PlanningSessionActivity,
   PlanningSessionActivityEntry,
@@ -26,6 +38,8 @@ export function ActivitySessionFeed({
   entries: readonly PlanningSessionActivityEntry[];
   nodes: readonly PlanningModelNode[];
 }) {
+  const copy = usePlanningCopy();
+  const shortcutsEnabled = usePlanningShortcuts();
   const [selected, setSelected] = useState<string | null>(null);
   const inspector = useInspectorStore();
   const visibleNodes = useMemo(() => {
@@ -42,35 +56,29 @@ export function ActivitySessionFeed({
   const currentNodes = new Map(nodes.map((node) => [node.id, node]));
   const paused = activity.connection === 'paused';
   return (
-    <div ref={rootRef}>
+    <section ref={rootRef} aria-label="Live session activity">
       {removalNotice ? (
         <p className="pc-visually-hidden" role="status">
           {removalNotice}
         </p>
       ) : null}
       <Card padding={0}>
-        <div className="pc-activity__feed-head">
-          <div>
-            <h2>Live</h2>
-            <span>This session only</span>
-          </div>
-          <span className="pc-activity__connection" data-reserve-label={DISCONNECTED_LABEL}>
-            <Badge tone={paused ? 'warn' : 'info'} variant="outline">
-              {paused
-                ? DISCONNECTED_LABEL
-                : activity.connection === 'connected'
-                  ? 'Watching'
-                  : 'Connecting'}
-            </Badge>
-          </span>
-        </div>
-        <p className="pc-activity__explanation">
-          Accepted watcher patches, in arrival order. Reloading clears this feed; snapshots never
-          add entries.
-          {paused
-            ? ' Previously accepted patches remain visible while the watcher reconnects.'
-            : ''}
-        </p>
+        <CardHeader
+          title="Live"
+          count={entries.length}
+          description={`Accepted watcher patches, in arrival order. This session only. Reloading clears this feed; snapshots never add entries.${paused ? ' Previously accepted patches remain visible while the watcher reconnects.' : ''}`}
+          actions={
+            <span className="pc-activity__connection" data-reserve-label={DISCONNECTED_LABEL}>
+              <Badge tone={paused ? 'warn' : 'info'} variant="outline">
+                {paused
+                  ? DISCONNECTED_LABEL
+                  : activity.connection === 'connected'
+                    ? 'Watching'
+                    : 'Connecting'}
+              </Badge>
+            </span>
+          }
+        />
         <section
           className="pc-activity__feed"
           data-scroll-context="activity-session"
@@ -89,7 +97,12 @@ export function ActivitySessionFeed({
               }
             />
           ) : (
-            <ol className="pc-activity__entries">
+            <ol
+              className="pc-activity__entries"
+              style={artifactRowStyle(
+                entries.flatMap((entry) => (entry.node ? [planningDisplayId(entry.node)] : [])),
+              )}
+            >
               {entries.map((entry) => {
                 const node = entry.node;
                 const available =
@@ -97,21 +110,35 @@ export function ActivitySessionFeed({
                 return (
                   <li
                     key={entry.id}
-                    className="pc-activity__entry"
+                    className="pc-activity__entry pc-artifact-row"
                     data-selected={selected === entry.id || undefined}
                   >
-                    <span className="pc-activity__operation">
-                      {entry.kind === 'relationships' ? 'Relationships changed' : entry.kind}
-                    </span>
                     <SessionActivityItem
                       entry={entry}
                       available={available ?? null}
                       selected={selected === entry.id}
                       onSelect={() => setSelected(entry.id)}
                     />
-                    <span className="pc-activity__status">
+                    <span className="pc-artifact-row__meta-group">
+                      <ArtifactRowMeta
+                        label={
+                          entry.kind === 'relationships' ? 'Relationships changed' : entry.kind
+                        }
+                      >
+                        {entry.kind}
+                      </ArtifactRowMeta>
                       {available ? <ArtifactStatus status={available.status} size="sm" /> : null}
                     </span>
+                    {available ? (
+                      <ArtifactRowCopy
+                        onCopy={copy}
+                        shortcutsEnabled={shortcutsEnabled}
+                        id={planningDisplayId(available)}
+                        command={planningContinuation(available)}
+                      />
+                    ) : (
+                      <span />
+                    )}
                   </li>
                 );
               })}
@@ -124,7 +151,7 @@ export function ActivitySessionFeed({
           {activity.truncated ? ' Only the latest 200 entries are retained.' : ''}
         </p>
       </Card>
-    </div>
+    </section>
   );
 }
 
@@ -140,42 +167,43 @@ function SessionActivityItem({
   onSelect: () => void;
 }) {
   const node = entry.node;
-  if (!node) return <span className="pc-activity__relationship">Graph relationships updated</span>;
+  if (!node)
+    return (
+      <>
+        <span />
+        <ArtifactRowTitle>Graph relationships updated</ArtifactRowTitle>
+      </>
+    );
   const chip = (
-    <WorkItemChip
-      type={node.type}
-      id={planningDisplayId(node)}
-      title={node.title}
-      interactive={Boolean(available)}
-    />
+    <WorkItemChip type={node.type} id={planningDisplayId(node)} interactive={Boolean(available)} />
   );
   if (!available)
     return (
-      <span className="pc-activity__item" data-activity-unavailable>
-        {chip}
-        <small>
+      <span className="pc-artifact-row__link" data-activity-unavailable>
+        <span className="pc-artifact-row__id">{chip}</span>
+        <ArtifactRowTitle>{node.title}</ArtifactRowTitle>
+        <small className="pc-visually-hidden">
           {entry.kind === 'removed' ? 'Removed from the graph' : 'No longer in the current graph'}
         </small>
       </span>
     );
   return (
-    <Tooltip content={node.title}>
-      <a
-        href={planningDetailHref(available) ?? undefined}
-        className="pc-activity__item"
-        data-keyboard-item={entry.id}
-        data-canonical-id={available.id}
-        data-selected={selected || undefined}
-        onFocus={onSelect}
-        onClick={(event) => {
-          if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
-          event.preventDefault();
-          onSelect();
-          inspectPlanningNode(available);
-        }}
-      >
-        {chip}
-      </a>
-    </Tooltip>
+    <a
+      href={planningDetailHref(available) ?? undefined}
+      className="pc-artifact-row__link"
+      data-keyboard-item={entry.id}
+      data-canonical-id={available.id}
+      data-selected={selected || undefined}
+      onFocus={onSelect}
+      onClick={(event) => {
+        if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+        event.preventDefault();
+        onSelect();
+        inspectPlanningNode(available);
+      }}
+    >
+      <span className="pc-artifact-row__id">{chip}</span>
+      <ArtifactRowTitle>{node.title}</ArtifactRowTitle>
+    </a>
   );
 }

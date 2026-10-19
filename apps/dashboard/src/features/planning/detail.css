@@ -213,12 +213,12 @@
 }
 .pc-detail__relations ul {
   display: grid;
-  gap: 8px;
+  gap: 0;
   list-style: none;
   margin: 0;
   padding: 0;
 }
-.pc-detail__relations li {
+.pc-detail__relations li:not(.pc-artifact-row) {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
@@ -324,30 +324,12 @@
 .pc-detail__artifact--panel .pc-detail__columns {
   grid-template-columns: minmax(0, 1fr);
 }
-.pc-detail__artifact--panel h2 {
+.pc-detail__artifact--panel .pc-detail__header > h2 {
   font-size: 20px;
   font-weight: 700;
   line-height: 1.25;
   overflow-wrap: normal;
   word-break: normal;
-}
-.pc-detail__artifact--panel .pc-card__head {
-  display: grid;
-  grid-template-columns: max-content minmax(0, 1fr) auto;
-  align-items: baseline;
-}
-.pc-detail__artifact--panel .pc-card__title {
-  grid-column: 1;
-  min-width: max-content;
-  white-space: nowrap;
-}
-.pc-detail__artifact--panel .pc-card__meta {
-  grid-column: 2;
-  min-width: 0;
-  overflow-wrap: normal;
-}
-.pc-detail__artifact--panel .pc-card__actions {
-  grid-column: 3;
 }
 .pc-shell-inspector .pc-detail__actions .pc-button {
   width: auto;
@@ -393,6 +375,7 @@
 
 .pc-detail__trace-pages {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: 8px;

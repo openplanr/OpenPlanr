@@ -1,18 +1,23 @@
-import type { AttentionProjection } from '@openplanr/protocol/dashboard/planning-attention.mjs';
 import { type ReactNode, useEffect, useId, useMemo, useRef, useState } from 'react';
+
 import {
+  CardHeader as ArtifactCardHeader,
+  ArtifactRowCopy,
+  ArtifactRowMeta,
+  ArtifactRowTitle,
   ArtifactStatus,
+  artifactRowStyle,
   Card,
   CommandHint,
   EmptyState,
   PriorityChip,
   Skeleton,
   StatePanel,
-  Tooltip,
   WorkItemChip,
 } from '../../design-system/components/index.js';
 import type { DashboardProductState } from '../../lib/api/product-state.js';
 import type { DashboardQueryIdentity } from '../../lib/binding/query-identity.js';
+import { usePlanningCopy, usePlanningShortcuts } from '../../lib/routing/planning-presentation.js';
 import {
   type PlanningAttentionFilter,
   serializePlanningViewHref,
@@ -23,6 +28,7 @@ import {
   useLiveListOrder,
   useLiveListSelection,
 } from './planning-inspector.js';
+import { listPreset } from './planning-list-filter.js';
 import {
   type PlanningModelNode,
   planningAttentionIds,
@@ -39,7 +45,6 @@ import {
   type PlanningWorkspaceModel,
   resolvePlanningWorkspace,
 } from './planning-workspace.js';
-import './planning.css';
 import './overview.css';
 
 export type OverviewPageProps = Readonly<{
@@ -47,7 +52,9 @@ export type OverviewPageProps = Readonly<{
   current: DashboardProductState<unknown>;
 }>;
 
-const PREVIEW_LIMIT = 4;
+type AttentionProjection = ReturnType<typeof selectPlanningAttention>;
+
+const PREVIEW_LIMIT = 5;
 
 function LastVisit({ projectId, successful }: { projectId: string; successful: boolean }) {
   const recorded = useRef(false);
@@ -96,14 +103,17 @@ function NodeLink({
   children,
   keyboard = false,
   selected = false,
+  className,
 }: {
   node: PlanningModelNode;
   children: ReactNode;
   keyboard?: boolean;
   selected?: boolean;
+  className?: string;
 }) {
   return (
     <a
+      className={className}
       data-keyboard-item={keyboard ? node.id : undefined}
       data-selected={selected || undefined}
       href={planningDetailHref(node) ?? undefined}
@@ -133,44 +143,40 @@ function HomeRow({
   selected: boolean;
 }) {
   const command = planningContinuation(commandNode ?? node);
+  const onCopy = usePlanningCopy();
+  const shortcutsEnabled = usePlanningShortcuts();
   return (
-    <li className="pc-home__row" data-selected={selected || undefined}>
-      <div className="pc-home__row-main">
-        <NodeLink node={node} keyboard selected={selected}>
-          <span className="pc-home__item">
-            <WorkItemChip type={node.type} id={planningDisplayId(node)} />
-            <span className="pc-home__title">{node.title}</span>
-          </span>
-        </NodeLink>
-        {reason ? <div className="pc-home__reason">{reason}</div> : null}
+    <li className="pc-home__row pc-artifact-row" data-selected={selected || undefined}>
+      <NodeLink node={node} keyboard selected={selected} className="pc-artifact-row__link">
+        <span className="pc-artifact-row__id">
+          <WorkItemChip type={node.type} id={planningDisplayId(node)} />
+        </span>
+        <ArtifactRowTitle>{node.title}</ArtifactRowTitle>
+      </NodeLink>
+      <span className="pc-artifact-row__meta-group">
+        {reason}
         {dependencies.length ? (
-          <div className="pc-home__dependencies">
-            Waits on{' '}
-            {dependencies.map((dependency) => (
-              <NodeLink key={dependency.id} node={dependency}>
-                <WorkItemChip type={dependency.type} id={planningDisplayId(dependency)} />
+          <span className="pc-home__dependencies">
+            <ArtifactRowMeta
+              icon="git-pull-request"
+              label={`Waits on unfinished dependencies: ${dependencies.map(planningDisplayId).join(', ')}`}
+            >
+              {dependencies.length}
+            </ArtifactRowMeta>
+            {dependencies.length === 1 ? (
+              <NodeLink node={dependencies[0]} className="pc-home__dependency-tag">
+                <WorkItemChip type={dependencies[0].type} id={planningDisplayId(dependencies[0])} />
               </NodeLink>
-            ))}
-          </div>
+            ) : null}
+          </span>
         ) : null}
-      </div>
-      <Tooltip content={command ?? 'No verified command is available for this identity.'}>
-        <div className="pc-home__command">
-          <CommandHint
-            command={command ?? ''}
-            size="sm"
-            label={
-              commandNode && commandNode.id !== node.id
-                ? `Continue ${planningDisplayId(commandNode)}`
-                : `Continue ${planningDisplayId(node)}`
-            }
-            disabled={!command}
-            disabledReason={
-              command ? undefined : 'No verified command is available for this identity.'
-            }
-          />
-        </div>
-      </Tooltip>
+      </span>
+      <ArtifactRowCopy
+        id={planningDisplayId(node)}
+        command={command}
+        onCopy={onCopy}
+        shortcutsEnabled={shortcutsEnabled}
+      />
     </li>
   );
 }
@@ -212,16 +218,13 @@ function AttentionCard({
   }, [preview]);
   return (
     <section className="pc-home__card" aria-labelledby={headingId} data-attention={filter}>
-      <div className="pc-home__card-heading">
-        <h2 id={headingId}>
-          {title} <span className="pc-home__count">{ids.length}</span>
-        </h2>
-        <a href={serializePlanningViewHref(planningAttentionView(filter))}>
-          See all {ids.length}
-          <span className="pc-visually-hidden"> {title.toLowerCase()}</span>
-        </a>
-        <p>{description}</p>
-      </div>
+      <ArtifactCardHeader
+        id={headingId}
+        title={title}
+        count={ids.length}
+        description={description}
+        href={serializePlanningViewHref(planningAttentionView(filter))}
+      />
       {preview.length ? (
         <ul className="pc-home__rows">
           {preview.map((node) => {
@@ -262,6 +265,8 @@ function HomeContent({
   attention: AttentionProjection;
 }) {
   const { graph, presentation } = model;
+  const copy = usePlanningCopy();
+  const shortcutsEnabled = usePlanningShortcuts();
   const inspector = useInspectorStore();
   const selectedId = inspector.selection?.kind === 'node' ? inspector.selection.id : undefined;
   const visibleIds = [
@@ -285,6 +290,11 @@ function HomeContent({
     const node = byId.get(spec.id);
     return node && node.status !== 'done' && node.status !== 'addressed';
   });
+  const openView = listPreset('open');
+  const specsHref = serializePlanningViewHref({
+    ...openView,
+    filters: { ...openView.filters, type: ['spec'] },
+  });
   const activeSprint = graph.nodes.find(
     (node) => node.type === 'sprint' && node.status !== 'done' && node.status !== 'addressed',
   );
@@ -293,10 +303,20 @@ function HomeContent({
     (node) => node.status === 'done' || node.status === 'addressed',
   ).length;
   const donePct = totals.total ? Math.round((totals.done / totals.total) * 100) : 0;
+  const rowIds = [
+    ...visibleNodes,
+    ...activeSpecs.slice(0, PREVIEW_LIMIT).flatMap((spec) => {
+      const node = byId.get(spec.id);
+      return node ? [node] : [];
+    }),
+    ...(activeSprint ? [activeSprint] : []),
+    ...graph.nodes.filter((node) => node.id === selectedId),
+  ].map(planningDisplayId);
   return (
     <div
       ref={rootRef}
       className="op-workspace op-planning pc-pipeline pc-overview"
+      style={artifactRowStyle(rowIds)}
       data-route-kind="planning.overview"
     >
       <PlanningNotice presentation={presentation} />
@@ -375,12 +395,12 @@ function HomeContent({
             byId={byId}
             selectedId={selectedId}
             reason={(node) => (
-              <>
-                {attention.byId[node.id].downstreamUnblockCount} downstream open tasks
-                {attention.byId[node.id].readiness === 'unknown'
-                  ? ' · Readiness unknown: unresolved dependencies.'
-                  : ''}
-              </>
+              <ArtifactRowMeta
+                icon="git-branch"
+                label={`${attention.byId[node.id].downstreamUnblockCount} downstream open tasks${attention.byId[node.id].readiness === 'unknown' ? '; Readiness unknown: unresolved dependencies.' : ''}`}
+              >
+                {attention.byId[node.id].downstreamUnblockCount}
+              </ArtifactRowMeta>
             )}
           />
           {unknownReadiness ? (
@@ -404,9 +424,16 @@ function HomeContent({
             selectedId={selectedId}
             reason={(node) => {
               const stale = attention.stale.find((entry) => entry.id === node.id);
-              return stale
-                ? `${Math.floor(stale.ageDays)} days since authored update (${stale.authoredAt.slice(0, 10)}). Git activity is unknown.`
-                : 'Authored activity unknown.';
+              return stale ? (
+                <ArtifactRowMeta
+                  icon="clock"
+                  label={`${Math.floor(stale.ageDays)} days since authored update (${stale.authoredAt.slice(0, 10)}). Git activity is unknown.`}
+                >
+                  {Math.floor(stale.ageDays)}d
+                </ArtifactRowMeta>
+              ) : (
+                'Authored activity unknown.'
+              );
             }}
           />
           {attention.unknownStaleIds.length ? (
@@ -423,10 +450,12 @@ function HomeContent({
             byId={byId}
             selectedId={selectedId}
             reason={(node) => (
-              <>
+              <ArtifactRowMeta
+                icon="flag"
+                label={`Priority ${String(node.frontmatter.priority)}${attention.byId[node.id].readiness === 'unknown' ? '; readiness unknown.' : ''}`}
+              >
                 <PriorityChip priority={String(node.frontmatter.priority)} />
-                {attention.byId[node.id].readiness === 'unknown' ? ' Readiness unknown.' : null}
-              </>
+              </ArtifactRowMeta>
             )}
           />
         </div>
@@ -438,32 +467,54 @@ function HomeContent({
             attention={attention}
             byId={byId}
             selectedId={selectedId}
-            reason={(node) => String(node.frontmatter.updated ?? node.frontmatter.created)}
+            reason={(node) => {
+              const raw = String(node.frontmatter.updated ?? node.frontmatter.created);
+              const date = new Date(raw);
+              return (
+                <ArtifactRowMeta icon="calendar-days" label={raw}>
+                  {Number.isFinite(date.getTime())
+                    ? date.toLocaleDateString('en-GB', {
+                        day: 'numeric',
+                        month: 'short',
+                        timeZone: 'UTC',
+                      })
+                    : 'Unknown'}
+                </ArtifactRowMeta>
+              );
+            }}
           />
           <section className="pc-home__card" aria-label="Specs in flight">
-            <div className="pc-home__card-heading">
-              <h2>Specs in flight</h2>
-              <p>Tasks done, counted once per spec.</p>
-            </div>
+            <ArtifactCardHeader
+              title="Specs in flight"
+              count={activeSpecs.length}
+              description="Tasks done, counted once per spec."
+              href={specsHref}
+            />
             {activeSpecs.length ? (
               <ul className="pc-home__specs">
-                {activeSpecs.map((spec) => {
+                {activeSpecs.slice(0, PREVIEW_LIMIT).map((spec) => {
                   const node = byId.get(spec.id);
                   if (!node) return null;
                   return (
-                    <li key={spec.id}>
-                      <NodeLink node={node}>
-                        <WorkItemChip type="spec" id={planningDisplayId(node)} />
-                        <span className="pc-home__title">{node.title}</span>
-                        <span>{spec.total ? `${spec.done}/${spec.total}` : 'No tasks'}</span>
+                    <li key={spec.id} className="pc-artifact-row">
+                      <NodeLink node={node} className="pc-artifact-row__link">
+                        <span className="pc-artifact-row__id">
+                          <WorkItemChip type="spec" id={planningDisplayId(node)} />
+                        </span>
+                        <ArtifactRowTitle>{node.title}</ArtifactRowTitle>
                       </NodeLink>
-                      {spec.total ? (
-                        <progress
-                          aria-label={`${node.title}: tasks done`}
-                          value={spec.done}
-                          max={spec.total}
-                        />
-                      ) : null}
+                      <ArtifactRowMeta
+                        icon="circle-check"
+                        label={`${spec.done} of ${spec.total} tasks done`}
+                      >
+                        {spec.total ? `${spec.done}/${spec.total}` : 'No tasks'}
+                      </ArtifactRowMeta>
+                      <ArtifactRowCopy
+                        onCopy={copy}
+                        shortcutsEnabled={shortcutsEnabled}
+                        id={planningDisplayId(node)}
+                        command={planningContinuation(node)}
+                      />
                     </li>
                   );
                 })}
@@ -476,10 +527,27 @@ function HomeContent({
             className="pc-home__card pc-home__sprint"
             aria-label={activeSprint ? 'Active sprint' : 'No active sprint'}
           >
-            <h2>{activeSprint ? 'Active sprint' : 'No active sprint'}</h2>
+            <ArtifactCardHeader
+              title={activeSprint ? 'Active sprint' : 'No active sprint'}
+              count={activeSprint ? 1 : 0}
+              href="#/sprints"
+            />
             {activeSprint ? (
               <>
-                <NodeLink node={activeSprint}>{activeSprint.title}</NodeLink>
+                <ul className="pc-home__rows">
+                  <HomeRow
+                    node={activeSprint}
+                    selected={selectedId === activeSprint.id}
+                    reason={
+                      <ArtifactRowMeta
+                        icon="circle-check"
+                        label={`${doneSprintItems} of ${sprintItems.length} sprint items done`}
+                      >
+                        {doneSprintItems}/{sprintItems.length}
+                      </ArtifactRowMeta>
+                    }
+                  />
+                </ul>
                 <p>
                   {doneSprintItems} of {sprintItems.length} sprint items done.
                 </p>
@@ -544,9 +612,7 @@ export function OverviewPage({ currentBinding, current }: OverviewPageProps) {
               'High priority, not started',
             ].map((title) => (
               <section className="pc-home__card" key={title}>
-                <div className="pc-home__card-heading">
-                  <h2>{title}</h2>
-                </div>
+                <ArtifactCardHeader title={title} />
                 <div className="pc-home__loading">
                   {[0, 1, 2, 3].map((row) => (
                     <Skeleton key={row} h={48} />

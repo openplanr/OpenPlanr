@@ -48,7 +48,7 @@ const DESTINATIONS: Readonly<Record<string, string>> = {
 function typing(target: Element | null): boolean {
   return Boolean(
     target?.closest(
-      'input, textarea, select, [contenteditable]:not([contenteditable="false"]), [role="textbox"], [role="combobox"]',
+      'input, textarea, select, [contenteditable]:not([contenteditable="false"]), [role="textbox"], [role="combobox"], .pc-chip-menu__popup',
     ),
   );
 }

@@ -14,6 +14,7 @@ const styles = [
     'design-system/typography.css',
     'design-system/planr-console-tokens.css',
     'design-system/components/planr-console.css',
+    'design-system/components/chip-menu.css',
     'design-system/components/governed-controls.css',
   ].map((path) =>
     readFileSync(resolve(dashboard, 'src', path), 'utf8').replace(/@import[^;]*;/gu, ''),
@@ -117,10 +118,10 @@ test('renders compact desktop controls and keeps touch targets through state cha
           return {
             icons: heights('.pc-icon-button'),
             actions: heights('.pc-button'),
-            fields: heights('.pc-select__field'),
+            fields: heights('.pc-chip[role="combobox"]'),
             inputs: heights('.pc-input__field'),
             inputWrappers: heights('.pc-input'),
-            wrappers: heights('.pc-select'),
+            wrappers: heights('.pc-chip-menu'),
             segments: heights('.pc-segmented__option'),
             segmented: heights('.pc-segmented'),
             graph: heights('.pc-graph-controls button'),
@@ -132,11 +133,15 @@ test('renders compact desktop controls and keeps touch targets through state cha
         assert.deepEqual(measurements.actions, mode.touch ? [44, 44, 44] : [34, 36, 36], label);
         assert.deepEqual(
           measurements.fields,
-          [mode.touch ? 44 : 36, mode.touch ? 44 : 36, mode.touch ? 44 : 36],
+          [mode.touch ? 44 : 32, mode.touch ? 44 : 32, mode.touch ? 44 : 32],
           label,
         );
         assert.deepEqual(measurements.wrappers, measurements.fields, label);
-        assert.deepEqual(measurements.inputs, measurements.fields, label);
+        assert.deepEqual(
+          measurements.inputs,
+          [mode.touch ? 44 : 36, mode.touch ? 44 : 36, mode.touch ? 44 : 36],
+          label,
+        );
         assert.deepEqual(measurements.inputWrappers, measurements.inputs, label);
         assert(
           measurements.segments.every((height) => height === (mode.touch ? 44 : 30)),
@@ -197,10 +202,10 @@ test('renders compact desktop controls and keeps touch targets through state cha
         await page.getByRole('button', { name: 'Two', exact: true }).getAttribute('aria-pressed'),
         'true',
       );
-      await page.getByRole('combobox', { name: 'Select sm' }).focus();
+      await page.getByRole('combobox', { name: /^Select sm:/u }).focus();
       await page.keyboard.press('ArrowDown');
       const focus = await page
-        .locator('.pc-select')
+        .locator('.pc-chip[role="combobox"]')
         .first()
         .evaluate((element) => {
           const style = getComputedStyle(element);
@@ -211,6 +216,7 @@ test('renders compact desktop controls and keeps touch targets through state cha
           };
         });
       assert.deepEqual(focus, { width: '2px', offset: '2px', color: 'rgb(94, 234, 212)' });
+      await page.keyboard.press('Escape');
       assert.deepEqual(errors, []);
       assert.deepEqual(requests, []);
     } finally {

@@ -457,12 +457,20 @@ export function registerDashboardPerformanceTraceTests() {
         panelsMs.push(latency);
       }
       await markInputAction(page, 'filter-input type task');
-      await page.getByRole('combobox', { name: 'Filter by type' }).selectOption('task');
+      await page.getByRole('combobox', { name: /^Filter by type:/u }).click();
+      await page.getByRole('option', { name: 'Task', exact: true }).click();
+      await page.keyboard.press('Escape');
       await markInputAction(page, 'filter-input clear text');
       await filter.fill('');
       const selectedRow = page.locator('.pc-list tbody tr[data-selected="true"]');
       await expect(selectedRow).toHaveCount(1);
       await selectedRow.focus();
+      await selectedRow.press('Enter');
+      const selectedDetail = page
+        .getByRole('dialog', { name: 'Inspector', exact: true })
+        .locator('[data-artifact-id]');
+      await expect(selectedDetail).toHaveAttribute('data-artifact-id', fixture.manifest.selectedId);
+      await expect(selectedDetail).toHaveAttribute('data-detail-state', 'ready');
       await markPhase(page, 'pan-scroll patch anchor');
       await page.evaluate(() => {
         const scroller = document.querySelector('.pc-shell__scroll');
@@ -487,7 +495,9 @@ export function registerDashboardPerformanceTraceTests() {
         contentType: 'application/json',
       });
       await markInputAction(page, 'filter-input clear type');
-      await page.getByRole('combobox', { name: 'Filter by type' }).selectOption('all');
+      await page.getByRole('combobox', { name: /^Filter by type:/u }).click();
+      await page.getByRole('button', { name: 'Clear Filter by type', exact: true }).click();
+      await page.keyboard.press('Escape');
       await expect(page.locator('.pc-list')).toContainText(
         `${fixture.manifest.nodeCount} of ${fixture.manifest.nodeCount}`,
       );

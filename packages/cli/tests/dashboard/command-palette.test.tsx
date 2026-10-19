@@ -23,6 +23,7 @@ import {
 } from '../../../../apps/dashboard/src/features/search/search-index.js';
 import { createSearchKeyNav } from '../../../../apps/dashboard/src/features/search/search-key-nav.js';
 import { useInspectorStore } from '../../../../apps/dashboard/src/features/shell/inspector-selection.js';
+import { PlanningPresentationProvider } from '../../../../apps/dashboard/src/lib/routing/planning-presentation.js';
 import { buildPremiumDashboardFixture } from './fixtures/premium-dashboard-fixtures.js';
 
 const TEST_ROOT = dirname(fileURLToPath(import.meta.url));
@@ -873,3 +874,157 @@ describe('command palette and callable search UI', () => {
     expect(PALETTE_STYLES).not.toMatch(/animation:|transition:/u);
   });
 });
+
+it('copies the focused palette action once while pending and honors disabled single-letter shortcuts', async () => {
+  let finish: (() => void) | undefined;
+  const onCopy = vi.fn(
+    () =>
+      new Promise<void>((resolve) => {
+        finish = resolve;
+      }),
+  );
+  const subject = render(
+    <CommandPalette open onClose={() => undefined} onCopy={onCopy} initialQuery="@command" />,
+  );
+  const actions = [
+    ...subject.container.querySelectorAll<HTMLButtonElement>('.pc-artifact-row__action'),
+  ];
+  expect(actions.length).toBeGreaterThan(1);
+  const last = actions[actions.length - 1];
+  act(() => last.focus());
+  fireEvent.keyDown(last, { key: 'c' });
+  expect(onCopy).toHaveBeenCalledExactlyOnceWith('/planr:sprint');
+  expect(last.getAttribute('aria-disabled')).toBe('true');
+  fireEvent.keyDown(last, { key: 'c' });
+  fireEvent.click(actions[0]);
+  expect(onCopy).toHaveBeenCalledTimes(1);
+  await act(async () => {
+    finish?.();
+  });
+  subject.rerender(
+    <CommandPalette
+      open
+      singleLetters={false}
+      onClose={() => undefined}
+      onCopy={onCopy}
+      initialQuery="@command"
+    />,
+  );
+  expect(last.getAttribute('aria-keyshortcuts')).toBeNull();
+  fireEvent.keyDown(last, { key: 'c' });
+  expect(onCopy).toHaveBeenCalledTimes(1);
+});
+
+it('respects the planning shortcut preference for full-search copy actions', () => {
+  const onCopy = vi.fn(async () => undefined);
+  const subject = render(
+    <PlanningPresentationProvider scope="search-copy-preference" view={null} singleLetters={false}>
+      <SearchWorkspace onCopy={onCopy} initialQuery="@command" />
+    </PlanningPresentationProvider>,
+  );
+  const action = subject.container.querySelector<HTMLButtonElement>('.pc-artifact-row__action');
+  if (!action) throw new Error('Missing search command copy action');
+  expect(action.getAttribute('aria-keyshortcuts')).toBeNull();
+  fireEvent.keyDown(action, { key: 'c' });
+  expect(onCopy).not.toHaveBeenCalled();
+});
+
+it.each(['palette', 'workspace'] as const)(
+  'copies a verified Planning continuation through the %s copy lock',
+  async (surface) => {
+    let finish: (() => void) | undefined;
+    const onCopy = vi.fn(
+      () =>
+        new Promise<void>((resolve) => {
+          finish = resolve;
+        }),
+    );
+    const subject = render(
+      surface === 'palette' ? (
+        <CommandPalette
+          open
+          onClose={() => undefined}
+          sources={sources}
+          onCopy={onCopy}
+          initialQuery="Callable"
+        />
+      ) : (
+        <SearchWorkspace sources={sources} onCopy={onCopy} initialQuery="Callable" />
+      ),
+    );
+    const action = screen.getByRole('button', { name: 'Copy command for SPEC-020/US-013' });
+    act(() => action.focus());
+    fireEvent.keyDown(action, { key: 'c' });
+    expect(onCopy).toHaveBeenCalledExactlyOnceWith('openplanr status SPEC-020/US-013 --md');
+    expect(action.getAttribute('aria-disabled')).toBe('true');
+    fireEvent.click(action);
+    fireEvent.keyDown(action, { key: 'c' });
+    expect(onCopy).toHaveBeenCalledTimes(1);
+    expect(subject.container.textContent).toContain('Copying command');
+    await act(async () => {
+      finish?.();
+    });
+    expect(subject.container.textContent).toContain('Command copied.');
+  },
+);
+
+it('renders each Planning result with a leaf ID tag, readable title and separate type hint', () => {
+  const hits = [...hitsFor('Unified'), ...hitsFor('Callable')];
+  const subject = render(
+    <SearchResults hits={hits} activeHref={null} listId="row-recipe" onSelect={() => undefined} />,
+  );
+  const rows = [...subject.container.querySelectorAll<HTMLElement>('.pc-palette__result')].filter(
+    (row) => row.querySelector('[data-canonical-id]'),
+  );
+  expect(rows.length).toBeGreaterThan(1);
+  for (const row of rows) {
+    const button = row.querySelector<HTMLButtonElement>('[data-search-result]');
+    const canonicalId = button?.dataset.canonicalId;
+    const tag = button?.querySelector('.pc-artifact-tag');
+    const title = button?.querySelector('.pc-artifact-row__title');
+    expect(tag?.textContent).toBe(canonicalId?.split('/').at(-1));
+    expect(title?.textContent?.length).toBeGreaterThan(0);
+    expect(title?.getAttribute('title')).toBe(title?.textContent);
+    expect(button?.querySelector('.pc-palette__row-hint')).toBeNull();
+    expect(
+      row.querySelector(':scope > .pc-palette__row-hint')?.textContent?.length,
+    ).toBeGreaterThan(0);
+  }
+});
+
+it.each(['palette', 'workspace'] as const)(
+  'uses the authored short ID for a slug-named %s hit without changing its canonical identity',
+  (surface) => {
+    const canonicalId =
+      'BL-431-dashboard-needs-a-complete-artifact-title-without-using-the-file-slug-as-the-display-id';
+    const title = 'A readable backlog title';
+    const node: PlanningModelNode = {
+      id: canonicalId,
+      title,
+      type: 'backlog',
+      status: 'outstanding',
+      frontmatter: { id: 'BL-431' },
+    };
+    const scopedSources = { planningNodes: [node] };
+    const subject = render(
+      surface === 'palette' ? (
+        <CommandPalette
+          open
+          onClose={() => undefined}
+          sources={scopedSources}
+          initialQuery="BL-431"
+        />
+      ) : (
+        <SearchWorkspace sources={scopedSources} initialQuery="BL-431" />
+      ),
+    );
+    const result = subject.container.querySelector<HTMLButtonElement>('[data-search-result]');
+    expect(result?.dataset.canonicalId).toBe(canonicalId);
+    expect(result?.dataset.searchResult).toBe(`planning:${canonicalId}`);
+    expect(result?.querySelector('.pc-artifact-tag')?.textContent).toBe('BL-431');
+    expect(result?.querySelector('.pc-artifact-row__title')?.textContent).toBe(title);
+    expect(result?.closest('ol')?.style.getPropertyValue('--id-col')).not.toContain(
+      `${canonicalId.length}ch`,
+    );
+  },
+);

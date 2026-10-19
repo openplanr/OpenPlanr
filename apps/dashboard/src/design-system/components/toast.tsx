@@ -51,9 +51,7 @@ export function Toast({ title, children, kind = 'info', action, onDismiss }: Toa
         }
       }}
     >
-      <span className="pc-toast__glyph" aria-hidden="true">
-        {kind === 'error' ? '!' : '✓'}
-      </span>
+      <span className="pc-toast__glyph" aria-hidden="true" />
       <div className="pc-toast__body">
         <div role={kind === 'error' ? 'alert' : 'status'} aria-atomic="true">
           <strong>{title}</strong>

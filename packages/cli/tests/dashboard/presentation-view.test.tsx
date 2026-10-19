@@ -287,8 +287,11 @@ describe('presentation consumers', () => {
       ),
     );
     expect(document.querySelectorAll('.pc-status-board__card')).toHaveLength(nodes.length - 1);
-    expect(screen.getByRole('button', { name: /Expand Done/u }).textContent).toContain('1');
-    fireEvent.click(screen.getByRole('button', { name: /Expand Done/u }));
+    const hideDone = screen.getByRole('button', { name: 'Hide done', exact: true });
+    expect(hideDone.getAttribute('aria-pressed')).toBe('true');
+    expect(document.querySelector('[data-keyboard-column="done"]')?.textContent).toContain('1');
+    fireEvent.click(hideDone);
+    expect(hideDone.getAttribute('aria-pressed')).toBe('false');
     expect(document.querySelectorAll('.pc-status-board__card')).toHaveLength(nodes.length);
     expect(document.body.textContent).toContain('Older story');
   });

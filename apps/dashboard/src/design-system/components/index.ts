@@ -6,6 +6,12 @@ export {
   PriorityChip,
   type PriorityChipProps,
 } from './artifact-recipes.js';
+export {
+  ArtifactRowCopy,
+  ArtifactRowMeta,
+  ArtifactRowTitle,
+  artifactRowStyle,
+} from './artifact-row.js';
 export { AlertDialog, Tabs as RadixTabs } from './composite-primitives.js';
 export {
   Badge,
@@ -15,7 +21,11 @@ export {
   type ButtonProps,
   type ButtonVariant,
   Card,
+  CardHeader,
+  type CardHeaderProps,
   type CardProps,
+  ChipToggle,
+  type ChipToggleProps,
   CommandHint,
   type CommandHintProps,
   type ControlSize,

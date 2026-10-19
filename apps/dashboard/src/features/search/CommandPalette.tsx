@@ -1,5 +1,4 @@
-import type { KeyboardEvent } from 'react';
-import { useEffect, useId, useMemo, useRef, useState } from 'react';
+import { type KeyboardEvent, useEffect, useId, useMemo, useRef, useState } from 'react';
 import {
   Button,
   Input,
@@ -9,6 +8,7 @@ import {
   Select,
 } from '../../design-system/components/index.js';
 import type { DashboardQueryIdentity } from '../../lib/binding/query-identity.js';
+import { usePlanningShortcuts } from '../../lib/routing/planning-presentation.js';
 import { inspectPlanningNode, useLiveListOrder } from '../planning/planning-inspector.js';
 import { SearchPreview } from './SearchPreview.js';
 import { SearchResults } from './SearchResults.js';
@@ -18,6 +18,8 @@ import {
   type DashboardSearchSources,
   queryDashboardSearchIndex,
   queryUnsupportedPlanningIdentities,
+  searchHitDisplayId,
+  verifiedSearchCommand,
 } from './search-index.js';
 import { createSearchKeyNav, type SearchKeyNav } from './search-key-nav.js';
 import { useOperateSearchHits } from './use-operate-search-hits.js';
@@ -484,7 +486,8 @@ export function CommandPalette({
       onKeyDown={onResultKeyDown}
       onKeyDownCapture={(event) => {
         const command =
-          event.target instanceof Element && event.target.closest('.pc-command-hint__copy');
+          event.target instanceof Element &&
+          event.target.closest('.pc-command-hint__copy, .pc-artifact-row__action');
         if (!command) return;
         if (
           composingRef.current ||
@@ -572,9 +575,15 @@ export function CommandPalette({
             activeHref={search.active?.href ?? null}
             activeId={search.active?.id ?? null}
             commandBusy={commandCopy.feedback?.state === 'pending'}
+            shortcutsEnabled={singleLetters}
             listId={listId}
             onSelect={selectHit}
             onFocus={search.activateHit}
+            commandForHit={(hit) => verifiedSearchCommand(hit, sources)}
+            displayIdForHit={(hit) => searchHitDisplayId(hit, sources)}
+            onCopyCommand={(command) => {
+              void commandCopy.copy(command);
+            }}
           />
           <div className="pc-palette__feedback">
             {selectedCommand?.source === 'command' ? (
@@ -648,6 +657,7 @@ export function SearchWorkspace({
   preferredOperateCycleId = null,
   connectionState = 'disconnected',
 }: SearchWorkspaceProps) {
+  const shortcutsEnabled = usePlanningShortcuts();
   const listId = useId();
   const search = useSearchState(
     sources,
@@ -715,8 +725,14 @@ export function SearchWorkspace({
         listId={listId}
         activeId={search.active?.id ?? null}
         commandBusy={commandCopy.feedback?.state === 'pending'}
+        shortcutsEnabled={shortcutsEnabled}
         onSelect={selectHit}
         onFocus={search.activateHit}
+        commandForHit={(hit) => verifiedSearchCommand(hit, sources)}
+        displayIdForHit={(hit) => searchHitDisplayId(hit, sources)}
+        onCopyCommand={(command) => {
+          void commandCopy.copy(command);
+        }}
       />
       <CommandCopyFeedback feedback={commandCopy.feedback} />
     </section>

@@ -1,20 +1,22 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ARTIFACT_STATUS_ORDER,
+  artifactRowStyle,
   Button,
   Card,
+  ChipToggle,
   CommandHint,
   DataTable,
   EmptyState,
   Input,
   SectionHeader,
   Select,
-  Switch,
+  Tabs,
   Toolbar,
   ToolbarDivider,
 } from '../../design-system/components/index.js';
 import type { DashboardProductState } from '../../lib/api/product-state.js';
-import { LIST_COLUMNS } from './planning-columns.js';
+import { LIST_COLUMNS, listCommandColumn } from './planning-columns.js';
 import {
   inspectPlanningNode,
   useLiveListOrder,
@@ -44,11 +46,14 @@ import {
   useListRowViewport,
   useListScrollAnchor,
   usePlanningCopy,
+  usePlanningShortcuts,
 } from './planning-list-window.js';
 import {
   type PlanningArtifactType,
   type PlanningModelNode,
+  planningArtifactTypeLabel,
   planningDetailHref,
+  planningDisplayId,
 } from './planning-model.js';
 import {
   PlanningNotice,
@@ -81,11 +86,15 @@ const TYPES: readonly PlanningArtifactType[] = Object.freeze([
 ]);
 const TYPE_OPTIONS = Object.freeze([
   { value: ALL, label: 'All types' },
-  ...TYPES.map((type) => ({ value: type, label: type })),
+  ...TYPES.map((type) => ({ value: type, label: planningArtifactTypeLabel(type) })),
 ]);
 const STATUS_OPTIONS = Object.freeze([
   { value: ALL, label: 'All statuses' },
-  ...ARTIFACT_STATUS_ORDER.map((status) => ({ value: status, label: status })),
+  ...ARTIFACT_STATUS_ORDER.map((status) => ({
+    value: status,
+    label:
+      status === 'in-progress' ? 'In progress' : status.charAt(0).toUpperCase() + status.slice(1),
+  })),
 ]);
 const PRIORITIES = ['P0', 'P1', 'P2', 'P3', 'critical', 'high', 'medium', 'low'];
 
@@ -210,6 +219,7 @@ export function ListPage({
     graph,
   );
   const copy = usePlanningCopy();
+  const shortcutsEnabled = usePlanningShortcuts();
   const [copyState, setCopyState] = useState('');
   const [copyPending, setCopyPending] = useState(false);
   const copyLock = useRef(false);
@@ -354,32 +364,42 @@ export function ListPage({
           className="pc-list__surface"
           aria-label="Planning artifact index"
         >
-          <fieldset className="pc-list__presets" aria-label="List presets">
-            {LIST_PRESETS.map(([key, label]) => {
-              const preset = listPreset(key);
-              const active =
-                JSON.stringify(effectiveView.filters) === JSON.stringify(preset.filters) &&
-                effectiveView.groupBy === preset.groupBy;
-              return (
-                <Button
-                  key={key}
-                  size="sm"
-                  variant="ghost"
-                  aria-pressed={active}
-                  onClick={() => setPresentation({ ...preset, density: effectiveView.density })}
-                >
-                  {label} <span className="pc-list__preset-count">{totals?.get(key)}</span>
-                </Button>
-              );
-            })}
-          </fieldset>
+          <div className="pc-list__presets">
+            <Tabs
+              label="List presets"
+              variant="pill"
+              value={
+                LIST_PRESETS.slice(0, 5).find(([key]) => {
+                  const preset = listPreset(key);
+                  return (
+                    JSON.stringify(effectiveView.filters) === JSON.stringify(preset.filters) &&
+                    effectiveView.groupBy === preset.groupBy
+                  );
+                })?.[0] ?? ''
+              }
+              tabs={LIST_PRESETS.slice(0, 5).map(([id, label]) => ({
+                id,
+                label,
+                count: totals?.get(id),
+              }))}
+              onChange={(id) => {
+                const preset = LIST_PRESETS.find(([key]) => key === id);
+                if (preset)
+                  setPresentation({ ...listPreset(preset[0]), density: effectiveView.density });
+              }}
+            />
+          </div>
           <Toolbar
-            right={<Switch size="sm" checked={compact} onChange={changeDensity} label="Compact" />}
+            right={
+              <ChipToggle checked={compact} onChange={changeDensity}>
+                Compact
+              </ChipToggle>
+            }
           >
             <Input
-              size="sm"
               icon="search"
-              width={220}
+              suffix="/"
+              width={340}
               placeholder="Filter by id or title"
               ariaLabel="Filter by id or title"
               value={query}
@@ -393,66 +413,61 @@ export function ListPage({
               width={128}
               ariaLabel="Filter by type"
               value={type}
-              onChange={(value) => {
-                updateFilters({ type: value === ALL ? [] : [value] });
+              onChange={(value) => updateFilters({ type: value === ALL ? [] : [value] })}
+              values={effectiveView.filters.type}
+              onValuesChange={(values) => {
+                updateFilters({ type: values as PlanningArtifactType[] });
                 resetPage();
               }}
-              options={TYPE_OPTIONS.map((option) =>
-                option.value === ALL && effectiveView.filters.type.length > 1
-                  ? { ...option, label: `Types: ${effectiveView.filters.type.join(', ')}` }
-                  : option,
-              )}
+              clearValue={ALL}
+              options={TYPE_OPTIONS}
             />
             <Select
               size="sm"
               width={138}
               ariaLabel="Filter by status"
               value={status}
-              onChange={(value) => {
-                updateFilters({ status: value === ALL ? [] : [value] });
+              onChange={(value) => updateFilters({ status: value === ALL ? [] : [value] })}
+              values={effectiveView.filters.status}
+              onValuesChange={(values) => {
+                updateFilters({ status: values });
                 resetPage();
               }}
-              options={STATUS_OPTIONS.map((option) =>
-                option.value === ALL && effectiveView.filters.status.length > 1
-                  ? { ...option, label: `Status: ${effectiveView.filters.status.join(', ')}` }
-                  : option,
-              )}
+              clearValue={ALL}
+              options={STATUS_OPTIONS}
             />
             <Select
               size="sm"
               ariaLabel="Filter by priority"
-              value={
-                effectiveView.filters.priority.length === 1
-                  ? effectiveView.filters.priority[0]
-                  : ALL
-              }
+              value={ALL}
               onChange={(value) => updateFilters({ priority: value === ALL ? [] : [value] })}
+              values={effectiveView.filters.priority}
+              onValuesChange={(values) => {
+                updateFilters({ priority: values });
+                resetPage();
+              }}
+              clearValue={ALL}
               options={[
-                {
-                  value: ALL,
-                  label:
-                    effectiveView.filters.priority.length > 1
-                      ? `Priority: ${effectiveView.filters.priority.join(', ')}`
-                      : 'All priorities',
-                },
-                ...PRIORITIES.map((value) => ({ value, label: value })),
+                { value: ALL, label: 'All priorities' },
+                ...PRIORITIES.map((value) => ({
+                  value,
+                  label: value.charAt(0).toUpperCase() + value.slice(1),
+                })),
               ]}
             />
             <Select
               size="sm"
               ariaLabel="Filter by label"
-              value={
-                effectiveView.filters.label.length === 1 ? effectiveView.filters.label[0] : ALL
-              }
+              value={ALL}
               onChange={(value) => updateFilters({ label: value === ALL ? [] : [value] })}
+              values={effectiveView.filters.label}
+              onValuesChange={(values) => {
+                updateFilters({ label: values });
+                resetPage();
+              }}
+              clearValue={ALL}
               options={[
-                {
-                  value: ALL,
-                  label:
-                    effectiveView.filters.label.length > 1
-                      ? `Labels: ${effectiveView.filters.label.join(', ')}`
-                      : 'All labels',
-                },
+                { value: ALL, label: 'All labels' },
                 ...labels.map((value) => ({ value, label: value })),
               ]}
             />
@@ -465,13 +480,13 @@ export function ListPage({
               }
               options={['none', 'spec', 'type', 'status', 'label'].map((value) => ({
                 value,
-                label: `Group: ${value}`,
+                label: `Group: ${value.charAt(0).toUpperCase() + value.slice(1)}`,
               }))}
             />
             <ToolbarDivider />
             <Button
               size="sm"
-              variant="ghost"
+              variant="secondary"
               disabled={sharePending}
               onClick={() => {
                 void share({ ...effectiveView, focusId: selectedId ?? null });
@@ -480,13 +495,34 @@ export function ListPage({
               Copy filter link
             </Button>
             {view?.filters.attention ? (
-              <Button size="sm" variant="ghost" onClick={clearFilters}>
+              <Button size="sm" variant="secondary" onClick={clearFilters}>
                 Clear attention filter: {view.filters.attention}
               </Button>
             ) : null}
             <span className="pc-list__note">read-only view of .planr/</span>
           </Toolbar>
           <fieldset className="pc-list__dates" aria-label="Relative date filters">
+            <Select
+              ariaLabel="Date preset"
+              value={
+                effectiveView.filters.createdWithinDays === 1
+                  ? 'today'
+                  : effectiveView.filters.createdWithinDays === 2
+                    ? 'yesterday'
+                    : 'none'
+              }
+              options={[
+                { value: 'none', label: 'Any date' },
+                { value: 'today', label: 'Filed today' },
+                { value: 'yesterday', label: 'Filed since yesterday' },
+              ]}
+              onChange={(value) => {
+                if (value === 'today' || value === 'yesterday')
+                  setPresentation({ ...listPreset(value), density: effectiveView.density });
+                else updateFilters({ createdWithinDays: null });
+              }}
+              clearValue="none"
+            />
             {(['createdWithinDays', 'updatedWithinDays'] as const).map((field) => (
               <label className="pc-list__relative" key={field}>
                 {field === 'createdWithinDays' ? 'Created' : 'Updated'} within UTC days
@@ -515,19 +551,19 @@ export function ListPage({
                 />
               </label>
             ))}
-            <Button size="sm" variant="ghost" onClick={clearFilters}>
+            <Button size="sm" variant="secondary" onClick={clearFilters}>
               Clear filters
             </Button>
           </fieldset>
           <fieldset className="pc-list__selection" aria-label="Bulk command copy">
             <Button
               size="sm"
-              variant="ghost"
+              variant="secondary"
               onClick={() => setSelected(rows.map((node) => node.id))}
             >
               Select all {rows.length} filtered
             </Button>
-            <Button size="sm" variant="ghost" onClick={() => setSelected([])}>
+            <Button size="sm" variant="secondary" onClick={() => setSelected([])}>
               Clear selection
             </Button>
             <span className="pc-list__selection-count">
@@ -539,7 +575,13 @@ export function ListPage({
               ariaLabel="Suggested backlog status"
               value={bulkStatus}
               onChange={setBulkStatus}
-              options={BACKLOG_STATUSES.map((value) => ({ value, label: value }))}
+              options={BACKLOG_STATUSES.map((value) => ({
+                value,
+                label:
+                  value === 'in-progress'
+                    ? 'In progress'
+                    : value.charAt(0).toUpperCase() + value.slice(1),
+              }))}
             />
             <Button
               size="sm"
@@ -583,22 +625,29 @@ export function ListPage({
                 ? `${dateExcluded} items excluded: unknown, invalid or future authored dates.`
                 : 'J/K move · Enter opens panel · Space selects · Shift+Up/Down extends · / filters · C copies ID')}
           </p>
-          <Button
-            variant="ghost"
-            size="sm"
-            aria-expanded={!collapsed}
-            onClick={() => setCollapsed((value) => !value)}
-          >
-            {collapsed ? 'Expand artifacts' : 'Collapse artifacts'}
-          </Button>
+          <div className="pc-list__utilities">
+            <Button
+              variant="secondary"
+              size="sm"
+              aria-expanded={!collapsed}
+              onClick={() => setCollapsed((value) => !value)}
+            >
+              {collapsed ? 'Expand artifacts' : 'Collapse artifacts'}
+            </Button>
+          </div>
           <div className="pc-list__window" data-scroll-context="list-window" hidden={collapsed}>
             {visibleGroups.map((group) => (
-              <section key={group.key} aria-label={group.label} data-keyboard-group={group.key}>
+              <section
+                key={group.key}
+                aria-label={group.label}
+                data-keyboard-group={group.key}
+                style={artifactRowStyle(group.nodes.map(planningDisplayId))}
+              >
                 <div className="pc-list__group-header" hidden={effectiveView.groupBy === 'none'}>
                   {effectiveView.groupBy !== 'none' ? (
                     <Button
                       size="sm"
-                      variant="ghost"
+                      variant="secondary"
                       aria-expanded={!collapsedGroups.includes(group.key)}
                       onClick={() =>
                         setCollapsedGroups((groups) =>
@@ -659,7 +708,7 @@ export function ListPage({
                     onRowFocus={(node) => inspectPlanningNode(node, false)}
                     caption="Planning artifacts"
                     emptyMessage="No node matches this filter."
-                    columns={LIST_COLUMNS}
+                    columns={[...LIST_COLUMNS, listCommandColumn(copy, shortcutsEnabled)]}
                   />
                 </div>
               </section>

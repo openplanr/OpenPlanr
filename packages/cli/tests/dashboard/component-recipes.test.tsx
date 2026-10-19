@@ -189,7 +189,7 @@ for (const theme of ['dark', 'light'] as const) {
         fireEvent.keyDown(button, { key: 'Enter' });
       }
       expect((screen.getByRole('textbox') as HTMLInputElement).disabled).toBe(true);
-      expect((screen.getByRole('combobox') as HTMLSelectElement).disabled).toBe(true);
+      expect((screen.getByRole('combobox') as HTMLButtonElement).disabled).toBe(true);
       fireEvent.click(screen.getByRole('switch'));
       expect(invoke).not.toHaveBeenCalled();
       expect(screen.getByText('Read unavailable')).toBeTruthy();
@@ -424,6 +424,25 @@ it('keeps denied clipboard commands selectable and offers manual copy without fa
   expect(screen.queryByText('Copied')).toBeNull();
 });
 
+it('keeps command feedback outside row geometry for success and clipboard denial', async () => {
+  const onCopy = vi.fn().mockResolvedValue(undefined);
+  const view = render(
+    <CommandHint variant="row" artifactId="T-001" command="status" onCopy={onCopy} />,
+  );
+  const button = screen.getByRole('button', { name: 'Copy command for T-001' });
+  await act(async () => fireEvent.click(button));
+  const feedback = document.querySelector('.pc-command-hint__feedback');
+  expect(feedback?.parentElement).toBe(document.body);
+  expect(view.container.querySelector('.pc-toast')).toBeNull();
+  expect(screen.getByRole('status').textContent).toBe('Copiedstatus');
+  onCopy.mockRejectedValue(new Error('Denied'));
+  await act(async () => fireEvent.click(button));
+  expect(view.container.querySelector('.pc-toast')).toBeNull();
+  expect(screen.getByRole('alert').textContent).toContain(
+    'Select the command and copy it manually.',
+  );
+});
+
 it('handles absent clipboard and ignores old completions after command selection changes', async () => {
   const view = render(<CommandHint command="first command" />);
   vi.stubGlobal('navigator', { clipboard: undefined });
@@ -473,14 +492,17 @@ it('ignores copy chords, composition and disabled shortcuts, and blocks unavaila
 
 function InspectorExample({
   state = 'ready',
+  modal = false,
 }: {
   state?: 'ready' | 'loading' | 'empty' | 'error';
+  modal?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   return (
     <Inspector
       open={open}
       onOpenChange={setOpen}
+      modal={modal}
       title="Item detail"
       description="Selected item"
       trigger={<button type="button">Inspect item</button>}
@@ -492,22 +514,25 @@ function InspectorExample({
   );
 }
 
-it('enters inspector heading, closes on Escape and restores launcher focus', async () => {
-  render(<InspectorExample />);
-  const trigger = screen.getByRole('button', { name: 'Inspect item' });
-  act(() => trigger.focus());
-  fireEvent.click(trigger);
-  expect(screen.getByRole('dialog').getAttribute('aria-labelledby')).toBe(
-    screen.getByRole('heading').id,
-  );
-  expect(document.activeElement).toBe(screen.getByRole('heading'));
-  fireEvent.keyDown(document.activeElement ?? trigger, { key: 'Escape' });
-  expect(screen.queryByRole('dialog')).toBeNull();
-  await act(async () => {
-    await new Promise((resolve) => setTimeout(resolve, 0));
-  });
-  expect(document.activeElement).toBe(trigger);
-});
+it.each([false, true])(
+  'preserves nonmodal focus and enters modal content with modal=%s',
+  async (modal) => {
+    render(<InspectorExample modal={modal} />);
+    const trigger = screen.getByRole('button', { name: 'Inspect item' });
+    act(() => trigger.focus());
+    fireEvent.click(trigger);
+    expect(screen.getByRole('dialog').getAttribute('aria-labelledby')).toBe(
+      screen.getByRole('heading').id,
+    );
+    expect(document.activeElement).toBe(modal ? screen.getByRole('heading') : trigger);
+    fireEvent.keyDown(document.activeElement ?? trigger, { key: 'Escape' });
+    expect(screen.queryByRole('dialog')).toBeNull();
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+    expect(document.activeElement).toBe(trigger);
+  },
+);
 
 it.each(['loading', 'empty', 'error'] as const)(
   'keeps inspector close available in %s state',

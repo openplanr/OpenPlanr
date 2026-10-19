@@ -206,7 +206,14 @@ describe('Full Search reference interactions', () => {
     expect(selected.getAttribute('data-search-result')).toBe(`planning:${selectedId}`);
     expect(scroller.scrollTop).toBe(120);
     expect(
-      within(screen.getByRole('list', { name: 'Planning work' })).getAllByRole('button'),
+      screen
+        .getByRole('list', { name: 'Planning work' })
+        .querySelectorAll('button[data-search-result]'),
+    ).toHaveLength(4);
+    expect(
+      within(screen.getByRole('list', { name: 'Planning work' })).getAllByRole('button', {
+        name: /^Copy command for /u,
+      }),
     ).toHaveLength(4);
     const query = screen.getByRole('textbox', { name: 'Search query' });
     expect((query as HTMLInputElement).value).toBe('@task');

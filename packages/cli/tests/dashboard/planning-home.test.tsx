@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 
+import { readFileSync } from 'node:fs';
 import { deriveAttention } from '@openplanr/protocol/dashboard/planning-attention.mjs';
 import { act, cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -250,7 +251,7 @@ describe('Home attention', () => {
     );
     const command = item.querySelector('code')?.textContent;
     expect(command).toBe('/planr:ship SPEC-026/T-109');
-    fireEvent.click(within(item).getByRole('button', { name: 'Copy command' }));
+    fireEvent.click(within(item).getByRole('button', { name: 'Copy command for T-036' }));
     await act(async () => {});
     expect(writeText).toHaveBeenCalledExactlyOnceWith(command);
     expect(JSON.parse(screen.getByTestId('selection').textContent ?? '{}').selection.id).toBe(
@@ -387,4 +388,191 @@ describe('Home attention', () => {
       reconciler.dispose();
     },
   );
+});
+
+function idColumnWidth(value: string): number {
+  const match = value.match(/^max\(9ch, calc\((\d+)ch \+ ([\d.]+)em \+ (\d+)px\)\)$/u);
+  if (!match) throw new Error(`Unsupported ID column recipe: ${value}`);
+  return Math.max(9 * 7.2, Number(match[1]) * 7.2 + Number(match[2]) * 12 + Number(match[3]));
+}
+
+it('caps each Home card at five rows and keeps the full count reachable', () => {
+  const additions: PlanningModelGraph['nodes'] = Array.from({ length: 11 }, (_, index) => ({
+    id: `SPEC-${900 + index}`,
+    type: 'spec',
+    status: 'in-progress',
+    title: `Additional specification ${index + 1}`,
+    frontmatter: { created: ARTBOARD_FIXTURE_CLOCK, updated: ARTBOARD_FIXTURE_CLOCK },
+  }));
+  const graph = { ...DATASET.graph, nodes: [...DATASET.graph.nodes, ...additions] };
+  const { container } = render(<Home current={fixture(graph)} />);
+  for (const list of container.querySelectorAll('.pc-home__card ul')) {
+    expect(list.children.length).toBeLessThanOrEqual(5);
+  }
+  const specs = screen.getByRole('region', { name: 'Specs in flight' });
+  const count = graph.nodes.filter(
+    (node) => node.type === 'spec' && node.status !== 'done' && node.status !== 'addressed',
+  ).length;
+  expect(within(specs).getAllByRole('listitem')).toHaveLength(5);
+  const link = within(specs).getByRole('link', { name: new RegExp(`See all ${count}`, 'u') });
+  const location = parseDashboardLocation(link.getAttribute('href') ?? '');
+  expect(location.invalidView).toBe(false);
+  expect(location.presentationView).not.toBeNull();
+  expect(
+    applyPlanningView(
+      graph.nodes,
+      location.presentationView,
+      new Date(ARTBOARD_FIXTURE_CLOCK),
+      graph,
+    ),
+  ).toHaveLength(count);
+  for (const title of container.querySelectorAll<HTMLElement>('.pc-artifact-row__title')) {
+    expect(title.title).toBe(title.textContent);
+  }
+});
+
+it('keeps every Home card on the shared row grid without tag and title overlap', () => {
+  const stylesheet = readFileSync(
+    `${process.cwd()}/../../apps/dashboard/src/design-system/components/artifact-row.css`,
+    'utf8',
+  );
+  const rowRule = stylesheet.match(/\.pc-artifact-row\s*\{([^}]+)\}/u)?.[1];
+  expect(rowRule).toBeDefined();
+  expect(rowRule).toMatch(
+    /grid-template-columns:\s*var\(--id-col[^;]+minmax\(0,\s*1fr\) auto var\(--action-col/u,
+  );
+  const padding = Number(rowRule?.match(/padding:\s*0 (\d+)px/u)?.[1]);
+  const gap = Number(rowRule?.match(/column-gap:\s*(\d+)px/u)?.[1]);
+  const height = Number(rowRule?.match(/height:\s*(\d+)px/u)?.[1]);
+  expect([padding, gap, height]).toEqual([20, 12, 44]);
+  expect(stylesheet).toMatch(
+    /\.pc-artifact-row__title\s*\{[^}]*overflow:\s*hidden;[^}]*text-overflow:\s*ellipsis/u,
+  );
+  const { container } = render(<Home />);
+  const cards = [...container.querySelectorAll('.pc-home__card')];
+  expect(cards).toHaveLength(6);
+  const home = container.querySelector<HTMLElement>('.pc-overview');
+  const idColumn = idColumnWidth(home?.style.getPropertyValue('--id-col') ?? '');
+  const titleColumns: number[] = [];
+  for (const section of cards) {
+    expect(section.querySelector('.pc-card__head')).toBeTruthy();
+    for (const list of section.querySelectorAll<HTMLElement>('ul')) {
+      const rows = [...list.querySelectorAll<HTMLElement>(':scope > .pc-artifact-row')];
+      if (!rows.length) continue;
+      expect(list.style.getPropertyValue('--id-col')).toBe('');
+      expect(idColumn).toBeGreaterThanOrEqual(9 * 7.2);
+      const titles = rows.map((row) => {
+        const title = row.querySelector('.pc-artifact-row__title');
+        const tag = row.querySelector('.pc-artifact-row__id .pc-artifact-tag');
+        expect(title).toBeTruthy();
+        expect(tag).toBeTruthy();
+        expect(title?.parentElement?.classList.contains('pc-artifact-row__link')).toBe(true);
+        const ch = 7.2;
+        const length = tag?.textContent?.length ?? 0;
+        const tagRight = padding + length * (ch + 0.03 * 12) + 14;
+        const titleLeft = padding + idColumn + gap;
+        titleColumns.push(titleLeft);
+        expect(tagRight).toBeLessThanOrEqual(titleLeft);
+        return titleLeft;
+      });
+      expect(new Set(titles).size).toBe(1);
+    }
+  }
+  expect(new Set(titleColumns).size).toBe(1);
+});
+
+it('summarizes multiple waiting dependencies with their full accessible ID list', () => {
+  const graph: PlanningModelGraph = {
+    nodes: ['T-001', 'T-109', 'T-110'].map((id) => ({
+      id,
+      type: 'task',
+      status: 'outstanding',
+      title: `Task ${id}`,
+      frontmatter: {
+        id,
+        created: ARTBOARD_FIXTURE_CLOCK,
+        ...(id === 'T-001' ? { dependsOn: ['T-109', 'T-110'] } : {}),
+      },
+    })),
+    edges: [
+      { from: 'T-001', to: 'T-109', kind: 'depends_on' },
+      { from: 'T-001', to: 'T-110', kind: 'depends_on' },
+    ],
+  };
+  const { container } = render(<Home current={fixture(graph)} />);
+  const row = container
+    .querySelector('[data-attention="waiting"] [data-keyboard-item="T-001"]')
+    ?.closest('li');
+  if (!row) throw new Error('Missing waiting row with multiple dependencies');
+  const summary = within(row).getByRole('button', {
+    name: '2 Waits on unfinished dependencies: T-109, T-110',
+  });
+  expect(summary.querySelector('.pc-artifact-row__meta-value')?.textContent).toBe('2');
+  expect(document.getElementById(summary.getAttribute('aria-describedby') ?? '')?.textContent).toBe(
+    'Waits on unfinished dependencies: T-109, T-110',
+  );
+  expect(row.querySelectorAll('.pc-home__dependency-tag')).toHaveLength(0);
+});
+
+it('keeps List titles in one column with room for every identifier', () => {
+  const current = fixture();
+  const { container } = render(
+    <PlanningPresentationProvider scope="row-geometry" view={planningAttentionView('waiting')}>
+      <ListPage currentBinding={current.binding} current={current.state} />
+    </PlanningPresentationProvider>,
+  );
+  const groups = [
+    ...container.querySelectorAll<HTMLElement>('.pc-list__window > section[data-keyboard-group]'),
+  ];
+  expect(groups.length).toBeGreaterThan(0);
+  const stylesheet = readFileSync(
+    `${process.cwd()}/../../apps/dashboard/src/features/planning/list.css`,
+    'utf8',
+  );
+  expect(stylesheet).toMatch(/font-size:\s*12px/u);
+  for (const group of groups) {
+    const idColumn = idColumnWidth(group.style.getPropertyValue('--id-col'));
+    expect(idColumn).toBeGreaterThanOrEqual(9 * 7.2);
+    const header = group.querySelector<HTMLElement>('th[data-column="id"]');
+    expect(header?.style.width).toBe('calc(var(--id-col) + 26px)');
+    const rows = [...group.querySelectorAll<HTMLElement>('tbody tr[data-keyboard-item]')];
+    expect(rows.length).toBeGreaterThan(0);
+    const titlePositions = rows.map((row) => {
+      const title = row.querySelector('.pc-list__title');
+      const tag = row.querySelector('.pc-artifact-tag');
+      expect(title).toBeTruthy();
+      expect(tag).toBeTruthy();
+      const ch = 7.2;
+      const tagWidth = (tag?.textContent?.length ?? 0) * (ch + 0.03 * 12) + 14;
+      const idWidth = idColumn;
+      expect(tagWidth).toBeLessThanOrEqual(idWidth);
+      return idWidth + 26 + 6;
+    });
+    expect(new Set(titlePositions).size).toBe(1);
+  }
+});
+
+it('copies a Home row through the supplied adapter while single-letter shortcuts are disabled', async () => {
+  const onCopy = vi.fn().mockResolvedValue(undefined);
+  const current = fixture();
+  const { container } = render(
+    <PlanningPresentationProvider
+      scope="row-copy"
+      view={null}
+      onCopy={onCopy}
+      singleLetters={false}
+    >
+      <Home current={current} />
+    </PlanningPresentationProvider>,
+  );
+  const button = container.querySelector<HTMLButtonElement>('.pc-home__row .pc-command-hint__copy');
+  expect(button).toBeTruthy();
+  expect(button?.getAttribute('aria-keyshortcuts')).toBeNull();
+  if (!button) throw new Error('Missing Home row copy action');
+  fireEvent.keyDown(button, { key: 'c' });
+  expect(onCopy).not.toHaveBeenCalled();
+  fireEvent.click(button);
+  await act(async () => {});
+  expect(onCopy).toHaveBeenCalledTimes(1);
+  expect(onCopy.mock.calls[0][0]).toMatch(/^\/planr:/u);
 });

@@ -1,6 +1,9 @@
 import { memo } from 'react';
 import {
+  ArtifactRowCopy,
+  ArtifactRowTitle,
   ArtifactStatus,
+  artifactRowStyle,
   Button,
   Card,
   CommandHint,
@@ -26,11 +29,25 @@ import type { PlanningWorkspaceModel } from './planning-workspace.js';
 import { usePlanningDetail } from './use-planning-detail.js';
 import './detail.css';
 
-function NodeLink({ node }: { node: PlanningModelNode }) {
+function NodeLink({ node, row = false }: { node: PlanningModelNode; row?: boolean }) {
   const href = planningDetailHref(node);
   return href ? (
-    <a className="pc-detail__node-link" href={href}>
-      <WorkItemChip type={node.type} id={planningDisplayId(node)} title={node.title} interactive />
+    <a className={row ? 'pc-artifact-row__link' : 'pc-detail__node-link'} href={href}>
+      {row ? (
+        <>
+          <span className="pc-artifact-row__id">
+            <WorkItemChip type={node.type} id={planningDisplayId(node)} />
+          </span>
+          <ArtifactRowTitle>{node.title}</ArtifactRowTitle>
+        </>
+      ) : (
+        <WorkItemChip
+          type={node.type}
+          id={planningDisplayId(node)}
+          title={node.title}
+          interactive
+        />
+      )}
     </a>
   ) : (
     <span>{node.id}: destination unavailable</span>
@@ -38,17 +55,34 @@ function NodeLink({ node }: { node: PlanningModelNode }) {
 }
 
 function Relations({ title, rows }: { title: string; rows: readonly StructuralReference[] }) {
+  const copy = usePlanningCopy();
+  const shortcutsEnabled = usePlanningShortcuts();
   return (
     <section className="pc-detail__relations" aria-label={title}>
       <h3>{title}</h3>
       {rows.length ? (
-        <ul>
+        <ul
+          style={artifactRowStyle(
+            rows.map((ref) => (ref.node ? planningDisplayId(ref.node) : ref.reference)),
+          )}
+        >
           {rows.map((ref) => (
-            <li key={ref.node?.id ?? ref.reference}>
+            <li
+              key={ref.node?.id ?? ref.reference}
+              className={ref.node ? 'pc-artifact-row' : undefined}
+            >
               {ref.node ? (
                 <>
-                  <NodeLink node={ref.node} />
-                  <ArtifactStatus status={ref.node.status} size="sm" />
+                  <NodeLink node={ref.node} row />
+                  <span className="pc-artifact-row__meta-group">
+                    <ArtifactStatus status={ref.node.status} size="sm" showLabel={false} />
+                  </span>
+                  <ArtifactRowCopy
+                    id={planningDisplayId(ref.node)}
+                    command={planningContinuation(ref.node)}
+                    onCopy={copy}
+                    shortcutsEnabled={shortcutsEnabled}
+                  />
                 </>
               ) : (
                 <span>
@@ -208,7 +242,11 @@ function ArtifactDetail({
           </>
         ) : null}
       </div>
-      <Card title="Trace" meta="from intent to this artifact and what it unblocks" padding={20}>
+      <Card
+        title="Trace"
+        description="From intent to this artifact and what it unblocks"
+        padding={20}
+      >
         <StructuralTrace key={node.id} model={detail} />
       </Card>
       <div className="pc-detail__columns">
@@ -254,7 +292,7 @@ function ArtifactDetail({
               </DeferredDetailContent>
             </section>
           </Card>
-          <Card title="Files" meta="declared by the artifact" padding={20}>
+          <Card title="Files" description="Declared by the artifact" padding={20}>
             <section
               className="pc-detail__files-region"
               data-scroll-context="files"
@@ -419,7 +457,7 @@ function ArtifactDetail({
             ) : null}
             <p>Copies text only. The dashboard never runs these commands.</p>
           </Card>
-          <Card title="History" meta="authored dates" padding={20}>
+          <Card title="History" description="Authored dates" padding={20}>
             <ol className="pc-detail__history">
               {['created', 'updated'].map((field) => (
                 <li key={field}>

@@ -4,7 +4,7 @@ import { inspectPlanningNode } from './planning-inspector.js';
 import type { PlanningModelNode } from './planning-model.js';
 
 export const BOARD_LANE_PAGE_SIZE = 6;
-export const BOARD_CARD_PITCH = 164;
+export const BOARD_CARD_PITCH = 100;
 export type BoardTarget = { cell: string; id: string; ordinal: number };
 export const boardCellKey = (lane: string, status: string) => `${lane}:${status}`;
 

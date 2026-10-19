@@ -12,6 +12,13 @@ import { Tabs as RadixTabs } from './composite-primitives.js';
 import { PcIcon, type PcIconName } from './console-icon.js';
 import { Tooltip } from './tooltip.js';
 
+export {
+  ChipToggle,
+  type ChipToggleProps,
+  Select,
+  type SelectOption,
+  type SelectProps,
+} from './chip-menu.js';
 export { CommandHint, type CommandHintProps } from './command-hint.js';
 
 import './planr-console.css';
@@ -193,6 +200,58 @@ export function Badge({
   );
 }
 
+export type CardHeaderProps = Readonly<{
+  title?: ReactNode;
+  count?: string | number;
+  description?: string;
+  actions?: ReactNode;
+  href?: string;
+  id?: string;
+}>;
+
+/** Fixed-height heading for artifact cards. */
+export function CardHeader({ title, count, description, actions, href, id }: CardHeaderProps) {
+  const descriptionId = useId();
+  return (
+    <header className="pc-card__head">
+      <div className="pc-card__heading">
+        <h2 className="pc-card__title" id={id}>
+          {title}
+        </h2>
+        {count !== undefined ? <span className="pc-card__meta">{count}</span> : null}
+      </div>
+      {description ? (
+        <>
+          <Tooltip content={description}>
+            <button
+              type="button"
+              className="pc-card__info"
+              aria-label={`About ${typeof title === 'string' ? title : 'this card'}`}
+              aria-describedby={descriptionId}
+            >
+              <PcIcon name="info" size={15} />
+            </button>
+          </Tooltip>
+          <span id={descriptionId} className="pc-visually-hidden">
+            {description}
+          </span>
+        </>
+      ) : null}
+      {actions || href ? (
+        <div className="pc-card__actions">
+          {actions}
+          {href ? (
+            <a href={href} className="pc-card__see-all">
+              See all{count !== undefined ? ` ${count}` : ''}
+              <span className="pc-visually-hidden"> {title}</span>
+            </a>
+          ) : null}
+        </div>
+      ) : null}
+    </header>
+  );
+}
+
 export type CardProps = Readonly<{
   children: ReactNode;
   title?: string;
@@ -200,6 +259,7 @@ export type CardProps = Readonly<{
   actions?: ReactNode;
   padding?: number;
   elevated?: boolean;
+  description?: string;
 }>;
 
 /** Hairline container for grouped content. Flat by default; `elevated` only for floating surfaces. */
@@ -208,17 +268,14 @@ export function Card({
   title,
   meta,
   actions,
-  padding = 14,
+  padding = 20,
   elevated = false,
+  description,
 }: CardProps) {
   return (
     <section className="pc-card" data-elevated={elevated || undefined}>
       {title || actions ? (
-        <header className="pc-card__head">
-          {title ? <h2 className="pc-card__title">{title}</h2> : null}
-          {meta ? <span className="pc-card__meta">{meta}</span> : null}
-          {actions ? <div className="pc-card__actions">{actions}</div> : null}
-        </header>
+        <CardHeader title={title} count={meta} description={description} actions={actions} />
       ) : null}
       <div className="pc-card__body" style={{ padding }}>
         {children}
@@ -266,13 +323,26 @@ export type TabsProps = Readonly<{
   onChange: (id: string) => void;
   size?: 'sm' | 'md';
   label?: string;
+  variant?: 'underline' | 'pill';
 }>;
 
 /** Underlined view switcher for a single surface. */
-export function Tabs({ tabs, value, onChange, size = 'md', label }: TabsProps) {
+export function Tabs({
+  tabs,
+  value,
+  onChange,
+  size = 'md',
+  label,
+  variant = 'underline',
+}: TabsProps) {
   return (
     <RadixTabs.Root value={value} onValueChange={onChange} activationMode="manual">
-      <RadixTabs.List className="pc-tabs" data-size={size} aria-label={label}>
+      <RadixTabs.List
+        className="pc-tabs"
+        data-size={size}
+        data-variant={variant}
+        aria-label={label}
+      >
         {tabs.map((tab) => (
           <RadixTabs.Trigger
             key={tab.id}
@@ -509,7 +579,7 @@ export function Input({
         data-invalid={Boolean(error) || undefined}
         style={{ width }}
       >
-        {icon ? <PcIcon name={icon} size={14} color="var(--pc-text-tertiary)" /> : null}
+        {icon ? <PcIcon name={icon} size={15} color="var(--pc-text-tertiary)" /> : null}
         <input
           className="pc-input__field"
           data-mono={mono || undefined}
@@ -527,74 +597,6 @@ export function Input({
           }}
         />
         {suffix ? <span className="pc-input__suffix">{suffix}</span> : null}
-      </span>
-      {error || disabledReason ? (
-        <span className="pc-control-reason" id={reasonId} role={error ? 'alert' : undefined}>
-          {error ?? disabledReason}
-        </span>
-      ) : null}
-    </span>
-  );
-}
-
-export type SelectOption = Readonly<{ value: string; label: string }>;
-
-export type SelectProps = Readonly<{
-  value: string;
-  onChange: (value: string) => void;
-  options: readonly (SelectOption | string)[];
-  ariaLabel: string;
-  size?: ControlSize;
-  width?: number;
-  disabled?: boolean;
-  disabledReason?: string;
-  error?: string;
-}>;
-
-/** Native select in console dress. */
-export function Select({
-  value,
-  onChange,
-  options,
-  ariaLabel,
-  size = 'md',
-  width,
-  disabled = false,
-  disabledReason,
-  error,
-}: SelectProps) {
-  const reasonId = useId();
-  return (
-    <span className="pc-field-control" style={{ width }}>
-      <span
-        className="pc-select"
-        data-size={size}
-        data-disabled={disabled || undefined}
-        data-invalid={Boolean(error) || undefined}
-        style={{ width }}
-      >
-        <select
-          className="pc-select__field"
-          value={value}
-          aria-label={ariaLabel}
-          disabled={disabled}
-          aria-disabled={disabled || undefined}
-          aria-invalid={Boolean(error) || undefined}
-          aria-describedby={error || disabledReason ? reasonId : undefined}
-          onChange={(event: ChangeEvent<HTMLSelectElement>) => {
-            if (!disabled) onChange(event.target.value);
-          }}
-        >
-          {options.map((option) => {
-            const item = typeof option === 'string' ? { value: option, label: option } : option;
-            return (
-              <option key={item.value} value={item.value}>
-                {item.label}
-              </option>
-            );
-          })}
-        </select>
-        <PcIcon name="chevron-down" size={13} color="var(--pc-text-tertiary)" />
       </span>
       {error || disabledReason ? (
         <span className="pc-control-reason" id={reasonId} role={error ? 'alert' : undefined}>
@@ -693,7 +695,7 @@ export function InlineAlert({ tone = 'warn', title, children, actions }: InlineA
 export type DataTableColumn<Row> = Readonly<{
   key: string;
   label: string;
-  width?: number;
+  width?: number | string;
   align?: 'left' | 'right';
   mono?: boolean;
   sortable?: boolean;
@@ -849,6 +851,7 @@ export function DataTable<Row extends { readonly id: string }>({
                 <th
                   key={column.key}
                   scope="col"
+                  data-column={column.key}
                   data-align={column.align ?? 'left'}
                   style={{ width: column.width }}
                   aria-sort={
@@ -911,7 +914,8 @@ export function DataTable<Row extends { readonly id: string }>({
                             event.ctrlKey ||
                             event.altKey ||
                             event.shiftKey ||
-                            (event.target instanceof Element && event.target.closest('a'))
+                            (event.target instanceof Element &&
+                              event.target.closest('a, button, input, [role="combobox"]'))
                           )
                             return;
                           event.currentTarget.focus({ preventScroll: true });
@@ -924,6 +928,7 @@ export function DataTable<Row extends { readonly id: string }>({
                   {columns.map((column) => (
                     <td
                       key={column.key}
+                      data-column={column.key}
                       data-align={column.align ?? 'left'}
                       data-mono={column.mono || undefined}
                       style={{ maxWidth: column.width }}

@@ -13,6 +13,8 @@ const styles = [
   'design-system/typography.css',
   'design-system/planr-console-tokens.css',
   'design-system/components/planr-console.css',
+  'design-system/components/artifact-row.css',
+  'design-system/components/chip-menu.css',
   'features/shell/console-shell.css',
   'features/shell/unified-shell.css',
   'features/search/command-palette.css',
@@ -524,7 +526,7 @@ test('status bootstrap and Activity disconnect preserve their painted geometry w
         return { x, y, width, height };
       };
       return {
-        header: rect('.pc-activity__feed-head'),
+        header: rect('[aria-label="Live session activity"] .pc-card__head'),
         connection: rect('.pc-activity__connection'),
         badge: rect('.pc-activity__connection > .pc-badge'),
         feed: rect('.pc-activity__feed'),

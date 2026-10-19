@@ -1,9 +1,15 @@
 import {
+  ArtifactRowCopy,
+  ArtifactRowMeta,
+  artifactRowStyle,
+} from '../../design-system/components/artifact-row.js';
+import {
+  ArtifactRowTitle,
   ArtifactStatus,
   PriorityChip,
-  Tooltip,
   WorkItemChip,
 } from '../../design-system/components/index.js';
+import { usePlanningCopy, usePlanningShortcuts } from '../../lib/routing/planning-presentation.js';
 import {
   BOARD_CARD_PITCH,
   type BoardTarget,
@@ -11,20 +17,30 @@ import {
   useBoardCellWindow,
 } from './planning-board-window.js';
 import { inspectPlanningNode } from './planning-inspector.js';
-import { type PlanningGroup, type PlanningModelNode, planningDisplayId } from './planning-model.js';
+import {
+  type PlanningGroup,
+  type PlanningModelNode,
+  planningContinuation,
+  planningDisplayId,
+} from './planning-model.js';
 import { authoredTimestamp } from './presentation-view.js';
 
 function BoardCard({ node, selected }: { node: PlanningModelNode; selected: boolean }) {
+  const copy = usePlanningCopy();
+  const shortcutsEnabled = usePlanningShortcuts();
   const timestamp = authoredTimestamp(node.frontmatter.updated);
   const updated = timestamp === null ? 'Unknown' : new Date(timestamp).toISOString().slice(0, 10);
   return (
-    <Tooltip content={node.title}>
+    <div
+      className="pc-status-board__card pc-artifact-row"
+      data-status={node.status}
+      data-selected={selected || undefined}
+    >
       <button
         type="button"
-        className="pc-status-board__card"
+        className="pc-status-board__open"
         data-keyboard-item={node.id}
         data-selected={selected || undefined}
-        data-status={node.status}
         aria-pressed={selected}
         onClick={(event) => {
           event.currentTarget.focus({ preventScroll: true });
@@ -34,15 +50,29 @@ function BoardCard({ node, selected }: { node: PlanningModelNode; selected: bool
       >
         <span className="pc-status-board__identity">
           <WorkItemChip type={node.type} id={planningDisplayId(node)} surface="card" />
-          <PriorityChip priority={String(node.frontmatter.priority ?? 'none')} />
         </span>
-        <span className="pc-status-board__title">{node.title}</span>
-        <span className="pc-status-board__foot">
-          <ArtifactStatus status={node.status} size="sm" surface="card" />
-          <span className="pc-status-board__updated">Updated {updated}</span>
-        </span>
+        <ArtifactRowTitle>{node.title}</ArtifactRowTitle>
       </button>
-    </Tooltip>
+      <ArtifactRowCopy
+        onCopy={copy}
+        shortcutsEnabled={shortcutsEnabled}
+        id={planningDisplayId(node)}
+        command={planningContinuation(node)}
+      />
+      <span className="pc-status-board__foot">
+        <ArtifactStatus status={node.status} size="sm" surface="card" />
+        <PriorityChip priority={String(node.frontmatter.priority ?? 'none')} />
+        <ArtifactRowMeta label={`Updated ${updated}`}>
+          {timestamp === null
+            ? 'Unknown'
+            : new Date(timestamp).toLocaleDateString('en-GB', {
+                day: 'numeric',
+                month: 'short',
+                timeZone: 'UTC',
+              })}
+        </ArtifactRowMeta>
+      </span>
+    </div>
   );
 }
 
@@ -69,6 +99,7 @@ export function BoardColumn({
       data-board-cell={cell}
       data-collapsed={collapsed || undefined}
       className="pc-status-board__column"
+      style={artifactRowStyle(group.nodes.map(planningDisplayId))}
       aria-label={group.key}
     >
       <header className="pc-status-board__head">

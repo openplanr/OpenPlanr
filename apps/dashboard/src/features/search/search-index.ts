@@ -11,6 +11,7 @@ import type {
 } from '../planning/planning-model.js';
 import {
   buildPlanningSearchIndex,
+  planningContinuation,
   planningDetailHref,
   planningDisplayId,
   planningRouteSubjectId,
@@ -83,6 +84,29 @@ export type DashboardSearchSources = Readonly<{
   commands?: readonly DashboardSearchCommand[];
   operateResults?: readonly AccessSafeOperateSearchHitV1[];
 }>;
+
+export function searchHitDisplayId(
+  hit: DashboardSearchHit,
+  sources: DashboardSearchSources,
+): string {
+  if (hit.source !== 'planning') return '';
+  const node = (sources.planningNodes ?? sources.planningGraph?.nodes ?? []).find(
+    (candidate) => `planning:${candidate.id}` === hit.id,
+  );
+  return planningDisplayId(node ?? hit.id.slice('planning:'.length));
+}
+
+export function verifiedSearchCommand(
+  hit: DashboardSearchHit,
+  sources: DashboardSearchSources,
+): string | null {
+  if (hit.source === 'command') return hit.command;
+  if (hit.source !== 'planning') return null;
+  const node = (sources.planningNodes ?? sources.planningGraph?.nodes ?? []).find(
+    (candidate) => `planning:${candidate.id}` === hit.id,
+  );
+  return node ? planningContinuation(node) : null;
+}
 
 function canonicalHit(
   id: string,

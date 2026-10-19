@@ -1,5 +1,5 @@
 import { Dialog } from 'radix-ui';
-import { type ReactElement, type ReactNode, useRef } from 'react';
+import { type ReactElement, type ReactNode, useEffect, useRef } from 'react';
 import { Skeleton } from './console-core.js';
 
 export type InspectorProps = Readonly<{
@@ -30,12 +30,37 @@ export function Inspector({
   reason,
 }: InspectorProps) {
   const heading = useRef<HTMLHeadingElement>(null);
+  const sheet = useRef<HTMLDivElement>(null);
+  const pointerDismissal = useRef(false);
+  useEffect(() => {
+    if (!open || modal) return;
+    const ownerDocument = document;
+    const outside = (event: PointerEvent) => {
+      if (ownerDocument.querySelector('[role="dialog"][aria-modal="true"]')) return;
+      if (event.target instanceof Node && !sheet.current?.contains(event.target)) {
+        pointerDismissal.current = true;
+        const toggle =
+          event.target instanceof Element
+            ? event.target.closest('[data-inspector-toggle], [aria-controls]')
+            : null;
+        if (
+          toggle?.hasAttribute('data-inspector-toggle') ||
+          (toggle && toggle.getAttribute('aria-controls') === sheet.current?.id)
+        )
+          return;
+        onOpenChange(false);
+      }
+    };
+    ownerDocument.addEventListener('pointerdown', outside, true);
+    return () => ownerDocument.removeEventListener('pointerdown', outside, true);
+  }, [open, modal, onOpenChange]);
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange} modal={modal}>
       {trigger ? <Dialog.Trigger asChild>{trigger}</Dialog.Trigger> : null}
       <Dialog.Portal>
         {modal ? <Dialog.Overlay className="pc-inspector-overlay" /> : null}
         <Dialog.Content
+          ref={sheet}
           className="pc-inspector-sheet"
           aria-modal={modal || undefined}
           data-state={state}
@@ -43,17 +68,28 @@ export function Inspector({
             // Row shortcuts move focus behind a nonmodal inspector without dismissing it.
             if (!modal) event.preventDefault();
           }}
-          onCloseAutoFocus={
-            onRestoreFocus
-              ? (event) => {
-                  event.preventDefault();
-                  onRestoreFocus();
-                }
-              : undefined
-          }
+          onPointerDownOutside={() => {
+            pointerDismissal.current = !modal;
+          }}
+          onCloseAutoFocus={(event) => {
+            const active = document.activeElement;
+            const preserveOutsideFocus =
+              pointerDismissal.current &&
+              active?.isConnected &&
+              active !== document.body &&
+              !active.matches('main, [role="main"]');
+            pointerDismissal.current = false;
+            if (preserveOutsideFocus) {
+              event.preventDefault();
+            } else if (onRestoreFocus) {
+              event.preventDefault();
+              onRestoreFocus();
+            }
+          }}
           onOpenAutoFocus={(event) => {
+            pointerDismissal.current = false;
             event.preventDefault();
-            heading.current?.focus();
+            if (modal) heading.current?.focus();
           }}
         >
           <header className="pc-inspector__head">

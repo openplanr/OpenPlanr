@@ -44,7 +44,7 @@
 
 .pc-sprints__panel {
   min-width: 0;
-  padding: 20px 22px;
+  padding: 20px;
   border: 1px solid var(--op-line);
   border-radius: 14px;
   background: var(--op-panel);
@@ -196,36 +196,6 @@
   list-style: none;
 }
 
-.pc-sprints__carry li a {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  min-height: 48px;
-  padding: 4px 8px;
-  border-top: 1px solid var(--op-line);
-  border-radius: 8px;
-  text-decoration: none;
-  color: var(--op-heading);
-  font-size: 14px;
-  transition: background 120ms ease-out;
-}
-
-.pc-sprints__carry li a > span:last-child {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.pc-sprints__carry li a:hover {
-  background: var(--op-raised);
-}
-
-.pc-sprints__carry li a:active,
-.pc-sprints__carry li a[data-selected="true"] {
-  background: var(--op-accent-soft);
-}
-
 .pc-sprints a:focus-visible {
   outline: 2px solid var(--op-accent);
   outline-offset: 2px;
@@ -267,13 +237,6 @@
   .pc-sprints__carry {
     height: 420px;
   }
-  .pc-sprints__carry li a {
-    flex-wrap: wrap;
-    padding: 8px 4px;
-  }
-  .pc-sprints__carry li a > span:last-child {
-    flex-basis: 100%;
-  }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -291,4 +254,18 @@
   .pc-sprints__close {
     background: CanvasText;
   }
+}
+
+.pc-sprints__member-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.pc-sprints__panel > .pc-card__head {
+  margin: -20px -20px 0;
+  flex-shrink: 0;
+}
+
+.pc-sprints__panel .pc-card__title {
+  font: 600 17px var(--op-font-display);
 }

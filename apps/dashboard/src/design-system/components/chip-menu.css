@@ -1,0 +1,202 @@
+.pc-chip-menu {
+  flex: 0 1 auto;
+  min-width: 0;
+}
+
+.pc-chip {
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-width: 0;
+  height: 32px;
+  padding: 0 12px;
+  border: 1px solid var(--pc-border-strong);
+  border-radius: 999px;
+  color: var(--pc-text-secondary);
+  background: var(--pc-surface-card);
+  font: 400 13px var(--pc-font-sans);
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.pc-chip-menu > .pc-chip {
+  width: 100%;
+}
+
+.pc-chip__label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pc-chip > .pc-icon {
+  flex-shrink: 0;
+}
+
+.pc-chip:hover:not(:disabled) {
+  background: var(--pc-surface-hover);
+}
+
+.pc-chip[data-active="true"] {
+  border-color: var(--pc-accent);
+  color: var(--pc-text-primary);
+  background: var(--op-accent-soft);
+}
+
+.pc-chip:active:not(:disabled) {
+  background: var(--pc-surface-raised);
+}
+
+.pc-chip:focus-visible,
+.pc-chip-menu__clear:focus-visible {
+  outline: 2px solid var(--pc-focus-ring);
+  outline-offset: 2px;
+}
+
+.pc-chip:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.pc-chip[data-invalid] {
+  border-color: var(--pc-danger);
+}
+
+.pc-chip-menu__popup {
+  position: fixed;
+  z-index: 100;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  max-height: 360px;
+  padding: 6px;
+  overflow: hidden;
+  border: 1px solid var(--pc-border-strong);
+  border-radius: 12px;
+  color: var(--pc-text-primary);
+  background: var(--pc-surface-raised);
+  box-shadow: var(--pc-shadow-menu);
+}
+
+.pc-chip-menu__list {
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+}
+
+.pc-chip-menu__option,
+.pc-chip-menu__clear {
+  box-sizing: border-box;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 32px;
+  padding: 6px 10px;
+  border: 0;
+  border-radius: 6px;
+  font: 400 13px var(--pc-font-sans);
+  color: var(--pc-text-secondary);
+  cursor: pointer;
+}
+
+.pc-chip-menu__option[data-focused] {
+  color: var(--pc-text-primary);
+  background: var(--pc-surface-hover);
+}
+
+.pc-chip-menu__option[aria-selected="true"] {
+  color: var(--pc-text-primary);
+  background: var(--op-accent-soft);
+}
+
+.pc-chip-menu__option > .pc-icon {
+  visibility: hidden;
+  flex-shrink: 0;
+}
+
+.pc-chip-menu__option[aria-selected="true"] > .pc-icon {
+  visibility: visible;
+}
+
+.pc-chip-menu__clear {
+  width: 100%;
+  margin-top: 6px;
+  border-top: 1px solid var(--pc-border-default);
+  border-radius: 0;
+  background: transparent;
+}
+
+@media (pointer: coarse), (max-width: 899px) {
+  .pc-chip,
+  .pc-chip-menu__option,
+  .pc-chip-menu__clear {
+    min-height: 44px;
+  }
+}
+
+@media (forced-colors: active) {
+  .pc-chip,
+  .pc-chip-menu__popup {
+    border-color: ButtonText;
+  }
+  .pc-chip[data-active="true"],
+  .pc-chip-menu__option[aria-selected="true"] {
+    outline: 1px solid Highlight;
+  }
+}
+
+.pc-tabs[data-variant="pill"] {
+  flex-wrap: nowrap;
+  gap: 6px;
+  border-bottom: 0;
+}
+
+.pc-tabs[data-variant="pill"] .pc-tabs__tab {
+  flex-shrink: 0;
+  height: 34px;
+  min-height: 34px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 8px;
+  font: 500 13.5px var(--pc-font-sans);
+  color: var(--pc-text-secondary);
+  background: transparent;
+}
+
+.pc-tabs[data-variant="pill"] .pc-tabs__tab::after {
+  display: none;
+}
+
+.pc-tabs[data-variant="pill"] .pc-tabs__tab[data-active] {
+  color: var(--pc-text-primary);
+  background: var(--pc-surface-card);
+  box-shadow: 0 0 0 1px var(--pc-border-strong);
+}
+
+.pc-tabs[data-variant="pill"] .pc-tabs__tab:active:not(:disabled) {
+  background: var(--pc-accent-soft);
+}
+
+.pc-chip[data-rich] {
+  justify-content: flex-start;
+  padding: 0;
+  border-color: transparent;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--pc-text-primary);
+}
+
+.pc-chip__title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

@@ -113,16 +113,17 @@ describe.each(['dark', 'light'])('Data health in %s theme', (theme) => {
     document.documentElement.dataset.theme = theme;
     const user = userEvent.setup();
     render(<DataHealth read={{ diagnostics: findings }} />);
-    const category = screen.getByRole('combobox', { name: 'Data health category' });
+    const category = screen.getByRole('combobox', { name: /^Data health category:/u });
     const query = screen.getByRole('textbox', { name: 'Filter data health' });
 
-    for (const [value, count] of [
-      ['references', 2],
-      ['identities', 1],
-      ['cycles', 2],
-      ['dates', 4],
+    for (const [label, count] of [
+      ['References', 2],
+      ['Identities', 1],
+      ['Cycles', 2],
+      ['Sprint dates', 4],
     ] as const) {
-      await user.selectOptions(category, value);
+      await user.click(category);
+      await user.click(screen.getByRole('option', { name: label, exact: true }));
       expect(screen.getByRole('status').textContent).toBe(`${count} of 9 findings`);
       expect(screen.getAllByRole('listitem')).toHaveLength(count);
     }
@@ -135,7 +136,7 @@ describe.each(['dark', 'light'])('Data health in %s theme', (theme) => {
     expect(screen.queryByText('No source findings reported')).toBeNull();
     await user.click(screen.getByRole('button', { name: 'Clear filters' }));
     expect((query as HTMLInputElement).value).toBe('');
-    expect((category as HTMLSelectElement).value).toBe('all');
+    expect(category.textContent).toContain('All findings');
     expect(screen.getAllByRole('listitem')).toHaveLength(9);
     await user.type(query, 'finding-2.md');
     expect(screen.getByRole('status').textContent).toBe('1 of 9 findings');
@@ -208,10 +209,8 @@ describe('Data health evidence boundaries', () => {
   it('retains filters, the focused finding and scroll when the read refreshes', async () => {
     const user = userEvent.setup();
     const view = render(<DataHealth read={{ diagnostics: findings }} />);
-    await user.selectOptions(
-      screen.getByRole('combobox', { name: 'Data health category' }),
-      'references',
-    );
+    await user.click(screen.getByRole('combobox', { name: /^Data health category:/u }));
+    await user.click(screen.getByRole('option', { name: 'References', exact: true }));
     await user.type(screen.getByRole('textbox', { name: 'Filter data health' }), 'trace');
     const focused = screen.getByRole('link', { name: required(findings[0]).nodeId });
     focused.focus();
@@ -235,9 +234,9 @@ describe('Data health evidence boundaries', () => {
     expect(
       (screen.getByRole('textbox', { name: 'Filter data health' }) as HTMLInputElement).value,
     ).toBe('trace');
-    expect(
-      (screen.getByRole('combobox', { name: 'Data health category' }) as HTMLSelectElement).value,
-    ).toBe('references');
+    expect(screen.getByRole('combobox', { name: /^Data health category:/u }).textContent).toContain(
+      'References',
+    );
     expect(screen.getByRole('status').textContent).toBe('3 of 10 findings');
   });
 });

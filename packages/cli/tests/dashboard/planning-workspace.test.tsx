@@ -3,7 +3,7 @@
 import { readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { act, fireEvent, render } from '@testing-library/react';
+import { act, fireEvent, render, screen } from '@testing-library/react';
 import axe from 'axe-core';
 import { JSDOM } from 'jsdom';
 import { sha256Jcs } from 'planr-pipeline/protocol';
@@ -21,6 +21,7 @@ import {
   type PlanningGraphEnvelope,
   parsePlanningGraphEnvelope,
 } from '../../../../apps/dashboard/src/features/planning/planning-api.js';
+import { BOARD_CARD_PITCH } from '../../../../apps/dashboard/src/features/planning/planning-board-window.js';
 import {
   PlanningNotice,
   PlanningRefusal,
@@ -714,7 +715,7 @@ describe('read-only status Board', () => {
       fireEvent.keyDown(done, { key: 'Enter' });
       expect(board.getByTestId('board-inspector').textContent).toContain('"id":"BL-002"');
       expect(board.getByTestId('board-inspector').textContent).toMatch(/"openTick":[1-9]/u);
-      fireEvent.click(board.getByRole('button', { name: /Collapse Done/u }));
+      fireEvent.click(board.getByRole('button', { name: 'Hide done', exact: true }));
       expect(board.card('BL-002')).toBeUndefined();
       expect(
         (await axe.run(board.container, { rules: { 'color-contrast': { enabled: false } } }))
@@ -753,7 +754,9 @@ describe('read-only status Board', () => {
           '[data-keyboard-column="outstanding"]',
         );
         const scroller = column?.querySelector<HTMLElement>('.pc-status-board__cards');
-        const first = column?.querySelector<HTMLButtonElement>('.pc-status-board__card');
+        const first = column?.querySelector<HTMLButtonElement>(
+          '.pc-status-board__card [data-keyboard-item]',
+        );
         if (!first || !scroller) throw new Error('Missing Board window.');
         act(() => first.focus());
         for (let index = 0; index < 16; index++)
@@ -823,8 +826,8 @@ describe('read-only status Board', () => {
           ?.getAttribute('data-keyboard-column'),
       ).toBe('done');
       expect(
-        board.getByRole('button', { name: /Collapse Done/u }).getAttribute('aria-expanded'),
-      ).toBe('true');
+        board.getByRole('button', { name: 'Hide done', exact: true }).getAttribute('aria-pressed'),
+      ).toBe('false');
       const removed: PlanningGraph = {
         ...moved,
         nodes: moved.nodes.filter((node) => node.id !== 'SPEC-020/T-022'),
@@ -846,9 +849,8 @@ describe('read-only status Board', () => {
     const before = fixtureHash(source);
     const board = boardHarness(source);
     try {
-      fireEvent.change(board.getByRole('combobox', { name: 'Swimlanes' }), {
-        target: { value: 'spec' },
-      });
+      fireEvent.click(board.getByRole('combobox', { name: /^Swimlanes:/u }));
+      fireEvent.click(screen.getByRole('option', { name: /spec/iu }));
       expect(board.container.querySelectorAll('.pc-status-board__lane').length).toBeLessThanOrEqual(
         6,
       );
@@ -901,7 +903,9 @@ describe('read-only status Board', () => {
       expect(copy).toHaveBeenCalledExactlyOnceWith(
         'openplanr backlog update BL-001 --status outstanding',
       );
-      expect(board.container.textContent).toContain('Select the command and copy it manually.');
+      expect(screen.getByRole('alert').textContent).toContain(
+        'Select the command and copy it manually.',
+      );
       const command = board.container.querySelector<HTMLButtonElement>(
         '.pc-status-board__command .pc-command-hint__copy',
       );
@@ -966,13 +970,29 @@ describe('read-only status Board', () => {
     try {
       expect(board.card('SPEC-010/T-001')).toBeTruthy();
       expect(
-        board.getByRole('button', { name: /Collapse Done/u }).getAttribute('aria-expanded'),
-      ).toBe('true');
+        board.getByRole('button', { name: 'Hide done', exact: true }).getAttribute('aria-pressed'),
+      ).toBe('false');
       expect(board.container.textContent).toContain('Lanes 7-10 of 10');
       expect(board.getByTestId('board-inspector').textContent).toContain('"id":"SPEC-010/T-001"');
     } finally {
       board.close();
     }
+  });
+
+  it('keeps compact Board cards on the same pitch as their virtualization slots', () => {
+    const styles = readFileSync(
+      resolve(
+        dirname(fileURLToPath(import.meta.url)),
+        '../../../../apps/dashboard/src/features/planning/board.css',
+      ),
+      'utf8',
+    );
+    expect(BOARD_CARD_PITCH).toBe(100);
+    expect(styles).toMatch(/\.pc-status-board__slot\s*\{[^}]*height:\s*100px/u);
+    expect(styles).toMatch(/\.pc-status-board__card\.pc-artifact-row\s*\{[^}]*height:\s*90px/u);
+    expect(styles).toMatch(
+      /\.pc-status-board__open \.pc-artifact-row__title\s*\{[^}]*grid-column:\s*1/u,
+    );
   });
 
   it('restores the logical card scroll anchor when a preceding card disappears', () => {
@@ -995,10 +1015,10 @@ describe('read-only status Board', () => {
         '[data-keyboard-column="outstanding"] .pc-status-board__cards',
       );
       if (!scroller) throw new Error('Missing card scroll window.');
-      scroller.scrollTop = 10 * 164 + 7;
+      scroller.scrollTop = 10 * BOARD_CARD_PITCH + 7;
       fireEvent.scroll(scroller);
       board.patch({ ...source, nodes: source.nodes.filter((node) => node.id !== 'BL-001') });
-      expect(scroller.scrollTop).toBe(9 * 164 + 7);
+      expect(scroller.scrollTop).toBe(9 * BOARD_CARD_PITCH + 7);
       expect(board.card('BL-010')).toBeTruthy();
     } finally {
       board.close();

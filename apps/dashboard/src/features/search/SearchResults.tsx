@@ -1,5 +1,16 @@
 /* biome-ignore-all lint/suspicious/noArrayIndexKey: owner ordering and duplicate labels remain visible without client deduplication. */
-import { PcIcon, type PcIconName } from '../../design-system/components/index.js';
+
+import {
+  ArtifactRowAction,
+  artifactRowStyle,
+} from '../../design-system/components/artifact-row.js';
+import {
+  ArtifactRowTitle,
+  ArtifactTag,
+  type ArtifactType,
+  PcIcon,
+  type PcIconName,
+} from '../../design-system/components/index.js';
 import type { DashboardSearchHit, DashboardUnsupportedIdentity } from './search-index.js';
 
 const GROUP_ORDER = Object.freeze(['planning', 'route', 'operate', 'command'] as const);
@@ -16,6 +27,24 @@ const GROUP_ICON = Object.freeze({
   command: 'copy',
 } satisfies Record<DashboardSearchHit['source'], PcIconName>);
 
+const PLANNING_TAG: Readonly<Record<string, ArtifactType>> = {
+  spec: 'spec',
+  story: 'us',
+  task: 't',
+  backlog: 'bl',
+  adr: 'adr',
+  epic: 'epic',
+  feature: 'epic',
+  sprint: 'sprint',
+  quick: 'qt',
+};
+
+function displayHitId(hit: DashboardSearchHit): string {
+  return hit.source === 'planning'
+    ? (hit.id.slice('planning:'.length).split('/').at(-1) ?? hit.id)
+    : '';
+}
+
 function humanLabel(value: string): string {
   const words = value
     .replace(/([a-z0-9])([A-Z])/gu, '$1 $2')
@@ -31,9 +60,13 @@ export type SearchResultsProps = Readonly<{
   activeHref: string | null;
   activeId?: string | null;
   commandBusy?: boolean;
+  shortcutsEnabled?: boolean;
   listId: string;
   onSelect: (hit: DashboardSearchHit) => void;
   onFocus?: (hit: DashboardSearchHit) => void;
+  commandForHit?: (hit: DashboardSearchHit) => string | null;
+  displayIdForHit?: (hit: DashboardSearchHit) => string;
+  onCopyCommand?: (command: string) => void;
 }>;
 
 function groupHits(
@@ -60,9 +93,13 @@ export function SearchResults({
   activeHref,
   activeId,
   commandBusy = false,
+  shortcutsEnabled = true,
   listId,
   onSelect,
   onFocus,
+  commandForHit,
+  displayIdForHit = displayHitId,
+  onCopyCommand,
 }: SearchResultsProps) {
   const grouped = groupHits(hits);
   const hasHits = hits.length > 0;
@@ -91,18 +128,28 @@ export function SearchResults({
             <h2 id={`${listId}-${source}-heading`} className="pc-palette__group-title">
               {GROUP_LABEL[source]}
             </h2>
-            <ol className="pc-palette__list" aria-label={GROUP_LABEL[source]}>
+            <ol
+              className="pc-palette__list"
+              aria-label={GROUP_LABEL[source]}
+              style={artifactRowStyle(rows.map(displayIdForHit))}
+            >
               {rows.map((hit) => {
+                const command =
+                  hit.source === 'command' ? hit.command : (commandForHit?.(hit) ?? null);
                 const occurrence = occurrences.get(hit.id) ?? 0;
                 occurrences.set(hit.id, occurrence + 1);
                 const active = activeId
                   ? hit.id === activeId
                   : hit.href !== null && hit.href === activeHref;
                 return (
-                  <li key={`${hit.id}:${occurrence}`}>
+                  <li
+                    key={`${hit.id}:${occurrence}`}
+                    className="pc-artifact-row pc-palette__result"
+                    data-selected={active || undefined}
+                  >
                     <button
                       type="button"
-                      className="pc-palette__row"
+                      className="pc-palette__row pc-artifact-row__link"
                       data-search-result={hit.id}
                       data-keyboard-item={hit.id}
                       data-copy-command={hit.source === 'command' ? 'true' : undefined}
@@ -120,15 +167,41 @@ export function SearchResults({
                       aria-busy={(hit.source === 'command' && commandBusy) || undefined}
                       onClick={() => onSelect(hit)}
                     >
-                      <PcIcon name={GROUP_ICON[source]} size={14} />
-                      {hit.source === 'planning' ? (
-                        <span className="pc-palette__row-id">
-                          {hit.id.slice('planning:'.length)}
-                        </span>
-                      ) : null}
-                      <span className="pc-palette__row-title">{hit.title}</span>
-                      <span className="pc-palette__row-hint">{humanLabel(hit.kind)}</span>
+                      <span className="pc-artifact-row__id pc-palette__identity">
+                        {hit.source === 'planning' && PLANNING_TAG[hit.kind] ? (
+                          <ArtifactTag type={PLANNING_TAG[hit.kind]}>
+                            {displayIdForHit(hit)}
+                          </ArtifactTag>
+                        ) : (
+                          <PcIcon name={GROUP_ICON[source]} size={14} />
+                        )}
+                      </span>
+                      <ArtifactRowTitle>{hit.title}</ArtifactRowTitle>
                     </button>
+                    <span className="pc-palette__row-hint">{humanLabel(hit.kind)}</span>
+                    {hit.source === 'command' || hit.source === 'planning' ? (
+                      <ArtifactRowAction
+                        id={hit.source === 'planning' ? hit.id.slice('planning:'.length) : hit.id}
+                        onFocus={() => onFocus?.(hit)}
+                        shortcutsEnabled={shortcutsEnabled}
+                        disabled={commandBusy || !command}
+                        disabledReason={
+                          !command
+                            ? 'No verified command is available for this identity.'
+                            : commandBusy
+                              ? 'A command copy is already in progress.'
+                              : undefined
+                        }
+                        onCopy={() => {
+                          if (command) {
+                            if (onCopyCommand) onCopyCommand(command);
+                            else onSelect(hit);
+                          }
+                        }}
+                      />
+                    ) : (
+                      <span />
+                    )}
                   </li>
                 );
               })}

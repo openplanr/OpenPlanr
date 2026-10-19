@@ -1,9 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
+  ArtifactRowCopy,
+  ArtifactRowTitle,
   ArtifactStatus,
+  artifactRowStyle,
   Card,
+  CardHeader,
   CommandHint,
-  DataTable,
   EmptyState,
   Skeleton,
   Tooltip,
@@ -11,14 +14,19 @@ import {
 } from '../../design-system/components/index.js';
 import type { DashboardProductState } from '../../lib/api/product-state.js';
 import type { DashboardQueryIdentity } from '../../lib/binding/query-identity.js';
+import { usePlanningCopy, usePlanningShortcuts } from '../../lib/routing/planning-presentation.js';
 import { useInspectorStore } from '../shell/inspector-selection.js';
-import { ITEM_COLUMN, STATUS_COLUMN, UPDATED_COLUMN } from './planning-columns.js';
 import {
   inspectPlanningNode,
   useLiveListOrder,
   useLiveListSelection,
 } from './planning-inspector.js';
-import { type PlanningModelNode, planningDetailHref, planningDisplayId } from './planning-model.js';
+import {
+  type PlanningModelNode,
+  planningContinuation,
+  planningDetailHref,
+  planningDisplayId,
+} from './planning-model.js';
 import {
   projectSprints,
   type SprintDate,
@@ -262,6 +270,8 @@ function SprintCarryOver({
   nodes: readonly PlanningModelNode[];
   selectedId: string | undefined;
 }) {
+  const copy = usePlanningCopy();
+  const shortcutsEnabled = usePlanningShortcuts();
   const previous = useRef<readonly string[]>([]);
   const visible = [...sprint.carryOver];
   // Keep the inspected row mounted when an accepted patch resolves its open status.
@@ -283,14 +293,19 @@ function SprintCarryOver({
       className="pc-sprints__panel pc-sprints__carry"
       aria-label={`Carry-over from ${planningDisplayId(sprint.node)}`}
     >
-      <h2>Carry-over from {planningDisplayId(sprint.node)}</h2>
-      <p>Still open after close · current status, regardless of later sprint membership.</p>
+      <CardHeader
+        title={`Carry-over from ${planningDisplayId(sprint.node)}`}
+        count={ordered.length}
+        description="Still open after close · current status, regardless of later sprint membership."
+        href={planningDetailHref(sprint.node) ?? undefined}
+      />
       {ordered.length ? (
-        <ul>
+        <ul style={artifactRowStyle(ordered.map(planningDisplayId))}>
           {ordered.map((node) => (
-            <li key={node.id}>
+            <li key={node.id} className="pc-artifact-row">
               <Tooltip content={node.title}>
                 <a
+                  className="pc-artifact-row__link"
                   href={planningDetailHref(node) ?? undefined}
                   data-keyboard-item={node.id}
                   data-selected={selectedId === node.id || undefined}
@@ -301,16 +316,27 @@ function SprintCarryOver({
                     inspectPlanningNode(node);
                   }}
                 >
-                  <ArtifactStatus status={node.status} size="sm" />
-                  <WorkItemChip type={node.type} id={planningDisplayId(node)} />
-                  <span>
-                    {node.title}
-                    {!sprint.carryOver.some((item) => item.id === node.id)
-                      ? ' · No longer open after close'
-                      : ''}
+                  <span className="pc-artifact-row__id">
+                    <WorkItemChip type={node.type} id={planningDisplayId(node)} />
                   </span>
+                  <ArtifactRowTitle>
+                    {`${node.title}${
+                      !sprint.carryOver.some((item) => item.id === node.id)
+                        ? ' · No longer open after close'
+                        : ''
+                    }`}
+                  </ArtifactRowTitle>
                 </a>
               </Tooltip>
+              <span className="pc-artifact-row__meta-group">
+                <ArtifactStatus status={node.status} size="sm" />
+              </span>
+              <ArtifactRowCopy
+                onCopy={copy}
+                shortcutsEnabled={shortcutsEnabled}
+                id={planningDisplayId(node)}
+                command={planningContinuation(node)}
+              />
             </li>
           ))}
         </ul>
@@ -333,6 +359,8 @@ function SprintCarryOver({
 }
 
 function SprintsContent({ model }: { model: PlanningWorkspaceModel }) {
+  const copy = usePlanningCopy();
+  const shortcutsEnabled = usePlanningShortcuts();
   const records = useMemo(() => projectSprints(model.graph), [model.graph]);
   const byId = new Map(records.map((record) => [record.node.id, record]));
   const orderedNodes = useLiveListOrder(
@@ -397,12 +425,25 @@ function SprintsContent({ model }: { model: PlanningWorkspaceModel }) {
           <Timeline sprints={sprints} />
           <section className="pc-sprints__grid" aria-label="Sprint completion">
             {sprints.map((sprint) => (
-              <article className="pc-sprints__panel pc-sprints__card" key={sprint.node.id}>
+              <article
+                className="pc-sprints__panel pc-sprints__card"
+                key={sprint.node.id}
+                aria-label={`${planningDisplayId(sprint.node)}: ${sprint.title}`}
+              >
+                <CardHeader
+                  title={sprint.title}
+                  count={sprint.members.length}
+                  description={
+                    typeof sprint.node.frontmatter.goal === 'string'
+                      ? sprint.node.frontmatter.goal
+                      : 'No sprint goal recorded.'
+                  }
+                  href={planningDetailHref(sprint.node) ?? undefined}
+                />
                 <div className="pc-sprints__head">
                   <WorkItemChip type="sprint" id={planningDisplayId(sprint.node)} />
                   <span>{sprint.active ? 'Active' : sprint.closed ? 'Closed' : 'Planned'}</span>
                 </div>
-                <h2>{sprint.title}</h2>
                 <p className="pc-sprints__completion">
                   <strong>{sprint.done}</strong> of {sprint.members.length} sprint items done
                 </p>
@@ -467,22 +508,56 @@ function SprintsContent({ model }: { model: PlanningWorkspaceModel }) {
               aria-label={`${planningDisplayId(sprint.node)} commitment`}
               key={sprint.node.id}
             >
-              <h2>{planningDisplayId(sprint.node)} commitment</h2>
-              <p>{sprint.members.length} items</p>
+              <CardHeader
+                title={`${planningDisplayId(sprint.node)} commitment`}
+                count={sprint.members.length}
+                href={planningDetailHref(sprint.node) ?? undefined}
+              />
               {sprint.members.length ? (
                 <div
                   className="pc-sprints__members"
                   data-scroll-context={`sprint:${sprint.node.id}`}
                 >
-                  <DataTable
-                    compact
-                    rows={sprint.members}
-                    selectedId={selectedId}
-                    onRowClick={inspectPlanningNode}
-                    onRowFocus={(node) => inspectPlanningNode(node, false)}
-                    caption={`Members of ${planningDisplayId(sprint.node)}`}
-                    columns={[ITEM_COLUMN, STATUS_COLUMN, UPDATED_COLUMN]}
-                  />
+                  <ul
+                    className="pc-sprints__member-list"
+                    style={artifactRowStyle(sprint.members.map(planningDisplayId))}
+                    aria-label={`Members of ${planningDisplayId(sprint.node)}`}
+                  >
+                    {sprint.members.map((node) => (
+                      <li
+                        key={node.id}
+                        className="pc-artifact-row"
+                        data-selected={selectedId === node.id || undefined}
+                      >
+                        <a
+                          className="pc-artifact-row__link"
+                          href={planningDetailHref(node) ?? undefined}
+                          data-keyboard-item={node.id}
+                          onFocus={() => inspectPlanningNode(node, false)}
+                          onClick={(event) => {
+                            if (event.metaKey || event.ctrlKey || event.altKey || event.shiftKey)
+                              return;
+                            event.preventDefault();
+                            inspectPlanningNode(node);
+                          }}
+                        >
+                          <span className="pc-artifact-row__id">
+                            <WorkItemChip type={node.type} id={planningDisplayId(node)} />
+                          </span>
+                          <ArtifactRowTitle>{node.title}</ArtifactRowTitle>
+                        </a>
+                        <span className="pc-artifact-row__meta-group">
+                          <ArtifactStatus status={node.status} size="sm" />
+                        </span>
+                        <ArtifactRowCopy
+                          onCopy={copy}
+                          shortcutsEnabled={shortcutsEnabled}
+                          id={planningDisplayId(node)}
+                          command={planningContinuation(node)}
+                        />
+                      </li>
+                    ))}
+                  </ul>
                 </div>
               ) : (
                 <EmptyState

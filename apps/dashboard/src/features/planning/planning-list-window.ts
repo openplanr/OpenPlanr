@@ -107,6 +107,7 @@ export {
   type ListPreferenceAdapter,
   useListPresentation,
   usePlanningCopy,
+  usePlanningShortcuts,
 } from '../../lib/routing/planning-presentation.js';
 export type { PlanningView } from '../../lib/routing/planning-view-codec.js';
 export { useInspectorStore } from '../shell/inspector-selection.js';
@@ -198,7 +199,6 @@ export function useListRowViewport({
   groups,
   positions,
   pageStart,
-  compact,
   grouped,
   collapsedGroups,
   selectedId,
@@ -216,7 +216,7 @@ export function useListRowViewport({
 }) {
   const [viewport, setViewport] = useState({ scope, top: 0, height: 560, mobile: false });
   const [target, setTarget] = useState<number | null>(null);
-  const rowHeight = compact && !viewport.mobile ? 36 : 46;
+  const rowHeight = 44;
   const geometry = useMemo(() => {
     let top = 0;
     return groups.map((group) => {
@@ -226,7 +226,7 @@ export function useListRowViewport({
       top += header + (collapsed ? 0 : 44 + group.nodes.length * rowHeight);
       return value;
     });
-  }, [groups, grouped, collapsedGroups, rowHeight]);
+  }, [groups, grouped, collapsedGroups]);
   const savedTop = viewport.scope === scope ? viewport.top : 0;
   let top = savedTop;
   if (target !== null && target >= pageStart) {

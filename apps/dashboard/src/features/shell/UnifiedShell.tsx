@@ -334,7 +334,7 @@ export function UnifiedShell({
               selection={inspectorStore.selection}
               floating
               modal={narrow}
-              onClose={() => interactions.closeInspector()}
+              onClose={() => setInspectorOpen(false)}
               onRestoreFocus={interactions.restoreInspectorFocus}
               onPromote={interactions.navigate}
               planningContent={

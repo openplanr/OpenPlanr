@@ -191,7 +191,9 @@ describe('Phase 1 session Activity', () => {
         sessionActivity={{ ...activity, connection: 'paused' }}
       />,
     );
-    expect(view.getByText('Disconnected · session retained')).toBeTruthy();
+    const session = view.getByRole('region', { name: 'Live session activity', exact: true });
+    expect(session.textContent).toContain('Disconnected · session retained');
+    expect(session.textContent).not.toContain('Watching');
     expect(view.getByText('Removed from the graph')).toBeTruthy();
     expect(view.container.querySelector('[data-keyboard-item]')).toBeNull();
     expect(view.container.querySelector('a[href*="detail"]')).toBeNull();

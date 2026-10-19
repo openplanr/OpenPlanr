@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo } from 'react';
 import {
   ArtifactStatus,
   Button,
+  ChipToggle,
   CommandHint,
   EmptyState,
   SectionHeader,
@@ -101,7 +102,12 @@ export function BoardWorkspace({
         {notice || removalNotice || missingFocus}
       </div>
       <Toolbar>
-        <span>Columns: status</span>
+        <Select
+          ariaLabel="Columns"
+          value="status"
+          onChange={() => undefined}
+          options={[{ value: 'status', label: 'Columns: status' }]}
+        />
         <Select
           value={swimlanes ? 'spec' : 'none'}
           onChange={(value) => {
@@ -109,21 +115,16 @@ export function BoardWorkspace({
             setPage(0);
           }}
           options={[
-            { value: 'none', label: 'No swimlanes' },
+            { value: 'none', label: 'Lanes: none' },
             { value: 'spec', label: 'Lanes: spec' },
           ]}
           ariaLabel="Swimlanes"
           size="sm"
+          clearValue="none"
         />
-        <button
-          type="button"
-          className="pc-status-board__toggle"
-          aria-expanded={doneExpanded}
-          onClick={() => setDoneExpanded((value) => !value)}
-        >
-          {doneExpanded ? 'Collapse' : 'Expand'} Done ·{' '}
-          {projection.columns.find((column) => column.key === 'done')?.nodes.length ?? 0}
-        </button>
+        <ChipToggle checked={!doneExpanded} onChange={(hidden) => setDoneExpanded(!hidden)}>
+          Hide done
+        </ChipToggle>
       </Toolbar>
       {items.length === 0 ? (
         <div className="pc-status-board__blank">

@@ -1,7 +1,10 @@
 import {
   Absent,
+  ArtifactRowCopy,
+  ArtifactRowMeta,
   ArtifactStatus,
   ArtifactTag,
+  type CommandHintProps,
   type DataTableColumn,
   PriorityChip,
   WorkItemChip,
@@ -9,6 +12,7 @@ import {
 import {
   type PlanningModelEdge,
   type PlanningModelNode,
+  planningContinuation,
   planningDisplayId,
 } from './planning-model.js';
 
@@ -133,7 +137,7 @@ export const LIST_COLUMNS: readonly Column[] = [
   {
     key: 'id',
     label: 'ID',
-    width: 150,
+    width: 'calc(var(--id-col) + 26px)',
     sortable: true,
     render: (node) => (
       <ArtifactTag type={TAG_TYPES[node.type]}>{planningDisplayId(node)}</ArtifactTag>
@@ -172,9 +176,34 @@ export const LIST_COLUMNS: readonly Column[] = [
   {
     ...UPDATED_COLUMN,
     sortable: true,
-    render: (node) =>
-      authoredTimestamp(node.frontmatter.updated) === null
-        ? 'Unknown'
-        : String(node.frontmatter.updated).slice(0, 10),
+    render: (node) => {
+      const timestamp = authoredTimestamp(node.frontmatter.updated);
+      if (timestamp === null) return 'Unknown';
+      const date = new Date(timestamp);
+      return (
+        <ArtifactRowMeta label={`Updated ${date.toISOString().slice(0, 10)}`}>
+          {date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', timeZone: 'UTC' })}
+        </ArtifactRowMeta>
+      );
+    },
   },
 ];
+
+export function listCommandColumn(
+  onCopy: CommandHintProps['onCopy'],
+  shortcutsEnabled: boolean,
+): Column {
+  return {
+    key: 'command',
+    label: '',
+    width: 54,
+    render: (node) => (
+      <ArtifactRowCopy
+        id={planningDisplayId(node)}
+        command={planningContinuation(node)}
+        onCopy={onCopy}
+        shortcutsEnabled={shortcutsEnabled}
+      />
+    ),
+  };
+}

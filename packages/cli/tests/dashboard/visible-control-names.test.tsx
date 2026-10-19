@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { cleanup, fireEvent, render, waitFor } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { computeAccessibleName } from 'dom-accessibility-api';
 import type { ReactNode } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -342,11 +342,10 @@ describe('visible control names', () => {
       }
       expect(await nameFailures(view.container)).toEqual([]);
       if (route === 'board') {
-        fireEvent.change(view.getByRole('combobox', { name: 'Swimlanes' }), {
-          target: { value: 'spec' },
-        });
+        fireEvent.click(view.getByRole('combobox', { name: /^Swimlanes:/u }));
+        fireEvent.click(screen.getByRole('option', { name: /spec/iu }));
         expect(await nameFailures(view.container)).toEqual([]);
-        fireEvent.click(view.getByRole('button', { name: /Expand Done/u }));
+        fireEvent.click(view.getByRole('button', { name: 'Hide done', exact: true }));
         expect(await nameFailures(view.container)).toEqual([]);
       }
     });

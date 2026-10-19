@@ -1020,7 +1020,7 @@ test.describe('dashboard real-browser quality', () => {
     await openFixture(page, '#/board', { planningScenario: 'delivery' });
     const doneCards = page.locator('[data-keyboard-column="done"] .pc-status-board__cards');
     await expect(doneCards.locator('.pc-status-board__card')).toHaveCount(0);
-    await page.getByRole('button', { name: /Expand Done/u }).click();
+    await page.getByRole('button', { name: 'Hide done', exact: true }).click();
     await expect(doneCards.locator('li[aria-setsize="33"]').first()).toBeAttached();
     expect(await doneCards.locator('.pc-status-board__card').count()).toBeLessThan(10);
     await doneCards.evaluate((element) => {
@@ -1038,10 +1038,9 @@ test.describe('dashboard real-browser quality', () => {
     await expect(
       sprint.getByRole('heading', { name: 'CRM recovery and observability' }),
     ).toBeVisible();
-    await expect(sprint.getByRole('table', { name: 'Members of SPRINT-009' })).toContainText(
-      'QT-071',
-    );
-    await expect(sprint).toContainText('3 items');
+    const members = sprint.getByRole('list', { name: 'Members of SPRINT-009' });
+    await expect(members).toContainText('QT-071');
+    await expect(members.getByRole('listitem')).toHaveCount(3);
     await expect(sprint).toContainText('Latest operating review');
     await expect(sprint).toContainText('1 reference this scope');
     await expect(sprint).toContainText('Submit one test registration before dispatching QT-071');
@@ -1163,11 +1162,11 @@ test.describe('dashboard real-browser quality', () => {
         await page.evaluate(() => document.fonts.ready);
         expect(await page.evaluate(() => localStorage.getItem('op-theme'))).toBe(theme);
         const board = page.locator('[data-route-kind="planning.board"]');
-        await expect(board.getByRole('button', { name: /Expand Done/u })).toHaveAttribute(
-          'aria-expanded',
-          'false',
+        await expect(board.getByRole('button', { name: 'Hide done', exact: true })).toHaveAttribute(
+          'aria-pressed',
+          'true',
         );
-        const card = board.locator('.pc-status-board__card').first();
+        const card = board.locator('.pc-status-board__card [data-keyboard-item]').first();
         await card.focus();
         await page.keyboard.press('Enter');
         await expect(
@@ -1180,7 +1179,8 @@ test.describe('dashboard real-browser quality', () => {
         await expect(card).toBeFocused();
         await page.keyboard.press('ArrowRight');
         await expect(board.locator('[data-keyboard-item]:focus')).toHaveCount(1);
-        await board.getByRole('combobox', { name: 'Swimlanes' }).selectOption('spec');
+        await board.getByRole('combobox', { name: /^Swimlanes:/u }).click();
+        await page.getByRole('option', { name: /spec/iu }).click();
         await expect(board.locator('.pc-status-board__lane')).not.toHaveCount(0);
         expect(await board.locator('[draggable="true"]').count()).toBe(0);
         await board.locator('.pc-status-board__card').first().dispatchEvent('dragstart');
@@ -1224,14 +1224,14 @@ test.describe('dashboard real-browser quality', () => {
             sprints.getByRole('heading', { name: 'No active sprint', exact: true }),
           ).toBeVisible();
           await expect(
-            sprints.getByRole('heading', { name: 'Launch sprint 1' }).locator('..'),
+            sprints.getByRole('article', { name: 'SPRINT-001: Launch sprint 1', exact: true }),
           ).toContainText('78 of 82 sprint items done');
           await expect(sprints).toContainText('closed-before-start');
           const carry = sprints.getByRole('region', { name: 'Carry-over from SPRINT-001' });
           await expect(carry).toContainText('Still open after close');
           expect(
             await carry
-              .locator('a')
+              .locator('a[data-keyboard-item]')
               .evaluateAll((links) => links.map((link) => link.getAttribute('href'))),
           ).toEqual([
             '#/detail/QT-006',
@@ -1239,7 +1239,7 @@ test.describe('dashboard real-browser quality', () => {
             '#/detail/QT-005',
             '#/detail/SPEC-015%2FT-055',
           ]);
-          const link = carry.locator('a').last();
+          const link = carry.locator('a[data-keyboard-item]').last();
           if (width < 900) await link.tap();
           else {
             await link.focus();
@@ -1315,10 +1315,12 @@ test.describe('dashboard real-browser quality', () => {
       expect(badgeBefore?.height).toBe(32);
       await page.evaluate(() => window.__dashboardLayoutShifts.markPhase('activity-disconnect'));
       await page.context().setOffline(true);
-      await expect(activity.locator('.pc-activity__feed-head')).toContainText(
-        'Disconnected · session retained',
-      );
-      await expect(activity.locator('.pc-activity__feed-head')).not.toContainText('Watching');
+      await expect(
+        activity.getByRole('region', { name: 'Live session activity', exact: true }),
+      ).toContainText('Disconnected · session retained');
+      await expect(
+        activity.getByRole('region', { name: 'Live session activity', exact: true }),
+      ).not.toContainText('Watching');
       await expect(activity).toContainText('This session only');
       await expect(activity.locator('[data-keyboard-item]')).toHaveCount(2);
       await page.evaluate(

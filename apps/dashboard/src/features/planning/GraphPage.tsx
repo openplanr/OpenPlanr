@@ -7,8 +7,10 @@ import {
   type GraphNode,
   InlineAlert,
   SectionHeader,
+  Select,
   Switch,
   Tabs,
+  WorkItemChip,
 } from '../../design-system/components/index.js';
 import type { DashboardProductState } from '../../lib/api/product-state.js';
 import type { DashboardQueryIdentity } from '../../lib/binding/query-identity.js';
@@ -178,30 +180,33 @@ function FocusedWorkspace({
       <div className="op-focused-graph__workspace">
         <aside className="op-focused-graph__sidebar" aria-label="Graph controls">
           <h2>Focus</h2>
-          <label>
-            Focus spec
-            <select
-              aria-label="Focus spec"
-              value={lens === 'project' ? '' : (focusId ?? '')}
-              onChange={(event) => {
-                setFocus(event.target.value || null);
-                setLens(event.target.value ? 'lineage' : 'project');
-              }}
-            >
-              <option value="">Whole project</option>
-              {focused && focused.type !== 'spec' ? (
-                <option value={focused.id}>{focused.id}</option>
-              ) : null}
-              {model.graph.nodes
+          <Select
+            ariaLabel="Focus spec"
+            value={lens === 'project' ? '' : (focusId ?? '')}
+            clearValue=""
+            active={false}
+            onChange={(value) => {
+              setFocus(value || null);
+              setLens(value ? 'lineage' : 'project');
+            }}
+            options={[
+              { value: '', label: 'Whole project' },
+              ...(focused && focused.type !== 'spec'
+                ? [{ value: focused.id, label: `${focused.id}: ${focused.title}` }]
+                : []),
+              ...model.graph.nodes
                 .filter((node) => node.type === 'spec')
-                .map((node) => (
-                  <option key={node.id} value={node.id}>
-                    {node.id}: {node.title}
-                  </option>
-                ))}
-            </select>
-          </label>
-          <p>{lens === 'project' ? 'Whole project' : (focused?.title ?? 'Whole project')}</p>
+                .map((node) => ({ value: node.id, label: `${node.id}: ${node.title}` })),
+            ]}
+            trigger={
+              lens !== 'project' && focused ? (
+                <>
+                  <WorkItemChip type={focused.type} id={focused.id} />
+                  <span className="pc-chip__title">{focused.title}</span>
+                </>
+              ) : undefined
+            }
+          />
           <p role="status">
             {projection.nodes.length} nodes shown of {model.graph.nodes.length}. Everything outside
             the focus is hidden, not deleted.
