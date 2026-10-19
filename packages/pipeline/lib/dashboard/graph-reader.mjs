@@ -253,11 +253,12 @@ function isArtifactFile(name) {
 }
 
 /** Recursively collect artifact `.md` paths under a flat agile dir (handles `us-NNN/` nesting). */
-function walkAgileDir(dir, acc) {
+function walkAgileDir(dir, acc, strict = false) {
   let entries;
   try {
     entries = readdirSync(dir, { withFileTypes: true });
-  } catch {
+  } catch (error) {
+    if (strict && error.code !== 'ENOENT') throw error;
     return acc;
   }
   for (const ent of entries) {
@@ -265,7 +266,7 @@ function walkAgileDir(dir, acc) {
     if (ent.isDirectory()) {
       // `sprints/SPRINT-NNN/` holds refinement notes, not artifacts.
       if (ent.name.startsWith('.') || /^SPRINT-\d+/u.test(ent.name)) continue;
-      walkAgileDir(full, acc);
+      walkAgileDir(full, acc, strict);
     } else if (ent.isFile() && isArtifactFile(ent.name)) {
       acc.push(full);
     }
@@ -274,11 +275,12 @@ function walkAgileDir(dir, acc) {
 }
 
 /** Collect the canonical `.md` artifacts from a single `.planr/specs/SPEC-NNN` dir. */
-function collectSpecDir(specDir, acc) {
+function collectSpecDir(specDir, acc, strict = false) {
   let entries;
   try {
     entries = readdirSync(specDir, { withFileTypes: true });
-  } catch {
+  } catch (error) {
+    if (strict && error.code !== 'ENOENT') throw error;
     return acc;
   }
   for (const ent of entries) {
@@ -292,7 +294,8 @@ function collectSpecDir(specDir, acc) {
       let inner;
       try {
         inner = readdirSync(full, { withFileTypes: true });
-      } catch {
+      } catch (error) {
+        if (strict) throw error;
         continue;
       }
       for (const f of inner) {
@@ -310,21 +313,22 @@ function collectSpecDir(specDir, acc) {
  * agile dirs, then each `specs/SPEC-NNN` dir's body + stories + tasks. Loose
  * top-level files and non-canonical subtrees are ignored by construction.
  */
-function collectArtifacts(planrDir) {
+function collectArtifacts(planrDir, strict = false) {
   const acc = [];
   for (const d of AGILE_DIRS) {
-    walkAgileDir(join(planrDir, d), acc);
+    walkAgileDir(join(planrDir, d), acc, strict);
   }
   const specsRoot = join(planrDir, 'specs');
   let specEntries;
   try {
     specEntries = readdirSync(specsRoot, { withFileTypes: true });
-  } catch {
+  } catch (error) {
+    if (strict && error.code !== 'ENOENT') throw error;
     specEntries = [];
   }
   for (const ent of specEntries) {
     if (ent.isDirectory() && /^SPEC-\d+/.test(ent.name)) {
-      collectSpecDir(join(specsRoot, ent.name), acc);
+      collectSpecDir(join(specsRoot, ent.name), acc, strict);
     }
   }
   return acc;
@@ -438,23 +442,28 @@ function readGraphData(planrDir, opts = {}, sourcePaths = new Map(), diagnostics
   const shouldValidate = opts.validate !== false;
 
   const empty = { nodes: [], edges: [] };
-  if (!planrDir || !existsSync(planrDir)) {
+  if (!planrDir || (!opts.strict && !existsSync(planrDir))) {
     return empty;
   }
 
   let stat;
   try {
     stat = statSync(planrDir);
-  } catch {
+  } catch (error) {
+    if (opts.strict && error.code !== 'ENOENT') throw error;
     return empty;
   }
-  if (!stat.isDirectory()) return empty;
+  if (!stat.isDirectory()) {
+    if (opts.strict)
+      throw Object.assign(new Error('Planning source is not a directory.'), { code: 'ENOTDIR' });
+    return empty;
+  }
 
-  const files = collectArtifacts(planrDir);
+  const files = collectArtifacts(planrDir, opts.strict === true);
   const nodes = [];
   const idSet = new Set();
   for (const file of files) {
-    const node = buildNode(file, planrDir, includeBody);
+    const node = buildNode(file, planrDir, includeBody, opts.strict === true);
     if (!node || !node.id) continue;
     // Namespacing makes story/task ids globally unique, so the old silent
     // "first wins" collapse is gone. Guard only against a genuine exact-duplicate
@@ -535,7 +544,7 @@ export function readGraph(planrDir, opts = {}) {
 export function readPlanningModel(planrDir) {
   const sourcePaths = new Map();
   const diagnostics = [];
-  const graph = readGraphData(planrDir, {}, sourcePaths, diagnostics);
+  const graph = readGraphData(planrDir, { strict: true }, sourcePaths, diagnostics);
   return createPlanningReadModel(graph, sourcePaths, diagnostics);
 }
 

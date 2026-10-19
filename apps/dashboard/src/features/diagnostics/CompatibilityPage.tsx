@@ -9,9 +9,11 @@ import {
   Tabs,
 } from '../../design-system/components/index.js';
 import type { DashboardBootstrap } from '../../lib/api/bootstrap.js';
+import type { PlanningWorkspaceModel } from '../planning/planning-workspace.js';
 import { type DiagnosticFinding, resolveCompatibilityDiagnostics } from './compatibility-model.js';
 import { DataHealth, type DataHealthRead } from './DataHealth.js';
 import { SupportSummary } from './SupportSummary.js';
+import { useDataHealth } from './use-data-health.js';
 import './diagnostics.css';
 
 export type CompatibilityPageProps = Readonly<{
@@ -22,6 +24,7 @@ export type CompatibilityPageProps = Readonly<{
   connection: DashboardConnection;
   onReturn?: () => void;
   dataHealth?: DataHealthRead | null;
+  planningModel?: PlanningWorkspaceModel | null;
 }>;
 
 function statusLabel(status: DiagnosticFinding['status']): string {
@@ -74,10 +77,12 @@ export function CompatibilityPage({
   bootDetail,
   connection,
   onReturn,
-  dataHealth = null,
+  dataHealth,
+  planningModel = null,
 }: CompatibilityPageProps) {
   const [tab, setTab] = useState('compatibility');
   const panelId = useId();
+  const health = useDataHealth(planningModel, bootstrap?.origin ?? null, tab === 'health');
   const findings = resolveCompatibilityDiagnostics({
     embeddedBuildId,
     bootstrap,
@@ -112,7 +117,7 @@ export function CompatibilityPage({
         onChange={setTab}
         tabs={[
           { id: 'compatibility', label: 'Compatibility', panelId: `${panelId}-compatibility` },
-          { id: 'health', label: 'Data health · Proposed', panelId: `${panelId}-health` },
+          { id: 'health', label: 'Data health', panelId: `${panelId}-health` },
           { id: 'recovery', label: 'Recovery', panelId: `${panelId}-recovery` },
           { id: 'support', label: 'Support summary', panelId: `${panelId}-support` },
         ]}
@@ -180,7 +185,7 @@ export function CompatibilityPage({
         hidden={tab !== 'health'}
         aria-label="Data health"
       >
-        <DataHealth read={dataHealth} />
+        <DataHealth {...health} read={dataHealth === undefined ? health.read : dataHealth} />
       </section>
       <section
         id={`${panelId}-recovery`}

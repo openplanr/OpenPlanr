@@ -106,6 +106,18 @@
       "mode": "644"
     },
     {
+      "source": "packages/protocol/lib/dashboard/planning-diagnostics-contracts.d.mts",
+      "target": "lib/dashboard/planning-diagnostics-contracts.d.mts",
+      "sha256": "0b65232537883d1b105c09e081f90319d18292fe1bdd135baab556bb0b6d626c",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/lib/dashboard/planning-diagnostics-contracts.mjs",
+      "target": "lib/dashboard/planning-diagnostics-contracts.mjs",
+      "sha256": "0c3f4f27a77481c69edd03e8d95ce2aed09c59a1d37cec7a7ccee0e68ad66c36",
+      "mode": "644"
+    },
+    {
       "source": "packages/protocol/lib/dashboard/planning-file-link-contracts.d.mts",
       "target": "lib/dashboard/planning-file-link-contracts.d.mts",
       "sha256": "e4531ade4c7ef5cfd401efd69fbfb94e1ef3084e6466b5cc014a32a8f3a3a1dd",

@@ -1,8 +1,15 @@
 /** Planning routes: the bound graph snapshot, node detail and the live event stream. */
 
 import { dirname } from 'node:path';
+import { getPlanningReadModel } from '../graph-engine.mjs';
+import {
+  assertPlanningDiagnosticsEnvelope,
+  PLANNING_DIAGNOSTICS_MAX_BYTES,
+  PLANNING_DIAGNOSTICS_MAX_COUNT,
+} from '../planning-diagnostics-contracts.mjs';
 import {
   assertPlanningFileLinkEnvelope,
+  PLANNING_FILE_LINK_ERROR_CODES,
   validPlanningFilePath,
 } from '../planning-file-link-contracts.mjs';
 import { sha256Jcs } from './operate.mjs';
@@ -97,6 +104,85 @@ export function handlePlanningGraph(context) {
   const binding = bindPlanningRequest(context);
   if (!binding) return planningBindingError(context.res);
   return planningJson(context.res, 200, context.dashboard.planning.graphEnvelope(binding));
+}
+
+export function handlePlanningDiagnostics(context) {
+  const { dashboard, req, res, url } = context;
+  const params = new URLSearchParams(url.searchParams);
+  if (params.getAll('sourceViewHash').length !== 1) return planningResponseError(res, 400);
+  const sourceViewHash = params.get('sourceViewHash');
+  params.delete('sourceViewHash');
+  const binding = planningRequestBinding(
+    req,
+    params,
+    dashboard.project.projectId,
+    dashboard.planningActorId,
+  );
+  if (!binding) return planningBindingError(res);
+  const { planning } = dashboard;
+  const cursor = planning.cursor();
+  if (sourceViewHash !== cursor.viewHash) return planningResponseError(res);
+  const base = {
+    kind: 'planning-diagnostics',
+    schemaVersion: PLANNING_SCHEMA_VERSION,
+    binding,
+    cursor,
+    sourceViewHash,
+    state: 'unavailable',
+    reason: null,
+    errorCode: null,
+    diagnostics: [],
+    totalCount: null,
+    truncated: false,
+  };
+  const respond = (value) =>
+    planningJson(res, 200, assertPlanningDiagnosticsEnvelope(value, { binding, cursor }));
+  let model;
+  try {
+    model = getPlanningReadModel(dashboard.planrDir);
+  } catch (error) {
+    const errorCode = PLANNING_FILE_LINK_ERROR_CODES.includes(error?.code) ? error.code : 'UNKNOWN';
+    return respond({
+      ...base,
+      state: 'error',
+      reason: 'Planning source diagnostics could not be read. Check source access and retry.',
+      errorCode,
+    });
+  }
+  // A native diagnostic belongs only to its complete source graph, including a delegated snapshot.
+  if (sha256Jcs(model.graph) !== cursor.viewHash || !sameLiveCursor(cursor, planning.cursor())) {
+    return respond({
+      ...base,
+      reason:
+        'Planning source diagnostics do not match the current graph. Refresh the graph and retry.',
+    });
+  }
+  const diagnostics = model.diagnostics
+    .toSorted((left, right) => {
+      const key = (entry) =>
+        JSON.stringify([entry.sourcePath, entry.nodeId, entry.field, entry.reason]);
+      return key(left) < key(right) ? -1 : key(left) > key(right) ? 1 : 0;
+    })
+    .slice(0, PLANNING_DIAGNOSTICS_MAX_COUNT)
+    .map((entry) => ({ ...entry, sourcePath: `.planr/${entry.sourcePath}` }));
+  const result = {
+    ...base,
+    state: 'available',
+    diagnostics,
+    totalCount: model.diagnostics.length,
+  };
+  const disclose = () => {
+    result.truncated = diagnostics.length < result.totalCount;
+    result.reason = result.truncated
+      ? 'The diagnostics response reached its record or byte limit. Additional source diagnostics are omitted.'
+      : null;
+  };
+  disclose();
+  while (Buffer.byteLength(JSON.stringify(result), 'utf8') > PLANNING_DIAGNOSTICS_MAX_BYTES) {
+    diagnostics.pop();
+    disclose();
+  }
+  return respond(result);
 }
 
 export function handlePlanningDetail(context) {

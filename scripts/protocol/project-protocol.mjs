@@ -36,6 +36,8 @@ const DASHBOARD_CONTRACT_FILES = new Set([
   'generated/operate-schema-token-codec.mjs',
   'planning-attention.d.mts',
   'planning-attention.mjs',
+  'planning-diagnostics-contracts.d.mts',
+  'planning-diagnostics-contracts.mjs',
   'planning-file-link-contracts.d.mts',
   'planning-file-link-contracts.mjs',
   'operate-experience-audit-display-contract.d.mts',

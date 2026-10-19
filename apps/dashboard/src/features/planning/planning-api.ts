@@ -9,6 +9,11 @@
 
 import { deepFreeze, sha256Jcs } from '@openplanr/protocol/canonical-json';
 import {
+  assertPlanningDiagnosticsEnvelope,
+  PLANNING_DIAGNOSTICS_MAX_BYTES,
+  type PlanningDiagnosticsEnvelope,
+} from '@openplanr/protocol/dashboard/planning-diagnostics-contracts.mjs';
+import {
   assertPlanningFileLinkEnvelope,
   PLANNING_FILE_LINK_MAX_BYTES,
   type PlanningFileLinkEnvelope,
@@ -1174,6 +1179,52 @@ export async function fetchPlanningDetail(
     options.identity,
     options.snapshot,
     nodeId,
+  );
+}
+
+export function parsePlanningDiagnosticsJson(
+  text: string,
+  identity: DashboardQueryIdentity,
+  snapshot: PlanningGraphEnvelope,
+): PlanningDiagnosticsEnvelope {
+  if (
+    !sameBinding(snapshot.binding, identity) ||
+    new TextEncoder().encode(text).byteLength > PLANNING_DIAGNOSTICS_MAX_BYTES
+  )
+    return invalid('$', 'Diagnostics do not belong to this Planning read');
+  try {
+    return assertPlanningDiagnosticsEnvelope(parseWireJson(text), {
+      binding: snapshot.binding,
+      cursor: snapshot.cursor,
+    });
+  } catch {
+    return invalid('$', 'Planning diagnostics could not be verified');
+  }
+}
+
+export async function fetchPlanningDiagnostics(
+  options: Readonly<{
+    origin: string;
+    identity: DashboardQueryIdentity;
+    snapshot: PlanningGraphEnvelope;
+    signal?: AbortSignal;
+    fetcher?: typeof fetch;
+  }>,
+): Promise<PlanningDiagnosticsEnvelope> {
+  if (!sameBinding(options.snapshot.binding, options.identity))
+    return invalid('$', 'A current Planning graph is required');
+  const url = planningUrl(options.origin, '/api/planning/diagnostics', options.identity);
+  url.searchParams.set('sourceViewHash', options.snapshot.cursor.viewHash);
+  const response = await (options.fetcher ?? fetch)(url, {
+    method: 'GET',
+    headers: { accept: 'application/json', 'x-openplanr-actor': options.identity.actorId },
+    cache: 'no-store',
+    signal: options.signal,
+  });
+  return parsePlanningDiagnosticsJson(
+    await readResponse(response, 'application/json'),
+    options.identity,
+    options.snapshot,
   );
 }
 

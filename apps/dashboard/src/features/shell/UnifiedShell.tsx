@@ -272,6 +272,14 @@ export function UnifiedShell({
                         bootPhase={bootPhase}
                         bootDetail={bootDetail}
                         connection={connection}
+                        planningModel={
+                          planningProjection.binding
+                            ? resolvePlanningWorkspace(
+                                planningProjection,
+                                planningProjection.binding,
+                              )
+                            : null
+                        }
                       />
                     </>
                   ) : (

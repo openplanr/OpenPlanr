@@ -19,6 +19,7 @@ import {
 } from './operate-routes.mjs';
 import {
   handlePlanningDetail,
+  handlePlanningDiagnostics,
   handlePlanningEvents,
   handlePlanningFileLink,
   handlePlanningGraph,
@@ -68,6 +69,12 @@ export const DASHBOARD_ROUTES = Object.freeze(
       method: 'GET',
       match: path('/api/planning/graph'),
       handle: handlePlanningGraph,
+      family: 'planning',
+    },
+    {
+      method: 'GET',
+      match: path('/api/planning/diagnostics'),
+      handle: handlePlanningDiagnostics,
       family: 'planning',
     },
     {

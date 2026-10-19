@@ -168,3 +168,40 @@
 .op-diagnostics__health .pc-badge {
   margin-inline-start: 0;
 }
+.op-diagnostics__health-status {
+  box-sizing: border-box;
+  block-size: 7rem;
+  overflow: auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--pc-space-3);
+}
+.op-diagnostics__health-status p {
+  margin: 0;
+}
+.op-diagnostics__health-content {
+  block-size: 32rem;
+  overflow: auto;
+  scrollbar-gutter: stable;
+  overflow-anchor: auto;
+}
+.op-diagnostics__health-content .pc-skeleton {
+  margin-block: var(--pc-space-4);
+}
+@media (max-width: 899px) {
+  .op-diagnostics__health-status {
+    flex-wrap: wrap;
+    align-content: start;
+  }
+}
+.op-diagnostics__health > .pc-toolbar-bar {
+  box-sizing: border-box;
+  block-size: 7rem;
+  overflow: auto;
+}
+@media (max-width: 899px) {
+  .op-diagnostics__health > .pc-toolbar-bar {
+    block-size: 12rem;
+  }
+}
