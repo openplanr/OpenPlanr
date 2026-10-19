@@ -67,3 +67,15 @@
   outline: 2px solid var(--op-accent);
   outline-offset: -2px;
 }
+
+.pc-list .pc-table {
+  table-layout: fixed;
+  min-width: 760px;
+}
+
+.pc-list .pc-section-header__count {
+  flex: 0 0 16ch;
+  min-inline-size: 16ch;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}

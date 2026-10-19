@@ -288,3 +288,21 @@
     border-color: ButtonText;
   }
 }
+
+.op-planning-notice:not(.pc-visually-hidden) {
+  position: fixed;
+  z-index: 20;
+  right: 16px;
+  bottom: calc(40px + env(safe-area-inset-bottom));
+  max-width: min(420px, calc(100vw - 32px));
+  padding: var(--op-space-3);
+  border: 1px solid var(--op-line-strong);
+  border-radius: var(--op-radius-card);
+  background: var(--op-panel);
+}
+
+@media (width < 900px) {
+  .op-planning-notice:not(.pc-visually-hidden) {
+    bottom: calc(72px + env(safe-area-inset-bottom));
+  }
+}

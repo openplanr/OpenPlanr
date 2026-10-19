@@ -69,6 +69,7 @@ export const GovernedButton = forwardRef<HTMLButtonElement, GovernedButtonProps>
 
     const visibleReason = pending ? pendingLabel : disabledReason;
     const unavailable = disabled || pending;
+    const descriptionId = pending ? `${reasonId}-pending` : disabledReason ? reasonId : undefined;
 
     async function invoke() {
       if (unavailable || inFlight.current || !onInvoke) return;
@@ -97,41 +98,43 @@ export const GovernedButton = forwardRef<HTMLButtonElement, GovernedButtonProps>
         tabIndex={tabIndex}
         disabled={unavailable}
         aria-disabled={unavailable || undefined}
-        aria-label={ariaLabel}
+        aria-label={pending ? pendingLabel : ariaLabel}
         aria-controls={ariaControls}
         aria-expanded={ariaExpanded}
         aria-haspopup={ariaHasPopup}
         aria-busy={pending || undefined}
-        aria-describedby={visibleReason ? reasonId : undefined}
+        aria-describedby={descriptionId}
         onClick={invoke}
       >
-        {pending ? <span className="op-governed-button__spinner" aria-hidden="true" /> : null}
-        <span>{pending ? pendingLabel : children}</span>
+        <span className="op-governed-button__spinner" data-pending={pending} aria-hidden="true" />
+        <span>{children}</span>
       </button>
     );
 
     return (
       <div className="op-governed-action" data-governed-action-state={pending ? 'pending' : 'idle'}>
-        {visibleReason ? (
-          <Tooltip content={visibleReason}>
-            <span
-              tabIndex={unavailable ? 0 : undefined}
-              aria-describedby={unavailable ? reasonId : undefined}
-            >
-              {control}
-            </span>
-          </Tooltip>
-        ) : (
-          control
-        )}
+        <Tooltip content={visibleReason} disabled={!visibleReason}>
+          <span
+            className="op-governed-action__trigger"
+            tabIndex={unavailable ? 0 : undefined}
+            aria-describedby={unavailable ? descriptionId : undefined}
+          >
+            {control}
+          </span>
+        </Tooltip>
         {failure ? (
           <p className="op-governed-reason" role="alert">
             {failure}
           </p>
         ) : null}
-        {visibleReason ? (
+        {disabledReason ? (
           <p className="op-governed-reason" id={reasonId}>
-            {visibleReason}
+            {disabledReason}
+          </p>
+        ) : null}
+        {pending ? (
+          <p className="pc-visually-hidden" id={`${reasonId}-pending`} role="status">
+            {pendingLabel}
           </p>
         ) : null}
       </div>

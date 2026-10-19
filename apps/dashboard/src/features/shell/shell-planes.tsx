@@ -1,4 +1,4 @@
-import { Fragment } from 'react';
+import { Fragment, useState } from 'react';
 import { dashboardRouteDefinition, type ParsedDashboardRoute } from '../../app/router.js';
 import {
   Card,
@@ -83,7 +83,7 @@ export function TransitScreen({ route, note }: TransitScreenProps) {
   const description =
     route.product === 'operate'
       ? 'Reading the Operate projection. The route is already resolved.'
-      : `Reading the graph from ${PLANNING_FOLDER}/. The route is already resolved.`;
+      : `Reading ${PLANNING_FOLDER}/. Planning files appear here after the read is validated.`;
   return (
     <div className="pc-transit" aria-busy="true">
       <SectionHeader eyebrow={shape.eyebrow} title={title} count={note} description={description} />
@@ -140,9 +140,29 @@ export type BootScreenProps = Readonly<{
   detail: string | null;
 }>;
 
+const BOOT_FAILURES = {
+  incompatible: {
+    tone: 'danger',
+    title: 'Dashboard installation is incompatible',
+    description:
+      'The UI, server, or packaged assets do not satisfy the same build contract. Open diagnostics to inspect the compatibility result.',
+    command: '/planr:doctor',
+    commandLabel: 'check the installation',
+  },
+  unavailable: {
+    tone: 'warn',
+    title: 'The dashboard connection could not be verified',
+    description:
+      'No validated bootstrap response is available. Check the local dashboard process and connection, then reload this tab.',
+    command: 'openplanr dashboard',
+    commandLabel: 'start the local dashboard from the project folder',
+  },
+} as const;
+
 /** Boot is a transit frame with a phase readout. The phase decides what boot resolves into. */
 export function BootScreen({ route, phase, detail }: BootScreenProps) {
   const failed = phase === 'incompatible' || phase === 'unavailable';
+  const failure = phase === 'incompatible' ? BOOT_FAILURES.incompatible : BOOT_FAILURES.unavailable;
   const steps = ['checking', failed ? phase : 'compatible'];
   return (
     <div className="pc-boot">
@@ -172,24 +192,10 @@ export function BootScreen({ route, phase, detail }: BootScreenProps) {
           <div className="pc-boot__card">
             <Card padding={14}>
               <div className="pc-boot__stack">
-                <InlineAlert
-                  tone={phase === 'incompatible' ? 'danger' : 'warn'}
-                  title={
-                    phase === 'incompatible'
-                      ? 'This build cannot read the graph on disk'
-                      : 'No graph at this path'
-                  }
-                >
-                  {detail ??
-                    (phase === 'incompatible'
-                      ? `The ${PLANNING_FOLDER}/ schema on disk is a version this dashboard does not read. Nothing was opened, and nothing on disk was touched.`
-                      : `The dashboard started, but there is no ${PLANNING_FOLDER}/ directory to read. Planning fills in as soon as one exists.`)}
+                <InlineAlert tone={failure.tone} title={failure.title}>
+                  {detail ?? failure.description}
                 </InlineAlert>
-                <CommandHint
-                  command={phase === 'incompatible' ? '/planr-doctor' : '/planr-plan'}
-                  label={phase === 'incompatible' ? 'check the schema version' : 'create the graph'}
-                  size="sm"
-                />
+                <CommandHint command={failure.command} label={failure.commandLabel} size="sm" />
               </div>
             </Card>
           </div>
@@ -203,38 +209,123 @@ export function BootScreen({ route, phase, detail }: BootScreenProps) {
   );
 }
 
-export type PlaneBannerProps = Readonly<{ state: 'stale' | 'offline'; reason: string }>;
+export type PlaneBannerProps = Readonly<{
+  state: 'stale' | 'offline';
+  reason: string;
+  projectionKind?: string;
+  errorCode?: string | null;
+  lastSnapshotAt?: number | null;
+  attempt?: number;
+  onRetry?: () => Promise<unknown>;
+}>;
 
-/** Stale and offline keep the last read on screen and say so above it. */
-export function PlaneBanner({ state, reason }: PlaneBannerProps) {
-  if (state === 'stale') {
-    return (
-      <div className="pc-plane-banner">
-        <InlineAlert tone="warn" title="Showing the last good read">
-          {reason}
-        </InlineAlert>
-      </div>
-    );
+function recoveryCopy({ state, projectionKind, errorCode }: PlaneBannerProps) {
+  if (projectionKind === 'corrupt' || errorCode === 'DASHBOARD_RESPONSE_INVALID') {
+    return {
+      kind: 'invalid-response',
+      tone: 'danger',
+      title: 'The latest dashboard response could not be validated',
+      instruction:
+        'The rejected response was not applied. Read again before resuming live updates.',
+    } as const;
+  }
+  if (errorCode === 'DASHBOARD_READ_FAILED') {
+    return {
+      kind: 'read-failed',
+      tone: 'danger',
+      title: 'The dashboard read failed',
+      instruction: 'Check that the local server is running and reachable, then retry the read.',
+    } as const;
+  }
+  return {
+    kind: state,
+    tone: 'warn',
+    title:
+      state === 'offline' ? 'The file watcher disconnected' : 'Checking for missed file updates',
+    instruction: 'Live updates resume after the connection and current snapshot are validated.',
+  } as const;
+}
+
+function SnapshotTime({ at }: Readonly<{ at?: number | null }>) {
+  const timestamp = typeof at === 'number' && Number.isFinite(at) ? new Date(at) : null;
+  if (!timestamp || !Number.isFinite(timestamp.getTime())) {
+    return <span>Live freshness cannot be confirmed.</span>;
   }
   return (
-    <div className="pc-plane-banner">
-      <InlineAlert tone="danger" title="Offline: the watcher is not reachable">
-        {reason}
+    <span>
+      Showing the last validated snapshot from{' '}
+      <time dateTime={timestamp.toISOString()}>
+        {timestamp.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}
+      </time>
+      .
+    </span>
+  );
+}
+
+/** Stale and offline keep the last read on screen and say so above it. */
+export function PlaneBanner(props: PlaneBannerProps) {
+  const { reason, lastSnapshotAt, attempt, onRetry } = props;
+  const [retrying, setRetrying] = useState(false);
+  const [retryFailed, setRetryFailed] = useState(false);
+  const copy = recoveryCopy(props);
+  const reconnecting = copy.kind === 'stale' || copy.kind === 'offline';
+  const retry = async () => {
+    if (!onRetry || retrying) return;
+    setRetrying(true);
+    setRetryFailed(false);
+    try {
+      await onRetry();
+    } catch {
+      setRetryFailed(true);
+    } finally {
+      setRetrying(false);
+    }
+  };
+  return (
+    <div
+      className="pc-plane-banner"
+      data-recovery-state={copy.kind}
+      role="status"
+      aria-live="polite"
+      aria-atomic="true"
+    >
+      <InlineAlert tone={copy.tone} title={copy.title}>
+        <span>{reason}</span> <SnapshotTime at={lastSnapshotAt} /> <span>{copy.instruction}</span>
+        {reconnecting && Number.isSafeInteger(attempt) && (attempt ?? 0) > 0
+          ? ` Reconnecting, attempt ${attempt}.`
+          : ''}
       </InlineAlert>
-      <CommandHint command="/planr-dashboard" label="restart the local reader" size="sm" />
+      {copy.kind === 'read-failed' ? (
+        <CommandHint
+          command="openplanr dashboard"
+          label="if the server stopped, start it from the project folder"
+          size="sm"
+        />
+      ) : null}
+      {onRetry ? (
+        <button
+          className="op-inline-action"
+          type="button"
+          disabled={retrying}
+          aria-busy={retrying || undefined}
+          onClick={() => void retry()}
+        >
+          {retrying ? 'Reading again' : 'Retry read'}
+        </button>
+      ) : null}
+      {retryFailed ? <p>Another read failed. Current data has not been refreshed.</p> : null}
     </div>
   );
 }
 
-/** Heads the diagnostics plane when the served build cannot read the graph on disk. */
+/** Heads the diagnostics plane when installation compatibility is refused. */
 export function IncompatibleNotice({ detail }: Readonly<{ detail: string | null }>) {
   return (
     <div className="pc-incompatible">
-      <InlineAlert tone="danger" title="This build cannot read the graph on disk">
-        {detail ??
-          `The ${PLANNING_FOLDER}/ schema is a version the dashboard does not understand. It stopped rather than render a partial or wrong reading of the plan.`}
+      <InlineAlert tone="danger" title={BOOT_FAILURES.incompatible.title}>
+        {detail ?? BOOT_FAILURES.incompatible.description}
       </InlineAlert>
-      <CommandHint command="/planr-doctor" label="report the schema version on disk" size="sm" />
+      <CommandHint command="/planr:doctor" label="check the installation" size="sm" />
       <InlineAlert tone="info" title="Nothing was changed">
         Plan views are read-only. No planning file was migrated, rewritten or removed.
       </InlineAlert>

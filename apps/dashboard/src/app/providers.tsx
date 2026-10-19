@@ -24,6 +24,7 @@ import {
   parseDashboardLocation,
   serializeDashboardRoute,
 } from './router.js';
+import type { DashboardPlanningLive } from './runtime-composition.js';
 
 export type DashboardIdentity = Readonly<{
   projectName: string;
@@ -50,6 +51,7 @@ export type DashboardContextValue = Readonly<{
   binding: DashboardQueryIdentity | null;
   projection: DashboardProductState<unknown>;
   planningProjection: DashboardProductState<unknown>;
+  planningLive: DashboardPlanningLive;
   operateCyclesProjection: DashboardProductState<unknown>;
   operateSearchBindings: readonly DashboardQueryIdentity[];
   operateReviewNavigation: OperateReviewNavigation | null;
@@ -72,6 +74,10 @@ const DEFAULT_CONNECTION: DashboardConnection = Object.freeze({
   reason: 'Waiting for OpenPlanr to return a validated project projection.',
 });
 const NOOP = () => Promise.reject(new Error('No exact dashboard refetch is available.'));
+const DEFAULT_PLANNING_LIVE: DashboardPlanningLive = Object.freeze({
+  state: 'connecting',
+  attempt: 0,
+});
 
 const DashboardContext = createContext<DashboardContextValue | null>(null);
 
@@ -95,6 +101,7 @@ export type DashboardProvidersProps = {
   binding?: DashboardQueryIdentity | null;
   projection?: DashboardProductState<unknown>;
   planningProjection?: DashboardProductState<unknown>;
+  planningLive?: DashboardPlanningLive;
   operateCyclesProjection?: DashboardProductState<unknown>;
   operateSearchBindings?: readonly DashboardQueryIdentity[];
   operateReviewNavigation?: OperateReviewNavigation | null;
@@ -153,6 +160,7 @@ export function DashboardProviders({
   binding = null,
   projection,
   planningProjection,
+  planningLive = DEFAULT_PLANNING_LIVE,
   operateCyclesProjection,
   operateSearchBindings = Object.freeze([]),
   operateReviewNavigation = null,
@@ -220,6 +228,7 @@ export function DashboardProviders({
         binding,
         projection: currentProjection,
         planningProjection: currentPlanningProjection,
+        planningLive,
         operateCyclesProjection: currentOperateCyclesProjection,
         operateSearchBindings,
         operateReviewNavigation,
@@ -238,6 +247,7 @@ export function DashboardProviders({
       binding,
       currentProjection,
       currentPlanningProjection,
+      planningLive,
       currentOperateCyclesProjection,
       operateSearchBindings,
       operateReviewNavigation,

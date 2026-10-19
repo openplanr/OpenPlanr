@@ -2460,6 +2460,24 @@ button.pc-work-item:disabled {
 .pc-toast__body strong + div {
   color: var(--pc-text-secondary);
 }
+.op-governed-action__trigger {
+  display: inline-flex;
+  max-width: 100%;
+}
+.op-governed-action__trigger > .op-governed-button {
+  width: 100%;
+}
+.op-governed-action__trigger:focus-visible {
+  outline: 2px solid var(--pc-focus-ring);
+  outline-offset: 2px;
+}
+.op-governed-button__spinner {
+  flex-shrink: 0;
+}
+.op-governed-button__spinner[data-pending="false"] {
+  visibility: hidden;
+  animation: none;
+}
 .pc-inspector-sheet {
   position: fixed;
   z-index: 60;

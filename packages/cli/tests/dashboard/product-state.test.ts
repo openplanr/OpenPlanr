@@ -79,7 +79,7 @@ const PRODUCT_ERROR_MATRIX: Record<DashboardProductStateKind, readonly string[]>
   empty: [],
   'read-only': [],
   refreshing: [],
-  stale: ['DASHBOARD_STALE_RESPONSE', 'DASHBOARD_READ_FAILED'],
+  stale: ['DASHBOARD_STALE_RESPONSE', 'DASHBOARD_READ_FAILED', 'DASHBOARD_RESPONSE_INVALID'],
   degraded: ['DASHBOARD_ERROR_UNAVAILABLE', 'DASHBOARD_READ_FAILED'],
   blocked: [],
   unavailable: ['DASHBOARD_ERROR_UNAVAILABLE', 'DASHBOARD_READ_FAILED'],

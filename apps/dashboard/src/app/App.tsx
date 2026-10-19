@@ -113,6 +113,7 @@ export function App({
       binding={runtime.binding}
       projection={runtime.projection}
       planningProjection={runtime.planningProjection}
+      planningLive={runtime.planningLive}
       operateCyclesProjection={runtime.operateCyclesProjection}
       operateSearchBindings={runtime.operateSearchBindings}
       operateReviewNavigation={runtime.operateReviewNavigation}

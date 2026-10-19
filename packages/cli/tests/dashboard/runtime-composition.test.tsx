@@ -19,6 +19,7 @@ const planning = vi.hoisted(() => ({
   fetch: vi.fn(),
   connect: vi.fn(),
   close: vi.fn(),
+  reconcile: vi.fn(),
 }));
 
 const operate = vi.hoisted(() => ({
@@ -31,7 +32,7 @@ const operate = vi.hoisted(() => ({
 vi.mock('../../../../apps/dashboard/src/features/planning/planning-api.js', () => ({
   fetchPlanningGraph: planning.fetch,
   parsePlanningGraphEnvelope: (value: unknown) => value,
-  createPlanningSseReconciler: () => Object.freeze({}),
+  createPlanningSseReconciler: planning.reconcile,
   connectPlanningSse: planning.connect,
   encodePlanningCheckpoint: () => 'checkpoint',
 }));
@@ -150,7 +151,7 @@ describe('production dashboard runtime composition', () => {
   it('keeps one Planning read and SSE lease while navigating between Operate routes', async () => {
     planning.fetch.mockResolvedValue(graphEnvelope);
     planning.connect.mockReturnValue(
-      Object.freeze({ completion: Promise.resolve(), close: planning.close }),
+      Object.freeze({ completion: new Promise<void>(() => {}), close: planning.close }),
     );
 
     const { result, rerender, unmount } = renderHook(
@@ -179,7 +180,7 @@ describe('production dashboard runtime composition', () => {
   it('rebinds one verified Planning graph immediately across Planning view routes', async () => {
     planning.fetch.mockResolvedValue(graphEnvelope);
     planning.connect.mockReturnValue(
-      Object.freeze({ completion: Promise.resolve(), close: planning.close }),
+      Object.freeze({ completion: new Promise<void>(() => {}), close: planning.close }),
     );
 
     const { result, rerender, unmount } = renderHook(
@@ -245,7 +246,7 @@ describe('production dashboard runtime composition', () => {
       .mockResolvedValueOnce(graphEnvelope)
       .mockRejectedValueOnce(new Error('new Planning root is unavailable'));
     planning.connect.mockReturnValue(
-      Object.freeze({ completion: Promise.resolve(), close: planning.close }),
+      Object.freeze({ completion: new Promise<void>(() => {}), close: planning.close }),
     );
 
     const { result, rerender, unmount } = renderHook(
@@ -279,10 +280,47 @@ describe('production dashboard runtime composition', () => {
     unmount();
   });
 
+  it('retains verified bytes through every watcher-refetch render and disables mutations', async () => {
+    planning.fetch.mockResolvedValueOnce(graphEnvelope);
+    planning.connect.mockReturnValue({ completion: new Promise(() => {}), close: planning.close });
+    const observed: { kind: string; data: unknown }[] = [];
+    const { result, unmount } = renderHook(() => {
+      const runtime = useDashboardRuntimeComposition(bootstrap, parseDashboardRoute('#/list'));
+      observed.push({ kind: runtime.projection.kind, data: runtime.projection.data });
+      return runtime;
+    });
+    await waitFor(() => expect(result.current.projection.kind).toBe('ready'));
+    const retained = result.current.projection.data;
+    let resolveRead!: (value: typeof graphEnvelope) => void;
+    planning.fetch.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          resolveRead = resolve;
+        }),
+    );
+    const callbacks = planning.reconcile.mock.calls.at(-1)?.[0] as {
+      onPatch: (snapshot: typeof graphEnvelope) => void;
+    };
+    observed.length = 0;
+    act(() => callbacks.onPatch(graphEnvelope));
+    await waitFor(() => expect(planning.fetch).toHaveBeenCalledTimes(2));
+    expect(result.current.projection.kind).toBe('refreshing');
+    expect(result.current.projection.data).toEqual(retained);
+    expect(result.current.projection.mutationEnabled).toBe(false);
+    expect(
+      observed.every(
+        (state) => state.data !== null && ['ready', 'refreshing'].includes(state.kind),
+      ),
+    ).toBe(true);
+    await act(async () => resolveRead(graphEnvelope));
+    await waitFor(() => expect(result.current.projection.kind).toBe('ready'));
+    unmount();
+  });
+
   it('retains a failed exact refetch as a typed read-only projection without leaking internals', async () => {
     planning.fetch.mockResolvedValue(graphEnvelope);
     planning.connect.mockReturnValue(
-      Object.freeze({ completion: Promise.resolve(), close: planning.close }),
+      Object.freeze({ completion: new Promise<void>(() => {}), close: planning.close }),
     );
     const { result, unmount } = renderHook(() =>
       useDashboardRuntimeComposition(bootstrap, parseDashboardRoute('#/overview')),
@@ -360,7 +398,7 @@ describe('production dashboard runtime composition', () => {
     const action = wireFixture(fixture.action);
     planning.fetch.mockResolvedValue(wireFixture(fixture.planning));
     planning.connect.mockReturnValue(
-      Object.freeze({ completion: Promise.resolve(), close: planning.close }),
+      Object.freeze({ completion: new Promise<void>(() => {}), close: planning.close }),
     );
     operate.root.mockImplementation(({ surface }: { surface: string }) =>
       Promise.resolve(surface === 'today' ? today : cycles),
@@ -435,7 +473,7 @@ describe('production dashboard runtime composition', () => {
     const action = wireFixture(fixture.action);
     planning.fetch.mockResolvedValue(wireFixture(fixture.planning));
     planning.connect.mockReturnValue(
-      Object.freeze({ completion: Promise.resolve(), close: planning.close }),
+      Object.freeze({ completion: new Promise<void>(() => {}), close: planning.close }),
     );
     operate.root.mockImplementation(({ surface }: { surface: string }) =>
       Promise.resolve(surface === 'today' ? today : cycles),

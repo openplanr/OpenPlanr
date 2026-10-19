@@ -29,6 +29,7 @@ import {
   type PlanningView,
   serializePlanningViewHref,
 } from '../../../../apps/dashboard/src/lib/routing/planning-view-codec.js';
+import { buildPremiumDashboardFixture } from './fixtures/premium-dashboard-fixtures.js';
 
 const FIXTURE_FIRST = 'T-920';
 const FIXTURE_SECOND = 'T-921';
@@ -82,9 +83,14 @@ const FIXTURE_NODES: readonly PlanningNode[] = [
   node('T-924', 'Other item', { priority: 'low', labels: ['later'] }),
 ];
 
-function fixture(nodes: readonly PlanningNode[] = FIXTURE_NODES) {
+function fixture(
+  nodes: readonly PlanningNode[] = FIXTURE_NODES,
+  kind: 'ready' | 'refreshing' | 'loading' = 'ready',
+  sequence = 0,
+  generation = 1,
+) {
   const graph: PlanningGraph = { nodes, edges: [] };
-  const eventHead = { sequence: 0, hash: null };
+  const eventHead = { sequence, hash: sequence ? `sha256:${'a'.repeat(64)}` : null };
   const viewHash = sha256Jcs(graph as never);
   const root = {
     actorId: 'fixture-list-owner',
@@ -92,7 +98,7 @@ function fixture(nodes: readonly PlanningNode[] = FIXTURE_NODES) {
     scopeId: 'planning',
     domainId: 'planning',
     domainVersion: '1.0.0',
-    generation: 1,
+    generation,
   };
   const binding = createDashboardQueryIdentity({
     productArea: 'planning',
@@ -109,20 +115,26 @@ function fixture(nodes: readonly PlanningNode[] = FIXTURE_NODES) {
       schemaVersion: '1.0.0',
       binding: root,
       cursor: { eventHead, viewHash },
-      mode: 'empty',
+      mode: nodes.some((node) => node.type === 'spec')
+        ? nodes.some((node) => node.type === 'epic' || node.type === 'feature')
+          ? 'mixed'
+          : 'spec'
+        : nodes.some((node) => node.type === 'epic' || node.type === 'feature')
+          ? 'agile'
+          : 'empty',
       graph,
     },
     binding,
   );
   const state = parseDashboardProductState<PlanningGraphEnvelope>(
     {
-      kind: 'ready',
+      kind,
       binding,
-      data: envelope,
-      reasonCodes: [],
+      data: kind === 'loading' ? null : envelope,
+      reasonCodes: kind === 'refreshing' ? ['DASHBOARD_REFRESHING'] : [],
       error: null,
       mutationEnabled: false,
-      policy: dashboardProductStatePolicy('ready'),
+      policy: dashboardProductStatePolicy(kind),
     },
     {
       currentBinding: binding,
@@ -180,6 +192,7 @@ afterEach(() => {
   clearInspector();
   vi.useRealTimers();
   vi.restoreAllMocks();
+  vi.unstubAllGlobals();
 });
 
 describe('List presentation tokens against validated projections', () => {
@@ -426,5 +439,187 @@ describe('List presentation tokens against validated projections', () => {
     expect(
       screen.getAllByRole('row').filter((row) => row.hasAttribute('data-keyboard-item')),
     ).toHaveLength(5);
+  });
+});
+
+function LiveShell({ current }: { current: ReturnType<typeof fixture> }) {
+  return (
+    <DashboardProviders
+      buildId="live-list-fixture"
+      initialHash="#/list"
+      binding={current.binding}
+      projection={current.state}
+      planningProjection={current.state}
+      connection={{ state: 'connected', label: 'Connected', reason: 'Verified fixture' }}
+      bootPhase="compatible"
+    >
+      <UnifiedShell />
+    </DashboardProviders>
+  );
+}
+
+describe('List live refetch retention', () => {
+  it.each(['representative', 'scaling'] as const)(
+    'retains filters, sorting, pagination, row DOM, selection, focus and scroll for %s data',
+    async (dataset) => {
+      const user = userEvent.setup();
+      const nodes = buildPremiumDashboardFixture(dataset).graph.nodes;
+      const { container, rerender } = render(<LiveShell current={fixture(nodes)} />);
+      await user.selectOptions(
+        screen.getByRole('combobox', { name: 'Filter by status' }),
+        'outstanding',
+      );
+      await user.type(screen.getByRole('textbox', { name: 'Filter by id or title' }), 'Fixture');
+      await user.click(screen.getByRole('button', { name: 'Updated' }));
+      await user.click(screen.getByRole('button', { name: 'Next' }));
+      const ids = rowIds(container);
+      const row = container.querySelector<HTMLElement>(`tr[data-keyboard-item="${ids[0]}"]`);
+      if (!row) throw new Error('Expected a second-page item');
+      act(() => row.focus());
+      const scroll = container.querySelector<HTMLElement>('.pc-shell__scroll');
+      const table = container.querySelector<HTMLElement>('.pc-table-wrap');
+      if (!scroll || !table) throw new Error('Expected scroll containers');
+      scroll.scrollTop = 30;
+      table.scrollLeft = 21;
+      const assertRetained = () => {
+        expect(container.querySelector(`tr[data-keyboard-item="${ids[0]}"]`)).toBe(row);
+        expect(row.dataset.selected).toBe('true');
+        expect(document.activeElement).toBe(row);
+        expect(scroll.scrollTop).toBe(30);
+        expect(table.scrollLeft).toBe(21);
+        expect(rowIds(container)).toEqual(ids);
+        expect((screen.getByRole('textbox') as HTMLInputElement).value).toBe('Fixture');
+        expect(
+          (screen.getByRole('combobox', { name: 'Filter by type' }) as HTMLSelectElement).value,
+        ).toBe('all');
+        expect(
+          (screen.getByRole('combobox', { name: 'Filter by status' }) as HTMLSelectElement).value,
+        ).toBe('outstanding');
+        expect(
+          screen.getByRole('navigation', { name: 'Planning artifact pages' }).textContent,
+        ).toContain('Page 2');
+        expect(container.querySelector('th[aria-sort="ascending"]')?.textContent).toContain(
+          'Updated',
+        );
+        expect(container.querySelector('.op-route-pending')).toBeNull();
+      };
+      rerender(<LiveShell current={fixture(nodes, 'refreshing')} />);
+      assertRetained();
+      const patched = nodes.map((node) =>
+        node.id === ids[0]
+          ? {
+              ...node,
+              title: 'Fixture changed on disk',
+              frontmatter: { ...node.frontmatter, updated: '2000-01-01' },
+            }
+          : node,
+      );
+      rerender(<LiveShell current={fixture(patched, 'ready', 1)} />);
+      assertRetained();
+      expect(row.textContent).toContain('Fixture changed on disk');
+      expect(row.getAttribute('data-live-changed')).toMatch(/^wash-/u);
+      expect(screen.getByText('1 item changed on disk')).toBeTruthy();
+      const show = screen.getByRole('link', { name: 'Show Filed since yesterday' });
+      const preset = parseDashboardLocation(show.getAttribute('href') ?? '').presentationView;
+      expect(preset).toMatchObject({
+        route: 'list',
+        groupBy: 'label',
+        filters: { type: ['backlog'], createdWithinDays: 2 },
+      });
+      const revision = row.getAttribute('data-live-changed');
+      rerender(<LiveShell current={fixture(patched, 'ready', 1)} />);
+      expect(row.getAttribute('data-live-changed')).toBe(revision);
+      await user.click(screen.getByRole('button', { name: 'Dismiss notification' }));
+      expect(screen.queryByText('1 item changed on disk')).toBeNull();
+      expect(document.activeElement).toBe(row);
+    },
+  );
+
+  it('washes each accepted change for 1600 ms, coalesces disk feedback and ignores repeated heads', () => {
+    vi.useFakeTimers();
+    const { container, rerender } = render(<LiveShell current={fixture()} />);
+    const patched = FIXTURE_NODES.map((node) =>
+      node.id === FIXTURE_FIRST ? { ...node, title: 'Changed once' } : node,
+    );
+    rerender(<LiveShell current={fixture(patched, 'ready', 1)} />);
+    const row = container.querySelector<HTMLElement>(`tr[data-keyboard-item="${FIXTURE_FIRST}"]`);
+    const marker = row?.getAttribute('data-live-changed');
+    expect(marker).toMatch(/^wash-/u);
+    act(() => vi.advanceTimersByTime(1599));
+    expect(row?.getAttribute('data-live-changed')).toBe(marker);
+    rerender(<LiveShell current={fixture(patched, 'ready', 1)} />);
+    act(() => vi.advanceTimersByTime(1));
+    expect(row?.hasAttribute('data-live-changed')).toBe(false);
+    act(() => vi.advanceTimersByTime(10_000));
+    expect(screen.getByText('1 item changed on disk')).toBeTruthy();
+    const next = patched.map((node) =>
+      node.id === FIXTURE_SECOND ? { ...node, title: 'Another change' } : node,
+    );
+    rerender(<LiveShell current={fixture(next, 'ready', 2)} />);
+    expect(screen.getByText('2 items changed on disk')).toBeTruthy();
+    expect(screen.getAllByLabelText('Notification')).toHaveLength(1);
+  });
+
+  it('uses a persistent changed dot under reduced motion until viewed', () => {
+    vi.stubGlobal(
+      'matchMedia',
+      vi.fn(() => ({ matches: true, addListener: vi.fn(), removeListener: vi.fn() })),
+    );
+    const { container, rerender } = render(<LiveShell current={fixture()} />);
+    const patched = FIXTURE_NODES.map((node) =>
+      node.id === FIXTURE_FIRST ? { ...node, title: 'Changed title' } : node,
+    );
+    rerender(<LiveShell current={fixture(patched, 'ready', 1)} />);
+    const row = container.querySelector<HTMLElement>(`tr[data-keyboard-item="${FIXTURE_FIRST}"]`);
+    expect(row?.getAttribute('data-live-changed')).toBe('dot');
+    expect(row?.getAttribute('aria-description')).toBe('Changed on disk');
+    act(() => row?.focus());
+    expect(row?.hasAttribute('data-live-changed')).toBe(false);
+    expect(screen.getByText('1 item changed on disk')).toBeTruthy();
+  });
+
+  it('moves selection and focus to the next row when the selected item is removed', () => {
+    const { container, rerender } = render(<LiveShell current={fixture()} />);
+    const ids = rowIds(container);
+    const row = container.querySelector<HTMLElement>(`tr[data-keyboard-item="${ids[0]}"]`);
+    act(() => row?.focus());
+    rerender(
+      <LiveShell
+        current={fixture(
+          FIXTURE_NODES.filter((node) => node.id !== ids[0]),
+          'ready',
+          1,
+        )}
+      />,
+    );
+    const next = container.querySelector<HTMLElement>(`tr[data-keyboard-item="${ids[1]}"]`);
+    expect(next?.dataset.selected).toBe('true');
+    expect(document.activeElement).toBe(next);
+    expect(screen.getByText(new RegExp(`${ids[0]} was removed`))).toBeTruthy();
+  });
+
+  it('shows first-load geometry and clears presentation across a changed binding', async () => {
+    const user = userEvent.setup();
+    const { container, rerender } = render(
+      <LiveShell current={fixture(FIXTURE_NODES, 'loading')} />,
+    );
+    expect(container.querySelector('.op-route-pending')).toBeTruthy();
+    rerender(<LiveShell current={fixture()} />);
+    await user.type(screen.getByRole('textbox'), 'Alpha');
+    rerender(<LiveShell current={fixture(FIXTURE_NODES, 'loading', 0, 2)} />);
+    expect(container.querySelector('.op-route-pending')).toBeTruthy();
+    rerender(<LiveShell current={fixture(FIXTURE_NODES, 'ready', 0, 2)} />);
+    expect((screen.getByRole('textbox') as HTMLInputElement).value).toBe('');
+    expect(screen.queryByText(/items? changed on disk/u)).toBeNull();
+  });
+
+  it('clears all no-match filters including URL priority and label constraints', async () => {
+    const user = userEvent.setup();
+    const { container } = render(
+      <View view={{ ...FIXTURE_VIEW, filters: { ...FIXTURE_VIEW.filters, query: 'No match' } }} />,
+    );
+    expect(screen.getByText('Nothing matches “No match”')).toBeTruthy();
+    await user.click(screen.getByRole('button', { name: 'Clear filters' }));
+    expect(rowIds(container)).toHaveLength(FIXTURE_NODES.length);
   });
 });

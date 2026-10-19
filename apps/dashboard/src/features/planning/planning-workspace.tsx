@@ -11,6 +11,7 @@ import type { PlanningModelGraph, PlanningModelNode } from './planning-model.js'
 
 export type PlanningPresentation =
   | 'ready'
+  | 'refreshing'
   | 'read-only'
   | 'stale'
   | 'partial'
@@ -28,6 +29,7 @@ export type PlanningWorkspaceModel = Readonly<{
 
 const PRESENTATION = Object.freeze({
   ready: 'ready',
+  refreshing: 'refreshing',
   'read-only': 'read-only',
   stale: 'stale',
   partial: 'partial',
@@ -36,6 +38,7 @@ const PRESENTATION = Object.freeze({
 } satisfies Readonly<Record<PlanningPresentation, PlanningPresentation>>);
 
 const PRESENTATION_NOTICE = Object.freeze({
+  refreshing: 'Checking for changes on disk. The last validated snapshot remains visible.',
   'read-only': 'This plan is available to review, but changes are not available here.',
   stale: 'This plan may be out of date.',
   partial: 'Some planning information is unavailable.',
@@ -126,7 +129,10 @@ export function resolvePlanningWorkspace(
 export function PlanningNotice({ presentation }: { presentation: PlanningPresentation }) {
   if (presentation === 'ready') return null;
   return (
-    <p className="op-planning-notice" role="status">
+    <p
+      className={`op-planning-notice${presentation === 'refreshing' ? ' pc-visually-hidden' : ''}`}
+      role="status"
+    >
       {PRESENTATION_NOTICE[presentation]}{' '}
       <a className="op-inline-action" href="#/home">
         Open Planning Home

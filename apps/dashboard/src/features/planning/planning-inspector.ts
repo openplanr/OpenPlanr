@@ -1,6 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { PlanningView } from '../../lib/routing/planning-view-codec.js';
-import { type InspectorNodeSnapshot, selectInspector } from '../shell/inspector-selection.js';
+import {
+  clearInspector,
+  type InspectorNodeSnapshot,
+  selectInspector,
+} from '../shell/inspector-selection.js';
 import { type PlanningModelNode, planningDetailHref } from './planning-model.js';
 
 function frontmatterString(
@@ -57,4 +61,71 @@ export function usePlanningViewFocus(
     } else setMissing(`The focused item ${view.focusId} is unavailable in this snapshot.`);
   }, [view, nodes]);
   return missing;
+}
+
+/** Live patches update values in place; only a user presentation change reorders survivors. */
+export function useLiveListOrder(nodes: readonly PlanningModelNode[], presentationKey: string) {
+  const previous = useRef<{ key: string; ids: readonly string[] } | null>(null);
+  const byId = new Map(nodes.map((node) => [node.id, node]));
+  const retained = previous.current;
+  const ordered =
+    retained?.key === presentationKey
+      ? [
+          ...retained.ids.flatMap((id) => {
+            const node = byId.get(id);
+            byId.delete(id);
+            return node ? [node] : [];
+          }),
+          ...byId.values(),
+        ]
+      : nodes;
+  useLayoutEffect(() => {
+    previous.current = { key: presentationKey, ids: ordered.map((node) => node.id) };
+  });
+  return ordered;
+}
+
+export function useLiveListSelection(
+  nodes: readonly PlanningModelNode[],
+  visible: readonly PlanningModelNode[],
+  selectedId: string | undefined,
+) {
+  const root = useRef<HTMLDivElement>(null);
+  const previous = useRef(visible.map((node) => node.id));
+  const [notice, setNotice] = useState('');
+  const selectedSignature = useRef('');
+  useLayoutEffect(() => {
+    const prior = previous.current;
+    previous.current = visible.map((node) => node.id);
+    if (!selectedId) return;
+    const selected = nodes.find((node) => node.id === selectedId);
+    if (selected) {
+      // The inspector snapshot must follow the accepted node without reopening its panel.
+      const signature = JSON.stringify(selected);
+      if (selectedSignature.current !== signature) {
+        selectedSignature.current = signature;
+        inspectPlanningNode(selected, false);
+      }
+      return;
+    }
+    const index = Math.max(0, prior.indexOf(selectedId));
+    const next = visible[Math.min(index, visible.length - 1)];
+    setNotice(
+      `${selectedId} was removed from the planning snapshot.${next ? ` Selected ${next.id}.` : ''}`,
+    );
+    if (next) inspectPlanningNode(next, false);
+    else clearInspector();
+    const active = document.activeElement;
+    if (active !== document.body && active?.isConnected && !root.current?.contains(active)) return;
+    const target = next
+      ? Array.from(root.current?.querySelectorAll<HTMLElement>('[data-keyboard-item]') ?? []).find(
+          (element) => element.dataset.keyboardItem === next.id,
+        )
+      : root.current?.querySelector<HTMLElement>('h1');
+    if (target) {
+      if (!target.hasAttribute('tabindex')) target.setAttribute('tabindex', '-1');
+      target.focus({ preventScroll: true });
+    }
+  }, [nodes, selectedId, visible]);
+  return { rootRef: root, removalNotice: notice };
 }

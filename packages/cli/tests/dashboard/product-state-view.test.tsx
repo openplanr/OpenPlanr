@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 
-import { cleanup, render, screen, waitFor } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { useState } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ProductStateView } from '../../../../apps/dashboard/src/features/diagnostics/ProductStateView.js';
@@ -444,4 +445,35 @@ describe('honest product-state and recovery presentation', () => {
       harness.cleanup();
     }
   });
+});
+
+it('keeps validated child state and keyboard focus across refreshing, stale and recovery', () => {
+  function Draft() {
+    const [draft, setDraft] = useState('draft');
+    return (
+      <input
+        aria-label="Retained draft"
+        value={draft}
+        onChange={(event) => setDraft(event.currentTarget.value)}
+      />
+    );
+  }
+  const stableView = (kind: 'ready' | 'refreshing' | 'stale') => (
+    <main>
+      <h1>Current route</h1>
+      <ProductStateView state={productState(kind)} currentBinding={binding}>
+        {() => <Draft />}
+      </ProductStateView>
+    </main>
+  );
+  const { rerender } = render(stableView('ready'));
+  const input = screen.getByRole('textbox', { name: 'Retained draft' });
+  fireEvent.change(input, { target: { value: 'in-progress draft' } });
+  act(() => input.focus());
+  for (const kind of ['refreshing', 'stale', 'ready'] as const) {
+    rerender(stableView(kind));
+    expect(screen.getByRole('textbox', { name: 'Retained draft' })).toBe(input);
+    expect(document.activeElement).toBe(input);
+    expect((input as HTMLInputElement).value).toBe('in-progress draft');
+  }
 });

@@ -80,6 +80,7 @@ export function useListPresentation(initialStatus: () => string) {
     page: 0,
     collapsed: false,
     collapsedGroups: [] as string[],
+    ignoreViewFilters: false,
   });
   const [state, set] = usePlanningPresentation('list', initial);
   useEffect(() => {
@@ -93,6 +94,7 @@ export function useListPresentation(initialStatus: () => string) {
         page: 0,
         collapsed: false,
         collapsedGroups: [] as string[],
+        ignoreViewFilters: false,
       });
       return;
     }
@@ -105,6 +107,7 @@ export function useListPresentation(initialStatus: () => string) {
       compact: view.density === 'compact',
       sort: { key: view.sort.field, dir: view.sort.direction },
       page: 0,
+      ignoreViewFilters: false,
     }));
   }, [view, invalidView, set]);
   const field =
@@ -119,7 +122,16 @@ export function useListPresentation(initialStatus: () => string) {
       }));
   return {
     ...state,
-    view,
+    view: state.ignoreViewFilters ? null : view,
+    clearFilters: () =>
+      set((current) => ({
+        ...current,
+        query: '',
+        type: 'all',
+        status: 'all',
+        page: 0,
+        ignoreViewFilters: true,
+      })),
     copyMessage,
     share: async (presentation: PlanningView) => {
       const hash = serializePlanningViewHref(presentation);

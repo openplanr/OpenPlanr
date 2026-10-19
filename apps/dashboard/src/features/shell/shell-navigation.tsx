@@ -235,13 +235,23 @@ export type NavRailProps = Readonly<{
   route: ParsedDashboardRoute;
   operateAvailable: boolean;
   onOpenPalette: () => void;
+  compact?: boolean;
+  onToggleCompact?: () => void;
+  preferenceError?: string | null;
 }>;
 
 /** Workspace switcher, the product's sections, and the palette entry point. */
-export function NavRail({ product, route, operateAvailable, onOpenPalette }: NavRailProps) {
+export function NavRail({
+  product,
+  route,
+  operateAvailable,
+  onOpenPalette,
+  compact = false,
+  onToggleCompact,
+  preferenceError,
+}: NavRailProps) {
   const sections = product === 'operate' ? OPERATE_SECTIONS : PLANNING_SECTIONS;
   const operateUnavailable = !operateAvailable;
-  const compact = route.kind === 'planning.graph' || route.kind === 'planning.board';
   return (
     <>
       <nav
@@ -314,6 +324,24 @@ export function NavRail({ product, route, operateAvailable, onOpenPalette }: Nav
           ))}
         </div>
         <div className="pc-rail__footer">
+          {onToggleCompact ? (
+            <button
+              type="button"
+              className="pc-rail__toggle"
+              aria-label={compact ? 'Expand navigation' : 'Collapse navigation'}
+              aria-expanded={!compact}
+              onClick={onToggleCompact}
+              title={compact ? 'Expand navigation' : 'Collapse navigation'}
+            >
+              <PcIcon name={compact ? 'chevron-right' : 'chevron-left'} size={14} />
+              <span>{compact ? 'Expand navigation' : 'Collapse navigation'}</span>
+            </button>
+          ) : null}
+          {preferenceError ? (
+            <p role="status" className="pc-rail__preference-error">
+              {preferenceError}
+            </p>
+          ) : null}
           {REFERENCE_ITEMS.map((item) => (
             <RailLink key={item.kind} item={item} route={route} />
           ))}
@@ -494,11 +522,9 @@ export function TopBar({
   const subject = !showSubject || route.kind === 'not-found' ? null : route.subjectId;
   return (
     <header className="pc-topbar">
-      {projectName ? (
-        <span className="pc-topbar__crumb" title={projectName}>
-          {projectName}
-        </span>
-      ) : null}
+      <span className="pc-topbar__crumb pc-topbar__project" title={projectName}>
+        {projectName ?? 'OpenPlanr'}
+      </span>
       <span className="pc-topbar__crumb">{product}</span>
       <PcIcon name="chevron-right" size={12} color="var(--pc-text-tertiary)" />
       <span className="pc-topbar__view">{definition?.label ?? 'Closed route'}</span>
@@ -577,11 +603,11 @@ export function StatusBar({
 }: StatusBarProps) {
   return (
     <footer className="pc-statusbar">
-      <span className="pc-statusbar__item">
+      <span className="pc-statusbar__item pc-statusbar__item--branch">
         <PcIcon name="git-branch" size={11} />
         <span className="pc-statusbar__text">{branch ?? <Absent>no branch</Absent>}</span>
       </span>
-      <span className="pc-statusbar__item">
+      <span className="pc-statusbar__item pc-statusbar__item--totals">
         <span className="pc-statusbar__text">
           {nodeCount === null
             ? 'graph not read'

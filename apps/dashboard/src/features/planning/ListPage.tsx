@@ -24,7 +24,12 @@ import {
   STATUS_COLUMN,
   UPDATED_COLUMN,
 } from './planning-columns.js';
-import { inspectPlanningNode, usePlanningViewFocus } from './planning-inspector.js';
+import {
+  inspectPlanningNode,
+  useLiveListOrder,
+  useLiveListSelection,
+  usePlanningViewFocus,
+} from './planning-inspector.js';
 import { takeListStatus } from './planning-list-filter.js';
 import {
   filterPlanningNodes,
@@ -99,16 +104,13 @@ export function ListPage({ currentBinding, current }: ListPageProps) {
     view,
     copyMessage,
     share,
+    clearFilters,
   } = useListPresentation(() => takeListStatus() ?? ALL);
   const inspector = useInspectorStore();
 
   const model = resolvePlanningWorkspace(current, currentBinding);
   const focusNotice = usePlanningViewFocus(view, model?.graph.nodes);
-  if (!model) {
-    return <PlanningRefusal routeKind="planning.list" title="Planning cannot be trusted" />;
-  }
-
-  const all = sortPlanningNodes(model.graph.nodes, 'id');
+  const all = sortPlanningNodes(model?.graph.nodes ?? [], 'id');
   const filteredByText = filterPlanningNodes(all, {
     search: query.trim() || undefined,
     typeFilter: isType(type) ? [type] : undefined,
@@ -144,7 +146,10 @@ export function ListPage({ currentBinding, current }: ListPageProps) {
     density: compact ? ('compact' as const) : ('comfortable' as const),
     focusId: inspector.selection?.kind === 'node' ? inspector.selection.id : null,
   };
-  const rows = applyPlanningView(filteredByText, effectiveView);
+  const rows = useLiveListOrder(
+    applyPlanningView(filteredByText, effectiveView),
+    JSON.stringify({ ...effectiveView, focusId: null }),
+  );
   const grouped = groupPresentationNodes(rows, effectiveView.groupBy);
   const appearances = grouped.flatMap((group) => group.nodes.map((node) => ({ group, node })));
   const pageCount = Math.max(1, Math.ceil(appearances.length / PAGE_SIZE));
@@ -159,13 +164,31 @@ export function ListPage({ currentBinding, current }: ListPageProps) {
     .filter((group) => group.nodes.length > 0);
   if (visibleGroups.length === 0)
     visibleGroups.push({ key: 'all', label: 'All artifacts', nodes: [] });
-  const dependencyCounts = outgoingDependencyCounts(model.graph.edges);
+  const dependencyCounts = outgoingDependencyCounts(model?.graph.edges ?? []);
   const resetPage = () => setPage(0);
   const selectedId = inspector.selection?.kind === 'node' ? inspector.selection.id : undefined;
 
+  const { rootRef, removalNotice } = useLiveListSelection(
+    all,
+    visibleRows.map((entry) => entry.node),
+    selectedId,
+  );
+  if (!model) {
+    return <PlanningRefusal routeKind="planning.list" title="Planning cannot be trusted" />;
+  }
+
   return (
-    <div className="op-workspace op-planning pc-pipeline pc-list" data-route-kind="planning.list">
+    <div
+      ref={rootRef}
+      className="op-workspace op-planning pc-pipeline pc-list"
+      data-route-kind="planning.list"
+    >
       <PlanningNotice presentation={model.presentation} />
+      {removalNotice ? (
+        <p className="pc-visually-hidden" role="status">
+          {removalNotice}
+        </p>
+      ) : null}
       {focusNotice ? <p role="status">{focusNotice}</p> : null}
       <SectionHeader
         headingLevel={1}
@@ -178,9 +201,9 @@ export function ListPage({ currentBinding, current }: ListPageProps) {
         <Card padding={0}>
           <EmptyState
             icon="list"
-            title="No artifacts yet"
-            description="The list fills in as the graph gains epics, features, stories and tasks."
-            action={<CommandHint command="/planr-plan" label="create the graph" size="sm" />}
+            title="No planning files yet"
+            description="No planning artifacts were found in this snapshot. Shape intent into a spec, then plan its stories and tasks."
+            action={<CommandHint command="/planr:spec" label="create the graph" size="sm" />}
           />
         </Card>
       ) : (
@@ -296,6 +319,20 @@ export function ListPage({ currentBinding, current }: ListPageProps) {
               </section>
             ))}
           </div>
+          {rows.length === 0 ? (
+            <EmptyState
+              icon="search"
+              title={
+                query.trim() ? `Nothing matches “${query.trim()}”` : 'Nothing matches these filters'
+              }
+              description={`${all.length} planning artifacts searched. Clear the filters to see all available items.`}
+              action={
+                <Button size="sm" onClick={clearFilters}>
+                  Clear filters
+                </Button>
+              }
+            />
+          ) : null}
           {appearances.length > PAGE_SIZE ? (
             <nav className="pc-list__pagination" aria-label="Planning artifact pages">
               <span className="pc-list__page-status" aria-live="polite">

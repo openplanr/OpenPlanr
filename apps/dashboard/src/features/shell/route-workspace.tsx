@@ -60,6 +60,7 @@ function isPendingRouteProjection(
 ): boolean {
   if (
     !isValidatedDashboardProductState(projection) ||
+    projection.data !== null ||
     (projection.kind !== 'booting' &&
       projection.kind !== 'loading' &&
       projection.kind !== 'refreshing')

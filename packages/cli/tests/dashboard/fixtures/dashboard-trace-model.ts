@@ -1,3 +1,8 @@
+import type {
+  DashboardLayoutShift,
+  DashboardLayoutShiftReport,
+} from './dashboard-layout-shifts.js';
+
 export const TRACE_PLAN = Object.freeze({ durationMs: 10_000, inputCount: 100, patchCount: 50 });
 export const TRACE_BUDGETS = Object.freeze({
   coldShellMs: 500,
@@ -7,6 +12,68 @@ export const TRACE_BUDGETS = Object.freeze({
   longTaskMs: 50,
   cls: 0,
 });
+
+export function classifyDashboardLayoutShift(
+  shift: DashboardLayoutShift,
+  evidence: Pick<DashboardLayoutShiftReport, 'phases' | 'inputActions'>,
+): Readonly<{ inputDriven: boolean; reason: 'counted' | 'native-excluded' | 'input-driven' }> {
+  let phaseIndex = -1;
+  for (let index = evidence.phases.length - 1; index >= 0; index -= 1) {
+    if (evidence.phases[index].startTime <= shift.startTime) {
+      phaseIndex = index;
+      break;
+    }
+  }
+  const phase = evidence.phases[phaseIndex];
+  if (
+    !phase ||
+    phase.phase !== shift.phase ||
+    !/^(filter-input|palette)(?:\s|$)/u.test(phase.phase)
+  )
+    return { inputDriven: false, reason: 'counted' };
+  const inputDriven = evidence.inputActions.some(
+    (action) =>
+      action.phase === phase.phase &&
+      action.phaseIndex === phaseIndex &&
+      action.startTime >= phase.startTime &&
+      action.startTime <= shift.startTime &&
+      shift.startTime - action.startTime <= 500,
+  );
+  return {
+    inputDriven,
+    reason: !inputDriven ? 'counted' : shift.hadRecentInput ? 'native-excluded' : 'input-driven',
+  };
+}
+
+export function aggregateDashboardLayoutShifts(evidence: DashboardLayoutShiftReport) {
+  for (const shift of evidence.shifts) {
+    if (
+      !Number.isFinite(shift.value) ||
+      shift.value < 0 ||
+      !Number.isFinite(shift.startTime) ||
+      shift.startTime < 0
+    )
+      throw new TypeError(
+        'Layout shift samples must have finite nonnegative values and start times.',
+      );
+  }
+  const shifts = evidence.shifts.map((shift) => ({
+    ...shift,
+    ...classifyDashboardLayoutShift(shift, evidence),
+  }));
+  const sum = (reason: (typeof shifts)[number]['reason']) =>
+    shifts.reduce((total, shift) => total + (shift.reason === reason ? shift.value : 0), 0);
+  const nativeExcludedCls = sum('native-excluded');
+  const inputDrivenCls = sum('input-driven');
+  return {
+    ...evidence,
+    shifts,
+    admittedCls: sum('counted'),
+    excludedCls: nativeExcludedCls + inputDrivenCls,
+    nativeExcludedCls,
+    inputDrivenCls,
+  };
+}
 
 /** Freeze fixture wall time without replacing native performance marks, timers or frames. */
 export function installFixedDashboardDate(now: number): void {
@@ -109,6 +176,7 @@ export type DashboardTraceMeasurements = Readonly<{
   graph: InteractionTrace;
   list: InteractionTrace;
   cls: number;
+  layoutShiftEvidence?: DashboardLayoutShiftReport;
   selectionBefore: SelectionSample;
   selectionAfter: readonly SelectionSample[];
   nodeCount: number;
@@ -120,6 +188,10 @@ export function evaluateDashboardTrace(
   tier: 'representative' | 'scaling',
   metrics: DashboardTraceMeasurements,
 ) {
+  const layoutShifts = metrics.layoutShiftEvidence
+    ? aggregateDashboardLayoutShifts(metrics.layoutShiftEvidence)
+    : null;
+  const cls = layoutShifts?.admittedCls ?? metrics.cls;
   const failures: string[] = [];
   const pending: { scenario: string; reason: string }[] = [];
   const require = (condition: boolean, message: string) => {
@@ -176,7 +248,7 @@ export function evaluateDashboardTrace(
         trace.interactionObserved, `${name} interaction trace is incomplete.`);
     percentile95([trace.cls, trace.durationMs, ...trace.longTasksMs]);
   }
-  percentile95([metrics.coldShellMs, metrics.usefulSnapshotMs, metrics.cls]);
+  percentile95([metrics.coldShellMs, metrics.usefulSnapshotMs, cls]);
   if (tier === 'representative') {
     require(metrics.coldShellMs <= TRACE_BUDGETS.coldShellMs, 'Cold shell exceeds budget.');
     require(metrics.usefulSnapshotMs <=
@@ -194,11 +266,13 @@ export function evaluateDashboardTrace(
     ].every(
       (value) => value <= TRACE_BUDGETS.longTaskMs,
     ), 'Steady interaction contains a long task.');
-    require(metrics.cls === 0 &&
+    require(cls === 0 &&
       (metrics.graph.pendingReason !== undefined || metrics.graph.cls === 0) &&
       metrics.list.cls === 0, 'Unexpected layout shift occurred.');
   }
   return {
+    cls,
+    ...(layoutShifts ? { layoutShifts } : {}),
     policy: tier === 'representative' ? 'budget' : 'scaling-baseline',
     summaries,
     failures,

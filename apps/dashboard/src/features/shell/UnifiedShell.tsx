@@ -7,6 +7,7 @@ import {
   resolvePlanningWorkspace,
 } from '../planning/planning-workspace.js';
 import { clearInspector, useInspectorStore } from './inspector-selection.js';
+import { PlanningLiveFeedback, usePlanningLiveFeedback } from './planning-live-feedback.js';
 import { hasCurrentRouteSubject, RouteWorkspace } from './route-workspace.js';
 import {
   CommandPalette,
@@ -51,6 +52,7 @@ export function UnifiedShell({
     binding,
     projection,
     planningProjection,
+    planningLive,
     operateSearchBindings,
     operateReviewNavigation,
     refetchCurrent,
@@ -61,7 +63,28 @@ export function UnifiedShell({
     invalidView,
   } = useDashboard();
   const search = useSearchCoordinator(planningProjection);
+  const live = usePlanningLiveFeedback(planningProjection);
   const [fontNoticeDismissed, setFontNoticeDismissed] = useState(false);
+  const [compactRail, setCompactRail] = useState(
+    () => adapters?.railPreference?.initialCompact ?? false,
+  );
+  const [railPreferenceError, setRailPreferenceError] = useState(() =>
+    adapters?.railPreference?.initialStorageError
+      ? 'Navigation preference could not be read in this browser.'
+      : null,
+  );
+  const toggleRail = () => {
+    const next = !compactRail;
+    setCompactRail(next);
+    try {
+      adapters?.railPreference?.save(next);
+      setRailPreferenceError(null);
+    } catch {
+      setRailPreferenceError(
+        'Navigation preference could not be saved. It applies until this page is closed.',
+      );
+    }
+  };
   const inspectorStore = useInspectorStore();
   const width = useSyncExternalStore(
     subscribeToResize,
@@ -89,6 +112,7 @@ export function UnifiedShell({
         binding.scopeId,
         binding.domainId,
         binding.domainVersion,
+        binding.generation,
       ])
     : identity.bindingLabel;
   const inspectorScope = useRef(scope);
@@ -138,9 +162,7 @@ export function UnifiedShell({
     <div
       className="pc-shell"
       data-dashboard-build-id={buildId}
-      data-compact-rail={
-        route.kind === 'planning.graph' || route.kind === 'planning.board' || undefined
-      }
+      data-compact-rail={compactRail || undefined}
       data-product={route.product ?? 'system'}
     >
       {/* biome-ignore lint/a11y/useValidAnchor: a skip link must retain anchor semantics; the handler avoids hash-router navigation. */}
@@ -159,6 +181,9 @@ export function UnifiedShell({
         route={route}
         operateAvailable={!operateOffline}
         onOpenPalette={search.show}
+        compact={compactRail}
+        onToggleCompact={toggleRail}
+        preferenceError={railPreferenceError}
       />
       <div className="pc-shell__column">
         <TopBar
@@ -170,7 +195,7 @@ export function UnifiedShell({
           onToggleInspector={() => setInspectorOpen((open) => !open)}
           onOpenPalette={search.show}
           themePreference={adapters?.themePreference}
-          paletteIconOnly={width < 900}
+          paletteIconOnly={width < 1200}
           shortcutHelp={interactions.help}
         />
         {fontLoadFailed && !fontNoticeDismissed ? (
@@ -198,8 +223,30 @@ export function UnifiedShell({
               <BootScreen route={route} phase={bootPhase} detail={bootDetail} />
             ) : (
               <>
-                {connection.state === 'stale' || connection.state === 'offline' ? (
-                  <PlaneBanner state={connection.state} reason={connection.reason} />
+                {connection.state === 'stale' ||
+                connection.state === 'offline' ||
+                projection.kind === 'stale' ||
+                planningLive.state === 'paused' ? (
+                  <PlaneBanner
+                    state={
+                      connection.state === 'offline' ||
+                      (planningLive.state === 'paused' && planningLive.attempt > 0)
+                        ? 'offline'
+                        : 'stale'
+                    }
+                    reason={
+                      planningLive.state === 'paused'
+                        ? 'Live file updates are paused until the connection and a current graph read are validated.'
+                        : projection.kind === 'stale'
+                          ? 'The latest read could not be validated for this view.'
+                          : connection.reason
+                    }
+                    projectionKind={projection.kind}
+                    errorCode={projection.error?.code}
+                    lastSnapshotAt={live.lastSnapshotAt}
+                    attempt={planningLive.attempt}
+                    onRetry={refetchCurrent}
+                  />
                 ) : null}
                 <div className="pc-shell__scroll" ref={interactions.scrollRef}>
                   {invalidView ? (
@@ -264,6 +311,11 @@ export function UnifiedShell({
           buildId={buildId}
         />
       </div>
+      <PlanningLiveFeedback
+        feedback={live.feedback}
+        onDismiss={live.dismiss}
+        onShow={interactions.navigate}
+      />
       <CommandPalette
         open={search.open}
         singleLetters={interactions.singleLetters}

@@ -79,9 +79,9 @@ describe('responsive navigation', () => {
   it.each([
     ['#/home', false],
     ['#/list', false],
-    ['#/graph', true],
-    ['#/board', true],
-  ])('uses the route rail mode for %s', (hash, compact) => {
+    ['#/graph', false],
+    ['#/board', false],
+  ])('keeps the default expanded rail on %s', (hash, compact) => {
     render(
       <NavRail
         route={parseDashboardRoute(hash)}
@@ -248,7 +248,7 @@ function assertLauncherNames(container: HTMLElement, width: number, compact: boo
     }
     const text = visibleText(button);
     const name = computeAccessibleName(button);
-    const iconOnly = width < 900 || (compact && button.matches('.pc-rail__palette'));
+    const iconOnly = button.matches('.pc-topbar__palette') ? width < 1200 : width < 900 || compact;
     if (iconOnly) {
       expect(text).toBe('');
       expect(name).toBe(button.getAttribute('aria-label'));
@@ -268,8 +268,8 @@ describe('shell accessible launcher names', () => {
   it.each([
     [1440, '#/home', false],
     [1440, '#/operate/today', false],
-    [1024, '#/graph', true],
-    [1120, '#/board', true],
+    [1024, '#/graph', false],
+    [1120, '#/board', false],
     [900, '#/operate/today', false],
     [899, '#/operate/today', false],
     [390, '#/operate/today', false],
@@ -339,3 +339,163 @@ it.each(['#/home', '#/operate/today'])(
     expect(details?.open).toBe(false);
   },
 );
+
+describe('route-independent rail presentation', () => {
+  function shell(
+    hash: string,
+    adapters?: import('../../../../apps/dashboard/src/app/browser-preferences.js').ShellAdapters,
+  ) {
+    return (
+      <DashboardProviders
+        buildId="rail-fixture"
+        initialHash={hash}
+        bootPhase="compatible"
+        connection={{ state: 'connected', label: 'Connected', reason: 'Validated fixture' }}
+      >
+        <UnifiedShell adapters={adapters} />
+      </DashboardProviders>
+    );
+  }
+
+  it.each([false, true])(
+    'keeps the user compact preference %s through route changes at 1440 px',
+    async (initialCompact) => {
+      vi.stubGlobal('innerWidth', 1440);
+      applyShellStyles(1440);
+      const save = vi.fn();
+      const adapters = {
+        loadSingleLetters: () => true,
+        saveSingleLetters: () => undefined,
+        copy: async () => undefined,
+        railPreference: { initialCompact, save },
+      };
+      const { container, rerender } = render(shell('#/list', adapters));
+      const rail = container.querySelector<HTMLElement>('.pc-rail');
+      if (!rail) throw new Error('Expected desktop rail');
+      const initialWidth = getComputedStyle(rail).width;
+      for (const hash of ['#/board', '#/list', '#/graph', '#/home', '#/list']) {
+        rerender(shell(hash, adapters));
+        expect(container.querySelector('.pc-rail')).toBe(rail);
+        expect(rail.hasAttribute('data-compact')).toBe(initialCompact);
+        expect(getComputedStyle(rail).width).toBe(initialWidth);
+      }
+      expect(save).not.toHaveBeenCalled();
+      await userEvent.setup().click(
+        screen.getByRole('button', {
+          name: initialCompact ? 'Expand navigation' : 'Collapse navigation',
+        }),
+      );
+      expect(save).toHaveBeenCalledExactlyOnceWith(!initialCompact);
+      const chosenWidth = getComputedStyle(rail).width;
+      expect(chosenWidth).not.toBe(initialWidth);
+      rerender(shell('#/board', adapters));
+      expect(rail.hasAttribute('data-compact')).toBe(!initialCompact);
+      expect(getComputedStyle(rail).width).toBe(chosenWidth);
+    },
+  );
+
+  it('surfaces denied persistence while keeping the explicit toggle usable', async () => {
+    vi.stubGlobal('innerWidth', 1440);
+    applyShellStyles(1440);
+    const save = vi.fn(() => {
+      throw new Error('denied');
+    });
+    render(
+      shell('#/list', {
+        loadSingleLetters: () => true,
+        saveSingleLetters: () => undefined,
+        copy: async () => undefined,
+        railPreference: { initialCompact: false, initialStorageError: true, save },
+      }),
+    );
+    expect(
+      screen.getByText('Navigation preference could not be read in this browser.'),
+    ).toBeTruthy();
+    await userEvent.setup().click(screen.getByRole('button', { name: 'Collapse navigation' }));
+    expect(screen.getByRole('button', { name: 'Expand navigation' })).toBeTruthy();
+    expect(
+      screen.getByText(
+        'Navigation preference could not be saved. It applies until this page is closed.',
+      ),
+    ).toBeTruthy();
+  });
+
+  it('reserves project, product, palette and connection tracks before bootstrap resolves', () => {
+    vi.stubGlobal('innerWidth', 1440);
+    applyShellStyles(1440);
+    const topbar = (projectName: string, connectionState: 'booting' | 'connected') => (
+      <TopBar
+        projectName={projectName}
+        connectionState={connectionState}
+        route={parseDashboardRoute('#/list')}
+        inspectorOpen={false}
+        onToggleInspector={() => undefined}
+        onOpenPalette={() => undefined}
+      />
+    );
+    const { container, rerender } = render(topbar('OpenPlanr', 'booting'));
+    const tracks = () =>
+      [
+        ...container.querySelectorAll<HTMLElement>(
+          '.pc-topbar__crumb, .pc-topbar__palette, .pc-topbar__end',
+        ),
+      ].map((element) => ({
+        width: getComputedStyle(element).width,
+        basis: getComputedStyle(element).flexBasis,
+      }));
+    const before = tracks();
+    expect(before.map((track) => track.basis)).toEqual(['12ch', '8ch', '300px', '38ch']);
+    rerender(topbar('app', 'connected'));
+    expect(tracks()).toEqual(before);
+  });
+});
+
+it.each([900, 1024, 1120])('keeps the rail toggle separate from destinations at %i px', (width) => {
+  const { container } = renderNamedShell(width, '#/operate/today');
+  const rail = container.querySelector('.pc-rail');
+  expect(
+    [...(rail?.querySelectorAll('.pc-rail__item > span:last-child') ?? [])].map(
+      (element) => element.textContent,
+    ),
+  ).toEqual([
+    'Today',
+    'Inbox',
+    'Actions',
+    'Cycles',
+    'Evidence',
+    'Outcomes',
+    'History',
+    'Recovery',
+    'Console',
+    'Diagnostics',
+  ]);
+  const toggle = screen.getByRole('button', { name: 'Collapse navigation' });
+  expect(toggle.closest('.pc-rail__footer')).toBeTruthy();
+  expect(toggle.closest('.pc-rail__sections')).toBeNull();
+  expect(toggle.matches('.pc-rail__item')).toBe(false);
+});
+
+it('constrains the mobile capability control to its 44 px hit slot', () => {
+  const { container } = renderNamedShell(390, '#/operate/today');
+  const capability = container.querySelector<HTMLElement>('.pc-topbar__end > button.pc-conn');
+  expect(capability).toBeTruthy();
+  expect(getComputedStyle(capability as HTMLElement).flexBasis).toBe('44px');
+  expect(getComputedStyle(capability as HTMLElement).width).toBe('44px');
+});
+
+it('keeps the nonmodal inspector outside the main flex layout', async () => {
+  const { container } = renderNamedShell(1440, '#/list');
+  const inspector = screen.getByRole('complementary', { name: 'Inspector' });
+  const main = container.querySelector('.pc-shell__main');
+  expect(getComputedStyle(inspector).position).toBe('absolute');
+  expect(inspector.parentElement).toBe(main?.parentElement);
+  expect(inspector.getAttribute('aria-modal')).toBeNull();
+  await userEvent.setup().click(screen.getByRole('button', { name: 'Hide inspector' }));
+  expect(screen.queryByRole('complementary', { name: 'Inspector' })).toBeNull();
+  expect(container.querySelector('.pc-shell__main')).toBe(main);
+  await userEvent.setup().click(screen.getByRole('button', { name: 'Show inspector' }));
+  expect(getComputedStyle(screen.getByRole('complementary', { name: 'Inspector' })).position).toBe(
+    'absolute',
+  );
+  expect(container.querySelector('.pc-shell__main')).toBe(main);
+});

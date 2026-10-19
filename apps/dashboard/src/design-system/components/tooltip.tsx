@@ -1,9 +1,13 @@
 import { Tooltip as Primitive } from 'radix-ui';
 import { type ReactElement, type ReactNode, useEffect, useRef, useState } from 'react';
 
-export type TooltipProps = Readonly<{ children: ReactElement; content: ReactNode }>;
+export type TooltipProps = Readonly<{
+  children: ReactElement;
+  content: ReactNode;
+  disabled?: boolean;
+}>;
 
-export function Tooltip({ children, content }: TooltipProps) {
+export function Tooltip({ children, content, disabled = false }: TooltipProps) {
   const [open, setOpen] = useState(false);
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const hovered = useRef(false);
@@ -20,10 +24,19 @@ export function Tooltip({ children, content }: TooltipProps) {
     }, 100);
   };
   useEffect(() => () => clearTimeout(timer.current), []);
+  useEffect(() => {
+    if (disabled) {
+      clearTimeout(timer.current);
+      setOpen(false);
+    }
+  }, [disabled]);
 
   return (
     <Primitive.Provider delayDuration={400} skipDelayDuration={0} disableHoverableContent>
-      <Primitive.Root open={open} onOpenChange={(next) => (next ? setOpen(true) : leave())}>
+      <Primitive.Root
+        open={open && !disabled}
+        onOpenChange={(next) => (next && !disabled ? setOpen(true) : leave())}
+      >
         <Primitive.Trigger
           asChild
           onPointerEnter={() => {
@@ -37,7 +50,7 @@ export function Tooltip({ children, content }: TooltipProps) {
           onFocus={() => {
             focused.current = true;
             clear();
-            setOpen(true);
+            if (!disabled) setOpen(true);
           }}
           onBlur={() => {
             focused.current = false;
