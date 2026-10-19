@@ -104,17 +104,17 @@ for (const theme of ['dark', 'light'] as const) {
         ),
       ).toEqual(['ring', 'half-ring', 'pause', 'diamond', 'dotted-ring', 'solid-dot', 'unknown']);
       for (const label of [
-        'outstanding',
-        'in progress',
-        'blocked',
-        'addressed',
-        'done',
-        'quiet',
+        'Outstanding',
+        'In progress',
+        'Blocked',
+        'Addressed',
+        'Done',
+        'Quiet',
         'future-status',
       ])
         expect(screen.getByText(label)).toBeTruthy();
       expect(view.container.querySelector('[data-status="in-progress"]')?.textContent).toBe(
-        'in progress',
+        'In progress',
       );
       expect(renderToStaticMarkup(<ArtifactStatus status="blocked" showLabel={false} />)).toContain(
         'pc-visually-hidden',

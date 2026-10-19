@@ -716,8 +716,16 @@ test.describe('dashboard real-browser quality', () => {
     await graph.getByRole('button', { name: /QT-071:/u }).click();
     const inspector = page.getByRole('complementary', { name: 'Inspector' });
     await expect(inspector).toContainText('Make failed CRM registrations visible and replayable');
-    await expect(inspector).toContainText('Dependencies');
-    await expect(inspector.getByRole('button', { name: /Open artifact/u })).toBeVisible();
+    await expect(inspector.locator('[data-artifact-id="QT-071"]')).toHaveAttribute(
+      'data-detail-state',
+      'ready',
+    );
+    const dependencies = inspector.getByRole('region', { name: 'Depends on', exact: true });
+    await expect(dependencies.getByRole('link', { name: /QT-070/u })).toBeVisible();
+    await expect(dependencies).toContainText('Done');
+    await expect(
+      inspector.getByRole('button', { name: 'Open full page', exact: true }),
+    ).toBeVisible();
     expect(await inspector.evaluate((node) => getComputedStyle(node).animationName)).toBe(
       'pc-inspector-enter',
     );

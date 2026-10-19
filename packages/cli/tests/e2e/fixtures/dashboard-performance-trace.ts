@@ -243,8 +243,9 @@ async function selectionSample(page: Page, id: string): Promise<SelectionSample>
     const selected = document.querySelector<HTMLElement>('.pc-list tr[data-selected="true"]');
     const focused = document.activeElement;
     const canonicalId =
-      document.querySelector('[aria-label="Inspector"] .pc-shell-inspector__head .pc-artifact-tag')
-        ?.textContent ?? null;
+      document.querySelector<HTMLElement>(
+        '.pc-shell-inspector [data-artifact-id], .pc-inspector-sheet [data-artifact-id]',
+      )?.dataset.artifactId ?? null;
     const matching = canonicalId === id && selected?.getAttribute('data-keyboard-item') === id;
     let scrollTop = window.scrollY;
     for (let parent = selected?.parentElement; parent; parent = parent.parentElement)
@@ -359,14 +360,18 @@ export function registerDashboardPerformanceTraceTests() {
           const started = performance.now();
           if (!(element instanceof HTMLElement)) throw new Error('Expected an HTML artifact row.');
           element.click();
-          while (
-            !document
-              .querySelector('[aria-label="Inspector"]')
-              ?.textContent?.includes(
-                element.querySelector('.pc-work-item__title')?.textContent ?? '',
-              )
-          ) {
-            if (performance.now() - started > 10_000) throw new Error('Inspector did not render.');
+          const selectedId = element.dataset.keyboardItem;
+          if (!selectedId) throw new Error('Artifact row is missing its canonical identity.');
+          while (true) {
+            const inspector = document.querySelector('.pc-shell-inspector, .pc-inspector-sheet');
+            const artifact = inspector?.querySelector<HTMLElement>('[data-artifact-id]');
+            if (artifact?.dataset.artifactId === selectedId) {
+              if (artifact.dataset.detailState === 'ready') break;
+              if (artifact.dataset.detailState === 'error')
+                throw new Error(`Inspector detail verification failed for ${selectedId}.`);
+            }
+            if (performance.now() - started > 10_000)
+              throw new Error(`Verified inspector did not render for ${selectedId}.`);
             await new Promise(requestAnimationFrame);
           }
           await new Promise(requestAnimationFrame);

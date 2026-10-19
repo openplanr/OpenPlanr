@@ -16,6 +16,7 @@ const PresentationContext = createContext<Map<string, unknown> | null>(null);
 const CopyContext = createContext<((text: string) => Promise<void>) | undefined>(undefined);
 const InvalidViewContext = createContext(false);
 const ViewContext = createContext<PlanningView | null>(null);
+const ShortcutsContext = createContext(true);
 
 type PresentationProps = {
   children: ReactNode;
@@ -23,6 +24,7 @@ type PresentationProps = {
   view: PlanningView | null;
   onCopy?: (text: string) => Promise<void>;
   invalidView?: boolean;
+  singleLetters?: boolean;
 };
 
 export function PlanningPresentationProvider({ scope, ...props }: PresentationProps) {
@@ -34,15 +36,20 @@ function PresentationScope({
   view,
   onCopy,
   invalidView = false,
+  singleLetters = true,
 }: Omit<PresentationProps, 'scope'>) {
   const cache = useRef(new Map<string, unknown>());
   return (
     <PresentationContext.Provider value={cache.current}>
-      <ViewContext.Provider value={view}>
-        <CopyContext.Provider value={onCopy}>
-          <InvalidViewContext.Provider value={invalidView}>{children}</InvalidViewContext.Provider>
-        </CopyContext.Provider>
-      </ViewContext.Provider>
+      <ShortcutsContext.Provider value={singleLetters}>
+        <ViewContext.Provider value={view}>
+          <CopyContext.Provider value={onCopy}>
+            <InvalidViewContext.Provider value={invalidView}>
+              {children}
+            </InvalidViewContext.Provider>
+          </CopyContext.Provider>
+        </ViewContext.Provider>
+      </ShortcutsContext.Provider>
     </PresentationContext.Provider>
   );
 }
@@ -85,6 +92,7 @@ export function useListPresentation(initialStatus: () => string) {
     collapsedGroups: [] as string[],
     ignoreViewFilters: false,
     presentation: null as PlanningView | null,
+    appliedView: null as string | null,
     selected: [] as string[],
   });
   const [state, set] = usePlanningPresentation('list', initial);
@@ -101,22 +109,35 @@ export function useListPresentation(initialStatus: () => string) {
         collapsedGroups: [] as string[],
         ignoreViewFilters: false,
         presentation: null,
+        appliedView: null,
         selected: [],
       });
       return;
     }
-    if (view?.route !== 'list') return;
-    set((current) => ({
-      ...current,
-      query: view.filters.query,
-      type: view.filters.type.length === 1 ? view.filters.type[0] : 'all',
-      status: view.filters.status.length === 1 ? view.filters.status[0] : 'all',
-      compact: view.density === 'compact',
-      sort: { key: view.sort.field, dir: view.sort.direction },
-      page: 0,
-      ignoreViewFilters: false,
-      presentation: view,
-    }));
+    if (view?.route !== 'list') {
+      set((current) =>
+        current.appliedView === null ? current : { ...current, appliedView: null },
+      );
+      return;
+    }
+    const appliedView = JSON.stringify(view);
+    // Returning from Detail must keep edits made after this same URL was first applied.
+    set((current) =>
+      current.appliedView === appliedView
+        ? current
+        : {
+            ...current,
+            appliedView,
+            query: view.filters.query,
+            type: view.filters.type.length === 1 ? view.filters.type[0] : 'all',
+            status: view.filters.status.length === 1 ? view.filters.status[0] : 'all',
+            compact: view.density === 'compact',
+            sort: { key: view.sort.field, dir: view.sort.direction },
+            page: 0,
+            ignoreViewFilters: false,
+            presentation: view,
+          },
+    );
   }, [view, invalidView, set]);
   const fields = useMemo(() => {
     const field =
@@ -211,3 +232,7 @@ export const browserListPreferences: ListPreferenceAdapter = {
   load: (key) => (typeof localStorage === 'undefined' ? null : localStorage.getItem(key)),
   save: (key, value) => localStorage.setItem(key, value),
 };
+
+export function usePlanningShortcuts() {
+  return useContext(ShortcutsContext);
+}

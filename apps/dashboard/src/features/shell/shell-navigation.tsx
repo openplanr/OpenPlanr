@@ -632,6 +632,7 @@ export type InspectorProps = Readonly<{
   floating: boolean;
   onClose?: () => void;
   onPromote?: (href: string) => void;
+  planningContent?: ReactNode;
 }>;
 
 function navigateTo(href: string): void {
@@ -642,7 +643,14 @@ function navigateTo(href: string): void {
  * The global inspector reads the same graph the plane does. While that read is in flight
  * it shows the shape of an artifact, never a resolved one.
  */
-export function Inspector({ mode, selection, floating, onClose, onPromote }: InspectorProps) {
+export function Inspector({
+  mode,
+  selection,
+  floating,
+  onClose,
+  onPromote,
+  planningContent,
+}: InspectorProps) {
   const [mobile, setMobile] = useState(
     () => typeof window !== 'undefined' && window.innerWidth < 900,
   );
@@ -719,6 +727,8 @@ export function Inspector({ mode, selection, floating, onClose, onPromote }: Ins
             </Button>
           ) : null}
         </div>
+      ) : planningContent ? (
+        planningContent
       ) : (
         <div className="pc-shell-inspector__content" aria-live="polite">
           <div className="pc-shell-inspector__head">

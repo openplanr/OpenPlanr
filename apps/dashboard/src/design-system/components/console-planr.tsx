@@ -22,12 +22,12 @@ export const ARTIFACT_STATUS_ORDER = Object.freeze([
 ] as const);
 
 const ARTIFACT_LABEL: Readonly<Record<string, string>> = Object.freeze({
-  done: 'done',
-  'in-progress': 'in progress',
-  blocked: 'blocked',
-  outstanding: 'outstanding',
-  addressed: 'addressed',
-  quiet: 'quiet',
+  done: 'Done',
+  'in-progress': 'In progress',
+  blocked: 'Blocked',
+  outstanding: 'Outstanding',
+  addressed: 'Addressed',
+  quiet: 'Quiet',
 });
 
 export type ArtifactStatusProps = Readonly<{

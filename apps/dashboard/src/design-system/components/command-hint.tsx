@@ -9,6 +9,7 @@ export type CommandHintProps = Readonly<{
   disabled?: boolean;
   disabledReason?: string;
   shortcutsEnabled?: boolean;
+  onCopy?: (text: string) => Promise<void>;
 }>;
 
 export function CommandHint({
@@ -18,6 +19,7 @@ export function CommandHint({
   disabled = false,
   disabledReason,
   shortcutsEnabled = true,
+  onCopy,
 }: CommandHintProps) {
   const [state, setState] = useState<'idle' | 'pending' | 'copied' | 'blocked'>('idle');
   const currentCommand = useRef(command);
@@ -41,8 +43,11 @@ export function CommandHint({
     inFlight.current = true;
     setState('pending');
     try {
-      if (!navigator.clipboard?.writeText) throw new Error('Clipboard unavailable');
-      await navigator.clipboard.writeText(command);
+      if (onCopy) await onCopy(command);
+      else {
+        if (!navigator.clipboard?.writeText) throw new Error('Clipboard unavailable');
+        await navigator.clipboard.writeText(command);
+      }
       if (mounted.current) setState(currentCommand.current === command ? 'copied' : 'idle');
     } catch {
       if (mounted.current) setState(currentCommand.current === command ? 'blocked' : 'idle');

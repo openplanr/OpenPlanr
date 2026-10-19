@@ -1,3 +1,6 @@
+import { createRequire } from 'node:module';
+import { dirname, resolve } from 'node:path';
+import { pathToFileURL } from 'node:url';
 import { sha256Jcs } from 'planr-pipeline/dashboard/verified-json';
 import {
   createDashboardApiFixture,
@@ -17,6 +20,13 @@ import {
 } from './premium-dashboard-server.ts';
 
 const fixture = createDashboardApiFixture();
+const pipelineRoot =
+  process.env.OPENPLANR_PACKED_PIPELINE_ROOT ??
+  dirname(createRequire(import.meta.url).resolve('planr-pipeline/package.json'));
+const { handlePlanningDetail } = await import(
+  /* @vite-ignore */
+  pathToFileURL(resolve(pipelineRoot, 'lib/dashboard/server/planning-routes.mjs')).href
+);
 const streams = new Set();
 let activeLocator = null;
 const disposableReviewScenarios = new Map();
@@ -758,6 +768,26 @@ async function routeApi(request, response, next) {
           generation: String(DASHBOARD_FIXTURE_GENERATION),
         });
       return valid ? responseJson(response, 200, planningForRequest(request)) : refuse(response);
+    }
+    if (pathname.startsWith('/api/planning/detail/')) {
+      if (request.method !== 'GET') return refuse(response, 405);
+      const snapshot = planningForRequest(request);
+      // Reuse the installed server's binding, subject and summary checks for fixture reads too.
+      return handlePlanningDetail({
+        dashboard: {
+          project: { projectId: snapshot.binding.projectId },
+          planningActorId: snapshot.binding.actorId,
+          planning: {
+            ensureGraph: () => snapshot.graph,
+            readNode: (id) => snapshot.graph.nodes.find((node) => node.id === id) ?? null,
+            cursor: () => snapshot.cursor,
+          },
+        },
+        req: request,
+        res: response,
+        url,
+        pathname,
+      });
     }
     if (pathname === '/api/planning/events') {
       const valid =

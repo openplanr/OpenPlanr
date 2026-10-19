@@ -123,37 +123,69 @@ export function useListScrollAnchor(
   useLayoutEffect(() => {
     const scroller = root.current?.querySelector<HTMLElement>('.pc-list__window');
     if (!scroller) return;
-    const mounted = () =>
-      Array.from(scroller.querySelectorAll<HTMLElement>('[data-keyboard-item]'));
+    if (!revision) return;
+    const rows = Array.from(scroller.querySelectorAll<HTMLElement>('[data-keyboard-item]'));
+    let frame: number | null = null;
     const record = () => {
+      frame = null;
       const top = scroller.getBoundingClientRect().top;
-      const row = mounted().find((row) => row.getBoundingClientRect().bottom > top + 36);
+      // Rows are in vertical document order. Locate the first visible row without
+      // measuring the entire mounted page on every scroll.
+      let low = 0;
+      let high = rows.length;
+      const rects = new Map<number, DOMRect>();
+      const rect = (index: number) => {
+        let value = rects.get(index);
+        if (!value) {
+          value = rows[index].getBoundingClientRect();
+          rects.set(index, value);
+        }
+        return value;
+      };
+      while (low < high) {
+        const middle = (low + high) >>> 1;
+        if (rect(middle).bottom > top + 36) high = middle;
+        else low = middle + 1;
+      }
+      const row = rows[low];
       if (row)
         previous.current = {
           key: presentationKey,
           id: row.dataset.keyboardItem ?? '',
           group: row.closest<HTMLElement>('[data-keyboard-group]')?.dataset.keyboardGroup ?? '',
-          top: row.getBoundingClientRect().top - top,
+          top: rect(low).top - top,
           scrollTop: scroller.scrollTop,
         };
     };
     const before = previous.current;
-    if (!revision) return;
-    if (before?.key === presentationKey) {
-      const row = mounted().find(
-        (row) =>
-          row.dataset.keyboardItem === before.id &&
-          row.closest<HTMLElement>('[data-keyboard-group]')?.dataset.keyboardGroup === before.group,
-      );
-      if (row)
-        scroller.scrollTop =
-          before.scrollTop +
-          row.getBoundingClientRect().top -
-          scroller.getBoundingClientRect().top -
-          before.top;
-    }
-    record();
-    scroller.addEventListener('scroll', record, { passive: true });
-    return () => scroller.removeEventListener('scroll', record);
+    const row =
+      before?.key === presentationKey
+        ? rows.find(
+            (row) =>
+              row.dataset.keyboardItem === before.id &&
+              row.closest<HTMLElement>('[data-keyboard-group]')?.dataset.keyboardGroup ===
+                before.group,
+          )
+        : null;
+    if (row && before) {
+      const offset = row.getBoundingClientRect().top - scroller.getBoundingClientRect().top;
+      const next = Math.max(0, scroller.scrollTop + offset - before.top);
+      // All geometry reads finish before the restore write. Predict the new
+      // anchor position rather than reading layout again after changing scroll.
+      previous.current = { ...before, top: offset - (next - scroller.scrollTop), scrollTop: next };
+      scroller.scrollTop = next;
+    } else record();
+    const scroll = () => {
+      const saved = previous.current;
+      const next = scroller.scrollTop;
+      if (saved?.key === presentationKey)
+        previous.current = { ...saved, top: saved.top - (next - saved.scrollTop), scrollTop: next };
+      if (frame === null) frame = requestAnimationFrame(record);
+    };
+    scroller.addEventListener('scroll', scroll, { passive: true });
+    return () => {
+      if (frame !== null) cancelAnimationFrame(frame);
+      scroller.removeEventListener('scroll', scroll);
+    };
   }, [root, presentationKey, revision]);
 }

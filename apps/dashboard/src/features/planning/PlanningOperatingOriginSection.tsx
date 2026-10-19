@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useDashboard } from '../../app/providers.js';
+import { Button, Card, InlineAlert } from '../../design-system/components/index.js';
 import type { DashboardQueryIdentity } from '../../lib/binding/query-identity.js';
 import { createDashboardQueryIdentity } from '../../lib/binding/query-identity.js';
 import { fetchPlanningOperatingTrace } from '../operate/planning/planning-actions.js';
@@ -10,87 +11,142 @@ export type PlanningOperatingOriginSectionProps = Readonly<{
   binding: DashboardQueryIdentity;
 }>;
 
-/** Fetch and render access-safe operating origin for one SPEC detail route. */
+type OriginRead = Readonly<{
+  key: string;
+  status: 'loading' | 'ready' | 'unavailable';
+  envelope: Record<string, unknown> | null;
+  reason?: string;
+}>;
+
+/** Read one access-safe origin; obsolete identity results never cross into the current view. */
 export function PlanningOperatingOriginSection({
   specId,
   binding,
 }: PlanningOperatingOriginSectionProps) {
   const { bootstrap } = useDashboard();
   const sourceRoot = bootstrap?.queryRoots.operate ?? null;
-  const [envelope, setEnvelope] = useState<Record<string, unknown> | null>(null);
-  const [status, setStatus] = useState<'idle' | 'loading' | 'ready' | 'unavailable'>('idle');
+  const [attempt, setAttempt] = useState(0);
+  const key = JSON.stringify([
+    attempt,
+    specId,
+    binding.projectId,
+    sourceRoot?.actorId,
+    sourceRoot?.projectId,
+    sourceRoot?.scopeId,
+    sourceRoot?.domainId,
+    sourceRoot?.domainVersion,
+    sourceRoot?.generation,
+  ]);
+  const [read, setRead] = useState<OriginRead>({ key, status: 'loading', envelope: null });
+  const unavailableReason = !sourceRoot
+    ? 'Operate is unavailable for this project. No operating origin can be read.'
+    : sourceRoot.projectId !== binding.projectId
+      ? 'The Operate source does not belong to the current Planning project.'
+      : typeof window === 'undefined'
+        ? 'Operating origin is available when this project is opened in the dashboard.'
+        : null;
 
   useEffect(() => {
-    if (
-      typeof window === 'undefined' ||
-      sourceRoot === null ||
-      sourceRoot.projectId !== binding.projectId
-    ) {
-      setEnvelope(null);
-      setStatus('unavailable');
+    setRead({ key, status: 'loading', envelope: null });
+    if (unavailableReason || !sourceRoot) {
+      setRead({
+        key,
+        status: 'unavailable',
+        envelope: null,
+        reason: unavailableReason ?? 'Operate is unavailable.',
+      });
       return undefined;
     }
-    let cancelled = false;
     const controller = new AbortController();
-    setStatus('loading');
-    const sourceIdentity = createDashboardQueryIdentity({
-      productArea: 'operate',
-      route: '#/operate/today',
-      actorId: sourceRoot.actorId,
-      projectId: sourceRoot.projectId,
-      scopeId: sourceRoot.scopeId,
-      domainId: sourceRoot.domainId,
-      domainVersion: sourceRoot.domainVersion,
-      cycleId: null,
-      subjectId: null,
-      eventHead: null,
-      viewHash: null,
-      generation: sourceRoot.generation,
-    });
-    fetchPlanningOperatingTrace({
-      origin: window.location.origin,
-      identity: sourceIdentity,
-      specId,
-      signal: controller.signal,
-    })
-      .then((creation) => {
+    let cancelled = false;
+    const load = async () => {
+      try {
+        const sourceIdentity = createDashboardQueryIdentity({
+          productArea: 'operate',
+          route: '#/operate/today',
+          ...sourceRoot,
+          cycleId: null,
+          subjectId: null,
+          eventHead: null,
+          viewHash: null,
+        });
+        const creation = await fetchPlanningOperatingTrace({
+          origin: window.location.origin,
+          identity: sourceIdentity,
+          specId,
+          signal: controller.signal,
+        });
         if (cancelled) return;
         const origin = creation.origin as Record<string, unknown>;
         const spec = origin.spec as { specId?: string } | undefined;
         if (
-          spec?.specId === specId &&
-          origin.scopeId === sourceRoot.scopeId &&
-          origin.domainId === sourceRoot.domainId &&
-          origin.domainVersion === sourceRoot.domainVersion &&
-          recordActorId(origin.actor) === sourceRoot.actorId
+          spec?.specId !== specId ||
+          origin.scopeId !== sourceRoot.scopeId ||
+          origin.domainId !== sourceRoot.domainId ||
+          origin.domainVersion !== sourceRoot.domainVersion ||
+          recordActorId(origin.actor) !== sourceRoot.actorId
         ) {
-          setEnvelope({
-            origin: creation.origin,
-            progress: creation.progress,
+          setRead({
+            key,
+            status: 'unavailable',
+            envelope: null,
+            reason: 'The operating origin could not be verified for the current Spec and source.',
           });
-          setStatus('ready');
           return;
         }
-        setStatus('unavailable');
-      })
-      .catch(() => {
-        if (!cancelled) setStatus('unavailable');
-      });
+        setRead({
+          key,
+          status: 'ready',
+          envelope: { origin: creation.origin, progress: creation.progress },
+        });
+      } catch {
+        if (!cancelled)
+          setRead({
+            key,
+            status: 'unavailable',
+            envelope: null,
+            reason: 'The access-safe operating origin read failed or could not be verified.',
+          });
+      }
+    };
+    void load();
     return () => {
       cancelled = true;
       controller.abort();
     };
-  }, [binding.projectId, sourceRoot, specId]);
+    // The key commits every source-root field; object identity alone does not identify this read.
+  }, [key, unavailableReason, sourceRoot, specId]);
 
-  if (status === 'loading' || status === 'idle') {
-    return (
-      <section className="op-planning-section" aria-label="Operating origin loading">
-        <p role="status">Loading operating origin projection…</p>
-      </section>
-    );
+  const current = read.key === key ? read : null;
+  const reason = unavailableReason ?? current?.reason;
+  if (!unavailableReason && current?.status === 'ready' && current.envelope) {
+    return <OperatingOriginPanel envelope={current.envelope} />;
   }
-  if (!envelope) return null;
-  return <OperatingOriginPanel envelope={envelope} />;
+  const retry = () => {
+    setRead({ key, status: 'loading', envelope: null });
+    setAttempt((value) => value + 1);
+  };
+  return (
+    <section aria-label="Operating origin" aria-busy={!reason} style={{ minHeight: 132 }}>
+      <Card title="Operating origin">
+        {reason ? (
+          <InlineAlert
+            tone="info"
+            title="Operating origin unavailable"
+            actions={
+              <Button size="sm" onClick={retry}>
+                Retry operating origin
+              </Button>
+            }
+          >
+            {reason}
+          </InlineAlert>
+        ) : (
+          <p role="status">Loading operating origin projection…</p>
+        )}
+      </Card>
+    </section>
+  );
 }
 
 function recordActorId(value: unknown): string | null {

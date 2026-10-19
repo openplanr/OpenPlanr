@@ -11,6 +11,7 @@ import { PlanningLiveFeedback, usePlanningLiveFeedback } from './planning-live-f
 import { hasCurrentRouteSubject, RouteWorkspace } from './route-workspace.js';
 import {
   CommandPalette,
+  PlanningDetailInspector,
   PlanningPresentationProvider,
   type ShellAdapters,
   useSearchCoordinator,
@@ -272,6 +273,7 @@ export function UnifiedShell({
                         scope={scope}
                         view={presentationView}
                         invalidView={invalidView}
+                        singleLetters={interactions.singleLetters}
                         onCopy={adapters?.copy}
                       >
                         <RouteWorkspace
@@ -294,12 +296,32 @@ export function UnifiedShell({
           </main>
           {inspectorOpen ? (
             <Inspector
-              key={`${route.kind}:${route.subjectId ?? ''}:${inspectorStore.openTick}`}
+              key={`${route.kind}:${route.subjectId ?? ''}`}
               mode={inspectorMode}
               selection={inspectorStore.selection}
               floating={narrow}
               onClose={() => interactions.closeInspector()}
               onPromote={interactions.navigate}
+              planningContent={
+                planningModel && inspectorStore.selection?.kind === 'node' ? (
+                  <PlanningPresentationProvider
+                    scope={scope}
+                    view={null}
+                    onCopy={adapters?.copy}
+                    singleLetters={interactions.singleLetters}
+                  >
+                    <PlanningDetailInspector
+                      model={planningModel}
+                      nodeId={inspectorStore.selection.id}
+                      origin={
+                        bootstrap?.origin ??
+                        (typeof window === 'undefined' ? '' : window.location.origin)
+                      }
+                      onPromote={interactions.navigate}
+                    />
+                  </PlanningPresentationProvider>
+                ) : undefined
+              }
             />
           ) : null}
         </div>

@@ -9,6 +9,7 @@ import {
 
 export type { ShellAdapters } from '../../app/browser-preferences.js';
 export { PlanningPresentationProvider } from '../../lib/routing/planning-presentation.js';
+export { PlanningDetailInspector } from '../planning/DetailPage.js';
 export { CommandPalette } from '../search/CommandPalette.js';
 export { useSearchCoordinator } from '../search/search-coordinator.js';
 
@@ -127,6 +128,7 @@ export function useShellInteractions({
       scroll.scrollTop = 0;
       scroll.scrollLeft = 0;
     }
+    let restoredFocus: HTMLElement | null = null;
     const restore = () => {
       if (!saved) return true;
       scroll.scrollTop = saved.top;
@@ -138,6 +140,12 @@ export function useShellInteractions({
       const focusTarget = item?.closest('[hidden]')
         ? item.closest('[data-keyboard-group]')?.querySelector<HTMLElement>('[aria-expanded]')
         : item;
+      // The parent live boundary runs after this layout effect and must honor return focus.
+      if (focusTarget) {
+        restoredFocus?.removeAttribute('data-live-focus-return');
+        restoredFocus = focusTarget;
+        restoredFocus.setAttribute('data-live-focus-return', '');
+      }
       focusTarget?.focus({ preventScroll: true });
       const regions = scrollRegions(scroll);
       let restoredRegions = 0;
@@ -160,6 +168,7 @@ export function useShellInteractions({
     if (!restored) observer.observe(scroll, { childList: true, subtree: true });
     return () => {
       observer.disconnect();
+      restoredFocus?.removeAttribute('data-live-focus-return');
       if (captured.current === contextKey) return;
       const focused = document.activeElement?.closest<HTMLElement>('[data-keyboard-item]');
       contexts.current.set(contextKey, {

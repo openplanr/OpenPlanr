@@ -649,7 +649,7 @@ export function ListPage({
           >
             {collapsed ? 'Expand artifacts' : 'Collapse artifacts'}
           </Button>
-          <div className="pc-list__window" hidden={collapsed}>
+          <div className="pc-list__window" data-scroll-context="list-window" hidden={collapsed}>
             {visibleGroups.map((group) => (
               <section key={group.key} aria-label={group.label} data-keyboard-group={group.key}>
                 {effectiveView.groupBy !== 'none' ? (
