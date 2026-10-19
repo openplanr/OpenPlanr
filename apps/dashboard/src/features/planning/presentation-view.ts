@@ -3,7 +3,10 @@ import {
   filterPlanningNodes,
   groupPlanningNodes,
   type PlanningGroup,
+  type PlanningModelGraph,
   type PlanningModelNode,
+  planningAttentionIds,
+  selectPlanningAttention,
 } from './planning-model.js';
 
 const DAY = 86_400_000;
@@ -62,11 +65,26 @@ export function applyPlanningView<Node extends PlanningModelNode>(
   nodes: readonly Node[],
   view: PlanningView | null,
   now = new Date(),
+  graph?: PlanningModelGraph,
 ): readonly Node[] {
   if (!view) return nodes;
   const filters = view.filters;
   const today = Date.parse(now.toISOString().slice(0, 10));
-  const searched = filterPlanningNodes(nodes, { search: filters.query.trim() || undefined });
+  if (filters.attention && !graph)
+    throw new Error('Attention filters require the full planning graph.');
+  const attentionIds =
+    filters.attention && graph
+      ? new Set(
+          planningAttentionIds(
+            selectPlanningAttention(graph, now.toISOString()),
+            filters.attention,
+          ),
+        )
+      : null;
+  const searched = filterPlanningNodes(
+    attentionIds ? nodes.filter((node) => attentionIds.has(node.id)) : nodes,
+    { search: filters.query.trim() || undefined },
+  );
   const matches = searched.filter(
     (node) =>
       (!filters.type.length || filters.type.includes(node.type)) &&

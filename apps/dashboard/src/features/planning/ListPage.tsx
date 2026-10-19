@@ -120,6 +120,7 @@ export function ListPage({ currentBinding, current }: ListPageProps) {
     schemaVersion: '1.0.0' as const,
     route: 'list' as const,
     filters: {
+      ...(view?.filters.attention ? { attention: view.filters.attention } : {}),
       type:
         type === ALL
           ? view?.filters.type.length && view.filters.type.length > 1
@@ -147,7 +148,7 @@ export function ListPage({ currentBinding, current }: ListPageProps) {
     focusId: inspector.selection?.kind === 'node' ? inspector.selection.id : null,
   };
   const rows = useLiveListOrder(
-    applyPlanningView(filteredByText, effectiveView),
+    model ? applyPlanningView(filteredByText, effectiveView, new Date(), model.graph) : [],
     JSON.stringify({ ...effectiveView, focusId: null }),
   );
   const grouped = groupPresentationNodes(rows, effectiveView.groupBy);
@@ -259,6 +260,11 @@ export function ListPage({ currentBinding, current }: ListPageProps) {
             >
               Copy filter link
             </Button>
+            {view?.filters.attention ? (
+              <Button size="sm" variant="ghost" onClick={clearFilters}>
+                Clear attention filter: {view.filters.attention}
+              </Button>
+            ) : null}
             <span className="pc-list__note">read-only view of .planr/</span>
           </Toolbar>
           <Button

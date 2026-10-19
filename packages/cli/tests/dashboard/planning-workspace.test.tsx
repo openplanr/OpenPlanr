@@ -205,17 +205,18 @@ describe('T-021 Planning workspace UI', () => {
     );
     const overviewDom = new JSDOM(`<!doctype html><html><body>${overviewHtml}</body></html>`);
     const overviewDocument = overviewDom.window.document;
-    expect(overviewDocument.querySelector('h1')?.textContent).toBe('Home');
+    expect(overviewDocument.querySelector('h1')?.textContent).toBe('Needs attention');
     expect(overviewDocument.querySelectorAll('h1')).toHaveLength(1);
-    expect(overviewHtml).toContain('3 artifacts');
-    expect(overviewHtml).toContain('Bound Planning transport');
+    expect(overviewHtml).toContain('4 items');
+    expect(overviewHtml).toContain('High priority, not started');
     expect(overviewHtml).toContain('Unified dashboard');
-    expect(overviewHtml).not.toContain('Sprint one');
+    expect(overviewHtml).toContain('Sprint one');
     expect(
       [...overviewDocument.querySelectorAll('table caption')].map((node) => node.textContent),
-    ).toEqual(['Blocked artifacts', 'Artifacts in progress']);
-    expect(overviewDocument.querySelectorAll('tbody tr[tabindex="0"]')).toHaveLength(2);
-    expect(overviewHtml).toContain('Depends-on is not the same as blocked-by');
+    ).toEqual([]);
+    expect(overviewHtml).toContain('Waiting on a dependency');
+    expect(overviewHtml).toContain('In progress, gone quiet');
+    expect(overviewHtml).toContain('Specs in flight');
     overviewDom.window.close();
 
     const graphBinding = identity('#/graph');
@@ -295,7 +296,7 @@ describe('T-021 Planning workspace UI', () => {
     expect(detailHtml).toContain('data-route-kind="planning.spec"');
   });
 
-  it('keeps Overview bounded and readable for zero, one, and many decision states', () => {
+  it('keeps Home empty and unknown attention states truthful', () => {
     const overview = identity('#/home');
     const emptyGraph: PlanningGraph = Object.freeze({
       nodes: Object.freeze([]),
@@ -307,89 +308,30 @@ describe('T-021 Planning workspace UI', () => {
         current={stateFor(overview, envelope(overview, emptyGraph))}
       />,
     );
-    expect(emptyHtml).toContain('No artifacts yet');
-    expect(emptyHtml).not.toContain('Blocked work');
+    expect(emptyHtml).toContain('No planning files yet');
+    expect(emptyHtml).not.toContain('Bound Planning transport');
 
-    const oneCurrentGraph: PlanningGraph = Object.freeze({
-      nodes: Object.freeze([graph.nodes[0]]),
-      edges: Object.freeze([]),
-    });
-    const oneCurrentHtml = renderToStaticMarkup(
-      <OverviewPage
-        currentBinding={overview}
-        current={stateFor(overview, envelope(overview, oneCurrentGraph))}
-      />,
-    );
-    expect(oneCurrentHtml).toContain('Nothing is blocked');
-    expect(oneCurrentHtml).toContain('1 artifact');
-    expect(oneCurrentHtml).toContain('Artifacts in progress');
-    expect(oneCurrentHtml).not.toContain('View all in progress');
-
-    const currentTemplate = graph.nodes[0];
-    const blockedTemplate = graph.nodes[2];
-    const manyGraph: PlanningGraph = Object.freeze({
+    const unknownGraph: PlanningGraph = Object.freeze({
       nodes: Object.freeze([
-        ...Array.from({ length: 4 }, (_, index) =>
-          Object.freeze({
-            ...blockedTemplate,
-            id: `T-BLOCKED-${index + 1}`,
-            title: `Blocked work ${index + 1}`,
-            frontmatter: Object.freeze({ id: `T-BLOCKED-${index + 1}` }),
-          }),
-        ),
-        ...Array.from({ length: 4 }, (_, index) =>
-          Object.freeze({
-            ...currentTemplate,
-            id: `SPEC-CURRENT-${index + 1}`,
-            title: `Current work ${index + 1}`,
-            frontmatter: Object.freeze({ id: `SPEC-CURRENT-${index + 1}` }),
-          }),
-        ),
+        Object.freeze({
+          ...graph.nodes[0],
+          frontmatter: Object.freeze({ id: graph.nodes[0].id }),
+        }),
+        graph.nodes[2],
       ]),
       edges: Object.freeze([]),
     });
-    const manyHtml = renderToStaticMarkup(
+    const unknownHtml = renderToStaticMarkup(
       <OverviewPage
         currentBinding={overview}
-        current={stateFor(overview, envelope(overview, manyGraph))}
+        current={stateFor(overview, envelope(overview, unknownGraph))}
       />,
     );
-    expect(manyHtml).toContain('8 artifacts');
-    expect(manyHtml).toContain('View all blocked');
-    expect(manyHtml).toContain('View all in progress');
-    expect(manyHtml).not.toContain('Blocked work 4');
-    expect(manyHtml).not.toContain('Current work 4');
-    const manyDom = new JSDOM(`<!doctype html><html><body>${manyHtml}</body></html>`);
-    expect(manyDom.window.document.querySelectorAll('.pc-table tbody tr')).toHaveLength(6);
-    expect(manyDom.window.document.body.textContent).toContain(
-      'Showing 3 of 4 blocked artifacts, in project order.',
-    );
-    expect(manyDom.window.document.body.textContent).toContain(
-      'Showing 3 of 4 in-progress artifacts, in project order.',
-    );
-    manyDom.window.close();
-
-    const initialHash = window.location.hash;
-    const preview = render(
-      <OverviewPage
-        currentBinding={overview}
-        current={stateFor(overview, envelope(overview, manyGraph))}
-      />,
-    );
-    try {
-      fireEvent.click(preview.getByRole('button', { name: 'View all blocked' }));
-      expect(window.location.hash).toBe('#/list');
-      const list = identity('#/list');
-      preview.rerender(
-        <ListPage currentBinding={list} current={stateFor(list, envelope(list, manyGraph))} />,
-      );
-      expect(preview.container.querySelectorAll('tbody tr')).toHaveLength(4);
-      expect(preview.container.textContent).toContain('Blocked work 4');
-      expect(preview.container.textContent).not.toContain('Current work 1');
-    } finally {
-      preview.unmount();
-      window.location.hash = initialHash;
-    }
+    expect(unknownHtml).toContain('2 items');
+    expect(unknownHtml).toContain('Waiting on a dependency');
+    expect(unknownHtml).toContain('In progress, gone quiet');
+    expect(unknownHtml).not.toContain('data-keyboard-item="SPEC-020/T-022"');
+    expect(unknownHtml).toMatch(/unknown|unavailable/iu);
   });
 
   it('refuses a foreign binding and an unbranded lookalike as a whole workspace', () => {

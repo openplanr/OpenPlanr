@@ -806,15 +806,21 @@ test.describe('dashboard real-browser quality', () => {
     const overview = page.locator('[data-route-kind="planning.overview"]');
     await expect(page).toHaveURL(/#\/home$/u);
     await expect(
-      overview.getByRole('heading', { level: 1, name: 'Home', exact: true }),
+      overview.getByRole('heading', { level: 1, name: 'Needs attention', exact: true }),
     ).toBeVisible();
-    await expect(overview).toContainText('1 artifact');
-    await expect(overview).toContainText('Nothing is blocked');
-    await expect(overview.getByRole('table', { name: 'Artifacts in progress' })).toContainText(
-      'Improve appointment reminder delivery',
-    );
-    await expect(overview).not.toContainText('Highest planning attention');
-    await expect(overview).not.toContainText('Needs attention');
+    await expect(overview).toContainText('1 item');
+    await expect(
+      overview.getByRole('heading', { name: /^Waiting on a dependency/u }),
+    ).toBeVisible();
+    await expect(
+      overview.getByRole('heading', { name: /^In progress, gone quiet/u }),
+    ).toBeVisible();
+    await expect(
+      overview.getByRole('heading', { name: /^High priority, not started/u }),
+    ).toBeVisible();
+    await expect(overview).toContainText('Commit-aware detection is available in Phase 2');
+    await expect(overview).toContainText('No active sprint');
+    expect((await layoutReport(page)).horizontalOverflow).toBe(false);
     await expectGoldenScreenshot(page, 'console-planning-overview-wide.png');
   });
 

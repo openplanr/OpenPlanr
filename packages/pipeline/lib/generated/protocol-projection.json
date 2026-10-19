@@ -94,6 +94,18 @@
       "mode": "644"
     },
     {
+      "source": "packages/protocol/lib/dashboard/planning-attention.d.mts",
+      "target": "lib/dashboard/planning-attention.d.mts",
+      "sha256": "24252d14652de03acc24b37198d952bea7d1f4e8c6b90285f371851cf4dd5f4d",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/lib/dashboard/planning-attention.mjs",
+      "target": "lib/dashboard/planning-attention.mjs",
+      "sha256": "d69c8f0e28faf6672ca847568a838de9329a6def200ec561fdca8c65250acd90",
+      "mode": "644"
+    },
+    {
       "source": "packages/protocol/projections/pipeline/lib/protocol/bounded-json-data.d.mts",
       "target": "lib/protocol/bounded-json-data.d.mts",
       "sha256": "f5a8d0c4df7a53e82f23cd6b857810f8cf761b17f6bdcc2d1dc3f0bb35538f60",

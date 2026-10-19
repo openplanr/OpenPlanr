@@ -25,11 +25,14 @@ export function serializePlanningSubject(value: string): string {
   return encodeURIComponent(value);
 }
 
+export type PlanningAttentionFilter = 'waiting' | 'stale' | 'high-not-started' | 'changed-today';
+
 export type PlanningViewRoute = 'list' | 'graph' | 'board' | 'activity';
 export type PlanningView = Readonly<{
   schemaVersion: '1.0.0';
   route: PlanningViewRoute;
   filters: Readonly<{
+    attention?: PlanningAttentionFilter;
     type: readonly string[];
     status: readonly string[];
     priority: readonly string[];
@@ -122,6 +125,7 @@ export function validatePlanningView(value: unknown): PlanningView | null {
   if (
     !object(filters) ||
     !closed(filters, [
+      ...(Object.hasOwn(filters, 'attention') ? ['attention'] : []),
       'type',
       'status',
       'priority',
@@ -130,6 +134,12 @@ export function validatePlanningView(value: unknown): PlanningView | null {
       'createdWithinDays',
       'updatedWithinDays',
     ])
+  )
+    return null;
+  if (
+    filters.attention !== undefined &&
+    (value.route !== 'list' ||
+      !choice(filters.attention, ['waiting', 'stale', 'high-not-started', 'changed-today']))
   )
     return null;
   if (
@@ -156,6 +166,7 @@ export function validatePlanningView(value: unknown): PlanningView | null {
     schemaVersion: '1.0.0',
     route: value.route,
     filters: Object.freeze({
+      ...(filters.attention !== undefined ? { attention: filters.attention } : {}),
       type: Object.freeze([...filters.type]),
       status: Object.freeze([...filters.status]),
       priority: Object.freeze([...filters.priority]),

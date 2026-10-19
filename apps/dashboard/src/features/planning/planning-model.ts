@@ -1,5 +1,11 @@
+import type { AttentionProjection } from '@openplanr/protocol/dashboard/planning-attention.mjs';
+import { deriveAttention } from '@openplanr/protocol/dashboard/planning-attention.mjs';
 import { PLANNING_FOLDER } from '@openplanr/protocol/names';
 import { canonicalDashboardHref } from '../../app/router.js';
+import type {
+  PlanningAttentionFilter,
+  PlanningView,
+} from '../../lib/routing/planning-view-codec.js';
 import { isCanonicalPlanningId } from '../../lib/routing/planning-view-codec.js';
 
 /**
@@ -1029,4 +1035,50 @@ export function selectAccessiblePlanningGraphRows(
       }),
     ),
   );
+}
+
+export function planningAttentionIds(
+  attention: AttentionProjection,
+  filter: PlanningAttentionFilter,
+): readonly string[] {
+  switch (filter) {
+    case 'waiting':
+      return attention.waiting.map((item) => item.id);
+    case 'stale':
+      return attention.stale.map((item) => item.id);
+    case 'high-not-started':
+      return attention.highPriorityNotStarted;
+    case 'changed-today':
+      return attention.changedToday.ids;
+  }
+}
+
+export function planningAttentionView(attention: PlanningAttentionFilter): PlanningView {
+  return {
+    schemaVersion: '1.0.0',
+    route: 'list',
+    filters: {
+      attention,
+      type: [],
+      status: [],
+      priority: [],
+      label: [],
+      query: '',
+      createdWithinDays: null,
+      updatedWithinDays: null,
+    },
+    groupBy: 'none',
+    sort: { field: 'id', direction: 'asc' },
+    density: 'comfortable',
+    focusId: null,
+  };
+}
+
+export function selectPlanningAttention(graph: PlanningModelGraph, nowUTC: string) {
+  return deriveAttention(graph, nowUTC);
+}
+
+export function planningContinuation(node: PlanningModelNode): string | null {
+  if (!isCanonicalPlanningId(node.id)) return null;
+  return node.type === 'task' ? `/planr:ship ${node.id}` : `openplanr status ${node.id} --md`;
 }
