@@ -17,7 +17,6 @@ export const PUBLIC_PACKAGE_PATHS = Object.freeze([
   'packages/cli',
   'packages/pipeline',
   'packages/protocol',
-  'packages/canvas',
 ]);
 
 // This allowlist describes ownership, not the current release's version numbers.

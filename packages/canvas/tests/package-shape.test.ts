@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -14,7 +14,12 @@ const entries = [
   ['@openplanr/canvas/testing', './src/testing/index'],
 ] as const;
 
-describe('public package shape', () => {
+describe('package shape', () => {
+  it('stays private and includes a README', () => {
+    expect(manifest.private).toBe(true);
+    expect(existsSync(new URL('../README.md', import.meta.url))).toBe(true);
+  });
+
   it('exposes compiled modules and the structural stylesheet', async () => {
     expect(manifest.exports).toEqual({
       '.': { types: './src/index.d.mts', import: './src/index.mjs' },

@@ -160,7 +160,7 @@
               "const": "packages/canvas"
             },
             "publication": {
-              "const": "public"
+              "const": "private"
             }
           }
         },

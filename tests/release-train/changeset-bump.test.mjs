@@ -66,22 +66,6 @@ test('a feature needs a minor for a published package it changes', () => {
   ]);
 });
 
-test('a new canvas package accepts its first minor changeset and rejects a missing bump', () => {
-  const files = ['packages/canvas/package.json', 'packages/canvas/src/index.mts'];
-  assert.deepEqual(
-    check({
-      title: 'feat(canvas): add public package scaffold',
-      files,
-      releases: { '@openplanr/canvas': 'minor' },
-    }),
-    { errors: [], warnings: [] },
-  );
-  assert.equal(
-    check({ title: 'feat(canvas): add public package scaffold', files }).errors.length,
-    1,
-  );
-});
-
 test('skill and adapter sources count as changes to openplanr', () => {
   const skillsOnly = check({
     title: 'feat(skills): offer findings',

@@ -1,6 +1,7 @@
 {
   "name": "@openplanr/canvas",
   "version": "0.0.0",
+  "private": true,
   "type": "module",
   "description": "Shared OpenPlanr infinite-canvas engine and React bindings",
   "license": "MIT",

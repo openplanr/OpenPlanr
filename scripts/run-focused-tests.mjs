@@ -31,7 +31,6 @@ const steps = Object.freeze([
       'tests/release-train/lockfile.test.mjs',
       'tests/release-train/cli-version.test.mjs',
       'tests/release-train/changeset-bump.test.mjs',
-      'tests/release-train/canvas-publication.test.mjs',
       'tests/ecosystem-root/publication-custody.test.mjs',
       'tests/ecosystem-root/packed-surface-baseline.test.mjs',
       'tests/ecosystem-root/source-comments.test.mjs',
