@@ -436,7 +436,9 @@ export function registerDashboardPerformanceTraceTests() {
           ),
         }),
       );
-      const layoutShiftEvidence = await page.evaluate(() => window.__dashboardLayoutShifts.snapshot());
+      const layoutShiftEvidence = await page.evaluate(() =>
+        window.__dashboardLayoutShifts.snapshot(),
+      );
       const cls = aggregateDashboardLayoutShifts(layoutShiftEvidence).admittedCls;
       const metrics: DashboardTraceMeasurements = {
         coldShellMs: cold.shellAt ?? Number.NaN,
