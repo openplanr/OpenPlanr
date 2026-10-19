@@ -2,6 +2,19 @@ import type { HitTestProbe } from '../../bench/hit-test';
 import type { ScenarioOverviewMetrics } from '../../bench/main';
 
 export const DOM_NODE_BUDGET = 2000;
+export const RUNNER_BUDGETS = process.env.CI === 'true';
+
+export function traceBudgetPolicy(runnerBudgets: boolean): {
+  budgetSet: 'local' | 'runner';
+  remountRendererMainP95Ms: number;
+  rafIntervalP95Ms: number | null;
+} {
+  return {
+    budgetSet: runnerBudgets ? 'runner' : 'local',
+    remountRendererMainP95Ms: runnerBudgets ? 24 : 16,
+    rafIntervalP95Ms: runnerBudgets ? null : 16.8,
+  };
+}
 
 export type TraceRun = {
   run: number;

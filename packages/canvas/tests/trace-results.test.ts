@@ -3,8 +3,27 @@ import {
   aggregateTraceRuns,
   domBudgetPolicy,
   type TraceRun,
+  traceBudgetPolicy,
   traceOwnership,
 } from './browser/trace-results';
+
+describe('trace budget selection', () => {
+  it('keeps local remount and rAF limits at the reference budgets', () => {
+    expect(traceBudgetPolicy(false)).toEqual({
+      budgetSet: 'local',
+      remountRendererMainP95Ms: 16,
+      rafIntervalP95Ms: 16.8,
+    });
+  });
+
+  it('uses runner remount headroom and reports rAF without a failing limit', () => {
+    expect(traceBudgetPolicy(true)).toEqual({
+      budgetSet: 'runner',
+      remountRendererMainP95Ms: 24,
+      rafIntervalP95Ms: null,
+    });
+  });
+});
 
 function run(index: number, main: number, raf: number, longTasks: number[] = []): TraceRun {
   return {
