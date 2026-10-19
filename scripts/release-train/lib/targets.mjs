@@ -17,6 +17,11 @@ export const PUBLIC_TARGETS = Object.freeze([
   }),
 ]);
 
+// The skill generator declares no input paths, so the roots it packages into openplanr are listed here.
+export const BUNDLED_SOURCES = Object.freeze({
+  openplanr: Object.freeze(['skills', 'adapters']),
+});
+
 export function targetByName(name) {
   const target = PUBLIC_TARGETS.find((entry) => entry.name === name);
   if (!target) throw new Error(`Not a public package: ${name}`);
