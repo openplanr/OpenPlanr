@@ -71,7 +71,7 @@ export function SearchResults({
   if (!hasHits && !hasUnsupported) {
     return (
       <p className="pc-palette__empty" role="status">
-        No matches. Try a view name or an item id like US-001.
+        No matches. Try an item ID, view name or command.
       </p>
     );
   }
@@ -80,6 +80,7 @@ export function SearchResults({
     <div className="pc-palette__results">
       {GROUP_ORDER.map((source) => {
         const rows = grouped[source];
+        const occurrences = new Map<string, number>();
         if (rows.length === 0) return null;
         return (
           <section
@@ -91,16 +92,27 @@ export function SearchResults({
               {GROUP_LABEL[source]}
             </h2>
             <ol className="pc-palette__list" aria-label={GROUP_LABEL[source]}>
-              {rows.map((hit, index) => {
+              {rows.map((hit) => {
+                const occurrence = occurrences.get(hit.id) ?? 0;
+                occurrences.set(hit.id, occurrence + 1);
                 const active = activeId
                   ? hit.id === activeId
                   : hit.href !== null && hit.href === activeHref;
                 return (
-                  <li key={`${hit.id}:${index}`}>
+                  <li key={`${hit.id}:${occurrence}`}>
                     <button
                       type="button"
                       className="pc-palette__row"
                       data-search-result={hit.id}
+                      data-keyboard-item={hit.id}
+                      data-copy-command={hit.source === 'command' ? 'true' : undefined}
+                      data-canonical-id={
+                        hit.source === 'planning'
+                          ? hit.id.slice('planning:'.length)
+                          : hit.source === 'operate'
+                            ? hit.id.slice(`operate:${hit.kind}:`.length)
+                            : undefined
+                      }
                       onFocus={() => onFocus?.(hit)}
                       data-active={active ? 'true' : 'false'}
                       aria-current={active ? 'true' : undefined}

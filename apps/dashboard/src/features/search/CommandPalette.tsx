@@ -207,18 +207,19 @@ function useSearchState(
   connectionState: string,
 ) {
   const [query, setQuery] = useState(initialQuery);
+  const previousQuery = useRef(query);
   const [nav, setNav] = useState<SearchKeyNav<DashboardSearchHit>>(() =>
     createSearchKeyNav<DashboardSearchHit>([]),
   );
   const selectedOperate = useSelectedOperateBinding(operateBindings, preferredOperateCycleId);
-  const operateHits = useOperateSearchHits({
+  const operateSearch = useOperateSearchHits({
     binding: selectedOperate.binding,
     connectionState,
     query,
   });
   const mergedSources = useMemo(
-    () => Object.freeze({ ...sources, operateResults: operateHits }),
-    [sources, operateHits],
+    () => Object.freeze({ ...sources, operateResults: operateSearch.hits }),
+    [sources, operateSearch.hits],
   );
   const index = useMemo(() => buildDashboardSearchIndex(mergedSources), [mergedSources]);
   const hits = useMemo(() => queryDashboardSearchIndex(index, query), [index, query]);
@@ -227,8 +228,16 @@ function useSearchState(
     [index, query],
   );
   useEffect(() => {
-    setNav(createSearchKeyNav(hits));
-  }, [hits]);
+    const retain = previousQuery.current === query;
+    previousQuery.current = query;
+    setNav((current) => {
+      const selectedId = retain ? current.getActive()?.id : null;
+      const index = selectedId ? hits.findIndex((hit) => hit.id === selectedId) : -1;
+      let next = createSearchKeyNav(hits);
+      for (let position = 0; position <= index; position += 1) next = next.moveDown();
+      return next;
+    });
+  }, [hits, query]);
 
   const onKeyDown = (
     event: KeyboardEvent<HTMLInputElement>,
@@ -263,6 +272,7 @@ function useSearchState(
     unsupported,
     active: nav.getActive(),
     selectedOperate,
+    operateSearchState: operateSearch.state,
     onKeyDown,
   };
 }
@@ -463,6 +473,12 @@ export function CommandPalette({
           selectedCycleId={search.selectedOperate.selectedCycleId}
           onSelect={search.selectedOperate.setSelectedCycleId}
         />
+        {search.operateSearchState === 'error' ? (
+          <p className="pc-palette__command" role="status" aria-label="Operate search status">
+            Operate search could not be read. Local destinations and Planning results remain
+            available. Check the connection and try the query again.
+          </p>
+        ) : null}
         <SearchResults
           hits={search.hits}
           unsupported={search.unsupported}
@@ -535,10 +551,15 @@ export function SearchWorkspace({
 
   const commandCopy = useCommandCopy(onCopy);
 
+  const selectHit = (hit: DashboardSearchHit) => {
+    if (hit.source === 'command') void commandCopy.copy(hit.command);
+    else navigateTo(hit.href);
+  };
+
   return (
     <section className="op-workspace pc-search-page" data-route-kind="planning.search">
       <SectionHeader
-        eyebrow="planr-status · search"
+        eyebrow="Reference"
         title="Search"
         count={`${search.hits.length} ${search.hits.length === 1 ? 'result' : 'results'}`}
         description="Planning work and Operate items, from access-safe projections."
@@ -551,6 +572,7 @@ export function SearchWorkspace({
           placeholder={PLACEHOLDER}
           icon="search"
           size="lg"
+          onKeyDown={(event) => search.onKeyDown(event, selectHit)}
           width={560}
         />
       </div>
@@ -559,6 +581,19 @@ export function SearchWorkspace({
         selectedCycleId={search.selectedOperate.selectedCycleId}
         onSelect={search.selectedOperate.setSelectedCycleId}
       />
+      {connectionState === 'offline' || connectionState === 'disconnected' ? (
+        <p className="pc-search-page__notice" role="note">
+          Live search is unavailable. Only locally available destinations and the last validated
+          Planning snapshot can be searched. Restart with <code>openplanr dashboard</code> to
+          reconnect.
+        </p>
+      ) : null}
+      {search.operateSearchState === 'error' ? (
+        <p className="pc-palette__command" role="status" aria-label="Operate search status">
+          Operate search could not be read. Local destinations and Planning results remain
+          available. Check the connection and try the query again.
+        </p>
+      ) : null}
       <SearchResults
         hits={search.hits}
         unsupported={search.unsupported}
@@ -566,10 +601,8 @@ export function SearchWorkspace({
         listId={listId}
         activeId={search.active?.id ?? null}
         commandBusy={commandCopy.feedback?.state === 'pending'}
-        onSelect={(hit) => {
-          if (hit.source === 'command') void commandCopy.copy(hit.command);
-          else navigateTo(hit.href);
-        }}
+        onSelect={selectHit}
+        onFocus={search.activateHit}
       />
       <CommandCopyFeedback feedback={commandCopy.feedback} />
     </section>

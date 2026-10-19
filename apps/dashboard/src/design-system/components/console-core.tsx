@@ -470,6 +470,7 @@ export function SectionHeader({
 export type InputProps = Readonly<{
   value: string;
   onChange: (value: string) => void;
+  onKeyDown?: (event: KeyboardEvent<HTMLInputElement>) => void;
   ariaLabel: string;
   placeholder?: string;
   icon?: PcIconName;
@@ -486,6 +487,7 @@ export type InputProps = Readonly<{
 export function Input({
   value,
   onChange,
+  onKeyDown,
   ariaLabel,
   placeholder,
   icon,
@@ -519,6 +521,7 @@ export function Input({
           aria-disabled={disabled || undefined}
           aria-invalid={Boolean(error) || undefined}
           aria-describedby={error || disabledReason ? reasonId : undefined}
+          onKeyDown={onKeyDown}
           onChange={(event: ChangeEvent<HTMLInputElement>) => {
             if (!disabled) onChange(event.target.value);
           }}

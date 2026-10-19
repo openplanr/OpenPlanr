@@ -403,23 +403,38 @@ test.describe('dashboard real-browser quality', () => {
         });
         await page.setViewportSize({ width, height: 1000 });
         const [bootstrapResponse, indexResponse] = await Promise.all([
-          page.waitForResponse((response) => new URL(response.url()).pathname === '/api/bootstrap'),
+          page.waitForResponse(
+            (response) =>
+              new URL(response.url()).pathname === '/api/bootstrap' && response.status() === 200,
+          ),
           page.waitForResponse((response) => {
             const url = new URL(response.url());
             return (
               url.pathname === '/api/operate/local-reviews' &&
-              url.searchParams.get('pageSize') === '12'
+              url.searchParams.get('pageSize') === '12' &&
+              response.status() === 200
             );
           }),
           page.goto(fixtureUrl('#/operate/today', { localOperate: 'empty', operateTheme: theme })),
         ]);
         expect(bootstrapResponse.ok()).toBe(true);
-        expect(await bootstrapResponse.json()).toMatchObject({
+        expect(indexResponse.ok()).toBe(true);
+        // API request bodies survive replacement of the document that issued the observed requests.
+        const [bootstrapRead, indexRead] = await Promise.all([
+          page.request.get(bootstrapResponse.url(), {
+            headers: bootstrapResponse.request().headers(),
+          }),
+          page.request.get(indexResponse.url(), {
+            headers: indexResponse.request().headers(),
+          }),
+        ]);
+        expect(bootstrapRead.ok()).toBe(true);
+        expect(await bootstrapRead.json()).toMatchObject({
           queryRoots: { operate: null },
           capabilities: { operateCommands: { available: false } },
         });
-        expect(indexResponse.ok()).toBe(true);
-        expect(await indexResponse.json()).toMatchObject({ pagination: { total: 0 }, items: [] });
+        expect(indexRead.ok()).toBe(true);
+        expect(await indexRead.json()).toMatchObject({ pagination: { total: 0 }, items: [] });
         const workspace = page.locator('[data-route-kind="operate.today"]');
         await expect(
           workspace.getByRole('heading', { name: 'Operate is not set up here yet' }),

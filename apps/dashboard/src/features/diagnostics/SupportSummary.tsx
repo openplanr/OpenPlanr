@@ -1,6 +1,6 @@
 import type { DashboardBootstrap } from '../../lib/api/bootstrap.js';
 
-const PRIVATE_PATH = /(?:^|[\s"'`])\/(?:Users|home|opt|var|private|tmp)\//iu;
+const PRIVATE_PATH = /(?:^|[\s"'`])(?:\/|[a-z]:[\\/]|\\\\)/iu;
 
 export type SupportSummaryProps = Readonly<{
   embeddedBuildId: string;
@@ -13,10 +13,9 @@ function safeLine(value: string | null | undefined): string {
   return value;
 }
 
-/** Presents only the access-safe support bundle certified by bootstrap custody. */
 export function SupportSummary({ embeddedBuildId, bootstrap }: SupportSummaryProps) {
   const lines = [
-    ['Embedded dashboard build', embeddedBuildId],
+    ['Embedded dashboard build', safeLine(embeddedBuildId)],
     ['Served dashboard build', safeLine(bootstrap?.ui.buildId)],
     ['Expected dashboard build', safeLine(bootstrap?.ui.expectedBuildId)],
     ['Asset manifest hash', safeLine(bootstrap?.ui.assetManifestHash)],
@@ -43,7 +42,7 @@ export function SupportSummary({ embeddedBuildId, bootstrap }: SupportSummaryPro
     [
       'Compatibility reasons',
       bootstrap?.compatibility.reasonCodes.length
-        ? bootstrap.compatibility.reasonCodes.join(' · ')
+        ? safeLine(bootstrap.compatibility.reasonCodes.join(' · '))
         : 'None',
     ],
     ['Project name', safeLine(bootstrap?.project.name)],
@@ -76,6 +75,9 @@ export function SupportSummary({ embeddedBuildId, bootstrap }: SupportSummaryPro
         ))}
       </dl>
 
+      <p className="op-diagnostics__intro">
+        Select the summary below to copy it into a support request.
+      </p>
       <textarea
         className="op-diagnostics__bundle"
         readOnly
