@@ -149,12 +149,10 @@ async function layoutReport(page: Page) {
   }, ACTIVE_TARGET_SELECTOR);
 }
 
-async function expectMainControlsHitTestable(page: Page) {
-  const controls = page
-    .locator('#main-content')
-    .locator(
-      `${ACTIVE_TARGET_SELECTOR}, [tabindex]:not([tabindex="-1"]), [contenteditable="true"]`,
-    );
+async function expectControlsHitTestable(page: Page, scope = page.locator('#main-content')) {
+  const controls = scope.locator(
+    `${ACTIVE_TARGET_SELECTOR}, [tabindex]:not([tabindex="-1"]), [contenteditable="true"]`,
+  );
   let checked = 0;
   for (const control of await controls.all()) {
     if (
@@ -173,10 +171,26 @@ async function expectMainControlsHitTestable(page: Page) {
         reachable: hit !== null && (hit === element || element.contains(hit)),
       };
     });
-    expect(report.reachable, `Main control is covered: ${JSON.stringify(report)}`).toBe(true);
+    expect(report.reachable, `Control is covered: ${JSON.stringify(report)}`).toBe(true);
     checked++;
   }
   expect(checked).toBeGreaterThan(0);
+}
+
+async function expectGovernedDialogFocusTrapped(page: Page, dialog: Locator, cancel: Locator) {
+  await expect(cancel).toBeFocused();
+  const controls = dialog.locator(ACTIVE_TARGET_SELECTOR);
+  const steps = (await controls.count()) + 1;
+  for (const direction of ['Tab', 'Shift+Tab']) {
+    for (let step = 0; step < steps; step++) {
+      await page.keyboard.press(direction);
+      expect(
+        await dialog.evaluate((element) => element.contains(document.activeElement)),
+        `Governed dialog must retain focus after ${direction}`,
+      ).toBe(true);
+    }
+  }
+  await cancel.focus();
 }
 
 async function touchTap(page: Page, target: Locator): Promise<void> {
@@ -419,13 +433,13 @@ test.describe('dashboard real-browser quality', () => {
           const dock = await inspector.boundingBox();
           if (!before || !dock) throw new Error('Missing main content or inspector dock.');
           expect(before.x + before.width).toBeLessThanOrEqual(dock.x + 1);
-          await expectMainControlsHitTestable(page);
+          await expectControlsHitTestable(page);
           await page.evaluate(() => window.__dashboardLayoutShifts.markPhase('inspector-toggle'));
           await page.getByRole('button', { name: 'Hide inspector', exact: true }).click();
           expect(await main.boundingBox()).toEqual(before);
           await page.getByRole('button', { name: 'Show inspector', exact: true }).click();
           expect(await main.boundingBox()).toEqual(before);
-          await expectMainControlsHitTestable(page);
+          await expectControlsHitTestable(page);
           const shifts = await page.evaluate(() =>
             window.__dashboardLayoutShifts
               .snapshot()
@@ -698,9 +712,16 @@ test.describe('dashboard real-browser quality', () => {
       await page.keyboard.press('Enter');
       const dialog = page.getByRole('alertdialog');
       await expect(dialog).toBeVisible();
-      expect(await dialog.evaluate((element) => element.contains(document.activeElement))).toBe(
-        true,
-      );
+      await expect(dialog).toHaveAccessibleName('Record “Reject recommendation”?');
+      const cancel = dialog.getByRole('button', { name: 'Keep reviewing', exact: true });
+      await expectGovernedDialogFocusTrapped(page, dialog, cancel);
+      await expect(
+        dialog.getByText(
+          'Records owner rejection and applies only the listed work dispositions; it does not delete evidence or execute Actions.',
+          { exact: true },
+        ),
+      ).toBeVisible();
+      await expectControlsHitTestable(page, dialog);
       await expect(dialog.getByText('project-write')).toBeVisible();
       expect(
         requests.filter(
@@ -776,6 +797,10 @@ test.describe('dashboard real-browser quality', () => {
       await trigger.click();
       const dialog = page.getByRole('alertdialog');
       await expect(dialog).toBeVisible();
+      await expect(dialog).toHaveAccessibleName(`Record “${proof.label}”?`);
+      const cancel = dialog.getByRole('button', { name: 'Keep reviewing', exact: true });
+      await expectGovernedDialogFocusTrapped(page, dialog, cancel);
+      await expectControlsHitTestable(page, dialog);
       await expect(dialog.getByRole('heading', { name: `Record “${proof.label}”?` })).toBeVisible();
       await expect(dialog.getByText(proof.consequence, { exact: true })).toBeVisible();
       await expect(dialog.getByText('project-write')).toBeVisible();
@@ -1324,6 +1349,8 @@ test.describe('dashboard real-browser quality', () => {
       name: 'Confirm Restore the previous reminder settings',
     });
     await expect(dialog).toBeVisible();
+    const cancel = dialog.getByRole('button', { name: 'Cancel', exact: true });
+    await expect(cancel).toBeFocused();
     await expect(dialog).toContainText(
       'You are about to Restore the previous reminder settings. Review the reminder setting rollback before confirming.',
     );
@@ -1348,7 +1375,9 @@ test.describe('dashboard real-browser quality', () => {
     );
     await expectGoldenScreenshot(page, 'console-operate-governed-action-dialog.png');
 
-    await dialog.getByRole('button', { name: 'Cancel' }).click();
+    await expectGovernedDialogFocusTrapped(page, dialog, cancel);
+    await expectControlsHitTestable(page, dialog);
+    await cancel.click();
     await expect(dialog).not.toBeVisible();
     await expect(trigger).toBeFocused();
   });

@@ -35,8 +35,8 @@ export function ReviewChoiceConfirmation({
       }}
     >
       <AlertDialog.Portal>
-        <AlertDialog.Overlay className="op-inbox-dialog__overlay" />
-        <AlertDialog.Content className="op-inbox-dialog__content op-review-dialog">
+        <AlertDialog.Overlay className="op-inbox-dialog__overlay op-governed-overlay" />
+        <AlertDialog.Content className="op-inbox-dialog__content op-review-dialog op-governed-dialog">
           {preview && choice ? (
             <>
               <p className="op-eyebrow">Exact owner choice</p>
@@ -110,15 +110,25 @@ export function ReviewChoiceConfirmation({
                   maxLength={2_048}
                   rows={3}
                   disabled={confirming}
+                  aria-disabled={confirming || undefined}
                   aria-invalid={!noteIsValid || undefined}
-                  aria-describedby="op-review-note-help"
+                  aria-describedby="op-review-note-help op-review-confirm-status"
                   onChange={(event) => setNote(event.currentTarget.value)}
                 />
               </label>
-              <p id="op-review-note-help" role={!noteIsValid ? 'alert' : undefined}>
+              <p
+                id="op-review-note-help"
+                className="op-governed-dialog__reason"
+                role={!noteIsValid ? 'alert' : undefined}
+              >
                 {noteIsValid
                   ? `${note.length} of 2,048 characters. The exact text is bound into the receipt.`
                   : 'Remove leading or trailing whitespace before confirming.'}
+              </p>
+              <p id="op-review-confirm-status" className="op-governed-dialog__reason" role="status">
+                {confirming
+                  ? 'Recording receipt. Confirmation is in progress.'
+                  : 'Confirm once to record this exact choice.'}
               </p>
               <div className="op-inbox-dialog__actions">
                 <AlertDialog.Cancel asChild>
@@ -126,6 +136,8 @@ export function ReviewChoiceConfirmation({
                     type="button"
                     className="pc-button op-inbox-dialog__cancel"
                     disabled={confirming}
+                    aria-disabled={confirming || undefined}
+                    aria-describedby={confirming ? 'op-review-confirm-status' : undefined}
                   >
                     Keep reviewing
                   </button>
@@ -135,9 +147,14 @@ export function ReviewChoiceConfirmation({
                   className="op-governed-button op-inbox-dialog__confirm"
                   disabled={confirming || !noteIsValid}
                   aria-busy={confirming || undefined}
+                  aria-disabled={confirming || !noteIsValid || undefined}
+                  aria-describedby="op-review-note-help op-review-confirm-status"
                   onClick={() => void onConfirm(note === '' ? null : note)}
                 >
-                  {confirming ? 'Recording immutable receipt' : `Record ${choice.choice.label}`}
+                  <span className="op-governed-dialog__label">
+                    <span aria-hidden={confirming || undefined}>Record {choice.choice.label}</span>
+                    <span aria-hidden={!confirming || undefined}>Recording immutable receipt</span>
+                  </span>
                 </button>
               </div>
             </>

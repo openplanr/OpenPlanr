@@ -1,0 +1,264 @@
+/* Portalled confirmations need the same recipes without relying on a route ancestor. */
+.op-governed-overlay[class] {
+  position: fixed;
+  z-index: 70;
+  inset: 0;
+  background: color-mix(in srgb, var(--pc-bg) 80%, transparent);
+}
+
+.op-governed-dialog[role] {
+  position: fixed;
+  z-index: 71;
+  top: 50%;
+  left: 50%;
+  display: grid;
+  box-sizing: border-box;
+  width: min(760px, calc(100vw - 32px));
+  max-height: calc(100dvh - 32px);
+  gap: 16px;
+  padding: 24px;
+  border: 1px solid var(--pc-border-strong);
+  border-radius: var(--op-radius-sheet);
+  background: var(--pc-raised);
+  color: var(--pc-text-primary);
+  box-shadow: var(--op-shadow-float);
+  font: 400 14px / 1.6 var(--pc-font-sans);
+  overflow: auto;
+  overscroll-behavior: contain;
+  overflow-wrap: anywhere;
+  transform: translate(-50%, -50%);
+  animation: op-governed-dialog-enter var(--op-motion-panel-duration) var(--op-motion-ease);
+}
+
+.op-governed-dialog > * {
+  min-width: 0;
+  margin: 0;
+}
+
+.op-governed-dialog .op-inbox-dialog__title {
+  margin: 0;
+  color: var(--op-heading);
+  font: 700 28px / 1.15 var(--op-font-display);
+  letter-spacing: -0.02em;
+}
+
+.op-governed-dialog .op-inbox-dialog__description {
+  margin: 0;
+  color: var(--pc-text-secondary);
+}
+
+.op-governed-dialog :is(h2, h3) {
+  margin: 0;
+  color: var(--op-heading);
+  font: 600 16px / 1.3 var(--op-font-display);
+}
+
+.op-governed-dialog :is(.op-inbox-dialog__facts, .op-cycle-custody) {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  padding: 16px;
+  margin: 0;
+  border: 1px solid var(--pc-border-subtle);
+  border-radius: var(--pc-radius-sm);
+  background: var(--pc-surface-card);
+}
+
+.op-governed-dialog :is(dl > div, dd) {
+  min-width: 0;
+}
+
+.op-governed-dialog dt {
+  color: var(--pc-text-tertiary);
+  font: 500 12px / 1.5 var(--pc-font-sans);
+  letter-spacing: normal;
+  text-transform: none;
+}
+
+.op-governed-dialog dd {
+  margin: 4px 0 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.op-governed-dialog :is(code, time, .op-eyebrow) {
+  font-family: var(--pc-font-mono);
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+
+.op-governed-dialog :is(.op-inbox-dialog__targets, .op-inbox-dialog__threshold) {
+  padding: 0;
+}
+
+.op-governed-dialog :is(.op-inbox-dialog__actions, .op-planning-handoff__dialog-actions) {
+  display: flex;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  align-items: start;
+  gap: 12px;
+  padding: 16px 0 0;
+  border-top: 1px solid var(--pc-border-subtle);
+}
+
+.op-governed-button,
+.op-governed-dialog :is(button, summary, textarea) {
+  min-height: 44px;
+}
+
+.op-governed-button {
+  padding-block: 8px;
+}
+
+.op-governed-dialog :is(button, summary, textarea) {
+  scroll-margin-block: 16px;
+}
+
+.op-governed-dialog :is(button, summary, textarea):focus-visible {
+  outline: 2px solid var(--pc-focus-ring);
+  outline-offset: 2px;
+}
+
+.op-governed-dialog summary {
+  box-sizing: border-box;
+  padding: 8px;
+  border-radius: var(--pc-radius-sm);
+  color: var(--pc-text-secondary);
+  cursor: pointer;
+  transition: var(--pc-transition-ui);
+}
+
+.op-governed-dialog summary:hover {
+  background: var(--pc-surface-hover);
+}
+
+.op-governed-dialog summary:active {
+  background: var(--pc-surface-active);
+}
+
+.op-review-dialog__note {
+  display: grid;
+  gap: 8px;
+  color: var(--pc-text-secondary);
+  font-size: 13px;
+}
+
+.op-review-dialog__note small {
+  font-size: 12px;
+}
+
+.op-governed-dialog textarea {
+  box-sizing: border-box;
+  width: 100%;
+  padding: 12px;
+  resize: vertical;
+  border: 1px solid var(--pc-border-strong);
+  border-radius: var(--pc-radius-sm);
+  background: var(--pc-surface-card);
+  color: var(--pc-text-primary);
+  font: inherit;
+  transition: var(--pc-transition-ui);
+}
+
+.op-governed-dialog textarea:hover:not(:disabled) {
+  background: var(--pc-surface-hover);
+}
+
+.op-governed-dialog textarea[aria-invalid="true"] {
+  border-color: var(--pc-danger);
+}
+
+.op-governed-dialog textarea:disabled {
+  background: var(--pc-bg);
+  color: var(--pc-text-tertiary);
+  cursor: not-allowed;
+}
+
+.op-governed-dialog .op-governed-dialog__reason {
+  min-height: 3em;
+  margin: 0;
+  color: var(--pc-text-tertiary);
+  font-size: 12px;
+}
+
+.op-governed-dialog [role="alert"] {
+  color: var(--pc-danger);
+}
+
+.op-governed-dialog__label {
+  display: grid;
+}
+
+.op-governed-dialog__label > span {
+  grid-area: 1 / 1;
+}
+
+.op-governed-dialog__label > [aria-hidden="true"] {
+  visibility: hidden;
+}
+
+@keyframes op-governed-dialog-enter {
+  from {
+    opacity: 0;
+    transform: translate(calc(-50% + var(--op-motion-panel-distance)), -50%);
+  }
+}
+
+@media (max-width: 480px) {
+  .op-governed-dialog[role] {
+    width: calc(100vw - 16px);
+    max-height: calc(100dvh - 16px);
+    padding: 16px;
+  }
+
+  .op-governed-dialog :is(.op-inbox-dialog__facts, .op-cycle-custody) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .op-governed-dialog :is(.op-inbox-dialog__actions, .op-planning-handoff__dialog-actions) {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .op-governed-dialog .op-governed-action,
+  .op-governed-dialog .op-governed-action__trigger {
+    width: 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .op-governed-dialog[role],
+  .op-governed-overlay[class] {
+    animation: none;
+  }
+
+  .op-governed-dialog *,
+  .op-governed-button {
+    transition: none;
+  }
+}
+
+@media (forced-colors: active) {
+  .op-governed-dialog[role] {
+    border-color: CanvasText;
+    background: Canvas;
+    color: CanvasText;
+    box-shadow: none;
+  }
+
+  .op-governed-overlay[class] {
+    background: Canvas;
+    opacity: 0.8;
+  }
+
+  .op-governed-dialog :is(button, summary, textarea):focus-visible {
+    outline-color: Highlight;
+  }
+
+  .op-governed-dialog textarea {
+    border-color: ButtonText;
+  }
+
+  .op-governed-dialog [aria-invalid="true"] {
+    border: 2px dashed CanvasText;
+  }
+}

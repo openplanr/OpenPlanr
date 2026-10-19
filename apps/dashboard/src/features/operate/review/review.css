@@ -213,6 +213,30 @@
   background: var(--pc-surface-card);
 }
 
+.op-review__receipt[data-receipt-state="recorded"] {
+  border-color: var(--pc-accent);
+}
+
+.op-review__receipt > p {
+  color: var(--pc-text-secondary);
+}
+
+.op-review__receipt .op-review__proof {
+  margin-block: 16px;
+}
+
+.op-review__receipt :is(.op-review__proof, .op-review__technical) > div {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.op-review__receipt .op-review__technical {
+  padding: 16px;
+  border: 1px solid var(--pc-border-subtle);
+  border-radius: var(--pc-radius-sm);
+  background: var(--pc-surface-card);
+}
+
 @media (max-width: 480px) {
   .op-review__hero,
   .op-review__section {

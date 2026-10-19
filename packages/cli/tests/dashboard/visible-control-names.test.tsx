@@ -1,7 +1,6 @@
 // @vitest-environment jsdom
 
 import { cleanup, fireEvent, render, waitFor } from '@testing-library/react';
-import axe from 'axe-core';
 import { computeAccessibleName } from 'dom-accessibility-api';
 import type { ReactNode } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -47,6 +46,7 @@ import {
 } from '../../../../apps/dashboard/src/lib/api/product-state.js';
 import { createDashboardQueryIdentity } from '../../../../apps/dashboard/src/lib/binding/query-identity.js';
 import { DASHBOARD_ROUTE_FIXTURES } from '../e2e/fixtures/dashboard-route-catalog.js';
+import { nameFailures, normalise, visibleText } from './control-name-guard.js';
 import {
   buildPremiumDashboardFixture,
   type FixtureDataset,
@@ -55,46 +55,6 @@ import {
   fixtureSnapshot,
 } from './fixtures/premium-dashboard-fixtures.js';
 import { operatePresentationFixture } from './operate-presentation-fixture.js';
-
-const normalise = (text: string) => text.replace(/\s+/gu, ' ').trim().toLowerCase();
-
-function visibleText(element: Element): string {
-  if (element.matches('svg') || element.closest('[aria-hidden="true"], [hidden]')) return '';
-  const style = getComputedStyle(element);
-  if (style.display === 'none' || style.visibility === 'hidden') return '';
-  if (element.tagName === 'BR') return ' ';
-  return Array.from(element.childNodes)
-    .map((child) => (child instanceof Element ? visibleText(child) : (child.textContent ?? '')))
-    .join('');
-}
-
-async function nameFailures(root: HTMLElement): Promise<string[]> {
-  const result = await axe.run(root, {
-    runOnly: { type: 'rule', values: ['label-content-name-mismatch'] },
-    elementRef: true,
-  });
-  const failures = result.violations.flatMap((violation) =>
-    violation.nodes.map(
-      (node) => `${node.target.join(', ')}: ${node.html}\n${node.failureSummary}`,
-    ),
-  );
-  // jsdom cannot measure icon fonts without native canvas. Check undecidable text
-  // controls directly so an axe incomplete result cannot silently pass this gate.
-  for (const incomplete of result.incomplete) {
-    for (const node of incomplete.nodes) {
-      const element = node.element;
-      if (!element) throw new Error(`Missing element for ${node.target.join(', ')}: ${node.html}`);
-      const text = normalise(visibleText(element));
-      if (!/[\p{L}\p{N}]/u.test(text)) continue;
-      const name = normalise(computeAccessibleName(element));
-      if (!name.includes(text))
-        failures.push(
-          `${node.target.join(', ')}: ${node.html}\nVisible text ${JSON.stringify(text)} is missing from name ${JSON.stringify(name)}.`,
-        );
-    }
-  }
-  return failures;
-}
 
 let sequence = 0;
 function fixture(dataset: FixtureDataset, route: string) {
@@ -248,6 +208,23 @@ describe('visible control names', () => {
     const failures = await nameFailures(container);
     expect(failures.length).toBeGreaterThan(0);
     expect(failures.join('\n')).toContain('command-hint-name-regression');
+  });
+
+  it('rejects governed dialog buttons and fields whose names omit their visible labels', async () => {
+    const { container } = render(
+      <div role="dialog" aria-label="Exact owner choice">
+        <button type="button" aria-label="Submit">
+          Record chosen recommendation
+        </button>
+        <label>
+          Owner note (optional)
+          <textarea aria-label="Receipt text" />
+        </label>
+      </div>,
+    );
+    const failures = await nameFailures(container);
+    expect(failures.join('\n')).toContain('Record chosen recommendation');
+    expect(failures.join('\n')).toContain('owner note (optional)');
   });
 
   it('excludes hidden shortcut badges from the accessible subtree', async () => {

@@ -112,7 +112,11 @@ export const GovernedButton = forwardRef<HTMLButtonElement, GovernedButtonProps>
     );
 
     return (
-      <div className="op-governed-action" data-governed-action-state={pending ? 'pending' : 'idle'}>
+      <div
+        className="op-governed-action"
+        data-governed-action-state={pending ? 'pending' : 'idle'}
+        data-unavailable={unavailable || undefined}
+      >
         <Tooltip content={visibleReason} disabled={!visibleReason}>
           <span
             className="op-governed-action__trigger"

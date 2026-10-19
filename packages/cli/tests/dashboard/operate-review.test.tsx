@@ -30,6 +30,7 @@ import {
   REVIEW_FIXTURE,
   type ReviewFixtureIdentity,
 } from '../helpers/operate-review-dashboard-fixture.js';
+import { nameFailures } from './control-name-guard.js';
 
 type Workspace = ReturnType<typeof createPendingReviewDisplay>;
 
@@ -111,7 +112,7 @@ function actionsHarness(
   workspace: Workspace,
   options: Readonly<{
     previewGate?: Promise<void>;
-    confirm?: () => Promise<ReviewConfirmation>;
+    confirm?: ReviewCommandPreview['confirm'];
   }> = {},
 ) {
   const cancel = vi.fn();
@@ -253,6 +254,120 @@ describe('Operate executive Review workspace', () => {
     expect(within(dialog).queryByText(/Record “Reject recommendation”/u)).toBeNull();
     expect(within(dialog).getByText('project-write')).toBeTruthy();
     expect(harness.preview).toHaveBeenCalledOnce();
+  });
+
+  it('opens on the safe choice, traps keyboard focus, and cancels without recording', async () => {
+    const workspace = createPendingReviewDisplay();
+    const binding = bindingFor(workspace);
+    const confirm = vi.fn<ReviewCommandPreview['confirm']>();
+    const harness = actionsHarness(workspace, { confirm });
+    render(
+      <ReviewPage
+        currentBinding={binding}
+        current={stateFor(workspace, binding)}
+        actions={harness.actions}
+      />,
+    );
+
+    const user = await selectAndPreview(/Approve bounded recommendation/u);
+    const dialog = await screen.findByRole('alertdialog');
+    const cancel = within(dialog).getByRole('button', { name: 'Keep reviewing' });
+    const record = within(dialog).getByRole('button', {
+      name: 'Record Approve bounded recommendation',
+    });
+    const note = within(dialog).getByRole('textbox', { name: 'Owner note (optional)' });
+    await waitFor(() => expect(document.activeElement).toBe(cancel));
+    expect(await nameFailures(dialog)).toEqual([]);
+    expect(within(dialog).getByText(workspace.payload.data.choices[0].consequence)).toBeTruthy();
+    expect(within(dialog).getByText(workspace.payload.data.choices[0].choiceHash)).toBeTruthy();
+    expect(within(dialog).getByText(`sha256:${'e'.repeat(64)}`)).toBeTruthy();
+    expect(within(dialog).getByText('Not authorized')).toBeTruthy();
+
+    await user.tab();
+    expect(document.activeElement).toBe(record);
+    await user.tab();
+    expect(document.activeElement).toBe(note);
+    await user.tab({ shift: true });
+    expect(document.activeElement).toBe(record);
+    await user.keyboard('{Escape}');
+    await waitFor(() => expect(screen.queryByRole('alertdialog')).toBeNull());
+    expect(harness.previewCustodyCancel).toHaveBeenCalledOnce();
+    expect(confirm).not.toHaveBeenCalled();
+  });
+
+  it('rejects inexact note whitespace and binds one exact note to the durable receipt', async () => {
+    const note = 'Bounded approval.\nKeep the rollback evidence.';
+    const workspace = createPendingReviewDisplay();
+    const binding = bindingFor(workspace);
+    const terminal = createTerminalReviewDisplay(note);
+    const gate = deferred<ReviewConfirmation>();
+    const confirm = vi.fn<ReviewCommandPreview['confirm']>(() => gate.promise);
+    const harness = actionsHarness(workspace, { confirm });
+    render(
+      <ReviewPage
+        currentBinding={binding}
+        current={stateFor(workspace, binding)}
+        actions={harness.actions}
+      />,
+    );
+    const user = await selectAndPreview(/Approve bounded recommendation/u);
+    const dialog = await screen.findByRole('alertdialog');
+    const textarea = within(dialog).getByRole('textbox', { name: 'Owner note (optional)' });
+    const record = within(dialog).getByRole('button', {
+      name: 'Record Approve bounded recommendation',
+    });
+    fireEvent.change(textarea, { target: { value: ' leading whitespace' } });
+    expect(textarea.getAttribute('aria-invalid')).toBe('true');
+    expect(record.matches(':disabled')).toBe(true);
+    expect(record.getAttribute('aria-disabled')).toBe('true');
+    expect(within(dialog).getByRole('alert').textContent).toContain('whitespace');
+    fireEvent.click(record);
+    expect(confirm).not.toHaveBeenCalled();
+
+    fireEvent.change(textarea, { target: { value: note } });
+    expect(textarea.getAttribute('aria-invalid')).toBeNull();
+    fireEvent.click(record);
+    fireEvent.click(record);
+    expect(confirm).toHaveBeenCalledExactlyOnceWith({ note });
+    const pending = within(dialog).getByRole('button', { name: 'Recording immutable receipt' });
+    const cancel = within(dialog).getByRole('button', { name: 'Keep reviewing' });
+    expect(pending.getAttribute('aria-busy')).toBe('true');
+    for (const control of [pending, cancel, textarea]) {
+      expect(control.matches(':disabled')).toBe(true);
+      expect(control.getAttribute('aria-disabled')).toBe('true');
+      const description = (control.getAttribute('aria-describedby') ?? '')
+        .split(/\s+/u)
+        .map((id) => document.getElementById(id)?.textContent ?? '')
+        .join(' ');
+      expect(description).toMatch(/receipt|recording/iu);
+    }
+    expect(await nameFailures(dialog)).toEqual([]);
+    await user.keyboard('{Escape}');
+    fireEvent.click(cancel);
+    expect(screen.getByRole('alertdialog')).toBe(dialog);
+    expect(harness.previewCustodyCancel).not.toHaveBeenCalled();
+    expect(confirm).toHaveBeenCalledOnce();
+
+    gate.resolve({
+      ok: true,
+      receipt: terminal.receipt,
+      workspace: terminal.workspace,
+      eventHead: terminal.receipt.eventHead,
+    });
+    const receipt = await screen.findByRole('region', { name: 'Review recorded' });
+    expect(screen.queryByRole('alertdialog')).toBeNull();
+    expect(
+      within(receipt).getByText(/does not execute an Action or authorize an external effect/u),
+    ).toBeTruthy();
+    const proof = within(receipt).getByText('Technical receipt proof');
+    expect((proof.closest('details') as HTMLDetailsElement).open).toBe(false);
+    await user.click(proof);
+    expect(within(receipt).getByText(note, { normalizer: (text) => text })).toBeTruthy();
+    expect(within(receipt).getByText(terminal.receipt.receiptId)).toBeTruthy();
+    expect(
+      within(receipt).getByText(terminal.receipt.boundSubmission.boundSubmissionHash),
+    ).toBeTruthy();
+    expect(confirm).toHaveBeenCalledOnce();
   });
 
   it.each(['OPERATE_PREVIEW_EXPIRED', 'CONCURRENT_MODIFICATION'])(

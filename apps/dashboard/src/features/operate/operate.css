@@ -399,6 +399,37 @@
   display: none;
 }
 
+.pc-operate :is(.op-cycle-custody, .op-inbox__custody) {
+  padding: 12px;
+  border: 1px solid var(--pc-border-subtle);
+  border-radius: var(--pc-radius-sm);
+  background: var(--pc-surface-card);
+}
+
+.pc-operate :is(.op-cycle-custody, .op-inbox__custody) > div {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.pc-operate :is(.op-cycle-custody, .op-inbox__custody) dt {
+  font: 500 12px / 1.5 var(--pc-font-sans);
+  letter-spacing: normal;
+  text-transform: none;
+}
+
+.pc-operate .op-governed-action[data-unavailable] .op-governed-reason,
+.pc-operate .op-governed-reason[role="alert"] {
+  padding: 8px 12px;
+  border-inline-start: 2px solid var(--pc-border-strong);
+  border-radius: var(--pc-radius-sm);
+  background: var(--pc-surface-card);
+}
+
+.pc-operate .op-governed-reason[role="alert"] {
+  border-color: var(--pc-danger);
+  color: var(--pc-danger);
+}
+
 @media (max-width: 1120px) {
   .pc-operate .op-today__desk-layout,
   .pc-operate-setup {
