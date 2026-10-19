@@ -755,7 +755,7 @@
       "lifecycle": "active",
       "authorityClass": "planning-write",
       "source": "skills/planr-design/openplanr.skill.json",
-      "sourceDigest": "sha256:9572439c52794f550ec50012ca7b1ab695b39bd3cf7c1ec43a6606751133df43",
+      "sourceDigest": "sha256:d227e866792416642c668bf8fab760a0d4ef29103c8b5464b575bf0ec074ac52",
       "triggerPolicy": {
         "include": [
           "Create an initial product design direction",
@@ -1864,5 +1864,5 @@
     }
   ],
   "compatibilityAliases": [],
-  "documentDigest": "sha256:de0f62b6342054429143ce02737ac2bb5496a414b29aa867802fb0b61e3a4b4e"
+  "documentDigest": "sha256:6504dcd37d8fae39fc143732d63935e9f5b8545959ac06d42a31ac2eb5e20bba"
 }
