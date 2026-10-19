@@ -23,6 +23,7 @@ type OperateRecoveryDisplaySurfaceV1 = operateComposition.OperateRecoveryDisplay
 type OperateReviewDisplayWorkspaceV1 = operateComposition.OperateReviewDisplayWorkspaceV1;
 type OperateReviewNavigation = operateComposition.OperateReviewNavigation;
 type PlanningGraphEnvelope = planningComposition.PlanningGraphEnvelope;
+type PlanningSessionActivity = planningComposition.PlanningSessionActivity;
 type DashboardBootstrap = dashboardComposition.DashboardBootstrap;
 type DashboardProductState<T> = dashboardComposition.DashboardProductState<T>;
 type DashboardProductStateKind = dashboardComposition.DashboardProductStateKind;
@@ -49,6 +50,7 @@ export type DashboardRuntimeComposition = Readonly<{
 }>;
 
 export type DashboardPlanningLive = Readonly<{
+  activity?: PlanningSessionActivity;
   state: 'connecting' | 'connected' | 'paused';
   attempt: number;
 }>;
@@ -670,6 +672,15 @@ function usePlanningLiveConnection(
   read: OwnerRead<PlanningGraphEnvelope>,
 ): DashboardPlanningLive {
   const key = origin && base ? JSON.stringify([origin, base]) : null;
+  const activityScope = origin && base ? planningRuntime.activityScope(base) : null;
+  const [activity, setActivity] = useState<PlanningSessionActivity>(
+    planningRuntime.emptySessionActivity,
+  );
+  useEffect(() => {
+    setActivity((current) =>
+      current.scope === activityScope ? current : planningRuntime.emptySessionActivity,
+    );
+  }, [activityScope]);
   const [status, setStatus] = useState<{
     key: string | null;
     live: DashboardPlanningLive;
@@ -714,6 +725,10 @@ function usePlanningLiveConnection(
     };
     const reconcileRead = async () => {
       if (!active || reconciling) return;
+      if (navigator.onLine === false) {
+        scheduleReconnect();
+        return;
+      }
       reconciling = true;
       try {
         const next = await reconcile();
@@ -738,6 +753,10 @@ function usePlanningLiveConnection(
     };
     const connect = () => {
       if (!active) return;
+      if (navigator.onLine === false) {
+        scheduleReconnect();
+        return;
+      }
       close();
       const currentLease = lease;
       const identity = dashboardRuntime.identity.create({
@@ -754,7 +773,13 @@ function usePlanningLiveConnection(
           connected();
         },
         onReady: connected,
-        onPatch: (next) => {
+        onPatch: (next, signal) => {
+          if (activityScope) {
+            const before = current;
+            setActivity((retained) =>
+              planningRuntime.appendSessionPatch(retained, activityScope, before, signal),
+            );
+          }
           if (next) current = next;
           connected();
           // A burst publishes one owner read while the accepted stream keeps its checkpoint.
@@ -788,16 +813,35 @@ function usePlanningLiveConnection(
     setStatus((previous) =>
       previous.key === key ? previous : { key, live: { state: 'connecting', attempt: 0 } },
     );
-    connect();
+    // An open stream can stay pending after the browser goes offline.
+    const offline = () => requireRead();
+    const online = () => {
+      if (reconnectTimer !== null) clearTimeout(reconnectTimer);
+      reconnectTimer = null;
+      if (reconciliationRequired) void reconcileRead();
+      else requireRead();
+    };
+    window.addEventListener('offline', offline);
+    window.addEventListener('online', online);
+    if (navigator.onLine === false) offline();
+    else connect();
     return () => {
       active = false;
+      window.removeEventListener('offline', offline);
+      window.removeEventListener('online', online);
       close();
       if (reconnectTimer !== null) clearTimeout(reconnectTimer);
       if (patchTimer !== null) clearTimeout(patchTimer);
     };
-  }, [base, data, key, origin, reconcile, refetch]);
+  }, [activityScope, base, data, key, origin, reconcile, refetch]);
 
-  return status.key === key ? status.live : { state: 'connecting', attempt: 0 };
+  return {
+    ...(status.key === key ? status.live : { state: 'connecting' as const, attempt: 0 }),
+    activity: {
+      ...(activity.scope === activityScope ? activity : planningRuntime.emptySessionActivity),
+      connection: status.key === key ? status.live.state : 'connecting',
+    },
+  };
 }
 
 /** Production owner-bound composition. Every slot keeps its own identity, read and lifecycle. */

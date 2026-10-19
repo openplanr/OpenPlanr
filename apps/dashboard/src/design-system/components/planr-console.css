@@ -2527,7 +2527,7 @@ button.pc-work-item:disabled {
 }
 .pc-command-hint__copy {
   flex-shrink: 0;
-  min-width: 100px;
+  min-width: calc(12ch + 44px);
   min-height: 30px;
   color: var(--pc-muted);
 }

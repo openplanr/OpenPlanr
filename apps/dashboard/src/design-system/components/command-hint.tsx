@@ -56,12 +56,6 @@ export function CommandHint({
     }
   };
   const reason = disabledReason ?? (!command.trim() ? 'No command available.' : undefined);
-  const buttonLabel =
-    state === 'copied'
-      ? 'Command copied'
-      : state === 'blocked'
-        ? 'Copy was blocked'
-        : 'Copy command';
   return (
     <div className="pc-command-hint" data-size={size} data-state={state}>
       {label ? <span className="pc-command-hint__label">{label}</span> : null}
@@ -74,7 +68,6 @@ export function CommandHint({
           disabled={unavailable}
           aria-disabled={unavailable || undefined}
           aria-busy={state === 'pending' || undefined}
-          aria-label={buttonLabel}
           aria-describedby={reason ? reasonId : undefined}
           aria-keyshortcuts={shortcutsEnabled ? 'C' : undefined}
           onClick={copy}
@@ -97,8 +90,14 @@ export function CommandHint({
             name={state === 'copied' ? 'check' : state === 'blocked' ? 'x' : 'copy'}
             size={12}
           />
-          <span>{state === 'pending' ? 'Copying' : state === 'copied' ? 'Copied' : 'Copy'}</span>
-          {shortcutsEnabled ? <kbd>C</kbd> : null}
+          <span>
+            {state === 'pending' ? 'Copying' : state === 'copied' ? 'Copied' : 'Copy command'}
+          </span>
+          {shortcutsEnabled ? (
+            <span aria-hidden="true">
+              <kbd>C</kbd>
+            </span>
+          ) : null}
         </button>
       </div>
       {reason ? <p id={reasonId}>{reason}</p> : null}

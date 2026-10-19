@@ -120,9 +120,10 @@ export function useLiveListSelection(
     if (active !== document.body && active?.isConnected && !root.current?.contains(active)) return;
     const target = next
       ? Array.from(root.current?.querySelectorAll<HTMLElement>('[data-keyboard-item]') ?? []).find(
-          (element) => element.dataset.keyboardItem === next.id,
+          (element) =>
+            element.dataset.keyboardItem === next.id || element.dataset.canonicalId === next.id,
         )
-      : root.current?.querySelector<HTMLElement>('h1');
+      : root.current?.querySelector<HTMLElement>('h1, h2');
     if (target) {
       if (!target.hasAttribute('tabindex')) target.setAttribute('tabindex', '-1');
       target.focus({ preventScroll: true });

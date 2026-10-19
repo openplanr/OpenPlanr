@@ -24,6 +24,7 @@ import {
   Tooltip,
   WorkItemChip,
 } from '../../../../apps/dashboard/src/design-system/components/index.js';
+import { ActivityPage } from '../../../../apps/dashboard/src/features/planning/ActivityPage.js';
 import { BoardPage } from '../../../../apps/dashboard/src/features/planning/BoardPage.js';
 import { DetailPage } from '../../../../apps/dashboard/src/features/planning/DetailPage.js';
 import { GraphPage } from '../../../../apps/dashboard/src/features/planning/GraphPage.js';
@@ -33,6 +34,12 @@ import {
   type PlanningGraphEnvelope,
   parsePlanningGraphEnvelope,
 } from '../../../../apps/dashboard/src/features/planning/planning-api.js';
+import {
+  appendPlanningSessionPatch,
+  EMPTY_SESSION_ACTIVITY,
+  planningActivityScope,
+} from '../../../../apps/dashboard/src/features/planning/planning-session-activity.js';
+import { SprintsPage } from '../../../../apps/dashboard/src/features/planning/SprintsPage.js';
 import { clearInspector } from '../../../../apps/dashboard/src/features/shell/inspector-selection.js';
 import {
   dashboardProductStatePolicy,
@@ -43,18 +50,20 @@ import {
   buildPremiumDashboardFixture,
   type FixtureDataset,
   fixtureHash,
+  fixturePatch,
   fixtureSnapshot,
 } from './fixtures/premium-dashboard-fixtures.js';
 
 const normalise = (text: string) => text.replace(/\s+/gu, ' ').trim().toLowerCase();
 
 function visibleText(element: Element): string {
-  if (element.matches('svg, [hidden], .pc-visually-hidden')) return '';
+  if (element.matches('svg') || element.closest('[aria-hidden="true"], [hidden]')) return '';
   const style = getComputedStyle(element);
   if (style.display === 'none' || style.visibility === 'hidden') return '';
+  if (element.tagName === 'BR') return ' ';
   return Array.from(element.childNodes)
     .map((child) => (child instanceof Element ? visibleText(child) : (child.textContent ?? '')))
-    .join(' ');
+    .join('');
 }
 
 async function nameFailures(root: HTMLElement): Promise<string[]> {
@@ -219,6 +228,35 @@ afterEach(() => {
 });
 
 describe('visible control names', () => {
+  it('rejects the command hint regression without inventing whitespace between inline labels', async () => {
+    const { container, getByRole } = render(
+      <button
+        id="command-hint-name-regression"
+        type="button"
+        className="pc-command-hint__copy"
+        data-state="idle"
+        aria-label="Copy command"
+        aria-keyshortcuts="C"
+      >
+        <span>Copy</span>
+        <kbd>C</kbd>
+      </button>,
+    );
+    expect(visibleText(getByRole('button'))).toBe('CopyC');
+    const failures = await nameFailures(container);
+    expect(failures.length).toBeGreaterThan(0);
+    expect(failures.join('\n')).toContain('command-hint-name-regression');
+  });
+
+  it('excludes hidden shortcut badges from the accessible subtree', async () => {
+    const { container, getByRole } = render(<CommandHint command="openplanr status --md" />);
+    const button = getByRole('button', { name: 'Copy command' });
+    expect(button.getAttribute('aria-label')).toBeNull();
+    expect(button.querySelector('kbd')?.closest('[aria-hidden="true"]')).toBeTruthy();
+    expect(button.getAttribute('aria-keyshortcuts')).toBe('C');
+    expect(visibleText(button)).toBe('Copy command');
+    expect(await nameFailures(container)).toEqual([]);
+  });
   it.each([
     ['board-name-regression', 'Expand 33 done cards', '33 done · Expand'],
     ['graph-name-regression', 'Inspect task', 'T-001 Verify the artifact'],
@@ -246,6 +284,8 @@ describe('visible control names', () => {
       ['graph', GraphPage],
       ['board', BoardPage],
       ['detail', DetailPage],
+      ['sprints', SprintsPage],
+      ['activity', ActivityPage],
     ] as const)(`keeps ${dataset} %s names aligned with visible text`, async (route, Page) => {
       const source = fixture(dataset, route);
       vi.stubGlobal(
@@ -270,7 +310,22 @@ describe('visible control names', () => {
         }),
       );
       const view = render(
-        source.wrap(<Page currentBinding={source.binding} current={source.current} />),
+        source.wrap(
+          route === 'activity' ? (
+            <ActivityPage
+              currentBinding={source.binding}
+              current={source.current}
+              sessionActivity={appendPlanningSessionPatch(
+                EMPTY_SESSION_ACTIVITY,
+                planningActivityScope(source.binding),
+                source.envelope,
+                fixturePatch(source.envelope, source.selected.id).event.payload,
+              )}
+            />
+          ) : (
+            <Page currentBinding={source.binding} current={source.current} />
+          ),
+        ),
       );
       if (route === 'detail')
         await waitFor(() =>
@@ -279,6 +334,11 @@ describe('visible control names', () => {
           ),
         );
       expect(view.container.querySelectorAll('button').length).toBeGreaterThan(0);
+      if (route === 'sprints' || route === 'activity') {
+        const copy = view.getByRole('button', { name: 'Copy command' });
+        expect(copy.classList.contains('pc-command-hint__copy')).toBe(true);
+        expect(visibleText(copy)).toBe('Copy command');
+      }
       if (route === 'board') {
         const expansion = view.container.querySelector<HTMLButtonElement>(
           '[data-keyboard-column="done"] .pc-status-board__empty',

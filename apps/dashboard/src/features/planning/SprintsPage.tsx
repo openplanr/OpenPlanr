@@ -1,45 +1,42 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  ARTIFACT_STATUS_ORDER,
   ArtifactStatus,
-  Badge,
   Card,
   CommandHint,
   DataTable,
   EmptyState,
-  PcIcon,
-  SectionHeader,
-  SprintProgress,
+  Skeleton,
+  Tooltip,
   WorkItemChip,
 } from '../../design-system/components/index.js';
 import type { DashboardProductState } from '../../lib/api/product-state.js';
 import type { DashboardQueryIdentity } from '../../lib/binding/query-identity.js';
+import { useInspectorStore } from '../shell/inspector-selection.js';
+import { ITEM_COLUMN, STATUS_COLUMN, UPDATED_COLUMN } from './planning-columns.js';
 import {
-  dependencyCountColumn,
-  ITEM_COLUMN,
-  STATUS_COLUMN,
-  sprintOf,
-  UPDATED_COLUMN,
-} from './planning-columns.js';
-import { inspectPlanningNode } from './planning-inspector.js';
+  inspectPlanningNode,
+  useLiveListOrder,
+  useLiveListSelection,
+} from './planning-inspector.js';
+import { type PlanningModelNode, planningDetailHref, planningDisplayId } from './planning-model.js';
 import {
-  type PlanningModelEdge,
-  type PlanningModelNode,
-  planningDisplayId,
-  tallyPlanningStatuses,
-} from './planning-model.js';
-import { PlanningNotice, PlanningRefusal, resolvePlanningWorkspace } from './planning-workspace.js';
+  projectSprints,
+  type SprintDate,
+  type SprintRecord,
+  sprintTimelineBounds,
+} from './planning-sprints.js';
+import {
+  PlanningNotice,
+  PlanningRefusal,
+  type PlanningWorkspaceModel,
+  resolvePlanningWorkspace,
+} from './planning-workspace.js';
 import './planning.css';
 import './sprints.css';
 
 export type SprintsPageProps = Readonly<{
   currentBinding: DashboardQueryIdentity;
   current: DashboardProductState<unknown>;
-}>;
-
-type SprintScope = Readonly<{
-  members: readonly PlanningModelNode[];
-  missing: readonly string[];
 }>;
 
 type OperateAction = Readonly<{
@@ -64,118 +61,6 @@ type OperatePulseState =
   | Readonly<{ status: 'loading'; pulse: null }>
   | Readonly<{ status: 'ready'; pulse: OperatePulse }>
   | Readonly<{ status: 'empty' | 'failed'; pulse: null }>;
-
-const SPRINT_ID_FIELDS = Object.freeze(['taskIds', 'storyIds', 'itemIds', 'artifactIds']);
-
-function strings(value: unknown): readonly string[] {
-  return Array.isArray(value)
-    ? value.filter((entry): entry is string => typeof entry === 'string' && entry.trim() !== '')
-    : [];
-}
-
-function sprintCommitment(sprint: PlanningModelNode): readonly string[] {
-  return Object.freeze([
-    ...new Set(SPRINT_ID_FIELDS.flatMap((field) => strings(sprint.frontmatter[field]))),
-  ]);
-}
-
-/** Membership supports both authored forms: sprint-owned commitment ids and item-owned sprintId. */
-export function sprintScope(
-  nodes: readonly PlanningModelNode[],
-  sprint: PlanningModelNode,
-): SprintScope {
-  const display = planningDisplayId(sprint);
-  const declared = sprintCommitment(sprint);
-  const byReference = new Map<string, PlanningModelNode[]>();
-  for (const node of nodes) {
-    if (node.type === 'sprint') continue;
-    for (const key of new Set([node.id, planningDisplayId(node)])) {
-      byReference.set(key, [...(byReference.get(key) ?? []), node]);
-    }
-  }
-  const selected = new Map<string, PlanningModelNode>();
-  for (const ref of declared) {
-    for (const node of byReference.get(ref) ?? []) selected.set(node.id, node);
-  }
-  for (const node of nodes) {
-    if (node.type === 'sprint') continue;
-    const ref = sprintOf(node);
-    if (ref === sprint.id || ref === display) selected.set(node.id, node);
-  }
-  const missing = declared.filter((ref) => !(byReference.get(ref)?.length ?? 0));
-  return Object.freeze({
-    members: Object.freeze([...selected.values()].sort((a, b) => a.id.localeCompare(b.id))),
-    missing: Object.freeze(missing),
-  });
-}
-
-function frontmatterText(node: PlanningModelNode, ...keys: readonly string[]): string | null {
-  for (const key of keys) {
-    const value = node.frontmatter[key];
-    if (typeof value === 'string' && value.trim() !== '') return value.trim();
-  }
-  return null;
-}
-
-function sprintTitle(sprint: PlanningModelNode): string {
-  return frontmatterText(sprint, 'title', 'name') ?? sprint.title;
-}
-
-function sprintStatus(sprint: PlanningModelNode): string {
-  const authored = frontmatterText(sprint, 'status')?.toLowerCase().replaceAll('_', '-');
-  if (authored === 'active' || authored === 'in progress') return 'in-progress';
-  return authored ?? sprint.status;
-}
-
-function sprintDates(
-  sprint: PlanningModelNode,
-): Readonly<{ start: string | null; end: string | null }> {
-  return Object.freeze({
-    start: frontmatterText(sprint, 'startDate', 'startsAt', 'start'),
-    end: frontmatterText(sprint, 'endDate', 'endsAt', 'end'),
-  });
-}
-
-function sprintHealth(
-  sprint: PlanningModelNode,
-  scope: SprintScope,
-): Readonly<{ label: string; tone: 'success' | 'warn' | 'danger' | 'info' }> {
-  const tally = tallyPlanningStatuses(scope.members);
-  if (scope.missing.length > 0) return Object.freeze({ label: 'scope mismatch', tone: 'warn' });
-  if (tally.blocked > 0) return Object.freeze({ label: 'blocked work', tone: 'danger' });
-  if (scope.members.length > 0 && tally.done === scope.members.length) {
-    const status = sprintStatus(sprint);
-    const recordClosed = status === 'done' || status === 'addressed';
-    return Object.freeze(
-      recordClosed
-        ? { label: 'complete', tone: 'success' }
-        : { label: 'ready to close', tone: 'warn' },
-    );
-  }
-  const { end } = sprintDates(sprint);
-  if (end && /^\d{4}-\d{2}-\d{2}$/u.test(end) && end < new Date().toISOString().slice(0, 10)) {
-    return Object.freeze({ label: 'past end date', tone: 'warn' });
-  }
-  return Object.freeze({ label: 'in flight', tone: 'info' });
-}
-
-function externalDependencies(
-  members: readonly PlanningModelNode[],
-  nodes: readonly PlanningModelNode[],
-  edges: readonly PlanningModelEdge[],
-): readonly PlanningModelNode[] {
-  const memberIds = new Set(members.map((node) => node.id));
-  const byId = new Map(nodes.map((node) => [node.id, node]));
-  const external = new Map<string, PlanningModelNode>();
-  for (const edge of edges) {
-    if (edge.kind !== 'depends_on' || !memberIds.has(edge.from) || memberIds.has(edge.to)) continue;
-    const target = byId.get(edge.to);
-    if (target && target.status !== 'done' && target.status !== 'addressed') {
-      external.set(target.id, target);
-    }
-  }
-  return Object.freeze([...external.values()].sort((a, b) => a.id.localeCompare(b.id)));
-}
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === 'object' && !Array.isArray(value);
@@ -232,7 +117,7 @@ function useOperatePulse(): OperatePulseState {
           signal: controller.signal,
         });
         if (!indexResponse.ok) {
-          setState({ status: 'empty', pulse: null });
+          setState({ status: 'failed', pulse: null });
           return;
         }
         const index = (await indexResponse.json()) as unknown;
@@ -276,225 +161,407 @@ function actionMentionsScope(action: OperateAction, ids: ReadonlySet<string>): b
   return [...ids].some((id) => text.includes(id.toLowerCase()));
 }
 
-export function SprintsPage({ currentBinding, current }: SprintsPageProps) {
-  const [picked, setPicked] = useState<string | null>(null);
-  const operate = useOperatePulse();
-  const model = resolvePlanningWorkspace(current, currentBinding);
-  if (!model) {
-    return <PlanningRefusal routeKind="planning.sprints" title="Planning cannot be trusted" />;
-  }
+function DateLabel({ value }: { value: SprintDate }) {
+  return value.time !== null && value.raw ? (
+    <time dateTime={value.raw}>{value.raw}</time>
+  ) : (
+    <span>{value.raw ? `Invalid date: ${value.raw}` : 'Unknown'}</span>
+  );
+}
 
-  const { nodes, edges } = model.graph;
-  const sprints = nodes
-    .filter((node) => node.type === 'sprint')
-    .sort((a, b) => b.id.localeCompare(a.id));
-  const active =
-    sprints.find((sprint) => sprint.id === picked) ??
-    sprints.find((sprint) => sprintStatus(sprint) !== 'done') ??
-    sprints[0] ??
-    null;
-  const scope = active
-    ? sprintScope(nodes, active)
-    : Object.freeze({ members: Object.freeze([]), missing: Object.freeze([]) });
-  const tally = tallyPlanningStatuses(scope.members);
-  const completion =
-    scope.members.length === 0 ? 0 : Math.round((tally.done / scope.members.length) * 100);
-  const external = active ? externalDependencies(scope.members, nodes, edges) : [];
+function Timeline({ sprints }: { sprints: readonly SprintRecord[] }) {
+  const bounds = sprintTimelineBounds(sprints);
+  const position = (time: number) => (bounds ? ((time - bounds.start) / bounds.span) * 100 : 0);
+  return (
+    <section className="pc-sprints__timeline pc-sprints__panel" aria-label="Sprint timeline">
+      <h2>Timeline</h2>
+      <p>Planned window, with the authored close date marked. Invalid dates are never corrected.</p>
+      {bounds ? (
+        <div className="pc-sprints__axis" aria-hidden="true">
+          <span>{new Date(bounds.start).toISOString().slice(0, 10)}</span>
+          <span>{new Date(bounds.end).toISOString().slice(0, 10)}</span>
+        </div>
+      ) : (
+        <p>Timeline unavailable: no valid authored dates.</p>
+      )}
+      {sprints.map((sprint) => (
+        <div className="pc-sprints__timeline-row" key={sprint.node.id}>
+          <div>
+            <WorkItemChip type="sprint" id={planningDisplayId(sprint.node)} />
+            <span>{sprint.title}</span>
+          </div>
+          <div>
+            <div className="pc-sprints__track" aria-hidden="true">
+              {sprint.start.time !== null &&
+              sprint.end.time !== null &&
+              sprint.end.time >= sprint.start.time ? (
+                <span
+                  className="pc-sprints__window"
+                  style={{
+                    left: `${position(sprint.start.time)}%`,
+                    width: `${Math.max(0.5, position(sprint.end.time) - position(sprint.start.time))}%`,
+                  }}
+                />
+              ) : null}
+              {sprint.close.time !== null ? (
+                <span
+                  className="pc-sprints__close"
+                  data-invalid={
+                    (sprint.start.time !== null && sprint.close.time < sprint.start.time) ||
+                    undefined
+                  }
+                  style={{ left: `${position(sprint.close.time)}%` }}
+                />
+              ) : null}
+            </div>
+            <dl className="pc-sprints__dates">
+              <div>
+                <dt>Start</dt>
+                <dd>
+                  <DateLabel value={sprint.start} />
+                </dd>
+              </div>
+              <div>
+                <dt>End</dt>
+                <dd>
+                  <DateLabel value={sprint.end} />
+                </dd>
+              </div>
+              <div>
+                <dt>closedAt</dt>
+                <dd>
+                  <DateLabel value={sprint.close} />
+                </dd>
+              </div>
+            </dl>
+            {sprint.diagnostics.length ? (
+              <ul className="pc-sprints__warnings">
+                {sprint.diagnostics.map((reason) => (
+                  <li key={reason}>{reason}</li>
+                ))}
+              </ul>
+            ) : null}
+          </div>
+        </div>
+      ))}
+      <p className="pc-sprints__legend">
+        <span>Outlined bar: planned window</span>
+        <span>Vertical marker: authored closedAt</span>
+        <a href="#/diagnostics">Inspect data health</a>
+      </p>
+    </section>
+  );
+}
+
+function SprintCarryOver({
+  sprint,
+  nodes,
+  selectedId,
+}: {
+  sprint: SprintRecord;
+  nodes: readonly PlanningModelNode[];
+  selectedId: string | undefined;
+}) {
+  const previous = useRef<readonly string[]>([]);
+  const visible = [...sprint.carryOver];
+  // Keep the inspected row mounted when an accepted patch resolves its open status.
+  if (
+    selectedId &&
+    previous.current.includes(selectedId) &&
+    !visible.some((node) => node.id === selectedId)
+  ) {
+    const retained = nodes.find((node) => node.id === selectedId);
+    if (retained)
+      visible.splice(Math.min(previous.current.indexOf(selectedId), visible.length), 0, retained);
+  }
+  const ordered = useLiveListOrder(visible, sprint.node.id);
+  useEffect(() => {
+    previous.current = ordered.map((node) => node.id);
+  }, [ordered]);
+  return (
+    <section
+      className="pc-sprints__panel pc-sprints__carry"
+      aria-label={`Carry-over from ${planningDisplayId(sprint.node)}`}
+    >
+      <h2>Carry-over from {planningDisplayId(sprint.node)}</h2>
+      <p>Still open after close · current status, regardless of later sprint membership.</p>
+      {ordered.length ? (
+        <ul>
+          {ordered.map((node) => (
+            <li key={node.id}>
+              <Tooltip content={node.title}>
+                <a
+                  href={planningDetailHref(node) ?? undefined}
+                  data-keyboard-item={node.id}
+                  data-selected={selectedId === node.id || undefined}
+                  onFocus={() => inspectPlanningNode(node, false)}
+                  onClick={(event) => {
+                    if (event.metaKey || event.ctrlKey || event.altKey || event.shiftKey) return;
+                    event.preventDefault();
+                    inspectPlanningNode(node);
+                  }}
+                >
+                  <ArtifactStatus status={node.status} size="sm" />
+                  <WorkItemChip type={node.type} id={planningDisplayId(node)} />
+                  <span>
+                    {node.title}
+                    {!sprint.carryOver.some((item) => item.id === node.id)
+                      ? ' · No longer open after close'
+                      : ''}
+                  </span>
+                </a>
+              </Tooltip>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p>No items still open after close.</p>
+      )}
+      {sprint.addressed.length ? (
+        <div>
+          <h3>Addressed terminal items</h3>
+          {sprint.addressed.map((node) => (
+            <p key={node.id}>
+              <WorkItemChip type={node.type} id={planningDisplayId(node)} /> {node.title} ·
+              addressed
+            </p>
+          ))}
+        </div>
+      ) : null}
+    </section>
+  );
+}
+
+function SprintsContent({ model }: { model: PlanningWorkspaceModel }) {
+  const records = useMemo(() => projectSprints(model.graph), [model.graph]);
+  const byId = new Map(records.map((record) => [record.node.id, record]));
+  const orderedNodes = useLiveListOrder(
+    records.map((record) => record.node),
+    model.binding.projectId,
+  );
+  const sprints = orderedNodes.flatMap((node) => {
+    const record = byId.get(node.id);
+    return record ? [record] : [];
+  });
+  const active = sprints.filter((sprint) => sprint.active);
+  const inspector = useInspectorStore();
+  const selectedId = inspector.selection?.kind === 'node' ? inspector.selection.id : undefined;
+  const visible = [
+    ...new Map(sprints.flatMap((sprint) => sprint.members).map((node) => [node.id, node])).values(),
+  ];
+  const { rootRef, removalNotice } = useLiveListSelection(model.graph.nodes, visible, selectedId);
+  const operate = useOperatePulse();
   const scopeIds = new Set(
-    active
-      ? [
-          planningDisplayId(active),
-          ...scope.members.flatMap((node) => [node.id, planningDisplayId(node)]),
-        ]
-      : [],
+    sprints.flatMap((sprint) => [
+      sprint.node.id,
+      ...sprint.members.flatMap((node) => [node.id, planningDisplayId(node)]),
+    ]),
   );
   const relatedActions =
     operate.status === 'ready'
       ? operate.pulse.actions.filter((action) => actionMentionsScope(action, scopeIds))
       : [];
-
   return (
     <div
+      ref={rootRef}
       className="op-workspace op-planning pc-pipeline pc-sprints"
       data-route-kind="planning.sprints"
     >
       <PlanningNotice presentation={model.presentation} />
-      <SectionHeader
-        headingLevel={1}
-        eyebrow="planr-status · sprints"
-        title="Sprints"
-        count={`${sprints.length} ${sprints.length === 1 ? 'sprint' : 'sprints'}`}
-        description="Commitment, delivery health, dependencies, and operating context from the records already in this workspace."
-      />
-      {sprints.length === 0 ? (
-        <Card padding={0}>
-          <EmptyState
-            icon="calendar-range"
-            title="No sprints yet"
-            description="No artifact of type sprint is in the graph."
-            action={<CommandHint command="/planr-plan" label="plan the next sprint" size="sm" />}
-          />
+      <p className="pc-visually-hidden" role="status">
+        {removalNotice}
+      </p>
+      <header className="pc-sprints__header">
+        <div>
+          <p className="op-eyebrow">
+            {sprints.length} sprints · {active.length ? `${active.length} active` : 'none active'}
+          </p>
+          <h1>Sprints</h1>
+          <p>
+            Planned windows and current completion across every sprint item type. Closed records
+            retain their original commitment.
+          </p>
+        </div>
+        <Card padding={20}>
+          <h2>{active.length ? 'Continue sprint planning' : 'No active sprint'}</h2>
+          <p>
+            {sprints.length
+              ? 'Review the latest history and select what fits capacity and the authored release cut.'
+              : 'No sprints yet. Plan the next sprint from your planning tools.'}
+          </p>
+          <CommandHint command="/planr:sprint" label="Plan the next sprint" size="sm" />
         </Card>
-      ) : (
+      </header>
+      {sprints.length ? (
         <>
-          <section className="pc-sprints__grid" aria-label="Sprint timeline">
-            {sprints.map((sprint) => {
-              const candidate = sprintScope(nodes, sprint);
-              const segments = ARTIFACT_STATUS_ORDER.map((status) => ({
-                state: status,
-                count: candidate.members.filter((node) => node.status === status).length,
-              })).filter((segment) => segment.count > 0);
-              const dates = sprintDates(sprint);
-              const health = sprintHealth(sprint, candidate);
-              const isActive = active?.id === sprint.id;
-              return (
-                <button
-                  key={sprint.id}
-                  type="button"
-                  className="pc-sprints__card"
-                  data-active={isActive || undefined}
-                  aria-pressed={isActive}
-                  onClick={() => setPicked(sprint.id)}
-                >
-                  <span className="pc-sprints__head">
-                    <WorkItemChip type="sprint" id={planningDisplayId(sprint)} />
-                    <Badge tone={health.tone} variant="outline">
-                      {health.label}
-                    </Badge>
-                  </span>
-                  <SprintProgress name={sprintTitle(sprint)} segments={segments} />
-                  <span className="pc-sprints__dates">
-                    <PcIcon name="calendar-range" size={12} />
-                    {dates.start && dates.end
-                      ? `${dates.start} → ${dates.end}`
-                      : 'Dates not recorded'}
-                  </span>
-                </button>
-              );
-            })}
-          </section>
-          {active ? (
-            <section
-              className="pc-sprints__workspace"
-              aria-label={`${planningDisplayId(active)} delivery workspace`}
-            >
-              <div className="pc-sprints__summary">
-                <div className="pc-sprints__summary-copy">
-                  <span className="pc-sprints__eyebrow">Current commitment</span>
-                  <h2>{sprintTitle(active)}</h2>
+          <Timeline sprints={sprints} />
+          <section className="pc-sprints__grid" aria-label="Sprint completion">
+            {sprints.map((sprint) => (
+              <article className="pc-sprints__panel pc-sprints__card" key={sprint.node.id}>
+                <div className="pc-sprints__head">
+                  <WorkItemChip type="sprint" id={planningDisplayId(sprint.node)} />
+                  <span>{sprint.active ? 'Active' : sprint.closed ? 'Closed' : 'Planned'}</span>
+                </div>
+                <h2>{sprint.title}</h2>
+                <p className="pc-sprints__completion">
+                  <strong>{sprint.done}</strong> of {sprint.members.length} sprint items done
+                </p>
+                <progress
+                  aria-label={`${sprint.title}: sprint items done`}
+                  value={sprint.done}
+                  max={Math.max(1, sprint.members.length)}
+                />
+                {!sprint.members.length ? <p>No sprint items</p> : null}
+                {sprint.unresolved.length ? (
                   <p>
-                    {frontmatterText(active, 'goal', 'sprintGoal') ?? 'No sprint goal is recorded.'}
+                    {sprint.members.length} resolved items; {sprint.unresolved.length} unresolved
+                    references excluded from completion.
                   </p>
-                </div>
-                <ArtifactStatus status={sprintStatus(active)} size="sm" />
-              </div>
-              <dl className="pc-sprints__metrics">
-                <div>
-                  <dt>Complete</dt>
-                  <dd>{completion}%</dd>
-                </div>
-                <div>
-                  <dt>Committed</dt>
-                  <dd>{scope.members.length}</dd>
-                </div>
-                <div data-attention={tally.blocked > 0 || undefined}>
-                  <dt>Blocked</dt>
-                  <dd>{tally.blocked}</dd>
-                </div>
-                <div data-attention={external.length > 0 || undefined}>
-                  <dt>External deps</dt>
-                  <dd>{external.length}</dd>
-                </div>
-              </dl>
-              <div className="pc-sprints__body">
-                <Card
-                  title={`${planningDisplayId(active)} commitment`}
-                  meta={`${scope.members.length} items`}
-                  padding={0}
-                >
-                  {scope.members.length > 0 ? (
-                    <DataTable
-                      compact
-                      rows={scope.members}
-                      onRowClick={inspectPlanningNode}
-                      caption={`Members of ${planningDisplayId(active)}`}
-                      columns={[
-                        ITEM_COLUMN,
-                        STATUS_COLUMN,
-                        dependencyCountColumn(edges),
-                        UPDATED_COLUMN,
-                      ]}
-                    />
-                  ) : (
-                    <div className="pc-sprints__empty">
-                      <EmptyState
-                        icon="calendar-range"
-                        title="No committed work"
-                        description="This sprint has no taskIds and no item points back through sprintId."
-                      />
-                    </div>
-                  )}
-                </Card>
-                <aside className="pc-sprints__intelligence" aria-label="Sprint intelligence">
-                  <div className="pc-sprints__intelligence-section">
-                    <span className="pc-sprints__eyebrow">Delivery health</span>
-                    <strong>{sprintHealth(active, scope).label}</strong>
-                    <p>
-                      {tally.done} done · {tally.inProgress} in progress · {tally.outstanding}{' '}
-                      outstanding
-                    </p>
-                  </div>
-                  {scope.missing.length > 0 ? (
-                    <div className="pc-sprints__intelligence-section" data-tone="warn">
-                      <span className="pc-sprints__eyebrow">Scope gaps</span>
-                      <strong>{scope.missing.length} committed IDs are missing</strong>
-                      <p>{scope.missing.join(', ')}</p>
-                    </div>
-                  ) : null}
-                  <div className="pc-sprints__intelligence-section">
-                    <span className="pc-sprints__eyebrow">Open dependencies</span>
-                    <strong>
-                      {external.length === 0
-                        ? 'No external blockers recorded'
-                        : `${external.length} outside this sprint`}
-                    </strong>
-                    {external.length > 0 ? (
-                      <ul>
-                        {external.slice(0, 4).map((node) => (
-                          <li key={node.id}>
-                            <button type="button" onClick={() => inspectPlanningNode(node)}>
-                              {planningDisplayId(node)} · {node.title}
-                            </button>
-                          </li>
-                        ))}
-                      </ul>
-                    ) : null}
-                  </div>
-                  {operate.status === 'ready' ? (
-                    <div className="pc-sprints__intelligence-section" data-tone="operate">
-                      <span className="pc-sprints__eyebrow">Latest operating review</span>
-                      <strong>{operate.pulse.signal}</strong>
-                      <p>
-                        {operate.pulse.counts.actions} actions · {operate.pulse.counts.gaps} gaps ·{' '}
-                        {relatedActions.length} reference this scope
-                      </p>
-                      {relatedActions.slice(0, 3).map((action) => (
-                        <div className="pc-sprints__operate-action" key={action.id}>
-                          <span>{action.priority}</span>
-                          <p>{action.action}</p>
-                          <small>Next: {action.firstStep}</small>
-                          <small>Owner: {action.owner}</small>
-                        </div>
-                      ))}
-                      <a href="#/operate/today">Open Operate today →</a>
-                    </div>
-                  ) : null}
-                </aside>
-              </div>
+                ) : null}
+                {sprint.addressed.length ? (
+                  <p>
+                    {sprint.addressed.length} addressed terminal items, separate from done and open
+                    work.
+                  </p>
+                ) : null}
+                <p>
+                  {typeof sprint.node.frontmatter.goal === 'string'
+                    ? sprint.node.frontmatter.goal
+                    : 'No sprint goal recorded.'}
+                </p>
+                <p>Release cut: {sprint.releaseCut ?? 'Unknown (not authored)'}</p>
+              </article>
+            ))}
+          </section>
+          {sprints
+            .filter((sprint) => sprint.closed)
+            .map((sprint) => (
+              <SprintCarryOver
+                key={sprint.node.id}
+                sprint={sprint}
+                nodes={model.graph.nodes}
+                selectedId={selectedId}
+              />
+            ))}
+          {sprints.some((sprint) => sprint.unresolved.length) ? (
+            <section className="pc-sprints__panel" aria-label="Unresolved sprint items">
+              <h2>Unresolved sprint items</h2>
+              <p>These references are not counted as done or open sprint items.</p>
+              <ul>
+                {sprints.flatMap((sprint) =>
+                  sprint.unresolved.map((ref) => (
+                    <li key={`${sprint.node.id}:${ref.reference}`}>
+                      <code>
+                        {planningDisplayId(sprint.node)} / {ref.reference}
+                      </code>
+                      : {ref.reason}
+                    </li>
+                  )),
+                )}
+              </ul>
             </section>
           ) : null}
+          {sprints.map((sprint) => (
+            <section
+              className="pc-sprints__panel"
+              aria-label={`${planningDisplayId(sprint.node)} commitment`}
+              key={sprint.node.id}
+            >
+              <h2>{planningDisplayId(sprint.node)} commitment</h2>
+              <p>{sprint.members.length} items</p>
+              {sprint.members.length ? (
+                <div
+                  className="pc-sprints__members"
+                  data-scroll-context={`sprint:${sprint.node.id}`}
+                >
+                  <DataTable
+                    compact
+                    rows={sprint.members}
+                    selectedId={selectedId}
+                    onRowClick={inspectPlanningNode}
+                    onRowFocus={(node) => inspectPlanningNode(node, false)}
+                    caption={`Members of ${planningDisplayId(sprint.node)}`}
+                    columns={[ITEM_COLUMN, STATUS_COLUMN, UPDATED_COLUMN]}
+                  />
+                </div>
+              ) : (
+                <EmptyState
+                  icon="calendar-range"
+                  title="No committed work"
+                  description="No resolved sprint items are recorded."
+                />
+              )}
+            </section>
+          ))}
         </>
-      )}
+      ) : null}
+      <section className="pc-sprints__panel" aria-label="Operating context">
+        <h2>Latest operating review</h2>
+        {operate.status === 'ready' ? (
+          <>
+            <p>{operate.pulse.signal}</p>
+            <p>
+              {operate.pulse.counts.actions} actions · {operate.pulse.counts.gaps} gaps ·{' '}
+              {relatedActions.length} reference this scope
+            </p>
+            {relatedActions.slice(0, 3).map((action) => (
+              <div key={action.id}>
+                <p>
+                  {action.priority} · {action.action}
+                </p>
+                <p>Next: {action.firstStep}</p>
+                <p>Owner: {action.owner}</p>
+              </div>
+            ))}
+          </>
+        ) : (
+          <p>
+            {operate.status === 'loading'
+              ? 'Reading operating context.'
+              : operate.status === 'failed'
+                ? 'Operating context unavailable: the latest review could not be read.'
+                : 'No operating reviews recorded.'}
+          </p>
+        )}
+        <a className="op-inline-action" href="#/operate/today">
+          Open Operate today
+        </a>
+      </section>
     </div>
   );
+}
+
+export function SprintsPage({ currentBinding, current }: SprintsPageProps) {
+  const model = resolvePlanningWorkspace(current, currentBinding);
+  if (model)
+    return (
+      <SprintsContent
+        key={JSON.stringify([
+          model.binding.actorId,
+          model.binding.projectId,
+          model.binding.generation,
+        ])}
+        model={model}
+      />
+    );
+  if (current.kind === 'loading' || current.kind === 'booting')
+    return (
+      <div
+        className="op-workspace op-planning pc-sprints"
+        data-route-kind="planning.sprints"
+        aria-busy="true"
+      >
+        <header className="pc-sprints__header">
+          <h1>Sprints</h1>
+        </header>
+        <p role="status">Reading .planr/</p>
+        <Skeleton h={240} />
+        <div className="pc-sprints__grid">
+          {[0, 1, 2].map((key) => (
+            <Skeleton key={key} h={240} />
+          ))}
+        </div>
+      </div>
+    );
+  return <PlanningRefusal routeKind="planning.sprints" title="Planning cannot be trusted" />;
 }

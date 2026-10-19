@@ -630,7 +630,7 @@ it('keeps a pending physical clipboard write locked across command selection cha
   const view = render(<CommandHint command="command A" />);
   fireEvent.click(screen.getByRole('button', { name: 'Copy command' }));
   view.rerender(<CommandHint command="command B" />);
-  const button = screen.getByRole('button', { name: 'Copy command' });
+  const button = screen.getByRole('button', { name: 'Copying' });
   expect((button as HTMLButtonElement).disabled).toBe(true);
   fireEvent.click(button);
   expect(writeText).toHaveBeenCalledExactlyOnceWith('command A');

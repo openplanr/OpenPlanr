@@ -8,6 +8,10 @@ import {
 } from 'react';
 import type { OperateReviewNavigation } from '../features/operate/review/review-navigation.js';
 import {
+  EMPTY_SESSION_ACTIVITY,
+  PlanningSessionActivityProvider,
+} from '../features/planning/planning-session-activity.js';
+import {
   LiveStateBoundary,
   type LiveSubjectTransition,
 } from '../features/shell/LiveStateBoundary.js';
@@ -260,14 +264,16 @@ export function DashboardProviders({
 
   return (
     <DashboardContext.Provider value={value}>
-      <LiveStateBoundary
-        route={route}
-        binding={binding}
-        transition={liveTransition}
-        trackedSubjectId={liveSubjectId}
-      >
-        {children}
-      </LiveStateBoundary>
+      <PlanningSessionActivityProvider value={planningLive.activity ?? EMPTY_SESSION_ACTIVITY}>
+        <LiveStateBoundary
+          route={route}
+          binding={binding}
+          transition={liveTransition}
+          trackedSubjectId={liveSubjectId}
+        >
+          {children}
+        </LiveStateBoundary>
+      </PlanningSessionActivityProvider>
     </DashboardContext.Provider>
   );
 }

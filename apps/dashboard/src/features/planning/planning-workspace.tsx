@@ -44,7 +44,7 @@ const PRESENTATION_NOTICE = Object.freeze({
   partial: 'Some planning information is unavailable.',
   blocked: 'Planning information is temporarily unavailable.',
   offline:
-    'You’re viewing the last available Planning information. Reconnect before checking again.',
+    'Offline. You’re viewing the last available Planning information. Reconnect before checking again.',
 } satisfies Readonly<Record<Exclude<PlanningPresentation, 'ready'>, string>>);
 
 const PLANNING_ROUTES = Object.freeze([

@@ -30,6 +30,7 @@ import {
   dashboardRouteDefinition,
   parseDashboardRoute,
 } from '../../../../apps/dashboard/src/app/router.js';
+import { installDashboardLayoutShifts } from '../dashboard/fixtures/dashboard-layout-shifts.js';
 import { registerDashboardPerformanceTraceTests } from './fixtures/dashboard-performance-trace.js';
 import {
   DASHBOARD_FIXTURE_CYCLE_ID,
@@ -924,6 +925,153 @@ test.describe('dashboard real-browser quality', () => {
       }
     }
     expect(writes).toEqual([]);
+  });
+
+  test.describe('sprint and activity evidence', () => {
+    test.use({ hasTouch: true });
+    test('renders sprint evidence and honest Activity states in both themes and touch sizes', async ({
+      page,
+    }, testInfo) => {
+      test.setTimeout(90_000);
+      await page.addInitScript(() => {
+        const theme = new URL(location.href).searchParams.get('evidenceTheme');
+        if (theme === 'light' || theme === 'dark') localStorage.setItem('op-theme', theme);
+      });
+      const writes: string[] = [];
+      page.on('request', (request) => {
+        if (new URL(request.url()).pathname.startsWith('/api/') && request.method() !== 'GET')
+          writes.push(`${request.method()} ${request.url()}`);
+      });
+      for (const theme of ['dark', 'light']) {
+        for (const width of [1440, 390, 320]) {
+          await page.setViewportSize({ width, height: 1000 });
+          expect((await page.request.post('/__fixture/reset?dataset=artboard')).ok()).toBe(true);
+          await page.goto(fixtureUrl('#/sprints', { dataset: 'artboard', evidenceTheme: theme }));
+          await page.evaluate(() => document.fonts.ready);
+          const sprints = page.locator('[data-route-kind="planning.sprints"]');
+          await expect(
+            sprints.getByRole('heading', { name: 'No active sprint', exact: true }),
+          ).toBeVisible();
+          await expect(
+            sprints.getByRole('heading', { name: 'Launch sprint 1' }).locator('..'),
+          ).toContainText('78 of 82 sprint items done');
+          await expect(sprints).toContainText('closed-before-start');
+          const carry = sprints.getByRole('region', { name: 'Carry-over from SPRINT-001' });
+          await expect(carry).toContainText('Still open after close');
+          expect(
+            await carry
+              .locator('a')
+              .evaluateAll((links) => links.map((link) => link.getAttribute('href'))),
+          ).toEqual([
+            '#/detail/QT-006',
+            '#/detail/BL-007',
+            '#/detail/QT-005',
+            '#/detail/SPEC-015%2FT-055',
+          ]);
+          const link = carry.locator('a').last();
+          if (width < 900) await link.tap();
+          else {
+            await link.focus();
+            await page.keyboard.press('Enter');
+          }
+          await expect(
+            page.getByRole(width < 900 ? 'dialog' : 'complementary', {
+              name: 'Inspector',
+              exact: true,
+            }),
+          ).toBeVisible();
+          await page.keyboard.press('Escape');
+          await expect(link).toBeFocused();
+          expect((await layoutReport(page)).horizontalOverflow).toBe(false);
+          expect(await axeViolations(page)).toEqual([]);
+          await testInfo.attach(`sprints-${theme}-${width}.png`, {
+            body: await page.screenshot({ fullPage: true }),
+            contentType: 'image/png',
+          });
+
+          await page.goto(fixtureUrl('#/activity', { dataset: 'artboard', evidenceTheme: theme }));
+          const activity = page.locator('[data-route-kind="planning.activity"]');
+          await expect(activity).toContainText('A graph snapshot is not a change log');
+          await expect(activity).toContainText('No activity returned');
+          await expect(activity).toContainText('This session only');
+          await expect(activity.locator('[data-keyboard-item]')).toHaveCount(0);
+          expect((await layoutReport(page)).horizontalOverflow).toBe(false);
+          expect(await axeViolations(page)).toEqual([]);
+          await testInfo.attach(`activity-${theme}-${width}.png`, {
+            body: await page.screenshot({ fullPage: true }),
+            contentType: 'image/png',
+          });
+        }
+      }
+      await openFixture(page, '#/sprints');
+      await expect(page.locator('[data-route-kind="planning.sprints"]')).toContainText(
+        'No sprints yet',
+      );
+      await openFixture(page, '#/sprints', { planningScenario: 'delivery' });
+      await expect(page.getByRole('heading', { name: 'Continue sprint planning' })).toBeVisible();
+      expect(writes).toEqual([]);
+    });
+
+    test('retains session-only accepted Activity patches, focus and scroll on disconnect without layout shift', async ({
+      page,
+    }, testInfo) => {
+      expect((await page.request.post('/__fixture/reset?dataset=artboard')).ok()).toBe(true);
+      await page.setViewportSize({ width: 1440, height: 1000 });
+      await page.goto(fixtureUrl('#/activity', { dataset: 'artboard' }));
+      await page.evaluate(() => document.fonts.ready);
+      const activity = page.locator('[data-route-kind="planning.activity"]');
+      await expect(activity).toContainText('Watching');
+      await page.evaluate(installDashboardLayoutShifts);
+      await page.evaluate(() => window.__dashboardLayoutShifts.markPhase('activity-patches'));
+      expect((await page.request.post('/__fixture/patch?dataset=artboard')).ok()).toBe(true);
+      const row = activity.locator('[data-keyboard-item]').first();
+      await expect(row).toBeVisible();
+      await row.focus();
+      const feed = activity.getByRole('region', { name: 'Live patches from this session' });
+      await feed.evaluate((element) => {
+        element.scrollTop = 0;
+      });
+      expect((await page.request.post('/__fixture/patch?dataset=artboard')).ok()).toBe(true);
+      await expect(activity.locator('[data-keyboard-item]')).toHaveCount(2);
+      await expect(row).toBeFocused();
+      expect(await feed.evaluate((element) => element.scrollTop)).toBe(0);
+      const indicator = activity.locator('.pc-activity__connection');
+      const badge = indicator.locator('.pc-badge');
+      const indicatorBefore = await indicator.boundingBox();
+      const badgeBefore = await badge.boundingBox();
+      expect(indicatorBefore).not.toBeNull();
+      expect(badgeBefore).not.toBeNull();
+      await page.evaluate(() => window.__dashboardLayoutShifts.markPhase('activity-disconnect'));
+      await page.context().setOffline(true);
+      await expect(activity.locator('.pc-activity__feed-head')).toContainText(
+        'Disconnected · session retained',
+      );
+      await expect(activity.locator('.pc-activity__feed-head')).not.toContainText('Watching');
+      await expect(activity).toContainText('This session only');
+      await expect(activity.locator('[data-keyboard-item]')).toHaveCount(2);
+      await page.evaluate(
+        () =>
+          new Promise<void>((resolve) =>
+            requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
+          ),
+      );
+      const report = await page.evaluate(() => window.__dashboardLayoutShifts.snapshot());
+      const shifts = report.shifts.filter(
+        (shift) =>
+          !shift.hadRecentInput &&
+          ['activity-patches', 'activity-disconnect'].includes(shift.phase),
+      );
+      const cls = shifts.reduce((sum, shift) => sum + shift.value, 0);
+      if (cls !== 0)
+        await testInfo.attach('activity-layout-shifts.json', {
+          body: JSON.stringify(report, null, 2),
+          contentType: 'application/json',
+        });
+      expect(cls, `Activity layout shifts: ${JSON.stringify(shifts, null, 2)}`).toBe(0);
+      expect(await indicator.boundingBox()).toEqual(indicatorBefore);
+      expect(await badge.boundingBox()).toEqual(badgeBefore);
+      await page.context().setOffline(false);
+    });
   });
 
   test('keeps Planning workspaces aligned to one shared application frame', async ({ page }) => {
