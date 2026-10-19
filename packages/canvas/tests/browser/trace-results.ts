@@ -1,4 +1,5 @@
 import type { HitTestProbe } from '../../bench/hit-test';
+import type { ScenarioOverviewMetrics } from '../../bench/main';
 
 export const DOM_NODE_BUDGET = 2000;
 
@@ -8,6 +9,8 @@ export type TraceRun = {
   hitTestP95Ms: number;
   hitTestProbe: HitTestProbe;
   rendererMainP95Ms: number;
+  rendererMainWorstMs: number;
+  overview: ScenarioOverviewMetrics;
   rafIntervalP95Ms: number;
   longTasksOver50Ms: number;
   longTaskDurationsMs: number[];
@@ -25,22 +28,13 @@ export function traceOwnership(input: {
 }
 
 export function domBudgetPolicy(input: Parameters<typeof traceOwnership>[0]): {
-  ownership:
-    | 'gated'
-    | 'reported, owned by overview'
-    | 'budget conflict, owner decision pending'
-    | 'reported, SVG stress tier'
-    | 'reported, remount timing only';
+  ownership: 'gated' | 'reported, SVG stress tier' | 'reported, remount timing only';
   regressionLimit: number | null;
 } {
-  if (input.scenario === 'pan-fit')
-    return { ownership: 'reported, owned by overview', regressionLimit: null };
   if (traceOwnership(input) !== 'gated')
     return { ownership: 'reported, SVG stress tier', regressionLimit: null };
   if (input.scenario === 'remount')
     return { ownership: 'reported, remount timing only', regressionLimit: null };
-  if (input.scenario === 'pan-40' && input.world === 'html')
-    return { ownership: 'budget conflict, owner decision pending', regressionLimit: 2100 };
   return { ownership: 'gated', regressionLimit: DOM_NODE_BUDGET };
 }
 

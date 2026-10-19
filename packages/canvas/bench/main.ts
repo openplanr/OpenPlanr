@@ -11,6 +11,8 @@ import { observeTransformWrites } from './transform-writes';
 
 export type Scenario = 'pan-100' | 'pan-40' | 'pan-fit' | 'zoom-sweep';
 export type WriteFrame = { frame: number; world: number; overlay: number };
+export type ScenarioOverviewMetrics = ReturnType<CanvasController['getOverviewMetrics']> &
+  Readonly<{ peakCachePixelBytes: number }>;
 export type ScenarioResult = {
   intervals: number[];
   writes: WriteFrame[];
@@ -23,10 +25,11 @@ export type ScenarioResult = {
   gpuRenderer: string;
   hitTestP95Ms: number;
   hitTestProbe: HitTestProbe;
+  overview: ScenarioOverviewMetrics;
 };
 export type RemountResult = Pick<
   ScenarioResult,
-  'intervals' | 'longTasks' | 'domNodes' | 'gpuRenderer' | 'hitTestP95Ms' | 'hitTestProbe'
+  'intervals' | 'longTasks' | 'domNodes' | 'gpuRenderer' | 'hitTestP95Ms' | 'hitTestProbe' | 'overview'
 > & { mountCounts: number[] };
 export interface Bench {
   ready: Promise<void>;
@@ -49,9 +52,18 @@ declare global {
 
 const params = new URLSearchParams(location.search);
 const fixtureName = params.get('fixture') ?? '708-997';
-const validFixtures = ['708-477', '708-997', '5000-8499', '5000-7312', 'svg-708', 'svg-5000'];
+const validFixtures = ['708-477', '708-997', '5000-8499', '5000-7312', 'svg-708', 'svg-5000', 'stress-50000'];
 if (!validFixtures.includes(fixtureName)) throw new TypeError(`fixture: ${fixtureName}`);
-const fixture = fixtureName.startsWith('svg-')
+const fixture = fixtureName === 'stress-50000'
+  ? {
+      nodes: Array.from({ length: 50_000 }, (_, index) => ({
+        id: `node-${index + 1}`, title: `Stress ${index + 1}`, rank: Math.floor(index / 250),
+        bounds: { x: Math.floor(index / 250) * 294, y: (index % 250) * 94, width: 230, height: 66 },
+      })),
+      edges: [],
+      bounds: { x: 0, y: 0, width: 199 * 294 + 230, height: 249 * 94 + 66 },
+    }
+  : fixtureName.startsWith('svg-')
   ? generateSvgDiagram(fixtureName === 'svg-708' ? 708 : 5000)
   : generateLayeredGraph(
       fixtureName.startsWith('708-') ? 708 : 5000,
@@ -59,6 +71,9 @@ const fixture = fixtureName.startsWith('svg-')
     );
 const worldType = params.get('world') ?? 'html';
 if (worldType !== 'html' && worldType !== 'svg') throw new TypeError(`world: ${worldType}`);
+const overviewRenderer = params.get('overviewRenderer') ?? 'canvas';
+if (overviewRenderer !== 'canvas' && overviewRenderer !== 'worker')
+  throw new TypeError(`overviewRenderer: ${overviewRenderer}`);
 const pointerMode = params.get('pointerMode') ?? 'pan';
 if (pointerMode !== 'pan' && pointerMode !== 'none')
   throw new TypeError(`pointerMode: ${pointerMode}`);
@@ -85,7 +100,6 @@ const edgeSvg = svgElement('svg', { class: 'edges', 'aria-hidden': 'true' });
 world.append(edgeSvg);
 const contentSvg = svgElement('svg', {
   class: 'svg-content',
-  'aria-hidden': 'true',
   viewBox: `${fixture.bounds.x} ${fixture.bounds.y} ${fixture.bounds.width} ${fixture.bounds.height}`,
   width: String(fixture.bounds.width),
   height: String(fixture.bounds.height),
@@ -96,6 +110,7 @@ Object.assign(contentSvg.style, {
 });
 if (worldType === 'svg') world.append(contentSvg);
 const overlaySvg = contentSvg.cloneNode(false);
+if (overlaySvg instanceof Element) overlaySvg.setAttribute('aria-hidden', 'true');
 overlay.append(overlaySvg);
 stage.append(world, overlay);
 const count = document.createElement('output');
@@ -128,57 +143,78 @@ const fixtureById = new Map(fixture.nodes.map((node) => [node.id, node]));
 const rendered = new Map<string, Element>();
 function positionNode(element: Element, node: CanvasNode): void {
   const { x, y, width, height } = node.bounds;
-  if (element instanceof SVGElement) {
-    element.setAttribute('transform', `translate(${x} ${y})`);
-    const shape = element.querySelector('rect');
-    shape?.setAttribute('width', String(width));
-    shape?.setAttribute('height', String(height));
-  } else if (element instanceof HTMLElement)
+  if (element instanceof HTMLElement || element instanceof SVGSVGElement) {
     Object.assign(element.style, {
       left: `${x}px`,
       top: `${y}px`,
       width: `${width}px`,
       height: `${height}px`,
     });
+    if (element instanceof SVGSVGElement) {
+      element.setAttribute('viewBox', `0 0 ${width} ${height}`);
+      const shape = element.querySelector('rect');
+      shape?.setAttribute('width', String(width));
+      shape?.setAttribute('height', String(height));
+    }
+  }
 }
-function renderNode(node: CanvasNode): void {
-  const { width, height } = node.bounds;
+function syncNodeContent(element: Element, node: CanvasNode): void {
+  const level = controller.getLevel(node.id) === 'dom' || node.frame ? 'dom' : 'compact';
+  if (element.getAttribute('data-card-level') === level) return;
+  element.setAttribute('data-card-level', level);
   const fixtureNode = fixtureById.get(node.id);
   const titleText = fixtureNode?.title ?? node.id;
-  let element: HTMLElement | SVGGElement;
-  if (worldType === 'svg') {
-    const group = svgElement('g', { 'data-canvas-node-id': node.id });
-    group.append(svgElement('rect', {
-      width: String(width), height: String(height), rx: '6', fill: 'white', stroke: '#b7bfca',
-    }));
+  element.setAttribute('aria-label', titleText);
+  if (element instanceof SVGElement) {
     const title = svgElement('text', { x: '10', y: '24', 'font-size': '13' });
     title.textContent = titleText;
-    const detail = svgElement('text', { x: '10', y: '45', 'font-size': '11', fill: '#536171' });
-    detail.textContent = node.id;
-    group.append(title, detail);
-    contentSvg.append(group);
-    element = group;
+    if (level === 'compact') element.replaceChildren(title);
+    else {
+      const shape = svgElement('rect', {
+        width: String(node.bounds.width), height: String(node.bounds.height), rx: '6',
+        fill: 'white', stroke: '#b7bfca',
+      });
+      const detail = svgElement('text', { x: '10', y: '45', 'font-size': '11', fill: '#536171' });
+      detail.textContent = node.id;
+      element.replaceChildren(shape, title, detail);
+    }
+  } else if (node.frame) {
+    const frame = document.createElement('iframe');
+    frame.title = node.id === 'preview-frame' ? 'Preview frame' : node.id;
+    frame.srcdoc = '<label>Frame field <input id="frame-field"></label>';
+    Object.assign(frame.style, { width: '100%', height: '100%', border: '0' });
+    element.classList.add('frame-card');
+    element.replaceChildren(frame);
   } else {
-    const card = document.createElement('article');
-    card.className = 'card';
-    card.dataset.canvasNodeId = node.id;
-    if (node.frame) {
-      const frame = document.createElement('iframe');
-      frame.title = node.id === 'preview-frame' ? 'Preview frame' : node.id;
-      frame.srcdoc = '<label>Frame field <input id="frame-field"></label>';
-      Object.assign(frame.style, { width: '100%', height: '100%', border: '0' });
-      card.classList.add('frame-card');
-      card.append(frame);
-    } else {
-      const title = document.createElement('strong');
-      title.textContent = titleText;
+    const title = document.createElement('strong');
+    title.textContent = titleText;
+    element.replaceChildren(title);
+    if (level === 'dom') {
       const detail = document.createElement('span');
       detail.textContent = `${node.id} · Layer ${fixtureNode?.rank ?? 0}`;
-      card.append(title, detail);
+      element.append(detail);
     }
-    world.append(card);
-    element = card;
   }
+}
+function syncContent(): void {
+  for (const [id, element] of rendered) {
+    const node = nodeById.get(id);
+    if (node) syncNodeContent(element, node);
+  }
+}
+function renderNode(node: CanvasNode): void {
+  let element: HTMLElement | SVGSVGElement;
+  if (worldType === 'svg') {
+    element = svgElement('svg', { class: 'card svg-card', 'data-canvas-node-id': node.id, tabindex: '-1', role: 'group' });
+    world.append(element);
+  } else {
+    element = document.createElement('article');
+    element.className = 'card';
+    element.dataset.canvasNodeId = node.id;
+    element.tabIndex = -1;
+    world.append(element);
+  }
+  syncNodeContent(element, node);
   positionNode(element, node);
   rendered.set(node.id, element);
   controller.registerNodeElement(node.id, element);
@@ -231,17 +267,24 @@ const controller = createCanvas({
   label: 'Canvas engine bench',
   pointerMode,
   motion: 'auto',
+  overviewRenderer,
   breakpoints: [{ name: 'mobile', minWidth: 0 }, { name: 'tablet', minWidth: 768 }, { name: 'desktop', minWidth: 1280 }],
   shortcutsEnabled: () => params.get('shortcuts') !== 'off',
   zoom: { min: 0.0001, max: 4 },
 });
 window.canvas = controller;
 controller.on('mount', syncMounted);
+controller.on('level', syncContent);
+controller.on('focus', syncContent);
+controller.on('selection', syncContent);
 controller.on('geometry', (ids) => {
   for (const id of ids) {
     const element = rendered.get(id);
     const node = nodeById.get(id);
-    if (element && node) positionNode(element, node);
+    if (element && node) {
+      syncNodeContent(element, node);
+      positionNode(element, node);
+    }
   }
 });
 controller.setNodes(nodes);
@@ -298,11 +341,14 @@ const bench: Bench = {
     performance.clearMarks('canvas-remount-start');
     performance.clearMarks('canvas-remount-end');
     let previous = await nextFrame();
+    const overviewStart = controller.getOverviewMetrics();
+    let peakCachePixelBytes = overviewStart.cachePixelBytes;
     const start = performance.now();
     performance.mark('canvas-remount-start');
     bench.setNodes(nodes);
     for (let frame = 0; frame < 30 && controller.getMountedIds().size < nodes.length; frame += 1) {
       const time = await nextFrame();
+      peakCachePixelBytes = Math.max(peakCachePixelBytes, controller.getOverviewMetrics().cachePixelBytes);
       intervals.push(time - previous);
       previous = time;
     }
@@ -315,6 +361,8 @@ const bench: Bench = {
     await nextFrame();
     longTasks.push(...(observer?.takeRecords() ?? []));
     const hitTestProbe = probeHitTests();
+    const overview = controller.getOverviewMetrics();
+    peakCachePixelBytes = Math.max(peakCachePixelBytes, overview.cachePixelBytes);
     return {
       intervals,
       mountCounts,
@@ -325,6 +373,12 @@ const bench: Bench = {
       gpuRenderer: renderer,
       hitTestP95Ms: hitTestProbe.p95Ms,
       hitTestProbe,
+      overview: {
+        ...overview,
+        peakCachePixelBytes,
+        redraws: overview.redraws - overviewStart.redraws,
+        presentationLagFrames: overview.presentationLagFrames.slice(overviewStart.presentationLagFrames.length),
+      },
     };
   },
   async run(scenario) {
@@ -333,8 +387,19 @@ const bench: Bench = {
     await nextFrame();
     const fitCamera = controller.getCamera();
     controller.setCamera(fitCamera);
+    if (scenario === 'pan-40') {
+      controller.setCamera({ x: 0, y: 0, zoom: 1 });
+      await new Promise<void>((resolve) => window.setTimeout(resolve, 150));
+      await nextFrame();
+    }
     if (scenario !== 'pan-fit')
       controller.setCamera({ x: 0, y: 0, zoom: scenario === 'pan-40' ? 0.4 : 1 });
+    if (scenario === 'pan-40') {
+      await new Promise<void>((resolve) => window.setTimeout(resolve, 150));
+      await nextFrame();
+      if (controller.getLevel() !== 'compact')
+        throw new Error(`Compact pan benchmark entered ${controller.getLevel()} at zoom 0.4`);
+    }
     await nextFrame();
     await nextFrame();
     for (const observer of transformObservers) observer.flush();
@@ -343,6 +408,8 @@ const bench: Bench = {
     performance.clearMarks('canvas-interaction-start');
     performance.clearMarks('canvas-interaction-end');
     const intervals: number[] = [];
+    const overviewStart = controller.getOverviewMetrics();
+    let peakCachePixelBytes = overviewStart.cachePixelBytes;
     const startCamera = controller.getCamera();
     let minimumZoom = startCamera.zoom;
     let domNodes = stage.querySelectorAll('*').length;
@@ -361,6 +428,7 @@ const bench: Bench = {
       minimumZoom = Math.min(minimumZoom, controller.getCamera().zoom);
       domNodes = Math.max(domNodes, stage.querySelectorAll('*').length);
       const now = await nextFrame();
+      peakCachePixelBytes = Math.max(peakCachePixelBytes, controller.getOverviewMetrics().cachePixelBytes);
       intervals.push(now - previous);
       previous = now;
     }
@@ -370,6 +438,8 @@ const bench: Bench = {
     for (const observer of transformObservers) observer.flush();
     longTasks.push(...(observer?.takeRecords() ?? []));
     const hitTestProbe = probeHitTests();
+    const overview = controller.getOverviewMetrics();
+    peakCachePixelBytes = Math.max(peakCachePixelBytes, overview.cachePixelBytes);
     return {
       intervals,
       writes: [...writes],
@@ -388,6 +458,12 @@ const bench: Bench = {
       gpuRenderer: renderer,
       hitTestP95Ms: hitTestProbe.p95Ms,
       hitTestProbe,
+      overview: {
+        ...overview,
+        peakCachePixelBytes,
+        redraws: overview.redraws - overviewStart.redraws,
+        presentationLagFrames: overview.presentationLagFrames.slice(overviewStart.presentationLagFrames.length),
+      },
     };
   },
 };

@@ -44,7 +44,14 @@ describe('package shape', () => {
       const entry = await import(specifier);
       const values =
         specifier === '@openplanr/canvas'
-          ? ['cameraFromScreenTranslate', 'cameraToScreenTranslate', 'createCanvas']
+          ? [
+              'cameraFromScreenTranslate',
+              'cameraToScreenTranslate',
+              'createCanvas',
+              'drawCameraOverview',
+              'drawMinimap',
+              'minimapToWorld',
+            ]
           : specifier === '@openplanr/canvas/testing'
             ? ['generateLayeredGraph', 'generateSvgDiagram', 'percentile95', 'rendererFrameWork']
             : [];
@@ -58,10 +65,14 @@ describe('package shape', () => {
               'CanvasController',
               'CanvasElements',
               'CanvasEvents',
+              'CanvasLevel',
               'CanvasNode',
               'CanvasOptions',
               'Diagnostic',
               'NodeId',
+              'MinimapTransform',
+              'OverviewMetrics',
+              'OverviewStyle',
               'Point',
               'Rect',
               'WorldElement',

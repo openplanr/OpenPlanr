@@ -174,6 +174,8 @@ async function recordRuns(
       hitTestP95Ms: sample.hitTestP95Ms,
       hitTestProbe: sample.hitTestProbe,
       rendererMainP95Ms: percentile95(rendererSamples),
+      rendererMainWorstMs: Math.max(...rendererSamples),
+      overview: sample.overview,
       rafIntervalP95Ms: percentile95(sample.intervals),
       longTasksOver50Ms: sample.longTasks.length,
       longTaskDurationsMs: sample.longTasks,
@@ -279,6 +281,12 @@ test('records production vanilla camera traces beside the reference budgets', as
       units: 'milliseconds per query',
       window: 'outside interaction marks',
     },
+    overview: {
+      redraws: 'per-scenario difference between final and initial redraw counters',
+      cachePixelBytes: 'final reported cache allocation',
+      peakCachePixelBytes:
+        'maximum reported cache allocation at scenario start, each animation frame and scenario end',
+    },
     warmup: {
       count: 708,
       scenario: 'pan-100',
@@ -294,11 +302,11 @@ test('records production vanilla camera traces beside the reference budgets', as
   await testInfo.attach('bench-trace', { path: output, contentType: 'application/json' });
   process.stdout.write(
     [
-      '| Fixture | World | DPR | Scenario | Ownership | Main p95 median / budget ms | Raw main p95s ms | rAF p95 median / budget ms | Raw rAF p95s ms | Long tasks per run | Long-task durations per run ms | First frame p50 / budget ms | DOM nodes per run | GPU renderer | Hit-test p95 median / budget ms | DOM ownership | DOM reference budget / regression limit | Hit-test queries per run |',
-      '| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |',
+      '| Fixture | World | DPR | Scenario | Ownership | Main p95 median / budget ms | Raw main p95s ms | rAF p95 median / budget ms | Raw rAF p95s ms | Long tasks per run | Long-task durations per run ms | First frame p50 / budget ms | DOM nodes per run | GPU renderer | Hit-test p95 median / budget ms | DOM ownership | DOM reference budget / regression limit | Hit-test queries per run | Overview redraws per run | Overview cache bytes per run | Peak overview cache bytes per run |',
+      '| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |',
       ...measurements.map(
         (item) =>
-          `| ${item.fixture} | ${item.world} | ${item.dpr} | ${item.scenario} | ${item.ownership} | ${item.rendererMainP95Ms} / ${item.referenceBudgets.rendererMainP95Ms} | ${JSON.stringify(item.runs.map((run) => run.rendererMainP95Ms))} | ${item.rafIntervalP95Ms} / ${item.referenceBudgets.rafIntervalP95Ms} | ${JSON.stringify(item.runs.map((run) => run.rafIntervalP95Ms))} | ${JSON.stringify(item.runs.map((run) => run.longTasksOver50Ms))} | ${JSON.stringify(item.runs.map((run) => run.longTaskDurationsMs))} | ${item.firstFrameP50Ms} / ${item.referenceBudgets.firstFrameP50Ms} | ${JSON.stringify(item.runs.map((run) => run.domNodes))} | ${item.gpuRenderer} | ${item.hitTestP95Ms} / ${item.referenceBudgets.hitTestP95Ms} | ${item.domBudget.ownership} | ${item.referenceBudgets.domNodes} / ${item.domBudget.regressionLimit ?? 'reported'} | ${JSON.stringify(item.runs.map((run) => run.hitTestProbe.queryCount))} |`,
+          `| ${item.fixture} | ${item.world} | ${item.dpr} | ${item.scenario} | ${item.ownership} | ${item.rendererMainP95Ms} / ${item.referenceBudgets.rendererMainP95Ms} | ${JSON.stringify(item.runs.map((run) => run.rendererMainP95Ms))} | ${item.rafIntervalP95Ms} / ${item.referenceBudgets.rafIntervalP95Ms} | ${JSON.stringify(item.runs.map((run) => run.rafIntervalP95Ms))} | ${JSON.stringify(item.runs.map((run) => run.longTasksOver50Ms))} | ${JSON.stringify(item.runs.map((run) => run.longTaskDurationsMs))} | ${item.firstFrameP50Ms} / ${item.referenceBudgets.firstFrameP50Ms} | ${JSON.stringify(item.runs.map((run) => run.domNodes))} | ${item.gpuRenderer} | ${item.hitTestP95Ms} / ${item.referenceBudgets.hitTestP95Ms} | ${item.domBudget.ownership} | ${item.referenceBudgets.domNodes} / ${item.domBudget.regressionLimit ?? 'reported'} | ${JSON.stringify(item.runs.map((run) => run.hitTestProbe.queryCount))} | ${JSON.stringify(item.runs.map((run) => run.overview.redraws))} | ${JSON.stringify(item.runs.map((run) => run.overview.cachePixelBytes))} | ${JSON.stringify(item.runs.map((run) => run.overview.peakCachePixelBytes))} |`,
       ),
       '',
     ].join('\n'),
@@ -351,4 +359,81 @@ test('records production vanilla camera traces beside the reference budgets', as
       .soft(item.firstFrameP50Ms, `${label}: first fixture frame`)
       .toBeLessThanOrEqual(item.referenceBudgets.firstFrameP50Ms);
   }
+});
+
+test('measures cached canvas and worker overview work, cache memory and presentation lag', async ({
+  browser,
+}, testInfo) => {
+  test.setTimeout(600_000);
+  const baseURL = testInfo.project.use.baseURL;
+  if (!baseURL) throw new Error('Overview comparison baseURL is missing');
+  const measurements: {
+    nodes: number;
+    renderer: 'canvas' | 'worker';
+    runs: TraceRun[];
+  }[] = [];
+  for (const nodes of [5000, 50_000]) {
+    for (const renderer of ['canvas', 'worker'] as const) {
+      const context = await browser.newContext({
+        viewport: { width: 1440, height: 900 },
+        deviceScaleFactor: 1,
+      });
+      try {
+        const page = await context.newPage();
+        const fixture = nodes === 5000 ? '5000-7312' : 'stress-50000';
+        await page.goto(`${baseURL}/?fixture=${fixture}&overviewRenderer=${renderer}`);
+        await waitForBench(page);
+        const session = await context.newCDPSession(page);
+        try {
+          const runs = await recordRuns(page, session, 'pan-fit');
+          measurements.push({ nodes, renderer, runs });
+          for (const run of runs) {
+            expect(run.rendererFrameSamples).toBeGreaterThan(0);
+            expect(run.rendererMainWorstMs).toBeGreaterThanOrEqual(run.rendererMainP95Ms);
+            expect(run.overview.cachePixelBytes).toBeGreaterThan(0);
+            if (renderer === 'worker')
+              expect(run.overview.presentationLagFrames.length).toBeGreaterThan(0);
+            for (const lag of run.overview.presentationLagFrames) {
+              expect(Number.isFinite(lag)).toBe(true);
+              expect(lag).toBeGreaterThanOrEqual(0);
+            }
+          }
+        } finally {
+          await session.detach();
+        }
+      } finally {
+        await context.close();
+      }
+    }
+  }
+  await testInfo.attach('overview-renderer-comparison', {
+    body: JSON.stringify(
+      {
+        stage: { width: 1440, height: 900, dpr: 1 },
+        framesPerRun: 180,
+        mainWork: 'Chromium renderer main-thread work between frame marks',
+        presentationLag: 'presentation frame minus the camera-write frame',
+        measurements,
+      },
+      null,
+      2,
+    ),
+    contentType: 'application/json',
+  });
+  process.stdout.write(
+    `${JSON.stringify(
+      measurements.map(({ nodes, renderer, runs }) => ({
+        nodes,
+        renderer,
+        mainP95Ms: runs.map((run) => run.rendererMainP95Ms),
+        worstMainFrameMs: runs.map((run) => run.rendererMainWorstMs),
+        redraws: runs.map((run) => run.overview.redraws),
+        cachePixelBytes: runs.map((run) => run.overview.cachePixelBytes),
+        peakCachePixelBytes: runs.map((run) => run.overview.peakCachePixelBytes),
+        presentationLagFrames: runs.map((run) => run.overview.presentationLagFrames),
+      })),
+      null,
+      2,
+    )}\n`,
+  );
 });

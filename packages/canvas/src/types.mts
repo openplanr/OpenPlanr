@@ -4,6 +4,16 @@ export type Rect = Readonly<{ x: number; y: number; width: number; height: numbe
 export type Camera = Readonly<{ x: number; y: number; zoom: number }>;
 export type WorldElement = HTMLElement;
 export type CanvasNode = Readonly<{ id: NodeId; bounds: Rect; kind?: string; frame?: boolean }>;
+export type CanvasLevel = 'dom' | 'compact' | 'overview';
+export type OverviewStyle = (node: CanvasNode) => Readonly<{ fill: string; stroke: string }>;
+export type MinimapTransform = Readonly<{ scale: number; offsetX: number; offsetY: number }>;
+export type OverviewMetrics = Readonly<{
+  cachePixelBytes: number;
+  redraws: number;
+  cameraFrame: number;
+  presentedCameraFrame: number;
+  presentationLagFrames: readonly number[];
+}>;
 
 export type CanvasEdge = Readonly<{
   id: string;
@@ -22,6 +32,9 @@ export type Diagnostic = Readonly<{
 export interface CanvasOptions {
   label: string;
   zoom?: Readonly<{ min?: number; max?: number }>;
+  lod?: Readonly<{ compactBelow?: number; overviewBelow?: number; hysteresis?: number }> | false;
+  overviewStyle?: OverviewStyle;
+  overviewRenderer?: 'canvas' | 'worker';
   culling?: Readonly<{ cellSize?: number; marginFactor?: number }>;
   breakpoints?: readonly Breakpoint[];
   worldBounds?: Readonly<{ rect: Rect; padding: number }>;
@@ -37,12 +50,14 @@ export interface CanvasElements {
   world: WorldElement;
   overlays?: readonly WorldElement[];
   edges?: SVGSVGElement | SVGGElement;
+  overview?: HTMLCanvasElement;
 }
 
 export interface CanvasEvents {
   camera: Camera;
   mount: ReadonlySet<NodeId>;
   geometry: ReadonlySet<NodeId>;
+  level: CanvasLevel;
   selection: readonly NodeId[];
   focus: NodeId | null;
   breakpoint: string | null;
@@ -61,6 +76,8 @@ export interface CanvasController {
   getMountedIds(): ReadonlySet<NodeId>;
   getDiagnostics(): readonly Diagnostic[];
   getBreakpoint(): string | null;
+  getLevel(id?: NodeId): CanvasLevel;
+  getOverviewMetrics(): OverviewMetrics;
   getCamera(): Camera;
   setCamera(camera: Camera, options?: Readonly<{ animate?: boolean }>): void;
   panBy(dxScreen: number, dyScreen: number): void;

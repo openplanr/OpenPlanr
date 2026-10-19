@@ -33,7 +33,8 @@
   "scripts": {
     "build": "node ../../scripts/typescript/compile-sources.mjs",
     "test": "vitest run",
-    "test:browser": "playwright test",
+    "test:browser": "playwright test --project=chromium",
+    "test:browser:nightly": "playwright test --project=firefox",
     "bench:trace": "playwright test tests/browser/bench-trace.spec.ts"
   },
   "engines": {

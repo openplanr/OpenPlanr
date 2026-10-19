@@ -14,12 +14,15 @@ import { buildEdgeRoutes, createEdgeLayer } from './edges.mjs';
 import { createFrameLoader } from './frame-loader.mjs';
 import { createFrames } from './frames.mjs';
 import { bindInput, isEditable } from './input.mjs';
+import { createLod } from './lod.mjs';
+import { createOverviewLayer } from './overview.mjs';
 import type {
   Camera,
   CanvasController,
   CanvasEdge,
   CanvasElements,
   CanvasEvents,
+  CanvasLevel,
   CanvasNode,
   CanvasOptions,
   Diagnostic,
@@ -62,6 +65,14 @@ export function createCanvas(options: CanvasOptions): CanvasController {
       breakpoints.map((entry) => entry.minWidth),
     );
   const culling = createCulling(options.culling);
+  const lod = createLod(options.lod);
+  if (options.overviewStyle !== undefined && typeof options.overviewStyle !== 'function')
+    invalid('overviewStyle', options.overviewStyle);
+  if (
+    options.overviewRenderer !== undefined &&
+    !['canvas', 'worker'].includes(options.overviewRenderer)
+  )
+    invalid('overviewRenderer', options.overviewRenderer);
   const min = options.zoom?.min === undefined ? 0.04 : options.zoom.min;
   const max = options.zoom?.max === undefined ? 4 : options.zoom.max;
   positive('zoom.min', min);
@@ -89,6 +100,16 @@ export function createCanvas(options: CanvasOptions): CanvasController {
     : undefined;
   let camera: Camera = { x: 0, y: 0, zoom: Math.max(min, Math.min(max, 1)) };
   let nodes = new Map<NodeId, CanvasNode>();
+  let overviewNodes: readonly CanvasNode[] = [];
+  let level: CanvasLevel = lod.update(camera.zoom);
+  let overviewLayer: ReturnType<typeof createOverviewLayer> | undefined;
+  let overviewCanvas: HTMLCanvasElement | undefined;
+  let ownsOverview = false;
+  let writeFrame = 0;
+  let cameraWriteFrame = 0;
+  let detailDirty = true;
+  const visibility = new Map<Element, string>();
+  let restoreOverview: (() => void) | undefined;
   let selection: readonly NodeId[] = [];
   let edges: readonly CanvasEdge[] = [];
   let diagnostics: readonly Diagnostic[] = [];
@@ -97,6 +118,8 @@ export function createCanvas(options: CanvasOptions): CanvasController {
   const registered = new Map<NodeId, Element>();
   let inputGesture = false;
   let zoomChanged = false;
+  let zooming = false;
+  let zoomIdleTimer: number | undefined;
   let edgesDirty = true;
   let loaderDirty = true;
   let lastRegion: Rect | undefined;
@@ -126,6 +149,7 @@ export function createCanvas(options: CanvasOptions): CanvasController {
     'active-frame': new Set(),
     mount: new Set(),
     geometry: new Set(),
+    level: new Set(),
     selection: new Set(),
     focus: new Set(),
     breakpoint: new Set(),
@@ -185,6 +209,7 @@ export function createCanvas(options: CanvasOptions): CanvasController {
     if (focused === id) return;
     focused = id;
     culling.setPinned('focus', id === null ? [] : [id]);
+    detailDirty = true;
     enqueue('focus', id);
   }
   const shortcutsEnabled = () => options.shortcutsEnabled?.() ?? true;
@@ -212,6 +237,82 @@ export function createCanvas(options: CanvasOptions): CanvasController {
   }
   function layers() {
     return elements ? [...new Set([elements.world, ...(elements.overlays ?? [])])] : [];
+  }
+  function nodeVisibility(element: Element, id: NodeId, pins: ReadonlySet<NodeId>) {
+    const realm = elements?.stage.ownerDocument.defaultView;
+    if (
+      !realm ||
+      (!(element instanceof realm.HTMLElement) && !(element instanceof realm.SVGElement))
+    )
+      return;
+    if (!visibility.has(element)) visibility.set(element, element.style.visibility);
+    const original = visibility.get(element) ?? '';
+    element.style.visibility =
+      level === 'overview' ? (pins.has(id) ? 'visible' : 'hidden') : original;
+  }
+  function updateVisibility() {
+    if (!elements) return;
+    const pins = culling.getPinnedIds();
+    for (const layer of layers()) {
+      if (!visibility.has(layer)) visibility.set(layer, layer.style.visibility);
+      layer.style.visibility = level === 'overview' ? 'hidden' : (visibility.get(layer) ?? '');
+    }
+    const edge = elements.edges;
+    if (edge) {
+      if (!visibility.has(edge)) visibility.set(edge, edge.style.visibility);
+      edge.style.visibility = level === 'overview' ? 'hidden' : (visibility.get(edge) ?? '');
+    }
+    for (const [id, element] of registered) nodeVisibility(element, id, pins);
+    if (level === 'overview') {
+      for (const element of elements.stage.querySelectorAll('[data-canvas-node-id]')) {
+        const id = element.getAttribute('data-canvas-node-id');
+        if (id !== null) nodeVisibility(element, id, pins);
+      }
+    } else {
+      const realm = elements.stage.ownerDocument.defaultView;
+      for (const [element, original] of visibility) {
+        if (realm && (element instanceof realm.HTMLElement || element instanceof realm.SVGElement))
+          element.style.visibility = original;
+      }
+    }
+    if (overviewCanvas)
+      overviewCanvas.style.visibility = level === 'overview' ? 'visible' : 'hidden';
+    detailDirty = false;
+  }
+  function drawOverview() {
+    if (!elements || !view) return false;
+    if (stageSize.width === 0 || stageSize.height === 0) return false;
+    if (!overviewCanvas) {
+      overviewCanvas = elements.overview ?? elements.stage.ownerDocument.createElement('canvas');
+      ownsOverview = !elements.overview;
+      if (ownsOverview) {
+        overviewCanvas.setAttribute('data-canvas-overview', '');
+        overviewCanvas.setAttribute('aria-hidden', 'true');
+        elements.stage.prepend(overviewCanvas);
+      }
+      overviewLayer = createOverviewLayer(
+        overviewCanvas,
+        options.overviewStyle,
+        options.overviewRenderer,
+        schedule,
+      );
+    }
+    return (
+      overviewLayer?.update({
+        camera,
+        nodes: overviewNodes,
+        edges,
+        selection,
+        focus: focused,
+        pinned: [...culling.getPinnedIds()],
+        width: stageSize.width,
+        height: stageSize.height,
+        devicePixelRatio: view.devicePixelRatio || 1,
+        frame: cameraWriteFrame,
+        zooming,
+        queryNodes: culling.query,
+      }) ?? false
+    );
   }
   function schedule() {
     if (view && !detaching && frameId === undefined) frameId = view.requestAnimationFrame(write);
@@ -241,8 +342,19 @@ export function createCanvas(options: CanvasOptions): CanvasController {
   function change(value: Camera) {
     const next = clamp(value);
     const changed = next.x !== camera.x || next.y !== camera.y || next.zoom !== camera.zoom;
-    zoomChanged ||= next.zoom !== camera.zoom;
+    const changedZoom = next.zoom !== camera.zoom;
+    zoomChanged ||= changedZoom;
+    if (changedZoom && view) {
+      zooming = true;
+      if (zoomIdleTimer !== undefined) view.clearTimeout(zoomIdleTimer);
+      zoomIdleTimer = view.setTimeout(() => {
+        zoomIdleTimer = undefined;
+        zooming = false;
+        schedule();
+      }, 150);
+    }
     camera = next;
+    if (!elements) level = lod.update(camera.zoom);
     dirty = true;
     cameraEvent = true;
     if (changed) moving();
@@ -259,6 +371,7 @@ export function createCanvas(options: CanvasOptions): CanvasController {
   function write(time: number) {
     frameId = undefined;
     if (!elements) return;
+    writeFrame += 1;
     if (animation) {
       const progress = Math.min(1, (time - animation.start) / 200);
       const { from, to } = animation;
@@ -276,16 +389,42 @@ export function createCanvas(options: CanvasOptions): CanvasController {
     if (dirty) {
       dirty = false;
       const { x, y, zoom } = camera;
+      let wroteCamera = false;
       for (const layer of layers()) {
         const transform = `scale(${zoom}) translate(${-x}px, ${-y}px)`;
-        if (layer.style.transform !== transform) layer.style.transform = transform;
+        if (layer.style.transform !== transform) {
+          layer.style.transform = transform;
+          wroteCamera = true;
+        }
       }
+      if (wroteCamera) cameraWriteFrame = writeFrame;
       if (activeFrame !== null) frames?.updatePosition();
     }
-    const update = culling.update(viewport(), time, inputGesture, zoomChanged);
+    const requestedLevel = lod.update(camera.zoom);
+    const overviewReady =
+      requestedLevel === 'overview' || level === 'overview' ? drawOverview() : false;
+    const update = culling.update(
+      viewport(),
+      time,
+      inputGesture,
+      zoomChanged,
+      requestedLevel !== 'overview' || !overviewReady,
+    );
+    let nextLevel = requestedLevel;
+    if (requestedLevel === 'overview' && !overviewReady) nextLevel = level;
+    if (level === 'overview' && requestedLevel !== 'overview') {
+      const pins = culling.getPinnedIds();
+      const hasContent = culling.getMountedIds().some((id) => !pins.has(id));
+      const needsContent =
+        !hasContent && culling.query(viewport()).some((node) => !pins.has(node.id));
+      if (needsContent) nextLevel = level;
+    }
+    const levelChanged = level !== nextLevel;
+    level = nextLevel;
+    detailDirty ||= levelChanged;
     zoomChanged = false;
     const region = culling.getRegion();
-    if (edgesDirty || region !== lastRegion) {
+    if (level !== 'overview' && (edgesDirty || region !== lastRegion)) {
       if (region) {
         const routes = buildEdgeRoutes(nodes.values(), edges, region, options.strict);
         edgeLayer?.update(routes);
@@ -304,14 +443,18 @@ export function createCanvas(options: CanvasOptions): CanvasController {
     activeFrameEvent = false;
     if (notifyCamera) emit('camera', cameraPayload);
     if (notifyFrame) emit('active-frame', framePayload);
+    if (levelChanged) emit('level', level);
     for (const event of events) event();
     if (update.geometry.length) emit('geometry', new Set(update.geometry));
     if (update.mount) {
       loader?.refresh();
+      detailDirty = true;
       emit('mount', new Set(culling.getMountedIds()));
       loader?.refresh();
     } else if (update.geometry.length || loaderDirty) loader?.refresh();
     loaderDirty = false;
+    if (detailDirty) updateVisibility();
+    if (level === 'overview') overviewLayer?.present();
     if (animation || update.pending) schedule();
     if (resumeTimer !== undefined) view?.clearTimeout(resumeTimer);
     resumeTimer = undefined;
@@ -344,6 +487,9 @@ export function createCanvas(options: CanvasOptions): CanvasController {
     if (frameId !== undefined) view?.cancelAnimationFrame(frameId);
     if (idleTimer !== undefined) view?.clearTimeout(idleTimer);
     if (resumeTimer !== undefined) view?.clearTimeout(resumeTimer);
+    if (zoomIdleTimer !== undefined) view?.clearTimeout(zoomIdleTimer);
+    zoomIdleTimer = undefined;
+    zooming = false;
     resumeTimer = undefined;
     frameId = undefined;
     idleTimer = undefined;
@@ -353,6 +499,20 @@ export function createCanvas(options: CanvasOptions): CanvasController {
     input?.dispose();
     loader?.dispose();
     edgeLayer?.dispose();
+    overviewLayer?.dispose();
+    if (ownsOverview) overviewCanvas?.remove();
+    restoreOverview?.();
+    for (const [element, original] of visibility) {
+      const realm = elements.stage.ownerDocument.defaultView;
+      if (realm && (element instanceof realm.HTMLElement || element instanceof realm.SVGElement))
+        element.style.visibility = original;
+    }
+    visibility.clear();
+    overviewLayer = undefined;
+    overviewCanvas = undefined;
+    restoreOverview = undefined;
+    ownsOverview = false;
+    detailDirty = true;
     frames?.dispose();
     culling.reset();
     registered.clear();
@@ -380,6 +540,8 @@ export function createCanvas(options: CanvasOptions): CanvasController {
       const realm = stage?.ownerDocument?.defaultView;
       if (!realm || !(stage instanceof realm.HTMLElement)) invalid('elements.stage', stage);
       validateWorld('elements.world', next.world, stage);
+      if (next.overview !== undefined && !(next.overview instanceof realm.HTMLCanvasElement))
+        invalid('elements.overview', next.overview);
       if (
         next.edges !== undefined &&
         (!(next.edges instanceof realm.SVGElement) || !['svg', 'g'].includes(next.edges.localName))
@@ -394,13 +556,28 @@ export function createCanvas(options: CanvasOptions): CanvasController {
         elements?.stage === stage &&
         elements.world === next.world &&
         elements.edges === next.edges &&
+        elements.overview === next.overview &&
         (elements.overlays ?? []).length === (next.overlays ?? []).length &&
         (elements.overlays ?? []).every((overlay, index) => overlay === next.overlays?.[index])
       )
         return;
       detach();
       elements = { ...next, overlays: [...(next.overlays ?? [])] };
+      level = 'dom';
       view = realm;
+      if (next.overview) {
+        const canvas = next.overview;
+        const style = canvas.getAttribute('style');
+        const width = canvas.width;
+        const height = canvas.height;
+        restoreOverview = () => {
+          if (style === null) canvas.removeAttribute('style');
+          else canvas.setAttribute('style', style);
+          canvas.width = width;
+          canvas.height = height;
+        };
+        canvas.style.visibility = 'hidden';
+      }
       const attributes = ['tabindex', 'role', 'aria-label', 'aria-roledescription'].map(
         (key) => [key, stage.getAttribute(key)] as const,
       );
@@ -439,9 +616,12 @@ export function createCanvas(options: CanvasOptions): CanvasController {
       const observer = realm.ResizeObserver ? new realm.ResizeObserver(resize) : undefined;
       observer?.observe(stage);
       realm.addEventListener('resize', resize);
+      const forcedColors = realm.matchMedia?.('(forced-colors: active)');
+      forcedColors?.addEventListener?.('change', schedule);
       restore = () => {
         observer?.disconnect();
         realm.removeEventListener('resize', resize);
+        forcedColors?.removeEventListener?.('change', schedule);
         stage.removeEventListener('focusin', focusIn);
         stage.removeEventListener('focusout', focusOut);
         stage.removeEventListener('compositionstart', compositionStart);
@@ -516,10 +696,12 @@ export function createCanvas(options: CanvasOptions): CanvasController {
       const result = buildEdgeRoutes(next.values(), edges, viewport(), options.strict);
       const changed = culling.setNodes(next);
       nodes = next;
+      if (changed.length) overviewNodes = [...nodes.values()];
       edgesDirty ||= changed.length > 0;
       loaderDirty ||= changed.length > 0;
       updateDiagnostics(result.diagnostics);
-      for (const id of registered.keys()) if (!nodes.has(id)) registered.delete(id);
+      for (const id of registered.keys())
+        if (!nodes.has(id)) controller.registerNodeElement(id, null);
       const remaining = selection.filter((id) => nodes.has(id));
       if (remaining.length !== selection.length) {
         selection = remaining;
@@ -564,10 +746,21 @@ export function createCanvas(options: CanvasOptions): CanvasController {
       if (element !== null && (!realm || !(element instanceof realm.Element)))
         invalid('element', element);
       if (element === null) {
+        const previous = registered.get(id);
+        const realm = elements?.stage.ownerDocument.defaultView;
+        if (
+          previous &&
+          realm &&
+          (previous instanceof realm.HTMLElement || previous instanceof realm.SVGElement)
+        ) {
+          previous.style.visibility = visibility.get(previous) ?? previous.style.visibility;
+          visibility.delete(previous);
+        }
         registered.delete(id);
         if (focused === id) setFocus(null);
       } else registered.set(id, element);
       loaderDirty = true;
+      detailDirty = true;
       schedule();
     },
     setPinned(source, ids) {
@@ -577,7 +770,10 @@ export function createCanvas(options: CanvasOptions): CanvasController {
       ids.forEach((id) => {
         requireNode(id, 'pinned.id');
       });
+      const changed = new Set([...culling.getPinnedIds(), ...ids]);
       culling.setPinned(`product:${source}`, ids);
+      detailDirty = true;
+      enqueue('geometry', changed);
       schedule();
     },
     getMountedIds() {
@@ -591,6 +787,23 @@ export function createCanvas(options: CanvasOptions): CanvasController {
     getBreakpoint() {
       alive();
       return breakpoint;
+    },
+    getLevel(id) {
+      alive();
+      if (id !== undefined) requireNode(id);
+      return id !== undefined && culling.getPinnedIds().has(id) ? 'dom' : level;
+    },
+    getOverviewMetrics() {
+      alive();
+      return (
+        overviewLayer?.metrics() ?? {
+          cachePixelBytes: 0,
+          redraws: 0,
+          cameraFrame: 0,
+          presentedCameraFrame: 0,
+          presentationLagFrames: [],
+        }
+      );
     },
     getCamera() {
       alive();
@@ -711,6 +924,7 @@ export function createCanvas(options: CanvasOptions): CanvasController {
         return;
       selection = [...ids];
       culling.setPinned('selection', selection);
+      detailDirty = true;
       enqueue('selection', [...selection]);
     },
     getSelection() {
@@ -772,6 +986,8 @@ export function createCanvas(options: CanvasOptions): CanvasController {
       if (id === activeFrame) return;
       activeFrame = id;
       culling.setPinned('active-frame', id === null ? [] : [id]);
+      detailDirty = true;
+      enqueue('geometry', new Set(culling.getPinnedIds()));
       activeFrameEvent = true;
       frames?.setActive(id);
       loader?.request(id);

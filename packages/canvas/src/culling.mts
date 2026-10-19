@@ -27,6 +27,15 @@ export function createCulling(
   let desired = new Set<NodeId>();
   let queue: NodeId[] = [];
   let frozenUntil = -Infinity;
+  let optionalMounts = true;
+
+  function getPinnedIds(): Set<NodeId> {
+    const pins = new Set<NodeId>();
+    for (const ids of sources.values()) {
+      for (const id of ids) if (nodes.has(id)) pins.add(id);
+    }
+    return pins;
+  }
 
   function setNodes(next: ReadonlyMap<NodeId, CanvasNode>): readonly NodeId[] {
     const changed: NodeId[] = [];
@@ -61,6 +70,7 @@ export function createCulling(
     now: number,
     gesture: boolean,
     zoomChanged: boolean,
+    admitOptional = true,
   ): CullingUpdate {
     if (zoomChanged) frozenUntil = now + 120;
     const outside =
@@ -69,11 +79,9 @@ export function createCulling(
       viewport.y < region.y ||
       viewport.x + viewport.width > region.x + region.width ||
       viewport.y + viewport.height > region.y + region.height;
-    const reevaluate = dirty || outside || zoomChanged;
-    const pins = new Set<NodeId>();
-    for (const ids of sources.values()) {
-      for (const id of ids) if (nodes.has(id)) pins.add(id);
-    }
+    const reevaluate = dirty || outside || zoomChanged || optionalMounts !== admitOptional;
+    optionalMounts = admitOptional;
+    const pins = getPinnedIds();
     if (reevaluate) {
       region = {
         x: viewport.x - (viewport.width * (marginFactor - 1)) / 2,
@@ -81,7 +89,7 @@ export function createCulling(
         width: viewport.width * marginFactor,
         height: viewport.height * marginFactor,
       };
-      desired = grid.query(region);
+      desired = admitOptional ? grid.query(region) : new Set();
     }
     if (reevaluate || pinsDirty) {
       const centerX = viewport.x + viewport.width / 2;
@@ -152,6 +160,15 @@ export function createCulling(
       pinsDirty = true;
     },
     getMountedIds: (): readonly NodeId[] => [...mounted],
+    getPinnedIds,
+    query(region: Rect): readonly CanvasNode[] {
+      const result: CanvasNode[] = [];
+      for (const id of grid.query(region)) {
+        const node = nodes.get(id);
+        if (node) result.push(node);
+      }
+      return result;
+    },
     getRegion: (): Rect | undefined => region,
     reset() {
       mounted.clear();

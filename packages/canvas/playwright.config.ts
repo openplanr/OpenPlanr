@@ -19,11 +19,27 @@ export default defineConfig({
     baseURL: 'http://127.0.0.1:4178',
     viewport: { width: 1440, height: 900 },
     trace: 'retain-on-failure',
-    launchOptions: {
-      args: gpuMode === 'metal' ? ['--use-angle=metal', '--enable-gpu', '--ignore-gpu-blocklist'] : [],
-    },
   },
-  projects: [{ name: 'chromium', use: { browserName: 'chromium' } }],
+  projects: [
+    {
+      name: 'chromium',
+      testIgnore: '**/*.firefox.spec.ts',
+      use: {
+        browserName: 'chromium',
+        launchOptions: {
+          args: gpuMode === 'metal' ? ['--use-angle=metal', '--enable-gpu', '--ignore-gpu-blocklist'] : [],
+        },
+      },
+    },
+    {
+      name: 'firefox',
+      testMatch: '**/*.firefox.spec.ts',
+      use: {
+        browserName: 'firefox',
+        launchOptions: { executablePath: process.env.CANVAS_FIREFOX_NIGHTLY_PATH },
+      },
+    },
+  ],
   webServer: {
     command: 'npm exec -- vite build bench --outDir ../test-results/bench --emptyOutDir && npm exec -- vite preview bench --outDir ../test-results/bench --host 127.0.0.1 --port 4178 --strictPort',
     url: 'http://127.0.0.1:4178',

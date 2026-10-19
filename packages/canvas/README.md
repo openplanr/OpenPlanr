@@ -1,12 +1,13 @@
 # @openplanr/canvas
 
-Framework-free camera, input and culling controller for HTML and SVG content. The package
+Framework-free camera, input, culling and overview controller for HTML and SVG content. The package
 is private and is not published. It has no runtime dependencies; React peers
 remain optional.
 
 Exports:
 
 - `.`: `createCanvas`, `cameraFromScreenTranslate`, `cameraToScreenTranslate`,
+  `drawCameraOverview`, `drawMinimap`, `minimapToWorld`,
   and their camera, geometry, node, options, elements, events and controller types.
 - `./react`: Empty entry reserved for React bindings.
 - `./testing`: `generateLayeredGraph`, `generateSvgDiagram`, `percentile95`,
@@ -46,9 +47,26 @@ changes freeze optional admissions until 120 ms after the last zoom change;
 unmounts, geometry and pinned admissions continue. `setPinned(source, ids)`
 keeps independent pin sources. Selection and registered focused elements pin
 their nodes internally. Optional `culling.cellSize` and `culling.marginFactor`
-override the defaults. Overview, safe-area chrome and the outline remain pending.
-At settled fit zoom the region can include the entire graph; the stage DOM budget
-still needs the pending overview layer. The trace gate retains that budget.
+override the defaults. Safe-area chrome and the outline remain pending.
+
+`lod` defaults to `{ compactBelow: 0.60, overviewBelow: 0.40, hysteresis: 0.03 }`;
+`lod: false` keeps DOM rendering. Levels switch below 0.57 and 0.37, returning
+above 0.63 and 0.43. Subscribe to `level` and query `getLevel(id)` to render
+compact cards while every pinned, focused, selected or edited node stays full.
+Mark edited nodes with `setPinned('editing', ids)`. Overview hides the world and
+edge SVG, releases optional mounts and preserves visible pinned wrappers. The
+overview remains visible until returning DOM mounts are ready after the zoom freeze.
+
+Pass an optional `overview` canvas on attach, or let the controller create it.
+`overviewStyle(node)` supplies fill and stroke. The default canvas 2D renderer
+translates a cached bitmap during stable pans; `getOverviewMetrics()` reports
+its pixel bytes and redraws. The cache holds at most 4,194,304 pixels (16 MiB of
+RGBA pixels). Active zoom scales the bitmap until its zoom ratio leaves 0.5 to 2
+or the view leaves its cached region, with one fresh draw after 150 ms without a zoom change.
+`overviewRenderer: 'worker'` opts into the experimental
+OffscreenCanvas renderer and reports measured presentation lag in frames; it
+throws when workers or OffscreenCanvas are unavailable. `drawMinimap` fits all
+nodes into a letterboxed target and returns the transform for `minimapToWorld`.
 
 `setEdges` supplies edges with `id`, `from`, `to`, `style`, and optional world
 `points`. Routes intersecting the mounted region draw as one path per style,
@@ -87,7 +105,7 @@ inputs throw `TypeError` with the field and value.
 Run `npm test --workspace=@openplanr/canvas`, `npm run test:browser
 --workspace=@openplanr/canvas`, or `npm run bench:trace
 --workspace=@openplanr/canvas`. The production Vite bench accepts `fixture`,
-`world`, `pointerMode`, `zoom`, `frame=1` and `frames=15` query parameters.
+`world`, `pointerMode`, `zoom`, `frame=1`, `frames=15` and `overviewRenderer` query parameters.
 It renders through mount and geometry events and shows the mounted count. Trace results are written to
 `test-results/bench-trace.json`; the measured reference and runner results appear
 together in its report. Each scenario records three runs and reports median
@@ -95,16 +113,19 @@ p95s with all raw results. A discarded warm-up precedes the 708-node interaction
 runs. Every scenario and raw trace run includes the WebGL renderer string.
 All four scenarios gate the unchanged main-thread, rAF, long-task, first-frame
 and hit-test budgets for the 708 and 5,000 HTML tiers and the 708 SVG tier at both
-pixel densities. Fit DOM counts are reported as owned by the pending overview.
-At 40%, HTML DOM counts retain the 2,000 reference budget and are reported as
-"budget conflict, owner decision pending", with a 2,100 regression ceiling.
-Other DOM gates remain at 2,000. Hit-test p95 uses per-query batch means at 1,000
+pixel densities. Stage DOM counts gate at 2,000, including compact cards at 40%
+and the fit overview. Hit-test p95 uses per-query batch means at 1,000
 seeded screen points outside each interaction window. Each point repeats queries
 until its batch spans at least 1 ms; the report includes actual call counts and
 unrounded milliseconds per query. A separate 968-node remount trace gates its 16 ms main-thread
 p95 and checks at most 200 admissions per frame across at least five frames.
 The 5,000 SVG stress tier remains reported. Browser traces
 require the external browser runner; results depend on its GPU and rendering mode.
+The overview comparison records main-thread work, worst frames, bitmap bytes and
+worker presentation lag at 5,000 and `stress-50000` nodes. `test:browser` runs
+Chromium only. Run `npm run test:browser:nightly --workspace=@openplanr/canvas`
+for the Firefox cache check, using Playwright's installed Firefox by default.
+`CANVAS_FIREFOX_NIGHTLY_PATH` optionally selects a nightly binary.
 
 The browser runner defaults to software mode. For the local Metal comparison,
 run `CANVAS_GPU_MODE=metal npm run bench:trace --workspace=@openplanr/canvas`.

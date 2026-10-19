@@ -11,6 +11,15 @@ function run(index: number, main: number, raf: number, longTasks: number[] = [])
     run: index,
     gpuRenderer: 'ANGLE test renderer',
     rendererMainP95Ms: main,
+    rendererMainWorstMs: main,
+    overview: {
+      cachePixelBytes: 0,
+      peakCachePixelBytes: 0,
+      redraws: 0,
+      cameraFrame: 0,
+      presentedCameraFrame: 0,
+      presentationLagFrames: [],
+    },
     hitTestP95Ms: main / 100,
     hitTestProbe: {
       p95Ms: main / 100,
@@ -43,6 +52,30 @@ describe('trace aggregation', () => {
     expect(runs).toEqual(original);
     expect(result.runs.map((sample) => sample.longTasksOver50Ms)).toEqual([0, 1, 0]);
     expect(result.runs[1].longTaskDurationsMs).toEqual([51.23456789]);
+  });
+
+  it('preserves per-scenario redraws and peak cache bytes when the final allocation shrinks', () => {
+    const runs = [run(1, 2, 16.7), run(2, 3, 16.8), run(3, 4, 16.9)];
+    const overviewSamples = [
+      { redraws: 7, cachePixelBytes: 0, peakCachePixelBytes: 83_000_000 },
+      { redraws: 4, cachePixelBytes: 8_000_000, peakCachePixelBytes: 21_000_000 },
+      { redraws: 2, cachePixelBytes: 4_000_000, peakCachePixelBytes: 4_000_000 },
+    ];
+    for (const [index, sample] of overviewSamples.entries())
+      runs[index].overview = { ...runs[index].overview, ...sample };
+    const original = structuredClone(runs);
+    const result = aggregateTraceRuns(runs);
+    expect(
+      result.runs.map(({ overview }) => ({
+        redraws: overview.redraws,
+        cachePixelBytes: overview.cachePixelBytes,
+        peakCachePixelBytes: overview.peakCachePixelBytes,
+      })),
+    ).toEqual(overviewSamples);
+    expect(JSON.stringify(result.runs.map((run) => run.overview))).toBe(
+      JSON.stringify(original.map((run) => run.overview)),
+    );
+    expect(runs).toEqual(original);
   });
 
   it.each([0, 1, 2, 4])('rejects %i samples instead of three', (count) => {
@@ -80,20 +113,20 @@ describe('trace budget ownership', () => {
 describe('DOM budget ownership', () => {
   for (const count of [708, 5000]) {
     for (const world of ['html', 'svg'] as const) {
-      it(`reports ${count} ${world} fit DOM separately from its timing ownership`, () => {
+      it(`gates ${count} ${world} fit DOM with its timing ownership`, () => {
         expect(domBudgetPolicy({ count, world, scenario: 'pan-fit' })).toEqual({
-          ownership: 'reported, owned by overview',
-          regressionLimit: null,
+          ownership: world === 'html' || count === 708 ? 'gated' : 'reported, SVG stress tier',
+          regressionLimit: world === 'html' || count === 708 ? 2000 : null,
         });
         expect(traceOwnership({ count, world, scenario: 'pan-fit' })).toBe(
           world === 'html' || count === 708 ? 'gated' : 'reported, SVG stress tier',
         );
       });
     }
-    it(`retains the ${count} HTML conflict with a regression ceiling`, () => {
+    it(`gates ${count} HTML compact cards at the reference budget`, () => {
       expect(domBudgetPolicy({ count, world: 'html', scenario: 'pan-40' })).toEqual({
-        ownership: 'budget conflict, owner decision pending',
-        regressionLimit: 2100,
+        ownership: 'gated',
+        regressionLimit: 2000,
       });
       expect(traceOwnership({ count, world: 'html', scenario: 'pan-40' })).toBe('gated');
     });
