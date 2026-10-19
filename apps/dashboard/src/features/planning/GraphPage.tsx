@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   Card,
   CommandHint,
@@ -15,6 +15,7 @@ import {
 } from '../../design-system/components/index.js';
 import type { DashboardProductState } from '../../lib/api/product-state.js';
 import type { DashboardQueryIdentity } from '../../lib/binding/query-identity.js';
+import { usePlanningView } from '../../lib/routing/planning-presentation.js';
 import { useInspectorStore } from '../shell/inspector-selection.js';
 import { inspectPlanningNode } from './planning-inspector.js';
 import {
@@ -24,6 +25,7 @@ import {
   planningDisplayId,
 } from './planning-model.js';
 import { PlanningNotice, PlanningRefusal, resolvePlanningWorkspace } from './planning-workspace.js';
+import { applyPlanningView } from './presentation-view.js';
 import './planning.css';
 
 export type GraphPageProps = Readonly<{
@@ -61,7 +63,11 @@ function isEdgeKind(value: string): value is EdgeKind {
  * Nodes touched by one edge kind, keyed by display id so the node code reads as authored.
  * A display id shared by two canonical ids falls back to the canonical id so edges stay exact.
  */
-function selectGraphIndex(graph: PlanningModelGraph, kind: EdgeKind): GraphIndex {
+function selectGraphIndex(
+  graph: PlanningModelGraph,
+  kind: EdgeKind,
+  focusId: string | null,
+): GraphIndex {
   const kindEdges = graph.edges.filter((edge) => edge.kind === kind);
   const touched = new Set(kindEdges.flatMap((edge) => [edge.from, edge.to]));
   const displayCount = new Map<string, number>();
@@ -74,13 +80,14 @@ function selectGraphIndex(graph: PlanningModelGraph, kind: EdgeKind): GraphIndex
   const byGraphId = new Map<string, PlanningModelNode>();
   const nodes: GraphNode[] = [];
   for (const node of graph.nodes) {
-    if (!touched.has(node.id)) continue;
+    if (!touched.has(node.id) && node.id !== focusId) continue;
     const display = planningDisplayId(node);
     const graphId = displayCount.get(display) === 1 ? display : node.id;
     graphIdOf.set(node.id, graphId);
     byGraphId.set(graphId, node);
     nodes.push({
       id: graphId,
+      canonicalId: node.id,
       type: node.type,
       label: node.title,
       blocked: node.status === 'blocked',
@@ -127,35 +134,55 @@ function cycleClosingEdges(
 }
 
 export function GraphPage({ currentBinding, current }: GraphPageProps) {
+  const token = usePlanningView();
+  const presentation = token?.route === 'graph' ? token : null;
   const [view, setView] = useState<GraphView>('graph');
   const [kind, setKind] = useState<EdgeKind>('depends_on');
   const inspector = useInspectorStore();
 
   const model = resolvePlanningWorkspace(current, currentBinding);
+  useEffect(() => {
+    if (!presentation?.focusId) return;
+    const focused = model?.graph.nodes.find((node) => node.id === presentation.focusId);
+    if (focused) inspectPlanningNode(focused, false);
+  }, [presentation, model?.graph.nodes]);
   if (!model) {
     return <PlanningRefusal routeKind="planning.graph" title="Planning cannot be trusted" />;
   }
 
-  const index = selectGraphIndex(model.graph, kind);
+  const nodes = applyPlanningView(model.graph.nodes, presentation);
+  const ids = new Set(nodes.map((node) => node.id));
+  const graph = {
+    nodes,
+    edges: model.graph.edges.filter((edge) => ids.has(edge.from) && ids.has(edge.to)),
+  };
+  const index = selectGraphIndex(graph, kind, presentation?.focusId ?? null);
   const closing = view === 'outline' ? cycleClosingEdges(index.nodes, index.edges) : null;
   const drawnEdges =
     closing && closing.size > 0 ? index.edges.filter((edge) => !closing.has(edge)) : index.edges;
-  const selectedId =
+  const inspectedId =
     inspector.selection?.kind === 'node'
       ? (index.graphIdOf.get(inspector.selection.id) ?? null)
       : null;
+  const selectedId =
+    inspectedId ??
+    (presentation?.focusId ? (index.graphIdOf.get(presentation.focusId) ?? null) : null);
   const visibleEdges = drawnEdges.map((edge) =>
     selectedId !== null && (edge.from === selectedId || edge.to === selectedId)
       ? { ...edge, active: true }
       : edge,
   );
-  const openNode = (graphId: string) => {
+  const openNode = (graphId: string, open = true) => {
     const node = index.byGraphId.get(graphId);
-    if (node) inspectPlanningNode(node);
+    if (node) inspectPlanningNode(node, open);
   };
 
   return (
-    <div className="op-workspace op-planning pc-pipeline" data-route-kind="planning.graph">
+    <div
+      className="op-workspace op-planning pc-pipeline"
+      data-route-kind="planning.graph"
+      data-density={presentation?.density}
+    >
       <PlanningNotice presentation={model.presentation} />
       <div>
         <SectionHeader
@@ -204,12 +231,12 @@ export function GraphPage({ currentBinding, current }: GraphPageProps) {
               <ToolbarDivider />
               <span style={MONO_NOTE}>edge kind</span>
             </Toolbar>
-            {index.edges.length === 0 ? (
+            {index.nodes.length === 0 ? (
               <Card padding={0}>
                 <EmptyState
                   icon="workflow"
                   title={`No ${kind} edges in this plan`}
-                  description="Both views draw edges only; an artifact without an edge of this kind is not shown."
+                  description="Both views draw relationships. A shared focus can also keep its isolated artifact visible."
                 />
               </Card>
             ) : (
@@ -221,6 +248,7 @@ export function GraphPage({ currentBinding, current }: GraphPageProps) {
                   flow={kind === 'depends_on' ? 'target-to-source' : 'source-to-target'}
                   selectedId={selectedId}
                   onSelect={openNode}
+                  onFocusSelect={(id) => openNode(id, false)}
                   height={GRAPH_HEIGHT}
                 />
               </div>

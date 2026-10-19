@@ -39,7 +39,9 @@ describe('immutable public dashboard route fixture catalog', () => {
       expect(route.kind).toBe(fixture.kind);
       expect(route.kind).not.toBe('not-found');
       if (route.kind === 'not-found') throw new TypeError(`Unparsed fixture: ${fixture.hash}`);
-      expect(serializeDashboardRoute(route)).toBe(fixture.hash);
+      expect(serializeDashboardRoute(route)).toBe(
+        fixture.kind === 'planning.overview' ? '#/home' : fixture.hash,
+      );
       const definition = dashboardRouteDefinition(route);
       expect(definition?.kind).toBe(fixture.kind);
       expect(fixture.composition).toBe('shell');

@@ -7,8 +7,10 @@ import {
 } from '../../design-system/components/index.js';
 import type { DashboardProductState } from '../../lib/api/product-state.js';
 import type { DashboardQueryIdentity } from '../../lib/binding/query-identity.js';
+import { usePlanningView } from '../../lib/routing/planning-presentation.js';
 import type { PlanningModelNode } from './planning-model.js';
 import { PlanningNotice, PlanningRefusal, resolvePlanningWorkspace } from './planning-workspace.js';
+import { applyPlanningView } from './presentation-view.js';
 import './planning.css';
 import './activity.css';
 
@@ -23,31 +25,36 @@ function carriesUpdated(node: PlanningModelNode): boolean {
 }
 
 export function ActivityPage({ currentBinding, current }: ActivityPageProps) {
+  const token = usePlanningView();
+  const presentation = token?.route === 'activity' ? token : null;
   const model = resolvePlanningWorkspace(current, currentBinding);
   if (!model) {
     return <PlanningRefusal routeKind="planning.activity" title="Planning cannot be trusted" />;
   }
 
-  const total = model.graph.nodes.length;
-  const withUpdated = model.graph.nodes.filter(carriesUpdated).length;
+  const items = applyPlanningView(model.graph.nodes, presentation);
+  const total = items.length;
+  const withUpdated = items.filter(carriesUpdated).length;
 
   return (
     <div
       className="op-workspace op-planning pc-pipeline pc-activity"
       data-route-kind="planning.activity"
+      data-density={presentation?.density}
     >
       <PlanningNotice presentation={model.presentation} />
       <SectionHeader
         headingLevel={1}
         eyebrow="planr-status"
         title="Activity"
+        count={presentation ? `${total} matching snapshot items` : undefined}
         description="Owner-issued watcher patches only. A graph snapshot is not a change log."
       />
       <Card padding={0}>
         <EmptyState
           icon="activity"
           title="No activity returned"
-          description="Activity is a live patch feed, not a history. This route was given a graph snapshot, which carries no change log — so empty is the normal state, not an error."
+          description="Activity is a live patch feed, not a history. This route was given a graph snapshot, which carries no change log; empty is the normal state, not an error."
         />
         <div className="pc-activity__aid">
           <CommandHint
@@ -59,8 +66,8 @@ export function ActivityPage({ currentBinding, current }: ActivityPageProps) {
             {withUpdated > 0 ? (
               <>
                 A graph snapshot carries no history. The nearest signal is each item's{' '}
-                <code className="pc-activity__code">updated</code> frontmatter — {withUpdated} of{' '}
-                {total} items carry one — shown on List.
+                <code className="pc-activity__code">updated</code> frontmatter: {withUpdated} of{' '}
+                {total} matching items carry one, shown on List.
               </>
             ) : (
               <>

@@ -73,7 +73,7 @@ const BOOTING = dashboardRuntime.projection.parseState({
   mutationEnabled: false,
   policy: dashboardRuntime.projection.statePolicy('booting'),
 });
-const PLANNING_HOME_ROUTE = dashboardRuntime.routing.parse('#/overview');
+const PLANNING_HOME_ROUTE = dashboardRuntime.routing.parse('#/home');
 
 function productStateReason(kind: DashboardProductStateKind): string {
   return `DASHBOARD_${kind.toUpperCase().replace('-', '_')}`;

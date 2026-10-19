@@ -2,16 +2,18 @@
 import { PcIcon, type PcIconName } from '../../design-system/components/index.js';
 import type { DashboardSearchHit, DashboardUnsupportedIdentity } from './search-index.js';
 
-const GROUP_ORDER = Object.freeze(['route', 'planning', 'operate'] as const);
+const GROUP_ORDER = Object.freeze(['route', 'planning', 'operate', 'command'] as const);
 const GROUP_LABEL = Object.freeze({
   route: 'Go to',
   planning: 'Planning work',
   operate: 'Operate items',
+  command: 'Commands to copy',
 } satisfies Record<DashboardSearchHit['source'], string>);
 const GROUP_ICON = Object.freeze({
   route: 'chevron-right',
   planning: 'corner-down-right',
   operate: 'gauge',
+  command: 'copy',
 } satisfies Record<DashboardSearchHit['source'], PcIconName>);
 
 function humanLabel(value: string): string {
@@ -27,8 +29,11 @@ export type SearchResultsProps = Readonly<{
   hits: readonly DashboardSearchHit[];
   unsupported?: readonly DashboardUnsupportedIdentity[];
   activeHref: string | null;
+  activeId?: string | null;
+  commandBusy?: boolean;
   listId: string;
   onSelect: (hit: DashboardSearchHit) => void;
+  onFocus?: (hit: DashboardSearchHit) => void;
 }>;
 
 function groupHits(
@@ -38,12 +43,14 @@ function groupHits(
     route: [],
     planning: [],
     operate: [],
+    command: [],
   };
   for (const hit of hits) grouped[hit.source].push(hit);
   return Object.freeze({
     route: Object.freeze(grouped.route),
     planning: Object.freeze(grouped.planning),
     operate: Object.freeze(grouped.operate),
+    command: Object.freeze(grouped.command),
   });
 }
 
@@ -51,8 +58,11 @@ export function SearchResults({
   hits,
   unsupported = Object.freeze([]),
   activeHref,
+  activeId,
+  commandBusy = false,
   listId,
   onSelect,
+  onFocus,
 }: SearchResultsProps) {
   const grouped = groupHits(hits);
   const hasHits = hits.length > 0;
@@ -82,14 +92,20 @@ export function SearchResults({
             </h2>
             <ol className="pc-palette__list" aria-label={GROUP_LABEL[source]}>
               {rows.map((hit, index) => {
-                const active = hit.href === activeHref;
+                const active = activeId
+                  ? hit.id === activeId
+                  : hit.href !== null && hit.href === activeHref;
                 return (
                   <li key={`${hit.id}:${index}`}>
                     <button
                       type="button"
                       className="pc-palette__row"
+                      data-search-result={hit.id}
+                      onFocus={() => onFocus?.(hit)}
                       data-active={active ? 'true' : 'false'}
                       aria-current={active ? 'true' : undefined}
+                      disabled={hit.source === 'command' && commandBusy}
+                      aria-busy={(hit.source === 'command' && commandBusy) || undefined}
                       onClick={() => onSelect(hit)}
                     >
                       <PcIcon name={GROUP_ICON[source]} size={14} />

@@ -45,7 +45,7 @@ const PRESENTATION_NOTICE = Object.freeze({
 } satisfies Readonly<Record<Exclude<PlanningPresentation, 'ready'>, string>>);
 
 const PLANNING_ROUTES = Object.freeze([
-  '#/overview',
+  '#/home',
   '#/graph',
   '#/board',
   '#/list',
@@ -128,8 +128,8 @@ export function PlanningNotice({ presentation }: { presentation: PlanningPresent
   return (
     <p className="op-planning-notice" role="status">
       {PRESENTATION_NOTICE[presentation]}{' '}
-      <a className="op-inline-action" href="#/overview">
-        Open Planning overview
+      <a className="op-inline-action" href="#/home">
+        Open Planning Home
       </a>
     </p>
   );
@@ -144,8 +144,8 @@ export function PlanningRefusal({ routeKind, title }: { routeKind: string; title
         title={title}
         description="We could not verify the Planning information for this view, so it is not shown."
         actions={
-          <a className="op-inline-action" href="#/overview">
-            Return to Planning overview
+          <a className="op-inline-action" href="#/home">
+            Return to Planning Home
           </a>
         }
       />

@@ -32,6 +32,7 @@ type RouteWorkspaceProps = Readonly<{
   binding: DashboardContext['binding'];
   connectionState: string;
   searchSources: DashboardSearchSources;
+  onCopy?: (text: string) => Promise<void>;
   operateSearchBindings: readonly NonNullable<DashboardContext['binding']>[];
   operateReviewNavigation: OperateReviewNavigation | null;
   refetchCurrent: () => Promise<DashboardProductState<unknown>>;
@@ -187,12 +188,14 @@ function PlanningRouteWorkspace({
   binding,
   connectionState,
   searchSources,
+  onCopy,
   operateSearchBindings,
 }: RouteWorkspaceProps) {
   if (route.kind === 'planning.search') {
     return (
       <PlanningSearchWorkspace
         sources={searchSources}
+        onCopy={onCopy}
         operateBindings={operateSearchBindings}
         connectionState={connectionState}
       />
@@ -258,8 +261,8 @@ export function RouteWorkspace(props: RouteWorkspaceProps) {
         <p className="op-eyebrow">Closed route</p>
         <h1>Destination not available</h1>
         <p>This address is not part of the OpenPlanr dashboard route contract.</p>
-        <a className="op-inline-action" href="#/overview">
-          Return to Planning overview
+        <a className="op-inline-action" href="#/home">
+          Return to Planning Home
         </a>
       </div>
     );

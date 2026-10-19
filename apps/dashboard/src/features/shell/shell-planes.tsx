@@ -218,7 +218,7 @@ export function PlaneBanner({ state, reason }: PlaneBannerProps) {
   }
   return (
     <div className="pc-plane-banner">
-      <InlineAlert tone="danger" title="Offline — the watcher is not reachable">
+      <InlineAlert tone="danger" title="Offline: the watcher is not reachable">
         {reason}
       </InlineAlert>
       <CommandHint command="/planr-dashboard" label="restart the local reader" size="sm" />
@@ -236,7 +236,7 @@ export function IncompatibleNotice({ detail }: Readonly<{ detail: string | null 
       </InlineAlert>
       <CommandHint command="/planr-doctor" label="report the schema version on disk" size="sm" />
       <InlineAlert tone="info" title="Nothing was changed">
-        The dashboard only ever reads. No file was migrated, rewritten or removed.
+        Plan views are read-only. No planning file was migrated, rewritten or removed.
       </InlineAlert>
     </div>
   );

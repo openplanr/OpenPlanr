@@ -106,8 +106,8 @@ export function OverviewPage({ currentBinding, current }: OverviewPageProps) {
       <PlanningNotice presentation={presentation} />
       <SectionHeader
         headingLevel={1}
-        eyebrow="planr-status · overview"
-        title="Overview"
+        eyebrow="planr-status · home"
+        title="Home"
         count={`${items.length} ${items.length === 1 ? 'artifact' : 'artifacts'}`}
         description="Status counts come straight from the graph snapshot."
       />
@@ -144,6 +144,7 @@ export function OverviewPage({ currentBinding, current }: OverviewPageProps) {
                     compact
                     rows={blocked.slice(0, PREVIEW_LIMIT)}
                     onRowClick={inspectPlanningNode}
+                    onRowFocus={(node) => inspectPlanningNode(node, false)}
                     caption="Blocked artifacts"
                     columns={[ITEM_COLUMN, dependsOnColumn(byId), SPRINT_COLUMN, UPDATED_COLUMN]}
                   />
@@ -187,6 +188,7 @@ export function OverviewPage({ currentBinding, current }: OverviewPageProps) {
                 compact
                 rows={active.slice(0, PREVIEW_LIMIT)}
                 onRowClick={inspectPlanningNode}
+                onRowFocus={(node) => inspectPlanningNode(node, false)}
                 caption="Artifacts in progress"
                 emptyMessage="No artifact carries the in-progress status."
                 columns={[

@@ -13,8 +13,9 @@ const columns = await readFile(
 
 test('planning list bounds mounted rows and exposes accessible pagination', () => {
   assert.match(page, /const PAGE_SIZE = 100/u);
-  assert.match(page, /rows\.slice\(pageStart, pageStart \+ PAGE_SIZE\)/u);
-  assert.match(page, /rows=\{visibleRows\}/u);
+  assert.match(page, /appearances\.slice\(pageStart, pageStart \+ PAGE_SIZE\)/u);
+  assert.match(page, /nodes: visibleRows[\s\S]*?map\(\(entry\) => entry\.node\)/u);
+  assert.match(page, /rows=\{group.nodes\}/u);
   assert.match(page, /aria-label="Planning artifact pages"/u);
   assert.match(page, /Page \{currentPage \+ 1\} of \{pageCount\}/u);
 });

@@ -1,4 +1,11 @@
-import { createContext, type ReactNode, useContext, useMemo, useSyncExternalStore } from 'react';
+import {
+  createContext,
+  type ReactNode,
+  useContext,
+  useEffect,
+  useMemo,
+  useSyncExternalStore,
+} from 'react';
 import type { OperateReviewNavigation } from '../features/operate/review/review-navigation.js';
 import {
   LiveStateBoundary,
@@ -11,7 +18,12 @@ import {
   parseDashboardProductState,
 } from '../lib/api/product-state.js';
 import type { DashboardQueryIdentity } from '../lib/binding/query-identity.js';
-import { type ParsedDashboardRoute, parseDashboardRoute } from './router.js';
+import type { PlanningView } from '../lib/routing/planning-view-codec.js';
+import {
+  type ParsedDashboardRoute,
+  parseDashboardLocation,
+  serializeDashboardRoute,
+} from './router.js';
 
 export type DashboardIdentity = Readonly<{
   projectName: string;
@@ -30,6 +42,8 @@ export type DashboardBootPhase = 'checking' | 'compatible' | 'incompatible' | 'u
 
 export type DashboardContextValue = Readonly<{
   route: ParsedDashboardRoute;
+  presentationView: PlanningView | null;
+  invalidView: boolean;
   identity: DashboardIdentity;
   connection: DashboardConnection;
   buildId: string;
@@ -154,7 +168,26 @@ export function DashboardProviders({
     () => currentHash(initialHash),
     () => currentHash(initialHash),
   );
-  const route = useMemo(() => parseDashboardRoute(hash), [hash]);
+  const { route, presentationView, invalidView } = useMemo(
+    () => parseDashboardLocation(hash),
+    [hash],
+  );
+  useEffect(() => {
+    if (initialHash !== undefined || typeof window === 'undefined') return;
+    const canonicalHash =
+      hash === '' || hash === '#' || hash === '#/overview'
+        ? '#/home'
+        : route.product === 'planning' && route.subjectId?.includes('/')
+          ? serializeDashboardRoute(route)
+          : hash;
+    if (hash !== canonicalHash) {
+      window.history.replaceState(
+        window.history.state,
+        '',
+        `${window.location.pathname}${window.location.search}${canonicalHash}`,
+      );
+    }
+  }, [hash, initialHash, route]);
   const currentProjection = useMemo(
     () => projection ?? projectionForConnection(connection),
     [connection, projection],
@@ -179,6 +212,8 @@ export function DashboardProviders({
     () =>
       Object.freeze({
         route,
+        presentationView,
+        invalidView,
         identity,
         connection,
         buildId,
@@ -195,6 +230,8 @@ export function DashboardProviders({
       }),
     [
       route,
+      presentationView,
+      invalidView,
       identity,
       connection,
       buildId,

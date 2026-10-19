@@ -1,11 +1,9 @@
-import { useState } from 'react';
 import {
   ARTIFACT_STATUS_ORDER,
   Button,
   Card,
   CommandHint,
   DataTable,
-  type DataTableSort,
   EmptyState,
   Input,
   SectionHeader,
@@ -15,11 +13,10 @@ import {
   ToolbarDivider,
 } from '../../design-system/components/index.js';
 import type { DashboardProductState } from '../../lib/api/product-state.js';
-import type { DashboardQueryIdentity } from '../../lib/binding/query-identity.js';
+import { useListPresentation } from '../../lib/routing/planning-presentation.js';
 import { useInspectorStore } from '../shell/inspector-selection.js';
 import {
   dependencyCountColumn,
-  frontmatterString,
   ITEM_COLUMN,
   outgoingDependencyCounts,
   REF_COLUMN,
@@ -27,21 +24,26 @@ import {
   STATUS_COLUMN,
   UPDATED_COLUMN,
 } from './planning-columns.js';
-import { inspectPlanningNode } from './planning-inspector.js';
+import { inspectPlanningNode, usePlanningViewFocus } from './planning-inspector.js';
 import { takeListStatus } from './planning-list-filter.js';
 import {
   filterPlanningNodes,
   type PlanningArtifactStatus,
   type PlanningArtifactType,
-  type PlanningModelNode,
   sortPlanningNodes,
 } from './planning-model.js';
-import { PlanningNotice, PlanningRefusal, resolvePlanningWorkspace } from './planning-workspace.js';
+import {
+  PlanningNotice,
+  PlanningRefusal,
+  type PlanningWorkspaceModel,
+  resolvePlanningWorkspace,
+} from './planning-workspace.js';
+import { applyPlanningView, groupPresentationNodes } from './presentation-view.js';
 import './planning.css';
 import './list.css';
 
 export type ListPageProps = Readonly<{
-  currentBinding: DashboardQueryIdentity;
+  currentBinding: PlanningWorkspaceModel['binding'];
   current: DashboardProductState<unknown>;
 }>;
 
@@ -76,46 +78,87 @@ function isStatus(value: string): value is PlanningArtifactStatus {
   return (ARTIFACT_STATUS_ORDER as readonly string[]).includes(value);
 }
 
-/** Sort by the `updated` frontmatter (ISO dates order lexically); items without one go last. */
-function sortByUpdated(
-  nodes: readonly PlanningModelNode[],
-  dir: DataTableSort['dir'],
-): readonly PlanningModelNode[] {
-  return [...nodes].sort((a, b) => {
-    const x = frontmatterString(a, 'updated');
-    const y = frontmatterString(b, 'updated');
-    if (x === y) return 0;
-    if (x === null) return 1;
-    if (y === null) return -1;
-    return dir === 'asc' ? x.localeCompare(y) : y.localeCompare(x);
-  });
-}
-
 export function ListPage({ currentBinding, current }: ListPageProps) {
-  const [query, setQuery] = useState('');
-  const [type, setType] = useState<string>(ALL);
-  const [status, setStatus] = useState<string>(() => takeListStatus() ?? ALL);
-  const [compact, setCompact] = useState(false);
-  const [sort, setSort] = useState<DataTableSort>({ key: 'updated', dir: 'desc' });
-  const [page, setPage] = useState(0);
+  const {
+    query,
+    setQuery,
+    type,
+    setType,
+    status,
+    setStatus,
+    compact,
+    setCompact,
+    sort,
+    setSort,
+    page,
+    setPage,
+    collapsed,
+    setCollapsed,
+    collapsedGroups,
+    setCollapsedGroups,
+    view,
+    copyMessage,
+    share,
+  } = useListPresentation(() => takeListStatus() ?? ALL);
   const inspector = useInspectorStore();
 
   const model = resolvePlanningWorkspace(current, currentBinding);
+  const focusNotice = usePlanningViewFocus(view, model?.graph.nodes);
   if (!model) {
     return <PlanningRefusal routeKind="planning.list" title="Planning cannot be trusted" />;
   }
 
   const all = sortPlanningNodes(model.graph.nodes, 'id');
-  const filtered = filterPlanningNodes(all, {
+  const filteredByText = filterPlanningNodes(all, {
     search: query.trim() || undefined,
     typeFilter: isType(type) ? [type] : undefined,
     statusFilter: isStatus(status) ? status : null,
   });
-  const rows = sort.key === 'updated' ? sortByUpdated(filtered, sort.dir) : filtered;
-  const pageCount = Math.max(1, Math.ceil(rows.length / PAGE_SIZE));
+  const effectiveView = {
+    schemaVersion: '1.0.0' as const,
+    route: 'list' as const,
+    filters: {
+      type:
+        type === ALL
+          ? view?.filters.type.length && view.filters.type.length > 1
+            ? view.filters.type
+            : []
+          : [type],
+      status:
+        status === ALL
+          ? view?.filters.status.length && view.filters.status.length > 1
+            ? view.filters.status
+            : []
+          : [status],
+      priority: view?.filters.priority ?? [],
+      label: view?.filters.label ?? [],
+      query,
+      createdWithinDays: view?.filters.createdWithinDays ?? null,
+      updatedWithinDays: view?.filters.updatedWithinDays ?? null,
+    },
+    groupBy: view?.groupBy ?? ('none' as const),
+    sort: {
+      field: sort.key as 'id' | 'title' | 'status' | 'priority' | 'updated',
+      direction: sort.dir,
+    },
+    density: compact ? ('compact' as const) : ('comfortable' as const),
+    focusId: inspector.selection?.kind === 'node' ? inspector.selection.id : null,
+  };
+  const rows = applyPlanningView(filteredByText, effectiveView);
+  const grouped = groupPresentationNodes(rows, effectiveView.groupBy);
+  const appearances = grouped.flatMap((group) => group.nodes.map((node) => ({ group, node })));
+  const pageCount = Math.max(1, Math.ceil(appearances.length / PAGE_SIZE));
   const currentPage = Math.min(page, pageCount - 1);
   const pageStart = currentPage * PAGE_SIZE;
-  const visibleRows = rows.slice(pageStart, pageStart + PAGE_SIZE);
+  const visibleRows = appearances.slice(pageStart, pageStart + PAGE_SIZE);
+  const visibleGroups = grouped
+    .map((group) => ({
+      ...group,
+      nodes: visibleRows.filter((entry) => entry.group === group).map((entry) => entry.node),
+    }))
+    .filter((group) => group.nodes.length > 0);
+  if (visibleGroups.length === 0)
+    visibleGroups.push({ key: 'all', label: 'All artifacts', nodes: [] });
   const dependencyCounts = outgoingDependencyCounts(model.graph.edges);
   const resetPage = () => setPage(0);
   const selectedId = inspector.selection?.kind === 'node' ? inspector.selection.id : undefined;
@@ -123,6 +166,7 @@ export function ListPage({ currentBinding, current }: ListPageProps) {
   return (
     <div className="op-workspace op-planning pc-pipeline pc-list" data-route-kind="planning.list">
       <PlanningNotice presentation={model.presentation} />
+      {focusNotice ? <p role="status">{focusNotice}</p> : null}
       <SectionHeader
         headingLevel={1}
         eyebrow="planr-plan · list"
@@ -140,7 +184,11 @@ export function ListPage({ currentBinding, current }: ListPageProps) {
           />
         </Card>
       ) : (
-        <section className="pc-list__surface" aria-label="Planning artifact index">
+        <section
+          data-keyboard-group="all"
+          className="pc-list__surface"
+          aria-label="Planning artifact index"
+        >
           <Toolbar
             right={<Switch size="sm" checked={compact} onChange={setCompact} label="Compact" />}
           >
@@ -179,37 +227,81 @@ export function ListPage({ currentBinding, current }: ListPageProps) {
               options={STATUS_OPTIONS}
             />
             <ToolbarDivider />
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => {
+                void share(effectiveView);
+              }}
+            >
+              Copy filter link
+            </Button>
             <span className="pc-list__note">read-only view of .planr/</span>
           </Toolbar>
-          <DataTable
-            rows={visibleRows}
-            compact={compact}
-            selectedId={selectedId}
-            sort={sort}
-            onSort={(key) => {
-              setSort((current) => ({
-                key,
-                dir: current.key === key && current.dir === 'desc' ? 'asc' : 'desc',
-              }));
-              resetPage();
-            }}
-            onRowClick={inspectPlanningNode}
-            caption="Planning artifacts"
-            emptyMessage="No node matches this filter."
-            columns={[
-              ITEM_COLUMN,
-              STATUS_COLUMN,
-              SPRINT_COLUMN,
-              dependencyCountColumn(dependencyCounts),
-              UPDATED_SORTABLE,
-              REF_COLUMN,
-            ]}
-          />
-          {rows.length > PAGE_SIZE ? (
+          <Button
+            variant="ghost"
+            size="sm"
+            aria-expanded={!collapsed}
+            onClick={() => setCollapsed((value) => !value)}
+          >
+            {collapsed ? 'Expand artifacts' : 'Collapse artifacts'}
+          </Button>
+          {copyMessage ? <p role="status">{copyMessage}</p> : null}
+          <div hidden={collapsed}>
+            {visibleGroups.map((group) => (
+              <section key={group.key} aria-label={group.label} data-keyboard-group={group.key}>
+                {effectiveView.groupBy !== 'none' ? (
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    aria-expanded={!collapsedGroups.includes(group.key)}
+                    onClick={() =>
+                      setCollapsedGroups((groups) =>
+                        groups.includes(group.key)
+                          ? groups.filter((key) => key !== group.key)
+                          : [...groups, group.key],
+                      )
+                    }
+                  >
+                    {group.label}
+                  </Button>
+                ) : null}
+                <div hidden={collapsedGroups.includes(group.key)}>
+                  <DataTable
+                    rows={group.nodes}
+                    compact={compact}
+                    selectedId={selectedId}
+                    sort={sort}
+                    onSort={(key) => {
+                      setSort((current) => ({
+                        key,
+                        dir: current.key === key && current.dir === 'desc' ? 'asc' : 'desc',
+                      }));
+                      resetPage();
+                    }}
+                    onRowClick={inspectPlanningNode}
+                    onRowFocus={(node) => inspectPlanningNode(node, false)}
+                    caption="Planning artifacts"
+                    emptyMessage="No node matches this filter."
+                    columns={[
+                      ITEM_COLUMN,
+                      STATUS_COLUMN,
+                      SPRINT_COLUMN,
+                      dependencyCountColumn(dependencyCounts),
+                      UPDATED_SORTABLE,
+                      REF_COLUMN,
+                    ]}
+                  />
+                </div>
+              </section>
+            ))}
+          </div>
+          {appearances.length > PAGE_SIZE ? (
             <nav className="pc-list__pagination" aria-label="Planning artifact pages">
               <span className="pc-list__page-status" aria-live="polite">
                 Page {currentPage + 1} of {pageCount} · {pageStart + 1}–
-                {Math.min(pageStart + PAGE_SIZE, rows.length)} of {rows.length}
+                {Math.min(pageStart + PAGE_SIZE, appearances.length)} of {appearances.length}{' '}
+                appearances
               </span>
               <div className="pc-list__page-actions">
                 <Button

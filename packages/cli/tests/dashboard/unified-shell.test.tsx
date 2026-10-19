@@ -36,7 +36,9 @@ function renderApp(hash: string): string {
   );
 }
 
-const ROUTE_CASES = DASHBOARD_ROUTE_FIXTURES.map(({ hash, kind }) => [hash, kind, hash] as const);
+const ROUTE_CASES = DASHBOARD_ROUTE_FIXTURES.map(
+  ({ hash, kind }) => [hash, kind, kind === 'planning.overview' ? '#/home' : hash] as const,
+);
 
 describe('unified dashboard route contract', () => {
   it.each(ROUTE_CASES)('parses and serializes %s exactly', (hash, kind, serialized) => {
@@ -146,7 +148,7 @@ describe('unified dashboard shell', () => {
       expect(html).toContain('planr-pipeline');
       expect(html).not.toContain('owner-dashboard');
       expect(html).not.toContain('scope-dashboard · business');
-      expect(html).toContain('href="#/overview"');
+      expect(html).toContain('href="#/home"');
       expect(html).toContain('href="#/operate/today"');
       expect(html).toContain('Jump to a view or an artifact');
       expect(html).toContain('role="status"');
@@ -221,7 +223,7 @@ describe('unified dashboard shell', () => {
   it('keeps a Planning route recognisable while its first projection is loading', () => {
     const html = renderApp('#/overview');
     expect(html).toContain('data-route-pending="booting"');
-    expect(html).toContain('Loading Overview');
+    expect(html).toContain('Loading Home');
     expect(html).not.toContain('Planning cannot be trusted');
     expect(html).not.toContain('Planning is not available');
   });

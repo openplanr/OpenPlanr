@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import type { DashboardProductState } from '../../lib/api/product-state.js';
 import { planningNodesFromProductState } from '../planning/planning-workspace.js';
 import type { DashboardSearchSources } from './search-index.js';
@@ -17,21 +17,11 @@ export function useSearchCoordinator(planningProjection: DashboardProductState<u
     [planningProjection],
   );
 
-  useEffect(() => {
-    const onKeyDown = (event: KeyboardEvent) => {
-      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
-        event.preventDefault();
-        setOpen(true);
-      }
-    };
-    document.addEventListener('keydown', onKeyDown);
-    return () => document.removeEventListener('keydown', onKeyDown);
-  }, []);
-
   return Object.freeze({
     open,
     sources,
     show: () => setOpen(true),
+    toggle: () => setOpen((current) => !current),
     close: () => setOpen(false),
   });
 }

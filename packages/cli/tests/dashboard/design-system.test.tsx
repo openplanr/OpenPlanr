@@ -300,7 +300,7 @@ describe('OpenPlanr design system', () => {
       />,
     );
     expect(html).toContain('data-route-kind="operate.today"');
-    expect(html).toContain('Offline — the watcher is not reachable');
+    expect(html).toContain('Offline: the watcher is not reachable');
     expect(html).toContain('data-route-pending="booting"');
     expect(html).toContain('Loading Today');
     expect(html).not.toContain('Verifying this dashboard');

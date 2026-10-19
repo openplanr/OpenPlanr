@@ -73,7 +73,7 @@ describe('dashboard shell binding summary', () => {
       domainId: 'planning',
       domainVersion: '1.0.0',
       cycleId: null,
-      route: '#/overview',
+      route: '#/home',
       subjectId: null,
       generation: 4,
       eventHead: { sequence: 1, hash: `sha256:${'e'.repeat(64)}` },
@@ -127,7 +127,7 @@ describe('dashboard shell binding summary', () => {
 
     expect(container.querySelector('.pc-plane-banner')).not.toBeNull();
     expect(container.querySelector('main')?.getAttribute('aria-busy')).not.toBe('true');
-    expect(container.textContent).toContain('Offline — the watcher is not reachable');
+    expect(container.textContent).toContain('Offline: the watcher is not reachable');
   });
 
   it.each([
@@ -142,7 +142,7 @@ describe('dashboard shell binding summary', () => {
       domainId: 'planning',
       domainVersion: '1.0.0',
       cycleId: null,
-      route: '#/overview',
+      route: '#/home',
       subjectId: null,
       generation: 4,
       eventHead: { sequence: 1, hash: `sha256:${'2'.repeat(64)}` },
@@ -180,7 +180,7 @@ describe('dashboard shell binding summary', () => {
     expect(pending?.dataset.routePending).toBe(kind);
     expect(pending?.getAttribute('aria-busy')).toBe('true');
     expect(pending?.textContent).toContain(status);
-    expect(pending?.querySelector('h1')?.textContent).toBe('Overview');
+    expect(pending?.querySelector('h1')?.textContent).toBe('Home');
     expect(container.querySelector('.op-state-panel')).toBeNull();
     expect(container.textContent).not.toContain('Planning cannot be trusted');
   });

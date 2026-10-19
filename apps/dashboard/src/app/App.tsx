@@ -8,6 +8,7 @@ import {
 } from '../features/diagnostics/compatibility-model.js';
 import { UnifiedShell } from '../features/shell/UnifiedShell.js';
 import { type DashboardBootstrap, loadDashboardBootstrapEnvelope } from '../lib/api/bootstrap.js';
+import { createBrowserShellAdapters } from './browser-preferences.js';
 import type { DashboardBootPhase, DashboardConnection, DashboardIdentity } from './providers.js';
 import { DashboardProviders } from './providers.js';
 import {
@@ -55,6 +56,7 @@ export function App({
     () => currentHash(initialHash),
     () => currentHash(initialHash),
   );
+  const [shellAdapters] = useState(createBrowserShellAdapters);
   const managedBootstrap = bootstrapOverride === undefined && connectionOverride === undefined;
   const [bootstrap, setBootstrap] = useState<DashboardBootstrap | null>(bootstrapOverride ?? null);
   const [bootPhase, setBootPhase] = useState<DashboardBootPhase>(
@@ -117,7 +119,7 @@ export function App({
       refetchCurrent={runtime.refetchCurrent}
     >
       <RouteAnnouncer />
-      <UnifiedShell fontLoadFailed={fontLoadFailed} />
+      <UnifiedShell fontLoadFailed={fontLoadFailed} adapters={shellAdapters} />
     </DashboardProviders>
   );
 }

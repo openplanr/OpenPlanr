@@ -439,7 +439,13 @@ export function GovernedActionCard({
 
 // ---------------------------------------------------------------- DependencyGraph
 
-export type GraphNode = Readonly<{ id: string; type: string; label: string; blocked?: boolean }>;
+export type GraphNode = Readonly<{
+  id: string;
+  canonicalId?: string;
+  type: string;
+  label: string;
+  blocked?: boolean;
+}>;
 export type GraphEdge = Readonly<{ from: string; to: string; blocked?: boolean; active?: boolean }>;
 
 export type DependencyGraphProps = Readonly<{
@@ -449,6 +455,7 @@ export type DependencyGraphProps = Readonly<{
   flow?: 'source-to-target' | 'target-to-source';
   selectedId?: string | null;
   onSelect?: (id: string) => void;
+  onFocusSelect?: (id: string) => void;
   height?: number;
 }>;
 
@@ -701,9 +708,15 @@ export function DependencyGraph({
   flow = 'source-to-target',
   selectedId,
   onSelect,
+  onFocusSelect,
   height,
 }: DependencyGraphProps) {
   const byId = new Map(nodes.map((node) => [node.id, node]));
+  const neighbours = new Map<string, string[]>();
+  for (const edge of edges) {
+    neighbours.set(edge.from, [...(neighbours.get(edge.from) ?? []), edge.to]);
+    neighbours.set(edge.to, [...(neighbours.get(edge.to) ?? []), edge.from]);
+  }
   const presentationEdges =
     flow === 'target-to-source'
       ? edges.map((edge) => ({ ...edge, from: edge.to, to: edge.from }))
@@ -761,6 +774,7 @@ export function DependencyGraph({
   return (
     <figure
       className="pc-graph"
+      data-scroll-context="graph"
       aria-label="Dependency graph"
       data-tracing={tracedIds.size > 0 || undefined}
       style={{ height }}
@@ -817,6 +831,11 @@ export function DependencyGraph({
               key={node.id}
               type="button"
               className="pc-graph-node"
+              data-keyboard-item={node.id}
+              data-canonical-id={node.canonicalId ?? node.id}
+              data-x={point.x}
+              data-y={point.y}
+              data-neighbours={(neighbours.get(node.id) ?? []).join('\n')}
               data-selected={selectedId === node.id || undefined}
               data-related={tracedIds.has(node.id) || undefined}
               data-blocked={node.blocked || undefined}
@@ -826,7 +845,15 @@ export function DependencyGraph({
                 width: GRAPH_NODE_W,
                 height: GRAPH_NODE_H,
               }}
-              onClick={onSelect ? () => onSelect(node.id) : undefined}
+              onClick={
+                onSelect
+                  ? (event) => {
+                      event.currentTarget.focus({ preventScroll: true });
+                      onSelect(node.id);
+                    }
+                  : undefined
+              }
+              onFocus={onFocusSelect ? () => onFocusSelect(node.id) : undefined}
               title={`${node.id} · ${node.label}`}
               aria-label={`${node.id}: ${node.label}${node.blocked ? ', blocked' : ''}`}
             >

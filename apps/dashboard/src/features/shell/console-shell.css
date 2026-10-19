@@ -1,6 +1,9 @@
 /* Planr Console application shell: rail, top bar, plane, inspector, status bar, transit planes. */
 
 .pc-shell {
+  --pc-sidebar-width: 236px;
+  --pc-rail-width: 64px;
+  --pc-topbar-height: 60px;
   position: relative;
   display: flex;
   height: 100vh;
@@ -321,7 +324,7 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  height: 22px;
+  height: 28px;
   padding: 0 8px;
   font: var(--pc-type-mono-sm);
   white-space: nowrap;
@@ -587,8 +590,9 @@
   padding: 16px 0 4px;
 }
 
-@media (max-width: 800px) {
+@media (max-width: 899px) {
   .pc-shell {
+    --pc-topbar-height: 56px;
     height: 100dvh;
   }
 
@@ -612,29 +616,81 @@
   }
 
   .pc-topbar > .pc-topbar__crumb,
-  .pc-topbar > .pc-topbar__view,
   .pc-topbar > .pc-topbar__subject,
   .pc-topbar > .pc-icon {
     display: none;
   }
 
-  .pc-topbar__palette {
+  .pc-topbar > .pc-topbar__view {
+    display: block;
     flex: 1;
-    width: auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .pc-topbar__palette {
+    flex: 0 0 44px;
+    justify-content: center;
+    width: 44px;
     min-width: 0;
     margin-left: 0;
+  }
+
+  .pc-topbar__placeholder,
+  .pc-topbar__palette .pc-rail__keys,
+  .pc-topbar__end .pc-conn:not(:last-child) {
+    display: none;
   }
 
   .pc-topbar__end {
     margin-left: 0;
   }
 
+  .pc-topbar__end .pc-conn {
+    justify-content: center;
+    width: 44px;
+    min-height: 44px;
+    padding: 0;
+  }
+
+  .pc-topbar__end .pc-capability-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .pc-topbar__end .pc-conn svg {
+    width: 16px;
+    height: 16px;
+  }
+
+  .pc-topbar .pc-icon-button {
+    min-width: 44px;
+    min-height: 44px;
+  }
+
   .pc-shell-inspector[data-floating="true"] {
-    right: 8px;
-    bottom: 8px;
-    left: 8px;
-    width: auto;
-    max-height: calc(100% - 16px);
+    inset: 0;
+    width: 100%;
+    max-height: none;
+  }
+
+  .pc-inspector-sheet {
+    z-index: 100;
+    inset: 0;
+    width: 100vw;
+    height: 100dvh;
+    border-radius: 0;
+    padding-bottom: max(20px, env(safe-area-inset-bottom));
+  }
+
+  .pc-inspector-overlay {
+    z-index: 99;
   }
 
   .pc-statusbar {
@@ -716,7 +772,9 @@
     right: 8px;
     bottom: calc(100% + 8px);
     display: grid;
-    width: min(240px, calc(100vw - 16px));
+    width: min(320px, calc(100vw - 16px));
+    max-height: calc(100dvh - 82px - env(safe-area-inset-bottom, 0px));
+    overflow-y: auto;
     padding: 6px;
     color: var(--pc-text-secondary);
     background: var(--pc-surface-card);
@@ -756,5 +814,40 @@
 @media (prefers-reduced-motion: reduce) {
   .pc-shell-inspector {
     animation: none;
+  }
+}
+
+@media (min-width: 900px) {
+  .pc-rail[data-compact="true"] {
+    width: var(--pc-rail-width);
+  }
+
+  .pc-rail[data-compact="true"] .pc-rail__wordmark,
+  .pc-rail[data-compact="true"] .pc-rail__brand > .pc-icon,
+  .pc-rail[data-compact="true"] .pc-rail__product > span,
+  .pc-rail[data-compact="true"] .pc-rail__palette > span,
+  .pc-rail[data-compact="true"] .pc-rail__item > span,
+  .pc-rail[data-compact="true"] .pc-rail__label {
+    display: none;
+  }
+
+  .pc-rail[data-compact="true"] .pc-rail__brand,
+  .pc-rail[data-compact="true"] .pc-rail__item,
+  .pc-rail[data-compact="true"] .pc-rail__palette {
+    justify-content: center;
+  }
+
+  .pc-rail[data-compact="true"] .pc-rail__products {
+    grid-template-columns: 1fr;
+  }
+
+  .pc-rail[data-compact="true"] .pc-rail__item,
+  .pc-rail[data-compact="true"] .pc-rail__product,
+  .pc-rail[data-compact="true"] .pc-rail__palette {
+    min-height: 36px;
+  }
+
+  .pc-rail[data-compact="true"] .pc-rail__footer {
+    padding-inline: 8px;
   }
 }

@@ -189,7 +189,7 @@ describe('production dashboard runtime composition', () => {
     );
 
     await waitFor(() => expect(result.current.projection.kind).toBe('ready'));
-    expect(result.current.binding?.route).toBe('#/overview');
+    expect(result.current.binding?.route).toBe('#/home');
     expect(planning.fetch).toHaveBeenCalledTimes(1);
 
     rerender({ hash: '#/graph' });

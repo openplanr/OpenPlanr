@@ -310,7 +310,7 @@ describe('closed dashboard product-state model', () => {
       createDashboardQueryIdentity({
         ...binding,
         productArea: 'planning',
-        route: '#/overview',
+        route: '#/home',
         subjectId: null,
       }),
     ],

@@ -25,6 +25,7 @@ export type ButtonProps = Readonly<{
   type?: 'button' | 'submit';
   onClick?: () => void;
   ariaLabel?: string;
+  'aria-expanded'?: boolean;
   disabledReason?: string;
 }>;
 
@@ -44,6 +45,7 @@ export function Button({
   type = 'button',
   onClick,
   ariaLabel,
+  'aria-expanded': ariaExpanded,
   disabledReason,
 }: ButtonProps) {
   const reasonId = useId();
@@ -60,6 +62,7 @@ export function Button({
         aria-busy={loading || undefined}
         aria-describedby={disabledReason ? reasonId : undefined}
         aria-label={ariaLabel}
+        aria-expanded={ariaExpanded}
         onClick={onClick}
       >
         {loading ? (
@@ -691,6 +694,7 @@ export type DataTableProps<Row extends { readonly id: string }> = Readonly<{
   sort?: DataTableSort;
   onSort?: (key: string) => void;
   onRowClick?: (row: Row) => void;
+  onRowFocus?: (row: Row) => void;
 }>;
 
 function cellValue<Row>(row: Row, key: string): ReactNode {
@@ -712,6 +716,7 @@ export function DataTable<Row extends { readonly id: string }>({
   sort,
   onSort,
   onRowClick,
+  onRowFocus,
 }: DataTableProps<Row>) {
   const activate = (row: Row) => onRowClick?.(row);
   const onRowKey = (event: KeyboardEvent<HTMLTableRowElement>, row: Row) => {
@@ -722,7 +727,7 @@ export function DataTable<Row extends { readonly id: string }>({
     }
   };
   return (
-    <div className="pc-table-wrap">
+    <div className="pc-table-wrap" data-scroll-context={caption ?? 'table'}>
       <table
         className="pc-table"
         data-compact={compact || undefined}
@@ -788,9 +793,26 @@ export function DataTable<Row extends { readonly id: string }>({
             rows.map((row) => (
               <tr
                 key={row.id}
+                data-keyboard-item={onRowClick ? row.id : undefined}
                 data-selected={selectedId !== undefined && row.id === selectedId ? true : undefined}
                 tabIndex={onRowClick ? 0 : undefined}
-                onClick={onRowClick ? () => activate(row) : undefined}
+                onFocus={onRowFocus ? () => onRowFocus(row) : undefined}
+                onClick={
+                  onRowClick
+                    ? (event) => {
+                        if (
+                          event.metaKey ||
+                          event.ctrlKey ||
+                          event.altKey ||
+                          event.shiftKey ||
+                          (event.target instanceof Element && event.target.closest('a'))
+                        )
+                          return;
+                        event.currentTarget.focus({ preventScroll: true });
+                        activate(row);
+                      }
+                    : undefined
+                }
                 onKeyDown={onRowClick ? (event) => onRowKey(event, row) : undefined}
               >
                 {columns.map((column) => (

@@ -11,7 +11,7 @@ import {
   queryPlanningSearchIndex,
 } from '../planning/planning-model.js';
 
-export type DashboardSearchHit = Readonly<{
+export type DashboardSearchDestinationHit = Readonly<{
   id: string;
   title: string;
   href: string;
@@ -19,10 +19,35 @@ export type DashboardSearchHit = Readonly<{
   kind: string;
 }>;
 
+export type DashboardSearchCommand = Readonly<{
+  id: string;
+  title: string;
+  command: string;
+}>;
+
+export type DashboardSearchCommandHit = DashboardSearchCommand &
+  Readonly<{
+    href: null;
+    source: 'command';
+    kind: 'command';
+  }>;
+
+export type DashboardSearchHit = DashboardSearchDestinationHit | DashboardSearchCommandHit;
+
+const DEFAULT_COMMANDS: readonly DashboardSearchCommand[] = Object.freeze([
+  Object.freeze({
+    id: 'dashboard',
+    title: 'Open the local dashboard',
+    command: 'openplanr dashboard',
+  }),
+  Object.freeze({ id: 'sprint', title: 'Plan a sprint', command: '/planr:sprint' }),
+]);
+
 export type DashboardSearchIndex = Readonly<{
   routes: readonly ClosedDashboardDestination[];
   planningNodes: readonly PlanningModelNode[];
-  operateHits: readonly DashboardSearchHit[];
+  operateHits: readonly DashboardSearchDestinationHit[];
+  commands: readonly DashboardSearchCommandHit[];
 }>;
 
 export type DashboardUnsupportedIdentity = Readonly<{
@@ -34,6 +59,7 @@ export type DashboardUnsupportedIdentity = Readonly<{
 
 export type DashboardSearchSources = Readonly<{
   planningNodes?: readonly PlanningModelNode[];
+  commands?: readonly DashboardSearchCommand[];
   operateResults?: readonly AccessSafeOperateSearchHitV1[];
 }>;
 
@@ -41,9 +67,9 @@ function canonicalHit(
   id: string,
   title: string,
   href: string | null,
-  source: DashboardSearchHit['source'],
+  source: DashboardSearchDestinationHit['source'],
   kind: string,
-): DashboardSearchHit | null {
+): DashboardSearchDestinationHit | null {
   if (href == null) return null;
   const canonical = canonicalClosedDashboardHref(href);
   if (canonical === null) return null;
@@ -52,9 +78,9 @@ function canonicalHit(
 
 function operateSearchHits(
   results: readonly AccessSafeOperateSearchHitV1[] | undefined,
-): readonly DashboardSearchHit[] {
+): readonly DashboardSearchDestinationHit[] {
   if (!results) return Object.freeze([]);
-  const hits: DashboardSearchHit[] = [];
+  const hits: DashboardSearchDestinationHit[] = [];
   for (const entry of results) {
     const hit = canonicalHit(
       `operate:${entry.kind}:${entry.subjectId}`,
@@ -78,11 +104,66 @@ export function buildDashboardSearchIndex(
     routes: closedDashboardDestinations(),
     planningNodes,
     operateHits,
+    commands: Object.freeze(
+      (sources.commands ?? DEFAULT_COMMANDS)
+        .filter((entry) => entry.id.trim() && entry.title.trim() && entry.command.trim())
+        .map(
+          (entry): DashboardSearchCommandHit =>
+            Object.freeze({
+              id: `command:${entry.id}`,
+              title: entry.title,
+              command: entry.command,
+              href: null,
+              source: 'command',
+              kind: 'command',
+            }),
+        ),
+    ),
   });
 }
 
 function matches(haystack: string, needle: string): boolean {
   return haystack.toLowerCase().includes(needle);
+}
+
+type SearchType = 'spec' | 'story' | 'task' | 'backlog' | 'adr' | 'sprint' | 'view' | 'command';
+type TypedSearch = Readonly<{ type: SearchType | null; term: string }>;
+
+function typedSearch(term: string): TypedSearch {
+  const match = term.trim().match(/^@(spec|story|task|backlog|adr|sprint|view|command)(?:\s+|$)/iu);
+  return {
+    type: (match?.[1].toLowerCase() as SearchType | undefined) ?? null,
+    term: match ? term.trim().slice(match[0].length).trim() : term.trim(),
+  };
+}
+
+function matchingPlanningNodes(
+  index: DashboardSearchIndex,
+  query: TypedSearch,
+): readonly PlanningModelNode[] {
+  const nodes = query.term
+    ? queryPlanningSearchIndex(
+        buildPlanningSearchIndex(index.planningNodes),
+        query.term,
+        index.planningNodes.length,
+      )
+    : index.planningNodes;
+  return query.type ? nodes.filter((node) => query.type === node.type) : nodes;
+}
+
+function matchingRouteHits(
+  index: DashboardSearchIndex,
+  query: TypedSearch,
+): readonly DashboardSearchDestinationHit[] {
+  if (query.type && query.type !== 'view') return [];
+  return index.routes
+    .filter((route) =>
+      matches(`${route.title} ${route.kind} ${route.href}`, query.term.toLowerCase()),
+    )
+    .map((route) =>
+      canonicalHit(`route:${route.kind}`, route.title, route.href, 'route', route.kind),
+    )
+    .filter((hit): hit is DashboardSearchDestinationHit => hit !== null);
 }
 
 /** Query only access-safe titles and canonical hrefs. Missing destinations are omitted, not invented. */
@@ -91,22 +172,13 @@ export function queryDashboardSearchIndex(
   term: string,
   maximumResults = 20,
 ): readonly DashboardSearchHit[] {
-  const needle = term.trim().toLowerCase();
-  if (!needle || !Number.isSafeInteger(maximumResults) || maximumResults < 0) {
+  const query = typedSearch(term);
+  const needle = query.term.toLowerCase();
+  if ((!needle && !query.type) || !Number.isSafeInteger(maximumResults) || maximumResults < 0) {
     return Object.freeze([]);
   }
-  const hits: DashboardSearchHit[] = [];
-  for (const route of index.routes) {
-    if (matches(`${route.title} ${route.kind} ${route.href}`, needle)) {
-      const hit = canonicalHit(`route:${route.kind}`, route.title, route.href, 'route', route.kind);
-      if (hit) hits.push(hit);
-    }
-  }
-  for (const node of queryPlanningSearchIndex(
-    buildPlanningSearchIndex(index.planningNodes),
-    term,
-    maximumResults,
-  )) {
+  const hits: DashboardSearchHit[] = [...matchingRouteHits(index, query)];
+  for (const node of matchingPlanningNodes(index, query)) {
     const hit = canonicalHit(
       `planning:${node.id}`,
       node.title,
@@ -117,14 +189,23 @@ export function queryDashboardSearchIndex(
     if (hit) hits.push(hit);
   }
   for (const operate of index.operateHits) {
-    if (matches(`${operate.title} ${operate.kind} ${operate.id}`, needle)) hits.push(operate);
+    if (!query.type && matches(`${operate.title} ${operate.kind} ${operate.id}`, needle))
+      hits.push(operate);
+  }
+  if (!query.type || query.type === 'command') {
+    hits.push(
+      ...index.commands.filter((entry) =>
+        matches(`${entry.id} ${entry.title} ${entry.command}`, needle),
+      ),
+    );
   }
   const seen = new Set<string>();
   return Object.freeze(
     hits
       .filter((hit) => {
-        if (seen.has(hit.href)) return false;
-        seen.add(hit.href);
+        const key = hit.source === 'command' ? hit.id : hit.href;
+        if (seen.has(key)) return false;
+        seen.add(key);
         return true;
       })
       .slice(0, maximumResults),
@@ -137,16 +218,13 @@ export function queryUnsupportedPlanningIdentities(
   term: string,
   maximumResults = 20,
 ): readonly DashboardUnsupportedIdentity[] {
-  const needle = term.trim().toLowerCase();
-  if (!needle || !Number.isSafeInteger(maximumResults) || maximumResults < 0) {
+  const query = typedSearch(term);
+  const needle = query.term.toLowerCase();
+  if ((!needle && !query.type) || !Number.isSafeInteger(maximumResults) || maximumResults < 0) {
     return Object.freeze([]);
   }
   const unsupported: DashboardUnsupportedIdentity[] = [];
-  for (const node of queryPlanningSearchIndex(
-    buildPlanningSearchIndex(index.planningNodes),
-    term,
-    maximumResults,
-  )) {
+  for (const node of matchingPlanningNodes(index, query)) {
     if (planningDetailHref(node) !== null) continue;
     unsupported.push(
       Object.freeze({

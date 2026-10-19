@@ -1,5 +1,6 @@
 import { PLANNING_FOLDER } from '@openplanr/protocol/names';
 import { canonicalDashboardHref } from '../../app/router.js';
+import { isCanonicalPlanningId } from '../../lib/routing/planning-view-codec.js';
 
 /**
  * Pure Planning presentation selectors over validated graph data (filter, sort, group, search,
@@ -793,6 +794,7 @@ function hasUnpairedSurrogate(value: string): boolean {
 export function planningRouteSubjectId(nodeOrId: PlanningModelNode | string): string | null {
   const id = typeof nodeOrId === 'string' ? nodeOrId : nodeOrId.id;
   if (!id || hasUnpairedSurrogate(id)) return null;
+  if (isCanonicalPlanningId(id)) return id;
   let output = '';
   for (const byte of new TextEncoder().encode(id)) {
     const character = String.fromCharCode(byte);
@@ -805,6 +807,7 @@ export function planningRouteSubjectId(nodeOrId: PlanningModelNode | string): st
 
 /** Reverse the route-only escaping without changing the canonical graph identity. */
 export function planningNodeIdFromRouteSubject(subjectId: string): string | null {
+  if (isCanonicalPlanningId(subjectId)) return subjectId;
   const bytes: number[] = [];
   for (let index = 0; index < subjectId.length; index += 1) {
     const character = subjectId[index];
@@ -820,7 +823,10 @@ export function planningNodeIdFromRouteSubject(subjectId: string): string | null
   }
   try {
     const decoded = new TextDecoder('utf-8', { fatal: true }).decode(new Uint8Array(bytes));
-    return decoded && planningRouteSubjectId(decoded) === subjectId ? decoded : null;
+    if (!decoded) return null;
+    if (isCanonicalPlanningId(decoded) && subjectId === decoded.replaceAll('/', ':2F'))
+      return decoded;
+    return planningRouteSubjectId(decoded) === subjectId ? decoded : null;
   } catch {
     return null;
   }

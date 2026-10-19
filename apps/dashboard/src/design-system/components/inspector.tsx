@@ -5,6 +5,8 @@ import { Skeleton } from './console-core.js';
 export type InspectorProps = Readonly<{
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onRestoreFocus?: () => void;
+  closeLabel?: string;
   title: string;
   description: string;
   children?: ReactNode;
@@ -17,6 +19,8 @@ export type InspectorProps = Readonly<{
 export function Inspector({
   open,
   onOpenChange,
+  onRestoreFocus,
+  closeLabel = 'Close inspector',
   title,
   description,
   children,
@@ -33,7 +37,16 @@ export function Inspector({
         {modal ? <Dialog.Overlay className="pc-inspector-overlay" /> : null}
         <Dialog.Content
           className="pc-inspector-sheet"
+          aria-modal={modal || undefined}
           data-state={state}
+          onCloseAutoFocus={
+            onRestoreFocus
+              ? (event) => {
+                  event.preventDefault();
+                  onRestoreFocus();
+                }
+              : undefined
+          }
           onOpenAutoFocus={(event) => {
             event.preventDefault();
             heading.current?.focus();
@@ -43,7 +56,7 @@ export function Inspector({
             <Dialog.Title className="pc-inspector__title" ref={heading} tabIndex={-1}>
               {title}
             </Dialog.Title>
-            <Dialog.Close className="pc-icon-button" aria-label="Close inspector">
+            <Dialog.Close className="pc-icon-button" aria-label={closeLabel}>
               ×
             </Dialog.Close>
           </header>

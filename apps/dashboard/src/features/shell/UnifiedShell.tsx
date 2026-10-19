@@ -1,4 +1,4 @@
-import { useEffect, useState, useSyncExternalStore } from 'react';
+import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { useDashboard } from '../../app/providers.js';
 import { CompatibilityPage } from '../diagnostics/CompatibilityPage.js';
 import { LocalOperateReviews } from '../operate/local-reviews/LocalOperateReviews.js';
@@ -6,10 +6,15 @@ import {
   planningNodesFromProductState,
   resolvePlanningWorkspace,
 } from '../planning/planning-workspace.js';
-import { CommandPalette } from '../search/CommandPalette.js';
-import { useSearchCoordinator } from '../search/search-coordinator.js';
-import { useInspectorStore } from './inspector-selection.js';
+import { clearInspector, useInspectorStore } from './inspector-selection.js';
 import { hasCurrentRouteSubject, RouteWorkspace } from './route-workspace.js';
+import {
+  CommandPalette,
+  PlanningPresentationProvider,
+  type ShellAdapters,
+  useSearchCoordinator,
+  useShellInteractions,
+} from './shell-interactions.js';
 import { Inspector, NavRail, StatusBar, TopBar } from './shell-navigation.js';
 import {
   BootScreen,
@@ -31,7 +36,13 @@ function readViewportWidth(): number {
   return typeof window === 'undefined' ? SERVER_VIEWPORT_WIDTH : window.innerWidth;
 }
 
-export function UnifiedShell({ fontLoadFailed = false }: { fontLoadFailed?: boolean }) {
+export function UnifiedShell({
+  fontLoadFailed = false,
+  adapters,
+}: {
+  fontLoadFailed?: boolean;
+  adapters?: ShellAdapters;
+}) {
   const {
     route,
     identity,
@@ -46,6 +57,8 @@ export function UnifiedShell({ fontLoadFailed = false }: { fontLoadFailed?: bool
     bootstrap,
     bootPhase,
     bootDetail,
+    presentationView,
+    invalidView,
   } = useDashboard();
   const search = useSearchCoordinator(planningProjection);
   const [fontNoticeDismissed, setFontNoticeDismissed] = useState(false);
@@ -69,6 +82,37 @@ export function UnifiedShell({ fontLoadFailed = false }: { fontLoadFailed?: bool
     if (inspectorStore.openTick > 0) setInspectorOpen(true);
   }, [inspectorStore.openTick]);
 
+  const scope = binding
+    ? JSON.stringify([
+        binding.projectId,
+        binding.actorId,
+        binding.scopeId,
+        binding.domainId,
+        binding.domainVersion,
+      ])
+    : identity.bindingLabel;
+  const inspectorScope = useRef(scope);
+  useEffect(() => {
+    if (inspectorScope.current !== scope) {
+      clearInspector();
+      setInspectorOpen(false);
+      inspectorScope.current = scope;
+    }
+  }, [scope]);
+  const routeKey = JSON.stringify([route, presentationView]);
+  const interactions = useShellInteractions({
+    adapters,
+    routeKey,
+    scope,
+    selectedId:
+      inspectorStore.selection?.kind === 'node'
+        ? inspectorStore.selection.id
+        : (inspectorStore.selection?.actionId ?? null),
+    paletteOpen: search.open,
+    togglePalette: search.toggle,
+    inspectorOpen,
+    setInspectorOpen,
+  });
   const product = route.product ?? 'planning';
   const incompatible = bootPhase === 'incompatible' || connection.state === 'incompatible';
   const showDiagnostics = route.kind === 'system.diagnostics' || incompatible;
@@ -94,6 +138,9 @@ export function UnifiedShell({ fontLoadFailed = false }: { fontLoadFailed?: bool
     <div
       className="pc-shell"
       data-dashboard-build-id={buildId}
+      data-compact-rail={
+        route.kind === 'planning.graph' || route.kind === 'planning.board' || undefined
+      }
       data-product={route.product ?? 'system'}
     >
       {/* biome-ignore lint/a11y/useValidAnchor: a skip link must retain anchor semantics; the handler avoids hash-router navigation. */}
@@ -122,6 +169,9 @@ export function UnifiedShell({ fontLoadFailed = false }: { fontLoadFailed?: bool
           inspectorOpen={inspectorOpen}
           onToggleInspector={() => setInspectorOpen((open) => !open)}
           onOpenPalette={search.show}
+          themePreference={adapters?.themePreference}
+          paletteIconOnly={width < 900}
+          shortcutHelp={interactions.help}
         />
         {fontLoadFailed && !fontNoticeDismissed ? (
           <div className="pc-font-notice" role="status">
@@ -136,6 +186,7 @@ export function UnifiedShell({ fontLoadFailed = false }: { fontLoadFailed?: bool
         ) : null}
         <div className="pc-shell__plane">
           <main
+            ref={interactions.rootRef}
             id="main-content"
             className="pc-shell__main"
             tabIndex={-1}
@@ -150,7 +201,12 @@ export function UnifiedShell({ fontLoadFailed = false }: { fontLoadFailed?: bool
                 {connection.state === 'stale' || connection.state === 'offline' ? (
                   <PlaneBanner state={connection.state} reason={connection.reason} />
                 ) : null}
-                <div className="pc-shell__scroll">
+                <div className="pc-shell__scroll" ref={interactions.scrollRef}>
+                  {invalidView ? (
+                    <p role="status">
+                      This view link is invalid or unsupported. Default filters are shown.
+                    </p>
+                  ) : null}
                   {showDiagnostics ? (
                     <>
                       {incompatible ? <IncompatibleNotice detail={bootDetail} /> : null}
@@ -164,16 +220,25 @@ export function UnifiedShell({ fontLoadFailed = false }: { fontLoadFailed?: bool
                     </>
                   ) : (
                     <div className="op-route-frame">
-                      <RouteWorkspace
-                        route={route}
-                        projection={projection}
-                        binding={binding}
-                        connectionState={connection.state}
-                        searchSources={search.sources}
-                        operateSearchBindings={operateSearchBindings}
-                        operateReviewNavigation={operateReviewNavigation}
-                        refetchCurrent={refetchCurrent}
-                      />
+                      <PlanningPresentationProvider
+                        key={scope}
+                        scope={scope}
+                        view={presentationView}
+                        invalidView={invalidView}
+                        onCopy={adapters?.copy}
+                      >
+                        <RouteWorkspace
+                          route={route}
+                          projection={projection}
+                          binding={binding}
+                          connectionState={connection.state}
+                          searchSources={search.sources}
+                          onCopy={adapters?.copy}
+                          operateSearchBindings={operateSearchBindings}
+                          operateReviewNavigation={operateReviewNavigation}
+                          refetchCurrent={refetchCurrent}
+                        />
+                      </PlanningPresentationProvider>
                     </div>
                   )}
                 </div>
@@ -186,6 +251,8 @@ export function UnifiedShell({ fontLoadFailed = false }: { fontLoadFailed?: bool
               mode={inspectorMode}
               selection={inspectorStore.selection}
               floating={narrow}
+              onClose={() => interactions.closeInspector()}
+              onPromote={interactions.navigate}
             />
           ) : null}
         </div>
@@ -199,6 +266,9 @@ export function UnifiedShell({ fontLoadFailed = false }: { fontLoadFailed?: bool
       </div>
       <CommandPalette
         open={search.open}
+        singleLetters={interactions.singleLetters}
+        onNavigate={interactions.navigate}
+        onCopy={adapters?.copy}
         onClose={search.close}
         sources={search.sources}
         operateBindings={operateSearchBindings}

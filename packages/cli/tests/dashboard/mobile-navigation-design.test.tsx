@@ -16,10 +16,10 @@ it('keeps the full dashboard navigable at phone width', () => {
   try {
     const navigation = rendered.getByRole('navigation', { name: 'Mobile Operate navigation' });
     expect(
-      within(navigation).getByRole('link', { name: 'Today' }).getAttribute('aria-current'),
+      within(navigation).getByRole('link', { name: 'Operate' }).getAttribute('aria-current'),
     ).toBe('page');
-    expect(within(navigation).getByRole('link', { name: 'Planning' }).getAttribute('href')).toBe(
-      '#/overview',
+    expect(within(navigation).getByRole('link', { name: 'Home' }).getAttribute('href')).toBe(
+      '#/home',
     );
     expect(rendered.queryByRole('heading', { name: 'Use a wider window' })).toBeNull();
   } finally {

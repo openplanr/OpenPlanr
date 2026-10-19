@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   Absent,
   ARTIFACT_STATUS_ORDER,
@@ -12,6 +12,7 @@ import {
 } from '../../design-system/components/index.js';
 import type { DashboardProductState } from '../../lib/api/product-state.js';
 import type { DashboardQueryIdentity } from '../../lib/binding/query-identity.js';
+import { usePlanningView } from '../../lib/routing/planning-presentation.js';
 import { inspectPlanningNode } from './planning-inspector.js';
 import {
   groupPlanningNodes,
@@ -21,6 +22,7 @@ import {
   planningGroupingDimensions,
 } from './planning-model.js';
 import { PlanningNotice, PlanningRefusal, resolvePlanningWorkspace } from './planning-workspace.js';
+import { applyPlanningView, groupPresentationNodes } from './presentation-view.js';
 import './planning.css';
 import './board.css';
 
@@ -58,7 +60,12 @@ function BoardCard({ node }: { node: PlanningModelNode }) {
     <button
       type="button"
       className="pc-status-board__card"
-      onClick={() => inspectPlanningNode(node)}
+      data-keyboard-item={node.id}
+      onClick={(event) => {
+        event.currentTarget.focus({ preventScroll: true });
+        inspectPlanningNode(node);
+      }}
+      onFocus={() => inspectPlanningNode(node, false)}
     >
       <WorkItemChip type={node.type} id={planningDisplayId(node)} />
       <span className="pc-status-board__title">{node.title}</span>
@@ -72,7 +79,11 @@ function BoardCard({ node }: { node: PlanningModelNode }) {
 
 function BoardColumn({ group, byStatus }: { group: PlanningGroup; byStatus: boolean }) {
   return (
-    <section className="pc-status-board__column" aria-label={group.label}>
+    <section
+      data-keyboard-column={group.key}
+      className="pc-status-board__column"
+      aria-label={group.label}
+    >
       <header className="pc-status-board__head">
         {byStatus ? (
           <ArtifactStatus status={group.key} size="sm" />
@@ -85,31 +96,61 @@ function BoardColumn({ group, byStatus }: { group: PlanningGroup; byStatus: bool
         {group.nodes.map((node) => (
           <BoardCard key={node.id} node={node} />
         ))}
-        {group.nodes.length === 0 ? <span className="pc-status-board__empty">empty</span> : null}
+        {group.nodes.length === 0 ? (
+          <button
+            type="button"
+            className="pc-status-board__empty"
+            data-keyboard-item={`empty:${group.key}`}
+            aria-label={`${group.label}: no cards`}
+          >
+            No cards
+          </button>
+        ) : null}
       </div>
     </section>
   );
 }
 
 export function BoardPage({ currentBinding, current }: BoardPageProps) {
-  const [dimension, setDimension] = useState('status');
+  const token = usePlanningView();
+  const presentation = token?.route === 'board' ? token : null;
+  const [dimension, setDimension] = useState<string>(presentation?.groupBy ?? 'status');
+  useEffect(() => {
+    if (presentation) setDimension(presentation.groupBy);
+  }, [presentation]);
   const model = resolvePlanningWorkspace(current, currentBinding);
   if (!model) {
     return <PlanningRefusal routeKind="planning.board" title="Planning cannot be trusted" />;
   }
 
-  const items = model.graph.nodes.filter((node) => node.type !== 'sprint');
-  const dimensions = planningGroupingDimensions(items);
+  const items = applyPlanningView(
+    model.graph.nodes.filter((node) => node.type !== 'sprint'),
+    presentation,
+  );
+  const availableDimensions = planningGroupingDimensions(items);
+  const dimensions = [
+    { key: 'none', label: 'None' },
+    ...availableDimensions,
+    ...(!availableDimensions.some((entry) => entry.key === 'spec')
+      ? [{ key: 'spec', label: 'Spec' }]
+      : []),
+    { key: 'label', label: 'Label' },
+  ];
   const active = dimensions.find((entry) => entry.key === dimension);
   const activeKey = active?.key ?? 'status';
   const byStatus = activeKey === 'status';
-  const columns = byStatus ? statusColumns(items) : groupPlanningNodes(items, activeKey);
+  const columns = byStatus
+    ? statusColumns(items)
+    : activeKey === 'none' || activeKey === 'label'
+      ? groupPresentationNodes(items, activeKey)
+      : groupPlanningNodes(items, activeKey);
   const groupedBy = active?.label.toLowerCase() ?? 'status';
 
   return (
     <div
       className="op-workspace op-planning op-planning--board pc-pipeline"
       data-route-kind="planning.board"
+      data-density={presentation?.density}
     >
       <PlanningNotice presentation={model.presentation} />
       <SectionHeader
@@ -117,7 +158,7 @@ export function BoardPage({ currentBinding, current }: BoardPageProps) {
         eyebrow="planr-status · board"
         title="Board"
         count={artifactCount(items.length)}
-        description={`Grouped by ${groupedBy}. Read-only — status changes come from the CLI lifecycle.`}
+        description={`Grouped by ${groupedBy}. Read-only; status changes come from the CLI lifecycle.`}
       />
       {items.length === 0 ? (
         <EmptyState
@@ -140,7 +181,7 @@ export function BoardPage({ currentBinding, current }: BoardPageProps) {
               />
             </Toolbar>
           ) : null}
-          <div className="pc-status-board">
+          <div data-scroll-context="board" className="pc-status-board">
             {columns.map((group) => (
               <BoardColumn key={group.key || 'none'} group={group} byStatus={byStatus} />
             ))}

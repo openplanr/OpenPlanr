@@ -52,11 +52,11 @@ export const PLANR_CAPABILITY_GROUPS: readonly PlanrCapabilityGroup[] = Object.f
         'Implement a plan, specification, task, or clearly stated request.',
         '#/board',
       ),
-      cap('planr-land', 'Assess release readiness and prepare a landing sequence.', '#/overview'),
+      cap('planr-land', 'Assess release readiness and prepare a landing sequence.', '#/home'),
       cap(
         'planr-status',
         "Inspect project or one feature's delivery status without changing state.",
-        '#/overview',
+        '#/home',
       ),
     ]),
   },
@@ -159,11 +159,7 @@ export const PLANR_CAPABILITY_GROUPS: readonly PlanrCapabilityGroup[] = Object.f
         '#/diagnostics',
       ),
       cap('planr-sync', 'Audit planning artifacts for graph and protocol drift.', '#/activity'),
-      cap(
-        'planr-dashboard',
-        'Start or inspect this loopback-only planning dashboard.',
-        '#/overview',
-      ),
+      cap('planr-dashboard', 'Start or inspect this loopback-only planning dashboard.', '#/home'),
     ]),
   },
 ]);

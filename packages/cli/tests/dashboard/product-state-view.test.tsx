@@ -359,7 +359,7 @@ describe('honest product-state and recovery presentation', () => {
     const planningBinding = createDashboardQueryIdentity({
       ...binding,
       productArea: 'planning',
-      route: '#/overview',
+      route: '#/home',
       cycleId: null,
     });
     for (const kind of ['read-only', 'stale', 'blocked'] as const) {

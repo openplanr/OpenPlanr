@@ -153,3 +153,17 @@
     border-color: ButtonText;
   }
 }
+
+.op-planning--board[data-density="compact"] .pc-status-board__column {
+  gap: var(--pc-space-1);
+  padding: var(--pc-space-2);
+}
+
+.op-planning--board[data-density="compact"] .pc-status-board__cards,
+.op-planning--board[data-density="compact"] .pc-status-board__card {
+  gap: var(--pc-space-1);
+}
+
+.op-planning--board[data-density="compact"] .pc-status-board__card {
+  padding: var(--pc-space-1) var(--pc-space-2);
+}

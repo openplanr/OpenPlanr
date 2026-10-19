@@ -132,6 +132,27 @@
   font: var(--pc-type-body-sm);
   color: var(--pc-text-tertiary);
 }
+.pc-palette__command {
+  padding: 8px 12px;
+  font: var(--pc-type-body-sm);
+  border-top: 1px solid var(--pc-border-subtle);
+}
+.pc-palette__command p {
+  margin: 0 0 4px;
+}
+.pc-palette__command code,
+.pc-palette__command input {
+  font: var(--pc-type-mono-sm);
+  user-select: text;
+  overflow-wrap: anywhere;
+}
+.pc-palette__command input {
+  width: 100%;
+  color: inherit;
+  background: transparent;
+  border: 1px solid var(--pc-border-subtle);
+  border-radius: var(--pc-radius-xs);
+}
 .pc-palette__foot {
   display: flex;
   align-items: center;

@@ -199,13 +199,13 @@ function stateFor(
 
 describe('T-021 Planning workspace UI', () => {
   it('renders Overview, Graph, Board, List, Sprints, Activity, and Detail from one graph', () => {
-    const overview = identity('#/overview');
+    const overview = identity('#/home');
     const overviewHtml = renderToStaticMarkup(
       <OverviewPage currentBinding={overview} current={stateFor(overview)} />,
     );
     const overviewDom = new JSDOM(`<!doctype html><html><body>${overviewHtml}</body></html>`);
     const overviewDocument = overviewDom.window.document;
-    expect(overviewDocument.querySelector('h1')?.textContent).toBe('Overview');
+    expect(overviewDocument.querySelector('h1')?.textContent).toBe('Home');
     expect(overviewDocument.querySelectorAll('h1')).toHaveLength(1);
     expect(overviewHtml).toContain('3 artifacts');
     expect(overviewHtml).toContain('Bound Planning transport');
@@ -296,7 +296,7 @@ describe('T-021 Planning workspace UI', () => {
   });
 
   it('keeps Overview bounded and readable for zero, one, and many decision states', () => {
-    const overview = identity('#/overview');
+    const overview = identity('#/home');
     const emptyGraph: PlanningGraph = Object.freeze({
       nodes: Object.freeze([]),
       edges: Object.freeze([]),
@@ -393,9 +393,9 @@ describe('T-021 Planning workspace UI', () => {
   });
 
   it('refuses a foreign binding and an unbranded lookalike as a whole workspace', () => {
-    const current = identity('#/overview');
+    const current = identity('#/home');
     const trusted = stateFor(current);
-    const foreign = identity('#/overview');
+    const foreign = identity('#/home');
     const foreignBinding = createDashboardQueryIdentity({ ...foreign, actorId: 'foreign-owner' });
     expect(resolvePlanningWorkspace(trusted, foreignBinding)).toBeNull();
     const html = renderToStaticMarkup(
@@ -424,7 +424,7 @@ describe('T-021 Planning workspace UI', () => {
     for (const [presentation, copy] of notices) {
       const html = renderToStaticMarkup(<PlanningNotice presentation={presentation} />);
       expect(html).toContain(copy);
-      expect(html).toContain('Open Planning overview');
+      expect(html).toContain('Open Planning Home');
       expect(html).not.toContain(`${presentation} projection`);
       expect(html).not.toContain('Graph identity');
       expect(html).not.toContain('mutation is inferred');
@@ -437,7 +437,7 @@ describe('T-021 Planning workspace UI', () => {
     expect(refusalHtml).toContain(
       'We could not verify the Planning information for this view, so it is not shown.',
     );
-    expect(refusalHtml).toContain('Return to Planning overview');
+    expect(refusalHtml).toContain('Return to Planning Home');
     expect(refusalHtml).not.toContain('exact binding');
     expect(refusalHtml).not.toContain('revision verification');
   });
