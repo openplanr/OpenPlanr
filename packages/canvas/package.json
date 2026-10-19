@@ -5,7 +5,9 @@
   "type": "module",
   "description": "Shared OpenPlanr infinite-canvas engine and React bindings",
   "license": "MIT",
-  "sideEffects": ["**/*.css"],
+  "sideEffects": [
+    "**/*.css"
+  ],
   "exports": {
     ".": {
       "types": "./src/index.d.mts",
@@ -30,7 +32,9 @@
   ],
   "scripts": {
     "build": "node ../../scripts/typescript/compile-sources.mjs",
-    "test": "vitest run"
+    "test": "vitest run",
+    "test:browser": "playwright test",
+    "bench:trace": "playwright test tests/browser/bench-trace.spec.ts"
   },
   "engines": {
     "node": ">=22.13.0"
@@ -54,5 +58,9 @@
   },
   "publishConfig": {
     "access": "public"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.64.0",
+    "vite": "6.4.3"
   }
 }

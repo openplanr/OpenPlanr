@@ -1,0 +1,286 @@
+import { mkdir, writeFile } from 'node:fs/promises';
+import { arch, cpus, platform, release } from 'node:os';
+import { resolve } from 'node:path';
+import {
+  type Browser,
+  type BrowserContext,
+  type CDPSession,
+  expect,
+  type Page,
+  test,
+} from '@playwright/test';
+import type { Scenario } from '../../bench/main';
+import {
+  percentile95,
+  type RendererTraceEvent,
+  rendererFrameWork,
+} from '../../src/testing/index.mts';
+import { waitForBench } from './bench';
+import { aggregateTraceRuns, type TraceRun, traceOwnership } from './trace-results';
+
+function traceEvents(input: unknown): RendererTraceEvent[] {
+  if (
+    typeof input !== 'object' ||
+    input === null ||
+    !('traceEvents' in input) ||
+    !Array.isArray(input.traceEvents)
+  ) {
+    throw new TypeError('Chromium trace must contain a traceEvents array');
+  }
+  return input.traceEvents.map((event: unknown) => {
+    if (
+      typeof event !== 'object' ||
+      event === null ||
+      !('name' in event) ||
+      typeof event.name !== 'string' ||
+      !('ph' in event) ||
+      typeof event.ph !== 'string' ||
+      !('ts' in event) ||
+      typeof event.ts !== 'number' ||
+      !('pid' in event) ||
+      typeof event.pid !== 'number' ||
+      !('tid' in event) ||
+      typeof event.tid !== 'number'
+    ) {
+      throw new TypeError('Chromium trace event is missing name, ph, ts, pid or tid');
+    }
+    const result: RendererTraceEvent = {
+      name: event.name,
+      ph: event.ph,
+      ts: event.ts,
+      pid: event.pid,
+      tid: event.tid,
+    };
+    if ('dur' in event && typeof event.dur === 'number') result.dur = event.dur;
+    if (
+      'args' in event &&
+      typeof event.args === 'object' &&
+      event.args !== null &&
+      'name' in event.args &&
+      typeof event.args.name === 'string'
+    )
+      result.args = { name: event.args.name };
+    return result;
+  });
+}
+async function finishTrace(session: CDPSession): Promise<RendererTraceEvent[]> {
+  const completed = new Promise<string>((resolveStream, reject) => {
+    session.once('Tracing.tracingComplete', (event: { stream?: string }) => {
+      if (!event.stream) reject(new Error('Chromium trace stream is missing'));
+      else resolveStream(event.stream);
+    });
+  });
+  await session.send('Tracing.end');
+  const stream = await completed;
+  let contents = '';
+  try {
+    for (;;) {
+      const chunk = await session.send('IO.read', { handle: stream });
+      contents += chunk.base64Encoded
+        ? Buffer.from(chunk.data, 'base64').toString('utf8')
+        : chunk.data;
+      if (chunk.eof) break;
+    }
+  } finally {
+    await session.send('IO.close', { handle: stream });
+  }
+  const parsed: unknown = JSON.parse(contents);
+  return traceEvents(parsed);
+}
+
+type Measurement = {
+  count: 708 | 5000;
+  fixture: string;
+  ownership: ReturnType<typeof traceOwnership>;
+  world: 'html' | 'svg';
+  dpr: number;
+  scenario: Scenario;
+  rendererMainP95Ms: number;
+  rafIntervalP95Ms: number;
+  runs: readonly TraceRun[];
+  firstFrameP50Ms: number;
+  firstFrameTrialsMs: number[];
+  referenceBudgets: {
+    rendererMainP95Ms: number;
+    rafIntervalP95Ms: number;
+    longTasksOver50Ms: number;
+    firstFrameP50Ms: number;
+  };
+};
+
+type Tier = { count: 708 | 5000; world: 'html' | 'svg'; dpr: 1 | 2 };
+
+async function firstFrames(context: BrowserContext, url: string): Promise<number[]> {
+  const trials: number[] = [];
+  for (let load = 0; load < 5; load += 1) {
+    const page = await context.newPage();
+    try {
+      await page.goto(url);
+      await waitForBench(page);
+      trials.push(
+        await page.evaluate(async () => {
+          await window.bench.ready;
+          return window.bench.firstFrameMs;
+        }),
+      );
+    } finally {
+      await page.close();
+    }
+  }
+  return trials;
+}
+
+async function recordRuns(
+  page: Page,
+  session: CDPSession,
+  scenario: Scenario,
+): Promise<TraceRun[]> {
+  const runs: TraceRun[] = [];
+  for (let run = 1; run <= 3; run += 1) {
+    await session.send('Tracing.start', {
+      categories:
+        'toplevel,devtools.timeline,disabled-by-default-devtools.timeline,blink.user_timing',
+      transferMode: 'ReturnAsStream',
+    });
+    const sample = await page.evaluate((name) => window.bench.run(name), scenario);
+    const events = await finishTrace(session);
+    if (sample.longTasks === null)
+      throw new Error('Long-task observations are unavailable for the Chromium trace');
+    const rendererSamples = rendererFrameWork(events);
+    runs.push({
+      run,
+      rendererMainP95Ms: percentile95(rendererSamples),
+      rafIntervalP95Ms: percentile95(sample.intervals),
+      longTasksOver50Ms: sample.longTasks.length,
+      longTaskDurationsMs: sample.longTasks,
+      domNodes: sample.domNodes,
+      rendererFrameSamples: rendererSamples.length,
+    });
+  }
+  return runs;
+}
+
+async function measureTier(browser: Browser, baseURL: string, tier: Tier): Promise<Measurement[]> {
+  const { count, world, dpr } = tier;
+  const fixture = world === 'svg' ? `svg-${count}` : count === 708 ? '708-997' : '5000-7312';
+  const url = `${baseURL}/?fixture=${fixture}&world=${world}`;
+  const mainBudget = world === 'html' ? { 708: 6, 5000: 8 }[count] : { 708: 8, 5000: 12 }[count];
+  const context = await browser.newContext({
+    viewport: { width: 1440, height: 900 },
+    deviceScaleFactor: dpr,
+  });
+  try {
+    const firstFrameTrialsMs = await firstFrames(context, url);
+    const firstFrameP50Ms = [...firstFrameTrialsMs].sort((a, b) => a - b)[2];
+    const page = await context.newPage();
+    await page.goto(url);
+    await waitForBench(page);
+    if (count === 708) await page.evaluate(() => window.bench.run('pan-100'));
+    const session = await context.newCDPSession(page);
+    try {
+      const measurements: Measurement[] = [];
+      const scenarios: Scenario[] = ['pan-100', 'pan-40', 'pan-fit', 'zoom-sweep'];
+      for (const scenario of scenarios) {
+        const runs = await recordRuns(page, session, scenario);
+        measurements.push({
+          count,
+          fixture,
+          ownership: traceOwnership({ count, world, scenario }),
+          world,
+          dpr,
+          scenario,
+          ...aggregateTraceRuns(runs),
+          firstFrameP50Ms,
+          firstFrameTrialsMs,
+          referenceBudgets: {
+            rendererMainP95Ms: mainBudget,
+            rafIntervalP95Ms: 16.8,
+            longTasksOver50Ms: 0,
+            firstFrameP50Ms: 150,
+          },
+        });
+      }
+      return measurements;
+    } finally {
+      await session.detach();
+      await page.close();
+    }
+  } finally {
+    await context.close();
+  }
+}
+
+test('records production vanilla camera traces beside the reference budgets', async ({
+  browser,
+}, testInfo) => {
+  test.setTimeout(1_800_000);
+  const baseURL = testInfo.project.use.baseURL;
+  if (!baseURL) throw new Error('Canvas trace baseURL is missing');
+  const measurements: Measurement[] = [];
+  for (const dpr of [2, 1] as const) {
+    for (const count of [708, 5000] as const) {
+      for (const world of ['html', 'svg'] as const) {
+        measurements.push(...(await measureTier(browser, baseURL, { count, world, dpr })));
+      }
+    }
+  }
+  const report = {
+    runner: {
+      os: platform(),
+      release: release(),
+      arch: arch(),
+      cpu: cpus()[0]?.model,
+      ci: Boolean(process.env.CI),
+    },
+    reference: 'Apple M5 Max; approved reference budgets, no runner adjustment',
+    stage: { width: 1440, height: 900 },
+    frames: 180,
+    recordedRunsPerScenario: 3,
+    aggregation: 'median of three per-run p95s',
+    warmup: {
+      count: 708,
+      scenario: 'pan-100',
+      runsPerInteractionPage: 1,
+      traced: false,
+      discarded: true,
+    },
+    measurements,
+  };
+  const output = resolve(import.meta.dirname, '../../test-results/bench-trace.json');
+  await mkdir(resolve(import.meta.dirname, '../../test-results'), { recursive: true });
+  await writeFile(output, `${JSON.stringify(report, null, 2)}\n`);
+  await testInfo.attach('bench-trace', { path: output, contentType: 'application/json' });
+  process.stdout.write(
+    [
+      '| Fixture | World | DPR | Scenario | Ownership | Main p95 median / budget ms | Raw main p95s ms | rAF p95 median / budget ms | Raw rAF p95s ms | Long tasks per run | Long-task durations per run ms | First frame p50 / budget ms | DOM nodes per run |',
+      '| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |',
+      ...measurements.map(
+        (item) =>
+          `| ${item.fixture} | ${item.world} | ${item.dpr} | ${item.scenario} | ${item.ownership} | ${item.rendererMainP95Ms} / ${item.referenceBudgets.rendererMainP95Ms} | ${JSON.stringify(item.runs.map((run) => run.rendererMainP95Ms))} | ${item.rafIntervalP95Ms} / ${item.referenceBudgets.rafIntervalP95Ms} | ${JSON.stringify(item.runs.map((run) => run.rafIntervalP95Ms))} | ${JSON.stringify(item.runs.map((run) => run.longTasksOver50Ms))} | ${JSON.stringify(item.runs.map((run) => run.longTaskDurationsMs))} | ${item.firstFrameP50Ms} / ${item.referenceBudgets.firstFrameP50Ms} | ${JSON.stringify(item.runs.map((run) => run.domNodes))} |`,
+      ),
+      '',
+    ].join('\n'),
+  );
+  for (const item of measurements.filter(
+    (measurement) =>
+      measurement.count === 708 &&
+      measurement.world === 'html' &&
+      measurement.scenario === 'pan-100',
+  )) {
+    const label = `${item.fixture} ${item.world} DPR ${item.dpr}`;
+    expect
+      .soft(item.rendererMainP95Ms, `${label}: renderer main work`)
+      .toBeLessThanOrEqual(item.referenceBudgets.rendererMainP95Ms);
+    expect
+      .soft(item.rafIntervalP95Ms, `${label}: rAF interval`)
+      .toBeLessThanOrEqual(item.referenceBudgets.rafIntervalP95Ms);
+    for (const run of item.runs) {
+      expect
+        .soft(run.longTasksOver50Ms, `${label}: run ${run.run} long tasks`)
+        .toBe(item.referenceBudgets.longTasksOver50Ms);
+    }
+    expect
+      .soft(item.firstFrameP50Ms, `${label}: first fixture frame`)
+      .toBeLessThanOrEqual(item.referenceBudgets.firstFrameP50Ms);
+  }
+});

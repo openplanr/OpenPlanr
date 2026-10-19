@@ -2,6 +2,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import ts from 'typescript';
 import { describe, expect, it } from 'vitest';
 
 const packageRoot = fileURLToPath(new URL('../', import.meta.url));
@@ -15,6 +16,15 @@ const entries = [
 ] as const;
 
 describe('package shape', () => {
+  it('creates and uses a detached controller without a browser', async () => {
+    const { createCanvas } = await import('@openplanr/canvas');
+    const controller = createCanvas({ label: 'Server canvas' });
+    controller.setCamera({ x: 5, y: 10, zoom: 2 });
+    expect(controller.worldToScreen({ x: 10, y: 20 })).toEqual({ x: 10, y: 20 });
+    expect(controller.getCamera()).toEqual({ x: 5, y: 10, zoom: 2 });
+    controller.detach();
+    controller.destroy();
+  });
   it('stays private and includes a README', () => {
     expect(manifest.private).toBe(true);
     expect(existsSync(new URL('../README.md', import.meta.url))).toBe(true);
@@ -32,8 +42,49 @@ describe('package shape', () => {
         resolve(packageRoot, `${target}.mjs`),
       );
       const entry = await import(specifier);
-      expect(Object.keys(entry)).toEqual([]);
-      expect(readFileSync(resolve(packageRoot, `${target}.d.mts`), 'utf8')).toContain('export {}');
+      const values =
+        specifier === '@openplanr/canvas'
+          ? ['cameraFromScreenTranslate', 'cameraToScreenTranslate', 'createCanvas']
+          : specifier === '@openplanr/canvas/testing'
+            ? ['generateLayeredGraph', 'generateSvgDiagram', 'percentile95', 'rendererFrameWork']
+            : [];
+      expect(Object.keys(entry).sort()).toEqual(values);
+      const types =
+        specifier === '@openplanr/canvas'
+          ? [
+              'Camera',
+              'CanvasController',
+              'CanvasElements',
+              'CanvasEvents',
+              'CanvasNode',
+              'CanvasOptions',
+              'NodeId',
+              'Point',
+              'Rect',
+              'WorldElement',
+            ]
+          : specifier === '@openplanr/canvas/testing'
+            ? [
+                'CanvasFixture',
+                'FixtureEdge',
+                'FixtureNode',
+                'RendererTraceEvent',
+                'RendererTraceMarks',
+              ]
+            : [];
+      const path = resolve(packageRoot, `${target}.d.mts`);
+      const program = ts.createProgram([path], { module: ts.ModuleKind.NodeNext });
+      const source = program.getSourceFile(path);
+      if (!source) throw new Error(`Missing declaration ${path}`);
+      const checker = program.getTypeChecker();
+      const symbol = checker.getSymbolAtLocation(source);
+      const names = symbol
+        ? checker
+            .getExportsOfModule(symbol)
+            .map((entry) => entry.name)
+            .sort()
+        : [];
+      expect(names).toEqual([...values, ...types].sort());
     }
     expect(fileURLToPath(import.meta.resolve('@openplanr/canvas/styles.css'))).toBe(
       resolve(packageRoot, 'src/styles.css'),
