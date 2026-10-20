@@ -99,6 +99,7 @@
         "cli",
         "pipeline",
         "protocol",
+        "canvas",
         "operate",
         "artifact",
         "design",
@@ -146,6 +147,20 @@
             },
             "publication": {
               "const": "public"
+            }
+          }
+        },
+        "canvas": {
+          "$ref": "#/$defs/component",
+          "properties": {
+            "package": {
+              "const": "@openplanr/canvas"
+            },
+            "path": {
+              "const": "packages/canvas"
+            },
+            "publication": {
+              "const": "private"
             }
           }
         },

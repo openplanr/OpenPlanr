@@ -144,7 +144,7 @@ Design a polished product interface through adaptive consultation, a shared canv
 - Invocation from the plugin: `$planr:design` in Codex/ChatGPT; `/planr:design` in Claude Code.
 - Hosts: Claude Code, Codex, ChatGPT, and Cursor where supported by the package manifest.
 - Aliases: none.
-- Packaged support: `references/craft.md`, `references/design-spec-template.md`, `references/design-system.md`, `references/discovery.md`, `references/generation.md`, `references/handoff.md`, `references/review.md`, `references/utilities.md`, `references/team-review.md`, with packaged validators and runtime support. See the [resource inventory](../../skills/planr-design/openplanr.skill.json).
+- Packaged support: `references/hosted-canvas.md`, `references/craft.md`, `references/design-spec-template.md`, `references/design-system.md`, `references/discovery.md`, `references/generation.md`, `references/handoff.md`, `references/review.md`, `references/utilities.md`, `references/team-review.md`, with packaged validators and runtime support. See the [resource inventory](../../skills/planr-design/openplanr.skill.json).
 
 ## `planr-design-loop`
 

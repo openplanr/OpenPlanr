@@ -22,6 +22,8 @@ shared source; variants write disjoint directories. Preserve IDs during evolutio
 All document source paths are local and relative to its directory; import the
 required asset snapshots rather than referring outside it or to remote resources.
 Fonts are asset snapshots too; follow [design-system.md](design-system.md).
+Design's hosted canvas path is the one exception: it publishes to the host's
+canvas service and follows that canvas's own font and asset rules.
 Use stable `data-planr-id` attributes on meaningful review targets, including
 primary controls and reusable component instances. Avoid anchoring feedback to
 incidental array positions or rendered CSS selectors.

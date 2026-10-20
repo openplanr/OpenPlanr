@@ -10,6 +10,14 @@ Develop one strong direction in the active host session, grounded in the product
 and its visual language. Deliver editable local source, a working review studio,
 and a ten-section design specification ready for Plan.
 
+## Choose where to design
+
+When the host can publish a hosted design canvas, design there by following
+[hosted-canvas.md](references/hosted-canvas.md), unless the user asks
+for the local studio. Its rules replace the studio, document and verification
+steps below; consultation and the specification still apply. Every other host
+uses the local studio.
+
 ## Consult and establish direction
 
 Read [discovery.md](references/discovery.md) before generating. Inspect the brief,

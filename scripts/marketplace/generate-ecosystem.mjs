@@ -291,6 +291,7 @@ async function buildOutputs() {
     cli: component('packages/cli', 'public'),
     pipeline: component('packages/pipeline', 'public'),
     protocol: component('packages/protocol', 'public'),
+    canvas: component('packages/canvas', 'private'),
     operate: component('packages/operate', 'private'),
     artifact: component('packages/artifact', 'private'),
     design: component('packages/design', 'private'),

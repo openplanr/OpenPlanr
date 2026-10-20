@@ -8,7 +8,7 @@
   "canonicalSkillCount": 30,
   "compatibilityAliasCount": 0,
   "skillCount": 30,
-  "assetCount": 214,
+  "assetCount": 215,
   "skills": [
     {
       "skillId": "planr-artifact",
@@ -193,7 +193,7 @@
         },
         {
           "path": "skills/connect/references/connectors.md",
-          "digest": "sha256:0b2062a01690bbb6b5e9688663fc3c38e8128361c9ddedea149b5bccd4620296"
+          "digest": "sha256:66b21a5127afc673f8e4acf6946c29f9f1e52d9d579c66cad46803e6052a4862"
         }
       ]
     },
@@ -455,15 +455,19 @@
       "assets": [
         {
           "path": "skills/design/SKILL.md",
-          "digest": "sha256:83aa5845ce85f6ca3280ef62af2cfcf350e4c94692b9b2b7494dff53f7086ca5"
+          "digest": "sha256:bc1fedd3d1fcc930001d079b9a63b928939f4fd2aca97d0143bcb0f8e6f97d20"
         },
         {
           "path": "skills/design/openplanr.skill.json",
-          "digest": "sha256:a0a2ef63dcacc839766959332b0831ab66549959e355209c89d477a2238fd176"
+          "digest": "sha256:5dcbc3e5fedaeb1c57e7f32dc3a2c7f8b34cb58a98bf47737f654450f3a38fce"
         },
         {
           "path": "skills/design/agents/openai.yaml",
           "digest": "sha256:39fce11578235a35e7f61e050810c0cfd81112804fe99fddf9c9f100af917925"
+        },
+        {
+          "path": "skills/design/references/hosted-canvas.md",
+          "digest": "sha256:901f0d95d47784bcf15f33bf4413e9a5de7aaf03401ca447451f5ccc0d6a2324"
         },
         {
           "path": "skills/design/references/craft.md",
@@ -483,7 +487,7 @@
         },
         {
           "path": "skills/design/references/generation.md",
-          "digest": "sha256:047d96e6ce691240bef4c6ae8a1a27436f3e1bbedd036eea282573ec806e74d0"
+          "digest": "sha256:fdce73f6cf64ee86243badc484556369efde06c35b6482f4c24b6198aff52ec4"
         },
         {
           "path": "skills/design/references/handoff.md",
@@ -556,7 +560,7 @@
         },
         {
           "path": "skills/design-loop/references/generation.md",
-          "digest": "sha256:047d96e6ce691240bef4c6ae8a1a27436f3e1bbedd036eea282573ec806e74d0"
+          "digest": "sha256:fdce73f6cf64ee86243badc484556369efde06c35b6482f4c24b6198aff52ec4"
         },
         {
           "path": "skills/design-loop/references/handoff.md",
@@ -629,7 +633,7 @@
         },
         {
           "path": "skills/design-review/references/generation.md",
-          "digest": "sha256:047d96e6ce691240bef4c6ae8a1a27436f3e1bbedd036eea282573ec806e74d0"
+          "digest": "sha256:fdce73f6cf64ee86243badc484556369efde06c35b6482f4c24b6198aff52ec4"
         },
         {
           "path": "skills/design-review/references/handoff.md",
@@ -752,7 +756,7 @@
         },
         {
           "path": "skills/investigate/scripts/backlog-item.mjs",
-          "digest": "sha256:ccded7cd9126aa631f8944a1c7ec23145db8fb3c972449f83c0c634e6a90016a"
+          "digest": "sha256:4d3ae483819acaa34ef79b1ee3b21f75ceb78bf290366d7a9e095021340a3b68"
         }
       ]
     },
@@ -832,7 +836,7 @@
       "assets": [
         {
           "path": "skills/plan/SKILL.md",
-          "digest": "sha256:8fbe80627c9ae062af6b0775717f50399cedfae473d1cb6b68b782028d5bcd62"
+          "digest": "sha256:4fa07c960eb441671dbfe40e4a77d89a93acc2215066dc7841ab9e478ba56fe7"
         },
         {
           "path": "skills/plan/openplanr.skill.json",
@@ -959,7 +963,7 @@
         },
         {
           "path": "skills/share/references/connectors.md",
-          "digest": "sha256:0b2062a01690bbb6b5e9688663fc3c38e8128361c9ddedea149b5bccd4620296"
+          "digest": "sha256:66b21a5127afc673f8e4acf6946c29f9f1e52d9d579c66cad46803e6052a4862"
         }
       ]
     },
@@ -1000,7 +1004,7 @@
         },
         {
           "path": "skills/ship/scripts/backlog-item.mjs",
-          "digest": "sha256:ccded7cd9126aa631f8944a1c7ec23145db8fb3c972449f83c0c634e6a90016a"
+          "digest": "sha256:4d3ae483819acaa34ef79b1ee3b21f75ceb78bf290366d7a9e095021340a3b68"
         }
       ]
     },
@@ -1058,7 +1062,7 @@
         },
         {
           "path": "skills/sprint/references/connectors.md",
-          "digest": "sha256:0b2062a01690bbb6b5e9688663fc3c38e8128361c9ddedea149b5bccd4620296"
+          "digest": "sha256:66b21a5127afc673f8e4acf6946c29f9f1e52d9d579c66cad46803e6052a4862"
         },
         {
           "path": "skills/sprint/references/tracker-connections.md",
@@ -1091,7 +1095,7 @@
         },
         {
           "path": "skills/status/references/connectors.md",
-          "digest": "sha256:0b2062a01690bbb6b5e9688663fc3c38e8128361c9ddedea149b5bccd4620296"
+          "digest": "sha256:66b21a5127afc673f8e4acf6946c29f9f1e52d9d579c66cad46803e6052a4862"
         },
         {
           "path": "skills/status/references/tracker-connections.md",
@@ -1116,7 +1120,7 @@
         },
         {
           "path": "skills/sync/references/connectors.md",
-          "digest": "sha256:0b2062a01690bbb6b5e9688663fc3c38e8128361c9ddedea149b5bccd4620296"
+          "digest": "sha256:66b21a5127afc673f8e4acf6946c29f9f1e52d9d579c66cad46803e6052a4862"
         },
         {
           "path": "skills/sync/references/tracker-connections.md",

@@ -1,0 +1,46 @@
+name: Changeset bump
+
+on:
+  pull_request:
+    # Title and label edits change the verdict without a new commit.
+    types: [opened, edited, synchronize, reopened, labeled, unlabeled]
+  merge_group:
+    types: [checks_requested]
+
+permissions:
+  contents: read
+  pull-requests: read
+
+concurrency:
+  group: changeset-bump-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  changeset-bump:
+    name: Check changeset bumps
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+      # The queue re-reads the pull request, so a label removed after queueing still fails.
+      # Its own file list keeps changesets from earlier queue entries out of the check.
+      - name: Read the pull request title, labels and changed files
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          QUEUE_REF: ${{ github.event.merge_group.head_ref }}
+        run: |
+          number="${PR_NUMBER:-$(printf '%s' "$QUEUE_REF" | sed -nE 's#^refs/heads/gh-readonly-queue/[^/]+/pr-([0-9]+)-.*#\1#p')}"
+          if [ -z "$number" ]; then
+            echo "::error::Cannot find the pull request number for ref '$QUEUE_REF'"
+            exit 1
+          fi
+          gh api "repos/$GITHUB_REPOSITORY/pulls/$number" > "$RUNNER_TEMP/pull.json"
+          gh api --paginate --slurp "repos/$GITHUB_REPOSITORY/pulls/$number/files" > "$RUNNER_TEMP/files.json"
+      - name: Check changeset bumps against the title type
+        run: node scripts/release-train/check-changeset-bump.mjs --pr "$RUNNER_TEMP/pull.json" --files "$RUNNER_TEMP/files.json"

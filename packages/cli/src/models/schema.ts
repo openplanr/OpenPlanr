@@ -30,32 +30,32 @@ const vaguePhrasePatternSchema = z.string().superRefine((pattern, ctx) => {
   }
 });
 
-export const vaguePhraseRuleSchema = z.object({
+export const vaguePhraseRuleSchema = z.looseObject({
   pattern: vaguePhrasePatternSchema,
   alternatives: z.array(z.string()),
   hint: z.string().optional(),
 });
 
-export const reportLinterRuleConfigSchema = z.object({
+export const reportLinterRuleConfigSchema = z.looseObject({
   id: z.string(),
   enabled: z.boolean(),
   minEvidenceLinks: z.number().optional(),
   requireSections: z.array(z.string()).optional(),
 });
 
-export const reportLinterConfigSchema = z.object({
+export const reportLinterConfigSchema = z.looseObject({
   rules: z.array(reportLinterRuleConfigSchema),
   vaguePhrases: z.array(vaguePhraseRuleSchema),
 });
 
-export const stakeholderReportsConfigSchema = z.object({
+export const stakeholderReportsConfigSchema = z.looseObject({
   orgName: z.string().optional(),
   logoUrl: z.string().optional(),
   accentColor: z.string().optional(),
   customSections: z.record(z.string(), z.string()).optional(),
 });
 
-export const distributionConfigSchema = z.object({
+export const distributionConfigSchema = z.looseObject({
   emailFrom: z.string().optional(),
   emailSmtpHost: z.string().optional(),
   weeklyRecipientAllowlist: z.array(z.string()).optional(),
@@ -65,13 +65,13 @@ export const distributionConfigSchema = z.object({
  * Upgrade-offer policy. Both fields are optional and additive: neither may
  * be inferred from a bare invocation — an absent block means "prompt as usual".
  */
-export const upgradeConfigSchema = z.object({
+export const upgradeConfigSchema = z.looseObject({
   autoUpgrade: z.boolean().optional(),
   updateCheck: z.boolean().optional(),
 });
 
 /** How Ship and Investigate treat out-of-scope findings when nobody can answer. */
-export const findingsConfigSchema = z.object({
+export const findingsConfigSchema = z.looseObject({
   unattended: z.enum(['report', 'file']).optional(),
   cliHintShown: z.boolean().optional(),
 });
@@ -84,12 +84,12 @@ const LINEAR_UUID_REGEX =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 /** Persisted Linear configuration. `teamId` remains the default and preserves legacy configs. */
-export const linearConfigSchema = z.object({
+export const linearConfigSchema = z.looseObject({
   teamId: z.string().min(1),
   teamKey: z.string().optional(),
   teams: z
     .array(
-      z.object({
+      z.looseObject({
         id: z.string().min(1),
         key: z.string().min(1),
         name: z.string().min(1),
@@ -130,7 +130,7 @@ export const linearConfigSchema = z.object({
   defaultEpicStrategy: z.enum(['project', 'milestone-of', 'label-on']).optional(),
   /** Override the auto-applied type-label names. Any missing key falls back to the default. */
   typeLabels: z
-    .object({
+    .looseObject({
       feature: z.string().min(1).optional(),
       story: z.string().min(1).optional(),
       task: z.string().min(1).optional(),
@@ -140,17 +140,17 @@ export const linearConfigSchema = z.object({
     .optional(),
 });
 
-/** Keeps unknown top-level keys so `saveConfig` writes back what it read. */
+/** Keeps unknown keys at every level so `saveConfig` writes back what it read. */
 export const configSchema = z.looseObject({
   projectName: z.string().min(1),
   targets: z.array(targetCLISchema).min(1),
-  outputPaths: z.object({
+  outputPaths: z.looseObject({
     agile: z.string().default(PLANNING_FOLDER),
     cursorRules: z.string().default('.cursor/rules'),
     claudeConfig: z.string().default('.'),
     codexConfig: z.string().default('.'),
   }),
-  idPrefix: z.object({
+  idPrefix: z.looseObject({
     epic: z.string().default('EPIC'),
     feature: z.string().default('FEAT'),
     story: z.string().default('US'),

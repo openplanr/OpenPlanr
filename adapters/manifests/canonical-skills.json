@@ -548,7 +548,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:0b2062a01690bbb6b5e9688663fc3c38e8128361c9ddedea149b5bccd4620296"
+          "digest": "sha256:66b21a5127afc673f8e4acf6946c29f9f1e52d9d579c66cad46803e6052a4862"
         }
       ],
       "contracts": {
@@ -1308,7 +1308,7 @@
       "source": "skills/planr-design/openplanr.skill.json",
       "entrypoint": "skills/planr-design/SKILL.md",
       "description": "Design a polished product interface through adaptive consultation, a shared canvas/prototype/walkthrough studio, and an implementation-ready specification. Use for a new design or an existing interface that needs a coherent direction.",
-      "sourceDigest": "sha256:234ec0b1c7a983590982462a59df017647ed8d76e45727417534e483e2f5ab5b",
+      "sourceDigest": "sha256:385c296eb792db6edfd512c0db1fdbf5a087298122e89d959bef3967fed2ba71",
       "resources": [
         {
           "path": "agents/openai.yaml",
@@ -1319,6 +1319,18 @@
           ],
           "executable": false,
           "digest": "sha256:6c7c552bfea93702edc0cab604ab048988582c2ffa8b6d7da2f5967a83f90833"
+        },
+        {
+          "path": "references/hosted-canvas.md",
+          "kind": "reference",
+          "hosts": [
+            "claude-code",
+            "codex",
+            "chatgpt",
+            "cursor"
+          ],
+          "executable": false,
+          "digest": "sha256:901f0d95d47784bcf15f33bf4413e9a5de7aaf03401ca447451f5ccc0d6a2324"
         },
         {
           "path": "references/craft.md",
@@ -1378,7 +1390,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:047d96e6ce691240bef4c6ae8a1a27436f3e1bbedd036eea282573ec806e74d0"
+          "digest": "sha256:fdce73f6cf64ee86243badc484556369efde06c35b6482f4c24b6198aff52ec4"
         },
         {
           "path": "references/handoff.md",
@@ -2540,7 +2552,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:047d96e6ce691240bef4c6ae8a1a27436f3e1bbedd036eea282573ec806e74d0"
+          "digest": "sha256:fdce73f6cf64ee86243badc484556369efde06c35b6482f4c24b6198aff52ec4"
         },
         {
           "path": "references/handoff.md",
@@ -3702,7 +3714,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:047d96e6ce691240bef4c6ae8a1a27436f3e1bbedd036eea282573ec806e74d0"
+          "digest": "sha256:fdce73f6cf64ee86243badc484556369efde06c35b6482f4c24b6198aff52ec4"
         },
         {
           "path": "references/handoff.md",
@@ -4993,7 +5005,7 @@
             "cursor"
           ],
           "executable": true,
-          "digest": "sha256:ccded7cd9126aa631f8944a1c7ec23145db8fb3c972449f83c0c634e6a90016a"
+          "digest": "sha256:4d3ae483819acaa34ef79b1ee3b21f75ceb78bf290366d7a9e095021340a3b68"
         }
       ],
       "contracts": {
@@ -5197,7 +5209,7 @@
       "source": "skills/planr-plan/openplanr.skill.json",
       "entrypoint": "skills/planr-plan/SKILL.md",
       "description": "Turn a Protocol-compatible specification or product intent into schema-compatible OpenPlanr stories and implementation tasks. Use for planning and decomposition, not implementation.",
-      "sourceDigest": "sha256:71ab2272efa19f817af597de0bf5aee163bcb1cd17418998107f21a412e91996",
+      "sourceDigest": "sha256:ee27dc8136cada6ffed75baa68ebdfd12c4d6414b069d4c89e627e4ec8beb68e",
       "resources": [
         {
           "path": "agents/openai.yaml",
@@ -5530,7 +5542,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:0b2062a01690bbb6b5e9688663fc3c38e8128361c9ddedea149b5bccd4620296"
+          "digest": "sha256:66b21a5127afc673f8e4acf6946c29f9f1e52d9d579c66cad46803e6052a4862"
         }
       ],
       "contracts": {
@@ -5636,7 +5648,7 @@
             "cursor"
           ],
           "executable": true,
-          "digest": "sha256:ccded7cd9126aa631f8944a1c7ec23145db8fb3c972449f83c0c634e6a90016a"
+          "digest": "sha256:4d3ae483819acaa34ef79b1ee3b21f75ceb78bf290366d7a9e095021340a3b68"
         }
       ],
       "contracts": {
@@ -5755,7 +5767,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:0b2062a01690bbb6b5e9688663fc3c38e8128361c9ddedea149b5bccd4620296"
+          "digest": "sha256:66b21a5127afc673f8e4acf6946c29f9f1e52d9d579c66cad46803e6052a4862"
         },
         {
           "path": "references/tracker-connections.md",
@@ -5837,7 +5849,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:0b2062a01690bbb6b5e9688663fc3c38e8128361c9ddedea149b5bccd4620296"
+          "digest": "sha256:66b21a5127afc673f8e4acf6946c29f9f1e52d9d579c66cad46803e6052a4862"
         },
         {
           "path": "references/tracker-connections.md",
@@ -5897,7 +5909,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:0b2062a01690bbb6b5e9688663fc3c38e8128361c9ddedea149b5bccd4620296"
+          "digest": "sha256:66b21a5127afc673f8e4acf6946c29f9f1e52d9d579c66cad46803e6052a4862"
         },
         {
           "path": "references/tracker-connections.md",
