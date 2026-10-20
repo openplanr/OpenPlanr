@@ -1,5 +1,6 @@
 export { cameraFromScreenTranslate, cameraToScreenTranslate } from './camera.mjs';
 export { createCanvas } from './controller.mjs';
+export { CanvasFocusError } from './focus.mjs';
 export { drawCameraOverview, drawMinimap, minimapToWorld } from './overview.mjs';
 export type {
   Breakpoint,
@@ -13,6 +14,7 @@ export type {
   CanvasOptions,
   ChromeSurface,
   Diagnostic,
+  Direction,
   MinimapTransform,
   NodeId,
   OverviewMetrics,

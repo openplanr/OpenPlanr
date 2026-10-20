@@ -1,3 +1,4 @@
+import { createAnnouncer } from './announcer.mjs';
 import {
   finite,
   invalid,
@@ -11,10 +12,13 @@ import {
 } from './camera.mjs';
 import { createCulling } from './culling.mjs';
 import { buildEdgeRoutes, createEdgeLayer } from './edges.mjs';
+import { CanvasFocusError, createRovingFocus, navigateSpatial } from './focus.mjs';
 import { createFrameLoader } from './frame-loader.mjs';
 import { createFrames } from './frames.mjs';
 import { bindInput, isEditable } from './input.mjs';
+import { keyAction } from './keyboard.mjs';
 import { createLod } from './lod.mjs';
+import { createOutline } from './outline.mjs';
 import { createOverviewLayer } from './overview.mjs';
 import { CHROME_TRANSITION_MS, computeSafeArea } from './safe-area.mjs';
 import type {
@@ -93,6 +97,9 @@ export function createCanvas(options: CanvasOptions): CanvasController {
     invalid('strict', options.strict);
   if (options.shortcutsEnabled !== undefined && typeof options.shortcutsEnabled !== 'function')
     invalid('shortcutsEnabled', options.shortcutsEnabled);
+  for (const field of ['navigate', 'outlineOrder'] as const)
+    if (options[field] !== undefined && typeof options[field] !== 'function')
+      invalid(field, options[field]);
   let pointerMode = options.pointerMode === undefined ? 'pan' : options.pointerMode;
   validatePointerMode(pointerMode);
   if (options.worldBounds) {
@@ -104,6 +111,10 @@ export function createCanvas(options: CanvasOptions): CanvasController {
     : undefined;
   let camera: Camera = { x: 0, y: 0, zoom: Math.max(min, Math.min(max, 1)) };
   let nodes = new Map<NodeId, CanvasNode>();
+  let outline: readonly NodeId[] = [];
+  let roving: ReturnType<typeof createRovingFocus> | undefined;
+  let announcer: ReturnType<typeof createAnnouncer> | undefined;
+  let announceZoom = false;
   let overviewNodes: readonly CanvasNode[] = [];
   let level: CanvasLevel = lod.update(camera.zoom);
   let overviewLayer: ReturnType<typeof createOverviewLayer> | undefined;
@@ -280,7 +291,21 @@ export function createCanvas(options: CanvasOptions): CanvasController {
     focused = id;
     culling.setPinned('focus', id === null ? [] : [id]);
     detailDirty = true;
+    roving?.sync();
     enqueue('focus', id);
+  }
+  async function focusNode(id: NodeId, announce = true) {
+    alive();
+    if (!nodes.has(id)) throw new CanvasFocusError(id, 'unknown-node');
+    if (!roving) throw new CanvasFocusError(id, 'no-element');
+    const result = roving.request(id);
+    revealBounds(requireNode(id).bounds);
+    schedule();
+    await result;
+    if (announce) {
+      const element = registered.get(id);
+      announcer?.say(element?.getAttribute('aria-label') || element?.textContent || '');
+    }
   }
   const shortcutsEnabled = () => options.shortcutsEnabled?.() ?? true;
 
@@ -317,10 +342,10 @@ export function createCanvas(options: CanvasOptions): CanvasController {
       return;
     if (!visibility.has(element)) visibility.set(element, element.style.visibility);
     const original = visibility.get(element) ?? '';
-    element.style.visibility =
-      level === 'overview' ? (pins.has(id) ? 'visible' : 'hidden') : original;
+    const value = level === 'overview' ? (pins.has(id) ? 'visible' : 'hidden') : original;
+    if (element.style.visibility !== value) element.style.visibility = value;
   }
-  function updateVisibility() {
+  function updateVisibility(levelChanged: boolean) {
     if (!elements) return;
     const pins = culling.getPinnedIds();
     for (const layer of layers()) {
@@ -332,16 +357,20 @@ export function createCanvas(options: CanvasOptions): CanvasController {
       if (!visibility.has(edge)) visibility.set(edge, edge.style.visibility);
       edge.style.visibility = level === 'overview' ? 'hidden' : (visibility.get(edge) ?? '');
     }
-    for (const [id, element] of registered) nodeVisibility(element, id, pins);
     if (level === 'overview') {
+      for (const [id, element] of registered) nodeVisibility(element, id, pins);
       for (const element of elements.stage.querySelectorAll('[data-canvas-node-id]')) {
         const id = element.getAttribute('data-canvas-node-id');
         if (id !== null) nodeVisibility(element, id, pins);
       }
-    } else {
+    } else if (levelChanged) {
       const realm = elements.stage.ownerDocument.defaultView;
       for (const [element, original] of visibility) {
-        if (realm && (element instanceof realm.HTMLElement || element instanceof realm.SVGElement))
+        if (
+          realm &&
+          (element instanceof realm.HTMLElement || element instanceof realm.SVGElement) &&
+          element.style.visibility !== original
+        )
           element.style.visibility = original;
       }
     }
@@ -525,9 +554,13 @@ export function createCanvas(options: CanvasOptions): CanvasController {
       loader?.refresh();
     } else if (update.geometry.length || loaderDirty) loader?.refresh();
     loaderDirty = false;
-    if (detailDirty) updateVisibility();
+    if (detailDirty) updateVisibility(levelChanged);
     if (level === 'overview') overviewLayer?.present();
-    if (animation || update.pending) schedule();
+    if (announceZoom && !animation) {
+      announceZoom = false;
+      announcer?.say(`Zoom ${Math.round(camera.zoom * 100)}%`);
+    }
+    if (roving?.update(!animation) || animation || update.pending) schedule();
     if (resumeTimer !== undefined) view?.clearTimeout(resumeTimer);
     resumeTimer = undefined;
     if (update.resumeAt !== undefined && view) {
@@ -568,6 +601,11 @@ export function createCanvas(options: CanvasOptions): CanvasController {
     isMoving = false;
     composing = false;
     animation = undefined;
+    roving?.dispose();
+    roving = undefined;
+    announcer?.dispose();
+    announcer = undefined;
+    announceZoom = false;
     input?.dispose();
     loader?.dispose();
     edgeLayer?.dispose();
@@ -671,21 +709,6 @@ export function createCanvas(options: CanvasOptions): CanvasController {
       stage.addEventListener('compositionend', compositionEnd);
       stage.addEventListener('blur', compositionEnd);
       stage.addEventListener('focusout', compositionEnd);
-      const focusIn = (event: FocusEvent) => {
-        const target = event.target;
-        const id =
-          [...registered].find(([, element]) => event.composedPath().includes(element))?.[0] ??
-          (target instanceof realm.Element
-            ? target.closest('[data-canvas-node-id]')?.getAttribute('data-canvas-node-id')
-            : null);
-        setFocus(id && nodes.has(id) ? id : null);
-      };
-      const focusOut = (event: FocusEvent) => {
-        if (!(event.relatedTarget instanceof realm.Node) || !stage.contains(event.relatedTarget))
-          setFocus(null);
-      };
-      stage.addEventListener('focusin', focusIn);
-      stage.addEventListener('focusout', focusOut);
       const observer = realm.ResizeObserver ? new realm.ResizeObserver(resize) : undefined;
       observer?.observe(stage);
       realm.addEventListener('resize', resize);
@@ -695,8 +718,6 @@ export function createCanvas(options: CanvasOptions): CanvasController {
         observer?.disconnect();
         realm.removeEventListener('resize', resize);
         forcedColors?.removeEventListener?.('change', schedule);
-        stage.removeEventListener('focusin', focusIn);
-        stage.removeEventListener('focusout', focusOut);
         stage.removeEventListener('compositionstart', compositionStart);
         stage.removeEventListener('compositionend', compositionEnd);
         stage.removeEventListener('blur', compositionEnd);
@@ -716,6 +737,22 @@ export function createCanvas(options: CanvasOptions): CanvasController {
       stage.setAttribute('role', 'group');
       stage.setAttribute('aria-label', options.label);
       stage.setAttribute('aria-roledescription', 'canvas');
+      announcer = createAnnouncer(stage);
+      roving = createRovingFocus(
+        stage,
+        registered,
+        () => outline,
+        () => focused,
+        setFocus,
+        (id) => {
+          if (!inputGesture) revealBounds(requireNode(id).bounds, 'minimal', 0);
+        },
+        (ids) => {
+          culling.setPinned('focus-request', ids);
+          detailDirty = true;
+          schedule();
+        },
+      );
       stage.style.touchAction = 'none';
       for (const layer of layers()) layer.style.transformOrigin = '0 0';
       frames = createFrames(
@@ -767,9 +804,12 @@ export function createCanvas(options: CanvasOptions): CanvasController {
           invalid(`nodes[${index}].kind`, node.kind);
         next.set(node.id, { ...node, bounds: { ...node.bounds } });
       }
+      const nextOutline = createOutline([...next.values()], options.outlineOrder);
       const result = buildEdgeRoutes(next.values(), edges, viewport(), options.strict);
       const changed = culling.setNodes(next);
       nodes = next;
+      outline = nextOutline;
+      roving?.sync();
       if (changed.length) overviewNodes = [...nodes.values()];
       edgesDirty ||= changed.length > 0;
       loaderDirty ||= changed.length > 0;
@@ -782,7 +822,10 @@ export function createCanvas(options: CanvasOptions): CanvasController {
         enqueue('selection', [...selection]);
       }
       culling.setPinned('selection', selection);
-      if (focused !== null && !nodes.has(focused)) setFocus(null);
+      if (focused !== null && !nodes.has(focused)) {
+        elements?.stage.focus({ preventScroll: true });
+        setFocus(null);
+      }
       if (activeFrame !== null && !nodes.get(activeFrame)?.frame) controller.deactivateFrame();
       frames?.refresh();
       schedule();
@@ -821,6 +864,7 @@ export function createCanvas(options: CanvasOptions): CanvasController {
         invalid('element', element);
       if (element === null) {
         const previous = registered.get(id);
+        if (previous) roving?.unregister(id, previous);
         const realm = elements?.stage.ownerDocument.defaultView;
         if (
           previous &&
@@ -831,8 +875,13 @@ export function createCanvas(options: CanvasOptions): CanvasController {
           visibility.delete(previous);
         }
         registered.delete(id);
-        if (focused === id) setFocus(null);
-      } else registered.set(id, element);
+      } else {
+        const previous = registered.get(id);
+        if (previous && previous !== element) roving?.unregister(id, previous);
+        registered.set(id, element);
+        roving?.register(id, element);
+        if (level === 'overview') nodeVisibility(element, id, culling.getPinnedIds());
+      }
       loaderDirty = true;
       detailDirty = true;
       schedule();
@@ -951,6 +1000,10 @@ export function createCanvas(options: CanvasOptions): CanvasController {
       alive();
       positive('factor', factor);
       zoomTo(camera.zoom * factor, screenPoint);
+      if (screenPoint === undefined) {
+        announceZoom = true;
+        schedule();
+      }
     },
     fit(target, settings) {
       alive();
@@ -974,6 +1027,7 @@ export function createCanvas(options: CanvasOptions): CanvasController {
           Math.max(0, safeArea.height - 2 * padding) / (bounds.height || 1),
         ),
       );
+      announceZoom = true;
       controller.setCamera(
         {
           x: bounds.x + bounds.width / 2 - (safeArea.x + safeArea.width / 2) / zoom,
@@ -1024,6 +1078,15 @@ export function createCanvas(options: CanvasOptions): CanvasController {
       alive();
       return [...selection];
     },
+    focusNode,
+    getFocus() {
+      alive();
+      return focused;
+    },
+    getOutline() {
+      alive();
+      return outline;
+    },
     setPointerMode(mode) {
       alive();
       validatePointerMode(mode);
@@ -1036,42 +1099,69 @@ export function createCanvas(options: CanvasOptions): CanvasController {
         composing ||
         !elements ||
         event.isComposing ||
-        isEditable(event) ||
-        !shortcutsEnabled() ||
-        event.ctrlKey ||
-        event.metaKey ||
-        event.altKey
+        isEditable(event)
       )
         return false;
       const target = event.target;
       const realm = elements.stage.ownerDocument.defaultView;
       if (target && realm && target instanceof realm.Element && !elements.stage.contains(target))
         return false;
-      const key = event.key;
-      let consumed = true;
-      if (key === '+' || key === '=') controller.zoomAt(1.25);
-      else if (key === '-') controller.zoomAt(1 / 1.25);
-      else if (key === '0' && !event.shiftKey) zoomTo(1);
-      else if (event.shiftKey && (key === '1' || key === '!' || event.code === 'Digit1'))
-        controller.fit('all');
-      else if (event.shiftKey && (key === '2' || key === '@' || event.code === 'Digit2'))
-        controller.fit('selection');
-      else if (
-        event.shiftKey &&
-        options.keyboard?.arrows !== 'none' &&
-        ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(key)
-      ) {
-        const stage = size();
+      const action = keyAction(event, options.keyboard?.arrows ?? 'navigate', shortcutsEnabled);
+      if (!action) return false;
+      if (action.type === 'zoom') controller.zoomAt(action.factor);
+      else if (action.type === 'reset') zoomTo(1);
+      else if (action.type === 'fit-all') controller.fit('all');
+      else if (action.type === 'fit-selection') controller.fit('selection');
+      else if (action.type === 'pan') {
         controller.panBy(
-          key === 'ArrowLeft' ? -stage.width / 4 : key === 'ArrowRight' ? stage.width / 4 : 0,
-          key === 'ArrowUp' ? -stage.height / 4 : key === 'ArrowDown' ? stage.height / 4 : 0,
+          action.direction === 'left'
+            ? -safeArea.width / 4
+            : action.direction === 'right'
+              ? safeArea.width / 4
+              : 0,
+          action.direction === 'up'
+            ? -safeArea.height / 4
+            : action.direction === 'down'
+              ? safeArea.height / 4
+              : 0,
         );
-      } else consumed = false;
-      if (consumed) {
-        consumedKeys.add(event);
-        event.preventDefault();
+      } else if (action.type === 'select') {
+        if (focused === null) return false;
+        controller.setSelection([focused]);
+      } else if (action.type === 'escape') {
+        if (activeFrame !== null) controller.deactivateFrame();
+        else if (selection.length) controller.setSelection([]);
+        else if (focused !== null) {
+          elements.stage.focus({ preventScroll: true });
+          setFocus(null);
+        } else return false;
+      } else {
+        let id: NodeId | null;
+        const jump = action.type === 'first' || action.type === 'last';
+        if (action.type === 'first') id = outline[0] ?? null;
+        else if (action.type === 'last') id = outline.at(-1) ?? null;
+        else if (action.type === 'navigate') {
+          id =
+            focused === null
+              ? ((action.direction === 'left' || action.direction === 'up'
+                  ? outline.at(-1)
+                  : outline[0]) ?? null)
+              : options.navigate
+                ? options.navigate(focused, action.direction)
+                : navigateSpatial(nodes.values(), requireNode(focused), action.direction);
+        } else return false;
+        if (id === null) announcer?.say('Edge of canvas');
+        else {
+          void focusNode(id, jump);
+        }
       }
-      return consumed;
+      if (['zoom', 'reset', 'fit-all', 'fit-selection'].includes(action.type)) {
+        announceZoom = true;
+        schedule();
+      }
+      consumedKeys.add(event);
+      event.preventDefault();
+      return true;
     },
     setActiveFrame(id) {
       alive();

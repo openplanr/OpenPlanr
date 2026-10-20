@@ -45,6 +45,7 @@ describe('package shape', () => {
       const values =
         specifier === '@openplanr/canvas'
           ? [
+              'CanvasFocusError',
               'cameraFromScreenTranslate',
               'cameraToScreenTranslate',
               'createCanvas',
@@ -70,6 +71,7 @@ describe('package shape', () => {
               'CanvasOptions',
               'ChromeSurface',
               'Diagnostic',
+              'Direction',
               'NodeId',
               'MinimapTransform',
               'OverviewMetrics',

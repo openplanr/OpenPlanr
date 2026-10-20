@@ -1,13 +1,13 @@
 # @openplanr/canvas
 
-Framework-free camera, input, culling and overview controller for HTML and SVG content. The package
+Framework-free camera, input, culling, focus and overview controller for HTML and SVG content. The package
 is private and is not published. It has no runtime dependencies; React peers
 remain optional.
 
 Exports:
 
 - `.`: `createCanvas`, `cameraFromScreenTranslate`, `cameraToScreenTranslate`,
-  `drawCameraOverview`, `drawMinimap`, `minimapToWorld`,
+  `drawCameraOverview`, `drawMinimap`, `minimapToWorld`, `CanvasFocusError`,
   and their camera, geometry, node, options, elements, events and controller types.
 - `./react`: Empty entry reserved for React bindings.
 - `./testing`: `generateLayeredGraph`, `generateSvgDiagram`, `percentile95`,
@@ -35,7 +35,7 @@ Animated `setCamera` moves take at most 200 ms and honor reduced motion and
 
 `setNodes` stores bounds for `fit('all' | 'selection' | ids, { padding, maxZoom })`
 and `reveal(id, { mode: 'minimal' | 'center' })`. `setSelection` and `getSelection`
-manage the selected IDs. Fit and reveal use the full stage. A 512 px spatial grid tracks incremental
+manage the selected IDs. Fit and reveal use the safe area. A 512 px spatial grid tracks incremental
 node changes. `on('mount', listener)` supplies the complete mounted ID set;
 `getMountedIds()` reads it synchronously. `hitTest(screenPoint)` queries the
 spatial grid and returns the topmost matching node ID or `null`. Render those IDs and update existing
@@ -47,7 +47,7 @@ changes freeze optional admissions until 120 ms after the last zoom change;
 unmounts, geometry and pinned admissions continue. `setPinned(source, ids)`
 keeps independent pin sources. Selection and registered focused elements pin
 their nodes internally. Optional `culling.cellSize` and `culling.marginFactor`
-override the defaults. Safe-area chrome and the outline remain pending.
+override the defaults.
 
 `lod` defaults to `{ compactBelow: 0.60, overviewBelow: 0.40, hysteresis: 0.03 }`;
 `lod: false` keeps DOM rendering. Levels switch below 0.57 and 0.37, returning
@@ -92,12 +92,34 @@ configured breakpoint gets 10 live frames, the next gets 6, and narrower ones ge
 Iframe sources supplied by a renderer may begin navigation before the engine
 observes their insertion; the scheduler controls subsequent admissions.
 
-The stage handles `+`/`=` and `-` for zoom, `0` for 100%, Shift+1 to fit all,
-Shift+2 to fit selection, and Shift+Arrows to pan by a quarter stage. Set
-`keyboard.arrows: 'none'` to leave all arrows to the product. Shortcuts ignore
-editable focus, IME composition and a false `shortcutsEnabled()` result. Browser
-page zoom keys pass through. A product coordinator may call `handleKey(event)`;
-it returns true only when consumed, and the same event is consumed once.
+The stage uses one tab stop with roving node tabindex. `focusNode(id)` pins and
+reveals a node, waits for its element, then resolves once DOM focus reaches it.
+It rejects with `CanvasFocusError` (`code: 'unknown-node' | 'no-element'`) for
+unknown IDs or when no element is available within two animation frames after
+the reveal settles. `getFocus()` returns the focused ID or `null`; the `focus`
+event emits each change. Unregister a focused element before removing it so
+focus can wait on the stage until its replacement registers.
+
+`getOutline()` lists every node by top edge, left edge and numeric ID, cached
+until `setNodes`. Supply `outlineOrder(nodes)` to return every ID exactly once.
+An outline button can await `focusNode(id)` then call `setSelection([id])`.
+The engine announces its accessible name through one polite live region.
+
+Arrows navigate by nearest centre within a 90-degree cone, breaking distance
+ties by numeric ID. Override with `navigate(from, direction)`. Shift+Arrows pan
+by a quarter of the safe-area size. Enter and Space select the focused node
+on keydown; Space held on the stage remains available for pan. Escape deactivates
+the active frame, then clears selection, then returns focus to the stage.
+Home and End jump to the first and last outline entries. `+`/`=` and `-` zoom,
+`0` resets to 100%, Shift+1 fits all and Shift+2 fits selection. Zoom commands,
+navigation boundaries and outline jumps announce at most once per 500 ms;
+wheel and pinch do not announce.
+
+Set `keyboard.arrows: 'none'` to leave all arrows to the product. All keys ignore
+editable focus, IME composition and Ctrl/Meta/Alt modifiers. A false
+`shortcutsEnabled()` disables only single-character zoom and fit shortcuts.
+A product coordinator may call `handleKey(event)`; it returns true and prevents
+default only when consumed, and the same event is consumed once.
 
 Event subscriptions return unsubscribe functions. Camera and active-frame
 events coalesce and run after the frame's transform write. Selection changes
@@ -108,6 +130,7 @@ Run `npm test --workspace=@openplanr/canvas`, `npm run test:browser
 --workspace=@openplanr/canvas`, or `npm run bench:trace
 --workspace=@openplanr/canvas`. The production Vite bench accepts `fixture`,
 `world`, `pointerMode`, `zoom`, `frame=1`, `frames=15` and `overviewRenderer` query parameters.
+Use `outline=1` for the visually hidden outline list.
 It renders through mount and geometry events and shows the mounted count. Trace results are written to
 `test-results/bench-trace.json`; the measured reference and runner results appear
 together in its report. Each scenario records three runs and reports median

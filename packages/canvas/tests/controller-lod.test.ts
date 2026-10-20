@@ -65,6 +65,35 @@ function make(options: Partial<CanvasOptions> = {}) {
 }
 
 describe('level presentation', () => {
+  it('writes node visibility only when overview presentation changes', () => {
+    const { controller, register } = make();
+    controller.setNodes([node('a')]);
+    const wrapper = register('a');
+    const writes = vi.spyOn(wrapper.style, 'visibility', 'set');
+    frame();
+    controller.setPinned('editing', ['a']);
+    frame();
+    expect(writes).not.toHaveBeenCalled();
+    controller.setCamera({ x: 0, y: 0, zoom: 0.36 });
+    frame();
+    expect(writes.mock.calls).toEqual([['visible']]);
+    controller.setSelection(['a']);
+    frame();
+    expect(writes.mock.calls).toEqual([['visible']]);
+    controller.setPinned('editing', []);
+    controller.setSelection([]);
+    frame();
+    expect(writes.mock.calls).toEqual([['visible'], ['hidden']]);
+    controller.setCamera({ x: 0, y: 0, zoom: 1 });
+    frame(120);
+    frame(120);
+    expect(wrapper.style.visibility).toBe('');
+    expect(writes.mock.calls).toEqual([['visible'], ['hidden'], ['']]);
+    controller.setPinned('editing', ['a']);
+    frame();
+    expect(writes).toHaveBeenCalledTimes(3);
+  });
+
   it('keeps every pin source full, visible and focused over the overview', () => {
     const { controller, world, overlay, edges, overview, register } = make();
     const ids = ['optional', 'focused', 'selected', 'edited', 'product'];

@@ -121,7 +121,7 @@ describe('controller culling integration', () => {
     controller.setSelection(['selected']);
     focus.focus();
     frame();
-    controller.panBy(10000, 0);
+    controller.setCamera({ x: 10000, y: 0, zoom: 1 });
     frame();
     expect(document.activeElement).toBe(focus);
     expect(controller.getMountedIds()).toEqual(new Set(['product', 'selected', 'focused']));
