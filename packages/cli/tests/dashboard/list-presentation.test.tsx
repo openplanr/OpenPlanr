@@ -792,6 +792,7 @@ describe('List triage, bounded windows and command-only selection', () => {
       if (this.classList.contains('pc-shell__scroll')) return new DOMRect(0, 60, 900, 600);
       if (this.classList.contains('pc-list__window'))
         return new DOMRect(0, 380 - (shell?.scrollTop ?? 0), 900, 4436);
+      if (this.tagName === 'TABLE') return new DOMRect(0, 390 - (shell?.scrollTop ?? 0), 900, 4436);
       const id = this.dataset.keyboardItem;
       if (id)
         return new DOMRect(
@@ -831,7 +832,7 @@ describe('List triage, bounded windows and command-only selection', () => {
     expect(rowIds(container)[0]).toBe('T-1015');
     expect(rowIds(container).length).toBeLessThanOrEqual(24);
     expect(window.scrollTop).toBe(0);
-    expect(container.querySelector('thead')?.style.transform).toBe('translateY(880px)');
+    expect(container.querySelector('thead')?.style.transform).toBe('translateY(870px)');
     const first = container.querySelector<HTMLElement>('[data-keyboard-item="T-1015"]');
     if (!first) throw new Error('Expected a shell-visible List row');
     act(() => first.focus());

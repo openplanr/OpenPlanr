@@ -7,6 +7,7 @@ import {
   type GraphNode,
   InlineAlert,
   SectionHeader,
+  SegmentedControl,
   Select,
   Switch,
   Tabs,
@@ -158,18 +159,15 @@ function FocusedWorkspace({
         description="Explore lineage and dependencies. Select a node to inspect its record."
       />
       <div className="op-focused-graph__toolbar">
-        <fieldset className="op-focused-graph__lenses" aria-label="Graph lens">
-          {LENSES.map((item) => (
-            <Button
-              key={item.id}
-              variant="ghost"
-              aria-pressed={lens === item.id}
-              onClick={() => setLens(item.id)}
-            >
-              {item.label}
-            </Button>
-          ))}
-        </fieldset>
+        <SegmentedControl
+          label="Graph lens"
+          options={LENSES.map((item) => ({ key: item.id, label: item.label }))}
+          value={lens}
+          onChange={(key) => {
+            const selected = LENSES.find((item) => item.id === key);
+            if (selected) setLens(selected.id);
+          }}
+        />
         <Tabs
           label="Graph view"
           value={view}

@@ -174,6 +174,7 @@ function HomeRow({
       className="pc-home__row pc-artifact-row"
       data-selected={selected || undefined}
       data-layout={layout}
+      data-mobile-layout="stacked"
     >
       <NodeLink node={node} keyboard selected={selected} className="pc-artifact-row__link">
         <span className="pc-artifact-row__id">
@@ -570,19 +571,21 @@ function HomeContent({
                   const node = byId.get(spec.id);
                   if (!node) return null;
                   return (
-                    <li key={spec.id} className="pc-artifact-row">
+                    <li key={spec.id} className="pc-artifact-row" data-mobile-layout="stacked">
                       <NodeLink node={node} className="pc-artifact-row__link">
                         <span className="pc-artifact-row__id">
                           <WorkItemChip type="spec" id={planningDisplayId(node)} />
                         </span>
                         <ArtifactRowTitle>{node.title}</ArtifactRowTitle>
                       </NodeLink>
-                      <ArtifactRowMeta
-                        icon="circle-check"
-                        label={`${spec.done} of ${spec.total} tasks done`}
-                      >
-                        {spec.total ? `${spec.done}/${spec.total}` : 'No tasks'}
-                      </ArtifactRowMeta>
+                      <span className="pc-artifact-row__meta-group">
+                        <ArtifactRowMeta
+                          icon="circle-check"
+                          label={`${spec.done} of ${spec.total} tasks done`}
+                        >
+                          {spec.total ? `${spec.done}/${spec.total}` : 'No tasks'}
+                        </ArtifactRowMeta>
+                      </span>
                       <ArtifactRowCopy
                         onCopy={copy}
                         shortcutsEnabled={shortcutsEnabled}

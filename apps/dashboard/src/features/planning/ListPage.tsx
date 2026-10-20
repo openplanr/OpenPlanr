@@ -435,7 +435,7 @@ export function ListPage({
                     event.currentTarget.querySelector('summary')?.focus();
                   }}
                 >
-                  <summary>List options</summary>
+                  <summary className="pc-touch-target">List options</summary>
                   <div className="pc-list__options-panel">
                     <Button
                       size="sm"
@@ -561,12 +561,16 @@ export function ListPage({
                       </Button>
                     </fieldset>
                     <details className="pc-list__commands">
-                      <summary>Review {bulk.commands.length} commands to copy</summary>
+                      <summary className="pc-touch-target">
+                        Review {bulk.commands.length} commands to copy
+                      </summary>
                       <pre>{bulk.commands.join('\n')}</pre>
                     </details>
                     <code className="pc-list__sprint-command">/planr:sprint</code>
                     <details className="pc-list__skipped">
-                      <summary>Why {bulk.skipped.length} items are skipped</summary>
+                      <summary className="pc-touch-target">
+                        Why {bulk.skipped.length} items are skipped
+                      </summary>
                       <ul>
                         {bulk.skipped.slice(0, 20).map((reason) => (
                           <li key={reason}>{reason}</li>
@@ -695,6 +699,7 @@ export function ListPage({
                     effectiveView.groupBy === 'none'
                       ? 0
                       : grouped.findIndex((entry) => entry.key === group.key) + 1;
+                  const itemCount = grouped.find((entry) => entry.key === group.key)?.nodes.length;
                   return {
                     ...group,
                     rows: group.nodes,
@@ -726,7 +731,7 @@ export function ListPage({
                           </Button>
                           <span className="pc-list__group-meta">
                             <span className="pc-list__group-item-count">
-                              {grouped.find((entry) => entry.key === group.key)?.nodes.length} items
+                              {itemCount} {itemCount === 1 ? 'item' : 'items'}
                             </span>
                             {effectiveView.groupBy === 'spec'
                               ? (() => {

@@ -4,6 +4,11 @@ import {
   canonicalClosedDashboardHref,
   closedDashboardDestinations,
 } from '../../lib/routing/operate-routes.js';
+import {
+  isCanonicalPlanningId,
+  serializePlanningViewHref,
+  validatePlanningView,
+} from '../../lib/routing/planning-view-codec.js';
 import type {
   PlanningModelGraph,
   PlanningModelNode,
@@ -32,6 +37,7 @@ export type DashboardSearchPlanningHit = Readonly<{
   href: string | null;
   source: 'planning';
   kind: string;
+  status?: string;
 }>;
 
 export type DashboardSearchCommand = Readonly<{
@@ -59,6 +65,7 @@ const DEFAULT_COMMANDS: readonly DashboardSearchCommand[] = Object.freeze([
     command: 'openplanr dashboard',
   }),
   Object.freeze({ id: 'sprint', title: 'Plan a sprint', command: '/planr:sprint' }),
+  Object.freeze({ id: 'status', title: 'Delivery status', command: 'openplanr status --md' }),
 ]);
 
 export type DashboardSearchIndex = Readonly<{
@@ -87,13 +94,18 @@ export type DashboardSearchSources = Readonly<{
 
 export function searchHitDisplayId(
   hit: DashboardSearchHit,
-  sources: DashboardSearchSources,
+  sources: DashboardSearchSources = {},
 ): string {
   if (hit.source !== 'planning') return '';
   const node = (sources.planningNodes ?? sources.planningGraph?.nodes ?? []).find(
     (candidate) => `planning:${candidate.id}` === hit.id,
   );
-  return planningDisplayId(node ?? hit.id.slice('planning:'.length));
+  const displayId = planningDisplayId(node ?? hit.id.slice('planning:'.length));
+  const shortId = displayId.split('-').slice(0, 2).join('-');
+  if (isCanonicalPlanningId(shortId)) return shortId;
+  const canonicalId = planningDisplayId(hit.id.slice('planning:'.length));
+  const canonicalShortId = canonicalId.split('-').slice(0, 2).join('-');
+  return isCanonicalPlanningId(canonicalShortId) ? canonicalShortId : displayId;
 }
 
 export function verifiedSearchCommand(
@@ -225,9 +237,10 @@ function matchingPlanningNodes(
 function matchingRouteHits(
   index: DashboardSearchIndex,
   query: TypedSearch,
+  hasPlanningMatches: boolean,
 ): readonly DashboardSearchDestinationHit[] {
   if (query.type && query.type !== 'view') return [];
-  return index.routes
+  const destinations = index.routes
     .filter((route) =>
       matches(`${route.title} ${route.kind} ${route.href}`, query.term.toLowerCase()),
     )
@@ -235,6 +248,34 @@ function matchingRouteHits(
       canonicalHit(`route:${route.kind}`, route.title, route.href, 'route', route.kind),
     )
     .filter((hit): hit is DashboardSearchDestinationHit => hit !== null);
+  if (query.term && (query.type === 'view' || (!query.type && hasPlanningMatches))) {
+    const view = validatePlanningView({
+      schemaVersion: '1.0.0',
+      route: 'list',
+      filters: {
+        type: [],
+        status: [],
+        priority: [],
+        label: [],
+        query: query.term,
+        createdWithinDays: null,
+        updatedWithinDays: null,
+      },
+      groupBy: 'none',
+      sort: { field: 'updated', direction: 'desc' },
+      density: 'comfortable',
+      focusId: null,
+    });
+    if (view)
+      destinations.push({
+        id: 'route:planning.list.filtered',
+        title: `List filtered to “${query.term}”`,
+        source: 'route',
+        kind: 'planning.list',
+        href: serializePlanningViewHref(view),
+      });
+  }
+  return destinations;
 }
 
 /** Route availability must not hide graph identities that can be inspected locally. */
@@ -249,7 +290,8 @@ export function queryDashboardSearchIndex(
     return Object.freeze([]);
   }
   const hits: DashboardSearchHit[] = [];
-  for (const node of matchingPlanningNodes(index, query)) {
+  const nodes = matchingPlanningNodes(index, query);
+  for (const node of nodes) {
     // A graph identity can be inspected even when the public route grammar cannot represent it.
     if (planningRouteSubjectId(node) === null) continue;
     hits.push(
@@ -259,10 +301,11 @@ export function queryDashboardSearchIndex(
         href: planningDetailHref(node),
         source: 'planning',
         kind: node.type,
+        status: node.status,
       }),
     );
   }
-  hits.push(...matchingRouteHits(index, query));
+  hits.push(...matchingRouteHits(index, query, nodes.length > 0));
   for (const operate of index.operateHits) {
     if (!query.type && matches(`${operate.title} ${operate.kind} ${operate.id}`, needle))
       hits.push(operate);
@@ -273,18 +316,34 @@ export function queryDashboardSearchIndex(
         matches(`${entry.id} ${entry.title} ${entry.command}`, needle),
       ),
     );
+    if (!query.type) {
+      const node = nodes.find((entry) => planningRouteSubjectId(entry) !== null);
+      const command = node ? planningContinuation(node) : null;
+      if (node && command) {
+        hits.push({
+          id: `command:planning:${node.id}`,
+          title: `Continue ${planningDisplayId(node)}`,
+          command,
+          source: 'command',
+          href: null,
+          kind: 'command',
+        });
+      }
+    }
   }
   const seen = new Set<string>();
-  return Object.freeze(
-    hits
-      .filter((hit) => {
-        const key = hit.source === 'command' || hit.source === 'planning' ? hit.id : hit.href;
-        if (seen.has(key)) return false;
-        seen.add(key);
-        return true;
-      })
-      .slice(0, maximumResults),
-  );
+  const distinct = hits.filter((hit) => {
+    const key = hit.source === 'command' || hit.source === 'planning' ? hit.id : hit.href;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+  const firstBySource = new Map<DashboardSearchHit['source'], DashboardSearchHit>();
+  for (const hit of distinct)
+    if (!firstBySource.has(hit.source)) firstBySource.set(hit.source, hit);
+  const selected = new Set([...firstBySource.values()].slice(0, maximumResults));
+  for (const hit of distinct) if (selected.size < maximumResults) selected.add(hit);
+  return Object.freeze(distinct.filter((hit) => selected.has(hit)));
 }
 
 /** Malformed graph identities remain visible without an interactive destination. */

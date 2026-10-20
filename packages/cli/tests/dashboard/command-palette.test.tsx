@@ -20,10 +20,12 @@ import {
   type DashboardSearchHit,
   queryDashboardSearchIndex,
   queryUnsupportedPlanningIdentities,
+  searchHitDisplayId,
 } from '../../../../apps/dashboard/src/features/search/search-index.js';
 import { createSearchKeyNav } from '../../../../apps/dashboard/src/features/search/search-key-nav.js';
 import { useInspectorStore } from '../../../../apps/dashboard/src/features/shell/inspector-selection.js';
 import { PlanningPresentationProvider } from '../../../../apps/dashboard/src/lib/routing/planning-presentation.js';
+import { parsePlanningViewToken } from '../../../../apps/dashboard/src/lib/routing/planning-view-codec.js';
 import { buildPremiumDashboardFixture } from './fixtures/premium-dashboard-fixtures.js';
 
 const TEST_ROOT = dirname(fileURLToPath(import.meta.url));
@@ -115,7 +117,7 @@ describe('command palette and callable search UI', () => {
         onSelect={() => undefined}
       />,
     );
-    expect(html).toContain('Planning work');
+    expect(html).toContain('Nodes');
     expect(html).toContain('Callable search');
     expect(html).toContain('Unavailable destinations');
     expect(html).toContain('aria-disabled="true"');
@@ -175,6 +177,7 @@ describe('command palette and callable search UI', () => {
     expect(queryDashboardSearchIndex(index, '@command').map((hit) => hit.source)).toEqual([
       'command',
       'command',
+      'command',
     ]);
     expect(
       queryUnsupportedPlanningIdentities(buildDashboardSearchIndex(sources), '@story Unsupported'),
@@ -182,6 +185,125 @@ describe('command palette and callable search UI', () => {
     expect(
       queryUnsupportedPlanningIdentities(buildDashboardSearchIndex(sources), '@task Unsupported'),
     ).toEqual([]);
+  });
+
+  it('switches type chips without losing the search term or opening the selected result', () => {
+    const onClose = vi.fn();
+    const onNavigate = vi.fn();
+    const subject = render(
+      <CommandPalette
+        open
+        onClose={onClose}
+        onNavigate={onNavigate}
+        initialQuery="Unified"
+        sources={{
+          planningNodes: [
+            planningNodes[0],
+            {
+              ...planningNodes[0],
+              id: 'BL-001',
+              type: 'backlog',
+              title: 'Unified backlog',
+              frontmatter: { id: 'BL-001' },
+            },
+          ],
+        }}
+      />,
+    );
+    const filters = screen.getByRole('group', { name: 'Filter search results' });
+    expect(filters.closest('.pc-palette__input-row')).toBeTruthy();
+    const input = screen.getByRole<HTMLInputElement>('searchbox');
+    expect(within(filters).getByRole('button', { name: 'All' }).getAttribute('aria-pressed')).toBe(
+      'true',
+    );
+    fireEvent.click(within(filters).getByRole('button', { name: 'BL' }));
+    expect(input.value).toBe('@backlog Unified');
+    expect(document.activeElement).toBe(input);
+    expect(subject.container.querySelectorAll('[data-search-result]')).toHaveLength(1);
+    expect(
+      subject.container.querySelector('[data-search-result]')?.getAttribute('data-canonical-id'),
+    ).toBe('BL-001');
+    expect(within(filters).getByRole('button', { name: 'BL' }).getAttribute('aria-pressed')).toBe(
+      'true',
+    );
+    fireEvent.click(within(filters).getByRole('button', { name: 'SPEC' }));
+    expect(input.value).toBe('@spec Unified');
+    expect(
+      subject.container.querySelector('[data-search-result]')?.getAttribute('data-canonical-id'),
+    ).toBe('SPEC-020');
+    fireEvent.click(within(filters).getByRole('button', { name: 'All' }));
+    expect(input.value).toBe('Unified');
+    expect(subject.container.querySelectorAll('[data-canonical-id]')).toHaveLength(2);
+    expect(screen.getByRole('heading', { name: 'Views' })).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'Commands' })).toBeTruthy();
+    expect(onClose).not.toHaveBeenCalled();
+    expect(onNavigate).not.toHaveBeenCalled();
+  });
+
+  it('retains filtered Views and verified Commands when matching Nodes fill the result limit', () => {
+    const index = buildDashboardSearchIndex({
+      planningNodes: Array.from({ length: 24 }, (_, index) => ({
+        ...planningNodes[0],
+        id: `SPEC-${String(index + 1).padStart(3, '0')}`,
+        title: 'Findings contract',
+        frontmatter: { id: `SPEC-${String(index + 1).padStart(3, '0')}` },
+      })),
+    });
+    const hits = queryDashboardSearchIndex(index, 'findings');
+    expect(hits).toHaveLength(20);
+    expect(hits[0].id).toBe('planning:SPEC-001');
+    const view = hits.find((hit) => hit.source === 'route');
+    if (!view || view.href === null) throw new Error('Expected the filtered List destination');
+    const token = new URLSearchParams(view.href.split('?')[1]).get('v');
+    expect(parsePlanningViewToken(token ?? '')?.filters.query).toBe('findings');
+    expect(hits.find((hit) => hit.source === 'command')).toMatchObject({
+      command: 'openplanr status SPEC-001 --md',
+      href: null,
+    });
+    expect(queryDashboardSearchIndex(index, '@command status')).toMatchObject([
+      { source: 'command', command: 'openplanr status --md', href: null },
+    ]);
+  });
+
+  it('sizes standalone result IDs from artifact identities when authored IDs contain slugs or titles', () => {
+    const id =
+      'BL-431-dashboard-needs-a-complete-artifact-title-without-using-the-file-slug-as-the-display-id';
+    const title = 'A complete artifact title that must not determine the identity column width';
+    for (const authored of [id, title]) {
+      const scoped = {
+        planningNodes: [
+          {
+            ...planningNodes[0],
+            id,
+            title,
+            type: 'backlog' as const,
+            frontmatter: { id: authored },
+          },
+        ],
+      };
+      const hits = queryDashboardSearchIndex(buildDashboardSearchIndex(scoped), 'complete');
+      const hit = hits.find((entry) => entry.source === 'planning');
+      if (!hit) throw new Error('Expected a Planning search result');
+      expect(searchHitDisplayId(hit, scoped)).toBe('BL-431');
+      const subject = render(
+        <SearchResults
+          hits={hits}
+          activeHref={null}
+          listId="actual-ids"
+          onSelect={() => undefined}
+        />,
+      );
+      const result = subject.container.querySelector('[data-canonical-id]');
+      expect(result?.querySelector('.pc-artifact-tag')?.textContent).toBe('BL-431');
+      expect(result?.closest('ol')?.style.getPropertyValue('--id-col')).toBe(
+        'max(9ch, calc(6ch + 0.18em + 16px))',
+      );
+      expect(result?.getAttribute('data-active')).toBe('true');
+      expect(result?.querySelector('[data-variant="glyph"]')?.getAttribute('data-status')).toBe(
+        'in-progress',
+      );
+      subject.unmount();
+    }
   });
 
   it('inspects the selected Planning item and promotes it through the navigation adapter', () => {
@@ -225,12 +347,13 @@ describe('command palette and callable search UI', () => {
       <CommandPalette open onClose={onClose} onNavigate={onNavigate} initialQuery="view" />,
     );
     const input = screen.getByRole('searchbox');
+    const selected = subject.container.querySelector('[data-active="true"]');
     fireEvent.compositionStart(input);
     for (const key of ['ArrowDown', 'ArrowUp', 'Enter', 'Escape'])
       fireEvent.keyDown(input, { key });
     expect(onClose).not.toHaveBeenCalled();
     expect(onNavigate).not.toHaveBeenCalled();
-    expect(subject.container.querySelector('[data-active="true"]')).toBeNull();
+    expect(subject.container.querySelector('[data-active="true"]')).toBe(selected);
     fireEvent.compositionEnd(input);
     for (const key of ['Enter', 'Escape']) {
       fireEvent.keyDown(input, { key, isComposing: true });
@@ -245,9 +368,9 @@ describe('command palette and callable search UI', () => {
     const subject = render(<CommandPalette open onClose={() => undefined} initialQuery="@view" />);
     const input = screen.getByRole('searchbox');
     const rows = () => [...subject.container.querySelectorAll('[data-active]')];
-    expect(rows().some((row) => row.getAttribute('data-active') === 'true')).toBe(false);
+    expect(rows()[0].getAttribute('data-active')).toBe('true');
     fireEvent.keyDown(input, { key: 'ArrowDown', ctrlKey: true });
-    expect(rows().some((row) => row.getAttribute('data-active') === 'true')).toBe(false);
+    expect(rows()[0].getAttribute('data-active')).toBe('true');
     expect(fireEvent.keyDown(input, { key: 'ArrowDown' })).toBe(false);
     expect(rows()[0].getAttribute('data-active')).toBe('true');
     fireEvent.keyDown(input, { key: 'ArrowDown' });
@@ -276,7 +399,9 @@ describe('command palette and callable search UI', () => {
         initialQuery="@view"
       />,
     );
-    const results = screen.getAllByRole('button');
+    const results = screen
+      .getAllByRole('button')
+      .filter((button) => button.hasAttribute('data-search-result'));
     act(() => results[0].focus());
     expect(fireEvent.keyDown(results[0], { key: 'j' })).toBe(false);
     expect(document.activeElement).toBe(results[1]);
@@ -296,7 +421,9 @@ describe('command palette and callable search UI', () => {
     render(
       <CommandPalette open singleLetters={false} onClose={() => undefined} initialQuery="@view" />,
     );
-    const results = screen.getAllByRole('button');
+    const results = screen
+      .getAllByRole('button')
+      .filter((button) => button.hasAttribute('data-search-result'));
     act(() => results[0].focus());
     for (const key of ['j', 'k', 'Tab']) expect(fireEvent.keyDown(results[0], { key })).toBe(true);
     expect(document.activeElement).toBe(results[0]);
@@ -318,7 +445,9 @@ describe('command palette and callable search UI', () => {
         initialQuery="@command"
       />,
     );
-    const results = screen.getAllByRole('button');
+    const results = screen
+      .getAllByRole('button')
+      .filter((button) => button.hasAttribute('data-search-result'));
     act(() => results[0].focus());
     fireEvent.compositionStart(screen.getByRole('searchbox'));
     for (const key of ['j', 'ArrowDown', 'Enter', 'c']) fireEvent.keyDown(results[0], { key });
@@ -417,7 +546,10 @@ describe('command palette and callable search UI', () => {
   it('explains that a view result has no canonical artifact ID to copy', () => {
     const onCopy = vi.fn(async () => undefined);
     render(<CommandPalette open onClose={() => undefined} onCopy={onCopy} initialQuery="@view" />);
-    const view = screen.getAllByRole('button')[0];
+    const view = screen
+      .getAllByRole('button')
+      .find((button) => button.hasAttribute('data-search-result'));
+    if (!view) throw new Error('Expected a view search result');
     act(() => view.focus());
     expect(fireEvent.keyDown(view, { key: 'c' })).toBe(false);
     expect(screen.getByRole('status').textContent).toContain('no canonical artifact ID to copy');
@@ -470,7 +602,9 @@ describe('command palette and callable search UI', () => {
       ],
     });
     expect(queryDashboardSearchIndex(custom, '@command')).toHaveLength(1);
-    expect(queryDashboardSearchIndex(custom, 'doctor')[0]).toMatchObject({
+    expect(
+      queryDashboardSearchIndex(custom, 'doctor').find((hit) => hit.source === 'command'),
+    ).toMatchObject({
       command: 'openplanr doctor',
       href: null,
     });
@@ -867,11 +1001,12 @@ describe('command palette and callable search UI', () => {
   });
 
   it('preserves responsive and reduced-motion presentation rules', () => {
-    expect(PALETTE_STYLES).toMatch(/\.pc-palette__panel\s*\{[^}]*max-width: 92%/u);
+    expect(PALETTE_STYLES).toMatch(/\.pc-palette__panel\s*\{[^}]*max-width: calc\(100% - 32px\)/u);
     expect(PALETTE_STYLES).toMatch(
       /\.pc-palette__results\s*\{[^}]*max-height: 320px;[^}]*overflow-y: auto/u,
     );
     expect(PALETTE_STYLES).not.toMatch(/animation:|transition:/u);
+    expect(PALETTE_STYLES).toMatch(/\.pc-palette__input:focus-visible\s*\{[^}]*outline-width: 0;/u);
   });
 });
 
@@ -890,7 +1025,7 @@ it('copies the focused palette action once while pending and honors disabled sin
     ...subject.container.querySelectorAll<HTMLButtonElement>('.pc-artifact-row__action'),
   ];
   expect(actions.length).toBeGreaterThan(1);
-  const last = actions[actions.length - 1];
+  const last = screen.getByRole('button', { name: 'Copy command for command:sprint' });
   act(() => last.focus());
   fireEvent.keyDown(last, { key: 'c' });
   expect(onCopy).toHaveBeenCalledExactlyOnceWith('/planr:sprint');
@@ -982,6 +1117,7 @@ it('renders each Planning result with a leaf ID tag, readable title and separate
     const canonicalId = button?.dataset.canonicalId;
     const tag = button?.querySelector('.pc-artifact-tag');
     const title = button?.querySelector('.pc-artifact-row__title');
+    expect(button?.querySelector('.pc-palette__identity [data-variant="glyph"]')).toBeTruthy();
     expect(tag?.textContent).toBe(canonicalId?.split('/').at(-1));
     expect(title?.textContent?.length).toBeGreaterThan(0);
     expect(title?.getAttribute('title')).toBe(title?.textContent);

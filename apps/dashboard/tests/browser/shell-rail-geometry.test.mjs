@@ -19,6 +19,7 @@ const styles = [
   'features/shell/unified-shell.css',
   'features/search/command-palette.css',
   'features/planning/activity.css',
+  'features/planning/board.css',
 ]
   .map((path) =>
     readFileSync(resolve(dashboard, 'src', path), 'utf8').replace(/@import[^;]*;/gu, ''),
@@ -39,9 +40,32 @@ function bundleFixture() {
         import { parseDashboardRoute } from './src/app/router.tsx';
         import { ActivitySessionFeed } from './src/features/planning/ActivitySessionFeed.tsx';
         import { EMPTY_SESSION_ACTIVITY } from './src/features/planning/planning-session-activity.ts';
+        import { createDashboardQueryIdentity } from './src/lib/binding/query-identity.ts';
+        import { dashboardProductStatePolicy, parseDashboardProductState } from './src/lib/api/product-state.ts';
+        import { parsePlanningGraphEnvelope } from './src/features/planning/planning-api.ts';
+        import { sha256Jcs } from '@openplanr/protocol/canonical-json';
         import { installDashboardLayoutShifts } from '../../packages/cli/tests/dashboard/fixtures/dashboard-layout-shifts.ts';
 
         installDashboardLayoutShifts();
+        const graph = {nodes:[{
+          id:'SPEC-001',type:'spec',title:'Geometry board',status:'in-progress',frontmatter:{id:'SPEC-001'}
+        }],edges:[]};
+        const binding = createDashboardQueryIdentity({
+          productArea:'planning',route:'#/board',actorId:'geometry-reader',
+          projectId:'sha256:' + 'a'.repeat(64),scopeId:'planning',domainId:'planning',domainVersion:'1.0.0',
+          cycleId:null,subjectId:null,eventHead:{sequence:0,hash:null},viewHash:sha256Jcs(graph),generation:1
+        });
+        const boardProjection = parseDashboardProductState(JSON.parse(JSON.stringify({
+          kind:'ready',binding,data:{
+            kind:'planning-graph-snapshot',schemaVersion:'1.0.0',
+            binding:{actorId:binding.actorId,projectId:binding.projectId,scopeId:'planning',
+              domainId:'planning',domainVersion:'1.0.0',generation:1},
+            cursor:{eventHead:binding.eventHead,viewHash:binding.viewHash},mode:'spec',graph
+          },reasonCodes:[],error:null,mutationEnabled:false,policy:dashboardProductStatePolicy('ready')
+        })),{currentBinding:binding,validateData:value => {
+          parsePlanningGraphEnvelope(value,binding);
+          return true;
+        }});
         const container = document.getElementById('root');
         let root = createRoot(container);
         let savedCompact = false;
@@ -61,9 +85,12 @@ function bundleFixture() {
         let status = { branch: null, nodeCount: null, edgeCount: null, connectionState: 'booting', buildId: 'geometry-fixture' };
         const render = (patch = {}) => {
           state = { ...state, ...patch };
+          const readyBoard = state.route === '#/board' && state.connectionState === 'connected';
           flushSync(() => root.render(createElement(DashboardProviders, {
             buildId: 'shell-geometry-fixture',
             initialHash: state.route,
+            binding: readyBoard ? binding : null,
+            projection: readyBoard ? boardProjection : undefined,
             identity: {
               projectName: state.projectName,
               projectDetail: 'Geometry fixture',
@@ -161,6 +188,21 @@ function assertRail(actual, baseline, width, context) {
   assert.equal(actual.rail.width, baseline.rail.width, `${context}: rail stays fixed`);
   assert.equal(actual.column.x, baseline.column.x, `${context}: column stays fixed`);
   assert.deepEqual(actual.palette, baseline.palette, `${context}: palette stays fixed`);
+  assert.deepEqual(actual.main, baseline.main, `${context}: main stays fixed`);
+  assert.deepEqual(actual.scroll, baseline.scroll, `${context}: scroll stays fixed`);
+}
+
+async function assertBoardShell(page, width, context) {
+  await render(page, { route: '#/list', connectionState: 'connected' });
+  await page.waitForSelector('[data-route-kind="planning.list"]');
+  const baseline = await geometry(page);
+  await render(page, { route: '#/board', connectionState: 'connected' });
+  const board = page.locator('[data-route-kind="planning.board"].op-planning--board');
+  await board.waitFor({ state: 'visible' });
+  assert.equal(await board.locator('.pc-status-board__column').count(), 5);
+  await settle(page);
+  assertRail(await geometry(page), baseline, width, context);
+  await render(page, { route: '#/board', connectionState: 'booting' });
 }
 
 test('bundles the shell geometry fixture into a standalone browser script', async () => {
@@ -263,6 +305,7 @@ test('keeps rail preferences and startup top-bar geometry stable across mounted 
   for (let repeat = 0; repeat < 3; repeat += 1) {
     for (const route of ['#/board', '#/list', '#/graph', '#/home']) {
       await render(page, { route });
+      if (route === '#/board') await assertBoardShell(page, 236, `expanded Board ${repeat}`);
       assertRail(await geometry(page), expanded, 236, `expanded ${repeat} ${route}`);
     }
   }
@@ -278,6 +321,7 @@ test('keeps rail preferences and startup top-bar geometry stable across mounted 
   for (let repeat = 0; repeat < 3; repeat += 1) {
     for (const route of ['#/board', '#/list', '#/graph', '#/home']) {
       await render(page, { route });
+      if (route === '#/board') await assertBoardShell(page, 64, `compact Board ${repeat}`);
       assertRail(await geometry(page), compact, 64, `compact ${repeat} ${route}`);
     }
   }
@@ -539,8 +583,9 @@ test('status bootstrap and Activity disconnect preserve their painted geometry w
   const watching = await feedGeometry();
   assert.equal(await page.locator('.pc-activity__connection > .pc-badge').innerText(), 'Watching');
   assert.equal(watching.reserveVisibility, 'hidden');
-  assert.equal(watching.badge.width, watching.connection.width);
-  assert.equal(watching.badge.height, 32, 'desktop status uses compact control density');
+  assert(watching.badge.width <= watching.connection.width);
+  assert.equal(watching.badge.height, 28, 'Activity artboard pill height');
+  assert.equal(watching.badge.x, watching.connection.x);
   await page.evaluate(() => {
     window.__dashboardLayoutShifts.markPhase('activity-disconnect');
     window.shellGeometry.renderFeed('paused');
@@ -558,7 +603,9 @@ test('status bootstrap and Activity disconnect preserve their painted geometry w
     'disconnect does not move the reserved wrapper',
   );
   assert.deepEqual(paused.feed, watching.feed);
-  assert.deepEqual(paused.badge, watching.badge, 'both connection states keep an identical box');
+  assert.equal(paused.badge.height, watching.badge.height);
+  assert.equal(paused.badge.y, watching.badge.y);
+  assert.equal(paused.badge.x, watching.badge.x, 'both labels keep their painted origin');
   assert(
     paused.badge.width <= paused.connection.width,
     'the longer label fits its reserved region',
@@ -667,14 +714,12 @@ test('mobile touch reaches the palette instead of an overflowing capability cont
   assert.equal(mobile.title, 'Home');
   assert.equal(mobile.titleVisible, true);
   assert.equal(mobile.hiddenCrumbs, true, 'mobile shows only the current view title');
-  assert.equal(mobile.controls.length, 5);
+  assert.equal(mobile.controls.length, 1);
   for (const control of mobile.controls) {
     assert.equal(control.width, 44, `${control.label}: touch width`);
     assert.equal(control.height, 44, `${control.label}: touch height`);
-    assert.equal(control.radius, '8px', `${control.label}: shared mobile radius`);
-    assert.equal(control.borderWidth, '1px', `${control.label}: shared mobile border width`);
-    assert.equal(control.borderStyle, 'solid', `${control.label}: shared mobile border style`);
-    assert.equal(control.borderColor, mobile.line3, `${control.label}: shared line3 border`);
+    assert.equal(control.radius, '0px', `${control.label}: mobile artboard radius`);
+    assert.equal(control.borderWidth, '0px', `${control.label}: ghost search border`);
     assert.equal(control.background, 'rgba(0, 0, 0, 0)', `${control.label}: transparent chrome`);
     assert.equal(control.inside, true, `${control.label}: fits inside the viewport`);
   }
@@ -687,10 +732,15 @@ test('mobile touch reaches the palette instead of an overflowing capability cont
     inside: true,
   });
   await render(page, { route: '#/operate/today', connectionState: 'connected' });
+  await page.locator('.pc-mobile-more > summary').click();
+  const capability = page.locator('.pc-mobile-more__controls button.pc-conn');
+  await capability.waitFor({ state: 'visible' });
+  const capabilityBox = await capability.boundingBox();
+  assert(capabilityBox && capabilityBox.width >= 44 && capabilityBox.height >= 44);
+  await page.locator('.pc-mobile-more > summary').click();
   const hit = await page.evaluate(() => {
     const palette = document.querySelector('.pc-topbar__palette');
-    const capability = document.querySelector('.pc-topbar__end > button.pc-conn');
-    if (!palette || !capability) throw new Error('Missing mobile controls');
+    if (!palette) throw new Error('Missing mobile search control');
     const box = palette.getBoundingClientRect();
     const x = box.x + box.width / 2;
     const y = box.y + box.height / 2;
@@ -698,12 +748,12 @@ test('mobile touch reaches the palette instead of an overflowing capability cont
       x,
       y,
       receivesTouch: document.elementFromPoint(x, y)?.closest('button') === palette,
-      capabilityWidth: capability.getBoundingClientRect().width,
+      topbarButtons: document.querySelectorAll('.pc-topbar button').length,
       viewport: window.innerWidth,
     };
   });
   assert.equal(hit.viewport, 390);
-  assert.equal(hit.capabilityWidth, 44);
+  assert.equal(hit.topbarButtons, 1);
   assert.equal(hit.receivesTouch, true);
   await page.touchscreen.tap(hit.x, hit.y);
   await page.locator('dialog.pc-palette').waitFor({ state: 'visible' });

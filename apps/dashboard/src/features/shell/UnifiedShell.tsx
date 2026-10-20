@@ -222,6 +222,7 @@ export function UnifiedShell({
           onOpenPalette={search.show}
           themePreference={adapters?.themePreference}
           paletteIconOnly={width < 1200}
+          mobile={narrow}
           shortcutHelp={interactions.help}
         />
         {fontLoadFailed && !fontNoticeDismissed ? (

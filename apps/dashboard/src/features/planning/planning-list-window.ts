@@ -258,6 +258,7 @@ export function useListRowViewport({
     if (previousScope.current !== scope) scroller.scrollTop = 0;
     previousScope.current = scope;
     const read = () => {
+      const headerInset = header?.querySelector('tr')?.offsetTop ?? 0;
       const origin =
         scroller === list
           ? 0
@@ -271,7 +272,17 @@ export function useListRowViewport({
         origin,
       };
       const headerOffset =
-        scroller === list ? 0 : Math.max(0, Math.min(next.top, (table?.offsetHeight ?? 36) - 36));
+        scroller === list || !table
+          ? 0
+          : Math.max(
+              0,
+              Math.min(
+                scroller.getBoundingClientRect().top -
+                  table.getBoundingClientRect().top -
+                  headerInset,
+                table.offsetHeight - 36 - headerInset,
+              ),
+            );
       if (header) {
         const transform = `translateY(${headerOffset}px)`;
         if (header.style.transform !== transform) header.style.transform = transform;

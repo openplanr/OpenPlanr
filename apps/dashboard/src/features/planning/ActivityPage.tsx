@@ -68,7 +68,7 @@ export function ActivityPage({ currentBinding, current, sessionActivity }: Activ
           <EmptyState
             icon="activity"
             title="Durable activity history unavailable"
-            description="A graph snapshot is not a change log. Authored-date history and day groups are unavailable in this phase."
+            description="There is no durable history in the current graph. A graph snapshot is not a change log. Authored-date history and day groups are unavailable in this phase."
           />
           <div className="pc-activity__aid">
             <CommandHint

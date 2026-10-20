@@ -124,7 +124,9 @@ describe('sprint evidence', () => {
     );
     expect(view.getByRole('heading', { name: 'No active sprint' })).toBeTruthy();
     const launch = view.getByRole('article', { name: 'SPRINT-001: Launch sprint 1', exact: true });
-    expect(launch.textContent).toContain('78 of 82 sprint items done');
+    expect(launch.textContent).toContain('78 / 82 sprint items done');
+    expect(view.getByText('78 of 82 sprint items done').className).toBe('pc-visually-hidden');
+    expect(launch.querySelector('[aria-hidden="true"]')?.textContent).toContain('78 / 82');
     const completion = view.getByRole('progressbar', {
       name: 'Launch sprint 1: sprint items done',
     });
@@ -135,6 +137,8 @@ describe('sprint evidence', () => {
     expect(members.textContent).toContain('QT-006');
     const carry = view.getByRole('region', { name: 'Carry-over from SPRINT-001' });
     expect(carry.textContent).toContain('Still open after close');
+    expect(view.getAllByRole('region', { name: /^Carry-over from/ })).toHaveLength(1);
+    expect(members.querySelectorAll('a .pc-artifact[data-variant="glyph"]')).toHaveLength(82);
     const links = Array.from(carry.querySelectorAll<HTMLAnchorElement>('a[data-keyboard-item]'));
     expect(links.map((link) => link.getAttribute('href'))).toEqual([
       '#/detail/QT-006',
@@ -192,7 +196,7 @@ describe('sprint evidence', () => {
     expect(view.container.textContent).toContain('closedAt: Unknown');
   });
 
-  it('shows authored dates and release cut without repairing invalid chronology or missing closedAt', () => {
+  it('shows authored dates and release cut without repairing invalid chronology or missing closedAt', async () => {
     const graph = {
       nodes: [
         sprint({
@@ -215,6 +219,23 @@ describe('sprint evidence', () => {
     expect(markers).toHaveLength(1);
     expect(markers[0].getAttribute('data-invalid')).toBe('true');
     expect(view.container.querySelectorAll('time[datetime="2026-09-30"]')).toHaveLength(1);
+    const timeline = view.getByRole('region', { name: 'Sprint timeline' });
+    const axis = timeline.querySelector('.pc-sprints__axis');
+    expect(axis?.children).toHaveLength(5);
+    expect(Array.from(axis?.querySelectorAll('span') ?? []).map((tick) => tick.style.left)).toEqual(
+      ['0%', '25%', '50%', '75%', '100%'],
+    );
+    expect(axis?.textContent).toContain('30 Sep');
+    expect(axis?.textContent).not.toContain('Sept');
+    const details = view.getByRole('button', {
+      name: /Release preparation · Start: 2026-10-15 · End: 2026-10-01/,
+    });
+    expect(details.getAttribute('aria-label')).toContain('closed-before-start');
+    expect(details.querySelector('time')?.closest('.pc-visually-hidden')).toBeTruthy();
+    fireEvent.focus(details);
+    const tooltip = await view.findByRole('tooltip');
+    expect(tooltip.textContent).toContain('closedAt: 2026-09-30');
+    expect(tooltip.textContent).toContain('end-before-start');
   });
 
   it('distinguishes active, planned and no-sprint states with the copy-only sprint command', () => {
@@ -237,6 +258,35 @@ describe('sprint evidence', () => {
     view.rerender(<SprintsPage {...props({ nodes: [], edges: [] })} />);
     expect(view.container.textContent).toContain('No sprints yet');
     expect(view.container.textContent).toContain('/planr:sprint');
+  });
+
+  it('omits empty carry-over cards while retaining the last inspected item after completion', () => {
+    const item: PlanningModelNode = {
+      id: 'QT-090',
+      type: 'quick',
+      title: 'Close the final item',
+      status: 'outstanding',
+      frontmatter: {},
+    };
+    const authoredSprint = sprint({ itemIds: [item.id] });
+    const view = render(<SprintsPage {...props({ nodes: [authoredSprint, item], edges: [] })} />);
+    const carry = view.getByRole('region', { name: 'Carry-over from SPRINT-090' });
+    const link = carry.querySelector<HTMLAnchorElement>('a[data-keyboard-item]');
+    if (!link) throw new Error('Missing carry-over item link');
+    fireEvent.click(link);
+    view.rerender(
+      <SprintsPage
+        {...props(
+          { nodes: [authoredSprint, { ...item, status: 'done' }], edges: [] },
+          'refreshing',
+        )}
+      />,
+    );
+    expect(carry.contains(link)).toBe(true);
+    expect(link.textContent).toContain('No longer open after close');
+    act(() => clearInspector());
+    expect(view.queryByRole('region', { name: 'Carry-over from SPRINT-090' })).toBeNull();
+    expect(view.queryByText('See all 0')).toBeNull();
   });
 
   it('uses coordinator navigation and retains focus, scroll and selection across refresh and disconnect', () => {

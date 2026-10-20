@@ -388,23 +388,3 @@
     border-bottom: 1px solid var(--op-line);
   }
 }
-
-.op-focused-graph__lenses {
-  display: flex;
-  flex-wrap: wrap;
-  border: 0;
-  padding: 0;
-  margin: 0;
-  min-width: 0;
-}
-
-.op-focused-graph__lenses .pc-button[aria-pressed="true"] {
-  background: var(--op-accent-soft);
-  color: var(--op-text);
-  border-color: var(--op-accent);
-}
-@media (forced-colors: active) {
-  .op-focused-graph__lenses .pc-button[aria-pressed="true"] {
-    border-color: Highlight;
-  }
-}

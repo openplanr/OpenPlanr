@@ -1,9 +1,13 @@
 .op-planning.pc-activity {
   width: 100%;
-  max-width: 1180px;
+  max-width: 1240px;
   min-width: 0;
-  gap: 20px;
+  gap: 24px;
   padding: 32px 40px 48px;
+}
+.pc-shell .op-planning.pc-activity {
+  max-width: 1240px;
+  padding-inline: max(0px, calc(40px - var(--pc-gutter)));
 }
 .pc-activity .pc-section-header {
   padding: 0;
@@ -45,19 +49,25 @@
   display: inline-grid;
   grid-template-areas: "state";
   width: max-content;
-  height: 32px;
+  height: 28px;
 }
 .pc-activity__connection > .pc-badge,
 .pc-activity__connection::before {
   display: inline-flex;
   grid-area: state;
-  justify-self: stretch;
+  justify-self: start;
   box-sizing: border-box;
   height: 100%;
   padding: 0 10px;
   line-height: 16px;
   font-size: var(--pc-text-2xs);
   white-space: nowrap;
+  align-items: center;
+  gap: 8px;
+  border-radius: 999px;
+  border-color: var(--op-line);
+  color: var(--op-muted);
+  background: transparent;
 }
 .pc-activity__connection::before {
   content: attr(data-reserve-label);
@@ -102,7 +112,7 @@
 .pc-activity__footnote {
   margin: 0;
   padding: 12px 20px;
-  height: 104px;
+  min-height: 56px;
   overflow: auto;
   line-height: 1.6;
 }
@@ -119,7 +129,7 @@
 }
 
 .pc-activity__durable {
-  height: 400px;
+  min-height: 280px;
   overflow: auto;
 }
 .pc-activity__loading {
@@ -141,17 +151,14 @@ a.pc-activity__item:active {
   outline-offset: 2px;
 }
 @media (width < 900px) {
-  .pc-activity__connection {
-    height: 44px;
-  }
   .op-planning.pc-activity {
     padding: 24px 16px 32px;
   }
+  .pc-shell .op-planning.pc-activity {
+    padding-inline: 2px;
+  }
   .pc-activity .pc-section-header__title {
     font-size: 30px;
-  }
-  .pc-activity__durable {
-    height: 480px;
   }
   .pc-activity__explanation {
     height: 140px;

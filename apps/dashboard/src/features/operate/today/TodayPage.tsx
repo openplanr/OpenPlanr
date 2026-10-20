@@ -70,12 +70,14 @@ function TodayContext({
   const firstUse = model.kind === 'first-use';
   return (
     <div className="op-workspace op-today pc-operate" data-route-kind="operate.today">
-      <SectionHeader
-        headingLevel={1}
-        eyebrow={`planr-operate · today · ${model.vocabulary.context}`}
-        title={model.vocabulary.title}
-        description="The current operating context for this project."
-      />
+      {!firstUse ? (
+        <SectionHeader
+          headingLevel={1}
+          eyebrow={`planr-operate · today · ${model.vocabulary.context}`}
+          title={model.vocabulary.title}
+          description="The current operating context for this project."
+        />
+      ) : null}
       {firstUse ? (
         <OperateSetup />
       ) : (

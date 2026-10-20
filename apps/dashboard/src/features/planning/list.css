@@ -35,6 +35,7 @@
   justify-content: space-between;
   gap: var(--pc-space-3);
   min-height: 44px;
+  margin-inline: var(--pc-list-gutter);
   padding: var(--pc-space-2) var(--pc-space-3);
   background: var(--pc-surface-card);
   border: 1px solid var(--pc-border-default);
@@ -118,6 +119,15 @@
 .pc-list__window[data-empty] {
   background: transparent;
   border-color: transparent;
+}
+
+@media (max-width: 899px), (pointer: coarse) {
+  .pc-list__window {
+    margin-block-start: -8px;
+  }
+  .pc-list .pc-table thead {
+    padding-block-start: 8px;
+  }
 }
 
 .pc-list__group-meta {

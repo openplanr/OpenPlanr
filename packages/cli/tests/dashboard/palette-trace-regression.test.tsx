@@ -40,6 +40,7 @@ describe('palette trace fixture queries', () => {
           fireEvent.change(input, { target: { value } });
           const first = subject.container.querySelector('[data-search-result]');
           expect(first?.getAttribute('data-search-result'), value).toBe(`planning:${node.id}`);
+          expect(first?.getAttribute('data-active'), value).toBe('true');
           expect(first?.textContent, value).toContain(node.title);
           expect(preview.getAttribute('data-preview-id'), value).toBe(node.id);
           expect(preview.getAttribute('data-preview-state'), value).toBe('ready');
@@ -101,10 +102,10 @@ describe('palette trace fixture queries', () => {
     const index = buildDashboardSearchIndex({
       planningNodes: [{ ...scoped, id: 'specs/other/T-079' }, scoped, { ...scoped, id: 'T-079' }],
     });
-    expect(queryDashboardSearchIndex(index, 'T-079').map((hit) => hit.id)).toEqual([
-      'planning:T-079',
-      'planning:specs/fixture-1/T-079',
-      'planning:specs/other/T-079',
-    ]);
+    expect(
+      queryDashboardSearchIndex(index, 'T-079')
+        .filter((hit) => hit.source === 'planning')
+        .map((hit) => hit.id),
+    ).toEqual(['planning:T-079', 'planning:specs/fixture-1/T-079', 'planning:specs/other/T-079']);
   });
 });

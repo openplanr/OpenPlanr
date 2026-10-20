@@ -100,9 +100,17 @@ export function CommandHint({
                 size={14}
               />
             ) : (
-              <span aria-hidden="true">
-                <kbd>C</kbd>
-              </span>
+              <>
+                <span className="pc-command-hint__key" aria-hidden="true">
+                  <kbd>C</kbd>
+                </span>
+                <span className="pc-command-hint__touch-icon" aria-hidden="true">
+                  <PcIcon
+                    name={state === 'copied' ? 'check' : state === 'blocked' ? 'x' : 'copy'}
+                    size={14}
+                  />
+                </span>
+              </>
             )}
             <span className="pc-visually-hidden">
               {state === 'pending' ? 'Copying' : state === 'copied' ? 'Copied' : 'Copy command'}

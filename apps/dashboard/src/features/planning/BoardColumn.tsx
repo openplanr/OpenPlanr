@@ -60,7 +60,7 @@ function BoardCard({ node, selected }: { node: PlanningModelNode; selected: bool
         command={planningContinuation(node)}
       />
       <span className="pc-status-board__foot">
-        <ArtifactStatus status={node.status} size="sm" surface="card" />
+        <ArtifactStatus status={node.status} size="sm" surface="card" variant="glyph" />
         <PriorityChip priority={String(node.frontmatter.priority ?? 'none')} />
         <ArtifactRowMeta label={`Updated ${updated}`}>
           {timestamp === null
@@ -81,14 +81,14 @@ export function BoardColumn({
   laneKey,
   selectedId,
   collapsed,
-  expandDone,
+  toggleDone,
   target,
 }: {
   group: PlanningGroup;
   laneKey: string;
   selectedId?: string;
   collapsed: boolean;
-  expandDone: () => void;
+  toggleDone: () => void;
   target: BoardTarget | null;
 }) {
   const cell = boardCellKey(laneKey, group.key);
@@ -102,31 +102,37 @@ export function BoardColumn({
       style={artifactRowStyle(group.nodes.map(planningDisplayId))}
       aria-label={group.key}
     >
-      <header className="pc-status-board__head">
-        <ArtifactStatus status={group.key} size="sm" />
-        <span className="pc-status-board__count">{group.nodes.length}</span>
-      </header>
+      {group.key === 'done' && group.nodes.length > 0 ? (
+        <button
+          type="button"
+          className="pc-status-board__empty pc-status-board__toggle"
+          data-keyboard-item={collapsed ? `empty:${cell}` : undefined}
+          aria-expanded={!collapsed}
+          onClick={toggleDone}
+        >
+          {group.nodes.length} done · {collapsed ? 'Expand' : 'Collapse'}
+        </button>
+      ) : null}
       <div
         ref={window.root}
         data-scroll-context={`board-cell:${cell}`}
         className="pc-status-board__cards"
-        style={{ height: collapsed ? 72 : window.height }}
+        hidden={collapsed}
       >
-        {collapsed || group.nodes.length === 0 ? (
+        {group.nodes.length === 0 ? (
           <ul className="pc-status-board__empty-list">
             <li>
               <button
                 type="button"
                 className="pc-status-board__empty"
                 data-keyboard-item={`empty:${cell}`}
-                aria-label={collapsed ? undefined : `${group.key}: no cards`}
-                onClick={collapsed ? expandDone : undefined}
+                aria-label={`${group.key}: no cards`}
               >
-                {collapsed ? `${group.nodes.length} done · Expand` : 'No cards'}
+                No cards
               </button>
             </li>
           </ul>
-        ) : (
+        ) : collapsed ? null : (
           <ul
             className="pc-status-board__window"
             style={{ height: group.nodes.length * BOARD_CARD_PITCH }}

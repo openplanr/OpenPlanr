@@ -1106,6 +1106,18 @@ function CycleDetailView({ item }: Readonly<{ item: LocalReviewItem }>) {
         <ActionRegister actions={item.actions} />
       </SectionBlock>
       <SectionBlock
+        title="Governed actions"
+        description="This local cycle is a read-only review record."
+      >
+        <InlineAlert
+          tone="info"
+          title="Approval and execution require an actor-bound Operate session"
+        >
+          Review the recorded decisions and actions before continuing through the governed Operate
+          gateway.
+        </InlineAlert>
+      </SectionBlock>
+      <SectionBlock
         title="Risks and dissent"
         description="Challenges retained rather than flattened into consensus."
       >
@@ -1264,62 +1276,63 @@ export function LocalOperateReviews({
     route.kind === 'operate.cycle' || route.kind === 'operate.review'
       ? 'Structured decisions, action plan, lens coverage, dissent, and the full audit record.'
       : (routeCopy?.[1] ?? 'Completed local operating review.');
+  const showSetup =
+    route.kind === 'operate.today' && indexState.status === 'ready' && selectedCycleId === null;
 
   return (
-    <div className="pc-shell__scroll pc-local-review pc-operate" data-route-kind={route.kind}>
-      <SectionHeader
-        headingLevel={1}
-        eyebrow="planr-operate · local"
-        title={title}
-        count={listRoute ? index.pagination.total : undefined}
-        description={description}
-        actions={
-          <Badge tone="info" variant="outline" icon="lock">
-            Governed actions
-          </Badge>
-        }
-      />
-      {indexState.status === 'failed' ? (
-        <InlineAlert tone="warn" title="Local reviews could not refresh">
-          {indexState.error}
-        </InlineAlert>
-      ) : null}
-      {listRoute ? (
-        indexState.status === 'loading' && !indexState.data ? (
+    <div className="pc-shell__scroll">
+      <div className="pc-local-review pc-operate" data-route-kind={route.kind}>
+        {!showSetup ? (
+          <SectionHeader
+            headingLevel={1}
+            eyebrow="planr-operate · local"
+            title={title}
+            count={listRoute ? index.pagination.total : undefined}
+            description={description}
+          />
+        ) : null}
+        {indexState.status === 'failed' ? (
+          <InlineAlert tone="warn" title="Local reviews could not refresh">
+            {indexState.error}
+          </InlineAlert>
+        ) : null}
+        {listRoute ? (
+          indexState.status === 'loading' && !indexState.data ? (
+            <SkeletonCards count={3} />
+          ) : index.items.length ? (
+            <>
+              <ReviewList items={index.items} history={route.kind === 'operate.history'} />
+              <Pagination index={index} onPage={setPage} />
+            </>
+          ) : indexState.status === 'ready' ? (
+            <EmptyReviews />
+          ) : null
+        ) : !selectedCycleId && indexState.status === 'loading' ? (
+          <SkeletonCards count={2} />
+        ) : !selectedCycleId ? (
+          indexState.status === 'ready' ? (
+            <EmptyReviews setup={route.kind === 'operate.today'} />
+          ) : null
+        ) : detailState.status === 'loading' && !detail ? (
           <SkeletonCards count={3} />
-        ) : index.items.length ? (
+        ) : !detail ? (
+          <InlineAlert tone="warn" title="This local review is unavailable">
+            {detailState.error ?? 'The report was not found.'}
+          </InlineAlert>
+        ) : (
           <>
-            <ReviewList items={index.items} history={route.kind === 'operate.history'} />
-            <Pagination index={index} onPage={setPage} />
+            {detailState.status === 'failed' ? (
+              <InlineAlert tone="warn" title="Showing the last readable review">
+                {detailState.error}
+              </InlineAlert>
+            ) : null}
+            <LocalRouteView route={route} item={detail} />
           </>
-        ) : indexState.status === 'ready' ? (
-          <EmptyReviews />
-        ) : null
-      ) : !selectedCycleId && indexState.status === 'loading' ? (
-        <SkeletonCards count={2} />
-      ) : !selectedCycleId ? (
-        indexState.status === 'ready' ? (
-          <EmptyReviews setup={route.kind === 'operate.today'} />
-        ) : null
-      ) : detailState.status === 'loading' && !detail ? (
-        <SkeletonCards count={3} />
-      ) : !detail ? (
-        <InlineAlert tone="warn" title="This local review is unavailable">
-          {detailState.error ?? 'The report was not found.'}
-        </InlineAlert>
-      ) : (
-        <>
-          {detailState.status === 'failed' ? (
-            <InlineAlert tone="warn" title="Showing the last readable review">
-              {detailState.error}
-            </InlineAlert>
-          ) : null}
-          <LocalRouteView route={route} item={detail} />
-        </>
-      )}
-      <div className="pc-local-review__footnote">
-        <PcIcon name="lock" size={12} /> Local projections are review records. Approval and
-        execution require an actor-bound Operate session.
+        )}
+        <div className="pc-local-review__footnote">
+          <PcIcon name="lock" size={12} /> Local projections are review records. Approval and
+          execution require an actor-bound Operate session.
+        </div>
       </div>
     </div>
   );

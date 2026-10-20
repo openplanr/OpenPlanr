@@ -273,6 +273,16 @@
   background: transparent;
   border-bottom: 1px solid var(--pc-border-default);
 }
+.pc-topbar__logo {
+  display: none;
+  flex: none;
+  color: var(--pc-accent);
+}
+.pc-topbar__utilities {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
 .pc-topbar__breadcrumbs {
   display: flex;
   align-items: center;
@@ -697,9 +707,9 @@
   }
 
   .pc-topbar {
-    grid-template-columns: minmax(0, 1fr) 44px auto;
-    gap: 6px;
-    padding: 0 8px;
+    grid-template-columns: minmax(0, 1fr) 88px 44px;
+    gap: 10px;
+    padding: 0 16px;
   }
 
   .pc-topbar__crumb,
@@ -717,83 +727,62 @@
     white-space: nowrap;
   }
 
+  .pc-topbar__logo {
+    display: block;
+  }
+  .pc-topbar__breadcrumbs {
+    gap: 10px;
+  }
+  .pc-topbar__view {
+    font: 700 15px var(--op-font-display);
+  }
   .pc-topbar__palette {
-    flex: 0 0 44px;
+    grid-column: 3;
+    grid-row: 1;
     justify-content: center;
     width: 44px;
-    min-width: 0;
-    margin-left: 0;
-  }
-
-  .pc-topbar__placeholder,
-  .pc-topbar__palette .pc-rail__keys,
-  .pc-topbar__end .pc-conn:not(:last-child) {
-    display: none;
-  }
-
-  .pc-topbar__end {
-    flex: 0 0 44px;
-    width: 44px;
-    margin-left: 0;
-  }
-  .pc-topbar__actions {
-    gap: 6px;
-  }
-
-  .pc-topbar__end > button.pc-conn,
-  .pc-topbar__end .pc-conn {
-    flex: 0 0 44px;
-    justify-content: center;
-    width: 44px;
-    min-height: 44px;
-    padding: 0;
-  }
-
-  .pc-topbar__end .pc-capability-label {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    overflow: hidden;
-    clip-path: inset(50%);
-    white-space: nowrap;
-  }
-
-  .pc-topbar__end .pc-conn svg {
-    width: 16px;
-    height: 16px;
-  }
-
-  .pc-topbar .pc-icon-button {
-    flex-basis: 44px;
-    width: 44px;
-    height: 44px;
     min-width: 44px;
-    min-height: 44px;
-  }
-
-  .pc-topbar__palette,
-  .pc-topbar__end > button.pc-conn {
     height: 44px;
-  }
-
-  .pc-topbar__palette,
-  .pc-topbar__end > button.pc-conn,
-  .pc-topbar .pc-icon-button {
-    border-radius: var(--pc-radius-sm);
-    border: 1px solid var(--op-line3);
+    padding: 0;
+    border: 0;
+    border-radius: 0;
     background: transparent;
   }
-
-  .pc-topbar__palette:hover,
-  .pc-topbar__end > button.pc-conn:hover,
-  .pc-topbar .pc-icon-button:hover:not(:disabled) {
-    background: var(--pc-surface-hover);
+  .pc-topbar__palette .pc-icon {
+    width: 20px;
+    height: 20px;
   }
-
-  .pc-topbar__palette:active,
-  .pc-topbar__end > button.pc-conn:active,
-  .pc-topbar .pc-icon-button:active:not(:disabled) {
-    background: var(--pc-surface-active);
+  .pc-topbar__placeholder,
+  .pc-topbar__palette .pc-rail__keys,
+  .pc-topbar__utilities {
+    display: none;
+  }
+  .pc-topbar__actions {
+    grid-column: 2;
+    grid-row: 1;
+  }
+  .pc-topbar__end {
+    flex: 1;
+    width: 88px;
+    justify-content: flex-end;
+  }
+  .pc-topbar__end > .pc-conn {
+    flex: none;
+    width: auto;
+    height: 28px;
+    padding: 0;
+    border: 0;
+  }
+  .pc-mobile-more__controls .pc-topbar__utilities {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 8px;
+  }
+  .pc-mobile-more__controls .pc-icon-button,
+  .pc-mobile-more__controls .pc-conn {
+    min-height: 44px;
+    min-width: 44px;
   }
 
   .pc-statusbar .pc-watcher {
@@ -848,9 +837,9 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 3px;
+    gap: 4px;
     padding: 4px 2px;
-    font: var(--pc-type-mono-sm);
+    font: 400 11.5px var(--pc-font-sans);
     color: inherit;
     text-decoration: none;
     background: transparent;
@@ -866,8 +855,16 @@
   }
 
   .pc-mobile-nav__item[aria-current="page"] {
-    color: var(--pc-accent-ink);
-    background: var(--pc-surface-selected);
+    color: var(--pc-text-secondary);
+    background: transparent;
+  }
+
+  .pc-mobile-nav__item > .pc-icon {
+    width: 20px;
+    height: 20px;
+  }
+  .pc-mobile-nav__item[aria-current="page"] > .pc-icon {
+    color: var(--pc-accent);
   }
 
   .pc-mobile-nav__item:focus-visible {

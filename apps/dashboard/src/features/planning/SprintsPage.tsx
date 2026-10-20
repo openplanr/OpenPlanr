@@ -183,75 +183,74 @@ function Timeline({ sprints }: { sprints: readonly SprintRecord[] }) {
   return (
     <section className="pc-sprints__timeline pc-sprints__panel" aria-label="Sprint timeline">
       <h2>Timeline</h2>
-      <p>Planned window, with the authored close date marked. Invalid dates are never corrected.</p>
       {bounds ? (
         <div className="pc-sprints__axis" aria-hidden="true">
-          <span>{new Date(bounds.start).toISOString().slice(0, 10)}</span>
-          <span>{new Date(bounds.end).toISOString().slice(0, 10)}</span>
+          {[0, 1, 2, 3, 4].map((tick) => (
+            <span key={tick} style={{ left: `${tick * 25}%` }}>
+              {new Date(bounds.start + ((bounds.end - bounds.start) * tick) / 4)
+                .toLocaleDateString('en-GB', { day: 'numeric', month: 'short', timeZone: 'UTC' })
+                .replace('Sept', 'Sep')}
+            </span>
+          ))}
         </div>
       ) : (
         <p>Timeline unavailable: no valid authored dates.</p>
       )}
-      {sprints.map((sprint) => (
-        <div className="pc-sprints__timeline-row" key={sprint.node.id}>
-          <div>
-            <WorkItemChip type="sprint" id={planningDisplayId(sprint.node)} />
-            <span>{sprint.title}</span>
-          </div>
-          <div>
-            <div className="pc-sprints__track" aria-hidden="true">
-              {sprint.start.time !== null &&
-              sprint.end.time !== null &&
-              sprint.end.time >= sprint.start.time ? (
-                <span
-                  className="pc-sprints__window"
-                  style={{
-                    left: `${position(sprint.start.time)}%`,
-                    width: `${Math.max(0.5, position(sprint.end.time) - position(sprint.start.time))}%`,
-                  }}
-                />
-              ) : null}
-              {sprint.close.time !== null ? (
-                <span
-                  className="pc-sprints__close"
-                  data-invalid={
-                    (sprint.start.time !== null && sprint.close.time < sprint.start.time) ||
-                    undefined
-                  }
-                  style={{ left: `${position(sprint.close.time)}%` }}
-                />
-              ) : null}
+      <div className="pc-sprints__timeline-rows">
+        {sprints.map((sprint) => {
+          const details = [
+            sprint.title,
+            `Start: ${sprint.start.raw ?? 'Unknown'}`,
+            `End: ${sprint.end.raw ?? 'Unknown'}`,
+            `closedAt: ${sprint.close.raw ?? 'Unknown'}`,
+            ...sprint.diagnostics,
+          ].join(' · ');
+          return (
+            <div className="pc-sprints__timeline-row" key={sprint.node.id}>
+              <div className="pc-sprints__timeline-label">
+                <WorkItemChip type="sprint" id={planningDisplayId(sprint.node)} />
+                <span title={sprint.title}>{sprint.title}</span>
+              </div>
+              <Tooltip content={details}>
+                <button
+                  type="button"
+                  className="pc-sprints__track pc-touch-target"
+                  aria-label={details}
+                >
+                  {sprint.start.time !== null &&
+                  sprint.end.time !== null &&
+                  sprint.end.time >= sprint.start.time ? (
+                    <span
+                      className="pc-sprints__window"
+                      style={{
+                        left: `${position(sprint.start.time)}%`,
+                        width: `${Math.max(0.5, position(sprint.end.time) - position(sprint.start.time))}%`,
+                      }}
+                    />
+                  ) : null}
+                  {sprint.close.time !== null ? (
+                    <span
+                      className="pc-sprints__close"
+                      data-invalid={
+                        (sprint.start.time !== null && sprint.close.time < sprint.start.time) ||
+                        undefined
+                      }
+                      style={{ left: `${position(sprint.close.time)}%` }}
+                    />
+                  ) : null}
+                  <span className="pc-visually-hidden">
+                    Start: <DateLabel value={sprint.start} /> · End:{' '}
+                    <DateLabel value={sprint.end} /> · closedAt: <DateLabel value={sprint.close} />
+                    {sprint.diagnostics.map((reason) => (
+                      <span key={reason}> · {reason}</span>
+                    ))}
+                  </span>
+                </button>
+              </Tooltip>
             </div>
-            <dl className="pc-sprints__dates">
-              <div>
-                <dt>Start</dt>
-                <dd>
-                  <DateLabel value={sprint.start} />
-                </dd>
-              </div>
-              <div>
-                <dt>End</dt>
-                <dd>
-                  <DateLabel value={sprint.end} />
-                </dd>
-              </div>
-              <div>
-                <dt>closedAt</dt>
-                <dd>
-                  <DateLabel value={sprint.close} />
-                </dd>
-              </div>
-            </dl>
-            {sprint.diagnostics.length ? (
-              <ul className="pc-sprints__warnings">
-                {sprint.diagnostics.map((reason) => (
-                  <li key={reason}>{reason}</li>
-                ))}
-              </ul>
-            ) : null}
-          </div>
-        </div>
-      ))}
+          );
+        })}
+      </div>
       <p className="pc-sprints__legend">
         <span>Outlined bar: planned window</span>
         <span>Vertical marker: authored closedAt</span>
@@ -288,6 +287,7 @@ function SprintCarryOver({
   useEffect(() => {
     previous.current = ordered.map((node) => node.id);
   }, [ordered]);
+  if (!ordered.length) return null;
   return (
     <section
       className="pc-sprints__panel pc-sprints__carry"
@@ -300,9 +300,16 @@ function SprintCarryOver({
         href={planningDetailHref(sprint.node) ?? undefined}
       />
       {ordered.length ? (
-        <ul style={artifactRowStyle(ordered.map(planningDisplayId))}>
+        <ul
+          className="pc-sprints__item-list"
+          style={artifactRowStyle(ordered.map(planningDisplayId))}
+        >
           {ordered.map((node) => (
-            <li key={node.id} className="pc-artifact-row">
+            <li
+              key={node.id}
+              className="pc-artifact-row"
+              data-selected={selectedId === node.id || undefined}
+            >
               <Tooltip content={node.title}>
                 <a
                   className="pc-artifact-row__link"
@@ -316,6 +323,9 @@ function SprintCarryOver({
                     inspectPlanningNode(node);
                   }}
                 >
+                  <span className="pc-sprints__item-status">
+                    <ArtifactStatus status={node.status} size="sm" variant="glyph" />
+                  </span>
                   <span className="pc-artifact-row__id">
                     <WorkItemChip type={node.type} id={planningDisplayId(node)} />
                   </span>
@@ -328,9 +338,6 @@ function SprintCarryOver({
                   </ArtifactRowTitle>
                 </a>
               </Tooltip>
-              <span className="pc-artifact-row__meta-group">
-                <ArtifactStatus status={node.status} size="sm" />
-              </span>
               <ArtifactRowCopy
                 onCopy={copy}
                 shortcutsEnabled={shortcutsEnabled}
@@ -430,27 +437,31 @@ function SprintsContent({ model }: { model: PlanningWorkspaceModel }) {
                 key={sprint.node.id}
                 aria-label={`${planningDisplayId(sprint.node)}: ${sprint.title}`}
               >
-                <CardHeader
-                  title={sprint.title}
-                  count={sprint.members.length}
-                  description={
-                    typeof sprint.node.frontmatter.goal === 'string'
-                      ? sprint.node.frontmatter.goal
-                      : 'No sprint goal recorded.'
-                  }
-                  href={planningDetailHref(sprint.node) ?? undefined}
-                />
                 <div className="pc-sprints__head">
                   <WorkItemChip type="sprint" id={planningDisplayId(sprint.node)} />
                   <span>{sprint.active ? 'Active' : sprint.closed ? 'Closed' : 'Planned'}</span>
                 </div>
+                <h2>
+                  <a href={planningDetailHref(sprint.node) ?? undefined}>{sprint.title}</a>
+                </h2>
                 <p className="pc-sprints__completion">
-                  <strong>{sprint.done}</strong> of {sprint.members.length} sprint items done
+                  <span aria-hidden="true">
+                    <strong>{sprint.done}</strong>
+                    <span className="pc-sprints__denominator"> / {sprint.members.length}</span>
+                    <span className="pc-sprints__done-label"> sprint items done</span>
+                  </span>
+                  <span className="pc-visually-hidden">
+                    {sprint.done} of {sprint.members.length} sprint items done
+                  </span>
                 </p>
                 <progress
                   aria-label={`${sprint.title}: sprint items done`}
                   value={sprint.done}
                   max={Math.max(1, sprint.members.length)}
+                  data-complete={
+                    (sprint.members.length > 0 && sprint.done === sprint.members.length) ||
+                    undefined
+                  }
                 />
                 {!sprint.members.length ? <p>No sprint items</p> : null}
                 {sprint.unresolved.length ? (
@@ -519,7 +530,7 @@ function SprintsContent({ model }: { model: PlanningWorkspaceModel }) {
                   data-scroll-context={`sprint:${sprint.node.id}`}
                 >
                   <ul
-                    className="pc-sprints__member-list"
+                    className="pc-sprints__member-list pc-sprints__item-list"
                     style={artifactRowStyle(sprint.members.map(planningDisplayId))}
                     aria-label={`Members of ${planningDisplayId(sprint.node)}`}
                   >
@@ -541,14 +552,14 @@ function SprintsContent({ model }: { model: PlanningWorkspaceModel }) {
                             inspectPlanningNode(node);
                           }}
                         >
+                          <span className="pc-sprints__item-status">
+                            <ArtifactStatus status={node.status} size="sm" variant="glyph" />
+                          </span>
                           <span className="pc-artifact-row__id">
                             <WorkItemChip type={node.type} id={planningDisplayId(node)} />
                           </span>
                           <ArtifactRowTitle>{node.title}</ArtifactRowTitle>
                         </a>
-                        <span className="pc-artifact-row__meta-group">
-                          <ArtifactStatus status={node.status} size="sm" />
-                        </span>
                         <ArtifactRowCopy
                           onCopy={copy}
                           shortcutsEnabled={shortcutsEnabled}

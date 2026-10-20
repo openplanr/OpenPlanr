@@ -1312,7 +1312,7 @@ test.describe('dashboard real-browser quality', () => {
       const badgeBefore = await badge.boundingBox();
       expect(indicatorBefore).not.toBeNull();
       expect(badgeBefore).not.toBeNull();
-      expect(badgeBefore?.height).toBe(32);
+      expect(badgeBefore?.height).toBe(28);
       await page.evaluate(() => window.__dashboardLayoutShifts.markPhase('activity-disconnect'));
       await page.context().setOffline(true);
       await expect(
@@ -1343,7 +1343,11 @@ test.describe('dashboard real-browser quality', () => {
         });
       expect(cls, `Activity layout shifts: ${JSON.stringify(shifts, null, 2)}`).toBe(0);
       expect(await indicator.boundingBox()).toEqual(indicatorBefore);
-      expect(await badge.boundingBox()).toEqual(badgeBefore);
+      const badgeAfter = await badge.boundingBox();
+      expect(badgeAfter?.height).toBe(badgeBefore?.height);
+      expect(badgeAfter?.y).toBe(badgeBefore?.y);
+      if (!badgeBefore || !badgeAfter) throw new Error('Activity badge geometry is unavailable');
+      expect(badgeAfter.x).toBe(badgeBefore.x);
       await page.context().setOffline(false);
     });
   });

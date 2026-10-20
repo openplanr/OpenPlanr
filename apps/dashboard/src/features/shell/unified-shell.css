@@ -459,7 +459,14 @@ a {
   text-decoration: none;
 }
 
-:where(a, button, summary, input, select, textarea):focus-visible {
+:where(
+  a,
+  button,
+  summary,
+  input:not(.pc-input__field, .pc-palette__input),
+  select,
+  textarea
+):focus-visible {
   outline: var(--op-focus-width) solid var(--op-focus);
   outline-offset: var(--op-focus-offset);
   box-shadow: none;

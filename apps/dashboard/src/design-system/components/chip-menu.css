@@ -34,6 +34,9 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+.pc-chip__label > .pc-artifact-tag {
+  flex-shrink: 0;
+}
 
 .pc-chip > .pc-icon {
   flex-shrink: 0;
@@ -196,6 +199,8 @@
 }
 
 .pc-chip__title {
+  min-width: 0;
+  flex: 1;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;

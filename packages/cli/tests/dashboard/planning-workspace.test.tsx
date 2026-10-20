@@ -277,7 +277,7 @@ describe('T-021 Planning workspace UI', () => {
     expect(boardHtml).not.toContain('comparison board');
     expect(
       boardDom.window.document.querySelector(
-        '[data-keyboard-column="done"] .pc-status-board__count',
+        '.pc-status-board__totals > div:last-child > span:last-child',
       )?.textContent,
     ).toBe('0');
     boardDom.window.close();
@@ -699,7 +699,18 @@ describe('read-only status Board', () => {
     const board = boardHarness(extra);
     try {
       expect(board.container.querySelectorAll('.pc-status-board__column')).toHaveLength(5);
+      expect(board.container.querySelectorAll('.pc-status-board__head')).toHaveLength(0);
+      expect(board.container.querySelector('.pc-status-board__pager')).toBeNull();
+      expect(
+        board.container.querySelector('.pc-status-board .pc-status-board__proposal')?.textContent,
+      ).toContain('Proposed for Phase 2');
+      expect(
+        board.container.querySelector('.pc-toolbar-bar .pc-status-board__command'),
+      ).toBeTruthy();
+      expect(board.getByRole('region', { name: 'Status totals' }).children).toHaveLength(5);
       expect(board.card('BL-002')).toBeUndefined();
+      const doneToggle = board.getByRole('button', { name: '1 done · Expand' });
+      expect(doneToggle.getAttribute('aria-expanded')).toBe('false');
       const blocked = board.card('SPEC-020/T-022');
       if (!blocked) throw new Error('Missing blocked card.');
       act(() => blocked.focus());
@@ -709,6 +720,13 @@ describe('read-only status Board', () => {
       expect((document.activeElement as HTMLElement).textContent).toContain('1 done');
       fireEvent.keyDown(document.activeElement as Element, { key: 'Enter' });
       expect(board.card('BL-002')).toBeTruthy();
+      expect(doneToggle.getAttribute('aria-expanded')).toBe('true');
+      expect(doneToggle.textContent).toContain('Collapse');
+      fireEvent.click(doneToggle);
+      expect(doneToggle.getAttribute('aria-expanded')).toBe('false');
+      expect(board.card('BL-002')).toBeUndefined();
+      fireEvent.click(doneToggle);
+      expect(doneToggle.getAttribute('aria-expanded')).toBe('true');
       const done = board.card('BL-002');
       if (!done) throw new Error('Done card did not expand.');
       act(() => done.focus());
@@ -973,6 +991,7 @@ describe('read-only status Board', () => {
         board.getByRole('button', { name: 'Hide done', exact: true }).getAttribute('aria-pressed'),
       ).toBe('false');
       expect(board.container.textContent).toContain('Lanes 7-10 of 10');
+      expect(board.container.querySelector('.pc-status-board__pager')).toBeTruthy();
       expect(board.getByTestId('board-inspector').textContent).toContain('"id":"SPEC-010/T-001"');
     } finally {
       board.close();

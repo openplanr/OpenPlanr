@@ -1,4 +1,5 @@
-import { type ReactNode, useEffect, useId, useRef, useState } from 'react';
+import { type ReactNode, useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import type { DashboardConnection } from '../../app/providers.js';
 import {
   DASHBOARD_ROUTE_DEFINITIONS,
@@ -31,6 +32,23 @@ type ConnectionState = DashboardConnection['state'];
 
 const RAIL_PALETTE_LABEL = 'Search or jump';
 const TOPBAR_PALETTE_LABEL = 'Jump to a view or an artifact…';
+
+function BrandMark({ className, size }: { className: string; size: number }) {
+  return (
+    <svg className={className} width={size} height={size} viewBox="0 0 160 160" aria-hidden="true">
+      <g transform="rotate(-45 80 80)">
+        <path
+          d="M125 50A52 52 0 1 0 125 110"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="12"
+          strokeLinecap="round"
+        />
+        <rect x="127" y="71" width="18" height="18" rx="3" fill="currentColor" />
+      </g>
+    </svg>
+  );
+}
 
 // ---------------------------------------------------------------- rail
 
@@ -219,6 +237,7 @@ function MobileNavigation({
           <span>More</span>
         </summary>
         <div className="pc-mobile-more__sheet" id={moreId}>
+          <div id="mobile-shell-controls" className="pc-mobile-more__controls" />
           {secondary.map((section) => (
             <section
               className="pc-mobile-more__section"
@@ -287,24 +306,7 @@ export function NavRail({
           aria-label="Dashboard navigation"
         >
           <div className="pc-rail__brand">
-            <svg
-              className="pc-rail__tile"
-              width="28"
-              height="28"
-              viewBox="0 0 160 160"
-              aria-hidden="true"
-            >
-              <g transform="rotate(-45 80 80)">
-                <path
-                  d="M125 50A52 52 0 1 0 125 110"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="12"
-                  strokeLinecap="round"
-                />
-                <rect x="127" y="71" width="18" height="18" rx="3" fill="currentColor" />
-              </g>
-            </svg>
+            <BrandMark className="pc-rail__tile" size={28} />
             <div className="pc-rail__identity">
               <span className="pc-rail__wordmark">OpenPlanr</span>
               <span className="pc-rail__branch">
@@ -371,12 +373,7 @@ export function NavRail({
           </div>
         </nav>
       ) : null}
-      <MobileNavigation
-        key={route.kind}
-        product={product}
-        route={route}
-        operateAvailable={operateAvailable}
-      />
+      <MobileNavigation product={product} route={route} operateAvailable={operateAvailable} />
     </>
   );
 }
@@ -442,7 +439,10 @@ export const CONNECTION_STATES: Readonly<Record<ConnectionState, ConnectionRecip
   },
 );
 
-export function ConnectionChip({ state }: Readonly<{ state: ConnectionState }>) {
+export function ConnectionChip({
+  state,
+  compact = false,
+}: Readonly<{ state: ConnectionState; compact?: boolean }>) {
   const recipe = CONNECTION_STATES[state];
   const live = state === 'connected' || state === 'read-only';
   return (
@@ -456,7 +456,13 @@ export function ConnectionChip({ state }: Readonly<{ state: ConnectionState }>) 
       ) : (
         <PcIcon name={recipe.icon} size={13} spin={state === 'booting'} />
       )}
-      {state === 'booting' ? null : live ? 'Live · watching .planr/' : recipe.label}
+      {state === 'booting'
+        ? null
+        : live
+          ? compact
+            ? 'Live'
+            : 'Live · watching .planr/'
+          : recipe.label}
     </span>
   );
 }
@@ -508,7 +514,13 @@ function applyTheme(choice: ThemeChoice): void {
 }
 
 export function ThemeToggle({ preference }: Readonly<{ preference?: ThemePreferenceAdapter }>) {
-  const [choice, setChoice] = useState<ThemeChoice>(preference?.initialChoice ?? 'system');
+  const [choice, setChoice] = useState<ThemeChoice>(() => {
+    const current =
+      typeof document === 'undefined' ? null : document.documentElement.getAttribute('data-theme');
+    return current === 'system' || current === 'light' || current === 'dark'
+      ? current
+      : (preference?.initialChoice ?? 'system');
+  });
   const [storageError, setStorageError] = useState(preference?.initialStorageError ?? false);
   return (
     <>
@@ -541,6 +553,7 @@ export type TopBarProps = Readonly<{
   projectName?: string;
   themePreference?: ThemePreferenceAdapter;
   paletteIconOnly?: boolean;
+  mobile?: boolean;
   shortcutHelp?: ReactNode;
   showSubject?: boolean;
   route: ParsedDashboardRoute;
@@ -556,6 +569,7 @@ export function TopBar({
   projectName,
   themePreference,
   paletteIconOnly = false,
+  mobile = false,
   shortcutHelp,
   showSubject = false,
   route,
@@ -568,9 +582,50 @@ export function TopBar({
   const definition = dashboardRouteDefinition(route);
   const product = route.product ?? 'system';
   const subject = !showSubject || route.kind === 'not-found' ? null : route.subjectId;
+  const [mobileControls, setMobileControls] = useState<HTMLElement | null>(null);
+  useLayoutEffect(() => {
+    setMobileControls(mobile ? document.getElementById('mobile-shell-controls') : null);
+  }, [mobile]);
+  const utilities = (
+    <div className="pc-topbar__utilities">
+      <Tooltip
+        content={
+          product === 'operate'
+            ? 'Operate actions require confirmation and an authorized command gateway. Receipts record every governed change.'
+            : 'Plan is read-only. Planning commands copy a continuation without changing project files.'
+        }
+      >
+        <button type="button" className="pc-conn">
+          <PcIcon name={product === 'operate' ? 'shield' : 'lock'} size={13} />
+          <span className="pc-capability-label">
+            {product === 'operate' ? 'Governed actions' : 'Read-only'}
+          </span>
+        </button>
+      </Tooltip>
+      {shortcutHelp}
+      <ThemeToggle preference={themePreference} />
+      <span data-inspector-toggle style={{ display: 'contents' }}>
+        <IconButton
+          icon={inspectorOpen ? 'panel-right-close' : 'panel-left-close'}
+          label={
+            inspectorOpen
+              ? 'Hide inspector'
+              : inspectorAvailable
+                ? 'Show inspector'
+                : 'Show inspector: select an item first'
+          }
+          disabled={!inspectorAvailable}
+          size="sm"
+          active={inspectorOpen}
+          onClick={onToggleInspector}
+        />
+      </span>
+    </div>
+  );
   return (
     <header className="pc-topbar" data-product={product}>
       <div className="pc-topbar__breadcrumbs">
+        <BrandMark className="pc-topbar__logo" size={24} />
         <span className="pc-topbar__crumb" title={projectName}>
           {product === 'planning' ? 'Plan' : product === 'operate' ? 'Operate' : 'Reference'}
         </span>
@@ -608,40 +663,9 @@ export function TopBar({
       </button>
       <div className="pc-topbar__actions">
         <output className="pc-topbar__end" aria-live="polite">
-          <ConnectionChip state={connectionState} />
-          <Tooltip
-            content={
-              product === 'operate'
-                ? 'Operate actions require confirmation and an authorized command gateway. Receipts record every governed change.'
-                : 'Plan is read-only. Planning commands copy a continuation without changing project files.'
-            }
-          >
-            <button type="button" className="pc-conn">
-              <PcIcon name={product === 'operate' ? 'shield' : 'lock'} size={13} />
-              <span className="pc-capability-label">
-                {product === 'operate' ? 'Governed actions' : 'Read-only'}
-              </span>
-            </button>
-          </Tooltip>
+          <ConnectionChip state={connectionState} compact={mobile} />
         </output>
-        {shortcutHelp}
-        <ThemeToggle preference={themePreference} />
-        <span data-inspector-toggle style={{ display: 'contents' }}>
-          <IconButton
-            icon={inspectorOpen ? 'panel-right-close' : 'panel-left-close'}
-            label={
-              inspectorOpen
-                ? 'Hide inspector'
-                : inspectorAvailable
-                  ? 'Show inspector'
-                  : 'Show inspector: select an item first'
-            }
-            disabled={!inspectorAvailable}
-            size="sm"
-            active={inspectorOpen}
-            onClick={onToggleInspector}
-          />
-        </span>
+        {mobile ? (mobileControls ? createPortal(utilities, mobileControls) : null) : utilities}
       </div>
     </header>
   );

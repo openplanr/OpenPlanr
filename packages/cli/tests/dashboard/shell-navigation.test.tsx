@@ -489,7 +489,7 @@ describe('route-independent rail presentation', () => {
 it.each([
   [1440, 'minmax(0, 1fr) 300px 482px'],
   [1024, 'minmax(0, 1fr) 44px 320px'],
-  [390, 'minmax(0, 1fr) 44px auto'],
+  [390, 'minmax(0, 1fr) 88px 44px'],
 ])('keeps the topbar grid independent of route text at %i px', (width, columns) => {
   applyShellStyles(Number(width));
   const topbar = (hash: string) => (
@@ -607,12 +607,37 @@ it.each([900, 1024, 1120])('keeps the rail toggle separate from destinations at 
   expect(toggle.matches('.pc-rail__item')).toBe(false);
 });
 
-it('constrains the mobile capability control to its 44 px hit slot', () => {
-  const { container } = renderNamedShell(390, '#/operate/today');
-  const capability = container.querySelector<HTMLElement>('.pc-topbar__end > button.pc-conn');
-  expect(capability).toBeTruthy();
-  expect(getComputedStyle(capability as HTMLElement).flexBasis).toBe('44px');
-  expect(getComputedStyle(capability as HTMLElement).width).toBe('44px');
+it('keeps mobile utilities reachable through More with 44 px hit targets', async () => {
+  const { container, rerender } = renderNamedShell(390, '#/operate/today');
+  const more = screen.getByText('More', { exact: true });
+  await userEvent.setup().click(more);
+  const utilities = container.querySelector<HTMLElement>('.pc-mobile-more__controls');
+  if (!utilities) throw new Error('Missing mobile utilities');
+  const capability = within(utilities).getByRole('button', { name: 'Governed actions' });
+  expect(getComputedStyle(capability).minHeight).toBe('44px');
+  expect(within(utilities).getByRole('button', { name: /^Theme:/u })).toBeTruthy();
+  expect(within(utilities).getByRole('button', { name: /Show inspector/u })).toBeTruthy();
+  await userEvent.setup().click(within(utilities).getByRole('button', { name: /^Theme:/u }));
+  expect(document.documentElement.getAttribute('data-theme')).toBe('light');
+  rerender(
+    <DashboardProviders
+      buildId="launcher-name-fixture"
+      initialHash="#/home"
+      bootPhase="compatible"
+      connection={{ state: 'connected', label: 'Connected', reason: 'Validated fixture' }}
+    >
+      <UnifiedShell />
+    </DashboardProviders>,
+  );
+  await userEvent.setup().click(screen.getByText('More', { exact: true }));
+  expect(within(utilities).getByRole('button', { name: 'Read-only' })).toBeTruthy();
+  document.querySelector('[data-shell-name-test]')?.remove();
+  applyShellStyles(1440);
+  act(() => {
+    vi.stubGlobal('innerWidth', 1440);
+    window.dispatchEvent(new Event('resize'));
+  });
+  expect(screen.getByRole('button', { name: 'Theme: light. Switch to dark.' })).toBeTruthy();
 });
 
 it('opens only a selected inspector over the existing main content', async () => {
@@ -704,7 +729,7 @@ it.each([
   },
 );
 
-it('shows only the page title and consistent touch controls in the mobile topbar', () => {
+it('shows the logo, page title, Live indicator and one search control in the mobile topbar', () => {
   const { container } = renderNamedShell(390, '#/home');
   const topbar = container.querySelector<HTMLElement>('.pc-topbar');
   if (!topbar) throw new Error('Missing topbar');
@@ -718,7 +743,7 @@ it('shows only the page title and consistent touch controls in the mobile topbar
   const controls = topbar.querySelectorAll<HTMLElement>(
     '.pc-topbar__palette, .pc-topbar__end > button.pc-conn, .pc-icon-button',
   );
-  expect(controls.length).toBeGreaterThanOrEqual(2);
+  expect(controls).toHaveLength(1);
   const styles = [...controls].map((control) => getComputedStyle(control));
   for (const style of styles) {
     expect(style.width).toBe('44px');
@@ -727,6 +752,16 @@ it('shows only the page title and consistent touch controls in the mobile topbar
     expect(style.backgroundColor).toBe(styles[0].backgroundColor);
     expect(style.border).toBe(styles[0].border);
   }
+  expect(getComputedStyle(topbar.querySelector('.pc-topbar__logo') as Element).display).toBe(
+    'block',
+  );
+  expect(visibleText(topbar.querySelector('.pc-conn--watcher') as HTMLElement)).toBe('Live');
+  const tab = container.querySelector<HTMLElement>('.pc-mobile-nav__item[aria-current="page"]');
+  if (!tab) throw new Error('Missing active mobile tab');
+  expect(getComputedStyle(tab).backgroundColor).toBe('rgba(0, 0, 0, 0)');
+  expect(getComputedStyle(tab).color).not.toBe(
+    getComputedStyle(tab.querySelector('svg') as Element).color,
+  );
   const status = container.querySelector<HTMLElement>('.pc-statusbar .pc-watcher');
   expect(visibleText(status as HTMLElement)).toBe('Live');
   expect(computeAccessibleName(status as HTMLElement)).toBe('watcher connected');

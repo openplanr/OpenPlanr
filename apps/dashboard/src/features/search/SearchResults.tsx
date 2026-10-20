@@ -6,19 +6,24 @@ import {
 } from '../../design-system/components/artifact-row.js';
 import {
   ArtifactRowTitle,
+  ArtifactStatus,
   ArtifactTag,
   type ArtifactType,
   PcIcon,
   type PcIconName,
 } from '../../design-system/components/index.js';
-import type { DashboardSearchHit, DashboardUnsupportedIdentity } from './search-index.js';
+import {
+  type DashboardSearchHit,
+  type DashboardUnsupportedIdentity,
+  searchHitDisplayId,
+} from './search-index.js';
 
 const GROUP_ORDER = Object.freeze(['planning', 'route', 'operate', 'command'] as const);
 const GROUP_LABEL = Object.freeze({
-  route: 'Go to',
-  planning: 'Planning work',
+  route: 'Views',
+  planning: 'Nodes',
   operate: 'Operate items',
-  command: 'Commands to copy',
+  command: 'Commands',
 } satisfies Record<DashboardSearchHit['source'], string>);
 const GROUP_ICON = Object.freeze({
   route: 'chevron-right',
@@ -38,12 +43,6 @@ const PLANNING_TAG: Readonly<Record<string, ArtifactType>> = {
   sprint: 'sprint',
   quick: 'qt',
 };
-
-function displayHitId(hit: DashboardSearchHit): string {
-  return hit.source === 'planning'
-    ? (hit.id.slice('planning:'.length).split('/').at(-1) ?? hit.id)
-    : '';
-}
 
 function humanLabel(value: string): string {
   const words = value
@@ -98,10 +97,12 @@ export function SearchResults({
   onSelect,
   onFocus,
   commandForHit,
-  displayIdForHit = displayHitId,
+  displayIdForHit = searchHitDisplayId,
   onCopyCommand,
 }: SearchResultsProps) {
   const grouped = groupHits(hits);
+  const selectedId =
+    activeId ?? (activeHref ? hits.find((hit) => hit.href === activeHref)?.id : hits[0]?.id);
   const hasHits = hits.length > 0;
   const hasUnsupported = unsupported.length > 0;
 
@@ -131,20 +132,19 @@ export function SearchResults({
             <ol
               className="pc-palette__list"
               aria-label={GROUP_LABEL[source]}
-              style={artifactRowStyle(rows.map(displayIdForHit))}
+              style={artifactRowStyle(rows.map((hit) => displayIdForHit(hit)))}
             >
               {rows.map((hit) => {
                 const command =
                   hit.source === 'command' ? hit.command : (commandForHit?.(hit) ?? null);
                 const occurrence = occurrences.get(hit.id) ?? 0;
                 occurrences.set(hit.id, occurrence + 1);
-                const active = activeId
-                  ? hit.id === activeId
-                  : hit.href !== null && hit.href === activeHref;
+                const active = hit.id === selectedId;
                 return (
                   <li
                     key={`${hit.id}:${occurrence}`}
                     className="pc-artifact-row pc-palette__result"
+                    data-source={hit.source}
                     data-selected={active || undefined}
                   >
                     <button
@@ -169,11 +169,16 @@ export function SearchResults({
                     >
                       <span className="pc-artifact-row__id pc-palette__identity">
                         {hit.source === 'planning' && PLANNING_TAG[hit.kind] ? (
-                          <ArtifactTag type={PLANNING_TAG[hit.kind]}>
-                            {displayIdForHit(hit)}
-                          </ArtifactTag>
+                          <>
+                            {hit.status ? (
+                              <ArtifactStatus status={hit.status} size="sm" variant="glyph" />
+                            ) : null}
+                            <ArtifactTag type={PLANNING_TAG[hit.kind]}>
+                              {displayIdForHit(hit)}
+                            </ArtifactTag>
+                          </>
                         ) : (
-                          <PcIcon name={GROUP_ICON[source]} size={14} />
+                          <PcIcon name={GROUP_ICON[source]} size={16} />
                         )}
                       </span>
                       <ArtifactRowTitle>{hit.title}</ArtifactRowTitle>

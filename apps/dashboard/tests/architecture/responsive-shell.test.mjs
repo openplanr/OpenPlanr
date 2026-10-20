@@ -58,5 +58,5 @@ test('capability tooltip controls meet the minimum active target height', () => 
   const chip = styles.match(/\.pc-conn\s*\{([^}]*)\}/u)?.[1] ?? '';
   const height = Number(chip.match(/height:\s*(\d+)px/u)?.[1]);
   assert(height >= 24, 'desktop and tablet capability controls must be at least 24px high');
-  assert.match(styles, /\.pc-topbar__end \.pc-conn\s*\{[^}]*min-height: 44px/u);
+  assert.match(styles, /\.pc-mobile-more__controls \.pc-conn\s*\{[^}]*min-height: 44px/u);
 });

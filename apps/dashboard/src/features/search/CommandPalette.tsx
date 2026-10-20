@@ -28,6 +28,12 @@ import './command-palette.css';
 const EMPTY_SOURCES: DashboardSearchSources = Object.freeze({});
 const EMPTY_OPERATE_BINDINGS = Object.freeze([]) as readonly DashboardQueryIdentity[];
 const PLACEHOLDER = 'Jump to a view or an artifact…';
+const TYPE_PREFIX = /^@(spec|story|task|backlog|adr|sprint|view|command)(?:\s+|$)/iu;
+const PALETTE_FILTERS = [
+  { label: 'All', type: null },
+  { label: 'BL', type: 'backlog' },
+  { label: 'SPEC', type: 'spec' },
+] as const;
 
 function humanLabel(value: string): string {
   const words = value.replaceAll('-', ' ').replaceAll('_', ' ').trim();
@@ -310,7 +316,7 @@ function useSearchState(
     activateHit,
     hits,
     unsupported,
-    active: hits.find((hit) => hit.id === nav.getActive()?.id) ?? null,
+    active: hits.find((hit) => hit.id === nav.getActive()?.id) ?? hits[0] ?? null,
     selectedOperate,
     operateSearchState: operateSearch.state,
     onKeyDown,
@@ -511,48 +517,69 @@ export function CommandPalette({
       <div className="pc-palette__panel" role="document">
         <div className="pc-palette__search">
           <div className="pc-palette__input-row">
-            <PcIcon name="search" size={15} color="var(--pc-text-tertiary)" />
-            <span id={`${listId}-label`} className="pc-visually-hidden">
-              Command palette
-            </span>
-            <input
-              ref={inputRef}
-              id={`${listId}-input`}
-              className="pc-palette__input"
-              type="search"
-              value={search.query}
-              placeholder={PLACEHOLDER}
-              aria-label="Search views and artifacts"
-              aria-controls={listId}
-              aria-describedby={
-                selectedCommand?.source === 'command' ? `${listId}-command-reason` : undefined
-              }
-              autoComplete="off"
-              spellCheck={false}
-              onChange={(event) => setQuery(event.target.value)}
-              onCompositionStart={() => {
-                composingRef.current = true;
-              }}
-              onCompositionEnd={() => {
-                composingRef.current = false;
-              }}
-              onKeyDown={(event) => {
-                if (
-                  event.defaultPrevented ||
-                  composingRef.current ||
-                  event.nativeEvent.isComposing ||
-                  event.keyCode === 229 ||
-                  !isTopmost()
-                )
-                  return;
-                if (event.key === 'Escape') {
-                  event.preventDefault();
-                  onClose();
-                  return;
+            <div className="pc-palette__query">
+              <PcIcon name="search" size={15} color="var(--pc-text-tertiary)" />
+              <span id={`${listId}-label`} className="pc-visually-hidden">
+                Command palette
+              </span>
+              <input
+                ref={inputRef}
+                id={`${listId}-input`}
+                className="pc-palette__input"
+                type="search"
+                value={search.query}
+                placeholder={PLACEHOLDER}
+                aria-label="Search views and artifacts"
+                aria-controls={listId}
+                aria-describedby={
+                  selectedCommand?.source === 'command' ? `${listId}-command-reason` : undefined
                 }
-                search.onKeyDown(event, selectHit);
-              }}
-            />
+                autoComplete="off"
+                spellCheck={false}
+                onChange={(event) => setQuery(event.target.value)}
+                onCompositionStart={() => {
+                  composingRef.current = true;
+                }}
+                onCompositionEnd={() => {
+                  composingRef.current = false;
+                }}
+                onKeyDown={(event) => {
+                  if (
+                    event.defaultPrevented ||
+                    composingRef.current ||
+                    event.nativeEvent.isComposing ||
+                    event.keyCode === 229 ||
+                    !isTopmost()
+                  )
+                    return;
+                  if (event.key === 'Escape') {
+                    event.preventDefault();
+                    onClose();
+                    return;
+                  }
+                  search.onKeyDown(event, selectHit);
+                }}
+              />
+            </div>
+            <fieldset className="pc-palette__filters" aria-label="Filter search results">
+              {PALETTE_FILTERS.map(({ label, type }) => (
+                <button
+                  key={label}
+                  type="button"
+                  className="pc-palette__filter"
+                  aria-pressed={
+                    (search.query.trim().match(TYPE_PREFIX)?.[1].toLowerCase() ?? null) === type
+                  }
+                  onClick={() => {
+                    const term = search.query.trim().replace(TYPE_PREFIX, '').trim();
+                    setQuery(type ? `@${type}${term ? ` ${term}` : ''}` : term);
+                    inputRef.current?.focus();
+                  }}
+                >
+                  {label}
+                </button>
+              ))}
+            </fieldset>
             <Kbd size="sm">esc</Kbd>
           </div>
           <p className="pc-palette__filter-help">
@@ -603,6 +630,9 @@ export function CommandPalette({
             )}
           </div>
           <div className="pc-palette__foot">
+            <span className="pc-palette__key">
+              <Kbd size="sm">Tab</Kbd> type filter
+            </span>
             <span className="pc-palette__key">
               <Kbd size="sm">↑</Kbd>
               <Kbd size="sm">↓</Kbd> move

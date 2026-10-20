@@ -101,7 +101,24 @@ export function BoardWorkspace({
       <div className="pc-visually-hidden" role="status" aria-live="polite">
         {notice || removalNotice || missingFocus}
       </div>
-      <Toolbar>
+      <Toolbar
+        right={
+          <div className="pc-status-board__command">
+            <CommandHint
+              command={statusCopy?.commands[0] ?? ''}
+              label="Copy status command"
+              disabled={!statusCopy?.commands.length}
+              disabledReason={
+                statusCopy?.skipped[0] ??
+                (selected ? undefined : 'Focus a card to inspect its status command.')
+              }
+              onCopy={copy}
+              shortcutsEnabled={shortcuts}
+              size="sm"
+            />
+          </div>
+        }
+      >
         <Select
           ariaLabel="Columns"
           value="status"
@@ -148,7 +165,11 @@ export function BoardWorkspace({
           />
         </div>
       ) : (
-        <div data-scroll-context="board" className="pc-status-board">
+        <div data-scroll-context="board" data-swimlanes={swimlanes} className="pc-status-board">
+          <p className="pc-status-board__proposal">
+            Proposed for Phase 2: drag a card to copy a status command, with a keyboard equivalent.
+            Cards remain read-only.
+          </p>
           <section
             className="pc-status-board__totals"
             data-done-expanded={doneExpanded}
@@ -156,7 +177,7 @@ export function BoardWorkspace({
           >
             {projection.columns.map((column) => (
               <div key={column.key}>
-                <ArtifactStatus status={column.key} size="sm" />
+                <ArtifactStatus status={column.key} size="sm" variant="legend" />
                 <span>{column.nodes.length}</span>
               </div>
             ))}
@@ -194,7 +215,7 @@ export function BoardWorkspace({
                     collapsed={
                       group.key === 'done' && doneExpanded === false && group.nodes.length > 0
                     }
-                    expandDone={expandDone}
+                    toggleDone={() => setDoneExpanded(!doneExpanded)}
                     target={target}
                   />
                 ))}
@@ -203,50 +224,30 @@ export function BoardWorkspace({
           ))}
         </div>
       )}
-      <div className="pc-status-board__pager">
-        {pages > 1 ? (
-          <>
-            <Button
-              size="sm"
-              disabled={currentPage === 0}
-              disabledReason={currentPage === 0 ? 'First page of spec lanes' : undefined}
-              onClick={() => setPage(currentPage - 1)}
-            >
-              Previous lanes
-            </Button>
-            <span>
-              Lanes {currentPage * BOARD_LANE_PAGE_SIZE + 1}-
-              {Math.min(lanes.length, (currentPage + 1) * BOARD_LANE_PAGE_SIZE)} of {lanes.length}
-            </span>
-            <Button
-              size="sm"
-              disabled={currentPage + 1 === pages}
-              disabledReason={currentPage + 1 === pages ? 'Last page of spec lanes' : undefined}
-              onClick={() => setPage(currentPage + 1)}
-            >
-              Next lanes
-            </Button>
-          </>
-        ) : null}
-      </div>
-      <div className="pc-status-board__command">
-        <CommandHint
-          command={statusCopy?.commands[0] ?? ''}
-          label="Copy status command"
-          disabled={!statusCopy?.commands.length}
-          disabledReason={
-            statusCopy?.skipped[0] ??
-            (selected ? undefined : 'Focus a card to inspect its status command.')
-          }
-          onCopy={copy}
-          shortcutsEnabled={shortcuts}
-          size="sm"
-        />
-      </div>
-      <p className="pc-status-board__proposal">
-        Proposed for Phase 2: drag a card to copy a status command, with a keyboard equivalent.
-        Cards remain read-only.
-      </p>
+      {pages > 1 ? (
+        <div className="pc-status-board__pager">
+          <Button
+            size="sm"
+            disabled={currentPage === 0}
+            disabledReason={currentPage === 0 ? 'First page of spec lanes' : undefined}
+            onClick={() => setPage(currentPage - 1)}
+          >
+            Previous lanes
+          </Button>
+          <span>
+            Lanes {currentPage * BOARD_LANE_PAGE_SIZE + 1}-
+            {Math.min(lanes.length, (currentPage + 1) * BOARD_LANE_PAGE_SIZE)} of {lanes.length}
+          </span>
+          <Button
+            size="sm"
+            disabled={currentPage + 1 === pages}
+            disabledReason={currentPage + 1 === pages ? 'Last page of spec lanes' : undefined}
+            onClick={() => setPage(currentPage + 1)}
+          >
+            Next lanes
+          </Button>
+        </div>
+      ) : null}
     </div>
   );
 }

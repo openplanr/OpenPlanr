@@ -69,7 +69,7 @@ function bundleFixture() {
             <Input ariaLabel="Responsive filter" width={340} value="" onChange={()=>undefined} suffix="/" />
           </div>
           <section className="pc-palette__search" id="palette" style={{width:'min(100%, 650px)'}}>
-            <div className="pc-palette__input-row"><input className="pc-palette__input" type="search" aria-label="Geometry query" /></div>
+            <div className="pc-palette__input-row"><div className="pc-palette__query"><input className="pc-palette__input" type="search" aria-label="Geometry query" /></div></div>
             <SearchResults hits={hits} activeHref={null} listId="row-results" onSelect={() => undefined} displayIdForHit={hit => searchHitDisplayId(hit,{planningNodes:paletteNodes})} />
           </section>
           <section className="op-workspace op-planning pc-list" id="list" style={artifactRowStyle(nodes.map(node=>node.id))}>
@@ -88,8 +88,8 @@ function bundleFixture() {
               <DataTable columns={LIST_COLUMNS} rows={[nodes[0]]} caption="One geometry artifact" />
             </div>
           </section>
-          <div id="board" style={{width:300}}>
-            <BoardColumn group={{key:'in-progress',nodes}} laneKey="none" collapsed={false} expandDone={()=>undefined} target={null} />
+          <div id="board" style={{width:300,height:600}}>
+            <BoardColumn group={{key:'in-progress',nodes}} laneKey="none" collapsed={false} toggleDone={()=>undefined} target={null} />
           </div>
         </>));
       `,
@@ -188,7 +188,9 @@ test('keeps rows, complete tags, titles and copy hit targets inside their geomet
                 top: r.top,
                 bottom: r.bottom,
                 height: r.height,
-                stacked: row.dataset.layout === 'stacked',
+                stacked:
+                  row.dataset.layout === 'stacked' ||
+                  (window.innerWidth < 900 && row.dataset.mobileLayout === 'stacked'),
                 linkTop: l.top,
                 linkBottom: l.bottom,
                 tagRight: a.right,
@@ -210,7 +212,7 @@ test('keeps rows, complete tags, titles and copy hit targets inside their geomet
           rows.forEach((row, index) => {
             if (row.stacked) {
               assert(row.tagBottom <= row.titleTop);
-              assert(row.titleWidth >= row.rowWidth - (width < 600 ? 24 : 40) - 1);
+              assert(row.titleWidth >= row.rowWidth - (width < 900 ? 32 : 40) - 1);
             } else {
               assert.equal(row.height, 44);
               assert(row.tagRight <= row.titleLeft);
@@ -361,6 +363,14 @@ test('keeps rows, complete tags, titles and copy hit targets inside their geomet
       );
       assert.equal(new Set(table.map((row) => row.titleLeft)).size, 1);
       assert(table.every((row) => row.tagRight <= row.titleLeft));
+      const boardViewport = await page
+        .locator('#board .pc-status-board__cards')
+        .evaluate((element) => ({
+          height: element.clientHeight,
+          overflow: getComputedStyle(element).overflowY,
+        }));
+      assert.equal(boardViewport.height, 584, 'Board cards fill the column inside its padding');
+      assert.equal(boardViewport.overflow, 'auto');
       const cards = await page.locator('#board .pc-status-board__card').evaluateAll((elements) =>
         elements.map((element) => {
           const r = element.getBoundingClientRect(),

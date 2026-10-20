@@ -187,13 +187,6 @@
 }
 
 @media (width < 600px) {
-  .pc-home__card .pc-artifact-row {
-    padding-inline: 12px;
-    column-gap: 8px;
-  }
-  .pc-home__card .pc-artifact-row__link {
-    column-gap: 8px;
-  }
   .pc-home__card .pc-artifact-row__meta-group {
     gap: 6px;
   }
