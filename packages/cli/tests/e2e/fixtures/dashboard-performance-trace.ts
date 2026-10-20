@@ -12,6 +12,7 @@ import {
   type RendererTraceEvent,
   rendererFrameWork,
   type SelectionSample,
+  TRACE_BUDGETS,
   TRACE_PLAN,
 } from '../../dashboard/fixtures/dashboard-trace-model.js';
 import {
@@ -590,7 +591,14 @@ export function registerDashboardPerformanceTraceTests() {
       };
       // CI keeps logs on every run but artifacts only on failure, so the numbers go to the log.
       process.stdout.write(
-        `dashboard performance ${dataset}: ${JSON.stringify({ runner: metadata.runner, summaries: evaluation.summaries, failures: evaluation.failures })}\n`,
+        `dashboard performance ${dataset}: ${JSON.stringify({
+          runner: metadata.runner,
+          coldShellMs: metrics.coldShellMs,
+          usefulSnapshotMs: metrics.usefulSnapshotMs,
+          summaries: evaluation.summaries,
+          budgets: TRACE_BUDGETS,
+          failures: evaluation.failures,
+        })}\n`,
       );
       await testInfo.attach('dashboard-performance.json', {
         body: Buffer.from(
