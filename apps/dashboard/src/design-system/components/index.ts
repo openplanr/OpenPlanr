@@ -9,6 +9,7 @@ export {
 export {
   ArtifactRowCopy,
   ArtifactRowMeta,
+  ArtifactRowMetaGroup,
   ArtifactRowTitle,
   artifactRowStyle,
 } from './artifact-row.js';

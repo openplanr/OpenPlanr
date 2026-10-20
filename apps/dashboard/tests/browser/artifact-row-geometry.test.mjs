@@ -197,6 +197,8 @@ test('keeps rows, complete tags, titles and copy hit targets inside their geomet
                 tagBottom: a.bottom,
                 titleTop: b.top,
                 rowWidth: r.width,
+                merged: Boolean(row.querySelector('[data-merged="true"]')),
+                linkWidth: l.width,
                 titleLeft: b.left,
                 titleWidth: b.width,
                 titleHeight: b.height,
@@ -212,7 +214,10 @@ test('keeps rows, complete tags, titles and copy hit targets inside their geomet
           rows.forEach((row, index) => {
             if (row.stacked) {
               assert(row.tagBottom <= row.titleTop);
-              assert(row.titleWidth >= row.rowWidth - (width < 900 ? 32 : 40) - 1);
+              assert(
+                row.titleWidth >=
+                  (row.merged ? row.linkWidth : row.rowWidth - (width < 900 ? 32 : 40)) - 1,
+              );
             } else {
               assert.equal(row.height, 44);
               assert(row.tagRight <= row.titleLeft);
@@ -391,6 +396,208 @@ test('keeps rows, complete tags, titles and copy hit targets inside their geomet
       });
     } finally {
       await context.close();
+    }
+  }
+});
+
+function triggerFocusReport(element) {
+  const active = document.activeElement;
+  return {
+    restored: active === element,
+    activeElement: active
+      ? {
+          tag: active.tagName,
+          class: active.getAttribute('class'),
+          ariaLabel: active.getAttribute('aria-label'),
+        }
+      : null,
+  };
+}
+
+test('merges touch row metadata into an exclusive details target and preserves fine tooltips', {
+  timeout: 60_000,
+}, async (t) => {
+  const code = (await bundleFixture()).outputFiles[0].text;
+  const browser = await launchBrowser();
+  t.after(() => browser.close());
+  for (const theme of ['dark', 'light']) {
+    for (const coarse of [true, false]) {
+      for (const width of [390, 1440]) {
+        const context = await browser.newContext({
+          viewport: { width, height: 844 },
+          hasTouch: coarse,
+          isMobile: coarse && width === 390,
+          reducedMotion: 'reduce',
+        });
+        try {
+          await context.route('**/*', (route) => route.abort());
+          const page = await context.newPage();
+          await page.setContent(
+            `<!doctype html><html data-theme="${theme}"><meta name="viewport" content="width=device-width,initial-scale=1"><body><div id="root"></div></body></html>`,
+          );
+          await page.addStyleTag({ content: styles });
+          await page.addScriptTag({ content: code });
+          await page.evaluate(async () => {
+            await document.fonts.ready;
+            await new Promise((done) => requestAnimationFrame(() => requestAnimationFrame(done)));
+          });
+          assert.equal(await page.evaluate(() => matchMedia('(pointer: coarse)').matches), coarse);
+          const row = page.locator('[data-attention="waiting"] .pc-home__row').first();
+          await row.scrollIntoViewIfNeeded();
+          const details = row.getByRole('button', { name: /^Details for T-901:/u });
+          const labels = [
+            '0 downstream open tasks',
+            'Waits on unfinished dependencies: SPEC-001, SPEC-002',
+          ];
+          if (!coarse) {
+            assert.equal(await details.count(), 0);
+            assert.equal(await row.locator('.pc-artifact-row__meta').count(), 2);
+            for (const [index, label] of labels.entries()) {
+              await row.locator('.pc-artifact-row__meta').nth(index).focus();
+              await page.getByRole('tooltip', { name: label, exact: true }).waitFor();
+              await page.keyboard.press('Escape');
+              await page.getByRole('tooltip').waitFor({ state: 'hidden' });
+            }
+            continue;
+          }
+          assert.equal(await row.locator('.pc-artifact-row__meta').count(), 0);
+          assert.equal(
+            await details.getAttribute('aria-label'),
+            `Details for T-901: ${labels.join(', ')}`,
+          );
+          const hit = await details.evaluate((element) => {
+            const rect = element.getBoundingClientRect();
+            const row = element.closest('.pc-artifact-row');
+            const link = row.querySelector('.pc-artifact-row__link').getBoundingClientRect();
+            const copy = row.querySelector('.pc-command-hint__copy').getBoundingClientRect();
+            const copyArea = {
+              left: (copy.left + copy.right) / 2 - 22,
+              right: (copy.left + copy.right) / 2 + 22,
+              top: (copy.top + copy.bottom) / 2 - 22,
+              bottom: (copy.top + copy.bottom) / 2 + 22,
+            };
+            const overlaps = (other) =>
+              rect.left < other.right &&
+              rect.right > other.left &&
+              rect.top < other.bottom &&
+              rect.bottom > other.top;
+            const sampleBox = {
+              left: (rect.left + rect.right) / 2 - 22,
+              top: (rect.top + rect.bottom) / 2 - 22,
+            };
+            const misses = [];
+            let owned = 0;
+            // Sample cell centres inside [0, 44) to avoid ambiguous outer-edge hits.
+            for (let offsetY = 1; offsetY < 44; offsetY += 2) {
+              for (let offsetX = 1; offsetX < 44; offsetX += 2) {
+                const x = sampleBox.left + offsetX;
+                const y = sampleBox.top + offsetY;
+                const target = document.elementFromPoint(x, y);
+                if (target && element.contains(target)) owned++;
+                else
+                  misses.push({
+                    x,
+                    y,
+                    offsetX,
+                    offsetY,
+                    element: target?.outerHTML.slice(0, 500) ?? null,
+                  });
+              }
+            }
+            return {
+              width: rect.width,
+              height: rect.height,
+              owned,
+              sampleBox,
+              misses,
+              overlapsLink: overlaps(link),
+              overlapsCopy: overlaps(copyArea),
+            };
+          });
+          const report = JSON.stringify({ theme, viewportWidth: width, ...hit });
+          assert(hit.width >= 44 && hit.height >= 44, report);
+          assert.equal(hit.owned, 484, report);
+          assert.equal(hit.overlapsLink, false, report);
+          assert.equal(hit.overlapsCopy, false, report);
+          const before = await row.boundingBox();
+          await page.evaluate(() => {
+            window.rowShiftTotal = 0;
+            window.rowShifts = [];
+            new PerformanceObserver((list) => {
+              for (const entry of list.getEntries()) {
+                window.rowShiftTotal += entry.value;
+                window.rowShifts.push({
+                  value: entry.value,
+                  startTime: entry.startTime,
+                  hadRecentInput: entry.hadRecentInput,
+                  scrollX: window.scrollX,
+                  scrollY: window.scrollY,
+                  sources: entry.sources.map((source) => ({
+                    node:
+                      source.node instanceof Element
+                        ? source.node.outerHTML.slice(0, 500)
+                        : (source.node?.nodeName ?? null),
+                    previousRect: source.previousRect.toJSON(),
+                    currentRect: source.currentRect.toJSON(),
+                  })),
+                });
+              }
+            }).observe({ type: 'layout-shift' });
+          });
+          await details.tap();
+          const popover = page.getByRole('dialog', { name: 'Details for T-901', exact: true });
+          await popover.waitFor();
+          assert.equal(
+            await popover.evaluate((element) => {
+              const overlay = element.closest('[data-radix-popper-content-wrapper]');
+              if (!overlay) throw new Error('Details popover is missing its positioning wrapper');
+              return getComputedStyle(overlay).position;
+            }),
+            'fixed',
+          );
+          assert.equal(await page.locator('body').getAttribute('data-scroll-locked'), null);
+          const text = (await popover.textContent()).replace(/\s+/gu, ' ');
+          assert(text.includes(labels[0]));
+          assert(text.includes('Waits on unfinished dependencies:'));
+          assert.deepEqual(await popover.locator('.pc-artifact-tag').allTextContents(), [
+            'SPEC-001',
+            'SPEC-002',
+          ]);
+          assert.equal(await popover.locator('li').count(), labels.length);
+          await page.keyboard.press('Escape');
+          await popover.waitFor({ state: 'hidden' });
+          const focusAfterEscape = await details.evaluate(triggerFocusReport);
+          assert(
+            focusAfterEscape.restored,
+            JSON.stringify({ theme, viewportWidth: width, close: 'Escape', ...focusAfterEscape }),
+          );
+          await details.tap();
+          await popover.waitFor();
+          await page.touchscreen.tap(1, 1);
+          await popover.waitFor({ state: 'hidden' });
+          const focusAfterOutsideTap = await details.evaluate(triggerFocusReport);
+          assert(
+            focusAfterOutsideTap.restored,
+            JSON.stringify({
+              theme,
+              viewportWidth: width,
+              close: 'outside tap',
+              ...focusAfterOutsideTap,
+            }),
+          );
+          assert.deepEqual(await row.boundingBox(), before);
+          await page.evaluate(
+            () => new Promise((done) => requestAnimationFrame(() => requestAnimationFrame(done))),
+          );
+          const shifts = await page.evaluate(() => ({
+            total: window.rowShiftTotal,
+            entries: window.rowShifts,
+          }));
+          assert.equal(shifts.total, 0, JSON.stringify({ theme, viewportWidth: width, ...shifts }));
+        } finally {
+          await context.close();
+        }
+      }
     }
   }
 });

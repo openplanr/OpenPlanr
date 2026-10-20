@@ -153,10 +153,10 @@ function renderSelection(state: CoordinatorState, context: KeyboardContext): voi
   context.announce(`${state.selected.size} selected`);
 }
 
-function topModal(document: Document): HTMLElement | undefined {
+function topKeyboardLayer(document: Document): HTMLElement | undefined {
   return Array.from(
     document.querySelectorAll<HTMLElement>(
-      'dialog[open], [role="dialog"][aria-modal="true"], [role="alertdialog"]',
+      'dialog[open], [role="dialog"][aria-modal="true"], [role="alertdialog"], [data-keyboard-layer="true"]',
     ),
   )
     .filter(visible)
@@ -167,8 +167,8 @@ function paletteChord(stroke: KeyStroke): boolean {
   return stroke.command && !stroke.event.altKey && !stroke.event.shiftKey && stroke.key === 'k';
 }
 
-function targetOwnsKeys(stroke: KeyStroke, modal: HTMLElement | undefined): boolean {
-  if (modal || typing(stroke.target)) return true;
+function targetOwnsKeys(stroke: KeyStroke, layer: HTMLElement | undefined): boolean {
+  if (layer || typing(stroke.target)) return true;
   return (
     Boolean(stroke.target?.closest('details[open], [role="menu"], [role="menuitem"]')) &&
     stroke.event.key !== 'Escape'
@@ -182,14 +182,14 @@ function skipShortcut(stroke: KeyStroke, state: CoordinatorState, document: Docu
     return true;
   }
   if (event.defaultPrevented) return true;
-  const modal = topModal(document);
+  const layer = topKeyboardLayer(document);
   if (paletteChord(stroke)) {
-    if (modal && (!context.paletteOpen || !modal.matches('.pc-palette'))) return true;
+    if (layer && (!context.paletteOpen || !layer.matches('.pc-palette'))) return true;
     consume(event);
     context.togglePalette();
     return true;
   }
-  if (targetOwnsKeys(stroke, modal) || stroke.command || event.altKey) return true;
+  if (targetOwnsKeys(stroke, layer) || stroke.command || event.altKey) return true;
   if (event.key.length !== 1 || event.key === ' ' || context.singleLetters) return false;
   if (stroke.key === 'c' && target?.closest('.pc-command-hint')) event.stopPropagation();
   return true;

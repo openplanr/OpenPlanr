@@ -161,11 +161,13 @@ describe('dashboard keyboard coordinator', () => {
     expect(context.openHelp).toHaveBeenCalledTimes(1);
   });
 
-  it.each(['dialog', 'modal', 'alertdialog'])('defers keys to an open %s', (kind) => {
+  it.each(['dialog', 'modal', 'alertdialog', 'popover'])('defers keys to an open %s', (kind) => {
     const html =
-      kind === 'dialog'
-        ? '<dialog open></dialog>'
-        : `<div role="${kind === 'modal' ? 'dialog' : kind}" aria-modal="true"></div>`;
+      kind === 'popover'
+        ? '<div role="dialog" data-keyboard-layer="true"></div>'
+        : kind === 'dialog'
+          ? '<dialog open></dialog>'
+          : `<div role="${kind === 'modal' ? 'dialog' : kind}" aria-modal="true"></div>`;
     const { context, clicks } = fixture(html + list);
     for (const value of ['j', 'k', 'c', '/', '?', 'Escape', 'Enter', 'ArrowDown'])
       key(document.body, value);
@@ -177,8 +179,11 @@ describe('dashboard keyboard coordinator', () => {
     expect(clicks).not.toHaveBeenCalled();
   });
 
-  it('ignores hidden overlays when deciding whether shortcuts are available', () => {
-    const { context } = fixture('<dialog open hidden></dialog>');
+  it.each([
+    '<dialog open hidden></dialog>',
+    '<div role="dialog" data-keyboard-layer="true" hidden></div>',
+  ])('ignores hidden overlays when deciding whether shortcuts are available: %s', (html) => {
+    const { context } = fixture(html);
     key(document.body, '?');
     expect(context.openHelp).toHaveBeenCalledTimes(1);
   });

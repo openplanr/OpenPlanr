@@ -2,9 +2,14 @@
 
 import { readFileSync } from 'node:fs';
 import { deriveAttention } from '@openplanr/protocol/dashboard/planning-attention.mjs';
-import { act, cleanup, fireEvent, render, screen, within } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { userEvent } from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { parseDashboardLocation } from '../../../../apps/dashboard/src/app/router.js';
+import {
+  ArtifactRowMeta,
+  ArtifactRowMetaGroup,
+} from '../../../../apps/dashboard/src/design-system/components/artifact-row.js';
 import { ListPage } from '../../../../apps/dashboard/src/features/planning/ListPage.js';
 import { OverviewPage } from '../../../../apps/dashboard/src/features/planning/OverviewPage.js';
 import {
@@ -21,6 +26,7 @@ import {
   clearInspector,
   useInspectorStore,
 } from '../../../../apps/dashboard/src/features/shell/inspector-selection.js';
+import { installKeyboardCoordinator } from '../../../../apps/dashboard/src/features/shell/keyboard-coordinator.js';
 import {
   PlanningLiveFeedback,
   usePlanningLiveFeedback,
@@ -32,6 +38,7 @@ import {
 import { createDashboardQueryIdentity } from '../../../../apps/dashboard/src/lib/binding/query-identity.js';
 import { PlanningPresentationProvider } from '../../../../apps/dashboard/src/lib/routing/planning-presentation.js';
 import { validatePlanningView } from '../../../../apps/dashboard/src/lib/routing/planning-view-codec.js';
+import { nameFailures } from './control-name-guard.js';
 import {
   ARTBOARD_FIXTURE_CLOCK,
   buildPremiumDashboardFixture,
@@ -349,7 +356,11 @@ describe('Home attention', () => {
       vi.setSystemTime(new Date(ARTBOARD_FIXTURE_CLOCK));
       vi.stubGlobal(
         'matchMedia',
-        vi.fn(() => ({ matches: reduced })),
+        vi.fn((query: string) => ({
+          matches: query === '(prefers-reduced-motion: reduce)' && reduced,
+          addEventListener: vi.fn(),
+          removeEventListener: vi.fn(),
+        })),
       );
       const current = fixture();
       const { container, rerender } = render(<LiveHome current={current} />);
@@ -564,6 +575,130 @@ it('summarizes multiple waiting dependencies with their full accessible ID list'
     'Waits on unfinished dependencies: T-109, T-110',
   );
   expect(row.querySelectorAll('.pc-home__dependency-tag')).toHaveLength(0);
+});
+
+it('keeps every metadata item in one touch popover and restores focus on Escape', async () => {
+  let coarse = true;
+  const listeners = new Set<() => void>();
+  vi.stubGlobal('matchMedia', (query: string) => ({
+    matches: query === '(pointer: coarse)' && coarse,
+    addEventListener: (_event: string, listener: () => void) => listeners.add(listener),
+    removeEventListener: (_event: string, listener: () => void) => listeners.delete(listener),
+  }));
+  const labels = [
+    '10 downstream open tasks',
+    'Waits on unfinished dependencies: T-122',
+    '36 days since authored update (2026-09-13). Git activity is unknown.',
+    'Priority P1',
+    '2026-10-19',
+  ];
+  const items = labels.map((label) => ({
+    key: label,
+    label,
+    control: <ArtifactRowMeta label={label}>{label}</ArtifactRowMeta>,
+  }));
+  const subject = render(<ArtifactRowMetaGroup id="BL-440" items={items} />);
+  const target = screen.getByRole('button', { name: `Details for BL-440: ${labels.join(', ')}` });
+  expect(subject.container.querySelectorAll('.pc-artifact-row__meta')).toHaveLength(0);
+  target.focus();
+  const restoreFocus = vi.spyOn(target, 'focus');
+  fireEvent.click(target);
+  const dialog = await screen.findByRole('dialog', { name: 'Details for BL-440' });
+  expect(document.body.hasAttribute('data-scroll-locked')).toBe(false);
+  expect(dialog.getAttribute('aria-modal')).toBeNull();
+  expect(
+    within(dialog)
+      .getAllByRole('listitem')
+      .map((item) => item.textContent),
+  ).toEqual(labels);
+  expect(await nameFailures(document.body)).toEqual([]);
+  fireEvent.keyDown(document.activeElement ?? document.body, { key: 'Escape' });
+  await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+  await waitFor(() => expect(document.activeElement).toBe(target));
+  expect(restoreFocus).toHaveBeenLastCalledWith({ preventScroll: true });
+  expect(await nameFailures(subject.container)).toEqual([]);
+
+  act(() => {
+    coarse = false;
+    for (const listener of listeners) listener();
+  });
+  expect(screen.queryByRole('button', { name: /^Details for/u })).toBeNull();
+  expect(subject.container.querySelectorAll('.pc-artifact-row__meta')).toHaveLength(5);
+  for (const label of labels)
+    expect(screen.getByRole('button', { name: `${label} ${label}` })).toBeTruthy();
+  const first = subject.container.querySelector<HTMLButtonElement>('.pc-artifact-row__meta');
+  if (!first) throw new Error('Missing fine-pointer metadata control');
+  act(() => first.focus());
+  subject.rerender(
+    <ArtifactRowMetaGroup
+      id="BL-440"
+      items={items.map((item, index) =>
+        index === 0
+          ? {
+              ...item,
+              label: '11 downstream open tasks',
+              control: <ArtifactRowMeta label="11 downstream open tasks">11</ArtifactRowMeta>,
+            }
+          : item,
+      )}
+    />,
+  );
+  expect(document.activeElement).toBe(first);
+  expect(first.textContent).toContain('11 downstream open tasks');
+});
+
+it('restores popover focus during Escape and outside dismissal with the keyboard coordinator active', async () => {
+  vi.stubGlobal('matchMedia', () => ({
+    matches: true,
+    addEventListener: vi.fn(),
+    removeEventListener: vi.fn(),
+  }));
+  const user = userEvent.setup();
+  const items = ['Downstream tasks', 'Waiting dependencies'].map((label) => ({
+    key: label,
+    label,
+    control: <ArtifactRowMeta label={label}>{label}</ArtifactRowMeta>,
+  }));
+  const subject = render(
+    <>
+      <ArtifactRowMetaGroup id="BL-440" items={items} />
+      <button type="button">Outside action</button>
+    </>,
+  );
+  const closeInspector = vi.fn(() => true);
+  const dispose = installKeyboardCoordinator(document, () => ({
+    root: subject.container,
+    singleLetters: true,
+    paletteOpen: false,
+    togglePalette: vi.fn(),
+    openHelp: vi.fn(),
+    navigate: vi.fn(),
+    closeInspector,
+    selectedId: () => null,
+    copy: vi.fn(async () => undefined),
+    announce: vi.fn(),
+  }));
+  try {
+    const target = screen.getByRole('button', { name: /^Details for BL-440:/u });
+    const restoreFocus = vi.spyOn(target, 'focus');
+    await user.click(target);
+    expect(screen.getByRole('dialog', { name: 'Details for BL-440' })).toBeTruthy();
+    fireEvent.keyDown(document.activeElement ?? document.body, { key: 'Escape' });
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(document.activeElement).toBe(target);
+    expect(restoreFocus).toHaveBeenLastCalledWith({ preventScroll: true });
+    expect(closeInspector).not.toHaveBeenCalled();
+
+    await user.click(target);
+    expect(screen.getByRole('dialog', { name: 'Details for BL-440' })).toBeTruthy();
+    await user.click(screen.getByRole('button', { name: 'Outside action' }));
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(document.activeElement).toBe(target);
+    expect(restoreFocus).toHaveBeenLastCalledWith({ preventScroll: true });
+    expect(closeInspector).not.toHaveBeenCalled();
+  } finally {
+    dispose();
+  }
 });
 
 it('keeps List titles in one column with room for every identifier', () => {

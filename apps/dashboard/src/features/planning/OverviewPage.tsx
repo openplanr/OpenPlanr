@@ -1,5 +1,6 @@
 import {
   type ComponentProps,
+  type ReactElement,
   type ReactNode,
   useEffect,
   useId,
@@ -12,6 +13,7 @@ import {
   CardHeader as ArtifactCardHeader,
   ArtifactRowCopy,
   ArtifactRowMeta,
+  ArtifactRowMetaGroup,
   ArtifactRowTitle,
   ArtifactStatus,
   artifactRowStyle,
@@ -63,6 +65,7 @@ export type OverviewPageProps = Readonly<{
 }>;
 
 type AttentionProjection = ReturnType<typeof selectPlanningAttention>;
+type RowReason = ReactElement<ComponentProps<typeof ArtifactRowMeta>> | string;
 
 const PREVIEW_LIMIT = 5;
 
@@ -158,7 +161,7 @@ function HomeRow({
   layout,
 }: {
   node: PlanningModelNode;
-  reason?: ReactNode;
+  reason?: RowReason;
   commandNode?: PlanningModelNode;
   dependencies?: readonly PlanningModelNode[];
   selected: boolean;
@@ -182,32 +185,62 @@ function HomeRow({
         </span>
         <ArtifactRowTitle>{node.title}</ArtifactRowTitle>
       </NodeLink>
-      <span className="pc-artifact-row__meta-group">
-        {reason}
-        {dependencies.length ? (
-          <span className="pc-home__dependencies">
-            {dependencies.length === 1 ? (
-              <Tooltip content={dependencyLabel}>
-                <NodeLink
-                  node={dependencies[0]}
-                  className="pc-artifact-row__meta"
-                  describedBy={dependencyDescriptionId}
-                >
-                  <PcIcon name="git-pull-request" size={13} />
-                  <span className="pc-artifact-row__meta-value">1</span>
-                  <span id={dependencyDescriptionId} className="pc-visually-hidden">
-                    {dependencyLabel}
-                  </span>
-                </NodeLink>
-              </Tooltip>
-            ) : (
-              <ArtifactRowMeta icon="git-pull-request" label={dependencyLabel}>
-                {dependencies.length}
-              </ArtifactRowMeta>
-            )}
-          </span>
-        ) : null}
-      </span>
+      <ArtifactRowMetaGroup
+        id={planningDisplayId(node)}
+        items={[
+          ...(reason
+            ? [
+                {
+                  key: 'reason',
+                  label: typeof reason === 'string' ? reason : reason.props.label,
+                  control: reason,
+                },
+              ]
+            : []),
+          ...(dependencies.length
+            ? [
+                {
+                  key: 'dependencies',
+                  label: dependencyLabel,
+                  content: (
+                    <>
+                      Waits on unfinished dependencies:{' '}
+                      {dependencies.map((dependency, index) => (
+                        <span key={dependency.id}>
+                          {index ? ', ' : null}
+                          <WorkItemChip type={dependency.type} id={planningDisplayId(dependency)} />
+                        </span>
+                      ))}
+                    </>
+                  ),
+                  control: (
+                    <span className="pc-home__dependencies">
+                      {dependencies.length === 1 ? (
+                        <Tooltip content={dependencyLabel}>
+                          <NodeLink
+                            node={dependencies[0]}
+                            className="pc-artifact-row__meta"
+                            describedBy={dependencyDescriptionId}
+                          >
+                            <PcIcon name="git-pull-request" size={13} />
+                            <span className="pc-artifact-row__meta-value">1</span>
+                            <span id={dependencyDescriptionId} className="pc-visually-hidden">
+                              {dependencyLabel}
+                            </span>
+                          </NodeLink>
+                        </Tooltip>
+                      ) : (
+                        <ArtifactRowMeta icon="git-pull-request" label={dependencyLabel}>
+                          {dependencies.length}
+                        </ArtifactRowMeta>
+                      )}
+                    </span>
+                  ),
+                },
+              ]
+            : []),
+        ]}
+      />
       <ArtifactRowCopy
         id={planningDisplayId(node)}
         command={command}
@@ -233,7 +266,7 @@ function AttentionCard({
   attention: AttentionProjection;
   byId: ReadonlyMap<string, PlanningModelNode>;
   selectedId?: string;
-  reason: (node: PlanningModelNode) => ReactNode;
+  reason: (node: PlanningModelNode) => RowReason;
 }) {
   const headingId = useId();
   const ids = planningAttentionIds(attention, filter);

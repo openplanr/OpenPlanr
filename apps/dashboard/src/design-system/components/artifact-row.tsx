@@ -1,4 +1,14 @@
-import { type CSSProperties, type ReactNode, useId } from 'react';
+import { Popover } from 'radix-ui';
+import {
+  type CSSProperties,
+  Fragment,
+  type ReactNode,
+  useEffect,
+  useId,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from 'react';
 import { CommandHint, type CommandHintProps } from './command-hint.js';
 import { PcIcon, type PcIconName } from './console-icon.js';
 import { Tooltip } from './tooltip.js';
@@ -64,6 +74,78 @@ export function ArtifactRowMeta({
         </span>
       </button>
     </Tooltip>
+  );
+}
+
+function coarsePointer() {
+  return window.matchMedia?.('(pointer: coarse)').matches ?? false;
+}
+
+function subscribePointer(onChange: () => void) {
+  const query = window.matchMedia?.('(pointer: coarse)');
+  query?.addEventListener('change', onChange);
+  return () => query?.removeEventListener('change', onChange);
+}
+
+export function ArtifactRowMetaGroup({
+  id,
+  items,
+}: {
+  id: string;
+  items: readonly { key: string; label: string; control: ReactNode; content?: ReactNode }[];
+}) {
+  const coarse = useSyncExternalStore(subscribePointer, coarsePointer, () => false);
+  const trigger = useRef<HTMLButtonElement>(null);
+  const [open, setOpen] = useState(false);
+  const merged = coarse && items.length > 1;
+  useEffect(() => {
+    if (!merged) setOpen(false);
+  }, [merged]);
+  return (
+    <span className="pc-artifact-row__meta-group" data-merged={merged || undefined}>
+      {merged ? (
+        <Popover.Root
+          open={open}
+          onOpenChange={(next) => {
+            if (!next) trigger.current?.focus({ preventScroll: true });
+            setOpen(next);
+          }}
+        >
+          <Popover.Trigger
+            ref={trigger}
+            className="pc-artifact-row__details"
+            aria-label={`Details for ${id}: ${items.map((item) => item.label).join(', ')}`}
+          >
+            <PcIcon name="info" size={16} />
+          </Popover.Trigger>
+          <Popover.Portal>
+            <Popover.Content
+              className="pc-tooltip pc-artifact-row__popover"
+              aria-label={`Details for ${id}`}
+              data-keyboard-layer="true"
+              sideOffset={8}
+              collisionPadding={12}
+              onEscapeKeyDown={(event) => event.stopPropagation()}
+              onCloseAutoFocus={(event) => event.preventDefault()}
+            >
+              <ul>
+                {items.map((item) => (
+                  <li key={item.key}>{item.content ?? item.label}</li>
+                ))}
+              </ul>
+              <Popover.Close
+                className="pc-artifact-row__details"
+                aria-label={`Close details for ${id}`}
+              >
+                <PcIcon name="x" size={16} />
+              </Popover.Close>
+            </Popover.Content>
+          </Popover.Portal>
+        </Popover.Root>
+      ) : (
+        items.map((item) => <Fragment key={item.key}>{item.control}</Fragment>)
+      )}
+    </span>
   );
 }
 
