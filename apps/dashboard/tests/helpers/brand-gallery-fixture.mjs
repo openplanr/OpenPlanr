@@ -536,7 +536,7 @@ function assertGalleryTokens(evidence) {
   const label = `${theme} ${state}`;
   const expectedColors = {
     ...palettes[theme],
-    line3: theme === 'dark' ? '#383f4a' : '#c7cdd5',
+    line3: theme === 'dark' ? '#5c687a' : '#7c8a9d',
     'control-border': theme === 'dark' ? '#606c7f' : '#5d6470',
   };
   for (const [name, hex] of Object.entries(expectedColors)) {
