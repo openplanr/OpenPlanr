@@ -1,5 +1,5 @@
 ---
-"openplanr": patch
+"openplanr": minor
 "@openplanr/dashboard-app": patch
 ---
 
