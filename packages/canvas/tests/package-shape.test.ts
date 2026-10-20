@@ -56,7 +56,19 @@ describe('package shape', () => {
               'minimapToWorld',
             ]
           : specifier === '@openplanr/canvas/testing'
-            ? ['generateLayeredGraph', 'generateSvgDiagram', 'percentile95', 'rendererFrameWork']
+            ? [
+                'CANVAS_TRACE_BUDGETS',
+                'aggregateLayoutShifts',
+                'classifyLayoutShift',
+                'domBudgetPolicy',
+                'evaluateCanvasTrace',
+                'generateLayeredGraph',
+                'generateSvgDiagram',
+                'percentile95',
+                'rendererFrameWork',
+                'traceBudgetPolicy',
+                'traceOwnership',
+              ]
             : [
                 'ActionPill',
                 'CanvasProvider',
@@ -115,6 +127,21 @@ describe('package shape', () => {
           : specifier === '@openplanr/canvas/testing'
             ? [
                 'CanvasFixture',
+                'CanvasTraceIdentity',
+                'CanvasHitTestProbe',
+                'CanvasTraceRun',
+                'CanvasTraceMeasurement',
+                'CanvasHitTestMeasurement',
+                'CanvasChromeSnapshot',
+                'CanvasChromeMeasurement',
+                'CanvasLodMeasurement',
+                'CanvasPinMeasurement',
+                'CanvasTraceResults',
+                'CanvasTraceEvaluation',
+                'LayoutShift',
+                'LayoutShiftReport',
+                'LayoutShiftRect',
+                'LayoutShiftPolicy',
                 'FixtureEdge',
                 'FixtureNode',
                 'RendererTraceEvent',
@@ -221,8 +248,21 @@ describe('package shape', () => {
         readFileSync(resolve(sourceRoot, name), 'utf8'),
         ts.ScriptTarget.Latest,
       );
+      function checkSpecifier(node: ts.Node | undefined): void {
+        if (node && ts.isStringLiteral(node))
+          expect(node.text).not.toMatch(/^react(?:-dom)?(?:\/|$)/u);
+      }
       function check(node: ts.Node): void {
-        if (ts.isStringLiteral(node)) expect(node.text).not.toMatch(/^react(?:-dom)?(?:\/|$)/u);
+        if (ts.isImportDeclaration(node) || ts.isExportDeclaration(node))
+          checkSpecifier(node.moduleSpecifier);
+        if (ts.isImportTypeNode(node) && ts.isLiteralTypeNode(node.argument))
+          checkSpecifier(node.argument.literal);
+        if (
+          ts.isCallExpression(node) &&
+          (node.expression.kind === ts.SyntaxKind.ImportKeyword ||
+            (ts.isIdentifier(node.expression) && node.expression.text === 'require'))
+        )
+          checkSpecifier(node.arguments[0]);
         ts.forEachChild(node, check);
       }
       check(source);

@@ -35,6 +35,8 @@ export type RemountResult = Pick<
 export interface Bench {
   ready: Promise<void>;
   firstFrameMs: number;
+  readonly gpuRenderer: string;
+  probeHitTests(): HitTestProbe;
   transformWrites: WriteFrame[];
   fixture: string;
   world: 'html' | 'svg';
@@ -138,6 +140,8 @@ export function createBench({ controller, stage, world, overlays = [], fixtureNa
       performance.mark('canvas-first-frame');
     }),
     firstFrameMs: 0,
+    gpuRenderer: renderer,
+    probeHitTests,
     get transformWrites() {
       for (const observer of transformObservers) observer.flush();
       return writes;
