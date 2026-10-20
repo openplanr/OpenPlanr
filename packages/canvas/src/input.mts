@@ -111,19 +111,21 @@ export function bindInput(
 
   listen(stage, 'keydown', (raw) => {
     const event = raw as KeyboardEvent;
-    if (composing || event.isComposing || isEditable(event) || !shortcutsEnabled()) return;
+    if (composing || event.isComposing || isEditable(event)) return;
     if (
       (event.key === ' ' || event.code === 'Space') &&
       !event.ctrlKey &&
       !event.metaKey &&
       !event.altKey
     ) {
+      if (controller.handleKey(event)) return;
       if (document.activeElement === stage) {
         space = true;
         event.preventDefault();
       }
       return;
     }
+    if (event.key.length === 1 && !shortcutsEnabled()) return;
     if (controller.handleKey(event)) event.preventDefault();
   });
   listen(document, 'keyup', (raw) => {
@@ -148,7 +150,7 @@ export function bindInput(
       'closest' in target &&
       typeof target.closest === 'function' &&
       target.closest('button, a, [role="button"]');
-    if (touch && interactive) return;
+    if (touch && interactive && !interactive.hasAttribute('data-canvas-node-id')) return;
     const occupied =
       interactive ||
       (target &&

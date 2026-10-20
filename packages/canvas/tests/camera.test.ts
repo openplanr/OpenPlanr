@@ -579,7 +579,7 @@ describe('camera key dispatch', () => {
     ['ArrowDown', { shiftKey: true }, true],
     ['ArrowLeft', { shiftKey: true }, true],
     ['ArrowRight', { shiftKey: true }, true],
-    ['ArrowRight', {}, false],
+    ['ArrowRight', {}, true],
     ['q', {}, false],
     ['Escape', {}, false],
     ['+', { ctrlKey: true }, false],

@@ -65,6 +65,9 @@ function surface(mode: 'pan' | 'none' = 'pan', shortcutsEnabled = () => true) {
     hitTest: () => null,
     setSelection: vi.fn(),
     getSelection: () => [],
+    focusNode: vi.fn(async () => {}),
+    getFocus: () => null,
+    getOutline: () => [],
     setPointerMode: vi.fn(),
     handleKey: vi.fn(() => false),
     setActiveFrame: vi.fn(),
@@ -229,7 +232,7 @@ describe('pointer and keyboard ownership', () => {
     }
   });
 
-  it('does not start Space pan without stage focus, during composition, or with shortcuts disabled', () => {
+  it('guards Space pan focus and composition and keeps it available with shortcuts disabled', () => {
     const { stage, controller } = surface('none');
     expect(key(stage, ' ').defaultPrevented).toBe(false);
     stage.focus();
@@ -239,9 +242,12 @@ describe('pointer and keyboard ownership', () => {
     expect(controller.panBy).not.toHaveBeenCalled();
     const disabled = surface('none', () => false);
     disabled.stage.focus();
-    expect(key(disabled.stage, ' ').defaultPrevented).toBe(false);
+    expect(key(disabled.stage, ' ').defaultPrevented).toBe(true);
+    pointer(disabled.stage, 'pointerdown', 100, 100);
+    pointer(disabled.stage, 'pointermove', 200, 200);
+    expect(disabled.controller.panBy).toHaveBeenCalledWith(-100, -100);
     expect(key(disabled.stage, '+').defaultPrevented).toBe(false);
-    expect(disabled.controller.handleKey).not.toHaveBeenCalled();
+    expect(disabled.controller.handleKey).toHaveBeenCalledTimes(1);
   });
 
   it('clears held Space when focus moves from the stage to an editor', () => {
@@ -334,13 +340,22 @@ describe('pointer and keyboard ownership', () => {
 
 describe('touch and Safari gestures', () => {
   it.each(['button', 'a', 'div'] as const)('preserves native touch on a %s control', (tag) => {
-    const { stage, controller } = surface();
+    const { stage, world, controller } = surface();
     const control = document.createElement(tag);
     if (tag === 'div') control.setAttribute('role', 'button');
     stage.append(control);
     const event = pointer(control, 'pointerdown', 100, 100, 1, 'touch');
     pointer(control, 'pointermove', 120, 130, 1, 'touch');
     expect(event.defaultPrevented).toBe(false);
+    expect(stage.setPointerCapture).not.toHaveBeenCalled();
+    expect(controller.panBy).not.toHaveBeenCalled();
+    const card = document.createElement('article');
+    card.setAttribute('role', 'button');
+    card.setAttribute('data-canvas-node-id', 'card');
+    card.append(control);
+    world.append(card);
+    expect(pointer(control, 'pointerdown', 100, 100, 2, 'touch').defaultPrevented).toBe(false);
+    pointer(control, 'pointermove', 120, 130, 2, 'touch');
     expect(stage.setPointerCapture).not.toHaveBeenCalled();
     expect(controller.panBy).not.toHaveBeenCalled();
   });
@@ -363,6 +378,57 @@ describe('touch and Safari gestures', () => {
     pointer(stage, 'pointermove', 110, 100, 1, 'touch');
     expect(controller.panBy).toHaveBeenCalledTimes(1);
   });
+
+  it.each([
+    ['html', 'pan'],
+    ['html', 'none'],
+    ['svg', 'pan'],
+    ['svg', 'none'],
+  ] as const)('tracks touch on %s node buttons in %s mode', (worldType, mode) => {
+    const { stage, world, controller } = surface(mode);
+    const card =
+      worldType === 'html'
+        ? document.createElement('article')
+        : document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    card.setAttribute('role', 'button');
+    card.setAttribute('data-canvas-node-id', 'card');
+    world.append(card);
+    pointer(card, 'pointerdown', 100, 100, 1, 'touch');
+    pointer(stage, 'pointermove', 120, 130, 1, 'touch');
+    if (mode === 'pan') expect(controller.panBy).toHaveBeenCalledExactlyOnceWith(-20, -30);
+    else expect(controller.panBy).not.toHaveBeenCalled();
+    pointer(card, 'pointerdown', 220, 130, 2, 'touch');
+    pointer(stage, 'pointermove', 240, 130, 2, 'touch');
+    expect(controller.panBy).toHaveBeenLastCalledWith(-10, 0);
+    expect(controller.zoomAt).toHaveBeenCalledExactlyOnceWith(1.2, { x: 160, y: 100 });
+  });
+
+  it.each(['mouse', 'touch'])(
+    'does not reveal pointer focus during a %s gesture',
+    (pointerType) => {
+      const { stage, world, binding } = surface();
+      binding.dispose();
+      const controller = createCanvas({ label: 'Gesture focus', motion: 'none' });
+      cleanups.push(() => controller.destroy());
+      controller.attach({ stage, world });
+      controller.setNodes([{ id: 'covered', bounds: { x: 900, y: 700, width: 100, height: 100 } }]);
+      const card = document.createElement('article');
+      card.setAttribute('role', 'button');
+      world.append(card);
+      controller.registerNodeElement('covered', card);
+      pointer(stage, 'pointerdown', 100, 100, 1, pointerType);
+      const before = controller.getCamera();
+      card.focus({ preventScroll: true });
+      expect(controller.getFocus()).toBe('covered');
+      expect(controller.getCamera()).toEqual(before);
+      pointer(stage, 'pointermove', 120, 130, 1, pointerType);
+      expect(controller.getCamera()).toEqual({ x: -20, y: -30, zoom: 1 });
+      pointer(stage, 'pointerup', 120, 130, 1, pointerType);
+      stage.focus();
+      card.focus({ preventScroll: true });
+      expect(controller.getCamera()).toEqual({ x: 212, y: 212, zoom: 1 });
+    },
+  );
 
   it('registers Safari gestures only when the browser supports them', () => {
     const unsupported = surface();

@@ -1,4 +1,5 @@
 export type NodeId = string;
+export type Direction = 'up' | 'down' | 'left' | 'right';
 export type Point = Readonly<{ x: number; y: number }>;
 export type Rect = Readonly<{ x: number; y: number; width: number; height: number }>;
 export type ChromeSurface = Readonly<{
@@ -49,6 +50,8 @@ export interface CanvasOptions {
   keyboard?: Readonly<{ arrows?: 'navigate' | 'none' }>;
   strict?: boolean;
   shortcutsEnabled?: () => boolean;
+  navigate?: (from: NodeId, direction: Direction) => NodeId | null;
+  outlineOrder?: (nodes: readonly CanvasNode[]) => readonly NodeId[];
 }
 
 export interface CanvasElements {
@@ -102,6 +105,9 @@ export interface CanvasController {
   hitTest(screenPoint: Point): NodeId | null;
   setSelection(ids: readonly NodeId[]): void;
   getSelection(): readonly NodeId[];
+  focusNode(id: NodeId): Promise<void>;
+  getFocus(): NodeId | null;
+  getOutline(): readonly NodeId[];
   setPointerMode(mode: 'pan' | 'none'): void;
   handleKey(event: KeyboardEvent): boolean;
   setActiveFrame(id: NodeId | null): void;

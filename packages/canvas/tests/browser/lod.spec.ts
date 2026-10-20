@@ -74,8 +74,9 @@ for (const world of ['html', 'svg'] as const) {
       expect(result.lostFocus).toBe(0);
       expect(result.hiddenFocus).toBe(0);
       expect(result.compactFocus).toBe(0);
-      const focused = page.getByRole(world === 'html' ? 'article' : 'group', {
-        name: 'focus-card',
+      const focused = page.getByRole('button', {
+        name: world === 'html' ? 'focus-card focus-card · Layer 0' : 'focus-card focus-card',
+        exact: true,
       });
       for (const zoom of [band.low, band.high]) {
         await page.evaluate(async (zoom) => {
@@ -250,6 +251,7 @@ for (const world of ['html', 'svg']) {
         background: style.backgroundColor,
         clipped: style.overflow === 'hidden' || titleStyle.overflow === 'hidden',
         name: card.getAttribute('aria-label'),
+        id: card.getAttribute('data-canvas-node-id'),
         title: title.textContent,
         width: card.getBoundingClientRect().width,
         svg: card instanceof SVGSVGElement,
@@ -260,7 +262,7 @@ for (const world of ['html', 'svg']) {
     expect(result.border).toBeGreaterThan(0);
     expect(result.background).toBe('rgb(255, 255, 255)');
     expect(result.clipped).toBe(true);
-    expect(result.name).toBe(result.title);
+    expect(result.name).toBe(`${result.title}, ${result.id}`);
     expect(result.width).toBeCloseTo(180 * 0.4, 1);
     expect(result.svg).toBe(world === 'svg');
     if (world === 'svg') expect(result.svgBounds).toBe('0 0 180 66');

@@ -226,6 +226,7 @@ test('camera keyboard shortcuts apply once and report consumption', async ({ pag
     const fit = dispatch('1', true);
     const fitSelection = dispatch('2', true);
     return {
+      safeArea: window.canvas.getSafeArea(),
       zoomIn,
       zoomOut,
       reset,
@@ -244,11 +245,24 @@ test('camera keyboard shortcuts apply once and report consumption', async ({ pag
   expect(results.zoomIn.camera.zoom).toBeCloseTo(1.25, 8);
   expect(results.zoomOut.camera.zoom).toBeCloseTo(1, 8);
   expect(results.reset.camera.zoom).toBe(1);
-  expect(results.shiftArrow.camera.x - results.reset.camera.x).toBeCloseTo(360, 6);
+  expect(results.safeArea).toEqual({ x: 12, y: 12, width: 1416, height: 876 });
+  expect(results.shiftArrow.camera.x - results.reset.camera.x).toBeCloseTo(
+    results.safeArea.width / 4,
+    6,
+  );
   expect(results.equals.camera.zoom).toBeCloseTo(1.25, 8);
-  expect(results.shiftDown.camera.y - results.shiftArrow.camera.y).toBeCloseTo(225, 6);
-  expect(results.shiftLeft.camera.x - results.shiftDown.camera.x).toBeCloseTo(-360, 6);
-  expect(results.shiftUp.camera.y - results.shiftLeft.camera.y).toBeCloseTo(-225, 6);
+  expect(results.shiftDown.camera.y - results.shiftArrow.camera.y).toBeCloseTo(
+    results.safeArea.height / 4,
+    6,
+  );
+  expect(results.shiftLeft.camera.x - results.shiftDown.camera.x).toBeCloseTo(
+    -results.safeArea.width / 4,
+    6,
+  );
+  expect(results.shiftUp.camera.y - results.shiftLeft.camera.y).toBeCloseTo(
+    -results.safeArea.height / 4,
+    6,
+  );
   for (const name of [
     'zoomIn',
     'zoomOut',
@@ -258,13 +272,14 @@ test('camera keyboard shortcuts apply once and report consumption', async ({ pag
     'shiftDown',
     'shiftLeft',
     'shiftUp',
+    'arrow',
     'fit',
     'fitSelection',
   ] as const) {
     expect(results[name].consumed).toBe(true);
     expect(results[name].prevented).toBe(true);
   }
-  for (const name of ['unsupported', 'composing', 'arrow'] as const) {
+  for (const name of ['unsupported', 'composing'] as const) {
     expect(results[name].consumed).toBe(false);
     expect(results[name].prevented).toBe(false);
   }
@@ -365,13 +380,20 @@ test('reduced motion makes an animated move immediate', async ({ page }) => {
   expect(actual).toEqual(next);
 });
 
-test('the product shortcut switch disables stage camera keys', async ({ page }) => {
+test('the product shortcut switch disables character zoom keys and preserves arrow panning', async ({
+  page,
+}) => {
   await openBench(page, 'shortcuts=off');
   await page.locator('#stage').focus();
   const before = await camera(page);
+  const safe = await page.evaluate(() => window.canvas.getSafeArea());
   await page.keyboard.press('+');
-  await page.keyboard.press('Shift+ArrowRight');
   expect(await camera(page)).toEqual(before);
+  await page.keyboard.press('Shift+ArrowRight');
+  const after = await camera(page);
+  expect(after.x - before.x).toBeCloseTo(safe.width / 4 / before.zoom, 6);
+  expect(after.y).toBe(before.y);
+  expect(after.zoom).toBe(before.zoom);
   const consumed = await page.evaluate(() =>
     window.canvas.handleKey(new KeyboardEvent('keydown', { key: '+' })),
   );
@@ -456,8 +478,10 @@ test('stage camera keys work through browser keyboard dispatch', async ({ page }
   expect((await camera(page)).zoom).toBeCloseTo(1.25, 8);
   await page.keyboard.press('-');
   expect((await camera(page)).zoom).toBeCloseTo(1, 8);
+  const beforePan = await camera(page);
+  const safe = await page.evaluate(() => window.canvas.getSafeArea());
   await page.keyboard.press('Shift+ArrowRight');
-  expect((await camera(page)).x).toBeCloseTo(360, 6);
+  expect((await camera(page)).x - beforePan.x).toBeCloseTo(safe.width / 4 / beforePan.zoom, 6);
   await page.keyboard.press('Shift+1');
   await expect.poll(async () => (await camera(page)).zoom).toBeLessThan(0.5);
   const fitted = await camera(page);

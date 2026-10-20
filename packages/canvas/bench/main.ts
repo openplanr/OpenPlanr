@@ -164,7 +164,10 @@ function syncNodeContent(element: Element, node: CanvasNode): void {
   element.setAttribute('data-card-level', level);
   const fixtureNode = fixtureById.get(node.id);
   const titleText = fixtureNode?.title ?? node.id;
-  element.setAttribute('aria-label', titleText);
+  const detailText = element instanceof SVGElement
+    ? node.id : `${node.id} · Layer ${fixtureNode?.rank ?? 0}`;
+  element.setAttribute('aria-label', level === 'dom' && !node.frame
+    ? `${titleText} ${detailText}` : `${titleText}, ${node.id}`);
   if (element instanceof SVGElement) {
     const title = svgElement('text', { x: '10', y: '24', 'font-size': '13' });
     title.textContent = titleText;
@@ -175,7 +178,7 @@ function syncNodeContent(element: Element, node: CanvasNode): void {
         fill: 'white', stroke: '#b7bfca',
       });
       const detail = svgElement('text', { x: '10', y: '45', 'font-size': '11', fill: '#536171' });
-      detail.textContent = node.id;
+      detail.textContent = ` ${detailText}`;
       element.replaceChildren(shape, title, detail);
     }
   } else if (node.frame) {
@@ -191,7 +194,7 @@ function syncNodeContent(element: Element, node: CanvasNode): void {
     element.replaceChildren(title);
     if (level === 'dom') {
       const detail = document.createElement('span');
-      detail.textContent = `${node.id} · Layer ${fixtureNode?.rank ?? 0}`;
+      detail.textContent = ` ${detailText}`;
       element.append(detail);
     }
   }
@@ -205,13 +208,14 @@ function syncContent(): void {
 function renderNode(node: CanvasNode): void {
   let element: HTMLElement | SVGSVGElement;
   if (worldType === 'svg') {
-    element = svgElement('svg', { class: 'card svg-card', 'data-canvas-node-id': node.id, tabindex: '-1', role: 'group' });
+    element = svgElement('svg', { class: 'card svg-card', 'data-canvas-node-id': node.id, tabindex: '-1', role: 'button' });
     world.append(element);
   } else {
     element = document.createElement('article');
     element.className = 'card';
     element.dataset.canvasNodeId = node.id;
     element.tabIndex = -1;
+    element.setAttribute('role', 'button');
     world.append(element);
   }
   syncNodeContent(element, node);
@@ -292,6 +296,30 @@ controller.setEdges(fixture.edges.map((edge) => ({ ...edge, style: 'dependency' 
 controller.attach({ stage, world, overlays: [overlay], edges: edgeSvg });
 syncMounted(new Set(controller.getMountedIds()));
 controller.setCamera({ x: 0, y: 0, zoom: Number(params.get('zoom') ?? 1) });
+const outline = params.get('outline') === '1' ? document.createElement('ul') : null;
+if (outline) {
+  outline.dataset.canvasOutline = '';
+  outline.setAttribute('aria-label', 'Canvas outline');
+  Object.assign(outline.style, {
+    position: 'absolute', width: '1px', height: '1px', overflow: 'hidden',
+    clipPath: 'inset(50%)', margin: '-1px', padding: '0',
+  });
+  document.body.append(outline);
+}
+function syncOutline(): void {
+  if (!outline) return;
+  outline.replaceChildren(...controller.getOutline().map((id) => {
+    const item = document.createElement('li');
+    const button = document.createElement('button');
+    button.textContent = `${id}, ${fixtureById.get(id)?.title ?? id}`;
+    button.addEventListener('click', () => {
+      void controller.focusNode(id).then(() => controller.setSelection([id]));
+    });
+    item.append(button);
+    return item;
+  }));
+}
+syncOutline();
 const nextFrame = (): Promise<number> => new Promise((resolve) => requestAnimationFrame(resolve));
 let longTasks: PerformanceEntry[] = [];
 const observer =
@@ -320,6 +348,7 @@ const bench: Bench = {
     nodeById = new Map(next.map((node) => [node.id, node]));
     controller.setEdges([]);
     controller.setNodes(next);
+    syncOutline();
   },
   async remount() {
     bench.setNodes([]);
