@@ -65,15 +65,33 @@ export function createRovingFocus(
   let parking = false;
   let parked = false;
   let skippingTab = false;
+  let order: readonly NodeId[] | undefined;
+  let positions = new Map<NodeId, number>();
+  let fallback: NodeId | undefined;
+  let fallbackDirty = true;
+  let tabStop: Element | undefined;
+  function tabindex(element: Element, value: string) {
+    if (element.getAttribute('tabindex') !== value) element.setAttribute('tabindex', value);
+  }
+  function moveTabStop(element: Element | undefined) {
+    if (tabStop === element) return;
+    if (tabStop) tabindex(tabStop, '-1');
+    tabStop = element;
+    if (tabStop) tabindex(tabStop, '0');
+  }
   function sync() {
-    const id = current();
-    const first = id ?? outline().find((entry) => registered.has(entry));
-    stage.tabIndex = id === null ? 0 : -1;
-    for (const [key, element] of registered) {
-      if (!attributes.has(element)) attributes.set(element, element.getAttribute('tabindex'));
-      const value = key === first && !skippingTab ? '0' : '-1';
-      if (element.getAttribute('tabindex') !== value) element.setAttribute('tabindex', value);
+    const next = outline();
+    if (order !== next) {
+      order = next;
+      positions = new Map(order.map((id, index) => [id, index]));
+      fallbackDirty = true;
+      if (!tabStop) fallback = order[0];
     }
+    const id = current();
+    const first = id ?? fallback;
+    const stageIndex = id === null ? 0 : -1;
+    if (stage.tabIndex !== stageIndex) stage.tabIndex = stageIndex;
+    moveTabStop(skippingTab || first === undefined ? undefined : registered.get(first));
   }
   function restore(element: Element) {
     if (!attributes.has(element)) return;
@@ -128,8 +146,20 @@ export function createRovingFocus(
   stage.addEventListener('focusin', focusIn);
   stage.addEventListener('focusout', focusOut);
   stage.addEventListener('keydown', tab);
+  sync();
   return {
     sync,
+    register(id: NodeId, element: Element) {
+      if (!attributes.has(element)) attributes.set(element, element.getAttribute('tabindex'));
+      if (!skippingTab && id === (current() ?? fallback)) moveTabStop(element);
+      else if (element !== tabStop) tabindex(element, '-1');
+      if (
+        !fallbackDirty &&
+        (positions.get(id) ?? Infinity) <
+          (fallback === undefined ? Infinity : (positions.get(fallback) ?? Infinity))
+      )
+        fallback = id;
+    },
     unregister(id: NodeId, element: Element) {
       if (current() === id && stage.ownerDocument.activeElement === element) {
         parking = true;
@@ -137,6 +167,8 @@ export function createRovingFocus(
         stage.focus({ preventScroll: true });
         parking = false;
       }
+      if (element === tabStop) tabStop = undefined;
+      if (id === fallback) fallbackDirty = true;
       restore(element);
     },
     request(id: NodeId): Promise<void> {
@@ -146,10 +178,22 @@ export function createRovingFocus(
       });
     },
     update(settled: boolean) {
+      if (fallbackDirty) {
+        let first = Infinity;
+        fallback = undefined;
+        for (const id of registered.keys()) {
+          const position = positions.get(id) ?? Infinity;
+          if (position < first) {
+            first = position;
+            fallback = id;
+          }
+        }
+        fallbackDirty = false;
+      }
       if (skippingTab) {
         skippingTab = false;
-        sync();
       }
+      sync();
       const id = current();
       const element = id === null ? undefined : registered.get(id);
       if (parked && element && focusElement(element)) parked = false;

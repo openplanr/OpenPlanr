@@ -342,13 +342,12 @@ export function createCanvas(options: CanvasOptions): CanvasController {
       return;
     if (!visibility.has(element)) visibility.set(element, element.style.visibility);
     const original = visibility.get(element) ?? '';
-    element.style.visibility =
-      level === 'overview' ? (pins.has(id) ? 'visible' : 'hidden') : original;
+    const value = level === 'overview' ? (pins.has(id) ? 'visible' : 'hidden') : original;
+    if (element.style.visibility !== value) element.style.visibility = value;
   }
-  function updateVisibility() {
+  function updateVisibility(levelChanged: boolean) {
     if (!elements) return;
     const pins = culling.getPinnedIds();
-    for (const [id, element] of registered) nodeVisibility(element, id, pins);
     for (const layer of layers()) {
       if (!visibility.has(layer)) visibility.set(layer, layer.style.visibility);
       layer.style.visibility = level === 'overview' ? 'hidden' : (visibility.get(layer) ?? '');
@@ -358,16 +357,20 @@ export function createCanvas(options: CanvasOptions): CanvasController {
       if (!visibility.has(edge)) visibility.set(edge, edge.style.visibility);
       edge.style.visibility = level === 'overview' ? 'hidden' : (visibility.get(edge) ?? '');
     }
-    for (const [id, element] of registered) nodeVisibility(element, id, pins);
     if (level === 'overview') {
+      for (const [id, element] of registered) nodeVisibility(element, id, pins);
       for (const element of elements.stage.querySelectorAll('[data-canvas-node-id]')) {
         const id = element.getAttribute('data-canvas-node-id');
         if (id !== null) nodeVisibility(element, id, pins);
       }
-    } else {
+    } else if (levelChanged) {
       const realm = elements.stage.ownerDocument.defaultView;
       for (const [element, original] of visibility) {
-        if (realm && (element instanceof realm.HTMLElement || element instanceof realm.SVGElement))
+        if (
+          realm &&
+          (element instanceof realm.HTMLElement || element instanceof realm.SVGElement) &&
+          element.style.visibility !== original
+        )
           element.style.visibility = original;
       }
     }
@@ -551,7 +554,7 @@ export function createCanvas(options: CanvasOptions): CanvasController {
       loader?.refresh();
     } else if (update.geometry.length || loaderDirty) loader?.refresh();
     loaderDirty = false;
-    if (detailDirty) updateVisibility();
+    if (detailDirty) updateVisibility(levelChanged);
     if (level === 'overview') overviewLayer?.present();
     if (announceZoom && !animation) {
       announceZoom = false;
@@ -876,9 +879,9 @@ export function createCanvas(options: CanvasOptions): CanvasController {
         const previous = registered.get(id);
         if (previous && previous !== element) roving?.unregister(id, previous);
         registered.set(id, element);
+        roving?.register(id, element);
         if (level === 'overview') nodeVisibility(element, id, culling.getPinnedIds());
       }
-      roving?.sync();
       loaderDirty = true;
       detailDirty = true;
       schedule();

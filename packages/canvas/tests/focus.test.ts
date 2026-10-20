@@ -129,6 +129,42 @@ describe('spatial focus navigation', () => {
 });
 
 describe('controller focus', () => {
+  it('bounds tabindex writes when a batch registers in reverse outline order', async () => {
+    const { controller, world, register } = make();
+    const nodes = Array.from({ length: 1000 }, (_, index) => node(`n${index}`, index * 80));
+    controller.setNodes(nodes);
+    const writes = vi.spyOn(Element.prototype, 'setAttribute');
+    for (const { id } of [...nodes].reverse()) register(id);
+    await frame();
+    expect(writes.mock.calls.filter(([name]) => name === 'tabindex').length).toBeLessThanOrEqual(
+      1002,
+    );
+    expect(world.querySelectorAll('[tabindex="0"]')).toHaveLength(1);
+    expect(world.querySelector('[tabindex="0"]')?.textContent).toBe('n0');
+  });
+
+  it('reselects the first mounted fallback after removal, registration and outline changes', async () => {
+    const { controller, world, register } = make();
+    controller.setNodes([node('first', 0), node('middle', 100), node('last', 200)]);
+    const last = register('last');
+    const middle = register('middle');
+    await frame();
+    expect(middle.tabIndex).toBe(0);
+    controller.registerNodeElement('middle', null);
+    middle.remove();
+    await frame();
+    expect(last.tabIndex).toBe(0);
+    const first = register('first');
+    await frame();
+    expect(first.tabIndex).toBe(0);
+    expect(last.tabIndex).toBe(-1);
+    controller.setNodes([node('first', 300), node('last', 200)]);
+    await frame();
+    expect(last.tabIndex).toBe(0);
+    expect(first.tabIndex).toBe(-1);
+    expect(world.querySelectorAll('[tabindex="0"]')).toHaveLength(1);
+  });
+
   it('keeps one mounted node in the tab order and restores attributes on detach', async () => {
     const { controller, stage, register } = make();
     controller.setNodes([node('later', 300), node('first', 100)]);
