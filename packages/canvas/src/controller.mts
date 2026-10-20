@@ -16,7 +16,7 @@ import { createFrames } from './frames.mjs';
 import { bindInput, isEditable } from './input.mjs';
 import { createLod } from './lod.mjs';
 import { createOverviewLayer } from './overview.mjs';
-import { computeSafeArea } from './safe-area.mjs';
+import { CHROME_TRANSITION_MS, computeSafeArea } from './safe-area.mjs';
 import type {
   Camera,
   CanvasController,
@@ -37,6 +37,8 @@ import type {
 function object(field: string, value: unknown): void {
   if (!value || typeof value !== 'object' || Array.isArray(value)) invalid(field, value);
 }
+
+const CAMERA_MOVE_MS = 200;
 
 export function createCanvas(options: CanvasOptions): CanvasController {
   object('options', options);
@@ -144,7 +146,7 @@ export function createCanvas(options: CanvasOptions): CanvasController {
   let dirty = false;
   let cameraEvent = false;
   let activeFrameEvent = false;
-  let animation: { from: Camera; to: Camera; start: number } | undefined;
+  let animation: { from: Camera; to: Camera; start: number; duration: number } | undefined;
   let input: ReturnType<typeof bindInput> | undefined;
   let frames: ReturnType<typeof createFrames> | undefined;
   let restore: (() => void) | undefined;
@@ -215,7 +217,11 @@ export function createCanvas(options: CanvasOptions): CanvasController {
       height: Math.max(...values.map((bounds) => bounds.y + bounds.height)) - y,
     };
   }
-  function revealBounds(bounds: Rect, mode: 'minimal' | 'center' = 'minimal') {
+  function revealBounds(
+    bounds: Rect,
+    mode: 'minimal' | 'center' = 'minimal',
+    duration = CAMERA_MOVE_MS,
+  ) {
     const start = worldToScreen(camera, bounds);
     function offset(value: number, length: number, origin: number, available: number) {
       if (mode === 'center' || length > available)
@@ -226,10 +232,28 @@ export function createCanvas(options: CanvasOptions): CanvasController {
     const dx = offset(start.x, bounds.width * camera.zoom, safeArea.x, safeArea.width);
     const dy = offset(start.y, bounds.height * camera.zoom, safeArea.y, safeArea.height);
     if (dx !== 0 || dy !== 0)
-      controller.setCamera(
+      moveCamera(
         { ...camera, x: camera.x + dx / camera.zoom, y: camera.y + dy / camera.zoom },
-        { animate: true },
+        duration,
       );
+  }
+  function moveCamera(value: Camera, duration?: number) {
+    animation = undefined;
+    if (
+      duration !== undefined &&
+      view &&
+      options.motion !== 'none' &&
+      !view.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+    ) {
+      animation = {
+        from: { ...camera },
+        to: clamp(value),
+        start: view.performance.now(),
+        duration,
+      };
+      moving();
+      schedule();
+    } else change(value);
   }
   function resize() {
     const bounds = elements?.stage.getBoundingClientRect();
@@ -421,7 +445,7 @@ export function createCanvas(options: CanvasOptions): CanvasController {
     if (!elements) return;
     writeFrame += 1;
     if (animation) {
-      const progress = Math.min(1, (time - animation.start) / 200);
+      const progress = Math.min(1, (time - animation.start) / animation.duration);
       const { from, to } = animation;
       change(
         progress === 1
@@ -872,7 +896,8 @@ export function createCanvas(options: CanvasOptions): CanvasController {
         0,
         Math.min(start.y + height, next.rect.y + next.rect.height) - Math.max(start.y, next.rect.y),
       );
-      if (coveredWidth * coveredHeight > (width * height) / 2) revealBounds(bounds);
+      if (coveredWidth * coveredHeight > (width * height) / 2)
+        revealBounds(bounds, 'minimal', CHROME_TRANSITION_MS);
     },
     removeChrome(id) {
       alive();
@@ -910,17 +935,7 @@ export function createCanvas(options: CanvasOptions): CanvasController {
       if (settings !== undefined) object('setCamera.options', settings);
       if (settings?.animate !== undefined && typeof settings.animate !== 'boolean')
         invalid('animate', settings.animate);
-      animation = undefined;
-      if (
-        settings?.animate &&
-        view &&
-        options.motion !== 'none' &&
-        !view.matchMedia?.('(prefers-reduced-motion: reduce)').matches
-      ) {
-        animation = { from: { ...camera }, to: clamp(value), start: view.performance.now() };
-        moving();
-        schedule();
-      } else change(value);
+      moveCamera(value, settings?.animate ? CAMERA_MOVE_MS : undefined);
     },
     panBy(dxScreen, dyScreen) {
       alive();

@@ -196,12 +196,18 @@ describe('chrome registry', () => {
     controller.setChrome({ ...right, rect: { x: 299, y: 0, width: 501, height: 600 } });
     expect(controller.getCamera()).toEqual({ x: 0, y: 0, zoom: 1 });
   });
-  it('animates covering reveals over at most 200ms and respects reduced motion', () => {
+  it('animates covering reveals with the chrome transition and respects reduced motion', () => {
     const { controller } = make({ motion: 'auto' });
     controller.setNodes([{ id: 'a', bounds: { x: 650, y: 200, width: 100, height: 100 } }]);
     controller.setSelection(['a']);
     controller.setChrome(right);
     expect(controller.getCamera().x).toBe(0);
+    frame(90);
+    expect(controller.getCamera().x).toBe(81);
+    frame(90);
+    expect(controller.getCamera()).toEqual({ x: 162, y: 0, zoom: 1 });
+    controller.setCamera({ x: 0, y: 0, zoom: 1 });
+    controller.reveal('a');
     frame(100);
     expect(controller.getCamera().x).toBe(81);
     frame(100);
@@ -211,6 +217,18 @@ describe('chrome registry', () => {
     vi.stubGlobal('matchMedia', () => ({ matches: true }));
     controller.setChrome(right);
     expect(controller.getCamera()).toEqual({ x: 162, y: 0, zoom: 1 });
+  });
+  it('prunes removed nodes from the selection before a covering surface opens', () => {
+    const { controller } = make();
+    controller.setNodes([
+      { id: 'a', bounds: { x: 650, y: 200, width: 100, height: 100 } },
+      { id: 'b', bounds: { x: 100, y: 100, width: 50, height: 50 } },
+    ]);
+    controller.setSelection(['a']);
+    controller.setNodes([{ id: 'b', bounds: { x: 100, y: 100, width: 50, height: 50 } }]);
+    expect(controller.getSelection()).toEqual([]);
+    expect(() => controller.setChrome(right)).not.toThrow();
+    expect(controller.getCamera()).toEqual({ x: 0, y: 0, zoom: 1 });
   });
   it('does not repeat reveals for unchanged or shrinking open surfaces', () => {
     const { controller } = make();

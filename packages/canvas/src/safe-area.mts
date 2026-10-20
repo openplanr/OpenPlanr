@@ -1,5 +1,8 @@
 import type { ChromeSurface, Rect } from './types.mjs';
 
+/** Open and close duration of chrome panels; camera moves caused by chrome match it. */
+export const CHROME_TRANSITION_MS = 180;
+
 export function computeSafeArea(
   stage: Readonly<{ width: number; height: number }>,
   surfaces: Iterable<ChromeSurface>,
