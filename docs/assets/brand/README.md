@@ -31,7 +31,7 @@ fonts cannot be controlled, such as GitHub and npm READMEs.
 | --- | --- | --- |
 | Ink | `#08080C` | Backgrounds, text on paper |
 | Teal | `#5EEAD4` | The mark, accents on ink |
-| Teal on light | `#237A72` | Accents and links on paper (meets contrast requirements) |
+| Teal on light | `#206E67` | Accents and links on paper (meets contrast requirements) |
 | Paper | `#F5F7F7` | Light backgrounds, text on ink |
 
 ## Typography
