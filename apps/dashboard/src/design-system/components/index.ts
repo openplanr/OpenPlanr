@@ -1,3 +1,18 @@
+export {
+  ArtifactTag,
+  type ArtifactTagProps,
+  type ArtifactType,
+  type ChipSurface,
+  PriorityChip,
+  type PriorityChipProps,
+} from './artifact-recipes.js';
+export {
+  ArtifactRowCopy,
+  ArtifactRowMeta,
+  ArtifactRowMetaGroup,
+  ArtifactRowTitle,
+  artifactRowStyle,
+} from './artifact-row.js';
 export { AlertDialog, Tabs as RadixTabs } from './composite-primitives.js';
 export {
   Badge,
@@ -7,7 +22,11 @@ export {
   type ButtonProps,
   type ButtonVariant,
   Card,
+  CardHeader,
+  type CardHeaderProps,
   type CardProps,
+  ChipToggle,
+  type ChipToggleProps,
   CommandHint,
   type CommandHintProps,
   type ControlSize,
@@ -86,6 +105,7 @@ export {
   type WorkItemChipProps,
 } from './console-planr.js';
 export { GovernedButton } from './governed-button.js';
+export { Inspector, type InspectorProps } from './inspector.js';
 export {
   ActionStateBadge,
   type ActionStateBadgeProps,
@@ -106,3 +126,5 @@ export {
   type StatusBadgeProps,
 } from './planr-console.js';
 export { StatePanel, type StatePanelProps, type StatePanelState } from './state-panel.js';
+export { Toast, type ToastKind, type ToastProps } from './toast.js';
+export { Tooltip, type TooltipProps } from './tooltip.js';

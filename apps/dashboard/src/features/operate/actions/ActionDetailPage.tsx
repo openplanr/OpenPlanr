@@ -448,7 +448,7 @@ function ActionWorkspace({
         aria-label={`Available actions for ${action.title}`}
       >
         {planningHref ? (
-          <a className="op-cycle-link" href={planningHref}>
+          <a className="pc-button op-cycle-link" href={planningHref}>
             Review Planning handoff
           </a>
         ) : null}
@@ -569,7 +569,7 @@ function ActionWorkspace({
       ) : null}
 
       <p className="op-action-detail__history-link">
-        <a className="op-cycle-link" href="#/operate/history">
+        <a className="pc-button op-cycle-link" href="#/operate/history">
           View activity and recovery details
         </a>
       </p>
@@ -1011,9 +1011,9 @@ export function ActionDetailPage({
           }}
         >
           <AlertDialog.Portal>
-            <AlertDialog.Overlay className="op-inbox-dialog__overlay" />
+            <AlertDialog.Overlay className="op-inbox-dialog__overlay op-governed-overlay" />
             <AlertDialog.Content
-              className="op-inbox-dialog__content"
+              className="op-inbox-dialog__content op-governed-dialog"
               onOpenAutoFocus={(event) => {
                 event.preventDefault();
                 dialogCancelRef.current?.focus({ preventScroll: true });
@@ -1022,8 +1022,10 @@ export function ActionDetailPage({
                 event.preventDefault();
               }}
             >
-              <AlertDialog.Title>Confirm {preview.allowedAction.label}</AlertDialog.Title>
-              <AlertDialog.Description>
+              <AlertDialog.Title className="op-inbox-dialog__title">
+                Confirm {preview.allowedAction.label}
+              </AlertDialog.Title>
+              <AlertDialog.Description className="op-inbox-dialog__description">
                 {`You are about to ${preview.allowedAction.label}. ${
                   preview.consequence ?? 'Review the prepared change before confirming.'
                 }`}
@@ -1047,7 +1049,11 @@ export function ActionDetailPage({
                     Cancel
                   </GovernedButton>
                 </AlertDialog.Cancel>
-                <GovernedButton disabled={confirming} onInvoke={() => void confirmPreview()}>
+                <GovernedButton
+                  disabled={confirming}
+                  disabledReason={confirming ? 'Confirmation in progress.' : undefined}
+                  onInvoke={() => void confirmPreview()}
+                >
                   {confirming
                     ? `Confirming ${preview.allowedAction.label}…`
                     : `Confirm ${preview.allowedAction.label}`}

@@ -49,16 +49,6 @@ a {
   line-height: var(--op-type-technical-leading);
 }
 
-.op-eyebrow {
-  margin: 0;
-  color: var(--op-control);
-  font-size: var(--op-type-eyebrow-size);
-  font-weight: var(--op-type-eyebrow-weight);
-  letter-spacing: var(--op-tracking-eyebrow);
-  line-height: var(--op-type-eyebrow-leading);
-  text-transform: uppercase;
-}
-
 .op-subject code {
   overflow-wrap: anywhere;
   font-family: var(--op-font-technical);
@@ -469,9 +459,17 @@ a {
   text-decoration: none;
 }
 
-:where(a, button, summary, input):focus-visible {
+:where(
+  a,
+  button,
+  summary,
+  input:not(.pc-input__field, .pc-palette__input),
+  select,
+  textarea
+):focus-visible {
   outline: var(--op-focus-width) solid var(--op-focus);
   outline-offset: var(--op-focus-offset);
+  box-shadow: none;
 }
 
 @media (max-width: 1120px) and (min-width: 801px) {
@@ -1887,4 +1885,78 @@ a {
 .op-route-frame .op-planning-handoff__header h1 {
   font-size: var(--op-type-page-size);
   line-height: var(--op-type-page-leading);
+}
+
+.pc-live-feedback {
+  position: fixed;
+  z-index: 70;
+  right: max(16px, env(safe-area-inset-right));
+  bottom: calc(40px + env(safe-area-inset-bottom));
+  width: min(420px, calc(100vw - 32px));
+  font-variant-numeric: tabular-nums;
+}
+
+.pc-live-feedback a {
+  color: var(--op-accent);
+}
+
+[data-live-changed="wash-a"] {
+  animation: pc-live-wash-a 1600ms ease-out;
+}
+
+[data-live-changed="wash-b"] {
+  animation: pc-live-wash-b 1600ms ease-out;
+}
+
+@keyframes pc-live-wash-a {
+  from {
+    background-color: var(--op-accent-soft);
+  }
+}
+
+@keyframes pc-live-wash-b {
+  from {
+    background-color: var(--op-accent-soft);
+  }
+}
+
+[data-live-changed="dot"] {
+  position: relative;
+}
+
+[data-live-changed="dot"]::after {
+  content: "";
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--op-accent);
+}
+
+@media (width < 900px) {
+  .pc-live-feedback {
+    bottom: calc(72px + env(safe-area-inset-bottom));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-live-changed] {
+    animation: none;
+  }
+}
+
+.pc-table tbody tr[data-live-changed="wash-a"] td {
+  animation: pc-live-wash-a 1600ms ease-out;
+}
+
+.pc-table tbody tr[data-live-changed="wash-b"] td {
+  animation: pc-live-wash-b 1600ms ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pc-table tbody tr[data-live-changed] td {
+    animation: none;
+  }
 }

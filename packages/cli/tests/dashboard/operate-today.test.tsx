@@ -306,8 +306,13 @@ describe('T-037 verified Today display consumption', () => {
     });
     const current = contextState('first-use', noCycle);
     const html = renderToStaticMarkup(<TodayPage currentBinding={noCycle} sources={{ current }} />);
-    expect(html).toContain('No active work yet');
-    expect(html).toContain('No next step is available until work is returned');
+    expect(html).toContain('Operate is not set up here yet');
+    expect(html).toContain('Proposed');
+    expect(html).not.toContain('The current operating context for this project.');
+    expect(html).toContain('/planr:operate');
+    expect(html).toContain('Example cycle');
+    expect(html).toContain('Content below is illustrative, not this project’s data.');
+    expect(html).toContain('No governed next step is available until work is returned');
     expect(html).not.toContain(fixture.cycleId);
   });
 

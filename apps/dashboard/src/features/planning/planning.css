@@ -288,3 +288,103 @@
     border-color: ButtonText;
   }
 }
+
+.op-planning-notice:not(.pc-visually-hidden) {
+  position: fixed;
+  z-index: 20;
+  right: 16px;
+  bottom: calc(40px + env(safe-area-inset-bottom));
+  max-width: min(420px, calc(100vw - 32px));
+  padding: var(--op-space-3);
+  border: 1px solid var(--op-line-strong);
+  border-radius: var(--op-radius-card);
+  background: var(--op-panel);
+}
+
+@media (width < 900px) {
+  .op-planning-notice:not(.pc-visually-hidden) {
+    bottom: calc(72px + env(safe-area-inset-bottom));
+  }
+}
+
+.op-focused-graph__toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 12px;
+}
+.op-focused-graph__workspace {
+  display: grid;
+  grid-template-columns: 260px minmax(0, 1fr);
+  min-width: 0;
+  border: 1px solid var(--op-line);
+  border-radius: 12px;
+  overflow: hidden;
+}
+.op-focused-graph__sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 20px;
+  background: var(--op-panel);
+  border-right: 1px solid var(--op-line);
+}
+.op-focused-graph .op-focused-graph__sidebar h2 {
+  margin: 0;
+  font: 600 11px var(--pc-font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--op-dim);
+}
+.op-focused-graph__sidebar p {
+  margin: 0;
+  color: var(--op-body);
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+.op-focused-graph__sidebar label {
+  min-width: 0;
+  min-height: var(--op-density-control);
+}
+.op-focused-graph__sidebar select {
+  box-sizing: border-box;
+  height: var(--op-density-control);
+  display: block;
+  width: 100%;
+  min-height: var(--op-density-control);
+  margin-top: 8px;
+  padding: 0 8px;
+  border: 1px solid var(--op-accent);
+  border-radius: 8px;
+  background: var(--op-card);
+  color: var(--op-text);
+}
+.op-focused-graph__sidebar select:focus-visible {
+  outline: 2px solid var(--op-accent);
+  outline-offset: 2px;
+}
+.op-focused-graph__surface {
+  min-width: 0;
+  background: var(--op-bg);
+}
+.op-focused-graph__preview {
+  display: grid;
+  align-content: start;
+  gap: 8px;
+  min-height: 180px;
+  padding: 16px;
+  border-top: 1px solid var(--op-line);
+  background: var(--op-raised);
+}
+.op-focused-graph__preview p {
+  margin: 0;
+}
+@media (max-width: 899px) {
+  .op-focused-graph__workspace {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .op-focused-graph__sidebar {
+    border-right: 0;
+    border-bottom: 1px solid var(--op-line);
+  }
+}

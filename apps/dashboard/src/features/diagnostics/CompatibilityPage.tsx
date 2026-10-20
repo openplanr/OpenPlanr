@@ -1,8 +1,19 @@
+import { useId, useState } from 'react';
 import type { DashboardConnection } from '../../app/providers.js';
-import { StatePanel } from '../../design-system/components/index.js';
+import {
+  Badge,
+  Button,
+  Card,
+  CommandHint,
+  StatePanel,
+  Tabs,
+} from '../../design-system/components/index.js';
 import type { DashboardBootstrap } from '../../lib/api/bootstrap.js';
+import type { PlanningWorkspaceModel } from '../planning/planning-workspace.js';
 import { type DiagnosticFinding, resolveCompatibilityDiagnostics } from './compatibility-model.js';
+import { DataHealth, type DataHealthRead } from './DataHealth.js';
 import { SupportSummary } from './SupportSummary.js';
+import { useDataHealth } from './use-data-health.js';
 import './diagnostics.css';
 
 export type CompatibilityPageProps = Readonly<{
@@ -12,6 +23,8 @@ export type CompatibilityPageProps = Readonly<{
   bootDetail: string | null;
   connection: DashboardConnection;
   onReturn?: () => void;
+  dataHealth?: DataHealthRead | null;
+  planningModel?: PlanningWorkspaceModel | null;
 }>;
 
 function statusLabel(status: DiagnosticFinding['status']): string {
@@ -57,7 +70,6 @@ function headline(findings: readonly DiagnosticFinding[]): {
   };
 }
 
-/** Read-only diagnostics for boot, package, API, watcher, and optional-dependency posture. */
 export function CompatibilityPage({
   embeddedBuildId,
   bootstrap,
@@ -65,7 +77,12 @@ export function CompatibilityPage({
   bootDetail,
   connection,
   onReturn,
+  dataHealth,
+  planningModel = null,
 }: CompatibilityPageProps) {
+  const [tab, setTab] = useState('compatibility');
+  const panelId = useId();
+  const health = useDataHealth(planningModel, bootstrap?.origin ?? null, tab === 'health');
   const findings = resolveCompatibilityDiagnostics({
     embeddedBuildId,
     bootstrap,
@@ -91,55 +108,112 @@ export function CompatibilityPage({
             installation paths.
           </p>
         </div>
-        {onReturn ? (
-          <button type="button" className="op-inline-action" onClick={onReturn}>
-            Return to dashboard
-          </button>
-        ) : null}
+        {onReturn ? <Button onClick={onReturn}>Return to dashboard</Button> : null}
       </header>
 
-      <StatePanel
-        state={summary.state}
-        eyebrow="Current posture"
-        title={summary.title}
-        description={summary.description}
+      <Tabs
+        label="Diagnostics sections"
+        value={tab}
+        onChange={setTab}
+        tabs={[
+          { id: 'compatibility', label: 'Compatibility', panelId: `${panelId}-compatibility` },
+          { id: 'health', label: 'Data health', panelId: `${panelId}-health` },
+          { id: 'recovery', label: 'Recovery', panelId: `${panelId}-recovery` },
+          { id: 'support', label: 'Support summary', panelId: `${panelId}-support` },
+        ]}
       />
-
       <section
-        className="op-diagnostics__findings"
-        aria-labelledby="dashboard-diagnostics-findings-title"
+        id={`${panelId}-compatibility`}
+        role="tabpanel"
+        hidden={tab !== 'compatibility'}
+        aria-label="Compatibility checks"
       >
-        <div className="op-section-heading">
-          <div>
-            <p className="op-eyebrow">Certified checks</p>
-            <h2 id="dashboard-diagnostics-findings-title">Boot through optional dependencies</h2>
+        <StatePanel
+          state={summary.state}
+          eyebrow="Current posture"
+          title={summary.title}
+          description={summary.description}
+        />
+
+        <section
+          className="op-diagnostics__findings"
+          aria-labelledby="dashboard-diagnostics-findings-title"
+        >
+          <div className="op-section-heading">
+            <div>
+              <p className="op-eyebrow">Certified checks</p>
+              <h2 id="dashboard-diagnostics-findings-title">Boot through optional dependencies</h2>
+            </div>
+            <p>
+              Each row is derived only from the public bootstrap envelope and current connection
+              state.
+            </p>
           </div>
-          <p>
-            Each row is derived only from the public bootstrap envelope and current connection
-            state.
-          </p>
-        </div>
 
-        <ol className="op-diagnostics__list">
-          {findings.map((entry) => (
-            <li key={entry.category} data-diagnostic={entry.category} data-status={entry.status}>
-              <article>
-                <header>
-                  <p className="op-eyebrow">{entry.category.replaceAll('-', ' ')}</p>
-                  <h3>{entry.title}</h3>
-                  <span className="op-diagnostics__status">{statusLabel(entry.status)}</span>
-                </header>
-                <p>{entry.detail}</p>
-                <p className="op-diagnostics__remediation">
-                  <strong>Next safe step:</strong> {entry.remediation}
-                </p>
-              </article>
-            </li>
-          ))}
-        </ol>
+          <ol className="op-diagnostics__list">
+            {findings.map((entry) => (
+              <li key={entry.category} data-diagnostic={entry.category} data-status={entry.status}>
+                <article>
+                  <header>
+                    <p className="op-eyebrow">{entry.category.replaceAll('-', ' ')}</p>
+                    <h3>{entry.title}</h3>
+                    <Badge
+                      tone={
+                        entry.status === 'pass'
+                          ? 'success'
+                          : entry.status === 'fail'
+                            ? 'danger'
+                            : 'warn'
+                      }
+                    >
+                      {statusLabel(entry.status)}
+                    </Badge>
+                  </header>
+                  <p>{entry.detail}</p>
+                  <p className="op-diagnostics__remediation">
+                    <strong>Next safe step:</strong> {entry.remediation}
+                  </p>
+                </article>
+              </li>
+            ))}
+          </ol>
+        </section>
       </section>
-
-      <SupportSummary embeddedBuildId={embeddedBuildId} bootstrap={bootstrap} />
+      <section
+        id={`${panelId}-health`}
+        role="tabpanel"
+        hidden={tab !== 'health'}
+        aria-label="Data health"
+      >
+        <DataHealth {...health} read={dataHealth === undefined ? health.read : dataHealth} />
+      </section>
+      <section
+        id={`${panelId}-recovery`}
+        role="tabpanel"
+        hidden={tab !== 'recovery'}
+        aria-label="Recovery guidance"
+      >
+        <Card title="Resume the local dashboard">
+          <p>
+            Start the dashboard from the project folder. The last validated snapshot remains
+            readable while the connection recovers.
+          </p>
+          <CommandHint command="openplanr dashboard" />
+          <p>
+            For package or API failures, follow the compatibility check's next safe step and verify
+            the installation again.
+          </p>
+          <a href="#/operate/recovery">Open governed Operate recovery</a>
+        </Card>
+      </section>
+      <section
+        id={`${panelId}-support`}
+        role="tabpanel"
+        hidden={tab !== 'support'}
+        aria-label="Support summary"
+      >
+        <SupportSummary embeddedBuildId={embeddedBuildId} bootstrap={bootstrap} />
+      </section>
 
       <p className="op-authority-note">
         Diagnostics do not create arguments, authority, effects, repeated instructions, PLAN runs,

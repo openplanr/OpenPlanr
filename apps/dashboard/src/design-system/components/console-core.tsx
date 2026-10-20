@@ -2,19 +2,26 @@ import {
   type ChangeEvent,
   type KeyboardEvent,
   type ReactNode,
-  useEffect,
+  useCallback,
   useId,
+  useLayoutEffect,
+  useRef,
   useState,
 } from 'react';
+import { Tabs as RadixTabs } from './composite-primitives.js';
 import { PcIcon, type PcIconName } from './console-icon.js';
-import './planr-console.css';
+import { Tooltip } from './tooltip.js';
 
-/*
- * Planr Console core kit, ported 1:1 from the design system's component sources
- * (Button, IconButton, Kbd, Badge, Card, EmptyState, Tabs, Skeleton, Toolbar,
- * SectionHeader, Input, Select, Switch, InlineAlert, CommandHint, DataTable).
- * Presentational only; every component renders exactly what it is given.
- */
+export {
+  ChipToggle,
+  type ChipToggleProps,
+  Select,
+  type SelectOption,
+  type SelectProps,
+} from './chip-menu.js';
+export { CommandHint, type CommandHintProps } from './command-hint.js';
+
+import './planr-console.css';
 
 // ---------------------------------------------------------------- Button
 
@@ -34,9 +41,13 @@ export type ButtonProps = Readonly<{
   type?: 'button' | 'submit';
   onClick?: () => void;
   ariaLabel?: string;
+  'aria-expanded'?: boolean;
+  'aria-pressed'?: boolean;
+  'data-copy-command'?: 'true';
+  disabledReason?: string;
 }>;
 
-const BUTTON_ICON = { sm: 13, md: 14, lg: 16 } as const;
+const BUTTON_ICON = { sm: 15, md: 15, lg: 16 } as const;
 
 /** The console's action control. Primary is reserved for the one governed action per view. */
 export function Button({
@@ -52,27 +63,45 @@ export function Button({
   type = 'button',
   onClick,
   ariaLabel,
+  'aria-expanded': ariaExpanded,
+  'aria-pressed': ariaPressed,
+  'data-copy-command': copyCommand,
+  disabledReason,
 }: ButtonProps) {
+  const reasonId = useId();
   return (
-    <button
-      type={type}
-      className="pc-button"
-      data-variant={variant}
-      data-size={size}
-      data-full={fullWidth || undefined}
-      disabled={disabled || loading}
-      aria-label={ariaLabel}
-      onClick={onClick}
-    >
-      {loading ? (
-        <PcIcon name="loader-circle" size={BUTTON_ICON[size]} spin />
-      ) : icon ? (
-        <PcIcon name={icon} size={BUTTON_ICON[size]} />
+    <>
+      <button
+        type={type}
+        className="pc-button"
+        data-variant={variant}
+        data-size={size}
+        data-full={fullWidth || undefined}
+        disabled={disabled || loading}
+        aria-disabled={disabled || loading || undefined}
+        aria-busy={loading || undefined}
+        aria-describedby={disabledReason ? reasonId : undefined}
+        aria-label={ariaLabel}
+        aria-expanded={ariaExpanded}
+        aria-pressed={ariaPressed}
+        data-copy-command={copyCommand}
+        onClick={onClick}
+      >
+        {loading ? (
+          <PcIcon name="loader-circle" size={BUTTON_ICON[size]} spin />
+        ) : icon ? (
+          <PcIcon name={icon} size={BUTTON_ICON[size]} />
+        ) : null}
+        {children}
+        {iconAfter ? <PcIcon name={iconAfter} size={BUTTON_ICON[size]} /> : null}
+        {shortcut ? <span className="pc-button__shortcut">{shortcut}</span> : null}
+      </button>
+      {disabledReason ? (
+        <span className="pc-control-reason" id={reasonId}>
+          {disabledReason}
+        </span>
       ) : null}
-      {children}
-      {iconAfter ? <PcIcon name={iconAfter} size={BUTTON_ICON[size]} /> : null}
-      {shortcut ? <span className="pc-button__shortcut">{shortcut}</span> : null}
-    </button>
+    </>
   );
 }
 
@@ -83,10 +112,11 @@ export type IconButtonProps = Readonly<{
   active?: boolean;
   disabled?: boolean;
   tone?: 'default' | 'strong' | 'danger' | 'accent';
+  disabledReason?: string;
   onClick?: () => void;
 }>;
 
-const ICON_BUTTON_ICON = { sm: 13, md: 15, lg: 17 } as const;
+const ICON_BUTTON_ICON = { sm: 13, md: 16, lg: 16 } as const;
 
 /** Square icon-only control for toolbars and row affordances. `label` is the accessible name. */
 export function IconButton({
@@ -97,22 +127,32 @@ export function IconButton({
   disabled = false,
   tone = 'default',
   onClick,
+  disabledReason,
 }: IconButtonProps) {
+  const reasonId = useId();
   return (
-    <button
-      type="button"
-      className="pc-icon-button"
-      data-size={size}
-      data-tone={tone}
-      data-active={active || undefined}
-      title={label}
-      aria-label={label}
-      aria-pressed={active || undefined}
-      disabled={disabled}
-      onClick={onClick}
-    >
-      <PcIcon name={icon} size={ICON_BUTTON_ICON[size]} />
-    </button>
+    <Tooltip content={disabledReason ?? label}>
+      <button
+        type="button"
+        className="pc-icon-button"
+        data-size={size}
+        data-tone={tone}
+        data-active={active || undefined}
+        aria-label={label}
+        aria-pressed={active || undefined}
+        disabled={disabled}
+        aria-disabled={disabled || undefined}
+        aria-describedby={disabledReason ? reasonId : undefined}
+        onClick={onClick}
+      >
+        <PcIcon name={icon} size={ICON_BUTTON_ICON[size]} />
+        {disabledReason ? (
+          <span className="pc-visually-hidden" id={reasonId}>
+            {disabledReason}
+          </span>
+        ) : null}
+      </button>
+    </Tooltip>
   );
 }
 
@@ -160,32 +200,101 @@ export function Badge({
   );
 }
 
+export type CardHeaderProps = Readonly<{
+  title?: ReactNode;
+  glyph?: ReactNode;
+  count?: string | number;
+  description?: string;
+  actions?: ReactNode;
+  href?: string;
+  id?: string;
+}>;
+
+/** Fixed-height heading for artifact cards. */
+export function CardHeader({
+  title,
+  glyph,
+  count,
+  description,
+  actions,
+  href,
+  id,
+}: CardHeaderProps) {
+  const descriptionId = useId();
+  return (
+    <header className="pc-card__head">
+      <div className="pc-card__heading">
+        {glyph ? (
+          <span className="pc-card__glyph" aria-hidden="true">
+            {glyph}
+          </span>
+        ) : null}
+        <h2 className="pc-card__title" id={id}>
+          {title}
+        </h2>
+        {count !== undefined ? <span className="pc-card__meta">{count}</span> : null}
+      </div>
+      {description ? (
+        <>
+          <Tooltip content={description}>
+            <button
+              type="button"
+              className="pc-card__info"
+              aria-label={`About ${typeof title === 'string' ? title : 'this card'}`}
+              aria-describedby={descriptionId}
+            >
+              <PcIcon name="info" size={15} />
+            </button>
+          </Tooltip>
+          <span id={descriptionId} className="pc-visually-hidden">
+            {description}
+          </span>
+        </>
+      ) : null}
+      {actions || href ? (
+        <div className="pc-card__actions">
+          {actions}
+          {href ? (
+            <a href={href} className="pc-card__see-all">
+              See all{count !== undefined ? ` ${count}` : ''}
+              <span className="pc-visually-hidden"> {title}</span>
+            </a>
+          ) : null}
+        </div>
+      ) : null}
+    </header>
+  );
+}
+
 export type CardProps = Readonly<{
   children: ReactNode;
+  className?: string;
   title?: string;
   meta?: string;
   actions?: ReactNode;
   padding?: number;
   elevated?: boolean;
+  description?: string;
 }>;
 
 /** Hairline container for grouped content. Flat by default; `elevated` only for floating surfaces. */
 export function Card({
   children,
+  className,
   title,
   meta,
   actions,
-  padding = 14,
+  padding = 20,
   elevated = false,
+  description,
 }: CardProps) {
   return (
-    <section className="pc-card" data-elevated={elevated || undefined}>
+    <section
+      className={className ? `pc-card ${className}` : 'pc-card'}
+      data-elevated={elevated || undefined}
+    >
       {title || actions ? (
-        <header className="pc-card__head">
-          {title ? <h2 className="pc-card__title">{title}</h2> : null}
-          {meta ? <span className="pc-card__meta">{meta}</span> : null}
-          {actions ? <div className="pc-card__actions">{actions}</div> : null}
-        </header>
+        <CardHeader title={title} count={meta} description={description} actions={actions} />
       ) : null}
       <div className="pc-card__body" style={{ padding }}>
         {children}
@@ -199,12 +308,19 @@ export type EmptyStateProps = Readonly<{
   title: string;
   description?: string;
   action?: ReactNode;
+  variant?: 'tile';
 }>;
 
 /** Empty state for a filtered table, a fresh workspace, or a cycle with nothing proposed. */
-export function EmptyState({ icon = 'inbox', title, description, action }: EmptyStateProps) {
+export function EmptyState({
+  icon = 'inbox',
+  title,
+  description,
+  action,
+  variant,
+}: EmptyStateProps) {
   return (
-    <div className="pc-empty">
+    <div className="pc-empty" data-variant={variant}>
       <span className="pc-empty__glyph" aria-hidden="true">
         <PcIcon name={icon} size={17} />
       </span>
@@ -222,6 +338,9 @@ export type TabDefinition = Readonly<{
   label: string;
   icon?: PcIconName;
   count?: number | string;
+  disabled?: boolean;
+  disabledReason?: string;
+  panelId?: string;
 }>;
 
 export type TabsProps = Readonly<{
@@ -230,31 +349,58 @@ export type TabsProps = Readonly<{
   onChange: (id: string) => void;
   size?: 'sm' | 'md';
   label?: string;
+  variant?: 'underline' | 'pill';
 }>;
 
 /** Underlined view switcher for a single surface. */
-export function Tabs({ tabs, value, onChange, size = 'md', label }: TabsProps) {
+export function Tabs({
+  tabs,
+  value,
+  onChange,
+  size = 'md',
+  label,
+  variant = 'underline',
+}: TabsProps) {
   return (
-    <div className="pc-tabs" data-size={size} role="tablist" aria-label={label}>
-      {tabs.map((tab) => {
-        const active = tab.id === value;
-        return (
-          <button
+    <RadixTabs.Root value={value} onValueChange={onChange} activationMode="manual">
+      <RadixTabs.List
+        className="pc-tabs"
+        data-size={size}
+        data-variant={variant}
+        aria-label={label}
+      >
+        {tabs.map((tab) => (
+          <RadixTabs.Trigger
             key={tab.id}
-            type="button"
-            role="tab"
+            value={tab.id}
             className="pc-tabs__tab"
-            aria-selected={active}
-            data-active={active || undefined}
-            onClick={() => onChange(tab.id)}
+            disabled={tab.disabled}
+            aria-disabled={tab.disabled || undefined}
+            aria-description={tab.disabledReason}
+            aria-controls={tab.panelId}
+            data-active={tab.id === value || undefined}
+            onMouseDown={(event) => {
+              // Preserve click activation while Radix owns roving focus and arrow keys.
+              event.preventDefault();
+              if (!tab.disabled) event.currentTarget.focus();
+            }}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault();
+                if (!tab.disabled) onChange(tab.id);
+              }
+            }}
+            onClick={() => {
+              if (!tab.disabled) onChange(tab.id);
+            }}
           >
             {tab.icon ? <PcIcon name={tab.icon} size={13} /> : null}
             {tab.label}
             {tab.count !== undefined ? <span className="pc-tabs__count">{tab.count}</span> : null}
-          </button>
-        );
-      })}
-    </div>
+          </RadixTabs.Trigger>
+        ))}
+      </RadixTabs.List>
+    </RadixTabs.Root>
   );
 }
 
@@ -387,6 +533,7 @@ export type SectionHeaderProps = Readonly<{
   actions?: ReactNode;
   sticky?: boolean;
   headingLevel?: 1 | 2 | 3;
+  inset?: boolean;
 }>;
 
 /** View header: eyebrow capability label, title, count, and the view's action cluster. */
@@ -398,10 +545,15 @@ export function SectionHeader({
   actions,
   sticky = false,
   headingLevel = 1,
+  inset = false,
 }: SectionHeaderProps) {
   const Heading = headingLevel === 1 ? 'h1' : headingLevel === 2 ? 'h2' : 'h3';
   return (
-    <header className="pc-section-header" data-sticky={sticky || undefined}>
+    <header
+      className="pc-section-header"
+      data-sticky={sticky || undefined}
+      data-inset={inset || undefined}
+    >
       <div className="pc-section-header__text">
         {eyebrow ? <span className="pc-section-header__eyebrow">{eyebrow}</span> : null}
         <div className="pc-section-header__row">
@@ -420,6 +572,7 @@ export function SectionHeader({
 export type InputProps = Readonly<{
   value: string;
   onChange: (value: string) => void;
+  onKeyDown?: (event: KeyboardEvent<HTMLInputElement>) => void;
   ariaLabel: string;
   placeholder?: string;
   icon?: PcIconName;
@@ -427,12 +580,16 @@ export type InputProps = Readonly<{
   size?: ControlSize;
   mono?: boolean;
   width?: number;
+  disabled?: boolean;
+  disabledReason?: string;
+  error?: string;
 }>;
 
 /** Single-line text input at console density. */
 export function Input({
   value,
   onChange,
+  onKeyDown,
   ariaLabel,
   placeholder,
   icon,
@@ -440,55 +597,43 @@ export function Input({
   size = 'md',
   mono = false,
   width,
+  disabled = false,
+  disabledReason,
+  error,
 }: InputProps) {
+  const reasonId = useId();
   return (
-    <span className="pc-input" data-size={size} style={{ width }}>
-      {icon ? <PcIcon name={icon} size={14} color="var(--pc-text-tertiary)" /> : null}
-      <input
-        className="pc-input__field"
-        data-mono={mono || undefined}
-        type="text"
-        value={value}
-        placeholder={placeholder}
-        aria-label={ariaLabel}
-        onChange={(event: ChangeEvent<HTMLInputElement>) => onChange(event.target.value)}
-      />
-      {suffix ? <span className="pc-input__suffix">{suffix}</span> : null}
-    </span>
-  );
-}
-
-export type SelectOption = Readonly<{ value: string; label: string }>;
-
-export type SelectProps = Readonly<{
-  value: string;
-  onChange: (value: string) => void;
-  options: readonly (SelectOption | string)[];
-  ariaLabel: string;
-  size?: ControlSize;
-  width?: number;
-}>;
-
-/** Native select in console dress. */
-export function Select({ value, onChange, options, ariaLabel, size = 'md', width }: SelectProps) {
-  return (
-    <span className="pc-select" data-size={size} style={{ width }}>
-      <select
-        className="pc-select__field"
-        value={value}
-        aria-label={ariaLabel}
-        onChange={(event: ChangeEvent<HTMLSelectElement>) => onChange(event.target.value)}
+    <span className="pc-field-control" style={{ width }}>
+      <span
+        className="pc-input"
+        data-size={size}
+        data-disabled={disabled || undefined}
+        data-invalid={Boolean(error) || undefined}
       >
-        {options.map((option) => {
-          const item = typeof option === 'string' ? { value: option, label: option } : option;
-          return (
-            <option key={item.value} value={item.value}>
-              {item.label}
-            </option>
-          );
-        })}
-      </select>
-      <PcIcon name="chevron-down" size={13} color="var(--pc-text-tertiary)" />
+        {icon ? <PcIcon name={icon} size={15} color="var(--pc-text-tertiary)" /> : null}
+        <input
+          className="pc-input__field"
+          data-mono={mono || undefined}
+          type="text"
+          value={value}
+          placeholder={placeholder}
+          aria-label={ariaLabel}
+          disabled={disabled}
+          aria-disabled={disabled || undefined}
+          aria-invalid={Boolean(error) || undefined}
+          aria-describedby={error || disabledReason ? reasonId : undefined}
+          onKeyDown={onKeyDown}
+          onChange={(event: ChangeEvent<HTMLInputElement>) => {
+            if (!disabled) onChange(event.target.value);
+          }}
+        />
+        {suffix ? <span className="pc-input__suffix">{suffix}</span> : null}
+      </span>
+      {error || disabledReason ? (
+        <span className="pc-control-reason" id={reasonId} role={error ? 'alert' : undefined}>
+          {error ?? disabledReason}
+        </span>
+      ) : null}
     </span>
   );
 }
@@ -499,6 +644,7 @@ export type SwitchProps = Readonly<{
   label?: string;
   ariaLabel?: string;
   disabled?: boolean;
+  disabledReason?: string;
   size?: 'sm' | 'md';
 }>;
 
@@ -510,7 +656,9 @@ export function Switch({
   ariaLabel,
   disabled = false,
   size = 'md',
+  disabledReason,
 }: SwitchProps) {
+  const reasonId = useId();
   return (
     <label className="pc-switch" data-size={size} data-disabled={disabled || undefined}>
       <input
@@ -520,13 +668,22 @@ export function Switch({
         checked={checked}
         aria-checked={checked}
         disabled={disabled}
+        aria-disabled={disabled || undefined}
+        aria-describedby={disabledReason ? reasonId : undefined}
         aria-label={label ? undefined : ariaLabel}
-        onChange={(event) => onChange(event.target.checked)}
+        onChange={(event) => {
+          if (!disabled) onChange(event.target.checked);
+        }}
       />
       <span className="pc-switch__track" aria-hidden="true">
         <span className="pc-switch__thumb" />
       </span>
       {label ? <span className="pc-switch__label">{label}</span> : null}
+      {disabledReason ? (
+        <span className="pc-control-reason" id={reasonId}>
+          {disabledReason}
+        </span>
+      ) : null}
     </label>
   );
 }
@@ -564,71 +721,12 @@ export function InlineAlert({ tone = 'warn', title, children, actions }: InlineA
   );
 }
 
-export type CommandHintProps = Readonly<{
-  command: string;
-  label?: string;
-  size?: 'sm' | 'md';
-}>;
-
-/**
- * A copy-ready invocation. The console never mutates the graph; the clipboard write is
- * the only outbound effect a read-only surface gets, and a refused write is reported.
- */
-export function CommandHint({ command, label, size = 'md' }: CommandHintProps) {
-  const [state, setState] = useState<'idle' | 'copied' | 'blocked'>('idle');
-  useEffect(() => {
-    if (state === 'idle') return;
-    const timer = window.setTimeout(() => setState('idle'), 1400);
-    return () => window.clearTimeout(timer);
-  }, [state]);
-  const copy = () => {
-    if (!navigator.clipboard) {
-      setState('blocked');
-      return;
-    }
-    navigator.clipboard.writeText(command).then(
-      () => setState('copied'),
-      () => setState('blocked'),
-    );
-  };
-  const buttonLabel =
-    state === 'copied'
-      ? 'Command copied'
-      : state === 'blocked'
-        ? 'Copy was blocked'
-        : 'Copy command';
-  return (
-    <div className="pc-command-hint" data-size={size}>
-      {label ? <span className="pc-command-hint__label">{label}</span> : null}
-      <div className="pc-command-hint__row">
-        <span className="pc-command-hint__command">
-          <PcIcon name="terminal" size={12} color="var(--pc-text-tertiary)" />
-          {command}
-        </span>
-        <button
-          type="button"
-          className="pc-command-hint__copy"
-          data-state={state}
-          aria-label={buttonLabel}
-          onClick={copy}
-        >
-          <PcIcon
-            name={state === 'copied' ? 'check' : state === 'blocked' ? 'x' : 'copy'}
-            size={12}
-          />
-          {state === 'idle' ? null : state}
-        </button>
-      </div>
-    </div>
-  );
-}
-
 // ---------------------------------------------------------------- DataTable
 
 export type DataTableColumn<Row> = Readonly<{
   key: string;
   label: string;
-  width?: number;
+  width?: number | string;
   align?: 'left' | 'right';
   mono?: boolean;
   sortable?: boolean;
@@ -644,14 +742,50 @@ export type DataTableProps<Row extends { readonly id: string }> = Readonly<{
   caption?: string;
   emptyMessage?: string;
   selectedId?: string;
+  selectedIds?: ReadonlySet<string>;
+  onRowSelect?: (row: Row) => void;
+  rowCount?: number;
+  rowPosition?: (row: Row) => number;
+  rowWindow?: Readonly<{ start: number; end: number; rowHeight: number; retainedId?: string }>;
+  groups?: readonly Readonly<{
+    key: string;
+    label: string;
+    rows: readonly Row[];
+    header?: ReactNode;
+    headerRowPosition?: number;
+    collapsed?: boolean;
+    rowWindow?: DataTableProps<Row>['rowWindow'];
+    rowPosition?: (row: Row) => number;
+  }>[];
+  rowHref?: (row: Row) => string | null;
   sort?: DataTableSort;
   onSort?: (key: string) => void;
   onRowClick?: (row: Row) => void;
+  onRowFocus?: (row: Row) => void;
 }>;
 
 function cellValue<Row>(row: Row, key: string): ReactNode {
   const value = (row as Record<string, unknown>)[key];
   return value === null || value === undefined ? null : String(value);
+}
+
+type TableWindowEntry<Row> = { row: Row; index: number } | { gap: number; index: number };
+function tableWindowEntries<Row extends { readonly id: string }>(
+  rows: readonly Row[],
+  window: DataTableProps<Row>['rowWindow'],
+): TableWindowEntry<Row>[] {
+  if (!window) return rows.map((row, index) => ({ row, index }));
+  const result: TableWindowEntry<Row>[] = [];
+  let gap = 0;
+  rows.forEach((row, index) => {
+    if ((index >= window.start && index < window.end) || row.id === window.retainedId) {
+      if (gap) result.push({ gap: gap * window.rowHeight, index: index - gap });
+      gap = 0;
+      result.push({ row, index });
+    } else gap++;
+  });
+  if (gap) result.push({ gap: gap * window.rowHeight, index: rows.length - gap });
+  return result;
 }
 
 /**
@@ -665,22 +799,73 @@ export function DataTable<Row extends { readonly id: string }>({
   caption,
   emptyMessage = 'Nothing here yet.',
   selectedId,
+  selectedIds,
+  onRowSelect,
+  rowCount,
+  rowPosition,
+  rowWindow,
+  groups,
+  rowHref,
   sort,
   onSort,
   onRowClick,
+  onRowFocus,
 }: DataTableProps<Row>) {
+  const scrollRegion = useRef<HTMLDivElement>(null);
+  const [scrollable, setScrollable] = useState(false);
+  const scrollContext = caption ?? 'table';
+  const measureScrollRegion = useCallback(() => {
+    const region = scrollRegion.current;
+    if (region)
+      setScrollable(
+        region.scrollWidth > region.clientWidth || region.scrollHeight > region.clientHeight,
+      );
+  }, []);
+  useLayoutEffect(measureScrollRegion);
+  useLayoutEffect(() => {
+    const region = scrollRegion.current;
+    if (!region) return;
+    const observer =
+      typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(measureScrollRegion);
+    observer?.observe(region);
+    const table = region.querySelector('table');
+    if (table) observer?.observe(table);
+    window.addEventListener('resize', measureScrollRegion);
+    return () => {
+      observer?.disconnect();
+      window.removeEventListener('resize', measureScrollRegion);
+    };
+  }, [measureScrollRegion]);
+  const regionAccessibility = scrollable
+    ? { tabIndex: 0, role: 'region' as const, 'aria-label': scrollContext }
+    : {};
   const activate = (row: Row) => onRowClick?.(row);
   const onRowKey = (event: KeyboardEvent<HTMLTableRowElement>, row: Row) => {
     if (!onRowClick) return;
+    if (event.target !== event.currentTarget) return;
+    if (event.key === ' ' && onRowSelect) {
+      event.preventDefault();
+      onRowSelect(row);
+      return;
+    }
     if (event.key === 'Enter' || event.key === ' ') {
       event.preventDefault();
       activate(row);
     }
   };
+  const rowGroups: NonNullable<DataTableProps<Row>['groups']> = groups ?? [
+    { key: 'all', label: '', rows, rowWindow },
+  ];
   return (
-    <div className="pc-table-wrap">
+    <div
+      ref={scrollRegion}
+      className="pc-table-wrap"
+      data-scroll-context={scrollContext}
+      {...regionAccessibility}
+    >
       <table
         className="pc-table"
+        aria-rowcount={rowCount === undefined ? undefined : rowCount + 1}
         data-compact={compact || undefined}
         data-interactive={onRowClick ? true : undefined}
       >
@@ -711,6 +896,7 @@ export function DataTable<Row extends { readonly id: string }>({
                 <th
                   key={column.key}
                   scope="col"
+                  data-column={column.key}
                   data-align={column.align ?? 'left'}
                   style={{ width: column.width }}
                   aria-sort={
@@ -733,36 +919,113 @@ export function DataTable<Row extends { readonly id: string }>({
             })}
           </tr>
         </thead>
-        <tbody>
-          {rows.length === 0 ? (
-            <tr>
-              <td className="pc-table__empty" colSpan={columns.length}>
-                {emptyMessage}
-              </td>
-            </tr>
-          ) : (
-            rows.map((row) => (
-              <tr
-                key={row.id}
-                data-selected={selectedId !== undefined && row.id === selectedId ? true : undefined}
-                tabIndex={onRowClick ? 0 : undefined}
-                onClick={onRowClick ? () => activate(row) : undefined}
-                onKeyDown={onRowClick ? (event) => onRowKey(event, row) : undefined}
-              >
-                {columns.map((column) => (
-                  <td
-                    key={column.key}
-                    data-align={column.align ?? 'left'}
-                    data-mono={column.mono || undefined}
-                    style={{ maxWidth: column.width }}
-                  >
-                    {column.render ? column.render(row) : cellValue(row, column.key)}
-                  </td>
-                ))}
+        {rowGroups.map((group) => (
+          <tbody
+            key={group.key}
+            aria-label={group.label || undefined}
+            data-keyboard-group={groups ? group.key : undefined}
+          >
+            {group.header ? (
+              <tr className="pc-table__group-header" aria-rowindex={group.headerRowPosition}>
+                <td colSpan={columns.length}>{group.header}</td>
               </tr>
-            ))
-          )}
-        </tbody>
+            ) : null}
+            {rows.length === 0 ? (
+              <tr>
+                <td className="pc-table__empty" colSpan={columns.length}>
+                  {emptyMessage}
+                </td>
+              </tr>
+            ) : (
+              tableWindowEntries(group.rows, group.rowWindow).map((entry) => {
+                if ('gap' in entry)
+                  return (
+                    <tr
+                      key={`gap:${entry.index}`}
+                      inert
+                      className="pc-table__spacer"
+                      hidden={group.collapsed}
+                    >
+                      <td
+                        aria-hidden="true"
+                        colSpan={columns.length}
+                        style={{ height: entry.gap, padding: 0, border: 0 }}
+                      />
+                    </tr>
+                  );
+                const { row } = entry;
+                return (
+                  <tr
+                    key={row.id}
+                    hidden={group.collapsed}
+                    aria-rowindex={
+                      group.rowPosition
+                        ? group.rowPosition(row) + 1
+                        : rowPosition
+                          ? rowPosition(row) + 1
+                          : undefined
+                    }
+                    aria-selected={selectedIds ? selectedIds.has(row.id) : undefined}
+                    data-done={(row as { status?: string }).status === 'done' || undefined}
+                    data-keyboard-item={onRowClick ? row.id : undefined}
+                    data-selected={
+                      selectedId !== undefined && row.id === selectedId ? true : undefined
+                    }
+                    tabIndex={onRowClick ? 0 : undefined}
+                    onFocus={onRowFocus ? () => onRowFocus(row) : undefined}
+                    onClick={
+                      onRowClick
+                        ? (event) => {
+                            if (
+                              event.metaKey ||
+                              event.ctrlKey ||
+                              event.altKey ||
+                              event.shiftKey ||
+                              (event.target instanceof Element &&
+                                event.target.closest('a, button, input, [role="combobox"]'))
+                            )
+                              return;
+                            event.currentTarget.focus({ preventScroll: true });
+                            activate(row);
+                          }
+                        : undefined
+                    }
+                    onKeyDown={onRowClick ? (event) => onRowKey(event, row) : undefined}
+                  >
+                    {columns.map((column) => (
+                      <td
+                        key={column.key}
+                        data-column={column.key}
+                        data-align={column.align ?? 'left'}
+                        data-mono={column.mono || undefined}
+                        style={{ maxWidth: column.width }}
+                      >
+                        {rowHref && column.key === 'id' && rowHref(row) ? (
+                          <a
+                            href={rowHref(row) ?? undefined}
+                            onClick={(event) => {
+                              if (event.metaKey || event.ctrlKey || event.altKey || event.shiftKey)
+                                return;
+                              event.preventDefault();
+                              event.currentTarget.closest('tr')?.focus({ preventScroll: true });
+                              activate(row);
+                            }}
+                          >
+                            {column.render ? column.render(row) : cellValue(row, column.key)}
+                          </a>
+                        ) : column.render ? (
+                          column.render(row)
+                        ) : (
+                          cellValue(row, column.key)
+                        )}
+                      </td>
+                    ))}
+                  </tr>
+                );
+              })
+            )}
+          </tbody>
+        ))}
       </table>
     </div>
   );

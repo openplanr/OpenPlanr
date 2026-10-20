@@ -1,26 +1,57 @@
-/* The header, toolbar and catalog stack at kit spacing, not the workspace grid gap. */
 .op-planning.pc-console {
   gap: 0;
+  min-width: 0;
 }
-
 .pc-console__shown {
   font: var(--pc-type-mono-sm);
   color: var(--pc-text-tertiary);
 }
-
 .pc-console__catalog {
   display: grid;
-  gap: 14px;
-  margin-top: 4px;
+  gap: var(--pc-space-5);
+  margin-top: var(--pc-space-4);
 }
-
-/* Group tables sit inside cards, so the table's own frame would double the card edge. */
 .pc-console__catalog .pc-card {
   overflow: hidden;
 }
-
 .pc-console__catalog .pc-table-wrap {
   border: 0;
   border-radius: 0;
   background: transparent;
+}
+.pc-console__note,
+.pc-console__group-description {
+  font: var(--pc-type-body-sm);
+  color: var(--pc-text-secondary);
+  max-width: 80ch;
+}
+.pc-console__group-description {
+  padding-inline: var(--pc-space-4);
+}
+.pc-console__command-name {
+  font: var(--pc-type-mono-sm);
+}
+.pc-console__link {
+  color: var(--pc-text-link);
+  text-underline-offset: 3px;
+}
+.pc-console__link:hover {
+  color: var(--pc-text-link-hover);
+}
+.pc-console__link:active {
+  background: var(--pc-surface-active);
+}
+.pc-console__link:focus-visible {
+  outline: 2px solid var(--pc-focus-ring);
+  outline-offset: 2px;
+}
+@media (max-width: 899px) {
+  .pc-console .pc-tabs__tab,
+  .pc-console .pc-command-hint__copy {
+    min-height: 44px;
+  }
+}
+.pc-console .pc-field-control,
+.pc-console .pc-input {
+  max-width: 100%;
 }

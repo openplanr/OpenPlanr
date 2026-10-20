@@ -30,7 +30,7 @@ describe('dashboard skip link', () => {
 
     fireEvent.click(screen.getByRole('link', { name: 'Skip to main content' }));
 
-    expect(window.location.hash).toBe('#/overview');
+    expect(window.location.hash).toBe('#/home');
     expect(document.activeElement).toBe(screen.getByRole('main'));
   });
 });

@@ -1,14 +1,22 @@
 import {
   Absent,
+  ArtifactRowCopy,
+  ArtifactRowMeta,
   ArtifactStatus,
+  ArtifactTag,
+  type CommandHintProps,
   type DataTableColumn,
+  PriorityChip,
   WorkItemChip,
 } from '../../design-system/components/index.js';
 import {
   type PlanningModelEdge,
   type PlanningModelNode,
+  planningContinuation,
   planningDisplayId,
 } from './planning-model.js';
+
+import { authoredTimestamp, planningLabels } from './presentation-view.js';
 
 /* Column recipes shared by the planning tables. Every cell renders a real field or Absent. */
 
@@ -111,4 +119,92 @@ export function dependencyCountColumn(
       return count > 0 ? String(count) : <Absent />;
     },
   });
+}
+
+const TAG_TYPES = {
+  spec: 'spec',
+  story: 'us',
+  task: 't',
+  backlog: 'bl',
+  adr: 'adr',
+  epic: 'epic',
+  feature: 'epic',
+  sprint: 'sprint',
+  quick: 'qt',
+} as const;
+
+export const LIST_COLUMNS: readonly Column[] = [
+  {
+    key: 'id',
+    label: 'ID',
+    width: 'max(92px, var(--id-col))',
+    sortable: true,
+    render: (node) => (
+      <ArtifactTag type={TAG_TYPES[node.type]}>{planningDisplayId(node)}</ArtifactTag>
+    ),
+  },
+  {
+    key: 'title',
+    label: 'Title',
+    sortable: true,
+    render: (node) => (
+      <span className="pc-list__title" title={node.title}>
+        {node.title}
+      </span>
+    ),
+  },
+  { ...STATUS_COLUMN, width: 138, sortable: true },
+  {
+    key: 'priority',
+    label: 'Priority',
+    width: 74,
+    sortable: true,
+    render: (node) => <PriorityChip priority={frontmatterString(node, 'priority') ?? undefined} />,
+  },
+  {
+    key: 'labels',
+    label: 'Labels',
+    width: 150,
+    render: (node) => (
+      <span className="pc-list__labels" title={planningLabels(node).join(', ')}>
+        {planningLabels(node).map((label) => (
+          <span key={label}>{label}</span>
+        ))}
+      </span>
+    ),
+  },
+  {
+    ...UPDATED_COLUMN,
+    width: 70,
+    sortable: true,
+    render: (node) => {
+      const timestamp = authoredTimestamp(node.frontmatter.updated);
+      if (timestamp === null) return 'Unknown';
+      const date = new Date(timestamp);
+      return (
+        <ArtifactRowMeta label={`Updated ${date.toISOString().slice(0, 10)}`}>
+          {date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', timeZone: 'UTC' })}
+        </ArtifactRowMeta>
+      );
+    },
+  },
+];
+
+export function listCommandColumn(
+  onCopy: CommandHintProps['onCopy'],
+  shortcutsEnabled: boolean,
+): Column {
+  return {
+    key: 'command',
+    label: '',
+    width: 28,
+    render: (node) => (
+      <ArtifactRowCopy
+        id={planningDisplayId(node)}
+        command={planningContinuation(node)}
+        onCopy={onCopy}
+        shortcutsEnabled={shortcutsEnabled}
+      />
+    ),
+  };
 }

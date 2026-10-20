@@ -1,4 +1,6 @@
 import type { ReactNode } from 'react';
+import type { ChipSurface } from './artifact-recipes.js';
+import { ArtifactStatus } from './console-planr.js';
 import './planr-console.css';
 
 /**
@@ -7,22 +9,10 @@ import './planr-console.css';
  * passes and never infer or fabricate planning fields.
  */
 
-const STATUS_LABEL: Readonly<Record<string, string>> = Object.freeze({
-  outstanding: 'outstanding',
-  'in-progress': 'in progress',
-  blocked: 'blocked',
-  done: 'done',
-  addressed: 'addressed',
-});
+export type StatusBadgeProps = Readonly<{ status: string; label?: string; surface?: ChipSurface }>;
 
-export type StatusBadgeProps = Readonly<{ status: string; label?: string }>;
-
-export function StatusBadge({ status, label }: StatusBadgeProps) {
-  return (
-    <span className="pc-status" data-status={status}>
-      {label ?? STATUS_LABEL[status] ?? status}
-    </span>
-  );
+export function StatusBadge({ status, label, surface }: StatusBadgeProps) {
+  return <ArtifactStatus status={status} label={label} surface={surface} />;
 }
 
 /**

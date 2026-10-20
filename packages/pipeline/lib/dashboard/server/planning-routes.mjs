@@ -1,5 +1,17 @@
 /** Planning routes: the bound graph snapshot, node detail and the live event stream. */
 
+import { dirname } from 'node:path';
+import { getPlanningReadModel } from '../graph-engine.mjs';
+import {
+  assertPlanningDiagnosticsEnvelope,
+  PLANNING_DIAGNOSTICS_MAX_BYTES,
+  PLANNING_DIAGNOSTICS_MAX_COUNT,
+} from '../planning-diagnostics-contracts.mjs';
+import {
+  assertPlanningFileLinkEnvelope,
+  PLANNING_FILE_LINK_ERROR_CODES,
+  validPlanningFilePath,
+} from '../planning-file-link-contracts.mjs';
 import { sha256Jcs } from './operate.mjs';
 import {
   assertPlanningDetailEnvelope,
@@ -15,6 +27,11 @@ import {
   validLiveBinding,
   validPlanningSubject,
 } from './planning.mjs';
+import {
+  declaredPlanningFiles,
+  readPlanningFileLinkArtifact,
+  resolvePlanningFileLink,
+} from './planning-file-links.mjs';
 import {
   planningBindingError,
   planningJson,
@@ -89,6 +106,85 @@ export function handlePlanningGraph(context) {
   return planningJson(context.res, 200, context.dashboard.planning.graphEnvelope(binding));
 }
 
+export function handlePlanningDiagnostics(context) {
+  const { dashboard, req, res, url } = context;
+  const params = new URLSearchParams(url.searchParams);
+  if (params.getAll('sourceViewHash').length !== 1) return planningResponseError(res, 400);
+  const sourceViewHash = params.get('sourceViewHash');
+  params.delete('sourceViewHash');
+  const binding = planningRequestBinding(
+    req,
+    params,
+    dashboard.project.projectId,
+    dashboard.planningActorId,
+  );
+  if (!binding) return planningBindingError(res);
+  const { planning } = dashboard;
+  const cursor = planning.cursor();
+  if (sourceViewHash !== cursor.viewHash) return planningResponseError(res);
+  const base = {
+    kind: 'planning-diagnostics',
+    schemaVersion: PLANNING_SCHEMA_VERSION,
+    binding,
+    cursor,
+    sourceViewHash,
+    state: 'unavailable',
+    reason: null,
+    errorCode: null,
+    diagnostics: [],
+    totalCount: null,
+    truncated: false,
+  };
+  const respond = (value) =>
+    planningJson(res, 200, assertPlanningDiagnosticsEnvelope(value, { binding, cursor }));
+  let model;
+  try {
+    model = getPlanningReadModel(dashboard.planrDir);
+  } catch (error) {
+    const errorCode = PLANNING_FILE_LINK_ERROR_CODES.includes(error?.code) ? error.code : 'UNKNOWN';
+    return respond({
+      ...base,
+      state: 'error',
+      reason: 'Planning source diagnostics could not be read. Check source access and retry.',
+      errorCode,
+    });
+  }
+  // A native diagnostic belongs only to its complete source graph, including a delegated snapshot.
+  if (sha256Jcs(model.graph) !== cursor.viewHash || !sameLiveCursor(cursor, planning.cursor())) {
+    return respond({
+      ...base,
+      reason:
+        'Planning source diagnostics do not match the current graph. Refresh the graph and retry.',
+    });
+  }
+  const diagnostics = model.diagnostics
+    .toSorted((left, right) => {
+      const key = (entry) =>
+        JSON.stringify([entry.sourcePath, entry.nodeId, entry.field, entry.reason]);
+      return key(left) < key(right) ? -1 : key(left) > key(right) ? 1 : 0;
+    })
+    .slice(0, PLANNING_DIAGNOSTICS_MAX_COUNT)
+    .map((entry) => ({ ...entry, sourcePath: `.planr/${entry.sourcePath}` }));
+  const result = {
+    ...base,
+    state: 'available',
+    diagnostics,
+    totalCount: model.diagnostics.length,
+  };
+  const disclose = () => {
+    result.truncated = diagnostics.length < result.totalCount;
+    result.reason = result.truncated
+      ? 'The diagnostics response reached its record or byte limit. Additional source diagnostics are omitted.'
+      : null;
+  };
+  disclose();
+  while (Buffer.byteLength(JSON.stringify(result), 'utf8') > PLANNING_DIAGNOSTICS_MAX_BYTES) {
+    diagnostics.pop();
+    disclose();
+  }
+  return respond(result);
+}
+
 export function handlePlanningDetail(context) {
   const { dashboard, res, pathname } = context;
   const { planning } = dashboard;
@@ -127,6 +223,80 @@ export function handlePlanningDetail(context) {
     nodeHash: sha256Jcs(node),
   });
   return planningJson(res, 200, envelope);
+}
+
+export function handlePlanningFileLink(context) {
+  const { dashboard, req, res, url, pathname } = context;
+  const params = new URLSearchParams(url.searchParams);
+  const extraKeys = ['file', 'sourceViewHash'];
+  if (extraKeys.some((key) => params.getAll(key).length !== 1))
+    return planningResponseError(res, 400);
+  const file = params.get('file');
+  const sourceViewHash = params.get('sourceViewHash');
+  for (const key of extraKeys) params.delete(key);
+  const binding = planningRequestBinding(
+    req,
+    params,
+    dashboard.project.projectId,
+    dashboard.planningActorId,
+  );
+  if (!binding) return planningBindingError(res);
+  const rawSubject = pathname.slice('/api/planning/file-link/'.length);
+  let nodeId;
+  try {
+    nodeId = decodeURIComponent(rawSubject);
+  } catch {
+    return planningResponseError(res, 400);
+  }
+  if (
+    !validPlanningSubject(nodeId) ||
+    rawSubject.includes('/') ||
+    encodeURIComponent(nodeId) !== rawSubject
+  )
+    return planningResponseError(res, 400);
+  const { planning } = dashboard;
+  const graph = planning.peekGraph();
+  if (!graph) return planningResponseError(res);
+  const cursor = planning.cursor();
+  if (sourceViewHash !== cursor.viewHash) return planningResponseError(res);
+  const summary = graph.nodes.find((node) => node.id === nodeId);
+  if (!summary) return planningResponseError(res, 404);
+  const respond = (result, path = null) =>
+    planningJson(
+      res,
+      200,
+      assertPlanningFileLinkEnvelope(
+        {
+          kind: 'planning-file-link',
+          schemaVersion: '1.0.0',
+          binding,
+          cursor,
+          sourceViewHash: cursor.viewHash,
+          nodeId,
+          path,
+          ...result,
+        },
+        { binding, cursor, nodeId },
+      ),
+    );
+  const refuse = (reason) =>
+    respond({ state: 'unavailable', reason, errorCode: null, editorUrl: null });
+  if (!validPlanningFilePath(file) || encodeURIComponent(file).length > 1024)
+    return refuse(
+      'The file path must be a repository-relative path without traversal, encoded segments or Windows separators, at most 1024 characters.',
+    );
+  const selected = readPlanningFileLinkArtifact(dashboard.planrDir, summary);
+  if (!selected.detail) return respond(selected.result);
+  const detail = selected.detail;
+  const summaryFields = Object.fromEntries(
+    Object.entries(detail.node).filter(([key]) => key !== 'body'),
+  );
+  if (sha256Jcs(summaryFields) !== sha256Jcs(summary) || !sameLiveCursor(cursor, planning.cursor()))
+    return planningResponseError(res);
+  const files = declaredPlanningFiles(detail.node);
+  if (validPlanningFilePath(detail.sourcePath)) files.add(detail.sourcePath);
+  if (!files.has(file)) return refuse('The selected artifact does not declare this file.');
+  return respond(resolvePlanningFileLink(dirname(dashboard.planrDir), file), file);
 }
 
 export function handlePlanningEvents(context) {

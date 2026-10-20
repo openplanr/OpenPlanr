@@ -594,7 +594,7 @@ export function InboxPage({ currentBinding, current, actions, onRefetch }: Inbox
           title="No matching Inbox item"
           description="Return to the Inbox to review the work that is currently available."
           actions={
-            <a className="op-inline-action" href="#/operate/inbox">
+            <a className="pc-button op-inline-action" href="#/operate/inbox">
               Return to Inbox
             </a>
           }
@@ -613,7 +613,7 @@ export function InboxPage({ currentBinding, current, actions, onRefetch }: Inbox
   return (
     <div
       ref={workspaceRef}
-      className="op-workspace op-inbox"
+      className="op-workspace op-inbox pc-operate"
       data-inbox-focus-workspace=""
       data-route-kind={model.detailRequested ? 'operate.inbox-item' : 'operate.inbox'}
       data-inbox-presentation={model.presentation}
@@ -732,9 +732,9 @@ export function InboxPage({ currentBinding, current, actions, onRefetch }: Inbox
         }}
       >
         <AlertDialog.Portal>
-          <AlertDialog.Overlay className="op-inbox-dialog__overlay" />
+          <AlertDialog.Overlay className="op-inbox-dialog__overlay op-governed-overlay" />
           <AlertDialog.Content
-            className="op-inbox-dialog__content"
+            className="op-inbox-dialog__content op-governed-dialog"
             onCloseAutoFocus={(event) => {
               event.preventDefault();
             }}
@@ -839,9 +839,24 @@ export function InboxPage({ currentBinding, current, actions, onRefetch }: Inbox
                   </section>
                 ) : null}
 
+                <p
+                  id="op-inbox-confirm-status"
+                  className="op-governed-dialog__reason"
+                  role="status"
+                >
+                  {confirming
+                    ? 'Waiting for durable acceptance. Confirmation is in progress.'
+                    : 'Confirm once to apply this exact transition.'}
+                </p>
                 <div className="op-inbox-dialog__actions">
                   <AlertDialog.Cancel asChild>
-                    <button type="button" className="op-inbox-dialog__cancel" disabled={confirming}>
+                    <button
+                      type="button"
+                      className="pc-button op-inbox-dialog__cancel"
+                      disabled={confirming}
+                      aria-disabled={confirming || undefined}
+                      aria-describedby={confirming ? 'op-inbox-confirm-status' : undefined}
+                    >
                       Cancel
                     </button>
                   </AlertDialog.Cancel>
@@ -850,9 +865,16 @@ export function InboxPage({ currentBinding, current, actions, onRefetch }: Inbox
                     className="op-governed-button op-inbox-dialog__confirm"
                     disabled={confirming}
                     aria-busy={confirming || undefined}
+                    aria-disabled={confirming || undefined}
+                    aria-describedby="op-inbox-confirm-status"
                     onClick={confirmPreview}
                   >
-                    {confirming ? 'Waiting for durable acceptance' : 'Confirm exact transition'}
+                    <span className="op-governed-dialog__label">
+                      <span aria-hidden={confirming || undefined}>Confirm exact transition</span>
+                      <span aria-hidden={!confirming || undefined}>
+                        Waiting for durable acceptance
+                      </span>
+                    </span>
                   </button>
                 </div>
               </>

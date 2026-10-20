@@ -127,7 +127,7 @@ export function EvidenceDesk({ model, mode }: EvidenceDeskProps) {
   const idPrefix = `op-today-evidence-${mode}-${model.binding.generation}`;
   if (mode === 'compact') {
     return (
-      <details className="op-today-evidence op-today-evidence--compact">
+      <details className="pc-card op-today-evidence op-today-evidence--compact">
         <summary>Evidence</summary>
         <div className="op-today-evidence__body">
           <EvidenceDeskContents model={model} idPrefix={idPrefix} />
@@ -137,7 +137,7 @@ export function EvidenceDesk({ model, mode }: EvidenceDeskProps) {
   }
 
   return (
-    <aside className="op-today-evidence op-today-evidence--wide" aria-label="Evidence">
+    <aside className="pc-card op-today-evidence op-today-evidence--wide" aria-label="Evidence">
       <h2>Evidence</h2>
       <EvidenceDeskContents model={model} idPrefix={idPrefix} />
     </aside>

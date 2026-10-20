@@ -1,5 +1,12 @@
+import type { AttentionProjection } from '@openplanr/protocol/dashboard/planning-attention.mjs';
+import { deriveAttention } from '@openplanr/protocol/dashboard/planning-attention.mjs';
 import { PLANNING_FOLDER } from '@openplanr/protocol/names';
 import { canonicalDashboardHref } from '../../app/router.js';
+import type {
+  PlanningAttentionFilter,
+  PlanningView,
+} from '../../lib/routing/planning-view-codec.js';
+import { isCanonicalPlanningId } from '../../lib/routing/planning-view-codec.js';
 
 /**
  * Pure Planning presentation selectors over validated graph data (filter, sort, group, search,
@@ -86,6 +93,7 @@ const STATUS_COLUMN_ORDER = Object.freeze([
   'outstanding',
   'in-progress',
   'blocked',
+  'addressed',
   'done',
 ] as const);
 const STATUS_SORT_LABEL: Readonly<Record<PlanningArtifactStatus, string>> = Object.freeze({
@@ -201,7 +209,7 @@ export type PlanningStatusTally = Readonly<{
   done: number;
 }>;
 
-/** Count real artifact statuses; addressed folds into done exactly as the Board columns do. */
+/** Legacy sprint tally; addressed remains terminal in this summary. */
 export function tallyPlanningStatuses(nodes: readonly PlanningModelNode[]): PlanningStatusTally {
   let outstanding = 0;
   let inProgress = 0;
@@ -251,7 +259,6 @@ export function planningSpecsInGraph(nodes: readonly PlanningModelNode[]): reado
 }
 
 function statusColumnOf(status: PlanningArtifactStatus): string {
-  if (status === 'addressed') return 'done';
   return (STATUS_COLUMN_ORDER as readonly string[]).includes(status) ? status : 'outstanding';
 }
 
@@ -329,7 +336,7 @@ export type PlanningGroup<Node extends PlanningModelNode = PlanningModelNode> = 
   nodes: readonly Node[];
 }>;
 
-/** Ordered Board buckets. Addressed work folds into Done exactly as in the legacy Board. */
+/** Status buckets retain distinct terminal outcomes for comparison. */
 export function groupPlanningNodes<Node extends PlanningModelNode>(
   nodes: readonly Node[],
   dimension: string,
@@ -793,6 +800,7 @@ function hasUnpairedSurrogate(value: string): boolean {
 export function planningRouteSubjectId(nodeOrId: PlanningModelNode | string): string | null {
   const id = typeof nodeOrId === 'string' ? nodeOrId : nodeOrId.id;
   if (!id || hasUnpairedSurrogate(id)) return null;
+  if (isCanonicalPlanningId(id)) return id;
   let output = '';
   for (const byte of new TextEncoder().encode(id)) {
     const character = String.fromCharCode(byte);
@@ -805,6 +813,7 @@ export function planningRouteSubjectId(nodeOrId: PlanningModelNode | string): st
 
 /** Reverse the route-only escaping without changing the canonical graph identity. */
 export function planningNodeIdFromRouteSubject(subjectId: string): string | null {
+  if (isCanonicalPlanningId(subjectId)) return subjectId;
   const bytes: number[] = [];
   for (let index = 0; index < subjectId.length; index += 1) {
     const character = subjectId[index];
@@ -820,7 +829,10 @@ export function planningNodeIdFromRouteSubject(subjectId: string): string | null
   }
   try {
     const decoded = new TextDecoder('utf-8', { fatal: true }).decode(new Uint8Array(bytes));
-    return decoded && planningRouteSubjectId(decoded) === subjectId ? decoded : null;
+    if (!decoded) return null;
+    if (isCanonicalPlanningId(decoded) && subjectId === decoded.replaceAll('/', ':2F'))
+      return decoded;
+    return planningRouteSubjectId(decoded) === subjectId ? decoded : null;
   } catch {
     return null;
   }
@@ -1023,4 +1035,50 @@ export function selectAccessiblePlanningGraphRows(
       }),
     ),
   );
+}
+
+export function planningAttentionIds(
+  attention: AttentionProjection,
+  filter: PlanningAttentionFilter,
+): readonly string[] {
+  switch (filter) {
+    case 'waiting':
+      return attention.waiting.map((item) => item.id);
+    case 'stale':
+      return attention.stale.map((item) => item.id);
+    case 'high-not-started':
+      return attention.highPriorityNotStarted;
+    case 'changed-today':
+      return attention.changedToday.ids;
+  }
+}
+
+export function planningAttentionView(attention: PlanningAttentionFilter): PlanningView {
+  return {
+    schemaVersion: '1.0.0',
+    route: 'list',
+    filters: {
+      attention,
+      type: [],
+      status: [],
+      priority: [],
+      label: [],
+      query: '',
+      createdWithinDays: null,
+      updatedWithinDays: null,
+    },
+    groupBy: 'none',
+    sort: { field: 'id', direction: 'asc' },
+    density: 'comfortable',
+    focusId: null,
+  };
+}
+
+export function selectPlanningAttention(graph: PlanningModelGraph, nowUTC: string) {
+  return deriveAttention(graph, nowUTC);
+}
+
+export function planningContinuation(node: PlanningModelNode): string | null {
+  if (!isCanonicalPlanningId(node.id)) return null;
+  return node.type === 'task' ? `/planr:ship ${node.id}` : `openplanr status ${node.id} --md`;
 }

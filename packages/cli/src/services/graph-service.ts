@@ -2,6 +2,12 @@ import { type Dirent, existsSync, readdirSync, readFileSync, type Stats, statSyn
 import path from 'node:path';
 import type { ArtifactFrontmatter, OpenPlanrConfig } from '../models/types.js';
 import { parseMarkdown } from '../utils/markdown.js';
+import {
+  createPlanningReadModel,
+  createReferenceResolver,
+  type PlanningDiagnostic,
+  type PlanningReadModel,
+} from './graph-read-model.js';
 
 export type GraphNodeType =
   | 'epic'
@@ -98,9 +104,8 @@ function collectSpecDir(specDir: string, acc: string[]): string[] {
   for (const entry of entries) {
     const fullPath = path.join(specDir, entry.name);
     if (entry.isFile()) {
-      if (/^SPEC-\d+.*\.md$/.test(entry.name)) acc.push(fullPath);
+      if (isArtifactFile(entry.name)) acc.push(fullPath);
     } else if (entry.isDirectory() && (entry.name === 'stories' || entry.name === 'tasks')) {
-      const prefix = entry.name === 'stories' ? 'US-' : 'T-';
       let inner: Dirent[];
       try {
         inner = readdirSync(fullPath, { withFileTypes: true });
@@ -108,7 +113,7 @@ function collectSpecDir(specDir: string, acc: string[]): string[] {
         continue;
       }
       for (const file of inner) {
-        if (file.isFile() && file.name.startsWith(prefix) && isArtifactFile(file.name)) {
+        if (file.isFile() && isArtifactFile(file.name)) {
           acc.push(path.join(fullPath, file.name));
         }
       }
@@ -197,6 +202,22 @@ export function classifyGraphStatus(rawStatus: unknown): GraphStatus {
   return 'outstanding';
 }
 
+function legacyAdrMetadata(filename: string, body: string): Record<string, string> {
+  const id = /^(ADR-\d+)(?:-|\.md$)/u.exec(filename)?.[1];
+  if (!id) return {};
+  const metadata: Record<string, string> = { id };
+  const heading = /^#[ \t]+(ADR-\d+):[ \t]*(.+)$/mu.exec(body);
+  if (heading?.[1] === id) metadata.title = heading[2].trim();
+  for (const [label, field] of [
+    ['Status', 'status'],
+    ['Date', 'date'],
+  ]) {
+    const value = new RegExp(`^-[ \\t]+${label}:[ \\t]*(.*)$`, 'mu').exec(body)?.[1].trim();
+    if (value) metadata[field] = value;
+  }
+  return metadata;
+}
+
 function buildNode(absPath: string, planrDir: string, includeBody: boolean): GraphNode | null {
   let raw: string;
   try {
@@ -205,13 +226,18 @@ function buildNode(absPath: string, planrDir: string, includeBody: boolean): Gra
     return null;
   }
 
-  const parsed = parseMarkdown(raw);
+  const normalized = raw.replace(/^\uFEFF/u, '');
+  const parsed = parseMarkdown(normalized);
   const frontmatter = { ...(parsed.data || {}) } as ArtifactFrontmatter;
   const relativeDir = path
     .relative(planrDir, path.dirname(absPath))
     .split(path.sep)
     .join('/')
     .replace(/^\//, '');
+  // Empty frontmatter still owns metadata, so detect the consumed fence rather than its keys.
+  if (parsed.content === normalized && relativeDir.split('/')[0] === 'adrs') {
+    Object.assign(frontmatter, legacyAdrMetadata(path.basename(absPath), parsed.content));
+  }
 
   const localId =
     frontmatter.id != null && String(frontmatter.id).trim() !== ''
@@ -219,6 +245,15 @@ function buildNode(absPath: string, planrDir: string, includeBody: boolean): Gra
       : path.basename(absPath, '.md');
   const type = inferType(relativeDir, localId);
   const scope = specScopeOf(relativeDir);
+  const prefix = scope ? (type === 'story' ? 'US-' : type === 'task' ? 'T-' : 'SPEC-') : '';
+  const filename = path.basename(absPath);
+  const hasArtifactFilename =
+    filename.startsWith(prefix) && /^[A-Z][A-Z0-9]*-\d+(?:-[^/]*)?\.md$/u.test(filename);
+  const hasArtifactId =
+    typeof frontmatter.id === 'string' &&
+    frontmatter.id.startsWith(prefix) &&
+    /^[A-Z][A-Z0-9]*-\d+$/u.test(frontmatter.id);
+  if (!hasArtifactFilename && !hasArtifactId) return null;
   const id = scope && type !== 'spec' ? `${scope}/${localId}` : localId;
   const authoredTitle = frontmatter.title ?? frontmatter.name;
   const title =
@@ -246,14 +281,31 @@ function buildNode(absPath: string, planrDir: string, includeBody: boolean): Gra
   return node;
 }
 
-function resolveRef(rawRef: unknown, scope: string | null, field: string): string {
-  const ref = String(rawRef);
-  if (!scope) return ref;
-  if (field === 'specId' || /^SPEC-\d+/.test(ref)) return ref;
-  return `${scope}/${ref}`;
+interface SourcedNode {
+  node: GraphNode;
+  sourcePath: string;
 }
 
-export function readGraph(planrDir: string, opts: ReadGraphOptions = {}): ProjectGraph {
+/** True when the file name starts with the id's last segment, followed by `-` or `.`. */
+function namedAfterId(entry: SourcedNode): boolean {
+  const localId = entry.node.id.split('/').at(-1) ?? entry.node.id;
+  const name = path.posix.basename(entry.sourcePath);
+  return name.startsWith(localId) && /^[-.]/u.test(name.slice(localId.length));
+}
+
+/** Duplicate precedence: the id-named file wins, then the lexically smallest path. */
+function precedesDuplicate(candidate: SourcedNode, current: SourcedNode): boolean {
+  const named = namedAfterId(candidate);
+  if (named !== namedAfterId(current)) return named;
+  return candidate.sourcePath < current.sourcePath;
+}
+
+function readGraphData(
+  planrDir: string,
+  opts: ReadGraphOptions = {},
+  sourcePaths = new Map<string, string>(),
+  diagnostics: PlanningDiagnostic[] = [],
+): ProjectGraph {
   if (!planrDir || !existsSync(planrDir)) return { nodes: [], edges: [] };
 
   let stat: Stats;
@@ -264,13 +316,35 @@ export function readGraph(planrDir: string, opts: ReadGraphOptions = {}): Projec
   }
   if (!stat.isDirectory()) return { nodes: [], edges: [] };
 
-  const nodes: GraphNode[] = [];
-  const idSet = new Set<string>();
+  const entries: SourcedNode[] = [];
   for (const file of collectArtifacts(planrDir)) {
     const node = buildNode(file, planrDir, opts.includeBody === true);
-    if (!node?.id || idSet.has(node.id)) continue;
-    nodes.push(node);
-    idSet.add(node.id);
+    if (!node?.id) continue;
+    entries.push({ node, sourcePath: path.relative(planrDir, file).split(path.sep).join('/') });
+  }
+  const winners = new Map<string, SourcedNode>();
+  for (const entry of entries) {
+    const current = winners.get(entry.node.id);
+    if (!current || precedesDuplicate(entry, current)) winners.set(entry.node.id, entry);
+  }
+  const nodes: GraphNode[] = [];
+  const idSet = new Set<string>();
+  for (const entry of entries) {
+    // A duplicate id is a data error; the winner follows one stated rule so the result
+    // never depends on directory listing order, and every other copy is reported.
+    if (winners.get(entry.node.id) !== entry) {
+      diagnostics.push({
+        nodeId: entry.node.id,
+        sourcePath: entry.sourcePath,
+        field: 'id',
+        reason: 'duplicate-identity',
+        classification: 'source-data',
+      });
+      continue;
+    }
+    sourcePaths.set(entry.node.id, entry.sourcePath);
+    nodes.push(entry.node);
+    idSet.add(entry.node.id);
   }
 
   const edges: GraphEdge[] = [];
@@ -283,27 +357,39 @@ export function readGraph(planrDir: string, opts: ReadGraphOptions = {}): Projec
     edges.push({ from, to, kind });
   };
 
+  const resolveRef = createReferenceResolver({ nodes, edges: [] });
   for (const node of nodes) {
     const scope =
       typeof node.frontmatter.specScope === 'string' ? node.frontmatter.specScope : null;
     for (const field of PARENT_FIELDS) {
       const parent = node.frontmatter[field];
       if (parent == null || parent === '') continue;
-      const parentId = resolveRef(parent, scope, field);
-      if (idSet.has(parentId)) addEdge(parentId, node.id, 'contains');
+      const parentId = resolveRef(parent, scope, field).targetId;
+      if (parentId && idSet.has(parentId)) addEdge(parentId, node.id, 'contains');
     }
 
     const dependsOn = node.frontmatter.dependsOn;
     if (Array.isArray(dependsOn)) {
       for (const dep of dependsOn) {
         if (dep == null || dep === '') continue;
-        const depId = resolveRef(dep, scope, 'dependsOn');
-        if (idSet.has(depId)) addEdge(node.id, depId, 'depends_on');
+        const depId = resolveRef(dep, scope, 'dependsOn').targetId;
+        if (depId && idSet.has(depId)) addEdge(node.id, depId, 'depends_on');
       }
     }
   }
 
   return { nodes, edges };
+}
+
+export function readGraph(planrDir: string, opts: ReadGraphOptions = {}): ProjectGraph {
+  return readGraphData(planrDir, opts);
+}
+
+export function readPlanningModel(planrDir: string): PlanningReadModel {
+  const sourcePaths = new Map<string, string>();
+  const diagnostics: PlanningDiagnostic[] = [];
+  const graph = readGraphData(planrDir, {}, sourcePaths, diagnostics);
+  return createPlanningReadModel(graph, sourcePaths, diagnostics);
 }
 
 export function readProjectGraph(
@@ -312,4 +398,31 @@ export function readProjectGraph(
   opts: ReadGraphOptions = {},
 ): ProjectGraph {
   return readGraph(path.join(projectDir, config.outputPaths.agile), opts);
+}
+
+export interface DuplicateIdentity {
+  id: string;
+  keptPath: string;
+  skippedPath: string;
+}
+
+/** The project graph plus every duplicate id the reader skipped, with both source paths. */
+export function readProjectGraphReport(
+  projectDir: string,
+  config: OpenPlanrConfig,
+  opts: ReadGraphOptions = {},
+): { graph: ProjectGraph; duplicates: DuplicateIdentity[] } {
+  const sourcePaths = new Map<string, string>();
+  const diagnostics: PlanningDiagnostic[] = [];
+  const planrDir = path.join(projectDir, config.outputPaths.agile);
+  const graph = readGraphData(planrDir, opts, sourcePaths, diagnostics);
+  const duplicates = diagnostics
+    .filter((diagnostic) => diagnostic.reason === 'duplicate-identity')
+    .map((diagnostic) => {
+      const keptPath = sourcePaths.get(diagnostic.nodeId);
+      if (keptPath === undefined)
+        throw new Error(`Duplicate id ${diagnostic.nodeId} has no kept source path.`);
+      return { id: diagnostic.nodeId, keptPath, skippedPath: diagnostic.sourcePath };
+    });
+  return { graph, duplicates };
 }

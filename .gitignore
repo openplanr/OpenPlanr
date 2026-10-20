@@ -98,6 +98,10 @@ CLAUDE.md
 /packages/pipeline/lib/dashboard/generated/operate-schema-token-codec.mjs
 /packages/pipeline/lib/dashboard/operate-*-contract.mjs
 /packages/pipeline/lib/dashboard/operate-*-contract.d.mts
+/packages/pipeline/lib/dashboard/planning-attention.mjs
+/packages/pipeline/lib/dashboard/planning-attention.d.mts
+/packages/pipeline/lib/dashboard/planning-*-contracts.mjs
+/packages/pipeline/lib/dashboard/planning-*-contracts.d.mts
 /packages/pipeline/lib/dashboard/operate-review-payload-safety.mjs
 /packages/pipeline/lib/dashboard/operate-review-payload-safety.d.mts
 /packages/pipeline/lib/dashboard/operate-review-workspace-projection-v2.d.mts

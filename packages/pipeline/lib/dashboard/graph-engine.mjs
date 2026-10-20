@@ -20,7 +20,7 @@ import { dirname } from 'node:path';
 import { validate } from '../design/schema-loader.mjs';
 import { deepFreeze } from '../protocol/jcs.mjs';
 import { CLI_COMMAND } from '../protocol/names.mjs';
-import { readGraph, readNode } from './graph-reader.mjs';
+import { readGraph, readNode, readPlanningModel } from './graph-reader.mjs';
 
 /** Lowest openplanr CLI version that emits the graph/status --json the dashboard consumes. */
 export const CLI_GRAPH_MIN_VERSION = '1.7.2';
@@ -155,6 +155,12 @@ export function buildGraph(planrDir, opts = {}) {
     if (delegated) return delegated;
   }
   return assertPlanningGraph(readGraph(planrDir));
+}
+
+/** Source diagnostics are read with their exact native graph, never a different delegate revision. */
+export function getPlanningReadModel(planrDir) {
+  const model = readPlanningModel(planrDir);
+  return deepFreeze({ ...model, graph: assertPlanningGraph(model.graph) });
 }
 
 /**

@@ -1,9 +1,12 @@
-import { join, resolve } from 'node:path';
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { dirname, join, resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { createDefaultConfig } from '../../src/services/config-service.js';
 import {
   classifyGraphStatus,
   readGraph,
+  readPlanningModel,
   readProjectGraph,
 } from '../../src/services/graph-service.js';
 
@@ -11,6 +14,52 @@ const fixtureRoot = resolve('tests/fixtures/graph-project');
 const planrDir = join(fixtureRoot, '.planr');
 
 describe('graph-service', () => {
+  it('discovers slug-named artifacts by frontmatter identity in canonical locations', () => {
+    const root = mkdtempSync(join(tmpdir(), 'planr-graph-discovery-'));
+    try {
+      const sources = {
+        'quick/fix-login.md': 'QT-001',
+        'tasks/us-login/validate-session.md': 'T-001',
+        'specs/SPEC-001-login/login.md': 'SPEC-001',
+        'specs/SPEC-001-login/stories/sign-in.md': 'US-001',
+        'specs/SPEC-001-login/tasks/check-token.md': 'T-002',
+        'quick/README.md': 'not-an-artifact',
+        'quick/missing-identity.md': '',
+        'quick/.hidden.md': 'QT-002',
+        'quick/login-error-report.md': 'QT-003',
+        'quick/.private/hidden.md': 'QT-004',
+        'sprints/SPRINT-001/notes.md': 'QT-005',
+        'designs/login.md': 'QT-006',
+        'specs/SPEC-001-login/design/login.md': 'QT-007',
+        'specs/SPEC-001-login/tasks/README.md': 'not-an-artifact',
+      };
+      for (const [source, id] of Object.entries(sources)) {
+        const file = join(root, source);
+        mkdirSync(dirname(file), { recursive: true });
+        writeFileSync(
+          file,
+          `---\nid: ${id}\ntitle: Login artifact\ndependsOn: [QT-999]\n---\n# Login\n`,
+        );
+      }
+      const model = readPlanningModel(root);
+      expect(model.graph.nodes.map((node) => node.id).sort()).toEqual([
+        'QT-001',
+        'SPEC-001',
+        'SPEC-001/T-002',
+        'SPEC-001/US-001',
+        'T-001',
+      ]);
+      expect(
+        readGraph(root, { includeBody: true }).nodes.find((node) => node.id === 'QT-001'),
+      ).toMatchObject({ type: 'quick', title: 'Login artifact', body: '# Login\n' });
+      expect(model.references.find((reference) => reference.nodeId === 'QT-001')?.sourcePath).toBe(
+        'quick/fix-login.md',
+      );
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
   it('classifies statuses with the protocol graph status set', () => {
     expect(classifyGraphStatus('done')).toBe('done');
     expect(classifyGraphStatus('closed')).toBe('done');

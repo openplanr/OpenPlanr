@@ -1,7 +1,7 @@
 import chalk from 'chalk';
 import type { Command } from 'commander';
 import { loadConfig } from '../../services/config-service.js';
-import { readProjectGraph } from '../../services/graph-service.js';
+import { readProjectGraphReport } from '../../services/graph-service.js';
 import { display, logger } from '../../utils/logger.js';
 
 export function registerGraphCommand(program: Command) {
@@ -12,7 +12,12 @@ export function registerGraphCommand(program: Command) {
     .action(async (opts: { json?: boolean }) => {
       const projectDir = program.opts().projectDir as string;
       const config = await loadConfig(projectDir);
-      const graph = readProjectGraph(projectDir, config);
+      const { graph, duplicates } = readProjectGraphReport(projectDir, config);
+      for (const duplicate of duplicates) {
+        process.stderr.write(
+          `Duplicate id ${duplicate.id}: kept ${duplicate.keptPath}, skipped ${duplicate.skippedPath}\n`,
+        );
+      }
 
       if (opts.json) {
         display.line(JSON.stringify(graph, null, 2));

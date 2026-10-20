@@ -16,6 +16,7 @@ import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { basename, dirname, join, relative, sep } from 'node:path';
 
 import { validate } from '../design/schema-loader.mjs';
+import { createPlanningReadModel, createReferenceResolver } from './graph-read-model.mjs';
 
 // ── Minimal YAML frontmatter parser (stdlib only) ─────────────────────────
 //
@@ -31,6 +32,8 @@ import { validate } from '../design/schema-loader.mjs';
 // Arbitrary nested objects remain outside this dependency-free reader.
 
 const FLAT_MAP_ARRAY_KEYS = new Set(['acceptanceCriteria', 'preserve']);
+const sourceReads = new Map();
+const MAX_SOURCE_READS = 16;
 
 function stripQuotes(raw) {
   const s = raw.trim();
@@ -69,7 +72,7 @@ function parseInlineArray(raw) {
  * the first two `---` fences. Returns null frontmatter when no fence is present.
  */
 export function splitFrontmatter(text) {
-  const normalized = text.replace(/\r\n/g, '\n');
+  const normalized = text.replace(/^\uFEFF/u, '').replace(/\r\n/g, '\n');
   if (!normalized.startsWith('---\n') && normalized !== '---') {
     return { raw: '', body: normalized, hasFrontmatter: false };
   }
@@ -232,11 +235,11 @@ export function classifyStatus(rawStatus) {
 // The walk is restricted to canonical artifact locations so loose markdown
 // (ESTIMATION.md, memory.md, checklists/, design-system/, designs/, diagrams/,
 // each spec's qa-report.md / clarifications.md / design/) is never ingested as a
-// bogus node. Two shapes are recognized:
+// bogus node. Identity comes from frontmatter or an ID-prefixed filename.
+// Two shapes are recognized:
 //   1. Flat agile dirs at `.planr/` root (epics/ features/ stories/ tasks/
 //      backlog/ quick/ sprints/ adrs/) — recurse for default-mode `us-*/` nesting.
-//   2. Per-spec dirs `.planr/specs/SPEC-*/` — ONLY the spec body `SPEC-*.md`,
-//      plus `stories/US-*.md` and `tasks/T-*.md`.
+//   2. Per-spec dirs `.planr/specs/SPEC-*/` with spec bodies, stories/, and tasks/.
 
 /** The flat agile artifact dirs that live directly under `.planr/`. */
 const AGILE_DIRS = ['epics', 'features', 'stories', 'tasks', 'backlog', 'quick', 'sprints', 'adrs'];
@@ -250,11 +253,12 @@ function isArtifactFile(name) {
 }
 
 /** Recursively collect artifact `.md` paths under a flat agile dir (handles `us-NNN/` nesting). */
-function walkAgileDir(dir, acc) {
+function walkAgileDir(dir, acc, strict = false) {
   let entries;
   try {
     entries = readdirSync(dir, { withFileTypes: true });
-  } catch {
+  } catch (error) {
+    if (strict && error.code !== 'ENOENT') throw error;
     return acc;
   }
   for (const ent of entries) {
@@ -262,7 +266,7 @@ function walkAgileDir(dir, acc) {
     if (ent.isDirectory()) {
       // `sprints/SPRINT-NNN/` holds refinement notes, not artifacts.
       if (ent.name.startsWith('.') || /^SPRINT-\d+/u.test(ent.name)) continue;
-      walkAgileDir(full, acc);
+      walkAgileDir(full, acc, strict);
     } else if (ent.isFile() && isArtifactFile(ent.name)) {
       acc.push(full);
     }
@@ -271,29 +275,28 @@ function walkAgileDir(dir, acc) {
 }
 
 /** Collect the canonical `.md` artifacts from a single `.planr/specs/SPEC-NNN` dir. */
-function collectSpecDir(specDir, acc) {
+function collectSpecDir(specDir, acc, strict = false) {
   let entries;
   try {
     entries = readdirSync(specDir, { withFileTypes: true });
-  } catch {
+  } catch (error) {
+    if (strict && error.code !== 'ENOENT') throw error;
     return acc;
   }
   for (const ent of entries) {
     const full = join(specDir, ent.name);
     if (ent.isFile()) {
-      // Only the spec body — never qa-report.md / clarifications.md / dotfiles.
-      if (/^SPEC-\d+.*\.md$/.test(ent.name)) acc.push(full);
+      if (isArtifactFile(ent.name)) acc.push(full);
     } else if (ent.isDirectory() && (ent.name === 'stories' || ent.name === 'tasks')) {
-      // ONLY stories/US-*.md and tasks/T-*.md — exclude design/, dotfiles, etc.
-      const prefix = ent.name === 'stories' ? 'US-' : 'T-';
       let inner;
       try {
         inner = readdirSync(full, { withFileTypes: true });
-      } catch {
+      } catch (error) {
+        if (strict) throw error;
         continue;
       }
       for (const f of inner) {
-        if (f.isFile() && f.name.startsWith(prefix) && isArtifactFile(f.name)) {
+        if (f.isFile() && isArtifactFile(f.name)) {
           acc.push(join(full, f.name));
         }
       }
@@ -307,21 +310,22 @@ function collectSpecDir(specDir, acc) {
  * agile dirs, then each `specs/SPEC-NNN` dir's body + stories + tasks. Loose
  * top-level files and non-canonical subtrees are ignored by construction.
  */
-function collectArtifacts(planrDir) {
+function collectArtifacts(planrDir, strict = false) {
   const acc = [];
   for (const d of AGILE_DIRS) {
-    walkAgileDir(join(planrDir, d), acc);
+    walkAgileDir(join(planrDir, d), acc, strict);
   }
   const specsRoot = join(planrDir, 'specs');
   let specEntries;
   try {
     specEntries = readdirSync(specsRoot, { withFileTypes: true });
-  } catch {
+  } catch (error) {
+    if (strict && error.code !== 'ENOENT') throw error;
     specEntries = [];
   }
   for (const ent of specEntries) {
     if (ent.isDirectory() && /^SPEC-\d+/.test(ent.name)) {
-      collectSpecDir(join(specsRoot, ent.name), acc);
+      collectSpecDir(join(specsRoot, ent.name), acc, strict);
     }
   }
   return acc;
@@ -342,17 +346,34 @@ const PARENT_FIELDS = ['epicId', 'featureId', 'storyId', 'specId'];
 
 // ── Public API ──────────────────────────────────────────────────────────────
 
+function legacyAdrMetadata(filename, body) {
+  const id = /^(ADR-\d+)(?:-|\.md$)/u.exec(filename)?.[1];
+  if (!id) return {};
+  const metadata = { id };
+  const heading = /^#[ \t]+(ADR-\d+):[ \t]*(.+)$/mu.exec(body);
+  if (heading?.[1] === id) metadata.title = heading[2].trim();
+  for (const [label, field] of [
+    ['Status', 'status'],
+    ['Date', 'date'],
+  ]) {
+    const value = new RegExp(`^-[ \\t]+${label}:[ \\t]*(.*)$`, 'mu').exec(body)?.[1].trim();
+    if (value) metadata[field] = value;
+  }
+  return metadata;
+}
+
 /**
  * Build a node object from a single artifact file.
  * @param {string} absPath absolute file path
  * @param {string} planrDir absolute path to the `.planr/` directory
  * @param {boolean} includeBody include the markdown body on the node
  */
-function buildNode(absPath, planrDir, includeBody) {
+function buildNode(absPath, planrDir, includeBody, throwOnReadError = false) {
   let text;
   try {
     text = readFileSync(absPath, 'utf-8');
-  } catch {
+  } catch (error) {
+    if (throwOnReadError) throw error;
     return null;
   }
   const { raw, body, hasFrontmatter } = splitFrontmatter(text);
@@ -361,6 +382,9 @@ function buildNode(absPath, planrDir, includeBody) {
   // `.planr/`-relative dir, normalized via path.relative so a relative or a
   // trailing-slashed planrDir still yields a clean POSIX-style relative path.
   const relDir = relative(planrDir, dirname(absPath)).split(sep).join('/').replace(/^\//, '');
+  if (!hasFrontmatter && relDir.split('/')[0] === 'adrs') {
+    Object.assign(fm, legacyAdrMetadata(basename(absPath), body));
+  }
 
   let localId = fm.id != null ? String(fm.id) : '';
   if (localId === '') {
@@ -375,6 +399,13 @@ function buildNode(absPath, planrDir, includeBody) {
   // (already unique); stories/tasks become `${SPEC-NNN}/${localId}`. Agile
   // top-level artifacts keep their bare (globally-unique) id.
   const scope = specScopeOf(relDir);
+  const prefix = scope ? (type === 'story' ? 'US-' : type === 'task' ? 'T-' : 'SPEC-') : '';
+  const filename = basename(absPath);
+  const hasArtifactFilename =
+    filename.startsWith(prefix) && /^[A-Z][A-Z0-9]*-\d+(?:-[^/]*)?\.md$/u.test(filename);
+  const hasArtifactId =
+    typeof fm.id === 'string' && fm.id.startsWith(prefix) && /^[A-Z][A-Z0-9]*-\d+$/u.test(fm.id);
+  if (!hasArtifactFilename && !hasArtifactId) return null;
   let id = localId;
   if (scope && type !== 'spec') {
     id = `${scope}/${localId}`;
@@ -410,35 +441,72 @@ function buildNode(absPath, planrDir, includeBody) {
  * @param {{ includeBody?: boolean, validate?: boolean }} [opts]
  * @returns {{ nodes: object[], edges: object[] }}
  */
-export function readGraph(planrDir, opts = {}) {
+/** True when the file name starts with the id's last segment, followed by `-` or `.`. */
+function namedAfterId(entry) {
+  const localId = entry.node.id.split('/').at(-1);
+  const name = basename(entry.sourcePath);
+  return name.startsWith(localId) && /^[-.]/u.test(name.slice(localId.length));
+}
+
+/** Duplicate precedence: the id-named file wins, then the lexically smallest path. */
+function precedesDuplicate(candidate, current) {
+  const named = namedAfterId(candidate);
+  if (named !== namedAfterId(current)) return named;
+  return candidate.sourcePath < current.sourcePath;
+}
+
+function readGraphData(planrDir, opts = {}, sourcePaths = new Map(), diagnostics = []) {
   const includeBody = opts.includeBody === true;
   const shouldValidate = opts.validate !== false;
 
   const empty = { nodes: [], edges: [] };
-  if (!planrDir || !existsSync(planrDir)) {
+  if (!planrDir || (!opts.strict && !existsSync(planrDir))) {
     return empty;
   }
 
   let stat;
   try {
     stat = statSync(planrDir);
-  } catch {
+  } catch (error) {
+    if (opts.strict && error.code !== 'ENOENT') throw error;
     return empty;
   }
-  if (!stat.isDirectory()) return empty;
+  if (!stat.isDirectory()) {
+    if (opts.strict)
+      throw Object.assign(new Error('Planning source is not a directory.'), { code: 'ENOTDIR' });
+    return empty;
+  }
 
-  const files = collectArtifacts(planrDir);
+  const files = collectArtifacts(planrDir, opts.strict === true);
+  const entries = [];
+  for (const file of files) {
+    const node = buildNode(file, planrDir, includeBody, opts.strict === true);
+    if (!node || !node.id) continue;
+    entries.push({ node, sourcePath: relative(planrDir, file).split(sep).join('/') });
+  }
+  const winners = new Map();
+  for (const entry of entries) {
+    const current = winners.get(entry.node.id);
+    if (!current || precedesDuplicate(entry, current)) winners.set(entry.node.id, entry);
+  }
   const nodes = [];
   const idSet = new Set();
-  for (const file of files) {
-    const node = buildNode(file, planrDir, includeBody);
-    if (!node || !node.id) continue;
-    // Namespacing makes story/task ids globally unique, so the old silent
-    // "first wins" collapse is gone. Guard only against a genuine exact-duplicate
-    // global id (the schema requires unique ids; a true dup is a data error).
-    if (idSet.has(node.id)) continue;
-    idSet.add(node.id);
-    nodes.push(node);
+  for (const entry of entries) {
+    // A duplicate id is a data error; the winner follows one stated rule so the result
+    // never depends on directory listing order, and every other copy is reported.
+    if (winners.get(entry.node.id) !== entry) {
+      diagnostics.push({
+        nodeId: entry.node.id,
+        sourcePath: entry.sourcePath,
+        field: 'id',
+        reason: 'duplicate-identity',
+        classification: 'source-data',
+      });
+      continue;
+    }
+    sourcePaths.set(entry.node.id, entry.sourcePath);
+    idSet.add(entry.node.id);
+    nodes.push(entry.node);
   }
 
   const edges = [];
@@ -451,15 +519,7 @@ export function readGraph(planrDir, opts = {}) {
     edges.push({ from, to, kind });
   };
 
-  // Resolve a parent/dependency reference to its global node id using the same
-  // namespacing: under a spec scope, `specId` ("SPEC-NNN") points at the spec
-  // body (bare id) while local refs (US-003, T-001) namespace to `${scope}/...`.
-  const resolveRef = (rawRef, scope, field) => {
-    const ref = String(rawRef);
-    if (!scope) return ref; // agile top-level: bare ids
-    if (field === 'specId' || /^SPEC-\d+/.test(ref)) return ref; // spec body is bare
-    return `${scope}/${ref}`;
-  };
+  const resolveRef = createReferenceResolver({ nodes, edges: [] });
 
   for (const node of nodes) {
     const fm = node.frontmatter || {};
@@ -468,7 +528,7 @@ export function readGraph(planrDir, opts = {}) {
     for (const field of PARENT_FIELDS) {
       const parent = fm[field];
       if (parent == null || parent === '') continue;
-      const parentId = resolveRef(parent, scope, field);
+      const parentId = resolveRef(parent, scope, field).targetId;
       if (idSet.has(parentId)) addEdge(parentId, node.id, 'contains');
     }
     // depends_on: this node -> each prerequisite (only when the target exists)
@@ -476,7 +536,7 @@ export function readGraph(planrDir, opts = {}) {
     if (Array.isArray(deps)) {
       for (const dep of deps) {
         if (dep == null || dep === '') continue;
-        const depId = resolveRef(dep, scope, 'dependsOn');
+        const depId = resolveRef(dep, scope, 'dependsOn').targetId;
         if (idSet.has(depId)) addEdge(node.id, depId, 'depends_on');
       }
     }
@@ -489,13 +549,29 @@ export function readGraph(planrDir, opts = {}) {
     if (errs.length > 0) {
       const first = errs
         .slice(0, 3)
-        .map((e) => `${e.path}: ${e.rule} — ${e.detail}`)
+        .map((e) => `${e.path}: ${e.rule}: ${e.detail}`)
         .join('; ');
       throw new Error(`graph-reader produced a graph that fails graph.schema.json: ${first}`);
     }
   }
 
+  // Reuse the source map already computed for diagnostics, including duplicate-ID precedence.
+  sourceReads.delete(planrDir);
+  sourceReads.set(planrDir, sourcePaths);
+  if (sourceReads.size > MAX_SOURCE_READS) sourceReads.delete(sourceReads.keys().next().value);
   return graph;
+}
+
+export function readGraph(planrDir, opts = {}) {
+  return readGraphData(planrDir, opts);
+}
+
+/** Diagnostic evidence stays separate from the closed graph wire projection. */
+export function readPlanningModel(planrDir) {
+  const sourcePaths = new Map();
+  const diagnostics = [];
+  const graph = readGraphData(planrDir, { strict: true }, sourcePaths, diagnostics);
+  return createPlanningReadModel(graph, sourcePaths, diagnostics);
 }
 
 /**
@@ -508,4 +584,13 @@ export function readNode(planrDir, id) {
   if (!id) return null;
   const graph = readGraph(planrDir, { includeBody: true, validate: false });
   return graph.nodes.find((n) => n.id === id) ?? null;
+}
+
+export function findPlanningArtifactSource(planrDir, id) {
+  const source = sourceReads.get(planrDir)?.get(id);
+  return source ? join(planrDir, source) : null;
+}
+
+export function readPlanningArtifactNode(file, planrDir) {
+  return buildNode(file, planrDir, true, true);
 }

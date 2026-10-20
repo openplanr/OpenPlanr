@@ -25,7 +25,7 @@ const ROUTE_FIXTURES = [
   {
     kind: 'planning.graph',
     hash: '#/graph',
-    readyText: 'No depends_on edges in this plan',
+    readyText: 'Everything outside the focus is hidden, not deleted.',
     composition: 'shell',
   },
   {

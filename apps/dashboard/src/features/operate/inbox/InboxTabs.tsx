@@ -40,13 +40,14 @@ export function InboxTabs({
         if (isInboxCategory(value)) onSelectedChange(value);
       }}
     >
-      <Tabs.List className="op-inbox-tabs__list" aria-label="Inbox categories">
+      <Tabs.List className="pc-tabs op-inbox-tabs__list" aria-label="Inbox categories">
         {INBOX_CATEGORIES.map((category) => {
           const count = model.categories[category].length;
           const noun = count === 1 ? 'item' : 'items';
           return (
             <Tabs.Trigger
-              className="op-inbox-tabs__trigger"
+              className="pc-tabs__tab op-inbox-tabs__trigger"
+              data-active={selected === category}
               value={category}
               key={category}
               aria-label={`${CATEGORY_LABEL[category]}, ${count} ${noun}`}

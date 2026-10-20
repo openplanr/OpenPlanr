@@ -7,6 +7,7 @@ import {
   TriangleAlert,
 } from 'lucide-react';
 import { type ReactNode, useId } from 'react';
+import { Skeleton } from './console-core.js';
 
 export type StatePanelState =
   | 'booting'
@@ -14,7 +15,9 @@ export type StatePanelState =
   | 'ready-to-resume'
   | 'unavailable'
   | 'incompatible'
-  | 'offline';
+  | 'offline'
+  | 'empty'
+  | 'error';
 
 const ICONS = {
   booting: CircleDotDashed,
@@ -23,6 +26,8 @@ const ICONS = {
   unavailable: CircleOff,
   incompatible: TriangleAlert,
   offline: RotateCcw,
+  empty: Cable,
+  error: TriangleAlert,
 } satisfies Record<StatePanelState, typeof CircleDotDashed>;
 
 export type StatePanelProps = Readonly<{
@@ -46,7 +51,7 @@ export function StatePanel({
   headingId,
 }: StatePanelProps) {
   const Icon = ICONS[state];
-  const urgent = state === 'offline' || state === 'incompatible';
+  const urgent = state === 'offline' || state === 'incompatible' || state === 'error';
   const generatedHeadingId = useId();
   const resolvedHeadingId = headingId ?? `dashboard-state-panel-${generatedHeadingId}`;
 
@@ -56,16 +61,24 @@ export function StatePanel({
       data-state={state}
       aria-labelledby={resolvedHeadingId}
       role={urgent ? 'alert' : 'status'}
+      aria-busy={state === 'booting' || undefined}
       aria-live={urgent ? 'assertive' : 'polite'}
     >
       <span className="op-state-panel__signal" aria-hidden="true" />
       <div className="op-state-panel__body">
         <p className="op-eyebrow">{eyebrow}</p>
         <div className="op-state-panel__heading">
-          <Icon aria-hidden="true" />
+          <Icon size={16} strokeWidth={1.8} aria-hidden="true" />
           <h2 id={resolvedHeadingId}>{title}</h2>
         </div>
         <p>{description}</p>
+        {state === 'booting' ? (
+          <div className="op-state-panel__skeleton" aria-hidden="true">
+            <Skeleton w="80%" h={16} />
+            <Skeleton w="60%" h={16} />
+            <Skeleton h={16} />
+          </div>
+        ) : null}
         {detail ? <p className="op-state-panel__detail">{detail}</p> : null}
       </div>
       {actions ? <div className="op-state-panel__actions">{actions}</div> : null}

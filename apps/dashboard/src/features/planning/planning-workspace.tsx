@@ -11,6 +11,7 @@ import type { PlanningModelGraph, PlanningModelNode } from './planning-model.js'
 
 export type PlanningPresentation =
   | 'ready'
+  | 'refreshing'
   | 'read-only'
   | 'stale'
   | 'partial'
@@ -28,6 +29,7 @@ export type PlanningWorkspaceModel = Readonly<{
 
 const PRESENTATION = Object.freeze({
   ready: 'ready',
+  refreshing: 'refreshing',
   'read-only': 'read-only',
   stale: 'stale',
   partial: 'partial',
@@ -36,16 +38,17 @@ const PRESENTATION = Object.freeze({
 } satisfies Readonly<Record<PlanningPresentation, PlanningPresentation>>);
 
 const PRESENTATION_NOTICE = Object.freeze({
+  refreshing: 'Checking for changes on disk. The last validated snapshot remains visible.',
   'read-only': 'This plan is available to review, but changes are not available here.',
   stale: 'This plan may be out of date.',
   partial: 'Some planning information is unavailable.',
   blocked: 'Planning information is temporarily unavailable.',
   offline:
-    'You’re viewing the last available Planning information. Reconnect before checking again.',
+    'Offline. You’re viewing the last available Planning information. Reconnect before checking again.',
 } satisfies Readonly<Record<Exclude<PlanningPresentation, 'ready'>, string>>);
 
 const PLANNING_ROUTES = Object.freeze([
-  '#/overview',
+  '#/home',
   '#/graph',
   '#/board',
   '#/list',
@@ -126,10 +129,13 @@ export function resolvePlanningWorkspace(
 export function PlanningNotice({ presentation }: { presentation: PlanningPresentation }) {
   if (presentation === 'ready') return null;
   return (
-    <p className="op-planning-notice" role="status">
+    <p
+      className={`op-planning-notice${presentation === 'refreshing' ? ' pc-visually-hidden' : ''}`}
+      role="status"
+    >
       {PRESENTATION_NOTICE[presentation]}{' '}
-      <a className="op-inline-action" href="#/overview">
-        Open Planning overview
+      <a className="op-inline-action" href="#/home">
+        Open Planning Home
       </a>
     </p>
   );
@@ -144,8 +150,8 @@ export function PlanningRefusal({ routeKind, title }: { routeKind: string; title
         title={title}
         description="We could not verify the Planning information for this view, so it is not shown."
         actions={
-          <a className="op-inline-action" href="#/overview">
-            Return to Planning overview
+          <a className="op-inline-action" href="#/home">
+            Return to Planning Home
           </a>
         }
       />

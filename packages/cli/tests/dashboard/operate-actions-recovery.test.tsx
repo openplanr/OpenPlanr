@@ -43,6 +43,7 @@ import {
   createDashboardQueryIdentity,
   type DashboardQueryIdentity,
 } from '../../../../apps/dashboard/src/lib/binding/query-identity.js';
+import { nameFailures } from './control-name-guard.js';
 
 type ActionWorkspace = Readonly<OperateActionDisplayWorkspaceV1>;
 type ActionsDisplay = Readonly<OperateExperienceDisplaySurfaceV1>;
@@ -662,6 +663,7 @@ describe('operate actions and recovery UI', () => {
     expect(
       within(dialog).getByText(`You are about to ${label}. ${issuedPreview.consequence}`),
     ).toBeTruthy();
+    expect(await nameFailures(dialog)).toEqual([]);
     const confirmButton = within(dialog).getByRole('button', { name: `Confirm ${label}` });
     await user.click(confirmButton);
     await waitFor(() => expect(confirm).toHaveBeenCalledOnce());

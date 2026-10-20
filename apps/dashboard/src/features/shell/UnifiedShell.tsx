@@ -1,4 +1,4 @@
-import { useEffect, useState, useSyncExternalStore } from 'react';
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { useDashboard } from '../../app/providers.js';
 import { CompatibilityPage } from '../diagnostics/CompatibilityPage.js';
 import { LocalOperateReviews } from '../operate/local-reviews/LocalOperateReviews.js';
@@ -6,17 +6,20 @@ import {
   planningNodesFromProductState,
   resolvePlanningWorkspace,
 } from '../planning/planning-workspace.js';
-import { CommandPalette } from '../search/CommandPalette.js';
-import { useSearchCoordinator } from '../search/search-coordinator.js';
-import { useInspectorStore } from './inspector-selection.js';
+import { clearInspector, useInspectorStore } from './inspector-selection.js';
+import { PlanningLiveFeedback, usePlanningLiveFeedback } from './planning-live-feedback.js';
 import { hasCurrentRouteSubject, RouteWorkspace } from './route-workspace.js';
-import { Inspector, NavRail, StatusBar, TopBar } from './shell-navigation.js';
 import {
-  BootScreen,
-  INSPECTOR_DOCK_WIDTH,
-  IncompatibleNotice,
-  PlaneBanner,
-} from './shell-planes.js';
+  CommandPalette,
+  PlanningDetailInspector,
+  PlanningPresentationProvider,
+  type ShellAdapters,
+  selectPlanningAttention,
+  useSearchCoordinator,
+  useShellInteractions,
+} from './shell-interactions.js';
+import { defaultCompactRail, Inspector, NavRail, StatusBar, TopBar } from './shell-navigation.js';
+import { BootScreen, IncompatibleNotice, PlaneBanner } from './shell-planes.js';
 import './unified-shell.css';
 
 const SERVER_VIEWPORT_WIDTH = 1440;
@@ -31,7 +34,13 @@ function readViewportWidth(): number {
   return typeof window === 'undefined' ? SERVER_VIEWPORT_WIDTH : window.innerWidth;
 }
 
-export function UnifiedShell() {
+export function UnifiedShell({
+  fontLoadFailed = false,
+  adapters,
+}: {
+  fontLoadFailed?: boolean;
+  adapters?: ShellAdapters;
+}) {
   const {
     route,
     identity,
@@ -40,34 +49,95 @@ export function UnifiedShell() {
     binding,
     projection,
     planningProjection,
+    planningLive,
     operateSearchBindings,
     operateReviewNavigation,
     refetchCurrent,
     bootstrap,
     bootPhase,
     bootDetail,
+    presentationView,
+    invalidView,
   } = useDashboard();
   const search = useSearchCoordinator(planningProjection);
+  const live = usePlanningLiveFeedback(planningProjection);
+  const [fontNoticeDismissed, setFontNoticeDismissed] = useState(false);
+  const [railChoice, setRailChoice] = useState(() => adapters?.railPreference?.initialCompact);
+  const compactRail = railChoice ?? defaultCompactRail(route);
+  const [railPreferenceError, setRailPreferenceError] = useState(() =>
+    adapters?.railPreference?.initialStorageError
+      ? 'Navigation preference could not be read in this browser.'
+      : null,
+  );
+  const toggleRail = () => {
+    const next = !compactRail;
+    setRailChoice(next);
+    try {
+      adapters?.railPreference?.save(next);
+      setRailPreferenceError(null);
+    } catch {
+      setRailPreferenceError(
+        'Navigation preference could not be saved. It applies until this page is closed.',
+      );
+    }
+  };
   const inspectorStore = useInspectorStore();
   const width = useSyncExternalStore(
     subscribeToResize,
     readViewportWidth,
     () => SERVER_VIEWPORT_WIDTH,
   );
-  const narrow = width < INSPECTOR_DOCK_WIDTH;
-  const [inspectorOpen, setInspectorOpen] = useState(
-    () => readViewportWidth() >= INSPECTOR_DOCK_WIDTH,
-  );
+  const narrow = width < 900;
+  const [inspectorOpen, setInspectorOpen] = useState(false);
 
-  // A floating inspector is a transient overlay: it closes when the plane narrows or moves on.
+  // Selection overlays belong to their originating route, never a reserved layout column.
   // biome-ignore lint/correctness/useExhaustiveDependencies: every route change closes the floating inspector.
   useEffect(() => {
-    if (narrow) setInspectorOpen(false);
+    setInspectorOpen(false);
   }, [narrow, route]);
+  const requestedInspectorTick = useRef(0);
   useEffect(() => {
-    if (inspectorStore.openTick > 0) setInspectorOpen(true);
-  }, [inspectorStore.openTick]);
+    if (requestedInspectorTick.current !== inspectorStore.openTick) {
+      requestedInspectorTick.current = inspectorStore.openTick;
+      if (inspectorStore.selection !== null) setInspectorOpen(true);
+    }
+  }, [inspectorStore.openTick, inspectorStore.selection]);
+  useEffect(() => {
+    if (inspectorStore.selection === null) setInspectorOpen(false);
+  }, [inspectorStore.selection]);
 
+  const scope = binding
+    ? JSON.stringify([
+        binding.projectId,
+        binding.actorId,
+        binding.scopeId,
+        binding.domainId,
+        binding.domainVersion,
+        binding.generation,
+      ])
+    : identity.bindingLabel;
+  const inspectorScope = useRef(scope);
+  useEffect(() => {
+    if (inspectorScope.current !== scope) {
+      clearInspector();
+      setInspectorOpen(false);
+      inspectorScope.current = scope;
+    }
+  }, [scope]);
+  const routeKey = JSON.stringify([route, presentationView]);
+  const interactions = useShellInteractions({
+    adapters,
+    routeKey,
+    scope,
+    selectedId:
+      inspectorStore.selection?.kind === 'node'
+        ? inspectorStore.selection.id
+        : (inspectorStore.selection?.actionId ?? null),
+    paletteOpen: search.open,
+    togglePalette: search.toggle,
+    inspectorOpen,
+    setInspectorOpen,
+  });
   const product = route.product ?? 'planning';
   const incompatible = bootPhase === 'incompatible' || connection.state === 'incompatible';
   const showDiagnostics = route.kind === 'system.diagnostics' || incompatible;
@@ -88,12 +158,35 @@ export function UnifiedShell() {
       ? planningNodes.length
       : null;
   const edgeCount = planningModel ? planningModel.graph.edges.length : null;
+  const [attentionNow] = useState(() => new Date().toISOString());
+  const graph = planningModel?.graph;
+  const railCounts = useMemo(() => {
+    if (!graph) return undefined;
+    try {
+      const attention = selectPlanningAttention(graph, attentionNow);
+      return {
+        'planning.overview': new Set([
+          ...attention.waiting.map((item) => item.id),
+          ...attention.stale.map((item) => item.id),
+          ...attention.highPriorityNotStarted,
+        ]).size,
+        'planning.list': graph.nodes.length,
+        'planning.activity': attention.changedToday.ids.length,
+      };
+    } catch {
+      // Invalid attention data is explained by Home; the rail must not present it as zero.
+      return { 'planning.list': graph.nodes.length };
+    }
+  }, [graph, attentionNow]);
+  const detailRoute = route.kind === 'planning.detail' || route.kind === 'planning.spec';
 
   return (
     <div
       className="pc-shell"
       data-dashboard-build-id={buildId}
+      data-compact-rail={compactRail || undefined}
       data-product={route.product ?? 'system'}
+      data-detail-route={detailRoute || undefined}
     >
       {/* biome-ignore lint/a11y/useValidAnchor: a skip link must retain anchor semantics; the handler avoids hash-router navigation. */}
       <a
@@ -111,6 +204,11 @@ export function UnifiedShell() {
         route={route}
         operateAvailable={!operateOffline}
         onOpenPalette={search.show}
+        compact={compactRail}
+        onToggleCompact={toggleRail}
+        preferenceError={railPreferenceError}
+        counts={railCounts}
+        branch={bootstrap?.project.branch ?? null}
       />
       <div className="pc-shell__column">
         <TopBar
@@ -119,11 +217,28 @@ export function UnifiedShell() {
           showSubject={hasCurrentRouteSubject({ route, projection, binding })}
           connectionState={connection.state}
           inspectorOpen={inspectorOpen}
+          inspectorAvailable={!detailRoute && inspectorStore.selection !== null}
           onToggleInspector={() => setInspectorOpen((open) => !open)}
           onOpenPalette={search.show}
+          themePreference={adapters?.themePreference}
+          paletteIconOnly={width < 1200}
+          mobile={narrow}
+          shortcutHelp={interactions.help}
         />
+        {fontLoadFailed && !fontNoticeDismissed ? (
+          <div className="pc-font-notice" role="status">
+            <span>
+              Some dashboard fonts could not load. You can keep working with fallback fonts. Reload
+              to retry.
+            </span>
+            <button type="button" onClick={() => setFontNoticeDismissed(true)}>
+              Dismiss font notice
+            </button>
+          </div>
+        ) : null}
         <div className="pc-shell__plane">
           <main
+            ref={interactions.rootRef}
             id="main-content"
             className="pc-shell__main"
             tabIndex={-1}
@@ -135,10 +250,37 @@ export function UnifiedShell() {
               <BootScreen route={route} phase={bootPhase} detail={bootDetail} />
             ) : (
               <>
-                {connection.state === 'stale' || connection.state === 'offline' ? (
-                  <PlaneBanner state={connection.state} reason={connection.reason} />
+                {connection.state === 'stale' ||
+                connection.state === 'offline' ||
+                projection.kind === 'stale' ||
+                planningLive.state === 'paused' ? (
+                  <PlaneBanner
+                    state={
+                      connection.state === 'offline' ||
+                      (planningLive.state === 'paused' && planningLive.attempt > 0)
+                        ? 'offline'
+                        : 'stale'
+                    }
+                    reason={
+                      planningLive.state === 'paused'
+                        ? 'Live file updates are paused until the connection and a current graph read are validated.'
+                        : projection.kind === 'stale'
+                          ? 'The latest read could not be validated for this view.'
+                          : connection.reason
+                    }
+                    projectionKind={projection.kind}
+                    errorCode={projection.error?.code}
+                    lastSnapshotAt={live.lastSnapshotAt}
+                    attempt={planningLive.attempt}
+                    onRetry={refetchCurrent}
+                  />
                 ) : null}
-                <div className="pc-shell__scroll">
+                <div className="pc-shell__scroll" ref={interactions.scrollRef}>
+                  {invalidView ? (
+                    <p role="status">
+                      This view link is invalid or unsupported. Default filters are shown.
+                    </p>
+                  ) : null}
                   {showDiagnostics ? (
                     <>
                       {incompatible ? <IncompatibleNotice detail={bootDetail} /> : null}
@@ -148,32 +290,74 @@ export function UnifiedShell() {
                         bootPhase={bootPhase}
                         bootDetail={bootDetail}
                         connection={connection}
+                        planningModel={
+                          planningProjection.binding
+                            ? resolvePlanningWorkspace(
+                                planningProjection,
+                                planningProjection.binding,
+                              )
+                            : null
+                        }
                       />
                     </>
                   ) : (
                     <div className="op-route-frame">
-                      <RouteWorkspace
-                        route={route}
-                        projection={projection}
-                        binding={binding}
-                        connectionState={connection.state}
-                        searchSources={search.sources}
-                        operateSearchBindings={operateSearchBindings}
-                        operateReviewNavigation={operateReviewNavigation}
-                        refetchCurrent={refetchCurrent}
-                      />
+                      <PlanningPresentationProvider
+                        key={scope}
+                        scope={scope}
+                        view={presentationView}
+                        invalidView={invalidView}
+                        singleLetters={interactions.singleLetters}
+                        onCopy={adapters?.copy}
+                      >
+                        <RouteWorkspace
+                          route={route}
+                          projection={projection}
+                          binding={binding}
+                          connectionState={connection.state}
+                          searchSources={search.sources}
+                          onCopy={adapters?.copy}
+                          operateSearchBindings={operateSearchBindings}
+                          operateReviewNavigation={operateReviewNavigation}
+                          refetchCurrent={refetchCurrent}
+                        />
+                      </PlanningPresentationProvider>
                     </div>
                   )}
                 </div>
               </>
             )}
           </main>
-          {inspectorOpen ? (
+          {!detailRoute && inspectorOpen && inspectorStore.selection !== null ? (
             <Inspector
-              key={`${route.kind}:${route.subjectId ?? ''}:${inspectorStore.openTick}`}
+              key={`${route.kind}:${route.subjectId ?? ''}`}
               mode={inspectorMode}
               selection={inspectorStore.selection}
-              floating={narrow}
+              floating
+              modal={narrow}
+              onClose={() => setInspectorOpen(false)}
+              onRestoreFocus={interactions.restoreInspectorFocus}
+              onPromote={interactions.navigate}
+              planningContent={
+                inspectorOpen && planningModel && inspectorStore.selection?.kind === 'node' ? (
+                  <PlanningPresentationProvider
+                    scope={scope}
+                    view={null}
+                    onCopy={adapters?.copy}
+                    singleLetters={interactions.singleLetters}
+                  >
+                    <PlanningDetailInspector
+                      model={planningModel}
+                      nodeId={inspectorStore.selection.id}
+                      origin={
+                        bootstrap?.origin ??
+                        (typeof window === 'undefined' ? '' : window.location.origin)
+                      }
+                      onPromote={interactions.navigate}
+                    />
+                  </PlanningPresentationProvider>
+                ) : undefined
+              }
             />
           ) : null}
         </div>
@@ -183,10 +367,19 @@ export function UnifiedShell() {
           edgeCount={edgeCount}
           connectionState={connection.state}
           buildId={buildId}
+          compact={narrow}
         />
       </div>
+      <PlanningLiveFeedback
+        feedback={live.feedback}
+        onDismiss={live.dismiss}
+        onShow={interactions.navigate}
+      />
       <CommandPalette
         open={search.open}
+        singleLetters={interactions.singleLetters}
+        onNavigate={interactions.navigate}
+        onCopy={adapters?.copy}
         onClose={search.close}
         sources={search.sources}
         operateBindings={operateSearchBindings}

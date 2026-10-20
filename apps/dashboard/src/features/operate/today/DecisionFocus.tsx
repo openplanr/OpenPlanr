@@ -31,7 +31,7 @@ export function DecisionFocus({ model, onContinuation }: DecisionFocusProps) {
   const cycleHref = model.activeCycle.deepLink;
 
   return (
-    <section className="op-today-focus" aria-labelledby="op-today-focus-title">
+    <section className="pc-card op-today-focus" aria-labelledby="op-today-focus-title">
       <div className="op-today-focus__custody">
         <p className="op-eyebrow">{attention ? 'Priority focus' : 'Current work'}</p>
       </div>
@@ -93,7 +93,7 @@ export function DecisionFocus({ model, onContinuation }: DecisionFocusProps) {
       <div className="op-today-focus__actions">
         {reviewNavigation ? (
           <a
-            className="op-today-focus__evidence-link"
+            className="pc-button op-today-focus__evidence-link"
             data-review-navigation=""
             data-review-read-action-digest={reviewNavigation.readActionDigest}
             href={reviewNavigation.deepLink}
@@ -112,7 +112,7 @@ export function DecisionFocus({ model, onContinuation }: DecisionFocusProps) {
             {continuation?.action.label ?? 'No next step available'}
           </GovernedButton>
         )}
-        <a className="op-today-focus__evidence-link" href="#/operate/evidence">
+        <a className="pc-button op-today-focus__evidence-link" href="#/operate/evidence">
           View evidence
         </a>
         <small>Changes take effect only after confirmation and verification.</small>

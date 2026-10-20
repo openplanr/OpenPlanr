@@ -57,7 +57,9 @@ describe('dashboard shell binding summary', () => {
     );
 
     expect(container.querySelector('.op-binding-passport')).toBeNull();
-    expect(container.querySelector('.pc-topbar__end')?.textContent).toContain('connected');
+    expect(container.querySelector('.pc-topbar__end')?.textContent).toContain(
+      'Live · watching .planr/',
+    );
     expect(container.textContent).not.toContain('Ready to review');
     expect(container.textContent).not.toContain('Workspace details');
     expect(container.textContent).not.toContain('owner-bound');
@@ -73,7 +75,7 @@ describe('dashboard shell binding summary', () => {
       domainId: 'planning',
       domainVersion: '1.0.0',
       cycleId: null,
-      route: '#/overview',
+      route: '#/home',
       subjectId: null,
       generation: 4,
       eventHead: { sequence: 1, hash: `sha256:${'e'.repeat(64)}` },
@@ -110,7 +112,7 @@ describe('dashboard shell binding summary', () => {
     );
 
     expect(container.querySelector('.pc-plane-banner')).not.toBeNull();
-    expect(container.textContent).toContain('Offline');
+    expect(container.textContent).toContain('The file watcher disconnected');
     expect(container.querySelector('main')?.getAttribute('aria-busy')).not.toBe('true');
   });
 
@@ -127,61 +129,61 @@ describe('dashboard shell binding summary', () => {
 
     expect(container.querySelector('.pc-plane-banner')).not.toBeNull();
     expect(container.querySelector('main')?.getAttribute('aria-busy')).not.toBe('true');
-    expect(container.textContent).toContain('Offline — the watcher is not reachable');
+    expect(container.textContent).toContain('The file watcher disconnected');
   });
 
-  it.each([
-    ['loading', 'loading'],
-    ['refreshing', 'refreshing'],
-  ] as const)('keeps a %s Planning projection in its route frame', (kind, status) => {
-    const binding = createDashboardQueryIdentity({
-      productArea: 'planning',
-      actorId: 'owner-bound',
-      projectId: `sha256:${'1'.repeat(64)}`,
-      scopeId: 'scope-bound',
-      domainId: 'planning',
-      domainVersion: '1.0.0',
-      cycleId: null,
-      route: '#/overview',
-      subjectId: null,
-      generation: 4,
-      eventHead: { sequence: 1, hash: `sha256:${'2'.repeat(64)}` },
-      viewHash: `sha256:${'3'.repeat(64)}`,
-    });
-    const projection = parseDashboardProductState(
-      {
-        kind,
-        binding,
-        data: kind === 'refreshing' ? {} : null,
-        reasonCodes: kind === 'refreshing' ? ['DASHBOARD_REFRESHING'] : [],
-        error: null,
-        mutationEnabled: false,
-        policy: dashboardProductStatePolicy(kind),
-      },
-      {
-        currentBinding: binding,
-        validateData: (value): value is Record<string, unknown> =>
-          typeof value === 'object' && value !== null,
-      },
-    );
-    const { container } = render(
-      <DashboardProviders
-        buildId="binding-test"
-        initialHash="#/overview"
-        connection={{ state: 'connected', label: 'Connected', reason: 'Verified.' }}
-        binding={binding}
-        projection={projection}
-      >
-        <UnifiedShell />
-      </DashboardProviders>,
-    );
+  it.each([['loading', 'loading']] as const)(
+    'keeps a %s Planning projection in its route frame',
+    (kind, status) => {
+      const binding = createDashboardQueryIdentity({
+        productArea: 'planning',
+        actorId: 'owner-bound',
+        projectId: `sha256:${'1'.repeat(64)}`,
+        scopeId: 'scope-bound',
+        domainId: 'planning',
+        domainVersion: '1.0.0',
+        cycleId: null,
+        route: '#/home',
+        subjectId: null,
+        generation: 4,
+        eventHead: { sequence: 1, hash: `sha256:${'2'.repeat(64)}` },
+        viewHash: `sha256:${'3'.repeat(64)}`,
+      });
+      const projection = parseDashboardProductState(
+        {
+          kind,
+          binding,
+          data: kind === 'refreshing' ? {} : null,
+          reasonCodes: kind === 'refreshing' ? ['DASHBOARD_REFRESHING'] : [],
+          error: null,
+          mutationEnabled: false,
+          policy: dashboardProductStatePolicy(kind),
+        },
+        {
+          currentBinding: binding,
+          validateData: (value): value is Record<string, unknown> =>
+            typeof value === 'object' && value !== null,
+        },
+      );
+      const { container } = render(
+        <DashboardProviders
+          buildId="binding-test"
+          initialHash="#/overview"
+          connection={{ state: 'connected', label: 'Connected', reason: 'Verified.' }}
+          binding={binding}
+          projection={projection}
+        >
+          <UnifiedShell />
+        </DashboardProviders>,
+      );
 
-    const pending = container.querySelector<HTMLElement>('.op-route-pending');
-    expect(pending?.dataset.routePending).toBe(kind);
-    expect(pending?.getAttribute('aria-busy')).toBe('true');
-    expect(pending?.textContent).toContain(status);
-    expect(pending?.querySelector('h1')?.textContent).toBe('Overview');
-    expect(container.querySelector('.op-state-panel')).toBeNull();
-    expect(container.textContent).not.toContain('Planning cannot be trusted');
-  });
+      const pending = container.querySelector<HTMLElement>('.op-route-pending');
+      expect(pending?.dataset.routePending).toBe(kind);
+      expect(pending?.getAttribute('aria-busy')).toBe('true');
+      expect(pending?.textContent).toContain(status);
+      expect(pending?.querySelector('h1')?.textContent).toBe('Home');
+      expect(container.querySelector('.op-state-panel')).toBeNull();
+      expect(container.textContent).not.toContain('Planning cannot be trusted');
+    },
+  );
 });

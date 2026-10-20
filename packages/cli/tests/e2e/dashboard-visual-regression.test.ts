@@ -24,17 +24,58 @@ import axe from 'axe-core';
 import {
   assertOperateReviewDisplayWorkspaceV1,
   assertOperatingReviewReceiptV2,
+  type OperateReviewDisplayWorkspaceV1,
 } from 'planr-pipeline/dashboard/operate-review-contract';
 import {
   dashboardRouteDefinition,
   parseDashboardRoute,
 } from '../../../../apps/dashboard/src/app/router.js';
 import {
+  assertBrandGalleryEvidence,
+  brandGalleryStates,
+  recordBrandGalleryEvidence,
+} from '../../../../apps/dashboard/tests/helpers/brand-gallery-fixture.mjs';
+import { installDashboardLayoutShifts } from '../dashboard/fixtures/dashboard-layout-shifts.js';
+import { registerDashboardPerformanceTraceTests } from './fixtures/dashboard-performance-trace.js';
+import {
   DASHBOARD_FIXTURE_CYCLE_ID,
   DASHBOARD_FIXTURE_REVIEW_ID,
   DASHBOARD_ROUTE_FIXTURES,
   dashboardRouteFixture,
 } from './fixtures/dashboard-route-catalog.js';
+
+registerDashboardPerformanceTraceTests();
+
+test('records fixture-only Tokens, Components and States in both themes', async ({
+  page,
+}, testInfo) => {
+  const errors: string[] = [];
+  page.on('pageerror', (error) => errors.push(error.message));
+  for (const theme of ['dark', 'light']) {
+    for (const state of brandGalleryStates) {
+      await page.emulateMedia({
+        reducedMotion: state === 'reduced-motion' ? 'reduce' : 'no-preference',
+      });
+      const response = await page.goto(
+        `/__fixture/brand-gallery?${new URLSearchParams({ theme, state })}`,
+      );
+      expect(response?.ok()).toBe(true);
+      await expect(page.locator('[data-brand-gallery]')).toBeVisible();
+      await page.evaluate(() => document.fonts.ready);
+      const evidence = await recordBrandGalleryEvidence(page, { theme, state });
+      await testInfo.attach(`brand-gallery-${theme}-${state}.json`, {
+        body: Buffer.from(JSON.stringify(evidence, null, 2)),
+        contentType: 'application/json',
+      });
+      assertBrandGalleryEvidence(evidence);
+    }
+    await page.screenshot({
+      path: testInfo.outputPath(`brand-gallery-${theme}.png`),
+      fullPage: true,
+    });
+  }
+  expect(errors).toEqual([]);
+});
 
 const TEST_ROOT = dirname(fileURLToPath(import.meta.url));
 const FIXTURE_ORIGIN = `http://127.0.0.1:${process.env.OPENPLANR_DASHBOARD_FIXTURE_PORT ?? '4173'}`;
@@ -144,6 +185,50 @@ async function layoutReport(page: Page) {
   }, ACTIVE_TARGET_SELECTOR);
 }
 
+async function expectControlsHitTestable(page: Page, scope = page.locator('#main-content')) {
+  const controls = scope.locator(
+    `${ACTIVE_TARGET_SELECTOR}, [tabindex]:not([tabindex="-1"]), [contenteditable="true"]`,
+  );
+  let checked = 0;
+  for (const control of await controls.all()) {
+    if (
+      !(await control.isVisible()) ||
+      (await control.isDisabled()) ||
+      (await control.getAttribute('aria-disabled')) === 'true'
+    )
+      continue;
+    await control.scrollIntoViewIfNeeded();
+    const report = await control.evaluate((element) => {
+      const rect = element.getBoundingClientRect();
+      const hit = document.elementFromPoint(rect.x + rect.width / 2, rect.y + rect.height / 2);
+      return {
+        target: element.outerHTML,
+        hit: hit?.outerHTML,
+        reachable: hit !== null && (hit === element || element.contains(hit)),
+      };
+    });
+    expect(report.reachable, `Control is covered: ${JSON.stringify(report)}`).toBe(true);
+    checked++;
+  }
+  expect(checked).toBeGreaterThan(0);
+}
+
+async function expectGovernedDialogFocusTrapped(page: Page, dialog: Locator, cancel: Locator) {
+  await expect(cancel).toBeFocused();
+  const controls = dialog.locator(ACTIVE_TARGET_SELECTOR);
+  const steps = (await controls.count()) + 1;
+  for (const direction of ['Tab', 'Shift+Tab']) {
+    for (let step = 0; step < steps; step++) {
+      await page.keyboard.press(direction);
+      expect(
+        await dialog.evaluate((element) => element.contains(document.activeElement)),
+        `Governed dialog must retain focus after ${direction}`,
+      ).toBe(true);
+    }
+  }
+  await cancel.focus();
+}
+
 async function touchTap(page: Page, target: Locator): Promise<void> {
   await expect(target).toBeVisible();
   await target.scrollIntoViewIfNeeded();
@@ -188,8 +273,9 @@ async function attachScreenshot(
   await attach(name, { body: screenshot, contentType: 'image/png' });
 }
 
+// Soft, so a test with several goldens compares and records every one.
 async function expectGoldenScreenshot(page: Page, name: string) {
-  await expect(page).toHaveScreenshot([process.platform, name], {
+  await expect.soft(page).toHaveScreenshot([process.platform, name], {
     animations: 'disabled',
     caret: 'hide',
     fullPage: true,
@@ -246,8 +332,8 @@ test.describe('dashboard real-browser quality', () => {
       if (route === '#/graph') {
         const graph = page.locator('[data-route-kind="planning.graph"]');
         await expect(graph.getByRole('heading', { level: 1, name: 'Graph' })).toBeVisible();
-        await expect(graph).toContainText('0 nodes · 0 edges');
-        await expect(graph).toContainText('No depends_on edges in this plan');
+        await expect(graph).toContainText('1 of 1 nodes');
+        await expect(graph).toContainText('Everything outside the focus is hidden, not deleted.');
         await expect(graph.getByRole('tab', { name: 'Graph' })).toHaveAttribute(
           'aria-selected',
           'true',
@@ -267,6 +353,162 @@ test.describe('dashboard real-browser quality', () => {
       expect(FIXTURE_ORIGIN).not.toBe('http://127.0.0.1:4173');
     }
   });
+
+  test('uses the shared presentation across every Operate route in both themes', async ({
+    page,
+  }, testInfo) => {
+    test.setTimeout(180_000);
+    await page.addInitScript(() => {
+      const theme = new URL(location.href).searchParams.get('operateTheme');
+      if (theme === 'dark' || theme === 'light') localStorage.setItem('op-theme', theme);
+    });
+    const writes: string[] = [];
+    page.on('request', (request) => {
+      if (
+        new URL(request.url()).pathname.startsWith('/api/operate/') &&
+        !['GET', 'HEAD'].includes(request.method())
+      )
+        writes.push(`${request.method()} ${new URL(request.url()).pathname}`);
+    });
+    const routes = DASHBOARD_ROUTE_FIXTURES.filter(({ kind }) => kind.startsWith('operate.'));
+    expect(routes).toHaveLength(15);
+    for (const theme of ['dark', 'light']) {
+      for (const width of [1440, 390, 320]) {
+        await page.setViewportSize({ width, height: 1000 });
+        for (const { hash, kind } of routes) {
+          await openFixture(page, hash, { operateTheme: theme });
+          const workspace = page.locator(`[data-route-kind="${kind}"]`);
+          await expect(workspace).toHaveClass(/pc-operate/u);
+          await page.evaluate(() => document.fonts.ready);
+          const typography = await workspace.evaluate((element) => {
+            const heading = element.querySelector('h1, h2');
+            if (!heading) throw new Error('Missing Operate heading.');
+            const style = getComputedStyle(heading);
+            return {
+              body: getComputedStyle(element).fontFamily,
+              heading: style.fontFamily,
+              size: parseFloat(style.fontSize),
+              isPageTitle: heading.tagName === 'H1',
+              overflow: document.documentElement.scrollWidth > document.documentElement.clientWidth,
+            };
+          });
+          expect(typography.body).toContain('DM Sans');
+          expect(typography.heading).toContain('Outfit');
+          expect(typography.size).toBe(typography.isPageTitle ? 28 : 20);
+          expect(typography.overflow, `${kind} at ${width}px in ${theme}`).toBe(false);
+          if (kind === 'operate.recovery' && width === 390) {
+            const history = workspace.getByRole('region', { name: 'Immutable recovery history' });
+            await expect(history).toHaveAttribute('tabindex', '0');
+            await history.focus();
+            await expect(history).toBeFocused();
+            await expect(history).toHaveCSS('outline-style', 'solid');
+            await expect(history).toHaveCSS('outline-width', '2px');
+          }
+          const violations = await axeViolations(page);
+          expect(violations, `${kind} accessibility at ${width}px in ${theme}`).toEqual([]);
+          if (width === 1440) {
+            await attachScreenshot(page, `${kind}-${theme}.png`, testInfo.attach.bind(testInfo));
+          }
+          if (kind === 'operate.today' && width === 1440) {
+            const focus = workspace.locator('.op-today-focus');
+            const evidence = workspace.locator('.op-today-evidence--wide');
+            const [focusBox, evidenceBox] = await Promise.all([
+              focus.boundingBox(),
+              evidence.boundingBox(),
+            ]);
+            if (!focusBox || !evidenceBox) throw new Error('Missing focus or evidence desk.');
+            expect(evidenceBox.x - focusBox.x - focusBox.width).toBeCloseTo(24, 0);
+            await expect(focus).toHaveCSS('border-radius', '14px');
+            await expect(evidence).toHaveCSS('border-radius', '14px');
+          }
+        }
+      }
+    }
+    expect(writes).toEqual([]);
+  });
+
+  for (const theme of ['dark', 'light']) {
+    for (const width of [1440, 320]) {
+      test(`shows the truthful first-run Operate page with a copyable host command (${theme}, ${width}px)`, async ({
+        page,
+      }, testInfo) => {
+        await page.addInitScript(installDashboardLayoutShifts);
+        await page.context().grantPermissions(['clipboard-read', 'clipboard-write']);
+        await page.addInitScript(() => {
+          const theme = new URL(location.href).searchParams.get('operateTheme');
+          if (theme === 'dark' || theme === 'light') localStorage.setItem('op-theme', theme);
+        });
+        await page.setViewportSize({ width, height: 1000 });
+        const [bootstrapResponse, indexResponse] = await Promise.all([
+          page.waitForResponse(
+            (response) =>
+              new URL(response.url()).pathname === '/api/bootstrap' && response.status() === 200,
+          ),
+          page.waitForResponse((response) => {
+            const url = new URL(response.url());
+            return (
+              url.pathname === '/api/operate/local-reviews' &&
+              url.searchParams.get('pageSize') === '12' &&
+              response.status() === 200
+            );
+          }),
+          page.goto(fixtureUrl('#/operate/today', { localOperate: 'empty', operateTheme: theme })),
+        ]);
+        expect(bootstrapResponse.ok()).toBe(true);
+        expect(indexResponse.ok()).toBe(true);
+        // API request bodies survive replacement of the document that issued the observed requests.
+        const [bootstrapRead, indexRead] = await Promise.all([
+          page.request.get(bootstrapResponse.url(), {
+            headers: bootstrapResponse.request().headers(),
+          }),
+          page.request.get(indexResponse.url(), {
+            headers: indexResponse.request().headers(),
+          }),
+        ]);
+        expect(bootstrapRead.ok()).toBe(true);
+        expect(await bootstrapRead.json()).toMatchObject({
+          queryRoots: { operate: null },
+          capabilities: { operateCommands: { available: false } },
+        });
+        expect(indexRead.ok()).toBe(true);
+        expect(await indexRead.json()).toMatchObject({ pagination: { total: 0 }, items: [] });
+        const workspace = page.locator('[data-route-kind="operate.today"]');
+        await expect(
+          workspace.getByRole('heading', { name: 'Operate is not set up here yet' }),
+        ).toBeVisible();
+        await expect(workspace.getByText('Proposed', { exact: true })).toBeVisible();
+        if (width === 1440) {
+          await expect(page.locator('.pc-shell-inspector, .pc-inspector-sheet')).toHaveCount(0);
+          await expect(
+            page.getByRole('button', {
+              name: 'Show inspector: select an item first',
+              exact: true,
+            }),
+          ).toBeDisabled();
+          const main = page.locator('#main-content');
+          const [content, column] = await Promise.all([
+            main.boundingBox(),
+            page.locator('.pc-shell__column').boundingBox(),
+          ]);
+          if (!content || !column) throw new Error('Missing main content or shell column.');
+          expect(content.width).toBe(column.width);
+          await expectControlsHitTestable(page);
+        }
+
+        await expect(workspace.locator('.op-today-focus, .pc-local-review__signal')).toHaveCount(0);
+        await workspace.getByRole('button', { name: 'Copy command', exact: true }).click();
+        await expect(workspace.getByRole('button', { name: 'Copied', exact: true })).toBeVisible();
+        expect(await page.evaluate(() => navigator.clipboard.readText())).toBe('/planr:operate');
+        expect((await layoutReport(page)).horizontalOverflow).toBe(false);
+        expect(await axeViolations(page)).toEqual([]);
+        await attachScreenshot(
+          page,
+          `operate-first-run-${theme}-${width}.png`,
+          testInfo.attach.bind(testInfo),
+        );
+      });
+    }
+  }
 
   test('shows completed local operating reviews and keeps cycle and history routes distinct', async ({
     page,
@@ -291,7 +533,7 @@ test.describe('dashboard real-browser quality', () => {
     await expect(detail).toContainText('Run the CRM smoke test');
     await expect(detail.getByRole('heading', { name: 'Review coverage' })).toBeVisible();
     await expect(detail.getByRole('heading', { name: 'Decision record' })).toBeVisible();
-    await expect(detail.getByText('Read-only')).toBeVisible();
+    await expect(detail.getByText('Governed actions')).toBeVisible();
     await expect(detail).not.toContainText('No command gateway in this build');
 
     const navigation = page.getByRole('navigation', { name: 'Dashboard navigation' });
@@ -517,9 +759,16 @@ test.describe('dashboard real-browser quality', () => {
       await page.keyboard.press('Enter');
       const dialog = page.getByRole('alertdialog');
       await expect(dialog).toBeVisible();
-      expect(await dialog.evaluate((element) => element.contains(document.activeElement))).toBe(
-        true,
-      );
+      await expect(dialog).toHaveAccessibleName('Record “Reject recommendation”?');
+      const cancel = dialog.getByRole('button', { name: 'Keep reviewing', exact: true });
+      await expectGovernedDialogFocusTrapped(page, dialog, cancel);
+      await expect(
+        dialog.getByText(
+          'Records owner rejection and applies only the listed work dispositions; it does not delete evidence or execute Actions.',
+          { exact: true },
+        ),
+      ).toBeVisible();
+      await expectControlsHitTestable(page, dialog);
       await expect(dialog.getByText('project-write')).toBeVisible();
       expect(
         requests.filter(
@@ -595,6 +844,10 @@ test.describe('dashboard real-browser quality', () => {
       await trigger.click();
       const dialog = page.getByRole('alertdialog');
       await expect(dialog).toBeVisible();
+      await expect(dialog).toHaveAccessibleName(`Record “${proof.label}”?`);
+      const cancel = dialog.getByRole('button', { name: 'Keep reviewing', exact: true });
+      await expectGovernedDialogFocusTrapped(page, dialog, cancel);
+      await expectControlsHitTestable(page, dialog);
       await expect(dialog.getByRole('heading', { name: `Record “${proof.label}”?` })).toBeVisible();
       await expect(dialog.getByText(proof.consequence, { exact: true })).toBeVisible();
       await expect(dialog.getByText('project-write')).toBeVisible();
@@ -624,7 +877,9 @@ test.describe('dashboard real-browser quality', () => {
       const envelope = (await response.json()) as Record<string, unknown>;
       const data = envelope.data as Record<string, unknown>;
       const receipt = assertOperatingReviewReceiptV2(data.receipt);
-      const workspace = assertOperateReviewDisplayWorkspaceV1(data.workspace);
+      const workspace = assertOperateReviewDisplayWorkspaceV1(
+        data.workspace,
+      ) as OperateReviewDisplayWorkspaceV1;
       expect(envelope).toMatchObject({
         ok: true,
         operation: 'operate.review.submit',
@@ -676,8 +931,8 @@ test.describe('dashboard real-browser quality', () => {
 
       const graph = page.locator('[data-route-kind="planning.graph"]');
       await expect(graph.getByRole('heading', { level: 1, name: 'Graph' })).toBeVisible();
-      await expect(graph).toContainText('No depends_on edges in this plan');
-      await expect(graph).toContainText('an artifact without an edge of this kind is not shown');
+      await expect(graph).toContainText('Everything outside the focus is hidden, not deleted.');
+      await expect(graph).toContainText('Arrows move to connected neighbours.');
       expect((await layoutReport(page)).horizontalOverflow).toBe(false);
 
       if (viewport.width >= 1024) {
@@ -693,41 +948,122 @@ test.describe('dashboard real-browser quality', () => {
   test('turns a real delivery plan into staged graph, bounded board, and sprint intelligence', async ({
     page,
   }) => {
+    await page.addInitScript(installDashboardLayoutShifts);
     await page.setViewportSize({ width: 1440, height: 900 });
     await openFixture(page, '#/graph', { planningScenario: 'delivery' });
 
     const graph = page.locator('[data-route-kind="planning.graph"]');
+    await expect(graph.getByRole('button', { name: 'Dependencies', exact: true })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
     await expect(graph.locator('.pc-graph-node')).toHaveCount(4);
+    const fittedNodes = await graph.locator('.pc-graph-node').evaluateAll((nodes) =>
+      nodes.map((node) => {
+        const canvas = node.closest('.pc-graph');
+        if (!canvas) throw new Error('Missing graph viewport.');
+        const bounds = canvas.getBoundingClientRect();
+        const rect = node.getBoundingClientRect();
+        return {
+          id: node.getAttribute('data-canonical-id'),
+          fits:
+            rect.left >= bounds.left - 2 &&
+            rect.right <= bounds.right + 2 &&
+            rect.top >= bounds.top - 2 &&
+            rect.bottom <= bounds.bottom + 2,
+        };
+      }),
+    );
+    expect(fittedNodes.filter((node) => !node.fits)).toEqual([]);
     await expect(graph.locator('.pc-graph__rank')).toHaveCount(4);
     const nodePositions = await graph
       .locator('.pc-graph-node')
       .evaluateAll((nodes) => nodes.map((node) => Math.round(node.getBoundingClientRect().x)));
     expect(new Set(nodePositions).size).toBe(4);
-    expect(Math.max(...nodePositions) - Math.min(...nodePositions)).toBeGreaterThan(500);
+    const canvasBounds = await graph.locator('.pc-graph').boundingBox();
+    if (!canvasBounds) throw new Error('Missing fitted graph viewport.');
+    // Stage spacing follows the available canvas at each viewport.
+    expect(Math.max(...nodePositions) - Math.min(...nodePositions)).toBeGreaterThan(
+      canvasBounds.width * 0.6,
+    );
 
-    await graph.getByRole('button', { name: /QT-071:/u }).click();
-    const inspector = page.getByRole('complementary', { name: 'Inspector' });
+    await expect(page.locator('.pc-shell-inspector, .pc-inspector-sheet')).toHaveCount(0);
+    await expectControlsHitTestable(page, graph);
+    const main = page.locator('#main-content');
+    const scroll = page.locator('.pc-shell__scroll');
+    const before = { main: await main.boundingBox(), scroll: await scroll.boundingBox() };
+    if (!before.main || !before.scroll) throw new Error('Missing main or scroll region.');
+    await page.evaluate(() => window.__dashboardLayoutShifts.markPhase('inspector-toggle'));
+    const selectedNode = graph.getByRole('button', {
+      name: 'QT-071 Make failed CRM registrations visible and replayable',
+      exact: true,
+    });
+    await selectedNode.click();
+    const inspector = page.getByRole('dialog', { name: 'Inspector', exact: true });
     await expect(inspector).toContainText('Make failed CRM registrations visible and replayable');
-    await expect(inspector).toContainText('Dependencies');
-    await expect(inspector.getByRole('button', { name: /Open artifact/u })).toBeVisible();
+    expect(await main.boundingBox()).toEqual(before.main);
+    expect(await scroll.boundingBox()).toEqual(before.scroll);
+    const overlay = await inspector.boundingBox();
+    if (!overlay) throw new Error('Missing inspector overlay.');
+    expect(overlay.x).toBeLessThan(before.main.x + before.main.width);
+    expect(overlay.x + overlay.width).toBeGreaterThan(before.main.x + before.main.width - 1);
+    await expect(inspector.locator('[data-artifact-id="QT-071"]')).toHaveAttribute(
+      'data-detail-state',
+      'ready',
+    );
+    const dependencies = inspector.getByRole('region', { name: 'Depends on', exact: true });
+    await expect(dependencies.getByRole('link', { name: /QT-070/u })).toBeVisible();
+    await expect(dependencies).toContainText('Done');
+    await expect(
+      inspector.getByRole('button', { name: 'Open full page', exact: true }),
+    ).toBeVisible();
     expect(await inspector.evaluate((node) => getComputedStyle(node).animationName)).toBe(
       'pc-inspector-enter',
     );
+
+    await page.keyboard.press('Escape');
+    await expect(inspector).toHaveCount(0);
+    await expect(selectedNode).toBeFocused();
+    expect(await main.boundingBox()).toEqual(before.main);
+    await selectedNode.click();
+    await expect(inspector).toBeVisible();
+    await main.click({ position: { x: 8, y: 8 } });
+    await expect(inspector).toHaveCount(0);
+    await expect(selectedNode).toBeFocused();
+    expect(await main.boundingBox()).toEqual(before.main);
+    expect(await scroll.boundingBox()).toEqual(before.scroll);
+    await expectControlsHitTestable(page, graph);
+    const shifts = await page.evaluate(() =>
+      window.__dashboardLayoutShifts
+        .snapshot()
+        .shifts.filter((entry) => entry.phase === 'inspector-toggle'),
+    );
+    expect(shifts.reduce((sum, shift) => sum + shift.value, 0)).toBe(0);
+
+    await selectedNode.click();
+    await expect(inspector).toBeVisible();
 
     await page.evaluate(() => {
       window.location.hash = '#/list';
     });
     await expect(page.locator('[data-route-kind="planning.list"]')).toBeVisible();
+    await expect(inspector).toHaveCount(0);
+    await page.getByRole('button', { name: 'Show inspector', exact: true }).click();
+    await expect(inspector).toContainText('Make failed CRM registrations visible and replayable');
     expect(await inspector.evaluate((node) => getComputedStyle(node).animationName)).toBe(
       'pc-inspector-enter',
     );
 
     await openFixture(page, '#/board', { planningScenario: 'delivery' });
-    const doneCards = page
-      .locator('.pc-status-board__column')
-      .filter({ hasText: 'done' })
-      .locator('.pc-status-board__cards');
-    await expect(doneCards.locator('.pc-status-board__card')).toHaveCount(33);
+    const doneCards = page.locator('[data-keyboard-column="done"] .pc-status-board__cards');
+    await expect(doneCards.locator('.pc-status-board__card')).toHaveCount(0);
+    await page.getByRole('button', { name: 'Hide done', exact: true }).click();
+    await expect(doneCards.locator('li[aria-setsize="33"]').first()).toBeAttached();
+    expect(await doneCards.locator('.pc-status-board__card').count()).toBeLessThan(10);
+    await doneCards.evaluate((element) => {
+      element.scrollTop = element.scrollHeight;
+    });
+    await expect(doneCards.locator('li[aria-posinset="33"]')).toBeAttached();
     const boardScroll = await doneCards.evaluate((element) => ({
       overflowY: getComputedStyle(element).overflowY,
       scrolls: element.scrollHeight > element.clientHeight,
@@ -739,10 +1075,9 @@ test.describe('dashboard real-browser quality', () => {
     await expect(
       sprint.getByRole('heading', { name: 'CRM recovery and observability' }),
     ).toBeVisible();
-    await expect(sprint.getByRole('table', { name: 'Members of SPRINT-009' })).toContainText(
-      'QT-071',
-    );
-    await expect(sprint).toContainText('3 items');
+    const members = sprint.getByRole('list', { name: 'Members of SPRINT-009' });
+    await expect(members).toContainText('QT-071');
+    await expect(members.getByRole('listitem')).toHaveCount(3);
     await expect(sprint).toContainText('Latest operating review');
     await expect(sprint).toContainText('1 reference this scope');
     await expect(sprint).toContainText('Submit one test registration before dispatching QT-071');
@@ -778,7 +1113,7 @@ test.describe('dashboard real-browser quality', () => {
     expect(transition).toEqual({ route: '#/graph', showedPlanningRefusal: false });
     await expect(page.locator('[data-route-kind="planning.graph"]')).toBeVisible();
     await expect(page.locator('[data-route-kind="planning.graph"]')).toContainText(
-      'No depends_on edges in this plan',
+      'Everything outside the focus is hidden, not deleted.',
     );
   });
 
@@ -789,19 +1124,30 @@ test.describe('dashboard real-browser quality', () => {
     }
   });
 
-  test('keeps Planning Overview bounded and decision-focused', async ({ page }) => {
+  test('keeps Planning Home bounded and decision-focused through the Overview alias', async ({
+    page,
+  }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
     await openFixture(page, '#/overview');
 
     const overview = page.locator('[data-route-kind="planning.overview"]');
-    await expect(overview.getByRole('heading', { level: 1, name: 'Overview' })).toBeVisible();
-    await expect(overview).toContainText('1 artifact');
-    await expect(overview).toContainText('Nothing is blocked');
-    await expect(overview.getByRole('table', { name: 'Artifacts in progress' })).toContainText(
-      'Improve appointment reminder delivery',
-    );
-    await expect(overview).not.toContainText('Highest planning attention');
-    await expect(overview).not.toContainText('Needs attention');
+    await expect(page).toHaveURL(/#\/home$/u);
+    await expect(
+      overview.getByRole('heading', { level: 1, name: 'Needs attention', exact: true }),
+    ).toBeVisible();
+    await expect(overview).toContainText('1 item');
+    await expect(
+      overview.getByRole('heading', { name: /^Waiting on a dependency/u }),
+    ).toBeVisible();
+    await expect(
+      overview.getByRole('heading', { name: /^In progress, gone quiet/u }),
+    ).toBeVisible();
+    await expect(
+      overview.getByRole('heading', { name: /^High priority, not started/u }),
+    ).toBeVisible();
+    await expect(overview).toContainText('Commit-aware detection is available in Phase 2');
+    await expect(overview).toContainText('No active sprint');
+    expect((await layoutReport(page)).horizontalOverflow).toBe(false);
     await expectGoldenScreenshot(page, 'console-planning-overview-wide.png');
   });
 
@@ -818,13 +1164,229 @@ test.describe('dashboard real-browser quality', () => {
       await expect(columns).toHaveCount(5);
       const inProgress = columns.filter({ hasText: 'in progress' });
       await expect(inProgress).toContainText('Improve appointment reminder delivery');
-      await expect(columns.filter({ hasText: 'blocked' })).toContainText('empty');
+      for (const status of ['outstanding', 'blocked', 'addressed', 'done']) {
+        const emptySlot = board
+          .getByRole('region', { name: status, exact: true })
+          .getByRole('button', { name: `${status}: no cards`, exact: true });
+        await expect(emptySlot).toHaveText('No cards');
+        await emptySlot.focus();
+        await expect(emptySlot).toBeFocused();
+      }
       expect((await layoutReport(page)).horizontalOverflow).toBe(false);
 
       if (viewport.width >= 1024) {
         await expectSurfaceToUseRouteFrame(page, '[data-route-kind="planning.board"]');
       }
     }
+  });
+
+  test('keeps Board status lanes read-only and keyboard reachable in both themes and sizes', async ({
+    page,
+  }, testInfo) => {
+    const writes: string[] = [];
+    page.on('request', (request) => {
+      if (new URL(request.url()).pathname.startsWith('/api/') && request.method() !== 'GET')
+        writes.push(`${request.method()} ${request.url()}`);
+    });
+    await page.addInitScript(() => {
+      const theme = new URL(window.location.href).searchParams.get('boardTheme');
+      if (theme === 'dark' || theme === 'light') localStorage.setItem('op-theme', theme);
+    });
+    for (const theme of ['dark', 'light']) {
+      for (const width of [1440, 390]) {
+        await page.setViewportSize({ width, height: 960 });
+        await openFixture(page, '#/board', { planningScenario: 'delivery', boardTheme: theme });
+        await page.evaluate(() => document.fonts.ready);
+        expect(await page.evaluate(() => localStorage.getItem('op-theme'))).toBe(theme);
+        const board = page.locator('[data-route-kind="planning.board"]');
+        await expect(board.getByRole('button', { name: 'Hide done', exact: true })).toHaveAttribute(
+          'aria-pressed',
+          'true',
+        );
+        const card = board.locator('.pc-status-board__card [data-keyboard-item]').first();
+        await card.focus();
+        await page.keyboard.press('Enter');
+        await expect(
+          page.getByRole('dialog', {
+            name: 'Inspector',
+            exact: true,
+          }),
+        ).toBeVisible();
+        await page.keyboard.press('Escape');
+        await expect(card).toBeFocused();
+        await page.keyboard.press('ArrowRight');
+        await expect(board.locator('[data-keyboard-item]:focus')).toHaveCount(1);
+        await board.getByRole('combobox', { name: /^Swimlanes:/u }).click();
+        await page.getByRole('option', { name: /spec/iu }).click();
+        await expect(board.locator('.pc-status-board__lane')).not.toHaveCount(0);
+        expect(await board.locator('[draggable="true"]').count()).toBe(0);
+        await board.locator('.pc-status-board__card').first().dispatchEvent('dragstart');
+        await board.locator('.pc-status-board__column').last().dispatchEvent('drop');
+        await expect(board).toContainText('Proposed for Phase 2');
+        expect((await layoutReport(page)).horizontalOverflow).toBe(false);
+        expect(await axeViolations(page)).toEqual([]);
+        await attachScreenshot(
+          page,
+          `planning-board-${theme}-${width}.png`,
+          testInfo.attach.bind(testInfo),
+        );
+      }
+    }
+    expect(writes).toEqual([]);
+  });
+
+  test.describe('sprint and activity evidence', () => {
+    test.use({ hasTouch: true });
+    test('renders sprint evidence and honest Activity states in both themes and touch sizes', async ({
+      page,
+    }, testInfo) => {
+      test.setTimeout(90_000);
+      await page.addInitScript(() => {
+        const theme = new URL(location.href).searchParams.get('evidenceTheme');
+        if (theme === 'light' || theme === 'dark') localStorage.setItem('op-theme', theme);
+      });
+      const writes: string[] = [];
+      page.on('request', (request) => {
+        if (new URL(request.url()).pathname.startsWith('/api/') && request.method() !== 'GET')
+          writes.push(`${request.method()} ${request.url()}`);
+      });
+      for (const theme of ['dark', 'light']) {
+        for (const width of [1440, 390, 320]) {
+          await page.setViewportSize({ width, height: 1000 });
+          expect((await page.request.post('/__fixture/reset?dataset=artboard')).ok()).toBe(true);
+          await page.goto(fixtureUrl('#/sprints', { dataset: 'artboard', evidenceTheme: theme }));
+          await page.evaluate(() => document.fonts.ready);
+          const sprints = page.locator('[data-route-kind="planning.sprints"]');
+          await expect(
+            sprints.getByRole('heading', { name: 'No active sprint', exact: true }),
+          ).toBeVisible();
+          await expect(
+            sprints.getByRole('article', { name: 'SPRINT-001: Launch sprint 1', exact: true }),
+          ).toContainText('78 of 82 sprint items done');
+          await expect(sprints).toContainText('closed-before-start');
+          const carry = sprints.getByRole('region', { name: 'Carry-over from SPRINT-001' });
+          await expect(carry).toContainText('Still open after close');
+          expect(
+            await carry
+              .locator('a[data-keyboard-item]')
+              .evaluateAll((links) => links.map((link) => link.getAttribute('href'))),
+          ).toEqual([
+            '#/detail/QT-006',
+            '#/detail/BL-007',
+            '#/detail/QT-005',
+            '#/detail/SPEC-015%2FT-055',
+          ]);
+          const link = carry.locator('a[data-keyboard-item]').last();
+          if (width < 900) await link.tap();
+          else {
+            await link.focus();
+            await page.keyboard.press('Enter');
+          }
+          await expect(
+            page.getByRole('dialog', {
+              name: 'Inspector',
+              exact: true,
+            }),
+          ).toBeVisible();
+          await page.keyboard.press('Escape');
+          await expect(link).toBeFocused();
+          expect((await layoutReport(page)).horizontalOverflow).toBe(false);
+          expect(await axeViolations(page)).toEqual([]);
+          await testInfo.attach(`sprints-${theme}-${width}.png`, {
+            body: await page.screenshot({ fullPage: true }),
+            contentType: 'image/png',
+          });
+
+          await page.goto(fixtureUrl('#/activity', { dataset: 'artboard', evidenceTheme: theme }));
+          const activity = page.locator('[data-route-kind="planning.activity"]');
+          await expect(activity).toContainText('A graph snapshot is not a change log');
+          await expect(activity).toContainText('No activity returned');
+          await expect(activity).toContainText('This session only');
+          await expect(activity.locator('[data-keyboard-item]')).toHaveCount(0);
+          expect((await layoutReport(page)).horizontalOverflow).toBe(false);
+          expect(await axeViolations(page)).toEqual([]);
+          await testInfo.attach(`activity-${theme}-${width}.png`, {
+            body: await page.screenshot({ fullPage: true }),
+            contentType: 'image/png',
+          });
+        }
+      }
+      await openFixture(page, '#/sprints');
+      await expect(page.locator('[data-route-kind="planning.sprints"]')).toContainText(
+        'No sprints yet',
+      );
+      await openFixture(page, '#/sprints', { planningScenario: 'delivery' });
+      await expect(page.getByRole('heading', { name: 'Continue sprint planning' })).toBeVisible();
+      expect(writes).toEqual([]);
+    });
+
+    test('retains session-only accepted Activity patches, focus and scroll on disconnect without layout shift', async ({
+      page,
+    }, testInfo) => {
+      expect((await page.request.post('/__fixture/reset?dataset=artboard')).ok()).toBe(true);
+      await page.setViewportSize({ width: 1440, height: 1000 });
+      await page.goto(fixtureUrl('#/activity', { dataset: 'artboard' }));
+      await page.evaluate(() => document.fonts.ready);
+      const activity = page.locator('[data-route-kind="planning.activity"]');
+      await expect(activity).toContainText('Watching');
+      await page.evaluate(installDashboardLayoutShifts);
+      await page.evaluate(() => window.__dashboardLayoutShifts.markPhase('activity-patches'));
+      expect((await page.request.post('/__fixture/patch?dataset=artboard')).ok()).toBe(true);
+      const row = activity.locator('[data-keyboard-item]').first();
+      await expect(row).toBeVisible();
+      await row.focus();
+      const feed = activity.getByRole('region', { name: 'Live patches from this session' });
+      await feed.evaluate((element) => {
+        element.scrollTop = 0;
+      });
+      expect((await page.request.post('/__fixture/patch?dataset=artboard')).ok()).toBe(true);
+      await expect(activity.locator('[data-keyboard-item]')).toHaveCount(2);
+      await expect(row).toBeFocused();
+      expect(await feed.evaluate((element) => element.scrollTop)).toBe(0);
+      const indicator = activity.locator('.pc-activity__connection');
+      const badge = indicator.locator('.pc-badge');
+      const indicatorBefore = await indicator.boundingBox();
+      const badgeBefore = await badge.boundingBox();
+      expect(indicatorBefore).not.toBeNull();
+      expect(badgeBefore).not.toBeNull();
+      expect(badgeBefore?.height).toBe(28);
+      await page.evaluate(() => window.__dashboardLayoutShifts.markPhase('activity-disconnect'));
+      await page.context().setOffline(true);
+      await expect(
+        activity.getByRole('region', { name: 'Live session activity', exact: true }),
+      ).toContainText('Disconnected · session retained');
+      await expect(
+        activity.getByRole('region', { name: 'Live session activity', exact: true }),
+      ).not.toContainText('Watching');
+      await expect(activity).toContainText('This session only');
+      await expect(activity.locator('[data-keyboard-item]')).toHaveCount(2);
+      await page.evaluate(
+        () =>
+          new Promise<void>((resolve) =>
+            requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
+          ),
+      );
+      const report = await page.evaluate(() => window.__dashboardLayoutShifts.snapshot());
+      const shifts = report.shifts.filter(
+        (shift) =>
+          !shift.hadRecentInput &&
+          ['activity-patches', 'activity-disconnect'].includes(shift.phase),
+      );
+      const cls = shifts.reduce((sum, shift) => sum + shift.value, 0);
+      if (cls !== 0)
+        await testInfo.attach('activity-layout-shifts.json', {
+          body: JSON.stringify(report, null, 2),
+          contentType: 'application/json',
+        });
+      expect(cls, `Activity layout shifts: ${JSON.stringify(shifts, null, 2)}`).toBe(0);
+      expect(await indicator.boundingBox()).toEqual(indicatorBefore);
+      const badgeAfter = await badge.boundingBox();
+      expect(badgeAfter?.height).toBe(badgeBefore?.height);
+      expect(badgeAfter?.y).toBe(badgeBefore?.y);
+      if (!badgeBefore || !badgeAfter) throw new Error('Activity badge geometry is unavailable');
+      expect(badgeAfter.x).toBe(badgeBefore.x);
+      await page.context().setOffline(false);
+    });
   });
 
   test('keeps Planning workspaces aligned to one shared application frame', async ({ page }) => {
@@ -867,6 +1429,99 @@ test.describe('dashboard real-browser quality', () => {
     );
   });
 
+  test('keeps palette preview named, reachable and trapped across themes and widths', async ({
+    page,
+  }, testInfo) => {
+    test.setTimeout(90_000);
+    await page.addInitScript(() => {
+      const theme = new URL(location.href).searchParams.get('evidenceTheme');
+      if (theme === 'light' || theme === 'dark') localStorage.setItem('op-theme', theme);
+    });
+    const writes: string[] = [];
+    page.on('request', (request) => {
+      const path = new URL(request.url()).pathname;
+      if (path.startsWith('/api/') && request.method() !== 'GET')
+        writes.push(`${request.method()} ${path}`);
+    });
+    for (const theme of ['dark', 'light']) {
+      for (const width of [1440, 390, 320]) {
+        await page.setViewportSize({ width, height: width === 320 ? 568 : 1000 });
+        expect((await page.request.post('/__fixture/reset?dataset=artboard')).ok()).toBe(true);
+        await page.goto(fixtureUrl('#/list', { dataset: 'artboard', evidenceTheme: theme }));
+        await expect(page.locator('.pc-list')).toBeVisible();
+        await page.evaluate(() => document.fonts.ready);
+        const launcher = page.getByRole('button', { name: 'Jump to a view or an artifact' });
+        await launcher.focus();
+        await page.keyboard.press('Control+K');
+        const palette = page.getByRole('dialog', { name: 'Command palette', exact: true });
+        const input = palette.getByRole('searchbox', { name: 'Search views and artifacts' });
+        await expect(input).toBeFocused();
+        await input.fill('SPEC-014/T-046');
+        const first = palette.locator('[data-search-result]').first();
+        await expect(first).toHaveAttribute('data-search-result', 'planning:SPEC-014/T-046');
+        const preview = palette.getByRole('complementary', { name: 'Search result preview' });
+        await expect(preview).toHaveAttribute('data-preview-id', 'SPEC-014/T-046');
+        await expect(preview).toHaveAttribute('data-preview-state', 'ready');
+        await expect(preview).toContainText('Connect Plan Ship company sync and release proof');
+        await expect(preview).toContainText('SPEC-014');
+        await expect(preview).toContainText('T-045');
+        await expect(page).toHaveURL(/#\/list$/u);
+        for (const control of await palette.locator(ACTIVE_TARGET_SELECTOR).all()) {
+          if (await control.isVisible()) await expect(control).toHaveAccessibleName(/\S/u);
+        }
+        await expectControlsHitTestable(page, palette);
+        await input.focus();
+        const steps = (await palette.locator(ACTIVE_TARGET_SELECTOR).count()) + 1;
+        for (const direction of ['Tab', 'Shift+Tab']) {
+          for (let step = 0; step < steps; step++) {
+            await page.keyboard.press(direction);
+            expect(
+              await palette.evaluate((element) => element.contains(document.activeElement)),
+              `Palette must retain focus after ${direction}`,
+            ).toBe(true);
+          }
+        }
+        await input.focus();
+        expect((await layoutReport(page)).horizontalOverflow).toBe(false);
+        expect(await axeViolations(page)).toEqual([]);
+        await attachScreenshot(
+          page,
+          `palette-${theme}-${width}.png`,
+          testInfo.attach.bind(testInfo),
+        );
+        await page.keyboard.press('Escape');
+        await expect(palette).not.toBeVisible();
+        await expect(launcher).toBeFocused();
+        await expect(page).toHaveURL(/#\/list$/u);
+      }
+    }
+    expect(writes).toEqual([]);
+  });
+
+  test('starts the handoff trace through palette search and promotes only on full-page activation', async ({
+    page,
+  }) => {
+    expect((await page.request.post('/__fixture/reset?dataset=artboard')).ok()).toBe(true);
+    await page.goto(fixtureUrl('#/list', { dataset: 'artboard' }));
+    await expect(page.locator('.pc-list')).toBeVisible();
+    await page.keyboard.press('Control+K');
+    const palette = page.getByRole('dialog', { name: 'Command palette', exact: true });
+    const input = palette.getByRole('searchbox', { name: 'Search views and artifacts' });
+    await input.fill('handoff');
+    const result = palette.getByRole('button', { name: /Design-to-Delivery Handoff Center/u });
+    await result.focus();
+    const preview = palette.getByRole('complementary', { name: 'Search result preview' });
+    await expect(preview).toHaveAttribute('data-preview-id', 'SPEC-014');
+    await expect(preview).toContainText('openplanr status SPEC-014 --md');
+    await expect(page).toHaveURL(/#\/list$/u);
+    await page.keyboard.press('Control+Enter');
+    await expect(palette).not.toBeVisible();
+    await expect(page).toHaveURL(/#\/detail\/SPEC-014$/u);
+    await expect(page.locator('[data-route-kind="planning.detail"]')).toContainText(
+      'Design-to-Delivery Handoff Center',
+    );
+  });
+
   test('returns focus after cancelling a runtime-issued governed Action preview', async ({
     page,
   }, testInfo) => {
@@ -879,6 +1534,8 @@ test.describe('dashboard real-browser quality', () => {
       name: 'Confirm Restore the previous reminder settings',
     });
     await expect(dialog).toBeVisible();
+    const cancel = dialog.getByRole('button', { name: 'Cancel', exact: true });
+    await expect(cancel).toBeFocused();
     await expect(dialog).toContainText(
       'You are about to Restore the previous reminder settings. Review the reminder setting rollback before confirming.',
     );
@@ -903,7 +1560,9 @@ test.describe('dashboard real-browser quality', () => {
     );
     await expectGoldenScreenshot(page, 'console-operate-governed-action-dialog.png');
 
-    await dialog.getByRole('button', { name: 'Cancel' }).click();
+    await expectGovernedDialogFocusTrapped(page, dialog, cancel);
+    await expectControlsHitTestable(page, dialog);
+    await cancel.click();
     await expect(dialog).not.toBeVisible();
     await expect(trigger).toBeFocused();
   });
@@ -924,18 +1583,21 @@ test.describe('dashboard real-browser quality', () => {
       expect(await page.evaluate(() => navigator.maxTouchPoints)).toBeGreaterThan(0);
 
       const mobileNavigation = page.getByRole('navigation', { name: 'Mobile Operate navigation' });
-      await touchTap(page, mobileNavigation.getByRole('link', { name: 'Inbox' }));
-      await expect(page.locator('[data-route-kind="operate.inbox"]')).toBeVisible();
-
       const more = mobileNavigation.locator('summary[aria-label="More Operate destinations"]');
-      await touchTap(page, more);
       const moreSheet = mobileNavigation.locator('details.pc-mobile-more');
+      await touchTap(page, more);
+      await expect(moreSheet).toHaveAttribute('open', '');
+      await touchTap(page, moreSheet.getByRole('link', { name: 'Inbox', exact: true }));
+      await expect(page.locator('[data-route-kind="operate.inbox"]')).toBeVisible();
+      await expect(moreSheet).not.toHaveAttribute('open', '');
+
+      await touchTap(page, more);
       await expect(moreSheet).toHaveAttribute('open', '');
       await touchTap(page, moreSheet.getByRole('link', { name: 'Evidence' }));
       await expect(page.locator('[data-route-kind="operate.evidence"]')).toBeVisible();
       await expect(moreSheet).not.toHaveAttribute('open', '');
 
-      await touchTap(page, mobileNavigation.getByRole('link', { name: 'Planning' }));
+      await touchTap(page, mobileNavigation.getByRole('link', { name: 'Home', exact: true }));
       await expect(page.locator('[data-route-kind="planning.overview"]')).toBeVisible();
       const planningNavigation = page.getByRole('navigation', {
         name: 'Mobile Planning navigation',
@@ -971,12 +1633,16 @@ test.describe('dashboard real-browser quality', () => {
     }
   });
 
-  test('keeps compact-rail destinations legible at tablet widths', async ({ page }) => {
-    for (const width of [801, 1024, 1120]) {
+  test('keeps desktop-rail destinations legible at tablet widths', async ({ page }) => {
+    for (const width of [900, 1024, 1120]) {
       await page.setViewportSize({ width, height: 768 });
       await openFixture(page, '#/operate/today');
 
       const navigation = page.getByRole('navigation', { name: 'Dashboard navigation' });
+      await expect(navigation).toBeVisible();
+      await expect(
+        page.getByRole('navigation', { name: 'Mobile Operate navigation' }),
+      ).not.toBeVisible();
       const labels = await navigation
         .locator('.pc-rail__item > span:last-child')
         .evaluateAll((elements) =>
@@ -991,7 +1657,15 @@ test.describe('dashboard real-browser quality', () => {
           }),
         );
 
+      // Expanded navigation keeps both product groups available (M2).
       expect(labels.map(({ text }) => text)).toEqual([
+        'Home',
+        'List',
+        'Graph',
+        'Board',
+        'Sprints',
+        'Activity',
+        'Search',
         'Today',
         'Inbox',
         'Actions',
@@ -1012,6 +1686,48 @@ test.describe('dashboard real-browser quality', () => {
     }
   });
 
+  test('exposes every omitted destination in the mobile menu below the desktop breakpoint', async ({
+    page,
+  }) => {
+    for (const width of [801, 899]) {
+      await page.setViewportSize({ width, height: 768 });
+      await openFixture(page, '#/operate/today');
+      await expect(
+        page.getByRole('navigation', { name: 'Dashboard navigation' }),
+      ).not.toBeVisible();
+      const navigation = page.getByRole('navigation', { name: 'Mobile Operate navigation' });
+      await expect(navigation).toBeVisible();
+      expect(await navigation.getByRole('link').allTextContents()).toEqual([
+        'Home',
+        'List',
+        'Activity',
+        'Operate',
+      ]);
+      await navigation.locator('summary[aria-label="More Operate destinations"]').click();
+      const more = navigation.locator('details.pc-mobile-more');
+      await expect(more).toHaveAttribute('open', '');
+      expect(await more.getByRole('link').allTextContents()).toEqual([
+        'Graph',
+        'Board',
+        'Sprints',
+        'Search',
+        'Inbox',
+        'Actions',
+        'Cycles',
+        'Evidence',
+        'Outcomes',
+        'History',
+        'Recovery',
+        'Console',
+        'Diagnostics',
+      ]);
+      await more.getByRole('link', { name: 'Inbox', exact: true }).click();
+      await expect(page.locator('[data-route-kind="operate.inbox"]')).toBeVisible();
+      await expect(more).not.toHaveAttribute('open', '');
+      expect((await layoutReport(page)).horizontalOverflow).toBe(false);
+    }
+  });
+
   test('uses a concise visible live status at responsive widths', async ({ page }) => {
     for (const width of [1120, 1024, 801, 800, 768, 480, 390, 320]) {
       await page.setViewportSize({ width, height: 768 });
@@ -1019,7 +1735,12 @@ test.describe('dashboard real-browser quality', () => {
 
       const status = page.getByRole('status', { name: 'watcher connected' });
       await expect(status).toBeVisible();
-      await expect(status.locator('.pc-watcher__label')).toHaveText('watcher connected');
+      // The mobile live pill uses its concise label (M3).
+      await expect(status.locator('.pc-watcher__label')).toHaveCount(1);
+      await expect(status.locator('.pc-watcher__label')).toBeVisible();
+      await expect(status.locator('.pc-watcher__label')).toHaveText(
+        width < 900 ? 'Live' : 'watcher connected',
+      );
       expect((await status.boundingBox())?.width ?? 0).toBeGreaterThan(0);
     }
   });
@@ -1143,7 +1864,10 @@ test.describe('dashboard real-browser quality', () => {
   }) => {
     const hostile = '<img src=x onerror="window.__fixtureXssFired=1"> Fixture';
     await openFixture(page, '#/overview', { project: hostile });
-    await expect(page.locator('.pc-topbar__crumb').first()).toHaveText(hostile);
+    // The breadcrumb displays Plan; project identity remains in its escaped title (T6).
+    const identity = page.locator('.pc-topbar__crumb').first();
+    await expect(identity).toHaveText('Plan');
+    await expect(identity).toHaveAttribute('title', hostile);
     expect(await page.locator('img[src="x"]').count()).toBe(0);
     expect(
       await page.evaluate(() =>

@@ -49,27 +49,51 @@ const consoleShell = readFileSync(
 );
 
 const APPROVED_COLORS = new Set([
-  '#f6f3ec',
-  '#fcfbf8',
-  '#1b1815',
-  '#726960',
-  '#d9d2c7',
-  '#5c750c',
-  '#f0fbce',
-  '#1d6152',
-  '#94600a',
-  '#9c2c15',
-  '#221f1b',
+  '#08080c',
+  '#0e0e14',
+  '#141420',
+  '#1a1a2a',
+  '#222236',
+  '#606c7f',
+  '#383f4a',
+  '#f4f4fa',
+  '#e8e8f0',
+  '#9999b8',
+  '#a4adbc',
+  '#858d99',
+  '#5eead4',
+  '#153a32',
+  '#78aef8',
+  '#f87171',
+  '#e7b85c',
+  '#b498ef',
+  '#c084fc',
+  '#60a5fa',
+  '#22d3ee',
+  '#fbbf24',
+  '#f472b6',
+  '#4ade80',
+  '#f5f7f7',
   '#ffffff',
-  '#141210',
-  '#b9afa3',
-  '#3a342f',
-  '#bce633',
-  '#2a2622',
-  '#8fcfbb',
-  '#f5c563',
-  '#f4a392',
-  '#0e0c0b',
+  '#e9efed',
+  '#dce3e1',
+  '#c7cdd5',
+  '#17191d',
+  '#4a525d',
+  '#5c6470',
+  '#5d6470',
+  '#206e67',
+  '#e3f3ed',
+  '#2664ac',
+  '#b83142',
+  '#8b5813',
+  '#6e53b0',
+  '#7833ec',
+  '#1556e5',
+  '#0d6c86',
+  '#8e5706',
+  '#be185d',
+  '#137237',
 ]);
 
 function colors(source: string) {
@@ -80,16 +104,24 @@ describe('OpenPlanr design system', () => {
   it('owns the approved light and dark palette without introducing a generic theme', () => {
     expect(new Set(colors(tokens))).toEqual(APPROVED_COLORS);
     expect(colors(shell)).toEqual([]);
-    expect(tokens).toContain(':root[data-theme="dark"]');
-    expect(tokens).toContain(':root:not([data-theme="light"])');
+    expect(tokens).toMatch(/:root\s*\{\s*color-scheme: dark;/u);
+    expect(tokens).toContain(':root[data-theme="light"]');
+    expect(tokens).toContain(':root[data-theme="system"]');
     expect(tokens).toContain(':root[data-contrast="high"]');
     expect(tokens).toContain('@media (forced-colors: active)');
   });
 
   it('is the local Tailwind v4 source entry and replaces its generic theme with OpenPlanr semantics', () => {
-    expect(tokens).toMatch(
-      /^@import "@fontsource-variable\/geist";\n@import "@fontsource-variable\/geist-mono";\n@import "tailwindcss";/u,
-    );
+    const localImports = [
+      ...[400, 500, 600, 700, 800].map((weight) => `@import "@fontsource/outfit/${weight}.css";`),
+      '@import "@fontsource-variable/dm-sans/standard.css";',
+      ...[400, 500, 600].map((weight) => `@import "@fontsource/source-code-pro/${weight}.css";`),
+      '@import "tailwindcss";',
+    ];
+    expect(tokens.startsWith(localImports.join('\n'))).toBe(true);
+    expect(typography).toContain('--op-font-display: "Outfit",');
+    expect(typography).toContain('--op-font-ui: "DM Sans Variable",');
+    expect(typography).toContain('"Source Code Pro", ui-monospace,');
     expect(tokens).toContain('@theme inline');
     expect(tokens).toContain('--color-*: initial;');
     expect(tokens).toContain('--color-primary: var(--op-control);');
@@ -119,7 +151,8 @@ describe('OpenPlanr design system', () => {
     expect(tokens).toMatch(
       /:root\[data-density="compact"\][\s\S]*--op-density-row-block: var\(--op-space-2\);/u,
     );
-    expect(tokens.indexOf('@media (prefers-color-scheme: dark)')).toBeLessThan(
+    expect(tokens).toContain('@media (prefers-color-scheme: light)');
+    expect(tokens.indexOf('@media (prefers-color-scheme: light)')).toBeLessThan(
       tokens.indexOf(':root[data-contrast="high"]'),
     );
   });
@@ -139,7 +172,9 @@ describe('OpenPlanr design system', () => {
       expect(consoleShell).toContain(`var(--pc-${token})`);
     }
     expect(consoleShell).not.toMatch(/font-size:\s*\d/u);
-    expect(consoleShell).not.toMatch(/border-radius:(?!\s*(?:var\(|50%|0))/u);
+    expect(consoleShell).toMatch(/\.pc-rail__palette\s*\{[^}]*border-radius: 10px/u);
+    expect(consoleShell).toMatch(/\.pc-rail__item\s*\{[^}]*border-radius: 8px/u);
+    expect(consoleShell).toMatch(/\.pc-conn\s*\{[^}]*border-radius: 999px/u);
     expect(consoleShell).toContain('.pc-watcher__dot');
     expect(consoleShell).toContain('.pc-watcher__label');
   });
@@ -268,15 +303,45 @@ describe('OpenPlanr design system', () => {
       />,
     );
     expect(html).toContain('data-route-kind="operate.today"');
-    expect(html).toContain('Offline — the watcher is not reachable');
+    expect(html).toContain('The file watcher disconnected');
     expect(html).toContain('data-route-pending="booting"');
     expect(html).toContain('Loading Today');
     expect(html).not.toContain('Verifying this dashboard');
+    expect(html).not.toContain('Dismiss font notice');
+  });
+
+  it('keeps the shell usable with a dismissible font notice across navigation', async () => {
+    const previousHash = window.location.hash;
+    window.location.hash = '#/overview';
+    const harness = renderDashboardComponent(
+      <App
+        buildId="font-notice-test"
+        fontLoadFailed
+        connection={{ state: 'offline', label: 'Offline', reason: 'Loopback unavailable' }}
+      />,
+    );
+    try {
+      const notice = harness.result.getByText(/Some dashboard fonts could not load/u);
+      expect(notice.closest('[role="status"]')).toBeTruthy();
+      expect(notice.closest('.pc-shell')).toBeTruthy();
+      expect(harness.result.getByRole('main')).toBeTruthy();
+      expect(harness.result.queryByRole('dialog')).toBeNull();
+      await harness.user.click(harness.result.getByRole('button', { name: 'Dismiss font notice' }));
+      expect(harness.result.queryByText(/Some dashboard fonts could not load/u)).toBeNull();
+      await harness.user.click(harness.result.getAllByRole('link', { name: 'Board' })[0]);
+      expect(window.location.hash).toBe('#/board');
+      expect(harness.result.getByRole('main')).toBeTruthy();
+      expect(harness.result.queryByText(/Some dashboard fonts could not load/u)).toBeNull();
+    } finally {
+      harness.cleanup();
+      window.location.hash = previousHash;
+    }
   });
 
   it('uses a readable semantic foreground for code surfaces in light and dark modes', () => {
-    expect(tokens).toMatch(/:root\s*\{[\s\S]*--op-on-code: #f6f3ec;/u);
-    expect(tokens).toMatch(/:root\[data-theme="dark"\][\s\S]*--op-on-code: var\(--op-ink\);/u);
+    expect(tokens).toMatch(/:root\s*\{[\s\S]*--op-on-code: var\(--op-text\);/u);
+    expect(tokens).toMatch(/:root\s*\{[\s\S]*--op-text: #f4f4fa;/u);
+    expect(tokens).toMatch(/:root\[data-theme="light"\][\s\S]*--op-text: #17191d;/u);
     expect(consoleShell).toMatch(/\.pc-skip-link[\s\S]*color: var\(--pc-text-inverse\);/u);
     expect(tokens).toMatch(/\.op-governed-tooltip[\s\S]*color: var\(--op-on-code\);/u);
   });
