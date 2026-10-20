@@ -13,13 +13,7 @@
     "packages/cli/tests/linear-status-sync.test.ts": ["QT-200"],
     "packages/pipeline/conformance/runner.mjs": ["T-001", "T-002", "T-007"],
     "packages/pipeline/lib/dashboard/graph-engine.mjs": ["T-002"],
-    "packages/pipeline/lib/dashboard/graph-reader.mjs": [
-      "AC-001",
-      "US-001",
-      "US-003",
-      "T-001",
-      "T-002"
-    ],
+    "packages/pipeline/lib/dashboard/graph-reader.mjs": ["AC-001", "US-001", "T-001", "T-002"],
     "packages/pipeline/lib/dashboard/watcher.mjs": ["SPEC-016", "T-004"],
     "packages/pipeline/lib/dev-loop-sim.mjs": ["T-001"],
     "packages/pipeline/tests/dashboard/graph-equivalence.test.mjs": ["SPEC-002", "US-001", "T-001"],

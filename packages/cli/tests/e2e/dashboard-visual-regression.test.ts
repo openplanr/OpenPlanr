@@ -273,8 +273,9 @@ async function attachScreenshot(
   await attach(name, { body: screenshot, contentType: 'image/png' });
 }
 
+// Soft, so a test with several goldens compares and records every one.
 async function expectGoldenScreenshot(page: Page, name: string) {
-  await expect(page).toHaveScreenshot([process.platform, name], {
+  await expect.soft(page).toHaveScreenshot([process.platform, name], {
     animations: 'disabled',
     caret: 'hide',
     fullPage: true,
