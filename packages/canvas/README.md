@@ -11,7 +11,10 @@ Exports:
   and their camera, geometry, node, options, elements, events and controller types.
 - `./react`: `CanvasProvider`, `CanvasStage`, `WorldNodes`, `OutlinePanel`,
   `ChromeProvider`, `useCanvas`, `useCamera`, `useChrome`, `useShortcut`,
-  `formatShortcut`, `useReducedMotion`, `defaultChromeKeymap`, and their prop,
+  `formatShortcut`, `useReducedMotion`, `defaultChromeKeymap`, `ChromeRoot`,
+  `MenuPill`, `Menu`, `MenuItem`, `FloatingToolbar`, `ToolbarItem`, `ToolbarMore`,
+  `ActionPill`, `PrimaryAction`, `SidebarToggle`, `Sidebar`, `NavigationPanel`,
+  `ZoomPill`, `HistoryPill`, `HelpButton`, `WelcomeHints`, `ToolbarHint`, and their prop,
   state and adapter types.
 - `./testing`: `generateLayeredGraph`, `generateSvgDiagram`, `percentile95`,
   `rendererFrameWork`, and their fixture and trace types.
@@ -200,6 +203,40 @@ binding for hints. `useReducedMotion()` tracks the media preference; the chrome
 state's `transitionMs` provides the shared panel duration. Extend the default
 keymap to customize bindings. `registerMenu(open)` registers the menu action
 when no navigation panel exists and returns its cleanup function.
+
+Put the floating slots inside `ChromeRoot`: `MenuPill` holds a `Menu` of
+`MenuItem` actions and an optional `viewPicker`; `FloatingToolbar` holds
+`ToolbarItem` controls and a `ToolbarMore` menu. Both item types take a
+`shortcut` binding or chrome action name, so their visible hints and tooltips
+follow the provider keymap. Products bind their own tool shortcuts from the same
+binding objects they pass to the controls. `ActionPill` accepts one
+`PrimaryAction` and a `SidebarToggle`; a second primary action throws.
+
+`Sidebar({ inspector?, outline? })` supplies Inspector and Outline tabs, pin and
+close controls. `NavigationPanel` supplies an optional left panel. Panels begin
+closed and unpinned; selecting a node marks the sidebar toggle without opening
+it. Enter on a selected node or a product Inspect action opens the sidebar.
+Escape and an empty-canvas click close unpinned panels; pinned panels remain.
+Closed panels are inert. Menus close on Escape, a canvas click or another menu
+opening, and never contribute to the safe area.
+
+`ZoomPill` and `HistoryPill({ onUndo, onRedo, canUndo?, canRedo? })` render only
+with a registered canvas. `HelpButton` accepts `onClick`.
+`WelcomeHints({ actions })` presents real product actions while the canvas has
+no nodes and anchors its labels to the measured menu and toolbar.
+`ToolbarHint({ id, children })` remembers dismissal through the storage adapter.
+Below the mobile breakpoint the toolbar moves to the bottom, zoom to the top
+left, panels become exclusive bottom sheets, and secondary controls move into
+the menu. Structural tokens in `styles.css` provide shared spacing and sizes;
+products theme the neutral tokens, `--canvas-chrome-accent` and
+`--canvas-chrome-focus`. Motion uses transform and opacity and respects reduced
+motion preferences.
+
+The React bench at `bench/react.html?chrome=1` demonstrates every slot; add
+`empty=1` to try welcome actions. The default page and trace scenarios keep their
+existing chrome-free layout. `window.chromeBench` exposes keymap and tool-binding
+setters, node creation, state inspection and storage diagnostics for browser
+checks; `storageError=1` exercises the product error callback.
 
 The React bench at `bench/react.html` uses the same fixtures and trace interface
 as the vanilla page. Its preloaded React DevTools hook counts production commits

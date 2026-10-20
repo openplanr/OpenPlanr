@@ -5,6 +5,7 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -85,8 +86,12 @@ export type ChromeState = Readonly<{
   ): () => void;
 }>;
 
+type ChromeNodeStore = {
+  subscribe(notify: () => void): () => void;
+  snapshot(): number;
+};
 type Bridge = Pick<ChromeState, 'registerRegion'> & {
-  registerCanvas(controller: CanvasController): () => void;
+  registerCanvas(controller: CanvasController, nodes?: ChromeNodeStore): () => void;
 };
 type SurfaceRegistration = {
   edge: ChromeSurface['edge'];
@@ -120,6 +125,8 @@ const emptyArea: Rect = { x: 0, y: 0, width: 0, height: 0 };
 const hintsKey = 'canvas.chrome.dismissedHints';
 const ChromeContext = createContext<ChromeState | null>(null);
 const BridgeContext = createContext<Bridge | null>(null);
+const ChromeCanvasContext = createContext<CanvasController | null>(null);
+const ChromeNodeStoreContext = createContext<ChromeNodeStore | null>(null);
 
 function sameRect(a: Rect, b: Rect): boolean {
   return a.x === b.x && a.y === b.y && a.width === b.width && a.height === b.height;
@@ -213,10 +220,19 @@ export function ChromeProvider({
   const [layout, setLayout] = useState<ChromeState['layout']>('desktop');
   const [chromeHidden, setChromeHidden] = useState(false);
   const [hasSelection, setHasSelection] = useState(false);
+  const [registeredCanvas, setRegisteredCanvas] = useState<CanvasController | null>(null);
+  const [nodeStore, setNodeStore] = useState<ChromeNodeStore | null>(null);
   const [safeArea, setSafeArea] = useState<Rect>(emptyArea);
   const [dismissedHints, setDismissedHints] = useState<readonly string[]>([]);
   const hints = useRef(dismissedHints);
-  const latest = useRef({ storage, onStorageError, keymap, panels, layout, chromeHidden });
+  const latest = useRef({
+    storage,
+    onStorageError,
+    keymap,
+    panels,
+    layout,
+    chromeHidden,
+  });
   latest.current = { storage, onStorageError, keymap, panels, layout, chromeHidden };
   const surfaces = useRef(new Map<string, SurfaceRegistration>());
   const panelRegistrations = useRef(new Map<string, ChromePanelOptions>());
@@ -415,7 +431,7 @@ export function ChromeProvider({
         element,
         options,
         visibility: element.style.visibility,
-        inert: element.inert,
+        inert: Boolean(element.inert),
       };
       surfaces.current.set(id, registration);
       const observer = new ResizeObserver(refreshSurfaces);
@@ -446,16 +462,19 @@ export function ChromeProvider({
     [refreshSurfaces],
   );
   const registerCanvas = useCallback(
-    (controller: CanvasController) => {
+    (controller: CanvasController, nodes?: ChromeNodeStore) => {
       if (canvas.current) throw new Error('ChromeProvider already has a registered canvas');
       canvas.current = controller;
+      setRegisteredCanvas(controller);
+      setNodeStore(nodes ?? null);
       setHasSelection(controller.getSelection().length > 0);
-      const selectionOff = controller.on('selection', (selection) =>
-        setHasSelection(selection.length > 0),
+      const selectionOff = controller.on('selection', () =>
+        setHasSelection(controller.getSelection().length > 0),
       );
-      const areaOff = controller.on('safe-area', (next) =>
-        setSafeArea((previous) => (sameRect(previous, next) ? previous : next)),
-      );
+      const areaOff = controller.on('safe-area', () => {
+        const next = controller.getSafeArea();
+        setSafeArea((previous) => (sameRect(previous, next) ? previous : next));
+      });
       refreshSurfaces();
       return () => {
         selectionOff();
@@ -463,6 +482,8 @@ export function ChromeProvider({
         for (const id of forwarded.current) controller.removeChrome(id);
         forwarded.current.clear();
         canvas.current = null;
+        setRegisteredCanvas(null);
+        setNodeStore(null);
         setHasSelection(false);
         refreshSurfaces();
       };
@@ -533,11 +554,12 @@ export function ChromeProvider({
     window.addEventListener('resize', refreshSurfaces);
     return () => window.removeEventListener('resize', refreshSurfaces);
   }, [refreshSurfaces]);
-  useEffect(() => {
+  useLayoutEffect(() => {
     latest.current.panels = panels;
     latest.current.chromeHidden = chromeHidden;
+    latest.current.layout = layout;
     refreshSurfaces();
-  }, [panels, chromeHidden, refreshSurfaces]);
+  }, [panels, chromeHidden, layout, refreshSurfaces]);
 
   useEffect(() => {
     let composing = false;
@@ -665,7 +687,15 @@ export function ChromeProvider({
   return createElement(
     BridgeContext.Provider,
     { value: bridge },
-    createElement(ChromeContext.Provider, { value }, children),
+    createElement(
+      ChromeCanvasContext.Provider,
+      { value: registeredCanvas },
+      createElement(
+        ChromeNodeStoreContext.Provider,
+        { value: nodeStore },
+        createElement(ChromeContext.Provider, { value }, children),
+      ),
+    ),
   );
 }
 
@@ -677,6 +707,14 @@ export function useChrome(): ChromeState {
 
 export function useChromeBridge(): Bridge | null {
   return useContext(BridgeContext);
+}
+
+export function useChromeCanvas(): CanvasController | null {
+  return useContext(ChromeCanvasContext);
+}
+
+export function useChromeNodeStore(): ChromeNodeStore | null {
+  return useContext(ChromeNodeStoreContext);
 }
 
 /** Returns the live binding shared by keyboard handling and shortcut hints. */

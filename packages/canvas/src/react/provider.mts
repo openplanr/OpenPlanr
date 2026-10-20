@@ -19,7 +19,7 @@ import type {
   NodeId,
 } from '../index.mjs';
 import { createCanvas } from '../index.mjs';
-import { useChromeBridge } from './chrome-provider.mjs';
+import { useChromeBridge, useChromeCanvas } from './chrome-provider.mjs';
 
 export interface CanvasProviderProps {
   label: string;
@@ -66,13 +66,16 @@ export function CanvasProvider({
   const initialBridge = useRef(bridge);
   useEffect(() => {
     const live = createCanvas({ ...initial.current.options, label: initial.current.label });
-    const unregister = initialBridge.current?.registerCanvas(live);
+    const unregister = initialBridge.current?.registerCanvas(live, {
+      subscribe: subscribeNodes,
+      snapshot: () => nodeMap.current.size,
+    });
     setController(live);
     return () => {
       unregister?.();
       live.destroy();
     };
-  }, []);
+  }, [subscribeNodes]);
   useEffect(() => {
     if (typeof controllerRef === 'function') controllerRef(controller);
     else if (controllerRef) controllerRef.current = controller;
@@ -110,7 +113,9 @@ export function useCamera<T>(
   selector: (camera: Camera) => T,
   isEqual: (left: T, right: T) => boolean = Object.is,
 ): T {
-  const controller = useCanvas();
+  const localController = useCanvas();
+  const chromeController = useChromeCanvas();
+  const controller = localController ?? chromeController;
   const latest = useRef({ selector, isEqual });
   latest.current = { selector, isEqual };
   const store = useMemo(() => {
