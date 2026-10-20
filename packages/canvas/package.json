@@ -1,0 +1,67 @@
+{
+  "name": "@openplanr/canvas",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Shared OpenPlanr infinite-canvas engine and React bindings",
+  "license": "MIT",
+  "sideEffects": [
+    "**/*.css"
+  ],
+  "exports": {
+    ".": {
+      "types": "./src/index.d.mts",
+      "import": "./src/index.mjs"
+    },
+    "./react": {
+      "types": "./src/react/index.d.mts",
+      "import": "./src/react/index.mjs"
+    },
+    "./testing": {
+      "types": "./src/testing/index.d.mts",
+      "import": "./src/testing/index.mjs"
+    },
+    "./styles.css": "./src/styles.css"
+  },
+  "files": [
+    "src/**/*.mjs",
+    "src/**/*.d.mts",
+    "src/styles.css",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "node ../../scripts/typescript/compile-sources.mjs",
+    "test": "vitest run",
+    "test:browser": "playwright test --project=chromium",
+    "test:browser:nightly": "playwright test --project=firefox",
+    "bench:trace": "playwright test tests/browser/bench-trace.spec.ts"
+  },
+  "engines": {
+    "node": ">=22.13.0"
+  },
+  "peerDependencies": {
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0"
+  },
+  "peerDependenciesMeta": {
+    "react": {
+      "optional": true
+    },
+    "react-dom": {
+      "optional": true
+    }
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/openplanr/OpenPlanr.git",
+    "directory": "packages/canvas"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.64.0",
+    "vite": "6.4.3"
+  }
+}

@@ -8,6 +8,7 @@ This is the deterministic local-candidate ledger for OpenPlanr 0.1.0. It reads o
 | `openplanr` | 3.1.1 | `packages/cli` | public |
 | `planr-pipeline` | 0.59.1 | `packages/pipeline` | public |
 | `@openplanr/protocol` | 0.13.0 | `packages/protocol` | public |
+| `@openplanr/canvas` | 0.0.0 | `packages/canvas` | private |
 | `@openplanr/operate` | 0.1.20 | `packages/operate` | private |
 | `@openplanr/artifact` | 0.6.8 | `packages/artifact` | private |
 | `@openplanr/design` | 0.4.8 | `packages/design` | private |

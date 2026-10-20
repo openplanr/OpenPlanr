@@ -15,6 +15,7 @@ const manifest = JSON.parse(readFileSync(resolve(root, 'package.json'), 'utf8'))
 const declared = new Set(manifest.workspaces ?? []);
 const order = [
   'packages/protocol',
+  'packages/canvas',
   'packages/operate',
   'packages/artifact',
   'packages/design',

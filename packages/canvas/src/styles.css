@@ -1,0 +1,31 @@
+:root {
+  --canvas-z-stage: 0;
+  --canvas-z-world-overlays: 5;
+  --canvas-z-screen-overlays: 10;
+  --canvas-z-chrome: 20;
+  --canvas-z-popovers: 30;
+  --canvas-z-toasts: 40;
+  --canvas-z-modals: 50;
+}
+
+.canvas-stage {
+  position: relative;
+  overflow: hidden;
+  width: 100%;
+  height: 100%;
+  touch-action: none;
+  z-index: var(--canvas-z-stage);
+}
+
+.canvas-world {
+  position: absolute;
+  inset: 0;
+  transform-origin: 0 0;
+}
+
+.canvas-chrome-root {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: var(--canvas-z-chrome);
+}

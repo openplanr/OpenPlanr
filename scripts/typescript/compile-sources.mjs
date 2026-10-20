@@ -9,7 +9,11 @@ import ts from 'typescript';
 const repositoryRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..');
 
 /** Workspaces whose tsconfig.json compiles .mts sources to the .mjs and .d.mts beside them. */
-export const TYPESCRIPT_PROJECTS = Object.freeze(['packages/artifact', 'packages/design']);
+export const TYPESCRIPT_PROJECTS = Object.freeze([
+  'packages/canvas',
+  'packages/artifact',
+  'packages/design',
+]);
 
 // This readable input compiles before the skills, HTML shells and exported editor styles read it.
 // Keep the public CSS path stable; installed DOM parsers and older browsers require flat rules.
