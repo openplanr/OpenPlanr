@@ -681,6 +681,7 @@ describe('Planning owner/client parity', () => {
       ['outstanding', 1],
       ['in-progress', 2],
       ['blocked', 1],
+      ['addressed', 0],
       ['done', 0],
     ]);
     expect(

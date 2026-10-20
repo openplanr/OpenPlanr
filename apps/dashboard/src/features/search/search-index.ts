@@ -71,8 +71,6 @@ const DEFAULT_COMMANDS: readonly DashboardSearchCommand[] = Object.freeze([
 export type DashboardSearchIndex = Readonly<{
   routes: readonly ClosedDashboardDestination[];
   planningNodes: readonly PlanningModelNode[];
-  planningIndex: PlanningSearchIndex;
-  planningAliases: ReadonlyMap<string, readonly PlanningModelNode[]>;
   operateHits: readonly DashboardSearchDestinationHit[];
   commands: readonly DashboardSearchCommandHit[];
 }>;
@@ -151,8 +149,12 @@ function operateSearchHits(
   return Object.freeze(hits);
 }
 
-type PlanningSearch = Pick<DashboardSearchIndex, 'planningIndex' | 'planningAliases'>;
+type PlanningSearch = Readonly<{
+  planningIndex: PlanningSearchIndex;
+  planningAliases: ReadonlyMap<string, readonly PlanningModelNode[]>;
+}>;
 const planningIndices = new WeakMap<readonly PlanningModelNode[], PlanningSearch>();
+const indexSearches = new WeakMap<readonly PlanningModelNode[], PlanningSearch>();
 
 function cachedPlanningIndex(nodes: readonly PlanningModelNode[]): PlanningSearch {
   let index = planningIndices.get(nodes);
@@ -176,10 +178,11 @@ export function buildDashboardSearchIndex(
 ): DashboardSearchIndex {
   const planningNodes = Object.freeze([...(sources.planningNodes ?? [])]);
   const operateHits = operateSearchHits(sources.operateResults);
+  // Search caches stay outside the index so it remains plain, digestible JSON.
+  indexSearches.set(planningNodes, cachedPlanningIndex(sources.planningNodes ?? planningNodes));
   return Object.freeze({
     routes: closedDashboardDestinations(),
     planningNodes,
-    ...cachedPlanningIndex(sources.planningNodes ?? planningNodes),
     operateHits,
     commands: Object.freeze(
       (sources.commands ?? DEFAULT_COMMANDS)
@@ -218,12 +221,13 @@ function matchingPlanningNodes(
   index: DashboardSearchIndex,
   query: TypedSearch,
 ): readonly PlanningModelNode[] {
+  const search = indexSearches.get(index.planningNodes) ?? cachedPlanningIndex(index.planningNodes);
   const nodes = query.term
-    ? queryPlanningSearchIndex(index.planningIndex, query.term, index.planningNodes.length)
+    ? queryPlanningSearchIndex(search.planningIndex, query.term, index.planningNodes.length)
     : [...index.planningNodes].sort((left, right) => left.id.localeCompare(right.id));
   const needle = query.term.toLowerCase();
   const exact = nodes.find((node) => node.id.toLowerCase() === needle);
-  const aliases = [...(index.planningAliases.get(needle) ?? [])].sort((left, right) =>
+  const aliases = [...(search.planningAliases.get(needle) ?? [])].sort((left, right) =>
     left.id.localeCompare(right.id),
   );
   const seen = new Set<string>();
