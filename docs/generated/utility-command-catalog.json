@@ -654,6 +654,14 @@
       "classification": "deterministic-preserved"
     },
     {
+      "path": "ship",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "ship checks",
+      "classification": "deterministic-preserved"
+    },
+    {
       "path": "sprint",
       "classification": "deterministic-preserved"
     },

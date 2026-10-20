@@ -492,7 +492,7 @@
     {
       "source": "packages/protocol/registries/commands.json",
       "target": "registry/v1.5.0/commands.json",
-      "sha256": "7695228eebff608c98751936f57467df60ee5985152991d4ea72942c97efa21f",
+      "sha256": "32d7e2cb7dd129ddf6175ca83809345af6a2acd2df68d345571e1227ff47c62d",
       "mode": "644"
     },
     {
