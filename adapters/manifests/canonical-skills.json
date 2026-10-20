@@ -5578,7 +5578,7 @@
       "source": "skills/planr-ship/openplanr.skill.json",
       "entrypoint": "skills/planr-ship/SKILL.md",
       "description": "Implement an OpenPlanr plan, specification, task, or clearly stated request end to end in the current repository. Use when the user asks to build, implement, fix, finish, or ship local work.",
-      "sourceDigest": "sha256:87bcee9971989645159cde3f76d6565322486368b7324b93a6653bdf2c8137c0",
+      "sourceDigest": "sha256:a1f65ddec4596070d9627e40d3cb4a1b59470bc1dd97ed68b1962aa30224b6ad",
       "resources": [
         {
           "path": "agents/openai.yaml",
