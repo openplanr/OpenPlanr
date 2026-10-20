@@ -5,7 +5,7 @@
  * Sessions and `api/review` persistence belong to `@openplanr/artifact/review-server.mjs`.
  */
 
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readFileSync, statSync } from 'node:fs';
 import { dirname, join, relative, resolve } from 'node:path';
 import {
   createArtifactBridgeNonce,
@@ -25,6 +25,7 @@ import {
   createArtifactReviewServer,
   listArtifactReviewServers,
 } from '@openplanr/artifact/review-server.mjs';
+import { assertDesignDocument } from '@openplanr/protocol/design-contracts';
 import { ARTIFACT_ERROR_CODES, PipelineError } from '@openplanr/protocol/errors';
 import { PLANNING_FOLDER, planningFolderConflict } from '@openplanr/protocol/planning-folder';
 import { listDesignRevisions, readDesignRevision, reviewDigest } from './context.mjs';
@@ -35,8 +36,10 @@ import {
   designRendererRevision,
   designSpecPath,
   hash,
+  prepareDesignDocument,
   readJson,
   standaloneDesignHtml,
+  withDesignRenderLock,
 } from './document.mjs';
 import { designReviewKey, designReviewPath, readDesignFeedback } from './feedback-reader.mjs';
 import {
@@ -477,6 +480,99 @@ export async function saveDesignState(file, { state, revision, stateVersion }) {
   }
 }
 
+export async function saveDesignLayout(file, input) {
+  if (
+    !input ||
+    typeof input !== 'object' ||
+    Array.isArray(input) ||
+    Object.keys(input).some((key) => !['revision', 'boards', 'restoreRevision'].includes(key)) ||
+    typeof input.revision !== 'string' ||
+    Object.hasOwn(input, 'boards') === Object.hasOwn(input, 'restoreRevision')
+  )
+    throw new Error('Design layout requires a revision and either boards or restoreRevision.');
+  return withDesignRenderLock(file, async (render) => {
+    const current = currentDesign(file);
+    if (input.revision !== current.revision)
+      throw Object.assign(new Error('The design changed. Reload before saving its layout.'), {
+        statusCode: 409,
+      });
+    const authored = prepareDesignDocument(file);
+    const authoredContent = { ...authored.document };
+    const committedContent = { ...current.document };
+    delete authoredContent.layout;
+    delete committedContent.layout;
+    if (
+      digestArtifactEnvelope(authored.envelope) !== digestArtifactEnvelope(current.envelope) ||
+      JSON.stringify(authored.fingerprints) !== JSON.stringify(current.fingerprints) ||
+      JSON.stringify(authoredContent) !== JSON.stringify(committedContent) ||
+      readFileSync(designSpecPath(current.root), 'utf8') !==
+        readFileSync(join(current.directory, 'design-spec.md'), 'utf8')
+    )
+      throw Object.assign(
+        new Error(
+          'Design sources or content changed. Render the design and reload before saving its layout.',
+        ),
+        { statusCode: 409 },
+      );
+    const previous = readJson(file);
+    const mode = statSync(file).mode & 0o7777;
+    const document = structuredClone(previous);
+    if (Object.hasOwn(input, 'restoreRevision')) {
+      if (
+        typeof input.restoreRevision !== 'string' ||
+        !/^[a-f0-9]{64}$/u.test(input.restoreRevision)
+      )
+        throw new Error(`Invalid layout restore revision ${input.restoreRevision}.`);
+      const restored = readJson(
+        join(current.root, '.design/revisions', input.restoreRevision, 'design-document.json'),
+      );
+      if (restored.layout === undefined) delete document.layout;
+      else document.layout = structuredClone(restored.layout);
+    } else {
+      if (!input.boards || typeof input.boards !== 'object' || Array.isArray(input.boards))
+        throw new Error('Design layout boards must be an object of exact board keys.');
+      const boards = { ...document.layout?.boards };
+      for (const [key, point] of Object.entries(input.boards)) {
+        if (
+          !current.entries.some(
+            (entry) => `${entry.screenId}/${entry.frameId}/${entry.variantId}` === key,
+          )
+        )
+          throw new Error(`Unknown exact design board key ${key}.`);
+        if (point === null) delete boards[key];
+        else {
+          if (
+            !point ||
+            typeof point !== 'object' ||
+            Array.isArray(point) ||
+            Object.keys(point).some((field) => !['x', 'y'].includes(field)) ||
+            !Number.isFinite(point.x) ||
+            !Number.isFinite(point.y) ||
+            Math.abs(point.x) > 1e7 ||
+            Math.abs(point.y) > 1e7
+          )
+            throw new Error(
+              `Design board ${key} requires finite x and y coordinates within ±10000000.`,
+            );
+          boards[key] = { ...boards[key], x: point.x, y: point.y };
+        }
+      }
+      document.layout = { ...document.layout, boards };
+      if (!Object.keys(boards).length) delete document.layout.boards;
+      if (!Object.keys(document.layout).length) delete document.layout;
+    }
+    assertDesignDocument(document);
+    atomicJson(file, document, { mode });
+    try {
+      const result = await render();
+      return { revision: result.revision };
+    } catch (error) {
+      atomicJson(file, previous, { mode });
+      throw error;
+    }
+  });
+}
+
 function respond(res, status, value) {
   res.writeHead(status, {
     'content-type': 'application/json; charset=utf-8',
@@ -646,6 +742,7 @@ async function startDesignReviewUnlocked(
           launchContext: base.startsWith('/studio/') ? 'local Studio' : 'private review',
         },
         stateUrl: `${base}api/design-state`,
+        layoutUrl: `${base}api/design-layout`,
         statusUrl: `${base}api/design-status`,
         readyUrl: `${base}api/design-ready`,
         shareUrl: `${base}api/design-share`,
@@ -960,6 +1057,16 @@ async function startDesignReviewUnlocked(
           });
         } else if (route === 'design-state' && req.method === 'PUT') {
           respond(res, 200, await saveDesignState(file, await readBody(req)));
+        } else if (route === 'design-layout' && req.method === 'PUT') {
+          if (
+            req.headers['x-openplanr-design'] !== '1' ||
+            !String(req.headers['content-type'] ?? '').startsWith('application/json') ||
+            (req.headers.origin && req.headers.origin !== `http://127.0.0.1:${server.port}`)
+          )
+            throw Object.assign(new Error('Layout saves require a same-origin studio request.'), {
+              statusCode: 403,
+            });
+          respond(res, 200, await saveDesignLayout(file, await readBody(req)));
         } else if (route === 'design-ready' && req.method === 'POST') {
           const value = await readBody(req);
           const loadedArtifacts = new Set(Array.isArray(value?.artifacts) ? value.artifacts : []);

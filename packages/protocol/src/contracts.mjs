@@ -74,7 +74,10 @@ const foundationPaths = {
       },
     ]),
   ),
-  'design-document': { '1.9.0': 'schemas/v1.9.0/design-document.schema.json' },
+  'design-document': {
+    '1.9.0': 'schemas/v1.9.0/design-document.schema.json',
+    '1.20.0': 'schemas/v1.20.0/design-document.schema.json',
+  },
   'design-review-workspace': { '1.9.0': 'schemas/v1.9.0/design-review-workspace.schema.json' },
   'design-workspace-create': { '1.9.0': 'schemas/v1.9.0/design-workspace-create.schema.json' },
   'design-workspace-revision': { '1.9.0': 'schemas/v1.9.0/design-workspace-revision.schema.json' },

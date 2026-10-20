@@ -1,5 +1,6 @@
 /** Design presentation composes the artifact stage. Pins remain artifact-owned. */
 import { createPrototypeStateRelay } from '@openplanr/artifact/ui/prototype-state.mjs';
+import { boardPlacement } from './layout.mjs';
 import { mountDesignChrome, mountDesignPanels } from './studio-chrome.mjs';
 
 /**
@@ -58,20 +59,10 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
       zoom: activeViewport.zoom,
       camera: { x: activeViewport.x, y: activeViewport.y },
       viewports,
-      positions: {},
       ratings: {},
       remix: {},
       preferences: { selected: [], rejected: [] },
     };
-    for (const entry of entries) {
-      const point = input.positions?.[entry.artifactId];
-      if (Number.isFinite(point?.x) && Number.isFinite(point?.y)) {
-        state.positions[entry.artifactId] = {
-          x: clamp(point.x, -1e7, 1e7),
-          y: clamp(point.y, -1e7, 1e7),
-        };
-      }
-    }
     for (const variant of readyVariants) {
       const rating = input.ratings?.[variant.id];
       if (Number.isInteger(rating) && rating >= 1 && rating <= 5)
@@ -127,6 +118,11 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
     if (location.hash !== next) history.pushState(null, '', next);
   }
   let revision = payload.revision;
+  let layout = clone(design.layout ?? {});
+  const undoMoves = [];
+  const redoMoves = [];
+  const layoutOperations = [];
+  let layoutSaving = false;
   let stateVersion = null;
   let stage = null;
   let root = null;
@@ -179,6 +175,7 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
   let noteScreenId = null;
   let notesReturnFocus = null;
   const panels = new Map();
+  const sectionHeadings = [];
   const cleanup = [];
 
   function listen(target, event, handler, settings) {
@@ -314,7 +311,7 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
           }
           if (capturedContent && capturedContentSerial === contentSerial) {
             contentDirty = false;
-            if (!reviewDirty)
+            if (!reviewDirty && !layoutOperations.length)
               status(
                 options.stateUrl || options.saveState
                   ? 'All changes saved'
@@ -341,6 +338,91 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
         }
       });
     return saving;
+  }
+
+  function layoutUrl() {
+    return options.layoutUrl ?? options.stateUrl?.replace(/design-state$/, 'design-layout');
+  }
+
+  function flushLayout() {
+    if (layoutSaving || !layoutOperations.length) return saving;
+    layoutSaving = true;
+    saving = saving.then(async () => {
+      try {
+        while (layoutOperations.length) {
+          const operation = layoutOperations[0];
+          const input = { revision, ...operation.input() };
+          status('Saving layout', 'saving');
+          let result;
+          if (typeof options.saveLayout === 'function') result = await options.saveLayout(input);
+          else if (layoutUrl())
+            result = await jsonRequest(layoutUrl(), {
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json', 'x-openplanr-design': '1' },
+              body: JSON.stringify(input),
+            });
+          else throw new Error('Layout save requires a studio layout URL or saveLayout callback.');
+          if (typeof result.revision !== 'string')
+            throw new Error('Layout save did not return a design revision.');
+          operation.saved?.(revision, result.revision);
+          revision = result.revision;
+          layoutOperations.shift();
+          storeDraft();
+        }
+        clearNotice('layout-save');
+        if (!contentDirty && !reviewDirty) status('All changes saved');
+      } catch (error) {
+        status(error.conflict ? 'Layout conflict' : 'Layout unsaved', 'failed');
+        notice(
+          `Board layout could not be saved: ${error.message} Keep this window open and retry saving.`,
+          true,
+          'layout-save',
+        );
+      } finally {
+        layoutSaving = false;
+      }
+    });
+    return saving;
+  }
+
+  function boardKey(entry) {
+    return `${entry.screenId}/${entry.frameId}/${entry.variantId}`;
+  }
+
+  function completeMove(entry, before) {
+    const key = boardKey(entry);
+    const after = clone(layout);
+    if (JSON.stringify(before) === JSON.stringify(after)) return;
+    const move = { before, after, beforeRevision: null, afterRevision: null };
+    undoMoves.push(move);
+    redoMoves.length = 0;
+    storeDraft();
+    if (options.stateUrl || options.saveState || options.saveLayout || options.layoutUrl) {
+      layoutOperations.push({
+        input: () => ({ boards: { [key]: { x: after.boards[key].x, y: after.boards[key].y } } }),
+        saved(previous, next) {
+          move.beforeRevision = previous;
+          move.afterRevision = next;
+        },
+      });
+      void flushLayout();
+    }
+  }
+
+  function restoreMove(redo) {
+    const source = redo ? redoMoves : undoMoves;
+    const target = redo ? undoMoves : redoMoves;
+    const move = source.pop();
+    if (!move) return;
+    layout = clone(redo ? move.after : move.before);
+    target.push(move);
+    render();
+    if (options.stateUrl || options.saveState || options.saveLayout || options.layoutUrl) {
+      layoutOperations.push({
+        input: () => ({ restoreRevision: redo ? move.afterRevision : move.beforeRevision }),
+      });
+      void flushLayout();
+    }
   }
 
   function reviewUrl() {
@@ -380,7 +462,8 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
           clearNotice('review-save');
           if (capturedSerial === reviewSerial) {
             reviewDirty = false;
-            if (!contentDirty) status(reviewUrl() ? 'All changes saved' : 'Saved in this browser');
+            if (!contentDirty && !layoutOperations.length)
+              status(reviewUrl() ? 'All changes saved' : 'Saved in this browser');
           }
           storeReviewDraft();
         } catch (error) {
@@ -397,7 +480,7 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
   }
 
   function flush() {
-    return Promise.all([flushState(), flushReview()]);
+    return Promise.all([flushState(), flushLayout(), flushReview()]);
   }
 
   function entryFor(
@@ -449,7 +532,8 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
 
   function finishGesture() {
     if (!gesture) return;
-    const pointerId = gesture.pointerId;
+    const completed = gesture;
+    const pointerId = completed.pointerId;
     gesture = null;
     // Clear our state first: releasing capture can synchronously notify listeners.
     try {
@@ -458,7 +542,12 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
       /* Already canceled by the browser. */
     }
     updatePan();
-    persist();
+    if (completed.mode === 'artboard')
+      completeMove(
+        entries.find((entry) => entry.artifactId === completed.artifactId),
+        completed.before,
+      );
+    else persist();
   }
 
   // Chromium can stop routing pointer input into a sandboxed product document that stayed
@@ -557,33 +646,10 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
     }
   }
 
-  function defaultPosition(entry, variant) {
-    const gap = 96;
-    const top = 72;
-    const frame = design.frames.find(({ id }) => id === entry.frameId);
-    const variants = state.compare ? readyVariants : [variant];
-    const variantIndex = variants.findIndex(({ id }) => id === entry.variantId);
-    const groupWidth =
-      design.frames.reduce((sum, item) => sum + item.width, 0) +
-      gap * Math.max(0, design.frames.length - 1) +
-      160;
-    return {
-      x:
-        variantIndex * groupWidth +
-        design.frames
-          .slice(0, design.frames.indexOf(frame))
-          .reduce((sum, item) => sum + item.width + gap, 0),
-      y:
-        top +
-        design.screenOrder.indexOf(entry.screenId) *
-          (Math.max(...design.frames.map(({ height }) => height)) + 176),
-    };
-  }
-
   function contentBounds(selection = null) {
     const visible = selection ? [selection] : visibleEntries();
     if (!visible.length) return { minX: 0, minY: 0, maxX: 1, maxY: 1 };
-    return visible.reduce(
+    const bounds = visible.reduce(
       (bounds, entry) => {
         const panel = panels.get(entry.artifactId);
         const frame = design.frames.find(({ id }) => id === entry.frameId);
@@ -597,6 +663,15 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
       },
       { minX: Infinity, minY: Infinity, maxX: -Infinity, maxY: -Infinity },
     );
+    if (!selection && state.view === 'canvas') {
+      for (const section of sectionHeadings) {
+        bounds.minX = Math.min(bounds.minX, parseFloat(section.style.left));
+        bounds.minY = Math.min(bounds.minY, parseFloat(section.style.top));
+        bounds.maxX = Math.max(bounds.maxX, parseFloat(section.style.left) + section.offsetWidth);
+        bounds.maxY = Math.max(bounds.maxY, parseFloat(section.style.top) + section.offsetHeight);
+      }
+    }
+    return bounds;
   }
 
   function centerEntry(entry) {
@@ -761,6 +836,7 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
       for (const item of qa('[data-design-note-screen]'))
         item.dataset.active = String(item.dataset.designNoteScreen === state.screenId);
 
+      for (const heading of sectionHeadings) heading.hidden = state.view !== 'canvas';
       const visible = visibleEntries();
       const visibleIds = new Set(visible.map(({ artifactId }) => artifactId));
       for (const entry of entries) {
@@ -778,14 +854,19 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
         layer.tabIndex = isVisible && ready && stageState.reviewMode === 'comment' ? 0 : -1;
         layer.setAttribute('aria-disabled', String(layer.tabIndex < 0));
         if (!isVisible && !outgoing) continue;
-        let { x, y } = defaultPosition(entry, variant);
-        if (state.view === 'canvas') ({ x, y } = state.positions[entry.artifactId] ?? { x, y });
-        else {
+        const placement = boardPlacement(design, entry, {
+          layout,
+          compare: state.compare,
+          variantId: state.variantId,
+        });
+        let { x, y } = placement;
+        if (state.view !== 'canvas') {
           x = 0;
           y = 0;
         }
         panel.style.left = `${x}px`;
         panel.style.top = `${y}px`;
+        panel.querySelector('.design-artboard-drag strong').textContent = placement.title;
       }
       grid.style.width = '1px';
       grid.style.height = '1px';
@@ -1559,6 +1640,7 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
         artifactId: dragging ? panel.dataset.artifactId : null,
         left: dragging ? parseFloat(panel.style.left) : state.camera.x,
         top: dragging ? parseFloat(panel.style.top) : state.camera.y,
+        before: dragging ? clone(layout) : null,
       };
       scroll.setPointerCapture?.(event.pointerId);
       updatePan();
@@ -1575,13 +1657,16 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
         saveViewport();
         scheduleCamera();
       } else {
-        state.positions[gesture.artifactId] = {
-          x: clamp(gesture.left + dx / state.zoom, -1e7, 1e7),
-          y: clamp(gesture.top + dy / state.zoom, -1e7, 1e7),
+        const entry = entries.find((item) => item.artifactId === gesture.artifactId);
+        const key = boardKey(entry);
+        const point = {
+          x: Math.round(clamp(gesture.left + dx / state.zoom, -1e7, 1e7)),
+          y: Math.round(clamp(gesture.top + dy / state.zoom, -1e7, 1e7)),
         };
+        layout.boards = { ...layout.boards, [key]: { ...layout.boards?.[key], ...point } };
         const panel = panels.get(gesture.artifactId);
-        panel.style.left = `${state.positions[gesture.artifactId].x}px`;
-        panel.style.top = `${state.positions[gesture.artifactId].y}px`;
+        panel.style.left = `${point.x}px`;
+        panel.style.top = `${point.y}px`;
         scheduleCamera();
       }
     });
@@ -1593,6 +1678,18 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
       });
     listen(document, 'keydown', (event) => {
       if (editable(event.target)) return;
+      if (
+        state.view === 'canvas' &&
+        !event.defaultPrevented &&
+        !event.altKey &&
+        (event.metaKey || event.ctrlKey) &&
+        event.key.toLowerCase() === 'z' &&
+        !document.querySelector('dialog[open],[role=dialog][data-state=open]')
+      ) {
+        event.preventDefault();
+        restoreMove(event.shiftKey);
+        return;
+      }
       if (
         state.view === 'canvas' &&
         event.code === 'Space' &&
@@ -1621,22 +1718,30 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
         event.preventDefault();
         const panel = label.closest('.planr-artifact-panel');
         const distance = event.shiftKey ? 40 : 8;
-        state.positions[panel.dataset.artifactId] = {
-          x: clamp(
-            parseFloat(panel.style.left) +
-              (event.key === 'ArrowRight' ? distance : event.key === 'ArrowLeft' ? -distance : 0),
-            -1e7,
-            1e7,
+        const entry = entries.find((item) => item.artifactId === panel.dataset.artifactId);
+        const key = boardKey(entry);
+        const before = clone(layout);
+        const point = {
+          x: Math.round(
+            clamp(
+              parseFloat(panel.style.left) +
+                (event.key === 'ArrowRight' ? distance : event.key === 'ArrowLeft' ? -distance : 0),
+              -1e7,
+              1e7,
+            ),
           ),
-          y: clamp(
-            parseFloat(panel.style.top) +
-              (event.key === 'ArrowDown' ? distance : event.key === 'ArrowUp' ? -distance : 0),
-            -1e7,
-            1e7,
+          y: Math.round(
+            clamp(
+              parseFloat(panel.style.top) +
+                (event.key === 'ArrowDown' ? distance : event.key === 'ArrowUp' ? -distance : 0),
+              -1e7,
+              1e7,
+            ),
           ),
         };
+        layout.boards = { ...layout.boards, [key]: { ...layout.boards?.[key], ...point } };
         render();
-        persist();
+        completeMove(entry, before);
       } else if (
         state.view === 'walkthrough' &&
         ['ArrowLeft', 'ArrowRight'].includes(event.key) &&
@@ -1684,7 +1789,7 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
       updateDesignNotes();
     });
     listen(window, 'online', () => {
-      if (dirty || reviewDirty) void flush();
+      if (dirty || reviewDirty || layoutOperations.length) void flush();
     });
     listen(window, 'beforeunload', (event) => {
       // A canceled navigation keeps ready frames; only retire background demand.
@@ -1693,7 +1798,14 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
       frameDemandKey = '';
       storeDraft();
       storeReviewDraft();
-      if ((contentDirty || reviewDirty) && (options.stateUrl || options.saveState || reviewUrl())) {
+      if (
+        (contentDirty || reviewDirty || layoutOperations.length) &&
+        (options.stateUrl ||
+          options.saveState ||
+          options.layoutUrl ||
+          options.saveLayout ||
+          reviewUrl())
+      ) {
         event.preventDefault();
         event.returnValue = '';
       }
@@ -1733,9 +1845,11 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
   async function refreshSavedState() {
     if (!options.stateUrl) return;
     try {
+      const observedRevision = revision;
       const result = await jsonRequest(options.stateUrl);
       if (destroyed) return;
-      if (result.revision !== undefined) revision = result.revision;
+      if (observedRevision === revision && result.revision !== undefined)
+        revision = result.revision;
       if (result.stateVersion !== undefined) stateVersion = result.stateVersion;
       if (result.state && !dirty) {
         state = normalizeState({ ...result.state, ...linkedState() });
@@ -1751,7 +1865,7 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
           true,
         );
       selectEntry(entryFor(), { save: false });
-      status('All changes saved');
+      if (!layoutOperations.length) status('All changes saved');
     } catch {
       status('Disconnected · local draft', 'disconnected');
     }
@@ -1760,6 +1874,7 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
   async function pollRevision() {
     if (!options.statusUrl || destroyed) return;
     try {
+      const observedRevision = revision;
       const result = await jsonRequest(options.statusUrl);
       if (destroyed) return;
       if (typeof result.verification === 'string')
@@ -1767,8 +1882,13 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
           result.verification === 'verified'
             ? 'Browser inspection complete'
             : 'Browser inspection pending';
-      if (result.revision !== undefined && revision !== null && result.revision !== revision) {
-        if (contentDirty || reviewDirty)
+      if (
+        observedRevision === revision &&
+        result.revision !== undefined &&
+        revision !== null &&
+        result.revision !== revision
+      ) {
+        if (contentDirty || reviewDirty || layoutOperations.length || layoutSaving)
           notice(
             'A new design revision is ready. Save or recover this browser’s unsaved changes before reloading.',
             true,
@@ -1815,7 +1935,12 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
       if (!root.dataset.sharedOpening) delete document.documentElement.dataset.designOpening;
       chrome?.update({ previewLabel: 'Preview ready' });
       if (!chrome) q('[data-design-preview-state]').textContent = 'Preview ready';
-      if (!contentDirty && !reviewDirty && (!options.stateUrl || stateVersion !== null))
+      if (
+        !contentDirty &&
+        !reviewDirty &&
+        !layoutOperations.length &&
+        (!options.stateUrl || stateVersion !== null)
+      )
         status(options.stateUrl ? 'All changes saved' : 'Local preview');
       const detail = {
         revision,
@@ -1872,6 +1997,18 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
     selectionOutline.setAttribute('aria-hidden', 'true');
     selectionOutline.hidden = true;
     scroll.append(selectionOutline);
+    for (const section of layout.sections ?? []) {
+      const heading = document.createElement('div');
+      heading.className = 'design-section-heading';
+      heading.setAttribute('role', 'heading');
+      heading.setAttribute('aria-level', '2');
+      heading.textContent = section.text;
+      heading.style.left = `${section.x}px`;
+      heading.style.top = `${section.y}px`;
+      if (section.maxW) heading.style.maxWidth = `${section.maxW}px`;
+      grid.append(heading);
+      sectionHeadings.push(heading);
+    }
     for (const entry of entries) {
       const panel = stage.getPanel(entry.artifactId);
       if (!panel) {
@@ -2047,9 +2184,10 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
       setTool,
       getTool: () => activeTool,
       getState: () => clone(state),
+      getLayout: () => clone(layout),
       getRevision: () => revision,
       getSaveState: () => ({
-        dirty: contentDirty || reviewDirty,
+        dirty: contentDirty || reviewDirty || layoutOperations.length > 0,
         personalPending: dirty && !contentDirty,
         commentsPending: reviewDirty,
         revision,
@@ -2089,7 +2227,6 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
           'zoom',
           'camera',
           'viewports',
-          'positions',
         ])
           if (snapshot[key] !== undefined) personal[key] = clone(snapshot[key]);
         state = normalizeState({ ...state, ...personal });
@@ -2119,6 +2256,7 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
         clearTimeout(pollTimer);
         clearTimeout(noticeTimer);
         if (cameraFrame !== null) cancelAnimationFrame(cameraFrame);
+        for (const heading of sectionHeadings) heading.remove();
         canvasBackground?.remove();
         selectionOutline?.remove();
         for (const remove of cleanup.splice(0)) remove();

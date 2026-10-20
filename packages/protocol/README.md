@@ -79,6 +79,11 @@ and validators from `@openplanr/protocol/design-contracts`. Rendering and review
 belong to the design and artifact packages. Legacy manifests and frozen schema
 families retain their existing formats.
 
+The additive `schemas/v1.20.0/design-document.schema.json` accepts optional
+canvas board positions and section headings. The current design validator accepts
+these fields while keeping authored `schemaVersion: "1.0.0"`; documents without
+layout remain valid. The original Protocol 1.9 schema bytes are unchanged.
+
 Design comment categories are separate from the frozen artifact pin intent.
 Protocol 1.11 adds metadata payload `schemaVersion: "1.1.0"` for the explicit
 `change-request` category. `assertDesignReviewMetadata()` accepts both 1.0.0 and

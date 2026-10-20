@@ -80,6 +80,47 @@ an artboard by its title to arrange it. Use I / C / H to select Interact / Annot
 Pan; hold Space for temporary pan and Escape to leave Pan or Inspect. Switching
 tools preserves comment drafts. Focused views start in Interact.
 
+## Canvas arrangement
+
+Author optional `layout.boards` and `layout.sections` in the design document to
+arrange the canvas. Coordinates are finite world-space numbers between `-1e7`
+and `1e7`. Every board key uses existing IDs: `screenId`, `screenId/frameId` or
+`screenId/frameId/variantId`. Each value requires `x` and `y` and may include a
+nonblank `title`.
+
+Placement uses the exact screen/frame/variant key first, then screen/frame, then
+the screen origin. A screen origin retains the grid's relative frame spacing and,
+in Compare, variant-group spacing. Without a matching placement, the board uses
+the computed grid. The label uses the most specific matching key with a title,
+otherwise the screen's usual label. Omitting `layout` or leaving it empty retains
+the default grid, labels and camera behavior.
+
+Section headers use unique IDs and nonblank text. Each section requires `id`,
+`x`, `y` and `text`; optional `maxW` is an integer from 1 to 16384 world pixels.
+They appear as non-interactive headings in Canvas and contribute to Fit.
+
+```json
+{
+  "layout": {
+    "boards": {
+      "overview": { "x": 120, "y": 180, "title": "Account journey" },
+      "overview/desktop/quiet": { "x": 1800, "y": 180 }
+    },
+    "sections": [
+      { "id": "account", "x": 120, "y": 80, "text": "Account journey", "maxW": 1200 }
+    ]
+  }
+}
+```
+
+Dragging a board's title in the local studio writes its exact
+screen/frame/variant position into the authored document and preserves an existing
+title. In Canvas, Cmd/Ctrl+Z saves the prior layout; Shift+Cmd/Ctrl+Z redoes it. Preserve these fields
+when revising the design. Portable studios without a local server keep drags only
+for the current session. Legacy positions in browser storage or
+`.design/studio-state.json` no longer determine placement; previously dragged
+boards return to their document or grid position.
+
 ## Parallel alternatives
 
 For Design Loop, define three clear hypotheses, not superficial recolors. Examples

@@ -12,7 +12,7 @@ import {
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { sha256Hex } from '../src/canonical-json.mjs';
-import { DESIGN_DOCUMENT_SCHEMA } from '../src/design-contracts.mjs';
+import { DESIGN_DOCUMENT_SCHEMA, DESIGN_DOCUMENT_V1_SCHEMA } from '../src/design-contracts.mjs';
 import { DESIGN_HANDOFF_SCHEMAS } from '../src/design-handoff-contracts.mjs';
 import { DIAGRAM_REVIEW_SCHEMAS } from '../src/diagram-review-contracts.mjs';
 import { ENTERPRISE_SCHEMAS } from '../src/enterprise-contracts.mjs';
@@ -76,7 +76,8 @@ for (const [name, value] of buildSkillPackageSchemasV18())
   expected.set(`schemas/v1.8.0/${name}`, json(value));
 for (const [name, value] of buildRuntimeLockSchemasV118())
   expected.set(`schemas/v1.18.0/${name}`, json(value));
-expected.set('schemas/v1.9.0/design-document.schema.json', json(DESIGN_DOCUMENT_SCHEMA));
+expected.set('schemas/v1.9.0/design-document.schema.json', json(DESIGN_DOCUMENT_V1_SCHEMA));
+expected.set('schemas/v1.20.0/design-document.schema.json', json(DESIGN_DOCUMENT_SCHEMA));
 for (const [name, value] of Object.entries(DESIGN_WORKSPACE_SCHEMAS))
   expected.set(`schemas/v1.9.0/${name}.schema.json`, json(value));
 
@@ -319,7 +320,7 @@ function walk(root, prefix = '') {
 
 const originalSchemaFiles = walk(join(packageRoot, 'schemas')).filter(
   ({ key }) =>
-    !/^v1\.(?:[5-9]|10|11|12|13|14|15|16|17|18|19)\.0\//u.test(key) && key.endsWith('.json'),
+    !/^v1\.(?:[5-9]|10|11|12|13|14|15|16|17|18|19|20)\.0\//u.test(key) && key.endsWith('.json'),
 );
 const originalRegistryFiles = walk(join(packageRoot, 'registry')).filter(
   ({ key }) => !key.startsWith('v1.17.0/') && key.endsWith('.json'),

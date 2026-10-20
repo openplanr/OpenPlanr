@@ -298,7 +298,7 @@
       ]
     },
     {
-      "path": "scripts/design-runtime-support-e34c388a8e59.mjs",
+      "path": "scripts/design-runtime-support-d53c2b391335.mjs",
       "kind": "script",
       "executable": false,
       "hosts": [
@@ -749,7 +749,7 @@
       ]
     },
     {
-      "path": "scripts/runtime/packages/design/templates/studio/studio.js.sources/14-interface-primitives.js",
+      "path": "scripts/runtime/packages/design/templates/studio/studio.js.sources/14-design-review-experience.js",
       "kind": "asset",
       "executable": false,
       "hosts": [
@@ -760,7 +760,7 @@
       ]
     },
     {
-      "path": "scripts/runtime/packages/design/templates/studio/studio.js.sources/15-interface-primitives.js",
+      "path": "scripts/runtime/packages/design/templates/studio/studio.js.sources/15-studio-shell.js",
       "kind": "asset",
       "executable": false,
       "hosts": [
@@ -771,7 +771,7 @@
       ]
     },
     {
-      "path": "scripts/runtime/packages/design/templates/studio/studio.js.sources/16-studio-shell.js",
+      "path": "scripts/runtime/packages/design/templates/studio/studio.js.sources/16-interface-primitives.js",
       "kind": "asset",
       "executable": false,
       "hosts": [
@@ -782,7 +782,29 @@
       ]
     },
     {
-      "path": "scripts/runtime/packages/design/templates/studio/studio.js.sources/17-design-studio.js",
+      "path": "scripts/runtime/packages/design/templates/studio/studio.js.sources/17-interface-primitives.js",
+      "kind": "asset",
+      "executable": false,
+      "hosts": [
+        "claude-code",
+        "codex",
+        "chatgpt",
+        "cursor"
+      ]
+    },
+    {
+      "path": "scripts/runtime/packages/design/templates/studio/studio.js.sources/18-studio-shell.js",
+      "kind": "asset",
+      "executable": false,
+      "hosts": [
+        "claude-code",
+        "codex",
+        "chatgpt",
+        "cursor"
+      ]
+    },
+    {
+      "path": "scripts/runtime/packages/design/templates/studio/studio.js.sources/19-design-studio.js",
       "kind": "asset",
       "executable": false,
       "hosts": [
@@ -980,7 +1002,7 @@
       ]
     },
     {
-      "path": "scripts/runtime/packages/protocol/schemas/v1.9.0/design-document.schema.json",
+      "path": "scripts/runtime/packages/protocol/schemas/v1.20.0/design-document.schema.json",
       "kind": "schema",
       "executable": false,
       "hosts": [

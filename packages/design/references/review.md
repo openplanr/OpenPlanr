@@ -13,7 +13,8 @@ to a merely similar element or clear it to make the board appear complete.
 
 Apply a screen-level pin to that screen. Apply a component-level pin to the shared
 component and inspect its affected instances; disclose this wider scope. Preserve
-unrelated screens, ordering, IDs, existing annotations and canvas arrangement.
+unrelated screens, ordering, IDs, existing annotations and canvas arrangement
+in the document's `layout.boards` and `layout.sections`.
 If two requests conflict materially, ask one consequential question using the host
 question surface or chat fallback. Use [discovery.md](discovery.md) for missing
 product context rather than restarting the entire consultation.

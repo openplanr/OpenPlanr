@@ -79,6 +79,7 @@ async function mount({
   experience = false,
   hash = '',
   stageOptions = {},
+  fetchImpl,
 } = {}) {
   const html = renderDesignStudio(data);
   const dom = new JSDOM(html, {
@@ -88,6 +89,7 @@ async function mount({
   });
   const { window } = dom;
   window.TextDecoder = TextDecoder;
+  if (fetchImpl) window.fetch = fetchImpl;
   window.Blob = Blob;
   window.URL.createObjectURL = () => `blob:http://127.0.0.1/${Math.random()}`;
   window.URL.revokeObjectURL = () => {};
@@ -853,8 +855,8 @@ test('canvas camera pans freely, artboards cross the origin, and each view resto
       }),
     );
     scroll.dispatchEvent(new app.window.MouseEvent('pointerup', { bubbles: true, button: 0 }));
-    assert.ok(app.studio.getState().positions[entry.artifactId].x < 0);
-    assert.ok(app.studio.getState().positions[entry.artifactId].y < 0);
+    assert.ok(app.studio.getLayout().boards['screen-1/desktop/editorial'].x < 0);
+    assert.ok(app.studio.getLayout().boards['screen-1/desktop/editorial'].y < 0);
 
     const canvasViewport = structuredClone(app.studio.getState().camera);
     scroll.dispatchEvent(
@@ -982,6 +984,7 @@ test('ratings, remix, selection and keyboard arrangement persist serially with o
   const saves = [];
   const app = await mount({
     options: {
+      saveLayout: async () => ({ revision: 'layout-test-revision' }),
       saveState: async (state, context) => {
         saves.push({ state, context });
         return { stateVersion: saves.length };
@@ -1012,7 +1015,8 @@ test('ratings, remix, selection and keyboard arrangement persist serially with o
     assert.equal(state.ratings.compact, 4);
     assert.equal(state.selectedVariant, 'compact');
     assert.equal(state.remix.compact, 'Keep the compact navigation.');
-    assert.equal(state.positions[entry.artifactId].x, 8);
+    assert.equal(state.positions, undefined);
+    assert.equal(app.studio.getLayout().boards['screen-1/desktop/compact'].x, 8);
     assert.equal(app.studio.getSaveState().dirty, false);
     app.documentNode.querySelector('[data-design-rating="5"]').click();
     await app.studio.flush();
@@ -1191,7 +1195,7 @@ test('dismissing a comment-save failure keeps the unsaved review and retry clear
   }
 });
 
-test('portable view defaults preserve saved browser ratings and arrangements on reopen', async () => {
+test('portable view defaults preserve ratings and ignore legacy browser arrangements on reopen', async () => {
   const data = fixture();
   const artifactId = data.entries[0].artifactId;
   const app = await mount({
@@ -1209,7 +1213,10 @@ test('portable view defaults preserve saved browser ratings and arrangements on 
     assert.equal(app.studio.getState().view, 'walkthrough');
     assert.equal(app.studio.getState().selectedVariant, 'compact');
     assert.equal(app.studio.getState().ratings.compact, 5);
-    assert.equal(app.studio.getState().positions[artifactId].x, 80);
+    assert.equal(app.studio.getState().positions, undefined);
+    app.studio.setView('canvas');
+    assert.equal(app.stage.getPanel(artifactId).style.left, '0px');
+    assert.equal(app.stage.getPanel(artifactId).style.top, '72px');
   } finally {
     app.close();
   }
@@ -1524,5 +1531,240 @@ test('actual size and focus preserve source geometry while non-secret deep links
     assert.equal(f.studio.getState().inspectionScale, 'fit');
   } finally {
     f.close();
+  }
+});
+
+test('document layout replaces legacy state positions without changing empty-layout geometry or camera', async () => {
+  const data = fixture();
+  const snapshots = [];
+  for (const layout of [undefined, {}, { boards: {} }]) {
+    const app = await mount({
+      data: {
+        ...data,
+        document: { ...data.document, ...(layout === undefined ? {} : { layout }) },
+      },
+    });
+    try {
+      app.studio.fit();
+      snapshots.push({
+        panels: data.entries.map(({ artifactId }) => {
+          const panel = app.stage.getPanel(artifactId);
+          return [panel.style.left, panel.style.top, panel.querySelector('strong').textContent];
+        }),
+        camera: app.studio.getState().camera,
+        zoom: app.studio.getState().zoom,
+      });
+    } finally {
+      app.close();
+    }
+  }
+  assert.deepEqual(
+    JSON.parse(JSON.stringify(snapshots[1])),
+    JSON.parse(JSON.stringify(snapshots[0])),
+  );
+  assert.deepEqual(
+    JSON.parse(JSON.stringify(snapshots[2])),
+    JSON.parse(JSON.stringify(snapshots[0])),
+  );
+});
+
+test('board moves queue revision saves and undo/redo without storing positions or replacing frames', async () => {
+  const requests = [];
+  let revision = 'initial';
+  const data = fixture({ count: 1 });
+  data.revision = revision;
+  data.document.layout = {
+    boards: { 'screen-1/desktop/editorial': { x: 50.4, y: 60.6, title: 'Overview' } },
+  };
+  const app = await mount({
+    data,
+    options: {
+      async saveLayout(input) {
+        requests.push(input);
+        assert.equal(input.revision, revision);
+        await delay(10);
+        revision = input.restoreRevision ?? `move-${requests.length}`;
+        return { revision };
+      },
+    },
+  });
+  try {
+    const entry = app.entries[0];
+    const frame = app.stage.getFrame(entry.artifactId);
+    const panel = app.stage.getPanel(entry.artifactId);
+    const handle = panel.querySelector('[data-design-drag]');
+    const key = (key, modifiers = {}) =>
+      handle.dispatchEvent(
+        new app.window.KeyboardEvent('keydown', { key, bubbles: true, ...modifiers }),
+      );
+    key('ArrowRight');
+    key('ArrowDown');
+    key('z', { ctrlKey: true });
+    await app.studio.flush();
+    assert.deepEqual(JSON.parse(JSON.stringify(requests)), [
+      { revision: 'initial', boards: { 'screen-1/desktop/editorial': { x: 58, y: 61 } } },
+      { revision: 'move-1', boards: { 'screen-1/desktop/editorial': { x: 58, y: 69 } } },
+      { revision: 'move-2', restoreRevision: 'move-1' },
+    ]);
+    assert.equal(panel.style.top, '61px');
+    key('z', { metaKey: true, shiftKey: true });
+    await app.studio.flush();
+    assert.equal(app.studio.getRevision(), 'move-2');
+    assert.equal(panel.style.top, '69px');
+    assert.equal(app.stage.getFrame(entry.artifactId), frame);
+    assert.equal(panel.querySelector('strong').textContent, 'Overview');
+    assert.equal(app.studio.getState().positions, undefined);
+    assert.equal(
+      JSON.parse(app.window.localStorage.getItem('openplanr.design-studio.fieldwork')).state
+        .positions,
+      undefined,
+    );
+    assert.equal(app.studio.getSaveState().dirty, false);
+  } finally {
+    app.close();
+  }
+});
+
+test('a failed layout save stays pending and retries visibly on flush', async () => {
+  let failed = true;
+  const data = fixture({ count: 1 });
+  data.revision = 'initial';
+  const app = await mount({
+    data,
+    options: {
+      async saveLayout() {
+        if (failed) throw new Error('Design layout write disconnected.');
+        return { revision: 'moved' };
+      },
+    },
+  });
+  try {
+    app.documentNode
+      .querySelector('[data-design-drag]')
+      .dispatchEvent(new app.window.KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+    await app.studio.flush();
+    assert.equal(app.studio.getSaveState().dirty, true);
+    assert.match(
+      app.documentNode.querySelector('.design-notice').textContent,
+      /Design layout write disconnected/,
+    );
+    failed = false;
+    await app.studio.flush();
+    assert.equal(app.studio.getSaveState().dirty, false);
+    assert.equal(app.studio.getRevision(), 'moved');
+  } finally {
+    app.close();
+  }
+});
+
+test('late startup state cannot rewind a revision adopted from a layout save', async () => {
+  let respond;
+  const initialState = new Promise((resolve) => {
+    respond = resolve;
+  });
+  const data = fixture({ count: 1 });
+  data.revision = 'initial';
+  const app = await mount({
+    data,
+    options: {
+      stateUrl: '/api/design-state',
+      async saveLayout() {
+        return { revision: 'moved' };
+      },
+    },
+    fetchImpl: () => initialState,
+  });
+  try {
+    app.documentNode
+      .querySelector('[data-design-drag]')
+      .dispatchEvent(new app.window.KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+    await app.studio.flush();
+    assert.equal(app.studio.getRevision(), 'moved');
+    respond({
+      ok: true,
+      async json() {
+        return { revision: 'initial', stateVersion: 0, state: {} };
+      },
+    });
+    await delay(30);
+    assert.equal(app.studio.getRevision(), 'moved');
+  } finally {
+    app.close();
+  }
+});
+
+test('section headings share the canvas world, affect Fit, and hide in focused views', async () => {
+  const data = fixture({ count: 1 });
+  data.document.layout = {
+    sections: [{ id: 'journey', x: -5000, y: -2000, text: 'Journey', maxW: 200 }],
+  };
+  const app = await mount({ data });
+  try {
+    const heading = app.documentNode.querySelector('.design-section-heading');
+    assert.equal(heading.getAttribute('role'), 'heading');
+    assert.equal(heading.getAttribute('aria-level'), '2');
+    assert.equal(heading.style.maxWidth, '200px');
+    assert.equal(heading.parentElement, app.documentNode.querySelector('.planr-frame-grid'));
+    Object.defineProperties(heading, { offsetWidth: { value: 200 }, offsetHeight: { value: 70 } });
+    Object.defineProperties(app.documentNode.querySelector('.planr-stage-scroll'), {
+      clientWidth: { value: 2000 },
+      clientHeight: { value: 1200 },
+    });
+    app.studio.fit();
+    const expectedZoom = 1904 / 6766;
+    assert.equal(app.studio.getState().zoom, expectedZoom);
+    assert.equal(app.studio.getState().camera.x, 48 + 5000 * expectedZoom);
+    for (const view of ['prototype', 'walkthrough']) {
+      app.studio.setView(view);
+      assert.equal(heading.hidden, true);
+    }
+    app.studio.setView('canvas');
+    assert.equal(heading.hidden, false);
+  } finally {
+    app.close();
+  }
+});
+
+test('fractional-zoom drags save and display whole CSS pixels', async () => {
+  const data = fixture({ count: 1 });
+  data.revision = 'initial';
+  const requests = [];
+  const app = await mount({
+    data,
+    options: {
+      async saveLayout(input) {
+        requests.push(input);
+        return { revision: 'moved' };
+      },
+    },
+  });
+  try {
+    app.studio.setCamera({ x: 40, y: 40, zoom: 0.29 });
+    const panel = app.stage.getPanel(app.entries[0].artifactId);
+    const handle = panel.querySelector('[data-design-drag]');
+    const scroll = app.documentNode.querySelector('.planr-stage-scroll');
+    const pointer = (target, type, x, y) =>
+      target.dispatchEvent(
+        new app.window.MouseEvent(type, {
+          bubbles: true,
+          button: 0,
+          clientX: x,
+          clientY: y,
+        }),
+      );
+    pointer(handle, 'pointerdown', 100, 100);
+    pointer(scroll, 'pointermove', 117, 111);
+    pointer(scroll, 'pointerup', 117, 111);
+    await app.studio.flush();
+    const point = app.studio.getLayout().boards['screen-1/desktop/editorial'];
+    assert.equal(point.x, Math.round(17 / 0.29));
+    assert.equal(point.y, Math.round(72 + 11 / 0.29));
+    assert.equal(panel.style.left, `${point.x}px`);
+    assert.equal(panel.style.top, `${point.y}px`);
+    assert.deepEqual(JSON.parse(JSON.stringify(requests[0].boards)), {
+      'screen-1/desktop/editorial': { x: point.x, y: point.y },
+    });
+  } finally {
+    app.close();
   }
 });

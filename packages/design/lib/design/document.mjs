@@ -355,7 +355,28 @@ export function standaloneDesignHtml(
 }
 
 /** The only publication point is current.json; incomplete revisions are never served. */
-export async function renderDesignDocument(
+export async function renderDesignDocument(file, options = {}) {
+  return withDesignRenderLock(file, (render) => render(options));
+}
+
+/** Runs a document edit and its render under the same publication lock. */
+export async function withDesignRenderLock(file, action) {
+  const { root } = loadDesignDocument(file);
+  const work = join(root, '.design');
+  mkdirSync(work, { recursive: true });
+  const release = await acquireStartLock(join(work, 'render.lock'), {
+    timeout: 1000,
+    stale: 30_000,
+  });
+  try {
+    recoverDesignPublication(root, { ownsRenderLock: true });
+    return await action((options) => renderDesignDocumentUnlocked(file, options));
+  } finally {
+    release();
+  }
+}
+
+async function renderDesignDocumentUnlocked(
   file,
   {
     beforeCommit,
@@ -366,14 +387,8 @@ export async function renderDesignDocument(
 ) {
   const { root } = loadDesignDocument(file);
   const work = join(root, '.design');
-  mkdirSync(work, { recursive: true });
-  const release = await acquireStartLock(join(work, 'render.lock'), {
-    timeout: 1000,
-    stale: 30_000,
-  });
   let temporary;
   try {
-    recoverDesignPublication(root, { ownsRenderLock: true });
     const prepared = prepareDesignDocument(file);
     const errors = prepared.lint.flatMap((item) =>
       item.errors.map((error) => `${item.screenId}: ${error.message}`),
@@ -476,6 +491,5 @@ export async function renderDesignDocument(
     };
   } finally {
     if (temporary) rmSync(temporary, { recursive: true, force: true });
-    release();
   }
 }

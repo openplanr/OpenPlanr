@@ -18,9 +18,9 @@ const freeze = (value) => {
 /**
  * Portable source of truth for the packaged Protocol 1.9 schema. Rendering,
  * file existence, symlink containment and revisions belong to the design domain.
- * @type {typeof import('./design-contracts.d.mts').DESIGN_DOCUMENT_SCHEMA}
+ * @type {typeof import('./design-contracts.d.mts').DESIGN_DOCUMENT_V1_SCHEMA}
  */
-export const DESIGN_DOCUMENT_SCHEMA = freeze({
+export const DESIGN_DOCUMENT_V1_SCHEMA = freeze({
   $schema: 'https://json-schema.org/draft/2020-12/schema',
   $id: 'https://openplanr.dev/schemas/v1.9.0/design-document.schema.json',
   'x-openplanr-contract': { id: 'design-document', version: '1.9.0' },
@@ -163,6 +163,56 @@ export const DESIGN_DOCUMENT_SCHEMA = freeze({
   },
 });
 
+/** @type {typeof import('./design-contracts.d.mts').DESIGN_DOCUMENT_SCHEMA} */
+export const DESIGN_DOCUMENT_SCHEMA = freeze({
+  ...DESIGN_DOCUMENT_V1_SCHEMA,
+  $id: 'https://openplanr.dev/schemas/v1.20.0/design-document.schema.json',
+  'x-openplanr-contract': { id: 'design-document', version: '1.20.0' },
+  properties: {
+    .../** @type {Record<string, unknown>} */ (DESIGN_DOCUMENT_V1_SCHEMA.properties),
+    layout: {
+      type: 'object',
+      additionalProperties: false,
+      properties: {
+        boards: {
+          type: 'object',
+          description:
+            'Keys are screenId, screenId/frameId or screenId/frameId/variantId; each ID must exist in the document.',
+          additionalProperties: {
+            type: 'object',
+            additionalProperties: false,
+            required: ['x', 'y'],
+            properties: {
+              x: { $ref: '#/$defs/coordinate' },
+              y: { $ref: '#/$defs/coordinate' },
+              title: { $ref: '#/$defs/text' },
+            },
+          },
+        },
+        sections: {
+          type: 'array',
+          items: {
+            type: 'object',
+            additionalProperties: false,
+            required: ['id', 'x', 'y', 'text'],
+            properties: {
+              id: { $ref: '#/$defs/id' },
+              x: { $ref: '#/$defs/coordinate' },
+              y: { $ref: '#/$defs/coordinate' },
+              text: { $ref: '#/$defs/text' },
+              maxW: { type: 'integer', minimum: 1, maximum: 16384 },
+            },
+          },
+        },
+      },
+    },
+  },
+  $defs: {
+    .../** @type {Record<string, unknown>} */ (DESIGN_DOCUMENT_V1_SCHEMA.$defs),
+    coordinate: { type: 'number', minimum: -1e7, maximum: 1e7 },
+  },
+});
+
 /**
  * Validate structure plus stable identity and cross-reference constraints.
  * @returns {ReturnType<typeof import('./design-contracts.d.mts').validateDesignDocument>}
@@ -198,6 +248,36 @@ export function validateDesignDocument(value) {
   for (const [index, variant] of value.variants.entries()) {
     for (const id of Object.keys(variant.sources ?? {})) {
       if (!screenIds.has(id)) errors.push(`$.variants[${index}].sources: unknown screen '${id}'`);
+    }
+  }
+  const frameIds = new Set(value.frames.map(({ id }) => id));
+  const variantIds = new Set(value.variants.map(({ id }) => id));
+  for (const [key, position] of Object.entries(value.layout?.boards ?? {})) {
+    const parts = key.split('/');
+    const path = `$.layout.boards['${key}']`;
+    if (parts.length > 3 || parts.some((id) => !/^[A-Za-z][A-Za-z0-9_-]{0,127}$/.test(id))) {
+      errors.push(`${path}: expected screenId, screenId/frameId or screenId/frameId/variantId`);
+    } else {
+      const [screenId, frameId, variantId] = parts;
+      if (!screenIds.has(screenId)) errors.push(`${path}: unknown screen '${screenId}'`);
+      if (frameId !== undefined && !frameIds.has(frameId))
+        errors.push(`${path}: unknown frame '${frameId}'`);
+      if (variantId !== undefined && !variantIds.has(variantId))
+        errors.push(`${path}: unknown variant '${variantId}'`);
+    }
+    for (const axis of ['x', 'y']) {
+      if (!Number.isFinite(position[axis]))
+        errors.push(`${path}.${axis}: expected a finite coordinate`);
+    }
+  }
+  const sectionIds = new Set();
+  for (const [index, section] of (value.layout?.sections ?? []).entries()) {
+    if (sectionIds.has(section.id))
+      errors.push(`$.layout.sections[${index}].id: duplicate identity '${section.id}'`);
+    sectionIds.add(section.id);
+    for (const axis of ['x', 'y']) {
+      if (!Number.isFinite(section[axis]))
+        errors.push(`$.layout.sections[${index}].${axis}: expected a finite coordinate`);
     }
   }
   const selected = value.variants.find(({ id }) => id === value.selectedVariant);

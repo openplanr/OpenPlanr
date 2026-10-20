@@ -8,6 +8,7 @@ import {
 import {
   assertDesignDocument,
   DESIGN_DOCUMENT_SCHEMA,
+  DESIGN_DOCUMENT_V1_SCHEMA,
   DESIGN_DOCUMENT_VERSION,
   validateDesignDocument,
 } from '../../packages/protocol/src/design-contracts.mjs';
@@ -85,7 +86,7 @@ test('authored design schema is additive, immutable, packaged identically and po
       'utf8',
     ),
   );
-  assert.deepEqual(packaged, DESIGN_DOCUMENT_SCHEMA);
+  assert.deepEqual(packaged, DESIGN_DOCUMENT_V1_SCHEMA);
   assert.equal(DESIGN_DOCUMENT_VERSION, '1.0.0');
   assert.deepEqual(packaged['x-openplanr-contract'], { id: 'design-document', version: '1.9.0' });
   assert.equal(Object.isFrozen(DESIGN_DOCUMENT_SCHEMA.properties.screens.items), true);
@@ -257,5 +258,112 @@ test('frame dimensions are positive bounded integers and project spacing stays f
     const document = fixture();
     document.designSystem.spacing = [spacing];
     assert.equal(validateDesignDocument(document).ok, false, String(spacing));
+  }
+});
+
+test('canvas layout is optional and uses the additive current schema without changing legacy bytes', () => {
+  const packaged = JSON.parse(
+    readFileSync(
+      new URL(
+        '../../packages/protocol/schemas/v1.20.0/design-document.schema.json',
+        import.meta.url,
+      ),
+      'utf8',
+    ),
+  );
+  assert.deepEqual(packaged, DESIGN_DOCUMENT_SCHEMA);
+  assert.deepEqual(packaged['x-openplanr-contract'], { id: 'design-document', version: '1.20.0' });
+  for (const layout of [undefined, {}, { boards: {}, sections: [] }]) {
+    const document = fixture();
+    if (layout !== undefined) document.layout = layout;
+    assert.strictEqual(assertDesignDocument(document), document);
+    assert.deepEqual(validateJson(document, packaged), []);
+  }
+  const document = {
+    ...fixture(),
+    layout: {
+      boards: {
+        overview: { x: -1e7, y: 1e7, title: 'Account journey' },
+        'overview/wide': { x: 0.25, y: -10 },
+        'overview/wide/quiet': { x: 300, y: 400, title: 'Current account' },
+      },
+      sections: [
+        { id: 'account', x: -100, y: 0, text: 'Account journey', maxW: 16384 },
+        { id: 'settings', x: 250, y: 300, text: 'Settings' },
+      ],
+    },
+  };
+  assert.strictEqual(assertDesignDocument(document), document);
+  assert.deepEqual(validateJson(document, packaged), []);
+  assert.deepEqual(
+    validateProtocolArtifact('design-document', document, { protocolVersion: '1.20.0' }),
+    [],
+  );
+  assert.ok(validateJson(document, DESIGN_DOCUMENT_V1_SCHEMA).length > 0);
+});
+
+test('canvas layout rejects unknown board references and malformed board keys by name', () => {
+  for (const key of [
+    'missing',
+    'overview/missing',
+    'overview/wide/missing',
+    '',
+    '/wide',
+    'overview/',
+    'overview//quiet',
+    'overview/wide/quiet/extra',
+    'overview/wide/quiet?',
+    `overview/${'a'.repeat(129)}`,
+  ]) {
+    const document = { ...fixture(), layout: { boards: { [key]: { x: 1, y: 2 } } } };
+    assert.throws(
+      () => assertDesignDocument(document),
+      (error) => {
+        assert.ok(error.message.includes(`$.layout.boards['${key}']`), error.message);
+        return true;
+      },
+    );
+  }
+});
+
+test('canvas layout rejects invalid coordinates, undeclared properties and repeated section ids', () => {
+  for (const coordinate of [NaN, Infinity, -Infinity, -1e7 - 1, 1e7 + 1, '10', null]) {
+    for (const axis of ['x', 'y']) {
+      for (const layout of [
+        { boards: { overview: { x: 0, y: 0, [axis]: coordinate } } },
+        { sections: [{ id: 'section', text: 'Journey', x: 0, y: 0, [axis]: coordinate }] },
+      ])
+        assert.equal(
+          validateDesignDocument({ ...fixture(), layout }).ok,
+          false,
+          String(coordinate),
+        );
+    }
+  }
+  for (const layout of [
+    { extra: true },
+    { boards: [] },
+    { boards: { overview: { y: 2 } } },
+    { boards: { overview: { x: 1, y: 2, extra: true } } },
+    { boards: { overview: { x: 1, y: 2, title: '  ' } } },
+    { sections: [{ id: 'section', x: 1, y: 2 }] },
+    { sections: [{ id: '1section', x: 1, y: 2, text: 'Journey' }] },
+    { sections: [{ id: 'section', x: 1, y: 2, text: '  ' }] },
+    { sections: [{ id: 'section', x: 1, y: 2, text: 'Journey', extra: true }] },
+    {
+      sections: [
+        { id: 'section', x: 1, y: 2, text: 'Journey' },
+        { id: 'section', x: 3, y: 4, text: 'Other journey' },
+      ],
+    },
+  ])
+    assert.equal(
+      validateDesignDocument({ ...fixture(), layout }).ok,
+      false,
+      JSON.stringify(layout),
+    );
+  for (const maxW of [0, -1, 1.5, 16385, Infinity, '100']) {
+    const layout = { sections: [{ id: 'section', x: 0, y: 0, text: 'Journey', maxW }] };
+    assert.equal(validateDesignDocument({ ...fixture(), layout }).ok, false, String(maxW));
   }
 });
