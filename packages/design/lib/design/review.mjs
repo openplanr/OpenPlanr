@@ -76,6 +76,7 @@ import {
   syncDesignShare,
 } from './share.mjs';
 import { renderDesignStudio } from './studio.mjs';
+import { validateDesignViewContext } from './view-context.mjs';
 
 export { designReviewKey, designReviewPath, readDesignFeedback } from './feedback-reader.mjs';
 
@@ -573,6 +574,19 @@ export async function saveDesignLayout(file, input) {
   });
 }
 
+function saveDesignViewContext(file, input, clock) {
+  const current = currentDesign(file);
+  const context = validateDesignViewContext(input, current);
+  const value = {
+    kind: 'openplanr-design-view-context',
+    schemaVersion: '1.0.0',
+    ...context,
+    updatedAt: clock().toISOString(),
+  };
+  atomicJson(join(current.root, '.design/view-context.json'), value);
+  return { ok: true };
+}
+
 function respond(res, status, value) {
   res.writeHead(status, {
     'content-type': 'application/json; charset=utf-8',
@@ -742,6 +756,7 @@ async function startDesignReviewUnlocked(
           launchContext: base.startsWith('/studio/') ? 'local Studio' : 'private review',
         },
         stateUrl: `${base}api/design-state`,
+        viewContextUrl: `${base}api/design-view-context`,
         layoutUrl: `${base}api/design-layout`,
         statusUrl: `${base}api/design-status`,
         readyUrl: `${base}api/design-ready`,
@@ -1057,6 +1072,16 @@ async function startDesignReviewUnlocked(
           });
         } else if (route === 'design-state' && req.method === 'PUT') {
           respond(res, 200, await saveDesignState(file, await readBody(req)));
+        } else if (route === 'design-view-context' && req.method === 'PUT') {
+          if (
+            req.headers['x-openplanr-design'] !== '1' ||
+            !String(req.headers['content-type'] ?? '').startsWith('application/json') ||
+            (req.headers.origin && req.headers.origin !== `http://127.0.0.1:${server.port}`)
+          )
+            throw Object.assign(new Error('View context requires a same-origin studio request.'), {
+              statusCode: 403,
+            });
+          respond(res, 200, saveDesignViewContext(file, await readBody(req), clock));
         } else if (route === 'design-layout' && req.method === 'PUT') {
           if (
             req.headers['x-openplanr-design'] !== '1' ||

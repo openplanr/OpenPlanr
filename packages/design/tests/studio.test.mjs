@@ -17,6 +17,223 @@ const cliRequire = createRequire(new URL('../../cli/package.json', import.meta.u
 const { JSDOM } = cliRequire('jsdom');
 const runtime = readFileSync(new URL('../templates/studio/studio.js', import.meta.url), 'utf8');
 
+test('live view context debounces changes, serializes requests and drains the latest unsaved state', async (t) => {
+  const data = fixture({ count: 1 });
+  data.revision = 'a'.repeat(64);
+  const requests = [];
+  let save;
+  const saved = new Promise((resolve) => {
+    save = resolve;
+  });
+  const app = await mount({
+    data,
+    options: { viewContextUrl: '/api/design-view-context', saveState: () => saved },
+    fetchImpl: (url, init) => new Promise((resolve) => requests.push({ url, init, resolve })),
+  });
+  t.after(() => app.close());
+  const scroll = app.documentNode.querySelector('.planr-stage-scroll');
+  Object.defineProperties(scroll, { clientWidth: { value: 600 }, clientHeight: { value: 500 } });
+  app.studio.setCamera({ x: 0, y: 0, zoom: 1 });
+  const waitForRequests = async (count) => {
+    for (let i = 0; i < 100 && requests.length < count; i++) await delay(10);
+    assert.equal(requests.length, count);
+  };
+  await delay(100);
+  app.studio.setCamera({ x: -10000, y: 0, zoom: 1 });
+  await delay(180);
+  assert.equal(requests.length, 0, 'the trailing debounce restarts after a visibility change');
+  await waitForRequests(1);
+  assert.deepEqual(JSON.parse(requests[0].init.body).visibleScreens, []);
+  assert.equal(requests[0].init.method, 'PUT');
+  assert.equal(requests[0].init.headers['x-openplanr-design'], '1');
+  app.studio.setView('prototype');
+  app.studio.setView('walkthrough');
+  app.documentNode.querySelector('[data-design-rating="4"]').click();
+  await delay(280);
+  assert.equal(requests.length, 1, 'only one context request can be in flight');
+  const respond = (index) =>
+    requests[index].resolve({ ok: true, json: async () => ({ ok: true }) });
+  respond(0);
+  await waitForRequests(2);
+  const latest = JSON.parse(requests[1].init.body);
+  assert.equal(latest.view, 'walkthrough');
+  assert.equal(latest.dirty, true);
+  assert.deepEqual(latest.visibleScreens, [
+    { screenId: 'screen-1', frameId: 'desktop', variantId: 'editorial' },
+  ]);
+  assert.deepEqual(latest.selected, { ...latest.visibleScreens[0], planrId: null });
+  respond(1);
+  save({ revision: data.revision });
+  await app.studio.flush();
+  await waitForRequests(3);
+  assert.equal(JSON.parse(requests[2].init.body).dirty, false);
+  respond(2);
+});
+
+for (const conflictAfterAdoption of [false, true]) {
+  test(`view context retries a layout revision conflict received ${conflictAfterAdoption ? 'after' : 'before'} revision adoption`, async (t) => {
+    const data = fixture({ count: 1 });
+    data.revision = 'initial';
+    const requests = [];
+    let saveLayout;
+    const layoutSaved = new Promise((resolve) => {
+      saveLayout = resolve;
+    });
+    const app = await mount({
+      data,
+      options: {
+        viewContextUrl: '/api/design-view-context',
+        saveLayout: () => layoutSaved,
+      },
+      fetchImpl: (_url, init) =>
+        new Promise((resolve) => requests.push({ input: JSON.parse(init.body), resolve })),
+    });
+    t.after(() => app.close());
+    const waitForRequests = async (count) => {
+      for (let i = 0; i < 100 && requests.length < count; i++) await delay(10);
+      assert.equal(requests.length, count);
+    };
+    await waitForRequests(1);
+    requests[0].resolve({ ok: true, json: async () => ({ ok: true }) });
+    const panel = app.stage.getPanel(app.entries[0].artifactId);
+    const handle = panel.querySelector('[data-design-drag]');
+    const scroll = app.documentNode.querySelector('.planr-stage-scroll');
+    for (const [target, type, x] of [
+      [handle, 'pointerdown', 100],
+      [scroll, 'pointermove', 140],
+      [scroll, 'pointerup', 140],
+    ])
+      target.dispatchEvent(
+        new app.window.MouseEvent(type, { bubbles: true, button: 0, clientX: x, clientY: 100 }),
+      );
+    await waitForRequests(2);
+    assert.equal(requests[1].input.revision, 'initial');
+    assert.equal(requests[1].input.dirty, true);
+    if (conflictAfterAdoption) {
+      saveLayout({ revision: 'moved' });
+      await app.studio.flush();
+    }
+    requests[1].resolve({
+      ok: false,
+      status: 409,
+      json: async () => ({ error: 'The design revision changed.' }),
+    });
+    await delay(0);
+    if (!conflictAfterAdoption) {
+      app.studio.setView('prototype');
+      await delay(300);
+      assert.equal(requests.length, 2, 'a conflicting revision is not retried before adoption');
+      saveLayout({ revision: 'moved' });
+      await app.studio.flush();
+    }
+    await waitForRequests(3);
+    assert.equal(requests[2].input.revision, 'moved');
+    assert.equal(requests[2].input.dirty, false);
+    assert.doesNotMatch(
+      app.documentNode.querySelector('[data-design-notice-message]').textContent,
+      /View context could not/u,
+    );
+    requests[2].resolve({ ok: true, json: async () => ({ ok: true }) });
+  });
+}
+
+test('view context failures show a temporary notice and retry on the next camera change', async (t) => {
+  const requests = [];
+  const app = await mount({
+    options: { viewContextUrl: '/api/design-view-context' },
+    fetchImpl: async (_url, init) => {
+      requests.push(JSON.parse(init.body));
+      return { ok: requests.length > 1, status: 503, json: async () => ({ error: 'Unavailable' }) };
+    },
+  });
+  t.after(() => app.close());
+  const setTimeout = app.window.setTimeout.bind(app.window);
+  let dismiss;
+  app.window.setTimeout = (callback, ms, ...args) => {
+    if (ms === 6000) dismiss = callback;
+    return setTimeout(callback, ms, ...args);
+  };
+  await delay(300);
+  assert.equal(requests.length, 1);
+  assert.match(
+    app.documentNode.querySelector('[data-design-notice-message]').textContent,
+    /Unavailable/u,
+  );
+  assert.equal(typeof dismiss, 'function');
+  dismiss();
+  assert.equal(app.documentNode.querySelector('.design-notice').hidden, true);
+  const { camera, zoom } = app.studio.getState();
+  app.studio.setCamera({ ...camera, zoom });
+  await delay(300);
+  assert.equal(requests.length, 2);
+  assert.deepEqual(requests[1], requests[0]);
+});
+
+test('portable studios do not post live view context', async (t) => {
+  const requests = [];
+  const app = await mount({ fetchImpl: (url) => requests.push(url) });
+  t.after(() => app.close());
+  app.studio.setView('prototype');
+  app.studio.setView('canvas');
+  app.studio.setCamera({ x: -10000, y: 0, zoom: 1 });
+  await delay(300);
+  assert.deepEqual(requests, []);
+});
+
+test('live view context uses measured auto heights and the public inspection event', async (t) => {
+  const data = fixture({ count: 1 });
+  data.document.frames[0].height = 'auto';
+  const contexts = [];
+  const app = await mount({
+    data,
+    options: { viewContextUrl: '/api/design-view-context' },
+    fetchImpl: async (_url, init) => {
+      contexts.push(JSON.parse(init.body));
+      return { ok: true, json: async () => ({ ok: true }) };
+    },
+  });
+  t.after(() => app.close());
+  const scroll = app.documentNode.querySelector('.planr-stage-scroll');
+  Object.defineProperties(scroll, { clientWidth: { value: 600 }, clientHeight: { value: 500 } });
+  app.studio.setCamera({ x: 0, y: -1000, zoom: 1 });
+  await delay(300);
+  assert.deepEqual(contexts.at(-1).visibleScreens, []);
+  const selected = {
+    screenId: 'screen-1',
+    frameId: 'desktop',
+    variantId: 'editorial',
+    planrId: 'main',
+  };
+  const active = data.entries.find(
+    (entry) =>
+      entry.screenId === selected.screenId &&
+      entry.frameId === selected.frameId &&
+      entry.variantId === selected.variantId,
+  );
+  app.window.dispatchEvent(
+    new app.window.MessageEvent('message', {
+      origin: 'null',
+      source: app.stage.getFrame(active.artifactId).contentWindow,
+      data: {
+        type: 'openplanr:design-size',
+        screenId: selected.screenId,
+        width: 1280,
+        height: 2400,
+      },
+    }),
+  );
+  app.documentNode
+    .querySelector('.planr-shell')
+    .dispatchEvent(
+      new app.window.CustomEvent('planr:design-inspection-change', { detail: selected }),
+    );
+  await delay(300);
+  assert.deepEqual(contexts.at(-1).selected, selected);
+  assert.deepEqual(contexts.at(-1).visibleScreens, [
+    { screenId: 'screen-1', frameId: 'desktop', variantId: 'editorial' },
+  ]);
+});
+
 function fixture({ count = 3, title = 'Fieldwork operations' } = {}) {
   const document = {
     kind: 'openplanr-design-document',

@@ -455,7 +455,7 @@
       "assets": [
         {
           "path": "skills/design/SKILL.md",
-          "digest": "sha256:bc1fedd3d1fcc930001d079b9a63b928939f4fd2aca97d0143bcb0f8e6f97d20"
+          "digest": "sha256:0212722ce9516be2b2144e8b8a247eaa4a452d4347c8c9e1d1acdb0219d1caa1"
         },
         {
           "path": "skills/design/openplanr.skill.json",
@@ -495,11 +495,11 @@
         },
         {
           "path": "skills/design/references/review.md",
-          "digest": "sha256:c0f60e746b88f75b2b4739a847d151d05d965945898a5454369645dd2a591444"
+          "digest": "sha256:85d163abb1770663f641f81e2f09861cfb94c3fe1efe8f85cb4857da7e5ae3ce"
         },
         {
           "path": "skills/design/references/utilities.md",
-          "digest": "sha256:cedeae549cda5434a768846dc3d83a1baddfa74940276485db6fba1c649301b5"
+          "digest": "sha256:bcb057b0599bf48cee3d2955808c6f3ab6377b8d520f1981782b7353cb22ba6a"
         },
         {
           "path": "skills/design/references/team-review.md",
@@ -568,11 +568,11 @@
         },
         {
           "path": "skills/design-loop/references/review.md",
-          "digest": "sha256:c0f60e746b88f75b2b4739a847d151d05d965945898a5454369645dd2a591444"
+          "digest": "sha256:85d163abb1770663f641f81e2f09861cfb94c3fe1efe8f85cb4857da7e5ae3ce"
         },
         {
           "path": "skills/design-loop/references/utilities.md",
-          "digest": "sha256:cedeae549cda5434a768846dc3d83a1baddfa74940276485db6fba1c649301b5"
+          "digest": "sha256:bcb057b0599bf48cee3d2955808c6f3ab6377b8d520f1981782b7353cb22ba6a"
         },
         {
           "path": "skills/design-loop/references/team-review.md",
@@ -641,11 +641,11 @@
         },
         {
           "path": "skills/design-review/references/review.md",
-          "digest": "sha256:c0f60e746b88f75b2b4739a847d151d05d965945898a5454369645dd2a591444"
+          "digest": "sha256:85d163abb1770663f641f81e2f09861cfb94c3fe1efe8f85cb4857da7e5ae3ce"
         },
         {
           "path": "skills/design-review/references/utilities.md",
-          "digest": "sha256:cedeae549cda5434a768846dc3d83a1baddfa74940276485db6fba1c649301b5"
+          "digest": "sha256:bcb057b0599bf48cee3d2955808c6f3ab6377b8d520f1981782b7353cb22ba6a"
         },
         {
           "path": "skills/design-review/references/team-review.md",

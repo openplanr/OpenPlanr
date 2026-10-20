@@ -124,6 +124,7 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
   const redoMoves = [];
   const layoutOperations = [];
   let layoutSaving = false;
+  let layoutDragDirty = false;
   let stateVersion = null;
   let stage = null;
   let root = null;
@@ -163,6 +164,12 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
   let previousStageZoom = 100;
   let compactViewport = false;
   let activeArtifactId = '';
+  let inspectedSelection = null;
+  let viewContextTimer = null;
+  let viewContextPending = null;
+  let viewContextSignature = null;
+  let viewContextConflictRevision = null;
+  let viewContextSaving = false;
   const framesUsedWithComments = new Set();
   let frameReload = 0;
   let walkthroughTransition = null;
@@ -256,6 +263,78 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
     return result;
   }
 
+  function scheduleViewContext() {
+    if (!options.viewContextUrl || !stage || !scroll || destroyed) return;
+    if (viewContextConflictRevision !== null && revision === viewContextConflictRevision) return;
+    viewContextConflictRevision = null;
+    if (inspectedSelection?.artifactId !== activeArtifactId) inspectedSelection = null;
+    const board = ({ screenId, frameId, variantId }) => ({ screenId, frameId, variantId });
+    const visible =
+      state.view === 'canvas'
+        ? visibleEntries().filter((entry) => {
+            const panel = panels.get(entry.artifactId);
+            const { width, height } = viewportFor(entry);
+            const x = state.camera.x + parseFloat(panel.style.left) * state.zoom;
+            const y = state.camera.y + parseFloat(panel.style.top) * state.zoom;
+            return (
+              x < scroll.clientWidth &&
+              y < scroll.clientHeight &&
+              x + width * state.zoom > 0 &&
+              y + height * state.zoom > 0
+            );
+          })
+        : [entryFor()];
+    visible.sort(
+      (a, b) => design.screenOrder.indexOf(a.screenId) - design.screenOrder.indexOf(b.screenId),
+    );
+    const context = {
+      revision,
+      view: state.view,
+      visibleScreens: visible.map(board),
+      selected: { ...board(state), planrId: inspectedSelection?.planrId ?? null },
+      dirty: contentDirty || reviewDirty || layoutDragDirty || layoutOperations.length > 0,
+    };
+    const signature = JSON.stringify(context);
+    if (signature === viewContextSignature) return;
+    viewContextSignature = signature;
+    viewContextPending = signature;
+    clearTimeout(viewContextTimer);
+    viewContextTimer = setTimeout(() => {
+      viewContextTimer = null;
+      void flushViewContext();
+    }, 250);
+  }
+
+  async function flushViewContext() {
+    if (viewContextSaving || !viewContextPending || destroyed) return;
+    const body = viewContextPending;
+    viewContextPending = null;
+    viewContextSaving = true;
+    try {
+      await jsonRequest(options.viewContextUrl, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'x-openplanr-design': '1' },
+        body,
+      });
+      clearNotice('view-context');
+    } catch (error) {
+      viewContextSignature = null;
+      if (error.conflict) {
+        viewContextConflictRevision = JSON.parse(body).revision;
+        viewContextPending = null;
+        clearTimeout(viewContextTimer);
+        viewContextTimer = null;
+        clearNotice('view-context');
+        if (revision !== viewContextConflictRevision) scheduleViewContext();
+      } else {
+        notice(`View context could not be synchronized: ${error.message}`, false, 'view-context');
+      }
+    } finally {
+      viewContextSaving = false;
+      if (viewContextPending && viewContextTimer === null) void flushViewContext();
+    }
+  }
+
   function persist({ content = false } = {}) {
     dirty = true;
     serial += 1;
@@ -265,6 +344,7 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
       status('Saving changes', 'saving');
     }
     storeDraft();
+    scheduleViewContext();
     root.dispatchEvent(
       new CustomEvent('planr:design-state-change', {
         bubbles: true,
@@ -320,6 +400,7 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
               );
           }
           storeDraft();
+          scheduleViewContext();
         } catch (error) {
           if (capturedContent)
             status(
@@ -369,6 +450,7 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
           revision = result.revision;
           layoutOperations.shift();
           storeDraft();
+          scheduleViewContext();
         }
         clearNotice('layout-save');
         if (!contentDirty && !reviewDirty) status('All changes saved');
@@ -406,6 +488,7 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
           move.afterRevision = next;
         },
       });
+      scheduleViewContext();
       void flushLayout();
     }
   }
@@ -422,6 +505,7 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
       layoutOperations.push({
         input: () => ({ restoreRevision: redo ? move.afterRevision : move.beforeRevision }),
       });
+      scheduleViewContext();
       void flushLayout();
     }
   }
@@ -467,6 +551,7 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
               status(reviewUrl() ? 'All changes saved' : 'Saved in this browser');
           }
           storeReviewDraft();
+          scheduleViewContext();
         } catch (error) {
           status('Comments unsaved', 'disconnected');
           notice(
@@ -544,6 +629,7 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
     const completed = gesture;
     const pointerId = completed.pointerId;
     gesture = null;
+    layoutDragDirty = false;
     // Clear our state first: releasing capture can synchronously notify listeners.
     try {
       if (scroll.hasPointerCapture?.(pointerId)) scroll.releasePointerCapture(pointerId);
@@ -557,6 +643,7 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
         completed.before,
       );
     else persist();
+    scheduleViewContext();
   }
 
   // Chromium can stop routing pointer input into a sandboxed product document that stayed
@@ -1328,6 +1415,14 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
   }
 
   function installEvents() {
+    listen(root, 'planr:design-camera', scheduleViewContext);
+    listen(root, 'planr:design-inspection-change', (event) => {
+      const { screenId, frameId, variantId, planrId } = event.detail;
+      if (screenId !== state.screenId || frameId !== state.frameId || variantId !== state.variantId)
+        return;
+      inspectedSelection = { artifactId: activeArtifactId, planrId };
+      scheduleViewContext();
+    });
     listen(window, 'message', (event) => {
       if (
         event.origin !== 'null' ||
@@ -1439,6 +1534,7 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
         if (state.view !== 'canvas' && root.dataset.designRestoring !== 'true')
           fit({ save: false });
         updateDesignNotes();
+        scheduleViewContext();
       });
       observer.observe(scroll);
       cleanup.push(() => observer.disconnect());
@@ -1601,6 +1697,7 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
     listen(root, 'planr:artifact-review-change', (event) => {
       latestReview = clone(event.detail);
       reviewDirty = true;
+      scheduleViewContext();
       reviewSerial += 1;
       status('Saving comments', 'saving');
       storeReviewDraft();
@@ -1706,6 +1803,7 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
         };
         layout.boards = { ...layout.boards, [key]: { ...layout.boards?.[key], ...point } };
         const panel = panels.get(gesture.artifactId);
+        layoutDragDirty = point.x !== gesture.left || point.y !== gesture.top;
         panel.style.left = `${point.x}px`;
         panel.style.top = `${point.y}px`;
         scheduleCamera();
@@ -1831,6 +1929,8 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
     });
     listen(window, 'online', () => {
       if (dirty || reviewDirty || layoutOperations.length) void flush();
+      viewContextSignature = null;
+      scheduleViewContext();
     });
     listen(window, 'beforeunload', (event) => {
       // A canceled navigation keeps ready frames; only retire background demand.
@@ -2307,6 +2407,7 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
         clearTimeout(reviewTimer);
         clearTimeout(pollTimer);
         clearTimeout(noticeTimer);
+        clearTimeout(viewContextTimer);
         if (cameraFrame !== null) cancelAnimationFrame(cameraFrame);
         for (const heading of sectionHeadings) heading.remove();
         canvasBackground?.remove();

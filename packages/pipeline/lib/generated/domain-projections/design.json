@@ -307,7 +307,7 @@
     {
       "source": "packages/design/lib/design/review.mjs",
       "target": "lib/design/review.mjs",
-      "sha256": "69661f1d248c98902f732d7c4ec14573520d98119b7e181e7a295a3d3ff0960a",
+      "sha256": "70abb5ebe7d334efce1af43305c1ec28a3a413578e0893042a242fb1cfdc4a6f",
       "mode": "644"
     },
     {
@@ -361,7 +361,7 @@
     {
       "source": "packages/design/lib/design/ui/enhancements.mjs",
       "target": "lib/design/ui/enhancements.mjs",
-      "sha256": "408a0cf5e8029ab795ea0c8757871222c1c63099ee4f5e836f51ebd11a35aade",
+      "sha256": "5e170e4e6e790f0c11629f177ffe54ca87f5f1568ba9390edbf0c50625873567",
       "mode": "644"
     },
     {
@@ -397,13 +397,19 @@
     {
       "source": "packages/design/lib/design/ui/studio.mjs",
       "target": "lib/design/ui/studio.mjs",
-      "sha256": "7a6aa4f37a6276036ee51527c0fc7a95092991b535535a6dd48bc16e398ba758",
+      "sha256": "5901c6246c4ba7f409c46377bd98cd89a4f920afa5262f1890deda78da21ed57",
       "mode": "644"
     },
     {
       "source": "packages/design/lib/design/utility.mjs",
       "target": "lib/design/utility.mjs",
-      "sha256": "1d292981510eb5aba47a4a8ce463749ffd3dc3355038653de7c5a415c49a0603",
+      "sha256": "95197755d7f1d570ef2de55040bacc388e51724c0ac20ae00eec0db5d333b812",
+      "mode": "644"
+    },
+    {
+      "source": "packages/design/lib/design/view-context.mjs",
+      "target": "lib/design/view-context.mjs",
+      "sha256": "106ba8588d45fa846ced1491ad0adf4b439ea17a059b0c79321e284a2d8fb517",
       "mode": "644"
     },
     {
@@ -463,7 +469,7 @@
     {
       "source": "packages/design/templates/studio/studio.js",
       "target": "templates/studio/studio.js",
-      "sha256": "529f8c675bc7b8c0c3ec6445fa3affb30512491ac3d38950f5339adbee58b09d",
+      "sha256": "c7f25ef112ccbbfbc2f14dae04e3ded93bd3f84a3756eefb6965bdce3cdb12ce",
       "mode": "644"
     }
   ]

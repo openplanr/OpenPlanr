@@ -1764,7 +1764,10 @@ export function mountDesignEnhancements({ payload, studio: designStudio, stage: 
         q('[aria-selected="true"]', reviewTabs).focus();
       }
     });
+    let inspectionRequest = 0;
     const selectTarget = async (value, overlay, point) => {
+      const requestId = ++inspectionRequest;
+      studio.selectEntry(value);
       const bridge = stage.getFrame(value.artifactId)?.__openPlanrBridge;
       try {
         const result = point
@@ -1774,7 +1777,18 @@ export function mountDesignEnhancements({ payload, studio: designStudio, stage: 
           throw new Error(
             'Element inspection is unavailable for this screen. Authored implementation guidance is available below.',
           );
+        if (requestId !== inspectionRequest || entry()?.artifactId !== value.artifactId) return;
         renderInspector(result);
+        root.dispatchEvent(
+          new CustomEvent('planr:design-inspection-change', {
+            detail: {
+              screenId: value.screenId,
+              frameId: value.frameId,
+              variantId: value.variantId,
+              planrId: result.anchor?.planrId ?? null,
+            },
+          }),
+        );
         if (overlay && result.rect) {
           let highlight = q('.design-inspect-highlight', overlay);
           if (!highlight) {
