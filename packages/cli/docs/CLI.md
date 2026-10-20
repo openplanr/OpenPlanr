@@ -694,6 +694,50 @@ Cursor uses Composer handoff with sequential fallback.
 
 ---
 
+### `openplanr ship checks`
+
+List the checks a change needs for a tier, without running them. Sources are the
+GitHub Actions workflows, husky (`.husky/pre-commit`, `.husky/pre-push`) and
+pre-commit hooks, package scripts, and the task's `## Test Requirements`.
+
+```bash
+openplanr ship checks --task .planr/tasks/T-012-parser.md --json
+openplanr ship checks --tier push --json
+```
+
+| Option          | Description                                                    | Default                                   |
+| --------------- | -------------------------------------------------------------- | ----------------------------------------- |
+| `--task <path>` | Task file whose Test Requirements to include                   | none                                      |
+| `--tier <tier>` | `task`, `story`, `push` or `planning`                          | `planning` for a `.planr`-only change, else `task` |
+| `--base <ref>`  | Compare against the merge base with this ref                   | `origin/HEAD`, then `main`                |
+| `--json`        | Print the `openplanr-ship-checks` result (schema `1.0.0`)      | `false`                                   |
+
+**Tiers:**
+
+- `planning`: `openplanr spec sync --dry-run` and `openplanr sync --dry-run`, tagged
+  `report-only` because both exit 0 when they report problems.
+- `task`: Test Requirements commands, pre-commit hooks, and the CI build when the
+  change touches a package entry point, a build script, a `tsconfig*.json` or a
+  bundler config. Without a task command, the `test`, `typecheck` and `lint`
+  scripts are listed as `fallback`.
+- `story`: `task` plus every `run` step of the pull-request and merge-queue
+  workflows whose path filters match the change.
+- `push`: `story` without path filters, plus push workflows and pre-push hooks.
+
+Each CI step is kept verbatim with its `cwd` (step, then job, then workflow
+`working-directory`). Install steps and `uses` steps are skipped. A static matrix
+is expanded; other `${{ }}` expressions are tagged `needs-review`. A check is
+`tracked-only` when its command, its package script, or a script file either one
+runs directly mentions `lint-staged`, `ls-files`, `--cached` or `--staged`;
+deeper calls are not followed. `relatedTests` lists test files that mention a
+name the change exports, a `.command()` name, or a route path.
+
+`complete` is `false` when any diagnostic is an `error`, for example a workflow
+that fails to parse: the listed checks are then not the full CI set. The command
+exits 1 for an unknown tier, a missing `--task` file or a directory outside git.
+
+---
+
 ### `openplanr sync`
 
 Validate and repair cross-references across all artifacts.

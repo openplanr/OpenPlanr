@@ -976,7 +976,7 @@
       "assets": [
         {
           "path": "skills/ship/SKILL.md",
-          "digest": "sha256:109c1e85dc7e77c41cfc3fde7d0626d86b2c4c9da0179c57e91a04d0f334b61f"
+          "digest": "sha256:451319c5f71e05f05927c47e3edcf1fbba1892016d16eb74549b8af0ae5521f9"
         },
         {
           "path": "skills/ship/openplanr.skill.json",
