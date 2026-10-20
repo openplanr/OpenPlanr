@@ -2,6 +2,7 @@
 /** Company publication constraints over the existing, compatible review bundle. */
 
 import { canonicalizeJson, sha256Hex } from './canonical-json.mjs';
+import { initialFrameHeight } from './design-contracts.mjs';
 import { assertDesignReviewBundle } from './review-experience-contracts.mjs';
 
 /** @type {typeof import('./design-publication-contracts.d.mts').COMPANY_DESIGN_MAX_BYTES} */
@@ -120,7 +121,8 @@ export function assertCompanyDesignBundle(value) {
       fail('entries must uniquely map artboards to artifacts.');
     usedArtifacts.add(entry.artifactId);
     combinations.add(key);
-    if (artifact.viewport.width !== frame.width || artifact.viewport.height !== frame.height)
+    const height = frame.height === 'auto' ? initialFrameHeight(design) : frame.height;
+    if (artifact.viewport.width !== frame.width || artifact.viewport.height !== height)
       fail('artifact viewport must match its declared frame.');
   }
   closed(envelope.viewer, ['mode', 'activeArtifactId', 'presentation'], 'viewer');

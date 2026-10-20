@@ -10,6 +10,7 @@ import {
   DESIGN_DOCUMENT_SCHEMA,
   DESIGN_DOCUMENT_V1_SCHEMA,
   DESIGN_DOCUMENT_VERSION,
+  initialFrameHeight,
   validateDesignDocument,
 } from '../../packages/protocol/src/design-contracts.mjs';
 import { validateJson } from '../../packages/protocol/src/json-schema.mjs';
@@ -366,4 +367,25 @@ test('canvas layout rejects invalid coordinates, undeclared properties and repea
     const layout = { sections: [{ id: 'section', x: 0, y: 0, text: 'Journey', maxW }] };
     assert.equal(validateDesignDocument({ ...fixture(), layout }).ok, false, String(maxW));
   }
+});
+
+test('content-sized heights are additive while fixed heights remain bounded integers', () => {
+  const document = fixture();
+  document.frames[0].height = 'auto';
+  assert.strictEqual(assertDesignDocument(document), document);
+  assert.deepEqual(validateJson(document, DESIGN_DOCUMENT_SCHEMA), []);
+  assert.ok(validateJson(document, DESIGN_DOCUMENT_V1_SCHEMA).length > 0);
+  for (const height of ['900', 'Auto', '100%', '', 0, -1, 1.5, 16385, NaN, Infinity, null]) {
+    document.frames[0].height = height;
+    assert.equal(validateDesignDocument(document).ok, false, String(height));
+  }
+});
+
+test('initial auto frame height uses the tallest integer height or 900', () => {
+  const document = fixture();
+  assert.equal(initialFrameHeight(document), 900);
+  document.frames[0].height = 'auto';
+  assert.equal(initialFrameHeight(document), 852);
+  document.frames[1].height = 'auto';
+  assert.equal(initialFrameHeight(document), 900);
 });

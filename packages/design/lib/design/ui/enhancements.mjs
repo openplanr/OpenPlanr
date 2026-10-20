@@ -5,6 +5,7 @@
  * Hooks come from `__OPENPLANR_DESIGN_STUDIO_OPTIONS__`; authored screens remain opaque sandboxes.
  */
 
+import { designFrameViewport } from '../frame-size.mjs';
 import { createDesignReviewExport, serializeDesignReviewExport } from '../review-export.mjs';
 import { mountDesignHandoffCenter } from './handoff-center.mjs';
 
@@ -1450,7 +1451,7 @@ export function mountDesignEnhancements({ payload, studio: designStudio, stage: 
             x: parseFloat(panel.style.left) || 0,
             y: parseFloat(panel.style.top) || 0,
             width: frame.width,
-            height: frame.height,
+            height: studio.getViewport(item.artifactId).height,
           };
         });
       if (!boards.length) return;
@@ -1811,7 +1812,7 @@ export function mountDesignEnhancements({ payload, studio: designStudio, stage: 
         event.preventDefault();
         event.stopPropagation();
         const rect = frame.getBoundingClientRect(),
-          viewport = design.frames.find((item) => item.id === value.frameId);
+          viewport = studio.getViewport(value.artifactId);
         studio.selectEntry(value);
         void selectTarget(value, overlay, {
           x: clamp(((event.clientX - rect.left) * viewport.width) / rect.width, 0, viewport.width),
@@ -2252,7 +2253,11 @@ export function mountDesignEnhancements({ payload, studio: designStudio, stage: 
             continue;
           }
           const viewport =
-            artifact.viewport || bundle.design.frames.find((item) => item.id === selectedFrame);
+            artifact.viewport ||
+            designFrameViewport(
+              bundle.design,
+              bundle.design.frames.find((item) => item.id === selectedFrame),
+            );
           const windowNode = node('div', '', {
             class: 'design-comparison-window',
             tabindex: '0',

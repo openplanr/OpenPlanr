@@ -42,6 +42,7 @@ export function createDesignStudioEntries(document, envelope) {
           variantId: variant.id,
           screenId,
           frameId: frame.id,
+          ...(frame.height === 'auto' ? { height: 'auto' } : {}),
         });
       }
     }

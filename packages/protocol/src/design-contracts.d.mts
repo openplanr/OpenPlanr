@@ -11,7 +11,7 @@ export interface DesignFrame {
   id: string;
   label: string;
   width: number;
-  height: number;
+  height: number | 'auto';
 }
 
 export interface DesignScreen {
@@ -82,3 +82,5 @@ export declare const DESIGN_DOCUMENT_V1_SCHEMA: Readonly<Record<string, unknown>
 export declare const DESIGN_DOCUMENT_SCHEMA: Readonly<Record<string, unknown>>;
 export declare function validateDesignDocument(value: unknown): { ok: boolean; errors: string[] };
 export declare function assertDesignDocument(value: unknown): DesignDocument;
+
+export declare function initialFrameHeight(document: Pick<DesignDocument, 'frames'>): number;

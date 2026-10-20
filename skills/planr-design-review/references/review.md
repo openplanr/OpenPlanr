@@ -99,3 +99,20 @@ it does not replace an entire ledger or change an owner decision. Review stale
 feedback before confirming its import and keep it bound to its original screen,
 frame and anchor. Missing historical bundles or conflicting identities must be
 repaired explicitly. Legacy `.feedback/notes.json` remains separate and untouched.
+
+## Frame-fit verification
+
+Use `height: "auto"` for long scrolling pages, and integer heights for fixed
+viewports. Auto boards measure content after load and fonts settle, then update
+on body resize, up to 16384px. Pins retain the numeric viewport captured when
+submitted; an exported frame may say `auto` without changing those coordinates.
+
+Browser verification fails `vertical-overflow` for a fixed frame whose document
+height exceeds its viewport by more than 1px. Auto frames skip that check.
+`outside-frame` fails rendered absolute/fixed elements more than 1px outside the
+frame width or height (document height for auto), after ancestor overflow clips
+are applied. Hidden and zero-sized elements are ignored.
+`board-root-box-sizing` requires the screen's body to compute `border-box`.
+For older revisions without that root style, update the authored root CSS and
+re-render before verifying them again. Inspect screenshots and journeys as well
+as these geometry checks.

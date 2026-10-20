@@ -298,7 +298,7 @@
       ]
     },
     {
-      "path": "scripts/design-runtime-support-d53c2b391335.mjs",
+      "path": "scripts/design-runtime-support-54497bd6f55f.mjs",
       "kind": "script",
       "executable": false,
       "hosts": [
@@ -727,7 +727,7 @@
       ]
     },
     {
-      "path": "scripts/runtime/packages/design/templates/studio/studio.js.sources/12-design-review-experience.js",
+      "path": "scripts/runtime/packages/design/templates/studio/studio.js.sources/12-protocol-contracts.js",
       "kind": "asset",
       "executable": false,
       "hosts": [
@@ -738,7 +738,7 @@
       ]
     },
     {
-      "path": "scripts/runtime/packages/design/templates/studio/studio.js.sources/13-studio-shell.js",
+      "path": "scripts/runtime/packages/design/templates/studio/studio.js.sources/13-design-review-experience.js",
       "kind": "asset",
       "executable": false,
       "hosts": [
@@ -749,7 +749,7 @@
       ]
     },
     {
-      "path": "scripts/runtime/packages/design/templates/studio/studio.js.sources/14-design-review-experience.js",
+      "path": "scripts/runtime/packages/design/templates/studio/studio.js.sources/14-studio-shell.js",
       "kind": "asset",
       "executable": false,
       "hosts": [
@@ -760,7 +760,7 @@
       ]
     },
     {
-      "path": "scripts/runtime/packages/design/templates/studio/studio.js.sources/15-studio-shell.js",
+      "path": "scripts/runtime/packages/design/templates/studio/studio.js.sources/15-design-review-experience.js",
       "kind": "asset",
       "executable": false,
       "hosts": [
@@ -771,7 +771,7 @@
       ]
     },
     {
-      "path": "scripts/runtime/packages/design/templates/studio/studio.js.sources/16-interface-primitives.js",
+      "path": "scripts/runtime/packages/design/templates/studio/studio.js.sources/16-studio-shell.js",
       "kind": "asset",
       "executable": false,
       "hosts": [
@@ -793,7 +793,7 @@
       ]
     },
     {
-      "path": "scripts/runtime/packages/design/templates/studio/studio.js.sources/18-studio-shell.js",
+      "path": "scripts/runtime/packages/design/templates/studio/studio.js.sources/18-interface-primitives.js",
       "kind": "asset",
       "executable": false,
       "hosts": [
@@ -804,7 +804,18 @@
       ]
     },
     {
-      "path": "scripts/runtime/packages/design/templates/studio/studio.js.sources/19-design-studio.js",
+      "path": "scripts/runtime/packages/design/templates/studio/studio.js.sources/19-studio-shell.js",
+      "kind": "asset",
+      "executable": false,
+      "hosts": [
+        "claude-code",
+        "codex",
+        "chatgpt",
+        "cursor"
+      ]
+    },
+    {
+      "path": "scripts/runtime/packages/design/templates/studio/studio.js.sources/20-design-studio.js",
       "kind": "asset",
       "executable": false,
       "hosts": [

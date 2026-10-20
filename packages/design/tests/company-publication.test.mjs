@@ -312,3 +312,16 @@ test('company publication bounds acyclic import expansion before producing large
   writeFileSync(join(root, 'source/level-20.css'), `/*${'x'.repeat(1024)}*/`);
   assert.throws(() => prepareCompanyDesignPublication(file), /Stylesheet expansion.*budget/);
 });
+
+test('auto frames retain authored height mode and numeric initial viewports in publication', (t) => {
+  const { file } = fixture(t, {
+    count: 1,
+    frames: [{ id: 'long', label: 'Long page', width: 600, height: 'auto' }],
+  });
+  const { bundle } = prepareCompanyDesignPublication(file);
+  assert.equal(bundle.design.frames[0].height, 'auto');
+  assert.deepEqual(bundle.envelope.artifacts[0].viewport, { width: 600, height: 900 });
+  assertCompanyDesignBundle(bundle);
+  bundle.envelope.artifacts[0].viewport.height = 901;
+  assert.throws(() => assertCompanyDesignBundle(bundle), /viewport must match/);
+});

@@ -17,6 +17,7 @@ import { DESIGN_HANDOFF_SCHEMAS } from '../src/design-handoff-contracts.mjs';
 import { DIAGRAM_REVIEW_SCHEMAS } from '../src/diagram-review-contracts.mjs';
 import { ENTERPRISE_SCHEMAS } from '../src/enterprise-contracts.mjs';
 import {
+  DESIGN_REVIEW_BUNDLE_CURRENT_SCHEMA,
   DESIGN_REVIEW_BUNDLE_V12_SCHEMA,
   DESIGN_REVIEW_METADATA_PAYLOAD_V11_SCHEMA,
   REVIEW_EXPERIENCE_SCHEMAS,
@@ -113,6 +114,11 @@ expected.set(
 expected.set(
   'schemas/v1.16.0/design-review-bundle.schema.json',
   json(DESIGN_REVIEW_BUNDLE_V12_SCHEMA),
+);
+
+expected.set(
+  'schemas/v1.20.0/design-review-bundle.schema.json',
+  json(DESIGN_REVIEW_BUNDLE_CURRENT_SCHEMA),
 );
 
 const envelopeMetadataPath = 'src/generated/artifact-envelope-metadata.mjs';

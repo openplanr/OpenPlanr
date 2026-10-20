@@ -1768,3 +1768,78 @@ test('fractional-zoom drags save and display whole CSS pixels', async () => {
     app.close();
   }
 });
+
+test('auto measurements update runtime geometry and preserve fixed frame geometry and grid rows', async (t) => {
+  const data = fixture({ count: 2 });
+  data.document.frames[0].height = 'auto';
+  for (const artifact of data.envelope.artifacts)
+    if (artifact.viewport.width === 1280) artifact.viewport.height = 844;
+  const app = await mount({ data });
+  t.after(() => app.close());
+  const { window, stage, studio } = app;
+  const selected = data.entries[0];
+  const iframe = stage.getFrame(selected.artifactId);
+  const panel = stage.getPanel(selected.artifactId);
+  const next = data.entries.find(
+    (entry) =>
+      entry.screenId === 'screen-2' &&
+      entry.frameId === 'desktop' &&
+      entry.variantId === 'editorial',
+  );
+  const before = stage.getPanel(next.artifactId).style.top;
+  const measure = (height, source = iframe.contentWindow) =>
+    window.dispatchEvent(
+      new window.MessageEvent('message', {
+        origin: 'null',
+        source,
+        data: { type: 'openplanr:design-size', screenId: selected.screenId, width: 1280, height },
+      }),
+    );
+  measure(2400);
+  assert.deepEqual({ ...studio.getViewport(selected.artifactId) }, { width: 1280, height: 2400 });
+  assert.equal(panel.style.getPropertyValue('--planr-artifact-height'), '2400px');
+  assert.equal(stage.getPanel(next.artifactId).style.top, before);
+  assert.equal(data.document.frames[0].height, 'auto');
+  assert.equal(data.envelope.artifacts[0].viewport.height, 844);
+  window.document.querySelector('.design-tools-menu button[aria-pressed]').click();
+  await delay(35);
+  const minimap = window.document.querySelector('.design-minimap svg');
+  for (const rect of minimap.querySelectorAll('rect'))
+    for (const attribute of ['x', 'y', 'width', 'height'])
+      assert.ok(Number.isFinite(Number(rect.getAttribute(attribute))), `${attribute} is numeric`);
+  let inspected;
+  Object.defineProperty(iframe, '__openPlanrBridge', {
+    configurable: true,
+    value: {
+      inspectAt: async (x, y) => {
+        inspected = { x, y };
+        return { tagName: 'button' };
+      },
+    },
+  });
+  iframe.getBoundingClientRect = () => ({ left: 100, top: 100, width: 640, height: 1200 });
+  panel
+    .querySelector('.design-inspect-overlay')
+    .dispatchEvent(new window.MouseEvent('click', { clientX: 420, clientY: 700, bubbles: true }));
+  await delay(0);
+  assert.deepEqual(inspected, { x: 640, y: 1200 });
+  for (const bad of [0, 'auto', NaN, 16385]) measure(bad);
+  measure(1200, window);
+  assert.equal(studio.getViewport(selected.artifactId).height, 2400);
+  studio.fitSelection();
+  const fitted = studio.getState();
+  assert.ok(Number.isFinite(fitted.camera.y) && Number.isFinite(fitted.zoom));
+  assert.ok(
+    Math.abs(
+      parseFloat(window.document.querySelector('.design-selection-outline').style.height) -
+        (2400 * fitted.zoom + 6),
+    ) <= 1,
+  );
+  for (const view of ['prototype', 'walkthrough']) {
+    studio.setView(view);
+    const state = studio.getState();
+    assert.ok(Number.isFinite(state.zoom) && Number.isFinite(state.camera.y));
+  }
+  const fixed = data.entries.find((entry) => entry.frameId === 'mobile');
+  assert.equal(studio.getViewport(fixed.artifactId).height, 844);
+});

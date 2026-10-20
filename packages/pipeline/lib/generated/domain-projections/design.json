@@ -85,7 +85,7 @@
     {
       "source": "packages/design/lib/design/browser-audit.mjs",
       "target": "lib/design/browser-audit.mjs",
-      "sha256": "770aedc03d68de21c4dd06376d4828163ddda175d42748847beabe5a583c3a31",
+      "sha256": "4327247e4a41508ca226729f028455270b9214807539357381c56b8f751ec812",
       "mode": "644"
     },
     {
@@ -151,7 +151,7 @@
     {
       "source": "packages/design/lib/design/document.mjs",
       "target": "lib/design/document.mjs",
-      "sha256": "246ecde148eba0885512c2c0a27a6be8242c82197e0a96acaab9e671b1865617",
+      "sha256": "6ad3695bdfda9d0813938c42ffd8230fde358209e049bc54f28a1bcefdc14f8f",
       "mode": "644"
     },
     {
@@ -163,13 +163,19 @@
     {
       "source": "packages/design/lib/design/feedback-import.mjs",
       "target": "lib/design/feedback-import.mjs",
-      "sha256": "7c0a120c2c55ea54f65bd9e32b4109929acdd2293d2d6635ebd6cbc7cc705022",
+      "sha256": "14e76022b5c56e768935e81f5cc9eb0aac38e709c6ebd6f478a905939f1c1119",
       "mode": "644"
     },
     {
       "source": "packages/design/lib/design/feedback-reader.mjs",
       "target": "lib/design/feedback-reader.mjs",
       "sha256": "745f7843690b72e6d21264754db976baee88b84c2577012cab3f9f94fbb27954",
+      "mode": "644"
+    },
+    {
+      "source": "packages/design/lib/design/frame-size.mjs",
+      "target": "lib/design/frame-size.mjs",
+      "sha256": "1ee45a8b14eb0e2ca5792c87cfad9ce6794c08c6adde5d5b063362f44fa66305",
       "mode": "644"
     },
     {
@@ -259,7 +265,7 @@
     {
       "source": "packages/design/lib/design/lint.mjs",
       "target": "lib/design/lint.mjs",
-      "sha256": "7bfa27a0badd09659cbcc552a23c21aafc1cef83d25ae03a31e1e6844463e81b",
+      "sha256": "c086228fefd37eac44efdc22589c23ac058e9083792b7ef400c43ce34546a55f",
       "mode": "644"
     },
     {
@@ -295,7 +301,7 @@
     {
       "source": "packages/design/lib/design/review-export.mjs",
       "target": "lib/design/review-export.mjs",
-      "sha256": "35de3f0cccf58c0bac2c13bb7998b5179cbb855336e97beb2c601c733336e01d",
+      "sha256": "0067c13684a07cc9ff9d5a4c2b1cfbe7e4b3897ca3a8c48c7dc3a60f9d9492e0",
       "mode": "644"
     },
     {
@@ -343,7 +349,7 @@
     {
       "source": "packages/design/lib/design/studio.mjs",
       "target": "lib/design/studio.mjs",
-      "sha256": "9fe19eebd21de5b4d49735b97131bafd6a96cba48ab69e29f5f02754a458db59",
+      "sha256": "3124342def2154b795121e1e5ec6710f68b95e1234fb64d4ea518bf6c62cf8ae",
       "mode": "644"
     },
     {
@@ -355,7 +361,7 @@
     {
       "source": "packages/design/lib/design/ui/enhancements.mjs",
       "target": "lib/design/ui/enhancements.mjs",
-      "sha256": "fc24c9d971bfcc214a5cd2e35c66eedf054e0ed35bf413cc00697771db9e027d",
+      "sha256": "408a0cf5e8029ab795ea0c8757871222c1c63099ee4f5e836f51ebd11a35aade",
       "mode": "644"
     },
     {
@@ -367,7 +373,7 @@
     {
       "source": "packages/design/lib/design/ui/layout.mjs",
       "target": "lib/design/ui/layout.mjs",
-      "sha256": "810597de7e6339034ccf014743b6191b8f78ebe3afc5b590d08347e7611caee1",
+      "sha256": "d948e53d1b570c1b8132148d6fb106b933e90a4b6e9085ddddd2f00fb81c617b",
       "mode": "644"
     },
     {
@@ -391,13 +397,13 @@
     {
       "source": "packages/design/lib/design/ui/studio.mjs",
       "target": "lib/design/ui/studio.mjs",
-      "sha256": "847ecbdebe9f8eea3f6a4e103087b84b8b42b0c0d923115a1a0726694fed44de",
+      "sha256": "7a6aa4f37a6276036ee51527c0fc7a95092991b535535a6dd48bc16e398ba758",
       "mode": "644"
     },
     {
       "source": "packages/design/lib/design/utility.mjs",
       "target": "lib/design/utility.mjs",
-      "sha256": "c22e6f8a829e38a80b60e57ebe681c4d1b1a97e7facc7bf49d2cbe505ef49b21",
+      "sha256": "1d292981510eb5aba47a4a8ce463749ffd3dc3355038653de7c5a415c49a0603",
       "mode": "644"
     },
     {
@@ -457,7 +463,7 @@
     {
       "source": "packages/design/templates/studio/studio.js",
       "target": "templates/studio/studio.js",
-      "sha256": "707f4055b68fe8a87f8e45d2cd448499100d6619357b894aec29c73d77dab7f4",
+      "sha256": "529f8c675bc7b8c0c3ec6445fa3affb30512491ac3d38950f5339adbee58b09d",
       "mode": "644"
     }
   ]

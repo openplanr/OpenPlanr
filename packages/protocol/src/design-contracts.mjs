@@ -7,12 +7,38 @@ import { validateJson } from './json-schema.mjs';
  */
 export const DESIGN_DOCUMENT_VERSION = '1.0.0';
 
+/** Initial viewport height for content-sized frames.
+ * @type {typeof import('./design-contracts.d.mts').initialFrameHeight}
+ */
+export function initialFrameHeight(document) {
+  const fixed = document.frames.flatMap(({ height }) =>
+    typeof height === 'number' && Number.isInteger(height) ? [height] : [],
+  );
+  return fixed.length ? Math.max(...fixed) : 900;
+}
+
 const freeze = (value) => {
   if (value && typeof value === 'object') {
     for (const nested of Object.values(value)) freeze(nested);
     Object.freeze(value);
   }
   return value;
+};
+
+const FRAME_SCHEMA = {
+  type: 'array',
+  minItems: 1,
+  items: {
+    type: 'object',
+    additionalProperties: false,
+    required: ['id', 'label', 'width', 'height'],
+    properties: {
+      id: { $ref: '#/$defs/id' },
+      label: { $ref: '#/$defs/text' },
+      width: { type: 'integer', minimum: 1, maximum: 16384 },
+      height: { type: 'integer', minimum: 1, maximum: 16384 },
+    },
+  },
 };
 
 /**
@@ -71,21 +97,7 @@ export const DESIGN_DOCUMENT_V1_SCHEMA = freeze({
       },
     },
     assets: { $ref: '#/$defs/paths' },
-    frames: {
-      type: 'array',
-      minItems: 1,
-      items: {
-        type: 'object',
-        additionalProperties: false,
-        required: ['id', 'label', 'width', 'height'],
-        properties: {
-          id: { $ref: '#/$defs/id' },
-          label: { $ref: '#/$defs/text' },
-          width: { type: 'integer', minimum: 1, maximum: 16384 },
-          height: { type: 'integer', minimum: 1, maximum: 16384 },
-        },
-      },
-    },
+    frames: FRAME_SCHEMA,
     screens: {
       type: 'array',
       minItems: 1,
@@ -170,6 +182,16 @@ export const DESIGN_DOCUMENT_SCHEMA = freeze({
   'x-openplanr-contract': { id: 'design-document', version: '1.20.0' },
   properties: {
     .../** @type {Record<string, unknown>} */ (DESIGN_DOCUMENT_V1_SCHEMA.properties),
+    frames: {
+      ...FRAME_SCHEMA,
+      items: {
+        ...FRAME_SCHEMA.items,
+        properties: {
+          ...FRAME_SCHEMA.items.properties,
+          height: { anyOf: [{ type: 'integer', minimum: 1, maximum: 16384 }, { const: 'auto' }] },
+        },
+      },
+    },
     layout: {
       type: 'object',
       additionalProperties: false,

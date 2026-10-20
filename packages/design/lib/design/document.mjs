@@ -35,6 +35,7 @@ import {
   readJson,
   recoverDesignPublication,
 } from './document-state.mjs';
+import { designFrameViewport, observeDesignFrameSize } from './frame-size.mjs';
 import { lintDesign } from './lint.mjs';
 import { buildManifest } from './manifest.mjs';
 import {
@@ -144,6 +145,11 @@ export function prepareDesignDocument(file, { readSource, passive = false, maxBy
         passive,
         ...(maxBytes === undefined ? {} : { maxBytes }),
       });
+      if (document.frames.some(({ height }) => height === 'auto'))
+        bundled.html = bundled.html.replace(
+          '</body>',
+          `<script>(${observeDesignFrameSize.toString()})()</script></body>`,
+        );
       const navigate = `<script>document.addEventListener('click',function(event){var link=event.target.closest('[data-design-target],[data-planr-navigate],[data-design-navigate]');if(!link)return;event.preventDefault();parent.postMessage({type:'openplanr:design-navigate',screenId:link.getAttribute('data-design-target')||link.getAttribute('data-planr-navigate')||link.getAttribute('data-design-navigate')},'*')});document.addEventListener('submit',function(event){event.preventDefault()});</script>`;
       if (!passive) bundled.html = bundled.html.replace('</body>', `${navigate}</body>`);
       for (const name of bundled.files) {
@@ -194,7 +200,7 @@ export function prepareDesignDocument(file, { readSource, passive = false, maxBy
           kind: 'html',
           title: `${screen.title} · ${variant.label} · ${frame.label}`,
           sourceId,
-          viewport: { width: frame.width, height: frame.height },
+          viewport: designFrameViewport(document, frame),
           colorScheme: 'light',
         });
         entries.push({
@@ -202,6 +208,7 @@ export function prepareDesignDocument(file, { readSource, passive = false, maxBy
           screenId,
           variantId: variant.id,
           frameId: frame.id,
+          ...(frame.height === 'auto' ? { height: 'auto' } : {}),
         });
       }
     }

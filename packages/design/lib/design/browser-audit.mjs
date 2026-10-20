@@ -3,7 +3,7 @@
  * closure dependencies: browser tools can evaluate this function's source.
  * It inspects rendered CSS and geometry; it does not exercise product actions.
  */
-export function auditRenderedScreen() {
+export function auditRenderedScreen({ height } = {}) {
   const issues = [];
   const add = (rule, severity, message) => issues.push({ rule, severity, message });
   const label = (node) =>
@@ -16,6 +16,15 @@ export function auditRenderedScreen() {
     add('screen-not-loaded', 'error', 'The frame has no authored design screen identity.');
   if (document.readyState !== 'complete')
     add('screen-loading', 'error', `The frame is still ${document.readyState}.`);
+  const documentHeight = document.documentElement.scrollHeight;
+  if (document.body && getComputedStyle(document.body).boxSizing !== 'border-box')
+    add('board-root-box-sizing', 'error', 'The screen root body must use box-sizing: border-box.');
+  if (height !== 'auto' && documentHeight > viewport.height + 1)
+    add(
+      'vertical-overflow',
+      'error',
+      `The screen is ${documentHeight}px tall in a ${viewport.height}px frame.`,
+    );
   const nodes = [...document.querySelectorAll('body *')];
   if (nodes.length > 5000)
     add(
@@ -82,9 +91,45 @@ export function auditRenderedScreen() {
     checkedFocus = 0;
   const focusTargets = [];
   for (const node of nodes.slice(0, 5000)) {
+    const style = getComputedStyle(node);
+    const rect = node.getBoundingClientRect();
+    if (
+      rect.width > 0 &&
+      rect.height > 0 &&
+      style.visibility !== 'hidden' &&
+      style.visibility !== 'collapse' &&
+      Number(style.opacity) > 0 &&
+      ['absolute', 'fixed'].includes(style.position)
+    ) {
+      let { left, right, top, bottom } = rect;
+      for (
+        let ancestor = node.parentElement;
+        ancestor && ancestor !== document.body;
+        ancestor = ancestor.parentElement
+      ) {
+        const clip = getComputedStyle(ancestor);
+        const bounds = ancestor.getBoundingClientRect();
+        if (['auto', 'scroll', 'hidden', 'clip'].includes(clip.overflowX)) {
+          left = Math.max(left, bounds.left + ancestor.clientLeft);
+          right = Math.min(right, bounds.left + ancestor.clientLeft + ancestor.clientWidth);
+        }
+        if (['auto', 'scroll', 'hidden', 'clip'].includes(clip.overflowY)) {
+          top = Math.max(top, bounds.top + ancestor.clientTop);
+          bottom = Math.min(bottom, bounds.top + ancestor.clientTop + ancestor.clientHeight);
+        }
+      }
+      if (
+        right > left &&
+        bottom > top &&
+        (left < -1 ||
+          right > viewport.width + 1 ||
+          top < -1 ||
+          bottom > (height === 'auto' ? documentHeight : viewport.height) + 1)
+      )
+        add('outside-frame', 'error', `${label(node)} is positioned outside the frame box.`);
+    }
     if (!visible(node)) continue;
     checkedElements += 1;
-    const style = getComputedStyle(node);
     const directText = [...node.childNodes].some(
       (child) => child.nodeType === 3 && child.textContent.trim(),
     );
@@ -304,7 +349,9 @@ export async function auditDesignPage(
       // A real keyboard event establishes focus-visible modality before the
       // screen helper inspects controls, without activating any product action.
       await page.keyboard?.press('Tab');
-      const result = await frame.evaluate(auditRenderedScreen);
+      const result = await frame.evaluate(auditRenderedScreen, {
+        height: expected.get(artifactId).height,
+      });
       if (result.screenId !== expected.get(artifactId).screenId) {
         add(
           artifactId,

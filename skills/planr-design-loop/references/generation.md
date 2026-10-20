@@ -147,3 +147,22 @@ preserve the original as a local source/reference and declare static image scree
 as static. Existing `finalized.json` and mode-specific specification readers remain
 supported. Use [craft.md](craft.md) for browser checks before finalization and
 [handoff.md](handoff.md) for the complete implementation context.
+
+## Content-sized frames
+
+Use `height: "auto"` for long scrolling pages; keep integer heights for fixed
+product viewports. Width remains an integer. Auto frames start at the tallest
+integer height in the document, or 900px if all frames are auto. After load, fonts
+and two animation frames, the studio measures `documentElement.scrollHeight` and
+sizes the board up to 16384px. A body ResizeObserver repeats that measurement.
+Fit, focused views, selection and inspection use the measured height. Grid rows
+keep the initial height so later rows do not move when content is measured; arrange
+long boards explicitly with `layout.boards` when they need more room.
+
+Set `box-sizing: border-box` on the authored screen root
+(`body[data-planr-screen]`), either directly or through a universal selector. The
+renderer preserves authored box sizing; the browser audit enforces this requirement.
+The browser audit reports `vertical-overflow` when a fixed frame's document height
+exceeds its viewport by more than 1px; auto frames skip this rule. `outside-frame` reports
+rendered absolute/fixed elements beyond the width or height by more than 1px,
+using document height for auto frames and respecting ancestor overflow clipping.

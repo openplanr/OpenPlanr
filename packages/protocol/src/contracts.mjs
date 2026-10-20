@@ -86,6 +86,7 @@ const foundationPaths = {
     '1.9.0': 'schemas/v1.9.0/design-review-bundle.schema.json',
     '1.10.0': 'schemas/v1.10.0/design-review-bundle.schema.json',
     '1.16.0': 'schemas/v1.16.0/design-review-bundle.schema.json',
+    '1.20.0': 'schemas/v1.20.0/design-review-bundle.schema.json',
   },
   'design-review-context': { '1.10.0': 'schemas/v1.10.0/design-review-context.schema.json' },
   'design-review-handoff': { '1.10.0': 'schemas/v1.10.0/design-review-handoff.schema.json' },

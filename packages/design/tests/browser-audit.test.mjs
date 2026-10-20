@@ -150,7 +150,7 @@ test('real browser audits hidden frames and restores their review visibility', a
   if (!instance) return;
   const page = await instance.newPage({ viewport: { width: 1200, height: 900 } });
   const content =
-    '<!doctype html><html lang="en"><body data-planr-screen="overview"><h1>Account</h1><p>Review your account information.</p><button onclick="this.textContent=\'Saved\'">Save account</button></body></html>';
+    '<!doctype html><html lang="en"><body data-planr-screen="overview" style="box-sizing:border-box"><h1>Account</h1><p>Review your account information.</p><button onclick="this.textContent=\'Saved\'">Save account</button></body></html>';
   const srcdoc = content.replaceAll('&', '&amp;').replaceAll('"', '&quot;');
   await page.setContent(
     `<section data-artifact-id="overview-desktop" hidden><iframe title="Account" data-planr-artifact-frame="overview-desktop" width="900" height="700" srcdoc="${srcdoc}"></iframe></section>`,
@@ -165,4 +165,76 @@ test('real browser audits hidden frames and restores their review visibility', a
   );
   assert.equal(report.status, 'unverified', 'layout audit does not invent screenshots or journeys');
   assert.equal(await page.locator('section').evaluate((element) => element.hidden), true);
+});
+
+test('frame mode reaches the rendered auditor', async () => {
+  const page = mockPage(clearResult());
+  page.frames()[0].evaluate = async (_fn, argument) => {
+    assert.deepEqual(argument, { height: 'auto' });
+    return clearResult();
+  };
+  await auditDesignPage(page, { entries: [{ ...entry, height: 'auto' }] });
+});
+
+test('real browser enforces frame bounds and root sizing while respecting clipped scroll content', async (t) => {
+  const instance = await browser(t);
+  if (!instance) return;
+  const page = await instance.newPage({ viewport: { width: 640, height: 600 } });
+  await page.setContent(
+    `<!doctype html><style>
+    body { margin:0; } main { height:1200px; }
+    .outside { position:absolute; left:650px; top:10px; width:40px; height:40px; }
+    .clipped { position:relative; overflow:auto; width:100px; height:100px; }
+    .clipped span { position:absolute; left:700px; top:900px; width:40px; height:40px; }
+    </style><body data-planr-screen="overview"><main>Long page
+    <div class="outside" data-planr-id="escaped">Outside</div>
+    <div class="clipped"><span data-planr-id="scroll-content">Scrollable</span></div>
+    <div style="display:none;position:absolute;left:-900px;width:40px;height:40px">Hidden</div>
+    <div style="position:fixed;top:-50px;width:40px;height:40px" data-planr-id="fixed-outside">Fixed</div>
+    </main></body>`,
+    { waitUntil: 'load' },
+  );
+  const fixed = await page.evaluate(auditRenderedScreen);
+  assert.ok(
+    fixed.issues.some(
+      ({ rule, message }) => rule === 'vertical-overflow' && /1200px.*600px/.test(message),
+    ),
+  );
+  assert.ok(fixed.issues.some(({ rule }) => rule === 'board-root-box-sizing'));
+  assert.deepEqual(
+    fixed.issues
+      .filter(({ rule }) => rule === 'outside-frame')
+      .map(({ message }) => message)
+      .sort(),
+    [
+      'escaped is positioned outside the frame box.',
+      'fixed-outside is positioned outside the frame box.',
+    ],
+  );
+  await page.locator('body').evaluate((body) => {
+    body.style.boxSizing = 'border-box';
+  });
+  const auto = await page.evaluate(auditRenderedScreen, { height: 'auto' });
+  assert.equal(
+    auto.issues.some(
+      ({ rule }) => rule === 'vertical-overflow' || rule === 'board-root-box-sizing',
+    ),
+    false,
+  );
+  assert.ok(
+    auto.issues.some(
+      ({ rule, message }) => rule === 'outside-frame' && message.startsWith('escaped '),
+    ),
+  );
+  await page.locator('.outside').evaluate((node) => {
+    node.style.left = '10px';
+    node.style.top = '800px';
+  });
+  const scrolling = await page.evaluate(auditRenderedScreen, { height: 'auto' });
+  assert.equal(
+    scrolling.issues.some(
+      ({ rule, message }) => rule === 'outside-frame' && message.startsWith('escaped '),
+    ),
+    false,
+  );
 });

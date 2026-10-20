@@ -1,5 +1,6 @@
 /** Design presentation composes the artifact stage. Pins remain artifact-owned. */
 import { createPrototypeStateRelay } from '@openplanr/artifact/ui/prototype-state.mjs';
+import { designFrameViewport } from '../frame-size.mjs';
 import { boardPlacement } from './layout.mjs';
 import { mountDesignChrome, mountDesignPanels } from './studio-chrome.mjs';
 
@@ -494,6 +495,14 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
     );
   }
 
+  function viewportFor(entry) {
+    const frame = design.frames.find(({ id }) => id === entry.frameId);
+    return (
+      stage.getState().artifacts.find(({ id }) => id === entry.artifactId)?.viewport ??
+      designFrameViewport(design, frame)
+    );
+  }
+
   function visibleEntries() {
     return entries.filter(
       (entry) =>
@@ -658,7 +667,7 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
         bounds.minX = Math.min(bounds.minX, x);
         bounds.minY = Math.min(bounds.minY, y - 64);
         bounds.maxX = Math.max(bounds.maxX, x + frame.width);
-        bounds.maxY = Math.max(bounds.maxY, y + frame.height);
+        bounds.maxY = Math.max(bounds.maxY, y + viewportFor(entry).height);
         return bounds;
       },
       { minX: Infinity, minY: Infinity, maxX: -Infinity, maxY: -Infinity },
@@ -681,7 +690,7 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
     const y = Number.parseFloat(panel.style.top) || 0;
     state.camera = {
       x: scroll.clientWidth / 2 - (x + frame.width / 2) * state.zoom,
-      y: scroll.clientHeight / 2 - (y + frame.height / 2) * state.zoom,
+      y: scroll.clientHeight / 2 - (y + viewportFor(entry).height / 2) * state.zoom,
     };
     saveViewport();
     render();
@@ -901,7 +910,7 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
     if (state.view !== 'canvas') {
       // A focused view has no navigable world: fit the authored frame inside
       // its viewport. Scrolling and gestures within the iframe remain native.
-      const frame = design.frames.find((item) => item.id === state.frameId);
+      const frame = viewportFor(entryFor());
       const inset = window.innerWidth <= 680 ? 12 : 24;
       state.zoom =
         state.inspectionScale === 'actual'
@@ -951,7 +960,7 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
         const y = pixel(state.camera.y + Number.parseFloat(panel.style.top) * state.zoom);
         selectionOutline.style.transform = `translate3d(${x - 3}px, ${y - 3}px, 0)`;
         selectionOutline.style.width = `${pixel(frame.width * state.zoom) + 6}px`;
-        selectionOutline.style.height = `${pixel(frame.height * state.zoom) + 6}px`;
+        selectionOutline.style.height = `${pixel(viewportFor(active).height * state.zoom) + 6}px`;
       }
     }
     const label = `${Math.round(state.zoom * 100)}%`;
@@ -1319,6 +1328,38 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
   }
 
   function installEvents() {
+    listen(window, 'message', (event) => {
+      if (
+        event.origin !== 'null' ||
+        !['openplanr:design-size', 'openplanr:design-size-error'].includes(event.data?.type)
+      )
+        return;
+      const entry = entries.find(
+        ({ artifactId }) => stage.getFrame(artifactId)?.contentWindow === event.source,
+      );
+      if (!entry) return;
+      const frame = design.frames.find(({ id }) => id === entry.frameId);
+      if (frame.height !== 'auto') return;
+      if (event.data.type === 'openplanr:design-size-error') {
+        notice(`Could not measure ${entry.screenId}: ${event.data.message}`, true);
+        return;
+      }
+      const { screenId, width, height } = event.data;
+      if (
+        screenId !== entry.screenId ||
+        width !== frame.width ||
+        !Number.isInteger(height) ||
+        height < 1 ||
+        height > 16384
+      )
+        return;
+      const viewport = viewportFor(entry);
+      if (viewport.height === height) return;
+      // The stage and bridge share this live viewport; the immutable render envelope keeps its initial size.
+      viewport.height = height;
+      panels.get(entry.artifactId).style.setProperty('--planr-artifact-height', `${height}px`);
+      render();
+    });
     listen(root, 'planr:artifact-viewport-zoom', (event) => {
       if (state.view !== 'canvas') return;
       const entry = entries.find((item) => stage.getFrame(item.artifactId) === event.target);
@@ -1331,7 +1372,7 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
         state.zoom * Math.exp(-deltaY * 0.004),
         {
           x: rect.left + (x * rect.width) / frame.width,
-          y: rect.top + (y * rect.height) / frame.height,
+          y: rect.top + (y * rect.height) / viewportFor(entry).height,
         },
         { scheduled: true },
       );
@@ -2019,6 +2060,14 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
       const screen = design.screens.find(({ id }) => id === entry.screenId);
       const variant = design.variants.find(({ id }) => id === entry.variantId);
       const frame = design.frames.find(({ id }) => id === entry.frameId);
+      if (frame.height === 'auto') {
+        const iframe = stage.getFrame(entry.artifactId);
+        const measure = () =>
+          iframe.contentWindow?.postMessage({ type: 'openplanr:design-measure' }, '*');
+        listen(iframe, 'planr:artifact-bridge-ready', measure);
+        listen(iframe, 'load', measure);
+        measure();
+      }
       const label = document.createElement('div');
       label.className = 'design-artboard-label';
       label.setAttribute('role', 'group');
@@ -2185,6 +2234,9 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
       getTool: () => activeTool,
       getState: () => clone(state),
       getLayout: () => clone(layout),
+      getViewport: (artifactId) => ({
+        ...viewportFor(entries.find((entry) => entry.artifactId === artifactId)),
+      }),
       getRevision: () => revision,
       getSaveState: () => ({
         dirty: contentDirty || reviewDirty || layoutOperations.length > 0,

@@ -1,3 +1,5 @@
+import { initialFrameHeight } from '../frame-size.mjs';
+
 /** Resolve document positions and titles over the studio's default grid. */
 export function boardPlacement(
   design,
@@ -35,10 +37,7 @@ export function boardPlacement(
       ? { x: matches[0].x + offset, y: matches[0].y }
       : {
           x: offset,
-          y:
-            72 +
-            design.screenOrder.indexOf(entry.screenId) *
-              (Math.max(...design.frames.map(({ height }) => height)) + 176),
+          y: 72 + design.screenOrder.indexOf(entry.screenId) * (initialFrameHeight(design) + 176),
         });
   const title =
     [...matches].reverse().find((match) => match?.title)?.title ??

@@ -14,6 +14,7 @@ import {
   standaloneDesignHtml,
 } from './document.mjs';
 import { importDesignFeedback } from './feedback-import.mjs';
+import { matchesDesignFrame } from './frame-size.mjs';
 import { readDesignHandoff, updateDesignHandoff } from './handoff.mjs';
 import {
   exportDesignReview,
@@ -78,8 +79,7 @@ export function verifyDesignDocument(file, report) {
       checkedArtifacts.includes(entry.artifactId) &&
       matches.length === 1 &&
       matches[0].screenId === entry.screenId &&
-      matches[0].viewport?.width === frame.width &&
-      matches[0].viewport?.height === frame.height &&
+      matchesDesignFrame(frame, matches[0].viewport) &&
       Number.isInteger(matches[0].checkedElements) &&
       matches[0].checkedElements > 0
     );
