@@ -16,6 +16,7 @@ import { createFrames } from './frames.mjs';
 import { bindInput, isEditable } from './input.mjs';
 import { createLod } from './lod.mjs';
 import { createOverviewLayer } from './overview.mjs';
+import { CHROME_TRANSITION_MS, computeSafeArea } from './safe-area.mjs';
 import type {
   Camera,
   CanvasController,
@@ -25,6 +26,7 @@ import type {
   CanvasLevel,
   CanvasNode,
   CanvasOptions,
+  ChromeSurface,
   Diagnostic,
   NodeId,
   Point,
@@ -35,6 +37,8 @@ import type {
 function object(field: string, value: unknown): void {
   if (!value || typeof value !== 'object' || Array.isArray(value)) invalid(field, value);
 }
+
+const CAMERA_MOVE_MS = 200;
 
 export function createCanvas(options: CanvasOptions): CanvasController {
   object('options', options);
@@ -130,6 +134,8 @@ export function createCanvas(options: CanvasOptions): CanvasController {
   let destroyed = false;
   let detaching = false;
   let stageSize = { width: 0, height: 0 };
+  const chrome = new Map<string, ChromeSurface>();
+  let safeArea = computeSafeArea(stageSize, chrome.values());
   let composing = false;
   let elements: CanvasElements | undefined;
   let view: Window | undefined;
@@ -140,7 +146,7 @@ export function createCanvas(options: CanvasOptions): CanvasController {
   let dirty = false;
   let cameraEvent = false;
   let activeFrameEvent = false;
-  let animation: { from: Camera; to: Camera; start: number } | undefined;
+  let animation: { from: Camera; to: Camera; start: number; duration: number } | undefined;
   let input: ReturnType<typeof bindInput> | undefined;
   let frames: ReturnType<typeof createFrames> | undefined;
   let restore: (() => void) | undefined;
@@ -153,6 +159,7 @@ export function createCanvas(options: CanvasOptions): CanvasController {
     selection: new Set(),
     focus: new Set(),
     breakpoint: new Set(),
+    'safe-area': new Set(),
     diagnostics: new Set(),
   };
   let queued: (() => void)[] = [];
@@ -186,10 +193,73 @@ export function createCanvas(options: CanvasOptions): CanvasController {
     const index = breakpoints.findIndex((entry) => entry.name === breakpoint);
     return index === breakpoints.length - 1 ? 10 : index === breakpoints.length - 2 ? 6 : 3;
   }
+  function updateSafeArea() {
+    const next = computeSafeArea(stageSize, chrome.values());
+    if (
+      next.x === safeArea.x &&
+      next.y === safeArea.y &&
+      next.width === safeArea.width &&
+      next.height === safeArea.height
+    )
+      return;
+    safeArea = next;
+    enqueue('safe-area', { ...next });
+  }
+  function boundsFor(ids: readonly NodeId[]): Rect | undefined {
+    const values = ids.map((id) => requireNode(id, 'target.id').bounds);
+    if (!values.length) return undefined;
+    const x = Math.min(...values.map((bounds) => bounds.x));
+    const y = Math.min(...values.map((bounds) => bounds.y));
+    return {
+      x,
+      y,
+      width: Math.max(...values.map((bounds) => bounds.x + bounds.width)) - x,
+      height: Math.max(...values.map((bounds) => bounds.y + bounds.height)) - y,
+    };
+  }
+  function revealBounds(
+    bounds: Rect,
+    mode: 'minimal' | 'center' = 'minimal',
+    duration = CAMERA_MOVE_MS,
+  ) {
+    const start = worldToScreen(camera, bounds);
+    function offset(value: number, length: number, origin: number, available: number) {
+      if (mode === 'center' || length > available)
+        return value + length / 2 - origin - available / 2;
+      if (value < origin) return value - origin;
+      return Math.max(0, value + length - origin - available);
+    }
+    const dx = offset(start.x, bounds.width * camera.zoom, safeArea.x, safeArea.width);
+    const dy = offset(start.y, bounds.height * camera.zoom, safeArea.y, safeArea.height);
+    if (dx !== 0 || dy !== 0)
+      moveCamera(
+        { ...camera, x: camera.x + dx / camera.zoom, y: camera.y + dy / camera.zoom },
+        duration,
+      );
+  }
+  function moveCamera(value: Camera, duration?: number) {
+    animation = undefined;
+    if (
+      duration !== undefined &&
+      view &&
+      options.motion !== 'none' &&
+      !view.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+    ) {
+      animation = {
+        from: { ...camera },
+        to: clamp(value),
+        start: view.performance.now(),
+        duration,
+      };
+      moving();
+      schedule();
+    } else change(value);
+  }
   function resize() {
     const bounds = elements?.stage.getBoundingClientRect();
     stageSize = { width: bounds?.width ?? 0, height: bounds?.height ?? 0 };
     loaderDirty = true;
+    updateSafeArea();
     const width = stageSize.width;
     const next = breakpoints.filter((entry) => entry.minWidth <= width).at(-1)?.name ?? null;
     if (next !== breakpoint) {
@@ -361,8 +431,10 @@ export function createCanvas(options: CanvasOptions): CanvasController {
     schedule();
   }
   function zoomTo(value: number, screenPoint?: Point) {
-    const stage = size();
-    const anchor = screenPoint ?? { x: stage.width / 2, y: stage.height / 2 };
+    const anchor = screenPoint ?? {
+      x: safeArea.x + safeArea.width / 2,
+      y: safeArea.y + safeArea.height / 2,
+    };
     point('screenPoint', anchor);
     const world = screenToWorld(camera, anchor);
     const zoom = Math.max(min, Math.min(max, value));
@@ -373,7 +445,7 @@ export function createCanvas(options: CanvasOptions): CanvasController {
     if (!elements) return;
     writeFrame += 1;
     if (animation) {
-      const progress = Math.min(1, (time - animation.start) / 200);
+      const progress = Math.min(1, (time - animation.start) / animation.duration);
       const { from, to } = animation;
       change(
         progress === 1
@@ -530,6 +602,7 @@ export function createCanvas(options: CanvasOptions): CanvasController {
     elements = undefined;
     view = undefined;
     stageSize = { width: 0, height: 0 };
+    updateSafeArea();
     detaching = false;
   }
 
@@ -676,6 +749,7 @@ export function createCanvas(options: CanvasOptions): CanvasController {
       for (const callbacks of Object.values(listeners)) callbacks.clear();
       queued = [];
       nodes.clear();
+      chrome.clear();
       selection = [];
     },
     setNodes(values) {
@@ -788,6 +862,52 @@ export function createCanvas(options: CanvasOptions): CanvasController {
       alive();
       return breakpoint;
     },
+    setChrome(surface) {
+      alive();
+      object('chrome', surface);
+      if (typeof surface.id !== 'string' || !surface.id.trim()) invalid('chrome.id', surface.id);
+      if (!['top', 'right', 'bottom', 'left'].includes(surface.edge))
+        invalid('chrome.edge', surface.edge);
+      rect('chrome.rect', surface.rect);
+      if (typeof surface.open !== 'boolean') invalid('chrome.open', surface.open);
+      const previous = chrome.get(surface.id);
+      const next = { ...surface, rect: { ...surface.rect } };
+      chrome.set(next.id, next);
+      updateSafeArea();
+      if (!next.open) return;
+      const expanded =
+        !previous?.open ||
+        previous.edge !== next.edge ||
+        next.rect.x < previous.rect.x ||
+        next.rect.y < previous.rect.y ||
+        next.rect.x + next.rect.width > previous.rect.x + previous.rect.width ||
+        next.rect.y + next.rect.height > previous.rect.y + previous.rect.height;
+      if (!expanded) return;
+      const bounds = boundsFor(selection);
+      if (!bounds) return;
+      const start = worldToScreen(camera, bounds);
+      const width = bounds.width * camera.zoom;
+      const height = bounds.height * camera.zoom;
+      const coveredWidth = Math.max(
+        0,
+        Math.min(start.x + width, next.rect.x + next.rect.width) - Math.max(start.x, next.rect.x),
+      );
+      const coveredHeight = Math.max(
+        0,
+        Math.min(start.y + height, next.rect.y + next.rect.height) - Math.max(start.y, next.rect.y),
+      );
+      if (coveredWidth * coveredHeight > (width * height) / 2)
+        revealBounds(bounds, 'minimal', CHROME_TRANSITION_MS);
+    },
+    removeChrome(id) {
+      alive();
+      if (!chrome.delete(id)) invalid('chrome.id', id);
+      updateSafeArea();
+    },
+    getSafeArea() {
+      alive();
+      return { ...safeArea };
+    },
     getLevel(id) {
       alive();
       if (id !== undefined) requireNode(id);
@@ -815,17 +935,7 @@ export function createCanvas(options: CanvasOptions): CanvasController {
       if (settings !== undefined) object('setCamera.options', settings);
       if (settings?.animate !== undefined && typeof settings.animate !== 'boolean')
         invalid('animate', settings.animate);
-      animation = undefined;
-      if (
-        settings?.animate &&
-        view &&
-        options.motion !== 'none' &&
-        !view.matchMedia?.('(prefers-reduced-motion: reduce)').matches
-      ) {
-        animation = { from: { ...camera }, to: clamp(value), start: view.performance.now() };
-        moving();
-        schedule();
-      } else change(value);
+      moveCamera(value, settings?.animate ? CAMERA_MOVE_MS : undefined);
     },
     panBy(dxScreen, dyScreen) {
       alive();
@@ -853,26 +963,21 @@ export function createCanvas(options: CanvasOptions): CanvasController {
       positive('maxZoom', maxZoom);
       const ids =
         target === 'all' ? [...nodes.keys()] : target === 'selection' ? selection : target;
-      const values = ids.map((id) => requireNode(id, 'target.id').bounds);
-      if (!values.length) return;
-      const left = Math.min(...values.map((bounds) => bounds.x));
-      const top = Math.min(...values.map((bounds) => bounds.y));
-      const right = Math.max(...values.map((bounds) => bounds.x + bounds.width));
-      const bottom = Math.max(...values.map((bounds) => bounds.y + bounds.height));
-      const stage = size();
+      const bounds = boundsFor(ids);
+      if (!bounds) return;
       const zoom = Math.max(
         min,
         Math.min(
           max,
           maxZoom,
-          Math.max(0, stage.width - 2 * padding) / (right - left || 1),
-          Math.max(0, stage.height - 2 * padding) / (bottom - top || 1),
+          Math.max(0, safeArea.width - 2 * padding) / (bounds.width || 1),
+          Math.max(0, safeArea.height - 2 * padding) / (bounds.height || 1),
         ),
       );
       controller.setCamera(
         {
-          x: (left + right) / 2 - stage.width / (2 * zoom),
-          y: (top + bottom) / 2 - stage.height / (2 * zoom),
+          x: bounds.x + bounds.width / 2 - (safeArea.x + safeArea.width / 2) / zoom,
+          y: bounds.y + bounds.height / 2 - (safeArea.y + safeArea.height / 2) / zoom,
           zoom,
         },
         { animate: true },
@@ -884,19 +989,7 @@ export function createCanvas(options: CanvasOptions): CanvasController {
       if (settings !== undefined) object('reveal.options', settings);
       const mode = settings?.mode === undefined ? 'minimal' : settings.mode;
       if (mode !== 'minimal' && mode !== 'center') invalid('mode', mode);
-      const stage = size();
-      const width = stage.width / camera.zoom;
-      const height = stage.height / camera.zoom;
-      let { x, y } = camera;
-      if (mode === 'center' || bounds.width > width) x = bounds.x + bounds.width / 2 - width / 2;
-      else if (bounds.x < x) x = bounds.x;
-      else if (bounds.x + bounds.width > x + width) x = bounds.x + bounds.width - width;
-      if (mode === 'center' || bounds.height > height)
-        y = bounds.y + bounds.height / 2 - height / 2;
-      else if (bounds.y < y) y = bounds.y;
-      else if (bounds.y + bounds.height > y + height) y = bounds.y + bounds.height - height;
-      if (x !== camera.x || y !== camera.y)
-        controller.setCamera({ ...camera, x, y }, { animate: true });
+      revealBounds(bounds, mode);
     },
     worldToScreen(value) {
       alive();
