@@ -407,14 +407,51 @@
 .canvas-chrome-root[data-layout="mobile"] button {
   min-width: 44px;
   min-height: 44px;
+  flex-shrink: 0;
+}
+
+.canvas-chrome-root[data-layout="mobile"] {
+  display: grid;
+  grid-template-columns: minmax(48px, max-content) minmax(96px, 152px) minmax(48px, 1fr);
+  align-content: start;
+  gap: var(--canvas-chrome-gap);
+  padding: calc(var(--canvas-chrome-inset) + env(safe-area-inset-top))
+    calc(16px + env(safe-area-inset-right)) 0 calc(16px + env(safe-area-inset-left));
 }
 
 .canvas-chrome-root[data-layout="mobile"] .canvas-chrome-slot {
   height: 48px;
 }
 
+.canvas-chrome-root[data-layout="mobile"] .canvas-chrome-menu,
+.canvas-chrome-root[data-layout="mobile"] .canvas-chrome-zoom,
+.canvas-chrome-root[data-layout="mobile"] .canvas-chrome-action {
+  position: relative;
+  inset: auto;
+  grid-row: 1;
+  min-width: 0;
+  padding: 1px;
+}
+
 .canvas-chrome-root[data-layout="mobile"] .canvas-chrome-menu {
-  top: calc(72px + env(safe-area-inset-top));
+  grid-column: 1;
+}
+
+.canvas-chrome-root[data-layout="mobile"] .canvas-chrome-view-picker {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.canvas-chrome-root[data-layout="mobile"] .canvas-chrome-view-picker > :first-child {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.canvas-chrome-root[data-layout="mobile"] .canvas-chrome-action {
+  grid-column: 3;
+  justify-self: end;
 }
 
 .canvas-chrome-mobile-menu-label {
@@ -424,11 +461,27 @@
 .canvas-chrome-root[data-layout="mobile"] .canvas-chrome-toolbar {
   top: auto;
   bottom: calc(var(--canvas-chrome-inset) + env(safe-area-inset-bottom));
+  padding: 1px;
 }
 
 .canvas-chrome-root[data-layout="mobile"] .canvas-chrome-zoom {
-  top: calc(var(--canvas-chrome-inset) + env(safe-area-inset-top));
-  bottom: auto;
+  grid-column: 2;
+  width: auto;
+  container-type: inline-size;
+  container-name: canvas-chrome-zoom;
+  justify-content: space-between;
+}
+
+@container canvas-chrome-zoom (width < 148px) {
+  .canvas-chrome-zoom output {
+    display: none;
+  }
+}
+
+@media (max-width: 359.99px) {
+  .canvas-chrome-root[data-layout="mobile"] {
+    grid-template-columns: minmax(48px, max-content) 96px minmax(48px, 1fr);
+  }
 }
 
 .canvas-chrome-root[data-layout="mobile"] .canvas-chrome-sidebar,

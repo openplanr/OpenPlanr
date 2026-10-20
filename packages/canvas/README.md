@@ -229,9 +229,16 @@ with a registered canvas. `HelpButton` accepts `onClick`.
 `WelcomeHints({ actions })` presents real product actions while the canvas has
 no nodes and anchors its labels to the measured menu and toolbar.
 `ToolbarHint({ id, children })` remembers dismissal through the storage adapter.
-Below the mobile breakpoint the toolbar moves to the bottom, zoom to the top
-left, panels become exclusive bottom sheets, and secondary controls move into
-the menu. Structural tokens in `styles.css` provide shared spacing and sizes;
+Below the mobile breakpoint the menu, zoom and action pills share one top row,
+with 16 px side gutters plus safe-area insets and a 12 px gap. CSS Grid positions
+zoom beside the menu's computed width and keeps actions at the right edge.
+The row reserves one top safe-area band ending 12 px below the pills. Slots are
+48 px tall with at least 44 px touch targets. Below 360 px, including 320 px,
+zoom compacts to minus and plus buttons; its percentage also hides whenever its
+grid track cannot fit the text. Wide view-picker labels truncate as needed.
+The toolbar stays at the bottom centre, panels become exclusive bottom sheets,
+and secondary controls move into the menu.
+Structural tokens in `styles.css` provide shared spacing and sizes;
 products theme the neutral tokens, `--canvas-chrome-accent` and
 `--canvas-chrome-focus`. Motion uses transform and opacity and respects reduced
 motion preferences.

@@ -487,14 +487,29 @@ describe('floating chrome slots', () => {
       if (this.matches('.canvas-stage')) return new DOMRect(0, 0, 390, 844);
       const name = this.getAttribute('data-chrome-slot');
       if (name === 'sidebar' || name === 'navigation') return new DOMRect(0, 380, 390, 464);
-      if (name === 'toolbar') return new DOMRect(70, 788, 250, 44);
-      if (name === 'zoom' || name === 'menu') return new DOMRect(12, 12, 120, 44);
-      return new DOMRect();
+      if (name === 'toolbar') return new DOMRect(70, 784, 250, 48);
+      const row: Record<string, DOMRect> = {
+        menu: new DOMRect(16, 12, 120, 48),
+        zoom: new DOMRect(148, 12, 152, 48),
+        action: new DOMRect(326, 12, 48, 48),
+      };
+      return row[name ?? ''] ?? new DOMRect();
     });
     render(<Tree />);
     expect(current().layout).toBe('mobile');
+    for (const id of ['menu', 'zoom', 'action'])
+      expect(
+        vi
+          .mocked(canvas().setChrome)
+          .mock.calls.some(
+            ([surface]) => surface.id === id && surface.edge === 'top' && surface.open,
+          ),
+      ).toBe(true);
+    expect(canvas().getSafeArea().y).toBe(72);
+    expect(current().safeArea.y).toBe(72);
     fireEvent.click(screen.getByRole('button', { name: 'Sidebar' }));
     const controllerArea = canvas().getSafeArea();
+    expect(controllerArea.y).toBe(72);
     expect(controllerArea.y + controllerArea.height).toBeLessThanOrEqual(380);
     expect(current().safeArea).toEqual(controllerArea);
     expect(current().safeArea.y + current().safeArea.height).toBeLessThanOrEqual(380);

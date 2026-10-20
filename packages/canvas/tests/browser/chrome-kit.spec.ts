@@ -254,19 +254,56 @@ test('panel and hint persistence round trip and adapter failures are observable'
   );
 });
 
-test('mobile uses a bottom tool pill, top-left zoom, one sheet, and menu overflow', async ({
+async function expectMobileRow(page: Page, width: number) {
+  const rects = [];
+  for (const name of ['menu', 'zoom', 'action']) {
+    const rect = await page.locator(slot(name)).boundingBox();
+    if (!rect) throw new Error(`Mobile ${name} pill did not render`);
+    expect(rect.height).toBe(48);
+    rects.push(rect);
+  }
+  const [menu, zoom, action] = rects;
+  if (!menu || !zoom || !action) throw new Error('Mobile top row is incomplete');
+  expect(menu.x).toBe(16);
+  expect(menu.y).toBe(12);
+  expect(action.x + action.width).toBe(width - 16);
+  expect(zoom.y).toBe(menu.y);
+  expect(action.y).toBe(menu.y);
+  expect(zoom.x).toBeGreaterThanOrEqual(menu.x + menu.width + 12);
+  for (let index = 0; index < rects.length; index += 1) {
+    const left = rects[index];
+    if (!left) throw new Error(`Mobile row rect ${index} is missing`);
+    for (const right of rects.slice(index + 1))
+      expect(left.x + left.width).toBeLessThanOrEqual(right.x);
+  }
+  const buttons = await page.locator('.canvas-chrome-root button:visible').evaluateAll((items) =>
+    items.map((item) => {
+      const rect = item.getBoundingClientRect();
+      return { width: rect.width, height: rect.height };
+    }),
+  );
+  for (const button of buttons) {
+    expect(button.width).toBeGreaterThanOrEqual(44);
+    expect(button.height).toBeGreaterThanOrEqual(44);
+  }
+  const top = Math.max(...rects.map((rect) => rect.y + rect.height)) + 12;
+  await expect.poll(async () => (await state(page)).safeArea.y).toBe(top);
+  await expect.poll(() => page.evaluate(() => window.canvas.getSafeArea().y)).toBe(top);
+  return top;
+}
+
+test('mobile uses one top row, a bottom tool pill, one sheet, and menu overflow', async ({
   page,
 }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await openChrome(page);
   expect((await state(page)).layout).toBe('mobile');
   const toolbar = await page.locator(slot('toolbar')).boundingBox();
-  const zoom = await page.locator(slot('zoom')).boundingBox();
-  if (!toolbar || !zoom) throw new Error('Mobile toolbar or zoom did not render');
+  if (!toolbar) throw new Error('Mobile toolbar did not render');
+  const top = await expectMobileRow(page, 390);
+  await expect(page.locator(`${slot('zoom')} output`)).toBeVisible();
   expect(toolbar.y).toBeGreaterThan(700);
   expect(Math.abs(toolbar.x + toolbar.width / 2 - 195)).toBeLessThanOrEqual(4);
-  expect(zoom.x).toBeLessThanOrEqual(20);
-  expect(zoom.y).toBeLessThanOrEqual(20);
   await expect(page.locator(slot('history'))).not.toBeVisible();
   await expect(page.locator(slot('help'))).not.toBeVisible();
   await page.getByRole('button', { name: 'More tools', exact: true }).click();
@@ -292,6 +329,7 @@ test('mobile uses a bottom tool pill, top-left zoom, one sheet, and menu overflo
     })
     .toBeLessThanOrEqual(sheet.y);
   const controllerArea = await page.evaluate(() => window.canvas.getSafeArea());
+  expect(controllerArea.y).toBe(top);
   expect(controllerArea.y + controllerArea.height).toBeLessThanOrEqual(sheet.y);
   await expect.poll(async () => (await state(page)).safeArea).toEqual(controllerArea);
   await page.evaluate(() => {
@@ -301,6 +339,24 @@ test('mobile uses a bottom tool pill, top-left zoom, one sheet, and menu overflo
   });
   await expect.poll(async () => (await state(page)).panels.sidebar?.open).toBe(false);
   await expect.poll(async () => (await state(page)).panels.navigation?.open).toBe(true);
+});
+
+test('mobile row compacts zoom at 320 pixels and follows wider menus at 390', async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 640 });
+  await openChrome(page);
+  await expectMobileRow(page, 320);
+  await expect(page.locator(`${slot('zoom')} output`)).not.toBeVisible();
+  await expect(page.getByRole('button', { name: 'Zoom out', exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Zoom in', exact: true })).toBeVisible();
+  for (const label of ['A wider canvas view', 'An exceptionally long canvas view picker label']) {
+    await page.locator('.canvas-chrome-view-picker > :first-child').evaluate((picker, text) => {
+      picker.textContent = text;
+    }, label);
+    await expectMobileRow(page, 320);
+    await expect(page.locator(`${slot('zoom')} output`)).not.toBeVisible();
+  }
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expectMobileRow(page, 390);
 });
 
 test('one-panel mode closes the opposite panel', async ({ page }) => {
