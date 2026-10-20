@@ -304,7 +304,9 @@ dropped frames at fit remain pending. Missing sections are pending and malformed
 fields throw `TypeError`. `aggregateLayoutShifts(evidence, { inputPhase })` counts
 all canvas shifts with `inputPhase: () => false`; consumers can classify input
 phases with an optional `inputWindowMs` (500 ms by default).
-The untraced `tests/browser/budgets.spec.ts` covers every seeded fixture, renderer
-and DPR with hit tests, sixteen chrome toggles, both LOD bands and 50/500 pins.
+The untraced `tests/browser/budgets.spec.ts` covers enabled fixtures, renderers
+and DPRs with hit tests, sixteen chrome toggles, both LOD bands and 50/500 pins.
 Its report is `test-results/canvas-budgets-${gpuMode}.json`. Both reports include
 browser/version, GPU mode, renderer strings, build commit and package version.
+Set `CANVAS_SECOND_DENSITY=1` to include HTML fixtures `708-477` and `5000-8499`
+in both benches; both reports record `secondDensity`.

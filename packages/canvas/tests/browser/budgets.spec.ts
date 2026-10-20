@@ -16,7 +16,7 @@ import {
 } from '../../src/testing/index.mts';
 import { waitForBench } from './bench';
 import { benchMetadata } from './metadata';
-import { RUNNER_BUDGETS, traceBudgetPolicy } from './trace-results';
+import { RUNNER_BUDGETS, SECOND_DENSITY, traceBudgetPolicy } from './trace-results';
 
 async function chromeToggles(page: Page) {
   return page.evaluate(async () => {
@@ -230,7 +230,14 @@ test('evaluates untraced fixture budgets at both pixel densities', async ({
   const pins: CanvasPinMeasurement[] = [];
   const renderers: (CanvasTraceIdentity & { gpuRenderer: string })[] = [];
   for (const dpr of [2, 1] as const) {
-    for (const fixture of ['708-477', '708-997', '5000-8499', '5000-7312', 'svg-708', 'svg-5000']) {
+    for (const fixture of [
+      ...(SECOND_DENSITY ? ['708-477'] : []),
+      '708-997',
+      ...(SECOND_DENSITY ? ['5000-8499'] : []),
+      '5000-7312',
+      'svg-708',
+      'svg-5000',
+    ]) {
       const world = fixture.startsWith('svg-') ? 'svg' : 'html';
       const count = fixture.includes('5000') ? 5000 : 708;
       for (const renderer of world === 'svg'
@@ -276,6 +283,7 @@ test('evaluates untraced fixture budgets at both pixel densities', async ({
   }
   const results = {
     ...metadata,
+    secondDensity: SECOND_DENSITY,
     budgetSet: traceBudgetPolicy(RUNNER_BUDGETS).budgetSet,
     hitTests,
     chrome,

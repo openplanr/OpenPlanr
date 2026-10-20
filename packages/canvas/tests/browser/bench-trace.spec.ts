@@ -24,6 +24,7 @@ import {
   DOM_NODE_BUDGET,
   domBudgetPolicy,
   RUNNER_BUDGETS,
+  SECOND_DENSITY,
   type TraceRun,
   traceBudgetPolicy,
   traceOwnership,
@@ -137,6 +138,7 @@ type Measurement = {
 
 type Tier = {
   count: 708 | 5000;
+  fixture: string;
   world: 'html' | 'svg';
   dpr: 1 | 2;
   renderer?: 'vanilla' | 'react';
@@ -210,8 +212,7 @@ async function recordRuns(
 }
 
 async function measureTier(browser: Browser, baseURL: string, tier: Tier): Promise<Measurement[]> {
-  const { count, world, dpr, renderer = 'vanilla' } = tier;
-  const fixture = world === 'svg' ? `svg-${count}` : count === 708 ? '708-997' : '5000-7312';
+  const { count, fixture, world, dpr, renderer = 'vanilla' } = tier;
   const url = `${baseURL}/${renderer === 'react' ? 'react.html' : ''}?fixture=${fixture}&world=${world}`;
   const mainBudget =
     CANVAS_TRACE_BUDGETS.rendererMainP95Ms[world === 'svg' ? 'svg' : renderer][count];
@@ -290,19 +291,52 @@ test('records production camera traces beside the reference budgets', async ({
   const measurements: Measurement[] = [];
   for (const dpr of [2, 1] as const) {
     for (const count of [708, 5000] as const) {
+      const fixture = count === 708 ? '708-997' : '5000-7312';
       for (const world of ['html', 'svg'] as const) {
-        measurements.push(...(await measureTier(browser, baseURL, { count, world, dpr })));
+        measurements.push(
+          ...(await measureTier(browser, baseURL, {
+            count,
+            fixture: world === 'svg' ? `svg-${count}` : fixture,
+            world,
+            dpr,
+          })),
+        );
       }
       measurements.push(
-        ...(await measureTier(browser, baseURL, { count, world: 'html', dpr, renderer: 'react' })),
+        ...(await measureTier(browser, baseURL, {
+          count,
+          fixture,
+          world: 'html',
+          dpr,
+          renderer: 'react',
+        })),
       );
+      if (SECOND_DENSITY) {
+        for (const renderer of ['vanilla', 'react'] as const) {
+          measurements.push(
+            ...(await measureTier(browser, baseURL, {
+              count,
+              fixture: count === 708 ? '708-477' : '5000-8499',
+              world: 'html',
+              dpr,
+              renderer,
+            })),
+          );
+        }
+      }
     }
   }
   const metadata = benchMetadata(browser, browserName);
-  const results = { ...metadata, budgetSet: budgets.budgetSet, measurements };
+  const results = {
+    ...metadata,
+    secondDensity: SECOND_DENSITY,
+    budgetSet: budgets.budgetSet,
+    measurements,
+  };
   const evaluations = ([708, 5000] as const).map((tier) => evaluateCanvasTrace(results, tier));
   const report = {
     ...metadata,
+    secondDensity: SECOND_DENSITY,
     evaluations,
     runner: {
       os: platform(),

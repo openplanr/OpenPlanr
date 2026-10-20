@@ -8,6 +8,13 @@ export { domBudgetPolicy, traceBudgetPolicy, traceOwnership } from '../../src/te
 
 export const DOM_NODE_BUDGET = CANVAS_TRACE_BUDGETS.domNodes;
 export const RUNNER_BUDGETS = process.env.CI === 'true';
+export const SECOND_DENSITY = parseSecondDensity(process.env.CANVAS_SECOND_DENSITY);
+
+export function parseSecondDensity(value: string | undefined): boolean {
+  if (value === undefined || value === '0') return false;
+  if (value === '1') return true;
+  throw new TypeError(`CANVAS_SECOND_DENSITY: expected 0 or 1; received ${JSON.stringify(value)}`);
+}
 
 export type TraceRun = {
   react?: ReactScenarioMetrics;
