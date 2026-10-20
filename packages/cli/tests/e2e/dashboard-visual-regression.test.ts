@@ -30,6 +30,11 @@ import {
   dashboardRouteDefinition,
   parseDashboardRoute,
 } from '../../../../apps/dashboard/src/app/router.js';
+import {
+  assertBrandGalleryEvidence,
+  brandGalleryStates,
+  recordBrandGalleryEvidence,
+} from '../../../../apps/dashboard/tests/helpers/brand-gallery-fixture.mjs';
 import { installDashboardLayoutShifts } from '../dashboard/fixtures/dashboard-layout-shifts.js';
 import { registerDashboardPerformanceTraceTests } from './fixtures/dashboard-performance-trace.js';
 import {
@@ -40,6 +45,37 @@ import {
 } from './fixtures/dashboard-route-catalog.js';
 
 registerDashboardPerformanceTraceTests();
+
+test('records fixture-only Tokens, Components and States in both themes', async ({
+  page,
+}, testInfo) => {
+  const errors: string[] = [];
+  page.on('pageerror', (error) => errors.push(error.message));
+  for (const theme of ['dark', 'light']) {
+    for (const state of brandGalleryStates) {
+      await page.emulateMedia({
+        reducedMotion: state === 'reduced-motion' ? 'reduce' : 'no-preference',
+      });
+      const response = await page.goto(
+        `/__fixture/brand-gallery?${new URLSearchParams({ theme, state })}`,
+      );
+      expect(response?.ok()).toBe(true);
+      await expect(page.locator('[data-brand-gallery]')).toBeVisible();
+      await page.evaluate(() => document.fonts.ready);
+      const evidence = await recordBrandGalleryEvidence(page, { theme, state });
+      await testInfo.attach(`brand-gallery-${theme}-${state}.json`, {
+        body: Buffer.from(JSON.stringify(evidence, null, 2)),
+        contentType: 'application/json',
+      });
+      assertBrandGalleryEvidence(evidence);
+    }
+    await page.screenshot({
+      path: testInfo.outputPath(`brand-gallery-${theme}.png`),
+      fullPage: true,
+    });
+  }
+  expect(errors).toEqual([]);
+});
 
 const TEST_ROOT = dirname(fileURLToPath(import.meta.url));
 const FIXTURE_ORIGIN = `http://127.0.0.1:${process.env.OPENPLANR_DASHBOARD_FIXTURE_PORT ?? '4173'}`;

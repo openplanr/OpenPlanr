@@ -2,6 +2,7 @@ import { createRequire } from 'node:module';
 import { dirname, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { sha256Jcs } from 'planr-pipeline/dashboard/verified-json';
+import { brandGalleryDocument } from '../../../../../apps/dashboard/tests/helpers/brand-gallery-fixture.mjs';
 import {
   createDashboardApiFixture,
   createDashboardReviewTerminal,
@@ -665,6 +666,25 @@ async function commandResponse(request, response, pathname) {
 async function routeApi(request, response, next) {
   const url = new URL(request.url, DASHBOARD_FIXTURE_ORIGIN);
   const { pathname } = url;
+  if (pathname === '/__fixture/brand-gallery') {
+    try {
+      if (request.method !== 'GET') throw new TypeError('Gallery fixture is GET-only.');
+      const html = await brandGalleryDocument({
+        theme: url.searchParams.get('theme') ?? 'dark',
+        state: url.searchParams.get('state') ?? 'normal',
+      });
+      response.writeHead(200, {
+        'content-type': 'text/html; charset=utf-8',
+        'cache-control': 'no-store',
+      });
+      response.end(html);
+    } catch (error) {
+      responseJson(response, 500, {
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+    return;
+  }
   if (pathname.startsWith('/__production/') || pathname.startsWith('/__fixture/')) {
     try {
       servePremiumFixture(request, response, fixture.planning.binding);
