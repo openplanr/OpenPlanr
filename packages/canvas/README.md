@@ -275,10 +275,13 @@ unrounded milliseconds per query. A separate 968-node remount trace gates its 16
 p95 and checks at most 200 admissions per frame across at least five frames.
 Only `CI=true` selects runner budgets: remount main-thread p95 and rAF intervals
 remain recorded without failing assertions because software GL has noisy remount
-timings and can present at 30 fps. Local remounts keep the 16 ms limit enforced.
+timings and can present at 30 fps. The first fixture frame p50 gates at 250 ms on
+the runner, whose cold software-GL page loads measure about three times the local
+time, and at 150 ms locally. Local remounts keep the 16 ms limit enforced.
 Every other budget and gate stays unchanged. The printed table,
 JSON report and its attachment identify the `local` or `runner` budget set and
-effective limits. Runner remounts show `reported (reference 16)` in the table,
+effective limits. Runner remounts show `reported (reference 16)` and runner first
+frames `250 (reference 150)` in the table,
 JSON report and attachment. The JSON retains reference limits; a `null` effective
 remount or rAF limit means it is reported only.
 The 5,000 SVG stress tier remains reported. Browser traces

@@ -9,11 +9,13 @@ export function traceBudgetPolicy(runnerBudgets: boolean): {
   budgetSet: 'local' | 'runner';
   remountRendererMainP95Ms: number | null;
   rafIntervalP95Ms: number | null;
+  firstFrameP50Ms: number;
 } {
   return {
     budgetSet: runnerBudgets ? 'runner' : 'local',
     remountRendererMainP95Ms: runnerBudgets ? null : 16,
     rafIntervalP95Ms: runnerBudgets ? null : 16.8,
+    firstFrameP50Ms: runnerBudgets ? 250 : 150,
   };
 }
 
