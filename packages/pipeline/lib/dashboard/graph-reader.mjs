@@ -441,6 +441,20 @@ function buildNode(absPath, planrDir, includeBody, throwOnReadError = false) {
  * @param {{ includeBody?: boolean, validate?: boolean }} [opts]
  * @returns {{ nodes: object[], edges: object[] }}
  */
+/** True when the file name starts with the id's last segment, followed by `-` or `.`. */
+function namedAfterId(entry) {
+  const localId = entry.node.id.split('/').at(-1);
+  const name = basename(entry.sourcePath);
+  return name.startsWith(localId) && /^[-.]/u.test(name.slice(localId.length));
+}
+
+/** Duplicate precedence: the id-named file wins, then the lexically smallest path. */
+function precedesDuplicate(candidate, current) {
+  const named = namedAfterId(candidate);
+  if (named !== namedAfterId(current)) return named;
+  return candidate.sourcePath < current.sourcePath;
+}
+
 function readGraphData(planrDir, opts = {}, sourcePaths = new Map(), diagnostics = []) {
   const includeBody = opts.includeBody === true;
   const shouldValidate = opts.validate !== false;
@@ -464,27 +478,35 @@ function readGraphData(planrDir, opts = {}, sourcePaths = new Map(), diagnostics
   }
 
   const files = collectArtifacts(planrDir, opts.strict === true);
-  const nodes = [];
-  const idSet = new Set();
+  const entries = [];
   for (const file of files) {
     const node = buildNode(file, planrDir, includeBody, opts.strict === true);
     if (!node || !node.id) continue;
-    // Namespacing makes story/task ids globally unique, so the old silent
-    // "first wins" collapse is gone. Guard only against a genuine exact-duplicate
-    // global id (the schema requires unique ids; a true dup is a data error).
-    if (idSet.has(node.id)) {
+    entries.push({ node, sourcePath: relative(planrDir, file).split(sep).join('/') });
+  }
+  const winners = new Map();
+  for (const entry of entries) {
+    const current = winners.get(entry.node.id);
+    if (!current || precedesDuplicate(entry, current)) winners.set(entry.node.id, entry);
+  }
+  const nodes = [];
+  const idSet = new Set();
+  for (const entry of entries) {
+    // A duplicate id is a data error; the winner follows one stated rule so the result
+    // never depends on directory listing order, and every other copy is reported.
+    if (winners.get(entry.node.id) !== entry) {
       diagnostics.push({
-        nodeId: node.id,
-        sourcePath: relative(planrDir, file).split(sep).join('/'),
+        nodeId: entry.node.id,
+        sourcePath: entry.sourcePath,
         field: 'id',
         reason: 'duplicate-identity',
         classification: 'source-data',
       });
       continue;
     }
-    sourcePaths.set(node.id, relative(planrDir, file).split(sep).join('/'));
-    idSet.add(node.id);
-    nodes.push(node);
+    sourcePaths.set(entry.node.id, entry.sourcePath);
+    idSet.add(entry.node.id);
+    nodes.push(entry.node);
   }
 
   const edges = [];

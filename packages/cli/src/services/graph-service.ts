@@ -281,6 +281,25 @@ function buildNode(absPath: string, planrDir: string, includeBody: boolean): Gra
   return node;
 }
 
+interface SourcedNode {
+  node: GraphNode;
+  sourcePath: string;
+}
+
+/** True when the file name starts with the id's last segment, followed by `-` or `.`. */
+function namedAfterId(entry: SourcedNode): boolean {
+  const localId = entry.node.id.split('/').at(-1) ?? entry.node.id;
+  const name = path.posix.basename(entry.sourcePath);
+  return name.startsWith(localId) && /^[-.]/u.test(name.slice(localId.length));
+}
+
+/** Duplicate precedence: the id-named file wins, then the lexically smallest path. */
+function precedesDuplicate(candidate: SourcedNode, current: SourcedNode): boolean {
+  const named = namedAfterId(candidate);
+  if (named !== namedAfterId(current)) return named;
+  return candidate.sourcePath < current.sourcePath;
+}
+
 function readGraphData(
   planrDir: string,
   opts: ReadGraphOptions = {},
@@ -297,25 +316,35 @@ function readGraphData(
   }
   if (!stat.isDirectory()) return { nodes: [], edges: [] };
 
-  const nodes: GraphNode[] = [];
-  const idSet = new Set<string>();
+  const entries: SourcedNode[] = [];
   for (const file of collectArtifacts(planrDir)) {
     const node = buildNode(file, planrDir, opts.includeBody === true);
     if (!node?.id) continue;
-    const sourcePath = path.relative(planrDir, file).split(path.sep).join('/');
-    if (idSet.has(node.id)) {
+    entries.push({ node, sourcePath: path.relative(planrDir, file).split(path.sep).join('/') });
+  }
+  const winners = new Map<string, SourcedNode>();
+  for (const entry of entries) {
+    const current = winners.get(entry.node.id);
+    if (!current || precedesDuplicate(entry, current)) winners.set(entry.node.id, entry);
+  }
+  const nodes: GraphNode[] = [];
+  const idSet = new Set<string>();
+  for (const entry of entries) {
+    // A duplicate id is a data error; the winner follows one stated rule so the result
+    // never depends on directory listing order, and every other copy is reported.
+    if (winners.get(entry.node.id) !== entry) {
       diagnostics.push({
-        nodeId: node.id,
-        sourcePath,
+        nodeId: entry.node.id,
+        sourcePath: entry.sourcePath,
         field: 'id',
         reason: 'duplicate-identity',
         classification: 'source-data',
       });
       continue;
     }
-    sourcePaths.set(node.id, sourcePath);
-    nodes.push(node);
-    idSet.add(node.id);
+    sourcePaths.set(entry.node.id, entry.sourcePath);
+    nodes.push(entry.node);
+    idSet.add(entry.node.id);
   }
 
   const edges: GraphEdge[] = [];
@@ -369,4 +398,31 @@ export function readProjectGraph(
   opts: ReadGraphOptions = {},
 ): ProjectGraph {
   return readGraph(path.join(projectDir, config.outputPaths.agile), opts);
+}
+
+export interface DuplicateIdentity {
+  id: string;
+  keptPath: string;
+  skippedPath: string;
+}
+
+/** The project graph plus every duplicate id the reader skipped, with both source paths. */
+export function readProjectGraphReport(
+  projectDir: string,
+  config: OpenPlanrConfig,
+  opts: ReadGraphOptions = {},
+): { graph: ProjectGraph; duplicates: DuplicateIdentity[] } {
+  const sourcePaths = new Map<string, string>();
+  const diagnostics: PlanningDiagnostic[] = [];
+  const planrDir = path.join(projectDir, config.outputPaths.agile);
+  const graph = readGraphData(planrDir, opts, sourcePaths, diagnostics);
+  const duplicates = diagnostics
+    .filter((diagnostic) => diagnostic.reason === 'duplicate-identity')
+    .map((diagnostic) => {
+      const keptPath = sourcePaths.get(diagnostic.nodeId);
+      if (keptPath === undefined)
+        throw new Error(`Duplicate id ${diagnostic.nodeId} has no kept source path.`);
+      return { id: diagnostic.nodeId, keptPath, skippedPath: diagnostic.sourcePath };
+    });
+  return { graph, duplicates };
 }

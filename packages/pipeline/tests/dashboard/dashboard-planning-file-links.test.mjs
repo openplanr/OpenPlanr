@@ -475,7 +475,7 @@ test('filesystem diagnostics preserve known codes and never echo arbitrary error
   }
 });
 
-test('canonical frontmatter source identity wins over filename lookalikes and duplicate summaries', async (t) => {
+test('the id-named source wins over a duplicate lookalike and alone declares file links', async (t) => {
   const { root, request } = fixture(t);
   const alias = '.planr/specs/SPEC-001-example/tasks/T-000-alias.md';
   fs.writeFileSync(join(root, alias), fs.readFileSync(join(root, sourcePath)));
@@ -486,10 +486,10 @@ test('canonical frontmatter source identity wins over filename lookalikes and du
       .replace('- `src/hello #?.ts`', '- `src/unlisted.ts`'),
   );
   await request('', { detail: true });
-  assert.equal((await request('src/unlisted.ts')).json.state, 'unavailable');
-  assert.equal((await request('src/hello #?.ts')).json.state, 'available');
-  assert.equal((await request(alias)).json.state, 'available');
-  assert.equal((await request(sourcePath)).json.state, 'unavailable');
+  assert.equal((await request('src/unlisted.ts')).json.state, 'available');
+  assert.equal((await request('src/hello #?.ts')).json.state, 'unavailable');
+  assert.equal((await request(alias)).json.state, 'unavailable');
+  assert.equal((await request(sourcePath)).json.state, 'available');
 });
 
 test('selected-source read failures retain safe diagnostics without opening target bodies', async (t) => {
