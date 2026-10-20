@@ -4,8 +4,9 @@
     "module": "ESNext",
     "moduleResolution": "Bundler",
     "allowImportingTsExtensions": true,
+    "jsx": "react-jsx",
     "types": ["node", "vite/client"]
   },
-  "include": ["bench/**/*.ts", "tests/browser/**/*.ts", "playwright.config.ts"],
+  "include": ["bench/**/*.ts", "bench/**/*.tsx", "tests/browser/**/*.ts", "playwright.config.ts"],
   "exclude": []
 }

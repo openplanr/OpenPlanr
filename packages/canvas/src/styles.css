@@ -23,6 +23,18 @@
   transform-origin: 0 0;
 }
 
+.canvas-overview {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.canvas-edges {
+  position: absolute;
+  overflow: visible;
+  pointer-events: none;
+}
+
 .canvas-chrome-root {
   position: fixed;
   inset: 0;

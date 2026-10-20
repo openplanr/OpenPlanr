@@ -1,3 +1,4 @@
+import type { ReactScenarioMetrics } from '../../bench/harness';
 import type { HitTestProbe } from '../../bench/hit-test';
 import type { ScenarioOverviewMetrics } from '../../bench/main';
 
@@ -17,6 +18,7 @@ export function traceBudgetPolicy(runnerBudgets: boolean): {
 }
 
 export type TraceRun = {
+  react?: ReactScenarioMetrics;
   run: number;
   gpuRenderer: string;
   hitTestP95Ms: number;

@@ -105,6 +105,7 @@ type Measurement = {
   ownership: ReturnType<typeof traceOwnership>;
   domBudget: ReturnType<typeof domBudgetPolicy>;
   world: 'html' | 'svg';
+  renderer: 'vanilla' | 'react';
   dpr: number;
   scenario: Scenario | 'remount';
   gpuRenderer: string;
@@ -131,7 +132,12 @@ type Measurement = {
   };
 };
 
-type Tier = { count: 708 | 5000; world: 'html' | 'svg'; dpr: 1 | 2 };
+type Tier = {
+  count: 708 | 5000;
+  world: 'html' | 'svg';
+  dpr: 1 | 2;
+  renderer?: 'vanilla' | 'react';
+};
 
 async function firstFrames(context: BrowserContext, url: string): Promise<number[]> {
   const trials: number[] = [];
@@ -194,16 +200,22 @@ async function recordRuns(
       domNodes: sample.domNodes,
       rendererFrameSamples: rendererSamples.length,
       ...('mountCounts' in sample ? { mountCounts: sample.mountCounts } : {}),
+      ...(sample.react ? { react: sample.react } : {}),
     });
   }
   return runs;
 }
 
 async function measureTier(browser: Browser, baseURL: string, tier: Tier): Promise<Measurement[]> {
-  const { count, world, dpr } = tier;
+  const { count, world, dpr, renderer = 'vanilla' } = tier;
   const fixture = world === 'svg' ? `svg-${count}` : count === 708 ? '708-997' : '5000-7312';
-  const url = `${baseURL}/?fixture=${fixture}&world=${world}`;
-  const mainBudget = world === 'html' ? { 708: 6, 5000: 8 }[count] : { 708: 8, 5000: 12 }[count];
+  const url = `${baseURL}/${renderer === 'react' ? 'react.html' : ''}?fixture=${fixture}&world=${world}`;
+  const mainBudget =
+    renderer === 'react'
+      ? { 708: 8, 5000: 10 }[count]
+      : world === 'html'
+        ? { 708: 6, 5000: 8 }[count]
+        : { 708: 8, 5000: 12 }[count];
   const context = await browser.newContext({
     viewport: { width: 1440, height: 900 },
     deviceScaleFactor: dpr,
@@ -241,6 +253,7 @@ async function measureTier(browser: Browser, baseURL: string, tier: Tier): Promi
           ownership: traceOwnership({ count, world, scenario }),
           domBudget: domBudgetPolicy({ count, world, scenario }),
           world,
+          renderer,
           dpr,
           scenario,
           gpuRenderer: runs[0].gpuRenderer,
@@ -266,7 +279,7 @@ async function measureTier(browser: Browser, baseURL: string, tier: Tier): Promi
   }
 }
 
-test('records production vanilla camera traces beside the reference budgets', async ({
+test('records production camera traces beside the reference budgets', async ({
   browser,
 }, testInfo) => {
   test.setTimeout(1_800_000);
@@ -278,6 +291,9 @@ test('records production vanilla camera traces beside the reference budgets', as
       for (const world of ['html', 'svg'] as const) {
         measurements.push(...(await measureTier(browser, baseURL, { count, world, dpr })));
       }
+      measurements.push(
+        ...(await measureTier(browser, baseURL, { count, world: 'html', dpr, renderer: 'react' })),
+      );
     }
   }
   const report = {
@@ -307,6 +323,12 @@ test('records production vanilla camera traces beside the reference budgets', as
       units: 'milliseconds per query',
       window: 'outside interaction marks',
     },
+    react: {
+      commits: 'DevTools production root commits during each measured scenario',
+      pureCameraFrames: 'interaction frames with no mount or level events',
+      pureCameraCommits:
+        'commits during those pure camera frames; mount and level changes are reported separately',
+    },
     overview: {
       redraws: 'per-scenario difference between final and initial redraw counters',
       cachePixelBytes: 'final reported cache allocation',
@@ -328,17 +350,27 @@ test('records production vanilla camera traces beside the reference budgets', as
   await testInfo.attach('bench-trace', { path: output, contentType: 'application/json' });
   process.stdout.write(
     [
-      '| Fixture | World | DPR | Scenario | Ownership | Budget set | Main p95 median / effective budget ms | Raw main p95s ms | rAF p95 median / effective budget ms | Raw rAF p95s ms | Long tasks per run | Long-task durations per run ms | First frame p50 / budget ms | DOM nodes per run | GPU renderer | Hit-test p95 median / budget ms | DOM ownership | DOM reference budget / regression limit | Hit-test queries per run | Overview redraws per run | Overview cache bytes per run | Peak overview cache bytes per run |',
-      '| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |',
+      '| Fixture | Renderer | World | DPR | Scenario | Ownership | Budget set | Main p95 median / effective budget ms | Raw main p95s ms | rAF p95 median / effective budget ms | Raw rAF p95s ms | Long tasks per run | Long-task durations per run ms | First frame p50 / budget ms | DOM nodes per run | GPU renderer | Hit-test p95 median / budget ms | DOM ownership | DOM reference budget / regression limit | Hit-test queries per run | Overview redraws per run | Overview cache bytes per run | Peak overview cache bytes per run | React metrics per run |',
+      '| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |',
       ...measurements.map(
         (item) =>
-          `| ${item.fixture} | ${item.world} | ${item.dpr} | ${item.scenario} | ${item.ownership} | ${budgets.budgetSet} | ${item.rendererMainP95Ms} / ${item.effectiveBudgets.rendererMainP95Ms ?? `reported (reference ${item.referenceBudgets.rendererMainP95Ms})`} | ${JSON.stringify(item.runs.map((run) => run.rendererMainP95Ms))} | ${item.rafIntervalP95Ms} / ${item.effectiveBudgets.rafIntervalP95Ms ?? `reported (reference ${item.referenceBudgets.rafIntervalP95Ms})`} | ${JSON.stringify(item.runs.map((run) => run.rafIntervalP95Ms))} | ${JSON.stringify(item.runs.map((run) => run.longTasksOver50Ms))} | ${JSON.stringify(item.runs.map((run) => run.longTaskDurationsMs))} | ${item.firstFrameP50Ms} / ${item.referenceBudgets.firstFrameP50Ms} | ${JSON.stringify(item.runs.map((run) => run.domNodes))} | ${item.gpuRenderer} | ${item.hitTestP95Ms} / ${item.referenceBudgets.hitTestP95Ms} | ${item.domBudget.ownership} | ${item.referenceBudgets.domNodes} / ${item.domBudget.regressionLimit ?? 'reported'} | ${JSON.stringify(item.runs.map((run) => run.hitTestProbe.queryCount))} | ${JSON.stringify(item.runs.map((run) => run.overview.redraws))} | ${JSON.stringify(item.runs.map((run) => run.overview.cachePixelBytes))} | ${JSON.stringify(item.runs.map((run) => run.overview.peakCachePixelBytes))} |`,
+          `| ${item.fixture} | ${item.renderer} | ${item.world} | ${item.dpr} | ${item.scenario} | ${item.ownership} | ${budgets.budgetSet} | ${item.rendererMainP95Ms} / ${item.effectiveBudgets.rendererMainP95Ms ?? `reported (reference ${item.referenceBudgets.rendererMainP95Ms})`} | ${JSON.stringify(item.runs.map((run) => run.rendererMainP95Ms))} | ${item.rafIntervalP95Ms} / ${item.effectiveBudgets.rafIntervalP95Ms ?? `reported (reference ${item.referenceBudgets.rafIntervalP95Ms})`} | ${JSON.stringify(item.runs.map((run) => run.rafIntervalP95Ms))} | ${JSON.stringify(item.runs.map((run) => run.longTasksOver50Ms))} | ${JSON.stringify(item.runs.map((run) => run.longTaskDurationsMs))} | ${item.firstFrameP50Ms} / ${item.referenceBudgets.firstFrameP50Ms} | ${JSON.stringify(item.runs.map((run) => run.domNodes))} | ${item.gpuRenderer} | ${item.hitTestP95Ms} / ${item.referenceBudgets.hitTestP95Ms} | ${item.domBudget.ownership} | ${item.referenceBudgets.domNodes} / ${item.domBudget.regressionLimit ?? 'reported'} | ${JSON.stringify(item.runs.map((run) => run.hitTestProbe.queryCount))} | ${JSON.stringify(item.runs.map((run) => run.overview.redraws))} | ${JSON.stringify(item.runs.map((run) => run.overview.cachePixelBytes))} | ${JSON.stringify(item.runs.map((run) => run.overview.peakCachePixelBytes))} | ${JSON.stringify(item.runs.map((run) => run.react ?? null))} |`,
       ),
       '',
     ].join('\n'),
   );
   for (const item of measurements.filter((measurement) => measurement.ownership === 'gated')) {
-    const label = `${item.fixture} ${item.world} DPR ${item.dpr} ${item.scenario}`;
+    const label = `${item.fixture} ${item.renderer} ${item.world} DPR ${item.dpr} ${item.scenario}`;
+    if (item.renderer === 'react') {
+      for (const run of item.runs) {
+        expect.soft(run.react, `${label}: production React counters`).toBeDefined();
+        expect.soft(run.react?.pureCameraCommits, `${label}: pure camera frame commits`).toBe(0);
+        if (item.scenario !== 'remount')
+          expect
+            .soft(run.react?.pureCameraFrames, `${label}: pure camera frame samples`)
+            .toBeGreaterThan(0);
+      }
+    }
     if (item.scenario === 'remount') {
       if (item.effectiveBudgets.rendererMainP95Ms !== null) {
         expect

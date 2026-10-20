@@ -9,7 +9,10 @@ Exports:
 - `.`: `createCanvas`, `cameraFromScreenTranslate`, `cameraToScreenTranslate`,
   `drawCameraOverview`, `drawMinimap`, `minimapToWorld`, `CanvasFocusError`,
   and their camera, geometry, node, options, elements, events and controller types.
-- `./react`: Empty entry reserved for React bindings.
+- `./react`: `CanvasProvider`, `CanvasStage`, `WorldNodes`, `OutlinePanel`,
+  `ChromeProvider`, `useCanvas`, `useCamera`, `useChrome`, `useShortcut`,
+  `formatShortcut`, `useReducedMotion`, `defaultChromeKeymap`, and their prop,
+  state and adapter types.
 - `./testing`: `generateLayeredGraph`, `generateSvgDiagram`, `percentile95`,
   `rendererFrameWork`, and their fixture and trace types.
 - `./styles.css`: Structural canvas styles and z-order variables.
@@ -125,6 +128,84 @@ Event subscriptions return unsubscribe functions. Camera and active-frame
 events coalesce and run after the frame's transform write. Selection changes
 also emit `selection`. Invalid
 inputs throw `TypeError` with the field and value.
+
+## React bindings
+
+Import bindings from `@openplanr/canvas/react` and structural styles from
+`@openplanr/canvas/styles.css`. `CanvasProvider({ label, options?, nodes?, edges?,
+controllerRef?, children? })` creates a controller after mounting and destroys
+it on unmount. `label` and `options` configure that lifetime; remount the provider
+to replace them. `controllerRef` accepts a callback or object ref and receives the
+live controller, then `null` on cleanup. React applications pass geometry through
+the provider's `nodes` prop and do not call `controller.setNodes` directly. The
+provider keeps the latest ID-to-node map in a ref so geometry events can update
+node positions without React state.
+
+`CanvasStage({ className?, children? })` attaches the stage, world, edge SVG and
+overview layers. Put `WorldNodes({ data, renderNode, nodeAttributes?, className? })` inside it;
+`data` is a `ReadonlyMap`, and `renderNode(id, item, level)` receives `undefined`
+when the map has no item for a mounted ID. Each wrapper registers with the
+controller, stays memoized by item identity and level, and reads a new renderer
+function through a ref. A changed renderer alone does not rerender existing
+nodes. `nodeAttributes(id, item, level)` returns wrapper attributes such as
+`role`, `aria-label`, `data-*` and `className`; it uses the same ref and memoization
+rules. Its `className` combines with the shared wrapper `className`. Removed IDs
+stop rendering as soon as the provider's nodes prop changes, before the core's
+next mounted-set update. The product supplies node
+content and its accessible name, including names appropriate to compact content.
+
+`useCanvas()` returns the controller or `null` before its mount effect.
+`useCamera(selector, isEqual = Object.is)` subscribes to selected camera values;
+equal selections retain the previous snapshot. Neither `WorldNodes` nor chrome
+subscribes to camera movement. Server rendering uses the initial camera
+`{ x: 0, y: 0, zoom: 1 }` and creates no controller.
+
+`OutlinePanel({ ids?, rowHeight, height, overscan = 3, renderRow, label,
+onActivate? })` virtualizes a flat `listbox`; the outline has no hierarchy to
+justify tree semantics. Rows expose their complete set size and one-based
+position and use roving focus. ArrowUp/Down, Home/End and PageUp/Down move focus;
+Enter or Space activates. IDs default to `getOutline()`. Activation invokes
+`onActivate(id)` or awaits `focusNode(id)` before selecting it. Use plain content
+in `renderRow(id, index)` so the option itself remains the focus target.
+
+`ChromeProvider({ storage?, onStorageError?, keymap?, mobileBreakpoint = 720,
+onePanelBreakpoint?, children? })` belongs above route content. `useChrome()`
+returns its panel, safe-area, layout, hint, chrome-hidden and pending-inspector
+state and registration/actions. `registerPanel(id, { side, role? })` declares a
+left or right panel; `setPanelOpen`, `togglePanel` and `setPanelPinned` control
+it. Panels start closed and unpinned. One-panel and mobile layouts close the
+opposite side when opening a panel. Selection marks `inspectorPending` while
+the sidebar remains closed.
+
+Register measured surfaces with `registerSurface(id, edge, element, { persistent,
+panelId?, zoom? })`. Only persistent surfaces affect the safe area; `panelId`
+follows its panel's visibility and `zoom` keeps the zoom pill visible when chrome
+is hidden. Safe-area coordinates describe page content when no canvas is mounted
+and are forwarded to the current canvas otherwise. Registrations return cleanup
+functions. `registerRegion(region, element, { panelId? }?)` adds a focus-cycle
+region; `CanvasStage` registers the canvas region itself. F6 and Shift+F6 visit
+skip link, menu, toolbar, action, canvas, sidebar, zoom, history and help, skipping
+closed or absent regions.
+
+`ChromeStorage` supplies `get(key)` and `set(key, value)`, synchronously or through
+promises. Panel open/pinned state and dismissed hints persist through this
+adapter. Failed reads use the closed default and report through
+`onStorageError(error, { key, operation })`; absent that callback errors rethrow.
+The exported `defaultChromeKeymap` binds Alt+BracketLeft to navigation/menu,
+Alt+BracketRight to the sidebar, Alt+KeyZ to hidden chrome, F6 to the next region
+and Shift+F6 to the previous region. Bindings match physical `event.code` plus
+modifiers and ignore editable targets and IME composition. `useShortcut(action)`
+returns the live binding; `formatShortcut(binding, platform?)` formats that same
+binding for hints. `useReducedMotion()` tracks the media preference; the chrome
+state's `transitionMs` provides the shared panel duration. Extend the default
+keymap to customize bindings. `registerMenu(open)` registers the menu action
+when no navigation panel exists and returns its cleanup function.
+
+The React bench at `bench/react.html` uses the same fixtures and trace interface
+as the vanilla page. Its preloaded React DevTools hook counts production commits
+through `onCommitFiberRoot`, exposed as `window.reactCommits`.
+React trace rows report commits, mount and level events, and commit counts for
+camera frames without mount or level changes.
 
 Run `npm test --workspace=@openplanr/canvas`, `npm run test:browser
 --workspace=@openplanr/canvas`, or `npm run bench:trace
