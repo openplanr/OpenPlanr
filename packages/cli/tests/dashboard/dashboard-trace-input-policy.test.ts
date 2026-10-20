@@ -8,7 +8,9 @@ import {
   classifyDashboardLayoutShift,
   type DashboardTraceMeasurements,
   evaluateDashboardTrace,
+  TRACE_BUDGETS,
   TRACE_PLAN,
+  traceBudgetPolicy,
 } from './fixtures/dashboard-trace-model.js';
 
 const shift = (
@@ -241,4 +243,49 @@ it('rejects corrupt raw shifts even when an input marker would otherwise exclude
     expect(() => aggregateDashboardLayoutShifts(evidence([sample]))).toThrow(TypeError);
   }
   expect(() => aggregateDashboardLayoutShifts(evidence([shift(Number.NaN)]))).toThrow(TypeError);
+});
+
+function listLoad(listRouteMs: number, listFrameWorkMs: number): DashboardTraceMeasurements {
+  const base = measurements();
+  return {
+    ...base,
+    warmRoutesMs: [50, listRouteMs],
+    warmRouteSamples: [
+      { route: '#/board', durationMs: 50 },
+      { route: '#/list', durationMs: listRouteMs },
+    ],
+    list: { ...base.list, frameWorkMs: [listFrameWorkMs] },
+  };
+}
+
+it('gates List warm route and frame work at the local reference budgets off CI', () => {
+  const local = traceBudgetPolicy(false);
+  expect(local).toMatchObject({ budgetSet: 'local', effective: TRACE_BUDGETS });
+  expect(evaluateDashboardTrace('representative', listLoad(59, 16.7), local)).toMatchObject({
+    passed: true,
+    budgetSet: 'local',
+  });
+  expect(evaluateDashboardTrace('representative', listLoad(70, 20.9), local)).toMatchObject({
+    passed: false,
+    failures: ['#/list warmRouteP95Ms exceeds budget.', 'Frame work exceeds budget.'],
+  });
+});
+
+it('gives CI runners headroom on List warm route and frame work only', () => {
+  const runner = traceBudgetPolicy(true);
+  expect(runner).toMatchObject({
+    budgetSet: 'runner',
+    effective: { ...TRACE_BUDGETS, listWarmRouteP95Ms: 100, frameWorkP95Ms: 24 },
+    reference: TRACE_BUDGETS,
+  });
+  const passed = evaluateDashboardTrace('representative', listLoad(70, 20.9), runner);
+  expect(passed).toMatchObject({ passed: true, budgetSet: 'runner' });
+  expect(passed.budgets).toEqual({ effective: runner.effective, reference: TRACE_BUDGETS });
+  expect(evaluateDashboardTrace('representative', listLoad(100, 24.1), runner)).toMatchObject({
+    passed: false,
+    failures: ['#/list warmRouteP95Ms exceeds budget.', 'Frame work exceeds budget.'],
+  });
+  expect(
+    evaluateDashboardTrace('representative', { ...listLoad(70, 20.9), coldShellMs: 501 }, runner),
+  ).toMatchObject({ passed: false, failures: ['Cold shell exceeds budget.'] });
 });

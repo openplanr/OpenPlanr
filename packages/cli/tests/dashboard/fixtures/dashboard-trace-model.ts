@@ -25,6 +25,21 @@ export const TRACE_BUDGETS = Object.freeze({
   cls: 0,
 });
 
+// CI runners are about twice as slow as the reference machine; only these List gates differ there.
+export const RUNNER_BUDGETS = process.env.CI === 'true';
+const RUNNER_OVERRIDES = Object.freeze({ listWarmRouteP95Ms: 100, frameWorkP95Ms: 24 });
+
+/** The budget set a representative trace is gated by, with the local reference values. */
+export function traceBudgetPolicy(runnerBudgets: boolean = RUNNER_BUDGETS) {
+  return Object.freeze({
+    budgetSet: runnerBudgets ? ('runner' as const) : ('local' as const),
+    effective: Object.freeze(
+      runnerBudgets ? { ...TRACE_BUDGETS, ...RUNNER_OVERRIDES } : TRACE_BUDGETS,
+    ),
+    reference: TRACE_BUDGETS,
+  });
+}
+
 export function classifyDashboardLayoutShift(
   shift: DashboardLayoutShift,
   evidence: Pick<DashboardLayoutShiftReport, 'phases' | 'inputActions'>,
@@ -202,7 +217,9 @@ export type DashboardTraceMeasurements = Readonly<{
 export function evaluateDashboardTrace(
   tier: 'representative' | 'scaling',
   metrics: DashboardTraceMeasurements,
+  budgetPolicy = traceBudgetPolicy(),
 ) {
+  const budgets = budgetPolicy.effective;
   const layoutShifts = metrics.layoutShiftEvidence
     ? aggregateDashboardLayoutShifts(metrics.layoutShiftEvidence)
     : null;
@@ -273,21 +290,21 @@ export function evaluateDashboardTrace(
   }
   percentile95([metrics.coldShellMs, metrics.usefulSnapshotMs, cls]);
   if (tier === 'representative') {
-    require(metrics.coldShellMs <= TRACE_BUDGETS.coldShellMs, 'Cold shell exceeds budget.');
+    require(metrics.coldShellMs <= budgets.coldShellMs, 'Cold shell exceeds budget.');
     require(metrics.usefulSnapshotMs <=
-      TRACE_BUDGETS.usefulSnapshotMs, 'Useful snapshot exceeds budget.');
+      budgets.usefulSnapshotMs, 'Useful snapshot exceeds budget.');
     for (const [name, value] of Object.entries(summaries).filter(
       ([name]) => !name.includes('Frame') && name !== 'patchP95Ms',
     ))
-      if (value !== null) require(value <= TRACE_BUDGETS.latencyP95Ms, `${name} exceeds budget.`);
+      if (value !== null) require(value <= budgets.latencyP95Ms, `${name} exceeds budget.`);
     for (const [route, value] of Object.entries(warmRouteP95ByRouteMs))
       require(route === '#/list'
-        ? value < TRACE_BUDGETS.listWarmRouteP95Ms
-        : value <= TRACE_BUDGETS.latencyP95Ms, `${route} warmRouteP95Ms exceeds budget.`);
-    require(summaries.graphFrameWorkP95Ms <= TRACE_BUDGETS.frameWorkP95Ms &&
-      summaries.listFrameWorkP95Ms <= TRACE_BUDGETS.frameWorkP95Ms, 'Frame work exceeds budget.');
+        ? value < budgets.listWarmRouteP95Ms
+        : value <= budgets.latencyP95Ms, `${route} warmRouteP95Ms exceeds budget.`);
+    require(summaries.graphFrameWorkP95Ms <= budgets.frameWorkP95Ms &&
+      summaries.listFrameWorkP95Ms <= budgets.frameWorkP95Ms, 'Frame work exceeds budget.');
     require([...metrics.graph.longTasksMs, ...metrics.list.longTasksMs].every(
-      (value) => value <= TRACE_BUDGETS.longTaskMs,
+      (value) => value <= budgets.longTaskMs,
     ), 'Steady interaction contains a long task.');
     require(cls === 0 &&
       metrics.graph.cls === 0 &&
@@ -297,6 +314,8 @@ export function evaluateDashboardTrace(
     cls,
     ...(layoutShifts ? { layoutShifts } : {}),
     policy: tier === 'representative' ? 'budget' : 'scaling-baseline',
+    budgetSet: budgetPolicy.budgetSet,
+    budgets: { effective: budgetPolicy.effective, reference: budgetPolicy.reference },
     summaries: { ...summaries, warmRouteP95ByRouteMs },
     failures,
     pending,

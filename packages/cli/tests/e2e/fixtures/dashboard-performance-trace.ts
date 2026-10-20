@@ -12,7 +12,6 @@ import {
   type RendererTraceEvent,
   rendererFrameWork,
   type SelectionSample,
-  TRACE_BUDGETS,
   TRACE_PLAN,
 } from '../../dashboard/fixtures/dashboard-trace-model.js';
 import {
@@ -596,7 +595,8 @@ export function registerDashboardPerformanceTraceTests() {
           coldShellMs: metrics.coldShellMs,
           usefulSnapshotMs: metrics.usefulSnapshotMs,
           summaries: evaluation.summaries,
-          budgets: TRACE_BUDGETS,
+          budgetSet: evaluation.budgetSet,
+          budgets: evaluation.budgets,
           failures: evaluation.failures,
         })}\n`,
       );
