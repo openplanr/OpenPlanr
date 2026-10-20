@@ -73,3 +73,96 @@ export function rendererFrameWork(
     return work / 1_000;
   });
 }
+export type LayoutShiftRect = Readonly<{
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  top: number;
+  right: number;
+  bottom: number;
+  left: number;
+}>;
+
+export type LayoutShift = Readonly<{
+  value: number;
+  startTime: number;
+  hadRecentInput: boolean;
+  phase: string;
+  sources: readonly Readonly<{
+    selector: string | null;
+    nodeKind: 'element' | 'text' | 'other' | 'unavailable';
+    connected: boolean | null;
+    previousRect: LayoutShiftRect;
+    currentRect: LayoutShiftRect;
+  }>[];
+}>;
+
+export type LayoutShiftReport = Readonly<{
+  phases: readonly Readonly<{ phase: string; startTime: number }>[];
+  inputActions: readonly Readonly<{ phase: string; phaseIndex: number; startTime: number }>[];
+  shifts: readonly LayoutShift[];
+}>;
+
+export type LayoutShiftPolicy = Readonly<{
+  inputPhase: (phase: string) => boolean;
+  inputWindowMs?: number;
+}>;
+
+export function classifyLayoutShift(
+  shift: LayoutShift,
+  evidence: LayoutShiftReport,
+  policy: LayoutShiftPolicy,
+): { inputDriven: boolean; reason: 'counted' | 'native-excluded' | 'input-driven' } {
+  let phaseIndex = -1;
+  for (let index = evidence.phases.length - 1; index >= 0; index -= 1) {
+    if (evidence.phases[index].startTime <= shift.startTime) {
+      phaseIndex = index;
+      break;
+    }
+  }
+  const phase = evidence.phases[phaseIndex];
+  if (!phase || phase.phase !== shift.phase || !policy.inputPhase(phase.phase))
+    return { inputDriven: false, reason: 'counted' };
+  const inputDriven = evidence.inputActions.some(
+    (action) =>
+      action.phase === phase.phase &&
+      action.phaseIndex === phaseIndex &&
+      action.startTime >= phase.startTime &&
+      action.startTime <= shift.startTime &&
+      shift.startTime - action.startTime <= (policy.inputWindowMs ?? 500),
+  );
+  return {
+    inputDriven,
+    reason: !inputDriven ? 'counted' : shift.hadRecentInput ? 'native-excluded' : 'input-driven',
+  };
+}
+
+export function aggregateLayoutShifts(evidence: LayoutShiftReport, policy: LayoutShiftPolicy) {
+  for (const shift of evidence.shifts)
+    if (
+      !Number.isFinite(shift.value) ||
+      shift.value < 0 ||
+      !Number.isFinite(shift.startTime) ||
+      shift.startTime < 0
+    )
+      throw new TypeError(
+        'Layout shift samples must have finite nonnegative values and start times.',
+      );
+  const shifts = evidence.shifts.map((shift) => ({
+    ...shift,
+    ...classifyLayoutShift(shift, evidence, policy),
+  }));
+  const sum = (reason: (typeof shifts)[number]['reason']) =>
+    shifts.reduce((total, shift) => total + (shift.reason === reason ? shift.value : 0), 0);
+  const nativeExcludedCls = sum('native-excluded');
+  const inputDrivenCls = sum('input-driven');
+  return {
+    ...evidence,
+    shifts,
+    admittedCls: sum('counted'),
+    excludedCls: nativeExcludedCls + inputDrivenCls,
+    nativeExcludedCls,
+    inputDrivenCls,
+  };
+}

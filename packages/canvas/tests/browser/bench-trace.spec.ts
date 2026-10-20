@@ -11,16 +11,20 @@ import {
 } from '@playwright/test';
 import type { Scenario } from '../../bench/main';
 import {
+  CANVAS_TRACE_BUDGETS,
+  evaluateCanvasTrace,
   percentile95,
   type RendererTraceEvent,
   rendererFrameWork,
 } from '../../src/testing/index.mts';
 import { waitForBench } from './bench';
+import { benchMetadata } from './metadata';
 import {
   aggregateTraceRuns,
   DOM_NODE_BUDGET,
   domBudgetPolicy,
   RUNNER_BUDGETS,
+  SECOND_DENSITY,
   type TraceRun,
   traceBudgetPolicy,
   traceOwnership,
@@ -106,7 +110,7 @@ type Measurement = {
   domBudget: ReturnType<typeof domBudgetPolicy>;
   world: 'html' | 'svg';
   renderer: 'vanilla' | 'react';
-  dpr: number;
+  dpr: 1 | 2;
   scenario: Scenario | 'remount';
   gpuRenderer: string;
   hitTestP95Ms: number;
@@ -134,6 +138,7 @@ type Measurement = {
 
 type Tier = {
   count: 708 | 5000;
+  fixture: string;
   world: 'html' | 'svg';
   dpr: 1 | 2;
   renderer?: 'vanilla' | 'react';
@@ -141,7 +146,7 @@ type Tier = {
 
 async function firstFrames(context: BrowserContext, url: string): Promise<number[]> {
   const trials: number[] = [];
-  for (let load = 0; load < 5; load += 1) {
+  for (let load = 0; load < CANVAS_TRACE_BUDGETS.firstFrameLoads; load += 1) {
     const page = await context.newPage();
     try {
       await page.goto(url);
@@ -207,15 +212,10 @@ async function recordRuns(
 }
 
 async function measureTier(browser: Browser, baseURL: string, tier: Tier): Promise<Measurement[]> {
-  const { count, world, dpr, renderer = 'vanilla' } = tier;
-  const fixture = world === 'svg' ? `svg-${count}` : count === 708 ? '708-997' : '5000-7312';
+  const { count, fixture, world, dpr, renderer = 'vanilla' } = tier;
   const url = `${baseURL}/${renderer === 'react' ? 'react.html' : ''}?fixture=${fixture}&world=${world}`;
   const mainBudget =
-    renderer === 'react'
-      ? { 708: 8, 5000: 10 }[count]
-      : world === 'html'
-        ? { 708: 6, 5000: 8 }[count]
-        : { 708: 8, 5000: 12 }[count];
+    CANVAS_TRACE_BUDGETS.rendererMainP95Ms[world === 'svg' ? 'svg' : renderer][count];
   const context = await browser.newContext({
     viewport: { width: 1440, height: 900 },
     deviceScaleFactor: dpr,
@@ -240,12 +240,13 @@ async function measureTier(browser: Browser, baseURL: string, tier: Tier): Promi
       for (const scenario of scenarios) {
         const runs = await recordRuns(page, session, scenario);
         const referenceBudgets = {
-          rendererMainP95Ms: scenario === 'remount' ? 16 : mainBudget,
-          rafIntervalP95Ms: 16.8,
-          longTasksOver50Ms: 0,
-          firstFrameP50Ms: 150,
+          rendererMainP95Ms:
+            scenario === 'remount' ? CANVAS_TRACE_BUDGETS.remountRendererMainP95Ms : mainBudget,
+          rafIntervalP95Ms: CANVAS_TRACE_BUDGETS.rafIntervalP95Ms,
+          longTasksOver50Ms: CANVAS_TRACE_BUDGETS.longTasksOver50Ms,
+          firstFrameP50Ms: CANVAS_TRACE_BUDGETS.firstFrameP50Ms,
           domNodes: DOM_NODE_BUDGET,
-          hitTestP95Ms: 0.1,
+          hitTestP95Ms: CANVAS_TRACE_BUDGETS.hitTestP95Ms,
         };
         measurements.push({
           count,
@@ -282,6 +283,7 @@ async function measureTier(browser: Browser, baseURL: string, tier: Tier): Promi
 
 test('records production camera traces beside the reference budgets', async ({
   browser,
+  browserName,
 }, testInfo) => {
   test.setTimeout(1_800_000);
   const baseURL = testInfo.project.use.baseURL;
@@ -289,15 +291,53 @@ test('records production camera traces beside the reference budgets', async ({
   const measurements: Measurement[] = [];
   for (const dpr of [2, 1] as const) {
     for (const count of [708, 5000] as const) {
+      const fixture = count === 708 ? '708-997' : '5000-7312';
       for (const world of ['html', 'svg'] as const) {
-        measurements.push(...(await measureTier(browser, baseURL, { count, world, dpr })));
+        measurements.push(
+          ...(await measureTier(browser, baseURL, {
+            count,
+            fixture: world === 'svg' ? `svg-${count}` : fixture,
+            world,
+            dpr,
+          })),
+        );
       }
       measurements.push(
-        ...(await measureTier(browser, baseURL, { count, world: 'html', dpr, renderer: 'react' })),
+        ...(await measureTier(browser, baseURL, {
+          count,
+          fixture,
+          world: 'html',
+          dpr,
+          renderer: 'react',
+        })),
       );
+      if (SECOND_DENSITY) {
+        for (const renderer of ['vanilla', 'react'] as const) {
+          measurements.push(
+            ...(await measureTier(browser, baseURL, {
+              count,
+              fixture: count === 708 ? '708-477' : '5000-8499',
+              world: 'html',
+              dpr,
+              renderer,
+            })),
+          );
+        }
+      }
     }
   }
+  const metadata = benchMetadata(browser, browserName);
+  const results = {
+    ...metadata,
+    secondDensity: SECOND_DENSITY,
+    budgetSet: budgets.budgetSet,
+    measurements,
+  };
+  const evaluations = ([708, 5000] as const).map((tier) => evaluateCanvasTrace(results, tier));
   const report = {
+    ...metadata,
+    secondDensity: SECOND_DENSITY,
+    evaluations,
     runner: {
       os: platform(),
       release: release(),
@@ -345,7 +385,10 @@ test('records production camera traces beside the reference budgets', async ({
     },
     measurements,
   };
-  const output = resolve(import.meta.dirname, '../../test-results/bench-trace.json');
+  const output = resolve(
+    import.meta.dirname,
+    `../../test-results/bench-trace-${metadata.gpuMode}.json`,
+  );
   await mkdir(resolve(import.meta.dirname, '../../test-results'), { recursive: true });
   await writeFile(output, `${JSON.stringify(report, null, 2)}\n`);
   await testInfo.attach('bench-trace', { path: output, contentType: 'application/json' });
@@ -360,68 +403,8 @@ test('records production camera traces beside the reference budgets', async ({
       '',
     ].join('\n'),
   );
-  for (const item of measurements.filter((measurement) => measurement.ownership === 'gated')) {
-    const label = `${item.fixture} ${item.renderer} ${item.world} DPR ${item.dpr} ${item.scenario}`;
-    if (item.renderer === 'react') {
-      for (const run of item.runs) {
-        expect.soft(run.react, `${label}: production React counters`).toBeDefined();
-        expect.soft(run.react?.pureCameraCommits, `${label}: pure camera frame commits`).toBe(0);
-        if (item.scenario !== 'remount')
-          expect
-            .soft(run.react?.pureCameraFrames, `${label}: pure camera frame samples`)
-            .toBeGreaterThan(0);
-      }
-    }
-    if (item.scenario === 'remount') {
-      if (item.effectiveBudgets.rendererMainP95Ms !== null) {
-        expect
-          .soft(item.rendererMainP95Ms, `${label}: chunked remount renderer main p95`)
-          .toBeLessThanOrEqual(item.effectiveBudgets.rendererMainP95Ms);
-      }
-      continue;
-    }
-    expect
-      .soft(item.hitTestP95Ms, `${label}: batched hit-test p95 over 1000 seeded points`)
-      .toBeLessThanOrEqual(item.referenceBudgets.hitTestP95Ms);
-    expect
-      .soft(item.rendererMainP95Ms, `${label}: renderer main work`)
-      .toBeLessThanOrEqual(item.referenceBudgets.rendererMainP95Ms);
-    if (item.effectiveBudgets.rafIntervalP95Ms !== null) {
-      expect
-        .soft(item.rafIntervalP95Ms, `${label}: rAF interval`)
-        .toBeLessThanOrEqual(item.effectiveBudgets.rafIntervalP95Ms);
-    }
-    for (const run of item.runs) {
-      expect.soft(run.hitTestProbe.sampleCount, `${label}: timed hit-test points`).toBe(1000);
-      expect
-        .soft(run.hitTestProbe.queryCount, `${label}: executed hit-test queries`)
-        .toBeGreaterThanOrEqual(1000);
-      expect
-        .soft(run.hitTestProbe.minSampleDurationMs, `${label}: hit-test batch duration`)
-        .toBeGreaterThanOrEqual(1);
-      expect.soft(run.hitTestP95Ms, `${label}: measurable hit-test latency`).toBeGreaterThan(0);
-      expect
-        .soft(
-          run.hitTestP95Ms,
-          `${label}: run ${run.run} batched hit-test p95 over 1000 seeded points`,
-        )
-        .toBeLessThanOrEqual(item.referenceBudgets.hitTestP95Ms);
-      if (item.domBudget.regressionLimit !== null) {
-        expect
-          .soft(
-            run.domNodes,
-            `${label}: run ${run.run} stage DOM nodes (${item.domBudget.ownership})`,
-          )
-          .toBeLessThanOrEqual(item.domBudget.regressionLimit);
-      }
-      expect
-        .soft(run.longTasksOver50Ms, `${label}: run ${run.run} long tasks`)
-        .toBe(item.referenceBudgets.longTasksOver50Ms);
-    }
-    expect
-      .soft(item.firstFrameP50Ms, `${label}: first fixture frame`)
-      .toBeLessThanOrEqual(item.effectiveBudgets.firstFrameP50Ms);
-  }
+  for (const evaluation of evaluations)
+    expect.soft(evaluation.failures, `canvas trace tier ${evaluation.tier}`).toEqual([]);
 });
 
 test('measures cached canvas and worker overview work, cache memory and presentation lag', async ({

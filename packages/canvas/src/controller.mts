@@ -515,9 +515,10 @@ export function createCanvas(options: CanvasOptions): CanvasController {
     if (requestedLevel === 'overview' && !overviewReady) nextLevel = level;
     if (level === 'overview' && requestedLevel !== 'overview') {
       const pins = culling.getPinnedIds();
-      const hasContent = culling.getMountedIds().some((id) => !pins.has(id));
-      const needsContent =
-        !hasContent && culling.query(viewport()).some((node) => !pins.has(node.id));
+      const mounted = new Set(culling.getMountedIds());
+      const needsContent = culling
+        .query(viewport())
+        .some((node) => !pins.has(node.id) && !mounted.has(node.id));
       if (needsContent) nextLevel = level;
     }
     const levelChanged = level !== nextLevel;

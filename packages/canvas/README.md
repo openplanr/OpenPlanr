@@ -17,7 +17,9 @@ Exports:
   `ZoomPill`, `HistoryPill`, `HelpButton`, `WelcomeHints`, `ToolbarHint`, and their prop,
   state and adapter types.
 - `./testing`: `generateLayeredGraph`, `generateSvgDiagram`, `percentile95`,
-  `rendererFrameWork`, and their fixture and trace types.
+  `rendererFrameWork`, `classifyLayoutShift`, `aggregateLayoutShifts`,
+  `CANVAS_TRACE_BUDGETS`, `evaluateCanvasTrace`, `traceBudgetPolicy`,
+  `traceOwnership`, `domBudgetPolicy`, and their fixture, trace, layout-shift and evaluation types.
 - `./styles.css`: Structural canvas styles and z-order variables.
 
 `createCanvas({ label })` creates a detached controller. Call `attach({ stage,
@@ -261,7 +263,7 @@ Run `npm test --workspace=@openplanr/canvas`, `npm run test:browser
 `world`, `pointerMode`, `zoom`, `frame=1`, `frames=15` and `overviewRenderer` query parameters.
 Use `outline=1` for the visually hidden outline list.
 It renders through mount and geometry events and shows the mounted count. Trace results are written to
-`test-results/bench-trace.json`; the measured reference and runner results appear
+`test-results/bench-trace-${gpuMode}.json`; the measured reference and runner results appear
 together in its report. Each scenario records three runs and reports median
 p95s with all raw results. A discarded warm-up precedes the 708-node interaction
 runs. Every scenario and raw trace run includes the WebGL renderer string.
@@ -295,3 +297,16 @@ for the Firefox cache check, using Playwright's installed Firefox by default.
 The browser runner defaults to software mode. For the local Metal comparison,
 run `CANVAS_GPU_MODE=metal npm run bench:trace --workspace=@openplanr/canvas`.
 CI rejects Metal mode; each result records the actual renderer string.
+
+`evaluateCanvasTrace(results, tier)` applies shared budgets at both 708 and 5,000
+nodes. It returns failures, reported metrics and pending sections; compositor
+dropped frames at fit remain pending. Missing sections are pending and malformed
+fields throw `TypeError`. `aggregateLayoutShifts(evidence, { inputPhase })` counts
+all canvas shifts with `inputPhase: () => false`; consumers can classify input
+phases with an optional `inputWindowMs` (500 ms by default).
+The untraced `tests/browser/budgets.spec.ts` covers enabled fixtures, renderers
+and DPRs with hit tests, sixteen chrome toggles, both LOD bands and 50/500 pins.
+Its report is `test-results/canvas-budgets-${gpuMode}.json`. Both reports include
+browser/version, GPU mode, renderer strings, build commit and package version.
+Set `CANVAS_SECOND_DENSITY=1` to include HTML fixtures `708-477` and `5000-8499`
+in both benches; both reports record `secondDensity`.
