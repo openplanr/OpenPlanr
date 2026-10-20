@@ -212,7 +212,7 @@ describe('camera geometry', () => {
     const { controller } = make();
     controller.setNodes([node('a', 750, 550)]);
     controller.reveal('a');
-    expect(controller.getCamera()).toEqual({ x: 50, y: 50, zoom: 1 });
+    expect(controller.getCamera()).toEqual({ x: 62, y: 62, zoom: 1 });
     controller.reveal('a', { mode: 'center' });
     expect(controller.getCamera()).toEqual({ x: 400, y: 300, zoom: 1 });
     controller.reveal('a');
@@ -405,6 +405,15 @@ describe('lifecycle and the frame writer', () => {
       () => controller.getMountedIds(),
       () => controller.getDiagnostics(),
       () => controller.getBreakpoint(),
+      () =>
+        controller.setChrome({
+          id: 'panel',
+          edge: 'left',
+          rect: { x: 0, y: 0, width: 10, height: 10 },
+          open: true,
+        }),
+      () => controller.removeChrome('panel'),
+      () => controller.getSafeArea(),
       () => controller.hitTest({ x: 0, y: 0 }),
       () => controller.getCamera(),
       () => controller.setCamera({ x: 0, y: 0, zoom: 1 }),

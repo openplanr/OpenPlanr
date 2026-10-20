@@ -1,6 +1,12 @@
 export type NodeId = string;
 export type Point = Readonly<{ x: number; y: number }>;
 export type Rect = Readonly<{ x: number; y: number; width: number; height: number }>;
+export type ChromeSurface = Readonly<{
+  id: string;
+  edge: 'top' | 'right' | 'bottom' | 'left';
+  rect: Rect;
+  open: boolean;
+}>;
 export type Camera = Readonly<{ x: number; y: number; zoom: number }>;
 export type WorldElement = HTMLElement;
 export type CanvasNode = Readonly<{ id: NodeId; bounds: Rect; kind?: string; frame?: boolean }>;
@@ -61,6 +67,7 @@ export interface CanvasEvents {
   selection: readonly NodeId[];
   focus: NodeId | null;
   breakpoint: string | null;
+  'safe-area': Rect;
   diagnostics: readonly Diagnostic[];
   'active-frame': NodeId | null;
 }
@@ -76,6 +83,9 @@ export interface CanvasController {
   getMountedIds(): ReadonlySet<NodeId>;
   getDiagnostics(): readonly Diagnostic[];
   getBreakpoint(): string | null;
+  setChrome(surface: ChromeSurface): void;
+  removeChrome(id: string): void;
+  getSafeArea(): Rect;
   getLevel(id?: NodeId): CanvasLevel;
   getOverviewMetrics(): OverviewMetrics;
   getCamera(): Camera;

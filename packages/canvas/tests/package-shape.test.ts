@@ -68,6 +68,7 @@ describe('package shape', () => {
               'CanvasLevel',
               'CanvasNode',
               'CanvasOptions',
+              'ChromeSurface',
               'Diagnostic',
               'NodeId',
               'MinimapTransform',

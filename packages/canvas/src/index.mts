@@ -11,6 +11,7 @@ export type {
   CanvasLevel,
   CanvasNode,
   CanvasOptions,
+  ChromeSurface,
   Diagnostic,
   MinimapTransform,
   NodeId,
