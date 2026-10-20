@@ -1,4 +1,4 @@
-import { positive } from './camera.mjs';
+import { invalid, positive } from './camera.mjs';
 import { createSpatialGrid, sameBounds } from './spatial-grid.mjs';
 import type { CanvasNode, NodeId, Rect } from './types.mjs';
 
@@ -15,6 +15,7 @@ export function createCulling(
   const marginFactor = options.marginFactor ?? 2;
   const chunkSize = options.chunkSize ?? 200;
   positive('culling.marginFactor', marginFactor);
+  if (marginFactor < 1) invalid('culling.marginFactor', marginFactor);
   positive('culling.chunkSize', chunkSize);
   const grid = createSpatialGrid(options.cellSize);
   let nodes = new Map<NodeId, CanvasNode>();

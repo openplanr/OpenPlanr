@@ -73,6 +73,20 @@ const node = (id: string, x = 0, y = 0) => ({
 });
 
 describe('controller culling integration', () => {
+  it('rejects a culling margin factor below one', () => {
+    const call = () =>
+      createCanvas({ label: 'Culling integration', culling: { marginFactor: 0.5 } });
+    expect(call).toThrow(TypeError);
+    expect(call).toThrow('culling.marginFactor: invalid value 0.5');
+  });
+
+  it('accepts a culling margin factor of one and mounts nodes at the viewport edges', () => {
+    const { controller } = make({ culling: { marginFactor: 1 } });
+    controller.setNodes([node('top-left'), node('bottom-right', 760, 560)]);
+    frame();
+    expect(controller.getMountedIds()).toEqual(new Set(['top-left', 'bottom-right']));
+  });
+
   it('notifies mounted nodes after writing every layer transform', () => {
     const { controller, world, overlay } = make();
     controller.setNodes([node('a', 10000)]);
