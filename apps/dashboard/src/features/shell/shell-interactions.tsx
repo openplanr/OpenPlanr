@@ -32,8 +32,8 @@ function scrollRegions(root: HTMLElement): HTMLElement[] {
   return Array.from(root.querySelectorAll<HTMLElement>('[data-scroll-context]'));
 }
 function snapshotRegions(root: HTMLElement): readonly ScrollRegion[] {
-  return scrollRegions(root).map((region, index) => ({
-    key: `${region.dataset.scrollContext}:${index}`,
+  return scrollRegions(root).map((region) => ({
+    key: region.dataset.scrollContext ?? '',
     top: region.scrollTop,
     left: region.scrollLeft,
   }));
@@ -132,6 +132,11 @@ export function useShellInteractions({
     let restoredFocus: HTMLElement | null = null;
     const restore = () => {
       if (!saved) return true;
+      if (
+        scroll.childElementCount === 0 ||
+        scroll.querySelector('[data-route-kind][aria-busy="true"], [data-route-pending]')
+      )
+        return false;
       scroll.scrollTop = saved.top;
       scroll.scrollLeft = saved.left;
       const item = Array.from(scroll.querySelectorAll<HTMLElement>('[data-keyboard-item]')).find(
@@ -149,26 +154,33 @@ export function useShellInteractions({
       }
       focusTarget?.focus({ preventScroll: true });
       const regions = scrollRegions(scroll);
-      let restoredRegions = 0;
       for (const savedRegion of saved.regions) {
-        const region = regions.find(
-          (entry, index) => `${entry.dataset.scrollContext}:${index}` === savedRegion.key,
-        );
+        const region = regions.find((entry) => entry.dataset.scrollContext === savedRegion.key);
         if (region) {
           region.scrollTop = savedRegion.top;
           region.scrollLeft = savedRegion.left;
-          restoredRegions++;
         }
       }
-      return (!saved.focusId || Boolean(item)) && restoredRegions === saved.regions.length;
+      return true;
     };
     const restored = restore();
     const observer = new MutationObserver(() => {
-      if (restore()) observer.disconnect();
+      if (restore()) {
+        observer.disconnect();
+        window.clearTimeout(timeout);
+      }
     });
-    if (!restored) observer.observe(scroll, { childList: true, subtree: true });
+    const timeout = restored ? undefined : window.setTimeout(() => observer.disconnect(), 500);
+    if (!restored)
+      observer.observe(scroll, {
+        childList: true,
+        subtree: true,
+        attributes: true,
+        attributeFilter: ['aria-busy', 'data-route-pending'],
+      });
     return () => {
       observer.disconnect();
+      window.clearTimeout(timeout);
       restoredFocus?.removeAttribute('data-live-focus-return');
       if (captured.current === contextKey) return;
       const focused = document.activeElement?.closest<HTMLElement>('[data-keyboard-item]');

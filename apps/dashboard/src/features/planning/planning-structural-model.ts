@@ -189,7 +189,7 @@ export function structuralFilePath(value: string): string | null {
 
 function filesOf(node: PlanningModelNode): StructuralFile[] {
   const rows: StructuralFile[] = [];
-  const add = (group: string, text: string) => {
+  const add = (group: string, text: string, path: string | null = null) => {
     const clean = text.replace(/^\s*[-*+]\s+/u, '').trim();
     if (!clean) return;
     const tagged = clean.match(/^(Create|Modify|Preserve|Keep)\s*:?\s+(.+)$/iu);
@@ -198,14 +198,12 @@ function filesOf(node: PlanningModelNode): StructuralFile[] {
       ? 'Preserve'
       : `${label[0]?.toUpperCase() ?? ''}${label.slice(1).toLowerCase()}`;
     const content = tagged?.[2] ?? clean;
-    const quoted = content.match(/^`([^`]+)`/u)?.[1];
-    rows.push(
-      Object.freeze({
-        group: normalized || 'Files',
-        path: structuralFilePath(quoted ?? content),
-        text: content,
-      }),
+    const row = Object.freeze({ group: normalized || 'Files', path, text: content });
+    const existing = rows.findIndex(
+      (other) => other.group === row.group && other.text === row.text,
     );
+    if (existing < 0) rows.push(row);
+    else if (rows[existing].path === null && path !== null) rows[existing] = row;
   };
   const values = node.frontmatter.files;
   if (Array.isArray(values)) {
@@ -224,12 +222,46 @@ function filesOf(node: PlanningModelNode): StructuralFile[] {
   let inFiles = false;
   let depth = 0;
   let group = 'Files';
-  for (const line of (node.body ?? '').split('\n')) {
-    const heading = line.match(/^(#{1,6})\s+(.*)$/u);
+  let fence: string | null = null;
+  let comment = false;
+  let declarationsEnded = false;
+  const lines = (node.body ?? '').split(/\r?\n/u);
+  // Keep declaration eligibility in sync with the server's declaredPlanningFiles parser.
+  for (let index = 0; index < lines.length; index += 1) {
+    const line = lines[index];
+    if (comment || line.includes('<!--')) {
+      comment = !line.includes('-->');
+      continue;
+    }
+    if (/^(?: {4}|\t)/u.test(line)) continue;
+    const marker = /^\s{0,3}(`{3,}|~{3,})/u.exec(line)?.[1];
+    if (marker) {
+      if (fence === null) fence = marker;
+      else if (
+        marker[0] === fence[0] &&
+        marker.length >= fence.length &&
+        /^\s*(?:`+|~+)\s*$/u.test(line)
+      )
+        fence = null;
+      continue;
+    }
+    if (fence !== null) continue;
+    if (/^ {0,3}<(?:[A-Za-z!]|\?)/u.test(line)) {
+      // Later descriptions remain inspectable after HTML ends declaration eligibility.
+      declarationsEnded = true;
+      inFiles = false;
+      continue;
+    }
+    if (line.trim() && /^\s{0,3}(?:=+|-+)\s*$/u.test(lines[index + 1] ?? '')) {
+      inFiles = false;
+      continue;
+    }
+    const heading = /^ {0,3}(#{1,6})\s+(.+?)\s*#*\s*$/u.exec(line);
     if (heading) {
-      if (/^files(?:\s|$)/iu.test(heading[2])) {
+      if (/^Files$/iu.test(heading[2])) {
         inFiles = true;
         depth = heading[1].length;
+        group = 'Files';
       } else if (inFiles && heading[1].length <= depth) inFiles = false;
       else if (inFiles) {
         const category = /^(Create|Modify|Preserve|Keep)(?:\s|$)/iu.exec(heading[2]);
@@ -240,12 +272,13 @@ function filesOf(node: PlanningModelNode): StructuralFile[] {
     if (!inFiles) continue;
     const groupLine = line.match(/^\s*\*\*(Create|Modify|Preserve|Keep):?\*\*:?\s*$/iu);
     if (groupLine) group = groupLine[1];
-    else if (/^\s*[-*+]\s+/u.test(line)) add(group, line);
+    else if (/^\s*[-*+]\s+/u.test(line)) {
+      const item = /^\s*[-*+]\s+(?:`([^`]+)`|([^\s`]+))\s*$/u.exec(line);
+      const path = item?.[1] ?? item?.[2];
+      add(group, line, !declarationsEnded && validPlanningFilePath(path) ? (path ?? null) : null);
+    }
   }
-  return rows.filter(
-    (row, index) =>
-      rows.findIndex((other) => other.group === row.group && other.text === row.text) === index,
-  );
+  return rows;
 }
 
 function evidenceOf(node: PlanningModelNode): StructuralEvidence[] {

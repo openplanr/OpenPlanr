@@ -380,7 +380,9 @@ describe('shared Planning artifact detail', () => {
     await screen.findByText('Detail verified against the current planning snapshot.');
     const files = screen.getByRole('region', { name: 'Declared files' });
     expect(files.textContent).not.toContain('`');
-    expect(within(files).getByText('.changeset/: Add a release note for the change.')).toBeTruthy();
+    const description = within(files).getByText('.changeset/: Add a release note for the change.');
+    expect(description).toBeTruthy();
+    expect(description.closest('.pc-detail__file')?.querySelector('button')).toBeNull();
   });
 
   it('keeps long criteria in page flow and compact file actions keyboard-operable', async () => {

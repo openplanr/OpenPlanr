@@ -5,6 +5,7 @@ import {
   createStructuralIndex,
   structuralFilePath,
 } from '../../../../apps/dashboard/src/features/planning/planning-structural-model.js';
+import { declaredPlanningFiles } from '../../../pipeline/lib/dashboard/server/planning-file-links.mjs';
 import { buildArtboardGraph, canonicalArtboardId } from './fixtures/premium-artboard-fixture.js';
 
 const artifact = (id: string, fields: Partial<PlanningModelNode> = {}): PlanningModelNode => ({
@@ -14,6 +15,95 @@ const artifact = (id: string, fields: Partial<PlanningModelNode> = {}): Planning
   status: 'outstanding',
   frontmatter: {},
   ...fields,
+});
+
+const declaredFileCases = [
+  {
+    name: 'task Create and Modify subsections',
+    body: '## Files\n### Create\n- src/new.ts\n### Modify\n- `src/main.ts`\n### Preserve\n- src/stable.ts',
+    paths: ['src/new.ts', 'src/main.ts', 'src/stable.ts'],
+  },
+  {
+    name: 'frontmatter files',
+    frontmatter: { files: { create: ['src/new.ts'] } },
+    paths: [],
+  },
+  {
+    name: 'frontmatter arrays',
+    frontmatter: { files: ['src/new.ts', { action: 'Modify', path: 'src/main.ts' }] },
+    paths: [],
+  },
+  {
+    name: 'visible declarations repeated in frontmatter',
+    frontmatter: { files: { modify: ['src/main.ts'] } },
+    body: '## Files\n### Modify\n- src/main.ts',
+    paths: ['src/main.ts'],
+  },
+  {
+    name: 'Files-prefixed headings',
+    body: '## Files changed\n- src/main.ts',
+    paths: [],
+  },
+  {
+    name: 'tagged and annotated items',
+    body: '## Files\n- Create: src/new.ts\n- `src/main.ts` note\n- `src/other.ts` - note',
+    paths: [],
+  },
+  {
+    name: 'extensionless and quoted paths',
+    body: '## Files\n- LICENSE\n- `src/hello #?.ts`',
+    paths: ['LICENSE', 'src/hello #?.ts'],
+  },
+  {
+    name: 'unicode within the path length limit',
+    body: `## Files\n- src/${'é'.repeat(180)}.ts`,
+    paths: [`src/${'é'.repeat(180)}.ts`],
+  },
+  {
+    name: 'hidden and indented items',
+    body: '## Files\n- src/visible.ts\n    - src/indented.ts\n<!--\n- src/comment.ts\n-->\n```md\n- src/fenced.ts\n```\n~~~md\n- src/tilde-fenced.ts\n~~~',
+    paths: ['src/visible.ts'],
+  },
+  {
+    name: 'setext and peer sections',
+    body: '## Files\n- src/visible.ts\nOther section\n=============\n- src/other.ts\n## Notes\n- src/note.ts',
+    paths: ['src/visible.ts'],
+  },
+  {
+    name: 'raw HTML',
+    body: '## Files\n- src/visible.ts\n<div hidden>\n- src/hidden.ts\n</div>\n## Files\n- src/later.ts',
+    paths: ['src/visible.ts'],
+  },
+  {
+    name: 'unsafe paths',
+    body: '## Files\n- ../outside.ts\n- /private/file.ts\n- src/../outside.ts\n- src/%2e.ts\n- src\\file.ts\n- `src/null\0.ts`',
+    paths: [],
+  },
+  {
+    name: 'heading syntax and deduplicated paths',
+    body: '  ## fIlEs ##\r\n### Modify\r\n+ src/main.ts\r\n* `src/main.ts`\r\n# Notes\r\n- src/other.ts',
+    paths: ['src/main.ts'],
+  },
+];
+
+describe('declared file parser parity', () => {
+  for (const entry of declaredFileCases) {
+    for (const parser of ['client', 'server']) {
+      it(`${parser}: ${entry.name}`, () => {
+        const current = artifact('T-files', entry);
+        const paths =
+          parser === 'server'
+            ? declaredPlanningFiles(current)
+            : new Set(
+                buildStructuralDetail(
+                  createStructuralIndex({ nodes: [current], edges: [] }),
+                  current,
+                ).files.flatMap(({ path }) => (path === null ? [] : [path])),
+              );
+        expect([...paths]).toEqual(entry.paths);
+      });
+    }
+  }
 });
 
 describe('structural detail projection', () => {
@@ -133,16 +223,17 @@ describe('structural detail projection', () => {
         shipRef: 'javascript:alert(1)',
         qaRef: 'https://example.com/proof',
       },
-      body: '## Files\n### Modify\n- `src/main.ts` changes\n### Preserve (do not touch)\n- The audit boundary\n## Notes\n- Not a file',
+      body: '## Files\n### Modify\n- `src/main.ts` changes\n- src/linked.ts\n### Preserve (do not touch)\n- The audit boundary\n## Notes\n- Not a file',
     });
     const detail = buildStructuralDetail(
       createStructuralIndex({ nodes: [current], edges: [] }),
       current,
     );
     expect(detail.files).toEqual([
-      { group: 'Create', path: 'src/new.ts', text: 'src/new.ts' },
+      { group: 'Create', path: null, text: 'src/new.ts' },
       { group: 'Preserve', path: null, text: 'Existing public names' },
-      { group: 'Modify', path: 'src/main.ts', text: '`src/main.ts` changes' },
+      { group: 'Modify', path: null, text: '`src/main.ts` changes' },
+      { group: 'Modify', path: 'src/linked.ts', text: 'src/linked.ts' },
       { group: 'Preserve', path: null, text: 'The audit boundary' },
     ]);
     expect(detail.evidence).toEqual([

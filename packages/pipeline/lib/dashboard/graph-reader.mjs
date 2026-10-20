@@ -235,11 +235,11 @@ export function classifyStatus(rawStatus) {
 // The walk is restricted to canonical artifact locations so loose markdown
 // (ESTIMATION.md, memory.md, checklists/, design-system/, designs/, diagrams/,
 // each spec's qa-report.md / clarifications.md / design/) is never ingested as a
-// bogus node. Two shapes are recognized:
+// bogus node. Identity comes from frontmatter or an ID-prefixed filename.
+// Two shapes are recognized:
 //   1. Flat agile dirs at `.planr/` root (epics/ features/ stories/ tasks/
 //      backlog/ quick/ sprints/ adrs/) — recurse for default-mode `us-*/` nesting.
-//   2. Per-spec dirs `.planr/specs/SPEC-*/` — ONLY the spec body `SPEC-*.md`,
-//      plus `stories/US-*.md` and `tasks/T-*.md`.
+//   2. Per-spec dirs `.planr/specs/SPEC-*/` with spec bodies, stories/, and tasks/.
 
 /** The flat agile artifact dirs that live directly under `.planr/`. */
 const AGILE_DIRS = ['epics', 'features', 'stories', 'tasks', 'backlog', 'quick', 'sprints', 'adrs'];
@@ -249,7 +249,7 @@ function isArtifactFile(name) {
   if (name.startsWith('.')) return false;
   if (name.endsWith('-error-report.md')) return false;
   if (name.endsWith('-gherkin.feature')) return false;
-  return /^[A-Z][A-Z0-9]*-\d+(?:-[^/]*)?\.md$/u.test(name);
+  return name.endsWith('.md');
 }
 
 /** Recursively collect artifact `.md` paths under a flat agile dir (handles `us-NNN/` nesting). */
@@ -286,11 +286,8 @@ function collectSpecDir(specDir, acc, strict = false) {
   for (const ent of entries) {
     const full = join(specDir, ent.name);
     if (ent.isFile()) {
-      // Only the spec body — never qa-report.md / clarifications.md / dotfiles.
-      if (/^SPEC-\d+.*\.md$/.test(ent.name) && isArtifactFile(ent.name)) acc.push(full);
+      if (isArtifactFile(ent.name)) acc.push(full);
     } else if (ent.isDirectory() && (ent.name === 'stories' || ent.name === 'tasks')) {
-      // ONLY stories/US-*.md and tasks/T-*.md — exclude design/, dotfiles, etc.
-      const prefix = ent.name === 'stories' ? 'US-' : 'T-';
       let inner;
       try {
         inner = readdirSync(full, { withFileTypes: true });
@@ -299,7 +296,7 @@ function collectSpecDir(specDir, acc, strict = false) {
         continue;
       }
       for (const f of inner) {
-        if (f.isFile() && f.name.startsWith(prefix) && isArtifactFile(f.name)) {
+        if (f.isFile() && isArtifactFile(f.name)) {
           acc.push(join(full, f.name));
         }
       }
@@ -402,6 +399,13 @@ function buildNode(absPath, planrDir, includeBody, throwOnReadError = false) {
   // (already unique); stories/tasks become `${SPEC-NNN}/${localId}`. Agile
   // top-level artifacts keep their bare (globally-unique) id.
   const scope = specScopeOf(relDir);
+  const prefix = scope ? (type === 'story' ? 'US-' : type === 'task' ? 'T-' : 'SPEC-') : '';
+  const filename = basename(absPath);
+  const hasArtifactFilename =
+    filename.startsWith(prefix) && /^[A-Z][A-Z0-9]*-\d+(?:-[^/]*)?\.md$/u.test(filename);
+  const hasArtifactId =
+    typeof fm.id === 'string' && fm.id.startsWith(prefix) && /^[A-Z][A-Z0-9]*-\d+$/u.test(fm.id);
+  if (!hasArtifactFilename && !hasArtifactId) return null;
   let id = localId;
   if (scope && type !== 'spec') {
     id = `${scope}/${localId}`;

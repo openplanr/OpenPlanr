@@ -70,7 +70,7 @@ function isArtifactFile(name: string): boolean {
   if (name.startsWith('.')) return false;
   if (name.endsWith('-error-report.md')) return false;
   if (name.endsWith('-gherkin.feature')) return false;
-  return /^[A-Z][A-Z0-9]*-\d+(?:-[^/]*)?\.md$/u.test(name);
+  return name.endsWith('.md');
 }
 
 function walkAgileDir(dir: string, acc: string[]): string[] {
@@ -104,9 +104,8 @@ function collectSpecDir(specDir: string, acc: string[]): string[] {
   for (const entry of entries) {
     const fullPath = path.join(specDir, entry.name);
     if (entry.isFile()) {
-      if (/^SPEC-\d+.*\.md$/.test(entry.name) && isArtifactFile(entry.name)) acc.push(fullPath);
+      if (isArtifactFile(entry.name)) acc.push(fullPath);
     } else if (entry.isDirectory() && (entry.name === 'stories' || entry.name === 'tasks')) {
-      const prefix = entry.name === 'stories' ? 'US-' : 'T-';
       let inner: Dirent[];
       try {
         inner = readdirSync(fullPath, { withFileTypes: true });
@@ -114,7 +113,7 @@ function collectSpecDir(specDir: string, acc: string[]): string[] {
         continue;
       }
       for (const file of inner) {
-        if (file.isFile() && file.name.startsWith(prefix) && isArtifactFile(file.name)) {
+        if (file.isFile() && isArtifactFile(file.name)) {
           acc.push(path.join(fullPath, file.name));
         }
       }
@@ -246,6 +245,15 @@ function buildNode(absPath: string, planrDir: string, includeBody: boolean): Gra
       : path.basename(absPath, '.md');
   const type = inferType(relativeDir, localId);
   const scope = specScopeOf(relativeDir);
+  const prefix = scope ? (type === 'story' ? 'US-' : type === 'task' ? 'T-' : 'SPEC-') : '';
+  const filename = path.basename(absPath);
+  const hasArtifactFilename =
+    filename.startsWith(prefix) && /^[A-Z][A-Z0-9]*-\d+(?:-[^/]*)?\.md$/u.test(filename);
+  const hasArtifactId =
+    typeof frontmatter.id === 'string' &&
+    frontmatter.id.startsWith(prefix) &&
+    /^[A-Z][A-Z0-9]*-\d+$/u.test(frontmatter.id);
+  if (!hasArtifactFilename && !hasArtifactId) return null;
   const id = scope && type !== 'spec' ? `${scope}/${localId}` : localId;
   const authoredTitle = frontmatter.title ?? frontmatter.name;
   const title =

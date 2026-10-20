@@ -190,6 +190,7 @@ function skipShortcut(stroke: KeyStroke, state: CoordinatorState, document: Docu
     return true;
   }
   if (targetOwnsKeys(stroke, layer) || stroke.command || event.altKey) return true;
+  if (ARROWS.includes(event.key) && !target?.matches('[data-keyboard-item]')) return true;
   if (event.key.length !== 1 || event.key === ' ' || context.singleLetters) return false;
   if (stroke.key === 'c' && target?.closest('.pc-command-hint')) event.stopPropagation();
   return true;

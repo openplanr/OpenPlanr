@@ -27,9 +27,11 @@ const DEFAULT_ADAPTERS: ShellAdapters = {
 function RememberedList({
   selected,
   onSelect,
+  omitSecond = false,
 }: {
   selected: string | null;
   onSelect: (id: string) => void;
+  omitSecond?: boolean;
 }) {
   const presentation = useListPresentation(() => 'all');
   return (
@@ -57,7 +59,7 @@ function RememberedList({
         })}
       </output>
       <div data-scroll-context="board" data-testid="nested-scroll">
-        {[FIXTURE_FIRST, FIXTURE_SECOND].map((id) => (
+        {(omitSecond ? [FIXTURE_FIRST] : [FIXTURE_FIRST, FIXTURE_SECOND]).map((id) => (
           <button
             key={id}
             type="button"
@@ -78,11 +80,17 @@ function Harness({
   scope = 'fixture-scope',
   adapters = DEFAULT_ADAPTERS,
   view = null,
+  leadingRegion = false,
+  loading = false,
+  omitSecond = false,
 }: {
   routeKey?: string;
   scope?: string;
   adapters?: ShellAdapters;
   view?: PlanningView | null;
+  leadingRegion?: boolean;
+  loading?: boolean;
+  omitSecond?: boolean;
 }) {
   const [selected, setSelected] = useState<string | null>(null);
   const [inspectorOpen, setInspectorOpen] = useState(false);
@@ -109,14 +117,22 @@ function Harness({
       <output data-testid="inspector">{String(inspectorOpen)}</output>
       <div ref={interactions.scrollRef} data-testid="scroll">
         <PlanningPresentationProvider scope={scope} view={view}>
-          {routeKey === '#/list' ? (
-            <RememberedList
-              selected={selected}
-              onSelect={(id) => {
-                setSelected(id);
-                setInspectorOpen(true);
-              }}
-            />
+          {routeKey === '#/list' && loading ? (
+            <section data-route-kind="planning.list" aria-busy="true">
+              Loading
+            </section>
+          ) : routeKey === '#/list' ? (
+            <>
+              {leadingRegion ? <div data-scroll-context="removed-region" /> : null}
+              <RememberedList
+                selected={selected}
+                omitSecond={omitSecond}
+                onSelect={(id) => {
+                  setSelected(id);
+                  setInspectorOpen(true);
+                }}
+              />
+            </>
           ) : (
             <article>
               <h1>Full detail</h1>
@@ -310,6 +326,79 @@ describe('promotion and return presentation', () => {
     expect(screen.getByTestId('nested-scroll').scrollTop).toBe(67);
     expect(screen.getByTestId('nested-scroll').scrollLeft).toBe(580);
     expect(document.activeElement).toBe(screen.getByRole('button', { name: FIXTURE_SECOND }));
+  });
+
+  it('restores stable regions once when another region disappears and then leaves user focus and scroll alone', async () => {
+    const rendered = render(<Harness leadingRegion />);
+    const selected = screen.getByRole('button', { name: FIXTURE_SECOND });
+    fireEvent.click(selected);
+    selected.focus();
+    const outer = screen.getByTestId('scroll');
+    outer.scrollTop = 154;
+    screen.getByTestId('nested-scroll').scrollLeft = 580;
+    fireEvent.click(screen.getByRole('button', { name: 'Promote selected item' }));
+    rendered.rerender(<Harness routeKey={DETAIL} />);
+    rendered.rerender(<Harness />);
+    expect.soft(screen.getByTestId('nested-scroll').scrollLeft).toBe(580);
+    const control = screen.getByRole('button', { name: FIXTURE_FIRST });
+    control.focus();
+    outer.scrollTop = 33;
+    screen.getByTestId('nested-scroll').scrollLeft = 72;
+    await act(async () => {
+      screen.getByTestId('nested-scroll').append(document.createElement('span'));
+    });
+    expect(document.activeElement).toBe(control);
+    expect(outer.scrollTop).toBe(33);
+    expect(screen.getByTestId('nested-scroll').scrollLeft).toBe(72);
+  });
+
+  it('waits for route data then stops restoring even when the saved row is gone', async () => {
+    const rendered = render(<Harness />);
+    const selected = screen.getByRole('button', { name: FIXTURE_SECOND });
+    fireEvent.click(selected);
+    selected.focus();
+    const outer = screen.getByTestId('scroll');
+    outer.scrollTop = 154;
+    fireEvent.click(screen.getByRole('button', { name: 'Promote selected item' }));
+    rendered.rerender(<Harness routeKey={DETAIL} />);
+    rendered.rerender(<Harness loading />);
+    expect.soft(outer.scrollTop).toBe(0);
+    rendered.rerender(<Harness omitSecond />);
+    await act(async () => undefined);
+    expect(outer.scrollTop).toBe(154);
+    const control = screen.getByRole('button', { name: FIXTURE_FIRST });
+    control.focus();
+    outer.scrollTop = 44;
+    await act(async () => {
+      screen.getByTestId('nested-scroll').append(document.createElement('span'));
+    });
+    expect(document.activeElement).toBe(control);
+    expect(outer.scrollTop).toBe(44);
+  });
+
+  it('expires a pending return restore before late route data can steal focus or scroll', async () => {
+    vi.useFakeTimers();
+    try {
+      const rendered = render(<Harness />);
+      const selected = screen.getByRole('button', { name: FIXTURE_SECOND });
+      fireEvent.click(selected);
+      selected.focus();
+      const outer = screen.getByTestId('scroll');
+      outer.scrollTop = 154;
+      fireEvent.click(screen.getByRole('button', { name: 'Promote selected item' }));
+      rendered.rerender(<Harness routeKey={DETAIL} />);
+      rendered.rerender(<Harness loading />);
+      await act(async () => vi.advanceTimersByTime(1000));
+      const control = screen.getByRole('button', { name: 'Promote selected item' });
+      control.focus();
+      outer.scrollTop = 55;
+      rendered.rerender(<Harness />);
+      await act(async () => undefined);
+      expect(document.activeElement).toBe(control);
+      expect(outer.scrollTop).toBe(55);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('captures native hash link navigation before its origin disappears', async () => {

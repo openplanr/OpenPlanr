@@ -222,6 +222,48 @@ describe('dashboard keyboard coordinator', () => {
     expect(context.announce).toHaveBeenCalledWith('2 of 3');
   });
 
+  it.each(['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'])(
+    'preserves native %s on focusable scroll regions and other non-row elements',
+    (arrow) => {
+      const { root, context } = fixture(
+        `<section tabindex="0" data-scroll-context="evidence"><span tabindex="0">Evidence</span></section><div tabindex="0">Other focus target</div>${list}`,
+      );
+      for (const target of root.querySelectorAll<HTMLElement>(
+        '[tabindex="0"]:not([data-keyboard-item])',
+      )) {
+        target.focus();
+        expect(key(target, arrow).defaultPrevented).toBe(false);
+        expect(document.activeElement).toBe(target);
+        key(target, 'g');
+        key(target, arrow);
+        key(target, 'h');
+      }
+      expect(context.navigate).not.toHaveBeenCalled();
+      expect(context.announce).not.toHaveBeenCalled();
+    },
+  );
+
+  it('keeps arrows on a nested scroll region out of managed row dispatch', () => {
+    const { root, item } = fixture(
+      `<div data-managed-rows><section data-route-kind="planning.board">${row('a')}${row('b')}<section tabindex="0" data-scroll-context="evidence"><span tabindex="0">Evidence</span></section></section></div>`,
+    );
+    const requests = vi.fn((request: Event) => request.preventDefault());
+    root.querySelector('[data-managed-rows]')?.addEventListener('workspace-row-key', requests);
+    const region = root.querySelector<HTMLElement>('[data-scroll-context]') as HTMLElement;
+    item('a').append(region);
+    for (const target of [region, region.firstElementChild as HTMLElement]) {
+      target.focus();
+      for (const arrow of ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight']) {
+        expect(key(target, arrow).defaultPrevented).toBe(false);
+        expect(document.activeElement).toBe(target);
+      }
+    }
+    expect(requests).not.toHaveBeenCalled();
+    item('b').focus();
+    expect(key(item('b'), 'ArrowDown').defaultPrevented).toBe(true);
+    expect(requests).toHaveBeenCalledOnce();
+  });
+
   it('uses the selected row as the origin and never navigates unavailable rows', () => {
     const { item, clicks } = fixture(
       `<section>${row('a', 'data-selected="true"')}${row('hidden', 'hidden')}${row('disabled', 'aria-disabled="true"')}${row('b')}${row('inert', 'inert')}</section>`,
