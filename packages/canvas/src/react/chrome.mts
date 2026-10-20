@@ -21,6 +21,7 @@ import type { ChromeAction, ChromeRegion, ChromeShortcut } from './chrome-provid
 import {
   formatShortcut,
   useChrome,
+  useChromeBridge,
   useChromeCanvas,
   useChromeNodeStore,
   useReducedMotion,
@@ -111,7 +112,7 @@ export interface ToolbarHintProps {
 
 type KitState = {
   openMenu: string | null;
-  setOpenMenu: (id: string | null) => void;
+  setOpenMenu: (id: string | null, restoreFocus?: boolean) => void;
   mobileMenu: HTMLElement | null;
   setMobileMenu: (element: HTMLElement | null) => void;
   anchors: Map<string, HTMLElement>;
@@ -205,7 +206,22 @@ export function ChromeRoot({ children, className }: ChromeRootProps): ReactNode 
   const chrome = useChrome();
   const controller = useChromeCanvas();
   const reduced = useReducedMotion();
-  const [openMenu, setOpenMenu] = useState<string | null>(null);
+  const [openMenu, updateOpenMenu] = useState<string | null>(null);
+  const bridge = useChromeBridge();
+  const menuOpener = useRef<HTMLElement | null>(null);
+  const setOpenMenu = useCallback(
+    (id: string | null, restoreFocus = true) => {
+      if (id !== null) {
+        menuOpener.current =
+          document.getElementById(id)?.querySelector<HTMLElement>('[aria-haspopup="menu"]') ?? null;
+      } else {
+        if (restoreFocus && menuOpener.current) bridge?.returnFocus(menuOpener.current);
+        menuOpener.current = null;
+      }
+      updateOpenMenu(id);
+    },
+    [bridge],
+  );
   const [mobileMenu, setMobileMenu] = useState<HTMLElement | null>(null);
   const anchors = useRef(new Map<string, HTMLElement>()).current;
   const press = useRef<{
@@ -218,11 +234,11 @@ export function ChromeRoot({ children, className }: ChromeRootProps): ReactNode 
   } | null>(null);
   const kit = useMemo(
     () => ({ openMenu, setOpenMenu, mobileMenu, setMobileMenu, anchors }),
-    [openMenu, mobileMenu, anchors],
+    [openMenu, setOpenMenu, mobileMenu, anchors],
   );
   useEffect(() => {
     if (chrome.chromeHidden) setOpenMenu(null);
-  }, [chrome.chromeHidden]);
+  }, [chrome.chromeHidden, setOpenMenu]);
   useEffect(() => {
     const emptyStage = (event: MouseEvent): Element | null => {
       if (!(event.target instanceof Element)) return null;
@@ -237,7 +253,7 @@ export function ChromeRoot({ children, className }: ChromeRootProps): ReactNode 
       const target = event.target;
       if (!(target instanceof Element)) return;
       if (target.closest('.canvas-stage') || !target.closest('[data-canvas-menu-host]'))
-        setOpenMenu(null);
+        setOpenMenu(null, false);
     };
     const pointerdown = (event: PointerEvent) => {
       dismissMenus(event);
@@ -282,12 +298,10 @@ export function ChromeRoot({ children, className }: ChromeRootProps): ReactNode 
         if (panel.open && !panel.pinned) chrome.setPanelOpen(id, false);
       }
     };
-    const keydown = (event: KeyboardEvent) => {
-      if (event.key !== 'Escape') return;
+    const dismissEscape = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape' || event.defaultPrevented) return;
       if (openMenu !== null) {
         setOpenMenu(null);
-        const host = document.getElementById(openMenu);
-        host?.querySelector<HTMLElement>('[aria-haspopup="menu"]')?.focus();
       } else {
         const panels = Object.entries(chrome.panels).filter(
           ([, panel]) => panel.open && !panel.pinned,
@@ -298,21 +312,37 @@ export function ChromeRoot({ children, className }: ChromeRootProps): ReactNode 
       event.preventDefault();
       event.stopPropagation();
     };
+    const stageKeydown = (event: KeyboardEvent) => {
+      if (event.target instanceof Element && event.target.closest('.canvas-stage'))
+        dismissEscape(event);
+    };
+    const keydown = (event: KeyboardEvent) => {
+      if (
+        event.target instanceof Element &&
+        event.target.closest(
+          '.canvas-stage, input, textarea, select, [contenteditable]:not([contenteditable="false"]), [role="dialog"], [aria-modal="true"]',
+        )
+      )
+        return;
+      dismissEscape(event);
+    };
     document.addEventListener('click', click, true);
     document.addEventListener('pointerdown', pointerdown, true);
     document.addEventListener('pointermove', pointermove, true);
     document.addEventListener('pointerup', pointerup, true);
     document.addEventListener('pointercancel', pointercancel, true);
-    document.addEventListener('keydown', keydown, true);
+    document.addEventListener('keydown', stageKeydown, true);
+    document.addEventListener('keydown', keydown);
     return () => {
       document.removeEventListener('click', click, true);
       document.removeEventListener('pointerdown', pointerdown, true);
       document.removeEventListener('pointermove', pointermove, true);
       document.removeEventListener('pointerup', pointerup, true);
       document.removeEventListener('pointercancel', pointercancel, true);
-      document.removeEventListener('keydown', keydown, true);
+      document.removeEventListener('keydown', stageKeydown, true);
+      document.removeEventListener('keydown', keydown);
     };
-  }, [chrome.panels, chrome.setPanelOpen, controller, openMenu]);
+  }, [chrome.panels, chrome.setPanelOpen, controller, openMenu, setOpenMenu]);
   return createElement(
     KitContext.Provider,
     { value: kit },
@@ -615,12 +645,12 @@ export function Sidebar({
         !controller.getSelection().includes(node.dataset.canvasNodeId)
       )
         return;
-      setTab('inspector');
+      setTab(inspector === undefined ? 'outline' : 'inspector');
       setPanelOpen(id, true);
     };
     document.addEventListener('keydown', keydown, true);
     return () => document.removeEventListener('keydown', keydown, true);
-  }, [controller, id, setPanelOpen]);
+  }, [controller, id, inspector, setPanelOpen]);
   return createElement(
     'div',
     slotProps('sidebar', ref, {
@@ -770,8 +800,7 @@ function RegisteredZoom({ label }: ZoomPillProps): ReactNode {
   }, [controller]);
   const zoom = (factor: number) => {
     if (!controller) return;
-    const area = controller.getSafeArea();
-    controller.zoomAt(factor, { x: area.x + area.width / 2, y: area.y + area.height / 2 });
+    controller.zoomAt(factor);
   };
   return createElement(
     'div',
@@ -920,12 +949,10 @@ export function WelcomeHints({
       'div',
       {
         className: 'canvas-chrome-welcome-actions',
-        role: 'menu',
+        role: 'group',
         'aria-label': 'Getting started actions',
       },
-      actions.map((action) =>
-        createElement(MenuItem, { key: action.label, ...action }, action.label),
-      ),
+      actions.map((action) => createElement(WelcomeAction, { key: action.label, ...action })),
     ),
     createElement(
       'span',
@@ -937,6 +964,28 @@ export function WelcomeHints({
       { ref: toolbar, className: 'canvas-chrome-welcome-label', 'data-welcome-anchor': 'toolbar' },
       toolbarHint,
     ),
+  );
+}
+
+function WelcomeAction({
+  label,
+  onClick,
+  shortcut,
+}: WelcomeHintsProps['actions'][number]): ReactNode {
+  const hint = useHint(shortcut);
+  return button(
+    undefined,
+    createElement(
+      Fragment,
+      null,
+      createElement('span', null, label),
+      hint && createElement('kbd', null, ` ${hint}`),
+    ),
+    onClick,
+    {
+      className: 'canvas-chrome-menu-item',
+      title: hint ? `${label} (${hint})` : undefined,
+    },
   );
 }
 

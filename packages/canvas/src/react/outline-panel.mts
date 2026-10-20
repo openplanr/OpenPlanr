@@ -9,6 +9,7 @@ import {
   useSyncExternalStore,
 } from 'react';
 import type { NodeId } from '../index.mjs';
+import { useChromeCanvas, useChromeNodeStore } from './chrome-provider.mjs';
 import { useCanvasBinding } from './provider.mjs';
 
 export interface OutlinePanelProps {
@@ -40,32 +41,43 @@ export function OutlinePanel({
   if (!Number.isInteger(overscan) || overscan < 0)
     throw new TypeError(`OutlinePanel overscan must be a non-negative integer: ${overscan}`);
   const binding = useCanvasBinding();
-  const controller = binding?.controller ?? null;
+  const registeredCanvas = useChromeCanvas();
+  const nodeStore = useChromeNodeStore();
+  const controller = binding?.controller ?? registeredCanvas;
   const list = useRef<HTMLDivElement>(null);
   const rows = useRef(new Map<number, HTMLDivElement>());
   const focusPending = useRef(false);
   const [scrollTop, setScrollTop] = useState(0);
-  const [active, setActive] = useState(0);
+  const [active, setActive] = useState<{ id: NodeId | undefined; index: number }>({
+    id: undefined,
+    index: 0,
+  });
   const prefix = useId();
   const store = useMemo(
     () => ({
       subscribe: (notify: () => void) => {
-        if (!controller || ids || !binding) return () => {};
+        if (!controller || ids) return () => {};
         const unmount = controller.on('mount', notify);
         const geometry = controller.on('geometry', notify);
-        const nodes = binding.subscribeNodes(notify);
+        const nodes = binding?.subscribeNodes(notify) ?? nodeStore?.subscribe(notify);
         return () => {
           unmount();
           geometry();
-          nodes();
+          nodes?.();
         };
       },
       snapshot: () => ids ?? controller?.getOutline() ?? emptyIds,
     }),
-    [binding, controller, ids],
+    [binding, controller, ids, nodeStore],
   );
   const outline = useSyncExternalStore(store.subscribe, store.snapshot, () => ids ?? emptyIds);
-  const current = Math.min(active, Math.max(0, outline.length - 1));
+  const found = active.id === undefined ? -1 : outline.indexOf(active.id);
+  const current = found < 0 ? Math.min(active.index, Math.max(0, outline.length - 1)) : found;
+  const currentId = outline[current];
+  useLayoutEffect(() => {
+    if (active.id !== currentId || active.index !== current)
+      setActive({ id: currentId, index: current });
+  }, [active, currentId, current]);
   const start = Math.max(0, Math.floor(scrollTop / rowHeight) - overscan);
   const end = Math.min(outline.length, Math.ceil((scrollTop + height) / rowHeight) + overscan);
   useLayoutEffect(() => {
@@ -87,7 +99,7 @@ export function OutlinePanel({
         element.scrollTop = (next + 1) * rowHeight - height;
       setScrollTop(element.scrollTop);
     }
-    setActive(next);
+    setActive({ id: outline[next], index: next });
     if (next === current) {
       rows.current.get(next)?.focus({ preventScroll: true });
       focusPending.current = false;
@@ -165,9 +177,9 @@ export function OutlinePanel({
             'aria-posinset': index + 1,
             'aria-selected': index === current,
             tabIndex: index === current ? 0 : -1,
-            onFocus: () => setActive(index),
+            onFocus: () => setActive({ id, index }),
             onClick: () => {
-              setActive(index);
+              setActive({ id, index });
               void activate(id);
             },
             style: {

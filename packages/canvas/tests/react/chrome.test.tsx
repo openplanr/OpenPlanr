@@ -327,12 +327,14 @@ describe('chrome state and keyboard', () => {
       'zoom',
       'history',
       'help',
-      'skip-link',
     ]) {
       fireEvent.keyDown(document, { code: 'F6' });
       expect(document.activeElement).toBe(screen.getByText(region));
     }
-    fireEvent.keyDown(document, { code: 'F6', shiftKey: true });
+    expect(fireEvent.keyDown(document, { code: 'F6' })).toBe(true);
+    expect(document.activeElement).toBe(screen.getByText('help'));
+    act(() => (document.activeElement as HTMLElement).blur());
+    expect(fireEvent.keyDown(document, { code: 'F6', shiftKey: true })).toBe(false);
     expect(document.activeElement).toBe(screen.getByText('help'));
     act(() => current().setPanelOpen('inspector', true));
     for (const region of [

@@ -587,3 +587,24 @@ describe('virtual outline', () => {
     expect(liveController().getSelection()).toEqual(['a']);
   });
 });
+
+it('keeps the active outline id through insertion and clamps its index after removal', () => {
+  const outline = (ids: readonly string[]) => (
+    <OutlinePanel
+      ids={ids}
+      rowHeight={28}
+      height={200}
+      label="Stable rows"
+      renderRow={(id) => id}
+    />
+  );
+  const view = render(outline(['a', 'b', 'c']));
+  act(() => screen.getByRole('option', { name: 'b' }).focus());
+  view.rerender(outline(['new', 'a', 'b', 'c']));
+  expect(screen.getByRole('option', { selected: true }).textContent).toBe('b');
+  expect(screen.getByRole('option', { name: 'b' }).tabIndex).toBe(0);
+  view.rerender(outline(['new', 'a', 'c']));
+  expect(screen.getByRole('option', { selected: true }).textContent).toBe('c');
+  view.rerender(outline(['new', 'a']));
+  expect(screen.getByRole('option', { selected: true }).textContent).toBe('a');
+});

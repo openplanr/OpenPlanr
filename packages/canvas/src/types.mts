@@ -94,6 +94,7 @@ export interface CanvasController {
   getCamera(): Camera;
   setCamera(camera: Camera, options?: Readonly<{ animate?: boolean }>): void;
   panBy(dxScreen: number, dyScreen: number): void;
+  /** Zooms at the safe-area centre and announces, or silently at an explicit point. */
   zoomAt(factor: number, screenPoint?: Point): void;
   fit(
     target: 'all' | 'selection' | readonly NodeId[],

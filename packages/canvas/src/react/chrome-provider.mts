@@ -92,6 +92,7 @@ type ChromeNodeStore = {
 };
 type Bridge = Pick<ChromeState, 'registerRegion'> & {
   registerCanvas(controller: CanvasController, nodes?: ChromeNodeStore): () => void;
+  returnFocus(opener: HTMLElement | null): void;
 };
 type SurfaceRegistration = {
   edge: ChromeSurface['edge'];
@@ -241,6 +242,25 @@ export function ChromeProvider({
   const canvas = useRef<CanvasController | null>(null);
   const menu = useRef<(() => void) | null>(null);
   const forwarded = useRef(new Set<string>());
+  const panelOpeners = useRef(new Map<string, HTMLElement | null>());
+  const returnFocus = useCallback((opener: HTMLElement | null) => {
+    let focusable = Boolean(
+      opener?.isConnected &&
+        opener.matches('button, input, textarea, select, a[href], [tabindex], [contenteditable]') &&
+        !opener.matches(':disabled') &&
+        !opener.closest('[hidden], [inert], [aria-hidden="true"]'),
+    );
+    for (let element = opener; element && focusable; element = element.parentElement) {
+      const style = getComputedStyle(element);
+      if (element.inert || style.display === 'none' || style.visibility === 'hidden')
+        focusable = false;
+    }
+    if (focusable && opener) {
+      opener.focus({ preventScroll: true });
+      if (document.activeElement === opener) return;
+    }
+    regions.current.get('canvas')?.element.focus({ preventScroll: true });
+  }, []);
 
   const reportStorageError = useCallback((error: unknown, context: ChromeStorageErrorContext) => {
     const callback = latest.current.onStorageError;
@@ -315,6 +335,16 @@ export function ChromeProvider({
   const updatePanel = useCallback(
     (id: string, value: ChromePanelState, persist = true) => {
       const current = latest.current;
+      const wasOpen = current.panels[id]?.open === true;
+      if (value.open && !wasOpen) {
+        const active = document.activeElement;
+        const host = active?.closest('[data-canvas-menu-host]');
+        panelOpeners.current.set(
+          id,
+          host?.querySelector<HTMLElement>('[aria-haspopup="menu"]') ??
+            (active instanceof HTMLElement ? active : null),
+        );
+      }
       if (persist) panelVersions.current.set(id, (panelVersions.current.get(id) ?? 0) + 1);
       const next = { ...current.panels, [id]: value };
       if (value.open && current.layout !== 'desktop' && panelRegistrations.current.has(id)) {
@@ -328,9 +358,11 @@ export function ChromeProvider({
         }
       }
       publishPanels(next);
+      if (wasOpen && !value.open && !document.activeElement?.closest('.canvas-stage'))
+        returnFocus(panelOpeners.current.get(id) ?? null);
       if (persist) save(`canvas.chrome.panel.${id}`, value);
     },
-    [publishPanels, save],
+    [publishPanels, returnFocus, save],
   );
   const setPanelOpen = useCallback(
     (id: string, open: boolean) => {
@@ -492,7 +524,6 @@ export function ChromeProvider({
   );
 
   useEffect(() => {
-    latest.current.storage = storage;
     const initialHints = hints.current;
     return read(
       hintsKey,
@@ -512,7 +543,7 @@ export function ChromeProvider({
         setDismissedHints([]);
       },
     );
-  }, [read, save, storage]);
+  }, [read, save]);
   const dismissHint = useCallback(
     (id: string) => {
       if (hints.current.includes(id)) return;
@@ -538,7 +569,8 @@ export function ChromeProvider({
         const open = [...panelRegistrations.current.keys()].filter(
           (id) => latest.current.panels[id]?.open,
         );
-        for (const id of open.slice(1)) setPanelOpen(id, false);
+        for (const id of open.slice(1))
+          updatePanel(id, { ...latest.current.panels[id], open: false }, false);
       }
     };
     update();
@@ -548,7 +580,7 @@ export function ChromeProvider({
       mobile.removeEventListener('change', update);
       onePanel?.removeEventListener('change', update);
     };
-  }, [mobileBreakpoint, onePanelBreakpoint, setPanelOpen]);
+  }, [mobileBreakpoint, onePanelBreakpoint, updatePanel]);
   useEffect(() => {
     refreshSurfaces();
     window.addEventListener('resize', refreshSurfaces);
@@ -585,17 +617,15 @@ export function ChromeProvider({
           return [];
         return [region.element];
       });
-      if (!active.length) return;
+      if (!active.length) return false;
       const current = active.findIndex(
         (element) => element === document.activeElement || element.contains(document.activeElement),
       );
       const index =
-        current < 0
-          ? backward
-            ? active.length - 1
-            : 0
-          : (current + (backward ? -1 : 1) + active.length) % active.length;
+        current < 0 ? (backward ? active.length - 1 : 0) : current + (backward ? -1 : 1);
+      if (index < 0 || index >= active.length) return false;
       active[index]?.focus();
+      return true;
     };
     const toggleRole = (role: 'navigation' | 'sidebar', side: 'left' | 'right') => {
       const panel = [...panelRegistrations.current].find(
@@ -605,12 +635,16 @@ export function ChromeProvider({
       togglePanel(panel[0]);
       return true;
     };
-    const actions: Record<ChromeAction, () => void> = {
+    const actions: Record<ChromeAction, () => boolean> = {
       menu: () => {
         if (!toggleRole('navigation', 'left')) menu.current?.();
+        return true;
       },
       sidebar: () => toggleRole('sidebar', 'right'),
-      hideChrome: () => setChromeHidden((hidden) => !hidden),
+      hideChrome: () => {
+        setChromeHidden((hidden) => !hidden);
+        return true;
+      },
       nextRegion: () => cycle(false),
       previousRegion: () => cycle(true),
     };
@@ -622,8 +656,7 @@ export function ChromeProvider({
         matches(event, bindings[name]),
       );
       if (!action) return;
-      actions[action]();
-      event.preventDefault();
+      if (actions[action]() !== false) event.preventDefault();
     };
     document.addEventListener('keydown', keydown);
     document.addEventListener('compositionstart', compositionStart);
@@ -642,8 +675,8 @@ export function ChromeProvider({
         panelRegistrations.current.get(id)?.side === 'right'),
   );
   const bridge = useMemo(
-    () => ({ registerCanvas, registerRegion }),
-    [registerCanvas, registerRegion],
+    () => ({ registerCanvas, registerRegion, returnFocus }),
+    [registerCanvas, registerRegion, returnFocus],
   );
   const value = useMemo<ChromeState>(
     () => ({

@@ -39,6 +39,10 @@ Default zoom limits are 0.04 and 4. Optional padded world bounds constrain pan.
 Animated `setCamera` moves take at most 200 ms and honor reduced motion and
 `motion: 'none'`.
 
+`zoomAt(factor)` zooms around the safe-area centre and announces the resulting
+percentage through the 500 ms coalesced live region. Passing an explicit
+`screenPoint` zooms silently, as wheel and pinch gestures do.
+
 `setNodes` stores bounds for `fit('all' | 'selection' | ids, { padding, maxZoom })`
 and `reveal(id, { mode: 'minimal' | 'center' })`. `setSelection` and `getSelection`
 manage the selected IDs. Fit and reveal use the safe area. A 512 px spatial grid tracks incremental

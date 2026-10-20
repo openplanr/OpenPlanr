@@ -357,7 +357,11 @@ test('welcome hints anchor to measured controls and disappear when a node is add
   page,
 }) => {
   await openChrome(page, 'empty=1');
-  await expect(page.getByRole('menuitem', { name: /^Add rectangle/u })).toBeVisible();
+  await expect(
+    page.getByRole('group', { name: 'Getting started actions' }).getByRole('button', {
+      name: /^Add rectangle/u,
+    }),
+  ).toBeVisible();
   const anchors = await page.evaluate(() => {
     return ['menu', 'toolbar'].map((name) => {
       const hint = document.querySelector(`[data-welcome-anchor="${name}"]`);
