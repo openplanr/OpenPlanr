@@ -8,19 +8,21 @@ import {
 } from './browser/trace-results';
 
 describe('trace budget selection', () => {
-  it('enforces local remount and rAF limits at the reference budgets', () => {
+  it('enforces local remount, rAF and first-frame limits at the reference budgets', () => {
     expect(traceBudgetPolicy(false)).toEqual({
       budgetSet: 'local',
       remountRendererMainP95Ms: 16,
       rafIntervalP95Ms: 16.8,
+      firstFrameP50Ms: 150,
     });
   });
 
-  it('reports runner remount and rAF without failing limits', () => {
+  it('reports runner remount and rAF and gates the runner first frame at 250 ms', () => {
     expect(traceBudgetPolicy(true)).toEqual({
       budgetSet: 'runner',
       remountRendererMainP95Ms: null,
       rafIntervalP95Ms: null,
+      firstFrameP50Ms: 250,
     });
   });
 });

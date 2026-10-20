@@ -1,7 +1,9 @@
-import { existsSync, readFileSync } from 'node:fs';
+import { spawnSync } from 'node:child_process';
+import { cpSync, existsSync, mkdtempSync, readdirSync, readFileSync, rmSync } from 'node:fs';
 import { createRequire } from 'node:module';
+import { tmpdir } from 'node:os';
 import { resolve, sep } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import ts from 'typescript';
 import { describe, expect, it } from 'vitest';
 
@@ -55,7 +57,37 @@ describe('package shape', () => {
             ]
           : specifier === '@openplanr/canvas/testing'
             ? ['generateLayeredGraph', 'generateSvgDiagram', 'percentile95', 'rendererFrameWork']
-            : [];
+            : [
+                'ActionPill',
+                'CanvasProvider',
+                'CanvasStage',
+                'ChromeProvider',
+                'ChromeRoot',
+                'FloatingToolbar',
+                'HelpButton',
+                'HistoryPill',
+                'Menu',
+                'MenuItem',
+                'MenuPill',
+                'NavigationPanel',
+                'OutlinePanel',
+                'PrimaryAction',
+                'Sidebar',
+                'SidebarToggle',
+                'ToolbarHint',
+                'ToolbarItem',
+                'ToolbarMore',
+                'WelcomeHints',
+                'WorldNodes',
+                'ZoomPill',
+                'defaultChromeKeymap',
+                'formatShortcut',
+                'useCamera',
+                'useCanvas',
+                'useChrome',
+                'useReducedMotion',
+                'useShortcut',
+              ];
       expect(Object.keys(entry).sort()).toEqual(values);
       const types =
         specifier === '@openplanr/canvas'
@@ -88,7 +120,41 @@ describe('package shape', () => {
                 'RendererTraceEvent',
                 'RendererTraceMarks',
               ]
-            : [];
+            : [
+                'ActionPillProps',
+                'CanvasProviderProps',
+                'CanvasStageProps',
+                'ChromeAction',
+                'ChromeKeymap',
+                'ChromePanelOptions',
+                'ChromePanelState',
+                'ChromeProviderProps',
+                'ChromeRegion',
+                'ChromeRegionOptions',
+                'ChromeRootProps',
+                'ChromeShortcut',
+                'ChromeState',
+                'ChromeStorage',
+                'ChromeStorageErrorContext',
+                'ChromeSurfaceOptions',
+                'FloatingToolbarProps',
+                'HelpButtonProps',
+                'HistoryPillProps',
+                'MenuItemProps',
+                'MenuPillProps',
+                'MenuProps',
+                'NavigationPanelProps',
+                'OutlinePanelProps',
+                'PrimaryActionProps',
+                'SidebarProps',
+                'SidebarToggleProps',
+                'ToolbarHintProps',
+                'ToolbarItemProps',
+                'ToolbarMoreProps',
+                'WelcomeHintsProps',
+                'WorldNodesProps',
+                'ZoomPillProps',
+              ];
       const path = resolve(packageRoot, `${target}.d.mts`);
       const program = ts.createProgram([path], { module: ts.ModuleKind.NodeNext });
       const source = program.getSourceFile(path);
@@ -118,6 +184,49 @@ describe('package shape', () => {
     });
     expect(manifest.sideEffects).toEqual(['**/*.css']);
     expect(manifest.publishConfig).toEqual({ access: 'public' });
+  });
+
+  it('loads the isolated core without React installed', () => {
+    const scratch = mkdtempSync(resolve(tmpdir(), 'canvas-core-'));
+    try {
+      expect(() => createRequire(resolve(scratch, 'package.json')).resolve('react')).toThrow();
+      cpSync(resolve(packageRoot, 'src'), resolve(scratch, 'src'), {
+        recursive: true,
+        filter: (path) => path !== resolve(packageRoot, 'src/react'),
+      });
+      const entry = pathToFileURL(resolve(scratch, 'src/index.mjs')).href;
+      const result = spawnSync(
+        process.execPath,
+        [
+          '--input-type=module',
+          '-e',
+          `const {createCanvas} = await import(${JSON.stringify(entry)}); const canvas = createCanvas({label:'Isolated core'}); canvas.destroy();`,
+        ],
+        { cwd: scratch, encoding: 'utf8' },
+      );
+      expect(result.stderr).toBe('');
+      expect(result.status).toBe(0);
+    } finally {
+      rmSync(scratch, { recursive: true, force: true });
+    }
+  });
+
+  it('restricts every React import to the React entry directory', () => {
+    const sourceRoot = resolve(packageRoot, 'src');
+    for (const name of readdirSync(sourceRoot, { recursive: true })) {
+      if (typeof name !== 'string' || !name.endsWith('.mts') || name.endsWith('.d.mts')) continue;
+      if (name.startsWith(`react${sep}`)) continue;
+      const source = ts.createSourceFile(
+        name,
+        readFileSync(resolve(sourceRoot, name), 'utf8'),
+        ts.ScriptTarget.Latest,
+      );
+      function check(node: ts.Node): void {
+        if (ts.isStringLiteral(node)) expect(node.text).not.toMatch(/^react(?:-dom)?(?:\/|$)/u);
+        ts.forEachChild(node, check);
+      }
+      check(source);
+    }
   });
 
   it('keeps the entire compiled core import graph inside the package', async () => {
