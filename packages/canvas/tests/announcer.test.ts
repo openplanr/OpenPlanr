@@ -50,6 +50,60 @@ describe('canvas announcements', () => {
     }
   });
 
+  it('announces a repeated identical message again by clearing the region first', async () => {
+    const stage = document.createElement('div');
+    const announcer = createAnnouncer(stage);
+    const status = stage.querySelector('[role="status"]');
+    if (!status) throw new Error('Canvas status region is missing');
+    const changes: string[] = [];
+    const observer = new MutationObserver(() => changes.push(status.textContent ?? ''));
+    observer.observe(status, { childList: true, characterData: true, subtree: true });
+    try {
+      announcer.say('Edge of canvas');
+      await vi.advanceTimersByTimeAsync(500);
+      announcer.say('Edge of canvas');
+      vi.advanceTimersToNextTimer();
+      await Promise.resolve();
+      expect(status.textContent).toBe('');
+      vi.advanceTimersToNextTimer();
+      await Promise.resolve();
+      expect(status.textContent).toBe('Edge of canvas');
+      expect(changes.filter((text) => text === 'Edge of canvas')).toHaveLength(2);
+      expect(changes).toEqual(['Edge of canvas', '', 'Edge of canvas']);
+    } finally {
+      observer.disconnect();
+      announcer.dispose();
+    }
+  });
+
+  it('cancels a pending repeat when disposed', async () => {
+    const stage = document.createElement('div');
+    const announcer = createAnnouncer(stage);
+    const status = stage.querySelector('[role="status"]');
+    announcer.say('Zoom 125%');
+    await vi.advanceTimersByTimeAsync(500);
+    announcer.say('Zoom 125%');
+    vi.advanceTimersToNextTimer();
+    announcer.dispose();
+    expect(vi.getTimerCount()).toBe(0);
+    expect(status?.textContent).toBe('');
+  });
+
+  it('uses the timers of the stage document window', () => {
+    const stage = document.createElement('div');
+    const view = stage.ownerDocument.defaultView;
+    if (!view) throw new Error('Test document has no window');
+    const setTimer = vi.spyOn(view, 'setTimeout');
+    const announcer = createAnnouncer(stage);
+    try {
+      announcer.say('Zoom 125%');
+      expect(setTimer).toHaveBeenCalledTimes(1);
+    } finally {
+      announcer.dispose();
+      setTimer.mockRestore();
+    }
+  });
+
   it('cancels a pending message when disposed', () => {
     const stage = document.createElement('div');
     const announcer = createAnnouncer(stage);
