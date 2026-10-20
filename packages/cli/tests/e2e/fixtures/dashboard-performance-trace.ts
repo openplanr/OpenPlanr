@@ -588,6 +588,10 @@ export function registerDashboardPerformanceTraceTests() {
         throttling: { cpu: 'disabled', network: 'disabled' },
         build: { ...productionManifest(), servedAssets: [...assets].sort(), mode: 'production' },
       };
+      // CI keeps logs on every run but artifacts only on failure, so the numbers go to the log.
+      process.stdout.write(
+        `dashboard performance ${dataset}: ${JSON.stringify({ runner: metadata.runner, summaries: evaluation.summaries, failures: evaluation.failures })}\n`,
+      );
       await testInfo.attach('dashboard-performance.json', {
         body: Buffer.from(
           JSON.stringify(
