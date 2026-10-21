@@ -199,7 +199,7 @@
     {
       "source": "packages/design/lib/design/browser-audit.mjs",
       "target": "lib/design/browser-audit.mjs",
-      "sha256": "b63da9a6d392a213ba16a0b98cd3569674060a917d31e0e70ee117b680329173",
+      "sha256": "cef1d81aa20ad61b81210467c29d3a806ac3b39af62cdcd388e196747de96af5",
       "mode": "644"
     },
     {
@@ -313,7 +313,7 @@
     {
       "source": "packages/design/lib/design/handoff-readiness.mjs",
       "target": "lib/design/handoff-readiness.mjs",
-      "sha256": "9cc4c6021ce4427c022fcb37e94f8ecdb7c703bb07066dbb1ac47e3f06bd94f6",
+      "sha256": "f1bf9700118eb67dbeb5e08d810894e9bf1fcd96bc4329914b9601d21a2b2d0a",
       "mode": "644"
     },
     {
@@ -517,7 +517,7 @@
     {
       "source": "packages/design/lib/design/ui/studio.mjs",
       "target": "lib/design/ui/studio.mjs",
-      "sha256": "b7ce69a51496396a13d70d0c3397a9e4aaab2669cd4299353fe6d092241d11dd",
+      "sha256": "52f91e189fc4a7ecca785c95d1f5e8314068558b013d811828c0623a40606321",
       "mode": "644"
     },
     {
@@ -589,7 +589,7 @@
     {
       "source": "packages/design/templates/studio/studio.js",
       "target": "templates/studio/studio.js",
-      "sha256": "2e0a8fc043b3dc9101793a0c64a17fccbcc85792ed9733e810395968d53c42b2",
+      "sha256": "15f5f127f5ce554e9ca9e49bb9da175c5f6442101988b8555d36ae4cb6b8265d",
       "mode": "644"
     }
   ]

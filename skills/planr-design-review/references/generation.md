@@ -9,7 +9,9 @@ Use a versioned `design-document.json` and the bundled schema exposed by the
 [utility](utilities.md). It names the design, stable screens and variants, authored
 local HTML/CSS/JavaScript, assets, screen order, responsive frames, interaction
 flows, selected direction, brief provenance and design-system references. Inspect
-the schema before creating the document; validate it before rendering.
+the schema before creating the document; validate it before rendering. Author new
+documents with `schemaVersion: "1.1.0"`; preserve an existing document's value
+when revising, migrating or arranging it.
 
 Read [team-review.md](team-review.md) and author a sibling `review-context.json`
 for every new design. Its welcome purpose and review questions belong to this
@@ -117,9 +119,10 @@ Dragging a board's title in the local studio writes its exact
 screen/frame/variant position into the authored document and preserves an existing
 title. In Canvas, Cmd/Ctrl+Z saves the prior layout; Shift+Cmd/Ctrl+Z redoes it. Preserve these fields
 when revising the design. Portable studios without a local server keep drags only
-for the current session. Legacy positions in browser storage or
-`.design/studio-state.json` no longer determine placement; previously dragged
-boards return to their document or grid position.
+for the current session. On first open, legacy positions in browser storage or
+`.design/studio-state.json` fill missing exact board keys in one layout revision.
+The studio removes migrated personal positions only after saving. Without a local
+server, those positions apply for the session.
 
 ## Parallel alternatives
 
@@ -168,8 +171,9 @@ rendered absolute/fixed elements beyond the width or height by more than 1px,
 using document height for auto frames and respecting ancestor overflow clipping.
 
 The three rules (`board-root-box-sizing`, `vertical-overflow`, `outside-frame`)
-are errors for documents with a `layout` object, including an empty object, or any
-frame with `height: "auto"`. They are warnings for all other documents and do not
-block verification or handoff readiness. The authored `schemaVersion` stays
-`1.0.0`; feature use determines severity for the whole document. Pass the document
-to `auditDesignPage` with its revision and entries when running browser checks.
+are errors when the authored document has `schemaVersion: "1.1.0"` or any frame
+with `height: "auto"`. Otherwise they are warnings and do not block verification
+or handoff readiness. A `layout` object never changes severity; migrating or
+dragging an existing fixed-frame `1.0.0` document keeps its warnings. Auto frames
+are valid with either schema version. Pass the document to `auditDesignPage` with
+its revision and entries when running browser checks.

@@ -11,6 +11,21 @@ import { designFixture } from './design-fixture.mjs';
 import { startDesignReview } from './studio-http-fixture.mjs';
 import { settleStudioChrome } from './studio-readiness.mjs';
 
+async function dragBoard(page) {
+  const bounds = await page.locator('[data-design-drag]').first().boundingBox();
+  await page.mouse.move(bounds.x + 50, bounds.y + bounds.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(bounds.x + 130, bounds.y + bounds.height / 2 + 45, { steps: 8 });
+  await page.mouse.up();
+  await page.evaluate(() => window.__openPlanrDesignStudio.flush());
+}
+
+async function pendingLayout(page) {
+  return page.evaluate(
+    () => JSON.parse(localStorage.getItem('openplanr.design-studio.operations')).pendingLayout,
+  );
+}
+
 test(`legacy board positions migrate once from server and local state (${browserEngine()})`, {
   timeout: 60000,
 }, async () => {
@@ -60,12 +75,20 @@ test(`legacy board positions migrate once from server and local state (${browser
     const page = await browser.newPage({ viewport: { width: 1600, height: 1050 } });
     page.setDefaultTimeout(10000);
     const layoutRequests = [];
+    const readyRequests = [];
     page.on('request', (request) => {
       if (request.url().endsWith('/api/design-layout') && request.method() === 'PUT')
         layoutRequests.push(request.postDataJSON());
+      if (request.url().endsWith('/api/design-ready') && request.method() === 'POST')
+        readyRequests.push(request.postDataJSON());
     });
     await page.addInitScript(
       ({ artifactIds, storageKey }) => {
+        window.__migrationStatuses = [];
+        new MutationObserver(() => {
+          const text = document.querySelector('[data-design-save-state]')?.textContent;
+          if (text) window.__migrationStatuses.push(text);
+        }).observe(document, { childList: true, characterData: true, subtree: true });
         if (sessionStorage.getItem('layout-migration-seeded')) return;
         localStorage.setItem(
           storageKey,
@@ -87,11 +110,24 @@ test(`legacy board positions migrate once from server and local state (${browser
       (response) =>
         response.url().endsWith('/api/design-state') && response.request().method() === 'GET',
     );
+    const readiness = page.waitForResponse((response) =>
+      response.url().endsWith('/api/design-ready'),
+    );
     await page.goto(session.url);
     await (await stateLoaded).finished();
     await page.locator('[data-design-ready="true"]').waitFor();
     await settleStudioChrome(page);
     await page.evaluate(() => window.__openPlanrDesignStudio.flush());
+    assert.equal((await readiness).status(), 200, 'migration readiness uses the adopted revision');
+    assert.equal(readyRequests.length, 1);
+    assert.equal(readyRequests[0].revision, currentDesign(file).revision);
+    assert.deepEqual(
+      await page.evaluate(() =>
+        window.__migrationStatuses.filter((text) => /disconnected/i.test(text)),
+      ),
+      [],
+      'migration does not flash a disconnected status',
+    );
     const migrated = await page.evaluate(
       (keys) => keys.map((key) => window.__openPlanrDesignStudio.getLayout().boards[key]),
       keys,
@@ -318,6 +354,215 @@ test(`board layout saves without replacing previews, supports undo and survives 
     await rm(root, { recursive: true, force: true });
   }
 });
+
+test(`a failed layout retains Retry through view context failures and recovers in the same session (${browserEngine()})`, {
+  timeout: 60000,
+}, async () => {
+  const root = await mkdtemp(join(tmpdir(), 'openplanr-layout-retry-'));
+  let browser, session;
+  try {
+    const { file } = designFixture(root, {
+      count: 1,
+      frames: [{ id: 'desktop', label: 'Desktop', width: 600, height: 450 }],
+    });
+    await renderDesignDocument(file);
+    session = await startDesignReview(file, {
+      env: { ...process.env, PLANR_HOME: join(root, 'home') },
+      port: 0,
+    });
+    browser = await launchBrowser({ engine: browserEngine() });
+    const page = await browser.newPage({ viewport: { width: 1600, height: 1050 } });
+    page.setDefaultTimeout(10000);
+    await page.goto(session.url);
+    await page.locator('[data-design-ready="true"]').waitFor();
+    await settleStudioChrome(page);
+    await page.evaluate(() => window.__openPlanrDesignStudio.flush());
+    await page.route('**/api/design-layout', (route) => route.abort('connectionrefused'));
+    await page.route('**/api/design-view-context', (route) => route.abort('connectionrefused'));
+    const contextFailed = page.waitForEvent('requestfailed', {
+      predicate: (request) => request.url().endsWith('/api/design-view-context'),
+    });
+    await dragBoard(page);
+    await contextFailed;
+    await settleStudioChrome(page);
+    await page.waitForFunction(() =>
+      document.querySelector('[data-design-notice-message]').textContent.includes('Board layout'),
+    );
+    assert.equal(await page.locator('[data-design-retry-layout]').isVisible(), true);
+    assert.notEqual(
+      await page.locator('[data-design-save-state]').textContent(),
+      'All changes saved',
+    );
+    assert.equal((await pendingLayout(page)).operations.length, 1);
+    const moved = await page.evaluate(
+      () => window.__openPlanrDesignStudio.getLayout().boards['screen-1/desktop/A'],
+    );
+    await page.unroute('**/api/design-layout');
+    await page.unroute('**/api/design-view-context');
+    const saved = page.waitForResponse((response) => response.url().endsWith('/api/design-layout'));
+    await page.locator('[data-design-retry-layout]').click();
+    assert.equal((await saved).status(), 200);
+    await page.evaluate(() => window.__openPlanrDesignStudio.flush());
+    assert.deepEqual(
+      JSON.parse(readFileSync(file, 'utf8')).layout.boards['screen-1/desktop/A'],
+      moved,
+    );
+    assert.equal(await pendingLayout(page), undefined);
+    await page.waitForFunction(
+      () => document.querySelector('[data-design-save-state]').textContent === 'All changes saved',
+    );
+    assert.equal(await page.locator('[data-design-retry-layout]').count(), 0);
+  } finally {
+    await browser?.close();
+    await session?.close();
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+for (const foreignContent of [false, true]) {
+  test(`a stopped studio preserves a move across restart and ${foreignContent ? 'drops it for changed authored content' : 'replays it against the new revision'} (${browserEngine()})`, {
+    timeout: 60000,
+  }, async () => {
+    const root = await mkdtemp(join(tmpdir(), 'openplanr-layout-restart-'));
+    let browser, session, releaseReplay;
+    try {
+      const { file, document } = designFixture(root, {
+        count: 1,
+        frames: [{ id: 'desktop', label: 'Desktop', width: 600, height: 450 }],
+      });
+      await renderDesignDocument(file);
+      const env = { ...process.env, PLANR_HOME: join(root, 'home') };
+      session = await startDesignReview(file, { env, port: 0 });
+      const port = Number(new URL(session.url).port);
+      browser = await launchBrowser({ engine: browserEngine() });
+      const page = await browser.newPage({ viewport: { width: 1600, height: 1050 } });
+      page.setDefaultTimeout(10000);
+      await page.goto(session.url);
+      await page.locator('[data-design-ready="true"]').waitFor();
+      await settleStudioChrome(page);
+      await page.evaluate(() => window.__openPlanrDesignStudio.flush());
+      const basedOn = await page.evaluate(() => window.__openPlanrDesignStudio.getRevision());
+      await session.close();
+      session = null;
+      const contextFailed = page.waitForEvent('requestfailed', {
+        predicate: (request) => request.url().endsWith('/api/design-view-context'),
+      });
+      await dragBoard(page);
+      await contextFailed;
+      await settleStudioChrome(page);
+      await page.waitForFunction(() =>
+        document.querySelector('[data-design-notice-message]').textContent.includes('Board layout'),
+      );
+      assert.equal(await page.locator('[data-design-retry-layout]').isVisible(), true);
+      assert.notEqual(
+        await page.locator('[data-design-save-state]').textContent(),
+        'All changes saved',
+      );
+      const moved = await page.evaluate(
+        () => window.__openPlanrDesignStudio.getLayout().boards['screen-1/desktop/A'],
+      );
+      const stored = await pendingLayout(page);
+      assert.equal(stored.operations.length, 1);
+      assert.equal(stored.operations[0].revision, basedOn);
+      assert.deepEqual(stored.operations[0].boards['screen-1/desktop/A'], moved);
+      const retryFailed = page.waitForEvent('requestfailed', {
+        predicate: (request) => request.url().endsWith('/api/design-layout'),
+      });
+      await page.locator('[data-design-retry-layout]').click();
+      await retryFailed;
+      await settleStudioChrome(page);
+      assert.notEqual(
+        await page.locator('[data-design-save-state]').textContent(),
+        'All changes saved',
+      );
+      assert.deepEqual(await pendingLayout(page), stored);
+
+      document.layout = { boards: { 'screen-1/desktop/A': { x: -300, y: 400 } } };
+      if (foreignContent) document.title = 'Updated operations workspace';
+      writeFileSync(file, `${JSON.stringify(document, null, 2)}\n`);
+      await renderDesignDocument(file);
+      const restartedRevision = currentDesign(file).revision;
+      assert.notEqual(restartedRevision, basedOn);
+      if (foreignContent)
+        await page.route('**/api/design-status', (route) => route.abort('connectionrefused'));
+      const oldSessionGone = page.waitForResponse(
+        (response) =>
+          response.url().endsWith(foreignContent ? '/api/design-layout' : '/api/design-status') &&
+          response.status() === 404,
+      );
+      session = await startDesignReview(file, { env, port });
+      if (foreignContent) await page.locator('[data-design-retry-layout]').click();
+      await oldSessionGone;
+      if (foreignContent) await page.unroute('**/api/design-status');
+      await page.locator('[data-design-reload-studio]').waitFor();
+      assert.match(
+        await page.locator('[data-design-notice-message]').textContent(),
+        /studio restarted/i,
+      );
+      assert.notEqual(
+        await page.locator('[data-design-save-state]').textContent(),
+        'All changes saved',
+      );
+      assert.deepEqual(await pendingLayout(page), stored);
+
+      let replayRequest;
+      const replayStarted = new Promise((resolve) => {
+        replayRequest = resolve;
+      });
+      const replayGate = new Promise((resolve) => {
+        releaseReplay = resolve;
+      });
+      if (!foreignContent)
+        await page.route('**/api/design-layout', async (route) => {
+          replayRequest(route.request().postDataJSON());
+          await replayGate;
+          await route.continue();
+        });
+      await page.locator('[data-design-reload-studio]').click();
+      if (!foreignContent) {
+        const input = await replayStarted;
+        assert.equal(input.revision, restartedRevision, 'the stored move is rebased before replay');
+        assert.deepEqual(input.boards['screen-1/desktop/A'], moved);
+        assert.notEqual(
+          await page.locator('[data-design-save-state]').textContent(),
+          'All changes saved',
+        );
+        assert.equal((await pendingLayout(page)).operations.length, 1);
+        releaseReplay();
+      }
+      await page.locator('[data-design-ready="true"]').waitFor();
+      await page.evaluate(() => window.__openPlanrDesignStudio.flush());
+      assert.equal(await pendingLayout(page), undefined);
+      if (foreignContent) {
+        assert.match(
+          await page.locator('[data-design-notice-message]').textContent(),
+          /pending board moves were dropped because authored content changed/i,
+        );
+        assert.deepEqual(
+          JSON.parse(readFileSync(file, 'utf8')).layout.boards['screen-1/desktop/A'],
+          {
+            x: -300,
+            y: 400,
+          },
+        );
+      } else {
+        assert.deepEqual(
+          JSON.parse(readFileSync(file, 'utf8')).layout.boards['screen-1/desktop/A'],
+          moved,
+        );
+        await page.waitForFunction(
+          () =>
+            document.querySelector('[data-design-save-state]').textContent === 'All changes saved',
+        );
+      }
+    } finally {
+      releaseReplay?.();
+      await browser?.close();
+      await session?.close();
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+}
 
 test(`canvas engine preserves legacy fit, zoom anchors, saved cameras and board layout (${browserEngine()})`, {
   timeout: 60000,

@@ -115,6 +115,28 @@ test('one authored source supports project frames, sparse variants and repeated 
   }
 });
 
+test('current design contracts accept both authored versions with fixed or content-sized frames', () => {
+  for (const schemaVersion of ['1.0.0', '1.1.0']) {
+    for (const height of [900, 'auto']) {
+      const document = { ...fixture(), schemaVersion };
+      document.frames[0].height = height;
+      assert.deepEqual(validateDesignDocument(document), { ok: true, errors: [] });
+      assert.strictEqual(assertDesignDocument(document), document);
+      assert.deepEqual(
+        validateProtocolArtifact('design-document', document, { protocolVersion: '1.20.0' }),
+        [],
+      );
+      document.layout = { boards: { overview: { x: 10, y: 20 } } };
+      assert.strictEqual(assertDesignDocument(document), document);
+      assert.equal(document.schemaVersion, schemaVersion);
+    }
+  }
+  assert.equal(DESIGN_DOCUMENT_V1_SCHEMA.properties.schemaVersion.const, '1.0.0');
+  assert.ok(
+    validateJson({ ...fixture(), schemaVersion: '1.1.0' }, DESIGN_DOCUMENT_V1_SCHEMA).length > 0,
+  );
+});
+
 test('walkthroughs are not limited to eight screens', () => {
   const document = fixture();
   for (let index = 0; index < 12; index += 1) {

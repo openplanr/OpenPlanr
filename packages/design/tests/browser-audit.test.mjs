@@ -9,6 +9,7 @@ import { browserExecutable, launchBrowser } from '../../../tests/support/browser
 import { auditDesignPage, auditRenderedScreen } from '../lib/design/browser-audit.mjs';
 import { currentDesign, renderDesignDocument } from '../lib/design/document.mjs';
 import { compileDesignHandoffReadiness } from '../lib/design/handoff-readiness.mjs';
+import { saveDesignLayout } from '../lib/design/layout-save.mjs';
 import { verifyDesignDocument } from '../lib/design/utility.mjs';
 import { designFixture } from './design-fixture.mjs';
 
@@ -311,63 +312,85 @@ function scrollingScreen(fn, argument, screenId) {
   return JSON.parse(JSON.stringify(result));
 }
 
-test('frame bounds warn for legacy documents and block verification for layout or auto documents', async (t) => {
-  for (const mode of ['legacy', 'layout', 'auto']) {
-    const root = mkdtempSync(join(tmpdir(), 'design-audit-severity-'));
-    t.after(() => rmSync(root, { recursive: true, force: true }));
-    const { file, document } = designFixture(root, {
-      count: 1,
-      frames: [{ id: 'desktop', label: 'Desktop', width: 640, height: 600 }],
-    });
-    if (mode === 'layout') document.layout = {};
-    if (mode === 'auto')
-      document.frames.push({ id: 'long', label: 'Long', width: 640, height: 'auto' });
-    writeFileSync(file, JSON.stringify(document));
-    await renderDesignDocument(file);
-    const current = currentDesign(file);
-    const frames = current.entries.map((artifact) => {
-      const page = mockPage(null, { artifact });
-      page.frames()[0].evaluate = async (fn, argument) =>
-        scrollingScreen(fn, argument, artifact.screenId);
-      return page.frames()[0];
-    });
-    const screenshot = join(root, 'screen.png');
-    writeFileSync(
-      screenshot,
-      Buffer.from(
-        'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Wl6F8sAAAAASUVORK5CYII=',
-        'base64',
-      ),
-    );
-    const report = await auditDesignPage(
-      { frames: () => frames },
-      {
-        revision: current.revision,
+test('frame bounds preserve legacy warnings after migration and drags and enforce authored or auto frames', async (t) => {
+  for (const mode of ['legacy', 'migrated', 'dragged', 'authored', 'auto']) {
+    await t.test(mode, async (t) => {
+      const root = mkdtempSync(join(tmpdir(), 'design-audit-severity-'));
+      t.after(() => rmSync(root, { recursive: true, force: true }));
+      const { file, document } = designFixture(root, {
+        count: 1,
+        frames: [{ id: 'desktop', label: 'Desktop', width: 640, height: 600 }],
+      });
+      if (mode === 'authored') document.schemaVersion = '1.1.0';
+      if (mode === 'auto')
+        document.frames.push({ id: 'long', label: 'Long', width: 640, height: 'auto' });
+      writeFileSync(file, JSON.stringify(document));
+      await renderDesignDocument(file);
+      const moves = {
+        migrated: [{ x: 120, y: 180 }],
+        dragged: [
+          { x: 120, y: 180 },
+          { x: 600, y: 400 },
+        ],
+      };
+      for (const point of moves[mode] ?? []) {
+        const current = currentDesign(file);
+        const board = current.entries[0];
+        await saveDesignLayout(file, {
+          revision: current.revision,
+          boards: { [`${board.screenId}/${board.frameId}/${board.variantId}`]: point },
+        });
+        assert.equal(currentDesign(file).document.schemaVersion, '1.0.0');
+      }
+      const expected =
+        mode === 'authored' || mode === 'auto'
+          ? { severity: 'error', verification: 'failed', readiness: 'blocked' }
+          : { severity: 'warning', verification: 'verified', readiness: 'pass' };
+      const current = currentDesign(file);
+      const frames = current.entries.map((artifact) => {
+        const page = mockPage(null, { artifact });
+        page.frames()[0].evaluate = async (fn, argument) =>
+          scrollingScreen(fn, argument, artifact.screenId);
+        return page.frames()[0];
+      });
+      const screenshot = join(root, 'screen.png');
+      writeFileSync(
+        screenshot,
+        Buffer.from(
+          'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Wl6F8sAAAAASUVORK5CYII=',
+          'base64',
+        ),
+      );
+      const report = await auditDesignPage(
+        { frames: () => frames },
+        {
+          revision: current.revision,
+          document: current.document,
+          entries: current.entries,
+          screenshotPaths: [screenshot],
+          scenarios: [{ name: 'Open drawer', status: 'passed' }],
+        },
+      );
+      assert.deepEqual(
+        Array.from(report.screens[0].issues, ({ rule, severity }) => ({ rule, severity })),
+        ['board-root-box-sizing', 'vertical-overflow', 'outside-frame'].map((rule) => ({
+          rule,
+          severity: expected.severity,
+        })),
+        mode,
+      );
+      const verified = verifyDesignDocument(file, report);
+      assert.equal(verified.status, expected.verification, mode);
+      const readiness = compileDesignHandoffReadiness({
         document: current.document,
-        entries: current.entries,
-        screenshotPaths: [screenshot],
-        scenarios: [{ name: 'Open drawer', status: 'passed' }],
-      },
-    );
-    assert.deepEqual(
-      Array.from(report.screens[0].issues, ({ rule, severity }) => ({ rule, severity })),
-      ['board-root-box-sizing', 'vertical-overflow', 'outside-frame'].map((rule) => ({
-        rule,
-        severity: mode === 'legacy' ? 'warning' : 'error',
-      })),
-      mode,
-    );
-    const verified = verifyDesignDocument(file, report);
-    assert.equal(verified.status, mode === 'legacy' ? 'verified' : 'failed', mode);
-    const readiness = compileDesignHandoffReadiness({
-      document: current.document,
-      sourceRevision: current.revision,
-      verification: verified,
+        sourceRevision: current.revision,
+        verification: verified,
+      });
+      assert.equal(
+        readiness.checks.find(({ id }) => id === 'rendered-verification').status,
+        expected.readiness,
+        mode,
+      );
     });
-    assert.equal(
-      readiness.checks.find(({ id }) => id === 'rendered-verification').status,
-      mode === 'legacy' ? 'pass' : 'blocked',
-      mode,
-    );
   }
 });

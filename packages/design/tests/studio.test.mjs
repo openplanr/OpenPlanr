@@ -35,6 +35,139 @@ function undoBoard(app, redo = false) {
   );
 }
 
+test('layout failures retain Retry when view context also fails and persist pending moves', async (t) => {
+  const data = fixture({ count: 1 });
+  data.revision = 'initial';
+  data.contentIdentity = 'authored';
+  const app = await mount({
+    data,
+    options: {
+      viewContextUrl: '/api/design-view-context',
+      saveLayout: async () => {
+        throw new Error('Offline layout');
+      },
+    },
+    fetchImpl: async () => {
+      throw new Error('Offline context');
+    },
+  });
+  t.after(() => app.close());
+  moveBoard(app);
+  assert.doesNotMatch(
+    app.documentNode.querySelector('[data-design-save-state]').textContent,
+    /All changes saved/u,
+  );
+  await app.studio.flush();
+  await delay(300);
+  assert.match(
+    app.documentNode.querySelector('[data-design-notice-message]').textContent,
+    /Offline layout/u,
+  );
+  assert.ok(app.documentNode.querySelector('[data-design-retry-layout]'));
+  const draft = JSON.parse(app.window.localStorage.getItem('openplanr.design-studio.fieldwork'));
+  assert.equal(draft.pendingLayout.contentIdentity, 'authored');
+  assert.deepEqual(draft.pendingLayout.operations, [
+    {
+      revision: 'initial',
+      boards: { 'screen-1/desktop/editorial': { x: 8, y: 72 } },
+    },
+  ]);
+  assert.doesNotMatch(
+    app.documentNode.querySelector('[data-design-save-state]').textContent,
+    /All changes saved/u,
+  );
+});
+
+for (const foreign of [false, true]) {
+  test(`stored layout moves ${foreign ? 'drop when authored content changes' : 'replay on the current revision before saved state'}`, async (t) => {
+    const data = fixture({ count: 1 });
+    data.revision = 'current';
+    data.contentIdentity = foreign ? 'changed' : 'authored';
+    const inputs = [];
+    const app = await mount({
+      data,
+      stored: {
+        pendingLayout: {
+          contentIdentity: 'authored',
+          operations: [
+            {
+              revision: 'old',
+              boards: { 'screen-1/desktop/editorial': { x: 200, y: 300 } },
+            },
+          ],
+        },
+      },
+      options: {
+        saveLayout: async (input) => {
+          inputs.push(input);
+          return { revision: 'replayed' };
+        },
+      },
+    });
+    t.after(() => app.close());
+    await delay(0);
+    await app.studio.flush();
+    if (foreign) {
+      assert.equal(inputs.length, 0);
+      assert.match(
+        app.documentNode.querySelector('[data-design-notice-message]').textContent,
+        /moves were dropped.*authored content changed/u,
+      );
+    } else {
+      assert.equal(inputs.length, 1);
+      assert.equal(inputs[0].revision, 'current');
+      assert.equal(app.studio.getLayout().boards['screen-1/desktop/editorial'].x, 200);
+      assert.equal(app.studio.getRevision(), 'replayed');
+    }
+    const draft = JSON.parse(app.window.localStorage.getItem('openplanr.design-studio.fieldwork'));
+    assert.equal(draft.pendingLayout, undefined);
+  });
+}
+
+test('a missing layout session keeps pending moves and offers Reload', async (t) => {
+  const app = await mount({
+    options: { layoutUrl: '/api/design-layout' },
+    fetchImpl: async () => ({
+      ok: false,
+      status: 404,
+      json: async () => ({ error: 'Session not found' }),
+    }),
+  });
+  t.after(() => app.close());
+  moveBoard(app);
+  await app.studio.flush();
+  assert.match(
+    app.documentNode.querySelector('[data-design-notice-message]').textContent,
+    /Studio restarted/u,
+  );
+  assert.ok(app.documentNode.querySelector('[data-design-reload-studio]'));
+  assert.equal(app.studio.getSaveState().dirty, true);
+});
+
+test('migration readiness waits for the adopted layout revision', async (t) => {
+  const data = fixture({ count: 1 });
+  data.revision = 'initial';
+  data.state = { positions: { [data.entries[0].artifactId]: { x: 100, y: 200 } } };
+  let finish;
+  const saved = new Promise((resolve) => {
+    finish = resolve;
+  });
+  const ready = [];
+  const app = await mount({
+    data,
+    options: { saveLayout: () => saved, onReady: (detail) => ready.push(detail) },
+  });
+  t.after(() => app.close());
+  await delay(80);
+  assert.equal(ready.length, 0, 'readiness cannot post the pre-migration revision');
+  finish({ revision: 'migrated' });
+  await app.studio.flush();
+  await delay(80);
+  assert.equal(ready.length, 1);
+  assert.equal(ready[0].revision, 'migrated');
+  assert.equal(data.document.schemaVersion, '1.0.0');
+});
+
 for (const foreign of [false, true]) {
   test(`layout conflict ${foreign ? 'preserves foreign authored content' : 'rebases absolute moves'}`, async (t) => {
     const data = fixture({ count: 1 });

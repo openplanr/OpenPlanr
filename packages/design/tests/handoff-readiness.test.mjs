@@ -93,6 +93,16 @@ test('ready evidence compiles all stable checks and exposes only prepare-plan co
   );
 });
 
+test('readiness accepts both supported authored document versions without changing evidence', () => {
+  for (const schemaVersion of ['1.0.0', '1.1.0']) {
+    const input = readyInput();
+    input.document.schemaVersion = schemaVersion;
+    const before = structuredClone(input);
+    assert.equal(compileDesignHandoffReadiness(input).status, 'ready');
+    assert.deepEqual(input, before);
+  }
+});
+
 test('missing, blocked, attention, and stale evidence produce exact recovery states', () => {
   const missing = readyInput();
   delete missing.verification;

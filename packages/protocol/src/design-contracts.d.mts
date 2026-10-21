@@ -56,7 +56,7 @@ export interface DesignLayout {
 
 export interface DesignDocument {
   kind: 'openplanr-design-document';
-  schemaVersion: '1.0.0';
+  schemaVersion: '1.0.0' | '1.1.0';
   id: string;
   title: string;
   brief: {

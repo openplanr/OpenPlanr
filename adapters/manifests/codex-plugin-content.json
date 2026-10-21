@@ -487,7 +487,7 @@
         },
         {
           "path": "skills/design/references/generation.md",
-          "digest": "sha256:eb12155eef990f6d305be9343f1b6c0514aa9b7ae1d6b98792da15609a1be32d"
+          "digest": "sha256:dc90c3bfede163daa6f6780926be38309bf009ad2c8502759555f01747790922"
         },
         {
           "path": "skills/design/references/handoff.md",
@@ -495,7 +495,7 @@
         },
         {
           "path": "skills/design/references/review.md",
-          "digest": "sha256:f601763324eb31feb3036d1fd60785a5d0490b5d6c2e54ee488347614c6f32ed"
+          "digest": "sha256:87dfa34d19effcbb9c6e0c94782ba6f4fa544d14967ebf7d8a65ba1af1608172"
         },
         {
           "path": "skills/design/references/utilities.md",
@@ -511,7 +511,7 @@
         },
         {
           "path": "skills/design/schemas/design-document.schema.json",
-          "digest": "sha256:9782c8c130b19f7c47b17ec59a216f4699e3a6f3b81120ecc0442d2576d58fa2"
+          "digest": "sha256:0aaedb8a0ccd90bcb97518f5b7be1b885fd49ed25b5c8e39d073e77974b3062f"
         },
         {
           "path": "skills/design/schemas/design-review-context.schema.json",
@@ -560,7 +560,7 @@
         },
         {
           "path": "skills/design-loop/references/generation.md",
-          "digest": "sha256:eb12155eef990f6d305be9343f1b6c0514aa9b7ae1d6b98792da15609a1be32d"
+          "digest": "sha256:dc90c3bfede163daa6f6780926be38309bf009ad2c8502759555f01747790922"
         },
         {
           "path": "skills/design-loop/references/handoff.md",
@@ -568,7 +568,7 @@
         },
         {
           "path": "skills/design-loop/references/review.md",
-          "digest": "sha256:f601763324eb31feb3036d1fd60785a5d0490b5d6c2e54ee488347614c6f32ed"
+          "digest": "sha256:87dfa34d19effcbb9c6e0c94782ba6f4fa544d14967ebf7d8a65ba1af1608172"
         },
         {
           "path": "skills/design-loop/references/utilities.md",
@@ -584,7 +584,7 @@
         },
         {
           "path": "skills/design-loop/schemas/design-document.schema.json",
-          "digest": "sha256:9782c8c130b19f7c47b17ec59a216f4699e3a6f3b81120ecc0442d2576d58fa2"
+          "digest": "sha256:0aaedb8a0ccd90bcb97518f5b7be1b885fd49ed25b5c8e39d073e77974b3062f"
         },
         {
           "path": "skills/design-loop/schemas/design-review-context.schema.json",
@@ -633,7 +633,7 @@
         },
         {
           "path": "skills/design-review/references/generation.md",
-          "digest": "sha256:eb12155eef990f6d305be9343f1b6c0514aa9b7ae1d6b98792da15609a1be32d"
+          "digest": "sha256:dc90c3bfede163daa6f6780926be38309bf009ad2c8502759555f01747790922"
         },
         {
           "path": "skills/design-review/references/handoff.md",
@@ -641,7 +641,7 @@
         },
         {
           "path": "skills/design-review/references/review.md",
-          "digest": "sha256:f601763324eb31feb3036d1fd60785a5d0490b5d6c2e54ee488347614c6f32ed"
+          "digest": "sha256:87dfa34d19effcbb9c6e0c94782ba6f4fa544d14967ebf7d8a65ba1af1608172"
         },
         {
           "path": "skills/design-review/references/utilities.md",
@@ -657,7 +657,7 @@
         },
         {
           "path": "skills/design-review/schemas/design-document.schema.json",
-          "digest": "sha256:9782c8c130b19f7c47b17ec59a216f4699e3a6f3b81120ecc0442d2576d58fa2"
+          "digest": "sha256:0aaedb8a0ccd90bcb97518f5b7be1b885fd49ed25b5c8e39d073e77974b3062f"
         },
         {
           "path": "skills/design-review/schemas/design-review-context.schema.json",
@@ -864,7 +864,7 @@
         },
         {
           "path": "skills/plan/schemas/design-document.schema.json",
-          "digest": "sha256:9782c8c130b19f7c47b17ec59a216f4699e3a6f3b81120ecc0442d2576d58fa2"
+          "digest": "sha256:0aaedb8a0ccd90bcb97518f5b7be1b885fd49ed25b5c8e39d073e77974b3062f"
         },
         {
           "path": "skills/plan/schemas/design-review-context.schema.json",

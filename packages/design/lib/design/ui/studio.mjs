@@ -129,7 +129,11 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
   const undoMoves = [];
   const redoMoves = [];
   const layoutOperations = [];
+  let pendingLayoutDraft = savedDraft?.pendingLayout ?? null;
   let layoutSaving = false;
+  let layoutFailed = false;
+  let sessionLost = false;
+  let startupSettled = false;
   let layoutDragDirty = false;
   let activeLayoutOperation = null;
   let layoutBlocked = false;
@@ -213,6 +217,7 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
 
   function status(message, phase = 'saved') {
     if (destroyed) return;
+    if (phase === 'saved' && hasPendingLayout()) return;
     if (chrome) chrome.update({ saveLabel: message, savePhase: phase });
     else {
       const node = q('[data-design-save-state]');
@@ -228,6 +233,7 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
     node.hidden = true;
     activeNotice = null;
     q('[data-design-retry-layout]')?.remove();
+    q('[data-design-reload-studio]')?.remove();
     if (restoreFocus) q(`button[data-design-view="${state.view}"]`)?.focus();
   }
 
@@ -243,9 +249,13 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
 
   function notice(message, persistent = false, key = message) {
     if (destroyed || dismissedNotices.get(key) === message) return;
+    if (sessionLost && key !== 'studio-restart') return;
+    if (layoutFailed && hasPendingLayout() && !['layout-save', 'studio-restart'].includes(key))
+      return;
     const node = q('.design-notice');
     clearTimeout(noticeTimer);
     q('[data-design-retry-layout]')?.remove();
+    q('[data-design-reload-studio]')?.remove();
     activeNotice = { key, message, persistent };
     q('[data-design-notice-message]').textContent = message;
     node.hidden = false;
@@ -268,10 +278,21 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
               : state,
           unsaved: contentDirty,
           personalPending: dirty && !contentDirty,
+          pendingLayout:
+            pendingLayoutDraft ??
+            (layoutOperations.length
+              ? {
+                  contentIdentity: payload.contentIdentity,
+                  operations: layoutOperations.map((operation) => ({
+                    revision: operation.revision ?? revision,
+                    boards: operation.replayBoards ?? operation.input().boards,
+                  })),
+                }
+              : undefined),
         }),
       );
-    } catch {
-      /* Server persistence remains available when local storage is full. */
+    } catch (error) {
+      notice(`The browser draft could not be stored: ${error.message}`, true, 'draft-storage');
     }
   }
 
@@ -286,6 +307,7 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
           `Save failed (${response.status}).`,
       );
       error.conflict = response.status === 409;
+      error.statusCode = response.status;
       throw error;
     }
     return result;
@@ -461,6 +483,94 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
     return Boolean(options.saveLayout || layoutUrl());
   }
 
+  function hasPendingLayout() {
+    return Boolean(
+      pendingLayoutDraft || layoutOperations.length || layoutSaving || layoutDragDirty,
+    );
+  }
+
+  function studioRestarted() {
+    sessionLost = true;
+    storeDraft();
+    status(hasPendingLayout() ? 'Layout unsaved · reload required' : 'Reload required', 'failed');
+    notice(
+      'Studio restarted. Reload to reconnect; pending board moves remain in this browser.',
+      true,
+      'studio-restart',
+    );
+    const reload = document.createElement('button');
+    reload.type = 'button';
+    reload.dataset.designReloadStudio = '';
+    reload.textContent = 'Reload';
+    reload.addEventListener('click', () => {
+      storeDraft();
+      window.location.reload();
+    });
+    q('.design-notice').append(reload);
+  }
+
+  function applyBoardMoves(boards) {
+    for (const [key, point] of Object.entries(boards)) {
+      layout.boards ??= {};
+      if (point === null) delete layout.boards[key];
+      else layout.boards[key] = { ...layout.boards[key], ...point };
+    }
+  }
+
+  function restorePendingLayout() {
+    if (!pendingLayoutDraft) return;
+    const pending = pendingLayoutDraft;
+    pendingLayoutDraft = null;
+    if (
+      layoutBlocked ||
+      !payload.contentIdentity ||
+      pending.contentIdentity !== payload.contentIdentity
+    ) {
+      storeDraft();
+      notice(
+        'Pending board moves were dropped because authored content changed. Review the current design before moving boards again.',
+        true,
+        'layout-dropped',
+      );
+      return;
+    }
+    const valid =
+      Array.isArray(pending.operations) &&
+      pending.operations.every(
+        (operation) =>
+          typeof operation?.revision === 'string' &&
+          operation.boards &&
+          typeof operation.boards === 'object' &&
+          !Array.isArray(operation.boards) &&
+          Object.entries(operation.boards).every(
+            ([key, point]) =>
+              entries.some((entry) => boardKey(entry) === key) &&
+              (point === null ||
+                (Number.isFinite(point?.x) &&
+                  Number.isFinite(point?.y) &&
+                  Math.abs(point.x) <= 1e7 &&
+                  Math.abs(point.y) <= 1e7)),
+          ),
+      );
+    if (!valid) {
+      storeDraft();
+      notice(
+        'Pending board moves could not be recovered because the browser draft contains invalid positions.',
+        true,
+        'layout-dropped',
+      );
+      return;
+    }
+    for (const operation of pending.operations) {
+      const boards = clone(operation.boards);
+      applyBoardMoves(boards);
+      layoutOperations.push({ revision, input: () => ({ boards }) });
+    }
+    storeDraft();
+    render();
+    if (layoutOperations.length) status('Recovering layout', 'saving');
+  }
+
   function newRevisionNotice() {
     notice(
       'A new design revision is ready. Save or recover this browser’s unsaved changes before reloading.',
@@ -478,7 +588,15 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
       throw new Error('Design status did not return a revision and authored content identity.');
     if (current.contentIdentity !== payload.contentIdentity) {
       layoutBlocked = true;
-      newRevisionNotice();
+      layoutOperations.length = 0;
+      layoutFailed = false;
+      storeDraft();
+      status('Design changed · reload required', 'failed');
+      notice(
+        'A new design revision is ready. Pending board moves were dropped because authored content changed. Reload to read the current design.',
+        true,
+        'new-revision',
+      );
       return false;
     }
     revision = current.revision;
@@ -490,13 +608,10 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
       for (let index = moves.length - 1; index >= 0; index--)
         if (moves[index].afterRevision !== null) moves.splice(index, 1);
     for (const operation of layoutOperations) {
+      operation.revision = revision;
       const boards = operation.input().boards;
       if (operation.move?.applied) operation.move.before = clone(layout);
-      for (const [key, point] of Object.entries(boards)) {
-        layout.boards ??= {};
-        if (point === null) delete layout.boards[key];
-        else layout.boards[key] = { ...layout.boards[key], ...point };
-      }
+      applyBoardMoves(boards);
       if (operation.move?.applied) operation.move.after = clone(layout);
       else if (operation.move) {
         const move = operation.move;
@@ -507,6 +622,7 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
         else if (move.after.boards) delete move.after.boards[move.key];
       }
     }
+    storeDraft();
     render();
     if (announce)
       notice(
@@ -518,8 +634,9 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
   }
 
   function flushLayout() {
-    if (layoutSaving || layoutBlocked || !layoutOperations.length) return saving;
+    if (layoutSaving || layoutBlocked || sessionLost || !layoutOperations.length) return saving;
     layoutSaving = true;
+    status('Saving layout', 'saving');
     saving = saving.then(async () => {
       let rebased = false;
       try {
@@ -558,9 +675,15 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
           storeDraft();
           scheduleViewContext();
         }
+        layoutFailed = false;
         clearNotice('layout-save');
-        if (!contentDirty && !reviewDirty) status('All changes saved');
       } catch (error) {
+        layoutFailed = true;
+        storeDraft();
+        if (error.statusCode === 404) {
+          studioRestarted();
+          return;
+        }
         status(error.conflict ? 'Layout conflict' : 'Layout unsaved', 'failed');
         notice(`Board layout could not be saved: ${error.message}`, true, 'layout-save');
         const retry = document.createElement('button');
@@ -572,6 +695,8 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
       } finally {
         activeLayoutOperation = null;
         layoutSaving = false;
+        if (!hasPendingLayout() && !contentDirty && !reviewDirty && !layoutBlocked && !sessionLost)
+          status('All changes saved');
       }
     });
     return saving;
@@ -587,6 +712,7 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
       return board ? { x: board.x, y: board.y } : null;
     };
     const operation = {
+      revision,
       move,
       boards: { [move.key]: point(move.after) },
       input: () => ({ boards: operation.boards }),
@@ -602,6 +728,7 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
       },
     };
     layoutOperations.push(operation);
+    storeDraft();
     scheduleViewContext();
     void flushLayout();
   }
@@ -645,16 +772,28 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
         if (redo) queueMove(move);
       }
       if (!layoutOperations.length && !layoutSaving) {
+        layoutFailed = false;
         clearNotice('layout-save');
         if (!contentDirty && !reviewDirty) status('All changes saved');
       }
+      storeDraft();
       scheduleViewContext();
       return;
     }
     layoutOperations.push({
+      revision,
       restore: true,
+      replayBoards: {
+        [move.key]: layout.boards?.[move.key]
+          ? {
+              x: layout.boards[move.key].x,
+              y: layout.boards[move.key].y,
+            }
+          : null,
+      },
       input: () => ({ restoreRevision: redo ? move.afterRevision : move.beforeRevision }),
     });
+    storeDraft();
     scheduleViewContext();
     void flushLayout();
   }
@@ -689,8 +828,8 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
       if (options.stateUrl) persist();
     };
     if (Object.keys(boards).length && canSaveLayout()) {
-      layoutOperations.push({ input: () => ({ boards }), saved: migrated });
-      void flushLayout();
+      layoutOperations.push({ revision, input: () => ({ boards }), saved: migrated });
+      storeDraft();
     } else if (canSaveLayout()) migrated();
   }
 
@@ -2042,6 +2181,7 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
       layout.boards = { ...layout.boards, [key]: { ...layout.boards?.[key], ...point } };
       const panel = panels.get(gesture.artifactId);
       layoutDragDirty = point.x !== gesture.left || point.y !== gesture.top;
+      if (layoutDragDirty) status('Moving board', 'saving');
       panel.style.left = `${point.x}px`;
       panel.style.top = `${point.y}px`;
       syncCanvasNodes();
@@ -2269,7 +2409,7 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
   }
 
   async function pollRevision() {
-    if (!options.statusUrl || destroyed) return;
+    if (!options.statusUrl || destroyed || sessionLost) return;
     try {
       const observedRevision = revision;
       const result = await jsonRequest(options.statusUrl);
@@ -2298,14 +2438,15 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
           result.message ?? 'The new revision failed. This working design remains available.',
           true,
         );
-    } catch {
-      if (!dirty) status('Disconnected', 'disconnected');
+    } catch (error) {
+      if (error.statusCode === 404) studioRestarted();
+      else if (!dirty && !hasPendingLayout()) status('Disconnected', 'disconnected');
     }
     pollTimer = setTimeout(pollRevision, 4000);
   }
 
   async function reportReady() {
-    if (readyReported || readyReporting || destroyed) return;
+    if (!startupSettled || readyReported || readyReporting || destroyed) return;
     readyReporting = true;
     try {
       const requiredEntries = [entryFor()];
@@ -2391,6 +2532,7 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
       }),
     );
     chrome = mountDesignChrome({ root, title: design.title, state });
+    if (hasPendingLayout()) status('Recovering layout', 'saving');
     if (chrome) cleanup.push(() => chrome.destroy());
     previousReviewMode = stage.getState().reviewMode;
     activeTool = previousReviewMode === 'comment' ? 'annotate' : 'interact';
@@ -2616,7 +2758,7 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
       }),
       getRevision: () => revision,
       getSaveState: () => ({
-        dirty: contentDirty || reviewDirty || layoutOperations.length > 0,
+        dirty: contentDirty || reviewDirty || hasPendingLayout(),
         personalPending: dirty && !contentDirty,
         commentsPending: reviewDirty,
         revision,
@@ -2697,8 +2839,11 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
         for (const remove of cleanup.splice(0)) remove();
       },
     });
-    void refreshSavedState().then(() => {
+    void refreshSavedState().then(async () => {
+      restorePendingLayout();
       migrateLegacyPositions();
+      await flushLayout();
+      startupSettled = true;
       return reportReady();
     });
     pollTimer = setTimeout(pollRevision, 4000);

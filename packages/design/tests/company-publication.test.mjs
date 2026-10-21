@@ -14,11 +14,12 @@ import { join } from 'node:path';
 import { test } from 'node:test';
 import { sha256Hex } from '@openplanr/protocol/canonical-json';
 import { assertCompanyDesignBundle } from '@openplanr/protocol/design-publication-contracts';
+import { assertDesignReviewBundle } from '@openplanr/protocol/review-experience-contracts';
 import {
   createCompanyDesignSourceReader,
   prepareCompanyDesignPublication,
 } from '../lib/design/company-publication.mjs';
-import { emptyReviewContext } from '../lib/design/context.mjs';
+import { bundleDesignRevision, emptyReviewContext } from '../lib/design/context.mjs';
 import { prepareDesignDocument } from '../lib/design/document.mjs';
 import { designFixture } from './design-fixture.mjs';
 
@@ -69,6 +70,28 @@ test('company publication converts shared local sources to the frozen inline hos
   );
   assertCompanyDesignBundle(publication.bundle);
   assert.equal(local.envelope.schemaVersion, '1.1.0');
+});
+
+test('both authored versions project fixed and auto frames into review and publication contracts', (t) => {
+  for (const schemaVersion of ['1.0.0', '1.1.0']) {
+    for (const height of [900, 'auto']) {
+      const { file, document } = fixture(t, {
+        count: 1,
+        frames: [{ id: 'desktop', label: 'Desktop', width: 1440, height }],
+      });
+      document.schemaVersion = schemaVersion;
+      save(file, document);
+      const review = bundleDesignRevision(prepareDesignDocument(file, { passive: true }));
+      assert.strictEqual(assertDesignReviewBundle(review), review);
+      const publication = prepareCompanyDesignPublication(file);
+      assert.strictEqual(assertCompanyDesignBundle(publication.bundle), publication.bundle);
+      for (const bundle of [review, publication.bundle]) {
+        assert.equal(Object.hasOwn(bundle.design, 'schemaVersion'), false);
+        assert.equal(bundle.design.frames[0].height, height);
+      }
+      assert.equal(JSON.parse(readFileSync(file, 'utf8')).schemaVersion, schemaVersion);
+    }
+  }
 });
 
 test('shared local boards cannot silently expand the hosted artboard or byte budget', (t) => {

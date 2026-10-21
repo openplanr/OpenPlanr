@@ -300,8 +300,7 @@ export async function auditDesignPage(
     checkedArtifacts = [],
     screens = [];
   const frameBoundsSeverity =
-    (document.layout && typeof document.layout === 'object') ||
-    document.frames?.some((frame) => frame.height === 'auto')
+    document.schemaVersion === '1.1.0' || document.frames?.some((frame) => frame.height === 'auto')
       ? 'error'
       : 'warning';
   const expected = new Map(entries.map((entry) => [entry.artifactId, entry]));
