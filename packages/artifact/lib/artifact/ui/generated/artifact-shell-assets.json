@@ -23,8 +23,8 @@
   "assets": [
     {
       "path": "lib/artifact/ui/diagram-editor.css",
-      "bytes": 91003,
-      "sha256": "2e2d18b512e909781e2d23c7d8c338b12ba8f461e222e5095ce876737ae9ae72",
+      "bytes": 91279,
+      "sha256": "98096806a755f30e245ebc8ff0507af6c477e2f5bfbe80b58a7c9100562b5115",
       "budget": {
         "bytes": 98304,
         "gzipBytes": 20480
@@ -77,8 +77,8 @@
     },
     {
       "path": "templates/diagram-owner.js",
-      "bytes": 1654367,
-      "sha256": "08aa33b857319aa8fecd5e37a139a7d21b4361ccd0e589a840579a75af7cf8d7",
+      "bytes": 1771815,
+      "sha256": "afdd1e2e012a047f1b6f9e80de8b81a5e4084c79bfe460bdeb62bf391b934511",
       "budget": {
         "bytes": 1800000,
         "gzipBytes": 340000

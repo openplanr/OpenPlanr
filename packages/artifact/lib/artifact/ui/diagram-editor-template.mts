@@ -34,6 +34,9 @@ export interface DiagramEditorSkeleton {
   stageRegion: HTMLElement;
   stage: HTMLElement;
   svg: SVGSVGElement;
+  worldLayer: HTMLElement;
+  overlayLayer: HTMLElement;
+  overlaySvg: SVGSVGElement;
   world: SVGGElement;
   overlays: SVGGElement;
   empty: HTMLElement;
@@ -167,7 +170,11 @@ export function renderEditorSkeleton(
     'aria-label': 'Diagram drawing',
     role: 'img',
   });
-  svg.append(world, overlays);
+  const overlaySvg = svgNode('svg', { 'data-editor-overlay-svg': '', 'aria-hidden': 'true' });
+  svg.append(world);
+  overlaySvg.append(overlays);
+  const worldLayer = node('div', { className: 'de-world-layer' }, svg),
+    overlayLayer = node('div', { className: 'de-overlay-layer' }, overlaySvg);
   const empty = node('div', { className: 'de-empty' }),
     canvasTools = node('div', {
       className: 'de-canvas-tools',
@@ -196,7 +203,8 @@ export function renderEditorSkeleton(
       role: 'application',
       tabindex: '0',
     },
-    svg,
+    worldLayer,
+    overlayLayer,
     empty,
     canvasTools,
     contextTools,
@@ -275,6 +283,9 @@ export function renderEditorSkeleton(
     stageRegion,
     stage,
     svg,
+    worldLayer,
+    overlayLayer,
+    overlaySvg,
     world,
     overlays,
     empty,

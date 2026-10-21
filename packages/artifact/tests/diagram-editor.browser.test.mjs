@@ -1094,7 +1094,8 @@ test(
     );
     await page.getByRole('button', { name: 'Pan', exact: true }).click();
     const canvas = await page.getByLabel('Diagram canvas', { exact: true }).boundingBox();
-    const oldTransform = await page.locator('[data-world]').getAttribute('transform');
+    const worldLayer = page.locator('[data-world]').locator('..').locator('..');
+    const oldTransform = await worldLayer.evaluate((element) => element.style.transform);
     await page.mouse.move(canvas.x + canvas.width / 2, canvas.y + canvas.height / 2);
     await page.mouse.down();
     await page.mouse.move(canvas.x + canvas.width / 2 + 42, canvas.y + canvas.height / 2 + 26, {
@@ -1102,7 +1103,8 @@ test(
     });
     await page.mouse.up();
     await settle(page);
-    assert.notEqual(await page.locator('[data-world]').getAttribute('transform'), oldTransform);
+    assert.notEqual(await worldLayer.evaluate((element) => element.style.transform), oldTransform);
+    assert.equal(await page.locator('[data-world]').getAttribute('transform'), null);
     assert.equal(
       await stable.evaluate((element) => element.isConnected),
       true,

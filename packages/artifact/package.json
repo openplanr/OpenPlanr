@@ -80,6 +80,7 @@
   },
   "dependencies": {
     "@expo-google-fonts/inter": "0.4.2",
+    "@openplanr/canvas": "0.0.0",
     "@openplanr/protocol": "0.13.0",
     "@resvg/resvg-js": "2.6.2",
     "@types/react": "19.3.0",

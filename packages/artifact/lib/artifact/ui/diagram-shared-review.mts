@@ -492,10 +492,7 @@ export function mountDiagramSharedReview({
         pinning = false;
         root.dataset.commentMode = 'false';
       }
-      for (const button of root.querySelectorAll<HTMLButtonElement>(
-        '[data-host-action="pin-comment"],[data-host-action="comment"]',
-      ))
-        button.disabled = value;
+      mounted.refreshHost();
     };
     let selected = '';
     cleanups.push(

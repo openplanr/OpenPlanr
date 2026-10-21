@@ -1,3 +1,9 @@
+import {
+  type CanvasController,
+  cameraFromScreenTranslate,
+  cameraToScreenTranslate,
+  createCanvas,
+} from '@openplanr/canvas';
 import type {
   DiagramBounds,
   DiagramPlacement,
@@ -28,12 +34,13 @@ interface DrawEvent {
   affectedIds?: string[];
 }
 export interface DiagramEditorCanvas {
+  controller: CanvasController;
   tool(): DiagramEditorTool;
   setTool(tool: DiagramEditorTool): void;
   setTemporaryPan(active: boolean): void;
   dragging(): boolean;
   cancelDrag(): void;
-  draw(event?: DrawEvent): void;
+  draw(event?: DrawEvent): boolean;
   fit(minimumScale?: number): void;
   zoom(factor: number, around?: DiagramEditorPoint): void;
   cameraPatch(camera: Camera): void;
@@ -43,7 +50,6 @@ export interface DiagramEditorCanvas {
   pointerUp(event: PointerEvent): void;
   pointerCancel(event: PointerEvent): void;
   lostPointerCapture(event: PointerEvent): void;
-  wheel(event: WheelEvent): void;
   blur(): void;
   dispose(): void;
 }
@@ -61,7 +67,6 @@ interface HandleDrag extends DragPoints {
   active: boolean;
 }
 type Drag =
-  | (DragPoints & { type: 'pan'; camera: Camera; active?: boolean })
   | (DragPoints & { type: 'marquee'; additive: boolean; base: string[]; active?: boolean })
   | (DragPoints & {
       type: 'move';
@@ -103,7 +108,7 @@ const intersect = (a: DiagramBounds | null, b: DiagramBounds) =>
 /** The drawing surface: camera, per-element SVG reconciliation, selection overlays and gestures. */
 export function createEditorCanvas(ctx: DiagramEditorContext): DiagramEditorCanvas {
   const { doc, win, session, dom } = ctx;
-  const { shell, stage, svg, world, overlays } = dom;
+  const { shell, stage, svg, world, overlays, worldLayer, overlayLayer, overlaySvg } = dom;
   const current = ctx.current,
     report = ctx.report;
   const elementNodes = new Map<string, SVGElement>(),
@@ -124,58 +129,207 @@ export function createEditorCanvas(ctx: DiagramEditorContext): DiagramEditorCanv
         ? 'slate'
         : 'midnight'
       : 'paper';
+  const controller = createCanvas({
+    label: 'Diagram canvas',
+    zoom: { min: 0.04, max: 4 },
+    pointerMode: 'none',
+    keyboard: { arrows: 'none' },
+    lod: false,
+    motion: 'none',
+  });
+  let stageRect: Pick<DOMRect, 'left' | 'top' | 'width' | 'height'> | null = null;
+  let pointerOrigin: Pick<DOMRect, 'left' | 'top'> | null = null;
+  let contextWidth = 0;
+  let viewStamp = '';
+  let cameraStamp = '';
+  let boundsStamp = '';
+  let renderedBundle: DiagramAuthoringBundle | null = null;
+  let indexedBundle: DiagramAuthoringBundle | null = null;
+  let geometryDirty = false;
+  const visibleIds = new Set<string>();
+  let settleTimer = 0;
+  let overlayScale = current().view.camera.scale;
+  const editedIds = new Set<string>();
+  const invalidateOrigin = () => {
+    stageRect = null;
+  };
+  const measureStage = () => (stageRect ??= stage.getBoundingClientRect());
+  const observer = win.ResizeObserver
+    ? new win.ResizeObserver((entries) => {
+        invalidateOrigin();
+        for (const entry of entries)
+          if (entry.target === dom.contextTools) contextWidth = entry.contentRect.width;
+      })
+    : null;
+  observer?.observe(stage);
+  observer?.observe(dom.contextTools);
+  win.addEventListener('resize', invalidateOrigin);
+  win.addEventListener('scroll', invalidateOrigin, true);
   const fromClient = (event: MouseEvent) => {
-    const rect = svg.getBoundingClientRect();
+    if (!pointerOrigin)
+      throw new TypeError('Pointer coordinates require an active gesture origin.');
+    const rect = pointerOrigin;
     return { x: event.clientX - rect.left, y: event.clientY - rect.top };
   };
-  const worldPoint = (point: DiagramEditorPoint, camera: Camera = current().view.camera) => ({
-    x: (point.x - camera.x) / camera.scale,
-    y: (point.y - camera.y) / camera.scale,
-  });
-  const cameraPatch = (camera: Camera) => session.setView({ camera });
+  const worldPoint = (point: DiagramEditorPoint, camera?: Camera) =>
+    camera
+      ? {
+          x: (point.x - camera.x) / camera.scale,
+          y: (point.y - camera.y) / camera.scale,
+        }
+      : controller.screenToWorld(point);
+  const cameraKey = (camera: Camera) => JSON.stringify(camera);
+  function syncCamera(camera: Camera) {
+    const stamp = cameraKey(camera);
+    if (stamp === cameraStamp) return;
+    cameraStamp = stamp;
+    const next = cameraFromScreenTranslate(camera),
+      before = controller.getCamera();
+    if (next.x !== before.x || next.y !== before.y || next.zoom !== before.zoom)
+      controller.setCamera(next);
+  }
+  const cameraPatch = (camera: Camera) => {
+    const result = session.setView({ camera });
+    if (!result.ok) report(errText(result));
+    else syncCamera(current().view.camera);
+  };
   function fit(minimumScale = fitMinimumScale) {
     fitMinimumScale = minimumScale;
     const state = current();
     if (!state.bundle) return;
-    const rect = stage.getBoundingClientRect(),
+    const area = controller.getSafeArea(),
       bounds = boundsOf(state.bundle),
       pad = 72;
     const scale = Math.min(
       1.6,
       Math.max(
         Math.max(0.04, minimumScale),
-        Math.min((rect.width - pad * 2) / bounds.width, (rect.height - pad * 2) / bounds.height),
+        Math.min((area.width - pad * 2) / bounds.width, (area.height - pad * 2) / bounds.height),
       ),
     );
     cameraPatch({
-      x: (rect.width - bounds.width * scale) / 2 - bounds.x * scale,
-      y: (rect.height - bounds.height * scale) / 2 - bounds.y * scale,
+      x: area.x + (area.width - bounds.width * scale) / 2 - bounds.x * scale,
+      y: area.y + (area.height - bounds.height * scale) / 2 - bounds.y * scale,
       scale,
       fit: 'all',
     });
   }
   function zoom(factor: number, around?: DiagramEditorPoint) {
-    const camera = current().view.camera,
-      point = around ?? { x: stage.clientWidth / 2, y: stage.clientHeight / 2 };
-    const scale = Math.min(4, Math.max(0.04, camera.scale * factor)),
-      anchor = worldPoint(point, camera);
-    cameraPatch({ x: point.x - anchor.x * scale, y: point.y - anchor.y * scale, scale, fit: null });
+    controller.zoomAt(factor, around);
+  }
+  function applyMounted(mounted: ReadonlySet<string>) {
+    const cull = elementNodes.size > 500;
+    for (const [id, node] of elementNodes) {
+      const visible = !cull || mounted.has(id);
+      if (visible !== visibleIds.has(id)) node.style.display = visible ? '' : 'none';
+      if (visible) visibleIds.add(id);
+      else visibleIds.delete(id);
+    }
+  }
+  controller.on('mount', applyMounted);
+  controller.on('selection', (selection) => {
+    const latest = controller.getSelection();
+    if (selection.length !== latest.length || selection.some((id, index) => id !== latest[index]))
+      return;
+    const before = current().view.selection;
+    if (selection.length === before.length && selection.every((id, index) => id === before[index]))
+      return;
+    const result = session.setView({ selection: [...selection] });
+    if (!result.ok) report(errText(result));
+  });
+  controller.on('camera', (camera) => {
+    const stored = current().view.camera,
+      next = cameraToScreenTranslate(camera);
+    const same = cameraFromScreenTranslate(stored);
+    const fit =
+      same.x === camera.x && same.y === camera.y && same.zoom === camera.zoom ? stored.fit : null;
+    const value = { ...next, fit };
+    cameraStamp = cameraKey(value);
+    if (cameraKey(stored) !== cameraStamp) {
+      const result = session.setView({ camera: value });
+      if (!result.ok) report(errText(result));
+    }
+    dom.zoomValue.textContent = Math.round(camera.zoom * 100) + '%';
+    dom.contextTools.hidden = true;
+    win.clearTimeout(settleTimer);
+    settleTimer = win.setTimeout(() => {
+      if (ctx.isDisposed()) return;
+      const state = current(),
+        bundle = ctx.displayed(state);
+      if (!bundle) return;
+      if (overlayScale !== camera.zoom) {
+        for (const id of state.view.selection) {
+          const node = elementNodes.get(id);
+          if (node) traceRoute(node, true, camera.zoom);
+        }
+        renderOverlays(state, bundle, new Set(state.view.selection));
+        overlayScale = camera.zoom;
+      } else positionContextTools(state, bundle);
+    }, 160);
+  });
+  const trackSpace = (event: KeyboardEvent) => {
+    if (
+      (event.key === ' ' || event.code === 'Space') &&
+      event.target === stage &&
+      !event.ctrlKey &&
+      !event.metaKey &&
+      !event.altKey &&
+      !event.isComposing
+    )
+      tempPan = true;
+  };
+  const releaseSpace = (event: KeyboardEvent) => {
+    if (event.key === ' ' || event.code === 'Space') tempPan = false;
+  };
+  stage.addEventListener('keydown', trackSpace, true);
+  doc.addEventListener('keyup', releaseSpace);
+  stage.addEventListener('blur', blur);
+  stage.addEventListener('focusout', blur);
+  syncCamera(current().view.camera);
+  controller.attach({ stage, world: worldLayer, overlays: [overlayLayer] });
+  function sizeSvg(bounds: DiagramBounds) {
+    const stamp = JSON.stringify(bounds);
+    if (stamp === boundsStamp) return;
+    boundsStamp = stamp;
+    for (const [drawing, margin] of [
+      [svg, 32],
+      [overlaySvg, 64 / 0.04],
+    ] as const) {
+      const x = bounds.x - margin,
+        y = bounds.y - margin;
+      const width = bounds.width + margin * 2,
+        height = bounds.height + margin * 2;
+      drawing.setAttribute('viewBox', `${x} ${y} ${width} ${height}`);
+      drawing.setAttribute('width', String(width));
+      drawing.setAttribute('height', String(height));
+      drawing.style.left = `${x}px`;
+      drawing.style.top = `${y}px`;
+    }
   }
   function draw(event: DrawEvent = { type: 'initial', affectedIds: [] }) {
-    if (ctx.isDisposed()) return;
+    if (ctx.isDisposed()) return false;
     const state = current(),
       bundle = ctx.displayed(state);
+    syncCamera(state.view.camera);
+    const nextViewStamp = JSON.stringify([
+      state.view.selection,
+      state.view.collapsedGroups,
+      state.view.trace,
+      state.view.snap,
+    ]);
+    dom.zoomValue.textContent = Math.round(controller.getCamera().zoom * 100) + '%';
+    if (event.type === 'view' && viewStamp === nextViewStamp && renderedBundle === bundle)
+      return false;
+    viewStamp = nextViewStamp;
     if (!bundle) {
+      controller.setNodes([]);
       world.replaceChildren();
       elementNodes.clear();
       ctx.chrome.render(state);
-      return;
+      return true;
     }
     const camera = state.view.camera;
     dom.zoomValue.textContent = Math.round(camera.scale * 100) + '%';
-    const transform = 'translate(' + camera.x + ' ' + camera.y + ') scale(' + camera.scale + ')';
-    world.setAttribute('transform', transform);
-    overlays.setAttribute('transform', transform);
     const byId = elementIndex(bundle.document),
       placements = new Map(bundle.presentation.elements.map((entry) => [entry.elementId, entry]));
     const theme = editorTheme(bundle),
@@ -193,11 +347,72 @@ export function createEditorCanvas(ctx: DiagramEditorContext): DiagramEditorCanv
     const affected = forceAll ? new Set(placements.keys()) : new Set(event.affectedIds ?? []);
     if (event.type === 'content' && !affected.size)
       for (const id of placements.keys()) affected.add(id);
+    if (state.gesture) geometryDirty ||= indexedBundle !== bundle;
+    if (!state.gesture && (geometryDirty || indexedBundle !== bundle)) {
+      const nodes = bundle.presentation.elements.map((entry) => {
+        const geometry = session.geometry(entry.elementId);
+        const rects = [geometry?.bounds ?? entry.bounds, geometry?.labelBounds];
+        let x = Infinity,
+          y = Infinity,
+          right = -Infinity,
+          bottom = -Infinity;
+        const include = (point: DiagramEditorPoint) => {
+          x = Math.min(x, point.x);
+          y = Math.min(y, point.y);
+          right = Math.max(right, point.x);
+          bottom = Math.max(bottom, point.y);
+        };
+        for (const point of geometry?.points ?? []) include(point);
+        for (const bounds of rects)
+          if (bounds) {
+            include(bounds);
+            include({ x: bounds.x + bounds.width, y: bounds.y + bounds.height });
+          }
+        return {
+          id: entry.elementId,
+          bounds:
+            x === Infinity
+              ? { x: 0, y: 0, width: 0, height: 0 }
+              : {
+                  x,
+                  y,
+                  width: right - x,
+                  height: bottom - y,
+                },
+        };
+      });
+      controller.setNodes(nodes);
+      const bounds = nodes.map((node) => node.bounds);
+      const x = Math.min(...bounds.map((rect) => rect.x));
+      const y = Math.min(...bounds.map((rect) => rect.y));
+      sizeSvg(
+        bounds.length
+          ? {
+              x,
+              y,
+              width: Math.max(...bounds.map((rect) => rect.x + rect.width)) - x,
+              height: Math.max(...bounds.map((rect) => rect.y + rect.height)) - y,
+            }
+          : boundsOf(bundle),
+      );
+      indexedBundle = bundle;
+      geometryDirty = false;
+    }
+    renderedBundle = bundle;
+    controller.setSelection(state.view.selection);
+    if (state.gesture) for (const id of event.affectedIds ?? []) editedIds.add(id);
+    else editedIds.clear();
+    controller.setPinned(
+      'editor-edit',
+      [...editedIds].filter((id) => placements.has(id)),
+    );
     const parser = new win.DOMParser();
     for (const [id, node] of elementNodes)
       if (!placements.has(id)) {
+        controller.registerNodeElement(id, null);
         node.remove();
         elementNodes.delete(id);
+        visibleIds.delete(id);
         renderSignatures.delete(id);
       }
     for (let order = 0; order < bundle.presentation.elements.length; order++) {
@@ -246,6 +461,8 @@ export function createEditorCanvas(ctx: DiagramEditorContext): DiagramEditorCanv
           if (old) old.replaceWith(replacement);
           else world.append(replacement);
           elementNodes.set(id, replacement);
+          visibleIds.add(id);
+          controller.registerNodeElement(id, replacement);
           renderSignatures.set(id, signature);
         }
       }
@@ -286,17 +503,18 @@ export function createEditorCanvas(ctx: DiagramEditorContext): DiagramEditorCanv
         stage.style.backgroundColor = palette.background;
         stage.style.backgroundImage = `radial-gradient(color-mix(in srgb, ${palette.border} 24%, transparent) 0.8px, transparent 0.8px)`;
         // Drawn selection and handles share the saved canvas palette; host chrome owns its theme.
-        svg.style.setProperty('--de-primary', palette.accent);
-        svg.style.setProperty('--de-panel', palette.fills.surface);
+        stage.style.setProperty('--de-primary', palette.accent);
+        stage.style.setProperty('--de-panel', palette.fills.surface);
       } else {
         stage.style.removeProperty('background-color');
         stage.style.removeProperty('background-image');
-        svg.style.removeProperty('--de-primary');
-        svg.style.removeProperty('--de-panel');
+        stage.style.removeProperty('--de-primary');
+        stage.style.removeProperty('--de-panel');
       }
     }
     renderOverlays(state, bundle, selection);
     ctx.chrome.render(state);
+    return true;
   }
   function svgElement(tag: string, attributes: Record<string, string | number>) {
     const node = doc.createElementNS(SVG, tag);
@@ -331,12 +549,7 @@ export function createEditorCanvas(ctx: DiagramEditorContext): DiagramEditorCanv
     group.append(...parts);
     return group;
   }
-  function renderOverlays(
-    state: DiagramEditorState,
-    bundle: DiagramAuthoringBundle,
-    selection: Set<string>,
-  ) {
-    overlays.replaceChildren();
+  function positionContextTools(state: DiagramEditorState, bundle: DiagramAuthoringBundle) {
     const selectedId = state.view.selection.length === 1 ? state.view.selection[0] : null;
     const selectedBounds = selectedId ? session.geometry(selectedId)?.bounds : null;
     const showContext =
@@ -347,22 +560,31 @@ export function createEditorCanvas(ctx: DiagramEditorContext): DiagramEditorCanv
     dom.contextTools.hidden = !showContext;
     if (showContext && selectedBounds) {
       const camera = state.view.camera;
-      const width = dom.contextTools.getBoundingClientRect().width;
+      const width = contextWidth,
+        rect = measureStage();
       dom.contextTools.style.left = `${Math.max(
         8,
         Math.min(
-          stage.clientWidth - width - 8,
+          rect.width - width - 8,
           camera.x + (selectedBounds.x + selectedBounds.width / 2) * camera.scale - width / 2,
         ),
       )}px`;
       dom.contextTools.style.top = `${Math.max(
         8,
         Math.min(
-          stage.clientHeight - 132,
+          rect.height - 132,
           camera.y + (selectedBounds.y + selectedBounds.height) * camera.scale + 12,
         ),
       )}px`;
     }
+  }
+  function renderOverlays(
+    state: DiagramEditorState,
+    bundle: DiagramAuthoringBundle,
+    selection: Set<string>,
+  ) {
+    overlays.replaceChildren();
+    positionContextTools(state, bundle);
     const scale = state.view.camera.scale,
       byPlacement = new Map(bundle.presentation.elements.map((item) => [item.elementId, item]));
     for (const id of selection) {
@@ -479,8 +701,17 @@ export function createEditorCanvas(ctx: DiagramEditorContext): DiagramEditorCanv
   }
   function pointerDown(event: PointerEvent) {
     const { select } = ctx.commands;
-    if (event.button !== 0 || !current().bundle || ctx.dialogs.active() || focusable(event.target))
+    if (
+      event.button !== 0 ||
+      tool === 'pan' ||
+      tempPan ||
+      !current().bundle ||
+      ctx.dialogs.active() ||
+      focusable(event.target)
+    )
       return;
+    stageRect = stage.getBoundingClientRect();
+    pointerOrigin = { left: stageRect.left, top: stageRect.top };
     // Pointer events target elements.
     const state = current(),
       start = fromClient(event),
@@ -496,11 +727,6 @@ export function createEditorCanvas(ctx: DiagramEditorContext): DiagramEditorCanv
       query.hits[0]?.id ??
       target?.getAttribute('data-element-id') ??
       null;
-    if ((tool === 'pan' || tempPan) && !handle) {
-      drag = { type: 'pan', start, last: start, camera: clone(state.view.camera) };
-      stage.setPointerCapture(event.pointerId);
-      return;
-    }
     if (!ctx.editable(state)) {
       if (id) select([id]);
       return;
@@ -556,14 +782,7 @@ export function createEditorCanvas(ctx: DiagramEditorContext): DiagramEditorCanv
   }
   function previewDrag() {
     raf = 0;
-    if (
-      !drag ||
-      drag.type === 'connect' ||
-      !drag.active ||
-      drag.type === 'marquee' ||
-      drag.type === 'pan'
-    )
-      return;
+    if (!drag || drag.type === 'connect' || !drag.active || drag.type === 'marquee') return;
     const state = current(),
       scale = state.view.camera.scale;
     const dx = (drag.last.x - drag.start.x) / scale,
@@ -612,16 +831,6 @@ export function createEditorCanvas(ctx: DiagramEditorContext): DiagramEditorCanv
     if (!drag) return;
     const point = fromClient(event);
     drag.last = point;
-    if (drag.type === 'pan') {
-      const camera = drag.camera;
-      cameraPatch({
-        x: camera.x + point.x - drag.start.x,
-        y: camera.y + point.y - drag.start.y,
-        scale: camera.scale,
-        fit: null,
-      });
-      return;
-    }
     if (drag.type === 'marquee' || drag.type === 'connect') {
       // A marquee starts only on a readable diagram.
       // biome-ignore format: bundles keep these one-line arguments; wrapping would change their bytes.
@@ -651,6 +860,7 @@ export function createEditorCanvas(ctx: DiagramEditorContext): DiagramEditorCanv
     }
     const finished = drag;
     drag = null;
+    pointerOrigin = null;
     if (finished.type === 'connect' && !cancel) {
       const query = session.query({ x: finished.last.x, y: finished.last.y, tolerance: 8 });
       const bundle = current().bundle;
@@ -691,17 +901,6 @@ export function createEditorCanvas(ctx: DiagramEditorContext): DiagramEditorCanv
       stage.releasePointerCapture(event.pointerId);
     draw({ type: 'view' });
   }
-  function wheel(event: WheelEvent) {
-    // Wheel events target elements.
-    if (!(event.target as Element).closest('.de-canvas')) return;
-    event.preventDefault();
-    const point = fromClient(event);
-    if (event.ctrlKey || event.metaKey) zoom(Math.exp(-event.deltaY * 0.002), point);
-    else {
-      const camera = current().view.camera;
-      cameraPatch({ ...camera, x: camera.x - event.deltaX, y: camera.y - event.deltaY, fit: null });
-    }
-  }
   function pointerUp(event: PointerEvent) {
     finishPointer(event);
   }
@@ -716,9 +915,11 @@ export function createEditorCanvas(ctx: DiagramEditorContext): DiagramEditorCanv
     if (drag) finishPointer(null, true);
   }
   return {
+    controller,
     tool: () => tool,
     setTool(next) {
       tool = next;
+      controller.setPointerMode(next === 'pan' ? 'pan' : 'none');
     },
     setTemporaryPan(active) {
       tempPan = active;
@@ -737,10 +938,18 @@ export function createEditorCanvas(ctx: DiagramEditorContext): DiagramEditorCanv
     pointerUp,
     pointerCancel,
     lostPointerCapture,
-    wheel,
     blur,
     dispose() {
       win.cancelAnimationFrame(raf);
+      win.clearTimeout(settleTimer);
+      observer?.disconnect();
+      win.removeEventListener('resize', invalidateOrigin);
+      win.removeEventListener('scroll', invalidateOrigin, true);
+      stage.removeEventListener('keydown', trackSpace, true);
+      doc.removeEventListener('keyup', releaseSpace);
+      stage.removeEventListener('blur', blur);
+      stage.removeEventListener('focusout', blur);
+      controller.destroy();
       elementNodes.clear();
       renderSignatures.clear();
     },

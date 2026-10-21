@@ -410,7 +410,7 @@ export function createEditorChrome(ctx: DiagramEditorContext): DiagramEditorChro
           x: camera.x + (rect.width - lastCanvas.width) / 2,
           y: camera.y + (rect.height - lastCanvas.height) / 2,
         });
-    } else ctx.canvas.fit();
+    } else if (ctx.current().view.camera.fit) ctx.canvas.fit();
     lastCanvas = { width: rect.width, height: rect.height };
     render(ctx.current(), { force: true });
     focusAfterRender?.focus({ preventScroll: true });
