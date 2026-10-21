@@ -16,6 +16,7 @@ import {
   percentile95,
   type RendererTraceEvent,
   rendererFrameWork,
+  toClockResolution,
 } from '../../src/testing/index.mts';
 import { waitForBench } from './bench';
 import { benchMetadata } from './metadata';
@@ -116,6 +117,7 @@ type Measurement = {
   hitTestP95Ms: number;
   rendererMainP95Ms: number;
   rafIntervalP95Ms: number;
+  rafIntervalP95MsAtClockResolution: number;
   runs: readonly TraceRun[];
   firstFrameP50Ms: number;
   firstFrameTrialsMs: number[];
@@ -239,6 +241,7 @@ async function measureTier(browser: Browser, baseURL: string, tier: Tier): Promi
       ];
       for (const scenario of scenarios) {
         const runs = await recordRuns(page, session, scenario);
+        const aggregate = aggregateTraceRuns(runs);
         const referenceBudgets = {
           rendererMainP95Ms:
             scenario === 'remount' ? CANVAS_TRACE_BUDGETS.remountRendererMainP95Ms : mainBudget,
@@ -258,7 +261,8 @@ async function measureTier(browser: Browser, baseURL: string, tier: Tier): Promi
           dpr,
           scenario,
           gpuRenderer: runs[0].gpuRenderer,
-          ...aggregateTraceRuns(runs),
+          ...aggregate,
+          rafIntervalP95MsAtClockResolution: toClockResolution(aggregate.rafIntervalP95Ms),
           firstFrameP50Ms,
           firstFrameTrialsMs,
           referenceBudgets,
@@ -358,6 +362,7 @@ test('records production camera traces beside the reference budgets', async ({
     },
     recordedRunsPerScenario: 3,
     aggregation: 'median of three per-run p95s',
+    clockResolution: 'interval gates compare the rAF median rounded to 0.1 ms; raw values are kept',
     hitTest: {
       method: 'p95 of per-query means at 1000 seeded screen points',
       minimumSampleDurationMs: 1,
@@ -394,11 +399,11 @@ test('records production camera traces beside the reference budgets', async ({
   await testInfo.attach('bench-trace', { path: output, contentType: 'application/json' });
   process.stdout.write(
     [
-      '| Fixture | Renderer | World | DPR | Scenario | Ownership | Budget set | Main p95 median / effective budget ms | Raw main p95s ms | rAF p95 median / effective budget ms | Raw rAF p95s ms | Long tasks per run | Long-task durations per run ms | First frame p50 / budget ms | DOM nodes per run | GPU renderer | Hit-test p95 median / budget ms | DOM ownership | DOM reference budget / regression limit | Hit-test queries per run | Overview redraws per run | Overview cache bytes per run | Peak overview cache bytes per run | React metrics per run |',
+      '| Fixture | Renderer | World | DPR | Scenario | Ownership | Budget set | Main p95 median / effective budget ms | Raw main p95s ms | rAF p95 median at 0.1 ms (raw) / effective budget ms | Raw rAF p95s ms | Long tasks per run | Long-task durations per run ms | First frame p50 / budget ms | DOM nodes per run | GPU renderer | Hit-test p95 median / budget ms | DOM ownership | DOM reference budget / regression limit | Hit-test queries per run | Overview redraws per run | Overview cache bytes per run | Peak overview cache bytes per run | React metrics per run |',
       '| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |',
       ...measurements.map(
         (item) =>
-          `| ${item.fixture} | ${item.renderer} | ${item.world} | ${item.dpr} | ${item.scenario} | ${item.ownership} | ${budgets.budgetSet} | ${item.rendererMainP95Ms} / ${item.effectiveBudgets.rendererMainP95Ms ?? `reported (reference ${item.referenceBudgets.rendererMainP95Ms})`} | ${JSON.stringify(item.runs.map((run) => run.rendererMainP95Ms))} | ${item.rafIntervalP95Ms} / ${item.effectiveBudgets.rafIntervalP95Ms ?? `reported (reference ${item.referenceBudgets.rafIntervalP95Ms})`} | ${JSON.stringify(item.runs.map((run) => run.rafIntervalP95Ms))} | ${JSON.stringify(item.runs.map((run) => run.longTasksOver50Ms))} | ${JSON.stringify(item.runs.map((run) => run.longTaskDurationsMs))} | ${item.firstFrameP50Ms} / ${item.effectiveBudgets.firstFrameP50Ms}${item.effectiveBudgets.firstFrameP50Ms === item.referenceBudgets.firstFrameP50Ms ? '' : ` (reference ${item.referenceBudgets.firstFrameP50Ms})`} | ${JSON.stringify(item.runs.map((run) => run.domNodes))} | ${item.gpuRenderer} | ${item.hitTestP95Ms} / ${item.referenceBudgets.hitTestP95Ms} | ${item.domBudget.ownership} | ${item.referenceBudgets.domNodes} / ${item.domBudget.regressionLimit ?? 'reported'} | ${JSON.stringify(item.runs.map((run) => run.hitTestProbe.queryCount))} | ${JSON.stringify(item.runs.map((run) => run.overview.redraws))} | ${JSON.stringify(item.runs.map((run) => run.overview.cachePixelBytes))} | ${JSON.stringify(item.runs.map((run) => run.overview.peakCachePixelBytes))} | ${JSON.stringify(item.runs.map((run) => run.react ?? null))} |`,
+          `| ${item.fixture} | ${item.renderer} | ${item.world} | ${item.dpr} | ${item.scenario} | ${item.ownership} | ${budgets.budgetSet} | ${item.rendererMainP95Ms} / ${item.effectiveBudgets.rendererMainP95Ms ?? `reported (reference ${item.referenceBudgets.rendererMainP95Ms})`} | ${JSON.stringify(item.runs.map((run) => run.rendererMainP95Ms))} | ${item.rafIntervalP95MsAtClockResolution} (${item.rafIntervalP95Ms}) / ${item.effectiveBudgets.rafIntervalP95Ms ?? `reported (reference ${item.referenceBudgets.rafIntervalP95Ms})`} | ${JSON.stringify(item.runs.map((run) => run.rafIntervalP95Ms))} | ${JSON.stringify(item.runs.map((run) => run.longTasksOver50Ms))} | ${JSON.stringify(item.runs.map((run) => run.longTaskDurationsMs))} | ${item.firstFrameP50Ms} / ${item.effectiveBudgets.firstFrameP50Ms}${item.effectiveBudgets.firstFrameP50Ms === item.referenceBudgets.firstFrameP50Ms ? '' : ` (reference ${item.referenceBudgets.firstFrameP50Ms})`} | ${JSON.stringify(item.runs.map((run) => run.domNodes))} | ${item.gpuRenderer} | ${item.hitTestP95Ms} / ${item.referenceBudgets.hitTestP95Ms} | ${item.domBudget.ownership} | ${item.referenceBudgets.domNodes} / ${item.domBudget.regressionLimit ?? 'reported'} | ${JSON.stringify(item.runs.map((run) => run.hitTestProbe.queryCount))} | ${JSON.stringify(item.runs.map((run) => run.overview.redraws))} | ${JSON.stringify(item.runs.map((run) => run.overview.cachePixelBytes))} | ${JSON.stringify(item.runs.map((run) => run.overview.peakCachePixelBytes))} | ${JSON.stringify(item.runs.map((run) => run.react ?? null))} |`,
       ),
       '',
     ].join('\n'),

@@ -31,6 +31,11 @@ export const CANVAS_TRACE_BUDGETS = Object.freeze({
   }),
 });
 
+/** Rounds a frame interval to the 0.1 ms resolution of the browser's `performance.now()`. */
+export function toClockResolution(ms: number): number {
+  return Math.round(ms * 10) / 10;
+}
+
 export function traceBudgetPolicy(runnerBudgets: boolean): {
   budgetSet: 'local' | 'runner';
   remountRendererMainP95Ms: number | null;
@@ -260,6 +265,19 @@ export function evaluateCanvasTrace(
     numeric(value, `${item.fixture}.${scenario}.${metric}`);
     check(item, scenario, metric, value, limit, value <= limit, reportOnly);
   }
+  function interval(
+    item: CanvasTraceIdentity,
+    scenario: string,
+    metric: string,
+    value: number,
+    limit: number,
+    reportOnly = false,
+  ): void {
+    numeric(value, `${item.fixture}.${scenario}.${metric}`);
+    const rounded = toClockResolution(value);
+    const measured = rounded === value ? rounded : `${rounded} (raw ${value})`;
+    check(item, scenario, metric, measured, limit, rounded <= limit, reportOnly);
+  }
   function hitTest(
     item: CanvasTraceIdentity,
     scenario: string,
@@ -410,7 +428,7 @@ export function evaluateCanvasTrace(
       if (results.browser.name === 'webkit' && item.scenario === 'pan-40') {
         if (run.worstFrameMs === undefined)
           throw new TypeError(`${field}.worstFrameMs is required for WebKit pan-40`);
-        maximum(
+        interval(
           item,
           scenario,
           'worstFrameMs',
@@ -435,7 +453,7 @@ export function evaluateCanvasTrace(
         mainLimit,
         reportOnly || (item.scenario === 'remount' && policy.remountRendererMainP95Ms === null),
       );
-      maximum(
+      interval(
         item,
         item.scenario,
         'rafIntervalP95Ms',
@@ -444,7 +462,7 @@ export function evaluateCanvasTrace(
         reportOnly || policy.rafIntervalP95Ms === null,
       );
     } else if (results.browser.name === 'webkit') {
-      maximum(
+      interval(
         item,
         item.scenario,
         'rafIntervalP95Ms',
@@ -453,7 +471,7 @@ export function evaluateCanvasTrace(
         reportOnly || policy.rafIntervalP95Ms === null,
       );
     } else if (item.scenario === 'pan-100' || item.scenario === 'pan-fit') {
-      maximum(
+      interval(
         item,
         item.scenario,
         'frameP95Ms',

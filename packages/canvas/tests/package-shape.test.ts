@@ -66,6 +66,7 @@ describe('package shape', () => {
                 'generateSvgDiagram',
                 'percentile95',
                 'rendererFrameWork',
+                'toClockResolution',
                 'traceBudgetPolicy',
                 'traceOwnership',
               ]
