@@ -34,6 +34,78 @@ async function activeTool(page, tool) {
   );
 }
 
+async function interactiveFrames(page) {
+  const frames = await page.locator('[data-planr-artifact-frame]').evaluateAll((frames) =>
+    frames.map((frame) => {
+      const rect = frame.getBoundingClientRect();
+      const hit = document.elementFromPoint(rect.x + rect.width / 2, rect.y + rect.height / 2);
+      return {
+        artifactId: frame.closest('[data-artifact-id]')?.getAttribute('data-artifact-id'),
+        pointerEvents: getComputedStyle(frame).pointerEvents,
+        inlinePointerEvents: frame.style.pointerEvents,
+        inert: Boolean(frame.closest('[inert]')),
+        trusted: frame.dataset.planrBridgeTrusted,
+        receivesPointer: hit === frame,
+        hit: hit?.outerHTML.slice(0, 300),
+      };
+    }),
+  );
+  for (const frame of frames) {
+    assert.equal(frame.pointerEvents, 'auto', JSON.stringify(frame));
+    assert.equal(frame.receivesPointer, true, JSON.stringify(frame));
+  }
+}
+
+async function clickFrameButton(page, name) {
+  const preview = page.locator('[data-planr-artifact-frame]');
+  const frame = page.frameLocator('[data-planr-artifact-frame]');
+  const button = frame.getByRole('button', { name, exact: true });
+  await page.evaluate(() => new Promise(requestAnimationFrame));
+  await interactiveFrames(page);
+  const deadline = performance.now() + 1000;
+  let pointers = [];
+  do {
+    const control = await button.evaluate((button) => {
+      window.fixtureButtonTarget = button;
+      window.fixtureButtonPointers = [];
+      const rect = button.getBoundingClientRect();
+      const x = rect.x + rect.width / 2;
+      const y = rect.y + rect.height / 2;
+      return {
+        x,
+        y,
+        width: innerWidth,
+        height: innerHeight,
+        hit: button.contains(document.elementFromPoint(x, y)),
+      };
+    });
+    assert.equal(control.hit, true, 'The frame hit test reaches the button');
+    const bounds = await preview.boundingBox();
+    assert.ok(bounds, 'The board iframe has a rendered box');
+    // Playwright's nested-frame coordinates omit the canvas CSS scale.
+    const point = {
+      x: bounds.x + (control.x * bounds.width) / control.width,
+      y: bounds.y + (control.y * bounds.height) / control.height,
+    };
+    assert.equal(
+      await page.evaluate(
+        ({ x, y }) => document.elementFromPoint(x, y)?.matches('[data-planr-artifact-frame]'),
+        point,
+      ),
+      true,
+      'The page hit test reaches the board iframe at the scaled button position',
+    );
+    await page.mouse.move(point.x, point.y);
+    await page.mouse.down();
+    await page.mouse.up();
+    pointers = await frame.locator('html').evaluate(() => window.fixtureButtonPointers);
+    if (pointers.includes('pointerdown') && pointers.includes('pointerup')) break;
+    await page.evaluate(() => new Promise(requestAnimationFrame));
+  } while (performance.now() < deadline);
+  assert.ok(pointers.includes('pointerdown'), 'A real pointerdown reaches the button within 1 s');
+  assert.ok(pointers.includes('pointerup'), 'A real pointerup reaches the button within 1 s');
+}
+
 test(`canvas tools are exclusive and interrupted gestures release without a view change (${engine})`, {
   timeout: 90000,
 }, async () => {
@@ -51,6 +123,18 @@ test(`canvas tools are exclusive and interrupted gestures release without a view
     });
     browser = await launchBrowser({ engine });
     const page = await browser.newPage({ viewport: { width: 1600, height: 1000 } });
+    await page.addInitScript(() => {
+      window.fixtureButtonPointers = [];
+      for (const type of ['pointerdown', 'pointerup'])
+        document.addEventListener(
+          type,
+          (event) => {
+            if (event.isTrusted && event.target === window.fixtureButtonTarget)
+              window.fixtureButtonPointers.push(type);
+          },
+          true,
+        );
+    });
     page.setDefaultTimeout(8000);
     page.setDefaultNavigationTimeout(30000);
     const errors = [];
@@ -92,22 +176,8 @@ test(`canvas tools are exclusive and interrupted gestures release without a view
       await page.getByRole('button', { name: 'Close new comment', exact: true }).click();
       await page.locator(selectors.interact).click();
       const frame = page.frameLocator('[data-planr-artifact-frame]');
-      // Let the browser commit iframe hit testing after an overlay is removed.
-      await page.evaluate(
-        () => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))),
-      );
-      const control = await frame
-        .getByRole('button', { name: 'Save workspace', exact: true })
-        .evaluate((button) => ({
-          rect: button.getBoundingClientRect().toJSON(),
-          width: innerWidth,
-          height: innerHeight,
-        }));
+      await clickFrameButton(page, 'Save workspace');
       const bounds = await page.locator('[data-planr-artifact-frame]').boundingBox();
-      await page.mouse.click(
-        bounds.x + ((control.rect.x + control.rect.width / 2) * bounds.width) / control.width,
-        bounds.y + ((control.rect.y + control.rect.height / 2) * bounds.height) / control.height,
-      );
       await frame.getByRole('button', { name: 'Saved', exact: true }).waitFor();
       // Pan owns the whole canvas, including pixels currently covered by a
       // sandboxed product frame. Interact must resume immediately afterward.
@@ -128,7 +198,7 @@ test(`canvas tools are exclusive and interrupted gestures release without a view
         'Pan starts over a product frame',
       );
       await page.locator(selectors.interact).click();
-      await frame.getByRole('button', { name: 'Saved', exact: true }).click();
+      await clickFrameButton(page, 'Saved');
       // Keyboard selection also works when the generic stage mode is unchanged.
       await page.locator(selectors.pan).click();
       await page.keyboard.press('i');

@@ -36,6 +36,8 @@ import {
   designSpecPath,
   hash,
   readJson,
+  saveDesignLayout,
+  saveDesignViewContext,
   standaloneDesignHtml,
 } from './document.mjs';
 import { designReviewKey, designReviewPath, readDesignFeedback } from './feedback-reader.mjs';
@@ -75,6 +77,7 @@ import {
 import { renderDesignStudio } from './studio.mjs';
 
 export { designReviewKey, designReviewPath, readDesignFeedback } from './feedback-reader.mjs';
+export { saveDesignLayout } from './layout-save.mjs';
 
 const VERSION = '1.4.0';
 // Capture the code and asset identity at module load; a live daemon must not
@@ -112,6 +115,26 @@ function studioRuntimeIdentity(current) {
       ),
     ),
   };
+}
+function studioContentIdentity(current) {
+  const document = { ...current.document };
+  delete document.layout;
+  return hash(
+    JSON.stringify({
+      document,
+      layoutGuidance: {
+        titles: Object.entries(current.document.layout?.boards ?? {})
+          .filter(([, board]) => board.title !== undefined)
+          .map(([key, board]) => [key, board.title])
+          .sort(([left], [right]) => left.localeCompare(right)),
+        sections: current.document.layout?.sections ?? [],
+      },
+      artifactDigest: digestArtifactEnvelope(current.envelope),
+      fingerprints: current.fingerprints,
+      contextDigest: current.contextDigest,
+      specification: readFileSync(join(current.directory, 'design-spec.md'), 'utf8'),
+    }),
+  );
 }
 /** Deterministic projection of the local ledger, using original immutable sources. */
 export function exportDesignReview(file, { scope = 'all', env = process.env } = {}) {
@@ -632,7 +655,13 @@ async function startDesignReviewUnlocked(
       }).state;
       const stalePins = readDesignFeedback(file, env).pins.filter((pin) => pin.stale);
       return renderDesignStudio(
-        { ...current, envelope: model.envelope, state, stalePins },
+        {
+          ...current,
+          envelope: model.envelope,
+          state,
+          stalePins,
+          contentIdentity: studioContentIdentity(current),
+        },
         { stageRuntimeUrl: `${base}runtime.js` },
       ).replace(
         '</head>',
@@ -646,6 +675,8 @@ async function startDesignReviewUnlocked(
           launchContext: base.startsWith('/studio/') ? 'local Studio' : 'private review',
         },
         stateUrl: `${base}api/design-state`,
+        viewContextUrl: `${base}api/design-view-context`,
+        layoutUrl: `${base}api/design-layout`,
         statusUrl: `${base}api/design-status`,
         readyUrl: `${base}api/design-ready`,
         shareUrl: `${base}api/design-share`,
@@ -949,6 +980,8 @@ async function startDesignReviewUnlocked(
             status: ready?.revision === current.revision ? ready.status : 'loading',
             verification: current.verification.status,
             runtimeIdentity: studioRuntimeIdentity(current),
+            contentIdentity: studioContentIdentity(current),
+            layout: current.document.layout,
           });
         } else if (route === 'design-state' && req.method === 'GET') {
           respond(res, 200, {
@@ -960,6 +993,26 @@ async function startDesignReviewUnlocked(
           });
         } else if (route === 'design-state' && req.method === 'PUT') {
           respond(res, 200, await saveDesignState(file, await readBody(req)));
+        } else if (route === 'design-view-context' && req.method === 'PUT') {
+          if (
+            req.headers['x-openplanr-design'] !== '1' ||
+            !String(req.headers['content-type'] ?? '').startsWith('application/json') ||
+            (req.headers.origin && req.headers.origin !== `http://127.0.0.1:${server.port}`)
+          )
+            throw Object.assign(new Error('View context requires a same-origin studio request.'), {
+              statusCode: 403,
+            });
+          respond(res, 200, saveDesignViewContext(file, await readBody(req), clock));
+        } else if (route === 'design-layout' && req.method === 'PUT') {
+          if (
+            req.headers['x-openplanr-design'] !== '1' ||
+            !String(req.headers['content-type'] ?? '').startsWith('application/json') ||
+            (req.headers.origin && req.headers.origin !== `http://127.0.0.1:${server.port}`)
+          )
+            throw Object.assign(new Error('Layout saves require a same-origin studio request.'), {
+              statusCode: 403,
+            });
+          respond(res, 200, await saveDesignLayout(file, await readBody(req)));
         } else if (route === 'design-ready' && req.method === 'POST') {
           const value = await readBody(req);
           const loadedArtifacts = new Set(Array.isArray(value?.artifacts) ? value.artifacts : []);

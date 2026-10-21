@@ -14,6 +14,7 @@ import {
   standaloneDesignHtml,
 } from './document.mjs';
 import { importDesignFeedback } from './feedback-import.mjs';
+import { matchesDesignFrame } from './frame-size.mjs';
 import { readDesignHandoff, updateDesignHandoff } from './handoff.mjs';
 import {
   exportDesignReview,
@@ -32,8 +33,10 @@ import {
   syncDesignShare,
 } from './share.mjs';
 import { manageDesignStudio } from './studio-lifecycle.mjs';
+import { readDesignViewContext } from './view-context.mjs';
 
 export { auditDesignPage, auditRenderedScreen } from './browser-audit.mjs';
+export { readDesignViewContext } from './view-context.mjs';
 
 function isPng(bytes) {
   if (
@@ -78,8 +81,7 @@ export function verifyDesignDocument(file, report) {
       checkedArtifacts.includes(entry.artifactId) &&
       matches.length === 1 &&
       matches[0].screenId === entry.screenId &&
-      matches[0].viewport?.width === frame.width &&
-      matches[0].viewport?.height === frame.height &&
+      matchesDesignFrame(frame, matches[0].viewport) &&
       Number.isInteger(matches[0].checkedElements) &&
       matches[0].checkedElements > 0
     );
@@ -137,7 +139,7 @@ export async function designUtility(
   if (argv.length === 0 || argv[0] === '--help' || argv[0] === 'help') {
     const help = {
       usage:
-        'design.mjs inspect|validate|render|open|studio|export|feedback|verify|share|publish|sync|manage|handoff <design-document.json>',
+        'design.mjs inspect|validate|render|open|studio|view-context|export|feedback|verify|share|publish|sync|manage|handoff <design-document.json>',
       flags: [
         '--json',
         '--no-open',
@@ -150,6 +152,7 @@ export async function designUtility(
         '--action inspect|export|import|select|resolve|rotate|pause|resume|revoke|delete|recovery|restore|status|stop',
         '--input <private recovery or feedback JSON file>',
         '--revision <current-render-revision>',
+        '--request-time <ISO-timestamp>',
         '--allow-stale',
         '--variant <id>',
         '--pins <id,id>',
@@ -168,6 +171,7 @@ export async function designUtility(
       'render',
       'open',
       'studio',
+      'view-context',
       'export',
       'feedback',
       'verify',
@@ -180,7 +184,7 @@ export async function designUtility(
     !input
   )
     throw new Error(
-      'Usage: design.mjs inspect|validate|render|open|studio|export|feedback|verify|share|publish|sync|manage|handoff <design-document.json> [--json] [--no-open] [--view canvas|prototype|walkthrough]',
+      'Usage: design.mjs inspect|validate|render|open|studio|view-context|export|feedback|verify|share|publish|sync|manage|handoff <design-document.json> [--json] [--no-open] [--view canvas|prototype|walkthrough]',
     );
   const flags = {};
   for (let i = 0; i < args.length; i++) {
@@ -203,6 +207,7 @@ export async function designUtility(
         'input',
         'scope',
         'revision',
+        'request-time',
         'allow-stale',
       ].includes(key)
     )
@@ -213,6 +218,8 @@ export async function designUtility(
     throw new Error('View must be canvas, prototype, or walkthrough.');
   const file = resolve(input);
   let result;
+  if (command === 'view-context')
+    result = readDesignViewContext(file, { requestTime: flags['request-time'] });
   if (command === 'studio')
     result = await manageDesignStudio(file, {
       action: flags.action,

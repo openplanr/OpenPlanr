@@ -159,7 +159,9 @@ export function createArtifactViewportGestures(
     timer = 0,
     pending: PendingGesture | null = null,
     pendingType = '';
+  let gestureScale = 1;
   const clear = () => {
+    gestureScale = 1;
     if (timer) cancel(timer);
     timer = 0;
     pending = null;
@@ -172,6 +174,32 @@ export function createArtifactViewportGestures(
     pending = null;
     pendingType = '';
     if (enabled && !disposed && value) emit(type, value);
+  };
+  const queue = (type: string, value: PendingGesture) => {
+    const deltaX = value.deltaX ?? 0;
+    const deltaY = value.deltaY ?? 0;
+    if (pendingType && pendingType !== type) flush();
+    pendingType = type;
+    pending =
+      type === 'viewport.zoom'
+        ? {
+            ...value,
+            deltaY: Math.max(
+              -ARTIFACT_VIEWPORT_ZOOM_MAX_DELTA,
+              Math.min(ARTIFACT_VIEWPORT_ZOOM_MAX_DELTA, (pending?.deltaY || 0) + deltaY),
+            ),
+          }
+        : {
+            deltaX: Math.max(
+              -ARTIFACT_VIEWPORT_PAN_MAX_DELTA,
+              Math.min(ARTIFACT_VIEWPORT_PAN_MAX_DELTA, (pending?.deltaX || 0) + deltaX),
+            ),
+            deltaY: Math.max(
+              -ARTIFACT_VIEWPORT_PAN_MAX_DELTA,
+              Math.min(ARTIFACT_VIEWPORT_PAN_MAX_DELTA, (pending?.deltaY || 0) + deltaY),
+            ),
+          };
+    if (!timer) timer = schedule(flush, 16);
   };
   const wheel = (event: WheelEvent) => {
     if (!enabled || disposed || !event.isTrusted || !event.cancelable) return;
@@ -199,7 +227,7 @@ export function createArtifactViewportGestures(
     deltaX *= scaleX;
     deltaY *= scaleY;
     let type: string;
-    let value: object | null;
+    let value: PendingGesture | null;
     if (zooming) {
       type = 'viewport.zoom';
       deltaY = Math.max(
@@ -229,37 +257,50 @@ export function createArtifactViewportGestures(
     if (!value) return;
     prevent.call(event);
     stop.call(event);
-    if (pendingType && pendingType !== type) flush();
-    pendingType = type;
-    pending =
-      type === 'viewport.zoom'
-        ? {
-            ...value,
-            deltaY: Math.max(
-              -ARTIFACT_VIEWPORT_ZOOM_MAX_DELTA,
-              Math.min(ARTIFACT_VIEWPORT_ZOOM_MAX_DELTA, (pending?.deltaY || 0) + deltaY),
-            ),
-          }
-        : {
-            deltaX: Math.max(
-              -ARTIFACT_VIEWPORT_PAN_MAX_DELTA,
-              Math.min(ARTIFACT_VIEWPORT_PAN_MAX_DELTA, (pending?.deltaX || 0) + deltaX),
-            ),
-            deltaY: Math.max(
-              -ARTIFACT_VIEWPORT_PAN_MAX_DELTA,
-              Math.min(ARTIFACT_VIEWPORT_PAN_MAX_DELTA, (pending?.deltaY || 0) + deltaY),
-            ),
-          };
-    if (!timer) timer = schedule(flush, 16);
+    queue(type, value);
+  };
+  const consumeGesture = (event: Event) => {
+    if (!enabled || disposed || !event.isTrusted || !event.cancelable) return false;
+    prevent.call(event);
+    stop.call(event);
+    return true;
+  };
+  const gestureStart = (event: Event) => {
+    if (consumeGesture(event)) gestureScale = 1;
+  };
+  const gestureChange = (raw: Event) => {
+    if (!consumeGesture(raw)) return;
+    const event = raw as Event & { scale: number; clientX: number; clientY: number };
+    if (!Number.isFinite(event.scale) || event.scale <= 0) return;
+    // Invert the host's exp(-deltaY * 0.01) curve for Safari's relative scale.
+    const deltaY = Math.max(
+      -ARTIFACT_VIEWPORT_ZOOM_MAX_DELTA,
+      Math.min(ARTIFACT_VIEWPORT_ZOOM_MAX_DELTA, -Math.log(event.scale / gestureScale) / 0.01),
+    );
+    gestureScale = event.scale;
+    const value = normalizeArtifactViewportZoom(
+      { x: event.clientX, y: event.clientY, deltaY },
+      { width: window.innerWidth, height: window.innerHeight },
+    );
+    if (value) queue('viewport.zoom', value);
+  };
+  const gestureEnd = (event: Event) => {
+    if (consumeGesture(event)) gestureScale = 1;
   };
   const destroy = () => {
     disposed = true;
     enabled = false;
     clear();
     remove('wheel', wheel, true);
+    remove('gesturestart', gestureStart, true);
+    remove('gesturechange', gestureChange, true);
+    remove('gestureend', gestureEnd, true);
     remove('pagehide', destroy);
   };
   add('wheel', wheel, { capture: true, passive: false });
+  add('gesturestart', gestureStart, { capture: true, passive: false });
+  add('gesturechange', gestureChange, { capture: true, passive: false });
+  add('gestureend', gestureEnd, { capture: true, passive: false });
   add('pagehide', destroy, { once: true });
   return Object.freeze({
     setEnabled(value: unknown) {

@@ -1,6 +1,7 @@
 /** Committed document state and atomic filesystem recovery, independent of rendering. */
 import { createHash, randomUUID } from 'node:crypto';
 import {
+  chmodSync,
   closeSync,
   lstatSync,
   mkdirSync,
@@ -24,14 +25,15 @@ export function readJson(path, fallback = undefined) {
     throw error;
   }
 }
-export function atomicJson(path, value) {
-  atomicBytes(path, json(value));
+export function atomicJson(path, value, { mode } = {}) {
+  atomicBytes(path, json(value), mode);
 }
-function atomicBytes(path, bytes) {
+export function atomicBytes(path, bytes, mode) {
   mkdirSync(dirname(path), { recursive: true });
   const temporary = `${path}.${randomUUID()}.tmp`;
   try {
     writeFileSync(temporary, bytes, { mode: 0o600, flag: 'wx' });
+    if (mode !== undefined) chmodSync(temporary, mode);
     renameSync(temporary, path);
   } finally {
     rmSync(temporary, { force: true });

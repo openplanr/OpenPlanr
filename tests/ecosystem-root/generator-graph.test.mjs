@@ -71,3 +71,14 @@ test('compiled guards are prepared before either skill or browser consumers', ()
     assert.ok(guards < plan.findIndex(({ id }) => id === consumer), consumer);
   assert.deepEqual(plan[guards].arguments, ['--guards-only']);
 });
+
+test('canvas sources compile before studio bundling and downstream distributions', () => {
+  const plan = resolveGeneratorPlan('write');
+  const compile = plan.findIndex(({ id }) => id === 'typescript-sources');
+  for (const consumer of [
+    'skill-role-host-adapters',
+    'design-studio',
+    'operate-artifact-design-public-projections',
+  ])
+    assert.ok(compile < plan.findIndex(({ id }) => id === consumer), consumer);
+});

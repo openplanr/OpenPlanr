@@ -14,11 +14,12 @@ import { join } from 'node:path';
 import { test } from 'node:test';
 import { sha256Hex } from '@openplanr/protocol/canonical-json';
 import { assertCompanyDesignBundle } from '@openplanr/protocol/design-publication-contracts';
+import { assertDesignReviewBundle } from '@openplanr/protocol/review-experience-contracts';
 import {
   createCompanyDesignSourceReader,
   prepareCompanyDesignPublication,
 } from '../lib/design/company-publication.mjs';
-import { emptyReviewContext } from '../lib/design/context.mjs';
+import { bundleDesignRevision, emptyReviewContext } from '../lib/design/context.mjs';
 import { prepareDesignDocument } from '../lib/design/document.mjs';
 import { designFixture } from './design-fixture.mjs';
 
@@ -69,6 +70,24 @@ test('company publication converts shared local sources to the frozen inline hos
   );
   assertCompanyDesignBundle(publication.bundle);
   assert.equal(local.envelope.schemaVersion, '1.1.0');
+});
+
+test('authored version 1.0.0 projects fixed and auto frames into review and publication contracts', (t) => {
+  for (const height of [900, 'auto']) {
+    const { file } = fixture(t, {
+      count: 1,
+      frames: [{ id: 'desktop', label: 'Desktop', width: 1440, height }],
+    });
+    const review = bundleDesignRevision(prepareDesignDocument(file, { passive: true }));
+    assert.strictEqual(assertDesignReviewBundle(review), review);
+    const publication = prepareCompanyDesignPublication(file);
+    assert.strictEqual(assertCompanyDesignBundle(publication.bundle), publication.bundle);
+    for (const bundle of [review, publication.bundle]) {
+      assert.equal(Object.hasOwn(bundle.design, 'schemaVersion'), false);
+      assert.equal(bundle.design.frames[0].height, height);
+    }
+    assert.equal(JSON.parse(readFileSync(file, 'utf8')).schemaVersion, '1.0.0');
+  }
 });
 
 test('shared local boards cannot silently expand the hosted artboard or byte budget', (t) => {
@@ -311,4 +330,17 @@ test('company publication bounds acyclic import expansion before producing large
     );
   writeFileSync(join(root, 'source/level-20.css'), `/*${'x'.repeat(1024)}*/`);
   assert.throws(() => prepareCompanyDesignPublication(file), /Stylesheet expansion.*budget/);
+});
+
+test('auto frames retain authored height mode and numeric initial viewports in publication', (t) => {
+  const { file } = fixture(t, {
+    count: 1,
+    frames: [{ id: 'long', label: 'Long page', width: 600, height: 'auto' }],
+  });
+  const { bundle } = prepareCompanyDesignPublication(file);
+  assert.equal(bundle.design.frames[0].height, 'auto');
+  assert.deepEqual(bundle.envelope.artifacts[0].viewport, { width: 600, height: 900 });
+  assertCompanyDesignBundle(bundle);
+  bundle.envelope.artifacts[0].viewport.height = 901;
+  assert.throws(() => assertCompanyDesignBundle(bundle), /viewport must match/);
 });

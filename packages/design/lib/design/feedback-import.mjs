@@ -18,6 +18,7 @@ import {
 import { ARTIFACT_ERROR_CODES, PipelineError } from '@openplanr/protocol/errors';
 import { listDesignRevisions, readDesignRevision } from './context.mjs';
 import { currentDesign, hash } from './document.mjs';
+import { matchesDesignFrame } from './frame-size.mjs';
 
 function invalid(message, code = ARTIFACT_ERROR_CODES.REVIEW_IMPORT) {
   throw new PipelineError(code, message);
@@ -96,7 +97,7 @@ function validatePin(pin, bundle) {
   const entry = bundle.entries.find((value) => value.artifactId === pin.artifactId);
   const frame = bundle.document.frames.find((value) => value.id === entry?.frameId);
   const screen = bundle.document.screens.find((value) => value.id === entry?.screenId);
-  if (!entry || pin.viewport.width !== frame?.width || pin.viewport.height !== frame?.height)
+  if (!entry || !matchesDesignFrame(frame, pin.viewport))
     invalid('Feedback pin does not match its original screen and captured frame.');
   if (pin.variant !== undefined && pin.variant !== entry.variantId)
     invalid('Feedback pin targets another design direction.');

@@ -47,7 +47,7 @@ const generatedOutputs = new Set([
 ]);
 const copiedNamespaces = [
   // Domain copies are output namespaces, including obsolete local remnants.
-  ...['artifact', 'design', 'design-engine', 'operate'].map(
+  ...['artifact', 'canvas', 'design', 'design-engine', 'operate'].map(
     (domain) => `packages/pipeline/lib/${domain}/`,
   ),
   'packages/protocol/projections/',

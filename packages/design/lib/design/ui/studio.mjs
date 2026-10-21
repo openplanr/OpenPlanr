@@ -1,5 +1,13 @@
 /** Design presentation composes the artifact stage. Pins remain artifact-owned. */
 import { createPrototypeStateRelay } from '@openplanr/artifact/ui/prototype-state.mjs';
+import {
+  cameraFromScreenTranslate,
+  cameraToScreenTranslate,
+  createCanvas,
+} from '@openplanr/canvas';
+import canvasStyles from '@openplanr/canvas/styles.css';
+import { designFrameLabel, designFrameViewport } from '../frame-size.mjs';
+import { boardPlacement } from './layout.mjs';
 import { mountDesignChrome, mountDesignPanels } from './studio-chrome.mjs';
 
 /**
@@ -58,20 +66,10 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
       zoom: activeViewport.zoom,
       camera: { x: activeViewport.x, y: activeViewport.y },
       viewports,
-      positions: {},
       ratings: {},
       remix: {},
       preferences: { selected: [], rejected: [] },
     };
-    for (const entry of entries) {
-      const point = input.positions?.[entry.artifactId];
-      if (Number.isFinite(point?.x) && Number.isFinite(point?.y)) {
-        state.positions[entry.artifactId] = {
-          x: clamp(point.x, -1e7, 1e7),
-          y: clamp(point.y, -1e7, 1e7),
-        };
-      }
-    }
     for (const variant of readyVariants) {
       const rating = input.ratings?.[variant.id];
       if (Number.isInteger(rating) && rating >= 1 && rating <= 5)
@@ -127,6 +125,20 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
     if (location.hash !== next) history.pushState(null, '', next);
   }
   let revision = payload.revision;
+  let layout = clone(design.layout ?? {});
+  const undoMoves = [];
+  const redoMoves = [];
+  const layoutOperations = [];
+  let pendingLayoutDraft = savedDraft?.pendingLayout ?? null;
+  let layoutSaving = false;
+  let layoutFailed = false;
+  let sessionLost = false;
+  let startupSettled = false;
+  let layoutDragDirty = false;
+  let activeLayoutOperation = null;
+  let layoutBlocked = false;
+  let legacyMigrated = false;
+  let legacyServerPositions = payload.state?.positions;
   let stateVersion = null;
   let stage = null;
   let root = null;
@@ -134,7 +146,15 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
   let scroll = null;
   let surface = null;
   let grid = null;
-  let canvasBackground = null;
+  let canvasAttached = false;
+  const canvas = createCanvas({
+    label: 'Design canvas',
+    zoom: { min: 0.05, max: 2 },
+    lod: false,
+    motion: 'none',
+    keyboard: { arrows: 'none' },
+    shortcutsEnabled: () => false,
+  });
   let cameraFrame = null;
   let selectionOutline = null;
   let dirty = false;
@@ -166,6 +186,12 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
   let previousStageZoom = 100;
   let compactViewport = false;
   let activeArtifactId = '';
+  let inspectedSelection = null;
+  let viewContextTimer = null;
+  let viewContextPending = null;
+  let viewContextSignature = null;
+  let viewContextConflictRevision = null;
+  let viewContextSaving = false;
   const framesUsedWithComments = new Set();
   let frameReload = 0;
   let walkthroughTransition = null;
@@ -179,6 +205,9 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
   let noteScreenId = null;
   let notesReturnFocus = null;
   const panels = new Map();
+  const sectionHeadings = [];
+  let sectionZoom = null;
+  const canvasPointers = new Set();
   const cleanup = [];
 
   function listen(target, event, handler, settings) {
@@ -188,12 +217,14 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
 
   function status(message, phase = 'saved') {
     if (destroyed) return;
+    if (phase === 'saved' && hasPendingLayout()) return;
     if (chrome) chrome.update({ saveLabel: message, savePhase: phase });
     else {
       const node = q('[data-design-save-state]');
       node.textContent = message;
       node.dataset.status = phase;
     }
+    q('[data-design-save-state]').title = message;
   }
 
   function hideNotice() {
@@ -202,6 +233,8 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
     const restoreFocus = node.contains(document.activeElement);
     node.hidden = true;
     activeNotice = null;
+    q('[data-design-retry-layout]')?.remove();
+    q('[data-design-reload-studio]')?.remove();
     if (restoreFocus) q(`button[data-design-view="${state.view}"]`)?.focus();
   }
 
@@ -217,8 +250,13 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
 
   function notice(message, persistent = false, key = message) {
     if (destroyed || dismissedNotices.get(key) === message) return;
+    if (sessionLost && key !== 'studio-restart') return;
+    if (layoutFailed && hasPendingLayout() && !['layout-save', 'studio-restart'].includes(key))
+      return;
     const node = q('.design-notice');
     clearTimeout(noticeTimer);
+    q('[data-design-retry-layout]')?.remove();
+    q('[data-design-reload-studio]')?.remove();
     activeNotice = { key, message, persistent };
     q('[data-design-notice-message]').textContent = message;
     node.hidden = false;
@@ -232,13 +270,30 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
         JSON.stringify({
           revision,
           stateVersion,
-          state,
+          state:
+            !legacyMigrated && (legacyServerPositions || savedDraft?.state?.positions)
+              ? {
+                  ...state,
+                  positions: { ...savedDraft?.state?.positions, ...legacyServerPositions },
+                }
+              : state,
           unsaved: contentDirty,
           personalPending: dirty && !contentDirty,
+          pendingLayout:
+            pendingLayoutDraft ??
+            (layoutOperations.length
+              ? {
+                  contentIdentity: payload.contentIdentity,
+                  operations: layoutOperations.map((operation) => ({
+                    revision: operation.revision ?? revision,
+                    boards: operation.replayBoards ?? operation.input().boards,
+                  })),
+                }
+              : undefined),
         }),
       );
-    } catch {
-      /* Server persistence remains available when local storage is full. */
+    } catch (error) {
+      notice(`The browser draft could not be stored: ${error.message}`, true, 'draft-storage');
     }
   }
 
@@ -253,9 +308,83 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
           `Save failed (${response.status}).`,
       );
       error.conflict = response.status === 409;
+      error.statusCode = response.status;
       throw error;
     }
     return result;
+  }
+
+  function scheduleViewContext() {
+    if (!options.viewContextUrl || !stage || !scroll || destroyed) return;
+    if (state.view === 'canvas' && !canvasAttached) return;
+    if (viewContextConflictRevision !== null && revision === viewContextConflictRevision) return;
+    viewContextConflictRevision = null;
+    if (inspectedSelection?.artifactId !== activeArtifactId) inspectedSelection = null;
+    const board = ({ screenId, frameId, variantId }) => ({ screenId, frameId, variantId });
+    const visible =
+      state.view === 'canvas'
+        ? visibleEntries().filter((entry) => {
+            const bounds = placedBoardBounds(entry);
+            if (!bounds) return false;
+            const { width, height } = bounds;
+            const { x, y } = canvas.worldToScreen(bounds);
+            return (
+              x < scroll.clientWidth &&
+              y < scroll.clientHeight &&
+              x + width * state.zoom > 0 &&
+              y + height * state.zoom > 0
+            );
+          })
+        : [entryFor()];
+    visible.sort(
+      (a, b) => design.screenOrder.indexOf(a.screenId) - design.screenOrder.indexOf(b.screenId),
+    );
+    const context = {
+      revision,
+      view: state.view,
+      visibleScreens: visible.map(board),
+      selected: { ...board(state), planrId: inspectedSelection?.planrId ?? null },
+      dirty: contentDirty || reviewDirty || layoutDragDirty || layoutOperations.length > 0,
+    };
+    const signature = JSON.stringify(context);
+    if (signature === viewContextSignature) return;
+    viewContextSignature = signature;
+    viewContextPending = signature;
+    clearTimeout(viewContextTimer);
+    viewContextTimer = setTimeout(() => {
+      viewContextTimer = null;
+      void flushViewContext();
+    }, 250);
+  }
+
+  async function flushViewContext() {
+    if (viewContextSaving || !viewContextPending || destroyed) return;
+    const body = viewContextPending;
+    viewContextPending = null;
+    viewContextSaving = true;
+    try {
+      await jsonRequest(options.viewContextUrl, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'x-openplanr-design': '1' },
+        body,
+      });
+      clearNotice('view-context');
+    } catch (error) {
+      viewContextSignature = null;
+      if (error.conflict) {
+        viewContextConflictRevision = JSON.parse(body).revision;
+        viewContextPending = null;
+        clearTimeout(viewContextTimer);
+        viewContextTimer = null;
+        clearNotice('view-context');
+        if (revision !== viewContextConflictRevision) scheduleViewContext();
+      } else {
+        notice(`View context could not be synchronized: ${error.message}`, false, 'view-context');
+      }
+    } finally {
+      viewContextSaving = false;
+      if (viewContextPending && viewContextTimer === null) void flushViewContext();
+    }
   }
 
   function persist({ content = false } = {}) {
@@ -267,6 +396,7 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
       status('Saving changes', 'saving');
     }
     storeDraft();
+    scheduleViewContext();
     root.dispatchEvent(
       new CustomEvent('planr:design-state-change', {
         bubbles: true,
@@ -289,6 +419,8 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
       .then(async () => {
         if (destroyed) return;
         try {
+          if (!legacyMigrated && (legacyServerPositions || savedDraft?.state?.positions))
+            captured.positions = { ...savedDraft?.state?.positions, ...legacyServerPositions };
           let result;
           if (!capturedContent && typeof options.savePersonalState === 'function') {
             result = await options.savePersonalState(captured, { revision, stateVersion });
@@ -314,7 +446,7 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
           }
           if (capturedContent && capturedContentSerial === contentSerial) {
             contentDirty = false;
-            if (!reviewDirty)
+            if (!reviewDirty && !layoutOperations.length)
               status(
                 options.stateUrl || options.saveState
                   ? 'All changes saved'
@@ -322,6 +454,7 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
               );
           }
           storeDraft();
+          scheduleViewContext();
         } catch (error) {
           if (capturedContent)
             status(
@@ -341,6 +474,364 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
         }
       });
     return saving;
+  }
+
+  function layoutUrl() {
+    return options.layoutUrl ?? options.stateUrl?.replace(/design-state$/, 'design-layout');
+  }
+
+  function canSaveLayout() {
+    return Boolean(options.saveLayout || layoutUrl());
+  }
+
+  function hasPendingLayout() {
+    return Boolean(
+      pendingLayoutDraft || layoutOperations.length || layoutSaving || layoutDragDirty,
+    );
+  }
+
+  function studioRestarted() {
+    sessionLost = true;
+    storeDraft();
+    status(hasPendingLayout() ? 'Layout unsaved · reload required' : 'Reload required', 'failed');
+    notice(
+      'Studio restarted. Reload to reconnect; pending board moves remain in this browser.',
+      true,
+      'studio-restart',
+    );
+    const reload = document.createElement('button');
+    reload.type = 'button';
+    reload.dataset.designReloadStudio = '';
+    reload.textContent = 'Reload';
+    reload.addEventListener('click', () => {
+      storeDraft();
+      window.location.reload();
+    });
+    q('.design-notice').append(reload);
+  }
+
+  function applyBoardMoves(boards) {
+    for (const [key, point] of Object.entries(boards)) {
+      layout.boards ??= {};
+      if (point === null) delete layout.boards[key];
+      else layout.boards[key] = { ...layout.boards[key], ...point };
+    }
+  }
+
+  function restorePendingLayout() {
+    if (!pendingLayoutDraft) return;
+    const pending = pendingLayoutDraft;
+    pendingLayoutDraft = null;
+    if (
+      layoutBlocked ||
+      !payload.contentIdentity ||
+      pending.contentIdentity !== payload.contentIdentity
+    ) {
+      storeDraft();
+      notice(
+        'Pending board moves were dropped because authored content changed. Review the current design before moving boards again.',
+        true,
+        'layout-dropped',
+      );
+      return;
+    }
+    const valid =
+      Array.isArray(pending.operations) &&
+      pending.operations.every(
+        (operation) =>
+          typeof operation?.revision === 'string' &&
+          operation.boards &&
+          typeof operation.boards === 'object' &&
+          !Array.isArray(operation.boards) &&
+          Object.entries(operation.boards).every(
+            ([key, point]) =>
+              entries.some((entry) => boardKey(entry) === key) &&
+              (point === null ||
+                (Number.isFinite(point?.x) &&
+                  Number.isFinite(point?.y) &&
+                  Math.abs(point.x) <= 1e7 &&
+                  Math.abs(point.y) <= 1e7)),
+          ),
+      );
+    if (!valid) {
+      storeDraft();
+      notice(
+        'Pending board moves could not be recovered because the browser draft contains invalid positions.',
+        true,
+        'layout-dropped',
+      );
+      return;
+    }
+    for (const operation of pending.operations) {
+      const boards = clone(operation.boards);
+      applyBoardMoves(boards);
+      layoutOperations.push({ revision, input: () => ({ boards }) });
+    }
+    storeDraft();
+    render();
+    if (layoutOperations.length) status('Recovering layout', 'saving');
+  }
+
+  function newRevisionNotice() {
+    notice(
+      'A new design revision is ready. Save or recover this browser’s unsaved changes before reloading.',
+      true,
+      'new-revision',
+    );
+  }
+
+  async function rebaseLayout({ announce = true, expectedRevision = revision } = {}) {
+    const url = options.statusUrl ?? options.stateUrl?.replace(/design-state$/, 'design-status');
+    if (!url) throw new Error('Layout conflict recovery requires a design status URL.');
+    const current = await jsonRequest(url);
+    if (revision !== expectedRevision) return true;
+    if (typeof current.revision !== 'string' || typeof current.contentIdentity !== 'string')
+      throw new Error('Design status did not return a revision and authored content identity.');
+    if (current.contentIdentity !== payload.contentIdentity) {
+      layoutBlocked = true;
+      layoutOperations.length = 0;
+      layoutFailed = false;
+      storeDraft();
+      status('Design changed · reload required', 'failed');
+      notice(
+        'A new design revision is ready. Pending board moves were dropped because authored content changed. Reload to read the current design.',
+        true,
+        'new-revision',
+      );
+      return false;
+    }
+    revision = current.revision;
+    layout = clone(current.layout ?? {});
+    const discardedRestores = layoutOperations.some((operation) => operation.restore);
+    for (let index = layoutOperations.length - 1; index >= 0; index--)
+      if (layoutOperations[index].restore) layoutOperations.splice(index, 1);
+    for (const moves of [undoMoves, redoMoves])
+      for (let index = moves.length - 1; index >= 0; index--)
+        if (moves[index].afterRevision !== null) moves.splice(index, 1);
+    for (const operation of layoutOperations) {
+      operation.revision = revision;
+      const boards = operation.input().boards;
+      if (operation.move?.applied) operation.move.before = clone(layout);
+      applyBoardMoves(boards);
+      if (operation.move?.applied) operation.move.after = clone(layout);
+      else if (operation.move) {
+        const move = operation.move;
+        const movedBoard = move.after.boards?.[move.key];
+        move.before = clone(layout);
+        move.after = clone(layout);
+        if (movedBoard) move.after.boards = { ...move.after.boards, [move.key]: movedBoard };
+        else if (move.after.boards) delete move.after.boards[move.key];
+      }
+    }
+    storeDraft();
+    render();
+    if (announce)
+      notice(
+        `The layout changed in another window. Pending board moves were rebased onto the current revision.${discardedRestores ? ' Stale undo and redo operations were dropped.' : ''}`,
+        true,
+        'layout-rebase',
+      );
+    return true;
+  }
+
+  function flushLayout() {
+    if (layoutSaving || layoutBlocked || sessionLost || !layoutOperations.length) return saving;
+    layoutSaving = true;
+    status('Saving layout', 'saving');
+    saving = saving.then(async () => {
+      let rebased = false;
+      try {
+        while (layoutOperations.length) {
+          const operation = layoutOperations[0];
+          const input = { revision, ...operation.input() };
+          activeLayoutOperation = operation;
+          operation.attempted = true;
+          operation.appliedAtSave = operation.move?.applied;
+          status('Saving layout', 'saving');
+          let result;
+          try {
+            if (typeof options.saveLayout === 'function') result = await options.saveLayout(input);
+            else if (layoutUrl())
+              result = await jsonRequest(layoutUrl(), {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json', 'x-openplanr-design': '1' },
+                body: JSON.stringify(input),
+              });
+            else
+              throw new Error('Layout save requires a studio layout URL or saveLayout callback.');
+          } catch (error) {
+            activeLayoutOperation = null;
+            operation.canceled = false;
+            if (!error.conflict || rebased) throw error;
+            rebased = true;
+            if (!(await rebaseLayout())) return;
+            continue;
+          }
+          if (typeof result.revision !== 'string')
+            throw new Error('Layout save did not return a design revision.');
+          operation.saved?.(revision, result.revision);
+          revision = result.revision;
+          layoutOperations.shift();
+          activeLayoutOperation = null;
+          storeDraft();
+          scheduleViewContext();
+        }
+        layoutFailed = false;
+        clearNotice('layout-save');
+      } catch (error) {
+        layoutFailed = true;
+        storeDraft();
+        if (error.statusCode === 404) {
+          studioRestarted();
+          return;
+        }
+        status(error.conflict ? 'Layout conflict' : 'Layout unsaved', 'failed');
+        notice(`Board layout could not be saved: ${error.message}`, true, 'layout-save');
+        const retry = document.createElement('button');
+        retry.type = 'button';
+        retry.dataset.designRetryLayout = '';
+        retry.textContent = 'Retry';
+        retry.addEventListener('click', () => void flushLayout());
+        q('.design-notice').append(retry);
+      } finally {
+        activeLayoutOperation = null;
+        layoutSaving = false;
+        if (!hasPendingLayout() && !contentDirty && !reviewDirty && !layoutBlocked && !sessionLost)
+          status('All changes saved');
+      }
+    });
+    return saving;
+  }
+
+  function boardKey(entry) {
+    return `${entry.screenId}/${entry.frameId}/${entry.variantId}`;
+  }
+
+  function queueMove(move) {
+    const point = (value) => {
+      const board = value.boards?.[move.key];
+      return board ? { x: board.x, y: board.y } : null;
+    };
+    const operation = {
+      revision,
+      move,
+      boards: { [move.key]: point(move.after) },
+      input: () => ({ boards: operation.boards }),
+      saved(previous, next) {
+        if (operation.appliedAtSave) {
+          move.beforeRevision = previous;
+          move.afterRevision = next;
+        }
+        if (operation.canceled) {
+          const boards = { [move.key]: point(layout) };
+          layoutOperations.push({ input: () => ({ boards }) });
+        }
+      },
+    };
+    layoutOperations.push(operation);
+    storeDraft();
+    scheduleViewContext();
+    void flushLayout();
+  }
+
+  function completeMove(entry, before) {
+    const after = clone(layout);
+    if (JSON.stringify(before) === JSON.stringify(after)) return;
+    const move = {
+      key: boardKey(entry),
+      before,
+      after,
+      beforeRevision: null,
+      afterRevision: null,
+      applied: true,
+    };
+    undoMoves.push(move);
+    redoMoves.length = 0;
+    storeDraft();
+    if (canSaveLayout()) queueMove(move);
+  }
+
+  function restoreMove(redo) {
+    const source = redo ? redoMoves : undoMoves;
+    const target = redo ? undoMoves : redoMoves;
+    const move = source.pop();
+    if (!move) return;
+    move.applied = redo;
+    layout = clone(redo ? move.after : move.before);
+    target.push(move);
+    render();
+    if (!canSaveLayout()) return;
+    if (move.beforeRevision === null || move.afterRevision === null) {
+      const pending = layoutOperations.find((operation) => operation.move === move);
+      if (pending) {
+        const board = layout.boards?.[move.key];
+        pending.boards = { [move.key]: board ? { x: board.x, y: board.y } : null };
+      }
+      if (pending === activeLayoutOperation && pending) pending.canceled = !redo;
+      else if (!pending?.attempted) {
+        if (pending) layoutOperations.splice(layoutOperations.indexOf(pending), 1);
+        if (redo) queueMove(move);
+      }
+      if (!layoutOperations.length && !layoutSaving) {
+        layoutFailed = false;
+        clearNotice('layout-save');
+        if (!contentDirty && !reviewDirty) status('All changes saved');
+      }
+      storeDraft();
+      scheduleViewContext();
+      return;
+    }
+    layoutOperations.push({
+      revision,
+      restore: true,
+      replayBoards: {
+        [move.key]: layout.boards?.[move.key]
+          ? {
+              x: layout.boards[move.key].x,
+              y: layout.boards[move.key].y,
+            }
+          : null,
+      },
+      input: () => ({ restoreRevision: redo ? move.afterRevision : move.beforeRevision }),
+    });
+    storeDraft();
+    scheduleViewContext();
+    void flushLayout();
+  }
+
+  function migrateLegacyPositions() {
+    if (layoutBlocked) return;
+    if (!legacyServerPositions && !savedDraft?.state?.positions) {
+      legacyMigrated = true;
+      return;
+    }
+    const boards = {};
+    for (const positions of [legacyServerPositions, savedDraft?.state?.positions])
+      for (const entry of entries) {
+        const key = boardKey(entry);
+        const point = positions?.[entry.artifactId];
+        if (layout.boards?.[key] !== undefined || boards[key] !== undefined || !point) continue;
+        if (
+          !Number.isFinite(point.x) ||
+          !Number.isFinite(point.y) ||
+          Math.abs(point.x) > 1e7 ||
+          Math.abs(point.y) > 1e7
+        )
+          continue;
+        boards[key] = { x: Math.round(point.x), y: Math.round(point.y) };
+      }
+    if (Object.keys(boards).length) layout.boards = { ...layout.boards, ...boards };
+    render();
+    const migrated = () => {
+      legacyMigrated = true;
+      legacyServerPositions = undefined;
+      storeDraft();
+      if (options.stateUrl) persist();
+    };
+    if (Object.keys(boards).length && canSaveLayout()) {
+      layoutOperations.push({ revision, input: () => ({ boards }), saved: migrated });
+      storeDraft();
+    } else if (canSaveLayout()) migrated();
   }
 
   function reviewUrl() {
@@ -380,9 +871,11 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
           clearNotice('review-save');
           if (capturedSerial === reviewSerial) {
             reviewDirty = false;
-            if (!contentDirty) status(reviewUrl() ? 'All changes saved' : 'Saved in this browser');
+            if (!contentDirty && !layoutOperations.length)
+              status(reviewUrl() ? 'All changes saved' : 'Saved in this browser');
           }
           storeReviewDraft();
+          scheduleViewContext();
         } catch (error) {
           status('Comments unsaved', 'disconnected');
           notice(
@@ -397,7 +890,7 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
   }
 
   function flush() {
-    return Promise.all([flushState(), flushReview()]);
+    return Promise.all([flushState(), flushLayout(), flushReview()]);
   }
 
   function entryFor(
@@ -411,6 +904,14 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
     );
   }
 
+  function viewportFor(entry) {
+    const frame = design.frames.find(({ id }) => id === entry.frameId);
+    return (
+      stage.getState().artifacts.find(({ id }) => id === entry.artifactId)?.viewport ??
+      designFrameViewport(design, frame)
+    );
+  }
+
   function visibleEntries() {
     return entries.filter(
       (entry) =>
@@ -420,10 +921,14 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
     );
   }
 
+  function syncFrameGestures(frame, panel) {
+    frame?.__openPlanrBridge?.setViewportGestures?.(state.view === 'canvas' && !panel.hidden);
+  }
+
   function updatePan() {
     root.dataset.designPanActive = String(state.view === 'canvas' && (panEnabled || spacePan));
     root.dataset.designTool = activeTool;
-    root.dataset.designDragging = String(gesture?.mode === 'pan');
+    canvas.setPointerMode(root.dataset.designInspect === 'true' ? 'none' : 'pan');
     q('[data-design-pan]').setAttribute('aria-pressed', String(activeTool === 'pan'));
     q('[data-planr-mode="interact"]').setAttribute(
       'aria-pressed',
@@ -442,15 +947,17 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
             ? 0
             : -1;
         if (frame.tabIndex !== tabIndex) frame.tabIndex = tabIndex;
-        frame.__openPlanrBridge?.setViewportGestures?.(state.view === 'canvas' && !panel.hidden);
+        syncFrameGestures(frame, panel);
       }
     }
   }
 
   function finishGesture() {
     if (!gesture) return;
-    const pointerId = gesture.pointerId;
+    const completed = gesture;
+    const pointerId = completed.pointerId;
     gesture = null;
+    layoutDragDirty = false;
     // Clear our state first: releasing capture can synchronously notify listeners.
     try {
       if (scroll.hasPointerCapture?.(pointerId)) scroll.releasePointerCapture(pointerId);
@@ -458,7 +965,13 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
       /* Already canceled by the browser. */
     }
     updatePan();
-    persist();
+    if (completed.mode === 'artboard')
+      completeMove(
+        entries.find((entry) => entry.artifactId === completed.artifactId),
+        completed.before,
+      );
+    else persist();
+    scheduleViewContext();
   }
 
   // Chromium can stop routing pointer input into a sandboxed product document that stayed
@@ -495,6 +1008,12 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
     if (tool === 'annotate' && root.hasAttribute('data-planr-room-comments-paused')) return;
     finishWalkthroughTransition();
     finishGesture();
+    if (canvasAttached && canvasPointers.size) {
+      saveViewport();
+      for (const pointerId of canvasPointers)
+        if (scroll.hasPointerCapture?.(pointerId)) scroll.releasePointerCapture(pointerId);
+      canvasPointers.clear();
+    }
     spacePan = false;
     spaceReturnTool = null;
     activeTool = tool;
@@ -517,7 +1036,20 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
     if (spacePan) setTool(previous || 'interact');
   }
 
+  function readCanvasCamera() {
+    if (!canvasAttached || state.view !== 'canvas') return;
+    const { x, y, scale } = cameraToScreenTranslate(canvas.getCamera());
+    state.camera = { x, y };
+    state.zoom = scale;
+  }
+
+  function applyCanvasCamera() {
+    canvas.setCamera(cameraFromScreenTranslate({ ...state.camera, scale: state.zoom }));
+    saveViewport();
+  }
+
   function saveViewport() {
+    readCanvasCamera();
     state.viewports[state.view] = {
       x: state.camera.x,
       y: state.camera.y,
@@ -530,6 +1062,7 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
     if (!viewport) return false;
     state.camera = { x: viewport.x, y: viewport.y };
     state.zoom = viewport.zoom;
+    if (canvasAttached && view === 'canvas') applyCanvasCamera();
     return true;
   }
 
@@ -543,11 +1076,11 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
     closeDesignNotes();
     saveViewport();
     state.view = view;
+    const restored = view === 'canvas' && restoreViewport(view);
     setTool(view === 'canvas' && activeTool === 'annotate' ? 'annotate' : 'interact');
     // Enter a focused viewer with product interaction, not a carried-over pin
     // or inspector cursor. Drafts stay in the review controller untouched.
     root.dispatchEvent(new CustomEvent('planr:design-view-change', { detail: { view } }));
-    const restored = view === 'canvas' && restoreViewport(view);
     render();
     if (!restored) fit({ save: false });
     if (queued) selectEntry(queued.entry, { ...queued.settings, save: false });
@@ -557,59 +1090,129 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
     }
   }
 
-  function defaultPosition(entry, variant) {
-    const gap = 96;
-    const top = 72;
-    const frame = design.frames.find(({ id }) => id === entry.frameId);
-    const variants = state.compare ? readyVariants : [variant];
-    const variantIndex = variants.findIndex(({ id }) => id === entry.variantId);
-    const groupWidth =
-      design.frames.reduce((sum, item) => sum + item.width, 0) +
-      gap * Math.max(0, design.frames.length - 1) +
-      160;
-    return {
-      x:
-        variantIndex * groupWidth +
-        design.frames
-          .slice(0, design.frames.indexOf(frame))
-          .reduce((sum, item) => sum + item.width + gap, 0),
-      y:
-        top +
-        design.screenOrder.indexOf(entry.screenId) *
-          (Math.max(...design.frames.map(({ height }) => height)) + 176),
-    };
+  function syncCanvasChrome() {
+    if (!canvasAttached) return;
+    const stageRect = scroll.getBoundingClientRect();
+    for (const [id, selector, open] of [
+      ['toolbar', '.design-toolbar', true],
+      ['tools', '.design-canvas-tools', true],
+      ['context', '.design-stage-context', true],
+      ['navigator', '.design-navigator', state.navOpen],
+      ['review', '.planr-review-rail', stage.getState().railOpen],
+    ]) {
+      const rect = q(selector).getBoundingClientRect();
+      const x = Math.max(0, rect.left - stageRect.left);
+      const y = Math.max(0, rect.top - stageRect.top);
+      const width = Math.max(0, Math.min(stageRect.width, rect.right - stageRect.left) - x);
+      const height = Math.max(0, Math.min(stageRect.height, rect.bottom - stageRect.top) - y);
+      const edge =
+        width >= height
+          ? y + height / 2 < stageRect.height / 2
+            ? 'top'
+            : 'bottom'
+          : x + width / 2 < stageRect.width / 2
+            ? 'left'
+            : 'right';
+      canvas.setChrome({
+        id,
+        edge,
+        rect: { x, y, width, height },
+        open: open && width > 0 && height > 0,
+      });
+    }
   }
 
-  function contentBounds(selection = null) {
-    const visible = selection ? [selection] : visibleEntries();
-    if (!visible.length) return { minX: 0, minY: 0, maxX: 1, maxY: 1 };
-    return visible.reduce(
-      (bounds, entry) => {
-        const panel = panels.get(entry.artifactId);
-        const frame = design.frames.find(({ id }) => id === entry.frameId);
-        const x = Number.parseFloat(panel.style.left) || 0;
-        const y = Number.parseFloat(panel.style.top) || 0;
-        bounds.minX = Math.min(bounds.minX, x);
-        bounds.minY = Math.min(bounds.minY, y - 64);
-        bounds.maxX = Math.max(bounds.maxX, x + frame.width);
-        bounds.maxY = Math.max(bounds.maxY, y + frame.height);
-        return bounds;
-      },
-      { minX: Infinity, minY: Infinity, maxX: -Infinity, maxY: -Infinity },
+  function placedBoardBounds(entry) {
+    const panel = panels.get(entry.artifactId);
+    if (!panel || panel.hidden) return null;
+    const bounds = {
+      ...viewportFor(entry),
+      x: parseFloat(panel.style.left),
+      y: parseFloat(panel.style.top),
+    };
+    return Object.values(bounds).every(Number.isFinite) ? bounds : null;
+  }
+
+  function syncCanvasNodes() {
+    if (!canvasAttached) return;
+    grid.style.setProperty('--design-zoom', String(state.zoom));
+    const placed = visibleEntries().flatMap((entry) => {
+      const bounds = placedBoardBounds(entry);
+      return bounds ? [{ entry, bounds }] : [];
+    });
+    const nodes = placed.flatMap(({ entry, bounds }) => {
+      return [
+        { id: entry.artifactId, bounds },
+        {
+          id: `label:${entry.artifactId}`,
+          bounds: { ...bounds, y: bounds.y - 34 / state.zoom, height: 28 / state.zoom },
+        },
+      ];
+    });
+    sectionHeadings.forEach((heading, index) => {
+      const section = layout.sections[index];
+      heading.hidden = false;
+      heading.style.fontSize = `${clamp(28 * state.zoom, 14, 28) / state.zoom}px`;
+      if (section.maxW) heading.style.maxWidth = `${section.maxW / state.zoom}px`;
+      const below = placed.filter(
+        ({ bounds: board }) =>
+          board.y >= section.y &&
+          section.x < board.x + board.width &&
+          section.x + heading.offsetWidth > board.x,
+      );
+      const bottom = Math.min(section.y, ...below.map(({ bounds }) => bounds.y - 42 / state.zoom));
+      heading.style.top = `${bottom - heading.offsetHeight}px`;
+      const bounds = {
+        x: parseFloat(heading.style.left),
+        y: parseFloat(heading.style.top),
+        width: heading.offsetWidth,
+        height: heading.offsetHeight,
+      };
+      heading.hidden = nodes.some(
+        ({ bounds: other }) =>
+          bounds.x < other.x + other.width &&
+          bounds.x + bounds.width > other.x &&
+          bounds.y < other.y + other.height &&
+          bounds.y + bounds.height > other.y,
+      );
+      if (!heading.hidden && Object.values(bounds).every(Number.isFinite))
+        nodes.push({ id: `section:${section.id}`, bounds });
+    });
+    sectionZoom = state.zoom;
+    canvas.setNodes(nodes);
+    for (const { entry } of placed) {
+      canvas.registerNodeElement(entry.artifactId, panels.get(entry.artifactId));
+      const label = panels.get(entry.artifactId).querySelector('.design-artboard-label');
+      const title = label.querySelector('strong');
+      const size = label.querySelector('span');
+      label.title = `${title.textContent} · ${size.textContent}`;
+      size.hidden = false;
+      size.hidden = title.scrollWidth > title.clientWidth || size.scrollWidth > size.clientWidth;
+    }
+    canvas.setSelection(
+      placed.some(({ entry }) => entry.artifactId === activeArtifactId) ? [activeArtifactId] : [],
     );
   }
 
+  function syncCanvas() {
+    if (state.view !== 'canvas') {
+      if (canvasAttached) canvas.detach();
+      canvasPointers.clear();
+      canvasAttached = false;
+      return;
+    }
+    if (!canvasAttached) {
+      canvas.attach({ stage: scroll, world: grid });
+      canvasAttached = true;
+      applyCanvasCamera();
+    }
+    syncCanvasNodes();
+    syncCanvasChrome();
+  }
+
   function centerEntry(entry) {
-    const panel = panels.get(entry.artifactId);
-    const frame = design.frames.find(({ id }) => id === entry.frameId);
-    const x = Number.parseFloat(panel.style.left) || 0;
-    const y = Number.parseFloat(panel.style.top) || 0;
-    state.camera = {
-      x: scroll.clientWidth / 2 - (x + frame.width / 2) * state.zoom,
-      y: scroll.clientHeight / 2 - (y + frame.height / 2) * state.zoom,
-    };
-    saveViewport();
-    render();
+    if (state.view !== 'canvas' || !placedBoardBounds(entry)) return;
+    fit({ selection: entry, save: false, maxZoom: state.zoom });
   }
 
   function updateDesignNotes() {
@@ -761,6 +1364,7 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
       for (const item of qa('[data-design-note-screen]'))
         item.dataset.active = String(item.dataset.designNoteScreen === state.screenId);
 
+      for (const heading of sectionHeadings) heading.hidden = state.view !== 'canvas';
       const visible = visibleEntries();
       const visibleIds = new Set(visible.map(({ artifactId }) => artifactId));
       for (const entry of entries) {
@@ -778,19 +1382,25 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
         layer.tabIndex = isVisible && ready && stageState.reviewMode === 'comment' ? 0 : -1;
         layer.setAttribute('aria-disabled', String(layer.tabIndex < 0));
         if (!isVisible && !outgoing) continue;
-        let { x, y } = defaultPosition(entry, variant);
-        if (state.view === 'canvas') ({ x, y } = state.positions[entry.artifactId] ?? { x, y });
-        else {
+        const placement = boardPlacement(design, entry, {
+          layout,
+          compare: state.compare,
+          variantId: state.variantId,
+        });
+        let { x, y } = placement;
+        if (state.view !== 'canvas') {
           x = 0;
           y = 0;
         }
         panel.style.left = `${x}px`;
         panel.style.top = `${y}px`;
+        panel.querySelector('.design-artboard-drag strong').textContent = placement.title;
       }
       grid.style.width = '1px';
       grid.style.height = '1px';
       surface.style.width = '100%';
       surface.style.height = '100%';
+      syncCanvas();
       updatePan();
       renderCamera();
       chrome?.update({ view: state.view, navOpen: state.navOpen, reviewOpen: stageState.railOpen });
@@ -817,10 +1427,11 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
       cancelAnimationFrame(cameraFrame);
       cameraFrame = null;
     }
+    readCanvasCamera();
     if (state.view !== 'canvas') {
       // A focused view has no navigable world: fit the authored frame inside
       // its viewport. Scrolling and gestures within the iframe remain native.
-      const frame = design.frames.find((item) => item.id === state.frameId);
+      const frame = viewportFor(entryFor());
       const inset = window.innerWidth <= 680 ? 12 : 24;
       state.zoom =
         state.inspectionScale === 'actual'
@@ -852,25 +1463,22 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
     const zoom = String(state.zoom);
     if (grid.style.getPropertyValue('--design-zoom') !== zoom)
       grid.style.setProperty('--design-zoom', zoom);
-    grid.style.transform = `translate(${state.camera.x}px, ${state.camera.y}px) scale(${state.zoom})`;
-    // Translate a bounded background layer rather than invalidating inherited
-    // properties on the entire shell or repainting its full stage background.
-    const pixelRatio = window.devicePixelRatio || 1;
-    const backgroundOffset = (value) => Math.round((value % 24) * pixelRatio) / pixelRatio;
-    canvasBackground.style.transform = `translate3d(${backgroundOffset(state.camera.x)}px, ${backgroundOffset(state.camera.y)}px, 0)`;
+    if (state.view === 'canvas' && sectionZoom !== state.zoom) syncCanvasNodes();
+    if (state.view !== 'canvas')
+      grid.style.transform = `translate(${state.camera.x}px, ${state.camera.y}px) scale(${state.zoom})`;
     const active = entries.find((entry) => entry.artifactId === activeArtifactId);
-    const panel = panels.get(activeArtifactId);
+    const bounds = active ? placedBoardBounds(active) : null;
     if (selectionOutline) {
-      selectionOutline.hidden = state.view !== 'canvas' || !active || !panel || panel.hidden;
+      selectionOutline.hidden = state.view !== 'canvas' || !bounds;
       if (!selectionOutline.hidden) {
         const frame = design.frames.find((item) => item.id === active.frameId);
         const ratio = window.devicePixelRatio || 1;
         const pixel = (value) => Math.round(value * ratio) / ratio;
-        const x = pixel(state.camera.x + Number.parseFloat(panel.style.left) * state.zoom);
-        const y = pixel(state.camera.y + Number.parseFloat(panel.style.top) * state.zoom);
+        const x = pixel(state.camera.x + bounds.x * state.zoom);
+        const y = pixel(state.camera.y + bounds.y * state.zoom);
         selectionOutline.style.transform = `translate3d(${x - 3}px, ${y - 3}px, 0)`;
         selectionOutline.style.width = `${pixel(frame.width * state.zoom) + 6}px`;
-        selectionOutline.style.height = `${pixel(frame.height * state.zoom) + 6}px`;
+        selectionOutline.style.height = `${pixel(viewportFor(active).height * state.zoom) + 6}px`;
       }
     }
     const label = `${Math.round(state.zoom * 100)}%`;
@@ -889,6 +1497,7 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
     for (const [id, panel] of panels) {
       const frame = stage.getFrame(id),
         placeholder = panel.querySelector('[data-design-load-frame]');
+      syncFrameGestures(frame, panel);
       if (!placeholder) continue;
       const status = frame.dataset.planrFrameState || 'unloaded';
       placeholder.hidden = status === 'ready';
@@ -1145,47 +1754,36 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
     return true;
   }
 
-  function fit({ save = true, selection = null } = {}) {
+  function fit({ save = true, selection = null, maxZoom = 1 } = {}) {
     state.inspectionScale = 'fit';
     render();
     if (state.view !== 'canvas') {
       if (save) persist();
       return;
     }
-    const bounds = contentBounds(selection);
-    const width = Math.max(1, bounds.maxX - bounds.minX);
-    const height = Math.max(1, bounds.maxY - bounds.minY);
-    const availableWidth = Math.max(100, scroll.clientWidth - 96);
-    const availableHeight = Math.max(100, scroll.clientHeight - 96);
-    state.zoom = clamp(
-      Math.min(availableWidth / Math.max(1, width), availableHeight / Math.max(1, height)),
-      0.05,
-      1,
-    );
-    state.camera = {
-      x: (scroll.clientWidth - width * state.zoom) / 2 - bounds.minX * state.zoom,
-      y: (scroll.clientHeight - height * state.zoom) / 2 - bounds.minY * state.zoom,
-    };
-    saveViewport();
-    renderCamera();
+    syncCanvasChrome();
+    for (let attempt = 0; attempt < 12; attempt++) {
+      const previousZoom = state.zoom;
+      canvas.fit(selection ? [selection.artifactId, `label:${selection.artifactId}`] : 'all', {
+        padding: 36,
+        maxZoom,
+      });
+      saveViewport();
+      renderCamera();
+      if (Math.abs(state.zoom - previousZoom) < 0.000001) break;
+    }
     if (save) persist();
   }
 
-  function zoomTo(value, point = null, { scheduled = false } = {}) {
+  function zoomTo(value, point = null) {
     if (state.view !== 'canvas') return;
-    const previous = state.zoom;
-    const next = clamp(value, 0.05, 2);
     const rect = scroll.getBoundingClientRect();
-    const x = point ? point.x - rect.left : scroll.clientWidth / 2;
-    const y = point ? point.y - rect.top : scroll.clientHeight / 2;
-    state.camera = {
-      x: x - ((x - state.camera.x) * next) / previous,
-      y: y - ((y - state.camera.y) * next) / previous,
-    };
-    state.zoom = next;
+    canvas.zoomAt(
+      value / canvas.getCamera().zoom,
+      point ? { x: point.x - rect.left, y: point.y - rect.top } : undefined,
+    );
     saveViewport();
-    if (scheduled) scheduleCamera();
-    else renderCamera();
+    renderCamera();
     persist();
   }
 
@@ -1238,6 +1836,83 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
   }
 
   function installEvents() {
+    listen(scroll, 'focusin', (event) => {
+      // Notes describe a board without navigating to it.
+      if (event.target.closest('[data-design-note]')) event.stopImmediatePropagation();
+    });
+    listen(scroll, 'keydown', (event) => {
+      if (state.view !== 'canvas') return;
+      if (['Escape', ' ', 'Enter', 'Home', 'End'].includes(event.key) || event.code === 'Space') {
+        event.stopImmediatePropagation();
+        if (
+          event.key !== 'Escape' ||
+          event.defaultPrevented ||
+          event.isComposing ||
+          editable(event.target) ||
+          event.ctrlKey ||
+          event.metaKey ||
+          event.altKey
+        )
+          return;
+        const menu = q('.planr-more-menu:not([hidden])');
+        if (menu) {
+          q('[data-planr-action="more"]')?.click();
+          return;
+        }
+        if (!root.dispatchEvent(new CustomEvent('planr:design-escape', { cancelable: true })))
+          return;
+        if (stage.getState().railOpen) {
+          stage.dispatch({ type: 'set-rail-open', railOpen: false });
+          q('[data-planr-action="feedback"]')?.focus();
+        }
+        return;
+      }
+      if (canvas.handleKey(event)) event.stopPropagation();
+    });
+    listen(scroll, 'gotpointercapture', (event) => {
+      if (canvasAttached && gesture?.pointerId !== event.pointerId)
+        canvasPointers.add(event.pointerId);
+    });
+    listen(root, 'planr:design-camera', scheduleViewContext);
+    listen(root, 'planr:design-inspection-change', (event) => {
+      const { screenId, frameId, variantId, planrId } = event.detail;
+      if (screenId !== state.screenId || frameId !== state.frameId || variantId !== state.variantId)
+        return;
+      inspectedSelection = { artifactId: activeArtifactId, planrId };
+      scheduleViewContext();
+    });
+    listen(window, 'message', (event) => {
+      if (
+        event.origin !== 'null' ||
+        !['openplanr:design-size', 'openplanr:design-size-error'].includes(event.data?.type)
+      )
+        return;
+      const entry = entries.find(
+        ({ artifactId }) => stage.getFrame(artifactId)?.contentWindow === event.source,
+      );
+      if (!entry) return;
+      const frame = design.frames.find(({ id }) => id === entry.frameId);
+      if (frame.height !== 'auto') return;
+      if (event.data.type === 'openplanr:design-size-error') {
+        notice(`Could not measure ${entry.screenId}: ${event.data.message}`, true);
+        return;
+      }
+      const { screenId, width, height } = event.data;
+      if (
+        screenId !== entry.screenId ||
+        width !== frame.width ||
+        !Number.isInteger(height) ||
+        height < 1 ||
+        height > 16384
+      )
+        return;
+      const viewport = viewportFor(entry);
+      if (viewport.height === height) return;
+      // The stage and bridge share this live viewport; the immutable render envelope keeps its initial size.
+      viewport.height = height;
+      panels.get(entry.artifactId).style.setProperty('--planr-artifact-height', `${height}px`);
+      render();
+    });
     listen(root, 'planr:artifact-viewport-zoom', (event) => {
       if (state.view !== 'canvas') return;
       const entry = entries.find((item) => stage.getFrame(item.artifactId) === event.target);
@@ -1247,10 +1922,10 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
       const rect = event.target.getBoundingClientRect();
       chrome?.update({ exportMenuOpen: false });
       zoomTo(
-        state.zoom * Math.exp(-deltaY * 0.004),
+        canvas.getCamera().zoom * clamp(Math.exp(-deltaY * 0.01), 0.8, 1.25),
         {
           x: rect.left + (x * rect.width) / frame.width,
-          y: rect.top + (y * rect.height) / frame.height,
+          y: rect.top + (y * rect.height) / viewportFor(entry).height,
         },
         { scheduled: true },
       );
@@ -1260,10 +1935,7 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
       const entry = entries.find((item) => stage.getFrame(item.artifactId) === event.target);
       if (!entry || panels.get(entry.artifactId)?.hidden) return;
       chrome?.update({ exportMenuOpen: false });
-      state.camera = {
-        x: clamp(state.camera.x - event.detail.deltaX, -1e7, 1e7),
-        y: clamp(state.camera.y - event.detail.deltaY, -1e7, 1e7),
-      };
+      canvas.panBy(event.detail.deltaX, event.detail.deltaY);
       saveViewport();
       scheduleCamera();
       persist();
@@ -1305,6 +1977,7 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
         ) {
           event.preventDefault();
           setTool('interact');
+          event.stopPropagation();
           q('[data-planr-mode="interact"]').focus();
         }
       },
@@ -1316,8 +1989,18 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
       const observer = new ResizeObserver(() => {
         if (state.view !== 'canvas' && root.dataset.designRestoring !== 'true')
           fit({ save: false });
+        syncCanvasChrome();
         updateDesignNotes();
+        scheduleViewContext();
       });
+      for (const selector of [
+        '.design-toolbar',
+        '.design-canvas-tools',
+        '.design-stage-context',
+        '.design-navigator',
+        '.planr-review-rail',
+      ])
+        observer.observe(q(selector));
       observer.observe(scroll);
       cleanup.push(() => observer.disconnect());
     }
@@ -1470,6 +2153,7 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
       }
       if (next.zoom !== previousStageZoom) {
         state.zoom = clamp(next.zoom / 100, 0.05, 2);
+        if (canvasAttached) applyCanvasCamera();
         previousStageZoom = next.zoom;
         saveViewport();
       }
@@ -1479,6 +2163,7 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
     listen(root, 'planr:artifact-review-change', (event) => {
       latestReview = clone(event.detail);
       reviewDirty = true;
+      scheduleViewContext();
       reviewSerial += 1;
       status('Saving comments', 'saving');
       storeReviewDraft();
@@ -1507,33 +2192,6 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
       },
       true,
     );
-    listen(
-      scroll,
-      'wheel',
-      (event) => {
-        if (state.view !== 'canvas') return;
-        event.preventDefault();
-        if (event.ctrlKey || event.metaKey) {
-          zoomTo(
-            state.zoom * Math.exp(-event.deltaY * 0.004),
-            {
-              x: event.clientX,
-              y: event.clientY,
-            },
-            { scheduled: true },
-          );
-          return;
-        }
-        state.camera = {
-          x: state.camera.x - (event.shiftKey ? event.deltaY : event.deltaX),
-          y: state.camera.y - (event.shiftKey ? 0 : event.deltaY),
-        };
-        saveViewport();
-        scheduleCamera();
-        persist();
-      },
-      { passive: false },
-    );
     listen(scroll, 'pointerdown', (event) => {
       if (state.view !== 'canvas') return;
       if (root.dataset.designInspect === 'true') return;
@@ -1541,24 +2199,21 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
       const label = event.target.closest('[data-design-drag]');
       const dragging =
         event.button === 0 && state.view === 'canvas' && label && !panEnabled && !spacePan;
-      const panning =
-        event.button === 1 ||
-        panEnabled ||
-        spacePan ||
-        event.target === scroll ||
-        event.target === grid ||
-        event.target === surface;
-      if (!dragging && !panning) return;
+      if (!dragging) return;
       event.preventDefault();
       const panel = label?.closest('.planr-artifact-panel');
+      const entry = entries.find((item) => item.artifactId === panel.dataset.artifactId);
+      const bounds = placedBoardBounds(entry);
+      if (!bounds) return;
       gesture = {
         pointerId: event.pointerId,
         x: event.clientX,
         y: event.clientY,
-        mode: dragging ? 'artboard' : 'pan',
-        artifactId: dragging ? panel.dataset.artifactId : null,
-        left: dragging ? parseFloat(panel.style.left) : state.camera.x,
-        top: dragging ? parseFloat(panel.style.top) : state.camera.y,
+        mode: 'artboard',
+        artifactId: panel.dataset.artifactId,
+        left: bounds.x,
+        top: bounds.y,
+        before: clone(layout),
       };
       scroll.setPointerCapture?.(event.pointerId);
       updatePan();
@@ -1567,50 +2222,69 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
       if (!gesture || gesture.pointerId !== event.pointerId) return;
       const dx = event.clientX - gesture.x;
       const dy = event.clientY - gesture.y;
-      if (gesture.mode === 'pan') {
-        state.camera = {
-          x: clamp(gesture.left + dx, -1e7, 1e7),
-          y: clamp(gesture.top + dy, -1e7, 1e7),
-        };
-        saveViewport();
-        scheduleCamera();
-      } else {
-        state.positions[gesture.artifactId] = {
-          x: clamp(gesture.left + dx / state.zoom, -1e7, 1e7),
-          y: clamp(gesture.top + dy / state.zoom, -1e7, 1e7),
-        };
-        const panel = panels.get(gesture.artifactId);
-        panel.style.left = `${state.positions[gesture.artifactId].x}px`;
-        panel.style.top = `${state.positions[gesture.artifactId].y}px`;
-        scheduleCamera();
-      }
+      const entry = entries.find((item) => item.artifactId === gesture.artifactId);
+      const key = boardKey(entry);
+      const point = {
+        x: Math.round(clamp(gesture.left + dx / state.zoom, -1e7, 1e7)),
+        y: Math.round(clamp(gesture.top + dy / state.zoom, -1e7, 1e7)),
+      };
+      layout.boards = { ...layout.boards, [key]: { ...layout.boards?.[key], ...point } };
+      const panel = panels.get(gesture.artifactId);
+      layoutDragDirty = point.x !== gesture.left || point.y !== gesture.top;
+      if (layoutDragDirty) status('Moving board', 'saving');
+      panel.style.left = `${point.x}px`;
+      panel.style.top = `${point.y}px`;
+      syncCanvasNodes();
+      scheduleCamera();
     });
     for (const eventName of ['pointerup', 'pointercancel', 'lostpointercapture'])
       listen(scroll, eventName, (event) => {
+        canvasPointers.delete(event.pointerId);
         if (!gesture || gesture.pointerId !== event.pointerId) return;
         if (eventName === 'pointerup') finishGesture();
         else releaseTemporaryPan();
       });
+    listen(
+      document,
+      'keydown',
+      (event) => {
+        if (editable(event.target)) return;
+        if (
+          state.view === 'canvas' &&
+          event.code === 'Space' &&
+          !event.defaultPrevented &&
+          !event.ctrlKey &&
+          !event.metaKey &&
+          !event.altKey &&
+          !document.querySelector('dialog[open],[role=dialog][data-state=open]') &&
+          !event.target.closest('button,[data-planr-annotation-layer]')
+        ) {
+          event.preventDefault();
+          event.stopPropagation();
+          if (event.repeat) return;
+          const previous = activeTool;
+          setTool('pan');
+          panEnabled = false;
+          spacePan = true;
+          spaceReturnTool = previous;
+          updatePan();
+        }
+      },
+      true,
+    );
     listen(document, 'keydown', (event) => {
       if (editable(event.target)) return;
       if (
         state.view === 'canvas' &&
-        event.code === 'Space' &&
         !event.defaultPrevented &&
-        !event.ctrlKey &&
-        !event.metaKey &&
         !event.altKey &&
-        !document.querySelector('dialog[open],[role=dialog][data-state=open]') &&
-        !event.target.closest('button,[data-planr-annotation-layer]')
+        (event.metaKey || event.ctrlKey) &&
+        event.key.toLowerCase() === 'z' &&
+        !document.querySelector('dialog[open],[role=dialog][data-state=open]')
       ) {
         event.preventDefault();
-        if (event.repeat) return;
-        const previous = activeTool;
-        setTool('pan');
-        panEnabled = false;
-        spacePan = true;
-        spaceReturnTool = previous;
-        updatePan();
+        restoreMove(event.shiftKey);
+        return;
       }
       const label = event.target.closest('[data-design-drag]');
       if (
@@ -1621,22 +2295,32 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
         event.preventDefault();
         const panel = label.closest('.planr-artifact-panel');
         const distance = event.shiftKey ? 40 : 8;
-        state.positions[panel.dataset.artifactId] = {
-          x: clamp(
-            parseFloat(panel.style.left) +
-              (event.key === 'ArrowRight' ? distance : event.key === 'ArrowLeft' ? -distance : 0),
-            -1e7,
-            1e7,
+        const entry = entries.find((item) => item.artifactId === panel.dataset.artifactId);
+        const bounds = placedBoardBounds(entry);
+        if (!bounds) return;
+        const key = boardKey(entry);
+        const before = clone(layout);
+        const point = {
+          x: Math.round(
+            clamp(
+              bounds.x +
+                (event.key === 'ArrowRight' ? distance : event.key === 'ArrowLeft' ? -distance : 0),
+              -1e7,
+              1e7,
+            ),
           ),
-          y: clamp(
-            parseFloat(panel.style.top) +
-              (event.key === 'ArrowDown' ? distance : event.key === 'ArrowUp' ? -distance : 0),
-            -1e7,
-            1e7,
+          y: Math.round(
+            clamp(
+              bounds.y +
+                (event.key === 'ArrowDown' ? distance : event.key === 'ArrowUp' ? -distance : 0),
+              -1e7,
+              1e7,
+            ),
           ),
         };
+        layout.boards = { ...layout.boards, [key]: { ...layout.boards?.[key], ...point } };
         render();
-        persist();
+        completeMove(entry, before);
       } else if (
         state.view === 'walkthrough' &&
         ['ArrowLeft', 'ArrowRight'].includes(event.key) &&
@@ -1684,7 +2368,9 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
       updateDesignNotes();
     });
     listen(window, 'online', () => {
-      if (dirty || reviewDirty) void flush();
+      if (dirty || reviewDirty || layoutOperations.length) void flush();
+      viewContextSignature = null;
+      scheduleViewContext();
     });
     listen(window, 'beforeunload', (event) => {
       // A canceled navigation keeps ready frames; only retire background demand.
@@ -1693,7 +2379,14 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
       frameDemandKey = '';
       storeDraft();
       storeReviewDraft();
-      if ((contentDirty || reviewDirty) && (options.stateUrl || options.saveState || reviewUrl())) {
+      if (
+        (contentDirty || reviewDirty || layoutOperations.length) &&
+        (options.stateUrl ||
+          options.saveState ||
+          options.layoutUrl ||
+          options.saveLayout ||
+          reviewUrl())
+      ) {
         event.preventDefault();
         event.returnValue = '';
       }
@@ -1733,12 +2426,20 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
   async function refreshSavedState() {
     if (!options.stateUrl) return;
     try {
+      const observedRevision = revision;
       const result = await jsonRequest(options.stateUrl);
       if (destroyed) return;
-      if (result.revision !== undefined) revision = result.revision;
+      if (
+        observedRevision === revision &&
+        result.revision !== undefined &&
+        result.revision !== revision
+      )
+        await rebaseLayout({ announce: false, expectedRevision: observedRevision });
       if (result.stateVersion !== undefined) stateVersion = result.stateVersion;
+      legacyServerPositions = result.state?.positions ?? legacyServerPositions;
       if (result.state && !dirty) {
         state = normalizeState({ ...result.state, ...linkedState() });
+        if (canvasAttached && state.view === 'canvas') applyCanvasCamera();
         if (compactViewport) {
           state.navOpen = false;
           state.reviewOpen = false;
@@ -1751,28 +2452,36 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
           true,
         );
       selectEntry(entryFor(), { save: false });
-      status('All changes saved');
+      if (!layoutOperations.length) status('All changes saved');
     } catch {
       status('Disconnected · local draft', 'disconnected');
     }
   }
 
+  function renderVerification(verification) {
+    q('[data-design-verification]').textContent =
+      verification === 'verified'
+        ? 'Browser inspection complete'
+        : verification === 'failed'
+          ? 'Browser inspection failed'
+          : 'Browser inspection pending';
+  }
+
   async function pollRevision() {
-    if (!options.statusUrl || destroyed) return;
+    if (!options.statusUrl || destroyed || sessionLost) return;
     try {
+      const observedRevision = revision;
       const result = await jsonRequest(options.statusUrl);
       if (destroyed) return;
-      if (typeof result.verification === 'string')
-        q('[data-design-verification]').textContent =
-          result.verification === 'verified'
-            ? 'Browser inspection complete'
-            : 'Browser inspection pending';
-      if (result.revision !== undefined && revision !== null && result.revision !== revision) {
-        if (contentDirty || reviewDirty)
-          notice(
-            'A new design revision is ready. Save or recover this browser’s unsaved changes before reloading.',
-            true,
-          );
+      if (typeof result.verification === 'string') renderVerification(result.verification);
+      if (
+        observedRevision === revision &&
+        result.revision !== undefined &&
+        revision !== null &&
+        result.revision !== revision
+      ) {
+        if (contentDirty || reviewDirty || layoutOperations.length || layoutSaving)
+          newRevisionNotice();
         else {
           storeDraft();
           window.location.reload();
@@ -1784,14 +2493,15 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
           result.message ?? 'The new revision failed. This working design remains available.',
           true,
         );
-    } catch {
-      if (!dirty) status('Disconnected', 'disconnected');
+    } catch (error) {
+      if (error.statusCode === 404) studioRestarted();
+      else if (!dirty && !hasPendingLayout()) status('Disconnected', 'disconnected');
     }
     pollTimer = setTimeout(pollRevision, 4000);
   }
 
   async function reportReady() {
-    if (readyReported || readyReporting || destroyed) return;
+    if (!startupSettled || readyReported || readyReporting || destroyed) return;
     readyReporting = true;
     try {
       const requiredEntries = [entryFor()];
@@ -1815,7 +2525,12 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
       if (!root.dataset.sharedOpening) delete document.documentElement.dataset.designOpening;
       chrome?.update({ previewLabel: 'Preview ready' });
       if (!chrome) q('[data-design-preview-state]').textContent = 'Preview ready';
-      if (!contentDirty && !reviewDirty && (!options.stateUrl || stateVersion !== null))
+      if (
+        !contentDirty &&
+        !reviewDirty &&
+        !layoutOperations.length &&
+        (!options.stateUrl || stateVersion !== null)
+      )
         status(options.stateUrl ? 'All changes saved' : 'Local preview');
       const detail = {
         revision,
@@ -1856,22 +2571,46 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
       return null;
     }
     root = q('.planr-shell');
+    const structuralStyle = document.createElement('style');
+    structuralStyle.textContent = canvasStyles;
+    document.head.prepend(structuralStyle);
+    cleanup.push(() => structuralStyle.remove());
+    cleanup.push(
+      canvas.on('camera', () => {
+        if (!canvasAttached || state.view !== 'canvas') return;
+        const previous = state.viewports.canvas;
+        saveViewport();
+        renderCamera();
+        const next = state.viewports.canvas;
+        if (previous?.x !== next.x || previous?.y !== next.y || previous?.zoom !== next.zoom)
+          persist();
+      }),
+    );
     chrome = mountDesignChrome({ root, title: design.title, state });
+    if (hasPendingLayout()) status('Recovering layout', 'saving');
     if (chrome) cleanup.push(() => chrome.destroy());
     previousReviewMode = stage.getState().reviewMode;
     activeTool = previousReviewMode === 'comment' ? 'annotate' : 'interact';
     scroll = q('.planr-stage-scroll');
     surface = q('.planr-stage-surface');
     grid = q('.planr-frame-grid');
-    canvasBackground = document.createElement('div');
-    canvasBackground.className = 'design-canvas-background';
-    canvasBackground.setAttribute('aria-hidden', 'true');
-    scroll.prepend(canvasBackground);
     selectionOutline = document.createElement('div');
     selectionOutline.className = 'design-selection-outline';
     selectionOutline.setAttribute('aria-hidden', 'true');
     selectionOutline.hidden = true;
     scroll.append(selectionOutline);
+    for (const section of layout.sections ?? []) {
+      const heading = document.createElement('div');
+      heading.className = 'design-section-heading';
+      heading.setAttribute('role', 'heading');
+      heading.setAttribute('aria-level', '2');
+      heading.textContent = section.text;
+      heading.style.left = `${section.x}px`;
+      heading.style.top = `${section.y}px`;
+      if (section.maxW) heading.style.maxWidth = `${section.maxW}px`;
+      grid.append(heading);
+      sectionHeadings.push(heading);
+    }
     for (const entry of entries) {
       const panel = stage.getPanel(entry.artifactId);
       if (!panel) {
@@ -1879,9 +2618,26 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
         return null;
       }
       panels.set(entry.artifactId, panel);
+      const nodeId = panel.getAttribute('data-canvas-node-id');
+      panel.dataset.canvasNodeId = entry.artifactId;
+      cleanup.push(() => {
+        if (nodeId === null) panel.removeAttribute('data-canvas-node-id');
+        else panel.setAttribute('data-canvas-node-id', nodeId);
+      });
       const screen = design.screens.find(({ id }) => id === entry.screenId);
       const variant = design.variants.find(({ id }) => id === entry.variantId);
       const frame = design.frames.find(({ id }) => id === entry.frameId);
+      const iframe = stage.getFrame(entry.artifactId);
+      const syncGestures = () => syncFrameGestures(iframe, panel);
+      listen(iframe, 'planr:artifact-bridge-ready', syncGestures);
+      listen(iframe, 'load', syncGestures);
+      if (frame.height === 'auto') {
+        const measure = () =>
+          iframe.contentWindow?.postMessage({ type: 'openplanr:design-measure' }, '*');
+        listen(iframe, 'planr:artifact-bridge-ready', measure);
+        listen(iframe, 'load', measure);
+        measure();
+      }
       const label = document.createElement('div');
       label.className = 'design-artboard-label';
       label.setAttribute('role', 'group');
@@ -1896,7 +2652,7 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
       const title = document.createElement('strong');
       title.textContent = `${screen.title}${readyVariants.length > 1 ? ` / ${variant.label}` : ''}`;
       const size = document.createElement('span');
-      size.textContent = `${frame.label} · ${frame.width} × ${frame.height}`;
+      size.textContent = designFrameLabel(frame);
       drag.append(title, size);
       label.append(drag);
       if (screen.description) {
@@ -1922,10 +2678,7 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
         panel.querySelector('.planr-frame').append(load);
       }
     }
-    const verified = payload.verification?.status === 'verified';
-    q('[data-design-verification]').textContent = verified
-      ? 'Browser inspection complete'
-      : 'Browser inspection pending';
+    renderVerification(payload.verification?.status);
     const prototypeState = createPrototypeStateRelay({
       contextId: `${design.id}:${payload.revision ?? payload.reviewOf ?? 'local'}`,
       parentWindow: window,
@@ -2046,10 +2799,17 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
     const controller = Object.freeze({
       setTool,
       getTool: () => activeTool,
-      getState: () => clone(state),
+      getState: () => {
+        readCanvasCamera();
+        return clone(state);
+      },
+      getLayout: () => clone(layout),
+      getViewport: (artifactId) => ({
+        ...viewportFor(entries.find((entry) => entry.artifactId === artifactId)),
+      }),
       getRevision: () => revision,
       getSaveState: () => ({
-        dirty: contentDirty || reviewDirty,
+        dirty: contentDirty || reviewDirty || hasPendingLayout(),
         personalPending: dirty && !contentDirty,
         commentsPending: reviewDirty,
         revision,
@@ -2063,6 +2823,7 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
         if (!Number.isFinite(camera?.x) || !Number.isFinite(camera?.y)) return;
         state.camera = { x: clamp(camera.x, -1e7, 1e7), y: clamp(camera.y, -1e7, 1e7) };
         if (Number.isFinite(camera.zoom)) state.zoom = clamp(camera.zoom, 0.05, 2);
+        applyCanvasCamera();
         saveViewport();
         renderCamera();
         persist();
@@ -2089,10 +2850,10 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
           'zoom',
           'camera',
           'viewports',
-          'positions',
         ])
           if (snapshot[key] !== undefined) personal[key] = clone(snapshot[key]);
         state = normalizeState({ ...state, ...personal });
+        if (canvasAttached && state.view === 'canvas') applyCanvasCamera();
         stage.dispatch({ type: 'set-rail-open', railOpen: state.reviewOpen });
         selectEntry(entryFor(), { save: false });
         render();
@@ -2105,11 +2866,14 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
       flush,
       exportArtifact,
       destroy() {
+        if (destroyed) return;
         finishWalkthroughTransition();
         root.dispatchEvent(new CustomEvent('planr:design-destroy'));
         for (const { artifactId } of entries)
           stage.getFrame(artifactId)?.__openPlanrBridge?.setViewportGestures?.(false);
         destroyed = true;
+        canvasAttached = false;
+        canvas.destroy();
         ++screenRequest;
         pendingScreen = null;
         failedSelection = null;
@@ -2118,13 +2882,20 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
         clearTimeout(reviewTimer);
         clearTimeout(pollTimer);
         clearTimeout(noticeTimer);
+        clearTimeout(viewContextTimer);
         if (cameraFrame !== null) cancelAnimationFrame(cameraFrame);
-        canvasBackground?.remove();
+        for (const heading of sectionHeadings) heading.remove();
         selectionOutline?.remove();
         for (const remove of cleanup.splice(0)) remove();
       },
     });
-    void refreshSavedState().then(reportReady);
+    void refreshSavedState().then(async () => {
+      restorePendingLayout();
+      migrateLegacyPositions();
+      await flushLayout();
+      startupSettled = true;
+      return reportReady();
+    });
     pollTimer = setTimeout(pollRevision, 4000);
     return controller;
   }

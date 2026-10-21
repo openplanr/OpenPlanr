@@ -35,6 +35,7 @@ import {
   readJson,
   recoverDesignPublication,
 } from './document-state.mjs';
+import { designFrameViewport, observeDesignFrameSize } from './frame-size.mjs';
 import { lintDesign } from './lint.mjs';
 import { buildManifest } from './manifest.mjs';
 import {
@@ -53,6 +54,9 @@ export {
   readJson,
   recoverDesignPublication,
 } from './document-state.mjs';
+
+export { saveDesignLayout } from './layout-save.mjs';
+export { saveDesignViewContext } from './view-context.mjs';
 
 export const DESIGN_VIEWS = Object.freeze(['canvas', 'prototype', 'walkthrough']);
 // Bump when renderer/bridge implementation changes outside the hashed runtime assets.
@@ -144,6 +148,11 @@ export function prepareDesignDocument(file, { readSource, passive = false, maxBy
         passive,
         ...(maxBytes === undefined ? {} : { maxBytes }),
       });
+      if (document.frames.some(({ height }) => height === 'auto'))
+        bundled.html = bundled.html.replace(
+          '</body>',
+          `<script>(${observeDesignFrameSize.toString()})()</script></body>`,
+        );
       const navigate = `<script>document.addEventListener('click',function(event){var link=event.target.closest('[data-design-target],[data-planr-navigate],[data-design-navigate]');if(!link)return;event.preventDefault();parent.postMessage({type:'openplanr:design-navigate',screenId:link.getAttribute('data-design-target')||link.getAttribute('data-planr-navigate')||link.getAttribute('data-design-navigate')},'*')});document.addEventListener('submit',function(event){event.preventDefault()});</script>`;
       if (!passive) bundled.html = bundled.html.replace('</body>', `${navigate}</body>`);
       for (const name of bundled.files) {
@@ -194,7 +203,7 @@ export function prepareDesignDocument(file, { readSource, passive = false, maxBy
           kind: 'html',
           title: `${screen.title} · ${variant.label} · ${frame.label}`,
           sourceId,
-          viewport: { width: frame.width, height: frame.height },
+          viewport: designFrameViewport(document, frame),
           colorScheme: 'light',
         });
         entries.push({
@@ -202,6 +211,7 @@ export function prepareDesignDocument(file, { readSource, passive = false, maxBy
           screenId,
           variantId: variant.id,
           frameId: frame.id,
+          ...(frame.height === 'auto' ? { height: 'auto' } : {}),
         });
       }
     }
@@ -355,7 +365,28 @@ export function standaloneDesignHtml(
 }
 
 /** The only publication point is current.json; incomplete revisions are never served. */
-export async function renderDesignDocument(
+export async function renderDesignDocument(file, options = {}) {
+  return withDesignRenderLock(file, (render) => render(options));
+}
+
+/** Runs a document edit and its render under the same publication lock. */
+export async function withDesignRenderLock(file, action) {
+  const { root } = loadDesignDocument(file);
+  const work = join(root, '.design');
+  mkdirSync(work, { recursive: true });
+  const release = await acquireStartLock(join(work, 'render.lock'), {
+    timeout: 1000,
+    stale: 30_000,
+  });
+  try {
+    recoverDesignPublication(root, { ownsRenderLock: true });
+    return await action((options) => renderDesignDocumentUnlocked(file, options));
+  } finally {
+    release();
+  }
+}
+
+async function renderDesignDocumentUnlocked(
   file,
   {
     beforeCommit,
@@ -366,14 +397,8 @@ export async function renderDesignDocument(
 ) {
   const { root } = loadDesignDocument(file);
   const work = join(root, '.design');
-  mkdirSync(work, { recursive: true });
-  const release = await acquireStartLock(join(work, 'render.lock'), {
-    timeout: 1000,
-    stale: 30_000,
-  });
   let temporary;
   try {
-    recoverDesignPublication(root, { ownsRenderLock: true });
     const prepared = prepareDesignDocument(file);
     const errors = prepared.lint.flatMap((item) =>
       item.errors.map((error) => `${item.screenId}: ${error.message}`),
@@ -476,6 +501,5 @@ export async function renderDesignDocument(
     };
   } finally {
     if (temporary) rmSync(temporary, { recursive: true, force: true });
-    release();
   }
 }

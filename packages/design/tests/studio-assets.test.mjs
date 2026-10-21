@@ -8,10 +8,20 @@ import {
   DESIGN_STUDIO_ASSET_BUDGETS,
   DESIGN_STUDIO_BUNDLE_BANNER,
   renderDesignStudioAssets,
+  renderDesignStudioRuntimeAsset,
 } from '../scripts/generate-design-studio.mjs';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const assets = renderDesignStudioAssets();
+
+test('the design studio stylesheet keeps its canvas ground free of dot patterns', () => {
+  const styles = readFileSync(join(root, 'templates/studio/studio.css'), 'utf8');
+  assert.equal(
+    styles.includes('radial-gradient('),
+    false,
+    'The design canvas ground must be plain.',
+  );
+});
 
 test('the generated studio runtime matches its ES module sources', () => {
   for (const [path, bytes] of Object.entries(assets)) {
@@ -49,4 +59,16 @@ test('the studio runtime names its generator and ships as one strict classic scr
   assert.ok(runtime.startsWith(`${DESIGN_STUDIO_BUNDLE_BANNER}\n"use strict";\n`));
   assert.doesNotMatch(runtime, /\/Users\//, 'the bundle carries no machine paths');
   assert.doesNotMatch(runtime, /<\/script/iu, 'the bundle can be inlined in a script element');
+});
+
+test('the studio bundle includes the vanilla canvas engine and structural styles', () => {
+  let inputs = [];
+  renderDesignStudioRuntimeAsset({
+    onInputs: (paths) => {
+      inputs = paths;
+    },
+  });
+  for (const source of ['index.mjs', 'controller.mjs', 'input.mjs', 'styles.css'])
+    assert.ok(inputs.includes(resolve(root, '../canvas/src', source)), source);
+  assert.ok(!inputs.some((path) => path.includes('/canvas/src/react/')));
 });

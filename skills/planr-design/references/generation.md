@@ -9,7 +9,8 @@ Use a versioned `design-document.json` and the bundled schema exposed by the
 [utility](utilities.md). It names the design, stable screens and variants, authored
 local HTML/CSS/JavaScript, assets, screen order, responsive frames, interaction
 flows, selected direction, brief provenance and design-system references. Inspect
-the schema before creating the document; validate it before rendering.
+the schema before creating the document; validate it before rendering. Use
+`schemaVersion: "1.0.0"` when authoring, revising, migrating or arranging documents.
 
 Read [team-review.md](team-review.md) and author a sibling `review-context.json`
 for every new design. Its welcome purpose and review questions belong to this
@@ -80,6 +81,48 @@ an artboard by its title to arrange it. Use I / C / H to select Interact / Annot
 Pan; hold Space for temporary pan and Escape to leave Pan or Inspect. Switching
 tools preserves comment drafts. Focused views start in Interact.
 
+## Canvas arrangement
+
+Author optional `layout.boards` and `layout.sections` in the design document to
+arrange the canvas. Coordinates are finite world-space numbers between `-1e7`
+and `1e7`. Every board key uses existing IDs: `screenId`, `screenId/frameId` or
+`screenId/frameId/variantId`. Each value requires `x` and `y` and may include a
+nonblank `title`.
+
+Placement uses the exact screen/frame/variant key first, then screen/frame, then
+the screen origin. A screen origin retains the grid's relative frame spacing and,
+in Compare, variant-group spacing. Without a matching placement, the board uses
+the computed grid. The label uses the most specific matching key with a title,
+otherwise the screen's usual label. Omitting `layout` or leaving it empty retains
+the default grid, labels and camera behavior.
+
+Section headers use unique IDs and nonblank text. Each section requires `id`,
+`x`, `y` and `text`; optional `maxW` is an integer from 1 to 16384 world pixels.
+They appear as non-interactive headings in Canvas and contribute to Fit.
+
+```json
+{
+  "layout": {
+    "boards": {
+      "overview": { "x": 120, "y": 180, "title": "Account journey" },
+      "overview/desktop/quiet": { "x": 1800, "y": 180 }
+    },
+    "sections": [
+      { "id": "account", "x": 120, "y": 80, "text": "Account journey", "maxW": 1200 }
+    ]
+  }
+}
+```
+
+Dragging a board's title in the local studio writes its exact
+screen/frame/variant position into the authored document and preserves an existing
+title. In Canvas, Cmd/Ctrl+Z saves the prior layout; Shift+Cmd/Ctrl+Z redoes it. Preserve these fields
+when revising the design. Portable studios without a local server keep drags only
+for the current session. On first open, legacy positions in browser storage or
+`.design/studio-state.json` fill missing exact board keys in one layout revision.
+The studio removes migrated personal positions only after saving. Without a local
+server, those positions apply for the session.
+
 ## Parallel alternatives
 
 For Design Loop, define three clear hypotheses, not superficial recolors. Examples
@@ -106,3 +149,30 @@ preserve the original as a local source/reference and declare static image scree
 as static. Existing `finalized.json` and mode-specific specification readers remain
 supported. Use [craft.md](craft.md) for browser checks before finalization and
 [handoff.md](handoff.md) for the complete implementation context.
+
+## Content-sized frames
+
+Use `height: "auto"` for long scrolling pages; keep integer heights for fixed
+product viewports. Width remains an integer. Auto frames start at the tallest
+integer height in the document, or 900px if all frames are auto. After load, fonts
+and two animation frames, the studio measures `documentElement.scrollHeight` and
+sizes the board up to 16384px. A body ResizeObserver repeats that measurement.
+Fit, focused views, selection and inspection use the measured height. Grid rows
+keep the initial height so later rows do not move when content is measured; arrange
+long boards explicitly with `layout.boards` when they need more room.
+
+Set `box-sizing: border-box` on the authored screen root
+(`body[data-planr-screen]`), either directly or through a universal selector. The
+renderer preserves authored box sizing; the browser audit checks this requirement.
+The browser audit reports `vertical-overflow` when a fixed frame's document height
+exceeds its viewport by more than 1px; auto frames skip this rule. `outside-frame` reports
+rendered absolute/fixed elements beyond the width or height by more than 1px,
+using document height for auto frames and respecting ancestor overflow clipping.
+
+The three rules (`board-root-box-sizing`, `vertical-overflow`, `outside-frame`)
+are errors throughout a document with any frame using `height: "auto"`. Use auto
+frames for pages that scroll to opt into these strict checks. Otherwise the rules
+are warnings and do not block verification or handoff readiness. Neither `layout`
+nor `schemaVersion` changes severity; migrating or dragging a fixed-frame document
+keeps its warnings. Pass the document to `auditDesignPage` with its revision and
+entries when running browser checks.

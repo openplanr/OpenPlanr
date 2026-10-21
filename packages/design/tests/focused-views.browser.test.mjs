@@ -119,16 +119,19 @@ test(`focused journeys contain the screen, preserve product interaction and retu
       await page.evaluate(async () => {
         const studio = window.__openPlanrDesignStudio;
         studio.setView('canvas');
-        const firstArtifact = document.querySelector('.planr-artifact-panel').dataset.artifactId;
         studio.restorePresentation({
           ...studio.getState(),
           compare: true,
-          positions: { ...studio.getState().positions, [firstArtifact]: { x: 350, y: 170 } },
         });
         studio.setCamera({ x: -275, y: 85, zoom: 0.42 });
         await studio.flush();
       });
+      await page.locator('[data-design-drag]').first().focus();
+      await page.keyboard.press('Shift+ArrowRight');
+      await page.keyboard.press('Shift+ArrowDown');
+      await page.evaluate(() => window.__openPlanrDesignStudio.flush());
       const canvas = await page.evaluate(() => window.__openPlanrDesignStudio.getState());
+      const canvasLayout = await page.evaluate(() => window.__openPlanrDesignStudio.getLayout());
       await page.locator('[data-planr-mode="comment"]').click();
       await page.locator('[data-design-view="prototype"]').click();
       assert.equal(
@@ -298,8 +301,8 @@ test(`focused journeys contain the screen, preserve product interaction and retu
       );
       assert.equal(restored.zoom, canvas.zoom);
       assert.deepEqual(
-        restored.positions,
-        canvas.positions,
+        await page.evaluate(() => window.__openPlanrDesignStudio.getLayout()),
+        canvasLayout,
         'focused journeys never alter the freeform artboard arrangement',
       );
       assert.equal(

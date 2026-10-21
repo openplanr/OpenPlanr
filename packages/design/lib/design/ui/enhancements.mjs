@@ -5,6 +5,7 @@
  * Hooks come from `__OPENPLANR_DESIGN_STUDIO_OPTIONS__`; authored screens remain opaque sandboxes.
  */
 
+import { designFrameViewport } from '../frame-size.mjs';
 import { createDesignReviewExport, serializeDesignReviewExport } from '../review-export.mjs';
 import { mountDesignHandoffCenter } from './handoff-center.mjs';
 
@@ -1450,7 +1451,7 @@ export function mountDesignEnhancements({ payload, studio: designStudio, stage: 
             x: parseFloat(panel.style.left) || 0,
             y: parseFloat(panel.style.top) || 0,
             width: frame.width,
-            height: frame.height,
+            height: studio.getViewport(item.artifactId).height,
           };
         });
       if (!boards.length) return;
@@ -1635,12 +1636,15 @@ export function mountDesignEnhancements({ payload, studio: designStudio, stage: 
     on(document, 'fullscreenchange', () => {
       if (!document.fullscreenElement) restore();
     });
+    function leavePresentation(event) {
+      if (!chrome || activeDialog) return false;
+      event.preventDefault();
+      restore();
+      return true;
+    }
+    on(root, 'planr:design-escape', leavePresentation);
     on(document, 'keydown', (event) => {
-      if (event.key === 'Escape' && chrome && !activeDialog) {
-        event.preventDefault();
-        restore();
-        return;
-      }
+      if (event.key === 'Escape' && leavePresentation(event)) return;
       if (event.target.closest('input,textarea,select,[contenteditable="true"]') || activeDialog)
         return;
       if (event.shiftKey && ['1', '!'].includes(event.key)) {
@@ -1763,7 +1767,10 @@ export function mountDesignEnhancements({ payload, studio: designStudio, stage: 
         q('[aria-selected="true"]', reviewTabs).focus();
       }
     });
+    let inspectionRequest = 0;
     const selectTarget = async (value, overlay, point) => {
+      const requestId = ++inspectionRequest;
+      studio.selectEntry(value);
       const bridge = stage.getFrame(value.artifactId)?.__openPlanrBridge;
       try {
         const result = point
@@ -1773,7 +1780,18 @@ export function mountDesignEnhancements({ payload, studio: designStudio, stage: 
           throw new Error(
             'Element inspection is unavailable for this screen. Authored implementation guidance is available below.',
           );
+        if (requestId !== inspectionRequest || entry()?.artifactId !== value.artifactId) return;
         renderInspector(result);
+        root.dispatchEvent(
+          new CustomEvent('planr:design-inspection-change', {
+            detail: {
+              screenId: value.screenId,
+              frameId: value.frameId,
+              variantId: value.variantId,
+              planrId: result.anchor?.planrId ?? null,
+            },
+          }),
+        );
         if (overlay && result.rect) {
           let highlight = q('.design-inspect-highlight', overlay);
           if (!highlight) {
@@ -1811,7 +1829,7 @@ export function mountDesignEnhancements({ payload, studio: designStudio, stage: 
         event.preventDefault();
         event.stopPropagation();
         const rect = frame.getBoundingClientRect(),
-          viewport = design.frames.find((item) => item.id === value.frameId);
+          viewport = studio.getViewport(value.artifactId);
         studio.selectEntry(value);
         void selectTarget(value, overlay, {
           x: clamp(((event.clientX - rect.left) * viewport.width) / rect.width, 0, viewport.width),
@@ -2252,7 +2270,11 @@ export function mountDesignEnhancements({ payload, studio: designStudio, stage: 
             continue;
           }
           const viewport =
-            artifact.viewport || bundle.design.frames.find((item) => item.id === selectedFrame);
+            artifact.viewport ||
+            designFrameViewport(
+              bundle.design,
+              bundle.design.frames.find((item) => item.id === selectedFrame),
+            );
           const windowNode = node('div', '', {
             class: 'design-comparison-window',
             tabindex: '0',

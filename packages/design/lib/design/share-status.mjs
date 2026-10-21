@@ -43,13 +43,13 @@ export function custodyLocation(file, options = {}, { allowMissing = false } = {
       : null;
   return { root, path, current, legacyPath };
 }
-export function presentationFingerprint(current) {
+export function presentationFingerprint(current, { legacy = false } = {}) {
   const state = readJson(join(current.root, '.design/studio-state.json'), { state: {} }).state;
   return hash(
     JSON.stringify({
       revision: current.revision,
       selectedVariant: state.selectedVariant ?? current.document.selectedVariant,
-      positions: state.positions ?? {},
+      ...(legacy ? { positions: state.positions ?? {} } : {}),
       verification: current.verification.status,
     }),
   );
@@ -68,7 +68,10 @@ export const safeStatus = (record, current) => ({
         publishedRevision: record.publishedRevision ?? null,
         hasUpdate:
           record.publishedRevision !== current.revision ||
-          record.publishedPresentation !== presentationFingerprint(current),
+          ![
+            presentationFingerprint(current),
+            presentationFingerprint(current, { legacy: true }),
+          ].includes(record.publishedPresentation),
         epoch: record.custody.epoch,
         commentsPaused: Boolean(record.custody.commentsPaused ?? record.commentsPaused),
         revoked: Boolean(record.revoked),

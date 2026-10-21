@@ -28,10 +28,10 @@ import { designUtility } from '../lib/design/utility.mjs';
 import { designFixture } from './design-fixture.mjs';
 
 const time = '2026-09-30T10:00:00.000Z';
-async function fixture(t) {
+async function fixture(t, options = {}) {
   const root = mkdtempSync(join(tmpdir(), 'design-feedback-import-'));
   t.after(() => rmSync(root, { recursive: true, force: true }));
-  const { file, document } = designFixture(root, { count: 1, variants: 2 });
+  const { file, document } = designFixture(root, { count: 1, variants: 2, ...options });
   const env = { ...process.env, PLANR_HOME: join(root, 'private-home') };
   await renderDesignDocument(file);
   const current = currentDesign(file);
@@ -334,4 +334,24 @@ test('canonical review envelopes and matching ledgers retain their review custod
     assert.equal(imported.decision, 'pending');
     assert.deepEqual(imported.pins, f.review.pins);
   }
+});
+
+test('auto feedback imports retain measured viewports and reject incompatible widths', async (t) => {
+  const f = await fixture(t, {
+    frames: [{ id: 'long', label: 'Long page', width: 600, height: 'auto' }],
+  });
+  f.review.pins[0].viewport = { width: 600, height: 4200 };
+  f.save(f.review);
+  await f.run();
+  assert.deepEqual(readDesignFeedback(f.file, f.env).pins[0].viewport, {
+    width: 600,
+    height: 4200,
+  });
+  const exported = exportDesignReview(f.file, { env: f.env });
+  f.save(exported);
+  await f.run();
+  assert.equal(readDesignFeedback(f.file, f.env).pins.length, 1);
+  f.review.pins[0].viewport.width = 601;
+  f.save(f.review);
+  await assert.rejects(() => f.run(), /does not match its original screen and captured frame/);
 });

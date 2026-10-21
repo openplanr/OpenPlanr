@@ -93,6 +93,15 @@ test('ready evidence compiles all stable checks and exposes only prepare-plan co
   );
 });
 
+test('readiness rejects the withdrawn authored document version', () => {
+  const input = readyInput();
+  input.document.schemaVersion = '1.1.0';
+  assert.throws(() => compileDesignHandoffReadiness(input), {
+    name: 'TypeError',
+    message: 'Readiness requires one supported design document.',
+  });
+});
+
 test('missing, blocked, attention, and stale evidence produce exact recovery states', () => {
   const missing = readyInput();
   delete missing.verification;
