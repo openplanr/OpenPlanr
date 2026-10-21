@@ -161,8 +161,15 @@ long boards explicitly with `layout.boards` when they need more room.
 
 Set `box-sizing: border-box` on the authored screen root
 (`body[data-planr-screen]`), either directly or through a universal selector. The
-renderer preserves authored box sizing; the browser audit enforces this requirement.
+renderer preserves authored box sizing; the browser audit checks this requirement.
 The browser audit reports `vertical-overflow` when a fixed frame's document height
 exceeds its viewport by more than 1px; auto frames skip this rule. `outside-frame` reports
 rendered absolute/fixed elements beyond the width or height by more than 1px,
 using document height for auto frames and respecting ancestor overflow clipping.
+
+The three rules (`board-root-box-sizing`, `vertical-overflow`, `outside-frame`)
+are errors for documents with a `layout` object, including an empty object, or any
+frame with `height: "auto"`. They are warnings for all other documents and do not
+block verification or handoff readiness. The authored `schemaVersion` stays
+`1.0.0`; feature use determines severity for the whole document. Pass the document
+to `auditDesignPage` with its revision and entries when running browser checks.

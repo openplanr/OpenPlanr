@@ -199,7 +199,7 @@
     {
       "source": "packages/design/lib/design/browser-audit.mjs",
       "target": "lib/design/browser-audit.mjs",
-      "sha256": "4327247e4a41508ca226729f028455270b9214807539357381c56b8f751ec812",
+      "sha256": "b63da9a6d392a213ba16a0b98cd3569674060a917d31e0e70ee117b680329173",
       "mode": "644"
     },
     {
@@ -445,7 +445,7 @@
     {
       "source": "packages/design/lib/design/share-status.mjs",
       "target": "lib/design/share-status.mjs",
-      "sha256": "0daead51d3f2320a68f7f5dd4bcd9cecfd567a8c830d621692d9beaf81691879",
+      "sha256": "f2763e1c6bc4133215b5a901153ae23eaae5a5df350fb8fc607032bd7825ddff",
       "mode": "644"
     },
     {

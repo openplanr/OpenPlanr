@@ -1,21 +1,32 @@
 import assert from 'node:assert/strict';
-import { existsSync } from 'node:fs';
+import { existsSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import test from 'node:test';
+import { runInNewContext } from 'node:vm';
 
 import { browserExecutable, launchBrowser } from '../../../tests/support/browser-launcher.mjs';
 import { auditDesignPage, auditRenderedScreen } from '../lib/design/browser-audit.mjs';
+import { currentDesign, renderDesignDocument } from '../lib/design/document.mjs';
+import { compileDesignHandoffReadiness } from '../lib/design/handoff-readiness.mjs';
+import { verifyDesignDocument } from '../lib/design/utility.mjs';
+import { designFixture } from './design-fixture.mjs';
 
+const document = { frames: [{ id: 'desktop', width: 900, height: 700 }] };
 const entry = {
   artifactId: 'overview-desktop',
   screenId: 'overview',
   frameId: 'desktop',
   variantId: 'primary',
 };
-function mockPage(result, { attribute = 'data-planr-artifact-frame', throws = false } = {}) {
+function mockPage(
+  result,
+  { attribute = 'data-planr-artifact-frame', throws = false, artifact = entry } = {},
+) {
   const panel = { hidden: true };
   const handle = {
     async getAttribute(name) {
-      return name === attribute ? entry.artifactId : null;
+      return name === attribute ? artifact.artifactId : null;
     },
     async evaluate(fn, argument) {
       return fn({ closest: () => panel }, argument);
@@ -46,9 +57,22 @@ const clearResult = () => ({
   issues: [],
 });
 
+test('rendered audits require a design document input', async () => {
+  for (const options of [undefined, { entries: [entry] }, { document: null, entries: [entry] }]) {
+    await assert.rejects(auditDesignPage(mockPage(clearResult()), options), {
+      name: 'TypeError',
+      message: 'Audit requires a design document input.',
+    });
+  }
+});
+
 test('rendered checks remain unverified until caller supplies screenshots and completed journeys', async () => {
   const page = mockPage(clearResult());
-  const report = await auditDesignPage(page, { revision: 'revision-one', entries: [entry] });
+  const report = await auditDesignPage(page, {
+    revision: 'revision-one',
+    document,
+    entries: [entry],
+  });
   assert.equal(report.status, 'unverified');
   assert.deepEqual(report.checkedArtifacts, [entry.artifactId]);
   assert.deepEqual(report.scenarios, []);
@@ -56,6 +80,7 @@ test('rendered checks remain unverified until caller supplies screenshots and co
   assert.equal(page.panel.hidden, true, 'audit restores hidden review panels');
   const verified = await auditDesignPage(page, {
     revision: 'revision-one',
+    document,
     entries: [entry],
     screenshotPaths: ['screenshots/overview.png'],
     scenarios: [{ name: 'Save account', status: 'passed' }],
@@ -66,6 +91,7 @@ test('rendered checks remain unverified until caller supplies screenshots and co
 test('missing, mismatched and failed frames can never claim complete artifact coverage', async () => {
   const options = {
     revision: 'revision-one',
+    document,
     entries: [entry],
     screenshotPaths: ['overview.png'],
     scenarios: [{ name: 'Save', status: 'passed' }],
@@ -91,7 +117,11 @@ test('computed findings retain artifact identity and browser script failures rem
     ],
   });
   page.pageErrors = async () => [new Error('Action handler failed.')];
-  const report = await auditDesignPage(page, { revision: 'revision-one', entries: [entry] });
+  const report = await auditDesignPage(page, {
+    revision: 'revision-one',
+    document,
+    entries: [entry],
+  });
   assert.equal(report.status, 'failed');
   assert.deepEqual(report.issues[0], {
     artifactId: entry.artifactId,
@@ -156,7 +186,11 @@ test('real browser audits hidden frames and restores their review visibility', a
     `<section data-artifact-id="overview-desktop" hidden><iframe title="Account" data-planr-artifact-frame="overview-desktop" width="900" height="700" srcdoc="${srcdoc}"></iframe></section>`,
     { waitUntil: 'load' },
   );
-  const report = await auditDesignPage(page, { revision: 'browser-revision', entries: [entry] });
+  const report = await auditDesignPage(page, {
+    revision: 'browser-revision',
+    document,
+    entries: [entry],
+  });
   assert.deepEqual(report.checkedArtifacts, [entry.artifactId]);
   assert.equal(
     report.issues.filter(({ severity }) => severity === 'error').length,
@@ -170,10 +204,13 @@ test('real browser audits hidden frames and restores their review visibility', a
 test('frame mode reaches the rendered auditor', async () => {
   const page = mockPage(clearResult());
   page.frames()[0].evaluate = async (_fn, argument) => {
-    assert.deepEqual(argument, { height: 'auto' });
+    assert.deepEqual(argument, { height: 'auto', frameBoundsSeverity: 'error' });
     return clearResult();
   };
-  await auditDesignPage(page, { entries: [{ ...entry, height: 'auto' }] });
+  await auditDesignPage(page, {
+    document: { frames: [{ ...document.frames[0], height: 'auto' }] },
+    entries: [{ ...entry, height: 'auto' }],
+  });
 });
 
 test('real browser enforces frame bounds and root sizing while respecting clipped scroll content', async (t) => {
@@ -237,4 +274,100 @@ test('real browser enforces frame bounds and root sizing while respecting clippe
     ),
     false,
   );
+});
+
+function scrollingScreen(fn, argument, screenId) {
+  const body = { getAttribute: () => screenId };
+  const drawer = {
+    getAttribute: () => 'drawer',
+    getBoundingClientRect: () => ({
+      left: -50,
+      right: -10,
+      top: 0,
+      bottom: 40,
+      width: 40,
+      height: 40,
+    }),
+    parentElement: body,
+    childNodes: [],
+    closest: () => null,
+    tabIndex: -1,
+  };
+  const result = runInNewContext(`(${fn.toString()})(argument)`, {
+    argument,
+    document: {
+      body,
+      readyState: 'complete',
+      documentElement: { scrollHeight: 1200, scrollWidth: 640 },
+      querySelectorAll: () => [drawer],
+      createElement: () => ({ getContext: () => null }),
+    },
+    window: { innerWidth: 640, innerHeight: 600, scrollX: 0, scrollY: 0 },
+    getComputedStyle: (node) =>
+      node === body
+        ? { boxSizing: 'content-box' }
+        : { position: 'fixed', visibility: 'visible', opacity: '1' },
+  });
+  return JSON.parse(JSON.stringify(result));
+}
+
+test('frame bounds warn for legacy documents and block verification for layout or auto documents', async (t) => {
+  for (const mode of ['legacy', 'layout', 'auto']) {
+    const root = mkdtempSync(join(tmpdir(), 'design-audit-severity-'));
+    t.after(() => rmSync(root, { recursive: true, force: true }));
+    const { file, document } = designFixture(root, {
+      count: 1,
+      frames: [{ id: 'desktop', label: 'Desktop', width: 640, height: 600 }],
+    });
+    if (mode === 'layout') document.layout = {};
+    if (mode === 'auto')
+      document.frames.push({ id: 'long', label: 'Long', width: 640, height: 'auto' });
+    writeFileSync(file, JSON.stringify(document));
+    await renderDesignDocument(file);
+    const current = currentDesign(file);
+    const frames = current.entries.map((artifact) => {
+      const page = mockPage(null, { artifact });
+      page.frames()[0].evaluate = async (fn, argument) =>
+        scrollingScreen(fn, argument, artifact.screenId);
+      return page.frames()[0];
+    });
+    const screenshot = join(root, 'screen.png');
+    writeFileSync(
+      screenshot,
+      Buffer.from(
+        'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Wl6F8sAAAAASUVORK5CYII=',
+        'base64',
+      ),
+    );
+    const report = await auditDesignPage(
+      { frames: () => frames },
+      {
+        revision: current.revision,
+        document: current.document,
+        entries: current.entries,
+        screenshotPaths: [screenshot],
+        scenarios: [{ name: 'Open drawer', status: 'passed' }],
+      },
+    );
+    assert.deepEqual(
+      Array.from(report.screens[0].issues, ({ rule, severity }) => ({ rule, severity })),
+      ['board-root-box-sizing', 'vertical-overflow', 'outside-frame'].map((rule) => ({
+        rule,
+        severity: mode === 'legacy' ? 'warning' : 'error',
+      })),
+      mode,
+    );
+    const verified = verifyDesignDocument(file, report);
+    assert.equal(verified.status, mode === 'legacy' ? 'verified' : 'failed', mode);
+    const readiness = compileDesignHandoffReadiness({
+      document: current.document,
+      sourceRevision: current.revision,
+      verification: verified,
+    });
+    assert.equal(
+      readiness.checks.find(({ id }) => id === 'rendered-verification').status,
+      mode === 'legacy' ? 'pass' : 'blocked',
+      mode,
+    );
+  }
 });

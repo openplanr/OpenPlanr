@@ -3,7 +3,7 @@
  * closure dependencies: browser tools can evaluate this function's source.
  * It inspects rendered CSS and geometry; it does not exercise product actions.
  */
-export function auditRenderedScreen({ height } = {}) {
+export function auditRenderedScreen({ height, frameBoundsSeverity = 'warning' } = {}) {
   const issues = [];
   const add = (rule, severity, message) => issues.push({ rule, severity, message });
   const label = (node) =>
@@ -18,11 +18,15 @@ export function auditRenderedScreen({ height } = {}) {
     add('screen-loading', 'error', `The frame is still ${document.readyState}.`);
   const documentHeight = document.documentElement.scrollHeight;
   if (document.body && getComputedStyle(document.body).boxSizing !== 'border-box')
-    add('board-root-box-sizing', 'error', 'The screen root body must use box-sizing: border-box.');
+    add(
+      'board-root-box-sizing',
+      frameBoundsSeverity,
+      'The screen root body must use box-sizing: border-box.',
+    );
   if (height !== 'auto' && documentHeight > viewport.height + 1)
     add(
       'vertical-overflow',
-      'error',
+      frameBoundsSeverity,
       `The screen is ${documentHeight}px tall in a ${viewport.height}px frame.`,
     );
   const nodes = [...document.querySelectorAll('body *')];
@@ -126,7 +130,11 @@ export function auditRenderedScreen({ height } = {}) {
           top < -1 ||
           bottom > (height === 'auto' ? documentHeight : viewport.height) + 1)
       )
-        add('outside-frame', 'error', `${label(node)} is positioned outside the frame box.`);
+        add(
+          'outside-frame',
+          frameBoundsSeverity,
+          `${label(node)} is positioned outside the frame box.`,
+        );
     }
     if (!visible(node)) continue;
     checkedElements += 1;
@@ -284,11 +292,18 @@ export function auditRenderedScreen({ height } = {}) {
  */
 export async function auditDesignPage(
   page,
-  { revision, entries = [], screenshotPaths = [], scenarios = [] } = {},
+  { revision, document, entries = [], screenshotPaths = [], scenarios = [] } = {},
 ) {
+  if (!document || typeof document !== 'object' || Array.isArray(document))
+    throw new TypeError('Audit requires a design document input.');
   const issues = [],
     checkedArtifacts = [],
     screens = [];
+  const frameBoundsSeverity =
+    (document.layout && typeof document.layout === 'object') ||
+    document.frames?.some((frame) => frame.height === 'auto')
+      ? 'error'
+      : 'warning';
   const expected = new Map(entries.map((entry) => [entry.artifactId, entry]));
   const add = (artifactId, rule, severity, message) =>
     issues.push({ artifactId, rule, severity, message });
@@ -351,6 +366,7 @@ export async function auditDesignPage(
       await page.keyboard?.press('Tab');
       const result = await frame.evaluate(auditRenderedScreen, {
         height: expected.get(artifactId).height,
+        frameBoundsSeverity,
       });
       if (result.screenId !== expected.get(artifactId).screenId) {
         add(

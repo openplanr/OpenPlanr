@@ -129,12 +129,16 @@ viewports. Auto boards measure content after load and fonts settle, then update
 on body resize, up to 16384px. Pins retain the numeric viewport captured when
 submitted; an exported frame may say `auto` without changing those coordinates.
 
-Browser verification fails `vertical-overflow` for a fixed frame whose document
+Browser verification reports `vertical-overflow` for a fixed frame whose document
 height exceeds its viewport by more than 1px. Auto frames skip that check.
-`outside-frame` fails rendered absolute/fixed elements more than 1px outside the
+`outside-frame` reports rendered absolute/fixed elements more than 1px outside the
 frame width or height (document height for auto), after ancestor overflow clips
 are applied. Hidden and zero-sized elements are ignored.
 `board-root-box-sizing` requires the screen's body to compute `border-box`.
-For older revisions without that root style, update the authored root CSS and
-re-render before verifying them again. Inspect screenshots and journeys as well
-as these geometry checks.
+These three rules are errors only when the design document has a `layout` object
+(including an empty object) or any frame with `height: "auto"`; otherwise they are
+warnings and do not block verification or handoff readiness. The authored
+`schemaVersion` remains `1.0.0` and does not determine severity. Pass the current
+design document to `auditDesignPage` alongside the revision and entries so every
+screen uses the document's severity. Inspect screenshots and journeys as well as
+these geometry checks.

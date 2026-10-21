@@ -1390,7 +1390,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:0399293b71f74b1b89c0d6bcba9837f1cffb506dc2fbbc8991be680aa61a68fc"
+          "digest": "sha256:eb12155eef990f6d305be9343f1b6c0514aa9b7ae1d6b98792da15609a1be32d"
         },
         {
           "path": "references/handoff.md",
@@ -1414,7 +1414,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:85d163abb1770663f641f81e2f09861cfb94c3fe1efe8f85cb4857da7e5ae3ce"
+          "digest": "sha256:f601763324eb31feb3036d1fd60785a5d0490b5d6c2e54ee488347614c6f32ed"
         },
         {
           "path": "references/utilities.md",
@@ -1450,7 +1450,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:8bb68fa3299b9df4dad9ddec2089d8da2c3367792b53b5b960b58cd31ca5ef9f"
+          "digest": "sha256:0cc5fd5644e17cf7a5cb54801a9429ddda35566303ff8715e739245ca2c94234"
         },
         {
           "path": "scripts/design-artifact-shell.mjs",
@@ -1654,7 +1654,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:2938b6ceeb4ca32d10e6de5db15078d8d914650712364d9d549a9faa92459bd5"
+          "digest": "sha256:cd3dfddf81fca1c7b1da9a4cf5f66180a02b669c57601df54f19fbd47a429eb7"
         },
         {
           "path": "scripts/design-shared-artifact-support-dependencies-design-support-protocol-contracts-3d9b1a86.mjs",
@@ -2600,7 +2600,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:0399293b71f74b1b89c0d6bcba9837f1cffb506dc2fbbc8991be680aa61a68fc"
+          "digest": "sha256:eb12155eef990f6d305be9343f1b6c0514aa9b7ae1d6b98792da15609a1be32d"
         },
         {
           "path": "references/handoff.md",
@@ -2624,7 +2624,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:85d163abb1770663f641f81e2f09861cfb94c3fe1efe8f85cb4857da7e5ae3ce"
+          "digest": "sha256:f601763324eb31feb3036d1fd60785a5d0490b5d6c2e54ee488347614c6f32ed"
         },
         {
           "path": "references/utilities.md",
@@ -2660,7 +2660,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:8bb68fa3299b9df4dad9ddec2089d8da2c3367792b53b5b960b58cd31ca5ef9f"
+          "digest": "sha256:0cc5fd5644e17cf7a5cb54801a9429ddda35566303ff8715e739245ca2c94234"
         },
         {
           "path": "scripts/design-artifact-shell.mjs",
@@ -2864,7 +2864,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:2938b6ceeb4ca32d10e6de5db15078d8d914650712364d9d549a9faa92459bd5"
+          "digest": "sha256:cd3dfddf81fca1c7b1da9a4cf5f66180a02b669c57601df54f19fbd47a429eb7"
         },
         {
           "path": "scripts/design-shared-artifact-support-dependencies-design-support-protocol-contracts-3d9b1a86.mjs",
@@ -3810,7 +3810,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:0399293b71f74b1b89c0d6bcba9837f1cffb506dc2fbbc8991be680aa61a68fc"
+          "digest": "sha256:eb12155eef990f6d305be9343f1b6c0514aa9b7ae1d6b98792da15609a1be32d"
         },
         {
           "path": "references/handoff.md",
@@ -3834,7 +3834,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:85d163abb1770663f641f81e2f09861cfb94c3fe1efe8f85cb4857da7e5ae3ce"
+          "digest": "sha256:f601763324eb31feb3036d1fd60785a5d0490b5d6c2e54ee488347614c6f32ed"
         },
         {
           "path": "references/utilities.md",
@@ -3870,7 +3870,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:8bb68fa3299b9df4dad9ddec2089d8da2c3367792b53b5b960b58cd31ca5ef9f"
+          "digest": "sha256:0cc5fd5644e17cf7a5cb54801a9429ddda35566303ff8715e739245ca2c94234"
         },
         {
           "path": "scripts/design-artifact-shell.mjs",
@@ -4074,7 +4074,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:2938b6ceeb4ca32d10e6de5db15078d8d914650712364d9d549a9faa92459bd5"
+          "digest": "sha256:cd3dfddf81fca1c7b1da9a4cf5f66180a02b669c57601df54f19fbd47a429eb7"
         },
         {
           "path": "scripts/design-shared-artifact-support-dependencies-design-support-protocol-contracts-3d9b1a86.mjs",
@@ -5411,7 +5411,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:4b00cba0fc3235ff47ad5a0710052bdeda3c1bf4c2e0c6412b006db3e6111480"
+          "digest": "sha256:7e1379e8a1f2900f45fb75f8dc30faba06511d2d0eaae9cb9588db3d79de127c"
         },
         {
           "path": "scripts/design-protocol-contracts.mjs",
