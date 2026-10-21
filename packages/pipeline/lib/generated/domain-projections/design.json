@@ -217,7 +217,7 @@
     {
       "source": "packages/design/lib/design/context.mjs",
       "target": "lib/design/context.mjs",
-      "sha256": "09f00d40fa1d4d92ca14955081f016e32d577b1fd26e94ee150b65df7eca037e",
+      "sha256": "4705fdb4468d766d0f29063d09ef2e26cf25ec67abda78bdfbcdb9466a829bb2",
       "mode": "644"
     },
     {
@@ -259,7 +259,7 @@
     {
       "source": "packages/design/lib/design/document-state.mjs",
       "target": "lib/design/document-state.mjs",
-      "sha256": "1b69a5c4a9f5346c19c442962c3737ef4ae5c3a4c9981e3641c5783041927c66",
+      "sha256": "f506b142c58e41e14d948f95ab98fa0e55463772389a000ed106a10e4dd4d577",
       "mode": "644"
     },
     {
@@ -379,7 +379,7 @@
     {
       "source": "packages/design/lib/design/layout-save.mjs",
       "target": "lib/design/layout-save.mjs",
-      "sha256": "9a2877b33e1c264cf961a70eb1dc4a54bdc06698b7b9952367456915db08b854",
+      "sha256": "63110f2e5c936ee9e4031540d8897daed69fe89fd5edf6f3ee2f67eafec4a310",
       "mode": "644"
     },
     {
@@ -427,7 +427,7 @@
     {
       "source": "packages/design/lib/design/review.mjs",
       "target": "lib/design/review.mjs",
-      "sha256": "be9d1531ed2cedf1803a9b6efc0e5f386d4d35ee3914a86cafec85254b6ea7a6",
+      "sha256": "374af7633958583c44da312f3e0541f54f37f85f74dfa2e60f72422a88e85d67",
       "mode": "644"
     },
     {
@@ -463,7 +463,7 @@
     {
       "source": "packages/design/lib/design/studio-render.mjs",
       "target": "lib/design/studio-render.mjs",
-      "sha256": "69385f2d2e3c9398055124b003ae4de35ad3b9c3f3807c45f6c56fe78ce40918",
+      "sha256": "2b630d41eff439f513c7e367a46038be223b18bd4732fbdbb401bd55c0c20713",
       "mode": "644"
     },
     {
@@ -517,7 +517,7 @@
     {
       "source": "packages/design/lib/design/ui/studio.mjs",
       "target": "lib/design/ui/studio.mjs",
-      "sha256": "6cd922b6171351ccb16ff846595ed12e52d80c7b2d195a8ee48a2d0e12ee0a41",
+      "sha256": "b7ce69a51496396a13d70d0c3397a9e4aaab2669cd4299353fe6d092241d11dd",
       "mode": "644"
     },
     {
@@ -589,7 +589,7 @@
     {
       "source": "packages/design/templates/studio/studio.js",
       "target": "templates/studio/studio.js",
-      "sha256": "ed3ffca82cf4b8372cf8c96c7280c74f02009bd58f73d2e2a426b6f8199e280b",
+      "sha256": "2e0a8fc043b3dc9101793a0c64a17fccbcc85792ed9733e810395968d53c42b2",
       "mode": "644"
     }
   ]

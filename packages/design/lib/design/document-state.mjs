@@ -28,7 +28,7 @@ export function readJson(path, fallback = undefined) {
 export function atomicJson(path, value, { mode } = {}) {
   atomicBytes(path, json(value), mode);
 }
-function atomicBytes(path, bytes, mode) {
+export function atomicBytes(path, bytes, mode) {
   mkdirSync(dirname(path), { recursive: true });
   const temporary = `${path}.${randomUUID()}.tmp`;
   try {

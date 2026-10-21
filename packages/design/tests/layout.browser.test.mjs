@@ -6,9 +6,154 @@ import { join } from 'node:path';
 import { test } from 'node:test';
 import { browserEngine, launchBrowser } from '../../../tests/support/browser-launcher.mjs';
 import { renderDesignDocument } from '../lib/design/document.mjs';
+import { currentDesign } from '../lib/design/document-state.mjs';
 import { designFixture } from './design-fixture.mjs';
 import { startDesignReview } from './studio-http-fixture.mjs';
 import { settleStudioChrome } from './studio-readiness.mjs';
+
+test(`legacy board positions migrate once from server and local state (${browserEngine()})`, {
+  timeout: 60000,
+}, async () => {
+  const root = await mkdtemp(join(tmpdir(), 'openplanr-layout-migration-'));
+  let browser, session;
+  try {
+    const { file, document } = designFixture(root, {
+      count: 3,
+      frames: [{ id: 'desktop', label: 'Desktop', width: 600, height: 450 }],
+    });
+    const keys = ['screen-1/desktop/A', 'screen-2/desktop/A', 'screen-3/desktop/A'];
+    const authored = { x: 450, y: 210, title: 'Authored board' };
+    document.layout = {
+      boards: {
+        'screen-2': { x: 900, y: 300, title: 'Second row' },
+        [keys[2]]: authored,
+      },
+    };
+    writeFileSync(file, `${JSON.stringify(document, null, 2)}\n`);
+    await renderDesignDocument(file);
+    const current = currentDesign(file);
+    const artifactIds = keys.map(
+      (key) =>
+        current.entries.find(
+          ({ screenId, frameId, variantId }) => `${screenId}/${frameId}/${variantId}` === key,
+        ).artifactId,
+    );
+    const stateFile = join(root, '.design/studio-state.json');
+    writeFileSync(
+      stateFile,
+      JSON.stringify({
+        state: {
+          positions: {
+            [artifactIds[0]]: { x: 100.6, y: 90.4 },
+            [artifactIds[2]]: { x: -100, y: -100 },
+          },
+        },
+        stateVersion: 7,
+        revision: current.revision,
+      }),
+    );
+    session = await startDesignReview(file, {
+      env: { ...process.env, PLANR_HOME: join(root, 'home') },
+      port: 0,
+    });
+    browser = await launchBrowser({ engine: browserEngine() });
+    const page = await browser.newPage({ viewport: { width: 1600, height: 1050 } });
+    page.setDefaultTimeout(10000);
+    const layoutRequests = [];
+    page.on('request', (request) => {
+      if (request.url().endsWith('/api/design-layout') && request.method() === 'PUT')
+        layoutRequests.push(request.postDataJSON());
+    });
+    await page.addInitScript(
+      ({ artifactIds, storageKey }) => {
+        if (sessionStorage.getItem('layout-migration-seeded')) return;
+        localStorage.setItem(
+          storageKey,
+          JSON.stringify({
+            state: {
+              positions: {
+                [artifactIds[0]]: { x: 700, y: 700 },
+                [artifactIds[1]]: { x: 200.2, y: 180.6 },
+                [artifactIds[2]]: { x: 800, y: 800 },
+              },
+            },
+          }),
+        );
+        sessionStorage.setItem('layout-migration-seeded', 'true');
+      },
+      { artifactIds, storageKey: 'openplanr.design-studio.operations' },
+    );
+    const stateLoaded = page.waitForResponse(
+      (response) =>
+        response.url().endsWith('/api/design-state') && response.request().method() === 'GET',
+    );
+    await page.goto(session.url);
+    await (await stateLoaded).finished();
+    await page.locator('[data-design-ready="true"]').waitFor();
+    await settleStudioChrome(page);
+    await page.evaluate(() => window.__openPlanrDesignStudio.flush());
+    const migrated = await page.evaluate(
+      (keys) => keys.map((key) => window.__openPlanrDesignStudio.getLayout().boards[key]),
+      keys,
+    );
+    assert.deepEqual(
+      migrated.map((point) => point && { x: point.x, y: point.y }),
+      [
+        { x: 101, y: 90 },
+        { x: 200, y: 181 },
+        { x: authored.x, y: authored.y },
+      ],
+      'server coordinates win, local coordinates fill absent exact keys, and authored coordinates remain',
+    );
+    assert.equal(layoutRequests.length, 1, 'all legacy positions use one layout revision');
+    const saved = JSON.parse(readFileSync(file, 'utf8')).layout.boards;
+    for (const [index, key] of keys.entries()) assert.deepEqual(saved[key], migrated[index]);
+    assert.deepEqual(saved[keys[2]], authored);
+    for (const [index, artifactId] of artifactIds.entries()) {
+      const panel = page.locator(`.planr-artifact-panel[data-artifact-id="${artifactId}"]`);
+      assert.deepEqual(
+        await panel.evaluate((node) => ({
+          x: parseFloat(node.style.left),
+          y: parseFloat(node.style.top),
+        })),
+        { x: migrated[index].x, y: migrated[index].y },
+      );
+    }
+    assert.equal(
+      await page.evaluate(() => {
+        const draft = JSON.parse(localStorage.getItem('openplanr.design-studio.operations'));
+        return Object.hasOwn(draft.state, 'positions');
+      }),
+      false,
+      'a successful migration removes legacy coordinates from the stored local draft',
+    );
+    await page.evaluate(async () => {
+      window.__openPlanrDesignStudio.setPanels({ navOpen: false });
+      await window.__openPlanrDesignStudio.flush();
+    });
+    assert.equal(
+      Object.hasOwn(JSON.parse(readFileSync(stateFile, 'utf8')).state, 'positions'),
+      false,
+      'the next personal state save removes legacy coordinates from the server state',
+    );
+    await page.reload();
+    await page.locator('[data-design-ready="true"]').waitFor();
+    await settleStudioChrome(page);
+    await page.evaluate(() => window.__openPlanrDesignStudio.flush());
+    assert.equal(layoutRequests.length, 1, 'a reload does not migrate again');
+    assert.deepEqual(
+      await page.evaluate(
+        (keys) => keys.map((key) => window.__openPlanrDesignStudio.getLayout().boards[key]),
+        keys,
+      ),
+      migrated,
+    );
+  } finally {
+    await browser?.close();
+    await session?.close();
+    await rm(root, { recursive: true, force: true });
+  }
+});
 
 test(`board layout saves without replacing previews, supports undo and survives reload (${browserEngine()})`, {
   timeout: 60000,

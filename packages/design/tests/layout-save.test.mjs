@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
-import { chmodSync, mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import fs, { chmodSync, mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import { syncBuiltinESMExports } from 'node:module';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
@@ -95,6 +96,55 @@ test('concurrent layout saves recheck the revision under the render lock', async
   assert.equal(results.filter((result) => result.status === 'fulfilled').length, 1);
   const rejected = results.find((result) => result.status === 'rejected');
   assert.equal(rejected.reason.statusCode, 409);
+});
+
+test('layout saves preserve indentation and the presence of a trailing newline', async (t) => {
+  for (const [indent, trailing] of [
+    [4, ''],
+    ['\t', '\n'],
+    ['', ''],
+  ]) {
+    const f = await fixture(t);
+    const format = (value) => JSON.stringify(value, null, indent) + trailing;
+    writeFileSync(f.file, format(f.document));
+    await saveDesignLayout(f.file, {
+      revision: f.current.revision,
+      boards: { [key]: { x: 12, y: 34 } },
+    });
+    assert.equal(readFileSync(f.file, 'utf8'), format(currentDesign(f.file).document));
+  }
+});
+
+test('a failed layout render preserves a concurrent authored document edit', async (t) => {
+  const f = await fixture(t);
+  const newer = JSON.stringify({ ...f.document, title: 'Concurrent authored title' }, null, 4);
+  const write = fs.writeFileSync;
+  t.mock.method(fs, 'writeFileSync', (path, ...args) => {
+    if (typeof path === 'string' && /\/pending-[^/]+\/render\.json$/u.test(path)) {
+      write(f.file, newer);
+      throw new Error('Rendering could not write the pending render record.');
+    }
+    return write(path, ...args);
+  });
+  syncBuiltinESMExports();
+  t.after(() => {
+    t.mock.restoreAll();
+    syncBuiltinESMExports();
+  });
+  await assert.rejects(
+    saveDesignLayout(f.file, {
+      revision: f.current.revision,
+      boards: { [key]: { x: 12, y: 34 } },
+    }),
+    (error) => {
+      assert.equal(error.statusCode, 409);
+      assert.match(error.message, /authored document .* changed during the save/iu);
+      assert.match(error.cause.message, /could not write the pending render record/u);
+      return true;
+    },
+  );
+  assert.equal(readFileSync(f.file, 'utf8'), newer);
+  assert.equal(currentDesign(f.file).revision, f.current.revision);
 });
 
 test('layout saves cannot publish authored source changes into unchanged previews', async (t) => {

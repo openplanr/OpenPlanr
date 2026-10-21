@@ -116,6 +116,26 @@ function studioRuntimeIdentity(current) {
     ),
   };
 }
+function studioContentIdentity(current) {
+  const document = { ...current.document };
+  delete document.layout;
+  return hash(
+    JSON.stringify({
+      document,
+      layoutGuidance: {
+        titles: Object.entries(current.document.layout?.boards ?? {})
+          .filter(([, board]) => board.title !== undefined)
+          .map(([key, board]) => [key, board.title])
+          .sort(([left], [right]) => left.localeCompare(right)),
+        sections: current.document.layout?.sections ?? [],
+      },
+      artifactDigest: digestArtifactEnvelope(current.envelope),
+      fingerprints: current.fingerprints,
+      contextDigest: current.contextDigest,
+      specification: readFileSync(join(current.directory, 'design-spec.md'), 'utf8'),
+    }),
+  );
+}
 /** Deterministic projection of the local ledger, using original immutable sources. */
 export function exportDesignReview(file, { scope = 'all', env = process.env } = {}) {
   if (!['all', 'current'].includes(scope))
@@ -635,7 +655,13 @@ async function startDesignReviewUnlocked(
       }).state;
       const stalePins = readDesignFeedback(file, env).pins.filter((pin) => pin.stale);
       return renderDesignStudio(
-        { ...current, envelope: model.envelope, state, stalePins },
+        {
+          ...current,
+          envelope: model.envelope,
+          state,
+          stalePins,
+          contentIdentity: studioContentIdentity(current),
+        },
         { stageRuntimeUrl: `${base}runtime.js` },
       ).replace(
         '</head>',
@@ -954,6 +980,8 @@ async function startDesignReviewUnlocked(
             status: ready?.revision === current.revision ? ready.status : 'loading',
             verification: current.verification.status,
             runtimeIdentity: studioRuntimeIdentity(current),
+            contentIdentity: studioContentIdentity(current),
+            layout: current.document.layout,
           });
         } else if (route === 'design-state' && req.method === 'GET') {
           respond(res, 200, {

@@ -117,9 +117,11 @@ bundleCurrent.allOf = [
   },
 ];
 const currentDesign = /** @type {MutableSchema} */ (bundleCurrent.properties.design);
-currentDesign.properties.frames = /** @type {Record<string, unknown>} */ (
-  DESIGN_DOCUMENT_SCHEMA.properties
-).frames;
+for (const key of ['frames', 'layout'])
+  currentDesign.properties[key] = /** @type {Record<string, unknown>} */ (
+    DESIGN_DOCUMENT_SCHEMA.properties
+  )[key];
+bundleCurrent.$defs = structuredClone(DESIGN_DOCUMENT_SCHEMA.$defs);
 const currentEntries = /** @type {{ items: { properties: Record<string, unknown> } }} */ (
   bundleCurrent.properties.entries
 );
@@ -261,8 +263,9 @@ export function assertDesignReviewMetadata(value) {
 export function assertDesignReviewBundle(value) {
   assertReviewExperience(
     value,
-    Array.isArray(value?.design?.frames) &&
-      value.design.frames.some(({ height }) => height === 'auto')
+    value?.design?.layout !== undefined ||
+      (Array.isArray(value?.design?.frames) &&
+        value.design.frames.some(({ height }) => height === 'auto'))
       ? DESIGN_REVIEW_BUNDLE_CURRENT_SCHEMA
       : value?.schemaVersion === '1.2.0'
         ? DESIGN_REVIEW_BUNDLE_V12_SCHEMA

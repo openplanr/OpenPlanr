@@ -360,7 +360,7 @@
     {
       "source": "packages/protocol/projections/pipeline/lib/protocol/review-experience-contracts.mjs",
       "target": "lib/protocol/review-experience-contracts.mjs",
-      "sha256": "103eb9756d097b6adf1312b06fe952b99a75cf3d215e5b26bdd26d6c666e39f4",
+      "sha256": "db851552a5138a6e7262faad42b9dbc96d24c8b04531e81bf3cc24f4bd27a957",
       "mode": "644"
     },
     {
@@ -1560,7 +1560,7 @@
     {
       "source": "packages/protocol/schemas/v1.20.0/design-review-bundle.schema.json",
       "target": "schemas/v1.20.0/design-review-bundle.schema.json",
-      "sha256": "36a39bb543f604ed4af4d1f230770b80a31e0e85bc6ce1d1db94fb5fdad71d68",
+      "sha256": "72db7c04d4a96ee8fc2a9c1c4146dd1cfc4352a80ea8cacda50aceeb9ad172c7",
       "mode": "644"
     },
     {

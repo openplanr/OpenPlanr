@@ -17,6 +17,400 @@ const cliRequire = createRequire(new URL('../../cli/package.json', import.meta.u
 const { JSDOM } = cliRequire('jsdom');
 const runtime = readFileSync(new URL('../templates/studio/studio.js', import.meta.url), 'utf8');
 
+function moveBoard(app, key = 'ArrowRight') {
+  app.stage
+    .getPanel(app.entries[0].artifactId)
+    .querySelector('[data-design-drag]')
+    .dispatchEvent(new app.window.KeyboardEvent('keydown', { key, bubbles: true }));
+}
+
+function undoBoard(app, redo = false) {
+  app.documentNode.body.dispatchEvent(
+    new app.window.KeyboardEvent('keydown', {
+      key: 'z',
+      ctrlKey: true,
+      shiftKey: redo,
+      bubbles: true,
+    }),
+  );
+}
+
+for (const foreign of [false, true]) {
+  test(`layout conflict ${foreign ? 'preserves foreign authored content' : 'rebases absolute moves'}`, async (t) => {
+    const data = fixture({ count: 1 });
+    data.revision = 'initial';
+    data.contentIdentity = 'authored';
+    const inputs = [];
+    const app = await mount({
+      data,
+      options: {
+        statusUrl: '/api/design-status',
+        saveLayout: async (input) => {
+          inputs.push(input);
+          if (inputs.length === 1)
+            throw Object.assign(new Error('Stale layout'), { conflict: true });
+          return { revision: 'saved' };
+        },
+      },
+      fetchImpl: async () => ({
+        ok: true,
+        json: async () => ({
+          revision: 'concurrent',
+          contentIdentity: foreign ? 'new-authored' : 'authored',
+        }),
+      }),
+    });
+    t.after(() => app.close());
+    moveBoard(app);
+    await app.studio.flush();
+    if (foreign) {
+      assert.match(
+        app.documentNode.querySelector('[data-design-notice-message]').textContent,
+        /new design revision is ready/i,
+      );
+      assert.equal(inputs.length, 1);
+      await app.studio.flush();
+      assert.equal(inputs.length, 1, 'foreign content blocks stale layout retries');
+    } else {
+      assert.equal(
+        inputs.length,
+        2,
+        'the stale move is resent after fetching the current revision',
+      );
+      assert.equal(inputs[1].revision, 'concurrent');
+      assert.deepEqual(inputs[1].boards, inputs[0].boards);
+      assert.equal(app.studio.getRevision(), 'saved');
+      assert.match(
+        app.documentNode.querySelector('[data-design-notice-message]').textContent,
+        /rebased/i,
+      );
+    }
+  });
+}
+
+test('layout conflict drops stale restore operations and retains concurrent board positions', async (t) => {
+  const data = fixture({ count: 1 });
+  data.revision = 'initial';
+  data.contentIdentity = 'authored';
+  const key = 'screen-1/desktop/editorial';
+  const concurrent = { x: 400, y: 500 };
+  const inputs = [];
+  const app = await mount({
+    data,
+    options: {
+      statusUrl: '/api/design-status',
+      saveLayout: async (input) => {
+        inputs.push(input);
+        if (Object.hasOwn(input, 'restoreRevision'))
+          throw Object.assign(new Error('Stale restore'), { conflict: true });
+        return { revision: 'moved' };
+      },
+    },
+    fetchImpl: async () => ({
+      ok: true,
+      json: async () => ({
+        revision: 'concurrent',
+        contentIdentity: 'authored',
+        layout: { boards: { [key]: concurrent } },
+      }),
+    }),
+  });
+  t.after(() => app.close());
+  moveBoard(app);
+  await app.studio.flush();
+  undoBoard(app);
+  await app.studio.flush();
+  assert.equal(inputs.length, 2, 'a stale restore is not resent');
+  assert.match(
+    app.documentNode.querySelector('[data-design-notice-message]').textContent,
+    /Stale undo and redo operations were dropped/u,
+  );
+  assert.equal(app.studio.getRevision(), 'concurrent');
+  assert.equal(JSON.stringify(app.studio.getLayout().boards[key]), JSON.stringify(concurrent));
+  assert.equal(app.studio.getSaveState().dirty, false);
+});
+
+for (const trigger of ['Retry', 'online']) {
+  test(`layout network error retries through ${trigger}`, async (t) => {
+    const inputs = [];
+    const app = await mount({
+      options: {
+        saveLayout: async (input) => {
+          inputs.push(input);
+          if (inputs.length === 1) throw new Error('Network unavailable');
+          return { revision: 'saved' };
+        },
+      },
+    });
+    t.after(() => app.close());
+    moveBoard(app);
+    await app.studio.flush();
+    assert.match(
+      app.documentNode.querySelector('[data-design-notice-message]').textContent,
+      /Network unavailable/u,
+    );
+    const retry = app.documentNode.querySelector('[data-design-retry-layout]');
+    assert.ok(retry && !retry.hidden, 'layout failure provides a Retry action');
+    if (trigger === 'Retry') retry.click();
+    else app.window.dispatchEvent(new app.window.Event('online'));
+    await app.studio.flush();
+    assert.equal(inputs.length, 2);
+    assert.equal(app.studio.getSaveState().dirty, false);
+  });
+}
+
+test('undo and redo of an unsaved move never restore a null revision', async (t) => {
+  const inputs = [];
+  let failing = true;
+  const app = await mount({
+    options: {
+      saveLayout: async (input) => {
+        inputs.push(input);
+        if (failing) throw new Error('Offline');
+        return { revision: 'saved' };
+      },
+    },
+  });
+  t.after(() => app.close());
+  const original = app.studio.getLayout();
+  moveBoard(app);
+  await app.studio.flush();
+  const moved = app.studio.getLayout();
+  undoBoard(app);
+  await delay(0);
+  assert.deepEqual(app.studio.getLayout(), original);
+  assert.equal(inputs.length, 1, 'undo rewrites the failed move locally');
+  assert.equal(app.studio.getSaveState().dirty, true);
+  failing = false;
+  undoBoard(app, true);
+  await app.studio.flush();
+  assert.deepEqual(app.studio.getLayout(), moved);
+  assert.equal(inputs.length, 2);
+  assert.ok(inputs.every((input) => !Object.hasOwn(input, 'restoreRevision')));
+});
+
+test('portable legacy positions migrate only into session layout', async (t) => {
+  const data = fixture({ count: 1 });
+  const id = data.entries[0].artifactId;
+  const stored = { state: { positions: { [id]: { x: 31.6, y: -42.3 } } } };
+  const app = await mount({ data, stored });
+  t.after(() => app.close());
+  assert.equal(
+    JSON.stringify(app.studio.getLayout().boards['screen-1/desktop/editorial']),
+    JSON.stringify({ x: 32, y: -42 }),
+  );
+  assert.equal(Object.hasOwn(app.studio.getState(), 'positions'), false);
+});
+
+test('legacy server positions migrate before local positions and are removed only after saving', async (t) => {
+  const data = fixture({ count: 1 });
+  data.revision = 'initial';
+  const keys = data.entries.map((entry) => `${entry.screenId}/${entry.frameId}/${entry.variantId}`);
+  const ids = data.entries.map((entry) => entry.artifactId);
+  data.document.layout = { boards: { [keys[2]]: { x: 50, y: 60, title: 'Authored' } } };
+  const stored = {
+    state: {
+      positions: {
+        [ids[0]]: { x: 999, y: 999 },
+        [ids[1]]: { x: 20.2, y: 30.9 },
+      },
+    },
+  };
+  const inputs = [],
+    personal = [];
+  let fail = true;
+  const options = {
+    stateUrl: '/api/design-state',
+    saveLayout: async (input) => {
+      inputs.push(input);
+      if (fail) throw new Error('Offline migration');
+      return { revision: 'migrated' };
+    },
+    savePersonalState: async (state) => {
+      personal.push(state);
+      return { stateVersion: 2 };
+    },
+  };
+  const app = await mount({
+    data,
+    stored,
+    options,
+    fetchImpl: async () => ({
+      ok: true,
+      json: async () => ({
+        revision: 'initial',
+        stateVersion: 1,
+        state: { positions: { [ids[0]]: { x: 10.8, y: -5.2 }, [ids[2]]: { x: 0, y: 0 } } },
+      }),
+    }),
+  });
+  t.after(() => app.close());
+  await delay(0);
+  assert.equal(
+    JSON.stringify(app.studio.getLayout().boards[keys[0]]),
+    JSON.stringify({ x: 11, y: -5 }),
+  );
+  assert.equal(
+    JSON.stringify(app.studio.getLayout().boards[keys[1]]),
+    JSON.stringify({ x: 20, y: 31 }),
+  );
+  assert.equal(app.studio.getLayout().boards[keys[2]].title, 'Authored');
+  assert.equal(inputs.length, 1);
+  assert.deepEqual(Object.keys(inputs[0].boards), keys.slice(0, 2));
+  const draft = () =>
+    JSON.parse(app.window.localStorage.getItem('openplanr.design-studio.fieldwork'));
+  assert.ok(draft().state.positions, 'a failed migration keeps legacy coordinates recoverable');
+  app.studio.setPanels({ navOpen: false });
+  await app.studio.flush();
+  assert.ok(personal.at(-1).positions, 'personal saves keep coordinates until migration succeeds');
+  const failedAttempts = inputs.length;
+  fail = false;
+  app.documentNode.querySelector('[data-design-retry-layout]').click();
+  await app.studio.flush();
+  await app.studio.flush();
+  assert.equal(Object.hasOwn(draft().state, 'positions'), false);
+  assert.equal(Object.hasOwn(personal.at(-1), 'positions'), false);
+  data.document.layout = JSON.parse(JSON.stringify(app.studio.getLayout()));
+  data.revision = 'migrated';
+  const reloaded = await mount({
+    data,
+    stored: draft(),
+    options,
+    fetchImpl: async () => ({
+      ok: true,
+      json: async () => ({ state: personal.at(-1), revision: 'migrated', stateVersion: 2 }),
+    }),
+  });
+  t.after(() => reloaded.close());
+  await reloaded.studio.flush();
+  assert.equal(inputs.length, failedAttempts + 1, 'reload does not enqueue another migration');
+});
+
+test('undo while a move is saving retains an absolute correction for uncertain results', async (t) => {
+  for (const succeeds of [false, true]) {
+    const inputs = [];
+    let finish;
+    const pending = new Promise((resolve, reject) => {
+      finish = succeeds ? resolve : reject;
+    });
+    const app = await mount({
+      options: {
+        saveLayout: async (input) => {
+          inputs.push(input);
+          if (inputs.length === 1) return pending;
+          return { revision: 'restored' };
+        },
+      },
+    });
+    t.after(() => app.close());
+    const original = JSON.stringify(app.studio.getLayout());
+    moveBoard(app);
+    await delay(0);
+    undoBoard(app);
+    finish(succeeds ? { revision: 'moved' } : new Error('Offline'));
+    await delay(0);
+    if (!succeeds) {
+      assert.equal(app.studio.getSaveState().dirty, true);
+      app.documentNode.querySelector('[data-design-retry-layout]').click();
+    }
+    await app.studio.flush();
+    assert.equal(JSON.stringify(app.studio.getLayout()), original);
+    assert.equal(inputs.length, 2);
+    assert.equal(inputs[1].boards['screen-1/desktop/editorial'], null);
+    assert.ok(inputs.every((input) => input.restoreRevision !== null));
+    assert.equal(app.studio.getSaveState().dirty, false);
+  }
+});
+
+test('startup migration preserves positions authored after the HTML response', async (t) => {
+  const data = fixture({ count: 1 });
+  data.revision = 'initial';
+  data.contentIdentity = 'authored';
+  const entry = data.entries[0];
+  const key = `${entry.screenId}/${entry.frameId}/${entry.variantId}`;
+  data.state = { positions: { [entry.artifactId]: { x: 10, y: 20 } } };
+  const inputs = [];
+  const app = await mount({
+    data,
+    options: {
+      stateUrl: '/api/design-state',
+      statusUrl: '/api/design-status',
+      saveLayout: async (input) => {
+        inputs.push(input);
+        return { revision: 'saved' };
+      },
+      savePersonalState: async () => ({ stateVersion: 2 }),
+    },
+    fetchImpl: async (url) => ({
+      ok: true,
+      json: async () =>
+        url.endsWith('design-state')
+          ? { revision: 'concurrent', stateVersion: 1, state: data.state }
+          : {
+              revision: 'concurrent',
+              contentIdentity: 'authored',
+              layout: { boards: { [key]: { x: 90, y: 80 } } },
+            },
+    }),
+  });
+  t.after(() => app.close());
+  await app.studio.flush();
+  assert.equal(inputs.length, 0, 'startup reconciles layout before collecting missing exact keys');
+  assert.equal(app.studio.getLayout().boards[key].x, 90);
+});
+
+test('undo reconciles a committed move whose response was lost', async (t) => {
+  const data = fixture({ count: 1 });
+  data.revision = 'initial';
+  data.contentIdentity = 'authored';
+  const key = 'screen-1/desktop/editorial';
+  let serverPoint = null,
+    rejectResponse;
+  const lost = new Promise((_resolve, reject) => {
+    rejectResponse = reject;
+  });
+  const inputs = [];
+  const app = await mount({
+    data,
+    options: {
+      statusUrl: '/api/design-status',
+      saveLayout: async (input) => {
+        inputs.push(input);
+        if (inputs.length === 2)
+          throw Object.assign(new Error('Committed revision changed'), { conflict: true });
+        serverPoint = input.boards[key];
+        if (inputs.length === 1) return lost;
+        return { revision: 'reconciled' };
+      },
+    },
+    fetchImpl: async () => ({
+      ok: true,
+      json: async () => ({
+        revision: 'committed',
+        contentIdentity: 'authored',
+        layout: { boards: { [key]: serverPoint } },
+      }),
+    }),
+  });
+  t.after(() => app.close());
+  moveBoard(app);
+  await delay(0);
+  undoBoard(app);
+  rejectResponse(new Error('Response lost after commit'));
+  await delay(0);
+  assert.equal(
+    app.studio.getSaveState().dirty,
+    true,
+    'an unknown save outcome keeps an absolute correction pending',
+  );
+  assert.equal(inputs.length, 1, 'undo itself stays local');
+  app.documentNode.querySelector('[data-design-retry-layout]').click();
+  await app.studio.flush();
+  assert.equal(serverPoint, null);
+  assert.equal(inputs.length, 3);
+  assert.equal(app.studio.getSaveState().dirty, false);
+});
+
 test('live view context debounces changes, serializes requests and drains the latest unsaved state', async (t) => {
   const data = fixture({ count: 1 });
   data.revision = 'a'.repeat(64);
@@ -1412,7 +1806,7 @@ test('dismissing a comment-save failure keeps the unsaved review and retry clear
   }
 });
 
-test('portable view defaults preserve ratings and ignore legacy browser arrangements on reopen', async () => {
+test('portable view defaults preserve ratings and migrate legacy browser arrangements on reopen', async () => {
   const data = fixture();
   const artifactId = data.entries[0].artifactId;
   const app = await mount({
@@ -1432,8 +1826,8 @@ test('portable view defaults preserve ratings and ignore legacy browser arrangem
     assert.equal(app.studio.getState().ratings.compact, 5);
     assert.equal(app.studio.getState().positions, undefined);
     app.studio.setView('canvas');
-    assert.equal(app.stage.getPanel(artifactId).style.left, '0px');
-    assert.equal(app.stage.getPanel(artifactId).style.top, '72px');
+    assert.equal(app.stage.getPanel(artifactId).style.left, '80px');
+    assert.equal(app.stage.getPanel(artifactId).style.top, '120px');
   } finally {
     app.close();
   }
@@ -1820,13 +2214,19 @@ test('board moves queue revision saves and undo/redo without storing positions o
     await app.studio.flush();
     assert.deepEqual(JSON.parse(JSON.stringify(requests)), [
       { revision: 'initial', boards: { 'screen-1/desktop/editorial': { x: 58, y: 61 } } },
-      { revision: 'move-1', boards: { 'screen-1/desktop/editorial': { x: 58, y: 69 } } },
-      { revision: 'move-2', restoreRevision: 'move-1' },
     ]);
     assert.equal(panel.style.top, '61px');
     key('z', { metaKey: true, shiftKey: true });
     await app.studio.flush();
     assert.equal(app.studio.getRevision(), 'move-2');
+    assert.equal(panel.style.top, '69px');
+    key('z', { ctrlKey: true });
+    await app.studio.flush();
+    assert.equal(requests.at(-1).restoreRevision, 'move-1');
+    assert.equal(panel.style.top, '61px');
+    key('z', { ctrlKey: true, shiftKey: true });
+    await app.studio.flush();
+    assert.equal(requests.at(-1).restoreRevision, 'move-2');
     assert.equal(panel.style.top, '69px');
     assert.equal(app.stage.getFrame(entry.artifactId), frame);
     assert.equal(panel.querySelector('strong').textContent, 'Overview');

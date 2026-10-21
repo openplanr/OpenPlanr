@@ -3,7 +3,7 @@ import { join } from 'node:path';
 import { digestArtifactEnvelope } from '@openplanr/artifact/envelope.mjs';
 import { assertDesignDocument } from '@openplanr/protocol/design-contracts';
 import { prepareDesignDocument, withDesignRenderLock } from './document.mjs';
-import { atomicJson, currentDesign, designSpecPath, readJson } from './document-state.mjs';
+import { atomicBytes, currentDesign, designSpecPath, hash, readJson } from './document-state.mjs';
 
 export async function saveDesignLayout(file, input) {
   if (
@@ -39,9 +39,9 @@ export async function saveDesignLayout(file, input) {
         ),
         { statusCode: 409 },
       );
-    const previous = readJson(file);
+    const previous = readFileSync(file, 'utf8');
     const mode = statSync(file).mode & 0o7777;
-    const document = structuredClone(previous);
+    const document = JSON.parse(previous);
     if (Object.hasOwn(input, 'restoreRevision')) {
       if (
         typeof input.restoreRevision !== 'string' ||
@@ -87,12 +87,27 @@ export async function saveDesignLayout(file, input) {
       if (!Object.keys(document.layout).length) delete document.layout;
     }
     assertDesignDocument(document);
-    atomicJson(file, document, { mode });
+    const indent = previous.match(/^([\t ]+)\S/mu)?.[1] ?? '';
+    const formatted = indent
+      ? JSON.stringify(document, null, '\t').replace(/^\t+/gmu, (tabs) =>
+          indent.repeat(tabs.length),
+        )
+      : JSON.stringify(document);
+    const written = `${formatted}${previous.endsWith('\n') ? '\n' : ''}`;
+    atomicBytes(file, written, mode);
     try {
       const result = await render();
       return { revision: result.revision };
     } catch (error) {
-      atomicJson(file, previous, { mode });
+      if (hash(readFileSync(file)) !== hash(written))
+        throw Object.assign(
+          new Error(
+            `The authored document ${file} changed during the save. Its newer contents were preserved; reload before saving its layout.`,
+            { cause: error },
+          ),
+          { statusCode: 409 },
+        );
+      atomicBytes(file, previous, mode);
       throw error;
     }
   });

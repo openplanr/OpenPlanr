@@ -131,6 +131,10 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
   const layoutOperations = [];
   let layoutSaving = false;
   let layoutDragDirty = false;
+  let activeLayoutOperation = null;
+  let layoutBlocked = false;
+  let legacyMigrated = false;
+  let legacyServerPositions = payload.state?.positions;
   let stateVersion = null;
   let stage = null;
   let root = null;
@@ -223,6 +227,7 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
     const restoreFocus = node.contains(document.activeElement);
     node.hidden = true;
     activeNotice = null;
+    q('[data-design-retry-layout]')?.remove();
     if (restoreFocus) q(`button[data-design-view="${state.view}"]`)?.focus();
   }
 
@@ -240,6 +245,7 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
     if (destroyed || dismissedNotices.get(key) === message) return;
     const node = q('.design-notice');
     clearTimeout(noticeTimer);
+    q('[data-design-retry-layout]')?.remove();
     activeNotice = { key, message, persistent };
     q('[data-design-notice-message]').textContent = message;
     node.hidden = false;
@@ -253,7 +259,13 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
         JSON.stringify({
           revision,
           stateVersion,
-          state,
+          state:
+            !legacyMigrated && (legacyServerPositions || savedDraft?.state?.positions)
+              ? {
+                  ...state,
+                  positions: { ...savedDraft?.state?.positions, ...legacyServerPositions },
+                }
+              : state,
           unsaved: contentDirty,
           personalPending: dirty && !contentDirty,
         }),
@@ -384,6 +396,8 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
       .then(async () => {
         if (destroyed) return;
         try {
+          if (!legacyMigrated && (legacyServerPositions || savedDraft?.state?.positions))
+            captured.positions = { ...savedDraft?.state?.positions, ...legacyServerPositions };
           let result;
           if (!capturedContent && typeof options.savePersonalState === 'function') {
             result = await options.savePersonalState(captured, { revision, stateVersion });
@@ -443,29 +457,104 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
     return options.layoutUrl ?? options.stateUrl?.replace(/design-state$/, 'design-layout');
   }
 
+  function canSaveLayout() {
+    return Boolean(options.saveLayout || layoutUrl());
+  }
+
+  function newRevisionNotice() {
+    notice(
+      'A new design revision is ready. Save or recover this browser’s unsaved changes before reloading.',
+      true,
+      'new-revision',
+    );
+  }
+
+  async function rebaseLayout({ announce = true, expectedRevision = revision } = {}) {
+    const url = options.statusUrl ?? options.stateUrl?.replace(/design-state$/, 'design-status');
+    if (!url) throw new Error('Layout conflict recovery requires a design status URL.');
+    const current = await jsonRequest(url);
+    if (revision !== expectedRevision) return true;
+    if (typeof current.revision !== 'string' || typeof current.contentIdentity !== 'string')
+      throw new Error('Design status did not return a revision and authored content identity.');
+    if (current.contentIdentity !== payload.contentIdentity) {
+      layoutBlocked = true;
+      newRevisionNotice();
+      return false;
+    }
+    revision = current.revision;
+    layout = clone(current.layout ?? {});
+    const discardedRestores = layoutOperations.some((operation) => operation.restore);
+    for (let index = layoutOperations.length - 1; index >= 0; index--)
+      if (layoutOperations[index].restore) layoutOperations.splice(index, 1);
+    for (const moves of [undoMoves, redoMoves])
+      for (let index = moves.length - 1; index >= 0; index--)
+        if (moves[index].afterRevision !== null) moves.splice(index, 1);
+    for (const operation of layoutOperations) {
+      const boards = operation.input().boards;
+      if (operation.move?.applied) operation.move.before = clone(layout);
+      for (const [key, point] of Object.entries(boards)) {
+        layout.boards ??= {};
+        if (point === null) delete layout.boards[key];
+        else layout.boards[key] = { ...layout.boards[key], ...point };
+      }
+      if (operation.move?.applied) operation.move.after = clone(layout);
+      else if (operation.move) {
+        const move = operation.move;
+        const movedBoard = move.after.boards?.[move.key];
+        move.before = clone(layout);
+        move.after = clone(layout);
+        if (movedBoard) move.after.boards = { ...move.after.boards, [move.key]: movedBoard };
+        else if (move.after.boards) delete move.after.boards[move.key];
+      }
+    }
+    render();
+    if (announce)
+      notice(
+        `The layout changed in another window. Pending board moves were rebased onto the current revision.${discardedRestores ? ' Stale undo and redo operations were dropped.' : ''}`,
+        true,
+        'layout-rebase',
+      );
+    return true;
+  }
+
   function flushLayout() {
-    if (layoutSaving || !layoutOperations.length) return saving;
+    if (layoutSaving || layoutBlocked || !layoutOperations.length) return saving;
     layoutSaving = true;
     saving = saving.then(async () => {
+      let rebased = false;
       try {
         while (layoutOperations.length) {
           const operation = layoutOperations[0];
           const input = { revision, ...operation.input() };
+          activeLayoutOperation = operation;
+          operation.attempted = true;
+          operation.appliedAtSave = operation.move?.applied;
           status('Saving layout', 'saving');
           let result;
-          if (typeof options.saveLayout === 'function') result = await options.saveLayout(input);
-          else if (layoutUrl())
-            result = await jsonRequest(layoutUrl(), {
-              method: 'PUT',
-              headers: { 'Content-Type': 'application/json', 'x-openplanr-design': '1' },
-              body: JSON.stringify(input),
-            });
-          else throw new Error('Layout save requires a studio layout URL or saveLayout callback.');
+          try {
+            if (typeof options.saveLayout === 'function') result = await options.saveLayout(input);
+            else if (layoutUrl())
+              result = await jsonRequest(layoutUrl(), {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json', 'x-openplanr-design': '1' },
+                body: JSON.stringify(input),
+              });
+            else
+              throw new Error('Layout save requires a studio layout URL or saveLayout callback.');
+          } catch (error) {
+            activeLayoutOperation = null;
+            operation.canceled = false;
+            if (!error.conflict || rebased) throw error;
+            rebased = true;
+            if (!(await rebaseLayout())) return;
+            continue;
+          }
           if (typeof result.revision !== 'string')
             throw new Error('Layout save did not return a design revision.');
           operation.saved?.(revision, result.revision);
           revision = result.revision;
           layoutOperations.shift();
+          activeLayoutOperation = null;
           storeDraft();
           scheduleViewContext();
         }
@@ -473,12 +562,15 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
         if (!contentDirty && !reviewDirty) status('All changes saved');
       } catch (error) {
         status(error.conflict ? 'Layout conflict' : 'Layout unsaved', 'failed');
-        notice(
-          `Board layout could not be saved: ${error.message} Keep this window open and retry saving.`,
-          true,
-          'layout-save',
-        );
+        notice(`Board layout could not be saved: ${error.message}`, true, 'layout-save');
+        const retry = document.createElement('button');
+        retry.type = 'button';
+        retry.dataset.designRetryLayout = '';
+        retry.textContent = 'Retry';
+        retry.addEventListener('click', () => void flushLayout());
+        q('.design-notice').append(retry);
       } finally {
+        activeLayoutOperation = null;
         layoutSaving = false;
       }
     });
@@ -489,25 +581,46 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
     return `${entry.screenId}/${entry.frameId}/${entry.variantId}`;
   }
 
+  function queueMove(move) {
+    const point = (value) => {
+      const board = value.boards?.[move.key];
+      return board ? { x: board.x, y: board.y } : null;
+    };
+    const operation = {
+      move,
+      boards: { [move.key]: point(move.after) },
+      input: () => ({ boards: operation.boards }),
+      saved(previous, next) {
+        if (operation.appliedAtSave) {
+          move.beforeRevision = previous;
+          move.afterRevision = next;
+        }
+        if (operation.canceled) {
+          const boards = { [move.key]: point(layout) };
+          layoutOperations.push({ input: () => ({ boards }) });
+        }
+      },
+    };
+    layoutOperations.push(operation);
+    scheduleViewContext();
+    void flushLayout();
+  }
+
   function completeMove(entry, before) {
-    const key = boardKey(entry);
     const after = clone(layout);
     if (JSON.stringify(before) === JSON.stringify(after)) return;
-    const move = { before, after, beforeRevision: null, afterRevision: null };
+    const move = {
+      key: boardKey(entry),
+      before,
+      after,
+      beforeRevision: null,
+      afterRevision: null,
+      applied: true,
+    };
     undoMoves.push(move);
     redoMoves.length = 0;
     storeDraft();
-    if (options.stateUrl || options.saveState || options.saveLayout || options.layoutUrl) {
-      layoutOperations.push({
-        input: () => ({ boards: { [key]: { x: after.boards[key].x, y: after.boards[key].y } } }),
-        saved(previous, next) {
-          move.beforeRevision = previous;
-          move.afterRevision = next;
-        },
-      });
-      scheduleViewContext();
-      void flushLayout();
-    }
+    if (canSaveLayout()) queueMove(move);
   }
 
   function restoreMove(redo) {
@@ -515,16 +628,70 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
     const target = redo ? undoMoves : redoMoves;
     const move = source.pop();
     if (!move) return;
+    move.applied = redo;
     layout = clone(redo ? move.after : move.before);
     target.push(move);
     render();
-    if (options.stateUrl || options.saveState || options.saveLayout || options.layoutUrl) {
-      layoutOperations.push({
-        input: () => ({ restoreRevision: redo ? move.afterRevision : move.beforeRevision }),
-      });
+    if (!canSaveLayout()) return;
+    if (move.beforeRevision === null || move.afterRevision === null) {
+      const pending = layoutOperations.find((operation) => operation.move === move);
+      if (pending) {
+        const board = layout.boards?.[move.key];
+        pending.boards = { [move.key]: board ? { x: board.x, y: board.y } : null };
+      }
+      if (pending === activeLayoutOperation && pending) pending.canceled = !redo;
+      else if (!pending?.attempted) {
+        if (pending) layoutOperations.splice(layoutOperations.indexOf(pending), 1);
+        if (redo) queueMove(move);
+      }
+      if (!layoutOperations.length && !layoutSaving) {
+        clearNotice('layout-save');
+        if (!contentDirty && !reviewDirty) status('All changes saved');
+      }
       scheduleViewContext();
-      void flushLayout();
+      return;
     }
+    layoutOperations.push({
+      restore: true,
+      input: () => ({ restoreRevision: redo ? move.afterRevision : move.beforeRevision }),
+    });
+    scheduleViewContext();
+    void flushLayout();
+  }
+
+  function migrateLegacyPositions() {
+    if (layoutBlocked) return;
+    if (!legacyServerPositions && !savedDraft?.state?.positions) {
+      legacyMigrated = true;
+      return;
+    }
+    const boards = {};
+    for (const positions of [legacyServerPositions, savedDraft?.state?.positions])
+      for (const entry of entries) {
+        const key = boardKey(entry);
+        const point = positions?.[entry.artifactId];
+        if (layout.boards?.[key] !== undefined || boards[key] !== undefined || !point) continue;
+        if (
+          !Number.isFinite(point.x) ||
+          !Number.isFinite(point.y) ||
+          Math.abs(point.x) > 1e7 ||
+          Math.abs(point.y) > 1e7
+        )
+          continue;
+        boards[key] = { x: Math.round(point.x), y: Math.round(point.y) };
+      }
+    if (Object.keys(boards).length) layout.boards = { ...layout.boards, ...boards };
+    render();
+    const migrated = () => {
+      legacyMigrated = true;
+      legacyServerPositions = undefined;
+      storeDraft();
+      if (options.stateUrl) persist();
+    };
+    if (Object.keys(boards).length && canSaveLayout()) {
+      layoutOperations.push({ input: () => ({ boards }), saved: migrated });
+      void flushLayout();
+    } else if (canSaveLayout()) migrated();
   }
 
   function reviewUrl() {
@@ -2072,9 +2239,14 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
       const observedRevision = revision;
       const result = await jsonRequest(options.stateUrl);
       if (destroyed) return;
-      if (observedRevision === revision && result.revision !== undefined)
-        revision = result.revision;
+      if (
+        observedRevision === revision &&
+        result.revision !== undefined &&
+        result.revision !== revision
+      )
+        await rebaseLayout({ announce: false, expectedRevision: observedRevision });
       if (result.stateVersion !== undefined) stateVersion = result.stateVersion;
+      legacyServerPositions = result.state?.positions ?? legacyServerPositions;
       if (result.state && !dirty) {
         state = normalizeState({ ...result.state, ...linkedState() });
         if (canvasAttached && state.view === 'canvas') applyCanvasCamera();
@@ -2114,10 +2286,7 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
         result.revision !== revision
       ) {
         if (contentDirty || reviewDirty || layoutOperations.length || layoutSaving)
-          notice(
-            'A new design revision is ready. Save or recover this browser’s unsaved changes before reloading.',
-            true,
-          );
+          newRevisionNotice();
         else {
           storeDraft();
           window.location.reload();
@@ -2528,7 +2697,10 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
         for (const remove of cleanup.splice(0)) remove();
       },
     });
-    void refreshSavedState().then(reportReady);
+    void refreshSavedState().then(() => {
+      migrateLegacyPositions();
+      return reportReady();
+    });
     pollTimer = setTimeout(pollRevision, 4000);
     return controller;
   }

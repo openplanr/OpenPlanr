@@ -538,11 +538,15 @@ test('ordinary unshared feedback does not create or require owner keys', async (
   assert.equal(existsSync(join(root, 'project-state')), false);
 });
 
-test('arrangement changes can be explicitly published without changing authored source revision', async (t) => {
+test('authored arrangement changes can be explicitly published without private personal state', async (t) => {
   const { root, file, options } = await fixture(t);
   await shareDesign(file, options);
   const before = getDesignShareStatus(file, options);
   const artifactId = prepareDesignShareBundle(file).entries[0].artifactId;
+  const document = JSON.parse(readFileSync(file, 'utf8'));
+  document.layout = { boards: { 'screen-1/desktop/A': { x: -240, y: 650 } } };
+  writeFileSync(file, JSON.stringify(document));
+  await renderDesignDocument(file);
   writeFileSync(
     join(root, '.design/studio-state.json'),
     JSON.stringify({
@@ -556,10 +560,11 @@ test('arrangement changes can be explicitly published without changing authored 
   );
   assert.equal(getDesignShareStatus(file, options).hasUpdate, true);
   const bundle = prepareDesignShareBundle(file);
-  assert.deepEqual(bundle.state, { positions: { [artifactId]: { x: -240, y: 650 } } });
+  assert.deepEqual(bundle.design.layout, document.layout);
+  assert.deepEqual(bundle.state, {});
   assert.ok(!JSON.stringify(bundle).includes('Private preference'));
   const after = await publishDesignShare(file, options);
-  assert.equal(after.publishedRevision, before.publishedRevision);
+  assert.notEqual(after.publishedRevision, before.publishedRevision);
   assert.notEqual(after.revision, before.revision);
   assert.equal(after.hasUpdate, false);
 });

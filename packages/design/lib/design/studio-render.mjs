@@ -164,6 +164,7 @@ export function renderDesignStudioMarkup(
     reviewContext = null,
     contextDigest = null,
     fingerprints = [],
+    contentIdentity = null,
   } = {},
   {
     stageRuntimeUrl = './artifact-review-stage.js',
@@ -204,6 +205,7 @@ export function renderDesignStudioMarkup(
     reviewContext,
     contextDigest,
     fingerprints,
+    contentIdentity,
     artifactKinds: Object.fromEntries(
       envelope.artifacts.map((artifact) => [artifact.id, artifact.kind]),
     ),

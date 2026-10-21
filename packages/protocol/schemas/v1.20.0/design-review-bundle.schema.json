@@ -181,6 +181,67 @@
             "prototype",
             "walkthrough"
           ]
+        },
+        "layout": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "boards": {
+              "type": "object",
+              "description": "Keys are screenId, screenId/frameId or screenId/frameId/variantId; each ID must exist in the document.",
+              "additionalProperties": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "x",
+                  "y"
+                ],
+                "properties": {
+                  "x": {
+                    "$ref": "#/$defs/coordinate"
+                  },
+                  "y": {
+                    "$ref": "#/$defs/coordinate"
+                  },
+                  "title": {
+                    "$ref": "#/$defs/text"
+                  }
+                }
+              }
+            },
+            "sections": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "id",
+                  "x",
+                  "y",
+                  "text"
+                ],
+                "properties": {
+                  "id": {
+                    "$ref": "#/$defs/id"
+                  },
+                  "x": {
+                    "$ref": "#/$defs/coordinate"
+                  },
+                  "y": {
+                    "$ref": "#/$defs/coordinate"
+                  },
+                  "text": {
+                    "$ref": "#/$defs/text"
+                  },
+                  "maxW": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 16384
+                  }
+                }
+              }
+            }
+          }
         }
       },
       "required": [
@@ -592,6 +653,11 @@
           "$ref": "#/$defs/paths"
         }
       }
+    },
+    "coordinate": {
+      "type": "number",
+      "minimum": -10000000,
+      "maximum": 10000000
     }
   },
   "allOf": [
