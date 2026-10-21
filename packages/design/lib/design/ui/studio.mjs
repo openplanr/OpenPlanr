@@ -1092,6 +1092,8 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
     const stageRect = scroll.getBoundingClientRect();
     for (const [id, selector, open] of [
       ['toolbar', '.design-toolbar', true],
+      ['tools', '.design-canvas-tools', true],
+      ['context', '.design-stage-context', true],
       ['navigator', '.design-navigator', state.navOpen],
       ['review', '.planr-review-rail', stage.getState().railOpen],
     ]) {
@@ -1979,7 +1981,13 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
         updateDesignNotes();
         scheduleViewContext();
       });
-      for (const selector of ['.design-toolbar', '.design-navigator', '.planr-review-rail'])
+      for (const selector of [
+        '.design-toolbar',
+        '.design-canvas-tools',
+        '.design-stage-context',
+        '.design-navigator',
+        '.planr-review-rail',
+      ])
         observer.observe(q(selector));
       observer.observe(scroll);
       cleanup.push(() => observer.disconnect());

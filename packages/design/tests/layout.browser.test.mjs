@@ -597,13 +597,15 @@ test(`canvas engine preserves legacy fit, zoom anchors, saved cameras and board 
       const maxX = Math.max(...panels.map((panel) => parseFloat(panel.style.left) + 600));
       const maxY = Math.max(...panels.map((panel) => parseFloat(panel.style.top) + 450));
       const stageRect = stage.getBoundingClientRect();
-      const toolbar = document.querySelector('.design-toolbar').getBoundingClientRect();
       let top = 0,
         bottom = stage.clientHeight;
-      if (toolbar.bottom > stageRect.top && toolbar.top < stageRect.bottom) {
-        if (toolbar.top + toolbar.height / 2 > stageRect.top + stageRect.height / 2)
-          bottom = toolbar.top - stageRect.top;
-        else top = toolbar.bottom - stageRect.top;
+      for (const selector of ['.design-toolbar', '.design-stage-context', '.design-canvas-tools']) {
+        const rect = document.querySelector(selector).getBoundingClientRect();
+        if (rect.bottom > stageRect.top && rect.top < stageRect.bottom) {
+          if (rect.top + rect.height / 2 > stageRect.top + stageRect.height / 2)
+            bottom = Math.min(bottom, rect.top - stageRect.top);
+          else top = Math.max(top, rect.bottom - stageRect.top);
+        }
       }
       const height = bottom - top;
       const zoom = Math.max(
@@ -706,7 +708,7 @@ for (const viewport of [
   { width: 1440, height: 900 },
   { width: 390, height: 844 },
 ]) {
-  test(`Fit keeps boards clear of the toolbar and section labels readable at ${viewport.width}px (${browserEngine()})`, {
+  test(`Fit keeps boards clear of floating chrome and section labels readable at ${viewport.width}px (${browserEngine()})`, {
     timeout: 60000,
   }, async () => {
     const root = await mkdtemp(join(tmpdir(), 'openplanr-canvas-chrome-'));
@@ -714,10 +716,13 @@ for (const viewport of [
     try {
       const { file, document } = designFixture(root, {
         count: 3,
-        frames: [{ id: 'desktop', label: 'Desktop viewport · 600 × 450', width: 600, height: 450 }],
+        frames: [
+          { id: 'desktop', label: 'Desktop viewport · 1440 × 1024', width: 1440, height: 1024 },
+          { id: 'mobile', label: 'Mobile', width: 390, height: 844 },
+        ],
       });
       document.layout = {
-        sections: [{ id: 'journey', x: 0, y: -160, text: 'Workspace journey', maxW: 160 }],
+        sections: [{ id: 'journey', x: 0, y: -320, text: 'Workspace journey', maxW: 160 }],
       };
       writeFileSync(file, `${JSON.stringify(document, null, 2)}\n`);
       await renderDesignDocument(file);
@@ -738,7 +743,7 @@ for (const viewport of [
       await settleStudioChrome(page);
       assert.equal(
         await page.locator('.design-artboard-drag span').first().textContent(),
-        'Desktop viewport · 600 × 450',
+        'Desktop viewport · 1440 × 1024',
       );
       await page.waitForFunction(
         () =>
@@ -771,6 +776,8 @@ for (const viewport of [
         return {
           stage: rect('.planr-stage-scroll'),
           toolbar: rect('.design-toolbar'),
+          tools: rect('.design-canvas-tools'),
+          context: rect('.design-stage-context'),
           camera,
           zoom,
           transform: document.querySelector('.planr-frame-grid').style.transform,
@@ -796,6 +803,16 @@ for (const viewport of [
           false,
           `Fit clears the measured toolbar: ${details}`,
         );
+        assert.equal(
+          intersects(board, geometry.tools),
+          false,
+          `Fit clears the measured canvas tools: ${details}`,
+        );
+        assert.equal(
+          intersects(board, geometry.context),
+          false,
+          `Fit clears the measured stage context: ${details}`,
+        );
       }
       for (const zoom of [null, 1, 0.3]) {
         if (zoom !== null) {
@@ -818,7 +835,7 @@ for (const viewport of [
               ),
             ].map((label) => label.getBoundingClientRect().toJSON()),
             anchor:
-              document.querySelector('.planr-frame-grid').getBoundingClientRect().top - 160 * zoom,
+              document.querySelector('.planr-frame-grid').getBoundingClientRect().top - 320 * zoom,
           };
         });
         assert.equal(heading.hidden, false, `heading visible at ${zoom ?? 'Fit'}`);
@@ -835,12 +852,12 @@ for (const viewport of [
         }
       }
       await page.evaluate(() =>
-        window.__openPlanrDesignStudio.setCamera({ x: 0, y: 0, zoom: 0.1 }),
+        window.__openPlanrDesignStudio.setCamera({ x: 0, y: 0, zoom: 0.05 }),
       );
       assert.equal(
         await page.locator('.design-section-heading').isVisible(),
         false,
-        'below 34 / 232 (about 14.7%), the first board label crosses the heading anchor',
+        'below 34 / 392 (about 8.7%), the first board label crosses the heading anchor',
       );
     } finally {
       await browser?.close();

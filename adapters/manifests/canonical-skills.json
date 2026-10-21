@@ -1954,7 +1954,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:7bcae762e4aacf3502e9d187516b28c86fd7a6b5e8c8dd0d6bc521697e74182c"
+          "digest": "sha256:e801ba3257923596324fd4aeea29f8905d8ea9672bad27d6caf2b8ec982a8055"
         },
         {
           "path": "scripts/runtime/packages/design/templates/studio/studio.js.sources/01-module-runtime.js",
@@ -2206,7 +2206,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:6b706db27067fb0f460584895589baf6679b0a728b105e9ff0d097c6fff03d50"
+          "digest": "sha256:d56aee9764f98936bd2cf342d076ad5441e92518b1f311df797a9c7551a2b5cf"
         },
         {
           "path": "scripts/runtime/packages/protocol/package.json",
@@ -3164,7 +3164,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:7bcae762e4aacf3502e9d187516b28c86fd7a6b5e8c8dd0d6bc521697e74182c"
+          "digest": "sha256:e801ba3257923596324fd4aeea29f8905d8ea9672bad27d6caf2b8ec982a8055"
         },
         {
           "path": "scripts/runtime/packages/design/templates/studio/studio.js.sources/01-module-runtime.js",
@@ -3416,7 +3416,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:6b706db27067fb0f460584895589baf6679b0a728b105e9ff0d097c6fff03d50"
+          "digest": "sha256:d56aee9764f98936bd2cf342d076ad5441e92518b1f311df797a9c7551a2b5cf"
         },
         {
           "path": "scripts/runtime/packages/protocol/package.json",
@@ -4374,7 +4374,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:7bcae762e4aacf3502e9d187516b28c86fd7a6b5e8c8dd0d6bc521697e74182c"
+          "digest": "sha256:e801ba3257923596324fd4aeea29f8905d8ea9672bad27d6caf2b8ec982a8055"
         },
         {
           "path": "scripts/runtime/packages/design/templates/studio/studio.js.sources/01-module-runtime.js",
@@ -4626,7 +4626,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:6b706db27067fb0f460584895589baf6679b0a728b105e9ff0d097c6fff03d50"
+          "digest": "sha256:d56aee9764f98936bd2cf342d076ad5441e92518b1f311df797a9c7551a2b5cf"
         },
         {
           "path": "scripts/runtime/packages/protocol/package.json",
