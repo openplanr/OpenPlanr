@@ -61,10 +61,15 @@ Discover checks in this order:
 3. package and task-runner scripts;
 4. applicable CI and pre-commit configuration.
 
-The packaged read-only [verification discovery helper](scripts/discover-verification.mjs)
-may list candidates. Resolve it relative to this `SKILL.md` and run
+Run `openplanr ship checks --json --task <task-path>` (omit `--task` for a direct
+request; add `--tier story` or `--tier push` before pushing) and run its `checks`
+from each `cwd`. The command never executes checks or writes files. When
+`complete` is `false`, report its error diagnostics and treat the check set as
+incomplete: a pass is not CI-equivalent. Without the CLI, the packaged read-only
+[verification discovery helper](scripts/discover-verification.mjs) may list
+candidates. Resolve it relative to this `SKILL.md` and run
 `node <helper> --project <repository-root> --task <task-path>`; omit `--task` for a
-direct request. It never executes checks or writes files. If it is unavailable,
+direct request. It never executes checks or writes files. If both are unavailable,
 inspect those four sources directly. Missing commands are diagnostics, not a
 reason to invent or skip all verification.
 
