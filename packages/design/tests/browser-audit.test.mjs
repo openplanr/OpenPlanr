@@ -182,6 +182,47 @@ test('computed findings retain artifact identity and browser script failures rem
   assert.ok(report.issues.some(({ rule }) => rule === 'browser-script-error'));
 });
 
+test('full audits discover frames mounted on demand and evicted beyond the budget', async () => {
+  const entries = Array.from({ length: 4 }, (_, index) => ({
+    ...entry,
+    artifactId: `screen-${index}-desktop`,
+    screenId: `screen-${index}`,
+  }));
+  const mounted = new Map();
+  const requested = [];
+  const stage = {
+    frameBudget: 2,
+    async ensureFrames(ids) {
+      requested.push(...ids);
+      for (const id of ids) {
+        if (mounted.has(id)) continue;
+        if (mounted.size === this.frameBudget) mounted.delete(mounted.keys().next().value);
+        const artifact = entries.find(({ artifactId }) => artifactId === id);
+        const frame = mockPage(clearResult(), { artifact }).frames()[0];
+        frame.evaluate = async () => {
+          assert.ok(mounted.has(id), 'only mounted frames can be inspected');
+          return { ...clearResult(), screenId: artifact.screenId };
+        };
+        mounted.set(id, frame);
+      }
+    },
+  };
+  const page = {
+    frames: () => [...mounted.values()],
+    evaluate: (fn, artifactId) =>
+      runInNewContext(`(${fn.toString()})(artifactId)`, {
+        artifactId,
+        window: { __openPlanrArtifactStage: stage },
+      }),
+  };
+  const report = await auditDesignPage(page, { document, entries });
+  const ids = entries.map(({ artifactId }) => artifactId);
+  assert.deepEqual(report.checkedArtifacts, ids);
+  assert.deepEqual(requested, ids);
+  assert.deepEqual(report.issues, []);
+  assert.equal(mounted.size, 2);
+});
+
 async function browser(t) {
   const executablePath = browserExecutable('chromium');
   if (!existsSync(executablePath)) {

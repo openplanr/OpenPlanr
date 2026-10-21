@@ -6,7 +6,7 @@ import {
   createCanvas,
 } from '@openplanr/canvas';
 import canvasStyles from '@openplanr/canvas/styles.css';
-import { designFrameViewport } from '../frame-size.mjs';
+import { designFrameLabel, designFrameViewport } from '../frame-size.mjs';
 import { boardPlacement } from './layout.mjs';
 import { mountDesignChrome, mountDesignPanels } from './studio-chrome.mjs';
 
@@ -1135,6 +1135,7 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
 
   function syncCanvasNodes() {
     if (!canvasAttached) return;
+    grid.style.setProperty('--design-zoom', String(state.zoom));
     const placed = visibleEntries().flatMap((entry) => {
       const bounds = placedBoardBounds(entry);
       return bounds ? [{ entry, bounds }] : [];
@@ -1153,28 +1154,41 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
       heading.hidden = false;
       heading.style.fontSize = `${clamp(28 * state.zoom, 14, 28) / state.zoom}px`;
       if (section.maxW) heading.style.maxWidth = `${section.maxW / state.zoom}px`;
-      heading.style.top = `${section.y - heading.offsetHeight}px`;
+      const below = placed.filter(
+        ({ bounds: board }) =>
+          board.y >= section.y &&
+          section.x < board.x + board.width &&
+          section.x + heading.offsetWidth > board.x,
+      );
+      const bottom = Math.min(section.y, ...below.map(({ bounds }) => bounds.y - 42 / state.zoom));
+      heading.style.top = `${bottom - heading.offsetHeight}px`;
       const bounds = {
         x: parseFloat(heading.style.left),
         y: parseFloat(heading.style.top),
         width: heading.offsetWidth,
         height: heading.offsetHeight,
       };
-      // Labels occupy the 34 screen pixels above a board, regardless of zoom.
-      heading.hidden = placed.some(
-        ({ bounds: board }) =>
-          bounds.x < board.x + board.width &&
-          bounds.x + bounds.width > board.x &&
-          bounds.y < board.y - 6 / state.zoom &&
-          bounds.y + bounds.height > board.y - 34 / state.zoom,
+      heading.hidden = nodes.some(
+        ({ bounds: other }) =>
+          bounds.x < other.x + other.width &&
+          bounds.x + bounds.width > other.x &&
+          bounds.y < other.y + other.height &&
+          bounds.y + bounds.height > other.y,
       );
       if (!heading.hidden && Object.values(bounds).every(Number.isFinite))
         nodes.push({ id: `section:${section.id}`, bounds });
     });
     sectionZoom = state.zoom;
     canvas.setNodes(nodes);
-    for (const { entry } of placed)
+    for (const { entry } of placed) {
       canvas.registerNodeElement(entry.artifactId, panels.get(entry.artifactId));
+      const label = panels.get(entry.artifactId).querySelector('.design-artboard-label');
+      const title = label.querySelector('strong');
+      const size = label.querySelector('span');
+      label.title = `${title.textContent} · ${size.textContent}`;
+      size.hidden = false;
+      size.hidden = title.scrollWidth > title.clientWidth || size.scrollWidth > size.clientWidth;
+    }
     canvas.setSelection(
       placed.some(({ entry }) => entry.artifactId === activeArtifactId) ? [activeArtifactId] : [],
     );
@@ -2638,10 +2652,7 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
       const title = document.createElement('strong');
       title.textContent = `${screen.title}${readyVariants.length > 1 ? ` / ${variant.label}` : ''}`;
       const size = document.createElement('span');
-      const dimensions = `${frame.width} × ${frame.height}`;
-      size.textContent = frame.label.includes(dimensions)
-        ? frame.label
-        : `${frame.label} · ${dimensions}`;
+      size.textContent = designFrameLabel(frame);
       drag.append(title, size);
       label.append(drag);
       if (screen.description) {

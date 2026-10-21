@@ -1,6 +1,7 @@
 import { resolveArtifactHtml } from '@openplanr/artifact/artifact-sources.mjs';
 import { renderPlanrMark } from '@openplanr/artifact/ui/renderers.mjs';
 import { embedJson, escapeHtml } from './escape.mjs';
+import { designFrameLabel } from './frame-size.mjs';
 
 export const DESIGN_STUDIO_VERSION = '1.9.0';
 export const DESIGN_STUDIO_ASSETS = Object.freeze({
@@ -127,7 +128,7 @@ function designNotes(document) {
 }
 
 function stageDetails(document) {
-  return `<div class="design-stage-context"><div><strong data-design-screen-title>${escapeHtml(document.screens.find(({ id }) => id === document.screenOrder[0]).title)}</strong><span data-design-stage-description>Every screen, one connected design</span></div><div class="design-stage-actions">${designNotes(document)}<label class="design-frame-picker">Frame<select aria-label="Responsive frame" data-design-frame>${document.frames.map((frame) => `<option value="${escapeHtml(frame.id)}">${escapeHtml(frame.label)} · ${frame.width} × ${frame.height}</option>`).join('')}</select></label></div></div>
+  return `<div class="design-stage-context"><div><strong data-design-screen-title>${escapeHtml(document.screens.find(({ id }) => id === document.screenOrder[0]).title)}</strong><span data-design-stage-description>Every screen, one connected design</span></div><div class="design-stage-actions">${designNotes(document)}<label class="design-frame-picker">Frame<select aria-label="Responsive frame" data-design-frame>${document.frames.map((frame) => `<option value="${escapeHtml(frame.id)}">${escapeHtml(designFrameLabel(frame))}</option>`).join('')}</select></label></div></div>
 	  <div class="design-canvas-tools" role="group" aria-label="Canvas controls"><div class="planr-segment design-interaction-picker" role="group" aria-label="Review mode">${iconButton('Interact', 'pointer', 'data-planr-mode="interact" aria-pressed="true" aria-keyshortcuts="I"')}${iconButton('Annotate', 'comment', 'data-planr-mode="comment" aria-pressed="false" aria-keyshortcuts="C"')}</div><span></span>${button('−', 'data-design-zoom="out" aria-label="Zoom out"')}${button('100%', 'data-design-zoom="reset" aria-label="Reset zoom"')}${button('+', 'data-design-zoom="in" aria-label="Zoom in"')}<span></span>${button('100%', 'data-design-actual-size aria-label="Inspect screen at actual size" aria-pressed="false"')}${button('Focus', 'data-design-focus aria-label="Focus on the preview"')}${button('Fit', 'data-design-fit aria-label="Fit all visible artboards"')}${button('Pan', 'data-design-pan aria-pressed="false" aria-label="Pan canvas" aria-keyshortcuts="H Space" title="Pan canvas (H). Hold Space to pan temporarily; Escape returns to Interact."')}</div>
   <div class="design-walkthrough-caption" hidden><div><span data-design-step></span><h2 data-design-narrative-title></h2><p data-design-narrative></p></div><div>${button('Previous', 'data-design-step-change="-1"')}${button('Next', 'data-design-step-change="1"')}</div></div>
   <div class="design-notice" role="status" aria-live="polite" hidden><span data-design-notice-message></span><button type="button" data-design-dismiss-notice aria-label="Dismiss notification" title="Dismiss notification"><span aria-hidden="true">×</span></button></div>`;

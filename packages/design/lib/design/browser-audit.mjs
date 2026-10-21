@@ -332,74 +332,87 @@ export async function auditDesignPage(
     };
   }
   const loaded = new Set();
-  for (const frame of page.frames()) {
-    let handle, artifactId, panelState;
+  for (const entry of expected.values()) {
     try {
-      if (frame === page.mainFrame?.()) continue;
-      handle = await frame.frameElement();
-      artifactId =
-        (await handle.getAttribute('data-planr-artifact-frame')) ??
-        (await handle.getAttribute('data-planr-artifact-id'));
-      if (!expected.has(artifactId)) continue;
-      if (loaded.has(artifactId)) {
-        add(
-          artifactId,
-          'duplicate-frame',
-          'error',
-          'Multiple frames claim the same artifact identity.',
-        );
-        continue;
-      }
-      loaded.add(artifactId);
       await page.evaluate?.(async (id) => {
         const stage = window.__openPlanrArtifactStage;
         if (stage?.frameBudget) await stage.ensureFrames([id]);
-      }, artifactId);
-      await frame.waitForLoadState?.('load', { timeout: 5000 });
-      panelState = await handle.evaluate((element) => {
-        const panel = element.closest('[data-artifact-id]');
-        if (!panel) return null;
-        const hidden = panel.hidden;
-        panel.hidden = false;
-        return { hidden };
-      });
-      // A real keyboard event establishes focus-visible modality before the
-      // screen helper inspects controls, without activating any product action.
-      await page.keyboard?.press('Tab');
-      const result = await frame.evaluate(auditRenderedScreen, {
-        height: expected.get(artifactId).height,
-        frameBoundsSeverity,
-      });
-      if (result.screenId !== expected.get(artifactId).screenId) {
-        add(
-          artifactId,
-          'screen-identity-mismatch',
-          'error',
-          `Expected screen ${expected.get(artifactId).screenId}; loaded ${result.screenId ?? 'none'}.`,
-        );
-        continue;
-      }
-      checkedArtifacts.push(artifactId);
-      screens.push({ artifactId, ...result });
-      for (const issue of result.issues) add(artifactId, issue.rule, issue.severity, issue.message);
+      }, entry.artifactId);
     } catch (error) {
-      if (artifactId && expected.has(artifactId))
-        add(
-          artifactId,
-          'frame-load-error',
-          'error',
-          `The rendered frame could not be inspected: ${error.message}`,
-        );
-    } finally {
-      if (panelState && handle) {
-        await handle
-          .evaluate((element, state) => {
-            const panel = element.closest('[data-artifact-id]');
-            if (panel) panel.hidden = state.hidden;
-          }, panelState)
-          .catch(() => {});
+      add(
+        entry.artifactId,
+        'frame-load-error',
+        'error',
+        `The rendered frame could not be mounted: ${error.message}`,
+      );
+      continue;
+    }
+    for (const frame of page.frames()) {
+      let handle, artifactId, panelState;
+      try {
+        if (frame === page.mainFrame?.()) continue;
+        handle = await frame.frameElement();
+        artifactId =
+          (await handle.getAttribute('data-planr-artifact-frame')) ??
+          (await handle.getAttribute('data-planr-artifact-id'));
+        if (artifactId !== entry.artifactId) continue;
+        if (loaded.has(artifactId)) {
+          add(
+            artifactId,
+            'duplicate-frame',
+            'error',
+            'Multiple frames claim the same artifact identity.',
+          );
+          continue;
+        }
+        loaded.add(artifactId);
+        await frame.waitForLoadState?.('load', { timeout: 5000 });
+        panelState = await handle.evaluate((element) => {
+          const panel = element.closest('[data-artifact-id]');
+          if (!panel) return null;
+          const hidden = panel.hidden;
+          panel.hidden = false;
+          return { hidden };
+        });
+        // A real keyboard event establishes focus-visible modality before the
+        // screen helper inspects controls, without activating any product action.
+        await page.keyboard?.press('Tab');
+        const result = await frame.evaluate(auditRenderedScreen, {
+          height: entry.height,
+          frameBoundsSeverity,
+        });
+        if (result.screenId !== entry.screenId) {
+          add(
+            artifactId,
+            'screen-identity-mismatch',
+            'error',
+            `Expected screen ${entry.screenId}; loaded ${result.screenId ?? 'none'}.`,
+          );
+          continue;
+        }
+        checkedArtifacts.push(artifactId);
+        screens.push({ artifactId, ...result });
+        for (const issue of result.issues)
+          add(artifactId, issue.rule, issue.severity, issue.message);
+      } catch (error) {
+        if (artifactId && expected.has(artifactId))
+          add(
+            artifactId,
+            'frame-load-error',
+            'error',
+            `The rendered frame could not be inspected: ${error.message}`,
+          );
+      } finally {
+        if (panelState && handle) {
+          await handle
+            .evaluate((element, state) => {
+              const panel = element.closest('[data-artifact-id]');
+              if (panel) panel.hidden = state.hidden;
+            }, panelState)
+            .catch(() => {});
+        }
+        await handle?.dispose?.();
       }
-      await handle?.dispose?.();
     }
   }
   for (const artifactId of expected.keys()) {

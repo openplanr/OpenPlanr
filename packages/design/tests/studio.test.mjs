@@ -2843,6 +2843,93 @@ test('section geometry uses readable screen type, screen width and a bottom anch
   }
 });
 
+test('section headings move above board labels at every zoom and Fit stays stable', async (t) => {
+  const data = fixture({ count: 3 });
+  data.document.layout = {
+    sections: [{ id: 'journey', x: 0, y: 0, text: 'Workspace journey', maxW: 160 }],
+  };
+  const app = await mount({ data });
+  t.after(() => app.close());
+  const heading = app.documentNode.querySelector('.design-section-heading');
+  Object.defineProperties(heading, {
+    offsetWidth: { get: () => 160 / app.studio.getState().zoom },
+    offsetHeight: { get: () => 35 / app.studio.getState().zoom },
+  });
+  Object.defineProperties(app.documentNode.querySelector('.planr-stage-scroll'), {
+    clientWidth: { value: 1440 },
+    clientHeight: { value: 900 },
+    getBoundingClientRect: {
+      value: () => ({ left: 0, top: 0, right: 1440, bottom: 900, width: 1440, height: 900 }),
+    },
+  });
+  for (const zoom of [0.05, 0.1, 0.17, 0.28, 1]) {
+    app.studio.setCamera({ x: 0, y: 0, zoom });
+    assert.equal(heading.hidden, false, `heading visible at ${zoom}`);
+    const bottom = parseFloat(heading.style.top) + heading.offsetHeight;
+    assert.ok(bottom <= 0, 'heading never moves below its authored anchor');
+    assert.ok(bottom * zoom <= 72 * zoom - 42 + 0.001, 'heading clears the label by 8px');
+    assert.ok(parseFloat(heading.style.fontSize) * zoom >= 14);
+  }
+  app.window.dispatchEvent(new app.window.Event('resize'));
+  app.studio.fit();
+  const fitted = app.studio.getState();
+  assert.equal(heading.hidden, false, 'Fit includes the relocated heading');
+  assert.ok(
+    fitted.camera.y + parseFloat(heading.style.top) * fitted.zoom >= 0,
+    JSON.stringify({ camera: fitted.camera, zoom: fitted.zoom, top: heading.style.top }),
+  );
+  app.studio.fit();
+  const repeated = app.studio.getState();
+  assert.ok(Math.abs(repeated.zoom - fitted.zoom) < 0.000001, 'Fit converges');
+  assert.ok(Math.abs(repeated.camera.y - fitted.camera.y) < 0.01, 'Fit does not oscillate');
+});
+
+test('board labels give titles priority over metadata and expose complete tooltips', async (t) => {
+  const data = fixture({ count: 1 });
+  data.document.screens[0].title = 'Public status page';
+  data.document.layout = { boards: { 'screen-1': { x: 0, y: 72, title: 'Public status page' } } };
+  const app = await mount({ data });
+  t.after(() => app.close());
+  const label = app.documentNode.querySelector('.design-artboard-label');
+  const title = label.querySelector('strong');
+  const size = label.querySelector('span');
+  Object.defineProperties(title, {
+    scrollWidth: { value: 110 },
+    clientWidth: { get: () => (app.studio.getState().zoom < 0.3 && !size.hidden ? 90 : 110) },
+  });
+  for (const zoom of [0.17, 1, 0.1]) {
+    app.studio.setCamera({ x: 0, y: 0, zoom });
+    assert.equal(size.hidden, zoom < 0.3, `metadata visibility at ${zoom}`);
+    assert.ok(title.scrollWidth <= title.clientWidth);
+    assert.equal(label.title, 'Public status page · Desktop · 1280 × 800');
+  }
+});
+
+test('relocated headings hide only when an upper board or another heading still collides', async (t) => {
+  const data = fixture({ count: 2 });
+  data.document.layout = {
+    boards: { 'screen-2': { x: 0, y: -800 } },
+    sections: [
+      { id: 'upper', x: 0, y: -900, text: 'Upper' },
+      { id: 'duplicate', x: 0, y: -900, text: 'Duplicate' },
+      { id: 'crowded', x: 0, y: 0, text: 'Crowded' },
+    ],
+  };
+  const app = await mount({ data });
+  t.after(() => app.close());
+  const headings = [...app.documentNode.querySelectorAll('.design-section-heading')];
+  for (const heading of headings)
+    Object.defineProperties(heading, {
+      offsetWidth: { value: 160 },
+      offsetHeight: { value: 35 },
+    });
+  app.studio.setCamera({ x: 0, y: 0, zoom: 0.28 });
+  assert.deepEqual(
+    headings.map((heading) => heading.hidden),
+    [false, true, true],
+  );
+});
+
 test('Fit excludes measured chrome on every stage edge', async (t) => {
   const app = await mount({ data: fixture({ count: 1 }) });
   t.after(() => app.close());
@@ -3001,6 +3088,28 @@ test('board metadata includes authored dimensions only once', async (t) => {
     app.documentNode.querySelector('.design-artboard-drag span').textContent,
     'Desktop viewport · 1280 × 800',
   );
+});
+
+test('frame picker includes fixed and auto dimensions exactly once', async () => {
+  for (const height of [800, 'auto']) {
+    for (const embedded of [false, true]) {
+      const data = fixture({ count: 1 });
+      const dimensions = `1280 × ${height}`;
+      data.document.frames[0].height = height;
+      data.document.frames[0].label = embedded
+        ? `Desktop viewport · ${dimensions}`
+        : 'Desktop viewport';
+      const dom = new JSDOM(renderDesignStudio(data));
+      try {
+        assert.equal(
+          dom.window.document.querySelector('[data-design-frame] option').textContent,
+          `Desktop viewport · ${dimensions}`,
+        );
+      } finally {
+        dom.window.close();
+      }
+    }
+  }
 });
 
 test('disconnected save status exposes the complete text as its title', async (t) => {

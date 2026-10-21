@@ -2,6 +2,12 @@ import { initialFrameHeight } from '@openplanr/protocol/design-contracts';
 
 export { initialFrameHeight };
 
+/** Frame label with authored dimensions included once. */
+export function designFrameLabel(frame) {
+  const dimensions = `${frame.width} × ${frame.height}`;
+  return frame.label.includes(dimensions) ? frame.label : `${frame.label} · ${dimensions}`;
+}
+
 /** Numeric viewport before a content-sized screen has been measured. */
 export function designFrameViewport(document, frame) {
   return {

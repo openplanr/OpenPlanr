@@ -199,7 +199,7 @@
     {
       "source": "packages/design/lib/design/browser-audit.mjs",
       "target": "lib/design/browser-audit.mjs",
-      "sha256": "ec5ff87ee59c24809f408353f6534f6732271069e3952715785be92e920ce2b4",
+      "sha256": "1743cf95ebbdc194ea298a1b198cc24e1d0fd5084c1f3a3d41e45e4751c6c3a9",
       "mode": "644"
     },
     {
@@ -289,7 +289,7 @@
     {
       "source": "packages/design/lib/design/frame-size.mjs",
       "target": "lib/design/frame-size.mjs",
-      "sha256": "1ee45a8b14eb0e2ca5792c87cfad9ce6794c08c6adde5d5b063362f44fa66305",
+      "sha256": "500eb139717050494d94a2a394c7cd0ae37b154df4934f95cfc4868bdc452873",
       "mode": "644"
     },
     {
@@ -463,7 +463,7 @@
     {
       "source": "packages/design/lib/design/studio-render.mjs",
       "target": "lib/design/studio-render.mjs",
-      "sha256": "2b630d41eff439f513c7e367a46038be223b18bd4732fbdbb401bd55c0c20713",
+      "sha256": "9752038626b94b6ba741054850a6f12d6866392a20a602115d59b8096be00a43",
       "mode": "644"
     },
     {
@@ -517,7 +517,7 @@
     {
       "source": "packages/design/lib/design/ui/studio.mjs",
       "target": "lib/design/ui/studio.mjs",
-      "sha256": "17b7be49032e346594520ad33ce7fa1a369845d512ece127928b05ca2e3f27e9",
+      "sha256": "ef59ac730b8275b2941aa84f65a1d1132bd2b09b1bdcd30beb9a95a7214f1c4c",
       "mode": "644"
     },
     {
@@ -589,7 +589,7 @@
     {
       "source": "packages/design/templates/studio/studio.js",
       "target": "templates/studio/studio.js",
-      "sha256": "10cf3b9e8f98ae4a9073000e8f2006f9404fa79010e7f47b2100f1e7f792a464",
+      "sha256": "ef2c4dbd280d85d989b680d910b6eb9bcb9fbc93432c28cd8e3fd2c79b754db4",
       "mode": "644"
     }
   ]

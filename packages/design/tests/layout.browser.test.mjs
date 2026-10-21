@@ -5,6 +5,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
 import { browserEngine, launchBrowser } from '../../../tests/support/browser-launcher.mjs';
+import { auditDesignPage } from '../lib/design/browser-audit.mjs';
 import { renderDesignDocument } from '../lib/design/document.mjs';
 import { currentDesign } from '../lib/design/document-state.mjs';
 import { designFixture } from './design-fixture.mjs';
@@ -915,12 +916,13 @@ for (const viewport of [
       const { file, document } = designFixture(root, {
         count: 3,
         frames: [
-          { id: 'desktop', label: 'Desktop viewport · 1440 × 1024', width: 1440, height: 1024 },
+          { id: 'desktop', label: 'Desktop viewport · 1440 × auto', width: 1440, height: 'auto' },
           { id: 'mobile', label: 'Mobile', width: 390, height: 844 },
         ],
       });
+      document.screens[0].title = 'Public status page';
       document.layout = {
-        sections: [{ id: 'journey', x: 0, y: -320, text: 'Workspace journey', maxW: 160 }],
+        sections: [{ id: 'journey', x: 0, y: 0, text: 'Workspace journey', maxW: 160 }],
       };
       writeFileSync(file, `${JSON.stringify(document, null, 2)}\n`);
       await renderDesignDocument(file);
@@ -941,7 +943,7 @@ for (const viewport of [
       await settleStudioChrome(page);
       assert.equal(
         await page.locator('.design-artboard-drag span').first().textContent(),
-        'Desktop viewport · 1440 × 1024',
+        'Desktop viewport · 1440 × auto',
       );
       await page.waitForFunction(
         () =>
@@ -968,6 +970,22 @@ for (const viewport of [
       await page.locator('[data-design-fit]').click();
       await settleStudioChrome(page);
       await assertCanvasLabels(page);
+      const title = await page
+        .locator('.design-artboard-label')
+        .first()
+        .evaluate((label) => {
+          const title = label.querySelector('strong');
+          return {
+            fits: title.scrollWidth <= title.clientWidth,
+            narrow: label.querySelector('.design-artboard-drag').clientWidth < title.scrollWidth,
+            tooltip: label.title,
+          };
+        });
+      assert.ok(
+        title.fits ||
+          (title.narrow && title.tooltip === 'Public status page · Desktop viewport · 1440 × auto'),
+        'Fit preserves the full board title or exposes its title and size in the tooltip',
+      );
       const geometry = await page.evaluate(() => {
         const rect = (selector) =>
           document.querySelector(selector).getBoundingClientRect().toJSON();
@@ -1013,7 +1031,7 @@ for (const viewport of [
           `Fit clears the measured stage context: ${details}`,
         );
       }
-      for (const zoom of [null, 1, 0.3]) {
+      for (const zoom of [null, 0.28, 1, 0.05]) {
         if (zoom !== null) {
           await page.evaluate((zoom) => {
             window.__openPlanrDesignStudio.setCamera({ x: 40, y: 200, zoom });
@@ -1033,15 +1051,18 @@ for (const viewport of [
                 '.planr-artifact-panel:not([hidden]) .design-artboard-label',
               ),
             ].map((label) => label.getBoundingClientRect().toJSON()),
-            anchor:
-              document.querySelector('.planr-frame-grid').getBoundingClientRect().top - 320 * zoom,
+            boards: [
+              ...document.querySelectorAll('.planr-artifact-panel:not([hidden]) .planr-frame'),
+            ].map((board) => board.getBoundingClientRect().toJSON()),
+            anchor: document.querySelector('.planr-frame-grid').getBoundingClientRect().top,
           };
         });
         assert.equal(heading.hidden, false, `heading visible at ${zoom ?? 'Fit'}`);
         assert.ok(heading.font >= 13.99 && heading.font <= 28.01, `screen font: ${heading.font}`);
         assert.ok(Math.abs(heading.maxWidth - 160) < 0.01);
-        assert.ok(Math.abs(heading.rect.bottom - heading.anchor) < 1);
+        assert.ok(heading.rect.bottom <= heading.anchor + 1);
         for (const label of heading.labels) assert.equal(intersects(heading.rect, label), false);
+        for (const board of heading.boards) assert.equal(intersects(heading.rect, board), false);
         if (zoom === null) {
           assert.ok(heading.rect.top >= geometry.stage.top - 1, 'Fit includes the heading box');
           assert.ok(
@@ -1050,14 +1071,6 @@ for (const viewport of [
           );
         }
       }
-      await page.evaluate(() =>
-        window.__openPlanrDesignStudio.setCamera({ x: 0, y: 0, zoom: 0.05 }),
-      );
-      assert.equal(
-        await page.locator('.design-section-heading').isVisible(),
-        false,
-        'below 34 / 392 (about 8.7%), the first board label crosses the heading anchor',
-      );
       await page.evaluate(() => {
         window.__openPlanrDesignStudio.setCamera({ x: 0, y: 0, zoom: 1 });
         document.querySelector('[data-design-screen="screen-2"]').click();
@@ -1070,6 +1083,27 @@ for (const viewport of [
       await page.evaluate(() => window.__openPlanrDesignStudio.fit());
       await settleStudioChrome(page);
       await assertCanvasLabels(page);
+      const fitted = await page.evaluate(() => window.__openPlanrDesignStudio.getState());
+      await page.evaluate(() => window.__openPlanrDesignStudio.fit());
+      const repeated = await page.evaluate(() => window.__openPlanrDesignStudio.getState());
+      assert.ok(Math.abs(repeated.zoom - fitted.zoom) < 0.000001, 'Fit converges');
+      assert.ok(Math.abs(repeated.camera.y - fitted.camera.y) < 0.01, 'Fit stays stable');
+
+      const current = currentDesign(file);
+      assert.equal(current.entries.length, 6);
+      assert.ok((await page.locator('iframe[data-planr-artifact-frame]').count()) <= 3);
+      const report = await auditDesignPage(page, {
+        document: current.document,
+        entries: current.entries,
+      });
+      assert.deepEqual(
+        report.checkedArtifacts,
+        current.entries.map(({ artifactId }) => artifactId),
+      );
+      assert.equal(
+        report.issues.some(({ rule }) => rule === 'missing-frame-inspection'),
+        false,
+      );
     } finally {
       await browser?.close();
       await session?.close();
