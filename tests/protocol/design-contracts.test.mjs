@@ -115,26 +115,39 @@ test('one authored source supports project frames, sparse variants and repeated 
   }
 });
 
-test('current design contracts accept both authored versions with fixed or content-sized frames', () => {
-  for (const schemaVersion of ['1.0.0', '1.1.0']) {
-    for (const height of [900, 'auto']) {
-      const document = { ...fixture(), schemaVersion };
-      document.frames[0].height = height;
-      assert.deepEqual(validateDesignDocument(document), { ok: true, errors: [] });
-      assert.strictEqual(assertDesignDocument(document), document);
-      assert.deepEqual(
-        validateProtocolArtifact('design-document', document, { protocolVersion: '1.20.0' }),
-        [],
-      );
-      document.layout = { boards: { overview: { x: 10, y: 20 } } };
-      assert.strictEqual(assertDesignDocument(document), document);
-      assert.equal(document.schemaVersion, schemaVersion);
-    }
+test('current design contracts accept fixed or content-sized frames at version 1.0.0', () => {
+  for (const height of [900, 'auto']) {
+    const document = fixture();
+    document.frames[0].height = height;
+    assert.deepEqual(validateDesignDocument(document), { ok: true, errors: [] });
+    assert.strictEqual(assertDesignDocument(document), document);
+    assert.deepEqual(
+      validateProtocolArtifact('design-document', document, { protocolVersion: '1.20.0' }),
+      [],
+    );
+    document.layout = { boards: { overview: { x: 10, y: 20 } } };
+    assert.strictEqual(assertDesignDocument(document), document);
+    assert.equal(document.schemaVersion, '1.0.0');
   }
   assert.equal(DESIGN_DOCUMENT_V1_SCHEMA.properties.schemaVersion.const, '1.0.0');
   assert.ok(
     validateJson({ ...fixture(), schemaVersion: '1.1.0' }, DESIGN_DOCUMENT_V1_SCHEMA).length > 0,
   );
+});
+
+test('design contracts reject the withdrawn authored version with any frame mode or layout', () => {
+  for (const height of [900, 'auto']) {
+    for (const layout of [undefined, { boards: { overview: { x: 10, y: 20 } } }]) {
+      const document = { ...fixture(), schemaVersion: '1.1.0' };
+      if (layout !== undefined) document.layout = layout;
+      document.frames[0].height = height;
+      assert.throws(
+        () => assertDesignDocument(document),
+        /Invalid design document.*schemaVersion/su,
+      );
+      assert.ok(validateJson(document, DESIGN_DOCUMENT_SCHEMA).length > 0);
+    }
+  }
 });
 
 test('walkthroughs are not limited to eight screens', () => {

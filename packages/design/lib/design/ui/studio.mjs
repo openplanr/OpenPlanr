@@ -146,7 +146,6 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
   let scroll = null;
   let surface = null;
   let grid = null;
-  let canvasBackground = null;
   let canvasAttached = false;
   const canvas = createCanvas({
     label: 'Design canvas',
@@ -1450,11 +1449,6 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
       syncCanvasNodes();
     if (state.view !== 'canvas')
       grid.style.transform = `translate(${state.camera.x}px, ${state.camera.y}px) scale(${state.zoom})`;
-    // Translate a bounded background layer rather than invalidating inherited
-    // properties on the entire shell or repainting its full stage background.
-    const pixelRatio = window.devicePixelRatio || 1;
-    const backgroundOffset = (value) => Math.round((value % 24) * pixelRatio) / pixelRatio;
-    canvasBackground.style.transform = `translate3d(${backgroundOffset(state.camera.x)}px, ${backgroundOffset(state.camera.y)}px, 0)`;
     const active = entries.find((entry) => entry.artifactId === activeArtifactId);
     const bounds = active ? placedBoardBounds(active) : null;
     if (selectionOutline) {
@@ -2582,10 +2576,6 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
     scroll = q('.planr-stage-scroll');
     surface = q('.planr-stage-surface');
     grid = q('.planr-frame-grid');
-    canvasBackground = document.createElement('div');
-    canvasBackground.className = 'design-canvas-background';
-    canvasBackground.setAttribute('aria-hidden', 'true');
-    scroll.prepend(canvasBackground);
     selectionOutline = document.createElement('div');
     selectionOutline.className = 'design-selection-outline';
     selectionOutline.setAttribute('aria-hidden', 'true');
@@ -2877,7 +2867,6 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
         clearTimeout(viewContextTimer);
         if (cameraFrame !== null) cancelAnimationFrame(cameraFrame);
         for (const heading of sectionHeadings) heading.remove();
-        canvasBackground?.remove();
         selectionOutline?.remove();
         for (const remove of cleanup.splice(0)) remove();
       },

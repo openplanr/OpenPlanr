@@ -299,10 +299,9 @@ export async function auditDesignPage(
   const issues = [],
     checkedArtifacts = [],
     screens = [];
-  const frameBoundsSeverity =
-    document.schemaVersion === '1.1.0' || document.frames?.some((frame) => frame.height === 'auto')
-      ? 'error'
-      : 'warning';
+  const frameBoundsSeverity = document.frames?.some((frame) => frame.height === 'auto')
+    ? 'error'
+    : 'warning';
   const expected = new Map(entries.map((entry) => [entry.artifactId, entry]));
   const add = (artifactId, rule, severity, message) =>
     issues.push({ artifactId, rule, severity, message });

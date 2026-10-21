@@ -14,6 +14,15 @@ import {
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const assets = renderDesignStudioAssets();
 
+test('the design studio stylesheet keeps its canvas ground free of dot patterns', () => {
+  const styles = readFileSync(join(root, 'templates/studio/studio.css'), 'utf8');
+  assert.equal(
+    styles.includes('radial-gradient('),
+    false,
+    'The design canvas ground must be plain.',
+  );
+});
+
 test('the generated studio runtime matches its ES module sources', () => {
   for (const [path, bytes] of Object.entries(assets)) {
     assert.equal(

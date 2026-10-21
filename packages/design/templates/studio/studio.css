@@ -220,7 +220,7 @@
 }
 [data-design-studio] .planr-stage {
 	overflow: hidden;
-	background-image: none;
+	background: var(--planr-color-stage);
 }
 .design-stage-context {
 	position: absolute;
@@ -376,16 +376,6 @@
 	contain: layout paint;
 	isolation: isolate;
 }
-.design-canvas-background {
-	position: absolute;
-	inset: -24px;
-	pointer-events: none;
-	background-image: radial-gradient(color-mix(in srgb, var(--planr-color-text-muted) 20%, transparent) 1px, transparent 1px);
-	background-size: 24px 24px;
-	will-change: transform;
-}
-[data-design-view="prototype"] .design-canvas-background,
-[data-design-view="walkthrough"] .design-canvas-background { display: none; }
 [data-design-studio] .planr-stage-surface {
 	position: relative;
 	min-width: 0;

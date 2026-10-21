@@ -81,11 +81,12 @@ families retain their existing formats.
 
 The additive `schemas/v1.20.0/design-document.schema.json` accepts optional
 canvas board positions, section headings and content-sized frame heights. The
-current design validator accepts authored `schemaVersion: "1.0.0"` and `"1.1.0"`,
-including `height: "auto"` with either version. New documents use `"1.1.0"`;
-existing documents keep their value. Frame checks are errors for `"1.1.0"`
-documents or any document with an auto-height frame, and warnings otherwise.
-Layout never changes severity. The original Protocol 1.9 schema bytes are unchanged.
+current design validator accepts authored `schemaVersion: "1.0.0"`, including
+`height: "auto"`. Use auto-height frames for pages that scroll; any auto-height
+frame makes `board-root-box-sizing`, `vertical-overflow` and `outside-frame`
+errors throughout the document. Otherwise these checks are warnings and do not
+block verification or handoff readiness. Layout and schema version never change
+severity. The original Protocol 1.9 schema bytes are unchanged.
 
 Design comment categories are separate from the frozen artifact pin intent.
 Protocol 1.11 adds metadata payload `schemaVersion: "1.1.0"` for the explicit

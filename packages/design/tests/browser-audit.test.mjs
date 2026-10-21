@@ -263,6 +263,40 @@ test('frame mode reaches the rendered auditor', async () => {
   });
 });
 
+test('frame severity depends only on auto frames, regardless of schema version or layout', async () => {
+  for (const schemaVersion of ['1.0.0', '1.1.0', '2.0.0']) {
+    for (const layout of [undefined, {}, { boards: { overview: { x: 120, y: 180 } } }]) {
+      for (const auto of [false, true]) {
+        const page = mockPage(clearResult());
+        let severity;
+        page.frames()[0].evaluate = async (_fn, argument) => {
+          severity = argument.frameBoundsSeverity;
+          return clearResult();
+        };
+        const report = await auditDesignPage(page, {
+          document: {
+            ...document,
+            schemaVersion,
+            layout,
+            frames: [...document.frames, ...(auto ? [{ id: 'long', height: 'auto' }] : [])],
+          },
+          entries: [entry],
+        });
+        assert.equal(
+          severity,
+          auto ? 'error' : 'warning',
+          `${schemaVersion}/${JSON.stringify(layout)}`,
+        );
+        assert.deepEqual(
+          report.checkedArtifacts,
+          [entry.artifactId],
+          JSON.stringify(report.issues),
+        );
+      }
+    }
+  }
+});
+
 test('real browser enforces frame bounds and root sizing while respecting clipped scroll content', async (t) => {
   const instance = await browser(t);
   if (!instance) return;
@@ -361,8 +395,8 @@ function scrollingScreen(fn, argument, screenId) {
   return JSON.parse(JSON.stringify(result));
 }
 
-test('frame bounds preserve legacy warnings after migration and drags and enforce authored or auto frames', async (t) => {
-  for (const mode of ['legacy', 'migrated', 'dragged', 'authored', 'auto']) {
+test('frame bounds preserve fixed-frame warnings after migration and drags and enforce auto frames', async (t) => {
+  for (const mode of ['legacy', 'migrated', 'dragged', 'auto']) {
     await t.test(mode, async (t) => {
       const root = mkdtempSync(join(tmpdir(), 'design-audit-severity-'));
       t.after(() => rmSync(root, { recursive: true, force: true }));
@@ -370,7 +404,6 @@ test('frame bounds preserve legacy warnings after migration and drags and enforc
         count: 1,
         frames: [{ id: 'desktop', label: 'Desktop', width: 640, height: 600 }],
       });
-      if (mode === 'authored') document.schemaVersion = '1.1.0';
       if (mode === 'auto')
         document.frames.push({ id: 'long', label: 'Long', width: 640, height: 'auto' });
       writeFileSync(file, JSON.stringify(document));
@@ -392,7 +425,7 @@ test('frame bounds preserve legacy warnings after migration and drags and enforc
         assert.equal(currentDesign(file).document.schemaVersion, '1.0.0');
       }
       const expected =
-        mode === 'authored' || mode === 'auto'
+        mode === 'auto'
           ? { severity: 'error', verification: 'failed', readiness: 'blocked' }
           : { severity: 'warning', verification: 'verified', readiness: 'pass' };
       const current = currentDesign(file);

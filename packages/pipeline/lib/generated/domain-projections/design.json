@@ -199,7 +199,7 @@
     {
       "source": "packages/design/lib/design/browser-audit.mjs",
       "target": "lib/design/browser-audit.mjs",
-      "sha256": "061f1f11d12d8099d29d32a3ab544198fe32d6d0dfe34f154db35df096f5b7c6",
+      "sha256": "ec5ff87ee59c24809f408353f6534f6732271069e3952715785be92e920ce2b4",
       "mode": "644"
     },
     {
@@ -313,7 +313,7 @@
     {
       "source": "packages/design/lib/design/handoff-readiness.mjs",
       "target": "lib/design/handoff-readiness.mjs",
-      "sha256": "f1bf9700118eb67dbeb5e08d810894e9bf1fcd96bc4329914b9601d21a2b2d0a",
+      "sha256": "9cc4c6021ce4427c022fcb37e94f8ecdb7c703bb07066dbb1ac47e3f06bd94f6",
       "mode": "644"
     },
     {
@@ -517,7 +517,7 @@
     {
       "source": "packages/design/lib/design/ui/studio.mjs",
       "target": "lib/design/ui/studio.mjs",
-      "sha256": "214ed5a3471c335a6985cc4c5c803267320c9732956c2aa417c856eb8e562c2d",
+      "sha256": "db41c7e4e2ec344d927becbcf497ca0c7d9b469ab4fe72ae8467b87fd7445885",
       "mode": "644"
     },
     {
@@ -583,13 +583,13 @@
     {
       "source": "packages/design/templates/studio/studio.css",
       "target": "templates/studio/studio.css",
-      "sha256": "94c88da1995870dc23eea875035eddb21af936a9871390b00c4351358c88b25b",
+      "sha256": "51f73546cd61adaedfd77681211471dd7379a7b28cf72320ccb3dde846a5daf2",
       "mode": "644"
     },
     {
       "source": "packages/design/templates/studio/studio.js",
       "target": "templates/studio/studio.js",
-      "sha256": "5107075a302d3de1871f41d7aa04b5d4fc61179ee51e9b5f943362810af17724",
+      "sha256": "d7d140cbb9da4f6800e1b6da9a39e0354fabc6079d38e2b00e21dd034b1255ef",
       "mode": "644"
     }
   ]

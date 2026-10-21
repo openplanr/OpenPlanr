@@ -26,10 +26,7 @@
       "const": "openplanr-design-document"
     },
     "schemaVersion": {
-      "enum": [
-        "1.0.0",
-        "1.1.0"
-      ]
+      "const": "1.0.0"
     },
     "id": {
       "$ref": "#/$defs/id"

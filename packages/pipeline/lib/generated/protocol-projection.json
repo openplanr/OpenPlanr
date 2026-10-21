@@ -138,7 +138,7 @@
     {
       "source": "packages/protocol/projections/pipeline/lib/protocol/design-contracts.mjs",
       "target": "lib/protocol/design-contracts.mjs",
-      "sha256": "e1a209c3845b3d81efe8832fd3f55b7976c6db899fef8018e0af16721bd083d4",
+      "sha256": "99a8dff3d12f2498d1b4908b354a049df8e93d2db5fe4034f8a1d992eef30678",
       "mode": "644"
     },
     {
@@ -522,7 +522,7 @@
     {
       "source": "packages/protocol/registries/skills.json",
       "target": "registry/v1.5.0/skills.json",
-      "sha256": "1041eec807dd3060d52394ec6177ff08ceacd196b4c0b17ca01b90b481806bd4",
+      "sha256": "5d471c26ec7b47f985c819164cbb2d21b32d8353eb53dda6190e51a9e3a01145",
       "mode": "644"
     },
     {
@@ -1554,7 +1554,7 @@
     {
       "source": "packages/protocol/schemas/v1.20.0/design-document.schema.json",
       "target": "schemas/v1.20.0/design-document.schema.json",
-      "sha256": "0aaedb8a0ccd90bcb97518f5b7be1b885fd49ed25b5c8e39d073e77974b3062f",
+      "sha256": "9782c8c130b19f7c47b17ec59a216f4699e3a6f3b81120ecc0442d2576d58fa2",
       "mode": "644"
     },
     {

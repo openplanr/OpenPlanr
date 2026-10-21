@@ -72,25 +72,21 @@ test('company publication converts shared local sources to the frozen inline hos
   assert.equal(local.envelope.schemaVersion, '1.1.0');
 });
 
-test('both authored versions project fixed and auto frames into review and publication contracts', (t) => {
-  for (const schemaVersion of ['1.0.0', '1.1.0']) {
-    for (const height of [900, 'auto']) {
-      const { file, document } = fixture(t, {
-        count: 1,
-        frames: [{ id: 'desktop', label: 'Desktop', width: 1440, height }],
-      });
-      document.schemaVersion = schemaVersion;
-      save(file, document);
-      const review = bundleDesignRevision(prepareDesignDocument(file, { passive: true }));
-      assert.strictEqual(assertDesignReviewBundle(review), review);
-      const publication = prepareCompanyDesignPublication(file);
-      assert.strictEqual(assertCompanyDesignBundle(publication.bundle), publication.bundle);
-      for (const bundle of [review, publication.bundle]) {
-        assert.equal(Object.hasOwn(bundle.design, 'schemaVersion'), false);
-        assert.equal(bundle.design.frames[0].height, height);
-      }
-      assert.equal(JSON.parse(readFileSync(file, 'utf8')).schemaVersion, schemaVersion);
+test('authored version 1.0.0 projects fixed and auto frames into review and publication contracts', (t) => {
+  for (const height of [900, 'auto']) {
+    const { file } = fixture(t, {
+      count: 1,
+      frames: [{ id: 'desktop', label: 'Desktop', width: 1440, height }],
+    });
+    const review = bundleDesignRevision(prepareDesignDocument(file, { passive: true }));
+    assert.strictEqual(assertDesignReviewBundle(review), review);
+    const publication = prepareCompanyDesignPublication(file);
+    assert.strictEqual(assertCompanyDesignBundle(publication.bundle), publication.bundle);
+    for (const bundle of [review, publication.bundle]) {
+      assert.equal(Object.hasOwn(bundle.design, 'schemaVersion'), false);
+      assert.equal(bundle.design.frames[0].height, height);
     }
+    assert.equal(JSON.parse(readFileSync(file, 'utf8')).schemaVersion, '1.0.0');
   }
 });
 

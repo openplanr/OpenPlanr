@@ -135,11 +135,11 @@ height exceeds its viewport by more than 1px. Auto frames skip that check.
 frame width or height (document height for auto), after ancestor overflow clips
 are applied. Hidden and zero-sized elements are ignored.
 `board-root-box-sizing` requires the screen's body to compute `border-box`.
-These three rules are errors when the authored document has
-`schemaVersion: "1.1.0"` or any frame with `height: "auto"`; otherwise they are
-warnings and do not block verification or handoff readiness. A `layout` object
-never changes severity. New documents use `1.1.0`; existing documents preserve
-their value through migration, dragging and revision. Auto frames are valid with
-either schema version. Pass the current design document to `auditDesignPage`
-alongside the revision and entries so every screen uses the document's severity.
+These three rules are errors throughout a document with any frame using
+`height: "auto"`. Use auto frames for pages that scroll to opt into these strict
+checks. Otherwise the rules are warnings and do not block verification or handoff
+readiness. Neither `layout` nor `schemaVersion` changes severity; migration and
+dragging keep fixed-frame warnings. Use `schemaVersion: "1.0.0"` for authored
+documents. Pass the current design document to `auditDesignPage` alongside the
+revision and entries so every screen uses the document's severity.
 Inspect screenshots and journeys as well as these geometry checks.

@@ -182,7 +182,6 @@ export const DESIGN_DOCUMENT_SCHEMA = freeze({
   'x-openplanr-contract': { id: 'design-document', version: '1.20.0' },
   properties: {
     .../** @type {Record<string, unknown>} */ (DESIGN_DOCUMENT_V1_SCHEMA.properties),
-    schemaVersion: { enum: ['1.0.0', '1.1.0'] },
     frames: {
       ...FRAME_SCHEMA,
       items: {
