@@ -15,6 +15,7 @@ export {
   CANVAS_TRACE_BUDGETS,
   domBudgetPolicy,
   evaluateCanvasTrace,
+  toClockResolution,
   traceBudgetPolicy,
   traceOwnership,
 } from './evaluate.mjs';

@@ -5,6 +5,7 @@ import {
   type CanvasTraceMeasurement,
   type CanvasTraceResults,
   evaluateCanvasTrace,
+  toClockResolution,
 } from '../../src/testing/index.mjs';
 
 function complete(count: 708 | 5000) {
@@ -329,6 +330,28 @@ describe('canvas trace evaluation', () => {
     ).toContain('rendererMainP95Ms');
   });
 
+  it.each([
+    [16.80000000000291, true],
+    [16.84, true],
+    [16.85, false],
+  ])('compares a Chromium rAF p95 of %d ms with 16.8 at clock resolution', (raf, passes) => {
+    const results = complete(708);
+    for (const run of results.measurements[0].runs) run.rafIntervalP95Ms = raf;
+    const evaluation = evaluate(results);
+    expect(evaluation.passed).toBe(passes);
+    if (!passes)
+      expect(evaluation.failures).toEqual([
+        `708-fixture vanilla html DPR 2 pan-100: rafIntervalP95Ms measured 16.9 (raw ${raf}), limit 16.8`,
+      ]);
+  });
+
+  it('rounds interval-derived metrics to the 0.1 ms clock resolution', () => {
+    expect(toClockResolution(16.80000000000291)).toBe(16.8);
+    expect(toClockResolution(16.84)).toBe(16.8);
+    expect(toClockResolution(16.85)).toBe(16.9);
+    expect(toClockResolution(16.7)).toBe(16.7);
+  });
+
   it('reports runner rAF and remount while preserving the 250 ms first-frame gate', () => {
     const results = complete(5000);
     results.budgetSet = 'runner';
@@ -482,8 +505,8 @@ describe('canvas trace evaluation', () => {
       run.worstFrameMs = 33;
     }
     expect(evaluate(results).failures).toEqual([]);
-    results.measurements[0].runs[0].worstFrameMs = 33.001;
-    for (const run of results.measurements[0].runs) run.rafIntervalP95Ms = 19.001;
+    results.measurements[0].runs[0].worstFrameMs = 33.05;
+    for (const run of results.measurements[0].runs) run.rafIntervalP95Ms = 19.05;
     expect(evaluate(results).failures.join('\n')).toContain('rafIntervalP95Ms');
     expect(evaluate(results).failures.join('\n')).toContain('worstFrameMs');
   });
@@ -493,13 +516,13 @@ describe('canvas trace evaluation', () => {
     results.browser.name = 'firefox';
     for (const run of results.measurements[0].runs) run.rafIntervalP95Ms = 17;
     expect(evaluate(results).failures).toEqual([]);
-    for (const run of results.measurements[0].runs) run.rafIntervalP95Ms = 17.001;
+    for (const run of results.measurements[0].runs) run.rafIntervalP95Ms = 17.05;
     expect(evaluate(results).failures.join('\n')).toContain('frameP95Ms');
     results.measurements[0].scenario = 'pan-fit';
     const limit = tier === 708 ? 20 : 25;
     for (const run of results.measurements[0].runs) run.rafIntervalP95Ms = limit;
     expect(evaluate(results).failures).toEqual([]);
-    for (const run of results.measurements[0].runs) run.rafIntervalP95Ms = limit + 0.001;
+    for (const run of results.measurements[0].runs) run.rafIntervalP95Ms = limit + 0.05;
     expect(evaluate(results).failures.join('\n')).toContain(`limit ${limit}`);
   });
 
