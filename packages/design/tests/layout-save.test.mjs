@@ -7,11 +7,12 @@ import { digestArtifactEnvelope } from '@openplanr/artifact/envelope.mjs';
 import { createReviewLedger } from '@openplanr/artifact/merge.mjs';
 import { writeArtifactReviewState } from '@openplanr/artifact/review.mjs';
 import { atomicJson, currentDesign, renderDesignDocument } from '../lib/design/document.mjs';
+import { saveDesignLayout } from '../lib/design/layout-save.mjs';
 import {
   designReviewKey,
   designReviewPath,
   readDesignFeedback,
-  saveDesignLayout,
+  saveDesignLayout as reviewSaveDesignLayout,
 } from '../lib/design/review.mjs';
 import { designFixture } from './design-fixture.mjs';
 import { fetch, startDesignReview } from './studio-http-fixture.mjs';
@@ -28,6 +29,7 @@ async function fixture(t, layout) {
 }
 
 test('layout saves preserve titles, formatting, artifact identity and review pin anchors', async (t) => {
+  assert.equal(reviewSaveDesignLayout, saveDesignLayout);
   const f = await fixture(t, { boards: { [key]: { x: 12, y: 34, title: 'Overview' } } });
   chmodSync(f.file, 0o664);
   const mode = statSync(f.file).mode & 0o7777;

@@ -1874,6 +1874,60 @@ test('a failed layout save stays pending and retries visibly on flush', async ()
   }
 });
 
+test('canvas initialization preserves a delayed authoritative personal viewport', async () => {
+  let respond;
+  const initialState = new Promise((resolve) => {
+    respond = resolve;
+  });
+  const app = await mount({
+    options: { stateUrl: '/api/design-state' },
+    fetchImpl: () => initialState,
+  });
+  try {
+    await delay(50);
+    assert.equal(app.studio.getSaveState().personalPending, false);
+    respond({
+      ok: true,
+      async json() {
+        return {
+          stateVersion: 1,
+          state: { view: 'canvas', camera: { x: -345, y: 147 }, zoom: 0.42 },
+        };
+      },
+    });
+    await delay(30);
+    assert.deepEqual(structuredClone(app.studio.getState().camera), { x: -345, y: 147 });
+    assert.equal(app.studio.getState().zoom, 0.42);
+    assert.equal(app.studio.getSaveState().personalPending, false);
+  } finally {
+    app.close();
+  }
+});
+
+test('Space on the focused engine stage enters and releases the studio pan tool', async () => {
+  const app = await mount();
+  try {
+    const scroll = app.documentNode.querySelector('.planr-stage-scroll');
+    scroll.focus();
+    scroll.dispatchEvent(
+      new app.window.KeyboardEvent('keydown', {
+        key: ' ',
+        code: 'Space',
+        bubbles: true,
+        cancelable: true,
+      }),
+    );
+    assert.equal(app.studio.getTool(), 'pan');
+    assert.equal(app.documentNode.querySelector('.planr-shell').dataset.designPanActive, 'true');
+    scroll.dispatchEvent(
+      new app.window.KeyboardEvent('keyup', { key: ' ', code: 'Space', bubbles: true }),
+    );
+    assert.equal(app.studio.getTool(), 'interact');
+  } finally {
+    app.close();
+  }
+});
+
 test('late startup state cannot rewind a revision adopted from a layout save', async () => {
   let respond;
   const initialState = new Promise((resolve) => {
@@ -1926,7 +1980,11 @@ test('section headings share the canvas world, affect Fit, and hide in focused v
     Object.defineProperties(app.documentNode.querySelector('.planr-stage-scroll'), {
       clientWidth: { value: 2000 },
       clientHeight: { value: 1200 },
+      getBoundingClientRect: {
+        value: () => ({ left: 0, top: 0, right: 2000, bottom: 1200, width: 2000, height: 1200 }),
+      },
     });
+    app.window.dispatchEvent(new app.window.Event('resize'));
     app.studio.fit();
     const expectedZoom = 1904 / 6766;
     assert.equal(app.studio.getState().zoom, expectedZoom);
@@ -2059,4 +2117,174 @@ test('auto measurements update runtime geometry and preserve fixed frame geometr
   }
   const fixed = data.entries.find((entry) => entry.frameId === 'mobile');
   assert.equal(studio.getViewport(fixed.artifactId).height, 844);
+});
+
+test('unplaced boards are excluded from live context until their structural render', async () => {
+  const contexts = [];
+  const app = await mount({
+    options: { viewContextUrl: '/api/view-context' },
+    fetchImpl: async (_url, init) => {
+      contexts.push(JSON.parse(init.body));
+      return {
+        ok: true,
+        async json() {
+          return {};
+        },
+      };
+    },
+  });
+  try {
+    for (const panel of app.documentNode.querySelectorAll('.planr-artifact-panel')) {
+      panel.style.removeProperty('left');
+      panel.style.removeProperty('top');
+    }
+    app.studio.setCamera({ x: 160, y: 110, zoom: 0.5 });
+    await delay(300);
+    assert.deepEqual(contexts.at(-1).visibleScreens, []);
+    assert.equal(app.documentNode.querySelector('.design-selection-outline').hidden, true);
+    app.studio.fit();
+    assert.ok(
+      [...app.documentNode.querySelectorAll('.planr-artifact-panel:not([hidden])')].every(
+        (panel) =>
+          Number.isFinite(parseFloat(panel.style.left)) &&
+          Number.isFinite(parseFloat(panel.style.top)),
+      ),
+    );
+  } finally {
+    app.close();
+  }
+});
+
+test('changing tools ends a captured engine pan', async () => {
+  const app = await mount();
+  try {
+    const scroll = app.documentNode.querySelector('.planr-stage-scroll');
+    const captured = new Set();
+    const pointer = (type, x = 0, y = 0) => {
+      const event = new app.window.MouseEvent(type, {
+        bubbles: true,
+        button: 0,
+        clientX: x,
+        clientY: y,
+      });
+      Object.defineProperty(event, 'pointerId', { value: 7 });
+      return event;
+    };
+    scroll.setPointerCapture = (id) => {
+      captured.add(id);
+      scroll.dispatchEvent(pointer('gotpointercapture'));
+    };
+    scroll.hasPointerCapture = (id) => captured.has(id);
+    scroll.releasePointerCapture = (id) => {
+      captured.delete(id);
+      scroll.dispatchEvent(pointer('lostpointercapture'));
+    };
+    app.studio.setTool('pan');
+    scroll.dispatchEvent(pointer('pointerdown', 50, 50));
+    scroll.dispatchEvent(pointer('pointermove', 90, 70));
+    const before = structuredClone(app.studio.getState().camera);
+    const mutations = [];
+    const observer = new app.window.MutationObserver((records) => mutations.push(...records));
+    observer.observe(scroll, {
+      attributes: true,
+      attributeFilter: ['role', 'aria-roledescription'],
+    });
+    app.studio.setTool('interact');
+    assert.equal(captured.size, 0);
+    assert.equal(mutations.length + observer.takeRecords().length, 0, 'The engine stays attached');
+    observer.disconnect();
+    scroll.dispatchEvent(pointer('pointermove', 170, 110));
+    scroll.dispatchEvent(pointer('pointerup', 170, 110));
+    assert.deepEqual(structuredClone(app.studio.getState().camera), before);
+  } finally {
+    app.close();
+  }
+});
+
+test('saved canvas translation survives a synchronous render during a view change', async () => {
+  const app = await mount();
+  try {
+    app.studio.setCamera({ x: 160, y: 110, zoom: 0.5 });
+    app.studio.setView('prototype');
+    app.documentNode
+      .querySelector('.planr-shell')
+      .addEventListener('planr:design-view-change', (event) => {
+        if (event.detail.view === 'canvas')
+          app.studio.setPanels({ navOpen: false, reviewOpen: false });
+      });
+    app.studio.setView('canvas');
+    assert.deepEqual(structuredClone(app.studio.getState().camera), { x: 160, y: 110 });
+    assert.deepEqual(structuredClone(app.studio.getState().viewports.canvas), {
+      x: 160,
+      y: 110,
+      zoom: 0.5,
+    });
+  } finally {
+    app.close();
+  }
+});
+
+test('studio keyboard coordination preserves control activation and owns Escape before engine selection', async () => {
+  const app = await mount();
+  try {
+    const panel = app.documentNode.querySelector('.planr-artifact-panel:not([hidden])');
+    panel.focus();
+    for (const key of ['Home', 'End']) {
+      const event = new app.window.KeyboardEvent('keydown', {
+        key,
+        bubbles: true,
+        cancelable: true,
+      });
+      panel.dispatchEvent(event);
+      assert.equal(event.defaultPrevented, false);
+      assert.equal(app.documentNode.activeElement, panel);
+    }
+    const button = panel.querySelector('[data-design-drag]');
+    button.focus();
+    const enter = new app.window.KeyboardEvent('keydown', {
+      key: 'Enter',
+      bubbles: true,
+      cancelable: true,
+    });
+    button.dispatchEvent(enter);
+    assert.equal(enter.defaultPrevented, false);
+    app.studio.setPanels({ reviewOpen: true });
+    panel.dispatchEvent(
+      new app.window.KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }),
+    );
+    assert.equal(app.studio.getState().reviewOpen, false);
+  } finally {
+    app.close();
+  }
+});
+
+test('opening notes for an inactive board preserves the saved canvas camera', async () => {
+  const app = await mount();
+  try {
+    const scroll = app.documentNode.querySelector('.planr-stage-scroll');
+    Object.defineProperties(scroll, {
+      clientWidth: { value: 1024 },
+      clientHeight: { value: 800 },
+      getBoundingClientRect: {
+        value: () => ({ left: 0, top: 0, right: 1024, bottom: 800, width: 1024, height: 800 }),
+      },
+    });
+    app.window.dispatchEvent(new app.window.Event('resize'));
+    app.studio.setCamera({ x: 160, y: 110, zoom: 0.5 });
+    const entry = app.entries.find(
+      (item) =>
+        item.frameId === 'mobile' && item.screenId === 'screen-1' && item.variantId === 'editorial',
+    );
+    const note = app.stage.getPanel(entry.artifactId).querySelector('[data-design-note]');
+    note.focus();
+    note.click();
+    assert.deepEqual(structuredClone(app.studio.getState().camera), { x: 160, y: 110 });
+    await app.studio.flush();
+    const stored = JSON.parse(
+      app.window.localStorage.getItem(`openplanr.design-studio.${app.document.id}`),
+    );
+    assert.deepEqual(stored.state.camera, { x: 160, y: 110 });
+  } finally {
+    app.close();
+  }
 });

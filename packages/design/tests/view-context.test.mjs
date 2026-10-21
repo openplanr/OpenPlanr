@@ -6,7 +6,7 @@ import { test } from 'node:test';
 import { acquireStartLock } from '@openplanr/artifact/internal/server-util.mjs';
 import { atomicJson, currentDesign, renderDesignDocument } from '../lib/design/document.mjs';
 import { designUtility, readDesignViewContext } from '../lib/design/utility.mjs';
-import { validateDesignViewContext } from '../lib/design/view-context.mjs';
+import { saveDesignViewContext, validateDesignViewContext } from '../lib/design/view-context.mjs';
 import { designFixture } from './design-fixture.mjs';
 import { fetch, startDesignReview } from './studio-http-fixture.mjs';
 
@@ -53,6 +53,26 @@ async function server(t, f) {
       fetch(url, { method: 'PUT', headers, body: JSON.stringify(input), ...options }),
   };
 }
+
+test('view context saves use the supplied clock and reject stale writes without overwriting', async (t) => {
+  const f = await fixture(t);
+  const updatedAt = '2026-10-20T10:00:00.000Z';
+  const clock = () => new Date(updatedAt);
+  assert.deepEqual(saveDesignViewContext(f.file, f.input, clock), { ok: true });
+  assert.deepEqual(JSON.parse(readFileSync(f.path, 'utf8')), {
+    kind: 'openplanr-design-view-context',
+    schemaVersion: '1.0.0',
+    ...f.input,
+    updatedAt,
+  });
+  assert.equal(currentDesign(f.file).revision, f.current.revision);
+  const before = readFileSync(f.path, 'utf8');
+  assert.throws(
+    () => saveDesignViewContext(f.file, { ...f.input, revision: 'stale-revision' }, clock),
+    (error) => error.statusCode === 409,
+  );
+  assert.equal(readFileSync(f.path, 'utf8'), before);
+});
 
 test('studio view context persists viewer selection without changing the design revision', async (t) => {
   const f = await fixture(t);

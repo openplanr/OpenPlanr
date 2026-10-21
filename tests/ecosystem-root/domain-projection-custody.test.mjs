@@ -36,6 +36,9 @@ function fixture(t) {
   }
   put('packages/pipeline/package.json', JSON.stringify({ name: 'planr-pipeline' }));
   put('packages/operate/lib/operate/current.mjs', 'export const current = true;\n');
+  put('packages/canvas/src/index.mts', 'export const engine = true;\n');
+  put('packages/canvas/src/index.mjs', 'export const engine = true;\n');
+  put('packages/canvas/src/styles.css', '.canvas { position: relative; }\n');
   const target = join(root, 'packages/pipeline');
   const run = (mode = 'write', domain = 'operate') => {
     const result = spawnSync(
@@ -58,6 +61,68 @@ function fixture(t) {
   };
   return { root, target, put, run };
 }
+
+test('design projection owns the compiled canvas runtime and rewrites its imports', (t) => {
+  const { root, target, put, run } = fixture(t);
+  for (const directory of ['lib/design-engine', 'templates/studio'])
+    mkdirSync(join(root, 'packages/design', directory), { recursive: true });
+  put(
+    'packages/design/lib/design/ui/studio.mjs',
+    [
+      "import { engine } from '@openplanr/canvas';",
+      "import styles from '@openplanr/canvas/styles.css';",
+      'export { engine, styles };',
+      '',
+    ].join('\n'),
+  );
+  put('packages/canvas/src/index.d.mts', 'export declare const engine: true;\n');
+  for (const path of ['react/index', 'testing/index', 'tests/engine.test'])
+    put(`packages/canvas/src/${path}.mts`, 'export const excluded = true;\n');
+  for (const path of ['react/index', 'testing/index', 'tests/engine.test'])
+    put(`packages/canvas/src/${path}.mjs`, 'export const excluded = true;\n');
+  put('packages/canvas/src/overview-worker.mjs', 'export const worker = true;\n');
+  const result = run('write', 'design');
+  assert.equal(result.status, 0, result.stderr);
+  assert.equal(
+    readFileSync(join(target, 'lib/design/ui/studio.mjs'), 'utf8'),
+    [
+      "import { engine } from '../../canvas/index.mjs';",
+      "import styles from '../../canvas/styles.css';",
+      'export { engine, styles };',
+      '',
+    ].join('\n'),
+  );
+  const manifest = JSON.parse(
+    readFileSync(join(target, 'lib/generated/domain-projections/design.json'), 'utf8'),
+  );
+  const canvas = manifest.entries.filter(({ target }) => target.startsWith('lib/canvas/'));
+  assert.deepEqual(
+    canvas.map(({ target }) => target),
+    ['lib/canvas/index.mjs', 'lib/canvas/overview-worker.mjs', 'lib/canvas/styles.css'],
+  );
+  for (const entry of canvas) {
+    const bytes = readFileSync(join(target, entry.target));
+    assert.deepEqual(bytes, readFileSync(join(root, entry.source)));
+    assert.equal(digest(bytes), entry.sha256);
+  }
+  assert.equal(run('check', 'design').status, 0);
+  assert.equal(run('write', 'design').report.changedFiles, 0);
+  put('packages/pipeline/lib/canvas/index.mjs', 'customer modification\n');
+  const conflict = run('write', 'design');
+  assert.equal(conflict.status, 1);
+  assert.equal(conflict.report.conflicts[0].target, 'lib/canvas/index.mjs');
+});
+
+test('design projection requires compiled canvas sources before writing', (t) => {
+  const { root, target, run } = fixture(t);
+  for (const directory of ['lib/design', 'lib/design-engine', 'templates/studio'])
+    mkdirSync(join(root, 'packages/design', directory), { recursive: true });
+  rmSync(join(root, 'packages/canvas/src/index.mjs'));
+  const result = run('write', 'design');
+  assert.equal(result.status, 1);
+  assert.match(result.stderr, /Missing compiled packages\/canvas\/src\/index.mjs/u);
+  assert.equal(existsSync(join(target, 'lib/canvas/index.mjs')), false);
+});
 
 for (const transition of ['pull', 'branch switch']) {
   test(`an unchanged retired projection is removed after a simulated ${transition}`, (t) => {

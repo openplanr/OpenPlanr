@@ -55,6 +55,9 @@ export {
   recoverDesignPublication,
 } from './document-state.mjs';
 
+export { saveDesignLayout } from './layout-save.mjs';
+export { saveDesignViewContext } from './view-context.mjs';
+
 export const DESIGN_VIEWS = Object.freeze(['canvas', 'prototype', 'walkthrough']);
 // Bump when renderer/bridge implementation changes outside the hashed runtime assets.
 export const DESIGN_RENDERER_VERSION = '1.3.0';

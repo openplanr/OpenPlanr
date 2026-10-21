@@ -749,7 +749,7 @@
       ]
     },
     {
-      "path": "scripts/runtime/packages/design/templates/studio/studio.js.sources/15-design-review-experience.js",
+      "path": "scripts/runtime/packages/design/templates/studio/studio.js.sources/15-canvas-engine.js",
       "kind": "asset",
       "executable": false,
       "hosts": [
@@ -760,7 +760,7 @@
       ]
     },
     {
-      "path": "scripts/runtime/packages/design/templates/studio/studio.js.sources/16-studio-shell.js",
+      "path": "scripts/runtime/packages/design/templates/studio/studio.js.sources/16-design-review-experience.js",
       "kind": "asset",
       "executable": false,
       "hosts": [
@@ -771,7 +771,7 @@
       ]
     },
     {
-      "path": "scripts/runtime/packages/design/templates/studio/studio.js.sources/17-interface-primitives.js",
+      "path": "scripts/runtime/packages/design/templates/studio/studio.js.sources/17-studio-shell.js",
       "kind": "asset",
       "executable": false,
       "hosts": [
@@ -793,7 +793,7 @@
       ]
     },
     {
-      "path": "scripts/runtime/packages/design/templates/studio/studio.js.sources/19-studio-shell.js",
+      "path": "scripts/runtime/packages/design/templates/studio/studio.js.sources/19-interface-primitives.js",
       "kind": "asset",
       "executable": false,
       "hosts": [
@@ -804,7 +804,18 @@
       ]
     },
     {
-      "path": "scripts/runtime/packages/design/templates/studio/studio.js.sources/20-design-studio.js",
+      "path": "scripts/runtime/packages/design/templates/studio/studio.js.sources/20-studio-shell.js",
+      "kind": "asset",
+      "executable": false,
+      "hosts": [
+        "claude-code",
+        "codex",
+        "chatgpt",
+        "cursor"
+      ]
+    },
+    {
+      "path": "scripts/runtime/packages/design/templates/studio/studio.js.sources/21-design-studio.js",
       "kind": "asset",
       "executable": false,
       "hosts": [

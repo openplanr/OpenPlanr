@@ -37,6 +37,7 @@ function responsibility(input) {
   if (input.startsWith('node_modules/pako/')) return 'compression';
   if (input.startsWith('node_modules/')) return 'interface-primitives';
   if (input.startsWith('packages/protocol/')) return 'protocol-contracts';
+  if (input.startsWith('packages/canvas/src/')) return 'canvas-engine';
   if (/^packages\/artifact\/lib\/artifact\/ui\/(?:studio-shell|prototype-state)/u.test(input))
     return 'studio-shell';
   if (input.startsWith('packages/artifact/lib/artifact/ui/')) return 'artifact-review-ui';

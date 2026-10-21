@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { DESIGN_DOCUMENT_SCHEMA } from '@openplanr/protocol/design-contracts';
-import { currentDesign } from './document-state.mjs';
+import { atomicJson, currentDesign } from './document-state.mjs';
 
 const anchorPattern = new RegExp(DESIGN_DOCUMENT_SCHEMA.$defs.id.pattern, 'u');
 const exact = (value, keys) =>
@@ -54,6 +54,19 @@ export function validateDesignViewContext(input, current) {
       `View context planrId ${JSON.stringify(planrId)} must be null or a document anchor ID of at most 128 characters.`,
     );
   return structuredClone(input);
+}
+
+export function saveDesignViewContext(file, input, clock) {
+  const current = currentDesign(file);
+  const context = validateDesignViewContext(input, current);
+  const value = {
+    kind: 'openplanr-design-view-context',
+    schemaVersion: '1.0.0',
+    ...context,
+    updatedAt: clock().toISOString(),
+  };
+  atomicJson(join(current.root, '.design/view-context.json'), value);
+  return { ok: true };
 }
 
 /** Reads validated viewer data, or explains why it cannot scope a request. */

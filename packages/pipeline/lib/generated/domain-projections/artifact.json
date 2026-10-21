@@ -2017,7 +2017,7 @@
     {
       "source": "packages/artifact/scripts/generate-artifact-shell.mjs",
       "target": "scripts/generate-artifact-shell.mjs",
-      "sha256": "6963ffaaa601bc44123f75f9f52c08d4128073e671a33eb61218a86cff36de72",
+      "sha256": "72e5ce3b5dc05134480b3cccd34be5576e875c006e19e576fcf4e9a3e4413def",
       "mode": "644"
     },
     {

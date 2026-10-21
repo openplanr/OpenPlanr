@@ -46,11 +46,21 @@ test(`board layout saves without replacing previews, supports undo and survives 
     assert.equal(await heading.evaluate((node) => getComputedStyle(node).maxWidth), '360px');
     assert.equal(await heading.evaluate((node) => getComputedStyle(node).pointerEvents), 'none');
     await page.locator('[data-design-fit]').click();
+    await settleStudioChrome(page);
     const stage = await page.locator('.planr-stage-scroll').boundingBox();
     const headingBounds = await heading.boundingBox();
-    assert.ok(headingBounds.x >= stage.x && headingBounds.y >= stage.y);
-    assert.ok(headingBounds.x + headingBounds.width <= stage.x + stage.width);
-    assert.ok(headingBounds.y + headingBounds.height <= stage.y + stage.height);
+    assert.ok(
+      headingBounds.x >= stage.x && headingBounds.y >= stage.y,
+      `Section starts inside the stage: ${JSON.stringify({ headingBounds, stage })}`,
+    );
+    assert.ok(
+      headingBounds.x + headingBounds.width <= stage.x + stage.width,
+      `Section ends inside the stage horizontally: ${JSON.stringify({ headingBounds, stage })}`,
+    );
+    assert.ok(
+      headingBounds.y + headingBounds.height <= stage.y + stage.height,
+      `Section ends inside the stage vertically: ${JSON.stringify({ headingBounds, stage })}`,
+    );
     assert.equal(await page.locator('[data-design-drag] strong').textContent(), 'Workspace board');
 
     const frame = page.locator('.planr-artifact-panel iframe');
@@ -77,7 +87,10 @@ test(`board layout saves without replacing previews, supports undo and survives 
       key,
     );
     const movedRevision = await page.evaluate(() => window.__openPlanrDesignStudio.getRevision());
-    assert.ok(moved.x > original.x && moved.y > original.y);
+    assert.ok(
+      moved.x > original.x && moved.y > original.y,
+      `Board moves with the drag: ${JSON.stringify({ moved, original })}`,
+    );
     assert.ok(Number.isInteger(moved.x) && Number.isInteger(moved.y));
     assert.equal(moved.title, original.title);
     assert.notEqual(movedRevision, initialRevision);
@@ -153,6 +166,137 @@ test(`board layout saves without replacing previews, supports undo and survives 
     }
     await page.locator('[data-design-view="canvas"]').click();
     assert.equal(await heading.isVisible(), true);
+    assert.deepEqual(errors, []);
+  } finally {
+    await browser?.close();
+    await session?.close();
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test(`canvas engine preserves legacy fit, zoom anchors, saved cameras and board layout (${browserEngine()})`, {
+  timeout: 60000,
+}, async () => {
+  const root = await mkdtemp(join(tmpdir(), 'openplanr-canvas-engine-'));
+  let browser, session;
+  try {
+    const { file } = designFixture(root, {
+      frames: [{ id: 'desktop', label: 'Desktop', width: 600, height: 450 }],
+    });
+    await renderDesignDocument(file);
+    session = await startDesignReview(file, {
+      env: { ...process.env, PLANR_HOME: join(root, 'home') },
+      port: 0,
+    });
+    browser = await launchBrowser({ engine: browserEngine() });
+    const page = await browser.newPage({ viewport: { width: 1600, height: 1050 } });
+    const errors = [];
+    page.on('pageerror', (error) => errors.push(error.message));
+    await page.goto(session.url);
+    await page.locator('[data-design-ready="true"]').waitFor();
+    await settleStudioChrome(page);
+    const stage = page.locator('.planr-stage-scroll');
+    assert.equal(await stage.getAttribute('aria-roledescription'), 'canvas');
+    await page.locator('[data-design-fit]').click();
+    const fitted = await page.evaluate(() => {
+      const stage = document.querySelector('.planr-stage-scroll');
+      const panels = [...document.querySelectorAll('.planr-artifact-panel:not([hidden])')];
+      const minX = Math.min(...panels.map((panel) => parseFloat(panel.style.left)));
+      const minY = Math.min(...panels.map((panel) => parseFloat(panel.style.top) - 64));
+      const maxX = Math.max(...panels.map((panel) => parseFloat(panel.style.left) + 600));
+      const maxY = Math.max(...panels.map((panel) => parseFloat(panel.style.top) + 450));
+      const zoom = Math.max(
+        0.05,
+        Math.min(
+          1,
+          (stage.clientWidth - 96) / (maxX - minX),
+          (stage.clientHeight - 96) / (maxY - minY),
+        ),
+      );
+      window.engineFrames = panels.flatMap((panel) => {
+        const frame = panel.querySelector('iframe');
+        return frame ? [{ frame, parent: frame.parentElement }] : [];
+      });
+      return {
+        actual: window.__openPlanrDesignStudio.getState(),
+        expected: {
+          zoom,
+          x: (stage.clientWidth - (maxX - minX) * zoom) / 2 - minX * zoom,
+          y: (stage.clientHeight - (maxY - minY) * zoom) / 2 - minY * zoom,
+        },
+      };
+    });
+    assert.ok(
+      await page.evaluate(() => window.engineFrames.length > 0),
+      'At least one preview is loaded',
+    );
+    assert.ok(Math.abs(fitted.actual.zoom - fitted.expected.zoom) < 0.00001);
+    assert.ok(Math.abs(fitted.actual.camera.x - fitted.expected.x) < 1);
+    assert.ok(Math.abs(fitted.actual.camera.y - fitted.expected.y) < 1);
+    const box = await stage.boundingBox();
+    const point = { x: box.width * 0.7, y: box.height * 0.6 };
+    await page.mouse.move(box.x + point.x, box.y + point.y);
+    await page.keyboard.down('Control');
+    await page.mouse.wheel(0, -30);
+    await page.keyboard.up('Control');
+    await page.waitForFunction(
+      (zoom) => window.__openPlanrDesignStudio.getState().zoom > zoom,
+      fitted.actual.zoom,
+    );
+    const zoomed = await page.evaluate(() => window.__openPlanrDesignStudio.getState());
+    assert.ok(Math.abs(zoomed.zoom - fitted.actual.zoom * 1.25) < 0.00001);
+    for (const axis of ['x', 'y']) {
+      const before = (point[axis] - fitted.actual.camera[axis]) / fitted.actual.zoom;
+      const after = (point[axis] - zoomed.camera[axis]) / zoomed.zoom;
+      assert.ok(Math.abs(after - before) < 1, `${axis} wheel anchor stays fixed`);
+    }
+    await page.locator('[data-design-fit]').click();
+    await page.evaluate(async () => {
+      await new Promise((resolve) => requestAnimationFrame(resolve));
+      await window.__openPlanrDesignStudio.flush();
+    });
+    const savedCamera = await page.evaluate(() => window.__openPlanrDesignStudio.getState());
+    assert.equal(
+      await page.evaluate(() =>
+        window.engineFrames.every(
+          ({ frame, parent }) => frame.isConnected && frame.parentElement === parent,
+        ),
+      ),
+      true,
+    );
+    await page.reload();
+    await page.locator('[data-design-ready="true"]').waitFor();
+    await settleStudioChrome(page);
+    const restored = await page.evaluate(() => window.__openPlanrDesignStudio.getState());
+    for (const axis of ['x', 'y'])
+      assert.ok(Math.abs(restored.camera[axis] - savedCamera.camera[axis]) < 0.00001);
+    assert.equal(restored.zoom, savedCamera.zoom);
+    const handle = page.locator('[data-design-drag]').first();
+    const bounds = await handle.boundingBox();
+    const saved = page.waitForResponse(
+      (response) =>
+        response.url().endsWith('/api/design-layout') && response.request().method() === 'PUT',
+    );
+    await page.mouse.move(bounds.x + 50, bounds.y + bounds.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(bounds.x + 110, bounds.y + bounds.height / 2 + 30, { steps: 6 });
+    await page.mouse.up();
+    assert.equal((await saved).status(), 200);
+    await page.evaluate(() => window.__openPlanrDesignStudio.flush());
+    const moved = await page.evaluate(
+      () => window.__openPlanrDesignStudio.getLayout().boards['screen-1/desktop/A'],
+    );
+    assert.ok(moved.x > 0 && moved.y > 72);
+    assert.deepEqual(
+      JSON.parse(readFileSync(file, 'utf8')).layout.boards['screen-1/desktop/A'],
+      moved,
+    );
+    for (const view of ['prototype', 'walkthrough']) {
+      await page.locator(`[data-design-view="${view}"]`).click();
+      assert.equal(await stage.getAttribute('aria-roledescription'), null);
+    }
+    await page.locator('[data-design-view="canvas"]').click();
+    assert.equal(await stage.getAttribute('aria-roledescription'), 'canvas');
     assert.deepEqual(errors, []);
   } finally {
     await browser?.close();

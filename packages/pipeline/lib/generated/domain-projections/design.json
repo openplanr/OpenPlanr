@@ -5,6 +5,120 @@
   "generator": "scripts/domains/project-domains.mjs",
   "entries": [
     {
+      "source": "packages/canvas/src/announcer.mjs",
+      "target": "lib/canvas/announcer.mjs",
+      "sha256": "8a53525b04dd12f7db4dba1d7e3754b904f7a923a6eefcb89ce150873b70da11",
+      "mode": "644"
+    },
+    {
+      "source": "packages/canvas/src/camera.mjs",
+      "target": "lib/canvas/camera.mjs",
+      "sha256": "a4e14676d6236ec598bffaa1442a61b8e62ed296e596bafa33964dfb451e0164",
+      "mode": "644"
+    },
+    {
+      "source": "packages/canvas/src/controller.mjs",
+      "target": "lib/canvas/controller.mjs",
+      "sha256": "ae28da3ded0b80a48160e4a17fa6baf3c745d9dd1ea9b7c3a98a71fa06af0474",
+      "mode": "644"
+    },
+    {
+      "source": "packages/canvas/src/culling.mjs",
+      "target": "lib/canvas/culling.mjs",
+      "sha256": "83af62db74e0b97522c1bc9447eade3ddd78e5418be4e405a33f2f706729b246",
+      "mode": "644"
+    },
+    {
+      "source": "packages/canvas/src/edges.mjs",
+      "target": "lib/canvas/edges.mjs",
+      "sha256": "1436efe781271814bf5323f0b1b557c0bdc8a375093e5519663438522a6c1c96",
+      "mode": "644"
+    },
+    {
+      "source": "packages/canvas/src/focus.mjs",
+      "target": "lib/canvas/focus.mjs",
+      "sha256": "da307d0a0698ea58bea725e471c593a2693b8a7cfb06c70e9d08a940e5ca04c5",
+      "mode": "644"
+    },
+    {
+      "source": "packages/canvas/src/frame-loader.mjs",
+      "target": "lib/canvas/frame-loader.mjs",
+      "sha256": "c3226b44b6d59d8e672de19efc9d2edda3e89adc8d3d5076c100b4c31b96d706",
+      "mode": "644"
+    },
+    {
+      "source": "packages/canvas/src/frames.mjs",
+      "target": "lib/canvas/frames.mjs",
+      "sha256": "d2d58fe9d29708eb211d45cc01ae45d7eddbbedc83e9badf050a59fe0d88caad",
+      "mode": "644"
+    },
+    {
+      "source": "packages/canvas/src/index.mjs",
+      "target": "lib/canvas/index.mjs",
+      "sha256": "9868e4b8a846c3012dada491081967ab5fd37d630cb03d9673af305a13a350f8",
+      "mode": "644"
+    },
+    {
+      "source": "packages/canvas/src/input.mjs",
+      "target": "lib/canvas/input.mjs",
+      "sha256": "9230ff0acbeb82835ca5badf578db0b3942168c90e3ca15c9e13dd04a30b2113",
+      "mode": "644"
+    },
+    {
+      "source": "packages/canvas/src/keyboard.mjs",
+      "target": "lib/canvas/keyboard.mjs",
+      "sha256": "b634905ef2f9f79b204ef46f469228d18e1a914793d5f61a96a664e1e42d5aff",
+      "mode": "644"
+    },
+    {
+      "source": "packages/canvas/src/lod.mjs",
+      "target": "lib/canvas/lod.mjs",
+      "sha256": "01ef34f8ab5bf34e1ad7a2c7a182a71caaf850f5ed8b01e27f68b1b70befe04c",
+      "mode": "644"
+    },
+    {
+      "source": "packages/canvas/src/outline.mjs",
+      "target": "lib/canvas/outline.mjs",
+      "sha256": "42283e31a9f01bb78a2fe4b9fa528eb040fcb28b64ab1e1e2bb30085f5468678",
+      "mode": "644"
+    },
+    {
+      "source": "packages/canvas/src/overview-worker.mjs",
+      "target": "lib/canvas/overview-worker.mjs",
+      "sha256": "5df8975e5b806c29713d21932ab0e7441067944513eef3758639edd89c53205c",
+      "mode": "644"
+    },
+    {
+      "source": "packages/canvas/src/overview.mjs",
+      "target": "lib/canvas/overview.mjs",
+      "sha256": "ffd6f23911f7c96e92aaed85a006b6416b71d2e0ee2658ffbafdea9ae6765573",
+      "mode": "644"
+    },
+    {
+      "source": "packages/canvas/src/safe-area.mjs",
+      "target": "lib/canvas/safe-area.mjs",
+      "sha256": "f226b094cce0deb56731f74fa0871eb405d56d6c86836ee6212830379af8dae4",
+      "mode": "644"
+    },
+    {
+      "source": "packages/canvas/src/spatial-grid.mjs",
+      "target": "lib/canvas/spatial-grid.mjs",
+      "sha256": "8856907cd3a04425bb0537350cb8930c6375a9684c66e7f235517a8d0c90b303",
+      "mode": "644"
+    },
+    {
+      "source": "packages/canvas/src/styles.css",
+      "target": "lib/canvas/styles.css",
+      "sha256": "7d39c507b18d71ea6183a0bc87ad4daa64b4f5c6c676571852a40f3f8998d32a",
+      "mode": "644"
+    },
+    {
+      "source": "packages/canvas/src/types.mjs",
+      "target": "lib/canvas/types.mjs",
+      "sha256": "bed2eb7e4352cd9cbeb24170b594fcadc39b8ace5ef5ff02ca242b2e48a4e474",
+      "mode": "644"
+    },
+    {
       "source": "packages/design/lib/design-engine/artifact-adapter.mjs",
       "target": "lib/design-engine/artifact-adapter.mjs",
       "sha256": "251ef6c1cf04437edcae4d2731a37b2208ef626a0f8643af55eb59a12cf09d4d",
@@ -151,7 +265,7 @@
     {
       "source": "packages/design/lib/design/document.mjs",
       "target": "lib/design/document.mjs",
-      "sha256": "6ad3695bdfda9d0813938c42ffd8230fde358209e049bc54f28a1bcefdc14f8f",
+      "sha256": "d7887a4c84f4abf74f31fa1bd3ef5d1609f980a44074022a7d4c1c930082dbf0",
       "mode": "644"
     },
     {
@@ -263,6 +377,12 @@
       "mode": "644"
     },
     {
+      "source": "packages/design/lib/design/layout-save.mjs",
+      "target": "lib/design/layout-save.mjs",
+      "sha256": "9a2877b33e1c264cf961a70eb1dc4a54bdc06698b7b9952367456915db08b854",
+      "mode": "644"
+    },
+    {
       "source": "packages/design/lib/design/lint.mjs",
       "target": "lib/design/lint.mjs",
       "sha256": "c086228fefd37eac44efdc22589c23ac058e9083792b7ef400c43ce34546a55f",
@@ -307,7 +427,7 @@
     {
       "source": "packages/design/lib/design/review.mjs",
       "target": "lib/design/review.mjs",
-      "sha256": "70abb5ebe7d334efce1af43305c1ec28a3a413578e0893042a242fb1cfdc4a6f",
+      "sha256": "be9d1531ed2cedf1803a9b6efc0e5f386d4d35ee3914a86cafec85254b6ea7a6",
       "mode": "644"
     },
     {
@@ -361,7 +481,7 @@
     {
       "source": "packages/design/lib/design/ui/enhancements.mjs",
       "target": "lib/design/ui/enhancements.mjs",
-      "sha256": "5e170e4e6e790f0c11629f177ffe54ca87f5f1568ba9390edbf0c50625873567",
+      "sha256": "9c00faddb345be1f948e85bbcbc38a9cb7f453bc6dfc844a229d0df503a875d7",
       "mode": "644"
     },
     {
@@ -397,7 +517,7 @@
     {
       "source": "packages/design/lib/design/ui/studio.mjs",
       "target": "lib/design/ui/studio.mjs",
-      "sha256": "5901c6246c4ba7f409c46377bd98cd89a4f920afa5262f1890deda78da21ed57",
+      "sha256": "6cd922b6171351ccb16ff846595ed12e52d80c7b2d195a8ee48a2d0e12ee0a41",
       "mode": "644"
     },
     {
@@ -409,7 +529,7 @@
     {
       "source": "packages/design/lib/design/view-context.mjs",
       "target": "lib/design/view-context.mjs",
-      "sha256": "106ba8588d45fa846ced1491ad0adf4b439ea17a059b0c79321e284a2d8fb517",
+      "sha256": "8f45a6b624e87ca013cb6ac916086fc0f42cab5fe64e3028e1cd94ed3360bff0",
       "mode": "644"
     },
     {
@@ -469,7 +589,7 @@
     {
       "source": "packages/design/templates/studio/studio.js",
       "target": "templates/studio/studio.js",
-      "sha256": "c7f25ef112ccbbfbc2f14dae04e3ded93bd3f84a3756eefb6965bdce3cdb12ce",
+      "sha256": "ed3ffca82cf4b8372cf8c96c7280c74f02009bd58f73d2e2a426b6f8199e280b",
       "mode": "644"
     }
   ]

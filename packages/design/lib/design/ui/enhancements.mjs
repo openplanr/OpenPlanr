@@ -1636,12 +1636,15 @@ export function mountDesignEnhancements({ payload, studio: designStudio, stage: 
     on(document, 'fullscreenchange', () => {
       if (!document.fullscreenElement) restore();
     });
+    function leavePresentation(event) {
+      if (!chrome || activeDialog) return false;
+      event.preventDefault();
+      restore();
+      return true;
+    }
+    on(root, 'planr:design-escape', leavePresentation);
     on(document, 'keydown', (event) => {
-      if (event.key === 'Escape' && chrome && !activeDialog) {
-        event.preventDefault();
-        restore();
-        return;
-      }
+      if (event.key === 'Escape' && leavePresentation(event)) return;
       if (event.target.closest('input,textarea,select,[contenteditable="true"]') || activeDialog)
         return;
       if (event.shiftKey && ['1', '!'].includes(event.key)) {

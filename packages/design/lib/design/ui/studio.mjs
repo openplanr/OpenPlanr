@@ -1,5 +1,11 @@
 /** Design presentation composes the artifact stage. Pins remain artifact-owned. */
 import { createPrototypeStateRelay } from '@openplanr/artifact/ui/prototype-state.mjs';
+import {
+  cameraFromScreenTranslate,
+  cameraToScreenTranslate,
+  createCanvas,
+} from '@openplanr/canvas';
+import canvasStyles from '@openplanr/canvas/styles.css';
 import { designFrameViewport } from '../frame-size.mjs';
 import { boardPlacement } from './layout.mjs';
 import { mountDesignChrome, mountDesignPanels } from './studio-chrome.mjs';
@@ -133,6 +139,15 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
   let surface = null;
   let grid = null;
   let canvasBackground = null;
+  let canvasAttached = false;
+  const canvas = createCanvas({
+    label: 'Design canvas',
+    zoom: { min: 0.05, max: 2 },
+    lod: false,
+    motion: 'none',
+    keyboard: { arrows: 'none' },
+    shortcutsEnabled: () => false,
+  });
   let cameraFrame = null;
   let selectionOutline = null;
   let dirty = false;
@@ -184,6 +199,7 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
   let notesReturnFocus = null;
   const panels = new Map();
   const sectionHeadings = [];
+  const canvasPointers = new Set();
   const cleanup = [];
 
   function listen(target, event, handler, settings) {
@@ -265,6 +281,7 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
 
   function scheduleViewContext() {
     if (!options.viewContextUrl || !stage || !scroll || destroyed) return;
+    if (state.view === 'canvas' && !canvasAttached) return;
     if (viewContextConflictRevision !== null && revision === viewContextConflictRevision) return;
     viewContextConflictRevision = null;
     if (inspectedSelection?.artifactId !== activeArtifactId) inspectedSelection = null;
@@ -272,10 +289,10 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
     const visible =
       state.view === 'canvas'
         ? visibleEntries().filter((entry) => {
-            const panel = panels.get(entry.artifactId);
-            const { width, height } = viewportFor(entry);
-            const x = state.camera.x + parseFloat(panel.style.left) * state.zoom;
-            const y = state.camera.y + parseFloat(panel.style.top) * state.zoom;
+            const bounds = placedBoardBounds(entry);
+            if (!bounds) return false;
+            const { width, height } = bounds;
+            const { x, y } = canvas.worldToScreen(bounds);
             return (
               x < scroll.clientWidth &&
               y < scroll.clientHeight &&
@@ -600,7 +617,7 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
   function updatePan() {
     root.dataset.designPanActive = String(state.view === 'canvas' && (panEnabled || spacePan));
     root.dataset.designTool = activeTool;
-    root.dataset.designDragging = String(gesture?.mode === 'pan');
+    canvas.setPointerMode(root.dataset.designInspect === 'true' ? 'none' : 'pan');
     q('[data-design-pan]').setAttribute('aria-pressed', String(activeTool === 'pan'));
     q('[data-planr-mode="interact"]').setAttribute(
       'aria-pressed',
@@ -680,6 +697,12 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
     if (tool === 'annotate' && root.hasAttribute('data-planr-room-comments-paused')) return;
     finishWalkthroughTransition();
     finishGesture();
+    if (canvasAttached && canvasPointers.size) {
+      saveViewport();
+      for (const pointerId of canvasPointers)
+        if (scroll.hasPointerCapture?.(pointerId)) scroll.releasePointerCapture(pointerId);
+      canvasPointers.clear();
+    }
     spacePan = false;
     spaceReturnTool = null;
     activeTool = tool;
@@ -702,7 +725,20 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
     if (spacePan) setTool(previous || 'interact');
   }
 
+  function readCanvasCamera() {
+    if (!canvasAttached || state.view !== 'canvas') return;
+    const { x, y, scale } = cameraToScreenTranslate(canvas.getCamera());
+    state.camera = { x, y };
+    state.zoom = scale;
+  }
+
+  function applyCanvasCamera() {
+    canvas.setCamera(cameraFromScreenTranslate({ ...state.camera, scale: state.zoom }));
+    saveViewport();
+  }
+
   function saveViewport() {
+    readCanvasCamera();
     state.viewports[state.view] = {
       x: state.camera.x,
       y: state.camera.y,
@@ -715,6 +751,7 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
     if (!viewport) return false;
     state.camera = { x: viewport.x, y: viewport.y };
     state.zoom = viewport.zoom;
+    if (canvasAttached && view === 'canvas') applyCanvasCamera();
     return true;
   }
 
@@ -728,11 +765,11 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
     closeDesignNotes();
     saveViewport();
     state.view = view;
+    const restored = view === 'canvas' && restoreViewport(view);
     setTool(view === 'canvas' && activeTool === 'annotate' ? 'annotate' : 'interact');
     // Enter a focused viewer with product interaction, not a carried-over pin
     // or inspector cursor. Drafts stay in the review controller untouched.
     root.dispatchEvent(new CustomEvent('planr:design-view-change', { detail: { view } }));
-    const restored = view === 'canvas' && restoreViewport(view);
     render();
     if (!restored) fit({ save: false });
     if (queued) selectEntry(queued.entry, { ...queued.settings, save: false });
@@ -742,45 +779,91 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
     }
   }
 
-  function contentBounds(selection = null) {
-    const visible = selection ? [selection] : visibleEntries();
-    if (!visible.length) return { minX: 0, minY: 0, maxX: 1, maxY: 1 };
-    const bounds = visible.reduce(
-      (bounds, entry) => {
-        const panel = panels.get(entry.artifactId);
-        const frame = design.frames.find(({ id }) => id === entry.frameId);
-        const x = Number.parseFloat(panel.style.left) || 0;
-        const y = Number.parseFloat(panel.style.top) || 0;
-        bounds.minX = Math.min(bounds.minX, x);
-        bounds.minY = Math.min(bounds.minY, y - 64);
-        bounds.maxX = Math.max(bounds.maxX, x + frame.width);
-        bounds.maxY = Math.max(bounds.maxY, y + viewportFor(entry).height);
-        return bounds;
-      },
-      { minX: Infinity, minY: Infinity, maxX: -Infinity, maxY: -Infinity },
-    );
-    if (!selection && state.view === 'canvas') {
-      for (const section of sectionHeadings) {
-        bounds.minX = Math.min(bounds.minX, parseFloat(section.style.left));
-        bounds.minY = Math.min(bounds.minY, parseFloat(section.style.top));
-        bounds.maxX = Math.max(bounds.maxX, parseFloat(section.style.left) + section.offsetWidth);
-        bounds.maxY = Math.max(bounds.maxY, parseFloat(section.style.top) + section.offsetHeight);
-      }
+  function syncCanvasChrome() {
+    if (!canvasAttached) return;
+    const stageRect = scroll.getBoundingClientRect();
+    for (const [id, selector, edge, open] of [
+      ['toolbar', '.design-toolbar', 'top', true],
+      ['navigator', '.design-navigator', 'left', state.navOpen],
+      ['review', '.planr-review-rail', 'right', stage.getState().railOpen],
+    ]) {
+      const rect = q(selector).getBoundingClientRect();
+      const x = Math.max(0, rect.left - stageRect.left);
+      const y = Math.max(0, rect.top - stageRect.top);
+      const width = Math.max(0, Math.min(stageRect.width, rect.right - stageRect.left) - x);
+      const height = Math.max(0, Math.min(stageRect.height, rect.bottom - stageRect.top) - y);
+      canvas.setChrome({
+        id,
+        edge,
+        rect: { x, y, width, height },
+        open: open && width > 0 && height > 0,
+      });
     }
-    return bounds;
+  }
+
+  function placedBoardBounds(entry) {
+    const panel = panels.get(entry.artifactId);
+    if (!panel || panel.hidden) return null;
+    const bounds = {
+      ...viewportFor(entry),
+      x: parseFloat(panel.style.left),
+      y: parseFloat(panel.style.top),
+    };
+    return Object.values(bounds).every(Number.isFinite) ? bounds : null;
+  }
+
+  function syncCanvasNodes() {
+    if (!canvasAttached) return;
+    const placed = visibleEntries().flatMap((entry) => {
+      const bounds = placedBoardBounds(entry);
+      return bounds ? [{ entry, bounds }] : [];
+    });
+    const nodes = placed.flatMap(({ entry, bounds }) => {
+      return [
+        { id: entry.artifactId, bounds },
+        // Include the artboard heading's established fit clearance.
+        { id: `label:${entry.artifactId}`, bounds: { ...bounds, y: bounds.y - 64, height: 64 } },
+      ];
+    });
+    sectionHeadings.forEach((heading, index) => {
+      const bounds = {
+        x: parseFloat(heading.style.left),
+        y: parseFloat(heading.style.top),
+        width: heading.offsetWidth,
+        height: heading.offsetHeight,
+      };
+      if (Object.values(bounds).every(Number.isFinite))
+        nodes.push({ id: `section:${layout.sections[index].id}`, bounds });
+    });
+    canvas.setNodes(nodes);
+    for (const { entry } of placed)
+      canvas.registerNodeElement(entry.artifactId, panels.get(entry.artifactId));
+    canvas.setSelection(
+      placed.some(({ entry }) => entry.artifactId === activeArtifactId) ? [activeArtifactId] : [],
+    );
+  }
+
+  function syncCanvas() {
+    if (state.view !== 'canvas') {
+      if (canvasAttached) canvas.detach();
+      canvasPointers.clear();
+      canvasAttached = false;
+      return;
+    }
+    if (!canvasAttached) {
+      canvas.attach({ stage: scroll, world: grid });
+      canvasAttached = true;
+      applyCanvasCamera();
+    }
+    syncCanvasNodes();
+    syncCanvasChrome();
   }
 
   function centerEntry(entry) {
-    const panel = panels.get(entry.artifactId);
-    const frame = design.frames.find(({ id }) => id === entry.frameId);
-    const x = Number.parseFloat(panel.style.left) || 0;
-    const y = Number.parseFloat(panel.style.top) || 0;
-    state.camera = {
-      x: scroll.clientWidth / 2 - (x + frame.width / 2) * state.zoom,
-      y: scroll.clientHeight / 2 - (y + viewportFor(entry).height / 2) * state.zoom,
-    };
+    if (state.view !== 'canvas' || !placedBoardBounds(entry)) return;
+    canvas.reveal(entry.artifactId, { mode: 'center' });
     saveViewport();
-    render();
+    renderCamera();
   }
 
   function updateDesignNotes() {
@@ -968,6 +1051,7 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
       grid.style.height = '1px';
       surface.style.width = '100%';
       surface.style.height = '100%';
+      syncCanvas();
       updatePan();
       renderCamera();
       chrome?.update({ view: state.view, navOpen: state.navOpen, reviewOpen: stageState.railOpen });
@@ -994,6 +1078,7 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
       cancelAnimationFrame(cameraFrame);
       cameraFrame = null;
     }
+    readCanvasCamera();
     if (state.view !== 'canvas') {
       // A focused view has no navigable world: fit the authored frame inside
       // its viewport. Scrolling and gestures within the iframe remain native.
@@ -1029,22 +1114,23 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
     const zoom = String(state.zoom);
     if (grid.style.getPropertyValue('--design-zoom') !== zoom)
       grid.style.setProperty('--design-zoom', zoom);
-    grid.style.transform = `translate(${state.camera.x}px, ${state.camera.y}px) scale(${state.zoom})`;
+    if (state.view !== 'canvas')
+      grid.style.transform = `translate(${state.camera.x}px, ${state.camera.y}px) scale(${state.zoom})`;
     // Translate a bounded background layer rather than invalidating inherited
     // properties on the entire shell or repainting its full stage background.
     const pixelRatio = window.devicePixelRatio || 1;
     const backgroundOffset = (value) => Math.round((value % 24) * pixelRatio) / pixelRatio;
     canvasBackground.style.transform = `translate3d(${backgroundOffset(state.camera.x)}px, ${backgroundOffset(state.camera.y)}px, 0)`;
     const active = entries.find((entry) => entry.artifactId === activeArtifactId);
-    const panel = panels.get(activeArtifactId);
+    const bounds = active ? placedBoardBounds(active) : null;
     if (selectionOutline) {
-      selectionOutline.hidden = state.view !== 'canvas' || !active || !panel || panel.hidden;
+      selectionOutline.hidden = state.view !== 'canvas' || !bounds;
       if (!selectionOutline.hidden) {
         const frame = design.frames.find((item) => item.id === active.frameId);
         const ratio = window.devicePixelRatio || 1;
         const pixel = (value) => Math.round(value * ratio) / ratio;
-        const x = pixel(state.camera.x + Number.parseFloat(panel.style.left) * state.zoom);
-        const y = pixel(state.camera.y + Number.parseFloat(panel.style.top) * state.zoom);
+        const x = pixel(state.camera.x + bounds.x * state.zoom);
+        const y = pixel(state.camera.y + bounds.y * state.zoom);
         selectionOutline.style.transform = `translate3d(${x - 3}px, ${y - 3}px, 0)`;
         selectionOutline.style.width = `${pixel(frame.width * state.zoom) + 6}px`;
         selectionOutline.style.height = `${pixel(viewportFor(active).height * state.zoom) + 6}px`;
@@ -1329,40 +1415,25 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
       if (save) persist();
       return;
     }
-    const bounds = contentBounds(selection);
-    const width = Math.max(1, bounds.maxX - bounds.minX);
-    const height = Math.max(1, bounds.maxY - bounds.minY);
-    const availableWidth = Math.max(100, scroll.clientWidth - 96);
-    const availableHeight = Math.max(100, scroll.clientHeight - 96);
-    state.zoom = clamp(
-      Math.min(availableWidth / Math.max(1, width), availableHeight / Math.max(1, height)),
-      0.05,
-      1,
-    );
-    state.camera = {
-      x: (scroll.clientWidth - width * state.zoom) / 2 - bounds.minX * state.zoom,
-      y: (scroll.clientHeight - height * state.zoom) / 2 - bounds.minY * state.zoom,
-    };
+    syncCanvasChrome();
+    canvas.fit(selection ? [selection.artifactId, `label:${selection.artifactId}`] : 'all', {
+      padding: 36,
+      maxZoom: 1,
+    });
     saveViewport();
     renderCamera();
     if (save) persist();
   }
 
-  function zoomTo(value, point = null, { scheduled = false } = {}) {
+  function zoomTo(value, point = null) {
     if (state.view !== 'canvas') return;
-    const previous = state.zoom;
-    const next = clamp(value, 0.05, 2);
     const rect = scroll.getBoundingClientRect();
-    const x = point ? point.x - rect.left : scroll.clientWidth / 2;
-    const y = point ? point.y - rect.top : scroll.clientHeight / 2;
-    state.camera = {
-      x: x - ((x - state.camera.x) * next) / previous,
-      y: y - ((y - state.camera.y) * next) / previous,
-    };
-    state.zoom = next;
+    canvas.zoomAt(
+      value / canvas.getCamera().zoom,
+      point ? { x: point.x - rect.left, y: point.y - rect.top } : undefined,
+    );
     saveViewport();
-    if (scheduled) scheduleCamera();
-    else renderCamera();
+    renderCamera();
     persist();
   }
 
@@ -1415,6 +1486,43 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
   }
 
   function installEvents() {
+    listen(scroll, 'focusin', (event) => {
+      // Notes describe a board without navigating to it.
+      if (event.target.closest('[data-design-note]')) event.stopImmediatePropagation();
+    });
+    listen(scroll, 'keydown', (event) => {
+      if (state.view !== 'canvas') return;
+      if (['Escape', ' ', 'Enter', 'Home', 'End'].includes(event.key) || event.code === 'Space') {
+        event.stopImmediatePropagation();
+        if (
+          event.key !== 'Escape' ||
+          event.defaultPrevented ||
+          event.isComposing ||
+          editable(event.target) ||
+          event.ctrlKey ||
+          event.metaKey ||
+          event.altKey
+        )
+          return;
+        const menu = q('.planr-more-menu:not([hidden])');
+        if (menu) {
+          q('[data-planr-action="more"]')?.click();
+          return;
+        }
+        if (!root.dispatchEvent(new CustomEvent('planr:design-escape', { cancelable: true })))
+          return;
+        if (stage.getState().railOpen) {
+          stage.dispatch({ type: 'set-rail-open', railOpen: false });
+          q('[data-planr-action="feedback"]')?.focus();
+        }
+        return;
+      }
+      if (canvas.handleKey(event)) event.stopPropagation();
+    });
+    listen(scroll, 'gotpointercapture', (event) => {
+      if (canvasAttached && gesture?.pointerId !== event.pointerId)
+        canvasPointers.add(event.pointerId);
+    });
     listen(root, 'planr:design-camera', scheduleViewContext);
     listen(root, 'planr:design-inspection-change', (event) => {
       const { screenId, frameId, variantId, planrId } = event.detail;
@@ -1464,7 +1572,7 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
       const rect = event.target.getBoundingClientRect();
       chrome?.update({ exportMenuOpen: false });
       zoomTo(
-        state.zoom * Math.exp(-deltaY * 0.004),
+        canvas.getCamera().zoom * clamp(Math.exp(-deltaY * 0.01), 0.8, 1.25),
         {
           x: rect.left + (x * rect.width) / frame.width,
           y: rect.top + (y * rect.height) / viewportFor(entry).height,
@@ -1477,10 +1585,7 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
       const entry = entries.find((item) => stage.getFrame(item.artifactId) === event.target);
       if (!entry || panels.get(entry.artifactId)?.hidden) return;
       chrome?.update({ exportMenuOpen: false });
-      state.camera = {
-        x: clamp(state.camera.x - event.detail.deltaX, -1e7, 1e7),
-        y: clamp(state.camera.y - event.detail.deltaY, -1e7, 1e7),
-      };
+      canvas.panBy(event.detail.deltaX, event.detail.deltaY);
       saveViewport();
       scheduleCamera();
       persist();
@@ -1522,6 +1627,7 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
         ) {
           event.preventDefault();
           setTool('interact');
+          event.stopPropagation();
           q('[data-planr-mode="interact"]').focus();
         }
       },
@@ -1533,9 +1639,12 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
       const observer = new ResizeObserver(() => {
         if (state.view !== 'canvas' && root.dataset.designRestoring !== 'true')
           fit({ save: false });
+        syncCanvasChrome();
         updateDesignNotes();
         scheduleViewContext();
       });
+      for (const selector of ['.design-toolbar', '.design-navigator', '.planr-review-rail'])
+        observer.observe(q(selector));
       observer.observe(scroll);
       cleanup.push(() => observer.disconnect());
     }
@@ -1688,6 +1797,7 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
       }
       if (next.zoom !== previousStageZoom) {
         state.zoom = clamp(next.zoom / 100, 0.05, 2);
+        if (canvasAttached) applyCanvasCamera();
         previousStageZoom = next.zoom;
         saveViewport();
       }
@@ -1726,33 +1836,6 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
       },
       true,
     );
-    listen(
-      scroll,
-      'wheel',
-      (event) => {
-        if (state.view !== 'canvas') return;
-        event.preventDefault();
-        if (event.ctrlKey || event.metaKey) {
-          zoomTo(
-            state.zoom * Math.exp(-event.deltaY * 0.004),
-            {
-              x: event.clientX,
-              y: event.clientY,
-            },
-            { scheduled: true },
-          );
-          return;
-        }
-        state.camera = {
-          x: state.camera.x - (event.shiftKey ? event.deltaY : event.deltaX),
-          y: state.camera.y - (event.shiftKey ? 0 : event.deltaY),
-        };
-        saveViewport();
-        scheduleCamera();
-        persist();
-      },
-      { passive: false },
-    );
     listen(scroll, 'pointerdown', (event) => {
       if (state.view !== 'canvas') return;
       if (root.dataset.designInspect === 'true') return;
@@ -1760,25 +1843,21 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
       const label = event.target.closest('[data-design-drag]');
       const dragging =
         event.button === 0 && state.view === 'canvas' && label && !panEnabled && !spacePan;
-      const panning =
-        event.button === 1 ||
-        panEnabled ||
-        spacePan ||
-        event.target === scroll ||
-        event.target === grid ||
-        event.target === surface;
-      if (!dragging && !panning) return;
+      if (!dragging) return;
       event.preventDefault();
       const panel = label?.closest('.planr-artifact-panel');
+      const entry = entries.find((item) => item.artifactId === panel.dataset.artifactId);
+      const bounds = placedBoardBounds(entry);
+      if (!bounds) return;
       gesture = {
         pointerId: event.pointerId,
         x: event.clientX,
         y: event.clientY,
-        mode: dragging ? 'artboard' : 'pan',
-        artifactId: dragging ? panel.dataset.artifactId : null,
-        left: dragging ? parseFloat(panel.style.left) : state.camera.x,
-        top: dragging ? parseFloat(panel.style.top) : state.camera.y,
-        before: dragging ? clone(layout) : null,
+        mode: 'artboard',
+        artifactId: panel.dataset.artifactId,
+        left: bounds.x,
+        top: bounds.y,
+        before: clone(layout),
       };
       scroll.setPointerCapture?.(event.pointerId);
       updatePan();
@@ -1787,34 +1866,55 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
       if (!gesture || gesture.pointerId !== event.pointerId) return;
       const dx = event.clientX - gesture.x;
       const dy = event.clientY - gesture.y;
-      if (gesture.mode === 'pan') {
-        state.camera = {
-          x: clamp(gesture.left + dx, -1e7, 1e7),
-          y: clamp(gesture.top + dy, -1e7, 1e7),
-        };
-        saveViewport();
-        scheduleCamera();
-      } else {
-        const entry = entries.find((item) => item.artifactId === gesture.artifactId);
-        const key = boardKey(entry);
-        const point = {
-          x: Math.round(clamp(gesture.left + dx / state.zoom, -1e7, 1e7)),
-          y: Math.round(clamp(gesture.top + dy / state.zoom, -1e7, 1e7)),
-        };
-        layout.boards = { ...layout.boards, [key]: { ...layout.boards?.[key], ...point } };
-        const panel = panels.get(gesture.artifactId);
-        layoutDragDirty = point.x !== gesture.left || point.y !== gesture.top;
-        panel.style.left = `${point.x}px`;
-        panel.style.top = `${point.y}px`;
-        scheduleCamera();
-      }
+      const entry = entries.find((item) => item.artifactId === gesture.artifactId);
+      const key = boardKey(entry);
+      const point = {
+        x: Math.round(clamp(gesture.left + dx / state.zoom, -1e7, 1e7)),
+        y: Math.round(clamp(gesture.top + dy / state.zoom, -1e7, 1e7)),
+      };
+      layout.boards = { ...layout.boards, [key]: { ...layout.boards?.[key], ...point } };
+      const panel = panels.get(gesture.artifactId);
+      layoutDragDirty = point.x !== gesture.left || point.y !== gesture.top;
+      panel.style.left = `${point.x}px`;
+      panel.style.top = `${point.y}px`;
+      syncCanvasNodes();
+      scheduleCamera();
     });
     for (const eventName of ['pointerup', 'pointercancel', 'lostpointercapture'])
       listen(scroll, eventName, (event) => {
+        canvasPointers.delete(event.pointerId);
         if (!gesture || gesture.pointerId !== event.pointerId) return;
         if (eventName === 'pointerup') finishGesture();
         else releaseTemporaryPan();
       });
+    listen(
+      document,
+      'keydown',
+      (event) => {
+        if (editable(event.target)) return;
+        if (
+          state.view === 'canvas' &&
+          event.code === 'Space' &&
+          !event.defaultPrevented &&
+          !event.ctrlKey &&
+          !event.metaKey &&
+          !event.altKey &&
+          !document.querySelector('dialog[open],[role=dialog][data-state=open]') &&
+          !event.target.closest('button,[data-planr-annotation-layer]')
+        ) {
+          event.preventDefault();
+          event.stopPropagation();
+          if (event.repeat) return;
+          const previous = activeTool;
+          setTool('pan');
+          panEnabled = false;
+          spacePan = true;
+          spaceReturnTool = previous;
+          updatePan();
+        }
+      },
+      true,
+    );
     listen(document, 'keydown', (event) => {
       if (editable(event.target)) return;
       if (
@@ -1829,25 +1929,6 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
         restoreMove(event.shiftKey);
         return;
       }
-      if (
-        state.view === 'canvas' &&
-        event.code === 'Space' &&
-        !event.defaultPrevented &&
-        !event.ctrlKey &&
-        !event.metaKey &&
-        !event.altKey &&
-        !document.querySelector('dialog[open],[role=dialog][data-state=open]') &&
-        !event.target.closest('button,[data-planr-annotation-layer]')
-      ) {
-        event.preventDefault();
-        if (event.repeat) return;
-        const previous = activeTool;
-        setTool('pan');
-        panEnabled = false;
-        spacePan = true;
-        spaceReturnTool = previous;
-        updatePan();
-      }
       const label = event.target.closest('[data-design-drag]');
       if (
         label &&
@@ -1858,12 +1939,14 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
         const panel = label.closest('.planr-artifact-panel');
         const distance = event.shiftKey ? 40 : 8;
         const entry = entries.find((item) => item.artifactId === panel.dataset.artifactId);
+        const bounds = placedBoardBounds(entry);
+        if (!bounds) return;
         const key = boardKey(entry);
         const before = clone(layout);
         const point = {
           x: Math.round(
             clamp(
-              parseFloat(panel.style.left) +
+              bounds.x +
                 (event.key === 'ArrowRight' ? distance : event.key === 'ArrowLeft' ? -distance : 0),
               -1e7,
               1e7,
@@ -1871,7 +1954,7 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
           ),
           y: Math.round(
             clamp(
-              parseFloat(panel.style.top) +
+              bounds.y +
                 (event.key === 'ArrowDown' ? distance : event.key === 'ArrowUp' ? -distance : 0),
               -1e7,
               1e7,
@@ -1994,6 +2077,7 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
       if (result.stateVersion !== undefined) stateVersion = result.stateVersion;
       if (result.state && !dirty) {
         state = normalizeState({ ...result.state, ...linkedState() });
+        if (canvasAttached && state.view === 'canvas') applyCanvasCamera();
         if (compactViewport) {
           state.navOpen = false;
           state.reviewOpen = false;
@@ -2122,6 +2206,21 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
       return null;
     }
     root = q('.planr-shell');
+    const structuralStyle = document.createElement('style');
+    structuralStyle.textContent = canvasStyles;
+    document.head.prepend(structuralStyle);
+    cleanup.push(() => structuralStyle.remove());
+    cleanup.push(
+      canvas.on('camera', () => {
+        if (!canvasAttached || state.view !== 'canvas') return;
+        const previous = state.viewports.canvas;
+        saveViewport();
+        renderCamera();
+        const next = state.viewports.canvas;
+        if (previous?.x !== next.x || previous?.y !== next.y || previous?.zoom !== next.zoom)
+          persist();
+      }),
+    );
     chrome = mountDesignChrome({ root, title: design.title, state });
     if (chrome) cleanup.push(() => chrome.destroy());
     previousReviewMode = stage.getState().reviewMode;
@@ -2157,6 +2256,12 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
         return null;
       }
       panels.set(entry.artifactId, panel);
+      const nodeId = panel.getAttribute('data-canvas-node-id');
+      panel.dataset.canvasNodeId = entry.artifactId;
+      cleanup.push(() => {
+        if (nodeId === null) panel.removeAttribute('data-canvas-node-id');
+        else panel.setAttribute('data-canvas-node-id', nodeId);
+      });
       const screen = design.screens.find(({ id }) => id === entry.screenId);
       const variant = design.variants.find(({ id }) => id === entry.variantId);
       const frame = design.frames.find(({ id }) => id === entry.frameId);
@@ -2332,7 +2437,10 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
     const controller = Object.freeze({
       setTool,
       getTool: () => activeTool,
-      getState: () => clone(state),
+      getState: () => {
+        readCanvasCamera();
+        return clone(state);
+      },
       getLayout: () => clone(layout),
       getViewport: (artifactId) => ({
         ...viewportFor(entries.find((entry) => entry.artifactId === artifactId)),
@@ -2353,6 +2461,7 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
         if (!Number.isFinite(camera?.x) || !Number.isFinite(camera?.y)) return;
         state.camera = { x: clamp(camera.x, -1e7, 1e7), y: clamp(camera.y, -1e7, 1e7) };
         if (Number.isFinite(camera.zoom)) state.zoom = clamp(camera.zoom, 0.05, 2);
+        applyCanvasCamera();
         saveViewport();
         renderCamera();
         persist();
@@ -2382,6 +2491,7 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
         ])
           if (snapshot[key] !== undefined) personal[key] = clone(snapshot[key]);
         state = normalizeState({ ...state, ...personal });
+        if (canvasAttached && state.view === 'canvas') applyCanvasCamera();
         stage.dispatch({ type: 'set-rail-open', railOpen: state.reviewOpen });
         selectEntry(entryFor(), { save: false });
         render();
@@ -2394,11 +2504,14 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
       flush,
       exportArtifact,
       destroy() {
+        if (destroyed) return;
         finishWalkthroughTransition();
         root.dispatchEvent(new CustomEvent('planr:design-destroy'));
         for (const { artifactId } of entries)
           stage.getFrame(artifactId)?.__openPlanrBridge?.setViewportGestures?.(false);
         destroyed = true;
+        canvasAttached = false;
+        canvas.destroy();
         ++screenRequest;
         pendingScreen = null;
         failedSelection = null;
