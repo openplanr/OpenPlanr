@@ -2507,7 +2507,7 @@ test('section headings share the canvas world, affect Fit, and hide in focused v
     const heading = app.documentNode.querySelector('.design-section-heading');
     assert.equal(heading.getAttribute('role'), 'heading');
     assert.equal(heading.getAttribute('aria-level'), '2');
-    assert.equal(heading.style.maxWidth, '200px');
+    assert.equal(parseFloat(heading.style.maxWidth) * app.studio.getState().zoom, 200);
     assert.equal(heading.parentElement, app.documentNode.querySelector('.planr-frame-grid'));
     Object.defineProperties(heading, { offsetWidth: { value: 200 }, offsetHeight: { value: 70 } });
     Object.defineProperties(app.documentNode.querySelector('.planr-stage-scroll'), {
@@ -2820,4 +2820,108 @@ test('opening notes for an inactive board preserves the saved canvas camera', as
   } finally {
     app.close();
   }
+});
+
+test('section geometry uses readable screen type, screen width and a bottom anchor', async (t) => {
+  const data = fixture({ count: 1 });
+  data.document.layout = {
+    sections: [{ id: 'journey', x: -5000, y: -2000, text: 'Journey', maxW: 200 }],
+  };
+  const app = await mount({ data });
+  t.after(() => app.close());
+  const heading = app.documentNode.querySelector('.design-section-heading');
+  Object.defineProperties(heading, {
+    offsetWidth: { value: 200 },
+    offsetHeight: { value: 70 },
+  });
+  for (const zoom of [0.05, 0.3, 1, 2]) {
+    app.studio.setCamera({ x: 0, y: 0, zoom });
+    const screenFont = parseFloat(app.window.getComputedStyle(heading).fontSize) * zoom;
+    assert.ok(screenFont >= 14 && screenFont <= 28, `screen font at ${zoom}: ${screenFont}`);
+    assert.ok(Math.abs(parseFloat(heading.style.maxWidth) * zoom - 200) < 0.000001);
+    assert.equal(parseFloat(heading.style.top) + heading.offsetHeight, -2000);
+  }
+});
+
+test('Fit excludes measured chrome on every stage edge', async (t) => {
+  const app = await mount({ data: fixture({ count: 1 }) });
+  t.after(() => app.close());
+  app.studio.setPanels({ navOpen: false, reviewOpen: false });
+  const scroll = app.documentNode.querySelector('.planr-stage-scroll');
+  const rect = (left, top, width, height) => ({
+    left,
+    top,
+    right: left + width,
+    bottom: top + height,
+    width,
+    height,
+  });
+  Object.defineProperties(scroll, {
+    clientWidth: { value: 2000 },
+    clientHeight: { value: 1200 },
+    getBoundingClientRect: { value: () => rect(100, 50, 2000, 1200) },
+  });
+  const toolbar = app.documentNode.querySelector('.design-toolbar');
+  for (const [edge, box] of [
+    ['bottom', rect(800, 1050, 600, 150)],
+    ['top', rect(800, 50, 600, 150)],
+    ['left', rect(100, 450, 200, 300)],
+    ['right', rect(1900, 450, 200, 300)],
+  ]) {
+    toolbar.getBoundingClientRect = () => box;
+    app.window.dispatchEvent(new app.window.Event('resize'));
+    app.studio.fit();
+    const { camera, zoom } = app.studio.getState();
+    for (const panel of app.documentNode.querySelectorAll('.planr-artifact-panel:not([hidden])')) {
+      const entry = app.entries.find(({ artifactId }) => artifactId === panel.dataset.artifactId);
+      const viewport = app.studio.getViewport(entry.artifactId);
+      const left = 100 + camera.x + parseFloat(panel.style.left) * zoom;
+      const top = 50 + camera.y + parseFloat(panel.style.top) * zoom;
+      if (edge === 'bottom') assert.ok(top + viewport.height * zoom <= box.top, edge);
+      if (edge === 'top') assert.ok(top >= box.bottom, edge);
+      if (edge === 'left') assert.ok(left >= box.right, edge);
+      if (edge === 'right') assert.ok(left + viewport.width * zoom <= box.left, edge);
+    }
+  }
+});
+
+test('board metadata includes authored dimensions only once', async (t) => {
+  const data = fixture({ count: 1 });
+  data.document.frames[0].label = 'Desktop viewport · 1280 × 800';
+  const app = await mount({ data });
+  t.after(() => app.close());
+  assert.equal(
+    app.documentNode.querySelector('.design-artboard-drag span').textContent,
+    'Desktop viewport · 1280 × 800',
+  );
+});
+
+test('disconnected save status exposes the complete text as its title', async (t) => {
+  const app = await mount({
+    options: { stateUrl: '/api/design-state' },
+    fetchImpl: async () => {
+      throw new Error('Offline state');
+    },
+  });
+  t.after(() => app.close());
+  await delay(30);
+  const status = app.documentNode.querySelector('[data-design-save-state]');
+  assert.equal(status.textContent, 'Disconnected · local draft');
+  assert.equal(status.title, status.textContent);
+});
+
+test('verification failure is shown on mount and after a status poll', async (t) => {
+  const data = fixture({ count: 1 });
+  data.verification = { status: 'failed' };
+  const app = await mount({
+    data,
+    options: { statusUrl: '/api/design-status' },
+    fetchImpl: async () => ({ ok: true, json: async () => ({ verification: 'failed' }) }),
+  });
+  t.after(() => app.close());
+  const label = app.documentNode.querySelector('[data-design-verification]');
+  assert.equal(label.textContent, 'Browser inspection failed');
+  label.textContent = 'Waiting for poll';
+  await delay(4100);
+  assert.equal(label.textContent, 'Browser inspection failed');
 });

@@ -199,7 +199,7 @@
     {
       "source": "packages/design/lib/design/browser-audit.mjs",
       "target": "lib/design/browser-audit.mjs",
-      "sha256": "cef1d81aa20ad61b81210467c29d3a806ac3b39af62cdcd388e196747de96af5",
+      "sha256": "061f1f11d12d8099d29d32a3ab544198fe32d6d0dfe34f154db35df096f5b7c6",
       "mode": "644"
     },
     {
@@ -517,7 +517,7 @@
     {
       "source": "packages/design/lib/design/ui/studio.mjs",
       "target": "lib/design/ui/studio.mjs",
-      "sha256": "52f91e189fc4a7ecca785c95d1f5e8314068558b013d811828c0623a40606321",
+      "sha256": "b3a2e3f6d325d121a3fdcc646d86343102bec56c197e91eebf22d9a4e4a24c59",
       "mode": "644"
     },
     {
@@ -583,13 +583,13 @@
     {
       "source": "packages/design/templates/studio/studio.css",
       "target": "templates/studio/studio.css",
-      "sha256": "f268447b028446d6b1df4433d4a1ac59c82f0a769046a4e8699ebe8ccf0b9cd2",
+      "sha256": "94c88da1995870dc23eea875035eddb21af936a9871390b00c4351358c88b25b",
       "mode": "644"
     },
     {
       "source": "packages/design/templates/studio/studio.js",
       "target": "templates/studio/studio.js",
-      "sha256": "15f5f127f5ce554e9ca9e49bb9da175c5f6442101988b8555d36ae4cb6b8265d",
+      "sha256": "7894db959b5a321ecd482455c9b878c749deb668e35801bdff088d8aae02bbc6",
       "mode": "644"
     }
   ]

@@ -81,6 +81,12 @@
 .design-save-state::before { content:""; width:5px; height:5px; flex:none; border-radius:50%; background:var(--planr-color-primary); }
 .design-save-state[data-status="failed"], .design-save-state[data-status="disconnected"] { color:var(--planr-color-danger); }
 .design-save-state[data-status="failed"]::before, .design-save-state[data-status="disconnected"]::before { background:currentColor; }
+.design-toolbar .studio-toolbar-status > .design-save-state {
+ display: block;
+ overflow: hidden;
+ text-overflow: ellipsis;
+ white-space: nowrap;
+}
 .design-toolbar .design-share { background:var(--planr-color-primary); color:var(--planr-color-background); font-weight:650; }
 .design-toolbar .design-share:hover { background:var(--planr-color-primary-strong); color:var(--planr-color-background); }
 .design-export { position:relative; flex:none; }

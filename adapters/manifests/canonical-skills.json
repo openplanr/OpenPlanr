@@ -1450,7 +1450,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:cb0a34cd899ebbe6ff1d017dcca7e9b72f5264549af519eef3de35aaf98c4049"
+          "digest": "sha256:56b91d764115959d7feeafb922d3801e9cae2429a460ba71f41a4da2c7dd33f2"
         },
         {
           "path": "scripts/design-artifact-shell.mjs",
@@ -1942,7 +1942,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:f268447b028446d6b1df4433d4a1ac59c82f0a769046a4e8699ebe8ccf0b9cd2"
+          "digest": "sha256:94c88da1995870dc23eea875035eddb21af936a9871390b00c4351358c88b25b"
         },
         {
           "path": "scripts/runtime/packages/design/templates/studio/studio.js.sources.json",
@@ -1954,7 +1954,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:2348554e1c039e6c1cd1f34bc2ade01601db89d6a96e5fe56c02160c442b76b1"
+          "digest": "sha256:7bcae762e4aacf3502e9d187516b28c86fd7a6b5e8c8dd0d6bc521697e74182c"
         },
         {
           "path": "scripts/runtime/packages/design/templates/studio/studio.js.sources/01-module-runtime.js",
@@ -2206,7 +2206,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:e6cf0c5e62cfd2cf2661620c655979508e81e8f13f833446c243bf2dcd463529"
+          "digest": "sha256:6b706db27067fb0f460584895589baf6679b0a728b105e9ff0d097c6fff03d50"
         },
         {
           "path": "scripts/runtime/packages/protocol/package.json",
@@ -2660,7 +2660,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:cb0a34cd899ebbe6ff1d017dcca7e9b72f5264549af519eef3de35aaf98c4049"
+          "digest": "sha256:56b91d764115959d7feeafb922d3801e9cae2429a460ba71f41a4da2c7dd33f2"
         },
         {
           "path": "scripts/design-artifact-shell.mjs",
@@ -3152,7 +3152,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:f268447b028446d6b1df4433d4a1ac59c82f0a769046a4e8699ebe8ccf0b9cd2"
+          "digest": "sha256:94c88da1995870dc23eea875035eddb21af936a9871390b00c4351358c88b25b"
         },
         {
           "path": "scripts/runtime/packages/design/templates/studio/studio.js.sources.json",
@@ -3164,7 +3164,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:2348554e1c039e6c1cd1f34bc2ade01601db89d6a96e5fe56c02160c442b76b1"
+          "digest": "sha256:7bcae762e4aacf3502e9d187516b28c86fd7a6b5e8c8dd0d6bc521697e74182c"
         },
         {
           "path": "scripts/runtime/packages/design/templates/studio/studio.js.sources/01-module-runtime.js",
@@ -3416,7 +3416,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:e6cf0c5e62cfd2cf2661620c655979508e81e8f13f833446c243bf2dcd463529"
+          "digest": "sha256:6b706db27067fb0f460584895589baf6679b0a728b105e9ff0d097c6fff03d50"
         },
         {
           "path": "scripts/runtime/packages/protocol/package.json",
@@ -3870,7 +3870,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:cb0a34cd899ebbe6ff1d017dcca7e9b72f5264549af519eef3de35aaf98c4049"
+          "digest": "sha256:56b91d764115959d7feeafb922d3801e9cae2429a460ba71f41a4da2c7dd33f2"
         },
         {
           "path": "scripts/design-artifact-shell.mjs",
@@ -4362,7 +4362,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:f268447b028446d6b1df4433d4a1ac59c82f0a769046a4e8699ebe8ccf0b9cd2"
+          "digest": "sha256:94c88da1995870dc23eea875035eddb21af936a9871390b00c4351358c88b25b"
         },
         {
           "path": "scripts/runtime/packages/design/templates/studio/studio.js.sources.json",
@@ -4374,7 +4374,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:2348554e1c039e6c1cd1f34bc2ade01601db89d6a96e5fe56c02160c442b76b1"
+          "digest": "sha256:7bcae762e4aacf3502e9d187516b28c86fd7a6b5e8c8dd0d6bc521697e74182c"
         },
         {
           "path": "scripts/runtime/packages/design/templates/studio/studio.js.sources/01-module-runtime.js",
@@ -4626,7 +4626,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:e6cf0c5e62cfd2cf2661620c655979508e81e8f13f833446c243bf2dcd463529"
+          "digest": "sha256:6b706db27067fb0f460584895589baf6679b0a728b105e9ff0d097c6fff03d50"
         },
         {
           "path": "scripts/runtime/packages/protocol/package.json",

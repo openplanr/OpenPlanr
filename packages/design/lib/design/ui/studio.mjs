@@ -207,6 +207,7 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
   let notesReturnFocus = null;
   const panels = new Map();
   const sectionHeadings = [];
+  let sectionZoom = null;
   const canvasPointers = new Set();
   const cleanup = [];
 
@@ -224,6 +225,7 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
       node.textContent = message;
       node.dataset.status = phase;
     }
+    q('[data-design-save-state]').title = message;
   }
 
   function hideNotice() {
@@ -1088,16 +1090,24 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
   function syncCanvasChrome() {
     if (!canvasAttached) return;
     const stageRect = scroll.getBoundingClientRect();
-    for (const [id, selector, edge, open] of [
-      ['toolbar', '.design-toolbar', 'top', true],
-      ['navigator', '.design-navigator', 'left', state.navOpen],
-      ['review', '.planr-review-rail', 'right', stage.getState().railOpen],
+    for (const [id, selector, open] of [
+      ['toolbar', '.design-toolbar', true],
+      ['navigator', '.design-navigator', state.navOpen],
+      ['review', '.planr-review-rail', stage.getState().railOpen],
     ]) {
       const rect = q(selector).getBoundingClientRect();
       const x = Math.max(0, rect.left - stageRect.left);
       const y = Math.max(0, rect.top - stageRect.top);
       const width = Math.max(0, Math.min(stageRect.width, rect.right - stageRect.left) - x);
       const height = Math.max(0, Math.min(stageRect.height, rect.bottom - stageRect.top) - y);
+      const edge =
+        width >= height
+          ? y + height / 2 < stageRect.height / 2
+            ? 'top'
+            : 'bottom'
+          : x + width / 2 < stageRect.width / 2
+            ? 'left'
+            : 'right';
       canvas.setChrome({
         id,
         edge,
@@ -1132,15 +1142,29 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
       ];
     });
     sectionHeadings.forEach((heading, index) => {
+      const section = layout.sections[index];
+      heading.hidden = false;
+      heading.style.fontSize = `${clamp(28 * state.zoom, 14, 28) / state.zoom}px`;
+      if (section.maxW) heading.style.maxWidth = `${section.maxW / state.zoom}px`;
+      heading.style.top = `${section.y - heading.offsetHeight}px`;
       const bounds = {
         x: parseFloat(heading.style.left),
         y: parseFloat(heading.style.top),
         width: heading.offsetWidth,
         height: heading.offsetHeight,
       };
-      if (Object.values(bounds).every(Number.isFinite))
-        nodes.push({ id: `section:${layout.sections[index].id}`, bounds });
+      // Labels occupy the 34 screen pixels above a board, regardless of zoom.
+      heading.hidden = placed.some(
+        ({ bounds: board }) =>
+          bounds.x < board.x + board.width &&
+          bounds.x + bounds.width > board.x &&
+          bounds.y < board.y - 6 / state.zoom &&
+          bounds.y + bounds.height > board.y - 34 / state.zoom,
+      );
+      if (!heading.hidden && Object.values(bounds).every(Number.isFinite))
+        nodes.push({ id: `section:${section.id}`, bounds });
     });
+    sectionZoom = state.zoom;
     canvas.setNodes(nodes);
     for (const { entry } of placed)
       canvas.registerNodeElement(entry.artifactId, panels.get(entry.artifactId));
@@ -1420,6 +1444,8 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
     const zoom = String(state.zoom);
     if (grid.style.getPropertyValue('--design-zoom') !== zoom)
       grid.style.setProperty('--design-zoom', zoom);
+    if (state.view === 'canvas' && sectionHeadings.length && sectionZoom !== state.zoom)
+      syncCanvasNodes();
     if (state.view !== 'canvas')
       grid.style.transform = `translate(${state.camera.x}px, ${state.camera.y}px) scale(${state.zoom})`;
     // Translate a bounded background layer rather than invalidating inherited
@@ -1722,12 +1748,16 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
       return;
     }
     syncCanvasChrome();
-    canvas.fit(selection ? [selection.artifactId, `label:${selection.artifactId}`] : 'all', {
-      padding: 36,
-      maxZoom: 1,
-    });
-    saveViewport();
-    renderCamera();
+    for (let attempt = 0; attempt < (sectionHeadings.length && !selection ? 12 : 1); attempt++) {
+      const previousZoom = state.zoom;
+      canvas.fit(selection ? [selection.artifactId, `label:${selection.artifactId}`] : 'all', {
+        padding: 36,
+        maxZoom: 1,
+      });
+      saveViewport();
+      renderCamera();
+      if (Math.abs(state.zoom - previousZoom) < 0.000001) break;
+    }
     if (save) persist();
   }
 
@@ -2408,17 +2438,22 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
     }
   }
 
+  function renderVerification(verification) {
+    q('[data-design-verification]').textContent =
+      verification === 'verified'
+        ? 'Browser inspection complete'
+        : verification === 'failed'
+          ? 'Browser inspection failed'
+          : 'Browser inspection pending';
+  }
+
   async function pollRevision() {
     if (!options.statusUrl || destroyed || sessionLost) return;
     try {
       const observedRevision = revision;
       const result = await jsonRequest(options.statusUrl);
       if (destroyed) return;
-      if (typeof result.verification === 'string')
-        q('[data-design-verification]').textContent =
-          result.verification === 'verified'
-            ? 'Browser inspection complete'
-            : 'Browser inspection pending';
+      if (typeof result.verification === 'string') renderVerification(result.verification);
       if (
         observedRevision === revision &&
         result.revision !== undefined &&
@@ -2598,7 +2633,10 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
       const title = document.createElement('strong');
       title.textContent = `${screen.title}${readyVariants.length > 1 ? ` / ${variant.label}` : ''}`;
       const size = document.createElement('span');
-      size.textContent = `${frame.label} · ${frame.width} × ${frame.height}`;
+      const dimensions = `${frame.width} × ${frame.height}`;
+      size.textContent = frame.label.includes(dimensions)
+        ? frame.label
+        : `${frame.label} · ${dimensions}`;
       drag.append(title, size);
       label.append(drag);
       if (screen.description) {
@@ -2624,10 +2662,7 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
         panel.querySelector('.planr-frame').append(load);
       }
     }
-    const verified = payload.verification?.status === 'verified';
-    q('[data-design-verification]').textContent = verified
-      ? 'Browser inspection complete'
-      : 'Browser inspection pending';
+    renderVerification(payload.verification?.status);
     const prototypeState = createPrototypeStateRelay({
       contextId: `${design.id}:${payload.revision ?? payload.reviewOf ?? 'local'}`,
       parentWindow: window,

@@ -110,6 +110,55 @@ test('missing, mismatched and failed frames can never claim complete artifact co
   assert.equal((await auditDesignPage(null, options)).status, 'unverified');
 });
 
+test('full audits load each expected artifact sequentially within the stage frame budget', async () => {
+  const entries = Array.from({ length: 5 }, (_, index) => ({
+    ...entry,
+    artifactId: `screen-${index}-desktop`,
+    screenId: `screen-${index}`,
+  }));
+  const loaded = new Set();
+  const inspected = [];
+  const requested = [];
+  const stage = {
+    frameBudget: 2,
+    async ensureFrames(ids) {
+      assert.equal(ids.length, 1);
+      await Promise.resolve();
+      while (loaded.size >= 2) loaded.delete(loaded.values().next().value);
+      loaded.add(ids[0]);
+      requested.push(ids[0]);
+      assert.ok(loaded.size <= 2);
+    },
+  };
+  const frames = entries.map((artifact) => {
+    const frame = mockPage(null, { artifact }).frames()[0];
+    frame.evaluate = async () => {
+      if (!loaded.has(artifact.artifactId)) throw new Error('Artifact source is not loaded.');
+      inspected.push(artifact.artifactId);
+      return { ...clearResult(), screenId: artifact.screenId };
+    };
+    return frame;
+  });
+  const unknown = mockPage(null, { artifact: { artifactId: 'unknown' } }).frames()[0];
+  const page = {
+    frames: () => [unknown, ...frames, frames[0]],
+    evaluate: (fn, artifactId) =>
+      runInNewContext(`(${fn.toString()})(artifactId)`, {
+        artifactId,
+        window: { __openPlanrArtifactStage: stage },
+      }),
+  };
+  const report = await auditDesignPage(page, { document, entries });
+  const artifactIds = entries.map(({ artifactId }) => artifactId);
+  assert.deepEqual(report.checkedArtifacts, artifactIds);
+  assert.deepEqual(requested, artifactIds);
+  assert.deepEqual(inspected, artifactIds);
+  assert.deepEqual(
+    report.issues.map(({ rule }) => rule),
+    ['duplicate-frame'],
+  );
+});
+
 test('computed findings retain artifact identity and browser script failures remain visible', async () => {
   const page = mockPage({
     ...clearResult(),

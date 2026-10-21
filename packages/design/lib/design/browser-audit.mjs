@@ -352,6 +352,10 @@ export async function auditDesignPage(
         continue;
       }
       loaded.add(artifactId);
+      await page.evaluate?.(async (id) => {
+        const stage = window.__openPlanrArtifactStage;
+        if (stage?.frameBudget) await stage.ensureFrames([id]);
+      }, artifactId);
       await frame.waitForLoadState?.('load', { timeout: 5000 });
       panelState = await handle.evaluate((element) => {
         const panel = element.closest('[data-artifact-id]');
