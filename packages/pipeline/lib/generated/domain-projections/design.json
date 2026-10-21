@@ -199,7 +199,7 @@
     {
       "source": "packages/design/lib/design/browser-audit.mjs",
       "target": "lib/design/browser-audit.mjs",
-      "sha256": "1743cf95ebbdc194ea298a1b198cc24e1d0fd5084c1f3a3d41e45e4751c6c3a9",
+      "sha256": "9f15135ee498f305ef1303b097b52343fe4832144af53bdeefabde971a2c498a",
       "mode": "644"
     },
     {

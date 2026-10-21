@@ -267,6 +267,97 @@ test('bounded demand preparation is sequential, retains LRU documents and detach
   assert.deepEqual(f.detachments, ['screen-0', 'screen-2']);
 });
 
+test('held frames survive competing demand and become evictable after the final release', async (t) => {
+  const f = fixture(t, { frameBudget: 1 });
+  await f.finish('screen-0');
+  await f.stage.ready;
+  const frame = f.stage.getFrame('screen-0');
+  const context = frame.contentWindow;
+  const release = f.stage.holdFrames(['screen-0']);
+  const releaseAgain = f.stage.holdFrames(['screen-0']);
+  const competing = f.stage.ensureFrames(['screen-1']);
+  await flush();
+  assert.equal(frame.contentWindow, context);
+  assert.equal(frame.isConnected, true);
+  assert.deepEqual(f.detachments, []);
+  assert.deepEqual(
+    f.sourceRequests.map(({ id }) => id),
+    ['screen-0'],
+  );
+  await f.stage.ensureFrames(['screen-0']);
+  release();
+  release();
+  await flush();
+  assert.equal(frame.isConnected, true, 'overlapping holds retain their own custody');
+  releaseAgain();
+  await f.finish('screen-1');
+  await competing;
+  assert.equal(frame.isConnected, false);
+  assert.deepEqual(f.detachments, ['screen-0']);
+  assert.deepEqual(f.stage.getLoadedArtifactIds(), ['screen-1']);
+});
+
+test('explicit retry frees a held slot for waiting demand', async (t) => {
+  const f = fixture(t, { frameBudget: 1 });
+  await f.finish('screen-0');
+  await f.stage.ready;
+  const release = f.stage.holdFrames(['screen-0']);
+  const competing = f.stage.ensureFrames(['screen-1']);
+  await flush();
+  const retry = f.stage.retryFrames(['screen-0']);
+  await f.finish('screen-1');
+  await competing;
+  await f.finish('screen-0');
+  await retry;
+  release();
+  assert.deepEqual(f.stage.getLoadedArtifactIds(), ['screen-0']);
+  assert.equal(f.stage.getState().status, 'ready');
+});
+
+test('held source preparation survives selection changes', async (t) => {
+  let resolveSource;
+  const f = fixture(t, {
+    frameBudget: 1,
+    resolver: (artifact) =>
+      artifact.id === 'screen-1'
+        ? new Promise((resolve) => {
+            resolveSource = resolve;
+          })
+        : '<main>Ready</main>',
+  });
+  await f.finish('screen-0');
+  await f.stage.ready;
+  const release = f.stage.holdFrames(['screen-1']);
+  const pending = f.stage.ensureFrames(['screen-1']);
+  await flush();
+  const signal = f.sourceRequests.at(-1).signal;
+  f.stage.dispatch({ type: 'set-active', artifactId: 'screen-2' });
+  assert.equal(signal.aborted, false);
+  resolveSource('<main>Held</main>');
+  await f.finish('screen-1');
+  await pending;
+  assert.deepEqual(f.stage.getLoadedArtifactIds(), ['screen-1']);
+  assert.equal(f.stage.getState().status, 'loading');
+  release();
+  await f.finish('screen-2');
+  await f.stage.ready;
+  assert.equal(f.stage.getState().status, 'ready');
+});
+
+test('destroy wakes demand waiting for held slots', async (t) => {
+  const f = fixture(t, { frameBudget: 1 });
+  await f.finish('screen-0');
+  await f.stage.ready;
+  const release = f.stage.holdFrames(['screen-0']);
+  const pending = f.stage.ensureFrames(['screen-1']);
+  const cancelled = assert.rejects(pending, { name: 'AbortError' });
+  await flush();
+  f.stage.destroy();
+  await cancelled;
+  release();
+  assert.equal(f.document.querySelectorAll('iframe').length, 0);
+});
+
 test('destroy cancels source preparation and queued demand without reviving a document', async (t) => {
   let resolveSource;
   const f = fixture(t, {

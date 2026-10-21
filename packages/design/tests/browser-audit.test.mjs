@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { EventEmitter } from 'node:events';
 import { existsSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -221,6 +222,242 @@ test('full audits discover frames mounted on demand and evicted beyond the budge
   assert.deepEqual(requested, ids);
   assert.deepEqual(report.issues, []);
   assert.equal(mounted.size, 2);
+});
+
+test('audits hold frames through competing demand, inspection failures and panel restoration', async (t) => {
+  for (const failure of [null, 'mount', 'attachment', 'inspection', 'restore']) {
+    await t.test(failure ?? 'success', async () => {
+      const page = mockPage(clearResult());
+      const frame = page.frames()[0];
+      const handle = await frame.frameElement();
+      let held = false,
+        mounted = false,
+        restored = false,
+        released = false,
+        disposed = false;
+      const stage = {
+        frameBudget: 1,
+        holdFrames(ids) {
+          assert.deepEqual([...ids], [entry.artifactId]);
+          held = true;
+          return () => {
+            assert.equal(page.panel.hidden, failure !== 'restore');
+            assert.equal(restored, !['mount', 'attachment'].includes(failure));
+            held = false;
+            released = true;
+          };
+        },
+        async ensureFrames(ids) {
+          if (ids[0] === entry.artifactId) {
+            mounted = true;
+            if (failure === 'mount') throw new Error('Source unavailable.');
+          } else if (!held) mounted = false;
+        },
+      };
+      const evaluate = (fn, artifactId) =>
+        runInNewContext(`(${fn.toString()})(artifactId)`, {
+          artifactId,
+          window: { __openPlanrArtifactStage: stage },
+        });
+      page.evaluate = evaluate;
+      page.evaluateHandle = async (fn, artifactId) => {
+        const value = await evaluate(fn, artifactId);
+        return {
+          evaluate: (fn) => fn(value),
+          dispose: async () => {
+            disposed = true;
+          },
+        };
+      };
+      page.keyboard = { press: () => stage.ensureFrames(['competing-screen']) };
+      const evaluatePanel = handle.evaluate;
+      handle.evaluate = async (fn, argument) => {
+        if (argument) {
+          assert.equal(mounted, true, 'the panel remains mounted until restoration');
+          restored = true;
+          if (failure === 'restore') throw new Error('Panel detached.');
+        }
+        return evaluatePanel(fn, argument);
+      };
+      frame.evaluate = async () => {
+        if (!mounted) throw new Error('Frame was detached.');
+        if (failure === 'inspection') throw new Error('Inspection failed.');
+        return clearResult();
+      };
+      if (failure === 'attachment') {
+        page.on = () => {};
+        page.off = () => {};
+        page.waitForSelector = async () => {
+          throw new Error('Frame did not attach.');
+        };
+      }
+      const report = await auditDesignPage(page, { document, entries: [entry] });
+      assert.deepEqual(
+        report.checkedArtifacts,
+        failure && failure !== 'restore' ? [] : [entry.artifactId],
+        JSON.stringify(report.issues),
+      );
+      assert.equal(released, true);
+      assert.equal(disposed, true);
+      assert.equal(held, false);
+      if (failure)
+        assert.ok(
+          report.issues.some(({ message }) => /unavailable|attach|failed|detached/u.test(message)),
+        );
+      else assert.deepEqual(report.issues, []);
+    });
+  }
+});
+
+test('rendered audits wait for Playwright to attach a mounted frame', async (t) => {
+  for (const event of ['frameattached', 'framenavigated']) {
+    await t.test(event, async () => {
+      const page = Object.assign(new EventEmitter(), mockPage(clearResult()));
+      const frame = page.frames()[0];
+      const handle = await frame.frameElement();
+      let attached = false;
+      handle.contentFrame = async () => null;
+      const evaluate = handle.evaluate;
+      handle.evaluate = async (fn, argument) =>
+        argument === handle ? fn(handle, handle) : evaluate(fn, argument);
+      page.frames = () => (attached ? [frame] : []);
+      page.waitForSelector = async () => handle;
+      const stage = {
+        frameBudget: 1,
+        async ensureFrames(ids) {
+          assert.deepEqual([...ids], [entry.artifactId]);
+          setImmediate(() => {
+            page.emit(event, mockPage(clearResult()).frames()[0]);
+            attached = true;
+            page.emit(event, frame);
+          });
+        },
+      };
+      page.evaluate = (fn, artifactId) =>
+        runInNewContext(`(${fn.toString()})(artifactId)`, {
+          artifactId,
+          window: { __openPlanrArtifactStage: stage },
+        });
+      const report = await auditDesignPage(page, { document, entries: [entry] });
+      assert.deepEqual(report.checkedArtifacts, [entry.artifactId], JSON.stringify(report.issues));
+      assert.deepEqual(report.issues, []);
+      assert.equal(page.panel.hidden, true);
+      assert.equal(page.listenerCount('frameattached'), 0);
+      assert.equal(page.listenerCount('framenavigated'), 0);
+    });
+  }
+});
+
+test('frame element lookup escapes artifact identities and retains duplicate checks', async () => {
+  const artifact = { ...entry, artifactId: 'overview."\\\n' };
+  const page = Object.assign(new EventEmitter(), mockPage(clearResult(), { artifact }));
+  const frames = [page.frames()[0], mockPage(clearResult(), { artifact }).frames()[0]];
+  const handle = await frames[0].frameElement();
+  handle.contentFrame = async () => frames[0];
+  page.frames = () => frames;
+  page.waitForSelector = async (selector, options) => {
+    assert.equal(
+      selector,
+      'iframe[data-planr-artifact-frame="overview\\2e \\22 \\5c \\a "], iframe[data-planr-artifact-id="overview\\2e \\22 \\5c \\a "]',
+    );
+    assert.deepEqual(options, { state: 'attached', timeout: 5000 });
+    return handle;
+  };
+  const report = await auditDesignPage(page, { document, entries: [artifact] });
+  assert.deepEqual(report.checkedArtifacts, [artifact.artifactId]);
+  assert.deepEqual(
+    report.issues.map(({ rule }) => rule),
+    ['duplicate-frame'],
+  );
+  assert.equal(page.listenerCount('frameattached'), 0);
+  assert.equal(page.listenerCount('framenavigated'), 0);
+});
+
+test('an unrelated detached frame does not abort the target attachment wait', async () => {
+  const page = Object.assign(new EventEmitter(), mockPage(clearResult()));
+  const frame = page.frames()[0];
+  const handle = await frame.frameElement();
+  const evaluate = handle.evaluate;
+  handle.evaluate = async (fn, argument) =>
+    argument === handle ? fn(handle, handle) : evaluate(fn, argument);
+  handle.contentFrame = async () => {
+    page.emit('frameattached', {
+      async frameElement() {
+        throw new Error('Frame has been detached.');
+      },
+    });
+    page.emit('frameattached', frame);
+    return null;
+  };
+  page.waitForSelector = async () => handle;
+  const report = await auditDesignPage(page, { document, entries: [entry] });
+  assert.deepEqual(report.checkedArtifacts, [entry.artifactId]);
+  assert.deepEqual(
+    report.issues.map(({ rule, severity }) => ({ rule, severity })),
+    [{ rule: 'frame-attachment-inspection-error', severity: 'warning' }],
+  );
+  assert.match(report.issues[0].message, /Frame has been detached/u);
+  assert.equal(page.listenerCount('frameattached'), 0);
+  assert.equal(page.listenerCount('framenavigated'), 0);
+});
+
+test('unattached frame timeouts name the artifact and remove attachment listeners', async (t) => {
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  const page = Object.assign(new EventEmitter(), mockPage(clearResult()));
+  const handle = await page.frames()[0].frameElement();
+  let lookupStarted;
+  const started = new Promise((resolve) => {
+    lookupStarted = resolve;
+  });
+  handle.contentFrame = async () => {
+    lookupStarted();
+    return null;
+  };
+  page.frames = () => [];
+  page.waitForSelector = async () => handle;
+  const pending = auditDesignPage(page, { document, entries: [entry] });
+  await started;
+  t.mock.timers.tick(5000);
+  const report = await pending;
+  assert.deepEqual(report.checkedArtifacts, []);
+  assert.equal(report.status, 'failed');
+  assert.deepEqual(
+    report.issues.map(({ rule }) => rule),
+    ['frame-load-error', 'missing-frame-inspection'],
+  );
+  assert.match(report.issues[0].message, /overview-desktop.*no frame attached/iu);
+  assert.equal(page.listenerCount('frameattached'), 0);
+  assert.equal(page.listenerCount('framenavigated'), 0);
+});
+
+test('pages without attachment events retain the frame scan fallback', async () => {
+  const page = mockPage(clearResult());
+  page.waitForSelector = async () => {
+    throw new Error('Eventless pages must use the frame scan.');
+  };
+  const report = await auditDesignPage(page, { document, entries: [entry] });
+  assert.deepEqual(report.checkedArtifacts, [entry.artifactId]);
+  assert.deepEqual(report.issues, []);
+});
+
+test('panel visibility restoration failures remain visible as warnings', async () => {
+  const page = mockPage(clearResult());
+  const handle = await page.frames()[0].frameElement();
+  const evaluate = handle.evaluate;
+  handle.evaluate = async (fn, argument) => {
+    if (argument) throw new Error('Panel detached.');
+    return evaluate(fn, argument);
+  };
+  const report = await auditDesignPage(page, { document, entries: [entry] });
+  assert.deepEqual(report.checkedArtifacts, [entry.artifactId]);
+  assert.deepEqual(report.issues, [
+    {
+      artifactId: entry.artifactId,
+      rule: 'panel-visibility-restore-error',
+      severity: 'warning',
+      message: 'Artifact overview-desktop panel visibility could not be restored: Panel detached.',
+    },
+  ]);
 });
 
 async function browser(t) {

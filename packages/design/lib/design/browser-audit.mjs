@@ -286,6 +286,59 @@ export function auditRenderedScreen({ height, frameBoundsSeverity = 'warning' } 
   };
 }
 
+async function attachedArtifactFrame(page, artifactId, warn) {
+  const deadline = Date.now() + 5000;
+  const escaped = artifactId.replace(
+    /[^a-z0-9_-]/giu,
+    (char) => `\\${char.codePointAt(0).toString(16)} `,
+  );
+  const handle = await page.waitForSelector(
+    `iframe[data-planr-artifact-frame="${escaped}"], iframe[data-planr-artifact-id="${escaped}"]`,
+    { state: 'attached', timeout: 5000 },
+  );
+  try {
+    return await new Promise((resolve, reject) => {
+      let settled = false;
+      const finish = (error, frame) => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timer);
+        page.off('frameattached', inspect);
+        page.off('framenavigated', inspect);
+        if (error) reject(error);
+        else resolve(frame);
+      };
+      const inspect = async (frame) => {
+        if (settled || frame === page.mainFrame?.()) return;
+        try {
+          const candidate = await frame.frameElement();
+          let matches;
+          try {
+            matches = await handle.evaluate((element, other) => element === other, candidate);
+          } finally {
+            await candidate.dispose?.();
+          }
+          if (matches) finish(null, frame);
+        } catch (error) {
+          if (!settled) warn(error);
+        }
+      };
+      const timer = setTimeout(
+        () => finish(new Error(`No frame attached for artifact ${artifactId} within 5000ms.`)),
+        Math.max(1, deadline - Date.now()),
+      );
+      // Subscribe before contentFrame so an attachment during the lookup cannot be missed.
+      page.on('frameattached', inspect);
+      page.on('framenavigated', inspect);
+      handle.contentFrame().then((frame) => {
+        if (frame) finish(null, frame);
+      }, finish);
+    });
+  } finally {
+    await handle.dispose?.();
+  }
+}
+
 /**
  * Browser-client agnostic orchestration. The caller owns the browser, screenshots
  * and explicit journey results; this module never installs or imports a browser.
@@ -333,85 +386,127 @@ export async function auditDesignPage(
   }
   const loaded = new Set();
   for (const entry of expected.values()) {
+    let frameHold;
     try {
-      await page.evaluate?.(async (id) => {
-        const stage = window.__openPlanrArtifactStage;
-        if (stage?.frameBudget) await stage.ensureFrames([id]);
-      }, entry.artifactId);
-    } catch (error) {
-      add(
-        entry.artifactId,
-        'frame-load-error',
-        'error',
-        `The rendered frame could not be mounted: ${error.message}`,
-      );
-      continue;
-    }
-    for (const frame of page.frames()) {
-      let handle, artifactId, panelState;
       try {
-        if (frame === page.mainFrame?.()) continue;
-        handle = await frame.frameElement();
-        artifactId =
-          (await handle.getAttribute('data-planr-artifact-frame')) ??
-          (await handle.getAttribute('data-planr-artifact-id'));
-        if (artifactId !== entry.artifactId) continue;
-        if (loaded.has(artifactId)) {
-          add(
-            artifactId,
-            'duplicate-frame',
-            'error',
-            'Multiple frames claim the same artifact identity.',
-          );
-          continue;
-        }
-        loaded.add(artifactId);
-        await frame.waitForLoadState?.('load', { timeout: 5000 });
-        panelState = await handle.evaluate((element) => {
-          const panel = element.closest('[data-artifact-id]');
-          if (!panel) return null;
-          const hidden = panel.hidden;
-          panel.hidden = false;
-          return { hidden };
-        });
-        // A real keyboard event establishes focus-visible modality before the
-        // screen helper inspects controls, without activating any product action.
-        await page.keyboard?.press('Tab');
-        const result = await frame.evaluate(auditRenderedScreen, {
-          height: entry.height,
-          frameBoundsSeverity,
-        });
-        if (result.screenId !== entry.screenId) {
-          add(
-            artifactId,
-            'screen-identity-mismatch',
-            'error',
-            `Expected screen ${entry.screenId}; loaded ${result.screenId ?? 'none'}.`,
-          );
-          continue;
-        }
-        checkedArtifacts.push(artifactId);
-        screens.push({ artifactId, ...result });
-        for (const issue of result.issues)
-          add(artifactId, issue.rule, issue.severity, issue.message);
+        frameHold = await page.evaluateHandle?.((id) => {
+          const stage = window.__openPlanrArtifactStage;
+          return stage?.frameBudget ? stage.holdFrames([id]) : null;
+        }, entry.artifactId);
+        await page.evaluate?.(async (id) => {
+          const stage = window.__openPlanrArtifactStage;
+          if (stage?.frameBudget) await stage.ensureFrames([id]);
+        }, entry.artifactId);
       } catch (error) {
-        if (artifactId && expected.has(artifactId))
+        add(
+          entry.artifactId,
+          'frame-load-error',
+          'error',
+          `The rendered frame could not be mounted: ${error.message}`,
+        );
+        continue;
+      }
+      let frames;
+      if (['waitForSelector', 'on', 'off'].every((method) => typeof page[method] === 'function')) {
+        try {
+          const frame = await attachedArtifactFrame(page, entry.artifactId, (error) =>
+            add(
+              entry.artifactId,
+              'frame-attachment-inspection-error',
+              'warning',
+              `A frame attachment could not be matched to artifact ${entry.artifactId}: ${error.message}`,
+            ),
+          );
+          frames = [frame, ...page.frames().filter((candidate) => candidate !== frame)];
+        } catch (error) {
           add(
-            artifactId,
+            entry.artifactId,
             'frame-load-error',
             'error',
-            `The rendered frame could not be inspected: ${error.message}`,
+            `Artifact ${entry.artifactId} has no frame attached for inspection: ${error.message}`,
           );
-      } finally {
-        if (panelState && handle) {
-          await handle
-            .evaluate((element, state) => {
-              const panel = element.closest('[data-artifact-id]');
-              if (panel) panel.hidden = state.hidden;
-            }, panelState)
-            .catch(() => {});
+          continue;
         }
-        await handle?.dispose?.();
+      } else frames = page.frames();
+      for (const frame of frames) {
+        let handle, artifactId, panelState;
+        try {
+          if (frame === page.mainFrame?.()) continue;
+          handle = await frame.frameElement();
+          artifactId =
+            (await handle.getAttribute('data-planr-artifact-frame')) ??
+            (await handle.getAttribute('data-planr-artifact-id'));
+          if (artifactId !== entry.artifactId) continue;
+          if (loaded.has(artifactId)) {
+            add(
+              artifactId,
+              'duplicate-frame',
+              'error',
+              'Multiple frames claim the same artifact identity.',
+            );
+            continue;
+          }
+          loaded.add(artifactId);
+          await frame.waitForLoadState?.('load', { timeout: 5000 });
+          panelState = await handle.evaluate((element) => {
+            const panel = element.closest('[data-artifact-id]');
+            if (!panel) return null;
+            const hidden = panel.hidden;
+            panel.hidden = false;
+            return { hidden };
+          });
+          // A real keyboard event establishes focus-visible modality before the
+          // screen helper inspects controls, without activating any product action.
+          await page.keyboard?.press('Tab');
+          const result = await frame.evaluate(auditRenderedScreen, {
+            height: entry.height,
+            frameBoundsSeverity,
+          });
+          if (result.screenId !== entry.screenId) {
+            add(
+              artifactId,
+              'screen-identity-mismatch',
+              'error',
+              `Expected screen ${entry.screenId}; loaded ${result.screenId ?? 'none'}.`,
+            );
+            continue;
+          }
+          checkedArtifacts.push(artifactId);
+          screens.push({ artifactId, ...result });
+          for (const issue of result.issues)
+            add(artifactId, issue.rule, issue.severity, issue.message);
+        } catch (error) {
+          if (artifactId && expected.has(artifactId))
+            add(
+              artifactId,
+              'frame-load-error',
+              'error',
+              `The rendered frame could not be inspected: ${error.message}`,
+            );
+        } finally {
+          if (panelState && handle) {
+            await handle
+              .evaluate((element, state) => {
+                const panel = element.closest('[data-artifact-id]');
+                if (panel) panel.hidden = state.hidden;
+              }, panelState)
+              .catch((error) =>
+                add(
+                  artifactId,
+                  'panel-visibility-restore-error',
+                  'warning',
+                  `Artifact ${artifactId} panel visibility could not be restored: ${error.message}`,
+                ),
+              );
+          }
+          await handle?.dispose?.();
+        }
+      }
+    } finally {
+      try {
+        await frameHold?.evaluate((release) => release?.());
+      } finally {
+        await frameHold?.dispose();
       }
     }
   }

@@ -1099,10 +1099,12 @@ for (const viewport of [
       assert.deepEqual(
         report.checkedArtifacts,
         current.entries.map(({ artifactId }) => artifactId),
+        JSON.stringify(report.issues),
       );
       assert.equal(
         report.issues.some(({ rule }) => rule === 'missing-frame-inspection'),
         false,
+        JSON.stringify(report.issues),
       );
     } finally {
       await browser?.close();
