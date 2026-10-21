@@ -921,6 +921,10 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
     );
   }
 
+  function syncFrameGestures(frame, panel) {
+    frame?.__openPlanrBridge?.setViewportGestures?.(state.view === 'canvas' && !panel.hidden);
+  }
+
   function updatePan() {
     root.dataset.designPanActive = String(state.view === 'canvas' && (panEnabled || spacePan));
     root.dataset.designTool = activeTool;
@@ -943,7 +947,7 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
             ? 0
             : -1;
         if (frame.tabIndex !== tabIndex) frame.tabIndex = tabIndex;
-        frame.__openPlanrBridge?.setViewportGestures?.(state.view === 'canvas' && !panel.hidden);
+        syncFrameGestures(frame, panel);
       }
     }
   }
@@ -1138,8 +1142,10 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
     const nodes = placed.flatMap(({ entry, bounds }) => {
       return [
         { id: entry.artifactId, bounds },
-        // Include the artboard heading's established fit clearance.
-        { id: `label:${entry.artifactId}`, bounds: { ...bounds, y: bounds.y - 64, height: 64 } },
+        {
+          id: `label:${entry.artifactId}`,
+          bounds: { ...bounds, y: bounds.y - 34 / state.zoom, height: 28 / state.zoom },
+        },
       ];
     });
     sectionHeadings.forEach((heading, index) => {
@@ -1192,9 +1198,7 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
 
   function centerEntry(entry) {
     if (state.view !== 'canvas' || !placedBoardBounds(entry)) return;
-    canvas.reveal(entry.artifactId, { mode: 'center' });
-    saveViewport();
-    renderCamera();
+    fit({ selection: entry, save: false, maxZoom: state.zoom });
   }
 
   function updateDesignNotes() {
@@ -1445,8 +1449,7 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
     const zoom = String(state.zoom);
     if (grid.style.getPropertyValue('--design-zoom') !== zoom)
       grid.style.setProperty('--design-zoom', zoom);
-    if (state.view === 'canvas' && sectionHeadings.length && sectionZoom !== state.zoom)
-      syncCanvasNodes();
+    if (state.view === 'canvas' && sectionZoom !== state.zoom) syncCanvasNodes();
     if (state.view !== 'canvas')
       grid.style.transform = `translate(${state.camera.x}px, ${state.camera.y}px) scale(${state.zoom})`;
     const active = entries.find((entry) => entry.artifactId === activeArtifactId);
@@ -1480,6 +1483,7 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
     for (const [id, panel] of panels) {
       const frame = stage.getFrame(id),
         placeholder = panel.querySelector('[data-design-load-frame]');
+      syncFrameGestures(frame, panel);
       if (!placeholder) continue;
       const status = frame.dataset.planrFrameState || 'unloaded';
       placeholder.hidden = status === 'ready';
@@ -1736,7 +1740,7 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
     return true;
   }
 
-  function fit({ save = true, selection = null } = {}) {
+  function fit({ save = true, selection = null, maxZoom = 1 } = {}) {
     state.inspectionScale = 'fit';
     render();
     if (state.view !== 'canvas') {
@@ -1744,11 +1748,11 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
       return;
     }
     syncCanvasChrome();
-    for (let attempt = 0; attempt < (sectionHeadings.length && !selection ? 12 : 1); attempt++) {
+    for (let attempt = 0; attempt < 12; attempt++) {
       const previousZoom = state.zoom;
       canvas.fit(selection ? [selection.artifactId, `label:${selection.artifactId}`] : 'all', {
         padding: 36,
-        maxZoom: 1,
+        maxZoom,
       });
       saveViewport();
       renderCamera();
@@ -2609,8 +2613,11 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
       const screen = design.screens.find(({ id }) => id === entry.screenId);
       const variant = design.variants.find(({ id }) => id === entry.variantId);
       const frame = design.frames.find(({ id }) => id === entry.frameId);
+      const iframe = stage.getFrame(entry.artifactId);
+      const syncGestures = () => syncFrameGestures(iframe, panel);
+      listen(iframe, 'planr:artifact-bridge-ready', syncGestures);
+      listen(iframe, 'load', syncGestures);
       if (frame.height === 'auto') {
-        const iframe = stage.getFrame(entry.artifactId);
         const measure = () =>
           iframe.contentWindow?.postMessage({ type: 'openplanr:design-measure' }, '*');
         listen(iframe, 'planr:artifact-bridge-ready', measure);

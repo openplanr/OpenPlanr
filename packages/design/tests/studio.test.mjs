@@ -2885,6 +2885,113 @@ test('Fit excludes measured chrome on every stage edge', async (t) => {
   }
 });
 
+test('visible canvas boards keep bridge gestures and direct interaction in Interact mode', async (t) => {
+  const app = await mount({ data: fixture({ count: 2 }) });
+  t.after(() => app.close());
+  const first = app.stage.getFrame(app.entries[0].artifactId);
+  const second = app.stage.getFrame(app.entries[2].artifactId);
+  const forwarded = [];
+  for (const frame of [first, second])
+    frame.__openPlanrBridge = { setViewportGestures: (enabled) => forwarded.push(enabled) };
+  app.studio.setTool('interact');
+  assert.equal(first.style.pointerEvents, '');
+  assert.equal(second.style.pointerEvents, '');
+  assert.equal(second.tabIndex, 0);
+  assert.deepEqual(forwarded, [true, true]);
+  forwarded.length = 0;
+  app.studio.setView('prototype');
+  assert.ok(forwarded.length > 0);
+  assert.ok(forwarded.every((enabled) => enabled === false));
+});
+
+async function studioReady(app) {
+  const root = app.documentNode.querySelector('.planr-shell');
+  if (root.dataset.designReady !== 'true')
+    await new Promise((resolve) =>
+      root.addEventListener('planr:design-ready', resolve, { once: true }),
+    );
+}
+
+test('a bridge mounted later within the frame budget receives current canvas gestures', async (t) => {
+  const gestures = new Map();
+  const app = await mount({
+    data: fixture({ count: 3 }),
+    stageOptions: {
+      frameBudget: 3,
+      bridgeClient: {
+        attach({ artifact, frame }) {
+          gestures.set(artifact.id, false);
+          frame.__openPlanrBridge = {
+            setViewportGestures: (enabled) => gestures.set(artifact.id, enabled),
+          };
+          frame.dataset.planrBridgeTrusted = 'true';
+          return () => {
+            delete frame.__openPlanrBridge;
+          };
+        },
+      },
+    },
+  });
+  t.after(() => app.close());
+  await studioReady(app);
+  const id = app.entries[2].artifactId;
+  assert.equal(app.stage.getLoadedArtifactIds().includes(id), false);
+  await app.stage.ensureFrames([id]);
+  assert.equal(app.stage.getFrame(id).dataset.planrFrameState, 'ready');
+  assert.equal(gestures.get(id), true, 'a late board must not retain the bridge default');
+});
+
+for (const event of ['planr:artifact-bridge-ready', 'load']) {
+  test(`a late bridge receives current gesture state on ${event}`, async (t) => {
+    const app = await mount({ data: fixture({ count: 2 }) });
+    t.after(() => app.close());
+    await studioReady(app);
+    const frame = app.stage.getFrame(app.entries[2].artifactId);
+    const forwarded = [];
+    frame.__openPlanrBridge = { setViewportGestures: (enabled) => forwarded.push(enabled) };
+    frame.dispatchEvent(new app.window.Event(event));
+    assert.deepEqual(forwarded, [true]);
+    app.studio.setView('prototype');
+    forwarded.length = 0;
+    frame.dispatchEvent(new app.window.Event(event));
+    assert.deepEqual(forwarded, [false], 'a late event uses the current view');
+    app.studio.destroy();
+    forwarded.length = 0;
+    frame.dispatchEvent(new app.window.Event(event));
+    assert.deepEqual(forwarded, [], 'destroy removes frame listeners');
+  });
+}
+
+test('centring a tall board keeps its screen-sized title clear of top chrome', async (t) => {
+  const app = await mount({ data: fixture({ count: 2 }) });
+  t.after(() => app.close());
+  app.studio.setPanels({ navOpen: false, reviewOpen: false });
+  const scroll = app.documentNode.querySelector('.planr-stage-scroll');
+  Object.defineProperties(scroll, {
+    clientWidth: { value: 600 },
+    clientHeight: { value: 400 },
+    getBoundingClientRect: {
+      value: () => ({ left: 0, top: 0, right: 600, bottom: 400, width: 600, height: 400 }),
+    },
+  });
+  app.documentNode.querySelector('.design-stage-context').getBoundingClientRect = () => ({
+    left: 0,
+    top: 0,
+    right: 600,
+    bottom: 80,
+    width: 600,
+    height: 80,
+  });
+  app.window.dispatchEvent(new app.window.Event('resize'));
+  app.studio.setCamera({ x: 0, y: 0, zoom: 1 });
+  app.documentNode.querySelector('[data-design-screen="screen-2"]').click();
+  const { camera, zoom } = app.studio.getState();
+  const panel = app.stage.getPanel(app.entries[2].artifactId);
+  const titleTop = camera.y + parseFloat(panel.style.top) * zoom - 34;
+  assert.ok(titleTop >= 92, `Title top ${titleTop} clears the header and its gap`);
+  assert.ok(camera.y + (parseFloat(panel.style.top) + 800) * zoom <= 388);
+});
+
 test('board metadata includes authored dimensions only once', async (t) => {
   const data = fixture({ count: 1 });
   data.document.frames[0].label = 'Desktop viewport · 1280 × 800';

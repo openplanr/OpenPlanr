@@ -26,6 +26,204 @@ async function pendingLayout(page) {
   );
 }
 
+async function assertCanvasLabels(
+  page,
+  selector = '.planr-artifact-panel:not([hidden]) .design-artboard-label',
+) {
+  const geometry = await page.evaluate((selector) => {
+    const rect = (node) => node.getBoundingClientRect().toJSON();
+    return {
+      stage: rect(document.querySelector('.planr-stage-scroll')),
+      chrome: [
+        ...document.querySelectorAll(
+          '.design-toolbar,.design-stage-context,.design-canvas-tools,.design-navigator,.planr-review-rail',
+        ),
+      ]
+        .filter((node) => !node.inert && node.getAttribute('aria-hidden') !== 'true')
+        .map(rect),
+      labels: [...document.querySelectorAll(selector)].map(rect),
+    };
+  }, selector);
+  assert.ok(geometry.labels.length > 0);
+  for (const label of geometry.labels) {
+    const details = JSON.stringify({ label, ...geometry });
+    assert.ok(
+      label.left >= geometry.stage.left - 1 && label.right <= geometry.stage.right + 1,
+      `Title stays inside the stage horizontally: ${details}`,
+    );
+    assert.ok(
+      label.top >= geometry.stage.top - 1 && label.bottom <= geometry.stage.bottom + 1,
+      `Title stays inside the stage vertically: ${details}`,
+    );
+    for (const chrome of geometry.chrome)
+      assert.equal(
+        label.left < chrome.right &&
+          label.right > chrome.left &&
+          label.top < chrome.bottom &&
+          label.bottom > chrome.top,
+        false,
+        `Title clears chrome: ${details}`,
+      );
+  }
+}
+
+test(`reloaded board gestures prevent native zoom and retain direct interaction (${browserEngine()})`, {
+  timeout: 60000,
+}, async () => {
+  const root = await mkdtemp(join(tmpdir(), 'openplanr-board-gestures-'));
+  let browser, session;
+  try {
+    const { file } = designFixture(root, {
+      count: 2,
+      frames: [{ id: 'desktop', label: 'Desktop', width: 600, height: 450 }],
+    });
+    await renderDesignDocument(file);
+    session = await startDesignReview(file, {
+      env: { ...process.env, PLANR_HOME: join(root, 'home') },
+      port: 0,
+    });
+    browser = await launchBrowser({ engine: browserEngine() });
+    const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+    page.setDefaultTimeout(10000);
+    await page.addInitScript(() => {
+      if (window === top) return;
+      window.boardWheelPrevention = [];
+      addEventListener(
+        'wheel',
+        (event) => {
+          // The bridge stops propagation; observe cancellation after its capture handler runs.
+          setTimeout(
+            () =>
+              window.boardWheelPrevention.push({
+                trusted: event.isTrusted,
+                cancelable: event.cancelable,
+                prevented: event.defaultPrevented,
+              }),
+            0,
+          );
+        },
+        { capture: true, passive: true },
+      );
+    });
+    await page.goto(session.url);
+    await page.locator('[data-design-ready="true"]').waitFor();
+    await page.evaluate(() => {
+      window.__openPlanrDesignStudio.setPanels({ navOpen: false, reviewOpen: false });
+      window.__openPlanrDesignStudio.fit();
+    });
+    await settleStudioChrome(page);
+    const frame = page.locator('.planr-artifact-panel[data-design-active="false"] iframe').first();
+    await frame.locator('..').locator('iframe[data-planr-frame-state="ready"]').waitFor();
+    const artifactId = await frame.getAttribute('data-planr-artifact-frame');
+    await page.evaluate((id) => window.__openPlanrArtifactStage.retryFrames([id]), artifactId);
+    await page.waitForFunction((id) => {
+      const frame = window.__openPlanrArtifactStage.getFrame(id);
+      return (
+        frame.dataset.planrFrameState === 'ready' && frame.dataset.planrBridgeTrusted === 'true'
+      );
+    }, artifactId);
+    const product = await (await frame.elementHandle()).contentFrame();
+    await product.evaluate(() => {
+      window.receivedWheels = 0;
+      addEventListener('wheel', () => window.receivedWheels++);
+    });
+    const baseline = await page.evaluate(() => ({
+      dpr: devicePixelRatio,
+      scale: visualViewport.scale,
+    }));
+    const readState = () => page.evaluate(() => window.__openPlanrDesignStudio.getState());
+    const assertWheelPrevented = async (count) => {
+      await product.waitForFunction((count) => window.boardWheelPrevention.length > count, count);
+      assert.deepEqual(
+        await product.evaluate(() => window.boardWheelPrevention.at(-1)),
+        {
+          trusted: true,
+          cancelable: true,
+          prevented: true,
+        },
+        'the reloaded frame cancels native zoom at the event source',
+      );
+    };
+    const pointer = async () => {
+      const box = await frame.boundingBox();
+      return { x: box.x + box.width / 2, y: box.y + box.height / 2 };
+    };
+    for (const modifier of ['Control', 'Meta', 'cdp']) {
+      if (modifier === 'cdp' && browserEngine() !== 'chromium') continue;
+      const point = await pointer();
+      const stage = await page.locator('.planr-stage-scroll').boundingBox();
+      const before = await readState();
+      const wheelCount = await product.evaluate(() => window.boardWheelPrevention.length);
+      await page.mouse.move(point.x, point.y);
+      if (modifier === 'cdp') {
+        const cdp = await page.context().newCDPSession(page);
+        try {
+          await cdp.send('Input.dispatchMouseEvent', {
+            type: 'mouseWheel',
+            ...point,
+            deltaX: 0,
+            deltaY: -10,
+            modifiers: 2,
+          });
+        } finally {
+          await cdp.detach();
+        }
+      } else {
+        await page.keyboard.down(modifier);
+        await page.mouse.wheel(0, -10);
+        await page.keyboard.up(modifier);
+      }
+      await assertWheelPrevented(wheelCount);
+      await page.waitForFunction(
+        (zoom) => window.__openPlanrDesignStudio.getState().zoom > zoom,
+        before.zoom,
+      );
+      const after = await readState();
+      assert.ok(Math.abs(after.zoom - before.zoom * Math.exp(0.1)) < 0.00001);
+      for (const axis of ['x', 'y']) {
+        const local = point[axis] - stage[axis];
+        assert.ok(
+          Math.abs(
+            (local - before.camera[axis]) / before.zoom - (local - after.camera[axis]) / after.zoom,
+          ) < 1,
+          `${modifier}: cursor anchor`,
+        );
+      }
+      assert.deepEqual(
+        await page.evaluate(() => ({ dpr: devicePixelRatio, scale: visualViewport.scale })),
+        baseline,
+        `${modifier}: browser zoom stays unchanged`,
+      );
+      assert.equal(baseline.scale, 1);
+    }
+    const point = await pointer();
+    const before = await readState();
+    const wheelCount = await product.evaluate(() => window.boardWheelPrevention.length);
+    await page.mouse.move(point.x, point.y);
+    await page.mouse.wheel(24, 36);
+    await assertWheelPrevented(wheelCount);
+    await page.waitForFunction(
+      (y) => window.__openPlanrDesignStudio.getState().camera.y < y,
+      before.camera.y,
+    );
+    const after = await readState();
+    assert.equal(after.zoom, before.zoom);
+    assert.ok(Math.abs(after.camera.x - before.camera.x + 24) < 1);
+    assert.ok(Math.abs(after.camera.y - before.camera.y + 36) < 1);
+    assert.equal(await product.evaluate(() => window.receivedWheels), 0);
+    assert.equal(
+      await frame.locator('..').locator('..').getAttribute('data-design-active'),
+      'false',
+    );
+    await product.getByRole('button', { name: 'Save workspace', exact: true }).click();
+    await product.getByRole('button', { name: 'Saved', exact: true }).waitFor();
+  } finally {
+    await browser?.close();
+    await session?.close();
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
 test(`legacy board positions migrate once from server and local state (${browserEngine()})`, {
   timeout: 60000,
 }, async () => {
@@ -593,7 +791,7 @@ test(`canvas engine preserves legacy fit, zoom anchors, saved cameras and board 
       const stage = document.querySelector('.planr-stage-scroll');
       const panels = [...document.querySelectorAll('.planr-artifact-panel:not([hidden])')];
       const minX = Math.min(...panels.map((panel) => parseFloat(panel.style.left)));
-      const minY = Math.min(...panels.map((panel) => parseFloat(panel.style.top) - 64));
+      const minY = Math.min(...panels.map((panel) => parseFloat(panel.style.top)));
       const maxX = Math.max(...panels.map((panel) => parseFloat(panel.style.left) + 600));
       const maxY = Math.max(...panels.map((panel) => parseFloat(panel.style.top) + 450));
       const stageRect = stage.getBoundingClientRect();
@@ -610,7 +808,7 @@ test(`canvas engine preserves legacy fit, zoom anchors, saved cameras and board 
       const height = bottom - top;
       const zoom = Math.max(
         0.05,
-        Math.min(1, (stage.clientWidth - 96) / (maxX - minX), (height - 96) / (maxY - minY)),
+        Math.min(1, (stage.clientWidth - 96) / (maxX - minX), (height - 96 - 34) / (maxY - minY)),
       );
       window.engineFrames = panels.flatMap((panel) => {
         const frame = panel.querySelector('iframe');
@@ -621,7 +819,7 @@ test(`canvas engine preserves legacy fit, zoom anchors, saved cameras and board 
         expected: {
           zoom,
           x: (stage.clientWidth - (maxX - minX) * zoom) / 2 - minX * zoom,
-          y: top + (height - (maxY - minY) * zoom) / 2 - minY * zoom,
+          y: top + (height - (maxY - minY) * zoom + 34) / 2 - minY * zoom,
         },
       };
     });
@@ -769,6 +967,7 @@ for (const viewport of [
       );
       await page.locator('[data-design-fit]').click();
       await settleStudioChrome(page);
+      await assertCanvasLabels(page);
       const geometry = await page.evaluate(() => {
         const rect = (selector) =>
           document.querySelector(selector).getBoundingClientRect().toJSON();
@@ -859,6 +1058,18 @@ for (const viewport of [
         false,
         'below 34 / 392 (about 8.7%), the first board label crosses the heading anchor',
       );
+      await page.evaluate(() => {
+        window.__openPlanrDesignStudio.setCamera({ x: 0, y: 0, zoom: 1 });
+        document.querySelector('[data-design-screen="screen-2"]').click();
+      });
+      await settleStudioChrome(page);
+      await assertCanvasLabels(
+        page,
+        '.planr-artifact-panel[data-design-active="true"] .design-artboard-label',
+      );
+      await page.evaluate(() => window.__openPlanrDesignStudio.fit());
+      await settleStudioChrome(page);
+      await assertCanvasLabels(page);
     } finally {
       await browser?.close();
       await session?.close();

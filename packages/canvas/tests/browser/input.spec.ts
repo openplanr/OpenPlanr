@@ -310,7 +310,10 @@ test('stage shortcuts do not fire in editable elements or outside the stage', as
   expect(await camera(page)).toEqual(before);
 });
 
-test('wheel over an inactive iframe pans and shields it during camera motion', async ({ page }) => {
+test('wheel over an inactive iframe pans, zooms and shields it during camera motion', async ({
+  page,
+  context,
+}) => {
   await openBench(page, 'frame=1');
   const frame = page.locator('iframe');
   await expect(frame).toHaveCSS('pointer-events', 'none');
@@ -318,6 +321,35 @@ test('wheel over an inactive iframe pans and shields it during camera motion', a
   await frame.hover({ force: true });
   await page.mouse.wheel(40, 70);
   await expect.poll(async () => (await camera(page)).y).toBeGreaterThan(before.y);
+  const dpr = await page.evaluate(() => devicePixelRatio);
+  for (const cdpPinch of [false, true]) {
+    const start = await camera(page);
+    const bounds = await frame.boundingBox();
+    if (!bounds) throw new Error('Preview frame has no bounds');
+    const point = { x: bounds.x + bounds.width / 2, y: bounds.y + bounds.height / 2 };
+    await page.mouse.move(point.x, point.y);
+    if (cdpPinch) {
+      const session = await context.newCDPSession(page);
+      try {
+        await session.send('Input.dispatchMouseEvent', {
+          type: 'mouseWheel',
+          ...point,
+          deltaX: 0,
+          deltaY: -10,
+          modifiers: 2,
+        });
+      } finally {
+        await session.detach();
+      }
+    } else {
+      await page.keyboard.down('Control');
+      await page.mouse.wheel(0, -10);
+      await page.keyboard.up('Control');
+    }
+    await expect.poll(async () => (await camera(page)).zoom).toBeGreaterThan(start.zoom);
+    expect(await page.evaluate(() => visualViewport?.scale)).toBe(1);
+    expect(await page.evaluate(() => devicePixelRatio)).toBe(dpr);
+  }
   await page.evaluate(() => window.canvas.setActiveFrame('preview-frame'));
   await expect(frame).toHaveCSS('pointer-events', 'auto');
   await page.evaluate(() => window.canvas.panBy(10, 10));

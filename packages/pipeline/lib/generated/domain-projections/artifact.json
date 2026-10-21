@@ -1153,7 +1153,7 @@
     {
       "source": "packages/artifact/lib/artifact/ui/bridge-tools.mjs",
       "target": "lib/artifact/ui/bridge-tools.mjs",
-      "sha256": "ad5137575aa96024d2c400db75a62b6fa1c1bbee4ba1dc0b2447462cc9609e3f",
+      "sha256": "b3b36b9de9cea0e7f83f833fb4524539649cd1c1b4cc9b81c45512812bee4107",
       "mode": "644"
     },
     {
