@@ -23,7 +23,7 @@ import {
   moveOrthogonalBend,
 } from './diagram-editor-actions.mjs';
 import { bundleOf, errText } from './diagram-editor-commands.mjs';
-import { focusable } from './diagram-editor-dom.mjs';
+import { focusable, showZoom } from './diagram-editor-dom.mjs';
 import type { DiagramEditorContext } from './diagram-editor-regions.mjs';
 
 export type DiagramEditorTool = 'select' | 'pan';
@@ -249,8 +249,9 @@ export function createEditorCanvas(ctx: DiagramEditorContext): DiagramEditorCanv
       const result = session.setView({ camera: value });
       if (!result.ok) report(errText(result));
     }
-    dom.zoomValue.textContent = Math.round(camera.zoom * 100) + '%';
-    dom.contextTools.hidden = true;
+    showZoom(dom.zoomValue, camera.zoom);
+    // An unchanged attribute write would still restyle the toolbar on every camera frame.
+    if (!dom.contextTools.hidden) dom.contextTools.hidden = true;
     win.clearTimeout(settleTimer);
     settleTimer = win.setTimeout(() => {
       if (ctx.isDisposed()) return;
@@ -317,7 +318,7 @@ export function createEditorCanvas(ctx: DiagramEditorContext): DiagramEditorCanv
       state.view.trace,
       state.view.snap,
     ]);
-    dom.zoomValue.textContent = Math.round(controller.getCamera().zoom * 100) + '%';
+    showZoom(dom.zoomValue, controller.getCamera().zoom);
     if (event.type === 'view' && viewStamp === nextViewStamp && renderedBundle === bundle)
       return false;
     viewStamp = nextViewStamp;
@@ -329,7 +330,7 @@ export function createEditorCanvas(ctx: DiagramEditorContext): DiagramEditorCanv
       return true;
     }
     const camera = state.view.camera;
-    dom.zoomValue.textContent = Math.round(camera.scale * 100) + '%';
+    showZoom(dom.zoomValue, camera.scale);
     const byId = elementIndex(bundle.document),
       placements = new Map(bundle.presentation.elements.map((entry) => [entry.elementId, entry]));
     const theme = editorTheme(bundle),

@@ -422,12 +422,11 @@ export function renderEditorControls(
     iconOnly: true,
     className: 'de-icon-button',
   });
-  const zoomValue = element(
-    doc,
-    'output',
-    { className: 'de-zoom-value', 'aria-label': 'Zoom level' },
-    '100%',
-  );
+  const zoomValue = element(doc, 'output', {
+    className: 'de-zoom-value',
+    'aria-label': 'Zoom level',
+  });
+  zoomValue.append(element(doc, 'span', { className: 'de-zoom-text' }, '100%'));
   zoomTools.append(zoomValue);
   canvasButton(zoomTools, 'Zoom in', 'zoom-in', {
     icon: 'plus',

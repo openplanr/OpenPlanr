@@ -1160,6 +1160,18 @@ body.planr-diagram-owner-page #diagram-owner-editor {
   text-align: center;
 }
 
+.planr-diagram-editor .de-zoom-value {
+  position: relative;
+  min-height: 1lh;
+}
+
+/* Strict containment makes the label text its own layout root, so zoom frames skip a full relayout. */
+.planr-diagram-editor .de-zoom-text {
+  position: absolute;
+  inset: 0;
+  contain: strict;
+}
+
 .planr-diagram-editor .de-empty {
   position: absolute;
   top: 50%;

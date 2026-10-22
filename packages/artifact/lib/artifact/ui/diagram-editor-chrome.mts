@@ -2,7 +2,7 @@ import { getDiagramAuthoringCapability } from '@openplanr/protocol/diagram-autho
 import { elementIndex } from '../diagram/authoring/model.mjs';
 import type { DiagramEditorState } from '../diagram/editor/index.mjs';
 import { displayName, quantity } from './diagram-editor-actions.mjs';
-import { button, element, icon, visibleMenuItems } from './diagram-editor-dom.mjs';
+import { button, element, icon, showZoom, visibleMenuItems } from './diagram-editor-dom.mjs';
 import { hostSaveLabel } from './diagram-editor-host.mjs';
 import type { DiagramEditorContext } from './diagram-editor-regions.mjs';
 
@@ -241,7 +241,7 @@ export function createEditorChrome(ctx: DiagramEditorContext): DiagramEditorChro
         .querySelector('.de-icon')
         ?.replaceWith(icon(doc, state.view.snap ? 'snap' : 'snap-off'));
     if (snapControl) snapControl.dataset.active = String(state.view.snap);
-    dom.zoomValue.textContent = Math.round(state.view.camera.scale * 100) + '%';
+    showZoom(dom.zoomValue, state.view.camera.scale);
     for (const [action, disabled] of Object.entries({
       undo: !state.canUndo || !editable(state),
       redo: !state.canRedo || !editable(state),

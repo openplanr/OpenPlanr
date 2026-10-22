@@ -225,6 +225,16 @@ export const focusable = (element: EventTarget | null | undefined) =>
   (element as Element | null | undefined)?.closest('input,textarea,select,button,[contenteditable="true"],[role="dialog"]');
 
 /** Operable choices in a rendered editor menu, in DOM order. */
+/**
+ * Sets the zoom label, writing only a changed value; the text sits in a contained inner span so
+ * each zoom frame relays out that span alone.
+ */
+export function showZoom(output: HTMLElement, zoom: number): void {
+  const text = output.firstElementChild ?? output,
+    label = Math.round(zoom * 100) + '%';
+  if (text.textContent !== label) text.textContent = label;
+}
+
 export function visibleMenuItems(menu: HTMLElement): HTMLElement[] {
   return [
     ...menu.querySelectorAll<HTMLElement>(
