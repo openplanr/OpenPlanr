@@ -109,18 +109,24 @@ npm run verify
 
 Each workspace's `npm test` runs the same test commands its Workspace CI jobs run, so
 `npm test --workspace=<package name>` from the root runs the tests CI runs for a change
-inside that directory. The CLI's runs the suite CI splits into six shards, then the heavy,
-Operate boundary and runtime integrity suites, each in its own process.
+inside that directory. The CLI's runs the suite CI splits into three shards, then the heavy,
+Operate boundary and runtime integrity suites, each in its own process; those four run in
+the nightly workflow, not on pull requests.
 
 `npm run lint` is the formatting and lint gate: Biome runs from the root `biome.jsonc`
 over every workspace, and CI fails on any error it reports. `npm run lint:fix` applies
 its safe fixes and `npm run format` its formatting.
 
-`npm ci` also installs a pre-commit hook (`.husky/pre-commit`, configured in
-`.lintstagedrc.mjs`). It applies Biome's safe fixes to the staged JavaScript, TypeScript,
-JSON and CSS files and restages them, and runs `check:comments` or `check:docs` when a file
-they cover is staged. It runs no tests, and CI does not install it. `HUSKY=0 git commit`
-skips it once.
+`npm ci` also installs two hooks; run it in every new checkout or worktree, since
+`core.hooksPath` points at `.husky/_`, which only `npm ci` creates there. The pre-commit hook
+(`.husky/pre-commit`, configured in `.lintstagedrc.mjs`) applies Biome's safe fixes to the
+staged JavaScript, TypeScript, JSON and CSS files and restages them, and runs
+`check:comments` or `check:docs` when a file they cover is staged. The pre-push hook
+(`scripts/hooks/pre-push.mjs`) runs `check:generated`, `check:boundaries`, `check:docs`,
+`check:comments`, `check:diagrams`, `lint` and `typecheck:declarations`, then `npm test` for
+each changed workspace among Protocol, canvas, Operate, artifact, integrations and the
+dashboard app. The CLI, pipeline, design and skill-runtime suites stay in CI. CI does not
+install either hook. `HUSKY=0` or `--no-verify` skips them once.
 
 In a clean verification checkout, run `git diff --exit-code HEAD --` after
 generation and after the build. Ignored local distributions may be created, but
@@ -130,14 +136,14 @@ commit intentional source and tracked manifest changes before applying this gate
 `npm run verify` checks generated assets, boundaries, public documentation, the committed
 documentation diagram sets, focused tests, and isolated packed-package behavior. It does not replace the full
 workspace test command or manual/browser checks for UI changes. The CI workflows
-under `.github/workflows/` define their additional runtime and browser coverage. Artifact
-browser certification runs Chromium on every pull request that touches the artifact
-surfaces. Firefox and WebKit run nightly, on manual dispatch, on Dependabot npm updates,
-and on pull requests labelled `browser-certification`. For a branch the workflow's path
-filter does not match, run `gh workflow run artifact-browser.yml --ref <branch>` instead of
-labelling it. Version pull requests run Chromium only, so Firefox and WebKit cover a release
-through the nightly run, or through `gh workflow run artifact-browser.yml --ref main` before
-the version pull request merges.
+under `.github/workflows/` define their additional runtime and browser coverage. Pull
+requests must pass two checks: `CI passed` from `ci.yml` and `Browser` from `browser.yml`,
+which runs the canvas, dashboard and artifact Chromium lanes a change reaches. Every pull
+request job finishes within 12 minutes. `nightly.yml` runs the CLI integration suites and
+coverage, the Node 22 contributor toolchain, packed proofs on Node 22, 24 and 26, the canvas
+timing traces, artifact Chromium, Firefox and WebKit, the published-package first runs and
+the dependency audit. It runs on the version pull request too. To run it on another branch,
+use `gh workflow run nightly.yml --ref <branch>`.
 
 Record failed or unavailable checks honestly. Do not update fixtures simply to
 hide a regression, or make an unsupported compatibility claim from one local run.
@@ -147,11 +153,12 @@ Before pushing a branch that touches several packages, `npm run verify:ci` reads
 (`--only` and `--skip` take the workflow's job ids, which `--list` prints). It runs the
 build job's `npm run generate` and `npm run build` once in place of restoring its outputs,
 runs every matrix entry in turn, and runs a job with a Node matrix once: its entry for your
-Node, else its entry for the build job's Node, so `compatibility` runs its Node 22 entry on
-Node 22 and its Node 24 entry otherwise. It does not replay `CI passed`, the job that fails
-unless every other Workspace CI job succeeded. It is slower than `npm run verify` and
-catches the suites `verify` does not run: workspace lint, the full CLI test tree, the heavy
-and Operate suites, and the package tests of every workspace.
+Node, else its entry for the build job's Node. It does not replay `CI passed`, the job that
+fails unless every other Workspace CI job succeeded, or the checks that read the pull
+request or the runner, which it names instead. It is slower than `npm run verify` and
+catches the suites `verify` does not run: workspace lint, the CLI test tree and the package
+tests of every workspace. The CLI heavy and Operate suites run nightly; run them with
+`npm test --workspace=openplanr`.
 
 ### Browser tests
 

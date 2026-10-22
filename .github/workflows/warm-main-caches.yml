@@ -1,7 +1,8 @@
 name: Warm main caches
 
 # Caches saved by merge queue runs are scoped to their gh-readonly-queue ref, so pull
-# request and queue runs can restore only what a main run saved.
+# request and queue runs can restore only what a main run saved. The npm cache path differs
+# inside the Playwright container, so each runner kind gets its own.
 on:
   push:
     branches: [main]
@@ -17,7 +18,7 @@ concurrency:
 
 jobs:
   warm:
-    name: Save the npm and Chromium caches for main
+    name: Save the npm cache for main
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
@@ -30,6 +31,22 @@ jobs:
           cache: npm
       - name: Install the root lockfile
         run: npm ci
-      - name: Install Chromium as Workspace CI does
-        uses: ./.github/actions/playwright-chromium
-        timeout-minutes: 12
+
+  warm-container:
+    name: Save the npm cache for main in the Playwright container
+    runs-on: ubuntu-24.04
+    container: mcr.microsoft.com/playwright:v1.64.0-noble
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      # The workspace belongs to the runner user and the container runs as root.
+      - name: Trust the workspace for git
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+          cache: npm
+      - name: Install the root lockfile
+        run: npm ci

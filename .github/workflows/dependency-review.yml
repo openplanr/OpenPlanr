@@ -1,5 +1,7 @@
 name: Dependency review
 
+# CI's static job runs this review. This workflow only keeps the "Review dependency changes"
+# context reporting until the ruleset requires "CI passed" and "Browser" instead.
 on:
   pull_request:
   merge_group:
@@ -12,6 +14,7 @@ jobs:
   dependency-review:
     name: Review dependency changes
     runs-on: ubuntu-24.04
+    timeout-minutes: 5
     steps:
       # The review already ran on the pull request; the merge queue only needs the required check to report.
       - if: github.event_name == 'pull_request'

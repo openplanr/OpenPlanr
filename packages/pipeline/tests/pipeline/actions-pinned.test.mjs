@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { readdirSync, readFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { dirname, join, relative, resolve } from 'node:path';
 import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
@@ -15,9 +15,10 @@ function yamlFiles(directory) {
 }
 
 test('every workflow and composite action uses a local path or a full commit SHA', () => {
-  const files = ['.github/workflows', '.github/actions'].flatMap((path) =>
-    yamlFiles(join(workspaceRoot, path)),
-  );
+  const files = ['.github/workflows', '.github/actions']
+    .map((path) => join(workspaceRoot, path))
+    .filter((path) => existsSync(path))
+    .flatMap((path) => yamlFiles(path));
   const references = files.flatMap((file) =>
     readFileSync(file, 'utf8')
       .split('\n')

@@ -1,11 +1,14 @@
 name: Windows installer guard
 
-# Pull requests check the guard alone. The nightly first-run workflow calls this job to also
-# install the published package and run init and doctor on Windows.
+# Pull requests that change the installer check the guard alone. The nightly workflow calls
+# this job to also install the published package and run init and doctor on Windows.
 
 on:
   pull_request:
-    branches: ['**']
+    paths:
+      - 'packages/cli/install.ps1'
+      - 'packages/cli/tests/fixtures/installer-node-guard.ps1'
+      - '.github/workflows/installer-guard.yml'
   workflow_call: {}
 
 permissions:
