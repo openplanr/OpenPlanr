@@ -14,14 +14,13 @@ const JOB_KEYS = new Set([
   'name',
   'needs',
   'if',
+  'permissions',
   'continue-on-error',
   'strategy',
   'runs-on',
   'timeout-minutes',
   'steps',
 ]);
-// Jobs that prepare on the contributor runtime, then prove the packed packages on another.
-const PACKED_JOBS = new Set(['packed-public-packages']);
 const STRATEGY_KEYS = new Set(['fail-fast', 'matrix']);
 const STEP_KEYS = new Set([
   'name',
@@ -32,41 +31,35 @@ const STEP_KEYS = new Set([
   'working-directory',
   'timeout-minutes',
 ]);
+const REMOTE_STEP_KEYS = new Set([...STEP_KEYS, 'if']);
 const CONSUMER_IF = /^\$\{\{\s*!cancelled\(\)\s*\}\}$/u;
 const RUNNER_ACTIONS =
   /^(?:actions\/(?:checkout|setup-node|upload-artifact|download-artifact)@|\.\/\.github\/actions\/playwright-chromium$)/u;
 // Runner provisioning that a contributor's checkout already has after the CONTRIBUTING setup.
 const RUNNER_SETUP = /^(?:npm ci|npm exec --workspace=\S+ -- playwright install\b.*)$/u;
 const RESTORE = /^tar -xzmf "\$RUNNER_TEMP\/build-outputs\.tgz"$/u;
+// Checks that read the pull request or the runner, so they run only on GitHub.
+const REMOTE_ACTIONS = /^actions\/dependency-review-action@/u;
+const ACTIONS_CONTEXT = /\$\{\{\s*(?:github|runner)\./u;
+const EXACT_VERSION = /^\d+\.\d+\.\d+$/u;
 const MATRIX_EXPRESSION = /\$\{\{\s*matrix\.([\w-]+)\s*\}\}/gu;
 const NODE_AXIS = /^\$\{\{\s*matrix\.([\w-]+)\s*\}\}$/u;
-const CONSUMER_NODE_TEST = /^node --test(?:\s+[\w./=-]+)*$/u;
+const NODE_TEST = /^node --test(?:\s+[\w./=-]+)*$/u;
 const CONTRIBUTOR_NODE_RANGE = JSON.parse(readFileSync(resolve(root, 'package.json'), 'utf8'))
   .engines.node;
 /** The required status job: it only reads the other jobs' results, so it is not replayed. */
 export const AGGREGATE_JOB = 'ci-passed';
-// A shard reports partial coverage; thresholds apply only to the merged report.
-const SHARD_COVERAGE =
-  '--coverage --coverage.reporter=text-summary --coverage.thresholds.statements=0 ' +
-  '--coverage.thresholds.branches=0 --coverage.thresholds.functions=0 ' +
-  '--coverage.thresholds.lines=0 --reporter=default --reporter=blob';
-/** Merges the shard blob reports and checks coverage thresholds; it runs no tests. */
-export const COVERAGE_MERGE = 'npx vitest run --merge-reports --coverage --reporter=dot';
 
 /**
  * Parses a CI command into the npm script and workspace it runs, or null for one that runs none.
- * Throws on shard flags other than the exact coverage suffix.
+ * A shard flag is the only argument a script run may pass.
  */
 export function parseScriptRun(line) {
-  if (line === COVERAGE_MERGE) return null;
-  const run = /^npm run ([a-z][\w:-]*)(?: --workspace=(\S+))?(?: -- --shard=\d+\/\d+(.*))?$/u.exec(
+  const run = /^npm run ([a-z][\w:-]*)(?: --workspace=(\S+))?(?: -- --shard=\d+\/\d+)?$/u.exec(
     line,
   );
   if (!run) return null;
-  const [, script, workspace, flags] = run;
-  if (flags && flags !== ` ${SHARD_COVERAGE}`) {
-    throw new Error(`"${line}" passes shard flags other than: ${SHARD_COVERAGE}`);
-  }
+  const [, script, workspace] = run;
   return { script, workspace };
 }
 
@@ -139,43 +132,23 @@ function uploadsBuildOutputs(step) {
   );
 }
 
+// A job may end on an exact minimum runtime for node --test checks; the local run uses its own Node.
 function setupNodeVersion(id, job) {
   const setups = job.steps.flatMap((step, index) =>
     step.uses?.startsWith('actions/setup-node@') ? [{ ...step, index }] : [],
   );
-  if (setups.length === 1 && setups[0].with?.['node-version'] !== undefined)
-    return String(setups[0].with['node-version']);
-  const [preparation, consumer] = setups;
-  const version = String(consumer?.with?.['node-version']);
-  const axis = NODE_AXIS.exec(version)?.[1];
-  const install = job.steps.findIndex((step) => step.run?.trim() === 'npm ci');
-  const restore = job.steps.findIndex((step) => RESTORE.test(step.run?.trim() ?? ''));
-  const proof = job.steps.findIndex((step) => step.run?.trim() === 'npm run verify:packed:strict');
-  const consumerCommands = job.steps
-    .slice((consumer?.index ?? job.steps.length) + 1)
-    .filter((step) => step.run !== undefined)
-    .map((step) => step.run.trim());
-  if (
-    !PACKED_JOBS.has(id) ||
-    setups.length !== 2 ||
-    String(preparation.with?.['node-version']) !== '24' ||
-    !axis ||
-    !Array.isArray(job.strategy?.matrix?.[axis]) ||
-    !(
-      preparation.index < install &&
-      install < consumer.index &&
-      restore > install &&
-      restore < consumer.index &&
-      proof > consumer.index
-    ) ||
-    consumerCommands.some(
-      (command) => command !== 'npm run verify:packed:strict' && !CONSUMER_NODE_TEST.test(command),
-    )
-  )
-    throw new Error(
-      `${id} must use one setup-node step or the explicit contributor-to-consumer packed setup`,
-    );
-  return version;
+  const [first, floor] = setups;
+  const version = first?.with?.['node-version'];
+  const floorOnly =
+    setups.length === 2 &&
+    EXACT_VERSION.test(String(floor.with?.['node-version'])) &&
+    job.steps
+      .slice(floor.index + 1)
+      .every((step) => step.run === undefined || NODE_TEST.test(step.run.trim()));
+  if (version !== undefined && (setups.length === 1 || floorOnly)) return String(version);
+  throw new Error(
+    `${id} must use one setup-node step, or end on an exact minimum runtime that runs only node --test`,
+  );
 }
 
 function requireKnownKeys(label, object, known) {
@@ -256,6 +229,13 @@ function expandMatrix(id, matrix) {
 
 // Runner steps provision CI and are not repeated locally; restore marks a build consumer.
 function stepRole(step, label, producer) {
+  if (
+    REMOTE_ACTIONS.test(step.uses ?? '') ||
+    Object.values(step.env ?? {}).some((value) => ACTIONS_CONTEXT.test(String(value)))
+  ) {
+    requireKnownKeys(label, step, REMOTE_STEP_KEYS);
+    return 'remote';
+  }
   requireKnownKeys(label, step, STEP_KEYS);
   if (step.uses !== undefined) {
     if (!RUNNER_ACTIONS.test(step.uses)) {
@@ -287,6 +267,7 @@ function planInstance(id, job, matrix, producer) {
     ),
     matrix,
     consumer: steps.some(({ role }) => role === 'restore'),
+    remote: steps.filter(({ role }) => role === 'remote').map(({ step }) => step.name ?? step.uses),
     steps: steps
       .filter(({ role }) => role === 'local')
       .map(({ step, label }) => ({
@@ -389,6 +370,8 @@ function runJob(job, plan, state) {
           }))
         : [];
     const failure = runSteps([...prepare, ...instance.steps]);
+    for (const name of instance.remote)
+      console.log(`-- ${name}: runs only on GitHub, not replayed`);
     state.results.push({
       label,
       preparationNode: instance.preparationNode,

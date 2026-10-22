@@ -1,0 +1,301 @@
+name: Nightly
+
+# The suites kept off pull request checks: CLI integration suites and coverage, the Node 22
+# contributor toolchain, packed proofs on every supported Node, canvas timing traces, Firefox
+# and WebKit, published-package first runs and the dependency audit. Version packages
+# dispatches it on the release branch, so the release PR carries the same evidence.
+on:
+  schedule:
+    - cron: '17 3 * * *'
+  workflow_dispatch: {}
+
+concurrency:
+  group: nightly-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  cli-isolated-tests:
+    name: Node 24 CLI ${{ matrix.suite }} tests
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - suite: heavy
+            script: test:heavy
+          - suite: Operate planning bridge
+            script: test:operate-planning-bridge
+          - suite: Operate command gateway
+            script: test:operate-command-gateway
+          - suite: runtime integrity
+            script: test:runtime-integrity
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+          cache: npm
+      - name: Install the root lockfile
+        run: npm ci
+      - name: Generate and build
+        run: |
+          npm run generate
+          npm run build
+      - name: Run the suite in a fresh process
+        working-directory: packages/cli
+        run: npm run ${{ matrix.script }}
+
+  cli-coverage:
+    name: Node 24 CLI coverage
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+          cache: npm
+      - name: Install the root lockfile
+        run: npm ci
+      - name: Generate and build
+        run: |
+          npm run generate
+          npm run build
+      - name: Run the CLI suite once and check coverage thresholds
+        working-directory: packages/cli
+        run: npm run test:main -- --coverage --coverage.reporter=text-summary
+
+  compatibility:
+    name: Node ${{ matrix.node }} contributor verification
+    strategy:
+      fail-fast: false
+      matrix:
+        node: [22]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+      - name: Install the root lockfile
+        run: npm ci
+      - name: Install Chromium for local studio tests
+        uses: ./.github/actions/playwright-chromium
+        timeout-minutes: 12
+      - name: Generate local distributions and verify tracked outputs
+        run: |
+          npm run generate
+          git diff --exit-code HEAD --
+      - name: Build in dependency order without tracked drift
+        run: |
+          npm run build
+          git diff --exit-code HEAD --
+      - name: Run the focused gates
+        run: npm run test:focused
+      - name: Test the packages that own the contributor studio and skill suites
+        run: |
+          npm test --workspace=@openplanr/protocol
+          npm test --workspace=@openplanr/canvas
+          npm test --workspace=@openplanr/artifact
+          npm test --workspace=@openplanr/design
+          npm test --workspace=@openplanr/skill-runtime
+          npm test --workspace=@openplanr/integrations
+      - name: Run the CLI command, spec and credentials regressions
+        run: >-
+          npm exec --workspace=openplanr -- vitest run
+          tests/unit/command-registration-parity.test.ts
+          tests/unit/spec-command.test.ts
+          tests/unit/spec-service.test.ts
+          tests/unit/credentials-service.test.ts
+
+  packed-public-packages:
+    name: Node ${{ matrix.node }} packed public-package proof
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        node: [22, 24, 26]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+          cache: npm
+      - name: Install the root lockfile
+        run: npm ci
+      - name: Install Chromium for packed Protocol browser verification
+        uses: ./.github/actions/playwright-chromium
+        timeout-minutes: 12
+      - name: Generate and build on the contributor runtime
+        run: |
+          npm run generate
+          npm run build
+      - name: Select the published-package consumer runtime
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: ${{ matrix.node }}
+      - name: Pack and install only public compatibility packages
+        run: npm run verify:packed:strict
+      - name: Verify landing owner-terminal custody on supported runtimes
+        run: >-
+          node --test --test-concurrency=1
+          packages/pipeline/tests/pipeline/landing.test.mjs
+          packages/pipeline/tests/pipeline/landing-adversarial.test.mjs
+          packages/pipeline/tests/pipeline/landing-packed-install.test.mjs
+
+  canvas-traces:
+    name: Canvas Chromium timing traces
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+          cache: npm
+      - name: Install the root lockfile
+        run: npm ci
+      - name: Generate and build
+        run: |
+          npm run generate
+          npm run build
+      - name: Install Chromium
+        uses: ./.github/actions/playwright-chromium
+        timeout-minutes: 12
+      - name: Trace the canvas benches at both edge densities with the runner budgets
+        run: npm run test:browser --workspace=@openplanr/canvas -- bench-trace budgets
+        env:
+          CI: 'true'
+          CANVAS_SECOND_DENSITY: '1'
+      - name: Preserve canvas trace results
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: canvas-trace-results
+          path: packages/canvas/test-results/
+          if-no-files-found: warn
+          retention-days: 14
+
+  artifact-browsers:
+    name: Artifact ${{ matrix.browser }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        browser: [chromium, firefox, webkit]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+          cache: npm
+      - name: Install the root lockfile
+        run: npm ci
+      - name: Generate workspace package assets
+        run: npm run generate
+      - name: Install the selected browser
+        run: npm exec --workspace=planr-pipeline -- playwright install --with-deps ${{ matrix.browser }}
+      - name: Run hostile sandbox certification
+        run: node --test packages/pipeline/tests/artifact/sandbox-hostile.test.mjs
+        env:
+          PLANR_BROWSER_TESTS: '1'
+          PLANR_REQUIRE_BROWSER: '1'
+          PLANR_BROWSER_ENGINE: ${{ matrix.browser }}
+      - name: Verify a stuck browser launch fails within its bound
+        if: matrix.browser == 'chromium'
+        run: node --test tests/protocol/browser-launcher.test.mjs
+        env:
+          PLANR_STUCK_LAUNCH_TEST: '1'
+      - name: Verify the shared editor in the selected browser
+        run: node --test --test-concurrency=1 packages/artifact/tests/diagram-editor.browser.test.mjs packages/artifact/tests/diagram-editor-host.browser.test.mjs packages/artifact/tests/diagram-conflicts.browser.test.mjs packages/artifact/tests/diagram-source-panel.browser.test.mjs
+        env:
+          PLANR_BROWSER_TESTS: '1'
+          PLANR_BROWSER_ENGINE: ${{ matrix.browser }}
+      - name: Verify the read-only studio, pin stability and frame budget
+        run: node --test --test-concurrency=1 packages/artifact/tests/diagram-studio.browser.test.mjs packages/artifact/tests/pin-stability.browser.test.mjs packages/artifact/tests/frame-budget.browser.test.mjs packages/artifact/tests/studio-identity.browser.test.mjs packages/artifact/tests/studio-menu.browser.test.mjs packages/artifact/tests/browser-sandbox.browser.test.mjs packages/artifact/tests/diagram-review-shell.browser.test.mjs
+        env:
+          PLANR_BROWSER_TESTS: '1'
+          PLANR_BROWSER_ENGINE: ${{ matrix.browser }}
+          PLANR_STUDIO_IDENTITY_EVIDENCE: ${{ runner.temp }}/studio-identity-${{ matrix.browser }}
+      - name: Retain native Studio identity evidence
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: studio-identity-${{ matrix.browser }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/studio-identity-${{ matrix.browser }}
+          retention-days: 7
+          if-no-files-found: warn
+
+  # Installs the published openplanr from npm; scripts/ci/first-run-journeys.mjs holds the journeys.
+  first-run-linux:
+    name: Linux published-package first run and upgrade
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+      - name: Run the fresh, upgrade and two-prefix journeys
+        run: node scripts/ci/first-run-journeys.mjs
+
+  first-run-windows:
+    name: Windows installer guard and first run
+    uses: ./.github/workflows/installer-guard.yml
+
+  audit:
+    name: Audit production dependencies
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+      # The same gate Publish applies, so a new advisory surfaces before a release.
+      - name: Audit the production dependency tree
+        run: npm audit --omit=dev --audit-level=high
+
+  report:
+    name: Report a failed nightly run
+    needs:
+      - cli-isolated-tests
+      - cli-coverage
+      - compatibility
+      - packed-public-packages
+      - canvas-traces
+      - artifact-browsers
+      - first-run-linux
+      - first-run-windows
+      - audit
+    if: failure() && github.event_name == 'schedule'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      actions: read
+      issues: write
+    steps:
+      - name: Open or update the nightly failure issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          HEAD_SHA: ${{ github.sha }}
+          TITLE: Nightly checks failed
+        run: |
+          last_green=$(gh run list --workflow nightly.yml --event schedule --status success --limit 1 --json headSha --jq '.[0].headSha // "none"')
+          body=$(printf 'Scheduled run failed: %s\n\nCommit: %s\nLast green scheduled run commit: %s\n' "$RUN_URL" "$HEAD_SHA" "$last_green")
+          issue=$(gh issue list --state open --limit 500 --json number,title --jq "map(select(.title == \"$TITLE\")) | .[0].number // empty")
+          if [ -n "$issue" ]; then
+            gh issue comment "$issue" --body "$body"
+          else
+            gh issue create --title "$TITLE" --body "$body"
+          fi

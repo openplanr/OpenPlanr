@@ -344,7 +344,7 @@ test('real pipeline archive is deterministic and byte-equal to its source invent
 test('root-only CI and release gates use authoritative workspace package proofs', () => {
   const workspaceRoot = resolve(root, '../..');
   for (const [path, proofCommand] of [
-    ['.github/workflows/ci.yml', /npm run verify:packed:strict/u],
+    ['.github/workflows/nightly.yml', /npm run verify:packed:strict/u],
     ['.github/workflows/release-proof.yml', /npm run verify/u],
   ]) {
     const workflow = readFileSync(join(workspaceRoot, path), 'utf8');

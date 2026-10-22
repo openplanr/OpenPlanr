@@ -1,6 +1,7 @@
 name: Workspace CI
 
 # No push trigger: the merge queue run already tests the exact commit that lands on main.
+# Integration suites, coverage, other Node versions and packed proofs run in nightly.yml.
 on:
   pull_request:
     branches: ['**']
@@ -18,7 +19,7 @@ jobs:
   build:
     name: Build generated outputs
     runs-on: ubuntu-24.04
-    timeout-minutes: 10
+    timeout-minutes: 8
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
@@ -31,9 +32,6 @@ jobs:
         run: |
           npm run generate
           git diff --exit-code HEAD --
-      # Same pin as openplanr/marketplace's check, so the release PR there cannot fail first.
-      - name: Validate the Claude plugin as the plugin directory's CLI does
-        run: npx --yes @anthropic-ai/claude-code@2.1.284 plugin validate --strict dist/plugins/claude/openplanr
       - name: Build in dependency order without tracked drift
         run: |
           npm run build
@@ -62,13 +60,6 @@ jobs:
             echo "$sensitive"
             exit 1
           fi
-      - name: Pack exact public candidates for linked private Studio verification
-        run: node scripts/release-train/pack-studio-candidate.mjs "$RUNNER_TEMP/studio-public-candidate"
-      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        with:
-          name: studio-public-candidate
-          path: ${{ runner.temp }}/studio-public-candidate/
-          if-no-files-found: error
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: build-outputs
@@ -78,21 +69,16 @@ jobs:
           retention-days: 30
           overwrite: true
 
-  quality:
-    name: Node 24 generated, boundary, docs, lint, type, and focused checks
-    needs: build
-    if: ${{ !cancelled() }}
+
+  # Runs beside the build so the critical path is the build plus the longest test lane.
+  static:
+    name: Node 24 static checks
     runs-on: ubuntu-24.04
-    timeout-minutes: 15
+    timeout-minutes: 12
+    permissions:
+      contents: read
+      pull-requests: read
     steps:
-      - name: Require the Build generated outputs job to have succeeded
-        env:
-          BUILD_RESULT: ${{ needs.build.result }}
-        run: |
-          if [ "$BUILD_RESULT" != success ]; then
-            echo "::error::Build generated outputs ended as '$BUILD_RESULT'; this job tests its outputs and cannot run without them."
-            exit 1
-          fi
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
@@ -100,12 +86,6 @@ jobs:
           cache: npm
       - name: Install the root lockfile
         run: npm ci
-      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
-        with:
-          name: build-outputs
-          path: ${{ runner.temp }}
-      - name: Restore the generated runtime from the build job
-        run: tar -xzmf "$RUNNER_TEMP/build-outputs.tgz"
       - name: Keep private planning state untracked
         run: |
           tracked="$(git ls-files .planr)"
@@ -114,6 +94,22 @@ jobs:
             echo "$tracked"
             exit 1
           fi
+      - name: Generate local distributions
+        run: npm run generate
+      - name: Build in dependency order
+        run: npm run build
+      # Same pin as openplanr/marketplace's check, so the release PR there cannot fail first.
+      - name: Validate the Claude plugin as the plugin directory's CLI does
+        run: npx --yes @anthropic-ai/claude-code@2.1.284 plugin validate --strict dist/plugins/claude/openplanr
+      - name: Pack exact public candidates for linked private Studio verification
+        env:
+          CANDIDATE_DIR: ${{ runner.temp }}/studio-public-candidate
+        run: node scripts/release-train/pack-studio-candidate.mjs "$CANDIDATE_DIR"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: studio-public-candidate
+          path: ${{ runner.temp }}/studio-public-candidate/
+          if-no-files-found: error
       - name: Verify generated custody
         run: npm run check:generated
       - name: Verify package and composition boundaries
@@ -130,13 +126,44 @@ jobs:
         run: npm run check:diagrams
       - name: Run the focused gates no package suite covers
         run: npm run test:focused
+      # The queue run only needs this job to report; the review already ran on the pull request.
+      - name: Review dependency changes
+        if: github.event_name == 'pull_request'
+        uses: actions/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294 # v5.0.0
+        with:
+          fail-on-severity: high
+      # The queue re-reads the pull request, so a label removed after queueing still fails.
+      # Its own file list keeps changesets from earlier queue entries out of the check.
+      - name: Check changeset bumps against the title type
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          QUEUE_REF: ${{ github.event.merge_group.head_ref }}
+        run: |
+          number="${PR_NUMBER:-$(printf '%s' "$QUEUE_REF" | sed -nE 's#^refs/heads/gh-readonly-queue/[^/]+/pr-([0-9]+)-.*#\1#p')}"
+          if [ -z "$number" ]; then
+            echo "::error::Cannot find the pull request number for ref '$QUEUE_REF'"
+            exit 1
+          fi
+          gh api "repos/$GITHUB_REPOSITORY/pulls/$number" > "$RUNNER_TEMP/pull.json"
+          gh api --paginate --slurp "repos/$GITHUB_REPOSITORY/pulls/$number/files" > "$RUNNER_TEMP/files.json"
+          node scripts/release-train/check-changeset-bump.mjs --pr "$RUNNER_TEMP/pull.json" --files "$RUNNER_TEMP/files.json"
+      # Last, because every later step would run on the minimum runtime.
+      - name: Select the advertised Protocol minimum runtime
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '22.13.0'
+      - name: Verify Protocol imports, schema generation and validation on the minimum
+        env:
+          OPENPLANR_PROTOCOL_FLOOR_EXECUTABLE: node
+        run: node --test tests/protocol/protocol-runtime-floor.test.mjs
 
   design-tests:
     name: Node 24 design package tests
     needs: build
     if: ${{ !cancelled() }}
     runs-on: ubuntu-24.04
-    timeout-minutes: 15
+    timeout-minutes: 12
     steps:
       - name: Require the Build generated outputs job to have succeeded
         env:
@@ -170,7 +197,7 @@ jobs:
     needs: build
     if: ${{ !cancelled() }}
     runs-on: ubuntu-24.04
-    timeout-minutes: 15
+    timeout-minutes: 12
     steps:
       - name: Require the Build generated outputs job to have succeeded
         env:
@@ -221,7 +248,7 @@ jobs:
           - suite: ecosystem orchestration
             script: test:orchestration:ecosystem
     runs-on: ubuntu-24.04
-    timeout-minutes: 15
+    timeout-minutes: 12
     steps:
       - name: Require the Build generated outputs job to have succeeded
         env:
@@ -248,15 +275,15 @@ jobs:
         run: npm run ${{ matrix.script }} --workspace=planr-pipeline
 
   cli-tests:
-    name: Node 24 CLI tests (shard ${{ matrix.shard }}/4)
+    name: Node 24 CLI tests (shard ${{ matrix.shard }}/3)
     needs: build
     if: ${{ !cancelled() }}
     strategy:
       fail-fast: false
       matrix:
-        shard: [1, 2, 3, 4]
+        shard: [1, 2, 3]
     runs-on: ubuntu-24.04
-    timeout-minutes: 15
+    timeout-minutes: 12
     steps:
       - name: Require the Build generated outputs job to have succeeded
         env:
@@ -279,196 +306,19 @@ jobs:
           path: ${{ runner.temp }}
       - name: Restore the generated runtime from the build job
         run: tar -xzmf "$RUNNER_TEMP/build-outputs.tgz"
-      # A shard covers only part of src, so thresholds are checked on the merged report in cli-coverage.
       - name: Run CLI test shard
         working-directory: packages/cli
-        run: >-
-          npm run test:main -- --shard=${{ matrix.shard }}/4
-          --coverage --coverage.reporter=text-summary
-          --coverage.thresholds.statements=0 --coverage.thresholds.branches=0
-          --coverage.thresholds.functions=0 --coverage.thresholds.lines=0
-          --reporter=default --reporter=blob
-      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        with:
-          name: cli-coverage-blob-${{ matrix.shard }}
-          path: packages/cli/.vitest-reports/
-          include-hidden-files: true
-          if-no-files-found: error
-          retention-days: 1
-
-  cli-coverage:
-    name: Node 24 CLI coverage
-    needs: cli-tests
-    runs-on: ubuntu-24.04
-    timeout-minutes: 10
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
-        with:
-          node-version: 24
-          cache: npm
-      - name: Install the root lockfile
-        run: npm ci
-      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
-        with:
-          pattern: cli-coverage-blob-*
-          path: packages/cli/.vitest-reports
-          merge-multiple: true
-      - name: Merge shard coverage and check thresholds
-        working-directory: packages/cli
-        run: npx vitest run --merge-reports --coverage --reporter=dot
-
-  cli-isolated-tests:
-    name: Node 24 CLI ${{ matrix.suite }} tests
-    needs: build
-    if: ${{ !cancelled() }}
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - suite: heavy
-            script: test:heavy
-          - suite: Operate planning bridge
-            script: test:operate-planning-bridge
-          - suite: Operate command gateway
-            script: test:operate-command-gateway
-          - suite: runtime integrity
-            script: test:runtime-integrity
-    runs-on: ubuntu-24.04
-    timeout-minutes: 15
-    steps:
-      - name: Require the Build generated outputs job to have succeeded
-        env:
-          BUILD_RESULT: ${{ needs.build.result }}
-        run: |
-          if [ "$BUILD_RESULT" != success ]; then
-            echo "::error::Build generated outputs ended as '$BUILD_RESULT'; this job tests its outputs and cannot run without them."
-            exit 1
-          fi
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
-        with:
-          node-version: 24
-          cache: npm
-      - name: Install the root lockfile
-        run: npm ci
-      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
-        with:
-          name: build-outputs
-          path: ${{ runner.temp }}
-      - name: Restore the generated runtime from the build job
-        run: tar -xzmf "$RUNNER_TEMP/build-outputs.tgz"
-      - name: Run the suite in a fresh process
-        working-directory: packages/cli
-        run: npm run ${{ matrix.script }}
-
-  # Node 24 contributors are covered by the build and package jobs above.
-  compatibility:
-    name: Node ${{ matrix.node }} contributor verification
-    strategy:
-      fail-fast: false
-      matrix:
-        node: [22]
-    runs-on: ubuntu-24.04
-    timeout-minutes: 20
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
-        with:
-          node-version: ${{ matrix.node }}
-          cache: npm
-      - name: Install the root lockfile
-        run: npm ci
-      - name: Install Chromium for local studio tests
-        uses: ./.github/actions/playwright-chromium
-        timeout-minutes: 12
-      - name: Generate local distributions and verify tracked outputs
-        run: |
-          npm run generate
-          git diff --exit-code HEAD --
-      - name: Build in dependency order without tracked drift
-        run: |
-          npm run build
-          git diff --exit-code HEAD --
-      - name: Run the focused gates
-        run: npm run test:focused
-      - name: Test the packages that own the contributor studio and skill suites
-        run: |
-          npm test --workspace=@openplanr/protocol
-          npm test --workspace=@openplanr/canvas
-          npm test --workspace=@openplanr/artifact
-          npm test --workspace=@openplanr/design
-          npm test --workspace=@openplanr/skill-runtime
-          npm test --workspace=@openplanr/integrations
-      - name: Run the CLI command, spec and credentials regressions
-        run: >-
-          npm exec --workspace=openplanr -- vitest run
-          tests/unit/command-registration-parity.test.ts
-          tests/unit/spec-command.test.ts
-          tests/unit/spec-service.test.ts
-          tests/unit/credentials-service.test.ts
-
-  packed-public-packages:
-    name: Node ${{ matrix.node }} packed public-package proof
-    needs: build
-    if: ${{ !cancelled() }}
-    runs-on: ubuntu-24.04
-    timeout-minutes: 20
-    strategy:
-      fail-fast: false
-      matrix:
-        node: [22, 24]
-    steps:
-      - name: Require the Build generated outputs job to have succeeded
-        env:
-          BUILD_RESULT: ${{ needs.build.result }}
-        run: |
-          if [ "$BUILD_RESULT" != success ]; then
-            echo "::error::Build generated outputs ended as '$BUILD_RESULT'; this job tests its outputs and cannot run without them."
-            exit 1
-          fi
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
-        with:
-          node-version: 24
-          cache: npm
-      - name: Install the root lockfile
-        run: npm ci
-      - name: Install Chromium for packed Protocol browser verification
-        uses: ./.github/actions/playwright-chromium
-        timeout-minutes: 12
-      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
-        with:
-          name: build-outputs
-          path: ${{ runner.temp }}
-      - name: Restore the generated runtime from the build job
-        run: tar -xzmf "$RUNNER_TEMP/build-outputs.tgz"
-      - name: Select the published-package consumer runtime
-        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
-        with:
-          node-version: ${{ matrix.node }}
-      - name: Pack and install only public compatibility packages
-        run: npm run verify:packed:strict
-      - name: Verify landing owner-terminal custody on supported runtimes
-        run: >-
-          node --test --test-concurrency=1
-          packages/pipeline/tests/pipeline/landing.test.mjs
-          packages/pipeline/tests/pipeline/landing-adversarial.test.mjs
-          packages/pipeline/tests/pipeline/landing-packed-install.test.mjs
+        run: npm run test:main -- --shard=${{ matrix.shard }}/3
 
   ci-passed:
     name: CI passed
     needs:
       - build
-      - quality
+      - static
       - design-tests
       - supporting-package-tests
       - pipeline-tests
       - cli-tests
-      - cli-coverage
-      - cli-isolated-tests
-      - compatibility
-      - packed-public-packages
     # always(), not !cancelled(): a skipped required check reports success, so this job
     # must run and fail when the workflow is cancelled.
     if: ${{ always() }}

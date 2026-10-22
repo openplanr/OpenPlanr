@@ -1,14 +1,60 @@
 import assert from 'node:assert/strict';
-import { execFileSync } from 'node:child_process';
-import { readFileSync } from 'node:fs';
+import { execFileSync, spawnSync } from 'node:child_process';
+import { readdirSync, readFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
+import { load } from 'js-yaml';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const workspaceRoot = resolve(root, '../..');
 const read = (path) => readFileSync(join(root, path), 'utf8');
 const readWorkspace = (path) => readFileSync(join(workspaceRoot, path), 'utf8');
+const workflowsDir = '.github/workflows';
+const loadWorkflow = (file) => load(readWorkspace(join(workflowsDir, file)));
+const PULL_REQUEST_CAP_MINUTES = 12;
+
+const triggers = (workflow) => {
+  const on = workflow.on;
+  if (typeof on === 'string') return [on];
+  return Array.isArray(on) ? on : Object.keys(on ?? {});
+};
+
+/** Lists the jobs, including called local workflows, that exceed the pull request time cap. */
+export function pullRequestTimeoutViolations(workflows) {
+  const violations = [];
+  const check = (file, seen = new Set()) => {
+    if (seen.has(file)) return;
+    seen.add(file);
+    for (const [id, job] of Object.entries(workflows[file].jobs ?? {})) {
+      const called = /^\.\/\.github\/workflows\/(.+)$/u.exec(job.uses ?? '')?.[1];
+      if (called) {
+        if (!workflows[called]) violations.push(`${file} ${id}: calls missing ${called}`);
+        else check(called, seen);
+        continue;
+      }
+      const cap = job['timeout-minutes'];
+      if (!Number.isInteger(cap) || cap > PULL_REQUEST_CAP_MINUTES) {
+        violations.push(
+          `${file} ${id}: timeout-minutes ${cap ?? 'unset'} exceeds ${PULL_REQUEST_CAP_MINUTES}`,
+        );
+        continue;
+      }
+      for (const [index, step] of (job.steps ?? []).entries()) {
+        const limit = step['timeout-minutes'];
+        if (limit !== undefined && (!Number.isInteger(limit) || limit > cap))
+          violations.push(
+            `${file} ${id} step ${index + 1}: timeout-minutes ${limit} exceeds the job's ${cap}`,
+          );
+      }
+    }
+  };
+  for (const [file, workflow] of Object.entries(workflows)) {
+    if (triggers(workflow).some((event) => event === 'pull_request' || event === 'merge_group'))
+      check(file);
+  }
+  return violations;
+}
 
 test('package metadata identifies the provenance repository and license', () => {
   const packageJson = JSON.parse(read('package.json'));
@@ -34,21 +80,91 @@ test('local release proof installs the exact root lock and never publishes', () 
   assert.doesNotMatch(workflow, /npm publish|id-token:\s*write/u);
 });
 
-test('hostile sandbox certification covers Chromium Firefox and WebKit', () => {
-  const workflow = readWorkspace('.github/workflows/artifact-browser.yml');
-  assert.match(
-    workflow,
-    /browser: >-\s*\$\{\{ fromJSON\(github\.event_name == 'pull_request'\s*&& !contains\(github\.event\.pull_request\.labels\.\*\.name, 'browser-certification'\)\s*&& !startsWith\(github\.head_ref, 'dependabot\/npm_and_yarn\/'\)\s*&& '\["chromium"\]' \|\| '\["chromium", "firefox", "webkit"\]'\) \}\}/,
+test('every pull request and merge queue job is capped at 12 minutes', () => {
+  const workflows = Object.fromEntries(
+    readdirSync(join(workspaceRoot, workflowsDir))
+      .filter((file) => /\.ya?ml$/u.test(file))
+      .map((file) => [file, loadWorkflow(file)]),
   );
+  assert.deepEqual(pullRequestTimeoutViolations(workflows), []);
+
+  const job = (timeout, steps = []) => ({ 'timeout-minutes': timeout, steps });
+  const fixture = {
+    'pr.yml': {
+      on: { pull_request: {} },
+      jobs: {
+        capped: job(12, [{ 'timeout-minutes': 12 }]),
+        long: job(13),
+        unset: { steps: [] },
+        step: job(10, [{ 'timeout-minutes': 11 }]),
+        called: { uses: './.github/workflows/called.yml' },
+      },
+    },
+    'queue.yml': { on: ['merge_group'], jobs: { long: job(20) } },
+    'called.yml': { on: { workflow_call: {} }, jobs: { long: job(30) } },
+    'nightly.yml': { on: { schedule: [] }, jobs: { long: job(45) } },
+  };
+  assert.deepEqual(pullRequestTimeoutViolations(fixture), [
+    'pr.yml long: timeout-minutes 13 exceeds 12',
+    'pr.yml unset: timeout-minutes unset exceeds 12',
+    "pr.yml step step 1: timeout-minutes 11 exceeds the job's 10",
+    'called.yml long: timeout-minutes 30 exceeds 12',
+    'queue.yml long: timeout-minutes 20 exceeds 12',
+  ]);
+});
+
+test('CI and Browser report on every pull request and merge queue run', () => {
+  for (const [file, gate] of [
+    ['ci.yml', 'ci-passed'],
+    ['browser.yml', 'browser'],
+  ]) {
+    const workflow = loadWorkflow(file);
+    assert.deepEqual(workflow.on.merge_group, { types: ['checks_requested'] }, file);
+    assert.ok(workflow.on.pull_request, file);
+    assert.equal(workflow.on.pull_request.paths, undefined, `${file} must not filter paths`);
+    assert.equal(workflow.jobs[gate].if, '${{ always() }}', file);
+  }
+  assert.equal(loadWorkflow('browser.yml').jobs.browser.name, 'Browser');
+});
+
+test('the Browser gate passes skipped lanes and fails anything else', () => {
+  const gate = loadWorkflow('browser.yml').jobs.browser;
+  const lanes = Object.keys(loadWorkflow('browser.yml').jobs).filter(
+    (id) => id !== 'browser' && id !== 'changes',
+  );
+  assert.deepEqual([...gate.needs].sort(), ['changes', ...lanes].sort());
+  const verdict = (needs) =>
+    spawnSync('bash', ['-e', '-c', gate.steps[0].run], {
+      env: { ...process.env, NEEDS: JSON.stringify(needs) },
+      encoding: 'utf8',
+    }).status;
+  const result = (value) => ({ result: value, outputs: {} });
+  const skipped = Object.fromEntries(lanes.map((id) => [id, result('skipped')]));
+  assert.equal(verdict({ changes: result('success'), ...skipped }), 0, 'a queue run passes');
+  assert.equal(verdict({ changes: result('success'), ...skipped, canvas: result('success') }), 0);
+  for (const value of ['failure', 'cancelled'])
+    assert.equal(verdict({ changes: result('success'), ...skipped, canvas: result(value) }), 1);
+  assert.equal(verdict({ changes: result('failure'), ...skipped }), 1);
+  assert.equal(verdict({}), 1);
+});
+
+test('Browser runs Chromium lanes and the nightly run certifies Chromium Firefox and WebKit', () => {
+  const browser = readWorkspace('.github/workflows/browser.yml');
+  assert.doesNotMatch(browser, /firefox|webkit/u);
+  assert.match(browser, /--grep-invert '\(bench-trace\|budgets\)\\\.spec\\\.ts'/u);
+
+  const workflow = readWorkspace('.github/workflows/nightly.yml');
   assert.match(workflow, /schedule:\s*\n\s*- cron:/);
-  assert.match(workflow, /types: \[opened, synchronize, reopened, labeled\]/);
-  assert.match(workflow, /group: .*\$\{\{ github\.event_name \}\}/);
+  assert.match(workflow, /workflow_dispatch: \{\}/);
+  assert.match(workflow, /browser: \[chromium, firefox, webkit\]/);
   assert.match(workflow, /PLANR_BROWSER_ENGINE:\s*\$\{\{ matrix\.browser \}\}/);
   assert.match(workflow, /playwright install --with-deps \$\{\{ matrix\.browser \}\}/);
   assert.match(
     workflow,
     /node --test packages\/pipeline\/tests\/artifact\/sandbox-hostile\.test\.mjs/,
   );
+  assert.match(workflow, /CANVAS_SECOND_DENSITY: '1'/);
+  assert.match(workflow, /test:browser --workspace=@openplanr\/canvas -- bench-trace budgets/);
 
   const blocks = workflow.split(/\n(?= {6}- | {2}\S)/);
   const studio = blocks.find((block) => block.includes('diagram-studio.browser.test.mjs'));
@@ -62,17 +178,8 @@ test('hostile sandbox certification covers Chromium Firefox and WebKit', () => {
 
   const stuckLaunch = blocks.find((block) => block.includes('browser-launcher.test.mjs'));
   assert.ok(stuckLaunch, 'a workflow step must run the stuck browser launch test');
-  assert.match(
-    stuckLaunch,
-    /if: github\.event_name != 'pull_request' && matrix\.browser == 'chromium'/,
-  );
+  assert.match(stuckLaunch, /if: matrix\.browser == 'chromium'/);
   assert.match(stuckLaunch, /PLANR_STUCK_LAUNCH_TEST: '1'/);
-
-  const report = blocks.find((block) => block.startsWith('  report:'));
-  assert.ok(report, 'a failed nightly run must be reported');
-  assert.match(report, /needs: hostile-sandbox/);
-  assert.match(report, /if: failure\(\) && github\.event_name == 'schedule'/);
-  assert.match(report, /permissions:\s*\n\s*actions: read\s*\n\s*issues: write/);
 
   const hostile = read('tests/artifact/sandbox-hostile.test.mjs');
   assert.match(hostile, /tests\/support\/browser-launcher\.mjs/);
@@ -82,18 +189,23 @@ test('hostile sandbox certification covers Chromium Firefox and WebKit', () => {
   assert.match(launcher, /playwright\[engine\]\.launch\(/);
 });
 
-test('nightly first-run journeys cover Linux and the Windows installer guard and report failures', () => {
-  const workflow = readWorkspace('.github/workflows/first-run-journeys.yml');
-  assert.match(workflow, /schedule:\s*\n\s*- cron:/);
-  assert.match(workflow, /workflow_dispatch: \{\}/);
-  assert.doesNotMatch(workflow, /runs-on: macos/);
-  assert.match(workflow, /run: node scripts\/ci\/first-run-journeys\.mjs\n/);
-  assert.match(workflow, /uses: \.\/\.github\/workflows\/installer-guard\.yml/);
+test('the nightly run covers first runs, reports scheduled failures and runs on the release PR', () => {
+  const nightly = loadWorkflow('nightly.yml');
+  const text = readWorkspace('.github/workflows/nightly.yml');
+  assert.doesNotMatch(text, /runs-on: macos/);
+  assert.match(text, /run: node scripts\/ci\/first-run-journeys\.mjs\n/);
+  assert.equal(nightly.jobs['first-run-windows'].uses, './.github/workflows/installer-guard.yml');
+  assert.deepEqual(triggers(nightly).sort(), ['schedule', 'workflow_dispatch']);
 
-  const report = workflow.split(/\n(?= {2}\S)/).find((block) => block.startsWith('  report:'));
-  assert.ok(report, 'a failed nightly run must be reported');
-  assert.match(report, /needs: \[linux, windows\]/);
-  assert.match(report, /if: failure\(\) && github\.event_name == 'schedule'/);
+  const report = nightly.jobs.report;
+  assert.deepEqual(
+    [...report.needs].sort(),
+    Object.keys(nightly.jobs)
+      .filter((id) => id !== 'report')
+      .sort(),
+  );
+  assert.equal(report.if, "failure() && github.event_name == 'schedule'");
+  assert.deepEqual(report.permissions, { actions: 'read', issues: 'write' });
 
   const guard = readWorkspace('.github/workflows/installer-guard.yml');
   assert.match(guard, /workflow_call: \{\}/);
@@ -101,6 +213,12 @@ test('nightly first-run journeys cover Linux and the Windows installer guard and
     guard,
     /if: github\.event_name != 'pull_request'\s*\n\s*run: node scripts\/ci\/first-run-journeys\.mjs --scenario fresh/,
   );
+
+  const version = loadWorkflow('version-pr.yml').jobs.version;
+  const dispatch = version.steps.at(-1);
+  assert.equal(dispatch.if, "steps.changesets.outputs.pr-number != ''");
+  assert.match(dispatch.run, /gh workflow run nightly\.yml .*--ref changeset-release\/main/u);
+  assert.equal(version.permissions.actions, 'write');
 });
 
 test('release stack metadata remains valid in spec-driven conformance', () => {

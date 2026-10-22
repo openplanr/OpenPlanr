@@ -323,9 +323,9 @@ test('publication requires consumed changesets and an output outside the source 
 });
 
 test('every isolated packed CI runner installs the declared Protocol browser dependency', () => {
-  const workflow = readFileSync(join(repository, '.github/workflows/ci.yml'), 'utf8');
+  const workflow = readFileSync(join(repository, '.github/workflows/nightly.yml'), 'utf8');
   const packed = workflow.slice(workflow.indexOf('  packed-public-packages:'));
-  assert.match(packed, /node: \[22, 24\]/u);
+  assert.match(packed, /node: \[22, 24, 26\]/u);
   const browser = packed.indexOf('uses: ./.github/actions/playwright-chromium');
   assert.match(
     readFileSync(join(repository, '.github/actions/playwright-chromium/action.yml'), 'utf8'),
@@ -348,8 +348,9 @@ test('CI prepares contributor tooling before switching to published consumer run
         : [],
     );
   for (const [name, id] of [
-    ['dashboard-browser.yml', 'browser-tests'],
-    ['artifact-browser.yml', 'hostile-sandbox'],
+    ['browser.yml', 'dashboard'],
+    ['browser.yml', 'artifact'],
+    ['nightly.yml', 'artifact-browsers'],
   ]) {
     assert.deepEqual(
       setups(workflow(name).jobs[id]).map(({ version }) => version),
@@ -357,11 +358,14 @@ test('CI prepares contributor tooling before switching to published consumer run
       name,
     );
   }
-  const ci = workflow('ci.yml');
-  assert.deepEqual(ci.jobs.compatibility.strategy.matrix.node, [22]);
-  assert.match(ci.jobs.compatibility.name, /contributor/u);
-  for (const job of [ci.jobs['packed-public-packages'], workflow('release-proof.yml').jobs.proof]) {
-    assert.deepEqual(job.strategy.matrix.node, [22, 24]);
+  const nightly = workflow('nightly.yml');
+  assert.deepEqual(nightly.jobs.compatibility.strategy.matrix.node, [22]);
+  assert.match(nightly.jobs.compatibility.name, /contributor/u);
+  for (const [job, nodes] of [
+    [nightly.jobs['packed-public-packages'], [22, 24, 26]],
+    [workflow('release-proof.yml').jobs.proof, [22, 24]],
+  ]) {
+    assert.deepEqual(job.strategy.matrix.node, nodes);
     const runtime = setups(job);
     assert.deepEqual(
       runtime.map(({ version }) => version),

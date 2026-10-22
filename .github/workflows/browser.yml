@@ -1,0 +1,177 @@
+name: Browser
+
+# Chromium lanes for the pull request's changed paths. Firefox, WebKit and the canvas
+# timing traces run in nightly.yml. The merge queue passes through: the pull request's
+# Browser run already covered its changes.
+on:
+  pull_request:
+    branches: ['**']
+  merge_group:
+    types: [checks_requested]
+
+concurrency:
+  group: browser-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  changes:
+    name: Select browser lanes
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      canvas: ${{ steps.lanes.outputs.canvas }}
+      dashboard: ${{ steps.lanes.outputs.dashboard }}
+      artifact: ${{ steps.lanes.outputs.artifact }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - id: lanes
+        name: Select lanes from the changed files
+        if: github.event_name == 'pull_request'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          set -o pipefail
+          gh api --paginate "repos/$GITHUB_REPOSITORY/pulls/$PR_NUMBER/files" --jq '.[].filename' \
+            | node scripts/ci/browser-lanes.mjs | tee -a "$GITHUB_OUTPUT"
+
+  canvas:
+    name: Canvas Chromium
+    needs: changes
+    if: needs.changes.outputs.canvas == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+          cache: npm
+      - name: Install the root lockfile
+        run: npm ci
+      - name: Generate workspace package assets
+        run: npm run generate
+      - name: Build workspace packages
+        run: npm run build
+      - name: Install Chromium
+        uses: ./.github/actions/playwright-chromium
+        timeout-minutes: 6
+      # The timing traces need a quiet runner and run nightly.
+      - name: Run the canvas functional specs against local workspace packages
+        run: npm run test:browser --workspace=@openplanr/canvas -- --grep-invert '(bench-trace|budgets)\.spec\.ts'
+        env:
+          CI: 'true'
+      - name: Preserve canvas browser results
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: canvas-browser-results
+          path: packages/canvas/test-results/
+          if-no-files-found: warn
+          retention-days: 14
+
+  dashboard:
+    name: Dashboard Chromium
+    needs: changes
+    if: needs.changes.outputs.dashboard == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+          cache: npm
+      - name: Install the root lockfile
+        run: npm ci
+      - name: Generate workspace package assets
+        run: npm run generate
+      - name: Install Chromium
+        uses: ./.github/actions/playwright-chromium
+        timeout-minutes: 6
+      - name: Run dashboard browser verification against local workspace packages
+        run: npm run test:browser --workspace=openplanr
+        env:
+          CI: 'true'
+      - name: Preserve browser diagnostics on failure
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: dashboard-browser-diagnostics
+          path: packages/cli/test-results/
+          if-no-files-found: ignore
+          retention-days: 14
+
+  artifact:
+    name: Artifact Chromium
+    needs: changes
+    if: needs.changes.outputs.artifact == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+          cache: npm
+      - name: Install the root lockfile
+        run: npm ci
+      - name: Generate workspace package assets
+        run: npm run generate
+      - name: Install Chromium
+        uses: ./.github/actions/playwright-chromium
+        timeout-minutes: 6
+      - name: Run hostile sandbox certification
+        run: node --test packages/pipeline/tests/artifact/sandbox-hostile.test.mjs
+        env:
+          PLANR_BROWSER_TESTS: '1'
+          PLANR_REQUIRE_BROWSER: '1'
+          PLANR_BROWSER_ENGINE: chromium
+      - name: Verify the shared editor
+        run: node --test --test-concurrency=1 packages/artifact/tests/diagram-editor.browser.test.mjs packages/artifact/tests/diagram-editor-host.browser.test.mjs packages/artifact/tests/diagram-conflicts.browser.test.mjs packages/artifact/tests/diagram-source-panel.browser.test.mjs
+        env:
+          PLANR_BROWSER_TESTS: '1'
+          PLANR_BROWSER_ENGINE: chromium
+      - name: Verify the read-only studio, pin stability and frame budget
+        run: node --test --test-concurrency=1 packages/artifact/tests/diagram-studio.browser.test.mjs packages/artifact/tests/pin-stability.browser.test.mjs packages/artifact/tests/frame-budget.browser.test.mjs packages/artifact/tests/studio-identity.browser.test.mjs packages/artifact/tests/studio-menu.browser.test.mjs packages/artifact/tests/browser-sandbox.browser.test.mjs packages/artifact/tests/diagram-review-shell.browser.test.mjs
+        env:
+          PLANR_BROWSER_TESTS: '1'
+          PLANR_BROWSER_ENGINE: chromium
+          PLANR_STUDIO_IDENTITY_EVIDENCE: ${{ runner.temp }}/studio-identity-chromium
+      - name: Retain native Studio identity evidence
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: studio-identity-chromium-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/studio-identity-chromium
+          retention-days: 7
+          if-no-files-found: warn
+
+  browser:
+    name: Browser
+    needs: [changes, canvas, dashboard, artifact]
+    # always(), not !cancelled(): a skipped required check reports success, so this job
+    # must run and fail when the workflow is cancelled.
+    if: ${{ always() }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Require the selector and every selected lane to have succeeded
+        env:
+          NEEDS: ${{ toJSON(needs) }}
+        run: |
+          if ! printf '%s\n' "$NEEDS" | jq -e '.changes.result == "success" and
+            ([to_entries[] | select(.key != "changes") | .value.result]
+              | all(. == "success" or . == "skipped"))' > /dev/null; then
+            echo "::error::The lane selector must succeed and every selected lane must pass."
+            printf '%s\n' "$NEEDS"
+            exit 1
+          fi

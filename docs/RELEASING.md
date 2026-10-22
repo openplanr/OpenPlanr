@@ -33,7 +33,7 @@ The [published CLI](../packages/cli/package.json) and
 [workspace tooling](../package.json) declare their own dependency compatibility.
 Workspace tooling has a narrower range because of its development dependencies. Standalone
 [Protocol](../packages/protocol/package.json) declares Node.js 22.13 as its floor, and
-`protocol-runtime-floor.yml` imports it on exactly that release. Use the latest supported
+Workspace CI's static job imports it on exactly that release. Use the latest supported
 LTS patch for routine work.
 
 ## Publication gates

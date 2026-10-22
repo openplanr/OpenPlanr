@@ -7,13 +7,14 @@ import { load } from 'js-yaml';
 import {
   AGGREGATE_JOB,
   assertContributorRuntime,
-  COVERAGE_MERGE,
   parseScriptRun,
   planLocalCi,
 } from '../../../../scripts/run-ci-parity.mjs';
 
 const root = fileURLToPath(new URL('../../../../', import.meta.url));
 const workflow = load(readFileSync(resolve(root, '.github/workflows/ci.yml'), 'utf8'));
+const nightly = load(readFileSync(resolve(root, '.github/workflows/nightly.yml'), 'utf8'));
+const ACTIONS_CONTEXT = /\$\{\{\s*(?:github|runner)\./u;
 const PROVISIONING = new Set([
   'npm ci',
   'npm exec --workspace=@openplanr/protocol -- playwright install --with-deps chromium',
@@ -41,7 +42,7 @@ test('local parity plans every Workspace CI job except the build producer and th
   );
 });
 
-test('local parity runs every CI command except runner provisioning, the build guard and the restore', () => {
+test('local parity runs every CI command except runner provisioning, GitHub-only checks, the build guard and the restore', () => {
   for (const job of planLocalCi(workflow, 24).jobs) {
     for (const instance of job.instances) {
       const expected = workflow.jobs[job.id].steps
@@ -49,6 +50,7 @@ test('local parity runs every CI command except runner provisioning, the build g
           (step) =>
             typeof step.run === 'string' &&
             step.env?.BUILD_RESULT === undefined &&
+            !Object.values(step.env ?? {}).some((value) => ACTIONS_CONTEXT.test(value)) &&
             !PROVISIONING.has(step.run.trim()),
         )
         .map((step) => ({
@@ -69,7 +71,7 @@ test('local parity runs each CI matrix entry under its CI check name', () => {
   const names = (id) => plan.jobs.find((job) => job.id === id).instances.map(({ name }) => name);
   assert.deepEqual(
     names('cli-tests'),
-    [1, 2, 3, 4].map((shard) => `Node 24 CLI tests (shard ${shard}/4)`),
+    [1, 2, 3].map((shard) => `Node 24 CLI tests (shard ${shard}/3)`),
   );
   assert.equal(
     names('pipeline-tests').length,
@@ -81,53 +83,65 @@ test('local parity runs each CI matrix entry under its CI check name', () => {
 });
 
 test('a Node-matrix job runs once, on this Node when CI covers it and otherwise on the build Node', () => {
-  assert.deepEqual(nodesFor(22, 'packed-public-packages'), ['22']);
-  assert.deepEqual(nodesFor(22, 'compatibility'), ['22']);
-  assert.deepEqual(nodesFor(24, 'packed-public-packages'), ['24']);
-  assert.deepEqual(nodesFor(24, 'compatibility'), []);
-  assert.deepEqual(nodesFor(26, 'packed-public-packages'), ['24']);
-  assert.deepEqual(nodesFor(20, 'quality'), ['24']);
-  const current = structuredClone(workflow);
-  current.jobs['packed-public-packages'].strategy.matrix.node = [26];
-  const currentNodes = (nodeMajor) =>
-    planLocalCi(current, nodeMajor)
-      .jobs.find((job) => job.id === 'packed-public-packages')
+  const changed = structuredClone(workflow);
+  changed.jobs.compatibility = structuredClone(nightly.jobs.compatibility);
+  changed.jobs.current = structuredClone(nightly.jobs.compatibility);
+  changed.jobs.current.strategy.matrix.node = [24, 26];
+  const nodes = (nodeMajor, id) =>
+    planLocalCi(changed, nodeMajor)
+      .jobs.find((job) => job.id === id)
       .instances.map(({ node }) => node);
-  assert.deepEqual(currentNodes(26), ['26']);
-  assert.deepEqual(currentNodes(24), []);
+  assert.deepEqual(nodes(22, 'compatibility'), ['22']);
+  assert.deepEqual(nodes(24, 'compatibility'), []);
+  assert.deepEqual(nodes(26, 'current'), ['26']);
+  assert.deepEqual(nodes(22, 'current'), ['24']);
+  assert.deepEqual(nodes(20, 'static'), ['24']);
 });
 
-test('packed jobs distinguish contributor preparation from the selected consumer runtime', () => {
-  const packed = planLocalCi(workflow, 22).jobs.find((job) => job.id === 'packed-public-packages');
-  assert.equal(packed.instances[0].preparationNode, '24');
-  assert.equal(packed.instances[0].node, '22');
+test('a job may end on an exact minimum runtime that runs only node --test', () => {
+  const steps = workflow.jobs.static.steps;
+  const floor = steps.findIndex((step) => step.with?.['node-version'] === '22.13.0');
+  assert.equal(floor, steps.length - 2, 'the Protocol floor must be the last runtime switch');
+  const plan = planLocalCi(workflow, 24).jobs.find((job) => job.id === 'static');
+  assert.deepEqual(
+    plan.instances.map(({ node }) => node),
+    ['24'],
+  );
   for (const mutate of [
+    (job) => job.steps.push({ run: 'npm run build' }),
     (job) => {
-      job.steps.find((step) => step.uses?.startsWith('actions/setup-node@')).with['node-version'] =
-        20;
+      job.steps[floor].with['node-version'] = 22;
     },
-    (job) => {
-      job.steps.push({ uses: 'actions/setup-node@v5', with: { 'node-version': 24 } });
-    },
-    (job) => {
-      job.steps.push({ run: 'npm run build' });
-    },
-    (job) => {
-      job.steps.push({ run: 'node --test test.mjs && npm run build' });
-    },
-    (job) => {
-      const index = job.steps.findLastIndex((step) => step.uses?.startsWith('actions/setup-node@'));
-      job.steps[index].with['node-version'] = `\${{ matrix.unknown }}`;
-    },
+    (job) => job.steps.push({ uses: 'actions/setup-node@v5', with: { 'node-version': 24 } }),
   ]) {
     const changed = structuredClone(workflow);
-    mutate(changed.jobs['packed-public-packages']);
-    assert.throws(() => planLocalCi(changed, 22), /explicit contributor-to-consumer packed setup/u);
+    mutate(changed.jobs.static);
+    assert.throws(() => planLocalCi(changed, 24), /must use one setup-node step/u);
   }
-  const unknown = structuredClone(workflow);
-  unknown.jobs['unknown-packed-job'] = unknown.jobs['packed-public-packages'];
-  delete unknown.jobs['packed-public-packages'];
-  assert.throws(() => planLocalCi(unknown, 22), /explicit contributor-to-consumer packed setup/u);
+});
+
+test('GitHub-only checks are named in the plan and never replayed', () => {
+  const [static_] = planLocalCi(workflow, 24).jobs.find((job) => job.id === 'static').instances;
+  assert.deepEqual(static_.remote, [
+    'Pack exact public candidates for linked private Studio verification',
+    'Review dependency changes',
+    'Check changeset bumps against the title type',
+  ]);
+  assert.ok(static_.steps.every(({ script }) => !/check-changeset-bump|pack-studio/u.test(script)));
+  assert.throws(
+    () =>
+      planLocalCi(
+        withStep({
+          name: 'Remote',
+          if: 'always()',
+          'continue-on-error': true,
+          env: { T: `\${{ github.token }}` },
+          run: 'true',
+        }),
+        24,
+      ),
+    /sets continue-on-error, which the local run ignores/u,
+  );
 });
 
 test('local parity execution requires the repository contributor floor', () => {
@@ -151,18 +165,18 @@ test('a CI step the local run cannot reproduce fails the plan instead of being d
     /GitHub expression the local run cannot evaluate/u,
   );
   const gated = structuredClone(workflow);
-  gated.jobs.quality.if = "github.event_name == 'push'";
-  assert.throws(() => planLocalCi(gated, 24), /quality runs under if: .*cannot evaluate/u);
+  gated.jobs.static.if = "github.event_name == 'push'";
+  assert.throws(() => planLocalCi(gated, 24), /static runs under if: .*cannot evaluate/u);
 });
 
 test('a job may need only the build and jobs defined before it', () => {
   const needing = (needs) => {
     const changed = structuredClone(workflow);
-    changed.jobs['cli-coverage'].needs = needs;
+    changed.jobs['design-tests'].needs = needs;
     return changed;
   };
-  assert.doesNotThrow(() => planLocalCi(needing(['build', 'quality', 'cli-tests']), 24));
-  for (const needs of ['cli-isolated-tests', 'unknown-job', AGGREGATE_JOB]) {
+  assert.doesNotThrow(() => planLocalCi(needing(['build', 'static']), 24));
+  for (const needs of ['cli-tests', 'unknown-job', AGGREGATE_JOB]) {
     assert.throws(
       () => planLocalCi(needing(needs), 24),
       /the local run orders jobs only after the build and earlier jobs/u,
@@ -170,22 +184,12 @@ test('a job may need only the build and jobs defined before it', () => {
   }
 });
 
-test('a shard accepts only the exact coverage flags, and the coverage merge runs no script', () => {
+test('a shard passes no flag but its shard', () => {
   const shard = workflow.jobs['cli-tests'].steps.find((step) => step.name === 'Run CLI test shard');
   const line = expand(shard.run.trim(), { shard: 1 });
   assert.deepEqual(parseScriptRun(line), { script: 'test:main', workspace: undefined });
-  assert.deepEqual(parseScriptRun('npm run test:main -- --shard=1/6'), {
-    script: 'test:main',
-    workspace: undefined,
-  });
-  for (const changed of [
-    `${line} --bail=1`,
-    line.replace('--coverage.thresholds.lines=0', '--coverage.thresholds.lines=50'),
-    'npm run test:main -- --shard=1/6 --coverage',
-  ]) {
-    assert.throws(() => parseScriptRun(changed), /passes shard flags other than/u);
-  }
-  assert.equal(parseScriptRun(COVERAGE_MERGE), null);
+  assert.equal(parseScriptRun(`${line} --coverage`), null);
+  assert.equal(parseScriptRun('npm run test:main -- --bail=1'), null);
 });
 
 // Follows `npm run <script>` aliases in && chains down to the commands they run.
@@ -197,16 +201,25 @@ function leaves(scripts, script) {
   });
 }
 
-test('every workspace npm test runs exactly the commands Workspace CI runs for it', () => {
-  const commands = planLocalCi(workflow, 24).jobs.flatMap(({ instances }) =>
-    instances.flatMap(({ steps }) =>
-      steps.flatMap(({ script, workingDirectory }) =>
-        script.split('\n').map((line) => ({ line: line.trim(), workingDirectory })),
+test('every workspace npm test runs exactly the commands Workspace CI and the nightly CLI suites run', () => {
+  const isolated = nightly.jobs['cli-isolated-tests'];
+  const runSuite = isolated.steps.find((step) => step.name === 'Run the suite in a fresh process');
+  const nightlySuites = isolated.strategy.matrix.include.map((matrix) => ({
+    line: expand(runSuite.run.trim(), matrix),
+    workingDirectory: runSuite['working-directory'],
+  }));
+  const commands = [
+    ...planLocalCi(workflow, 24).jobs.flatMap(({ instances }) =>
+      instances.flatMap(({ steps }) =>
+        steps.flatMap(({ script, workingDirectory }) =>
+          script.split('\n').map((line) => ({ line: line.trim(), workingDirectory })),
+        ),
       ),
     ),
-  );
+    ...nightlySuites,
+  ];
   for (const { line, workingDirectory } of commands) {
-    if (workingDirectory === '.' || line === COVERAGE_MERGE) continue;
+    if (workingDirectory === '.') continue;
     assert.ok(
       parseScriptRun(line),
       `${workingDirectory} CI commands must name a workspace script so npm test can run them: ${line}`,
