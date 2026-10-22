@@ -190,6 +190,21 @@ test('container jobs read runner paths from the shell, not from expressions', ()
   assert.deepEqual(offending, []);
 });
 
+test('container jobs trust the runner-owned workspace for git right after checkout', () => {
+  for (const file of readdirSync(join(workspaceRoot, workflowsDir)).filter((name) =>
+    /\.ya?ml$/u.test(name),
+  ))
+    for (const [id, job] of Object.entries(loadWorkflow(file).jobs ?? {})) {
+      if (!job.container) continue;
+      const checkout = job.steps.findIndex((step) => step.uses?.startsWith('actions/checkout@'));
+      assert.equal(
+        job.steps[checkout + 1]?.run,
+        'git config --global --add safe.directory "$GITHUB_WORKSPACE"',
+        `${file} ${id}`,
+      );
+    }
+});
+
 test('CI and Browser report on every pull request and merge queue run', () => {
   for (const [file, gate] of [
     ['ci.yml', 'ci-passed'],

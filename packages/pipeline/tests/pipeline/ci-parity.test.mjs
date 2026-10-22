@@ -15,7 +15,11 @@ const root = fileURLToPath(new URL('../../../../', import.meta.url));
 const workflow = load(readFileSync(resolve(root, '.github/workflows/ci.yml'), 'utf8'));
 const nightly = load(readFileSync(resolve(root, '.github/workflows/nightly.yml'), 'utf8'));
 const ACTIONS_CONTEXT = /\$\{\{\s*(?:github|runner)\./u;
-const PROVISIONING = new Set(['npm ci', 'tar -xzmf "$RUNNER_TEMP/build-outputs.tgz"']);
+const PROVISIONING = new Set([
+  'npm ci',
+  'git config --global --add safe.directory "$GITHUB_WORKSPACE"',
+  'tar -xzmf "$RUNNER_TEMP/build-outputs.tgz"',
+]);
 const expand = (text, matrix) =>
   text.replace(/\$\{\{ matrix\.(\w+) \}\}/gu, (_expression, key) => String(matrix[key]));
 const nodesFor = (nodeMajor, id) =>
