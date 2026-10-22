@@ -298,6 +298,7 @@ export function createEditorKeyboard(ctx: DiagramEditorContext): DiagramEditorKe
   ];
   // Key events reach the document from its focused element; the steps below match editor controls.
   function keydown(event: KeyboardEvent) {
+    if (event.defaultPrevented) return;
     if (wrapDialogFocus(event) || cycleDrawerFocus(event as ElementKeyEvent)) return;
     if (!shell.contains(event.target as Node) && !canvas.dragging() && !dialogs.active()) return;
     for (const step of navigation) if (step(event as ElementKeyEvent)) return;

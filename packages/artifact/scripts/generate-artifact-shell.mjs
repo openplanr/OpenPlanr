@@ -224,11 +224,17 @@ export function renderDesignBoardAdapterAsset({ projectRoot = root } = {}) {
 }
 
 export function renderDiagramStudioRuntimeAsset({ projectRoot = root } = {}) {
-  return bundleBrowserEntry('lib/artifact/ui/diagram-studio.mjs', { projectRoot });
+  return bundleBrowserEntry('lib/artifact/ui/diagram-studio.mjs', {
+    projectRoot,
+    define: { 'import.meta.url': 'document.baseURI' },
+  });
 }
 
 export function renderDiagramOwnerRuntimeAsset({ projectRoot = root } = {}) {
-  return bundleBrowserEntry('lib/artifact/ui/diagram-owner-studio.mjs', { projectRoot });
+  return bundleBrowserEntry('lib/artifact/ui/diagram-owner-studio.mjs', {
+    projectRoot,
+    define: { 'import.meta.url': 'document.baseURI' },
+  });
 }
 
 /**

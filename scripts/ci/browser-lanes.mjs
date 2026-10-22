@@ -12,9 +12,15 @@ const SHARED = [
   'tests/support/browser-launcher.mjs',
 ];
 
-/** Path prefixes, or exact paths, that select each lane. */
+/** Path prefixes (ending in `/` or `*`), or exact paths, that select each lane. */
 export const LANES = Object.freeze({
-  canvas: ['packages/canvas/', ...SHARED],
+  canvas: [
+    'packages/canvas/',
+    'packages/artifact/lib/artifact/ui/',
+    'packages/artifact/tests/diagram-editor*',
+    'packages/artifact/tests/fixtures/diagram-editor-canvas.mjs',
+    ...SHARED,
+  ],
   dashboard: [
     'apps/dashboard/',
     'packages/cli/tests/dashboard/',
@@ -41,7 +47,13 @@ export function selectLanes(files) {
     Object.entries(LANES).map(([lane, paths]) => [
       lane,
       files.some((file) =>
-        paths.some((path) => (path.endsWith('/') ? file.startsWith(path) : file === path)),
+        paths.some((path) =>
+          path.endsWith('/')
+            ? file.startsWith(path)
+            : path.endsWith('*')
+              ? file.startsWith(path.slice(0, -1))
+              : file === path,
+        ),
       ),
     ]),
   );

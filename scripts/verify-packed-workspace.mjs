@@ -35,6 +35,7 @@ import { browserExecutable } from '../tests/support/browser-launcher.mjs';
 // Protocol is now public, but a new dependency on it is not authorized here.
 const PROJECTED_PACKAGE_NAMES = new Set([
   '@openplanr/artifact',
+  '@openplanr/canvas',
   '@openplanr/dashboard-app',
   '@openplanr/design',
   '@openplanr/integrations',
@@ -310,7 +311,7 @@ function extractPackage({ tarball, destination, environment }) {
   return packageRoot;
 }
 
-function dependencyViolations(manifest) {
+export function dependencyViolations(manifest) {
   const violations = [];
   for (const field of DEPENDENCY_FIELDS) {
     const dependencies = manifest[field];
@@ -331,7 +332,7 @@ function dependencyViolations(manifest) {
   return violations.sort();
 }
 
-function runtimeSourceViolations(packageRoot, inventory) {
+export function runtimeSourceViolations(packageRoot, inventory) {
   const privateImport = new RegExp(
     String.raw`(?:from\s*|import\s*\(|require\s*\()\s*['"](${[...PROJECTED_PACKAGE_NAMES]
       .map((name) => name.replace('/', '\\/'))

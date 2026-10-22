@@ -41,7 +41,10 @@ const DOMAIN_PROJECTIONS = Object.freeze({
       target: 'lib/canvas',
       include: (file) =>
         !/^(?:react|testing|tests)\//u.test(file) &&
-        (file.endsWith('.mjs') || file === 'styles.css' || isTypeScriptSource(file)),
+        (file.endsWith('.mjs') ||
+          file.endsWith('.d.mts') ||
+          file === 'styles.css' ||
+          isTypeScriptSource(file)),
     }),
     Object.freeze({ source: 'packages/design/lib/design', target: 'lib/design' }),
     Object.freeze({ source: 'packages/design/lib/design-engine', target: 'lib/design-engine' }),

@@ -1,3 +1,4 @@
+import type { CanvasController } from '@openplanr/canvas';
 import { getDiagramAuthoringCapability } from '@openplanr/protocol/diagram-authoring-contracts';
 import type { VersionedDiagramAuthoringBundle as DiagramAuthoringBundle } from '@openplanr/protocol/studio-presentation-contracts';
 import type {
@@ -10,7 +11,7 @@ import { createEditorCanvas } from './diagram-editor-canvas.mjs';
 import { createEditorChrome, createEditorLayout } from './diagram-editor-chrome.mjs';
 import { createEditorCommands } from './diagram-editor-commands.mjs';
 import { createEditorDialogs } from './diagram-editor-dialogs.mjs';
-import { icon } from './diagram-editor-dom.mjs';
+import { focusable, icon } from './diagram-editor-dom.mjs';
 import {
   colorSchemeOf,
   type DiagramEditorHostOptions,
@@ -111,6 +112,8 @@ interface MountOptions {
 }
 /** The handle a host keeps for one mounted editor. */
 interface MountedEditor {
+  /** The shared camera and host chrome controller. */
+  canvas: CanvasController;
   dispose(): void;
   refresh(bundle: DiagramAuthoringBundle): ReturnType<DiagramEditorSession['refresh']>;
   openSourcePanel(options?: { tab?: 'import' | 'export' }): boolean;
@@ -265,8 +268,7 @@ export function mountDiagramEditor({ root, session, host = {} }: MountOptions): 
     typeof win.ResizeObserver === 'function' ? new win.ResizeObserver(scheduleResize) : null;
   const onSession = (event: DiagramEditorEvent) => {
     if (disposed) return;
-    canvas.draw(event);
-    reactChrome.update();
+    if (canvas.draw(event)) reactChrome.update();
   };
   const unsubscribe = session.subscribe(onSession);
   const onColorScheme = () => {
@@ -278,7 +280,15 @@ export function mountDiagramEditor({ root, session, host = {} }: MountOptions): 
   stage.addEventListener('pointerup', canvas.pointerUp);
   stage.addEventListener('pointercancel', canvas.pointerCancel);
   stage.addEventListener('lostpointercapture', canvas.lostPointerCapture);
-  stage.addEventListener('wheel', canvas.wheel, { passive: false });
+  const editorKey = (event: KeyboardEvent) => {
+    if (focusable(event.target)) return;
+    const handle = (event.target as Element).closest?.('[data-handle="connect"]');
+    if (event.key === 'Escape' || (handle && ['Enter', ' '].includes(event.key))) {
+      keyboard.keydown(event);
+      event.stopImmediatePropagation();
+    }
+  };
+  stage.addEventListener('keydown', editorKey, true);
   doc.addEventListener('keydown', keyboard.keydown);
   doc.addEventListener('focusin', keyboard.focusin);
   doc.addEventListener('keyup', keyboard.keyup);
@@ -292,6 +302,7 @@ export function mountDiagramEditor({ root, session, host = {} }: MountOptions): 
   canvas.draw();
   scheduleResize();
   return {
+    canvas: canvas.controller,
     dispose() {
       if (disposed) return;
       disposed = true;
@@ -308,7 +319,7 @@ export function mountDiagramEditor({ root, session, host = {} }: MountOptions): 
       stage.removeEventListener('pointerup', canvas.pointerUp);
       stage.removeEventListener('pointercancel', canvas.pointerCancel);
       stage.removeEventListener('lostpointercapture', canvas.lostPointerCapture);
-      stage.removeEventListener('wheel', canvas.wheel);
+      stage.removeEventListener('keydown', editorKey, true);
       if (!resize) win.removeEventListener('resize', scheduleResize);
       doc.removeEventListener('keydown', keyboard.keydown);
       doc.removeEventListener('focusin', keyboard.focusin);

@@ -30,6 +30,15 @@ test('Browser selects only the lanes a change reaches', () => {
   });
   for (const shared of ['package-lock.json', '.github/workflows/browser.yml'])
     assert.deepEqual(selectLanes([shared]), { canvas: true, dashboard: true, artifact: true });
+  for (const editor of [
+    'packages/artifact/lib/artifact/ui/diagram-editor-canvas.mts',
+    'packages/artifact/lib/artifact/ui/stage.mjs',
+    'packages/artifact/tests/diagram-editor-canvas.browser.test.mjs',
+    'packages/artifact/tests/fixtures/diagram-editor-canvas.mjs',
+  ])
+    assert.deepEqual(selectLanes([editor]), { canvas: true, dashboard: false, artifact: true });
+  assert.equal(selectLanes(['packages/artifact/tests/diagram-studio.test.mjs']).canvas, false);
+  assert.equal(selectLanes(['packages/artifact/tests/fixtures/other.mjs']).canvas, false);
   assert.equal(selectLanes(['packages/canvas-extra/x.ts']).canvas, false);
   assert.equal(selectLanes(['packages/cli/package.json']).canvas, false);
 });
