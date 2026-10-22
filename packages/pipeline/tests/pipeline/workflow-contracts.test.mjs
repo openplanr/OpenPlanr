@@ -170,6 +170,26 @@ test('pull request jobs take browsers from the Playwright image pinned to the lo
     for (const id of ids) assert.ok(workflows[file].jobs[id].container, `${file} ${id}`);
 });
 
+test('container jobs read runner paths from the shell, not from expressions', () => {
+  // Expressions resolve to host paths, which the job container does not mount there.
+  const offending = readdirSync(join(workspaceRoot, workflowsDir))
+    .filter((file) => /\.ya?ml$/u.test(file))
+    .flatMap((file) =>
+      Object.entries(loadWorkflow(file).jobs ?? {})
+        .filter(([, job]) => job.container)
+        .flatMap(([id, job]) =>
+          (job.steps ?? [])
+            .filter((step) =>
+              [step.run ?? '', ...Object.values(step.env ?? {})].some((value) =>
+                /\$\{\{\s*(?:runner\.temp|github\.workspace|runner\.workspace)/u.test(value),
+              ),
+            )
+            .map((step) => `${file} ${id}: ${step.name ?? step.run}`),
+        ),
+    );
+  assert.deepEqual(offending, []);
+});
+
 test('CI and Browser report on every pull request and merge queue run', () => {
   for (const [file, gate] of [
     ['ci.yml', 'ci-passed'],

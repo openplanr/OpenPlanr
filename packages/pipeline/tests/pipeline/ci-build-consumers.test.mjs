@@ -14,7 +14,7 @@ const consumers = Object.entries(jobs).filter(
 );
 const GUARD =
   /^if \[ "\$BUILD_RESULT" != success \]; then\n\s+echo "::error::[^\n]+"\n\s+exit 1\nfi\n?$/u;
-const RESTORE = /^tar -xzmf "\$\{\{ runner\.temp \}\}\/build-outputs\.tgz"$/u;
+const RESTORE = /^tar -xzmf "\$RUNNER_TEMP\/build-outputs\.tgz"$/u;
 const SETUP = /^npm ci$/u;
 
 // The build job is not a required check, and a required job skipped by its `if` reports

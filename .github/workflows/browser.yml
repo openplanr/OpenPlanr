@@ -136,11 +136,11 @@ jobs:
           PLANR_BROWSER_TESTS: '1'
           PLANR_BROWSER_ENGINE: chromium
       - name: Verify the read-only studio, pin stability and frame budget
-        run: node --test --test-concurrency=1 packages/artifact/tests/diagram-studio.browser.test.mjs packages/artifact/tests/pin-stability.browser.test.mjs packages/artifact/tests/frame-budget.browser.test.mjs packages/artifact/tests/studio-identity.browser.test.mjs packages/artifact/tests/studio-menu.browser.test.mjs packages/artifact/tests/browser-sandbox.browser.test.mjs packages/artifact/tests/diagram-review-shell.browser.test.mjs
+        # In a container, runner.temp in a script is the host path, so use the shell's RUNNER_TEMP.
+        run: PLANR_STUDIO_IDENTITY_EVIDENCE="$RUNNER_TEMP/studio-identity-chromium" node --test --test-concurrency=1 packages/artifact/tests/diagram-studio.browser.test.mjs packages/artifact/tests/pin-stability.browser.test.mjs packages/artifact/tests/frame-budget.browser.test.mjs packages/artifact/tests/studio-identity.browser.test.mjs packages/artifact/tests/studio-menu.browser.test.mjs packages/artifact/tests/browser-sandbox.browser.test.mjs packages/artifact/tests/diagram-review-shell.browser.test.mjs
         env:
           PLANR_BROWSER_TESTS: '1'
           PLANR_BROWSER_ENGINE: chromium
-          PLANR_STUDIO_IDENTITY_EVIDENCE: ${{ runner.temp }}/studio-identity-chromium
       - name: Retain native Studio identity evidence
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2

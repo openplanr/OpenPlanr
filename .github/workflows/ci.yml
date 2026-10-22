@@ -186,9 +186,8 @@ jobs:
         with:
           name: build-outputs
           path: ${{ runner.temp }}
-      # Inside a container, runner.temp names a host path; using it on both sides keeps them equal.
       - name: Restore the generated runtime from the build job
-        run: tar -xzmf "${{ runner.temp }}/build-outputs.tgz"
+        run: tar -xzmf "$RUNNER_TEMP/build-outputs.tgz"
       - name: Test the design package
         run: npm test --workspace=@openplanr/design
 
@@ -220,7 +219,7 @@ jobs:
           name: build-outputs
           path: ${{ runner.temp }}
       - name: Restore the generated runtime from the build job
-        run: tar -xzmf "${{ runner.temp }}/build-outputs.tgz"
+        run: tar -xzmf "$RUNNER_TEMP/build-outputs.tgz"
       - name: Test protocol, canvas, operate, artifact, integrations, and dashboard
         env:
           PLANR_BROWSER_TESTS: 1
@@ -260,7 +259,7 @@ jobs:
           name: build-outputs
           path: ${{ runner.temp }}
       - name: Restore the generated runtime from the build job
-        run: tar -xzmf "${{ runner.temp }}/build-outputs.tgz"
+        run: tar -xzmf "$RUNNER_TEMP/build-outputs.tgz"
       - name: Test the skill runtime
         run: npm test --workspace=@openplanr/skill-runtime
 
@@ -299,7 +298,7 @@ jobs:
           name: build-outputs
           path: ${{ runner.temp }}
       - name: Restore the generated runtime from the build job
-        run: tar -xzmf "${{ runner.temp }}/build-outputs.tgz"
+        run: tar -xzmf "$RUNNER_TEMP/build-outputs.tgz"
       - name: Run pipeline suite
         run: npm run ${{ matrix.script }} --workspace=planr-pipeline
 
@@ -334,7 +333,7 @@ jobs:
           name: build-outputs
           path: ${{ runner.temp }}
       - name: Restore the generated runtime from the build job
-        run: tar -xzmf "${{ runner.temp }}/build-outputs.tgz"
+        run: tar -xzmf "$RUNNER_TEMP/build-outputs.tgz"
       - name: Run CLI test shard
         working-directory: packages/cli
         run: npm run test:main -- --shard=${{ matrix.shard }}/3

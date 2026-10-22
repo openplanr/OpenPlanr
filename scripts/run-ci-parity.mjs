@@ -37,7 +37,7 @@ const CONSUMER_IF = /^\$\{\{\s*!cancelled\(\)\s*\}\}$/u;
 const RUNNER_ACTIONS = /^actions\/(?:checkout|setup-node|upload-artifact|download-artifact)@/u;
 // Runner provisioning that a contributor's checkout already has after the CONTRIBUTING setup.
 const RUNNER_SETUP = /^npm ci$/u;
-const RESTORE = /^tar -xzmf "\$\{\{ runner\.temp \}\}\/build-outputs\.tgz"$/u;
+const RESTORE = /^tar -xzmf "\$RUNNER_TEMP\/build-outputs\.tgz"$/u;
 // Checks that read the pull request or the runner, so they run only on GitHub.
 const REMOTE_ACTIONS = /^actions\/dependency-review-action@/u;
 const ACTIONS_CONTEXT = /\$\{\{\s*(?:github|runner)\./u;
