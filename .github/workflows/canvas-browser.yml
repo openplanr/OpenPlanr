@@ -4,8 +4,8 @@ on:
   pull_request:
     paths:
       - 'packages/canvas/**'
-      - 'packages/artifact/lib/artifact/ui/diagram-editor*'
-      - 'packages/artifact/tests/diagram-editor-canvas*'
+      - 'packages/artifact/lib/artifact/ui/**'
+      - 'packages/artifact/tests/diagram-editor*'
       - 'packages/artifact/tests/fixtures/diagram-editor-canvas.mjs'
       - 'package.json'
       - 'package-lock.json'
