@@ -8,7 +8,6 @@ const SHARED = [
   'package.json',
   'package-lock.json',
   '.github/workflows/browser.yml',
-  '.github/actions/playwright-chromium/',
   'scripts/ci/browser-lanes.mjs',
   'tests/support/browser-launcher.mjs',
 ];

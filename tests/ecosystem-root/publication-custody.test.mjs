@@ -322,20 +322,13 @@ test('publication requires consumed changesets and an output outside the source 
   }
 });
 
-test('every isolated packed CI runner installs the declared Protocol browser dependency', () => {
-  const workflow = readFileSync(join(repository, '.github/workflows/nightly.yml'), 'utf8');
-  const packed = workflow.slice(workflow.indexOf('  packed-public-packages:'));
-  assert.match(packed, /node: \[22, 24, 26\]/u);
-  const browser = packed.indexOf('uses: ./.github/actions/playwright-chromium');
-  assert.match(
-    readFileSync(join(repository, '.github/actions/playwright-chromium/action.yml'), 'utf8'),
-    /npm exec --workspace=@openplanr\/protocol -- playwright install chromium/u,
-  );
-  const proof = packed.indexOf('npm run verify:packed:strict');
-  assert.ok(
-    browser > 0 && proof > browser,
-    'Packed CI must install its own browser before consumer execution',
-  );
+test('every isolated packed CI runner has the declared Protocol browser dependency', () => {
+  const nightly = load(readFileSync(join(repository, '.github/workflows/nightly.yml'), 'utf8'));
+  const packed = nightly.jobs['packed-public-packages'];
+  assert.deepEqual(packed.strategy.matrix.node, [22, 24, 26]);
+  const { version } = JSON.parse(readFileSync(join(repository, 'package-lock.json'), 'utf8'))
+    .packages['node_modules/playwright'];
+  assert.equal(packed.container, `mcr.microsoft.com/playwright:v${version}-noble`);
 });
 
 test('CI prepares contributor tooling before switching to published consumer runtimes', () => {

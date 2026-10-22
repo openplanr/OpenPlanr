@@ -20,6 +20,23 @@ const triggers = (workflow) => {
   return Array.isArray(on) ? on : Object.keys(on ?? {});
 };
 
+const APT = /\bapt(?:-get)?\b|install-deps|--with-deps/u;
+
+/** Lists pull request and merge queue jobs that install system packages. */
+export function pullRequestAptViolations(workflows) {
+  return Object.entries(workflows)
+    .filter(([, workflow]) =>
+      triggers(workflow).some((event) => event === 'pull_request' || event === 'merge_group'),
+    )
+    .flatMap(([file, workflow]) =>
+      Object.entries(workflow.jobs ?? {}).flatMap(([id, job]) =>
+        (job.steps ?? [])
+          .filter((step) => APT.test(step.run ?? '') || step.uses?.startsWith('./.github/actions/'))
+          .map((step) => `${file} ${id}: ${step.name ?? step.uses ?? step.run}`),
+      ),
+    );
+}
+
 /** Lists the jobs, including called local workflows, that exceed the pull request time cap. */
 export function pullRequestTimeoutViolations(workflows) {
   const violations = [];
@@ -113,6 +130,46 @@ test('every pull request and merge queue job is capped at 12 minutes', () => {
   ]);
 });
 
+test('pull request jobs take browsers from the Playwright image pinned to the lockfile', () => {
+  const workflows = Object.fromEntries(
+    readdirSync(join(workspaceRoot, workflowsDir))
+      .filter((file) => /\.ya?ml$/u.test(file))
+      .map((file) => [file, loadWorkflow(file)]),
+  );
+  assert.deepEqual(pullRequestAptViolations(workflows), []);
+  assert.deepEqual(
+    pullRequestAptViolations({
+      'pr.yml': {
+        on: ['pull_request'],
+        jobs: {
+          a: { steps: [{ name: 'deps', run: 'npx playwright install-deps chromium' }] },
+          b: { steps: [{ run: 'sudo apt-get install -y x' }] },
+          c: { steps: [{ uses: './.github/actions/setup' }] },
+        },
+      },
+      'nightly.yml': { on: ['schedule'], jobs: { a: { steps: [{ run: 'apt install x' }] } } },
+    }),
+    ['pr.yml a: deps', 'pr.yml b: sudo apt-get install -y x', 'pr.yml c: ./.github/actions/setup'],
+  );
+
+  const { version } = JSON.parse(readWorkspace('package-lock.json')).packages[
+    'node_modules/playwright'
+  ];
+  const images = Object.entries(workflows).flatMap(([file, workflow]) =>
+    Object.entries(workflow.jobs ?? {}).flatMap(([id, job]) =>
+      job.container ? [[`${file} ${id}`, job.container]] : [],
+    ),
+  );
+  assert.ok(images.length > 0);
+  for (const [job, image] of images)
+    assert.equal(image, `mcr.microsoft.com/playwright:v${version}-noble`, job);
+  for (const [file, ids] of [
+    ['ci.yml', ['design-tests', 'supporting-package-tests']],
+    ['browser.yml', ['canvas', 'dashboard', 'artifact']],
+  ])
+    for (const id of ids) assert.ok(workflows[file].jobs[id].container, `${file} ${id}`);
+});
+
 test('CI and Browser report on every pull request and merge queue run', () => {
   for (const [file, gate] of [
     ['ci.yml', 'ci-passed'],
@@ -158,7 +215,7 @@ test('Browser runs Chromium lanes and the nightly run certifies Chromium Firefox
   assert.match(workflow, /workflow_dispatch: \{\}/);
   assert.match(workflow, /browser: \[chromium, firefox, webkit\]/);
   assert.match(workflow, /PLANR_BROWSER_ENGINE:\s*\$\{\{ matrix\.browser \}\}/);
-  assert.match(workflow, /playwright install --with-deps \$\{\{ matrix\.browser \}\}/);
+  assert.doesNotMatch(workflow, /playwright install/u);
   assert.match(
     workflow,
     /node --test packages\/pipeline\/tests\/artifact\/sandbox-hostile\.test\.mjs/,

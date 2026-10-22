@@ -48,6 +48,8 @@ jobs:
     needs: changes
     if: needs.changes.outputs.canvas == 'true'
     runs-on: ubuntu-24.04
+    # The Playwright image carries the browsers and their system libraries, so no job waits on apt.
+    container: mcr.microsoft.com/playwright:v1.64.0-noble
     timeout-minutes: 12
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -61,9 +63,6 @@ jobs:
         run: npm run generate
       - name: Build workspace packages
         run: npm run build
-      - name: Install Chromium
-        uses: ./.github/actions/playwright-chromium
-        timeout-minutes: 6
       # The timing traces need a quiet runner and run nightly.
       - name: Run the canvas functional specs against local workspace packages
         run: npm run test:browser --workspace=@openplanr/canvas -- --grep-invert '(bench-trace|budgets)\.spec\.ts'
@@ -83,6 +82,7 @@ jobs:
     needs: changes
     if: needs.changes.outputs.dashboard == 'true'
     runs-on: ubuntu-24.04
+    container: mcr.microsoft.com/playwright:v1.64.0-noble
     timeout-minutes: 12
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -94,9 +94,6 @@ jobs:
         run: npm ci
       - name: Generate workspace package assets
         run: npm run generate
-      - name: Install Chromium
-        uses: ./.github/actions/playwright-chromium
-        timeout-minutes: 6
       - name: Run dashboard browser verification against local workspace packages
         run: npm run test:browser --workspace=openplanr
         env:
@@ -115,6 +112,7 @@ jobs:
     needs: changes
     if: needs.changes.outputs.artifact == 'true'
     runs-on: ubuntu-24.04
+    container: mcr.microsoft.com/playwright:v1.64.0-noble
     timeout-minutes: 12
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -126,9 +124,6 @@ jobs:
         run: npm ci
       - name: Generate workspace package assets
         run: npm run generate
-      - name: Install Chromium
-        uses: ./.github/actions/playwright-chromium
-        timeout-minutes: 6
       - name: Run hostile sandbox certification
         run: node --test packages/pipeline/tests/artifact/sandbox-hostile.test.mjs
         env:

@@ -76,6 +76,7 @@ jobs:
       matrix:
         node: [22]
     runs-on: ubuntu-24.04
+    container: mcr.microsoft.com/playwright:v1.64.0-noble
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -85,9 +86,6 @@ jobs:
           cache: npm
       - name: Install the root lockfile
         run: npm ci
-      - name: Install Chromium for local studio tests
-        uses: ./.github/actions/playwright-chromium
-        timeout-minutes: 12
       - name: Generate local distributions and verify tracked outputs
         run: |
           npm run generate
@@ -104,7 +102,6 @@ jobs:
           npm test --workspace=@openplanr/canvas
           npm test --workspace=@openplanr/artifact
           npm test --workspace=@openplanr/design
-          npm test --workspace=@openplanr/skill-runtime
           npm test --workspace=@openplanr/integrations
       - name: Run the CLI command, spec and credentials regressions
         run: >-
@@ -114,9 +111,30 @@ jobs:
           tests/unit/spec-service.test.ts
           tests/unit/credentials-service.test.ts
 
+  # The Playwright image has no make, which the skill runtime's structured checks run.
+  compatibility-skill-runtime:
+    name: Node 22 contributor skill runtime tests
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install the root lockfile
+        run: npm ci
+      - name: Generate and build
+        run: |
+          npm run generate
+          npm run build
+      - name: Test the skill runtime
+        run: npm test --workspace=@openplanr/skill-runtime
+
   packed-public-packages:
     name: Node ${{ matrix.node }} packed public-package proof
     runs-on: ubuntu-24.04
+    container: mcr.microsoft.com/playwright:v1.64.0-noble
     timeout-minutes: 20
     strategy:
       fail-fast: false
@@ -130,9 +148,6 @@ jobs:
           cache: npm
       - name: Install the root lockfile
         run: npm ci
-      - name: Install Chromium for packed Protocol browser verification
-        uses: ./.github/actions/playwright-chromium
-        timeout-minutes: 12
       - name: Generate and build on the contributor runtime
         run: |
           npm run generate
@@ -153,6 +168,7 @@ jobs:
   canvas-traces:
     name: Canvas Chromium timing traces
     runs-on: ubuntu-24.04
+    container: mcr.microsoft.com/playwright:v1.64.0-noble
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -166,9 +182,6 @@ jobs:
         run: |
           npm run generate
           npm run build
-      - name: Install Chromium
-        uses: ./.github/actions/playwright-chromium
-        timeout-minutes: 12
       - name: Trace the canvas benches at both edge densities with the runner budgets
         run: npm run test:browser --workspace=@openplanr/canvas -- bench-trace budgets
         env:
@@ -186,6 +199,7 @@ jobs:
   artifact-browsers:
     name: Artifact ${{ matrix.browser }}
     runs-on: ubuntu-24.04
+    container: mcr.microsoft.com/playwright:v1.64.0-noble
     timeout-minutes: 20
     strategy:
       fail-fast: false
@@ -201,8 +215,6 @@ jobs:
         run: npm ci
       - name: Generate workspace package assets
         run: npm run generate
-      - name: Install the selected browser
-        run: npm exec --workspace=planr-pipeline -- playwright install --with-deps ${{ matrix.browser }}
       - name: Run hostile sandbox certification
         run: node --test packages/pipeline/tests/artifact/sandbox-hostile.test.mjs
         env:
@@ -270,6 +282,7 @@ jobs:
       - cli-isolated-tests
       - cli-coverage
       - compatibility
+      - compatibility-skill-runtime
       - packed-public-packages
       - canvas-traces
       - artifact-browsers
