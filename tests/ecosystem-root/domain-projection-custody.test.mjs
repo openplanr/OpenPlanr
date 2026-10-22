@@ -98,7 +98,12 @@ test('design projection owns the compiled canvas runtime and rewrites its import
   const canvas = manifest.entries.filter(({ target }) => target.startsWith('lib/canvas/'));
   assert.deepEqual(
     canvas.map(({ target }) => target),
-    ['lib/canvas/index.mjs', 'lib/canvas/overview-worker.mjs', 'lib/canvas/styles.css'],
+    [
+      'lib/canvas/index.d.mts',
+      'lib/canvas/index.mjs',
+      'lib/canvas/overview-worker.mjs',
+      'lib/canvas/styles.css',
+    ],
   );
   for (const entry of canvas) {
     const bytes = readFileSync(join(target, entry.target));
