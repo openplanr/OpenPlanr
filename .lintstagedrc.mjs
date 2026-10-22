@@ -1,4 +1,4 @@
-// The fast gates CI runs, applied at commit time; tests stay in CI.
+// The fast gates CI runs, applied at commit time; the pre-push hook adds the slower gates.
 export default {
   '*.{js,mjs,cjs,jsx,ts,mts,cts,tsx,json,jsonc,css}':
     'biome check --write --no-errors-on-unmatched --diagnostic-level=error',

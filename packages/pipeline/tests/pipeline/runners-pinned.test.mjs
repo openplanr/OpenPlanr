@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { readdirSync, readFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { dirname, join, relative, resolve } from 'node:path';
 import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
@@ -14,9 +14,10 @@ function yamlFiles(directory) {
 }
 
 test('no workflow or composite action runs on the floating ubuntu-latest image', () => {
-  const files = ['.github/workflows', '.github/actions'].flatMap((path) =>
-    yamlFiles(join(workspaceRoot, path)),
-  );
+  const files = ['.github/workflows', '.github/actions']
+    .map((path) => join(workspaceRoot, path))
+    .filter((path) => existsSync(path))
+    .flatMap((path) => yamlFiles(path));
   assert.ok(files.length > 0, 'no workflow files found under .github');
   const floating = files.flatMap((file) =>
     readFileSync(file, 'utf8')
