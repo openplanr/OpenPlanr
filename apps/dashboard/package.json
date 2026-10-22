@@ -43,7 +43,7 @@
     "axe-core": "4.14.0",
     "tailwindcss": "4.3.3",
     "typescript": "^6.0.2",
-    "vite": "6.4.5"
+    "vite": "8.3.4"
   },
   "engines": {
     "node": ">=22.13.0"
