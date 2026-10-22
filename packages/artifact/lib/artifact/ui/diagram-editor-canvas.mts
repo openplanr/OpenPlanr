@@ -587,6 +587,7 @@ export function createEditorCanvas(ctx: DiagramEditorContext): DiagramEditorCanv
     positionContextTools(state, bundle);
     const scale = state.view.camera.scale,
       byPlacement = new Map(bundle.presentation.elements.map((item) => [item.elementId, item]));
+    overlayScale = scale;
     for (const id of selection) {
       const geometry = session.geometry(id),
         rect = geometry?.bounds ?? geometry?.labelBounds;

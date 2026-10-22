@@ -363,6 +363,18 @@ test('camera frames preserve scene nodes, overlays and chrome while updating the
   assert.equal(f.overlays.hasAttribute('transform'), false);
 });
 
+test('zoom settling keeps selection overlays drawn at the current zoom', async (t) => {
+  const f = fixture(t);
+  f.controller.zoomAt(1.5);
+  f.flush();
+  f.session.setView({ selection: ['node-0'] });
+  f.flush();
+  const box = f.overlays.querySelector('.de-selection-box');
+  assert.ok(box, 'The selection outline is drawn');
+  await new Promise((resolve) => setTimeout(resolve, 250));
+  assert.equal(box.isConnected, true, 'Settling does not replace overlays drawn at this zoom');
+});
+
 test('culling starts above 500 elements and preserves order, selection, focus and host pins', async (t) => {
   for (const count of [500, 501]) {
     const f = fixture(t, { count }),
