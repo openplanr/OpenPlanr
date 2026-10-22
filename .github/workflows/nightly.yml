@@ -196,6 +196,13 @@ jobs:
         env:
           CI: 'true'
           CANVAS_SECOND_DENSITY: '1'
+      - name: Trace the diagram editor on the canvas engine with the runner budgets
+        working-directory: packages/artifact
+        run: node --import ../../tests/support/isolate-user-state.mjs --test tests/diagram-editor-canvas.browser.test.mjs
+        env:
+          CI: 'true'
+          PLANR_BROWSER_TESTS: '1'
+          PLANR_CANVAS_TRACE: '1'
       - name: Preserve canvas trace results
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2

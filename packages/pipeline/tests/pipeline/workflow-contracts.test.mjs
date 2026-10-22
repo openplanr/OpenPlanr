@@ -257,6 +257,13 @@ test('Browser runs Chromium lanes and the nightly run certifies Chromium Firefox
   );
   assert.match(workflow, /CANVAS_SECOND_DENSITY: '1'/);
   assert.match(workflow, /test:browser --workspace=@openplanr\/canvas -- bench-trace budgets/);
+  const editorTrace = workflow
+    .split(/\n(?= {6}- )/)
+    .find((block) => block.includes('diagram-editor-canvas.browser.test.mjs'));
+  assert.ok(editorTrace, 'nightly must trace the diagram editor on the canvas engine');
+  assert.match(editorTrace, /working-directory: packages\/artifact/);
+  assert.match(editorTrace, /PLANR_CANVAS_TRACE: '1'/);
+  assert.match(editorTrace, /PLANR_BROWSER_TESTS: '1'/);
 
   const blocks = workflow.split(/\n(?= {6}- | {2}\S)/);
   const studio = blocks.find((block) => block.includes('diagram-studio.browser.test.mjs'));
