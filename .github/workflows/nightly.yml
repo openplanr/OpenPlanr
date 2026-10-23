@@ -76,7 +76,10 @@ jobs:
       matrix:
         node: [22]
     runs-on: ubuntu-24.04
-    container: mcr.microsoft.com/playwright:v1.64.0-noble
+    # As root, Firefox refuses the runner-owned HOME and permission and git ownership tests misbehave.
+    container:
+      image: mcr.microsoft.com/playwright:v1.64.0-noble
+      options: --user 1001
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -215,7 +218,10 @@ jobs:
   artifact-browsers:
     name: Artifact ${{ matrix.browser }}
     runs-on: ubuntu-24.04
-    container: mcr.microsoft.com/playwright:v1.64.0-noble
+    # As root, Firefox refuses the runner-owned HOME and permission and git ownership tests misbehave.
+    container:
+      image: mcr.microsoft.com/playwright:v1.64.0-noble
+      options: --user 1001
     timeout-minutes: 20
     strategy:
       fail-fast: false
@@ -308,7 +314,10 @@ jobs:
       - first-run-linux
       - first-run-windows
       - audit
-    if: failure() && github.event_name == 'schedule'
+    # Manual runs on other branches stay silent; the release PR's dispatch reports separately.
+    if: >-
+      failure() && (github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch'
+      && github.ref == 'refs/heads/changeset-release/main'))
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     permissions:
@@ -321,10 +330,12 @@ jobs:
           GH_REPO: ${{ github.repository }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
           HEAD_SHA: ${{ github.sha }}
-          TITLE: Nightly checks failed
+          EVENT: ${{ github.event_name }}
+          BRANCH: ${{ github.ref_name }}
+          TITLE: ${{ github.event_name == 'schedule' && 'Nightly checks failed' || 'Release PR nightly checks failed' }}
         run: |
-          last_green=$(gh run list --workflow nightly.yml --event schedule --status success --limit 1 --json headSha --jq '.[0].headSha // "none"')
-          body=$(printf 'Scheduled run failed: %s\n\nCommit: %s\nLast green scheduled run commit: %s\n' "$RUN_URL" "$HEAD_SHA" "$last_green")
+          last_green=$(gh run list --workflow nightly.yml --event "$EVENT" --branch "$BRANCH" --status success --limit 1 --json headSha --jq '.[0].headSha // "none"')
+          body=$(printf '%s run on %s failed: %s\n\nCommit: %s\nLast green %s run commit on %s: %s\n' "$EVENT" "$BRANCH" "$RUN_URL" "$HEAD_SHA" "$EVENT" "$BRANCH" "$last_green")
           issue=$(gh issue list --state open --limit 500 --json number,title --jq "map(select(.title == \"$TITLE\")) | .[0].number // empty")
           if [ -n "$issue" ]; then
             gh issue comment "$issue" --body "$body"
