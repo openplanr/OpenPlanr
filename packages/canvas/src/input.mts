@@ -3,6 +3,7 @@ import type { CanvasController, CanvasElements, Point } from './types.mjs';
 const WHEEL_ZOOM_RATE = 0.01;
 const WHEEL_ZOOM_MIN_FACTOR = 0.8;
 const WHEEL_ZOOM_MAX_FACTOR = 1.25;
+const WHEEL_BURST_GAP_MS = 150;
 
 function editable(target: EventTarget | null): boolean {
   if (!target || !('nodeType' in target)) return false;
@@ -82,9 +83,27 @@ export function bindInput(
     removers.push(() => target.removeEventListener(type, listener, options));
   }
 
+  // Reading the rect per wheel event forces layout after the frame's style writes.
+  let rect: DOMRect | null = null;
+  let lastWheel = -Infinity;
+  function stageRect(): DOMRect {
+    rect ??= stage.getBoundingClientRect();
+    return rect;
+  }
+  const invalidate = () => {
+    rect = null;
+  };
+  const observer = view?.ResizeObserver ? new view.ResizeObserver(invalidate) : undefined;
+  observer?.observe(stage);
+  removers.push(() => observer?.disconnect());
+  if (view) {
+    listen(view, 'resize', invalidate);
+    listen(document, 'scroll', invalidate, { capture: true, passive: true });
+  }
+
   function local(point: Point): Point {
-    const rect = stage.getBoundingClientRect();
-    return { x: point.x - rect.left, y: point.y - rect.top };
+    const { left, top } = stageRect();
+    return { x: point.x - left, y: point.y - top };
   }
 
   listen(
@@ -92,7 +111,10 @@ export function bindInput(
     'wheel',
     (raw) => {
       const event = raw as WheelEvent;
-      const delta = normalizeWheel(event, stage.getBoundingClientRect().height);
+      // A stage can move without resizing; re-measure once per wheel burst.
+      if (event.timeStamp - lastWheel > WHEEL_BURST_GAP_MS) invalidate();
+      lastWheel = event.timeStamp;
+      const delta = normalizeWheel(event, stageRect().height);
       event.preventDefault();
       if (event.ctrlKey || event.metaKey) {
         controller.zoomAt(
@@ -162,6 +184,7 @@ export function bindInput(
       space ||
       (event.button === 0 && getPointerMode() === 'pan' && !occupied);
     if (!touch && !pan) return;
+    invalidate();
     pointers.set(event.pointerId, { x: event.clientX, y: event.clientY, touch });
     setGesture(true);
     if (stage.setPointerCapture) stage.setPointerCapture(event.pointerId);
@@ -226,6 +249,7 @@ export function bindInput(
       'gesturestart',
       (event) => {
         gestureScale = 1;
+        invalidate();
         setGesture(true);
         event.preventDefault();
       },

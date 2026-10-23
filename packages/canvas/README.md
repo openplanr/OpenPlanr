@@ -136,8 +136,8 @@ Each table lists both runtime values and TypeScript types exported by that entry
 | `evaluateCanvasTrace` | Validates evidence and returns failures, reports and pending coverage. |
 | `toClockResolution` | Rounds frame intervals to 0.1 ms browser clock resolution. |
 | `traceBudgetPolicy` | Selects effective local or runner trace limits. |
-| `traceOwnership` | Identifies gated HTML/708 SVG tiers and reported SVG stress tiers. |
-| `domBudgetPolicy` | Selects gated DOM counts or report-only remount/stress measurements. |
+| `traceOwnership` | Names the card or SVG tier a trace is gated against. |
+| `domBudgetPolicy` | Selects gated DOM counts or report-only remount/SVG measurements. |
 | `CanvasFixture` | Fixture nodes, edges and aggregate world bounds. |
 | `FixtureEdge` | Fixture edge with endpoints and world route points. |
 | `FixtureNode` | Fixture node with title, rank and world bounds. |
@@ -295,7 +295,9 @@ The engine announces its accessible name through one polite live region.
 | Alt+[ / Alt+] / Alt+Z with the default chrome keymap | Toggle navigation/menu, sidebar or chrome visibility using physical key codes. |
 
 Event subscriptions return unsubscribe functions. Camera and active-frame
-events coalesce and run after the frame's transform write. Selection changes
+events coalesce and run after the frame's transform write. `motion` reports
+`true` in the first frame of a pan, zoom or gesture and `false` once input has
+been idle for 150 ms and no pointer or gesture is held. Selection changes
 also emit `selection`. Invalid
 inputs throw `TypeError` with the field and value.
 
@@ -450,16 +452,16 @@ sample count or exact count is stated.
 | Chromium renderer main-thread p95, vanilla HTML, 708 / 5,000 nodes | 6 / 8 ms | Same, except the 5,000-node zoom sweep |
 | Chromium renderer main-thread p95, React HTML, 708 / 5,000 nodes | 8 / 10 ms | Same, except the 5,000-node zoom sweep |
 | Chromium renderer main-thread p95, 5,000-node HTML zoom sweep | 8 ms vanilla / 10 ms React | 14 ms |
-| Chromium renderer main-thread p95, SVG, 708 / 5,000 nodes | 8 / 12 ms | Same; 5,000 SVG is reported only |
+| Chromium renderer main-thread p95, SVG, 708 / 5,000 nodes | 8 / 12 ms | Same |
 | Remount renderer main-thread p95 | 16 ms | Reported only (16 ms reference) |
-| Chromium rAF interval p95 | 16.8 ms | Reported only (16.8 ms reference) |
+| Chromium rAF interval p95 | 16.8 ms; SVG worlds are reported only | Reported only (16.8 ms reference) |
 | WebKit rAF interval p95 | 19 ms | Reported only (19 ms reference) |
 | WebKit 40% pan worst frame | 33 ms | Same |
 | Firefox 100% pan frame p95 | 17 ms | Same |
 | Firefox fit pan frame p95, 708 / 5,000 nodes | 20 / 25 ms | Same |
 | Long tasks over 50 ms | 0 | Same |
-| Stage DOM nodes | 2,000 | Same; remount DOM count is reported only |
-| First fixture frame p50 | 150 ms across exactly 5 loads | 250 ms across exactly 5 loads |
+| Stage DOM nodes | 2,000; SVG worlds are reported only | Same; remount DOM count is reported only |
+| First fixture frame p50 | 150 ms across exactly 5 loads; SVG worlds are reported only | 250 ms across exactly 5 loads |
 | Hit-test p95 | Greater than 0 and at most 0.1 ms | Same |
 | Hit-test sampling | Exactly 1,000 points, at least 1,000 queries, at least 1 ms per sample batch | Same |
 | Chrome toggles / admitted layout shift | Exactly 16 toggles / 0 admitted CLS | Same |
@@ -468,13 +470,14 @@ sample count or exact count is stated.
 | Dropped pins | 0, with 50- and 500-pin tiers | Same |
 | React commits on pure camera frames | 0 | Same |
 
-HTML at both node tiers and SVG at 708 nodes are gated. The 5,000-node SVG stress
-tier reports trace timings without gating them. Frame intervals are rounded to
-0.1 ms before comparison. Local runs keep every reference budget unchanged.
-All four scenarios gate main-thread, rAF, long-task, first-frame
-and hit-test budgets for the 708 and 5,000 HTML tiers and the 708 SVG tier at both
-pixel densities. Stage DOM counts gate at 2,000, including compact cards at 40%
-and the fit overview. Hit-test p95 uses per-query batch means at 1,000
+Frame intervals are rounded to 0.1 ms before comparison. Local runs keep every
+reference budget unchanged. All four scenarios gate main-thread, rAF, long-task,
+first-frame and hit-test budgets for the 708 and 5,000 HTML tiers at both pixel
+densities. Stage DOM counts gate at 2,000, including compact cards at 40% and the
+fit overview. SVG worlds use the SVG diagram tier at 708 and 5,000: renderer
+main-thread p95 gates at 8 and 12 ms and long tasks at 0, hit tests gate as above,
+and stage DOM, rAF interval and first-frame values are reported. Hit-test p95 uses
+per-query batch means at 1,000
 seeded screen points outside each interaction window. Each point repeats queries
 until its batch spans at least 1 ms; the report includes actual call counts and
 unrounded milliseconds per query. A separate 968-node remount trace gates its 16 ms main-thread
@@ -492,7 +495,7 @@ effective limits. Runner remounts show `reported (reference 16)` and runner firs
 frames `250 (reference 150)` in the table,
 JSON report and attachment. The JSON retains reference limits; a `null` effective
 remount or rAF limit means it is reported only.
-The 5,000 SVG stress tier remains reported. Browser traces
+Browser traces
 require the external browser runner; results depend on its GPU and rendering mode.
 The overview comparison records main-thread work, worst frames, bitmap bytes and
 worker presentation lag at 5,000 and `stress-50000` nodes. `test:browser` runs
