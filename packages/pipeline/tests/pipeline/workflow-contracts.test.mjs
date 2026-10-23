@@ -157,7 +157,7 @@ test('pull request jobs take browsers from the Playwright image pinned to the lo
   ];
   const images = Object.entries(workflows).flatMap(([file, workflow]) =>
     Object.entries(workflow.jobs ?? {}).flatMap(([id, job]) =>
-      job.container ? [[`${file} ${id}`, job.container]] : [],
+      job.container ? [[`${file} ${id}`, job.container.image ?? job.container]] : [],
     ),
   );
   assert.ok(images.length > 0);
@@ -295,6 +295,8 @@ test('the nightly run covers first runs, reports scheduled failures and runs on 
   assert.match(text, /run: node scripts\/ci\/first-run-journeys\.mjs\n/);
   assert.equal(nightly.jobs['first-run-windows'].uses, './.github/workflows/installer-guard.yml');
   assert.deepEqual(triggers(nightly).sort(), ['schedule', 'workflow_dispatch']);
+  for (const id of ['compatibility', 'artifact-browsers'])
+    assert.equal(nightly.jobs[id].container.options, '--user 1001', `${id} must not run as root`);
 
   const report = nightly.jobs.report;
   assert.deepEqual(

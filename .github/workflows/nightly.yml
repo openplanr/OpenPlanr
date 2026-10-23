@@ -76,7 +76,10 @@ jobs:
       matrix:
         node: [22]
     runs-on: ubuntu-24.04
-    container: mcr.microsoft.com/playwright:v1.64.0-noble
+    # As root, Firefox refuses the runner-owned HOME and permission and git ownership tests misbehave.
+    container:
+      image: mcr.microsoft.com/playwright:v1.64.0-noble
+      options: --user 1001
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -215,7 +218,10 @@ jobs:
   artifact-browsers:
     name: Artifact ${{ matrix.browser }}
     runs-on: ubuntu-24.04
-    container: mcr.microsoft.com/playwright:v1.64.0-noble
+    # As root, Firefox refuses the runner-owned HOME and permission and git ownership tests misbehave.
+    container:
+      image: mcr.microsoft.com/playwright:v1.64.0-noble
+      options: --user 1001
     timeout-minutes: 20
     strategy:
       fail-fast: false
