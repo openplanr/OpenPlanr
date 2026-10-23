@@ -146,7 +146,7 @@ describe('trace budget ownership', () => {
       for (const scenario of ['pan-100', 'pan-40', 'pan-fit', 'zoom-sweep']) {
         it(`${count} ${world} ${scenario}`, () => {
           expect(traceOwnership({ count, world, scenario })).toBe(
-            world === 'html' || count === 708 ? 'gated' : 'reported, SVG stress tier',
+            world === 'html' ? 'gated, card tier' : 'gated, SVG tier',
           );
         });
       }
@@ -156,23 +156,21 @@ describe('trace budget ownership', () => {
 
 describe('DOM budget ownership', () => {
   for (const count of [708, 5000]) {
-    for (const world of ['html', 'svg'] as const) {
-      it(`gates ${count} ${world} fit DOM with its timing ownership`, () => {
-        expect(domBudgetPolicy({ count, world, scenario: 'pan-fit' })).toEqual({
-          ownership: world === 'html' || count === 708 ? 'gated' : 'reported, SVG stress tier',
-          regressionLimit: world === 'html' || count === 708 ? 2000 : null,
-        });
-        expect(traceOwnership({ count, world, scenario: 'pan-fit' })).toBe(
-          world === 'html' || count === 708 ? 'gated' : 'reported, SVG stress tier',
-        );
+    it(`gates ${count} html fit DOM and reports ${count} svg fit DOM`, () => {
+      expect(domBudgetPolicy({ count, world: 'html', scenario: 'pan-fit' })).toEqual({
+        ownership: 'gated',
+        regressionLimit: 2000,
       });
-    }
+      expect(domBudgetPolicy({ count, world: 'svg', scenario: 'pan-fit' })).toEqual({
+        ownership: 'reported, SVG tier',
+        regressionLimit: null,
+      });
+    });
     it(`gates ${count} HTML compact cards at the reference budget`, () => {
       expect(domBudgetPolicy({ count, world: 'html', scenario: 'pan-40' })).toEqual({
         ownership: 'gated',
         regressionLimit: 2000,
       });
-      expect(traceOwnership({ count, world: 'html', scenario: 'pan-40' })).toBe('gated');
     });
     for (const scenario of ['pan-100', 'zoom-sweep']) {
       it(`keeps ${count} HTML ${scenario} DOM gated at the reference budget`, () => {
@@ -183,16 +181,6 @@ describe('DOM budget ownership', () => {
       });
     }
   }
-  it('keeps the SVG DOM-level tier gated and the stress tier reported', () => {
-    expect(domBudgetPolicy({ count: 708, world: 'svg', scenario: 'pan-40' })).toEqual({
-      ownership: 'gated',
-      regressionLimit: 2000,
-    });
-    expect(domBudgetPolicy({ count: 5000, world: 'svg', scenario: 'pan-40' })).toEqual({
-      ownership: 'reported, SVG stress tier',
-      regressionLimit: null,
-    });
-  });
   it('preserves the remount trace as a timing-only gate', () => {
     expect(domBudgetPolicy({ count: 708, world: 'html', scenario: 'remount' })).toEqual({
       ownership: 'reported, remount timing only',
