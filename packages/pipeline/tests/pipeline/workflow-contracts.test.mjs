@@ -305,7 +305,16 @@ test('the nightly run covers first runs, reports scheduled failures and runs on 
       .filter((id) => id !== 'report')
       .sort(),
   );
-  assert.equal(report.if, "failure() && github.event_name == 'schedule'");
+  assert.equal(
+    report.if,
+    "failure() && (github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/changeset-release/main'))",
+  );
+  const reportStep = report.steps[0];
+  assert.equal(
+    reportStep.env.TITLE,
+    "${{ github.event_name == 'schedule' && 'Nightly checks failed' || 'Release PR nightly checks failed' }}",
+  );
+  assert.match(reportStep.run, /--event "\$EVENT" --branch "\$BRANCH"/u);
   assert.deepEqual(report.permissions, { actions: 'read', issues: 'write' });
 
   const guard = readWorkspace('.github/workflows/installer-guard.yml');
