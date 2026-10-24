@@ -4,6 +4,14 @@ import {
   getDiagramAuthoringCapability,
 } from '@openplanr/protocol/diagram-authoring-contracts';
 import { elementIndex, isAuthoringSnapshot } from '../diagram/authoring/model.mjs';
+import {
+  createDiagramShapeSearch,
+  DIAGRAM_PATTERNS,
+  DIAGRAM_SHAPE_LIBRARIES,
+  diagramShapeAllowed,
+  diagramShapeEntry,
+} from '../diagram/authoring/shape-catalog.mjs';
+import { renderDiagramShapeSvg } from '../diagram/authoring/shape-geometry.mjs';
 import type { DiagramEditorState } from '../diagram/editor/index.mjs';
 import type { DiagramEditorIconName } from './diagram-editor.mjs';
 import { displayName, kindName } from './diagram-editor-actions.mjs';
@@ -65,6 +73,9 @@ export function createEditorOutline(ctx: DiagramEditorContext): DiagramEditorOut
   let tab: DiagramEditorLeftTab = 'outline';
   let renderedDocument: object | null = null;
   let renderedControls = '';
+  let libraryQuery = '';
+  let selectedLibrary = 'all';
+  const searchCatalog = createDiagramShapeSearch();
 
   function setLeftTab(next: DiagramEditorLeftTab, { focus = false }: { focus?: boolean } = {}) {
     tab = next;
@@ -98,6 +109,110 @@ export function createEditorOutline(ctx: DiagramEditorContext): DiagramEditorOut
     row.tabIndex = 0;
     row.focus();
   }
+  function renderCatalog(state: DiagramEditorState) {
+    if (!state.bundle) return;
+    const capability = getDiagramAuthoringCapability(state.bundle.document.grammar.id);
+    const search = field(doc, 'Search shapes', libraryQuery, {
+      type: 'search',
+      placeholder: 'Search shapes',
+      'data-library-search': '',
+    });
+    const library = field(doc, 'Shape library', selectedLibrary, {
+      choices: [
+        ['all', 'All libraries'],
+        ...DIAGRAM_SHAPE_LIBRARIES.map((item): [string, string] => [item.id, item.name]),
+      ],
+      'data-library-selector': '',
+    });
+    const results = element(doc, 'div', { className: 'de-library-results' });
+    const count = element(doc, 'p', {
+      className: 'de-muted',
+      role: 'status',
+      'aria-live': 'polite',
+    });
+    shapesPane.append(search.label, library.label, count, results);
+    function renderResults() {
+      results.replaceChildren();
+      const entries = searchCatalog(libraryQuery, selectedLibrary).filter((entry) =>
+        diagramShapeAllowed(entry, capability),
+      );
+      count.textContent = `${entries.length} shapes`;
+      for (const pack of DIAGRAM_SHAPE_LIBRARIES) {
+        const matches = entries.filter((entry) => entry.library === pack.id);
+        if (!matches.length) continue;
+        const section = element(doc, 'section', { className: 'de-shape-section' });
+        const grid = element(doc, 'div', { className: 'de-shape-grid' });
+        section.append(element(doc, 'h3', {}, pack.name), grid);
+        for (const entry of matches) {
+          const shape = button(doc, '', 'create-catalog', {
+            'data-id': entry.id,
+            className: 'de-shape-button',
+            'aria-label': `Create ${entry.definition.name.toLowerCase()}`,
+            disabled: !ctx.editable(state),
+          });
+          const preview = doc.createElementNS('http://www.w3.org/2000/svg', 'svg');
+          preview.setAttribute('viewBox', '0 0 64 40');
+          preview.setAttribute('aria-hidden', 'true');
+          preview.classList.add('de-library-preview');
+          preview.innerHTML = renderDiagramShapeSvg(
+            entry.definition,
+            { x: 2, y: 2, width: 60, height: 36 },
+            { fill: 'var(--de-raised)', stroke: 'currentColor', strokeWidth: 1.5 },
+          );
+          shape.append(preview, element(doc, 'span', {}, entry.definition.name));
+          grid.append(shape);
+        }
+        results.append(section);
+      }
+      const terms = libraryQuery.toLowerCase().trim().split(/\s+/u).filter(Boolean);
+      const patterns = DIAGRAM_PATTERNS.filter(
+        (pattern) =>
+          (selectedLibrary === 'all' || selectedLibrary === pattern.library) &&
+          terms.every((term) =>
+            `${pattern.name} ${pattern.description}`.toLowerCase().includes(term),
+          ) &&
+          pattern.nodes.every((node) =>
+            diagramShapeAllowed(diagramShapeEntry(node.shape), capability),
+          ),
+      );
+      if (patterns.length) {
+        const section = element(doc, 'section', { className: 'de-shape-section' });
+        section.append(element(doc, 'h3', {}, 'Patterns'));
+        for (const pattern of patterns) {
+          const item = button(doc, '', 'create-pattern', {
+            'data-id': pattern.id,
+            className: 'de-pattern-button',
+            'aria-label': `Insert ${pattern.name.toLowerCase()}`,
+            disabled: !ctx.editable(state),
+          });
+          item.append(
+            element(doc, 'span', {}, pattern.name),
+            element(doc, 'small', { className: 'de-muted' }, pattern.description),
+          );
+          section.append(item);
+        }
+        results.append(section);
+      }
+      if (!entries.length && !patterns.length)
+        results.append(
+          element(
+            doc,
+            'p',
+            { className: 'de-muted' },
+            'No matching shapes or patterns. Try another keyword.',
+          ),
+        );
+    }
+    search.input.addEventListener('input', () => {
+      libraryQuery = search.input.value;
+      renderResults();
+    });
+    library.input.addEventListener('change', () => {
+      selectedLibrary = library.input.value;
+      renderResults();
+    });
+    renderResults();
+  }
   function renderLeft(state: DiagramEditorState) {
     const { editable, readOnly } = ctx;
     // Geometry-only revisions reuse an engine-certified immutable semantic root.
@@ -113,6 +228,15 @@ export function createEditorOutline(ctx: DiagramEditorContext): DiagramEditorOut
     ]);
     if (document && renderedDocument === document && renderedControls === controls) return;
     renderedDocument = null;
+    const focusedSearch =
+      doc.activeElement?.tagName === 'INPUT' &&
+      doc.activeElement.hasAttribute('data-library-search')
+        ? {
+            start: (doc.activeElement as HTMLInputElement).selectionStart,
+            end: (doc.activeElement as HTMLInputElement).selectionEnd,
+          }
+        : null;
+    const focusedLibrary = doc.activeElement?.hasAttribute('data-library-selector');
     leftTabs.replaceChildren();
     if (readOnly(state)) tab = 'outline';
     for (const [name, action] of readOnly(state)
@@ -139,11 +263,14 @@ export function createEditorOutline(ctx: DiagramEditorContext): DiagramEditorOut
       element(doc, 'p', { className: 'de-muted' }, 'Add a shape, then refine it in the inspector.'),
     );
     const capability = getDiagramAuthoringCapability(state.bundle.document.grammar.id);
-    const groups: Array<[string, string[]]> = [
-      ['Flow', ['process', 'start', 'end', 'decision', 'data-store', 'component']],
-      ['Structure', ['container', 'horizontal-lane', 'vertical-lane']],
-      ['Notes', ['annotation']],
-    ];
+    if (ctx.config.shapeLibraryEnabled) renderCatalog(state);
+    const groups: Array<[string, string[]]> = ctx.config.shapeLibraryEnabled
+      ? [['Structure', ['horizontal-lane', 'vertical-lane']]]
+      : [
+          ['Flow', ['process', 'start', 'end', 'decision', 'data-store', 'component']],
+          ['Structure', ['container', 'horizontal-lane', 'vertical-lane']],
+          ['Notes', ['annotation']],
+        ];
     for (const [title, kinds] of groups) {
       const section = element(doc, 'section', { className: 'de-shape-section' }),
         grid = element(doc, 'div', { className: 'de-shape-grid' });
@@ -315,6 +442,14 @@ export function createEditorOutline(ctx: DiagramEditorContext): DiagramEditorOut
       outlinePane.append(
         element(doc, 'p', { className: 'de-muted' }, 'No objects yet. Use Shapes to create one.'),
       );
+    if (focusedSearch) {
+      const input = shapesPane.querySelector<HTMLInputElement>('[data-library-search]');
+      input?.focus({ preventScroll: true });
+      input?.setSelectionRange(focusedSearch.start, focusedSearch.end);
+    } else if (focusedLibrary)
+      shapesPane
+        .querySelector<HTMLElement>('[data-library-selector]')
+        ?.focus({ preventScroll: true });
     renderedDocument = document;
     renderedControls = controls;
   }

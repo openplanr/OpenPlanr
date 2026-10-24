@@ -1,4 +1,5 @@
 // @ts-check
+import { shapeReferenceKey } from '@openplanr/protocol/shape-library-contracts';
 import { inverseDependencies } from './diff.mjs';
 import {
   appearanceFields,
@@ -13,13 +14,16 @@ import {
   same,
   sealBundle,
   semanticFields,
+  setShapeLibrary,
   setStudioPresentation,
   snapshot,
+  transactionVersionFields,
   validateAuthoringBundle,
 } from './model.mjs';
 import { applyOperation, previewDiagramTransaction } from './transactions.mjs';
 
 function record(bundle, change) {
+  if (change.collection === 'shape-library') return bundle.shapeLibrary ?? null;
   if (change.collection === 'studio-presentation') return bundle.studioPresentation ?? null;
   if (change.collection === 'source-map') return bundle.sourceMap;
   if (change.collection === 'document') return bundle.document;
@@ -35,6 +39,10 @@ function record(bundle, change) {
 const atPath = (value, path) => path.reduce((current, key) => current?.[key], value);
 function restoreChange(bundle, change, positions, emphasisOrder) {
   if (!change.path.length) {
+    if (change.collection === 'shape-library') {
+      setShapeLibrary(bundle, change.before);
+      return;
+    }
     if (change.collection === 'studio-presentation') {
       setStudioPresentation(bundle, change.before);
       return;
@@ -73,7 +81,13 @@ function restoreChange(bundle, change, positions, emphasisOrder) {
   }
   const value = record(bundle, change);
   const parent = atPath(value, change.path.slice(0, -1));
-  parent[change.path.at(-1)] = clone(change.before);
+  if (
+    change.collection === 'elements' &&
+    same(change.path, ['appearance', 'shapeRef']) &&
+    change.before === null
+  )
+    delete parent.shapeRef;
+  else parent[change.path.at(-1)] = clone(change.before);
 }
 function validateInverse(value) {
   const diagnostics = inspectPlainData(value);
@@ -119,6 +133,7 @@ function validateInverse(value) {
           'presentation',
           'source-map',
           'studio-presentation',
+          'shape-library',
         ].includes(change.collection) ||
         (change.elementId !== null && typeof change.elementId !== 'string') ||
         !Array.isArray(change.path) ||
@@ -196,6 +211,19 @@ function compileCompensation(current, target, inverse, transactionId) {
       presentation: working.presentation.elements
         .filter((value) => removed.some(([id]) => id === value.elementId))
         .map(clone),
+    });
+  const definitions = new Map(
+    (working.shapeLibrary ?? []).map((definition) => [shapeReferenceKey(definition), definition]),
+  );
+  for (const definition of target.shapeLibrary ?? [])
+    if (!definitions.has(shapeReferenceKey(definition)))
+      definitions.set(shapeReferenceKey(definition), definition);
+  const expandedLibrary = [...definitions.values()];
+  if (!same(working.shapeLibrary ?? [], expandedLibrary))
+    add({
+      type: 'set-shape-library',
+      before: clone(working.shapeLibrary ?? null),
+      after: clone(expandedLibrary),
     });
   const inserted = [...targetEntries].filter(([id]) => !oldEntries.has(id));
   if (inserted.length)
@@ -303,6 +331,12 @@ function compileCompensation(current, target, inverse, transactionId) {
       before: clone(working.sourceMap),
       after: clone(target.sourceMap),
     });
+  if (!same(working.shapeLibrary ?? null, target.shapeLibrary ?? null))
+    add({
+      type: 'set-shape-library',
+      before: clone(working.shapeLibrary ?? null),
+      after: clone(target.shapeLibrary ?? null),
+    });
   if (!same(working.studioPresentation ?? null, target.studioPresentation ?? null))
     add({
       type: 'set-studio-presentation',
@@ -317,16 +351,7 @@ function compileCompensation(current, target, inverse, transactionId) {
     transaction:
       /** @type {import('@openplanr/protocol/studio-presentation-contracts').VersionedDiagramEditTransaction} */ ({
         kind: 'diagram-edit-transaction',
-        schemaVersion:
-          current.schemaVersion === '1.1.0' ||
-          operations.some((op) => op.type === 'set-studio-presentation')
-            ? '1.1.0'
-            : '1.0.0',
-        protocolVersion:
-          current.schemaVersion === '1.1.0' ||
-          operations.some((op) => op.type === 'set-studio-presentation')
-            ? '1.17.0'
-            : '1.13.0',
+        ...transactionVersionFields(current, operations),
         diagramId: current.diagramId,
         transactionId,
         base: snapshot(current),

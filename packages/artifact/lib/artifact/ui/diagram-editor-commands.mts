@@ -9,6 +9,11 @@ import type {
 import type { DiagramCommand, DiagramCommandResult } from '../diagram/authoring/index.mjs';
 import { appearanceFields, clone, geometryFields, snapshot } from '../diagram/authoring/model.mjs';
 import {
+  diagramPattern,
+  diagramShapeAllowed,
+  diagramShapeEntry,
+} from '../diagram/authoring/shape-catalog.mjs';
+import {
   copyDiagramSelection,
   type DiagramSelectionClipboard,
 } from '../diagram/editor/clipboard.mjs';
@@ -17,6 +22,8 @@ import {
   addOrthogonalDetour,
   arrangementCommand,
   connector,
+  createCatalogPattern,
+  createCatalogShape,
   createObject,
   type DiagramEditorPoint,
   type DiagramObjectKind,
@@ -25,6 +32,7 @@ import {
   placement,
   processTemplate,
   transaction,
+  visibleInsertionPoint,
 } from './diagram-editor-actions.mjs';
 import type { DiagramEditorTool } from './diagram-editor-canvas.mjs';
 import type { DiagramEditorRail } from './diagram-editor-chrome.mjs';
@@ -141,6 +149,11 @@ export function createEditorCommands(ctx: DiagramEditorContext): DiagramEditorCo
   let clipboard: DiagramSelectionClipboard | null = null,
     actionTrigger: HTMLElement | null = null;
 
+  const visibleWorldBounds = () => {
+    const origin = ctx.canvas.worldPoint({ x: 0, y: 0 });
+    const end = ctx.canvas.worldPoint({ x: dom.stage.clientWidth, y: dom.stage.clientHeight });
+    return { ...origin, width: end.x - origin.x, height: end.y - origin.y };
+  };
   const select = (ids: string[], { force = false }: { force?: boolean } = {}) => {
     const next = [...new Set(ids)],
       previous = current().view.selection;
@@ -424,16 +437,8 @@ export function createEditorCommands(ctx: DiagramEditorContext): DiagramEditorCo
         const existing = bundle.presentation.elements
           .map((item) => item.bounds)
           .filter((rect) => rect !== null);
-        const right = existing.length
-          ? Math.max(...existing.map((item) => item.x + item.width))
-          : null;
-        const y = existing.length
-          ? Math.min(...existing.map((item) => item.y))
-          : Math.round(at.y - 36);
-        const command = createObject(kind, {
-          x: right === null ? Math.round(at.x - 80) : Math.round(right + 64),
-          y: Math.round(y),
-        });
+        const command = createObject(kind, visibleInsertionPoint(at,
+          kind === 'container' || kind.endsWith('-lane') ? { width: 540, height: 240 } : { width: 160, height: 80 }, existing, visibleWorldBounds()));
         const result = submit(command, [command.elements[0].value.id]);
         if (result.ok) {
           ctx.chrome.dismissEmpty();
@@ -443,6 +448,27 @@ export function createEditorCommands(ctx: DiagramEditorContext): DiagramEditorCo
         }
       },
     ],
+    ['create-catalog', ({ bundle, value }) => {
+      if (!ctx.config.shapeLibraryEnabled || typeof value !== 'string') return;
+      const entry = diagramShapeEntry(value);
+      if (!diagramShapeAllowed(entry, getDiagramAuthoringCapability(bundle.document.grammar.id))) {
+        report(`Shape ${entry.definition.name} is unavailable in this grammar.`); return;
+      }
+      const center = ctx.canvas.worldPoint({ x: dom.stage.clientWidth / 2, y: dom.stage.clientHeight / 2 });
+      const existing = bundle.presentation.elements.flatMap((item) => item.bounds ? [item.bounds] : []);
+      const command = createCatalogShape(value, visibleInsertionPoint(center, entry.definition.sizing, existing, visibleWorldBounds()));
+      finishCatalogInsert(command, entry.definition.name);
+    }],
+    ['create-pattern', ({ bundle, value }) => {
+      if (!ctx.config.shapeLibraryEnabled || typeof value !== 'string') return;
+      const pattern = diagramPattern(value);
+      const width = Math.max(...pattern.nodes.map((node) => node.x + diagramShapeEntry(node.shape).definition.sizing.width));
+      const height = Math.max(...pattern.nodes.map((node) => node.y + diagramShapeEntry(node.shape).definition.sizing.height));
+      const center = ctx.canvas.worldPoint({ x: dom.stage.clientWidth / 2, y: dom.stage.clientHeight / 2 });
+      const existing = bundle.presentation.elements.flatMap((item) => item.bounds ? [item.bounds] : []);
+      const command = createCatalogPattern(value, visibleInsertionPoint(center, { width, height }, existing, visibleWorldBounds()), bundle.document.grammar.id);
+      finishCatalogInsert(command, pattern.name);
+    }],
     ['quick-add', ({ bundle, ids }) => {
       if (ids.length !== 1 || !bundle.document.nodes.some((node) => node.id === ids[0])) return;
       const bounds = bundle.presentation.elements.find((item) => item.elementId === ids[0])?.bounds;
@@ -612,6 +638,19 @@ export function createEditorCommands(ctx: DiagramEditorContext): DiagramEditorCo
     [order[index], order[index + delta]] = [order[index + delta], order[index]];
     submit({ type: 'reorder-lanes', ids: order });
   }
+  function finishCatalogInsert(command: Extract<DiagramCommand, { type: 'create' }>, name: string) {
+    const result = submit(
+      command,
+      command.elements
+        .filter((item) => item.collection !== 'relations')
+        .map((item) => item.value.id),
+    );
+    if (!result.ok) return;
+    ctx.chrome.dismissEmpty();
+    ctx.chrome.closeDrawers({ restoreFocus: false });
+    dom.stage.focus();
+    notice(`${name} added. ${command.elements.length} objects created.`);
+  }
   function act(action: string, value?: unknown, options: ActionOptions = {}) {
     if (['menu-undo', 'menu-redo', 'menu-save', 'menu-zoom-in', 'menu-zoom-out'].includes(action)) {
       ctx.chrome.setOverflow(false);
@@ -643,6 +682,8 @@ export function createEditorCommands(ctx: DiagramEditorContext): DiagramEditorCo
     actionTrigger = target;
     try {
       if (action === 'create') act(action, target.dataset.kind);
+      else if (action === 'create-catalog' || action === 'create-pattern')
+        act(action, target.dataset.id);
       else if (action === 'select-id')
         act(action, target.dataset.id, {
           additive: event.shiftKey || event.metaKey || event.ctrlKey,

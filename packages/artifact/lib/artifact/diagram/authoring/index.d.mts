@@ -45,7 +45,8 @@ export interface DiagramFieldChange {
     | 'elements'
     | 'presentation'
     | 'source-map'
-    | 'studio-presentation';
+    | 'studio-presentation'
+    | 'shape-library';
   elementId: string | null;
   path: string[];
   before: DiagramJsonValue;
@@ -89,7 +90,12 @@ export type DiagramCommandDisclosures =
   | { excludedRelationIds: string[]; detachedAnnotationIds: string[] }
   | { deletionImpact: DiagramDeletionImpact };
 export type DiagramCommand =
-  | { type: 'create'; elements: DiagramSemanticEntry[]; presentation: DiagramPlacement[] }
+  | {
+      type: 'create';
+      elements: DiagramSemanticEntry[];
+      presentation: DiagramPlacement[];
+      shapeDefinitions?: import('@openplanr/protocol/shape-library-contracts').DiagramShapeDefinition[];
+    }
   | { type: 'rename'; id: string; label: string }
   | { type: 'describe'; id: string; description: string | null }
   | { type: 'reconnect'; id: string; from: string; to: string }

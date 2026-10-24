@@ -4,6 +4,7 @@ import type {
   DiagramEditTransaction,
 } from './diagram-authoring-contracts.mjs';
 import type { DiagramReviewBundle } from './diagram-review-contracts.mjs';
+import type { ShapeDefinition } from './shape-library-contracts.mjs';
 export interface DiagramPresentation {
   kind: 'openplanr-diagram-presentation';
   schemaVersion: '2.0.0';
@@ -53,7 +54,19 @@ export type DiagramAuthoringBundleV11 = Omit<
   DiagramAuthoringBundle,
   'schemaVersion' | 'protocolVersion'
 > & { schemaVersion: '1.1.0'; protocolVersion: '1.17.0'; studioPresentation: DiagramPresentation };
-export type VersionedDiagramAuthoringBundle = DiagramAuthoringBundle | DiagramAuthoringBundleV11;
+export type DiagramAuthoringBundleV12 = Omit<
+  DiagramAuthoringBundle,
+  'schemaVersion' | 'protocolVersion'
+> & {
+  schemaVersion: '1.2.0';
+  protocolVersion: '1.21.0';
+  shapeLibrary: ShapeDefinition[];
+  studioPresentation?: DiagramPresentation;
+};
+export type VersionedDiagramAuthoringBundle =
+  | (DiagramAuthoringBundle & { studioPresentation?: never; shapeLibrary?: never })
+  | (DiagramAuthoringBundleV11 & { shapeLibrary?: never })
+  | DiagramAuthoringBundleV12;
 export interface SetStudioPresentationOperation {
   type: 'set-studio-presentation';
   before: DiagramPresentation | null;
@@ -67,7 +80,42 @@ export type DiagramEditTransactionV11 = Omit<
   protocolVersion: '1.17.0';
   operations: Array<DiagramEditOperation | SetStudioPresentationOperation>;
 };
-export type VersionedDiagramEditTransaction = DiagramEditTransaction | DiagramEditTransactionV11;
+export interface SetShapeLibraryOperation {
+  type: 'set-shape-library';
+  before: ShapeDefinition[] | null;
+  after: ShapeDefinition[] | null;
+}
+export type DiagramEditTransactionV12 = Omit<
+  DiagramEditTransaction,
+  'schemaVersion' | 'protocolVersion' | 'operations'
+> & {
+  schemaVersion: '1.2.0';
+  protocolVersion: '1.21.0';
+  operations: Array<
+    DiagramEditOperation | SetStudioPresentationOperation | SetShapeLibraryOperation
+  >;
+};
+export type VersionedDiagramEditTransaction =
+  | DiagramEditTransaction
+  | DiagramEditTransactionV11
+  | DiagramEditTransactionV12;
+export declare const DIAGRAM_AUTHORING_BUNDLE_V12_SCHEMA: Record<string, unknown>;
+export declare const DIAGRAM_EDIT_TRANSACTION_V12_SCHEMA: Record<string, unknown>;
+export declare const DIAGRAM_REVIEW_BUNDLE_V12_SCHEMA: Record<string, unknown>;
+export type DiagramReviewBundleV12 = Omit<DiagramReviewBundle, 'schemaVersion' | 'authored'> & {
+  schemaVersion: '1.2.0';
+  presentation?: DiagramPresentation;
+  authored?: VersionedDiagramAuthoringBundle;
+};
+export declare function supportsDiagramShapeLibrary(value: unknown): boolean;
+export declare function supportsDiagramStudioPresentation(value: unknown): boolean;
+export declare function diagramAuthoringVersionFields(value: {
+  shapeLibrary?: ShapeDefinition[];
+  studioPresentation?: DiagramPresentation | null;
+}):
+  | { schemaVersion: '1.2.0'; protocolVersion: '1.21.0' }
+  | { schemaVersion: '1.1.0'; protocolVersion: '1.17.0' }
+  | { schemaVersion: '1.0.0'; protocolVersion: '1.13.0' };
 
 export declare function validateVersionedDiagramAuthoringArtifact(
   kind: string,

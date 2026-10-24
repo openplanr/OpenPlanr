@@ -22,6 +22,12 @@ import {
   DESIGN_REVIEW_METADATA_PAYLOAD_V11_SCHEMA,
   REVIEW_EXPERIENCE_SCHEMAS,
 } from '../src/review-experience-contracts.mjs';
+import { SHAPE_DEFINITION_SCHEMA } from '../src/shape-library-contracts.mjs';
+import {
+  DIAGRAM_AUTHORING_BUNDLE_V12_SCHEMA,
+  DIAGRAM_EDIT_TRANSACTION_V12_SCHEMA,
+  DIAGRAM_REVIEW_BUNDLE_V12_SCHEMA,
+} from '../src/studio-presentation-contracts.mjs';
 import { DESIGN_WORKSPACE_SCHEMAS } from '../src/workspace-contracts.mjs';
 import {
   buildArtifactEnvelopeMetadataSchemas,
@@ -53,6 +59,13 @@ const check = process.argv.includes('--check');
 const refreshPreservation = process.argv.includes('--refresh-preservation-baseline');
 const json = (value) => `${JSON.stringify(value, null, 2)}\n`;
 const expected = new Map();
+for (const [name, value] of Object.entries({
+  'diagram-authoring-bundle': DIAGRAM_AUTHORING_BUNDLE_V12_SCHEMA,
+  'diagram-edit-transaction': DIAGRAM_EDIT_TRANSACTION_V12_SCHEMA,
+  'diagram-review-bundle': DIAGRAM_REVIEW_BUNDLE_V12_SCHEMA,
+  'diagram-shape-definition': SHAPE_DEFINITION_SCHEMA,
+}))
+  expected.set(`schemas/v1.21.0/${name}.schema.json`, json(value));
 expected.set('registry/v1.17.0/commands.json', json(buildStudioCommandRegistry()));
 
 for (const [name, value] of buildSchemas()) expected.set(`schemas/v1.5.0/${name}`, json(value));
@@ -219,6 +232,7 @@ const projectionFiles = new Map([
     'large-object-contracts',
     'large-object-limits',
     'studio-presentation-contracts',
+    'shape-library-contracts',
     'sharing-security-contracts',
   ].flatMap((name) => [
     [
@@ -326,7 +340,7 @@ function walk(root, prefix = '') {
 
 const originalSchemaFiles = walk(join(packageRoot, 'schemas')).filter(
   ({ key }) =>
-    !/^v1\.(?:[5-9]|10|11|12|13|14|15|16|17|18|19|20)\.0\//u.test(key) && key.endsWith('.json'),
+    !/^v1\.(?:[5-9]|10|11|12|13|14|15|16|17|18|19|20|21)\.0\//u.test(key) && key.endsWith('.json'),
 );
 const originalRegistryFiles = walk(join(packageRoot, 'registry')).filter(
   ({ key }) => !key.startsWith('v1.17.0/') && key.endsWith('.json'),

@@ -945,6 +945,26 @@ body.planr-diagram-owner-page #diagram-owner-editor {
   margin-top: var(--de-space-2);
 }
 
+.planr-diagram-editor .de-library-preview {
+  width: 100%;
+  height: 36px;
+  color: var(--de-primary);
+}
+
+.planr-diagram-editor .de-pattern-button {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--de-space-1);
+  width: 100%;
+  min-width: 0;
+  height: auto;
+  padding: var(--de-space-2);
+  white-space: normal;
+  text-align: left;
+  overflow-wrap: anywhere;
+}
+
 /* Canvas and viewport controls */
 .planr-diagram-editor .de-stage {
   position: relative;

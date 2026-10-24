@@ -122,6 +122,8 @@ CLAUDE.md
 /packages/design/templates/studio/studio.js
 
 # Typed authoring stays visible; only compiler-emitted .mjs/.d.mts siblings are ignored.
+/packages/artifact/lib/artifact/diagram/authoring/shape-geometry.mjs
+/packages/artifact/lib/artifact/diagram/authoring/shape-geometry.d.mts
 /packages/artifact/lib/artifact/diagram/editor/*.mjs
 /packages/artifact/lib/artifact/diagram/editor/*.d.mts
 /packages/artifact/lib/artifact/ui/*.mjs

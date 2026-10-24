@@ -350,6 +350,15 @@ export function renderDiagramProperties({
       choices: Object.entries(NODE_NAMES),
     });
   }
+  if ('shapeRef' in place.appearance && place.appearance.shapeRef) {
+    const ref = place.appearance.shapeRef;
+    const library = inspectorSection(document, 'Library', { open: true });
+    library.body.append(
+      element(document, 'p', {}, ref.shapeId),
+      element(document, 'p', { className: 'de-muted' }, `${ref.packId} · ${ref.packVersion}`),
+    );
+    form.append(library.details);
+  }
   form.append(content.details);
 
   const geometry = inspectorSection(document, 'Geometry', {

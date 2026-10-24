@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { mkdir, mkdtemp, realpath, rm, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, realpath, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
@@ -22,6 +22,7 @@ async function fixture(
     viewport = { width: 1440, height: 900 },
     storageBlocked = false,
     hasTouch = false,
+    shapeLibrary = false,
   } = {},
 ) {
   const root = await realpath(await mkdtemp(join(tmpdir(), 'planr-editor-ui-')));
@@ -31,7 +32,11 @@ async function fixture(
     root,
     slug: 'checkout',
     noOpen: true,
-    env: { ...process.env, PLANR_HOME: join(root, 'home') },
+    env: {
+      ...process.env,
+      PLANR_HOME: join(root, 'home'),
+      PLANR_SHAPE_LIBRARY: shapeLibrary ? '1' : '0',
+    },
   });
   let browser;
   const errors = [],
@@ -2730,3 +2735,112 @@ test('touch drag commits one edit and touch cancellation retains the original gr
   );
   await page.keyboard.press('Escape');
 });
+
+for (const pattern of [
+  { name: 'service architecture', nodes: 3, annotations: 0, edges: 2 },
+  { name: 'approval process', nodes: 4, annotations: 0, edges: 3 },
+  { name: 'product journey', nodes: 3, annotations: 1, edges: 2 },
+]) {
+  test(
+    `shape foundation ${pattern.name} supports keyboard insert, undo, theme, export and reload`,
+    options,
+    async (t) => {
+      const { page, read } = await fixture(t, { shapeLibrary: true });
+      await page.getByRole('tab', { name: 'Shapes', exact: true }).click();
+      if (pattern.name === 'service architecture') {
+        await page.getByLabel('Shape library', { exact: true }).selectOption('engineering');
+        await page.screenshot({
+          path: join(tmpdir(), `openplanr-foundation-${browserEngine()}-library.png`),
+          fullPage: true,
+        });
+      }
+      const insert = page.getByRole('button', { name: `Insert ${pattern.name}`, exact: true });
+      assert.equal(
+        await insert.evaluate((node) => node.scrollWidth <= node.clientWidth),
+        true,
+        'Pattern description stays inside the library rail',
+      );
+      await insert.focus();
+      await page.keyboard.press('Enter');
+      await settle(page);
+      assert.equal(
+        await page.locator('[data-editor-svg] [data-element-id]').count(),
+        pattern.nodes + pattern.annotations + pattern.edges,
+      );
+      await page.getByRole('button', { name: 'Undo', exact: true }).click();
+      await settle(page);
+      assert.equal(await page.locator('[data-editor-svg] [data-element-id]').count(), 0);
+      await page.getByRole('button', { name: 'Redo', exact: true }).click();
+      await page.locator('[data-studio-palette-menu]').click();
+      await page.getByRole('menuitem', { name: 'Dark', exact: true }).click();
+      await save(page);
+      const saved = await read();
+      assert.equal(saved.schemaVersion, '1.2.0');
+      assert.equal(saved.studioPresentation.theme, 'dark');
+      assert.equal(saved.document.nodes.length, pattern.nodes);
+      assert.equal(saved.document.annotations.length, pattern.annotations);
+      assert.equal(saved.document.relations.length, pattern.edges);
+      assert.ok(saved.shapeLibrary.length > 0);
+      await page.getByRole('button', { name: 'More', exact: true }).click();
+      const downloading = page.waitForEvent('download');
+      await page.getByRole('menuitem', { name: 'Export JSON', exact: true }).click();
+      const exported = await downloading;
+      assert.deepEqual(JSON.parse(await readFile(await exported.path(), 'utf8')), saved);
+      await page.reload();
+      await page.locator('[data-editor-svg]').waitFor();
+      assert.deepEqual(await read(), saved);
+      for (const node of saved.document.nodes)
+        assert.equal(await drawing(page, node.id).getAttribute('aria-label'), node.label);
+      await page.screenshot({
+        path: join(
+          tmpdir(),
+          `openplanr-foundation-${browserEngine()}-${pattern.name.replaceAll(' ', '-')}.png`,
+        ),
+        fullPage: true,
+      });
+    },
+  );
+}
+
+test(
+  'shape foundation search retains its query after insertion and mobile insertion closes the drawer',
+  options,
+  async (t) => {
+    const { page, read } = await fixture(t, {
+      shapeLibrary: true,
+      viewport: { width: 390, height: 844 },
+    });
+    await page.getByRole('button', { name: 'Outline', exact: true }).click();
+    await page.getByRole('tab', { name: 'Shapes', exact: true }).click();
+    await page.getByLabel('Shape library', { exact: true }).selectOption('engineering');
+    await page.getByLabel('Search shapes', { exact: true }).fill('gateway');
+    assert.equal(await page.locator('[data-action="create-catalog"]').count(), 1);
+    await page.getByRole('button', { name: 'Create api gateway', exact: true }).click();
+    await settle(page);
+    assert.equal(await page.locator('.de-left').getAttribute('aria-hidden'), 'true');
+    assert.equal(
+      await page.locator('.de-canvas').evaluate((node) => node === document.activeElement),
+      true,
+    );
+    await page.getByRole('button', { name: 'Outline', exact: true }).click();
+    assert.equal(await page.getByLabel('Search shapes', { exact: true }).inputValue(), 'gateway');
+    assert.equal(
+      await page.getByLabel('Shape library', { exact: true }).inputValue(),
+      'engineering',
+    );
+    await page.getByRole('button', { name: 'Close outline', exact: true }).click();
+    await page.getByRole('button', { name: 'More', exact: true }).click();
+    await page.getByRole('menuitem', { name: 'Save diagram', exact: true }).click();
+    await page.locator('.de-save-state[data-state="saved"]').waitFor();
+    const saved = await read();
+    assert.equal(saved.presentation.elements[0].appearance.shapeRef.shapeId, 'api-gateway');
+    assert.equal(
+      await page.evaluate(() => document.documentElement.scrollWidth > innerWidth),
+      false,
+    );
+    await page.screenshot({
+      path: join(tmpdir(), `openplanr-foundation-${browserEngine()}-mobile.png`),
+      fullPage: true,
+    });
+  },
+);

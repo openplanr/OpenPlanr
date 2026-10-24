@@ -13,6 +13,7 @@ export * from './json-schema.mjs';
 export * from './large-object-contracts.mjs';
 export * from './planning-contracts.mjs';
 export * from './registries.mjs';
+export * from './shape-library-contracts.mjs';
 export * from './sharing-security-contracts.mjs';
 export {
   assertDiagramPresentation as assertDiagramReviewPresentation,
@@ -21,11 +22,17 @@ export {
   assertVersionedDiagramEditTransaction,
   assertVersionedDiagramReviewBundle,
   DIAGRAM_AUTHORING_BUNDLE_V11_SCHEMA,
+  DIAGRAM_AUTHORING_BUNDLE_V12_SCHEMA,
   DIAGRAM_EDIT_TRANSACTION_V11_SCHEMA,
+  DIAGRAM_EDIT_TRANSACTION_V12_SCHEMA,
   DIAGRAM_PRESENTATION_SCHEMA,
   DIAGRAM_REVIEW_BUNDLE_V11_SCHEMA,
+  DIAGRAM_REVIEW_BUNDLE_V12_SCHEMA,
+  diagramAuthoringVersionFields,
   legacyDiagramAuthoringProjection,
   normalizeDiagramPresentation,
+  supportsDiagramShapeLibrary,
+  supportsDiagramStudioPresentation,
   validateVersionedDiagramAuthoringBundle,
   validateVersionedDiagramEditTransaction,
   versionedDiagramAuthoringBundleDigest,

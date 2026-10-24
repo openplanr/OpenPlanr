@@ -15,7 +15,9 @@ export declare function protocolAssetUrl(
       | '1.13.0'
       | '1.15.0'
       | '1.16.0'
-      | '1.17.0';
+      | '1.17.0'
+      | '1.19.0'
+      | '1.21.0';
   },
 ): URL;
 export declare const PROTOCOL_V113_CONTRACTS: Readonly<Record<string, string>>;
@@ -36,3 +38,5 @@ export declare function validateEnterpriseJourneyArtifact(
   kind: string,
   value: unknown,
 ): { path: string; rule: string; detail: string }[];
+
+export declare const PROTOCOL_V121_CONTRACTS: Readonly<Record<string, string>>;

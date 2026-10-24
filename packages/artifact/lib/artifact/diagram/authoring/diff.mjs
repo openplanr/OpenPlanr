@@ -127,23 +127,23 @@ export function diffDiagramBundles(before, after) {
       presentation,
       [field],
     );
-  if (
-    !same(
-      (before.schemaVersion === '1.1.0' ? before.studioPresentation : null) ?? null,
-      (after.schemaVersion === '1.1.0' ? after.studioPresentation : null) ?? null,
-    )
-  )
-    presentation.push({
-      collection: 'studio-presentation',
-      elementId: null,
-      path: [],
-      before: /** @type {import('./index.d.mts').DiagramJsonValue} */ (
-        clone((before.schemaVersion === '1.1.0' ? before.studioPresentation : null) ?? null)
-      ),
-      after: /** @type {import('./index.d.mts').DiagramJsonValue} */ (
-        clone((after.schemaVersion === '1.1.0' ? after.studioPresentation : null) ?? null)
-      ),
-    });
+  const metadata = /** @type {const} */ ([
+    ['studioPresentation', 'studio-presentation'],
+    ['shapeLibrary', 'shape-library'],
+  ]);
+  for (const [property, collection] of metadata)
+    if (!same(before[property] ?? null, after[property] ?? null))
+      presentation.push({
+        collection,
+        elementId: null,
+        path: [],
+        before: /** @type {import('./index.d.mts').DiagramJsonValue} */ (
+          clone(before[property] ?? null)
+        ),
+        after: /** @type {import('./index.d.mts').DiagramJsonValue} */ (
+          clone(after[property] ?? null)
+        ),
+      });
   return {
     ok: true,
     semantic,

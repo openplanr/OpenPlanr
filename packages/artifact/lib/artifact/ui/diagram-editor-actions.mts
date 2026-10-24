@@ -10,6 +10,7 @@ import type {
   DiagramSemanticEntry,
   DiagramSemanticUpdate,
 } from '@openplanr/protocol/diagram-authoring-contracts';
+import { getDiagramAuthoringCapability } from '@openplanr/protocol/diagram-authoring-contracts';
 import type {
   VersionedDiagramAuthoringBundle as DiagramAuthoringBundle,
   VersionedDiagramEditTransaction as DiagramEditTransaction,
@@ -29,7 +30,13 @@ import {
   same,
   semanticFields,
   snapshot,
+  transactionVersionFields,
 } from '../diagram/authoring/model.mjs';
+import {
+  diagramPattern,
+  diagramShapeAllowed,
+  diagramShapeEntry,
+} from '../diagram/authoring/shape-catalog.mjs';
 import {
   copyDiagramSelection,
   type DiagramSelectionClipboard,
@@ -113,8 +120,7 @@ export const transaction = (
   operations: DiagramEditOperation[],
 ): DiagramEditTransaction => ({
   kind: 'diagram-edit-transaction',
-  schemaVersion: '1.0.0',
-  protocolVersion: '1.13.0',
+  ...transactionVersionFields(bundle, operations),
   transactionId: freshId(),
   diagramId: bundle.diagramId,
   base: snapshot(bundle),
@@ -185,6 +191,114 @@ export function createObject(kind: DiagramObjectKind, position: Point): CreateCo
     presentation: [placement(id, shape, bounds)],
   };
 }
+export function createCatalogShape(
+  catalogId: string,
+  position: Point,
+  label?: string,
+): CreateCommand {
+  const { definition, kind } = diagramShapeEntry(catalogId);
+  const command = createObject(kind, position);
+  const item = command.presentation[0];
+  const semantic = command.elements[0];
+  if (semantic.collection === 'annotations') semantic.value.text = label ?? definition.name;
+  else if (semantic.collection !== 'relations') semantic.value.label = label ?? definition.name;
+  item.bounds = { ...position, width: definition.sizing.width, height: definition.sizing.height };
+  item.appearance = {
+    ...item.appearance,
+    fill: kind === 'container' ? 'transparent' : 'surface',
+    stroke: 'default',
+    shapeRef: {
+      packId: definition.packId,
+      packVersion: definition.packVersion,
+      shapeId: definition.shapeId,
+      definitionDigest: definition.definitionDigest,
+    },
+  };
+  return { ...command, shapeDefinitions: [definition] };
+}
+
+export function createCatalogPattern(
+  patternId: string,
+  position: Point,
+  grammar: string,
+): CreateCommand {
+  const pattern = diagramPattern(patternId);
+  const capability = getDiagramAuthoringCapability(grammar);
+  if (pattern.nodes.some((node) => !diagramShapeAllowed(diagramShapeEntry(node.shape), capability)))
+    throw new TypeError(`Pattern ${pattern.name} is not supported by grammar ${grammar}.`);
+  const shapes = pattern.nodes.map((node) =>
+    createCatalogShape(node.shape, { x: position.x + node.x, y: position.y + node.y }, node.label),
+  );
+  const edges = pattern.edges.map((edge) =>
+    connector(
+      shapes[edge.from].elements[0].value.id,
+      shapes[edge.to].elements[0].value.id,
+      edge.label,
+    ),
+  );
+  const parts = [...shapes, ...edges];
+  return {
+    type: 'create',
+    elements: parts.flatMap((part) => part.elements),
+    presentation: parts.flatMap((part) => part.presentation),
+    shapeDefinitions: [
+      ...new Map(
+        shapes
+          .flatMap((part) => part.shapeDefinitions ?? [])
+          .map((definition) => [definition.definitionDigest, definition]),
+      ).values(),
+    ],
+  };
+}
+
+/** Keep insertion near the visible center even when distant objects exist. */
+export function visibleInsertionPoint(
+  center: Point,
+  size: { width: number; height: number },
+  existing: DiagramBounds[],
+  viewport?: DiagramBounds,
+): Point {
+  const origin = {
+    x: Math.round(center.x - size.width / 2),
+    y: Math.round(center.y - size.height / 2),
+  };
+  const offsets = [[0, 0]];
+  for (let ring = 1; ring <= 2; ring++) {
+    offsets.push(
+      [0, ring],
+      [0, -ring],
+      [ring, 0],
+      [-ring, 0],
+      [ring, ring],
+      [-ring, ring],
+      [ring, -ring],
+      [-ring, -ring],
+    );
+  }
+  for (const [dx, dy] of offsets) {
+    const point = { x: origin.x + dx * (size.width + 24), y: origin.y + dy * (size.height + 24) };
+    if (
+      viewport &&
+      (point.x < viewport.x ||
+        point.y < viewport.y ||
+        point.x + size.width > viewport.x + viewport.width ||
+        point.y + size.height > viewport.y + viewport.height)
+    )
+      continue;
+    if (
+      !existing.some(
+        (rect) =>
+          point.x < rect.x + rect.width &&
+          point.x + size.width > rect.x &&
+          point.y < rect.y + rect.height &&
+          point.y + size.height > rect.y,
+      )
+    )
+      return point;
+  }
+  return origin;
+}
+
 export function connector(from: string, to: string, label = ''): CreateCommand {
   const id = freshId('connector');
   const entry = placement(id, 'connector', null);

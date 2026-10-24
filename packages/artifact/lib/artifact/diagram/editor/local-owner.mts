@@ -173,6 +173,7 @@ function storeFailure(error: OwnerFailure) {
 
 /** The owner shell carries preferences, never document content or source paths. */
 function ownerPage({
+  shapeLibrary,
   slug,
   title,
   grammar,
@@ -180,8 +181,9 @@ function ownerPage({
   slug: string;
   title: string;
   grammar: DiagramAuthoringProfile;
+  shapeLibrary: boolean;
 }) {
-  const config = embedJson({ diagramId: slug, title, grammar });
+  const config = embedJson({ diagramId: slug, title, grammar, shapeLibrary });
   return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="referrer" content="no-referrer"><meta name="color-scheme" content="light dark"><title>${escapeHtml(title)} · OpenPlanr Diagram Editor</title><link rel="stylesheet" href="artifact-theme.css"><link rel="stylesheet" href="editor.css"></head><body class="planr-diagram-owner-page"><main id="diagram-owner-editor" aria-label="Diagram editor"><p role="status">Opening local diagram…</p></main><script type="application/json" id="diagram-owner-data">${config}</script><script src="runtime.js" defer></script></body></html>`;
 }
 
@@ -247,7 +249,12 @@ export function createDiagramLocalOwnerAdapter({
             status: 200,
             kind: 'asset',
             asset: 'document',
-            body: ownerPage({ slug, title, grammar }),
+            body: ownerPage({
+              slug,
+              title,
+              grammar,
+              shapeLibrary: env.PLANR_SHAPE_LIBRARY === '1',
+            }),
           };
         if (segments[0] === 'diagram-font.ttf')
           return {
