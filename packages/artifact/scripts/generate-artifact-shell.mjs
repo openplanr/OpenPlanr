@@ -233,6 +233,8 @@ export function renderDiagramStudioRuntimeAsset({ projectRoot = root } = {}) {
 export function renderDiagramOwnerRuntimeAsset({ projectRoot = root } = {}) {
   return bundleBrowserEntry('lib/artifact/ui/diagram-owner-studio.mjs', {
     projectRoot,
+    compact: true,
+    minifySyntax: false,
     define: { 'import.meta.url': 'document.baseURI' },
   });
 }
