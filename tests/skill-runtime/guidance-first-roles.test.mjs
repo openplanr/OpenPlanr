@@ -59,6 +59,8 @@ test('ordinary QA is direct, read-only, and free of release bookkeeping', () => 
     assert.ok(denied.includes(tool), `qa denies ${tool}`);
   assert.doesNotMatch(frontmatter, /^tools:/mu, 'qa inherits the remaining tools');
   assert.match(ordinary, /read-only checks/iu);
+  assert.match(ordinary, /inherited\s+shell and connector tools can still write/iu);
+  assert.match(ordinary, /not complete technical write\s+isolation/iu);
   assert.match(ordinary, /human-readable review/iu);
   assert.match(ordinary, /acceptance criteria/iu);
   assert.match(ordinary, /security/iu);
@@ -83,6 +85,35 @@ test('ordinary QA is direct, read-only, and free of release bookkeeping', () => 
       path,
     );
   }
+});
+
+test('Plan and Ship delegate bounded work conditionally and preserve host limitations', () => {
+  for (const name of ['plan', 'ship']) {
+    const skill = read(`skills/planr-${name}/SKILL.md`);
+    assert.match(skill, /The main session owns/iu);
+    assert.match(skill, /Keep small coherent/iu);
+    assert.match(skill, /Delegate only a self-contained/iu);
+    assert.match(skill, /agent availability alone is not a reason to dispatch/iu);
+    assert.match(skill, /disjoint\s+writes or an\s+agreed interface/iu);
+    assert.match(skill, /exact registered identity/iu);
+    assert.match(skill, /never claim an unavailable specialist ran/iu);
+    assert.match(skill, /Entity\s+scaffolding remains\s+manual, on explicit request/iu);
+  }
+  const plan = read('skills/planr-plan/SKILL.md');
+  assert.match(plan, /Do not have two planners decompose the same request/iu);
+  assert.match(plan, /planr:planr-specification/u);
+  const ship = read('skills/planr-ship/SKILL.md');
+  assert.match(ship, /legacy `db-agent`[\s\S]*belongs to backend/iu);
+  assert.match(ship, /preserve the\s+task's recorded identity/iu);
+  assert.match(ship, /Database is optional read-only introspection/iu);
+  assert.match(ship, /never migration implementation/iu);
+  assert.match(
+    ship,
+    /Use a separate QA reviewer for authorization, credentials, data-loss risk,/iu,
+  );
+  assert.match(ship, /migrations, public contracts, release behavior, or substantial delegated/iu);
+  assert.match(ship, /planr:planr-backend/u);
+  assert.match(ship, /planr:planr-qa/u);
 });
 
 test('implementation roles recover from observed results without retry budgets or mandatory memory', () => {

@@ -64,7 +64,10 @@ import {
   type RuntimeId,
   readRegistry,
 } from './runtime-manager/inventory.js';
-import { planRetiredCursorProjectRules } from './runtime-manager/legacy-adapters.js';
+import {
+  planRetiredClaudeProjectAgents,
+  planRetiredCursorProjectRules,
+} from './runtime-manager/legacy-adapters.js';
 import {
   canonicalProjectPath,
   codexSkillsRoot,
@@ -483,11 +486,10 @@ export async function previewSetup(options: SetupOptions): Promise<SetupPreview>
     runtimes,
     actions,
   );
-  const retiredProjectRules = planRetiredCursorProjectRules(
-    options.projectDir,
-    runtimes,
-    runtimeScopes,
-  );
+  const retiredProjectRules = [
+    ...planRetiredCursorProjectRules(options.projectDir, runtimes, runtimeScopes),
+    ...planRetiredClaudeProjectAgents(options.projectDir, runtimes, runtimeScopes),
+  ];
   const needsTransitionState =
     runtimes.includes('codex') ||
     actions.some(
@@ -761,11 +763,14 @@ export async function applySetup(options: SetupOptions): Promise<
       preview.runtimes,
       actions,
     );
-    const retiredProjectRules = planRetiredCursorProjectRules(
-      options.projectDir,
-      preview.runtimes,
-      preview.runtimeScopes,
-    );
+    const retiredProjectRules = [
+      ...planRetiredCursorProjectRules(options.projectDir, preview.runtimes, preview.runtimeScopes),
+      ...planRetiredClaudeProjectAgents(
+        options.projectDir,
+        preview.runtimes,
+        preview.runtimeScopes,
+      ),
+    ];
     const previousCodexMode =
       state.userBundles?.codex?.installMode ??
       (state.userBundles?.codex ? 'direct' : undefined) ??
@@ -973,7 +978,7 @@ export async function applySetup(options: SetupOptions): Promise<
         ) {
           throw new RuntimeManagerError(
             'E_MIGRATION_CONFLICT',
-            `Retired Cursor workflow bytes changed during setup: ${retired.target}.`,
+            `Retired project adapter bytes changed during setup: ${retired.target}.`,
             'The setup transaction restored the pre-setup bytes; inspect the file and rerun.',
           );
         }

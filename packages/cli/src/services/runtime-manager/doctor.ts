@@ -37,6 +37,11 @@ import {
   type RuntimeId,
   readRegistry,
 } from './inventory.js';
+import {
+  RETIRED_CLAUDE_AGENT_HASHES,
+  RETIRED_CURSOR_AGENT_RULES,
+  RETIRED_CURSOR_WORKFLOW_RULES,
+} from './legacy-adapters.js';
 import { codexSkillsRoot, pathIsWithin, planrHome, projectKey, statePath } from './paths.js';
 import {
   bundledHostRoot,
@@ -256,6 +261,34 @@ export async function runtimeDoctor(
       ...(!result.installed && configured
         ? { fix: `Install ${result.command} only if you intend to use this adapter.` }
         : {}),
+    });
+  }
+  for (const [runtime, candidates] of [
+    [
+      'claude',
+      Object.keys(RETIRED_CLAUDE_AGENT_HASHES).map((name) =>
+        path.join(projectDir, '.claude', 'agents', name),
+      ),
+    ],
+    [
+      'cursor',
+      [
+        ...RETIRED_CURSOR_WORKFLOW_RULES.map((name) =>
+          path.join(projectDir, '.cursor', 'rules', name),
+        ),
+        ...RETIRED_CURSOR_AGENT_RULES.map((name) =>
+          path.join(projectDir, '.cursor', 'rules', 'agents', name),
+        ),
+      ],
+    ],
+  ] as const) {
+    const leftovers = candidates.filter((target) => existsSync(target));
+    if (leftovers.length === 0) continue;
+    diagnostics.push({
+      code: `runtime-${runtime}-legacy-agents`,
+      status: 'warn',
+      message: `Potential legacy ${runtime} adapter paths remain: ${leftovers.join(', ')}`,
+      fix: `Run \`${CLI_COMMAND} setup --runtime ${runtime} --scope project --dry-run\`, then rerun without --dry-run to back up and retire recognized generated files. Modified or unknown files are preserved; review those manually.`,
     });
   }
   const pipeline = resolvePipelinePackage(false);
