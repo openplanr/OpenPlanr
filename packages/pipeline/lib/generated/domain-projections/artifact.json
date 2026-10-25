@@ -1081,7 +1081,7 @@
     {
       "source": "packages/artifact/lib/artifact/local-document.mjs",
       "target": "lib/artifact/local-document.mjs",
-      "sha256": "ac1addf34cb90ac0a28790812138aed7fd37e48ca0b652cf8359c83f1b561025",
+      "sha256": "3888be62a4fc0981ea05ce81c0e0358a2bb7541e13db0d55bc0727d7924bea45",
       "mode": "644"
     },
     {
@@ -1519,7 +1519,7 @@
     {
       "source": "packages/artifact/lib/artifact/ui/generated/artifact-shell-assets.json",
       "target": "lib/artifact/ui/generated/artifact-shell-assets.json",
-      "sha256": "5420d985a7580cc6d837aac95c2f82947c36575e8a1323184531cc2e7111074e",
+      "sha256": "b596188ce47a58f74991ed2c60714392f7a3f09a549d8dec912d1c6770a6ce6c",
       "mode": "644"
     },
     {
@@ -2059,19 +2059,19 @@
     {
       "source": "packages/artifact/templates/artifact-review-stage.js",
       "target": "templates/artifact-review-stage.js",
-      "sha256": "ff2d2d2b31944b8f8131a5c39400db9810f046f26c19f62404e458ff76023011",
+      "sha256": "75f55d447333a76b38d68f6e341d4d5c118b0d20f0496a115d7482e8bf2ed121",
       "mode": "644"
     },
     {
       "source": "packages/artifact/templates/design/design-board-adapter.js",
       "target": "templates/design/design-board-adapter.js",
-      "sha256": "8f3a3d1fece1fdb78a263e400ea0d9e015d74643bc05fd2908579bbf11e51d4f",
+      "sha256": "1376d8a06091406abe6ea5f5e24590b729b449329a021fd46d023692d44eec67",
       "mode": "644"
     },
     {
       "source": "packages/artifact/templates/diagram-owner.js",
       "target": "templates/diagram-owner.js",
-      "sha256": "6f867f715dab2d063247a70c8211599949ff516ac8c36f5e54ac3741fc2e7aaa",
+      "sha256": "b1836a13fead94894d59164570fe1e5fb7c68c9787153b3a83f72931be992ab8",
       "mode": "644"
     },
     {

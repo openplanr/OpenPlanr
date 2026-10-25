@@ -59,8 +59,8 @@
     },
     {
       "path": "templates/artifact-review-stage.js",
-      "bytes": 363431,
-      "sha256": "ff2d2d2b31944b8f8131a5c39400db9810f046f26c19f62404e458ff76023011",
+      "bytes": 365084,
+      "sha256": "75f55d447333a76b38d68f6e341d4d5c118b0d20f0496a115d7482e8bf2ed121",
       "budget": {
         "bytes": 450560,
         "gzipBytes": 96256
@@ -68,8 +68,8 @@
     },
     {
       "path": "templates/design/design-board-adapter.js",
-      "bytes": 257378,
-      "sha256": "8f3a3d1fece1fdb78a263e400ea0d9e015d74643bc05fd2908579bbf11e51d4f",
+      "bytes": 259031,
+      "sha256": "1376d8a06091406abe6ea5f5e24590b729b449329a021fd46d023692d44eec67",
       "budget": {
         "bytes": 286720,
         "gzipBytes": 58368
@@ -77,8 +77,8 @@
     },
     {
       "path": "templates/diagram-owner.js",
-      "bytes": 1302418,
-      "sha256": "6f867f715dab2d063247a70c8211599949ff516ac8c36f5e54ac3741fc2e7aaa",
+      "bytes": 1304089,
+      "sha256": "b1836a13fead94894d59164570fe1e5fb7c68c9787153b3a83f72931be992ab8",
       "budget": {
         "bytes": 1800000,
         "gzipBytes": 340000

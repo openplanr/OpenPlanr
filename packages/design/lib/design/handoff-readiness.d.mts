@@ -7,7 +7,7 @@ import type {
 export interface DesignHandoffReadinessInput {
   document: {
     kind: 'openplanr-design-document';
-    schemaVersion: '1.0.0';
+    schemaVersion: '1.0.0' | '1.1.0';
     id: string;
     selectedVariant?: string;
     variants?: Array<{ id: string; status: string }>;

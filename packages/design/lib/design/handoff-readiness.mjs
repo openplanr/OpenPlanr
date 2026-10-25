@@ -217,7 +217,7 @@ export function compileDesignHandoffReadiness(input) {
   if (
     !document ||
     document.kind !== 'openplanr-design-document' ||
-    document.schemaVersion !== '1.0.0' ||
+    !['1.0.0', '1.1.0'].includes(document.schemaVersion) ||
     typeof document.id !== 'string' ||
     !document.id
   )

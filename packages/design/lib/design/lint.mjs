@@ -26,6 +26,8 @@
 
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
+import { inspectLocalDocumentBody } from '@openplanr/artifact/local-document.mjs';
+import { validateDesignProps } from '@openplanr/protocol/design-contracts';
 import { AA_NORMAL, contrastRatio } from './contrast.mjs';
 import { FRAMES, isCanonicalFrame, isOnSpacingScale, nearestSpacing } from './tokens.mjs';
 
@@ -205,6 +207,17 @@ export function lintDesign(html, opts = {}) {
   const { designSystem = null } = opts;
   const errors = [];
   const warnings = [];
+  if (opts.screen) {
+    const values = Object.hasOwn(opts.variant?.props ?? {}, opts.screen.id)
+      ? opts.variant.props[opts.screen.id]
+      : {};
+    errors.push(
+      ...validateDesignProps({
+        screens: [opts.screen],
+        variants: [{ props: { [opts.screen.id]: values } }],
+      }).map((message) => ({ rule: 'invalid-instance-prop', level: 'error', message })),
+    );
+  }
 
   const decls = [...styleBlockDecls(html), ...inlineStyleDecls(html)];
   for (const d of decls) {
@@ -285,6 +298,65 @@ export function lintDesign(html, opts = {}) {
     declarations: decls.length,
     summary: `${errors.length} error(s), ${warnings.length} warning(s)`,
   };
+}
+
+function withoutRootTheme(html) {
+  if (!/theme-(?:light|dark)|data-theme/iu.test(html)) return null;
+  const body = inspectLocalDocumentBody(html);
+  if (!body) return null;
+  const edits = [];
+  for (const { name, value } of body.attrs) {
+    const location = body.location.attrs?.[name];
+    if (!location) continue;
+    let replacement;
+    if (name === 'data-theme' && ['light', 'dark'].includes(value)) replacement = '';
+    if (name === 'class') {
+      const raw = html.slice(location.startOffset, location.endOffset);
+      const quoted = /^(class\s*=\s*)(["'])([\s\S]*)\2$/iu.exec(raw);
+      if (quoted) {
+        const kept = quoted[3].replace(/(^|\s)theme-(?:light|dark)(?=\s|$)/gu, '$1');
+        if (kept !== quoted[3]) replacement = `${quoted[1]}${quoted[2]}${kept}${quoted[2]}`;
+      } else if (/^class\s*=\s*theme-(?:light|dark)$/iu.test(raw)) replacement = '';
+    }
+    if (replacement !== undefined) edits.push({ ...location, replacement });
+  }
+  if (!edits.length) return null;
+  let normalized = html;
+  for (const { startOffset, endOffset, replacement } of edits.sort(
+    (a, b) => b.startOffset - a.startOffset,
+  ))
+    normalized = normalized.slice(0, startOffset) + replacement + normalized.slice(endOffset);
+  return normalized;
+}
+
+/** Warns about separate screens differing only in explicit light/dark body markers. */
+export function lintThemeOnlySources(sources) {
+  const warnings = [];
+  const seen = new Map();
+  for (const { screenId, source, html } of sources) {
+    const normalized = withoutRootTheme(html);
+    if (normalized === null) continue;
+    const key = JSON.stringify({
+      html: normalized,
+      styles: source.styles ?? [],
+      scripts: source.scripts ?? [],
+    });
+    const previous = seen.get(key);
+    if (
+      previous &&
+      previous.screenId !== screenId &&
+      previous.source !== source.html &&
+      previous.html !== html
+    )
+      warnings.push({
+        rule: 'theme-only-source',
+        level: 'warn',
+        screenId,
+        message: `Screens ${previous.screenId} (${previous.source}) and ${screenId} (${source.html}) differ only by a root theme marker; declare a theme prop and share one source.`,
+      });
+    else seen.set(key, { screenId, source: source.html, html });
+  }
+  return warnings;
 }
 
 /**

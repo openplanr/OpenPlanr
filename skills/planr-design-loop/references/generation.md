@@ -10,7 +10,8 @@ Use a versioned `design-document.json` and the bundled schema exposed by the
 local HTML/CSS/JavaScript, assets, screen order, responsive frames, interaction
 flows, selected direction, brief provenance and design-system references. Inspect
 the schema before creating the document; validate it before rendering. Use
-`schemaVersion: "1.0.0"` when authoring, revising, migrating or arranging documents.
+`schemaVersion: "1.1.0"` for documents with screen or variant props. Documents without
+props may keep `schemaVersion: "1.0.0"`.
 
 Read [team-review.md](team-review.md) and author a sibling `review-context.json`
 for every new design. Its welcome purpose and review questions belong to this
@@ -19,7 +20,9 @@ design, updating only what changed. Render it with the same revision as the
 screens so the shared welcome and implementation guidance describe that revision.
 
 Place source in a sibling `source/` directory. Shared CSS and components belong in
-shared source; variants write disjoint directories. Preserve IDs during evolution.
+shared source. Distinct design directions may use disjoint directories; theme,
+partial and state instances share a screen source through typed props. Preserve
+IDs during evolution.
 All document source paths are local and relative to its directory; import the
 required asset snapshots rather than referring outside it or to remote resources.
 Fonts are asset snapshots too; follow [design-system.md](design-system.md).
@@ -56,6 +59,61 @@ states needed for implementation, and make responsive and keyboard behavior
 observable. If the requested deliverable is an architecture or decision diagram
 rather than a product interface, route that content to the diagram workflow instead
 of styling documentation as a product screen.
+
+## Typed screen props
+
+Declare reusable screen state in `screens[].props`. An enum declaration requires
+`type: "enum"`, nonempty unique string `options`, and a `default` from those options.
+A boolean declaration requires `type: "boolean"` and a boolean `default`. Prop names,
+enum options and enum defaults must be lowercase tokens matching
+`^[a-z][a-z0-9-]*$`, with at most 128 characters. Use `is-dark` and `dark-mode`,
+for example; uppercase letters, spaces and underscores are invalid. Use props for
+theme, partial content and state variants instead of copying HTML sources.
+
+Set instance values in `variants[].props`, keyed first by screen ID and then prop
+name. Omitted values use the screen defaults. For example:
+
+```json
+{
+  "schemaVersion": "1.1.0",
+  "screens": [
+    {
+      "id": "overview",
+      "title": "Overview",
+      "source": { "html": "source/overview.html" },
+      "props": {
+        "theme": { "type": "enum", "options": ["light", "dark"], "default": "light" },
+        "partial": { "type": "boolean", "default": false }
+      }
+    }
+  ],
+  "variants": [
+    { "id": "light", "label": "Light", "status": "ready" },
+    {
+      "id": "dark",
+      "label": "Dark",
+      "status": "ready",
+      "props": { "overview": { "theme": "dark", "partial": true } }
+    }
+  ]
+}
+```
+
+Each source with props needs exactly one explicit `<body>` screen root. The
+renderer writes effective values onto that body as `data-prop-theme="dark"`,
+`data-prop-partial="true"`, `prop-theme-dark` and `prop-partial-true`; false booleans
+also receive an attribute and class. Names and values are written unchanged,
+without case conversion or encoding. A prop named `is-dark` becomes
+`data-prop-is-dark="true"` and `prop-is-dark-true`; scripts read it as
+`document.body.dataset.propIsDark`. Branch CSS and local scripts on these values.
+A `variants[].sources[screenId]` override still selects the source; props
+apply to that selected source, otherwise to `screens[].source`. Board keys,
+screen order, responsive frames and existing source overrides retain their roles.
+
+Lint warns about copied screens only when their source files are byte-identical
+after removing body `data-theme="light"` or `data-theme="dark"` attributes and
+`theme-light` or `theme-dark` body classes. Other markup, styles, scripts and assets
+must match. Use a shared source with a theme prop for those instances.
 
 ## Views
 

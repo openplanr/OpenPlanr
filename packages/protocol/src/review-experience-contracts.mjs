@@ -1,7 +1,11 @@
 // @ts-check
 
 import { canonicalizeJson, sha256Hex } from './canonical-json.mjs';
-import { DESIGN_DOCUMENT_SCHEMA } from './design-contracts.mjs';
+import {
+  DESIGN_DOCUMENT_SCHEMA,
+  DESIGN_DOCUMENT_V120_SCHEMA,
+  validateDesignProps,
+} from './design-contracts.mjs';
 import { validateJson } from './json-schema.mjs';
 import { DESIGN_REVIEW_BUNDLE_SCHEMA } from './workspace-contracts.mjs';
 
@@ -119,15 +123,36 @@ bundleCurrent.allOf = [
 const currentDesign = /** @type {MutableSchema} */ (bundleCurrent.properties.design);
 for (const key of ['frames', 'layout'])
   currentDesign.properties[key] = /** @type {Record<string, unknown>} */ (
-    DESIGN_DOCUMENT_SCHEMA.properties
+    DESIGN_DOCUMENT_V120_SCHEMA.properties
   )[key];
-bundleCurrent.$defs = structuredClone(DESIGN_DOCUMENT_SCHEMA.$defs);
+bundleCurrent.$defs = structuredClone(DESIGN_DOCUMENT_V120_SCHEMA.$defs);
 const currentEntries = /** @type {{ items: { properties: Record<string, unknown> } }} */ (
   bundleCurrent.properties.entries
 );
 currentEntries.items.properties.height = { const: 'auto' };
+/** @type {typeof import('./review-experience-contracts.d.mts').DESIGN_REVIEW_BUNDLE_V120_SCHEMA} */
+export const DESIGN_REVIEW_BUNDLE_V120_SCHEMA = bundleCurrent;
+
+const bundleProps = /** @type {MutableSchema} */ (structuredClone(bundleCurrent));
+bundleProps.$id = 'https://openplanr.dev/schemas/v1.22.0/design-review-bundle.schema.json';
+bundleProps['x-openplanr-contract'] = { id: 'design-review-bundle', version: '1.22.0' };
+const propsDesign = /** @type {MutableSchema} */ (bundleProps.properties.design);
+const authoredProperties = /** @type {Record<string, unknown>} */ (
+  DESIGN_DOCUMENT_SCHEMA.properties
+);
+propsDesign.properties.schemaVersion = authoredProperties.schemaVersion;
+for (const key of ['screens', 'variants']) {
+  const projected = /** @type {{ items: { properties: Record<string, unknown> } }} */ (
+    propsDesign.properties[key]
+  );
+  const authored = /** @type {{ items: { properties: Record<string, unknown> } }} */ (
+    authoredProperties[key]
+  );
+  projected.items.properties.props = authored.items.properties.props;
+}
+propsDesign.allOf = structuredClone(DESIGN_DOCUMENT_SCHEMA.allOf);
 /** @type {typeof import('./review-experience-contracts.d.mts').DESIGN_REVIEW_BUNDLE_CURRENT_SCHEMA} */
-export const DESIGN_REVIEW_BUNDLE_CURRENT_SCHEMA = bundleCurrent;
+export const DESIGN_REVIEW_BUNDLE_CURRENT_SCHEMA = bundleProps;
 
 const item = closed(
   {
@@ -261,9 +286,24 @@ export function assertDesignReviewMetadata(value) {
 }
 /** @returns {ReturnType<typeof import('./review-experience-contracts.d.mts').assertDesignReviewBundle>} */
 export function assertDesignReviewBundle(value) {
+  if (
+    value?.design?.schemaVersion !== '1.1.0' &&
+    ['screens', 'variants'].some(
+      (field) =>
+        Array.isArray(value?.design?.[field]) &&
+        value.design[field].some((item) => item && Object.hasOwn(item, 'props')),
+    )
+  )
+    throw new TypeError('Invalid design props: props require design.schemaVersion "1.1.0"');
   assertReviewExperience(
     value,
-    value?.design?.layout !== undefined ||
+    value?.design?.schemaVersion !== undefined ||
+      ['screens', 'variants'].some(
+        (field) =>
+          Array.isArray(value?.design?.[field]) &&
+          value.design[field].some((item) => item && Object.hasOwn(item, 'props')),
+      ) ||
+      value?.design?.layout !== undefined ||
       (Array.isArray(value?.design?.frames) &&
         value.design.frames.some(({ height }) => height === 'auto'))
       ? DESIGN_REVIEW_BUNDLE_CURRENT_SCHEMA
@@ -273,6 +313,8 @@ export function assertDesignReviewBundle(value) {
           ? DESIGN_REVIEW_BUNDLE_V11_SCHEMA
           : DESIGN_REVIEW_BUNDLE_SCHEMA,
   );
+  const propErrors = validateDesignProps(value.design);
+  if (propErrors.length) throw new TypeError(`Invalid design props:\n${propErrors.join('\n')}`);
   if (['1.1.0', '1.2.0'].includes(value.schemaVersion)) {
     if (
       value.reviewContext.designId !== value.design.id ||

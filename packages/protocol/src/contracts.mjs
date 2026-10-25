@@ -14,6 +14,7 @@ import { dirname, join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { PROTOCOL_V115_CONTRACTS, validateDiagramReviewArtifact } from './browser-contracts.mjs';
 import { deepFreeze } from './canonical-json.mjs';
+import { validateDesignProps } from './design-contracts.mjs';
 import { DESIGN_HANDOFF_CONTRACT_FILES } from './design-handoff-contracts.mjs';
 import {
   assertDiagramData,
@@ -84,6 +85,7 @@ const foundationPaths = {
   'design-document': {
     '1.9.0': 'schemas/v1.9.0/design-document.schema.json',
     '1.20.0': 'schemas/v1.20.0/design-document.schema.json',
+    '1.22.0': 'schemas/v1.22.0/design-document.schema.json',
   },
   'design-review-workspace': { '1.9.0': 'schemas/v1.9.0/design-review-workspace.schema.json' },
   'design-workspace-create': { '1.9.0': 'schemas/v1.9.0/design-workspace-create.schema.json' },
@@ -94,6 +96,7 @@ const foundationPaths = {
     '1.10.0': 'schemas/v1.10.0/design-review-bundle.schema.json',
     '1.16.0': 'schemas/v1.16.0/design-review-bundle.schema.json',
     '1.20.0': 'schemas/v1.20.0/design-review-bundle.schema.json',
+    '1.22.0': 'schemas/v1.22.0/design-review-bundle.schema.json',
   },
   'design-review-context': { '1.10.0': 'schemas/v1.10.0/design-review-context.schema.json' },
   'design-review-handoff': { '1.10.0': 'schemas/v1.10.0/design-review-handoff.schema.json' },
@@ -1381,6 +1384,18 @@ function validateStudioArtifact(kind, value, resolved) {
 }
 function validateGenericArtifact(kind, value, resolved) {
   const errors = validateResolvedArtifact(value, resolved);
+  if (
+    !errors.length &&
+    resolved.protocolVersion === '1.22.0' &&
+    ['design-document', 'design-review-bundle'].includes(kind)
+  )
+    errors.push(
+      ...validateDesignProps(kind === 'design-document' ? value : value.design).map((detail) => ({
+        path: '$',
+        rule: 'design-props',
+        detail,
+      })),
+    );
   if (kind === 'guided-questionnaire' && resolved.protocolVersion === '1.2.0')
     errors.push(...guidedQuestionnaireCompatibilityErrors(value));
   return errors;

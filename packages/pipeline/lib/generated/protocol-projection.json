@@ -132,13 +132,13 @@
     {
       "source": "packages/protocol/projections/pipeline/lib/protocol/contracts.mjs",
       "target": "lib/protocol/contracts.mjs",
-      "sha256": "05b77847079fc301c11f94765701dbff4575df8bfd6b7569ae8858bdbc180e26",
+      "sha256": "917061fcd0f9ce2b413ed1c3b21388a8699c4a37d88565d412b3aa2bddc2d343",
       "mode": "644"
     },
     {
       "source": "packages/protocol/projections/pipeline/lib/protocol/design-contracts.mjs",
       "target": "lib/protocol/design-contracts.mjs",
-      "sha256": "99a8dff3d12f2498d1b4908b354a049df8e93d2db5fe4034f8a1d992eef30678",
+      "sha256": "2801fc22ada371956bf87671bce9ba947e4f5aa33f1758d95ed348023a3df72e",
       "mode": "644"
     },
     {
@@ -282,7 +282,7 @@
     {
       "source": "packages/protocol/projections/pipeline/lib/protocol/json-schema.mjs",
       "target": "lib/protocol/json-schema.mjs",
-      "sha256": "d0a2e800cc8ccef70d1dddf3dd6f8976b63356529b1ece5f60884d9ed0ebb994",
+      "sha256": "934172a1cb98971403ed3b105ed2d2f5d26fda7857a90cc768e29179dbed8d7b",
       "mode": "644"
     },
     {
@@ -360,7 +360,7 @@
     {
       "source": "packages/protocol/projections/pipeline/lib/protocol/review-experience-contracts.mjs",
       "target": "lib/protocol/review-experience-contracts.mjs",
-      "sha256": "db851552a5138a6e7262faad42b9dbc96d24c8b04531e81bf3cc24f4bd27a957",
+      "sha256": "4ffd76c33c33990595ac8c8d22777e2b83a49cf7585fb0e16d104f10344fc505",
       "mode": "644"
     },
     {
@@ -534,7 +534,7 @@
     {
       "source": "packages/protocol/registries/skills.json",
       "target": "registry/v1.5.0/skills.json",
-      "sha256": "53693e5cce7d947002f545fcbe856e4c3c02b0ffe5d84dd6d3e6e52d000f198d",
+      "sha256": "d9612052fa7a51cab7f79ef9074558820f204f30dc9fe9949a150ba1b13bdf68",
       "mode": "644"
     },
     {
@@ -1597,6 +1597,18 @@
       "source": "packages/protocol/schemas/v1.21.0/diagram-shape-definition.schema.json",
       "target": "schemas/v1.21.0/diagram-shape-definition.schema.json",
       "sha256": "bf3a43250216ea34efe44b1cb12414e98cb78e1d196af25f22bcf4686d90b6a7",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.22.0/design-document.schema.json",
+      "target": "schemas/v1.22.0/design-document.schema.json",
+      "sha256": "33d74abce73ec6631ee1a4f5037bb49571f81cedaebac5bf37d77d91a170b507",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.22.0/design-review-bundle.schema.json",
+      "target": "schemas/v1.22.0/design-review-bundle.schema.json",
+      "sha256": "92e42b05c54f7773f89e93de45fad1c6bfc4027160079d52dcabe59fc0612933",
       "mode": "644"
     },
     {
