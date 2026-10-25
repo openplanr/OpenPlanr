@@ -81,20 +81,12 @@ jobs:
           retention-days: 14
 
   dashboard:
-    name: Dashboard Chromium (${{ matrix.suite.name }})
+    name: Dashboard Chromium
     needs: changes
     if: needs.changes.outputs.dashboard == 'true'
     runs-on: ubuntu-24.04
     container: mcr.microsoft.com/playwright:v1.64.1-noble
     timeout-minutes: 12
-    strategy:
-      fail-fast: false
-      matrix:
-        suite:
-          - name: visual
-            filter: --grep-invert=performance
-          - name: performance
-            filter: --grep=performance
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       # The workspace belongs to the runner user and the container runs as root.
@@ -109,14 +101,14 @@ jobs:
       - name: Generate workspace package assets
         run: npm run generate
       - name: Run dashboard browser verification against local workspace packages
-        run: npm run test:browser --workspace=openplanr -- ${{ matrix.suite.filter }}
+        run: npm run test:browser --workspace=openplanr -- --grep-invert=performance
         env:
           CI: 'true'
-      - name: Preserve browser diagnostics
-        if: always()
+      - name: Preserve browser diagnostics on failure
+        if: failure()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: dashboard-browser-diagnostics-${{ matrix.suite.name }}
+          name: dashboard-browser-diagnostics
           path: packages/cli/test-results/
           if-no-files-found: ignore
           retention-days: 14

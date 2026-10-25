@@ -215,6 +215,50 @@ jobs:
           if-no-files-found: warn
           retention-days: 14
 
+  dashboard-traces:
+    name: Dashboard Chromium timing traces
+    runs-on: ubuntu-24.04
+    container:
+      image: mcr.microsoft.com/playwright:v1.64.1-noble
+      options: --user 1001
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Trust the workspace for git
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+          cache: npm
+      - name: Install the root lockfile
+        run: npm ci
+      - name: Generate workspace package assets
+        run: npm run generate
+      - name: Trace the dashboard with the runner budgets
+        run: npm run test:browser --workspace=openplanr -- --grep=performance
+        env:
+          CI: 'true'
+      - name: Preserve the first trace results
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: dashboard-trace-results-1
+          path: packages/cli/test-results/
+          if-no-files-found: ignore
+          retention-days: 14
+      - name: Trace the dashboard again with the runner budgets
+        run: npm run test:browser --workspace=openplanr -- --grep=performance
+        env:
+          CI: 'true'
+      - name: Preserve the second trace results
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: dashboard-trace-results-2
+          path: packages/cli/test-results/
+          if-no-files-found: ignore
+          retention-days: 14
+
   artifact-browsers:
     name: Artifact ${{ matrix.browser }}
     runs-on: ubuntu-24.04
@@ -310,6 +354,7 @@ jobs:
       - compatibility-skill-runtime
       - packed-public-packages
       - canvas-traces
+      - dashboard-traces
       - artifact-browsers
       - first-run-linux
       - first-run-windows
