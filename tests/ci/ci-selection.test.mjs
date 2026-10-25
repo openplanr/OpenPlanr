@@ -1,11 +1,88 @@
 import assert from 'node:assert/strict';
-import { execFileSync } from 'node:child_process';
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { execFileSync, spawnSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
+import {
+  copyFileSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync,
+} from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
+import { fileURLToPath } from 'node:url';
 import { selectLanes } from '../../scripts/ci/browser-lanes.mjs';
 import { changedFiles, suitesFor } from '../../scripts/hooks/pre-push.mjs';
+
+const root = fileURLToPath(new URL('../../', import.meta.url));
+
+for (const scenario of ['safe-fix warning', 'partially staged source', 'formatting error']) {
+  test(`pre-commit preserves source and pins with ${scenario}`, () => {
+    const repo = mkdtempSync(join(tmpdir(), 'pre-commit-'));
+    const git = (...args) =>
+      execFileSync('git', ['-C', repo, '-c', 'user.name=t', '-c', 'user.email=t@t', ...args], {
+        encoding: 'utf8',
+      });
+    const sourcePath = 'packages/pipeline/lib/source.mjs';
+    const pinPath = 'packages/pipeline/lib/pins.json';
+    const digest = (source) => createHash('sha256').update(source).digest('hex');
+    const writeSourceAndPin = (source) => {
+      writeFileSync(join(repo, sourcePath), source);
+      writeFileSync(join(repo, pinPath), `{ "sha256": "${digest(source)}" }\n`);
+    };
+    try {
+      git('init', '-q');
+      git('config', 'core.hooksPath', '/dev/null');
+      mkdirSync(join(repo, 'packages/pipeline/lib'), { recursive: true });
+      for (const file of ['.lintstagedrc.mjs', 'biome.jsonc'])
+        copyFileSync(join(root, file), join(repo, file));
+      writeSourceAndPin('export const hasPreserve = () => false;\n');
+      git('add', '.');
+      git('commit', '-q', '-m', 'fixture');
+      symlinkSync(join(root, 'node_modules'), join(repo, 'node_modules'), 'dir');
+      symlinkSync(join(root, 'scripts'), join(repo, 'scripts'), 'dir');
+      writeSourceAndPin(
+        scenario === 'formatting error'
+          ? 'export const hasPreserve=(value)=>Object.hasOwn(value,"preserve")\n'
+          : "export const hasPreserve = (value) => Object.prototype.hasOwnProperty.call(value, 'preserve');\n",
+      );
+      git('add', sourcePath, pinPath);
+      if (scenario === 'partially staged source')
+        writeFileSync(
+          join(repo, sourcePath),
+          readFileSync(join(repo, sourcePath), 'utf8') + "export const note = 'unstaged';\n",
+        );
+      const staged = git('diff', '--cached', '--binary');
+      const unstaged = git('diff', '--binary');
+      const source = readFileSync(join(repo, sourcePath), 'utf8');
+      const pin = readFileSync(join(repo, pinPath), 'utf8');
+      const result = spawnSync('sh', [join(root, '.husky/pre-commit')], {
+        cwd: repo,
+        encoding: 'utf8',
+        env: { ...process.env, PATH: `${join(root, 'node_modules/.bin')}:${process.env.PATH}` },
+      });
+      assert.ifError(result.error);
+      assert.equal(
+        result.status,
+        scenario === 'formatting error' ? 1 : 0,
+        result.stdout + result.stderr,
+      );
+      assert.equal(git('diff', '--cached', '--binary'), staged);
+      assert.equal(git('diff', '--binary'), unstaged);
+      assert.equal(readFileSync(join(repo, sourcePath), 'utf8'), source);
+      assert.equal(readFileSync(join(repo, pinPath), 'utf8'), pin);
+      assert.equal(
+        JSON.parse(git('show', `:${pinPath}`)).sha256,
+        digest(git('show', `:${sourcePath}`)),
+      );
+    } finally {
+      rmSync(repo, { recursive: true, force: true });
+    }
+  });
+}
 
 test('Browser selects only the lanes a change reaches', () => {
   assert.deepEqual(selectLanes(['docs/README.md']), {
