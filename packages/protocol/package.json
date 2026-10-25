@@ -119,6 +119,10 @@
     "./enterprise-journey-contracts": {
       "types": "./src/enterprise-journey-contracts.d.mts",
       "import": "./src/enterprise-journey-contracts.mjs"
+    },
+    "./shape-library-contracts": {
+      "types": "./src/shape-library-contracts.d.mts",
+      "import": "./src/shape-library-contracts.mjs"
     }
   },
   "files": [

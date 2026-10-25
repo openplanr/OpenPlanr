@@ -1,3 +1,4 @@
+import { assertShapeDefinition } from './shape-library-contracts.mjs';
 // @ts-check
 /**
  * Protocol artifact schema registry and validation: resolves each kind and version to its packaged
@@ -43,9 +44,9 @@ import {
 } from './skill-source-contracts.mjs';
 import {
   assertDiagramPresentation,
-  assertDiagramReviewBundleV11,
   assertVersionedDiagramAuthoringBundle,
   assertVersionedDiagramEditTransaction,
+  assertVersionedDiagramReviewBundle,
 } from './studio-presentation-contracts.mjs';
 
 const packageRoot = join(dirname(fileURLToPath(import.meta.url)), '..');
@@ -56,6 +57,12 @@ const v16Schema = (kind) => `schemas/v1.6.0/${PROTOCOL_V16_CONTRACT_FILES[kind]}
 const v17Schema = (kind) => `schemas/v1.7.0/${PROTOCOL_V17_CONTRACT_FILES[kind]}`;
 const v18Schema = (kind) => `schemas/v1.8.0/${PROTOCOL_V18_CONTRACT_FILES[kind]}`;
 
+const shapeContractKinds = [
+  'diagram-authoring-bundle',
+  'diagram-edit-transaction',
+  'diagram-review-bundle',
+  'diagram-shape-definition',
+];
 const foundationPaths = {
   ...Object.fromEntries(
     Object.keys(LARGE_OBJECT_SCHEMAS).map((name) => [
@@ -273,6 +280,12 @@ const foundationPaths = {
 };
 
 // Authoring successors are additive; preserve every legacy diagram registration.
+for (const kind of shapeContractKinds)
+  foundationPaths[kind] = {
+    ...foundationPaths[kind],
+    '1.21.0': `schemas/v1.21.0/${kind}.schema.json`,
+  };
+
 for (const kind of Object.keys(ENTERPRISE_JOURNEY_SCHEMAS)) {
   foundationPaths[kind] = {
     ...foundationPaths[kind],
@@ -1252,8 +1265,8 @@ function guidedQuestionnaireCompatibilityErrors(value) {
 export function validateProtocolArtifact(kind, value, { protocolVersion } = {}) {
   const journeyErrors = validateCompanyJourneyArtifact(kind, value, protocolVersion);
   if (journeyErrors) return journeyErrors;
-  const studioKind = Object.hasOwn(LARGE_OBJECT_SCHEMAS, kind);
-  if (studioKind && protocolVersion === '1.17.0') {
+  const studioKind = Object.hasOwn(LARGE_OBJECT_SCHEMAS, kind) || shapeContractKinds.includes(kind);
+  if (studioKind && ['1.17.0', '1.21.0'].includes(protocolVersion)) {
     return validateStudioArtifact(kind, value, sharedProtocolSchema(kind, protocolVersion));
   }
   if (Object.hasOwn(PROTOCOL_V115_CONTRACTS, kind)) {
@@ -1296,7 +1309,7 @@ export function validateProtocolArtifact(kind, value, { protocolVersion } = {}) 
     versionInput = { protocolVersion: descriptor?.value };
   }
   const version = inferredVersion(kind, versionInput, protocolVersion);
-  if (studioKind && version === '1.17.0') {
+  if (studioKind && ['1.17.0', '1.21.0'].includes(version)) {
     return validateStudioArtifact(kind, value, sharedProtocolSchema(kind, version));
   }
   if (version === '1.13.0' && authoringKind) {
@@ -1351,7 +1364,8 @@ function validateStudioArtifact(kind, value, resolved) {
     if (Object.hasOwn(SHARING_SECURITY_SCHEMAS, kind)) assertSharingSecurityContract(value, kind);
     else if (kind === 'diagram-authoring-bundle') assertVersionedDiagramAuthoringBundle(value);
     else if (kind === 'diagram-edit-transaction') assertVersionedDiagramEditTransaction(value);
-    else if (kind === 'diagram-review-bundle') assertDiagramReviewBundleV11(value);
+    else if (kind === 'diagram-review-bundle') assertVersionedDiagramReviewBundle(value);
+    else if (kind === 'diagram-shape-definition') assertShapeDefinition(value);
     else if (kind === 'diagram-presentation') assertDiagramPresentation(value);
     else assertLargeObjectContract(value, kind);
     return [];

@@ -298,7 +298,7 @@
       ]
     },
     {
-      "path": "scripts/design-runtime-support-54497bd6f55f.mjs",
+      "path": "scripts/design-runtime-support-6774fd3d5d02.mjs",
       "kind": "script",
       "executable": false,
       "hosts": [
@@ -353,7 +353,7 @@
       ]
     },
     {
-      "path": "scripts/design-shared-protocol-contracts-31a760fc.mjs",
+      "path": "scripts/design-shared-protocol-contracts-75a938cc.mjs",
       "kind": "script",
       "executable": false,
       "hosts": [
@@ -364,7 +364,7 @@
       ]
     },
     {
-      "path": "scripts/design-shared-protocol-contracts-75a938cc.mjs",
+      "path": "scripts/design-shared-protocol-contracts-b5f28f94.mjs",
       "kind": "script",
       "executable": false,
       "hosts": [

@@ -72,6 +72,34 @@ viewers and the rasterizer reject.
 Run `npm run generate:diagram` after changing a diagram definition and
 `npm run check:diagram && npm test` before integration.
 
+## Shape libraries
+
+The shared editor includes 30 entries across Basics, Engineering, Process and
+General, plus service architecture, approval process and product journey patterns.
+Patterns insert editable shapes and connections in one undoable transaction.
+Search matches names, descriptions and tags without a network request.
+
+Hosts enable creation with `host.shapeLibrary: true`; it defaults off. The local
+owner enables it with `PLANR_SHAPE_LIBRARY=1`. Install compatible document readers
+and API validators before enabling creation. Disabling creation keeps saved
+library documents readable; reverting to an older reader is not a safe rollback.
+
+Authoring format 1.2 embeds pinned inert shape definitions and their content
+digests. Geometry is shared by previews, hit testing, connector attachments and
+SVG/native exports. Existing documents keep their format until a library shape
+is inserted. Undo restores the preceding snapshot, including its format.
+Definitions use normalized rectangles, ellipses, convex polygons and lines;
+arbitrary SVG, scripts and external resources are rejected. Decorations must stay
+inside the attachment outline. Rounded rectangles use their axis-aligned bounds
+for containment; curved attachment outlines also require ellipse bounding
+envelopes. Identical outline geometry is accepted directly. Catalog additions
+belong in `diagram/authoring/shape-catalog.mjs` and require definition and geometry
+fixtures, not changes to core rendering switches.
+
+Library size does not increase document capacity. Existing authoring limits and
+focused-export diagnostics remain in effect. Custom library uploading and
+specialist notation editors are not exposed by this foundation.
+
 ## Native encrypted diagram reviews
 
 `planr-pipeline/diagram-review-bundle/browser` exposes

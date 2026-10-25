@@ -5,6 +5,7 @@ import type {
 import {
   assertVersionedDiagramReviewBundle,
   type DiagramReviewBundleV11,
+  type DiagramReviewBundleV12,
 } from '@openplanr/protocol/studio-presentation-contracts';
 import { createDiagramEditorSession } from '../diagram/editor/session.mjs';
 import { escapeHtml } from '../internal/escape.mjs';
@@ -26,7 +27,10 @@ import {
 } from './feedback-rail.mjs';
 import { renderArtifactRail } from './renderers.mjs';
 
-type DiagramReviewBundle = LegacyDiagramReviewBundle | DiagramReviewBundleV11;
+type DiagramReviewBundle =
+  | LegacyDiagramReviewBundle
+  | DiagramReviewBundleV11
+  | DiagramReviewBundleV12;
 function assertDiagramReviewBundle(value: unknown): DiagramReviewBundle {
   assertVersionedDiagramReviewBundle(value);
   return value as DiagramReviewBundle;

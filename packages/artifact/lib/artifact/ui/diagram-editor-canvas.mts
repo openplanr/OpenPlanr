@@ -16,6 +16,7 @@ import {
   renderAuthoredSceneElement,
 } from '../diagram/authoring/renderer.mjs';
 import { resolveDiagramSceneElement } from '../diagram/authoring/scene.mjs';
+import { findDiagramShape } from '../diagram/authoring/shape-geometry.mjs';
 import type { DiagramEditorState, DiagramEditorView } from '../diagram/editor/index.mjs';
 import {
   type DiagramEditorPoint,
@@ -336,7 +337,7 @@ export function createEditorCanvas(ctx: DiagramEditorContext): DiagramEditorCanv
     const theme = editorTheme(bundle),
       palette = authoredDiagramPalette(
         theme,
-        bundle.schemaVersion === '1.1.0' ? bundle.studioPresentation : undefined,
+        'studioPresentation' in bundle ? bundle.studioPresentation : undefined,
       ),
       emphasis = new Map(bundle.document.emphasis.map((entry) => [entry.targetId, entry.level]));
     const selection = new Set(state.view.selection);
@@ -427,7 +428,7 @@ export function createEditorCanvas(ctx: DiagramEditorContext): DiagramEditorCanv
           entry,
           emphasis.get(id) ?? null,
           theme,
-          (bundle.schemaVersion === '1.1.0' ? bundle.studioPresentation : undefined) ?? null,
+          ('studioPresentation' in bundle ? bundle.studioPresentation : undefined) ?? null,
           source?.collection === 'relations'
             ? [placements.get(source.value.from), placements.get(source.value.to)]
             : null,
@@ -439,6 +440,8 @@ export function createEditorCanvas(ctx: DiagramEditorContext): DiagramEditorCanv
             placements,
             order,
             emphasis.get(id) ?? null,
+            [],
+            'shapeLibrary' in bundle ? bundle.shapeLibrary : [],
           );
           const xml = parser.parseFromString(
             '<svg xmlns="' +
@@ -497,7 +500,8 @@ export function createEditorCanvas(ctx: DiagramEditorContext): DiagramEditorCanv
     }
     renderedDigest = bundle.bundleDigest;
     shell.dataset.diagramTheme = theme;
-    const canvasPalette = bundle.schemaVersion === '1.1.0' ? bundle.studioPresentation.theme : null;
+    const canvasPalette =
+      'studioPresentation' in bundle ? (bundle.studioPresentation?.theme ?? null) : null;
     if (renderedCanvasPalette !== canvasPalette) {
       renderedCanvasPalette = canvasPalette;
       if (canvasPalette) {
@@ -803,8 +807,11 @@ export function createEditorCanvas(ctx: DiagramEditorContext): DiagramEditorCanv
         after = clone(before);
       if (drag.type === 'resize') {
         if (!before.bounds || !after.bounds) return;
-        after.bounds.width = Math.max(24, Math.round(before.bounds.width + dx));
-        after.bounds.height = Math.max(24, Math.round(before.bounds.height + dy));
+        const minimum = place?.appearance.shapeRef
+          ? findDiagramShape(drag.origin.shapeLibrary ?? [], place.appearance.shapeRef).sizing
+          : { minWidth: 24, minHeight: 24 };
+        after.bounds.width = Math.max(minimum.minWidth, Math.round(before.bounds.width + dx));
+        after.bounds.height = Math.max(minimum.minHeight, Math.round(before.bounds.height + dy));
       }
       if (drag.type === 'bend') {
         if (!after.route) return;

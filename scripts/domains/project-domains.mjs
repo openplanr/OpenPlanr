@@ -61,6 +61,7 @@ const legacyOwnership = JSON.parse(
 const PROTOCOL_TARGETS = Object.freeze({
   'large-object-contracts': 'lib/protocol/large-object-contracts.mjs',
   'sharing-security-contracts': 'lib/protocol/sharing-security-contracts.mjs',
+  'shape-library-contracts': 'lib/protocol/shape-library-contracts.mjs',
   'studio-presentation-contracts': 'lib/protocol/studio-presentation-contracts.mjs',
   errors: 'lib/protocol/errors.mjs',
   names: 'lib/protocol/names.mjs',

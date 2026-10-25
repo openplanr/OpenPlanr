@@ -38,6 +38,8 @@ export interface DiagramEditorHostOptions {
   }) => (() => void) | null;
   /** Show the Review tab. Defaults to true. */
   review?: boolean;
+  /** Enable new shape-library creation after the host accepts format 1.2. Defaults to false. */
+  shapeLibrary?: boolean;
   /** Replace the local wording where the host changes what is true. */
   labels?: {
     subtitle?: string;
@@ -67,6 +69,7 @@ export interface DiagramEditorHostConfig {
   actions: DiagramEditorHostAction[];
   panels: DiagramEditorHostPanel[];
   reviewEnabled: boolean;
+  shapeLibraryEnabled: boolean;
   colorScheme: DiagramEditorColorScheme;
 }
 type HostCallback = 'onSelect' | 'mount';
@@ -158,6 +161,8 @@ export function colorSchemeOf(value: unknown): DiagramEditorColorScheme {
 export function readHostOptions(host: DiagramEditorHostOptions): DiagramEditorHostConfig {
   if (host.mountChrome !== undefined && typeof host.mountChrome !== 'function')
     throw new TypeError('Host mountChrome must be a function.');
+  if (host.shapeLibrary !== undefined && typeof host.shapeLibrary !== 'boolean')
+    throw new TypeError('Host shapeLibrary must be true or false.');
   if (host.review !== undefined && typeof host.review !== 'boolean')
     throw new TypeError('Host review must be true or false.');
   if (host.onCompareRevisions !== undefined && typeof host.onCompareRevisions !== 'function')
@@ -172,6 +177,7 @@ export function readHostOptions(host: DiagramEditorHostOptions): DiagramEditorHo
     actions,
     panels,
     reviewEnabled: host.review !== false,
+    shapeLibraryEnabled: host.shapeLibrary === true,
     colorScheme: colorSchemeOf(host.colorScheme),
   };
 }

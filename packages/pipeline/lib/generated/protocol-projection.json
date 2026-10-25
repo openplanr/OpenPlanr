@@ -108,13 +108,13 @@
     {
       "source": "packages/protocol/projections/pipeline/lib/protocol/browser-contracts.d.mts",
       "target": "lib/protocol/browser-contracts.d.mts",
-      "sha256": "345af287393f2172a2fc5e633ee3ca87d8cb4c6f648e754909abaa55f8668917",
+      "sha256": "42b452c5cbc485b63669021b99fed3b4ca08577b6afe2f724063a29e208c59ee",
       "mode": "644"
     },
     {
       "source": "packages/protocol/projections/pipeline/lib/protocol/browser-contracts.mjs",
       "target": "lib/protocol/browser-contracts.mjs",
-      "sha256": "12ae0bc19ac400020e1cbd3567edd16aa0f2b476a31580c7b1b7a8985eed53ff",
+      "sha256": "87dbdbecc5530102bc70250b850cc3966d01d67e94354badd8410f505d652650",
       "mode": "644"
     },
     {
@@ -132,7 +132,7 @@
     {
       "source": "packages/protocol/projections/pipeline/lib/protocol/contracts.mjs",
       "target": "lib/protocol/contracts.mjs",
-      "sha256": "7cc6471a4eb00fae282d2a987db1184f06a6a02a552ae75e97b02c8ccacbb2f2",
+      "sha256": "05b77847079fc301c11f94765701dbff4575df8bfd6b7569ae8858bdbc180e26",
       "mode": "644"
     },
     {
@@ -168,7 +168,7 @@
     {
       "source": "packages/protocol/projections/pipeline/lib/protocol/diagram-authoring-contracts.d.mts",
       "target": "lib/protocol/diagram-authoring-contracts.d.mts",
-      "sha256": "030563ec79b397af310106d2607c81a8467ab06a8fbfda37801ce2aa133b9c87",
+      "sha256": "0ebb0a43d875a4e1387fedc7c2e272ebe874ad708bd6f31e472da7b532be700e",
       "mode": "644"
     },
     {
@@ -364,6 +364,18 @@
       "mode": "644"
     },
     {
+      "source": "packages/protocol/projections/pipeline/lib/protocol/shape-library-contracts.d.mts",
+      "target": "lib/protocol/shape-library-contracts.d.mts",
+      "sha256": "119220c655801c2b95931a505833202bc430979fa50c258f67776f0cd8e2c57c",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/projections/pipeline/lib/protocol/shape-library-contracts.mjs",
+      "target": "lib/protocol/shape-library-contracts.mjs",
+      "sha256": "47bf861a138c9cb25e8928ad3e3d77fb2cfbc58dc6ee963ae74746fe1c15b011",
+      "mode": "644"
+    },
+    {
       "source": "packages/protocol/projections/pipeline/lib/protocol/sharing-security-contracts.d.mts",
       "target": "lib/protocol/sharing-security-contracts.d.mts",
       "sha256": "17d27c5d87da5554954e5dea9a4c94e4492d1055d6164bbb46387411fdfdae29",
@@ -384,13 +396,13 @@
     {
       "source": "packages/protocol/projections/pipeline/lib/protocol/studio-presentation-contracts.d.mts",
       "target": "lib/protocol/studio-presentation-contracts.d.mts",
-      "sha256": "4df0a1037c8297fa878252ce78d34b3590543ce1a22796f171f189deee0998d1",
+      "sha256": "5b9e492a80112a7b51dd6f92f780839507c9439338a5b54ce025e695e68e49a0",
       "mode": "644"
     },
     {
       "source": "packages/protocol/projections/pipeline/lib/protocol/studio-presentation-contracts.mjs",
       "target": "lib/protocol/studio-presentation-contracts.mjs",
-      "sha256": "877a01a02d1784b22a07e7574e8cc3ffb4b47b94b91422792fe4f006dadf4c5c",
+      "sha256": "6fe4853bc32f117258ae39f6a353f12ea8b0910d9a9924c12df03c4dfd4325d4",
       "mode": "644"
     },
     {
@@ -522,7 +534,7 @@
     {
       "source": "packages/protocol/registries/skills.json",
       "target": "registry/v1.5.0/skills.json",
-      "sha256": "5d471c26ec7b47f985c819164cbb2d21b32d8353eb53dda6190e51a9e3a01145",
+      "sha256": "bfb9405e57bf732b17e7785e39145dd7d560747b8901ac65f53411682c038a81",
       "mode": "644"
     },
     {
@@ -1561,6 +1573,30 @@
       "source": "packages/protocol/schemas/v1.20.0/design-review-bundle.schema.json",
       "target": "schemas/v1.20.0/design-review-bundle.schema.json",
       "sha256": "72db7c04d4a96ee8fc2a9c1c4146dd1cfc4352a80ea8cacda50aceeb9ad172c7",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.21.0/diagram-authoring-bundle.schema.json",
+      "target": "schemas/v1.21.0/diagram-authoring-bundle.schema.json",
+      "sha256": "35ef92d8c888b4d1fd2a8e6a6b6077740761ee564aa34257c4e08e0916bb20f7",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.21.0/diagram-edit-transaction.schema.json",
+      "target": "schemas/v1.21.0/diagram-edit-transaction.schema.json",
+      "sha256": "e1734a1fd9fd2ad09ad21eadf94778d6e544370c1e768b192bad44e53e560cbe",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.21.0/diagram-review-bundle.schema.json",
+      "target": "schemas/v1.21.0/diagram-review-bundle.schema.json",
+      "sha256": "d5dabde34dff716f015526265d2cfb51032c8d61fed6ffb2f99093fcde4a0e2d",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.21.0/diagram-shape-definition.schema.json",
+      "target": "schemas/v1.21.0/diagram-shape-definition.schema.json",
+      "sha256": "bf3a43250216ea34efe44b1cb12414e98cb78e1d196af25f22bcf4686d90b6a7",
       "mode": "644"
     },
     {

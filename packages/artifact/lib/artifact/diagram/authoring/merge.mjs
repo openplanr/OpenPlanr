@@ -1,4 +1,6 @@
 // @ts-check
+import { shapeReferenceKey } from '@openplanr/protocol/shape-library-contracts';
+import { diagramAuthoringVersionFields } from '@openplanr/protocol/studio-presentation-contracts';
 import {
   clone,
   elementIndex,
@@ -24,7 +26,7 @@ const collectionKey = (path) => {
   return ['nodes', 'relations', 'groups', 'lanes', 'annotations'].includes(path[1]) ? 'id' : null;
 };
 const derived = (path, key) =>
-  (path.length === 0 && key === 'bundleDigest') ||
+  (path.length === 0 && ['bundleDigest', 'schemaVersion', 'protocolVersion'].includes(key)) ||
   (path.length === 1 && path[0] === 'document' && key === 'documentDigest') ||
   (path.length === 1 &&
     path[0] === 'presentation' &&
@@ -167,6 +169,26 @@ function mergeElements(original, mine, theirs, path, key, merge) {
   );
   return result;
 }
+function mergeShapeLibraries(original, mine, theirs, path, overlap) {
+  const libraries = [original, mine, theirs].map((value) => (value === absent ? [] : value));
+  const maps = libraries.map(
+    (library) => new Map(library.map((definition) => [shapeReferenceKey(definition), definition])),
+  );
+  const result = [];
+  for (const key of new Set([...maps[2].keys(), ...maps[1].keys(), ...maps[0].keys()])) {
+    const [before, local, remote] = maps.map((map) => map.get(key) ?? absent);
+    const value = identical(local, remote)
+      ? copy(local)
+      : identical(before, local)
+        ? copy(remote)
+        : identical(before, remote)
+          ? copy(local)
+          : overlap(before, local, remote, [...path, key]);
+    if (value !== absent) result.push(value);
+  }
+  return result;
+}
+
 function applyStructuralChoices(target, structural, choices, local, remote) {
   // Structural choices carry a semantic element and its placement together, even
   // when a parent object could otherwise take an unchanged-side shortcut.
@@ -250,6 +272,8 @@ export function previewDiagramMerge(base, local, remote, choices = {}) {
     if (identical(mine, theirs)) return copy(mine);
     if (identical(original, mine)) return copy(theirs);
     if (identical(original, theirs)) return copy(mine);
+    if (isRootField(path, 'shapeLibrary'))
+      return mergeShapeLibraries(original, mine, theirs, path, overlap);
     if ([original, mine, theirs].every(isObject))
       return mergeObjects(original, mine, theirs, path, merge);
     const key = collectionKey(path);
@@ -281,6 +305,7 @@ export function previewDiagramMerge(base, local, remote, choices = {}) {
   retainSourceCorrespondence(target, base, local, remote, indexes);
   let sealed;
   try {
+    Object.assign(target, diagramAuthoringVersionFields(target));
     sealed = sealBundle(target);
   } catch {
     return {

@@ -33,7 +33,7 @@ export interface AuthoredDiagramSvgResult {
   svg: string;
   scene: AuthoredDiagramScene;
   quality: DiagramSceneQuality;
-  renderer: { id: 'openplanr-authored-svg'; version: '1.1.0' };
+  renderer: { id: 'openplanr-authored-svg'; version: '1.2.0' };
   theme: AuthoredDiagramTheme;
   diagnostics: [];
 }
@@ -51,7 +51,7 @@ export interface AuthoredDiagramRenderFailure {
 }
 export declare const AUTHORED_DIAGRAM_RENDERER: Readonly<{
   id: 'openplanr-authored-svg';
-  version: '1.1.0';
+  version: '1.2.0';
 }>;
 /** Internal renderer palette shared by static output and the live editor. */
 export declare function authoredDiagramPalette(

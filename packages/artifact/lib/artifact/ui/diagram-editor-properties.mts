@@ -14,6 +14,7 @@ import {
   parentIndex,
   semanticFields,
 } from '../diagram/authoring/model.mjs';
+import { findDiagramShape } from '../diagram/authoring/shape-geometry.mjs';
 import type { DiagramEditorState } from '../diagram/editor/index.mjs';
 import type { DiagramEditorIconName } from './diagram-editor.mjs';
 import {
@@ -350,6 +351,15 @@ export function renderDiagramProperties({
       choices: Object.entries(NODE_NAMES),
     });
   }
+  if ('shapeRef' in place.appearance && place.appearance.shapeRef) {
+    const ref = place.appearance.shapeRef;
+    const library = inspectorSection(document, 'Library', { open: true });
+    library.body.append(
+      element(document, 'p', {}, ref.shapeId),
+      element(document, 'p', { className: 'de-muted' }, `${ref.packId} · ${ref.packVersion}`),
+    );
+    form.append(library.details);
+  }
   form.append(content.details);
 
   const geometry = inspectorSection(document, 'Geometry', {
@@ -357,6 +367,9 @@ export function renderDiagramProperties({
     open: true,
   });
   if (geom.bounds) {
+    const minimum = place.appearance.shapeRef
+      ? findDiagramShape(bundle.shapeLibrary ?? [], place.appearance.shapeRef).sizing
+      : { minWidth: 1, minHeight: 1 };
     const grid = element(document, 'div', { className: 'de-field-grid' });
     for (const [name, key] of [
       ['X', 'x'],
@@ -368,7 +381,7 @@ export function renderDiagramProperties({
       add(grid, name, geom.bounds[key], {
         type: 'number',
         step: '1',
-        min: ['width', 'height'].includes(key) ? 1 : -1000000,
+        min: key === 'width' ? minimum.minWidth : key === 'height' ? minimum.minHeight : -1000000,
         max: 1000000,
         disabled: !editable || lock,
       });

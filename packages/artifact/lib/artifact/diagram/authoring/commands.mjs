@@ -1,5 +1,9 @@
 // @ts-check
 import {
+  assertShapeDefinition,
+  shapeReferenceKey,
+} from '@openplanr/protocol/shape-library-contracts';
+import {
   clone,
   geometryFields,
   inspectPlainData,
@@ -7,13 +11,14 @@ import {
   same,
   semanticFields,
   snapshot,
+  transactionVersionFields,
   validateAuthoringBundle,
 } from './model.mjs';
 import { previewDiagramTransaction, previewDiagramTransactionForEditor } from './transactions.mjs';
 
 const collections = ['nodes', 'relations', 'groups', 'lanes', 'annotations'];
 const fields = {
-  create: ['elements', 'presentation'],
+  create: ['elements', 'presentation', 'shapeDefinitions'],
   rename: ['id', 'label'],
   describe: ['id', 'description'],
   reconnect: ['id', 'from', 'to'],
@@ -263,6 +268,41 @@ function removal(bundle, ids, ungroup = false) {
   };
   return { operations, impact };
 }
+/** @returns {import('@openplanr/protocol/studio-presentation-contracts').SetShapeLibraryOperation[]} */
+function libraryOperations(bundle, definitions, presentation) {
+  const current = bundle.shapeLibrary ?? [];
+  const merged = new Map(current.map((definition) => [shapeReferenceKey(definition), definition]));
+  const required = new Set(
+    presentation.flatMap((placement) =>
+      placement.appearance.shapeRef ? [shapeReferenceKey(placement.appearance.shapeRef)] : [],
+    ),
+  );
+  for (const definition of definitions) {
+    assertShapeDefinition(definition);
+    const key = shapeReferenceKey(definition);
+    requireValue(
+      required.has(key),
+      `Shape definition ${key} is not used by the inserted elements.`,
+    );
+    const existing = merged.get(key);
+    requireValue(
+      !existing || same(existing, definition),
+      `Shape definition ${key} conflicts with the immutable definition in this diagram.`,
+    );
+    merged.set(key, definition);
+  }
+  const after = [...merged.values()];
+  return same(current, after)
+    ? []
+    : [
+        {
+          type: 'set-shape-library',
+          before: clone(bundle.shapeLibrary ?? null),
+          after: clone(after),
+        },
+      ];
+}
+
 function duplicate(bundle, command) {
   const source = command.type === 'paste' ? command.sourceBundle : bundle;
   const validation = validateAuthoringBundle(source);
@@ -332,8 +372,21 @@ function duplicate(bundle, command) {
       ...translate(geometryFields(item), dx, dy),
       elementId: idMap[item.elementId],
     }));
-  /** @type {import('@openplanr/protocol/diagram-authoring-contracts').DiagramEditOperation[]} */
-  const operations = [{ type: 'insert-elements', elements, presentation }];
+  /** @type {import('@openplanr/protocol/studio-presentation-contracts').VersionedDiagramEditTransaction['operations']} */
+  const operations = [
+    ...libraryOperations(
+      bundle,
+      (source.shapeLibrary ?? []).filter((definition) =>
+        presentation.some(
+          (item) =>
+            item.appearance.shapeRef &&
+            shapeReferenceKey(item.appearance.shapeRef) === shapeReferenceKey(definition),
+        ),
+      ),
+      presentation,
+    ),
+    { type: 'insert-elements', elements, presentation },
+  ];
   // Explicit order and emphasis are separate semantics, not inferred from array indexes.
   const before = membershipState(bundle.document);
   for (const collection of ['groups', 'lanes'])
@@ -431,13 +484,18 @@ function compileCommand(inputBundle, command, options, privateResult) {
   )
     return fail('options', 'Only a caller-supplied transactionId is accepted.', '$options');
   if (command.type === 'cancel') return { ok: true, cancelled: true, transaction: null };
-  /** @type {import('@openplanr/protocol/studio-presentation-contracts').DiagramEditTransactionV11['operations']} */
+  /** @type {import('@openplanr/protocol/studio-presentation-contracts').VersionedDiagramEditTransaction['operations']} */
   let operations;
   let disclosures;
   try {
     switch (command.type) {
       case 'create':
+        requireValue(
+          command.shapeDefinitions === undefined || Array.isArray(command.shapeDefinitions),
+          'Shape definitions must be an array.',
+        );
         operations = [
+          ...libraryOperations(bundle, command.shapeDefinitions ?? [], command.presentation),
           {
             type: 'insert-elements',
             elements: clone(command.elements),
@@ -525,7 +583,7 @@ function compileCommand(inputBundle, command, options, privateResult) {
         operations = [
           {
             type: 'set-studio-presentation',
-            before: clone(bundle.schemaVersion === '1.1.0' ? bundle.studioPresentation : null),
+            before: clone(bundle.studioPresentation ?? null),
             after: clone(command.presentation),
           },
         ];
@@ -610,13 +668,10 @@ function compileCommand(inputBundle, command, options, privateResult) {
     }
     operations = operations.filter((op) => !('before' in op) || !same(op.before, op.after));
     if (!operations.length) return { ok: true, changed: false, transaction: null };
-    const versioned =
-      bundle.schemaVersion === '1.1.0' || command.type === 'set-studio-presentation';
     const transaction =
       /** @type {import('@openplanr/protocol/studio-presentation-contracts').VersionedDiagramEditTransaction} */ ({
         kind: 'diagram-edit-transaction',
-        schemaVersion: versioned ? '1.1.0' : '1.0.0',
-        protocolVersion: versioned ? '1.17.0' : '1.13.0',
+        ...transactionVersionFields(bundle, operations),
         transactionId: /** @type {{transactionId:string}} */ (options).transactionId,
         diagramId: bundle.diagramId,
         base: snapshot(bundle),
