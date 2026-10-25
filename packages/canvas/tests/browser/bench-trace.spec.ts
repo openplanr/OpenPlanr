@@ -12,6 +12,7 @@ import {
 import type { Scenario } from '../../bench/main';
 import {
   CANVAS_TRACE_BUDGETS,
+  type CanvasTraceMeasurement,
   evaluateCanvasTrace,
   percentile95,
   type RendererTraceEvent,
@@ -20,6 +21,7 @@ import {
 } from '../../src/testing/index.mts';
 import { waitForBench } from './bench';
 import { benchMetadata } from './metadata';
+import { recordRafRun } from './raf-trace';
 import {
   aggregateTraceRuns,
   DOM_NODE_BUDGET,
@@ -289,6 +291,7 @@ test('records production camera traces beside the reference budgets', async ({
   browser,
   browserName,
 }, testInfo) => {
+  test.skip(browserName !== 'chromium', 'Renderer main-thread traces require Chromium CDP');
   test.setTimeout(1_800_000);
   const baseURL = testInfo.project.use.baseURL;
   if (!baseURL) throw new Error('Canvas trace baseURL is missing');
@@ -412,9 +415,138 @@ test('records production camera traces beside the reference budgets', async ({
     expect.soft(evaluation.failures, `canvas trace tier ${evaluation.tier}`).toEqual([]);
 });
 
+async function measureRafTier(
+  browser: Browser,
+  baseURL: string,
+  tier: Tier,
+  browserName: 'webkit' | 'firefox',
+) {
+  const { count, fixture, dpr, renderer = 'vanilla' } = tier;
+  const url = `${baseURL}/${renderer === 'react' ? 'react.html' : ''}?fixture=${fixture}`;
+  const context = await browser.newContext({
+    viewport: { width: 1440, height: 900 },
+    deviceScaleFactor: dpr,
+  });
+  try {
+    const firstFrameTrialsMs = await firstFrames(context, url);
+    const firstFrameP50Ms = [...firstFrameTrialsMs].sort((a, b) => a - b)[2];
+    const page = await context.newPage();
+    await page.goto(url);
+    await waitForBench(page);
+    if (count === 708) await page.evaluate(() => window.bench.run('pan-100'));
+    const scenarios: Scenario[] =
+      browserName === 'webkit'
+        ? ['pan-100', 'pan-40', 'pan-fit', 'zoom-sweep']
+        : ['pan-100', 'pan-fit'];
+    const measurements = [];
+    for (const scenario of scenarios) {
+      const runs = [];
+      for (let run = 1; run <= 3; run += 1)
+        runs.push({ run, ...(await recordRafRun(page, scenario)) });
+      const item = {
+        count,
+        fixture,
+        renderer,
+        world: 'html' as const,
+        dpr,
+        scenario,
+        firstFrameP50Ms,
+        firstFrameTrialsMs,
+        runs,
+      } satisfies CanvasTraceMeasurement;
+      measurements.push(item);
+    }
+    return measurements;
+  } finally {
+    await context.close();
+  }
+}
+
+test('records non-CDP camera traces beside the browser reference budgets', async ({
+  browser,
+  browserName,
+}, testInfo) => {
+  test.skip(browserName === 'chromium', 'Chromium uses its renderer main-thread trace');
+  if (browserName === 'chromium') return;
+  test.setTimeout(1_800_000);
+  const started = Date.now();
+  const baseURL = testInfo.project.use.baseURL;
+  if (!baseURL) throw new Error('Canvas rAF trace baseURL is missing');
+  const measurements = [];
+  for (const dpr of [2, 1] as const) {
+    for (const count of [708, 5000] as const) {
+      for (const renderer of ['vanilla', 'react'] as const) {
+        measurements.push(
+          ...(await measureRafTier(
+            browser,
+            baseURL,
+            {
+              count,
+              fixture: count === 708 ? '708-997' : '5000-7312',
+              world: 'html',
+              dpr,
+              renderer,
+            },
+            browserName,
+          )),
+        );
+      }
+    }
+  }
+  const metadata = benchMetadata(browser, browserName);
+  const results = { ...metadata, budgetSet: budgets.budgetSet, measurements };
+  const evaluations = ([708, 5000] as const).map((tier) => evaluateCanvasTrace(results, tier));
+  const durationMs = Date.now() - started;
+  const report = {
+    ...results,
+    evaluations,
+    secondDensity: false,
+    runner: {
+      os: platform(),
+      release: release(),
+      arch: arch(),
+      cpu: cpus()[0]?.model,
+      ci: RUNNER_BUDGETS,
+    },
+    durationMs,
+    runnerMinutes: durationMs / 60_000,
+    stage: { width: 1440, height: 900 },
+    frames: 180,
+    recordedRunsPerScenario: 3,
+    aggregation: 'median of three per-run rAF p95s; worst frame checked per run',
+    clockResolution: 'interval gates compare values rounded to 0.1 ms; raw intervals are kept',
+    measurementPath:
+      'bench requestAnimationFrame intervals bounded by canvas interaction and frame marks',
+    referenceBudgets: CANVAS_TRACE_BUDGETS[browserName],
+    effectiveBudgets: {
+      ...CANVAS_TRACE_BUDGETS[browserName],
+      ...(budgets.rafIntervalP95Ms === null
+        ? browserName === 'webkit'
+          ? { rafIntervalP95Ms: null, pan40WorstFrameMs: null }
+          : { pan100FrameP95Ms: null, panFitFrameP95Ms: null }
+        : {}),
+      firstFrameP50Ms: budgets.firstFrameP50Ms,
+    },
+  };
+  const directory = resolve(import.meta.dirname, '../../test-results');
+  await mkdir(directory, { recursive: true });
+  const output = resolve(directory, `bench-trace-${browserName}-${metadata.gpuMode}.json`);
+  await writeFile(output, `${JSON.stringify(report, null, 2)}\n`);
+  await testInfo.attach(`bench-trace-${browserName}`, {
+    path: output,
+    contentType: 'application/json',
+  });
+  for (const evaluation of evaluations)
+    expect
+      .soft(evaluation.failures, `canvas ${browserName} trace tier ${evaluation.tier}`)
+      .toEqual([]);
+});
+
 test('measures cached canvas and worker overview work, cache memory and presentation lag', async ({
   browser,
+  browserName,
 }, testInfo) => {
+  test.skip(browserName !== 'chromium', 'Overview renderer comparison requires Chromium CDP');
   test.setTimeout(600_000);
   const baseURL = testInfo.project.use.baseURL;
   if (!baseURL) throw new Error('Overview comparison baseURL is missing');

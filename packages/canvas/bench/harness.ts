@@ -94,6 +94,23 @@ export function createBench({ controller, stage, world, overlays = [], fixtureNa
   }
   requestAnimationFrame(markFrame);
   const nextFrame = (): Promise<number> => new Promise((resolve) => requestAnimationFrame(resolve));
+  function waitForOverviewExit(scenario: string): Promise<void> {
+    if (controller.getLevel() !== 'overview') return Promise.resolve();
+    return new Promise((resolve, reject) => {
+      function check(): void {
+        if (controller.getLevel() === 'overview') frame = requestAnimationFrame(check);
+        else {
+          window.clearTimeout(timeout);
+          resolve();
+        }
+      }
+      let frame = requestAnimationFrame(check);
+      const timeout = window.setTimeout(() => {
+        cancelAnimationFrame(frame);
+        reject(new Error(`Canvas ${fixtureName} ${scenario} setup: overview did not return to DOM at zoom ${controller.getCamera().zoom} within 5000 ms`));
+      }, 5000);
+    });
+  }
   let longTasks: PerformanceEntry[] = [];
   const observer =
     typeof PerformanceObserver !== 'undefined' &&
@@ -154,6 +171,7 @@ export function createBench({ controller, stage, world, overlays = [], fixtureNa
       controller.setCamera({ x: 0, y: 0, zoom: 1 });
       await new Promise<void>((resolve) => window.setTimeout(resolve, 150));
       await nextFrame();
+      await waitForOverviewExit('remount');
       const nodes = Array.from({ length: 968 }, (_, index) => ({
         id: `remount-${index}`,
         bounds: { x: (index % 44) * 30, y: Math.floor(index / 44) * 30, width: 20, height: 20 },
@@ -221,6 +239,7 @@ export function createBench({ controller, stage, world, overlays = [], fixtureNa
         controller.setCamera({ x: 0, y: 0, zoom: 1 });
         await new Promise<void>((resolve) => window.setTimeout(resolve, 150));
         await nextFrame();
+        await waitForOverviewExit(scenario);
       }
       if (scenario !== 'pan-fit')
         controller.setCamera({ x: 0, y: 0, zoom: scenario === 'pan-40' ? 0.4 : 1 });
@@ -232,6 +251,7 @@ export function createBench({ controller, stage, world, overlays = [], fixtureNa
       }
       await nextFrame();
       await nextFrame();
+      if (scenario !== 'pan-fit') await waitForOverviewExit(scenario);
       for (const observer of transformObservers) observer.flush();
       writes = [];
       longTasks = [];

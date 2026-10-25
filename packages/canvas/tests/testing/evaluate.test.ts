@@ -496,6 +496,131 @@ describe('canvas trace evaluation', () => {
     },
   );
 
+  it.each(['webkit', 'firefox'] as const)(
+    'keeps unsupported %s metrics pending while gating supported timing',
+    (name) => {
+      const results = complete(708);
+      const measurements = results.measurements.map((item) => ({
+        ...item,
+        scenario: 'pan-100' as const,
+        runs: item.runs.map((run) => ({
+          ...run,
+          rendererMainP95Ms: 'unsupported' as const,
+          longTasksOver50Ms: 'unsupported' as const,
+          layoutShiftValue: 'unsupported' as const,
+        })),
+      }));
+      const evaluation = evaluateCanvasTrace(
+        { ...results, browser: { ...results.browser, name }, measurements },
+        708,
+      );
+      expect(evaluation.failures).toEqual([]);
+      expect(evaluation.reported.filter((line) => line.includes('pan-100'))).toEqual([]);
+      for (const metric of ['rendererMainP95Ms', 'longTasksOver50Ms', 'layoutShiftValue']) {
+        const pending = evaluation.pending.filter((line) => line.includes(`${metric} unsupported`));
+        expect(pending).toHaveLength(3);
+        expect(pending[0]).toContain('708-fixture vanilla html DPR 2 pan-100 run 1');
+        expect(pending[0]).toContain('tier 708');
+      }
+      expect(
+        evaluateCanvasTrace(
+          { ...results, browser: { ...results.browser, name }, measurements },
+          5000,
+        ).pending.filter((line) => line.includes('unsupported')),
+      ).toEqual([]);
+      for (const run of measurements[0].runs) run.rafIntervalP95Ms = 1000;
+      expect(
+        evaluateCanvasTrace(
+          { ...results, browser: { ...results.browser, name }, measurements },
+          708,
+        ).failures.join('\n'),
+      ).toContain(name === 'webkit' ? 'rafIntervalP95Ms' : 'frameP95Ms');
+    },
+  );
+
+  for (const budgetSet of ['local', 'runner'] as const) {
+    it.each([
+      ['chromium', 'rendererMainP95Ms'],
+      ['chromium', 'rafIntervalP95Ms'],
+      ['chromium', 'longTasksOver50Ms'],
+      ['webkit', 'rafIntervalP95Ms'],
+      ['firefox', 'rafIntervalP95Ms'],
+      ['chromium', 'worstFrameMs'],
+      ['webkit', 'worstFrameMs'],
+      ['firefox', 'worstFrameMs'],
+      ['chromium', 'engineFrameSamples'],
+      ['webkit', 'engineFrameSamples'],
+      ['firefox', 'engineFrameSamples'],
+    ] as const)(`rejects unsupported %s %s with ${budgetSet} budgets`, (name, metric) => {
+      const results = complete(708);
+      const measurements = results.measurements.map((item) => ({
+        ...item,
+        scenario: metric === 'worstFrameMs' ? ('pan-40' as const) : item.scenario,
+        runs: item.runs.map((run) => ({ ...run, [metric]: 'unsupported' })),
+      }));
+      const malformed = {
+        ...results,
+        budgetSet,
+        browser: { ...results.browser, name },
+        measurements,
+      } as CanvasTraceResults;
+      expect(() => evaluateCanvasTrace(malformed, 708)).toThrow(TypeError);
+      expect(() => evaluateCanvasTrace(malformed, 708)).toThrow(metric);
+    });
+  }
+
+  it('still gates supported long tasks alongside unsupported observations', () => {
+    const results = complete(708);
+    results.browser.name = 'firefox';
+    const measurements = results.measurements.map((item) => ({
+      ...item,
+      runs: item.runs.map((run, index) => ({
+        ...run,
+        longTasksOver50Ms: index === 0 ? ('unsupported' as const) : 1,
+      })),
+    }));
+    const evaluation = evaluateCanvasTrace({ ...results, measurements }, 708);
+    expect(evaluation.failures).toHaveLength(2);
+    expect(evaluation.failures.join('\n')).toContain('longTasksOver50Ms measured 1, limit 0');
+    expect(evaluation.pending.join('\n')).toContain('longTasksOver50Ms unsupported');
+  });
+
+  it('accepts numeric optional browser evidence without marking it unsupported', () => {
+    const results = complete(708);
+    const measurements = results.measurements.map((item) => ({
+      ...item,
+      runs: item.runs.map((run) => ({ ...run, layoutShiftValue: 0, engineFrameSamples: 180 })),
+    }));
+    expect(evaluateCanvasTrace({ ...results, measurements }, 708).pending).toEqual([
+      'dropped frames at fit: compositor trace is not measured',
+    ]);
+  });
+
+  it('keeps chrome geometry and toggle gates active when layout shifts are unsupported', () => {
+    const results = complete(708);
+    const chrome = results.chrome.map((item) => ({
+      ...item,
+      layoutShifts: 'unsupported' as const,
+    }));
+    const evaluation = evaluateCanvasTrace({ ...results, chrome }, 708);
+    expect(evaluation.failures).toEqual([]);
+    expect(evaluation.pending.join('\n')).toContain('layoutShifts unsupported for tier 708');
+    chrome[0].snapshots.pop();
+    chrome[0].after.camera.x = 1;
+    chrome[0].after.stage.width = 1200;
+    const failures = evaluateCanvasTrace({ ...results, chrome }, 708).failures;
+    expect(failures).toHaveLength(3);
+    expect(failures.join('\n')).toContain('toggles');
+    expect(failures.join('\n')).toContain('camera unchanged');
+    expect(failures.join('\n')).toContain('stage unchanged');
+    expect(failures.join('\n')).not.toMatch(/admittedCls|phases/u);
+    expect(
+      evaluateCanvasTrace({ ...results, chrome }, 5000).pending.filter((line) =>
+        line.includes('unsupported'),
+      ),
+    ).toEqual([]);
+  });
+
   it('enforces WebKit rAF and worst pan-40 frame limits', () => {
     const results = complete(708);
     results.browser.name = 'webkit';
@@ -511,6 +636,20 @@ describe('canvas trace evaluation', () => {
     expect(evaluate(results).failures.join('\n')).toContain('worstFrameMs');
   });
 
+  it('requires WebKit pan-40 worst-frame evidence even with runner timing budgets', () => {
+    const results = complete(708);
+    results.browser.name = 'webkit';
+    results.budgetSet = 'runner';
+    results.measurements[0].scenario = 'pan-40';
+    const measurements = results.measurements.map((item) => ({
+      ...item,
+      runs: item.runs.map(({ worstFrameMs: _worst, ...run }) => run),
+    }));
+    expect(() => evaluateCanvasTrace({ ...results, measurements }, 708)).toThrow(
+      'worstFrameMs is required for WebKit pan-40',
+    );
+  });
+
   it.each([708, 5000] as const)('enforces Firefox frame limits at tier %i', (tier) => {
     const results = complete(tier);
     results.browser.name = 'firefox';
@@ -524,6 +663,52 @@ describe('canvas trace evaluation', () => {
     expect(evaluate(results).failures).toEqual([]);
     for (const run of results.measurements[0].runs) run.rafIntervalP95Ms = limit + 0.05;
     expect(evaluate(results).failures.join('\n')).toContain(`limit ${limit}`);
+  });
+
+  it.each([
+    ['webkit', 'pan-40', 708, 'rafIntervalP95Ms', 19],
+    ['firefox', 'pan-100', 708, 'frameP95Ms', 17],
+    ['firefox', 'pan-fit', 708, 'frameP95Ms', 20],
+    ['firefox', 'pan-fit', 5000, 'frameP95Ms', 25],
+  ] as const)(
+    'reports runner %s %s timing at tier %i while retaining structural gates',
+    (name, scenario, tier, metric, limit) => {
+      const results = complete(tier);
+      results.browser.name = name;
+      results.budgetSet = 'runner';
+      results.measurements[0].scenario = scenario;
+      for (const run of results.measurements[0].runs) {
+        run.rafIntervalP95Ms = 1000;
+        run.worstFrameMs = 1000;
+      }
+      const evaluation = evaluate(results);
+      expect(evaluation.failures).toEqual([]);
+      expect(evaluation.reported.join('\n')).toContain(`${metric} measured 1000, limit ${limit}`);
+      if (name === 'webkit')
+        expect(evaluation.reported.filter((line) => line.includes('worstFrameMs'))).toHaveLength(3);
+      results.measurements[0].runs[0].domNodes = 2001;
+      results.measurements[0].runs[0].longTasksOver50Ms = 1;
+      expect(evaluate(results).failures.join('\n')).toContain('domNodes');
+      expect(evaluate(results).failures.join('\n')).toContain('longTasksOver50Ms');
+    },
+  );
+
+  it.each([
+    ['rendererMainP95Ms', '16'],
+    ['rafIntervalP95Ms', null],
+    ['longTasksOver50Ms', undefined],
+    ['worstFrameMs', -1],
+    ['layoutShiftValue', NaN],
+    ['engineFrameSamples', Infinity],
+  ] as const)('rejects malformed %s browser evidence', (metric, value) => {
+    const results = complete(708);
+    const measurements = results.measurements.map((item) => ({
+      ...item,
+      runs: item.runs.map((run) => ({ ...run, [metric]: value })),
+    }));
+    const malformed = { ...results, measurements } as CanvasTraceResults;
+    expect(() => evaluateCanvasTrace(malformed, 708)).toThrow(TypeError);
+    expect(() => evaluateCanvasTrace(malformed, 708)).toThrow(String(metric));
   });
 
   it.each([
@@ -585,6 +770,10 @@ describe('canvas trace evaluation', () => {
       },
     ],
     ['before', (r: Complete) => ({ ...r, chrome: [{ ...r.chrome[0], before: null }] })],
+    [
+      'layoutShifts',
+      (r: Complete) => ({ ...r, chrome: [{ ...r.chrome[0], layoutShifts: 'unavailable' }] }),
+    ],
     [
       'startTime',
       (r: Complete) => {
