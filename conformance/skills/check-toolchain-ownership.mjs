@@ -17,7 +17,7 @@ const excludedDirectories = new Set([
   'tests',
   'vendor',
 ]);
-const mutationCall = /\b(?:appendFile|copyFile|rename|writeFile)(?:Sync)?\s*\(/u;
+const mutationCall = /\b(?:appendFile|atomicWrite|copyFile|rename|writeFile)(?:Sync)?\s*\(/u;
 const promptCompilerApi =
   /\b(?:buildCompiledManifests|compileComposedV1|compileHostProjections|flattenCompiledAssets|readStandardSkillPackage|renderSkillForHost|writeOutputTree)\b/u;
 const roleSignatures = Object.freeze({
@@ -28,9 +28,12 @@ const roleSignatures = Object.freeze({
         bytes,
       )),
   'runtime-installer': (bytes) =>
-    /['"]\.codex['"]/u.test(bytes) &&
-    /['"]skills['"]/u.test(bytes) &&
-    /\bcodexSkillsRoot\b/u.test(bytes),
+    (/['"]\.codex['"]/u.test(bytes) &&
+      /['"]skills['"]/u.test(bytes) &&
+      /\bcodexSkillsRoot\b/u.test(bytes)) ||
+    (/\bexport\s+async\s+function\s+applySetup\b/u.test(bytes) &&
+      /\bcodexSkillsRoot\b/u.test(bytes) &&
+      /\batomicWrite\s*\(/u.test(bytes)),
 });
 
 function fail(code, message, details = {}) {

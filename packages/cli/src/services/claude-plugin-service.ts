@@ -541,3 +541,18 @@ export function applyBundledClaudePluginIntegration(
     inspection: finalInspection,
   };
 }
+
+/** Setup and doctor word a second `planr` plugin identically; neither removes it. */
+export function duplicateClaudePluginDiagnostic(inspection: ClaudePluginInspection): {
+  message: string;
+  fix: string;
+} {
+  const managed = inspection.plugins.map((plugin) => plugin.id).join(', ');
+  const duplicates = inspection.duplicatePluginIds;
+  return {
+    message: `Duplicate Claude plugin detected: ${duplicates.join(', ')} installed beside the setup-managed ${managed}; both expose the same /planr commands`,
+    fix: `Keep one plugin. To keep the setup-managed ${managed}, run: ${duplicates
+      .map(claudePluginUninstallCommand)
+      .join(' && ')}`,
+  };
+}
