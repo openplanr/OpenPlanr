@@ -12,7 +12,8 @@ import {
 } from './dashboard-api-fixture.mjs';
 
 const fixture = createDashboardApiFixture();
-const streams = new Set();
+const streams = new Map();
+const liveListScenarios = new Map();
 let activeLocator = null;
 const disposableReviewScenarios = new Map();
 const DISPOSABLE_REVIEW_DISPOSITIONS = new Set(['approved', 'changes_requested', 'rejected']);
@@ -62,7 +63,86 @@ function bootstrapForRequest(request) {
   }
 }
 
+function liveListScenario(request) {
+  const referer = new URL(request.headers.referer ?? DASHBOARD_FIXTURE_ORIGIN);
+  const session = referer.searchParams.get('planningSession');
+  if (referer.searchParams.get('planningScenario') !== 'live-list' || !session) return null;
+  if (!/^[a-z0-9-]{1,80}$/u.test(session)) throw new TypeError('Invalid live List session.');
+  let state = liveListScenarios.get(session);
+  if (!state) {
+    const nodes = Array.from({ length: 127 }, (_, index) => ({
+      id: `list-item-${String(index + 1).padStart(3, '0')}`,
+      type: index === 125 ? 'epic' : 'task',
+      title: `Live list artifact ${String(index + 1).padStart(3, '0')}`,
+      status: index === 126 ? 'done' : 'outstanding',
+      frontmatter: { updated: '2026-09-01' },
+    }));
+    const graph = { nodes, edges: [] };
+    state = {
+      snapshot: {
+        ...fixture.planning,
+        cursor: { eventHead: { sequence: 0, hash: null }, viewHash: sha256Jcs(graph) },
+        mode: 'agile',
+        graph,
+      },
+    };
+    liveListScenarios.set(session, state);
+  }
+  return state;
+}
+
+function emitLiveListPatch(request, response) {
+  const state = liveListScenario(request);
+  if (request.method !== 'POST' || !state) return refuse(response);
+  const previous = state.snapshot;
+  const updated = previous.graph.nodes.find((node) => node.id === 'list-item-101');
+  if (!updated) throw new TypeError('Live List patch target is missing.');
+  const node = { ...updated, title: `${updated.title} refreshed` };
+  const patch = { updated: [node], added: [], removed: [], edges: { added: [], removed: [] } };
+  const graph = {
+    ...previous.graph,
+    nodes: previous.graph.nodes.map((entry) => (entry.id === node.id ? node : entry)),
+  };
+  const sequence = previous.cursor.eventHead.sequence + 1;
+  const viewHash = sha256Jcs(graph);
+  const cursor = {
+    eventHead: {
+      sequence,
+      hash: sha256Jcs({
+        kind: 'planning-live-head',
+        previous: previous.cursor.eventHead,
+        sequence,
+        patchHash: sha256Jcs(patch),
+        viewHash,
+      }),
+    },
+    viewHash,
+  };
+  const patchHash = sha256Jcs({ from: previous.cursor, to: cursor, patch });
+  const event = {
+    kind: 'planning-live-event',
+    schemaVersion: '1.0.0',
+    event: 'patch',
+    binding: previous.binding,
+    cursor,
+    payload: {
+      patchId: `ppatch_${sequence}_${patchHash.slice(7, 23)}`,
+      patchHash,
+      from: previous.cursor,
+      to: cursor,
+      patch,
+    },
+  };
+  state.snapshot = { ...previous, cursor, graph };
+  for (const [stream, binding] of streams) {
+    if (binding === state) stream.write(`event: patch\ndata: ${JSON.stringify(event)}\n\n`);
+  }
+  return responseJson(response, 200, event);
+}
+
 function planningForRequest(request) {
+  const live = liveListScenario(request);
+  if (live) return live.snapshot;
   try {
     const referer = new URL(request.headers.referer ?? DASHBOARD_FIXTURE_ORIGIN);
     if (referer.searchParams.get('planningScenario') !== 'delivery') return fixture.planning;
@@ -563,7 +643,12 @@ function openStream(request, response) {
   response.setHeader('connection', 'keep-alive');
   response.flushHeaders();
   response.write(': owner fixture stream ready\n\n');
-  streams.add(response);
+  streams.set(
+    response,
+    new URL(request.url, DASHBOARD_FIXTURE_ORIGIN).pathname === '/api/planning/events'
+      ? liveListScenario(request)
+      : null,
+  );
   request.once('close', () => streams.delete(response));
 }
 
@@ -702,6 +787,9 @@ async function routeApi(request, response, next) {
   const { pathname } = url;
   if (!pathname.startsWith('/api/')) return next();
   try {
+    if (pathname === '/api/fixture/planning/patch' && exactQuery(url, {})) {
+      return emitLiveListPatch(request, response);
+    }
     if (pathname === '/api/bootstrap') {
       return request.method === 'GET' && exactQuery(url, {})
         ? responseJson(response, 200, bootstrapForRequest(request))
@@ -862,7 +950,7 @@ export function dashboardFixtureServerPlugin() {
         void routeApi(request, response, next);
       });
       server.httpServer?.once('close', () => {
-        for (const response of streams) response.end();
+        for (const response of streams.keys()) response.end();
         streams.clear();
       });
     },

@@ -110,7 +110,8 @@ export function resolvePlanningWorkspace(
   ) {
     return null;
   }
-  const presentation = PRESENTATION[state.kind as PlanningPresentation];
+  const presentation =
+    state.kind === 'refreshing' ? 'ready' : PRESENTATION[state.kind as PlanningPresentation];
   const envelope = asPlanningEnvelope(state.data);
   if (presentation === undefined || envelope === null) return null;
   return Object.freeze({

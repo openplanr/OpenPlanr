@@ -157,7 +157,9 @@ function verifiedState<T>(
   mutationEnabled = false,
   error: DashboardSafeError | null = null,
 ): DashboardProductState<T> {
-  if (!PRESENTATIONS.has(kind)) throw new Error('Unsupported owner presentation state.');
+  if (!PRESENTATIONS.has(kind) && !(kind === 'refreshing' && binding.productArea === 'planning')) {
+    throw new Error('Unsupported owner presentation state.');
+  }
   return dashboardRuntime.projection.parseState<T>(
     {
       kind,
@@ -221,6 +223,7 @@ function contextState(
 function useOwnerRead<T>(
   key: string | null,
   read: (signal: AbortSignal) => Promise<T>,
+  retainPreviousRevision = false,
 ): OwnerRead<T> {
   const readRef = useRef(read);
   readRef.current = read;
@@ -342,7 +345,7 @@ function useOwnerRead<T>(
 
   const isCurrent = snapshot.key === key && snapshot.revision === revision;
   const phase = isCurrent ? snapshot.phase : key === null ? 'idle' : 'loading';
-  const data = isCurrent ? snapshot.data : null;
+  const data = isCurrent || (retainPreviousRevision && snapshot.key === key) ? snapshot.data : null;
   const error = isCurrent ? snapshot.error : null;
   return useMemo(
     () => Object.freeze({ phase, data, error, refetch, reconcile }),
@@ -671,6 +674,7 @@ export function useDashboardRuntimeComposition(
       if (!origin || !planningReadBase) throw new Error('Planning query root is unavailable.');
       return planningRuntime.fetchGraph({ origin, identity: planningReadBase, signal });
     },
+    true,
   );
 
   const operateKey = rootKey(operateRoot);

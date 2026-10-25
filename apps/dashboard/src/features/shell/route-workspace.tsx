@@ -56,12 +56,13 @@ export function hasCurrentRouteSubject({
 function isPendingRouteProjection(
   projection: DashboardProductState<unknown>,
   binding: DashboardContext['binding'],
+  retainValidatedData = false,
 ): boolean {
   if (
     !isValidatedDashboardProductState(projection) ||
     (projection.kind !== 'booting' &&
       projection.kind !== 'loading' &&
-      projection.kind !== 'refreshing')
+      (projection.kind !== 'refreshing' || (retainValidatedData && projection.data !== null)))
   ) {
     return false;
   }
@@ -69,11 +70,7 @@ function isPendingRouteProjection(
   return binding !== null && isCurrentDashboardQuery(projection.binding, binding);
 }
 
-/**
- * Keep an ordinary route recognisable while its exact owner-issued projection is in flight:
- * the real header, a skeleton body in the shape the route will have. Booting, loading, and
- * refreshing are expected transit states, not a refused or unavailable product surface.
- */
+/** Preserve route chrome while its owner projection is pending. */
 function PendingRouteFrame({
   route,
   projection,
@@ -200,7 +197,7 @@ function PlanningRouteWorkspace({
   }
 
   const Page = resolvePlanningRoutePage<PlanningPageProps>(route);
-  if (isPendingRouteProjection(projection, binding)) {
+  if (isPendingRouteProjection(projection, binding, true)) {
     return <PendingRouteFrame route={route} projection={projection} />;
   }
   if (Page && binding && isValidatedDashboardProductState<Record<string, unknown>>(projection)) {
