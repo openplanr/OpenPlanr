@@ -69,7 +69,7 @@ function resolveCommand(command, env, cwd) {
 function insideStubRoot(file) {
   let directory;
   try {
-    directory = realpathSync(dirname(file));
+    directory = dirname(realpathSync(file));
   } catch {
     return false;
   }

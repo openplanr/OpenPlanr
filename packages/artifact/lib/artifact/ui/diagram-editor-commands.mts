@@ -228,7 +228,7 @@ export function createEditorCommands(ctx: DiagramEditorContext): DiagramEditorCo
       notice('Diagram saved.');
     }
   }
-  function useTool(next: DiagramEditorTool, state: DiagramEditorState) {
+  function chooseTool(next: DiagramEditorTool, state: DiagramEditorState) {
     ctx.canvas.setTool(next);
     ctx.chrome.render(state, { force: true });
     notice(next === 'select' ? 'Select mode' : 'Pan mode');
@@ -351,8 +351,8 @@ export function createEditorCommands(ctx: DiagramEditorContext): DiagramEditorCo
     ['properties-tab', () => ctx.inspector.showTab(actionTrigger?.dataset.tab ?? 'properties')],
     ['review-tab', () => ctx.inspector.showTab(actionTrigger?.dataset.tab ?? 'review')],
     ['host-panel-tab', () => ctx.inspector.showTab(actionTrigger?.dataset.tab ?? 'properties')],
-    ['select-tool', ({ state }) => useTool('select', state)],
-    ['pan-tool', ({ state }) => useTool('pan', state)],
+    ['select-tool', ({ state }) => chooseTool('select', state)],
+    ['pan-tool', ({ state }) => chooseTool('pan', state)],
     [
       'snap',
       ({ state }) => {
@@ -707,7 +707,7 @@ export function createEditorCommands(ctx: DiagramEditorContext): DiagramEditorCo
     select,
     submit,
     submitTransaction,
-    useTool,
+    useTool: chooseTool,
     trigger: () => actionTrigger,
     hasClipboard: () => !!clipboard,
     click,

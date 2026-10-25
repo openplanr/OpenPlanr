@@ -1,5 +1,13 @@
 import { spawnSync } from 'node:child_process';
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync,
+} from 'node:fs';
 import { createRequire } from 'node:module';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
@@ -75,6 +83,45 @@ describe.skipIf(process.platform === 'win32')('host CLI guard', () => {
       ['claude', join(real, 'claude')],
       ['codex', join(real, 'codex')],
     ]);
+  });
+
+  it('rejects executable symlinks outside the stub root while allowing internal targets', () => {
+    const root = mkdtempSync(join(tmpdir(), 'openplanr-host-guard-links-'));
+    roots.push(root);
+    const stubs = join(root, 'stubs');
+    const real = join(root, 'real');
+    markerHost(stubs, 'allowed', join(root, 'stub.ran'));
+    markerHost(real, 'claude', join(root, 'real.ran'));
+    symlinkSync(join(stubs, 'allowed'), join(stubs, 'codex'));
+    symlinkSync(join(real, 'claude'), join(stubs, 'claude'));
+    const log = join(root, 'guard.log');
+    const result = spawnSync(
+      process.execPath,
+      [
+        '--input-type=module',
+        '-e',
+        `import { spawnSync } from 'node:child_process';
+         const blocked = spawnSync('claude', ['--version']);
+         const allowed = spawnSync('codex', ['--version']);
+         console.log(JSON.stringify({ blocked: blocked.error?.code, allowed: allowed.status }));`,
+      ],
+      {
+        encoding: 'utf8',
+        env: {
+          ...process.env,
+          PATH: stubs,
+          OPENPLANR_TEST_HOST_GUARD_LOG: log,
+          OPENPLANR_TEST_HOST_GUARD_ROOT: stubs,
+          NODE_OPTIONS: `--import=${pathToFileURL(guardModule).href}`,
+        },
+      },
+    );
+    expect(result.status, result.stderr).toBe(0);
+    expect(JSON.parse(result.stdout)).toEqual({ blocked: 'ENOENT', allowed: 0 });
+    expect(existsSync(join(root, 'real.ran'))).toBe(false);
+    expect(existsSync(join(root, 'stub.ran'))).toBe(true);
+    const violation = JSON.parse(readFileSync(log, 'utf8')) as { command: string };
+    expect(violation.command).toBe('claude');
   });
 
   it('fails a vitest test that reaches a real host CLI', () => {

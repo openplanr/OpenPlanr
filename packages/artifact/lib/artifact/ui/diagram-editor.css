@@ -631,12 +631,12 @@ body.planr-diagram-owner-page #diagram-owner-editor {
 
 /* Full-bleed tabs, rows, menu items and summaries keep their focus ring inside their own box. */
 .planr-diagram-editor
-:is(
-  .de-panel-header > .de-panel-tabs button,
-  .de-outline-item button,
-  .de-menu-item,
-  details > summary
-):focus-visible {
+  :is(
+    .de-panel-header > .de-panel-tabs button,
+    .de-outline-item button,
+    .de-menu-item,
+    details > summary
+  ):focus-visible {
   outline-offset: -2px;
 }
 
@@ -1885,7 +1885,7 @@ body.planr-diagram-owner-page #diagram-owner-editor {
 /* The bar is inert under an open drawer and sits outside the backdrop, so it takes the same layer.
  * A click on it lands on the shell, which closes the drawer as a backdrop click does. */
 .planr-diagram-editor[data-layout~="drawer"]:is([data-left-open="true"], [data-right-open="true"])
-.de-bar::after {
+  .de-bar::after {
   position: absolute;
   z-index: 1;
   inset: 0;
