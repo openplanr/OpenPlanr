@@ -38,13 +38,13 @@ const protocolManifest = JSON.parse(
 
 const EXPECTED_RUNTIME = {
   '@openplanr/protocol': protocolManifest.version,
-  '@tanstack/react-query': '5.104.2',
+  '@tanstack/react-query': '5.104.5',
   'class-variance-authority': '0.7.1',
   clsx: '2.1.1',
-  'lucide-react': '1.55.0',
-  'radix-ui': '1.8.0',
-  react: '19.3.0',
-  'react-dom': '19.3.0',
+  'lucide-react': '1.61.0',
+  'radix-ui': '1.8.1',
+  react: '19.3.1',
+  'react-dom': '19.3.1',
   'react-router': '7.18.3',
   'tailwind-merge': '3.7.0',
   'tw-animate-css': '1.4.0',
