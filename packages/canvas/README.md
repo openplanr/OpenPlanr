@@ -294,6 +294,49 @@ Chromium only. Run `npm run test:browser:nightly --workspace=@openplanr/canvas`
 for the Firefox cache check, using Playwright's installed Firefox by default.
 `CANVAS_FIREFOX_NIGHTLY_PATH` optionally selects a nightly binary.
 
+Run `npm run bench:trace:cross-browser --workspace=@openplanr/canvas` for the
+WebKit and stock Firefox trace suites. WebKit covers HTML fixtures
+with 708 and 5,000 nodes in vanilla and React at DPR 2 and 1, exercising pan at
+100%, pan at 40%, fit and zoom. Firefox uses the same eight fixture, binding and
+DPR combinations with pan at 100% and fit. The separate `firefox` project keeps
+the optional nightly binary for the cache check; `firefox-trace` uses
+Playwright's installed Firefox.
+
+These browsers reuse the benches' rAF intervals, bounded by each interaction's
+own phase and frame marks. `PerformanceObserver.supportedEntryTypes` determines
+whether long-task and layout-shift observations are available; unavailable
+metrics are reported as `unsupported`. CDP main-thread work is `unsupported`
+outside Chromium. First-frame timing and DOM counts remain supported.
+
+The release-candidate job uses `CI=true`. It gates long tasks where supported,
+stage DOM counts, first-frame p50 (250 ms) and hit-test budgets, plus React
+pure-camera commit checks. As in Chromium, the runner only reports interaction
+rAF p95 and worst-frame limits; local runs enforce the existing browser limits.
+Frame timings must still be numeric; missing or `unsupported` timing is invalid.
+
+| Measurement | Chromium | WebKit | Firefox |
+| --- | --- | --- | --- |
+| rAF interval p95 | Bench intervals | Bench intervals | Bench intervals |
+| Worst frame | CDP renderer work | Bench intervals | Bench intervals |
+| Interaction and engine frame marks | Supported | Supported | Supported |
+| First-frame timing and stage DOM count | Supported | Supported | Supported |
+| CDP main-thread work | Supported | `unsupported` | `unsupported` |
+| Long-task observations | Runtime support required by CDP suite | Runtime support check | Runtime support check |
+| Layout-shift observations | Runtime support check | Runtime support check | Runtime support check |
+
+Cross-browser results use `test-results/bench-trace-webkit-${gpuMode}.json`,
+and `test-results/bench-trace-firefox-${gpuMode}.json`. To run the optional
+untraced budget checks in those projects, use
+`npm exec --workspace=@openplanr/canvas -- playwright test --project=webkit --project=firefox-trace tests/browser/budgets.spec.ts`.
+Those checks write `test-results/canvas-budgets-webkit-${gpuMode}.json` and
+`test-results/canvas-budgets-firefox-${gpuMode}.json`. Chromium keeps its existing
+filenames. The `canvas-cross-browser-traces` job in `nightly.yml` adds only
+the extra engine trace rows and runs only on
+`workflow_dispatch`, including release-candidate dispatches and manual runs.
+Scheduled runs and ordinary pull requests do not run this lane. The existing
+Chromium `canvas-traces` job already supplies the second edge density and
+untraced budget bench on dispatch.
+
 The browser runner defaults to software mode. For the local Metal comparison,
 run `CANVAS_GPU_MODE=metal npm run bench:trace --workspace=@openplanr/canvas`.
 CI rejects Metal mode; each result records the actual renderer string.

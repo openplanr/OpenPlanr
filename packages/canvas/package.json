@@ -35,7 +35,8 @@
     "test": "vitest run",
     "test:browser": "playwright test --project=chromium",
     "test:browser:nightly": "playwright test --project=firefox",
-    "bench:trace": "playwright test tests/browser/bench-trace.spec.ts"
+    "bench:trace": "playwright test --project=chromium tests/browser/bench-trace.spec.ts",
+    "bench:trace:cross-browser": "playwright test --project=webkit --project=firefox-trace tests/browser/bench-trace.spec.ts"
   },
   "engines": {
     "node": ">=22.13.0"

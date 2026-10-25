@@ -86,10 +86,12 @@ export type CanvasHitTestProbe = Readonly<{
 }>;
 export type CanvasTraceRun = Readonly<{
   run: number;
-  rendererMainP95Ms?: number;
+  rendererMainP95Ms?: number | 'unsupported';
   rafIntervalP95Ms: number;
   worstFrameMs?: number;
-  longTasksOver50Ms: number;
+  longTasksOver50Ms: number | 'unsupported';
+  layoutShiftValue?: number | 'unsupported';
+  engineFrameSamples?: number;
   domNodes: number;
   hitTestP95Ms: number;
   hitTestProbe: CanvasHitTestProbe;
@@ -110,7 +112,7 @@ export type CanvasChromeSnapshot = Readonly<{
 }>;
 export type CanvasChromeMeasurement = CanvasTraceIdentity &
   Readonly<{
-    layoutShifts: LayoutShiftReport;
+    layoutShifts: LayoutShiftReport | 'unsupported';
     before: CanvasChromeSnapshot;
     after: CanvasChromeSnapshot;
     snapshots: readonly CanvasChromeSnapshot[];
@@ -240,6 +242,22 @@ export function evaluateCanvasTrace(
   const pending = ['dropped frames at fit: compositor trace is not measured'];
   const limits = CANVAS_TRACE_BUDGETS;
   const policy = traceBudgetPolicy(results.budgetSet === 'runner');
+  function supported(
+    item: CanvasTraceIdentity,
+    scenario: string,
+    metric: string,
+    value: unknown,
+  ): value is number {
+    if (value === 'unsupported') {
+      if (item.count === tier)
+        pending.push(
+          `${item.fixture} ${item.renderer} ${item.world} DPR ${item.dpr} ${scenario}: ${metric} unsupported for tier ${tier}`,
+        );
+      return false;
+    }
+    numeric(value, `${item.fixture}.${scenario}.${metric}`);
+    return true;
+  }
   function check(
     item: CanvasTraceIdentity,
     scenario: string,
@@ -369,20 +387,34 @@ export function evaluateCanvasTrace(
       object(run, `${field}.runs`);
       numeric(run.run, `${field}.run`);
       const scenario = `${item.scenario} run ${run.run}`;
-      if (results.browser.name === 'chromium' || run.rendererMainP95Ms !== undefined) {
+      if (results.browser.name === 'chromium') {
         numeric(run.rendererMainP95Ms, `${field}.rendererMainP95Ms`);
         main.push(run.rendererMainP95Ms);
+      } else {
+        supported(
+          item,
+          scenario,
+          'rendererMainP95Ms',
+          run.rendererMainP95Ms === undefined ? 'unsupported' : run.rendererMainP95Ms,
+        );
       }
       numeric(run.rafIntervalP95Ms, `${field}.rafIntervalP95Ms`);
       raf.push(run.rafIntervalP95Ms);
-      maximum(
-        item,
-        scenario,
-        'longTasksOver50Ms',
-        run.longTasksOver50Ms,
-        limits.longTasksOver50Ms,
-        reportOnly,
-      );
+      if (results.browser.name === 'chromium')
+        numeric(run.longTasksOver50Ms, `${field}.longTasksOver50Ms`);
+      if (supported(item, scenario, 'longTasksOver50Ms', run.longTasksOver50Ms))
+        maximum(
+          item,
+          scenario,
+          'longTasksOver50Ms',
+          run.longTasksOver50Ms,
+          limits.longTasksOver50Ms,
+          reportOnly,
+        );
+      if (run.layoutShiftValue !== undefined)
+        supported(item, scenario, 'layoutShiftValue', run.layoutShiftValue);
+      for (const metric of ['engineFrameSamples', 'worstFrameMs'] as const)
+        if (run[metric] !== undefined) numeric(run[metric], `${field}.${metric}`);
       hitTest(item, scenario, run.hitTestProbe, reportOnly);
       maximum(item, scenario, 'hitTestP95Ms', run.hitTestP95Ms, limits.hitTestP95Ms, reportOnly);
       check(
@@ -434,7 +466,7 @@ export function evaluateCanvasTrace(
           'worstFrameMs',
           run.worstFrameMs,
           limits.webkit.pan40WorstFrameMs,
-          reportOnly,
+          reportOnly || policy.rafIntervalP95Ms === null,
         );
       }
     }
@@ -470,7 +502,10 @@ export function evaluateCanvasTrace(
         limits.webkit.rafIntervalP95Ms,
         reportOnly || policy.rafIntervalP95Ms === null,
       );
-    } else if (item.scenario === 'pan-100' || item.scenario === 'pan-fit') {
+    } else if (
+      results.browser.name === 'firefox' &&
+      (item.scenario === 'pan-100' || item.scenario === 'pan-fit')
+    ) {
       interval(
         item,
         item.scenario,
@@ -479,19 +514,33 @@ export function evaluateCanvasTrace(
         item.scenario === 'pan-100'
           ? limits.firefox.pan100FrameP95Ms
           : limits.firefox.panFitFrameP95Ms[item.count],
-        reportOnly,
+        reportOnly || policy.rafIntervalP95Ms === null,
       );
     }
   }
   for (const item of results.hitTests ?? []) hitTest(item, 'hit-test', item.hitTestProbe);
   for (const item of results.chrome ?? []) {
     const field = `${item.fixture}.chrome`;
-    layoutEvidence(item.layoutShifts, `${field}.layoutShifts`);
     snapshot(item.before, `${field}.before`);
     snapshot(item.after, `${field}.after`);
     if (!Array.isArray(item.snapshots)) throw new TypeError(`${field}.snapshots must be an array`);
-    const cls = aggregateLayoutShifts(item.layoutShifts, { inputPhase: () => false });
-    maximum(item, 'chrome-toggle', 'admittedCls', cls.admittedCls, limits.admittedCls);
+    if (item.layoutShifts === 'unsupported') {
+      supported(item, 'chrome-toggle', 'layoutShifts', item.layoutShifts);
+    } else {
+      layoutEvidence(item.layoutShifts, `${field}.layoutShifts`);
+      const cls = aggregateLayoutShifts(item.layoutShifts, { inputPhase: () => false });
+      maximum(item, 'chrome-toggle', 'admittedCls', cls.admittedCls, limits.admittedCls);
+      const phases = item.layoutShifts.phases;
+      check(
+        item,
+        'chrome-toggle',
+        'phases',
+        JSON.stringify(phases.map((phase) => phase.phase)),
+        'chrome-toggle 0 through 15',
+        phases.length === limits.chromeToggles &&
+          phases.every((phase, index) => phase.phase === `chrome-toggle ${index}`),
+      );
+    }
     check(
       item,
       'chrome-toggle',
@@ -499,16 +548,6 @@ export function evaluateCanvasTrace(
       item.snapshots.length,
       limits.chromeToggles,
       item.snapshots.length === limits.chromeToggles,
-    );
-    const phases = item.layoutShifts.phases;
-    check(
-      item,
-      'chrome-toggle',
-      'phases',
-      JSON.stringify(phases.map((phase) => phase.phase)),
-      'chrome-toggle 0 through 15',
-      phases.length === limits.chromeToggles &&
-        phases.every((phase, index) => phase.phase === `chrome-toggle ${index}`),
     );
     for (const [index, current] of [...item.snapshots, item.after].entries()) {
       snapshot(current, `${field}.snapshots[${index}]`);

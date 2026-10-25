@@ -18,9 +18,12 @@ import { waitForBench } from './bench';
 import { benchMetadata } from './metadata';
 import { RUNNER_BUDGETS, SECOND_DENSITY, traceBudgetPolicy } from './trace-results';
 
-async function chromeToggles(page: Page) {
-  return page.evaluate(async () => {
-    if (!PerformanceObserver.supportedEntryTypes.includes('layout-shift'))
+async function chromeToggles(page: Page, requireLayoutShift: boolean) {
+  return page.evaluate(async (requireLayoutShift) => {
+    const supportsLayoutShift =
+      typeof PerformanceObserver !== 'undefined' &&
+      PerformanceObserver.supportedEntryTypes.includes('layout-shift');
+    if (requireLayoutShift && !supportsLayoutShift)
       throw new Error('Canvas chrome layout-shift observation is unavailable');
     const stage = document.getElementById('stage');
     if (!stage) throw new Error('Canvas chrome stage is missing');
@@ -107,8 +110,10 @@ async function chromeToggles(page: Page) {
         });
       }
     };
-    const observer = new PerformanceObserver((list) => record(list.getEntries()));
-    observer.observe({ type: 'layout-shift', buffered: false });
+    const observer = supportsLayoutShift
+      ? new PerformanceObserver((list) => record(list.getEntries()))
+      : null;
+    observer?.observe({ type: 'layout-shift', buffered: false });
     const snapshots: CanvasChromeSnapshot[] = [];
     try {
       for (let index = 0; index < 16; index += 1) {
@@ -142,14 +147,16 @@ async function chromeToggles(page: Page) {
         snapshots.push(snapshot());
       }
       await next();
-      record(observer.takeRecords());
-      const layoutShifts: LayoutShiftReport = { phases, inputActions, shifts };
+      if (observer) record(observer.takeRecords());
+      const layoutShifts: LayoutShiftReport | 'unsupported' = observer
+        ? { phases, inputActions, shifts }
+        : 'unsupported';
       return { before, after: snapshot(), snapshots, layoutShifts };
     } finally {
-      observer.disconnect();
+      observer?.disconnect();
       for (const { panel } of panels) panel.remove();
     }
-  });
+  }, requireLayoutShift);
 }
 
 async function lodCrossings(page: Page, band: 'full-compact' | 'compact-overview') {
@@ -224,19 +231,18 @@ test('evaluates untraced fixture budgets at both pixel densities', async ({
   const metadata = benchMetadata(browser, browserName);
   const hitTests: CanvasHitTestMeasurement[] = [];
   const chrome: (CanvasChromeMeasurement & {
-    classification: ReturnType<typeof aggregateLayoutShifts>;
+    classification: ReturnType<typeof aggregateLayoutShifts> | 'unsupported';
   })[] = [];
   const lod: CanvasLodMeasurement[] = [];
   const pins: CanvasPinMeasurement[] = [];
   const renderers: (CanvasTraceIdentity & { gpuRenderer: string })[] = [];
   for (const dpr of [2, 1] as const) {
     for (const fixture of [
-      ...(SECOND_DENSITY ? ['708-477'] : []),
+      ...(browserName === 'chromium' && SECOND_DENSITY ? ['708-477'] : []),
       '708-997',
-      ...(SECOND_DENSITY ? ['5000-8499'] : []),
+      ...(browserName === 'chromium' && SECOND_DENSITY ? ['5000-8499'] : []),
       '5000-7312',
-      'svg-708',
-      'svg-5000',
+      ...(browserName === 'chromium' ? ['svg-708', 'svg-5000'] : []),
     ]) {
       const world = fixture.startsWith('svg-') ? 'svg' : 'html';
       const count = fixture.includes('5000') ? 5000 : 708;
@@ -263,13 +269,14 @@ test('evaluates untraced fixture budgets at both pixel densities', async ({
           }));
           hitTests.push({ ...identity, hitTestProbe: probe.hitTestProbe });
           renderers.push({ ...identity, gpuRenderer: probe.gpuRenderer });
-          const toggles = await chromeToggles(page);
+          const toggles = await chromeToggles(page, browserName === 'chromium');
           chrome.push({
             ...identity,
             ...toggles,
-            classification: aggregateLayoutShifts(toggles.layoutShifts, {
-              inputPhase: () => false,
-            }),
+            classification:
+              toggles.layoutShifts === 'unsupported'
+                ? 'unsupported'
+                : aggregateLayoutShifts(toggles.layoutShifts, { inputPhase: () => false }),
           });
           for (const band of ['full-compact', 'compact-overview'] as const)
             lod.push({ ...identity, ...(await lodCrossings(page, band)) });
@@ -283,7 +290,7 @@ test('evaluates untraced fixture budgets at both pixel densities', async ({
   }
   const results = {
     ...metadata,
-    secondDensity: SECOND_DENSITY,
+    secondDensity: browserName === 'chromium' && SECOND_DENSITY,
     budgetSet: traceBudgetPolicy(RUNNER_BUDGETS).budgetSet,
     hitTests,
     chrome,
@@ -294,7 +301,10 @@ test('evaluates untraced fixture budgets at both pixel densities', async ({
   const evaluations = ([708, 5000] as const).map((tier) => evaluateCanvasTrace(results, tier));
   const directory = resolve(import.meta.dirname, '../../test-results');
   await mkdir(directory, { recursive: true });
-  const output = resolve(directory, `canvas-budgets-${metadata.gpuMode}.json`);
+  const output = resolve(
+    directory,
+    `canvas-budgets-${browserName === 'chromium' ? '' : `${browserName}-`}${metadata.gpuMode}.json`,
+  );
   await writeFile(output, `${JSON.stringify({ ...results, evaluations }, null, 2)}\n`);
   await testInfo.attach('canvas-budgets', { path: output, contentType: 'application/json' });
   for (const evaluation of evaluations)
