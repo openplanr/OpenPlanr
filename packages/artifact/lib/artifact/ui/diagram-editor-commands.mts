@@ -437,8 +437,14 @@ export function createEditorCommands(ctx: DiagramEditorContext): DiagramEditorCo
         const existing = bundle.presentation.elements
           .map((item) => item.bounds)
           .filter((rect) => rect !== null);
-        const command = createObject(kind, visibleInsertionPoint(at,
-          kind === 'container' || kind.endsWith('-lane') ? { width: 540, height: 240 } : { width: 160, height: 80 }, existing, visibleWorldBounds()));
+        const position = ctx.config.shapeLibraryEnabled
+          ? visibleInsertionPoint(at,
+            kind === 'container' || kind.endsWith('-lane') ? { width: 540, height: 240 } : { width: 160, height: 80 }, existing, visibleWorldBounds())
+          : {
+              x: existing.length ? Math.round(Math.max(...existing.map((item) => item.x + item.width)) + 64) : Math.round(at.x - 80),
+              y: existing.length ? Math.round(Math.min(...existing.map((item) => item.y))) : Math.round(at.y - 36),
+            };
+        const command = createObject(kind, position);
         const result = submit(command, [command.elements[0].value.id]);
         if (result.ok) {
           ctx.chrome.dismissEmpty();
