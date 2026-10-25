@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import {
   ARTIFACT_STATUS_ORDER,
   Button,
@@ -28,7 +27,7 @@ import {
   UPDATED_COLUMN,
 } from './planning-columns.js';
 import { inspectPlanningNode } from './planning-inspector.js';
-import { takeListStatus } from './planning-list-filter.js';
+import { usePlanningListState } from './planning-list-state.js';
 import {
   filterPlanningNodes,
   type PlanningArtifactStatus,
@@ -92,12 +91,8 @@ function sortByUpdated(
 }
 
 export function ListPage({ currentBinding, current }: ListPageProps) {
-  const [query, setQuery] = useState('');
-  const [type, setType] = useState<string>(ALL);
-  const [status, setStatus] = useState<string>(() => takeListStatus() ?? ALL);
-  const [compact, setCompact] = useState(false);
-  const [sort, setSort] = useState<DataTableSort>({ key: 'updated', dir: 'desc' });
-  const [page, setPage] = useState(0);
+  const [{ query, type, status, compact, sort, page }, updateView] =
+    usePlanningListState(currentBinding);
   const inspector = useInspectorStore();
 
   const model = resolvePlanningWorkspace(current, currentBinding);
@@ -117,7 +112,6 @@ export function ListPage({ currentBinding, current }: ListPageProps) {
   const pageStart = currentPage * PAGE_SIZE;
   const visibleRows = rows.slice(pageStart, pageStart + PAGE_SIZE);
   const dependencyCounts = outgoingDependencyCounts(model.graph.edges);
-  const resetPage = () => setPage(0);
   const selectedId = inspector.selection?.kind === 'node' ? inspector.selection.id : undefined;
 
   return (
@@ -142,7 +136,14 @@ export function ListPage({ currentBinding, current }: ListPageProps) {
       ) : (
         <section className="pc-list__surface" aria-label="Planning artifact index">
           <Toolbar
-            right={<Switch size="sm" checked={compact} onChange={setCompact} label="Compact" />}
+            right={
+              <Switch
+                size="sm"
+                checked={compact}
+                onChange={(value) => updateView({ compact: value })}
+                label="Compact"
+              />
+            }
           >
             <Input
               size="sm"
@@ -152,8 +153,7 @@ export function ListPage({ currentBinding, current }: ListPageProps) {
               ariaLabel="Filter by id or title"
               value={query}
               onChange={(value) => {
-                setQuery(value);
-                resetPage();
+                updateView({ query: value, page: 0 });
               }}
             />
             <Select
@@ -162,8 +162,7 @@ export function ListPage({ currentBinding, current }: ListPageProps) {
               ariaLabel="Filter by type"
               value={type}
               onChange={(value) => {
-                setType(value);
-                resetPage();
+                updateView({ type: value, page: 0 });
               }}
               options={TYPE_OPTIONS}
             />
@@ -173,8 +172,7 @@ export function ListPage({ currentBinding, current }: ListPageProps) {
               ariaLabel="Filter by status"
               value={status}
               onChange={(value) => {
-                setStatus(value);
-                resetPage();
+                updateView({ status: value, page: 0 });
               }}
               options={STATUS_OPTIONS}
             />
@@ -187,11 +185,10 @@ export function ListPage({ currentBinding, current }: ListPageProps) {
             selectedId={selectedId}
             sort={sort}
             onSort={(key) => {
-              setSort((current) => ({
-                key,
-                dir: current.key === key && current.dir === 'desc' ? 'asc' : 'desc',
-              }));
-              resetPage();
+              updateView({
+                sort: { key, dir: sort.key === key && sort.dir === 'desc' ? 'asc' : 'desc' },
+                page: 0,
+              });
             }}
             onRowClick={inspectPlanningNode}
             caption="Planning artifacts"
@@ -216,7 +213,7 @@ export function ListPage({ currentBinding, current }: ListPageProps) {
                   size="sm"
                   icon="chevron-left"
                   disabled={currentPage === 0}
-                  onClick={() => setPage(Math.max(0, currentPage - 1))}
+                  onClick={() => updateView({ page: Math.max(0, currentPage - 1) })}
                 >
                   Previous
                 </Button>
@@ -224,7 +221,7 @@ export function ListPage({ currentBinding, current }: ListPageProps) {
                   size="sm"
                   iconAfter="chevron-right"
                   disabled={currentPage + 1 >= pageCount}
-                  onClick={() => setPage(Math.min(pageCount - 1, currentPage + 1))}
+                  onClick={() => updateView({ page: Math.min(pageCount - 1, currentPage + 1) })}
                 >
                   Next
                 </Button>

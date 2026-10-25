@@ -30,6 +30,13 @@ import {
   parseDashboardRoute,
 } from '../../../../apps/dashboard/src/app/router.js';
 import {
+  encodePlanningCheckpoint,
+  type PlanningGraphEnvelope,
+  parsePlanningGraphEnvelope,
+  parsePlanningLiveEvent,
+} from '../../../../apps/dashboard/src/features/planning/planning-api.js';
+import { createDashboardQueryIdentity } from '../../../../apps/dashboard/src/lib/binding/query-identity.js';
+import {
   DASHBOARD_FIXTURE_CYCLE_ID,
   DASHBOARD_FIXTURE_REVIEW_ID,
   DASHBOARD_ROUTE_FIXTURES,
@@ -748,6 +755,139 @@ test.describe('dashboard real-browser quality', () => {
     await expect(sprint).toContainText('Submit one test registration before dispatching QT-071');
     expect((await layoutReport(page)).horizontalOverflow).toBe(false);
     expect(await axeViolations(page)).toEqual([]);
+  });
+
+  test('retains the List view and selection through a validated live patch', async ({ page }) => {
+    const initialGraphResponse = page.waitForResponse(
+      (response) => new URL(response.url()).pathname === '/api/planning/graph',
+    );
+    const initialStream = page.waitForResponse(
+      (response) => new URL(response.url()).pathname === '/api/planning/events',
+    );
+    await openFixture(page, '#/list', {
+      planningScenario: 'live-list',
+      planningSession: `list-${Date.now()}`,
+    });
+    await initialStream;
+    const initialWire = (await (await initialGraphResponse).json()) as PlanningGraphEnvelope;
+    const identity = createDashboardQueryIdentity({
+      ...initialWire.binding,
+      ...initialWire.cursor,
+      productArea: 'planning',
+      route: '#/list',
+      cycleId: null,
+      subjectId: null,
+    });
+    const initial = parsePlanningGraphEnvelope(initialWire, identity);
+    const list = page.locator('[data-route-kind="planning.list"]');
+    await list.getByRole('textbox', { name: 'Filter by id or title' }).fill('Live list artifact');
+    await list.getByRole('combobox', { name: 'Filter by type' }).selectOption('task');
+    await list.getByRole('combobox', { name: 'Filter by status' }).selectOption('outstanding');
+    await list.locator('label.pc-switch', { hasText: 'Compact' }).click();
+    await expect(list.getByRole('switch', { name: 'Compact' })).toBeChecked();
+    await list.getByRole('button', { name: 'Updated', exact: true }).click();
+    await expect(list.getByRole('columnheader', { name: 'Updated', exact: true })).toHaveAttribute(
+      'aria-sort',
+      'ascending',
+    );
+    await list.getByRole('button', { name: 'Next', exact: true }).click();
+    const selected = list.getByRole('row').filter({ hasText: 'list-item-101' });
+    await selected.click();
+    await expect(selected).toHaveAttribute('data-selected', 'true');
+    await expect(list.locator('.pc-list__page-status')).toHaveText('Page 2 of 2 · 101–125 of 125');
+
+    await page.evaluate(() => {
+      const state = { pending: false, removedList: false, notice: false };
+      const contains = (node: Node, selector: string) =>
+        node instanceof Element &&
+        (node.matches(selector) || node.querySelector(selector) !== null);
+      const observer = new MutationObserver((records) => {
+        state.pending ||= records.some((record) =>
+          Array.from(record.addedNodes).some((node) => contains(node, '[data-route-pending]')),
+        );
+        state.notice ||= records.some((record) =>
+          Array.from(record.addedNodes).some((node) => contains(node, '.op-planning-notice')),
+        );
+        state.removedList ||= records.some((record) =>
+          Array.from(record.removedNodes).some((node) =>
+            contains(node, '[data-route-kind="planning.list"]'),
+          ),
+        );
+      });
+      observer.observe(document.body, { childList: true, subtree: true });
+      Reflect.set(window, '__fixtureListObservation', { state, observer });
+    });
+
+    let releaseRefresh: (() => void) | undefined;
+    const refreshGate = new Promise<void>((resolve) => {
+      releaseRefresh = resolve;
+    });
+    await page.route('**/api/planning/graph?*', async (route) => {
+      await refreshGate;
+      await route.continue();
+    });
+    const refreshStarted = page.waitForRequest(
+      (request) => new URL(request.url()).pathname === '/api/planning/graph',
+    );
+    try {
+      const event = parsePlanningLiveEvent(
+        await page.evaluate(async () => {
+          const response = await fetch('/api/fixture/planning/patch', { method: 'POST' });
+          if (!response.ok) throw new Error(`Live List patch failed: ${response.status}`);
+          return response.json();
+        }),
+        identity,
+      );
+      expect(event.event).toBe('patch');
+      expect(event.cursor.eventHead.sequence).toBe(initial.cursor.eventHead.sequence + 1);
+      expect(event.cursor.viewHash).not.toBe(initial.cursor.viewHash);
+      await refreshStarted;
+      await expect(list).toBeVisible();
+      await expect(page.locator('[data-route-pending]')).toHaveCount(0);
+      await expect(list.locator('.op-planning-notice')).toHaveCount(0);
+      await expect(selected).toHaveAttribute('data-selected', 'true');
+
+      const checkpoint = encodePlanningCheckpoint(event.cursor);
+      const cursorApplied = page.waitForRequest(
+        (request) =>
+          new URL(request.url()).pathname === '/api/planning/events' &&
+          request.headers()['last-event-id'] === checkpoint,
+      );
+      if (!releaseRefresh) throw new Error('Live List refresh gate is missing.');
+      releaseRefresh();
+      await cursorApplied;
+      await expect(selected).toContainText('Live list artifact 101 refreshed');
+      await expect(list.getByRole('textbox', { name: 'Filter by id or title' })).toHaveValue(
+        'Live list artifact',
+      );
+      await expect(list.getByRole('combobox', { name: 'Filter by type' })).toHaveValue('task');
+      await expect(list.getByRole('combobox', { name: 'Filter by status' })).toHaveValue(
+        'outstanding',
+      );
+      await expect(list.getByRole('switch', { name: 'Compact' })).toBeChecked();
+      await expect(
+        list.getByRole('columnheader', { name: 'Updated', exact: true }),
+      ).toHaveAttribute('aria-sort', 'ascending');
+      await expect(list.locator('.pc-list__page-status')).toHaveText(
+        'Page 2 of 2 · 101–125 of 125',
+      );
+      await expect(selected).toHaveAttribute('data-selected', 'true');
+      await expect(page.locator('[data-route-pending]')).toHaveCount(0);
+      await expect(list.locator('.op-planning-notice')).toHaveCount(0);
+      const observation = await page.evaluate(() => {
+        const value = Reflect.get(window, '__fixtureListObservation') as {
+          state: { pending: boolean; removedList: boolean; notice: boolean };
+          observer: MutationObserver;
+        };
+        value.observer.disconnect();
+        Reflect.deleteProperty(window, '__fixtureListObservation');
+        return value.state;
+      });
+      expect(observation).toEqual({ pending: false, removedList: false, notice: false });
+    } finally {
+      releaseRefresh?.();
+      await page.unroute('**/api/planning/graph?*');
+    }
   });
 
   test('does not replace a verified Planning workspace while changing Planning routes', async ({

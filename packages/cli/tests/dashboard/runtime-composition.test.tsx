@@ -1,29 +1,41 @@
 // @vitest-environment jsdom
 
-import { act, renderHook, waitFor } from '@testing-library/react';
+import { act, render, renderHook, screen, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { parseDashboardRoute } from '../../../../apps/dashboard/src/app/router.js';
 import { useDashboardRuntimeComposition } from '../../../../apps/dashboard/src/app/runtime-composition.js';
 import { resolvePlanningHandoffModel } from '../../../../apps/dashboard/src/features/operate/planning/planning-handoff-model.js';
+import type { PlanningGraphEnvelope } from '../../../../apps/dashboard/src/features/planning/planning-api.js';
 import { planningNodesFromProductState } from '../../../../apps/dashboard/src/features/planning/planning-workspace.js';
+import { RouteWorkspace } from '../../../../apps/dashboard/src/features/shell/route-workspace.js';
 import { parseDashboardBootstrap } from '../../../../apps/dashboard/src/lib/api/bootstrap.js';
 import { freezeDashboardWire } from '../../../../apps/dashboard/src/lib/api/product-state.js';
 import { DashboardValidationError } from '../../../../apps/dashboard/src/lib/api/validation.js';
 import {
   createDashboardApiFixture,
+  createDashboardReviewTerminal,
   DASHBOARD_FIXTURE_ACTION_ID,
   DASHBOARD_FIXTURE_CYCLE_ID,
+  DASHBOARD_FIXTURE_REVIEW_ID,
 } from '../e2e/fixtures/dashboard-api-fixture.mjs';
 
 const planning = vi.hoisted(() => ({
   fetch: vi.fn(),
   connect: vi.fn(),
   close: vi.fn(),
+  reconcile: vi.fn<
+    (
+      options: Parameters<
+        typeof import('../../../../apps/dashboard/src/features/planning/planning-api.js').createPlanningSseReconciler
+      >[0],
+    ) => Readonly<Record<string, never>>
+  >(() => Object.freeze({})),
 }));
 
 const operate = vi.hoisted(() => ({
   root: vi.fn(),
   action: vi.fn(),
+  review: vi.fn(),
   connect: vi.fn(),
   close: vi.fn(),
 }));
@@ -31,7 +43,7 @@ const operate = vi.hoisted(() => ({
 vi.mock('../../../../apps/dashboard/src/features/planning/planning-api.js', () => ({
   fetchPlanningGraph: planning.fetch,
   parsePlanningGraphEnvelope: (value: unknown) => value,
-  createPlanningSseReconciler: () => Object.freeze({}),
+  createPlanningSseReconciler: planning.reconcile,
   connectPlanningSse: planning.connect,
   encodePlanningCheckpoint: () => 'checkpoint',
 }));
@@ -63,12 +75,48 @@ vi.mock('../../../../apps/dashboard/src/lib/api/sse.js', async (importOriginal) 
   };
 });
 
+vi.mock(
+  '../../../../apps/dashboard/src/features/operate/review/review-api.js',
+  async (importOriginal) => {
+    const actual =
+      await importOriginal<
+        typeof import('../../../../apps/dashboard/src/features/operate/review/review-api.js')
+      >();
+    return { ...actual, fetchOperateReviewDisplay: operate.review };
+  },
+);
+
 const HASH = (character: string) => `sha256:${character.repeat(64)}`;
 const PROJECT_ID = HASH('a');
 const VIEW_HASH = HASH('b');
 
 function wireFixture<T>(value: T): T {
   return freezeDashboardWire(JSON.parse(JSON.stringify(value)) as T);
+}
+
+function ReviewRuntime({
+  bootstrap,
+  route,
+  renders,
+}: {
+  bootstrap: ReturnType<typeof parseDashboardBootstrap>;
+  route: ReturnType<typeof parseDashboardRoute>;
+  renders: ReturnType<typeof useDashboardRuntimeComposition>[];
+}) {
+  const runtime = useDashboardRuntimeComposition(bootstrap, route);
+  renders.push(runtime);
+  return (
+    <RouteWorkspace
+      route={route}
+      projection={runtime.projection}
+      binding={runtime.binding}
+      connectionState="connected"
+      searchSources={{}}
+      operateSearchBindings={runtime.operateSearchBindings}
+      operateReviewNavigation={runtime.operateReviewNavigation}
+      refetchCurrent={runtime.refetchCurrent}
+    />
+  );
 }
 
 const bootstrap = parseDashboardBootstrap({
@@ -229,6 +277,76 @@ describe('production dashboard runtime composition', () => {
 
     unmount();
     expect(planning.close).toHaveBeenCalledTimes(1);
+  });
+
+  it('retains the verified Planning graph in every render while an SSE patch refreshes', async () => {
+    const refreshedGraph = wireFixture<PlanningGraphEnvelope>({
+      ...graphEnvelope,
+      cursor: { eventHead: { sequence: 1, hash: HASH('d') }, viewHash: HASH('e') },
+      graph: {
+        ...graphEnvelope.graph,
+        nodes: graphEnvelope.graph.nodes.map((node) => ({
+          ...node,
+          title: 'Deliver reliable appointment reminders',
+        })),
+      },
+    });
+    let resolveRefresh: ((value: PlanningGraphEnvelope) => void) | undefined;
+    const refresh = new Promise<PlanningGraphEnvelope>((resolve) => {
+      resolveRefresh = resolve;
+    });
+    planning.fetch.mockResolvedValueOnce(graphEnvelope).mockReturnValueOnce(refresh);
+    planning.connect.mockReturnValue(
+      Object.freeze({ completion: Promise.resolve(), close: planning.close }),
+    );
+    const renders: ReturnType<typeof useDashboardRuntimeComposition>['projection'][] = [];
+    const { result, unmount } = renderHook(() => {
+      const runtime = useDashboardRuntimeComposition(bootstrap, parseDashboardRoute('#/overview'));
+      renders.push(runtime.projection);
+      return runtime;
+    });
+    await waitFor(() => expect(result.current.projection.kind).toBe('ready'));
+    const options = planning.reconcile.mock.calls.at(-1)?.[0];
+    if (!options) throw new Error('Planning SSE reconciler was not created.');
+    renders.length = 0;
+
+    act(() => {
+      options.onPatch(refreshedGraph, {
+        patchId: 'reminder-title-update',
+        patchHash: HASH('f'),
+        from: graphEnvelope.cursor,
+        to: refreshedGraph.cursor,
+        patch: {
+          updated: refreshedGraph.graph.nodes,
+          added: [],
+          removed: [],
+          edges: { added: [], removed: [] },
+        },
+      });
+    });
+
+    expect(planning.fetch).toHaveBeenCalledTimes(2);
+    expect(renders.length).toBeGreaterThan(0);
+    for (const projection of renders) {
+      expect(projection.data).toEqual(graphEnvelope);
+      expect(projection.kind).toBe('refreshing');
+      expect(projection.mutationEnabled).toBe(false);
+      expect(projection.binding).toMatchObject(graphEnvelope.cursor);
+    }
+    expect(result.current.projection.mutationEnabled).toBe(false);
+    expect(result.current.projection.binding).toMatchObject(graphEnvelope.cursor);
+
+    const completeRefresh = resolveRefresh;
+    if (!completeRefresh) throw new Error('Planning refresh resolver is unavailable.');
+    await act(async () => completeRefresh(refreshedGraph));
+
+    expect(result.current.projection.kind).toBe('ready');
+    expect(result.current.projection.data).toEqual(refreshedGraph);
+    expect(result.current.projection.binding).toMatchObject(refreshedGraph.cursor);
+    expect(planningNodesFromProductState(result.current.projection)).toMatchObject([
+      { title: 'Deliver reliable appointment reminders' },
+    ]);
+    unmount();
   });
 
   it('does not carry a verified Planning graph across a changed root custody', async () => {
@@ -469,4 +587,60 @@ describe('production dashboard runtime composition', () => {
 
     unmount();
   });
+
+  it.each(['approved', 'changes_requested', 'rejected'] as const)(
+    'keeps a recorded %s Review mounted and focused during exact reconciliation',
+    async (disposition) => {
+      const fixture = createDashboardApiFixture();
+      const terminal = wireFixture(createDashboardReviewTerminal(disposition, null).workspace);
+      let resolveRefresh: ((value: typeof terminal) => void) | undefined;
+      const refresh = new Promise<typeof terminal>((resolve) => {
+        resolveRefresh = resolve;
+      });
+      planning.fetch.mockResolvedValue(wireFixture(fixture.planning));
+      planning.connect.mockReturnValue({ completion: Promise.resolve(), close: planning.close });
+      operate.root.mockImplementation(({ surface }: { surface: string }) =>
+        Promise.resolve(wireFixture(surface === 'today' ? fixture.today : fixture.cycles)),
+      );
+      operate.connect.mockReturnValue({ completion: Promise.resolve(), close: operate.close });
+      operate.review.mockResolvedValueOnce(terminal).mockReturnValueOnce(refresh);
+      const route = parseDashboardRoute(
+        `#/operate/cycles/${DASHBOARD_FIXTURE_CYCLE_ID}/reviews/${DASHBOARD_FIXTURE_REVIEW_ID}`,
+      );
+      const operateBootstrap = parseDashboardBootstrap(fixture.bootstrap);
+      const renders: ReturnType<typeof useDashboardRuntimeComposition>[] = [];
+      const subject = render(
+        <ReviewRuntime bootstrap={operateBootstrap} route={route} renders={renders} />,
+      );
+      const receipt = await screen.findByRole('heading', { name: 'Review recorded' });
+      await waitFor(() =>
+        expect(document.activeElement).toBe(screen.getByRole('heading', { name: 'Owner Review' })),
+      );
+      receipt.focus();
+      const runtime = renders.at(-1);
+      if (!runtime) throw new Error('Review runtime is unavailable.');
+      renders.length = 0;
+      let pending: ReturnType<typeof runtime.refetchCurrent> | undefined;
+      act(() => {
+        pending = runtime.refetchCurrent();
+      });
+
+      expect(screen.getByRole('heading', { name: 'Review recorded' })).toBe(receipt);
+      expect(document.activeElement).toBe(receipt);
+      expect(subject.container.querySelector('[data-route-pending]')).toBeNull();
+      for (const render of renders) {
+        expect(render.projection.kind).toBe('read-only');
+        expect(render.projection.data).toEqual(terminal);
+      }
+      const completeRefresh = resolveRefresh;
+      if (!completeRefresh || !pending) throw new Error('Review reconciliation is unavailable.');
+      await act(async () => {
+        completeRefresh(terminal);
+        await pending;
+      });
+      expect(screen.getByRole('heading', { name: 'Review recorded' })).toBe(receipt);
+      expect(document.activeElement).toBe(receipt);
+      subject.unmount();
+    },
+  );
 });

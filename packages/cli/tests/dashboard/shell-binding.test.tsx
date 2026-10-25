@@ -3,12 +3,14 @@
 import { render } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import { DashboardProviders } from '../../../../apps/dashboard/src/app/providers.js';
+import { parsePlanningGraphEnvelope } from '../../../../apps/dashboard/src/features/planning/planning-api.js';
 import { UnifiedShell } from '../../../../apps/dashboard/src/features/shell/UnifiedShell.js';
 import {
   dashboardProductStatePolicy,
   parseDashboardProductState,
 } from '../../../../apps/dashboard/src/lib/api/product-state.js';
 import { createDashboardQueryIdentity } from '../../../../apps/dashboard/src/lib/binding/query-identity.js';
+import { createDashboardApiFixture } from '../e2e/fixtures/dashboard-api-fixture.mjs';
 
 describe('dashboard shell binding summary', () => {
   it('keeps a connected workspace out of the page hierarchy', () => {
@@ -134,25 +136,20 @@ describe('dashboard shell binding summary', () => {
     ['loading', 'loading'],
     ['refreshing', 'refreshing'],
   ] as const)('keeps a %s Planning projection in its route frame', (kind, status) => {
+    const { planning } = createDashboardApiFixture();
     const binding = createDashboardQueryIdentity({
+      ...planning.binding,
+      ...planning.cursor,
       productArea: 'planning',
-      actorId: 'owner-bound',
-      projectId: `sha256:${'1'.repeat(64)}`,
-      scopeId: 'scope-bound',
-      domainId: 'planning',
-      domainVersion: '1.0.0',
-      cycleId: null,
       route: '#/overview',
+      cycleId: null,
       subjectId: null,
-      generation: 4,
-      eventHead: { sequence: 1, hash: `sha256:${'2'.repeat(64)}` },
-      viewHash: `sha256:${'3'.repeat(64)}`,
     });
     const projection = parseDashboardProductState(
       {
         kind,
         binding,
-        data: kind === 'refreshing' ? {} : null,
+        data: kind === 'refreshing' ? JSON.parse(JSON.stringify(planning)) : null,
         reasonCodes: kind === 'refreshing' ? ['DASHBOARD_REFRESHING'] : [],
         error: null,
         mutationEnabled: false,
@@ -160,8 +157,10 @@ describe('dashboard shell binding summary', () => {
       },
       {
         currentBinding: binding,
-        validateData: (value): value is Record<string, unknown> =>
-          typeof value === 'object' && value !== null,
+        validateData: (value): value is Record<string, unknown> => {
+          parsePlanningGraphEnvelope(value, binding);
+          return true;
+        },
       },
     );
     const { container } = render(
@@ -177,10 +176,16 @@ describe('dashboard shell binding summary', () => {
     );
 
     const pending = container.querySelector<HTMLElement>('.op-route-pending');
-    expect(pending?.dataset.routePending).toBe(kind);
-    expect(pending?.getAttribute('aria-busy')).toBe('true');
-    expect(pending?.textContent).toContain(status);
-    expect(pending?.querySelector('h1')?.textContent).toBe('Overview');
+    if (kind === 'loading') {
+      expect(pending?.dataset.routePending).toBe(kind);
+      expect(pending?.getAttribute('aria-busy')).toBe('true');
+      expect(pending?.textContent).toContain(status);
+      expect(pending?.querySelector('h1')?.textContent).toBe('Overview');
+    } else {
+      expect(pending).toBeNull();
+      expect(container.querySelector('h1')?.textContent).toBe('Overview');
+      expect(container.textContent).toContain('Improve appointment reminder delivery');
+    }
     expect(container.querySelector('.op-state-panel')).toBeNull();
     expect(container.textContent).not.toContain('Planning cannot be trusted');
   });
