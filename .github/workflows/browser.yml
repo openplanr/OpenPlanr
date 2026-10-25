@@ -100,6 +100,8 @@ jobs:
         run: npm ci
       - name: Generate workspace package assets
         run: npm run generate
+      - name: Run the dashboard brand and shared-pattern browser tests
+        run: npm run test:brand:browser --workspace=@openplanr/dashboard-app
       - name: Run dashboard browser verification against local workspace packages
         run: npm run test:browser --workspace=openplanr -- --grep-invert=performance
         env:
