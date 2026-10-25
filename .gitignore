@@ -23,8 +23,6 @@ release/
 # Runtime and private planning state are never repository inputs.
 .planr/
 .cursor/
-AGENTS.md
-CLAUDE.md
 
 # Local design previews, revision history, review state, and development caches.
 .design/
