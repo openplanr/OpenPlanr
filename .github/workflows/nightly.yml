@@ -78,7 +78,7 @@ jobs:
     runs-on: ubuntu-24.04
     # As root, Firefox refuses the runner-owned HOME and permission and git ownership tests misbehave.
     container:
-      image: mcr.microsoft.com/playwright:v1.64.0-noble
+      image: mcr.microsoft.com/playwright:v1.64.1-noble
       options: --user 1001
     timeout-minutes: 20
     steps:
@@ -140,7 +140,7 @@ jobs:
   packed-public-packages:
     name: Node ${{ matrix.node }} packed public-package proof
     runs-on: ubuntu-24.04
-    container: mcr.microsoft.com/playwright:v1.64.0-noble
+    container: mcr.microsoft.com/playwright:v1.64.1-noble
     timeout-minutes: 20
     strategy:
       fail-fast: false
@@ -177,7 +177,7 @@ jobs:
   canvas-traces:
     name: Canvas Chromium timing traces
     runs-on: ubuntu-24.04
-    container: mcr.microsoft.com/playwright:v1.64.0-noble
+    container: mcr.microsoft.com/playwright:v1.64.1-noble
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -220,7 +220,7 @@ jobs:
     runs-on: ubuntu-24.04
     # As root, Firefox refuses the runner-owned HOME and permission and git ownership tests misbehave.
     container:
-      image: mcr.microsoft.com/playwright:v1.64.0-noble
+      image: mcr.microsoft.com/playwright:v1.64.1-noble
       options: --user 1001
     timeout-minutes: 20
     strategy:

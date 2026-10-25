@@ -697,7 +697,7 @@
     {
       "source": "packages/design/templates/studio/studio.js",
       "target": "templates/studio/studio.js",
-      "sha256": "ef2c4dbd280d85d989b680d910b6eb9bcb9fbc93432c28cd8e3fd2c79b754db4",
+      "sha256": "07416d39dcbf2cf7e633f54bfe32bab8ed3e817e6e9c553192cbb7adb30821d3",
       "mode": "644"
     }
   ]

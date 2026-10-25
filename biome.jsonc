@@ -1,5 +1,5 @@
 {
-  "$schema": "https://biomejs.dev/schemas/2.5.11/schema.json",
+  "$schema": "https://biomejs.dev/schemas/2.6.2/schema.json",
   "vcs": {
     "enabled": true,
     "clientKind": "git",
@@ -51,6 +51,8 @@
       "!packages/cli/tests/fixtures",
       "!packages/pipeline/conformance/expected",
       "!packages/pipeline/conformance/fixtures",
+      "!packages/pipeline/conformance/fixture-design",
+      "!packages/pipeline/conformance/fixture-spec",
       "!packages/pipeline/tests/dashboard/fixtures",
       "!packages/pipeline/tests/fixtures"
     ]
@@ -109,6 +111,29 @@
     }
   },
   "overrides": [
+    {
+      // These suites use Vitest's options argument, not Playwright's describe API.
+      "includes": ["packages/cli/tests/integration/**", "packages/cli/tests/unit/**"],
+      "linter": {
+        "domains": {
+          "playwright": "none"
+        }
+      }
+    },
+    {
+      // Component identities are created once per imperative mount or test, outside React renders.
+      "includes": [
+        "packages/artifact/lib/artifact/ui/studio-shell-mount-impl.tsx",
+        "packages/canvas/tests/react/**"
+      ],
+      "linter": {
+        "rules": {
+          "correctness": {
+            "noComponentHookFactories": "off"
+          }
+        }
+      }
+    },
     {
       // Command-line entry points and conformance runners report through the console.
       "includes": [

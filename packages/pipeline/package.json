@@ -285,9 +285,9 @@
     "esbuild": "0.28.2",
     "pako": "2.1.0",
     "parse5": "8.0.1",
-    "react": "19.3.0",
-    "react-dom": "19.3.0",
-    "radix-ui": "1.8.0"
+    "react": "19.3.1",
+    "react-dom": "19.3.1",
+    "radix-ui": "1.8.1"
   },
   "optionalDependencies": {
     "@expo-google-fonts/inter": "0.4.2",
@@ -295,7 +295,7 @@
   },
   "devDependencies": {
     "pixelmatch": "7.2.0",
-    "playwright": "1.64.0",
+    "playwright": "1.64.1",
     "pngjs": "7.0.0"
   },
   "scripts": {
