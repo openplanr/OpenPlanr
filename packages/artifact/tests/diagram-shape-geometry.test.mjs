@@ -104,6 +104,20 @@ test('all three patterns resolve and export readable geometry', () => {
   }
 });
 
+test('every catalog entry exports its full default label at its default size', () => {
+  for (const entry of DIAGRAM_SHAPE_CATALOG) {
+    const bundle = create(createCatalogShape(entry.id, { x: 0, y: 0 }));
+    const rendered = renderAuthoredDiagramSvg(bundle);
+    assert.equal(rendered.ok, true, `${entry.id}: ${JSON.stringify(rendered.diagnostics)}`);
+    assert.equal(rendered.scene.elements[0].label, entry.definition.name);
+    assert.equal(
+      rendered.quality.diagnostics.some((item) => item.severity === 'error'),
+      false,
+      `${entry.id}: ${JSON.stringify(rendered.quality.diagnostics)}`,
+    );
+  }
+});
+
 test('native export preserves portable definitions and verifies without the catalog', async (t) => {
   const root = await mkdtemp(join(tmpdir(), 'planr-shape-native-'));
   t.after(() => rm(root, { recursive: true, force: true }));

@@ -271,3 +271,171 @@ test('multiple library operations cannot redefine a removed immutable identity',
     /immutable library definition/u,
   );
 });
+
+test('transaction context enforces final shape size after geometry and appearance changes', () => {
+  const bundle = libraryBundle();
+  const placement = bundle.presentation.elements[0];
+  const { bounds, route, label, zIndex } = placement;
+  const before = { bounds, route, label, zIndex };
+  const resize = (width, height = bounds.height) => ({
+    ...makeTransaction(bundle),
+    ...diagramAuthoringVersionFields(bundle),
+    operations: [
+      {
+        type: 'set-geometry',
+        changes: [
+          {
+            elementId: placement.elementId,
+            before,
+            after: { ...before, bounds: { ...bounds, width, height } },
+          },
+        ],
+      },
+    ],
+  });
+  assert.throws(
+    () => assertVersionedDiagramEditTransaction(resize(79), { baseBundle: bundle }),
+    /below shape minimum 80 by 40/u,
+  );
+  assert.throws(
+    () => assertVersionedDiagramEditTransaction(resize(80, 39), { baseBundle: bundle }),
+    /below shape minimum/u,
+  );
+  assertVersionedDiagramEditTransaction(resize(80, 40), { baseBundle: bundle });
+  const removedAppearance = resize(1);
+  const appearance = structuredClone(placement.appearance);
+  delete appearance.shapeRef;
+  removedAppearance.operations.push({
+    type: 'set-appearance-locks',
+    changes: [
+      {
+        elementId: placement.elementId,
+        before: { appearance: placement.appearance, locks: placement.locks },
+        after: { appearance, locks: placement.locks },
+      },
+    ],
+  });
+  assertVersionedDiagramEditTransaction(removedAppearance, { baseBundle: bundle });
+});
+
+function composedDefinition(outline, decorations) {
+  const value = definition();
+  value.attachment = outline;
+  value.primitives = [{ ...outline, fill: 'fill', stroke: 'stroke' }, ...decorations];
+  return rehashDefinition(value);
+}
+
+test('compositions reject visible primitives beyond their declared attachment', () => {
+  const outer = { type: 'rect', x: 0, y: 0, width: 0.25, height: 1, radius: 0 };
+  for (const decoration of [
+    {
+      type: 'rect',
+      x: 0.25,
+      y: 0,
+      width: 0.75,
+      height: 1,
+      radius: 0,
+      fill: 'fill',
+      stroke: 'stroke',
+    },
+    { type: 'line', x1: 0, y1: 0.5, x2: 1, y2: 0.5, stroke: 'stroke' },
+  ])
+    assert.throws(
+      () => assertShapeDefinition(composedDefinition(outer, [decoration])),
+      /primitive 1: primitive envelope exceeds its attachment/u,
+    );
+});
+
+test('polygon containment uses curve extrema and accepts tangent or shared-arc decorations', () => {
+  const circle = {
+    type: 'ellipse',
+    cx: 0.5,
+    cy: 0.5,
+    rx: 0.5,
+    ry: 0.5,
+    fill: 'none',
+    stroke: 'stroke',
+  };
+  const square = {
+    type: 'polygon',
+    points: [
+      { x: 0, y: 0 },
+      { x: 1, y: 0 },
+      { x: 1, y: 1 },
+      { x: 0, y: 1 },
+    ],
+  };
+  assertShapeDefinition(composedDefinition(square, [circle]));
+  const diamond = {
+    type: 'polygon',
+    points: [
+      { x: 0.5, y: 0 },
+      { x: 1, y: 0.5 },
+      { x: 0.5, y: 1 },
+      { x: 0, y: 0.5 },
+    ],
+  };
+  assert.throws(
+    () => assertShapeDefinition(composedDefinition(diamond, [circle])),
+    /primitive exceeds its attachment/u,
+  );
+  const rounded = {
+    type: 'rect',
+    x: 0.2,
+    y: 0.2,
+    width: 0.6,
+    height: 0.6,
+    radius: 0.3,
+    fill: 'fill',
+    stroke: 'stroke',
+  };
+  assert.throws(
+    () => assertShapeDefinition(composedDefinition(diamond, [rounded])),
+    /rounded-rectangle bounds/u,
+  );
+
+  const cap = {
+    type: 'polygon',
+    points: [
+      { x: 0, y: 0.5 },
+      { x: 0.5, y: 0 },
+      { x: 1, y: 0.5 },
+      { x: 0.5, y: 1 },
+    ],
+    fill: 'none',
+    stroke: 'stroke',
+  };
+  assertShapeDefinition(composedDefinition(diamond, [cap]));
+  assertShapeDefinition(
+    composedDefinition({ ...diamond, points: diamond.points.toReversed() }, [cap]),
+  );
+});
+
+test('curved attachments require contained decoration envelopes', () => {
+  const outer = { type: 'ellipse', cx: 0.5, cy: 0.5, rx: 0.5, ry: 0.5 };
+  const centered = {
+    type: 'ellipse',
+    cx: 0.5,
+    cy: 0.5,
+    rx: 0.2,
+    ry: 0.2,
+    fill: 'fill',
+    stroke: 'stroke',
+  };
+  assertShapeDefinition(composedDefinition(outer, [centered]));
+  assert.throws(
+    () => assertShapeDefinition(composedDefinition(outer, [{ ...centered, rx: 0.49, ry: 0.49 }])),
+    /curved decorations require their axis-aligned bounds/u,
+  );
+  const rounded = { type: 'rect', x: 0, y: 0, width: 1, height: 1, radius: 0.2 };
+  assert.throws(
+    () =>
+      assertShapeDefinition(
+        composedDefinition(rounded, [
+          { type: 'line', x1: 0, y1: 0, x2: 1, y2: 1, stroke: 'stroke' },
+        ]),
+      ),
+    /envelope exceeds/u,
+  );
+  assertShapeDefinition(composedDefinition(rounded, [centered]));
+});

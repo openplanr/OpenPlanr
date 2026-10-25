@@ -2803,6 +2803,53 @@ for (const pattern of [
 }
 
 test(
+  'shape foundation resize respects definition minima and persists one undoable edit',
+  options,
+  async (t) => {
+    const { page, read } = await fixture(t, { shapeLibrary: true });
+    const id = await create(page, 'rectangle');
+    await apply(page, { Label: '' });
+    await save(page);
+    const before = await read();
+    const definition = before.shapeLibrary[0];
+    assert.equal(
+      await page.getByLabel('Width', { exact: true }).getAttribute('min'),
+      String(definition.sizing.minWidth),
+    );
+    assert.equal(
+      await page.getByLabel('Height', { exact: true }).getAttribute('min'),
+      String(definition.sizing.minHeight),
+    );
+    const handle = await page
+      .locator(`[data-handle="resize"][data-handle-id="${id}"]`)
+      .boundingBox();
+    await page.mouse.move(handle.x + handle.width / 2, handle.y + handle.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(handle.x + handle.width / 2 - 200, handle.y + handle.height / 2 - 200, {
+      steps: 8,
+    });
+    await page.mouse.up();
+    await settle(page);
+    assert.equal(await page.locator('.de-alert').isHidden(), true);
+    await save(page);
+    const resized = await read();
+    assert.deepEqual(resized.presentation.elements[0].bounds, {
+      ...before.presentation.elements[0].bounds,
+      width: definition.sizing.minWidth,
+      height: definition.sizing.minHeight,
+    });
+    await page.getByRole('button', { name: 'Undo', exact: true }).click();
+    await save(page);
+    assert.deepEqual((await read()).presentation, before.presentation);
+    await page.getByRole('button', { name: 'Redo', exact: true }).click();
+    await save(page);
+    await page.reload();
+    await page.locator('[data-editor-svg]').waitFor();
+    assert.deepEqual((await read()).presentation, resized.presentation);
+  },
+);
+
+test(
   'shape foundation search retains its query after insertion and mobile insertion closes the drawer',
   options,
   async (t) => {

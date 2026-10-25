@@ -372,7 +372,7 @@
     {
       "source": "packages/protocol/projections/pipeline/lib/protocol/shape-library-contracts.mjs",
       "target": "lib/protocol/shape-library-contracts.mjs",
-      "sha256": "2d91feba9bcfe056ddad8f841cbb4cb4e6bd8a6f53b11514d7d25917f420d22e",
+      "sha256": "47bf861a138c9cb25e8928ad3e3d77fb2cfbc58dc6ee963ae74746fe1c15b011",
       "mode": "644"
     },
     {
@@ -402,7 +402,7 @@
     {
       "source": "packages/protocol/projections/pipeline/lib/protocol/studio-presentation-contracts.mjs",
       "target": "lib/protocol/studio-presentation-contracts.mjs",
-      "sha256": "081f61edcd8e0de4ded85a5b20578708f3f0d2003a54f58abfad5cd37070c875",
+      "sha256": "6fe4853bc32f117258ae39f6a353f12ea8b0910d9a9924c12df03c4dfd4325d4",
       "mode": "644"
     },
     {
@@ -534,7 +534,7 @@
     {
       "source": "packages/protocol/registries/skills.json",
       "target": "registry/v1.5.0/skills.json",
-      "sha256": "51bc77880f1ed2b427bb83887bb98fb72d7280d26657916be06f0b90c17200ee",
+      "sha256": "bfb9405e57bf732b17e7785e39145dd7d560747b8901ac65f53411682c038a81",
       "mode": "644"
     },
     {

@@ -140,6 +140,81 @@ function assertGeometry(value, label) {
   }
 }
 
+// Normalized geometry only needs allowance for floating-point roundoff.
+const GEOMETRY_ROUNDOFF = Number.EPSILON * 32;
+function primitiveVertices(primitive) {
+  if (primitive.type === 'polygon') return primitive.points;
+  if (primitive.type === 'line')
+    return [
+      { x: primitive.x1, y: primitive.y1 },
+      { x: primitive.x2, y: primitive.y2 },
+    ];
+  const x = primitive.type === 'ellipse' ? primitive.cx - primitive.rx : primitive.x;
+  const y = primitive.type === 'ellipse' ? primitive.cy - primitive.ry : primitive.y;
+  const width = primitive.type === 'ellipse' ? primitive.rx * 2 : primitive.width;
+  const height = primitive.type === 'ellipse' ? primitive.ry * 2 : primitive.height;
+  return [
+    { x, y },
+    { x: x + width, y },
+    { x: x + width, y: y + height },
+    { x, y: y + height },
+  ];
+}
+function primitiveSupport(primitive, nx, ny) {
+  if (primitive.type === 'ellipse')
+    return primitive.cx * nx + primitive.cy * ny + Math.hypot(primitive.rx * nx, primitive.ry * ny);
+  // Rounded corners scale uniformly, so only the rectangle envelope survives every aspect ratio.
+  return Math.max(...primitiveVertices(primitive).map(({ x, y }) => x * nx + y * ny));
+}
+function containsPoint(outline, point) {
+  if (outline.type === 'ellipse')
+    return (
+      Math.hypot((point.x - outline.cx) / outline.rx, (point.y - outline.cy) / outline.ry) <=
+      1 + GEOMETRY_ROUNDOFF
+    );
+  const dx = Math.max(
+    outline.x + outline.radius - point.x,
+    point.x - (outline.x + outline.width - outline.radius),
+    0,
+  );
+  const dy = Math.max(
+    outline.y + outline.radius - point.y,
+    point.y - (outline.y + outline.height - outline.radius),
+    0,
+  );
+  return Math.hypot(dx, dy) <= outline.radius + GEOMETRY_ROUNDOFF;
+}
+function assertPrimitiveContainment(primitive, outline, label) {
+  const { fill: _fill, stroke: _stroke, ...geometry } = primitive;
+  if (canonicalizeJson(geometry) === canonicalizeJson(outline)) return;
+  if (outline.type === 'polygon') {
+    const points = outline.points;
+    let sign = 0;
+    for (let index = 0; index < points.length && sign === 0; index += 1) {
+      const a = points[index],
+        b = points[(index + 1) % points.length],
+        c = points[(index + 2) % points.length];
+      sign = Math.sign((b.x - a.x) * (c.y - b.y) - (b.y - a.y) * (c.x - b.x));
+    }
+    for (let index = 0; index < points.length; index += 1) {
+      const a = points[index],
+        b = points[(index + 1) % points.length];
+      const length = Math.hypot(b.x - a.x, b.y - a.y);
+      const nx = (sign * (b.y - a.y)) / length,
+        ny = (sign * (a.x - b.x)) / length;
+      if (primitiveSupport(primitive, nx, ny) > a.x * nx + a.y * ny + GEOMETRY_ROUNDOFF)
+        throw new TypeError(
+          `${label}: primitive exceeds its attachment outline; keep decoration geometry and rounded-rectangle bounds inside the declared boundary.`,
+        );
+    }
+    return;
+  }
+  if (!primitiveVertices(primitive).every((point) => containsPoint(outline, point)))
+    throw new TypeError(
+      `${label}: primitive envelope exceeds its attachment outline; curved decorations require their axis-aligned bounds inside the declared boundary.`,
+    );
+}
+
 export function assertShapeDefinition(value) {
   assertDiagramData(value);
   const failures = validateJson(value, SHAPE_DEFINITION_SCHEMA);
@@ -155,6 +230,8 @@ export function assertShapeDefinition(value) {
   const { fill: _fill, stroke: _stroke, ...outline } = value.primitives[0];
   if (canonicalizeJson(outline) !== canonicalizeJson(value.attachment))
     throw new TypeError(`Shape ${key}: first primitive must match its attachment outline.`);
+  for (const [index, primitive] of value.primitives.entries())
+    assertPrimitiveContainment(primitive, value.attachment, `Shape ${key} primitive ${index}`);
   assertGeometry(value.textRegion, `Shape ${key} text region`);
   if (value.sizing.width < value.sizing.minWidth || value.sizing.height < value.sizing.minHeight)
     throw new TypeError(`Shape ${key}: default size is below its minimum size.`);

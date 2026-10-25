@@ -16,6 +16,7 @@ import {
   renderAuthoredSceneElement,
 } from '../diagram/authoring/renderer.mjs';
 import { resolveDiagramSceneElement } from '../diagram/authoring/scene.mjs';
+import { findDiagramShape } from '../diagram/authoring/shape-geometry.mjs';
 import type { DiagramEditorState, DiagramEditorView } from '../diagram/editor/index.mjs';
 import {
   type DiagramEditorPoint,
@@ -806,8 +807,11 @@ export function createEditorCanvas(ctx: DiagramEditorContext): DiagramEditorCanv
         after = clone(before);
       if (drag.type === 'resize') {
         if (!before.bounds || !after.bounds) return;
-        after.bounds.width = Math.max(24, Math.round(before.bounds.width + dx));
-        after.bounds.height = Math.max(24, Math.round(before.bounds.height + dy));
+        const minimum = place?.appearance.shapeRef
+          ? findDiagramShape(drag.origin.shapeLibrary ?? [], place.appearance.shapeRef).sizing
+          : { minWidth: 24, minHeight: 24 };
+        after.bounds.width = Math.max(minimum.minWidth, Math.round(before.bounds.width + dx));
+        after.bounds.height = Math.max(minimum.minHeight, Math.round(before.bounds.height + dy));
       }
       if (drag.type === 'bend') {
         if (!after.route) return;

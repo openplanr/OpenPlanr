@@ -393,22 +393,8 @@ Object.assign(DIAGRAM_REVIEW_BUNDLE_V12_SCHEMA.properties, {
 
 function assertShapeLibraryReferences(value) {
   assertShapeLibrary(value.shapeLibrary);
-  for (const entry of value.presentation.elements) {
-    if (entry.appearance.shapeRef) {
-      if (entry.route)
-        throw new TypeError(
-          `Element ${entry.elementId}: connectors cannot reference library shapes.`,
-        );
-      const definition = assertShapeReference(entry.appearance.shapeRef, value.shapeLibrary);
-      if (
-        entry.bounds.width < definition.sizing.minWidth ||
-        entry.bounds.height < definition.sizing.minHeight
-      )
-        throw new TypeError(
-          `Element ${entry.elementId}: saved size is below shape minimum ${definition.sizing.minWidth} by ${definition.sizing.minHeight}.`,
-        );
-    }
-  }
+  for (const entry of value.presentation.elements)
+    assertPlacementShape(entry, value.shapeLibrary, true);
 }
 function assertDiagramAuthoringBundleV12(value) {
   if (validateJson(value, DIAGRAM_AUTHORING_BUNDLE_V12_SCHEMA).length)
@@ -461,8 +447,19 @@ function assertChangedValue(operation, current, label) {
   )
     throw new TypeError(`${label} operation before/after differs.`);
 }
-function assertPlacementShape(entry, library) {
-  if (entry.appearance.shapeRef) assertShapeReference(entry.appearance.shapeRef, library);
+function assertPlacementShape(entry, library, validateGeometry = false) {
+  if (!entry.appearance.shapeRef) return;
+  const definition = assertShapeReference(entry.appearance.shapeRef, library);
+  if (!validateGeometry) return;
+  if (entry.route || !entry.bounds)
+    throw new TypeError(`Element ${entry.elementId}: connectors cannot reference library shapes.`);
+  if (
+    entry.bounds.width < definition.sizing.minWidth ||
+    entry.bounds.height < definition.sizing.minHeight
+  )
+    throw new TypeError(
+      `Element ${entry.elementId}: saved size is below shape minimum ${definition.sizing.minWidth} by ${definition.sizing.minHeight}.`,
+    );
 }
 function updateReferencedPlacements(operation, placements, library) {
   if (operation.type === 'insert-elements' || operation.type === 'remove-elements') {
@@ -471,16 +468,24 @@ function updateReferencedPlacements(operation, placements, library) {
       if (operation.type === 'insert-elements') placements.set(entry.elementId, entry);
       else placements.delete(entry.elementId);
     }
-  } else if (operation.type === 'set-appearance-locks') {
-    for (const change of operation.changes) {
+    return;
+  }
+  if (!['set-geometry', 'set-appearance-locks'].includes(operation.type)) return;
+  for (const change of operation.changes) {
+    const appearance = operation.type === 'set-appearance-locks';
+    if (appearance) {
       assertPlacementShape(change.before, library);
       assertPlacementShape(change.after, library);
-      const previous = placements.get(change.elementId);
-      if (previous)
-        placements.set(change.elementId, { ...previous, appearance: change.after.appearance });
     }
+    const previous = placements.get(change.elementId);
+    if (previous)
+      placements.set(change.elementId, {
+        ...previous,
+        ...(appearance ? { appearance: change.after.appearance } : change.after),
+      });
   }
 }
+
 function stripShapeReferences(item) {
   if (!item || typeof item !== 'object') return;
   if (item.appearance) delete item.appearance.shapeRef;
@@ -505,7 +510,7 @@ function projectLibraryOperations(operations, basis) {
       ordinary.push(projected);
     }
   }
-  for (const placement of placements.values()) assertPlacementShape(placement, library);
+  for (const placement of placements.values()) assertPlacementShape(placement, library, true);
   return ordinary;
 }
 function assertDiagramEditTransactionV12(value, options) {

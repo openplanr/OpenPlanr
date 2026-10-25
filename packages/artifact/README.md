@@ -89,7 +89,10 @@ digests. Geometry is shared by previews, hit testing, connector attachments and
 SVG/native exports. Existing documents keep their format until a library shape
 is inserted. Undo restores the preceding snapshot, including its format.
 Definitions use normalized rectangles, ellipses, convex polygons and lines;
-arbitrary SVG, scripts and external resources are rejected. Catalog additions
+arbitrary SVG, scripts and external resources are rejected. Decorations must stay
+inside the attachment outline. Rounded rectangles use their axis-aligned bounds
+for containment; curved attachment outlines also require ellipse bounding
+envelopes. Identical outline geometry is accepted directly. Catalog additions
 belong in `diagram/authoring/shape-catalog.mjs` and require definition and geometry
 fixtures, not changes to core rendering switches.
 

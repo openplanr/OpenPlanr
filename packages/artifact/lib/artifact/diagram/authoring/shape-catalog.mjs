@@ -77,7 +77,18 @@ const cylinderOutline = polygon([
 ]);
 const cylinderPrimitives = [
   painted(cylinderOutline),
-  { ...ellipse, cy: 0.15, ry: 0.15, fill: 'none', stroke: 'stroke' },
+  {
+    type: 'polygon',
+    points: [
+      ...cylinderOutline.points.slice(0, 9),
+      ...cylinderOutline.points
+        .slice(1, 8)
+        .reverse()
+        .map(({ x, y }) => ({ x, y: 0.3 - y })),
+    ],
+    fill: 'none',
+    stroke: 'stroke',
+  },
 ];
 const variants = {
   cylinder: { attachment: cylinderOutline, primitives: cylinderPrimitives },
@@ -160,7 +171,14 @@ function catalogEntry([library, shapeId, name, kind, geometry, tags]) {
     textRegion,
     attachment,
     sizing: {
-      width: kind === 'container' ? 540 : kind === 'annotation' ? 240 : 160,
+      width:
+        kind === 'container'
+          ? 540
+          : kind === 'annotation'
+            ? 240
+            : geometry === 'parallelogram'
+              ? 200
+              : 160,
       height:
         kind === 'container'
           ? 240
