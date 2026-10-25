@@ -1,5 +1,14 @@
 # @openplanr/operate
 
+## 0.1.21
+
+### Patch Changes
+
+- Updated dependencies [b00c4b4]
+- Updated dependencies [085c665]
+- Updated dependencies [085c665]
+  - @openplanr/protocol@0.14.0
+
 ## 0.1.20
 
 ### Patch Changes
