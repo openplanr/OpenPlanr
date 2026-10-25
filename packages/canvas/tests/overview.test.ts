@@ -462,7 +462,7 @@ describe('worker presentation', () => {
     };
     vi.stubGlobal(
       'Worker',
-      vi.fn(function MockWorker(this: unknown) {
+      vi.fn(function workerConstructor(this: unknown) {
         return worker;
       }),
     );
