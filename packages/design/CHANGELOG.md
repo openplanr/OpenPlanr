@@ -1,5 +1,45 @@
 # @openplanr/design
 
+## 0.5.0
+
+### Minor Changes
+
+- 085c665: Support content-sized design frames with `height: "auto"`. Size studio boards from rendered content while keeping grid rows stable, preserve numeric feedback coordinates and exports, and audit vertical overflow, positioned content outside frames and root box sizing.
+  
+  The v1.20.0 design document schema retains `schemaVersion: "1.0.0"`, including auto-height frames. Use `height: "auto"` for pages that scroll. Treat vertical overflow, positioned content outside frames and root box sizing as errors throughout a document with any auto-height frame; all other documents receive warnings that do not block verification or handoff readiness. Layout and schema version never affect severity; migration and dragging preserve fixed-frame warnings.
+  
+  Ignore legacy personal canvas positions when detecting share updates. Accept existing position-based fingerprints while those positions still match; an older share whose personal positions have since changed can report one update until explicitly republished.
+- 085c665: Use the shared canvas engine for design studio navigation, fitting and chrome safe areas while retaining saved board layouts and artifact preview state.
+- 085c665: Store canvas board positions, optional board titles and section headings in the authored design document. The local studio saves dragged positions to the document and supports undo and redo; portable studios retain moves for the session. Existing documents keep their computed grid unless legacy studio-state or browser positions can fill missing exact board keys. The studio migrates those positions in one layout revision that is not undoable in the session, then removes them from personal state after saving; without a server, they apply for the session only.
+  
+  The `DESIGN_DOCUMENT_SCHEMA` export now points to the v1.20.0 design document schema. Review bundles retain authored layout and omit legacy personal positions; layout-bearing bundles use the additive v1.20.0 review bundle schema.
+  
+  The v1.20.0 design contract retains authored `schemaVersion: "1.0.0"` for fixed and auto-height frames, and the frozen Protocol 1.9 schema remains unchanged. Vertical overflow, positioned content outside frames and root box sizing are errors throughout a document with any auto-height frame, and warnings otherwise. Layout and schema version never affect severity.
+  
+  Use a plain studio canvas ground from the theme's stage surface token, preserving board edges and shadows and the diagram editor's dot grid.
+  
+  Keep unsaved board moves in the browser draft across reloads and replay their absolute positions against the current layout revision when authored content is unchanged. Report and discard stale moves when authored content changes. Preserve layout save failures and their Retry action over view-context notices; after a studio restart, keep pending moves and offer Reload. Keep the header unsaved until layout recovery completes, and report preview readiness with the revision adopted after legacy layout migration.
+- 085c665: Publish live local Studio selection, visible boards, view and unsaved state to a validated view context file. Add a design utility reader and skill guidance for resolving viewer-relative edit requests against the current revision.
+
+### Patch Changes
+
+- 085c665: Handle board wheel and Safari pinch gestures through the artifact bridge while preserving direct interaction with every board in Interact mode. Keep board titles clear of chrome when fitting or centring boards.
+  
+  Apply the current canvas gesture state when board bridges become ready, reload, or mount within the frame budget so late previews also prevent browser page zoom.
+- 085c665: Keep canvas section headings readable, fit boards around the measured toolbar, and show accurate review status and board dimensions. Inspect every board during full browser audits within the live frame budget.
+- 085c665: Audit every board within the live frame budget, keep section headings and board titles readable at Fit, and show frame dimensions once.
+- 085c665: Wait for browser frame attachment before auditing mounted design boards and report frame loading and panel visibility restoration failures.
+  
+  Hold design frames during rendered audits so competing viewport demand cannot evict or cancel them. Queue demand while held frames fill the budget, resuming after release.
+- Updated dependencies [b00c4b4]
+- Updated dependencies [085c665]
+- Updated dependencies [085c665]
+- Updated dependencies [085c665]
+- Updated dependencies [085c665]
+- Updated dependencies [af98d66]
+  - @openplanr/protocol@0.14.0
+  - @openplanr/artifact@0.7.0
+
 ## 0.4.8
 
 ### Patch Changes

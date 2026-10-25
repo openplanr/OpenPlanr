@@ -1,5 +1,25 @@
 # @openplanr/artifact
 
+## 0.7.0
+
+### Minor Changes
+
+- b00c4b4: Add portable versioned shape libraries, shared canvas and export geometry, searchable catalog entries, and atomic editable patterns. Preserve legacy document formats and exact undo across library promotion. Gate new library creation until compatible readers are available.
+- af98d66: Ctrl/Cmd+wheel zoom in the diagram editor uses the same zoom curve as the design studio. Hosts can reach the editor's canvas controller through `MountedEditor.canvas` to fit diagrams around their own controls.
+
+### Patch Changes
+
+- 085c665: Handle board wheel and Safari pinch gestures through the artifact bridge while preserving direct interaction with every board in Interact mode. Keep board titles clear of chrome when fitting or centring boards.
+  
+  Apply the current canvas gesture state when board bridges become ready, reload, or mount within the frame budget so late previews also prevent browser page zoom.
+- 085c665: Wait for browser frame attachment before auditing mounted design boards and report frame loading and panel visibility restoration failures.
+  
+  Hold design frames during rendered audits so competing viewport demand cannot evict or cancel them. Queue demand while held frames fill the budget, resuming after release.
+- Updated dependencies [b00c4b4]
+- Updated dependencies [085c665]
+- Updated dependencies [085c665]
+  - @openplanr/protocol@0.14.0
+
 ## 0.6.8
 
 ### Patch Changes
