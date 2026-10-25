@@ -325,7 +325,7 @@
     {
       "source": "packages/design/lib/design/context.mjs",
       "target": "lib/design/context.mjs",
-      "sha256": "4705fdb4468d766d0f29063d09ef2e26cf25ec67abda78bdfbcdb9466a829bb2",
+      "sha256": "2a524a55e37747058cfad09b4b5a6bc51255099c4bfaa21ffbe03fdd8fb0eef4",
       "mode": "644"
     },
     {
@@ -373,7 +373,7 @@
     {
       "source": "packages/design/lib/design/document.mjs",
       "target": "lib/design/document.mjs",
-      "sha256": "d7887a4c84f4abf74f31fa1bd3ef5d1609f980a44074022a7d4c1c930082dbf0",
+      "sha256": "43f1e3a622c16bd95e95ea4d7b1d9c04f68e8e6884071394fc6364ed8e6f33d4",
       "mode": "644"
     },
     {
@@ -415,13 +415,13 @@
     {
       "source": "packages/design/lib/design/handoff-readiness.d.mts",
       "target": "lib/design/handoff-readiness.d.mts",
-      "sha256": "61085a5867c9fba1366df3c436638d87255513a8e2423cae759babcdd7e0c2fc",
+      "sha256": "90bef93d2a29ab9b876d905eaadb3260415123b4130d8f820825013aa6190c00",
       "mode": "644"
     },
     {
       "source": "packages/design/lib/design/handoff-readiness.mjs",
       "target": "lib/design/handoff-readiness.mjs",
-      "sha256": "9cc4c6021ce4427c022fcb37e94f8ecdb7c703bb07066dbb1ac47e3f06bd94f6",
+      "sha256": "f1bf9700118eb67dbeb5e08d810894e9bf1fcd96bc4329914b9601d21a2b2d0a",
       "mode": "644"
     },
     {
@@ -493,7 +493,7 @@
     {
       "source": "packages/design/lib/design/lint.mjs",
       "target": "lib/design/lint.mjs",
-      "sha256": "c086228fefd37eac44efdc22589c23ac058e9083792b7ef400c43ce34546a55f",
+      "sha256": "98e8eafee056c4ce1b7a607d331e35068a2e818b49dfa81e3365efeaffb6d678",
       "mode": "644"
     },
     {
@@ -697,7 +697,7 @@
     {
       "source": "packages/design/templates/studio/studio.js",
       "target": "templates/studio/studio.js",
-      "sha256": "07416d39dcbf2cf7e633f54bfe32bab8ed3e817e6e9c553192cbb7adb30821d3",
+      "sha256": "c085a0c72343cf121eadd03dc72fb046c340c8445689df0d62e0ee4143f974f2",
       "mode": "644"
     }
   ]

@@ -36,7 +36,7 @@ import {
   recoverDesignPublication,
 } from './document-state.mjs';
 import { designFrameViewport, observeDesignFrameSize } from './frame-size.mjs';
-import { lintDesign } from './lint.mjs';
+import { lintDesign, lintThemeOnlySources } from './lint.mjs';
 import { buildManifest } from './manifest.mjs';
 import {
   designStudioArtifactId,
@@ -137,6 +137,16 @@ export function prepareDesignDocument(file, { readSource, passive = false, maxBy
     ]),
   );
   for (const variant of document.variants.filter((item) => item.status === 'ready')) {
+    const themeWarnings = lintThemeOnlySources(
+      document.screens.map((screen) => {
+        const source = variant.sources?.[screen.id] ?? screen.source;
+        return {
+          screenId: screen.id,
+          source,
+          html: sourceContents.get(source.html).toString('utf8'),
+        };
+      }),
+    );
     for (const screenId of document.screenOrder) {
       const screen = document.screens.find((item) => item.id === screenId);
       const bundled = bundleLocalDocument({
@@ -146,6 +156,18 @@ export function prepareDesignDocument(file, { readSource, passive = false, maxBy
         screenId,
         readSource,
         passive,
+        ...(screen.props
+          ? {
+              screenProps: Object.fromEntries(
+                Object.entries(screen.props).map(([name, declaration]) => [
+                  name,
+                  Object.hasOwn(variant.props?.[screenId] ?? {}, name)
+                    ? variant.props[screenId][name]
+                    : declaration.default,
+                ]),
+              ),
+            }
+          : {}),
         ...(maxBytes === undefined ? {} : { maxBytes }),
       });
       if (document.frames.some(({ height }) => height === 'auto'))
@@ -171,7 +193,11 @@ export function prepareDesignDocument(file, { readSource, passive = false, maxBy
       }
       const report = lintDesign(bundled.html, {
         designSystem: document.designSystem,
+        screen,
+        variant,
       });
+      report.warnings.push(...themeWarnings.filter((item) => item.screenId === screenId));
+      report.summary = `${report.errors.length} error(s), ${report.warnings.length} warning(s)`;
       lint.push({ variantId: variant.id, screenId, ...report });
       for (const anchor of screen.anchors ?? []) {
         if (

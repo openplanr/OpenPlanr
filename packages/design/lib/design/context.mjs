@@ -62,6 +62,18 @@ export function reviewFingerprints({ document, context, screen, variant, frame, 
       files: Object.entries(sourceDigests).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0)),
       width: frame.width,
       height: frame.height,
+      ...(screen.props === undefined
+        ? {}
+        : {
+            props: Object.fromEntries(
+              Object.entries(screen.props).map(([name, declaration]) => [
+                name,
+                Object.hasOwn(variant.props?.[screen.id] ?? {}, name)
+                  ? variant.props[screen.id][name]
+                  : declaration.default,
+              ]),
+            ),
+          }),
     }),
     guidanceDigest: reviewDigest({
       title: screen.title,
@@ -89,6 +101,10 @@ export function bundleDesignRevision(current, state = {}) {
     kind: 'openplanr-design-review-bundle',
     schemaVersion: current.envelope.schemaVersion === '1.1.0' ? '1.2.0' : '1.1.0',
     design: {
+      ...(document.screens.some((screen) => screen.props !== undefined) ||
+      document.variants.some((variant) => variant.props !== undefined)
+        ? { schemaVersion: document.schemaVersion }
+        : {}),
       ...pick(document, [
         'id',
         'title',
@@ -100,7 +116,7 @@ export function bundleDesignRevision(current, state = {}) {
         'layout',
       ]),
       screens: document.screens.map((screen) =>
-        pick(screen, ['id', 'title', 'description', 'anchors']),
+        pick(screen, ['id', 'title', 'description', 'anchors', 'props']),
       ),
       selectedVariant: document.variants.some(
         (variant) => variant.id === state.selectedVariant && variant.status === 'ready',
@@ -109,7 +125,7 @@ export function bundleDesignRevision(current, state = {}) {
         : document.selectedVariant,
       variants: document.variants
         .filter((variant) => variant.status === 'ready')
-        .map((variant) => pick(variant, ['id', 'label', 'status'])),
+        .map((variant) => pick(variant, ['id', 'label', 'status', 'props'])),
     },
     envelope: structuredClone(current.envelope),
     entries: structuredClone(current.entries),

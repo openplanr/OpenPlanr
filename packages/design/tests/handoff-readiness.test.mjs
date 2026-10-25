@@ -93,9 +93,15 @@ test('ready evidence compiles all stable checks and exposes only prepare-plan co
   );
 });
 
-test('readiness rejects the withdrawn authored document version', () => {
+test('readiness accepts typed props document versions', () => {
   const input = readyInput();
   input.document.schemaVersion = '1.1.0';
+  assert.equal(compileDesignHandoffReadiness(input).status, 'ready');
+});
+
+test('readiness rejects unsupported authored document versions', () => {
+  const input = readyInput();
+  input.document.schemaVersion = '1.2.0';
   assert.throws(() => compileDesignHandoffReadiness(input), {
     name: 'TypeError',
     message: 'Readiness requires one supported design document.',

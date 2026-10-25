@@ -9,6 +9,7 @@ import {
   assertDesignDocument,
   DESIGN_DOCUMENT_SCHEMA,
   DESIGN_DOCUMENT_V1_SCHEMA,
+  DESIGN_DOCUMENT_V120_SCHEMA,
   DESIGN_DOCUMENT_VERSION,
   initialFrameHeight,
   validateDesignDocument,
@@ -135,17 +136,14 @@ test('current design contracts accept fixed or content-sized frames at version 1
   );
 });
 
-test('design contracts reject the withdrawn authored version with any frame mode or layout', () => {
+test('released layout contracts reject authored prop versions with any frame mode or layout', () => {
   for (const height of [900, 'auto']) {
     for (const layout of [undefined, { boards: { overview: { x: 10, y: 20 } } }]) {
       const document = { ...fixture(), schemaVersion: '1.1.0' };
       if (layout !== undefined) document.layout = layout;
       document.frames[0].height = height;
-      assert.throws(
-        () => assertDesignDocument(document),
-        /Invalid design document.*schemaVersion/su,
-      );
-      assert.ok(validateJson(document, DESIGN_DOCUMENT_SCHEMA).length > 0);
+
+      assert.ok(validateJson(document, DESIGN_DOCUMENT_V120_SCHEMA).length > 0);
     }
   }
 });
@@ -307,7 +305,7 @@ test('canvas layout is optional and uses the additive current schema without cha
       'utf8',
     ),
   );
-  assert.deepEqual(packaged, DESIGN_DOCUMENT_SCHEMA);
+  assert.deepEqual(packaged, DESIGN_DOCUMENT_V120_SCHEMA);
   assert.deepEqual(packaged['x-openplanr-contract'], { id: 'design-document', version: '1.20.0' });
   for (const layout of [undefined, {}, { boards: {}, sections: [] }]) {
     const document = fixture();
