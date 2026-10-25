@@ -6,6 +6,11 @@ import { z } from 'zod';
 import { CLI_COMMAND } from '../utils/constants.js';
 import { parseExternalJson } from '../utils/external-json.js';
 import { effectiveCodexHome } from './runtime-manager/codex-discovery.js';
+import {
+  hostRunnerBounds,
+  isProbeTimeout,
+  probeTimeoutMessage,
+} from './runtime-manager/host-version-probe.js';
 
 export type CodexCommandRunner = (args: string[]) => {
   status: number | null;
@@ -36,7 +41,11 @@ export interface CodexPluginInspection {
 }
 
 const defaultRunner: CodexCommandRunner = (args) => {
-  const result = spawnSync('codex', args, { encoding: 'utf8', windowsHide: true });
+  const result = spawnSync('codex', args, {
+    encoding: 'utf8',
+    windowsHide: true,
+    ...hostRunnerBounds(args),
+  });
   return {
     status: result.status,
     stdout: result.stdout ?? '',
@@ -209,9 +218,10 @@ export function inspectCodexPluginIntegration(
       error: `The CLI bundled Codex host marketplace does not declare ${HOST_PLUGIN_NAME}. Run ${CLI_COMMAND} setup --runtime codex to repair it.`,
     };
   const version = runner(['--version']);
+  const timedOut = isProbeTimeout(version.error);
   if (version.error || version.status !== 0)
     return {
-      available: false,
+      available: timedOut,
       ready: false,
       marketplaceName,
       pluginId,
@@ -219,7 +229,9 @@ export function inspectCodexPluginIntegration(
       installedVersion: null,
       duplicates: [],
       operations: [],
-      error: version.error?.message || version.stderr.trim() || 'Codex is unavailable.',
+      error: timedOut
+        ? probeTimeoutMessage('codex', 'Codex')
+        : version.error?.message || version.stderr.trim() || 'Codex is unavailable.',
     };
   try {
     const listedMarketplaces = output(

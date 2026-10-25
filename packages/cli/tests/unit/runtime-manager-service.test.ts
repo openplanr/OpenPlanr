@@ -38,6 +38,7 @@ import {
   runtimeRoot,
   type SetupOptions,
 } from '../../src/services/runtime-manager-service.js';
+import { hostlessPath } from '../helpers/hostless-path.js';
 import { resolvePipelinePackageRoot } from '../helpers/pipeline-package-root.js';
 
 // File ownership tests do not consult or mutate the developer's native plugin installation.
@@ -102,7 +103,11 @@ function regularFiles(directory: string): string[] {
 const canonicalProjectKey = (directory: string) =>
   createHash('sha256').update(realpathSync(directory)).digest('hex').slice(0, 16);
 
+let previousPath: string | undefined;
+
 beforeEach(() => {
+  previousPath = process.env.PATH;
+  process.env.PATH = hostlessPath();
   previousCodexHome = process.env.CODEX_HOME;
   delete process.env.CODEX_HOME;
   root = mkdtempSync(join(tmpdir(), 'openplanr-runtime-'));
@@ -116,6 +121,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  process.env.PATH = previousPath;
   if (previousCodexHome === undefined) delete process.env.CODEX_HOME;
   else process.env.CODEX_HOME = previousCodexHome;
   delete process.env.OPENPLANR_HOME;
