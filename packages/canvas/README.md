@@ -4,23 +4,168 @@ Framework-free camera, input, culling, focus and overview controller for HTML an
 is private and is not published. It has no runtime dependencies; React peers
 remain optional.
 
-Exports:
+## Workspace installation
 
-- `.`: `createCanvas`, `cameraFromScreenTranslate`, `cameraToScreenTranslate`,
-  `drawCameraOverview`, `drawMinimap`, `minimapToWorld`, `CanvasFocusError`,
-  and their camera, geometry, node, options, elements, events and controller types.
-- `./react`: `CanvasProvider`, `CanvasStage`, `WorldNodes`, `OutlinePanel`,
-  `ChromeProvider`, `useCanvas`, `useCamera`, `useChrome`, `useShortcut`,
-  `formatShortcut`, `useReducedMotion`, `defaultChromeKeymap`, `ChromeRoot`,
-  `MenuPill`, `Menu`, `MenuItem`, `FloatingToolbar`, `ToolbarItem`, `ToolbarMore`,
-  `ActionPill`, `PrimaryAction`, `SidebarToggle`, `Sidebar`, `NavigationPanel`,
-  `ZoomPill`, `HistoryPill`, `HelpButton`, `WelcomeHints`, `ToolbarHint`, and their prop,
-  state and adapter types.
-- `./testing`: `generateLayeredGraph`, `generateSvgDiagram`, `percentile95`,
-  `rendererFrameWork`, `classifyLayoutShift`, `aggregateLayoutShifts`,
-  `CANVAS_TRACE_BUDGETS`, `evaluateCanvasTrace`, `traceBudgetPolicy`,
-  `traceOwnership`, `domBudgetPolicy`, and their fixture, trace, layout-shift and evaluation types.
-- `./styles.css`: Structural canvas styles and z-order variables.
+The package remains private at `0.0.0` and is not yet published to npm. Existing
+workspace consumers resolve it through the root npm workspace installation:
+
+```bash
+npm ci
+npm run build -w @openplanr/canvas
+```
+
+Use Node.js 22.13 or later. The core has no runtime dependencies. React consumers
+supply `react` and `react-dom` compatible with the optional `^19.2.0` peers.
+Import the core from `@openplanr/canvas`, React bindings from
+`@openplanr/canvas/react`, and CSS once from `@openplanr/canvas/styles.css`.
+Give the stage's container an explicit height; the structural stage fills it.
+
+## Entry points
+
+Each table lists both runtime values and TypeScript types exported by that entry.
+
+### `.` exports
+
+| Export | Purpose |
+| --- | --- |
+| `createCanvas` | Creates a detached controller from `CanvasOptions`. |
+| `cameraFromScreenTranslate` | Converts screen translation and scale to a camera. |
+| `cameraToScreenTranslate` | Converts a camera to screen translation and scale. |
+| `drawCameraOverview` | Draws an overview of nodes for a camera and viewport. |
+| `drawMinimap` | Draws a fitted minimap and returns its coordinate transform. |
+| `minimapToWorld` | Converts a minimap point to world coordinates. |
+| `CanvasFocusError` | Focus failure with an `unknown-node` or `no-element` code. |
+| `Breakpoint` | Named minimum stage width for responsive frame budgets. |
+| `Camera` | World origin and zoom: `{ x, y, zoom }`. |
+| `CanvasController` | Controller methods for lifetime, geometry, camera, input, focus and events. |
+| `CanvasEdge` | Edge endpoints, style and optional routed world points. |
+| `CanvasElements` | Stage, HTML world and optional overlays, edges and overview elements. |
+| `CanvasEvents` | Typed camera, mount, geometry, level, selection, focus, breakpoint, active-frame and diagnostic payloads. |
+| `CanvasLevel` | Rendering level: `dom`, `compact` or `overview`. |
+| `CanvasNode` | Node ID, world bounds and optional kind/frame marker. |
+| `CanvasOptions` | Label and optional camera, culling, rendering, input and navigation configuration. |
+| `ChromeSurface` | Measured open chrome surface and its occupied edge. |
+| `Diagnostic` | Geometry or endpoint problem with a code, ID and reason. |
+| `Direction` | An up, down, left or right navigation direction. |
+| `MinimapTransform` | Scale and offsets mapping world coordinates into a minimap. |
+| `NodeId` | String node identifier. |
+| `OverviewMetrics` | Cache bytes, redraw count and worker presentation measurements. |
+| `OverviewStyle` | Callback returning a node overview fill and stroke. |
+| `Point` | Readonly `{ x, y }` coordinate. |
+| `Rect` | Readonly `{ x, y, width, height }` rectangle. |
+| `WorldElement` | HTML element transformed as a world layer. |
+
+### `./react` exports
+
+| Export | Purpose |
+| --- | --- |
+| `CanvasProvider` | Owns a controller lifetime and synchronizes React node and edge props. |
+| `CanvasStage` | Attaches the stage, HTML world, edge SVG and overview layers. |
+| `WorldNodes` | Renders the mounted ID set with memoized product content. |
+| `OutlinePanel` | Virtualized flat listbox for reaching every node. |
+| `ChromeProvider` | Owns panel state, measured safe areas, storage and chrome shortcuts. |
+| `useCanvas` | Returns the mounted controller or `null`. |
+| `useCamera` | Subscribes to a selected camera value with optional equality comparison. |
+| `useChrome` | Returns chrome state and registration/actions; requires `ChromeProvider`. |
+| `useShortcut` | Returns a chrome action’s current key binding. |
+| `formatShortcut` | Formats a key binding for the current or supplied platform. |
+| `useReducedMotion` | Subscribes to the reduced-motion media preference. |
+| `defaultChromeKeymap` | Default menu, sidebar, hide-chrome and focus-region bindings. |
+| `ChromeRoot` | Full-window chrome container. |
+| `MenuPill` | Menu slot with an optional view picker. |
+| `Menu` | Accessible menu of product actions. |
+| `MenuItem` | Menu action with optional shortcut hint. |
+| `FloatingToolbar` | Floating tool slot. |
+| `ToolbarItem` | Tool control with optional shortcut hint. |
+| `ToolbarMore` | Overflow menu for secondary toolbar controls. |
+| `ActionPill` | Primary action and sidebar toggle slot. |
+| `PrimaryAction` | Single primary product action. |
+| `SidebarToggle` | Inspector/outline panel toggle with selection indication. |
+| `Sidebar` | Inspector and outline panel with pin and close controls. |
+| `NavigationPanel` | Optional left navigation panel. |
+| `ZoomPill` | Camera zoom controls shown when a canvas is registered. |
+| `HistoryPill` | Product undo/redo controls shown when a canvas is registered. |
+| `HelpButton` | Help action slot. |
+| `WelcomeHints` | Empty-canvas product actions with anchored labels. |
+| `ToolbarHint` | Dismissible toolbar hint persisted through chrome storage. |
+| `ChromeAction` | Named menu, sidebar, visibility or focus-cycle action. |
+| `ChromeKeymap` | Binding for each chrome action. |
+| `ChromePanelOptions` | Panel side and optional navigation/sidebar role. |
+| `ChromePanelState` | Panel open and pinned flags. |
+| `ChromeRegion` | Named focus-cycle region. |
+| `ChromeRegionOptions` | Optional panel association for a focus region. |
+| `ChromeShortcut` | Physical key code and optional modifier flags. |
+| `ChromeState` | Chrome snapshots and panel, surface, region and hint actions. |
+| `ChromeStorage` | Synchronous or asynchronous key/value storage adapter. |
+| `ChromeStorageErrorContext` | Storage key and failed get/set operation. |
+| `ChromeSurfaceOptions` | Persistent safe-area participation, panel association and zoom visibility. |
+| `ActionPillProps` | Props accepted by `ActionPill`. |
+| `ChromeRootProps` | Props accepted by `ChromeRoot`. |
+| `FloatingToolbarProps` | Props accepted by `FloatingToolbar`. |
+| `HelpButtonProps` | Props accepted by `HelpButton`. |
+| `HistoryPillProps` | Props accepted by `HistoryPill`. |
+| `MenuItemProps` | Props accepted by `MenuItem`. |
+| `MenuPillProps` | Props accepted by `MenuPill`. |
+| `MenuProps` | Props accepted by `Menu`. |
+| `NavigationPanelProps` | Props accepted by `NavigationPanel`. |
+| `PrimaryActionProps` | Props accepted by `PrimaryAction`. |
+| `SidebarProps` | Props accepted by `Sidebar`. |
+| `SidebarToggleProps` | Props accepted by `SidebarToggle`. |
+| `ToolbarHintProps` | Props accepted by `ToolbarHint`. |
+| `ToolbarItemProps` | Props accepted by `ToolbarItem`. |
+| `ToolbarMoreProps` | Props accepted by `ToolbarMore`. |
+| `WelcomeHintsProps` | Props accepted by `WelcomeHints`. |
+| `ZoomPillProps` | Props accepted by `ZoomPill`. |
+| `ChromeProviderProps` | Props accepted by `ChromeProvider`. |
+| `OutlinePanelProps` | Props accepted by `OutlinePanel`. |
+| `CanvasProviderProps` | Props accepted by `CanvasProvider`. |
+| `CanvasStageProps` | Props accepted by `CanvasStage`. |
+| `WorldNodesProps` | Props accepted by `WorldNodes`. |
+
+### `./testing` exports
+
+| Export | Purpose |
+| --- | --- |
+| `generateLayeredGraph` | Seeded 708- or 5,000-node HTML graph fixture. |
+| `generateSvgDiagram` | Seeded 708- or 5,000-node SVG diagram fixture. |
+| `percentile95` | Computes p95 of nonempty finite nonnegative samples. |
+| `rendererFrameWork` | Measures renderer main-thread work between trace frame marks. |
+| `classifyLayoutShift` | Classifies a shift against input-window policy. |
+| `aggregateLayoutShifts` | Aggregates measured shifts with input-phase evidence. |
+| `CANVAS_TRACE_BUDGETS` | Shared reference limits and measurement sample counts. |
+| `evaluateCanvasTrace` | Validates evidence and returns failures, reports and pending coverage. |
+| `toClockResolution` | Rounds frame intervals to 0.1 ms browser clock resolution. |
+| `traceBudgetPolicy` | Selects effective local or runner trace limits. |
+| `traceOwnership` | Identifies gated HTML/708 SVG tiers and reported SVG stress tiers. |
+| `domBudgetPolicy` | Selects gated DOM counts or report-only remount/stress measurements. |
+| `CanvasFixture` | Fixture nodes, edges and aggregate world bounds. |
+| `FixtureEdge` | Fixture edge with endpoints and world route points. |
+| `FixtureNode` | Fixture node with title, rank and world bounds. |
+| `CanvasChromeMeasurement` | Chrome-toggle layout-shift evidence and camera/stage snapshots. |
+| `CanvasChromeSnapshot` | Camera and stage rectangle at a chrome measurement point. |
+| `CanvasHitTestMeasurement` | Fixture identity and hit-test probe. |
+| `CanvasHitTestProbe` | Hit-test p95, sample/query counts and minimum sample duration. |
+| `CanvasLodMeasurement` | LOD band transitions, observed levels and blank/double-layer counts. |
+| `CanvasPinMeasurement` | Pinned-node count, DOM count and dropped pins. |
+| `CanvasTraceEvaluation` | Evaluation identity, failures, reported metrics, pending sections and pass flag. |
+| `CanvasTraceIdentity` | Fixture, renderer, world, node tier and device pixel ratio. |
+| `CanvasTraceMeasurement` | Scenario runs and first-frame load trials. |
+| `CanvasTraceResults` | Browser, budget set and optional trace, hit-test, chrome, LOD and pin evidence. |
+| `CanvasTraceRun` | One interaction run’s timing, DOM, hit-test and optional React measurements. |
+| `LayoutShift` | Shift value, timing, input phase and source geometry. |
+| `LayoutShiftPolicy` | Input phase and optional input-window duration for shift classification. |
+| `LayoutShiftRect` | Full rectangle coordinates recorded for a shifted source. |
+| `LayoutShiftReport` | Phases, input actions and measured shifts. |
+| `RendererTraceEvent` | Chromium trace event fields used by renderer work measurement. |
+| `RendererTraceMarks` | Optional frame and interaction boundary mark names. |
+
+### `./styles.css`
+
+Import `@openplanr/canvas/styles.css` for structural stage/world/overview/edge
+styles, floating chrome, responsive panels and the tokens documented below.
+This stylesheet exports no JavaScript values or TypeScript types.
+
+## Core API
 
 `createCanvas({ label })` creates a detached controller. Call `attach({ stage,
 world, overlays })` to connect elements, `detach()` to release them, and
@@ -44,6 +189,11 @@ Animated `setCamera` moves take at most 200 ms and honor reduced motion and
 `zoomAt(factor)` zooms around the safe-area centre and announces the resulting
 percentage through the 500 ms coalesced live region. Passing an explicit
 `screenPoint` zooms silently, as wheel and pinch gestures do.
+
+Register persistent chrome with `setChrome({ id, edge, rect, open })`, remove it
+with `removeChrome(id)`, and read the remaining stage rectangle with
+`getSafeArea()`. Rectangles use stage-relative screen coordinates; camera reveal
+operations reserve the occupied edges.
 
 `setNodes` stores bounds for `fit('all' | 'selection' | ids, { padding, maxZoom })`
 and `reveal(id, { mode: 'minimal' | 'center' })`. `setSelection` and `getSelection`
@@ -117,21 +267,32 @@ until `setNodes`. Supply `outlineOrder(nodes)` to return every ID exactly once.
 An outline button can await `focusNode(id)` then call `setSelection([id])`.
 The engine announces its accessible name through one polite live region.
 
-Arrows navigate by nearest centre within a 90-degree cone, breaking distance
-ties by numeric ID. Override with `navigate(from, direction)`. Shift+Arrows pan
-by a quarter of the safe-area size. Enter and Space select the focused node
-on keydown; Space held on the stage remains available for pan. Escape deactivates
-the active frame, then clears selection, then returns focus to the stage.
-Home and End jump to the first and last outline entries. `+`/`=` and `-` zoom,
-`0` resets to 100%, Shift+1 fits all and Shift+2 fits selection. Zoom commands,
-navigation boundaries and outline jumps announce at most once per 500 ms;
-wheel and pinch do not announce.
+## Keyboard and accessibility
 
-Set `keyboard.arrows: 'none'` to leave all arrows to the product. All keys ignore
-editable focus, IME composition and Ctrl/Meta/Alt modifiers. A false
-`shortcutsEnabled()` disables only single-character zoom and fit shortcuts.
-A product coordinator may call `handleKey(event)`; it returns true and prevents
-default only when consumed, and the same event is consumed once.
+| Input or contract | Behavior |
+| --- | --- |
+| Arrows | Navigate by nearest centre within a 90-degree cone, breaking distance ties by numeric ID; `navigate(from, direction)` can override it. |
+| Shift+Arrows | Pan by a quarter of the safe-area size. |
+| Enter / Space | Select the focused node on keydown. Space held on the stage remains available for pan. |
+| Escape | Deactivate an active frame, then clear selection, then return focus to the stage. |
+| Home / End | Focus the first / last outline entry. |
+| `+` / `=` / `-` | Zoom in / out by a factor of 1.25 around the safe-area centre. |
+| `0` | Reset zoom to 100%. |
+| Shift+1 / Shift+2 | Fit all nodes / the selection into the safe area. |
+| Ctrl/Meta/Alt with a stage key | Leave the key to the product/browser; browser zoom shortcuts are not intercepted. |
+| Editable focus / IME composition | Ignore engine shortcuts. |
+| `keyboard.arrows: 'none'` | Leave all arrows, including shifted arrows, to the product. |
+| `shortcutsEnabled()` returns false | Disable only single-character zoom, reset and fit shortcuts. |
+| Product key coordinator | `handleKey(event)` returns true and prevents default only when consumed; the same event is consumed once. |
+| Stage semantics | Named `group` with `aria-roledescription="canvas"`, one tab stop and roving node tabindex. Products provide accessible node names. |
+| Offscreen nodes | `focusNode` pins, reveals and waits for the node element; `getOutline()` reaches every node. |
+| Announcements | One polite live region; zoom, navigation boundaries and outline jumps coalesce at most once per 500 ms. Wheel and pinch remain silent. |
+| Frame interaction | Host-side Done control and outside click allow leaving an active frame without a cross-origin keyboard bridge. |
+| Reduced motion | Camera animations and chrome transitions respect the media preference; `motion: 'none'` also disables camera animation. |
+| Forced colours | Overview nodes use `CanvasText`, selection/focus use `Highlight`, and chrome defaults use system colours. Products supply accessible DOM node styles. |
+| Outline listbox | ArrowUp/Down, Home/End and PageUp/Down move focus; Enter/Space activates. Rows report full set size and one-based position. |
+| F6 / Shift+F6 with `ChromeProvider` | Visit registered skip-link, menu, toolbar, action, canvas, sidebar, zoom, history and help regions; skip absent or closed regions. |
+| Alt+[ / Alt+] / Alt+Z with the default chrome keymap | Toggle navigation/menu, sidebar or chrome visibility using physical key codes. |
 
 Event subscriptions return unsubscribe functions. Camera and active-frame
 events coalesce and run after the frame's transform write. Selection changes
@@ -257,6 +418,14 @@ through `onCommitFiberRoot`, exposed as `window.reactCommits`.
 React trace rows report commits, mount and level events, and commit counts for
 camera frames without mount or level changes.
 
+## Verification and budgets
+
+After building, `npm test -w @openplanr/canvas` checks README exports against the
+built declarations. `npm run test:packed -w @openplanr/canvas` builds and packs the
+package, installs it in an isolated Vite React app and checks rendering, pan and
+zoom in Chromium. The packed check needs network access and a Playwright browser;
+it is excluded from the default unit suite.
+
 Run `npm test --workspace=@openplanr/canvas`, `npm run test:browser
 --workspace=@openplanr/canvas`, or `npm run bench:trace
 --workspace=@openplanr/canvas`. The production Vite bench accepts `fixture`,
@@ -267,7 +436,41 @@ It renders through mount and geometry events and shows the mounted count. Trace 
 together in its report. Each scenario records three runs and reports median
 p95s with all raw results. A discarded warm-up precedes the 708-node interaction
 runs. Every scenario and raw trace run includes the WebGL renderer string.
-Local runs keep every reference budget unchanged. All four scenarios gate main-thread, rAF, long-task, first-frame
+Traced runs and the untraced budgets bench are reserved for nightly verification
+and release PRs. Routine changes use the unit and functional browser suites.
+The trace script remains available for reproducing those runs locally.
+
+The following limits come from `CANVAS_TRACE_BUDGETS` and
+`traceBudgetPolicy`. Only `CI=true` selects runner limits in the trace harness;
+all other environments use the local set. Values below are maxima unless a
+sample count or exact count is stated.
+
+| Metric | Local reference | `CI=true` runner |
+| --- | --- | --- |
+| Chromium renderer main-thread p95, vanilla HTML, 708 / 5,000 nodes | 6 / 8 ms | Same |
+| Chromium renderer main-thread p95, React HTML, 708 / 5,000 nodes | 8 / 10 ms | Same |
+| Chromium renderer main-thread p95, SVG, 708 / 5,000 nodes | 8 / 12 ms | Same; 5,000 SVG is reported only |
+| Remount renderer main-thread p95 | 16 ms | Reported only (16 ms reference) |
+| Chromium rAF interval p95 | 16.8 ms | Reported only (16.8 ms reference) |
+| WebKit rAF interval p95 | 19 ms | Reported only (19 ms reference) |
+| WebKit 40% pan worst frame | 33 ms | Same |
+| Firefox 100% pan frame p95 | 17 ms | Same |
+| Firefox fit pan frame p95, 708 / 5,000 nodes | 20 / 25 ms | Same |
+| Long tasks over 50 ms | 0 | Same |
+| Stage DOM nodes | 2,000 | Same; remount DOM count is reported only |
+| First fixture frame p50 | 150 ms across exactly 5 loads | 250 ms across exactly 5 loads |
+| Hit-test p95 | Greater than 0 and at most 0.1 ms | Same |
+| Hit-test sampling | Exactly 1,000 points, at least 1,000 queries, at least 1 ms per sample batch | Same |
+| Chrome toggles / admitted layout shift | Exactly 16 toggles / 0 admitted CLS | Same |
+| LOD switches per band | Exactly 20 | Same |
+| Blank frames / double-layer frames | 0 / 0 | Same |
+| Dropped pins | 0, with 50- and 500-pin tiers | Same |
+| React commits on pure camera frames | 0 | Same |
+
+HTML at both node tiers and SVG at 708 nodes are gated. The 5,000-node SVG stress
+tier reports trace timings without gating them. Frame intervals are rounded to
+0.1 ms before comparison. Local runs keep every reference budget unchanged.
+All four scenarios gate main-thread, rAF, long-task, first-frame
 and hit-test budgets for the 708 and 5,000 HTML tiers and the 708 SVG tier at both
 pixel densities. Stage DOM counts gate at 2,000, including compact cards at 40%
 and the fit overview. Hit-test p95 uses per-query batch means at 1,000
@@ -310,3 +513,43 @@ Its report is `test-results/canvas-budgets-${gpuMode}.json`. Both reports includ
 browser/version, GPU mode, renderer strings, build commit and package version.
 Set `CANVAS_SECOND_DENSITY=1` to include HTML fixtures `708-477` and `5000-8499`
 in both benches; both reports record `secondDensity`.
+
+## Theming
+
+The stylesheet defines these defaults on `:root`. Override them on `:root` or an
+appropriate ancestor of the stage/chrome. Products supply their node, edge and
+overview colours; these variables theme structural layers and chrome.
+
+| CSS variable | Default | Purpose |
+| --- | --- | --- |
+| `--canvas-z-stage` | `0` | Stage stacking level. |
+| `--canvas-z-world-overlays` | `5` | World overlay stacking token. |
+| `--canvas-z-screen-overlays` | `10` | Screen overlay stacking token. |
+| `--canvas-z-chrome` | `20` | Floating chrome stacking level. |
+| `--canvas-z-popovers` | `30` | Popover and mobile panel stacking level. |
+| `--canvas-z-toasts` | `40` | Toast stacking token. |
+| `--canvas-z-modals` | `50` | Modal stacking token. |
+| `--canvas-chrome-inset` | `12px` | Chrome distance from viewport edges. |
+| `--canvas-chrome-gap` | `12px` | Spacing between chrome surfaces. |
+| `--canvas-chrome-pill-height` | `40px` | Desktop pill height. |
+| `--canvas-chrome-toolbar-height` | `44px` | Desktop toolbar height. |
+| `--canvas-chrome-help-size` | `40px` | Desktop help button size. |
+| `--canvas-chrome-zoom-width` | `144px` | Desktop zoom pill width. |
+| `--canvas-chrome-sidebar-width` | `312px` | Default sidebar width. |
+| `--canvas-chrome-navigation-width` | `264px` | Default navigation panel width. |
+| `--canvas-chrome-panel-inset` | `64px` | Desktop panel top/bottom inset. |
+| `--canvas-chrome-transition` | `180ms` | Panel transform/opacity transition duration. |
+| `--canvas-chrome-background` | `Canvas` | Surface background. |
+| `--canvas-chrome-foreground` | `CanvasText` | Main text colour. |
+| `--canvas-chrome-muted` | `CanvasText` | Disabled control colour. |
+| `--canvas-chrome-border` | `ButtonBorder` | Surface border colour. |
+| `--canvas-chrome-hover` | `ButtonFace` | Hover background. |
+| `--canvas-chrome-accent` | `ButtonText` | Primary action background. |
+| `--canvas-chrome-on-accent` | `Canvas` | Primary action foreground. |
+| `--canvas-chrome-focus` | `Highlight` | Focus-ring colour. |
+| `--canvas-chrome-shadow` | `0 2px 12px rgb(0 0 0 / 12%)` | Surface shadow. |
+
+`--canvas-chrome-panel-width` is an optional per-panel override consumed by the
+stylesheet; it has no declared default and falls back to the sidebar or
+navigation width. Mobile layout uses its own 48 px slot height and bottom-sheet
+geometry. See the React binding section for its responsive behavior.
