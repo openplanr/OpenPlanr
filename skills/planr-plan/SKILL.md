@@ -7,9 +7,9 @@ license: MIT
 # OpenPlanr Plan
 
 Turn a decision-complete specification or clear product request into
-implementation-ready stories and tasks. Perform the reasoning in this active
-coding session. Do not delegate semantic planning to a command-line or model
-subprocess. Plan ends with a Ship handoff; it never starts implementation
+implementation-ready stories and tasks in this active coding session. Do not
+delegate semantic planning to a command-line or model subprocess. Plan ends with a
+Ship handoff; it never starts implementation
 automatically.
 
 ## Resolve context directly
@@ -64,14 +64,24 @@ host has no structured question interface, ask one concise chat question.
 
 ## Apply PO lenses in-session
 
-When the host supports native agents, dispatch the applicable database,
-designer, and specification roles inside this session. Give each role the
-request, repository root, relevant paths, and the precise decision or artifact
-it owns. Parallelize independent lenses. When native agents are unavailable,
-perform the same lenses sequentially in the active agent.
+The main session owns the plan, decisions, and integration. Keep small coherent
+planning work in this session. Delegate only a self-contained outcome that
+benefits from context isolation, a distinct capability boundary, or independent
+parallel work; agent availability alone is not a reason to dispatch.
 
-The specification role integrates the results. Database and design roles
-provide grounded inputs; they do not create a second independent plan.
+Use specification for a distinct planning assignment or completeness review,
+designer for a separate design deliverable or critique, and database only for
+authorized read-only live introspection when repository schemas are insufficient.
+Do not have two planners decompose the same request. Entity scaffolding remains
+manual, on explicit request.
+
+Select the exact registered identity from the host's roster; Claude plugin
+agents use names such as `planr:planr-specification`. Give each worker its outcome,
+authoritative paths, relevant decisions, file ownership, verification requirements,
+and concise return expectations. Parallel workers need disjoint writes or an
+agreed interface. Explain the delegation's purpose briefly in commentary.
+When the host lacks the native role, perform the work sequentially in this session
+and disclose capability limitations; never claim an unavailable specialist ran.
 
 ## Author the decomposition
 

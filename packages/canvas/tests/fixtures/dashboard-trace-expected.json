@@ -1,0 +1,266 @@
+{
+  "frameWorkMs": [
+    1.123,
+    0.659,
+    0.626,
+    0.666,
+    0.689,
+    2.877,
+    0.44,
+    0.444,
+    0.467,
+    0.391,
+    0.413,
+    0.492,
+    0.581,
+    0.528,
+    0.769,
+    0.509,
+    0.513,
+    0.503,
+    0.483,
+    0.496,
+    0.5,
+    0.456,
+    0.477
+  ],
+  "frameWorkP95Ms": 1.123,
+  "layoutShiftEvidence": {
+    "phases": [
+      {
+        "phase": "route-load",
+        "startTime": 0
+      },
+      {
+        "phase": "filter-input 1",
+        "startTime": 100
+      },
+      {
+        "phase": "palette query 1",
+        "startTime": 1000
+      },
+      {
+        "phase": "inspector 1",
+        "startTime": 2000
+      },
+      {
+        "phase": "graph-lens whole project",
+        "startTime": 3000
+      }
+    ],
+    "inputActions": [
+      {
+        "phase": "filter-input 1",
+        "phaseIndex": 1,
+        "startTime": 150
+      },
+      {
+        "phase": "palette query 1",
+        "phaseIndex": 2,
+        "startTime": 1100
+      },
+      {
+        "phase": "inspector 1",
+        "phaseIndex": 3,
+        "startTime": 2050
+      },
+      {
+        "phase": "graph-lens whole project",
+        "phaseIndex": 4,
+        "startTime": 3010
+      }
+    ],
+    "shifts": [
+      {
+        "value": 0.01,
+        "startTime": 50,
+        "phase": "route-load",
+        "hadRecentInput": false,
+        "sources": []
+      },
+      {
+        "value": 0.02,
+        "startTime": 160,
+        "phase": "filter-input 1",
+        "hadRecentInput": true,
+        "sources": []
+      },
+      {
+        "value": 0.03,
+        "startTime": 649.999,
+        "phase": "filter-input 1",
+        "hadRecentInput": false,
+        "sources": []
+      },
+      {
+        "value": 0.04,
+        "startTime": 650.001,
+        "phase": "filter-input 1",
+        "hadRecentInput": false,
+        "sources": []
+      },
+      {
+        "value": 0.05,
+        "startTime": 1200,
+        "phase": "palette query 1",
+        "hadRecentInput": false,
+        "sources": []
+      },
+      {
+        "value": 0.06,
+        "startTime": 1050,
+        "phase": "palette query 1",
+        "hadRecentInput": false,
+        "sources": []
+      },
+      {
+        "value": 0.07,
+        "startTime": 2100,
+        "phase": "inspector 1",
+        "hadRecentInput": true,
+        "sources": []
+      },
+      {
+        "value": 0.08,
+        "startTime": 3100,
+        "phase": "graph-lens whole project",
+        "hadRecentInput": true,
+        "sources": []
+      },
+      {
+        "value": 0.09,
+        "startTime": 3100,
+        "phase": "filter-input 1",
+        "hadRecentInput": false,
+        "sources": []
+      }
+    ]
+  },
+  "classifications": [
+    {
+      "inputDriven": false,
+      "reason": "counted"
+    },
+    {
+      "inputDriven": true,
+      "reason": "native-excluded"
+    },
+    {
+      "inputDriven": true,
+      "reason": "input-driven"
+    },
+    {
+      "inputDriven": false,
+      "reason": "counted"
+    },
+    {
+      "inputDriven": true,
+      "reason": "input-driven"
+    },
+    {
+      "inputDriven": false,
+      "reason": "counted"
+    },
+    {
+      "inputDriven": false,
+      "reason": "counted"
+    },
+    {
+      "inputDriven": true,
+      "reason": "native-excluded"
+    },
+    {
+      "inputDriven": false,
+      "reason": "counted"
+    }
+  ],
+  "aggregate": {
+    "admittedCls": 0.27,
+    "excludedCls": 0.18,
+    "nativeExcludedCls": 0.1,
+    "inputDrivenCls": 0.08,
+    "shifts": [
+      {
+        "value": 0.01,
+        "startTime": 50,
+        "phase": "route-load",
+        "hadRecentInput": false,
+        "sources": [],
+        "inputDriven": false,
+        "reason": "counted"
+      },
+      {
+        "value": 0.02,
+        "startTime": 160,
+        "phase": "filter-input 1",
+        "hadRecentInput": true,
+        "sources": [],
+        "inputDriven": true,
+        "reason": "native-excluded"
+      },
+      {
+        "value": 0.03,
+        "startTime": 649.999,
+        "phase": "filter-input 1",
+        "hadRecentInput": false,
+        "sources": [],
+        "inputDriven": true,
+        "reason": "input-driven"
+      },
+      {
+        "value": 0.04,
+        "startTime": 650.001,
+        "phase": "filter-input 1",
+        "hadRecentInput": false,
+        "sources": [],
+        "inputDriven": false,
+        "reason": "counted"
+      },
+      {
+        "value": 0.05,
+        "startTime": 1200,
+        "phase": "palette query 1",
+        "hadRecentInput": false,
+        "sources": [],
+        "inputDriven": true,
+        "reason": "input-driven"
+      },
+      {
+        "value": 0.06,
+        "startTime": 1050,
+        "phase": "palette query 1",
+        "hadRecentInput": false,
+        "sources": [],
+        "inputDriven": false,
+        "reason": "counted"
+      },
+      {
+        "value": 0.07,
+        "startTime": 2100,
+        "phase": "inspector 1",
+        "hadRecentInput": true,
+        "sources": [],
+        "inputDriven": false,
+        "reason": "counted"
+      },
+      {
+        "value": 0.08,
+        "startTime": 3100,
+        "phase": "graph-lens whole project",
+        "hadRecentInput": true,
+        "sources": [],
+        "inputDriven": true,
+        "reason": "native-excluded"
+      },
+      {
+        "value": 0.09,
+        "startTime": 3100,
+        "phase": "filter-input 1",
+        "hadRecentInput": false,
+        "sources": [],
+        "inputDriven": false,
+        "reason": "counted"
+      }
+    ]
+  }
+}

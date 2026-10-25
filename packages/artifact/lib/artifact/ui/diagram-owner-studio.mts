@@ -13,6 +13,7 @@ import { mountDiagramShareControl } from './diagram-share-control.mjs';
 
 /** The `diagram-owner-data` payload local-owner.mts embeds in the owner page. */
 interface OwnerPageConfig {
+  shapeLibrary?: boolean;
   diagramId: string;
   title: string;
   grammar: DiagramAuthoringProfile;
@@ -100,6 +101,7 @@ export async function mountDiagramOwnerStudio(document: Document = globalThis.do
       root,
       session,
       host: {
+        shapeLibrary: config.shapeLibrary === true,
         actions: [
           {
             id: 'share-diagram',

@@ -11,6 +11,20 @@ const entries = (values: readonly CanvasNode[]) =>
   new Map(values.map((value) => [value.id, value]));
 
 describe('mounted region', () => {
+  it('rejects a margin factor below one', () => {
+    const call = () => createCulling({ marginFactor: 0.5 });
+    expect(call).toThrow(TypeError);
+    expect(call).toThrow('culling.marginFactor: invalid value 0.5');
+  });
+
+  it('accepts a margin factor of one and mounts nodes at the viewport edges', () => {
+    const culling = createCulling({ marginFactor: 1 });
+    culling.setNodes(entries([node('top-left'), node('bottom-right', 760, 560)]));
+    culling.update(viewport, 0, false, false);
+    expect(culling.getRegion()).toEqual(viewport);
+    expect(new Set(culling.getMountedIds())).toEqual(new Set(['top-left', 'bottom-right']));
+  });
+
   it('retains the mounted set and cached region while panning inside it', () => {
     const culling = createCulling();
     culling.setNodes(entries([node('origin'), node('margin', -350), node('outside', -450)]));

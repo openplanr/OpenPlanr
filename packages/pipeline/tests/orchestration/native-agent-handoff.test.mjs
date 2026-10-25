@@ -1,3 +1,5 @@
+import '../helpers/isolate-host-commands.mjs';
+
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';

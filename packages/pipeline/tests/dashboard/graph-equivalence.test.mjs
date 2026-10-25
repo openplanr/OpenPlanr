@@ -1,5 +1,8 @@
 import assert from 'node:assert/strict';
-import { dirname, join } from 'node:path';
+import { spawnSync } from 'node:child_process';
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { delimiter, dirname, join } from 'node:path';
 import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
 
@@ -20,6 +23,40 @@ const collisionDir = join(root, 'conformance/fixtures/dashboard-collision/.planr
 
 const sortedIds = (graph) => graph.nodes.map((n) => n.id).sort();
 const sortedEdges = (graph) => graph.edges.map((e) => `${e.kind} ${e.from} ${e.to}`).sort();
+
+test('CLI graph discovery bounds a version process that ignores termination', {
+  skip: process.platform === 'win32',
+}, (t) => {
+  const directory = mkdtempSync(join(tmpdir(), 'planr-graph-probe-'));
+  t.after(() => rmSync(directory, { recursive: true, force: true }));
+  const bin = join(directory, 'bin');
+  mkdirSync(bin);
+  writeFileSync(
+    join(bin, 'openplanr'),
+    `#!${process.execPath}\nprocess.on('SIGTERM', () => {});\nsetInterval(() => {}, 1000);\n`,
+    { mode: 0o755 },
+  );
+  const module = new URL('../../lib/dashboard/graph-engine.mjs', import.meta.url).href;
+  const result = spawnSync(
+    process.execPath,
+    [
+      '--input-type=module',
+      '-e',
+      `
+    import { detectCli } from ${JSON.stringify(module)};
+    console.log(JSON.stringify(detectCli()));
+  `,
+    ],
+    {
+      encoding: 'utf8',
+      timeout: 15_000,
+      killSignal: 'SIGKILL',
+      env: { ...process.env, PATH: [bin, process.env.PATH].join(delimiter) },
+    },
+  );
+  assert.equal(result.status, 0, result.stderr || result.error?.message);
+  assert.equal(JSON.parse(result.stdout), null);
+});
 
 /**
  * A CLI `run` stub that emulates `openplanr` for the delegate path: `--version`

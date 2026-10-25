@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>React canvas engine bench</title>
+    <script>
+      window.reactCommits = 0;
+      window.__REACT_DEVTOOLS_GLOBAL_HOOK__ = {
+        supportsFiber: true,
+        inject() { return 1; },
+        onCommitFiberRoot() { window.reactCommits += 1; },
+        onCommitFiberUnmount() {},
+        onPostCommitFiberRoot() {},
+      };
+      window.addEventListener('error', (event) => {
+        window.benchError ??= event.error instanceof Error
+          ? event.error.message
+          : event.message || `Bench resource failed: ${event.target?.src || event.target?.href || 'unknown'}`;
+      }, true);
+      window.addEventListener('unhandledrejection', (event) => {
+        window.benchError ??= event.reason instanceof Error ? event.reason.message : String(event.reason);
+      });
+    </script>
+    <style>
+      html, body, #root { margin: 0; width: 100%; height: 100%; font: 14px system-ui, sans-serif; }
+      .canvas-stage { background: #f5f6f8; }
+      .card { position: absolute; box-sizing: border-box; border: 1px solid #b7bfca; border-radius: 6px; background: white; padding: 10px; }
+      .card strong, .card span { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+      .card span { color: #536171; margin-top: 6px; }
+      .card[data-card-level="compact"] { padding: 10px; }
+      .frame-card { padding: 0; }
+      #mounted-count { position: fixed; left: 16px; bottom: 16px; }
+      svg { pointer-events: none; }
+      svg path { stroke: #aeb9c7; stroke-width: 1; }
+      #editable { position: fixed; right: 16px; bottom: 16px; }
+      html:has(.canvas-chrome-root) #mounted-count,
+      html:has(.canvas-chrome-root) #editable { display: none; }
+      .canvas-skip-link { pointer-events: auto; position: fixed; top: 8px; left: 8px; transform: translateY(-200%); padding: 12px; background: white; color: #222; }
+      .canvas-skip-link:focus { transform: none; z-index: var(--canvas-z-popovers); }
+      .bench-inspector { padding: 16px; }
+      .bench-inspector h2 { font-size: 14px; }
+      .bench-dialog { pointer-events: auto; position: fixed; inset: 30% auto auto 50%; transform: translateX(-50%); width: min(360px, 80vw); border: 1px solid #b7bfca; border-radius: 12px; padding: 24px; }
+      .bench-dialog input { display: block; width: 100%; box-sizing: border-box; margin: 8px 0 16px; }
+      .bench-outline { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); margin: -1px; padding: 0; }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+    <output id="mounted-count" aria-label="Mounted nodes"></output>
+    <input id="editable" aria-label="Editable shortcut target" />
+    <script type="module" src="./react-main.tsx"></script>
+  </body>
+</html>

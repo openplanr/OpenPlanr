@@ -106,6 +106,31 @@ test('runtime-only revisions keep authored fingerprints and preserve prior revie
   assert.equal(listDesignRevisions(file).revisions.length, 2);
   assert.throws(() => readDesignRevision(file, '../current'));
 });
+test('review bundles preserve authored layout through JSON and revision reads', async (t) => {
+  const { file, document } = fixture(t);
+  document.layout = {
+    boards: { 'screen-1/desktop/A': { x: 42, y: 84, title: 'Overview' } },
+    sections: [{ id: 'overview', x: 10, y: 20, text: 'Overview', maxW: 500 }],
+  };
+  atomicJson(file, document);
+  const { revision } = await renderDesignDocument(file);
+  const bundle = bundleDesignRevision(currentDesign(file));
+  assert.deepEqual(bundle.design.layout, document.layout);
+  const roundTrip = JSON.parse(JSON.stringify(bundle));
+  assert.equal(assertDesignReviewBundle(roundTrip), roundTrip);
+  assert.deepEqual(readDesignRevision(file, revision).design.layout, document.layout);
+  bundle.design.layout.boards['screen-1/desktop/A'].x = 100;
+  assert.equal(document.layout.boards['screen-1/desktop/A'].x, 42);
+});
+test('review bundles exclude legacy personal positions without requiring a layout', (t) => {
+  const { file } = fixture(t);
+  const current = prepareDesignDocument(file);
+  const bundle = bundleDesignRevision(current, {
+    positions: { [current.entries[0].artifactId]: { x: 42, y: 84 } },
+  });
+  assert.deepEqual(bundle.state, {});
+  assert.equal(assertDesignReviewBundle(bundle), bundle);
+});
 function seedReview(file, env, comment = 'Make the primary action clearer.') {
   const current = currentDesign(file);
   const reviewOf = digestArtifactEnvelope(current.envelope);

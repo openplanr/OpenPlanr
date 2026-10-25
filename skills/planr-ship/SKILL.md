@@ -6,8 +6,8 @@ license: MIT
 
 # OpenPlanr Ship
 
-Produce an implementation-complete local repository in this active coding
-session. Landing and release preparation belong to `planr-land`. Ordinary
+Produce an implementation-complete local repository in this active coding session.
+Landing and release preparation belong to `planr-land`. Ordinary
 Ship stays host-native. Do not delegate implementation to a command-line or model subprocess. If the user explicitly asks another coding agent to implement,
 hand off to `planr-delegate` before implementation. That separate opt-in workflow
 previews the selected context, writable repository, profile, and destination;
@@ -40,13 +40,34 @@ context is sufficient; missing planning files do not create a gate.
 
 ## Implement with native roles
 
-Use the host's read, edit, shell, browser, and test capabilities. When native
-agents are available, dispatch only the applicable frontend, backend, database,
-QA, DevOps, and documentation roles inside this session. Give each role its
-owned outcome, relevant context paths, and explicit file coordination boundary.
-Run independent work in parallel. Host-native role agents remain part of this
-Ship session and do not invoke the separate `planr-delegate` helper. When native
-agents are unavailable, perform the same lenses sequentially in the active agent.
+The main session owns scope, decisions, integration, and final verification.
+Use the host's read, edit, shell, browser, and test capabilities inside this session.
+Keep small coherent changes in this session. Delegate only a self-contained
+outcome that benefits from context isolation, a distinct capability boundary,
+or independent parallel work; agent availability alone is not a reason to dispatch.
+
+Frontend and backend own substantial bounded implementation assignments.
+Persistence implementation, including a task carrying the legacy `db-agent`
+identity, belongs to backend with the relevant database guidance; preserve the
+task's recorded identity. Database is optional read-only introspection when
+repository schemas are insufficient, never migration implementation. Keep small
+documentation updates with their implementation; delegate substantial documentation
+or requested configuration work separately. DevOps never deploys. Entity
+scaffolding remains manual, on explicit request.
+
+Use a separate QA reviewer for authorization, credentials, data-loss risk,
+migrations, public contracts, release behavior, or substantial delegated
+implementation. Small low-risk edits use focused verification in the main session.
+QA retains verification tools, subject to role policy and session permissions.
+
+Select the exact registered identity from the host's roster; Claude plugin
+agents use names such as `planr:planr-backend` and `planr:planr-qa`. Give each worker
+its outcome, authoritative paths, relevant decisions, file ownership, verification
+requirements, and concise return expectations. Parallel workers need disjoint
+writes or an agreed interface. Explain the delegation's purpose briefly in
+commentary. Host-native workers do not invoke the separate `planr-delegate` helper.
+When the host lacks the native role, perform the work sequentially in this session
+and disclose capability limitations; never claim an unavailable specialist ran.
 
 Integrate the complete change, then verify behavior. `reviewRisks` and
 `browserSurfaces` select useful checks; empty arrays are normal and neither field
@@ -61,10 +82,15 @@ Discover checks in this order:
 3. package and task-runner scripts;
 4. applicable CI and pre-commit configuration.
 
-The packaged read-only [verification discovery helper](scripts/discover-verification.mjs)
-may list candidates. Resolve it relative to this `SKILL.md` and run
+Run `openplanr ship checks --json --task <task-path>` (omit `--task` for a direct
+request; add `--tier story` or `--tier push` before pushing) and run its `checks`
+from each `cwd`. The command never executes checks or writes files. When
+`complete` is `false`, report its error diagnostics and treat the check set as
+incomplete: a pass is not CI-equivalent. Without the CLI, the packaged read-only
+[verification discovery helper](scripts/discover-verification.mjs) may list
+candidates. Resolve it relative to this `SKILL.md` and run
 `node <helper> --project <repository-root> --task <task-path>`; omit `--task` for a
-direct request. It never executes checks or writes files. If it is unavailable,
+direct request. It never executes checks or writes files. If both are unavailable,
 inspect those four sources directly. Missing commands are diagnostics, not a
 reason to invent or skip all verification.
 

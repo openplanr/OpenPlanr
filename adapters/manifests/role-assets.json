@@ -61,7 +61,7 @@
       "id": "planr-qa",
       "source": "agents/qa/planr-qa/AGENT.md",
       "path": "dist/plugins/claude/openplanr/agents/planr-qa.md",
-      "digest": "sha256:ea6adf72cf5dd7667d31b0dc9501646ed7211d85392efe826beefb52edc0b938"
+      "digest": "sha256:d2f56a652c00aed41a6e0d3147ca336975487fc57c5eadc13581cbfe1a9c9739"
     },
     {
       "id": "planr-specification",

@@ -11,6 +11,7 @@ import {
   preparePlan,
   prepareShip,
 } from '../../lib/pipeline/index.mjs';
+import { buildPlanContext, buildShipContext } from '../../lib/pipeline/ship-context.mjs';
 
 function project() {
   const root = mkdtempSync(join(tmpdir(), 'openplanr-engine-'));
@@ -144,8 +145,8 @@ function defaultModeFeature(root, stories, { canonical = false } = {}) {
                 featureSlug: 'auth',
                 slug: `task-${taskIndex + 1}`,
                 schemaVersion: '1.0.0',
-                type: 'Tech',
-                agent: 'backend-agent',
+                type: task.type ?? 'Tech',
+                agent: task.agent ?? 'backend-agent',
                 status: task.status ?? 'pending',
                 created: '2026-08-30',
                 updated: '2026-08-30',
@@ -379,6 +380,66 @@ test('Protocol 1.7 Plan artifacts validate and canonical task guidance reaches S
   assert.deepEqual(prepared.unresolvedTasks[0].browserSurfaces, ['authentication', 'session']);
   assert.deepEqual(prepared.unresolvedTasks[0].acceptanceRefs, ['AC-001']);
 });
+
+for (const mode of ['spec-driven', 'default']) {
+  test(`Plan and Ship resolve the stack index and overlay in ${mode} mode`, (t) => {
+    const root = project();
+    t.after(() => rmSync(root, { recursive: true, force: true }));
+    if (mode === 'spec-driven') decomposeDeclared(root);
+    else
+      defaultModeFeature(root, [{ id: 'US-001', tasks: [{ id: 'T-001' }] }], {
+        canonical: true,
+      });
+    writeFileSync(
+      join(root, 'input/tech/stack.md'),
+      'ActiveStackFiles:\n  - backend/nestjs.md\nBuildCommand: "node --version"\nTestCommand: "node --version"\n',
+    );
+    mkdirSync(join(root, '.planr/stacks/backend'), { recursive: true });
+    writeFileSync(
+      join(root, '.planr/stacks/backend/nestjs.md'),
+      'Use project persistence boundaries.\n',
+    );
+    for (const buildContext of [buildPlanContext, buildShipContext]) {
+      const context = buildContext({ projectRoot: root, feature: 'auth', runtime: 'codex' });
+      assert.match(context.architecture.join('\n'), /Technical stack \(input\/tech\/stack\.md\)/u);
+      assert.match(
+        context.architecture.join('\n'),
+        /Installed stack conventions \(backend\/nestjs\.md\)/u,
+      );
+      assert.match(context.architecture.join('\n'), /Use project persistence boundaries/u);
+      assert.match(
+        context.startingPoints.join('\n'),
+        /Project stack override: \.planr\/stacks\/backend\/nestjs\.md/u,
+      );
+    }
+  });
+  for (const [type, agent] of [
+    ['UI', 'frontend-agent'],
+    ['Tech', 'backend-agent'],
+    ['Tech', 'db-agent'],
+  ]) {
+    test(`Ship preserves ${type}/${agent} ownership in ${mode} context`, (t) => {
+      const root = project();
+      t.after(() => rmSync(root, { recursive: true, force: true }));
+      if (mode === 'spec-driven') {
+        decomposeDeclared(root, { task: { type, agent } });
+      } else {
+        defaultModeFeature(root, [{ id: 'US-001', tasks: [{ id: 'T-001', type, agent }] }], {
+          canonical: true,
+        });
+      }
+      const prepared = prepareShipContext({ projectRoot: root, feature: 'auth' });
+      assert.equal(prepared.unresolvedTasks.length, 1);
+      assert.equal(prepared.unresolvedTasks[0].type, type);
+      assert.equal(prepared.unresolvedTasks[0].agent, agent);
+      const taskPath =
+        mode === 'spec-driven'
+          ? join(root, '.planr/specs/SPEC-001-auth/tasks/T-001-login.md')
+          : join(root, 'output/feats/feat-auth/us-1/tasks/task-1.md');
+      assert.match(readFileSync(taskPath, 'utf8'), new RegExp(`agent: "${agent}"`, 'u'));
+    });
+  }
+}
 
 test('Ship translates legacy snake-case task guidance at read time', () => {
   const root = project();

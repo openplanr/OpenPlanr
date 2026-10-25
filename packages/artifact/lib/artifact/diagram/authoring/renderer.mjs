@@ -5,10 +5,11 @@ import { escapeXml } from '../rendering/svg.mjs';
 import { DIAGRAM_THEME } from '../rendering/theme.mjs';
 import { inspectPlainData } from './model.mjs';
 import { resolveDiagramScene } from './scene.mjs';
+import { renderCompiledDiagramShape } from './shape-geometry.mjs';
 
 export const AUTHORED_DIAGRAM_RENDERER = Object.freeze({
   id: 'openplanr-authored-svg',
-  version: '1.1.0',
+  version: '1.2.0',
 });
 /** @type {Record<'paper'|'slate'|'midnight',import('./renderer.d.mts').AuthoredDiagramTheme>} */
 const palettes = {
@@ -135,6 +136,13 @@ function attributes(element, theme, fill = theme.fills[element.appearance.fill])
   return `fill="${fill}" stroke="${strokeColor(appearance, theme)}" stroke-width="${appearance.strokeWidth}"${dash}`;
 }
 function shape(element, theme) {
+  if (element.compiledShape)
+    return renderCompiledDiagramShape(element.compiledShape, {
+      fill: theme.fills[element.appearance.fill],
+      stroke: strokeColor(element.appearance, theme),
+      strokeWidth: element.appearance.strokeWidth,
+      strokeStyle: element.appearance.strokeStyle,
+    });
   const { x, y, width, height } = element.bounds;
   const common = attributes(element, theme);
   const n = svgNumber;
@@ -243,7 +251,7 @@ export function renderAuthoredDiagramSvg(bundle, options = {}) {
     };
   const presentation =
     options.presentation ??
-    (bundle.schemaVersion === '1.1.0' ? bundle.studioPresentation : undefined);
+    ('studioPresentation' in bundle ? bundle.studioPresentation : undefined);
   const theme = authoredDiagramPalette(
     options.theme ?? bundle.presentation.theme.themeId,
     presentation,

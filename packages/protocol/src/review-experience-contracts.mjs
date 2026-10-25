@@ -1,5 +1,7 @@
 // @ts-check
+
 import { canonicalizeJson, sha256Hex } from './canonical-json.mjs';
+import { DESIGN_DOCUMENT_SCHEMA } from './design-contracts.mjs';
 import { validateJson } from './json-schema.mjs';
 import { DESIGN_REVIEW_BUNDLE_SCHEMA } from './workspace-contracts.mjs';
 
@@ -102,6 +104,30 @@ Object.assign(bundleV12.properties, {
 });
 /** @type {typeof import('./review-experience-contracts.d.mts').DESIGN_REVIEW_BUNDLE_V12_SCHEMA} */
 export const DESIGN_REVIEW_BUNDLE_V12_SCHEMA = bundleV12;
+
+const bundleCurrent = /** @type {MutableSchema} */ (structuredClone(bundleV12));
+bundleCurrent.$id = 'https://openplanr.dev/schemas/v1.20.0/design-review-bundle.schema.json';
+bundleCurrent['x-openplanr-contract'] = { id: 'design-review-bundle', version: '1.20.0' };
+bundleCurrent.properties.schemaVersion = { enum: ['1.1.0', '1.2.0'] };
+bundleCurrent.properties.envelope = bundleV11.properties.envelope;
+bundleCurrent.allOf = [
+  {
+    if: { properties: { schemaVersion: { const: '1.2.0' } } },
+    then: { properties: { envelope: bundleV12.properties.envelope } },
+  },
+];
+const currentDesign = /** @type {MutableSchema} */ (bundleCurrent.properties.design);
+for (const key of ['frames', 'layout'])
+  currentDesign.properties[key] = /** @type {Record<string, unknown>} */ (
+    DESIGN_DOCUMENT_SCHEMA.properties
+  )[key];
+bundleCurrent.$defs = structuredClone(DESIGN_DOCUMENT_SCHEMA.$defs);
+const currentEntries = /** @type {{ items: { properties: Record<string, unknown> } }} */ (
+  bundleCurrent.properties.entries
+);
+currentEntries.items.properties.height = { const: 'auto' };
+/** @type {typeof import('./review-experience-contracts.d.mts').DESIGN_REVIEW_BUNDLE_CURRENT_SCHEMA} */
+export const DESIGN_REVIEW_BUNDLE_CURRENT_SCHEMA = bundleCurrent;
 
 const item = closed(
   {
@@ -237,11 +263,15 @@ export function assertDesignReviewMetadata(value) {
 export function assertDesignReviewBundle(value) {
   assertReviewExperience(
     value,
-    value?.schemaVersion === '1.2.0'
-      ? DESIGN_REVIEW_BUNDLE_V12_SCHEMA
-      : value?.schemaVersion === '1.1.0'
-        ? DESIGN_REVIEW_BUNDLE_V11_SCHEMA
-        : DESIGN_REVIEW_BUNDLE_SCHEMA,
+    value?.design?.layout !== undefined ||
+      (Array.isArray(value?.design?.frames) &&
+        value.design.frames.some(({ height }) => height === 'auto'))
+      ? DESIGN_REVIEW_BUNDLE_CURRENT_SCHEMA
+      : value?.schemaVersion === '1.2.0'
+        ? DESIGN_REVIEW_BUNDLE_V12_SCHEMA
+        : value?.schemaVersion === '1.1.0'
+          ? DESIGN_REVIEW_BUNDLE_V11_SCHEMA
+          : DESIGN_REVIEW_BUNDLE_SCHEMA,
   );
   if (['1.1.0', '1.2.0'].includes(value.schemaVersion)) {
     if (

@@ -49,9 +49,9 @@ export const INVENTORY_CLASSIFICATIONS = Object.freeze([
 // remains immutable; current bytes are verified independently below.
 export const PROTECTED_USER_OWNED_PATHS = Object.freeze({
   'bin/openplanr-pipeline.mjs': 'a5f2874b2fc8ce7f8a2db5934923bfc54dd90914b6c1ba1b8c6ddc66cc92153f',
-  'lib/pipeline/engine.mjs': '1edc792a90cbeb01b0884b3f9579efe9ade94aaa3903f5e041572d837c51114c',
+  'lib/pipeline/engine.mjs': '5efbd83e9a2cdbfd0bf30d34c484defb3d3526327b6fce0593fedee6a0e1d960',
   'tests/pipeline/engine.test.mjs':
-    '4e6eb657beac4ce0d2f2df4c7532e38467d22c4bf49b502e2291fff3a6351e3f',
+    '5e61f6e66dbe58f1b98c8ad910f4c0ea821d307fa881d3cc5cc609de7b3dc95e',
 });
 
 const knownRepositories = Object.freeze([

@@ -19,6 +19,9 @@ jobs:
     if: github.repository == 'openplanr/OpenPlanr' && vars.RELEASE_APP_ID != ''
     runs-on: ubuntu-24.04
     timeout-minutes: 45
+    permissions:
+      contents: read
+      actions: write
     steps:
       - uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
         id: app
@@ -35,6 +38,7 @@ jobs:
       - name: Install the root lockfile
         run: npm ci
       - name: Open or update the version PR
+        id: changesets
         uses: changesets/action@ae32849d5ba541f9ae29e40e22a623bc13562f51 # v2.1.2
         with:
           version-script: npm run version-packages:ci
@@ -42,3 +46,9 @@ jobs:
           pr-title: 'chore(release): version packages'
           create-github-releases: false
           github-token: ${{ steps.app.outputs.token }}
+      # The release PR carries the nightly evidence for its exact commit.
+      - name: Run the nightly suites on the version PR branch
+        if: steps.changesets.outputs.pr-number != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run nightly.yml --repo "$GITHUB_REPOSITORY" --ref changeset-release/main

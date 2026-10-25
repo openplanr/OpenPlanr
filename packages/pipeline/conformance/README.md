@@ -5,7 +5,6 @@
 ## What this verifies
 
 For a given runtime adapter, the conformance test asserts that running PLAN + SHIP against the `feat-todo` fixture produces:
-
 1. **Post-PO state** — valid US + Task files matching `expected/spec-driven-decomposition.json`
 2. **Post-DEV state** — `.pipeline-shipped` marker present, build/test green, source written
 3. **No Preserve violations** — files in any task's `Preserve:` list are unchanged (`git diff` returns empty for those paths)
@@ -58,7 +57,6 @@ Full automation per-runtime is a v2 polish item.
 ## Fixture overview
 
 `feat-todo` — a deliberately tiny fixture:
-
 - 1 functional requirement: "User can add a todo to an in-memory list."
 - No PNG → 1 task per US (Tech only).
 - Stack: TypeScript + Vitest.
@@ -66,18 +64,17 @@ Full automation per-runtime is a v2 polish item.
 
 ## Files
 
-| File | Purpose |
-|---|---|
-| `fixture-spec/SPEC-001-todo-feature.md` | The seed spec with full body |
-| `fixture-stack/stack.md` | Minimal Node + TypeScript + Vitest stack |
-| `expected/spec-driven-decomposition.json` | Post-PO assertions (US + Task file presence + frontmatter) |
-| `expected/post-ship-state.json` | Post-DEV assertions (build green, marker present, no Preserve violations) |
-| `runner.mjs` | Node script — `--setup`, `--verify-po`, `--verify-ship` flags |
+| File                                      | Purpose                                                                   |
+| ----------------------------------------- | ------------------------------------------------------------------------- |
+| `fixture-spec/SPEC-001-todo-feature.md`   | The seed spec with full body                                              |
+| `fixture-stack/stack.md`                  | Minimal Node + TypeScript + Vitest stack                                  |
+| `expected/spec-driven-decomposition.json` | Post-PO assertions (US + Task file presence + frontmatter)                |
+| `expected/post-ship-state.json`           | Post-DEV assertions (build green, marker present, no Preserve violations) |
+| `runner.mjs`                              | Node script — `--setup`, `--verify-po`, `--verify-ship` flags             |
 
 ## Anti-checks (red-team)
 
 The runner also performs:
-
 - **Preserve violation check** — `git diff --name-only` against the fixture's pre-PLAN baseline; intersects with any task's `Preserve:` list. Any overlap fails the test.
 - **Substitution leak check** — greps for `${CLAUDE_PLUGIN_ROOT}` in generated `.cursor/rules/` and `AGENTS.md`. On Cursor/Codex runtimes, this token must NOT appear (it's Claude-Code-specific).
 - **Schema validity** — parses the `.pipeline-shipped` YAML and asserts required fields are present and non-empty.
@@ -97,4 +94,4 @@ The runner prints a one-line summary to stdout per check, plus a structured JSON
 
 ---
 
-*OpenPlanr Protocol v1.0.0 conformance test. Compatible with Claude Code, Cursor, and Codex (semi-automated v1).*
+_OpenPlanr Protocol v1.0.0 conformance test. Compatible with Claude Code, Cursor, and Codex (semi-automated v1)._

@@ -21,14 +21,10 @@ const floor = JSON.parse(readFileSync(join(protocol, 'package.json'), 'utf8')).e
 );
 
 test('minimum-runtime CI creates ignored Protocol projections before switching to the floor', () => {
-  const workflow = load(
-    readFileSync(join(root, '.github/workflows/protocol-runtime-floor.yml'), 'utf8'),
-  );
-  const steps = workflow.jobs['runtime-floor'].steps;
+  const workflow = load(readFileSync(join(root, '.github/workflows/ci.yml'), 'utf8'));
+  const steps = workflow.jobs.static.steps;
   const install = steps.findIndex((step) => step.run === 'npm ci');
-  const generation = steps.findIndex(
-    (step) => step.run === 'node packages/protocol/scripts/generate-protocol-assets.mjs',
-  );
+  const generation = steps.findIndex((step) => step.run === 'npm run generate');
   const minimum = steps.findIndex((step) => step.with?.['node-version'] === floor);
   assert.ok(steps.slice(0, install).some((step) => Number(step.with?.['node-version']) === 24));
   assert.ok(install >= 0 && generation > install && minimum > generation);

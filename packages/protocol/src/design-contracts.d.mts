@@ -11,7 +11,7 @@ export interface DesignFrame {
   id: string;
   label: string;
   width: number;
-  height: number;
+  height: number | 'auto';
 }
 
 export interface DesignScreen {
@@ -34,6 +34,26 @@ export interface DesignVariant {
   sources?: Record<string, DesignSource>;
 }
 
+export interface DesignBoardPosition {
+  x: number;
+  y: number;
+  title?: string;
+}
+
+export interface DesignSection {
+  id: string;
+  x: number;
+  y: number;
+  text: string;
+  maxW?: number;
+}
+
+export interface DesignLayout {
+  /** Keys identify a screen, screen/frame or screen/frame/variant. */
+  boards?: Record<string, DesignBoardPosition>;
+  sections?: DesignSection[];
+}
+
 export interface DesignDocument {
   kind: 'openplanr-design-document';
   schemaVersion: '1.0.0';
@@ -47,6 +67,7 @@ export interface DesignDocument {
   };
   designSystem?: { path?: string; tokens?: string; spacing?: number[] };
   assets?: string[];
+  layout?: DesignLayout;
   frames: DesignFrame[];
   screens: DesignScreen[];
   screenOrder: string[];
@@ -57,6 +78,9 @@ export interface DesignDocument {
 }
 
 export declare const DESIGN_DOCUMENT_VERSION: '1.0.0';
+export declare const DESIGN_DOCUMENT_V1_SCHEMA: Readonly<Record<string, unknown>>;
 export declare const DESIGN_DOCUMENT_SCHEMA: Readonly<Record<string, unknown>>;
 export declare function validateDesignDocument(value: unknown): { ok: boolean; errors: string[] };
 export declare function assertDesignDocument(value: unknown): DesignDocument;
+
+export declare function initialFrameHeight(document: Pick<DesignDocument, 'frames'>): number;

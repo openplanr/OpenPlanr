@@ -149,6 +149,57 @@ describe('level presentation', () => {
     expect(world.style.visibility).toBe('');
   });
 
+  it('retains the overview until every viewport node is mounted across chunks', () => {
+    const { controller, world, overview } = make();
+    const viewportNodes = Array.from({ length: 544 }, (_, index) => ({
+      id: `viewport-${index}`,
+      bounds: {
+        x: 100 + (index % 32) * 40,
+        y: 100 + Math.floor(index / 32) * 40,
+        width: 30,
+        height: 30,
+      },
+    }));
+    const marginNodes = Array.from({ length: 100 }, (_, index) => node(`margin-${index}`, 2000));
+    controller.setNodes([...viewportNodes, ...marginNodes]);
+    controller.setCamera({ x: 0, y: 0, zoom: 0.36 });
+    frame();
+    frame(150);
+    expect(controller.getLevel()).toBe('overview');
+    expect(controller.getMountedIds().size).toBe(0);
+    const levels: string[] = [];
+    controller.on('level', (level) => levels.push(level));
+    controller.setCamera({ x: 0, y: 0, zoom: 0.44 });
+    frame();
+    expect(controller.getMountedIds().size).toBe(0);
+    expect(controller.getLevel()).toBe('overview');
+    expect(overview.style.visibility).toBe('visible');
+    expect(world.style.visibility).toBe('hidden');
+    expect(levels).toEqual([]);
+    for (const count of [200, 400]) {
+      frame(count === 200 ? 120 : 16);
+      const mounted = controller.getMountedIds();
+      expect(mounted.size).toBe(count);
+      expect(viewportNodes.every((node) => mounted.has(node.id))).toBe(false);
+      expect(controller.getLevel()).toBe('overview');
+      expect(overview.style.visibility).toBe('visible');
+      expect(world.style.visibility).toBe('hidden');
+      expect(levels).toEqual([]);
+    }
+    frame();
+    const mounted = controller.getMountedIds();
+    expect(mounted.size).toBe(600);
+    expect(viewportNodes.every((node) => mounted.has(node.id))).toBe(true);
+    expect(marginNodes.some((node) => !mounted.has(node.id))).toBe(true);
+    expect(controller.getLevel()).toBe('compact');
+    expect(overview.style.visibility).toBe('hidden');
+    expect(world.style.visibility).toBe('');
+    expect(levels).toEqual(['compact']);
+    frame();
+    expect(controller.getMountedIds().size).toBe(644);
+    expect(levels).toEqual(['compact']);
+  });
+
   it('does not emit level events for changes to pinned detail', () => {
     const { controller, register } = make();
     controller.setNodes([node('a')]);

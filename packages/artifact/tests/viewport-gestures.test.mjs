@@ -3,6 +3,7 @@ import { createServer } from 'node:http';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 import { build } from 'esbuild';
+import { JSDOM } from 'jsdom';
 import { launchBrowser } from '../../../tests/support/browser-launcher.mjs';
 import {
   createArtifactBridgeNonce,
@@ -11,11 +12,137 @@ import {
   validateArtifactBridgeMessage,
 } from '../lib/artifact/bridge.mjs';
 import {
+  createArtifactViewportGestures,
   normalizeArtifactViewportPan,
   normalizeArtifactViewportZoom,
 } from '../lib/artifact/ui/bridge-tools.mjs';
 
 const viewport = { width: 800, height: 600 };
+
+function gestureFixture(t) {
+  const { window } = new JSDOM('', { pretendToBeVisual: true });
+  const listeners = new Map();
+  const timers = new Map();
+  const messages = [];
+  let timerId = 0;
+  t.mock.method(window, 'addEventListener', (type, listener, options) => {
+    listeners.set(type, { listener, options });
+  });
+  const remove = t.mock.method(window, 'removeEventListener', () => {});
+  t.mock.method(window, 'setTimeout', (callback) => {
+    timers.set(++timerId, callback);
+    return timerId;
+  });
+  t.mock.method(window, 'clearTimeout', (id) => timers.delete(id));
+  const bridge = createArtifactViewportGestures(window, (type, value) =>
+    messages.push({ type, value }),
+  );
+  t.after(() => {
+    bridge.destroy();
+    window.close();
+  });
+  return {
+    bridge,
+    messages,
+    listeners,
+    remove,
+    flush() {
+      const callbacks = [...timers.values()];
+      timers.clear();
+      for (const callback of callbacks) callback();
+    },
+    dispatch(type, init = {}, trusted = true) {
+      const event =
+        type === 'wheel'
+          ? new window.WheelEvent(type, { cancelable: true, ...init })
+          : Object.assign(new window.Event(type, { cancelable: true }), init);
+      const registered = listeners.get(type);
+      assert.ok(registered, `${type} listener is registered`);
+      // DOM-created events are untrusted; exercise the captured native accessors with a trusted wrapper.
+      registered.listener(
+        new Proxy(event, {
+          get(target, key) {
+            return key === 'isTrusted' ? trusted : Reflect.get(target, key, target);
+          },
+        }),
+      );
+      return event.defaultPrevented;
+    },
+  };
+}
+
+test('bridge wheel listener is non-passive capture and cancels trusted ctrl/meta wheel only when enabled', (t) => {
+  const app = gestureFixture(t);
+  assert.deepEqual(app.listeners.get('wheel').options, { capture: true, passive: false });
+  const wheel = { clientX: 120, clientY: 230, deltaY: -10, ctrlKey: true };
+  assert.equal(app.dispatch('wheel', wheel), false);
+  app.bridge.setEnabled(true);
+  assert.equal(app.dispatch('wheel', wheel, false), false);
+  for (const modifiers of [{ ctrlKey: true }, { metaKey: true }]) {
+    assert.equal(app.dispatch('wheel', { ...wheel, ctrlKey: false, ...modifiers }), true);
+    app.flush();
+  }
+  assert.deepEqual(
+    app.messages,
+    Array.from({ length: 2 }, () => ({
+      type: 'viewport.zoom',
+      value: { x: 120, y: 230, deltaY: -10 },
+    })),
+  );
+  assert.equal(app.dispatch('wheel', { deltaX: 24, deltaY: 36 }), true);
+  app.flush();
+  assert.deepEqual(app.messages.at(-1), {
+    type: 'viewport.pan',
+    value: { deltaX: 24, deltaY: 36 },
+  });
+  app.bridge.destroy();
+  assert.ok(
+    app.remove.mock.calls.some(
+      ({ arguments: args }) =>
+        args[0] === 'wheel' && args[1] === app.listeners.get('wheel').listener && args[2] === true,
+    ),
+  );
+});
+
+test('bridge Safari gestures cancel page zoom and forward scale ratios at the gesture point', (t) => {
+  const app = gestureFixture(t);
+  for (const type of ['gesturestart', 'gesturechange', 'gestureend'])
+    assert.deepEqual(app.listeners.get(type)?.options, { capture: true, passive: false });
+  const point = { clientX: 120, clientY: 230 };
+  assert.equal(app.dispatch('gesturestart', { ...point, scale: 1 }), false);
+  app.bridge.setEnabled(true);
+  assert.equal(app.dispatch('gesturestart', { ...point, scale: 1 }), true);
+  assert.equal(app.dispatch('gesturechange', { ...point, scale: 1.1 }, false), false);
+  for (const scale of [1.1, 1.21]) {
+    assert.equal(app.dispatch('gesturechange', { ...point, scale }), true);
+    app.flush();
+  }
+  assert.equal(app.messages.length, 2);
+  for (const { type, value } of app.messages) {
+    assert.equal(type, 'viewport.zoom');
+    assert.equal(value.x, 120);
+    assert.equal(value.y, 230);
+    assert.ok(Math.abs(Math.exp(-value.deltaY * 0.01) - 1.1) < 0.000001);
+  }
+  for (const scale of [1.21, 0, NaN, Infinity]) {
+    assert.equal(app.dispatch('gesturechange', { ...point, scale }), true);
+    app.flush();
+  }
+  assert.equal(app.messages.length, 2, 'stationary or invalid scales never forward');
+  assert.equal(app.dispatch('gestureend', { ...point, scale: 1.21 }), true);
+  app.bridge.setEnabled(false);
+  assert.equal(app.dispatch('gesturechange', { ...point, scale: 1.5 }), false);
+  app.bridge.setEnabled(true);
+  app.dispatch('gesturestart', { ...point, scale: 1 });
+  app.dispatch('gesturechange', { ...point, scale: 1.1 });
+  app.flush();
+  assert.ok(Math.abs(app.messages.at(-1).value.deltaY + Math.log(1.1) / 0.01) < 0.000001);
+  app.bridge.destroy();
+  for (const type of ['gesturestart', 'gesturechange', 'gestureend'])
+    assert.ok(
+      app.remove.mock.calls.some(({ arguments: args }) => args[0] === type && args[2] === true),
+    );
+});
 test('viewport zoom requires opt-in, exact authenticated identity and bounded coordinates', () => {
   const zoom = { x: 120, y: 230, deltaY: -45 };
   assert.deepEqual(normalizeArtifactViewportZoom(zoom, viewport), zoom);

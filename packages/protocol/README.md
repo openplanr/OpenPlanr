@@ -79,6 +79,15 @@ and validators from `@openplanr/protocol/design-contracts`. Rendering and review
 belong to the design and artifact packages. Legacy manifests and frozen schema
 families retain their existing formats.
 
+The additive `schemas/v1.20.0/design-document.schema.json` accepts optional
+canvas board positions, section headings and content-sized frame heights. The
+current design validator accepts authored `schemaVersion: "1.0.0"`, including
+`height: "auto"`. Use auto-height frames for pages that scroll; any auto-height
+frame makes `board-root-box-sizing`, `vertical-overflow` and `outside-frame`
+errors throughout the document. Otherwise these checks are warnings and do not
+block verification or handoff readiness. Layout and schema version never change
+severity. The original Protocol 1.9 schema bytes are unchanged.
+
 Design comment categories are separate from the frozen artifact pin intent.
 Protocol 1.11 adds metadata payload `schemaVersion: "1.1.0"` for the explicit
 `change-request` category. `assertDesignReviewMetadata()` accepts both 1.0.0 and

@@ -11,7 +11,7 @@ export const CANONICAL_REGISTRIES = deepFreeze({
     "kind": "role-registry",
     "schemaVersion": "1.1.0",
     "protocolVersion": "1.5.0",
-    "documentVersion": "1.0.0",
+    "documentVersion": "1.1.0",
     "digestAlgorithm": "sha256",
     "canonicalization": "rfc8785",
     "roles": [
@@ -70,23 +70,13 @@ export const CANONICAL_REGISTRIES = deepFreeze({
         "adapterMappings": [
           {
             "host": "claude-code",
-            "nativeId": "backend-agent",
-            "generatedPath": "adapters/claude-code/agents/backend-agent.md"
-          },
-          {
-            "host": "codex",
-            "nativeId": "planr-backend",
-            "generatedPath": "adapters/codex/agents/planr-backend.md"
-          },
-          {
-            "host": "cursor",
-            "nativeId": "planr-backend",
-            "generatedPath": "adapters/cursor/agents/planr-backend.md"
+            "nativeId": "planr:planr-backend",
+            "generatedPath": "dist/plugins/claude/openplanr/agents/planr-backend.md"
           }
         ],
         "qaCoverage": [
-          "tests/protocol/role-alias-registry.test.mjs",
-          "evaluation/roles/planr-backend.json"
+          "tests/protocol/catalogs-and-routing.test.mjs",
+          "tests/ecosystem-root/ecosystem-generation.test.mjs"
         ]
       },
       {
@@ -141,23 +131,13 @@ export const CANONICAL_REGISTRIES = deepFreeze({
         "adapterMappings": [
           {
             "host": "claude-code",
-            "nativeId": "db-agent",
-            "generatedPath": "adapters/claude-code/agents/db-agent.md"
-          },
-          {
-            "host": "codex",
-            "nativeId": "planr-database",
-            "generatedPath": "adapters/codex/agents/planr-database.md"
-          },
-          {
-            "host": "cursor",
-            "nativeId": "planr-database",
-            "generatedPath": "adapters/cursor/agents/planr-database.md"
+            "nativeId": "planr:planr-database",
+            "generatedPath": "dist/plugins/claude/openplanr/agents/planr-database.md"
           }
         ],
         "qaCoverage": [
-          "tests/protocol/role-alias-registry.test.mjs",
-          "evaluation/roles/planr-database.json"
+          "tests/protocol/catalogs-and-routing.test.mjs",
+          "tests/ecosystem-root/ecosystem-generation.test.mjs"
         ]
       },
       {
@@ -210,23 +190,13 @@ export const CANONICAL_REGISTRIES = deepFreeze({
         "adapterMappings": [
           {
             "host": "claude-code",
-            "nativeId": "designer-agent",
-            "generatedPath": "adapters/claude-code/agents/designer-agent.md"
-          },
-          {
-            "host": "codex",
-            "nativeId": "planr-designer",
-            "generatedPath": "adapters/codex/agents/planr-designer.md"
-          },
-          {
-            "host": "cursor",
-            "nativeId": "planr-designer",
-            "generatedPath": "adapters/cursor/agents/planr-designer.md"
+            "nativeId": "planr:planr-designer",
+            "generatedPath": "dist/plugins/claude/openplanr/agents/planr-designer.md"
           }
         ],
         "qaCoverage": [
-          "tests/protocol/role-alias-registry.test.mjs",
-          "evaluation/roles/planr-designer.json"
+          "tests/protocol/catalogs-and-routing.test.mjs",
+          "tests/ecosystem-root/ecosystem-generation.test.mjs"
         ]
       },
       {
@@ -283,23 +253,13 @@ export const CANONICAL_REGISTRIES = deepFreeze({
         "adapterMappings": [
           {
             "host": "claude-code",
-            "nativeId": "devops-agent",
-            "generatedPath": "adapters/claude-code/agents/devops-agent.md"
-          },
-          {
-            "host": "codex",
-            "nativeId": "planr-devops",
-            "generatedPath": "adapters/codex/agents/planr-devops.md"
-          },
-          {
-            "host": "cursor",
-            "nativeId": "planr-devops",
-            "generatedPath": "adapters/cursor/agents/planr-devops.md"
+            "nativeId": "planr:planr-devops",
+            "generatedPath": "dist/plugins/claude/openplanr/agents/planr-devops.md"
           }
         ],
         "qaCoverage": [
-          "tests/protocol/role-alias-registry.test.mjs",
-          "evaluation/roles/planr-devops.json"
+          "tests/protocol/catalogs-and-routing.test.mjs",
+          "tests/ecosystem-root/ecosystem-generation.test.mjs"
         ]
       },
       {
@@ -356,23 +316,13 @@ export const CANONICAL_REGISTRIES = deepFreeze({
         "adapterMappings": [
           {
             "host": "claude-code",
-            "nativeId": "doc-gen-agent",
-            "generatedPath": "adapters/claude-code/agents/doc-gen-agent.md"
-          },
-          {
-            "host": "codex",
-            "nativeId": "planr-documentation",
-            "generatedPath": "adapters/codex/agents/planr-documentation.md"
-          },
-          {
-            "host": "cursor",
-            "nativeId": "planr-documentation",
-            "generatedPath": "adapters/cursor/agents/planr-documentation.md"
+            "nativeId": "planr:planr-documentation",
+            "generatedPath": "dist/plugins/claude/openplanr/agents/planr-documentation.md"
           }
         ],
         "qaCoverage": [
-          "tests/protocol/role-alias-registry.test.mjs",
-          "evaluation/roles/planr-documentation.json"
+          "tests/protocol/catalogs-and-routing.test.mjs",
+          "tests/ecosystem-root/ecosystem-generation.test.mjs"
         ]
       },
       {
@@ -429,23 +379,13 @@ export const CANONICAL_REGISTRIES = deepFreeze({
         "adapterMappings": [
           {
             "host": "claude-code",
-            "nativeId": "entity-scaffold-agent",
-            "generatedPath": "adapters/claude-code/agents/entity-scaffold-agent.md"
-          },
-          {
-            "host": "codex",
-            "nativeId": "planr-entity-scaffold",
-            "generatedPath": "adapters/codex/agents/planr-entity-scaffold.md"
-          },
-          {
-            "host": "cursor",
-            "nativeId": "planr-entity-scaffold",
-            "generatedPath": "adapters/cursor/agents/planr-entity-scaffold.md"
+            "nativeId": "planr:planr-entity-scaffold",
+            "generatedPath": "dist/plugins/claude/openplanr/agents/planr-entity-scaffold.md"
           }
         ],
         "qaCoverage": [
-          "tests/protocol/role-alias-registry.test.mjs",
-          "evaluation/roles/planr-entity-scaffold.json"
+          "tests/protocol/catalogs-and-routing.test.mjs",
+          "tests/ecosystem-root/ecosystem-generation.test.mjs"
         ]
       },
       {
@@ -504,28 +444,18 @@ export const CANONICAL_REGISTRIES = deepFreeze({
         "adapterMappings": [
           {
             "host": "claude-code",
-            "nativeId": "frontend-agent",
-            "generatedPath": "adapters/claude-code/agents/frontend-agent.md"
-          },
-          {
-            "host": "codex",
-            "nativeId": "planr-frontend",
-            "generatedPath": "adapters/codex/agents/planr-frontend.md"
-          },
-          {
-            "host": "cursor",
-            "nativeId": "planr-frontend",
-            "generatedPath": "adapters/cursor/agents/planr-frontend.md"
+            "nativeId": "planr:planr-frontend",
+            "generatedPath": "dist/plugins/claude/openplanr/agents/planr-frontend.md"
           }
         ],
         "qaCoverage": [
-          "tests/protocol/role-alias-registry.test.mjs",
-          "evaluation/roles/planr-frontend.json"
+          "tests/protocol/catalogs-and-routing.test.mjs",
+          "tests/ecosystem-root/ecosystem-generation.test.mjs"
         ]
       },
       {
         "roleId": "planr-qa",
-        "roleVersion": "1.0.0",
+        "roleVersion": "1.1.0",
         "displayName": "Qa",
         "description": "Canonical qa role for the OpenPlanr qa phase.",
         "legacyAliases": [
@@ -537,7 +467,7 @@ export const CANONICAL_REGISTRIES = deepFreeze({
           }
         ],
         "phase": "qa",
-        "activation": "always",
+        "activation": "conditional",
         "capabilityTier": "read-only-qa",
         "authorityClass": "quality-verification",
         "writeBoundary": {
@@ -556,7 +486,7 @@ export const CANONICAL_REGISTRIES = deepFreeze({
         },
         "source": {
           "path": "agents/qa/planr-qa/AGENT.md",
-          "digest": "sha256:b66c7477435bb309fd9e81be2e6b3d34c1c0e0361a2ed82d56e1249df2163777"
+          "digest": "sha256:283cbe632da47993a5457f64d9391df4d0892900efec02144453da9bd466400e"
         },
         "taskKinds": [
           "qa"
@@ -576,28 +506,18 @@ export const CANONICAL_REGISTRIES = deepFreeze({
         "adapterMappings": [
           {
             "host": "claude-code",
-            "nativeId": "qa-agent",
-            "generatedPath": "adapters/claude-code/agents/qa-agent.md"
-          },
-          {
-            "host": "codex",
-            "nativeId": "planr-qa",
-            "generatedPath": "adapters/codex/agents/planr-qa.md"
-          },
-          {
-            "host": "cursor",
-            "nativeId": "planr-qa",
-            "generatedPath": "adapters/cursor/agents/planr-qa.md"
+            "nativeId": "planr:planr-qa",
+            "generatedPath": "dist/plugins/claude/openplanr/agents/planr-qa.md"
           }
         ],
         "qaCoverage": [
-          "tests/protocol/role-alias-registry.test.mjs",
-          "evaluation/roles/planr-qa.json"
+          "tests/protocol/catalogs-and-routing.test.mjs",
+          "tests/ecosystem-root/ecosystem-generation.test.mjs"
         ]
       },
       {
         "roleId": "planr-specification",
-        "roleVersion": "1.0.0",
+        "roleVersion": "1.1.0",
         "displayName": "Specification",
         "description": "Canonical specification role for the OpenPlanr po phase.",
         "legacyAliases": [
@@ -609,7 +529,7 @@ export const CANONICAL_REGISTRIES = deepFreeze({
           }
         ],
         "phase": "po",
-        "activation": "always",
+        "activation": "conditional",
         "capabilityTier": "analysis-high",
         "authorityClass": "planning-write",
         "writeBoundary": {
@@ -646,27 +566,17 @@ export const CANONICAL_REGISTRIES = deepFreeze({
         "adapterMappings": [
           {
             "host": "claude-code",
-            "nativeId": "specification-agent",
-            "generatedPath": "adapters/claude-code/agents/specification-agent.md"
-          },
-          {
-            "host": "codex",
-            "nativeId": "planr-specification",
-            "generatedPath": "adapters/codex/agents/planr-specification.md"
-          },
-          {
-            "host": "cursor",
-            "nativeId": "planr-specification",
-            "generatedPath": "adapters/cursor/agents/planr-specification.md"
+            "nativeId": "planr:planr-specification",
+            "generatedPath": "dist/plugins/claude/openplanr/agents/planr-specification.md"
           }
         ],
         "qaCoverage": [
-          "tests/protocol/role-alias-registry.test.mjs",
-          "evaluation/roles/planr-specification.json"
+          "tests/protocol/catalogs-and-routing.test.mjs",
+          "tests/ecosystem-root/ecosystem-generation.test.mjs"
         ]
       }
     ],
-    "documentDigest": "sha256:21b377788335a0d855afb9709011a3b4fb102abe693897fce0d300a4266125bb"
+    "documentDigest": "sha256:55046ed4cd5bbfae5df429efeb6a122558332035772f90cac4d178717174754e"
   },
   "task-kinds.json": {
     "kind": "task-kind-registry",
@@ -675,7 +585,7 @@ export const CANONICAL_REGISTRIES = deepFreeze({
     "documentVersion": "1.0.0",
     "digestAlgorithm": "sha256",
     "canonicalization": "rfc8785",
-    "roleRegistryDigest": "sha256:21b377788335a0d855afb9709011a3b4fb102abe693897fce0d300a4266125bb",
+    "roleRegistryDigest": "sha256:55046ed4cd5bbfae5df429efeb6a122558332035772f90cac4d178717174754e",
     "bindings": [
       {
         "taskKind": "backend",
@@ -886,7 +796,7 @@ export const CANONICAL_REGISTRIES = deepFreeze({
         "precedence": 4
       }
     ],
-    "documentDigest": "sha256:6c6ac8986526299307ca65501dd313d33a38ed5997c2b27badf8697fa66b6baf"
+    "documentDigest": "sha256:3706b13a36281ba035afba6184ff18690d2934e431623e91b83d904827b5cb7a"
   },
   "rules.json": {
     "kind": "rule-catalog",
@@ -1507,7 +1417,7 @@ export const CANONICAL_REGISTRIES = deepFreeze({
         "ownerPackage": "openplanr",
         "source": {
           "path": "skills/planr-plan/SKILL.md",
-          "digest": "sha256:ee27dc8136cada6ffed75baa68ebdfd12c4d6414b069d4c89e627e4ec8beb68e"
+          "digest": "sha256:b58fd784d77400e33b08e348003ac59ab2b8ecc77eea03ef20be6e8becf57826"
         },
         "authorityClass": "workflow",
         "machineJson": false,
@@ -1528,7 +1438,7 @@ export const CANONICAL_REGISTRIES = deepFreeze({
         "ownerPackage": "openplanr",
         "source": {
           "path": "docs/generated/utility-command-catalog.json",
-          "digest": "sha256:af86a0898b4fe76e08a4078c7afe8f70094efdcd63e642a0d61ec02709d680b0"
+          "digest": "sha256:70f33f5d875899bb2c2b861b6c880aebda58c071d9c11abd3712362318974f15"
         },
         "authorityClass": "workflow",
         "machineJson": false,
@@ -1717,7 +1627,7 @@ export const CANONICAL_REGISTRIES = deepFreeze({
         "ownerPackage": "openplanr",
         "source": {
           "path": "docs/generated/utility-command-catalog.json",
-          "digest": "sha256:af86a0898b4fe76e08a4078c7afe8f70094efdcd63e642a0d61ec02709d680b0"
+          "digest": "sha256:70f33f5d875899bb2c2b861b6c880aebda58c071d9c11abd3712362318974f15"
         },
         "authorityClass": "workflow",
         "machineJson": true,
@@ -1738,7 +1648,7 @@ export const CANONICAL_REGISTRIES = deepFreeze({
         "ownerPackage": "openplanr",
         "source": {
           "path": "skills/planr-plan/SKILL.md",
-          "digest": "sha256:ee27dc8136cada6ffed75baa68ebdfd12c4d6414b069d4c89e627e4ec8beb68e"
+          "digest": "sha256:b58fd784d77400e33b08e348003ac59ab2b8ecc77eea03ef20be6e8becf57826"
         },
         "authorityClass": "workflow",
         "machineJson": false,
@@ -2179,7 +2089,7 @@ export const CANONICAL_REGISTRIES = deepFreeze({
         "ownerPackage": "planr-pipeline",
         "source": {
           "path": "skills/planr-design/SKILL.md",
-          "digest": "sha256:385c296eb792db6edfd512c0db1fdbf5a087298122e89d959bef3967fed2ba71"
+          "digest": "sha256:d4f027660fe2cc6e2a1bce254916fe65d01d0ad484f96eebb13f4711685143b8"
         },
         "authorityClass": "compatibility-router",
         "machineJson": false,
@@ -2242,7 +2152,7 @@ export const CANONICAL_REGISTRIES = deepFreeze({
         "ownerPackage": "planr-pipeline",
         "source": {
           "path": "skills/planr-plan/SKILL.md",
-          "digest": "sha256:ee27dc8136cada6ffed75baa68ebdfd12c4d6414b069d4c89e627e4ec8beb68e"
+          "digest": "sha256:b58fd784d77400e33b08e348003ac59ab2b8ecc77eea03ef20be6e8becf57826"
         },
         "authorityClass": "compatibility-router",
         "machineJson": false,
@@ -2263,7 +2173,7 @@ export const CANONICAL_REGISTRIES = deepFreeze({
         "ownerPackage": "planr-pipeline",
         "source": {
           "path": "skills/planr-ship/SKILL.md",
-          "digest": "sha256:7c8ba9060b62e4adfbd79ada00f732e81e800c01ad0d66887e4c1b9aacb5afa5"
+          "digest": "sha256:b4d71fc7aed441e0cbb0dfa7559ff02cdd5a3b92a566d3c4890426f1e48c6590"
         },
         "authorityClass": "compatibility-router",
         "machineJson": false,
@@ -3099,7 +3009,7 @@ export const CANONICAL_REGISTRIES = deepFreeze({
         ]
       }
     ],
-    "documentDigest": "sha256:2a1c7ab8e4cd04c04db2fb54f2778fba2073a92c25f2e71143aa16614cae85ea"
+    "documentDigest": "sha256:236cbd288b484b25178c3bb58e6daa3e462c31f7672820a91d95b8be6b33cf04"
   },
   "skills.json": {
     "kind": "skill-catalog",
@@ -3858,7 +3768,7 @@ export const CANONICAL_REGISTRIES = deepFreeze({
         "lifecycle": "active",
         "authorityClass": "planning-write",
         "source": "skills/planr-design/openplanr.skill.json",
-        "sourceDigest": "sha256:d227e866792416642c668bf8fab760a0d4ef29103c8b5464b575bf0ec074ac52",
+        "sourceDigest": "sha256:99baa3d561a0e0e603c8617e1ccce8e0cab27c6cd1304e47f6fd57379076bb95",
         "triggerPolicy": {
           "include": [
             "Create an initial product design direction",
@@ -3919,7 +3829,7 @@ export const CANONICAL_REGISTRIES = deepFreeze({
         "lifecycle": "active",
         "authorityClass": "planning-write",
         "source": "skills/planr-design-loop/openplanr.skill.json",
-        "sourceDigest": "sha256:c86d4ca6988fd5c1471d7dc99188929ea7d2d695d15df43adb2340198895fc27",
+        "sourceDigest": "sha256:a1c876dc9bd9770ea7d5c43c8696f3be2e252dd52d084e9411b1d4842f25e636",
         "triggerPolicy": {
           "include": [
             "Explore multiple design directions or variants",
@@ -3980,7 +3890,7 @@ export const CANONICAL_REGISTRIES = deepFreeze({
         "lifecycle": "active",
         "authorityClass": "review-evidence",
         "source": "skills/planr-design-review/openplanr.skill.json",
-        "sourceDigest": "sha256:4a12e9dd2ae9a7246a6abb094623aa112591f58422e2632060a71564939ad592",
+        "sourceDigest": "sha256:96d799efff004279b4726b0a285d42b660e3aff5527aa8e2a7ddf8fcee1a67c4",
         "triggerPolicy": {
           "include": [
             "Review or critique an existing OpenPlanr design",
@@ -4408,12 +4318,12 @@ export const CANONICAL_REGISTRIES = deepFreeze({
       },
       {
         "skillId": "planr-plan",
-        "skillVersion": "1.2.1",
+        "skillVersion": "1.3.0",
         "description": "Turn a Protocol-compatible specification or product intent into schema-compatible OpenPlanr stories and implementation tasks. Use for planning and decomposition, not implementation.",
         "lifecycle": "active",
         "authorityClass": "planning-write",
         "source": "skills/planr-plan/openplanr.skill.json",
-        "sourceDigest": "sha256:aac15ca181a105628aaa14511b1946ab675b96ad8e7abff462ae25f4c5fb217f",
+        "sourceDigest": "sha256:d5f96a23dddfac761ac2103fd4561d19377a757b078e7ee5e7228a2575a5f6bd",
         "triggerPolicy": {
           "include": [
             "Decompose a specification into user stories and implementation tasks",
@@ -4651,12 +4561,12 @@ export const CANONICAL_REGISTRIES = deepFreeze({
       },
       {
         "skillId": "planr-ship",
-        "skillVersion": "1.2.1",
+        "skillVersion": "1.3.0",
         "description": "Implement an OpenPlanr plan, specification, task, or clearly stated request end to end in the current repository. Use when the user asks to build, implement, fix, finish, or ship local work.",
         "lifecycle": "active",
         "authorityClass": "implementation",
         "source": "skills/planr-ship/openplanr.skill.json",
-        "sourceDigest": "sha256:2fe2353469bb1fbb77029334fcc51b94240bb3baf56c69c5829b47908e2d7d33",
+        "sourceDigest": "sha256:fb92ddb223243c1a4a918384f1d5db32e5ba01add49ef8d441d97c34a3a07075",
         "triggerPolicy": {
           "include": [
             "Implement a plan, specification, task, fix, or clearly stated local request",
@@ -4967,7 +4877,7 @@ export const CANONICAL_REGISTRIES = deepFreeze({
       }
     ],
     "compatibilityAliases": [],
-    "documentDigest": "sha256:6504dcd37d8fae39fc143732d63935e9f5b8545959ac06d42a31ac2eb5e20bba"
+    "documentDigest": "sha256:8b5f2037b66aefbaeaf251ae86d7155635d1734262cbb3a99124eefcb985e87e"
   },
   "outputs.json": {
     "kind": "output-catalog",

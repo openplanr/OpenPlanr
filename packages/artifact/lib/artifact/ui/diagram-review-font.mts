@@ -1,4 +1,9 @@
-import { assertDiagramReviewBundle } from '@openplanr/protocol/diagram-review-contracts';
+import type { DiagramReviewBundle } from '@openplanr/protocol/diagram-review-contracts';
+import {
+  assertVersionedDiagramReviewBundle,
+  type DiagramReviewBundleV11,
+  type DiagramReviewBundleV12,
+} from '@openplanr/protocol/studio-presentation-contracts';
 import { ensureDiagramFont } from './diagram-font.mjs';
 import { prepareDiagramSvg } from './diagram-svg.mjs';
 import { DIAGRAM_FONT_DATA_URL } from './generated/diagram-font.mjs';
@@ -11,7 +16,10 @@ export function ensureDiagramReviewFont(document: Document): Promise<void> {
 }
 /** Export verified passive pixels and the same packaged font used by the native viewer. */
 export function diagramReviewSvgExport(value: unknown): string {
-  const bundle = assertDiagramReviewBundle(value);
+  const bundle = assertVersionedDiagramReviewBundle(value) as
+    | DiagramReviewBundle
+    | DiagramReviewBundleV11
+    | DiagramReviewBundleV12;
   const drawing = prepareDiagramSvg(bundle.scene.svg, {
     allowOffset: bundle.source.kind === 'authoring',
   });

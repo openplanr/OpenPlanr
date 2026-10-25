@@ -9,6 +9,7 @@ import {
   parentIndex,
   same,
   snapshot,
+  transactionVersionFields,
   validateAuthoringBundle,
 } from './model.mjs';
 import { previewDiagramTransaction } from './transactions.mjs';
@@ -65,8 +66,7 @@ function preview(bundle, changes, transactionId) {
     bundle,
     /** @type {import('@openplanr/protocol/studio-presentation-contracts').VersionedDiagramEditTransaction} */ ({
       kind: 'diagram-edit-transaction',
-      schemaVersion: bundle.schemaVersion === '1.1.0' ? '1.1.0' : '1.0.0',
-      protocolVersion: bundle.schemaVersion === '1.1.0' ? '1.17.0' : '1.13.0',
+      ...transactionVersionFields(bundle),
       diagramId: bundle.diagramId,
       transactionId,
       base: snapshot(bundle),

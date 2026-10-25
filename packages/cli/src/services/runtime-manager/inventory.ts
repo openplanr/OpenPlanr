@@ -2,7 +2,8 @@ import { spawnSync } from 'node:child_process';
 import { accessSync, constants, existsSync, readFileSync, statSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { PLANNING_FOLDER } from '../../utils/constants.js';
+import { getPackageRoot, PLANNING_FOLDER } from '../../utils/constants.js';
+import { RuntimeManagerError } from './errors.js';
 
 export { planningFolderConflict } from '../../../lib/planning-folder.mjs';
 
@@ -125,4 +126,31 @@ export function listInstalledRuntimeAdapters(): AdapterRegistryEntry[] {
   if (!existsSync(registryPath)) return [];
   const registry = JSON.parse(readFileSync(registryPath, 'utf8')) as AdapterRegistry;
   return registry.adapters.map((adapter) => structuredClone(adapter));
+}
+
+export function readRegistry(): {
+  root: string;
+  version: string;
+  pluginVersion: string;
+  registry: AdapterRegistry;
+} {
+  const root = getPackageRoot();
+  const registryPath = path.join(root, 'lib', 'host-packages', 'adapter-registry.json');
+  if (!existsSync(registryPath)) {
+    throw new RuntimeManagerError(
+      'E_HOST_PACKAGE_MISSING',
+      'The OpenPlanr host-package inventory is missing.',
+      'Reinstall the OpenPlanr utility CLI or run the workspace skill generator.',
+    );
+  }
+  const document = JSON.parse(readFileSync(registryPath, 'utf8')) as AdapterRegistry & {
+    pipelineVersion: string;
+    pluginVersion: string;
+  };
+  return {
+    root,
+    version: document.pipelineVersion,
+    pluginVersion: document.pluginVersion,
+    registry: document,
+  };
 }

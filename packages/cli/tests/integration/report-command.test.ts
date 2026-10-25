@@ -3,16 +3,21 @@ import { chmodSync, existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync
 import { createRequire } from 'node:module';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterAll, afterEach, describe, expect, it } from 'vitest';
 
 const CLI = resolve('src/cli/index.ts');
 const TSX = createRequire(import.meta.url).resolve('tsx/cli');
+
+// Report evidence checks call `gh`; a stub that fails keeps the developer's GitHub CLI out of the run.
+const hostStubs = mkdtempSync(join(tmpdir(), 'planr-report-gh-'));
+writeFileSync(join(hostStubs, 'gh'), '#!/bin/sh\nexit 1\n', { mode: 0o755 });
+afterAll(() => rmSync(hostStubs, { recursive: true, force: true }));
 
 function runPlanr(args: string[], cwd: string, env: NodeJS.ProcessEnv = {}) {
   return spawnSync(process.execPath, [TSX, CLI, ...args], {
     encoding: 'utf-8',
     cwd,
-    env: { ...process.env, NO_COLOR: '1', ...env },
+    env: { ...process.env, PATH: `${hostStubs}:${process.env.PATH}`, NO_COLOR: '1', ...env },
   });
 }
 

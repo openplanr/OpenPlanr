@@ -39,3 +39,6 @@ node_modules/
 # Local evaluation run directories — raw prompts, traces, and grader output stay local
 evaluation/.runs/
 .evaluation-ci/
+
+# Rebuilt from the canvas workspace by the design domain projection.
+/lib/canvas/

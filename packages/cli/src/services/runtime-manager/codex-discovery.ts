@@ -1,26 +1,14 @@
+import { effectiveCodexHome } from './paths.js';
+
+export { effectiveCodexHome } from './paths.js';
+
 import { createHash } from 'node:crypto';
-import { existsSync, lstatSync, readdirSync, readFileSync, realpathSync } from 'node:fs';
+import { existsSync, lstatSync, readdirSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { parse } from 'smol-toml';
 import { userHome } from '../../../lib/planr-home.mjs';
 import type { SkillInstallMode } from './global-state.js';
 import { inspectRuntimeLocator, inspectRuntimePackage } from './runtime-package.js';
-
-function canonicalPath(directory: string): string {
-  const resolved = path.resolve(directory);
-  let existing = resolved;
-  while (!existsSync(existing) && path.dirname(existing) !== existing)
-    existing = path.dirname(existing);
-  return path.join(realpathSync(existing), path.relative(existing, resolved));
-}
-
-/** Uses the native profile selected by the caller, without inspecting other accounts. */
-export function effectiveCodexHome(): string {
-  const defaultHome = path.resolve(userHome(), '.codex');
-  const selected = process.env.CODEX_HOME?.trim();
-  if (!selected || canonicalPath(selected) === canonicalPath(defaultHome)) return defaultHome;
-  return canonicalPath(selected);
-}
 
 type SkillCopy = Readonly<{
   kind: 'bundled' | 'user' | 'project' | 'plugin-cache';

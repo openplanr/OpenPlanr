@@ -847,11 +847,14 @@ export function previewMermaidCopy(source, options = {}) {
     /** @type {import('@openplanr/protocol/studio-presentation-contracts').VersionedDiagramAuthoringBundle} */ (
       /** @type {unknown} */ ({
         ...meta('diagram-authoring-bundle'),
-        ...(previous?.schemaVersion === '1.1.0'
+        ...(previous
           ? {
-              schemaVersion: '1.1.0',
-              protocolVersion: '1.17.0',
-              studioPresentation: clone(previous.studioPresentation),
+              schemaVersion: previous.schemaVersion,
+              protocolVersion: previous.protocolVersion,
+              ...(previous.studioPresentation
+                ? { studioPresentation: clone(previous.studioPresentation) }
+                : {}),
+              ...(previous.shapeLibrary ? { shapeLibrary: clone(previous.shapeLibrary) } : {}),
             }
           : {}),
         diagramId,

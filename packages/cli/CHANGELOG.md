@@ -1,5 +1,53 @@
 # Changelog
 
+## 3.2.0
+
+### Minor Changes
+
+- 085c665: Support content-sized design frames with `height: "auto"`. Size studio boards from rendered content while keeping grid rows stable, preserve numeric feedback coordinates and exports, and audit vertical overflow, positioned content outside frames and root box sizing.
+  
+  The v1.20.0 design document schema retains `schemaVersion: "1.0.0"`, including auto-height frames. Use `height: "auto"` for pages that scroll. Treat vertical overflow, positioned content outside frames and root box sizing as errors throughout a document with any auto-height frame; all other documents receive warnings that do not block verification or handoff readiness. Layout and schema version never affect severity; migration and dragging preserve fixed-frame warnings.
+  
+  Ignore legacy personal canvas positions when detecting share updates. Accept existing position-based fingerprints while those positions still match; an older share whose personal positions have since changed can report one update until explicitly republished.
+- 085c665: Use the shared canvas engine for design studio navigation, fitting and chrome safe areas while retaining saved board layouts and artifact preview state.
+- 99b195c: The design skills now push for a deliberate look instead of generic defaults. A design names its direction and the one thing a viewer should remember. New products without a brand start from two to four quick direction sketches for you to pick from, unless you leave the choice to the skill. Type and color stay within a small system, common generic choices are named and avoided, and landing pages follow a clear order, with realistic sample prices and quotes marked as samples for you to replace.
+  
+  Designs can also carry real typefaces. Openly licensed font files saved in a design are embedded when it renders, so it still opens offline and fetches nothing; without them, the design uses a named system font stack and says which one.
+- 085c665: Store canvas board positions, optional board titles and section headings in the authored design document. The local studio saves dragged positions to the document and supports undo and redo; portable studios retain moves for the session. Existing documents keep their computed grid unless legacy studio-state or browser positions can fill missing exact board keys. The studio migrates those positions in one layout revision that is not undoable in the session, then removes them from personal state after saving; without a server, they apply for the session only.
+  
+  The `DESIGN_DOCUMENT_SCHEMA` export now points to the v1.20.0 design document schema. Review bundles retain authored layout and omit legacy personal positions; layout-bearing bundles use the additive v1.20.0 review bundle schema.
+  
+  The v1.20.0 design contract retains authored `schemaVersion: "1.0.0"` for fixed and auto-height frames, and the frozen Protocol 1.9 schema remains unchanged. Vertical overflow, positioned content outside frames and root box sizing are errors throughout a document with any auto-height frame, and warnings otherwise. Layout and schema version never affect severity.
+  
+  Use a plain studio canvas ground from the theme's stage surface token, preserving board edges and shadows and the diagram editor's dot grid.
+  
+  Keep unsaved board moves in the browser draft across reloads and replay their absolute positions against the current layout revision when authored content is unchanged. Report and discard stale moves when authored content changes. Preserve layout save failures and their Retry action over view-context notices; after a studio restart, keep pending moves and offer Reload. Keep the header unsaved until layout recovery completes, and report preview readiness with the revision adopted after legacy layout migration.
+- e49d598: `/planr:design` now designs on the host's own design canvas when the host can publish one. It says so in one line, notes that the canvas is published to the host's service and private until shared, builds one board per screen with the primary journey interactive, and keeps the board sources in the project. It still writes the ten-section `design-spec.md`, now with the canvas link, so `/planr:plan` works as before. Say "use the local studio instead" to keep the local studio, for example for an encrypted company review. Hosts without a design canvas keep the local studio unchanged.
+- 085c665: Publish live local Studio selection, visible boards, view and unsaved state to a validated view context file. Add a design utility reader and skill guidance for resolving viewer-relative edit requests against the current revision.
+- 9bdcd2e: New `openplanr ship checks` lists the checks a change needs, read from your GitHub Actions workflows, husky and pre-commit hooks, package scripts and the task's Test Requirements. It never runs them. Pick a tier with `--tier task|story|push|planning`; without it you get `task`, or `planning` when only `.planr/` files changed. `--json` returns a versioned result.
+  
+  CI `run` steps come back verbatim, multi-line ones included, with the working directory CI uses and a pointer to the workflow line. A step that only calls a package script is listed once. The build comes first when CI runs it. Static matrix values are expanded, and anything else with an expression is marked for review. Checks that only see tracked or staged files, such as lint-staged, are marked `tracked-only`. Prose Test Requirements and acceptance IDs are returned as entries, and existing tests that mention a name your change exports are listed. A workflow that fails to parse is reported as an error and the result says `complete: false`, so a broken workflow never looks like no checks.
+  
+  Ship now uses this command to find its checks, and falls back to its packaged helper when the CLI isn't installed.
+- d391097: Ship and Investigate now keep what they notice outside your task. Each finding is listed with its evidence and severity, apart from anything that blocks the task, and offered as a backlog item: one question files all, some or none of them, and anything already in your backlog is shown as tracked instead of filed again. Runs nobody can answer report findings without filing them, unless `.planr/config.json` sets `"findings": { "unattended": "file" }`. Filing works without the CLI installed and writes the same file `openplanr backlog add` does.
+  
+  `openplanr backlog list` and the other list commands now show each item's title, `Created` prints the path relative to your project, acceptance criteria passed as a list are written one per line, and top-level settings you add to `.planr/config.json` are kept when OpenPlanr saves it.
+
+### Patch Changes
+
+- 05c76ed: `openplanr backlog add` and the backlog helper in Ship and Investigate now reject a priority other than critical, high, medium or low, from `--priority` or from `--data`, and name the value they rejected. Existing backlog items with other priorities still load and list. The CLI reports a rejected priority as `E_BACKLOG_INVALID` and a create command without a title as `E_PLANNING_INPUT_REQUIRED`, instead of as an unexpected failure.
+- 1a4e6b1: Commands that save `.planr/config.json` now keep settings you add inside its sections, such as `outputPaths` or `findings`, instead of dropping them.
+- a966062: The connectors page now describes only the Linear sync token: where it is stored and that it is sent only to Linear.
+- 085c665: Handle board wheel and Safari pinch gestures through the artifact bridge while preserving direct interaction with every board in Interact mode. Keep board titles clear of chrome when fitting or centring boards.
+  
+  Apply the current canvas gesture state when board bridges become ready, reload, or mount within the frame budget so late previews also prevent browser page zoom.
+- 085c665: Keep canvas section headings readable, fit boards around the measured toolbar, and show accurate review status and board dimensions. Inspect every board during full browser audits within the live frame budget.
+- ef83613: When you leave the canvas with commenting on and open a screen in Prototype or Walkthrough, the studio reloads that screen once, which makes clicks into it less likely to stop reaching it. Other view switches keep the screen as it was, including what you typed and where you scrolled.
+- 085c665: Audit every board within the live frame budget, keep section headings and board titles readable at Fit, and show frame dimensions once.
+- 085c665: Wait for browser frame attachment before auditing mounted design boards and report frame loading and panel visibility restoration failures.
+  
+  Hold design frames during rendered audits so competing viewport demand cannot evict or cancel them. Queue demand while held frames fill the budget, resuming after release.
+
 ## 3.1.1
 
 ### Patch Changes

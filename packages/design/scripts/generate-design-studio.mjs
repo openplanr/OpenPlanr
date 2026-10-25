@@ -33,6 +33,10 @@ export function renderDesignStudioRuntimeAsset({ projectRoot = root, onInputs } 
     projectRoot,
     banner: DESIGN_STUDIO_BUNDLE_BANNER,
     onInputs,
+    loader: { '.css': 'text' },
+    minifySyntax: true,
+    // DOM-only studios never start the engine's optional overview worker.
+    define: { 'import.meta.url': 'document.baseURI' },
   });
 }
 

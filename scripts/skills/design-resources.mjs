@@ -182,7 +182,7 @@ export async function buildDesignSkillResources({
           resolve(root, `packages/protocol/schemas/v1.1.0/${name}.schema.json`),
         ),
         resolve(root, 'packages/protocol/schemas/v1.14.0/artifact-theme.schema.json'),
-        resolve(root, 'packages/protocol/schemas/v1.9.0/design-document.schema.json'),
+        resolve(root, 'packages/protocol/schemas/v1.20.0/design-document.schema.json'),
         ...[
           'design-review-workspace',
           'design-workspace-create',
@@ -390,7 +390,7 @@ export async function buildDesignSkillResources({
       kind: 'schema',
       executable: false,
       bytes: readFileSync(
-        resolve(root, 'packages/protocol/schemas/v1.9.0/design-document.schema.json'),
+        resolve(root, 'packages/protocol/schemas/v1.20.0/design-document.schema.json'),
       ),
     },
     ...['design-review-context', 'design-review-handoff'].map((name) => ({

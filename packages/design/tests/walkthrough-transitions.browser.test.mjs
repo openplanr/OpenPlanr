@@ -295,7 +295,7 @@ test(`walkthrough navigation stays painted, preserves product state and handles 
 
       const rapid = await observeNavigation(page, [1, 1, -1], 'screen-2');
       assertContinuousTransition(rapid, `${host}/rapid next and previous`);
-      const beforeCancel = await page.evaluate(() => window.__openPlanrDesignStudio.getState());
+      const beforeCancel = await page.evaluate(() => window.__openPlanrDesignStudio.getLayout());
       await observeNavigation(page, [1], 'screen-3', { cancelToView: 'prototype' });
       await settled(page, 'screen-3');
       assert.equal(
@@ -309,8 +309,8 @@ test(`walkthrough navigation stays painted, preserves product state and handles 
         'prototype',
       );
       assert.deepEqual(
-        (await page.evaluate(() => window.__openPlanrDesignStudio.getState())).positions,
-        beforeCancel.positions,
+        await page.evaluate(() => window.__openPlanrDesignStudio.getLayout()),
+        beforeCancel,
         'transitions never rewrite the freeform canvas arrangement',
       );
 

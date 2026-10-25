@@ -417,8 +417,8 @@ test('browser studio boots through the protected artifact server and supports a 
     });
     await page.mouse.up();
     const movedPosition = await page.evaluate(
-      (artifactId) => window.__openPlanrDesignStudio.getState().positions[artifactId],
-      firstCanvasEntry.artifactId,
+      (key) => window.__openPlanrDesignStudio.getLayout().boards[key],
+      `${firstCanvasEntry.screenId}/${firstCanvasEntry.frameId}/${firstCanvasEntry.variantId}`,
     );
     assert.ok(movedPosition.x < 0);
     assert.ok(movedPosition.y < 0);
@@ -542,14 +542,14 @@ test('browser studio boots through the protected artifact server and supports a 
     await page.waitForSelector('[data-design-ready="true"]', { timeout: 15000 });
     assert.deepEqual(
       await page.evaluate(
-        (artifactId) => ({
+        (key) => ({
           camera: window.__openPlanrDesignStudio.getState().camera,
-          position: window.__openPlanrDesignStudio.getState().positions[artifactId],
+          position: window.__openPlanrDesignStudio.getLayout().boards?.[key],
         }),
-        firstCanvasEntry.artifactId,
+        `${firstCanvasEntry.screenId}/${firstCanvasEntry.frameId}/${firstCanvasEntry.variantId}`,
       ),
-      { camera: movedCamera, position: movedPosition },
-      'freeform camera and artboard coordinates survive a restart',
+      { camera: movedCamera, position: undefined },
+      'the camera persists while board moves without a studio server remain session-only',
     );
     assert.equal(await page.locator('.planr-shell').getAttribute('data-design-nav-open'), 'false');
     assert.equal(await page.locator('.planr-shell').getAttribute('data-planr-rail-open'), 'false');

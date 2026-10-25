@@ -4,6 +4,7 @@ import type {
   DiagramPlacement,
   DiagramSemanticEntry,
 } from '@openplanr/protocol/diagram-authoring-contracts';
+import type { ShapeDefinition, ShapeOutline } from '@openplanr/protocol/shape-library-contracts';
 import type { VersionedDiagramAuthoringBundle as DiagramAuthoringBundle } from '@openplanr/protocol/studio-presentation-contracts';
 import {
   clone,
@@ -12,6 +13,7 @@ import {
   validateAuthoringBundle,
 } from '../authoring/model.mjs';
 import { resolveDiagramSceneElement } from '../authoring/scene.mjs';
+import { diagramShapeDistance } from '../authoring/shape-geometry.mjs';
 
 export interface DiagramGeometryCamera {
   x: number;
@@ -19,6 +21,7 @@ export interface DiagramGeometryCamera {
   scale: number;
 }
 export interface DiagramGeometryRecord {
+  outline?: ShapeOutline;
   id: string;
   collection: DiagramSemanticEntry['collection'];
   bounds: DiagramBounds | null;
@@ -96,6 +99,7 @@ interface CellRange {
 type IndexedEntry = DiagramSemanticEntry & { value: { members?: string[] } };
 type EmphasisLevel = DiagramAuthoringBundle['document']['emphasis'][number]['level'];
 interface GeometryMetadata {
+  shapeLibrary: ShapeDefinition[];
   byId: Map<string, IndexedEntry>;
   placements: Map<string, DiagramPlacement>;
   order: Map<string, number>;
@@ -106,7 +110,7 @@ interface GeometryMetadata {
 }
 type GeometryDependencies = Pick<GeometryMetadata, 'signatures' | 'children' | 'incident'>;
 type Primitive = { id: string; bounds: DiagramBounds; cells: string[] | null } & (
-  | { kind: 'bounds' | 'label' }
+  | { kind: 'bounds' | 'label'; outline?: ShapeOutline }
   | { kind: 'segment'; start: Point; end: Point }
 );
 type GeometryQuery = Parameters<DiagramGeometryIndex['query']>[0];
@@ -166,7 +170,16 @@ function metadata(bundle: DiagramAuthoringBundle): GeometryMetadata {
         (incident.get(endpoint) as Set<string>).add(id);
       }
   }
-  return { byId, placements, order, emphasis, signatures, children, incident };
+  return {
+    byId,
+    placements,
+    order,
+    emphasis,
+    signatures,
+    children,
+    incident,
+    shapeLibrary: bundle.shapeLibrary ?? [],
+  };
 }
 function resolveGeometry(data: GeometryMetadata, id: string): DiagramGeometryRecord {
   const element = resolveDiagramSceneElement(
@@ -175,10 +188,13 @@ function resolveGeometry(data: GeometryMetadata, id: string): DiagramGeometryRec
     data.placements,
     data.order.get(id) as number,
     data.emphasis.get(id) ?? null,
+    [],
+    data.shapeLibrary,
   );
   return {
     id,
     collection: element.collection,
+    ...(element.compiledShape ? { outline: element.compiledShape.attachment } : {}),
     bounds: element.bounds,
     points: element.points ?? [],
     labelBounds: element.text?.bounds ?? null,
@@ -189,7 +205,13 @@ function resolveGeometry(data: GeometryMetadata, id: string): DiagramGeometryRec
 function primitives(record: DiagramGeometryRecord) {
   const result: Primitive[] = [];
   if (record.bounds)
-    result.push({ id: record.id, kind: 'bounds', bounds: record.bounds, cells: null });
+    result.push({
+      id: record.id,
+      kind: 'bounds',
+      bounds: record.bounds,
+      cells: null,
+      ...(record.outline ? { outline: record.outline } : {}),
+    });
   if (record.labelBounds)
     result.push({ id: record.id, kind: 'label', bounds: record.labelBounds, cells: null });
   for (let index = 1; index < record.points.length; index++) {
@@ -474,7 +496,9 @@ export function createDiagramGeometryIndex(
       const distance =
         primitive.kind === 'segment'
           ? segmentDistance(query.world, primitive.start, primitive.end)
-          : rectDistance(query.world, primitive.bounds);
+          : primitive.outline
+            ? diagramShapeDistance(query.world, primitive.outline)
+            : rectDistance(query.world, primitive.bounds);
       if (distance > query.radius) continue;
       const record = records.get(primitive.id) as DiagramGeometryRecord;
       const hit = {

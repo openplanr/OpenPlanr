@@ -16,7 +16,7 @@ import { join } from 'node:path';
 import { test } from 'node:test';
 import { launchBrowser } from '../../../tests/support/browser-launcher.mjs';
 import { contrastRatio } from '../lib/design/contrast.mjs';
-import { renderDesignDocument } from '../lib/design/document.mjs';
+import { atomicJson, currentDesign, hash, renderDesignDocument } from '../lib/design/document.mjs';
 import { readDesignFeedback } from '../lib/design/review.mjs';
 import {
   exportDesignShareRecovery,
@@ -538,11 +538,15 @@ test('ordinary unshared feedback does not create or require owner keys', async (
   assert.equal(existsSync(join(root, 'project-state')), false);
 });
 
-test('arrangement changes can be explicitly published without changing authored source revision', async (t) => {
+test('authored arrangement changes can be explicitly published without private personal state', async (t) => {
   const { root, file, options } = await fixture(t);
   await shareDesign(file, options);
   const before = getDesignShareStatus(file, options);
   const artifactId = prepareDesignShareBundle(file).entries[0].artifactId;
+  const document = JSON.parse(readFileSync(file, 'utf8'));
+  document.layout = { boards: { 'screen-1/desktop/A': { x: -240, y: 650 } } };
+  writeFileSync(file, JSON.stringify(document));
+  await renderDesignDocument(file);
   writeFileSync(
     join(root, '.design/studio-state.json'),
     JSON.stringify({
@@ -556,10 +560,54 @@ test('arrangement changes can be explicitly published without changing authored 
   );
   assert.equal(getDesignShareStatus(file, options).hasUpdate, true);
   const bundle = prepareDesignShareBundle(file);
-  assert.deepEqual(bundle.state, { positions: { [artifactId]: { x: -240, y: 650 } } });
+  assert.deepEqual(bundle.design.layout, document.layout);
+  assert.deepEqual(bundle.state, {});
   assert.ok(!JSON.stringify(bundle).includes('Private preference'));
   const after = await publishDesignShare(file, options);
-  assert.equal(after.publishedRevision, before.publishedRevision);
+  assert.notEqual(after.publishedRevision, before.publishedRevision);
   assert.notEqual(after.revision, before.revision);
   assert.equal(after.hasUpdate, false);
+});
+
+test('legacy personal positions do not change share status or exported bundles', async (t) => {
+  const { root, file, options } = await fixture(t);
+  await shareDesign(file, options);
+  const before = getDesignShareStatus(file, options);
+  const bundle = prepareDesignShareBundle(file);
+  writeFileSync(
+    join(root, '.design/studio-state.json'),
+    JSON.stringify({
+      state: { positions: { [bundle.entries[0].artifactId]: { x: -90, y: 400 } } },
+    }),
+  );
+  assert.deepEqual(prepareDesignShareBundle(file), bundle);
+  assert.deepEqual(getDesignShareStatus(file, options), before);
+});
+
+test('legacy presentation fingerprints remain current without masking presentation updates', async (t) => {
+  const { root, file, options, record } = await fixture(t);
+  const positions = { legacy: { x: 90, y: 400 } };
+  writeFileSync(join(root, '.design/studio-state.json'), JSON.stringify({ state: { positions } }));
+  await shareDesign(file, options);
+  const current = currentDesign(file);
+  const legacy = record();
+  legacy.publishedPresentation = hash(
+    JSON.stringify({
+      revision: current.revision,
+      selectedVariant: current.document.selectedVariant,
+      positions,
+      verification: current.verification.status,
+    }),
+  );
+  const path = join(
+    options.custodyRoot,
+    readdirSync(options.custodyRoot).find((name) => name.endsWith('.json')),
+  );
+  writeFileSync(path, JSON.stringify(legacy), { mode: 0o600 });
+  assert.equal(getDesignShareStatus(file, options).hasUpdate, false);
+  atomicJson(join(root, '.design/verification', `${current.revision}.json`), {
+    status: 'verified',
+    revision: current.revision,
+  });
+  assert.equal(getDesignShareStatus(file, options).hasUpdate, true);
 });

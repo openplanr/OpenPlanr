@@ -315,3 +315,29 @@ test('malformed coordinates and duplicate thread identities fail visibly rather 
     /format/u,
   );
 });
+
+test('auto frame exports preserve authored mode and captured numeric pin coordinates', () => {
+  const value = input();
+  value.bundle.design.frames[0].height = 'auto';
+  value.review.pins = [pin({ anchor: undefined, viewport: { width: 1440, height: 4200 } })];
+  const snapshot = createDesignReviewExport(value);
+  assert.deepEqual(snapshot.groups[0].frame, {
+    id: 'desktop',
+    label: 'Desktop',
+    width: 1440,
+    height: 'auto',
+  });
+  assert.deepEqual(threadOf(snapshot).location.capturedViewport, { width: 1440, height: 4200 });
+  assert.equal(threadOf(snapshot).location.viewportPixels.y, 1260);
+  assert.match(serializeDesignReviewExport(snapshot, 'markdown'), /1440 × auto/);
+});
+
+test('auto frame exports do not expose malformed width fields', () => {
+  const value = input();
+  value.bundle.design.frames[0].height = 'auto';
+  value.bundle.design.frames[0].width = '/Users/private/project';
+  const snapshot = createDesignReviewExport(value);
+  assert.equal(snapshot.groups[0].frame.width, null);
+  assert.equal(snapshot.groups[0].frame.height, null);
+  assert.equal(JSON.stringify(snapshot).includes('/Users/private/project'), false);
+});

@@ -3,7 +3,7 @@
   "schemaVersion": "1.0.0",
   "protocolVersion": "1.8.0",
   "skillId": "planr-ship",
-  "skillVersion": "1.2.1",
+  "skillVersion": "1.3.0",
   "entrypoint": "SKILL.md",
   "hosts": [
     "claude-code",

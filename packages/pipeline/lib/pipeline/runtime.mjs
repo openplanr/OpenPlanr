@@ -19,6 +19,7 @@ const NORMALIZE = {
   cursor: 'cursor',
 };
 const EXECUTABLE = { 'claude-code': 'claude', codex: 'codex', cursor: 'cursor' };
+const PROBE_TIMEOUT_MS = 5_000;
 
 export function listRuntimeAdapters() {
   return registry.adapters.map((adapter) => structuredClone(adapter));
@@ -28,15 +29,42 @@ export function normalizeRuntime(value) {
   return value ? (NORMALIZE[String(value).toLowerCase()] ?? String(value).toLowerCase()) : null;
 }
 
+function probeCommand(command, run) {
+  const result = run(command, ['--version'], {
+    encoding: 'utf8',
+    windowsHide: true,
+    timeout: PROBE_TIMEOUT_MS,
+    killSignal: 'SIGKILL',
+  });
+  const timedOut = result.error?.code === 'ETIMEDOUT';
+  return { present: timedOut || (!result.error && result.status === 0), timedOut };
+}
+
 export function commandExists(command, run = spawnSync) {
-  const result = run(command, ['--version'], { encoding: 'utf8', windowsHide: true });
-  return !result.error && result.status === 0;
+  return probeCommand(command, run).present;
+}
+
+function discoverRuntimes(run, adapters = registry.adapters) {
+  const diagnostics = [];
+  const installed = adapters
+    .filter((adapter) => {
+      const command = EXECUTABLE[adapter.id];
+      const probe = probeCommand(command, run);
+      if (probe.timedOut) {
+        diagnostics.push({
+          code: 'E_RUNTIME_PROBE_TIMEOUT',
+          problem: `${command} --version did not finish within ${PROBE_TIMEOUT_MS}ms; the runtime is present but its version is unknown.`,
+          fix: `Check the ${command} launcher before invoking it; runtime discovery did not verify its health.`,
+        });
+      }
+      return probe.present;
+    })
+    .map((adapter) => adapter.id);
+  return { installed, diagnostics };
 }
 
 export function detectInstalledRuntimes(run = spawnSync) {
-  return registry.adapters
-    .filter((adapter) => commandExists(EXECUTABLE[adapter.id], run))
-    .map((adapter) => adapter.id);
+  return discoverRuntimes(run).installed;
 }
 
 function readProjectDefault(projectRoot) {
@@ -87,19 +115,23 @@ export function validateRuntimeLock(projectRoot, runtimeId) {
   return lock;
 }
 
-function resolvedAdapter(id, source, available, projectRoot, { strictRuntimeLock = true } = {}) {
-  let diagnostics = [];
+function resolvedAdapter(
+  id,
+  source,
+  available,
+  projectRoot,
+  { strictRuntimeLock = true, probeDiagnostics = [] } = {},
+) {
+  const diagnostics = [...probeDiagnostics];
   try {
     validateRuntimeLock(projectRoot, id);
   } catch (error) {
     if (strictRuntimeLock || !(error instanceof PipelineError)) throw error;
-    diagnostics = [
-      {
-        code: error.code,
-        problem: error.message,
-        ...(error.fix ? { fix: error.fix } : {}),
-      },
-    ];
+    diagnostics.push({
+      code: error.code,
+      problem: error.message,
+      ...(error.fix ? { fix: error.fix } : {}),
+    });
   }
   return {
     adapter: structuredClone(registry.adapters.find((entry) => entry.id === id)),
@@ -132,7 +164,6 @@ export function resolveRuntimeAdapter({
   installed,
   strictRuntimeLock = true,
 } = {}) {
-  const available = installed ?? detectInstalledRuntimes();
   const activeRuntime = active ?? process.env.OPENPLANR_RUNTIME ?? readActiveRuntime(projectRoot);
   const candidates = [
     ['explicit', normalizeRuntime(explicit)],
@@ -150,12 +181,21 @@ export function resolveRuntimeAdapter({
         'Choose claude, codex, or cursor.',
       );
     }
-    return resolvedAdapter(id, source, available, projectRoot, { strictRuntimeLock });
+    const discovery = installed
+      ? { installed, diagnostics: [] }
+      : discoverRuntimes(spawnSync, [adapter]);
+    return resolvedAdapter(id, source, discovery.installed, projectRoot, {
+      strictRuntimeLock,
+      probeDiagnostics: discovery.diagnostics,
+    });
   }
 
+  const discovery = installed ? { installed, diagnostics: [] } : discoverRuntimes(spawnSync);
+  const available = discovery.installed;
   if (available.length === 1) {
     return resolvedAdapter(available[0], 'installed', available, projectRoot, {
       strictRuntimeLock,
+      probeDiagnostics: discovery.diagnostics,
     });
   }
   if (available.length === 0) {

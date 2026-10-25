@@ -14,6 +14,7 @@ import {
   membershipState,
   same,
   semanticFields,
+  setShapeLibrary,
   setStudioPresentation,
   snapshot,
   validateAuthoringBundle,
@@ -37,7 +38,7 @@ function transactionDraft(bundle, transaction) {
   const presentation = { ...bundle.presentation, elements: [...bundle.presentation.elements] };
   const changedPlacements = new Set();
   for (const op of transaction.operations) {
-    if (op.type === 'set-geometry' || op.type === 'set-appearance')
+    if (op.type === 'set-geometry' || op.type === 'set-appearance-locks')
       for (const change of op.changes) changedPlacements.add(change.elementId);
     if (
       op.type === 'update-semantics' &&
@@ -75,7 +76,10 @@ export function applyOperation(bundle, op, path, diagnostics) {
   const document = bundle.document;
   const entries = elementIndex(document);
   const placements = new Map(bundle.presentation.elements.map((value) => [value.elementId, value]));
-  if (op.type === 'set-studio-presentation') {
+  if (op.type === 'set-shape-library') {
+    if (precondition(bundle.shapeLibrary ?? null, op.before, path, diagnostics))
+      setShapeLibrary(bundle, op.after);
+  } else if (op.type === 'set-studio-presentation') {
     if (precondition(bundle.studioPresentation ?? null, op.before, path, diagnostics))
       setStudioPresentation(bundle, op.after);
   } else if (op.type === 'insert-elements') {

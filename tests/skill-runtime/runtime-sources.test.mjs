@@ -82,6 +82,20 @@ test('Studio ships complete readable statement units that reassemble the canonic
     ],
   );
   const inputs = units.manifest.sources.flatMap(({ inputs: unitInputs }) => unitInputs);
+  const canvas = units.manifest.sources.filter(
+    ({ responsibility }) => responsibility === 'canvas-engine',
+  );
+  assert.ok(canvas.length > 0);
+  assert.ok(
+    canvas
+      .flatMap(({ inputs: unitInputs }) => unitInputs)
+      .includes('packages/canvas/src/camera.mjs'),
+  );
+  assert.ok(
+    canvas.every(({ inputs: unitInputs }) =>
+      unitInputs.every((path) => path.startsWith('packages/canvas/src/')),
+    ),
+  );
   assert.ok(inputs.includes('packages/design/lib/design/ui/studio.mjs'));
   assert.ok(inputs.includes('node_modules/react-dom/cjs/react-dom-client.production.js'));
   assert.ok(inputs.every((path) => !path.startsWith('../') && !path.startsWith('/')));

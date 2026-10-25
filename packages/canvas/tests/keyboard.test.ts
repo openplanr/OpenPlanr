@@ -360,3 +360,34 @@ describe('keyboard ownership guards', () => {
     for (const value of ['Enter', 'Escape', 'x', 'Tab', '1', '2']) expect(key(value)).toBe(false);
   });
 });
+
+it('announces public centre zooms and keeps explicit-point zooms silent', async () => {
+  const { controller, stage } = make();
+  const area = controller.getSafeArea();
+  const centre = { x: area.x + area.width / 2, y: area.y + area.height / 2 };
+  const anchor = controller.screenToWorld(centre);
+  controller.zoomAt(1.25);
+  expect(controller.screenToWorld(centre)).toEqual(anchor);
+  await frame(0);
+  await frame(500);
+  expect(stage.querySelector('[role="status"]')?.textContent).toBe('Zoom 125%');
+  controller.zoomAt(1.25, centre);
+  await frame(0);
+  await frame(500);
+  expect(stage.querySelector('[role="status"]')?.textContent).toBe('Zoom 125%');
+});
+
+it('keeps wheel and Safari pinch zoom announcements silent', async () => {
+  vi.stubGlobal('GestureEvent', Event);
+  const { controller, stage } = make();
+  stage.dispatchEvent(new WheelEvent('wheel', { ctrlKey: true, deltaY: -10, cancelable: true }));
+  stage.dispatchEvent(new Event('gesturestart', { cancelable: true }));
+  const pinch = new Event('gesturechange', { cancelable: true });
+  Object.assign(pinch, { scale: 1.2, clientX: 120, clientY: 130 });
+  stage.dispatchEvent(pinch);
+  stage.dispatchEvent(new Event('gestureend'));
+  expect(controller.getCamera().zoom).toBeGreaterThan(1);
+  await frame(0);
+  await frame(500);
+  expect(stage.querySelector('[role="status"]')?.textContent).toBe('');
+});

@@ -147,6 +147,9 @@ export function bundleBrowserEntry(
     banner = ARTIFACT_SHELL_BUNDLE_BANNER,
     onInputs,
     compact = false,
+    minifySyntax = compact,
+    loader,
+    define,
   } = {},
 ) {
   const result = buildSync({
@@ -158,12 +161,13 @@ export function bundleBrowserEntry(
     format,
     globalName,
     legalComments: 'inline',
+    loader,
     logLevel: 'warning',
     minifyWhitespace: compact,
-    minifySyntax: compact,
+    minifySyntax,
     minifyIdentifiers: false,
     platform: 'browser',
-    define: { 'process.env.NODE_ENV': '"production"' },
+    define: { 'process.env.NODE_ENV': '"production"', ...define },
     sourcemap: false,
     target: ['es2022'],
     treeShaking: true,
@@ -220,11 +224,19 @@ export function renderDesignBoardAdapterAsset({ projectRoot = root } = {}) {
 }
 
 export function renderDiagramStudioRuntimeAsset({ projectRoot = root } = {}) {
-  return bundleBrowserEntry('lib/artifact/ui/diagram-studio.mjs', { projectRoot });
+  return bundleBrowserEntry('lib/artifact/ui/diagram-studio.mjs', {
+    projectRoot,
+    define: { 'import.meta.url': 'document.baseURI' },
+  });
 }
 
 export function renderDiagramOwnerRuntimeAsset({ projectRoot = root } = {}) {
-  return bundleBrowserEntry('lib/artifact/ui/diagram-owner-studio.mjs', { projectRoot });
+  return bundleBrowserEntry('lib/artifact/ui/diagram-owner-studio.mjs', {
+    projectRoot,
+    compact: true,
+    minifySyntax: false,
+    define: { 'import.meta.url': 'document.baseURI' },
+  });
 }
 
 /**

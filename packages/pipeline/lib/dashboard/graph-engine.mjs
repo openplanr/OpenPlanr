@@ -67,6 +67,7 @@ function defaultRun(cmd, args, options = {}) {
   const res = spawnSync(cmd, args, {
     encoding: 'utf-8',
     timeout: 10_000,
+    killSignal: 'SIGKILL',
     windowsHide: true,
     cwd: options.cwd,
   });

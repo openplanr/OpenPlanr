@@ -109,20 +109,24 @@ describe('the CLI pipeline pin tracks the pipeline it is released against', () =
 
   it('tests the consolidated pipeline and dashboard from local workspace custody', () => {
     const workflow = rootWorkflow('ci.yml');
-    const dashboardWorkflow = rootWorkflow('dashboard-browser.yml');
+    const nightlyWorkflow = rootWorkflow('nightly.yml');
+    const dashboardWorkflow = rootWorkflow('browser.yml');
+    const lanes = readFileSync(resolve(workspaceRoot, 'scripts/ci/browser-lanes.mjs'), 'utf8');
 
     expect(workflow).toContain('node-version: 24');
     expect(workflow).toContain('run: npm test');
-    expect(workflow).toContain('node: [22, 24]');
     expect(workflow).toContain('run: npm run test:focused');
     expect(workflow).toContain('run: npm ci');
     expect(workflow).toContain('run: npm run check:generated');
     expect(workflow).toContain('run: npm run check:boundaries');
-    expect(workflow).toContain('run: npm run verify:packed:strict');
-    expect(workflow).not.toContain('dashboard-candidate');
-    expect(workflow).not.toContain('.ci/planr-pipeline');
+    expect(nightlyWorkflow).toContain('node: [22, 24, 26]');
+    expect(nightlyWorkflow).toContain('run: npm run verify:packed:strict');
+    for (const text of [workflow, nightlyWorkflow]) {
+      expect(text).not.toContain('dashboard-candidate');
+      expect(text).not.toContain('.ci/planr-pipeline');
+    }
 
-    expect(dashboardWorkflow).toContain("- 'apps/dashboard/**'");
+    expect(lanes).toContain("'apps/dashboard/'");
     expect(dashboardWorkflow).toContain('run: npm run test:browser --workspace=openplanr');
     expect(dashboardWorkflow).toContain('against local workspace packages');
     expect(dashboardWorkflow).not.toContain('OPENPLANR_PIPELINE_SOURCE');

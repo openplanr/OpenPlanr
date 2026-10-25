@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { cpSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
+import { cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { dirname, join, resolve } from 'node:path';
+import { delimiter, dirname, join, resolve } from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 
@@ -80,6 +80,48 @@ function changelogCheck(report) {
   );
   return check;
 }
+
+test('doctor bounds a stalled GitHub CLI version without claiming a missing release', {
+  skip: process.platform === 'win32',
+}, (t) => {
+  const checkout = buildCheckout('0.41.0');
+  t.after(() => rmSync(checkout, { recursive: true, force: true }));
+  const bin = join(checkout, 'bin');
+  mkdirSync(bin);
+  writeFileSync(
+    join(bin, 'gh'),
+    `#!${process.execPath}\nprocess.on('SIGTERM', () => {});\nsetInterval(() => {}, 1000);\n`,
+    { mode: 0o755 },
+  );
+  const result = spawnSync(
+    process.execPath,
+    [join(checkout, 'scripts/doctor.mjs'), '--release', '--json', '--workspace-root', checkout],
+    {
+      cwd: checkout,
+      encoding: 'utf8',
+      timeout: 10_000,
+      killSignal: 'SIGKILL',
+      env: {
+        ...process.env,
+        HOME: join(checkout, 'home'),
+        PATH: [bin, process.env.PATH].join(delimiter),
+      },
+    },
+  );
+  assert.equal(result.error, undefined, result.stderr);
+  assert.equal(result.signal, null, result.stderr);
+  const report = JSON.parse(result.stdout);
+  assert.ok(
+    report.checks.some(
+      ({ status, message }) =>
+        status === 'warn' && /gh --version.*5000ms.*version is unknown.*not checked/u.test(message),
+    ),
+  );
+  assert.equal(
+    report.checks.some(({ message }) => /GitHub release .* is missing/u.test(message)),
+    false,
+  );
+});
 
 test('the release audit fails when CHANGELOG.md has no section for the released version', () => {
   // 0.37.1 reproduces the real gap: it was tagged and published while the

@@ -66,3 +66,14 @@ export declare function createSealedAuthoringSnapshot(
   value: DiagramAuthoringBundle,
   previous?: DiagramAuthoringBundle | null,
 ): { ok: true; bundle: DiagramAuthoringBundle } | DiagramKernelFailure;
+
+export declare function setShapeLibrary(
+  bundle: DiagramAuthoringBundle,
+  library: import('@openplanr/protocol/shape-library-contracts').DiagramShapeDefinition[] | null,
+): void;
+export declare function transactionVersionFields(
+  bundle: DiagramAuthoringBundle,
+  operations?: import('@openplanr/protocol/studio-presentation-contracts').VersionedDiagramEditTransaction['operations'],
+): ReturnType<
+  typeof import('@openplanr/protocol/studio-presentation-contracts').diagramAuthoringVersionFields
+>;

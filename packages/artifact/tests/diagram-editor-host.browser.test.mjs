@@ -223,6 +223,20 @@ test(
   },
 );
 
+test('the diagram editor keeps its dot background in both color schemes', options, async (t) => {
+  const page = await hostedFixture(t);
+  for (const colorScheme of ['light', 'dark']) {
+    await page.evaluate((scheme) => window.__mount.setColorScheme(scheme), colorScheme);
+    assert.match(
+      await page
+        .locator('.de-canvas')
+        .evaluate((element) => getComputedStyle(element).backgroundImage),
+      /radial-gradient\(/u,
+      `The ${colorScheme} diagram canvas retains its dot pattern`,
+    );
+  }
+});
+
 test(
   'access lost during a hosted save shows Access changed instead of a stuck Saving state',
   options,

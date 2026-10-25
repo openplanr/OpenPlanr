@@ -1,3 +1,4 @@
+import { shapeReferenceKey } from '@openplanr/protocol/shape-library-contracts';
 import type { VersionedDiagramAuthoringBundle as DiagramAuthoringBundle } from '@openplanr/protocol/studio-presentation-contracts';
 
 import type { DiagramCommandResult } from '../authoring/index.mjs';
@@ -90,6 +91,16 @@ export function copyDiagramSelection(
   fragment.presentation.elements = fragment.presentation.elements.filter(
     (item: { elementId: string }) => selected.has(item.elementId),
   );
+  if (fragment.shapeLibrary) {
+    const used = new Set(
+      fragment.presentation.elements.flatMap((item) =>
+        item.appearance.shapeRef ? [shapeReferenceKey(item.appearance.shapeRef)] : [],
+      ),
+    );
+    fragment.shapeLibrary = fragment.shapeLibrary.filter((definition) =>
+      used.has(shapeReferenceKey(definition)),
+    );
+  }
   const sourceBundle: DiagramAuthoringBundle = sealBundle(fragment);
   const checked = validateAuthoringBundle(sourceBundle);
   if (!checked.ok) return checked;

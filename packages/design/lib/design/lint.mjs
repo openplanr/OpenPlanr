@@ -297,7 +297,14 @@ export function lintCanvasData(data, { frames } = {}) {
   for (const section of data?.sections || []) {
     for (const a of section.artboards || []) {
       const accepted = frames?.length
-        ? frames.some((frame) => frame.width === a.width && frame.height === a.height)
+        ? frames.some(
+            (frame) =>
+              frame.width === a.width &&
+              (frame.height === 'auto'
+                ? a.height === 'auto' ||
+                  (Number.isInteger(a.height) && a.height > 0 && a.height <= 16384)
+                : frame.height === a.height),
+          )
         : isCanonicalFrame({ w: a.width, h: a.height });
       if (!accepted) {
         errors.push({

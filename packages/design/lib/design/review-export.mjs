@@ -269,7 +269,12 @@ function reviewExportTools() {
           frame: {
             id: refs.frame,
             label: field(frame?.label),
-            ...(dimensions(frame) ?? { width: null, height: null }),
+            ...(frame?.height === 'auto' &&
+            Number.isInteger(frame.width) &&
+            frame.width > 0 &&
+            frame.width <= 16384
+              ? { width: frame.width, height: 'auto' }
+              : (dimensions(frame) ?? { width: null, height: null })),
           },
           threads: [],
         });
@@ -326,7 +331,7 @@ function reviewExportTools() {
     String(value ?? 'Unavailable')
       .replaceAll('\\', '\\\\')
       .replace(/[\r\n]/gu, ' ')
-      .replace(/[\[\]<>`*#|]/gu, (char) => '\\' + char);
+      .replace(/[[\]<>`*#|]/gu, (char) => '\\' + char);
   const quoted = (value) => {
     const runs = value.match(/`+/gu) ?? [];
     const fence = '`'.repeat(Math.max(3, ...runs.map((run) => run.length + 1)));

@@ -84,11 +84,11 @@ const EXPECTED_ROLES = Object.freeze({
     'implementation-high',
     'implementation-result',
   ],
-  'planr-qa': ['qa-agent', 'qa', 'always', 'read-only-qa', 'task-output-manifest'],
+  'planr-qa': ['qa-agent', 'qa', 'conditional', 'read-only-qa', 'task-output-manifest'],
   'planr-specification': [
     'specification-agent',
     'po',
-    'always',
+    'conditional',
     'analysis-high',
     'specification-output',
   ],
@@ -190,10 +190,26 @@ export function validateCanonicalRegistries(registries = CANONICAL_REGISTRIES) {
         `Role compatibility mapping drifted for ${role.roleId}.`,
       );
     }
-    if (role.adapterMappings.length < 3 || role.qaCoverage.length < 1) {
+    if (
+      !equal(
+        role.adapterMappings.map(({ host, nativeId, generatedPath }) => [
+          host,
+          nativeId,
+          generatedPath,
+        ]),
+        [
+          [
+            'claude-code',
+            `planr:${role.roleId}`,
+            `dist/plugins/claude/openplanr/agents/${role.roleId}.md`,
+          ],
+        ],
+      ) ||
+      role.qaCoverage.length < 1
+    ) {
       fail(
         PROTOCOL_ERROR_CODES.REGISTRY_INVALID,
-        `Role ${role.roleId} lacks adapter parity or QA coverage.`,
+        `Role ${role.roleId} must name its generated Claude agent and existing QA coverage.`,
       );
     }
   }

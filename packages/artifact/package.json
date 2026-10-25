@@ -1,6 +1,6 @@
 {
   "name": "@openplanr/artifact",
-  "version": "0.6.8",
+  "version": "0.7.0",
   "private": true,
   "type": "module",
   "description": "Canonical OpenPlanr artifact review, sharing, and rendering runtime",
@@ -80,15 +80,16 @@
   },
   "dependencies": {
     "@expo-google-fonts/inter": "0.4.2",
-    "@openplanr/protocol": "0.13.0",
+    "@openplanr/canvas": "0.0.0",
+    "@openplanr/protocol": "0.14.0",
     "@resvg/resvg-js": "2.6.2",
     "@types/react": "19.3.0",
     "esbuild": "0.28.2",
     "pako": "2.1.0",
     "parse5": "8.0.1",
-    "react": "19.3.0",
-    "react-dom": "19.3.0",
-    "radix-ui": "1.8.0"
+    "react": "19.3.1",
+    "react-dom": "19.3.1",
+    "radix-ui": "1.8.1"
   },
   "scripts": {
     "generate": "node scripts/generate-artifact-shell.mjs",

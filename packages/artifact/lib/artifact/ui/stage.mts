@@ -604,6 +604,8 @@ export function mountArtifactStage({
   }
   const frameDiagnostics = new Map<string, ArtifactFrameDiagnostic>();
   const frameLoads = new Map<string, FrameLoad>();
+  const frameHolds = new Map<string, number>();
+  const frameHoldWaiters = new Set<() => void>();
   const frameSlots = new Map<string, { host: Node; placeholder: Comment }>();
   // Dormant frames keep their identities and canvas hosts without an about:blank context.
   // Already assigned sources and explicit eager hosts retain their existing mounts.
@@ -1068,12 +1070,14 @@ export function mountArtifactStage({
   function disposeStage() {
     if (disposed) return true;
     disposed = true;
+    wakeFrameDemand();
     for (const id of [...frameLoads.keys()]) releaseFrame(id);
     for (const remove of cleanup.splice(0)) remove();
     return true;
   }
   const controller = Object.freeze({
     frameBudget,
+    holdFrames,
     ensureFrames,
     retryFrames,
     getFrameDiagnostics: () => [...frameDiagnostics.values()],
@@ -1222,6 +1226,7 @@ export function mountArtifactStage({
     const record = frameLoads.get(artifactId);
     if (!record) return;
     frameLoads.delete(artifactId);
+    wakeFrameDemand();
     record.cancelled = true;
     record.abort.abort();
     record.unlisten?.();
@@ -1440,6 +1445,32 @@ export function mountArtifactStage({
     return record.promise;
   }
 
+  function wakeFrameDemand() {
+    for (const resolve of frameHoldWaiters) resolve();
+    frameHoldWaiters.clear();
+  }
+
+  /** Retains frames against eviction and inactive-load cancellation until released. */
+  function holdFrames(artifactIds: readonly string[]) {
+    if (disposed) throw cancelledFrame();
+    if (!Array.isArray(artifactIds) || artifactIds.some((id) => !frames.has(id))) {
+      throw new TypeError('Requested artifact frames must be known artifact IDs.');
+    }
+    const ids = [...new Set(artifactIds)];
+    for (const id of ids) frameHolds.set(id, (frameHolds.get(id) ?? 0) + 1);
+    let released = false;
+    return () => {
+      if (released) return;
+      released = true;
+      for (const id of ids) {
+        const count = frameHolds.get(id) ?? 0;
+        if (count > 1) frameHolds.set(id, count - 1);
+        else frameHolds.delete(id);
+      }
+      wakeFrameDemand();
+    };
+  }
+
   function ensureFrames(artifactIds: readonly string[], isCurrent = () => true) {
     if (disposed || !isCurrent()) return Promise.reject(cancelledFrame());
     if (
@@ -1456,7 +1487,7 @@ export function mountArtifactStage({
     }
     // Every requested id names a known frame, and every frame has its artifact.
     // biome-ignore format: bundles keep this one-line call; wrapping would change their bytes.
-    if (frameBudget === null)
+    if (frameBudget === null || requested.every((id) => frameLoads.has(id)))
       return Promise.all(requested.map((id) => assignArtifactSource(stageArtifactById(state, id) as StageArtifact)));
     const run = async () => {
       // A selection may be replaced while its demand waits behind another load.
@@ -1466,9 +1497,14 @@ export function mountArtifactStage({
         if (!frameLoads.has(id)) {
           while (frameLoads.size >= frameBudget) {
             const candidates = [...frameLoads]
-              .filter(([loadedId]) => !requested.includes(loadedId))
+              .filter(([loadedId]) => !requested.includes(loadedId) && !frameHolds.has(loadedId))
               .sort((a, b) => a[1].used - b[1].used);
-            if (!candidates.length) throw new Error('The artifact frame budget is exhausted.');
+            if (!candidates.length) {
+              if (!frameHolds.size) throw new Error('The artifact frame budget is exhausted.');
+              await new Promise<void>((resolve) => frameHoldWaiters.add(resolve));
+              if (disposed || !isCurrent()) throw cancelledFrame();
+              continue;
+            }
             releaseFrame(candidates[0][0]);
           }
         }
@@ -1502,7 +1538,7 @@ export function mountArtifactStage({
 
   function cancelInactiveLoads(ids: readonly string[]) {
     for (const [id, record] of frameLoads) {
-      if (record.status === 'loading' && !ids.includes(id)) releaseFrame(id);
+      if (record.status === 'loading' && !ids.includes(id) && !frameHolds.has(id)) releaseFrame(id);
     }
   }
 

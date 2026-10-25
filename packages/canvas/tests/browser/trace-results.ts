@@ -1,22 +1,23 @@
+import type { ReactScenarioMetrics } from '../../bench/harness';
 import type { HitTestProbe } from '../../bench/hit-test';
 import type { ScenarioOverviewMetrics } from '../../bench/main';
 
-export const DOM_NODE_BUDGET = 2000;
-export const RUNNER_BUDGETS = process.env.CI === 'true';
+import { CANVAS_TRACE_BUDGETS } from '../../src/testing/index.mts';
 
-export function traceBudgetPolicy(runnerBudgets: boolean): {
-  budgetSet: 'local' | 'runner';
-  remountRendererMainP95Ms: number | null;
-  rafIntervalP95Ms: number | null;
-} {
-  return {
-    budgetSet: runnerBudgets ? 'runner' : 'local',
-    remountRendererMainP95Ms: runnerBudgets ? null : 16,
-    rafIntervalP95Ms: runnerBudgets ? null : 16.8,
-  };
+export { domBudgetPolicy, traceBudgetPolicy, traceOwnership } from '../../src/testing/index.mts';
+
+export const DOM_NODE_BUDGET = CANVAS_TRACE_BUDGETS.domNodes;
+export const RUNNER_BUDGETS = process.env.CI === 'true';
+export const SECOND_DENSITY = parseSecondDensity(process.env.CANVAS_SECOND_DENSITY);
+
+export function parseSecondDensity(value: string | undefined): boolean {
+  if (value === undefined || value === '0') return false;
+  if (value === '1') return true;
+  throw new TypeError(`CANVAS_SECOND_DENSITY: expected 0 or 1; received ${JSON.stringify(value)}`);
 }
 
 export type TraceRun = {
+  react?: ReactScenarioMetrics;
   run: number;
   gpuRenderer: string;
   hitTestP95Ms: number;
@@ -31,25 +32,6 @@ export type TraceRun = {
   rendererFrameSamples: number;
   mountCounts?: readonly number[];
 };
-
-export function traceOwnership(input: {
-  count: number;
-  world: 'html' | 'svg';
-  scenario: string;
-}): 'gated' | 'reported, SVG stress tier' {
-  return input.world === 'html' || input.count === 708 ? 'gated' : 'reported, SVG stress tier';
-}
-
-export function domBudgetPolicy(input: Parameters<typeof traceOwnership>[0]): {
-  ownership: 'gated' | 'reported, SVG stress tier' | 'reported, remount timing only';
-  regressionLimit: number | null;
-} {
-  if (traceOwnership(input) !== 'gated')
-    return { ownership: 'reported, SVG stress tier', regressionLimit: null };
-  if (input.scenario === 'remount')
-    return { ownership: 'reported, remount timing only', regressionLimit: null };
-  return { ownership: 'gated', regressionLimit: DOM_NODE_BUDGET };
-}
 
 export function aggregateTraceRuns(runs: readonly TraceRun[]): {
   hitTestP95Ms: number;

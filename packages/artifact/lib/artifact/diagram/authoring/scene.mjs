@@ -3,6 +3,12 @@ import { wrapDiagramLabel } from '../rendering/layout.mjs';
 import { diagramGraphemes } from '../rendering/text.mjs';
 import { MAX_DIAGRAM_SCENE_EXTENT } from '../rendering/theme.mjs';
 import { clone, elementIndex, same, snapshot, validateAuthoringBundle } from './model.mjs';
+import {
+  compileDiagramShape,
+  diagramShapeAttachment,
+  diagramShapeInterior,
+  findDiagramShape,
+} from './shape-geometry.mjs';
 
 export const AUTHORED_SCENE_ITEM_BUDGET = 256;
 export const AUTHORED_MINIMUM_FONT_SIZE = 12;
@@ -77,12 +83,23 @@ function orthogonal(points, fromSide, toSide) {
   }
   return result;
 }
-function routePoints(relation, placement, placements) {
+function routePoints(relation, placement, placements, shapeLibrary) {
   const route = placement.route;
   const from = placements.get(relation.from),
     to = placements.get(relation.to);
-  const start = resolveShapeAttachment(from.bounds, from.appearance.shape, route.from);
-  const end = resolveShapeAttachment(to.bounds, to.appearance.shape, route.to);
+  const attach = (entry, intent) =>
+    entry.appearance.shapeRef
+      ? diagramShapeAttachment(
+          compileDiagramShape(
+            findDiagramShape(shapeLibrary, entry.appearance.shapeRef),
+            entry.bounds,
+          ),
+          entry.bounds,
+          intent,
+        )
+      : resolveShapeAttachment(entry.bounds, entry.appearance.shape, intent);
+  const start = attach(from, route.from);
+  const end = attach(to, route.to);
   if (route.mode === 'manual') {
     const authored = [start, ...route.points.slice(1, -1).map(clone), end];
     return route.strategy === 'orthogonal'
@@ -160,9 +177,12 @@ function resolveText(element, diagnostics) {
   const container = element.collection === 'groups' || element.collection === 'lanes';
   const inset =
     element.appearance.shape === 'diamond' || element.appearance.shape === 'ellipse' ? 0.22 : 0;
-  const shapeWidth = element.bounds
-    ? Math.max(1, element.bounds.width * (1 - inset * 2) - 24)
-    : null;
+  const textRegion = element.compiledShape?.textRegion;
+  const shapeWidth = textRegion
+    ? textRegion.width
+    : element.bounds
+      ? Math.max(1, element.bounds.width * (1 - inset * 2) - 24)
+      : null;
   const available =
     anchor?.width ??
     (element.bounds ? shapeWidth : Math.min(280, Math.max(72, textWidth(label, size) + 16)));
@@ -198,8 +218,12 @@ function resolveText(element, diagnostics) {
   else if (element.bounds) {
     const width = shapeWidth ?? element.bounds.width;
     bounds = {
-      x: element.bounds.x + (element.bounds.width - width) / 2,
-      y: container ? element.bounds.y + 8 : element.bounds.y + (element.bounds.height - height) / 2,
+      x: textRegion?.x ?? element.bounds.x + (element.bounds.width - width) / 2,
+      y: textRegion
+        ? textRegion.y + (textRegion.height - height) / 2
+        : container
+          ? element.bounds.y + 8
+          : element.bounds.y + (element.bounds.height - height) / 2,
       width,
       height,
     };
@@ -209,7 +233,9 @@ function resolveText(element, diagnostics) {
   }
   if (
     maximumLine > bounds.width + 1 ||
-    (element.bounds && !anchor && height > element.bounds.height - (container ? 12 : 16))
+    (element.bounds &&
+      !anchor &&
+      height > (textRegion?.height ?? element.bounds.height - (container ? 12 : 16)))
   )
     diagnostics.push(
       issue(
@@ -266,6 +292,7 @@ function segmentEntersBox(start, end, bounds) {
   return low <= high;
 }
 function shapeInterior(point, element) {
+  if (element.compiledShape) return diagramShapeInterior(point, element.compiledShape.attachment);
   const { x, y, width, height } = element.bounds;
   const dx = Math.abs(point.x - x - width / 2),
     dy = Math.abs(point.y - y - height / 2);
@@ -448,6 +475,7 @@ export function resolveDiagramSceneElement(
   order,
   emphasisLevel = null,
   diagnostics = [],
+  shapeLibrary = [],
 ) {
   const { collection, value } = entry;
   /** @type {import('./scene.d.mts').AuthoredDiagramSceneElement} */
@@ -468,14 +496,21 @@ export function resolveDiagramSceneElement(
     locks: clone(placement.locks),
     emphasis: emphasisLevel,
   };
-  if (placement.bounds) Object.assign(element, clone(placement.bounds));
+  if (placement.bounds) {
+    Object.assign(element, clone(placement.bounds));
+    if (placement.appearance.shapeRef)
+      element.compiledShape = compileDiagramShape(
+        findDiagramShape(shapeLibrary, placement.appearance.shapeRef),
+        placement.bounds,
+      );
+  }
   if (collection === 'relations')
     Object.assign(element, {
       from: value.from,
       to: value.to,
       direction: value.direction,
       route: clone(placement.route),
-      points: routePoints(value, placement, placements),
+      points: routePoints(value, placement, placements, shapeLibrary),
     });
   element.text = resolveText(element, diagnostics);
   element.lines = element.text?.lines ?? [];
@@ -511,6 +546,7 @@ export function resolveDiagramScene(bundle) {
         order,
         emphasis.get(placement.elementId) ?? null,
         diagnostics,
+        'shapeLibrary' in bundle ? bundle.shapeLibrary : [],
       ),
     )
     .sort((a, b) => a.zIndex - b.zIndex || a.order - b.order);

@@ -152,7 +152,12 @@ export function buildSchemas() {
   );
   const adapterMapping = closed(['host', 'nativeId', 'generatedPath'], {
     host: { enum: ['claude-code', 'codex', 'cursor'] },
-    nativeId: ref('identifier'),
+    nativeId: {
+      type: 'string',
+      pattern: '^(?:[a-z][a-z0-9]*(?:-[a-z0-9]+)*:)?[a-z][a-z0-9]*(?:-[a-z0-9]+)*$',
+      minLength: 1,
+      maxLength: 128,
+    },
     generatedPath: ref('relativePath'),
   });
   const role = closed(
@@ -1378,7 +1383,7 @@ const ROLE_DEFINITIONS = [
     'planr-qa',
     'qa-agent',
     'qa',
-    'always',
+    'conditional',
     'read-only-qa',
     'quality-verification',
     'read-only',
@@ -1392,7 +1397,7 @@ const ROLE_DEFINITIONS = [
     'planr-specification',
     'specification-agent',
     'po',
-    'always',
+    'conditional',
     'analysis-high',
     'planning-write',
     'declared-paths',
@@ -1423,7 +1428,7 @@ function roleRecord([
     phase === 'po-preflight' ? 'po/preflight' : phase === 'post-build' ? 'post-build' : phase;
   return {
     roleId,
-    roleVersion: '1.0.0',
+    roleVersion: ['planr-qa', 'planr-specification'].includes(roleId) ? '1.1.0' : '1.0.0',
     displayName: slug
       .split('-')
       .map((part) => part[0].toUpperCase() + part.slice(1))
@@ -1452,18 +1457,22 @@ function roleRecord([
     adapterMappings: [
       {
         host: 'claude-code',
-        nativeId: legacyId,
-        generatedPath: `adapters/claude-code/agents/${legacyId}.md`,
+        nativeId: `planr:${roleId}`,
+        generatedPath: `dist/plugins/claude/openplanr/agents/${roleId}.md`,
       },
-      { host: 'codex', nativeId: roleId, generatedPath: `adapters/codex/agents/${roleId}.md` },
-      { host: 'cursor', nativeId: roleId, generatedPath: `adapters/cursor/agents/${roleId}.md` },
     ],
-    qaCoverage: [`tests/protocol/role-alias-registry.test.mjs`, `evaluation/roles/${roleId}.json`],
+    qaCoverage: [
+      'tests/protocol/catalogs-and-routing.test.mjs',
+      'tests/ecosystem-root/ecosystem-generation.test.mjs',
+    ],
   };
 }
 
 function buildRoles() {
-  return document('role-registry', '1.1.0', { roles: ROLE_DEFINITIONS.map(roleRecord) });
+  return document('role-registry', '1.1.0', {
+    documentVersion: '1.1.0',
+    roles: ROLE_DEFINITIONS.map(roleRecord),
+  });
 }
 
 const TASK_BINDINGS = [

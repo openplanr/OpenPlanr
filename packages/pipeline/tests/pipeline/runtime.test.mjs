@@ -1,11 +1,152 @@
 import assert from 'node:assert/strict';
+import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join, resolve } from 'node:path';
+import { delimiter, join, resolve } from 'node:path';
 import { test } from 'node:test';
+import { fileURLToPath } from 'node:url';
 
-import { resolveRuntimeAdapter, runtimeHandoff } from '../../lib/pipeline/index.mjs';
+import {
+  detectInstalledRuntimes,
+  resolveRuntimeAdapter,
+  runtimeHandoff,
+} from '../../lib/pipeline/index.mjs';
+
+test('runtime probes are bounded and retain a timed-out executable as present', () => {
+  const calls = [];
+  const installed = detectInstalledRuntimes((command, args, options) => {
+    calls.push({ command, args, options });
+    if (command === 'claude') return { status: 0 };
+    if (command === 'cursor') return { status: null, error: { code: 'ETIMEDOUT' } };
+    return { status: null, error: { code: 'ENOENT' } };
+  });
+  assert.deepEqual(installed, ['claude-code', 'cursor']);
+  assert.equal(calls.length, 3);
+  for (const { args, options } of calls) {
+    assert.deepEqual(args, ['--version']);
+    assert.equal(options.timeout, 5_000);
+    assert.equal(options.killSignal, 'SIGKILL');
+  }
+});
+
+test('a non-returning version process cannot ignore the probe deadline', () => {
+  const runtime = new URL('../../lib/pipeline/runtime.mjs', import.meta.url).href;
+  const source = `
+    import { spawnSync } from 'node:child_process';
+    import { commandExists } from ${JSON.stringify(runtime)};
+    const present = commandExists(process.execPath, (command, args, options) =>
+      spawnSync(command, ['-e', "process.on('SIGTERM', () => {}); setInterval(() => {}, 1000)"], options));
+    console.log(JSON.stringify({ present }));
+  `;
+  const started = Date.now();
+  const result = spawnSync(process.execPath, ['--input-type=module', '-e', source], {
+    encoding: 'utf8',
+    timeout: 10_000,
+    killSignal: 'SIGKILL',
+  });
+  assert.equal(result.status, 0, result.stderr || result.error?.message);
+  assert.deepEqual(JSON.parse(result.stdout), { present: true });
+  assert.ok(Date.now() - started < 9_000, 'probe must finish before the outer guard');
+});
+
+test('selected runtime discovery reports a stalled version and ignores unrelated hosts', {
+  skip: process.platform === 'win32',
+}, (t) => {
+  const root = mkdtempSync(join(tmpdir(), 'planr-probe-'));
+  t.after(() => rmSync(root, { recursive: true, force: true }));
+  const bin = join(root, 'bin');
+  mkdirSync(bin);
+  const marker = join(root, 'cursor-called');
+  writeFileSync(join(bin, 'codex'), '#!/bin/sh\necho test-codex\n', { mode: 0o755 });
+  writeFileSync(
+    join(bin, 'cursor'),
+    `#!${process.execPath}\nrequire('node:fs').writeFileSync(${JSON.stringify(marker)}, 'called');\nprocess.on('SIGTERM', () => {});\nsetInterval(() => {}, 1000);\n`,
+    { mode: 0o755 },
+  );
+  const runtime = new URL('../../lib/pipeline/runtime.mjs', import.meta.url).href;
+  const run = (id) =>
+    spawnSync(
+      process.execPath,
+      [
+        '--input-type=module',
+        '-e',
+        `
+    import { resolveRuntimeAdapter } from ${JSON.stringify(runtime)};
+    console.log(JSON.stringify(resolveRuntimeAdapter({ projectRoot: ${JSON.stringify(root)}, explicit: ${JSON.stringify(id)}, strictRuntimeLock: false })));
+  `,
+      ],
+      {
+        encoding: 'utf8',
+        timeout: 10_000,
+        killSignal: 'SIGKILL',
+        env: { ...process.env, PATH: [bin, process.env.PATH].join(delimiter) },
+      },
+    );
+  const codex = run('codex');
+  assert.equal(codex.status, 0, codex.stderr);
+  assert.equal(JSON.parse(codex.stdout).installed, true);
+  assert.throws(() => readFileSync(marker), { code: 'ENOENT' });
+  mkdirSync(join(root, '.planr'));
+  writeFileSync(
+    join(root, '.planr/runtime-lock.json'),
+    JSON.stringify({
+      ...compatibleLock(),
+      components: { ...compatibleLock().components, pipeline: '0.1.0' },
+    }),
+  );
+  const cursor = run('cursor');
+  assert.equal(cursor.status, 0, cursor.stderr || cursor.error?.message);
+  const resolved = JSON.parse(cursor.stdout);
+  assert.equal(resolved.installed, true);
+  assert.deepEqual(
+    resolved.diagnostics.map(({ code }) => code),
+    ['E_RUNTIME_PROBE_TIMEOUT', 'E_LOCK_INCOMPATIBLE'],
+  );
+  assert.match(resolved.diagnostics[0].problem, /cursor --version.*5000ms.*version is unknown/u);
+  assert.equal(readFileSync(marker, 'utf8'), 'called');
+});
+
+test('the Pipeline test runner shadows ambient coding-host executables', {
+  skip: process.platform === 'win32',
+}, (t) => {
+  const root = mkdtempSync(join(tmpdir(), 'planr-test-hosts-'));
+  t.after(() => rmSync(root, { recursive: true, force: true }));
+  const bin = join(root, 'ambient-bin');
+  mkdirSync(bin);
+  const marker = join(root, 'ambient-called');
+  for (const host of ['claude', 'codex', 'cursor'])
+    writeFileSync(
+      join(bin, host),
+      `#!${process.execPath}\nrequire('node:fs').writeFileSync(${JSON.stringify(marker)}, 'called');\nprocess.exit(99);\n`,
+      { mode: 0o755 },
+    );
+  const fixture = join(root, 'probe.test.mjs');
+  writeFileSync(
+    fixture,
+    `
+    import assert from 'node:assert/strict';
+    import { spawnSync } from 'node:child_process';
+    import { test } from 'node:test';
+    test('isolated host versions', () => {
+      for (const host of ['claude', 'codex', 'cursor']) {
+        const result = spawnSync(host, ['--version'], { encoding: 'utf8' });
+        assert.equal(result.status, 0);
+        assert.match(result.stdout, /OpenPlanr test host/);
+      }
+    });
+  `,
+  );
+  const runner = new URL('../../scripts/run-test-group.mjs', import.meta.url);
+  const result = spawnSync(process.execPath, [fileURLToPath(runner), fixture], {
+    encoding: 'utf8',
+    timeout: 10_000,
+    killSignal: 'SIGKILL',
+    env: { ...process.env, PATH: [bin, process.env.PATH].join(delimiter) },
+  });
+  assert.equal(result.status, 0, result.stderr || result.stdout);
+  assert.throws(() => readFileSync(marker), { code: 'ENOENT' });
+});
 
 const registry = JSON.parse(
   readFileSync(new URL('../../registry/adapters.json', import.meta.url), 'utf8'),

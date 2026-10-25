@@ -14,6 +14,7 @@ test('Artifact never imports design, pipeline, CLI, or conformance code', () => 
       sourceDirectories: ['lib', 'scripts'],
       allowedBare: [
         /^node:/u,
+        /^@openplanr\/canvas(?:\/|$)/u,
         /^@openplanr\/protocol(?:\/|$)/u,
         /^(?:@resvg\/resvg-js|esbuild|pako|parse5)$/u,
         /^(?:react|react-dom|radix-ui)(?:\/|$)/u,
@@ -103,6 +104,7 @@ test('portable editor bundles without filesystem, Design, hosted identity or Nod
     );
     assert.ok(
       resolve(root, file).startsWith(packageRoot + sep) ||
+        resolve(root, file).startsWith(resolve(packageRoot, '../canvas') + sep) ||
         resolve(root, file).startsWith(resolve(packageRoot, '../protocol') + sep) ||
         browserDependencies.some((directory) => resolve(root, file).startsWith(directory + sep)),
       file,

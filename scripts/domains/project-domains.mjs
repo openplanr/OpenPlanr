@@ -36,6 +36,16 @@ const DOMAIN_PROJECTIONS = Object.freeze({
     }),
   ]),
   design: Object.freeze([
+    Object.freeze({
+      source: 'packages/canvas/src',
+      target: 'lib/canvas',
+      include: (file) =>
+        !/^(?:react|testing|tests)\//u.test(file) &&
+        (file.endsWith('.mjs') ||
+          file.endsWith('.d.mts') ||
+          file === 'styles.css' ||
+          isTypeScriptSource(file)),
+    }),
     Object.freeze({ source: 'packages/design/lib/design', target: 'lib/design' }),
     Object.freeze({ source: 'packages/design/lib/design-engine', target: 'lib/design-engine' }),
     Object.freeze({ source: 'packages/design/templates/studio', target: 'templates/studio' }),
@@ -51,6 +61,7 @@ const legacyOwnership = JSON.parse(
 const PROTOCOL_TARGETS = Object.freeze({
   'large-object-contracts': 'lib/protocol/large-object-contracts.mjs',
   'sharing-security-contracts': 'lib/protocol/sharing-security-contracts.mjs',
+  'shape-library-contracts': 'lib/protocol/shape-library-contracts.mjs',
   'studio-presentation-contracts': 'lib/protocol/studio-presentation-contracts.mjs',
   errors: 'lib/protocol/errors.mjs',
   names: 'lib/protocol/names.mjs',
@@ -177,6 +188,13 @@ function projectedSpecifier(specifier, targetRelativeFile) {
     const subpath = specifier.slice('@openplanr/artifact/'.length);
     return posixRelative(targetDirectory, `lib/artifact/${subpath}`);
   }
+  if (specifier === '@openplanr/canvas') {
+    return posixRelative(targetDirectory, 'lib/canvas/index.mjs');
+  }
+  if (specifier.startsWith('@openplanr/canvas/')) {
+    const subpath = specifier.slice('@openplanr/canvas/'.length);
+    return posixRelative(targetDirectory, `lib/canvas/${subpath}`);
+  }
   throw new Error(`No pipeline projection for workspace import ${specifier}`);
 }
 
@@ -184,7 +202,7 @@ function projectBytes(bytes, targetRelativeFile) {
   if (!/\.(?:[cm]?[jt]s|mts)$/u.test(targetRelativeFile)) return bytes;
   const source = bytes.toString('utf8');
   const projected = source.replace(
-    /(['"])(@openplanr\/(?:protocol|artifact)(?:\/[^'"\s]+)?)\1/gu,
+    /(['"])(@openplanr\/(?:protocol|artifact|canvas)(?:\/[^'"\s]+)?)\1/gu,
     (_match, quote, specifier) =>
       `${quote}${projectedSpecifier(specifier, targetRelativeFile)}${quote}`,
   );
@@ -283,6 +301,7 @@ function collectEntries(domains, targetRoot) {
       if (!existsSync(sourceRoot))
         throw new Error(`Missing canonical source: ${projection.source}`);
       for (const child of walkFiles(sourceRoot)) {
+        if (projection.include && !projection.include(child.split(sep).join('/'))) continue;
         if (isTypeScriptSource(child)) {
           const compiled = join(projection.source, child.replace(/\.(?:mts|tsx)$/u, '.mjs'));
           if (!existsSync(resolve(workspaceRoot, compiled)))

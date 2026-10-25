@@ -1,3 +1,4 @@
+import { assertVersionedDiagramReviewBundle } from './studio-presentation-contracts.mjs';
 // @ts-check
 
 import { DESIGN_HANDOFF_CONTRACT_FILES } from './design-handoff-contracts.mjs';
@@ -61,6 +62,20 @@ export const PROTOCOL_V115_CONTRACTS = Object.freeze(
  * @type {typeof import('./browser-contracts.d.mts').validateDiagramReviewArtifact}
  */
 export function validateDiagramReviewArtifact(kind, value, { protocolVersion = '1.15.0' } = {}) {
+  if (kind === 'diagram-review-bundle' && ['1.17.0', '1.21.0'].includes(protocolVersion)) {
+    try {
+      assertVersionedDiagramReviewBundle(value);
+      return [];
+    } catch (error) {
+      return [
+        {
+          path: '$',
+          rule: 'diagram-review-contract',
+          detail: error instanceof Error ? error.message : 'Invalid diagram review data.',
+        },
+      ];
+    }
+  }
   if (protocolVersion !== '1.15.0' || !Object.hasOwn(DIAGRAM_REVIEW_SCHEMAS, kind))
     throw new RangeError(`Unknown diagram review Protocol contract: ${kind}@${protocolVersion}`);
   try {
@@ -112,6 +127,17 @@ export function validateEnterpriseJourneyArtifact(kind, value) {
   }
 }
 
+export const PROTOCOL_V121_CONTRACTS = Object.freeze(
+  Object.fromEntries(
+    [
+      'diagram-authoring-bundle',
+      'diagram-edit-transaction',
+      'diagram-review-bundle',
+      'diagram-shape-definition',
+    ].map((kind) => [kind, `${kind}.schema.json`]),
+  ),
+);
+
 const PROTOCOL_CONTRACTS_BY_VERSION = Object.freeze({
   '1.5.0': PROTOCOL_V15_CONTRACTS,
   '1.6.0': PROTOCOL_V16_CONTRACTS,
@@ -123,6 +149,7 @@ const PROTOCOL_CONTRACTS_BY_VERSION = Object.freeze({
   '1.16.0': PROTOCOL_V116_CONTRACTS,
   '1.17.0': PROTOCOL_V117_CONTRACTS,
   '1.19.0': PROTOCOL_V119_CONTRACTS,
+  '1.21.0': PROTOCOL_V121_CONTRACTS,
 });
 
 /**

@@ -1,8 +1,8 @@
 import { existsSync, lstatSync, readFileSync, realpathSync, writeFileSync } from 'node:fs';
 import { basename, dirname, join, resolve } from 'node:path';
 import { canonicalizeJson } from '@openplanr/protocol/canonical-json';
-import { diagramReviewBundleDigest } from '@openplanr/protocol/diagram-review-contracts';
 import { PLANNING_FOLDER } from '@openplanr/protocol/names';
+import { versionedDiagramReviewBundleDigest } from '@openplanr/protocol/studio-presentation-contracts';
 import {
   ensurePrivateDirectory,
   ownerCustodyLocation,
@@ -39,7 +39,7 @@ async function currentDiagram(file) {
     root: sourceRoot(file),
     id: bundle.diagramId,
     title: bundle.title,
-    revision: diagramReviewBundleDigest(bundle),
+    revision: versionedDiagramReviewBundleDigest(bundle),
     sourceDigest: bundle.source.digest,
   };
 }

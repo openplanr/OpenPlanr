@@ -97,6 +97,7 @@ export function bundleDesignRevision(current, state = {}) {
         'screenOrder',
         'frames',
         'flows',
+        'layout',
       ]),
       screens: document.screens.map((screen) =>
         pick(screen, ['id', 'title', 'description', 'anchors']),
@@ -112,7 +113,7 @@ export function bundleDesignRevision(current, state = {}) {
     },
     envelope: structuredClone(current.envelope),
     entries: structuredClone(current.entries),
-    state: pick(state, ['positions']),
+    state: {},
     revision: current.revision,
     verification: pick(current.verification ?? {}, ['status']),
     reviewContext: context,

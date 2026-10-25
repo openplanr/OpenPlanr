@@ -11,6 +11,8 @@ package.
   host-native question fallback, interruption, and recovery.
 - `skills/migrations/` contains the frozen byte comparisons consumed by the
   markdown compiler's compatibility tests.
+- `roles/` supplies manual conditional-delegation cases and acceptance criteria;
+  its README distinguishes those inputs from executed model evaluations.
 - `spikes/diagram-renderer/` retains a runnable renderer benchmark and its recorded
   decision. Its README explains the manual entry point and measured limits.
 

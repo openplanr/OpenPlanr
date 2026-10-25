@@ -9,7 +9,9 @@ import type {
   DiagramRoute,
   DiagramSemanticEntry,
 } from '@openplanr/protocol/diagram-authoring-contracts';
+import type { ShapeDefinition } from '@openplanr/protocol/shape-library-contracts';
 import type { VersionedDiagramAuthoringBundle as DiagramAuthoringBundle } from '@openplanr/protocol/studio-presentation-contracts';
+import type { CompiledDiagramShape } from './shape-geometry.mjs';
 
 export interface DiagramSceneDiagnostic extends DiagramAuthoringValidationError {
   elementIds: string[];
@@ -29,6 +31,7 @@ export interface DiagramSceneText {
   baseline: number;
 }
 export interface AuthoredDiagramSceneElement {
+  compiledShape?: CompiledDiagramShape;
   id: string;
   collection: DiagramSemanticEntry['collection'];
   semantic: DiagramSemanticEntry['value'];
@@ -93,6 +96,7 @@ export declare function resolveDiagramSceneElement(
   order: number,
   emphasisLevel?: AuthoredDiagramSceneElement['emphasis'],
   diagnostics?: DiagramSceneDiagnostic[],
+  shapeLibrary?: ShapeDefinition[],
 ): AuthoredDiagramSceneElement;
 export declare function resolveDiagramScene(
   bundle: DiagramAuthoringBundle,

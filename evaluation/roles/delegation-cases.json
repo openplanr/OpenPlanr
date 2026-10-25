@@ -1,0 +1,49 @@
+{
+  "cases": [
+    {
+      "id": "small-backend-fix",
+      "request": "Fix normalizeLabel so whitespace-only input returns an empty string instead of a hyphen. Keep its existing casing and punctuation behavior. Add a regression test.",
+      "files": {
+        "src/labels.mjs": "export function normalizeLabel(value) { return value.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^$|^-+|-+$/g, '-'); }\n",
+        "test/labels.test.mjs": "import assert from 'node:assert/strict';\nimport { test } from 'node:test';\nimport { normalizeLabel } from '../src/labels.mjs';\ntest('normalizes labels', () => assert.equal(normalizeLabel('Hello World'), 'hello-world'));\n"
+      },
+      "acceptanceCriteria": [
+        "Whitespace-only input returns an empty string.",
+        "The existing Hello World case passes and punctuation behavior remains unchanged.",
+        "The regression test fails against the original implementation."
+      ],
+      "expectedDelegation": "The main session implements and verifies this small coherent change without a worker or separate QA."
+    },
+    {
+      "id": "separable-ui-api-change",
+      "request": "Implement a searchable, paginated item browser. Agree the listItems contract first, then implement the API and browser independently with tests. Keep filters and selection when changing pages; provide keyboard-operable loading, empty, error and success states.",
+      "files": {
+        "src/api.mjs": "export function listItems(items, { query, page, pageSize }) { throw new Error('Not implemented'); }\n",
+        "src/browser.mjs": "export function mountItems(root, loadItems) { throw new Error('Not implemented'); }\n",
+        "README.md": "listItems accepts an item array and { query, page, pageSize }; it returns { items, total, page, pageSize }. Pages are one-based. Search matches item labels case-insensitively. Items have string id and label fields. mountItems receives a DOM root and an async loader with that same request/response contract.\n"
+      },
+      "acceptanceCriteria": [
+        "API search and pagination agree with the documented contract, including empty results.",
+        "The browser preserves query and selection across pages and handles stale responses.",
+        "Browser interaction and keyboard checks exercise loading, empty, error and success states.",
+        "The combined implementation is reviewed and verified after integration."
+      ],
+      "expectedDelegation": "After agreeing the interface, backend owns src/api.mjs and its tests, frontend owns src/browser.mjs and its browser tests, and QA reviews the substantial combined implementation. A host without native roles performs the same work sequentially and reports that limitation."
+    },
+    {
+      "id": "material-risk-review",
+      "request": "Review this change to project document authorization. Do not repair it. Check whether users can read documents from projects they do not belong to, preserve the owner capability, and provide evidence for any finding.",
+      "files": {
+        "src/access.mjs": "export function canReadDocument(actor, document) { return actor.id === document.ownerId || actor.projectIds.length > 0; }\n",
+        "test/access.test.mjs": "import assert from 'node:assert/strict';\nimport { test } from 'node:test';\nimport { canReadDocument } from '../src/access.mjs';\ntest('owner can read', () => assert.equal(canReadDocument({ id: 'owner', projectIds: [] }, { ownerId: 'owner', projectId: 'private' }), true));\n"
+      },
+      "acceptanceCriteria": [
+        "A separate reviewer identifies that membership in an unrelated project grants access.",
+        "The finding names the reachable input, impact and missing project-membership comparison.",
+        "The owner case remains permitted and a proposed regression covers unrelated membership.",
+        "Review does not modify source or planning files; unexecuted checks are reported honestly."
+      ],
+      "expectedDelegation": "Use QA because authorization is material risk. Do not treat the passing owner-only test as authorization coverage."
+    }
+  ]
+}

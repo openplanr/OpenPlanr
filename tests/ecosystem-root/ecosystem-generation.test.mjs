@@ -182,6 +182,20 @@ test('the capability map carries each agent description verbatim', () => {
   }
 });
 
+test('declared native role mappings resolve to packaged runtime identities', () => {
+  const plugin = json('dist/plugins/claude/openplanr/.claude-plugin/plugin.json');
+  for (const role of json('packages/protocol/registries/roles.json').roles) {
+    assert.equal(role.adapterMappings.length, 1, role.roleId);
+    for (const mapping of role.adapterMappings) {
+      assert.equal(mapping.host, 'claude-code');
+      const agent = read(mapping.generatedPath).toString('utf8');
+      const name = /^name: (.+)$/mu.exec(agent)?.[1];
+      assert.equal(name, role.roleId);
+      assert.equal(mapping.nativeId, `${plugin.name}:${name}`);
+    }
+  }
+});
+
 test('OpenAI plugin exposes readable content for every canonical skill and no aliases', () => {
   const plugin = json('dist/plugins/openai/openplanr/.codex-plugin/plugin.json');
   const content = json('adapters/manifests/codex-plugin-content.json');

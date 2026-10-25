@@ -1,5 +1,14 @@
 import assert from 'node:assert/strict';
-import { readdirSync, readFileSync } from 'node:fs';
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs';
+import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
@@ -8,7 +17,9 @@ import { GENERATOR_STEPS } from '../../scripts/generate-all.mjs';
 import {
   assertPackedSurfaceCompatibility,
   countProtocolAssets,
+  dependencyViolations,
   readPackedSurfaceBaseline,
+  runtimeSourceViolations,
 } from '../../scripts/verify-packed-workspace.mjs';
 
 const baseline = readPackedSurfaceBaseline();
@@ -95,4 +106,37 @@ test('normal generation never rewrites the reviewed compatibility baseline', () 
     for (const candidate of step.candidates) {
       assert.doesNotMatch(candidate.write.script, /preservation-catalog|packed-surface-baseline/u);
     }
+});
+
+test('packed runtime rejects the private canvas workspace import', (t) => {
+  const root = mkdtempSync(join(tmpdir(), 'openplanr-packed-canvas-'));
+  t.after(() => rmSync(root, { recursive: true, force: true }));
+  mkdirSync(join(root, 'lib'));
+  const source = "import { createCanvas } from '@openplanr/canvas';\n";
+  writeFileSync(join(root, 'lib/editor.mjs'), source);
+  assert.deepEqual(
+    runtimeSourceViolations(root, [{ path: 'lib/editor.mjs', bytes: Buffer.byteLength(source) }]),
+    ['lib/editor.mjs:private-import:@openplanr/canvas'],
+  );
+});
+
+test('packed manifests reject the private canvas workspace dependency', () => {
+  assert.deepEqual(dependencyViolations({ dependencies: { '@openplanr/canvas': '0.0.0' } }), [
+    'dependencies:@openplanr/canvas',
+  ]);
+});
+
+test('projected artifact editor runtime and types resolve the pipeline canvas module', () => {
+  const canvas = new URL('lib/canvas/index.mjs', pipeline);
+  assert.ok(existsSync(canvas));
+  for (const path of [
+    'lib/artifact/ui/diagram-editor-canvas.mjs',
+    'lib/artifact/ui/diagram-editor.d.mts',
+  ]) {
+    const file = new URL(path, pipeline);
+    const source = readFileSync(file, 'utf8');
+    const specifier = /from\s+['"]([^'"]*canvas\/index\.mjs)['"]/u.exec(source)?.[1];
+    assert.ok(specifier?.startsWith('.'), `${path} must use a relative canvas import`);
+    assert.equal(new URL(specifier, file).href, canvas.href, path);
+  }
 });

@@ -2,7 +2,13 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { canonicalizeJson, sha256Hex } from '../../packages/protocol/src/canonical-json.mjs';
 import { assertCompanyDesignBundle } from '../../packages/protocol/src/design-publication-contracts.mjs';
-import { assertDesignReviewBundle } from '../../packages/protocol/src/review-experience-contracts.mjs';
+import {
+  assertDesignReviewBundle,
+  assertReviewExperience,
+  DESIGN_REVIEW_BUNDLE_CURRENT_SCHEMA,
+  DESIGN_REVIEW_BUNDLE_V11_SCHEMA,
+  DESIGN_REVIEW_BUNDLE_V12_SCHEMA,
+} from '../../packages/protocol/src/review-experience-contracts.mjs';
 
 function fixture() {
   const reviewContext = {
@@ -80,6 +86,31 @@ test('company constraints reuse the source-free 1.1 bundle without changing lega
   delete legacy.fingerprints;
   assert.equal(assertDesignReviewBundle(legacy), legacy);
   assert.throws(() => assertCompanyDesignBundle(legacy), /1.1.0/);
+});
+
+test('authored layout selects the current bundle schema while older schemas stay closed', () => {
+  const bundle = fixture();
+  bundle.design.layout = {
+    boards: { 'checkout/desktop/A': { x: 42, y: 84, title: 'Checkout' } },
+    sections: [{ id: 'purchase', x: 10, y: 20, text: 'Purchase' }],
+  };
+  assert.doesNotThrow(() => assertReviewExperience(bundle, DESIGN_REVIEW_BUNDLE_CURRENT_SCHEMA));
+  assert.equal(assertDesignReviewBundle(bundle), bundle);
+  assert.equal(assertCompanyDesignBundle(bundle), bundle);
+  assert.throws(() => assertReviewExperience(bundle, DESIGN_REVIEW_BUNDLE_V11_SCHEMA), /layout/);
+  const shared = structuredClone(bundle);
+  shared.schemaVersion = '1.2.0';
+  shared.envelope.schemaVersion = '1.1.0';
+  shared.envelope.sources = [];
+  assert.equal(assertDesignReviewBundle(shared), shared);
+  assert.throws(() => assertReviewExperience(shared, DESIGN_REVIEW_BUNDLE_V12_SCHEMA), /layout/);
+  for (const invalid of [
+    { boards: { 'checkout/desktop/A': { x: '42', y: 84 } } },
+    { sections: [{ id: 'purchase', x: 0, y: 0, text: 'Purchase', extra: true }] },
+  ]) {
+    bundle.design.layout = invalid;
+    assert.throws(() => assertDesignReviewBundle(bundle), /layout/);
+  }
 });
 
 test('rejects malformed identity, entry, viewport and envelope mappings', () => {

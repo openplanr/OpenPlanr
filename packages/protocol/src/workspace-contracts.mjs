@@ -1,5 +1,5 @@
 // @ts-check
-import { DESIGN_DOCUMENT_SCHEMA } from './design-contracts.mjs';
+import { DESIGN_DOCUMENT_V1_SCHEMA } from './design-contracts.mjs';
 import { validateJson } from './json-schema.mjs';
 
 /** @type {typeof import('./workspace-contracts.d.mts').DESIGN_WORKSPACE_VERSION} */
@@ -98,7 +98,7 @@ export const DESIGN_WORKSPACE_SCHEMA = schema('design-review-workspace', {
 // design-system references are deliberately not part of a published workspace.
 const designProperties =
   /** @type {Record<string, { items: { properties: Record<string, unknown>; required: string[] } }>} */ (
-    structuredClone(DESIGN_DOCUMENT_SCHEMA.properties)
+    structuredClone(DESIGN_DOCUMENT_V1_SCHEMA.properties)
   );
 for (const key of ['kind', 'schemaVersion', 'brief', 'assets', 'designSystem'])
   delete designProperties[key];
@@ -171,7 +171,7 @@ export const DESIGN_REVIEW_BUNDLE_SCHEMA = {
     },
     ['kind', 'schemaVersion', 'design', 'envelope', 'entries', 'revision'],
   ),
-  $defs: structuredClone(DESIGN_DOCUMENT_SCHEMA.$defs),
+  $defs: structuredClone(DESIGN_DOCUMENT_V1_SCHEMA.$defs),
 };
 
 /** @returns {ReturnType<typeof import('./workspace-contracts.d.mts').assertWorkspaceContract>} */

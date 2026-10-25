@@ -43,6 +43,7 @@ export function prepareAuthoredDiagramReviewBundle(source) {
     ...(source.studioPresentation
       ? { studioPresentation: structuredClone(source.studioPresentation) }
       : {}),
+    ...('shapeLibrary' in source ? { shapeLibrary: structuredClone(source.shapeLibrary) } : {}),
     originalSource: null,
     sourceMap: null,
     bundleDigest: source.bundleDigest,
@@ -53,7 +54,8 @@ export function prepareAuthoredDiagramReviewBundle(source) {
   const viewBox = rendered.scene.viewBox;
   const bundle = {
     kind: 'openplanr-diagram-review-bundle',
-    schemaVersion: source.studioPresentation ? '1.1.0' : '1.0.0',
+    schemaVersion:
+      'shapeLibrary' in source ? '1.2.0' : source.studioPresentation ? '1.1.0' : '1.0.0',
     ...(source.studioPresentation
       ? { presentation: structuredClone(source.studioPresentation) }
       : {}),

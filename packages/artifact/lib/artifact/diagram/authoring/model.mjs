@@ -8,7 +8,9 @@ import {
 } from '@openplanr/protocol/diagram-authoring-contracts';
 import {
   createVersionedDiagramAuthoringSnapshot,
+  diagramAuthoringVersionFields,
   sealVersionedDiagramAuthoringSnapshot,
+  supportsDiagramStudioPresentation,
   validateVersionedDiagramAuthoringBundle,
   versionedDiagramAuthoringBundleDigest,
 } from '@openplanr/protocol/studio-presentation-contracts';
@@ -128,13 +130,9 @@ export function validateAuthoringBundle(bundle) {
   let diagnostics = inspectPlainData(bundle);
   if (!diagnostics.length) {
     try {
-      diagnostics =
-        bundle &&
-        typeof bundle === 'object' &&
-        'schemaVersion' in bundle &&
-        bundle.schemaVersion === '1.1.0'
-          ? validateVersionedDiagramAuthoringBundle(bundle)
-          : validateDiagramAuthoringBundle(bundle);
+      diagnostics = supportsDiagramStudioPresentation(bundle)
+        ? validateVersionedDiagramAuthoringBundle(bundle)
+        : validateDiagramAuthoringBundle(bundle);
     } catch {
       diagnostics = [
         diagnostic('$', 'plain-data', 'Bundle could not be inspected as inert JSON data.'),
@@ -248,15 +246,26 @@ export function sealBundle(bundle, previous = null) {
   return result;
 }
 
-/** An explicit presentation edit promotes custody; its inverse may restore a legacy snapshot. */
+/** Explicit metadata changes derive the envelope without discarding other capabilities. */
 export function setStudioPresentation(bundle, presentation) {
-  if (presentation === null) {
-    delete bundle.studioPresentation;
-    bundle.schemaVersion = '1.0.0';
-    bundle.protocolVersion = '1.13.0';
-  } else {
-    bundle.studioPresentation = clone(presentation);
-    bundle.schemaVersion = '1.1.0';
-    bundle.protocolVersion = '1.17.0';
-  }
+  if (presentation === null) delete bundle.studioPresentation;
+  else bundle.studioPresentation = clone(presentation);
+  Object.assign(bundle, diagramAuthoringVersionFields(bundle));
+}
+
+export function setShapeLibrary(bundle, library) {
+  if (library === null) delete bundle.shapeLibrary;
+  else bundle.shapeLibrary = clone(library);
+  Object.assign(bundle, diagramAuthoringVersionFields(bundle));
+}
+
+/** Transactions retain every capability needed by their base or operations. */
+export function transactionVersionFields(bundle, operations = []) {
+  return diagramAuthoringVersionFields({
+    ...bundle,
+    ...(operations.some((op) => op.type === 'set-shape-library') ? { shapeLibrary: [] } : {}),
+    ...(operations.some((op) => op.type === 'set-studio-presentation')
+      ? { studioPresentation: {} }
+      : {}),
+  });
 }

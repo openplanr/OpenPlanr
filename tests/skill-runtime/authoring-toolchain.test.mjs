@@ -292,6 +292,24 @@ test('repository conformance discovers unregistered prompt writers and runtime i
   try {
     assert.doesNotThrow(() => validateToolchainOwners(document, { repositoryRoot }));
 
+    const modularInstaller = `
+      import { atomicWrite } from './storage.mjs';
+      import { codexSkillsRoot } from './paths.mjs';
+      export async function applySetup() {
+        await atomicWrite(codexSkillsRoot(), 'runtime install');
+      }
+    `;
+    writeFileSync(join(repositoryRoot, installerOwner), modularInstaller);
+    writeFileSync(
+      join(packages, 'storage.mjs'),
+      "import { writeFileSync } from 'node:fs';\nexport async function atomicWrite(target, bytes) { writeFileSync(target, bytes); }\n",
+    );
+    writeFileSync(
+      join(packages, 'paths.mjs'),
+      "export const codexSkillsRoot = () => join(home, '.codex', 'skills');\n",
+    );
+    assert.doesNotThrow(() => validateToolchainOwners(document, { repositoryRoot }));
+
     const competingWriter = join(scripts, 'competing-writer.mjs');
     writeFileSync(
       competingWriter,
@@ -317,6 +335,13 @@ test('repository conformance discovers unregistered prompt writers and runtime i
       writeFileSync(codexSkillsRoot(), 'second runtime installer');
     `,
     );
+    assert.throws(
+      () => validateToolchainOwners(document, { repositoryRoot }),
+      (error) =>
+        error.code === 'E_SKILL_TOOLCHAIN_IMPLEMENTATION_CONFLICT' &&
+        error.details.undeclared.includes('packages/competing-installer.ts'),
+    );
+    writeFileSync(join(packages, 'competing-installer.ts'), modularInstaller);
     assert.throws(
       () => validateToolchainOwners(document, { repositoryRoot }),
       (error) =>

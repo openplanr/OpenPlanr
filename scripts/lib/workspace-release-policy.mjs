@@ -27,8 +27,10 @@ const internalDependencies = Object.freeze({
   'packages/protocol': {},
   'packages/canvas': {},
   'packages/operate': { dependencies: ['@openplanr/protocol'] },
-  'packages/artifact': { dependencies: ['@openplanr/protocol'] },
-  'packages/design': { dependencies: ['@openplanr/artifact', '@openplanr/protocol'] },
+  'packages/artifact': { dependencies: ['@openplanr/canvas', '@openplanr/protocol'] },
+  'packages/design': {
+    dependencies: ['@openplanr/artifact', '@openplanr/canvas', '@openplanr/protocol'],
+  },
   'packages/skill-runtime': { dependencies: ['@openplanr/protocol'] },
   'packages/integrations': {},
   'apps/dashboard': { dependencies: ['@openplanr/protocol'] },

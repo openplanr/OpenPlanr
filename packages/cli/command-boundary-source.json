@@ -29,6 +29,7 @@
     "search": "deterministic-preserved",
     "server": "deterministic-preserved",
     "setup": "deterministic-preserved",
+    "ship": "deterministic-preserved",
     "spec": "deterministic-preserved",
     "sprint": "deterministic-preserved",
     "status": "deterministic-preserved",

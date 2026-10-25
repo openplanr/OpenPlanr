@@ -358,4 +358,27 @@ describe('Claude plugin integration', () => {
       /^claude plugin marketplace list --json is not valid JSON: /u,
     );
   });
+
+  it('bounds a `claude --version` that never returns and reports Claude Code present', () => {
+    const root = mkdtempSync(join(tmpdir(), 'openplanr-claude-hang-'));
+    roots.push(root);
+    const stub = join(root, 'claude.mjs');
+    writeFileSync(stub, 'setInterval(() => {}, 1_000);\n');
+    const previous = process.env.OPENPLANR_CLAUDE_BIN;
+    process.env.OPENPLANR_CLAUDE_BIN = stub;
+    try {
+      const started = Date.now();
+      const inspection = inspectBundledClaudePluginIntegration(root);
+      expect(Date.now() - started).toBeLessThan(9_000);
+      expect(inspection.available).toBe(true);
+      expect(inspection.ready).toBe(false);
+      expect(inspection.operations).toEqual([]);
+      expect(inspection.error).toBe(
+        'claude --version did not finish within 5000ms; Claude Code is present but its version is unknown. Plugin state was not read.',
+      );
+    } finally {
+      if (previous === undefined) delete process.env.OPENPLANR_CLAUDE_BIN;
+      else process.env.OPENPLANR_CLAUDE_BIN = previous;
+    }
+  }, 20_000);
 });

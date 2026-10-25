@@ -1,3 +1,4 @@
+import type { ShapeReference } from './shape-library-contracts.mjs';
 export type DiagramAuthoringDigest = `sha256:${string}`;
 export type DiagramAuthoringProfile = 'flowchart' | 'process' | 'swimlane' | 'architecture';
 export type DiagramAuthoringNodeKind =
@@ -110,6 +111,7 @@ export interface DiagramRoute {
   points: Array<{ x: number; y: number }>;
 }
 export interface DiagramAppearance {
+  shapeRef?: ShapeReference;
   shape:
     | 'rectangle'
     | 'rounded-rectangle'

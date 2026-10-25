@@ -647,7 +647,7 @@ function taskRecords(root) {
       const artifact = artifactInfo(path);
       const task = normalizePlanningTask(artifact.frontmatter);
       const preserve = sectionList(artifact.body, 'Preserve');
-      const structuredPreserveDeclared = Object.prototype.hasOwnProperty.call(task, 'preserve');
+      const structuredPreserveDeclared = Object.hasOwn(task, 'preserve');
       const structuredPreserve = structuredPreserveDeclared ? task.preserve : undefined;
       return {
         id: task.id ?? basename(path, '.md'),
@@ -655,6 +655,7 @@ function taskRecords(root) {
         storyId: task.storyId,
         status: task.status ?? 'pending',
         type: task.type ?? 'Tech',
+        agent: task.agent,
         reviewRisks: task.reviewRisks,
         browserSurfaces: task.browserSurfaces,
         acceptanceRefs: task.acceptanceRefs,
@@ -980,6 +981,8 @@ export function prepareShipContext({ projectRoot = process.cwd(), feature, taskI
         selector,
         storyId,
         status,
+        type,
+        agent,
         dependsOn,
         dependencySelectors,
         reviewRisks,
@@ -993,6 +996,8 @@ export function prepareShipContext({ projectRoot = process.cwd(), feature, taskI
         selector,
         storyId,
         sourceStatus: status,
+        type,
+        agent,
         dependsOn,
         dependencySelectors,
         reviewRisks,

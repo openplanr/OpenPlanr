@@ -461,4 +461,34 @@ enabled = true
       rmSync(state.fixture, { recursive: true, force: true });
     }
   });
+
+  it.skipIf(process.platform === 'win32')(
+    'bounds a `codex --version` that never returns and reports Codex present',
+    () => {
+      const hostPackageRoot = hostPackageFixture();
+      const bin = mkdtempSync(path.join(tmpdir(), 'openplanr-codex-hang-'));
+      writeFileSync(path.join(bin, 'codex'), '#!/bin/sh\nexec sleep 600\n', { mode: 0o755 });
+      const previousPath = process.env.PATH;
+      process.env.PATH = [bin, '/bin'].join(path.delimiter);
+      try {
+        const started = Date.now();
+        const inspection = inspectCodexPluginIntegration(
+          hostPackageRoot,
+          'unified-plugin',
+          undefined,
+        );
+        expect(Date.now() - started).toBeLessThan(9_000);
+        expect(inspection.available).toBe(true);
+        expect(inspection.ready).toBe(false);
+        expect(inspection.error).toBe(
+          'codex --version did not finish within 5000ms; Codex is present but its version is unknown. Plugin state was not read.',
+        );
+      } finally {
+        process.env.PATH = previousPath;
+        rmSync(bin, { recursive: true, force: true });
+        rmSync(hostPackageRoot, { recursive: true, force: true });
+      }
+    },
+    20_000,
+  );
 });

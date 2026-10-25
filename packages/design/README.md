@@ -26,7 +26,7 @@ node lib/design/utility.mjs export /path/to/design-document.json --view prototyp
 
 The public CLI accepts the same document with `openplanr artifact open`. All three
 views render the same authored local HTML/CSS/JavaScript. Protocol owns the
-additive `v1.9.0/design-document.schema.json` contract; this package owns source
+versioned design document contracts; `DESIGN_DOCUMENT_SCHEMA` names v1.20.0. This package owns source
 validation, rendering and the studio. Shared review serving, iframe isolation,
 pin persistence and capture remain in the artifact package.
 
@@ -164,8 +164,14 @@ selected screen. Fit, 100% and focus inspect source typography without rewriting
 it. Non-secret screen/frame/direction/view hashes survive refresh and browser Back.
 
 Pins and reviewer metadata use the canonical review ledger; direction preference
-and arrangement use `.design/studio-state.json`. Saves bind to the current revision
-and state version, and stale concurrent writes return a conflict. Downloaded JSON
+uses `.design/studio-state.json`. Board positions live in `design-document.json`
+and support undo and redo. On open, legacy server positions, then browser positions,
+fill missing exact board keys in one layout revision; this migration is not undoable
+in the session. Portable studios apply legacy positions for the session only.
+Layout saves preserve indentation and the presence of a trailing newline. Conflicting
+layout-only revisions rebase pending moves; a new authored render requires reloading.
+Other save errors retain pending moves with a Retry action. Feedback saves bind to
+the current revision and state version, and stale concurrent writes return a conflict. Downloaded JSON
 feedback requires an explicit revision-bound import. Imports retain comments,
 replies and original mappings, but never manufacture owner decisions. Historical
 project `.feedback/notes.json` files remain preserved and are not silently adopted.

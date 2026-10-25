@@ -114,7 +114,7 @@ until implementation, package compatibility and final CI/re-review pass.
 Candidate tarballs using current versions are local test evidence, not registry
 releases. Private assets must be generated from exact packed public candidates,
 with digests retained, then rebuilt from the actual released pins at adoption.
-The public build job publishes a `studio-public-candidate` CI artifact containing
+The public static check job publishes a `studio-public-candidate` CI artifact containing
 Protocol/pipeline tarballs and a commit-bound SHA-256 receipt. The linked private
 checks adopt only explicitly selected, successfully built candidate archives after
 verifying their identities and bytes. Release dependency pins remain unchanged
