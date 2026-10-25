@@ -3,6 +3,11 @@ import { existsSync, readFileSync, realpathSync } from 'node:fs';
 import path from 'node:path';
 import { z } from 'zod';
 import { parseExternalJson } from '../utils/external-json.js';
+import {
+  hostRunnerBounds,
+  isProbeTimeout,
+  probeTimeoutMessage,
+} from './runtime-manager/host-version-probe.js';
 
 export const OPENPLANR_CLAUDE_PLUGIN = 'planr';
 
@@ -121,6 +126,7 @@ function defaultRunner(args: string[]): ClaudeCommandResult {
     {
       encoding: 'utf8',
       windowsHide: true,
+      ...hostRunnerBounds(args),
     },
   );
   return {
@@ -309,9 +315,10 @@ export function inspectBundledClaudePluginIntegration(
   runner: ClaudeCommandRunner = defaultRunner,
 ): ClaudePluginInspection {
   const versionCheck = runner(['--version']);
+  const timedOut = isProbeTimeout(versionCheck.error);
   if (versionCheck.error || versionCheck.status !== 0) {
     return {
-      available: false,
+      available: timedOut,
       marketplaceConfigured: false,
       ready: false,
       operations: [],
@@ -320,7 +327,9 @@ export function inspectBundledClaudePluginIntegration(
       duplicatePluginIds: [],
       duplicatePluginPaths: [],
       externalPlugins: [],
-      error: versionCheck.error?.message || versionCheck.stderr.trim() || 'Claude Code unavailable',
+      error: timedOut
+        ? probeTimeoutMessage('claude', 'Claude Code')
+        : versionCheck.error?.message || versionCheck.stderr.trim() || 'Claude Code unavailable',
     };
   }
   try {
