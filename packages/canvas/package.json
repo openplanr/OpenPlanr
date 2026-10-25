@@ -33,6 +33,7 @@
   "scripts": {
     "build": "node ../../scripts/typescript/compile-sources.mjs",
     "test": "vitest run",
+    "test:packed": "npm run build && vitest run --config vitest.packed.config.ts",
     "test:browser": "playwright test --project=chromium",
     "test:browser:nightly": "playwright test --project=firefox",
     "bench:trace": "playwright test --project=chromium tests/browser/bench-trace.spec.ts",
