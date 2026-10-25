@@ -22,6 +22,8 @@ import {
   PriorityChip,
   SegmentedControl,
   Select,
+  SelectionBar,
+  type SelectionBarItem,
   SkeletonTable,
   StatePanel,
   type StatePanelState,
@@ -235,6 +237,7 @@ export function BrandFixtureGallery({ state, clock, graph, sources }: BrandFixtu
   const [inspector, setInspector] = useState(false);
   const [selected, setSelected] = useState<string | null>(null);
   const [announcement, setAnnouncement] = useState('');
+  const [selectionCount, setSelectionCount] = useState(1);
   const disabled = state === 'disabled';
   const reason = disabled ? 'Unavailable in this fixture state.' : undefined;
   const copy = async () => {
@@ -306,7 +309,8 @@ export function BrandFixtureGallery({ state, clock, graph, sources }: BrandFixtu
       style={{
         ...stack,
         width: 1440,
-        padding: '64px 80px',
+        maxWidth: '100%',
+        padding: '64px clamp(16px, 5.556vw, 80px)',
         gap: 44,
         boxSizing: 'border-box',
         color: 'var(--op-text)',
@@ -675,6 +679,67 @@ export function BrandFixtureGallery({ state, clock, graph, sources }: BrandFixtu
               />
             </Inspector>
           </Recipe>
+          <Recipe name="shared-patterns">
+            <div data-redesign-fixture style={stack}>
+              <Card title="Shared card heading" meta="3" actions={<Button>See all</Button>}>
+                <div data-redesign-tags style={row}>
+                  {TYPES.map((type) => (
+                    <ArtifactTag key={type} type={type} variant="id">
+                      {type.toUpperCase()}
+                    </ArtifactTag>
+                  ))}
+                </div>
+              </Card>
+              <div data-redesign-status style={row}>
+                {STATUSES.map((status) => (
+                  <ArtifactStatus key={status} status={status} variant="legend" />
+                ))}
+              </div>
+              <div data-redesign-priority style={row}>
+                {['high', 'medium', 'low', undefined].map((priority) => (
+                  <PriorityChip key={priority ?? 'absent'} priority={priority} variant="text" />
+                ))}
+              </div>
+              <SegmentedControl
+                label="Shared view"
+                options={[
+                  { key: 'list', label: 'List' },
+                  { key: 'board', label: 'Board' },
+                ]}
+                value={segment}
+                onChange={setSegment}
+              />
+              <StatePanel
+                variant="card"
+                state="empty"
+                eyebrow=""
+                title="No matching items"
+                description="Clear the filters to see more items."
+                actions={<Button onClick={() => setFilter('')}>Clear filters</Button>}
+              />
+              <StatePanel
+                variant="card"
+                state="error"
+                eyebrow=""
+                title="Could not read planning files"
+                description="Run the command to inspect the project."
+                detail="openplanr doctor"
+                actions={<CommandHint command="openplanr doctor" onCopy={copy} />}
+              />
+              <StatePanel
+                variant="card"
+                state="booting"
+                eyebrow=""
+                title="Reading items"
+                description="Reading planning files."
+                actions={<Button loading>Clear filters</Button>}
+              />
+              <div style={row}>
+                <Button onClick={() => setSelectionCount(1)}>Select one</Button>
+                <Button onClick={() => setSelectionCount(3)}>Select three</Button>
+              </div>
+            </div>
+          </Recipe>
           <h2>Opaque tag and status contrast</h2>
           {SURFACES.map((surface) => (
             <div
@@ -714,6 +779,30 @@ export function BrandFixtureGallery({ state, clock, graph, sources }: BrandFixtu
           ))}
         </div>
       </section>
+      <SelectionBar
+        disabled={disabled}
+        items={examples.slice(0, selectionCount).map(
+          (node): SelectionBarItem => ({
+            id: node.id,
+            title: node.title,
+            type:
+              node.type === 'task'
+                ? 't'
+                : node.type === 'story'
+                  ? 'us'
+                  : node.type === 'spec'
+                    ? 'spec'
+                    : 'bl',
+            command: `openplanr status ${node.id} --md`,
+          }),
+        )}
+        onClear={() => setSelectionCount(0)}
+        onOpen={() => {
+          setSelected(first.id);
+          setInspector(true);
+        }}
+        onCopy={state === 'error' || state === 'loading' ? copy : undefined}
+      />
       <span role="status" className="pc-visually-hidden">
         {announcement}
       </span>

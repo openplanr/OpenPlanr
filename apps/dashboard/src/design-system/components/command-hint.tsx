@@ -1,8 +1,25 @@
-import { useEffect, useId, useRef, useState } from 'react';
+import { useId } from 'react';
 import { createPortal } from 'react-dom';
 import { PcIcon } from './console-icon.js';
 import { Toast } from './toast.js';
 import { Tooltip } from './tooltip.js';
+import { useCopyFeedback } from './use-copy-feedback.js';
+
+export function CopyLabels({ idle, current }: { idle: string; current: string }) {
+  return (
+    <span className="pc-copy-label">
+      {[idle, 'Copying', 'Copied', 'Copy failed'].map((text) => (
+        <span
+          key={text}
+          data-active={text === current}
+          style={{ visibility: text === current ? 'visible' : 'hidden' }}
+        >
+          {text}
+        </span>
+      ))}
+    </span>
+  );
+}
 
 export type CommandHintProps = Readonly<{
   command: string;
@@ -27,40 +44,12 @@ export function CommandHint({
   shortcutsEnabled = true,
   onCopy,
 }: CommandHintProps) {
-  const [state, setState] = useState<'idle' | 'pending' | 'copied' | 'blocked'>('idle');
-  const currentCommand = useRef(command);
-  const mounted = useRef(true);
-  const inFlight = useRef(false);
+  const feedback = useCopyFeedback(command, disabled, onCopy);
+  const { state, copy } = feedback;
+  const currentLabel = feedback.message || (state === 'pending' ? 'Copying' : 'Copy command');
+  const rowLabel = feedback.message || `Copy command for ${artifactId}`;
   const reasonId = useId();
   const unavailable = disabled || !command.trim() || state === 'pending';
-  useEffect(() => {
-    mounted.current = true;
-    return () => {
-      mounted.current = false;
-    };
-  }, []);
-  useEffect(() => {
-    currentCommand.current = command;
-    // Keep the physical clipboard lock when selection changes during a write.
-    setState(inFlight.current ? 'pending' : 'idle');
-  }, [command]);
-  const copy = async () => {
-    if (unavailable || inFlight.current) return;
-    inFlight.current = true;
-    setState('pending');
-    try {
-      if (onCopy) await onCopy(command);
-      else {
-        if (!navigator.clipboard?.writeText) throw new Error('Clipboard unavailable');
-        await navigator.clipboard.writeText(command);
-      }
-      if (mounted.current) setState(currentCommand.current === command ? 'copied' : 'idle');
-    } catch {
-      if (mounted.current) setState(currentCommand.current === command ? 'blocked' : 'idle');
-    } finally {
-      inFlight.current = false;
-    }
-  };
   const reason = disabledReason ?? (!command.trim() ? 'No command available.' : undefined);
   return (
     <div className="pc-command-hint" data-size={size} data-state={state} data-variant={variant}>
@@ -70,7 +59,7 @@ export function CommandHint({
         <Tooltip content={reason ?? 'Copy command (C)'}>
           <button
             type="button"
-            aria-label={variant === 'row' ? `Copy command for ${artifactId}` : undefined}
+            aria-label={variant === 'row' ? rowLabel : undefined}
             className="pc-command-hint__copy"
             data-state={state}
             disabled={unavailable}
@@ -112,12 +101,13 @@ export function CommandHint({
                 </span>
               </>
             )}
-            <span className="pc-visually-hidden">
-              {state === 'pending' ? 'Copying' : state === 'copied' ? 'Copied' : 'Copy command'}
-            </span>
+            <CopyLabels idle="Copy command" current={currentLabel} />
           </button>
         </Tooltip>
       </div>
+      <span className="pc-visually-hidden" aria-live="polite" aria-atomic="true">
+        {feedback.message}
+      </span>
       {reason ? <p id={reasonId}>{reason}</p> : null}
       {state === 'copied' || state === 'blocked'
         ? createPortal(
@@ -126,9 +116,14 @@ export function CommandHint({
                 key={`${command}-${state}`}
                 title={state === 'copied' ? 'Copied' : 'Copy was blocked'}
                 kind={state === 'blocked' ? 'error' : 'info'}
-                onDismiss={() => setState('idle')}
+                onDismiss={feedback.reset}
               >
-                {state === 'blocked' ? <p>Select the command and copy it manually.</p> : null}
+                {state === 'blocked' ? (
+                  <>
+                    <p>{feedback.error}</p>
+                    <p>Select the command and copy it manually.</p>
+                  </>
+                ) : null}
                 <code>{command}</code>
               </Toast>
             </div>,

@@ -413,7 +413,7 @@ describe('shared Planning artifact detail', () => {
     expect(within(files).getByRole('button', { name: 'Open in editor' }).textContent).toBe('');
     act(() => copyPath.focus());
     await user.keyboard('{Enter}');
-    await screen.findByText('Copied');
+    await screen.findByText('Copied', { selector: '[role="status"] > strong' });
     expect(copy).toHaveBeenCalledExactlyOnceWith(file);
   });
 
@@ -542,7 +542,7 @@ describe('shared Planning artifact detail', () => {
     );
     await screen.findByText('Detail verified against the current planning snapshot.');
     fireEvent.click(screen.getByRole('button', { name: 'Copy link to item' }));
-    await screen.findByText('Copied');
+    await screen.findByText('Copied', { selector: '[role="status"] > strong' });
     expect(copy).toHaveBeenCalledWith(
       `${window.location.href.split('#')[0]}#/detail/SPEC-026%2FT-121`,
     );

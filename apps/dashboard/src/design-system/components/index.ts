@@ -125,6 +125,7 @@ export {
   StatusBadge,
   type StatusBadgeProps,
 } from './planr-console.js';
+export { SelectionBar, type SelectionBarItem, type SelectionBarProps } from './selection-bar.js';
 export { StatePanel, type StatePanelProps, type StatePanelState } from './state-panel.js';
 export { Toast, type ToastKind, type ToastProps } from './toast.js';
 export { Tooltip, type TooltipProps } from './tooltip.js';

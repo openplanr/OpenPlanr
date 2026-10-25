@@ -105,7 +105,9 @@ export async function bundleBrandGalleryFixture() {
           if (state === 'loading' || state === 'error') {
             const copy = document.querySelector('[data-gallery-recipe="command"] .pc-command-hint__copy');
             if (!copy) throw new Error('Gallery command recipe is missing its copy control.');
-            queueMicrotask(() => copy.click());
+            const selectionCopy = document.querySelector('.pc-selection-bar__copy');
+            if (!selectionCopy) throw new Error('Gallery selection recipe is missing its copy control.');
+            queueMicrotask(() => { copy.click(); selectionCopy.click(); });
           }
         }
         window.brandGalleryFixture = { setState: render,
@@ -643,6 +645,7 @@ function assertGalleryGeometry(evidence) {
   assert.equal(evidence.commandReference.paddingRight, '12px');
   assert.equal(evidence.commandReference.fontSize, '13px');
   const expectedRecipes = [
+    'shared-patterns',
     'button-primary',
     'button-secondary',
     'button-ghost',

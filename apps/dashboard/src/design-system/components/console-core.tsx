@@ -222,7 +222,7 @@ export function CardHeader({
 }: CardHeaderProps) {
   const descriptionId = useId();
   return (
-    <header className="pc-card__head">
+    <header className="pc-card__head pc-card__header">
       <div className="pc-card__heading">
         {glyph ? (
           <span className="pc-card__glyph" aria-hidden="true">

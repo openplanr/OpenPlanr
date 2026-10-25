@@ -405,7 +405,7 @@ it('copies exact command bytes with C once, locks pending, and reports confirmed
   expect(writeText).toHaveBeenCalledExactlyOnceWith(command);
   expect(parentKey).not.toHaveBeenCalled();
   expect(button.getAttribute('aria-busy')).toBe('true');
-  expect(screen.queryByText('Copied')).toBeNull();
+  expect(screen.getByText('Copied').style.visibility).toBe('hidden');
   await act(async () => release());
   expect(screen.getByRole('status').textContent).toBe(`Copied${command}`);
 });
@@ -421,7 +421,7 @@ it('keeps denied clipboard commands selectable and offers manual copy without fa
   expect(view.container.querySelector('code.pc-command-hint__command')?.textContent).toBe(
     '/planr:status',
   );
-  expect(screen.queryByText('Copied')).toBeNull();
+  expect(screen.getByText('Copied').style.visibility).toBe('hidden');
 });
 
 it('keeps command feedback outside row geometry for success and clipboard denial', async () => {
@@ -461,7 +461,7 @@ it('handles absent clipboard and ignores old completions after command selection
   fireEvent.click(screen.getByRole('button', { name: 'Copy command' }));
   view.rerender(<CommandHint command="third command" />);
   await act(async () => release());
-  expect(screen.queryByText('Copied')).toBeNull();
+  expect(screen.getByText('Copied').style.visibility).toBe('hidden');
   expect(screen.getByRole('button', { name: 'Copy command' })).toBeTruthy();
 });
 
@@ -660,7 +660,7 @@ it('keeps a pending physical clipboard write locked across command selection cha
   fireEvent.click(button);
   expect(writeText).toHaveBeenCalledExactlyOnceWith('command A');
   await act(async () => release());
-  expect(screen.queryByText('Copied')).toBeNull();
+  expect(screen.getByText('Copied').style.visibility).toBe('hidden');
   expect((button as HTMLButtonElement).disabled).toBe(false);
   fireEvent.click(button);
   expect(writeText.mock.calls.map(([command]) => command)).toEqual(['command A', 'command B']);

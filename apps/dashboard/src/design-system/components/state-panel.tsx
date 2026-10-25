@@ -38,6 +38,7 @@ export type StatePanelProps = Readonly<{
   detail?: string;
   actions?: ReactNode;
   headingId?: string;
+  variant?: 'card';
 }>;
 
 /** Honest empty/degraded state presentation. State and reasons always come from its caller. */
@@ -49,12 +50,36 @@ export function StatePanel({
   detail,
   actions,
   headingId,
+  variant,
 }: StatePanelProps) {
   const Icon = ICONS[state];
   const urgent = state === 'offline' || state === 'incompatible' || state === 'error';
   const generatedHeadingId = useId();
   const resolvedHeadingId = headingId ?? `dashboard-state-panel-${generatedHeadingId}`;
 
+  if (variant === 'card')
+    return (
+      <section
+        className={`pc-state-card pc-state-${state === 'booting' ? 'loading' : state}`}
+        role={urgent ? 'alert' : 'status'}
+        aria-labelledby={resolvedHeadingId}
+        aria-busy={state === 'booting' || undefined}
+      >
+        <h2 id={resolvedHeadingId}>
+          {state === 'booting' ? (
+            <>
+              <span className="pc-visually-hidden">{title}</span>
+              <Skeleton w="45%" h={18} />
+            </>
+          ) : (
+            title
+          )}
+        </h2>
+        {state === 'booting' ? <Skeleton h={22} /> : <p>{description}</p>}
+        {detail ? <code>{detail}</code> : null}
+        {actions ? <div className="pc-state-card__action">{actions}</div> : null}
+      </section>
+    );
   return (
     <section
       className="op-state-panel"

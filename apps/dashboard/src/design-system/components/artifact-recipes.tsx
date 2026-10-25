@@ -7,12 +7,13 @@ export type ArtifactTagProps = Readonly<{
   type: ArtifactType;
   children: ReactNode;
   surface?: ChipSurface;
+  variant?: 'id';
 }>;
 
-export function ArtifactTag({ type, children, surface = 'panel' }: ArtifactTagProps) {
+export function ArtifactTag({ type, children, surface = 'panel', variant }: ArtifactTagProps) {
   return (
     <span
-      className="pc-artifact-tag"
+      className={variant === 'id' ? 'pc-artifact-tag pc-artifact-row__id' : 'pc-artifact-tag'}
       data-type={type}
       data-surface={surface}
       style={chipStyle(`type-${type}`, surface)}
@@ -30,7 +31,7 @@ export function chipStyle(recipe: string, surface: ChipSurface): CSSProperties {
   };
 }
 
-export type PriorityChipProps = Readonly<{ priority?: string }>;
+export type PriorityChipProps = Readonly<{ priority?: string; variant?: 'text' }>;
 
 const PRIORITIES: Readonly<Record<string, { label: string; glyph: string; high?: boolean }>> = {
   P0: { label: 'P0', glyph: '!!', high: true },
@@ -44,7 +45,22 @@ const PRIORITIES: Readonly<Record<string, { label: string; glyph: string; high?:
   none: { label: 'none', glyph: '·' },
 };
 
-export function PriorityChip({ priority = 'none' }: PriorityChipProps) {
+export function PriorityChip({ priority = 'none', variant }: PriorityChipProps) {
+  if (variant === 'text') {
+    if (priority === 'none' || !priority) return null;
+    const level = ['P0', 'P1', 'critical', 'high'].includes(priority)
+      ? 'high'
+      : ['P2', 'medium'].includes(priority)
+        ? 'medium'
+        : ['P3', 'low'].includes(priority)
+          ? 'low'
+          : priority;
+    return (
+      <span className="pc-priority" data-variant="text" data-priority={level}>
+        {level.charAt(0).toUpperCase() + level.slice(1)}
+      </span>
+    );
+  }
   const recipe = Object.hasOwn(PRIORITIES, priority) ? PRIORITIES[priority] : undefined;
   return (
     <span className="pc-priority" data-priority={priority} data-high={recipe?.high || undefined}>
