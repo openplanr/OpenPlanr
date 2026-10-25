@@ -6,6 +6,7 @@ import { join } from 'node:path';
 import { test } from 'node:test';
 import { resolveArtifactHtml } from '@openplanr/artifact/envelope.mjs';
 import { bundleLocalDocument } from '@openplanr/artifact/local-document.mjs';
+import { reviewDigest } from '../lib/design/context.mjs';
 import { prepareDesignDocument } from '../lib/design/document.mjs';
 import * as lint from '../lib/design/lint.mjs';
 import { designFixture } from './design-fixture.mjs';
@@ -95,21 +96,33 @@ test('lowercase tokens retain identical attribute and class values', (t) => {
   assert.match(html, /class="[^"]*\bprop-theme-high-contrast\b[^"]*"/u);
 });
 
-for (const [label, props] of [
-  ['uppercase name', { isDark: { type: 'boolean', default: true } }],
-  ['space in value', { theme: { type: 'enum', options: ['Dark mode'], default: 'Dark mode' } }],
+for (const [label, props, message] of [
+  [
+    'uppercase name',
+    { isDark: { type: 'boolean', default: true } },
+    /value "isDark" does not match/u,
+  ],
+  [
+    'space in value',
+    { theme: { type: 'enum', options: ['Dark mode'], default: 'Dark mode' } },
+    /\$\.screens\[0\]\.props\.theme: matched 0\/2 branches/u,
+  ],
   [
     'case pair',
     { theme: { type: 'boolean', default: false }, Theme: { type: 'boolean', default: true } },
+    /value "Theme" does not match/u,
   ],
 ]) {
   test(`invalid prop token ${label} fails rendering and lint`, (t) => {
     const state = fixture(t);
     state.document.screens[0].props = props;
     state.document.variants[1].props = {};
-    assert.throws(() => state.save(), /props|default/u);
+    assert.throws(() => state.save(), message);
     const report = lint.lintDesign('<body>Workspace</body>', { screen: state.document.screens[0] });
-    assert.ok(report.errors.length > 0, 'token rules must also apply without schema validation');
+    assert.match(
+      report.errors.map(({ message }) => message).join('\n'),
+      /must be a lowercase token/u,
+    );
   });
 }
 
@@ -128,6 +141,53 @@ test('declared prototype-named props use their default when the instance omits t
   }
   assert.ok(prepared.lint.every(({ ok }) => ok));
 });
+
+for (const screenId of ['constructor', 'toString', 'valueOf', 'hasOwnProperty']) {
+  for (const name of ['name', 'length']) {
+    test(`prototype-named screen ${screenId} resolves prop ${name} by own key`, (t) => {
+      const state = fixture(t);
+      const screen = state.document.screens[0];
+      screen.id = screenId;
+      screen.props = { [name]: { type: 'enum', options: ['short', 'long'], default: 'short' } };
+      state.document.screenOrder = [screenId];
+      state.document.variants[0].props = {};
+      state.document.variants[1].props = { [screenId]: { [name]: 'long' } };
+      const prepared = state.save();
+      const { sourceDigests } = bundleLocalDocument({
+        root: state.root,
+        source: screen.source,
+        screenId,
+        screenProps: { [name]: 'short' },
+      });
+      for (const [variantId, value] of [
+        ['A', 'short'],
+        ['B', 'long'],
+      ]) {
+        const html = sourceHtml(prepared, variantId, screenId);
+        assert.ok(html.includes(`data-prop-${name}="${value}"`));
+        assert.ok(html.includes(`prop-${name}-${value}`));
+        for (const frame of state.document.frames) {
+          const fingerprint = prepared.fingerprints.find(
+            (item) => item.variantId === variantId && item.frameId === frame.id,
+          );
+          assert.equal(
+            fingerprint.contentDigest,
+            reviewDigest({
+              files: Object.entries(sourceDigests).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0)),
+              width: frame.width,
+              height: frame.height,
+              props: { [name]: value },
+            }),
+          );
+        }
+      }
+      assert.ok(
+        prepared.lint.every(({ ok }) => ok),
+        JSON.stringify(prepared.lint),
+      );
+    });
+  }
+}
 
 test('direct bundling rejects prop tokens without schema validation', (t) => {
   const state = fixture(t);
@@ -189,38 +249,39 @@ test('props are scoped by screen and apply to a variant source override', (t) =>
   );
 });
 
-for (const [label, value] of [
-  ['unknown prop', { missing: 'light' }],
-  ['inherited prop name', { toString: 'light' }],
-  ['enum outside options', { theme: 'sepia' }],
-  ['boolean with string value', { expanded: 'false' }],
-  ['enum with boolean value', { theme: false }],
+for (const [label, value, message, lintMessage = message] of [
+  ['unknown prop', { missing: 'light' }, /unknown prop 'missing'/u],
+  [
+    'inherited prop name',
+    { toString: 'light' },
+    /value "toString" does not match/u,
+    /unknown prop 'toString'/u,
+  ],
+  ['enum outside options', { theme: 'sepia' }, /"sepia" is not an enum option/u],
+  ['boolean with string value', { expanded: 'false' }, /expected a boolean, received "false"/u],
+  ['enum with boolean value', { theme: false }, /false is not an enum option/u],
 ]) {
   test(`invalid instance ${label} fails validation and lint`, (t) => {
     const state = fixture(t);
     state.document.variants[1].props['screen-1'] = value;
-    assert.throws(() => state.save(), /props|missing|toString|theme|expanded/iu);
+    assert.throws(() => state.save(), message);
     const report = lint.lintDesign('<body><main>Workspace</main></body>', {
       screen: state.document.screens[0],
       variant: state.document.variants[1],
     });
-    assert.ok(report.errors.length > 0, 'invalid instance must produce a lint error');
-    assert.match(
-      report.errors.map(({ message }) => message).join('\n'),
-      /missing|toString|theme|expanded/u,
-    );
+    assert.match(report.errors.map(({ message }) => message).join('\n'), lintMessage);
   });
 }
 
-for (const [label, value] of [
-  ['enum', 'sepia'],
-  ['boolean', 'true'],
+for (const [label, value, message] of [
+  ['enum', 'sepia', /default: 'sepia' is not an enum option/u],
+  ['boolean', 'true', /\$\.screens\[0\]\.props\.expanded: matched 0\/2 branches/u],
 ]) {
   test(`invalid ${label} default cannot be rendered`, (t) => {
     const state = fixture(t);
     const name = label === 'enum' ? 'theme' : 'expanded';
     state.document.screens[0].props[name].default = value;
-    assert.throws(() => state.save(), /default|theme|expanded/iu);
+    assert.throws(() => state.save(), message);
   });
 }
 

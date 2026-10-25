@@ -54,6 +54,7 @@ export function reviewFingerprints({ document, context, screen, variant, frame, 
   const components = context.implementation.components.filter(
     (component) => !component.screenIds?.length || component.screenIds.includes(screen.id),
   );
+  const values = Object.hasOwn(variant.props ?? {}, screen.id) ? variant.props[screen.id] : {};
   return {
     screenId: screen.id,
     variantId: variant.id,
@@ -68,9 +69,7 @@ export function reviewFingerprints({ document, context, screen, variant, frame, 
             props: Object.fromEntries(
               Object.entries(screen.props).map(([name, declaration]) => [
                 name,
-                Object.hasOwn(variant.props?.[screen.id] ?? {}, name)
-                  ? variant.props[screen.id][name]
-                  : declaration.default,
+                Object.hasOwn(values, name) ? values[name] : declaration.default,
               ]),
             ),
           }),

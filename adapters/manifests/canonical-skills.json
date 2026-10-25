@@ -1498,7 +1498,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:41f915b5aafa433ff23011b05bf6777a42b1e629d93b3ad837edc0ac0ecd6689"
+          "digest": "sha256:265390be5971cb170bfa3bbe85073d95d3a03fdcad5ad2d6885863ed92636d7c"
         },
         {
           "path": "scripts/design-encrypted-workspace-client.mjs",
@@ -1666,7 +1666,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:9b78f9d9a1cdf6b41d8a5325e19f13eb1bff014154d7cc33df60147cdcdedac7"
+          "digest": "sha256:f2e1cd55ff19cb6127d02f3b2cd86fdcc5737432b3f59420707b86181c6963f9"
         },
         {
           "path": "scripts/design-shared-artifact-support-protocol-contracts-ea2cd15e.mjs",
@@ -2720,7 +2720,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:41f915b5aafa433ff23011b05bf6777a42b1e629d93b3ad837edc0ac0ecd6689"
+          "digest": "sha256:265390be5971cb170bfa3bbe85073d95d3a03fdcad5ad2d6885863ed92636d7c"
         },
         {
           "path": "scripts/design-encrypted-workspace-client.mjs",
@@ -2888,7 +2888,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:9b78f9d9a1cdf6b41d8a5325e19f13eb1bff014154d7cc33df60147cdcdedac7"
+          "digest": "sha256:f2e1cd55ff19cb6127d02f3b2cd86fdcc5737432b3f59420707b86181c6963f9"
         },
         {
           "path": "scripts/design-shared-artifact-support-protocol-contracts-ea2cd15e.mjs",
@@ -3942,7 +3942,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:41f915b5aafa433ff23011b05bf6777a42b1e629d93b3ad837edc0ac0ecd6689"
+          "digest": "sha256:265390be5971cb170bfa3bbe85073d95d3a03fdcad5ad2d6885863ed92636d7c"
         },
         {
           "path": "scripts/design-encrypted-workspace-client.mjs",
@@ -4110,7 +4110,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:9b78f9d9a1cdf6b41d8a5325e19f13eb1bff014154d7cc33df60147cdcdedac7"
+          "digest": "sha256:f2e1cd55ff19cb6127d02f3b2cd86fdcc5737432b3f59420707b86181c6963f9"
         },
         {
           "path": "scripts/design-shared-artifact-support-protocol-contracts-ea2cd15e.mjs",

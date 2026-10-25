@@ -149,6 +149,7 @@ export function prepareDesignDocument(file, { readSource, passive = false, maxBy
     );
     for (const screenId of document.screenOrder) {
       const screen = document.screens.find((item) => item.id === screenId);
+      const values = Object.hasOwn(variant.props ?? {}, screenId) ? variant.props[screenId] : {};
       const bundled = bundleLocalDocument({
         root,
         source: variant.sources?.[screenId] ?? screen.source,
@@ -161,9 +162,7 @@ export function prepareDesignDocument(file, { readSource, passive = false, maxBy
               screenProps: Object.fromEntries(
                 Object.entries(screen.props).map(([name, declaration]) => [
                   name,
-                  Object.hasOwn(variant.props?.[screenId] ?? {}, name)
-                    ? variant.props[screenId][name]
-                    : declaration.default,
+                  Object.hasOwn(values, name) ? values[name] : declaration.default,
                 ]),
               ),
             }

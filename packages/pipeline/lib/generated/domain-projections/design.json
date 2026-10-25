@@ -325,7 +325,7 @@
     {
       "source": "packages/design/lib/design/context.mjs",
       "target": "lib/design/context.mjs",
-      "sha256": "2a524a55e37747058cfad09b4b5a6bc51255099c4bfaa21ffbe03fdd8fb0eef4",
+      "sha256": "6951e500f408a145d46074f2d393b1b1f3effcc6d2eecc4593c0406f42b95629",
       "mode": "644"
     },
     {
@@ -373,7 +373,7 @@
     {
       "source": "packages/design/lib/design/document.mjs",
       "target": "lib/design/document.mjs",
-      "sha256": "43f1e3a622c16bd95e95ea4d7b1d9c04f68e8e6884071394fc6364ed8e6f33d4",
+      "sha256": "6dfcfb643ef4e4686c4027272f4116ef028c1ff91681e51562ec58b914febb4f",
       "mode": "644"
     },
     {
@@ -493,7 +493,7 @@
     {
       "source": "packages/design/lib/design/lint.mjs",
       "target": "lib/design/lint.mjs",
-      "sha256": "98e8eafee056c4ce1b7a607d331e35068a2e818b49dfa81e3365efeaffb6d678",
+      "sha256": "eb93fc503a8886fd8273812029dc1e0a204c984e686b23b26850a87eb43a233c",
       "mode": "644"
     },
     {

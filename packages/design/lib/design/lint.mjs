@@ -207,13 +207,17 @@ export function lintDesign(html, opts = {}) {
   const { designSystem = null } = opts;
   const errors = [];
   const warnings = [];
-  if (opts.screen)
+  if (opts.screen) {
+    const values = Object.hasOwn(opts.variant?.props ?? {}, opts.screen.id)
+      ? opts.variant.props[opts.screen.id]
+      : {};
     errors.push(
       ...validateDesignProps({
         screens: [opts.screen],
-        variants: [{ props: { [opts.screen.id]: opts.variant?.props?.[opts.screen.id] ?? {} } }],
+        variants: [{ props: { [opts.screen.id]: values } }],
       }).map((message) => ({ rule: 'invalid-instance-prop', level: 'error', message })),
     );
+  }
 
   const decls = [...styleBlockDecls(html), ...inlineStyleDecls(html)];
   for (const d of decls) {
