@@ -1,6 +1,10 @@
 import { createHash } from 'node:crypto';
 import { existsSync, lstatSync, readdirSync, readFileSync } from 'node:fs';
 import path from 'node:path';
+import { getPackageRoot } from '../../utils/constants.js';
+import { RuntimeManagerError } from './errors.js';
+import { type RuntimeId, readRegistry } from './inventory.js';
+import { runtimeRoot } from './paths.js';
 
 type PackageFile = { path: string; digest: string };
 export type RuntimePackage = Readonly<{
@@ -294,4 +298,107 @@ export function inspectThinRule(
   if (!bytes.equals(thinSkillEntry(readFileSync(entry), locator)))
     throw new Error('Thin rule differs from its pinned package entry.');
   return locator;
+}
+
+export interface BundledHostAsset {
+  skillId: string;
+  targetName: string;
+  relativePath: string;
+  content: Buffer;
+}
+
+export function bundledHostRoot(host: 'openai' | 'claude' | 'cursor'): string {
+  const cliRoot = getPackageRoot();
+  const root = path.join(cliRoot, 'lib', 'host-packages', host);
+  if (!existsSync(root) || lstatSync(root).isSymbolicLink() || !lstatSync(root).isDirectory()) {
+    throw new RuntimeManagerError(
+      'E_HOST_PACKAGE_MISSING',
+      `The bundled ${host} OpenPlanr package is missing or unsafe.`,
+      'Reinstall the OpenPlanr utility CLI or run the workspace skill generator.',
+    );
+  }
+  return root;
+}
+
+export function bundledRuntimePackage(runtime: RuntimeId): RuntimePackage {
+  const host = runtime === 'claude-code' ? 'claude' : runtime === 'codex' ? 'openai' : 'cursor';
+  try {
+    return inspectRuntimePackage(
+      path.join(bundledHostRoot(host), 'openplanr'),
+      path.join(runtimeRoot(), 'packages'),
+      host,
+      readRegistry().pluginVersion,
+      false,
+    );
+  } catch (cause) {
+    throw new RuntimeManagerError(
+      'E_RUNTIME_PACKAGE_INVALID',
+      `The exact ${runtime} runtime package could not be verified: ${cause instanceof Error ? cause.message : String(cause)}`,
+      'Reinstall the OpenPlanr CLI or regenerate its host packages.',
+    );
+  }
+}
+
+/** Compares the retained copy of the bundled package with its reviewed bytes. */
+export function retainedRuntimePackageDrift(
+  runtime: RuntimeId,
+  runtimePackage: RuntimePackage,
+): RuntimePackageDrift {
+  try {
+    return retainedPackageDrift(runtimePackage);
+  } catch (cause) {
+    throw new RuntimeManagerError(
+      'E_RUNTIME_PACKAGE_INVALID',
+      `The ${runtime} runtime package ${runtimePackage.version} at ${runtimePackage.root} could not be inspected: ${cause instanceof Error ? cause.message : String(cause)}`,
+      'Remove the symbolic link or other unsupported entry it names, then rerun the command.',
+    );
+  }
+}
+
+export function bundledSkillAssets(
+  runtime: RuntimeId,
+  runtimePackage = bundledRuntimePackage(runtime),
+): BundledHostAsset[] {
+  const assets: BundledHostAsset[] = [];
+  const rootName = runtime === 'cursor' ? 'rules' : 'skills';
+  for (const file of runtimePackage.files) {
+    const segments = file.relativePath.split('/');
+    if (segments[0] !== rootName) continue;
+    if (runtime === 'cursor') {
+      if (segments.length !== 2 || !segments[1].endsWith('.mdc')) continue;
+      const skillId = segments[1].slice(0, -'.mdc'.length);
+      assets.push({
+        skillId,
+        targetName: skillId,
+        relativePath: segments[1],
+        content: thinSkillEntry(file.content, runtimeLocator(runtimePackage, file.relativePath)),
+      });
+      continue;
+    }
+    const [, skillId, ...relative] = segments;
+    const relativePath = relative.join('/');
+    if (relativePath === 'SKILL.md') {
+      const locator = runtimeLocator(runtimePackage, file.relativePath);
+      assets.push({
+        skillId,
+        targetName: skillId,
+        relativePath,
+        content: thinSkillEntry(file.content, locator),
+      });
+      assets.push({
+        skillId,
+        targetName: skillId,
+        relativePath: 'openplanr.install.json',
+        content: Buffer.from(`${JSON.stringify(locator, null, 2)}\n`),
+      });
+    } else if (relativePath === 'openplanr.skill.json' || relativePath === 'agents/openai.yaml') {
+      assets.push({
+        skillId,
+        targetName: skillId,
+        relativePath,
+        content: thinDiscoveryMetadata(relativePath, file.content),
+      });
+    }
+  }
+  return assets;
 }

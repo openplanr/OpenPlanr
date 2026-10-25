@@ -119,9 +119,10 @@ its safe fixes and `npm run format` its formatting.
 
 `npm ci` also installs two hooks; run it in every new checkout or worktree, since
 `core.hooksPath` points at `.husky/_`, which only `npm ci` creates there. The pre-commit hook
-(`.husky/pre-commit`, configured in `.lintstagedrc.mjs`) applies Biome's safe fixes to the
-staged JavaScript, TypeScript, JSON and CSS files and restages them, and runs
-`check:comments` or `check:docs` when a file they cover is staged. The pre-push hook
+(`.husky/pre-commit`, configured in `.lintstagedrc.mjs`) checks staged JavaScript,
+TypeScript, JSON and CSS without rewriting them, and runs `check:comments` or
+`check:docs` when a file they cover is staged. Apply any fixes with `npm run lint:fix`
+before verification, review affected integrity pins, and stage the result. The pre-push hook
 (`scripts/hooks/pre-push.mjs`) runs `check:generated`, `check:boundaries`, `check:docs`,
 `check:comments`, `check:diagrams`, `lint` and `typecheck:declarations`, then `npm test` for
 each changed workspace among Protocol, canvas, Operate, artifact, integrations and the

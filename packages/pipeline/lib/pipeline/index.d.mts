@@ -237,7 +237,7 @@ export interface ResolvedRuntimeAdapter {
   adapter: RuntimeAdapter;
   source: 'explicit' | 'active' | 'project' | 'installed';
   installed: boolean;
-  /** Lock problems reported instead of thrown when `strictRuntimeLock` is false. */
+  /** Runtime discovery warnings and nonblocking lock problems. */
   diagnostics: Array<{ code: string; problem: string; fix?: string }>;
 }
 
@@ -271,7 +271,7 @@ export function detectInstalledRuntimes(
   run?: (
     command: string,
     args: string[],
-    options: { encoding: 'utf8'; windowsHide: true },
+    options: { encoding: 'utf8'; windowsHide: true; timeout: number; killSignal: 'SIGKILL' },
   ) => { error?: Error; status: number | null },
 ): RuntimeAdapterId[];
 export function listRuntimeAdapters(): RuntimeAdapter[];

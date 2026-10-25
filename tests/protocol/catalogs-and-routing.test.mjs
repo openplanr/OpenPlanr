@@ -1,10 +1,11 @@
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 
 import { withDocumentDigest } from '../../packages/protocol/src/canonical-json.mjs';
+import { validateProtocolArtifact } from '../../packages/protocol/src/contracts.mjs';
 import { ProtocolError } from '../../packages/protocol/src/errors.mjs';
 import {
   CANONICAL_REGISTRIES,
@@ -72,6 +73,65 @@ test('alias collision fails with a stable typed diagnostic', () => {
   assert.throws(
     () => validateCanonicalRegistries(values),
     (error) => error instanceof ProtocolError && error.code === 'E_PROTOCOL_DUPLICATE_ID',
+  );
+});
+
+test('roles advertise only packaged Claude agents and real coverage', () => {
+  const registry = CANONICAL_REGISTRIES['roles.json'];
+  assert.equal(registry.documentVersion, '1.1.0');
+  for (const role of registry.roles) {
+    assert.deepEqual(role.adapterMappings, [
+      {
+        host: 'claude-code',
+        nativeId: `planr:${role.roleId}`,
+        generatedPath: `dist/plugins/claude/openplanr/agents/${role.roleId}.md`,
+      },
+    ]);
+    for (const path of role.qaCoverage)
+      assert.ok(existsSync(new URL(`../../${path}`, import.meta.url)), path);
+    assert.equal(
+      role.activation,
+      role.roleId === 'planr-entity-scaffold' ? 'manual' : 'conditional',
+      role.roleId,
+    );
+  }
+  assert.equal(validateCanonicalRegistries(), true);
+});
+
+test('role mapping validation rejects nonexistent host agents and legacy dispatch names', () => {
+  for (const mapping of [
+    {
+      host: 'codex',
+      nativeId: 'planr-backend',
+      generatedPath: 'adapters/codex/agents/planr-backend.md',
+    },
+    {
+      host: 'claude-code',
+      nativeId: 'backend-agent',
+      generatedPath: 'adapters/claude-code/agents/backend-agent.md',
+    },
+  ]) {
+    const values = clone();
+    values['roles.json'].roles[0].adapterMappings = [mapping];
+    values['roles.json'] = redigest(values['roles.json']);
+    assert.throws(
+      () => validateCanonicalRegistries(values),
+      (error) => error instanceof ProtocolError && error.code === 'E_PROTOCOL_REGISTRY_INVALID',
+    );
+  }
+});
+
+test('scoped native agent names do not relax canonical role identifiers', () => {
+  const registry = structuredClone(CANONICAL_REGISTRIES['roles.json']);
+  assert.deepEqual(validateProtocolArtifact('role-registry', registry), []);
+  registry.roles[0].adapterMappings[0].nativeId = 'planr::planr-backend';
+  assert.ok(
+    validateProtocolArtifact('role-registry', registry).some(({ rule }) => rule === 'pattern'),
+  );
+  registry.roles[0].adapterMappings[0].nativeId = 'planr:planr-backend';
+  registry.roles[0].roleId = 'planr:planr-backend';
+  assert.ok(
+    validateProtocolArtifact('role-registry', registry).some(({ rule }) => rule === 'pattern'),
   );
 });
 

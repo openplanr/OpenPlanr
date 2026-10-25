@@ -1305,12 +1305,12 @@
     },
     {
       "skillId": "planr-plan",
-      "skillVersion": "1.2.1",
+      "skillVersion": "1.3.0",
       "description": "Turn a Protocol-compatible specification or product intent into schema-compatible OpenPlanr stories and implementation tasks. Use for planning and decomposition, not implementation.",
       "lifecycle": "active",
       "authorityClass": "planning-write",
       "source": "skills/planr-plan/openplanr.skill.json",
-      "sourceDigest": "sha256:aac15ca181a105628aaa14511b1946ab675b96ad8e7abff462ae25f4c5fb217f",
+      "sourceDigest": "sha256:d5f96a23dddfac761ac2103fd4561d19377a757b078e7ee5e7228a2575a5f6bd",
       "triggerPolicy": {
         "include": [
           "Decompose a specification into user stories and implementation tasks",
@@ -1548,12 +1548,12 @@
     },
     {
       "skillId": "planr-ship",
-      "skillVersion": "1.2.1",
+      "skillVersion": "1.3.0",
       "description": "Implement an OpenPlanr plan, specification, task, or clearly stated request end to end in the current repository. Use when the user asks to build, implement, fix, finish, or ship local work.",
       "lifecycle": "active",
       "authorityClass": "implementation",
       "source": "skills/planr-ship/openplanr.skill.json",
-      "sourceDigest": "sha256:2fe2353469bb1fbb77029334fcc51b94240bb3baf56c69c5829b47908e2d7d33",
+      "sourceDigest": "sha256:fb92ddb223243c1a4a918384f1d5db32e5ba01add49ef8d441d97c34a3a07075",
       "triggerPolicy": {
         "include": [
           "Implement a plan, specification, task, fix, or clearly stated local request",
@@ -1864,5 +1864,5 @@
     }
   ],
   "compatibilityAliases": [],
-  "documentDigest": "sha256:7201c5ca3f0b6820214e18c4f6a5268e30b9b5be897ff092bb95e196230dbf0b"
+  "documentDigest": "sha256:8b5f2037b66aefbaeaf251ae86d7155635d1734262cbb3a99124eefcb985e87e"
 }
