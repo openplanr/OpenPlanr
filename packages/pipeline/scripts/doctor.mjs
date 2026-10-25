@@ -103,12 +103,8 @@ function run(command, argsList, cwd = root) {
     cwd,
     encoding: 'utf8',
     stdio: ['ignore', 'pipe', 'pipe'],
+    ...(argsList[0] === '--version' ? { timeout: 5_000, killSignal: 'SIGKILL' } : {}),
   });
-}
-
-function commandExists(command) {
-  const result = run(command, ['--version']);
-  return result.status === 0;
 }
 
 function parseSemver(version) {
@@ -218,7 +214,16 @@ function handleStaleDaemon(id, label, stateDir, message) {
 }
 
 function readGithubRelease(cwd, tag) {
-  if (!commandExists('gh')) {
+  const probe = run('gh', ['--version']);
+  if (probe.error?.code === 'ETIMEDOUT') {
+    return {
+      available: true,
+      ok: false,
+      problem:
+        'gh --version did not finish within 5000ms; GitHub CLI is present but its version is unknown. The release was not checked.',
+    };
+  }
+  if (probe.status !== 0) {
     return { available: false, ok: false };
   }
 
@@ -286,7 +291,15 @@ function checkRelease(id, label, cwd, version) {
   }
 
   const release = readGithubRelease(cwd, tag);
-  if (!release.available) {
+  if (release.problem) {
+    warn(
+      `${id}.release`,
+      'Releases',
+      release.problem,
+      'Check the GitHub CLI launcher or verify the release manually.',
+      true,
+    );
+  } else if (!release.available) {
     warn(
       `${id}.release`,
       'Releases',
