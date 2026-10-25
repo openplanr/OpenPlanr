@@ -15,7 +15,14 @@ import {
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
+import { shapeDefinitionDigest } from '@openplanr/protocol/shape-library-contracts';
+import { versionedDiagramReviewBundleDigest } from '@openplanr/protocol/studio-presentation-contracts';
 import { makeBundle, sealBundle } from '../../../tests/protocol/fixtures/diagram-authoring.mjs';
+import {
+  sealBundle as sealVersionedBundle,
+  setShapeLibrary,
+} from '../lib/artifact/diagram/authoring/model.mjs';
+import { diagramShapeEntry } from '../lib/artifact/diagram/authoring/shape-catalog.mjs';
 import { prepareDiagramShareBundle } from '../lib/artifact/diagram/review-bundle.mjs';
 import {
   exportDiagramShareRecovery,
@@ -27,6 +34,7 @@ import {
   syncDiagramShare,
 } from '../lib/artifact/diagram/share.mjs';
 import * as client from '../lib/artifact/diagram/workspace-client.mjs';
+import { diagramReviewSvgExport } from '../lib/artifact/ui/diagram-review-font.mjs';
 import { diagramWorkspaceService } from './diagram-workspace-service.mjs';
 
 function fixture(t) {
@@ -113,6 +121,43 @@ test('share preserves authored source, stores private custody first and emits on
   assert.equal(again.id, status.id);
   assert.equal(again.destination, 'https://share.test');
   assert.equal(f.state.requests.filter(({ method }) => method === 'PUT').length, 1);
+});
+
+test('existing encrypted shares publish portable definitions without changing transport or source', async (t) => {
+  const f = fixture(t);
+  const original = await shareDiagram(f.file, f.options);
+  const definition = structuredClone(diagramShapeEntry('basics/hexagon').definition);
+  definition.packId = 'portable-share';
+  definition.definitionDigest = shapeDefinitionDigest(definition);
+  const { packId, packVersion, shapeId, definitionDigest } = definition;
+  const placement = f.bundle.presentation.elements.find((item) => item.elementId === 'node-a');
+  placement.appearance.shapeRef = { packId, packVersion, shapeId, definitionDigest };
+  f.bundle.document.nodes.find((node) => node.id === 'node-a').label = 'Start';
+  setShapeLibrary(f.bundle, [definition]);
+  f.bundle = sealVersionedBundle(f.bundle);
+  writeFileSync(f.file, JSON.stringify(f.bundle));
+  const source = readFileSync(f.file, 'utf8');
+  const status = await getDiagramShareStatus(f.file, f.options);
+  assert.equal(status.hasUpdate, true);
+  const published = await publishDiagramShare(f.file, f.options);
+  assert.equal(published.id, original.id);
+  assert.equal(published.url, original.url);
+  assert.notEqual(published.publishedRevision, original.publishedRevision);
+  const access = record(f).custody;
+  assert.notEqual(access.schemaVersion, '2.0.0');
+  const remote = await client.decryptWorkspaceRevision(access, undefined, f.options);
+  assert.equal(remote.schemaVersion, '1.2.0');
+  assert.deepEqual(remote.authored, f.bundle);
+  const { workspaceRevision, reviewOf, ...review } = remote;
+  assert.equal(workspaceRevision, access.currentRevision);
+  assert.equal(versionedDiagramReviewBundleDigest(review), reviewOf);
+  const svg = diagramReviewSvgExport(review);
+  assert.match(svg, /data:font\//u);
+  assert.match(svg, /<polygon[^>]+points=/u);
+  assert.equal(readFileSync(f.file, 'utf8'), source);
+  const unchanged = await getDiagramShareStatus(f.file, f.options);
+  assert.equal(unchanged.hasUpdate, false);
+  await manageDiagramShare(f.file, 'revoke', f.options);
 });
 
 test('interrupted creation and publication retry the saved revision without dropping owner authority', async (t) => {

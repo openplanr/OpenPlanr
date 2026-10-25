@@ -1,5 +1,4 @@
 import {
-  assertDiagramReviewBundle,
   assertDiagramReviewFeedback,
   assertDiagramWorkspaceContract,
   DIAGRAM_WORKSPACE_API,
@@ -10,7 +9,6 @@ import {
   DIAGRAM_WORKSPACE_REVISION_SCHEMA,
   DIAGRAM_WORKSPACE_SCHEMA,
   DIAGRAM_WORKSPACE_VERSION,
-  diagramReviewBundleDigest,
 } from '@openplanr/protocol/diagram-review-contracts';
 import {
   assertVersionedDiagramReviewBundle,
@@ -39,9 +37,9 @@ const client = createEncryptedWorkspaceClient({
     workspace: DIAGRAM_WORKSPACE_SCHEMA,
   },
   assertContract: assertDiagramWorkspaceContract,
-  assertBundle: assertDiagramReviewBundle,
+  assertBundle: assertVersionedDiagramReviewBundle,
   assertFeedback: assertDiagramReviewFeedback,
-  bundleDigest: diagramReviewBundleDigest,
+  bundleDigest: versionedDiagramReviewBundleDigest,
 });
 export const {
   encodeWorkspaceBytes,

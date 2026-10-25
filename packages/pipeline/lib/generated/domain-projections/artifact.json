@@ -889,7 +889,7 @@
     {
       "source": "packages/artifact/lib/artifact/diagram/share.mjs",
       "target": "lib/artifact/diagram/share.mjs",
-      "sha256": "e38c2f4e3aa336dff91b834c88315fa30a1adb59082c7dac2e3196d4001a0d31",
+      "sha256": "380e03831bba9f4cd197211043a417b8ba689a7c01a00ee64a1a8627bca4e3e9",
       "mode": "644"
     },
     {
@@ -907,7 +907,7 @@
     {
       "source": "packages/artifact/lib/artifact/diagram/workspace-client.mjs",
       "target": "lib/artifact/diagram/workspace-client.mjs",
-      "sha256": "e09d8e0b74a5e4e5697f6e6bd3b06bb29de5855e90b63e2c2315086d0e9944fa",
+      "sha256": "5db7adf2ba7a6f387cee4e07993d3ac91bdff3d291f15e341c36a53d9058e622",
       "mode": "644"
     },
     {
@@ -1405,7 +1405,7 @@
     {
       "source": "packages/artifact/lib/artifact/ui/diagram-review-font.mjs",
       "target": "lib/artifact/ui/diagram-review-font.mjs",
-      "sha256": "1e75ce9cf0b54735d8283ae65971d88b1727ab3525b016358026f893a5b97d5d",
+      "sha256": "01fa354672d668682bd717f25a9bcb1b1624ef464d9be4c1146a3ee986a852d0",
       "mode": "644"
     },
     {
@@ -1429,7 +1429,7 @@
     {
       "source": "packages/artifact/lib/artifact/ui/diagram-shared-review.d.mts",
       "target": "lib/artifact/ui/diagram-shared-review.d.mts",
-      "sha256": "51768200c9746ebf6e36b394c186d73a5311f3a71837c210c54c65c292c5cfe3",
+      "sha256": "2b6e20fa4bc40415c0d682ccf0f4b5f31eaa58324b749ea164f6db04c4a60375",
       "mode": "644"
     },
     {
