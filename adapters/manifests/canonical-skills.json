@@ -1954,7 +1954,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:0bab5c7c73247098c4636be1ee97c4b6258d0f7bc1517ad4d10a194284dc1f6a"
+          "digest": "sha256:0cf0e7ce935c8be46318e4b1030e01bb72d1b079ab2ef29fcbce6093b4481a10"
         },
         {
           "path": "scripts/runtime/packages/design/templates/studio/studio.js.sources/01-module-runtime.js",
@@ -1978,7 +1978,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:cb3eafecfffc8532216b7bcd71bac6afea5b3fb7f8b0887da140e11c0006cd11"
+          "digest": "sha256:a71e51391e9b730dd958c618d78eca7f08afdba44c6deaec659cc74407f60a62"
         },
         {
           "path": "scripts/runtime/packages/design/templates/studio/studio.js.sources/03-react-dom-client-fiber-foundations.js",
@@ -2062,7 +2062,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:8c81399ccb8a52f0c5e3eca3e49c53dda63e3f954e816c8c0ee94f9a3d2d40f6"
+          "digest": "sha256:7e5c20997dc0ec69609fa5983db9daf426ab2e4da798969be45bc037cb6285d6"
         },
         {
           "path": "scripts/runtime/packages/design/templates/studio/studio.js.sources/10-react.js",
@@ -2218,7 +2218,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:e2b8a258f17377977d71366a18abda7e42250d67ff527f2f597c531d500aa312"
+          "digest": "sha256:25c2873803f650d7130c81b93e560d7bdbedc7800ea4ef2457383ba6e319748d"
         },
         {
           "path": "scripts/runtime/packages/protocol/registries/artifact-theme.json",
@@ -2494,7 +2494,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:66a4b5b0ce31ce6c5a5ea43c17dea76a48df6a1bcf5c2cd6b187b2b6c210143c"
+          "digest": "sha256:c780d6f2609e544d086bc236c27f408fcd736d3a9ea91175c8ed674cfd0a4b0b"
         }
       ],
       "contracts": {
@@ -3164,7 +3164,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:0bab5c7c73247098c4636be1ee97c4b6258d0f7bc1517ad4d10a194284dc1f6a"
+          "digest": "sha256:0cf0e7ce935c8be46318e4b1030e01bb72d1b079ab2ef29fcbce6093b4481a10"
         },
         {
           "path": "scripts/runtime/packages/design/templates/studio/studio.js.sources/01-module-runtime.js",
@@ -3188,7 +3188,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:cb3eafecfffc8532216b7bcd71bac6afea5b3fb7f8b0887da140e11c0006cd11"
+          "digest": "sha256:a71e51391e9b730dd958c618d78eca7f08afdba44c6deaec659cc74407f60a62"
         },
         {
           "path": "scripts/runtime/packages/design/templates/studio/studio.js.sources/03-react-dom-client-fiber-foundations.js",
@@ -3272,7 +3272,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:8c81399ccb8a52f0c5e3eca3e49c53dda63e3f954e816c8c0ee94f9a3d2d40f6"
+          "digest": "sha256:7e5c20997dc0ec69609fa5983db9daf426ab2e4da798969be45bc037cb6285d6"
         },
         {
           "path": "scripts/runtime/packages/design/templates/studio/studio.js.sources/10-react.js",
@@ -3428,7 +3428,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:e2b8a258f17377977d71366a18abda7e42250d67ff527f2f597c531d500aa312"
+          "digest": "sha256:25c2873803f650d7130c81b93e560d7bdbedc7800ea4ef2457383ba6e319748d"
         },
         {
           "path": "scripts/runtime/packages/protocol/registries/artifact-theme.json",
@@ -3704,7 +3704,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:66a4b5b0ce31ce6c5a5ea43c17dea76a48df6a1bcf5c2cd6b187b2b6c210143c"
+          "digest": "sha256:c780d6f2609e544d086bc236c27f408fcd736d3a9ea91175c8ed674cfd0a4b0b"
         }
       ],
       "contracts": {
@@ -4374,7 +4374,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:0bab5c7c73247098c4636be1ee97c4b6258d0f7bc1517ad4d10a194284dc1f6a"
+          "digest": "sha256:0cf0e7ce935c8be46318e4b1030e01bb72d1b079ab2ef29fcbce6093b4481a10"
         },
         {
           "path": "scripts/runtime/packages/design/templates/studio/studio.js.sources/01-module-runtime.js",
@@ -4398,7 +4398,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:cb3eafecfffc8532216b7bcd71bac6afea5b3fb7f8b0887da140e11c0006cd11"
+          "digest": "sha256:a71e51391e9b730dd958c618d78eca7f08afdba44c6deaec659cc74407f60a62"
         },
         {
           "path": "scripts/runtime/packages/design/templates/studio/studio.js.sources/03-react-dom-client-fiber-foundations.js",
@@ -4482,7 +4482,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:8c81399ccb8a52f0c5e3eca3e49c53dda63e3f954e816c8c0ee94f9a3d2d40f6"
+          "digest": "sha256:7e5c20997dc0ec69609fa5983db9daf426ab2e4da798969be45bc037cb6285d6"
         },
         {
           "path": "scripts/runtime/packages/design/templates/studio/studio.js.sources/10-react.js",
@@ -4638,7 +4638,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:e2b8a258f17377977d71366a18abda7e42250d67ff527f2f597c531d500aa312"
+          "digest": "sha256:25c2873803f650d7130c81b93e560d7bdbedc7800ea4ef2457383ba6e319748d"
         },
         {
           "path": "scripts/runtime/packages/protocol/registries/artifact-theme.json",
@@ -4914,7 +4914,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:66a4b5b0ce31ce6c5a5ea43c17dea76a48df6a1bcf5c2cd6b187b2b6c210143c"
+          "digest": "sha256:c780d6f2609e544d086bc236c27f408fcd736d3a9ea91175c8ed674cfd0a4b0b"
         }
       ],
       "contracts": {
@@ -5349,11 +5349,11 @@
     },
     {
       "id": "planr-plan",
-      "version": "1.2.1",
+      "version": "1.3.0",
       "source": "skills/planr-plan/openplanr.skill.json",
       "entrypoint": "skills/planr-plan/SKILL.md",
       "description": "Turn a Protocol-compatible specification or product intent into schema-compatible OpenPlanr stories and implementation tasks. Use for planning and decomposition, not implementation.",
-      "sourceDigest": "sha256:ee27dc8136cada6ffed75baa68ebdfd12c4d6414b069d4c89e627e4ec8beb68e",
+      "sourceDigest": "sha256:b58fd784d77400e33b08e348003ac59ab2b8ecc77eea03ef20be6e8becf57826",
       "resources": [
         {
           "path": "agents/openai.yaml",
@@ -5471,7 +5471,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:e2b8a258f17377977d71366a18abda7e42250d67ff527f2f597c531d500aa312"
+          "digest": "sha256:25c2873803f650d7130c81b93e560d7bdbedc7800ea4ef2457383ba6e319748d"
         },
         {
           "path": "scripts/runtime/packages/protocol/schemas/v1.1.0/artifact-review.schema.json",
@@ -5718,11 +5718,11 @@
     },
     {
       "id": "planr-ship",
-      "version": "1.2.1",
+      "version": "1.3.0",
       "source": "skills/planr-ship/openplanr.skill.json",
       "entrypoint": "skills/planr-ship/SKILL.md",
       "description": "Implement an OpenPlanr plan, specification, task, or clearly stated request end to end in the current repository. Use when the user asks to build, implement, fix, finish, or ship local work.",
-      "sourceDigest": "sha256:a1f65ddec4596070d9627e40d3cb4a1b59470bc1dd97ed68b1962aa30224b6ad",
+      "sourceDigest": "sha256:b4d71fc7aed441e0cbb0dfa7559ff02cdd5a3b92a566d3c4890426f1e48c6590",
       "resources": [
         {
           "path": "agents/openai.yaml",

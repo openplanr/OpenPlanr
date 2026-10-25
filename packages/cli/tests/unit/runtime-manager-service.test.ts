@@ -2111,7 +2111,157 @@ describe('canonical host package naming', () => {
   });
 });
 
+describe('legacy Claude agent cleanup', () => {
+  const legacyBackend = readFileSync(
+    new URL('../fixtures/runtime/legacy-backend-agent.md', import.meta.url),
+  );
+  const options = () =>
+    ({ projectDir, cliVersion, runtime: 'claude-code', scope: 'project' }) as const;
+  const writeLegacy = (content: string | Buffer) => {
+    const target = join(projectDir, '.claude', 'agents', 'backend-agent.md');
+    mkdirSync(dirname(target), { recursive: true });
+    writeFileSync(target, content);
+    return target;
+  };
+
+  it('backs up recognized historical bytes and restores them through runtime rollback', async () => {
+    const target = writeLegacy(legacyBackend);
+    const preview = await previewSetup(options());
+    expect(preview.actions).toContainEqual(
+      expect.objectContaining({
+        target,
+        runtime: 'claude-code',
+        operation: 'retire',
+      }),
+    );
+    expect(readFileSync(target)).toEqual(legacyBackend);
+
+    const applied = await applySetup(options());
+    expect(existsSync(target)).toBe(false);
+    expect(existsSync(join(projectDir, '.claude', 'agents', 'planr-backend.md'))).toBe(true);
+    if (!applied.backupDir) throw new Error('Setup did not create a backup');
+    const manifest = JSON.parse(
+      readFileSync(join(applied.backupDir, 'migration-manifest.json'), 'utf8'),
+    ) as { files: Array<{ target: string; backup?: string }> };
+    const entry = manifest.files.find((file: { target: string }) => file.target === target);
+    if (!entry?.backup) throw new Error('Backup did not retain the retired agent');
+    expect(readFileSync(entry.backup)).toEqual(legacyBackend);
+
+    const rolledBack = await rollbackRuntime(projectDir);
+    expect(rolledBack.restored).toContain(target);
+    expect(readFileSync(target)).toEqual(legacyBackend);
+  });
+
+  it('does not retire or recreate the same legacy agent on repeated setup', async () => {
+    const target = writeLegacy(legacyBackend);
+    await applySetup(options());
+    const secondPreview = await previewSetup(options());
+    expect(secondPreview.actions).not.toContainEqual(expect.objectContaining({ target }));
+    await applySetup(options());
+    expect(existsSync(target)).toBe(false);
+  });
+
+  it.each([
+    ['modified generated', `${legacyBackend.toString('utf8')}\nProject-specific instructions.\n`],
+    ['hand-authored', '# Project backend agent\nKeep this policy.\n'],
+    [
+      'ambiguous header',
+      '---\nname: backend-agent\n---\n<!-- Generated from agents/dev/planr-backend/AGENT.md. Alias ownership: Protocol roles registry. -->\n',
+    ],
+  ])('preserves %s agent bytes and reports manual review', async (_kind, content) => {
+    const target = writeLegacy(content);
+    const preview = await previewSetup(options());
+    expect(preview.actions).not.toContainEqual(
+      expect.objectContaining({ target, operation: 'retire' }),
+    );
+    await applySetup(options());
+    expect(readFileSync(target, 'utf8')).toBe(content);
+    const diagnosed = await runtimeDoctor(projectDir);
+    expect(diagnosed.diagnostics).toContainEqual(
+      expect.objectContaining({
+        code: 'runtime-claude-legacy-agents',
+        status: 'warn',
+        message: expect.stringContaining(target),
+        fix: expect.stringContaining('openplanr setup --runtime claude --scope project --dry-run'),
+      }),
+    );
+  });
+
+  it('preserves recognized project agents during user-only setup', async () => {
+    const target = writeLegacy(legacyBackend);
+    const userOptions = { ...options(), scope: 'user' as const };
+    const preview = await previewSetup(userOptions);
+    expect(preview.actions).not.toContainEqual(
+      expect.objectContaining({ target, operation: 'retire' }),
+    );
+    await applySetup(userOptions);
+    expect(readFileSync(target)).toEqual(legacyBackend);
+  });
+
+  it('preserves a legacy-name symlink and its destination', async () => {
+    const destination = join(root, 'user-agent.md');
+    writeFileSync(destination, legacyBackend);
+    const target = join(projectDir, '.claude', 'agents', 'backend-agent.md');
+    mkdirSync(dirname(target), { recursive: true });
+    symlinkSync(destination, target);
+    const preview = await previewSetup(options());
+    expect(preview.actions).not.toContainEqual(
+      expect.objectContaining({ target, operation: 'retire' }),
+    );
+    await applySetup(options());
+    expect(readFileSync(target)).toEqual(legacyBackend);
+    expect(readFileSync(destination)).toEqual(legacyBackend);
+  });
+
+  it('reports recognized Claude and Cursor leftovers before setup without deleting them', async () => {
+    const target = writeLegacy(legacyBackend);
+    const cursor = join(projectDir, '.cursor', 'rules', 'agents', 'qa-agent.md');
+    mkdirSync(dirname(cursor), { recursive: true });
+    writeFileSync(cursor, '# user-owned review agent\n');
+    const diagnosed = await runtimeDoctor(projectDir);
+    for (const runtime of ['claude', 'cursor']) {
+      expect(diagnosed.diagnostics).toContainEqual(
+        expect.objectContaining({
+          code: `runtime-${runtime}-legacy-agents`,
+          status: 'warn',
+          fix: expect.stringContaining(
+            `openplanr setup --runtime ${runtime} --scope project --dry-run`,
+          ),
+        }),
+      );
+    }
+    expect(readFileSync(target)).toEqual(legacyBackend);
+    expect(readFileSync(cursor, 'utf8')).toBe('# user-owned review agent\n');
+  });
+});
+
 describe('legacy Cursor cleanup', () => {
+  it.each([
+    ['missing provenance', ''],
+    ['empty provenance', '\n'],
+    ['empty CRLF provenance', '\r\n'],
+    ['truncated provenance', '\n> Source: `planr-pipeline'],
+    ['foreign provenance', '\n> Source: `project/agents/backend.md`\n'],
+  ])('preserves ambiguous Cursor agent bytes with %s', async (_kind, suffix) => {
+    const target = join(projectDir, '.cursor', 'rules', 'agents', 'backend-agent.md');
+    const content = Buffer.from(
+      `> **Cursor adapter — synthesized from planr-pipeline.** Agent role system prompt (body-only). Used by \`/cursor/rules/planr-pipeline.mdc\` for Composer subagent dispatch.${suffix}`,
+    );
+    mkdirSync(dirname(target), { recursive: true });
+    writeFileSync(target, content);
+    const options = { projectDir, cliVersion, runtime: 'cursor', scope: 'project' } as const;
+
+    for (let attempt = 0; attempt < 2; attempt += 1) {
+      const preview = await previewSetup(options);
+      expect(preview.actions).not.toContainEqual(expect.objectContaining({ target }));
+      expect(readFileSync(target)).toEqual(content);
+      await applySetup(options);
+      expect(readFileSync(target)).toEqual(content);
+    }
+    await rollbackRuntime(projectDir);
+    expect(readFileSync(target)).toEqual(content);
+  });
+
   it('retires unreachable generated Cursor workflow copies during project setup', async () => {
     const rules = join(projectDir, '.cursor', 'rules');
     const retired = [
