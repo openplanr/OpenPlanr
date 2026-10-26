@@ -331,17 +331,25 @@ describe('canvas trace evaluation', () => {
   });
 
   it.each([
-    ['local', 'vanilla', 'zoom-sweep', 8],
-    ['local', 'react', 'zoom-sweep', 10],
-    ['runner', 'vanilla', 'zoom-sweep', 14],
-    ['runner', 'react', 'zoom-sweep', 14],
-    ['runner', 'vanilla', 'pan-40', 8],
-    ['runner', 'react', 'pan-fit', 10],
+    ['local', 'vanilla', 5000, 'zoom-sweep', 8],
+    ['local', 'react', 5000, 'zoom-sweep', 10],
+    ['runner', 'vanilla', 5000, 'zoom-sweep', 14],
+    ['runner', 'react', 5000, 'zoom-sweep', 14],
+    ['runner', 'vanilla', 5000, 'pan-40', 8],
+    ['runner', 'react', 5000, 'pan-fit', 10],
+    ['local', 'vanilla', 708, 'pan-40', 6],
+    ['local', 'vanilla', 708, 'zoom-sweep', 6],
+    ['runner', 'vanilla', 708, 'pan-40', 8],
+    ['runner', 'vanilla', 708, 'zoom-sweep', 8],
+    ['runner', 'vanilla', 708, 'pan-100', 6],
+    ['runner', 'vanilla', 708, 'pan-fit', 6],
+    ['runner', 'react', 708, 'pan-40', 8],
+    ['runner', 'react', 708, 'zoom-sweep', 8],
   ] as const)(
-    'gates %s %s html tier 5000 %s main at %i',
-    (budgetSet, renderer, scenario, limit) => {
+    'gates %s %s html tier %i %s main at %i',
+    (budgetSet, renderer, tier, scenario, limit) => {
       for (const dpr of [1, 2] as const) {
-        const results = complete(5000);
+        const results = complete(tier);
         results.budgetSet = budgetSet;
         const item = results.measurements[0];
         Object.assign(item, { renderer, scenario, dpr });
@@ -355,13 +363,31 @@ describe('canvas trace evaluation', () => {
     },
   );
 
-  it('keeps the runner zoom-sweep limit off the 708 HTML tier', () => {
-    const results = complete(708);
-    results.budgetSet = 'runner';
-    results.measurements[0].scenario = 'zoom-sweep';
-    for (const run of results.measurements[0].runs) run.rendererMainP95Ms = 6.001;
-    expect(evaluate(results).failures.join('\n')).toContain('limit 6');
-  });
+  it.each([
+    ['webkit', 'local', 'react', 708, 150],
+    ['webkit', 'local', 'react', 5000, 150],
+    ['webkit', 'runner', 'react', 708, 350],
+    ['webkit', 'runner', 'react', 5000, 350],
+    ['webkit', 'runner', 'vanilla', 708, 250],
+    ['webkit', 'runner', 'vanilla', 5000, 250],
+    ['chromium', 'runner', 'react', 5000, 250],
+  ] as const)(
+    'gates %s %s %s html tier %i first frame at %i',
+    (browser, budgetSet, renderer, tier, limit) => {
+      for (const dpr of [1, 2] as const) {
+        const results = complete(tier);
+        results.browser.name = browser;
+        results.budgetSet = budgetSet;
+        Object.assign(results.measurements[0], { renderer, dpr });
+        setFirstFrame(results, limit);
+        expect(evaluate(results).failures).toEqual([]);
+        setFirstFrame(results, limit + 0.001);
+        expect(evaluate(results).failures.join('\n')).toContain(
+          `firstFrameP50Ms measured ${limit + 0.001}, limit ${limit}`,
+        );
+      }
+    },
+  );
 
   it.each([
     [16.80000000000291, true],

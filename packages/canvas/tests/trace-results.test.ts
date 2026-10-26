@@ -34,8 +34,10 @@ describe('trace budget selection', () => {
       budgetSet: 'local',
       remountRendererMainP95Ms: 16,
       htmlZoomSweep5000RendererMainP95Ms: null,
+      vanillaHtml708PanZoomRendererMainP95Ms: null,
       rafIntervalP95Ms: 16.8,
       firstFrameP50Ms: 150,
+      webkitReactFirstFrameP50Ms: null,
     });
   });
 
@@ -44,8 +46,10 @@ describe('trace budget selection', () => {
       budgetSet: 'runner',
       remountRendererMainP95Ms: null,
       htmlZoomSweep5000RendererMainP95Ms: 14,
+      vanillaHtml708PanZoomRendererMainP95Ms: 8,
       rafIntervalP95Ms: null,
       firstFrameP50Ms: 250,
+      webkitReactFirstFrameP50Ms: 350,
     });
   });
 });

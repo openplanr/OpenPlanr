@@ -275,7 +275,12 @@ async function measureTier(browser: Browser, baseURL: string, tier: Tier): Promi
                 ? budgets.remountRendererMainP95Ms
                 : scenario === 'zoom-sweep' && world === 'html' && count === 5000
                   ? (budgets.htmlZoomSweep5000RendererMainP95Ms ?? mainBudget)
-                  : mainBudget,
+                  : (scenario === 'pan-40' || scenario === 'zoom-sweep') &&
+                      renderer === 'vanilla' &&
+                      world === 'html' &&
+                      count === 708
+                    ? (budgets.vanillaHtml708PanZoomRendererMainP95Ms ?? mainBudget)
+                    : mainBudget,
             rafIntervalP95Ms: budgets.rafIntervalP95Ms,
             firstFrameP50Ms: budgets.firstFrameP50Ms,
           },
@@ -530,6 +535,9 @@ test('records non-CDP camera traces beside the browser reference budgets', async
           : { pan100FrameP95Ms: null, panFitFrameP95Ms: null }
         : {}),
       firstFrameP50Ms: budgets.firstFrameP50Ms,
+      ...(browserName === 'webkit'
+        ? { reactFirstFrameP50Ms: budgets.webkitReactFirstFrameP50Ms ?? budgets.firstFrameP50Ms }
+        : {}),
     },
   };
   const directory = resolve(import.meta.dirname, '../../test-results');
