@@ -4,9 +4,13 @@ import { createRequire } from 'node:module';
 import path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import {
+  createSpec,
   createSpecStory,
   createSpecTask,
+  type ShapeSpecAnswers,
   SPEC_CONTRACT_HEADINGS,
+  shapeSpec,
+  validateSpecContract,
 } from '../../src/services/spec-service.js';
 import { createTestProject, type TestProject } from '../helpers/test-project.js';
 
@@ -194,9 +198,25 @@ describe('openplanr spec validate', { timeout: 60_000 }, () => {
     expect(readFileSync(specPath).equals(before)).toBe(true);
   });
 
-  it('rejects a wrong schemaVersion as an error', async () => {
+  it('accepts each schemaVersion the Protocol ships a spec schema for', async () => {
+    for (const version of ['1.0.0', '1.7.0']) {
+      const { created, specPath } = await project(
+        VALID.replace('schemaVersion: "1.7.0"', `schemaVersion: "${version}"`),
+      );
+      const before = readFileSync(specPath);
+      const { status, report } = validateJson(created.dir);
+      expect({ version, status, violations: report.violations }).toEqual({
+        version,
+        status: 0,
+        violations: [],
+      });
+      expect(readFileSync(specPath).equals(before)).toBe(true);
+    }
+  });
+
+  it('rejects an unsupported schemaVersion and names the supported ones', async () => {
     const { created, specPath } = await project(
-      VALID.replace('schemaVersion: "1.7.0"', 'schemaVersion: "1.0.0"'),
+      VALID.replace('schemaVersion: "1.7.0"', 'schemaVersion: "1.3.0"'),
     );
     const before = readFileSync(specPath);
     const { status, report } = validateJson(created.dir);
@@ -204,7 +224,8 @@ describe('openplanr spec validate', { timeout: 60_000 }, () => {
     expect(report.violations).toEqual([
       expect.objectContaining({
         rule: 'frontmatter',
-        message: expect.stringMatching(/schemaVersion/u),
+        message:
+          'schemaVersion is "1.3.0", which is unsupported; supported versions: 1.0.0, 1.7.0.',
       }),
     ]);
     expect(readFileSync(specPath).equals(before)).toBe(true);
@@ -264,5 +285,65 @@ describe('openplanr spec promote', { timeout: 60_000 }, () => {
     expect(result.status).toBe(0);
     expect(result.stdout).toMatch(/marks? the spec\s+ready-for-pipeline/u);
     expect(result.stdout).toContain('--dry-run');
+  });
+});
+
+function shapeAnswers(): ShapeSpecAnswers {
+  return {
+    kind: 'professional-specification',
+    schemaVersion: '1.0.0',
+    protocolVersion: '1.1.0',
+    context: 'Operators need one reliable way to recover an interrupted import.',
+    audience: { primary: 'Workspace operators', affected: ['Support engineers'] },
+    outcome: {
+      statement: 'Interrupted imports recover without duplicate records.',
+      measure: 'Duplicate records observed after recovery',
+      target: 'Zero duplicate records in the recovery suite',
+      timeframe: 'Every candidate build before owner review',
+    },
+    functionalRequirements: ['The operator can resume one interrupted import safely'],
+    constraints: ['Existing completed imports remain byte-for-byte unchanged'],
+    evidenceExpectations: ['A crash-recovery test proves exact-once materialization'],
+    failureModes: ['A replay can materialize the same record twice after a crash'],
+    rollback: 'Disable resume and restore the prior read-only recovery path.',
+    scope: {
+      inScope: ['Interrupted local import recovery'],
+      outOfScope: ['Remote production data repair remains separately governed'],
+    },
+    acceptanceCriteria: [
+      'Given an interrupted import, when recovery resumes, then each record exists exactly once.',
+    ],
+    declaredSpecialists: ['data-integrity'],
+    businessRules: ['A completed import is never replayed'],
+    decompositionNotes: 'One backend task.',
+  };
+}
+
+describe('specs written by the CLI templates', () => {
+  async function violationsAfter(
+    write: (created: TestProject, specId: string) => Promise<unknown>,
+  ): Promise<string[]> {
+    const created = await createTestProject('spec-validate-templates');
+    projects.push(created);
+    const spec = await createSpec(created.dir, created.config, 'Import recovery');
+    await write(created, spec.id);
+    const report = await validateSpecContract(created.dir, created.config, spec.id);
+    return (report?.violations ?? []).map((violation) => `${violation.rule}: ${violation.message}`);
+  }
+
+  it('spec create meets the contract except for AC-NNN ids on its placeholder criteria', async () => {
+    expect(await violationsAfter(async () => undefined)).toEqual([
+      'acceptance-ids: Criterion "Given ..., when ..., then ..." does not start with an AC-NNN id.',
+      'acceptance-ids: Criterion "Given ..., when ..., then ..." does not start with an AC-NNN id.',
+    ]);
+  });
+
+  it('spec shape meets the contract except for AC-NNN ids on its criteria', async () => {
+    const violations = await violationsAfter((created, specId) =>
+      shapeSpec(created.dir, created.config, specId, shapeAnswers()),
+    );
+    expect(violations).toEqual([
+      'acceptance-ids: Criterion "Given an interrupted import, when recovery resumes, then eac" does not start with an AC-NNN id.',
+    ]);
   });
 });

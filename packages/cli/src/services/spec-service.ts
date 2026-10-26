@@ -28,7 +28,7 @@
  */
 
 import { randomUUID } from 'node:crypto';
-import { readFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import fsPromises from 'node:fs/promises';
 import path from 'node:path';
 import { validateJson } from '../../lib/json-schema.mjs';
@@ -2055,11 +2055,13 @@ export async function getSpecStatus(
   return { specCount: specs.length, specs, totalStories, totalTasks };
 }
 
-const PROFESSIONAL_SPEC_REQUIRED_SECTIONS = Object.freeze([
+/** Body headings required by the specification contract, in order. */
+export const SPEC_CONTRACT_HEADINGS = Object.freeze([
   'Context & Goal',
   'Audience',
   'Outcome & Measurement',
   'Functional Requirements',
+  'Business Rules',
   'Constraints',
   'Evidence Expectations',
   'Failure Modes',
@@ -2067,7 +2069,15 @@ const PROFESSIONAL_SPEC_REQUIRED_SECTIONS = Object.freeze([
   'Scope Boundaries',
   'Acceptance Criteria',
   'Declared Risk Specialists',
+  'Notes for Decomposition',
 ] as const);
+
+// Business rules and decomposition notes are optional shape answers, so promotion does not require their content.
+const PROFESSIONAL_SPEC_REQUIRED_SECTIONS = Object.freeze(
+  SPEC_CONTRACT_HEADINGS.filter(
+    (heading) => heading !== 'Business Rules' && heading !== 'Notes for Decomposition',
+  ),
+);
 
 function markdownSection(content: string, heading: string, level = 2): string | null {
   const lines = content.split(/\r?\n/u);
@@ -2214,24 +2224,6 @@ export async function validateSpecForPromotion(
   return { ready: issues.length === 0, issues };
 }
 
-/** Body headings required by the specification contract, in order. */
-export const SPEC_CONTRACT_HEADINGS = Object.freeze([
-  'Context & Goal',
-  'Audience',
-  'Outcome & Measurement',
-  'Functional Requirements',
-  'Business Rules',
-  'Constraints',
-  'Evidence Expectations',
-  'Failure Modes',
-  'Rollback',
-  'Scope Boundaries',
-  'Acceptance Criteria',
-  'Declared Risk Specialists',
-  'Notes for Decomposition',
-] as const);
-
-const SPEC_CONTRACT_SCHEMA_VERSION = '1.7.0';
 const SCOPE_SUBHEADINGS = Object.freeze(['In Scope', 'Out of Scope'] as const);
 const ACCEPTANCE_ID = /^AC-\d{3,}$/u;
 
@@ -2247,6 +2239,21 @@ export interface SpecContractReport {
   specId: string;
   file: string | null;
   violations: SpecContractViolation[];
+}
+
+/** Spec frontmatter schemas projected from the Protocol, keyed by their `schemaVersion` const. */
+function supportedSpecSchemas(): Map<string, unknown> {
+  const root = new URL('../../lib/schemas/', import.meta.url);
+  const schemas = new Map<string, unknown>();
+  for (const entry of readdirSync(root, { withFileTypes: true })) {
+    const file = new URL(`${entry.name}/spec.schema.json`, root);
+    if (!entry.isDirectory() || !existsSync(file)) continue;
+    const schema: unknown = JSON.parse(readFileSync(file, 'utf8'));
+    const properties = plainRecord(plainRecord(schema)?.properties);
+    const version = plainRecord(properties?.schemaVersion)?.const;
+    if (typeof version === 'string') schemas.set(version, schema);
+  }
+  return schemas;
 }
 
 /** Headings outside fenced code blocks, with their level and text. */
@@ -2373,10 +2380,24 @@ export async function validateSpecContract(
     );
   }
 
-  for (const issue of validateJson(
-    data,
-    planningProtocolSchema('spec', SPEC_CONTRACT_SCHEMA_VERSION),
-  )) {
+  const schemas = supportedSpecSchemas();
+  const versions = [...schemas.keys()].sort((a, b) => a.localeCompare(b, 'en', { numeric: true }));
+  const declared = data.schemaVersion;
+  let schema = typeof declared === 'string' ? schemas.get(declared) : undefined;
+  if (schema === undefined) {
+    const found =
+      declared === undefined ? 'missing' : `${JSON.stringify(declared)}, which is unsupported`;
+    violations.push(
+      violation(
+        'frontmatter',
+        `schemaVersion is ${found}; supported versions: ${versions.join(', ')}.`,
+      ),
+    );
+    // Check the remaining keys against the newest contract.
+    schema = schemas.get(versions[versions.length - 1]);
+  }
+  for (const issue of validateJson(data, schema)) {
+    if (issue.path === '$.schemaVersion' || issue.detail.includes("'schemaVersion'")) continue;
     violations.push(violation('frontmatter', `${issue.path} ${issue.rule}: ${issue.detail}`));
   }
   for (const issue of contractHeadingViolations(content)) {

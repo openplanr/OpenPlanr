@@ -259,7 +259,7 @@ openplanr spec validate SPEC-001 --json
 
 **Rules:**
 1. **`path`** — the file is `SPEC-NNN-{slug}/SPEC-NNN-{slug}.md`, and its frontmatter `id` and `slug` match that path.
-2. **`frontmatter`** — the frontmatter is valid against the Protocol `1.7.0` spec schema: every required key (including `id` and `schemaVersion`), allowed values, no unknown keys. Any other `schemaVersion` is an error.
+2. **`frontmatter`** — the frontmatter is valid against the Protocol spec schema for the `schemaVersion` it declares (`1.0.0` or `1.7.0`): every required key (including `id`), allowed values, no unknown keys. A missing or unsupported `schemaVersion` is an error that lists the supported versions.
 3. **`headings`** — the 13 contract headings, from `## Context & Goal` to `## Notes for Decomposition`, appear in order, and `## Scope Boundaries` has `### In Scope` and `### Out of Scope`. Other headings may sit between them.
 4. **`acceptance-ids`** — every top-level item under `## Acceptance Criteria` starts with a unique `AC-NNN` id (a checkbox and bold markers before it are fine).
 
