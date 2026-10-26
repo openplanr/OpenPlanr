@@ -18,7 +18,8 @@
  *   - openplanr spec status [id]             Decomposition state per spec
  *   - openplanr spec destroy <id>            rm -rf one self-contained spec dir
  *   - openplanr spec attach-design <id> --files <png>...   Attach UI mockups
- *   - openplanr spec promote <id>            Validate + print pipeline handoff
+ *   - openplanr spec validate <id>           Check one spec against the contract; read-only
+ *   - openplanr spec promote <id>            Validate, mark ready-for-pipeline, print handoff
  */
 
 import { readFile as readBinaryFile, stat } from 'node:fs/promises';
@@ -48,6 +49,7 @@ import {
   syncAllSpecs,
   syncSpec,
   updateSpecFields,
+  validateSpecContract,
   validateSpecForPromotion,
 } from '../../services/spec-service.js';
 import { CLI_COMMAND, PLANNING_FOLDER } from '../../utils/constants.js';
@@ -595,13 +597,59 @@ export function registerSpecCommand(program: Command) {
     });
 
   // ------------------------------------------------------------------------
+  // openplanr spec validate <id>
+  // ------------------------------------------------------------------------
+  spec
+    .command('validate')
+    .description(
+      'Check a spec file against the specification contract (path, frontmatter, headings, acceptance ids) without writing',
+    )
+    .argument('<specId>', 'spec ID (e.g., SPEC-001)')
+    .option('--json', 'emit machine-readable output', false)
+    .action(async (specId: string, opts: { json?: boolean }) => {
+      requireArtifactId(specId, 'specId', 'SPEC-001');
+      const projectDir = program.opts().projectDir as string;
+      const config = await loadConfig(projectDir);
+
+      const report = await validateSpecContract(projectDir, config, specId);
+      if (!report) {
+        throw new CliBoundaryError('E_SPEC_NOT_FOUND', `Spec ${specId} not found.`, {
+          recovery: `Run \`${CLI_COMMAND} spec list\` to see the specs in this project.`,
+        });
+      }
+      const ok = report.violations.length === 0;
+      if (opts.json) {
+        display.line(JSON.stringify({ ok, ...report }));
+      } else if (ok) {
+        logger.success(`${specId} meets the specification contract.`);
+      } else {
+        logger.error(
+          `${specId} has ${report.violations.length} contract violation${
+            report.violations.length === 1 ? '' : 's'
+          }:`,
+        );
+        for (const violation of report.violations) {
+          logger.error(`  ${violation.file}: [${violation.rule}] ${violation.message}`);
+        }
+      }
+      if (!ok) process.exitCode = 1;
+    });
+
+  // ------------------------------------------------------------------------
   // openplanr spec promote <id>
   // ------------------------------------------------------------------------
   spec
     .command('promote')
-    .description('Validate that a spec is ready and print the pipeline handoff command')
+    .description(
+      'Validate that a spec is ready, mark the spec ready-for-pipeline, and print the pipeline handoff command',
+    )
     .argument('<specId>', 'spec ID (e.g., SPEC-001)')
-    .action(async (specId: string) => {
+    .option(
+      '--dry-run',
+      'validate and print the handoff command without marking the spec ready-for-pipeline',
+      false,
+    )
+    .action(async (specId: string, opts: { dryRun?: boolean }) => {
       requireArtifactId(specId, 'specId', 'SPEC-001');
       const projectDir = program.opts().projectDir as string;
       const config = await loadConfig(projectDir);
@@ -618,9 +666,11 @@ export function registerSpecCommand(program: Command) {
       const spec = await readSpec(projectDir, config, specId);
       if (!spec) return; // unreachable if validation passed
 
-      await updateSpecFields(projectDir, config, specId, { status: 'ready-for-pipeline' });
-
+      if (!opts.dryRun) {
+        await updateSpecFields(projectDir, config, specId, { status: 'ready-for-pipeline' });
+      }
       logger.success(`${specId} is ready for host-native implementation.`);
+      if (opts.dryRun) logger.dim('Dry run: the spec was not marked ready-for-pipeline.');
       logger.dim('');
       display.line('Next: invoke the host-native Plan skill:');
       display.line(`  $planr:plan ${spec.id}`);
