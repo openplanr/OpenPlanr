@@ -629,7 +629,7 @@
       "ownerPackage": "openplanr",
       "source": {
         "path": "skills/planr-spec/SKILL.md",
-        "digest": "sha256:040841d2b63504fd4ad9e07222ba0356cdd3084045fbb70f665bb043e4d006fa"
+        "digest": "sha256:150d31da1f87918ce7966706230779c19fadf261f7afd78ae5ef0924ea6a4be1"
       },
       "authorityClass": "workflow",
       "machineJson": false,
@@ -692,7 +692,7 @@
       "ownerPackage": "openplanr",
       "source": {
         "path": "skills/planr-spec/SKILL.md",
-        "digest": "sha256:040841d2b63504fd4ad9e07222ba0356cdd3084045fbb70f665bb043e4d006fa"
+        "digest": "sha256:150d31da1f87918ce7966706230779c19fadf261f7afd78ae5ef0924ea6a4be1"
       },
       "authorityClass": "workflow",
       "machineJson": false,
@@ -1948,5 +1948,5 @@
       ]
     }
   ],
-  "documentDigest": "sha256:ef42341ae1550c08b0768e392d7b13f9f08fc3c328d38391cdeb19853db5b8a8"
+  "documentDigest": "sha256:b619a459eb1a6cab6f9d63494b32c356a64571faaaf8ce892dbb9316d0218a62"
 }

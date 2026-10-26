@@ -5850,11 +5850,11 @@
     },
     {
       "id": "planr-spec",
-      "version": "1.0.1",
+      "version": "1.0.2",
       "source": "skills/planr-spec/openplanr.skill.json",
       "entrypoint": "skills/planr-spec/SKILL.md",
       "description": "Shape vague product or engineering intent into a clear, measurable Protocol-compatible specification grounded in the current repository. Use when requirements need clarification before planning or implementation.",
-      "sourceDigest": "sha256:040841d2b63504fd4ad9e07222ba0356cdd3084045fbb70f665bb043e4d006fa",
+      "sourceDigest": "sha256:150d31da1f87918ce7966706230779c19fadf261f7afd78ae5ef0924ea6a4be1",
       "resources": [
         {
           "path": "agents/openai.yaml",
@@ -5876,7 +5876,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:55ecc8361256073324d2507097862f6222589e22887dffe5b5e25cdc89199df5"
+          "digest": "sha256:eaaf58e5d2e5cf788856c8d0e156a1ff49111d3578556bfb7c8fe2466df15b15"
         }
       ],
       "contracts": {
