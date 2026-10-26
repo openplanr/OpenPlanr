@@ -1226,7 +1226,7 @@
       "skillId": "planr-spec",
       "family": "planning",
       "contribution": "professional",
-      "skillVersion": "1.0.1",
+      "skillVersion": "1.0.2",
       "description": "Shape vague product or engineering intent into a clear, measurable Protocol-compatible specification grounded in the current repository. Use when requirements need clarification before planning or implementation.",
       "lifecycle": "active",
       "authorityClass": "planning-write",

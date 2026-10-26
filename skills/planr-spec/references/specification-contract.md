@@ -30,7 +30,9 @@ template:
 
 Keep evidence and rollback as useful planning context, not approval gates or
 receipt requirements. A risk-specialist section may be empty when no specialist
-lens applies.
+lens applies. Under `## Notes for Decomposition`, list each decision made without
+an answer as a bullet starting `Assumption:` that names the decision and the
+alternative not taken.
 
 For a repository intentionally using default mode, write
 `input/specs/spec-{slug}.md` and preserve its active schema. Do not create a
