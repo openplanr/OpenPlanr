@@ -331,19 +331,14 @@ describe('specs written by the CLI templates', () => {
     return (report?.violations ?? []).map((violation) => `${violation.rule}: ${violation.message}`);
   }
 
-  it('spec create meets the contract except for AC-NNN ids on its placeholder criteria', async () => {
-    expect(await violationsAfter(async () => undefined)).toEqual([
-      'acceptance-ids: Criterion "Given ..., when ..., then ..." does not start with an AC-NNN id.',
-      'acceptance-ids: Criterion "Given ..., when ..., then ..." does not start with an AC-NNN id.',
-    ]);
+  it('spec create meets the contract', async () => {
+    expect(await violationsAfter(async () => undefined)).toEqual([]);
   });
 
-  it('spec shape meets the contract except for AC-NNN ids on its criteria', async () => {
+  it('spec shape meets the contract', async () => {
     const violations = await violationsAfter((created, specId) =>
       shapeSpec(created.dir, created.config, specId, shapeAnswers()),
     );
-    expect(violations).toEqual([
-      'acceptance-ids: Criterion "Given an interrupted import, when recovery resumes, then eac" does not start with an AC-NNN id.',
-    ]);
+    expect(violations).toEqual([]);
   });
 });

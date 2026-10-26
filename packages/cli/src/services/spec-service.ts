@@ -524,7 +524,7 @@ export async function prepareOperatingSpecDraft(
       functionalRequirements: input.framing.requirements,
       businessRules: list(input.framing.constraints),
       outOfScope: input.framing.nonScope,
-      acceptanceCriteria: input.framing.acceptanceOutcomes,
+      acceptanceCriteria: numberedAcceptanceCriteria(input.framing.acceptanceOutcomes),
       decompositionNotes: [
         `Scope:\n${list(input.framing.scope)}`,
         input.framing.risks.length > 0 ? `Risks:\n${list(input.framing.risks)}` : '',
@@ -866,6 +866,15 @@ export interface SpecDecompositionInput {
 
 type AcceptanceCriterion = { id: string; statement: string };
 
+/** Stable `AC-NNN` id for the criterion at a zero-based position. */
+function acceptanceCriterionId(index: number): string {
+  return `AC-${String(index + 1).padStart(3, '0')}`;
+}
+
+function numberedAcceptanceCriteria(statements: readonly string[]): AcceptanceCriterion[] {
+  return statements.map((statement, index) => ({ id: acceptanceCriterionId(index), statement }));
+}
+
 function specTaskInput(
   aiTask: SpecDecompositionTask,
   storyId: string,
@@ -1006,10 +1015,7 @@ async function replaceSpecWithDecomposition(
     const taskIdMap = new Map(flatTasks.map((task, index) => [task.id, allocation.T[index]]));
     for (const [storyIndex, aiStory] of decomposition.stories.entries()) {
       const storyId = allocation.US[storyIndex];
-      const acceptanceCriteria = aiStory.acceptanceCriteria.map((statement, index) => ({
-        id: `AC-${String(index + 1).padStart(3, '0')}`,
-        statement,
-      }));
+      const acceptanceCriteria = numberedAcceptanceCriteria(aiStory.acceptanceCriteria);
       const renderedTasks: Array<{
         id: string;
         filename: string;
@@ -1672,7 +1678,7 @@ export async function shapeSpec(
       failureModes: professional.failureModes,
       rollback: professional.rollback,
       scope: professional.scope,
-      acceptanceCriteria: professional.acceptanceCriteria,
+      acceptanceCriteria: numberedAcceptanceCriteria(professional.acceptanceCriteria),
       declaredSpecialists: professional.declaredSpecialists,
       businessRules: professional.businessRules,
       decompositionNotes: professional.decompositionNotes,
@@ -1743,7 +1749,7 @@ async function renderSpecStoryContent(
   const today = new Date().toISOString().split('T')[0];
   const acceptanceCriteria = (body.acceptanceCriteria ?? []).map((criterion, index) =>
     typeof criterion === 'string'
-      ? { id: `AC-${String(index + 1).padStart(3, '0')}`, statement: criterion }
+      ? { id: acceptanceCriterionId(index), statement: criterion }
       : criterion,
   );
   const content = await renderTemplate(
