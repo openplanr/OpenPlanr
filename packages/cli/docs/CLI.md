@@ -243,6 +243,30 @@ openplanr spec shape SPEC-001
 
 ---
 
+#### `openplanr spec validate`
+
+Check one spec file against the specification contract. It reads the file and writes nothing.
+
+```bash
+openplanr spec validate SPEC-001
+openplanr spec validate SPEC-001 --json
+```
+
+| Option     | Description                                                     | Required |
+| ---------- | --------------------------------------------------------------- | -------- |
+| `<specId>` | Spec ID to check                                                | Yes      |
+| `--json`   | Print `{ ok, specId, file, violations[] }` instead of text      | No       |
+
+**Rules:**
+1. **`path`** — the file is `SPEC-NNN-{slug}/SPEC-NNN-{slug}.md`, and its frontmatter `id` and `slug` match that path.
+2. **`frontmatter`** — the frontmatter is valid against the Protocol `1.7.0` spec schema: every required key (including `id` and `schemaVersion`), allowed values, no unknown keys. Any other `schemaVersion` is an error.
+3. **`headings`** — the 13 contract headings, from `## Context & Goal` to `## Notes for Decomposition`, appear in order, and `## Scope Boundaries` has `### In Scope` and `### Out of Scope`. Other headings may sit between them.
+4. **`acceptance-ids`** — every top-level item under `## Acceptance Criteria` starts with a unique `AC-NNN` id (a checkbox and bold markers before it are fine).
+
+Each violation is printed with the file, the rule, and what was found. The command exits 1 when there is any violation or the spec is not found, and 0 otherwise.
+
+---
+
 #### `openplanr spec sync`
 
 Validate spec integrity and auto-fix safe inconsistencies. Use after manual edits, interrupted work, or when in doubt.
@@ -322,11 +346,19 @@ openplanr spec attach-design SPEC-001 --files login.png signup.png
 
 #### `openplanr spec promote`
 
-Validate that a spec is ready for handoff to `planr-pipeline` (has stories, tasks, non-trivial body) and print the next-step pipeline command. Updates SPEC frontmatter `status: ready-for-pipeline`.
+Validate that a spec is ready for handoff (has stories, tasks, and a non-trivial body), mark the spec ready-for-pipeline by writing `status: "ready-for-pipeline"` into its frontmatter, and print the next-step pipeline command.
 
 ```bash
 openplanr spec promote SPEC-001
+openplanr spec promote SPEC-001 --dry-run   # validate and print the handoff; write nothing
 ```
+
+| Option      | Description                                                                     | Required |
+| ----------- | ------------------------------------------------------------------------------- | -------- |
+| `<specId>`  | Spec ID to promote                                                              | Yes      |
+| `--dry-run` | Validate and print the handoff command without marking the spec ready-for-pipeline | No    |
+
+To check a spec's structure without changing its status, use `openplanr spec validate`.
 
 After promotion, run from any configured runtime:
 
