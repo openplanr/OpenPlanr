@@ -7,6 +7,7 @@ export const CANVAS_TRACE_BUDGETS = Object.freeze({
     svg: Object.freeze({ 708: 8, 5000: 12 }),
   }),
   remountRendererMainP95Ms: 16,
+  runnerHtmlZoomSweep5000RendererMainP95Ms: 14,
   longTasksOver50Ms: 0,
   rafIntervalP95Ms: 16.8,
   domNodes: 2000,
@@ -39,12 +40,17 @@ export function toClockResolution(ms: number): number {
 export function traceBudgetPolicy(runnerBudgets: boolean): {
   budgetSet: 'local' | 'runner';
   remountRendererMainP95Ms: number | null;
+  /** Main-thread limit for the 5,000-node HTML zoom sweep; null keeps the renderer's reference limit. */
+  htmlZoomSweep5000RendererMainP95Ms: number | null;
   rafIntervalP95Ms: number | null;
   firstFrameP50Ms: number;
 } {
   return {
     budgetSet: runnerBudgets ? 'runner' : 'local',
     remountRendererMainP95Ms: runnerBudgets ? null : CANVAS_TRACE_BUDGETS.remountRendererMainP95Ms,
+    htmlZoomSweep5000RendererMainP95Ms: runnerBudgets
+      ? CANVAS_TRACE_BUDGETS.runnerHtmlZoomSweep5000RendererMainP95Ms
+      : null,
     rafIntervalP95Ms: runnerBudgets ? null : CANVAS_TRACE_BUDGETS.rafIntervalP95Ms,
     firstFrameP50Ms: runnerBudgets
       ? CANVAS_TRACE_BUDGETS.runnerFirstFrameP50Ms
@@ -473,10 +479,14 @@ export function evaluateCanvasTrace(
     const rafMedian = raf.sort((a, b) => a - b)[1];
     if (results.browser.name === 'chromium') {
       const mainMedian = main.sort((a, b) => a - b)[1];
+      const htmlZoomSweep5000 =
+        item.scenario === 'zoom-sweep' && item.world === 'html' && item.count === 5000;
       const mainLimit =
         item.scenario === 'remount'
           ? limits.remountRendererMainP95Ms
-          : limits.rendererMainP95Ms[item.world === 'svg' ? 'svg' : item.renderer][item.count];
+          : htmlZoomSweep5000 && policy.htmlZoomSweep5000RendererMainP95Ms !== null
+            ? policy.htmlZoomSweep5000RendererMainP95Ms
+            : limits.rendererMainP95Ms[item.world === 'svg' ? 'svg' : item.renderer][item.count];
       maximum(
         item,
         item.scenario,

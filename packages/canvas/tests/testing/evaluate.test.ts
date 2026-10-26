@@ -331,6 +331,39 @@ describe('canvas trace evaluation', () => {
   });
 
   it.each([
+    ['local', 'vanilla', 'zoom-sweep', 8],
+    ['local', 'react', 'zoom-sweep', 10],
+    ['runner', 'vanilla', 'zoom-sweep', 14],
+    ['runner', 'react', 'zoom-sweep', 14],
+    ['runner', 'vanilla', 'pan-40', 8],
+    ['runner', 'react', 'pan-fit', 10],
+  ] as const)(
+    'gates %s %s html tier 5000 %s main at %i',
+    (budgetSet, renderer, scenario, limit) => {
+      for (const dpr of [1, 2] as const) {
+        const results = complete(5000);
+        results.budgetSet = budgetSet;
+        const item = results.measurements[0];
+        Object.assign(item, { renderer, scenario, dpr });
+        for (const run of item.runs) run.rendererMainP95Ms = limit;
+        expect(evaluate(results).failures).toEqual([]);
+        for (const run of item.runs) run.rendererMainP95Ms += 0.001;
+        expect(evaluate(results).failures.join('\n')).toContain(
+          `${scenario}: rendererMainP95Ms measured ${limit + 0.001}, limit ${limit}`,
+        );
+      }
+    },
+  );
+
+  it('keeps the runner zoom-sweep limit off the 708 HTML tier', () => {
+    const results = complete(708);
+    results.budgetSet = 'runner';
+    results.measurements[0].scenario = 'zoom-sweep';
+    for (const run of results.measurements[0].runs) run.rendererMainP95Ms = 6.001;
+    expect(evaluate(results).failures.join('\n')).toContain('limit 6');
+  });
+
+  it.each([
     [16.80000000000291, true],
     [16.84, true],
     [16.85, false],
