@@ -447,8 +447,9 @@ sample count or exact count is stated.
 
 | Metric | Local reference | `CI=true` runner |
 | --- | --- | --- |
-| Chromium renderer main-thread p95, vanilla HTML, 708 / 5,000 nodes | 6 / 8 ms | Same |
-| Chromium renderer main-thread p95, React HTML, 708 / 5,000 nodes | 8 / 10 ms | Same |
+| Chromium renderer main-thread p95, vanilla HTML, 708 / 5,000 nodes | 6 / 8 ms | Same, except the 5,000-node zoom sweep |
+| Chromium renderer main-thread p95, React HTML, 708 / 5,000 nodes | 8 / 10 ms | Same, except the 5,000-node zoom sweep |
+| Chromium renderer main-thread p95, 5,000-node HTML zoom sweep | 8 ms vanilla / 10 ms React | 14 ms |
 | Chromium renderer main-thread p95, SVG, 708 / 5,000 nodes | 8 / 12 ms | Same; 5,000 SVG is reported only |
 | Remount renderer main-thread p95 | 16 ms | Reported only (16 ms reference) |
 | Chromium rAF interval p95 | 16.8 ms | Reported only (16.8 ms reference) |
@@ -482,7 +483,9 @@ Only `CI=true` selects runner budgets: remount main-thread p95 and rAF intervals
 remain recorded without failing assertions because software GL has noisy remount
 timings and can present at 30 fps. The first fixture frame p50 gates at 250 ms on
 the runner, whose cold software-GL page loads measure about three times the local
-time, and at 150 ms locally. Local remounts keep the 16 ms limit enforced.
+time, and at 150 ms locally. The 5,000-node HTML zoom sweep gates its main-thread
+p95 at 14 ms on the runner, where software GL measures about four to five times the
+local time. Local remounts keep the 16 ms limit enforced.
 Every other budget and gate stays unchanged. The printed table,
 JSON report and its attachment identify the `local` or `runner` budget set and
 effective limits. Runner remounts show `reported (reference 16)` and runner first

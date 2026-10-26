@@ -33,6 +33,7 @@ describe('trace budget selection', () => {
     expect(traceBudgetPolicy(false)).toEqual({
       budgetSet: 'local',
       remountRendererMainP95Ms: 16,
+      htmlZoomSweep5000RendererMainP95Ms: null,
       rafIntervalP95Ms: 16.8,
       firstFrameP50Ms: 150,
     });
@@ -42,6 +43,7 @@ describe('trace budget selection', () => {
     expect(traceBudgetPolicy(true)).toEqual({
       budgetSet: 'runner',
       remountRendererMainP95Ms: null,
+      htmlZoomSweep5000RendererMainP95Ms: 14,
       rafIntervalP95Ms: null,
       firstFrameP50Ms: 250,
     });

@@ -271,7 +271,11 @@ async function measureTier(browser: Browser, baseURL: string, tier: Tier): Promi
           effectiveBudgets: {
             ...referenceBudgets,
             rendererMainP95Ms:
-              scenario === 'remount' ? budgets.remountRendererMainP95Ms : mainBudget,
+              scenario === 'remount'
+                ? budgets.remountRendererMainP95Ms
+                : scenario === 'zoom-sweep' && world === 'html' && count === 5000
+                  ? (budgets.htmlZoomSweep5000RendererMainP95Ms ?? mainBudget)
+                  : mainBudget,
             rafIntervalP95Ms: budgets.rafIntervalP95Ms,
             firstFrameP50Ms: budgets.firstFrameP50Ms,
           },
