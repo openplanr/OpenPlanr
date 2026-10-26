@@ -23,6 +23,12 @@ mutually exclusive questions at once and put the recommended option first. If
 the host lacks that interface, ask one concise chat question. Do not present a
 long prose questionnaire.
 
+If no one can answer, as in a headless run, do not ask: choose the
+repository-backed default, or the recommended one when the repository does not
+settle it, and record each such choice as a bullet starting `Assumption:` under
+`## Notes for Decomposition`, naming the decision and the alternative not taken.
+Record a decision you settle inside a functional requirement the same way.
+
 When native agents are available, use the specification role to consolidate the
 contract and dispatch database or designer roles only when their lens affects
 the decision. Otherwise perform those lenses sequentially in the active agent.

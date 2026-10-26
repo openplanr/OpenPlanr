@@ -1017,11 +1017,11 @@
       "assets": [
         {
           "path": "skills/spec/SKILL.md",
-          "digest": "sha256:1ff5c57c86757aaed8693a2bb448099f810d23a532f5ccdfd241e972c7e43d9a"
+          "digest": "sha256:8da00648b861c64b675384fc0524f1c8b48cf5e245e23eb416e35519a44c9eba"
         },
         {
           "path": "skills/spec/openplanr.skill.json",
-          "digest": "sha256:f4d06e96f07db140706108b16e0a48f377d1c50d170b0a0c1b4a93d7642a4fb6"
+          "digest": "sha256:aaf4a2660b2310e312d6b9aa25a099ca4057c44129d634e2f45fbc8a7862c621"
         },
         {
           "path": "skills/spec/agents/openai.yaml",
@@ -1029,7 +1029,7 @@
         },
         {
           "path": "skills/spec/references/specification-contract.md",
-          "digest": "sha256:55ecc8361256073324d2507097862f6222589e22887dffe5b5e25cdc89199df5"
+          "digest": "sha256:eaaf58e5d2e5cf788856c8d0e156a1ff49111d3578556bfb7c8fe2466df15b15"
         }
       ]
     },
