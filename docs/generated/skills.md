@@ -192,7 +192,7 @@ Diagnose OpenPlanr CLI, pipeline, runtime-adapter, installation, and lock health
 
 ## `planr-investigate`
 
-Diagnose a bug, regression, error, failing test, or unexplained behavior and optionally implement a bounded fix. Use whenever the user asks why something fails or asks to investigate, debug, or find a root cause, including before any fix and for a single file. Not for planned feature delivery.
+Diagnose a software bug, regression, error, failing test, or unexplained behavior and optionally implement a bounded fix. Use when the user asks why code or an application fails, or asks to investigate, debug, or find a root cause, including before any fix. Not for planned feature delivery.
 
 - Select for: Investigate a bug, regression, error, or unexplained behavior; Reproduce a defect, establish its root cause, or apply a bounded fix; Investigate why this fails.
 - Defer for: Plan a new feature; Run a broad product review.
@@ -280,7 +280,7 @@ Share a status report, sprint note or release notes with the team as a chat mess
 
 ## `planr-ship`
 
-Implement an OpenPlanr plan, specification, task, or clearly stated request end to end in the current repository. Use whenever the user asks to build, implement, fix, finish, or ship local work, including a small or already accepted change and requests to plan and implement it. Invoke before editing files. Not for planning only, landing, or release.
+Implement an OpenPlanr plan, specification, task, or clearly stated request end to end in the current repository. Use when the user asks to build, implement, fix, finish, or ship local work, or to plan and implement an accepted change. Invoke before editing files for the requested change. Not for planning only, landing, release, or work handed to another coding agent.
 
 - Select for: Implement a plan, specification, task, fix, or clearly stated local request; Build and verify the requested repository change; Ship this; Ship task; Implement this task; Implement this plan with parallel coding agents; Use native parallel agents to implement this task; Fix the delegate runner in the active agent.
 - Defer for: Only plan the work; Prepare a release without changing code; Have Codex implement this task; Use Codex to implement this; Have Claude Code implement this task; Ask another coding agent to implement this task; Use another coding agent to build this change.

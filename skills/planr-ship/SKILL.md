@@ -1,6 +1,6 @@
 ---
 name: planr-ship
-description: Implement an OpenPlanr plan, specification, task, or clearly stated request end to end in the current repository. Use whenever the user asks to build, implement, fix, finish, or ship local work, including a small or already accepted change and requests to plan and implement it. Invoke before editing files. Not for planning only, landing, or release.
+description: Implement an OpenPlanr plan, specification, task, or clearly stated request end to end in the current repository. Use when the user asks to build, implement, fix, finish, or ship local work, or to plan and implement an accepted change. Invoke before editing files for the requested change. Not for planning only, landing, release, or work handed to another coding agent.
 license: MIT
 ---
 

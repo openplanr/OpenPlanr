@@ -160,6 +160,12 @@
       "expectedSkillId": "planr-design-review"
     },
     {
+      "id": "design-review-pin-fix-not-ship",
+      "kind": "near-miss",
+      "input": "Fix the spacing issue pinned on the settings board",
+      "forbiddenSkillId": "planr-ship"
+    },
+    {
       "id": "diagram-create",
       "kind": "positive",
       "input": "Create a professional architecture diagram from this English description",
@@ -226,6 +232,12 @@
       "expectedSkillId": "planr-release"
     },
     {
+      "id": "release-changelog-not-ship",
+      "kind": "near-miss",
+      "input": "Update the CHANGELOG for what shipped",
+      "forbiddenSkillId": "planr-ship"
+    },
+    {
       "id": "operate-board",
       "kind": "positive",
       "input": "Run an executive operating review across product, technology, growth, operations, and strategy",
@@ -290,6 +302,30 @@
       "kind": "collision",
       "input": "Plan and implement this accepted local repository change end to end",
       "expectedSkillId": "planr-ship"
+    },
+    {
+      "id": "investigate-failing-test-before-fix",
+      "kind": "collision",
+      "input": "Find out why the checkout test fails before fixing anything",
+      "expectedSkillId": "planr-investigate"
+    },
+    {
+      "id": "investigate-debug-root-cause",
+      "kind": "paraphrase",
+      "input": "Debug the failing test and find its root cause",
+      "expectedSkillId": "planr-investigate"
+    },
+    {
+      "id": "ship-plan-implement-accepted",
+      "kind": "paraphrase",
+      "input": "Plan and implement the accepted change to the export flow",
+      "expectedSkillId": "planr-ship"
+    },
+    {
+      "id": "ship-accepted-not-plan",
+      "kind": "near-miss",
+      "input": "Plan and implement the accepted change to the export flow",
+      "forbiddenSkillId": "planr-plan"
     },
     {
       "id": "ship-missing-selector",
@@ -489,6 +525,12 @@
       "id": "delegate-codex-fix-review",
       "kind": "paraphrase",
       "input": "Please use Codex to implement the fix, then review the resulting patch",
+      "expectedSkillId": "planr-delegate"
+    },
+    {
+      "id": "delegate-codex-fix-failing-test",
+      "kind": "collision",
+      "input": "Have Codex fix the failing checkout test",
       "expectedSkillId": "planr-delegate"
     },
     {

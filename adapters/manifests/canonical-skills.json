@@ -5150,8 +5150,8 @@
       "version": "2.1.0",
       "source": "skills/planr-investigate/openplanr.skill.json",
       "entrypoint": "skills/planr-investigate/SKILL.md",
-      "description": "Diagnose a bug, regression, error, failing test, or unexplained behavior and optionally implement a bounded fix. Use whenever the user asks why something fails or asks to investigate, debug, or find a root cause, including before any fix and for a single file. Not for planned feature delivery.",
-      "sourceDigest": "sha256:2ac5d3b72322814fd3cdb60ed16aad7829ecbba823313fa25a9d001655fb828c",
+      "description": "Diagnose a software bug, regression, error, failing test, or unexplained behavior and optionally implement a bounded fix. Use when the user asks why code or an application fails, or asks to investigate, debug, or find a root cause, including before any fix. Not for planned feature delivery.",
+      "sourceDigest": "sha256:609df8f6bed69e1a49eefaa332c30997d2ad4ac4301f3adef0b91fa39daa13be",
       "resources": [
         {
           "path": "agents/openai.yaml",
@@ -5161,7 +5161,7 @@
             "chatgpt"
           ],
           "executable": false,
-          "digest": "sha256:3961b0a4cf9b36d8eab3d9e04d9988990f729ea0430b44fea8f51df52bc288b6"
+          "digest": "sha256:9ccb4d035c0adcd20771510c6d6d9732827ec0ab861dd687b753015d6f3f6991"
         },
         {
           "path": "references/findings.md",
@@ -5757,8 +5757,8 @@
       "version": "1.4.0",
       "source": "skills/planr-ship/openplanr.skill.json",
       "entrypoint": "skills/planr-ship/SKILL.md",
-      "description": "Implement an OpenPlanr plan, specification, task, or clearly stated request end to end in the current repository. Use whenever the user asks to build, implement, fix, finish, or ship local work, including a small or already accepted change and requests to plan and implement it. Invoke before editing files. Not for planning only, landing, or release.",
-      "sourceDigest": "sha256:0492027b1030858390473e94d3f9be4a6fc2465d556bb19b6aed81a857ab9f63",
+      "description": "Implement an OpenPlanr plan, specification, task, or clearly stated request end to end in the current repository. Use when the user asks to build, implement, fix, finish, or ship local work, or to plan and implement an accepted change. Invoke before editing files for the requested change. Not for planning only, landing, release, or work handed to another coding agent.",
+      "sourceDigest": "sha256:c01e21e744d323a781abce7713500dad948717fa3234112e5740a10def01d6c8",
       "resources": [
         {
           "path": "agents/openai.yaml",
@@ -5768,7 +5768,7 @@
             "chatgpt"
           ],
           "executable": false,
-          "digest": "sha256:370ccd1fa0d988a28244d14b90e6e9ce4642db04467889da9043ecc01da3a8c3"
+          "digest": "sha256:08628d822b8168eea900d2788172b77a23cc0e074e7535b3a299af9e34c7112e"
         },
         {
           "path": "references/result-contract.md",

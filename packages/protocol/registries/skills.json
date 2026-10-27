@@ -1061,7 +1061,7 @@
     {
       "skillId": "planr-investigate",
       "skillVersion": "2.1.0",
-      "description": "Diagnose a bug, regression, error, failing test, or unexplained behavior and optionally implement a bounded fix. Use whenever the user asks why something fails or asks to investigate, debug, or find a root cause, including before any fix and for a single file. Not for planned feature delivery.",
+      "description": "Diagnose a software bug, regression, error, failing test, or unexplained behavior and optionally implement a bounded fix. Use when the user asks why code or an application fails, or asks to investigate, debug, or find a root cause, including before any fix. Not for planned feature delivery.",
       "lifecycle": "active",
       "authorityClass": "diagnostic",
       "source": "skills/planr-investigate/openplanr.skill.json",
@@ -1549,7 +1549,7 @@
     {
       "skillId": "planr-ship",
       "skillVersion": "1.4.0",
-      "description": "Implement an OpenPlanr plan, specification, task, or clearly stated request end to end in the current repository. Use whenever the user asks to build, implement, fix, finish, or ship local work, including a small or already accepted change and requests to plan and implement it. Invoke before editing files. Not for planning only, landing, or release.",
+      "description": "Implement an OpenPlanr plan, specification, task, or clearly stated request end to end in the current repository. Use when the user asks to build, implement, fix, finish, or ship local work, or to plan and implement an accepted change. Invoke before editing files for the requested change. Not for planning only, landing, release, or work handed to another coding agent.",
       "lifecycle": "active",
       "authorityClass": "implementation",
       "source": "skills/planr-ship/openplanr.skill.json",
@@ -1864,5 +1864,5 @@
     }
   ],
   "compatibilityAliases": [],
-  "documentDigest": "sha256:fb496e810144a39906d1d71e915fc6aa543f04bb31cecd33c5eb87a44d353f4f"
+  "documentDigest": "sha256:de11562f2f2342506a913d7717b1dc6f92cc254336168c67c21476419d0106eb"
 }

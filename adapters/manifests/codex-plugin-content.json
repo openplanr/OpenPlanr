@@ -735,12 +735,12 @@
       "skillId": "planr-investigate",
       "projectedName": "investigate",
       "invocation": "$planr:investigate",
-      "description": "Diagnose a bug, regression, error, failing test, or unexplained behavior and optionally implement a bounded fix. Use whenever the user asks why something fails or asks to investigate, debug, or find a root cause, including before any fix and for a single file. Not for planned feature delivery.",
+      "description": "Diagnose a software bug, regression, error, failing test, or unexplained behavior and optionally implement a bounded fix. Use when the user asks why code or an application fails, or asks to investigate, debug, or find a root cause, including before any fix. Not for planned feature delivery.",
       "entrypoint": "skills/investigate/SKILL.md",
       "assets": [
         {
           "path": "skills/investigate/SKILL.md",
-          "digest": "sha256:52810770378ccc2cad374658b705a38b94abed659ee28a570e220408ae9e1a63"
+          "digest": "sha256:211864dde578b1655eed6cfaca103b5e650c09a0d62f8ba6c9ee23f37257de4f"
         },
         {
           "path": "skills/investigate/openplanr.skill.json",
@@ -748,7 +748,7 @@
         },
         {
           "path": "skills/investigate/agents/openai.yaml",
-          "digest": "sha256:ee4553d92a895540c80fcaff63fa6fa9d89c1f2ff127bf2f4545c0504f933206"
+          "digest": "sha256:b094d4e12ebe3c9da37395468d9be9b57cf9b9915069ed05a9b7f2491101b121"
         },
         {
           "path": "skills/investigate/references/findings.md",
@@ -971,12 +971,12 @@
       "skillId": "planr-ship",
       "projectedName": "ship",
       "invocation": "$planr:ship",
-      "description": "Implement an OpenPlanr plan, specification, task, or clearly stated request end to end in the current repository. Use whenever the user asks to build, implement, fix, finish, or ship local work, including a small or already accepted change and requests to plan and implement it. Invoke before editing files. Not for planning only, landing, or release.",
+      "description": "Implement an OpenPlanr plan, specification, task, or clearly stated request end to end in the current repository. Use when the user asks to build, implement, fix, finish, or ship local work, or to plan and implement an accepted change. Invoke before editing files for the requested change. Not for planning only, landing, release, or work handed to another coding agent.",
       "entrypoint": "skills/ship/SKILL.md",
       "assets": [
         {
           "path": "skills/ship/SKILL.md",
-          "digest": "sha256:7e43798485be244ae0b8346fc1fb51015122f783080c48db2e433619fbde4450"
+          "digest": "sha256:e5fa1282a415e26c1463ed73c5d88ec69512080395d7fb385463d0bdff0a73ec"
         },
         {
           "path": "skills/ship/openplanr.skill.json",
@@ -984,7 +984,7 @@
         },
         {
           "path": "skills/ship/agents/openai.yaml",
-          "digest": "sha256:f7ff8b8c646d298b6158856963fdc84e487c7207d3beaf108ea72bc88a87eb86"
+          "digest": "sha256:884dab0cf43c9afb90944b40b529b8d1b6fa6f0b4f7d66ebc5d3a0a01e9a7d31"
         },
         {
           "path": "skills/ship/references/result-contract.md",
