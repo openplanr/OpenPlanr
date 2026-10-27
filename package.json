@@ -38,6 +38,7 @@
     "skill:preview": "node scripts/skills/preview.mjs",
     "skill:evaluate": "node scripts/skills/evaluate.mjs",
     "skill:evaluate:catalog": "node scripts/skills/evaluate-catalog.mjs",
+    "skill:evaluate:claude": "node scripts/skills/evaluate-claude-plugin.mjs",
     "skill:evaluate:model": "node scripts/skills/evaluate-model-release.mjs",
     "skill:impact": "node scripts/skills/impact.mjs",
     "skill:verify:codex-plugin": "node scripts/skills/verify-openai-v18.mjs",

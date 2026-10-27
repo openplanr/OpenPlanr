@@ -150,6 +150,13 @@ export const GENERATOR_STEPS = Object.freeze([
       command('scripts/marketplace/generate-ecosystem.mjs', ['--write'], ['--check']),
     ]),
   }),
+  Object.freeze({
+    id: 'claude-plugin-evals',
+    required: true,
+    candidates: Object.freeze([
+      command('scripts/skills/generate-claude-plugin-evals.mjs', ['--write'], ['--check']),
+    ]),
+  }),
 ]);
 
 function availableScript(script) {

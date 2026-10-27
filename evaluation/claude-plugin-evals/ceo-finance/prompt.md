@@ -1,0 +1,8 @@
+---
+description: Generated from evaluation/skills/routing-corpus.json case ceo-finance.
+max_turns: 3
+allowed_tools: [Read, Glob, Grep, Skill]
+plugins: ["../../../dist/plugins/claude/openplanr"]
+---
+
+Run a CEO review of strategy, runway, and margin
