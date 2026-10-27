@@ -6,8 +6,10 @@
  */
 
 import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
-import { dirname, join, relative, resolve } from 'node:path';
+import { dirname, join, posix, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+
+import { HOST_PLUGIN_NAME, projectedSkillName } from './host-invocations.mjs';
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..');
 
@@ -19,10 +21,11 @@ const SCAFFOLD_DIR = 'evaluation/skills/claude-plugin-eval-scaffolds';
 const OPTION_KEYS = new Set(['rivalSkillId', 'scaffold']);
 const RESULTS_DIR = 'results';
 
-const pluginSkillName = (skillId) => `planr:${skillId.replace(/^planr-/u, '')}`;
-const skillPattern = (skillId) => `"skill"\\s*:\\s*"${pluginSkillName(skillId)}"`;
-const otherPlanrSkillPattern = (skillId) =>
-  `"skill"\\s*:\\s*"planr:(?!${pluginSkillName(skillId).slice('planr:'.length)}")`;
+const ROUTER_SKILL_ID = 'planr-openplanr';
+
+// Claude may call a plugin skill by its bare name, so the namespace is optional.
+const skillPattern = (skillIds) =>
+  `"skill"\\s*:\\s*"(?:${HOST_PLUGIN_NAME}:)?(?:${skillIds.map(projectedSkillName).join('|')})"`;
 
 function fail(message) {
   throw new Error(`E_CLAUDE_PLUGIN_EVALS: ${message}`);
@@ -59,8 +62,8 @@ export function selectPluginEvalCases({ corpus, registry }) {
   return selected;
 }
 
-// Without `arm: both`, a Skill grader is an unscored indicator in a two-arm run,
-// so a case would pass even when the expected skill never fires.
+// A case whose graders are all Skill graders is scored in full even in a two-arm run;
+// `arm: both` keeps that true once a case gains a non-Skill grader.
 function skillGrader({ skillPatternSource, min, max }) {
   return [
     '---',
@@ -77,15 +80,16 @@ function skillGrader({ skillPatternSource, min, max }) {
 
 /**
  * Renders the suite as a map of eval-dir-relative paths to file contents.
- * `readScaffold` returns a scaffold script's contents by file name.
+ * `skillIds` lists every registry skill; `readScaffold` returns a scaffold script's contents by file name.
  */
-export function renderPluginEvalFiles(cases, { readScaffold } = {}) {
+export function renderPluginEvalFiles(cases, { skillIds, readScaffold } = {}) {
+  if (!skillIds?.length) fail('no registry skill ids were supplied.');
   const files = new Map();
   for (const fixture of cases) {
-    const caseDir = join(PLUGIN_EVAL_DIR, fixture.id);
-    const plugin = relative(caseDir, PLUGIN_DIR);
+    const caseDir = posix.join(PLUGIN_EVAL_DIR, fixture.id);
+    const plugin = posix.relative(caseDir, PLUGIN_DIR);
     files.set(
-      join(fixture.id, 'prompt.md'),
+      posix.join(fixture.id, 'prompt.md'),
       [
         '---',
         `description: Generated from ${CORPUS_PATH} case ${fixture.id}.`,
@@ -102,7 +106,7 @@ export function renderPluginEvalFiles(cases, { readScaffold } = {}) {
     if (scaffold !== undefined) {
       if (!readScaffold) fail(`case ${fixture.id}: no scaffold reader was supplied.`);
       files.set(
-        join(fixture.id, 'case.yaml'),
+        posix.join(fixture.id, 'case.yaml'),
         [
           'schema_version: "1.1"',
           `name: ${fixture.id}`,
@@ -111,28 +115,32 @@ export function renderPluginEvalFiles(cases, { readScaffold } = {}) {
           '',
         ].join('\n'),
       );
-      files.set(join(fixture.id, 'scaffold.sh'), readScaffold(scaffold));
+      files.set(posix.join(fixture.id, 'scaffold.sh'), readScaffold(scaffold));
     }
     if (fixture.expectedSkillId === undefined) {
       files.set(
-        join(fixture.id, 'graders', 'no-planr-skill.md'),
-        skillGrader({ skillPatternSource: '"skill"\\s*:\\s*"planr:', min: 0, max: 0 }),
+        posix.join(fixture.id, 'graders', 'no-planr-skill.md'),
+        skillGrader({ skillPatternSource: skillPattern(skillIds), min: 0, max: 0 }),
       );
       continue;
     }
     const { rivalSkillId } = fixture.claudePluginEval;
     files.set(
-      join(fixture.id, 'graders', `${fixture.expectedSkillId}-fires.md`),
-      skillGrader({ skillPatternSource: skillPattern(fixture.expectedSkillId) }),
+      posix.join(fixture.id, 'graders', `${fixture.expectedSkillId}-fires.md`),
+      skillGrader({ skillPatternSource: skillPattern([fixture.expectedSkillId]) }),
     );
     files.set(
-      join(fixture.id, 'graders', `${rivalSkillId}-does-not-fire.md`),
-      skillGrader({ skillPatternSource: skillPattern(rivalSkillId), min: 0, max: 0 }),
+      posix.join(fixture.id, 'graders', `${rivalSkillId}-does-not-fire.md`),
+      skillGrader({ skillPatternSource: skillPattern([rivalSkillId]), min: 0, max: 0 }),
+    );
+    // The router hands off to the expected skill, so calling it is not a misroute.
+    const otherSkillIds = skillIds.filter(
+      (skillId) => skillId !== fixture.expectedSkillId && skillId !== ROUTER_SKILL_ID,
     );
     files.set(
-      join(fixture.id, 'graders', 'other-planr-skills-do-not-fire.md'),
+      posix.join(fixture.id, 'graders', 'other-planr-skills-do-not-fire.md'),
       skillGrader({
-        skillPatternSource: otherPlanrSkillPattern(fixture.expectedSkillId),
+        skillPatternSource: skillPattern(otherSkillIds),
         min: 0,
         max: 0,
       }),
@@ -144,7 +152,7 @@ export function renderPluginEvalFiles(cases, { readScaffold } = {}) {
 function listFiles(directory, prefix = '') {
   if (!existsSync(directory)) return [];
   return readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
-    const path = join(prefix, entry.name);
+    const path = posix.join(prefix, entry.name);
     if (!prefix && entry.name === RESULTS_DIR) return [];
     return entry.isDirectory() ? listFiles(join(directory, entry.name), path) : [path];
   });
@@ -153,15 +161,16 @@ function listFiles(directory, prefix = '') {
 /** Builds the expected suite for a repository root. */
 export function buildPluginEvalSuite(root = repoRoot) {
   const read = (path) => JSON.parse(readFileSync(resolve(root, path), 'utf8'));
+  const registry = read(REGISTRY_PATH);
   const readScaffold = (name) => {
     const path = resolve(root, SCAFFOLD_DIR, name);
     if (!existsSync(path)) fail(`scaffold ${name} does not exist in ${SCAFFOLD_DIR}.`);
     return readFileSync(path, 'utf8');
   };
-  return renderPluginEvalFiles(
-    selectPluginEvalCases({ corpus: read(CORPUS_PATH), registry: read(REGISTRY_PATH) }),
-    { readScaffold },
-  );
+  return renderPluginEvalFiles(selectPluginEvalCases({ corpus: read(CORPUS_PATH), registry }), {
+    skillIds: registry.skills.map(({ skillId }) => skillId),
+    readScaffold,
+  });
 }
 
 /** Lists eval-dir paths whose contents differ from the expected suite. */

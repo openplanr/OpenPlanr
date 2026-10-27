@@ -1,6 +1,6 @@
 ---
 type: tool_used
 tool: Skill
-input_match: '"skill"\s*:\s*"planr:status"'
+input_match: '"skill"\s*:\s*"(?:planr:)?(?:status)"'
 arm: both
 ---

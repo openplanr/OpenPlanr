@@ -17,6 +17,8 @@ import {
 const root = fileURLToPath(new URL('../../', import.meta.url));
 const registry = JSON.parse(readFileSync(join(root, 'skills/registry.json'), 'utf8'));
 const corpusPath = 'evaluation/skills/routing-corpus.json';
+const skillIds = registry.skills.map(({ skillId }) => skillId);
+const render = (cases, options) => renderPluginEvalFiles(cases, { skillIds, ...options });
 
 function scratchRoot(t) {
   const scratch = mkdtempSync(join(tmpdir(), 'openplanr-plugin-evals-'));
@@ -96,7 +98,7 @@ test('run results inside the eval directory are not drift and survive regenerati
 });
 
 test('a positive case asserts its skill fires and neither its rival nor another planr skill does', () => {
-  const files = renderPluginEvalFiles([positive({ rivalSkillId: 'planr-plan' })]);
+  const files = render([positive({ rivalSkillId: 'planr-plan' })]);
   assert.deepEqual(
     [...files.keys()],
     [
@@ -110,51 +112,72 @@ test('a positive case asserts its skill fires and neither its rival nor another 
     files.get('case-a/prompt.md'),
     /^plugins: \["\.\.\/\.\.\/\.\.\/dist\/plugins\/claude\/openplanr"\]$/mu,
   );
-  assert.match(files.get('case-a/graders/planr-spec-fires.md'), /"planr:spec"'\narm: both/u);
+  assert.match(files.get('case-a/graders/planr-spec-fires.md'), /'\narm: both/u);
   assert.match(
     files.get('case-a/graders/planr-plan-does-not-fire.md'),
-    /"planr:plan"'\nmin: 0\nmax: 0\narm: both/u,
+    /'\nmin: 0\nmax: 0\narm: both/u,
+  );
+  assert.match(
+    files.get('case-a/graders/other-planr-skills-do-not-fire.md'),
+    /'\nmin: 0\nmax: 0\narm: both/u,
   );
   assert.match(files.get('case-a/prompt.md'), /^max_turns: 10$/mu);
 });
 
-test('the other-skill grader matches every planr skill except the expected one', () => {
-  const expected = { ...positive({ rivalSkillId: 'planr-plan' }), expectedSkillId: 'planr-plan' };
-  const grader = renderPluginEvalFiles([expected]).get(
-    'case-a/graders/other-planr-skills-do-not-fire.md',
-  );
-  assert.match(grader, /\nmin: 0\nmax: 0\narm: both/u);
+const skillNames = skillIds.map((skillId) => skillId.slice('planr-'.length));
+
+/** Lists the skills a grader matches; a skill must match both namespaced and bare, or neither. */
+function matchedSkills(grader) {
   const pattern = new RegExp(grader.match(/^input_match: '(.*)'$/mu)[1], 'u');
   const call = (skill) => JSON.stringify({ skill });
-  assert.doesNotMatch(call('planr:plan'), pattern);
-  for (const skill of ['planr:plan-review', 'planr:release', 'planr:spec'])
-    assert.match(call(skill), pattern, skill);
   assert.doesNotMatch(call('other:plan-review'), pattern);
+  return skillNames.filter((name) => {
+    const namespaced = pattern.test(call(`planr:${name}`));
+    assert.equal(pattern.test(call(name)), namespaced, name);
+    return namespaced;
+  });
+}
+
+test('each positive-case grader matches exactly its skills, namespaced or bare', () => {
+  const files = render([
+    { ...positive({ rivalSkillId: 'planr-plan-review' }), expectedSkillId: 'planr-plan' },
+  ]);
+  assert.deepEqual(matchedSkills(files.get('case-a/graders/planr-plan-fires.md')), ['plan']);
+  assert.deepEqual(matchedSkills(files.get('case-a/graders/planr-plan-review-does-not-fire.md')), [
+    'plan-review',
+  ]);
+  assert.deepEqual(
+    matchedSkills(files.get('case-a/graders/other-planr-skills-do-not-fire.md')),
+    skillNames.filter((name) => !['plan', 'openplanr'].includes(name)),
+  );
 });
 
-test('a negative case asserts that no planr skill fires', () => {
-  const files = renderPluginEvalFiles([
+test('a negative case asserts that no planr skill fires, the router included', () => {
+  const files = render([
     { id: 'case-b', kind: 'negative', input: 'Translate this', claudePluginEval: {} },
   ]);
-  assert.match(
-    files.get('case-b/graders/no-planr-skill.md'),
-    /"planr:'\nmin: 0\nmax: 0\narm: both/u,
+  const grader = files.get('case-b/graders/no-planr-skill.md');
+  assert.match(grader, /'\nmin: 0\nmax: 0\narm: both/u);
+  assert.deepEqual(matchedSkills(grader), skillNames);
+});
+
+test('rendering without registry skill ids is an actionable failure', () => {
+  assert.throws(
+    () => renderPluginEvalFiles([positive({ rivalSkillId: 'planr-plan' })]),
+    /no registry skill ids/u,
   );
 });
 
 test('a scaffolded case copies its script and names it in case.yaml', () => {
-  const files = renderPluginEvalFiles(
-    [positive({ rivalSkillId: 'planr-plan', scaffold: 'repo.sh' })],
-    { readScaffold: (name) => `# ${name}\n` },
-  );
+  const files = render([positive({ rivalSkillId: 'planr-plan', scaffold: 'repo.sh' })], {
+    readScaffold: (name) => `# ${name}\n`,
+  });
   assert.equal(files.get('case-a/scaffold.sh'), '# repo.sh\n');
   assert.equal(
     files.get('case-a/case.yaml'),
     'schema_version: "1.1"\nname: case-a\ncontext:\n  scaffold_script: scaffold.sh\n',
   );
-  assert.ok(
-    !renderPluginEvalFiles([positive({ rivalSkillId: 'planr-plan' })]).has('case-a/case.yaml'),
-  );
+  assert.ok(!render([positive({ rivalSkillId: 'planr-plan' })]).has('case-a/case.yaml'));
 });
 
 test('a scaffold edit the generated tree does not reflect is reported as drift', (t) => {

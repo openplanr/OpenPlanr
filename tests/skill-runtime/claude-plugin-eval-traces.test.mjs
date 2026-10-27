@@ -1,7 +1,15 @@
 import assert from 'node:assert/strict';
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import {
+  chmodSync,
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
 import test from 'node:test';
 
 import { collectRunTraces } from '../../scripts/skills/evaluate-claude-plugin.mjs';
@@ -13,8 +21,8 @@ function scratch(t) {
 }
 
 function trace(root, name, content) {
-  const path = join(root, 'sandbox', name, 'trace.jsonl');
-  mkdirSync(join(root, 'sandbox', name), { recursive: true });
+  const path = join(root, 'sandbox', name, 'out', 'trace.jsonl');
+  mkdirSync(dirname(path), { recursive: true });
   writeFileSync(path, content);
   return path;
 }
@@ -36,8 +44,9 @@ test('each run trace named in the result is copied under traces/<case>/<arm>-<n>
       },
     ],
   };
-  const report = collectRunTraces({ result, outputDir });
+  const report = collectRunTraces({ result, outputDir, tempRoots: [join(root, 'sandbox')] });
   assert.deepEqual(report.missing, []);
+  assert.deepEqual(report.kept, []);
   assert.deepEqual(report.copied, [
     'traces/spec-vague/with-1.jsonl',
     'traces/spec-vague/with-2.jsonl',
@@ -62,7 +71,7 @@ test('a run whose trace is absent or unnamed is reported, not skipped', (t) => {
       },
     ],
   };
-  const report = collectRunTraces({ result, outputDir: join(root, 'out') });
+  const report = collectRunTraces({ result, outputDir: join(root, 'out'), tempRoots: [root] });
   assert.deepEqual(report.copied, []);
   assert.deepEqual(
     report.missing.map(({ run }) => run),
@@ -70,4 +79,34 @@ test('a run whose trace is absent or unnamed is reported, not skipped', (t) => {
   );
   assert.match(report.missing[0].reason, /does not exist/u);
   assert.match(report.missing[1].reason, /no tracePath/u);
+});
+
+test('a copied run sandbox is removed only when it sits directly in a temporary root', (t) => {
+  const root = scratch(t);
+  const removable = trace(root, 'a', 'with-1\n');
+  const sandbox = dirname(dirname(removable));
+  mkdirSync(join(sandbox, 'sealed', 'inner'), { recursive: true });
+  chmodSync(join(sandbox, 'sealed'), 0o000);
+  chmodSync(sandbox, 0o500);
+  const outside = join(root, 'elsewhere', 'deep', 'b', 'out', 'trace.jsonl');
+  mkdirSync(dirname(outside), { recursive: true });
+  writeFileSync(outside, 'with-2\n');
+  const result = {
+    cases: [
+      { name: 'spec-vague', arms: { with: [{ tracePath: removable }, { tracePath: outside }] } },
+    ],
+  };
+  const report = collectRunTraces({
+    result,
+    outputDir: join(root, 'results'),
+    tempRoots: [join(root, 'sandbox'), join(root, 'elsewhere')],
+  });
+  assert.equal(report.copied.length, 2);
+  assert.equal(existsSync(sandbox), false);
+  assert.equal(existsSync(outside), true);
+  assert.deepEqual(
+    report.kept.map(({ run }) => run),
+    ['spec-vague/with-2'],
+  );
+  assert.match(report.kept[0].reason, /is not directly inside/u);
 });
