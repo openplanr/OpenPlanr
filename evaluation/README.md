@@ -38,13 +38,16 @@ their own temporary fixtures and do not require a contributor's saved runs.
 cases that set `claudePluginEval`; do not edit it by hand. Each case checks that
 Claude Code invokes the expected `planr:` skill, does not invoke the case's
 `rivalSkillId`, and invokes no other `planr:` skill. A negative case (`"claudePluginEval": {}`) checks that no
-`planr:` skill fires. Every grader is scored in both arms, so a case fails when
-the expected skill never fires. `npm run check:generated` fails when the suite no
+`planr:` skill fires. Each run starts in an empty directory, so a case whose
+prompt refers to repository context sets `claudePluginEval.scaffold` to a script
+in `skills/claude-plugin-eval-scaffolds/`. The script builds a small, offline,
+deterministic git repository before Claude starts. Every grader is scored in
+both arms, so a case fails when the expected skill never fires. `npm run check:generated` fails when the suite no
 longer matches the corpus.
 
 `npm run skill:evaluate:claude` rebuilds the plugin and runs the suite with the
 installed `claude` CLI against `dist/plugins/claude/openplanr`, with a pinned
-model and a $10 cost ceiling. It is report-only (`--threshold 0`) and calls the
-model, so it is a manual check, not a CI gate. Extra arguments pass through, for
+model, case scaffolds (`--scaffold`) and a $10 cost ceiling. It is report-only
+(`--threshold 0`) and calls the model, so it is a manual check, not a CI gate. Extra arguments pass through, for
 example `npm run skill:evaluate:claude -- --runs 1 --case spec-vague`. Results,
 including `report.html`, go to the ignored `claude-plugin-evals/results/`.

@@ -15,6 +15,8 @@ export const PLUGIN_EVAL_DIR = 'evaluation/claude-plugin-evals';
 export const PLUGIN_DIR = 'dist/plugins/claude/openplanr';
 const CORPUS_PATH = 'evaluation/skills/routing-corpus.json';
 const REGISTRY_PATH = 'skills/registry.json';
+const SCAFFOLD_DIR = 'evaluation/skills/claude-plugin-eval-scaffolds';
+const OPTION_KEYS = new Set(['rivalSkillId', 'scaffold']);
 const RESULTS_DIR = 'results';
 
 const pluginSkillName = (skillId) => `planr:${skillId.replace(/^planr-/u, '')}`;
@@ -34,9 +36,13 @@ export function selectPluginEvalCases({ corpus, registry }) {
     const options = fixture.claudePluginEval;
     if (options === null || typeof options !== 'object' || Array.isArray(options))
       fail(`case ${fixture.id}: claudePluginEval must be an object.`);
-    const unknown = Object.keys(options).filter((key) => key !== 'rivalSkillId');
+    const unknown = Object.keys(options).filter((key) => !OPTION_KEYS.has(key));
     if (unknown.length) fail(`case ${fixture.id}: unknown claudePluginEval keys ${unknown}.`);
     if (!/^[a-z0-9-]+$/u.test(fixture.id)) fail(`case ${fixture.id}: id is not a directory name.`);
+    if (options.scaffold !== undefined && !/^[a-z0-9-]+\.sh$/u.test(options.scaffold))
+      fail(
+        `case ${fixture.id}: scaffold ${options.scaffold} must name a .sh file in ${SCAFFOLD_DIR}.`,
+      );
     if (fixture.expectedSkillId === undefined) {
       if (fixture.kind !== 'negative')
         fail(`case ${fixture.id}: only negative cases may omit expectedSkillId.`);
@@ -69,8 +75,11 @@ function skillGrader({ skillPatternSource, min, max }) {
   ].join('\n');
 }
 
-/** Renders the suite as a map of eval-dir-relative paths to file contents. */
-export function renderPluginEvalFiles(cases) {
+/**
+ * Renders the suite as a map of eval-dir-relative paths to file contents.
+ * `readScaffold` returns a scaffold script's contents by file name.
+ */
+export function renderPluginEvalFiles(cases, { readScaffold } = {}) {
   const files = new Map();
   for (const fixture of cases) {
     const caseDir = join(PLUGIN_EVAL_DIR, fixture.id);
@@ -89,6 +98,21 @@ export function renderPluginEvalFiles(cases) {
         '',
       ].join('\n'),
     );
+    const { scaffold } = fixture.claudePluginEval;
+    if (scaffold !== undefined) {
+      if (!readScaffold) fail(`case ${fixture.id}: no scaffold reader was supplied.`);
+      files.set(
+        join(fixture.id, 'case.yaml'),
+        [
+          'schema_version: "1.1"',
+          `name: ${fixture.id}`,
+          'context:',
+          '  scaffold_script: scaffold.sh',
+          '',
+        ].join('\n'),
+      );
+      files.set(join(fixture.id, 'scaffold.sh'), readScaffold(scaffold));
+    }
     if (fixture.expectedSkillId === undefined) {
       files.set(
         join(fixture.id, 'graders', 'no-planr-skill.md'),
@@ -129,8 +153,14 @@ function listFiles(directory, prefix = '') {
 /** Builds the expected suite for a repository root. */
 export function buildPluginEvalSuite(root = repoRoot) {
   const read = (path) => JSON.parse(readFileSync(resolve(root, path), 'utf8'));
+  const readScaffold = (name) => {
+    const path = resolve(root, SCAFFOLD_DIR, name);
+    if (!existsSync(path)) fail(`scaffold ${name} does not exist in ${SCAFFOLD_DIR}.`);
+    return readFileSync(path, 'utf8');
+  };
   return renderPluginEvalFiles(
     selectPluginEvalCases({ corpus: read(CORPUS_PATH), registry: read(REGISTRY_PATH) }),
+    { readScaffold },
   );
 }
 

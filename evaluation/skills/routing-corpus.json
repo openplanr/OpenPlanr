@@ -159,7 +159,8 @@
       "input": "Critique the existing completed OpenPlanr design",
       "expectedSkillId": "planr-design-review",
       "claudePluginEval": {
-        "rivalSkillId": "planr-design"
+        "rivalSkillId": "planr-design",
+        "scaffold": "completed-design.sh"
       }
     },
     {
@@ -297,7 +298,8 @@
       "input": "Investigate why checkout fails; do not implement a fix yet",
       "expectedSkillId": "planr-investigate",
       "claudePluginEval": {
-        "rivalSkillId": "planr-ship"
+        "rivalSkillId": "planr-ship",
+        "scaffold": "checkout-failing-test.sh"
       }
     },
     {
@@ -306,7 +308,8 @@
       "input": "Plan and implement this accepted local repository change end to end",
       "expectedSkillId": "planr-ship",
       "claudePluginEval": {
-        "rivalSkillId": "planr-plan"
+        "rivalSkillId": "planr-plan",
+        "scaffold": "accepted-change.sh"
       }
     },
     {

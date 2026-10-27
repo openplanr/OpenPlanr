@@ -21,8 +21,12 @@ const corpusPath = 'evaluation/skills/routing-corpus.json';
 function scratchRoot(t) {
   const scratch = mkdtempSync(join(tmpdir(), 'openplanr-plugin-evals-'));
   t.after(() => rmSync(scratch, { recursive: true, force: true }));
-  for (const path of [corpusPath, 'skills/registry.json'])
-    cpSync(join(root, path), join(scratch, path));
+  for (const path of [
+    corpusPath,
+    'skills/registry.json',
+    'evaluation/skills/claude-plugin-eval-scaffolds',
+  ])
+    cpSync(join(root, path), join(scratch, path), { recursive: true });
   writePluginEvalSuite(scratch, buildPluginEvalSuite(scratch));
   return scratch;
 }
@@ -138,6 +142,38 @@ test('a negative case asserts that no planr skill fires', () => {
   );
 });
 
+test('a scaffolded case copies its script and names it in case.yaml', () => {
+  const files = renderPluginEvalFiles(
+    [positive({ rivalSkillId: 'planr-plan', scaffold: 'repo.sh' })],
+    { readScaffold: (name) => `# ${name}\n` },
+  );
+  assert.equal(files.get('case-a/scaffold.sh'), '# repo.sh\n');
+  assert.equal(
+    files.get('case-a/case.yaml'),
+    'schema_version: "1.1"\nname: case-a\ncontext:\n  scaffold_script: scaffold.sh\n',
+  );
+  assert.ok(
+    !renderPluginEvalFiles([positive({ rivalSkillId: 'planr-plan' })]).has('case-a/case.yaml'),
+  );
+});
+
+test('a scaffold edit the generated tree does not reflect is reported as drift', (t) => {
+  const scratch = scratchRoot(t);
+  const script = join(scratch, 'evaluation/skills/claude-plugin-eval-scaffolds/accepted-change.sh');
+  writeFileSync(script, `${readFileSync(script, 'utf8')}touch extra\n`);
+  assert.deepEqual(findPluginEvalDrift(scratch, buildPluginEvalSuite(scratch)), [
+    'plan-and-implement/scaffold.sh',
+  ]);
+});
+
+test('a missing scaffold script is an actionable failure', (t) => {
+  const scratch = scratchRoot(t);
+  editCorpus(scratch, (cases) => {
+    cases.find(({ id }) => id === 'spec-vague').claudePluginEval.scaffold = 'absent.sh';
+  });
+  assert.throws(() => buildPluginEvalSuite(scratch), /scaffold absent\.sh does not exist/u);
+});
+
 test('malformed claudePluginEval options are rejected', () => {
   for (const [fixture, message] of [
     [positive({}), /not a registry skill/u],
@@ -145,6 +181,7 @@ test('malformed claudePluginEval options are rejected', () => {
     [positive({ rivalSkillId: 'planr-spec' }), /must differ/u],
     [positive({ rivalSkillId: 'planr-plan', extra: true }), /unknown claudePluginEval keys/u],
     [positive(true), /must be an object/u],
+    [positive({ rivalSkillId: 'planr-plan', scaffold: '../x.sh' }), /must name a \.sh file/u],
     [
       {
         id: 'case-b',

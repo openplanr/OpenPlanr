@@ -46,6 +46,7 @@ process.exitCode = run('claude', [
   '--threshold',
   '0',
   '--trust-plugin',
+  '--scaffold',
   '--no-publish',
   '--output-dir',
   outputDir,
