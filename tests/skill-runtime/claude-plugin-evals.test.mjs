@@ -72,6 +72,7 @@ test('opting a case out leaves its stale files as drift until regenerated', (t) 
   });
   const files = buildPluginEvalSuite(scratch);
   assert.deepEqual(findPluginEvalDrift(scratch, files), [
+    'ceo-finance/graders/other-planr-skills-do-not-fire.md',
     'ceo-finance/graders/planr-ceo-review-fires.md',
     'ceo-finance/graders/planr-operate-does-not-fire.md',
     'ceo-finance/prompt.md',
@@ -90,7 +91,7 @@ test('run results inside the eval directory are not drift and survive regenerati
   assert.ok(readFileSync(join(results, 'run/aggregate-result.json'), 'utf8'));
 });
 
-test('a positive case asserts its skill fires and its rival does not', () => {
+test('a positive case asserts its skill fires and neither its rival nor another planr skill does', () => {
   const files = renderPluginEvalFiles([positive({ rivalSkillId: 'planr-plan' })]);
   assert.deepEqual(
     [...files.keys()],
@@ -98,6 +99,7 @@ test('a positive case asserts its skill fires and its rival does not', () => {
       'case-a/prompt.md',
       'case-a/graders/planr-spec-fires.md',
       'case-a/graders/planr-plan-does-not-fire.md',
+      'case-a/graders/other-planr-skills-do-not-fire.md',
     ],
   );
   assert.match(
@@ -109,6 +111,21 @@ test('a positive case asserts its skill fires and its rival does not', () => {
     files.get('case-a/graders/planr-plan-does-not-fire.md'),
     /"planr:plan"'\nmin: 0\nmax: 0\narm: both/u,
   );
+  assert.match(files.get('case-a/prompt.md'), /^max_turns: 10$/mu);
+});
+
+test('the other-skill grader matches every planr skill except the expected one', () => {
+  const expected = { ...positive({ rivalSkillId: 'planr-plan' }), expectedSkillId: 'planr-plan' };
+  const grader = renderPluginEvalFiles([expected]).get(
+    'case-a/graders/other-planr-skills-do-not-fire.md',
+  );
+  assert.match(grader, /\nmin: 0\nmax: 0\narm: both/u);
+  const pattern = new RegExp(grader.match(/^input_match: '(.*)'$/mu)[1], 'u');
+  const call = (skill) => JSON.stringify({ skill });
+  assert.doesNotMatch(call('planr:plan'), pattern);
+  for (const skill of ['planr:plan-review', 'planr:release', 'planr:spec'])
+    assert.match(call(skill), pattern, skill);
+  assert.doesNotMatch(call('other:plan-review'), pattern);
 });
 
 test('a negative case asserts that no planr skill fires', () => {

@@ -19,6 +19,8 @@ const RESULTS_DIR = 'results';
 
 const pluginSkillName = (skillId) => `planr:${skillId.replace(/^planr-/u, '')}`;
 const skillPattern = (skillId) => `"skill"\\s*:\\s*"${pluginSkillName(skillId)}"`;
+const otherPlanrSkillPattern = (skillId) =>
+  `"skill"\\s*:\\s*"planr:(?!${pluginSkillName(skillId).slice('planr:'.length)}")`;
 
 function fail(message) {
   throw new Error(`E_CLAUDE_PLUGIN_EVALS: ${message}`);
@@ -78,7 +80,7 @@ export function renderPluginEvalFiles(cases) {
       [
         '---',
         `description: Generated from ${CORPUS_PATH} case ${fixture.id}.`,
-        'max_turns: 3',
+        'max_turns: 10',
         'allowed_tools: [Read, Glob, Grep, Skill]',
         `plugins: ["${plugin}"]`,
         '---',
@@ -102,6 +104,14 @@ export function renderPluginEvalFiles(cases) {
     files.set(
       join(fixture.id, 'graders', `${rivalSkillId}-does-not-fire.md`),
       skillGrader({ skillPatternSource: skillPattern(rivalSkillId), min: 0, max: 0 }),
+    );
+    files.set(
+      join(fixture.id, 'graders', 'other-planr-skills-do-not-fire.md'),
+      skillGrader({
+        skillPatternSource: otherPlanrSkillPattern(fixture.expectedSkillId),
+        min: 0,
+        max: 0,
+      }),
     );
   }
   return files;
