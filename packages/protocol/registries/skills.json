@@ -1061,7 +1061,7 @@
     {
       "skillId": "planr-investigate",
       "skillVersion": "2.0.1",
-      "description": "Diagnose a bug, regression, error, or unexplained behavior and optionally implement a bounded fix. Use for root-cause investigation, not planned feature delivery.",
+      "description": "Diagnose a bug, regression, error, failing test, or unexplained behavior and optionally implement a bounded fix. Use whenever the user asks why something fails or asks to investigate, debug, or find a root cause, including before any fix and for a single file. Not for planned feature delivery.",
       "lifecycle": "active",
       "authorityClass": "diagnostic",
       "source": "skills/planr-investigate/openplanr.skill.json",
@@ -1549,7 +1549,7 @@
     {
       "skillId": "planr-ship",
       "skillVersion": "1.3.0",
-      "description": "Implement an OpenPlanr plan, specification, task, or clearly stated request end to end in the current repository. Use when the user asks to build, implement, fix, finish, or ship local work.",
+      "description": "Implement an OpenPlanr plan, specification, task, or clearly stated request end to end in the current repository. Use whenever the user asks to build, implement, fix, finish, or ship local work, including a small or already accepted change and requests to plan and implement it. Invoke before editing files. Not for planning only, landing, or release.",
       "lifecycle": "active",
       "authorityClass": "implementation",
       "source": "skills/planr-ship/openplanr.skill.json",
@@ -1864,5 +1864,5 @@
     }
   ],
   "compatibilityAliases": [],
-  "documentDigest": "sha256:3ecf796678076264518c001d3b3f3052323015b816434e49ddd18e2fb7830339"
+  "documentDigest": "sha256:05b616dcf517e3ea2fcb061f943f4873c64ca5aabf67754bc1e31e4d2cb684ee"
 }
