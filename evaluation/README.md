@@ -47,22 +47,32 @@ Graders match a skill called by its namespaced or bare name (`planr:spec` or `sp
 
 Each run starts in an empty directory. A case can set `claudePluginEval.scaffold`
 to a script in `skills/claude-plugin-eval-scaffolds/` that builds a small, offline,
-deterministic git repository before Claude starts. Only `design-review-critique`,
-`investigate-before-ship` and `plan-and-implement` have one. The other cases' prompts
-can refer to a plan, feature or piece of work the empty directory does not hold,
-so they may score low for that reason rather than because of routing.
+deterministic git repository before Claude starts. `design-loop-variants`,
+`design-review-critique`, `investigate-before-ship`, `plan-and-implement`,
+`ship-versus-land` and `spec-vague` have one. `ceo-finance`, `plan-review-cross` and
+`status-feature` do not, so their prompts can refer to a plan or feature the empty
+directory does not hold, and they may score low for that reason rather than
+because of routing.
+
+Cases may use `Read`, `Glob`, `Grep` and `Skill`. A case that needs more lists
+`Write`, `Edit` or `Bash` in `claudePluginEval.allowedTools`; only
+`plan-and-implement` does (`Write` and `Edit`). The CLI grants such tools to every
+case in a run, so the runner calls `claude plugin eval` once per tool set, using
+the generated `tags`, and the read-only cases never receive them.
 
 `npm run skill:evaluate:claude` rebuilds the plugin and runs the suite with the
 installed `claude` CLI against `dist/plugins/claude/openplanr`, with a pinned
 model, case scaffolds (`--scaffold`), a $10 cost ceiling and no baseline arm
 (`--ablation none`): without the plugin no `planr:` skill exists, so a baseline
-would only add cost. It is report-only (`--threshold 0`): a missed skill lowers
-the case score, but no case fails and the exit code stays 0. It calls the model,
+would only add cost. It is report-only (`--threshold 0`): a low score does not
+change the exit code, but a case that fails to load, a run that ends on an API
+error, or a cost-ceiling hit still exits non-zero. The ceiling is shared across
+the runner's calls. It calls the model,
 so it is a manual check, not a CI gate. Extra arguments pass through, for example
 `npm run skill:evaluate:claude -- --runs 1 --case spec-vague`. Results, including
-`aggregate-result.json` and `report.html`, go to the ignored
-`claude-plugin-evals/results/`, and each run's transcript is copied to
-`traces/<case>/<arm>-<n>.jsonl` there; a run whose transcript cannot be copied is
+`aggregate-result.json` and `report.html`, go to one folder per tool set under the
+ignored `claude-plugin-evals/results/<timestamp>/`, and each run's transcript is
+copied to `traces/<case>/<arm>-<n>.jsonl` there; a run whose transcript cannot be copied is
 named on stderr. To keep those transcripts the command passes `--keep-temp`, then
 removes each run's sandbox from the temporary directory once its transcript is
 copied. A sandbox it does not remove is named on stderr; it holds the run's Claude

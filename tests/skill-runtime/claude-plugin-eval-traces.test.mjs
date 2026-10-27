@@ -12,7 +12,7 @@ import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import test from 'node:test';
 
-import { collectRunTraces } from '../../scripts/skills/evaluate-claude-plugin.mjs';
+import { claudeEvalArgs, collectRunTraces } from '../../scripts/skills/evaluate-claude-plugin.mjs';
 
 function scratch(t) {
   const root = mkdtempSync(join(tmpdir(), 'openplanr-eval-traces-'));
@@ -109,4 +109,37 @@ test('a copied run sandbox is removed only when it sits directly in a temporary 
     ['spec-vague/with-2'],
   );
   assert.match(report.kept[0].reason, /is not directly inside/u);
+});
+
+test('a trace outside a sandbox out/ folder keeps its directory, even directly in a temp root', (t) => {
+  const root = scratch(t);
+  const tracePath = join(root, 'sandbox', 'a', 'trace.jsonl');
+  mkdirSync(dirname(tracePath), { recursive: true });
+  writeFileSync(tracePath, 'with-1\n');
+  const report = collectRunTraces({
+    result: { cases: [{ name: 'spec-vague', arms: { with: [{ tracePath }] } }] },
+    outputDir: join(root, 'results'),
+    tempRoots: [root],
+  });
+  assert.equal(report.copied.length, 1);
+  assert.equal(existsSync(tracePath), true);
+  assert.match(report.kept[0].reason, /not in a sandbox out\/ folder/u);
+});
+
+test('each eval call runs one tagged group with no baseline arm and grants only its tools', () => {
+  const args = (grants) =>
+    claudeEvalArgs({ outputDir: 'out', tag: 'grant-edit-write', grants, maxCostUsd: 7.5 });
+  const writer = args(['Edit', 'Write']);
+  assert.deepEqual(writer.slice(writer.indexOf('--ablation'), writer.indexOf('--ablation') + 2), [
+    '--ablation',
+    'none',
+  ]);
+  assert.deepEqual(writer.slice(writer.indexOf('--tag'), writer.indexOf('--tag') + 4), [
+    '--tag',
+    'grant-edit-write',
+    '--allow-tools',
+    'Edit',
+  ]);
+  assert.equal(writer[writer.indexOf('--max-cost-usd') + 1], '7.50');
+  assert.ok(!args([]).includes('--allow-tools'));
 });

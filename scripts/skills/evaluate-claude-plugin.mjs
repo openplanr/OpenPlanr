@@ -17,15 +17,19 @@ import {
   rmSync,
 } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { basename, dirname, join, resolve } from 'node:path';
+import { basename, dirname, join, matchesGlob, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { PLUGIN_EVAL_DIR } from './generate-claude-plugin-evals.mjs';
+import {
+  loadPluginEvalCases,
+  PLUGIN_EVAL_DIR,
+  pluginEvalRunGroups,
+} from './generate-claude-plugin-evals.mjs';
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const MODEL = 'claude-sonnet-5-5';
 const JUDGE_MODEL = 'claude-haiku-5-5';
-const MAX_COST_USD = '10';
+const MAX_COST_USD = 10;
 // The CLI creates sandboxes in /tmp even when the system temporary directory is elsewhere.
 const TEMP_ROOTS = [tmpdir(), '/tmp'];
 
@@ -88,34 +92,23 @@ function run(command, args) {
   return result.status ?? 1;
 }
 
-function main() {
-  const generated = run(process.execPath, ['scripts/generate-all.mjs', '--write']);
-  if (generated !== 0) {
-    process.stderr.write(
-      `npm run generate failed with exit ${generated}; the plugin was not built.\n`,
-    );
-    return generated;
-  }
-
-  const outputDir = join(
-    repoRoot,
-    PLUGIN_EVAL_DIR,
-    'results',
-    new Date().toISOString().replace(/[:.]/gu, '-'),
-  );
-  const resultPath = join(outputDir, 'aggregate-result.json');
-  const status = run('claude', [
+/** Returns the `claude plugin eval` arguments for one run group. */
+export function claudeEvalArgs({ outputDir, tag, grants, maxCostUsd, extraArgs = [] }) {
+  return [
     'plugin',
     'eval',
     '.',
     '--eval-dir',
     PLUGIN_EVAL_DIR,
+    '--tag',
+    tag,
+    ...(grants.length ? ['--allow-tools', ...grants] : []),
     '--model',
     MODEL,
     '--judge-model',
     JUDGE_MODEL,
     '--max-cost-usd',
-    MAX_COST_USD,
+    maxCostUsd.toFixed(2),
     '--threshold',
     '0',
     // Without the plugin no planr skill exists, so a baseline arm only adds cost.
@@ -128,22 +121,66 @@ function main() {
     '--no-publish',
     '--output-dir',
     outputDir,
-    ...process.argv.slice(2),
-  ]);
+    ...extraArgs,
+  ];
+}
 
-  if (!existsSync(resultPath)) {
-    process.stderr.write(`No eval result at ${resultPath}; no run traces were copied.\n`);
-    return status;
+/** Returns the `--case` glob among pass-through arguments, if any. */
+function caseGlobOf(extraArgs) {
+  const index = extraArgs.indexOf('--case');
+  if (index !== -1) return extraArgs[index + 1];
+  return extraArgs.find((arg) => arg.startsWith('--case='))?.slice('--case='.length);
+}
+
+function main() {
+  const generated = run(process.execPath, ['scripts/generate-all.mjs', '--write']);
+  if (generated !== 0) {
+    process.stderr.write(
+      `npm run generate failed with exit ${generated}; the plugin was not built.\n`,
+    );
+    return generated;
   }
-  const { copied, missing, kept } = collectRunTraces({
-    result: JSON.parse(readFileSync(resultPath, 'utf8')),
-    outputDir,
-  });
-  process.stdout.write(`Copied ${copied.length} run traces to ${join(outputDir, 'traces')}.\n`);
-  for (const { run: name, reason } of missing)
-    process.stderr.write(`Run trace not copied for ${name}: ${reason}.\n`);
-  for (const { run: name, reason } of kept)
-    process.stderr.write(`Sandbox left behind for ${name}: ${reason}.\n`);
+
+  const extraArgs = process.argv.slice(2);
+  const caseGlob = caseGlobOf(extraArgs);
+  const groups = pluginEvalRunGroups(loadPluginEvalCases()).filter(
+    ({ caseIds }) => !caseGlob || caseIds.some((id) => matchesGlob(id, caseGlob)),
+  );
+  const runRoot = join(
+    repoRoot,
+    PLUGIN_EVAL_DIR,
+    'results',
+    new Date().toISOString().replace(/[:.]/gu, '-'),
+  );
+  let status = groups.length ? 0 : 1;
+  if (!groups.length) process.stderr.write(`No eval case matches --case ${caseGlob}.\n`);
+  let spentUsd = 0;
+  for (const { tag, grants } of groups) {
+    const maxCostUsd = MAX_COST_USD - spentUsd;
+    if (maxCostUsd <= 0) {
+      process.stderr.write(`Cost ceiling of $${MAX_COST_USD} reached; group ${tag} did not run.\n`);
+      status = Math.max(status, 2);
+      continue;
+    }
+    const outputDir = join(runRoot, tag);
+    status = Math.max(
+      status,
+      run('claude', claudeEvalArgs({ outputDir, tag, grants, maxCostUsd, extraArgs })),
+    );
+    const resultPath = join(outputDir, 'aggregate-result.json');
+    if (!existsSync(resultPath)) {
+      process.stderr.write(`No eval result at ${resultPath}; no run traces were copied.\n`);
+      continue;
+    }
+    const result = JSON.parse(readFileSync(resultPath, 'utf8'));
+    spentUsd += result.costUsd ?? 0;
+    const { copied, missing, kept } = collectRunTraces({ result, outputDir });
+    process.stdout.write(`Copied ${copied.length} run traces to ${join(outputDir, 'traces')}.\n`);
+    for (const { run: name, reason } of missing)
+      process.stderr.write(`Run trace not copied for ${name}: ${reason}.\n`);
+    for (const { run: name, reason } of kept)
+      process.stderr.write(`Sandbox left behind for ${name}: ${reason}.\n`);
+  }
   return status;
 }
 

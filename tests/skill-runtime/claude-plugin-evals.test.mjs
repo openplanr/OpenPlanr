@@ -9,6 +9,7 @@ import {
   buildPluginEvalSuite,
   findPluginEvalDrift,
   PLUGIN_EVAL_DIR,
+  pluginEvalRunGroups,
   renderPluginEvalFiles,
   selectPluginEvalCases,
   writePluginEvalSuite,
@@ -122,6 +123,20 @@ test('a positive case asserts its skill fires and neither its rival nor another 
     /'\nmin: 0\nmax: 0\narm: both/u,
   );
   assert.match(files.get('case-a/prompt.md'), /^max_turns: 10$/mu);
+  assert.match(files.get('case-a/prompt.md'), /^allowed_tools: \[Read, Glob, Grep, Skill\]$/mu);
+  assert.match(files.get('case-a/prompt.md'), /^tags: \[read-only\]$/mu);
+});
+
+test('a case that needs write tools lists them and runs in its own group', () => {
+  const writer = { ...positive({ rivalSkillId: 'planr-plan', allowedTools: ['Write', 'Edit'] }) };
+  const reader = { ...positive({ rivalSkillId: 'planr-plan' }), id: 'case-b' };
+  const prompt = render([writer]).get('case-a/prompt.md');
+  assert.match(prompt, /^allowed_tools: \[Read, Glob, Grep, Skill, Write, Edit\]$/mu);
+  assert.match(prompt, /^tags: \[grant-edit-write\]$/mu);
+  assert.deepEqual(pluginEvalRunGroups([writer, reader]), [
+    { tag: 'grant-edit-write', grants: ['Edit', 'Write'], caseIds: ['case-a'] },
+    { tag: 'read-only', grants: [], caseIds: ['case-b'] },
+  ]);
 });
 
 const skillNames = skillIds.map((skillId) => skillId.slice('planr-'.length));
@@ -205,6 +220,15 @@ test('malformed claudePluginEval options are rejected', () => {
     [positive({ rivalSkillId: 'planr-plan', extra: true }), /unknown claudePluginEval keys/u],
     [positive(true), /must be an object/u],
     [positive({ rivalSkillId: 'planr-plan', scaffold: '../x.sh' }), /must name a \.sh file/u],
+    [positive({ rivalSkillId: 'planr-plan', allowedTools: [] }), /allowedTools must list/u],
+    [
+      positive({ rivalSkillId: 'planr-plan', allowedTools: ['WebFetch'] }),
+      /allowedTools must list/u,
+    ],
+    [
+      positive({ rivalSkillId: 'planr-plan', allowedTools: ['Edit', 'Edit'] }),
+      /allowedTools must list/u,
+    ],
     [
       {
         id: 'case-b',

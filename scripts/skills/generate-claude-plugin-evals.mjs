@@ -18,7 +18,11 @@ export const PLUGIN_DIR = 'dist/plugins/claude/openplanr';
 const CORPUS_PATH = 'evaluation/skills/routing-corpus.json';
 const REGISTRY_PATH = 'skills/registry.json';
 const SCAFFOLD_DIR = 'evaluation/skills/claude-plugin-eval-scaffolds';
-const OPTION_KEYS = new Set(['rivalSkillId', 'scaffold']);
+const OPTION_KEYS = new Set(['rivalSkillId', 'scaffold', 'allowedTools']);
+const READ_ONLY_TOOLS = ['Read', 'Glob', 'Grep', 'Skill'];
+// `claude plugin eval` grants these per run, not per case, so cases that need them run separately.
+const GRANTABLE_TOOLS = new Set(['Bash', 'Edit', 'Write']);
+const READ_ONLY_TAG = 'read-only';
 const RESULTS_DIR = 'results';
 
 const ROUTER_SKILL_ID = 'planr-openplanr';
@@ -46,6 +50,17 @@ export function selectPluginEvalCases({ corpus, registry }) {
       fail(
         `case ${fixture.id}: scaffold ${options.scaffold} must name a .sh file in ${SCAFFOLD_DIR}.`,
       );
+    const { allowedTools } = options;
+    if (
+      allowedTools !== undefined &&
+      (!Array.isArray(allowedTools) ||
+        allowedTools.length === 0 ||
+        new Set(allowedTools).size !== allowedTools.length ||
+        allowedTools.some((tool) => !GRANTABLE_TOOLS.has(tool)))
+    )
+      fail(
+        `case ${fixture.id}: allowedTools must list distinct tools from ${[...GRANTABLE_TOOLS].join(', ')}.`,
+      );
     if (fixture.expectedSkillId === undefined) {
       if (fixture.kind !== 'negative')
         fail(`case ${fixture.id}: only negative cases may omit expectedSkillId.`);
@@ -60,6 +75,23 @@ export function selectPluginEvalCases({ corpus, registry }) {
   }
   if (selected.length === 0) fail('no routing-corpus case sets claudePluginEval.');
   return selected;
+}
+
+const grantsOf = (fixture) => [...(fixture.claudePluginEval.allowedTools ?? [])].sort();
+const runTagOf = (fixture) => {
+  const grants = grantsOf(fixture);
+  return grants.length ? `grant-${grants.join('-').toLowerCase()}` : READ_ONLY_TAG;
+};
+
+/** Groups cases by the tools a run must grant; each group runs as its own `claude plugin eval` call. */
+export function pluginEvalRunGroups(cases) {
+  const groups = new Map();
+  for (const fixture of cases) {
+    const tag = runTagOf(fixture);
+    if (!groups.has(tag)) groups.set(tag, { tag, grants: grantsOf(fixture), caseIds: [] });
+    groups.get(tag).caseIds.push(fixture.id);
+  }
+  return [...groups.values()];
 }
 
 // A case whose graders are all Skill graders is scored in full even in a two-arm run;
@@ -94,7 +126,8 @@ export function renderPluginEvalFiles(cases, { skillIds, readScaffold } = {}) {
         '---',
         `description: Generated from ${CORPUS_PATH} case ${fixture.id}.`,
         'max_turns: 10',
-        'allowed_tools: [Read, Glob, Grep, Skill]',
+        `allowed_tools: [${[...READ_ONLY_TOOLS, ...(fixture.claudePluginEval.allowedTools ?? [])].join(', ')}]`,
+        `tags: [${runTagOf(fixture)}]`,
         `plugins: ["${plugin}"]`,
         '---',
         '',
@@ -158,16 +191,25 @@ function listFiles(directory, prefix = '') {
   });
 }
 
+const readJson = (root, path) => JSON.parse(readFileSync(resolve(root, path), 'utf8'));
+
+/** Returns the corpus cases the suite is generated from. */
+export function loadPluginEvalCases(root = repoRoot) {
+  return selectPluginEvalCases({
+    corpus: readJson(root, CORPUS_PATH),
+    registry: readJson(root, REGISTRY_PATH),
+  });
+}
+
 /** Builds the expected suite for a repository root. */
 export function buildPluginEvalSuite(root = repoRoot) {
-  const read = (path) => JSON.parse(readFileSync(resolve(root, path), 'utf8'));
-  const registry = read(REGISTRY_PATH);
+  const registry = readJson(root, REGISTRY_PATH);
   const readScaffold = (name) => {
     const path = resolve(root, SCAFFOLD_DIR, name);
     if (!existsSync(path)) fail(`scaffold ${name} does not exist in ${SCAFFOLD_DIR}.`);
     return readFileSync(path, 'utf8');
   };
-  return renderPluginEvalFiles(selectPluginEvalCases({ corpus: read(CORPUS_PATH), registry }), {
+  return renderPluginEvalFiles(loadPluginEvalCases(root), {
     skillIds: registry.skills.map(({ skillId }) => skillId),
     readScaffold,
   });

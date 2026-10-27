@@ -144,7 +144,8 @@
       "input": "Explore multiple competing design variants",
       "expectedSkillId": "planr-design-loop",
       "claudePluginEval": {
-        "rivalSkillId": "planr-design"
+        "rivalSkillId": "planr-design",
+        "scaffold": "design-brief.sh"
       }
     },
     {
@@ -309,7 +310,11 @@
       "expectedSkillId": "planr-ship",
       "claudePluginEval": {
         "rivalSkillId": "planr-plan",
-        "scaffold": "accepted-change.sh"
+        "scaffold": "accepted-change.sh",
+        "allowedTools": [
+          "Write",
+          "Edit"
+        ]
       }
     },
     {
@@ -336,7 +341,8 @@
       "input": "Prepare the already implemented work for release without changing code",
       "expectedSkillId": "planr-land",
       "claudePluginEval": {
-        "rivalSkillId": "planr-ship"
+        "rivalSkillId": "planr-ship",
+        "scaffold": "implemented-change.sh"
       }
     },
     {
@@ -345,7 +351,8 @@
       "input": "Turn this vague product intent into a precise specification",
       "expectedSkillId": "planr-spec",
       "claudePluginEval": {
-        "rivalSkillId": "planr-plan"
+        "rivalSkillId": "planr-plan",
+        "scaffold": "product-intent.sh"
       }
     },
     {
