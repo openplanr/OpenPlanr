@@ -48,6 +48,11 @@ longer matches the corpus.
 `npm run skill:evaluate:claude` rebuilds the plugin and runs the suite with the
 installed `claude` CLI against `dist/plugins/claude/openplanr`, with a pinned
 model, case scaffolds (`--scaffold`) and a $10 cost ceiling. It is report-only
-(`--threshold 0`) and calls the model, so it is a manual check, not a CI gate. Extra arguments pass through, for
-example `npm run skill:evaluate:claude -- --runs 1 --case spec-vague`. Results,
-including `report.html`, go to the ignored `claude-plugin-evals/results/`.
+(`--threshold 0`) and calls the model, so it is a manual check, not a CI gate.
+Extra arguments pass through, for example
+`npm run skill:evaluate:claude -- --runs 1 --case spec-vague`. Results, including
+`report.html`, go to the ignored `claude-plugin-evals/results/`, and each run's
+transcript is copied to `traces/<case>/<arm>-<n>.jsonl` there; a run whose
+transcript cannot be copied is named on stderr. To keep those transcripts the
+command passes `--keep-temp`, which also leaves each run's sandbox in the system
+temporary directory.
