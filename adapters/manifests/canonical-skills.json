@@ -5150,8 +5150,8 @@
       "version": "2.1.0",
       "source": "skills/planr-investigate/openplanr.skill.json",
       "entrypoint": "skills/planr-investigate/SKILL.md",
-      "description": "Diagnose a software bug, regression, error, failing test, or unexplained behavior and optionally implement a bounded fix. Use when the user asks to investigate, debug, or find a root cause, including before any fix. Not for planned feature delivery.",
-      "sourceDigest": "sha256:bb9154b9378ae34de641e1054db8c5b10aac15c2d26f88aa72eaba59d2747547",
+      "description": "Diagnose a bug, regression, error, or unexplained behavior and optionally implement a bounded fix. Use for root-cause investigation, including before any fix, not planned feature delivery.",
+      "sourceDigest": "sha256:c3ab65adfbe563612d657b7072cd7a022150b1a3509426ffb716ca0a5bf49fca",
       "resources": [
         {
           "path": "agents/openai.yaml",
@@ -5161,7 +5161,7 @@
             "chatgpt"
           ],
           "executable": false,
-          "digest": "sha256:7aaca7ba41f33ca3e2658f23391d94e5087080ef697df6a31ff186927821ecb1"
+          "digest": "sha256:07651fdaa9aab3486f3288b35547db534dc46bbf96f56aebb9e63c99d205eb37"
         },
         {
           "path": "references/findings.md",

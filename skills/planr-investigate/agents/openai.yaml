@@ -1,6 +1,6 @@
 interface:
   display_name: "OpenPlanr Investigate"
-  short_description: "Diagnose a software bug, regression, error, failing test, or…"
-  default_prompt: "Use $planr-investigate to diagnose a software bug, regression, error, failing test, or unexplained behavior and optionally implement a bounded fix. Use when the user asks to investigate, debug, or find a root cause, including before any fix. Not for planned feature delivery."
+  short_description: "Diagnose a bug, regression, error, or unexplained behavior and…"
+  default_prompt: "Use $planr-investigate to diagnose a bug, regression, error, or unexplained behavior and optionally implement a bounded fix. Use for root-cause investigation, including before any fix, not planned feature delivery."
 policy:
   allow_implicit_invocation: true
