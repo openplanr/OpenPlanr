@@ -12,7 +12,12 @@ import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import test from 'node:test';
 
-import { claudeEvalArgs, collectRunTraces } from '../../scripts/skills/evaluate-claude-plugin.mjs';
+import {
+  assertPassThroughArgs,
+  claudeEvalArgs,
+  collectRunTraces,
+  runEvalGroups,
+} from '../../scripts/skills/evaluate-claude-plugin.mjs';
 
 function scratch(t) {
   const root = mkdtempSync(join(tmpdir(), 'openplanr-eval-traces-'));
@@ -134,12 +139,75 @@ test('each eval call runs one tagged group with no baseline arm and grants only 
     '--ablation',
     'none',
   ]);
-  assert.deepEqual(writer.slice(writer.indexOf('--tag'), writer.indexOf('--tag') + 4), [
+  assert.deepEqual(writer.slice(writer.indexOf('--tag'), writer.indexOf('--tag') + 5), [
     '--tag',
     'grant-edit-write',
     '--allow-tools',
     'Edit',
+    'Write',
   ]);
   assert.equal(writer[writer.indexOf('--max-cost-usd') + 1], '7.50');
   assert.ok(!args([]).includes('--allow-tools'));
+});
+
+test('pass-through arguments cannot set a tag, a tool grant or the arms', () => {
+  for (const arg of ['--tag', '--allow-tools', '--ablation', '--allow-tools=Bash'])
+    assert.throws(
+      () => assertPassThroughArgs(['--runs', '1', arg, 'x']),
+      /cannot be passed through/u,
+    );
+  assertPassThroughArgs(['--runs', '1', '--case', 'spec-vague']);
+});
+
+const groups = [
+  { tag: 'read-only', grants: [] },
+  { tag: 'grant-edit-write', grants: ['Edit', 'Write'] },
+  { tag: 'grant-bash', grants: ['Bash'] },
+];
+
+function fakeEval(costs) {
+  const calls = [];
+  const runEval = (args) => {
+    const outputDir = args[args.indexOf('--output-dir') + 1];
+    calls.push(args[args.indexOf('--max-cost-usd') + 1]);
+    const costUsd = costs[calls.length - 1];
+    if (costUsd === undefined) return 143;
+    mkdirSync(outputDir, { recursive: true });
+    writeFileSync(join(outputDir, 'aggregate-result.json'), JSON.stringify({ costUsd, cases: [] }));
+    return 0;
+  };
+  return { calls, runEval };
+}
+
+test('a group that leaves no result stops the run and names the groups not run', (t) => {
+  const runRoot = scratch(t);
+  const { calls, runEval } = fakeEval([1]);
+  const lines = [];
+  const status = runEvalGroups({
+    groups,
+    runRoot,
+    extraArgs: [],
+    runEval,
+    log: (l) => lines.push(l),
+  });
+  assert.equal(status, 143);
+  assert.deepEqual(calls, ['10.00', '9.00']);
+  assert.match(lines.join(''), /Groups not run: grant-bash\./u);
+});
+
+test('the ceiling is shared and a group whose remainder is under one cent is skipped', (t) => {
+  const runRoot = scratch(t);
+  const { calls, runEval } = fakeEval([9.995, 0]);
+  const lines = [];
+  const status = runEvalGroups({
+    groups,
+    runRoot,
+    extraArgs: [],
+    runEval,
+    log: (l) => lines.push(l),
+  });
+  assert.equal(status, 2);
+  assert.deepEqual(calls, ['10.00']);
+  assert.match(lines.join(''), /group grant-edit-write did not run/u);
+  assert.match(lines.join(''), /group grant-bash did not run/u);
 });

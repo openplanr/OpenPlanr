@@ -58,7 +58,9 @@ Cases may use `Read`, `Glob`, `Grep` and `Skill`. A case that needs more lists
 `Write`, `Edit` or `Bash` in `claudePluginEval.allowedTools`; only
 `plan-and-implement` does (`Write` and `Edit`). The CLI grants such tools to every
 case in a run, so the runner calls `claude plugin eval` once per tool set, using
-the generated `tags`, and the read-only cases never receive them.
+the generated `tags`, and the read-only cases never receive them. For the same
+reason the runner rejects `--tag`, `--allow-tools` and `--ablation` as extra
+arguments.
 
 `npm run skill:evaluate:claude` rebuilds the plugin and runs the suite with the
 installed `claude` CLI against `dist/plugins/claude/openplanr`, with a pinned
@@ -67,7 +69,8 @@ model, case scaffolds (`--scaffold`), a $10 cost ceiling and no baseline arm
 would only add cost. It is report-only (`--threshold 0`): a low score does not
 change the exit code, but a case that fails to load, a run that ends on an API
 error, or a cost-ceiling hit still exits non-zero. The ceiling is shared across
-the runner's calls. It calls the model,
+the runner's calls; a call that leaves no result stops the run, since its spend
+is unknown, and the groups left are named as not run. It calls the model,
 so it is a manual check, not a CI gate. Extra arguments pass through, for example
 `npm run skill:evaluate:claude -- --runs 1 --case spec-vague`. Results, including
 `aggregate-result.json` and `report.html`, go to one folder per tool set under the

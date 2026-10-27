@@ -125,6 +125,22 @@ export function claudeEvalArgs({ outputDir, tag, grants, maxCostUsd, extraArgs =
   ];
 }
 
+const RESERVED_ARGS = ['--tag', '--allow-tools', '--ablation'];
+const MIN_GROUP_BUDGET_USD = 0.01;
+
+/** Throws when pass-through arguments would change a group's tag, tool grants or arms. */
+export function assertPassThroughArgs(extraArgs) {
+  for (const arg of extraArgs) {
+    const flag = RESERVED_ARGS.find(
+      (reserved) => arg === reserved || arg.startsWith(`${reserved}=`),
+    );
+    if (flag)
+      throw new Error(
+        `${flag} cannot be passed through: the runner sets it per tool group so read-only cases never receive extra tools.`,
+      );
+  }
+}
+
 /** Returns the `--case` glob among pass-through arguments, if any. */
 function caseGlobOf(extraArgs) {
   const index = extraArgs.indexOf('--case');
@@ -132,7 +148,58 @@ function caseGlobOf(extraArgs) {
   return extraArgs.find((arg) => arg.startsWith('--case='))?.slice('--case='.length);
 }
 
+/**
+ * Runs each group through `runEval(args)` under one shared cost ceiling and returns the worst exit status.
+ * A group that leaves no result stops the run, since its spend is unknown.
+ */
+export function runEvalGroups({
+  groups,
+  runRoot,
+  extraArgs,
+  runEval,
+  maxCostUsd = MAX_COST_USD,
+  log = (text) => process.stderr.write(text),
+}) {
+  let status = 0;
+  let spentUsd = 0;
+  for (const [index, { tag, grants }] of groups.entries()) {
+    const budgetUsd = maxCostUsd - spentUsd;
+    if (budgetUsd < MIN_GROUP_BUDGET_USD) {
+      log(`Cost ceiling of $${maxCostUsd} reached; group ${tag} did not run.\n`);
+      status = Math.max(status, 2);
+      continue;
+    }
+    const outputDir = join(runRoot, tag);
+    status = Math.max(
+      status,
+      runEval(claudeEvalArgs({ outputDir, tag, grants, maxCostUsd: budgetUsd, extraArgs })),
+    );
+    const resultPath = join(outputDir, 'aggregate-result.json');
+    if (!existsSync(resultPath)) {
+      const notRun = groups.slice(index + 1).map((group) => group.tag);
+      log(`No eval result at ${resultPath}; its spend is unknown and no run traces were copied.\n`);
+      if (notRun.length) log(`Groups not run: ${notRun.join(', ')}.\n`);
+      return Math.max(status, 1);
+    }
+    const result = JSON.parse(readFileSync(resultPath, 'utf8'));
+    spentUsd += result.costUsd ?? 0;
+    const { copied, missing, kept } = collectRunTraces({ result, outputDir });
+    log(`Copied ${copied.length} run traces to ${join(outputDir, 'traces')}.\n`);
+    for (const { run: name, reason } of missing)
+      log(`Run trace not copied for ${name}: ${reason}.\n`);
+    for (const { run: name, reason } of kept) log(`Sandbox left behind for ${name}: ${reason}.\n`);
+  }
+  return status;
+}
+
 function main() {
+  const extraArgs = process.argv.slice(2);
+  try {
+    assertPassThroughArgs(extraArgs);
+  } catch (error) {
+    process.stderr.write(`${error.message}\n`);
+    return 1;
+  }
   const generated = run(process.execPath, ['scripts/generate-all.mjs', '--write']);
   if (generated !== 0) {
     process.stderr.write(
@@ -141,47 +208,21 @@ function main() {
     return generated;
   }
 
-  const extraArgs = process.argv.slice(2);
   const caseGlob = caseGlobOf(extraArgs);
   const groups = pluginEvalRunGroups(loadPluginEvalCases()).filter(
     ({ caseIds }) => !caseGlob || caseIds.some((id) => matchesGlob(id, caseGlob)),
   );
+  if (!groups.length) {
+    process.stderr.write(`No eval case matches --case ${caseGlob}.\n`);
+    return 1;
+  }
   const runRoot = join(
     repoRoot,
     PLUGIN_EVAL_DIR,
     'results',
     new Date().toISOString().replace(/[:.]/gu, '-'),
   );
-  let status = groups.length ? 0 : 1;
-  if (!groups.length) process.stderr.write(`No eval case matches --case ${caseGlob}.\n`);
-  let spentUsd = 0;
-  for (const { tag, grants } of groups) {
-    const maxCostUsd = MAX_COST_USD - spentUsd;
-    if (maxCostUsd <= 0) {
-      process.stderr.write(`Cost ceiling of $${MAX_COST_USD} reached; group ${tag} did not run.\n`);
-      status = Math.max(status, 2);
-      continue;
-    }
-    const outputDir = join(runRoot, tag);
-    status = Math.max(
-      status,
-      run('claude', claudeEvalArgs({ outputDir, tag, grants, maxCostUsd, extraArgs })),
-    );
-    const resultPath = join(outputDir, 'aggregate-result.json');
-    if (!existsSync(resultPath)) {
-      process.stderr.write(`No eval result at ${resultPath}; no run traces were copied.\n`);
-      continue;
-    }
-    const result = JSON.parse(readFileSync(resultPath, 'utf8'));
-    spentUsd += result.costUsd ?? 0;
-    const { copied, missing, kept } = collectRunTraces({ result, outputDir });
-    process.stdout.write(`Copied ${copied.length} run traces to ${join(outputDir, 'traces')}.\n`);
-    for (const { run: name, reason } of missing)
-      process.stderr.write(`Run trace not copied for ${name}: ${reason}.\n`);
-    for (const { run: name, reason } of kept)
-      process.stderr.write(`Sandbox left behind for ${name}: ${reason}.\n`);
-  }
-  return status;
+  return runEvalGroups({ groups, runRoot, extraArgs, runEval: (args) => run('claude', args) });
 }
 
 if (resolve(process.argv[1] ?? '') === fileURLToPath(import.meta.url)) process.exitCode = main();
