@@ -809,7 +809,7 @@
       "family": "diagnostics",
       "contribution": "professional",
       "skillVersion": "2.1.0",
-      "description": "Diagnose a software bug, regression, error, failing test, or unexplained behavior and optionally implement a bounded fix. Use when the user asks why code or an application fails, or asks to investigate, debug, or find a root cause, including before any fix. Not for planned feature delivery.",
+      "description": "Diagnose a software bug, regression, error, failing test, or unexplained behavior and optionally implement a bounded fix. Use when the user asks to investigate, debug, or find a root cause, including before any fix. Not for planned feature delivery.",
       "lifecycle": "active",
       "authorityClass": "diagnostic",
       "source": "skills/planr-investigate/openplanr.skill.json",

@@ -192,7 +192,7 @@ Diagnose OpenPlanr CLI, pipeline, runtime-adapter, installation, and lock health
 
 ## `planr-investigate`
 
-Diagnose a software bug, regression, error, failing test, or unexplained behavior and optionally implement a bounded fix. Use when the user asks why code or an application fails, or asks to investigate, debug, or find a root cause, including before any fix. Not for planned feature delivery.
+Diagnose a software bug, regression, error, failing test, or unexplained behavior and optionally implement a bounded fix. Use when the user asks to investigate, debug, or find a root cause, including before any fix. Not for planned feature delivery.
 
 - Select for: Investigate a bug, regression, error, or unexplained behavior; Reproduce a defect, establish its root cause, or apply a bounded fix; Investigate why this fails.
 - Defer for: Plan a new feature; Run a broad product review.

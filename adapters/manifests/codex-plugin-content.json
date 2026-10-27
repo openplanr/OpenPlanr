@@ -735,12 +735,12 @@
       "skillId": "planr-investigate",
       "projectedName": "investigate",
       "invocation": "$planr:investigate",
-      "description": "Diagnose a software bug, regression, error, failing test, or unexplained behavior and optionally implement a bounded fix. Use when the user asks why code or an application fails, or asks to investigate, debug, or find a root cause, including before any fix. Not for planned feature delivery.",
+      "description": "Diagnose a software bug, regression, error, failing test, or unexplained behavior and optionally implement a bounded fix. Use when the user asks to investigate, debug, or find a root cause, including before any fix. Not for planned feature delivery.",
       "entrypoint": "skills/investigate/SKILL.md",
       "assets": [
         {
           "path": "skills/investigate/SKILL.md",
-          "digest": "sha256:211864dde578b1655eed6cfaca103b5e650c09a0d62f8ba6c9ee23f37257de4f"
+          "digest": "sha256:13459647c1d6b54e3d948aafb3becaf14f08113e970b446622910371a4ba7340"
         },
         {
           "path": "skills/investigate/openplanr.skill.json",
@@ -748,7 +748,7 @@
         },
         {
           "path": "skills/investigate/agents/openai.yaml",
-          "digest": "sha256:b094d4e12ebe3c9da37395468d9be9b57cf9b9915069ed05a9b7f2491101b121"
+          "digest": "sha256:fbfa193f35ec0f3956fb3416ed7a5665ef8c4f765c7deebbf74384f17796f1de"
         },
         {
           "path": "skills/investigate/references/findings.md",

@@ -1061,7 +1061,7 @@
     {
       "skillId": "planr-investigate",
       "skillVersion": "2.1.0",
-      "description": "Diagnose a software bug, regression, error, failing test, or unexplained behavior and optionally implement a bounded fix. Use when the user asks why code or an application fails, or asks to investigate, debug, or find a root cause, including before any fix. Not for planned feature delivery.",
+      "description": "Diagnose a software bug, regression, error, failing test, or unexplained behavior and optionally implement a bounded fix. Use when the user asks to investigate, debug, or find a root cause, including before any fix. Not for planned feature delivery.",
       "lifecycle": "active",
       "authorityClass": "diagnostic",
       "source": "skills/planr-investigate/openplanr.skill.json",
@@ -1864,5 +1864,5 @@
     }
   ],
   "compatibilityAliases": [],
-  "documentDigest": "sha256:de11562f2f2342506a913d7717b1dc6f92cc254336168c67c21476419d0106eb"
+  "documentDigest": "sha256:6051ce50668b749d4bcc219ac1d9682e02a1c4f1dbc04bd62f77e95be94871be"
 }
