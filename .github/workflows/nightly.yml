@@ -103,6 +103,8 @@ jobs:
       - name: Run the focused gates
         run: npm run test:focused
       - name: Test the packages that own the contributor studio and skill suites
+        env:
+          PLANR_VIEW_CONTEXT_BUDGET_MS: 500
         run: |
           npm test --workspace=@openplanr/protocol
           npm test --workspace=@openplanr/canvas

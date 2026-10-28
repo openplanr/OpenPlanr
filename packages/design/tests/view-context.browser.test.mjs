@@ -11,7 +11,22 @@ import { designFixture } from './design-fixture.mjs';
 import { startDesignReview } from './studio-http-fixture.mjs';
 import { settleStudioChrome } from './studio-readiness.mjs';
 
-async function waitForContext(path, matches, { since = performance.now(), timeout = 500 } = {}) {
+// Pull requests assert the functional result within a generous bound; nightly sets the budget to enforce the 500 ms claim.
+function viewContextBudget(raw = process.env.PLANR_VIEW_CONTEXT_BUDGET_MS) {
+  if (raw === undefined || raw === '') return 5000;
+  const budget = Number(raw);
+  if (!Number.isFinite(budget) || budget <= 0)
+    throw new Error(`PLANR_VIEW_CONTEXT_BUDGET_MS must be a positive number; received ${raw}.`);
+  return budget;
+}
+
+const budgetMs = viewContextBudget();
+
+async function waitForContext(
+  path,
+  matches,
+  { since = performance.now(), timeout = budgetMs } = {},
+) {
   let context;
   do {
     try {
@@ -28,7 +43,7 @@ async function waitForContext(path, matches, { since = performance.now(), timeou
   assert.fail(`View context did not update within ${timeout} ms: ${JSON.stringify(context)}`);
 }
 
-test(`inspected elements and visible boards reach live view context within 500 ms (${browserEngine()})`, {
+test(`inspected elements and visible boards reach live view context (${browserEngine()})`, {
   timeout: 60000,
 }, async () => {
   const root = await mkdtemp(join(tmpdir(), 'planr-view-context-browser-'));

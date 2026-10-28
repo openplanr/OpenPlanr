@@ -173,6 +173,7 @@ control it:
 | --- | --- |
 | `PLANR_BROWSER_TESTS=1` | Runs the opt-in Artifact and pipeline browser tests, which are skipped otherwise. The Design package's browser tests always run. |
 | `PLANR_REQUIRE_BROWSER=1` | Makes the pipeline artifact browser tests fail instead of skip when `PLANR_BROWSER_TESTS` is unset; the browser certification workflow sets it. |
+| `PLANR_VIEW_CONTEXT_BUDGET_MS` | Bound, in milliseconds, on each live view context update in the Design browser test. Unset, it is 5000 so pull request runs assert the result; nightly sets 500. |
 | `PLANR_BROWSER_ENGINE` | `chromium` (default), `firefox` or `webkit`. |
 | `PLANR_BROWSER_EXECUTABLE` | Path to a browser binary (or wrapper script) to launch instead of Playwright's bundled browser for that engine. |
 | `PLANR_BROWSER_CHANNEL` | A Chromium release channel such as `chrome`; ignored when an executable is set. |
