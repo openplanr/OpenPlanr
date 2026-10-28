@@ -5,7 +5,8 @@ import { resolve } from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 import { load } from 'js-yaml';
-import { AGGREGATE_JOB } from '../../../../scripts/run-ci-parity.mjs';
+import { JOBS } from '../../../../scripts/ci/workspace-jobs.mjs';
+import { AGGREGATE_JOB, SELECTOR_JOB, selectedIf } from '../../../../scripts/run-ci-parity.mjs';
 
 const root = fileURLToPath(new URL('../../../../', import.meta.url));
 const { jobs } = load(readFileSync(resolve(root, '.github/workflows/ci.yml'), 'utf8'));
@@ -18,11 +19,13 @@ const RESTORE = /^tar -xzmf "\$RUNNER_TEMP\/build-outputs\.tgz"$/u;
 const SETUP = /^(?:npm ci|git config --global --add safe\.directory "\$GITHUB_WORKSPACE")$/u;
 
 // The build job is not a required check, and a required job skipped by its `if` reports
-// success, so each consumer must start on every build outcome and fail itself first.
-test('every job that needs the build runs unless cancelled and first requires its success', () => {
+// success, so each selected consumer must start on every build outcome and fail itself first.
+test('every job that needs the build runs when selected unless cancelled and first requires its success', () => {
   assert.ok(consumers.length > 0, 'Workspace CI must keep jobs that consume the build outputs');
+  assert.deepEqual(consumers.map(([id]) => id).sort(), [...JOBS].sort());
   for (const [id, job] of consumers) {
-    assert.equal(job.if, '${{ !cancelled() }}', `${id} must run on every build outcome`);
+    assert.deepEqual(job.needs, ['build', SELECTOR_JOB], id);
+    assert.equal(job.if, selectedIf(id), `${id} must run on every build outcome when selected`);
     const [guard] = job.steps;
     assert.equal(guard.if, undefined, `${id} must run its build guard unconditionally`);
     assert.equal(guard.env?.BUILD_RESULT, '${{ needs.build.result }}', `${id} must guard first`);
@@ -48,7 +51,17 @@ test('every job that needs the build restores its outputs before any test comman
   }
 });
 
-test('the CI passed gate needs every blocking job and fails unless each one succeeded', () => {
+test('the selector publishes one output for each job it can skip', () => {
+  const selector = jobs[SELECTOR_JOB];
+  assert.equal(Object.keys(jobs)[0], SELECTOR_JOB, 'the local run orders jobs after their needs');
+  assert.deepEqual(
+    selector.outputs,
+    Object.fromEntries(JOBS.map((id) => [id, `\${{ steps.select.outputs.${id} }}`])),
+  );
+  assert.match(selector.steps.at(-1).run, /node scripts\/ci\/workspace-jobs\.mjs --event/u);
+});
+
+test('the CI passed gate needs every blocking job and fails unless each selected one succeeded', () => {
   const gate = jobs[AGGREGATE_JOB];
   assert.equal(gate.name, 'CI passed');
   assert.equal(gate.if, '${{ always() }}', 'A cancelled run must still report a failed gate');
@@ -62,9 +75,28 @@ test('the CI passed gate needs every blocking job and fails unless each one succ
       env: { ...process.env, NEEDS: JSON.stringify(needs, null, 2) },
       encoding: 'utf8',
     }).status;
-  const all = Object.fromEntries(gate.needs.map((id) => [id, { result: 'success', outputs: {} }]));
+  const selection = (selected) => Object.fromEntries(JOBS.map((id) => [id, String(selected)]));
+  const run = (outputs) =>
+    Object.fromEntries(
+      gate.needs.map((id) => [
+        id,
+        { result: 'success', outputs: id === SELECTOR_JOB ? outputs : {} },
+      ]),
+    );
+  const all = run(selection(true));
   assert.equal(verdict(all), 0);
   for (const result of ['failure', 'cancelled', 'skipped'])
     assert.equal(verdict({ ...all, [gate.needs.at(-1)]: { result, outputs: {} } }), 1, result);
+  const none = run(selection(false));
+  const skipped = { result: 'skipped', outputs: {} };
+  const skippedLanes = Object.fromEntries(JOBS.map((id) => [id, skipped]));
+  assert.equal(verdict({ ...none, ...skippedLanes }), 0, 'an unselected job may skip');
+  assert.equal(verdict({ ...all, 'cli-tests': skipped }), 1, 'a selected job may not skip');
+  assert.equal(verdict({ ...none, ...skippedLanes, static: skipped }), 1, 'static never skips');
+  assert.equal(
+    verdict({ ...none, ...skippedLanes, [SELECTOR_JOB]: { result: 'failure', outputs: {} } }),
+    1,
+    'a failed selector fails the gate',
+  );
   assert.equal(verdict({}), 1, 'A gate that reads no results must fail');
 });

@@ -139,7 +139,11 @@ documentation diagram sets, focused tests, and isolated packed-package behavior.
 workspace test command or manual/browser checks for UI changes. The CI workflows
 under `.github/workflows/` define their additional runtime and browser coverage. Pull
 requests must pass two checks: `CI passed` from `ci.yml` and `Browser` from `browser.yml`,
-which runs the canvas, dashboard and artifact Chromium lanes a change reaches. Every pull
+which runs the canvas, dashboard and artifact Chromium lanes a change reaches. On a pull
+request, `ci.yml` always runs the build and static checks and runs only the package test jobs
+the changed files reach, as `scripts/ci/workspace-jobs.mjs` maps them; a path it does not map
+runs every job. The version pull request runs only the build and static checks. The merge
+queue runs every job and every Browser lane. Every pull
 request job finishes within 12 minutes. `nightly.yml` runs the CLI integration suites and
 coverage, the Node 22 contributor toolchain, packed proofs on Node 22, 24 and 26, the canvas
 timing traces, artifact Chromium, Firefox and WebKit, the published-package first runs and
@@ -154,8 +158,9 @@ Before pushing a branch that touches several packages, `npm run verify:ci` reads
 (`--only` and `--skip` take the workflow's job ids, which `--list` prints). It runs the
 build job's `npm run generate` and `npm run build` once in place of restoring its outputs,
 runs every matrix entry in turn, and runs a job with a Node matrix once: its entry for your
-Node, else its entry for the build job's Node. It does not replay `CI passed`, the job that
-fails unless every other Workspace CI job succeeded, or the checks that read the pull
+Node, else its entry for the build job's Node. It runs every test job, whatever a pull
+request would select. It does not replay `CI passed`, the job that fails unless every
+selected Workspace CI job succeeded, the job selector, or the checks that read the pull
 request or the runner, which it names instead. It is slower than `npm run verify` and
 catches the suites `verify` does not run: workspace lint, the CLI test tree and the package
 tests of every workspace. The CLI heavy and Operate suites run nightly; run them with

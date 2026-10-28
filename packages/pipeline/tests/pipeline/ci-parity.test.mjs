@@ -9,6 +9,8 @@ import {
   assertContributorRuntime,
   parseScriptRun,
   planLocalCi,
+  SELECTOR_JOB,
+  selectedIf,
 } from '../../../../scripts/run-ci-parity.mjs';
 
 const root = fileURLToPath(new URL('../../../../', import.meta.url));
@@ -32,14 +34,27 @@ const withStep = (step) => {
   return changed;
 };
 
-test('local parity plans every Workspace CI job except the build producer and the gate', () => {
+test('local parity plans every Workspace CI job except the build producer, the selector and the gate', () => {
   const plan = planLocalCi(workflow, 24);
   assert.equal(plan.producer, 'build');
   assert.deepEqual(plan.prepare, ['npm run generate', 'npm run build']);
   assert.deepEqual(
     plan.jobs.map(({ id }) => id),
-    Object.keys(workflow.jobs).filter((id) => id !== 'build' && id !== AGGREGATE_JOB),
+    Object.keys(workflow.jobs).filter(
+      (id) => id !== 'build' && id !== AGGREGATE_JOB && id !== SELECTOR_JOB,
+    ),
   );
+});
+
+test('local parity replays a job the selector can skip, and only under its own selection', () => {
+  const ids = planLocalCi(workflow, 24).jobs.map(({ id }) => id);
+  for (const id of ['design-tests', 'cli-tests']) {
+    assert.equal(workflow.jobs[id].if, selectedIf(id));
+    assert.ok(ids.includes(id), id);
+  }
+  const crossed = structuredClone(workflow);
+  crossed.jobs['design-tests'].if = selectedIf('cli-tests');
+  assert.throws(() => planLocalCi(crossed, 24), /design-tests runs under if: .*cannot evaluate/u);
 });
 
 test('local parity runs every CI command except runner provisioning, GitHub-only checks, the build guard and the restore', () => {

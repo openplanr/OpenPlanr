@@ -1,8 +1,8 @@
 name: Browser
 
 # Chromium lanes for the pull request's changed paths. Firefox, WebKit and the canvas
-# timing traces run in nightly.yml. The merge queue passes through: the pull request's
-# Browser run already covered its changes.
+# timing traces run in nightly.yml. The merge queue runs every lane, so a lane a pull
+# request skipped still tests the commit that lands.
 on:
   pull_request:
     branches: ['**']
@@ -34,14 +34,21 @@ jobs:
           persist-credentials: false
       - id: lanes
         name: Select lanes from the changed files
-        if: github.event_name == 'pull_request'
         env:
           GH_TOKEN: ${{ github.token }}
+          EVENT_NAME: ${{ github.event_name }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
+          HEAD_REF: ${{ github.head_ref }}
+          HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name }}
         run: |
           set -o pipefail
-          gh api --paginate "repos/$GITHUB_REPOSITORY/pulls/$PR_NUMBER/files" --jq '.[].filename' \
-            | node scripts/ci/browser-lanes.mjs | tee -a "$GITHUB_OUTPUT"
+          : > "$RUNNER_TEMP/changed-files"
+          if [ "$EVENT_NAME" = pull_request ]; then
+            gh api --paginate "repos/$GITHUB_REPOSITORY/pulls/$PR_NUMBER/files" --jq '.[].filename' > "$RUNNER_TEMP/changed-files"
+          fi
+          node scripts/ci/browser-lanes.mjs --event "$EVENT_NAME" --head-ref "$HEAD_REF" \
+            --head-repo "$HEAD_REPO" --repo "$GITHUB_REPOSITORY" < "$RUNNER_TEMP/changed-files" \
+            | tee -a "$GITHUB_OUTPUT"
 
   canvas:
     name: Canvas Chromium
@@ -172,9 +179,9 @@ jobs:
         env:
           NEEDS: ${{ toJSON(needs) }}
         run: |
-          if ! printf '%s\n' "$NEEDS" | jq -e '.changes.result == "success" and
-            ([to_entries[] | select(.key != "changes") | .value.result]
-              | all(. == "success" or . == "skipped"))' > /dev/null; then
+          if ! printf '%s\n' "$NEEDS" | jq -e '.changes.outputs as $selected | length > 0 and
+            all(to_entries[]; .value.result == "success" or
+              (.value.result == "skipped" and $selected[.key] == "false"))' > /dev/null; then
             echo "::error::The lane selector must succeed and every selected lane must pass."
             printf '%s\n' "$NEEDS"
             exit 1

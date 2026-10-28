@@ -1,6 +1,7 @@
 name: Workspace CI
 
 # No push trigger: the merge queue run already tests the exact commit that lands on main.
+# A pull request runs only the test jobs its changed files reach; the merge queue runs them all.
 # Integration suites, coverage, other Node versions and packed proofs run in nightly.yml.
 on:
   pull_request:
@@ -16,6 +17,41 @@ permissions:
   contents: read
 
 jobs:
+  changes:
+    name: Select Workspace CI jobs
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      design-tests: ${{ steps.select.outputs.design-tests }}
+      supporting-package-tests: ${{ steps.select.outputs.supporting-package-tests }}
+      skill-runtime-tests: ${{ steps.select.outputs.skill-runtime-tests }}
+      pipeline-tests: ${{ steps.select.outputs.pipeline-tests }}
+      cli-tests: ${{ steps.select.outputs.cli-tests }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - id: select
+        name: Select jobs from the changed files
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EVENT_NAME: ${{ github.event_name }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          HEAD_REF: ${{ github.head_ref }}
+          HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name }}
+        run: |
+          set -o pipefail
+          : > "$RUNNER_TEMP/changed-files"
+          if [ "$EVENT_NAME" = pull_request ]; then
+            gh api --paginate "repos/$GITHUB_REPOSITORY/pulls/$PR_NUMBER/files" --jq '.[].filename' > "$RUNNER_TEMP/changed-files"
+          fi
+          node scripts/ci/workspace-jobs.mjs --event "$EVENT_NAME" --head-ref "$HEAD_REF" \
+            --head-repo "$HEAD_REPO" --repo "$GITHUB_REPOSITORY" < "$RUNNER_TEMP/changed-files" \
+            | tee -a "$GITHUB_OUTPUT"
+
   build:
     name: Build generated outputs
     runs-on: ubuntu-24.04
@@ -160,8 +196,8 @@ jobs:
 
   design-tests:
     name: Node 24 design package tests
-    needs: build
-    if: ${{ !cancelled() }}
+    needs: [build, changes]
+    if: ${{ !cancelled() && needs.changes.outputs.design-tests == 'true' }}
     runs-on: ubuntu-24.04
     # The Playwright image carries the browsers and their system libraries, so no job waits on apt.
     container: mcr.microsoft.com/playwright:v1.64.1-noble
@@ -196,8 +232,8 @@ jobs:
 
   supporting-package-tests:
     name: Node 24 supporting package tests
-    needs: build
-    if: ${{ !cancelled() }}
+    needs: [build, changes]
+    if: ${{ !cancelled() && needs.changes.outputs.supporting-package-tests == 'true' }}
     runs-on: ubuntu-24.04
     container: mcr.microsoft.com/playwright:v1.64.1-noble
     timeout-minutes: 12
@@ -240,8 +276,8 @@ jobs:
   # The Playwright image has no make, which the skill runtime's structured checks run.
   skill-runtime-tests:
     name: Node 24 skill runtime tests
-    needs: build
-    if: ${{ !cancelled() }}
+    needs: [build, changes]
+    if: ${{ !cancelled() && needs.changes.outputs.skill-runtime-tests == 'true' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 12
     steps:
@@ -271,8 +307,8 @@ jobs:
 
   pipeline-tests:
     name: Node 24 pipeline ${{ matrix.suite }} tests
-    needs: build
-    if: ${{ !cancelled() }}
+    needs: [build, changes]
+    if: ${{ !cancelled() && needs.changes.outputs.pipeline-tests == 'true' }}
     strategy:
       fail-fast: false
       matrix:
@@ -310,8 +346,8 @@ jobs:
 
   cli-tests:
     name: Node 24 CLI tests (shard ${{ matrix.shard }}/3)
-    needs: build
-    if: ${{ !cancelled() }}
+    needs: [build, changes]
+    if: ${{ !cancelled() && needs.changes.outputs.cli-tests == 'true' }}
     strategy:
       fail-fast: false
       matrix:
@@ -347,6 +383,7 @@ jobs:
   ci-passed:
     name: CI passed
     needs:
+      - changes
       - build
       - static
       - design-tests
@@ -360,13 +397,14 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
-      - name: Require every Workspace CI job to have succeeded
+      - name: Require every selected Workspace CI job to have succeeded
         env:
           NEEDS: ${{ toJSON(needs) }}
         run: |
-          results="$(printf '%s\n' "$NEEDS" | grep -E '"result": *"[a-z_]*"' || true)"
-          if [ -z "$results" ] || printf '%s\n' "$results" | grep -qvE '"result": *"success"'; then
-            echo "::error::Every Workspace CI job must succeed; a failed, cancelled or skipped job fails this check."
+          if ! printf '%s\n' "$NEEDS" | jq -e '.changes.outputs as $selected | length > 0 and
+            all(to_entries[]; .value.result == "success" or
+              (.value.result == "skipped" and $selected[.key] == "false"))' > /dev/null; then
+            echo "::error::Every Workspace CI job must succeed, except a test job the change does not reach; a failed, cancelled or wrongly skipped job fails this check."
             printf '%s\n' "$NEEDS"
             exit 1
           fi
