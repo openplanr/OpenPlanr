@@ -395,6 +395,12 @@
       "mode": "644"
     },
     {
+      "source": "packages/design/lib/design/font-fetch.mjs",
+      "target": "lib/design/font-fetch.mjs",
+      "sha256": "1c88deea5df84e42e415f7b1cc27486ac45a85d4a9cad4055fcb9760ffc3d0c2",
+      "mode": "644"
+    },
+    {
       "source": "packages/design/lib/design/frame-size.mjs",
       "target": "lib/design/frame-size.mjs",
       "sha256": "500eb139717050494d94a2a394c7cd0ae37b154df4934f95cfc4868bdc452873",
@@ -631,7 +637,7 @@
     {
       "source": "packages/design/lib/design/utility.mjs",
       "target": "lib/design/utility.mjs",
-      "sha256": "95197755d7f1d570ef2de55040bacc388e51724c0ac20ae00eec0db5d333b812",
+      "sha256": "24f86eabeaeab9b52d205b01737b95831a2bcc7db3eb92368268061dae35446f",
       "mode": "644"
     },
     {
