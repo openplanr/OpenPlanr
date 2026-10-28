@@ -28,7 +28,7 @@
  */
 
 import { randomUUID } from 'node:crypto';
-import { readFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import fsPromises from 'node:fs/promises';
 import path from 'node:path';
 import { validateJson } from '../../lib/json-schema.mjs';
@@ -524,7 +524,7 @@ export async function prepareOperatingSpecDraft(
       functionalRequirements: input.framing.requirements,
       businessRules: list(input.framing.constraints),
       outOfScope: input.framing.nonScope,
-      acceptanceCriteria: input.framing.acceptanceOutcomes,
+      acceptanceCriteria: numberedAcceptanceCriteria(input.framing.acceptanceOutcomes),
       decompositionNotes: [
         `Scope:\n${list(input.framing.scope)}`,
         input.framing.risks.length > 0 ? `Risks:\n${list(input.framing.risks)}` : '',
@@ -866,6 +866,15 @@ export interface SpecDecompositionInput {
 
 type AcceptanceCriterion = { id: string; statement: string };
 
+/** Stable `AC-NNN` id for the criterion at a zero-based position. */
+function acceptanceCriterionId(index: number): string {
+  return `AC-${String(index + 1).padStart(3, '0')}`;
+}
+
+function numberedAcceptanceCriteria(statements: readonly string[]): AcceptanceCriterion[] {
+  return statements.map((statement, index) => ({ id: acceptanceCriterionId(index), statement }));
+}
+
 function specTaskInput(
   aiTask: SpecDecompositionTask,
   storyId: string,
@@ -1006,10 +1015,7 @@ async function replaceSpecWithDecomposition(
     const taskIdMap = new Map(flatTasks.map((task, index) => [task.id, allocation.T[index]]));
     for (const [storyIndex, aiStory] of decomposition.stories.entries()) {
       const storyId = allocation.US[storyIndex];
-      const acceptanceCriteria = aiStory.acceptanceCriteria.map((statement, index) => ({
-        id: `AC-${String(index + 1).padStart(3, '0')}`,
-        statement,
-      }));
+      const acceptanceCriteria = numberedAcceptanceCriteria(aiStory.acceptanceCriteria);
       const renderedTasks: Array<{
         id: string;
         filename: string;
@@ -1672,7 +1678,7 @@ export async function shapeSpec(
       failureModes: professional.failureModes,
       rollback: professional.rollback,
       scope: professional.scope,
-      acceptanceCriteria: professional.acceptanceCriteria,
+      acceptanceCriteria: numberedAcceptanceCriteria(professional.acceptanceCriteria),
       declaredSpecialists: professional.declaredSpecialists,
       businessRules: professional.businessRules,
       decompositionNotes: professional.decompositionNotes,
@@ -1743,7 +1749,7 @@ async function renderSpecStoryContent(
   const today = new Date().toISOString().split('T')[0];
   const acceptanceCriteria = (body.acceptanceCriteria ?? []).map((criterion, index) =>
     typeof criterion === 'string'
-      ? { id: `AC-${String(index + 1).padStart(3, '0')}`, statement: criterion }
+      ? { id: acceptanceCriterionId(index), statement: criterion }
       : criterion,
   );
   const content = await renderTemplate(
@@ -2055,11 +2061,13 @@ export async function getSpecStatus(
   return { specCount: specs.length, specs, totalStories, totalTasks };
 }
 
-const PROFESSIONAL_SPEC_REQUIRED_SECTIONS = Object.freeze([
+/** Body headings required by the specification contract, in order. */
+export const SPEC_CONTRACT_HEADINGS = Object.freeze([
   'Context & Goal',
   'Audience',
   'Outcome & Measurement',
   'Functional Requirements',
+  'Business Rules',
   'Constraints',
   'Evidence Expectations',
   'Failure Modes',
@@ -2067,7 +2075,15 @@ const PROFESSIONAL_SPEC_REQUIRED_SECTIONS = Object.freeze([
   'Scope Boundaries',
   'Acceptance Criteria',
   'Declared Risk Specialists',
+  'Notes for Decomposition',
 ] as const);
+
+// Business rules and decomposition notes are optional shape answers, so promotion does not require their content.
+const PROFESSIONAL_SPEC_REQUIRED_SECTIONS = Object.freeze(
+  SPEC_CONTRACT_HEADINGS.filter(
+    (heading) => heading !== 'Business Rules' && heading !== 'Notes for Decomposition',
+  ),
+);
 
 function markdownSection(content: string, heading: string, level = 2): string | null {
   const lines = content.split(/\r?\n/u);
@@ -2212,4 +2228,189 @@ export async function validateSpecForPromotion(
   }
 
   return { ready: issues.length === 0, issues };
+}
+
+const SCOPE_SUBHEADINGS = Object.freeze(['In Scope', 'Out of Scope'] as const);
+const ACCEPTANCE_ID = /^AC-\d{3,}$/u;
+
+export type SpecContractRule = 'path' | 'frontmatter' | 'headings' | 'acceptance-ids';
+
+export interface SpecContractViolation {
+  file: string;
+  rule: SpecContractRule;
+  message: string;
+}
+
+export interface SpecContractReport {
+  specId: string;
+  file: string | null;
+  violations: SpecContractViolation[];
+}
+
+/** Spec frontmatter schemas projected from the Protocol, keyed by their `schemaVersion` const. */
+function supportedSpecSchemas(): Map<string, unknown> {
+  const root = new URL('../../lib/schemas/', import.meta.url);
+  const schemas = new Map<string, unknown>();
+  for (const entry of readdirSync(root, { withFileTypes: true })) {
+    const file = new URL(`${entry.name}/spec.schema.json`, root);
+    if (!entry.isDirectory() || !existsSync(file)) continue;
+    const schema: unknown = JSON.parse(readFileSync(file, 'utf8'));
+    const properties = plainRecord(plainRecord(schema)?.properties);
+    const version = plainRecord(properties?.schemaVersion)?.const;
+    if (typeof version === 'string') schemas.set(version, schema);
+  }
+  return schemas;
+}
+
+/** Headings outside fenced code blocks, with their level and text. */
+function markdownHeadings(content: string): Array<{ level: number; text: string }> {
+  const headings: Array<{ level: number; text: string }> = [];
+  let fence: string | null = null;
+  for (const line of content.split(/\r?\n/u)) {
+    const marker = /^\s*(```|~~~)/u.exec(line)?.[1];
+    if (marker) {
+      fence = fence === null ? marker : fence === marker ? null : fence;
+      continue;
+    }
+    if (fence !== null) continue;
+    const match = /^(#{1,6})\s+(.+?)\s*#*\s*$/u.exec(line);
+    if (match) headings.push({ level: match[1].length, text: match[2] });
+  }
+  return headings;
+}
+
+function contractHeadingViolations(content: string): string[] {
+  const issues: string[] = [];
+  const headings = markdownHeadings(content);
+  const sectionHeadings = headings.filter((heading) => heading.level === 2);
+  const positions = SPEC_CONTRACT_HEADINGS.map((required) =>
+    sectionHeadings.findIndex((heading) => heading.text === required),
+  );
+  for (const [index, required] of SPEC_CONTRACT_HEADINGS.entries()) {
+    if (positions[index] === -1) issues.push(`Missing heading "## ${required}".`);
+  }
+  let previous: { heading: string; position: number } | null = null;
+  for (const [index, required] of SPEC_CONTRACT_HEADINGS.entries()) {
+    const position = positions[index];
+    if (position === -1) continue;
+    if (previous && position < previous.position) {
+      issues.push(`Heading "## ${required}" appears before "## ${previous.heading}".`);
+    }
+    previous = { heading: required, position };
+  }
+
+  const scopeIndex = headings.findIndex(
+    (heading) => heading.level === 2 && heading.text === 'Scope Boundaries',
+  );
+  if (scopeIndex !== -1) {
+    const end = headings.findIndex((heading, index) => index > scopeIndex && heading.level <= 2);
+    const scope = headings.slice(scopeIndex + 1, end === -1 ? undefined : end);
+    for (const required of SCOPE_SUBHEADINGS) {
+      if (!scope.some((heading) => heading.level === 3 && heading.text.startsWith(required))) {
+        issues.push(`"## Scope Boundaries" is missing "### ${required}".`);
+      }
+    }
+  }
+  return issues;
+}
+
+/** Every top-level criterion in Acceptance Criteria must start with a unique AC-NNN id. */
+function acceptanceIdViolations(content: string): string[] {
+  const section = markdownSection(content, 'Acceptance Criteria');
+  if (section === null) return ['No "## Acceptance Criteria" section to read acceptance ids from.'];
+  const criteria = section
+    .split(/\r?\n/u)
+    .map((line) => /^(?:[-*+]|\d+[.)])\s+(.*)$/u.exec(line)?.[1])
+    .filter((item): item is string => item !== undefined);
+  if (criteria.length === 0) return ['"## Acceptance Criteria" lists no criteria.'];
+
+  const issues: string[] = [];
+  const seen = new Set<string>();
+  for (const criterion of criteria) {
+    const text = criterion.replace(/^\[[ xX]\]\s*/u, '').replace(/^[*_`]+/u, '');
+    const id = /^([A-Za-z]+-[A-Za-z0-9]+)/u.exec(text)?.[1];
+    if (!id || !ACCEPTANCE_ID.test(id)) {
+      issues.push(`Criterion "${text.slice(0, 60)}" does not start with an AC-NNN id.`);
+      continue;
+    }
+    if (seen.has(id)) issues.push(`Acceptance id ${id} is used more than once.`);
+    seen.add(id);
+  }
+  return issues;
+}
+
+/**
+ * Check one spec file against the specification contract without writing.
+ * Returns null when no spec directory matches the id.
+ */
+export async function validateSpecContract(
+  projectDir: string,
+  config: OpenPlanrConfig,
+  specId: string,
+): Promise<SpecContractReport | null> {
+  const resolved = await resolveSpecDir(projectDir, config, specId);
+  if (!resolved) return null;
+  const file = path.join(resolved.dir, `${specId}-${resolved.slug}.md`);
+  const violation = (rule: SpecContractRule, message: string): SpecContractViolation => ({
+    file,
+    rule,
+    message,
+  });
+  if (!(await fileExists(file))) {
+    return {
+      specId,
+      file: null,
+      violations: [
+        violation('path', `Expected the spec file ${path.basename(file)} in ${resolved.dir}.`),
+      ],
+    };
+  }
+
+  const violations: SpecContractViolation[] = [];
+  const raw = await readFile(file);
+  let parsed: { data: Record<string, unknown>; content: string };
+  try {
+    parsed = parseMarkdown(raw);
+  } catch (error) {
+    violations.push(violation('frontmatter', `Frontmatter is not valid YAML: ${messageOf(error)}`));
+    parsed = { data: {}, content: raw };
+  }
+  const { data, content } = parsed;
+
+  if (typeof data.id === 'string' && data.id !== specId) {
+    violations.push(violation('path', `Frontmatter id is ${data.id}; the path says ${specId}.`));
+  }
+  if (typeof data.slug === 'string' && data.slug !== resolved.slug) {
+    violations.push(
+      violation('path', `Frontmatter slug is ${data.slug}; the path says ${resolved.slug}.`),
+    );
+  }
+
+  const schemas = supportedSpecSchemas();
+  const versions = [...schemas.keys()].sort((a, b) => a.localeCompare(b, 'en', { numeric: true }));
+  const declared = data.schemaVersion;
+  let schema = typeof declared === 'string' ? schemas.get(declared) : undefined;
+  if (schema === undefined) {
+    const found =
+      declared === undefined ? 'missing' : `${JSON.stringify(declared)}, which is unsupported`;
+    violations.push(
+      violation(
+        'frontmatter',
+        `schemaVersion is ${found}; supported versions: ${versions.join(', ')}.`,
+      ),
+    );
+    // Check the remaining keys against the newest contract.
+    schema = schemas.get(versions[versions.length - 1]);
+  }
+  for (const issue of validateJson(data, schema)) {
+    if (issue.path === '$.schemaVersion' || issue.detail.includes("'schemaVersion'")) continue;
+    violations.push(violation('frontmatter', `${issue.path} ${issue.rule}: ${issue.detail}`));
+  }
+  for (const issue of contractHeadingViolations(content)) {
+    violations.push(violation('headings', issue));
+  }
+  for (const issue of acceptanceIdViolations(content)) {
+    violations.push(violation('acceptance-ids', issue));
+  }
+  return { specId, file, violations };
 }

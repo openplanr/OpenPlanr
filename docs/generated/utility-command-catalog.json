@@ -554,6 +554,10 @@
       "classification": "deterministic-preserved"
     },
     {
+      "path": "spec validate",
+      "classification": "deterministic-preserved"
+    },
+    {
       "path": "spec promote",
       "classification": "deterministic-preserved"
     },

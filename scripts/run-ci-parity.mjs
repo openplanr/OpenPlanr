@@ -49,6 +49,8 @@ const CONTRIBUTOR_NODE_RANGE = JSON.parse(readFileSync(resolve(root, 'package.js
   .engines.node;
 /** The required status job: it only reads the other jobs' results, so it is not replayed. */
 export const AGGREGATE_JOB = 'ci-passed';
+/** Reads the pull request's changed files on GitHub; the local run replays every job instead. */
+export const SELECTOR_JOB = 'changes';
 
 /**
  * Parses a CI command into the npm script and workspace it runs, or null for one that runs none.
@@ -120,9 +122,14 @@ export function planLocalCi(workflow, nodeMajor) {
     buildNode: context.buildNode,
     prepare: context.prepare,
     jobs: entries
-      .filter(([id]) => id !== producer && id !== AGGREGATE_JOB)
+      .filter(([id]) => id !== producer && id !== AGGREGATE_JOB && id !== SELECTOR_JOB)
       .map(([id, job]) => planJob(id, job, context)),
   };
+}
+
+/** The `if:` of a job the selector can skip; the local run always replays it. */
+export function selectedIf(id) {
+  return `\${{ !cancelled() && needs.${SELECTOR_JOB}.outputs.${id} == 'true' }}`;
 }
 
 function uploadsBuildOutputs(step) {
@@ -168,7 +175,7 @@ function planJob(id, job, context) {
       `${id} needs ${needs.join(', ')}; the local run orders jobs only after the build and earlier jobs`,
     );
   }
-  if (job.if !== undefined && !CONSUMER_IF.test(job.if)) {
+  if (job.if !== undefined && !CONSUMER_IF.test(job.if) && job.if !== selectedIf(id)) {
     throw new Error(`${id} runs under if: ${job.if}, which the local run cannot evaluate`);
   }
   const all = expandMatrix(id, job.strategy?.matrix).map((matrix) =>

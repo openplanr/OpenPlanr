@@ -765,16 +765,48 @@ test(
   options,
   async (t) => {
     const page = await hostedFixture(t);
-    for (const [width, expectedLayout] of [
-      [320, 'compact'],
-      [390, 'compact'],
-      [680, 'inline'],
-      [681, 'inline'],
-      [700, 'inline'],
-      [1440, 'inline'],
+    for (const [width, expectedLayout, narrow] of [
+      [320, 'compact', true],
+      [390, 'compact', true],
+      [680, 'inline', false],
+      [681, 'inline', false],
+      [700, 'inline', false],
+      [1440, 'inline', false],
     ]) {
       await page.setViewportSize({ width, height: 900 });
-      await page.waitForTimeout(100);
+      // The toolbar and the editor shell each write their layout in the animation frame after a
+      // ResizeObserver callback, so the viewport change is settled only once both have caught up.
+      const layoutsSettled = () =>
+        page.evaluate(() => {
+          const toolbar = document.querySelector('.studio-toolbar');
+          const shell = toolbar?.closest('.planr-diagram-editor');
+          return {
+            layout: toolbar?.dataset.studioLayout,
+            shellLayout: shell?.dataset.layout,
+            toolbarWidth: toolbar?.getBoundingClientRect().width,
+          };
+        });
+      try {
+        await page.waitForFunction(
+          ({ expected, expectedNarrow }) => {
+            const toolbar = document.querySelector('.studio-toolbar');
+            const shell = toolbar?.closest('.planr-diagram-editor');
+            return (
+              toolbar?.dataset.studioLayout === expected &&
+              shell?.dataset.layout?.split(' ').includes('narrow') === expectedNarrow
+            );
+          },
+          { expected: expectedLayout, expectedNarrow: narrow },
+          { timeout: 5_000 },
+        );
+      } catch (cause) {
+        const actual = await layoutsSettled();
+        throw new Error(
+          `${width}px layouts did not settle: expected toolbar ${JSON.stringify(expectedLayout)} ` +
+            `and shell ${narrow ? 'with' : 'without'} "narrow"; actual ${JSON.stringify(actual)}`,
+          { cause },
+        );
+      }
       const bounds = await page.evaluate(() => {
         const rect = (selector) => {
           const r = document.querySelector(selector).getBoundingClientRect();

@@ -1060,12 +1060,12 @@
     },
     {
       "skillId": "planr-investigate",
-      "skillVersion": "2.0.1",
-      "description": "Diagnose a bug, regression, error, or unexplained behavior and optionally implement a bounded fix. Use for root-cause investigation, not planned feature delivery.",
+      "skillVersion": "2.1.0",
+      "description": "Diagnose a bug, regression, error, or unexplained behavior and optionally implement a bounded fix. Use for root-cause investigation, including before any fix, not planned feature delivery.",
       "lifecycle": "active",
       "authorityClass": "diagnostic",
       "source": "skills/planr-investigate/openplanr.skill.json",
-      "sourceDigest": "sha256:ad1422ac497f638b739d362a93af8eddc9cd0634c8a737a2c408023bd5cb9797",
+      "sourceDigest": "sha256:eb14795cb0e58a28178aaead5e2737c191f981f0da182cabeeeb99d7c45d87f4",
       "triggerPolicy": {
         "include": [
           "Investigate a bug, regression, error, or unexplained behavior",
@@ -1548,12 +1548,12 @@
     },
     {
       "skillId": "planr-ship",
-      "skillVersion": "1.3.0",
-      "description": "Implement an OpenPlanr plan, specification, task, or clearly stated request end to end in the current repository. Use when the user asks to build, implement, fix, finish, or ship local work.",
+      "skillVersion": "1.4.0",
+      "description": "Implement an OpenPlanr plan, specification, task, or clearly stated request end to end in the current repository. Use when the user asks to build, implement, fix, finish, or ship local work, or to plan and implement an accepted change. Invoke before editing files for the requested change. Not for planning only, landing, release, or work handed to another coding agent.",
       "lifecycle": "active",
       "authorityClass": "implementation",
       "source": "skills/planr-ship/openplanr.skill.json",
-      "sourceDigest": "sha256:fb92ddb223243c1a4a918384f1d5db32e5ba01add49ef8d441d97c34a3a07075",
+      "sourceDigest": "sha256:636a378452d54760d78c5fa5f361de0ced97035e41ba7f3e3361fd5ab5d8058d",
       "triggerPolicy": {
         "include": [
           "Implement a plan, specification, task, fix, or clearly stated local request",
@@ -1621,12 +1621,12 @@
     },
     {
       "skillId": "planr-spec",
-      "skillVersion": "1.0.1",
+      "skillVersion": "1.0.2",
       "description": "Shape vague product or engineering intent into a clear, measurable Protocol-compatible specification grounded in the current repository. Use when requirements need clarification before planning or implementation.",
       "lifecycle": "active",
       "authorityClass": "planning-write",
       "source": "skills/planr-spec/openplanr.skill.json",
-      "sourceDigest": "sha256:f4d06e96f07db140706108b16e0a48f377d1c50d170b0a0c1b4a93d7642a4fb6",
+      "sourceDigest": "sha256:aaf4a2660b2310e312d6b9aa25a099ca4057c44129d634e2f45fbc8a7862c621",
       "triggerPolicy": {
         "include": [
           "Turn vague product or engineering intent into a precise specification",
@@ -1864,5 +1864,5 @@
     }
   ],
   "compatibilityAliases": [],
-  "documentDigest": "sha256:b8db6a80119d4b2fa375a76fd4e59bda3ad14d52efe56ef88ca572763e7d074e"
+  "documentDigest": "sha256:84aa1fca15056b29bc848beca237f56ea477090158d158d7e5f7e4234437ee81"
 }

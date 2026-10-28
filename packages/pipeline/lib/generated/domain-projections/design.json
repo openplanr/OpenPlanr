@@ -37,7 +37,7 @@
     {
       "source": "packages/canvas/src/controller.mjs",
       "target": "lib/canvas/controller.mjs",
-      "sha256": "ae28da3ded0b80a48160e4a17fa6baf3c745d9dd1ea9b7c3a98a71fa06af0474",
+      "sha256": "629f71a18aca5b942090f502d1317f56120119a73f512c06867632fb175c7aa4",
       "mode": "644"
     },
     {
@@ -49,7 +49,7 @@
     {
       "source": "packages/canvas/src/culling.mjs",
       "target": "lib/canvas/culling.mjs",
-      "sha256": "83af62db74e0b97522c1bc9447eade3ddd78e5418be4e405a33f2f706729b246",
+      "sha256": "08757ad1d8e70db376195c697d2eeb5ef22aa99cb0f97a0beb1968f74af2bca9",
       "mode": "644"
     },
     {
@@ -61,7 +61,7 @@
     {
       "source": "packages/canvas/src/edges.mjs",
       "target": "lib/canvas/edges.mjs",
-      "sha256": "1436efe781271814bf5323f0b1b557c0bdc8a375093e5519663438522a6c1c96",
+      "sha256": "707ab630d58a775082bedd1e29d196ea9a30f22d01c8f55b26e996737b91cbc2",
       "mode": "644"
     },
     {
@@ -121,7 +121,7 @@
     {
       "source": "packages/canvas/src/input.mjs",
       "target": "lib/canvas/input.mjs",
-      "sha256": "9230ff0acbeb82835ca5badf578db0b3942168c90e3ca15c9e13dd04a30b2113",
+      "sha256": "04ef4a6744c1fb340a1b2d142d0347b805da8ca40f0e5408e028f47574d0756a",
       "mode": "644"
     },
     {
@@ -217,7 +217,7 @@
     {
       "source": "packages/canvas/src/types.d.mts",
       "target": "lib/canvas/types.d.mts",
-      "sha256": "a87b4047f8a42947ac10bdb8741cf793a4b71a6fd5a325d41243fdcd4f3324fe",
+      "sha256": "c6a18b57024db4357fd14c92ede441e175bc83ef0b0d4861cce639f5d7bdb157",
       "mode": "644"
     },
     {
@@ -589,7 +589,7 @@
     {
       "source": "packages/design/lib/design/ui/enhancements.mjs",
       "target": "lib/design/ui/enhancements.mjs",
-      "sha256": "9c00faddb345be1f948e85bbcbc38a9cb7f453bc6dfc844a229d0df503a875d7",
+      "sha256": "cbdc572dbce3563c66c70beee9b9c0b47c6bc2e365290f742074bb56f4fa4ac3",
       "mode": "644"
     },
     {
@@ -625,7 +625,7 @@
     {
       "source": "packages/design/lib/design/ui/studio.mjs",
       "target": "lib/design/ui/studio.mjs",
-      "sha256": "ef59ac730b8275b2941aa84f65a1d1132bd2b09b1bdcd30beb9a95a7214f1c4c",
+      "sha256": "9e092f1a6220fb25c5a7d011573c66c076ac0a72ce3fee9c8268c31086ebfb8e",
       "mode": "644"
     },
     {
@@ -697,7 +697,7 @@
     {
       "source": "packages/design/templates/studio/studio.js",
       "target": "templates/studio/studio.js",
-      "sha256": "c085a0c72343cf121eadd03dc72fb046c340c8445689df0d62e0ee4143f974f2",
+      "sha256": "10dcbf9b4ee2a039f4b6502d741bb9064d668f7ff776f311330e83f2086eccec",
       "mode": "644"
     }
   ]

@@ -28,7 +28,8 @@ export function buildEdgeRoutes(
   region: Rect,
   strict = false,
 ): EdgeRoutes {
-  const byId = new Map(Array.from(nodes, (node) => [node.id, node]));
+  // Camera frames rebuild routes, so a world without edges skips indexing every node.
+  const byId = new Map(edges.length ? Array.from(nodes, (node) => [node.id, node]) : []);
   const grouped = new Map<string, string[]>();
   const diagnostics: Diagnostic[] = [];
   const drawnBounds: Point[] = [];

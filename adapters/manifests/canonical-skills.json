@@ -1954,7 +1954,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:b591bd7cd509edaff85874931c8971677778280776105d893e24b0ed9ee79053"
+          "digest": "sha256:883c094162afc18637301227f2093c0582110a798006c5f0ec2884021fca249b"
         },
         {
           "path": "scripts/runtime/packages/design/templates/studio/studio.js.sources/01-module-runtime.js",
@@ -2110,7 +2110,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:9f1e3e4bee690452ca512fbfcec4777244bd773cb1177fb19263f54def48722d"
+          "digest": "sha256:84f4fe26fdd473a8858766a433986cc60e60639906da15a0f3244c4b5a5adc5f"
         },
         {
           "path": "scripts/runtime/packages/design/templates/studio/studio.js.sources/14-studio-shell.js",
@@ -2134,7 +2134,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:5d29bb88f041c9fad393491becc097198e0ce965a1bbc8cb0b410e17bfad6b70"
+          "digest": "sha256:457b785e01410722ba42aa372ac2b1e82f73fdc134a6d1c4d068bd16cd83c230"
         },
         {
           "path": "scripts/runtime/packages/design/templates/studio/studio.js.sources/16-design-review-experience.js",
@@ -2206,7 +2206,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:d99e4aede54009be49bec6d7244b35578469d43330f261cbf0f05dac0ae40bee"
+          "digest": "sha256:672d0395a9d1016f511f3b8dd6b23c1015958a97e54a83e51af2f39b53222236"
         },
         {
           "path": "scripts/runtime/packages/protocol/package.json",
@@ -3176,7 +3176,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:b591bd7cd509edaff85874931c8971677778280776105d893e24b0ed9ee79053"
+          "digest": "sha256:883c094162afc18637301227f2093c0582110a798006c5f0ec2884021fca249b"
         },
         {
           "path": "scripts/runtime/packages/design/templates/studio/studio.js.sources/01-module-runtime.js",
@@ -3332,7 +3332,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:9f1e3e4bee690452ca512fbfcec4777244bd773cb1177fb19263f54def48722d"
+          "digest": "sha256:84f4fe26fdd473a8858766a433986cc60e60639906da15a0f3244c4b5a5adc5f"
         },
         {
           "path": "scripts/runtime/packages/design/templates/studio/studio.js.sources/14-studio-shell.js",
@@ -3356,7 +3356,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:5d29bb88f041c9fad393491becc097198e0ce965a1bbc8cb0b410e17bfad6b70"
+          "digest": "sha256:457b785e01410722ba42aa372ac2b1e82f73fdc134a6d1c4d068bd16cd83c230"
         },
         {
           "path": "scripts/runtime/packages/design/templates/studio/studio.js.sources/16-design-review-experience.js",
@@ -3428,7 +3428,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:d99e4aede54009be49bec6d7244b35578469d43330f261cbf0f05dac0ae40bee"
+          "digest": "sha256:672d0395a9d1016f511f3b8dd6b23c1015958a97e54a83e51af2f39b53222236"
         },
         {
           "path": "scripts/runtime/packages/protocol/package.json",
@@ -4398,7 +4398,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:b591bd7cd509edaff85874931c8971677778280776105d893e24b0ed9ee79053"
+          "digest": "sha256:883c094162afc18637301227f2093c0582110a798006c5f0ec2884021fca249b"
         },
         {
           "path": "scripts/runtime/packages/design/templates/studio/studio.js.sources/01-module-runtime.js",
@@ -4554,7 +4554,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:9f1e3e4bee690452ca512fbfcec4777244bd773cb1177fb19263f54def48722d"
+          "digest": "sha256:84f4fe26fdd473a8858766a433986cc60e60639906da15a0f3244c4b5a5adc5f"
         },
         {
           "path": "scripts/runtime/packages/design/templates/studio/studio.js.sources/14-studio-shell.js",
@@ -4578,7 +4578,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:5d29bb88f041c9fad393491becc097198e0ce965a1bbc8cb0b410e17bfad6b70"
+          "digest": "sha256:457b785e01410722ba42aa372ac2b1e82f73fdc134a6d1c4d068bd16cd83c230"
         },
         {
           "path": "scripts/runtime/packages/design/templates/studio/studio.js.sources/16-design-review-experience.js",
@@ -4650,7 +4650,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:d99e4aede54009be49bec6d7244b35578469d43330f261cbf0f05dac0ae40bee"
+          "digest": "sha256:672d0395a9d1016f511f3b8dd6b23c1015958a97e54a83e51af2f39b53222236"
         },
         {
           "path": "scripts/runtime/packages/protocol/package.json",
@@ -5147,11 +5147,11 @@
     },
     {
       "id": "planr-investigate",
-      "version": "2.0.1",
+      "version": "2.1.0",
       "source": "skills/planr-investigate/openplanr.skill.json",
       "entrypoint": "skills/planr-investigate/SKILL.md",
-      "description": "Diagnose a bug, regression, error, or unexplained behavior and optionally implement a bounded fix. Use for root-cause investigation, not planned feature delivery.",
-      "sourceDigest": "sha256:08dcf60afb7d0934a25d35c0b1c37f853a4d49a4f23ba1847529165513045d78",
+      "description": "Diagnose a bug, regression, error, or unexplained behavior and optionally implement a bounded fix. Use for root-cause investigation, including before any fix, not planned feature delivery.",
+      "sourceDigest": "sha256:c3ab65adfbe563612d657b7072cd7a022150b1a3509426ffb716ca0a5bf49fca",
       "resources": [
         {
           "path": "agents/openai.yaml",
@@ -5161,7 +5161,7 @@
             "chatgpt"
           ],
           "executable": false,
-          "digest": "sha256:6a19c75f6c6c54d786fbae97a8b8916274ff32f0ebc4847d37db38ebdbfe04fb"
+          "digest": "sha256:07651fdaa9aab3486f3288b35547db534dc46bbf96f56aebb9e63c99d205eb37"
         },
         {
           "path": "references/findings.md",
@@ -5754,11 +5754,11 @@
     },
     {
       "id": "planr-ship",
-      "version": "1.3.0",
+      "version": "1.4.0",
       "source": "skills/planr-ship/openplanr.skill.json",
       "entrypoint": "skills/planr-ship/SKILL.md",
-      "description": "Implement an OpenPlanr plan, specification, task, or clearly stated request end to end in the current repository. Use when the user asks to build, implement, fix, finish, or ship local work.",
-      "sourceDigest": "sha256:b4d71fc7aed441e0cbb0dfa7559ff02cdd5a3b92a566d3c4890426f1e48c6590",
+      "description": "Implement an OpenPlanr plan, specification, task, or clearly stated request end to end in the current repository. Use when the user asks to build, implement, fix, finish, or ship local work, or to plan and implement an accepted change. Invoke before editing files for the requested change. Not for planning only, landing, release, or work handed to another coding agent.",
+      "sourceDigest": "sha256:c01e21e744d323a781abce7713500dad948717fa3234112e5740a10def01d6c8",
       "resources": [
         {
           "path": "agents/openai.yaml",
@@ -5768,7 +5768,7 @@
             "chatgpt"
           ],
           "executable": false,
-          "digest": "sha256:c72113d049f4f3edbbb5a4dace9edf19f3622c3ea157421ca03c67dcf3bc375f"
+          "digest": "sha256:08628d822b8168eea900d2788172b77a23cc0e074e7535b3a299af9e34c7112e"
         },
         {
           "path": "references/result-contract.md",
@@ -5850,11 +5850,11 @@
     },
     {
       "id": "planr-spec",
-      "version": "1.0.1",
+      "version": "1.0.2",
       "source": "skills/planr-spec/openplanr.skill.json",
       "entrypoint": "skills/planr-spec/SKILL.md",
       "description": "Shape vague product or engineering intent into a clear, measurable Protocol-compatible specification grounded in the current repository. Use when requirements need clarification before planning or implementation.",
-      "sourceDigest": "sha256:040841d2b63504fd4ad9e07222ba0356cdd3084045fbb70f665bb043e4d006fa",
+      "sourceDigest": "sha256:150d31da1f87918ce7966706230779c19fadf261f7afd78ae5ef0924ea6a4be1",
       "resources": [
         {
           "path": "agents/openai.yaml",
@@ -5876,7 +5876,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:55ecc8361256073324d2507097862f6222589e22887dffe5b5e25cdc89199df5"
+          "digest": "sha256:eaaf58e5d2e5cf788856c8d0e156a1ff49111d3578556bfb7c8fe2466df15b15"
         }
       ],
       "contracts": {

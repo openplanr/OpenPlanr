@@ -100,9 +100,19 @@ jobs:
         run: |
           npm run build
           git diff --exit-code HEAD --
+      # The Playwright image has no jq, which the CI selector test runs, and the non-root user cannot apt-get.
+      - name: Install jq
+        run: |
+          mkdir -p "$RUNNER_TEMP/jq-bin"
+          curl -fsSL -o "$RUNNER_TEMP/jq-bin/jq" https://github.com/jqlang/jq/releases/download/jq-1.8.1/jq-linux-amd64
+          echo "020468de7539ce70ef1bceaf7cde2e8c4f2ca6c3afb84642aabc5c97d9fc2a0d  $RUNNER_TEMP/jq-bin/jq" | sha256sum --check --strict
+          chmod +x "$RUNNER_TEMP/jq-bin/jq"
+          echo "$RUNNER_TEMP/jq-bin" >> "$GITHUB_PATH"
       - name: Run the focused gates
         run: npm run test:focused
       - name: Test the packages that own the contributor studio and skill suites
+        env:
+          PLANR_VIEW_CONTEXT_BUDGET_MS: 500
         run: |
           npm test --workspace=@openplanr/protocol
           npm test --workspace=@openplanr/canvas

@@ -6,6 +6,7 @@ import {
   type CanvasTraceResults,
   evaluateCanvasTrace,
   toClockResolution,
+  traceOwnership,
 } from '../../src/testing/index.mjs';
 
 function complete(count: 708 | 5000) {
@@ -325,9 +326,7 @@ describe('canvas trace evaluation', () => {
     expect(evaluate(results).failures).toEqual([]);
     for (const run of item.runs) run.rendererMainP95Ms += 0.001;
     const evaluation = evaluate(results);
-    expect(
-      (world === 'svg' && tier === 5000 ? evaluation.reported : evaluation.failures).join('\n'),
-    ).toContain('rendererMainP95Ms');
+    expect(evaluation.failures.join('\n')).toContain('rendererMainP95Ms');
   });
 
   it.each([
@@ -441,15 +440,56 @@ describe('canvas trace evaluation', () => {
     ).toHaveLength(2);
   });
 
-  it('reports traced SVG stress-tier measurements instead of gating them', () => {
-    const results = complete(5000);
-    for (const key of ['measurements', 'hitTests', 'chrome', 'lod', 'pins'] as const)
-      for (const item of results[key]) item.world = 'svg';
-    for (const run of results.measurements[0].runs) run.rendererMainP95Ms = 1000;
-    expect(evaluate(results).failures).toEqual([]);
-    expect(evaluate(results).reported.join('\n')).toContain(
-      'rendererMainP95Ms measured 1000, limit 12',
-    );
+  for (const tier of [708, 5000] as const) {
+    const svg = (mutate: (item: Complete['measurements'][number]) => void = () => {}) => {
+      const results = complete(tier);
+      for (const key of ['measurements', 'hitTests', 'chrome', 'lod', 'pins'] as const)
+        for (const item of results[key]) item.world = 'svg';
+      mutate(results.measurements[0]);
+      return evaluate(results);
+    };
+    const limit = CANVAS_TRACE_BUDGETS.rendererMainP95Ms.svg[tier];
+
+    it(`gates SVG tier ${tier} renderer main p95 at ${limit} ms and long tasks at 0`, () => {
+      expect(svg().failures).toEqual([]);
+      const slow = svg((item) => {
+        for (const run of item.runs) run.rendererMainP95Ms = limit + 0.001;
+      });
+      expect(slow.failures).toEqual([
+        `${tier}-fixture vanilla svg DPR 2 pan-100: rendererMainP95Ms measured ${limit + 0.001}, limit ${limit}`,
+      ]);
+      const blocked = svg((item) => {
+        item.runs[1].longTasksOver50Ms = 1;
+      });
+      expect(blocked.failures).toEqual([
+        `${tier}-fixture vanilla svg DPR 2 pan-100 run 2: longTasksOver50Ms measured 1, limit 0`,
+      ]);
+    });
+
+    it(`reports card-world DOM, rAF and first-frame budgets for SVG tier ${tier}`, () => {
+      const evaluation = svg((item) => {
+        for (const run of item.runs) {
+          run.domNodes = 70243;
+          run.rafIntervalP95Ms = 17.5;
+        }
+        item.firstFrameTrialsMs = [960, 970, 980, 990, 1000];
+        item.firstFrameP50Ms = 980;
+      });
+      expect(evaluation.failures).toEqual([]);
+      const reported = evaluation.reported.join('\n');
+      expect(reported).toContain('domNodes measured 70243, limit 2000');
+      expect(reported).toContain('rafIntervalP95Ms measured 17.5, limit 16.8');
+      expect(reported).toContain('firstFrameP50Ms measured 980, limit 150');
+      expect(reported).not.toMatch(/rendererMainP95Ms|longTasksOver50Ms|hitTest/u);
+    });
+  }
+
+  it('names the budget table each world is gated against', () => {
+    for (const count of [708, 5000])
+      for (const scenario of ['pan-100', 'zoom-sweep', 'remount']) {
+        expect(traceOwnership({ count, world: 'svg', scenario })).toBe('gated, SVG tier');
+        expect(traceOwnership({ count, world: 'html', scenario })).toBe('gated, card tier');
+      }
   });
 
   it.each([

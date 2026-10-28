@@ -335,21 +335,11 @@ for (const count of [708, 5000])
       count,
     );
     t.diagnostic(JSON.stringify({ count, evaluation }));
-    // Gates the SVG diagram tier table: renderer main p95 and long tasks, at both tiers.
     for (const measurement of measurements) {
       const median = measurement.runs.map((run) => run.rendererMainP95Ms).sort((a, b) => a - b)[1];
       t.diagnostic(`${count} ${measurement.scenario}: median renderer main p95 ${median} ms`);
-      assert.ok(
-        median <= CANVAS_TRACE_BUDGETS.rendererMainP95Ms.svg[count],
-        `${count} ${measurement.scenario}: renderer main p95 ${median} ms exceeds ${CANVAS_TRACE_BUDGETS.rendererMainP95Ms.svg[count]} ms`,
-      );
-      for (const run of measurement.runs)
-        assert.equal(
-          run.longTasksOver50Ms,
-          0,
-          `${count} ${measurement.scenario} run ${run.run}: no task may exceed 50 ms`,
-        );
     }
+    assert.deepEqual(evaluation.failures, [], `${count}-element SVG tier budgets`);
   });
 
 test(

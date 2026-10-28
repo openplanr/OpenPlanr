@@ -38,6 +38,7 @@ release/
 /evaluation/skills/design-workflow-evidence/
 /evaluation/skills/design-workflow-results.json
 /evaluation/skills/design-workflow-results.md
+/evaluation/claude-plugin-evals/results/
 
 # Private repository preparation, product research, and verification evidence.
 /.claude/

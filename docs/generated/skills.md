@@ -192,7 +192,7 @@ Diagnose OpenPlanr CLI, pipeline, runtime-adapter, installation, and lock health
 
 ## `planr-investigate`
 
-Diagnose a bug, regression, error, or unexplained behavior and optionally implement a bounded fix. Use for root-cause investigation, not planned feature delivery.
+Diagnose a bug, regression, error, or unexplained behavior and optionally implement a bounded fix. Use for root-cause investigation, including before any fix, not planned feature delivery.
 
 - Select for: Investigate a bug, regression, error, or unexplained behavior; Reproduce a defect, establish its root cause, or apply a bounded fix; Investigate why this fails.
 - Defer for: Plan a new feature; Run a broad product review.
@@ -280,7 +280,7 @@ Share a status report, sprint note or release notes with the team as a chat mess
 
 ## `planr-ship`
 
-Implement an OpenPlanr plan, specification, task, or clearly stated request end to end in the current repository. Use when the user asks to build, implement, fix, finish, or ship local work.
+Implement an OpenPlanr plan, specification, task, or clearly stated request end to end in the current repository. Use when the user asks to build, implement, fix, finish, or ship local work, or to plan and implement an accepted change. Invoke before editing files for the requested change. Not for planning only, landing, release, or work handed to another coding agent.
 
 - Select for: Implement a plan, specification, task, fix, or clearly stated local request; Build and verify the requested repository change; Ship this; Ship task; Implement this task; Implement this plan with parallel coding agents; Use native parallel agents to implement this task; Fix the delegate runner in the active agent.
 - Defer for: Only plan the work; Prepare a release without changing code; Have Codex implement this task; Use Codex to implement this; Have Claude Code implement this task; Ask another coding agent to implement this task; Use another coding agent to build this change.
