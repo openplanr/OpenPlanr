@@ -142,8 +142,9 @@ requests must pass two checks: `CI passed` from `ci.yml` and `Browser` from `bro
 which runs the canvas, dashboard and artifact Chromium lanes a change reaches. On a pull
 request, `ci.yml` always runs the build and static checks and runs only the package test jobs
 the changed files reach, as `scripts/ci/workspace-jobs.mjs` maps them; a path it does not map
-runs every job. The version pull request runs only the build and static checks. The merge
-queue runs every job and every Browser lane. Every pull
+runs every job, and a renamed file counts by its old path too. A version pull request that
+changes only what `npm run version-packages:ci` writes runs only the build and static checks.
+The merge queue runs every job and every Browser lane. Every pull
 request job finishes within 12 minutes. `nightly.yml` runs the CLI integration suites and
 coverage, the Node 22 contributor toolchain, packed proofs on Node 22, 24 and 26, the canvas
 timing traces, artifact Chromium, Firefox and WebKit, the published-package first runs and

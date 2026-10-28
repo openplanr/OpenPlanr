@@ -46,7 +46,7 @@ jobs:
           set -o pipefail
           : > "$RUNNER_TEMP/changed-files"
           if [ "$EVENT_NAME" = pull_request ]; then
-            gh api --paginate "repos/$GITHUB_REPOSITORY/pulls/$PR_NUMBER/files" --jq '.[].filename' > "$RUNNER_TEMP/changed-files"
+            gh api --paginate "repos/$GITHUB_REPOSITORY/pulls/$PR_NUMBER/files" --jq '.[] | .filename, (.previous_filename // empty)' > "$RUNNER_TEMP/changed-files"
           fi
           node scripts/ci/workspace-jobs.mjs --event "$EVENT_NAME" --head-ref "$HEAD_REF" \
             --head-repo "$HEAD_REPO" --repo "$GITHUB_REPOSITORY" < "$RUNNER_TEMP/changed-files" \
@@ -401,7 +401,7 @@ jobs:
         env:
           NEEDS: ${{ toJSON(needs) }}
         run: |
-          if ! printf '%s\n' "$NEEDS" | jq -e '.changes.outputs as $selected | length > 0 and
+          if ! printf '%s\n' "$NEEDS" | jq -e '.changes.outputs as $selected | ($selected | length) > 0 and
             all(to_entries[]; .value.result == "success" or
               (.value.result == "skipped" and $selected[.key] == "false"))' > /dev/null; then
             echo "::error::Every Workspace CI job must succeed, except a test job the change does not reach; a failed, cancelled or wrongly skipped job fails this check."

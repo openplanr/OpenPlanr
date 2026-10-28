@@ -52,13 +52,14 @@ export const LANES = Object.freeze({
 
 /**
  * Returns `{ lane: boolean }` for every lane, given the changed file paths. A run other than a
- * pull request, such as the merge queue, runs every lane; the version pull request runs none.
+ * pull request, such as the merge queue, runs every lane; an unedited version pull request
+ * runs none.
  */
 export function selectLanes(files, context = { event: 'pull_request' }) {
   const every = (selected) =>
     Object.fromEntries(Object.keys(LANES).map((lane) => [lane, selected]));
   if (context.event !== 'pull_request' || files.length >= FILE_LIMIT) return every(true);
-  if (isVersionPullRequest(context)) return every(false);
+  if (isVersionPullRequest(files, context)) return every(false);
   // No lane reads the skill projections, and static checks prove them against their sources.
   const reaching = files.filter(
     (file) => !SKILL_PROJECTIONS.some((pattern) => matchesPath(file, pattern)),

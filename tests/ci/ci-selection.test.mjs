@@ -14,6 +14,7 @@ import { tmpdir } from 'node:os';
 import { dirname, join, normalize } from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
+import { load } from 'js-yaml';
 import { selectLanes } from '../../scripts/ci/browser-lanes.mjs';
 import {
   FILE_LIMIT,
@@ -483,4 +484,79 @@ test('a lane runs when a tracked file its code or tests read changes', () => {
     if (files.length) missed[lane] = files.sort();
   }
   assert.deepEqual(missed, {});
+});
+
+const selectorStep = (workflow, job, id) =>
+  load(readFileSync(join(root, '.github/workflows', workflow), 'utf8')).jobs[job].steps.find(
+    (step) => step.id === id,
+  );
+// Runs the workflow's own jq filter over a pull request files API page.
+const changedPaths = (step, page) => {
+  const filter = /--jq '([^']+)'/u.exec(step.run)?.[1];
+  assert.ok(filter, `${step.name} must list files with gh api --jq`);
+  return execFileSync('jq', ['-r', filter], { input: JSON.stringify(page), encoding: 'utf8' })
+    .split('\n')
+    .filter(Boolean);
+};
+
+test('a renamed file selects by its old path as well as its new one', () => {
+  const moved = [
+    {
+      filename: 'docs/a.mjs',
+      previous_filename: 'packages/skill-runtime/lib/a.mjs',
+      status: 'renamed',
+    },
+    { filename: 'docs/b.md', status: 'modified' },
+  ];
+  const workspace = changedPaths(selectorStep('ci.yml', 'changes', 'select'), moved);
+  assert.deepEqual(
+    selectJobs(workspace, pullRequest),
+    only(SUPPORTING, SKILL_RUNTIME, PIPELINE, CLI),
+  );
+  const canvas = [
+    { filename: 'docs/x.ts', previous_filename: 'packages/canvas/src/x.ts', status: 'renamed' },
+  ];
+  const lanes = changedPaths(selectorStep('browser.yml', 'changes', 'lanes'), canvas);
+  assert.equal(selectLanes(lanes).canvas, true);
+});
+
+test('code on the version branch selects as on any other branch', () => {
+  const version = fromBranch(VERSION_BRANCH);
+  const release = [
+    '.changeset/spec-validate.md',
+    '.claude-plugin/marketplace.json',
+    'adapters/manifests/canonical-skills.json',
+    'apps/dashboard/CHANGELOG.md',
+    'apps/dashboard/package.json',
+    'docs/generated/ecosystem.md',
+    'package-lock.json',
+    'packages/cli/CHANGELOG.md',
+    'packages/cli/package.json',
+  ];
+  assert.deepEqual(selectJobs(release, version), only());
+  for (const extra of ['packages/cli/src/a.ts', 'skills/planr-ship/SKILL.md', 'package.json']) {
+    assert.deepEqual(
+      selectJobs([...release, extra], version),
+      selectJobs([...release, extra], pullRequest),
+      extra,
+    );
+    assert.deepEqual(
+      selectLanes([...release, extra], version),
+      selectLanes([...release, extra]),
+      extra,
+    );
+  }
+});
+
+test('the selectors never print a changed path where the runner reads workflow commands', () => {
+  for (const script of ['scripts/ci/workspace-jobs.mjs', 'scripts/ci/browser-lanes.mjs']) {
+    const result = spawnSync(process.execPath, [script, '--event', 'pull_request'], {
+      cwd: root,
+      input: '::error::injected\n  ::add-mask::secret\n',
+      encoding: 'utf8',
+    });
+    assert.equal(result.status, 0, result.stderr);
+    for (const line of `${result.stdout}\n${result.stderr}`.split('\n'))
+      assert.doesNotMatch(line.trimStart(), /^::/u, `${script}: ${line}`);
+  }
 });

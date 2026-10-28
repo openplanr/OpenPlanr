@@ -248,6 +248,7 @@ test('the Browser gate passes only the lanes the selector skipped and fails anyt
     assert.equal(verdict({ changes: selector(['canvas']), ...skipped, canvas: result(value) }), 1);
   assert.equal(verdict({ changes: selector([], 'failure'), ...skipped }), 1);
   assert.equal(verdict({ changes: result('failure'), ...skipped }), 1);
+  assert.equal(verdict({ changes: result('success'), ...passed }), 1, 'no selector outputs');
   assert.equal(verdict({}), 1);
 });
 

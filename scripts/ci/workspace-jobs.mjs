@@ -21,8 +21,25 @@ const SHARED_READERS = Object.freeze([SUPPORTING, SKILL_RUNTIME, PIPELINE, CLI])
 /** The pull request files API lists at most this many files, so a longer list is incomplete. */
 export const FILE_LIMIT = 3000;
 
-/** The release branch Version packages opens; its pull request changes no source or test. */
+/** The release branch Version packages opens with `npm run version-packages:ci`. */
 export const VERSION_BRANCH = 'changeset-release/main';
+
+/**
+ * What that script writes: `changeset version` bumps workspace manifests, writes changelogs
+ * and deletes changesets, `sync-lockfile.mjs` carries the versions into the lockfile, and
+ * `npm run generate` refreshes the projections that digest the manifests.
+ */
+export const VERSION_FILES = Object.freeze([
+  '.changeset/',
+  'packages/*/package.json',
+  'apps/*/package.json',
+  'packages/*/CHANGELOG.md',
+  'apps/*/CHANGELOG.md',
+  'package-lock.json',
+  'adapters/manifests/',
+  '.claude-plugin/',
+  'docs/generated/',
+]);
 
 /** Tracked outputs `npm run generate` derives from skills, agents and package metadata. */
 export const SKILL_PROJECTIONS = Object.freeze([
@@ -114,9 +131,15 @@ export function jobsFor(file) {
   );
 }
 
-/** Whether a run is the Version packages pull request from this repository. */
-export function isVersionPullRequest({ event, headRef, headRepo, repo }) {
-  return event === 'pull_request' && headRef === VERSION_BRANCH && !!repo && headRepo === repo;
+/** Whether a run is the Version packages pull request from this repository, unedited. */
+export function isVersionPullRequest(files, { event, headRef, headRepo, repo }) {
+  return (
+    event === 'pull_request' &&
+    headRef === VERSION_BRANCH &&
+    !!repo &&
+    headRepo === repo &&
+    files.every((file) => VERSION_FILES.some((pattern) => matchesPath(file, pattern)))
+  );
 }
 
 /**
@@ -127,7 +150,7 @@ export function selectJobs(files, context) {
   const every = (selected) => Object.fromEntries(JOBS.map((job) => [job, selected]));
   if (context.event !== 'pull_request' || files.length === 0 || files.length >= FILE_LIMIT)
     return every(true);
-  if (isVersionPullRequest(context)) return every(false);
+  if (isVersionPullRequest(files, context)) return every(false);
   const selected = new Set(files.flatMap(jobsFor));
   return Object.fromEntries(JOBS.map((job) => [job, selected.has(job)]));
 }
@@ -154,7 +177,9 @@ if (
 ) {
   const context = parseContext(process.argv.slice(2));
   const files = readFileSync(0, 'utf8').split('\n').filter(Boolean);
-  for (const file of files) process.stderr.write(`${file}: ${jobsFor(file).join(', ') || '-'}\n`);
+  // Quoted, so a contributor's file name can never start a workflow command line.
+  for (const file of files)
+    process.stderr.write(`${JSON.stringify(file)}: ${jobsFor(file).join(', ') || '-'}\n`);
   for (const [job, selected] of Object.entries(selectJobs(files, context)))
     process.stdout.write(`${job}=${selected}\n`);
 }

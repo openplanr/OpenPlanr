@@ -98,5 +98,6 @@ test('the CI passed gate needs every blocking job and fails unless each selected
     1,
     'a failed selector fails the gate',
   );
+  assert.equal(verdict(run({})), 1, 'a selector that published no outputs fails the gate');
   assert.equal(verdict({}), 1, 'A gate that reads no results must fail');
 });
