@@ -29,6 +29,14 @@ async function within(promise, message, ms = 10_000) {
   }
 }
 
+async function waitFor(predicate, message, ms = 10_000) {
+  const deadline = Date.now() + ms;
+  while (!predicate()) {
+    if (Date.now() > deadline) throw new Error(`Timed out after ${ms} ms: ${message}`);
+    await delay(10);
+  }
+}
+
 function moveBoard(app, key = 'ArrowRight') {
   app.stage
     .getPanel(app.entries[0].artifactId)
@@ -714,18 +722,24 @@ test('view context failures show a temporary notice and retry on the next camera
     if (ms === 6000) dismiss = callback;
     return setTimeout(callback, ms, ...args);
   };
-  await delay(300);
-  assert.equal(requests.length, 1);
-  assert.match(
-    app.documentNode.querySelector('[data-design-notice-message]').textContent,
-    /Unavailable/u,
+  await waitFor(
+    () =>
+      requests.length > 0 &&
+      /Unavailable/u.test(
+        app.documentNode.querySelector('[data-design-notice-message]').textContent,
+      ),
+    'the failed view context request never raised its notice',
   );
+  assert.equal(requests.length, 1);
   assert.equal(typeof dismiss, 'function');
   dismiss();
   assert.equal(app.documentNode.querySelector('.design-notice').hidden, true);
   const { camera, zoom } = app.studio.getState();
   app.studio.setCamera({ ...camera, zoom });
-  await delay(300);
+  await waitFor(
+    () => requests.length >= 2,
+    'the view context was not resent after the dismissed failure',
+  );
   assert.equal(requests.length, 2);
   assert.deepEqual(requests[1], requests[0]);
 });
@@ -757,7 +771,10 @@ test('live view context uses measured auto heights and the public inspection eve
   const scroll = app.documentNode.querySelector('.planr-stage-scroll');
   Object.defineProperties(scroll, { clientWidth: { value: 600 }, clientHeight: { value: 500 } });
   app.studio.setCamera({ x: 0, y: -1000, zoom: 1 });
-  await delay(300);
+  await waitFor(
+    () => contexts.at(-1)?.visibleScreens.length === 0,
+    'no view context with empty visible screens was posted after panning away',
+  );
   assert.deepEqual(contexts.at(-1).visibleScreens, []);
   const selected = {
     screenId: 'screen-1',
@@ -788,7 +805,10 @@ test('live view context uses measured auto heights and the public inspection eve
     .dispatchEvent(
       new app.window.CustomEvent('planr:design-inspection-change', { detail: selected }),
     );
-  await delay(300);
+  await waitFor(
+    () => contexts.at(-1)?.selected.planrId === selected.planrId,
+    'the inspected selection never reached the view context',
+  );
   assert.deepEqual(contexts.at(-1).selected, selected);
   assert.deepEqual(contexts.at(-1).visibleScreens, [
     { screenId: 'screen-1', frameId: 'desktop', variantId: 'editorial' },
