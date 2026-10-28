@@ -73,6 +73,7 @@ export interface CanvasEvents {
   'safe-area': Rect;
   diagnostics: readonly Diagnostic[];
   'active-frame': NodeId | null;
+  motion: boolean;
 }
 
 export interface CanvasController {

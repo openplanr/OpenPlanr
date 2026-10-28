@@ -58,20 +58,20 @@ export function traceBudgetPolicy(runnerBudgets: boolean): {
   };
 }
 
+/** Names the budget table a trace is gated against; SVG worlds use the SVG diagram tier. */
 export function traceOwnership(input: {
   count: number;
   world: 'html' | 'svg';
   scenario: string;
-}): 'gated' | 'reported, SVG stress tier' {
-  return input.world === 'html' || input.count === 708 ? 'gated' : 'reported, SVG stress tier';
+}): 'gated, card tier' | 'gated, SVG tier' {
+  return input.world === 'svg' ? 'gated, SVG tier' : 'gated, card tier';
 }
 
 export function domBudgetPolicy(input: Parameters<typeof traceOwnership>[0]): {
-  ownership: 'gated' | 'reported, SVG stress tier' | 'reported, remount timing only';
+  ownership: 'gated' | 'reported, SVG tier' | 'reported, remount timing only';
   regressionLimit: number | null;
 } {
-  if (traceOwnership(input) !== 'gated')
-    return { ownership: 'reported, SVG stress tier', regressionLimit: null };
+  if (input.world === 'svg') return { ownership: 'reported, SVG tier', regressionLimit: null };
   if (input.scenario === 'remount')
     return { ownership: 'reported, remount timing only', regressionLimit: null };
   return { ownership: 'gated', regressionLimit: CANVAS_TRACE_BUDGETS.domNodes };
@@ -302,17 +302,12 @@ export function evaluateCanvasTrace(
     const measured = rounded === value ? rounded : `${rounded} (raw ${value})`;
     check(item, scenario, metric, measured, limit, rounded <= limit, reportOnly);
   }
-  function hitTest(
-    item: CanvasTraceIdentity,
-    scenario: string,
-    probe: CanvasHitTestProbe,
-    reportOnly = false,
-  ): void {
+  function hitTest(item: CanvasTraceIdentity, scenario: string, probe: CanvasHitTestProbe): void {
     object(probe, `${item.fixture}.${scenario}.hitTestProbe`);
     for (const key of ['p95Ms', 'sampleCount', 'queryCount', 'minSampleDurationMs'] as const)
       numeric(probe[key], `${item.fixture}.${scenario}.hitTestProbe.${key}`);
-    maximum(item, scenario, 'hitTestP95Ms', probe.p95Ms, limits.hitTestP95Ms, reportOnly);
-    check(item, scenario, 'hitTestP95Ms', probe.p95Ms, '> 0', probe.p95Ms > 0, reportOnly);
+    maximum(item, scenario, 'hitTestP95Ms', probe.p95Ms, limits.hitTestP95Ms);
+    check(item, scenario, 'hitTestP95Ms', probe.p95Ms, '> 0', probe.p95Ms > 0);
     check(
       item,
       scenario,
@@ -320,7 +315,6 @@ export function evaluateCanvasTrace(
       probe.sampleCount,
       limits.hitTestSampleCount,
       probe.sampleCount === limits.hitTestSampleCount,
-      reportOnly,
     );
     check(
       item,
@@ -329,7 +323,6 @@ export function evaluateCanvasTrace(
       probe.queryCount,
       `>= ${limits.hitTestQueryCount}`,
       probe.queryCount >= limits.hitTestQueryCount,
-      reportOnly,
     );
     check(
       item,
@@ -338,7 +331,6 @@ export function evaluateCanvasTrace(
       probe.minSampleDurationMs,
       `>= ${limits.hitTestMinSampleDurationMs}`,
       probe.minSampleDurationMs >= limits.hitTestMinSampleDurationMs,
-      reportOnly,
     );
   }
   for (const section of ['measurements', 'hitTests', 'chrome', 'lod', 'pins'] as const) {
@@ -353,7 +345,8 @@ export function evaluateCanvasTrace(
       pending.push(`${section}: absent for tier ${tier}`);
   }
   for (const item of results.measurements ?? []) {
-    const reportOnly = traceOwnership(item) !== 'gated';
+    // The SVG diagram tier has no DOM, rAF interval or first-frame budget; those are reported.
+    const svgTier = traceOwnership(item) === 'gated, SVG tier';
     const field = `${item.fixture}.${item.scenario}`;
     choice(
       item.scenario,
@@ -372,7 +365,6 @@ export function evaluateCanvasTrace(
       item.firstFrameTrialsMs.length,
       limits.firstFrameLoads,
       item.firstFrameTrialsMs.length === limits.firstFrameLoads,
-      reportOnly,
     );
     const medianFirstFrame = [...item.firstFrameTrialsMs].sort((a, b) => a - b)[
       Math.floor(item.firstFrameTrialsMs.length / 2)
@@ -385,7 +377,7 @@ export function evaluateCanvasTrace(
       'firstFrameP50Ms',
       item.firstFrameP50Ms,
       policy.firstFrameP50Ms,
-      reportOnly,
+      svgTier,
     );
     const main: number[] = [];
     const raf: number[] = [];
@@ -415,23 +407,14 @@ export function evaluateCanvasTrace(
           'longTasksOver50Ms',
           run.longTasksOver50Ms,
           limits.longTasksOver50Ms,
-          reportOnly,
         );
       if (run.layoutShiftValue !== undefined)
         supported(item, scenario, 'layoutShiftValue', run.layoutShiftValue);
       for (const metric of ['engineFrameSamples', 'worstFrameMs'] as const)
         if (run[metric] !== undefined) numeric(run[metric], `${field}.${metric}`);
-      hitTest(item, scenario, run.hitTestProbe, reportOnly);
-      maximum(item, scenario, 'hitTestP95Ms', run.hitTestP95Ms, limits.hitTestP95Ms, reportOnly);
-      check(
-        item,
-        scenario,
-        'hitTestP95Ms',
-        run.hitTestP95Ms,
-        '> 0',
-        run.hitTestP95Ms > 0,
-        reportOnly,
-      );
+      hitTest(item, scenario, run.hitTestProbe);
+      maximum(item, scenario, 'hitTestP95Ms', run.hitTestP95Ms, limits.hitTestP95Ms);
+      check(item, scenario, 'hitTestP95Ms', run.hitTestP95Ms, '> 0', run.hitTestP95Ms > 0);
       const dom = domBudgetPolicy(item);
       maximum(
         item,
@@ -449,7 +432,6 @@ export function evaluateCanvasTrace(
           'pureCameraCommits',
           run.react.pureCameraCommits,
           limits.pureCameraCommits,
-          reportOnly,
         );
         numeric(run.react.pureCameraFrames, `${field}.react.pureCameraFrames`);
         if (item.scenario !== 'remount')
@@ -460,7 +442,6 @@ export function evaluateCanvasTrace(
             run.react.pureCameraFrames,
             '> 0',
             run.react.pureCameraFrames > 0,
-            reportOnly,
           );
       }
       if (results.browser.name === 'webkit' && item.scenario === 'pan-40') {
@@ -472,7 +453,7 @@ export function evaluateCanvasTrace(
           'worstFrameMs',
           run.worstFrameMs,
           limits.webkit.pan40WorstFrameMs,
-          reportOnly || policy.rafIntervalP95Ms === null,
+          policy.rafIntervalP95Ms === null,
         );
       }
     }
@@ -493,7 +474,7 @@ export function evaluateCanvasTrace(
         'rendererMainP95Ms',
         mainMedian,
         mainLimit,
-        reportOnly || (item.scenario === 'remount' && policy.remountRendererMainP95Ms === null),
+        item.scenario === 'remount' && policy.remountRendererMainP95Ms === null,
       );
       interval(
         item,
@@ -501,7 +482,7 @@ export function evaluateCanvasTrace(
         'rafIntervalP95Ms',
         rafMedian,
         limits.rafIntervalP95Ms,
-        reportOnly || policy.rafIntervalP95Ms === null,
+        svgTier || policy.rafIntervalP95Ms === null,
       );
     } else if (results.browser.name === 'webkit') {
       interval(
@@ -510,7 +491,7 @@ export function evaluateCanvasTrace(
         'rafIntervalP95Ms',
         rafMedian,
         limits.webkit.rafIntervalP95Ms,
-        reportOnly || policy.rafIntervalP95Ms === null,
+        svgTier || policy.rafIntervalP95Ms === null,
       );
     } else if (
       results.browser.name === 'firefox' &&
@@ -524,7 +505,7 @@ export function evaluateCanvasTrace(
         item.scenario === 'pan-100'
           ? limits.firefox.pan100FrameP95Ms
           : limits.firefox.panFitFrameP95Ms[item.count],
-        reportOnly || policy.rafIntervalP95Ms === null,
+        policy.rafIntervalP95Ms === null,
       );
     }
   }

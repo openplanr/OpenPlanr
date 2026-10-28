@@ -11,6 +11,18 @@ const nodes: CanvasNode[] = [
 const region = { x: 0, y: 0, width: 100, height: 100 };
 
 describe('route culling and batching', () => {
+  it('returns empty routes without reading nodes when there are no edges', () => {
+    const untouched: Iterable<CanvasNode> = {
+      [Symbol.iterator]() {
+        throw new Error('nodes were indexed');
+      },
+    };
+    const routes = buildEdgeRoutes(untouched, [], region);
+    expect(routes.paths.size).toBe(0);
+    expect(routes.bounds).toBeNull();
+    expect(routes.diagnostics).toEqual([]);
+  });
+
   it('batches segments by style and keeps a crossing with both endpoints outside', () => {
     const routes = buildEdgeRoutes(
       nodes,

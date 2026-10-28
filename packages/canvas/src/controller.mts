@@ -43,6 +43,7 @@ function object(field: string, value: unknown): void {
 }
 
 const CAMERA_MOVE_MS = 200;
+const DEMOTE_DELAY_MS = 300;
 
 export function createCanvas(options: CanvasOptions): CanvasController {
   object('options', options);
@@ -152,7 +153,12 @@ export function createCanvas(options: CanvasOptions): CanvasController {
   let view: Window | undefined;
   let frameId: number | undefined;
   let idleTimer: number | undefined;
+  let demoteTimer: number | undefined;
+  let promotedZoom: number | null = null;
+  let rasterZoom = Number.NaN;
+  let demoteDue = false;
   let isMoving = false;
+  let motionEvent = false;
   const consumedKeys = new WeakSet<KeyboardEvent>();
   let dirty = false;
   let cameraEvent = false;
@@ -172,6 +178,7 @@ export function createCanvas(options: CanvasOptions): CanvasController {
     breakpoint: new Set(),
     'safe-area': new Set(),
     diagnostics: new Set(),
+    motion: new Set(),
   };
   let queued: (() => void)[] = [];
   function emit<K extends keyof CanvasEvents>(event: K, payload: CanvasEvents[K]) {
@@ -416,12 +423,41 @@ export function createCanvas(options: CanvasOptions): CanvasController {
   function schedule() {
     if (view && !detaching && frameId === undefined) frameId = view.requestAnimationFrame(write);
   }
+  // Layer toggles re-raster the world, so they run in the frame write: promote on motion,
+  // and demote only after a zoom has settled, to re-raster at the final scale.
+  function promote() {
+    if (!view) return;
+    if (isMoving || inputGesture) {
+      if (demoteTimer !== undefined) view.clearTimeout(demoteTimer);
+      demoteTimer = undefined;
+      demoteDue = false;
+      if (promotedZoom === null) {
+        promotedZoom = rasterZoom;
+        for (const layer of layers()) layer.style.willChange = 'transform';
+      }
+      return;
+    }
+    if (promotedZoom === null) {
+      rasterZoom = camera.zoom;
+      return;
+    }
+    if (promotedZoom === camera.zoom) return;
+    if (demoteDue) {
+      demoteDue = false;
+      promotedZoom = null;
+      rasterZoom = camera.zoom;
+      for (const layer of layers()) layer.style.removeProperty('will-change');
+      return;
+    }
+    demoteTimer ??= view.setTimeout(() => {
+      demoteTimer = undefined;
+      demoteDue = true;
+      schedule();
+    }, DEMOTE_DELAY_MS);
+  }
   function moving() {
     if (!view) return;
     if (!isMoving) {
-      for (const layer of layers()) {
-        if (layer.style.willChange !== 'transform') layer.style.willChange = 'transform';
-      }
       frames?.setMoving(true);
       loader?.setMoving(true);
     }
@@ -429,9 +465,6 @@ export function createCanvas(options: CanvasOptions): CanvasController {
     if (idleTimer !== undefined) view.clearTimeout(idleTimer);
     idleTimer = view.setTimeout(() => {
       idleTimer = undefined;
-      for (const layer of layers()) {
-        if (layer.style.willChange) layer.style.removeProperty('will-change');
-      }
       isMoving = false;
       frames?.setMoving(inputGesture);
       loader?.setMoving(inputGesture);
@@ -501,6 +534,7 @@ export function createCanvas(options: CanvasOptions): CanvasController {
       if (wroteCamera) cameraWriteFrame = writeFrame;
       if (activeFrame !== null) frames?.updatePosition();
     }
+    promote();
     const requestedLevel = lod.update(camera.zoom);
     const overviewReady =
       requestedLevel === 'overview' || level === 'overview' ? drawOverview() : false;
@@ -546,6 +580,10 @@ export function createCanvas(options: CanvasOptions): CanvasController {
     if (notifyCamera) emit('camera', cameraPayload);
     if (notifyFrame) emit('active-frame', framePayload);
     if (levelChanged) emit('level', level);
+    if (motionEvent !== (isMoving || inputGesture)) {
+      motionEvent = !motionEvent;
+      emit('motion', motionEvent);
+    }
     for (const event of events) event();
     if (update.geometry.length) emit('geometry', new Set(update.geometry));
     if (update.mount) {
@@ -592,6 +630,12 @@ export function createCanvas(options: CanvasOptions): CanvasController {
     detaching = true;
     if (frameId !== undefined) view?.cancelAnimationFrame(frameId);
     if (idleTimer !== undefined) view?.clearTimeout(idleTimer);
+    if (demoteTimer !== undefined) view?.clearTimeout(demoteTimer);
+    demoteTimer = undefined;
+    demoteDue = false;
+    promotedZoom = null;
+    rasterZoom = Number.NaN;
+    motionEvent = false;
     if (resumeTimer !== undefined) view?.clearTimeout(resumeTimer);
     if (zoomIdleTimer !== undefined) view?.clearTimeout(zoomIdleTimer);
     zoomIdleTimer = undefined;

@@ -320,17 +320,62 @@ describe('lifecycle and the frame writer', () => {
     frame();
     expect(notifications).toHaveLength(1);
   });
-  it('removes will-change 150 milliseconds after the last move', () => {
+  it('promotes layers in the frame write and keeps them promoted through pans', () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+    const { controller, world, overlay } = make();
+    frame();
+    controller.panBy(5, 5);
+    expect(world.style.willChange).toBe('');
+    frame();
+    expect(world.style.willChange).toBe('transform');
+    expect(overlay.style.willChange).toBe('transform');
+    vi.advanceTimersByTime(150);
+    frame();
+    vi.advanceTimersByTime(1000);
+    frame();
+    expect(world.style.willChange).toBe('transform');
+  });
+  it('reports motion in frame writes until input has been idle for 150 milliseconds', () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+    const { controller } = make();
+    frame();
+    const motion = vi.fn();
+    controller.on('motion', motion);
+    controller.panBy(5, 5);
+    expect(motion).not.toHaveBeenCalled();
+    frame();
+    expect(motion.mock.calls).toEqual([[true]]);
+    vi.advanceTimersByTime(140);
+    controller.zoomAt(1.25, { x: 10, y: 10 });
+    frame();
+    vi.advanceTimersByTime(149);
+    frame();
+    expect(motion.mock.calls).toEqual([[true]]);
+    vi.advanceTimersByTime(1);
+    frame();
+    expect(motion.mock.calls).toEqual([[true], [false]]);
+  });
+  it('demotes layers in a frame write only after a zoom has settled', () => {
     vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
     const { controller, world } = make();
-    controller.panBy(5, 5);
+    frame();
+    controller.zoomAt(1.25, { x: 100, y: 100 });
+    frame();
     expect(world.style.willChange).toBe('transform');
-    vi.advanceTimersByTime(100);
+    vi.advanceTimersByTime(150);
+    frame();
+    vi.advanceTimersByTime(299);
     controller.panBy(5, 5);
-    vi.advanceTimersByTime(149);
+    frame();
+    vi.advanceTimersByTime(150);
+    frame();
+    vi.advanceTimersByTime(300);
     expect(world.style.willChange).toBe('transform');
-    vi.advanceTimersByTime(1);
+    frame();
     expect(world.style.willChange).toBe('');
+    controller.panBy(5, 5);
+    frame();
+    expect(world.style.willChange).toBe('transform');
   });
   it('creates detached, attaches and detaches idempotently, restores owned DOM', () => {
     const controller = createCanvas({ label: 'Detached' });

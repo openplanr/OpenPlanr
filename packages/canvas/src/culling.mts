@@ -27,6 +27,7 @@ export function createCulling(
   let pinsDirty = false;
   let desired = new Set<NodeId>();
   let queue: NodeId[] = [];
+  let queueStale = false;
   let frozenUntil = -Infinity;
   let optionalMounts = true;
 
@@ -92,21 +93,7 @@ export function createCulling(
       };
       desired = admitOptional ? grid.query(region) : new Set();
     }
-    if (reevaluate || pinsDirty) {
-      const centerX = viewport.x + viewport.width / 2;
-      const centerY = viewport.y + viewport.height / 2;
-      const distance = (id: NodeId) => {
-        const node = nodes.get(id);
-        if (!node) return Infinity;
-        return (
-          (node.bounds.x + node.bounds.width / 2 - centerX) ** 2 +
-          (node.bounds.y + node.bounds.height / 2 - centerY) ** 2
-        );
-      };
-      queue = [...desired]
-        .filter((id) => !mounted.has(id) && !pins.has(id))
-        .sort((left, right) => distance(left) - distance(right) || left.localeCompare(right));
-    }
+    if (reevaluate || pinsDirty) queueStale = true;
     const admitted: NodeId[] = [];
     const removed: NodeId[] = [];
     for (const id of mounted) {
@@ -122,12 +109,38 @@ export function createCulling(
       }
     }
     const frozen = now < frozenUntil;
+    // Zoom frames are frozen, so the distance sort waits until admissions resume.
+    if (queueStale && !frozen) {
+      const centerX = viewport.x + viewport.width / 2;
+      const centerY = viewport.y + viewport.height / 2;
+      const distance = (id: NodeId) => {
+        const node = nodes.get(id);
+        if (!node) return Infinity;
+        return (
+          (node.bounds.x + node.bounds.width / 2 - centerX) ** 2 +
+          (node.bounds.y + node.bounds.height / 2 - centerY) ** 2
+        );
+      };
+      queue = [...desired]
+        .filter((id) => !mounted.has(id) && !pins.has(id))
+        .sort((left, right) => distance(left) - distance(right) || left.localeCompare(right));
+      queueStale = false;
+    }
     if (!frozen && (!gesture || reevaluate)) {
       const batch = queue.splice(0, chunkSize);
       for (const id of batch) {
         mounted.add(id);
         admitted.push(id);
       }
+    }
+    let waiting = queue.length > 0;
+    if (queueStale) {
+      waiting = false;
+      for (const id of desired)
+        if (!mounted.has(id) && !pins.has(id)) {
+          waiting = true;
+          break;
+        }
     }
     const geometry = [...moved];
     moved.clear();
@@ -138,8 +151,8 @@ export function createCulling(
         ? { mount: { mounted: admitted, unmounted: removed } }
         : {}),
       geometry,
-      pending: queue.length > 0 && !gesture && !frozen,
-      ...(queue.length && frozen ? { resumeAt: frozenUntil } : {}),
+      pending: waiting && !gesture && !frozen,
+      ...(waiting && frozen ? { resumeAt: frozenUntil } : {}),
     };
   }
   return {
@@ -177,6 +190,7 @@ export function createCulling(
       region = undefined;
       desired.clear();
       queue = [];
+      queueStale = false;
       frozenUntil = -Infinity;
       dirty = true;
     },

@@ -175,6 +175,36 @@ describe('wheel input', () => {
     expect(controller.zoomAt).toHaveBeenCalledWith(factor, { x: 100, y: 200 });
     expect(controller.panBy).not.toHaveBeenCalled();
   });
+
+  it('measures the stage once per wheel burst and again after a resize or scroll', () => {
+    const { stage, controller } = surface();
+    const measure = vi.mocked(stage.getBoundingClientRect);
+    const wheel = (timeStamp: number, ctrlKey = true) => {
+      const event = new WheelEvent('wheel', {
+        deltaY: 1,
+        ctrlKey,
+        clientX: 120,
+        clientY: 230,
+        cancelable: true,
+      });
+      Object.defineProperty(event, 'timeStamp', { value: timeStamp });
+      stage.dispatchEvent(event);
+    };
+    measure.mockClear();
+    for (let index = 0; index < 20; index++) wheel(1000 + index * 8, index % 2 === 0);
+    expect(measure).toHaveBeenCalledTimes(1);
+    expect(controller.zoomAt).toHaveBeenLastCalledWith(Math.exp(-0.01), { x: 100, y: 200 });
+    wheel(1500);
+    expect(measure).toHaveBeenCalledTimes(2);
+    window.dispatchEvent(new Event('resize'));
+    wheel(1508);
+    expect(measure).toHaveBeenCalledTimes(3);
+    document.body.dispatchEvent(new Event('scroll'));
+    wheel(1516);
+    expect(measure).toHaveBeenCalledTimes(4);
+    wheel(1524);
+    expect(measure).toHaveBeenCalledTimes(4);
+  });
 });
 
 describe('pointer and keyboard ownership', () => {
