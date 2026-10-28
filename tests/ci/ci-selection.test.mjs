@@ -5,6 +5,7 @@ import {
   copyFileSync,
   mkdirSync,
   mkdtempSync,
+  readdirSync,
   readFileSync,
   rmSync,
   symlinkSync,
@@ -494,9 +495,10 @@ const selectorStep = (workflow, job, id) =>
 const changedPaths = (step, page) => {
   const filter = /--jq '([^']+)'/u.exec(step.run)?.[1];
   assert.ok(filter, `${step.name} must list files with gh api --jq`);
-  return execFileSync('jq', ['-r', filter], { input: JSON.stringify(page), encoding: 'utf8' })
-    .split('\n')
-    .filter(Boolean);
+  const result = spawnSync('jq', ['-r', filter], { input: JSON.stringify(page), encoding: 'utf8' });
+  assert.ok(!result.error, `jq is required to run the workflow's filter: ${result.error?.message}`);
+  assert.equal(result.status, 0, result.stderr);
+  return result.stdout.split('\n').filter(Boolean);
 };
 
 test('a renamed file selects by its old path as well as its new one', () => {
@@ -559,4 +561,25 @@ test('the selectors never print a changed path where the runner reads workflow c
     for (const line of `${result.stdout}\n${result.stderr}`.split('\n'))
       assert.doesNotMatch(line.trimStart(), /^::/u, `${script}: ${line}`);
   }
+});
+
+test('a container job that runs the selector test installs jq before it', () => {
+  const needsJq = (run = '') => /test:focused|tests\/ci\//u.test(run);
+  const installsJq = (run = '') =>
+    /\bjq-linux/u.test(run) && /sha256sum --check/u.test(run) && /GITHUB_PATH/u.test(run);
+  const missing = [];
+  for (const file of readdirSync(join(root, '.github/workflows')).filter((f) =>
+    f.endsWith('.yml'),
+  )) {
+    const { jobs = {} } = load(readFileSync(join(root, '.github/workflows', file), 'utf8'));
+    for (const [name, job] of Object.entries(jobs)) {
+      if (!job.container) continue;
+      const steps = job.steps ?? [];
+      const first = steps.findIndex((step) => needsJq(step.run));
+      if (first === -1) continue;
+      if (!steps.slice(0, first).some((step) => installsJq(step.run)))
+        missing.push(`${file}:${name}`);
+    }
+  }
+  assert.deepEqual(missing, []);
 });
