@@ -31,7 +31,10 @@
       "id": "ceo-finance",
       "kind": "positive",
       "input": "Run a CEO review of strategy, runway, and margin",
-      "expectedSkillId": "planr-ceo-review"
+      "expectedSkillId": "planr-ceo-review",
+      "claudePluginEval": {
+        "rivalSkillId": "planr-operate"
+      }
     },
     {
       "id": "ceo-investment",
@@ -139,7 +142,11 @@
       "id": "design-loop-variants",
       "kind": "collision",
       "input": "Explore multiple competing design variants",
-      "expectedSkillId": "planr-design-loop"
+      "expectedSkillId": "planr-design-loop",
+      "claudePluginEval": {
+        "rivalSkillId": "planr-design",
+        "scaffold": "design-brief.sh"
+      }
     },
     {
       "id": "design-loop-feedback",
@@ -151,7 +158,11 @@
       "id": "design-review-critique",
       "kind": "collision",
       "input": "Critique the existing completed OpenPlanr design",
-      "expectedSkillId": "planr-design-review"
+      "expectedSkillId": "planr-design-review",
+      "claudePluginEval": {
+        "rivalSkillId": "planr-design",
+        "scaffold": "completed-design.sh"
+      }
     },
     {
       "id": "design-review-pinned",
@@ -265,7 +276,10 @@
       "id": "plan-review-cross",
       "kind": "collision",
       "input": "Review the implementation plan for product, engineering, design, and developer-experience problems",
-      "expectedSkillId": "planr-plan-review"
+      "expectedSkillId": "planr-plan-review",
+      "claudePluginEval": {
+        "rivalSkillId": "planr-plan"
+      }
     },
     {
       "id": "plan-review-challenge",
@@ -295,13 +309,25 @@
       "id": "investigate-before-ship",
       "kind": "collision",
       "input": "Investigate why checkout fails; do not implement a fix yet",
-      "expectedSkillId": "planr-investigate"
+      "expectedSkillId": "planr-investigate",
+      "claudePluginEval": {
+        "rivalSkillId": "planr-ship",
+        "scaffold": "checkout-failing-test.sh"
+      }
     },
     {
       "id": "plan-and-implement",
       "kind": "collision",
       "input": "Plan and implement this accepted local repository change end to end",
-      "expectedSkillId": "planr-ship"
+      "expectedSkillId": "planr-ship",
+      "claudePluginEval": {
+        "rivalSkillId": "planr-plan",
+        "scaffold": "accepted-change.sh",
+        "allowedTools": [
+          "Write",
+          "Edit"
+        ]
+      }
     },
     {
       "id": "investigate-failing-test-before-fix",
@@ -349,13 +375,21 @@
       "id": "ship-versus-land",
       "kind": "collision",
       "input": "Prepare the already implemented work for release without changing code",
-      "expectedSkillId": "planr-land"
+      "expectedSkillId": "planr-land",
+      "claudePluginEval": {
+        "rivalSkillId": "planr-ship",
+        "scaffold": "implemented-change.sh"
+      }
     },
     {
       "id": "spec-vague",
       "kind": "collision",
       "input": "Turn this vague product intent into a precise specification",
-      "expectedSkillId": "planr-spec"
+      "expectedSkillId": "planr-spec",
+      "claudePluginEval": {
+        "rivalSkillId": "planr-plan",
+        "scaffold": "product-intent.sh"
+      }
     },
     {
       "id": "spec-criteria",
@@ -373,7 +407,10 @@
       "id": "status-feature",
       "kind": "collision",
       "input": "Show text progress for this feature, not the visual dashboard",
-      "expectedSkillId": "planr-status"
+      "expectedSkillId": "planr-status",
+      "claudePluginEval": {
+        "rivalSkillId": "planr-dashboard"
+      }
     },
     {
       "id": "sync-graph",
@@ -406,7 +443,8 @@
       "kind": "negative",
       "input": "Translate this paragraph into French",
       "expectedStatus": "deferred",
-      "expectedReason": "no-confident-match"
+      "expectedReason": "no-confident-match",
+      "claudePluginEval": {}
     },
     {
       "id": "negative-weather",
