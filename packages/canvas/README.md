@@ -471,7 +471,8 @@ sample count or exact count is stated.
 | React commits on pure camera frames | 0 | Same |
 
 Frame intervals are rounded to 0.1 ms before comparison. Local runs keep every
-reference budget unchanged. All four scenarios gate main-thread, rAF, long-task,
+reference budget for HTML worlds; SVG worlds report stage DOM, rAF interval and
+first frame instead of gating them. All four scenarios gate main-thread, rAF, long-task,
 first-frame and hit-test budgets for the 708 and 5,000 HTML tiers at both pixel
 densities. Stage DOM counts gate at 2,000, including compact cards at 40% and the
 fit overview. SVG worlds use the SVG diagram tier at 708 and 5,000: renderer
@@ -489,7 +490,7 @@ the runner, whose cold software-GL page loads measure about three times the loca
 time, and at 150 ms locally. The 5,000-node HTML zoom sweep gates its main-thread
 p95 at 14 ms on the runner, where software GL measures about four to five times the
 local time. Local remounts keep the 16 ms limit enforced.
-Every other budget and gate stays unchanged. The printed table,
+Every other budget and gate is the same in both sets. The printed table,
 JSON report and its attachment identify the `local` or `runner` budget set and
 effective limits. Runner remounts show `reported (reference 16)` and runner first
 frames `250 (reference 150)` in the table,

@@ -1420,6 +1420,21 @@ export function mountDesignEnhancements({ payload, studio: designStudio, stage: 
     map.append(svg, close);
     q('.planr-stage').append(map);
     const scroll = q('.planr-stage-scroll');
+    // The ResizeObserver clears this, so camera draws never read stage layout.
+    let scrollSize = null;
+    const sizeObserver =
+      typeof ResizeObserver === 'function'
+        ? new ResizeObserver(() => {
+            scrollSize = null;
+          })
+        : null;
+    sizeObserver?.observe(scroll);
+    destroyers.push(() => sizeObserver?.disconnect());
+    const stageSize = () => {
+      const size = scrollSize ?? { width: scroll.clientWidth, height: scroll.clientHeight };
+      if (sizeObserver) scrollSize = size;
+      return size;
+    };
     let geometry = null,
       scheduled = false;
     const mapBoards = new Map();
@@ -1455,11 +1470,12 @@ export function mountDesignEnhancements({ payload, studio: designStudio, stage: 
           };
         });
       if (!boards.length) return;
+      const { width: stageWidth, height: stageHeight } = stageSize();
       const viewport = {
         x: -current.camera.x / current.zoom,
         y: -current.camera.y / current.zoom,
-        width: scroll.clientWidth / current.zoom,
-        height: scroll.clientHeight / current.zoom,
+        width: stageWidth / current.zoom,
+        height: stageHeight / current.zoom,
       };
       // Board bounds are independent of the camera. Including the viewport in
       // these bounds made every zoom shrink/recenter the whole overview.
@@ -1525,9 +1541,10 @@ export function mountDesignEnhancements({ payload, studio: designStudio, stage: 
         y = ((event.clientY - bounds.top) * 128) / bounds.height;
       const worldX = geometry.minX + (x - geometry.offsetX) / geometry.scale,
         worldY = geometry.minY + (y - geometry.offsetY) / geometry.scale;
+      const { width, height } = stageSize();
       studio.setCamera({
-        x: scroll.clientWidth / 2 - worldX * state().zoom,
-        y: scroll.clientHeight / 2 - worldY * state().zoom,
+        x: width / 2 - worldX * state().zoom,
+        y: height / 2 - worldY * state().zoom,
       });
     };
     on(svg, 'pointerdown', (event) => {

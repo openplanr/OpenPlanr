@@ -1954,7 +1954,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:6aff8602d968b12ebd28ca377bb35f401fd982af959e4b1327ce923e963eb9bc"
+          "digest": "sha256:883c094162afc18637301227f2093c0582110a798006c5f0ec2884021fca249b"
         },
         {
           "path": "scripts/runtime/packages/design/templates/studio/studio.js.sources/01-module-runtime.js",
@@ -2110,7 +2110,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:9f1e3e4bee690452ca512fbfcec4777244bd773cb1177fb19263f54def48722d"
+          "digest": "sha256:84f4fe26fdd473a8858766a433986cc60e60639906da15a0f3244c4b5a5adc5f"
         },
         {
           "path": "scripts/runtime/packages/design/templates/studio/studio.js.sources/14-studio-shell.js",
@@ -3176,7 +3176,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:6aff8602d968b12ebd28ca377bb35f401fd982af959e4b1327ce923e963eb9bc"
+          "digest": "sha256:883c094162afc18637301227f2093c0582110a798006c5f0ec2884021fca249b"
         },
         {
           "path": "scripts/runtime/packages/design/templates/studio/studio.js.sources/01-module-runtime.js",
@@ -3332,7 +3332,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:9f1e3e4bee690452ca512fbfcec4777244bd773cb1177fb19263f54def48722d"
+          "digest": "sha256:84f4fe26fdd473a8858766a433986cc60e60639906da15a0f3244c4b5a5adc5f"
         },
         {
           "path": "scripts/runtime/packages/design/templates/studio/studio.js.sources/14-studio-shell.js",
@@ -4398,7 +4398,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:6aff8602d968b12ebd28ca377bb35f401fd982af959e4b1327ce923e963eb9bc"
+          "digest": "sha256:883c094162afc18637301227f2093c0582110a798006c5f0ec2884021fca249b"
         },
         {
           "path": "scripts/runtime/packages/design/templates/studio/studio.js.sources/01-module-runtime.js",
@@ -4554,7 +4554,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:9f1e3e4bee690452ca512fbfcec4777244bd773cb1177fb19263f54def48722d"
+          "digest": "sha256:84f4fe26fdd473a8858766a433986cc60e60639906da15a0f3244c4b5a5adc5f"
         },
         {
           "path": "scripts/runtime/packages/design/templates/studio/studio.js.sources/14-studio-shell.js",
