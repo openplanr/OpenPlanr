@@ -202,7 +202,6 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
   let failedSelection = null;
   let frameDemandKey = '';
   let frameDemandGeneration = 0;
-  let canvasMoving = false;
   let queuedSelection = null;
   let noteScreenId = null;
   let notesReturnFocus = null;
@@ -1224,7 +1223,6 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
       if (canvasAttached) canvas.detach();
       canvasPointers.clear();
       canvasAttached = false;
-      canvasMoving = false;
       return;
     }
     if (!canvasAttached) {
@@ -1541,8 +1539,6 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
   function scheduleFrameDemand() {
     if (!stage?.frameBudget || destroyed) return;
     clearTimeout(frameDemandTimer);
-    // Swapping iframes mid-gesture re-rasters the board; load once the canvas is still.
-    if (canvasMoving) return;
     const generation = frameDemandGeneration;
     frameDemandTimer = setTimeout(() => {
       if (
@@ -2604,13 +2600,6 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
     structuralStyle.textContent = canvasStyles;
     document.head.prepend(structuralStyle);
     cleanup.push(() => structuralStyle.remove());
-    cleanup.push(
-      canvas.on('motion', (moving) => {
-        canvasMoving = moving;
-        if (moving) clearTimeout(frameDemandTimer);
-        else if (canvasAttached && state.view === 'canvas') scheduleFrameDemand();
-      }),
-    );
     cleanup.push(
       canvas.on('camera', () => {
         if (!canvasAttached || state.view !== 'canvas') return;
