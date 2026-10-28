@@ -17,6 +17,18 @@ const cliRequire = createRequire(new URL('../../cli/package.json', import.meta.u
 const { JSDOM } = cliRequire('jsdom');
 const runtime = readFileSync(new URL('../templates/studio/studio.js', import.meta.url), 'utf8');
 
+async function within(promise, message, ms = 10_000) {
+  let timer;
+  const expired = new Promise((_, reject) => {
+    timer = setTimeout(() => reject(new Error(`Timed out after ${ms} ms: ${message}`)), ms);
+  });
+  try {
+    return await Promise.race([promise, expired]);
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 function moveBoard(app, key = 'ArrowRight') {
   app.stage
     .getPanel(app.entries[0].artifactId)
@@ -152,17 +164,39 @@ test('migration readiness waits for the adopted layout revision', async (t) => {
   const saved = new Promise((resolve) => {
     finish = resolve;
   });
+  let saveStarted;
+  const saving = new Promise((resolve) => {
+    saveStarted = resolve;
+  });
+  let announceReady;
+  const readyAnnounced = new Promise((resolve) => {
+    announceReady = resolve;
+  });
   const ready = [];
   const app = await mount({
     data,
-    options: { saveLayout: () => saved, onReady: (detail) => ready.push(detail) },
+    options: {
+      saveLayout: () => {
+        saveStarted();
+        return saved;
+      },
+      onReady: (detail) => {
+        ready.push(detail);
+        announceReady();
+      },
+    },
   });
   t.after(() => app.close());
-  await delay(80);
+  await within(saving, 'the migrated layout was never saved');
+  // Readiness posts after two animation frames; wait the same frames so an early post would land first.
+  await delay(0);
+  await new Promise((resolve) =>
+    app.window.requestAnimationFrame(() => app.window.requestAnimationFrame(resolve)),
+  );
   assert.equal(ready.length, 0, 'readiness cannot post the pre-migration revision');
   finish({ revision: 'migrated' });
   await app.studio.flush();
-  await delay(80);
+  await within(readyAnnounced, 'onReady never fired after the migrated layout save resolved');
   assert.equal(ready.length, 1);
   assert.equal(ready[0].revision, 'migrated');
   assert.equal(data.document.schemaVersion, '1.0.0');
