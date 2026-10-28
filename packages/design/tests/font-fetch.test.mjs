@@ -6,6 +6,7 @@ import {
   readdirSync,
   readFileSync,
   rmSync,
+  statSync,
   writeFileSync,
 } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -82,8 +83,10 @@ function catalog() {
 /** A fetch double serving `routes`; unknown URLs are 404 and every request is recorded. */
 function fakeFetch(routes = catalog(), { fail = new Map() } = {}) {
   const requests = [];
+  const redirects = new Map();
   const fetchImpl = async (url, init) => {
     requests.push(url);
+    redirects.set(url, init.redirect);
     assert.ok(init.signal instanceof AbortSignal, `${url} is requested without a timeout signal`);
     if (fail.has(url)) {
       const failure = fail.get(url);
@@ -94,7 +97,7 @@ function fakeFetch(routes = catalog(), { fail = new Map() } = {}) {
       ? new Response(routes.get(url))
       : new Response('Not Found', { status: 404 });
   };
-  return { fetchImpl, requests };
+  return { fetchImpl, requests, redirects };
 }
 
 function workspace(t) {
@@ -109,7 +112,7 @@ function run(args, fetchImpl) {
 
 test('fetches Latin woff2 files, license files and local CSS for two families', async (t) => {
   const { root, dest } = workspace(t);
-  const { fetchImpl, requests } = fakeFetch();
+  const { fetchImpl, requests, redirects } = fakeFetch();
 
   const result = await run(
     ['--family', 'Inter:400,600', '--family', 'Chewy:400', '--dest', dest, '--json'],
@@ -152,6 +155,14 @@ test('fetches Latin woff2 files, license files and local CSS for two families', 
     ['fonts'],
     'no staging folder is left',
   );
+  assert.equal(statSync(dest).mode & 0o777, 0o755);
+  for (const url of [
+    'https://fonts.gstatic.com/s/inter/latin-var.woff2',
+    'https://fonts.gstatic.com/s/chewy/latin-400.woff2',
+    `${CATALOG}/ofl/inter/OFL.txt`,
+    `${CATALOG}/apache/chewy/LICENSE.txt`,
+  ])
+    assert.equal(redirects.get(url), 'error', `${url} must not follow redirects`);
 });
 
 test('drops every non-Latin subset', async (t) => {
@@ -234,6 +245,29 @@ test('enforces family, weight and syntax limits before any request', async (t) =
     designUtility(['fonts', 'list'], { fetchImpl, stdout: () => {} }),
     /fonts fetch --family/u,
   );
+  await assert.rejects(
+    designUtility(['fonts'], { fetchImpl, stdout: () => {} }),
+    /\| design\.mjs fonts fetch --family/u,
+  );
+  for (const flag of [
+    ['--family', 'Inter:400'],
+    ['--dest', '/tmp/fonts'],
+  ])
+    await assert.rejects(
+      designUtility(['validate', 'design-document.json', ...flag], { fetchImpl, stdout: () => {} }),
+      new RegExp(`Unknown option for validate: ${flag[0]}`, 'u'),
+    );
+});
+
+test('a family name in the wrong case points to the catalog name', async (t) => {
+  const { dest } = workspace(t);
+  const { fetchImpl, requests } = fakeFetch();
+  await assert.rejects(
+    run(['--family', 'inter:400', '--dest', dest], fetchImpl),
+    /"inter" is listed as "Inter"; use the catalog name "Inter"\./u,
+  );
+  assert.equal(existsSync(dest), false);
+  assert.ok(!requests.some((url) => url.startsWith('https://fonts.gstatic.com/')));
 });
 
 test('a failed or timed-out download leaves no font folder behind', async (t) => {

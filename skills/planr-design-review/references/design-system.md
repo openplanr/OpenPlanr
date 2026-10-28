@@ -61,7 +61,9 @@ Snapshot with the bundled helper, run from the skill directory (see
 node scripts/design.mjs fonts fetch --family "Inter:400,600" --family "Source Serif 4:400" --dest <design>/source/assets/fonts
 ```
 
-It is the one network request to ask for. It enforces the rules above, verifies each
+It is the one command to ask approval for. A host that allowlists network access by
+domain needs `raw.githubusercontent.com`, `fonts.googleapis.com` and
+`fonts.gstatic.com`. It enforces the rules above, verifies each
 license from the Google Fonts catalog, writes `fonts.css`, and prints the files and
 total bytes. Start the design stylesheet with `@import "assets/fonts/fonts.css";`
 (relative to that stylesheet), then use the families by name. Nothing is fetched when

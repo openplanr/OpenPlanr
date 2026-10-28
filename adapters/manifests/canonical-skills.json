@@ -1366,7 +1366,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:cdff2b5ecb19d6c2f7cc5f93cace46c60231f698f549dd1f3c5b6080b21a5679"
+          "digest": "sha256:558a165a070b31bba66b81c77eeb86b935a09dcbad9939f37fc580e3f301a1a6"
         },
         {
           "path": "references/discovery.md",
@@ -1426,7 +1426,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:260e91e8027946774a55f2e613356f5237ee0fc6660436e1d1ff6b9be5d812ef"
+          "digest": "sha256:6f5d0067a9fe75d30994c4bbddec91135d93f3dacb70f43add3b2ad17f1144ad"
         },
         {
           "path": "references/team-review.md",
@@ -1450,7 +1450,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:1ae09f1023c2ac16cc41942f778dfd4e7a87cec5a9638d28093815b338355520"
+          "digest": "sha256:6feea162e96236d2392162831e660a2fd5e908b2c67bf64bea89bbcb8dd41467"
         },
         {
           "path": "scripts/design-artifact-shell.mjs",
@@ -2588,7 +2588,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:cdff2b5ecb19d6c2f7cc5f93cace46c60231f698f549dd1f3c5b6080b21a5679"
+          "digest": "sha256:558a165a070b31bba66b81c77eeb86b935a09dcbad9939f37fc580e3f301a1a6"
         },
         {
           "path": "references/discovery.md",
@@ -2648,7 +2648,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:260e91e8027946774a55f2e613356f5237ee0fc6660436e1d1ff6b9be5d812ef"
+          "digest": "sha256:6f5d0067a9fe75d30994c4bbddec91135d93f3dacb70f43add3b2ad17f1144ad"
         },
         {
           "path": "references/team-review.md",
@@ -2672,7 +2672,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:1ae09f1023c2ac16cc41942f778dfd4e7a87cec5a9638d28093815b338355520"
+          "digest": "sha256:6feea162e96236d2392162831e660a2fd5e908b2c67bf64bea89bbcb8dd41467"
         },
         {
           "path": "scripts/design-artifact-shell.mjs",
@@ -3810,7 +3810,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:cdff2b5ecb19d6c2f7cc5f93cace46c60231f698f549dd1f3c5b6080b21a5679"
+          "digest": "sha256:558a165a070b31bba66b81c77eeb86b935a09dcbad9939f37fc580e3f301a1a6"
         },
         {
           "path": "references/discovery.md",
@@ -3870,7 +3870,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:260e91e8027946774a55f2e613356f5237ee0fc6660436e1d1ff6b9be5d812ef"
+          "digest": "sha256:6f5d0067a9fe75d30994c4bbddec91135d93f3dacb70f43add3b2ad17f1144ad"
         },
         {
           "path": "references/team-review.md",
@@ -3894,7 +3894,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:1ae09f1023c2ac16cc41942f778dfd4e7a87cec5a9638d28093815b338355520"
+          "digest": "sha256:6feea162e96236d2392162831e660a2fd5e908b2c67bf64bea89bbcb8dd41467"
         },
         {
           "path": "scripts/design-artifact-shell.mjs",

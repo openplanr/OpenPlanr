@@ -1,5 +1,6 @@
 /** Snapshots open-license Google Fonts into a design's local font folder. */
 import {
+  chmodSync,
   existsSync,
   mkdirSync,
   mkdtempSync,
@@ -78,10 +79,14 @@ export function latinFontFaces(css, family) {
   return faces;
 }
 
-async function request(fetchImpl, url, { headers, allowMissing = false } = {}) {
+async function request(fetchImpl, url, { headers, allowMissing = false, redirect } = {}) {
   let response;
   try {
-    response = await fetchImpl(url, { headers, signal: AbortSignal.timeout(TIMEOUT_MS) });
+    response = await fetchImpl(url, {
+      headers,
+      redirect,
+      signal: AbortSignal.timeout(TIMEOUT_MS),
+    });
   } catch (error) {
     const reason =
       error?.name === 'TimeoutError' ? `no response within ${TIMEOUT_MS / 1000} s` : error?.message;
@@ -103,12 +108,16 @@ async function verifiedLicense(fetchImpl, family) {
     const text = await metadata.text();
     const name = /^name:\s*"([^"]*)"/mu.exec(text)?.[1];
     const declared = /^license:\s*"([^"]*)"/mu.exec(text)?.[1];
+    if (name !== family && name?.toLowerCase() === family.toLowerCase())
+      throw new Error(`"${family}" is listed as "${name}"; use the catalog name "${name}".`);
     if (name !== family || declared !== license.metadata)
       throw new Error(
         `"${family}" is not verified as ${license.id}: ${base}/METADATA.pb names ${JSON.stringify(name)} with license ${JSON.stringify(declared)}. Use the system stack.`,
       );
     const body = Buffer.from(
-      await (await request(fetchImpl, `${base}/${license.file}`)).arrayBuffer(),
+      await (
+        await request(fetchImpl, `${base}/${license.file}`, { redirect: 'error' })
+      ).arrayBuffer(),
     );
     if (!license.text.test(body.toString('utf8')))
       throw new Error(
@@ -122,7 +131,9 @@ async function verifiedLicense(fetchImpl, family) {
 }
 
 async function download(fetchImpl, url) {
-  const bytes = Buffer.from(await (await request(fetchImpl, url)).arrayBuffer());
+  const bytes = Buffer.from(
+    await (await request(fetchImpl, url, { redirect: 'error' })).arrayBuffer(),
+  );
   if (bytes.length > MAX_FILE_BYTES)
     throw new Error(`Font file is ${bytes.length} bytes, over the ${MAX_FILE_BYTES} limit: ${url}`);
   if (bytes.toString('latin1', 0, 4) !== 'wOF2') throw new Error(`Font file is not woff2: ${url}`);
@@ -214,6 +225,8 @@ export async function fetchDesignFonts({ families, dest, fetchImpl = fetch }) {
     }
     assertWritableDestination(target);
     if (existsSync(target)) rmdirSync(target);
+    // mkdtemp creates 0700; the snapshot should get the usual folder mode.
+    chmodSync(staging, 0o755);
     renameSync(staging, target);
   } catch (error) {
     rmSync(staging, { recursive: true, force: true });

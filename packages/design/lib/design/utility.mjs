@@ -188,7 +188,7 @@ export async function designUtility(
     !input
   )
     throw new Error(
-      'Usage: design.mjs inspect|validate|render|open|studio|view-context|export|feedback|verify|share|publish|sync|manage|handoff <design-document.json> [--json] [--no-open] [--view canvas|prototype|walkthrough]',
+      'Usage: design.mjs inspect|validate|render|open|studio|view-context|export|feedback|verify|share|publish|sync|manage|handoff <design-document.json> [--json] [--no-open] [--view canvas|prototype|walkthrough] | design.mjs fonts fetch --family "<Name>:<weights>" [--family ...] --dest <dir>',
     );
   const flags = {};
   for (let i = 0; i < args.length; i++) {
@@ -218,6 +218,8 @@ export async function designUtility(
       ].includes(key)
     )
       throw new Error(`Unknown option: ${args[i]}`);
+    if (['family', 'dest'].includes(key) && command !== 'fonts')
+      throw new Error(`Unknown option for ${command}: ${args[i]}`);
     if (key === 'family') flags.family = [...(flags.family ?? []), args[++i]];
     else flags[key] = ['json', 'no-open', 'allow-stale'].includes(key) ? true : args[++i];
   }

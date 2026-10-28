@@ -21,7 +21,9 @@ node scripts/design.mjs fonts fetch --family "<Name>:<weights>" [--family ...] -
 
 `fonts fetch` snapshots at most two OFL or Apache families, three weights each, as
 Latin `woff2` files with their license files and a local `fonts.css`. It needs network
-access; ask the user to approve that one command. It refuses an existing non-empty
+access; ask the user to approve that one command. A host that allowlists domains needs
+`raw.githubusercontent.com` (license check), `fonts.googleapis.com` (font CSS) and
+`fonts.gstatic.com` (font files). It refuses an existing non-empty
 `--dest` and leaves nothing behind when any request fails. See
 [design-system.md](design-system.md) for the fallback.
 
