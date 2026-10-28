@@ -1,6 +1,6 @@
 ---
 name: planr-investigate
-description: "Diagnose a bug, regression, error, or unexplained behavior and optionally implement a bounded fix. Use for root-cause investigation, not planned feature delivery."
+description: "Diagnose a bug, regression, error, or unexplained behavior and optionally implement a bounded fix. Use for root-cause investigation, including before any fix, not planned feature delivery."
 ---
 
 # OpenPlanr Investigate
