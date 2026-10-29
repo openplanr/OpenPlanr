@@ -1,5 +1,15 @@
 # Changelog
 
+## 3.4.0
+
+### Minor Changes
+
+- 6a629c8: `/diagram` now draws bar, line and scatter charts with labelled axes and a mark for every data value, instead of generic boxes.
+
+### Patch Changes
+
+- fd01286: `fonts fetch` no longer leaves empty folders behind when writing to disk fails, and it clears its own staging folders left by an interrupted run. Destinations named `.fonts-fetch-*` are now refused, because that prefix is reserved for staging.
+
 ## 3.3.0
 
 ### Minor Changes
