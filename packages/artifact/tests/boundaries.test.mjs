@@ -34,12 +34,14 @@ test('diagram authoring has a closed browser-safe Artifact and Protocol import g
   const renderingHelpers = new Set(
     [
       'diagram/rendering/layout.mjs',
+      'diagram/rendering/layouts/chart-cartesian.mjs',
       'diagram/rendering/svg.mjs',
       'diagram/rendering/theme.mjs',
       'diagram/rendering/text.mjs',
       'diagram/accessibility.mjs',
       'diagram/source-map.mjs',
       'diagram/errors.mjs',
+      'diagram/registry.mjs',
       'internal/contrast.mjs',
     ].map((path) => resolve(packageRoot, 'lib/artifact', path)),
   );

@@ -48,6 +48,30 @@ function add(path, bytes) {
 }
 
 function exampleDocument(grammar) {
+  const chartExamples = {
+    bar: {
+      keys: ['Jan', 'Feb', 'Mar', 'Apr', 'May'],
+      labels: ['Orders shipped'],
+      values: [[24, 31, 28, 42, 49]],
+    },
+    line: {
+      keys: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
+      labels: ['New accounts', 'Returning accounts'],
+      values: [
+        [18, 26, 23, 38, 42, 51],
+        [28, 24, 32, 30, 46, 43],
+      ],
+    },
+    scatter: {
+      keys: ['1', '2', '4', '7', '8', '12'],
+      labels: ['Small teams', 'Large teams'],
+      values: [
+        [12, 19, 25, 38, 46, 60],
+        [22, 27, 39, 43, 58, 72],
+      ],
+    },
+  };
+  const chart = chartExamples[grammar.grammarId];
   const required = new Set(grammar.requiredPrimitives);
   const needsNodes =
     required.has('node') ||
@@ -106,24 +130,48 @@ function exampleDocument(grammar) {
         { id: 'event-finish', label: 'Finish', order: 1, at: null },
       ]
     : [];
-  const series = required.has('series')
+  const series = chart
+    ? chart.values.map((values, index) => ({
+        id: `series-${index === 0 ? 'main' : 'secondary'}`,
+        label: chart.labels[index],
+        values: values.map((value, keyIndex) => ({ key: chart.keys[keyIndex], value })),
+      }))
+    : required.has('series')
+      ? [
+          {
+            id: 'series-main',
+            label: 'Primary series',
+            values: [
+              { key: 'A', value: 3 },
+              { key: 'B', value: 5 },
+            ],
+          },
+        ]
+      : [];
+  const axes = chart
     ? [
         {
-          id: 'series-main',
-          label: 'Primary series',
-          values: [
-            { key: 'A', value: 3 },
-            { key: 'B', value: 5 },
-          ],
+          id: 'axis-horizontal',
+          label: grammar.grammarId === 'scatter' ? 'Engineering hours' : 'Month',
+          scale: grammar.grammarId === 'scatter' ? 'linear' : 'categorical',
+        },
+        {
+          id: 'axis-vertical',
+          label:
+            grammar.grammarId === 'bar'
+              ? 'Orders shipped'
+              : grammar.grammarId === 'line'
+                ? 'Active accounts'
+                : 'Tasks completed',
+          scale: 'linear',
         },
       ]
-    : [];
-  const axes = required.has('axis')
-    ? [
-        { id: 'axis-horizontal', label: 'Horizontal meaning', scale: 'linear' },
-        { id: 'axis-vertical', label: 'Vertical meaning', scale: 'linear' },
-      ]
-    : [];
+    : required.has('axis')
+      ? [
+          { id: 'axis-horizontal', label: 'Horizontal meaning', scale: 'linear' },
+          { id: 'axis-vertical', label: 'Vertical meaning', scale: 'linear' },
+        ]
+      : [];
   const sets = required.has('set')
     ? [
         { id: 'set-a', label: 'Set A', members: ['item-a'] },
@@ -173,6 +221,9 @@ function grammarReference(grammar) {
     `- Directions: ${grammar.directions.map((value) => `\`${value}\``).join(', ')}\n` +
     `- Mermaid: \`${grammar.projections.mermaid}\`\n` +
     `- Excalidraw: \`${grammar.projections.excalidraw}\`\n\n` +
+    (['bar', 'line', 'scatter'].includes(grammar.grammarId)
+      ? `## Renderer mapping\n\nAxes are declared horizontally, then vertically. Bar and categorical line keys share category slots across series. Ordinal axes preserve each series' key order and reject cycles; at every step, the ready key with the earliest first appearance across the declared series comes next. Unconstrained keys follow first appearance. List the full order in the first series to control it. Numeric line and scatter keys supply horizontal values; series values supply vertical values. Temporal horizontal axes accept date keys and logarithmic axes require positive values. Bars require categorical or ordinal horizontal axes and a linear vertical axis. Scatter nodes with semantic positions use normalized plot coordinates. Other nodes remain supporting cards.\n\nCanonical SVG, HTML and PNG render axes and data marks. Editable Excalidraw export and authoring migration are unsupported for these charts; the runtime emits a fidelity report without an editable file.\n\n`
+      : '') +
     `## Use this grammar\n\n${grammar.summary}\n\n` +
     `## Readability\n\n` +
     `Simplified ${grammar.detailLimits.simplified}; balanced ${grammar.detailLimits.balanced}; ` +
