@@ -1,5 +1,6 @@
 import { execFileSync } from 'node:child_process';
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
+import { createRequire } from 'node:module';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { Command } from 'commander';
@@ -111,7 +112,7 @@ describe('openplanr ship checks discovery', () => {
     const second = await discoverShipChecks({ projectDir: root, tier: 'story' });
     expect(first).toMatchObject({
       kind: 'openplanr-ship-checks',
-      schemaVersion: '1.0.0',
+      schemaVersion: '1.1.0',
       complete: true,
       tier: 'story',
       tierSource: 'flag',
@@ -133,6 +134,7 @@ describe('openplanr ship checks discovery', () => {
       'requirements',
       'acceptance',
       'relatedTests',
+      'coverage',
       'diagnostics',
     ]);
     expect(JSON.stringify(second)).toBe(JSON.stringify(first));
@@ -460,6 +462,191 @@ jobs:
       ),
     );
     expect(steps.size).toBe(expected);
+  });
+});
+
+const codes = (result: ShipChecksResult): string[] => result.diagnostics.map(({ code }) => code);
+
+const LINT_STAGED: Files = {
+  '.husky/pre-commit': 'npx lint-staged\n',
+  'src/index.ts': 'export const value = 1;\n',
+};
+
+/** Links the workspace's own TypeScript into a fixture so the project resolves it. */
+function withTypeScript(root: string): string {
+  const source = dirname(createRequire(import.meta.url).resolve('typescript/package.json'));
+  mkdirSync(join(root, 'node_modules'), { recursive: true });
+  symlinkSync(source, join(root, 'node_modules/typescript'), 'dir');
+  return root;
+}
+
+const TS_BASE: Files = {
+  '.gitignore': 'node_modules\n',
+  'tsconfig.json': JSON.stringify({ include: ['src'] }),
+  'src/index.ts': 'export const value = 1;\n',
+};
+
+describe('openplanr ship checks coverage', () => {
+  it('names untracked files that tracked-only checks cannot see', async () => {
+    const root = fixture(LINT_STAGED, { 'src/new.ts': 'export {};\n' });
+    const result = await discoverShipChecks({ projectDir: root });
+    expect(result.coverage.trackedOnly).toEqual({
+      checks: ['hook:pre-commit:1'],
+      unseen: ['src/new.ts'],
+    });
+    expect(result.diagnostics).toContainEqual(
+      expect.objectContaining({
+        code: 'UNTRACKED_NOT_SEEN',
+        severity: 'warning',
+        message: expect.stringMatching(/src\/new\.ts.*git add -N/u),
+      }),
+    );
+  });
+
+  it('stops reporting a new file once it is staged or marked intent-to-add', async () => {
+    for (const args of [['add'], ['add', '-N']]) {
+      const root = fixture(LINT_STAGED, { 'src/new.ts': 'export {};\n' });
+      git(root, ...args, 'src/new.ts');
+      const result = await discoverShipChecks({ projectDir: root });
+      expect(result.coverage.trackedOnly.unseen).toEqual([]);
+      expect(codes(result)).not.toContain('UNTRACKED_NOT_SEEN');
+    }
+  });
+
+  it('reports nothing unseen when no check is tracked-only', async () => {
+    const root = fixture(CI_BASE, { 'src/new.ts': 'export {};\n' });
+    const result = await discoverShipChecks({ projectDir: root, tier: 'story' });
+    expect(result.coverage.trackedOnly).toEqual({ checks: [], unseen: [] });
+    expect(codes(result)).not.toContain('UNTRACKED_NOT_SEEN');
+  });
+
+  it('follows a script file one level deep to find a tracked-only check', async () => {
+    const root = fixture(
+      {
+        '.github/workflows/ci.yml':
+          'on: pull_request\njobs:\n  paths:\n    runs-on: ubuntu-latest\n    steps:\n      - run: npm run check:paths\n',
+        'package.json': manifest({ 'check:paths': 'node scripts/paths.mjs' }),
+        'scripts/paths.mjs': "execFileSync('git', ['ls-files']);\n",
+      },
+      { 'docs/new.md': '# New\n' },
+    );
+    const result = await discoverShipChecks({ projectDir: root, tier: 'story' });
+    expect(result.coverage.trackedOnly.unseen).toEqual(['docs/new.md']);
+    expect(result.coverage.trackedOnly.checks).toHaveLength(1);
+  });
+
+  it('lists new TypeScript files that no tsconfig includes', async () => {
+    const root = withTypeScript(
+      fixture(TS_BASE, { 'src/b.ts': 'export {};\n', 'tests/a.test.ts': 'export {};\n' }),
+    );
+    const result = await discoverShipChecks({ projectDir: root });
+    expect(result.coverage.typescript).toEqual({
+      tsconfigs: ['tsconfig.json'],
+      uncovered: ['tests/a.test.ts'],
+    });
+    expect(result.diagnostics).toContainEqual(
+      expect.objectContaining({
+        code: 'TS_NOT_COVERED',
+        severity: 'warning',
+        message: expect.stringContaining('tests/a.test.ts'),
+      }),
+    );
+  });
+
+  it('lists a staged new TypeScript file that no tsconfig includes', async () => {
+    const root = withTypeScript(fixture(TS_BASE, { 'tests/a.test.ts': 'export {};\n' }));
+    git(root, 'add', 'tests/a.test.ts');
+    const result = await discoverShipChecks({ projectDir: root });
+    expect(result.changed.files).toContainEqual({ path: 'tests/a.test.ts', status: 'added' });
+    expect(result.coverage.typescript?.uncovered).toEqual(['tests/a.test.ts']);
+  });
+
+  it('reports a broken extends and does not count its fallback files as covered', async () => {
+    const root = withTypeScript(
+      fixture(
+        {
+          '.gitignore': 'node_modules\n',
+          'tsconfig.base.json': JSON.stringify({ include: ['src'] }),
+          'tsconfig.json': JSON.stringify({ extends: './tsconfig.bse.json' }),
+          'src/index.ts': 'export const value = 1;\n',
+        },
+        { 'tests/a.test.ts': 'export {};\n' },
+      ),
+    );
+    const result = await discoverShipChecks({ projectDir: root });
+    expect(result.coverage.typescript?.uncovered).toEqual(['tests/a.test.ts']);
+    expect(result.diagnostics).toContainEqual(
+      expect.objectContaining({
+        code: 'TSCONFIG_ERROR',
+        severity: 'warning',
+        path: 'tsconfig.json',
+        message: expect.stringContaining('tsconfig.bse.json'),
+      }),
+    );
+  });
+
+  it('warns about a tsconfig that is not valid JSON', async () => {
+    const root = withTypeScript(
+      fixture(
+        { ...TS_BASE, 'tsconfig.test.json': '{\n  "include": [\n' },
+        { 'src/b.ts': 'export {};\n' },
+      ),
+    );
+    const result = await discoverShipChecks({ projectDir: root });
+    expect(result.diagnostics).toContainEqual(
+      expect.objectContaining({
+        code: 'TSCONFIG_UNREADABLE',
+        severity: 'warning',
+        path: 'tsconfig.test.json',
+      }),
+    );
+    expect(result.coverage.typescript?.uncovered).toEqual([]);
+  });
+
+  it('matches files that a tsconfig reaches through a symlinked directory', async () => {
+    const root = withTypeScript(fixture(TS_BASE, { 'real/n.ts': 'export {};\n' }));
+    symlinkSync('../real', join(root, 'src/linked'), 'dir');
+    git(root, 'add', 'src/linked');
+    const result = await discoverShipChecks({ projectDir: root });
+    expect(result.coverage.typescript?.uncovered).toEqual([]);
+  });
+
+  it('counts files reached through extends, files and project references', async () => {
+    const root = withTypeScript(
+      fixture(
+        {
+          '.gitignore': 'node_modules\n',
+          'tsconfig.base.json':
+            '{\n  // shared options\n  "compilerOptions": { "strict": true },\n  "include": ["src"],\n}\n',
+          'tsconfig.json': JSON.stringify({
+            extends: './tsconfig.base.json',
+            files: ['scripts/tool.ts'],
+            references: [{ path: './config/test.json' }],
+          }),
+          'config/test.json': JSON.stringify({ include: ['../tests'] }),
+          'scripts/tool.ts': 'export {};\n',
+        },
+        { 'tests/a.test.ts': 'export {};\n', '.planr/tool.ts': 'export {};\n' },
+      ),
+    );
+    const result = await discoverShipChecks({ projectDir: root });
+    expect(result.coverage.typescript?.uncovered).toEqual([]);
+    expect(codes(result)).not.toContain('TS_NOT_COVERED');
+  });
+
+  it('skips the tsconfig scan when the change adds no TypeScript file', async () => {
+    const root = withTypeScript(fixture(TS_BASE, { 'src/index.ts': 'export const value = 2;\n' }));
+    const result = await discoverShipChecks({ projectDir: root });
+    expect(result.coverage.typescript).toEqual({ tsconfigs: [], uncovered: [] });
+  });
+
+  it('returns null TypeScript coverage when the project cannot resolve typescript', async () => {
+    const root = fixture(TS_BASE, { 'src/b.ts': 'export {};\n' });
+    const result = await discoverShipChecks({ projectDir: root });
+    expect(result.coverage.typescript).toBeNull();
+    expect(result.diagnostics).toContainEqual(
+      expect.objectContaining({ code: 'TYPESCRIPT_UNAVAILABLE', severity: 'info' }),
+    );
   });
 });
 
