@@ -498,7 +498,7 @@ describe('openplanr ship checks coverage', () => {
       expect.objectContaining({
         code: 'UNTRACKED_NOT_SEEN',
         severity: 'warning',
-        message: expect.stringContaining('git add -N'),
+        message: expect.stringMatching(/src\/new\.ts.*git add -N/u),
       }),
     );
   });
@@ -545,8 +545,70 @@ describe('openplanr ship checks coverage', () => {
       uncovered: ['tests/a.test.ts'],
     });
     expect(result.diagnostics).toContainEqual(
-      expect.objectContaining({ code: 'TS_NOT_COVERED', severity: 'warning' }),
+      expect.objectContaining({
+        code: 'TS_NOT_COVERED',
+        severity: 'warning',
+        message: expect.stringContaining('tests/a.test.ts'),
+      }),
     );
+  });
+
+  it('lists a staged new TypeScript file that no tsconfig includes', async () => {
+    const root = withTypeScript(fixture(TS_BASE, { 'tests/a.test.ts': 'export {};\n' }));
+    git(root, 'add', 'tests/a.test.ts');
+    const result = await discoverShipChecks({ projectDir: root });
+    expect(result.changed.files).toContainEqual({ path: 'tests/a.test.ts', status: 'added' });
+    expect(result.coverage.typescript?.uncovered).toEqual(['tests/a.test.ts']);
+  });
+
+  it('reports a broken extends and does not count its fallback files as covered', async () => {
+    const root = withTypeScript(
+      fixture(
+        {
+          '.gitignore': 'node_modules\n',
+          'tsconfig.base.json': JSON.stringify({ include: ['src'] }),
+          'tsconfig.json': JSON.stringify({ extends: './tsconfig.bse.json' }),
+          'src/index.ts': 'export const value = 1;\n',
+        },
+        { 'tests/a.test.ts': 'export {};\n' },
+      ),
+    );
+    const result = await discoverShipChecks({ projectDir: root });
+    expect(result.coverage.typescript?.uncovered).toEqual(['tests/a.test.ts']);
+    expect(result.diagnostics).toContainEqual(
+      expect.objectContaining({
+        code: 'TSCONFIG_ERROR',
+        severity: 'warning',
+        path: 'tsconfig.json',
+        message: expect.stringContaining('tsconfig.bse.json'),
+      }),
+    );
+  });
+
+  it('warns about a tsconfig that is not valid JSON', async () => {
+    const root = withTypeScript(
+      fixture(
+        { ...TS_BASE, 'tsconfig.test.json': '{\n  "include": [\n' },
+        { 'src/b.ts': 'export {};\n' },
+      ),
+    );
+    const result = await discoverShipChecks({ projectDir: root });
+    expect(result.diagnostics).toContainEqual(
+      expect.objectContaining({
+        code: 'TSCONFIG_UNREADABLE',
+        severity: 'warning',
+        path: 'tsconfig.test.json',
+      }),
+    );
+    expect(result.coverage.typescript?.uncovered).toEqual([]);
+  });
+
+  it('matches files that a tsconfig reaches through a symlinked directory', async () => {
+    const root = withTypeScript(fixture(TS_BASE, { 'real/n.ts': 'export {};\n' }));
+    symlinkSync('../real', join(root, 'src/linked'), 'dir');
+    git(root, 'add', 'src/linked');
+    const result = await discoverShipChecks({ projectDir: root });
+    expect(result.coverage.typescript?.uncovered).toEqual([]);
   });
 
   it('counts files reached through extends, files and project references', async () => {

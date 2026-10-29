@@ -771,10 +771,13 @@ name the change exports, a `.command()` name, or a route path.
 `.planr/` that no `tsconfig*.json` root file set includes (`files`, `include`,
 `exclude`, `extends`, and `references` one level deep; warning `TS_NOT_COVERED`).
 A file reached only through an import is still reported, and the command does
-not check which tsconfig CI runs. To read tsconfigs, the command loads the
-project's own `typescript` package, which runs that package's code; it never
-executes checks. When the project cannot resolve `typescript`, `typescript` is
-`null` with the info diagnostic `TYPESCRIPT_UNAVAILABLE`.
+not check which tsconfig CI runs. A tsconfig that TypeScript reports errors for
+raises `TSCONFIG_ERROR` with its first message, and a config whose `extends`
+cannot be read adds no coverage. To read tsconfigs, the command loads the
+`typescript` package that Node resolves from the project root, which can be a
+copy in a parent directory, and that runs the package's code; it never executes
+checks. When Node cannot resolve `typescript` there, `typescript` is `null` with
+the info diagnostic `TYPESCRIPT_UNAVAILABLE`.
 
 `complete` is `false` when any diagnostic is an `error`, for example a workflow
 that fails to parse: the listed checks are then not the full CI set. The command

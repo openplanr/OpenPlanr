@@ -1,4 +1,4 @@
-import { existsSync, statSync } from 'node:fs';
+import { existsSync, realpathSync, statSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { dirname, join, relative, resolve } from 'node:path';
 import type { ChangedFile, ShipCheck, ShipCoverage, ShipDiagnostic } from './contract.js';
@@ -8,8 +8,17 @@ import { toPosix } from './packages.js';
 const TYPESCRIPT_FILE = /\.(?:[cm]?ts|tsx)$/u;
 const TSCONFIG = /(?:^|\/)tsconfig[^/]*\.json$/u;
 const NEW_STATUSES: ReadonlySet<ChangedFile['status']> = new Set(['added', 'renamed', 'untracked']);
+/** TypeScript codes for an `extends` target it cannot read or find. */
+const EXTENDS_FAILURES: ReadonlySet<number> = new Set([5083, 6053]);
+const LISTED_PATHS = 5;
 
-type ParsedConfig = { fileNames: string[]; projectReferences?: readonly { path: string }[] };
+type ConfigError = { code: number; messageText: unknown };
+
+type ParsedConfig = {
+  fileNames: string[];
+  errors: readonly ConfigError[];
+  projectReferences?: readonly { path: string }[];
+};
 
 /** The subset of the TypeScript compiler API this module calls. */
 type TypeScriptApi = {
@@ -25,6 +34,7 @@ type TypeScriptApi = {
     existingOptions?: undefined,
     configFileName?: string,
   ): ParsedConfig;
+  flattenDiagnosticMessageText(messageText: unknown, newLine: string): string;
 };
 
 function isTypeScriptApi(value: unknown): value is TypeScriptApi {
@@ -33,6 +43,7 @@ function isTypeScriptApi(value: unknown): value is TypeScriptApi {
   return (
     typeof api.readConfigFile === 'function' &&
     typeof api.parseJsonConfigFileContent === 'function' &&
+    typeof api.flattenDiagnosticMessageText === 'function' &&
     typeof api.sys === 'object' &&
     api.sys !== null
   );
@@ -49,6 +60,16 @@ function loadProjectTypeScript(root: string): TypeScriptApi | null {
     throw error;
   }
   return isTypeScriptApi(loaded) ? loaded : null;
+}
+
+function listPaths(paths: readonly string[]): string {
+  const shown = paths.slice(0, LISTED_PATHS).join(', ');
+  return paths.length > LISTED_PATHS ? `${shown} and ${paths.length - LISTED_PATHS} more` : shown;
+}
+
+/** The real path of an existing file, so symlinked directories compare equal. */
+function realPath(path: string): string {
+  return existsSync(path) ? realpathSync(path) : path;
 }
 
 function referencedConfig(path: string): string {
@@ -68,8 +89,8 @@ function tsconfigRootFiles(
     if (parsed.has(absolute) || !existsSync(absolute)) return;
     parsed.add(absolute);
     const { config, error } = ts.readConfigFile(absolute, ts.sys.readFile);
+    const path = toPosix(relative(root, absolute));
     if (error !== undefined || config === undefined) {
-      const path = toPosix(relative(root, absolute));
       diagnostics.push(
         diagnostic('TSCONFIG_UNREADABLE', 'warning', `${path} could not be parsed.`, path),
       );
@@ -82,7 +103,20 @@ function tsconfigRootFiles(
       undefined,
       absolute,
     );
-    for (const file of result.fileNames) files.add(resolve(file));
+    const [first] = result.errors;
+    if (first !== undefined) {
+      diagnostics.push(
+        diagnostic(
+          'TSCONFIG_ERROR',
+          'warning',
+          `${path}: ${ts.flattenDiagnosticMessageText(first.messageText, ' ')}`,
+          path,
+        ),
+      );
+    }
+    // A failed `extends` makes TypeScript fall back to its default include, which would hide files.
+    if (!result.errors.some(({ code }) => EXTENDS_FAILURES.has(code)))
+      for (const file of result.fileNames) files.add(realPath(resolve(file)));
     if (followReferences)
       for (const reference of result.projectReferences ?? [])
         parse(referencedConfig(resolve(reference.path)), false);
@@ -107,7 +141,7 @@ export async function readCoverage(
       diagnostic(
         'UNTRACKED_NOT_SEEN',
         'warning',
-        `${unseen.length} untracked file(s) are invisible to ${trackedOnly.join(', ')}. Run \`git add -N\` on them, or run those checks on the files directly, before trusting a pass.`,
+        `Untracked file(s) ${listPaths(unseen)} are invisible to ${trackedOnly.join(', ')}. Run \`git add -N\` on them, or run those checks on the files directly, before trusting a pass.`,
       ),
     );
   }
@@ -142,13 +176,13 @@ async function readTypeScriptCoverage(
     return null;
   }
   const covered = tsconfigRootFiles(ts, root, tsconfigs, diagnostics);
-  const uncovered = created.filter((path) => !covered.has(resolve(root, path)));
+  const uncovered = created.filter((path) => !covered.has(realPath(resolve(root, path))));
   if (uncovered.length > 0) {
     diagnostics.push(
       diagnostic(
         'TS_NOT_COVERED',
         'warning',
-        `${uncovered.length} new TypeScript file(s) match no tsconfig files, include or reference; they are typechecked only if a covered file imports them.`,
+        `New TypeScript file(s) ${listPaths(uncovered)} match no tsconfig files, include or reference; they are typechecked only if a covered file imports them.`,
       ),
     );
   }
