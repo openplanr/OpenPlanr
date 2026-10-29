@@ -7,6 +7,7 @@ export type PackageManifest = {
   main?: unknown;
   exports?: unknown;
   bin?: unknown;
+  private: boolean;
   scripts: Record<string, string>;
   workspaces: string[];
 };
@@ -43,6 +44,7 @@ export function manifestFrom(value: unknown): PackageManifest {
     main: record.main,
     exports: record.exports,
     bin: record.bin,
+    private: record.private === true,
     scripts,
     workspaces: Array.isArray(declared)
       ? declared.filter((entry): entry is string => typeof entry === 'string')

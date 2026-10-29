@@ -742,7 +742,7 @@ openplanr ship checks --tier push --json
 | `--task <path>` | Task file whose Test Requirements to include                   | none                                      |
 | `--tier <tier>` | `task`, `story`, `push` or `planning`                          | `planning` for a `.planr`-only change, else `task` |
 | `--base <ref>`  | Compare against the merge base with this ref                   | `origin/HEAD`, then `main`                |
-| `--json`        | Print the `openplanr-ship-checks` result (schema `1.1.0`)      | `false`                                   |
+| `--json`        | Print the `openplanr-ship-checks` result (schema `1.2.0`)      | `false`                                   |
 
 **Tiers:**
 
@@ -755,6 +755,15 @@ openplanr ship checks --tier push --json
 - `story`: `task` plus every `run` step of the pull-request and merge-queue
   workflows whose path filters match the change.
 - `push`: `story` without path filters, plus push workflows and pre-push hooks.
+  When the change adds non-code files (for example JSON data or templates) to a
+  package that is not `private`, it also lists
+  `npm pack --dry-run --json --ignore-scripts` from that package's directory,
+  tagged `package-contents`. Its `expectFiles` names the new files relative to
+  the package; confirm each one, or the copy the build writes for it, appears in
+  the tarball's `files`. Run it after the build. Dotfiles, files under `test`,
+  `tests`, `__tests__`, `fixture` or `fixtures` folders, and files in the
+  repository's `.planr/`, `.changeset/`, `.github/` or `.husky/` are not listed.
+  `--ignore-scripts` keeps `prepack`, `prepare` and `postpack` from running.
 
 Each CI step is kept verbatim with its `cwd` (step, then job, then workflow
 `working-directory`). Install steps and `uses` steps are skipped. A static matrix

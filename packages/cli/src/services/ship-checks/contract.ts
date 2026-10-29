@@ -1,5 +1,5 @@
 export const SHIP_CHECKS_KIND = 'openplanr-ship-checks';
-export const SHIP_CHECKS_SCHEMA_VERSION = '1.1.0';
+export const SHIP_CHECKS_SCHEMA_VERSION = '1.2.0';
 
 export const SHIP_TIERS = ['task', 'story', 'push', 'planning'] as const;
 export type ShipTier = (typeof SHIP_TIERS)[number];
@@ -30,6 +30,8 @@ export type ShipCheck = {
   script?: PackageScript;
   condition?: string;
   shell?: string;
+  /** Package-relative files the change adds that the packed tarball should contain. */
+  expectFiles?: string[];
   acceptanceIds: string[];
 };
 

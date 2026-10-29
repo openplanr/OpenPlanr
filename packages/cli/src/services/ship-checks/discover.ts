@@ -15,6 +15,7 @@ import {
 } from './contract.js';
 import { readCoverage } from './coverage.js';
 import { readHuskyHook, readPreCommitFramework } from './hooks.js';
+import { packageContentsChecks } from './package-contents.js';
 import {
   isBuildCommand,
   ManifestError,
@@ -283,7 +284,11 @@ export async function discoverShipChecks(
       );
     }
     candidates.push(...readHuskyHook(root, 'pre-commit'), ...readPreCommitFramework(root));
-    if (tier === 'push') candidates.push(...readHuskyHook(root, 'pre-push'));
+    if (tier === 'push')
+      candidates.push(
+        ...readHuskyHook(root, 'pre-push'),
+        ...packageContentsChecks(root, changes.files, diagnostics),
+      );
     const taskChecks = task?.requirements.checks ?? [];
     candidates.push(...taskChecks);
     if (taskChecks.length === 0)
