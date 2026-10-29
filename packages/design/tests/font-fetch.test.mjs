@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
-import {
+import fs, {
+  chmodSync,
   existsSync,
   mkdirSync,
   mkdtempSync,
@@ -7,8 +8,11 @@ import {
   readFileSync,
   rmSync,
   statSync,
+  symlinkSync,
+  utimesSync,
   writeFileSync,
 } from 'node:fs';
+import { syncBuiltinESMExports } from 'node:module';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
@@ -300,6 +304,256 @@ test('a failed or timed-out download leaves no font folder behind', async (t) =>
     );
     assert.equal(existsSync(join(root, 'source/assets')), false);
   }
+});
+
+for (const method of ['writeFileSync', 'mkdtempSync', 'renameSync']) {
+  for (const existingSource of [false, true]) {
+    test(`${method} failure removes only newly created empty parents (existing source: ${existingSource})`, async (t) => {
+      const { root, dest } = workspace(t);
+      const source = join(root, 'source');
+      if (existingSource) mkdirSync(source);
+      const failure = Object.assign(new Error(`Injected ${method} failure: disk full`), {
+        code: 'ENOSPC',
+      });
+      t.mock.method(fs, method, () => {
+        throw failure;
+      });
+      syncBuiltinESMExports();
+      t.after(() => {
+        t.mock.restoreAll();
+        syncBuiltinESMExports();
+      });
+
+      await assert.rejects(
+        run(['--family', 'Chewy:400', '--dest', dest], fakeFetch().fetchImpl),
+        (error) => error === failure,
+      );
+
+      assert.equal(existsSync(dest), false);
+      assert.equal(existsSync(join(source, 'assets')), false);
+      assert.equal(existsSync(source), existingSource);
+      assert.deepEqual(readdirSync(root), existingSource ? ['source'] : []);
+    });
+  }
+}
+
+test('a failed write preserves newly created parents that gained other files', async (t) => {
+  const { root, dest } = workspace(t);
+  const assets = join(root, 'source/assets');
+  const write = fs.writeFileSync;
+  const failure = new Error('Injected write failure: disk full');
+  t.mock.method(fs, 'writeFileSync', () => {
+    write(join(assets, 'keep.txt'), 'concurrent file');
+    throw failure;
+  });
+  syncBuiltinESMExports();
+  t.after(() => {
+    t.mock.restoreAll();
+    syncBuiltinESMExports();
+  });
+
+  await assert.rejects(
+    run(['--family', 'Chewy:400', '--dest', dest], fakeFetch().fetchImpl),
+    (error) => error === failure,
+  );
+
+  assert.deepEqual(readdirSync(assets), ['keep.txt']);
+  assert.equal(readFileSync(join(assets, 'keep.txt'), 'utf8'), 'concurrent file');
+});
+
+for (const method of ['readdirSync', 'rmdirSync', 'rmSync']) {
+  test(`a ${method} cleanup failure is reported on the original write error and cleanup continues`, async (t) => {
+    const { root, dest } = workspace(t);
+    const assets = join(root, 'source/assets');
+    const source = join(root, 'source');
+    const failure = new Error('Injected write failure: disk full');
+    const cleanup = fs[method];
+    const read = fs.readdirSync;
+    const inspected = [];
+    const failedPaths = [];
+    const cleanupMessage = 'Injected cleanup failure: permission denied';
+    t.mock.method(fs, 'writeFileSync', () => {
+      throw failure;
+    });
+    if (method !== 'readdirSync')
+      t.mock.method(fs, method, (path, ...args) => {
+        if (
+          path === assets ||
+          (method === 'rmSync' && path.startsWith(join(assets, '.fonts-fetch-')))
+        ) {
+          failedPaths.push(path);
+          throw new Error(cleanupMessage);
+        }
+        return cleanup(path, ...args);
+      });
+    t.mock.method(fs, 'readdirSync', (path, ...args) => {
+      inspected.push(path);
+      if (method === 'readdirSync' && (path === assets || path === source) && args.length === 0) {
+        failedPaths.push(path);
+        throw new Error(cleanupMessage);
+      }
+      return read(path, ...args);
+    });
+    syncBuiltinESMExports();
+    t.after(() => {
+      t.mock.restoreAll();
+      syncBuiltinESMExports();
+    });
+
+    await assert.rejects(
+      run(['--family', 'Chewy:400', '--dest', dest], fakeFetch().fetchImpl),
+      (error) => {
+        assert.equal(error, failure);
+        assert.equal(failedPaths.length, method === 'readdirSync' ? 2 : 1);
+        assert.deepEqual(
+          error.cleanupErrors,
+          failedPaths.map((path) => ({ path, message: cleanupMessage })),
+        );
+        assert.equal(
+          error.message,
+          `Injected write failure: disk full${failedPaths.map((path) => ` (cleanup also failed for ${path}: ${cleanupMessage})`).join('')}`,
+        );
+        return true;
+      },
+    );
+
+    assert.equal(existsSync(dest), false);
+    assert.ok(inspected.includes(source), 'cleanup still inspects the outer created parent');
+  });
+}
+
+test('removes only staging sibling directories older than ten minutes', async (t) => {
+  const { root, dest } = workspace(t);
+  const assets = join(root, 'source/assets');
+  mkdirSync(assets, { recursive: true });
+  const old = new Date(Date.now() - 11 * 60_000);
+  const recent = new Date(Date.now() - 9 * 60_000);
+  const stale = join(assets, '.fonts-fetch-old');
+  const fresh = join(assets, '.fonts-fetch-recent');
+  const unrelated = join(assets, 'other-folder');
+  const elsewhere = join(root, '.fonts-fetch-elsewhere');
+  for (const directory of [stale, fresh, unrelated, elsewhere]) {
+    mkdirSync(directory);
+    writeFileSync(join(directory, 'keep.txt'), 'existing content');
+    utimesSync(directory, old, old);
+  }
+  utimesSync(fresh, recent, recent);
+  const file = join(assets, '.fonts-fetch-file');
+  writeFileSync(file, 'ordinary file');
+  utimesSync(file, old, old);
+  const link = join(assets, '.fonts-fetch-link');
+  symlinkSync(elsewhere, link, 'dir');
+
+  await run(['--family', 'Chewy:400', '--dest', dest], fakeFetch().fetchImpl);
+
+  assert.equal(existsSync(stale), false);
+  assert.ok(existsSync(join(dest, 'fonts.css')));
+  for (const directory of [fresh, unrelated, elsewhere, link])
+    assert.equal(readFileSync(join(directory, 'keep.txt'), 'utf8'), 'existing content');
+  assert.equal(readFileSync(file, 'utf8'), 'ordinary file');
+});
+
+test('reports the path and reason when a read-only stale staging subfolder cannot be removed', {
+  skip: process.platform === 'win32' || process.getuid?.() === 0,
+}, async (t) => {
+  const { root } = workspace(t);
+  const stale = join(root, '.fonts-fetch-old');
+  const locked = join(stale, 'read-only');
+  mkdirSync(locked, { recursive: true });
+  writeFileSync(join(locked, 'keep.txt'), 'existing content');
+  chmodSync(locked, 0o555);
+  try {
+    let reason;
+    assert.throws(
+      () => rmSync(stale, { recursive: true }),
+      (error) => {
+        reason = error.message;
+        return true;
+      },
+    );
+    const old = new Date(Date.now() - 11 * 60_000);
+    utimesSync(stale, old, old);
+    await assert.rejects(
+      run(['--family', 'Chewy:400', '--dest', join(root, 'fonts')], fakeFetch().fetchImpl),
+      { message: `Could not remove stale staging folder ${stale}: ${reason}` },
+    );
+
+    assert.equal(existsSync(join(root, 'fonts')), false);
+    assert.equal(readFileSync(join(locked, 'keep.txt'), 'utf8'), 'existing content');
+  } finally {
+    chmodSync(locked, 0o755);
+  }
+});
+
+for (const method of ['statSync', 'rmSync']) {
+  test(`continues when a stale staging sibling disappears during ${method}`, async (t) => {
+    const { root } = workspace(t);
+    const stale = join(root, '.fonts-fetch-old');
+    mkdirSync(stale);
+    const old = new Date(Date.now() - 11 * 60_000);
+    utimesSync(stale, old, old);
+    const original = fs[method];
+    const remove = fs.rmSync;
+    let removed = false;
+    t.mock.method(fs, method, (path, ...args) => {
+      if (path === stale) {
+        removed = true;
+        remove(stale, { recursive: true });
+        throw Object.assign(new Error('Staging sibling already removed'), { code: 'ENOENT' });
+      }
+      return original(path, ...args);
+    });
+    syncBuiltinESMExports();
+    t.after(() => {
+      t.mock.restoreAll();
+      syncBuiltinESMExports();
+    });
+
+    const dest = join(root, 'fonts');
+    await run(['--family', 'Chewy:400', '--dest', dest], fakeFetch().fetchImpl);
+
+    assert.equal(removed, true);
+    assert.deepEqual(readdirSync(root), ['fonts']);
+    assert.ok(existsSync(join(dest, 'fonts.css')));
+  });
+}
+
+test('refuses an empty destination named like a staging folder before any write', async (t) => {
+  const { root } = workspace(t);
+  const dest = join(root, '.fonts-fetch-destination');
+  mkdirSync(dest);
+  const old = new Date(Date.now() - 11 * 60_000);
+  utimesSync(dest, old, old);
+  const { fetchImpl, requests } = fakeFetch();
+
+  await assert.rejects(run(['--family', 'Chewy:400', '--dest', dest], fetchImpl), {
+    message: `Font destination uses the reserved staging prefix .fonts-fetch-: ${dest}`,
+  });
+
+  assert.deepEqual(requests, []);
+  assert.ok(existsSync(dest));
+  assert.deepEqual(readdirSync(dest), []);
+  assert.ok(Math.abs(statSync(dest).mtimeMs - old.getTime()) < 1);
+});
+
+test('refuses a snapshot destination that a later staging sweep would delete', async (t) => {
+  const { root } = workspace(t);
+  const snapshot = join(root, '.fonts-fetch-mine');
+  const { fetchImpl, requests } = fakeFetch();
+
+  await assert.rejects(
+    async () => {
+      await run(['--family', 'Chewy:400', '--dest', snapshot], fetchImpl);
+      const old = new Date(Date.now() - 11 * 60_000);
+      utimesSync(snapshot, old, old);
+      await run(['--family', 'Chewy:400', '--dest', join(root, 'fonts')], fetchImpl);
+      assert.ok(existsSync(snapshot), 'the staging sweep deleted the earlier font snapshot');
+    },
+    { message: `Font destination uses the reserved staging prefix .fonts-fetch-: ${snapshot}` },
+  );
+
+  assert.deepEqual(requests, []);
+  assert.deepEqual(readdirSync(root), []);
 });
 
 test('rejects non-woff2 bytes and a missing Latin weight', async (t) => {

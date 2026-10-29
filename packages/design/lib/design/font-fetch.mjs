@@ -11,13 +11,15 @@ import {
   statSync,
   writeFileSync,
 } from 'node:fs';
-import { dirname, join, resolve } from 'node:path';
+import { basename, dirname, join, resolve } from 'node:path';
 
 const MAX_FAMILIES = 2;
 const MAX_WEIGHTS = 3;
 const TIMEOUT_MS = 20_000;
 const MAX_FILE_BYTES = 1_500_000;
 const MAX_TOTAL_BYTES = 5_000_000;
+const STAGING_MAX_AGE_MS = 10 * 60_000;
+const STAGING_PREFIX = '.fonts-fetch-';
 const CSS_ENDPOINT = 'https://fonts.googleapis.com/css2';
 const FONT_ORIGIN = 'https://fonts.gstatic.com/';
 const CATALOG_ROOT = 'https://raw.githubusercontent.com/google/fonts/main';
@@ -172,6 +174,10 @@ export async function fetchDesignFonts({ families, dest, fetchImpl = fetch }) {
       `--family names a family twice: ${specs.map(({ family }) => family).join(', ')}.`,
     );
   const target = resolve(dest);
+  if (basename(target).startsWith(STAGING_PREFIX))
+    throw new Error(
+      `Font destination uses the reserved staging prefix ${STAGING_PREFIX}: ${target}`,
+    );
   assertWritableDestination(target);
 
   const files = new Map();
@@ -216,9 +222,29 @@ export async function fetchDesignFonts({ families, dest, fetchImpl = fetch }) {
   }
   add('fonts.css', Buffer.from(rules.join('')));
 
-  mkdirSync(dirname(target), { recursive: true });
-  const staging = mkdtempSync(join(dirname(target), '.fonts-fetch-'));
+  const parent = dirname(target);
+  const missingParents = [];
+  for (let directory = parent; !existsSync(directory); directory = dirname(directory))
+    missingParents.push(directory);
+  const createdParents = [];
+  let staging;
   try {
+    for (const directory of missingParents.reverse()) {
+      mkdirSync(directory);
+      createdParents.push(directory);
+    }
+    const staleBefore = Date.now() - STAGING_MAX_AGE_MS;
+    for (const entry of readdirSync(parent, { withFileTypes: true })) {
+      if (!entry.isDirectory() || !entry.name.startsWith(STAGING_PREFIX)) continue;
+      const path = join(parent, entry.name);
+      try {
+        if (statSync(path).mtimeMs < staleBefore) rmSync(path, { recursive: true });
+      } catch (error) {
+        if (error.code === 'ENOENT') continue;
+        throw new Error(`Could not remove stale staging folder ${path}: ${error.message}`);
+      }
+    }
+    staging = mkdtempSync(join(parent, STAGING_PREFIX));
     for (const [path, bytes] of files) {
       mkdirSync(dirname(join(staging, path)), { recursive: true });
       writeFileSync(join(staging, path), bytes, { flag: 'wx' });
@@ -229,7 +255,21 @@ export async function fetchDesignFonts({ families, dest, fetchImpl = fetch }) {
     chmodSync(staging, 0o755);
     renameSync(staging, target);
   } catch (error) {
-    rmSync(staging, { recursive: true, force: true });
+    const cleanupErrors = [];
+    for (const directory of [...(staging ? [staging] : []), ...createdParents.reverse()]) {
+      try {
+        if (directory === staging) rmSync(directory, { recursive: true, force: true });
+        else if (readdirSync(directory).length === 0) rmdirSync(directory);
+      } catch (cleanupError) {
+        cleanupErrors.push({ path: directory, message: cleanupError.message });
+      }
+    }
+    if (cleanupErrors.length > 0) {
+      error.cleanupErrors = cleanupErrors;
+      error.message += cleanupErrors
+        .map(({ path, message }) => ` (cleanup also failed for ${path}: ${message})`)
+        .join('');
+    }
     throw error;
   }
   return {
