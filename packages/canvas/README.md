@@ -449,7 +449,8 @@ sample count or exact count is stated.
 
 | Metric | Local reference | `CI=true` runner |
 | --- | --- | --- |
-| Chromium renderer main-thread p95, vanilla HTML, 708 / 5,000 nodes | 6 / 8 ms | Same, except the 5,000-node zoom sweep |
+| Chromium renderer main-thread p95, vanilla HTML, 708 / 5,000 nodes | 6 / 8 ms | Same, except the 708-node 40% pan and zoom sweep and the 5,000-node zoom sweep |
+| Chromium renderer main-thread p95, 708-node vanilla HTML 40% pan and zoom sweep | 6 ms | 8 ms |
 | Chromium renderer main-thread p95, React HTML, 708 / 5,000 nodes | 8 / 10 ms | Same, except the 5,000-node zoom sweep |
 | Chromium renderer main-thread p95, 5,000-node HTML zoom sweep | 8 ms vanilla / 10 ms React | 14 ms |
 | Chromium renderer main-thread p95, SVG, 708 / 5,000 nodes | 8 / 12 ms | Same |
@@ -461,7 +462,7 @@ sample count or exact count is stated.
 | Firefox fit pan frame p95, 708 / 5,000 nodes | 20 / 25 ms | Same |
 | Long tasks over 50 ms | 0 | Same |
 | Stage DOM nodes | 2,000; SVG worlds are reported only | Same; remount DOM count is reported only |
-| First fixture frame p50 | 150 ms across exactly 5 loads; SVG worlds are reported only | 250 ms across exactly 5 loads |
+| First fixture frame p50 | 150 ms across exactly 5 loads; SVG worlds are reported only | 250 ms across exactly 5 loads; WebKit React HTML 350 ms |
 | Hit-test p95 | Greater than 0 and at most 0.1 ms | Same |
 | Hit-test sampling | Exactly 1,000 points, at least 1,000 queries, at least 1 ms per sample batch | Same |
 | Chrome toggles / admitted layout shift | Exactly 16 toggles / 0 admitted CLS | Same |
@@ -488,8 +489,9 @@ remain recorded without failing assertions because software GL has noisy remount
 timings and can present at 30 fps. The first fixture frame p50 gates at 250 ms on
 the runner, whose cold software-GL page loads measure about three times the local
 time, and at 150 ms locally. The 5,000-node HTML zoom sweep gates its main-thread
-p95 at 14 ms on the runner, where software GL measures about four to five times the
-local time. Local remounts keep the 16 ms limit enforced.
+p95 at 14 ms on the runner, and the 708-node vanilla HTML 40% pan and zoom sweep at
+8 ms, where software GL measures about four to five times the local time. Local
+remounts keep the 16 ms limit enforced.
 Every other budget and gate is the same in both sets. The printed table,
 JSON report and its attachment identify the `local` or `runner` budget set and
 effective limits. Runner remounts show `reported (reference 16)` and runner first
@@ -519,7 +521,8 @@ metrics are reported as `unsupported`. CDP main-thread work is `unsupported`
 outside Chromium. First-frame timing and DOM counts remain supported.
 
 The release-candidate job uses `CI=true`. It gates long tasks where supported,
-stage DOM counts, first-frame p50 (250 ms) and hit-test budgets, plus React
+stage DOM counts, first-frame p50 (250 ms; 350 ms for WebKit React HTML, whose
+runner loads measure about four times the local time) and hit-test budgets, plus React
 pure-camera commit checks. As in Chromium, the runner only reports interaction
 rAF p95 and worst-frame limits; local runs enforce the existing browser limits.
 Frame timings must still be numeric; missing or `unsupported` timing is invalid.

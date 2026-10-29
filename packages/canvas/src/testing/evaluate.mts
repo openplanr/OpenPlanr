@@ -8,11 +8,13 @@ export const CANVAS_TRACE_BUDGETS = Object.freeze({
   }),
   remountRendererMainP95Ms: 16,
   runnerHtmlZoomSweep5000RendererMainP95Ms: 14,
+  runnerVanillaHtml708PanZoomRendererMainP95Ms: 8,
   longTasksOver50Ms: 0,
   rafIntervalP95Ms: 16.8,
   domNodes: 2000,
   firstFrameP50Ms: 150,
   runnerFirstFrameP50Ms: 250,
+  runnerWebkitReactFirstFrameP50Ms: 350,
   firstFrameLoads: 5,
   hitTestP95Ms: 0.1,
   hitTestSampleCount: 1000,
@@ -42,8 +44,12 @@ export function traceBudgetPolicy(runnerBudgets: boolean): {
   remountRendererMainP95Ms: number | null;
   /** Main-thread limit for the 5,000-node HTML zoom sweep; null keeps the renderer's reference limit. */
   htmlZoomSweep5000RendererMainP95Ms: number | null;
+  /** Main-thread limit for 708-node vanilla HTML pan-40 and zoom sweep; null keeps the reference limit. */
+  vanillaHtml708PanZoomRendererMainP95Ms: number | null;
   rafIntervalP95Ms: number | null;
   firstFrameP50Ms: number;
+  /** WebKit first-frame limit for React HTML; null keeps `firstFrameP50Ms`. */
+  webkitReactFirstFrameP50Ms: number | null;
 } {
   return {
     budgetSet: runnerBudgets ? 'runner' : 'local',
@@ -51,10 +57,16 @@ export function traceBudgetPolicy(runnerBudgets: boolean): {
     htmlZoomSweep5000RendererMainP95Ms: runnerBudgets
       ? CANVAS_TRACE_BUDGETS.runnerHtmlZoomSweep5000RendererMainP95Ms
       : null,
+    vanillaHtml708PanZoomRendererMainP95Ms: runnerBudgets
+      ? CANVAS_TRACE_BUDGETS.runnerVanillaHtml708PanZoomRendererMainP95Ms
+      : null,
     rafIntervalP95Ms: runnerBudgets ? null : CANVAS_TRACE_BUDGETS.rafIntervalP95Ms,
     firstFrameP50Ms: runnerBudgets
       ? CANVAS_TRACE_BUDGETS.runnerFirstFrameP50Ms
       : CANVAS_TRACE_BUDGETS.firstFrameP50Ms,
+    webkitReactFirstFrameP50Ms: runnerBudgets
+      ? CANVAS_TRACE_BUDGETS.runnerWebkitReactFirstFrameP50Ms
+      : null,
   };
 }
 
@@ -376,7 +388,12 @@ export function evaluateCanvasTrace(
       item.scenario,
       'firstFrameP50Ms',
       item.firstFrameP50Ms,
-      policy.firstFrameP50Ms,
+      results.browser.name === 'webkit' &&
+        item.renderer === 'react' &&
+        item.world === 'html' &&
+        policy.webkitReactFirstFrameP50Ms !== null
+        ? policy.webkitReactFirstFrameP50Ms
+        : policy.firstFrameP50Ms,
       svgTier,
     );
     const main: number[] = [];
@@ -462,12 +479,19 @@ export function evaluateCanvasTrace(
       const mainMedian = main.sort((a, b) => a - b)[1];
       const htmlZoomSweep5000 =
         item.scenario === 'zoom-sweep' && item.world === 'html' && item.count === 5000;
+      const vanillaHtml708PanZoom =
+        item.renderer === 'vanilla' &&
+        item.world === 'html' &&
+        item.count === 708 &&
+        (item.scenario === 'pan-40' || item.scenario === 'zoom-sweep');
       const mainLimit =
         item.scenario === 'remount'
           ? limits.remountRendererMainP95Ms
           : htmlZoomSweep5000 && policy.htmlZoomSweep5000RendererMainP95Ms !== null
             ? policy.htmlZoomSweep5000RendererMainP95Ms
-            : limits.rendererMainP95Ms[item.world === 'svg' ? 'svg' : item.renderer][item.count];
+            : vanillaHtml708PanZoom && policy.vanillaHtml708PanZoomRendererMainP95Ms !== null
+              ? policy.vanillaHtml708PanZoomRendererMainP95Ms
+              : limits.rendererMainP95Ms[item.world === 'svg' ? 'svg' : item.renderer][item.count];
       maximum(
         item,
         item.scenario,
