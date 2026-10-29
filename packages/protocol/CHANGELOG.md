@@ -1,5 +1,12 @@
 # @openplanr/protocol
 
+## 0.15.0
+
+### Minor Changes
+
+- 1354de0: Native role metadata references the generated Claude agents and their scoped identities, marks QA and specification activation as conditional, and keeps task type and agent in prepared Ship context.
+- 818ff59: Adds typed enum and boolean screen props and variant instance values to design documents (schema 1.1.0).
+
 ## 0.14.0
 
 ### Minor Changes

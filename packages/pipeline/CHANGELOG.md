@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.61.0
+
+### Minor Changes
+
+- 818ff59: Adds typed enum and boolean screen props and variant instance values to design documents (schema 1.1.0).
+
+### Patch Changes
+
+- 1354de0: Bounds runtime version probes and reports stalled launchers as unknown instead of missing. Explicit or saved runtime choices probe only the selected runtime.
+- ae8c1fe: Includes the updated canvas gesture handling.
+- bc70471: Updates the conformance example projects to patched vitest and vite.
+- 1354de0: Native role metadata references the generated Claude agents and their scoped identities, marks QA and specification activation as conditional, and keeps task type and agent in prepared Ship context.
+- 3b7b87d: The studio minimap no longer forces a layout each time it redraws during a pinch zoom.
+
 ## 0.60.0
 
 ### Minor Changes
