@@ -6,6 +6,8 @@
  */
 
 import { DIAGRAM_ERROR_CODES, diagramFail } from '../errors.mjs';
+import { getGrammar } from '../registry.mjs';
+import { layoutCartesianChart } from './layouts/chart-cartesian.mjs';
 import { diagramGraphemes, measureDiagramText } from './text.mjs';
 import {
   diagramMetrics,
@@ -53,9 +55,10 @@ const STRAIGHTEN_TOLERANCE = 12;
 const FEEDBACK_CLEARANCE = 40;
 const FEEDBACK_LABEL_LIMIT = 32;
 
-function semanticItems(document) {
-  if (document.nodes.length > 0) return document.nodes;
+function semanticItems(document, includeAll = false) {
+  if (!includeAll && document.nodes.length > 0) return document.nodes;
   return [
+    ...document.nodes,
     ...document.events.map((item) => ({ ...item, kind: 'event', description: null })),
     ...document.series.map((item) => ({ ...item, kind: 'series', description: null })),
     ...document.sets.map((item) => ({ ...item, kind: 'set', description: null })),
@@ -1855,7 +1858,46 @@ function assertSceneExtent(width, height) {
 
 export function layoutDiagram(document, { theme = resolveDiagramTheme(document.theme) } = {}) {
   const metrics = diagramMetrics(theme);
-  if (document.grammar.id === 'sequence') {
+  const grammar = getGrammar(document.grammar.id);
+  if (grammar.layoutFamily === 'chart' && ['bar', 'line', 'scatter'].includes(grammar.grammarId)) {
+    const scene = layoutCartesianChart(document, { wrapDiagramLabel });
+    const positioned = new Set(scene.marks.map(({ id }) => id));
+    const items = semanticItems(document, true).filter(({ id }) => !positioned.has(id));
+    let y = PADDING;
+    scene.boxes = items.map((item) => {
+      const box = {
+        ...createBox(item, metrics),
+        x: scene.width + PADDING,
+        y,
+        emphasis: document.emphasis.find(({ targetId }) => targetId === item.id)?.level ?? null,
+      };
+      y += box.height + 24;
+      return box;
+    });
+    scene.notes = graphNotes(document, [...scene.boxes, ...scene.marks, ...scene.axes], [], []);
+    scene.width = Math.ceil(
+      Math.max(
+        scene.width,
+        ...[...scene.boxes, ...scene.notes].map((item) => item.x + item.width + PADDING),
+      ),
+    );
+    scene.height = Math.ceil(
+      Math.max(
+        scene.height,
+        ...[...scene.boxes, ...scene.notes].map((item) => item.y + item.height + PADDING),
+      ),
+    );
+    assertSceneExtent(scene.width, scene.height);
+    return Object.freeze(
+      Object.fromEntries(
+        Object.entries(scene).map(([key, value]) => [
+          key,
+          Array.isArray(value) ? Object.freeze(value.map(Object.freeze)) : value,
+        ]),
+      ),
+    );
+  }
+  if (grammar.layoutFamily === 'chronology' && grammar.grammarId === 'sequence') {
     const scene = sequenceLayout(document, metrics);
     assertSceneExtent(scene.width, scene.height);
     return Object.freeze({

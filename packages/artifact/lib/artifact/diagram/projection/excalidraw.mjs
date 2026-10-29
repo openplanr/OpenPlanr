@@ -44,6 +44,17 @@ function baseElement(id, type, geometry) {
 }
 
 export const EXCALIDRAW_EXPORT_CAPABILITIES = Object.freeze({
+  ...Object.fromEntries(
+    ['bar', 'line', 'scatter'].map((grammarId) => [
+      grammarId,
+      Object.freeze({
+        grammarId,
+        status: 'unsupported',
+        reason:
+          'Cartesian axes and data marks are available in canonical SVG, HTML and PNG. Editable chart projection is not certified; no Excalidraw file is emitted.',
+      }),
+    ]),
+  ),
   flowchart: Object.freeze({
     grammarId: 'flowchart',
     status: 'editable',

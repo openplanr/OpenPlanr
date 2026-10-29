@@ -34,15 +34,61 @@
   "series": [
     {
       "id": "series-main",
-      "label": "Primary series",
+      "label": "Small teams",
       "values": [
         {
-          "key": "A",
-          "value": 3
+          "key": "1",
+          "value": 12
         },
         {
-          "key": "B",
-          "value": 5
+          "key": "2",
+          "value": 19
+        },
+        {
+          "key": "4",
+          "value": 25
+        },
+        {
+          "key": "7",
+          "value": 38
+        },
+        {
+          "key": "8",
+          "value": 46
+        },
+        {
+          "key": "12",
+          "value": 60
+        }
+      ]
+    },
+    {
+      "id": "series-secondary",
+      "label": "Large teams",
+      "values": [
+        {
+          "key": "1",
+          "value": 22
+        },
+        {
+          "key": "2",
+          "value": 27
+        },
+        {
+          "key": "4",
+          "value": 39
+        },
+        {
+          "key": "7",
+          "value": 43
+        },
+        {
+          "key": "8",
+          "value": 58
+        },
+        {
+          "key": "12",
+          "value": 72
         }
       ]
     }
@@ -50,12 +96,12 @@
   "axes": [
     {
       "id": "axis-horizontal",
-      "label": "Horizontal meaning",
+      "label": "Engineering hours",
       "scale": "linear"
     },
     {
       "id": "axis-vertical",
-      "label": "Vertical meaning",
+      "label": "Tasks completed",
       "scale": "linear"
     }
   ],
@@ -66,8 +112,9 @@
     "title": "Scatter plot fixture",
     "description": "A compact scatter plot example with semantic reading order.",
     "readingOrder": [
-      "series-main"
+      "series-main",
+      "series-secondary"
     ]
   },
-  "documentDigest": "sha256:fd30c391ef0ca9f84765ec536752e37a09115e3191235ca230a97be41b74a74f"
+  "documentDigest": "sha256:337a5978e3f75c1149be08ef49611ecb81adc958487aa9478ff569f80316a95b"
 }

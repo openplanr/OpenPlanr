@@ -19,6 +19,29 @@ export function escapeXml(value) {
 
 const coordinate = (value) => Math.round(value * 100) / 100;
 
+const seriesColor = (index, theme) => [theme.accent, theme.foreground, theme.border][index % 3];
+
+function renderChartText(text, theme) {
+  return `<text x="${text.x}" y="${text.y + 13}" font-family="${theme.fontFamily}" font-size="13" fill="${theme.foreground}">${text.lines.map((line, index) => `<tspan x="${text.x}" y="${text.y + 13 + index * 18}">${escapeXml(line)}</tspan>`).join('')}</text>`;
+}
+
+function renderAxis(axis, theme) {
+  const stroke = axis.emphasis ? theme.accent : theme.border;
+  return `<g data-axis-id="${escapeXml(axis.id)}"><line x1="${axis.x1}" y1="${axis.y1}" x2="${axis.x2}" y2="${axis.y2}" stroke="${stroke}" stroke-width="2"/>${axis.ticks.map((tick) => `<line x1="${tick.x}" y1="${tick.y}" x2="${tick.x + (axis.x1 === axis.x2 ? -6 : 0)}" y2="${tick.y + (axis.x1 === axis.x2 ? 0 : 6)}" stroke="${stroke}"/>${renderChartText(tick.text, theme)}`).join('')}${renderChartText(axis.text, theme)}</g>`;
+}
+
+function renderMark(mark, theme) {
+  const color = seriesColor(mark.seriesIndex, theme);
+  let shape;
+  if (mark.kind === 'bar')
+    shape = `<rect x="${mark.x}" y="${mark.y}" width="${mark.width}" height="${mark.height}" fill="${color}"/>`;
+  else if (mark.kind === 'point')
+    shape = `<circle cx="${mark.x + mark.width / 2}" cy="${mark.y + mark.height / 2}" r="${mark.width / 2}" fill="${color}"/>`;
+  else
+    shape = `<polyline points="${mark.points.map((point) => point.join(',')).join(' ')}" fill="none" stroke="${color}" stroke-width="${mark.emphasis === 'primary' ? 4 : 3}"${mark.seriesIndex % 2 ? ' stroke-dasharray="8 5"' : ''}/>${mark.points.map(([x, y]) => `<circle cx="${x}" cy="${y}" r="3" fill="${color}"/>`).join('')}`;
+  return `<g data-mark-id="${escapeXml(mark.id)}" data-mark-kind="${mark.kind}" opacity="${mark.emphasis === 'muted' ? 0.5 : 1}"${mark.emphasis === 'primary' ? ` stroke="${theme.foreground}" stroke-width="2"` : ''}><title>${escapeXml(mark.label)}${mark.key === undefined ? '' : `: ${escapeXml(mark.key)}, ${mark.value}`}</title>${shape}</g>`;
+}
+
 function renderEdge(edge, theme, style) {
   const labelX = edge.labelBounds
     ? edge.labelBounds.x + edge.labelBounds.width / 2
@@ -153,6 +176,12 @@ export function renderDiagramSvg(document, { theme = resolveDiagramTheme(documen
     `<desc id="${descriptionId}">${escapeXml(document.accessibility.description)}</desc>`,
     `<defs>${renderAdaptiveStyle(theme)}<marker id="diagram-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M 0 0 L 10 5 L 0 10 z" fill="${theme.border}"/></marker></defs>`,
     `<rect width="${scene.width}" height="${scene.height}" fill="${theme.background}"/>`,
+    ...scene.axes.map((axis) => renderAxis(axis, theme)),
+    ...(scene.marks ?? []).map((mark) => renderMark(mark, theme)),
+    ...(scene.legend ?? []).map(
+      (text) =>
+        `<g><line x1="${text.x - 28}" y1="${text.y + 8}" x2="${text.x - 8}" y2="${text.y + 8}" stroke="${seriesColor(text.seriesIndex, theme)}" stroke-width="3"${text.seriesIndex % 2 ? ' stroke-dasharray="8 5"' : ''}/>${renderChartText(text, theme)}</g>`,
+    ),
     ...scene.lanes.map((lane) => renderLane(lane, theme, metrics)),
     ...scene.groups.map((group) => renderGroup(group, theme, metrics)),
     ...(metrics.phase.knockout ? [] : phases),

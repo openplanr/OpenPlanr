@@ -51,6 +51,24 @@ function nodeOverlapCount(scene) {
   return count;
 }
 
+function markOverlapCount(scene) {
+  const marks = scene.marks ?? [];
+  const obstacles = [...scene.boxes, ...(scene.notes ?? []), ...(scene.labelBounds ?? [])];
+  let count = 0;
+  for (const [index, mark] of marks.entries()) {
+    count += obstacles.filter((box) =>
+      mark.kind === 'polyline' && mark.points.length > 1
+        ? mark.points.slice(1).some((point, i) => segmentEntersBox(mark.points[i], point, box))
+        : overlaps(mark, box),
+    ).length;
+    if (mark.kind === 'bar')
+      count += marks
+        .slice(index + 1)
+        .filter((other) => other.kind === 'bar' && overlaps(mark, other)).length;
+  }
+  return count;
+}
+
 // A label this close to a node it does not connect reads as that node's caption.
 const FOREIGN_LABEL_MARGIN = 12;
 
@@ -256,6 +274,7 @@ function clippedGeometry(scene) {
     ...(scene.groups ?? []),
     ...(scene.lanes ?? []),
     ...(scene.axes ?? []),
+    ...(scene.marks ?? []),
     ...(scene.notes ?? []),
     ...(scene.labelBounds ?? []),
   ];
@@ -267,7 +286,10 @@ function clippedGeometry(scene) {
       rect.x + rect.width > scene.width ||
       rect.y + rect.height > scene.height,
   );
-  const endpoints = scene.edges.flatMap(edgePoints);
+  const endpoints = [
+    ...scene.edges.flatMap(edgePoints),
+    ...(scene.marks ?? []).flatMap((mark) => mark.points ?? []),
+  ];
   return (
     outside ||
     endpoints.some(
@@ -298,6 +320,7 @@ function semanticCoverage(document, scene) {
     ...(scene.groups ?? []),
     ...(scene.lanes ?? []),
     ...(scene.axes ?? []),
+    ...(scene.marks ?? []),
   ];
   const rendered = new Set(renderedItems.map((item) => item.id));
   const missing = [
@@ -393,9 +416,19 @@ export function createRenderQualityReport(document, { scene, png, svgValidation 
     },
     {
       id: 'geometry-present',
-      status: scene.boxes.length > 0 ? 'pass' : 'fail',
-      message: `${scene.boxes.length} semantic boxes and ${scene.edges.length} relations rendered.`,
+      status: scene.boxes.length > 0 || scene.marks?.length > 0 ? 'pass' : 'fail',
+      message: `${scene.boxes.length} semantic boxes and ${scene.edges.length} relations rendered.${scene.marks ? ` ${scene.marks.length} data marks rendered.` : ''}`,
     },
+    ...(scene.marks
+      ? [
+          {
+            id: 'mark-overlap',
+            status: markOverlapCount(scene) ? 'fail' : 'pass',
+            message:
+              'Data marks must keep clear of labels, notes and nodes; bars must not overlap. Crossings and coincident points between data series are intentional.',
+          },
+        ]
+      : []),
     {
       id: 'node-overlap',
       status: nodeOverlap > 0 ? 'fail' : 'pass',
