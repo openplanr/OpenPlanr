@@ -42,6 +42,14 @@ const GENERIC_GEOMETRY = Object.freeze(
   ]),
 );
 
+// Families whose own geometry is the shared box, frame and lane layout.
+const SHARED_LAYOUT_FAMILIES = Object.freeze(
+  new Set(['graph', 'lanes', 'hierarchy', 'containment']),
+);
+const layoutFamilyOf = new Map(
+  DIAGRAM_GRAMMARS.map(({ grammarId, layoutFamily }) => [grammarId, layoutFamily]),
+);
+
 const fixtureIds = readdirSync(fixtureRoot)
   .filter((name) => name.endsWith(FIXTURE_SUFFIX))
   .map((name) => name.slice(0, -FIXTURE_SUFFIX.length))
@@ -92,6 +100,11 @@ for (const grammarId of fixtureIds) {
       assert.ok(
         isGenericScene(scene),
         `${grammarId} now draws its own geometry; remove it from GENERIC_GEOMETRY`,
+      );
+    else if (!SHARED_LAYOUT_FAMILIES.has(layoutFamilyOf.get(grammarId)))
+      assert.ok(
+        !isGenericScene(scene),
+        `${grammarId} (${layoutFamilyOf.get(grammarId)} family) regressed to generic boxes`,
       );
   });
 }
