@@ -2,7 +2,8 @@ import { execFileSync } from 'node:child_process';
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { tmpdir } from 'node:os';
-import { dirname, join, resolve } from 'node:path';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { Command } from 'commander';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { parseDocument } from 'yaml';
@@ -445,7 +446,7 @@ jobs:
   });
 
   it("lists every non-install run step of this repository's CI workflow in the push tier", async () => {
-    const repository = resolve('../..');
+    const repository = fileURLToPath(new URL('../../../../', import.meta.url));
     const workflow = '.github/workflows/ci.yml';
     const document = parseDocument(readFileSync(join(repository, workflow), 'utf8')).toJS() as {
       jobs: Record<string, { steps?: { run?: string }[] }>;
