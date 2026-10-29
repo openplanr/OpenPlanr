@@ -742,7 +742,7 @@ openplanr ship checks --tier push --json
 | `--task <path>` | Task file whose Test Requirements to include                   | none                                      |
 | `--tier <tier>` | `task`, `story`, `push` or `planning`                          | `planning` for a `.planr`-only change, else `task` |
 | `--base <ref>`  | Compare against the merge base with this ref                   | `origin/HEAD`, then `main`                |
-| `--json`        | Print the `openplanr-ship-checks` result (schema `1.0.0`)      | `false`                                   |
+| `--json`        | Print the `openplanr-ship-checks` result (schema `1.1.0`)      | `false`                                   |
 
 **Tiers:**
 
@@ -763,6 +763,18 @@ is expanded; other `${{ }}` expressions are tagged `needs-review`. A check is
 runs directly mentions `lint-staged`, `ls-files`, `--cached` or `--staged`;
 deeper calls are not followed. `relatedTests` lists test files that mention a
 name the change exports, a `.command()` name, or a route path.
+
+`coverage` names changed files that a passing run may not have checked.
+`trackedOnly.unseen` lists untracked files when any check is `tracked-only`
+(warning `UNTRACKED_NOT_SEEN`); `git add -N` makes them visible.
+`typescript.uncovered` lists new `.ts`, `.tsx`, `.mts` and `.cts` files outside
+`.planr/` that no `tsconfig*.json` root file set includes (`files`, `include`,
+`exclude`, `extends`, and `references` one level deep; warning `TS_NOT_COVERED`).
+A file reached only through an import is still reported, and the command does
+not check which tsconfig CI runs. To read tsconfigs, the command loads the
+project's own `typescript` package, which runs that package's code; it never
+executes checks. When the project cannot resolve `typescript`, `typescript` is
+`null` with the info diagnostic `TYPESCRIPT_UNAVAILABLE`.
 
 `complete` is `false` when any diagnostic is an `error`, for example a workflow
 that fails to parse: the listed checks are then not the full CI set. The command

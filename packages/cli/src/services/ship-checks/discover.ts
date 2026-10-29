@@ -13,6 +13,7 @@ import {
   type ShipDiagnostic,
   type ShipTier,
 } from './contract.js';
+import { readCoverage } from './coverage.js';
 import { readHuskyHook, readPreCommitFramework } from './hooks.js';
 import {
   isBuildCommand,
@@ -308,6 +309,13 @@ export async function discoverShipChecks(
       diagnostic('NO_CHECKS', 'warning', `No checks were discovered for the ${tier} tier.`),
     );
   }
+  const coverage = await readCoverage(
+    root,
+    changes.files,
+    checks,
+    () => listFiles(root),
+    diagnostics,
+  );
   return {
     kind: SHIP_CHECKS_KIND,
     schemaVersion: SHIP_CHECKS_SCHEMA_VERSION,
@@ -322,6 +330,7 @@ export async function discoverShipChecks(
     requirements: task?.requirements.requirements ?? [],
     acceptance: task?.requirements.acceptance ?? [],
     relatedTests,
+    coverage,
     diagnostics,
   };
 }
