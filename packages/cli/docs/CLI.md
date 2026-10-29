@@ -759,10 +759,16 @@ openplanr ship checks --tier push --json
   package that is not `private`, it also lists
   `npm pack --dry-run --json --ignore-scripts` from that package's directory,
   tagged `package-contents`. Its `expectFiles` names the new files relative to
-  the package; confirm each one, or the copy the build writes for it, appears in
-  the tarball's `files`. Run it after the build. Dotfiles, files under `test`,
-  `tests`, `__tests__`, `fixture` or `fixtures` folders, and files in the
-  repository's `.planr/`, `.changeset/`, `.github/` or `.husky/` are not listed.
+  the package. Run it after the build and account for each one: it, or the copy
+  the build writes for it, appears in the tarball's `files`, or the package
+  deliberately leaves it out. The command lists what npm would pack; it exits 0
+  either way, and a package that publishes another directory (for example with
+  pnpm `publishConfig.directory`) needs its own check. Files in any
+  dot-directory, dotfiles and files under `test`, `tests`, `__tests__`,
+  `fixture`, `fixtures` or `node_modules` folders are not listed, unless the
+  package's `files` names that folder. New code files are out of scope: a
+  package that ships unbuilt `.js` or `.mjs` scripts needs another check that
+  they are packed.
   `--ignore-scripts` keeps `prepack`, `prepare` and `postpack` from running.
 
 Each CI step is kept verbatim with its `cwd` (step, then job, then workflow

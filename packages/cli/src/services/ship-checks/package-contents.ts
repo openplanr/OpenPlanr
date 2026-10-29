@@ -2,25 +2,46 @@ import { existsSync } from 'node:fs';
 import { join, posix } from 'node:path';
 import type { ChangedFile, CheckCandidate, ShipDiagnostic } from './contract.js';
 import { diagnostic } from './contract.js';
+import type { PackageManifest } from './packages.js';
 import { ManifestError, readManifest } from './packages.js';
 
 const CODE_FILE = /\.(?:[cm]?[jt]sx?)$/u;
 const SKIPPED_SEGMENT = /^(?:tests?|__tests__|fixtures?|node_modules)$/u;
-const SKIPPED_ROOT = /^\.(?:planr|changeset|github|husky)\//u;
+const GLOB = /[*?[{!]/u;
 const NEW_STATUSES: ReadonlySet<ChangedFile['status']> = new Set(['added', 'renamed', 'untracked']);
 const PACK_COMMAND = 'npm pack --dry-run --json --ignore-scripts';
 
 /** A new file that a build step must copy or a package must list, as opposed to compiled source. */
-function isShippableData(path: string): boolean {
-  const segments = path.split('/');
-  const name = segments.at(-1) ?? '';
+function isDataFile(path: string): boolean {
   return (
     !CODE_FILE.test(path) &&
-    name !== 'package.json' &&
-    !name.startsWith('.') &&
-    !SKIPPED_ROOT.test(path) &&
-    !segments.slice(0, -1).some((segment) => SKIPPED_SEGMENT.test(segment))
+    !path.endsWith('/package.json') &&
+    path !== 'package.json' &&
+    !path.split('/').some((segment) => segment.startsWith('.'))
   );
+}
+
+/** Whether a `files` entry names the path or a directory above it; a glob counts from its fixed prefix. */
+function filesNames(files: readonly string[], path: string): boolean {
+  return files.some((entry) => {
+    const segments = entry
+      .replace(/^\.?\/+/u, '')
+      .replace(/\/+$/u, '')
+      .split('/');
+    const glob = segments.findIndex((segment) => GLOB.test(segment));
+    const prefix = (glob === -1 ? segments : segments.slice(0, glob)).join('/');
+    if (prefix === '') return segments[0] === '**';
+    return path === prefix || path.startsWith(`${prefix}/`);
+  });
+}
+
+/** False for a file under a test or fixture directory unless the package's `files` names it. */
+function isPublishable(path: string, files: readonly string[]): boolean {
+  const inSkipped = path
+    .split('/')
+    .slice(0, -1)
+    .some((segment) => SKIPPED_SEGMENT.test(segment));
+  return !inSkipped || filesNames(files, path);
 }
 
 function owningPackage(root: string, path: string): string | null {
@@ -38,7 +59,7 @@ export function packageContentsChecks(
 ): CheckCandidate[] {
   const expected = new Map<string, string[]>();
   for (const { path, status } of changed) {
-    if (!NEW_STATUSES.has(status) || !isShippableData(path)) continue;
+    if (!NEW_STATUSES.has(status) || !isDataFile(path)) continue;
     const dir = owningPackage(root, path);
     if (dir === null) continue;
     const files = expected.get(dir) ?? [];
@@ -46,13 +67,13 @@ export function packageContentsChecks(
     expected.set(dir, files);
   }
   const checks: CheckCandidate[] = [];
-  for (const [dir, expectFiles] of [...expected].sort(([left], [right]) =>
+  for (const [dir, candidates] of [...expected].sort(([left], [right]) =>
     left.localeCompare(right),
   )) {
     const manifestPath = dir === '.' ? 'package.json' : `${dir}/package.json`;
-    let isPrivate: boolean;
+    let manifest: PackageManifest | null;
     try {
-      isPrivate = readManifest(join(root, dir))?.private ?? true;
+      manifest = readManifest(join(root, dir));
     } catch (error) {
       if (!(error instanceof ManifestError)) throw error;
       diagnostics.push(
@@ -60,7 +81,10 @@ export function packageContentsChecks(
       );
       continue;
     }
-    if (isPrivate) continue;
+    if (manifest === null || manifest.private) continue;
+    const files = manifest.files;
+    const expectFiles = candidates.filter((path) => isPublishable(path, files));
+    if (expectFiles.length === 0) continue;
     checks.push({
       id: `package-contents:${dir}`,
       command: PACK_COMMAND,

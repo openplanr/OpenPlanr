@@ -713,13 +713,62 @@ describe('openplanr ship checks package contents', () => {
         'packages/app/src/a.json': '{}\n',
         'docs/guide.md': '# Guide\n',
         'packages/lib/tests/fixtures/x.json': '{}\n',
+        'packages/lib/fixtures/y.json': '{}\n',
         'packages/lib/src/existing.json': '{"changed":true}\n',
         'packages/lib/src/extra.ts': 'export {};\n',
         'packages/lib/src/.hidden': 'x\n',
+        'packages/lib/.storybook/preview.json': '{}\n',
       },
     );
     const result = await discoverShipChecks({ projectDir: root, tier: 'push' });
     expect(packChecks(result)).toEqual([]);
+  });
+
+  it('lists test and fixture folders only when the package files field names them', async () => {
+    const root = fixture(
+      {
+        ...LIBRARY,
+        'packages/lib/package.json': JSON.stringify({
+          name: 'lib',
+          version: '1.0.0',
+          files: ['src', './fixtures/', 'test/data/**'],
+        }),
+      },
+      {
+        'packages/lib/fixtures/probe/x.json': '{}\n',
+        'packages/lib/test/data/y.json': '{}\n',
+        'packages/lib/test/other/z.json': '{}\n',
+        'packages/lib/tests/w.json': '{}\n',
+      },
+    );
+    const [check] = packChecks(await discoverShipChecks({ projectDir: root, tier: 'push' }));
+    expect(check?.expectFiles).toEqual(['fixtures/probe/x.json', 'test/data/y.json']);
+  });
+
+  it('treats any truthy private value as private', async () => {
+    const root = fixture(
+      {
+        ...LIBRARY,
+        'packages/lib/package.json': JSON.stringify({
+          name: 'lib',
+          private: 'true',
+          files: ['src'],
+        }),
+      },
+      { 'packages/lib/src/data.json': '{}\n' },
+    );
+    expect(packChecks(await discoverShipChecks({ projectDir: root, tier: 'push' }))).toEqual([]);
+  });
+
+  it('reports an invalid package manifest instead of listing its pack', async () => {
+    const root = fixture(LIBRARY, { 'packages/lib/src/data.json': '{}\n' });
+    writeFileSync(join(root, 'packages/lib/package.json'), '{ not json');
+    const result = await discoverShipChecks({ projectDir: root, tier: 'push' });
+    expect(packChecks(result)).toEqual([]);
+    expect(result.diagnostics.filter((entry) => entry.code === 'MANIFEST_INVALID')).toEqual([
+      expect.objectContaining({ severity: 'error', path: 'packages/lib/package.json' }),
+    ]);
+    expect(result.complete).toBe(false);
   });
 
   it('runs a pack command that lists the files without running lifecycle scripts', async () => {
@@ -770,6 +819,12 @@ describe('openplanr ship checks command', () => {
     ]);
     expect(exitCode).toBeUndefined();
     expect(JSON.parse(output)).toMatchObject({ kind: 'openplanr-ship-checks', tier: 'story' });
+  });
+
+  it('prints the files a package contents check must account for', async () => {
+    const root = fixture(LIBRARY, { 'packages/lib/src/templates/a.json': '{}\n' });
+    const { output } = await run(['--project-dir', root, 'ship', 'checks', '--tier', 'push']);
+    expect(output).toMatch(/account for:.*src\/templates\/a\.json/u);
   });
 
   it('exits 1 with a failure envelope for an unknown tier or a missing task', async () => {

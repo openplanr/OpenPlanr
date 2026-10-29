@@ -30,7 +30,7 @@ export type ShipCheck = {
   script?: PackageScript;
   condition?: string;
   shell?: string;
-  /** Package-relative files the change adds that the packed tarball should contain. */
+  /** Package-relative files the change adds; each must be in the tarball or deliberately excluded. */
   expectFiles?: string[];
   acceptanceIds: string[];
 };

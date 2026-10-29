@@ -23,6 +23,8 @@ function render(result: ShipChecksResult): void {
     const more = rest.length > 0 ? chalk.dim(` (+${rest.length} lines)`) : '';
     const where = check.cwd === '.' ? '' : chalk.dim(` [${check.cwd}]`);
     display.line(`  ${first}${more}${where}  ${chalk.dim(check.tags.join(', '))}`);
+    if (check.expectFiles !== undefined)
+      display.line(`    ${chalk.dim('account for:')} ${check.expectFiles.join(', ')}`);
   }
   for (const requirement of result.requirements)
     display.line(`  ${chalk.dim('requirement:')} ${requirement.text}`);
