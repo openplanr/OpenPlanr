@@ -1,5 +1,23 @@
 # @openplanr/design
 
+## 0.6.0
+
+### Minor Changes
+
+- 818ff59: Adds typed enum and boolean screen props and variant instance values to design documents (schema 1.1.0).
+
+### Patch Changes
+
+- ae8c1fe: The studio forces far fewer layouts while panning and zooming.
+- 3b7b87d: The studio minimap no longer forces a layout each time it redraws during a pinch zoom.
+- Updated dependencies [ae8c1fe]
+- Updated dependencies [5150182]
+- Updated dependencies [1354de0]
+- Updated dependencies [818ff59]
+  - @openplanr/artifact@0.8.0
+  - @openplanr/canvas@0.0.1
+  - @openplanr/protocol@0.15.0
+
 ## 0.5.0
 
 ### Minor Changes

@@ -1,5 +1,26 @@
 # Changelog
 
+## 3.3.0
+
+### Minor Changes
+
+- 12664ad: The design skills can now save real typefaces with `node scripts/design.mjs fonts fetch --family "Inter:400,600" --dest <design>/source/assets/fonts`. It downloads Latin `woff2` and license files from Google Fonts for up to two OFL or Apache families, three weights each, and writes a local `fonts.css`. Other licenses are refused and a failed download leaves nothing behind. Hosts that allowlist domains need `raw.githubusercontent.com`, `fonts.googleapis.com` and `fonts.gstatic.com`.
+- cc55ef1: `openplanr ship checks` now reports changed files a passing run may not have checked: untracked files that tracked-only checks such as lint-staged cannot see, and new TypeScript files that no tsconfig includes. The JSON result moves to schema `1.1.0` with a new `coverage` field.
+- 34cc3ca: Adds `openplanr spec validate <specId>`, a read-only check of a spec against the specification contract: frontmatter schema, the 13 headings in order, and `AC-NNN` ids on acceptance criteria. It prints each violation and exits 1 if any are found. `--json` gives machine-readable output.
+  
+  `openplanr spec promote` takes `--dry-run` to validate and print the handoff command without writing. `spec create` and `spec shape` now number acceptance criteria `AC-001`, `AC-002` and so on, so new specs pass validation.
+
+### Patch Changes
+
+- ae8c1fe: Panning and zooming in the design studio is smoother: wheel and pinch input no longer forces a layout on every event, and the minimap no longer forces one when it redraws during a pinch zoom.
+- e094d32: Plugin inspection no longer hangs on a slow `claude --version` or `codex --version`. After 5 seconds it reports the runtime as present with an unknown version.
+- ae8c1fe: Plan and Ship keep small, coherent work in the main session and delegate only bounded work that benefits from isolation or parallel execution. Native role metadata now points at the generated Claude agents, and persistence work goes to the backend role.
+- 1354de0: `openplanr setup` removes legacy Claude project agents it can verify are unchanged, with backup and restore. Edited, unknown and symlinked files are left alone, and `openplanr doctor` lists any legacy paths that remain.
+- 7c7b840: Claude Code now loads the investigate skill when you ask it to investigate a failure without fixing it yet, and the ship skill when you ask it to plan and implement an accepted change. Codex and Cursor get the same updated skill descriptions.
+- 7f46e96: In headless runs where no one can answer, the spec skill no longer asks. It picks the repository-backed or recommended default and records each choice as an `Assumption:` bullet under `## Notes for Decomposition`. Interactive runs are unchanged.
+- 7e346a6: The dashboard List keeps its filters, sort, compact setting, page and selected row when planning files update live.
+- ae8c1fe: Design skills can now author theme and state variants with typed props instead of copying source files. Existing designs without props render as before.
+
 ## 3.2.0
 
 ### Minor Changes
