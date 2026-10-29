@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import {
+import fs, {
   existsSync,
   mkdirSync,
   mkdtempSync,
@@ -7,8 +7,11 @@ import {
   readFileSync,
   rmSync,
   statSync,
+  symlinkSync,
+  utimesSync,
   writeFileSync,
 } from 'node:fs';
+import { syncBuiltinESMExports } from 'node:module';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
@@ -300,6 +303,117 @@ test('a failed or timed-out download leaves no font folder behind', async (t) =>
     );
     assert.equal(existsSync(join(root, 'source/assets')), false);
   }
+});
+
+for (const method of ['writeFileSync', 'mkdtempSync', 'renameSync']) {
+  for (const existingSource of [false, true]) {
+    test(`${method} failure removes only newly created empty parents (existing source: ${existingSource})`, async (t) => {
+      const { root, dest } = workspace(t);
+      const source = join(root, 'source');
+      if (existingSource) mkdirSync(source);
+      const failure = Object.assign(new Error(`Injected ${method} failure: disk full`), {
+        code: 'ENOSPC',
+      });
+      t.mock.method(fs, method, () => {
+        throw failure;
+      });
+      syncBuiltinESMExports();
+      t.after(() => {
+        t.mock.restoreAll();
+        syncBuiltinESMExports();
+      });
+
+      await assert.rejects(
+        run(['--family', 'Chewy:400', '--dest', dest], fakeFetch().fetchImpl),
+        (error) => error === failure,
+      );
+
+      assert.equal(existsSync(dest), false);
+      assert.equal(existsSync(join(source, 'assets')), false);
+      assert.equal(existsSync(source), existingSource);
+      assert.deepEqual(readdirSync(root), existingSource ? ['source'] : []);
+    });
+  }
+}
+
+test('a failed write preserves newly created parents that gained other files', async (t) => {
+  const { root, dest } = workspace(t);
+  const assets = join(root, 'source/assets');
+  const write = fs.writeFileSync;
+  const failure = new Error('Injected write failure: disk full');
+  t.mock.method(fs, 'writeFileSync', () => {
+    write(join(assets, 'keep.txt'), 'concurrent file');
+    throw failure;
+  });
+  syncBuiltinESMExports();
+  t.after(() => {
+    t.mock.restoreAll();
+    syncBuiltinESMExports();
+  });
+
+  await assert.rejects(
+    run(['--family', 'Chewy:400', '--dest', dest], fakeFetch().fetchImpl),
+    (error) => error === failure,
+  );
+
+  assert.deepEqual(readdirSync(assets), ['keep.txt']);
+  assert.equal(readFileSync(join(assets, 'keep.txt'), 'utf8'), 'concurrent file');
+});
+
+test('removes only staging sibling directories older than ten minutes', async (t) => {
+  const { root, dest } = workspace(t);
+  const assets = join(root, 'source/assets');
+  mkdirSync(assets, { recursive: true });
+  const old = new Date(Date.now() - 11 * 60_000);
+  const recent = new Date(Date.now() - 9 * 60_000);
+  const stale = join(assets, '.fonts-fetch-old');
+  const fresh = join(assets, '.fonts-fetch-recent');
+  const unrelated = join(assets, 'other-folder');
+  const elsewhere = join(root, '.fonts-fetch-elsewhere');
+  for (const directory of [stale, fresh, unrelated, elsewhere]) {
+    mkdirSync(directory);
+    writeFileSync(join(directory, 'keep.txt'), 'existing content');
+    utimesSync(directory, old, old);
+  }
+  utimesSync(fresh, recent, recent);
+  const file = join(assets, '.fonts-fetch-file');
+  writeFileSync(file, 'ordinary file');
+  utimesSync(file, old, old);
+  const link = join(assets, '.fonts-fetch-link');
+  symlinkSync(elsewhere, link, 'dir');
+
+  await run(['--family', 'Chewy:400', '--dest', dest], fakeFetch().fetchImpl);
+
+  assert.equal(existsSync(stale), false);
+  assert.ok(existsSync(join(dest, 'fonts.css')));
+  for (const directory of [fresh, unrelated, elsewhere, link])
+    assert.equal(readFileSync(join(directory, 'keep.txt'), 'utf8'), 'existing content');
+  assert.equal(readFileSync(file, 'utf8'), 'ordinary file');
+});
+
+test('stale staging cleanup preserves an empty destination named like a staging folder', async (t) => {
+  const { root } = workspace(t);
+  const dest = join(root, '.fonts-fetch-destination');
+  mkdirSync(dest);
+  const old = new Date(Date.now() - 11 * 60_000);
+  utimesSync(dest, old, old);
+  const failure = new Error('Injected staging creation failure');
+  t.mock.method(fs, 'mkdtempSync', () => {
+    throw failure;
+  });
+  syncBuiltinESMExports();
+  t.after(() => {
+    t.mock.restoreAll();
+    syncBuiltinESMExports();
+  });
+
+  await assert.rejects(
+    run(['--family', 'Chewy:400', '--dest', dest], fakeFetch().fetchImpl),
+    (error) => error === failure,
+  );
+
+  assert.ok(existsSync(dest));
+  assert.deepEqual(readdirSync(dest), []);
 });
 
 test('rejects non-woff2 bytes and a missing Latin weight', async (t) => {
