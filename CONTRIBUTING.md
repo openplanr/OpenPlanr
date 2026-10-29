@@ -40,6 +40,17 @@ so the CLI's compiled exports exist.
 4. Regenerate derived files and include changed tracked manifests in the same PR.
 5. Describe the concrete behavior change, validation results, and limitations.
 
+Keep each pull request to one behavior change or one fix, with its tests and docs.
+Split unrelated changes. As a guide, keep pull requests to about 800 changed
+non-test lines; split larger work into ordered pull requests.
+
+Write changesets per audience. For `openplanr`, describe what a user can now do or
+what improved in one or two sentences. For library packages such as
+`@openplanr/protocol` and `planr-pipeline`, write one short line in their own terms.
+When a change touches several packages and needs different text, use one changeset
+file per audience. Keep internal refactors, test-only changes, and benchmark budgets
+out of the `openplanr` changeset text.
+
 Use product-oriented branch names such as `fix/diagram-labels` or
 `feat/review-navigation`, Conventional Commit subjects, and a changeset
 (`npm run changeset`) for every change that alters a published package. Keep private
