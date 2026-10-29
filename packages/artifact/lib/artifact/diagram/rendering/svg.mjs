@@ -4,6 +4,7 @@ import { measureDiagramText } from './text.mjs';
 import {
   DIAGRAM_PALETTE_KEYS,
   diagramMetrics,
+  diagramSeriesColors,
   isDashedRelation,
   resolveDiagramTheme,
 } from './theme.mjs';
@@ -19,15 +20,10 @@ export function escapeXml(value) {
 
 const coordinate = (value) => Math.round(value * 100) / 100;
 
-const SERIES_COLORS = Object.freeze([
-  '#0072b2',
-  '#d55e00',
-  '#009e73',
-  '#cc79a7',
-  '#e69f00',
-  '#56b4e9',
-]);
-const seriesColor = (index) => SERIES_COLORS[index % SERIES_COLORS.length];
+const seriesColor = (index, theme) => {
+  const colors = diagramSeriesColors(theme);
+  return colors[index % colors.length];
+};
 
 function renderChartText(text, theme) {
   return `<text x="${text.x}" y="${text.y + 13}" font-family="${theme.fontFamily}" font-size="13" fill="${theme.foreground}">${text.lines.map((line, index) => `<tspan x="${text.x}" y="${text.y + 13 + index * 18}">${escapeXml(line)}</tspan>`).join('')}</text>`;
@@ -39,7 +35,7 @@ function renderAxis(axis, theme) {
 }
 
 function renderMark(mark, theme) {
-  const color = seriesColor(mark.seriesIndex);
+  const color = seriesColor(mark.seriesIndex, theme);
   let shape;
   if (mark.kind === 'bar')
     shape = `<rect x="${mark.x}" y="${mark.y}" width="${mark.width}" height="${mark.height}" fill="${color}"/>`;
@@ -162,12 +158,19 @@ function renderNote(note, theme) {
  * swaps the whole drawing without structural hooks. resvg skips at-rules, so
  * the PNG keeps the light values.
  */
-function renderAdaptiveStyle(theme) {
+function renderAdaptiveStyle(theme, chart) {
   if (!theme.dark) return '';
-  const rules = DIAGRAM_PALETTE_KEYS.flatMap((key) => [
-    `[fill="${theme[key]}"]{fill:${theme.dark[key]}}`,
-    `[stroke="${theme[key]}"]{stroke:${theme.dark[key]}}`,
-  ]).join('');
+  const colors = DIAGRAM_PALETTE_KEYS.map((key) => [theme[key], theme.dark[key]]);
+  if (chart) {
+    const dark = diagramSeriesColors(theme.dark);
+    colors.push(...diagramSeriesColors(theme).map((color, index) => [color, dark[index]]));
+  }
+  const rules = colors
+    .flatMap(([light, dark]) => [
+      `[fill="${light}"]{fill:${dark}}`,
+      `[stroke="${light}"]{stroke:${dark}}`,
+    ])
+    .join('');
   return `<style>@media (prefers-color-scheme: dark){${rules}}</style>`;
 }
 
@@ -182,13 +185,13 @@ export function renderDiagramSvg(document, { theme = resolveDiagramTheme(documen
     `<svg xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="${titleId} ${descriptionId}" viewBox="0 0 ${scene.width} ${scene.height}" width="${scene.width}" height="${scene.height}">`,
     `<title id="${titleId}">${escapeXml(document.accessibility.title)}</title>`,
     `<desc id="${descriptionId}">${escapeXml(document.accessibility.description)}</desc>`,
-    `<defs>${renderAdaptiveStyle(theme)}<marker id="diagram-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M 0 0 L 10 5 L 0 10 z" fill="${theme.border}"/></marker></defs>`,
+    `<defs>${renderAdaptiveStyle(theme, scene.kind === 'chart')}<marker id="diagram-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M 0 0 L 10 5 L 0 10 z" fill="${theme.border}"/></marker></defs>`,
     `<rect width="${scene.width}" height="${scene.height}" fill="${theme.background}"/>`,
     ...scene.axes.map((axis) => renderAxis(axis, theme)),
     ...(scene.marks ?? []).map((mark) => renderMark(mark, theme)),
     ...(scene.legend ?? []).map(
       (text) =>
-        `<g><line x1="${text.x - 28}" y1="${text.y + 8}" x2="${text.x - 8}" y2="${text.y + 8}" stroke="${seriesColor(text.seriesIndex)}" stroke-width="3"${text.seriesIndex % 2 ? ' stroke-dasharray="8 5"' : ''}/>${renderChartText(text, theme)}</g>`,
+        `<g><line x1="${text.x - 28}" y1="${text.y + 8}" x2="${text.x - 8}" y2="${text.y + 8}" stroke="${seriesColor(text.seriesIndex, theme)}" stroke-width="3"${text.seriesIndex % 2 ? ' stroke-dasharray="8 5"' : ''}/>${renderChartText(text, theme)}</g>`,
     ),
     ...scene.lanes.map((lane) => renderLane(lane, theme, metrics)),
     ...scene.groups.map((group) => renderGroup(group, theme, metrics)),

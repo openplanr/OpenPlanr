@@ -40,8 +40,9 @@ script-free galleries are generated under `fixtures/diagram/`,
 `references/diagram/`, and `gallery/diagram/`.
 
 Cartesian charts place categorical keys in first-appearance order across the
-declared series. Ordinal axes use that same order and reject a series whose keys
-reverse it; declare consistent key order across series. Bar and line series
+declared series. Ordinal axes merge the orders declared by each series and reject
+cycles. Initially unconstrained keys enter a queue in first-appearance order;
+newly unblocked keys follow keys already waiting. Bar and line series
 reject duplicate keys, while scatter series allow repeated horizontal values.
 
 `@openplanr/artifact/diagram-editor` exports the shared browser editor and its

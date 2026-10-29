@@ -58,7 +58,7 @@ function domainScale(document, values, scale, zero) {
   const spansZero = scale === 'linear' && minimum < 0 && maximum > 0;
   if (zero && spansZero && !ticks.some(({ value }) => value === 0)) {
     const fraction = -(minimum / unit) / (maximum / unit - minimum / unit);
-    const nearest = Math.max(1, Math.min(3, Math.round(fraction * 4)));
+    const nearest = Math.round(fraction * 4);
     ticks[nearest] = { fraction, value: 0 };
   }
   let precision = 4;
@@ -87,6 +87,45 @@ function domainScale(document, values, scale, zero) {
   };
 }
 
+function mergeOrdinalKeys(document, keys) {
+  const following = new Map(keys.map((key) => [key, new Set()]));
+  const preceding = new Map(keys.map((key) => [key, new Map()]));
+  for (const series of document.series) {
+    for (let index = 1; index < series.values.length; index += 1) {
+      const before = series.values[index - 1].key;
+      const after = series.values[index].key;
+      following.get(before).add(after);
+      preceding.get(after).set(before, series.id);
+    }
+  }
+  const remaining = new Map(keys.map((key) => [key, preceding.get(key).size]));
+  const ordered = keys.filter((key) => remaining.get(key) === 0);
+  for (let index = 0; index < ordered.length; index += 1) {
+    for (const key of following.get(ordered[index])) {
+      remaining.set(key, remaining.get(key) - 1);
+      if (remaining.get(key) === 0) ordered.push(key);
+    }
+  }
+  if (ordered.length !== keys.length) {
+    let key = keys.find((candidate) => remaining.get(candidate) > 0);
+    const visited = new Map();
+    while (!visited.has(key)) {
+      const [before, seriesId] = [...preceding.get(key)].find(
+        ([candidate]) => remaining.get(candidate) > 0,
+      );
+      visited.set(key, { before, after: key, seriesId });
+      key = before;
+    }
+    const { before, after, seriesId } = visited.get(key);
+    invalid(
+      document,
+      `Conflicting ordinal key order in series ${seriesId}: ${JSON.stringify(before)} precedes ${JSON.stringify(after)}, but the series orders form a cycle. Use consistent key order across series.`,
+      { seriesId, keys: [before, after] },
+    );
+  }
+  return ordered;
+}
+
 /** Cartesian axes use declaration order; numeric scatter x values come from series keys. */
 export function layoutCartesianChart(document, { wrapDiagramLabel }) {
   const kind = document.grammar.id;
@@ -107,33 +146,19 @@ export function layoutCartesianChart(document, { wrapDiagramLabel }) {
     diagramFail(DIAGRAM_ERROR_CODES.RESOURCE_BUDGET_EXCEEDED, 'Chart exceeds 10000 data marks.', {
       count,
     });
-  const keys = [...new Set(document.series.flatMap(({ values }) => values.map(({ key }) => key)))];
-  const categories = new Map(keys.map((key, index) => [key, index]));
   for (const series of document.series) {
     if (
       ['bar', 'line'].includes(kind) &&
       new Set(series.values.map(({ key }) => key)).size !== series.values.length
     )
       invalid(document, `Duplicate keys in series ${series.id}.`, { seriesId: series.id });
-    if (horizontal.scale === 'ordinal') {
-      const conflict = series.values.findIndex(
-        ({ key }, index) =>
-          index > 0 && categories.get(key) < categories.get(series.values[index - 1].key),
-      );
-      if (conflict > 0) {
-        const before = series.values[conflict - 1].key;
-        const after = series.values[conflict].key;
-        invalid(
-          document,
-          `Conflicting ordinal key order in series ${series.id}: ${JSON.stringify(before)} precedes ${JSON.stringify(after)}, but first-appearance order requires the reverse. Use consistent key order across series.`,
-          {
-            seriesId: series.id,
-            keys: [before, after],
-          },
-        );
-      }
-    }
   }
+  const firstAppearance = [
+    ...new Set(document.series.flatMap(({ values }) => values.map(({ key }) => key))),
+  ];
+  const keys =
+    horizontal.scale === 'ordinal' ? mergeOrdinalKeys(document, firstAppearance) : firstAppearance;
+  const categories = new Map(keys.map((key, index) => [key, index]));
   const data = document.series.map((series) =>
     series.values.map(({ key, value }) => ({
       key,

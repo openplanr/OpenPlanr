@@ -10,6 +10,7 @@ import {
 } from '../lib/artifact/diagram/index.mjs';
 import { createRenderQualityReport } from '../lib/artifact/diagram/rendering/reports.mjs';
 import { resolveDiagramTheme } from '../lib/artifact/diagram/rendering/theme.mjs';
+import { contrastRatio } from '../lib/artifact/internal/contrast.mjs';
 
 function chart(kind, changes = {}) {
   const base = JSON.parse(
@@ -89,7 +90,23 @@ test('mixed-sign bars grow from a rendered zero baseline and labelled tick', () 
     assert.equal(mark.value < 0 ? mark.y : mark.y + mark.height, zero.y);
 });
 
-test('categorical keys keep first appearance while ordinal order conflicts name their input', () => {
+for (const values of [
+  [-1, 100],
+  [-100, 1],
+  [-3, 7],
+])
+  test(`zero tick stays readable for mixed-sign values ${values.join(', ')}`, () => {
+    const { scene, quality } = renderDiagramOutputs(
+      chart('bar', { series: [series(values.map((value, index) => [String(index), value]))] }),
+    );
+    assert.equal(quality.status, 'pass');
+    assert.equal(quality.checks.find(({ id }) => id === 'label-overlap').status, 'pass');
+    const zeros = scene.axes[1].ticks.filter(({ text }) => text.lines.join('') === '0');
+    assert.equal(zeros.length, 1);
+    assert.equal(scene.axes[0].y1, zeros[0].y);
+  });
+
+test('categorical keys keep first appearance while ordinal keys merge series orders', () => {
   const base = chart('line');
   const samples = [
     series(
@@ -115,12 +132,44 @@ test('categorical keys keep first appearance while ordinal order conflicts name 
     layoutDiagram(categorical).axes[0].ticks.map(({ text }) => text.lines.join('')),
     ['Jan', 'Mar', 'Feb'],
   );
+  for (const second of [samples[1], series([['Feb', 2]], 'series-b')]) {
+    const { scene, quality } = renderDiagramOutputs(
+      chart('line', {
+        axes: [{ ...base.axes[0], scale: 'ordinal' }, base.axes[1]],
+        series: [samples[0], second],
+      }),
+    );
+    assert.equal(quality.status, 'pass');
+    assert.deepEqual(
+      scene.axes[0].ticks.map(({ text }) => text.lines.join('')),
+      ['Jan', 'Feb', 'Mar'],
+    );
+  }
+});
+
+test('conflicting ordinal orders name the series and keys in the cycle', () => {
+  const base = chart('line');
   assert.throws(
     () =>
       layoutDiagram(
         chart('line', {
           axes: [{ ...base.axes[0], scale: 'ordinal' }, base.axes[1]],
-          series: samples,
+          series: [
+            series(
+              [
+                ['Mar', 1],
+                ['Feb', 2],
+              ],
+              'series-a',
+            ),
+            series(
+              [
+                ['Feb', 3],
+                ['Mar', 4],
+              ],
+              'series-b',
+            ),
+          ],
         }),
       ),
     (error) => {
@@ -181,6 +230,23 @@ for (const kind of ['bar', 'line', 'scatter'])
       assert.equal(new Set([...bySeries.values()].slice(0, 4)).size, 4);
       assert.equal(new Set(bySeries.values()).size, 6);
       const resolved = resolveDiagramTheme(theme);
+      for (const color of bySeries.values()) {
+        const ratio = contrastRatio(color, resolved.background);
+        assert.ok(ratio !== null && ratio >= 3, `${color} on ${resolved.background}: ${ratio}`);
+        if (resolved.dark) {
+          for (const attribute of ['fill', 'stroke']) {
+            const dark = svg.match(
+              new RegExp(`\\[${attribute}="${color}"\\]\\{${attribute}:(#[0-9a-f]{6})\\}`, 'iu'),
+            )?.[1];
+            assert.ok(dark, `${color} has a dark ${attribute} remap`);
+            const darkRatio = contrastRatio(dark, resolved.dark.background);
+            assert.ok(
+              darkRatio !== null && darkRatio >= 3,
+              `${dark} on ${resolved.dark.background}: ${darkRatio}`,
+            );
+          }
+        }
+      }
       assert.ok(
         [...bySeries.values()].every(
           (color) => color !== resolved.border && color !== resolved.dark?.border,
