@@ -397,7 +397,7 @@
     {
       "source": "packages/design/lib/design/font-fetch.mjs",
       "target": "lib/design/font-fetch.mjs",
-      "sha256": "34b73ef83a408cfe44ecc1fc662c1672407f5d066684553b3800c97684cd8707",
+      "sha256": "5b2671918fdc6c17e0f312c3393109dc22b5daad84a87e126a33991590161690",
       "mode": "644"
     },
     {
