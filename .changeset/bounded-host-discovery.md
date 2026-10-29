@@ -2,4 +2,4 @@
 'planr-pipeline': patch
 ---
 
-Bound runtime version probes and report stalled launchers without treating them as missing. Probe only the selected runtime for explicit or saved choices, bound doctor version checks, and isolate Pipeline tests from installed coding-host executables.
+Bounds runtime version probes and reports stalled launchers as unknown instead of missing. Explicit or saved runtime choices probe only the selected runtime.
