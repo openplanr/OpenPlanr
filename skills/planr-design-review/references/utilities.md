@@ -2,7 +2,8 @@
 
 Run the linked design helper from the skill entrypoint relative to the skill's
 directory. It contains deterministic operations and all required assets. It needs
-Node.js 22.13 or later, with no global CLI, provider credentials or runtime downloads.
+Node.js 22.13 or later, with no global CLI or provider credentials. Only `fonts fetch`
+downloads anything, and only when run; nothing is fetched when a design opens.
 Use `--help` to inspect the installed command interface before writing documents
 or invoking operations; the installed contract is authoritative.
 
@@ -15,7 +16,16 @@ node scripts/design.mjs feedback <design-document.json> --action inspect --json
 node scripts/design.mjs view-context <design-document.json> --json
 node scripts/design.mjs studio <design-document.json> --action status --json
 node scripts/design.mjs studio <design-document.json> --action stop --json
+node scripts/design.mjs fonts fetch --family "<Name>:<weights>" [--family ...] --dest <design>/source/assets/fonts --json
 ```
+
+`fonts fetch` snapshots at most two OFL or Apache families, three weights each, as
+Latin `woff2` files with their license files and a local `fonts.css`. It needs network
+access; ask the user to approve that one command. A host that allowlists domains needs
+`raw.githubusercontent.com` (license check), `fonts.googleapis.com` (font CSS) and
+`fonts.gstatic.com` (font files). It refuses an existing non-empty
+`--dest` and leaves nothing behind when any request fails. See
+[design-system.md](design-system.md) for the fallback.
 
 Use `--view prototype` or `--view walkthrough` to select the initial presentation.
 When an `openplanr` CLI is available, prefer its public `openplanr artifact` route for

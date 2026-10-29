@@ -54,8 +54,23 @@ while authoring:
 - at most two families and three weights each; one variable file can cover a
   family's weights.
 
-Snapshotting needs network access while authoring. When it is unavailable, or a
-license is unclear, use the role's system stack and name that fallback in the return:
+Snapshot with the bundled helper, run from the skill directory (see
+[utilities.md](utilities.md)):
+
+```sh
+node scripts/design.mjs fonts fetch --family "Inter:400,600" --family "Source Serif 4:400" --dest <design>/source/assets/fonts
+```
+
+It is the one command to ask approval for. A host that allowlists network access by
+domain needs `raw.githubusercontent.com`, `fonts.googleapis.com` and
+`fonts.gstatic.com`. It enforces the rules above, verifies each
+license from the Google Fonts catalog, writes `fonts.css`, and prints the files and
+total bytes. Start the design stylesheet with `@import "assets/fonts/fonts.css";`
+(relative to that stylesheet), then use the families by name. Nothing is fetched when
+a design opens.
+
+When the host denies network access, the command fails, or it refuses a license, use
+the role's system stack and name that fallback in the return:
 
 | Role | System stack |
 | --- | --- |

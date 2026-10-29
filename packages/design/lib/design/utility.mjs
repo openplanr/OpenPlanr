@@ -14,6 +14,7 @@ import {
   standaloneDesignHtml,
 } from './document.mjs';
 import { importDesignFeedback } from './feedback-import.mjs';
+import { fetchDesignFonts } from './font-fetch.mjs';
 import { matchesDesignFrame } from './frame-size.mjs';
 import { readDesignHandoff, updateDesignHandoff } from './handoff.mjs';
 import {
@@ -139,7 +140,7 @@ export async function designUtility(
   if (argv.length === 0 || argv[0] === '--help' || argv[0] === 'help') {
     const help = {
       usage:
-        'design.mjs inspect|validate|render|open|studio|view-context|export|feedback|verify|share|publish|sync|manage|handoff <design-document.json>',
+        'design.mjs inspect|validate|render|open|studio|view-context|export|feedback|verify|share|publish|sync|manage|handoff <design-document.json> | design.mjs fonts fetch --family "<Name>:<weights>" [--family ...] --dest <dir>',
       flags: [
         '--json',
         '--no-open',
@@ -157,8 +158,10 @@ export async function designUtility(
         '--variant <id>',
         '--pins <id,id>',
         '--summary <text>',
+        '--family <Name>:<weight,weight> (fonts fetch; at most 2 families, 3 weights each)',
+        '--dest <design>/source/assets/fonts (fonts fetch)',
       ],
-      note: 'The host authors design sources. This utility only validates, renders, reviews and exports them.',
+      note: 'The host authors design sources. This utility only validates, renders, reviews and exports them; fonts fetch downloads open-license fonts only when run.',
     };
     stdout(help);
     return help;
@@ -180,11 +183,12 @@ export async function designUtility(
       'sync',
       'manage',
       'handoff',
+      'fonts',
     ].includes(command) ||
     !input
   )
     throw new Error(
-      'Usage: design.mjs inspect|validate|render|open|studio|view-context|export|feedback|verify|share|publish|sync|manage|handoff <design-document.json> [--json] [--no-open] [--view canvas|prototype|walkthrough]',
+      'Usage: design.mjs inspect|validate|render|open|studio|view-context|export|feedback|verify|share|publish|sync|manage|handoff <design-document.json> [--json] [--no-open] [--view canvas|prototype|walkthrough] | design.mjs fonts fetch --family "<Name>:<weights>" [--family ...] --dest <dir>',
     );
   const flags = {};
   for (let i = 0; i < args.length; i++) {
@@ -209,13 +213,27 @@ export async function designUtility(
         'revision',
         'request-time',
         'allow-stale',
+        'family',
+        'dest',
       ].includes(key)
     )
       throw new Error(`Unknown option: ${args[i]}`);
-    flags[key] = ['json', 'no-open', 'allow-stale'].includes(key) ? true : args[++i];
+    if (['family', 'dest'].includes(key) && command !== 'fonts')
+      throw new Error(`Unknown option for ${command}: ${args[i]}`);
+    if (key === 'family') flags.family = [...(flags.family ?? []), args[++i]];
+    else flags[key] = ['json', 'no-open', 'allow-stale'].includes(key) ? true : args[++i];
   }
   if (flags.view && !['canvas', 'prototype', 'walkthrough'].includes(flags.view))
     throw new Error('View must be canvas, prototype, or walkthrough.');
+  if (command === 'fonts') {
+    if (input !== 'fetch')
+      throw new Error(
+        'Usage: design.mjs fonts fetch --family "<Name>:<weights>" [--family ...] --dest <dir>',
+      );
+    const result = await fetchDesignFonts({ families: flags.family, dest: flags.dest, fetchImpl });
+    stdout(result);
+    return result;
+  }
   const file = resolve(input);
   let result;
   if (command === 'view-context')
