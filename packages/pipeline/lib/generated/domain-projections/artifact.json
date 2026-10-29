@@ -811,7 +811,7 @@
     {
       "source": "packages/artifact/lib/artifact/diagram/rendering/layouts/chart-cartesian.mjs",
       "target": "lib/artifact/diagram/rendering/layouts/chart-cartesian.mjs",
-      "sha256": "1be6a359bc1fc8b432fc97e9c6a4ca3f6dcb8f5d183187e78861d62f61d8ea85",
+      "sha256": "97c56319026f9b972e5136df19e26b7a7225ac13e269c12c683f0a2ab26c94ae",
       "mode": "644"
     },
     {
@@ -829,7 +829,7 @@
     {
       "source": "packages/artifact/lib/artifact/diagram/rendering/svg.mjs",
       "target": "lib/artifact/diagram/rendering/svg.mjs",
-      "sha256": "8c4c11ca28845cdd847bc9ff5c3ea44fed34a549af5010409e73eeb92014203a",
+      "sha256": "2f1ecf3a25febdc6c7efd3476d5e3415f4afc5014f2203a8585eac945bd0cc57",
       "mode": "644"
     },
     {
@@ -1525,7 +1525,7 @@
     {
       "source": "packages/artifact/lib/artifact/ui/generated/artifact-shell-assets.json",
       "target": "lib/artifact/ui/generated/artifact-shell-assets.json",
-      "sha256": "7f12593fd888e340ae19f73e64f12b8826d66c3f218f7e7424c229813fb716cb",
+      "sha256": "10873562bd3791e5d109a0651a2a8edfd3f17629ad06d71c7b7ada00146cfec7",
       "mode": "644"
     },
     {
@@ -2077,7 +2077,7 @@
     {
       "source": "packages/artifact/templates/diagram-owner.js",
       "target": "templates/diagram-owner.js",
-      "sha256": "d54caf9ebeb0496dc15b914f616ca0e3f5f2bc1579738818a9854ddf93288186",
+      "sha256": "8fbe548cbc25a5aefb7bd424a97c5582633144e5ac2bb68d8c7363f6fb614bac",
       "mode": "644"
     },
     {

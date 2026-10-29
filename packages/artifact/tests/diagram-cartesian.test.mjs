@@ -9,6 +9,7 @@ import {
   renderDiagramOutputs,
 } from '../lib/artifact/diagram/index.mjs';
 import { createRenderQualityReport } from '../lib/artifact/diagram/rendering/reports.mjs';
+import { resolveDiagramTheme } from '../lib/artifact/diagram/rendering/theme.mjs';
 
 function chart(kind, changes = {}) {
   const base = JSON.parse(
@@ -36,6 +37,168 @@ const report = (document, scene) =>
     scene,
     png: { width: 1, height: 1, byteLength: 1 },
     svgValidation: { ok: true },
+  });
+
+for (let count = 3; count <= 7; count += 1)
+  test(`grouped bars leave visible gaps with ${count} series`, () => {
+    const document = chart('bar', {
+      series: Array.from({ length: count }, (_, index) =>
+        series(
+          [
+            ['Jan', 10 + index],
+            ['Feb', 20 + index],
+          ],
+          `series-${index}`,
+        ),
+      ),
+    });
+    const { scene, quality } = renderDiagramOutputs(document);
+    assert.equal(quality.status, 'pass');
+    for (const key of ['Jan', 'Feb']) {
+      const bars = scene.marks.filter((mark) => mark.key === key);
+      for (let index = 1; index < bars.length; index += 1)
+        assert.ok(bars[index].x - (bars[index - 1].x + bars[index - 1].width) > 1);
+    }
+  });
+
+test('mixed-sign bars grow from a rendered zero baseline and labelled tick', () => {
+  const { scene, quality, svg } = renderDiagramOutputs(
+    chart('bar', {
+      series: [
+        series([
+          ['A', -5],
+          ['B', 10],
+          ['C', -20],
+        ]),
+      ],
+    }),
+  );
+  assert.equal(quality.status, 'pass');
+  const zero = scene.axes[1].ticks.find(({ text }) => text.lines.join('') === '0');
+  assert.ok(zero, 'The value axis must label zero');
+  assert.equal(scene.axes[0].y1, zero.y);
+  assert.equal(scene.axes[0].y2, zero.y);
+  assert.match(
+    svg,
+    new RegExp(
+      `<line x1="${scene.axes[0].x1}" y1="${zero.y}" x2="${scene.axes[0].x2}" y2="${zero.y}"`,
+      'u',
+    ),
+  );
+  for (const mark of scene.marks)
+    assert.equal(mark.value < 0 ? mark.y : mark.y + mark.height, zero.y);
+});
+
+test('categorical keys keep first appearance while ordinal order conflicts name their input', () => {
+  const base = chart('line');
+  const samples = [
+    series(
+      [
+        ['Jan', 1],
+        ['Mar', 3],
+      ],
+      'series-a',
+    ),
+    series(
+      [
+        ['Feb', 2],
+        ['Mar', 4],
+      ],
+      'series-b',
+    ),
+  ];
+  const categorical = chart('line', {
+    axes: [{ ...base.axes[0], scale: 'categorical' }, base.axes[1]],
+    series: samples,
+  });
+  assert.deepEqual(
+    layoutDiagram(categorical).axes[0].ticks.map(({ text }) => text.lines.join('')),
+    ['Jan', 'Mar', 'Feb'],
+  );
+  assert.throws(
+    () =>
+      layoutDiagram(
+        chart('line', {
+          axes: [{ ...base.axes[0], scale: 'ordinal' }, base.axes[1]],
+          series: samples,
+        }),
+      ),
+    (error) => {
+      assert.equal(error.code, 'E_DIAGRAM_RENDER_FAILED');
+      assert.match(error.message, /ordinal/iu);
+      assert.match(error.message, /series-b/u);
+      assert.match(error.message, /Feb/u);
+      assert.match(error.message, /Mar/u);
+      return true;
+    },
+  );
+});
+
+test('line charts reject repeated keys with series diagnostics', () => {
+  assert.throws(
+    () =>
+      layoutDiagram(
+        chart('line', {
+          series: [
+            series([
+              ['Jan', 1],
+              ['Jan', 5],
+              ['Feb', 2],
+            ]),
+          ],
+        }),
+      ),
+    { code: 'E_DIAGRAM_RENDER_FAILED', message: /Duplicate keys in series series-main/u },
+  );
+});
+
+for (const kind of ['bar', 'line', 'scatter'])
+  test(`${kind} uses six distinct series colours and matching legend colours in every theme`, () => {
+    for (const theme of [
+      { themeId: 'openplanr-default', mode: 'light' },
+      ...['light', 'dark', 'auto'].map((mode) => ({ themeId: 'openplanr', mode })),
+    ]) {
+      const { svg } = renderDiagramOutputs(
+        chart(kind, {
+          theme,
+          series: Array.from({ length: 6 }, (_, index) =>
+            series(
+              [
+                ['1', index + 1],
+                ['2', index + 2],
+              ],
+              `series-${index}`,
+            ),
+          ),
+        }),
+      );
+      const colors = Array.from(
+        svg.matchAll(
+          /<g data-mark-id="([^"]+)"[^>]*><title>[^<]*<\/title><(?:rect|circle|polyline)[^>]*?(?:fill|stroke)="(#[^"]+)"/gu,
+        ),
+      ).map(([, id, color]) => [id, color]);
+      const bySeries = new Map(colors);
+      assert.equal(new Set([...bySeries.values()].slice(0, 4)).size, 4);
+      assert.equal(new Set(bySeries.values()).size, 6);
+      const resolved = resolveDiagramTheme(theme);
+      assert.ok(
+        [...bySeries.values()].every(
+          (color) => color !== resolved.border && color !== resolved.dark?.border,
+        ),
+      );
+      const legendColors = Array.from(
+        svg.matchAll(/<g><line [^>]*stroke="(#[^"]+)"/gu),
+        ([, color]) => color,
+      );
+      assert.deepEqual(legendColors, [...bySeries.values()]);
+      if (kind === 'line') {
+        const lines = Array.from(svg.matchAll(/<polyline [^>]+/gu), ([line]) => line);
+        assert.deepEqual(
+          lines.map((line) => line.includes('stroke-dasharray="8 5"')),
+          [false, true, false, true, false, true],
+        );
+      }
+    }
   });
 
 for (const kind of ['bar', 'line', 'scatter'])

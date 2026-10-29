@@ -55,6 +55,12 @@ function domainScale(document, values, scale, zero) {
           : value,
     };
   });
+  const spansZero = scale === 'linear' && minimum < 0 && maximum > 0;
+  if (zero && spansZero && !ticks.some(({ value }) => value === 0)) {
+    const fraction = -(minimum / unit) / (maximum / unit - minimum / unit);
+    const nearest = Math.max(1, Math.min(3, Math.round(fraction * 4)));
+    ticks[nearest] = { fraction, value: 0 };
+  }
   let precision = 4;
   while (
     precision < 17 &&
@@ -62,6 +68,7 @@ function domainScale(document, values, scale, zero) {
   )
     precision += 1;
   return {
+    spansZero,
     position(value) {
       const transformedValue = scale === 'logarithmic' ? Math.log10(value) : value;
       return (transformedValue / unit - minimum / unit) / (maximum / unit - minimum / unit);
@@ -104,10 +111,28 @@ export function layoutCartesianChart(document, { wrapDiagramLabel }) {
   const categories = new Map(keys.map((key, index) => [key, index]));
   for (const series of document.series) {
     if (
-      kind === 'bar' &&
+      ['bar', 'line'].includes(kind) &&
       new Set(series.values.map(({ key }) => key)).size !== series.values.length
     )
       invalid(document, `Duplicate keys in series ${series.id}.`, { seriesId: series.id });
+    if (horizontal.scale === 'ordinal') {
+      const conflict = series.values.findIndex(
+        ({ key }, index) =>
+          index > 0 && categories.get(key) < categories.get(series.values[index - 1].key),
+      );
+      if (conflict > 0) {
+        const before = series.values[conflict - 1].key;
+        const after = series.values[conflict].key;
+        invalid(
+          document,
+          `Conflicting ordinal key order in series ${series.id}: ${JSON.stringify(before)} precedes ${JSON.stringify(after)}, but first-appearance order requires the reverse. Use consistent key order across series.`,
+          {
+            seriesId: series.id,
+            keys: [before, after],
+          },
+        );
+      }
+    }
   }
   const data = document.series.map((series) =>
     series.values.map(({ key, value }) => ({
@@ -195,9 +220,9 @@ export function layoutCartesianChart(document, { wrapDiagramLabel }) {
       width: index === 0 ? plotWidth : 1,
       height: plotHeight,
       x1: left,
-      y1: bottom,
+      y1: index === 0 && yScale.spansZero ? y(0) : bottom,
       x2: index === 0 ? right : left,
-      y2: index === 0 ? bottom : top,
+      y2: index === 0 ? (yScale.spansZero ? y(0) : bottom) : top,
       ticks: Object.freeze(ticks.map(Object.freeze)),
       text,
       emphasis: emphasis(axis.id),
@@ -232,14 +257,15 @@ export function layoutCartesianChart(document, { wrapDiagramLabel }) {
         py = y(item.value);
       if (kind === 'bar') {
         const slot = (plotWidth - 24) / keys.length;
-        const width = (slot * 0.7) / document.series.length;
+        const seriesSlot = (slot * 0.7) / document.series.length;
+        const width = seriesSlot * 0.9;
         const baseline = y(0);
         marks.push({
           ...common,
           kind: 'bar',
           key: item.key,
           value: item.value,
-          x: px - slot * 0.35 + seriesIndex * width,
+          x: px - slot * 0.35 + seriesIndex * seriesSlot + (seriesSlot - width) / 2,
           y: Math.min(py, baseline),
           width,
           height: Math.abs(baseline - py),

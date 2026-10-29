@@ -19,7 +19,15 @@ export function escapeXml(value) {
 
 const coordinate = (value) => Math.round(value * 100) / 100;
 
-const seriesColor = (index, theme) => [theme.accent, theme.foreground, theme.border][index % 3];
+const SERIES_COLORS = Object.freeze([
+  '#0072b2',
+  '#d55e00',
+  '#009e73',
+  '#cc79a7',
+  '#e69f00',
+  '#56b4e9',
+]);
+const seriesColor = (index) => SERIES_COLORS[index % SERIES_COLORS.length];
 
 function renderChartText(text, theme) {
   return `<text x="${text.x}" y="${text.y + 13}" font-family="${theme.fontFamily}" font-size="13" fill="${theme.foreground}">${text.lines.map((line, index) => `<tspan x="${text.x}" y="${text.y + 13 + index * 18}">${escapeXml(line)}</tspan>`).join('')}</text>`;
@@ -31,7 +39,7 @@ function renderAxis(axis, theme) {
 }
 
 function renderMark(mark, theme) {
-  const color = seriesColor(mark.seriesIndex, theme);
+  const color = seriesColor(mark.seriesIndex);
   let shape;
   if (mark.kind === 'bar')
     shape = `<rect x="${mark.x}" y="${mark.y}" width="${mark.width}" height="${mark.height}" fill="${color}"/>`;
@@ -180,7 +188,7 @@ export function renderDiagramSvg(document, { theme = resolveDiagramTheme(documen
     ...(scene.marks ?? []).map((mark) => renderMark(mark, theme)),
     ...(scene.legend ?? []).map(
       (text) =>
-        `<g><line x1="${text.x - 28}" y1="${text.y + 8}" x2="${text.x - 8}" y2="${text.y + 8}" stroke="${seriesColor(text.seriesIndex, theme)}" stroke-width="3"${text.seriesIndex % 2 ? ' stroke-dasharray="8 5"' : ''}/>${renderChartText(text, theme)}</g>`,
+        `<g><line x1="${text.x - 28}" y1="${text.y + 8}" x2="${text.x - 8}" y2="${text.y + 8}" stroke="${seriesColor(text.seriesIndex)}" stroke-width="3"${text.seriesIndex % 2 ? ' stroke-dasharray="8 5"' : ''}/>${renderChartText(text, theme)}</g>`,
     ),
     ...scene.lanes.map((lane) => renderLane(lane, theme, metrics)),
     ...scene.groups.map((group) => renderGroup(group, theme, metrics)),
