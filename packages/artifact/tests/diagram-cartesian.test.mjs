@@ -132,7 +132,10 @@ test('categorical keys keep first appearance while ordinal keys merge series ord
     layoutDiagram(categorical).axes[0].ticks.map(({ text }) => text.lines.join('')),
     ['Jan', 'Mar', 'Feb'],
   );
-  for (const second of [samples[1], series([['Feb', 2]], 'series-b')]) {
+  for (const [second, expected] of [
+    [samples[1], ['Jan', 'Feb', 'Mar']],
+    [series([['Feb', 2]], 'series-b'), ['Jan', 'Mar', 'Feb']],
+  ]) {
     const { scene, quality } = renderDiagramOutputs(
       chart('line', {
         axes: [{ ...base.axes[0], scale: 'ordinal' }, base.axes[1]],
@@ -142,10 +145,36 @@ test('categorical keys keep first appearance while ordinal keys merge series ord
     assert.equal(quality.status, 'pass');
     assert.deepEqual(
       scene.axes[0].ticks.map(({ text }) => text.lines.join('')),
-      ['Jan', 'Feb', 'Mar'],
+      expected,
     );
   }
 });
+
+for (const [first, second] of [
+  [['Jan', 'Feb', 'Mar'], ['Apr']],
+  [
+    ['Jan', 'Feb'],
+    ['Mar', 'Apr'],
+  ],
+])
+  test(`ordinal keys preserve first appearance for ${first.join(', ')} + ${second.join(', ')}`, () => {
+    const base = chart('line');
+    const scene = layoutDiagram(
+      chart('line', {
+        axes: [{ ...base.axes[0], scale: 'ordinal' }, base.axes[1]],
+        series: [first, second].map((keys, index) =>
+          series(
+            keys.map((key, value) => [key, value + 1]),
+            `series-${index}`,
+          ),
+        ),
+      }),
+    );
+    assert.deepEqual(
+      scene.axes[0].ticks.map(({ text }) => text.lines.join('')),
+      ['Jan', 'Feb', 'Mar', 'Apr'],
+    );
+  });
 
 test('conflicting ordinal orders name the series and keys in the cycle', () => {
   const base = chart('line');
@@ -157,7 +186,7 @@ test('conflicting ordinal orders name the series and keys in the cycle', () => {
           series: [
             series(
               [
-                ['Mar', 1],
+                ['Jan', 1],
                 ['Feb', 2],
               ],
               'series-a',
@@ -165,7 +194,7 @@ test('conflicting ordinal orders name the series and keys in the cycle', () => {
             series(
               [
                 ['Feb', 3],
-                ['Mar', 4],
+                ['Jan', 4],
               ],
               'series-b',
             ),
@@ -177,7 +206,50 @@ test('conflicting ordinal orders name the series and keys in the cycle', () => {
       assert.match(error.message, /ordinal/iu);
       assert.match(error.message, /series-b/u);
       assert.match(error.message, /Feb/u);
+      assert.match(error.message, /Jan/u);
+      return true;
+    },
+  );
+});
+
+test('three-series ordinal cycles name the conflicting series and keys', () => {
+  const base = chart('line');
+  assert.throws(
+    () =>
+      layoutDiagram(
+        chart('line', {
+          axes: [{ ...base.axes[0], scale: 'ordinal' }, base.axes[1]],
+          series: [
+            series(
+              [
+                ['Jan', 1],
+                ['Feb', 2],
+              ],
+              'series-a',
+            ),
+            series(
+              [
+                ['Feb', 2],
+                ['Mar', 3],
+              ],
+              'series-b',
+            ),
+            series(
+              [
+                ['Mar', 3],
+                ['Jan', 1],
+              ],
+              'series-c',
+            ),
+          ],
+        }),
+      ),
+    (error) => {
+      assert.equal(error.code, 'E_DIAGRAM_RENDER_FAILED');
+      assert.match(error.message, /ordinal/iu);
+      assert.match(error.message, /series-c/u);
       assert.match(error.message, /Mar/u);
+      assert.match(error.message, /Jan/u);
       return true;
     },
   );

@@ -337,7 +337,7 @@
     {
       "source": "packages/artifact/gallery/diagram/inventory.json",
       "target": "gallery/diagram/inventory.json",
-      "sha256": "10cbffdeb1defb14e8b1f332dfb791094fa04d6e0e17415481ec438a52081a3c",
+      "sha256": "8a2e3bd558190b780e4ac2a0adc4f7f25a5359270aa86fd8f2dfbc5e131d0303",
       "mode": "644"
     },
     {
@@ -811,7 +811,7 @@
     {
       "source": "packages/artifact/lib/artifact/diagram/rendering/layouts/chart-cartesian.mjs",
       "target": "lib/artifact/diagram/rendering/layouts/chart-cartesian.mjs",
-      "sha256": "f8e5cc805e87870f704ac16de5ed7c7ea92e7548d4913013ee3c7fe1a86a52c7",
+      "sha256": "020c65ab43be0bec1edb6ef367aec946e5568ad0f6c20a4deed7c33c2981219d",
       "mode": "644"
     },
     {
@@ -1813,7 +1813,7 @@
     {
       "source": "packages/artifact/references/diagram/bar.md",
       "target": "references/diagram/bar.md",
-      "sha256": "8f9c03c5c4e0a55ee44cc05c1b6b45776b83ef665126d9d52f68a742acc833e4",
+      "sha256": "d6a000e16da311887af875e681e8fac39988351622babe0d916a1849ad6e4561",
       "mode": "644"
     },
     {
@@ -1903,7 +1903,7 @@
     {
       "source": "packages/artifact/references/diagram/line.md",
       "target": "references/diagram/line.md",
-      "sha256": "12ab3e32f7dfec264d8ac498bc6c217b61b8441577ee95dfb3e3514b070401f7",
+      "sha256": "a6bc3331fd2de64b222d578d1ed71c44fafe952a1ab7161794e60a6af8299b67",
       "mode": "644"
     },
     {
@@ -1969,7 +1969,7 @@
     {
       "source": "packages/artifact/references/diagram/scatter.md",
       "target": "references/diagram/scatter.md",
-      "sha256": "974ab61dc83441dad280b255c93e5e07d463a8251a753e72e660ceefa690136f",
+      "sha256": "b987314f5d431c8fc357c0ba42e2d1666014fb344319e007ce83856ba013bb11",
       "mode": "644"
     },
     {

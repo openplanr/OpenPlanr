@@ -318,7 +318,7 @@
       },
       "reference": {
         "path": "references/diagram/bar.md",
-        "digest": "sha256:8f9c03c5c4e0a55ee44cc05c1b6b45776b83ef665126d9d52f68a742acc833e4"
+        "digest": "sha256:d6a000e16da311887af875e681e8fac39988351622babe0d916a1849ad6e4561"
       },
       "rendererContract": {
         "layoutFamily": "chart",
@@ -352,7 +352,7 @@
       },
       "reference": {
         "path": "references/diagram/line.md",
-        "digest": "sha256:12ab3e32f7dfec264d8ac498bc6c217b61b8441577ee95dfb3e3514b070401f7"
+        "digest": "sha256:a6bc3331fd2de64b222d578d1ed71c44fafe952a1ab7161794e60a6af8299b67"
       },
       "rendererContract": {
         "layoutFamily": "chart",
@@ -386,7 +386,7 @@
       },
       "reference": {
         "path": "references/diagram/scatter.md",
-        "digest": "sha256:974ab61dc83441dad280b255c93e5e07d463a8251a753e72e660ceefa690136f"
+        "digest": "sha256:b987314f5d431c8fc357c0ba42e2d1666014fb344319e007ce83856ba013bb11"
       },
       "rendererContract": {
         "layoutFamily": "chart",

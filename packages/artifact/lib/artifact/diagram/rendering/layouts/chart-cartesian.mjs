@@ -99,12 +99,13 @@ function mergeOrdinalKeys(document, keys) {
     }
   }
   const remaining = new Map(keys.map((key) => [key, preceding.get(key).size]));
-  const ordered = keys.filter((key) => remaining.get(key) === 0);
-  for (let index = 0; index < ordered.length; index += 1) {
-    for (const key of following.get(ordered[index])) {
-      remaining.set(key, remaining.get(key) - 1);
-      if (remaining.get(key) === 0) ordered.push(key);
-    }
+  const ordered = [];
+  while (ordered.length < keys.length) {
+    const next = keys.find((key) => remaining.get(key) === 0);
+    if (next === undefined) break;
+    ordered.push(next);
+    remaining.delete(next);
+    for (const key of following.get(next)) remaining.set(key, remaining.get(key) - 1);
   }
   if (ordered.length !== keys.length) {
     let key = keys.find((candidate) => remaining.get(candidate) > 0);
