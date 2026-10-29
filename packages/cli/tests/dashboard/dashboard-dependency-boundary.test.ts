@@ -38,7 +38,7 @@ const protocolManifest = JSON.parse(
 
 const EXPECTED_RUNTIME = {
   '@openplanr/protocol': protocolManifest.version,
-  '@tanstack/react-query': '5.104.5',
+  '@tanstack/react-query': '5.105.0',
   'class-variance-authority': '0.7.1',
   clsx: '2.1.1',
   'lucide-react': '1.61.0',
