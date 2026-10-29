@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.62.0
+
+### Minor Changes
+
+- 6a629c8: Render bar, line and scatter diagrams with labelled axes and data marks from their series values. Preserve chart content in SVG, HTML and PNG, with explicit diagnostics for unsupported axis mappings and editable exports.
+
 ## 0.61.0
 
 ### Minor Changes
