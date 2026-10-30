@@ -30,7 +30,7 @@ function bounds(points) {
 }
 
 /** Radial spokes follow the first appearance of value keys across series. */
-export function layoutRadialChart(document, { wrapDiagramLabel }) {
+export function layoutRadialChart(document, { wrapDiagramLabel, segmentEntersBox }) {
   const invalid = (message, details = {}) =>
     diagramFail(DIAGRAM_ERROR_CODES.RENDER_FAILED, `${document.grammar.id} chart: ${message}`, {
       ...details,
@@ -85,9 +85,9 @@ export function layoutRadialChart(document, { wrapDiagramLabel }) {
   };
   const sizes = keys.map((key) => label('', key, 0, 0));
   const radius = 200;
+  const tickGap = 64;
   const cx = radius + Math.max(...sizes.map(({ width }) => width)) + 64;
   const cy = radius + Math.max(...sizes.map(({ height }) => height)) + 100;
-  const sidebar = cx + radius + Math.max(...sizes.map(({ width }) => width)) + 80;
   const angle = (index) => -Math.PI / 2 + (index * TAU) / keys.length;
   const spokes = keys.map((_, index) => point(cx, cy, radius, angle(index)));
   const maximum = document.series.reduce(
@@ -97,62 +97,6 @@ export function layoutRadialChart(document, { wrapDiagramLabel }) {
   const radial = (value) => (maximum === 0 ? 0 : radius * (value / maximum));
   const emphasis = (id) => document.emphasis.find(({ targetId }) => targetId === id)?.level ?? null;
   const labelBounds = [];
-  const axes = document.axes.map((axis, index) => {
-    const ticks =
-      index === 0
-        ? keys.map((key, keyIndex) => {
-            const a = angle(keyIndex + (radar ? 0 : 0.5));
-            const [x, y] = point(cx, cy, radius + 28, a);
-            const text = label(
-              `${axis.id}-tick-${keyIndex}`,
-              key,
-              x,
-              y - sizes[keyIndex].height / 2,
-              Math.abs(Math.cos(a)) < 0.01 ? 'middle' : Math.cos(a) > 0 ? 'start' : 'end',
-            );
-            return { x, y, text };
-          })
-        : Array.from({ length: 5 }, (_, tickIndex) => {
-            const value = maximum * (tickIndex / 4);
-            const rounded = Number(value.toPrecision(4));
-            const text = label(
-              `${axis.id}-tick-${tickIndex}`,
-              String(Number.isFinite(rounded) ? rounded : value),
-              cx + 6,
-              cy - radius * (tickIndex / 4) - 18,
-            );
-            return { x: cx, y: cy - radius * (tickIndex / 4), text };
-          });
-    const text = label(axis.id, axis.label, index === 0 ? 32 : sidebar, 32);
-    labelBounds.push(text, ...ticks.map(({ text }) => text));
-    return {
-      ...axis,
-      radial: true,
-      ...bounds([
-        [cx - radius, cy - radius],
-        [cx + radius, cy + radius],
-      ]),
-      x1: cx,
-      y1: cy,
-      x2: cx,
-      y2: cy - radius,
-      ticks: Object.freeze(ticks.map(Object.freeze)),
-      text,
-      emphasis: emphasis(axis.id),
-      ...(index === 1
-        ? {
-            grid: Object.freeze({
-              cx,
-              cy,
-              radius,
-              polygon: radar,
-              spokes: Object.freeze(spokes.map(Object.freeze)),
-              rings: Object.freeze([0.25, 0.5, 0.75, 1]),
-            }),
-          }
-        : {}),
-    };
-  });
   const marks = [];
   for (const [seriesIndex, series] of document.series.entries()) {
     const common = {
@@ -186,6 +130,84 @@ export function layoutRadialChart(document, { wrapDiagramLabel }) {
       }
     }
   }
+  const axes = document.axes.map((axis, index) => {
+    const ticks =
+      index === 0
+        ? keys.map((key, keyIndex) => {
+            const a = angle(keyIndex + (radar ? 0 : 0.5));
+            const [x, y] = point(cx, cy, radius + 28, a);
+            const text = label(
+              `${axis.id}-tick-${keyIndex}`,
+              key,
+              x,
+              y - sizes[keyIndex].height / 2,
+              Math.abs(Math.cos(a)) < 0.01 ? 'middle' : Math.cos(a) > 0 ? 'start' : 'end',
+            );
+            return { x, y, text };
+          })
+        : Array.from({ length: 5 }, (_, tickIndex) => {
+            const value = maximum * (tickIndex / 4);
+            const rounded = Number(value.toPrecision(4));
+            const text = label(
+              `${axis.id}-tick-${tickIndex}`,
+              String(Number.isFinite(rounded) ? rounded : value),
+              cx + (radar && tickIndex > 0 ? tickGap : 6),
+              cy - radius * (tickIndex / 4) - 18,
+            );
+            if (radar && tickIndex > 0) {
+              const hitsPolygon = (candidate) =>
+                marks.some((mark) =>
+                  mark.points.some((start, index) =>
+                    segmentEntersBox(start, mark.points[(index + 1) % mark.points.length], {
+                      ...candidate,
+                      x: candidate.x - 2,
+                      width: candidate.width + 4,
+                    }),
+                  ),
+                );
+              if (hitsPolygon(text)) {
+                const left = { ...text, x: cx - tickGap - text.width };
+                if (!hitsPolygon(left)) text.x = left.x;
+              }
+            }
+            return { x: cx, y: cy - radius * (tickIndex / 4), text };
+          });
+    const text = label(
+      axis.id,
+      axis.label,
+      index === 0 ? 32 : cx + Math.max(...sizes.map(({ width }) => width)) / 2 + 12,
+      32,
+    );
+    if (index === 1) text.y = cy - radius - 24 - text.height;
+    labelBounds.push(text, ...ticks.map(({ text }) => text));
+    return {
+      ...axis,
+      radial: true,
+      ...bounds([
+        [cx - radius, cy - radius],
+        [cx + radius, cy + radius],
+      ]),
+      x1: cx,
+      y1: cy,
+      x2: cx,
+      y2: cy - radius,
+      ticks: Object.freeze(ticks.map(Object.freeze)),
+      text,
+      emphasis: emphasis(axis.id),
+      ...(index === 1
+        ? {
+            grid: Object.freeze({
+              cx,
+              cy,
+              radius,
+              polygon: radar,
+              spokes: Object.freeze(spokes.map(Object.freeze)),
+              rings: Object.freeze([0.25, 0.5, 0.75, 1]),
+            }),
+          }
+        : {}),
+    };
+  });
   let legendY = cy + radius + Math.max(...sizes.map(({ height }) => height)) + 72;
   const legend = document.series.map((series, seriesIndex) => {
     const text = label(series.id, series.label, 64, legendY);
@@ -195,7 +217,9 @@ export function layoutRadialChart(document, { wrapDiagramLabel }) {
   });
   return {
     kind: 'chart',
-    width: Math.ceil(Math.max(sidebar + 160, ...labelBounds.map(({ x, width }) => x + width + 32))),
+    width: Math.ceil(
+      Math.max(cx + radius + 32, ...labelBounds.map(({ x, width }) => x + width + 32)),
+    ),
     height: Math.ceil(legendY + 48),
     axes,
     marks,

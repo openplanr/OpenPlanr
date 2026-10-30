@@ -805,7 +805,7 @@
     {
       "source": "packages/artifact/lib/artifact/diagram/rendering/layout.mjs",
       "target": "lib/artifact/diagram/rendering/layout.mjs",
-      "sha256": "fe2f8f3e1bc2631ec64f2debe6d1527a164b0c28890ec3f1b82f9f6f2f918026",
+      "sha256": "ed42bfaf6736bf2386dd26740aeb19984aba2528e6b4a44de42fa2ce2b4aad4e",
       "mode": "644"
     },
     {
@@ -817,7 +817,7 @@
     {
       "source": "packages/artifact/lib/artifact/diagram/rendering/layouts/chart-radial.mjs",
       "target": "lib/artifact/diagram/rendering/layouts/chart-radial.mjs",
-      "sha256": "c3ec90986a598e0541fc7ef739708c96ac7bfe2f725d11572a702857e79df4d7",
+      "sha256": "a38bacbff714ec926598115f54cf3978c6f95d718f2e13e1742c67d47c147073",
       "mode": "644"
     },
     {
@@ -829,7 +829,7 @@
     {
       "source": "packages/artifact/lib/artifact/diagram/rendering/reports.mjs",
       "target": "lib/artifact/diagram/rendering/reports.mjs",
-      "sha256": "8844aa8318fa3f10f0a068f78def56eaeeb0c8d6374fa7a734cd5ffd5bb452e1",
+      "sha256": "6c53a630fa7f0feb0800d520c303d6e9920fe989a26b64ff5f708afdb7161b41",
       "mode": "644"
     },
     {

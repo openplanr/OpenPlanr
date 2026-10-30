@@ -54,26 +54,26 @@ function nodeOverlapCount(scene) {
 
 function markOverlapCount(scene) {
   const marks = scene.marks ?? [];
-  // Radial scale labels are painted above marks on opaque backgrounds.
-  const scaleTickIds = new Set(
+  const scaleTicks = new Map(
     scene.axes
       .filter((axis) => axis.radial && axis.grid)
-      .flatMap((axis) => axis.ticks.map(({ text }) => text.id)),
+      .flatMap((axis) => axis.ticks.map(({ text }, index) => [text.id, { centre: index === 0 }])),
   );
-  const obstacles = [
-    ...scene.boxes,
-    ...(scene.notes ?? []),
-    ...(scene.labelBounds ?? []).filter(({ id }) => !scaleTickIds.has(id)),
-  ];
+  const obstacles = [...scene.boxes, ...(scene.notes ?? []), ...(scene.labelBounds ?? [])];
   let count = 0;
   for (const [index, mark] of marks.entries()) {
-    count += obstacles.filter((box) =>
-      ['polygon', 'arc'].includes(mark.kind)
-        ? radialMarkHitsBox(mark, box)
+    count += obstacles.filter((box) => {
+      const tick = scaleTicks.get(box.id);
+      if (tick && (tick.centre || mark.kind === 'arc')) return false;
+      const obstacle = tick ? { ...box, x: box.x - 2, width: box.width + 4 } : box;
+      return ['polygon', 'arc'].includes(mark.kind)
+        ? radialMarkHitsBox(mark, obstacle)
         : mark.kind === 'polyline' && mark.points.length > 1
-          ? mark.points.slice(1).some((point, i) => segmentEntersBox(mark.points[i], point, box))
-          : overlaps(mark, box),
-    ).length;
+          ? mark.points
+              .slice(1)
+              .some((point, i) => segmentEntersBox(mark.points[i], point, obstacle))
+          : overlaps(mark, obstacle);
+    }).length;
     if (mark.kind === 'bar')
       count += marks
         .slice(index + 1)

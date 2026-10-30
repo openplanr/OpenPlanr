@@ -43,6 +43,30 @@ const report = (document, scene) =>
     svgValidation: { ok: true },
   });
 
+function polygonHitsTile({ points }, text) {
+  const left = text.x - 2,
+    right = text.x + text.width + 2,
+    top = text.y,
+    bottom = text.y + text.height;
+  const inside = ([x, y]) => x > left && x < right && y > top && y < bottom;
+  return points.some((start, index) => {
+    const end = points[(index + 1) % points.length];
+    if (inside(start) || inside(end)) return true;
+    const [x, y] = start,
+      dx = end[0] - x,
+      dy = end[1] - y;
+    return [
+      ...[left, right].map((edge) => [edge, x, dx, y, dy, top, bottom]),
+      ...[top, bottom].map((edge) => [edge, y, dy, x, dx, left, right]),
+    ].some(([edge, origin, delta, other, otherDelta, low, high]) => {
+      if (delta === 0) return false;
+      const fraction = (edge - origin) / delta;
+      const crossing = other + fraction * otherDelta;
+      return fraction >= 0 && fraction <= 1 && crossing > low && crossing < high;
+    });
+  });
+}
+
 for (const kind of ['radar', 'polar']) {
   test(`${kind} renders its grid, labels, marks and explicit editable fallback`, () => {
     const document = chart(kind);
@@ -85,7 +109,8 @@ for (const kind of ['radar', 'polar']) {
     for (const [index, tick] of scale.ticks.entries()) {
       assert.equal(tick.x, cx);
       assert.equal(tick.y, cy - radius * (index / 4));
-      assert.equal(tick.text.x, cx + 6);
+      if (kind === 'polar' || index === 0) assert.equal(tick.text.x, cx + 6);
+      else assert.ok(tick.text.x > cx || tick.text.x + tick.text.width < cx);
       assert.equal(tick.text.y + tick.text.height, tick.y);
       assert.ok(scene.labelBounds.includes(tick.text));
       const overlay = `<g data-scale-tick-id="${tick.text.id}">`;
@@ -96,6 +121,19 @@ for (const kind of ['radar', 'polar']) {
           `${overlay}<rect x="${tick.text.x - 2}" y="${tick.text.y}" width="${tick.text.width + 4}" height="${tick.text.height}" fill="${theme.background}"/>`,
         ),
       );
+    }
+    assert.ok(scene.labelBounds.includes(scale.text));
+    assert.ok(scale.text.x >= cx);
+    assert.ok(scale.text.y + scale.text.height < scale.ticks.at(-1).text.y);
+    assert.equal(
+      scene.width,
+      Math.ceil(
+        Math.max(cx + radius + 32, ...scene.labelBounds.map((text) => text.x + text.width + 32)),
+      ),
+    );
+    for (const text of scene.labelBounds) {
+      assert.ok(text.x >= 0 && text.y >= 0);
+      assert.ok(text.x + text.width <= scene.width && text.y + text.height <= scene.height);
     }
     const obstacle = { ...scale.ticks[2].text, id: 'overlapping-label' };
     const collision = report(document, { ...scene, labelBounds: [...scene.labelBounds, obstacle] });
@@ -218,6 +256,83 @@ for (const kind of ['radar', 'polar']) {
         }
       });
 }
+
+test('radar fixture scale tiles keep clear of every polygon edge', () => {
+  const document = chart('radar');
+  const scene = layoutDiagram(document);
+  for (const { text } of scene.axes[1].ticks)
+    for (const mark of scene.marks)
+      assert.equal(polygonHitsTile(mark, text), false, `${text.id} crosses ${mark.id}`);
+  assert.equal(status(report(document, scene), 'mark-overlap'), 'pass');
+});
+
+test('radar moves a ring label left when its right tile crosses a polygon edge', () => {
+  const document = chart('radar', {
+    series: [
+      series([
+        ['A', 9],
+        ['B', 9],
+        ['C', 0],
+      ]),
+    ],
+  });
+  const scene = layoutDiagram(document);
+  const { cx } = scene.axes[1].grid;
+  const { text } = scene.axes[1].ticks[1];
+  assert.ok(text.x + text.width < cx);
+  assert.equal(polygonHitsTile(scene.marks[0], text), false);
+  const right = { ...text, x: 2 * cx - text.x - text.width };
+  assert.equal(polygonHitsTile(scene.marks[0], right), true);
+  const collision = report(document, {
+    ...scene,
+    labelBounds: scene.labelBounds.map((label) => (label.id === text.id ? right : label)),
+  });
+  assert.equal(status(collision, 'mark-overlap'), 'fail');
+  assert.equal(status(report(document, scene), 'mark-overlap'), 'pass');
+});
+
+test('radar retains the right tile and reports when both sides cross polygon edges', () => {
+  const document = chart('radar', {
+    series: [
+      series([
+        ['A', 9],
+        ['B', 9],
+        ['C', 0],
+      ]),
+      series(
+        [
+          ['A', 9],
+          ['B', 0],
+          ['C', 9],
+        ],
+        'second',
+      ),
+    ],
+  });
+  const scene = layoutDiagram(document);
+  const { cx } = scene.axes[1].grid;
+  const { text } = scene.axes[1].ticks[1];
+  assert.ok(text.x > cx);
+  assert.equal(polygonHitsTile(scene.marks[0], text), true);
+  assert.equal(polygonHitsTile(scene.marks[1], { ...text, x: 2 * cx - text.x - text.width }), true);
+  assert.equal(status(report(document, scene), 'mark-overlap'), 'fail');
+});
+
+test('radar checks the closing polygon edge against non-centre scale tiles', () => {
+  const document = chart('radar');
+  const scene = layoutDiagram(document);
+  const mark = scene.marks[0];
+  const start = mark.points.at(-1),
+    end = mark.points[0];
+  const text = {
+    ...scene.axes[1].ticks[2].text,
+    x: (start[0] + end[0]) / 2 - 4,
+    y: (start[1] + end[1]) / 2 - 4,
+    width: 8,
+    height: 8,
+  };
+  assert.equal(status(report(document, { ...scene, labelBounds: [text] }), 'mark-overlap'), 'fail');
+});
 
 test('radar vertices follow first appearance regardless of later series order', () => {
   const document = chart('radar', {
