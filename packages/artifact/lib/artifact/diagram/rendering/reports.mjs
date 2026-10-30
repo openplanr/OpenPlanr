@@ -11,6 +11,7 @@ import {
   routesMerge,
   SHARED_SEGMENT_LENGTH,
 } from './layout.mjs';
+import { sectorBoundsPoints } from './layouts/chart-radial.mjs';
 import { measureDiagramText } from './text.mjs';
 import { diagramMetrics, resolveDiagramTheme } from './theme.mjs';
 
@@ -57,9 +58,11 @@ function markOverlapCount(scene) {
   let count = 0;
   for (const [index, mark] of marks.entries()) {
     count += obstacles.filter((box) =>
-      mark.kind === 'polyline' && mark.points.length > 1
-        ? mark.points.slice(1).some((point, i) => segmentEntersBox(mark.points[i], point, box))
-        : overlaps(mark, box),
+      ['polygon', 'arc'].includes(mark.kind)
+        ? radialMarkHitsBox(mark, box)
+        : mark.kind === 'polyline' && mark.points.length > 1
+          ? mark.points.slice(1).some((point, i) => segmentEntersBox(mark.points[i], point, box))
+          : overlaps(mark, box),
     ).length;
     if (mark.kind === 'bar')
       count += marks
@@ -67,6 +70,74 @@ function markOverlapCount(scene) {
         .filter((other) => other.kind === 'bar' && overlaps(mark, other)).length;
   }
   return count;
+}
+
+function radialMarkHitsBox(mark, box) {
+  if (!overlaps(mark, box)) return false;
+  const corners = [
+    [box.x, box.y],
+    [box.x + box.width, box.y],
+    [box.x + box.width, box.y + box.height],
+    [box.x, box.y + box.height],
+  ];
+  if (mark.kind === 'polygon') {
+    const points = [...mark.points, mark.points[0]];
+    return points.slice(1).some((point, index) => segmentEntersBox(points[index], point, box));
+  }
+  if (mark.radius === 0) return false;
+  const inAngle = (x, y) => {
+    const angle =
+      (((Math.atan2(y - mark.cy, x - mark.cx) - mark.startAngle) % (2 * Math.PI)) + 2 * Math.PI) %
+      (2 * Math.PI);
+    return angle <= mark.endAngle - mark.startAngle + 1e-9;
+  };
+  if (
+    corners.some(([x, y]) => Math.hypot(x - mark.cx, y - mark.cy) <= mark.radius && inAngle(x, y))
+  )
+    return true;
+  if (
+    [mark.startAngle, mark.endAngle].some((angle) =>
+      segmentEntersBox(
+        [mark.cx, mark.cy],
+        [mark.cx + mark.radius * Math.cos(angle), mark.cy + mark.radius * Math.sin(angle)],
+        box,
+      ),
+    )
+  )
+    return true;
+  for (const [fixed, centre, otherCentre, low, high, vertical] of [
+    ...[box.x, box.x + box.width].map((x) => [
+      x,
+      mark.cx,
+      mark.cy,
+      box.y,
+      box.y + box.height,
+      true,
+    ]),
+    ...[box.y, box.y + box.height].map((y) => [
+      y,
+      mark.cy,
+      mark.cx,
+      box.x,
+      box.x + box.width,
+      false,
+    ]),
+  ]) {
+    const squared = mark.radius ** 2 - (fixed - centre) ** 2;
+    if (squared < 0) continue;
+    if (
+      [-1, 1].some((sign) => {
+        const other = otherCentre + sign * Math.sqrt(squared);
+        return (
+          other >= low &&
+          other <= high &&
+          (vertical ? inAngle(fixed, other) : inAngle(other, fixed))
+        );
+      })
+    )
+      return true;
+  }
+  return false;
 }
 
 // A label this close to a node it does not connect reads as that node's caption.
@@ -288,7 +359,14 @@ function clippedGeometry(scene) {
   );
   const endpoints = [
     ...scene.edges.flatMap(edgePoints),
-    ...(scene.marks ?? []).flatMap((mark) => mark.points ?? []),
+    ...(scene.marks ?? []).flatMap((mark) =>
+      mark.kind === 'arc'
+        ? [mark.cx, mark.cy, mark.radius, mark.startAngle, mark.endAngle].every(Number.isFinite) &&
+          mark.radius >= 0
+          ? sectorBoundsPoints(mark)
+          : [[Number.NaN, Number.NaN]]
+        : (mark.points ?? []),
+    ),
   ];
   return (
     outside ||

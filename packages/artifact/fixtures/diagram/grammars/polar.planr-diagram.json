@@ -34,15 +34,31 @@
   "series": [
     {
       "id": "series-main",
-      "label": "Primary series",
+      "label": "Requests per second",
       "values": [
         {
-          "key": "A",
-          "value": 3
+          "key": "API",
+          "value": 24
         },
         {
-          "key": "B",
-          "value": 5
+          "key": "Web",
+          "value": 40
+        },
+        {
+          "key": "Jobs",
+          "value": 18
+        },
+        {
+          "key": "Storage",
+          "value": 32
+        },
+        {
+          "key": "Search",
+          "value": 26
+        },
+        {
+          "key": "Events",
+          "value": 48
         }
       ]
     }
@@ -50,12 +66,12 @@
   "axes": [
     {
       "id": "axis-horizontal",
-      "label": "Horizontal meaning",
-      "scale": "linear"
+      "label": "Service",
+      "scale": "categorical"
     },
     {
       "id": "axis-vertical",
-      "label": "Vertical meaning",
+      "label": "Requests per second",
       "scale": "linear"
     }
   ],
@@ -69,5 +85,5 @@
       "series-main"
     ]
   },
-  "documentDigest": "sha256:c3acebb435ec9af2453e43eba522b0c21a2f70b98fdf1f2a9ca77f81e5331afd"
+  "documentDigest": "sha256:512a51ddef715e33eb92d4660a40ba4e3f136e12bf41bcb605255d51abea3097"
 }

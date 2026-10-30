@@ -133,7 +133,7 @@
     {
       "source": "packages/artifact/fixtures/diagram/grammars/polar.planr-diagram.json",
       "target": "fixtures/diagram/grammars/polar.planr-diagram.json",
-      "sha256": "77f3eb5f1fcf43f342af02969a732987e08690cf05ff67546d6e1afb2a959757",
+      "sha256": "0eb9866307e0aead947d7a19f051d05846ad50bbbfe341b4c54043fc92e52e49",
       "mode": "644"
     },
     {
@@ -157,7 +157,7 @@
     {
       "source": "packages/artifact/fixtures/diagram/grammars/radar.planr-diagram.json",
       "target": "fixtures/diagram/grammars/radar.planr-diagram.json",
-      "sha256": "2f0c12dc514269edd02e74561432369cc966e33fa10f9817fed23bad064d9cb0",
+      "sha256": "3ec465cd0e044f6389134aea88930c45c8777819cdd5903590b9df9133a66314",
       "mode": "644"
     },
     {
@@ -337,7 +337,7 @@
     {
       "source": "packages/artifact/gallery/diagram/inventory.json",
       "target": "gallery/diagram/inventory.json",
-      "sha256": "8a2e3bd558190b780e4ac2a0adc4f7f25a5359270aa86fd8f2dfbc5e131d0303",
+      "sha256": "0aeb9d692b0e0c035686c849be12a00ed6cc92ca41d9045762d6e0b1729d2a6a",
       "mode": "644"
     },
     {
@@ -727,7 +727,7 @@
     {
       "source": "packages/artifact/lib/artifact/diagram/index.d.mts",
       "target": "lib/artifact/diagram/index.d.mts",
-      "sha256": "a47929ee7656f71daff5dfa70f6c5c75756dbce90c37745fafed235fb892ab03",
+      "sha256": "be74a7c52466e42effabd3630aeb35ea382c5ec34a4fdfd538367ea76e183125",
       "mode": "644"
     },
     {
@@ -757,7 +757,7 @@
     {
       "source": "packages/artifact/lib/artifact/diagram/projection/excalidraw.mjs",
       "target": "lib/artifact/diagram/projection/excalidraw.mjs",
-      "sha256": "10824449284f5af642969c8afd0d7e8a33fdfd734cb813f1c87d159aeb9e760e",
+      "sha256": "b7169d6bac727e3a22b321e05e01677f5e9eb38ffe572670bc42f8a7f790828b",
       "mode": "644"
     },
     {
@@ -805,13 +805,19 @@
     {
       "source": "packages/artifact/lib/artifact/diagram/rendering/layout.mjs",
       "target": "lib/artifact/diagram/rendering/layout.mjs",
-      "sha256": "47e9351d5f023651d8b51ae63c6066f2d0d36c65a73ea9e4f05282d3173f2942",
+      "sha256": "fe2f8f3e1bc2631ec64f2debe6d1527a164b0c28890ec3f1b82f9f6f2f918026",
       "mode": "644"
     },
     {
       "source": "packages/artifact/lib/artifact/diagram/rendering/layouts/chart-cartesian.mjs",
       "target": "lib/artifact/diagram/rendering/layouts/chart-cartesian.mjs",
       "sha256": "020c65ab43be0bec1edb6ef367aec946e5568ad0f6c20a4deed7c33c2981219d",
+      "mode": "644"
+    },
+    {
+      "source": "packages/artifact/lib/artifact/diagram/rendering/layouts/chart-radial.mjs",
+      "target": "lib/artifact/diagram/rendering/layouts/chart-radial.mjs",
+      "sha256": "b962de0d43d6219d72f4b2f30b67612628f1ea90d5159b6467e0ece9fc26d426",
       "mode": "644"
     },
     {
@@ -823,13 +829,13 @@
     {
       "source": "packages/artifact/lib/artifact/diagram/rendering/reports.mjs",
       "target": "lib/artifact/diagram/rendering/reports.mjs",
-      "sha256": "6a048ecd29102618c499bc784044ff56540c4eca67d28c2c57f047ae5a30ce7c",
+      "sha256": "3a0a0883d5e4cc6cf01e947d5de2708f1c6d3f023366f78e3611e765008f2740",
       "mode": "644"
     },
     {
       "source": "packages/artifact/lib/artifact/diagram/rendering/svg.mjs",
       "target": "lib/artifact/diagram/rendering/svg.mjs",
-      "sha256": "f9c7379b09ec0cbe9c724698b1807562f4e1f846560bad0d12ab396b01577763",
+      "sha256": "70e8ac465df257691266683f9a333c7047c4a3aad15f3acc8b475ac7104b20aa",
       "mode": "644"
     },
     {
@@ -1525,7 +1531,7 @@
     {
       "source": "packages/artifact/lib/artifact/ui/generated/artifact-shell-assets.json",
       "target": "lib/artifact/ui/generated/artifact-shell-assets.json",
-      "sha256": "fb582872818ead0ac11e20e928944fe6147c41e40835caa209eb97e836bf915a",
+      "sha256": "c2fcb28f0bda6daef5fbe9dd24cc1432cca78752b284c9ad5b787bba7057c6b5",
       "mode": "644"
     },
     {
@@ -1933,7 +1939,7 @@
     {
       "source": "packages/artifact/references/diagram/polar.md",
       "target": "references/diagram/polar.md",
-      "sha256": "419278767dd04635cf3b28347871b047086fea07ef86365ba3f27a352a1e831f",
+      "sha256": "1afca8de1dda5b193350f92fc231624a216f8a858afc90fdd7ba5e7334ebccf8",
       "mode": "644"
     },
     {
@@ -1957,7 +1963,7 @@
     {
       "source": "packages/artifact/references/diagram/radar.md",
       "target": "references/diagram/radar.md",
-      "sha256": "c8a5d51a0a4c40c7b37f864a99f346574bf23ef1ae2503aa3d165c20b8604b12",
+      "sha256": "97b5c45d4c9a6f0af66990c1a7df5e82465fea49c1e1a47c943db74e401c1bdb",
       "mode": "644"
     },
     {
@@ -2077,7 +2083,7 @@
     {
       "source": "packages/artifact/templates/diagram-owner.js",
       "target": "templates/diagram-owner.js",
-      "sha256": "838b8a69c6edc9133e3f1cb4c60a4c842f8e79378a12973226fb9fb362b596fa",
+      "sha256": "9e762b57bba18429c8c32a0c37206364908057e925e819ae650a92319f6e2ecf",
       "mode": "644"
     },
     {

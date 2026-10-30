@@ -29,6 +29,15 @@ export interface DiagramAxis extends DiagramBounds {
   readonly text: DiagramChartText;
   readonly ticks: readonly Readonly<{ x: number; y: number; text: DiagramChartText }>[];
   readonly emphasis: string | null;
+  readonly radial?: boolean;
+  readonly grid?: Readonly<{
+    cx: number;
+    cy: number;
+    radius: number;
+    polygon: boolean;
+    spokes: readonly (readonly [number, number])[];
+    rings: readonly number[];
+  }>;
 }
 export type DiagramMark = DiagramBounds &
   Readonly<{
@@ -39,7 +48,17 @@ export type DiagramMark = DiagramBounds &
   }> &
   (
     | Readonly<{ kind: 'bar' | 'point'; key?: string; value?: number }>
-    | Readonly<{ kind: 'polyline'; points: readonly (readonly [number, number])[] }>
+    | Readonly<{ kind: 'polyline' | 'polygon'; points: readonly (readonly [number, number])[] }>
+    | Readonly<{
+        kind: 'arc';
+        key: string;
+        value: number;
+        cx: number;
+        cy: number;
+        radius: number;
+        startAngle: number;
+        endAngle: number;
+      }>
   );
 export interface DiagramScene extends Readonly<Record<string, unknown>> {
   readonly kind: 'graph' | 'sequence' | 'chart';

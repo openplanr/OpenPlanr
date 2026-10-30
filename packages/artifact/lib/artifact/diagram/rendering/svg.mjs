@@ -31,6 +31,22 @@ function renderChartText(text, theme) {
 
 function renderAxis(axis, theme) {
   const stroke = axis.emphasis ? theme.accent : theme.border;
+  if (axis.radial) {
+    const grid = axis.grid;
+    const shapes = grid
+      ? grid.rings
+          .map((fraction) =>
+            grid.polygon
+              ? `<polygon points="${grid.spokes.map(([x, y]) => `${grid.cx + (x - grid.cx) * fraction},${grid.cy + (y - grid.cy) * fraction}`).join(' ')}"/>`
+              : `<circle cx="${grid.cx}" cy="${grid.cy}" r="${grid.radius * fraction}"/>`,
+          )
+          .join('') +
+        grid.spokes
+          .map(([x, y]) => `<line x1="${grid.cx}" y1="${grid.cy}" x2="${x}" y2="${y}"/>`)
+          .join('')
+      : '';
+    return `<g data-axis-id="${escapeXml(axis.id)}"><g data-radial-grid="${grid ? 'scale' : 'category'}" fill="none" stroke="${stroke}" stroke-width="1">${shapes}</g>${axis.ticks.map(({ text }) => renderChartText(text, theme)).join('')}${renderChartText(axis.text, theme)}</g>`;
+  }
   return `<g data-axis-id="${escapeXml(axis.id)}"><line x1="${axis.x1}" y1="${axis.y1}" x2="${axis.x2}" y2="${axis.y2}" stroke="${stroke}" stroke-width="2"/>${axis.ticks.map((tick) => `<line x1="${tick.x}" y1="${tick.y}" x2="${tick.x + (axis.x1 === axis.x2 ? -6 : 0)}" y2="${tick.y + (axis.x1 === axis.x2 ? 0 : 6)}" stroke="${stroke}"/>${renderChartText(tick.text, theme)}`).join('')}${renderChartText(axis.text, theme)}</g>`;
 }
 
@@ -41,7 +57,14 @@ function renderMark(mark, theme) {
     shape = `<rect x="${mark.x}" y="${mark.y}" width="${mark.width}" height="${mark.height}" fill="${color}"/>`;
   else if (mark.kind === 'point')
     shape = `<circle cx="${mark.x + mark.width / 2}" cy="${mark.y + mark.height / 2}" r="${mark.width / 2}" fill="${color}"/>`;
-  else
+  else if (mark.kind === 'polygon')
+    shape = `<polygon points="${mark.points.map((point) => point.join(',')).join(' ')}" fill="none" stroke="${color}" stroke-width="${mark.emphasis === 'primary' ? 4 : 3}"${mark.seriesIndex % 2 ? ' stroke-dasharray="8 5"' : ''}/>`;
+  else if (mark.kind === 'arc') {
+    const at = (angle) =>
+      `${mark.cx + mark.radius * Math.cos(angle)} ${mark.cy + mark.radius * Math.sin(angle)}`;
+    const middle = (mark.startAngle + mark.endAngle) / 2;
+    shape = `<path d="M ${mark.cx} ${mark.cy} L ${at(mark.startAngle)} A ${mark.radius} ${mark.radius} 0 0 1 ${at(middle)} A ${mark.radius} ${mark.radius} 0 0 1 ${at(mark.endAngle)} Z" fill="${color}"/>`;
+  } else
     shape = `<polyline points="${mark.points.map((point) => point.join(',')).join(' ')}" fill="none" stroke="${color}" stroke-width="${mark.emphasis === 'primary' ? 4 : 3}"${mark.seriesIndex % 2 ? ' stroke-dasharray="8 5"' : ''}/>${mark.points.map(([x, y]) => `<circle cx="${x}" cy="${y}" r="3" fill="${color}"/>`).join('')}`;
   return `<g data-mark-id="${escapeXml(mark.id)}" data-mark-kind="${mark.kind}" opacity="${mark.emphasis === 'muted' ? 0.5 : 1}"${mark.emphasis === 'primary' ? ` stroke="${theme.foreground}" stroke-width="2"` : ''}><title>${escapeXml(mark.label)}${mark.key === undefined ? '' : `: ${escapeXml(mark.key)}, ${mark.value}`}</title>${shape}</g>`;
 }

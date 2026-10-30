@@ -8,6 +8,7 @@
 import { DIAGRAM_ERROR_CODES, diagramFail } from '../errors.mjs';
 import { getGrammar } from '../registry.mjs';
 import { layoutCartesianChart } from './layouts/chart-cartesian.mjs';
+import { layoutRadialChart } from './layouts/chart-radial.mjs';
 import { diagramGraphemes, measureDiagramText } from './text.mjs';
 import {
   diagramMetrics,
@@ -1859,8 +1860,13 @@ function assertSceneExtent(width, height) {
 export function layoutDiagram(document, { theme = resolveDiagramTheme(document.theme) } = {}) {
   const metrics = diagramMetrics(theme);
   const grammar = getGrammar(document.grammar.id);
-  if (grammar.layoutFamily === 'chart' && ['bar', 'line', 'scatter'].includes(grammar.grammarId)) {
-    const scene = layoutCartesianChart(document, { wrapDiagramLabel });
+  if (
+    grammar.layoutFamily === 'chart' &&
+    ['bar', 'line', 'scatter', 'radar', 'polar'].includes(grammar.grammarId)
+  ) {
+    const scene = ['radar', 'polar'].includes(grammar.grammarId)
+      ? layoutRadialChart(document, { wrapDiagramLabel })
+      : layoutCartesianChart(document, { wrapDiagramLabel });
     const positioned = new Set(scene.marks.map(({ id }) => id));
     const items = semanticItems(document, true).filter(({ id }) => !positioned.has(id));
     let y = PADDING;
@@ -1874,7 +1880,26 @@ export function layoutDiagram(document, { theme = resolveDiagramTheme(document.t
       y += box.height + 24;
       return box;
     });
-    scene.notes = graphNotes(document, [...scene.boxes, ...scene.marks, ...scene.axes], [], []);
+    scene.notes = graphNotes(
+      document,
+      [
+        ...scene.boxes,
+        ...scene.marks,
+        ...scene.axes,
+        ...(scene.axes.some((axis) => axis.radial) ? scene.labelBounds : []),
+      ],
+      [],
+      [],
+    );
+    if (scene.axes.some((axis) => axis.radial)) {
+      let nextY = PADDING;
+      for (const note of [...scene.notes].sort(
+        (left, right) => (left.anchorY ?? left.y) - (right.anchorY ?? right.y),
+      )) {
+        note.y = Math.max(nextY, (note.anchorY ?? nextY) - note.height / 2);
+        nextY = note.y + note.height + 16;
+      }
+    }
     scene.width = Math.ceil(
       Math.max(
         scene.width,
