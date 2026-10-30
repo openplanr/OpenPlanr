@@ -67,6 +67,65 @@ for (const kind of ['radar', 'polar']) {
     );
   });
 
+  test(`${kind} labels scale values beside the top spoke and checks label collisions`, () => {
+    const document = chart(kind);
+    const { scene, svg, quality } = renderDiagramOutputs(document);
+    assert.equal(quality.status, 'pass');
+    const scale = scene.axes[1];
+    const { cx, cy, radius } = scale.grid;
+    const maximum = Math.max(
+      ...document.series.flatMap(({ values }) => values.map(({ value }) => value)),
+    );
+    assert.deepEqual(
+      scale.ticks.map(({ text }) => text.lines.join('')),
+      Array.from({ length: 5 }, (_, index) =>
+        String(Number((maximum * (index / 4)).toPrecision(4))),
+      ),
+    );
+    for (const [index, tick] of scale.ticks.entries()) {
+      assert.equal(tick.x, cx);
+      assert.equal(tick.y, cy - radius * (index / 4));
+      assert.equal(tick.text.x, cx + 6);
+      assert.equal(tick.text.y + tick.text.height, tick.y);
+      assert.ok(scene.labelBounds.includes(tick.text));
+      const overlay = `<g data-scale-tick-id="${tick.text.id}">`;
+      assert.ok(svg.indexOf(overlay) > svg.lastIndexOf('data-mark-kind='));
+      const theme = resolveDiagramTheme(document.theme);
+      assert.ok(
+        svg.includes(
+          `${overlay}<rect x="${tick.text.x - 2}" y="${tick.text.y}" width="${tick.text.width + 4}" height="${tick.text.height}" fill="${theme.background}"/>`,
+        ),
+      );
+    }
+    const obstacle = { ...scale.ticks[2].text, id: 'overlapping-label' };
+    const collision = report(document, { ...scene, labelBounds: [...scene.labelBounds, obstacle] });
+    assert.equal(status(collision, 'label-overlap'), 'fail');
+  });
+
+  test(`${kind} legend swatches match its data marks`, () => {
+    const base = chart(kind);
+    const document = chart(kind, {
+      series: [base.series[0], { ...base.series[0], id: 'second' }],
+    });
+    const { scene, svg } = renderDiagramOutputs(document);
+    const colors = diagramSeriesColors(resolveDiagramTheme(document.theme));
+    for (const text of scene.legend) {
+      const color = colors[text.seriesIndex];
+      if (kind === 'polar')
+        assert.ok(
+          svg.includes(
+            `<g><rect x="${text.x - 24}" y="${text.y + 2}" width="12" height="12" fill="${color}"/>`,
+          ),
+        );
+      else
+        assert.ok(
+          svg.includes(
+            `<g><line x1="${text.x - 28}" y1="${text.y + 8}" x2="${text.x - 8}" y2="${text.y + 8}" stroke="${color}" stroke-width="3"${text.seriesIndex % 2 ? ' stroke-dasharray="8 5"' : ''}/>`,
+          ),
+        );
+    }
+  });
+
   test(`${kind} rejects negative values and duplicate keys`, () => {
     const base = chart(kind);
     const negative = structuredClone(base.series);
@@ -131,12 +190,26 @@ for (const kind of ['radar', 'polar']) {
         const { svg, quality } = renderDiagramOutputs(document);
         assert.equal(quality.status, 'pass');
         const theme = resolveDiagramTheme(document.theme);
+        if (kind === 'polar') {
+          const sectors = [
+            ...svg.matchAll(/data-mark-kind="arc"[^>]*><title>[^<]*<\/title>(<path[^>]*>)/gu),
+          ];
+          assert.equal(
+            sectors.length,
+            document.series.reduce((count, { values }) => count + values.length, 0),
+          );
+          for (const [, path] of sectors)
+            assert.ok(path.includes(`stroke="${theme.background}" stroke-width="1.5"`));
+        }
         for (const palette of [theme, ...(theme.dark ? [theme.dark] : [])])
           for (const color of diagramSeriesColors(palette)) {
             assert.ok(contrastRatio(color, palette.background) >= 3);
             if (palette === theme) assert.ok(svg.includes(color));
           }
         if (theme.dark) {
+          assert.ok(
+            svg.includes(`[stroke="${theme.background}"]{stroke:${theme.dark.background}}`),
+          );
           for (const [index, color] of diagramSeriesColors(theme).entries()) {
             const dark = diagramSeriesColors(theme.dark)[index];
             assert.ok(svg.includes(`[fill="${color}"]{fill:${dark}}`));
@@ -198,7 +271,36 @@ test('radar rejects missing spokes', () => {
   );
 });
 
-test('legacy radial category axes and short series keep one vertex per key', () => {
+for (const count of [1, 2])
+  test(`radar rejects ${count} spokes with a named error and repair hint`, () => {
+    assert.throws(
+      () =>
+        layoutDiagram(
+          chart('radar', {
+            series: [
+              series(
+                [
+                  ['A', 1],
+                  ['B', 2],
+                ].slice(0, count),
+              ),
+            ],
+          }),
+        ),
+      (error) => {
+        assert.equal(error.code, 'E_DIAGRAM_RENDER_FAILED');
+        assert.equal(
+          error.message,
+          `radar chart: Expected at least 3 radar spokes, received ${count}.`,
+        );
+        assert.equal(error.details.spokeCount, count);
+        assert.match(error.details.repair, /Radar charts require at least 3 spokes/u);
+        return true;
+      },
+    );
+  });
+
+test('legacy radial category axes keep one vertex per key', () => {
   for (const kind of ['radar', 'polar']) {
     const base = chart(kind);
     const { scene, quality } = renderDiagramOutputs(
@@ -208,13 +310,14 @@ test('legacy radial category axes and short series keep one vertex per key', () 
           series([
             ['A', 3],
             ['B', 5],
+            ['C', 4],
           ]),
         ],
       }),
     );
     assert.equal(quality.status, 'pass');
-    assert.equal(scene.marks.length, kind === 'radar' ? 1 : 2);
-    if (kind === 'radar') assert.equal(scene.marks[0].points.length, 2);
+    assert.equal(scene.marks.length, kind === 'radar' ? 1 : 3);
+    if (kind === 'radar') assert.equal(scene.marks[0].points.length, 3);
   }
 });
 
@@ -259,6 +362,23 @@ test('one polar value renders a full circle with two arcs', () => {
   assert.equal((svg.match(/ A /gu) ?? []).length, 2);
   assert.equal(mark.width, mark.radius * 2 + 4);
   assert.equal(mark.height, mark.radius * 2 + 4);
+});
+
+test('polar sector paths sweep clockwise through two half-arcs', () => {
+  const { scene, svg, quality } = renderDiagramOutputs(
+    chart('polar', {
+      series: [
+        series([
+          ['A', 1],
+          ['B', 1],
+        ]),
+      ],
+    }),
+  );
+  assert.equal(quality.status, 'pass');
+  const { cx, cy, radius } = scene.axes[1].grid;
+  const path = `M ${cx} ${cy} L ${cx} ${cy - radius} A ${radius} ${radius} 0 0 1 ${cx + radius} ${cy} A ${radius} ${radius} 0 0 1 ${cx} ${cy + radius} Z`;
+  assert.ok(svg.includes(`<path d="${path}"`));
 });
 
 for (const kind of ['radar', 'polar'])

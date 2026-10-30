@@ -54,7 +54,17 @@ function nodeOverlapCount(scene) {
 
 function markOverlapCount(scene) {
   const marks = scene.marks ?? [];
-  const obstacles = [...scene.boxes, ...(scene.notes ?? []), ...(scene.labelBounds ?? [])];
+  // Radial scale labels are painted above marks on opaque backgrounds.
+  const scaleTickIds = new Set(
+    scene.axes
+      .filter((axis) => axis.radial && axis.grid)
+      .flatMap((axis) => axis.ticks.map(({ text }) => text.id)),
+  );
+  const obstacles = [
+    ...scene.boxes,
+    ...(scene.notes ?? []),
+    ...(scene.labelBounds ?? []).filter(({ id }) => !scaleTickIds.has(id)),
+  ];
   let count = 0;
   for (const [index, mark] of marks.entries()) {
     count += obstacles.filter((box) =>

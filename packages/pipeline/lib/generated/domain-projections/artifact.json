@@ -817,7 +817,7 @@
     {
       "source": "packages/artifact/lib/artifact/diagram/rendering/layouts/chart-radial.mjs",
       "target": "lib/artifact/diagram/rendering/layouts/chart-radial.mjs",
-      "sha256": "b962de0d43d6219d72f4b2f30b67612628f1ea90d5159b6467e0ece9fc26d426",
+      "sha256": "c3ec90986a598e0541fc7ef739708c96ac7bfe2f725d11572a702857e79df4d7",
       "mode": "644"
     },
     {
@@ -829,13 +829,13 @@
     {
       "source": "packages/artifact/lib/artifact/diagram/rendering/reports.mjs",
       "target": "lib/artifact/diagram/rendering/reports.mjs",
-      "sha256": "3a0a0883d5e4cc6cf01e947d5de2708f1c6d3f023366f78e3611e765008f2740",
+      "sha256": "8844aa8318fa3f10f0a068f78def56eaeeb0c8d6374fa7a734cd5ffd5bb452e1",
       "mode": "644"
     },
     {
       "source": "packages/artifact/lib/artifact/diagram/rendering/svg.mjs",
       "target": "lib/artifact/diagram/rendering/svg.mjs",
-      "sha256": "70e8ac465df257691266683f9a333c7047c4a3aad15f3acc8b475ac7104b20aa",
+      "sha256": "1dd62b0d1ab334f1bb86530d7e7755004938242aaa50141a0d63cb680953bd55",
       "mode": "644"
     },
     {

@@ -45,7 +45,7 @@ function renderAxis(axis, theme) {
           .map(([x, y]) => `<line x1="${grid.cx}" y1="${grid.cy}" x2="${x}" y2="${y}"/>`)
           .join('')
       : '';
-    return `<g data-axis-id="${escapeXml(axis.id)}"><g data-radial-grid="${grid ? 'scale' : 'category'}" fill="none" stroke="${stroke}" stroke-width="1">${shapes}</g>${axis.ticks.map(({ text }) => renderChartText(text, theme)).join('')}${renderChartText(axis.text, theme)}</g>`;
+    return `<g data-axis-id="${escapeXml(axis.id)}"><g data-radial-grid="${grid ? 'scale' : 'category'}" fill="none" stroke="${stroke}" stroke-width="1">${shapes}</g>${grid ? '' : axis.ticks.map(({ text }) => renderChartText(text, theme)).join('')}${renderChartText(axis.text, theme)}</g>`;
   }
   return `<g data-axis-id="${escapeXml(axis.id)}"><line x1="${axis.x1}" y1="${axis.y1}" x2="${axis.x2}" y2="${axis.y2}" stroke="${stroke}" stroke-width="2"/>${axis.ticks.map((tick) => `<line x1="${tick.x}" y1="${tick.y}" x2="${tick.x + (axis.x1 === axis.x2 ? -6 : 0)}" y2="${tick.y + (axis.x1 === axis.x2 ? 0 : 6)}" stroke="${stroke}"/>${renderChartText(tick.text, theme)}`).join('')}${renderChartText(axis.text, theme)}</g>`;
 }
@@ -63,7 +63,7 @@ function renderMark(mark, theme) {
     const at = (angle) =>
       `${mark.cx + mark.radius * Math.cos(angle)} ${mark.cy + mark.radius * Math.sin(angle)}`;
     const middle = (mark.startAngle + mark.endAngle) / 2;
-    shape = `<path d="M ${mark.cx} ${mark.cy} L ${at(mark.startAngle)} A ${mark.radius} ${mark.radius} 0 0 1 ${at(middle)} A ${mark.radius} ${mark.radius} 0 0 1 ${at(mark.endAngle)} Z" fill="${color}"/>`;
+    shape = `<path d="M ${mark.cx} ${mark.cy} L ${at(mark.startAngle)} A ${mark.radius} ${mark.radius} 0 0 1 ${at(middle)} A ${mark.radius} ${mark.radius} 0 0 1 ${at(mark.endAngle)} Z" fill="${color}" stroke="${theme.background}" stroke-width="1.5"/>`;
   } else
     shape = `<polyline points="${mark.points.map((point) => point.join(',')).join(' ')}" fill="none" stroke="${color}" stroke-width="${mark.emphasis === 'primary' ? 4 : 3}"${mark.seriesIndex % 2 ? ' stroke-dasharray="8 5"' : ''}/>${mark.points.map(([x, y]) => `<circle cx="${x}" cy="${y}" r="3" fill="${color}"/>`).join('')}`;
   return `<g data-mark-id="${escapeXml(mark.id)}" data-mark-kind="${mark.kind}" opacity="${mark.emphasis === 'muted' ? 0.5 : 1}"${mark.emphasis === 'primary' ? ` stroke="${theme.foreground}" stroke-width="2"` : ''}><title>${escapeXml(mark.label)}${mark.key === undefined ? '' : `: ${escapeXml(mark.key)}, ${mark.value}`}</title>${shape}</g>`;
@@ -212,9 +212,17 @@ export function renderDiagramSvg(document, { theme = resolveDiagramTheme(documen
     `<rect width="${scene.width}" height="${scene.height}" fill="${theme.background}"/>`,
     ...scene.axes.map((axis) => renderAxis(axis, theme)),
     ...(scene.marks ?? []).map((mark) => renderMark(mark, theme)),
+    ...scene.axes
+      .filter((axis) => axis.radial && axis.grid)
+      .flatMap((axis) =>
+        axis.ticks.map(
+          ({ text }) =>
+            `<g data-scale-tick-id="${escapeXml(text.id)}"><rect x="${text.x - 2}" y="${text.y}" width="${text.width + 4}" height="${text.height}" fill="${theme.background}"/>${renderChartText(text, theme)}</g>`,
+        ),
+      ),
     ...(scene.legend ?? []).map(
       (text) =>
-        `<g><line x1="${text.x - 28}" y1="${text.y + 8}" x2="${text.x - 8}" y2="${text.y + 8}" stroke="${seriesColor(text.seriesIndex, theme)}" stroke-width="3"${text.seriesIndex % 2 ? ' stroke-dasharray="8 5"' : ''}/>${renderChartText(text, theme)}</g>`,
+        `<g>${document.grammar.id === 'polar' ? `<rect x="${text.x - 24}" y="${text.y + 2}" width="12" height="12" fill="${seriesColor(text.seriesIndex, theme)}"/>` : `<line x1="${text.x - 28}" y1="${text.y + 8}" x2="${text.x - 8}" y2="${text.y + 8}" stroke="${seriesColor(text.seriesIndex, theme)}" stroke-width="3"${text.seriesIndex % 2 ? ' stroke-dasharray="8 5"' : ''}/>`}${renderChartText(text, theme)}</g>`,
     ),
     ...scene.lanes.map((lane) => renderLane(lane, theme, metrics)),
     ...scene.groups.map((group) => renderGroup(group, theme, metrics)),

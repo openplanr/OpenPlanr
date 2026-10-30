@@ -35,7 +35,7 @@ export function layoutRadialChart(document, { wrapDiagramLabel }) {
     diagramFail(DIAGRAM_ERROR_CODES.RENDER_FAILED, `${document.grammar.id} chart: ${message}`, {
       ...details,
       repair:
-        'Declare category and linear scale axes, unique keys and finite non-negative values. Radar series must each include every spoke.',
+        'Declare category and linear scale axes, unique keys and finite non-negative values. Radar charts require at least 3 spokes, and every series must include each spoke.',
     });
   if (document.axes.length !== 2) invalid(`Expected two axes, received ${document.axes.length}.`);
   if (
@@ -53,6 +53,10 @@ export function layoutRadialChart(document, { wrapDiagramLabel }) {
   const keys = [...new Set(document.series.flatMap(({ values }) => values.map(({ key }) => key)))];
   if (keys.length === 0) invalid('No value keys were declared.');
   const radar = document.grammar.id === 'radar';
+  if (radar && keys.length < 3)
+    invalid(`Expected at least 3 radar spokes, received ${keys.length}.`, {
+      spokeCount: keys.length,
+    });
   for (const series of document.series) {
     if (new Set(series.values.map(({ key }) => key)).size !== series.values.length)
       invalid(`Duplicate keys in series ${series.id}.`, { seriesId: series.id });
@@ -114,10 +118,10 @@ export function layoutRadialChart(document, { wrapDiagramLabel }) {
             const text = label(
               `${axis.id}-tick-${tickIndex}`,
               String(Number.isFinite(rounded) ? rounded : value),
-              sidebar,
-              110 + tickIndex * 28,
+              cx + 6,
+              cy - radius * (tickIndex / 4) - 18,
             );
-            return { x: sidebar, y: text.y, text };
+            return { x: cx, y: cy - radius * (tickIndex / 4), text };
           });
     const text = label(axis.id, axis.label, index === 0 ? 32 : sidebar, 32);
     labelBounds.push(text, ...ticks.map(({ text }) => text));
