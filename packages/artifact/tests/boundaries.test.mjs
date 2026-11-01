@@ -35,6 +35,7 @@ test('diagram authoring has a closed browser-safe Artifact and Protocol import g
     [
       'diagram/rendering/layout.mjs',
       'diagram/rendering/layouts/chart-cartesian.mjs',
+      'diagram/rendering/layouts/chart-radial.mjs',
       'diagram/rendering/svg.mjs',
       'diagram/rendering/theme.mjs',
       'diagram/rendering/text.mjs',

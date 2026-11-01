@@ -10,9 +10,7 @@ const FIXTURE_SUFFIX = '.planr-diagram.json';
 // Grammars whose fixture renders invalid, with the exact failing checks.
 // Remove an entry in the change that makes that grammar render valid.
 const KNOWN_FAILURES = Object.freeze({
-  polar: ['semantic-coverage'],
   quadrant: ['semantic-coverage'],
-  radar: ['semantic-coverage'],
   sankey: ['semantic-coverage'],
   'user-journey': ['semantic-coverage'],
   venn: ['semantic-coverage'],
@@ -75,6 +73,20 @@ for (const grammarId of fixtureIds) {
     );
     assert.equal(document.grammar.id, grammarId);
     const { quality, scene } = renderDiagramOutputs(document);
+    if (['radar', 'polar'].includes(grammarId)) {
+      assert.equal(scene.kind, 'chart');
+      assert.equal(scene.axes.length, 2);
+      assert.equal(scene.boxes.length, 0);
+      const spokes = new Set(document.series.flatMap(({ values }) => values.map(({ key }) => key)));
+      assert.ok(spokes.size >= 5 && spokes.size <= 6);
+      assert.equal(document.series.length, grammarId === 'radar' ? 2 : 1);
+      for (const series of document.series) {
+        const marks = scene.marks.filter(({ id }) => id === series.id);
+        assert.equal(marks.length, grammarId === 'radar' ? 1 : series.values.length);
+        assert.ok(marks.every(({ kind }) => kind === (grammarId === 'radar' ? 'polygon' : 'arc')));
+        if (grammarId === 'radar') assert.equal(marks[0].points.length, spokes.size);
+      }
+    }
     if (['bar', 'line', 'scatter'].includes(grammarId)) {
       assert.equal(scene.kind, 'chart');
       assert.equal(scene.axes.length, 2);

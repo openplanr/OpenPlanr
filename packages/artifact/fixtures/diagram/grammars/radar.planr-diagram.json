@@ -34,15 +34,61 @@
   "series": [
     {
       "id": "series-main",
-      "label": "Primary series",
+      "label": "Current platform",
       "values": [
         {
-          "key": "A",
-          "value": 3
+          "key": "Reliability",
+          "value": 8
         },
         {
-          "key": "B",
+          "key": "Delivery",
+          "value": 6
+        },
+        {
+          "key": "Security",
+          "value": 9
+        },
+        {
+          "key": "Usability",
           "value": 5
+        },
+        {
+          "key": "Support",
+          "value": 7
+        },
+        {
+          "key": "Cost",
+          "value": 4
+        }
+      ]
+    },
+    {
+      "id": "series-secondary",
+      "label": "Target platform",
+      "values": [
+        {
+          "key": "Reliability",
+          "value": 9
+        },
+        {
+          "key": "Delivery",
+          "value": 8
+        },
+        {
+          "key": "Security",
+          "value": 9
+        },
+        {
+          "key": "Usability",
+          "value": 8
+        },
+        {
+          "key": "Support",
+          "value": 8
+        },
+        {
+          "key": "Cost",
+          "value": 7
         }
       ]
     }
@@ -50,12 +96,12 @@
   "axes": [
     {
       "id": "axis-horizontal",
-      "label": "Horizontal meaning",
-      "scale": "linear"
+      "label": "Platform capability",
+      "scale": "categorical"
     },
     {
       "id": "axis-vertical",
-      "label": "Vertical meaning",
+      "label": "Score (shared scale)",
       "scale": "linear"
     }
   ],
@@ -66,8 +112,9 @@
     "title": "Radar chart fixture",
     "description": "A compact radar chart example with semantic reading order.",
     "readingOrder": [
-      "series-main"
+      "series-main",
+      "series-secondary"
     ]
   },
-  "documentDigest": "sha256:3d2c48ef6b4581c0a83f425d1b38b6adf7e3a95602bedce793c7ce0e5874d0bb"
+  "documentDigest": "sha256:e638d9d4e22d189dff7075209990576504c65b2e4bdbc2d13eb7a2e180aed707"
 }

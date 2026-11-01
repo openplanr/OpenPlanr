@@ -45,6 +45,17 @@ function baseElement(id, type, geometry) {
 
 export const EXCALIDRAW_EXPORT_CAPABILITIES = Object.freeze({
   ...Object.fromEntries(
+    ['radar', 'polar'].map((grammarId) => [
+      grammarId,
+      Object.freeze({
+        grammarId,
+        status: 'unsupported',
+        reason:
+          'Radial grids, polygons and sectors are available in canonical SVG, HTML and PNG. Editable radial chart projection is not certified; no Excalidraw file is emitted.',
+      }),
+    ]),
+  ),
+  ...Object.fromEntries(
     ['bar', 'line', 'scatter'].map((grammarId) => [
       grammarId,
       Object.freeze({
