@@ -36,6 +36,16 @@ const series = (values, id = 'series-main') => ({
   values: values.map(([key, value]) => ({ key, value })),
 });
 const status = (quality, id) => quality.checks.find((check) => check.id === id).status;
+/** Every check passes, except a radar ring label crossing, which warns. */
+function assertClean(quality) {
+  const crossing = quality.checks.some(
+    ({ id, status }) => id === 'scale-label-crossing' && status === 'warning',
+  );
+  assert.equal(quality.status, crossing ? 'warning' : 'pass');
+  for (const check of quality.checks)
+    if (check.id !== 'scale-label-crossing')
+      assert.equal(check.status, 'pass', `${check.id}: ${check.message}`);
+}
 const report = (document, scene) =>
   createRenderQualityReport(document, {
     scene,
@@ -71,7 +81,7 @@ for (const kind of ['radar', 'polar']) {
   test(`${kind} renders its grid, labels, marks and explicit editable fallback`, () => {
     const document = chart(kind);
     const { scene, svg, png, quality } = renderDiagramOutputs(document);
-    assert.equal(quality.status, 'pass');
+    assertClean(quality);
     assert.equal(status(quality, 'semantic-coverage'), 'pass');
     assert.equal(scene.axes.length, 2);
     assert.equal(scene.axes[1].grid.spokes.length, 6);
@@ -94,7 +104,7 @@ for (const kind of ['radar', 'polar']) {
   test(`${kind} labels scale values beside the top spoke and checks label collisions`, () => {
     const document = chart(kind);
     const { scene, svg, quality } = renderDiagramOutputs(document);
-    assert.equal(quality.status, 'pass');
+    assertClean(quality);
     const scale = scene.axes[1];
     const { cx, cy, radius } = scale.grid;
     const maximum = Math.max(
@@ -109,18 +119,19 @@ for (const kind of ['radar', 'polar']) {
     for (const [index, tick] of scale.ticks.entries()) {
       assert.equal(tick.x, cx);
       assert.equal(tick.y, cy - radius * (index / 4));
-      if (kind === 'polar' || index === 0) assert.equal(tick.text.x, cx + 6);
-      else assert.ok(tick.text.x > cx || tick.text.x + tick.text.width < cx);
+      assert.equal(tick.text.x, cx + 6);
       assert.equal(tick.text.y + tick.text.height, tick.y);
       assert.ok(scene.labelBounds.includes(tick.text));
       const overlay = `<g data-scale-tick-id="${tick.text.id}">`;
       assert.ok(svg.indexOf(overlay) > svg.lastIndexOf('data-mark-kind='));
-      const theme = resolveDiagramTheme(document.theme);
-      assert.ok(
-        svg.includes(
-          `${overlay}<rect x="${tick.text.x - 2}" y="${tick.text.y}" width="${tick.text.width + 4}" height="${tick.text.height}" fill="${theme.background}"/>`,
-        ),
-      );
+      if (kind === 'polar') {
+        const theme = resolveDiagramTheme(document.theme);
+        assert.ok(
+          svg.includes(
+            `${overlay}<rect x="${tick.text.x - 2}" y="${tick.text.y}" width="${tick.text.width + 4}" height="${tick.text.height}" fill="${theme.background}"/>`,
+          ),
+        );
+      }
     }
     assert.ok(scene.labelBounds.includes(scale.text));
     assert.ok(scale.text.x >= cx);
@@ -190,7 +201,7 @@ for (const kind of ['radar', 'polar']) {
       values: item.values.map((value) => ({ ...value, value: 0 })),
     }));
     const { scene, quality, svg } = renderDiagramOutputs(chart(kind, { series: samples }));
-    assert.equal(quality.status, 'pass');
+    assertClean(quality);
     const { cx, cy } = scene.axes[1].grid;
     for (const mark of scene.marks) {
       if (kind === 'radar') assert.ok(mark.points.every(([x, y]) => x === cx && y === cy));
@@ -209,7 +220,7 @@ for (const kind of ['radar', 'polar']) {
       })),
     });
     const { scene, quality } = renderDiagramOutputs(document);
-    assert.equal(quality.status, 'pass');
+    assertClean(quality);
     assert.equal(scene.notes.length, 3);
     assert.equal(status(quality, 'semantic-coverage'), 'pass');
   });
@@ -226,7 +237,7 @@ for (const kind of ['radar', 'polar']) {
           })),
         });
         const { svg, quality } = renderDiagramOutputs(document);
-        assert.equal(quality.status, 'pass');
+        assertClean(quality);
         const theme = resolveDiagramTheme(document.theme);
         if (kind === 'polar') {
           const sectors = [
@@ -257,68 +268,121 @@ for (const kind of ['radar', 'polar']) {
       });
 }
 
-test('radar fixture scale tiles keep clear of every polygon edge', () => {
-  const document = chart('radar');
-  const scene = layoutDiagram(document);
-  for (const { text } of scene.axes[1].ticks)
-    for (const mark of scene.marks)
-      assert.equal(polygonHitsTile(mark, text), false, `${text.id} crosses ${mark.id}`);
-  assert.equal(status(report(document, scene), 'mark-overlap'), 'pass');
+// The report pads ring labels by 2 px and ignores 1 px grazes, as segmentEntersBox does.
+const inset = (text) => ({
+  ...text,
+  x: text.x + 1,
+  y: text.y + 1,
+  width: text.width - 2,
+  height: text.height - 2,
 });
 
-test('radar moves a ring label left when its right tile crosses a polygon edge', () => {
-  const document = chart('radar', {
-    series: [
-      series([
-        ['A', 9],
-        ['B', 9],
-        ['C', 0],
-      ]),
-    ],
-  });
-  const scene = layoutDiagram(document);
-  const { cx } = scene.axes[1].grid;
-  const { text } = scene.axes[1].ticks[1];
-  assert.ok(text.x + text.width < cx);
-  assert.equal(polygonHitsTile(scene.marks[0], text), false);
-  const right = { ...text, x: 2 * cx - text.x - text.width };
-  assert.equal(polygonHitsTile(scene.marks[0], right), true);
-  const collision = report(document, {
-    ...scene,
-    labelBounds: scene.labelBounds.map((label) => (label.id === text.id ? right : label)),
-  });
-  assert.equal(status(collision, 'mark-overlap'), 'fail');
-  assert.equal(status(report(document, scene), 'mark-overlap'), 'pass');
-});
-
-test('radar retains the right tile and reports when both sides cross polygon edges', () => {
-  const document = chart('radar', {
-    series: [
-      series([
-        ['A', 9],
-        ['B', 9],
-        ['C', 0],
-      ]),
+function seededRadar(spokes, seed) {
+  let state = seed;
+  const next = () => {
+    state = (state * 1_103_515_245 + 12_345) % 2_147_483_648;
+    return state / 2_147_483_648;
+  };
+  return chart('radar', {
+    series: ['first', 'second'].map((id) =>
       series(
-        [
-          ['A', 9],
-          ['B', 0],
-          ['C', 9],
-        ],
-        'second',
+        Array.from({ length: spokes }, (_, index) => [
+          `Axis ${index + 1}`,
+          Math.round(next() * 10),
+        ]),
+        id,
       ),
-    ],
+    ),
   });
-  const scene = layoutDiagram(document);
-  const { cx } = scene.axes[1].grid;
-  const { text } = scene.axes[1].ticks[1];
-  assert.ok(text.x > cx);
-  assert.equal(polygonHitsTile(scene.marks[0], text), true);
-  assert.equal(polygonHitsTile(scene.marks[1], { ...text, x: 2 * cx - text.x - text.width }), true);
-  assert.equal(status(report(document, scene), 'mark-overlap'), 'fail');
+}
+const seededRadars = [5, 6, 8].flatMap((spokes) =>
+  Array.from({ length: 4 }, (_, index) => ({
+    name: `${spokes} spokes, seed ${index}`,
+    document: seededRadar(spokes, spokes * 100 + index),
+  })),
+);
+
+function ringTopAt({ cx, spokes }, fraction, x) {
+  const ring = spokes.map(([sx, sy]) => [
+    cx + (sx - cx) * fraction,
+    spokes.cy + (sy - spokes.cy) * fraction,
+  ]);
+  return Math.min(
+    ...ring.flatMap((start, index) => {
+      const end = ring[(index + 1) % ring.length];
+      if (x < Math.min(start[0], end[0]) || x > Math.max(start[0], end[0]) || start[0] === end[0])
+        return [];
+      return [start[1] + ((x - start[0]) / (end[0] - start[0])) * (end[1] - start[1])];
+    }),
+  );
+}
+
+test('radar ring values sit nearest their own ring along the top spoke', () => {
+  for (const { name, document } of [
+    { name: 'fixture', document: chart('radar') },
+    ...seededRadars,
+  ]) {
+    const { grid, ticks } = layoutDiagram(document).axes[1];
+    const shape = { cx: grid.cx, spokes: Object.assign([...grid.spokes], { cy: grid.cy }) };
+    for (const [index, { text }] of ticks.entries()) {
+      if (index === 0) continue;
+      const baseline = text.y + 13;
+      const x = text.x + text.width / 2;
+      const nearest = grid.rings.reduce((best, fraction) =>
+        Math.abs(ringTopAt(shape, fraction, x) - baseline) <
+        Math.abs(ringTopAt(shape, best, x) - baseline)
+          ? fraction
+          : best,
+      );
+      assert.equal(nearest, index / 4, `${name}: ${text.lines.join('')} reads as ring ${nearest}`);
+    }
+  }
 });
 
-test('radar checks the closing polygon edge against non-centre scale tiles', () => {
+test('radar ring labels crossing series lines warn by name and never invalidate', () => {
+  let crossings = 0;
+  for (const { name, document } of [
+    { name: 'fixture', document: chart('radar') },
+    ...seededRadars,
+  ]) {
+    const { scene, quality } = renderDiagramOutputs(document);
+    assert.notEqual(quality.status, 'invalid', `${name} renders invalid`);
+    assert.equal(status(quality, 'mark-overlap'), 'pass', name);
+    const expected = scene.axes[1].ticks
+      .slice(1)
+      .flatMap(({ text }) =>
+        scene.marks
+          .filter((mark) => polygonHitsTile(mark, inset(text)))
+          .map((mark) => `"${text.lines.join('')}" crosses series "${mark.label}"`),
+      );
+    crossings += expected.length;
+    const check = quality.checks.find(({ id }) => id === 'scale-label-crossing');
+    assert.equal(check.status, expected.length ? 'warning' : 'pass', name);
+    for (const crossing of expected)
+      assert.ok(check.message.includes(crossing), `${name}: ${crossing}`);
+  }
+  assert.ok(crossings > 0, 'seeded radars exercise at least one crossing');
+});
+
+test('radar ring labels draw a background text halo without tiles', () => {
+  const document = chart('radar', { theme: { themeId: 'openplanr', mode: 'auto' } });
+  const { scene, svg } = renderDiagramOutputs(document);
+  const theme = resolveDiagramTheme(document.theme);
+  for (const { text } of scene.axes[1].ticks) {
+    const group = svg.slice(svg.indexOf(`<g data-scale-tick-id="${text.id}">`)).split('</g>')[0];
+    assert.match(
+      group,
+      new RegExp(
+        `^<g data-scale-tick-id="${text.id}"><text [^>]*stroke="${theme.background}" stroke-width="3" stroke-linejoin="round" paint-order="stroke">`,
+        'u',
+      ),
+    );
+    assert.doesNotMatch(group, /<rect/u);
+  }
+  assert.ok(svg.includes(`[stroke="${theme.background}"]{stroke:${theme.dark.background}}`));
+});
+
+test('radar checks the closing polygon edge against non-centre scale labels', () => {
   const document = chart('radar');
   const scene = layoutDiagram(document);
   const mark = scene.marks[0];
@@ -331,7 +395,9 @@ test('radar checks the closing polygon edge against non-centre scale tiles', () 
     width: 8,
     height: 8,
   };
-  assert.equal(status(report(document, { ...scene, labelBounds: [text] }), 'mark-overlap'), 'fail');
+  const quality = report(document, { ...scene, labelBounds: [text] });
+  assert.equal(status(quality, 'scale-label-crossing'), 'warning');
+  assert.equal(status(quality, 'mark-overlap'), 'pass');
 });
 
 test('radar vertices follow first appearance regardless of later series order', () => {
@@ -353,7 +419,7 @@ test('radar vertices follow first appearance regardless of later series order', 
     ],
   });
   const { scene, quality, svg } = renderDiagramOutputs(document);
-  assert.equal(quality.status, 'pass');
+  assertClean(quality);
   assert.deepEqual(
     scene.axes[0].ticks.map(({ text }) => text.lines.join('')),
     ['C', 'A', 'B'],
@@ -430,7 +496,7 @@ test('legacy radial category axes keep one vertex per key', () => {
         ],
       }),
     );
-    assert.equal(quality.status, 'pass');
+    assertClean(quality);
     assert.equal(scene.marks.length, kind === 'radar' ? 1 : 3);
     if (kind === 'radar') assert.equal(scene.marks[0].points.length, 3);
   }
@@ -454,7 +520,7 @@ test('polar divides each first-appearance category angle into stable series slot
       ],
     }),
   );
-  assert.equal(quality.status, 'pass');
+  assertClean(quality);
   assert.deepEqual(
     scene.axes[0].ticks.map(({ text }) => text.lines.join('')),
     ['B', 'A', 'C'],
@@ -471,7 +537,7 @@ test('one polar value renders a full circle with two arcs', () => {
   const { scene, svg, quality } = renderDiagramOutputs(
     chart('polar', { series: [series([['All traffic', 10]])] }),
   );
-  assert.equal(quality.status, 'pass');
+  assertClean(quality);
   const [mark] = scene.marks;
   assert.ok(Math.abs(mark.endAngle - mark.startAngle - 2 * Math.PI) < 1e-10);
   assert.equal((svg.match(/ A /gu) ?? []).length, 2);
@@ -490,7 +556,7 @@ test('polar sector paths sweep clockwise through two half-arcs', () => {
       ],
     }),
   );
-  assert.equal(quality.status, 'pass');
+  assertClean(quality);
   const { cx, cy, radius } = scene.axes[1].grid;
   const path = `M ${cx} ${cy} L ${cx} ${cy - radius} A ${radius} ${radius} 0 0 1 ${cx + radius} ${cy} A ${radius} ${radius} 0 0 1 ${cx} ${cy + radius} Z`;
   assert.ok(svg.includes(`<path d="${path}"`));
@@ -575,7 +641,7 @@ test('radial scales remain finite for the largest and smallest finite values', (
         ],
       }),
     );
-    assert.equal(quality.status, 'pass');
+    assertClean(quality);
     assert.doesNotMatch(svg, /NaN|Infinity/u);
   }
 });

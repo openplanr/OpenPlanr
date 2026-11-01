@@ -25,8 +25,8 @@ const seriesColor = (index, theme) => {
   return colors[index % colors.length];
 };
 
-function renderChartText(text, theme) {
-  return `<text x="${text.x}" y="${text.y + 13}" font-family="${theme.fontFamily}" font-size="13" fill="${theme.foreground}">${text.lines.map((line, index) => `<tspan x="${text.x}" y="${text.y + 13 + index * 18}">${escapeXml(line)}</tspan>`).join('')}</text>`;
+function renderChartText(text, theme, halo = '') {
+  return `<text x="${text.x}" y="${text.y + 13}" font-family="${theme.fontFamily}" font-size="13" fill="${theme.foreground}"${halo}>${text.lines.map((line, index) => `<tspan x="${text.x}" y="${text.y + 13 + index * 18}">${escapeXml(line)}</tspan>`).join('')}</text>`;
 }
 
 function renderAxis(axis, theme) {
@@ -217,7 +217,7 @@ export function renderDiagramSvg(document, { theme = resolveDiagramTheme(documen
       .flatMap((axis) =>
         axis.ticks.map(
           ({ text }) =>
-            `<g data-scale-tick-id="${escapeXml(text.id)}"><rect x="${text.x - 2}" y="${text.y}" width="${text.width + 4}" height="${text.height}" fill="${theme.background}"/>${renderChartText(text, theme)}</g>`,
+            `<g data-scale-tick-id="${escapeXml(text.id)}">${axis.grid.polygon ? renderChartText(text, theme, ` stroke="${theme.background}" stroke-width="3" stroke-linejoin="round" paint-order="stroke"`) : `<rect x="${text.x - 2}" y="${text.y}" width="${text.width + 4}" height="${text.height}" fill="${theme.background}"/>${renderChartText(text, theme)}`}</g>`,
         ),
       ),
     ...(scene.legend ?? []).map(

@@ -1865,7 +1865,7 @@ export function layoutDiagram(document, { theme = resolveDiagramTheme(document.t
     ['bar', 'line', 'scatter', 'radar', 'polar'].includes(grammar.grammarId)
   ) {
     const scene = ['radar', 'polar'].includes(grammar.grammarId)
-      ? layoutRadialChart(document, { wrapDiagramLabel, segmentEntersBox })
+      ? layoutRadialChart(document, { wrapDiagramLabel })
       : layoutCartesianChart(document, { wrapDiagramLabel });
     const positioned = new Set(scene.marks.map(({ id }) => id));
     const items = semanticItems(document, true).filter(({ id }) => !positioned.has(id));

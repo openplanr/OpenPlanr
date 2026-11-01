@@ -30,7 +30,7 @@ function bounds(points) {
 }
 
 /** Radial spokes follow the first appearance of value keys across series. */
-export function layoutRadialChart(document, { wrapDiagramLabel, segmentEntersBox }) {
+export function layoutRadialChart(document, { wrapDiagramLabel }) {
   const invalid = (message, details = {}) =>
     diagramFail(DIAGRAM_ERROR_CODES.RENDER_FAILED, `${document.grammar.id} chart: ${message}`, {
       ...details,
@@ -85,7 +85,6 @@ export function layoutRadialChart(document, { wrapDiagramLabel, segmentEntersBox
   };
   const sizes = keys.map((key) => label('', key, 0, 0));
   const radius = 200;
-  const tickGap = 64;
   const cx = radius + Math.max(...sizes.map(({ width }) => width)) + 64;
   const cy = radius + Math.max(...sizes.map(({ height }) => height)) + 100;
   const angle = (index) => -Math.PI / 2 + (index * TAU) / keys.length;
@@ -151,25 +150,9 @@ export function layoutRadialChart(document, { wrapDiagramLabel, segmentEntersBox
             const text = label(
               `${axis.id}-tick-${tickIndex}`,
               String(Number.isFinite(rounded) ? rounded : value),
-              cx + (radar && tickIndex > 0 ? tickGap : 6),
+              cx + 6,
               cy - radius * (tickIndex / 4) - 18,
             );
-            if (radar && tickIndex > 0) {
-              const hitsPolygon = (candidate) =>
-                marks.some((mark) =>
-                  mark.points.some((start, index) =>
-                    segmentEntersBox(start, mark.points[(index + 1) % mark.points.length], {
-                      ...candidate,
-                      x: candidate.x - 2,
-                      width: candidate.width + 4,
-                    }),
-                  ),
-                );
-              if (hitsPolygon(text)) {
-                const left = { ...text, x: cx - tickGap - text.width };
-                if (!hitsPolygon(left)) text.x = left.x;
-              }
-            }
             return { x: cx, y: cy - radius * (tickIndex / 4), text };
           });
     const text = label(
