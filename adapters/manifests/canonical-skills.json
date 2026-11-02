@@ -5147,7 +5147,7 @@
     },
     {
       "id": "planr-investigate",
-      "version": "2.2.0",
+      "version": "2.3.0",
       "source": "skills/planr-investigate/openplanr.skill.json",
       "entrypoint": "skills/planr-investigate/SKILL.md",
       "description": "Diagnose a bug, regression, error, or unexplained behavior and optionally implement a bounded fix. Use for root-cause investigation, including before any fix, not planned feature delivery.",
@@ -5766,11 +5766,11 @@
     },
     {
       "id": "planr-ship",
-      "version": "1.5.0",
+      "version": "1.6.0",
       "source": "skills/planr-ship/openplanr.skill.json",
       "entrypoint": "skills/planr-ship/SKILL.md",
       "description": "Implement an OpenPlanr plan, specification, task, or clearly stated request end to end in the current repository. Use when the user asks to build, implement, fix, finish, or ship local work, or to plan and implement an accepted change. Invoke before editing files for the requested change. Not for planning only, landing, release, or work handed to another coding agent.",
-      "sourceDigest": "sha256:9ad6d013f25dcccb6b92e6f01cc9704d4c34a85816d981f90540dd32b5d96a89",
+      "sourceDigest": "sha256:239dc1dc9aa54ba6f2e4782083ce602b2d520680219d328a5d2e1e151f9dd13d",
       "resources": [
         {
           "path": "agents/openai.yaml",
