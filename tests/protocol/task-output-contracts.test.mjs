@@ -207,6 +207,58 @@ test('implementation result validates concise task and direct-request outcomes',
   );
 });
 
+test('implementation result 1.23.0 adds awaiting-acceptance and per-check acceptance IDs', () => {
+  const v123 = { protocolVersion: '1.23.0' };
+  const awaiting = implementationResult({
+    outcome: {
+      status: 'awaiting-acceptance',
+      summary: 'Repository work is done; acceptance needs an owner-only run.',
+    },
+    checks: [
+      {
+        command: 'npm test',
+        status: 'passed',
+        detail: 'Failed before the change on an assertion; passes now.',
+        acceptanceIds: ['AC-1', 'US-001.AC-2'],
+      },
+    ],
+  });
+  assert.deepEqual(validateProtocolArtifact('implementation-result', awaiting, v123), []);
+  assert.deepEqual(
+    validateProtocolArtifact('implementation-result', implementationResult(), v123),
+    [],
+  );
+  assert.ok(
+    validateProtocolArtifact('implementation-result', awaiting, { protocolVersion: '1.5.0' })
+      .length > 0,
+  );
+  assert.ok(
+    validateProtocolArtifact('implementation-result', implementationResult(), {
+      protocolVersion: '1.5.0',
+    }).length === 0,
+  );
+  for (const malformed of ['ac-1', 'AC-', 'AC-1 ', 'US-001.AC', 'T-001']) {
+    const value = implementationResult({
+      checks: [{ command: 'npm test', status: 'passed', detail: 'ok', acceptanceIds: [malformed] }],
+    });
+    assert.ok(
+      validateProtocolArtifact('implementation-result', value, v123).some(
+        ({ rule }) => rule === 'pattern',
+      ),
+      malformed,
+    );
+  }
+  const { schema } = resolveProtocolSchema('implementation-result', v123);
+  assert.deepEqual(Object.keys(schema.properties).sort(), [
+    'changed',
+    'checks',
+    'issues',
+    'outcome',
+    'task',
+  ]);
+  assert.doesNotMatch(JSON.stringify(schema.properties), /hash|digest|evidence|attempt|receipt/iu);
+});
+
 test('legacy task output remains readable and satisfies its original semantic joins', () => {
   const manifest = task();
   const result = output(manifest);

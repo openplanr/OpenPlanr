@@ -5147,11 +5147,11 @@
     },
     {
       "id": "planr-investigate",
-      "version": "2.1.0",
+      "version": "2.2.0",
       "source": "skills/planr-investigate/openplanr.skill.json",
       "entrypoint": "skills/planr-investigate/SKILL.md",
       "description": "Diagnose a bug, regression, error, or unexplained behavior and optionally implement a bounded fix. Use for root-cause investigation, including before any fix, not planned feature delivery.",
-      "sourceDigest": "sha256:c3ab65adfbe563612d657b7072cd7a022150b1a3509426ffb716ca0a5bf49fca",
+      "sourceDigest": "sha256:e5a354fc8d34b8060fa2120547b6cdc65b19f3ee50f92940c37ba4b346d3aa9c",
       "resources": [
         {
           "path": "agents/openai.yaml",
@@ -5162,6 +5162,18 @@
           ],
           "executable": false,
           "digest": "sha256:07651fdaa9aab3486f3288b35547db534dc46bbf96f56aebb9e63c99d205eb37"
+        },
+        {
+          "path": "references/fail-first.md",
+          "kind": "reference",
+          "hosts": [
+            "claude-code",
+            "codex",
+            "chatgpt",
+            "cursor"
+          ],
+          "executable": false,
+          "digest": "sha256:8c76f966b45919fd0caf1b31f4fd83120ec8bc100747720871550676dc971766"
         },
         {
           "path": "references/findings.md",
@@ -5754,11 +5766,11 @@
     },
     {
       "id": "planr-ship",
-      "version": "1.4.0",
+      "version": "1.5.0",
       "source": "skills/planr-ship/openplanr.skill.json",
       "entrypoint": "skills/planr-ship/SKILL.md",
       "description": "Implement an OpenPlanr plan, specification, task, or clearly stated request end to end in the current repository. Use when the user asks to build, implement, fix, finish, or ship local work, or to plan and implement an accepted change. Invoke before editing files for the requested change. Not for planning only, landing, release, or work handed to another coding agent.",
-      "sourceDigest": "sha256:c01e21e744d323a781abce7713500dad948717fa3234112e5740a10def01d6c8",
+      "sourceDigest": "sha256:9bf3a2f8d79003c70f04b8d3548ecfeb89671017c0a0267f2a0a458760632b8d",
       "resources": [
         {
           "path": "agents/openai.yaml",
@@ -5780,7 +5792,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:687f53f2d6682dbe628bb2bfd52edd5685d9611e2695497516d37a1ef355b57f"
+          "digest": "sha256:1c8bf48c8bbae9b6a7ef7b6e1d444412c9bf6f3c67fc0233c159c3b084cc7e0e"
         },
         {
           "path": "references/design-lineage.md",
@@ -5805,6 +5817,18 @@
           ],
           "executable": true,
           "digest": "sha256:8805ac8d814a1d94364d455df6da350983d4c8436faa3749717da5f1b3ae63b1"
+        },
+        {
+          "path": "references/fail-first.md",
+          "kind": "reference",
+          "hosts": [
+            "claude-code",
+            "codex",
+            "chatgpt",
+            "cursor"
+          ],
+          "executable": false,
+          "digest": "sha256:8c76f966b45919fd0caf1b31f4fd83120ec8bc100747720871550676dc971766"
         },
         {
           "path": "references/findings.md",

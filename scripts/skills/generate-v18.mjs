@@ -109,6 +109,7 @@ const operateAdvisorDestinations = Object.freeze([
 ]);
 const trackerConnectionDestinations = Object.freeze(['planr-sync', 'planr-sprint', 'planr-status']);
 const findingsDestinations = Object.freeze(['planr-ship', 'planr-investigate']);
+const failFirstDestinations = Object.freeze(['planr-ship', 'planr-investigate']);
 const connectionsCatalog = readConnectionsCatalog(root);
 const connectorsMarkdown = renderConnectors(connectionsCatalog);
 const operateValidatorDestinations = Object.freeze([
@@ -197,6 +198,11 @@ const sharedSkillResources = Object.freeze([
       executable: false,
     },
   ]),
+  ...failFirstDestinations.map((skillId) => ({
+    source: 'skills/shared/fail-first.md',
+    destination: `skills/${skillId}/references/fail-first.md`,
+    executable: false,
+  })),
   {
     source: 'packages/integrations/src/portable-sync.mjs',
     destination: 'skills/planr-sync/scripts/sync.mjs',

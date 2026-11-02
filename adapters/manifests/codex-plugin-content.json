@@ -8,7 +8,7 @@
   "canonicalSkillCount": 30,
   "compatibilityAliasCount": 0,
   "skillCount": 30,
-  "assetCount": 215,
+  "assetCount": 217,
   "skills": [
     {
       "skillId": "planr-artifact",
@@ -740,15 +740,19 @@
       "assets": [
         {
           "path": "skills/investigate/SKILL.md",
-          "digest": "sha256:2f3426737579e889e35d4d7c03ca112a268f550ed1290ffa9b6d947f94522b4a"
+          "digest": "sha256:d65f7dbdfe519db5aea0145cb8d89834280840d848317d39319a31b697d0058e"
         },
         {
           "path": "skills/investigate/openplanr.skill.json",
-          "digest": "sha256:eb14795cb0e58a28178aaead5e2737c191f981f0da182cabeeeb99d7c45d87f4"
+          "digest": "sha256:5258e0aecbefd4dc8a7ddfdce0faa8ed051c43ecdd41282779174aa3922455ad"
         },
         {
           "path": "skills/investigate/agents/openai.yaml",
           "digest": "sha256:a351007ce74261258a793cb856e3f3a279f49054a9d441fc051f61ce9904f29a"
+        },
+        {
+          "path": "skills/investigate/references/fail-first.md",
+          "digest": "sha256:8c76f966b45919fd0caf1b31f4fd83120ec8bc100747720871550676dc971766"
         },
         {
           "path": "skills/investigate/references/findings.md",
@@ -976,11 +980,11 @@
       "assets": [
         {
           "path": "skills/ship/SKILL.md",
-          "digest": "sha256:e5fa1282a415e26c1463ed73c5d88ec69512080395d7fb385463d0bdff0a73ec"
+          "digest": "sha256:6fa0f1654a0a7f040b9c6135305b9833e9a498530a43bb1c30f34e91d90a18f7"
         },
         {
           "path": "skills/ship/openplanr.skill.json",
-          "digest": "sha256:636a378452d54760d78c5fa5f361de0ced97035e41ba7f3e3361fd5ab5d8058d"
+          "digest": "sha256:f5659c681a914bed63b8029f1d3028f79e4f7c07f7558e434a2aaa85178af72c"
         },
         {
           "path": "skills/ship/agents/openai.yaml",
@@ -988,7 +992,7 @@
         },
         {
           "path": "skills/ship/references/result-contract.md",
-          "digest": "sha256:687f53f2d6682dbe628bb2bfd52edd5685d9611e2695497516d37a1ef355b57f"
+          "digest": "sha256:1c8bf48c8bbae9b6a7ef7b6e1d444412c9bf6f3c67fc0233c159c3b084cc7e0e"
         },
         {
           "path": "skills/ship/references/design-lineage.md",
@@ -997,6 +1001,10 @@
         {
           "path": "skills/ship/scripts/discover-verification.mjs",
           "digest": "sha256:8805ac8d814a1d94364d455df6da350983d4c8436faa3749717da5f1b3ae63b1"
+        },
+        {
+          "path": "skills/ship/references/fail-first.md",
+          "digest": "sha256:8c76f966b45919fd0caf1b31f4fd83120ec8bc100747720871550676dc971766"
         },
         {
           "path": "skills/ship/references/findings.md",

@@ -1250,6 +1250,39 @@ export function buildSchemas() {
   ]);
 }
 
+/** Protocol 1.23 implementation result: adds `awaiting-acceptance` and per-check acceptance IDs. */
+export function buildImplementationResultSchemaV123() {
+  const schemas = buildSchemas();
+  const commonDefs = schemas.get('common.schema.json').$defs;
+  const usedDefs = new Set();
+  const localize = (value) => {
+    if (Array.isArray(value)) return value.map(localize);
+    if (!value || typeof value !== 'object') return value;
+    const match = /^common\.schema\.json#\/\$defs\/([^/]+)$/u.exec(value.$ref ?? '');
+    if (match) {
+      usedDefs.add(match[1]);
+      return { ...value, $ref: `#/$defs/${match[1]}` };
+    }
+    return Object.fromEntries(
+      Object.entries(value).map(([key, nested]) => [key, localize(nested)]),
+    );
+  };
+  const schema = localize(schemas.get('implementation-result.schema.json'));
+  schema.$id = 'https://openplanr.dev/schemas/v1.23.0/implementation-result.schema.json';
+  schema['x-openplanr-contract'] = { id: 'implementation-result', version: '1.23.0' };
+  schema.properties.outcome.properties.status = {
+    enum: ['completed', 'partial', 'blocked', 'awaiting-acceptance'],
+  };
+  schema.properties.checks.items.properties.acceptanceIds = array(
+    { type: 'string', pattern: '^(?:[A-Z][A-Z0-9]*-[0-9]+\\.)?AC-[0-9]+$' },
+    0,
+    256,
+    true,
+  );
+  schema.$defs = Object.fromEntries([...usedDefs].sort().map((name) => [name, commonDefs[name]]));
+  return schema;
+}
+
 const workspaceRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..', '..');
 const digestFor = (value) => `sha256:${sha256Hex(value)}`;
 const digestForCanonicalPath = (path, fallbackNamespace) => {

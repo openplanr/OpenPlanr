@@ -162,6 +162,67 @@ test('Ship and Investigate split issues into blockers and findings they offer to
   }
 });
 
+test('Ship passes delegate context, re-checks evidence and maps checks to acceptance', () => {
+  const skill = readWorkspace('skills/planr-ship/SKILL.md');
+  for (const pin of [
+    /`\.planr\/conventions\/<area>\.md`/u,
+    /absolute task path with `MODE`/u,
+    /`SPEC_DIR`/u,
+    /Re-run the cheap checks a worker reports as passed/u,
+    /`git diff --name-only` plus untracked files/u,
+    /Act on warning diagnostics too/u,
+    /`expectFiles` entry/u,
+    /`awaiting-acceptance`/u,
+    /outside Create and Modify/u,
+    /acceptance IDs it covers; list acceptance criteria no check covers/u,
+    /\]\(references\/fail-first\.md\)/u,
+  ]) {
+    assert.match(skill, pin);
+  }
+  assert.match(
+    readWorkspace('skills/planr-investigate/SKILL.md'),
+    /\]\(references\/fail-first\.md\)/u,
+  );
+  const contract = readWorkspace('skills/planr-ship/references/result-contract.md');
+  assert.match(contract, /`awaiting-acceptance`/u);
+  assert.match(contract, /acceptance IDs it covers/u);
+  assert.match(contract, /Do not add receipts, digests, proof ledgers/u);
+});
+
+test('Ship and Investigate carry the shared fail-first reference', () => {
+  const failFirst = readWorkspace('skills/shared/fail-first.md');
+  for (const skillId of ['planr-ship', 'planr-investigate']) {
+    assert.equal(readWorkspace(`skills/${skillId}/references/fail-first.md`), failFirst, skillId);
+  }
+  for (const rule of [
+    /assertion/u,
+    /load error/u,
+    /`git status --porcelain`/u,
+    /nothing staged/u,
+    /Off by default/iu,
+    /Restore from the copy/u,
+    /Copy the target file outside the repository/u,
+    /and rebuild if step 4 did/u,
+    /`cmp`/u,
+  ]) {
+    assert.match(failFirst, rule);
+  }
+  assert.doesNotMatch(failFirst, /must stop/iu);
+  assert.doesNotMatch(failFirst, RETIRED_GOVERNANCE);
+  for (const [skillId, hostSkill] of [
+    ['planr-ship', 'ship'],
+    ['planr-investigate', 'investigate'],
+  ]) {
+    for (const path of [
+      `dist/plugins/claude/openplanr/skills/${hostSkill}/references/fail-first.md`,
+      `dist/plugins/openai/openplanr/skills/${hostSkill}/references/fail-first.md`,
+      `dist/plugins/cursor/openplanr/rules/${skillId}/references/fail-first.md`,
+    ]) {
+      assert.equal(readWorkspace(path), failFirst, path);
+    }
+  }
+});
+
 test('every host receives the canonical Ship package without compatibility commands', () => {
   const canonical = readWorkspace('skills/planr-ship/SKILL.md');
   const manifest = JSON.parse(readWorkspace('skills/planr-ship/openplanr.skill.json'));
