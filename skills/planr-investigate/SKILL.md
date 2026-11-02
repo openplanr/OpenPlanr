@@ -22,6 +22,7 @@ the requested outcome.
 When the user asked for a fix, implement the smallest coherent correction within the requested
 repository and run focused regression checks. Preserve unrelated work. Ask only when a missing
 product decision or an irreversible external action genuinely blocks progress.
+Prove the regression test with [fail-first](references/fail-first.md).
 
 ## Findings outside the cause
 

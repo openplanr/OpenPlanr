@@ -20,6 +20,7 @@ For a selector, locate exactly one task and read it completely. Then follow its
 when present, and specification. Also read repository instructions, ADRs,
 planning rules, applicable stack guidance, relevant design/database context,
 implementation code, tests, and interfaces produced by declared dependencies.
+Project conventions, when present, live in `.planr/conventions/<area>.md`, indexed from AGENTS.md; read the areas this task touches.
 
 Read [the design lineage contract](references/design-lineage.md). If the selected
 planning root contains `design-lineage.json`, load only the selected task's mapped
@@ -62,8 +63,9 @@ QA retains verification tools, subject to role policy and session permissions.
 
 Select the exact registered identity from the host's roster; Claude plugin
 agents use names such as `planr:planr-backend` and `planr:planr-qa`. Give each worker
-its outcome, authoritative paths, relevant decisions, file ownership, verification
-requirements, and concise return expectations. Parallel workers need disjoint
+its outcome, the absolute task path with `MODE` and, in spec-driven mode, `SPEC_DIR`,
+authoritative paths, relevant decisions, file ownership, verification requirements,
+and concise return expectations. Parallel workers need disjoint
 writes or an agreed interface. Explain the delegation's purpose briefly in
 commentary. Host-native workers do not invoke the separate `planr-delegate` helper.
 When the host lacks the native role, perform the work sequentially in this session
@@ -71,7 +73,8 @@ and disclose capability limitations; never claim an unavailable specialist ran.
 
 Integrate the complete change, then verify behavior. `reviewRisks` and
 `browserSurfaces` select useful checks; empty arrays are normal and neither field
-is a workflow gate.
+is a workflow gate. Re-run the cheap checks a worker reports as passed, and compare
+its `changed` list with `git diff --name-only` plus untracked files; report any difference.
 
 ## Discover and run verification
 
@@ -86,9 +89,11 @@ Run `openplanr ship checks --json --task <task-path>` (omit `--task` for a direc
 request; add `--tier story` or `--tier push` before pushing) and run its `checks`
 from each `cwd`. The command never executes checks or writes files. When
 `complete` is `false`, report its error diagnostics and treat the check set as
-incomplete: a pass is not CI-equivalent. Without the CLI, the packaged read-only
-[verification discovery helper](scripts/discover-verification.mjs) may list
-candidates. Resolve it relative to this `SKILL.md` and run
+incomplete: a pass is not CI-equivalent. Act on warning diagnostics too; each names
+the files or checks it affects. For a `package-contents` check, account for every
+`expectFiles` entry in the tarball's `files`: packed or deliberately left out. Without
+the CLI, the packaged read-only [verification discovery helper](scripts/discover-verification.mjs)
+may list candidates. Resolve it relative to this `SKILL.md` and run
 `node <helper> --project <repository-root> --task <task-path>`; omit `--task` for a
 direct request. It never executes checks or writes files. If both are unavailable,
 inspect those four sources directly. Missing commands are diagnostics, not a
@@ -98,6 +103,8 @@ Run the strongest applicable focused checks while working, then the relevant
 regression checks. Run each check on its own or under `set -o pipefail`, and judge
 it by its own exit code; to shorten output, write it to a log and read the tail.
 Fix failures caused by the change and rerun affected checks.
+For an acceptance check written or changed for this task, follow
+[fail-first](references/fail-first.md) and report what it proved in that check's result.
 Read [the result contract](references/result-contract.md) before reporting.
 
 Report defects you notice outside the task as [findings](references/findings.md),
