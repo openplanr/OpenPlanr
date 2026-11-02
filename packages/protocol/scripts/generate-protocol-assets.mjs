@@ -49,7 +49,11 @@ import {
 } from './diagram-authoring-definitions.mjs';
 import { buildDiagramRegistries, buildDiagramSchemas } from './diagram-definitions.mjs';
 import { buildPlanningSchemas } from './planning-definitions.mjs';
-import { buildRegistries, buildSchemas } from './protocol-definitions.mjs';
+import {
+  buildImplementationResultSchemaV123,
+  buildRegistries,
+  buildSchemas,
+} from './protocol-definitions.mjs';
 import { buildRuntimeLockSchemasV118 } from './runtime-lock-definitions-v118.mjs';
 import { buildSkillPackageSchemasV18 } from './skill-package-definitions-v18.mjs';
 import { buildSkillSourceSchemas } from './skill-source-definitions.mjs';
@@ -142,6 +146,10 @@ expected.set(
 expected.set(
   'schemas/v1.22.0/design-review-bundle.schema.json',
   json(DESIGN_REVIEW_BUNDLE_CURRENT_SCHEMA),
+);
+expected.set(
+  'schemas/v1.23.0/implementation-result.schema.json',
+  json(buildImplementationResultSchemaV123()),
 );
 
 const envelopeMetadataPath = 'src/generated/artifact-envelope-metadata.mjs';
@@ -350,7 +358,7 @@ function walk(root, prefix = '') {
 
 const originalSchemaFiles = walk(join(packageRoot, 'schemas')).filter(
   ({ key }) =>
-    !/^v1\.(?:[5-9]|10|11|12|13|14|15|16|17|18|19|20|21|22)\.0\//u.test(key) &&
+    !/^v1\.(?:[5-9]|10|11|12|13|14|15|16|17|18|19|20|21|22|23)\.0\//u.test(key) &&
     key.endsWith('.json'),
 );
 const originalRegistryFiles = walk(join(packageRoot, 'registry')).filter(

@@ -188,7 +188,7 @@ test('Ship implementation roles deterministically recover task and parent contex
   assert.match(shared, /\.openplanr\/stacks\/<logical-path>/u);
   assert.match(shared, /report the conflict without mixing or rewriting/iu);
   assert.match(shared, /project-local stack file overrides the installed default/iu);
-  assert.match(shared, /Outcome.*completed, partial, or blocked/isu);
+  assert.match(shared, /Outcome.*completed, partial, blocked, or\s+awaiting-acceptance/isu);
   assert.match(shared, /Issues.*always include/isu);
   assert.match(shared, /problem, impact,\s+and next action/iu);
   assert.match(shared, /write `none` when the issues array is empty/iu);

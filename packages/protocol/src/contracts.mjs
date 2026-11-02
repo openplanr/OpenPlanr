@@ -224,7 +224,10 @@ const foundationPaths = {
   'task-kind-registry': { '1.5.0': 'schemas/v1.5.0/task-kind-registry.schema.json' },
   'task-manifest': { '1.5.0': 'schemas/v1.5.0/task-manifest.schema.json' },
   'task-output-manifest': { '1.5.0': 'schemas/v1.5.0/task-output-manifest.schema.json' },
-  'implementation-result': { '1.5.0': 'schemas/v1.5.0/implementation-result.schema.json' },
+  'implementation-result': {
+    '1.5.0': 'schemas/v1.5.0/implementation-result.schema.json',
+    '1.23.0': 'schemas/v1.23.0/implementation-result.schema.json',
+  },
   'rule-catalog': { '1.5.0': 'schemas/v1.5.0/rule-catalog.schema.json' },
   'command-catalog': { '1.5.0': 'schemas/v1.5.0/command-catalog.schema.json' },
   'skill-catalog': {

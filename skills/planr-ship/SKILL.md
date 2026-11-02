@@ -116,10 +116,12 @@ behavior, link material changes by purpose, and summarize actual verification.
 Retain complete file inventories and command diagnostics in their existing
 results instead of reproducing them in chat.
 
-- **Outcome:** `completed`, `partial`, or `blocked`, followed by what now works.
+- **Outcome:** `completed`, `partial`, `blocked`, or `awaiting-acceptance` (repository
+  work done; acceptance needs a run only the owner can do), followed by what now works.
 - **Task:** task ID and path, or `direct-request`.
-- **Changed:** material paths grouped by purpose.
-- **Checks:** command, `passed`, `failed`, or `not-run`, plus a concise result.
+- **Changed:** material paths grouped by purpose; files outside Create and Modify in their own group.
+- **Checks:** command, `passed`, `failed`, or `not-run`, plus a concise result and the
+  acceptance IDs it covers; list acceptance criteria no check covers.
 - **Issues:** blockers with problem, impact, and next action, or `none`; then
   findings outside the task, each with its disposition.
 

@@ -976,7 +976,7 @@
       "assets": [
         {
           "path": "skills/ship/SKILL.md",
-          "digest": "sha256:e5fa1282a415e26c1463ed73c5d88ec69512080395d7fb385463d0bdff0a73ec"
+          "digest": "sha256:3786c1928cadb8b14b1a110546f1ef6036ed999938876d7731874248744934e7"
         },
         {
           "path": "skills/ship/openplanr.skill.json",
@@ -988,7 +988,7 @@
         },
         {
           "path": "skills/ship/references/result-contract.md",
-          "digest": "sha256:687f53f2d6682dbe628bb2bfd52edd5685d9611e2695497516d37a1ef355b57f"
+          "digest": "sha256:1c8bf48c8bbae9b6a7ef7b6e1d444412c9bf6f3c67fc0233c159c3b084cc7e0e"
         },
         {
           "path": "skills/ship/references/design-lineage.md",

@@ -132,7 +132,7 @@
     {
       "source": "packages/protocol/projections/pipeline/lib/protocol/contracts.mjs",
       "target": "lib/protocol/contracts.mjs",
-      "sha256": "917061fcd0f9ce2b413ed1c3b21388a8699c4a37d88565d412b3aa2bddc2d343",
+      "sha256": "67b23dc2832824f16f50f74786c70fe5635d91323a9b38b77017d5a99795b71a",
       "mode": "644"
     },
     {
@@ -504,7 +504,7 @@
     {
       "source": "packages/protocol/registries/commands.json",
       "target": "registry/v1.5.0/commands.json",
-      "sha256": "790eeebac09919c0d9228226072852d230fcfd200a075b4ce31a2d177e0a4e04",
+      "sha256": "47f785fae35bccb4e82b7b79c572c3b868f1447c9eabde0be581c0625e7ef2c5",
       "mode": "644"
     },
     {
@@ -1609,6 +1609,12 @@
       "source": "packages/protocol/schemas/v1.22.0/design-review-bundle.schema.json",
       "target": "schemas/v1.22.0/design-review-bundle.schema.json",
       "sha256": "92e42b05c54f7773f89e93de45fad1c6bfc4027160079d52dcabe59fc0612933",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.23.0/implementation-result.schema.json",
+      "target": "schemas/v1.23.0/implementation-result.schema.json",
+      "sha256": "a7fc37f981227dc3698c707d22b136d562dfa6f63e03f4f248d75576a78ea5a0",
       "mode": "644"
     },
     {
