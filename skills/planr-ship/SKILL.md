@@ -19,8 +19,8 @@ For a selector, locate exactly one task and read it completely. Then follow its
 `storyId` and `specId` to the parent story, acceptance criteria, Gherkin file
 when present, and specification. Also read repository instructions, ADRs,
 planning rules, applicable stack guidance, relevant design/database context,
-implementation code, tests, and interfaces produced by declared dependencies.
-Project conventions, when present, live in `.planr/conventions/<area>.md`, indexed from AGENTS.md; read the areas this task touches.
+implementation code, tests, and interfaces produced by declared dependencies. Read any
+`.planr/conventions/<area>.md`, indexed from AGENTS.md, for the areas this task touches.
 
 Read [the design lineage contract](references/design-lineage.md). If the selected
 planning root contains `design-lineage.json`, load only the selected task's mapped
@@ -126,7 +126,7 @@ results instead of reproducing them in chat.
 - **Outcome:** `completed`, `partial`, `blocked`, or `awaiting-acceptance` (repository
   work done; acceptance needs a run only the owner can do), followed by what now works.
 - **Task:** task ID and path, or `direct-request`.
-- **Changed:** material paths grouped by purpose; files outside Create and Modify in their own group.
+- **Changed:** material paths grouped by purpose, files outside Create and Modify apart.
 - **Checks:** command, `passed`, `failed`, or `not-run`, plus a concise result and the
   acceptance IDs it covers; list acceptance criteria no check covers.
 - **Issues:** blockers with problem, impact, and next action, or `none`; then

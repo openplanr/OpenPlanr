@@ -201,6 +201,8 @@ test('Ship and Investigate carry the shared fail-first reference', () => {
     /nothing staged/u,
     /Off by default/iu,
     /Restore from the copy/u,
+    /Copy the target file outside the repository/u,
+    /and rebuild if step 4 did/u,
     /`cmp`/u,
   ]) {
     assert.match(failFirst, rule);

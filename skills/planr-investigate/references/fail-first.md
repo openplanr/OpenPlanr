@@ -27,12 +27,12 @@ Off by default. Offer it only when an acceptance check is new code or fail-first
 failed only on load; the question's default is skip.
 
 1. Record `git status --porcelain` and confirm nothing staged (`git diff --cached --quiet`).
-2. Copy the target file.
+2. Copy the target file outside the repository.
 3. Make one small edit that breaks behaviour the criterion names.
 4. Rebuild if the tests run built output.
 5. Run the check. It must fail on an assertion.
-6. Restore from the copy, not with `git checkout`, which also discards the
-   uncommitted implementation.
+6. Restore from the copy, and rebuild if step 4 did; never `git checkout`, which
+   also discards the uncommitted implementation.
 7. Confirm `cmp` against the copy, an identical `--porcelain` output, and nothing staged.
 
 A seed that survives goes in `checks` with a question whose default is "add a

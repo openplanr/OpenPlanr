@@ -5173,7 +5173,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:82db662b12637ae2ee8076bd86a0a5ea1a4e9c61f2794ec530e02c809c44b215"
+          "digest": "sha256:8c76f966b45919fd0caf1b31f4fd83120ec8bc100747720871550676dc971766"
         },
         {
           "path": "references/findings.md",
@@ -5770,7 +5770,7 @@
       "source": "skills/planr-ship/openplanr.skill.json",
       "entrypoint": "skills/planr-ship/SKILL.md",
       "description": "Implement an OpenPlanr plan, specification, task, or clearly stated request end to end in the current repository. Use when the user asks to build, implement, fix, finish, or ship local work, or to plan and implement an accepted change. Invoke before editing files for the requested change. Not for planning only, landing, release, or work handed to another coding agent.",
-      "sourceDigest": "sha256:f10e3b8a902c9d749c10d3d254ebd3eed3e02a2f26c7639693c629aab0f0c677",
+      "sourceDigest": "sha256:9bf3a2f8d79003c70f04b8d3548ecfeb89671017c0a0267f2a0a458760632b8d",
       "resources": [
         {
           "path": "agents/openai.yaml",
@@ -5828,7 +5828,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:82db662b12637ae2ee8076bd86a0a5ea1a4e9c61f2794ec530e02c809c44b215"
+          "digest": "sha256:8c76f966b45919fd0caf1b31f4fd83120ec8bc100747720871550676dc971766"
         },
         {
           "path": "references/findings.md",
