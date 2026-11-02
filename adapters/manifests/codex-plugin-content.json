@@ -752,7 +752,7 @@
         },
         {
           "path": "skills/investigate/references/fail-first.md",
-          "digest": "sha256:8c76f966b45919fd0caf1b31f4fd83120ec8bc100747720871550676dc971766"
+          "digest": "sha256:8fb3ac5b32e2a13e099b728423b8962b15559430bf2b7f6f70a1927df2044b4a"
         },
         {
           "path": "skills/investigate/references/findings.md",
@@ -980,7 +980,7 @@
       "assets": [
         {
           "path": "skills/ship/SKILL.md",
-          "digest": "sha256:6fa0f1654a0a7f040b9c6135305b9833e9a498530a43bb1c30f34e91d90a18f7"
+          "digest": "sha256:2b44a76b13428e1d713d96dd4cf48d442b85743f54830d849c7684afe8538065"
         },
         {
           "path": "skills/ship/openplanr.skill.json",
@@ -1004,7 +1004,7 @@
         },
         {
           "path": "skills/ship/references/fail-first.md",
-          "digest": "sha256:8c76f966b45919fd0caf1b31f4fd83120ec8bc100747720871550676dc971766"
+          "digest": "sha256:8fb3ac5b32e2a13e099b728423b8962b15559430bf2b7f6f70a1927df2044b4a"
         },
         {
           "path": "skills/ship/references/findings.md",

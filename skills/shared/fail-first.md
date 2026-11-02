@@ -18,8 +18,8 @@ Investigate, the regression test for the fix.
   implementation to prove it.
 
 A check that already passes before the change: report "passes before the change;
-proves nothing" and ask one host-native question with the default "narrow the
-check". An unattended run takes the default and reports it.
+proves nothing", then narrow or strengthen the check yourself and record that in
+`checks`.
 
 ## Seeded fault
 
