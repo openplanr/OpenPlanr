@@ -2173,7 +2173,7 @@ export const CANONICAL_REGISTRIES = deepFreeze({
         "ownerPackage": "planr-pipeline",
         "source": {
           "path": "skills/planr-ship/SKILL.md",
-          "digest": "sha256:9bf3a2f8d79003c70f04b8d3548ecfeb89671017c0a0267f2a0a458760632b8d"
+          "digest": "sha256:239dc1dc9aa54ba6f2e4782083ce602b2d520680219d328a5d2e1e151f9dd13d"
         },
         "authorityClass": "compatibility-router",
         "machineJson": false,
@@ -3009,7 +3009,7 @@ export const CANONICAL_REGISTRIES = deepFreeze({
         ]
       }
     ],
-    "documentDigest": "sha256:5ffe31c5b76e3f2cf04ae74d5728ea751c00cedd4803d5c9ef826beee02677bb"
+    "documentDigest": "sha256:f2ad751b73273cb8284f83bbe652aa3dfd76713d7df59fc754cab8f9f614aac2"
   },
   "skills.json": {
     "kind": "skill-catalog",
@@ -4073,12 +4073,12 @@ export const CANONICAL_REGISTRIES = deepFreeze({
       },
       {
         "skillId": "planr-investigate",
-        "skillVersion": "2.2.0",
+        "skillVersion": "2.3.0",
         "description": "Diagnose a bug, regression, error, or unexplained behavior and optionally implement a bounded fix. Use for root-cause investigation, including before any fix, not planned feature delivery.",
         "lifecycle": "active",
         "authorityClass": "diagnostic",
         "source": "skills/planr-investigate/openplanr.skill.json",
-        "sourceDigest": "sha256:5258e0aecbefd4dc8a7ddfdce0faa8ed051c43ecdd41282779174aa3922455ad",
+        "sourceDigest": "sha256:2a0fcaacd12fe22b78d4c72e0c6ef27effc2f9c5c1d04758920ec3810c1e6ce4",
         "triggerPolicy": {
           "include": [
             "Investigate a bug, regression, error, or unexplained behavior",
@@ -4561,12 +4561,12 @@ export const CANONICAL_REGISTRIES = deepFreeze({
       },
       {
         "skillId": "planr-ship",
-        "skillVersion": "1.5.0",
+        "skillVersion": "1.6.0",
         "description": "Implement an OpenPlanr plan, specification, task, or clearly stated request end to end in the current repository. Use when the user asks to build, implement, fix, finish, or ship local work, or to plan and implement an accepted change. Invoke before editing files for the requested change. Not for planning only, landing, release, or work handed to another coding agent.",
         "lifecycle": "active",
         "authorityClass": "implementation",
         "source": "skills/planr-ship/openplanr.skill.json",
-        "sourceDigest": "sha256:f5659c681a914bed63b8029f1d3028f79e4f7c07f7558e434a2aaa85178af72c",
+        "sourceDigest": "sha256:46b7912188268e8f50125cb4554869c05d274544ebd90c59721e206538731cc5",
         "triggerPolicy": {
           "include": [
             "Implement a plan, specification, task, fix, or clearly stated local request",
@@ -4877,7 +4877,7 @@ export const CANONICAL_REGISTRIES = deepFreeze({
       }
     ],
     "compatibilityAliases": [],
-    "documentDigest": "sha256:b779796da0c3a0c0f560a55945be098cbe0ce34fb3296f88e42aa5918f74d24c"
+    "documentDigest": "sha256:5fdf68522d50cb4811b5c6c1f2672a29ad83052a14766d16cff7417f8e35c474"
   },
   "outputs.json": {
     "kind": "output-catalog",

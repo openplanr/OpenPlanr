@@ -5147,7 +5147,7 @@
     },
     {
       "id": "planr-investigate",
-      "version": "2.2.0",
+      "version": "2.3.0",
       "source": "skills/planr-investigate/openplanr.skill.json",
       "entrypoint": "skills/planr-investigate/SKILL.md",
       "description": "Diagnose a bug, regression, error, or unexplained behavior and optionally implement a bounded fix. Use for root-cause investigation, including before any fix, not planned feature delivery.",
@@ -5173,7 +5173,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:8c76f966b45919fd0caf1b31f4fd83120ec8bc100747720871550676dc971766"
+          "digest": "sha256:8fb3ac5b32e2a13e099b728423b8962b15559430bf2b7f6f70a1927df2044b4a"
         },
         {
           "path": "references/findings.md",
@@ -5766,11 +5766,11 @@
     },
     {
       "id": "planr-ship",
-      "version": "1.5.0",
+      "version": "1.6.0",
       "source": "skills/planr-ship/openplanr.skill.json",
       "entrypoint": "skills/planr-ship/SKILL.md",
       "description": "Implement an OpenPlanr plan, specification, task, or clearly stated request end to end in the current repository. Use when the user asks to build, implement, fix, finish, or ship local work, or to plan and implement an accepted change. Invoke before editing files for the requested change. Not for planning only, landing, release, or work handed to another coding agent.",
-      "sourceDigest": "sha256:9bf3a2f8d79003c70f04b8d3548ecfeb89671017c0a0267f2a0a458760632b8d",
+      "sourceDigest": "sha256:239dc1dc9aa54ba6f2e4782083ce602b2d520680219d328a5d2e1e151f9dd13d",
       "resources": [
         {
           "path": "agents/openai.yaml",
@@ -5828,7 +5828,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:8c76f966b45919fd0caf1b31f4fd83120ec8bc100747720871550676dc971766"
+          "digest": "sha256:8fb3ac5b32e2a13e099b728423b8962b15559430bf2b7f6f70a1927df2044b4a"
         },
         {
           "path": "references/findings.md",

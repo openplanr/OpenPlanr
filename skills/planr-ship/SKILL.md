@@ -90,8 +90,11 @@ request; add `--tier story` or `--tier push` before pushing) and run its `checks
 from each `cwd`. The command never executes checks or writes files. When
 `complete` is `false`, report its error diagnostics and treat the check set as
 incomplete: a pass is not CI-equivalent. Act on warning diagnostics too; each names
-the files or checks it affects. For a `package-contents` check, account for every
-`expectFiles` entry in the tarball's `files`: packed or deliberately left out. Without
+the files or checks it affects. A diagnostic that a check could not run, such as
+`TYPESCRIPT_UNAVAILABLE`, is not a pass: name that check in `checks` and verify its
+concern yourself where you can (for a new test file, confirm some tsconfig includes
+it). For a `package-contents` check, account for every `expectFiles` entry in the
+tarball's `files`: packed or deliberately left out. Without
 the CLI, the packaged read-only [verification discovery helper](scripts/discover-verification.mjs)
 may list candidates. Resolve it relative to this `SKILL.md` and run
 `node <helper> --project <repository-root> --task <task-path>`; omit `--task` for a

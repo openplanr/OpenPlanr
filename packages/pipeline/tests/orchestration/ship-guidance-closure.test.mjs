@@ -171,6 +171,8 @@ test('Ship passes delegate context, re-checks evidence and maps checks to accept
     /Re-run the cheap checks a worker reports as passed/u,
     /`git diff --name-only` plus untracked files/u,
     /Act on warning diagnostics too/u,
+    /A diagnostic that a check could not run, such as\s+`TYPESCRIPT_UNAVAILABLE`, is not a pass/u,
+    /confirm some tsconfig includes\s+it/u,
     /`expectFiles` entry/u,
     /`awaiting-acceptance`/u,
     /outside Create and Modify/u,
@@ -207,6 +209,14 @@ test('Ship and Investigate carry the shared fail-first reference', () => {
   ]) {
     assert.match(failFirst, rule);
   }
+  assert.match(failFirst, /passes before the change;\s+proves nothing/u);
+  assert.match(failFirst, /narrow or strengthen the check yourself and record that in\s+`checks`/u);
+  const alreadyPasses = failFirst.slice(
+    failFirst.indexOf('A check that already passes'),
+    failFirst.indexOf('## Seeded fault'),
+  );
+  assert.match(alreadyPasses, /passes before the change/u);
+  assert.doesNotMatch(alreadyPasses, /\bask|question|default/iu);
   assert.doesNotMatch(failFirst, /must stop/iu);
   assert.doesNotMatch(failFirst, RETIRED_GOVERNANCE);
   for (const [skillId, hostSkill] of [
