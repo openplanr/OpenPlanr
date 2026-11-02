@@ -59,7 +59,8 @@ export function classifyScope(
 }
 
 function withScope(check: CheckCandidate, scope: CheckScope, scopeReason?: string): ShipCheck {
-  const { id, command, cwd, sources, tags, script, condition, shell, acceptanceIds } = check;
+  const { id, command, cwd, sources, tags, script, condition, shell, expectFiles, acceptanceIds } =
+    check;
   return {
     id,
     command,
@@ -71,6 +72,7 @@ function withScope(check: CheckCandidate, scope: CheckScope, scopeReason?: strin
     ...(script === undefined ? {} : { script }),
     ...(condition === undefined ? {} : { condition }),
     ...(shell === undefined ? {} : { shell }),
+    ...(expectFiles === undefined ? {} : { expectFiles }),
     acceptanceIds,
   };
 }
