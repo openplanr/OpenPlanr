@@ -9,7 +9,13 @@ export const PLUGIN_LICENSE = 'MIT';
 /** Listing fields the Claude plugin directory reads from `plugin.json`. */
 export const CLAUDE_PLUGIN_LISTING = Object.freeze({
   displayName: 'OpenPlanr',
-  keywords: Object.freeze(['planning', 'specification', 'delivery', 'code-review', 'design']),
+  keywords: Object.freeze([
+    'coding-agents',
+    'agent-harness',
+    'code-review',
+    'planning',
+    'verification',
+  ]),
   privacyPolicyUrl: 'https://openplanr.dev/privacy',
   termsOfServiceUrl: 'https://openplanr.dev/terms',
   supportUrl: 'https://github.com/openplanr/OpenPlanr/blob/main/SUPPORT.md',

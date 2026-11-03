@@ -6,7 +6,7 @@ const END_RE = (name: string) =>
   new RegExp(`^<!--\\s*##planr-${escapeRegExp(name)}:end##\\s*-->\\s*$`, 'm');
 
 function beginMarker(name: string): string {
-  return `<!-- ##planr-${name}:begin## (managed by planr CLI; preserve hand-edits outside this block) -->`;
+  return `<!-- ##planr-${name}:begin## (managed by openplanr CLI; preserve hand-edits outside this block) -->`;
 }
 
 function endMarker(name: string): string {
