@@ -3,7 +3,7 @@
   "version": "0.61.0",
   "private": false,
   "type": "module",
-  "description": "OpenPlanr complete PO, Design, DEV, QA, and delivery pipeline",
+  "description": "The delivery pipeline behind OpenPlanr's skills: specification, design, implementation, QA and release outputs. Installed with openplanr.",
   "license": "MIT",
   "repository": {
     "type": "git",

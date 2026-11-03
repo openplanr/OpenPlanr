@@ -8,8 +8,8 @@
 <h3 align="center">Close the loop from intent to delivery.</h3>
 
 <p align="center">
-  OpenPlanr is the shared delivery loop for product teams and their AI agents.<br>
-  Plan, design, build, review, and operate from durable context in your repository:<br>
+  Your agent writes the code. OpenPlanr is the open harness around it:<br>
+  plans as files in your repository, checks before you merge, and a record of what shipped.<br>
   25+ skills for Claude Code, Codex, and Cursor, plus the deterministic <code>openplanr</code> CLI.
 </p>
 

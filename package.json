@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "OpenPlanr planning, diagramming, design review, host-native skills, and deterministic delivery tools.",
+  "description": "The open harness around your coding agent: OpenPlanr skills for Claude Code, Codex and Cursor, the openplanr CLI and the protocol.",
   "license": "MIT",
   "repository": {
     "type": "git",

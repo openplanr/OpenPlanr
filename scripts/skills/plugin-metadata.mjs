@@ -1,6 +1,6 @@
 /** Identity shared by the generated Claude, Codex and repository plugin manifests. */
 export const PLUGIN_DESCRIPTION =
-  'Close the loop from intent to delivery. Plan, design, build, review, and operate from durable context in your repository.';
+  'Close the loop from intent to delivery. Plans as files in your repo, checks before you merge, and a record of what shipped, in Claude Code, Codex and Cursor.';
 
 export const PLUGIN_AUTHOR = Object.freeze({ name: 'OpenPlanr', url: 'https://openplanr.dev' });
 
