@@ -13,7 +13,7 @@
       "name": "planr",
       "source": "./dist/plugins/claude/openplanr",
       "version": "3.3.0",
-      "description": "Close the loop from intent to delivery. Plan, design, build, review, and operate from durable context in your repository.",
+      "description": "Close the loop from intent to delivery. Plans as files in your repo, checks before you merge, and a record of what shipped, in Claude Code, Codex and Cursor.",
       "strict": true
     }
   ]

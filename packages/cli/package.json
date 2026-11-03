@@ -1,7 +1,7 @@
 {
   "name": "openplanr",
   "version": "3.3.0",
-  "description": "Deterministic OpenPlanr utilities for planning storage, validation, rendering, setup, diagnostics, and GitHub/Linear synchronization",
+  "description": "The openplanr CLI: validates plans in your repo, lists the checks a change needs, renders diagrams, installs 25+ skills into Claude Code, Codex and Cursor, and syncs GitHub Issues and Linear. No model calls.",
   "type": "module",
   "main": "./dist/cli/index.js",
   "types": "./dist/cli/index.d.ts",
@@ -86,8 +86,8 @@
     "planning",
     "cli",
     "backlog",
-    "sprint",
-    "user-story",
+    "code-review",
+    "agent-harness",
     "github",
     "linear"
   ],
