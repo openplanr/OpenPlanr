@@ -274,6 +274,7 @@ export async function prepareDelegateRun({
       runId,
       native: prepared.profile.kind !== 'generic',
       branch: true,
+      runDirectory: privateDirectory,
     });
     const custodyPath = join(runPath, 'custody.json');
     await updateRunRecord(

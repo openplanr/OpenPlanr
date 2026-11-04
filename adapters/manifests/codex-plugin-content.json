@@ -346,7 +346,7 @@
         },
         {
           "path": "skills/delegate/references/worktree-custody.md",
-          "digest": "sha256:ecafa20680adbb2179ddb88418b4d7fc8c2cac5d97a5c16798bf47c386a619ef"
+          "digest": "sha256:83e3cdf8ff1926a34846347c4f0669e013caefbc84e58b1b1fb26bb5a1d7f924"
         },
         {
           "path": "skills/delegate/scripts/adapters/claude.mjs",
@@ -370,7 +370,7 @@
         },
         {
           "path": "skills/delegate/scripts/custody.mjs",
-          "digest": "sha256:c971df69c831609659f6f48f67014eb1a34c318f5fb3f355936b3e8430e9fb90"
+          "digest": "sha256:2691c282af296b2bc540dfe733663cf6401fae27a58897cff98cdea6f770f47f"
         },
         {
           "path": "skills/delegate/scripts/helper-snapshot.mjs",
@@ -406,7 +406,7 @@
         },
         {
           "path": "skills/delegate/scripts/run-preparation.mjs",
-          "digest": "sha256:86bec469a7c1c9d89acf039b50aaaa470b645945eb418a2509e3cee5083d660c"
+          "digest": "sha256:d1c2564cf22dbec09bdd133db2f2580700ad1d2a2488f080c4521cb819afcb58"
         },
         {
           "path": "skills/delegate/scripts/run-execution.mjs",

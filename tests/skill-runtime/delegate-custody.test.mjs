@@ -13,6 +13,10 @@ import {
   sameGitState,
   validateWorktreeCustody,
 } from '../../skills/planr-delegate/scripts/custody.mjs';
+import {
+  createRunRecord,
+  updateRunRecord,
+} from '../../skills/planr-delegate/scripts/run-record.mjs';
 
 function git(root, ...args) {
   return execFileSync('git', args, { cwd: root, encoding: 'utf8' }).trim();
@@ -218,25 +222,38 @@ test('a run branch commits selected files as its base and accepts delegate commi
     assert.doesNotMatch(git(root, 'worktree', 'list', '--porcelain'), /planr-delegate/u);
   }));
 
+async function refRun({ base, root, worktreeParent }) {
+  const runDirectory = join(base, 'records');
+  for (const runId of ['pending-run', 'finished-run']) {
+    await createRunRecord(
+      { runId, integration: { status: 'applying' } },
+      { directory: runDirectory },
+    );
+    git(root, 'update-ref', `refs/planr-delegate/${runId}/restore`, 'HEAD');
+  }
+  const parentBranch = git(root, 'symbolic-ref', 'HEAD');
+  const record = await createWorktreeCustody({
+    repositoryRoot: root,
+    capsule: capsule(['changed.txt']),
+    selectedPaths: ['changed.txt'],
+    worktreeParent,
+    branch: true,
+    runDirectory,
+  });
+  const warned = async (ref) => {
+    const result = await validateWorktreeCustody(record);
+    assert.deepEqual(result.violations, [], ref);
+    assert.ok(result.warnings[0]?.refs.includes(ref), ref);
+  };
+  return { record, parentBranch, runDirectory, warned };
+}
+
 test('owner ref activity during a run warns; delegate moves of protected refs block', async () =>
   fixture(async ({ base, root, worktreeParent }) => {
     const remote = join(base, 'remote');
     git(base, 'clone', '-q', root, remote);
     git(root, 'remote', 'add', 'origin', remote);
-    git(root, 'update-ref', 'refs/planr-delegate/other-run/restore', 'HEAD');
-    const parentBranch = git(root, 'symbolic-ref', 'HEAD');
-    const record = await createWorktreeCustody({
-      repositoryRoot: root,
-      capsule: capsule(['changed.txt']),
-      selectedPaths: ['changed.txt'],
-      worktreeParent,
-      branch: true,
-    });
-    const warned = async (ref) => {
-      const result = await validateWorktreeCustody(record);
-      assert.deepEqual(result.violations, [], ref);
-      assert.ok(result.warnings[0]?.refs.includes(ref), ref);
-    };
+    const { record, parentBranch, warned } = await refRun({ base, root, worktreeParent });
     git(root, 'commit', '--allow-empty', '-qm', 'owner commit');
     await warned(parentBranch);
     git(root, 'switch', '-q', '-c', 'feature');
@@ -276,25 +293,43 @@ test('owner ref activity during a run warns; delegate moves of protected refs bl
     await parentMoved(record.base);
     git(record.worktreePath, 'commit', '--allow-empty', '-qm', 'delegate commit');
     await parentMoved('HEAD');
-    const rewritten = git(
-      record.worktreePath,
-      'commit-tree',
-      `${record.initialHead}^{tree}`,
-      '-m',
-      'rewrite',
-    );
-    git(record.worktreePath, 'update-ref', parentBranch, rewritten);
-    assert.deepEqual(
-      (await validateWorktreeCustody(record)).violations.map(({ code }) => code),
-      ['E_CUSTODY_PARENT_BRANCH'],
-    );
     git(root, 'update-ref', parentBranch, owned);
-    assert.deepEqual((await validateWorktreeCustody(record)).violations, []);
-    git(record.worktreePath, 'update-ref', '-d', 'refs/planr-delegate/other-run/restore');
+    git(record.worktreePath, 'update-ref', '-d', 'refs/planr-delegate/pending-run/restore');
     assert.deepEqual(
       (await validateWorktreeCustody(record)).violations.map(({ code, ref }) => [code, ref]),
-      [['E_CUSTODY_RESTORE_REF', 'refs/planr-delegate/other-run/restore']],
+      [['E_CUSTODY_RESTORE_REF', 'refs/planr-delegate/pending-run/restore']],
     );
+  }));
+
+test('an owner amend of the parent branch during a run only warns', async () =>
+  fixture(async (paths) => {
+    const { record, parentBranch, warned } = await refRun(paths);
+    git(paths.root, 'commit', '--amend', '--allow-empty', '-qm', 'owner amend');
+    await warned(parentBranch);
+    assert.equal((await validateWorktreeCustody(record)).valid, true);
+  }));
+
+test('deleting the parent branch during a run blocks', async () =>
+  fixture(async (paths) => {
+    const { record, parentBranch } = await refRun(paths);
+    git(record.worktreePath, 'update-ref', '-d', parentBranch);
+    assert.deepEqual(
+      (await validateWorktreeCustody(record)).violations.map(({ code, ref }) => [code, ref]),
+      [['E_CUSTODY_PARENT_BRANCH', parentBranch]],
+    );
+  }));
+
+test("another run's restore ref removed after that run resolves only warns", async () =>
+  fixture(async (paths) => {
+    const { record, runDirectory, warned } = await refRun(paths);
+    await updateRunRecord(
+      'finished-run',
+      { integration: { status: 'rolled-back' } },
+      { directory: runDirectory },
+    );
+    git(paths.root, 'update-ref', '-d', 'refs/planr-delegate/finished-run/restore');
+    await warned('refs/planr-delegate/finished-run/restore');
+    assert.equal((await validateWorktreeCustody(record)).valid, true);
   }));
 
 test('scope planner orders contract owner first and keeps secondary context read-only', () => {

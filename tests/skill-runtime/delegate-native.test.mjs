@@ -939,6 +939,9 @@ for (const resolution of ['rollback', 'accept'])
 test('a run with no changes completes without a patch or restore point', async (t) => {
   const f = await fixture(t);
   const prepared = await f.prepare();
+  const run = await readRunRecord(prepared.runId, { directory: f.runDirectory });
+  const custody = JSON.parse(await readFile(run.custodyPath, 'utf8'));
+  assert.equal(custody.runDirectory, await realpath(f.runDirectory));
   const input = { runId: prepared.runId, runDirectory: f.runDirectory, env: f.env };
   await dispatchDelegateRun(input);
   await writeFile(join(prepared.record.worktreePath, 'source.txt'), 'base\n');

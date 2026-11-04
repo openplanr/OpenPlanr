@@ -17,6 +17,7 @@ import {
 } from 'node:fs/promises';
 import { basename, dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { promisify } from 'node:util';
+import { readRunRecord } from './run-record.mjs';
 
 const execFileAsync = promisify(execFile);
 export const CUSTODY_SCHEMA_VERSION = '1.0.0';
@@ -129,6 +130,18 @@ async function isAncestor(root, ancestor, descendant) {
   );
 }
 
+// A restore ref is gone legitimately once its run applied, recovered or was cleaned up.
+async function unresolvedRun(runDirectory, runId) {
+  if (!runDirectory) return true;
+  try {
+    const { integration } = await readRunRecord(runId, { directory: runDirectory });
+    return ['applying', 'interrupted'].includes(integration?.status);
+  } catch (error) {
+    if (['ENOENT', 'E_RUN_ID'].includes(error.code)) return false;
+    throw error;
+  }
+}
+
 async function branchViolations(root, record) {
   const violations = [];
   const head = (await git(root, ['symbolic-ref', '-q', 'HEAD'], { allowFailure: true }))
@@ -149,12 +162,11 @@ async function branchViolations(root, record) {
   const now = await refSnapshot(parent, record.branch);
   const reported = new Set([`refs/planr-delegate/${record.runId}/restore`]);
   const previous = before[record.parentBranch] ?? record.initialHead;
-  const moved = record.parentBranch ? now[record.parentBranch] : undefined;
-  // Owner commits fast-forward the branch; delegate work descends from base.
+  const moved = record.parentBranch ? (now[record.parentBranch] ?? null) : undefined;
+  // Owner commits, amends and resets warn; only delegate work descends from base.
   if (
-    moved &&
-    moved !== previous &&
-    ((await isAncestor(parent, record.base, moved)) || !(await isAncestor(parent, previous, moved)))
+    moved === null ||
+    (moved && moved !== previous && (await isAncestor(parent, record.base, moved)))
   ) {
     reported.add(record.parentBranch);
     violations.push({
@@ -165,7 +177,12 @@ async function branchViolations(root, record) {
     });
   }
   for (const name of Object.keys(before))
-    if (RESTORE_REF.test(name) && !reported.has(name) && !now[name]) {
+    if (
+      RESTORE_REF.test(name) &&
+      !reported.has(name) &&
+      !now[name] &&
+      (await unresolvedRun(record.runDirectory, name.split('/')[2]))
+    ) {
       reported.add(name);
       violations.push({ code: 'E_CUSTODY_RESTORE_REF', ref: name });
     }
@@ -542,6 +559,7 @@ export async function createWorktreeCustody({
   runId = randomUUID(),
   native = false,
   branch = false,
+  runDirectory,
 } = {}) {
   if (
     !repositoryRoot ||
@@ -671,6 +689,7 @@ export async function createWorktreeCustody({
             ?.toString('utf8')
             .trim() || null,
         refs: await refSnapshot(root, branchName),
+        ...(runDirectory ? { runDirectory } : {}),
       };
     }
     const preservedFiles = {};

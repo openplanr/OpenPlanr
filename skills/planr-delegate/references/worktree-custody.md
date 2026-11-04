@@ -9,9 +9,10 @@ the readable capsule. The source checkout and unrelated worktrees remain indepen
 Custody records bind the run, worktree ownership, base commit, selected source state,
 Preserve paths and the repository's refs. The delegate may commit; the run branch must
 stay checked out and descend from its base. The branch checked out in the parent at
-prepare may only fast-forward to commits that do not contain the run's base, and other
-runs' restore refs may not be deleted. Any other ref change, such as a branch switch,
-stash, fetch or tag, is a report warning.
+prepare may not be deleted or moved to a commit that contains the run's base, and a
+restore ref may not be deleted while its run is still applying or interrupted. Any
+other ref change, such as a branch switch, amend, reset, stash, fetch or tag, is a
+report warning.
 Preserve changes, scope violations, submodule (gitlink) changes, including ones that
 `ignore` settings hide, and patches the parent
 checkout no longer accepts block acceptance. Integration scope constrains accepted
