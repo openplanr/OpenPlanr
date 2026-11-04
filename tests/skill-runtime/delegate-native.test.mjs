@@ -2,7 +2,16 @@ import assert from 'node:assert/strict';
 import { execFileSync, spawn } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import fs from 'node:fs';
-import { mkdir, mkdtemp, readFile, realpath, rm, symlink, writeFile } from 'node:fs/promises';
+import {
+  chmod,
+  mkdir,
+  mkdtemp,
+  readFile,
+  realpath,
+  rm,
+  symlink,
+  writeFile,
+} from 'node:fs/promises';
 import { syncBuiltinESMExports } from 'node:module';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -263,6 +272,20 @@ test('edit flags apply only when native settings choose no permission mode', asy
   assert.equal((await codexWriteFlags(profile, env, cwd)).length, 2);
   await writeFile(codex, 'profile = "ci"\n[profiles.ci]\nsandbox_mode = "danger-full-access"\n');
   assert.deepEqual(await codexWriteFlags(profile, env, cwd), []);
+  await writeFile(codex, 'profiles.ci.sandbox_mode = "read-only"\n');
+  assert.deepEqual(await codexWriteFlags(profile, env, cwd), []);
+  await writeFile(codex, '[profiles]\nci = { sandbox_mode = "read-only" }\n');
+  assert.deepEqual(await codexWriteFlags(profile, env, cwd), []);
+  await writeFile(codex, '"sandbox_mode" = "read-only"\n');
+  assert.deepEqual(await codexWriteFlags(profile, env, cwd), []);
+  await writeFile(codex, '# sandbox_mode = "read-only"\n');
+  assert.equal((await codexWriteFlags(profile, env, cwd)).length, 2);
+  await writeFile(codex, `sandbox_mode = "danger-full-access"\n${'# padding\n'.repeat(8000)}`);
+  assert.deepEqual(await codexWriteFlags(profile, env, cwd), []);
+  await writeFile(codex, 'sandbox_mode = "danger-full-access"\n');
+  await chmod(codex, 0o000);
+  assert.deepEqual(await codexWriteFlags(profile, env, cwd), []);
+  await chmod(codex, 0o600);
   await writeFile(codex, '');
   await writeFile(join(cwd, '.codex', 'config.toml'), 'sandbox_mode = "read-only"\n');
   assert.deepEqual(await codexWriteFlags(profile, env, cwd), []);

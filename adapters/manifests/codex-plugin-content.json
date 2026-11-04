@@ -354,7 +354,7 @@
         },
         {
           "path": "skills/delegate/scripts/adapters/codex.mjs",
-          "digest": "sha256:e8e2d91503f35458ef3ce3bb6012805029c51cb99b164125f0ba236c4f5bbdf6"
+          "digest": "sha256:6a04c0fb4f56e7e52da413c8d35c3b6f86d3aaa1e281dbd08f993380233191e6"
         },
         {
           "path": "skills/delegate/scripts/adapters/generic.mjs",

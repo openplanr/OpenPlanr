@@ -1,3 +1,4 @@
+import { readFile, stat } from 'node:fs/promises';
 import { join } from 'node:path';
 import { capsuleDirectory } from './capsule.mjs';
 import { AdapterError, invokeProcess } from './generic.mjs';
@@ -31,25 +32,36 @@ export async function resolveCodexDestination(profile, env) {
   return knownDestination(endpoint);
 }
 
+// Any uncommented sandbox_mode key outside an inactive [profiles.<name>] table counts as set.
 function sandboxModeSet(config) {
-  if (!config) return false;
-  const top = config.split(/^\s*\[/mu)[0];
-  if (/^\s*sandbox_mode\s*=/mu.test(top)) return true;
-  const active = /^\s*profile\s*=\s*["']([^"']+)["']/mu.exec(top)?.[1];
-  if (!active) return false;
-  const section = [
-    ...config.matchAll(
-      /^\s*\[profiles\.(?:["']([^"']+)["']|([A-Za-z0-9_-]+))\]\s*([\s\S]*?)(?=^\s*\[|$)/gmu,
-    ),
-  ].find((match) => (match[1] ?? match[2]) === active);
-  return Boolean(section && /^\s*sandbox_mode\s*=/mu.test(section[3]));
+  const active = /^\s*profile\s*=\s*["']([^"']+)["']/mu.exec(config.split(/^\s*\[/mu)[0])?.[1];
+  let skipped = false;
+  for (const line of config.split('\n')) {
+    const header = /^\s*\[\s*profiles\.(?:"([^"]+)"|'([^']+)'|([A-Za-z0-9_-]+))\s*\]/u.exec(line);
+    if (header) skipped = (header[1] ?? header[2] ?? header[3]) !== active;
+    else if (/^\s*\[/u.test(line)) skipped = false;
+    if (!skipped && /^[^#]*\bsandbox_mode["']?\s*=/u.test(line)) return true;
+  }
+  return false;
+}
+
+// Missing config means no sandbox choice; unreadable or oversized config counts as a choice.
+async function codexConfigChoosesSandbox(path) {
+  let config;
+  try {
+    if ((await stat(path)).size > 64 * 1024) return true;
+    config = await readFile(path, 'utf8');
+  } catch (error) {
+    return error.code !== 'ENOENT';
+  }
+  return sandboxModeSet(config);
 }
 
 // Workspace writes only when neither the user nor the project config chooses a sandbox.
 export async function codexWriteFlags(profile, env, cwd) {
   const home = profile.configDir || env.CODEX_HOME || join(env.HOME ?? '', '.codex');
   for (const path of [join(home, 'config.toml'), join(cwd, '.codex', 'config.toml')])
-    if (sandboxModeSet(await readNativeConfig(path))) return [];
+    if (await codexConfigChoosesSandbox(path)) return [];
   return ['--sandbox', 'workspace-write'];
 }
 
