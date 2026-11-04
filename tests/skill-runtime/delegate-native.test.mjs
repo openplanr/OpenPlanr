@@ -9,6 +9,7 @@ import {
   readFile,
   realpath,
   rm,
+  stat,
   symlink,
   writeFile,
 } from 'node:fs/promises';
@@ -727,6 +728,54 @@ test('a submodule beside an unrelated parent edit integrates and a gitlink chang
   );
 });
 
+for (const hidden of ['gitmodules', 'config', 'diff'])
+  test(`a gitlink change hidden by ${hidden} ignore settings still blocks`, async (t) => {
+    const f = await fixture(t);
+    const git = (cwd, ...args) => execFileSync('git', args, { cwd, encoding: 'utf8' }).trim();
+    const first = git(f.root, 'rev-parse', 'HEAD');
+    git(f.root, 'commit', '--allow-empty', '-qm', 'second');
+    git(f.root, 'update-index', '--add', '--cacheinfo', `160000,${first},vendor/lib`);
+    await writeFile(
+      join(f.root, '.gitmodules'),
+      `[submodule "vendor/lib"]\n\tpath = vendor/lib\n\turl = ./lib\n${hidden === 'gitmodules' ? '\tignore = all\n' : ''}`,
+    );
+    git(f.root, 'add', '.gitmodules');
+    await mkdir(join(f.root, 'vendor', 'lib'), { recursive: true });
+    git(f.root, 'commit', '-qm', 'submodule');
+    if (hidden === 'config') git(f.root, 'config', 'submodule.vendor/lib.ignore', 'all');
+    if (hidden === 'diff') git(f.root, 'config', 'diff.ignoreSubmodules', 'all');
+    const second = git(f.root, 'rev-parse', 'HEAD~1');
+    for (const change of ['commit', 'checkout']) {
+      const prepared = await f.prepare({ scopePaths: ['source.txt', 'vendor'] });
+      const input = { runId: prepared.runId, runDirectory: f.runDirectory, env: f.env };
+      await dispatchDelegateRun(input);
+      const worktree = prepared.record.worktreePath;
+      if (change === 'commit') {
+        git(worktree, 'update-index', '--cacheinfo', `160000,${second},vendor/lib`);
+        git(
+          worktree,
+          '-c',
+          'user.name=Delegate',
+          '-c',
+          'user.email=d@example.test',
+          'commit',
+          '-qm',
+          'bump',
+        );
+      } else {
+        git(worktree, 'clone', '-q', f.root, 'vendor/lib');
+        git(join(worktree, 'vendor', 'lib'), 'checkout', '-q', '--detach', second);
+      }
+      const review = await delegateIntegrationCommand('review', input);
+      assert.equal(review.ready, false, `${change}: ${JSON.stringify(review)}`);
+      assert.deepEqual(
+        review.violations.filter(({ code }) => code === 'E_INTEGRATION_GITLINK'),
+        [{ code: 'E_INTEGRATION_GITLINK', path: 'vendor/lib' }],
+        change,
+      );
+    }
+  });
+
 test('a parent edit elsewhere in a file the delegate changed merges on apply', async (t) => {
   const f = await fixture(t);
   const lines = Array.from({ length: 12 }, (_, index) => `line ${index + 1}`);
@@ -751,50 +800,82 @@ test('a parent edit elsewhere in a file the delegate changed merges on apply', a
   );
 });
 
-for (const crash of ['before-apply', 'after-apply', 'partial'])
+async function interruptedApply(t, { notes, delegateNotes, ownerNotes, mode } = {}) {
+  const f = await fixture(t);
+  await writeFile(join(f.root, 'notes.md'), notes);
+  if (mode) await chmod(join(f.root, 'notes.md'), mode);
+  execFileSync('git', ['add', 'notes.md'], { cwd: f.root });
+  execFileSync('git', ['commit', '-qm', 'notes'], { cwd: f.root });
+  const prepared = await f.prepare({
+    scopePaths: ['source.txt', 'notes.md'],
+    retainWorktree: true,
+  });
+  const input = { runId: prepared.runId, runDirectory: f.runDirectory, env: f.env };
+  await dispatchDelegateRun(input);
+  await writeFile(join(prepared.record.worktreePath, 'notes.md'), delegateNotes);
+  if (ownerNotes) await writeFile(join(f.root, 'notes.md'), ownerNotes);
+  await delegateIntegrationCommand('review', input);
+  const applied = await delegateIntegrationCommand('apply', { ...input, checks: passingCheck });
+  assert.equal(applied.status, 'completed', JSON.stringify(applied));
+  // Model the durable state a crash leaves between the apply check and acceptance.
+  const closed = await readRunRecord(prepared.runId, { directory: f.runDirectory });
+  const { at: _at, states: _states, ...accepted } = closed.integration;
+  execFileSync('git', ['update-ref', accepted.restoreRef, accepted.restore], { cwd: f.root });
+  await updateRunRecord(
+    prepared.runId,
+    {
+      status: 'completed',
+      disposition: null,
+      closedAt: null,
+      integration: { ...accepted, status: 'applying' },
+    },
+    { directory: f.runDirectory },
+  );
+  return { f, input, accepted };
+}
+
+const LINES = Array.from({ length: 12 }, (_, index) => `line ${index + 1}`);
+const lines = (first, last) => `${[first, ...LINES.slice(1, -1), last].join('\n')}\n`;
+
+for (const crash of ['before-apply', 'after-apply', 'partial', 'edited-after-apply'])
   test(`an apply interrupted ${crash} recovers without losing owner edits`, async (t) => {
-    const f = await fixture(t);
-    await writeFile(join(f.root, 'notes.md'), 'notes\n');
-    execFileSync('git', ['add', 'notes.md'], { cwd: f.root });
-    execFileSync('git', ['commit', '-qm', 'notes'], { cwd: f.root });
-    const prepared = await f.prepare({
-      scopePaths: ['source.txt', 'notes.md'],
-      retainWorktree: true,
+    const owner = lines('line 1', 'owner line 12');
+    const merged = lines('delegate line 1', 'owner line 12');
+    const { f, input, accepted } = await interruptedApply(t, {
+      notes: lines('line 1', 'line 12'),
+      delegateNotes: lines('delegate line 1', 'line 12'),
+      ownerNotes: owner,
     });
-    const input = { runId: prepared.runId, runDirectory: f.runDirectory, env: f.env };
-    await dispatchDelegateRun(input);
-    await writeFile(join(prepared.record.worktreePath, 'notes.md'), 'delegate notes\n');
-    await writeFile(join(f.root, 'owner-note.txt'), 'owner edit\n');
-    await delegateIntegrationCommand('review', input);
-    const applied = await delegateIntegrationCommand('apply', { ...input, checks: passingCheck });
-    assert.equal(applied.status, 'completed', JSON.stringify(applied));
-    // Model the durable state a crash leaves between the apply check and acceptance.
-    const closed = await readRunRecord(prepared.runId, { directory: f.runDirectory });
-    const { at: _at, states: _states, ...accepted } = closed.integration;
-    execFileSync('git', ['update-ref', accepted.restoreRef, accepted.restore], { cwd: f.root });
-    await updateRunRecord(
-      prepared.runId,
-      {
-        status: 'completed',
-        disposition: null,
-        closedAt: null,
-        integration: { ...accepted, status: 'applying' },
-      },
-      { directory: f.runDirectory },
-    );
+    assert.equal(await readFile(join(f.root, 'notes.md'), 'utf8'), merged);
     if (crash === 'before-apply')
       execFileSync('git', ['apply', '-R', accepted.patchPath], { cwd: f.root });
-    if (crash === 'partial') execFileSync('git', ['restore', 'notes.md'], { cwd: f.root });
+    if (crash === 'partial') await writeFile(join(f.root, 'notes.md'), owner);
+    if (crash === 'edited-after-apply')
+      await writeFile(join(f.root, 'source.txt'), 'owner edit after the crash\n');
     if (crash === 'after-apply') {
       const recovered = await delegateIntegrationCommand('recover', {
         ...input,
         resolution: 'accept',
       });
       assert.equal(recovered.recovered, 'accepted');
-      const record = await readRunRecord(prepared.runId, { directory: f.runDirectory });
+      const record = await readRunRecord(input.runId, { directory: f.runDirectory });
       assert.equal(record.disposition, 'integrated');
       assert.equal(record.integration.verified, true);
       assert.equal(await readFile(join(f.root, 'source.txt'), 'utf8'), 'implemented\n');
+      assert.equal(await readFile(join(f.root, 'notes.md'), 'utf8'), merged);
+    } else if (crash === 'edited-after-apply') {
+      const recovered = await delegateIntegrationCommand('recover', input);
+      assert.equal(recovered.recovered, 'conflicts');
+      assert.deepEqual(
+        recovered.rollbackErrors.map(({ path }) => path),
+        ['source.txt'],
+      );
+      assert.equal(
+        await readFile(join(f.root, 'source.txt'), 'utf8'),
+        'owner edit after the crash\n',
+      );
+      assert.equal(await readFile(join(f.root, 'notes.md'), 'utf8'), owner);
+      return;
     } else {
       await assert.rejects(
         delegateIntegrationCommand('recover', { ...input, resolution: 'accept' }),
@@ -803,17 +884,81 @@ for (const crash of ['before-apply', 'after-apply', 'partial'])
       const recovered = await delegateIntegrationCommand('recover', input);
       assert.equal(recovered.recovered, 'rolled-back');
       assert.equal(await readFile(join(f.root, 'source.txt'), 'utf8'), 'base\n');
-      assert.equal(await readFile(join(f.root, 'notes.md'), 'utf8'), 'notes\n');
+      assert.equal(await readFile(join(f.root, 'notes.md'), 'utf8'), owner);
       const retried = await delegateIntegrationCommand('apply', { ...input, checks: passingCheck });
       assert.equal(retried.status, 'completed', JSON.stringify(retried));
-      assert.equal(await readFile(join(f.root, 'notes.md'), 'utf8'), 'delegate notes\n');
+      assert.equal(await readFile(join(f.root, 'notes.md'), 'utf8'), merged);
     }
-    assert.equal(await readFile(join(f.root, 'owner-note.txt'), 'utf8'), 'owner edit\n');
     assert.equal(
       execFileSync('git', ['for-each-ref', accepted.restoreRef], { cwd: f.root, encoding: 'utf8' }),
       '',
     );
   });
+
+test('recover leaves an unapplied path alone when the patch also reverses cleanly', async (t) => {
+  const block = (value) => ['l9', value, 'l11'];
+  const notes = `${[...LINES.slice(0, 8), ...block('l10'), 'm1', 'm2', 'm3', 'm4', 'm5', 'm6', 'end'].join('\n')}\n`;
+  // The owner pasted the post-image lower in the file, so the reverse hunk also matches there.
+  const owner = `${notes}${['line 7', 'line 8', ...block('CHANGED'), 'm1', 'm2'].join('\n')}\n`;
+  const { f, input, accepted } = await interruptedApply(t, {
+    notes,
+    delegateNotes: notes.replace('\nl10\n', '\nCHANGED\n'),
+    ownerNotes: owner,
+  });
+  // source.txt stays applied and notes.md returns to its pre-image, so the whole patch reverses.
+  await writeFile(join(f.root, 'notes.md'), owner);
+  execFileSync('git', ['apply', '--check', '-R', accepted.patchPath], { cwd: f.root });
+  await assert.rejects(delegateIntegrationCommand('recover', { ...input, resolution: 'accept' }), {
+    code: 'E_INTEGRATION_RECOVERY_INCOMPLETE',
+  });
+  const recovered = await delegateIntegrationCommand('recover', input);
+  assert.equal(recovered.recovered, 'rolled-back', JSON.stringify(recovered));
+  assert.equal(await readFile(join(f.root, 'notes.md'), 'utf8'), owner);
+  assert.equal(await readFile(join(f.root, 'source.txt'), 'utf8'), 'base\n');
+});
+
+for (const resolution of ['rollback', 'accept'])
+  test(`recover ${resolution} keeps a private file's permissions`, async (t) => {
+    const { f, input } = await interruptedApply(t, {
+      notes: 'secret\n',
+      delegateNotes: 'rotated secret\n',
+      mode: 0o600,
+    });
+    assert.equal((await stat(join(f.root, 'notes.md'))).mode & 0o777, 0o600);
+    // A crash between git apply and the permission restore leaves the default mode.
+    await chmod(join(f.root, 'notes.md'), 0o644);
+    const recovered = await delegateIntegrationCommand('recover', { ...input, resolution });
+    assert.equal(recovered.recovered, resolution === 'accept' ? 'accepted' : 'rolled-back');
+    assert.equal(
+      await readFile(join(f.root, 'notes.md'), 'utf8'),
+      resolution === 'accept' ? 'rotated secret\n' : 'secret\n',
+    );
+    assert.equal((await stat(join(f.root, 'notes.md'))).mode & 0o777, 0o600);
+  });
+
+test('a run with no changes completes without a patch or restore point', async (t) => {
+  const f = await fixture(t);
+  const prepared = await f.prepare();
+  const input = { runId: prepared.runId, runDirectory: f.runDirectory, env: f.env };
+  await dispatchDelegateRun(input);
+  await writeFile(join(prepared.record.worktreePath, 'source.txt'), 'base\n');
+  const review = await delegateIntegrationCommand('review', input);
+  assert.equal(review.ready, true);
+  assert.deepEqual(review.changedPaths, []);
+  const applied = await delegateIntegrationCommand('apply', { ...input, checks: passingCheck });
+  assert.equal(applied.status, 'completed', JSON.stringify(applied));
+  const record = await readRunRecord(prepared.runId, { directory: f.runDirectory });
+  assert.equal(record.integration.status, 'applied');
+  assert.equal(record.integration.restoreRef, null);
+  await assert.rejects(stat(join(record.runPath, 'patch.diff')), { code: 'ENOENT' });
+  assert.equal(
+    execFileSync('git', ['for-each-ref', 'refs/planr-delegate/'], {
+      cwd: f.root,
+      encoding: 'utf8',
+    }),
+    '',
+  );
+});
 
 test('failure evidence is saved without automatic baseline and cannot be erased by zero checks', async (t) => {
   const f = await fixture(t);
@@ -1107,14 +1252,14 @@ test('normal check completion stops background writers and timeout retains bound
   assert.match(timed[0].diagnostic, /actionable fixture error/);
 });
 
-test('an owner save between the apply check and git apply is kept and recover rolls back', async (t) => {
+test('an owner save between the apply check and git apply is kept and the run returns to review', async (t) => {
   const f = await fixture(t);
   const prepared = await f.prepare();
   const input = { runId: prepared.runId, runDirectory: f.runDirectory, env: f.env };
   await dispatchDelegateRun(input);
   const record = await readRunRecord(prepared.runId, { directory: f.runDirectory });
   const custody = JSON.parse(await readFile(record.custodyPath, 'utf8'));
-  let accepted;
+  let rolledBack;
   const result = await integrateDelegateDelta({
     custody,
     run: record,
@@ -1122,29 +1267,29 @@ test('an owner save between the apply check and git apply is kept and recover ro
     checks: [],
     reviewOnlyReason: 'Exercise destination concurrency.',
     patchPath: join(record.runPath, 'patch.diff'),
-    onApplying: async (state) => {
-      accepted = state;
+    onApplying: async () => {
       await writeFile(join(f.root, 'source.txt'), 'owner save during apply\n');
     },
+    onRolledBack: async (state) => {
+      rolledBack = state;
+    },
   });
-  assert.equal(result.code, 'E_INTEGRATION_APPLY_INTERRUPTED');
-  assert.match(result.nextAction, /recover/u);
-  assert.equal(await readFile(join(f.root, 'source.txt'), 'utf8'), 'owner save during apply\n');
-  await updateRunRecord(
-    record.runId,
-    { integration: { status: 'applying', ...accepted } },
-    { directory: f.runDirectory },
+  assert.equal(result.code, 'E_INTEGRATION_SOURCE_DRIFT', JSON.stringify(result));
+  assert.deepEqual(rolledBack, { rollbackErrors: [], code: 'E_INTEGRATION_SOURCE_DRIFT' });
+  assert.ok(
+    result.violations.some(
+      ({ code, path }) => code === 'E_INTEGRATION_SOURCE_DRIFT' && path === 'source.txt',
+    ),
   );
-  await assert.rejects(delegateIntegrationCommand('recover', { ...input, resolution: 'accept' }), {
-    code: 'E_INTEGRATION_RECOVERY_INCOMPLETE',
-  });
-  const recovered = await delegateIntegrationCommand('recover', input);
-  assert.equal(recovered.recovered, 'conflicts');
-  assert.deepEqual(
-    recovered.rollbackErrors.map(({ path }) => path),
-    ['source.txt'],
-  );
+  assert.doesNotMatch(result.nextAction, /recover/u);
   assert.equal(await readFile(join(f.root, 'source.txt'), 'utf8'), 'owner save during apply\n');
+  assert.equal(
+    execFileSync('git', ['for-each-ref', 'refs/planr-delegate/'], {
+      cwd: f.root,
+      encoding: 'utf8',
+    }),
+    '',
+  );
 });
 
 for (const failed of [true, false])

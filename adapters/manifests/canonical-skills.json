@@ -958,7 +958,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:c92120a14819832ed8a9baa92d42db14d42649f8c844c6c468c384f477043aa3"
+          "digest": "sha256:3f09618101b64cc5369d4eb11a81e10156de653e19e4eeae6da02456b64dabff"
         },
         {
           "path": "references/operator-guide.md",
@@ -994,7 +994,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:63f92dfca3375603c4ea99f6e67f396ffa8efcf6c044083f3fd501dff41eb368"
+          "digest": "sha256:ecafa20680adbb2179ddb88418b4d7fc8c2cac5d97a5c16798bf47c386a619ef"
         },
         {
           "path": "scripts/adapters/claude.mjs",
@@ -1066,7 +1066,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:9f082d12299cd2b46489e05fa70c4c4ae10e6b4410dfcaf4a30422a9c4e686b0"
+          "digest": "sha256:c971df69c831609659f6f48f67014eb1a34c318f5fb3f355936b3e8430e9fb90"
         },
         {
           "path": "scripts/helper-snapshot.mjs",
@@ -1090,7 +1090,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:48d6250a23b3b2d729d7bcf6ec3de8b2f0a9a12f545bc76c847a6f80707dc731"
+          "digest": "sha256:52cfd4806d59591f3875978ac48f2be42cb87eb519d7ac08f262accb2d1300c9"
         },
         {
           "path": "scripts/presentation.mjs",
@@ -1102,7 +1102,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:b7d5114586bcdd05587c4ff38afac3cec859605a4b7069b41a2bd93389dfaf44"
+          "digest": "sha256:84b8b49479806187ff3a502897f4cd901fdfe00d6cbd6a371b641fe2091892fd"
         },
         {
           "path": "scripts/profiles.mjs",
@@ -1234,7 +1234,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:e750924d1415bbf79a9b7b4a8b2f01d08613fcbb103bee68a4e07c65f25821c8"
+          "digest": "sha256:ad9e17e3428de3c5e68ddca066f9997e37833006635c4ecf35e5ad17b23fbc3e"
         },
         {
           "path": "scripts/integration-transaction.mjs",

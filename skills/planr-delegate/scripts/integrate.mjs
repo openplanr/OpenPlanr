@@ -56,6 +56,7 @@ function publicReview(review) {
     ready: review.ready,
     changedPaths: review.changedPaths,
     violations: review.violations,
+    warnings: review.warnings ?? [],
     patch: review.patch.map(({ path, before, after }) => ({
       path,
       origin: review.changes?.find((change) => change.path === path)?.origin ?? 'delegate',

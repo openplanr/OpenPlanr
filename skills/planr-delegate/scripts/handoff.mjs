@@ -1,7 +1,7 @@
 // Hand delegate work back through its run branch: snapshot, review, check at tip, git apply.
 import { execFile } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { chmod, lstat, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { chmod, copyFile, lstat, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { captureFileState, HOOKLESS_COMMIT, validateWorktreeCustody } from './custody.mjs';
@@ -24,6 +24,8 @@ import { compactIntegrationState } from './run-record.mjs';
 const DIFF = [
   '-c',
   'diff.noprefix=false',
+  '-c',
+  'diff.ignoreSubmodules=none',
   'diff',
   '--no-ext-diff',
   '--no-textconv',
@@ -31,6 +33,7 @@ const DIFF = [
   '--no-relative',
   '--no-renames',
   '--submodule=short',
+  '--ignore-submodules=none',
 ];
 const APPLY = [
   '-c',
@@ -134,7 +137,8 @@ async function assertAtTip(root, tip, violations) {
 }
 
 async function changedEntries(root, base, tip) {
-  const tokens = (await git(root, [...DIFF, '-z', '--raw', '--no-abbrev', base, tip])).stdout
+  const range = tip ? [base, tip] : [base];
+  const tokens = (await git(root, [...DIFF, '-z', '--raw', '--no-abbrev', ...range])).stdout
     .toString('utf8')
     .split('\0');
   const entries = [];
@@ -143,6 +147,26 @@ async function changedEntries(root, base, tip) {
     entries.push({ path: tokens[index + 1], beforeMode, afterMode, beforeOid, afterOid });
   }
   return entries;
+}
+
+/** Lists submodules that differ from base, including ones `ignore` settings hide from `git add`. */
+async function submodulePaths(root, base) {
+  const paths = new Set(
+    (await changedEntries(root, base))
+      .filter(({ beforeMode, afterMode }) => beforeMode === '160000' || afterMode === '160000')
+      .map(({ path }) => path),
+  );
+  const status = (
+    await git(root, ['status', '--porcelain=v2', '-z', '--ignore-submodules=none'])
+  ).stdout
+    .toString('utf8')
+    .split('\0');
+  for (const row of status) {
+    const fields = row.split(' ');
+    if (['1', '2'].includes(fields[0]) && fields[2]?.startsWith('S'))
+      paths.add(fields.slice(fields[0] === '1' ? 8 : 9).join(' '));
+  }
+  return [...paths];
 }
 
 async function objectState(root, mode, oid) {
@@ -159,8 +183,8 @@ async function objectState(root, mode, oid) {
   return { kind: 'file', mode: mode === '100755' ? 0o755 : 0o644, bytes, oid };
 }
 
-async function applyCheck(root, patch, paths, reverse = false) {
-  const result = await git(root, [...APPLY, '--check', ...(reverse ? ['-R'] : []), '-'], {
+async function applyCheck(root, patch, paths) {
+  const result = await git(root, [...APPLY, '--check', '-'], {
     input: patch,
     allowFailure: true,
   });
@@ -195,6 +219,9 @@ export async function reviewBranchDelta(input = {}) {
   if (violations.some(({ code }) => BRANCH_VIOLATIONS.includes(code))) return empty;
   const root = custody.worktreePath;
   const tip = await snapshotTip(custody);
+  // git apply without --index leaves a submodule untouched yet reports success.
+  const submodules = await submodulePaths(root, custody.base);
+  violations.push(...submodules.map((path) => ({ code: 'E_INTEGRATION_GITLINK', path })));
   const changes = [];
   for (const entry of await changedEntries(root, custody.base, tip)) {
     const { path } = entry;
@@ -204,10 +231,9 @@ export async function reviewBranchDelta(input = {}) {
       violations.push({ code: 'E_INTEGRATION_SCOPE', path });
     if (protectedPaths.some((rule) => covers(rule, path)))
       violations.push({ code: 'E_INTEGRATION_PRESERVE', path });
-    // git apply without --index leaves a submodule untouched yet reports success.
-    if (before.kind === 'gitlink' || after.kind === 'gitlink')
-      violations.push({ code: 'E_INTEGRATION_GITLINK', path });
-    else
+    if (before.kind === 'gitlink' || after.kind === 'gitlink') {
+      if (!submodules.includes(path)) violations.push({ code: 'E_INTEGRATION_GITLINK', path });
+    } else
       try {
         await assertSafeChanges(custody.repositoryRoot, [{ path, after }]);
       } catch (error) {
@@ -244,6 +270,7 @@ export async function reviewBranchDelta(input = {}) {
     changedPaths,
     changes,
     violations,
+    warnings: custodyCheck.warnings,
     patch: changes.map(({ path, before, after }) => ({ path, before, after })),
     base: custody.base,
     tip,
@@ -269,19 +296,27 @@ async function removeBaseline(custody, target) {
 }
 
 async function physicalModes(root, changes) {
-  const modes = new Map();
+  const modes = {};
   for (const { path, before, after } of changes) {
     if (before.kind !== 'file' || after.kind !== 'file') continue;
     const info = await lstat(join(root, path));
-    if (info.isFile()) modes.set(path, info.mode & 0o777);
+    if (info.isFile()) modes[path] = info.mode & 0o777;
   }
   return modes;
 }
 
-// git apply rewrites files with default permissions; only the executable bit belongs to the delta.
-async function restorePhysicalModes(root, modes) {
-  for (const [path, before] of modes) {
-    const info = await lstat(join(root, path));
+// git apply and git restore write files with default permissions; only the executable bit belongs to the delta.
+async function restorePhysicalModes(root, modes, paths) {
+  for (const path of paths) {
+    const before = modes?.[path];
+    if (before === undefined) continue;
+    let info;
+    try {
+      info = await lstat(join(root, path));
+    } catch (error) {
+      if (error.code === 'ENOENT') continue;
+      throw error;
+    }
     if (!info.isFile()) continue;
     const mode = (before & ~0o111) | (info.mode & 0o111);
     if (mode !== (info.mode & 0o777)) await chmod(join(root, path), mode);
@@ -305,6 +340,7 @@ export async function integrateBranchDelta({
   onVerification,
   onApplying,
   onAccepted,
+  onRolledBack,
 } = {}) {
   const native = Boolean(run.nativeSelection);
   const root = custody.worktreePath;
@@ -564,6 +600,7 @@ export async function integrateBranchDelta({
       );
     await assertAtTip(root, review.tip, review.violations);
     const custodyCheck = await validateWorktreeCustody(custody, { native });
+    review.warnings = custodyCheck.warnings;
     if (!custodyCheck.valid) {
       review.violations.push(...custodyCheck.violations);
       throw new IntegrationError(
@@ -574,20 +611,6 @@ export async function integrateBranchDelta({
     if (controller.signal.aborted)
       throw new IntegrationError('E_INTEGRATION_INTERRUPTED', 'Integration was interrupted.');
     const parent = custody.repositoryRoot;
-    const drift = await applyCheck(parent, review.patchBytes, review.changedPaths);
-    if (drift.length) {
-      review.violations.push(...drift);
-      throw new IntegrationError(
-        'E_INTEGRATION_SOURCE_DRIFT',
-        'The parent checkout no longer accepts the reviewed patch.',
-      );
-    }
-    if (patchPath) await writeFile(patchPath, review.patchBytes, { mode: 0o600 });
-    const ref = restoreRef(custody.runId);
-    const restore =
-      (await text(parent, ['stash', 'create'])) || (await text(parent, ['rev-parse', 'HEAD']));
-    await git(parent, ['update-ref', ref, restore]);
-    restoreCreated = true;
     const accepted = {
       delegatePaths,
       generatedPaths,
@@ -601,32 +624,64 @@ export async function integrateBranchDelta({
       base: review.base,
       tip: review.tip,
       patchSha256: review.patchSha256,
-      patchPath: patchPath ?? null,
-      restoreRef: ref,
-      restore,
+      patchPath: null,
+      restoreRef: null,
+      restore: null,
     };
-    verification.phase = 'source-write';
-    verification.phases.push({ phase: 'source-write', startedAt: new Date().toISOString() });
-    await progress();
-    const modes = await physicalModes(parent, review.changes);
-    await onApplying?.(accepted);
-    applying = true;
-    const applied = await git(parent, [...APPLY, '-'], {
-      input: review.patchBytes,
-      allowFailure: true,
-    });
-    if (applied.code !== 0)
-      throw new IntegrationError(
-        'E_INTEGRATION_APPLY_INTERRUPTED',
-        `git apply failed after its check: ${applied.stderr.trim().slice(-1024)}`,
-      );
-    await restorePhysicalModes(parent, modes);
+    if (review.changedPaths.length) {
+      const drift = await applyCheck(parent, review.patchBytes, review.changedPaths);
+      if (drift.length) {
+        review.violations.push(...drift);
+        throw new IntegrationError(
+          'E_INTEGRATION_SOURCE_DRIFT',
+          'The parent checkout no longer accepts the reviewed patch.',
+        );
+      }
+      if (patchPath) await writeFile(patchPath, review.patchBytes, { mode: 0o600 });
+      accepted.patchPath = patchPath ?? null;
+      accepted.restoreRef = restoreRef(custody.runId);
+      accepted.restore =
+        (await text(parent, ['stash', 'create'])) || (await text(parent, ['rev-parse', 'HEAD']));
+      await git(parent, ['update-ref', accepted.restoreRef, accepted.restore]);
+      restoreCreated = true;
+      accepted.modes = await physicalModes(parent, review.changes);
+      verification.phase = 'source-write';
+      verification.phases.push({ phase: 'source-write', startedAt: new Date().toISOString() });
+      await progress();
+      await onApplying?.(accepted);
+      applying = true;
+      const applied = await git(parent, [...APPLY, '-'], {
+        input: review.patchBytes,
+        allowFailure: true,
+      });
+      if (applied.code !== 0) {
+        const states = await pathStates(parent, accepted, review.patchBytes, review.changedPaths);
+        if (Object.values(states).some((state) => ['applied', 'unknown'].includes(state)))
+          throw new IntegrationError(
+            'E_INTEGRATION_APPLY_INTERRUPTED',
+            `git apply failed after its check: ${applied.stderr.trim().slice(-1024)}`,
+          );
+        // Nothing was written, so the run returns to review instead of recovery.
+        await onRolledBack?.({ rollbackErrors: [], code: 'E_INTEGRATION_SOURCE_DRIFT' });
+        applying = false;
+        review.violations.push(
+          ...Object.entries(states)
+            .filter(([, state]) => state === 'conflict')
+            .map(([path]) => ({ code: 'E_INTEGRATION_SOURCE_DRIFT', path })),
+        );
+        throw new IntegrationError(
+          'E_INTEGRATION_SOURCE_DRIFT',
+          `The parent checkout changed after the apply check: ${applied.stderr.trim().slice(-1024)}`,
+        );
+      }
+      await restorePhysicalModes(parent, accepted.modes, review.changedPaths);
+    }
     const states = {};
     for (const path of review.changedPaths)
       states[path] = compactIntegrationState(await captureFileState(parent, path));
     await onAccepted?.({ ...accepted, states });
     applying = false;
-    await git(parent, ['update-ref', '-d', ref]);
+    if (restoreCreated) await git(parent, ['update-ref', '-d', accepted.restoreRef]);
     return {
       status: 'completed',
       ...review,
@@ -692,35 +747,55 @@ async function workingObject(root, path) {
   try {
     info = await lstat(join(root, path));
   } catch (error) {
-    if (error.code === 'ENOENT') return 'absent';
+    if (error.code === 'ENOENT') return ABSENT;
     throw error;
   }
   if (info.isSymbolicLink()) {
     const state = await captureFileState(root, path);
-    return text(root, ['hash-object', '--stdin'], { input: state.target });
+    return {
+      mode: '120000',
+      oid: await text(root, ['hash-object', '--stdin'], { input: state.target }),
+    };
   }
-  return text(root, ['hash-object', '--', path]);
+  return {
+    mode: info.mode & 0o111 ? '100755' : '100644',
+    oid: await text(root, ['--literal-pathspecs', 'hash-object', '--', path]),
+  };
 }
+
+const ABSENT = { mode: null, oid: 'absent' };
+const UNKNOWN = { mode: null, oid: 'unknown' };
 
 async function imageObjects(root, integration, patch, paths) {
   const directory = await mkdtemp(join(tmpdir(), 'planr-recover-'));
   const env = { GIT_INDEX_FILE: join(directory, 'index') };
   const objects = async () => {
     const found = {};
-    for (const line of (await text(root, ['ls-files', '-s', '-z', '--', ...paths], { env })).split(
-      '\0',
-    )) {
+    for (const line of (
+      await text(root, ['--literal-pathspecs', 'ls-files', '-s', '-z', '--', ...paths], { env })
+    ).split('\0')) {
       const separator = line.indexOf('\t');
-      if (separator > 0) found[line.slice(separator + 1)] = line.split(' ')[1];
+      if (separator > 0) {
+        const [mode, oid] = line.slice(0, separator).split(' ');
+        found[line.slice(separator + 1)] = { mode, oid };
+      }
     }
-    return Object.fromEntries(paths.map((path) => [path, found[path] ?? 'absent']));
+    return Object.fromEntries(paths.map((path) => [path, found[path] ?? ABSENT]));
   };
   try {
     await git(root, ['read-tree', integration.restore], { env });
     // The restore point holds tracked files only; selected untracked files start at base.
     for (const path of paths) {
-      const listed = await text(root, ['ls-files', '-s', '--', path], { env });
-      const fromBase = await text(root, ['ls-tree', integration.base, '--', path]);
+      const listed = await text(root, ['--literal-pathspecs', 'ls-files', '-s', '--', path], {
+        env,
+      });
+      const fromBase = await text(root, [
+        '--literal-pathspecs',
+        'ls-tree',
+        integration.base,
+        '--',
+        path,
+      ]);
       if (!listed && fromBase) {
         const [mode, , oid] = fromBase.split('\t')[0].split(' ');
         await git(root, ['update-index', '--add', '--cacheinfo', `${mode},${oid},${path}`], {
@@ -729,11 +804,51 @@ async function imageObjects(root, integration, patch, paths) {
       }
     }
     const pre = await objects();
-    await git(root, [...APPLY, '--cached', '-'], { input: patch, env });
-    return { pre, post: await objects() };
+    const preIndex = join(directory, 'pre-index');
+    await copyFile(env.GIT_INDEX_FILE, preIndex);
+    if (
+      (await git(root, [...APPLY, '--cached', '-'], { input: patch, env, allowFailure: true }))
+        .code === 0
+    )
+      return { pre, post: await objects() };
+    // The owner changed a path before the restore point; only that path's post-image is unknown.
+    const post = {};
+    for (const path of paths) {
+      await copyFile(preIndex, env.GIT_INDEX_FILE);
+      const include = `--include=${path.replace(/[*?[\]\\]/gu, '\\$&')}`;
+      const result = await git(root, [...APPLY, '--cached', include, '-'], {
+        input: patch,
+        env,
+        allowFailure: true,
+      });
+      post[path] = result.code === 0 ? (await objects())[path] : UNKNOWN;
+    }
+    return { pre, post };
   } finally {
     await rm(directory, { recursive: true, force: true });
   }
+}
+
+function matches(current, image, other) {
+  if (current.oid !== image.oid) return false;
+  return image.oid !== other.oid || current.mode === image.mode;
+}
+
+/** Classifies each patch path as applied, pending or conflict against its pre and post images. */
+async function pathStates(root, integration, patch, paths) {
+  const { pre, post } = await imageObjects(root, integration, patch, paths);
+  const states = {};
+  for (const path of paths) {
+    const current = await workingObject(root, path);
+    states[path] = matches(current, post[path], pre[path])
+      ? 'applied'
+      : matches(current, pre[path], post[path])
+        ? 'pending'
+        : post[path] === UNKNOWN
+          ? 'unknown'
+          : 'conflict';
+  }
+  return states;
 }
 
 /** Resolves an apply interrupted between its check and completion without overwriting user edits. */
@@ -753,39 +868,33 @@ export async function recoverBranchApply(record, resolution = 'rollback') {
   const paths = integration.changedPaths;
   const release = await checkoutLock(root);
   try {
-    if (!(await applyCheck(root, patch, paths, true)).length) {
-      if (resolution === 'accept') return { state: 'applied', restored: [], conflicts: [] };
-      await git(root, [...APPLY, '-R', '-'], { input: patch });
-      return { state: 'rolled-back', restored: paths, conflicts: [] };
-    }
-    if (!(await applyCheck(root, patch, paths)).length) {
-      if (resolution === 'accept')
+    const states = await pathStates(root, integration, patch, paths);
+    const applied = paths.filter((path) => states[path] === 'applied');
+    if (resolution === 'accept') {
+      if (applied.length !== paths.length)
         throw new IntegrationError(
           'E_INTEGRATION_RECOVERY_INCOMPLETE',
-          'The patch was not applied; recover with rollback.',
+          applied.length
+            ? 'The patch was applied partially; recover with rollback.'
+            : 'The patch was not applied; recover with rollback.',
         );
-      return { state: 'rolled-back', restored: [], conflicts: [] };
+      await restorePhysicalModes(root, integration.modes, paths);
+      return { state: 'applied', restored: [], conflicts: [] };
     }
-    if (resolution === 'accept')
-      throw new IntegrationError(
-        'E_INTEGRATION_RECOVERY_INCOMPLETE',
-        'The patch was applied partially; recover with rollback.',
-      );
-    const { pre, post } = await imageObjects(root, integration, patch, paths);
-    const restored = [];
-    const conflicts = [];
-    for (const path of paths) {
-      const current = await workingObject(root, path);
-      if (current === pre[path]) continue;
-      if (current !== post[path]) {
-        conflicts.push({ path, code: 'E_INTEGRATION_ROLLBACK_CONFLICT' });
-        continue;
-      }
-      if (pre[path] === 'absent') await rm(join(root, path), { force: true });
-      else {
-        const source = (await text(root, ['ls-tree', integration.restore, '--', path]))
-          ? integration.restore
-          : integration.base;
+    for (const path of applied) {
+      const source = (await text(root, [
+        '--literal-pathspecs',
+        'ls-tree',
+        integration.restore,
+        '--',
+        path,
+      ]))
+        ? integration.restore
+        : (await text(root, ['--literal-pathspecs', 'ls-tree', integration.base, '--', path]))
+          ? integration.base
+          : null;
+      if (!source) await rm(join(root, path), { force: true });
+      else
         await git(root, [
           '--literal-pathspecs',
           'restore',
@@ -794,10 +903,16 @@ export async function recoverBranchApply(record, resolution = 'rollback') {
           '--',
           path,
         ]);
-      }
-      restored.push(path);
     }
-    return { state: conflicts.length ? 'interrupted' : 'rolled-back', restored, conflicts };
+    await restorePhysicalModes(root, integration.modes, applied);
+    const conflicts = paths
+      .filter((path) => ['conflict', 'unknown'].includes(states[path]))
+      .map((path) => ({ path, code: 'E_INTEGRATION_ROLLBACK_CONFLICT' }));
+    return {
+      state: conflicts.length ? 'interrupted' : 'rolled-back',
+      restored: applied,
+      conflicts,
+    };
   } finally {
     await release();
   }

@@ -108,29 +108,25 @@ export const HOOKLESS_COMMIT = [
   '-q',
   '-m',
 ];
-// Other runs, remote-tracking refs and branches checked out elsewhere move without the delegate.
-const UNOWNED_REFS = ['refs/heads/planr-delegate/', 'refs/planr-delegate/', 'refs/remotes/'];
+const RESTORE_REF = /^refs\/planr-delegate\/[^/]+\/restore$/u;
 
-async function sharedRefs(root, worktreePath) {
-  const checkedOut = new Set();
-  let current = null;
-  for (const line of (await git(root, ['worktree', 'list', '--porcelain', '-z']))
-    .toString('utf8')
-    .split('\0')) {
-    if (line.startsWith('worktree ')) current = line.slice('worktree '.length);
-    else if (line.startsWith('branch ') && current !== worktreePath)
-      checkedOut.add(line.slice('branch '.length));
-  }
+async function refSnapshot(root, branch) {
   const refs = {};
   for (const line of (await git(root, ['for-each-ref', '--format=%(refname)%00%(objectname)']))
     .toString('utf8')
     .split('\n')) {
     const [name, oid] = line.split('\0');
-    if (!oid || checkedOut.has(name) || UNOWNED_REFS.some((prefix) => name.startsWith(prefix)))
-      continue;
-    refs[name] = oid;
+    if (oid && name !== `refs/heads/${branch}`) refs[name] = oid;
   }
   return refs;
+}
+
+async function isAncestor(root, ancestor, descendant) {
+  return (
+    (await git(root, ['merge-base', '--is-ancestor', ancestor, descendant], {
+      allowFailure: true,
+    })) !== null
+  );
 }
 
 async function branchViolations(root, record) {
@@ -138,25 +134,54 @@ async function branchViolations(root, record) {
   const head = (await git(root, ['symbolic-ref', '-q', 'HEAD'], { allowFailure: true }))
     ?.toString('utf8')
     .trim();
-  if (head !== `refs/heads/${record.branch}`)
+  const branchRef = `refs/heads/${record.branch}`;
+  if (head !== branchRef)
     violations.push({ code: 'E_CUSTODY_BRANCH', expected: record.branch, actual: head ?? null });
   else if (
-    (await git(root, ['merge-base', '--is-ancestor', record.base, 'HEAD'], {
-      allowFailure: true,
-    })) === null
+    (await git(root, ['show-ref', '--verify', '--quiet', branchRef], { allowFailure: true })) ===
+    null
   )
+    violations.push({ code: 'E_CUSTODY_BRANCH', expected: record.branch, actual: null });
+  else if (!(await isAncestor(root, record.base, 'HEAD')))
     violations.push({ code: 'E_CUSTODY_BASE', base: record.base });
-  const refs = await sharedRefs(record.repositoryRoot, record.worktreePath);
-  const changed = [...new Set([...Object.keys(refs), ...Object.keys(record.refs ?? {})])]
-    .filter((name) => refs[name] !== record.refs?.[name])
-    .sort();
-  if (changed.length)
+  const parent = record.repositoryRoot;
+  const before = record.refs ?? {};
+  const now = await refSnapshot(parent, record.branch);
+  const reported = new Set([`refs/planr-delegate/${record.runId}/restore`]);
+  const previous = before[record.parentBranch] ?? record.initialHead;
+  const moved = record.parentBranch ? now[record.parentBranch] : undefined;
+  // Owner commits fast-forward the branch; delegate work descends from base.
+  if (
+    moved &&
+    moved !== previous &&
+    ((await isAncestor(parent, record.base, moved)) || !(await isAncestor(parent, previous, moved)))
+  ) {
+    reported.add(record.parentBranch);
     violations.push({
-      code: 'E_CUSTODY_REFS',
-      refs: changed.slice(0, 20),
-      ...(changed.length > 20 ? { omitted: changed.length - 20 } : {}),
+      code: 'E_CUSTODY_PARENT_BRANCH',
+      ref: record.parentBranch,
+      expected: previous,
+      actual: moved,
     });
-  return violations;
+  }
+  for (const name of Object.keys(before))
+    if (RESTORE_REF.test(name) && !reported.has(name) && !now[name]) {
+      reported.add(name);
+      violations.push({ code: 'E_CUSTODY_RESTORE_REF', ref: name });
+    }
+  const changed = [...new Set([...Object.keys(now), ...Object.keys(before)])]
+    .filter((name) => !reported.has(name) && now[name] !== before[name])
+    .sort();
+  const warnings = changed.length
+    ? [
+        {
+          code: 'W_CUSTODY_REFS',
+          refs: changed.slice(0, 20),
+          ...(changed.length > 20 ? { omitted: changed.length - 20 } : {}),
+        },
+      ]
+    : [];
+  return { violations, warnings };
 }
 
 function digest(bytes) {
@@ -641,7 +666,11 @@ export async function createWorktreeCustody({
         handoff: 'branch',
         branch: branchName,
         base: (await git(worktreePath, ['rev-parse', 'HEAD'])).toString('utf8').trim(),
-        refs: await sharedRefs(root, worktreePath),
+        parentBranch:
+          (await git(root, ['symbolic-ref', '-q', 'HEAD'], { allowFailure: true }))
+            ?.toString('utf8')
+            .trim() || null,
+        refs: await refSnapshot(root, branchName),
       };
     }
     const preservedFiles = {};
@@ -740,9 +769,13 @@ export async function validateWorktreeCustody(
     throw new CustodyError('E_CUSTODY_RECORD', 'A custody record is required.');
   const root = await assertRepository(record.worktreePath);
   const violations = [];
+  let warnings = [];
   await assertRepository(record.repositoryRoot);
-  if (record.handoff === 'branch') violations.push(...(await branchViolations(root, record)));
-  else {
+  if (record.handoff === 'branch') {
+    const branch = await branchViolations(root, record);
+    violations.push(...branch.violations);
+    warnings = branch.warnings;
+  } else {
     // Source HEAD/index may advance on unrelated paths; integration checks each destination.
     const head = (await git(root, ['rev-parse', 'HEAD'])).toString('utf8').trim();
     if (head !== record.initialHead)
@@ -788,7 +821,12 @@ export async function validateWorktreeCustody(
     )
       violations.push({ code: 'E_CUSTODY_SETUP_CHANGED', path });
   }
-  return { valid: violations.length === 0, violations, changedPaths: currentStatus.changedPaths };
+  return {
+    valid: violations.length === 0,
+    violations,
+    warnings,
+    changedPaths: currentStatus.changedPaths,
+  };
 }
 
 export async function cleanupWorktreeCustody(record, { disposition, beforeRemove } = {}) {

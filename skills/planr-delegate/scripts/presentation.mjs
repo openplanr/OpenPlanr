@@ -94,9 +94,13 @@ export function handoffPresentation(outcome) {
   };
 }
 
-function violationText({ code, path, change, omitted }) {
+function warningText({ refs, omitted }) {
+  return `Refs changed outside this run (not blocking): ${refs.join(', ')}${omitted ? ` and ${omitted} more` : ''}`;
+}
+
+function violationText({ code, path, ref, change, omitted }) {
   if (omitted) return `${code}: ${omitted} more path(s)`;
-  if (!path) return code;
+  if (!path) return ref ? `${code}: ${ref}` : code;
   return change ? `${code}: ${path} (${change})` : `${code}: ${path}`;
 }
 
@@ -109,6 +113,7 @@ export function reviewPresentation(review) {
       : 'Observed changes require attention before integration.',
     changed: visiblePaths(review.changedPaths),
     violations: review.violations.map(violationText),
+    warnings: (review.warnings ?? []).map(warningText),
     nextAction: review.ready
       ? 'Inspect the retained worktree patch and then call apply with the same scope.'
       : 'Resolve the violations in the retained worktree or source before retrying.',
@@ -128,6 +133,7 @@ export function implementationReport(result, selector) {
       ? ['Owned worktree cleanup failed; integration remains accepted']
       : []),
     ...(result.violations ?? []).map(violationText),
+    ...(result.warnings ?? []).map(warningText),
     ...(result.code ? [result.code] : []),
     ...failed.map(({ command, status, exitCode, timeoutMs, classification }) =>
       status === 'timed-out'

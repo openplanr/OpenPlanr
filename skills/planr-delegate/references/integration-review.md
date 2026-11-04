@@ -51,10 +51,12 @@ with the saved `patch.diff`. A parent edit elsewhere in a changed file merges; a
 overlapping parent edit blocks with its path and leaves the checkout untouched.
 Concurrent user edits are never overwritten or rolled back.
 
-An apply interrupted between its check and completion must use `recover`. A fully
-applied patch can be accepted; rollback (default) reverses it, or after a partial
-apply restores only patch paths that still match their pre- or post-apply content.
-Keep conflicting user edits. Do not bypass a rejected helper by manually applying
+If `git apply` fails without writing, for example after a parent save between its check
+and the write, the run returns to review with the conflicting paths. An apply
+interrupted between its check and completion must use `recover`, which compares each
+patch path with its pre- and post-apply content. A fully applied patch can be accepted;
+rollback (default) restores only paths that match their post-apply content and keeps
+file permissions. Keep conflicting user edits. Do not bypass a rejected helper by manually applying
 its patch.
 
 Successful native integration closes the exact run, saves evidence/report and

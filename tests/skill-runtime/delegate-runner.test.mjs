@@ -4,6 +4,7 @@ import { createHash } from 'node:crypto';
 import {
   chmod,
   cp,
+  lstat,
   mkdir,
   mkdtemp,
   readdir,
@@ -465,6 +466,46 @@ test('prepared helper survives projection replacement and detects changes to its
   await assert.rejects(delegateRunnerCommand('status', { runId: prepared.runId, runDirectory }), {
     code: 'E_DELEGATE_HELPER_DRIFT',
   });
+});
+
+test('a 2.0.0 run record routes integration to its pinned helper', async (t) => {
+  const { root, base, runDirectory, profileDirectory } = await fixture(t);
+  const { logPath } = await fakeProfile({ base, profileDirectory });
+  const prepared = await prepareDelegateRun({
+    repositoryRoot: root,
+    request: 'Inspect source.txt.',
+    selectedFiles: ['source.txt'],
+    scopePaths: ['source.txt'],
+    profile: 'fake',
+    profileDirectory,
+    runDirectory,
+    env: environment(logPath),
+  });
+  const record = await readRunRecord(prepared.runId, { directory: runDirectory });
+  await writeFile(
+    record.helper.integrationPath,
+    'export async function delegateIntegrationCommand(action) {\n  return { routed: "pinned", action };\n}\n',
+  );
+  const hash = createHash('sha256');
+  for (const path of (await readdir(record.helper.directory, { recursive: true })).sort()) {
+    const file = join(record.helper.directory, path);
+    if (!(await lstat(file)).isFile()) continue;
+    const bytes = await readFile(file);
+    hash.update(path).update('\0').update(String(bytes.length)).update('\0').update(bytes);
+  }
+  const recordPath = join(record.runPath, 'record.json');
+  await writeFile(
+    recordPath,
+    `${JSON.stringify({
+      ...record,
+      schemaVersion: '2.0.0',
+      helper: { ...record.helper, digest: hash.digest('hex') },
+    })}\n`,
+  );
+  assert.deepEqual(
+    await delegateIntegrationCommand('review', { runId: prepared.runId, runDirectory }),
+    { routed: 'pinned', action: 'review' },
+  );
 });
 
 test('tool-capable generic adapter edits, resumes its exact session, and integrates observed changes', async (t) => {

@@ -189,10 +189,14 @@ test('a run branch commits selected files as its base and accepts delegate commi
     git(root, 'commit', '--allow-empty', '-qm', 'owner keeps working');
     assert.deepEqual((await validateWorktreeCustody(record)).violations, []);
     git(record.worktreePath, 'tag', 'delegate-tag');
-    assert.deepEqual(
-      (await validateWorktreeCustody(record)).violations.map(({ code, refs }) => [code, refs]),
-      [['E_CUSTODY_REFS', ['refs/tags/delegate-tag']]],
-    );
+    const tagged = await validateWorktreeCustody(record);
+    assert.deepEqual(tagged.violations, []);
+    assert.deepEqual(tagged.warnings, [
+      {
+        code: 'W_CUSTODY_REFS',
+        refs: [git(root, 'symbolic-ref', 'HEAD'), 'refs/tags/delegate-tag'],
+      },
+    ]);
     git(root, 'tag', '-d', 'delegate-tag');
     git(record.worktreePath, 'reset', '-q', '--hard', record.initialHead);
     assert.deepEqual(
@@ -212,6 +216,81 @@ test('a run branch commits selected files as its base and accepts delegate commi
     assert.equal(removed.removed, record.worktreePath);
     assert.equal(git(root, 'branch', '--list', record.branch), '');
     assert.doesNotMatch(git(root, 'worktree', 'list', '--porcelain'), /planr-delegate/u);
+  }));
+
+test('owner ref activity during a run warns; delegate moves of protected refs block', async () =>
+  fixture(async ({ base, root, worktreeParent }) => {
+    const remote = join(base, 'remote');
+    git(base, 'clone', '-q', root, remote);
+    git(root, 'remote', 'add', 'origin', remote);
+    git(root, 'update-ref', 'refs/planr-delegate/other-run/restore', 'HEAD');
+    const parentBranch = git(root, 'symbolic-ref', 'HEAD');
+    const record = await createWorktreeCustody({
+      repositoryRoot: root,
+      capsule: capsule(['changed.txt']),
+      selectedPaths: ['changed.txt'],
+      worktreeParent,
+      branch: true,
+    });
+    const warned = async (ref) => {
+      const result = await validateWorktreeCustody(record);
+      assert.deepEqual(result.violations, [], ref);
+      assert.ok(result.warnings[0]?.refs.includes(ref), ref);
+    };
+    git(root, 'commit', '--allow-empty', '-qm', 'owner commit');
+    await warned(parentBranch);
+    git(root, 'switch', '-q', '-c', 'feature');
+    git(root, 'commit', '--allow-empty', '-qm', 'owner feature commit');
+    await warned('refs/heads/feature');
+    git(root, 'switch', '-q', '-');
+    git(root, 'branch', 'scratch');
+    await warned('refs/heads/scratch');
+    await writeFile(join(root, 'unrelated.txt'), 'owner stash\n');
+    git(root, 'stash', 'push', '-q');
+    await warned('refs/stash');
+    const sibling = join(base, 'sibling');
+    git(root, 'worktree', 'add', '-q', '-b', 'claude/sibling', sibling);
+    git(root, 'worktree', 'remove', sibling);
+    await warned('refs/heads/claude/sibling');
+    git(root, 'update-ref', 'refs/prefetch/remotes/origin/main', 'HEAD');
+    await warned('refs/prefetch/remotes/origin/main');
+    git(root, 'bisect', 'start');
+    git(root, 'bisect', 'bad', 'HEAD');
+    await warned('refs/bisect/bad');
+    git(root, 'bisect', 'reset');
+    git(remote, 'config', 'user.name', 'Fixture');
+    git(remote, 'config', 'user.email', 'fixture@example.test');
+    git(remote, 'commit', '--allow-empty', '-qm', 'upstream release');
+    git(remote, 'tag', 'v1');
+    git(root, 'fetch', '-q', 'origin');
+    await warned('refs/tags/v1');
+
+    const owned = git(root, 'rev-parse', parentBranch);
+    git(record.worktreePath, 'commit', '--allow-empty', '-qm', 'delegate commit');
+    git(record.worktreePath, 'update-ref', parentBranch, 'HEAD');
+    assert.deepEqual(
+      (await validateWorktreeCustody(record)).violations.map(({ code, ref }) => [code, ref]),
+      [['E_CUSTODY_PARENT_BRANCH', parentBranch]],
+    );
+    const rewritten = git(
+      record.worktreePath,
+      'commit-tree',
+      `${record.initialHead}^{tree}`,
+      '-m',
+      'rewrite',
+    );
+    git(record.worktreePath, 'update-ref', parentBranch, rewritten);
+    assert.deepEqual(
+      (await validateWorktreeCustody(record)).violations.map(({ code }) => code),
+      ['E_CUSTODY_PARENT_BRANCH'],
+    );
+    git(root, 'update-ref', parentBranch, owned);
+    assert.deepEqual((await validateWorktreeCustody(record)).violations, []);
+    git(record.worktreePath, 'update-ref', '-d', 'refs/planr-delegate/other-run/restore');
+    assert.deepEqual(
+      (await validateWorktreeCustody(record)).violations.map(({ code, ref }) => [code, ref]),
+      [['E_CUSTODY_RESTORE_REF', 'refs/planr-delegate/other-run/restore']],
+    );
   }));
 
 test('scope planner orders contract owner first and keeps secondary context read-only', () => {
