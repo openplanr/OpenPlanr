@@ -42,7 +42,7 @@ const SAFE_ADAPTER_DIAGNOSTICS = Object.freeze({
   E_ADAPTER_PROCESS_IDENTITY:
     'Process identity inspection is unavailable. Restore normal host process inspection before retrying; native permissions were not changed.',
   E_ADAPTER_PERMISSION:
-    'Native permission needs attention. Resolve it in the native configuration, then continue this exact session; permissions are never weakened automatically.',
+    'Native permission needs attention. Resolve it in the native configuration, then continue this exact session; permissions are never bypassed automatically.',
   E_ADAPTER_RESULT:
     'Native execution ended without terminal evidence; inspect the exact session and retained worktree.',
   E_ADAPTER_MODEL_TEMPLATE:

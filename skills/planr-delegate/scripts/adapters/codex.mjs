@@ -84,6 +84,9 @@ async function execute({
   const args = [
     ...profile.argv,
     'exec',
+    // `exec resume` takes no sandbox flag of its own; the parent `exec` flag applies.
+    '--sandbox',
+    'workspace-write',
     ...(sessionId ? ['resume'] : []),
     '--json',
     ...(!sessionId ? ['--add-dir', directory] : []),

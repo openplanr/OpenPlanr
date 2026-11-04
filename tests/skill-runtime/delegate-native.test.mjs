@@ -171,14 +171,27 @@ for (const kind of ['claude', 'codex', 'cursor']) {
     assert.equal(calls[0].extension, 'trusted-value');
     assert.match(calls[0].input, /ordered|INDEX|index/i);
     assert.ok(!calls[1].input.includes('capsule.json'), 'resume does not resend full context');
-    for (const call of calls)
+    const writeFlags = {
+      claude: ['--permission-mode', 'acceptEdits'],
+      codex: ['--sandbox', 'workspace-write'],
+      cursor: [],
+    }[kind];
+    for (const call of calls) {
+      const at = call.args.indexOf(writeFlags[0]);
+      if (writeFlags.length) assert.deepEqual(call.args.slice(at, at + 2), writeFlags);
+      if (kind === 'codex') assert.ok(at < call.args.indexOf('--json'), 'exec-level flag');
+      assert.equal(
+        call.args.filter((arg) => /permission-mode|sandbox/u.test(arg)).length,
+        writeFlags.length / 2,
+      );
       assert.ok(
         !call.args.some((arg) =>
-          /force|yolo|bypass|sandbox|permission-mode|disallowedTools|strict-mcp|restricted|setting-sources|web_search/u.test(
+          /force|yolo|bypass|dangerously|danger-full-access|disallowedTools|strict-mcp|restricted|setting-sources|web_search/u.test(
             arg,
           ),
         ),
       );
+    }
     assert.equal(
       (await readRunRecord(prepared.runId, { directory: f.runDirectory })).hardDeadlineAt,
       null,

@@ -114,7 +114,12 @@ a GGUF filename or display label is not automatically its request ID. Apply an
 explicit model override only to this run through the existing native options;
 rewrite or enroll a saved profile only when the user requests it.
 
-If a native CLI uses read-only permissions for non-interactive runs, delegation reports attention rather than enabling writes. Resolve access in that CLI’s own configuration or explicitly authorized exact-session invocation, then continue the recorded session. Model summaries are never sufficient evidence of implementation.
+Dispatch and resume start Claude Code with `--permission-mode acceptEdits` and Codex
+with `--sandbox workspace-write`, so the delegate can edit files in its worktree;
+Cursor runs with `--trust`. These flags take precedence over a default mode in the
+CLI's own settings. Shell commands still follow the CLI's allowlist and approval
+settings, and no bypass flag is passed. If the CLI still denies an action, delegation
+reports attention rather than widening access. Resolve access in that CLI’s own configuration or explicitly authorized exact-session invocation, then continue the recorded session. Model summaries are never sufficient evidence of implementation.
 
 Cursor's CLI writes its own state back to `~/.cursor/cli-config.json` when a run
 ends, so `permissions.allow` entries added while a run is active can be lost. Add

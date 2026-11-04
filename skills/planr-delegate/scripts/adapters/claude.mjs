@@ -263,6 +263,9 @@ async function execute({
     profile.executable,
     [
       ...profile.argv,
+      // Edits only; shell commands still follow the native allowlist.
+      '--permission-mode',
+      'acceptEdits',
       '--print',
       '--output-format',
       'stream-json',
