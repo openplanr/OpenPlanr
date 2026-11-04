@@ -87,7 +87,17 @@ function gitInput(root, args, input) {
         else resolveOutput(stdout);
       },
     );
-    child.stdin.on('error', reject);
+    // Git may exit without reading stdin; its exit status, not the closed pipe, is the result.
+    child.stdin.on('error', (error) => {
+      if (error.code === 'EPIPE') return;
+      const operation = args.find((arg) => !arg.startsWith('-'));
+      reject(
+        new CustodyError('E_CUSTODY_GIT', `Git operation input failed: ${operation}`, {
+          operation,
+          cause: error.code,
+        }),
+      );
+    });
     child.stdin.end(input);
   });
 }

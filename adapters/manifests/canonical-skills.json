@@ -1066,7 +1066,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:2691c282af296b2bc540dfe733663cf6401fae27a58897cff98cdea6f770f47f"
+          "digest": "sha256:8c127a851e321a217621a76636a70a8326f8e3a02e9eda6db849ad89626da228"
         },
         {
           "path": "scripts/helper-snapshot.mjs",
@@ -1234,7 +1234,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:3473d718069463159f333bce3ef2be854afdc30c3650855ee2e5b26f5df26238"
+          "digest": "sha256:f35b6e805b013b3ce193dfa35e4e0137309a21cc2f4f2d78e2cd415b1c8e18e9"
         },
         {
           "path": "scripts/integration-transaction.mjs",

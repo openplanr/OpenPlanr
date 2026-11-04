@@ -1435,3 +1435,40 @@ test('size preflight includes verification evidence added during apply before an
   for (const path of Object.keys(files))
     assert.equal(await readFile(join(data.repositoryRoot, path), 'utf8'), 'base\n');
 });
+
+test('a git that exits before reading its input reports its own result (run branch)', async () => {
+  const { custody } = await fixture({ branch: true });
+  await writeFile(join(custody.worktreePath, 'tracked.txt'), `${'delegate\n'.repeat(256 * 1024)}`);
+  const realGit = (await execFile('git', ['--exec-path'])).stdout.trim();
+  const shims = await mkdtemp(join(tmpdir(), 'planr-git-shim-'));
+  roots.push(shims);
+  await writeFile(
+    join(shims, 'git'),
+    [
+      '#!/bin/sh',
+      'for arg in "$@"; do',
+      '  if [ "$arg" = --check ]; then',
+      '    exec 0<&-',
+      '    echo "error: patch failed: tracked.txt:1" >&2',
+      '    sleep 0.2',
+      '    exit 1',
+      '  fi',
+      'done',
+      `exec "${realGit}/git" "$@"`,
+      '',
+    ].join('\n'),
+    { mode: 0o755 },
+  );
+  const path = process.env.PATH;
+  process.env.PATH = `${shims}:${path}`;
+  try {
+    const review = await reviewDelegateDelta({ custody, run, scopePaths: ['tracked.txt'] });
+    assert.equal(review.ready, false);
+    assert.deepEqual(
+      review.violations.map(({ code, path }) => [code, path]),
+      [['E_INTEGRATION_SOURCE_DRIFT', 'tracked.txt']],
+    );
+  } finally {
+    process.env.PATH = path;
+  }
+});

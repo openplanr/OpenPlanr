@@ -50,6 +50,10 @@ const SELECTION_ERRORS = [
   'E_INTEGRATION_GENERATOR_DRIFT',
 ];
 
+function gitOperation(args) {
+  return args.find((arg) => !arg.startsWith('-') && !arg.includes('='));
+}
+
 function git(cwd, args, { input, allowFailure = false, env } = {}) {
   return new Promise((resolveResult, reject) => {
     const child = execFile(
@@ -69,7 +73,7 @@ function git(cwd, args, { input, allowFailure = false, env } = {}) {
         };
         if (!error || allowFailure) resolveResult(result);
         else {
-          const operation = args.find((arg) => !arg.startsWith('-') && !arg.includes('='));
+          const operation = gitOperation(args);
           reject(
             new IntegrationError(
               'E_INTEGRATION_GIT',
@@ -80,8 +84,20 @@ function git(cwd, args, { input, allowFailure = false, env } = {}) {
         }
       },
     );
-    child.stdin.on('error', reject);
-    child.stdin.end(input ?? '');
+    // Git may exit without reading stdin; its exit status, not the closed pipe, is the result.
+    child.stdin.on('error', (error) => {
+      if (error.code === 'EPIPE') return;
+      const operation = gitOperation(args);
+      reject(
+        new IntegrationError(
+          'E_INTEGRATION_GIT',
+          `git ${operation} stdin failed: ${error.message}`,
+          { operation, cause: error.code },
+        ),
+      );
+    });
+    if (input === undefined) child.stdin.end();
+    else child.stdin.end(input);
   });
 }
 
