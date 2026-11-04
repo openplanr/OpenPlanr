@@ -167,6 +167,10 @@ for (const kind of ['claude', 'codex', 'cursor']) {
     assert.equal(prepared.preview.modelSelection, 'native default/automatic');
     assert.equal(prepared.preview.destination.class, 'native-managed');
     assert.match(prepared.preview.executionPolicy.extensions, /hooks, plugins and MCP/);
+    assert.equal(
+      prepared.preview.executionPolicy.permissions,
+      kind === 'cursor' ? 'native-managed' : 'native-managed; edit mode when none is configured',
+    );
     const first = await dispatchDelegateRun(input);
     assert.equal(first.status, 'completed');
     const second = await resumeDelegateRun({
@@ -264,6 +268,11 @@ test('edit flags apply only when native settings choose no permission mode', asy
   );
   assert.deepEqual(await claudeWriteFlags(profile, env, cwd, options), []);
   await writeFile(join(base, '.claude', 'settings.json'), '{ unreadable');
+  assert.deepEqual(await claudeWriteFlags(profile, env, cwd, options), []);
+  await writeFile(
+    join(base, '.claude', 'settings.json'),
+    JSON.stringify({ padding: 'x'.repeat(70 * 1024) }),
+  );
   assert.deepEqual(await claudeWriteFlags(profile, env, cwd, options), []);
 
   const codex = join(base, '.codex', 'config.toml');

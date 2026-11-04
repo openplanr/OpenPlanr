@@ -314,7 +314,7 @@
       "assets": [
         {
           "path": "skills/delegate/SKILL.md",
-          "digest": "sha256:344d272793e81025c73d2c62333e786f4a073dec30f1ac8eb8ed560bea2c8e4f"
+          "digest": "sha256:0fb1a4eb4c890ba45aeefbd113c492fcc65682d6dcec0274da2103c83bd64868"
         },
         {
           "path": "skills/delegate/openplanr.skill.json",
@@ -338,7 +338,7 @@
         },
         {
           "path": "skills/delegate/references/operator-guide.md",
-          "digest": "sha256:9cc27ffa6774186a17de8941a787fc6dee8690a6f35bcf59a682d1c3a8aa2664"
+          "digest": "sha256:d85dea381c092daf1fce8feaaa2baa56bbd95c85c1f1f0ca50bdaecc87fea578"
         },
         {
           "path": "skills/delegate/references/run-handoff.md",
@@ -350,11 +350,11 @@
         },
         {
           "path": "skills/delegate/scripts/adapters/claude.mjs",
-          "digest": "sha256:7d1419b6f1b40d5dcfaa9a48a230fafe6430b4299198c04e6dd18c896862e485"
+          "digest": "sha256:f9e4d3c54ebcf7695939d4da71bef1a651f2450f0fb0985e831944b7244faf86"
         },
         {
           "path": "skills/delegate/scripts/adapters/codex.mjs",
-          "digest": "sha256:6a04c0fb4f56e7e52da413c8d35c3b6f86d3aaa1e281dbd08f993380233191e6"
+          "digest": "sha256:07fffd239bdb2e7a1e7f742b3a24ed3e4c18ff612c740baa7668e36a63406eb8"
         },
         {
           "path": "skills/delegate/scripts/adapters/generic.mjs",
@@ -438,7 +438,7 @@
         },
         {
           "path": "skills/delegate/scripts/adapters/native.mjs",
-          "digest": "sha256:ff2a8c9365264c4065b8be742ba98ba7b5c8269779c66f217140e9fbf6609727"
+          "digest": "sha256:602f45bb308f637ecc9ec7175bd28f5b89aebf6d3b5e6d14f499edda5acac7c7"
         },
         {
           "path": "skills/delegate/scripts/backend-diagnostics.mjs",

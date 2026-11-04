@@ -4,9 +4,9 @@ import { capsuleDirectory } from './capsule.mjs';
 import { AdapterError, invokeProcess } from './generic.mjs';
 import {
   createNativeProgress,
+  EDIT_DEFAULT_EXECUTION_POLICY,
   knownDestination,
   NATIVE_CAPABILITIES,
-  NATIVE_EXECUTION_POLICY,
   nativeFailure,
   nativeObserver,
   nativeTurn,
@@ -177,7 +177,7 @@ export const codexAdapter = Object.freeze({
     return {
       capabilities: NATIVE_CAPABILITIES,
       destination: await resolveCodexDestination(profile, env),
-      executionPolicy: NATIVE_EXECUTION_POLICY,
+      executionPolicy: EDIT_DEFAULT_EXECUTION_POLICY,
     };
   },
   run: execute,

@@ -116,12 +116,22 @@ rewrite or enroll a saved profile only when the user requests it.
 
 When the CLI's own settings choose no permission mode, dispatch and resume start
 Claude Code with `--permission-mode acceptEdits` and Codex with `--sandbox
-workspace-write`, so a stock install can edit files in its worktree. A configured
-mode always wins: Claude `permissions.defaultMode` in user, project, local or managed
-settings, or Codex `sandbox_mode` at the top of `config.toml`, in its active profile
-or in the project's `.codex/config.toml`. Unreadable settings count as configured.
-Cursor runs with `--trust`. Shell commands still follow the CLI's allowlist and
-approval settings, and no bypass flag is passed. If the CLI still denies an action, delegation
+workspace-write`, so a stock install can edit files in its worktree. In
+`acceptEdits`, Claude also runs `mkdir`, `touch`, `rm`, `rmdir`, `mv`, `cp` and `sed`
+without asking, for paths in the worktree and the added context directory. A
+configured mode always wins: Claude `permissions.defaultMode` in user, project, local
+or managed settings files, or Codex `sandbox_mode` in `config.toml` or the project's
+`.codex/config.toml`, outside an inactive profile. Unreadable or oversized settings
+count as configured. Cursor runs with `--trust`. Other shell commands still follow
+the CLI's allowlist and approval settings, and no bypass flag is passed.
+
+Limits of this check: it reads settings files only, so system or MDM-delivered
+policies and Codex managed configuration are not seen. A Codex profile selected in
+one file but defined in the other is not matched. A project-level Claude
+`defaultMode`, including `"auto"`, counts as configured. The check runs again on each
+`resume`, so a settings change between turns can change the flag.
+
+If the CLI still denies an action, delegation
 reports attention rather than widening access. Resolve access in that CLI’s own configuration or explicitly authorized exact-session invocation, then continue the recorded session. Model summaries are never sufficient evidence of implementation.
 
 Cursor's CLI writes its own state back to `~/.cursor/cli-config.json` when a run

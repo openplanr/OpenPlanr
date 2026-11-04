@@ -68,7 +68,8 @@ digest-acceptance step or permanently frozen setup baseline. See
 
 Use the returned pinned helper for subsequent actions. `dispatch`, bounded `wait`
 and `status` expose the exact session, native progress, inactivity and phase timings.
-Native tools, permissions, configuration and implementation loops remain native.
+Native tools, permissions, configuration and implementation loops remain native, except
+that Claude Code or Codex with no configured permission mode starts in its edit mode.
 Do not add bypass/force/yolo flags, blanket tool exclusions or silent model fallbacks.
 Local backend probes are compatibility diagnostics, not a separate execution policy.
 They read model metadata without submitting inference, loading models or sending

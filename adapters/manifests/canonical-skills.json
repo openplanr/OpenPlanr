@@ -912,7 +912,7 @@
       "source": "skills/planr-delegate/openplanr.skill.json",
       "entrypoint": "skills/planr-delegate/SKILL.md",
       "description": "Coordinate an explicitly requested implementation with Claude Code, Codex or Cursor, then independently review and integrate its observed changes. Use when the user asks another coding agent to implement.",
-      "sourceDigest": "sha256:c2e536cdfed1616c505d2cd1142febf6c7da796aad77309e1f6e4739a9f5647e",
+      "sourceDigest": "sha256:b2e66eace68e3885d97cc3d65f16103798cae0f332caaeaab982479644063884",
       "resources": [
         {
           "path": "agents/openai.yaml",
@@ -970,7 +970,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:9cc27ffa6774186a17de8941a787fc6dee8690a6f35bcf59a682d1c3a8aa2664"
+          "digest": "sha256:d85dea381c092daf1fce8feaaa2baa56bbd95c85c1f1f0ca50bdaecc87fea578"
         },
         {
           "path": "references/run-handoff.md",
@@ -1006,7 +1006,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:7d1419b6f1b40d5dcfaa9a48a230fafe6430b4299198c04e6dd18c896862e485"
+          "digest": "sha256:f9e4d3c54ebcf7695939d4da71bef1a651f2450f0fb0985e831944b7244faf86"
         },
         {
           "path": "scripts/adapters/codex.mjs",
@@ -1018,7 +1018,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:6a04c0fb4f56e7e52da413c8d35c3b6f86d3aaa1e281dbd08f993380233191e6"
+          "digest": "sha256:07fffd239bdb2e7a1e7f742b3a24ed3e4c18ff612c740baa7668e36a63406eb8"
         },
         {
           "path": "scripts/adapters/generic.mjs",
@@ -1270,7 +1270,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:ff2a8c9365264c4065b8be742ba98ba7b5c8269779c66f217140e9fbf6609727"
+          "digest": "sha256:602f45bb308f637ecc9ec7175bd28f5b89aebf6d3b5e6d14f499edda5acac7c7"
         },
         {
           "path": "scripts/backend-diagnostics.mjs",
