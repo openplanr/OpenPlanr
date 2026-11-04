@@ -160,6 +160,60 @@ test('unrelated source checkout HEAD and index advances do not block a run', asy
     assert.equal((await validateWorktreeCustody(record)).valid, true);
   }));
 
+test('a run branch commits selected files as its base and accepts delegate commits on top', async () =>
+  fixture(async ({ root, worktreeParent }) => {
+    await writeFile(join(root, 'changed.txt'), 'selected dirty');
+    await writeFile(join(root, 'ignored.txt'), 'force-added');
+    git(root, 'add', '--force', 'ignored.txt');
+    git(root, 'commit', '-qm', 'track an ignored file');
+    await writeFile(join(root, 'ignored.txt'), 'selected ignored edit');
+    const record = await createWorktreeCustody({
+      repositoryRoot: root,
+      capsule: capsule(['changed.txt', 'ignored.txt']),
+      selectedPaths: ['changed.txt', 'ignored.txt'],
+      worktreeParent,
+      branch: true,
+    });
+    assert.equal(record.branch, `planr-delegate/${record.runId}`);
+    assert.equal(git(record.worktreePath, 'rev-parse', 'HEAD'), record.base);
+    assert.equal(git(record.worktreePath, 'show', `${record.base}:changed.txt`), 'selected dirty');
+    assert.equal(
+      git(record.worktreePath, 'show', `${record.base}:ignored.txt`),
+      'selected ignored edit',
+    );
+    assert.equal(git(record.worktreePath, 'status', '--porcelain'), '');
+    assert.match(git(root, 'worktree', 'list', '--porcelain'), /locked planr-delegate /u);
+    await writeFile(join(record.worktreePath, 'changed.txt'), 'delegate');
+    git(record.worktreePath, 'add', 'changed.txt');
+    git(record.worktreePath, 'commit', '-qm', 'delegate commit');
+    git(root, 'commit', '--allow-empty', '-qm', 'owner keeps working');
+    assert.deepEqual((await validateWorktreeCustody(record)).violations, []);
+    git(record.worktreePath, 'tag', 'delegate-tag');
+    assert.deepEqual(
+      (await validateWorktreeCustody(record)).violations.map(({ code, refs }) => [code, refs]),
+      [['E_CUSTODY_REFS', ['refs/tags/delegate-tag']]],
+    );
+    git(root, 'tag', '-d', 'delegate-tag');
+    git(record.worktreePath, 'reset', '-q', '--hard', record.initialHead);
+    assert.deepEqual(
+      (await validateWorktreeCustody(record)).violations.map(({ code }) => code),
+      ['E_CUSTODY_BASE'],
+    );
+    git(record.worktreePath, 'checkout', '-q', '-b', 'elsewhere');
+    assert.ok(
+      (await validateWorktreeCustody(record)).violations.some(
+        ({ code }) => code === 'E_CUSTODY_BRANCH',
+      ),
+    );
+    git(record.worktreePath, 'checkout', '-q', record.branch);
+    git(root, 'branch', '-D', 'elsewhere');
+    git(record.worktreePath, 'reset', '-q', '--hard', record.base);
+    const removed = await cleanupWorktreeCustody(record, { disposition: 'abandoned' });
+    assert.equal(removed.removed, record.worktreePath);
+    assert.equal(git(root, 'branch', '--list', record.branch), '');
+    assert.doesNotMatch(git(root, 'worktree', 'list', '--porcelain'), /planr-delegate/u);
+  }));
+
 test('scope planner orders contract owner first and keeps secondary context read-only', () => {
   const scopes = planWritableScopes({
     contractOwnerKey: 'protocol',

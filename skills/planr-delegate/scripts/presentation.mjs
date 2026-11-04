@@ -142,6 +142,10 @@ export function implementationReport(result, selector) {
         ]
       : []),
   ];
+  const unselected = result.unselectedDirtyPaths ?? [];
+  const unselectedNote = unselected.length
+    ? ` Checks did not include ${result.unselectedDirtyCount ?? unselected.length} unselected local change(s): ${visiblePaths(unselected)}.`
+    : '';
   return {
     Outcome: accepted
       ? paths.length
@@ -152,16 +156,17 @@ export function implementationReport(result, selector) {
     Changed: paths.length
       ? `${paths.length} observed file(s) ${accepted ? 'integrated' : 'not accepted'}: ${visiblePaths(paths)}`
       : 'No observed file changes.',
-    Checks: checks.length
-      ? `${checks.filter(({ status }) => status === 'passed').length}/${checks.length} independent check(s) passed: ${checks
-          .map(
-            ({ command, status, durationMs }) =>
-              `${command} (${status}${
-                durationMs === undefined ? '' : `, ${(durationMs / 1000).toFixed(1)}s`
-              })`,
-          )
-          .join(', ')}`
-      : 'No independent checks ran; verification remains unconfirmed.',
+    Checks:
+      (checks.length
+        ? `${checks.filter(({ status }) => status === 'passed').length}/${checks.length} independent check(s) passed: ${checks
+            .map(
+              ({ command, status, durationMs }) =>
+                `${command} (${status}${
+                  durationMs === undefined ? '' : `, ${(durationMs / 1000).toFixed(1)}s`
+                })`,
+            )
+            .join(', ')}${unselectedNote ? '.' : ''}`
+        : 'No independent checks ran; verification remains unconfirmed.') + unselectedNote,
     Issues: issues.length
       ? `${issues.join('; ')}.${accepted ? '' : ` ${result.nextAction ?? ''}`}`.trim()
       : 'None found in this review.',

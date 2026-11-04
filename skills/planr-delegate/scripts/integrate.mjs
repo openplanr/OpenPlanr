@@ -4,10 +4,17 @@ import { lstat, readFile, rename, writeFile } from 'node:fs/promises';
 import { join, resolve, sep } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { captureFileState } from './custody.mjs';
+import {
+  integrateBranchDelta,
+  isBranchHandoff,
+  recoverBranchApply,
+  reviewBranchDelta,
+} from './handoff.mjs';
 import { verifiedHelper } from './helper-snapshot.mjs';
 import { resolveSelectedChecks } from './integration-checks.mjs';
 import {
   covers,
+  git,
   IntegrationError,
   rollbackWritten,
   sameState,
@@ -15,9 +22,9 @@ import {
 } from './integration-files.mjs';
 import {
   checkoutLock,
-  integrateDelegateDelta,
+  integrateDelegateDelta as integrateTransaction,
   patchDigest,
-  reviewDelegateDelta,
+  reviewDelegateDelta as reviewTransaction,
 } from './integration-transaction.mjs';
 import { implementationReport, reviewPresentation } from './presentation.mjs';
 import { cleanupAcceptedWorktree, recoverOwnedProcesses } from './run-lifecycle.mjs';
@@ -25,6 +32,7 @@ import { readDelegateCustody, validateDelegateCapsule } from './run-preflight.mj
 import {
   assertRunRecordFits,
   closeRunRecord,
+  compactIntegrationState,
   processIdentity,
   readRunRecord,
   updateRunRecord,
@@ -33,7 +41,15 @@ import {
 
 export { discoverDelegateChecks, runDelegateChecks } from './integration-checks.mjs';
 export { IntegrationError } from './integration-files.mjs';
-export { integrateDelegateDelta, reviewDelegateDelta } from './integration-transaction.mjs';
+
+/** Reviews a run branch handoff, or the retained transaction for custody prepared without one. */
+export function reviewDelegateDelta(input = {}) {
+  return isBranchHandoff(input.custody) ? reviewBranchDelta(input) : reviewTransaction(input);
+}
+
+export function integrateDelegateDelta(input = {}) {
+  return isBranchHandoff(input.custody) ? integrateBranchDelta(input) : integrateTransaction(input);
+}
 
 function publicReview(review) {
   return {
@@ -209,9 +225,82 @@ async function recoverIntegration(input, record) {
   }
 }
 
+async function closeIntegrated(record, runDirectory) {
+  const closed = await closeRunRecord(record.runId, {
+    disposition: 'integrated',
+    directory: runDirectory,
+  });
+  if (!closed.nativeSelection || closed.retainWorktree) return undefined;
+  try {
+    return await cleanupAcceptedWorktree(closed, runDirectory);
+  } catch (error) {
+    const cleanup = { status: 'failed', code: error.code ?? 'E_DELEGATE_CLEANUP' };
+    await updateRunRecord(record.runId, { cleanup }, { directory: runDirectory });
+    return cleanup;
+  }
+}
+
+async function recoverBranchIntegration(input, record) {
+  const integration = record.integration;
+  if (!['applying', 'interrupted'].includes(integration?.status))
+    throw new IntegrationError('E_INTEGRATION_RECOVERY', 'This run has no unresolved integration.');
+  const result = await recoverBranchApply(record, input.resolution);
+  const directory = { directory: input.runDirectory };
+  if (result.state === 'applied') {
+    const { status: _status, ...accepted } = integration;
+    const states = {};
+    for (const path of accepted.changedPaths)
+      states[path] = compactIntegrationState(await captureFileState(record.repositoryRoot, path));
+    await updateRunRecord(
+      record.runId,
+      { integration: { ...accepted, status: 'applied', at: new Date().toISOString(), states } },
+      directory,
+    );
+    await removeRestoreRef(record);
+    return {
+      cleanup: await closeIntegrated(record, input.runDirectory),
+      runId: record.runId,
+      status: 'completed',
+      report: implementationReport({ status: 'completed', ...accepted }, record.selector),
+      recovered: 'accepted',
+    };
+  }
+  await updateRunRecord(
+    record.runId,
+    {
+      integration: {
+        ...integration,
+        status: result.state,
+        restoredPaths: result.restored,
+        rollbackErrors: result.conflicts,
+      },
+    },
+    directory,
+  );
+  if (result.state === 'rolled-back') await removeRestoreRef(record);
+  return {
+    runId: record.runId,
+    status: result.conflicts.length ? 'blocked' : 'completed',
+    recovered: result.conflicts.length ? 'conflicts' : 'rolled-back',
+    rollbackErrors: result.conflicts,
+    nextAction: result.conflicts.length
+      ? 'Preserve conflicting host edits and resolve the listed paths explicitly.'
+      : 'Review the retained patch again before retrying apply.',
+  };
+}
+
+async function removeRestoreRef(record) {
+  const ref = record.integration.restoreRef;
+  if (ref && (await git(record.repositoryRoot, 'for-each-ref', ref)).length)
+    await git(record.repositoryRoot, 'update-ref', '-d', ref);
+}
+
 async function integrationCommandLocked(action, input, record) {
   record = await recoverOwnedProcesses(record, input.runDirectory);
-  if (action === 'recover') return recoverIntegration(input, record);
+  if (action === 'recover')
+    return record.integration?.restoreRef
+      ? recoverBranchIntegration(input, record)
+      : recoverIntegration(input, record);
   if (['applying', 'interrupted'].includes(record.integration?.status))
     throw new IntegrationError(
       'E_RUN_INTEGRATION_RECOVERY',
@@ -282,7 +371,7 @@ async function integrationCommandLocked(action, input, record) {
           verificationMutations:
             record.verification?.mutatedPaths ?? record.verificationMutations ?? [],
           reviewedPatch: {
-            digest: patchDigest(observed),
+            digest: observed.tip ?? patchDigest(observed),
             at: new Date().toISOString(),
             scopePaths,
           },
@@ -332,9 +421,31 @@ async function integrationCommandLocked(action, input, record) {
   const verificationProcess = await processIdentity();
   const evidencePath = join(record.runPath, `verification-${randomUUID()}.json`);
   let verification;
-  const result = await integrateDelegateDelta({
+  const integrate = isBranchHandoff(custody) ? integrateBranchDelta : integrateTransaction;
+  const result = await integrate({
     ...common,
     capsule,
+    patchPath: join(record.runPath, 'patch.diff'),
+    onApplying: async (accepted) => {
+      const placeholder = { kind: 'file', mode: 0o644, digest: '0'.repeat(64) };
+      const current = await readRunRecord(record.runId, { directory: input.runDirectory });
+      assertRunRecordFits({
+        ...current,
+        integration: {
+          status: 'applied',
+          ...accepted,
+          states: Object.fromEntries(accepted.changedPaths.map((path) => [path, placeholder])),
+        },
+        status: 'closed',
+        disposition: 'integrated',
+        closedAt: new Date().toISOString(),
+      });
+      await updateRunRecord(
+        record.runId,
+        { integration: { status: 'applying', phase: 'source-write', ...accepted } },
+        { directory: input.runDirectory },
+      );
+    },
     checks: input.checks,
     preparation: input.preparation,
     baselineComparison: input.baselineComparison === true,
@@ -442,32 +553,20 @@ async function integrationCommandLocked(action, input, record) {
     checks: result.checks ?? [],
     verification: verification ?? null,
     generatedPaths: result.generatedPaths ?? [],
+    unselectedDirtyPaths: result.unselectedDirtyPaths ?? [],
+    unselectedDirtyCount: result.unselectedDirtyCount ?? 0,
     generators: result.generators ?? [],
     code: result.code ?? null,
     rollbackErrors: result.rollbackErrors ?? [],
     nextAction: result.nextAction,
   };
   if (result.status === 'completed') {
-    const closed = await closeRunRecord(input.runId, {
-      disposition: 'integrated',
-      directory: input.runDirectory,
-    });
-    if (closed.nativeSelection && !closed.retainWorktree) {
-      try {
-        output.cleanup = await cleanupAcceptedWorktree(closed, input.runDirectory);
-      } catch (error) {
-        output.cleanup = { status: 'failed', code: error.code ?? 'E_DELEGATE_CLEANUP' };
-        output.violations.push({
-          code: output.cleanup.code,
-          message: 'Integration succeeded; owned worktree cleanup needs attention.',
-        });
-        await updateRunRecord(
-          input.runId,
-          { cleanup: output.cleanup },
-          { directory: input.runDirectory },
-        );
-      }
-    }
+    output.cleanup = await closeIntegrated(record, input.runDirectory);
+    if (output.cleanup?.status === 'failed')
+      output.violations.push({
+        code: output.cleanup.code,
+        message: 'Integration succeeded; owned worktree cleanup needs attention.',
+      });
   }
   return {
     ...output,

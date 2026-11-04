@@ -624,7 +624,7 @@ test('private records are bounded, credential-free, and retained until explicit 
     { runId: 'closed', status: 'completed' },
     { directory: runDirectory },
   );
-  assert.equal(active.schemaVersion, '2.0.0');
+  assert.equal(active.schemaVersion, '3.0.0');
   assert.equal((await stat(join(runDirectory, 'active', 'record.json'))).mode & 0o077, 0);
   await assert.rejects(
     updateRunRecord(

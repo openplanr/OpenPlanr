@@ -163,7 +163,7 @@ for (const kind of ['claude', 'codex', 'cursor']) {
     const f = await fixture(t, kind);
     const prepared = await f.prepare();
     const input = { runId: prepared.runId, runDirectory: f.runDirectory, env: f.env };
-    assert.equal(prepared.record.schemaVersion, '2.0.0');
+    assert.equal(prepared.record.schemaVersion, '3.0.0');
     assert.equal(prepared.preview.modelSelection, 'native default/automatic');
     assert.equal(prepared.preview.destination.class, 'native-managed');
     assert.match(prepared.preview.executionPolicy.extensions, /hooks, plugins and MCP/);
@@ -581,7 +581,7 @@ test('verification mutation invalidates the review, then the updated candidate c
   assert.equal(final.status, 'completed');
 });
 
-test('stale prepared worktree checks the actual merged candidate and preserves unrelated source edits', async (t) => {
+test('unselected parent edits stay out of checks, are reported and survive apply', async (t) => {
   const f = await fixture(t);
   const prepared = await f.prepare();
   const input = { runId: prepared.runId, runDirectory: f.runDirectory, env: f.env };
@@ -595,50 +595,50 @@ test('stale prepared worktree checks the actual merged candidate and preserves u
         executable: process.execPath,
         args: [
           '-e',
-          "require('node:assert').equal(require('node:fs').readFileSync('owner-note.txt','utf8'),'owner edit\\n')",
+          "require('node:assert').equal(require('node:fs').existsSync('owner-note.txt'),false)",
         ],
         cwd: '.',
       },
     ],
   });
   assert.equal(applied.status, 'completed', JSON.stringify(applied));
-  assert.equal(applied.verification.candidateKind, 'fresh-candidate');
+  assert.equal(applied.verification.candidateKind, 'prepared-worktree');
+  assert.deepEqual(applied.unselectedDirtyPaths, ['owner-note.txt']);
+  assert.match(
+    applied.report.Checks,
+    /did not include 1 unselected local change\(s\): owner-note\.txt/u,
+  );
   assert.equal(await readFile(join(f.root, 'owner-note.txt'), 'utf8'), 'owner edit\n');
 });
 
-test('a checkout that differs from the verified candidate names each differing path', async (t) => {
+test('a parent edit to a reviewed path blocks apply with its path; unrelated edits do not', async (t) => {
   const f = await fixture(t);
   const prepared = await f.prepare();
-  await dispatchDelegateRun({ runId: prepared.runId, runDirectory: f.runDirectory, env: f.env });
-  const record = await readRunRecord(prepared.runId, { directory: f.runDirectory });
-  const custody = JSON.parse(await readFile(record.custodyPath, 'utf8'));
-  const result = await integrateDelegateDelta({
-    custody,
-    run: record,
-    scopePaths: ['source.txt'],
+  const input = { runId: prepared.runId, runDirectory: f.runDirectory, env: f.env };
+  await dispatchDelegateRun(input);
+  await delegateIntegrationCommand('review', input);
+  await writeFile(join(f.root, 'late-owner.txt'), 'owner save before acceptance\n');
+  await writeFile(join(f.root, 'source.txt'), 'owner save on the same line\n');
+  const result = await delegateIntegrationCommand('apply', {
+    ...input,
     checks: [],
-    reviewOnlyReason: 'Exercise the final checkout identity.',
-    beforeApply: async () => {
-      await writeFile(join(f.root, 'late-owner.txt'), 'owner save before acceptance\n');
-      await rm(join(f.root, 'preserved.txt'));
-    },
+    reviewOnlyReason: 'Exercise the parent apply check.',
   });
-  assert.equal(result.code, 'E_INTEGRATION_SOURCE_DRIFT');
+  assert.equal(result.status, 'blocked');
   assert.deepEqual(
-    result.violations.filter(({ code }) => code === 'E_INTEGRATION_SOURCE_DRIFT'),
-    [
-      { code: 'E_INTEGRATION_SOURCE_DRIFT', path: 'late-owner.txt', change: 'extra' },
-      { code: 'E_INTEGRATION_SOURCE_DRIFT', path: 'preserved.txt', change: 'missing' },
-    ],
+    result.violations
+      .filter(({ code }) => code === 'E_INTEGRATION_SOURCE_DRIFT')
+      .map(({ path }) => path),
+    ['source.txt'],
   );
-  assert.equal(await readFile(join(f.root, 'source.txt'), 'utf8'), 'base\n');
+  assert.equal(await readFile(join(f.root, 'source.txt'), 'utf8'), 'owner save on the same line\n');
   assert.equal(
     await readFile(join(f.root, 'late-owner.txt'), 'utf8'),
     'owner save before acceptance\n',
   );
 });
 
-test('fresh candidate keeps force-added ignored files beside an unrelated tracked edit', async (t) => {
+test('force-added ignored files beside an unrelated tracked edit integrate', async (t) => {
   const f = await fixture(t);
   await mkdir(join(f.root, 'cache'));
   await writeFile(join(f.root, 'cache', 'tracked.md'), 'force-added\n');
@@ -664,10 +664,156 @@ test('fresh candidate keeps force-added ignored files beside an unrelated tracke
     ],
   });
   assert.equal(applied.status, 'completed', JSON.stringify(applied));
-  assert.equal(applied.verification.candidateKind, 'fresh-candidate');
+  assert.equal(applied.verification.candidateKind, 'prepared-worktree');
   assert.equal(await readFile(join(f.root, 'source.txt'), 'utf8'), 'implemented\n');
   assert.equal(await readFile(join(f.root, 'notes.txt'), 'utf8'), 'owner edit\n');
 });
+
+const passingCheck = [{ executable: process.execPath, args: ['-e', 'process.exit(0)'], cwd: '.' }];
+
+test('a tracked dangling symlink beside an unrelated parent edit integrates', async (t) => {
+  const f = await fixture(t);
+  await symlink('missing-target', join(f.root, 'dangling'));
+  execFileSync('git', ['add', 'dangling'], { cwd: f.root });
+  execFileSync('git', ['commit', '-qm', 'dangling link'], { cwd: f.root });
+  const prepared = await f.prepare();
+  const input = { runId: prepared.runId, runDirectory: f.runDirectory, env: f.env };
+  await dispatchDelegateRun(input);
+  await writeFile(join(f.root, 'owner-note.txt'), 'owner edit\n');
+  assert.equal((await delegateIntegrationCommand('review', input)).ready, true);
+  const applied = await delegateIntegrationCommand('apply', { ...input, checks: passingCheck });
+  assert.equal(applied.status, 'completed', JSON.stringify(applied));
+  assert.equal(fs.readlinkSync(join(f.root, 'dangling')), 'missing-target');
+  assert.equal(await readFile(join(f.root, 'source.txt'), 'utf8'), 'implemented\n');
+});
+
+test('a submodule beside an unrelated parent edit integrates and a gitlink change blocks', async (t) => {
+  const f = await fixture(t);
+  const commit = (ref) =>
+    execFileSync('git', ['rev-parse', ref], { cwd: f.root, encoding: 'utf8' }).trim();
+  const first = commit('HEAD');
+  execFileSync('git', ['commit', '--allow-empty', '-qm', 'second'], { cwd: f.root });
+  execFileSync('git', ['update-index', '--add', '--cacheinfo', `160000,${first},vendor/lib`], {
+    cwd: f.root,
+  });
+  await mkdir(join(f.root, 'vendor', 'lib'), { recursive: true });
+  execFileSync('git', ['commit', '-qm', 'uninitialised submodule'], { cwd: f.root });
+  const prepared = await f.prepare({ scopePaths: ['source.txt', 'vendor'] });
+  const input = { runId: prepared.runId, runDirectory: f.runDirectory, env: f.env };
+  await dispatchDelegateRun(input);
+  await writeFile(join(f.root, 'owner-note.txt'), 'owner edit\n');
+  assert.equal((await delegateIntegrationCommand('review', input)).ready, true);
+  const applied = await delegateIntegrationCommand('apply', { ...input, checks: passingCheck });
+  assert.equal(applied.status, 'completed', JSON.stringify(applied));
+  assert.equal(await readFile(join(f.root, 'source.txt'), 'utf8'), 'implemented\n');
+
+  const second = await f.prepare({ scopePaths: ['source.txt', 'vendor'] });
+  const next = { runId: second.runId, runDirectory: f.runDirectory, env: f.env };
+  await dispatchDelegateRun(next);
+  const worktree = second.record.worktreePath;
+  execFileSync('git', ['update-index', '--cacheinfo', `160000,${commit('HEAD~1')},vendor/lib`], {
+    cwd: worktree,
+  });
+  execFileSync(
+    'git',
+    ['-c', 'user.name=Delegate', '-c', 'user.email=d@example.test', 'commit', '-qm', 'bump'],
+    { cwd: worktree },
+  );
+  const review = await delegateIntegrationCommand('review', next);
+  assert.equal(review.ready, false);
+  assert.deepEqual(
+    review.violations.filter(({ code }) => code === 'E_INTEGRATION_GITLINK'),
+    [{ code: 'E_INTEGRATION_GITLINK', path: 'vendor/lib' }],
+  );
+});
+
+test('a parent edit elsewhere in a file the delegate changed merges on apply', async (t) => {
+  const f = await fixture(t);
+  const lines = Array.from({ length: 12 }, (_, index) => `line ${index + 1}`);
+  await writeFile(join(f.root, 'notes.md'), `${lines.join('\n')}\n`);
+  execFileSync('git', ['add', 'notes.md'], { cwd: f.root });
+  execFileSync('git', ['commit', '-qm', 'notes'], { cwd: f.root });
+  const prepared = await f.prepare({ scopePaths: ['source.txt', 'notes.md'] });
+  const input = { runId: prepared.runId, runDirectory: f.runDirectory, env: f.env };
+  await dispatchDelegateRun(input);
+  const edit = (first, last) => `${[first, ...lines.slice(1, -1), last].join('\n')}\n`;
+  await writeFile(
+    join(prepared.record.worktreePath, 'notes.md'),
+    edit('delegate line 1', 'line 12'),
+  );
+  await writeFile(join(f.root, 'notes.md'), edit('line 1', 'owner line 12'));
+  assert.equal((await delegateIntegrationCommand('review', input)).ready, true);
+  const applied = await delegateIntegrationCommand('apply', { ...input, checks: passingCheck });
+  assert.equal(applied.status, 'completed', JSON.stringify(applied));
+  assert.equal(
+    await readFile(join(f.root, 'notes.md'), 'utf8'),
+    edit('delegate line 1', 'owner line 12'),
+  );
+});
+
+for (const crash of ['before-apply', 'after-apply', 'partial'])
+  test(`an apply interrupted ${crash} recovers without losing owner edits`, async (t) => {
+    const f = await fixture(t);
+    await writeFile(join(f.root, 'notes.md'), 'notes\n');
+    execFileSync('git', ['add', 'notes.md'], { cwd: f.root });
+    execFileSync('git', ['commit', '-qm', 'notes'], { cwd: f.root });
+    const prepared = await f.prepare({
+      scopePaths: ['source.txt', 'notes.md'],
+      retainWorktree: true,
+    });
+    const input = { runId: prepared.runId, runDirectory: f.runDirectory, env: f.env };
+    await dispatchDelegateRun(input);
+    await writeFile(join(prepared.record.worktreePath, 'notes.md'), 'delegate notes\n');
+    await writeFile(join(f.root, 'owner-note.txt'), 'owner edit\n');
+    await delegateIntegrationCommand('review', input);
+    const applied = await delegateIntegrationCommand('apply', { ...input, checks: passingCheck });
+    assert.equal(applied.status, 'completed', JSON.stringify(applied));
+    // Model the durable state a crash leaves between the apply check and acceptance.
+    const closed = await readRunRecord(prepared.runId, { directory: f.runDirectory });
+    const { at: _at, states: _states, ...accepted } = closed.integration;
+    execFileSync('git', ['update-ref', accepted.restoreRef, accepted.restore], { cwd: f.root });
+    await updateRunRecord(
+      prepared.runId,
+      {
+        status: 'completed',
+        disposition: null,
+        closedAt: null,
+        integration: { ...accepted, status: 'applying' },
+      },
+      { directory: f.runDirectory },
+    );
+    if (crash === 'before-apply')
+      execFileSync('git', ['apply', '-R', accepted.patchPath], { cwd: f.root });
+    if (crash === 'partial') execFileSync('git', ['restore', 'notes.md'], { cwd: f.root });
+    if (crash === 'after-apply') {
+      const recovered = await delegateIntegrationCommand('recover', {
+        ...input,
+        resolution: 'accept',
+      });
+      assert.equal(recovered.recovered, 'accepted');
+      const record = await readRunRecord(prepared.runId, { directory: f.runDirectory });
+      assert.equal(record.disposition, 'integrated');
+      assert.equal(record.integration.verified, true);
+      assert.equal(await readFile(join(f.root, 'source.txt'), 'utf8'), 'implemented\n');
+    } else {
+      await assert.rejects(
+        delegateIntegrationCommand('recover', { ...input, resolution: 'accept' }),
+        { code: 'E_INTEGRATION_RECOVERY_INCOMPLETE' },
+      );
+      const recovered = await delegateIntegrationCommand('recover', input);
+      assert.equal(recovered.recovered, 'rolled-back');
+      assert.equal(await readFile(join(f.root, 'source.txt'), 'utf8'), 'base\n');
+      assert.equal(await readFile(join(f.root, 'notes.md'), 'utf8'), 'notes\n');
+      const retried = await delegateIntegrationCommand('apply', { ...input, checks: passingCheck });
+      assert.equal(retried.status, 'completed', JSON.stringify(retried));
+      assert.equal(await readFile(join(f.root, 'notes.md'), 'utf8'), 'delegate notes\n');
+    }
+    assert.equal(await readFile(join(f.root, 'owner-note.txt'), 'utf8'), 'owner edit\n');
+    assert.equal(
+      execFileSync('git', ['for-each-ref', accepted.restoreRef], { cwd: f.root, encoding: 'utf8' }),
+      '',
+    );
+  });
 
 test('failure evidence is saved without automatic baseline and cannot be erased by zero checks', async (t) => {
   const f = await fixture(t);
@@ -722,7 +868,7 @@ test('review-only is explicitly unverified and retention keeps the owned worktre
   );
 });
 
-test('fresh-candidate verification mutation returns to owned worktree for re-review without changing the source', async (t) => {
+test('a verification mutation beside an unrelated parent edit stays in the worktree for re-review', async (t) => {
   const f = await fixture(t);
   const prepared = await f.prepare();
   const input = { runId: prepared.runId, runDirectory: f.runDirectory, env: f.env };
@@ -740,8 +886,7 @@ test('fresh-candidate verification mutation returns to owned worktree for re-rev
     ],
   });
   assert.equal(result.code, 'E_INTEGRATION_REVIEW_DRIFT');
-  assert.equal(result.verification.candidateKind, 'fresh-candidate');
-  assert.equal(result.verification.mutationsReturnedToWorktree, true);
+  assert.deepEqual(result.verification.mutatedPaths, ['source.txt']);
   assert.equal(
     await readFile(join(prepared.record.worktreePath, 'source.txt'), 'utf8'),
     'review this mutation\n',
@@ -810,50 +955,6 @@ test('a candidate edit after selection blocks checks and integration while retai
   await assert.rejects(readFile(join(prepared.record.worktreePath, 'check-started')), {
     code: 'ENOENT',
   });
-});
-
-test('fresh-candidate mutation return cannot overwrite an owner edit between per-file writes', async (t) => {
-  const f = await fixture(t);
-  await writeFile(join(f.root, 'z-other.txt'), 'other base\n');
-  execFileSync('git', ['add', 'z-other.txt'], { cwd: f.root });
-  execFileSync('git', ['commit', '-qm', 'second fixture file'], { cwd: f.root });
-  const prepared = await f.prepare({ scopePaths: ['source.txt', 'z-other.txt'] });
-  const input = { runId: prepared.runId, runDirectory: f.runDirectory, env: f.env };
-  await dispatchDelegateRun(input);
-  await writeFile(join(f.root, 'owner-note.txt'), 'source owner edit\n');
-  await delegateIntegrationCommand('review', input);
-  const rename = fs.renameSync;
-  t.after(() => {
-    fs.renameSync = rename;
-    syncBuiltinESMExports();
-  });
-  fs.renameSync = (from, to) => {
-    rename(from, to);
-    if (from === join(prepared.record.worktreePath, 'source.txt'))
-      fs.writeFileSync(join(prepared.record.worktreePath, 'z-other.txt'), 'owner worktree save\n');
-  };
-  syncBuiltinESMExports();
-  const result = await delegateIntegrationCommand('apply', {
-    ...input,
-    checks: [
-      {
-        executable: process.execPath,
-        args: [
-          '-e',
-          "const fs=require('node:fs'); fs.writeFileSync('source.txt','mutation'); fs.writeFileSync('z-other.txt','other mutation')",
-        ],
-        cwd: '.',
-      },
-    ],
-  });
-  assert.equal(result.status, 'blocked');
-  assert.equal(result.verification.retainedCandidate, true);
-  assert.equal(
-    await readFile(join(prepared.record.worktreePath, 'z-other.txt'), 'utf8'),
-    'owner worktree save\n',
-  );
-  assert.equal(await readFile(join(f.root, 'source.txt'), 'utf8'), 'base\n');
-  assert.equal(await readFile(join(f.root, 'z-other.txt'), 'utf8'), 'other base\n');
 });
 
 test('independent preparation and checks can use a directory introduced by the delegate', async (t) => {
@@ -1006,29 +1107,48 @@ test('normal check completion stops background writers and timeout retains bound
   assert.match(timed[0].diagnostic, /actionable fixture error/);
 });
 
-test('an owner save during journal persistence cannot be overwritten by apply or rollback', async (t) => {
+test('an owner save between the apply check and git apply is kept and recover rolls back', async (t) => {
   const f = await fixture(t);
   const prepared = await f.prepare();
-  await dispatchDelegateRun({ runId: prepared.runId, runDirectory: f.runDirectory, env: f.env });
+  const input = { runId: prepared.runId, runDirectory: f.runDirectory, env: f.env };
+  await dispatchDelegateRun(input);
   const record = await readRunRecord(prepared.runId, { directory: f.runDirectory });
   const custody = JSON.parse(await readFile(record.custodyPath, 'utf8'));
+  let accepted;
   const result = await integrateDelegateDelta({
     custody,
     run: record,
     scopePaths: ['source.txt'],
     checks: [],
     reviewOnlyReason: 'Exercise destination concurrency.',
-    onProgress: async (_path, phase) => {
-      if (phase === 'before')
-        await writeFile(join(f.root, 'source.txt'), 'owner save during journal\n');
+    patchPath: join(record.runPath, 'patch.diff'),
+    onApplying: async (state) => {
+      accepted = state;
+      await writeFile(join(f.root, 'source.txt'), 'owner save during apply\n');
     },
   });
-  assert.equal(result.code, 'E_INTEGRATION_SOURCE_DRIFT');
-  assert.equal(await readFile(join(f.root, 'source.txt'), 'utf8'), 'owner save during journal\n');
+  assert.equal(result.code, 'E_INTEGRATION_APPLY_INTERRUPTED');
+  assert.match(result.nextAction, /recover/u);
+  assert.equal(await readFile(join(f.root, 'source.txt'), 'utf8'), 'owner save during apply\n');
+  await updateRunRecord(
+    record.runId,
+    { integration: { status: 'applying', ...accepted } },
+    { directory: f.runDirectory },
+  );
+  await assert.rejects(delegateIntegrationCommand('recover', { ...input, resolution: 'accept' }), {
+    code: 'E_INTEGRATION_RECOVERY_INCOMPLETE',
+  });
+  const recovered = await delegateIntegrationCommand('recover', input);
+  assert.equal(recovered.recovered, 'conflicts');
+  assert.deepEqual(
+    recovered.rollbackErrors.map(({ path }) => path),
+    ['source.txt'],
+  );
+  assert.equal(await readFile(join(f.root, 'source.txt'), 'utf8'), 'owner save during apply\n');
 });
 
 for (const failed of [true, false])
-  test(`fresh candidate retains ${failed ? 'failed' : 'undeclared'} generator output for inspection`, async (t) => {
+  test(`the worktree retains ${failed ? 'failed' : 'undeclared'} generator output for inspection`, async (t) => {
     const f = await fixture(t);
     const pkg = 'packages/fixture';
     await mkdir(join(f.root, pkg), { recursive: true });
@@ -1060,7 +1180,7 @@ for (const failed of [true, false])
       result.code,
       failed ? 'E_INTEGRATION_GENERATION' : 'E_INTEGRATION_GENERATOR_SCOPE',
     );
-    assert.equal(result.verification.candidateKind, 'fresh-candidate');
+    assert.equal(result.verification.candidateKind, 'prepared-worktree');
     assert.ok(result.verification.mutatedPaths.includes(`${pkg}/generated.txt`));
     assert.match(
       await readFile(join(prepared.record.worktreePath, pkg, 'generated.txt'), 'utf8'),
@@ -1258,50 +1378,6 @@ test('automatic cleanup retains an owned worktree edited after acceptance', asyn
   assert.equal(await readFile(join(f.root, 'source.txt'), 'utf8'), 'implemented\n');
 });
 
-for (const interleaving of ['journal', 'later-write'])
-  test(`integration rejects a checkout changed during ${interleaving} without losing owner edits`, async (t) => {
-    const f = await fixture(t);
-    await writeFile(join(f.root, 'owner-note.txt'), 'owner baseline\n');
-    await writeFile(join(f.root, 'z-other.txt'), 'other baseline\n');
-    execFileSync('git', ['add', '.'], { cwd: f.root });
-    execFileSync('git', ['commit', '-qm', 'additional fixture files'], { cwd: f.root });
-    const prepared = await f.prepare({ scopePaths: ['source.txt', 'z-other.txt'] });
-    await dispatchDelegateRun({ runId: prepared.runId, runDirectory: f.runDirectory, env: f.env });
-    await writeFile(join(prepared.record.worktreePath, 'z-other.txt'), 'other implementation\n');
-    const record = await readRunRecord(prepared.runId, { directory: f.runDirectory });
-    const custody = JSON.parse(await readFile(record.custodyPath, 'utf8'));
-    let accepted = false;
-    const result = await integrateDelegateDelta({
-      custody,
-      run: record,
-      scopePaths: ['source.txt', 'z-other.txt'],
-      checks: [{ executable: process.execPath, args: ['-e', 'process.exit(0)'], cwd: '.' }],
-      beforeApply: async () => {
-        if (interleaving === 'journal')
-          await writeFile(join(f.root, 'owner-note.txt'), 'owner journal save\n');
-      },
-      onProgress: async (path, phase) => {
-        if (interleaving === 'later-write' && path === 'z-other.txt' && phase === 'before')
-          await writeFile(join(f.root, 'source.txt'), 'owner later save\n');
-      },
-      onAccepted: () => {
-        accepted = true;
-      },
-    });
-    assert.equal(result.status, 'blocked');
-    assert.equal(result.code, 'E_INTEGRATION_SOURCE_DRIFT');
-    assert.equal(accepted, false);
-    assert.equal(await readFile(join(f.root, 'z-other.txt'), 'utf8'), 'other baseline\n');
-    assert.equal(
-      await readFile(join(f.root, 'source.txt'), 'utf8'),
-      interleaving === 'later-write' ? 'owner later save\n' : 'base\n',
-    );
-    assert.equal(
-      await readFile(join(f.root, 'owner-note.txt'), 'utf8'),
-      interleaving === 'journal' ? 'owner journal save\n' : 'owner baseline\n',
-    );
-  });
-
 test('cleanup retains an owner save made during the final ownership read', async (t) => {
   const f = await fixture(t);
   const prepared = await f.prepare({ retainWorktree: true });
@@ -1344,75 +1420,6 @@ test('cleanup retains an owner save made during the final ownership read', async
   );
   assert.equal(await readFile(join(f.root, 'source.txt'), 'utf8'), 'implemented\n');
 });
-
-for (const ownerEdit of [false, true])
-  test(`native crash acceptance ${ownerEdit ? 'rejects checkout drift' : 'recovers the tested candidate'}`, async (t) => {
-    const f = await fixture(t);
-    await writeFile(join(f.root, 'owner-note.txt'), 'owner baseline\n');
-    execFileSync('git', ['add', '.'], { cwd: f.root });
-    execFileSync('git', ['commit', '-qm', 'additional fixture file'], { cwd: f.root });
-    const prepared = await f.prepare({ retainWorktree: true });
-    const input = { runId: prepared.runId, runDirectory: f.runDirectory, env: f.env };
-    await dispatchDelegateRun(input);
-    await delegateIntegrationCommand('review', input);
-    assert.equal(
-      (
-        await delegateIntegrationCommand('apply', {
-          ...input,
-          checks: [{ executable: process.execPath, args: ['-e', 'process.exit(0)'], cwd: '.' }],
-        })
-      ).status,
-      'completed',
-    );
-    const record = await readRunRecord(prepared.runId, { directory: f.runDirectory });
-    const journalPath = join(record.runPath, 'integration-journal.json');
-    const bytes = await readFile(journalPath);
-    const journal = JSON.parse(bytes);
-    // Model the durable state after the last write cursor but before final acceptance.
-    await updateRunRecord(
-      record.runId,
-      {
-        status: 'completed',
-        disposition: null,
-        integration: {
-          status: 'interrupted',
-          journalPath,
-          journalDigest: createHash('sha256').update(bytes).digest('hex'),
-          cursor: journal.changes.length,
-          pendingPath: null,
-        },
-      },
-      { directory: f.runDirectory },
-    );
-    if (ownerEdit) {
-      await writeFile(join(f.root, 'owner-note.txt'), 'owner save before recovery\n');
-      await assert.rejects(
-        delegateIntegrationCommand('recover', {
-          ...input,
-          resolution: 'accept',
-        }),
-        { code: 'E_INTEGRATION_RECOVERY_CONFLICT' },
-      );
-      assert.equal(
-        (await readRunRecord(record.runId, { directory: f.runDirectory })).integration.status,
-        'interrupted',
-      );
-      assert.equal(
-        await readFile(join(f.root, 'owner-note.txt'), 'utf8'),
-        'owner save before recovery\n',
-      );
-    } else {
-      const recovered = await delegateIntegrationCommand('recover', {
-        ...input,
-        resolution: 'accept',
-      });
-      assert.equal(recovered.recovered, 'accepted');
-      assert.equal(
-        (await readRunRecord(record.runId, { directory: f.runDirectory })).integration.verified,
-        true,
-      );
-    }
-  });
 
 test('native cleanup unregisters an accepted worktree already missing from disk', async (t) => {
   const f = await fixture(t);

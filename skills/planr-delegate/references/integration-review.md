@@ -26,32 +26,36 @@ parent host's normal execution controls and configuration. They are not an OpenP
 OS sandbox. Arguments, exits, timings and bounded private failure diagnostics are
 saved separately from native-agent check claims.
 
-Verification normally runs in the prepared owned worktree. Ordinary ignored
-build/cache outputs are allowed. If preparation, a check or generation changes
-reviewable source/tests/configuration/generated files, the old review is invalid:
-inspect the updated candidate and review again before acceptance. If the source
-checkout makes the prepared tree stale, verification uses a fresh candidate only
-when needed, retaining the original native session/worktree.
+`review` commits the worktree's non-ignored state as the run branch tip and reviews
+`git diff base tip`. Verification runs in the owned worktree at that tip: checks see
+HEAD plus the selected files plus the delegate's changes, not the parent checkout's
+other uncommitted files, which the report lists. Ordinary ignored build/cache outputs
+are allowed. If preparation, a check or generation changes reviewable
+source/tests/configuration/generated files, the old review is invalid: inspect the
+updated candidate and review again before acceptance.
 
 Failed checks keep the candidate blocked. `baselineComparison: true` explicitly
-requests a relevant failed-check comparison; it is diagnostic and cannot turn a
-failure into acceptance. Earlier attempt evidence remains private. Narrowing a
+requests a relevant failed-check comparison in a temporary worktree at the base
+commit; it is diagnostic and cannot turn a failure into acceptance. Dependencies are
+not copied there, so include their setup in `preparation`. Earlier attempt evidence remains private. Narrowing a
 previously failed check set requires `checkSelectionReason`. With no applicable
 automated check, `reviewOnlyReason` allows explicitly unverified review-only
 integration; zero checks never produces a verified outcome.
 
 ## Checkout protection and recovery
 
-The integration lock, scope/Preserve checks, reviewed patch identity, destination
-compare-and-swap and recovery journal protect checkout writes. Concurrent user
-edits are never overwritten or rolled back. A source change during checks requires
-reviewing the actual candidate again. The journal records intended states before
-the first source write and recovery touches only helper-written paths that still
-match those states.
+The per-repository lock, scope/Preserve checks and the reviewed tip protect checkout
+writes. `apply` saves a restore point (`git stash create`) under the private ref
+`refs/planr-delegate/<runId>/restore`, then runs `git apply --check` and `git apply`
+with the saved `patch.diff`. A parent edit elsewhere in a changed file merges; an
+overlapping parent edit blocks with its path and leaves the checkout untouched.
+Concurrent user edits are never overwritten or rolled back.
 
-An interrupted source write must use `recover` with rollback (default) or accept
-after inspecting every journaled path. Keep conflicting user edits. Do not bypass
-a rejected helper by manually applying its patch.
+An apply interrupted between its check and completion must use `recover`. A fully
+applied patch can be accepted; rollback (default) reverses it, or after a partial
+apply restores only patch paths that still match their pre- or post-apply content.
+Keep conflicting user edits. Do not bypass a rejected helper by manually applying
+its patch.
 
 Successful native integration closes the exact run, saves evidence/report and
 removes only its owned worktree unless retained. `status` recovers the five-field
@@ -61,7 +65,9 @@ deployment are outside this helper.
 Experimental generic protocol-v1 adapters and older pinned helpers retain their
 original check interface and lifecycle; native v2 does not expand their permissions.
 
-Destination publication claims the existing directory entry and compares its bytes before exclusive creation of the replacement. Concurrent replacements block integration. Claimed originals remain in private write custody (Git metadata, or destination-local custody when volumes differ) for crash recovery and writers holding an old inode; conflicts report their retained paths. Rollback uses the same guard and cannot discard a changed claimed original.
+## Runs pinned to older helpers
+
+Their recovery journal records intended states before the first source write, and recovery touches only helper-written paths that still match those states. Destination publication claims the existing directory entry and compares its bytes before exclusive creation of the replacement. Concurrent replacements block integration. Claimed originals remain in private write custody (Git metadata, or destination-local custody when volumes differ) for crash recovery and writers holding an old inode; conflicts report their retained paths. Rollback uses the same guard and cannot discard a changed claimed original.
 
 Candidate identity is checked across verification and acceptance; a changed owned worktree is retained instead of automatically removed. Guarded writes validate parent-directory identities as well as final entries. The parent host provides filesystem containment: these checks are conflict detection, not an OS sandbox against processes that deliberately rename ancestors between syscalls. Process custody stops the owned process group; intentionally detached services and processes outside that group remain the native harness/operator responsibility. Independent commands must finish their work before returning success.
 

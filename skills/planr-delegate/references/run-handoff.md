@@ -1,7 +1,7 @@
 # Run/session lifecycle
 
-Each new run has private v2 records, a complete readable capsule, one owned detached
-worktree and a pinned helper snapshot. Records contain configuration references,
+Each new run has private v3 records, a complete readable capsule, one owned worktree
+on its run branch and a pinned helper snapshot. Records contain configuration references,
 not credential values. Old runs route operations through their unchanged pinned
 helpers; there is no automatic migration or permission expansion.
 
