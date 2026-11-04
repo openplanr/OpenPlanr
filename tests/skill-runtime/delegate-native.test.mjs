@@ -4,6 +4,7 @@ import { createHash } from 'node:crypto';
 import fs from 'node:fs';
 import {
   chmod,
+  lstat,
   mkdir,
   mkdtemp,
   readFile,
@@ -812,7 +813,9 @@ async function interruptedApply(t, { notes, delegateNotes, ownerNotes, mode } = 
   });
   const input = { runId: prepared.runId, runDirectory: f.runDirectory, env: f.env };
   await dispatchDelegateRun(input);
-  await writeFile(join(prepared.record.worktreePath, 'notes.md'), delegateNotes);
+  const delegated = join(prepared.record.worktreePath, 'notes.md');
+  if (typeof delegateNotes === 'function') await delegateNotes(delegated);
+  else await writeFile(delegated, delegateNotes);
   if (ownerNotes) await writeFile(join(f.root, 'notes.md'), ownerNotes);
   await delegateIntegrationCommand('review', input);
   const applied = await delegateIntegrationCommand('apply', { ...input, checks: passingCheck });
@@ -934,6 +937,28 @@ for (const resolution of ['rollback', 'accept'])
       resolution === 'accept' ? 'rotated secret\n' : 'secret\n',
     );
     assert.equal((await stat(join(f.root, 'notes.md'))).mode & 0o777, 0o600);
+  });
+
+for (const [change, delegate] of [
+  ['deleted', (path) => rm(path)],
+  [
+    'replaced by a symlink',
+    async (path) => {
+      await rm(path);
+      await symlink('source.txt', path);
+    },
+  ],
+])
+  test(`recover rollback keeps the permissions of a private file the delegate ${change}`, async (t) => {
+    const { f, input } = await interruptedApply(t, {
+      notes: 'secret\n',
+      delegateNotes: delegate,
+      mode: 0o600,
+    });
+    const recovered = await delegateIntegrationCommand('recover', input);
+    assert.equal(recovered.recovered, 'rolled-back', JSON.stringify(recovered));
+    assert.equal(await readFile(join(f.root, 'notes.md'), 'utf8'), 'secret\n');
+    assert.equal((await lstat(join(f.root, 'notes.md'))).mode & 0o777, 0o600);
   });
 
 test('a run with no changes completes without a patch or restore point', async (t) => {

@@ -297,8 +297,8 @@ async function removeBaseline(custody, target) {
 
 async function physicalModes(root, changes) {
   const modes = {};
-  for (const { path, before, after } of changes) {
-    if (before.kind !== 'file' || after.kind !== 'file') continue;
+  for (const { path, before } of changes) {
+    if (before.kind !== 'file') continue;
     const info = await lstat(join(root, path));
     if (info.isFile()) modes[path] = info.mode & 0o777;
   }

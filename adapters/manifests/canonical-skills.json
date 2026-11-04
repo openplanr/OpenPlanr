@@ -1234,7 +1234,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:ad9e17e3428de3c5e68ddca066f9997e37833006635c4ecf35e5ad17b23fbc3e"
+          "digest": "sha256:3473d718069463159f333bce3ef2be854afdc30c3650855ee2e5b26f5df26238"
         },
         {
           "path": "scripts/integration-transaction.mjs",
