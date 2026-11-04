@@ -338,7 +338,7 @@
         },
         {
           "path": "skills/delegate/references/operator-guide.md",
-          "digest": "sha256:57a4a83ad05aeaab6cb3692ecde53467f7d00d666b3a042ef7cdf0743610e3e4"
+          "digest": "sha256:9cc27ffa6774186a17de8941a787fc6dee8690a6f35bcf59a682d1c3a8aa2664"
         },
         {
           "path": "skills/delegate/references/run-handoff.md",
@@ -350,11 +350,11 @@
         },
         {
           "path": "skills/delegate/scripts/adapters/claude.mjs",
-          "digest": "sha256:c36e4af88d4fd47ccdd9fa928c1cab968fc20e5e5f05bb92d306a90b67546478"
+          "digest": "sha256:7d1419b6f1b40d5dcfaa9a48a230fafe6430b4299198c04e6dd18c896862e485"
         },
         {
           "path": "skills/delegate/scripts/adapters/codex.mjs",
-          "digest": "sha256:648b90b0bee6270683afafff354fba46b31522d75d14fc26a5a730e9f8de701f"
+          "digest": "sha256:e8e2d91503f35458ef3ce3bb6012805029c51cb99b164125f0ba236c4f5bbdf6"
         },
         {
           "path": "skills/delegate/scripts/adapters/generic.mjs",

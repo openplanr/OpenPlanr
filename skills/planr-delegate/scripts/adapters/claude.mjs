@@ -26,7 +26,7 @@ function routingVariables(env) {
   );
 }
 
-// Keeps only routing variables from settings files; callers expose source labels and origins.
+// Keeps routing variables and whether a default permission mode is set; callers expose source labels.
 async function readClaudeRoutingSettings(profile, env, cwd, options = {}) {
   const managedRoot =
     options.managedRoot ??
@@ -108,6 +108,7 @@ async function readClaudeRoutingSettings(profile, env, cwd, options = {}) {
       inspected.push({
         source,
         env: routingVariables(settings.env ?? {}),
+        ...(settings.permissions?.defaultMode !== undefined ? { defaultMode: true } : {}),
         ...(settings.policyHelper ? { opaqueRouting: true } : {}),
       });
     } catch (error) {
@@ -202,6 +203,16 @@ export async function resolveClaudeRouting(profile, env, cwd, options) {
   };
 }
 
+// Edit access only when no settings file chooses a mode; unreadable settings count as chosen.
+export async function claudeWriteFlags(profile, env, cwd, options) {
+  try {
+    const settings = await readClaudeRoutingSettings(profile, env, cwd, options);
+    return settings.some((entry) => entry.defaultMode) ? [] : ['--permission-mode', 'acceptEdits'];
+  } catch {
+    return [];
+  }
+}
+
 export async function resolveClaudeDestination(profile, env, cwd) {
   return (await resolveClaudeRouting(profile, env, cwd)).destination;
 }
@@ -263,9 +274,7 @@ async function execute({
     profile.executable,
     [
       ...profile.argv,
-      // Edits only; shell commands still follow the native allowlist.
-      '--permission-mode',
-      'acceptEdits',
+      ...(await claudeWriteFlags(profile, env, cwd)),
       '--print',
       '--output-format',
       'stream-json',

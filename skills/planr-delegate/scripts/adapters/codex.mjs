@@ -31,6 +31,28 @@ export async function resolveCodexDestination(profile, env) {
   return knownDestination(endpoint);
 }
 
+function sandboxModeSet(config) {
+  if (!config) return false;
+  const top = config.split(/^\s*\[/mu)[0];
+  if (/^\s*sandbox_mode\s*=/mu.test(top)) return true;
+  const active = /^\s*profile\s*=\s*["']([^"']+)["']/mu.exec(top)?.[1];
+  if (!active) return false;
+  const section = [
+    ...config.matchAll(
+      /^\s*\[profiles\.(?:["']([^"']+)["']|([A-Za-z0-9_-]+))\]\s*([\s\S]*?)(?=^\s*\[|$)/gmu,
+    ),
+  ].find((match) => (match[1] ?? match[2]) === active);
+  return Boolean(section && /^\s*sandbox_mode\s*=/mu.test(section[3]));
+}
+
+// Workspace writes only when neither the user nor the project config chooses a sandbox.
+export async function codexWriteFlags(profile, env, cwd) {
+  const home = profile.configDir || env.CODEX_HOME || join(env.HOME ?? '', '.codex');
+  for (const path of [join(home, 'config.toml'), join(cwd, '.codex', 'config.toml')])
+    if (sandboxModeSet(await readNativeConfig(path))) return [];
+  return ['--sandbox', 'workspace-write'];
+}
+
 async function execute({
   profile,
   cwd,
@@ -85,8 +107,7 @@ async function execute({
     ...profile.argv,
     'exec',
     // `exec resume` takes no sandbox flag of its own; the parent `exec` flag applies.
-    '--sandbox',
-    'workspace-write',
+    ...(await codexWriteFlags(profile, env, cwd)),
     ...(sessionId ? ['resume'] : []),
     '--json',
     ...(!sessionId ? ['--add-dir', directory] : []),

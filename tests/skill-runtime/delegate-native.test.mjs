@@ -7,7 +7,11 @@ import { syncBuiltinESMExports } from 'node:module';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
-import { resolveCodexDestination } from '../../skills/planr-delegate/scripts/adapters/codex.mjs';
+import { claudeWriteFlags } from '../../skills/planr-delegate/scripts/adapters/claude.mjs';
+import {
+  codexWriteFlags,
+  resolveCodexDestination,
+} from '../../skills/planr-delegate/scripts/adapters/codex.mjs';
 import { terminateProcessGroup } from '../../skills/planr-delegate/scripts/adapters/generic.mjs';
 import { failureCode, nativeTurn } from '../../skills/planr-delegate/scripts/adapters/native.mjs';
 import { captureFileState } from '../../skills/planr-delegate/scripts/custody.mjs';
@@ -224,6 +228,45 @@ for (const kind of ['claude', 'codex', 'cursor']) {
     assert.equal(recovered.report.Checks.includes('1/1'), true);
   });
 }
+
+test('edit flags apply only when native settings choose no permission mode', async (t) => {
+  const base = await realpath(await mkdtemp(join(tmpdir(), 'planr-write-flags-')));
+  t.after(() => rm(base, { recursive: true, force: true }));
+  const cwd = join(base, 'worktree');
+  const options = { managedRoot: join(base, 'managed') };
+  await mkdir(join(cwd, '.claude'), { recursive: true });
+  await mkdir(join(cwd, '.codex'), { recursive: true });
+  await mkdir(join(base, '.claude'));
+  await mkdir(join(base, '.codex'));
+  const env = { HOME: base };
+  const profile = { argv: [] };
+  assert.deepEqual(await claudeWriteFlags(profile, env, cwd, options), [
+    '--permission-mode',
+    'acceptEdits',
+  ]);
+  await writeFile(
+    join(cwd, '.claude', 'settings.json'),
+    JSON.stringify({ permissions: { allow: ['Bash(npm test)'] } }),
+  );
+  assert.equal((await claudeWriteFlags(profile, env, cwd, options)).length, 2);
+  await writeFile(
+    join(base, '.claude', 'settings.json'),
+    JSON.stringify({ permissions: { defaultMode: 'auto' } }),
+  );
+  assert.deepEqual(await claudeWriteFlags(profile, env, cwd, options), []);
+  await writeFile(join(base, '.claude', 'settings.json'), '{ unreadable');
+  assert.deepEqual(await claudeWriteFlags(profile, env, cwd, options), []);
+
+  const codex = join(base, '.codex', 'config.toml');
+  assert.deepEqual(await codexWriteFlags(profile, env, cwd), ['--sandbox', 'workspace-write']);
+  await writeFile(codex, 'profile = "ci"\n[profiles.other]\nsandbox_mode = "read-only"\n');
+  assert.equal((await codexWriteFlags(profile, env, cwd)).length, 2);
+  await writeFile(codex, 'profile = "ci"\n[profiles.ci]\nsandbox_mode = "danger-full-access"\n');
+  assert.deepEqual(await codexWriteFlags(profile, env, cwd), []);
+  await writeFile(codex, '');
+  await writeFile(join(cwd, '.codex', 'config.toml'), 'sandbox_mode = "read-only"\n');
+  assert.deepEqual(await codexWriteFlags(profile, env, cwd), []);
+});
 
 test('selection handles ambiguity, explicit model/configuration and saved native engine without enrollment', async (t) => {
   const f = await fixture(t);
