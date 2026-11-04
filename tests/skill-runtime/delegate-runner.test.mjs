@@ -23,6 +23,7 @@ import {
   loadProfile,
   PROFILE_LIFETIME_MS,
 } from '../../skills/planr-delegate/scripts/profiles.mjs';
+import { integrationPaths } from '../../skills/planr-delegate/scripts/run-contract.mjs';
 import {
   closeRunRecord,
   createRunRecord,
@@ -374,6 +375,15 @@ test('installed helper command accepts bounded JSON stdin and reports the previe
   await assert.rejects(delegateRunnerCommand('prepare', { repositoryRoot: root }), {
     code: 'E_DELEGATE_SCOPE',
   });
+  await assert.rejects(
+    delegateRunnerCommand('prepare', { repositoryRoot: root, scopePaths: ['apps/**'] }),
+    { code: 'E_DELEGATE_SCOPE', message: /use "apps" instead of "apps\/\*\*"/ },
+  );
+  await assert.rejects(
+    delegateRunnerCommand('prepare', { repositoryRoot: root, scopePaths: ['*.ts'] }),
+    { code: 'E_DELEGATE_SCOPE', message: /literal path prefixes, not globs/ },
+  );
+  assert.deepEqual(integrationPaths(['app/[slug]/page.tsx']), ['app/[slug]/page.tsx']);
 });
 
 test('prepared helper survives projection replacement and detects changes to its private copy', async (t) => {

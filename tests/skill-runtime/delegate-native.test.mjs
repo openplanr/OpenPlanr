@@ -324,6 +324,10 @@ test('native permission denial remains actionable and continues the same session
   assert.equal(denied.status, 'blocked');
   const status = await delegateRunStatus(input);
   assert.equal(status.diagnostic.code, 'E_ADAPTER_PERMISSION');
+  await assert.rejects(delegateIntegrationCommand('review', input), {
+    code: 'E_INTEGRATION_RUN',
+    message: /resume with this runId and an answer or correction/,
+  });
   const resumed = await resumeDelegateRun({
     ...input,
     env: { ...f.env, FIXTURE_MODE: '' },
@@ -514,6 +518,69 @@ test('stale prepared worktree checks the actual merged candidate and preserves u
   assert.equal(await readFile(join(f.root, 'owner-note.txt'), 'utf8'), 'owner edit\n');
 });
 
+test('a checkout that differs from the verified candidate names each differing path', async (t) => {
+  const f = await fixture(t);
+  const prepared = await f.prepare();
+  await dispatchDelegateRun({ runId: prepared.runId, runDirectory: f.runDirectory, env: f.env });
+  const record = await readRunRecord(prepared.runId, { directory: f.runDirectory });
+  const custody = JSON.parse(await readFile(record.custodyPath, 'utf8'));
+  const result = await integrateDelegateDelta({
+    custody,
+    run: record,
+    scopePaths: ['source.txt'],
+    checks: [],
+    reviewOnlyReason: 'Exercise the final checkout identity.',
+    beforeApply: async () => {
+      await writeFile(join(f.root, 'late-owner.txt'), 'owner save before acceptance\n');
+      await rm(join(f.root, 'preserved.txt'));
+    },
+  });
+  assert.equal(result.code, 'E_INTEGRATION_SOURCE_DRIFT');
+  assert.deepEqual(
+    result.violations.filter(({ code }) => code === 'E_INTEGRATION_SOURCE_DRIFT'),
+    [
+      { code: 'E_INTEGRATION_SOURCE_DRIFT', path: 'late-owner.txt', change: 'extra' },
+      { code: 'E_INTEGRATION_SOURCE_DRIFT', path: 'preserved.txt', change: 'missing' },
+    ],
+  );
+  assert.equal(await readFile(join(f.root, 'source.txt'), 'utf8'), 'base\n');
+  assert.equal(
+    await readFile(join(f.root, 'late-owner.txt'), 'utf8'),
+    'owner save before acceptance\n',
+  );
+});
+
+test('fresh candidate keeps force-added ignored files beside an unrelated tracked edit', async (t) => {
+  const f = await fixture(t);
+  await mkdir(join(f.root, 'cache'));
+  await writeFile(join(f.root, 'cache', 'tracked.md'), 'force-added\n');
+  await writeFile(join(f.root, 'notes.txt'), 'notes\n');
+  execFileSync('git', ['add', '--force', 'cache/tracked.md', 'notes.txt'], { cwd: f.root });
+  execFileSync('git', ['commit', '-qm', 'track ignored file'], { cwd: f.root });
+  const prepared = await f.prepare();
+  const input = { runId: prepared.runId, runDirectory: f.runDirectory, env: f.env };
+  await dispatchDelegateRun(input);
+  await writeFile(join(f.root, 'notes.txt'), 'owner edit\n');
+  assert.equal((await delegateIntegrationCommand('review', input)).ready, true);
+  const applied = await delegateIntegrationCommand('apply', {
+    ...input,
+    checks: [
+      {
+        executable: process.execPath,
+        args: [
+          '-e',
+          "require('node:assert').equal(require('node:fs').readFileSync('cache/tracked.md','utf8'),'force-added\\n')",
+        ],
+        cwd: '.',
+      },
+    ],
+  });
+  assert.equal(applied.status, 'completed', JSON.stringify(applied));
+  assert.equal(applied.verification.candidateKind, 'fresh-candidate');
+  assert.equal(await readFile(join(f.root, 'source.txt'), 'utf8'), 'implemented\n');
+  assert.equal(await readFile(join(f.root, 'notes.txt'), 'utf8'), 'owner edit\n');
+});
+
 test('failure evidence is saved without automatic baseline and cannot be erased by zero checks', async (t) => {
   const f = await fixture(t);
   const prepared = await f.prepare();
@@ -642,6 +709,10 @@ test('a candidate edit after selection blocks checks and integration while retai
     },
   });
   assert.equal(result.code, 'E_INTEGRATION_CANDIDATE_STALE');
+  assert.deepEqual(
+    result.violations.filter(({ code }) => code === 'E_INTEGRATION_CANDIDATE_STALE'),
+    [{ code: 'E_INTEGRATION_CANDIDATE_STALE', path: 'source.txt', change: 'changed' }],
+  );
   assert.equal(result.checks.length, 0);
   assert.equal(await readFile(join(f.root, 'source.txt'), 'utf8'), 'base\n');
   assert.equal(

@@ -116,6 +116,12 @@ rewrite or enroll a saved profile only when the user requests it.
 
 If a native CLI uses read-only permissions for non-interactive runs, delegation reports attention rather than enabling writes. Resolve access in that CLI’s own configuration or explicitly authorized exact-session invocation, then continue the recorded session. Model summaries are never sufficient evidence of implementation.
 
+Cursor's CLI writes its own state back to `~/.cursor/cli-config.json` when a run
+ends, so `permissions.allow` entries added while a run is active can be lost. Add
+the commands the task needs (for example `Shell(pnpm)`) before `dispatch`. After an
+`E_ADAPTER_PERMISSION` attention state, wait until the run has stopped, edit the
+allowlist, then `resume` the same run.
+
 ## Diagnostics and unused runs
 
 `dispatch` and `resume` return the retained diagnostic directly, including safe

@@ -182,6 +182,33 @@ test('presentation distinguishes delegate claims, observed changes, checks, and 
   assert.match(unverified.Checks, /No independent checks ran/u);
 });
 
+test('review of an unfinished run names the recovery step for its status', async () => {
+  const custody = { repositoryRoot: '/unused/source', worktreePath: '/unused/worktree' };
+  for (const [status, step] of [
+    ['question', /resume with this runId and an answer/],
+    ['blocked', /resume with this runId and an answer or correction/],
+    ['running', /wait for this runId/],
+  ])
+    await assert.rejects(
+      reviewDelegateDelta({ custody, run: { status }, scopePaths: ['source.txt'] }),
+      (error) =>
+        error.code === 'E_INTEGRATION_RUN' &&
+        step.test(error.message) &&
+        error.details.status === status,
+    );
+});
+
+test('blocked integration reports name how each differing path changed', () => {
+  const violations = [
+    { code: 'E_INTEGRATION_SOURCE_DRIFT', path: 'cache/tracked.md', change: 'extra' },
+    { code: 'E_INTEGRATION_SOURCE_DRIFT', omitted: 3 },
+  ];
+  assert.deepEqual(reviewPresentation({ ready: false, changedPaths: [], violations }).violations, [
+    'E_INTEGRATION_SOURCE_DRIFT: cache/tracked.md (extra)',
+    'E_INTEGRATION_SOURCE_DRIFT: 3 more path(s)',
+  ]);
+});
+
 test('accepted-state inspection reports filesystem causes instead of hiding them as content drift', async () => {
   const { base, repositoryRoot } = await fixture();
   await mkdir(join(base, 'outside'));

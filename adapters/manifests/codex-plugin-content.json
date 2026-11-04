@@ -338,7 +338,7 @@
         },
         {
           "path": "skills/delegate/references/operator-guide.md",
-          "digest": "sha256:436c12e8ff06e67a529df1aaeb736407d85a63c636260f4a193f458c94fd2ec4"
+          "digest": "sha256:2dbdac987429cfe6800de513098f8f4424c533b085fe54219d7643040e59e56b"
         },
         {
           "path": "skills/delegate/references/run-handoff.md",
@@ -382,7 +382,7 @@
         },
         {
           "path": "skills/delegate/scripts/presentation.mjs",
-          "digest": "sha256:32ca0c561e99bb02dc8f88e0823a0b826a24cd61404b165fe306bbbce9ee99b9"
+          "digest": "sha256:743b370d7c04c363c8935754eb662773cd25bab5e8b7569cd25430068275c980"
         },
         {
           "path": "skills/delegate/scripts/profiles.mjs",
@@ -398,7 +398,7 @@
         },
         {
           "path": "skills/delegate/scripts/run-contract.mjs",
-          "digest": "sha256:f87f0bd16249266ef6f044a37db608d852a5d893628de26ab9844dc92df57c46"
+          "digest": "sha256:c2001a897a93788e9047f601d90cde9b1a6eb3a46c439af86da23dd214392f60"
         },
         {
           "path": "skills/delegate/scripts/run-preflight.mjs",
@@ -418,7 +418,7 @@
         },
         {
           "path": "skills/delegate/scripts/integration-files.mjs",
-          "digest": "sha256:0630912abe3992664b50012fb36dd6dec26f741449800ab6a6c421def219424e"
+          "digest": "sha256:9955bcdf000d72c84d485bca47554d7576d31832cd623922fe642afb5355ad1e"
         },
         {
           "path": "skills/delegate/scripts/integration-checks.mjs",
@@ -426,7 +426,7 @@
         },
         {
           "path": "skills/delegate/scripts/integration-transaction.mjs",
-          "digest": "sha256:c3914e4fdb6e12258b209178fca07ffc39e2f5376c770a27aa9a1858c5d833ed"
+          "digest": "sha256:9c478e3de6d8aa2a490401abdbcb74062e746a3bbb469cb7befb2f0f612aeb5c"
         },
         {
           "path": "skills/delegate/scripts/adapters/capsule.mjs",
