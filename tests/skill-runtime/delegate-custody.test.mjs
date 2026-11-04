@@ -266,12 +266,16 @@ test('owner ref activity during a run warns; delegate moves of protected refs bl
     await warned('refs/tags/v1');
 
     const owned = git(root, 'rev-parse', parentBranch);
+    const parentMoved = async (target) => {
+      git(record.worktreePath, 'update-ref', parentBranch, target);
+      assert.deepEqual(
+        (await validateWorktreeCustody(record)).violations.map(({ code, ref }) => [code, ref]),
+        [['E_CUSTODY_PARENT_BRANCH', parentBranch]],
+      );
+    };
+    await parentMoved(record.base);
     git(record.worktreePath, 'commit', '--allow-empty', '-qm', 'delegate commit');
-    git(record.worktreePath, 'update-ref', parentBranch, 'HEAD');
-    assert.deepEqual(
-      (await validateWorktreeCustody(record)).violations.map(({ code, ref }) => [code, ref]),
-      [['E_CUSTODY_PARENT_BRANCH', parentBranch]],
-    );
+    await parentMoved('HEAD');
     const rewritten = git(
       record.worktreePath,
       'commit-tree',
