@@ -481,7 +481,8 @@ export async function rollbackWritten(root, changes, suffix) {
   return errors;
 }
 
-export async function treeIdentity(root, overrides = new Map()) {
+// Logical Git state per present path, keyed and ordered by path.
+export async function treeEntries(root, overrides = new Map()) {
   const paths = new Set(
     (await git(root, 'ls-files', '-z', '--cached', '--others', '--exclude-standard'))
       .toString('utf8')
@@ -489,12 +490,35 @@ export async function treeIdentity(root, overrides = new Map()) {
       .filter(Boolean),
   );
   for (const path of overrides.keys()) paths.add(path);
-  const hash = createHash('sha256');
+  const entries = new Map();
   for (const path of [...paths].sort()) {
     const state = overrides.get(path) ?? (await captureFileState(root, safePath(path)));
     const logical = await gitFileState(root, path, state);
-    if (logical.kind !== 'absent')
-      hash.update(path).update('\0').update(JSON.stringify(logical)).update('\0');
+    if (logical.kind !== 'absent') entries.set(path, JSON.stringify(logical));
   }
+  return entries;
+}
+
+export function entriesIdentity(entries) {
+  const hash = createHash('sha256');
+  for (const [path, logical] of entries)
+    hash.update(path).update('\0').update(logical).update('\0');
   return hash.digest('hex');
+}
+
+export async function treeIdentity(root, overrides = new Map()) {
+  return entriesIdentity(await treeEntries(root, overrides));
+}
+
+// The first paths where actual differs from expected: missing, extra or changed.
+export function treeDifferences(expected, actual, limit = 10) {
+  const differences = [];
+  for (const path of [...new Set([...expected.keys(), ...actual.keys()])].sort()) {
+    if (expected.get(path) === actual.get(path)) continue;
+    differences.push({
+      path,
+      change: !actual.has(path) ? 'missing' : !expected.has(path) ? 'extra' : 'changed',
+    });
+  }
+  return { count: differences.length, paths: differences.slice(0, limit) };
 }

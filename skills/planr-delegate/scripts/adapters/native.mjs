@@ -20,6 +20,11 @@ export const NATIVE_EXECUTION_POLICY = Object.freeze({
   extensions:
     'Trusted native hooks, plugins and MCP may execute code or contact additional services. OpenPlanr does not sandbox these extensions.',
 });
+// Claude Code and Codex start in their edit mode when native settings choose none.
+export const EDIT_DEFAULT_EXECUTION_POLICY = Object.freeze({
+  ...NATIVE_EXECUTION_POLICY,
+  permissions: 'native-managed; edit mode when none is configured',
+});
 export const NATIVE_MANAGED_DESTINATION = Object.freeze({
   class: 'native-managed',
   origin: 'native-managed',

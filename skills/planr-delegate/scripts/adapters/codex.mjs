@@ -1,11 +1,12 @@
+import { readFile, stat } from 'node:fs/promises';
 import { join } from 'node:path';
 import { capsuleDirectory } from './capsule.mjs';
 import { AdapterError, invokeProcess } from './generic.mjs';
 import {
   createNativeProgress,
+  EDIT_DEFAULT_EXECUTION_POLICY,
   knownDestination,
   NATIVE_CAPABILITIES,
-  NATIVE_EXECUTION_POLICY,
   nativeFailure,
   nativeObserver,
   nativeTurn,
@@ -29,6 +30,39 @@ export async function resolveCodexDestination(profile, env) {
   const section = sections.find((match) => (match[1] ?? match[2]) === provider);
   const endpoint = section && /^\s*base_url\s*=\s*["']([^"']+)["']/mu.exec(section[3])?.[1];
   return knownDestination(endpoint);
+}
+
+// Any uncommented sandbox_mode key outside an inactive [profiles.<name>] table counts as set.
+function sandboxModeSet(config) {
+  const active = /^\s*profile\s*=\s*["']([^"']+)["']/mu.exec(config.split(/^\s*\[/mu)[0])?.[1];
+  let skipped = false;
+  for (const line of config.split('\n')) {
+    const header = /^\s*\[\s*profiles\.(?:"([^"]+)"|'([^']+)'|([A-Za-z0-9_-]+))\s*\]/u.exec(line);
+    if (header) skipped = (header[1] ?? header[2] ?? header[3]) !== active;
+    else if (/^\s*\[/u.test(line)) skipped = false;
+    if (!skipped && /^[^#]*\bsandbox_mode["']?\s*=/u.test(line)) return true;
+  }
+  return false;
+}
+
+// Missing config means no sandbox choice; unreadable or oversized config counts as a choice.
+async function codexConfigChoosesSandbox(path) {
+  let config;
+  try {
+    if ((await stat(path)).size > 64 * 1024) return true;
+    config = await readFile(path, 'utf8');
+  } catch (error) {
+    return error.code !== 'ENOENT';
+  }
+  return sandboxModeSet(config);
+}
+
+// Workspace writes only when neither the user nor the project config chooses a sandbox.
+export async function codexWriteFlags(profile, env, cwd) {
+  const home = profile.configDir || env.CODEX_HOME || join(env.HOME ?? '', '.codex');
+  for (const path of [join(home, 'config.toml'), join(cwd, '.codex', 'config.toml')])
+    if (await codexConfigChoosesSandbox(path)) return [];
+  return ['--sandbox', 'workspace-write'];
 }
 
 async function execute({
@@ -84,6 +118,8 @@ async function execute({
   const args = [
     ...profile.argv,
     'exec',
+    // `exec resume` takes no sandbox flag of its own; the parent `exec` flag applies.
+    ...(await codexWriteFlags(profile, env, cwd)),
     ...(sessionId ? ['resume'] : []),
     '--json',
     ...(!sessionId ? ['--add-dir', directory] : []),
@@ -141,7 +177,7 @@ export const codexAdapter = Object.freeze({
     return {
       capabilities: NATIVE_CAPABILITIES,
       destination: await resolveCodexDestination(profile, env),
-      executionPolicy: NATIVE_EXECUTION_POLICY,
+      executionPolicy: EDIT_DEFAULT_EXECUTION_POLICY,
     };
   },
   run: execute,

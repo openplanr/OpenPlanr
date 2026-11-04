@@ -2,12 +2,25 @@ import assert from 'node:assert/strict';
 import { execFileSync, spawn } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import fs from 'node:fs';
-import { mkdir, mkdtemp, readFile, realpath, rm, symlink, writeFile } from 'node:fs/promises';
+import {
+  chmod,
+  mkdir,
+  mkdtemp,
+  readFile,
+  realpath,
+  rm,
+  symlink,
+  writeFile,
+} from 'node:fs/promises';
 import { syncBuiltinESMExports } from 'node:module';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
-import { resolveCodexDestination } from '../../skills/planr-delegate/scripts/adapters/codex.mjs';
+import { claudeWriteFlags } from '../../skills/planr-delegate/scripts/adapters/claude.mjs';
+import {
+  codexWriteFlags,
+  resolveCodexDestination,
+} from '../../skills/planr-delegate/scripts/adapters/codex.mjs';
 import { terminateProcessGroup } from '../../skills/planr-delegate/scripts/adapters/generic.mjs';
 import { failureCode, nativeTurn } from '../../skills/planr-delegate/scripts/adapters/native.mjs';
 import { captureFileState } from '../../skills/planr-delegate/scripts/custody.mjs';
@@ -154,6 +167,10 @@ for (const kind of ['claude', 'codex', 'cursor']) {
     assert.equal(prepared.preview.modelSelection, 'native default/automatic');
     assert.equal(prepared.preview.destination.class, 'native-managed');
     assert.match(prepared.preview.executionPolicy.extensions, /hooks, plugins and MCP/);
+    assert.equal(
+      prepared.preview.executionPolicy.permissions,
+      kind === 'cursor' ? 'native-managed' : 'native-managed; edit mode when none is configured',
+    );
     const first = await dispatchDelegateRun(input);
     assert.equal(first.status, 'completed');
     const second = await resumeDelegateRun({
@@ -171,14 +188,27 @@ for (const kind of ['claude', 'codex', 'cursor']) {
     assert.equal(calls[0].extension, 'trusted-value');
     assert.match(calls[0].input, /ordered|INDEX|index/i);
     assert.ok(!calls[1].input.includes('capsule.json'), 'resume does not resend full context');
-    for (const call of calls)
+    const writeFlags = {
+      claude: ['--permission-mode', 'acceptEdits'],
+      codex: ['--sandbox', 'workspace-write'],
+      cursor: [],
+    }[kind];
+    for (const call of calls) {
+      const at = call.args.indexOf(writeFlags[0]);
+      if (writeFlags.length) assert.deepEqual(call.args.slice(at, at + 2), writeFlags);
+      if (kind === 'codex') assert.ok(at < call.args.indexOf('--json'), 'exec-level flag');
+      assert.equal(
+        call.args.filter((arg) => /permission-mode|sandbox/u.test(arg)).length,
+        writeFlags.length / 2,
+      );
       assert.ok(
         !call.args.some((arg) =>
-          /force|yolo|bypass|sandbox|permission-mode|disallowedTools|strict-mcp|restricted|setting-sources|web_search/u.test(
+          /force|yolo|bypass|dangerously|danger-full-access|disallowedTools|strict-mcp|restricted|setting-sources|web_search/u.test(
             arg,
           ),
         ),
       );
+    }
     assert.equal(
       (await readRunRecord(prepared.runId, { directory: f.runDirectory })).hardDeadlineAt,
       null,
@@ -211,6 +241,64 @@ for (const kind of ['claude', 'codex', 'cursor']) {
     assert.equal(recovered.report.Checks.includes('1/1'), true);
   });
 }
+
+test('edit flags apply only when native settings choose no permission mode', async (t) => {
+  const base = await realpath(await mkdtemp(join(tmpdir(), 'planr-write-flags-')));
+  t.after(() => rm(base, { recursive: true, force: true }));
+  const cwd = join(base, 'worktree');
+  const options = { managedRoot: join(base, 'managed') };
+  await mkdir(join(cwd, '.claude'), { recursive: true });
+  await mkdir(join(cwd, '.codex'), { recursive: true });
+  await mkdir(join(base, '.claude'));
+  await mkdir(join(base, '.codex'));
+  const env = { HOME: base };
+  const profile = { argv: [] };
+  assert.deepEqual(await claudeWriteFlags(profile, env, cwd, options), [
+    '--permission-mode',
+    'acceptEdits',
+  ]);
+  await writeFile(
+    join(cwd, '.claude', 'settings.json'),
+    JSON.stringify({ permissions: { allow: ['Bash(npm test)'] } }),
+  );
+  assert.equal((await claudeWriteFlags(profile, env, cwd, options)).length, 2);
+  await writeFile(
+    join(base, '.claude', 'settings.json'),
+    JSON.stringify({ permissions: { defaultMode: 'auto' } }),
+  );
+  assert.deepEqual(await claudeWriteFlags(profile, env, cwd, options), []);
+  await writeFile(join(base, '.claude', 'settings.json'), '{ unreadable');
+  assert.deepEqual(await claudeWriteFlags(profile, env, cwd, options), []);
+  await writeFile(
+    join(base, '.claude', 'settings.json'),
+    JSON.stringify({ padding: 'x'.repeat(70 * 1024) }),
+  );
+  assert.deepEqual(await claudeWriteFlags(profile, env, cwd, options), []);
+
+  const codex = join(base, '.codex', 'config.toml');
+  assert.deepEqual(await codexWriteFlags(profile, env, cwd), ['--sandbox', 'workspace-write']);
+  await writeFile(codex, 'profile = "ci"\n[profiles.other]\nsandbox_mode = "read-only"\n');
+  assert.equal((await codexWriteFlags(profile, env, cwd)).length, 2);
+  await writeFile(codex, 'profile = "ci"\n[profiles.ci]\nsandbox_mode = "danger-full-access"\n');
+  assert.deepEqual(await codexWriteFlags(profile, env, cwd), []);
+  await writeFile(codex, 'profiles.ci.sandbox_mode = "read-only"\n');
+  assert.deepEqual(await codexWriteFlags(profile, env, cwd), []);
+  await writeFile(codex, '[profiles]\nci = { sandbox_mode = "read-only" }\n');
+  assert.deepEqual(await codexWriteFlags(profile, env, cwd), []);
+  await writeFile(codex, '"sandbox_mode" = "read-only"\n');
+  assert.deepEqual(await codexWriteFlags(profile, env, cwd), []);
+  await writeFile(codex, '# sandbox_mode = "read-only"\n');
+  assert.equal((await codexWriteFlags(profile, env, cwd)).length, 2);
+  await writeFile(codex, `sandbox_mode = "danger-full-access"\n${'# padding\n'.repeat(8000)}`);
+  assert.deepEqual(await codexWriteFlags(profile, env, cwd), []);
+  await writeFile(codex, 'sandbox_mode = "danger-full-access"\n');
+  await chmod(codex, 0o000);
+  assert.deepEqual(await codexWriteFlags(profile, env, cwd), []);
+  await chmod(codex, 0o600);
+  await writeFile(codex, '');
+  await writeFile(join(cwd, '.codex', 'config.toml'), 'sandbox_mode = "read-only"\n');
+  assert.deepEqual(await codexWriteFlags(profile, env, cwd), []);
+});
 
 test('selection handles ambiguity, explicit model/configuration and saved native engine without enrollment', async (t) => {
   const f = await fixture(t);
@@ -324,6 +412,10 @@ test('native permission denial remains actionable and continues the same session
   assert.equal(denied.status, 'blocked');
   const status = await delegateRunStatus(input);
   assert.equal(status.diagnostic.code, 'E_ADAPTER_PERMISSION');
+  await assert.rejects(delegateIntegrationCommand('review', input), {
+    code: 'E_INTEGRATION_RUN',
+    message: /resume with this runId and an answer or correction/,
+  });
   const resumed = await resumeDelegateRun({
     ...input,
     env: { ...f.env, FIXTURE_MODE: '' },
@@ -514,6 +606,69 @@ test('stale prepared worktree checks the actual merged candidate and preserves u
   assert.equal(await readFile(join(f.root, 'owner-note.txt'), 'utf8'), 'owner edit\n');
 });
 
+test('a checkout that differs from the verified candidate names each differing path', async (t) => {
+  const f = await fixture(t);
+  const prepared = await f.prepare();
+  await dispatchDelegateRun({ runId: prepared.runId, runDirectory: f.runDirectory, env: f.env });
+  const record = await readRunRecord(prepared.runId, { directory: f.runDirectory });
+  const custody = JSON.parse(await readFile(record.custodyPath, 'utf8'));
+  const result = await integrateDelegateDelta({
+    custody,
+    run: record,
+    scopePaths: ['source.txt'],
+    checks: [],
+    reviewOnlyReason: 'Exercise the final checkout identity.',
+    beforeApply: async () => {
+      await writeFile(join(f.root, 'late-owner.txt'), 'owner save before acceptance\n');
+      await rm(join(f.root, 'preserved.txt'));
+    },
+  });
+  assert.equal(result.code, 'E_INTEGRATION_SOURCE_DRIFT');
+  assert.deepEqual(
+    result.violations.filter(({ code }) => code === 'E_INTEGRATION_SOURCE_DRIFT'),
+    [
+      { code: 'E_INTEGRATION_SOURCE_DRIFT', path: 'late-owner.txt', change: 'extra' },
+      { code: 'E_INTEGRATION_SOURCE_DRIFT', path: 'preserved.txt', change: 'missing' },
+    ],
+  );
+  assert.equal(await readFile(join(f.root, 'source.txt'), 'utf8'), 'base\n');
+  assert.equal(
+    await readFile(join(f.root, 'late-owner.txt'), 'utf8'),
+    'owner save before acceptance\n',
+  );
+});
+
+test('fresh candidate keeps force-added ignored files beside an unrelated tracked edit', async (t) => {
+  const f = await fixture(t);
+  await mkdir(join(f.root, 'cache'));
+  await writeFile(join(f.root, 'cache', 'tracked.md'), 'force-added\n');
+  await writeFile(join(f.root, 'notes.txt'), 'notes\n');
+  execFileSync('git', ['add', '--force', 'cache/tracked.md', 'notes.txt'], { cwd: f.root });
+  execFileSync('git', ['commit', '-qm', 'track ignored file'], { cwd: f.root });
+  const prepared = await f.prepare();
+  const input = { runId: prepared.runId, runDirectory: f.runDirectory, env: f.env };
+  await dispatchDelegateRun(input);
+  await writeFile(join(f.root, 'notes.txt'), 'owner edit\n');
+  assert.equal((await delegateIntegrationCommand('review', input)).ready, true);
+  const applied = await delegateIntegrationCommand('apply', {
+    ...input,
+    checks: [
+      {
+        executable: process.execPath,
+        args: [
+          '-e',
+          "require('node:assert').equal(require('node:fs').readFileSync('cache/tracked.md','utf8'),'force-added\\n')",
+        ],
+        cwd: '.',
+      },
+    ],
+  });
+  assert.equal(applied.status, 'completed', JSON.stringify(applied));
+  assert.equal(applied.verification.candidateKind, 'fresh-candidate');
+  assert.equal(await readFile(join(f.root, 'source.txt'), 'utf8'), 'implemented\n');
+  assert.equal(await readFile(join(f.root, 'notes.txt'), 'utf8'), 'owner edit\n');
+});
+
 test('failure evidence is saved without automatic baseline and cannot be erased by zero checks', async (t) => {
   const f = await fixture(t);
   const prepared = await f.prepare();
@@ -642,6 +797,10 @@ test('a candidate edit after selection blocks checks and integration while retai
     },
   });
   assert.equal(result.code, 'E_INTEGRATION_CANDIDATE_STALE');
+  assert.deepEqual(
+    result.violations.filter(({ code }) => code === 'E_INTEGRATION_CANDIDATE_STALE'),
+    [{ code: 'E_INTEGRATION_CANDIDATE_STALE', path: 'source.txt', change: 'changed' }],
+  );
   assert.equal(result.checks.length, 0);
   assert.equal(await readFile(join(f.root, 'source.txt'), 'utf8'), 'base\n');
   assert.equal(

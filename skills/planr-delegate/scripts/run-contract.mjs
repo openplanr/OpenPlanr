@@ -55,6 +55,17 @@ export function integrationPaths(paths) {
             'E_DELEGATE_SCOPE',
             'Integration paths must be safe repository-relative paths.',
           );
+        // Scope entries are literal prefixes; a glob would only fail later at review.
+        const parts = path.split('/');
+        const glob = parts.findIndex((part) => /[*?]/u.test(part));
+        if (glob !== -1) {
+          throw new DelegateRunError(
+            'E_DELEGATE_SCOPE',
+            glob > 0
+              ? `Integration paths are literal path prefixes, not globs; use "${parts.slice(0, glob).join('/')}" instead of "${path}".`
+              : `Integration paths are literal path prefixes, not globs; list the files or directories "${path}" should cover.`,
+          );
+        }
         return path;
       }),
     ),
