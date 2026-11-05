@@ -21,7 +21,7 @@ import { resolveArtifactHtml } from '../../packages/artifact/lib/artifact/artifa
 import { digestArtifactEnvelope } from '../../packages/artifact/lib/artifact/envelope.mjs';
 import { readRuntimeAsset } from '../../packages/artifact/lib/artifact/internal/runtime-asset.mjs';
 import { createArtifactReview } from '../../packages/artifact/lib/artifact/review.mjs';
-import { renderArtifactStageRuntimeAsset } from '../../packages/artifact/scripts/generate-artifact-shell.mjs';
+import { renderLocalArtifactStageRuntimeAsset } from '../../packages/artifact/scripts/generate-artifact-shell.mjs';
 import { renderDesignStudioRuntimeAsset } from '../../packages/design/scripts/generate-design-studio.mjs';
 import { readSkillSourceRegistry } from '../../packages/skill-runtime/src/catalog.mjs';
 import {
@@ -560,7 +560,7 @@ test('design runtime bundling and release archives preserve binary assets withou
       [
         'scripts/runtime/packages/artifact/templates/artifact-review-stage.js',
         () =>
-          renderArtifactStageRuntimeAsset({
+          renderLocalArtifactStageRuntimeAsset({
             projectRoot: join(root, 'packages/artifact'),
             compact: false,
           }),
@@ -576,7 +576,7 @@ test('design runtime bundling and release archives preserve binary assets withou
       );
       assert.ok(resources.some((resource) => resource.path === `${path}.sources.json`));
       const bytes = readRuntimeAsset(join(installed, path));
-      assert.deepEqual(bytes, Buffer.from(render()));
+      assert.ok(bytes.equals(Buffer.from(await render())), `${path} matches its rendered source`);
       assert.doesNotThrow(() => new Script(bytes.toString('utf8')), path);
     }
   } finally {
