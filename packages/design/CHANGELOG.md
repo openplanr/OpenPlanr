@@ -1,5 +1,14 @@
 # @openplanr/design
 
+## 0.6.1
+
+### Patch Changes
+
+- Updated dependencies [8a7403c]
+- Updated dependencies [c1da084]
+  - @openplanr/protocol@0.16.0
+  - @openplanr/artifact@0.8.1
+
 ## 0.6.0
 
 ### Minor Changes

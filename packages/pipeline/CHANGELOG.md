@@ -1,5 +1,38 @@
 # Changelog
 
+## 0.62.0
+
+### Minor Changes
+
+- 6a629c8: Render bar, line and scatter diagrams with labelled axes and data marks from their series values. Preserve chart content in SVG, HTML and PNG, with explicit diagnostics for unsupported axis mappings and editable exports.
+- 807f3e5: Render radar charts as closed series polygons and polar charts as value-scaled sectors with radial grids, category labels and legends. Reject negative values and report unsupported editable chart exports explicitly.
+
+### Patch Changes
+
+- 7cee602: The design skills now share through the `openplanr` CLI. Their bundled scripts no longer read a shared review's owner keys or contact the share service: `design.mjs share`, `publish`, `sync` and `manage`, the studio's Share dialog, feedback sync and handoff decisions on a shared design all run `openplanr artifact` for the network step. Local design work is unchanged and needs no CLI.
+  
+  - Without the CLI, sharing stops with `E_DESIGN_SHARE_CLI_REQUIRED` and asks you to run `npm install -g openplanr`. Feedback inspection still works and reports that sync was skipped, and the studio's Share dialog says the CLI is needed.
+  - If the skills and the CLI use different sharing formats, sharing refuses with `E_DESIGN_SHARE_RUNTIME_MISMATCH` and names which one to update. An older CLI is refused the same way.
+  - Existing shares keep working. The CLI reads the same owner records, sends to the same address, and `OPENPLANR_SHARE_BASE` still chooses the origin for a new share.
+  - The studio syncs a shared design every 15 seconds only while its page is visible, and no longer polls designs that are not shared.
+  - A recovery file exported without `--output` goes to a new file in `PLANR_HOME/design-recovery`, a private folder next to the owner keys, from the CLI and from the studio's Share dialog. The file holds the owner keys, so keep it private when you move it.
+  - If the CLI does not answer within a few seconds, the studio keeps working and reports that the CLI did not respond. Changing the category or decision on a hosted reviewer's comment is refused, and nothing is saved, until sharing can run, instead of being saved locally and never sent.
+  - On Windows the skills start the CLI's own script from the `openplanr.cmd` that npm installs.
+- 103c244: You can now manage a shared design from the CLI, the same way the local studio does:
+  
+  - `openplanr artifact status <design-document>` shows the review link and whether the current revision is published.
+  - `openplanr artifact manage <design-document> --action ...` rotates the reviewer access token, pauses or resumes comments, revokes or deletes the review, prints the reviewer token, and writes or restores a private recovery file. Rotate, revoke, delete and restore ask first; `--yes` confirms them.
+  - `openplanr artifact feedback <design-document>` syncs a shared design, then inspects, exports, imports, selects or resolves its feedback.
+  - `openplanr artifact handoff <design-document> --action ...` now inspects and updates a handoff as well as drafting it. On a shared design, category and disposition changes also reach the review.
+  
+  If the optional `planr-pipeline` package is missing, these commands say so with `E_DESIGN_SHARE_PIPELINE_MISSING` instead of failing with a generic error.
+  
+  `design.mjs <command> --help` and `-h` now print help wherever they appear. Before, `design.mjs share --help` ran the share command instead of printing help.
+- 8a7403c: The design skills now ship a smaller review stage and contract set. Their copy of the review stage leaves out link sharing, the hosted viewer and live rooms, and their scripts no longer bundle the sharing and hosted workspace contracts or the paste and workspace schemas. The studio, prototype, walkthrough and feedback rail work as before, and sharing still runs through the `openplanr` CLI. A portable HTML export from the skills no longer shows a Share button, which could only report that sharing was unavailable.
+  
+  `@openplanr/protocol` adds a `large-object-limits` entry point, so you can read the resource limits without loading the sharing contracts.
+- 6d86c9a: The npm package, README and plugin descriptions now say what OpenPlanr is: the open harness around your coding agent, with plans as files in your repo, checks before you merge, and a record of what shipped. The package keywords drop `sprint` and `user-story` and add `code-review` and `agent-harness`. Commands and behavior are unchanged.
+
 ## 0.61.0
 
 ### Minor Changes
