@@ -120,5 +120,9 @@ test('the local stage leaves out every sharing module and keeps the review rail'
   );
   assert.ok(inputs.every((path) => !path.includes('local-stage-stub:')));
   assert.ok([...emitted].every((path) => inputs.includes(path)));
-  assert.notEqual(local, renderArtifactStageRuntimeAsset({ compact: false }));
+  const upstream = renderArtifactStageRuntimeAsset({ compact: false });
+  assert.ok(
+    local !== upstream,
+    `the local stage (${local.length} characters) differs from the full stage (${upstream.length})`,
+  );
 });

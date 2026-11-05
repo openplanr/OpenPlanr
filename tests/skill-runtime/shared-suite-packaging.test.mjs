@@ -96,11 +96,14 @@ test('standalone downloads own complete canonical resources independently of thi
     const packageInfo = readStandardSkillPackage({ repoRoot: root, registryRow: row(id) });
     const entries = buildStandaloneSkillEntries({ repoRoot: root, registryRow: row(id) });
     const files = new Map(entries.map(({ path, bytes }) => [path, bytes]));
-    assert.deepEqual(files.get('LICENSE'), readFileSync(join(root, 'LICENSE')));
+    assert.ok(files.get('LICENSE').equals(readFileSync(join(root, 'LICENSE'))), `${id}/LICENSE`);
     for (const resource of packageInfo.resources) {
       assert.ok(files.has(resource.path), `${id}/${resource.path}`);
       if (resource.path !== 'agents/openai.yaml')
-        assert.deepEqual(files.get(resource.path), readFileSync(resource.absolute));
+        assert.ok(
+          files.get(resource.path).equals(readFileSync(resource.absolute)),
+          `${id}/${resource.path} is ${files.get(resource.path).length} bytes, source ${readFileSync(resource.absolute).length}`,
+        );
     }
     const name = id.slice('planr-'.length);
     assert.match(files.get('agents/openai.yaml').toString(), new RegExp(`\\$${name}\\b`, 'u'));

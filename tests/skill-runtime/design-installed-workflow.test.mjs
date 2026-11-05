@@ -527,7 +527,12 @@ test('design runtime bundling and release archives preserve binary assets withou
     const portablePath = `scripts/runtime/${sourcePath}`;
     const resource = resources.find(({ path }) => path === portablePath);
     assert.ok(resource, `portable Design resources include ${sourcePath}`);
-    assert.deepEqual(resourceBytes(resource.bytes), readFileSync(join(root, sourcePath)));
+    const portable = resourceBytes(resource.bytes);
+    const source = readFileSync(join(root, sourcePath));
+    assert.ok(
+      portable.equals(source),
+      `${sourcePath} is ${portable.length} bytes, source is ${source.length}`,
+    );
   }
   const binary = Buffer.from([0, 255, 128, 13, 10, 193, 240, 159, 255, 0]);
   const entries = [
@@ -540,8 +545,13 @@ test('design runtime bundling and release archives preserve binary assets withou
   const archive = createDeterministicZip(entries);
   const extracted = readDeterministicZip(archive);
   assert.deepEqual(extracted.find(({ path }) => path === 'assets/opaque-font.woff2').bytes, binary);
-  for (const entry of resources)
-    assert.deepEqual(extracted.find(({ path }) => path === entry.path).bytes, entry.bytes);
+  for (const entry of resources) {
+    const unpacked = extracted.find(({ path }) => path === entry.path).bytes;
+    assert.ok(
+      unpacked.equals(entry.bytes),
+      `${entry.path} unpacks to ${unpacked.length} bytes, packed ${entry.bytes.length}`,
+    );
+  }
   assert.ok(
     resources.length < 200,
     'portable closure fits the frozen skill-package resource limit',
@@ -576,7 +586,11 @@ test('design runtime bundling and release archives preserve binary assets withou
       );
       assert.ok(resources.some((resource) => resource.path === `${path}.sources.json`));
       const bytes = readRuntimeAsset(join(installed, path));
-      assert.ok(bytes.equals(Buffer.from(await render())), `${path} matches its rendered source`);
+      const expected = Buffer.from(await render());
+      assert.ok(
+        bytes.equals(expected),
+        `${path} is ${bytes.length} bytes, its rendered source ${expected.length}`,
+      );
       assert.doesNotThrow(() => new Script(bytes.toString('utf8')), path);
     }
   } finally {

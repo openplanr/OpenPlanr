@@ -69,7 +69,8 @@ test('the Claude archive is built from inspected bytes and modes, deterministica
     assert.equal(checked.status, 0, checked.stderr);
   }
   const bytes = readFileSync(join(first.root, archive));
-  assert.deepEqual(bytes, readFileSync(join(second.root, archive)));
+  const again = readFileSync(join(second.root, archive));
+  assert.ok(bytes.equals(again), `${archive} is ${bytes.length} bytes, then ${again.length}`);
   const entries = readDeterministicZip(bytes);
   assert.deepEqual(
     entries.map(({ path, mode }) => [path, mode & 0o777]),
