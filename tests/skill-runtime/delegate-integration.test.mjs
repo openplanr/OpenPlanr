@@ -24,7 +24,10 @@ import {
   reviewBranchDelta,
 } from '../../skills/planr-delegate/scripts/handoff.mjs';
 import { snapshotHelper } from '../../skills/planr-delegate/scripts/helper-snapshot.mjs';
-import { delegateIntegrationCommand } from '../../skills/planr-delegate/scripts/integrate.mjs';
+import {
+  delegateIntegrationCommand,
+  discoverDelegateChecks,
+} from '../../skills/planr-delegate/scripts/integrate.mjs';
 import {
   handoffPresentation,
   implementationReport,
@@ -316,6 +319,111 @@ test('preserve, scope, source drift, staged, and committed changes block without
       scenario.name,
     );
   }
+});
+
+test('safe mode, deletion, and new-file delta applies as uncommitted diff after independent checks', async () => {
+  const { custody, repositoryRoot } = await fixture({
+    files: {
+      'package.json': JSON.stringify({
+        scripts: {
+          'test:focused': 'node -e "process.exit(0)"',
+          'check:boundaries': 'node -e "process.exit(0)"',
+        },
+      }),
+    },
+  });
+  await writeFile(join(custody.worktreePath, 'tracked.txt'), 'delegate\n');
+  await chmod(join(custody.worktreePath, 'tracked.txt'), 0o755);
+  await rm(join(custody.worktreePath, 'keep.txt'));
+  await writeFile(join(custody.worktreePath, 'new.txt'), 'new\n');
+  const checks = await discoverDelegateChecks({ repositoryRoot, changedPaths: ['tracked.txt'] });
+  assert.ok(checks.some((check) => check.kind === 'focused'));
+  assert.ok(checks.some((check) => check.kind === 'regression'));
+  const result = await integrateBranchDelta({
+    custody,
+    run,
+    scopePaths: ['tracked.txt', 'keep.txt', 'new.txt'],
+    checks,
+  });
+  assert.equal(result.status, 'completed', JSON.stringify(result.violations));
+  assert.equal(
+    result.checks.every((check) => check.status === 'passed'),
+    true,
+  );
+  assert.equal(await readFile(join(repositoryRoot, 'tracked.txt'), 'utf8'), 'delegate\n');
+  const { stdout } = await git(repositoryRoot, 'status', '--short');
+  assert.match(stdout, /tracked\.txt/u);
+  assert.match(stdout, /new\.txt/u);
+  assert.match(stdout, /keep\.txt/u);
+});
+
+test('failed check rolls back source and reports independent finding', async () => {
+  const { custody, repositoryRoot } = await fixture({
+    files: {
+      'package.json': JSON.stringify({ scripts: { 'test:fail': 'node -e "process.exit(1)"' } }),
+    },
+  });
+  await writeFile(join(custody.worktreePath, 'tracked.txt'), 'delegate\n');
+  const result = await integrateBranchDelta({
+    custody,
+    run,
+    scopePaths: ['tracked.txt'],
+    checks: ['npm run test:fail'],
+  });
+  assert.equal(result.status, 'blocked');
+  assert.equal(result.checks[0].status, 'failed');
+  assert.equal(result.checks[0].classification, 'baseline-failure');
+  assert.equal(await readFile(join(repositoryRoot, 'tracked.txt'), 'utf8'), 'base\n');
+});
+
+test('timed-out check rolls back without labeling the patch a regression or retrying the baseline', async () => {
+  const { custody, repositoryRoot } = await fixture({
+    files: {
+      'package.json': JSON.stringify({
+        scripts: { 'test:slow': 'node -e "setTimeout(() => {}, 300)"' },
+      }),
+    },
+  });
+  await writeFile(join(custody.worktreePath, 'tracked.txt'), 'delegate\n');
+  const result = await integrateBranchDelta({
+    custody,
+    run,
+    scopePaths: ['tracked.txt'],
+    checks: ['npm run test:slow'],
+    timeoutMs: 20,
+  });
+  assert.equal(result.status, 'blocked');
+  assert.equal(result.code, 'E_INTEGRATION_CHECK_TIMEOUT');
+  assert.equal(result.checks[0].status, 'timed-out');
+  assert.equal(result.checks[0].classification, undefined);
+  assert.match(result.nextAction, /timeoutMs/u);
+  assert.equal(await readFile(join(repositoryRoot, 'tracked.txt'), 'utf8'), 'base\n');
+});
+
+test('unsafe delegated symlink is reported as a conflict without touching source', async () => {
+  const { custody, repositoryRoot } = await fixture();
+  await symlink('/etc/passwd', join(custody.worktreePath, 'escape.txt'));
+  const result = await integrateBranchDelta({
+    custody,
+    run,
+    scopePaths: ['escape.txt'],
+    checks: [],
+  });
+  assert.equal(result.status, 'blocked');
+  assert.ok(result.violations.some((violation) => violation.code === 'E_INTEGRATION_LINK'));
+  await assert.rejects(lstat(join(repositoryRoot, 'escape.txt')), { code: 'ENOENT' });
+});
+
+test('custody without a run branch is refused instead of integrated', async () => {
+  const { custody } = await fixture();
+  const { handoff, branch, base, parentBranch, refs, ...detached } = custody;
+  await assert.rejects(reviewBranchDelta({ custody: detached, run, scopePaths: ['tracked.txt'] }), {
+    code: 'E_INTEGRATION_RECORD',
+  });
+  await assert.rejects(
+    integrateBranchDelta({ custody: detached, run, scopePaths: ['tracked.txt'], checks: [] }),
+    { code: 'E_INTEGRATION_RECORD' },
+  );
 });
 
 test('installed review command reads private custody but reports only observed metadata', async () => {
