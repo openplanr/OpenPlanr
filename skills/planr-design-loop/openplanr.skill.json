@@ -265,7 +265,7 @@
       ]
     },
     {
-      "path": "scripts/design-shared-artifact-support-dependencies-design-support-protocol-contracts-3d9b1a86.mjs",
+      "path": "scripts/design-shared-artifact-support-dependencies-design-support-protocol-contracts-3b87ee1f.mjs",
       "kind": "script",
       "executable": false,
       "hosts": [
@@ -277,6 +277,17 @@
     },
     {
       "path": "scripts/design-shared-artifact-support-protocol-contracts-7ff33c4f.mjs",
+      "kind": "script",
+      "executable": false,
+      "hosts": [
+        "claude-code",
+        "codex",
+        "chatgpt",
+        "cursor"
+      ]
+    },
+    {
+      "path": "scripts/design-shared-design-support-0bac378d.mjs",
       "kind": "script",
       "executable": false,
       "hosts": [

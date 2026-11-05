@@ -15,7 +15,6 @@ import {
   unlinkSync,
   writeFileSync,
 } from 'node:fs';
-import { homedir } from 'node:os';
 import { basename, dirname, join, resolve } from 'node:path';
 import { digestArtifactEnvelope } from '@openplanr/artifact/envelope.mjs';
 import { resolveArtifactReviewDestination } from '@openplanr/artifact/import.mjs';
@@ -38,7 +37,8 @@ import { custodyLocation, FORMAT, presentationFingerprint, safeStatus } from './
 import * as workspace from './workspace-client.mjs';
 import { mergeWorkspaceFeedback } from './workspace-feedback.mjs';
 
-export { getDesignShareStatus } from './share-status.mjs';
+export { defaultDesignRecoveryOutput } from './recovery-location.mjs';
+export { getDesignShareStatus, getDesignShareStatusAsync } from './share-status.mjs';
 
 /** Never upload source paths, local provenance, arbitrary state, or owner keys. */
 export function prepareDesignShareBundle(file) {
@@ -310,14 +310,15 @@ export async function publishDesignReviewMetadata(file, payload, { revisionId, .
   });
 }
 
+/** In-process sharing holds the keys itself, so it never needs to refuse ahead of a change. */
+export function assertDesignShareAvailable() {}
+
 /** Explicit recovery export; normal status/CLI output never contains credentials. */
-/** Without `output`, writes a new file in `~/Downloads`. */
 export async function exportDesignShareRecovery(file, { output, ...options } = {}) {
+  if (!output) throw new Error('Recovery export requires a new private output path.');
   return withCustody(file, options, async ({ record }) => {
     if (!record) throw new Error('Create the shared review first.');
-    const target = resolve(
-      output ?? join(homedir(), 'Downloads', `openplanr-design-recovery-${Date.now()}.json`),
-    );
+    const target = resolve(output);
     mkdirSync(dirname(target), { recursive: true, mode: 0o700 });
     const recovery = structuredClone(record);
     if (

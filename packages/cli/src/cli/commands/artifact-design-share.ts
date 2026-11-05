@@ -6,6 +6,7 @@ import {
   DESIGN_MANAGE_ACTIONS,
   type DesignHandoffAction,
   type DesignShareAction,
+  defaultDesignRecoveryOutput,
   isDesignDocumentFile,
   prepareDesignHandoff,
   readDesignShareRuntime,
@@ -123,7 +124,7 @@ export function registerDesignShareCommands(artifact: Command, context: DesignSh
     .requiredOption('--action <action>', DESIGN_MANAGE_ACTIONS.join('|'))
     .option(
       '--output <path>',
-      'recovery: write the private recovery file to this new path (default: ~/Downloads)',
+      'recovery: write the private recovery file to this new path (default: a new file in PLANR_HOME/design-recovery)',
     )
     .option('--input <path>', 'restore: read the private recovery file from this path')
     .option('--yes', 'confirm a rotate, revoke, delete or restore non-interactively', false)
@@ -147,8 +148,13 @@ export function registerDesignShareCommands(artifact: Command, context: DesignSh
       )
         return;
       const result = await runDesignShareAction(input, action as DesignShareAction, {
-        ...(action === 'recovery' && typeof options.output === 'string'
-          ? { output: context.resolveInput(options.output) }
+        ...(action === 'recovery'
+          ? {
+              output:
+                typeof options.output === 'string'
+                  ? context.resolveInput(options.output)
+                  : await defaultDesignRecoveryOutput(),
+            }
           : {}),
         ...(action === 'restore' ? { input: context.resolveInput(String(options.input)) } : {}),
       });

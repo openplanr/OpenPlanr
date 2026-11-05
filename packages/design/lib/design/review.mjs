@@ -67,8 +67,10 @@ import {
 } from './implementation-handoff-approval.mjs';
 import { createDesignReviewExport } from './review-export.mjs';
 import {
+  defaultDesignRecoveryOutput,
   exportDesignShareRecovery,
   getDesignShareStatus,
+  getDesignShareStatusAsync,
   manageDesignShare,
   publishDesignShare,
   shareDesign,
@@ -136,8 +138,11 @@ function studioContentIdentity(current) {
     }),
   );
 }
-/** Deterministic projection of the local ledger, using original immutable sources. */
-export function exportDesignReview(file, { scope = 'all', env = process.env } = {}) {
+/**
+ * Deterministic projection of the local ledger, using original immutable sources.
+ * `shared` takes a share status the caller already read; otherwise it is read here.
+ */
+export function exportDesignReview(file, { scope = 'all', env = process.env, shared: known } = {}) {
   if (!['all', 'current'].includes(scope))
     throw new Error('Review export scope must be current or all.');
   const current = currentDesign(file),
@@ -169,12 +174,13 @@ export function exportDesignReview(file, { scope = 'all', env = process.env } = 
     byDigest.set(value.reviewOf, [...(byDigest.get(value.reviewOf) ?? []), value]);
   // Attachment status projects only public identities. Credentials never enter
   // the export input, and an absent attachment does not block local reviews.
-  let shared = null;
-  try {
-    shared = getDesignShareStatus(file, { env });
-  } catch {
-    /* Local-only or unavailable attachment. */
-  }
+  let shared = known ?? null;
+  if (known === undefined)
+    try {
+      shared = getDesignShareStatus(file, { env });
+    } catch {
+      /* Local-only or unavailable attachment. */
+    }
   const currentRevisionId =
     shared?.publishedRevision === current.revision && shared?.revision
       ? shared.revision
@@ -886,7 +892,12 @@ async function startDesignReviewUnlocked(
             )
               throw new Error('Review export requires scope current or all.');
             await syncDesignShare(file, { env, fetchImpl, unavailable: 'skip' });
-            respond(res, 200, exportDesignReview(file, { scope: input.scope ?? 'all', env }));
+            const shared = await getDesignShareStatusAsync(file, { env }).catch(() => null);
+            respond(
+              res,
+              200,
+              exportDesignReview(file, { scope: input.scope ?? 'all', env, shared }),
+            );
           } else {
             if (
               !input ||
@@ -940,7 +951,7 @@ async function startDesignReviewUnlocked(
             readFileSync(new URL('../../templates/studio/share.js', import.meta.url), 'utf8'),
           );
         } else if (route === 'design-share' && req.method === 'GET') {
-          respond(res, 200, getDesignShareStatus(file, { env }));
+          respond(res, 200, await getDesignShareStatusAsync(file, { env }));
         } else if (route === 'design-share' && req.method === 'POST') {
           if (
             req.headers['x-openplanr-design'] !== '1' ||
@@ -960,7 +971,11 @@ async function startDesignReviewUnlocked(
           if (action === 'create') result = await shareDesign(file, options);
           else if (action === 'publish') result = await publishDesignShare(file, options);
           else if (action === 'sync') result = await syncDesignShare(file, options);
-          else if (action === 'recovery') result = await exportDesignShareRecovery(file, options);
+          else if (action === 'recovery')
+            result = await exportDesignShareRecovery(file, {
+              ...options,
+              output: defaultDesignRecoveryOutput(env),
+            });
           else result = await manageDesignShare(file, action, options);
           respond(res, 200, result);
         } else if (route === 'design-status' && req.method === 'GET') {

@@ -666,7 +666,8 @@ A shared design is managed from the same command. `status` shows the review link
 and whether the current revision is published, without printing secrets. `manage`
 rotates the reviewer access token, pauses or resumes comments, revokes or deletes
 the review, prints the reviewer token with `--action access --json`, and writes or
-restores a private recovery file. Rotate, revoke, delete and restore ask first;
+restores a private recovery file. Without `--output`, the recovery file is a new
+file in `PLANR_HOME/design-recovery` (folder 0700, file 0600). Rotate, revoke, delete and restore ask first;
 `--yes` confirms them non-interactively. `feedback` syncs a shared design before it
 inspects or exports feedback. `handoff` drafts the review handoff by default, and
 its other actions update it from a JSON object; on a shared design, category and

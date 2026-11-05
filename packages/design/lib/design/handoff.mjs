@@ -32,7 +32,7 @@ export {
   readDesignHandoffReadiness,
 } from './handoff-reader.mjs';
 
-import { publishDesignReviewMetadata } from './share.mjs';
+import { assertDesignShareAvailable, publishDesignReviewMetadata } from './share.mjs';
 
 const conflict = (message) => Object.assign(new Error(message), { statusCode: 409 });
 function sourceItem(pin, shareUrl) {
@@ -155,6 +155,9 @@ export async function updateDesignHandoff(
           if (!choices.includes(input[input.action])) throw new Error(`Invalid ${input.action}.`);
           if (typeof (input.reason ?? '') !== 'string' || (input.reason ?? '').length > 16384)
             throw new Error('Disposition reason is too long.');
+          // A decision on a hosted reviewer's pin must reach the review, so it is refused
+          // before anything is saved when sharing cannot run.
+          if (pin.revisionId) assertDesignShareAvailable({ env, ...shareOptions });
           const updatedAt = new Date().toISOString();
           const local = normalizedLocalMetadata(
             readJson(metadataPath(value.current), { version: 0, byRevision: {} }),
@@ -309,7 +312,12 @@ export async function updateDesignHandoff(
         ...shareOptions,
       });
     } catch (error) {
-      synchronization = { pending: true, error: error.message };
+      // The decision was not queued; only a CLI that timed out mid-publish may have stored it.
+      synchronization = {
+        pending: false,
+        error: error.message,
+        ...(error.code ? { code: error.code } : {}),
+      };
     }
   }
   return {

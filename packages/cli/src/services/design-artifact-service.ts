@@ -211,6 +211,18 @@ export async function runDesignShareAction(
   }
 }
 
+/** A new private recovery file path under `PLANR_HOME/design-recovery`. */
+export async function defaultDesignRecoveryOutput(): Promise<string> {
+  const runtime = await pipelineModule(sharingPipeline(), 'lib/design/recovery-location.mjs');
+  if (typeof runtime.defaultDesignRecoveryOutput !== 'function')
+    throw new ArtifactCommandError(
+      'E_DESIGN_SHARE_UNSUPPORTED',
+      'The installed workflow package does not choose a default recovery file location.',
+      'Pass --output <path>, or update OpenPlanr: npm install -g openplanr.',
+    );
+  return String(runtime.defaultDesignRecoveryOutput(process.env));
+}
+
 /** Versions the skill helpers compare before they hand a design share operation to this CLI. */
 export async function readDesignShareRuntime(cliVersion: string) {
   const pipeline = sharingPipeline();

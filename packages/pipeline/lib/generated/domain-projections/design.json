@@ -445,7 +445,7 @@
     {
       "source": "packages/design/lib/design/handoff.mjs",
       "target": "lib/design/handoff.mjs",
-      "sha256": "c4e384b22f493cc66140b0e6b8c9a9bc730f902c369afebe5fd9bddff2c91cf8",
+      "sha256": "f2d03a594bf06a641ea40031662dca659f5d87d506333d46537549cbc7064b16",
       "mode": "644"
     },
     {
@@ -533,6 +533,12 @@
       "mode": "644"
     },
     {
+      "source": "packages/design/lib/design/recovery-location.mjs",
+      "target": "lib/design/recovery-location.mjs",
+      "sha256": "a8a76b5b99769c9e3c8bb2df9269a5eca70f659b86504bbd185cde20c3c85a35",
+      "mode": "644"
+    },
+    {
       "source": "packages/design/lib/design/review-export.mjs",
       "target": "lib/design/review-export.mjs",
       "sha256": "0067c13684a07cc9ff9d5a4c2b1cfbe7e4b3897ca3a8c48c7dc3a60f9d9492e0",
@@ -541,7 +547,7 @@
     {
       "source": "packages/design/lib/design/review.mjs",
       "target": "lib/design/review.mjs",
-      "sha256": "a75182bf6ad2f44922f82cbdb7ab8ddaaf1712f8747f575c3bcda39f905fdc5f",
+      "sha256": "b710282c72b906c3eafcefcf76ae1846a8e059e40159b3428d92b47bd1945114",
       "mode": "644"
     },
     {
@@ -559,7 +565,7 @@
     {
       "source": "packages/design/lib/design/share-cli-bridge.mjs",
       "target": "lib/design/share-cli-bridge.mjs",
-      "sha256": "9b407b47d8f553c31c8f8c8c22a8ab4645082d7847bed1f7c29f09fc5b73e5c9",
+      "sha256": "4931569c9e2699c36a224c707d2283e6c446d55d6e826ca1302f221c0e9c7b52",
       "mode": "644"
     },
     {
@@ -571,13 +577,13 @@
     {
       "source": "packages/design/lib/design/share-status.mjs",
       "target": "lib/design/share-status.mjs",
-      "sha256": "f2763e1c6bc4133215b5a901153ae23eaae5a5df350fb8fc607032bd7825ddff",
+      "sha256": "bb46cfe7b719fc469c23b9bffb6f0e0146041348010be86daee29db9a1fb6edf",
       "mode": "644"
     },
     {
       "source": "packages/design/lib/design/share.mjs",
       "target": "lib/design/share.mjs",
-      "sha256": "78783dc304e5ecd82646a6a83ccd2b7529d023b80e937cba8040c5e52d21e755",
+      "sha256": "36417ed4423f4a3c0f290ee471e9d8c8aa67a84b706ee611b66067bad9146d0d",
       "mode": "644"
     },
     {
@@ -703,7 +709,7 @@
     {
       "source": "packages/design/templates/studio/share.js",
       "target": "templates/studio/share.js",
-      "sha256": "c012ef899571836888bccb78212ac4b7437d0e380f29aa671c74f33bcc0bfe5c",
+      "sha256": "daee29d2c1e1a413d245cbaf321c882cfdb4df82276482a7747d8976d85fdfcd",
       "mode": "644"
     },
     {

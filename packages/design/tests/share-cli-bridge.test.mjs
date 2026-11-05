@@ -1,7 +1,16 @@
 import assert from 'node:assert/strict';
-import { chmodSync, existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import {
+  chmodSync,
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { performance } from 'node:perf_hooks';
 import { test } from 'node:test';
 import { DESIGN_SHARE_COMPAT } from '../lib/design/share-compat.mjs';
 
@@ -22,6 +31,7 @@ let input = '';
 try { input = readFileSync(0, 'utf8'); } catch {}
 appendFileSync(${JSON.stringify(log)}, JSON.stringify({ args, input }) + '\\n');
 const answer = JSON.parse(readFileSync(${JSON.stringify(join(dir, 'answers.json'))}, 'utf8'))[args[1]];
+if (answer.delayMs) Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, answer.delayMs);
 process.stdout.write(JSON.stringify(answer.body) + '\\n');
 process.exitCode = answer.exit ?? 0;
 `,
@@ -200,5 +210,86 @@ test('an error the CLI reports keeps its code, problem and recovery', async (t) 
   assert.throws(() => bridge.getDesignShareStatus('/d/design-document.json', { env: cli.env }), {
     code: 'E_ARTIFACT_INPUT_INVALID',
     message: 'Not a design.',
+  });
+});
+
+test('a CLI that does not answer is reported as unresponsive, once per wait, without blocking', async (t) => {
+  const cli = fakeCli(t, {
+    'share-runtime': { delayMs: 60_000, body: runtime(DESIGN_SHARE_COMPAT).body },
+  });
+  const file = '/d/design-document.json';
+  let ticks = 0;
+  const timer = setInterval(() => ticks++, 50);
+  const started = performance.now();
+  const status = await bridge.getDesignShareStatusAsync(file, { env: cli.env });
+  clearInterval(timer);
+  assert.equal(status.shared, false);
+  assert.equal(status.unavailable.code, 'E_DESIGN_SHARE_CLI_UNRESPONSIVE');
+  assert.match(status.unavailable.message, /did not finish `artifact share-runtime` within 5 s/);
+  assert.ok(ticks > 50, `the event loop kept running (${ticks} ticks)`);
+  assert.ok(performance.now() - started < 15_000);
+  const again = performance.now();
+  assert.equal(
+    (await bridge.getDesignShareStatusAsync(file, { env: cli.env })).unavailable.code,
+    'E_DESIGN_SHARE_CLI_UNRESPONSIVE',
+  );
+  assert.equal(
+    bridge.getDesignShareStatus(file, { env: cli.env }).unavailable.code,
+    'E_DESIGN_SHARE_CLI_UNRESPONSIVE',
+  );
+  await assert.rejects(bridge.shareDesign(file, { env: cli.env }), {
+    code: 'E_DESIGN_SHARE_CLI_UNRESPONSIVE',
+  });
+  assert.ok(performance.now() - again < 1_000, 'the failed handshake is remembered');
+  assert.deepEqual(
+    cli.calls().map(({ args }) => args[1]),
+    ['share-runtime'],
+    'the CLI was started once',
+  );
+});
+
+test('a missing option value is refused before the CLI runs', async (t) => {
+  const cli = fakeCli(t, { 'share-runtime': runtime(DESIGN_SHARE_COMPAT) });
+  await assert.rejects(
+    bridge.importDesignShareRecovery('/d/design-document.json', { env: cli.env }),
+    {
+      code: 'E_DESIGN_SHARE_INPUT_INVALID',
+      message: 'Recovery restore requires --input <private recovery file>.',
+    },
+  );
+  await assert.rejects(
+    bridge.publishDesignReviewMetadata('/d/design-document.json', {}, { env: cli.env }),
+    { code: 'E_DESIGN_SHARE_INPUT_INVALID', message: /requires --revision/ },
+  );
+  assert.deepEqual(cli.calls(), []);
+});
+
+test('on Windows the CLI script behind the npm shim runs under this Node', (t) => {
+  const root = mkdtempSync(join(tmpdir(), 'planr-win-cli-'));
+  t.after(() => rmSync(root, { recursive: true, force: true }));
+  const npm = join(root, 'npm');
+  const script = join(npm, 'node_modules', 'openplanr', 'bin', 'openplanr.js');
+  mkdirSync(join(npm, 'node_modules', 'openplanr', 'bin'), { recursive: true });
+  writeFileSync(script, '');
+  writeFileSync(
+    join(npm, 'openplanr.cmd'),
+    '@ECHO off\r\nGOTO start\r\n:start\r\n"%_prog%"  "%dp0%\\node_modules\\openplanr\\bin\\openplanr.js" %*\r\n',
+  );
+  const empty = join(root, 'empty');
+  mkdirSync(empty);
+  const execPath = 'C:\\node\\node.exe';
+  assert.deepEqual(
+    bridge.cliLauncher({ platform: 'win32', env: { Path: `${empty};${npm}` }, execPath }),
+    { file: execPath, args: [script] },
+  );
+  writeFileSync(join(npm, 'openplanr.cmd'), '@ECHO off\r\n');
+  assert.deepEqual(bridge.cliLauncher({ platform: 'win32', env: { PATH: npm }, execPath }), {
+    file: execPath,
+    args: [script],
+  });
+  assert.equal(bridge.cliLauncher({ platform: 'win32', env: { PATH: empty }, execPath }), null);
+  assert.deepEqual(bridge.cliLauncher({ platform: 'darwin', env: {} }), {
+    file: 'openplanr',
+    args: [],
   });
 });

@@ -7,6 +7,7 @@ import {
   readdirSync,
   readFileSync,
   realpathSync,
+  renameSync,
   rmSync,
   symlinkSync,
   writeFileSync,
@@ -14,6 +15,7 @@ import {
 import { createRequire } from 'node:module';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
+import { performance } from 'node:perf_hooks';
 import { pathToFileURL } from 'node:url';
 import { afterEach, describe, expect, it } from 'vitest';
 import { resolvePipelinePackageRoot } from '../helpers/pipeline-package-root.js';
@@ -64,7 +66,7 @@ function json(run: Run) {
   return JSON.parse(run.stdout.trim().split('\n').at(-1) as string) as Record<string, unknown>;
 }
 
-async function project(withCli: boolean) {
+async function project(cli: boolean | string) {
   const outer = realpathSync(mkdtempSync(join(tmpdir(), 'openplanr-helper-bridge-')));
   cleanups.push(() => rmSync(outer, { recursive: true, force: true }));
   const { designFixture } = await load<{ designFixture(root: string): { file: string } }>(
@@ -80,11 +82,13 @@ async function project(withCli: boolean) {
   cleanups.push(() => server.close());
   const bin = join(outer, 'bin');
   mkdirSync(bin);
-  if (withCli) {
+  if (cli) {
     // The real CLI from source, reachable as `openplanr` the way a global install would be.
     writeFileSync(
       join(bin, 'openplanr'),
-      `#!/bin/sh\nexec "${process.execPath}" "${TSX}" "${CLI}" "$@"\n`,
+      typeof cli === 'string'
+        ? cli
+        : `#!/bin/sh\nexec "${process.execPath}" "${TSX}" "${CLI}" "$@"\n`,
     );
     chmodSync(join(bin, 'openplanr'), 0o755);
   }
@@ -100,7 +104,52 @@ async function project(withCli: boolean) {
     OPENPLANR_PIPELINE_ROOT: pipelineRoot,
   };
   json(await helper(['render', file], env, dir));
-  return { dir, file, host, home, env };
+  return { dir, file, host, home, env, bin };
+}
+
+/** Every file under a directory with its bytes, to show that nothing was written. */
+function snapshot(root: string): Record<string, string> {
+  const files: Record<string, string> = {};
+  for (const entry of readdirSync(root, { recursive: true, withFileTypes: true }))
+    if (entry.isFile()) {
+      const path = join(entry.parentPath, entry.name);
+      files[path] = readFileSync(path, 'base64');
+    }
+  return files;
+}
+
+async function openStudio(file: string, env: Record<string, string>, dir: string) {
+  const studio = spawn(process.execPath, [HELPER, 'open', file, '--no-open', '--port', '0'], {
+    cwd: dir,
+    env,
+    stdio: ['ignore', 'pipe', 'pipe'],
+  });
+  cleanups.push(
+    () =>
+      new Promise((resolveExit) => {
+        studio.once('exit', resolveExit);
+        studio.kill('SIGTERM');
+      }),
+  );
+  const opened = await new Promise<{ url: string }>((resolveOpen, rejectOpen) => {
+    let text = '';
+    studio.stdout.on('data', (chunk: Buffer) => {
+      text += chunk.toString('utf8');
+      const line = text.split('\n').find((value) => value.trim().startsWith('{'));
+      if (line) resolveOpen(JSON.parse(line));
+    });
+    studio.once('exit', (code) => rejectOpen(new Error(`studio exited with ${code}`)));
+  });
+  const page = await fetch(opened.url);
+  const cookie = page.headers.get('set-cookie')?.split(';')[0] ?? '';
+  return { url: opened.url, cookie };
+}
+
+async function timed(request: Promise<Response>) {
+  const started = performance.now();
+  const response = await request;
+  const body = (await response.json()) as Record<string, unknown>;
+  return { status: response.status, body, ms: performance.now() - started };
 }
 
 afterEach(async () => {
@@ -111,7 +160,7 @@ describe('the bundled design helper shares only through the openplanr CLI', {
   timeout: 180_000,
 }, () => {
   it('shares, syncs and publishes owner decisions through the CLI', async () => {
-    const { dir, file, host, home, env } = await project(true);
+    const { dir, file, host, home, env, bin } = await project(true);
     const shared = json(await helper(['share', file], env, dir));
     expect(String(shared.url)).toMatch(/^http:\/\/127\.0\.0\.1:\d+\/d\//);
     const custodyDir = join(home, 'design-shares');
@@ -183,6 +232,21 @@ describe('the bundled design helper shares only through the openplanr CLI', {
       decision,
       JSON.stringify({ pinId: 'pin-1', disposition: 'accepted', reason: 'Clearer labels' }),
     );
+    const designState = () => snapshot(join(dir, '.design'));
+    const saved = designState();
+    const requestsBefore = host.state.requests.length;
+    renameSync(join(bin, 'openplanr'), join(bin, 'openplanr.off'));
+    const refused = await helper(
+      ['handoff', file, '--action', 'disposition', '--input', decision],
+      env,
+      dir,
+    );
+    expect(refused.status).toBe(1);
+    expect(refused.stderr).toMatch(/Sharing runs in the OpenPlanr CLI/);
+    expect(designState()).toEqual(saved);
+    expect(host.state.requests.length).toBe(requestsBefore);
+    renameSync(join(bin, 'openplanr.off'), join(bin, 'openplanr'));
+
     const before = host.state.requests.length;
     json(await helper(['handoff', file, '--action', 'disposition', '--input', decision], env, dir));
     const metadata = host.state.requests
@@ -192,6 +256,26 @@ describe('the bundled design helper shares only through the openplanr CLI', {
 
     json(await helper(['manage', file, '--action', 'pause'], env, dir));
     expect(host.state.requests.at(-1)?.url).toMatch(/\/manage$/);
+  });
+
+  it('keeps the studio responsive while a hung CLI times out, and remembers the failure', async () => {
+    const { dir, file, env } = await project('#!/bin/sh\nexec sleep 60\n');
+    const { url, cookie } = await openStudio(file, env, dir);
+    const headers = { cookie };
+    const panel = timed(fetch(`${url}api/design-share`, { headers }));
+    await new Promise((resolveWait) => setTimeout(resolveWait, 300));
+    const unrelated = await timed(fetch(`${url}api/design-status`, { headers }));
+    expect(unrelated.status).toBe(200);
+    expect(unrelated.ms).toBeLessThan(1_500);
+    const first = await panel;
+    expect(first.body).toMatchObject({
+      shared: false,
+      unavailable: { code: 'E_DESIGN_SHARE_CLI_UNRESPONSIVE' },
+    });
+    expect(first.ms).toBeLessThan(10_000);
+    const second = await timed(fetch(`${url}api/design-share`, { headers }));
+    expect(second.body).toMatchObject({ unavailable: { code: 'E_DESIGN_SHARE_CLI_UNRESPONSIVE' } });
+    expect(second.ms).toBeLessThan(1_000);
   });
 
   it('keeps local design working and says sharing needs the CLI when it is missing', async () => {
@@ -204,29 +288,8 @@ describe('the bundled design helper shares only through the openplanr CLI', {
     );
     expect(existsSync(String(exported.output))).toBe(true);
 
-    const studio = spawn(process.execPath, [HELPER, 'open', file, '--no-open', '--port', '0'], {
-      cwd: dir,
-      env,
-      stdio: ['ignore', 'pipe', 'pipe'],
-    });
-    cleanups.push(
-      () =>
-        new Promise((resolveExit) => {
-          studio.once('exit', resolveExit);
-          studio.kill('SIGTERM');
-        }),
-    );
-    const opened = await new Promise<{ url: string }>((resolveOpen, rejectOpen) => {
-      let text = '';
-      studio.stdout.on('data', (chunk: Buffer) => {
-        text += chunk.toString('utf8');
-        const line = text.split('\n').find((value) => value.trim().startsWith('{'));
-        if (line) resolveOpen(JSON.parse(line));
-      });
-      studio.once('exit', (code) => rejectOpen(new Error(`studio exited with ${code}`)));
-    });
-    const page = await fetch(opened.url);
-    const cookie = page.headers.get('set-cookie')?.split(';')[0] ?? '';
+    const opened = await openStudio(file, env, dir);
+    const cookie = opened.cookie;
     const panel = await fetch(`${opened.url}api/design-share`, { headers: { cookie } });
     expect(panel.status).toBe(200);
     expect(await panel.json()).toMatchObject({

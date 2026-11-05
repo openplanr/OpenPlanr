@@ -85,7 +85,7 @@
       else if (name === 'copy-token') { const value = await request('access'); await copy(value.token, 'Access token copied. Send it separately from the link.'); }
       else {
         const result = await request(name);
-        if (name === 'recovery') announce(`Recovery file saved privately: ${result.output}`);
+        if (name === 'recovery') announce(`Recovery file saved to ${result.output}. It holds the owner keys, so keep it private.`);
         else { status = await request(); render(); announce(name === 'rotate' ? 'Token rotated. Copy the new access token for your team.' : name === 'sync' ? (result.issues?.length ? `Feedback synchronized; ${result.issues.length} invalid events need attention. Open feedback diagnostics.` : 'Team reviews synchronized.') : 'Changes saved.'); }
       }
     } catch (error) { announce(error.message, true); }
