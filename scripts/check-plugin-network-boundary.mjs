@@ -68,7 +68,7 @@ export const RULES = Object.freeze({
     [
       ...text.matchAll(
         new RegExp(
-          `^\\s*// (?:\\.\\./)*(?:packages/[a-z-]+/)?(?:lib|src)/\\S*?/(?:${SHARE_MODULES.join('|')})\\.m?[jt]s$`,
+          `^\\s*// (?:\\.\\./)*(?:packages/)?(?:[a-z-]+/)?(?:lib|src)/(?:\\S*?/)?(?:${SHARE_MODULES.join('|')})\\.m?[jt]s$`,
           'gmu',
         ),
       ),

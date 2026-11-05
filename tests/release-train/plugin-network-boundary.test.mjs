@@ -51,6 +51,8 @@ test('each kind of credential read or OpenPlanr request is found', (t) => {
     'e.mjs': 'headers.Authorization = `Bearer ${token}`;',
     'f.mjs': '// packages/artifact/lib/artifact/owner-custody.mjs\nexport const x = 1;\n',
     'g.js': '  // lib/artifact/ui/hosted-viewer.mjs\n  var y = 2;\n',
+    'h.mjs': '// packages/protocol/src/sharing-security-contracts.mjs\nexport const z = 3;\n',
+    'i.js': '  // ../protocol/src/workspace-contracts.mjs\n  var w = 4;\n',
   });
   assert.deepEqual(rules(root), [
     'a.mjs openplanr-request-url',
@@ -61,6 +63,8 @@ test('each kind of credential read or OpenPlanr request is found', (t) => {
     'e.mjs authorization',
     'f.mjs share-module',
     'g.js share-module',
+    'h.mjs share-module',
+    'i.js share-module',
   ]);
 });
 

@@ -12,14 +12,34 @@
       "reason": "Listing metadata (homepage, author, privacy and terms links); the plugin never requests them."
     },
     {
-      "path": "skills/*delegate/scripts/*.mjs",
+      "path": "skills/delegate/scripts/custody.mjs",
       "rule": "owner-key",
-      "reason": "The delegate run custody token is a local lock for git apply; delegate scripts make no network request."
+      "reason": "The delegate run custody token is a local lock that pairs a run with its git apply; it is written to and compared from local files and never sent."
     },
     {
-      "path": "rules/planr-delegate/scripts/*.mjs",
+      "path": "skills/delegate/scripts/run-lifecycle.mjs",
       "rule": "owner-key",
-      "reason": "The delegate run custody token is a local lock for git apply; delegate scripts make no network request."
+      "reason": "The delegate run custody token is a local lock that pairs a run with its git apply; it is written to and compared from local files and never sent."
+    },
+    {
+      "path": "skills/planr-delegate/scripts/custody.mjs",
+      "rule": "owner-key",
+      "reason": "The delegate run custody token is a local lock that pairs a run with its git apply; it is written to and compared from local files and never sent."
+    },
+    {
+      "path": "skills/planr-delegate/scripts/run-lifecycle.mjs",
+      "rule": "owner-key",
+      "reason": "The delegate run custody token is a local lock that pairs a run with its git apply; it is written to and compared from local files and never sent."
+    },
+    {
+      "path": "rules/planr-delegate/scripts/custody.mjs",
+      "rule": "owner-key",
+      "reason": "The delegate run custody token is a local lock that pairs a run with its git apply; it is written to and compared from local files and never sent."
+    },
+    {
+      "path": "rules/planr-delegate/scripts/run-lifecycle.mjs",
+      "rule": "owner-key",
+      "reason": "The delegate run custody token is a local lock that pairs a run with its git apply; it is written to and compared from local files and never sent."
     }
   ],
   "shrinking": [
@@ -84,7 +104,15 @@
       "rule": "share-module"
     },
     {
+      "path": "runtime/design/scripts/design-shared-protocol-contracts-*.mjs",
+      "rule": "share-module"
+    },
+    {
       "path": "runtime/design/scripts/design-upload-spool.mjs",
+      "rule": "share-module"
+    },
+    {
+      "path": "runtime/design/scripts/runtime/packages/artifact/templates/artifact-review-stage.js.sources/03-protocol-contracts.js",
       "rule": "share-module"
     },
     {
@@ -134,6 +162,10 @@
     {
       "path": "runtime/design/scripts/runtime/packages/protocol/schemas/v1.1.0/artifact-paste.schema.json",
       "rule": "owner-key"
+    },
+    {
+      "path": "runtime/plan/scripts/design-protocol-contracts.mjs",
+      "rule": "share-module"
     },
     {
       "path": "runtime/plan/scripts/design.mjs",
@@ -212,7 +244,15 @@
       "rule": "share-module"
     },
     {
+      "path": "skills/planr-design*/scripts/design-shared-protocol-contracts-*.mjs",
+      "rule": "share-module"
+    },
+    {
       "path": "skills/planr-design*/scripts/design-upload-spool.mjs",
+      "rule": "share-module"
+    },
+    {
+      "path": "skills/planr-design*/scripts/runtime/packages/artifact/templates/artifact-review-stage.js.sources/03-protocol-contracts.js",
       "rule": "share-module"
     },
     {
@@ -262,6 +302,10 @@
     {
       "path": "skills/planr-design*/scripts/runtime/packages/protocol/schemas/v1.1.0/artifact-paste.schema.json",
       "rule": "owner-key"
+    },
+    {
+      "path": "skills/planr-plan/scripts/design-protocol-contracts.mjs",
+      "rule": "share-module"
     },
     {
       "path": "skills/planr-plan/scripts/design.mjs",
