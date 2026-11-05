@@ -70,6 +70,22 @@
       "classification": "deterministic-preserved"
     },
     {
+      "path": "artifact share-runtime",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "artifact status",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "artifact manage",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "artifact feedback",
+      "classification": "deterministic-preserved"
+    },
+    {
       "path": "artifact handoff",
       "classification": "deterministic-preserved"
     },

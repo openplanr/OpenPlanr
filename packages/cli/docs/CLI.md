@@ -644,6 +644,11 @@ openplanr artifact open <file> [--title <title>] [--root <asset-root>] [--theme 
 openplanr artifact share <file> [--title <title>] [--root <asset-root>] [--presentation auto|document|canvas] [--snapshot] [--short] [--ttl 1d|7d|30d] [--secret-output <private-file>] [--no-open] [--json] [--yes]
 openplanr artifact publish <diagram-manifest|diagram-bundle|design-document> [--yes] [--json]
 openplanr artifact sync <diagram-manifest|diagram-bundle|design-document> [--json]
+openplanr artifact status <design-document> [--json]
+openplanr artifact manage <design-document> --action rotate|pause|resume|revoke|delete|access|recovery|restore [--output <new-path>] [--input <recovery-file>] [--yes] [--json]
+openplanr artifact feedback <design-document> [--action inspect|export|import|select|resolve] [--format json|markdown] [--scope current|all] [--output <new-path>] [--input <file>] [--json]
+openplanr artifact handoff <design-document> [--action draft|inspect|update|approve|category|disposition] [--input <file|->] [--json]
+openplanr artifact share-runtime [--json]
 openplanr artifact import --secret-input <private-file|-> [--output <path>] [--allow-stale] [--json] [--yes]
 openplanr artifact export <session-id> [--format json|markdown] [--output <path>]
 ```
@@ -655,6 +660,19 @@ Owner keys stay privately outside the repository. Publish revisions
 explicitly; `sync` imports revision-bound feedback without changing the diagram.
 Native diagram sharing does not accept `--snapshot`, `--short`, or `--ttl`;
 export HTML first to choose the generic snapshot transport.
+
+A shared design is managed from the same command. `status` shows the review link
+and whether the current revision is published, without printing secrets. `manage`
+rotates the reviewer access token, pauses or resumes comments, revokes or deletes
+the review, prints the reviewer token with `--action access --json`, and writes or
+restores a private recovery file. Rotate, revoke, delete and restore ask first;
+`--yes` confirms them non-interactively. `feedback` syncs a shared design before it
+inspects or exports feedback. `handoff` drafts the review handoff by default, and
+its other actions update it from a JSON object; on a shared design, category and
+disposition changes also publish to the review. `share-runtime` reports the CLI,
+workflow package and design sharing format versions. Design sharing needs the
+optional `planr-pipeline` package; without it these commands fail with
+`E_DESIGN_SHARE_PIPELINE_MISSING`.
 
 When `--root` is omitted, the artifact file's directory is the asset root. This
 makes `openplanr artifact share /absolute/path/to/artifact.html` work without

@@ -18,7 +18,6 @@ import {
 import {
   isDesignDocumentFile,
   openDesignArtifact,
-  prepareDesignHandoff,
   runDesignShareAction,
 } from '../../services/design-artifact-service.js';
 import {
@@ -31,6 +30,7 @@ import { isNonInteractive } from '../../services/interactive-state.js';
 import { promptConfirm } from '../../services/prompt-service.js';
 import { CLI_COMMAND } from '../../utils/constants.js';
 import { display, logger } from '../../utils/logger.js';
+import { registerDesignShareCommands } from './artifact-design-share.js';
 
 type Theme = 'auto' | 'light' | 'dark';
 type Presentation = 'auto' | 'document' | 'canvas';
@@ -670,27 +670,10 @@ export function registerArtifactCommand(program: Command): void {
     openArtifact(program, file, command.optsWithGlobals<OpenOptions>()),
   );
 
-  artifact
-    .command('handoff <file>')
-    .description('Prepare a factual design review handoff for refinement and owner approval')
-    .option('--json', 'emit machine-readable output', false)
-    .action(async (file: string, _options, command: Command) => {
-      const input = resolveInput(program, file);
-      if (!isDesignDocumentFile(input))
-        throw new ArtifactCommandError(
-          'E_ARTIFACT_INPUT_INVALID',
-          'Handoff requires a design-document.json file.',
-        );
-      const result = await prepareDesignHandoff(input);
-      if (command.optsWithGlobals().json) display.line(JSON.stringify(result));
-      else {
-        logger.success('Design review handoff prepared');
-        if (result.path) display.keyValue('Handoff', String(result.path));
-        logger.dim(
-          'Refine the draft in your coding session, then review and approve it in the local studio. Plan remains a separate invocation.',
-        );
-      }
-    });
+  registerDesignShareCommands(artifact, {
+    resolveInput: (value) => resolveInput(program, value),
+    confirmed: (local) => confirmed(program, local),
+  });
 
   artifact
     .command('share <file>')

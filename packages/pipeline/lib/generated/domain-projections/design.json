@@ -557,6 +557,12 @@
       "mode": "644"
     },
     {
+      "source": "packages/design/lib/design/share-compat.mjs",
+      "target": "lib/design/share-compat.mjs",
+      "sha256": "37eef995bb45f4a760bae446c004a388d4e23c8e703986583f829175cf9b6232",
+      "mode": "644"
+    },
+    {
       "source": "packages/design/lib/design/share-status.mjs",
       "target": "lib/design/share-status.mjs",
       "sha256": "f2763e1c6bc4133215b5a901153ae23eaae5a5df350fb8fc607032bd7825ddff",
