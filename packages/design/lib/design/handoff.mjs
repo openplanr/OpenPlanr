@@ -129,7 +129,7 @@ async function preserveReviewErrors(path, action) {
 export async function updateDesignHandoff(
   file,
   input,
-  { env = process.env, fetchImpl = fetch, ...shareOptions } = {},
+  { env = process.env, ...shareOptions } = {},
 ) {
   if (!input || !['draft', 'update', 'approve', 'category', 'disposition'].includes(input.action))
     throw new Error('Unknown design handoff action.');
@@ -308,7 +308,6 @@ export async function updateDesignHandoff(
       synchronization = await publishDesignReviewMetadata(file, outgoing.payload, {
         revisionId: outgoing.revisionId,
         env,
-        fetchImpl,
         ...shareOptions,
       });
     } catch (error) {

@@ -1498,7 +1498,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:40f133c5209a3eb95135cb188e1c126f595e27ab88e8fbf3facb32c0461eeb14"
+          "digest": "sha256:ca7def3a516d28afd982defbee209a15536e1cdd3bea9ebe429b0bb034dbcd4c"
         },
         {
           "path": "scripts/design-loopback-server.mjs",
@@ -2528,7 +2528,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:40f133c5209a3eb95135cb188e1c126f595e27ab88e8fbf3facb32c0461eeb14"
+          "digest": "sha256:ca7def3a516d28afd982defbee209a15536e1cdd3bea9ebe429b0bb034dbcd4c"
         },
         {
           "path": "scripts/design-loopback-server.mjs",
@@ -3558,7 +3558,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:40f133c5209a3eb95135cb188e1c126f595e27ab88e8fbf3facb32c0461eeb14"
+          "digest": "sha256:ca7def3a516d28afd982defbee209a15536e1cdd3bea9ebe429b0bb034dbcd4c"
         },
         {
           "path": "scripts/design-loopback-server.mjs",
