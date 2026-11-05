@@ -1,0 +1,283 @@
+{
+  "$comment": "Shrinking entries are design sharing code that is moving to the openplanr CLI. A change may remove entries but never add one; releases refuse while any remain.",
+  "permanent": [
+    {
+      "path": ".claude-plugin/plugin.json",
+      "rule": "openplanr-request-url",
+      "reason": "Listing metadata (homepage, author, privacy and terms links); the plugin never requests them."
+    },
+    {
+      "path": ".codex-plugin/plugin.json",
+      "rule": "openplanr-request-url",
+      "reason": "Listing metadata (homepage, author, privacy and terms links); the plugin never requests them."
+    },
+    {
+      "path": "skills/*delegate/scripts/*.mjs",
+      "rule": "owner-key",
+      "reason": "The delegate run custody token is a local lock for git apply; delegate scripts make no network request."
+    },
+    {
+      "path": "rules/planr-delegate/scripts/*.mjs",
+      "rule": "owner-key",
+      "reason": "The delegate run custody token is a local lock for git apply; delegate scripts make no network request."
+    }
+  ],
+  "shrinking": [
+    {
+      "path": "runtime/design/scripts/design-chunked-workspace-client.mjs",
+      "rule": "authorization"
+    },
+    {
+      "path": "runtime/design/scripts/design-chunked-workspace-client.mjs",
+      "rule": "owner-key"
+    },
+    {
+      "path": "runtime/design/scripts/design-chunked-workspace-client.mjs",
+      "rule": "share-module"
+    },
+    {
+      "path": "runtime/design/scripts/design-encrypted-workspace-client.mjs",
+      "rule": "authorization"
+    },
+    {
+      "path": "runtime/design/scripts/design-encrypted-workspace-client.mjs",
+      "rule": "openplanr-request-url"
+    },
+    {
+      "path": "runtime/design/scripts/design-encrypted-workspace-client.mjs",
+      "rule": "owner-key"
+    },
+    {
+      "path": "runtime/design/scripts/design-encrypted-workspace-client.mjs",
+      "rule": "share-host"
+    },
+    {
+      "path": "runtime/design/scripts/design-encrypted-workspace-client.mjs",
+      "rule": "share-module"
+    },
+    {
+      "path": "runtime/design/scripts/design-owner-custody.mjs",
+      "rule": "share-module"
+    },
+    {
+      "path": "runtime/design/scripts/design-review.mjs",
+      "rule": "authorization"
+    },
+    {
+      "path": "runtime/design/scripts/design-review.mjs",
+      "rule": "home-read-with-network"
+    },
+    {
+      "path": "runtime/design/scripts/design-share.mjs",
+      "rule": "openplanr-request-url"
+    },
+    {
+      "path": "runtime/design/scripts/design-share.mjs",
+      "rule": "owner-key"
+    },
+    {
+      "path": "runtime/design/scripts/design-share.mjs",
+      "rule": "share-host"
+    },
+    {
+      "path": "runtime/design/scripts/design-share.mjs",
+      "rule": "share-module"
+    },
+    {
+      "path": "runtime/design/scripts/design-upload-spool.mjs",
+      "rule": "share-module"
+    },
+    {
+      "path": "runtime/design/scripts/runtime/packages/artifact/templates/artifact-review-stage.js.sources/05-artifact-sharing.js",
+      "rule": "openplanr-request-url"
+    },
+    {
+      "path": "runtime/design/scripts/runtime/packages/artifact/templates/artifact-review-stage.js.sources/05-artifact-sharing.js",
+      "rule": "owner-key"
+    },
+    {
+      "path": "runtime/design/scripts/runtime/packages/artifact/templates/artifact-review-stage.js.sources/05-artifact-sharing.js",
+      "rule": "share-host"
+    },
+    {
+      "path": "runtime/design/scripts/runtime/packages/artifact/templates/artifact-review-stage.js.sources/05-artifact-sharing.js",
+      "rule": "share-module"
+    },
+    {
+      "path": "runtime/design/scripts/runtime/packages/artifact/templates/artifact-review-stage.js.sources/06-artifact-review-ui.js",
+      "rule": "owner-key"
+    },
+    {
+      "path": "runtime/design/scripts/runtime/packages/artifact/templates/artifact-review-stage.js.sources/06-artifact-review-ui.js",
+      "rule": "share-module"
+    },
+    {
+      "path": "runtime/design/scripts/runtime/packages/artifact/templates/artifact-review-stage.js.sources/07-artifact-sharing.js",
+      "rule": "share-module"
+    },
+    {
+      "path": "runtime/design/scripts/runtime/packages/artifact/templates/artifact-review-stage.js.sources/08-artifact-review-ui.js",
+      "rule": "openplanr-request-url"
+    },
+    {
+      "path": "runtime/design/scripts/runtime/packages/artifact/templates/artifact-review-stage.js.sources/08-artifact-review-ui.js",
+      "rule": "owner-key"
+    },
+    {
+      "path": "runtime/design/scripts/runtime/packages/artifact/templates/artifact-review-stage.js.sources/08-artifact-review-ui.js",
+      "rule": "share-host"
+    },
+    {
+      "path": "runtime/design/scripts/runtime/packages/artifact/templates/artifact-review-stage.js.sources/08-artifact-review-ui.js",
+      "rule": "share-module"
+    },
+    {
+      "path": "runtime/design/scripts/runtime/packages/protocol/schemas/v1.1.0/artifact-paste.schema.json",
+      "rule": "owner-key"
+    },
+    {
+      "path": "runtime/plan/scripts/design.mjs",
+      "rule": "openplanr-request-url"
+    },
+    {
+      "path": "runtime/plan/scripts/design.mjs",
+      "rule": "owner-key"
+    },
+    {
+      "path": "runtime/plan/scripts/design.mjs",
+      "rule": "share-host"
+    },
+    {
+      "path": "runtime/plan/scripts/design.mjs",
+      "rule": "share-module"
+    },
+    {
+      "path": "skills/planr-design*/scripts/design-chunked-workspace-client.mjs",
+      "rule": "authorization"
+    },
+    {
+      "path": "skills/planr-design*/scripts/design-chunked-workspace-client.mjs",
+      "rule": "owner-key"
+    },
+    {
+      "path": "skills/planr-design*/scripts/design-chunked-workspace-client.mjs",
+      "rule": "share-module"
+    },
+    {
+      "path": "skills/planr-design*/scripts/design-encrypted-workspace-client.mjs",
+      "rule": "authorization"
+    },
+    {
+      "path": "skills/planr-design*/scripts/design-encrypted-workspace-client.mjs",
+      "rule": "openplanr-request-url"
+    },
+    {
+      "path": "skills/planr-design*/scripts/design-encrypted-workspace-client.mjs",
+      "rule": "owner-key"
+    },
+    {
+      "path": "skills/planr-design*/scripts/design-encrypted-workspace-client.mjs",
+      "rule": "share-host"
+    },
+    {
+      "path": "skills/planr-design*/scripts/design-encrypted-workspace-client.mjs",
+      "rule": "share-module"
+    },
+    {
+      "path": "skills/planr-design*/scripts/design-owner-custody.mjs",
+      "rule": "share-module"
+    },
+    {
+      "path": "skills/planr-design*/scripts/design-review.mjs",
+      "rule": "authorization"
+    },
+    {
+      "path": "skills/planr-design*/scripts/design-review.mjs",
+      "rule": "home-read-with-network"
+    },
+    {
+      "path": "skills/planr-design*/scripts/design-share.mjs",
+      "rule": "openplanr-request-url"
+    },
+    {
+      "path": "skills/planr-design*/scripts/design-share.mjs",
+      "rule": "owner-key"
+    },
+    {
+      "path": "skills/planr-design*/scripts/design-share.mjs",
+      "rule": "share-host"
+    },
+    {
+      "path": "skills/planr-design*/scripts/design-share.mjs",
+      "rule": "share-module"
+    },
+    {
+      "path": "skills/planr-design*/scripts/design-upload-spool.mjs",
+      "rule": "share-module"
+    },
+    {
+      "path": "skills/planr-design*/scripts/runtime/packages/artifact/templates/artifact-review-stage.js.sources/05-artifact-sharing.js",
+      "rule": "openplanr-request-url"
+    },
+    {
+      "path": "skills/planr-design*/scripts/runtime/packages/artifact/templates/artifact-review-stage.js.sources/05-artifact-sharing.js",
+      "rule": "owner-key"
+    },
+    {
+      "path": "skills/planr-design*/scripts/runtime/packages/artifact/templates/artifact-review-stage.js.sources/05-artifact-sharing.js",
+      "rule": "share-host"
+    },
+    {
+      "path": "skills/planr-design*/scripts/runtime/packages/artifact/templates/artifact-review-stage.js.sources/05-artifact-sharing.js",
+      "rule": "share-module"
+    },
+    {
+      "path": "skills/planr-design*/scripts/runtime/packages/artifact/templates/artifact-review-stage.js.sources/06-artifact-review-ui.js",
+      "rule": "owner-key"
+    },
+    {
+      "path": "skills/planr-design*/scripts/runtime/packages/artifact/templates/artifact-review-stage.js.sources/06-artifact-review-ui.js",
+      "rule": "share-module"
+    },
+    {
+      "path": "skills/planr-design*/scripts/runtime/packages/artifact/templates/artifact-review-stage.js.sources/07-artifact-sharing.js",
+      "rule": "share-module"
+    },
+    {
+      "path": "skills/planr-design*/scripts/runtime/packages/artifact/templates/artifact-review-stage.js.sources/08-artifact-review-ui.js",
+      "rule": "openplanr-request-url"
+    },
+    {
+      "path": "skills/planr-design*/scripts/runtime/packages/artifact/templates/artifact-review-stage.js.sources/08-artifact-review-ui.js",
+      "rule": "owner-key"
+    },
+    {
+      "path": "skills/planr-design*/scripts/runtime/packages/artifact/templates/artifact-review-stage.js.sources/08-artifact-review-ui.js",
+      "rule": "share-host"
+    },
+    {
+      "path": "skills/planr-design*/scripts/runtime/packages/artifact/templates/artifact-review-stage.js.sources/08-artifact-review-ui.js",
+      "rule": "share-module"
+    },
+    {
+      "path": "skills/planr-design*/scripts/runtime/packages/protocol/schemas/v1.1.0/artifact-paste.schema.json",
+      "rule": "owner-key"
+    },
+    {
+      "path": "skills/planr-plan/scripts/design.mjs",
+      "rule": "openplanr-request-url"
+    },
+    {
+      "path": "skills/planr-plan/scripts/design.mjs",
+      "rule": "owner-key"
+    },
+    {
+      "path": "skills/planr-plan/scripts/design.mjs",
+      "rule": "share-host"
+    },
+    {
+      "path": "skills/planr-plan/scripts/design.mjs",
+      "rule": "share-module"
+    }
+  ]
+}
