@@ -59,7 +59,9 @@ specification handoff; Plan and Ship are separate user invocations.
 ## Persistent company review
 
 `share.mjs` owns local private custody and explicit publishing. `workspace-client.mjs`
-is the portable encrypted transport shared with the hosted viewer. Protocol's
+is the portable encrypted transport shared with the hosted viewer. The bundled skill
+helpers replace both with `share-cli-bridge.mjs`, which runs each sharing operation in
+the `openplanr` CLI, so the helpers carry no owner keys or share transport. Protocol's
 additive design-workspace contracts describe immutable revisions and signed,
 revision-bound feedback; existing generic artifact room contracts are unchanged.
 The hosted companion lives in the separate `openplanr-web` repository.

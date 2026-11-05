@@ -1,6 +1,8 @@
 import { spawn } from 'node:child_process';
 import {
+  chmodSync,
   existsSync,
+  mkdirSync,
   mkdtempSync,
   readdirSync,
   readFileSync,
@@ -11,7 +13,7 @@ import {
 } from 'node:fs';
 import { createRequire } from 'node:module';
 import { tmpdir } from 'node:os';
-import { join, resolve } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { afterEach, describe, expect, it } from 'vitest';
 import { resolvePipelinePackageRoot } from '../helpers/pipeline-package-root.js';
@@ -242,6 +244,22 @@ describe('openplanr artifact design sharing commands', { timeout: 120_000 }, () 
       json(
         await cli(['artifact', 'manage', file, '--action', action, '--yes', '--json'], dir, env),
       );
+  });
+
+  it('writes a recovery file under PLANR_HOME/design-recovery when no output path is given', async () => {
+    const { dir, file, home, env } = await sharedProject();
+    json(await cli(['artifact', 'share', file, '--yes', '--no-open', '--json'], dir, env));
+    const directory = join(home, 'design-recovery');
+    mkdirSync(directory, { mode: 0o755 });
+    chmodSync(directory, 0o755);
+    const result = json(
+      await cli(['artifact', 'manage', file, '--action', 'recovery', '--json'], dir, env),
+    );
+    const output = String(result.output);
+    expect(dirname(output)).toBe(directory);
+    expect(output).toMatch(/\/openplanr-design-recovery-\d+\.json$/u);
+    expect(statSync(directory).mode & 0o777).toBe(0o700);
+    expect(statSync(output).mode & 0o777).toBe(0o600);
   });
 
   it('refuses destructive management without confirmation', async () => {

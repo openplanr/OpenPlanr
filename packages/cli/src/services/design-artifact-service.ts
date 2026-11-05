@@ -94,6 +94,7 @@ interface DesignShareResult {
   imported?: number;
   output?: string;
   token?: string;
+  pending?: boolean;
 }
 
 export type DesignShareAction =
@@ -108,7 +109,8 @@ export type DesignShareAction =
   | 'resume'
   | 'revoke'
   | 'delete'
-  | 'access';
+  | 'access'
+  | 'review-metadata';
 
 export const DESIGN_MANAGE_ACTIONS = [
   'rotate',
@@ -144,6 +146,7 @@ const SHARE_METHODS: Record<DesignShareAction, string> = {
   revoke: 'manageDesignShare',
   delete: 'manageDesignShare',
   access: 'manageDesignShare',
+  'review-metadata': 'publishDesignReviewMetadata',
 };
 
 /** The installed workflow package, which holds the only design sharing implementation. */
@@ -198,10 +201,26 @@ export async function runDesignShareAction(
       );
     if (SHARE_METHODS[action] === 'manageDesignShare')
       return (await method(file, action, options)) as DesignShareResult;
+    if (action === 'review-metadata') {
+      const { payload, ...rest } = options;
+      return (await method(file, payload, rest)) as DesignShareResult;
+    }
     return (await method(file, options)) as DesignShareResult;
   } catch (error) {
     return withShareCode(error);
   }
+}
+
+/** A new private recovery file path under `PLANR_HOME/design-recovery`. */
+export async function defaultDesignRecoveryOutput(): Promise<string> {
+  const runtime = await pipelineModule(sharingPipeline(), 'lib/design/recovery-location.mjs');
+  if (typeof runtime.defaultDesignRecoveryOutput !== 'function')
+    throw new ArtifactCommandError(
+      'E_DESIGN_SHARE_UNSUPPORTED',
+      'The installed workflow package does not choose a default recovery file location.',
+      'Pass --output <path>, or update OpenPlanr: npm install -g openplanr.',
+    );
+  return String(runtime.defaultDesignRecoveryOutput(process.env));
 }
 
 /** Versions the skill helpers compare before they hand a design share operation to this CLI. */

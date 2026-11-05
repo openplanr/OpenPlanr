@@ -445,7 +445,7 @@
     {
       "source": "packages/design/lib/design/handoff.mjs",
       "target": "lib/design/handoff.mjs",
-      "sha256": "c4e384b22f493cc66140b0e6b8c9a9bc730f902c369afebe5fd9bddff2c91cf8",
+      "sha256": "f2d03a594bf06a641ea40031662dca659f5d87d506333d46537549cbc7064b16",
       "mode": "644"
     },
     {
@@ -533,6 +533,12 @@
       "mode": "644"
     },
     {
+      "source": "packages/design/lib/design/recovery-location.mjs",
+      "target": "lib/design/recovery-location.mjs",
+      "sha256": "a8a76b5b99769c9e3c8bb2df9269a5eca70f659b86504bbd185cde20c3c85a35",
+      "mode": "644"
+    },
+    {
       "source": "packages/design/lib/design/review-export.mjs",
       "target": "lib/design/review-export.mjs",
       "sha256": "0067c13684a07cc9ff9d5a4c2b1cfbe7e4b3897ca3a8c48c7dc3a60f9d9492e0",
@@ -541,7 +547,7 @@
     {
       "source": "packages/design/lib/design/review.mjs",
       "target": "lib/design/review.mjs",
-      "sha256": "374af7633958583c44da312f3e0541f54f37f85f74dfa2e60f72422a88e85d67",
+      "sha256": "b710282c72b906c3eafcefcf76ae1846a8e059e40159b3428d92b47bd1945114",
       "mode": "644"
     },
     {
@@ -557,6 +563,12 @@
       "mode": "644"
     },
     {
+      "source": "packages/design/lib/design/share-cli-bridge.mjs",
+      "target": "lib/design/share-cli-bridge.mjs",
+      "sha256": "4931569c9e2699c36a224c707d2283e6c446d55d6e826ca1302f221c0e9c7b52",
+      "mode": "644"
+    },
+    {
       "source": "packages/design/lib/design/share-compat.mjs",
       "target": "lib/design/share-compat.mjs",
       "sha256": "37eef995bb45f4a760bae446c004a388d4e23c8e703986583f829175cf9b6232",
@@ -565,13 +577,13 @@
     {
       "source": "packages/design/lib/design/share-status.mjs",
       "target": "lib/design/share-status.mjs",
-      "sha256": "f2763e1c6bc4133215b5a901153ae23eaae5a5df350fb8fc607032bd7825ddff",
+      "sha256": "bb46cfe7b719fc469c23b9bffb6f0e0146041348010be86daee29db9a1fb6edf",
       "mode": "644"
     },
     {
       "source": "packages/design/lib/design/share.mjs",
       "target": "lib/design/share.mjs",
-      "sha256": "0bc25921e52e3d020824450d4a4e4d79a8f25519121a18c887c87add566848b5",
+      "sha256": "36417ed4423f4a3c0f290ee471e9d8c8aa67a84b706ee611b66067bad9146d0d",
       "mode": "644"
     },
     {
@@ -643,7 +655,7 @@
     {
       "source": "packages/design/lib/design/utility.mjs",
       "target": "lib/design/utility.mjs",
-      "sha256": "a480fbbdce4623dc625cc88e63735974ce434a1a6b9aec078cdc3a0318403d84",
+      "sha256": "8a86db17099a0fb26651c5416d8793d2a6edd08581577906faefa3923b92615d",
       "mode": "644"
     },
     {
@@ -697,7 +709,7 @@
     {
       "source": "packages/design/templates/studio/share.js",
       "target": "templates/studio/share.js",
-      "sha256": "b388471dccec997c49ce9638ff9a312037d311d63cbe980dceeb9c3c02ca037b",
+      "sha256": "daee29d2c1e1a413d245cbaf321c882cfdb4df82276482a7747d8976d85fdfcd",
       "mode": "644"
     },
     {

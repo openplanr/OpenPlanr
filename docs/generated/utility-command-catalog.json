@@ -86,6 +86,10 @@
       "classification": "deterministic-preserved"
     },
     {
+      "path": "artifact review-metadata",
+      "classification": "deterministic-preserved"
+    },
+    {
       "path": "artifact handoff",
       "classification": "deterministic-preserved"
     },

@@ -97,3 +97,8 @@ export function getDesignShareStatus(file, options = {}) {
     (legacyPath ? readCustody(legacyPath, { label: 'Design', format: FORMAT }) : null);
   return safeStatus(record, current);
 }
+
+/** In-process status reads local files only, so the async form needs no child process. */
+export async function getDesignShareStatusAsync(file, options = {}) {
+  return getDesignShareStatus(file, options);
+}

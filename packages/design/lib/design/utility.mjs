@@ -373,7 +373,10 @@ export async function designUtility(
   }
   if (command === 'feedback') {
     const action = flags.action ?? 'inspect';
-    if (action !== 'import') await syncDesignShare(file, { env, fetchImpl });
+    const synced =
+      action === 'import'
+        ? undefined
+        : await syncDesignShare(file, { env, fetchImpl, unavailable: 'skip' });
     if (action === 'import')
       result = await importDesignFeedback(file, {
         input: flags.input,
@@ -436,6 +439,8 @@ export async function designUtility(
         revision: current.revision,
       };
     } else throw new Error('Feedback action must be inspect, export, import, select, or resolve.');
+    if (synced?.skipped)
+      result = { ...result, sync: { skipped: synced.skipped, reason: synced.reason } };
   }
   stdout(result);
   return result;

@@ -144,40 +144,7 @@
       ]
     },
     {
-      "path": "scripts/design-chunked-workspace-client.mjs",
-      "kind": "script",
-      "executable": false,
-      "hosts": [
-        "claude-code",
-        "codex",
-        "chatgpt",
-        "cursor"
-      ]
-    },
-    {
-      "path": "scripts/design-compression.mjs",
-      "kind": "script",
-      "executable": false,
-      "hosts": [
-        "claude-code",
-        "codex",
-        "chatgpt",
-        "cursor"
-      ]
-    },
-    {
       "path": "scripts/design-document.mjs",
-      "kind": "script",
-      "executable": false,
-      "hosts": [
-        "claude-code",
-        "codex",
-        "chatgpt",
-        "cursor"
-      ]
-    },
-    {
-      "path": "scripts/design-encrypted-workspace-client.mjs",
       "kind": "script",
       "executable": false,
       "hosts": [
@@ -221,17 +188,6 @@
       ]
     },
     {
-      "path": "scripts/design-owner-custody.mjs",
-      "kind": "script",
-      "executable": false,
-      "hosts": [
-        "claude-code",
-        "codex",
-        "chatgpt",
-        "cursor"
-      ]
-    },
-    {
       "path": "scripts/design-parse5-parser.mjs",
       "kind": "script",
       "executable": false,
@@ -254,7 +210,7 @@
       ]
     },
     {
-      "path": "scripts/design-resource-pack.mjs",
+      "path": "scripts/design-review-state-store.mjs",
       "kind": "script",
       "executable": false,
       "hosts": [
@@ -287,17 +243,6 @@
       ]
     },
     {
-      "path": "scripts/design-runtime-support-25485dbf1cb2.mjs",
-      "kind": "script",
-      "executable": false,
-      "hosts": [
-        "claude-code",
-        "codex",
-        "chatgpt",
-        "cursor"
-      ]
-    },
-    {
       "path": "scripts/design-sandbox-guards.mjs",
       "kind": "script",
       "executable": false,
@@ -309,7 +254,7 @@
       ]
     },
     {
-      "path": "scripts/design-share.mjs",
+      "path": "scripts/design-share-cli-bridge.mjs",
       "kind": "script",
       "executable": false,
       "hosts": [
@@ -320,7 +265,7 @@
       ]
     },
     {
-      "path": "scripts/design-shared-artifact-support-dependencies-design-support-protocol-contracts-3d9b1a86.mjs",
+      "path": "scripts/design-shared-artifact-support-dependencies-design-support-protocol-contracts-3b87ee1f.mjs",
       "kind": "script",
       "executable": false,
       "hosts": [
@@ -331,7 +276,7 @@
       ]
     },
     {
-      "path": "scripts/design-shared-artifact-support-protocol-contracts-ea2cd15e.mjs",
+      "path": "scripts/design-shared-artifact-support-protocol-contracts-7ff33c4f.mjs",
       "kind": "script",
       "executable": false,
       "hosts": [
@@ -342,29 +287,7 @@
       ]
     },
     {
-      "path": "scripts/design-shared-protocol-contracts-75a938cc.mjs",
-      "kind": "script",
-      "executable": false,
-      "hosts": [
-        "claude-code",
-        "codex",
-        "chatgpt",
-        "cursor"
-      ]
-    },
-    {
-      "path": "scripts/design-shared-protocol-contracts-b5f28f94.mjs",
-      "kind": "script",
-      "executable": false,
-      "hosts": [
-        "claude-code",
-        "codex",
-        "chatgpt",
-        "cursor"
-      ]
-    },
-    {
-      "path": "scripts/design-upload-spool.mjs",
+      "path": "scripts/design-shared-design-support-0bac378d.mjs",
       "kind": "script",
       "executable": false,
       "hosts": [
