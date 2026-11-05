@@ -1043,6 +1043,12 @@
       "mode": "644"
     },
     {
+      "source": "packages/artifact/lib/artifact/internal/review-state-store.mjs",
+      "target": "lib/artifact/internal/review-state-store.mjs",
+      "sha256": "b3a867781a7102bc44ae9dacda271c2610a48fc21086486f455199f8d2a3c0b6",
+      "mode": "644"
+    },
+    {
       "source": "packages/artifact/lib/artifact/internal/runtime-asset.d.mts",
       "target": "lib/artifact/internal/runtime-asset.d.mts",
       "sha256": "e13a6950ef0ef730d977f15084ee317d04b1694ceb5f7b95f0243b1676e0ecbc",
@@ -1129,7 +1135,7 @@
     {
       "source": "packages/artifact/lib/artifact/review-server.mjs",
       "target": "lib/artifact/review-server.mjs",
-      "sha256": "79936d34b7a3529869a587c2b9524ac17c085e9699a1dab4460001d7b544ff30",
+      "sha256": "c3fd53287a5376e4622f4c7a38f85ad4cbc00e7188a7b942644caab19385d9c1",
       "mode": "644"
     },
     {
