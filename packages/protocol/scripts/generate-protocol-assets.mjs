@@ -290,6 +290,7 @@ const projectionFiles = new Map([
   ['design-publication-contracts.d.mts', read('src/design-publication-contracts.d.mts')],
   ['design-handoff-contracts.mjs', read('src/design-handoff-contracts.mjs')],
   ['design-handoff-contracts.d.mts', read('src/design-handoff-contracts.d.mts')],
+  ['design-review-bundle-contracts.mjs', read('src/design-review-bundle-contracts.mjs')],
   ['workspace-contracts.mjs', read('src/workspace-contracts.mjs')],
   ['enterprise-contracts.mjs', read('src/enterprise-contracts.mjs')],
   ['enterprise-contracts.d.mts', read('src/enterprise-contracts.d.mts')],
