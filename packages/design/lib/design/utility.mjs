@@ -39,6 +39,11 @@ import { readDesignViewContext } from './view-context.mjs';
 export { auditDesignPage, auditRenderedScreen } from './browser-audit.mjs';
 export { readDesignViewContext } from './view-context.mjs';
 
+/** Version of the `openplanr design` commands and their JSON; skills check it before calling them. */
+export const DESIGN_UTILITY_CONTRACT = 1;
+/** Contracts this runtime still serves. Raise `min` only in a planned major release. */
+export const DESIGN_UTILITY_SUPPORTED = Object.freeze({ min: 1, max: DESIGN_UTILITY_CONTRACT });
+
 function isPng(bytes) {
   if (
     bytes.length < 57 ||
