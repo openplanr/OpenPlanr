@@ -1,5 +1,6 @@
 ---
 'openplanr': minor
+'planr-pipeline': patch
 ---
 
 You can now manage a shared design from the CLI, the same way the local studio does:
