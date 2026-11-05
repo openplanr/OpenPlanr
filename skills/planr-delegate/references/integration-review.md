@@ -67,10 +67,8 @@ deployment are outside this helper.
 Experimental generic protocol-v1 adapters and older pinned helpers retain their
 original check interface and lifecycle; native v2 does not expand their permissions.
 
-## Runs pinned to older helpers
+## Process custody and runs pinned to older helpers
 
-Their recovery journal records intended states before the first source write, and recovery touches only helper-written paths that still match those states. Destination publication claims the existing directory entry and compares its bytes before exclusive creation of the replacement. Concurrent replacements block integration. Claimed originals remain in private write custody (Git metadata, or destination-local custody when volumes differ) for crash recovery and writers holding an old inode; conflicts report their retained paths. Rollback uses the same guard and cannot discard a changed claimed original.
+Process custody stops the owned process group; intentionally detached services and processes outside that group remain the native harness/operator responsibility. Independent commands must finish their work before returning success. Cleanup checks that the owned worktree is still at the accepted tip after ownership reads, just before removal; a changed worktree is retained for inspection.
 
-Candidate identity is checked across verification and acceptance; a changed owned worktree is retained instead of automatically removed. Guarded writes validate parent-directory identities as well as final entries. The parent host provides filesystem containment: these checks are conflict detection, not an OS sandbox against processes that deliberately rename ancestors between syscalls. Process custody stops the owned process group; intentionally detached services and processes outside that group remain the native harness/operator responsibility. Independent commands must finish their work before returning success.
-
-Native interruption recovery validates the complete checkout against the journaled candidate identity before accepting saved verification. Cleanup validates accepted worktree contents after ownership reads, just before removal; an already absent owned worktree can still be unregistered. Concurrent editor saves detected at either boundary retain their files and require review or recovery.
+A run prepared by an older helper, without a run branch, finishes review, apply and recovery through that pinned helper. The current helper refuses its custody instead of integrating it.

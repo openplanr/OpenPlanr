@@ -309,17 +309,6 @@
       "executable": false
     },
     {
-      "path": "scripts/integration-transaction.mjs",
-      "kind": "script",
-      "hosts": [
-        "claude-code",
-        "codex",
-        "chatgpt",
-        "cursor"
-      ],
-      "executable": false
-    },
-    {
       "path": "scripts/adapters/capsule.mjs",
       "kind": "script",
       "hosts": [

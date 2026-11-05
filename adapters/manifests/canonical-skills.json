@@ -958,7 +958,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:3f09618101b64cc5369d4eb11a81e10156de653e19e4eeae6da02456b64dabff"
+          "digest": "sha256:5c5457cb8c7865ba6ba0b11686c229ebda2a0a7faa65c9b02746442bc213107b"
         },
         {
           "path": "references/operator-guide.md",
@@ -994,7 +994,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:83e3cdf8ff1926a34846347c4f0669e013caefbc84e58b1b1fb26bb5a1d7f924"
+          "digest": "sha256:a7bb2dc84ed3861f283f2dbec978b717ed35fe5fc70d368a25cac701eaff4a10"
         },
         {
           "path": "scripts/adapters/claude.mjs",
@@ -1090,7 +1090,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:52cfd4806d59591f3875978ac48f2be42cb87eb519d7ac08f262accb2d1300c9"
+          "digest": "sha256:9ee8d17a28aad8edf29ebda6edcef21b86124081f7c933a53473cf8e90d7380a"
         },
         {
           "path": "scripts/presentation.mjs",
@@ -1198,7 +1198,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:77ba3221b799a5cec0c1001d550be3c9742ae5a1a6795cc7e59b6316c339d233"
+          "digest": "sha256:13165f8fd68c9560187d02a6f79f30ad6aa5c146d4d98639739bc4d182aaad41"
         },
         {
           "path": "scripts/integration-files.mjs",
@@ -1210,7 +1210,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:9955bcdf000d72c84d485bca47554d7576d31832cd623922fe642afb5355ad1e"
+          "digest": "sha256:94845c938bbf67f7b81f6ca0344ef778e8db978af242f8e8a499b8c8b156a294"
         },
         {
           "path": "scripts/integration-checks.mjs",
@@ -1234,19 +1234,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:f35b6e805b013b3ce193dfa35e4e0137309a21cc2f4f2d78e2cd415b1c8e18e9"
-        },
-        {
-          "path": "scripts/integration-transaction.mjs",
-          "kind": "script",
-          "hosts": [
-            "claude-code",
-            "codex",
-            "chatgpt",
-            "cursor"
-          ],
-          "executable": false,
-          "digest": "sha256:ed858b8eba81dd07d626dff2ea7442751cab25ec621232945408c942f3a5c0c6"
+          "digest": "sha256:07ff51c3da9774b11a6227838ec71c63289a9038f2d11fb7305255ad833396d2"
         },
         {
           "path": "scripts/adapters/capsule.mjs",

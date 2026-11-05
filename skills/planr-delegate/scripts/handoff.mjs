@@ -1,7 +1,7 @@
 // Hand delegate work back through its run branch: snapshot, review, check at tip, git apply.
 import { execFile } from 'node:child_process';
-import { createHash } from 'node:crypto';
-import { chmod, copyFile, lstat, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { createHash, randomUUID } from 'node:crypto';
+import { chmod, copyFile, lstat, mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { captureFileState, HOOKLESS_COMMIT, validateWorktreeCustody } from './custody.mjs';
@@ -16,10 +16,15 @@ import {
   changedSinceSnapshot,
   covers,
   IntegrationError,
+  safePath,
   workingSnapshot,
 } from './integration-files.mjs';
-import { checkoutLock, compareWithBaseline, reviewScope } from './integration-transaction.mjs';
-import { compactIntegrationState } from './run-record.mjs';
+import {
+  acquireRunTransitionLock,
+  compactIntegrationState,
+  processIdentity,
+  processIdentityState,
+} from './run-record.mjs';
 
 const DIFF = [
   '-c',
@@ -49,6 +54,146 @@ const SELECTION_ERRORS = [
   'E_INTEGRATION_GENERATOR_SELECTION',
   'E_INTEGRATION_GENERATOR_DRIFT',
 ];
+
+const ACTIVE_RECOVERY =
+  'The delegate is still running: wait for this runId; if it stops for input, answer through resume, then review once it completes.';
+const RUN_RECOVERY = {
+  question:
+    'The delegate is waiting for an answer: run resume with this runId and an answer, then review once it completes.',
+  blocked:
+    'The delegate stopped for attention: inspect status, resolve the cause, run resume with this runId and an answer or correction, then review once it completes.',
+  running: ACTIVE_RECOVERY,
+  resuming: ACTIVE_RECOVERY,
+  prepared: 'The run has not been dispatched: dispatch it, then review once it completes.',
+};
+
+function completed(run) {
+  return run?.status === 'completed' || run?.state === 'completed';
+}
+
+function reviewScope({ custody, run, scopePaths = [], preservePaths = [] } = {}) {
+  if (!custody?.repositoryRoot || !custody?.worktreePath)
+    throw new IntegrationError('E_INTEGRATION_RECORD', 'A custody record is required.');
+  if (!completed(run))
+    throw new IntegrationError(
+      'E_INTEGRATION_RUN',
+      `Only a completed delegate run can be reviewed. ${RUN_RECOVERY[run?.status] ?? 'Inspect the run with status.'}`,
+      { status: run?.status ?? null },
+    );
+  if (!isBranchHandoff(custody))
+    throw new IntegrationError(
+      'E_INTEGRATION_RECORD',
+      'This custody has no run branch; finish the run with the helper pinned when it was prepared.',
+    );
+  if (!Array.isArray(scopePaths) || scopePaths.length === 0)
+    throw new IntegrationError(
+      'E_INTEGRATION_SCOPE',
+      'Explicit writable scope paths are required.',
+    );
+  const allowed = scopePaths.map(safePath);
+  const protectedPaths = [...(custody.preservePaths ?? []), ...preservePaths].map((entry) =>
+    safePath(typeof entry === 'string' ? entry : entry.path),
+  );
+  return { allowed, protectedPaths };
+}
+
+export async function checkoutLock(root) {
+  const path = join(
+    tmpdir(),
+    `planr-integration-lock-${createHash('sha256').update(root).digest('hex')}`,
+  );
+  // Serialize stale recovery with the same crash-safe acquisition used by runs.
+  // Keep the checkout owner file so retained helpers still observe an active apply.
+  const transitions = `${path}-transitions`;
+  await mkdir(join(transitions, 'checkout'), { recursive: true, mode: 0o700 });
+  let releaseTransition;
+  try {
+    releaseTransition = await acquireRunTransitionLock('checkout', { directory: transitions });
+  } catch (error) {
+    if (error.code === 'E_RUN_LOCKED')
+      throw new IntegrationError(
+        'E_INTEGRATION_LOCKED',
+        'Another integration holds this checkout.',
+      );
+    throw error;
+  }
+  const token = randomUUID();
+  try {
+    try {
+      await mkdir(path, { mode: 0o700 });
+    } catch (error) {
+      if (error.code !== 'EEXIST') throw error;
+      const owner = JSON.parse(await readFile(join(path, 'owner.json'), 'utf8'));
+      if (!['exited', 'reused'].includes(await processIdentityState(owner)))
+        throw new IntegrationError(
+          'E_INTEGRATION_LOCKED',
+          'Another integration holds this checkout.',
+        );
+      await rm(path, { recursive: true });
+      await mkdir(path, { mode: 0o700 });
+    }
+    await writeFile(
+      join(path, 'owner.json'),
+      JSON.stringify({ ...(await processIdentity()), token }),
+      {
+        flag: 'wx',
+        mode: 0o600,
+      },
+    );
+  } catch (error) {
+    await releaseTransition();
+    throw error;
+  }
+  return async () => {
+    try {
+      const owner = JSON.parse(await readFile(join(path, 'owner.json'), 'utf8'));
+      if (owner.token !== token)
+        throw new IntegrationError('E_INTEGRATION_LOCKED', 'Checkout lock ownership changed.');
+      await rm(path, { recursive: true });
+    } finally {
+      await releaseTransition();
+    }
+  };
+}
+
+async function compareWithBaseline(
+  results,
+  selectedChecks,
+  target,
+  { phase, timeoutMs, signal, onProcess },
+) {
+  const beforeBaseline = await workingSnapshot(target.root);
+  const failing = selectedChecks.filter((_check, index) => results[index]?.status === 'failed');
+  const baseline = await phase('baseline-checks', () =>
+    runDelegateChecks({
+      repositoryRoot: target.root,
+      checks: failing,
+      onProcess,
+      timeoutMs,
+      home: target.home,
+      signal: signal,
+    }),
+  );
+  const effects = await changedSinceSnapshot(target.root, beforeBaseline);
+  let index = 0;
+  const compared = results.map((result) => {
+    if (result.status !== 'failed') return result;
+    const evidence = baseline[index++];
+    const baselineStatus = effects.length ? 'unverified' : evidence.status;
+    return {
+      ...result,
+      baselineStatus,
+      baseline: evidence,
+      classification:
+        baselineStatus === 'failed'
+          ? 'baseline-failure'
+          : baselineStatus === 'passed'
+            ? 'regression'
+            : 'unverified',
+    };
+  });
+  return { results: compared, effects };
+}
 
 function gitOperation(args) {
   return args.find((arg) => !arg.startsWith('-') && !arg.includes('='));
