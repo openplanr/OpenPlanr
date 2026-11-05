@@ -571,7 +571,7 @@
     {
       "source": "packages/design/lib/design/share.mjs",
       "target": "lib/design/share.mjs",
-      "sha256": "0bc25921e52e3d020824450d4a4e4d79a8f25519121a18c887c87add566848b5",
+      "sha256": "78783dc304e5ecd82646a6a83ccd2b7529d023b80e937cba8040c5e52d21e755",
       "mode": "644"
     },
     {

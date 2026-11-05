@@ -649,6 +649,7 @@ openplanr artifact manage <design-document> --action rotate|pause|resume|revoke|
 openplanr artifact feedback <design-document> [--action inspect|export|import|select|resolve] [--format json|markdown] [--scope current|all] [--output <new-path>] [--input <file>] [--json]
 openplanr artifact handoff <design-document> [--action draft|inspect|update|approve|category|disposition] [--input <file|->] [--json]
 openplanr artifact share-runtime [--json]
+openplanr artifact review-metadata <design-document> --revision <hosted-revision> --input <file|-> [--json]
 openplanr artifact import --secret-input <private-file|-> [--output <path>] [--allow-stale] [--json] [--yes]
 openplanr artifact export <session-id> [--format json|markdown] [--output <path>]
 ```
@@ -670,7 +671,9 @@ restores a private recovery file. Rotate, revoke, delete and restore ask first;
 inspects or exports feedback. `handoff` drafts the review handoff by default, and
 its other actions update it from a JSON object; on a shared design, category and
 disposition changes also publish to the review. `share-runtime` reports the CLI,
-workflow package and design sharing format versions. Design sharing needs the
+workflow package and design sharing format versions, and `review-metadata` publishes
+one owner category or disposition; the bundled design helpers use both to hand sharing
+to the CLI. Design sharing needs the
 optional `planr-pipeline` package; without it these commands fail with
 `E_DESIGN_SHARE_PIPELINE_MISSING`.
 

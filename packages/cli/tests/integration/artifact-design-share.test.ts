@@ -244,6 +244,21 @@ describe('openplanr artifact design sharing commands', { timeout: 120_000 }, () 
       );
   });
 
+  it('writes a recovery file to ~/Downloads when no output path is given', async () => {
+    const { dir, file, home, env } = await sharedProject();
+    json(await cli(['artifact', 'share', file, '--yes', '--no-open', '--json'], dir, env));
+    const userHome = join(home, '..', 'user-home');
+    const result = json(
+      await cli(['artifact', 'manage', file, '--action', 'recovery', '--json'], dir, {
+        ...env,
+        HOME: userHome,
+      }),
+    );
+    const output = String(result.output);
+    expect(output.startsWith(join(userHome, 'Downloads', 'openplanr-design-recovery-'))).toBe(true);
+    expect(statSync(output).mode & 0o777).toBe(0o600);
+  });
+
   it('refuses destructive management without confirmation', async () => {
     const { dir, file, env } = await sharedProject();
     json(await cli(['artifact', 'share', file, '--yes', '--no-open', '--json'], dir, env));

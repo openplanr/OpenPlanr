@@ -67,7 +67,7 @@ function readJsonInput(source: string, resolvePath: (file: string) => string) {
   } catch {
     throw new ArtifactCommandError(
       'E_ARTIFACT_INPUT_INVALID',
-      `The handoff input from ${source === '-' ? 'stdin' : source} must be a JSON object.`,
+      `The input from ${source === '-' ? 'stdin' : source} must be a JSON object.`,
     );
   }
 }
@@ -121,7 +121,10 @@ export function registerDesignShareCommands(artifact: Command, context: DesignSh
       'Rotate, pause, resume, revoke, delete, reveal access to, or recover a design review',
     )
     .requiredOption('--action <action>', DESIGN_MANAGE_ACTIONS.join('|'))
-    .option('--output <path>', 'recovery: write the private recovery file to this new path')
+    .option(
+      '--output <path>',
+      'recovery: write the private recovery file to this new path (default: ~/Downloads)',
+    )
     .option('--input <path>', 'restore: read the private recovery file from this path')
     .option('--yes', 'confirm a rotate, revoke, delete or restore non-interactively', false)
     .option('--json', 'emit machine-readable output', false)
@@ -129,11 +132,6 @@ export function registerDesignShareCommands(artifact: Command, context: DesignSh
       const options = command.optsWithGlobals<Flags>();
       const action = oneOf(options.action, DESIGN_MANAGE_ACTIONS, 'Manage action');
       const input = designDocument(context, file);
-      if (action === 'recovery' && typeof options.output !== 'string')
-        throw new ArtifactCommandError(
-          'E_ARTIFACT_INPUT_INVALID',
-          'Recovery export requires --output <new-path>.',
-        );
       if (action === 'restore' && typeof options.input !== 'string')
         throw new ArtifactCommandError(
           'E_ARTIFACT_INPUT_INVALID',
@@ -149,7 +147,9 @@ export function registerDesignShareCommands(artifact: Command, context: DesignSh
       )
         return;
       const result = await runDesignShareAction(input, action as DesignShareAction, {
-        ...(action === 'recovery' ? { output: context.resolveInput(String(options.output)) } : {}),
+        ...(action === 'recovery' && typeof options.output === 'string'
+          ? { output: context.resolveInput(options.output) }
+          : {}),
         ...(action === 'restore' ? { input: context.resolveInput(String(options.input)) } : {}),
       });
       const json = Boolean(options.json);
@@ -197,6 +197,29 @@ export function registerDesignShareCommands(artifact: Command, context: DesignSh
       emit(Boolean(options.json), result, () => {
         logger.success(`Design feedback ${action} complete`);
         if (typeof result.output === 'string') display.keyValue('Output', result.output);
+      });
+    });
+
+  artifact
+    .command('review-metadata <file>')
+    .description(
+      'Publish an owner category or disposition to a shared design review (used by the design helpers)',
+    )
+    .requiredOption('--revision <revision>', 'the hosted revision the decision belongs to')
+    .requiredOption('--input <path|->', 'the decision as a JSON object, from a file or stdin')
+    .option('--json', 'emit machine-readable output', false)
+    .action(async (file: string, _options, command: Command) => {
+      const options = command.optsWithGlobals<Flags>();
+      const result = await runDesignShareAction(designDocument(context, file), 'review-metadata', {
+        payload: readJsonInput(String(options.input), context.resolveInput),
+        revisionId: String(options.revision),
+      });
+      emit(Boolean(options.json), result, () => {
+        logger.success(
+          result.pending
+            ? 'Review decision saved; it is sent on the next sync'
+            : 'Review decision published',
+        );
       });
     });
 

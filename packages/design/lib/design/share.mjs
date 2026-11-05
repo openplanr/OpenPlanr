@@ -15,6 +15,7 @@ import {
   unlinkSync,
   writeFileSync,
 } from 'node:fs';
+import { homedir } from 'node:os';
 import { basename, dirname, join, resolve } from 'node:path';
 import { digestArtifactEnvelope } from '@openplanr/artifact/envelope.mjs';
 import { resolveArtifactReviewDestination } from '@openplanr/artifact/import.mjs';
@@ -310,11 +311,13 @@ export async function publishDesignReviewMetadata(file, payload, { revisionId, .
 }
 
 /** Explicit recovery export; normal status/CLI output never contains credentials. */
+/** Without `output`, writes a new file in `~/Downloads`. */
 export async function exportDesignShareRecovery(file, { output, ...options } = {}) {
-  if (!output) throw new Error('Recovery export requires a new private output path.');
   return withCustody(file, options, async ({ record }) => {
     if (!record) throw new Error('Create the shared review first.');
-    const target = resolve(output);
+    const target = resolve(
+      output ?? join(homedir(), 'Downloads', `openplanr-design-recovery-${Date.now()}.json`),
+    );
     mkdirSync(dirname(target), { recursive: true, mode: 0o700 });
     const recovery = structuredClone(record);
     if (
