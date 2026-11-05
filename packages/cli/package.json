@@ -103,7 +103,7 @@
     "url": "https://github.com/openplanr/OpenPlanr/issues"
   },
   "dependencies": {
-    "@inquirer/prompts": "^8.7.4",
+    "@inquirer/prompts": "^8.7.5",
     "@linear/sdk": "^65.2.0",
     "@napi-rs/keyring": "^1.2.0",
     "chalk": "^5.3.0",
@@ -117,10 +117,10 @@
     "planr-pipeline": "0.62.0"
   },
   "devDependencies": {
-    "@biomejs/biome": "^2.6.3",
+    "@biomejs/biome": "^2.6.4",
     "@changesets/cli": "^3.0.3",
     "@tailwindcss/vite": "4.3.3",
-    "@tanstack/react-query": "5.105.0",
+    "@tanstack/react-query": "5.105.3",
     "@testing-library/dom": "10.4.2",
     "@testing-library/react": "16.3.3",
     "@testing-library/user-event": "14.6.8",
@@ -131,7 +131,7 @@
     "class-variance-authority": "0.7.1",
     "clsx": "2.1.1",
     "axe-core": "4.14.0",
-    "lucide-react": "1.61.0",
+    "lucide-react": "1.66.0",
     "tsx": "^4.23.15",
     "radix-ui": "1.8.1",
     "react": "19.3.1",
