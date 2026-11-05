@@ -79,5 +79,11 @@ test('installed Studio boots in a browser from its readable runtime source units
       { timeout: 10_000 },
     );
   }
+  assert.equal(await page.locator('[data-planr-action="share"]').first().isVisible(), true);
+  const exported = join(root, 'portable.html');
+  assert.equal((await run(['export', file, '--format', 'html', '--output', exported])).ok, true);
+  await page.goto(pathToFileURL(exported).href, { waitUntil: 'domcontentloaded', timeout: 30_000 });
+  await page.waitForFunction(() => window.__openPlanrArtifactStage, null, { timeout: 20_000 });
+  assert.equal(await page.locator('[data-planr-action="share"]').first().isHidden(), true);
   assert.deepEqual(errors, []);
 });

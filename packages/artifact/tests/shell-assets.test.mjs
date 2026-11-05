@@ -4,6 +4,7 @@ import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
+import { Script } from 'node:vm';
 import { gzipSync } from 'node:zlib';
 import { ARTIFACT_SHELL_ASSET_PATHS } from '../lib/artifact/ui/shell.mjs';
 import {
@@ -11,6 +12,8 @@ import {
   ARTIFACT_SHELL_ASSET_BUDGETS,
   ARTIFACT_SHELL_BUNDLE_BANNER,
   renderArtifactShellAssets,
+  renderArtifactStageRuntimeAsset,
+  renderLocalArtifactStageRuntimeAsset,
   runArtifactShellGenerator,
 } from '../scripts/generate-artifact-shell.mjs';
 
@@ -94,4 +97,28 @@ test('browser bundles name their generator and keep third-party license headers'
     /\/\*! pako 2\.1\.0 https:\/\/github\.com\/nodeca\/pako @license \(MIT AND Zlib\) \*\//u,
     'the pako license header travels inside the bundle',
   );
+});
+
+test('the local stage leaves out every sharing module and keeps the review rail', async () => {
+  let inputs = [];
+  let emitted = new Set();
+  const local = await renderLocalArtifactStageRuntimeAsset({
+    compact: false,
+    onInputs: (all, used) => {
+      inputs = all;
+      emitted = used;
+    },
+  });
+  new Script(local, { filename: 'artifact-review-stage.local.js' });
+  assert.match(local, /mountArtifactFeedbackRail/u);
+  assert.match(local, /function createDurablePasteShare\(\) \{\s*return null;/u);
+  const sharing =
+    /(?:share-dialog|hosted-viewer|durable-paste-share|share-client|live-room|chunked-workspace-client|review-outbox|sharing-security-contracts|workspace-contracts)\.mjs$/u;
+  assert.deepEqual(
+    [...emitted].filter((path) => sharing.test(path)),
+    [],
+  );
+  assert.ok(inputs.every((path) => !path.includes('local-stage-stub:')));
+  assert.ok([...emitted].every((path) => inputs.includes(path)));
+  assert.notEqual(local, renderArtifactStageRuntimeAsset({ compact: false }));
 });

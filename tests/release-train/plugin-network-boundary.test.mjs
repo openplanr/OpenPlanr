@@ -7,6 +7,7 @@ import test from 'node:test';
 import {
   assertReleasablePlugin,
   classifyFindings,
+  readAllowlist,
   scanPluginNetworkBoundary,
 } from '../../scripts/check-plugin-network-boundary.mjs';
 
@@ -75,28 +76,49 @@ test('a home read without any request is not a finding', (t) => {
 
 test('allowlist entries cover findings by glob, and unused entries are reported stale', () => {
   const findings = [
-    { path: 'runtime/design/scripts/design-share-1a2b3c4d.mjs', rule: 'share-host', evidence: [] },
+    { path: 'runtime/delegate/scripts/custody-1a2b3c4d.mjs', rule: 'owner-key', evidence: [] },
     { path: 'runtime/x.mjs', rule: 'owner-key', evidence: [] },
   ];
   const { blocking, allowed, stale } = classifyFindings(findings, {
-    permanent: [],
-    shrinking: [
-      { path: 'runtime/design/scripts/design-share-*.mjs', rule: 'share-host' },
-      { path: 'runtime/gone.mjs', rule: 'authorization' },
+    permanent: [
+      { path: 'runtime/delegate/scripts/custody-*.mjs', rule: 'owner-key', reason: 'local lock' },
+      { path: 'runtime/gone.mjs', rule: 'authorization', reason: 'gone' },
     ],
   });
   assert.deepEqual(
     allowed.map(({ path }) => path),
-    ['runtime/design/scripts/design-share-1a2b3c4d.mjs'],
+    ['runtime/delegate/scripts/custody-1a2b3c4d.mjs'],
   );
   assert.deepEqual(
     blocking.map(({ path }) => path),
     ['runtime/x.mjs'],
   );
-  assert.deepEqual(stale, [{ path: 'runtime/gone.mjs', rule: 'authorization', kind: 'shrinking' }]);
+  assert.deepEqual(stale, [{ path: 'runtime/gone.mjs', rule: 'authorization' }]);
 });
 
-test('a release refuses any finding even when the shrinking allowlist covers it', (t) => {
+test('the allowlist accepts only permanent entries with a reason', (t) => {
+  const write = (value) => {
+    const root = mkdtempSync(join(tmpdir(), 'planr-allowlist-'));
+    t.after(() => rmSync(root, { recursive: true, force: true }));
+    mkdirSync(join(root, 'scripts'));
+    writeFileSync(
+      join(root, 'scripts/plugin-network-boundary-allowlist.json'),
+      JSON.stringify(value),
+    );
+    return root;
+  };
+  assert.throws(
+    () =>
+      readAllowlist(write({ permanent: [], shrinking: [{ path: 'a.mjs', rule: 'owner-key' }] })),
+    /unsupported keys: shrinking/u,
+  );
+  assert.throws(
+    () => readAllowlist(write({ permanent: [{ path: 'a.mjs', rule: 'owner-key' }] })),
+    /invalid permanent entry/u,
+  );
+});
+
+test('a release refuses any finding the allowlist does not cover', (t) => {
   const root = plugin(t, {
     'runtime/design/scripts/design-share.mjs': 'fetch("https://share.openplanr.dev/x");',
   });

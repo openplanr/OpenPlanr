@@ -5,6 +5,9 @@
   if (!options.shareUrl) return;
   const button = document.querySelector('[data-planr-action="share"]');
   if (!button) return;
+  // Claims the control so a stage without its own share dialog keeps it visible.
+  button.setAttribute('data-planr-share-adapter', '');
+  button.hidden = false;
   button.setAttribute('aria-label', 'Share design');
   let dialog, status, busy = false, opener;
   const element = (tag, text, attributes = {}) => {
