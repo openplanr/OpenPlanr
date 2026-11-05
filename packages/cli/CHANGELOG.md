@@ -1,5 +1,57 @@
 # Changelog
 
+## 3.4.0
+
+### Minor Changes
+
+- 6a629c8: `/diagram` now draws bar, line and scatter charts with labelled axes and a mark for every data value, instead of generic boxes.
+- 4c87858: Delegated runs now hand their work back through a Git branch. Each new run works on its own branch from a base commit that holds your selected files, and `apply` uses `git apply` to leave the same uncommitted diff as before.
+  
+  - If you edit another part of a file the delegate changed, the two edits now merge. An edit to the same lines still blocks, and the blocked result names the file.
+  - Checks run on your last commit plus the selected files and the delegate's changes. Your other uncommitted files are no longer part of the checks; the report lists them.
+  - A change to a submodule pointer blocks review, because `git apply` cannot update it. This holds when `ignore` settings hide the submodule.
+  - Branch switches, amends, resets, stashes, fetches and tags made during a run are listed in the report and do not block it. The run blocks if its own branch is moved off its base, if your checked-out branch is deleted or picks up the run's commits, or if the restore point of a run that is still being applied or recovered is deleted.
+  - A dangling symlink or a submodule in your checkout no longer makes apply fail when you have other uncommitted edits.
+  - If an apply is interrupted, `recover` can accept a fully applied patch or roll it back without overwriting your edits.
+  
+  Runs prepared before this release finish with the helper they started with.
+- 7cee602: The design skills now share through the `openplanr` CLI. Their bundled scripts no longer read a shared review's owner keys or contact the share service: `design.mjs share`, `publish`, `sync` and `manage`, the studio's Share dialog, feedback sync and handoff decisions on a shared design all run `openplanr artifact` for the network step. Local design work is unchanged and needs no CLI.
+  
+  - Without the CLI, sharing stops with `E_DESIGN_SHARE_CLI_REQUIRED` and asks you to run `npm install -g openplanr`. Feedback inspection still works and reports that sync was skipped, and the studio's Share dialog says the CLI is needed.
+  - If the skills and the CLI use different sharing formats, sharing refuses with `E_DESIGN_SHARE_RUNTIME_MISMATCH` and names which one to update. An older CLI is refused the same way.
+  - Existing shares keep working. The CLI reads the same owner records, sends to the same address, and `OPENPLANR_SHARE_BASE` still chooses the origin for a new share.
+  - The studio syncs a shared design every 15 seconds only while its page is visible, and no longer polls designs that are not shared.
+  - A recovery file exported without `--output` goes to a new file in `PLANR_HOME/design-recovery`, a private folder next to the owner keys, from the CLI and from the studio's Share dialog. The file holds the owner keys, so keep it private when you move it.
+  - If the CLI does not answer within a few seconds, the studio keeps working and reports that the CLI did not respond. Changing the category or decision on a hosted reviewer's comment is refused, and nothing is saved, until sharing can run, instead of being saved locally and never sent.
+  - On Windows the skills start the CLI's own script from the `openplanr.cmd` that npm installs.
+- 103c244: You can now manage a shared design from the CLI, the same way the local studio does:
+  
+  - `openplanr artifact status <design-document>` shows the review link and whether the current revision is published.
+  - `openplanr artifact manage <design-document> --action ...` rotates the reviewer access token, pauses or resumes comments, revokes or deletes the review, prints the reviewer token, and writes or restores a private recovery file. Rotate, revoke, delete and restore ask first; `--yes` confirms them.
+  - `openplanr artifact feedback <design-document>` syncs a shared design, then inspects, exports, imports, selects or resolves its feedback.
+  - `openplanr artifact handoff <design-document> --action ...` now inspects and updates a handoff as well as drafting it. On a shared design, category and disposition changes also reach the review.
+  
+  If the optional `planr-pipeline` package is missing, these commands say so with `E_DESIGN_SHARE_PIPELINE_MISSING` instead of failing with a generic error.
+  
+  `design.mjs <command> --help` and `-h` now print help wherever they appear. Before, `design.mjs share --help` ran the share command instead of printing help.
+- 807f3e5: `/diagram` now draws radar charts for comparing series across at least three categories and polar charts with value-scaled sectors, labelled radial grids and matching legends.
+- c1da084: `/ship` now passes the task path and mode to delegated roles, re-runs the checks a delegate reports as passed, acts on warning diagnostics and on the new files a `package-contents` check expects, and maps each check to the acceptance criteria it covers. A new `awaiting-acceptance` outcome marks repository work that only the owner can accept. `/ship` and `/investigate` now report whether an acceptance or regression test actually failed before the change.
+- 1b63c8b: `openplanr ship checks --tier push` now lists `npm pack --dry-run --json --ignore-scripts` for each published package that gains non-code files such as JSON data or templates, with the new files to account for: each is in the tarball or deliberately left out. The JSON result moves to schema `1.2.0`.
+
+### Patch Changes
+
+- e25cf67: The delegate skill no longer ships its previous integration path, which copied the checkout and wrote each changed file back itself. New runs already use the run branch handoff. Runs prepared before that change still finish with the helper they started with.
+- 5ceb24f: `delegate` apply no longer refuses with `E_INTEGRATION_SOURCE_DRIFT` in repositories that track files also matched by `.gitignore` while the checkout has an unrelated uncommitted edit. When the final checkout or the selected candidate does differ, the refusal lists the first differing paths and whether each is missing, extra or changed. `prepare` rejects glob characters in `scopePaths` and names the literal prefix to use, `review` of an unfinished run names the step that unblocks it, and the operator guide explains how to set Cursor's command allowlist before dispatch.
+  
+  When Claude Code or Codex settings choose no permission mode, `delegate` now starts Claude Code with `--permission-mode acceptEdits` and Codex with `--sandbox workspace-write` on dispatch and resume, so a stock install can edit files in the run's worktree. Claude's edit mode also runs `mkdir`, `touch`, `rm`, `rmdir`, `mv`, `cp` and `sed` without asking inside the worktree. A mode you configured, such as Claude `defaultMode` or Codex `sandbox_mode`, is left in charge. Shell commands still follow each CLI's own allowlist, and no bypass flag is passed.
+- 8a7403c: The design skills now ship a smaller review stage and contract set. Their copy of the review stage leaves out link sharing, the hosted viewer and live rooms, and their scripts no longer bundle the sharing and hosted workspace contracts or the paste and workspace schemas. The studio, prototype, walkthrough and feedback rail work as before, and sharing still runs through the `openplanr` CLI. A portable HTML export from the skills no longer shows a Share button, which could only report that sharing was unavailable.
+  
+  `@openplanr/protocol` adds a `large-object-limits` entry point, so you can read the resource limits without loading the sharing contracts.
+- fd01286: `fonts fetch` no longer leaves empty folders behind when writing to disk fails, and it clears its own staging folders left by an interrupted run. Destinations named `.fonts-fetch-*` are now refused, because that prefix is reserved for staging.
+- 6d86c9a: The npm package, README and plugin descriptions now say what OpenPlanr is: the open harness around your coding agent, with plans as files in your repo, checks before you merge, and a record of what shipped. The package keywords drop `sprint` and `user-story` and add `code-review` and `agent-harness`. Commands and behavior are unchanged.
+- 8e3991b: The Claude plugin directory keywords now match what OpenPlanr is: `coding-agents`, `agent-harness`, `code-review`, `planning` and `verification`. Managed blocks the CLI writes into your files now say "managed by openplanr CLI"; existing blocks are still recognized and update on the next write.
+- 1ba15eb: `/ship` and `/investigate` no longer ask a question when an acceptance or regression test already passes before the change; they narrow or strengthen the test themselves and report it. `/ship` now reports a check that `ship checks` could not run, such as tsconfig coverage when TypeScript cannot be loaded, and verifies that concern itself.
+
 ## 3.3.0
 
 ### Minor Changes
