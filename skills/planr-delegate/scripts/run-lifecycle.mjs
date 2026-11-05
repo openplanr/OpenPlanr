@@ -5,7 +5,7 @@ import { basename, dirname, join } from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
 import { terminateProcessGroup } from './adapters/generic.mjs';
 import { captureFileState, cleanupWorktreeCustody, validateWorktreeCustody } from './custody.mjs';
-import { git, treeIdentity } from './integration-files.mjs';
+import { git } from './integration-files.mjs';
 import {
   implementationReport,
   liveExecutionTiming,
@@ -368,13 +368,7 @@ export async function cleanupAcceptedWorktree(record, runDirectory) {
     beforeRemove: async (target) => {
       if (unstarted)
         await assertUnchangedAbandonment(record, await custodyAt(record, runDirectory));
-      if (
-        record.integration?.tip
-          ? !(await worktreeAtTip(target, record.integration.tip))
-          : record.nativeSelection &&
-            record.integration?.worktreeIdentity &&
-            (await treeIdentity(target)) !== record.integration.worktreeIdentity
-      )
+      if (record.integration?.tip && !(await worktreeAtTip(target, record.integration.tip)))
         throw new DelegateRunError(
           'E_DELEGATE_CLEANUP_DRIFT',
           'Owned worktree changed after acceptance; retain it for inspection.',
@@ -463,9 +457,6 @@ export async function delegateRunStatus({ runId, runDirectory = defaultRunDirect
       ? {
           status: record.integration.status,
           phase: record.integration.phase,
-          journalPath: record.integration.journalPath,
-          cursor: record.integration.cursor,
-          pendingPath: record.integration.pendingPath,
           nextAction: `Run node ${record.helper?.integrationPath ?? 'integrate.mjs'} recover with this run ID and resolution rollback (default) or accept after verifying every written path.`,
         }
       : null,

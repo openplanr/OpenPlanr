@@ -30,4 +30,4 @@ verification evidence, report and exact native session reference after cleanup.
 Old runs continue through their pinned helper; never broaden their policy or migrate
 their records automatically.
 
-Runs prepared by older helpers use detached worktrees and guarded integration, which keeps original directory entries for recovery and for writers holding the old inode. If Git metadata is on a different filesystem, private ignored write custody stays beside the destination and its location is recorded in the Git metadata before the first source write. Recovery validates that location inside the checkout. Existing metadata-based custody and pinned legacy helpers remain readable.
+Runs prepared by older helpers use detached worktrees and their own integration; they finish through that pinned helper.

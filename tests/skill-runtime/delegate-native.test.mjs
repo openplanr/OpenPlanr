@@ -1,6 +1,5 @@
 import assert from 'node:assert/strict';
 import { execFileSync, spawn } from 'node:child_process';
-import { createHash } from 'node:crypto';
 import fs from 'node:fs';
 import {
   chmod,
@@ -25,19 +24,12 @@ import {
 } from '../../skills/planr-delegate/scripts/adapters/codex.mjs';
 import { terminateProcessGroup } from '../../skills/planr-delegate/scripts/adapters/generic.mjs';
 import { failureCode, nativeTurn } from '../../skills/planr-delegate/scripts/adapters/native.mjs';
-import { captureFileState } from '../../skills/planr-delegate/scripts/custody.mjs';
-import {
-  delegateIntegrationCommand,
-  integrateDelegateDelta,
-} from '../../skills/planr-delegate/scripts/integrate.mjs';
+import { integrateBranchDelta } from '../../skills/planr-delegate/scripts/handoff.mjs';
+import { delegateIntegrationCommand } from '../../skills/planr-delegate/scripts/integrate.mjs';
 import {
   resolveSelectedChecks,
   runDelegateChecks,
 } from '../../skills/planr-delegate/scripts/integration-checks.mjs';
-import {
-  retainedEntryState,
-  rollbackWritten,
-} from '../../skills/planr-delegate/scripts/integration-files.mjs';
 import {
   enrollProfile,
   loadProfile,
@@ -1093,7 +1085,7 @@ test('a candidate edit after selection blocks checks and integration while retai
   const custody = JSON.parse(await readFile(prepared.record.custodyPath, 'utf8'));
   const run = await readRunRecord(prepared.runId, { directory: f.runDirectory });
   let edited = false;
-  const result = await integrateDelegateDelta({
+  const result = await integrateBranchDelta({
     custody,
     run,
     scopePaths: ['source.txt'],
@@ -1288,7 +1280,7 @@ test('an owner save between the apply check and git apply is kept and the run re
   const record = await readRunRecord(prepared.runId, { directory: f.runDirectory });
   const custody = JSON.parse(await readFile(record.custodyPath, 'utf8'));
   let rolledBack;
-  const result = await integrateDelegateDelta({
+  const result = await integrateBranchDelta({
     custody,
     run: record,
     scopePaths: ['source.txt'],
@@ -1361,50 +1353,6 @@ for (const failed of [true, false])
     );
     assert.equal(await readFile(join(f.root, pkg, 'generated.txt'), 'utf8'), 'original\n');
   });
-
-test('rollback recovers claimed-but-unpublished files and symlinks, including a second interrupted rollback', async (t) => {
-  const f = await fixture(t);
-  const path = 'source.txt',
-    writeId = 'crash-fixture';
-  const sourceBefore = await captureFileState(f.root, path);
-  const after = { ...sourceBefore, contentBase64: Buffer.from('applied\n').toString('base64') };
-  const gitDir = execFileSync('git', ['rev-parse', '--absolute-git-dir'], {
-    cwd: f.root,
-    encoding: 'utf8',
-  }).trim();
-  const file = `${createHash('sha256').update(path).digest('hex')}.before`;
-  const custody = join(gitDir, 'planr-delegate-write-custody', writeId);
-  await mkdir(custody, { recursive: true, mode: 0o700 });
-  const { rename } = await import('node:fs/promises');
-  await rename(join(f.root, path), join(custody, file));
-  const changes = [{ path, sourceBefore, after, writeId }];
-  assert.deepEqual(await rollbackWritten(f.root, changes, 'recover'), []);
-  assert.equal(await readFile(join(f.root, path), 'utf8'), 'base\n');
-  await writeFile(join(f.root, path), 'applied\n');
-  const rollbackCustody = join(gitDir, 'planr-delegate-write-custody', `${writeId}-rollback`);
-  await mkdir(rollbackCustody, { recursive: true, mode: 0o700 });
-  await rename(join(f.root, path), join(rollbackCustody, file));
-  assert.deepEqual(await rollbackWritten(f.root, changes, 'recover-again'), []);
-  assert.equal(await readFile(join(f.root, path), 'utf8'), 'base\n');
-  const linkPath = 'link',
-    linkId = 'link-crash';
-  await symlink(path, join(f.root, linkPath));
-  const linkBefore = await captureFileState(f.root, linkPath);
-  const linkCustody = join(gitDir, 'planr-delegate-write-custody', linkId);
-  await mkdir(linkCustody, { recursive: true, mode: 0o700 });
-  const linkFile = `${createHash('sha256').update(linkPath).digest('hex')}.before`;
-  await rename(join(f.root, linkPath), join(linkCustody, linkFile));
-  assert.equal(retainedEntryState(join(linkCustody, linkFile)).target, path);
-  assert.deepEqual(
-    await rollbackWritten(
-      f.root,
-      [{ path: linkPath, sourceBefore: linkBefore, after: { kind: 'absent' }, writeId: linkId }],
-      'link-recover',
-    ),
-    [],
-  );
-  assert.equal((await captureFileState(f.root, linkPath)).target, path);
-});
 
 for (const operation of ['prepare-worktree', 'dispatch'])
   test(`${operation} recovers an orphan preparation writer before retry`, async (t) => {
