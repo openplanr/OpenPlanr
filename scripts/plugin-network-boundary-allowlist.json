@@ -40,75 +40,21 @@
       "path": "rules/planr-delegate/scripts/run-lifecycle.mjs",
       "rule": "owner-key",
       "reason": "The delegate run custody token is a local lock that pairs a run with its git apply; it is written to and compared from local files and never sent."
+    },
+    {
+      "path": "runtime/design/scripts/design-review-state-store.mjs",
+      "rule": "authorization",
+      "reason": "Builds the control header for a recorded loopback review server from its own token; this module makes no request, and its callers send the header only to 127.0.0.1."
+    },
+    {
+      "path": "skills/planr-design*/scripts/design-review-state-store.mjs",
+      "rule": "authorization",
+      "reason": "Builds the control header for a recorded loopback review server from its own token; this module makes no request, and its callers send the header only to 127.0.0.1."
     }
   ],
   "shrinking": [
     {
-      "path": "runtime/design/scripts/design-chunked-workspace-client.mjs",
-      "rule": "authorization"
-    },
-    {
-      "path": "runtime/design/scripts/design-chunked-workspace-client.mjs",
-      "rule": "owner-key"
-    },
-    {
-      "path": "runtime/design/scripts/design-chunked-workspace-client.mjs",
-      "rule": "share-module"
-    },
-    {
-      "path": "runtime/design/scripts/design-encrypted-workspace-client.mjs",
-      "rule": "authorization"
-    },
-    {
-      "path": "runtime/design/scripts/design-encrypted-workspace-client.mjs",
-      "rule": "openplanr-request-url"
-    },
-    {
-      "path": "runtime/design/scripts/design-encrypted-workspace-client.mjs",
-      "rule": "owner-key"
-    },
-    {
-      "path": "runtime/design/scripts/design-encrypted-workspace-client.mjs",
-      "rule": "share-host"
-    },
-    {
-      "path": "runtime/design/scripts/design-encrypted-workspace-client.mjs",
-      "rule": "share-module"
-    },
-    {
-      "path": "runtime/design/scripts/design-owner-custody.mjs",
-      "rule": "share-module"
-    },
-    {
-      "path": "runtime/design/scripts/design-review.mjs",
-      "rule": "authorization"
-    },
-    {
-      "path": "runtime/design/scripts/design-review.mjs",
-      "rule": "home-read-with-network"
-    },
-    {
-      "path": "runtime/design/scripts/design-share.mjs",
-      "rule": "openplanr-request-url"
-    },
-    {
-      "path": "runtime/design/scripts/design-share.mjs",
-      "rule": "owner-key"
-    },
-    {
-      "path": "runtime/design/scripts/design-share.mjs",
-      "rule": "share-host"
-    },
-    {
-      "path": "runtime/design/scripts/design-share.mjs",
-      "rule": "share-module"
-    },
-    {
-      "path": "runtime/design/scripts/design-shared-protocol-contracts-*.mjs",
-      "rule": "share-module"
-    },
-    {
-      "path": "runtime/design/scripts/design-upload-spool.mjs",
+      "path": "runtime/design/scripts/design-shared-artifact-support-protocol-contracts-*.mjs",
       "rule": "share-module"
     },
     {
@@ -168,87 +114,7 @@
       "rule": "share-module"
     },
     {
-      "path": "runtime/plan/scripts/design.mjs",
-      "rule": "openplanr-request-url"
-    },
-    {
-      "path": "runtime/plan/scripts/design.mjs",
-      "rule": "owner-key"
-    },
-    {
-      "path": "runtime/plan/scripts/design.mjs",
-      "rule": "share-host"
-    },
-    {
-      "path": "runtime/plan/scripts/design.mjs",
-      "rule": "share-module"
-    },
-    {
-      "path": "skills/planr-design*/scripts/design-chunked-workspace-client.mjs",
-      "rule": "authorization"
-    },
-    {
-      "path": "skills/planr-design*/scripts/design-chunked-workspace-client.mjs",
-      "rule": "owner-key"
-    },
-    {
-      "path": "skills/planr-design*/scripts/design-chunked-workspace-client.mjs",
-      "rule": "share-module"
-    },
-    {
-      "path": "skills/planr-design*/scripts/design-encrypted-workspace-client.mjs",
-      "rule": "authorization"
-    },
-    {
-      "path": "skills/planr-design*/scripts/design-encrypted-workspace-client.mjs",
-      "rule": "openplanr-request-url"
-    },
-    {
-      "path": "skills/planr-design*/scripts/design-encrypted-workspace-client.mjs",
-      "rule": "owner-key"
-    },
-    {
-      "path": "skills/planr-design*/scripts/design-encrypted-workspace-client.mjs",
-      "rule": "share-host"
-    },
-    {
-      "path": "skills/planr-design*/scripts/design-encrypted-workspace-client.mjs",
-      "rule": "share-module"
-    },
-    {
-      "path": "skills/planr-design*/scripts/design-owner-custody.mjs",
-      "rule": "share-module"
-    },
-    {
-      "path": "skills/planr-design*/scripts/design-review.mjs",
-      "rule": "authorization"
-    },
-    {
-      "path": "skills/planr-design*/scripts/design-review.mjs",
-      "rule": "home-read-with-network"
-    },
-    {
-      "path": "skills/planr-design*/scripts/design-share.mjs",
-      "rule": "openplanr-request-url"
-    },
-    {
-      "path": "skills/planr-design*/scripts/design-share.mjs",
-      "rule": "owner-key"
-    },
-    {
-      "path": "skills/planr-design*/scripts/design-share.mjs",
-      "rule": "share-host"
-    },
-    {
-      "path": "skills/planr-design*/scripts/design-share.mjs",
-      "rule": "share-module"
-    },
-    {
-      "path": "skills/planr-design*/scripts/design-shared-protocol-contracts-*.mjs",
-      "rule": "share-module"
-    },
-    {
-      "path": "skills/planr-design*/scripts/design-upload-spool.mjs",
+      "path": "skills/planr-design*/scripts/design-shared-artifact-support-protocol-contracts-*.mjs",
       "rule": "share-module"
     },
     {
@@ -305,22 +171,6 @@
     },
     {
       "path": "skills/planr-plan/scripts/design-protocol-contracts.mjs",
-      "rule": "share-module"
-    },
-    {
-      "path": "skills/planr-plan/scripts/design.mjs",
-      "rule": "openplanr-request-url"
-    },
-    {
-      "path": "skills/planr-plan/scripts/design.mjs",
-      "rule": "owner-key"
-    },
-    {
-      "path": "skills/planr-plan/scripts/design.mjs",
-      "rule": "share-host"
-    },
-    {
-      "path": "skills/planr-plan/scripts/design.mjs",
       "rule": "share-module"
     }
   ]

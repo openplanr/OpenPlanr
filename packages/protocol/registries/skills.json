@@ -755,7 +755,7 @@
       "lifecycle": "active",
       "authorityClass": "planning-write",
       "source": "skills/planr-design/openplanr.skill.json",
-      "sourceDigest": "sha256:8043eaa5fab05b77c3e47d5e0f580dc05a4a5c21c420f4c2815c72d71c323098",
+      "sourceDigest": "sha256:b162bfe24f4e1523edb7a567ad23c77b31a0cec8a159558b03b6212710d13f60",
       "triggerPolicy": {
         "include": [
           "Create an initial product design direction",
@@ -816,7 +816,7 @@
       "lifecycle": "active",
       "authorityClass": "planning-write",
       "source": "skills/planr-design-loop/openplanr.skill.json",
-      "sourceDigest": "sha256:5a244a415488abb8abb336b799ea475156e7cea9477ce45c2b69955c19f8ce12",
+      "sourceDigest": "sha256:26ebe09eac16036c9fbcfb0308130bb25d6e2f64088df8de342a9b61f02060db",
       "triggerPolicy": {
         "include": [
           "Explore multiple design directions or variants",
@@ -877,7 +877,7 @@
       "lifecycle": "active",
       "authorityClass": "review-evidence",
       "source": "skills/planr-design-review/openplanr.skill.json",
-      "sourceDigest": "sha256:935ae48b423ff2bba4eef6e2823d9ca7afda07db1d48b5433951c55baca9dc1c",
+      "sourceDigest": "sha256:0fdf2ae44c442186e3d038e5a4150b6c3f7aed7a7086057e9bc9ec2dc1bda680",
       "triggerPolicy": {
         "include": [
           "Review or critique an existing OpenPlanr design",
@@ -1864,5 +1864,5 @@
     }
   ],
   "compatibilityAliases": [],
-  "documentDigest": "sha256:f3522d157369c78d2251a8233e695e0bcd3ff95a012756c4776b33837d25e9ac"
+  "documentDigest": "sha256:c07d62379e3f1a71d19e972a53d4aff16d3a79a7e2a966107b89ef50041bd454"
 }

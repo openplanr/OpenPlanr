@@ -885,7 +885,7 @@ async function startDesignReviewUnlocked(
               (input.scope !== undefined && !['all', 'current'].includes(input.scope))
             )
               throw new Error('Review export requires scope current or all.');
-            await syncDesignShare(file, { env, fetchImpl });
+            await syncDesignShare(file, { env, fetchImpl, unavailable: 'skip' });
             respond(res, 200, exportDesignReview(file, { scope: input.scope ?? 'all', env }));
           } else {
             if (
@@ -960,15 +960,7 @@ async function startDesignReviewUnlocked(
           if (action === 'create') result = await shareDesign(file, options);
           else if (action === 'publish') result = await publishDesignShare(file, options);
           else if (action === 'sync') result = await syncDesignShare(file, options);
-          else if (action === 'recovery')
-            result = await exportDesignShareRecovery(file, {
-              ...options,
-              output: join(
-                env.HOME ?? process.env.HOME,
-                'Downloads',
-                `openplanr-design-recovery-${Date.now()}.json`,
-              ),
-            });
+          else if (action === 'recovery') result = await exportDesignShareRecovery(file, options);
           else result = await manageDesignShare(file, action, options);
           respond(res, 200, result);
         } else if (route === 'design-status' && req.method === 'GET') {

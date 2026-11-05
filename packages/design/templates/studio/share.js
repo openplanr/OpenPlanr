@@ -39,6 +39,7 @@
       details.append(element('dt', term), element('dd', value));
     }
     content.append(details);
+    if (status.unavailable) { content.append(element('p', status.unavailable.message)); return; }
     if (!status.shared || status.pending) {
       content.append(element('p', 'Publish an encrypted review that your team can open while your laptop is offline. Share the link and access token separately.'));
       content.append(action(status.pending ? `Retry ${status.pendingAction || 'sharing'}` : 'Create shared review', status.pendingAction || 'create', 'design-share-primary'));
@@ -111,7 +112,7 @@
   // Periodic pull imports only published feedback, never publishes local changes.
   let syncing = false;
   const sync = async () => {
-    if (syncing || document.hidden) return;
+    if (syncing || document.hidden || !status?.shared) return;
     syncing = true;
     try {
       const result = await request('sync');
@@ -128,6 +129,8 @@
       button.title = error.message;
     } finally { syncing = false; }
   };
+  // Only a design shared before this page loaded is polled; sharing from the dialog refreshes status.
+  request().then((value) => { status ??= value; }, (error) => { button.title = error.message; });
   const timer = setInterval(sync, 15000);
   addEventListener('pagehide', () => clearInterval(timer), { once: true });
 })();

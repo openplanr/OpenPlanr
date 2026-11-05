@@ -2,8 +2,10 @@
 
 Run the linked design helper from the skill entrypoint relative to the skill's
 directory. It contains deterministic operations and all required assets. It needs
-Node.js 22.13 or later, with no global CLI or provider credentials. Only `fonts fetch`
-downloads anything, and only when run; nothing is fetched when a design opens.
+Node.js 22.13 or later, with no provider credentials. Local design work needs no global
+CLI. Sharing a design for company review runs in the `openplanr` CLI, which holds the
+owner keys. Only `fonts fetch` downloads anything, and only when run; nothing is
+fetched when a design opens.
 Use `--help` to inspect the installed command interface before writing documents
 or invoking operations; the installed contract is authoritative.
 
@@ -108,12 +110,16 @@ The design remains accessible when the local machine is offline. Owner authority
 saves automatically in a protected user-level file outside the project; recovery
 export is optional. Only copy the reviewer token through the explicit Share controls.
 
-The bundled utility supports `share`, `publish`, and `sync` with the same design
-document argument. `share` creates or retries a review, `publish` sends an explicitly
-requested new revision to the existing URL, and `sync` retrieves authenticated
-feedback. Run `--help` for access-management and recovery options. The public CLI
-equivalents are `openplanr artifact share`, `openplanr artifact publish`, and
-`openplanr artifact sync`. No global CLI is required for the bundled helper.
+Sharing needs the OpenPlanr CLI (`npm install -g openplanr`). The bundled utility's
+`share`, `publish`, `sync` and `manage` commands, the studio's Share dialog, and handoff
+decisions on a shared design all run `openplanr artifact` for the network step, so the
+helper itself reads no owner keys. `share` creates or retries a review, `publish` sends
+an explicitly requested new revision to the existing URL, and `sync` retrieves
+authenticated feedback. You can also run the CLI directly: `openplanr artifact share`,
+`publish`, `sync`, `status`, `manage`, `feedback` and `handoff`. Without the CLI,
+sharing commands stop with `E_DESIGN_SHARE_CLI_REQUIRED`, and feedback inspection
+still works but reports that sync was skipped. A helper and CLI with different sharing
+formats refuse with `E_DESIGN_SHARE_RUNTIME_MISMATCH`; update whichever is older.
 
 Retention is until the owner revokes or deletes the review, while the service is
 maintained. The owner can pause comments and rotate access tokens. Rotation blocks

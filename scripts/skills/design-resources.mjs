@@ -28,16 +28,11 @@ const CHUNK_BOUNDARIES = Object.freeze([
   ['artifact-shell', 'packages/artifact/lib/artifact/ui/shell.mjs'],
   ['sandbox-guards', 'packages/artifact/lib/artifact/ui/generated/sandbox-guards.mjs'],
   ['review', 'packages/design/lib/design/review.mjs'],
-  ['share', 'packages/design/lib/design/share.mjs'],
+  ['share-cli-bridge', 'packages/design/lib/design/share-cli-bridge.mjs'],
   ['handoff', 'packages/design/lib/design/handoff.mjs'],
   ['document', 'packages/design/lib/design/document.mjs'],
-  ['compression', 'node_modules/pako/dist/pako.esm.mjs'],
-  ['resource-pack', 'packages/artifact/lib/artifact/resource-pack.mjs'],
-  ['chunked-workspace-client', 'packages/artifact/lib/artifact/chunked-workspace-client.mjs'],
-  ['encrypted-workspace-client', 'packages/artifact/lib/artifact/encrypted-workspace-client.mjs'],
-  ['owner-custody', 'packages/artifact/lib/artifact/owner-custody.mjs'],
-  ['upload-spool', 'packages/artifact/lib/artifact/upload-spool.mjs'],
   ['runtime-home', 'packages/artifact/lib/artifact/internal/planr-home.mjs'],
+  ['review-state-store', 'packages/artifact/lib/artifact/internal/review-state-store.mjs'],
   ['loopback-server', 'packages/artifact/lib/artifact/internal/server-util.mjs'],
 ]);
 
@@ -223,6 +218,17 @@ export async function buildDesignSkillResources({
     legalComments: 'inline',
     plugins: [
       {
+        // Skill helpers hand every sharing operation to the openplanr CLI, which holds the owner keys.
+        name: 'share-through-cli',
+        setup(buildApi) {
+          const designLib = resolve(root, 'packages/design/lib/design');
+          const bridge = join(designLib, 'share-cli-bridge.mjs');
+          buildApi.onResolve({ filter: /^\.\/share(?:-status)?\.mjs$/ }, ({ importer }) =>
+            dirname(importer) === designLib && importer !== bridge ? { path: bridge } : undefined,
+          );
+        },
+      },
+      {
         name: 'portable-design-assets',
         setup(buildApi) {
           buildApi.onLoad({ filter: /\.mjs$/ }, ({ path }) => {
@@ -345,6 +351,16 @@ export async function buildDesignSkillResources({
   if (unresolved.length)
     throw new Error(`Design utility has external runtime dependencies: ${unresolved.join(', ')}`);
   const contents = new Map(result.outputFiles.map((file) => [logical(file.path), file.text]));
+  // esbuild can emit an empty shared chunk that importers load only for side effects it lacks.
+  for (const key of [...kept]) {
+    if (key === designKey || contents.get(key).trim()) continue;
+    kept.splice(kept.indexOf(key), 1);
+    const bareImport = new RegExp(
+      `^import ["']\\./${basename(key).replace(/[.*+?^${}()|[\]\\]/gu, '\\$&')}["'];\\n`,
+      'gmu',
+    );
+    for (const other of kept) contents.set(other, contents.get(other).replace(bareImport, ''));
+  }
   const names = new Map();
   for (const key of kept) {
     if (dirname(key) !== CHUNK_OUTDIR) throw new Error(`Design chunk ${key} is not flat.`);
