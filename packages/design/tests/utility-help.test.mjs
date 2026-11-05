@@ -74,6 +74,19 @@ test('a help flag after the document path still prints help', async (t) => {
   assert.deepEqual(readdirSync(root), []);
 });
 
+test('-h on its own prints the command list like --help', async (t) => {
+  const { requests, fetchImpl, env } = isolated(t);
+  const printed = [];
+  const result = await designUtility(['-h'], {
+    stdout: (value) => printed.push(value),
+    env,
+    fetchImpl,
+  });
+  assert.match(result.usage, /design\.mjs inspect\|validate/);
+  assert.deepEqual(printed, [result]);
+  assert.deepEqual(requests, []);
+});
+
 test('a document path that looks like an option is refused', async (t) => {
   const { requests, fetchImpl, env } = isolated(t);
   await assert.rejects(

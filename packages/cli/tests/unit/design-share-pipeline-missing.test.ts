@@ -4,8 +4,13 @@ vi.mock('../../src/services/pipeline-package-service.js', () => ({
   resolvePipelinePackage: () => null,
 }));
 
-const { readDesignShareRuntime, runDesignFeedback, runDesignHandoffAction, runDesignShareAction } =
-  await import('../../src/services/design-artifact-service.js');
+const {
+  prepareDesignHandoff,
+  readDesignShareRuntime,
+  runDesignFeedback,
+  runDesignHandoffAction,
+  runDesignShareAction,
+} = await import('../../src/services/design-artifact-service.js');
 
 describe('design sharing without the optional workflow package', () => {
   const missing = {
@@ -24,5 +29,6 @@ describe('design sharing without the optional workflow package', () => {
     await expect(runDesignHandoffAction('/design-document.json', 'inspect')).rejects.toMatchObject(
       missing,
     );
+    await expect(prepareDesignHandoff('/design-document.json')).rejects.toMatchObject(missing);
   });
 });

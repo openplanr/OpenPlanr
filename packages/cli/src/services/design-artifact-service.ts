@@ -248,10 +248,9 @@ export async function runDesignFeedback(
 
 /** Prepare a factual owner handoff. Semantic refinement stays in the host agent. */
 export async function prepareDesignHandoff(file: string): Promise<Record<string, unknown>> {
+  const pipeline = sharingPipeline();
   const { document } = await loadDesignRuntime();
   await document.renderDesignDocument(file);
-  const pipeline = resolvePipelinePackage(false);
-  if (!pipeline) throw new Error('The OpenPlanr workflow package is unavailable.');
   const runtime = await import(
     pathToFileURL(path.join(pipeline.root, 'lib/design/handoff.mjs')).href
   );

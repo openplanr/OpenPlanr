@@ -643,7 +643,7 @@
     {
       "source": "packages/design/lib/design/utility.mjs",
       "target": "lib/design/utility.mjs",
-      "sha256": "80bb16794a0f596ef4820cbff77fa459ec46700c7398b29484fc4c8ab2456da4",
+      "sha256": "a480fbbdce4623dc625cc88e63735974ce434a1a6b9aec078cdc3a0318403d84",
       "mode": "644"
     },
     {

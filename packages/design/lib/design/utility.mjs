@@ -171,7 +171,7 @@ export async function designUtility(
     fetchImpl = fetch,
   } = {},
 ) {
-  if (argv.length === 0 || argv[0] === '--help' || argv[0] === 'help') {
+  if (argv.length === 0 || ['--help', '-h', 'help'].includes(argv[0])) {
     const help = {
       usage:
         'design.mjs inspect|validate|render|open|studio|view-context|export|feedback|verify|share|publish|sync|manage|handoff <design-document.json> | design.mjs fonts fetch --family "<Name>:<weights>" [--family ...] --dest <dir>',
