@@ -28,15 +28,20 @@ does not need repeated delivery. Plain native completion is accepted without a
 formatting-only correction. Permission denials remain actionable and are never
 worked around by silently weakening policy or changing providers.
 
-Prepare required dependencies/build outputs once in the owned worktree. Parent
-verification uses structured executable/argument arrays and normally reuses that
-prepared tree. Reviewable changes made by verification invalidate the previous
-review. A stale prepared tree requires a fresh actual candidate only when necessary.
-Failures remain blocked; baseline comparisons are explicit diagnostics. Review-only
-acceptance is explicitly unverified and requires a reason.
+Prepare required dependencies/build outputs once in the owned worktree. The run works
+on its own branch from a base commit that holds the selected files. Parent verification
+uses structured executable/argument arrays in that worktree at the reviewed branch tip;
+other uncommitted parent files are not part of checks and are listed in the report.
+Reviewable changes made by verification invalidate the previous review. Failures
+remain blocked; baseline comparisons run in a temporary worktree at the base commit and
+are explicit diagnostics. Review-only acceptance is explicitly unverified and requires
+a reason.
 
-Integration retains the checkout lock, scope/Preserve checks, reviewed patch identity,
-destination compare-and-swap and recovery journal. Concurrent user edits are preserved.
+Integration holds the checkout lock, checks scope/Preserve and the reviewed tip, runs
+`git apply --check`, saves a restore ref, then runs `git apply`. A parent edit elsewhere in
+a changed file merges; an overlapping edit blocks with its path. After an interrupted
+apply, `recover` accepts a fully applied patch or rolls it back without overwriting
+user edits.
 Accepted changes remain an uncommitted local diff. Successful integration removes
 only its owned worktree unless retained, keeping context, patch, evidence, report and
 native session reference. Failed/interrupted worktrees remain inspectable.
@@ -51,7 +56,7 @@ never executed. It checks ownership, the initial checkout and all surrounding
 resources before cleanup. Modified or unknown files, ignored dependencies, existing
 sessions and recovery work prevent removal. The record and evidence remain available.
 
-Private v2 records describe this behavior. Existing profiles are unchanged and retained
+Private v3 run records describe this behavior. Existing profiles are unchanged and retained
 runs use their original pinned helpers. Generic adapters remain experimental under
 their existing versioned protocol. Ordinary `planr-ship` and frozen public contracts
 remain unchanged; there are no public delegation CLI commands.
