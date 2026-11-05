@@ -723,6 +723,25 @@ test('Plan carries only handoff inspection and rejects authoring operations offl
   }
 });
 
+test('a skill runtime that would bundle a sharing module is refused', async () => {
+  const directory = realpathSync(mkdtempSync(join(tmpdir(), 'openplanr-sharing-entry-')));
+  try {
+    const entry = join(directory, 'entry.mjs');
+    const module = (path) => JSON.stringify(join(root, path));
+    writeFileSync(
+      entry,
+      `export { main } from ${module('packages/design/lib/design/plan-handoff-utility.mjs')};\n` +
+        `export { readCustody } from ${module('packages/artifact/lib/artifact/owner-custody.mjs')};\n`,
+    );
+    await assert.rejects(
+      buildDesignSkillResources({ repoRoot: root, profile: 'plan', entrypoint: entry }),
+      /runtime bundles sharing modules that belong to the openplanr CLI: .*owner-custody\.mjs/u,
+    );
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
+});
+
 test('isolated Design and Plan installations preserve explicit review handoff approval and freshness', () => {
   const directory = realpathSync(mkdtempSync(join(tmpdir(), 'openplanr-team-review-install-')));
   try {
