@@ -5,6 +5,7 @@ import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { assertReleasablePlugin } from '../check-plugin-network-boundary.mjs';
 import { bundleDirectory, PUBLIC_TARGETS } from './lib/targets.mjs';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
@@ -15,6 +16,9 @@ const pending =
   pendingIndex === -1
     ? PUBLIC_TARGETS.map((target) => target.name)
     : JSON.parse(rest[pendingIndex + 1]);
+
+// The npm packages carry the host plugins, so none may ship while a plugin bundle is unclean.
+assertReleasablePlugin({ workspace: root });
 
 for (const target of PUBLIC_TARGETS) {
   if (!pending.includes(target.name)) continue;

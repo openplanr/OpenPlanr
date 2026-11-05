@@ -9,7 +9,11 @@ export function inspectPlanDesignHandoff(
   argv,
   { stdout = (value) => process.stdout.write(`${JSON.stringify(value)}\n`) } = {},
 ) {
-  if (argv.length === 0 || ['--help', 'help'].includes(argv[0])) {
+  if (
+    argv.length === 0 ||
+    argv[0] === 'help' ||
+    argv.some((value) => ['--help', '-h'].includes(value))
+  ) {
     const help = {
       usage: 'design.mjs handoff <design-document.json> [--action inspect] [--json]',
       note: 'Reads the existing handoff and its current approval; never renders, publishes, or starts implementation.',
@@ -18,6 +22,8 @@ export function inspectPlanDesignHandoff(
     return help;
   }
   const [command, input, ...args] = argv;
+  if (typeof input === 'string' && input.startsWith('-'))
+    throw new Error(`${input} must be a design document path, not an option.`);
   if (command !== 'handoff' || !input)
     throw new Error('Usage: design.mjs handoff <design-document.json> [--action inspect] [--json]');
   for (let index = 0; index < args.length; index += 1) {

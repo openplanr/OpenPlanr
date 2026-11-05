@@ -28,7 +28,7 @@
     "build": "node scripts/workspace-command.mjs build",
     "generate": "node scripts/generate-all.mjs",
     "check:generated": "node scripts/generate-all.mjs --check",
-    "check:boundaries": "node scripts/check-workspace-boundaries.mjs && node scripts/check-composition-boundaries.mjs && node conformance/skills/check-toolchain-ownership.mjs",
+    "check:boundaries": "node scripts/check-workspace-boundaries.mjs && node scripts/check-composition-boundaries.mjs && node conformance/skills/check-toolchain-ownership.mjs && node scripts/check-plugin-network-boundary.mjs",
     "check:diagrams": "node scripts/docs/check-diagrams.mjs",
     "check:docs": "node scripts/docs/check-public-docs.mjs",
     "check:comments": "node scripts/check-source-comments.mjs",

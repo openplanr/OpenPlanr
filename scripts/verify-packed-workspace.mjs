@@ -1281,6 +1281,18 @@ function verifyCliOnlyInstall({
       JSON.stringify({ status: inspection.status, inspection: inspectionReport }),
     );
   }
+  const sharing = runCli(nodeExecutable, cliRoot, ['artifact', 'share-runtime', '--json'], {
+    cwd: project,
+    env: environment,
+  });
+  const sharingReport = assertJsonOutput(sharing, 'CLI-only design sharing runtime');
+  if (sharing.status === 0 || sharingReport.code !== 'E_DESIGN_SHARE_PIPELINE_MISSING') {
+    throw new ProofFailure(
+      'E_CLI_ONLY_SHARING_BOUNDARY',
+      'CLI-only design sharing does not report the missing workflow package.',
+      JSON.stringify({ status: sharing.status, report: sharingReport }),
+    );
+  }
   return {
     operateHelp: commandDigest(help, [project]),
     operateUtility: {

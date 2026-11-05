@@ -523,7 +523,7 @@
     {
       "source": "packages/design/lib/design/plan-handoff-utility.mjs",
       "target": "lib/design/plan-handoff-utility.mjs",
-      "sha256": "bf98190e678c5d8cc9ff3da262076c42dccab5e0ce116f71faf25d97e751d699",
+      "sha256": "cee623d1b34dc79fd1c20a21371124977e48b1f3d7e5ae19170c42a3b514e280",
       "mode": "644"
     },
     {
@@ -554,6 +554,12 @@
       "source": "packages/design/lib/design/screens.mjs",
       "target": "lib/design/screens.mjs",
       "sha256": "13d173eb6725a4d82ee6f441ce49b4eef3e082d1b8df835a8d0362a3ee277c62",
+      "mode": "644"
+    },
+    {
+      "source": "packages/design/lib/design/share-compat.mjs",
+      "target": "lib/design/share-compat.mjs",
+      "sha256": "37eef995bb45f4a760bae446c004a388d4e23c8e703986583f829175cf9b6232",
       "mode": "644"
     },
     {
@@ -637,7 +643,7 @@
     {
       "source": "packages/design/lib/design/utility.mjs",
       "target": "lib/design/utility.mjs",
-      "sha256": "56bd9673839b026de163bc208b16021dc5943aceeacb7650fadf8c201593405b",
+      "sha256": "a480fbbdce4623dc625cc88e63735974ce434a1a6b9aec078cdc3a0318403d84",
       "mode": "644"
     },
     {

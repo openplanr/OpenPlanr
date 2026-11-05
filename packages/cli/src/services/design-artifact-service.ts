@@ -1,7 +1,8 @@
 import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { resolvePipelinePackage } from './pipeline-package-service.js';
+import { ArtifactCommandError } from './artifact-pipeline-service.js';
+import { type PipelinePackage, resolvePipelinePackage } from './pipeline-package-service.js';
 
 export function isDesignDocumentFile(file: string): boolean {
   if (path.extname(file).toLowerCase() !== '.json') return false;
@@ -92,44 +93,164 @@ interface DesignShareResult {
   reviewPath?: string;
   imported?: number;
   output?: string;
+  token?: string;
+}
+
+export type DesignShareAction =
+  | 'share'
+  | 'publish'
+  | 'sync'
+  | 'status'
+  | 'recovery'
+  | 'restore'
+  | 'rotate'
+  | 'pause'
+  | 'resume'
+  | 'revoke'
+  | 'delete'
+  | 'access';
+
+export const DESIGN_MANAGE_ACTIONS = [
+  'rotate',
+  'pause',
+  'resume',
+  'revoke',
+  'delete',
+  'access',
+  'recovery',
+  'restore',
+] as const satisfies readonly DesignShareAction[];
+
+export const DESIGN_HANDOFF_ACTIONS = [
+  'inspect',
+  'draft',
+  'update',
+  'approve',
+  'category',
+  'disposition',
+] as const;
+export type DesignHandoffAction = (typeof DESIGN_HANDOFF_ACTIONS)[number];
+
+const SHARE_METHODS: Record<DesignShareAction, string> = {
+  share: 'shareDesign',
+  publish: 'publishDesignShare',
+  sync: 'syncDesignShare',
+  status: 'getDesignShareStatus',
+  recovery: 'exportDesignShareRecovery',
+  restore: 'importDesignShareRecovery',
+  rotate: 'manageDesignShare',
+  pause: 'manageDesignShare',
+  resume: 'manageDesignShare',
+  revoke: 'manageDesignShare',
+  delete: 'manageDesignShare',
+  access: 'manageDesignShare',
+};
+
+/** The installed workflow package, which holds the only design sharing implementation. */
+function sharingPipeline(): PipelinePackage {
+  const pipeline = resolvePipelinePackage(false);
+  if (!pipeline)
+    throw new ArtifactCommandError(
+      'E_DESIGN_SHARE_PIPELINE_MISSING',
+      'Design sharing needs the OpenPlanr workflow package (planr-pipeline), which is not installed.',
+      'Reinstall the CLI with its optional dependencies: npm install -g openplanr (without --omit=optional).',
+    );
+  return pipeline;
+}
+
+async function pipelineModule(pipeline: PipelinePackage, relative: string) {
+  return (await import(pathToFileURL(path.join(pipeline.root, relative)).href)) as Record<
+    string,
+    unknown
+  >;
+}
+
+/** Gives a share failure that has no public error code the stable code E_DESIGN_SHARE_FAILED. */
+function withShareCode(error: unknown): never {
+  const code = (error as { code?: unknown; name?: unknown } | null)?.code;
+  const name = (error as { name?: unknown } | null)?.name;
+  const coded = [code, name].some(
+    (value) => typeof value === 'string' && /^E_[A-Z0-9_]+$/u.test(value),
+  );
+  if (!coded && error instanceof Error)
+    throw new ArtifactCommandError('E_DESIGN_SHARE_FAILED', error.message);
+  throw error;
 }
 
 export async function runDesignShareAction(
   file: string,
-  action: 'share' | 'publish' | 'sync' | 'recovery',
+  action: DesignShareAction,
   options: Record<string, unknown> = {},
 ): Promise<DesignShareResult> {
-  const pipeline = resolvePipelinePackage(false);
-  if (!pipeline)
-    throw new Error(
-      'Design sharing requires the OpenPlanr workflow package or the design skill’s bundled utility.',
-    );
-  if (action === 'share' || action === 'publish') {
-    const { document } = await loadDesignRuntime();
-    await document.renderDesignDocument(file);
+  const pipeline = sharingPipeline();
+  try {
+    if (action === 'share' || action === 'publish') {
+      const { document } = await loadDesignRuntime();
+      await document.renderDesignDocument(file);
+    }
+    const runtime = await pipelineModule(pipeline, 'lib/design/share.mjs');
+    const method = runtime[SHARE_METHODS[action]];
+    if (typeof method !== 'function')
+      throw new ArtifactCommandError(
+        'E_DESIGN_SHARE_UNSUPPORTED',
+        `The installed workflow package does not support design sharing action "${action}".`,
+        'Update OpenPlanr: npm install -g openplanr.',
+      );
+    if (SHARE_METHODS[action] === 'manageDesignShare')
+      return (await method(file, action, options)) as DesignShareResult;
+    return (await method(file, options)) as DesignShareResult;
+  } catch (error) {
+    return withShareCode(error);
   }
-  const runtime = await import(
-    pathToFileURL(path.join(pipeline.root, 'lib/design/share.mjs')).href
-  );
-  const method = {
-    share: 'shareDesign',
-    publish: 'publishDesignShare',
-    sync: 'syncDesignShare',
-    recovery: 'exportDesignShareRecovery',
-  }[action];
-  if (typeof runtime[method] !== 'function')
-    throw new Error(
-      'The installed workflow package does not support permanent design sharing. Update OpenPlanr first.',
-    );
-  return runtime[method](file, options);
+}
+
+/** Versions the skill helpers compare before they hand a design share operation to this CLI. */
+export async function readDesignShareRuntime(cliVersion: string) {
+  const pipeline = sharingPipeline();
+  const compatPath = path.join(pipeline.root, 'lib/design/share-compat.mjs');
+  const compat = existsSync(compatPath)
+    ? (await pipelineModule(pipeline, 'lib/design/share-compat.mjs')).DESIGN_SHARE_COMPAT
+    : null;
+  return {
+    ok: true,
+    cli: cliVersion,
+    pipeline: pipeline.version,
+    designShareCompat: typeof compat === 'number' ? compat : null,
+  };
+}
+
+/** Runs the workflow package's own feedback command, which syncs a shared design first. */
+export async function runDesignFeedback(
+  file: string,
+  action: string,
+  flags: Record<string, string | boolean | undefined>,
+): Promise<Record<string, unknown>> {
+  const pipeline = sharingPipeline();
+  const argv = ['feedback', file, '--action', action];
+  for (const [name, value] of Object.entries(flags)) {
+    if (value === undefined || value === false) continue;
+    argv.push(`--${name}`);
+    if (value !== true) argv.push(value);
+  }
+  try {
+    const utility = await pipelineModule(pipeline, 'lib/design/utility.mjs');
+    if (typeof utility.designUtility !== 'function')
+      throw new ArtifactCommandError(
+        'E_DESIGN_SHARE_UNSUPPORTED',
+        'The installed workflow package does not support design feedback.',
+        'Update OpenPlanr: npm install -g openplanr.',
+      );
+    return (await utility.designUtility(argv, { stdout: () => {} })) as Record<string, unknown>;
+  } catch (error) {
+    return withShareCode(error);
+  }
 }
 
 /** Prepare a factual owner handoff. Semantic refinement stays in the host agent. */
 export async function prepareDesignHandoff(file: string): Promise<Record<string, unknown>> {
+  const pipeline = sharingPipeline();
   const { document } = await loadDesignRuntime();
   await document.renderDesignDocument(file);
-  const pipeline = resolvePipelinePackage(false);
-  if (!pipeline) throw new Error('The OpenPlanr workflow package is unavailable.');
   const runtime = await import(
     pathToFileURL(path.join(pipeline.root, 'lib/design/handoff.mjs')).href
   );
@@ -143,4 +264,36 @@ export async function prepareDesignHandoff(file: string): Promise<Record<string,
     revision: snapshot.revision,
     version: snapshot.draft?.version ?? 0,
   });
+}
+
+/** Inspects or updates a handoff; updates on a shared design also publish owner review metadata. */
+export async function runDesignHandoffAction(
+  file: string,
+  action: Exclude<DesignHandoffAction, 'draft'>,
+  input: Record<string, unknown> = {},
+): Promise<Record<string, unknown>> {
+  const pipeline = sharingPipeline();
+  try {
+    const runtime = await pipelineModule(pipeline, 'lib/design/handoff.mjs');
+    const { readDesignHandoff, updateDesignHandoff } = runtime;
+    if (typeof readDesignHandoff !== 'function' || typeof updateDesignHandoff !== 'function')
+      throw new ArtifactCommandError(
+        'E_DESIGN_SHARE_UNSUPPORTED',
+        'The installed workflow package does not support review handoffs.',
+        'Update OpenPlanr: npm install -g openplanr.',
+      );
+    if (action === 'inspect') return (await readDesignHandoff(file)) as Record<string, unknown>;
+    const snapshot = (await readDesignHandoff(file)) as {
+      revision?: string;
+      draft?: { version?: number };
+    };
+    return (await updateDesignHandoff(file, {
+      ...input,
+      action,
+      revision: input.revision ?? snapshot.revision,
+      version: input.version ?? snapshot.draft?.version ?? 0,
+    })) as Record<string, unknown>;
+  } catch (error) {
+    return withShareCode(error);
+  }
 }
