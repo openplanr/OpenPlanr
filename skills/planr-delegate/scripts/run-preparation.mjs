@@ -273,6 +273,8 @@ export async function prepareDelegateRun({
       worktreeParent: custodyParent,
       runId,
       native: prepared.profile.kind !== 'generic',
+      branch: true,
+      runDirectory: privateDirectory,
     });
     const custodyPath = join(runPath, 'custody.json');
     await updateRunRecord(
@@ -282,6 +284,8 @@ export async function prepareDelegateRun({
         worktreePath: custody.worktreePath,
         initialHead: custody.initialHead,
         initialIndex: custody.initialIndex,
+        branch: custody.branch,
+        base: custody.base,
       },
       { directory: privateDirectory },
     );

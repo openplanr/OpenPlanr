@@ -958,7 +958,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:4ed5dceda80d3dfa3027793a472a408cb9dd5a847e251a3dfa3c5cca509b9f7b"
+          "digest": "sha256:3f09618101b64cc5369d4eb11a81e10156de653e19e4eeae6da02456b64dabff"
         },
         {
           "path": "references/operator-guide.md",
@@ -982,7 +982,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:6468f7fa3ddf8d561f08c4d8a368564958c21f88777b33bb6e482c9180d997b2"
+          "digest": "sha256:a677ed12b04f9c53a7027736ac00fa83e962af72536b24c23cc9d12cbd300541"
         },
         {
           "path": "references/worktree-custody.md",
@@ -994,7 +994,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:8e78648690cfa1d786af5383aec0d567955ad8bd173a96558fac339a2efedae2"
+          "digest": "sha256:83e3cdf8ff1926a34846347c4f0669e013caefbc84e58b1b1fb26bb5a1d7f924"
         },
         {
           "path": "scripts/adapters/claude.mjs",
@@ -1066,7 +1066,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:f9ce2ecad8bd7417091cd734691781b406abfff4ce94a93aa1a965dc685e70ab"
+          "digest": "sha256:8c127a851e321a217621a76636a70a8326f8e3a02e9eda6db849ad89626da228"
         },
         {
           "path": "scripts/helper-snapshot.mjs",
@@ -1090,7 +1090,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:45372038ee72614f81b1d146431ea6e841882f581e05c4486b8871d47d84d86b"
+          "digest": "sha256:52cfd4806d59591f3875978ac48f2be42cb87eb519d7ac08f262accb2d1300c9"
         },
         {
           "path": "scripts/presentation.mjs",
@@ -1102,7 +1102,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:743b370d7c04c363c8935754eb662773cd25bab5e8b7569cd25430068275c980"
+          "digest": "sha256:84b8b49479806187ff3a502897f4cd901fdfe00d6cbd6a371b641fe2091892fd"
         },
         {
           "path": "scripts/profiles.mjs",
@@ -1126,7 +1126,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:cbceec29880e4af92fc2dbd692edd10dcd6cb24ab87108b3a492f94797d93473"
+          "digest": "sha256:42492bdb49583c271e5a2439deb43b3119aadb672c5be3349667890718bc055f"
         },
         {
           "path": "scripts/runner.mjs",
@@ -1174,7 +1174,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:746630b00e1c252cae6dd7e78cde4b2d6c65e75f1ef19a092111e1e4de5152e3"
+          "digest": "sha256:d1c2564cf22dbec09bdd133db2f2580700ad1d2a2488f080c4521cb819afcb58"
         },
         {
           "path": "scripts/run-execution.mjs",
@@ -1198,7 +1198,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:1b3dfe50152ef63bb174fb19aef9b3351f7d25be49c2557f6187cbba8db37317"
+          "digest": "sha256:77ba3221b799a5cec0c1001d550be3c9742ae5a1a6795cc7e59b6316c339d233"
         },
         {
           "path": "scripts/integration-files.mjs",
@@ -1225,6 +1225,18 @@
           "digest": "sha256:28da3e3ead865d923a75d4b111028e69c9e8bc72c83348067300d54ac8d37d05"
         },
         {
+          "path": "scripts/handoff.mjs",
+          "kind": "script",
+          "hosts": [
+            "claude-code",
+            "codex",
+            "chatgpt",
+            "cursor"
+          ],
+          "executable": false,
+          "digest": "sha256:f35b6e805b013b3ce193dfa35e4e0137309a21cc2f4f2d78e2cd415b1c8e18e9"
+        },
+        {
           "path": "scripts/integration-transaction.mjs",
           "kind": "script",
           "hosts": [
@@ -1234,7 +1246,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:9c478e3de6d8aa2a490401abdbcb74062e746a3bbb469cb7befb2f0f612aeb5c"
+          "digest": "sha256:ed858b8eba81dd07d626dff2ea7442751cab25ec621232945408c942f3a5c0c6"
         },
         {
           "path": "scripts/adapters/capsule.mjs",

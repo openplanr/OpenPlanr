@@ -17,6 +17,7 @@ import {
 } from 'node:fs/promises';
 import { basename, dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { promisify } from 'node:util';
+import { readRunRecord } from './run-record.mjs';
 
 const execFileAsync = promisify(execFile);
 export const CUSTODY_SCHEMA_VERSION = '1.0.0';
@@ -66,6 +67,148 @@ async function git(root, args, { allowFailure = false } = {}) {
       exitCode: error.code,
     });
   }
+}
+
+function gitInput(root, args, input) {
+  return new Promise((resolveOutput, reject) => {
+    const child = execFile(
+      'git',
+      args,
+      { cwd: root, encoding: 'buffer', maxBuffer: 32 * 1024 * 1024 },
+      (error, stdout) => {
+        const operation = args.find((arg) => !arg.startsWith('-'));
+        if (error)
+          reject(
+            new CustodyError('E_CUSTODY_GIT', `Git operation failed: ${operation}`, {
+              operation,
+              exitCode: error.code,
+            }),
+          );
+        else resolveOutput(stdout);
+      },
+    );
+    // Git may exit without reading stdin; its exit status, not the closed pipe, is the result.
+    child.stdin.on('error', (error) => {
+      if (error.code === 'EPIPE') return;
+      const operation = args.find((arg) => !arg.startsWith('-'));
+      reject(
+        new CustodyError('E_CUSTODY_GIT', `Git operation input failed: ${operation}`, {
+          operation,
+          cause: error.code,
+        }),
+      );
+    });
+    child.stdin.end(input);
+  });
+}
+
+export const RUN_BRANCH_PREFIX = 'planr-delegate/';
+// Repository hooks, signing and the user's identity never apply to run commits.
+export const HOOKLESS_COMMIT = [
+  '-c',
+  'core.hooksPath=/dev/null',
+  '-c',
+  'commit.gpgSign=false',
+  '-c',
+  'user.name=planr-delegate',
+  '-c',
+  'user.email=planr-delegate@localhost',
+  'commit',
+  '--no-verify',
+  '--allow-empty',
+  '-q',
+  '-m',
+];
+const RESTORE_REF = /^refs\/planr-delegate\/[^/]+\/restore$/u;
+
+async function refSnapshot(root, branch) {
+  const refs = {};
+  for (const line of (await git(root, ['for-each-ref', '--format=%(refname)%00%(objectname)']))
+    .toString('utf8')
+    .split('\n')) {
+    const [name, oid] = line.split('\0');
+    if (oid && name !== `refs/heads/${branch}`) refs[name] = oid;
+  }
+  return refs;
+}
+
+async function isAncestor(root, ancestor, descendant) {
+  return (
+    (await git(root, ['merge-base', '--is-ancestor', ancestor, descendant], {
+      allowFailure: true,
+    })) !== null
+  );
+}
+
+// A restore ref is gone legitimately once its run applied, recovered or was cleaned up.
+async function unresolvedRun(runDirectory, runId) {
+  if (!runDirectory) return true;
+  try {
+    const { integration } = await readRunRecord(runId, { directory: runDirectory });
+    return ['applying', 'interrupted'].includes(integration?.status);
+  } catch (error) {
+    if (['ENOENT', 'E_RUN_ID'].includes(error.code)) return false;
+    throw error;
+  }
+}
+
+async function branchViolations(root, record) {
+  const violations = [];
+  const head = (await git(root, ['symbolic-ref', '-q', 'HEAD'], { allowFailure: true }))
+    ?.toString('utf8')
+    .trim();
+  const branchRef = `refs/heads/${record.branch}`;
+  if (head !== branchRef)
+    violations.push({ code: 'E_CUSTODY_BRANCH', expected: record.branch, actual: head ?? null });
+  else if (
+    (await git(root, ['show-ref', '--verify', '--quiet', branchRef], { allowFailure: true })) ===
+    null
+  )
+    violations.push({ code: 'E_CUSTODY_BRANCH', expected: record.branch, actual: null });
+  else if (!(await isAncestor(root, record.base, 'HEAD')))
+    violations.push({ code: 'E_CUSTODY_BASE', base: record.base });
+  const parent = record.repositoryRoot;
+  const before = record.refs ?? {};
+  const now = await refSnapshot(parent, record.branch);
+  const reported = new Set([`refs/planr-delegate/${record.runId}/restore`]);
+  const previous = before[record.parentBranch] ?? record.initialHead;
+  const moved = record.parentBranch ? (now[record.parentBranch] ?? null) : undefined;
+  // Owner commits, amends and resets warn; only delegate work descends from base.
+  if (
+    moved === null ||
+    (moved && moved !== previous && (await isAncestor(parent, record.base, moved)))
+  ) {
+    reported.add(record.parentBranch);
+    violations.push({
+      code: 'E_CUSTODY_PARENT_BRANCH',
+      ref: record.parentBranch,
+      expected: previous,
+      actual: moved,
+    });
+  }
+  for (const name of Object.keys(before))
+    if (
+      RESTORE_REF.test(name) &&
+      !reported.has(name) &&
+      !now[name] &&
+      (await unresolvedRun(record.runDirectory, name.split('/')[2]))
+    ) {
+      reported.add(name);
+      violations.push({ code: 'E_CUSTODY_RESTORE_REF', ref: name });
+    }
+  const changed = [...new Set([...Object.keys(now), ...Object.keys(before)])]
+    .filter((name) => !reported.has(name) && now[name] !== before[name])
+    .sort();
+  const warnings = changed.length
+    ? [
+        {
+          code: 'W_CUSTODY_REFS',
+          refs: changed.slice(0, 20),
+          ...(changed.length > 20 ? { omitted: changed.length - 20 } : {}),
+        },
+      ]
+    : [];
+  return { violations, warnings };
 }
 
 function digest(bytes) {
@@ -425,6 +568,8 @@ export async function createWorktreeCustody({
   worktreeParent,
   runId = randomUUID(),
   native = false,
+  branch = false,
+  runDirectory,
 } = {}) {
   if (
     !repositoryRoot ||
@@ -504,7 +649,11 @@ export async function createWorktreeCustody({
       JSON.stringify({ runId, custodyToken, repositoryRoot: root, worktreePath }),
       { mode: 0o600, flag: 'wx' },
     );
-    await git(root, ['worktree', 'add', '--detach', '--', worktreePath, initialHead]);
+    const branchName = `${RUN_BRANCH_PREFIX}${runId}`;
+    if (branch) {
+      await git(root, ['worktree', 'add', '-b', branchName, '--', worktreePath, initialHead]);
+      await git(root, ['worktree', 'lock', '--reason', `planr-delegate ${runId}`, worktreePath]);
+    } else await git(root, ['worktree', 'add', '--detach', '--', worktreePath, initialHead]);
     const checkoutFiles = native
       ? await initialCheckoutFiles(worktreePath, initialHead, paths)
       : {};
@@ -526,6 +675,33 @@ export async function createWorktreeCustody({
       }
       startingFiles[path] = await fileState(worktreePath, path);
     }
+    let handoff = {};
+    if (branch) {
+      if (paths.length)
+        await gitInput(
+          worktreePath,
+          [
+            '--literal-pathspecs',
+            'add',
+            '--force',
+            '--pathspec-from-file=-',
+            '--pathspec-file-nul',
+          ],
+          `${paths.join('\0')}\0`,
+        );
+      await git(worktreePath, [...HOOKLESS_COMMIT, `planr-delegate base ${runId}`]);
+      handoff = {
+        handoff: 'branch',
+        branch: branchName,
+        base: (await git(worktreePath, ['rev-parse', 'HEAD'])).toString('utf8').trim(),
+        parentBranch:
+          (await git(root, ['symbolic-ref', '-q', 'HEAD'], { allowFailure: true }))
+            ?.toString('utf8')
+            .trim() || null,
+        refs: await refSnapshot(root, branchName),
+        ...(runDirectory ? { runDirectory } : {}),
+      };
+    }
     const preservedFiles = {};
     for (const path of protectedPaths)
       preservedFiles[path] = await protectedState(worktreePath, path);
@@ -537,6 +713,7 @@ export async function createWorktreeCustody({
       repositoryRoot: root,
       worktreePath,
       initialHead,
+      ...handoff,
       initialIndex: await indexState(worktreePath),
       sourceIndex,
       selectedPaths: paths,
@@ -600,7 +777,7 @@ export async function inspectWorktreeSetup(record, options = {}) {
     const before =
       record.setupFiles?.[path] ??
       record.startingFiles?.[path] ??
-      (await headFileState(record.worktreePath, path, record.initialHead));
+      (await headFileState(record.worktreePath, path, record.base ?? record.initialHead));
     const after = await captureFileState(record.worktreePath, path);
     if (
       !sameGitState(
@@ -621,13 +798,20 @@ export async function validateWorktreeCustody(
     throw new CustodyError('E_CUSTODY_RECORD', 'A custody record is required.');
   const root = await assertRepository(record.worktreePath);
   const violations = [];
+  let warnings = [];
   await assertRepository(record.repositoryRoot);
-  // Source HEAD/index may advance on unrelated paths; integration checks each destination.
-  const head = (await git(root, ['rev-parse', 'HEAD'])).toString('utf8').trim();
-  if (head !== record.initialHead)
-    violations.push({ code: 'E_CUSTODY_HEAD', expected: record.initialHead, actual: head });
-  const currentIndex = await indexState(root);
-  if (currentIndex !== record.initialIndex) violations.push({ code: 'E_CUSTODY_INDEX' });
+  if (record.handoff === 'branch') {
+    const branch = await branchViolations(root, record);
+    violations.push(...branch.violations);
+    warnings = branch.warnings;
+  } else {
+    // Source HEAD/index may advance on unrelated paths; integration checks each destination.
+    const head = (await git(root, ['rev-parse', 'HEAD'])).toString('utf8').trim();
+    if (head !== record.initialHead)
+      violations.push({ code: 'E_CUSTODY_HEAD', expected: record.initialHead, actual: head });
+    const currentIndex = await indexState(root);
+    if (currentIndex !== record.initialIndex) violations.push({ code: 'E_CUSTODY_INDEX' });
+  }
   if (!native && record.engineConfiguration) {
     const currentConfiguration = await captureEngineConfiguration(root);
     for (const path of Object.keys(record.engineConfiguration))
@@ -640,7 +824,7 @@ export async function validateWorktreeCustody(
   // Abandonment supplies its own complete raw-byte filesystem inventory. Avoid
   // Git status there because it may invoke configured clean filters as a side effect.
   const currentStatus = inspectStatus ? await status(root) : { changedPaths: [], stagedPaths: [] };
-  if (currentStatus.stagedPaths.length)
+  if (currentStatus.stagedPaths.length && record.handoff !== 'branch')
     violations.push({ code: 'E_CUSTODY_STAGED', paths: currentStatus.stagedPaths });
   for (const path of record.preservePaths) {
     let now;
@@ -666,7 +850,12 @@ export async function validateWorktreeCustody(
     )
       violations.push({ code: 'E_CUSTODY_SETUP_CHANGED', path });
   }
-  return { valid: violations.length === 0, violations, changedPaths: currentStatus.changedPaths };
+  return {
+    valid: violations.length === 0,
+    violations,
+    warnings,
+    changedPaths: currentStatus.changedPaths,
+  };
 }
 
 export async function cleanupWorktreeCustody(record, { disposition, beforeRemove } = {}) {
@@ -731,16 +920,34 @@ export async function cleanupWorktreeCustody(record, { disposition, beforeRemove
   if (registered) {
     // Validate accepted contents after ownership reads, immediately before native removal.
     if (present) await beforeRemove?.(target);
+    if (record.handoff === 'branch' && worktreeLocked(listed, target))
+      await git(root, ['worktree', 'unlock', target]);
     await git(root, ['worktree', 'remove', '--force', '--', target]);
   } else if (present)
     throw new CustodyError(
       'E_CUSTODY_CLEANUP',
       'Present worktree is not registered to this repository.',
     );
+  if (record.handoff === 'branch')
+    for (const ref of [
+      `refs/heads/${record.branch}`,
+      `refs/planr-delegate/${record.runId}/restore`,
+    ])
+      if (
+        (await git(root, ['show-ref', '--verify', '--quiet', ref], { allowFailure: true })) !== null
+      )
+        await git(root, ['update-ref', '-d', ref]);
   await rm(physicalParent, { recursive: true, force: true });
   return {
     removed: target,
     disposition,
     ...(!present && !registered ? { alreadyRemoved: true } : {}),
   };
+}
+
+function worktreeLocked(listed, target) {
+  const block = listed.split('\n\n').find((entry) => entry.startsWith(`worktree ${target}\n`));
+  return Boolean(
+    block?.split('\n').some((line) => line === 'locked' || line.startsWith('locked ')),
+  );
 }

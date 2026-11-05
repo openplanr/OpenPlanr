@@ -51,7 +51,7 @@ const roots = [];
 async function git(cwd, ...args) {
   return execFile('git', args, { cwd });
 }
-async function fixture({ dirty = false, preservePaths = [], files = {} } = {}) {
+async function fixture({ dirty = false, preservePaths = [], files = {}, branch = false } = {}) {
   const base = await mkdtemp(join(tmpdir(), 'planr-integrate-test-'));
   roots.push(base);
   const repositoryRoot = join(base, 'source');
@@ -90,6 +90,7 @@ async function fixture({ dirty = false, preservePaths = [], files = {} } = {}) {
     capsule,
     selectedPaths,
     preservePaths,
+    branch,
   });
   return { base, repositoryRoot, custody, capsule };
 }
@@ -252,71 +253,75 @@ test('observed patch excludes selected dirty baseline and ignores delegate claim
   assert.equal(review.changedPaths.includes('fabricated.txt'), false);
 });
 
-test('preserve, scope, source drift, staged, and committed changes block without source writes', async () => {
-  const cases = [
-    {
-      name: 'preserve',
-      mutate: async ({ custody }) => writeFile(join(custody.worktreePath, 'keep.txt'), 'changed\n'),
-      scopePaths: ['keep.txt'],
-    },
-    {
-      name: 'scope',
-      mutate: async ({ custody }) =>
-        writeFile(join(custody.worktreePath, 'tracked.txt'), 'changed\n'),
-      scopePaths: ['other.txt'],
-    },
-    {
-      name: 'source drift',
-      mutate: async ({ custody, repositoryRoot }) => {
-        await writeFile(join(custody.worktreePath, 'tracked.txt'), 'changed\n');
-        await writeFile(join(repositoryRoot, 'tracked.txt'), 'source moved\n');
+for (const branch of [false, true])
+  test(`preserve, scope, source drift, staged, and committed changes block without source writes${branch ? ' (run branch)' : ''}`, async () => {
+    const cases = [
+      {
+        name: 'preserve',
+        mutate: async ({ custody }) =>
+          writeFile(join(custody.worktreePath, 'keep.txt'), 'changed\n'),
+        scopePaths: ['keep.txt'],
       },
-      scopePaths: ['tracked.txt'],
-    },
-    {
-      name: 'staged',
-      mutate: async ({ custody }) => {
-        await writeFile(join(custody.worktreePath, 'tracked.txt'), 'changed\n');
-        await git(custody.worktreePath, 'add', 'tracked.txt');
+      {
+        name: 'scope',
+        mutate: async ({ custody }) =>
+          writeFile(join(custody.worktreePath, 'tracked.txt'), 'changed\n'),
+        scopePaths: ['other.txt'],
       },
-      scopePaths: ['tracked.txt'],
-    },
-    {
-      name: 'committed',
-      mutate: async ({ custody }) => {
-        await writeFile(join(custody.worktreePath, 'tracked.txt'), 'changed\n');
-        await git(
-          custody.worktreePath,
-          '-c',
-          'user.name=Test',
-          '-c',
-          'user.email=test@example.com',
-          'commit',
-          '-qam',
-          'delegate committed',
-        );
+      {
+        name: 'source drift',
+        mutate: async ({ custody, repositoryRoot }) => {
+          await writeFile(join(custody.worktreePath, 'tracked.txt'), 'changed\n');
+          await writeFile(join(repositoryRoot, 'tracked.txt'), 'source moved\n');
+        },
+        scopePaths: ['tracked.txt'],
       },
-      scopePaths: ['tracked.txt'],
-    },
-  ];
-  for (const scenario of cases) {
-    const input = await fixture({ preservePaths: ['keep.txt'] });
-    await scenario.mutate(input);
-    const expected = await readFile(join(input.repositoryRoot, 'tracked.txt'), 'utf8');
-    const result = await integrateDelegateDelta({
-      custody: input.custody,
-      run,
-      scopePaths: scenario.scopePaths,
-      checks: [],
-    });
-    assert.equal(result.status, 'blocked', scenario.name);
-    assert.equal(
-      await readFile(join(input.repositoryRoot, 'tracked.txt'), 'utf8'),
-      expected,
-      scenario.name,
-    );
-  }
-});
+      {
+        name: 'staged',
+        mutate: async ({ custody }) => {
+          await writeFile(join(custody.worktreePath, 'tracked.txt'), 'changed\n');
+          await git(custody.worktreePath, 'add', 'tracked.txt');
+        },
+        scopePaths: ['tracked.txt'],
+      },
+      {
+        name: 'committed',
+        mutate: async ({ custody }) => {
+          await writeFile(join(custody.worktreePath, 'tracked.txt'), 'changed\n');
+          await git(
+            custody.worktreePath,
+            '-c',
+            'user.name=Test',
+            '-c',
+            'user.email=test@example.com',
+            'commit',
+            '-qam',
+            'delegate committed',
+          );
+        },
+        scopePaths: ['tracked.txt'],
+      },
+    ];
+    for (const scenario of cases) {
+      const input = await fixture({ branch, preservePaths: ['keep.txt'] });
+      await scenario.mutate(input);
+      const expected = await readFile(join(input.repositoryRoot, 'tracked.txt'), 'utf8');
+      const result = await integrateDelegateDelta({
+        custody: input.custody,
+        run,
+        scopePaths: scenario.scopePaths,
+        checks: [],
+      });
+      // A run branch accepts delegate commits and staging that descend from its base.
+      const accepted = branch && ['staged', 'committed'].includes(scenario.name);
+      assert.equal(result.status, accepted ? 'completed' : 'blocked', scenario.name);
+      assert.equal(
+        await readFile(join(input.repositoryRoot, 'tracked.txt'), 'utf8'),
+        accepted ? 'changed\n' : expected,
+        scenario.name,
+      );
+    }
+  });
 
 test('mid-apply failure rolls back all source paths and retains worktree', async () => {
   const { custody, repositoryRoot } = await fixture();
@@ -339,100 +344,110 @@ test('mid-apply failure rolls back all source paths and retains worktree', async
   await assert.rejects(lstat(join(repositoryRoot, 'nested')), { code: 'ENOENT' });
 });
 
-test('safe mode, deletion, and new-file delta applies as uncommitted diff after independent checks', async () => {
-  const { custody, repositoryRoot } = await fixture({
-    files: {
-      'package.json': JSON.stringify({
-        scripts: {
-          'test:focused': 'node -e "process.exit(0)"',
-          'check:boundaries': 'node -e "process.exit(0)"',
-        },
-      }),
-    },
+for (const branch of [false, true])
+  test(`safe mode, deletion, and new-file delta applies as uncommitted diff after independent checks${branch ? ' (run branch)' : ''}`, async () => {
+    const { custody, repositoryRoot } = await fixture({
+      branch,
+      files: {
+        'package.json': JSON.stringify({
+          scripts: {
+            'test:focused': 'node -e "process.exit(0)"',
+            'check:boundaries': 'node -e "process.exit(0)"',
+          },
+        }),
+      },
+    });
+    await writeFile(join(custody.worktreePath, 'tracked.txt'), 'delegate\n');
+    await chmod(join(custody.worktreePath, 'tracked.txt'), 0o755);
+    await rm(join(custody.worktreePath, 'keep.txt'));
+    await writeFile(join(custody.worktreePath, 'new.txt'), 'new\n');
+    const checks = await discoverDelegateChecks({ repositoryRoot, changedPaths: ['tracked.txt'] });
+    assert.ok(checks.some((check) => check.kind === 'focused'));
+    assert.ok(checks.some((check) => check.kind === 'regression'));
+    const result = await integrateDelegateDelta({
+      custody,
+      run,
+      scopePaths: ['tracked.txt', 'keep.txt', 'new.txt'],
+      checks,
+    });
+    assert.equal(result.status, 'completed', JSON.stringify(result.violations));
+    assert.equal(
+      result.checks.every((check) => check.status === 'passed'),
+      true,
+    );
+    assert.equal(await readFile(join(repositoryRoot, 'tracked.txt'), 'utf8'), 'delegate\n');
+    const { stdout } = await git(repositoryRoot, 'status', '--short');
+    assert.match(stdout, /tracked\.txt/u);
+    assert.match(stdout, /new\.txt/u);
+    assert.match(stdout, /keep\.txt/u);
   });
-  await writeFile(join(custody.worktreePath, 'tracked.txt'), 'delegate\n');
-  await chmod(join(custody.worktreePath, 'tracked.txt'), 0o755);
-  await rm(join(custody.worktreePath, 'keep.txt'));
-  await writeFile(join(custody.worktreePath, 'new.txt'), 'new\n');
-  const checks = await discoverDelegateChecks({ repositoryRoot, changedPaths: ['tracked.txt'] });
-  assert.ok(checks.some((check) => check.kind === 'focused'));
-  assert.ok(checks.some((check) => check.kind === 'regression'));
-  const result = await integrateDelegateDelta({
-    custody,
-    run,
-    scopePaths: ['tracked.txt', 'keep.txt', 'new.txt'],
-    checks,
-  });
-  assert.equal(result.status, 'completed', JSON.stringify(result.violations));
-  assert.equal(
-    result.checks.every((check) => check.status === 'passed'),
-    true,
-  );
-  assert.equal(await readFile(join(repositoryRoot, 'tracked.txt'), 'utf8'), 'delegate\n');
-  const { stdout } = await git(repositoryRoot, 'status', '--short');
-  assert.match(stdout, /tracked\.txt/u);
-  assert.match(stdout, /new\.txt/u);
-  assert.match(stdout, /keep\.txt/u);
-});
 
-test('failed check rolls back source and reports independent finding', async () => {
-  const { custody, repositoryRoot } = await fixture({
-    files: {
-      'package.json': JSON.stringify({ scripts: { 'test:fail': 'node -e "process.exit(1)"' } }),
-    },
+for (const branch of [false, true])
+  test(`failed check rolls back source and reports independent finding${branch ? ' (run branch)' : ''}`, async () => {
+    const { custody, repositoryRoot } = await fixture({
+      branch,
+      files: {
+        'package.json': JSON.stringify({ scripts: { 'test:fail': 'node -e "process.exit(1)"' } }),
+      },
+    });
+    await writeFile(join(custody.worktreePath, 'tracked.txt'), 'delegate\n');
+    const result = await integrateDelegateDelta({
+      custody,
+      run,
+      scopePaths: ['tracked.txt'],
+      checks: ['npm run test:fail'],
+    });
+    assert.equal(result.status, 'blocked');
+    assert.equal(result.checks[0].status, 'failed');
+    assert.equal(result.checks[0].classification, 'baseline-failure');
+    assert.equal(await readFile(join(repositoryRoot, 'tracked.txt'), 'utf8'), 'base\n');
   });
-  await writeFile(join(custody.worktreePath, 'tracked.txt'), 'delegate\n');
-  const result = await integrateDelegateDelta({
-    custody,
-    run,
-    scopePaths: ['tracked.txt'],
-    checks: ['npm run test:fail'],
-  });
-  assert.equal(result.status, 'blocked');
-  assert.equal(result.checks[0].status, 'failed');
-  assert.equal(result.checks[0].classification, 'baseline-failure');
-  assert.equal(await readFile(join(repositoryRoot, 'tracked.txt'), 'utf8'), 'base\n');
-});
 
-test('timed-out check rolls back without labeling the patch a regression or retrying the baseline', async () => {
-  const { custody, repositoryRoot } = await fixture({
-    files: {
-      'package.json': JSON.stringify({
-        scripts: { 'test:slow': 'node -e "setTimeout(() => {}, 300)"' },
-      }),
-    },
+for (const branch of [false, true])
+  test(`timed-out check rolls back without labeling the patch a regression or retrying the baseline${branch ? ' (run branch)' : ''}`, async () => {
+    const { custody, repositoryRoot } = await fixture({
+      branch,
+      files: {
+        'package.json': JSON.stringify({
+          scripts: { 'test:slow': 'node -e "setTimeout(() => {}, 300)"' },
+        }),
+      },
+    });
+    await writeFile(join(custody.worktreePath, 'tracked.txt'), 'delegate\n');
+    const result = await integrateDelegateDelta({
+      custody,
+      run,
+      scopePaths: ['tracked.txt'],
+      checks: ['npm run test:slow'],
+      timeoutMs: 20,
+    });
+    assert.equal(result.status, 'blocked');
+    assert.equal(result.code, 'E_INTEGRATION_CHECK_TIMEOUT');
+    assert.equal(result.checks[0].status, 'timed-out');
+    assert.equal(result.checks[0].classification, undefined);
+    assert.match(result.nextAction, /timeoutMs/u);
+    assert.equal(await readFile(join(repositoryRoot, 'tracked.txt'), 'utf8'), 'base\n');
   });
-  await writeFile(join(custody.worktreePath, 'tracked.txt'), 'delegate\n');
-  const result = await integrateDelegateDelta({
-    custody,
-    run,
-    scopePaths: ['tracked.txt'],
-    checks: ['npm run test:slow'],
-    timeoutMs: 20,
-  });
-  assert.equal(result.status, 'blocked');
-  assert.equal(result.code, 'E_INTEGRATION_CHECK_TIMEOUT');
-  assert.equal(result.checks[0].status, 'timed-out');
-  assert.equal(result.checks[0].classification, undefined);
-  assert.match(result.nextAction, /timeoutMs/u);
-  assert.equal(await readFile(join(repositoryRoot, 'tracked.txt'), 'utf8'), 'base\n');
-});
 
-test('unsafe delegated symlink is reported as a conflict without touching source', async () => {
-  const { custody, repositoryRoot } = await fixture();
-  await symlink('/etc/passwd', join(custody.worktreePath, 'escape.txt'));
-  const result = await integrateDelegateDelta({
-    custody,
-    run,
-    scopePaths: ['escape.txt'],
-    checks: [],
+for (const branch of [false, true])
+  test(`unsafe delegated symlink is reported as a conflict without touching source${branch ? ' (run branch)' : ''}`, async () => {
+    const { custody, repositoryRoot } = await fixture({ branch });
+    await symlink('/etc/passwd', join(custody.worktreePath, 'escape.txt'));
+    const result = await integrateDelegateDelta({
+      custody,
+      run,
+      scopePaths: ['escape.txt'],
+      checks: [],
+    });
+    assert.equal(result.status, 'blocked');
+    assert.ok(
+      result.violations.some(
+        (violation) =>
+          violation.code === (branch ? 'E_INTEGRATION_LINK' : 'E_INTEGRATION_UNSAFE_WORKTREE_PATH'),
+      ),
+    );
+    await assert.rejects(lstat(join(repositoryRoot, 'escape.txt')), { code: 'ENOENT' });
   });
-  assert.equal(result.status, 'blocked');
-  assert.ok(
-    result.violations.some((violation) => violation.code === 'E_INTEGRATION_UNSAFE_WORKTREE_PATH'),
-  );
-  await assert.rejects(lstat(join(repositoryRoot, 'escape.txt')), { code: 'ENOENT' });
-});
 
 test('installed review command reads private custody but reports only observed metadata', async () => {
   const { base, custody, repositoryRoot, capsule } = await fixture();
@@ -527,30 +542,31 @@ async function recordedRun({ base, custody, capsule }) {
   return { runId, runDirectory };
 }
 
-test('recorded integration scope cannot be widened after dispatch', async () => {
-  const data = await fixture();
-  const { custody, repositoryRoot } = data;
-  await writeFile(join(custody.worktreePath, 'tracked.txt'), 'delegate\n');
-  const { runId, runDirectory } = await recordedRun(data);
-  await updateRunRecord(
-    runId,
-    { integrationScopePaths: ['tracked.txt'] },
-    { directory: runDirectory },
-  );
-  await assert.rejects(
-    delegateIntegrationCommand('apply', {
+for (const branch of [false, true])
+  test(`recorded integration scope cannot be widened after dispatch${branch ? ' (run branch)' : ''}`, async () => {
+    const data = await fixture({ branch });
+    const { custody, repositoryRoot } = data;
+    await writeFile(join(custody.worktreePath, 'tracked.txt'), 'delegate\n');
+    const { runId, runDirectory } = await recordedRun(data);
+    await updateRunRecord(
       runId,
-      runDirectory,
-      scopePaths: ['keep.txt'],
-      checks: [],
-    }),
-    { code: 'E_INTEGRATION_SCOPE_WIDENED' },
-  );
-  const reviewed = await delegateIntegrationCommand('review', { runId, runDirectory });
-  assert.equal(reviewed.ready, true);
-  assert.deepEqual(reviewed.changedPaths, ['tracked.txt']);
-  assert.equal(await readFile(join(repositoryRoot, 'tracked.txt'), 'utf8'), 'base\n');
-});
+      { integrationScopePaths: ['tracked.txt'] },
+      { directory: runDirectory },
+    );
+    await assert.rejects(
+      delegateIntegrationCommand('apply', {
+        runId,
+        runDirectory,
+        scopePaths: ['keep.txt'],
+        checks: [],
+      }),
+      { code: 'E_INTEGRATION_SCOPE_WIDENED' },
+    );
+    const reviewed = await delegateIntegrationCommand('review', { runId, runDirectory });
+    assert.equal(reviewed.ready, true);
+    assert.deepEqual(reviewed.changedPaths, ['tracked.txt']);
+    assert.equal(await readFile(join(repositoryRoot, 'tracked.txt'), 'utf8'), 'base\n');
+  });
 
 test('scoped checks and declared generation integrate atomically with auditable provenance', async () => {
   const packagePath = 'packages/widget';
@@ -642,208 +658,222 @@ test('scoped checks and declared generation integrate atomically with auditable 
   assert.equal(base.length > 0, true);
 });
 
-test('generator side effects outside declared outputs roll back both generated and delegate files', async () => {
-  const packagePath = 'packages/widget';
-  const sourcePath = `${packagePath}/source.txt`;
-  const outputPath = `${packagePath}/generated.txt`;
-  const generator =
-    "node -e \"const fs=require('fs');fs.writeFileSync('generated.txt','changed');fs.writeFileSync('stray.txt','unlisted')\"";
-  const { custody, repositoryRoot } = await fixture({
-    files: {
-      [`${packagePath}/package.json`]: JSON.stringify({ scripts: { generate: generator } }),
-      [sourcePath]: 'base\n',
-      [outputPath]: 'base\n',
-    },
-  });
-  await writeFile(join(custody.worktreePath, sourcePath), 'delegate\n');
-  const result = await integrateDelegateDelta({
-    custody,
-    run,
-    scopePaths: [packagePath],
-    checks: [],
-    generators: [{ packagePath, script: 'generate', outputPaths: [outputPath] }],
-  });
-  assert.equal(result.status, 'blocked');
-  assert.equal(result.code, 'E_INTEGRATION_GENERATOR_SCOPE');
-  assert.equal(await readFile(join(repositoryRoot, sourcePath), 'utf8'), 'base\n');
-  assert.equal(await readFile(join(repositoryRoot, outputPath), 'utf8'), 'base\n');
-  await assert.rejects(lstat(join(repositoryRoot, packagePath, 'stray.txt')), { code: 'ENOENT' });
-});
-
-test('unsafe explicit check and dirty generated destination block before source writes', async () => {
-  const packagePath = 'packages/widget';
-  const sourcePath = `${packagePath}/source.txt`;
-  const outputPath = `${packagePath}/generated.txt`;
-  const { custody, repositoryRoot } = await fixture({
-    files: {
-      [`${packagePath}/package.json`]: JSON.stringify({
-        scripts: { generate: 'node -e ""', test: 'node -e ""' },
-      }),
-      [sourcePath]: 'base\n',
-      [outputPath]: 'base\n',
-    },
-  });
-  await writeFile(join(custody.worktreePath, sourcePath), 'delegate\n');
-  await assert.rejects(
-    integrateDelegateDelta({
-      custody,
-      run,
-      scopePaths: [packagePath],
-      checks: ['npm run test; touch secret'],
-    }),
-    { code: 'E_INTEGRATION_CHECK_SELECTION' },
-  );
-  await writeFile(join(repositoryRoot, outputPath), 'user work\n');
-  await assert.rejects(
-    integrateDelegateDelta({
+for (const branch of [false, true])
+  test(`generator side effects outside declared outputs roll back both generated and delegate files${branch ? ' (run branch)' : ''}`, async () => {
+    const packagePath = 'packages/widget';
+    const sourcePath = `${packagePath}/source.txt`;
+    const outputPath = `${packagePath}/generated.txt`;
+    const generator =
+      "node -e \"const fs=require('fs');fs.writeFileSync('generated.txt','changed');fs.writeFileSync('stray.txt','unlisted')\"";
+    const { custody, repositoryRoot } = await fixture({
+      branch,
+      files: {
+        [`${packagePath}/package.json`]: JSON.stringify({ scripts: { generate: generator } }),
+        [sourcePath]: 'base\n',
+        [outputPath]: 'base\n',
+      },
+    });
+    await writeFile(join(custody.worktreePath, sourcePath), 'delegate\n');
+    const result = await integrateDelegateDelta({
       custody,
       run,
       scopePaths: [packagePath],
       checks: [],
       generators: [{ packagePath, script: 'generate', outputPaths: [outputPath] }],
-    }),
-    (error) => ['E_INTEGRATION_GENERATOR_DRIFT', 'E_INTEGRATION_SOURCE_DRIFT'].includes(error.code),
-  );
-  assert.equal(await readFile(join(repositoryRoot, sourcePath), 'utf8'), 'base\n');
-  assert.equal(await readFile(join(repositoryRoot, outputPath), 'utf8'), 'user work\n');
-});
+    });
+    assert.equal(result.status, 'blocked');
+    assert.equal(result.code, 'E_INTEGRATION_GENERATOR_SCOPE');
+    assert.equal(await readFile(join(repositoryRoot, sourcePath), 'utf8'), 'base\n');
+    assert.equal(await readFile(join(repositoryRoot, outputPath), 'utf8'), 'base\n');
+    await assert.rejects(lstat(join(repositoryRoot, packagePath, 'stray.txt')), { code: 'ENOENT' });
+  });
 
-test('a check that writes repository files cannot silently become delegated output', async () => {
-  const packagePath = 'packages/widget';
-  const sourcePath = `${packagePath}/source.txt`;
-  const { custody, repositoryRoot } = await fixture({
-    files: {
-      [`${packagePath}/package.json`]: JSON.stringify({
-        scripts: {
-          'test:mutate': "node -e \"require('fs').writeFileSync('stray.txt','from check')\"",
-        },
+for (const branch of [false, true])
+  test(`unsafe explicit check and dirty generated destination block before source writes${branch ? ' (run branch)' : ''}`, async () => {
+    const packagePath = 'packages/widget';
+    const sourcePath = `${packagePath}/source.txt`;
+    const outputPath = `${packagePath}/generated.txt`;
+    const { custody, repositoryRoot } = await fixture({
+      branch,
+      files: {
+        [`${packagePath}/package.json`]: JSON.stringify({
+          scripts: { generate: 'node -e ""', test: 'node -e ""' },
+        }),
+        [sourcePath]: 'base\n',
+        [outputPath]: 'base\n',
+      },
+    });
+    await writeFile(join(custody.worktreePath, sourcePath), 'delegate\n');
+    await assert.rejects(
+      integrateDelegateDelta({
+        custody,
+        run,
+        scopePaths: [packagePath],
+        checks: ['npm run test; touch secret'],
       }),
-      [sourcePath]: 'base\n',
-    },
+      { code: 'E_INTEGRATION_CHECK_SELECTION' },
+    );
+    await writeFile(join(repositoryRoot, outputPath), 'user work\n');
+    await assert.rejects(
+      integrateDelegateDelta({
+        custody,
+        run,
+        scopePaths: [packagePath],
+        checks: [],
+        generators: [{ packagePath, script: 'generate', outputPaths: [outputPath] }],
+      }),
+      (error) =>
+        ['E_INTEGRATION_GENERATOR_DRIFT', 'E_INTEGRATION_SOURCE_DRIFT'].includes(error.code),
+    );
+    assert.equal(await readFile(join(repositoryRoot, sourcePath), 'utf8'), 'base\n');
+    assert.equal(await readFile(join(repositoryRoot, outputPath), 'utf8'), 'user work\n');
   });
-  await writeFile(join(custody.worktreePath, sourcePath), 'delegate\n');
-  const result = await integrateDelegateDelta({
-    custody,
-    run,
-    scopePaths: [packagePath],
-    checks: [{ command: 'npm run test:mutate', cwd: packagePath }],
-  });
-  assert.equal(result.status, 'blocked');
-  assert.equal(result.code, 'E_INTEGRATION_CHECK_SIDE_EFFECT');
-  assert.equal(await readFile(join(repositoryRoot, sourcePath), 'utf8'), 'base\n');
-  await assert.rejects(lstat(join(repositoryRoot, packagePath, 'stray.txt')), { code: 'ENOENT' });
-});
 
-test('baseline classification also rolls back side effects from the baseline rerun', async () => {
-  const packagePath = 'packages/widget';
-  const sourcePath = `${packagePath}/source.txt`;
-  const script =
-    "node -e \"const fs=require('fs');if(fs.readFileSync('source.txt','utf8')==='base\\n')fs.writeFileSync('baseline-stray.txt','side effect');process.exit(1)\"";
-  const { custody, repositoryRoot } = await fixture({
-    files: {
-      [`${packagePath}/package.json`]: JSON.stringify({ scripts: { test: script } }),
-      [sourcePath]: 'base\n',
-    },
+for (const branch of [false, true])
+  test(`a check that writes repository files cannot silently become delegated output${branch ? ' (run branch)' : ''}`, async () => {
+    const packagePath = 'packages/widget';
+    const sourcePath = `${packagePath}/source.txt`;
+    const { custody, repositoryRoot } = await fixture({
+      branch,
+      files: {
+        [`${packagePath}/package.json`]: JSON.stringify({
+          scripts: {
+            'test:mutate': "node -e \"require('fs').writeFileSync('stray.txt','from check')\"",
+          },
+        }),
+        [sourcePath]: 'base\n',
+      },
+    });
+    await writeFile(join(custody.worktreePath, sourcePath), 'delegate\n');
+    const result = await integrateDelegateDelta({
+      custody,
+      run,
+      scopePaths: [packagePath],
+      checks: [{ command: 'npm run test:mutate', cwd: packagePath }],
+    });
+    assert.equal(result.status, 'blocked');
+    assert.equal(result.code, 'E_INTEGRATION_CHECK_SIDE_EFFECT');
+    assert.equal(await readFile(join(repositoryRoot, sourcePath), 'utf8'), 'base\n');
+    await assert.rejects(lstat(join(repositoryRoot, packagePath, 'stray.txt')), { code: 'ENOENT' });
   });
-  await writeFile(join(custody.worktreePath, sourcePath), 'delegate\n');
-  const result = await integrateDelegateDelta({
-    custody,
-    run,
-    scopePaths: [packagePath],
-    checks: [{ command: 'npm run test', cwd: packagePath }],
-  });
-  assert.equal(result.status, 'blocked');
-  assert.equal(result.code, 'E_INTEGRATION_BASELINE_SIDE_EFFECT');
-  assert.equal(result.checks[0].classification, 'unverified');
-  assert.equal(await readFile(join(repositoryRoot, sourcePath), 'utf8'), 'base\n');
-  await assert.rejects(lstat(join(repositoryRoot, packagePath, 'baseline-stray.txt')), {
-    code: 'ENOENT',
-  });
-});
 
-test('checks cannot revert concurrent edits or delete a new owner note', async () => {
-  const data = await fixture({
-    files: {
-      'package.json': JSON.stringify({ scripts: { test: 'node check.mjs' } }),
-      'check.mjs': 'await new Promise(r=>setTimeout(r,250));',
-      'other.txt': 'before\n',
-    },
+for (const branch of [false, true])
+  test(`baseline classification also rolls back side effects from the baseline rerun${branch ? ' (run branch)' : ''}`, async () => {
+    const packagePath = 'packages/widget';
+    const sourcePath = `${packagePath}/source.txt`;
+    const script =
+      "node -e \"const fs=require('fs');if(fs.readFileSync('source.txt','utf8')==='base\\n')fs.writeFileSync('baseline-stray.txt','side effect');process.exit(1)\"";
+    const { custody, repositoryRoot } = await fixture({
+      branch,
+      files: {
+        [`${packagePath}/package.json`]: JSON.stringify({ scripts: { test: script } }),
+        [sourcePath]: 'base\n',
+      },
+    });
+    await writeFile(join(custody.worktreePath, sourcePath), 'delegate\n');
+    const result = await integrateDelegateDelta({
+      custody,
+      run,
+      scopePaths: [packagePath],
+      checks: [{ command: 'npm run test', cwd: packagePath }],
+    });
+    assert.equal(result.status, 'blocked');
+    assert.equal(result.code, 'E_INTEGRATION_BASELINE_SIDE_EFFECT');
+    assert.equal(result.checks[0].classification, 'unverified');
+    assert.equal(await readFile(join(repositoryRoot, sourcePath), 'utf8'), 'base\n');
+    await assert.rejects(lstat(join(repositoryRoot, packagePath, 'baseline-stray.txt')), {
+      code: 'ENOENT',
+    });
   });
-  await writeFile(join(data.custody.worktreePath, 'tracked.txt'), 'delegate\n');
-  const integration = integrateDelegateDelta({
-    custody: data.custody,
-    run,
-    scopePaths: ['tracked.txt'],
-    checks: ['npm run test'],
-  });
-  await new Promise((r) => setTimeout(r, 120));
-  await writeFile(join(data.repositoryRoot, 'other.txt'), 'owner edit\n');
-  await writeFile(join(data.repositoryRoot, 'NOTES.md'), 'owner note\n');
-  const result = await integration;
-  assert.equal(result.status, 'completed', JSON.stringify(result));
-  assert.equal(await readFile(join(data.repositoryRoot, 'other.txt'), 'utf8'), 'owner edit\n');
-  assert.equal(await readFile(join(data.repositoryRoot, 'NOTES.md'), 'utf8'), 'owner note\n');
-});
 
-test('source drift during scratch checks preserves owner changes without any partial delta', async () => {
-  const gate = await mkdtemp(join(tmpdir(), 'planr-check-gate-'));
-  roots.push(gate);
-  const started = join(gate, 'started');
-  const release = join(gate, 'release');
-  const data = await fixture({
-    files: {
-      'package.json': JSON.stringify({ scripts: { test: 'node check.mjs' } }),
-      'check.mjs': `import {writeFile,readFile} from 'node:fs/promises';
+for (const branch of [false, true])
+  test(`checks cannot revert concurrent edits or delete a new owner note${branch ? ' (run branch)' : ''}`, async () => {
+    const data = await fixture({
+      branch,
+      files: {
+        'package.json': JSON.stringify({ scripts: { test: 'node check.mjs' } }),
+        'check.mjs': 'await new Promise(r=>setTimeout(r,250));',
+        'other.txt': 'before\n',
+      },
+    });
+    await writeFile(join(data.custody.worktreePath, 'tracked.txt'), 'delegate\n');
+    const integration = integrateDelegateDelta({
+      custody: data.custody,
+      run,
+      scopePaths: ['tracked.txt'],
+      checks: ['npm run test'],
+    });
+    await new Promise((r) => setTimeout(r, 120));
+    await writeFile(join(data.repositoryRoot, 'other.txt'), 'owner edit\n');
+    await writeFile(join(data.repositoryRoot, 'NOTES.md'), 'owner note\n');
+    const result = await integration;
+    assert.equal(result.status, 'completed', JSON.stringify(result));
+    assert.equal(await readFile(join(data.repositoryRoot, 'other.txt'), 'utf8'), 'owner edit\n');
+    assert.equal(await readFile(join(data.repositoryRoot, 'NOTES.md'), 'utf8'), 'owner note\n');
+  });
+
+for (const branch of [false, true])
+  test(`source drift during scratch checks preserves owner changes without any partial delta${branch ? ' (run branch)' : ''}`, async () => {
+    const gate = await mkdtemp(join(tmpdir(), 'planr-check-gate-'));
+    roots.push(gate);
+    const started = join(gate, 'started');
+    const release = join(gate, 'release');
+    const data = await fixture({
+      branch,
+      files: {
+        'package.json': JSON.stringify({ scripts: { test: 'node check.mjs' } }),
+        'check.mjs': `import {writeFile,readFile} from 'node:fs/promises';
         await writeFile(${JSON.stringify(started)},'ready');
         const deadline=Date.now()+10000;
         while(true){try{await readFile(${JSON.stringify(release)});break;}
           catch(error){if(error.code!=='ENOENT'||Date.now()>deadline)throw error;}
           await new Promise(r=>setTimeout(r,10));}`,
-    },
-  });
-  await writeFile(join(data.custody.worktreePath, 'tracked.txt'), 'delegate\n');
-  const integration = integrateDelegateDelta({
-    custody: data.custody,
-    run,
-    scopePaths: ['tracked.txt'],
-    checks: ['npm run test'],
-  });
-  try {
-    const deadline = Date.now() + 10000;
-    while (true) {
-      try {
-        await readFile(started);
-        break;
-      } catch (error) {
-        if (error.code !== 'ENOENT' || Date.now() > deadline) throw error;
+      },
+    });
+    await writeFile(join(data.custody.worktreePath, 'tracked.txt'), 'delegate\n');
+    const integration = integrateDelegateDelta({
+      custody: data.custody,
+      run,
+      scopePaths: ['tracked.txt'],
+      checks: ['npm run test'],
+    });
+    try {
+      const deadline = Date.now() + 10000;
+      while (true) {
+        try {
+          await readFile(started);
+          break;
+        } catch (error) {
+          if (error.code !== 'ENOENT' || Date.now() > deadline) throw error;
+        }
+        await new Promise((resolve) => setTimeout(resolve, 10));
       }
-      await new Promise((resolve) => setTimeout(resolve, 10));
+      await writeFile(join(data.repositoryRoot, 'tracked.txt'), 'owner edit\n');
+    } finally {
+      await writeFile(release, 'continue');
     }
-    await writeFile(join(data.repositoryRoot, 'tracked.txt'), 'owner edit\n');
-  } finally {
-    await writeFile(release, 'continue');
-  }
-  const result = await integration;
-  assert.equal(result.code, 'E_INTEGRATION_SOURCE_DRIFT');
-  assert.equal(await readFile(join(data.repositoryRoot, 'tracked.txt'), 'utf8'), 'owner edit\n');
-});
-
-test('physical permissions and unrelated source commits do not cause false drift', async () => {
-  const data = await fixture();
-  await chmod(join(data.repositoryRoot, 'tracked.txt'), 0o664);
-  await writeFile(join(data.custody.worktreePath, 'tracked.txt'), 'delegate\n');
-  await writeFile(join(data.repositoryRoot, 'other.txt'), 'unrelated\n');
-  await git(data.repositoryRoot, 'add', 'other.txt');
-  await git(data.repositoryRoot, 'commit', '-qm', 'unrelated');
-  const result = await integrateDelegateDelta({
-    custody: data.custody,
-    run,
-    scopePaths: ['tracked.txt'],
-    checks: [],
+    const result = await integration;
+    assert.equal(result.code, 'E_INTEGRATION_SOURCE_DRIFT');
+    assert.equal(await readFile(join(data.repositoryRoot, 'tracked.txt'), 'utf8'), 'owner edit\n');
   });
-  assert.equal(result.status, 'completed', JSON.stringify(result));
-  assert.equal((await lstat(join(data.repositoryRoot, 'tracked.txt'))).mode & 0o777, 0o664);
-});
+
+for (const branch of [false, true])
+  test(`physical permissions and unrelated source commits do not cause false drift${branch ? ' (run branch)' : ''}`, async () => {
+    const data = await fixture({ branch });
+    await chmod(join(data.repositoryRoot, 'tracked.txt'), 0o664);
+    await writeFile(join(data.custody.worktreePath, 'tracked.txt'), 'delegate\n');
+    await writeFile(join(data.repositoryRoot, 'other.txt'), 'unrelated\n');
+    await git(data.repositoryRoot, 'add', 'other.txt');
+    await git(data.repositoryRoot, 'commit', '-qm', 'unrelated');
+    const result = await integrateDelegateDelta({
+      custody: data.custody,
+      run,
+      scopePaths: ['tracked.txt'],
+      checks: [],
+    });
+    assert.equal(result.status, 'completed', JSON.stringify(result));
+    assert.equal((await lstat(join(data.repositoryRoot, 'tracked.txt'))).mode & 0o777, 0o664);
+  });
 
 test('parent-selected checks inherit the parent host environment without storing its credentials', async () => {
   const data = await fixture({
@@ -1010,8 +1040,9 @@ test('real run-record preflight rejects oversized final metadata before writing 
   assert.equal(await readFile(join(data.repositoryRoot, 'tracked.txt'), 'utf8'), 'base\n');
 });
 
-async function compiledFixture() {
+async function compiledFixture(branch = false) {
   const data = await fixture({
+    branch,
     files: {
       '.gitignore': 'node_modules/\ndist/\n',
       'packages/library/package.json': JSON.stringify({
@@ -1021,8 +1052,10 @@ async function compiledFixture() {
       'packages/library/build.mjs':
         "import{mkdirSync,readFileSync,writeFileSync}from'node:fs';mkdirSync('dist',{recursive:true});writeFileSync('dist/value.txt',readFileSync('value.txt'));",
       'packages/client/package.json': JSON.stringify({
-        scripts: { test: 'node check.mjs' },
+        scripts: { test: 'node check.mjs', link: 'node link.mjs' },
       }),
+      'packages/client/link.mjs':
+        "import{existsSync,mkdirSync,symlinkSync}from'node:fs';mkdirSync('node_modules',{recursive:true});if(!existsSync('node_modules/library'))symlinkSync('../../library','node_modules/library');",
       'packages/client/check.mjs':
         "import{readFileSync}from'node:fs';const v=readFileSync('node_modules/library/dist/value.txt','utf8');if(process.argv[2]!=='tests/focused.test.mjs'||v!==readFileSync('../library/value.txt','utf8'))process.exit(2);if(process.argv.includes('tests/regression.test.mjs')&&v==='candidate')process.exit(3);",
     },
@@ -1035,6 +1068,7 @@ async function compiledFixture() {
   return data;
 }
 const buildSteps = [{ cwd: 'packages/library', command: 'npm run build' }];
+const linkStep = { cwd: 'packages/client', command: 'npm run link' };
 const focusedCheck = [
   {
     cwd: 'packages/client',
@@ -1101,58 +1135,60 @@ test('scratch prepares workspace builds and package-local dependencies before a 
   assert.equal(recovered.nextAction, status.nextAction);
 });
 
-test('fresh rebuilt baseline identifies regressions and keeps failed evidence after a successful retry', async () => {
-  const data = await compiledFixture();
-  const { runId, runDirectory } = await recordedRun(data);
-  const input = {
-    runId,
-    runDirectory,
-    scopePaths: ['packages/library/value.txt'],
-    preparation: buildSteps,
-  };
-  await delegateIntegrationCommand('review', input);
-  const failed = await delegateIntegrationCommand('apply', {
-    ...input,
-    checks: [
-      {
-        cwd: 'packages/client',
-        command: 'npm run test',
-        args: ['--', 'tests/focused.test.mjs', 'tests/regression.test.mjs'],
-      },
-    ],
+for (const branch of [false, true])
+  test(`fresh rebuilt baseline identifies regressions and keeps failed evidence after a successful retry${branch ? ' (run branch)' : ''}`, async () => {
+    const data = await compiledFixture(branch);
+    const { runId, runDirectory } = await recordedRun(data);
+    const input = {
+      runId,
+      runDirectory,
+      scopePaths: ['packages/library/value.txt'],
+      // Dependencies are not copied into a run branch checkout; preparation provides them.
+      preparation: branch ? [linkStep, ...buildSteps] : buildSteps,
+    };
+    await delegateIntegrationCommand('review', input);
+    const failed = await delegateIntegrationCommand('apply', {
+      ...input,
+      checks: [
+        {
+          cwd: 'packages/client',
+          command: 'npm run test',
+          args: ['--', 'tests/focused.test.mjs', 'tests/regression.test.mjs'],
+        },
+      ],
+    });
+    assert.equal(failed.code, 'E_INTEGRATION_CHECKS', JSON.stringify(failed));
+    assert.equal(failed.checks[0].classification, 'regression');
+    assert.equal(failed.checks[0].baseline.exitCode, 0);
+    assert.deepEqual(
+      [...new Set(failed.verification.preparation.map(({ target }) => target))],
+      ['candidate', 'baseline'],
+    );
+    const priorBytes = await readFile(failed.verification.evidencePath);
+    assert.equal(
+      await readFile(join(data.repositoryRoot, 'packages/library/value.txt'), 'utf8'),
+      'base',
+    );
+    await assert.rejects(delegateIntegrationCommand('apply', { ...input, checks: [] }), {
+      code: 'E_INTEGRATION_CHECKS_REQUIRED',
+    });
+    await writeFile(join(data.custody.worktreePath, 'packages/library/value.txt'), 'corrected');
+    await delegateIntegrationCommand('review', input);
+    const accepted = await delegateIntegrationCommand('apply', {
+      ...input,
+      checks: [
+        {
+          cwd: 'packages/client',
+          command: 'npm run test',
+          args: ['--', 'tests/focused.test.mjs', 'tests/regression.test.mjs'],
+        },
+      ],
+    });
+    assert.equal(accepted.status, 'completed', JSON.stringify(accepted));
+    assert.equal(accepted.verification.attempt, 2);
+    assert.notEqual(accepted.verification.evidencePath, failed.verification.evidencePath);
+    assert.deepEqual(await readFile(failed.verification.evidencePath), priorBytes);
   });
-  assert.equal(failed.code, 'E_INTEGRATION_CHECKS', JSON.stringify(failed));
-  assert.equal(failed.checks[0].classification, 'regression');
-  assert.equal(failed.checks[0].baseline.exitCode, 0);
-  assert.deepEqual(
-    failed.verification.preparation.map(({ target }) => target),
-    ['candidate', 'baseline'],
-  );
-  const priorBytes = await readFile(failed.verification.evidencePath);
-  assert.equal(
-    await readFile(join(data.repositoryRoot, 'packages/library/value.txt'), 'utf8'),
-    'base',
-  );
-  await assert.rejects(delegateIntegrationCommand('apply', { ...input, checks: [] }), {
-    code: 'E_INTEGRATION_CHECKS_REQUIRED',
-  });
-  await writeFile(join(data.custody.worktreePath, 'packages/library/value.txt'), 'corrected');
-  await delegateIntegrationCommand('review', input);
-  const accepted = await delegateIntegrationCommand('apply', {
-    ...input,
-    checks: [
-      {
-        cwd: 'packages/client',
-        command: 'npm run test',
-        args: ['--', 'tests/focused.test.mjs', 'tests/regression.test.mjs'],
-      },
-    ],
-  });
-  assert.equal(accepted.status, 'completed', JSON.stringify(accepted));
-  assert.equal(accepted.verification.attempt, 2);
-  assert.notEqual(accepted.verification.evidencePath, failed.verification.evidencePath);
-  assert.deepEqual(await readFile(failed.verification.evidencePath), priorBytes);
-});
 
 test('failed or mutating preparation blocks before checks and source writes', async () => {
   for (const script of [
@@ -1398,4 +1434,41 @@ test('size preflight includes verification evidence added during apply before an
   await assert.rejects(lstat(join(record.runPath, 'integration-journal.json')), { code: 'ENOENT' });
   for (const path of Object.keys(files))
     assert.equal(await readFile(join(data.repositoryRoot, path), 'utf8'), 'base\n');
+});
+
+test('a git that exits before reading its input reports its own result (run branch)', async () => {
+  const { custody } = await fixture({ branch: true });
+  await writeFile(join(custody.worktreePath, 'tracked.txt'), `${'delegate\n'.repeat(256 * 1024)}`);
+  const realGit = (await execFile('git', ['--exec-path'])).stdout.trim();
+  const shims = await mkdtemp(join(tmpdir(), 'planr-git-shim-'));
+  roots.push(shims);
+  await writeFile(
+    join(shims, 'git'),
+    [
+      '#!/bin/sh',
+      'for arg in "$@"; do',
+      '  if [ "$arg" = --check ]; then',
+      '    exec 0<&-',
+      '    echo "error: patch failed: tracked.txt:1" >&2',
+      '    sleep 0.2',
+      '    exit 1',
+      '  fi',
+      'done',
+      `exec "${realGit}/git" "$@"`,
+      '',
+    ].join('\n'),
+    { mode: 0o755 },
+  );
+  const path = process.env.PATH;
+  process.env.PATH = `${shims}:${path}`;
+  try {
+    const review = await reviewDelegateDelta({ custody, run, scopePaths: ['tracked.txt'] });
+    assert.equal(review.ready, false);
+    assert.deepEqual(
+      review.violations.map(({ code, path }) => [code, path]),
+      [['E_INTEGRATION_SOURCE_DRIFT', 'tracked.txt']],
+    );
+  } finally {
+    process.env.PATH = path;
+  }
 });

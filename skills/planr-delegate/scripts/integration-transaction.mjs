@@ -93,12 +93,7 @@ function completed(run) {
   return run?.status === 'completed' || run?.state === 'completed';
 }
 
-export async function reviewDelegateDelta({
-  custody,
-  run,
-  scopePaths = [],
-  preservePaths = [],
-} = {}) {
+export function reviewScope({ custody, run, scopePaths = [], preservePaths = [] } = {}) {
   if (!custody?.repositoryRoot || !custody?.worktreePath)
     throw new IntegrationError('E_INTEGRATION_RECORD', 'A custody record is required.');
   if (!completed(run))
@@ -116,6 +111,12 @@ export async function reviewDelegateDelta({
   const protectedPaths = [...(custody.preservePaths ?? []), ...preservePaths].map((entry) =>
     safePath(typeof entry === 'string' ? entry : entry.path),
   );
+  return { allowed, protectedPaths };
+}
+
+export async function reviewDelegateDelta(input = {}) {
+  const { custody, run } = input;
+  const { allowed, protectedPaths } = reviewScope(input);
   const custodyCheck = await validateWorktreeCustody(custody, {
     native: Boolean(run.nativeSelection),
   });
@@ -479,7 +480,7 @@ async function generateCandidate({
   }
 }
 
-async function compareWithBaseline(
+export async function compareWithBaseline(
   results,
   selectedChecks,
   target,
