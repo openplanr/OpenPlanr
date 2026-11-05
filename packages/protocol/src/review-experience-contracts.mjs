@@ -6,8 +6,8 @@ import {
   DESIGN_DOCUMENT_V120_SCHEMA,
   validateDesignProps,
 } from './design-contracts.mjs';
+import { DESIGN_REVIEW_BUNDLE_SCHEMA } from './design-review-bundle-contracts.mjs';
 import { validateJson } from './json-schema.mjs';
-import { DESIGN_REVIEW_BUNDLE_SCHEMA } from './workspace-contracts.mjs';
 
 const text = { type: 'string', maxLength: 16384 };
 const id = { type: 'string', minLength: 1, maxLength: 128 };

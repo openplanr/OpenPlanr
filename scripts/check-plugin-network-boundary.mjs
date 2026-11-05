@@ -16,7 +16,8 @@ export const PLUGIN_ROOTS = Object.freeze([
 const ALLOWLIST = 'scripts/plugin-network-boundary-allowlist.json';
 const CODE = new Set(['.mjs', '.js', '.cjs', '.json', '.html', '.css']);
 
-const SHARE_MODULES = [
+/** Sharing modules owned by the openplanr CLI; no plugin bundle may contain them. */
+export const SHARE_MODULES = Object.freeze([
   'share',
   'share-status',
   'owner-custody',
@@ -32,7 +33,7 @@ const SHARE_MODULES = [
   'live-room-integrity',
   'sharing-security-contracts',
   'workspace-contracts',
-];
+]);
 
 const HOME_READ =
   /(?:\benv(?:\?\.|\.)(?:HOME|PLANR_HOME|OPENPLANR_HOME)\b|\bhomedir\(|tokens\.json|artifact-daemon)/u;
@@ -95,13 +96,15 @@ function globPattern(pattern) {
   return new RegExp(`^${escaped}$`, 'u');
 }
 
-/** Reads the allowlist; each entry names a file glob, a rule and why it is still there. */
+/** Reads the allowlist; each entry names a file glob, a rule and why that finding is safe. */
 export function readAllowlist(workspace = root) {
   const path = join(workspace, ALLOWLIST);
   const value = JSON.parse(readFileSync(path, 'utf8'));
-  for (const entry of value.shrinking ?? [])
-    if (typeof entry.path !== 'string' || !Object.hasOwn(RULES, entry.rule))
-      throw new Error(`${ALLOWLIST} has an invalid shrinking entry: ${JSON.stringify(entry)}`);
+  const unknown = Object.keys(value).filter((key) => !['$comment', 'permanent'].includes(key));
+  if (unknown.length)
+    throw new Error(
+      `${ALLOWLIST} has unsupported keys: ${unknown.join(', ')}. Only permanent entries are allowed.`,
+    );
   for (const entry of value.permanent ?? [])
     if (
       typeof entry.path !== 'string' ||
@@ -110,7 +113,7 @@ export function readAllowlist(workspace = root) {
       !entry.reason.trim()
     )
       throw new Error(`${ALLOWLIST} has an invalid permanent entry: ${JSON.stringify(entry)}`);
-  return { permanent: value.permanent ?? [], shrinking: value.shrinking ?? [] };
+  return { permanent: value.permanent ?? [] };
 }
 
 /**
@@ -150,10 +153,11 @@ export function scanPluginNetworkBoundary({
 
 /** Splits findings into allowed and blocking ones, and lists allowlist entries nothing matched. */
 export function classifyFindings(findings, allowlist) {
-  const entries = [
-    ...allowlist.permanent.map((entry) => ({ ...entry, kind: 'permanent' })),
-    ...allowlist.shrinking.map((entry) => ({ ...entry, kind: 'shrinking' })),
-  ].map((entry) => ({ ...entry, pattern: globPattern(entry.path), used: false }));
+  const entries = allowlist.permanent.map((entry) => ({
+    ...entry,
+    pattern: globPattern(entry.path),
+    used: false,
+  }));
   const blocking = [];
   const allowed = [];
   for (const finding of findings) {
@@ -162,24 +166,21 @@ export function classifyFindings(findings, allowlist) {
     );
     if (entry) {
       entry.used = true;
-      allowed.push({ ...finding, kind: entry.kind });
+      allowed.push(finding);
     } else blocking.push(finding);
   }
-  const stale = entries
-    .filter((entry) => !entry.used)
-    .map(({ path, rule, kind }) => ({ path, rule, kind }));
+  const stale = entries.filter((entry) => !entry.used).map(({ path, rule }) => ({ path, rule }));
   return { blocking, allowed, stale };
 }
 
-/** Release check: every finding blocks, whatever the allowlist says, except permanent entries. */
+/** Release check on the packed plugin: every finding the allowlist does not cover blocks. */
 export function assertReleasablePlugin({ workspace = root, pluginRoots } = {}) {
-  const { permanent } = readAllowlist(workspace);
   const findings = scanPluginNetworkBoundary({
     workspace,
     ...(pluginRoots ? { pluginRoots } : {}),
     includeSkillSources: false,
   });
-  const { blocking } = classifyFindings(findings, { permanent, shrinking: [] });
+  const { blocking } = classifyFindings(findings, readAllowlist(workspace));
   if (blocking.length)
     throw new Error(
       `The plugin bundle still reads credentials or contacts OpenPlanr hosts; no release ships until it is clean:\n${blocking
@@ -190,21 +191,18 @@ export function assertReleasablePlugin({ workspace = root, pluginRoots } = {}) {
 
 function main() {
   const allowlist = readAllowlist();
-  const { blocking, allowed, stale } = classifyFindings(scanPluginNetworkBoundary(), allowlist);
-  const shrinking = allowed.filter(({ kind }) => kind === 'shrinking').length;
+  const { blocking, stale } = classifyFindings(scanPluginNetworkBoundary(), allowlist);
   if (blocking.length || stale.length) {
     for (const { path, rule, evidence } of blocking)
       console.error(`plugin network boundary: ${path} [${rule}] ${evidence.join(', ')}`);
-    for (const { path, rule, kind } of stale)
+    for (const { path, rule } of stale)
       console.error(
-        `plugin network boundary: ${kind} allowlist entry ${path} [${rule}] matches nothing; remove it from ${ALLOWLIST}.`,
+        `plugin network boundary: allowlist entry ${path} [${rule}] matches nothing; remove it from ${ALLOWLIST}.`,
       );
     process.exitCode = 1;
     return;
   }
-  console.log(
-    `Plugin network boundary holds (${shrinking} allowlisted findings left before a release can ship).`,
-  );
+  console.log('Plugin network boundary holds.');
 }
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) main();

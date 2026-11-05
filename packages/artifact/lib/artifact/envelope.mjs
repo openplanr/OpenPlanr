@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
 import { ARTIFACT_ERROR_CODES, PipelineError } from '@openplanr/protocol/errors';
-import { LARGE_OBJECT_LIMITS } from '@openplanr/protocol/large-object-contracts';
+import { LARGE_OBJECT_LIMITS } from '@openplanr/protocol/large-object-limits';
 import {
   ARTIFACT_MAX_SOURCES,
   ARTIFACT_MAX_VIEWS,

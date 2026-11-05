@@ -5,7 +5,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { Script } from 'node:vm';
-import { buildSync } from 'esbuild';
+import { build, buildSync } from 'esbuild';
 import {
   ARTIFACT_SHELL_ASSET_PATHS,
   ARTIFACT_SHELL_VERSION,
@@ -138,7 +138,7 @@ export function renderArtifactShellAssetManifest(assets) {
  * `entry` resolves against `projectRoot`; `banner` names the calling generator.
  * `format: 'esm'` leaves an entry that is itself one IIFE unwrapped, keeping its directive.
  */
-export function bundleBrowserEntry(
+function browserBuildOptions(
   entry,
   {
     format = 'iife',
@@ -152,7 +152,7 @@ export function bundleBrowserEntry(
     define,
   } = {},
 ) {
-  const result = buildSync({
+  return {
     absWorkingDir: projectRoot,
     entryPoints: [entry],
     banner: { js: banner },
@@ -174,7 +174,10 @@ export function bundleBrowserEntry(
     tsconfigRaw: {},
     write: false,
     metafile: !!onInputs,
-  });
+  };
+}
+
+function browserBuildOutput(result, entry, { projectRoot = root, onInputs } = {}) {
   if (result.warnings.length > 0) {
     throw new ArtifactThemeGenerationError(
       'E_ARTIFACT_BUNDLE_WARNINGS',
@@ -185,8 +188,19 @@ export function bundleBrowserEntry(
       },
     );
   }
-  if (onInputs)
-    onInputs(Object.keys(result.metafile.inputs).map((path) => resolve(projectRoot, path)));
+  if (onInputs) {
+    const emitted = new Set(
+      Object.values(result.metafile.outputs).flatMap((output) =>
+        Object.entries(output.inputs)
+          .filter(([_path, data]) => data.bytesInOutput > 0)
+          .map(([path]) => resolve(projectRoot, path)),
+      ),
+    );
+    onInputs(
+      Object.keys(result.metafile.inputs).map((path) => resolve(projectRoot, path)),
+      emitted,
+    );
+  }
   const output = result.outputFiles?.[0]?.text;
   if (typeof output !== 'string' || output.length === 0) {
     throw new ArtifactThemeGenerationError(
@@ -196,6 +210,10 @@ export function bundleBrowserEntry(
     );
   }
   return output.endsWith('\n') ? output : `${output}\n`;
+}
+
+export function bundleBrowserEntry(entry, options = {}) {
+  return browserBuildOutput(buildSync(browserBuildOptions(entry, options)), entry, options);
 }
 
 /**
@@ -212,6 +230,60 @@ export function renderArtifactStageRuntimeAsset({
     globalName: 'OpenPlanrArtifactStage',
     projectRoot,
     onInputs,
+  });
+}
+
+/** Stage modules a local review never mounts: paste sharing, the share dialog and the hosted viewer. */
+const LOCAL_STAGE_STUBS = Object.freeze({
+  './durable-paste-share.mjs': 'export function createDurablePasteShare() { return null; }',
+  // A share control that no host adapter has claimed has nothing to open, so it is hidden.
+  './share-dialog.mjs': `export function mountArtifactShareDialog({ root } = {}) {
+  const trigger = root?.querySelector?.('[data-planr-action="share"]');
+  if (trigger && !trigger.hasAttribute('data-planr-share-adapter')) trigger.hidden = true;
+  return null;
+}`,
+  './hosted-viewer.mjs': 'export function mountHostedArtifactViewer() { return null; }',
+});
+
+/** Render the stage without its sharing modules, for runtimes that hand sharing to the CLI. */
+export async function renderLocalArtifactStageRuntimeAsset({
+  projectRoot = root,
+  compact = true,
+  onInputs,
+} = {}) {
+  const entry = 'lib/artifact/ui/stage.mjs';
+  const stage = resolve(projectRoot, entry);
+  const options = { compact, globalName: 'OpenPlanrArtifactStage', projectRoot, onInputs };
+  const stubFilter = new RegExp(
+    `^(?:${Object.keys(LOCAL_STAGE_STUBS)
+      .map((path) => path.replaceAll('.', '\\.'))
+      .join('|')})$`,
+  );
+  const result = await build({
+    ...browserBuildOptions(entry, options),
+    plugins: [
+      {
+        name: 'local-stage-stubs',
+        setup(buildApi) {
+          buildApi.onResolve({ filter: stubFilter }, ({ path, importer }) =>
+            importer === stage ? { path, namespace: 'local-stage-stub' } : undefined,
+          );
+          buildApi.onLoad({ filter: /.*/, namespace: 'local-stage-stub' }, ({ path }) => ({
+            contents: LOCAL_STAGE_STUBS[path],
+            loader: 'js',
+          }));
+        },
+      },
+    ],
+  });
+  return browserBuildOutput(result, entry, {
+    projectRoot,
+    onInputs:
+      onInputs &&
+      ((inputs, emitted) => {
+        const real = (path) => !path.includes('local-stage-stub:');
+        onInputs(inputs.filter(real), new Set([...emitted].filter(real)));
+      }),
   });
 }
 

@@ -21,7 +21,7 @@ import { resolveArtifactHtml } from '../../packages/artifact/lib/artifact/artifa
 import { digestArtifactEnvelope } from '../../packages/artifact/lib/artifact/envelope.mjs';
 import { readRuntimeAsset } from '../../packages/artifact/lib/artifact/internal/runtime-asset.mjs';
 import { createArtifactReview } from '../../packages/artifact/lib/artifact/review.mjs';
-import { renderArtifactStageRuntimeAsset } from '../../packages/artifact/scripts/generate-artifact-shell.mjs';
+import { renderLocalArtifactStageRuntimeAsset } from '../../packages/artifact/scripts/generate-artifact-shell.mjs';
 import { renderDesignStudioRuntimeAsset } from '../../packages/design/scripts/generate-design-studio.mjs';
 import { readSkillSourceRegistry } from '../../packages/skill-runtime/src/catalog.mjs';
 import {
@@ -527,7 +527,12 @@ test('design runtime bundling and release archives preserve binary assets withou
     const portablePath = `scripts/runtime/${sourcePath}`;
     const resource = resources.find(({ path }) => path === portablePath);
     assert.ok(resource, `portable Design resources include ${sourcePath}`);
-    assert.deepEqual(resourceBytes(resource.bytes), readFileSync(join(root, sourcePath)));
+    const portable = resourceBytes(resource.bytes);
+    const source = readFileSync(join(root, sourcePath));
+    assert.ok(
+      portable.equals(source),
+      `${sourcePath} is ${portable.length} bytes, source is ${source.length}`,
+    );
   }
   const binary = Buffer.from([0, 255, 128, 13, 10, 193, 240, 159, 255, 0]);
   const entries = [
@@ -540,8 +545,13 @@ test('design runtime bundling and release archives preserve binary assets withou
   const archive = createDeterministicZip(entries);
   const extracted = readDeterministicZip(archive);
   assert.deepEqual(extracted.find(({ path }) => path === 'assets/opaque-font.woff2').bytes, binary);
-  for (const entry of resources)
-    assert.deepEqual(extracted.find(({ path }) => path === entry.path).bytes, entry.bytes);
+  for (const entry of resources) {
+    const unpacked = extracted.find(({ path }) => path === entry.path).bytes;
+    assert.ok(
+      unpacked.equals(entry.bytes),
+      `${entry.path} unpacks to ${unpacked.length} bytes, packed ${entry.bytes.length}`,
+    );
+  }
   assert.ok(
     resources.length < 200,
     'portable closure fits the frozen skill-package resource limit',
@@ -560,7 +570,7 @@ test('design runtime bundling and release archives preserve binary assets withou
       [
         'scripts/runtime/packages/artifact/templates/artifact-review-stage.js',
         () =>
-          renderArtifactStageRuntimeAsset({
+          renderLocalArtifactStageRuntimeAsset({
             projectRoot: join(root, 'packages/artifact'),
             compact: false,
           }),
@@ -576,7 +586,11 @@ test('design runtime bundling and release archives preserve binary assets withou
       );
       assert.ok(resources.some((resource) => resource.path === `${path}.sources.json`));
       const bytes = readRuntimeAsset(join(installed, path));
-      assert.deepEqual(bytes, Buffer.from(render()));
+      const expected = Buffer.from(await render());
+      assert.ok(
+        bytes.equals(expected),
+        `${path} is ${bytes.length} bytes, its rendered source ${expected.length}`,
+      );
       assert.doesNotThrow(() => new Script(bytes.toString('utf8')), path);
     }
   } finally {
@@ -717,6 +731,25 @@ test('Plan carries only handoff inspection and rejects authoring operations offl
       existsSync(journalPath),
       false,
       'the existing Design reader retains its recovery default',
+    );
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
+});
+
+test('a skill runtime that would bundle a sharing module is refused', async () => {
+  const directory = realpathSync(mkdtempSync(join(tmpdir(), 'openplanr-sharing-entry-')));
+  try {
+    const entry = join(directory, 'entry.mjs');
+    const module = (path) => JSON.stringify(join(root, path));
+    writeFileSync(
+      entry,
+      `export { main } from ${module('packages/design/lib/design/plan-handoff-utility.mjs')};\n` +
+        `export { readCustody } from ${module('packages/artifact/lib/artifact/owner-custody.mjs')};\n`,
+    );
+    await assert.rejects(
+      buildDesignSkillResources({ repoRoot: root, profile: 'plan', entrypoint: entry }),
+      /runtime bundles sharing modules that belong to the openplanr CLI: .*owner-custody\.mjs/u,
     );
   } finally {
     rmSync(directory, { recursive: true, force: true });

@@ -3,9 +3,9 @@ import { readdirSync, readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { basename, dirname, join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
-
-import { renderArtifactStageRuntimeAsset } from '../../packages/artifact/scripts/generate-artifact-shell.mjs';
+import { renderLocalArtifactStageRuntimeAsset } from '../../packages/artifact/scripts/generate-artifact-shell.mjs';
 import { renderDesignStudioRuntimeAsset } from '../../packages/design/scripts/generate-design-studio.mjs';
+import { SHARE_MODULES } from '../check-plugin-network-boundary.mjs';
 import { resourceBytes } from './resource-bytes.mjs';
 import { splitRuntimeAssetSources } from './runtime-sources.mjs';
 
@@ -39,7 +39,7 @@ const CHUNK_BOUNDARIES = Object.freeze([
 // Plan's boundaries include only its read-only dependencies. Using a complete
 // server or sharing client as an extra entrypoint would retain unused authority.
 const PLAN_CHUNK_BOUNDARIES = Object.freeze([
-  ['protocol-contracts', 'packages/protocol/src/large-object-contracts.mjs'],
+  ['protocol-contracts', 'packages/protocol/src/review-experience-contracts.mjs'],
 ]);
 
 const CHUNK_OUTDIR = 'design-bundle';
@@ -138,11 +138,16 @@ export async function buildDesignSkillResources({
   const logical = (absolute) => relative(root, absolute).split(sep).join('/');
   // The stage and studio runtimes are untracked outputs of later generator steps, so they
   // are rendered from source here instead of read from disk. Skills ship them as readable
-  // statement units; the readable stage is the same program without whitespace compaction.
+  // statement units; the readable stage leaves out whitespace compaction and the sharing modules
+  // that the openplanr CLI owns.
   const stageRuntimePath = resolve(root, 'packages/artifact/templates/artifact-review-stage.js');
   const studioRuntimePath = resolve(root, 'packages/design/templates/studio/studio.js');
   const browserInputs = [];
-  const collectInputs = (inputs) => browserInputs.push(...inputs);
+  const emittedBrowserInputs = [];
+  const collectInputs = (inputs, emitted) => {
+    browserInputs.push(...inputs);
+    emittedBrowserInputs.push(...emitted);
+  };
   const sourceAssets = new Map(
     includesStudio
       ? [
@@ -150,7 +155,7 @@ export async function buildDesignSkillResources({
             stageRuntimePath,
             {
               packageRoot: resolve(root, 'packages/artifact'),
-              text: renderArtifactStageRuntimeAsset({
+              text: await renderLocalArtifactStageRuntimeAsset({
                 projectRoot: resolve(root, 'packages/artifact'),
                 compact: false,
                 onInputs: collectInputs,
@@ -173,19 +178,13 @@ export async function buildDesignSkillResources({
   const assetPaths = includesStudio
     ? [
         resolve(root, 'packages/protocol/schemas/v1.0.0/design-manifest.schema.json'),
-        ...['artifact-envelope', 'artifact-review', 'artifact-paste'].map((name) =>
+        ...['artifact-envelope', 'artifact-review'].map((name) =>
           resolve(root, `packages/protocol/schemas/v1.1.0/${name}.schema.json`),
         ),
         resolve(root, 'packages/protocol/schemas/v1.14.0/artifact-theme.schema.json'),
         resolve(root, 'packages/protocol/schemas/v1.22.0/design-document.schema.json'),
         resolve(root, 'packages/protocol/schemas/v1.22.0/design-review-bundle.schema.json'),
-        ...[
-          'design-review-workspace',
-          'design-workspace-create',
-          'design-workspace-revision',
-          'design-workspace-event',
-          'design-review-bundle',
-        ].map((name) => resolve(root, `packages/protocol/schemas/v1.9.0/${name}.schema.json`)),
+        resolve(root, 'packages/protocol/schemas/v1.9.0/design-review-bundle.schema.json'),
         ...files(resolve(root, 'packages/protocol/schemas/v1.10.0')),
         ...files(resolve(root, 'packages/protocol/schemas/v1.11.0')),
         ...files(resolve(root, 'packages/protocol/schemas/v1.16.0')),
@@ -452,6 +451,17 @@ export async function buildDesignSkillResources({
       bytes,
     });
   }
+  const sharing = [...bundledInputs, ...emittedBrowserInputs]
+    .map((path) => path.replaceAll('\\', '/'))
+    .filter((path) =>
+      SHARE_MODULES.some((name) =>
+        new RegExp(`/(?:lib|src)/(?:.*/)?${name}\\.mjs$`, 'u').test(path),
+      ),
+    );
+  if (sharing.length)
+    throw new Error(
+      `Design ${profile} runtime bundles sharing modules that belong to the openplanr CLI: ${sharing.join(', ')}`,
+    );
   const dependencyRoots = new Set();
   for (const path of [...bundledInputs, ...browserInputs]) {
     const normalized = path.replaceAll('\\', '/');

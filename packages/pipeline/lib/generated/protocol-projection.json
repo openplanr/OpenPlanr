@@ -166,6 +166,12 @@
       "mode": "644"
     },
     {
+      "source": "packages/protocol/projections/pipeline/lib/protocol/design-review-bundle-contracts.mjs",
+      "target": "lib/protocol/design-review-bundle-contracts.mjs",
+      "sha256": "689b3d06f37e6f8cc1ddfa541159511a3cac125d171c21b00e5e432f9779fa3b",
+      "mode": "644"
+    },
+    {
       "source": "packages/protocol/projections/pipeline/lib/protocol/diagram-authoring-contracts.d.mts",
       "target": "lib/protocol/diagram-authoring-contracts.d.mts",
       "sha256": "0ebb0a43d875a4e1387fedc7c2e272ebe874ad708bd6f31e472da7b532be700e",
@@ -360,7 +366,7 @@
     {
       "source": "packages/protocol/projections/pipeline/lib/protocol/review-experience-contracts.mjs",
       "target": "lib/protocol/review-experience-contracts.mjs",
-      "sha256": "4ffd76c33c33990595ac8c8d22777e2b83a49cf7585fb0e16d104f10344fc505",
+      "sha256": "844220cc0d829cb438f906afd81de05c00643eaa820ffe4ad4e9650ab4d2797d",
       "mode": "644"
     },
     {
@@ -408,7 +414,7 @@
     {
       "source": "packages/protocol/projections/pipeline/lib/protocol/workspace-contracts.mjs",
       "target": "lib/protocol/workspace-contracts.mjs",
-      "sha256": "a47c42d43dfd2ae167a325ac20f593d0080222ea55914eb1799244d82aac9496",
+      "sha256": "a77a427bb2e1fb07d043b5f7d1a53151f3077bc4a395d862bff0daf7c36c6a6d",
       "mode": "644"
     },
     {
@@ -534,7 +540,7 @@
     {
       "source": "packages/protocol/registries/skills.json",
       "target": "registry/v1.5.0/skills.json",
-      "sha256": "76eaa8f6603ec38ed7a5ea9d8d287213cdd4b45e9fb3496e6f4984ffe51021d7",
+      "sha256": "137a013de1db3a255290d3648731bbe1b2fbbfa15f4c2c6e55f272a6a62741ec",
       "mode": "644"
     },
     {

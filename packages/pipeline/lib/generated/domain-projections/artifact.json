@@ -949,7 +949,7 @@
     {
       "source": "packages/artifact/lib/artifact/envelope.mjs",
       "target": "lib/artifact/envelope.mjs",
-      "sha256": "4e615d8b233a13822ffb98c38693e19fa48611ac1e54a9246a3d655f918cafcd",
+      "sha256": "ca65e52d06559efd33f24bb75f5e46980dea9a13f3764c477df7265f2fc6eee1",
       "mode": "644"
     },
     {
@@ -1537,7 +1537,7 @@
     {
       "source": "packages/artifact/lib/artifact/ui/generated/artifact-shell-assets.json",
       "target": "lib/artifact/ui/generated/artifact-shell-assets.json",
-      "sha256": "c2fcb28f0bda6daef5fbe9dd24cc1432cca78752b284c9ad5b787bba7057c6b5",
+      "sha256": "69eb2353c97d36572b1e0ec44fdcc3dc5c1f46d45317ad801c37788e9cd87b71",
       "mode": "644"
     },
     {
@@ -2059,7 +2059,7 @@
     {
       "source": "packages/artifact/scripts/generate-artifact-shell.mjs",
       "target": "scripts/generate-artifact-shell.mjs",
-      "sha256": "68c78916e54e44c79cba55743cfc0f33677ea940e99e6f2f2de7ae5f89ac16f6",
+      "sha256": "b5665fdc6fb834ffb797b68aeb66599117c8ea0ca976e0adb74d1c2877c38c18",
       "mode": "644"
     },
     {
@@ -2077,19 +2077,19 @@
     {
       "source": "packages/artifact/templates/artifact-review-stage.js",
       "target": "templates/artifact-review-stage.js",
-      "sha256": "75f55d447333a76b38d68f6e341d4d5c118b0d20f0496a115d7482e8bf2ed121",
+      "sha256": "e86f099d81e184fffe134a8792fcaec2eb31d195cde62b3a535da8c1d62f3314",
       "mode": "644"
     },
     {
       "source": "packages/artifact/templates/design/design-board-adapter.js",
       "target": "templates/design/design-board-adapter.js",
-      "sha256": "1376d8a06091406abe6ea5f5e24590b729b449329a021fd46d023692d44eec67",
+      "sha256": "e5cea055ff2416d1a8bfb16186569026f5739d8e9cbda016dd3377a8176277d2",
       "mode": "644"
     },
     {
       "source": "packages/artifact/templates/diagram-owner.js",
       "target": "templates/diagram-owner.js",
-      "sha256": "9e762b57bba18429c8c32a0c37206364908057e925e819ae650a92319f6e2ecf",
+      "sha256": "60052c7eece2aa3ebf6aa3d0491ca94433d14380413b7c7c035a2226c5626a98",
       "mode": "644"
     },
     {

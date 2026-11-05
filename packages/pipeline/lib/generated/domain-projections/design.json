@@ -445,7 +445,7 @@
     {
       "source": "packages/design/lib/design/handoff.mjs",
       "target": "lib/design/handoff.mjs",
-      "sha256": "f2d03a594bf06a641ea40031662dca659f5d87d506333d46537549cbc7064b16",
+      "sha256": "7f5fe437a95b28ac2229e2d18d2e00745b3c7c2379619f3f63114252cf19e0f0",
       "mode": "644"
     },
     {
@@ -709,7 +709,7 @@
     {
       "source": "packages/design/templates/studio/share.js",
       "target": "templates/studio/share.js",
-      "sha256": "daee29d2c1e1a413d245cbaf321c882cfdb4df82276482a7747d8976d85fdfcd",
+      "sha256": "f76e2c70cb047927769b7d42a796cc222d078e7c6dda08806eef7455aeeeee09",
       "mode": "644"
     },
     {
