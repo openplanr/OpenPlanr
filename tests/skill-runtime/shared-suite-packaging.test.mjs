@@ -34,25 +34,37 @@ const root = resolve(import.meta.dirname, '../..');
 const registry = readSkillSourceRegistry({ repoRoot: root });
 const row = (id) => registry.skills.find(({ skillId }) => skillId === id);
 
-test('suite closure shares Design and Operate bytes while retaining local advertised helpers', () => {
-  const design = readStandardSkillPackage({ repoRoot: root, registryRow: row('planr-design') });
-  const loop = readStandardSkillPackage({ repoRoot: root, registryRow: row('planr-design-loop') });
-  const shared = suiteSharedResources(design, 'codex', 'skills/design');
-  const repeated = suiteSharedResources(loop, 'codex', 'skills/design-loop');
+test('suite closure shares Operate bytes and keeps design skills free of runtime', () => {
+  const ceo = readStandardSkillPackage({ repoRoot: root, registryRow: row('planr-ceo-review') });
+  const cto = readStandardSkillPackage({ repoRoot: root, registryRow: row('planr-cto-review') });
+  const shared = suiteSharedResources(ceo, 'codex', 'skills/ceo-review');
+  const repeated = suiteSharedResources(cto, 'codex', 'skills/cto-review');
   assert.ok(shared.length > 1);
   assert.deepEqual(
     repeated.map(({ path, bytes }) => ({ path, bytes })),
     shared.map(({ path, bytes }) => ({ path, bytes })),
   );
-  const local = suiteLocalResources(design, 'codex', 'skills/design');
-  assert.ok(local.some(({ path }) => path === 'scripts/design.mjs'));
+  const local = suiteLocalResources(ceo, 'codex', 'skills/ceo-review');
   assert.equal(local.filter(({ path }) => path.startsWith('scripts/')).length, 1);
-  assert.ok(local.some(({ path }) => path === 'references/handoff.md'));
-  assert.ok(local.some(({ path }) => path === 'schemas/design-document.schema.json'));
-  const launcher = local.find(({ path }) => path === 'scripts/design.mjs').bytes.toString();
-  assert.match(launcher, /import \{ main as run \}/u);
+  const launcher = local.find(({ path }) => path === 'scripts/validate-note.mjs').bytes.toString();
+  assert.match(launcher, /import \{ runOperateReviewNoteValidator as run \}/u);
   assert.match(launcher, /await run\(process\.argv\.slice\(2\)\)/u);
   assert.doesNotMatch(launcher, /https?:|npm |npx |PLANR_HOME/u);
+  for (const id of ['planr-design', 'planr-design-loop', 'planr-design-review', 'planr-plan']) {
+    const design = readStandardSkillPackage({ repoRoot: root, registryRow: row(id) });
+    const skillRoot = `skills/${id.slice('planr-'.length)}`;
+    assert.deepEqual(
+      suiteSharedResources(design, 'codex', skillRoot).map(({ path }) => path),
+      [],
+      id,
+    );
+    const designLocal = suiteLocalResources(design, 'codex', skillRoot);
+    assert.deepEqual(
+      designLocal.filter(({ path }) => path.startsWith('scripts/')).map(({ path }) => path),
+      id === 'planr-plan' ? ['scripts/planning-ids.mjs'] : [],
+    );
+    assert.ok(designLocal.some(({ path }) => path === 'schemas/design-document.schema.json'));
+  }
 });
 
 test('standalone archive verification rejects self-consistent incomplete or substituted products', () => {
@@ -67,7 +79,7 @@ test('standalone archive verification rejects self-consistent incomplete or subs
     /inventory/u,
   );
   const changed = entries.map((entry) =>
-    entry.path === 'scripts/design.mjs'
+    entry.path === 'scripts/planning-ids.mjs'
       ? { ...entry, bytes: Buffer.from('process.exit(0);') }
       : entry,
   );
@@ -76,7 +88,7 @@ test('standalone archive verification rejects self-consistent incomplete or subs
     /canonical standalone closure/u,
   );
   const modeChanged = entries.map((entry) =>
-    entry.path === 'scripts/design.mjs' ? { ...entry, mode: 0o644 } : entry,
+    entry.path === 'scripts/planning-ids.mjs' ? { ...entry, mode: 0o644 } : entry,
   );
   assert.throws(
     () => verifyStandaloneSkillEntries({ repoRoot: root, registryRow, entries: modeChanged }),
@@ -108,10 +120,7 @@ test('standalone downloads own complete canonical resources independently of thi
     const name = id.slice('planr-'.length);
     assert.match(files.get('agents/openai.yaml').toString(), new RegExp(`\\$${name}\\b`, 'u'));
     assert.doesNotMatch(files.get('agents/openai.yaml').toString(), /\$planr:/u);
-    assert.doesNotMatch(
-      files.get('scripts/design.mjs')?.toString() ?? '',
-      /\.\.\/\.\.\/\.\.\/runtime\//u,
-    );
+    assert.equal(files.has('scripts/design.mjs'), false, `${id} ships no design runtime`);
   }
 });
 
@@ -182,17 +191,9 @@ test('exact native suites run exported-main launchers offline after relocation',
           assert.equal(result.status, 1);
           assert.match(result.stderr, /E_OPERATE_NOTE: Usage: validate-note/u);
         } else {
-          const result = spawnSync(
-            process.execPath,
-            [join(plugin, skillRoot, 'scripts/design.mjs'), '--help'],
-            {
-              cwd: directory,
-              encoding: 'utf8',
-              env: { PATH: '/usr/bin:/bin' },
-            },
-          );
-          assert.equal(result.status, 0, result.stderr);
-          assert.match(JSON.parse(result.stdout).usage, /^design\.mjs /u);
+          assert.equal(existsSync(join(plugin, skillRoot, 'scripts/design.mjs')), false, id);
+          assert.equal(existsSync(join(plugin, 'runtime/design')), false, host);
+          assert.equal(existsSync(join(plugin, 'runtime/plan')), false, host);
         }
       }
     }

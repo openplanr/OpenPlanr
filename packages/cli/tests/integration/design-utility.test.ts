@@ -17,8 +17,8 @@ import { resolvePipelinePackageRoot } from '../helpers/pipeline-package-root.js'
 
 const CLI = resolve('src/cli/index.ts');
 const TSX = createRequire(import.meta.url).resolve('tsx/cli');
-const HELPER = resolve('../../skills/planr-design/scripts/design.mjs');
 const pipelineRoot = resolvePipelinePackageRoot();
+const HELPER = join(pipelineRoot, 'lib/design/utility.mjs');
 const cleanups: Array<() => unknown> = [];
 
 type Run = { status: number | null; stdout: string; stderr: string };

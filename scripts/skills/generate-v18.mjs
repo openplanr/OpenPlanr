@@ -25,11 +25,7 @@ import {
   readConnectionsCatalog,
   renderConnectors,
 } from './connectors.mjs';
-import {
-  buildDesignSkillResources,
-  buildPlanSkillResources,
-  DESIGN_SKILL_IDS,
-} from './design-resources.mjs';
+import { buildDesignSkillResources, DESIGN_SKILL_IDS } from './design-resources.mjs';
 import { readHistoricalCustody } from './historical-custody.mjs';
 import {
   HOST_PLUGIN_NAME,
@@ -283,10 +279,8 @@ syncGeneratedOutputs({
   completeRoots: false,
 });
 
-const designResources = await buildDesignSkillResources({ repoRoot: root });
-const planResources = await buildPlanSkillResources({ repoRoot: root });
+const resources = buildDesignSkillResources({ repoRoot: root });
 for (const skillId of [...DESIGN_SKILL_IDS, 'planr-plan']) {
-  const resources = skillId === 'planr-plan' ? planResources : designResources;
   const manifestPath = resolve(root, `skills/${skillId}/openplanr.skill.json`);
   const manifest = JSON.parse(readFileSync(manifestPath, 'utf8'));
   const expectedResources = [

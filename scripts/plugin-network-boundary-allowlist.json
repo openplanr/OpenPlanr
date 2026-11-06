@@ -40,16 +40,6 @@
       "path": "rules/planr-delegate/scripts/run-lifecycle.mjs",
       "rule": "owner-key",
       "reason": "The delegate run custody token is a local lock that pairs a run with its git apply; it is written to and compared from local files and never sent."
-    },
-    {
-      "path": "runtime/design/scripts/design-review-state-store.mjs",
-      "rule": "authorization",
-      "reason": "Builds the control header for a recorded loopback review server from its own token; this module makes no request, and its callers send the header only to 127.0.0.1."
-    },
-    {
-      "path": "skills/planr-design*/scripts/design-review-state-store.mjs",
-      "rule": "authorization",
-      "reason": "Builds the control header for a recorded loopback review server from its own token; this module makes no request, and its callers send the header only to 127.0.0.1."
     }
   ]
 }

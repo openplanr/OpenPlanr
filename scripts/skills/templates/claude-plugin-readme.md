@@ -34,20 +34,20 @@ The same skills ship for Codex and Cursor through the `openplanr` package.
 - Skills run inside Claude Code. The plugin makes no model calls of its own and sends no
   telemetry. It has no hooks and no MCP servers.
 - Skills call the `openplanr` CLI, bundled Node.js scripts, `git`, and the GitHub CLI (`gh`). They
-  read and write files in your repository.
+  read and write files in your repository. The design skills run every local design operation
+  through `openplanr design`; the plugin ships no design runtime.
 - The planning dashboard and local artifact reviews bind to loopback only.
-- Bundled scripts are readable JavaScript. The design studio and review stage pages ship as
-  readable source files; the local review server joins them after checking their recorded
-  SHA-256 digests, without downloading or decoding code.
+- Bundled scripts are readable JavaScript.
 - Skills and bundled scripts store and read no GitHub, Linear or model-provider credentials and
   send no agent credentials to OpenPlanr services. Coding-agent runs you request use that
   agent's own sign-in, described below.
 - Sharing a design or diagram review runs in the `openplanr` CLI, not in the plugin. The CLI
   creates the review's owner access keys, stores them readable only by you under `~/.planr` (or
   `PLANR_HOME`), and sends them only to the review address stored with them. The plugin's
-  bundled scripts read no owner keys and contact no OpenPlanr host; for sharing, status and
-  feedback sync they run `openplanr artifact` and pass on its result. Without the CLI, local
-  design work continues and sharing asks you to install it.
+  bundled scripts read no owner keys and contact no OpenPlanr host.
+- Without the CLI, the design skills still write the design document, sources and
+  specification, marked unverified, and tell you the command to install it. On Claude Code,
+  the design skill can build on Claude's hosted design canvas instead.
 - While a local design studio page for a shared design is visible, it asks the CLI to sync the
   review every 15 seconds. This pulls published team feedback and finishes delivering
   previously queued review metadata; it never publishes local design changes.

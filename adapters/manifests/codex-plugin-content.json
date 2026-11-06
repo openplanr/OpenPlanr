@@ -8,7 +8,7 @@
   "canonicalSkillCount": 30,
   "compatibilityAliasCount": 0,
   "skillCount": 30,
-  "assetCount": 217,
+  "assetCount": 213,
   "skills": [
     {
       "skillId": "planr-artifact",
@@ -459,7 +459,7 @@
         },
         {
           "path": "skills/design/openplanr.skill.json",
-          "digest": "sha256:5dcbc3e5fedaeb1c57e7f32dc3a2c7f8b34cb58a98bf47737f654450f3a38fce"
+          "digest": "sha256:da6e4b51fa16e55425d9d7460dcdceab4cfc414f20050d532464a76d988d34b8"
         },
         {
           "path": "skills/design/agents/openai.yaml",
@@ -506,10 +506,6 @@
           "digest": "sha256:f80c2fd8260705d7e9db15afd25db79ff10389c64bf12e6a6c12ae3e35f617e8"
         },
         {
-          "path": "skills/design/scripts/design.mjs",
-          "digest": "sha256:cca181a784f5dab67fc31fd55679481b35147f4798ee3f49bd29017f5044573b"
-        },
-        {
           "path": "skills/design/schemas/design-document.schema.json",
           "digest": "sha256:33d74abce73ec6631ee1a4f5037bb49571f81cedaebac5bf37d77d91a170b507"
         },
@@ -536,7 +532,7 @@
         },
         {
           "path": "skills/design-loop/openplanr.skill.json",
-          "digest": "sha256:60a80012891cf356b086f2766da383981d640714a04a2fd2bf931f0af37a910f"
+          "digest": "sha256:f96a6bceaaabff1acbdaad257ee0d602705305661c102bc22c21b2d40db50f6f"
         },
         {
           "path": "skills/design-loop/agents/openai.yaml",
@@ -579,10 +575,6 @@
           "digest": "sha256:f80c2fd8260705d7e9db15afd25db79ff10389c64bf12e6a6c12ae3e35f617e8"
         },
         {
-          "path": "skills/design-loop/scripts/design.mjs",
-          "digest": "sha256:cca181a784f5dab67fc31fd55679481b35147f4798ee3f49bd29017f5044573b"
-        },
-        {
           "path": "skills/design-loop/schemas/design-document.schema.json",
           "digest": "sha256:33d74abce73ec6631ee1a4f5037bb49571f81cedaebac5bf37d77d91a170b507"
         },
@@ -609,7 +601,7 @@
         },
         {
           "path": "skills/design-review/openplanr.skill.json",
-          "digest": "sha256:a352cac3b4e0bb072afd8e525352574e9f30a50c044341096f273eff58c1ce39"
+          "digest": "sha256:3151d0c1d1e306305256271abfbbab7408ce55b178868159ec9d82f426de499b"
         },
         {
           "path": "skills/design-review/agents/openai.yaml",
@@ -650,10 +642,6 @@
         {
           "path": "skills/design-review/references/team-review.md",
           "digest": "sha256:f80c2fd8260705d7e9db15afd25db79ff10389c64bf12e6a6c12ae3e35f617e8"
-        },
-        {
-          "path": "skills/design-review/scripts/design.mjs",
-          "digest": "sha256:cca181a784f5dab67fc31fd55679481b35147f4798ee3f49bd29017f5044573b"
         },
         {
           "path": "skills/design-review/schemas/design-document.schema.json",
@@ -844,7 +832,7 @@
         },
         {
           "path": "skills/plan/openplanr.skill.json",
-          "digest": "sha256:e8c99328f94d04c47aabac80c85dd4422f220036fee675bea6fc5979e1338df6"
+          "digest": "sha256:4f2c0de87e8c91f0aa244f72042044e791342d5b4718cf2d0f86cf34c7d5a6ce"
         },
         {
           "path": "skills/plan/agents/openai.yaml",
@@ -861,10 +849,6 @@
         {
           "path": "skills/plan/scripts/planning-ids.mjs",
           "digest": "sha256:d7051fab0540e3beb176015f174e0851a3ceb8a24c43344495b43a28d2eaceae"
-        },
-        {
-          "path": "skills/plan/scripts/design.mjs",
-          "digest": "sha256:8ec9264e3b70d1d9789b3d356005ca26caf258c4d2f4bb335071d7d199defa0c"
         },
         {
           "path": "skills/plan/schemas/design-document.schema.json",

@@ -1,10 +1,23 @@
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import test from 'node:test';
 
 const root = resolve(import.meta.dirname, '../..');
 const DESIGN_SKILLS = ['planr-design', 'planr-design-loop', 'planr-design-review'];
+const HOST_BUNDLES = ['claude', 'openai', 'cursor'].flatMap((host) => [
+  `dist/plugins/${host}/openplanr`,
+  `packages/cli/lib/host-packages/${host}/openplanr`,
+]);
+const RUNTIME_PATH = /^runtime\/(?:design|plan)\/|(?:^|\/)scripts\/design(?:-[a-z0-9-]+)?\.mjs$/u;
+const BINARY = /\.(?:png|jpe?g|gif|webp|ico|woff2?|ttf|otf|zip|tgz)$/iu;
+
+function files(directory, prefix = '') {
+  return readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
+    const path = prefix ? `${prefix}/${entry.name}` : entry.name;
+    return entry.isDirectory() ? files(join(directory, entry.name), path) : [path];
+  });
+}
 
 const read = (path) => readFileSync(join(root, path), 'utf8');
 const prose = (text) => text.replace(/\s+/gu, ' ');
@@ -19,6 +32,43 @@ function stopRow(text, signal) {
   assert.equal(rows.length, 1, `exactly one probe row matches ${signal}`);
   return rows[0];
 }
+
+test('no host bundle carries the design or plan runtime', () => {
+  for (const bundle of HOST_BUNDLES) {
+    assert.ok(existsSync(join(root, bundle)), `${bundle} is generated`);
+    assert.deepEqual(
+      files(join(root, bundle)).filter((path) => RUNTIME_PATH.test(path)),
+      [],
+      `${bundle} ships no design or plan runtime`,
+    );
+  }
+});
+
+test('no shipped skill text or manifest names scripts/design.mjs', () => {
+  const shipped = [
+    'skills',
+    'adapters/manifests',
+    'scripts/skills/templates',
+    ...HOST_BUNDLES,
+  ].flatMap((directory) =>
+    files(join(root, directory))
+      .filter((path) => !BINARY.test(path))
+      .map((path) => `${directory}/${path}`),
+  );
+  assert.ok(shipped.length > 100);
+  assert.deepEqual(
+    shipped.filter((path) => read(path).includes('scripts/design.mjs')),
+    [],
+  );
+  for (const id of [...DESIGN_SKILLS, 'planr-plan']) {
+    const manifest = JSON.parse(read(`skills/${id}/openplanr.skill.json`));
+    assert.deepEqual(
+      manifest.resources.map(({ path }) => path).filter((path) => path.startsWith('scripts/')),
+      id === 'planr-plan' ? ['scripts/planning-ids.mjs'] : [],
+      `${id} declares no design runtime`,
+    );
+  }
+});
 
 test('each design skill probes the CLI and the artifact tool before consultation', () => {
   for (const id of DESIGN_SKILLS) {
