@@ -415,7 +415,7 @@
     {
       "source": "packages/design/lib/design/handoff-reader.mjs",
       "target": "lib/design/handoff-reader.mjs",
-      "sha256": "062951521b884a03f26bc4c190de377749bb7c0a33b6950955e58c3b6e3eccfc",
+      "sha256": "5f06a265bdc8c8f8b00cdbbba72921378c064223b562cc4779d504691f86de5d",
       "mode": "644"
     },
     {
@@ -427,7 +427,7 @@
     {
       "source": "packages/design/lib/design/handoff-readiness.mjs",
       "target": "lib/design/handoff-readiness.mjs",
-      "sha256": "f1bf9700118eb67dbeb5e08d810894e9bf1fcd96bc4329914b9601d21a2b2d0a",
+      "sha256": "dab2947a868750898c33ab75f4300aaf92c52b3cd3bede5c1871dda3594a8d81",
       "mode": "644"
     },
     {

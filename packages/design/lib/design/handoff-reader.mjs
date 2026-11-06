@@ -286,7 +286,7 @@ export function readDesignHandoffReadiness(file, { env = process.env, ...shareOp
           ...handoff,
           path: 'review-handoff.json',
           digest: `sha256:${handoff.contentHash}`,
-          current: reviewDigest(handoff.basis) === reviewDigest(value.basis),
+          current: basisIsCurrent(value.current.root, handoff.basis, value.basis),
         }
       : undefined,
   });
