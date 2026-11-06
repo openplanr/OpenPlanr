@@ -12,6 +12,7 @@ import {
   rmSync,
   writeFileSync,
 } from 'node:fs';
+import { createRequire } from 'node:module';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import test from 'node:test';
@@ -35,6 +36,8 @@ const root = resolve(import.meta.dirname, '../..');
 // The workflow package files `openplanr design` and Plan's handoff inspection run.
 const UTILITY = join(root, 'packages/pipeline/lib/design/utility.mjs');
 const PLAN_UTILITY = join(root, 'packages/pipeline/lib/design/plan-handoff-utility.mjs');
+const CLI = join(root, 'packages/cli/src/cli/index.ts');
+const TSX = createRequire(import.meta.url).resolve('tsx/cli');
 const pixel = Buffer.from(
   'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Wl6F8sAAAAASUVORK5CYII=',
   'base64',
@@ -169,6 +172,17 @@ function run(script, directory, args, { success = true } = {}) {
   }
   assert.notEqual(result.status, 0);
   return result;
+}
+
+/** Runs `openplanr <args> --json` from the CLI source, as Plan runs it. */
+function planr(directory, args, { status = 0 } = {}) {
+  const result = spawnSync(
+    process.execPath,
+    [TSX, CLI, '--project-dir', directory, ...args, '--json'],
+    { cwd: directory, env: environment(directory), encoding: 'utf8', timeout: 60_000 },
+  );
+  assert.equal(result.status, status, `${result.stderr}\n${result.stdout}`);
+  return JSON.parse(result.stdout.trim().split('\n').at(-1));
 }
 
 async function open(script, directory, file) {
@@ -585,30 +599,19 @@ test('standalone and suite design and Plan skills ship no design runtime', () =>
   }
 });
 
-test('Plan handoff inspection is read-only and rejects authoring operations', async () => {
+test('Plan handoff inspection through the CLI is read-only and rejects authoring operations', () => {
   const directory = realpathSync(mkdtempSync(join(tmpdir(), 'openplanr-plan-handoff-only-')));
   try {
-    const script = PLAN_UTILITY;
-    const help = run(script, directory, ['--help']);
-    assert.match(help.usage, /handoff.*inspect/u);
-    assert.doesNotMatch(help.usage, /render|publish|studio/u);
     const source = fixture(directory);
-    const rendered = run(UTILITY, directory, ['render', source.path]);
-    const inspected = run(script, directory, [
-      'handoff',
-      source.path,
-      '--action',
-      'inspect',
-      '--json',
-    ]);
+    const rendered = planr(directory, ['design', 'render', source.path]);
+    const inspected = planr(directory, ['design', 'handoff', source.path, '--action', 'inspect']);
     assert.equal(inspected.revision, rendered.revision);
     assert.equal(inspected.draft, null);
     const before = readFileSync(join(source.design, '.design/current.json'));
-    for (const args of [
-      ['render', source.path],
-      ['handoff', source.path, '--action', 'approve'],
-    ])
-      run(script, directory, args, { success: false });
+    const approve = planr(directory, ['design', 'handoff', source.path, '--action', 'approve'], {
+      status: 1,
+    });
+    assert.equal(approve.code, 'commander.invalidArgument');
     assert.deepEqual(readFileSync(join(source.design, '.design/current.json')), before);
     const directoryBytes = (path) =>
       readdirSync(path, { withFileTypes: true })
@@ -629,9 +632,10 @@ test('Plan handoff inspection is read-only and rejects authoring operations', as
     for (const bytes of [journal, 'null\n', '{malformed']) {
       writeFileSync(journalPath, bytes);
       const unchanged = directoryBytes(directory);
-      const failure = run(script, directory, ['handoff', source.path], { success: false });
-      assert.match(failure.stderr, /E_DESIGN_PUBLICATION_PENDING/u);
-      assert.match(failure.stderr, /Design utility/u);
+      const failure = planr(directory, ['design', 'handoff', source.path, '--action', 'inspect'], {
+        status: 1,
+      });
+      assert.equal(failure.code, 'E_DESIGN_PUBLICATION_PENDING');
       assert.deepEqual(
         directoryBytes(directory),
         unchanged,
