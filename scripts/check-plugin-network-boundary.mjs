@@ -601,22 +601,28 @@ export function readAllowlist(workspace = root) {
   return { permanent };
 }
 
-/** Refuses a baseline whose count exceeds the one committed at `ref`, the pull request's base. */
+/**
+ * Refuses any permanent entry ({path, rule}) the allowlist at `ref`, the pull request's base, lacks.
+ * Before the base pins a baseline, its allowlist uses retired rules and nothing is compared.
+ */
 export function assertBaselineNotGrown(ref, workspace = root) {
   const git = (...args) => spawnSync('git', args, { cwd: workspace, encoding: 'utf8' });
   if (git('rev-parse', '--verify', '--quiet', `${ref}^{commit}`).status !== 0)
     throw new Error(
-      `Cannot resolve ${ref} to compare ${BASELINE} with the base branch; fetch it first. The check fails closed without it.`,
+      `Cannot resolve ${ref} to compare ${ALLOWLIST} with the base branch; fetch it first. The check fails closed without it.`,
     );
-  const base = git('show', `${ref}:${BASELINE}`);
-  if (base.status !== 0) return { base: null };
-  const before = JSON.parse(base.stdout).count;
-  const after = JSON.parse(readFileSync(join(workspace, BASELINE), 'utf8')).count;
-  if (after > before)
+  if (git('show', `${ref}:${BASELINE}`).status !== 0) return { base: null };
+  const base = git('show', `${ref}:${ALLOWLIST}`);
+  if (base.status !== 0) throw new Error(`${ref} pins ${BASELINE} but has no ${ALLOWLIST}.`);
+  const key = ({ path, rule }) => `${path} [${rule}]`;
+  const before = new Set((JSON.parse(base.stdout).permanent ?? []).map(key));
+  const after = JSON.parse(readFileSync(join(workspace, ALLOWLIST), 'utf8')).permanent ?? [];
+  const added = after.map(key).filter((entry) => !before.has(entry));
+  if (added.length)
     throw new Error(
-      `${BASELINE} grew from ${before} entries at ${ref} to ${after}. The allowlist may only shrink.`,
+      `${ALLOWLIST} has entries ${ref} does not: ${added.join(', ')}. The allowlist may only shrink.`,
     );
-  return { base: before };
+  return { base: before.size };
 }
 
 /** Splits findings into allowed and blocking ones, and lists allowlist entries nothing matched. */

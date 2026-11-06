@@ -337,29 +337,45 @@ test('the permanent allowlist is pinned to its baseline and can only shrink', (t
   );
 });
 
-test('on a pull request the baseline count may not exceed the base branch', (t) => {
+test('on a pull request every allowlist entry must already be on the base branch', (t) => {
   const root = mkdtempSync(join(tmpdir(), 'planr-baseline-base-'));
   t.after(() => rmSync(root, { recursive: true, force: true }));
   const git = (...args) => execFileSync('git', ['-C', root, ...args], { encoding: 'utf8' });
-  const baseline = (count) =>
+  const commit = (message) => {
+    git('add', '.');
+    git('-c', 'user.name=t', '-c', 'user.email=t@example.com', 'commit', '-qm', message);
+  };
+  const entry = (path, rule = 'env-read', reason = 'local') => ({ path, rule, reason });
+  const pin = (permanent) => {
+    writeFileSync(
+      join(root, 'scripts/plugin-network-boundary-allowlist.json'),
+      JSON.stringify({ permanent }),
+    );
     writeFileSync(
       join(root, 'scripts/plugin-network-boundary-baseline.json'),
-      JSON.stringify({ count }),
+      JSON.stringify({ count: permanent.length }),
     );
+  };
   mkdirSync(join(root, 'scripts'));
   git('init', '-q');
-  writeFileSync(join(root, 'README.md'), 'x');
-  git('add', '.');
-  git('-c', 'user.name=t', '-c', 'user.email=t@example.com', 'commit', '-qm', 'none');
-  baseline(3);
+  writeFileSync(
+    join(root, 'scripts/plugin-network-boundary-allowlist.json'),
+    JSON.stringify({ permanent: [entry('old.mjs', 'owner-key')] }),
+  );
+  commit('allowlist before the pin');
+  pin([entry('a.mjs'), entry('b.mjs', 'network-send')]);
   assert.deepEqual(assertBaselineNotGrown('HEAD', root), { base: null });
-  git('add', '.');
-  git('-c', 'user.name=t', '-c', 'user.email=t@example.com', 'commit', '-qm', 'pin');
-  assert.deepEqual(assertBaselineNotGrown('HEAD', root), { base: 3 });
-  baseline(2);
-  assert.deepEqual(assertBaselineNotGrown('HEAD', root), { base: 3 });
-  baseline(4);
-  assert.throws(() => assertBaselineNotGrown('HEAD', root), /grew from 3 entries at HEAD to 4/u);
+  commit('pin');
+  assert.deepEqual(assertBaselineNotGrown('HEAD', root), { base: 2 });
+  pin([entry('a.mjs', 'env-read', 'reworded')]);
+  assert.deepEqual(assertBaselineNotGrown('HEAD', root), { base: 2 });
+  pin([entry('a.mjs'), entry('**', 'network-send')]);
+  assert.throws(
+    () => assertBaselineNotGrown('HEAD', root),
+    /entries HEAD does not: \*\* \[network-send\]/u,
+  );
+  pin([entry('a.mjs'), entry('b.mjs', 'network-send'), entry('c.mjs')]);
+  assert.throws(() => assertBaselineNotGrown('HEAD', root), /c\.mjs \[env-read\]/u);
   assert.throws(
     () => assertBaselineNotGrown('origin/main', root),
     /Cannot resolve origin\/main[\s\S]*fails closed/u,
