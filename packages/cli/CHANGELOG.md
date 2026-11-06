@@ -1,5 +1,33 @@
 # Changelog
 
+## 3.5.0
+
+### Minor Changes
+
+- 83529dd: You can now work on a local design from the CLI with `openplanr design`:
+  
+  - `inspect`, `validate` and `render` check and render a design document.
+  - `open` starts the local design studio, and `studio status` and `studio stop` report or stop it from another terminal, including a studio a design skill started.
+  - `view-context`, `export`, `verify` and `handoff` report what the studio shows, export standalone HTML, record a browser check and read the review handoff.
+  - `fonts fetch` downloads open-license fonts into the design.
+  - `capabilities --json` reports which design command contract your install serves.
+  
+  These commands need the optional `planr-pipeline` package. Without it, `openplanr design capabilities` still succeeds and reports `E_DESIGN_RUNTIME_MISSING`, and the other commands stop with that code. Reinstall with `npm install -g openplanr`, without `--omit=optional`.
+  
+  `openplanr artifact open` on a design gives the same reinstall step when that package is missing.
+- e907c78: The design skills now run local design work through `openplanr design`. The OpenPlanr plugins for Claude Code, Codex and Cursor no longer ship a design runtime of their own.
+  
+  - Design, Design Loop and Design Review check `openplanr design capabilities --json` before they ask you anything. On Claude Code, Design builds on Claude's hosted design canvas when it's available, and that needs no CLI.
+  - Without a working CLI, the skills still write the design document, its sources and `design-spec.md`, marked unverified, then tell you what to run:
+    - `openplanr` not found: `npm install -g openplanr`
+    - an older `openplanr`: `npm install -g openplanr@latest`
+    - `openplanr` installed with `--omit=optional`: `npm install -g openplanr` without that flag
+  - Design Review of a hosted canvas design works from the canvas comments.
+  - Plan reads a local design handoff with `openplanr design handoff`.
+  - In Codex's default sandbox the design studio can't start. The skills tell you how to run it: in your own terminal, or with Codex's local network and `~/.planr` write access turned on.
+  
+  Removing a working feature normally waits for a major release. This one ships in a minor release as a deliberate exception: if you used the local design studio from the plugin without the CLI, install it with `npm install -g openplanr` and run the skill again.
+
 ## 3.4.0
 
 ### Minor Changes
