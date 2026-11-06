@@ -68,7 +68,7 @@ const PIPELINE_OPTIONAL_DEPENDENCIES = Object.freeze({
   '@expo-google-fonts/inter': '0.4.2',
   '@resvg/resvg-js': '2.6.2',
 });
-// Design runtime the packed workflow package must carry once the skills stop bundling it.
+// Design runtime files the packed workflow package must carry.
 const DESIGN_RUNTIME_FILES = Object.freeze([
   'lib/design/utility.mjs',
   'lib/design/plan-handoff-utility.mjs',

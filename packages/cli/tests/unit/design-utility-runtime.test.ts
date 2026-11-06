@@ -33,8 +33,8 @@ describe('the design utility runtime', () => {
     await expect(readDesignCapabilities('1.2.3')).resolves.toEqual({
       ok: false,
       code: 'E_DESIGN_RUNTIME_MISSING',
-      message: expect.stringContaining('planr-pipeline'),
-      fix: expect.stringContaining('--omit=optional'),
+      problem: expect.stringContaining('planr-pipeline'),
+      recovery: expect.stringContaining('--omit=optional'),
       contract: null,
       supported: null,
       cli: '1.2.3',

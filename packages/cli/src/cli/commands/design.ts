@@ -53,7 +53,7 @@ const DOCUMENT_COMMANDS: ReadonlyArray<
   ],
   [
     'handoff',
-    'Inspect the design review handoff',
+    'Inspect the design review handoff without changing any file',
     () => [new Option('--action <action>', 'inspect').choices(['inspect']).default('inspect')],
   ],
 ];
@@ -101,8 +101,8 @@ export function registerDesignCommand(program: Command): void {
       const result = await readDesignCapabilities(OPENPLANR_VERSION);
       if (command.opts().json) display.line(JSON.stringify(result));
       else if (!result.ok) {
-        logger.warn(result.message);
-        logger.dim(result.fix);
+        logger.warn(result.problem);
+        logger.dim(result.recovery);
       } else {
         display.keyValue('CLI', result.cli);
         display.keyValue('Workflow package', result.pipeline);

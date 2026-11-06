@@ -729,8 +729,10 @@ install serves. Without the optional `planr-pipeline` package it still exits 0, 
 `npm install -g openplanr` (without `--omit=optional`). The other commands fail with
 the same code in that case. `open` keeps running until you stop it, and
 `studio stop` stops a design's studio from another terminal. `verify` exits 1 when
-the report fails. Other failures without their own code use `E_DESIGN_UTILITY_FAILED`.
-Sharing and feedback stay under `openplanr artifact`.
+the report fails. `handoff` never changes a file: while a render is unfinished it
+fails with `E_DESIGN_PUBLICATION_PENDING`, and `render` finishes it. Other failures
+without their own code use `E_DESIGN_UTILITY_FAILED`. Sharing and feedback stay
+under `openplanr artifact`.
 
 ---
 

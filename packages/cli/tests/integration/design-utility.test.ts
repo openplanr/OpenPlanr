@@ -2,6 +2,7 @@ import { type ChildProcess, spawn } from 'node:child_process';
 import {
   existsSync,
   mkdtempSync,
+  readdirSync,
   readFileSync,
   realpathSync,
   rmSync,
@@ -149,7 +150,7 @@ describe('openplanr design', { timeout: 120_000 }, () => {
     expect(existsSync(join(dir, `.design/verification/${revision}.json`))).toBe(true);
   });
 
-  it('reports utility failures with a stable code and keeps handoff read-only', async () => {
+  it('reports utility failures with a stable code and only inspects handoffs', async () => {
     const { dir, file } = await designProject();
     json(await cli(['design', 'render', file, '--json'], dir));
     expect(
@@ -172,6 +173,37 @@ describe('openplanr design', { timeout: 120_000 }, () => {
     const update = await cli(['design', 'handoff', file, '--action', 'approve', '--json'], dir);
     expect(update.status).toBe(1);
     expect(json(update, 1)).toMatchObject({ code: 'commander.invalidArgument' });
+  });
+
+  it('inspects a handoff without recovering a pending publication', async () => {
+    const { dir, file } = await designProject();
+    const { revision } = json(await cli(['design', 'render', file, '--json'], dir));
+    const directoryBytes = (path: string): Array<{ path: string; bytes: Buffer }> =>
+      readdirSync(path, { withFileTypes: true })
+        .sort((left, right) => left.name.localeCompare(right.name))
+        .flatMap((entry) => {
+          const child = join(path, entry.name);
+          return entry.isDirectory()
+            ? directoryBytes(child)
+            : [{ path: child, bytes: readFileSync(child) }];
+        });
+    const journal = JSON.stringify({
+      revision,
+      previousRevision: null,
+      previousManifest: null,
+      manifest: JSON.parse(readFileSync(join(dir, 'finalized.json'), 'utf8')),
+    });
+    for (const bytes of [journal, 'null\n', '{malformed']) {
+      writeFileSync(join(dir, '.design/publication.json'), bytes);
+      const unchanged = directoryBytes(dir);
+      const inspect = await cli(['design', 'handoff', file, '--action', 'inspect', '--json'], dir);
+      expect(json(inspect, 1)).toMatchObject({ code: 'E_DESIGN_PUBLICATION_PENDING' });
+      expect(directoryBytes(dir)).toEqual(unchanged);
+    }
+    writeFileSync(join(dir, '.design/publication.json'), journal);
+    json(await cli(['design', 'render', file, '--json'], dir));
+    expect(existsSync(join(dir, '.design/publication.json'))).toBe(false);
+    expect(json(await cli(['design', 'handoff', file, '--json'], dir))).toMatchObject({ revision });
   });
 
   it('stops a studio another process started, from a second shell', async () => {
