@@ -4,6 +4,7 @@
  * storage reads, no sends to anything but proven-local destinations, no share or Figma hosts.
  * Rules run on the TypeScript AST of every script, so aliases and computed access are seen.
  */
+import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { dirname, extname, join, posix, relative, resolve, sep } from 'node:path';
@@ -21,23 +22,23 @@ const BASELINE = 'scripts/plugin-network-boundary-baseline.json';
 const SCRIPT = new Set(['.mjs', '.js', '.cjs']);
 const CODE = new Set([...SCRIPT, '.json', '.html', '.css']);
 const PROSE = new Set([...CODE, '.md', '.mdc', '.yaml', '.yml']);
+const SHELL = new Set(['.sh']);
+const SCANNED = new Set([...PROSE, ...SHELL]);
 const MANIFESTS = ['.claude-plugin/plugin.json', '.codex-plugin/plugin.json', 'manifest.json'];
 
 const READS = new Set(['env-read', 'home-read', 'browser-storage']);
 const SENDS = new Set(['network-send', 'env-forward']);
-export const RULES = Object.freeze([
-  ...READS,
-  ...SENDS,
-  'share-host',
-  'figma-host',
-  'figma-token',
-  'credential-forward',
-  'plugin-anchor',
-]);
+const OTHER_RULES =
+  'dynamic-code share-host figma-host figma-token credential-forward plugin-anchor';
+export const RULES = Object.freeze([...READS, ...SENDS, ...OTHER_RULES.split(' ')]);
 
 const SHARE_HOST = /share\.openplanr\.dev|OPENPLANR_SHARE_BASE/gu;
 const FIGMA_HOST = /\b(?:[a-z0-9-]+\.)*figma\.com\b/giu;
 const FIGMA_TOKEN = /FIGMA_TOKEN|X-Figma-Token|\bfigd_/giu;
+const SHELL_SEND = /\b(?:curl|wget|nc|ncat|socat|ssh|scp|rsync)\b|\/dev\/(?:tcp|udp)\//gu;
+const SHELL_HOME = /\$\{?HOME\b|(?:^|[\s"'=])~\//gmu;
+const SHELL_ENV =
+  /(?:^|[;&|(]\s*)(?:printenv|env)\b|\$\{?[A-Za-z_]*(?:TOKEN|SECRET|PASSWORD|API_KEY|AUTH)[A-Za-z_]*/gmu;
 const CREDENTIAL_FILE =
   /^~\/|(?:^|[/\\])(?:\.netrc|\.npmrc|\.git-credentials|tokens\.json|credentials\.json|auth\.json)$/u;
 const STORAGE = new Set(['localStorage', 'sessionStorage', 'indexedDB', 'cookieStore']);
@@ -45,25 +46,29 @@ const GLOBALS = new Set(['globalThis', 'window', 'self']);
 const NETWORK_MODULES = new Set(['http', 'https', 'http2', 'net', 'tls', 'dgram']);
 const CLIENT_LIBRARIES = new Set(['undici', 'axios', 'node-fetch', 'ws', 'got']);
 const NETWORK_CALLS = new Set(['request', 'get', 'connect', 'createConnection', 'Socket']);
-const SPAWNS = new Set([
-  'spawn',
-  'spawnSync',
-  'exec',
-  'execSync',
-  'execFile',
-  'execFileSync',
-  'fork',
-]);
+const SPAWNS = new Set('spawn spawnSync exec execSync execFile execFileSync fork'.split(' '));
 const NUMBER_CALLS = new Set(['Number', 'parseInt', 'Number.parseInt', 'Math.trunc']);
 
 const moduleName = (text) => text.replace(/^node:/u, '');
 const lineOf = (file, node) => file.getLineAndCharacterOfPosition(node.getStart(file)).line + 1;
-const dotted = (node) =>
-  ts.isIdentifier(node)
-    ? node.text
-    : ts.isPropertyAccessExpression(node) && dotted(node.expression)
-      ? `${dotted(node.expression)}.${node.name.text}`
+const literalText = (node) => {
+  const parts = node && stringParts(node);
+  return parts?.length === 1 ? parts[0] : undefined;
+};
+/** `a.b.c` for identifiers and property or literal-key element access, else undefined. */
+const dotted = (node) => {
+  if (ts.isIdentifier(node)) return node.text;
+  if (ts.isParenthesizedExpression(node)) return dotted(node.expression);
+  const key = ts.isPropertyAccessExpression(node)
+    ? node.name.text
+    : ts.isElementAccessExpression(node)
+      ? literalText(node.argumentExpression)
       : undefined;
+  const owner = key === undefined ? undefined : dotted(node.expression);
+  return owner && `${owner}.${key}`;
+};
+/** Drops a `globalThis.`, `window.` or `self.` prefix. */
+const bare = (name) => name?.replace(/^(?:(?:globalThis|window|self)\.)+/u, '');
 
 /** True when `node` is a name in a declaration, property key or member name, not a value read. */
 function isNameOnly(node) {
@@ -79,25 +84,57 @@ function isNameOnly(node) {
   );
 }
 
-/** Splits a string, template or `+` chain into literal text and expressions. */
-function stringParts(node) {
+const declared = new WeakMap();
+/** True when the file declares `name` itself, so the global of that name is shadowed. */
+function isShadowed(file, name) {
+  if (!declared.has(file)) {
+    const names = new Set();
+    const visit = (node) => {
+      if (ts.isIdentifier(node) && isNameOnly(node) && !ts.isPropertyAccessExpression(node.parent))
+        names.add(node.text);
+      if (ts.isImportClause(node) && node.name) names.add(node.name.text);
+      ts.forEachChild(node, visit);
+    };
+    visit(file);
+    declared.set(file, names);
+  }
+  return declared.get(file).has(name);
+}
+
+function rawParts(node, top) {
+  if (ts.isParenthesizedExpression(node)) return rawParts(node.expression, top);
   if (ts.isStringLiteralLike(node)) return [node.text];
   if (ts.isTemplateExpression(node))
     return [
       node.head.text,
-      ...node.templateSpans.flatMap((span) => [span.expression, span.literal.text]),
+      ...node.templateSpans.flatMap((span) => [
+        ...(rawParts(span.expression, false) ?? [span.expression]),
+        span.literal.text,
+      ]),
     ];
-  if (ts.isBinaryExpression(node) && node.operatorToken.kind === ts.SyntaxKind.PlusToken) {
-    const left = stringParts(node.left);
-    const right = stringParts(node.right);
-    return left && right ? [...left, ...right] : undefined;
-  }
-  if (ts.isParenthesizedExpression(node)) return stringParts(node.expression);
-  return undefined;
+  if (!ts.isBinaryExpression(node) || node.operatorToken.kind !== ts.SyntaxKind.PlusToken)
+    return undefined;
+  const left = rawParts(node.left, false);
+  const right = rawParts(node.right, false);
+  return top && !left && !right
+    ? undefined
+    : [...(left ?? [node.left]), ...(right ?? [node.right])];
+}
+
+/** Splits a string, template or `+` chain into `[text, expression, text, …]`, folding literals. */
+function stringParts(node) {
+  const raw = rawParts(node, true);
+  if (!raw) return undefined;
+  const parts = [''];
+  for (const part of raw)
+    if (typeof part === 'string') parts[parts.length - 1] += part;
+    else parts.push(part, '');
+  return parts;
 }
 
 /** A port is proven when it is a number literal, a numeric coercion, or an integer-checked name. */
 function isNumericPort(node, file) {
+  if (!node || typeof node === 'string') return false;
   if (ts.isNumericLiteral(node)) return true;
   if (ts.isPrefixUnaryExpression(node) && node.operator === ts.SyntaxKind.PlusToken) return true;
   if (ts.isCallExpression(node) && NUMBER_CALLS.has(dotted(node.expression))) return true;
@@ -130,38 +167,35 @@ function isNumericPort(node, file) {
   return proven;
 }
 
+const LOOPBACK = /^(?:http|ws):\/\/127\.0\.0\.1(?::\d{1,5})?(?:[/?#]|$)/u;
+const LOOPBACK_PATH = /^(?:http|ws):\/\/127\.0\.0\.1(?::\d{1,5})?[/?#]/u;
+const LOOPBACK_PORT = /^(?:http|ws):\/\/127\.0\.0\.1:$/u;
+const sameOrigin = (node, file, names) =>
+  names.includes(bare(dotted(node)) ?? '') && !isShadowed(file, bare(dotted(node)).split('.')[0]);
+
 /** Proves a destination local: a relative path, same-origin, or literal 127.0.0.1 with a proven port. */
 export function isLocalDestination(node, file) {
   if (!node) return false;
-  if (ts.isNewExpression(node) && dotted(node.expression) === 'URL') {
+  if (ts.isNewExpression(node) && bare(dotted(node.expression)) === 'URL') {
     const [path, base] = node.arguments ?? [];
     return (
-      Boolean(path && base) &&
       isLocalDestination(path, file) &&
-      /^(?:(?:globalThis|window|self)\.)?(?:location\.(?:href|origin)|document\.baseURI)$/u.test(
-        dotted(base) ?? '',
-      )
+      sameOrigin(base, file, ['location.href', 'location.origin', 'document.baseURI'])
     );
   }
   const parts = stringParts(node);
-  if (!parts?.length) return false;
-  const [head, port, rest] = parts;
-  if (typeof head === 'string' && head !== '')
-    return (
-      /^(?:\/(?!\/)|\.\.?\/)/u.test(head) ||
-      /^http:\/\/127\.0\.0\.1(?::\d{1,5})?(?:[/?#]|$)/u.test(head) ||
-      (head === 'http://127.0.0.1:' &&
-        port !== undefined &&
-        typeof port !== 'string' &&
-        isNumericPort(port, file) &&
-        (rest === undefined || /^(?:[/?#]|$)/u.test(rest)))
-    );
+  if (!parts) return false;
+  const [head, first, rest] = parts;
+  const literal = parts.length === 1;
+  if (head === '') return sameOrigin(first, file, ['location.origin']) && /^\//u.test(rest);
+  if (/^(?:\/(?!\/)|\.\.?\/)/u.test(head))
+    return !head.includes('\\') && (literal || /[^/\\]/u.test(head));
+  if (literal) return LOOPBACK.test(head);
   return (
-    head === '' &&
-    typeof port !== 'string' &&
-    /^(?:(?:globalThis|window|self)\.)?location\.origin$/u.test(dotted(port) ?? '') &&
-    typeof rest === 'string' &&
-    /^\/(?!\/)/u.test(rest)
+    LOOPBACK_PATH.test(head) ||
+    (LOOPBACK_PORT.test(head) &&
+      isNumericPort(first, file) &&
+      (/^[/?#]/u.test(rest) || (rest === '' && parts.length === 3)))
   );
 }
 
@@ -192,6 +226,18 @@ function hasExplicitEnvironment(call, file) {
   );
 }
 
+/** The module a literal `import()`, `require()` or `process.getBuiltinModule()` loads. */
+function moduleOf(node) {
+  while (node && (ts.isParenthesizedExpression(node) || ts.isAwaitExpression(node)))
+    node = node.expression;
+  if (!node || !ts.isCallExpression(node)) return undefined;
+  const loader =
+    node.expression.kind === ts.SyntaxKind.ImportKeyword ||
+    ['require', 'process.getBuiltinModule'].includes(bare(dotted(node.expression)));
+  const specifier = loader ? literalText(node.arguments[0]) : undefined;
+  return specifier === undefined ? undefined : moduleName(specifier);
+}
+
 /** Records `name` as a binding of `imported` (or `*` for the whole module) from `source`. */
 function bindingsOf(node, file, bind) {
   if (ts.isImportDeclaration(node) && ts.isStringLiteral(node.moduleSpecifier)) {
@@ -204,11 +250,11 @@ function bindingsOf(node, file, bind) {
       bind(element.name.text, source, (element.propertyName ?? element.name).text);
     return;
   }
-  const call = ts.isVariableDeclaration(node) ? node.initializer : undefined;
-  if (!call || !ts.isCallExpression(call) || dotted(call.expression) !== 'require') return;
-  const [specifier] = call.arguments;
-  if (!specifier || !ts.isStringLiteralLike(specifier)) return;
-  const source = moduleName(specifier.text);
+  if (!ts.isVariableDeclaration(node) || !node.initializer) return;
+  const source =
+    moduleOf(node.initializer) ??
+    (bare(dotted(node.initializer)) === 'process' ? 'process' : undefined);
+  if (source === undefined) return;
   if (ts.isIdentifier(node.name)) bind(node.name.text, source, '*');
   else if (ts.isObjectBindingPattern(node.name))
     for (const element of node.name.elements)
@@ -225,30 +271,38 @@ function importedSpecifier(node) {
   const dynamic =
     ts.isCallExpression(node) &&
     (node.expression.kind === ts.SyntaxKind.ImportKeyword || dotted(node.expression) === 'require');
-  return dynamic && node.arguments[0] && ts.isStringLiteralLike(node.arguments[0])
-    ? node.arguments[0].text
-    : undefined;
+  return dynamic ? literalText(node.arguments[0]) : undefined;
 }
 
-const ENV_OWNERS = new Set(['process', 'globalThis.process', 'import.meta', 'Deno']);
+const ENV_OWNERS = new Set(['process', 'import.meta', 'Deno', 'Bun']);
+const isProcess = (node, member) =>
+  ENV_OWNERS.has(
+    node.kind === ts.SyntaxKind.MetaProperty ? 'import.meta' : (bare(dotted(node)) ?? ''),
+  ) ||
+  moduleOf(node) === 'process' ||
+  (member(node)?.source === 'process' && member(node).imported === '*');
 
-function envRead(node, file) {
-  if (ts.isPropertyAccessExpression(node) || ts.isElementAccessExpression(node)) {
-    const owner =
-      node.expression.kind === ts.SyntaxKind.MetaProperty ? 'import.meta' : dotted(node.expression);
-    const key = ts.isPropertyAccessExpression(node)
-      ? node.name.text
-      : ts.isStringLiteralLike(node.argumentExpression) && node.argumentExpression.text;
-    if (ENV_OWNERS.has(owner) && key === 'env') return node.getText(file).slice(0, 40);
-  }
+function envRead(node, file, member) {
+  const key = ts.isPropertyAccessExpression(node)
+    ? node.name.text
+    : ts.isElementAccessExpression(node)
+      ? literalText(node.argumentExpression)
+      : undefined;
+  if (key === 'env' && isProcess(node.expression, member)) return node.getText(file).slice(0, 40);
   if (
-    ts.isVariableDeclaration(node) &&
-    ts.isObjectBindingPattern(node.name) &&
-    node.initializer &&
-    dotted(node.initializer) === 'process' &&
-    node.name.elements.some(
-      (element) => (element.propertyName ?? element.name).getText(file) === 'env',
-    )
+    ts.isCallExpression(node) &&
+    ['Reflect.get', 'Object.getOwnPropertyDescriptor'].includes(dotted(node.expression)) &&
+    node.arguments[0] &&
+    isProcess(node.arguments[0], member) &&
+    literalText(node.arguments[1]) === 'env'
+  )
+    return dotted(node.expression);
+  if (
+    ts.isBindingElement(node) &&
+    (node.propertyName ?? node.name).getText(file) === 'env' &&
+    ts.isVariableDeclaration(node.parent.parent) &&
+    node.parent.parent.initializer &&
+    isProcess(node.parent.parent.initializer, member)
   )
     return 'const { env } = process';
   if (
@@ -260,32 +314,29 @@ function envRead(node, file) {
   return undefined;
 }
 
-function homeRead(node) {
-  const callee = ts.isCallExpression(node) ? dotted(node.expression) : undefined;
-  if (callee && /(?:^|\.)(?:homedir|userInfo)$/u.test(callee)) return `${callee}()`;
+function homeRead(node, file, member) {
+  const callee = ts.isCallExpression(node) ? node.expression : undefined;
+  const name =
+    callee && (dotted(callee) ?? `${member(callee)?.source}.${member(callee)?.imported}`);
+  if (name && /(?:^|\.)(?:homedir|userInfo)$/u.test(name)) return `${name}()`;
   if (ts.isStringLiteralLike(node) && CREDENTIAL_FILE.test(node.text))
     return JSON.stringify(node.text).slice(0, 40);
   return undefined;
 }
 
 function storageRead(node) {
-  if (ts.isIdentifier(node) && STORAGE.has(node.text) && !isNameOnly(node)) return node.text;
+  if (ts.isIdentifier(node))
+    return STORAGE.has(node.text) && !isNameOnly(node) ? node.text : undefined;
   const name = dotted(node);
-  if (
-    ts.isPropertyAccessExpression(node) &&
-    STORAGE.has(node.name.text) &&
-    GLOBALS.has(dotted(node.expression))
-  )
-    return name;
-  return name === 'document.cookie' ? name : undefined;
+  const global = name !== undefined && bare(name) !== name;
+  return (global && STORAGE.has(bare(name))) || bare(name) === 'document.cookie' ? name : undefined;
 }
 
 function webSend(node, file) {
+  const name = dotted(node);
   const isFetch =
     (ts.isIdentifier(node) && node.text === 'fetch' && !isNameOnly(node)) ||
-    (ts.isPropertyAccessExpression(node) &&
-      node.name.text === 'fetch' &&
-      GLOBALS.has(dotted(node.expression)));
+    (!ts.isIdentifier(node) && name !== 'fetch' && bare(name) === 'fetch');
   if (isFetch) {
     const call = node.parent;
     if (!ts.isCallExpression(call) || call.expression !== node) return 'fetch reference';
@@ -294,7 +345,7 @@ function webSend(node, file) {
       ? undefined
       : `fetch(${target?.getText(file).slice(0, 48) ?? ''})`;
   }
-  const kind = ts.isNewExpression(node) ? dotted(node.expression) : undefined;
+  const kind = ts.isNewExpression(node) ? bare(dotted(node.expression)) : undefined;
   if (kind === 'XMLHttpRequest') return 'new XMLHttpRequest';
   if (
     (kind === 'WebSocket' || kind === 'EventSource') &&
@@ -303,7 +354,7 @@ function webSend(node, file) {
     return `new ${kind}`;
   if (
     ts.isCallExpression(node) &&
-    dotted(node.expression) === 'navigator.sendBeacon' &&
+    bare(dotted(node.expression)) === 'navigator.sendBeacon' &&
     !isLocalDestination(node.arguments[0], file)
   )
     return 'navigator.sendBeacon';
@@ -319,17 +370,13 @@ function socketSend(node, file, member) {
   const local =
     isLocalDestination(first, file) ||
     isLocalSocketOptions(first, file) ||
-    (Boolean(first) &&
-      isNumericPort(first, file) &&
-      Boolean(second) &&
-      ts.isStringLiteralLike(second) &&
-      second.text === '127.0.0.1');
+    (isNumericPort(first, file) && literalText(second) === '127.0.0.1');
   return local ? undefined : `${called.source}.${called.imported}`;
 }
 
 function childProcess(node, file, member) {
-  if (!(ts.isIdentifier(node) || ts.isPropertyAccessExpression(node)) || isNameOnly(node))
-    return undefined;
+  const access = ts.isPropertyAccessExpression(node) || ts.isElementAccessExpression(node);
+  if (!(ts.isIdentifier(node) || access) || isNameOnly(node)) return undefined;
   const spawn = member(node);
   if (spawn?.source !== 'child_process' || !SPAWNS.has(spawn.imported)) return undefined;
   const call = node.parent;
@@ -338,11 +385,27 @@ function childProcess(node, file, member) {
   return explicit ? undefined : `${spawn.imported} inherits the environment`;
 }
 
+function dynamicCode(node) {
+  const name = bare(dotted(node));
+  if (name === 'eval' && !(ts.isIdentifier(node) && isNameOnly(node))) return 'eval';
+  if (
+    (ts.isCallExpression(node) || ts.isNewExpression(node)) &&
+    bare(dotted(node.expression)) === 'Function'
+  )
+    return 'Function';
+  const loader =
+    ts.isCallExpression(node) &&
+    (node.expression.kind === ts.SyntaxKind.ImportKeyword || dotted(node.expression) === 'require');
+  return loader && literalText(node.arguments[0]) === undefined
+    ? 'computed module specifier'
+    : undefined;
+}
+
 function concatenatedShareHost(node) {
-  if (!ts.isBinaryExpression(node) || ts.isBinaryExpression(node.parent)) return undefined;
-  const parts = stringParts(node);
-  return parts?.every((part) => typeof part === 'string') &&
-    /share\.openplanr\.dev/u.test(parts.join(''))
+  const expression = ts.isBinaryExpression(node) || ts.isTemplateExpression(node);
+  const nested =
+    expression && (ts.isBinaryExpression(node.parent) || ts.isTemplateSpan(node.parent));
+  return expression && !nested && /share\.openplanr\.dev/u.test(literalText(node) ?? '')
     ? 'concatenated share host'
     : undefined;
 }
@@ -358,9 +421,18 @@ export function scriptSignals(text, path) {
   collect(file);
   const member = (node) => {
     if (ts.isIdentifier(node)) return bindings.get(node.text);
-    if (!ts.isPropertyAccessExpression(node) || !ts.isIdentifier(node.expression)) return undefined;
-    const owner = bindings.get(node.expression.text);
-    return owner?.imported === '*' ? { source: owner.source, imported: node.name.text } : undefined;
+    const key = ts.isPropertyAccessExpression(node)
+      ? node.name.text
+      : ts.isElementAccessExpression(node)
+        ? literalText(node.argumentExpression)
+        : undefined;
+    if (key === undefined) return undefined;
+    const owner = ts.isIdentifier(node.expression)
+      ? bindings.get(node.expression.text)
+      : { source: moduleOf(node.expression), imported: '*' };
+    return owner?.source && owner.imported === '*'
+      ? { source: owner.source, imported: key }
+      : undefined;
   };
   const detectors = [
     ['env-read', envRead],
@@ -369,6 +441,7 @@ export function scriptSignals(text, path) {
     ['network-send', webSend],
     ['network-send', socketSend],
     ['env-forward', childProcess],
+    ['dynamic-code', dynamicCode],
     ['share-host', concatenatedShareHost],
   ];
   const signals = [];
@@ -406,6 +479,10 @@ function textSignals(text, extension) {
   match('share-host', SHARE_HOST, CODE);
   match('figma-host', FIGMA_HOST, PROSE);
   match('figma-token', FIGMA_TOKEN, PROSE);
+  match('share-host', SHARE_HOST, SHELL);
+  match('network-send', SHELL_SEND, SHELL);
+  match('home-read', SHELL_HOME, SHELL);
+  match('env-read', SHELL_ENV, SHELL);
   return found;
 }
 
@@ -433,7 +510,7 @@ export function scanPluginRoot(pluginRoot) {
   for (const absolute of walk(pluginRoot)) {
     const path = relative(pluginRoot, absolute).split(sep).join('/');
     const extension = extname(path);
-    if (!PROSE.has(extension)) continue;
+    if (!SCANNED.has(extension)) continue;
     const text = readFileSync(absolute, 'utf8');
     const found = textSignals(text, extension);
     if (SCRIPT.has(extension)) {
@@ -524,6 +601,24 @@ export function readAllowlist(workspace = root) {
   return { permanent };
 }
 
+/** Refuses a baseline whose count exceeds the one committed at `ref`, the pull request's base. */
+export function assertBaselineNotGrown(ref, workspace = root) {
+  const git = (...args) => spawnSync('git', args, { cwd: workspace, encoding: 'utf8' });
+  if (git('rev-parse', '--verify', '--quiet', `${ref}^{commit}`).status !== 0)
+    throw new Error(
+      `Cannot resolve ${ref} to compare ${BASELINE} with the base branch; fetch it first. The check fails closed without it.`,
+    );
+  const base = git('show', `${ref}:${BASELINE}`);
+  if (base.status !== 0) return { base: null };
+  const before = JSON.parse(base.stdout).count;
+  const after = JSON.parse(readFileSync(join(workspace, BASELINE), 'utf8')).count;
+  if (after > before)
+    throw new Error(
+      `${BASELINE} grew from ${before} entries at ${ref} to ${after}. The allowlist may only shrink.`,
+    );
+  return { base: before };
+}
+
 /** Splits findings into allowed and blocking ones, and lists allowlist entries nothing matched. */
 export function classifyFindings(findings, allowlist) {
   const entries = allowlist.permanent.map((entry) => ({
@@ -592,6 +687,16 @@ export function assertReleasablePlugin({
 }
 
 function main(argv) {
+  const baseRef = argv[argv.indexOf('--baseline-base') + 1];
+  if (argv.includes('--baseline-base')) {
+    const { base } = assertBaselineNotGrown(baseRef);
+    console.log(
+      base === null
+        ? `${BASELINE} does not exist at ${baseRef} yet; nothing to compare.`
+        : `${BASELINE} has not grown since ${baseRef}.`,
+    );
+    return;
+  }
   const roots = argv.flatMap((value, index) =>
     argv[index - 1] === '--plugin-root' ? [resolve(value)] : [],
   );

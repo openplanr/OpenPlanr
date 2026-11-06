@@ -1,10 +1,12 @@
 import assert from 'node:assert/strict';
+import { execFileSync } from 'node:child_process';
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import test from 'node:test';
 import {
   allowlistDigest,
+  assertBaselineNotGrown,
   assertReleasablePlugin,
   checkPluginRoots,
   classifyFindings,
@@ -47,6 +49,9 @@ test('project reads, proven-local sends and schema identifiers pass', (t) => {
       "await fetch(new URL('./state', location.href));",
       "request({ hostname: '127.0.0.1', port: 4173 });",
       "new WebSocket('/live');",
+      "new WebSocket('ws://127.0.0.1:4173/live');",
+      "await fetch(location.origin + '/api/pins');",
+      'await fetch(`/api/${encodeURIComponent(id)}`);',
       'const doc = { $id: "https://openplanr.dev/schemas/v1/a.schema.json" };',
       'const run = (git) => git; // homedir() and process.env in a comment are not reads',
     ].join('\n'),
@@ -95,6 +100,14 @@ test('a send is found unless its destination is proven local', (t) => {
     'h.mjs': "const base = 'https://share.' + 'openplanr.dev';",
     'i.mjs': "import net from 'node:net';\nnet.connect(443, 'example.com');",
     'j.js': 'navigator.sendBeacon("https://example.com/b", data);\nnew XMLHttpRequest();',
+    'k.mjs': 'const s = "@x.example";\nawait fetch(`http://127.0.0.1:80${s}/a`);',
+    'l.mjs': 'const s = ".x.example";\nawait fetch(`http://127.0.0.1${s}/a`);',
+    'm.js': 'const h = "/x.example";\nawait fetch(`/${h}`);',
+    'n.js': "await fetch('/\\\\x.example/a');",
+    'o.mjs': 'const p = 80;\nconst s = "@x.example";\nawait fetch(`http://127.0.0.1:${p}${s}`);',
+    'p.js':
+      'const location = { origin: "https://x.example" };\nawait fetch(`${location.origin}/a`);',
+    'q.js': "export const go = (location) => fetch(new URL('/a', location.href));",
   });
   assert.deepEqual(rules(root), [
     'a.mjs network-send',
@@ -106,6 +119,76 @@ test('a send is found unless its destination is proven local', (t) => {
     'h.mjs share-host',
     'i.mjs network-send',
     'j.js network-send',
+    'k.mjs network-send',
+    'l.mjs network-send',
+    'm.js network-send',
+    'n.js network-send',
+    'o.mjs network-send',
+    'p.js network-send',
+    'q.js network-send',
+  ]);
+});
+
+test('computed, aliased and dynamic forms are seen', (t) => {
+  const root = plugin(t, {
+    'a.mjs': "const e = process['e' + 'nv'];",
+    'b.mjs': "const e = globalThis['process'].env;",
+    'c.mjs': 'const p = process;\nconst e = p.env;',
+    'd.mjs': "import p from 'node:process';\nconst e = p.env;",
+    'e.mjs': "const e = Reflect.get(process, 'env');",
+    'f.mjs': "const e = process.getBuiltinModule('process').env;",
+    'g.mjs': 'const e = Bun.env;',
+    'h.cjs': "const h = require('os').homedir();",
+    'i.mjs': "import os from 'node:os';\nconst h = os['homedir']();",
+    'j.js': "globalThis['fetch']('https://x.example');",
+    'k.js': 'new window.XMLHttpRequest();\nwindow.navigator.sendBeacon("https://x.example");',
+    'l.js': "const s = window['localStorage'];",
+    'm.mjs': "const h = await import('node:https');\nh.request('https://x.example');",
+    'n.cjs': "require('child_process').spawn('git');",
+    'o.mjs': "const cp = await import('node:child_process');\ncp.execFile('gh');",
+    'p.mjs': "const base = `https://share.${'openplanr'}.dev`;",
+    'q.mjs': 'eval(code);\n(0, eval)(code);',
+    'r.mjs': "const f = new Function('return 1');",
+    's.mjs': 'const m = await import(specifier);',
+    't.cjs': 'const m = require(name);',
+  });
+  assert.deepEqual(rules(root), [
+    'a.mjs env-read',
+    'b.mjs env-read',
+    'c.mjs env-read',
+    'd.mjs env-read',
+    'e.mjs env-read',
+    'f.mjs env-read',
+    'g.mjs env-read',
+    'h.cjs home-read',
+    'i.mjs home-read',
+    'j.js network-send',
+    'k.js network-send',
+    'l.js browser-storage',
+    'm.mjs network-send',
+    'n.cjs env-forward',
+    'o.mjs env-forward',
+    'p.mjs share-host',
+    'q.mjs dynamic-code',
+    'r.mjs dynamic-code',
+    's.mjs dynamic-code',
+    't.cjs dynamic-code',
+  ]);
+});
+
+test('shipped shell scripts are scanned for sends, home and credential reads', (t) => {
+  const root = plugin(t, {
+    'a.sh': '#!/usr/bin/env bash\ncurl -s https://x.example',
+    'b.sh': '#!/usr/bin/env bash\ncat "$HOME/.netrc"',
+    'c.sh': '#!/usr/bin/env bash\necho "$GITHUB_TOKEN"',
+    'd.sh': '#!/usr/bin/env bash\nprintenv',
+    'e.sh': '#!/usr/bin/env bash\ngit log --since="$1" | sort',
+  });
+  assert.deepEqual(rules(root), [
+    'a.sh network-send',
+    'b.sh home-read',
+    'c.sh env-read',
+    'd.sh env-read',
   ]);
 });
 
@@ -251,6 +334,35 @@ test('the permanent allowlist is pinned to its baseline and can only shrink', (t
   assert.throws(
     () => readAllowlist(write([{ path: 'a.mjs', rule: 'env-read' }], baseline)),
     /invalid permanent entry/u,
+  );
+});
+
+test('on a pull request the baseline count may not exceed the base branch', (t) => {
+  const root = mkdtempSync(join(tmpdir(), 'planr-baseline-base-'));
+  t.after(() => rmSync(root, { recursive: true, force: true }));
+  const git = (...args) => execFileSync('git', ['-C', root, ...args], { encoding: 'utf8' });
+  const baseline = (count) =>
+    writeFileSync(
+      join(root, 'scripts/plugin-network-boundary-baseline.json'),
+      JSON.stringify({ count }),
+    );
+  mkdirSync(join(root, 'scripts'));
+  git('init', '-q');
+  writeFileSync(join(root, 'README.md'), 'x');
+  git('add', '.');
+  git('-c', 'user.name=t', '-c', 'user.email=t@example.com', 'commit', '-qm', 'none');
+  baseline(3);
+  assert.deepEqual(assertBaselineNotGrown('HEAD', root), { base: null });
+  git('add', '.');
+  git('-c', 'user.name=t', '-c', 'user.email=t@example.com', 'commit', '-qm', 'pin');
+  assert.deepEqual(assertBaselineNotGrown('HEAD', root), { base: 3 });
+  baseline(2);
+  assert.deepEqual(assertBaselineNotGrown('HEAD', root), { base: 3 });
+  baseline(4);
+  assert.throws(() => assertBaselineNotGrown('HEAD', root), /grew from 3 entries at HEAD to 4/u);
+  assert.throws(
+    () => assertBaselineNotGrown('origin/main', root),
+    /Cannot resolve origin\/main[\s\S]*fails closed/u,
   );
 });
 
