@@ -14,6 +14,8 @@ there. Hosts without one use the local studio unchanged.
 - Use the local studio when the user asks for it, asks for an encrypted company
   review or share link, or the canvas cannot be created or published. Name the
   reason when it is a failure, keep any work already written and continue locally.
+  The local studio needs a ready runtime; without one, end at the matching stop in
+  [utilities.md](utilities.md).
 - Before creating the canvas, say in one line that the design is published to
   the host's service and stays private to the user until they share it.
 
@@ -57,6 +59,7 @@ Name each screen's board file in the screen inventory. This path writes no
 specification and board sources are Plan's inputs.
 
 Return the direction, the canvas link, the specification and board-source paths,
-and the verification status. Review happens in the canvas's own comments; apply
-revisions with the Design type's revising steps and keep the specification in
-step. OpenPlanr Studio cannot open a hosted canvas yet, so do not offer it.
+and the verification status. Review happens in the canvas's own comments: read
+them with the host's artifact comments tool, apply revisions with the Design
+type's revising steps, and keep the specification in step. OpenPlanr Studio
+cannot open a hosted canvas yet, so do not offer it.
