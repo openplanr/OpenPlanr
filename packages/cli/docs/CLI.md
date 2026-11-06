@@ -707,6 +707,35 @@ invisible opaque-origin Blob sandbox; it is not standalone website publishing.
 
 ---
 
+### `openplanr design`
+
+Validate, render, review, export and inspect a local design document.
+
+```bash
+openplanr design capabilities [--json]
+openplanr design inspect|validate|render <design-document> [--json]
+openplanr design open <design-document> [--view canvas|prototype|walkthrough] [--port <port>] [--no-open] [--json]
+openplanr design studio status|stop <design-document> [--instance-id <id>] [--json]
+openplanr design view-context <design-document> [--request-time <timestamp>] [--json]
+openplanr design export <design-document> [--view <view>] [--format html] [--output <new-path>] [--json]
+openplanr design verify <design-document> --report <browser-report.json> [--json]
+openplanr design handoff <design-document> [--action inspect] [--json]
+openplanr design fonts fetch --family "<Name>:<weights>" [--family ...] --dest <dir> [--json]
+```
+
+`capabilities` reports the design command contract and the range of contracts this
+install serves. Without the optional `planr-pipeline` package it still exits 0, with
+`pipeline: null` and `E_DESIGN_RUNTIME_MISSING`; reinstall with
+`npm install -g openplanr` (without `--omit=optional`). The other commands fail with
+the same code in that case. `open` keeps running until you stop it, and
+`studio stop` stops a design's studio from another terminal. `verify` exits 1 when
+the report fails. `handoff` never changes a file: while a render is unfinished it
+fails with `E_DESIGN_PUBLICATION_PENDING`, and `render` finishes it. Other failures
+without their own code use `E_DESIGN_UTILITY_FAILED`. Sharing and feedback stay
+under `openplanr artifact`.
+
+---
+
 ### `openplanr rules generate`
 
 Generate AI agent rule files for Cursor, Claude Code, and/or Codex. Two flags: **`--target`** (which runtime) and **`--scope`** (which workflow — agile or pipeline).

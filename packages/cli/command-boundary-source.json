@@ -10,6 +10,7 @@
     "config": "deterministic-preserved",
     "context": "deterministic-preserved",
     "dashboard": "deterministic-preserved",
+    "design": "deterministic-preserved",
     "diagram": "deterministic-preserved",
     "doctor": "deterministic-preserved",
     "epic": "deterministic-preserved",

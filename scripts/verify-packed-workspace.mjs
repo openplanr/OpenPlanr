@@ -68,6 +68,14 @@ const PIPELINE_OPTIONAL_DEPENDENCIES = Object.freeze({
   '@expo-google-fonts/inter': '0.4.2',
   '@resvg/resvg-js': '2.6.2',
 });
+// Design runtime files the packed workflow package must carry.
+const DESIGN_RUNTIME_FILES = Object.freeze([
+  'lib/design/utility.mjs',
+  'lib/design/plan-handoff-utility.mjs',
+  'lib/design/font-fetch.mjs',
+  'templates/studio/studio.js',
+  'templates/studio/studio.css',
+]);
 
 const repositoryRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const pipelineSourceRoot = path.join(repositoryRoot, 'packages', 'pipeline');
@@ -1186,7 +1194,29 @@ function verifyFullInstall({
   if (checkResult.status !== 0 || checked.ok !== true || checked.validation?.status !== 'passed') {
     throw new ProofFailure('E_CLI_DIAGRAM_CHECK_FAILED', 'Packed openplanr diagram check failed.');
   }
+  const missingDesignRuntime = DESIGN_RUNTIME_FILES.filter(
+    (file) => !fs.existsSync(path.join(pipelineRoot, file)),
+  );
+  const designResult = runCli(nodeExecutable, cliRoot, ['design', 'capabilities', '--json'], {
+    cwd: diagramProject,
+    env: environment,
+  });
+  const design = assertJsonOutput(designResult, 'openplanr design capabilities');
+  if (
+    missingDesignRuntime.length > 0 ||
+    designResult.status !== 0 ||
+    design.ok !== true ||
+    !Number.isInteger(design.contract) ||
+    design.pipeline !== readJson(path.join(pipelineRoot, 'package.json')).version
+  ) {
+    throw new ProofFailure(
+      'E_CLI_DESIGN_RUNTIME_FAILED',
+      'Packed openplanr design does not reach the packed design runtime.',
+      JSON.stringify({ missingDesignRuntime, status: designResult.status, design }),
+    );
+  }
   return {
+    design: { contract: design.contract, supported: design.supported },
     protocol: protocolConsumers,
     aliasCases: aliases,
     dashboard: exportProof.dashboard,
@@ -1293,7 +1323,24 @@ function verifyCliOnlyInstall({
       JSON.stringify({ status: sharing.status, report: sharingReport }),
     );
   }
+  const design = runCli(nodeExecutable, cliRoot, ['design', 'capabilities', '--json'], {
+    cwd: project,
+    env: environment,
+  });
+  const designReport = assertJsonOutput(design, 'CLI-only design capabilities');
+  if (
+    design.status !== 0 ||
+    designReport.code !== 'E_DESIGN_RUNTIME_MISSING' ||
+    designReport.pipeline !== null
+  ) {
+    throw new ProofFailure(
+      'E_CLI_ONLY_DESIGN_BOUNDARY',
+      'CLI-only design capabilities do not report the missing workflow package.',
+      JSON.stringify({ status: design.status, report: designReport }),
+    );
+  }
   return {
+    designRuntime: designReport.code,
     operateHelp: commandDigest(help, [project]),
     operateUtility: {
       status: 'passed',

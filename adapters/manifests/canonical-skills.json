@@ -1450,7 +1450,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:349540cc9bd3bf2dd3dafacde0bef00f87b4099b828371c82f5e0e82fca0464c"
+          "digest": "sha256:18059ec8f4f44e27a82a50a18522578d89fb75c40fd98cac29f318222951da77"
         },
         {
           "path": "scripts/design-artifact-shell.mjs",
@@ -1474,7 +1474,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:c14cbf3b4a911cd7bef2a18bfe9ec1811138033dd48a9fad236ebc356de18c80"
+          "digest": "sha256:5ca105a1a339a50b1cb6dc34bd77458f968d4d1fee792cfbf851ccff38479e83"
         },
         {
           "path": "scripts/design-entities.mjs",
@@ -1498,7 +1498,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:ca7def3a516d28afd982defbee209a15536e1cdd3bea9ebe429b0bb034dbcd4c"
+          "digest": "sha256:347ef2cbbaefd623281c385d5d0835d6f4f697676b8d62800cd0b96b5a796103"
         },
         {
           "path": "scripts/design-loopback-server.mjs",
@@ -1630,7 +1630,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:c1ffb603d8b781ac3b4c77e2a430ca81c3b1e7cc5f3392cb252e7d5c1dd7cb9f"
+          "digest": "sha256:493802c9629e88b0007c55d7293937ff69473f4ea20e06e3826c61019098b914"
         },
         {
           "path": "schemas/design-document.schema.json",
@@ -2480,7 +2480,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:349540cc9bd3bf2dd3dafacde0bef00f87b4099b828371c82f5e0e82fca0464c"
+          "digest": "sha256:18059ec8f4f44e27a82a50a18522578d89fb75c40fd98cac29f318222951da77"
         },
         {
           "path": "scripts/design-artifact-shell.mjs",
@@ -2504,7 +2504,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:c14cbf3b4a911cd7bef2a18bfe9ec1811138033dd48a9fad236ebc356de18c80"
+          "digest": "sha256:5ca105a1a339a50b1cb6dc34bd77458f968d4d1fee792cfbf851ccff38479e83"
         },
         {
           "path": "scripts/design-entities.mjs",
@@ -2528,7 +2528,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:ca7def3a516d28afd982defbee209a15536e1cdd3bea9ebe429b0bb034dbcd4c"
+          "digest": "sha256:347ef2cbbaefd623281c385d5d0835d6f4f697676b8d62800cd0b96b5a796103"
         },
         {
           "path": "scripts/design-loopback-server.mjs",
@@ -2660,7 +2660,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:c1ffb603d8b781ac3b4c77e2a430ca81c3b1e7cc5f3392cb252e7d5c1dd7cb9f"
+          "digest": "sha256:493802c9629e88b0007c55d7293937ff69473f4ea20e06e3826c61019098b914"
         },
         {
           "path": "schemas/design-document.schema.json",
@@ -3510,7 +3510,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:349540cc9bd3bf2dd3dafacde0bef00f87b4099b828371c82f5e0e82fca0464c"
+          "digest": "sha256:18059ec8f4f44e27a82a50a18522578d89fb75c40fd98cac29f318222951da77"
         },
         {
           "path": "scripts/design-artifact-shell.mjs",
@@ -3534,7 +3534,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:c14cbf3b4a911cd7bef2a18bfe9ec1811138033dd48a9fad236ebc356de18c80"
+          "digest": "sha256:5ca105a1a339a50b1cb6dc34bd77458f968d4d1fee792cfbf851ccff38479e83"
         },
         {
           "path": "scripts/design-entities.mjs",
@@ -3558,7 +3558,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:ca7def3a516d28afd982defbee209a15536e1cdd3bea9ebe429b0bb034dbcd4c"
+          "digest": "sha256:347ef2cbbaefd623281c385d5d0835d6f4f697676b8d62800cd0b96b5a796103"
         },
         {
           "path": "scripts/design-loopback-server.mjs",
@@ -3690,7 +3690,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:c1ffb603d8b781ac3b4c77e2a430ca81c3b1e7cc5f3392cb252e7d5c1dd7cb9f"
+          "digest": "sha256:493802c9629e88b0007c55d7293937ff69473f4ea20e06e3826c61019098b914"
         },
         {
           "path": "schemas/design-document.schema.json",
@@ -4883,7 +4883,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:36ec8fe7b3443962a1826ab6af4e306aa26cf2f839c76da7bab61c9f2664a59c"
+          "digest": "sha256:325fa0bf085791901a9dc2fbadb0979747f27d537451cf0a076b651341781170"
         },
         {
           "path": "scripts/design-protocol-contracts.mjs",

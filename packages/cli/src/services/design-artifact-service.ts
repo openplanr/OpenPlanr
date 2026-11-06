@@ -41,7 +41,7 @@ async function loadDesignRuntime() {
   const pipeline = resolvePipelinePackage(false);
   if (!pipeline)
     throw new Error(
-      'Design review requires the OpenPlanr workflow package. Install openplanr or use the design skill’s bundled utility.',
+      'Design review requires the OpenPlanr workflow package. Reinstall openplanr without --omit=optional.',
     );
   const [document, review] = await Promise.all([
     import(pathToFileURL(path.join(pipeline.root, 'lib/design/document.mjs')).href),
@@ -149,6 +149,22 @@ const SHARE_METHODS: Record<DesignShareAction, string> = {
   'review-metadata': 'publishDesignReviewMetadata',
 };
 
+const PIPELINE_REINSTALL =
+  'Reinstall the CLI with its optional dependencies: npm install -g openplanr (without --omit=optional).';
+const RUNTIME_MISSING = {
+  code: 'E_DESIGN_RUNTIME_MISSING',
+  problem:
+    'Design commands need the OpenPlanr workflow package (planr-pipeline), which is not installed.',
+  recovery: PIPELINE_REINSTALL,
+} as const;
+
+const PUBLICATION_PENDING = 'E_DESIGN_PUBLICATION_PENDING';
+const SHARE_CODES = { unsupported: 'E_DESIGN_SHARE_UNSUPPORTED', failed: 'E_DESIGN_SHARE_FAILED' };
+const UTILITY_CODES = {
+  unsupported: 'E_DESIGN_RUNTIME_UNSUPPORTED',
+  failed: 'E_DESIGN_UTILITY_FAILED',
+};
+
 /** The installed workflow package, which holds the only design sharing implementation. */
 function sharingPipeline(): PipelinePackage {
   const pipeline = resolvePipelinePackage(false);
@@ -156,7 +172,18 @@ function sharingPipeline(): PipelinePackage {
     throw new ArtifactCommandError(
       'E_DESIGN_SHARE_PIPELINE_MISSING',
       'Design sharing needs the OpenPlanr workflow package (planr-pipeline), which is not installed.',
-      'Reinstall the CLI with its optional dependencies: npm install -g openplanr (without --omit=optional).',
+      PIPELINE_REINSTALL,
+    );
+  return pipeline;
+}
+
+function designPipeline(): PipelinePackage {
+  const pipeline = resolvePipelinePackage(false);
+  if (!pipeline)
+    throw new ArtifactCommandError(
+      RUNTIME_MISSING.code,
+      RUNTIME_MISSING.problem,
+      RUNTIME_MISSING.recovery,
     );
   return pipeline;
 }
@@ -168,15 +195,14 @@ async function pipelineModule(pipeline: PipelinePackage, relative: string) {
   >;
 }
 
-/** Gives a share failure that has no public error code the stable code E_DESIGN_SHARE_FAILED. */
-function withShareCode(error: unknown): never {
+/** Gives a design failure that has no public error code a stable one, E_DESIGN_SHARE_FAILED by default. */
+function withDesignCode(error: unknown, fallback = SHARE_CODES.failed): never {
   const code = (error as { code?: unknown; name?: unknown } | null)?.code;
   const name = (error as { name?: unknown } | null)?.name;
   const coded = [code, name].some(
     (value) => typeof value === 'string' && /^E_[A-Z0-9_]+$/u.test(value),
   );
-  if (!coded && error instanceof Error)
-    throw new ArtifactCommandError('E_DESIGN_SHARE_FAILED', error.message);
+  if (!coded && error instanceof Error) throw new ArtifactCommandError(fallback, error.message);
   throw error;
 }
 
@@ -207,7 +233,7 @@ export async function runDesignShareAction(
     }
     return (await method(file, options)) as DesignShareResult;
   } catch (error) {
-    return withShareCode(error);
+    return withDesignCode(error);
   }
 }
 
@@ -238,6 +264,48 @@ export async function readDesignShareRuntime(cliVersion: string) {
   };
 }
 
+/** Commands served by a workflow package entry other than `designUtility`. */
+const UTILITY_ENTRIES: Record<string, readonly [module: string, name: string]> = {
+  // Plan reads handoffs through this; unlike `designUtility`, it never recovers a pending publication.
+  handoff: ['lib/design/plan-handoff-utility.mjs', 'inspectPlanDesignHandoff'],
+};
+
+async function callDesignUtility(
+  pipeline: PipelinePackage,
+  argv: string[],
+  codes: typeof UTILITY_CODES,
+  openUrl?: (url: string) => Promise<void>,
+): Promise<Record<string, unknown>> {
+  const [module, name] = UTILITY_ENTRIES[argv[0]] ?? ['lib/design/utility.mjs', 'designUtility'];
+  try {
+    const run = (await pipelineModule(pipeline, module))[name];
+    if (typeof run !== 'function')
+      throw new ArtifactCommandError(
+        codes.unsupported,
+        `The installed workflow package does not support design ${argv[0]}.`,
+        'Update OpenPlanr: npm install -g openplanr.',
+      );
+    return (await run(argv, { stdout: () => {}, openUrl })) as Record<string, unknown>;
+  } catch (error) {
+    // The workflow package's message names no command a CLI user can run.
+    if (error instanceof Error && (error as { code?: unknown }).code === PUBLICATION_PENDING)
+      throw new ArtifactCommandError(
+        PUBLICATION_PENDING,
+        error.message,
+        'Finish the interrupted render, then retry: openplanr design render <design-document.json>',
+      );
+    return withDesignCode(error, codes.failed);
+  }
+}
+
+/** Runs one workflow package design utility command, such as `inspect <file>`, and returns its result. */
+export async function runDesignUtility(
+  argv: string[],
+  openUrl?: (url: string) => Promise<void>,
+): Promise<Record<string, unknown>> {
+  return callDesignUtility(designPipeline(), argv, UTILITY_CODES, openUrl);
+}
+
 /** Runs the workflow package's own feedback command, which syncs a shared design first. */
 export async function runDesignFeedback(
   file: string,
@@ -251,18 +319,38 @@ export async function runDesignFeedback(
     argv.push(`--${name}`);
     if (value !== true) argv.push(value);
   }
-  try {
-    const utility = await pipelineModule(pipeline, 'lib/design/utility.mjs');
-    if (typeof utility.designUtility !== 'function')
-      throw new ArtifactCommandError(
-        'E_DESIGN_SHARE_UNSUPPORTED',
-        'The installed workflow package does not support design feedback.',
-        'Update OpenPlanr: npm install -g openplanr.',
-      );
-    return (await utility.designUtility(argv, { stdout: () => {} })) as Record<string, unknown>;
-  } catch (error) {
-    return withShareCode(error);
-  }
+  return callDesignUtility(pipeline, argv, SHARE_CODES);
+}
+
+/** The design utility contract range, or `pipeline: null` when the workflow package is missing. */
+export async function readDesignCapabilities(cliVersion: string) {
+  const pipeline = resolvePipelinePackage(false);
+  if (!pipeline)
+    return {
+      ok: false as const,
+      ...RUNTIME_MISSING,
+      contract: null,
+      supported: null,
+      cli: cliVersion,
+      pipeline: null,
+    };
+  const utility = await pipelineModule(pipeline, 'lib/design/utility.mjs');
+  const contract = utility.DESIGN_UTILITY_CONTRACT;
+  const { min, max } = (utility.DESIGN_UTILITY_SUPPORTED ?? {}) as { min?: unknown; max?: unknown };
+  const isVersion = (value: unknown): value is number => Number.isInteger(value);
+  if (!isVersion(contract) || !isVersion(min) || !isVersion(max))
+    throw new ArtifactCommandError(
+      UTILITY_CODES.unsupported,
+      `The installed workflow package ${pipeline.version} does not report a design command contract.`,
+      'Update OpenPlanr: npm install -g openplanr@latest.',
+    );
+  return {
+    ok: true as const,
+    contract,
+    supported: { min, max },
+    cli: cliVersion,
+    pipeline: pipeline.version,
+  };
 }
 
 /** Prepare a factual owner handoff. Semantic refinement stays in the host agent. */
@@ -313,6 +401,6 @@ export async function runDesignHandoffAction(
       version: input.version ?? snapshot.draft?.version ?? 0,
     })) as Record<string, unknown>;
   } catch (error) {
-    return withShareCode(error);
+    return withDesignCode(error);
   }
 }

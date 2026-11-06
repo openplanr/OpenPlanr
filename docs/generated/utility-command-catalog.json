@@ -170,6 +170,66 @@
       "classification": "deterministic-preserved"
     },
     {
+      "path": "design",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "design capabilities",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "design inspect",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "design validate",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "design render",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "design open",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "design view-context",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "design export",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "design verify",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "design handoff",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "design studio",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "design studio status",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "design studio stop",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "design fonts",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "design fonts fetch",
+      "classification": "deterministic-preserved"
+    },
+    {
       "path": "diagram",
       "classification": "deterministic-preserved"
     },
