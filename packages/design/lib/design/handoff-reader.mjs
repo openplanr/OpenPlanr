@@ -7,7 +7,15 @@ import {
   DESIGN_HANDOFF_SCHEMA,
 } from '@openplanr/protocol/review-experience-contracts';
 import { emptyReviewContext, reviewDigest } from './context.mjs';
-import { currentDesign, designSpecPath, hash, readJson } from './document-state.mjs';
+import {
+  currentDesign,
+  designContentRevision,
+  designRenderRevision,
+  designSourceRevision,
+  designSpecPath,
+  hash,
+  readJson,
+} from './document-state.mjs';
 import { readDesignFeedback } from './feedback-reader.mjs';
 import { renderMarkdown } from './handoff-format.mjs';
 import {
@@ -161,6 +169,43 @@ export function readDesignExperience(file, { env = process.env } = {}) {
     loadingHistory: false,
   };
 }
+/** A render's content revision, or null when a render recorded without one cannot prove it. */
+function contentRevisionOf(root, revision) {
+  const directory = join(root, '.design/revisions', revision);
+  const record = readJson(join(directory, 'render.json'), null);
+  if (!record) return null;
+  if (typeof record.contentRevision === 'string') return record.contentRevision;
+  const specPath = join(directory, 'design-spec.md');
+  if (!existsSync(specPath)) return null;
+  const spec = readFileSync(specPath, 'utf8');
+  const source = designSourceRevision(
+    record.document,
+    record.contextDigest,
+    digestArtifactEnvelope(record.envelope),
+  );
+  // Trust the derivation only when it reproduces the recorded render revision exactly.
+  return designRenderRevision(source, spec, record.rendererRevision) === revision
+    ? designContentRevision(source, spec)
+    : null;
+}
+
+const withoutRender = ({ sourceRevision, verificationDigest, ...basis }) => basis;
+
+/**
+ * Whether an approved basis still describes the current design.
+ * A renderer-only re-render keeps it current; its new verification is reported separately.
+ */
+function basisIsCurrent(root, approved, basis) {
+  if (reviewDigest(approved) === reviewDigest(basis)) return true;
+  if (approved.sourceRevision === basis.sourceRevision) return false;
+  const content = contentRevisionOf(root, approved.sourceRevision);
+  return (
+    content !== null &&
+    content === contentRevisionOf(root, basis.sourceRevision) &&
+    reviewDigest(withoutRender(approved)) === reviewDigest(withoutRender(basis))
+  );
+}
+
 export function readDesignHandoff(file, { env = process.env, ...shareOptions } = {}) {
   const value = snapshot(file, env, shareOptions);
   const path = join(dirname(designSpecPath(value.current.root)), 'review-handoff.json');
@@ -178,7 +223,7 @@ export function readDesignHandoff(file, { env = process.env, ...shareOptions } =
     path,
     revision: value.current.revision,
     draft,
-    current: Boolean(draft && reviewDigest(draft.basis) === reviewDigest(value.basis)),
+    current: Boolean(draft && basisIsCurrent(value.current.root, draft.basis, value.basis)),
     metadata: value.metadata,
     feedback: { pins: value.feedback.pins },
     basis: value.basis,

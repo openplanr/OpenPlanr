@@ -29,6 +29,9 @@ import { assertDesignDocument } from '@openplanr/protocol/design-contracts';
 import { loadReviewContext, reviewDigest, reviewFingerprints } from './context.mjs';
 import {
   atomicJson,
+  designContentRevision,
+  designRenderRevision,
+  designSourceRevision,
   designSpecPath,
   hash,
   json,
@@ -252,9 +255,7 @@ export function prepareDesignDocument(file, { readSource, passive = false, maxBy
       presentation: 'canvas',
     },
   });
-  const revision = hash(
-    json({ document, contextDigest, digest: digestArtifactEnvelope(envelope) }),
-  );
+  const revision = designSourceRevision(document, contextDigest, digestArtifactEnvelope(envelope));
   return {
     ...inspected,
     reviewContext,
@@ -434,7 +435,8 @@ async function renderDesignDocumentUnlocked(
     for (let section = 1; section <= 10; section++)
       if (!new RegExp(`^## ${section}\\. `, 'm').test(spec))
         throw new Error(`design-spec.md is missing section ${section}.`);
-    prepared.revision = hash(json({ source: prepared.revision, spec, rendererRevision }));
+    const contentRevision = designContentRevision(prepared.revision, spec);
+    prepared.revision = designRenderRevision(prepared.revision, spec, rendererRevision);
     const directory = join(work, 'revisions', prepared.revision);
     const previous = readJson(join(work, 'current.json'), null);
     const generatedAt = now();
@@ -463,6 +465,7 @@ async function renderDesignDocumentUnlocked(
       envelope: prepared.envelope,
       entries: prepared.entries,
       revision: prepared.revision,
+      contentRevision,
       rendererRevision,
       lint: prepared.lint,
       manifest,
