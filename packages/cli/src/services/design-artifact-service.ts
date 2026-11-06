@@ -158,6 +158,7 @@ const RUNTIME_MISSING = {
   recovery: PIPELINE_REINSTALL,
 } as const;
 
+const PUBLICATION_PENDING = 'E_DESIGN_PUBLICATION_PENDING';
 const SHARE_CODES = { unsupported: 'E_DESIGN_SHARE_UNSUPPORTED', failed: 'E_DESIGN_SHARE_FAILED' };
 const UTILITY_CODES = {
   unsupported: 'E_DESIGN_RUNTIME_UNSUPPORTED',
@@ -286,6 +287,13 @@ async function callDesignUtility(
       );
     return (await run(argv, { stdout: () => {}, openUrl })) as Record<string, unknown>;
   } catch (error) {
+    // The workflow package's message names no command a CLI user can run.
+    if (error instanceof Error && (error as { code?: unknown }).code === PUBLICATION_PENDING)
+      throw new ArtifactCommandError(
+        PUBLICATION_PENDING,
+        error.message,
+        'Finish the interrupted render, then retry: openplanr design render <design-document.json>',
+      );
     return withDesignCode(error, codes.failed);
   }
 }

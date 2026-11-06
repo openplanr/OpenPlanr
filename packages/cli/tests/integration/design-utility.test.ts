@@ -197,7 +197,10 @@ describe('openplanr design', { timeout: 120_000 }, () => {
       writeFileSync(join(dir, '.design/publication.json'), bytes);
       const unchanged = directoryBytes(dir);
       const inspect = await cli(['design', 'handoff', file, '--action', 'inspect', '--json'], dir);
-      expect(json(inspect, 1)).toMatchObject({ code: 'E_DESIGN_PUBLICATION_PENDING' });
+      expect(json(inspect, 1)).toMatchObject({
+        code: 'E_DESIGN_PUBLICATION_PENDING',
+        recovery: expect.stringContaining('openplanr design render <design-document.json>'),
+      });
       expect(directoryBytes(dir)).toEqual(unchanged);
     }
     writeFileSync(join(dir, '.design/publication.json'), journal);
