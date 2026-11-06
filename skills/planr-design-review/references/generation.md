@@ -34,12 +34,12 @@ incidental array positions or rendered CSS selectors.
 
 Author real screen content with useful labels, plausible data and complete states.
 Make the primary journey navigable and meaningful controls functional. Use local
-HTML/CSS/JavaScript and assets supported by the bundled utility; do not require a
+HTML/CSS/JavaScript and assets supported by the design utilities; do not require a
 build server, package installation, remote modules or a development environment to
 open the studio. Third-party assets retain their license/attribution where needed.
 Use classic browser scripts with local event handlers. If adapting an existing
-module-based component, compile its local preview before packaging; the portable
-utility does not install dependencies or compile modules. Use local image `src`
+module-based component, compile its local preview before packaging; the design
+utilities do not install dependencies or compile modules. Use local image `src`
 with responsive CSS. Forms validate and run local handlers; omit navigation
 actions and targets. Cross-screen actions can use `data-design-navigate` with the
 stable target screen ID.

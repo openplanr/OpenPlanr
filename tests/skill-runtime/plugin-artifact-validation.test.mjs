@@ -292,17 +292,6 @@ test('directory reading reports links and special files without following them',
   assert.throws(() => readDirectoryEntries(join(directory, 'plugin-link')), /not a link/u);
 });
 
-test('generated Studio and stage source units satisfy package text bounds', async () => {
-  const { buildDesignSkillResources } = await import('../../scripts/skills/design-resources.mjs');
-  const resources = await buildDesignSkillResources({
-    repoRoot: resolve(import.meta.dirname, '../..'),
-  });
-  const report = assertDirectoryEntries(resources.map(({ path, bytes }) => ({ path, bytes })));
-  assert.ok(report.fileCount < 200);
-  assert.ok(resources.some(({ path }) => path.endsWith('studio/studio.js.sources.json')));
-  assert.ok(resources.some(({ path }) => path.endsWith('artifact-review-stage.js.sources.json')));
-});
-
 test('directory reading reports oversized files by size without loading them', (t) => {
   const directory = mkdtempSync(join(tmpdir(), 'openplanr-directory-large-'));
   t.after(() => rmSync(directory, { recursive: true, force: true }));

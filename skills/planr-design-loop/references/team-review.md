@@ -101,10 +101,9 @@ has been rendered and checked.
 
 ## Prepare and refine the handoff
 
-When requested, run `openplanr artifact handoff <design-document.json>` or the bundled
-`node scripts/design.mjs handoff <design-document.json>` utility. Both prepare a
-factual draft from the recorded review; neither calls an AI model or starts Plan.
-Read the utility's `--help` for the installed edit and approval interface.
+When requested, run `openplanr artifact handoff <design-document.json>`. It
+prepares a factual draft from the recorded review; it does not call an AI model or
+start Plan. Read its `--help` for the installed edit and approval interface.
 
 Refine the draft in this active host session. Preserve comment quotations,
 authorship, source revision and references. Separate accepted changes from

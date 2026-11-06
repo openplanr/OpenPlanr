@@ -40,8 +40,8 @@ repository notes, credentials or an entire specification into shared context.
 Open the design with `openplanr artifact <design-document.json>` after editing context;
 the route validates and renders it. If it reports a draft error and falls back to
 the previous working revision, fix that error before sharing the changed context.
-When working through an installed design
-skill instead, use its bundled `validate`, `render` and `open` utilities. Inspect
+When working through a design skill instead,
+use `openplanr design validate`, `render` and `open`. Inspect
 Welcome for the correct design title, purpose and review questions, then use the
 explicit Share or Publish action. If browser inspection is unavailable, state
 that the welcome is unverified. Changing the context file alone does not update

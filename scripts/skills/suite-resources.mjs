@@ -1,7 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { posix } from 'node:path';
 import { sha256Bytes } from '../../packages/skill-runtime/src/compiler/index.mjs';
-import { DESIGN_SKILL_IDS } from './design-resources.mjs';
 
 const OPERATE_SKILL_IDS = new Set([
   'planr-operate',
@@ -15,14 +14,7 @@ const OPERATE_SKILL_IDS = new Set([
 ]);
 
 function runtimeGroup(skillId, path) {
-  if (DESIGN_SKILL_IDS.includes(skillId) && path.startsWith('scripts/')) return 'design';
-  if (
-    skillId === 'planr-plan' &&
-    (/^scripts\/design(?:-[a-z0-9-]+)?\.mjs$/u.test(path) || path.startsWith('scripts/runtime/'))
-  )
-    return 'plan';
-  if (OPERATE_SKILL_IDS.has(skillId) && path.startsWith('scripts/')) return 'operate';
-  return null;
+  return OPERATE_SKILL_IDS.has(skillId) && path.startsWith('scripts/') ? 'operate' : null;
 }
 
 /** The canonical package remains portable; this mapping belongs to complete native suites. */
@@ -33,21 +25,16 @@ export function suiteResourcePath(skillId, path, skillRoot) {
 
 /** Imported modules never rely on their direct-execution guard to run a helper. */
 export function renderSuiteLauncher({ skillId, path, skillRoot }) {
-  const group = runtimeGroup(skillId, path);
-  if (!group || !['scripts/design.mjs', 'scripts/validate-note.mjs'].includes(path)) return null;
+  if (!runtimeGroup(skillId, path) || path !== 'scripts/validate-note.mjs') return null;
   const target = suiteResourcePath(skillId, path, skillRoot);
   const relative = posix.relative(posix.dirname(`${skillRoot}/${path}`), target);
-  const entry = group === 'operate' ? 'runOperateReviewNoteValidator' : 'main';
-  const error =
-    group === 'operate'
-      ? "`${error.code ?? 'E_OPERATE_NOTE'}: ${error.message}\\n`"
-      : '`${error.message}\\n`';
+  const error = "`${error.code ?? 'E_OPERATE_NOTE'}: ${error.message}\\n`";
   return `#!/usr/bin/env node
 // Generated package-relative launcher; no global runtime or invocation downloads.
 import { existsSync, realpathSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { ${entry} as run } from ${JSON.stringify(relative)};
+import { runOperateReviewNoteValidator as run } from ${JSON.stringify(relative)};
 export * from ${JSON.stringify(relative)};
 if (process.argv[1] && existsSync(resolve(process.argv[1])) &&
   realpathSync(fileURLToPath(import.meta.url)) === realpathSync(resolve(process.argv[1]))) {

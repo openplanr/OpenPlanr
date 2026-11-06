@@ -54,11 +54,11 @@ while authoring:
 - at most two families and three weights each; one variable file can cover a
   family's weights.
 
-Snapshot with the bundled helper, run from the skill directory (see
+Snapshot with the design CLI, run from the project directory (see
 [utilities.md](utilities.md)):
 
 ```sh
-node scripts/design.mjs fonts fetch --family "Inter:400,600" --family "Source Serif 4:400" --dest <design>/source/assets/fonts
+openplanr design fonts fetch --family "Inter:400,600" --family "Source Serif 4:400" --dest <design>/source/assets/fonts
 ```
 
 It is the one command to ask approval for. A host that allowlists network access by

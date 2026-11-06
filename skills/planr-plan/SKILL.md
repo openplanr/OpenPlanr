@@ -45,10 +45,14 @@ unresolved feedback; carry relevant gaps into explicit task checks. Preserve
 existing design or re-extract an authored specification from preview images.
 
 When `review-handoff.json` is present beside `design-spec.md`, read its current
-approval and freshness with the bundled
-`node scripts/design.mjs handoff <design-document.json> --action inspect --json`. Use approved, current
+approval and freshness with
+`openplanr design handoff <design-document.json> --action inspect --json`. Use approved, current
 handoff items as additional planning context, retaining revision/comment links and
-unresolved questions. An outdated or unapproved draft is evidence, not agreed scope;
+unresolved questions. When `openplanr` is not found, does not know `design`, or
+reports `E_DESIGN_RUNTIME_MISSING`, treat the handoff as unverified evidence rather
+than agreed scope, continue when the specification is decision-complete, and name
+the fix: `npm install -g openplanr`, `npm install -g openplanr@latest`, or
+`npm install -g openplanr` without `--omit=optional`, respectively. An outdated or unapproved draft is evidence, not agreed scope;
 report the changed inputs and obtain the missing decision only when it affects the
 requested plan. Never silently substitute a newer draft for an approved snapshot.
 A missing review handoff does not block ordinary planning from a clear specification.

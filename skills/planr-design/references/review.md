@@ -9,10 +9,10 @@ a remix; keep their origin distinct and do not invent board votes.
 For "this button" or "this screen", read the live local viewer context:
 
 ```sh
-node scripts/design.mjs view-context <design-document.json> --json
+openplanr design view-context <design-document.json> --json
 ```
 
-The utility reads `.design/view-context.json` beside the document and rejects a
+The command reads `.design/view-context.json` beside the document and rejects a
 revision that differs from the current render. Ignore context whose `updatedAt`
 is older than the user's request; pass `--request-time <ISO-timestamp>` to have
 the reader enforce that check. Missing, invalid or stale context returns
@@ -85,7 +85,7 @@ decision. Read project-local shared feedback alongside the ordinary pin ledger.
 
 Creating a share or publishing an update requires an explicit user request.
 Rendering a local revision does not update the remote review. After the user asks
-to publish, use the studio's Publish update action or the bundled utility; verify
+to publish, use the studio's Publish update action or `openplanr artifact publish`; verify
 the returned published revision. The URL stays stable and recipients choose when
 to load a new revision. Earlier pins remain stale until deliberately addressed.
 
@@ -96,9 +96,9 @@ specifications, project files, URLs, logs, or ordinary command output.
 
 ## Agent-friendly review exports
 
-Use **Export reviews** in the Review sidebar, or the bundled feedback export
-utility, for Markdown or JSON grouped by original revision, screen, direction and
-responsive frame. Preserve reviewer IDs, exact quotations, replies and timestamps.
+Use **Export reviews** in the Review sidebar, or
+`openplanr artifact feedback --action export`, for Markdown or JSON grouped by
+original revision, screen, direction and responsive frame. Preserve reviewer IDs, exact quotations, replies and timestamps.
 Read the completeness flag; wait for older pages or retry when disconnected before
 treating an export as the full review history. Unsaved text in a composer is a draft,
 not submitted feedback.

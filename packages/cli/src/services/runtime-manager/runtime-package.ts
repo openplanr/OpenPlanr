@@ -197,7 +197,7 @@ export function thinSkillEntry(source: Buffer, locator: RuntimeLocator): Buffer 
           : undefined;
   if (!invocation) throw new Error('Thin discovery has no supported host invocation context.');
   return Buffer.from(
-    `${frontmatter}\n# OpenPlanr\n\nRead the complete instructions at ${JSON.stringify(path.join(locator.sourceRoot, locator.entryPath))} before performing this skill. Resolve every relative reference, schema and script from that cached source file's directory, not from this discovery entry. This exact package works offline; do not substitute a global CLI, another installed version or a download.\n\n${invocation} This mapping applies only to skill invocation; keep cached resource paths unchanged.\n`,
+    `${frontmatter}\n# OpenPlanr\n\nRead the complete instructions at ${JSON.stringify(path.join(locator.sourceRoot, locator.entryPath))} before performing this skill. Resolve every relative reference, schema and script from that cached source file's directory, not from this discovery entry. This exact package works offline; do not substitute another installed version or a download. Run the \`openplanr\` commands it names with the \`openplanr\` on \`PATH\`.\n\n${invocation} This mapping applies only to skill invocation; keep cached resource paths unchanged.\n`,
   );
 }
 

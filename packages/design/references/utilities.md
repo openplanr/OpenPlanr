@@ -1,25 +1,70 @@
-# Bundled design utilities
+# Design utilities
 
-Run the linked design helper from the skill entrypoint relative to the skill's
-directory. It contains deterministic operations and all required assets. It needs
-Node.js 22.13 or later, with no provider credentials. Local design work needs no global
-CLI. Sharing a design for company review runs in the `openplanr` CLI, which holds the
-owner keys. Only `fonts fetch` downloads anything, and only when run; nothing is
-fetched when a design opens.
-Use `--help` to inspect the installed command interface before writing documents
-or invoking operations; the installed contract is authoritative.
+Design operations run in the `openplanr` CLI. They are deterministic, need Node.js
+22.13 or later and no provider credentials. Only `fonts fetch` downloads anything,
+and only when run; nothing is fetched when a design opens. Use `--help` on a
+command to inspect the installed interface before writing documents or invoking
+operations; the installed contract is authoritative.
+
+## Check the design runtime
+
+Run this once, before consultation, and check whether the host's artifact tool
+offers a design quickstart or a Design artifact type:
 
 ```sh
-node scripts/design.mjs inspect <design-document.json> --json
-node scripts/design.mjs validate <design-document.json> --json
-node scripts/design.mjs render <design-document.json> --json
-node scripts/design.mjs open <design-document.json> --view canvas --no-open --json
-node scripts/design.mjs feedback <design-document.json> --action inspect --json
-node scripts/design.mjs view-context <design-document.json> --json
-node scripts/design.mjs studio <design-document.json> --action status --json
-node scripts/design.mjs studio <design-document.json> --action stop --json
-node scripts/design.mjs fonts fetch --family "<Name>:<weights>" [--family ...] --dest <design>/source/assets/fonts --json
+openplanr design capabilities --json
 ```
+
+These skills need design contract 1. Treat a successful
+`openplanr design capabilities --json` as proof the runtime is ready. Never locate
+or import the OpenPlanr workflow package, inspect `node_modules`, or call internal
+runtime modules. Use the `openplanr` on `PATH`; never search for another one or
+for bundled design scripts. A failed probe means the matching stop below.
+
+| Probe result | Runtime | Next action |
+|---|---|---|
+| `ok: true` and `supported.min` ≤ 1 ≤ `supported.max` | Ready | Use the commands below. |
+| `openplanr` not found | Stop 1: no CLI | `npm install -g openplanr` |
+| `unknown command 'design'`, `E_DESIGN_RUNTIME_UNSUPPORTED`, or a `supported` range without 1 | Stop 2: CLI too old | `npm install -g openplanr@latest` |
+| `ok: false` with `E_DESIGN_RUNTIME_MISSING` and `pipeline: null` | Stop 3: CLI without its workflow package | `npm install -g openplanr`, run without `--omit=optional` |
+
+A design on the hosted canvas needs no CLI. At a stop, consultation and
+authoring still happen: author `design-document.json`, its sources and
+`design-spec.md`, mark them **unverified**, and say that no studio was rendered or
+checked. End with every next action that applies, each one the user can run: the
+stop's command, and the host action below. On Claude Code without a Design
+artifact type, that is the command and the canvas actions. Then ask the user to
+run the skill again.
+
+| Host | Notes |
+|---|---|
+| Claude Code | Design builds on the hosted canvas when the artifact tool offers a Design type. When it does not, also name the canvas actions: sign in with `/login` on a claude.ai Pro, Max, Ultra, Team or Enterprise plan; or, when artifacts are turned off, re-enable them in `/config`. An API key or gateway token means no claude.ai login: name `/login` with a claude.ai plan, or the CLI. On Bedrock, Google Cloud or Foundry, or in an organisation with CMEK, HIPAA or Zero Data Retention, the canvas is unavailable and the CLI is the path. |
+| Codex | The stop's command. `openplanr setup` installs the workflow package beside the skills, but `PATH` can resolve a different `openplanr`; `which openplanr` shows the one that runs. Codex's default `workspace-write` sandbox stops the studio: `design open` fails with `listen EPERM`. Tell the user to run `openplanr design open <design-document.json>` in their own terminal, or to restart Codex with `-c sandbox_workspace_write.network_access=true -c 'sandbox_workspace_write.writable_roots=["<absolute path of ~/.planr>"]'` (use `PLANR_HOME` instead when it is set). That setting also lets commands reach the network. |
+| Cursor | The stop's command. `openplanr setup` installs the workflow package beside the skills, but `PATH` can resolve a different `openplanr`; `which openplanr` shows the one that runs. |
+| ChatGPT | Without a local shell, take stop 1: deliver the unverified sources and specification, and name `npm install -g openplanr` for a coding agent with a shell. |
+
+## Commands
+
+Run these from the project directory. Paths resolve against it.
+
+```sh
+openplanr design inspect <design-document.json> --json
+openplanr design validate <design-document.json> --json
+openplanr design render <design-document.json> --json
+openplanr design open <design-document.json> --view canvas --no-open --json
+openplanr design view-context <design-document.json> --json
+openplanr design verify <design-document.json> --report <browser-report.json> --json
+openplanr design export <design-document.json> --view canvas --format html --output <path> --json
+openplanr design studio status <design-document.json> --json
+openplanr design studio stop <design-document.json> --json
+openplanr design fonts fetch --family "<Name>:<weights>" [--family ...] --dest <design>/source/assets/fonts --json
+openplanr artifact feedback <design-document.json> --action inspect --json
+```
+
+`render` reads the specification at the path in [handoff.md](handoff.md), so write
+`design-spec.md` before the first render. The CLI prints `<path>` in place of
+absolute paths, so an `ENOENT` names no file: check that `design-spec.md` and
+every source the document names exist before suspecting the CLI.
 
 `fonts fetch` snapshots at most two OFL or Apache families, three weights each, as
 Latin `woff2` files with their license files and a local `fonts.css`. It needs network
@@ -30,9 +75,9 @@ access; ask the user to approve that one command. A host that allowlists domains
 [design-system.md](design-system.md) for the fallback.
 
 Use `--view prototype` or `--view walkthrough` to select the initial presentation.
-When an `openplanr` CLI is available, prefer its public `openplanr artifact` route for
-opening the document; otherwise use this bundled script. Both compose the same
-design and artifact runtime, preserving feedback and view behavior.
+`design open` keeps the studio running until it is stopped, so run it in the
+background. `openplanr artifact open <design-document.json>` opens the same studio,
+preserving feedback and view behavior.
 
 `view-context` returns validated live viewer data, or `{ viewContext: null, reason }`
 when unavailable or stale. Use `--request-time <ISO-timestamp>` to reject context
@@ -51,12 +96,12 @@ Opening a completed design reuses its healthy local service and returns a short
 Studio; a service hosting several designs offers a selection page. Keep the
 returned URL instead of constructing one from export paths.
 
-Use `studio --action status` to find the healthy service for this design. Its
+Use `design studio status` to find the healthy service for this design. Its
 `status: running` reports service availability; `browserStatus` reports observed
 preview loading separately, and `verification` reports actual saved checks.
 Startup alone does not mean a design is ready or verified.
 
-Use `studio --action stop` to authenticate the exact owned live instance and drain
+Use `design studio stop` to authenticate the exact owned live instance and drain
 pending saves; it does not signal a process by PID. `status: stopping` means
 shutdown was accepted. Run status again to confirm it stopped. Feedback, ratings
 and arrangement remain in their canonical stores and survive reopening.
@@ -65,7 +110,7 @@ A healthy service with different settings, an older runtime, or an unvalidated
 session must be stopped before reopening. When its launcher record is missing,
 stop can recover the sole authenticated owner for this design. If several owned
 services remain, inspect status and choose one explicitly with
-`studio <design-document.json> --action stop --instance-id <id>`. An instance from
+`openplanr design studio stop <design-document.json> --instance-id <id>`. An instance from
 another project or state directory is rejected. Hosted shares continue independently.
 
 ## Import downloaded feedback
@@ -73,7 +118,7 @@ another project or state directory is rejected. Hosted shares continue independe
 Explicitly reconcile downloaded feedback with the canonical local ledger:
 
 ```sh
-node scripts/design.mjs feedback <design-document.json> --action import --input <downloaded-review.json> --revision <current-render-revision> --json
+openplanr artifact feedback <design-document.json> --action import --input <downloaded-review.json> --revision <current-render-revision> --json
 ```
 
 Read `feedback --action inspect` first and pass its current `revision` internally;
@@ -110,16 +155,11 @@ The design remains accessible when the local machine is offline. Owner authority
 saves automatically in a protected user-level file outside the project; recovery
 export is optional. Only copy the reviewer token through the explicit Share controls.
 
-Sharing needs the OpenPlanr CLI (`npm install -g openplanr`). The bundled utility's
-`share`, `publish`, `sync` and `manage` commands, the studio's Share dialog, and handoff
-decisions on a shared design all run `openplanr artifact` for the network step, so the
-helper itself reads no owner keys. `share` creates or retries a review, `publish` sends
-an explicitly requested new revision to the existing URL, and `sync` retrieves
-authenticated feedback. You can also run the CLI directly: `openplanr artifact share`,
-`publish`, `sync`, `status`, `manage`, `feedback` and `handoff`. Without the CLI,
-sharing commands stop with `E_DESIGN_SHARE_CLI_REQUIRED`, and feedback inspection
-still works but reports that sync was skipped. A helper and CLI with different sharing
-formats refuse with `E_DESIGN_SHARE_RUNTIME_MISMATCH`; update whichever is older.
+Sharing runs in the `openplanr` CLI, which holds the owner keys:
+`openplanr artifact share`, `publish`, `sync`, `status`, `manage`, `feedback` and
+`handoff`, and the studio's Share dialog. `share` creates or retries a review,
+`publish` sends an explicitly requested new revision to the existing URL, and
+`sync` retrieves authenticated feedback.
 
 Retention is until the owner revokes or deletes the review, while the service is
 maintained. The owner can pause comments and rotate access tokens. Rotation blocks
@@ -129,9 +169,9 @@ saved operation and use its retry path. Report service unavailability explicitly
 
 ## Team review and handoff
 
-`openplanr artifact handoff <design-document.json>` and the bundled
-`node scripts/design.mjs handoff <design-document.json>` prepare or refresh a
-factual review handoff. Use `--json` for structured results and consult `--help`
+`openplanr artifact handoff <design-document.json>` prepares or refreshes a
+factual review handoff, and `openplanr design handoff <design-document.json>`
+inspects it. Use `--json` for structured results and consult `--help`
 for inspection, update and approval actions. Follow [team-review.md](team-review.md)
 for active-agent refinement and owner approval. These deterministic operations do
 not call a provider, publish a design or start Plan/Ship.
