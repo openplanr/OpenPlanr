@@ -134,6 +134,21 @@ test('the host table covers Claude Code, Codex, Cursor and ChatGPT', () => {
   }
 });
 
+test('the Claude Code row sends API-key users to /login and providers to the CLI', () => {
+  for (const id of DESIGN_SKILLS) {
+    const row = prose(stopRow(utilities(id), /Claude Code/u));
+    assert.match(
+      row,
+      /An API key or gateway token means no claude\.ai login: name `\/login` with a claude\.ai plan, or the CLI\./u,
+    );
+    assert.match(
+      row,
+      /On Bedrock, Google Cloud or Foundry, or in an organisation with CMEK, HIPAA or Zero Data Retention, the canvas is unavailable and the CLI is the path\./u,
+    );
+    assert.doesNotMatch(row, /API key, gateway token, Bedrock/u);
+  }
+});
+
 test('the Codex row says how to run the studio inside the Codex sandbox', () => {
   for (const id of DESIGN_SKILLS) {
     const row = prose(stopRow(utilities(id), /Codex/u));
