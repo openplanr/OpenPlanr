@@ -163,6 +163,17 @@ describe('immutable runtime packages', () => {
       expect(native.toString()).toContain('planr-plan');
     },
   );
+  it('sends commands the skill runs to the openplanr CLI on PATH', () => {
+    const runtime = inspectRuntimePackage(sourceRoot, cacheRoot, 'cursor', '1.2.3');
+    const direct = thinSkillEntry(
+      Buffer.from('---\nname: design\ndescription: Design a screen.\n---\n# Design\n'),
+      runtimeLocator(runtime, 'skills/plan/SKILL.md'),
+    ).toString();
+    expect(direct).not.toContain('global CLI');
+    expect(direct).toContain(
+      'Run the `openplanr` commands it names with the `openplanr` on `PATH`.',
+    );
+  });
   it('validates the complete package behind a thin Cursor rule', () => {
     const entry = 'rules/planr-plan.mdc';
     const content = Buffer.from('---\ndescription: Plan a feature.\n---\n# Plan\n');
