@@ -12,5 +12,6 @@ The design skills now run local design work through `openplanr design`. The Open
   - `openplanr` installed with `--omit=optional`: `npm install -g openplanr` without that flag
 - Design Review of a hosted canvas design works from the canvas comments.
 - Plan reads a local design handoff with `openplanr design handoff`.
+- In Codex's default sandbox the design studio can't start. The skills tell you how to run it: in your own terminal, or with Codex's local network and `~/.planr` write access turned on.
 
 Removing a working feature normally waits for a major release. This one ships in a minor release as a deliberate exception: if you used the local design studio from the plugin without the CLI, install it with `npm install -g openplanr` and run the skill again.

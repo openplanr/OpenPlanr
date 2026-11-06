@@ -134,6 +134,19 @@ test('the host table covers Claude Code, Codex, Cursor and ChatGPT', () => {
   }
 });
 
+test('the Codex row says how to run the studio inside the Codex sandbox', () => {
+  for (const id of DESIGN_SKILLS) {
+    const row = prose(stopRow(utilities(id), /Codex/u));
+    assert.match(row, /`listen EPERM`/u);
+    assert.match(row, /run `openplanr design open <design-document\.json>` in their own terminal/u);
+    assert.match(row, /-c sandbox_workspace_write\.network_access=true/u);
+    assert.match(
+      row,
+      /-c 'sandbox_workspace_write\.writable_roots=\["<absolute path of ~\/\.planr>"\]'/u,
+    );
+  }
+});
+
 test('Loop delivers unverified variants and Review uses hosted canvas comments', () => {
   assert.match(
     prose(skill('planr-design-loop')),

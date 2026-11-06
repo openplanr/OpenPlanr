@@ -36,11 +36,11 @@ stop's command, and the host action below. On Claude Code without a Design
 artifact type, that is the command and the canvas actions. Then ask the user to
 run the skill again.
 
-| Host | Without a ready runtime |
+| Host | Notes |
 |---|---|
 | Claude Code | Design builds on the hosted canvas when the artifact tool offers a Design type. When it does not, also name the canvas actions: sign in with `/login` on a claude.ai Pro, Max, Ultra, Team or Enterprise plan; or, when artifacts are turned off, re-enable them in `/config`. An API key, gateway token, Bedrock, Google Cloud, Foundry, or an organisation with CMEK, HIPAA or Zero Data Retention cannot use the canvas; the CLI is the path there. |
-| Codex | The stop's command. `openplanr setup` installs the workflow package beside the skills, but `PATH` can resolve a different `openplanr`; `which openplanr` shows the one that runs. |
-| Cursor | As Codex. |
+| Codex | The stop's command. `openplanr setup` installs the workflow package beside the skills, but `PATH` can resolve a different `openplanr`; `which openplanr` shows the one that runs. Codex's default `workspace-write` sandbox stops the studio: `design open` fails with `listen EPERM`. Tell the user to run `openplanr design open <design-document.json>` in their own terminal, or to restart Codex with `-c sandbox_workspace_write.network_access=true -c 'sandbox_workspace_write.writable_roots=["<absolute path of ~/.planr>"]'` (use `PLANR_HOME` instead when it is set). That setting also lets commands reach the network. |
+| Cursor | The stop's command. `openplanr setup` installs the workflow package beside the skills, but `PATH` can resolve a different `openplanr`; `which openplanr` shows the one that runs. |
 | ChatGPT | Without a local shell, take stop 1: deliver the unverified sources and specification, and name `npm install -g openplanr` for a coding agent with a shell. |
 
 ## Commands
