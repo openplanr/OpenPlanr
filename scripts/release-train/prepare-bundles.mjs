@@ -1,11 +1,13 @@
 #!/usr/bin/env node
 // Pack every pending public package into <out>/<bundle>/ with its publication proof.
-// Usage: node scripts/release-train/prepare-bundles.mjs <out-dir> --pending '["@openplanr/protocol", ...]'
+// Usage: node scripts/release-train/prepare-bundles.mjs <out-dir> --pending '["@openplanr/protocol", ...]' [--github-output]
 import { execFileSync } from 'node:child_process';
-import { readFileSync } from 'node:fs';
+import { appendFileSync, readFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { assertReleasablePlugin } from '../check-plugin-network-boundary.mjs';
+import { readDirectoryEntries } from '../skills/plugin-artifact-validation.mjs';
+import { pluginDigest } from './lib/plugin-digest.mjs';
 import { bundleDirectory, PUBLIC_TARGETS } from './lib/targets.mjs';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
@@ -19,6 +21,14 @@ const pending =
 
 // The npm packages carry the host plugins, so none may ship while a plugin bundle is unclean.
 assertReleasablePlugin({ workspace: root });
+
+// The marketplace job has no dependencies installed, so it checks this digest instead of the guard.
+const pluginSha256 = pluginDigest(
+  readDirectoryEntries(join(root, 'dist/plugins/claude/openplanr')),
+);
+console.log(`Claude plugin sha256 ${pluginSha256}`);
+if (rest.includes('--github-output') && process.env.GITHUB_OUTPUT)
+  appendFileSync(process.env.GITHUB_OUTPUT, `plugin_sha256=${pluginSha256}\n`);
 
 for (const target of PUBLIC_TARGETS) {
   if (!pending.includes(target.name)) continue;

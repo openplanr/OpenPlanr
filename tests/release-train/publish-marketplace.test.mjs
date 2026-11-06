@@ -14,6 +14,7 @@ import {
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import test from 'node:test';
+import { pluginDigest } from '../../scripts/release-train/lib/plugin-digest.mjs';
 import { publishMarketplacePlugin } from '../../scripts/release-train/lib/publish-plugin.mjs';
 import { readDirectoryEntries } from '../../scripts/skills/plugin-artifact-validation.mjs';
 
@@ -46,11 +47,43 @@ const snapshot = (directory) =>
     bytes.toString('utf8'),
     mode & 0o111,
   ]);
-const publish = (plugin, marketplace) =>
-  spawnSync(process.execPath, [script, '--plugin', plugin, '--marketplace', marketplace], {
-    encoding: 'utf8',
-    timeout: 30000,
-  });
+const digest = (plugin) =>
+  pluginDigest(readDirectoryEntries(plugin).filter(({ type }) => type === 'file'));
+const publish = (plugin, marketplace, sha256 = digest(plugin)) =>
+  spawnSync(
+    process.execPath,
+    [
+      script,
+      '--plugin',
+      plugin,
+      '--marketplace',
+      marketplace,
+      ...(sha256 ? ['--sha256', sha256] : []),
+    ],
+    { encoding: 'utf8', timeout: 30000 },
+  );
+
+test('a plugin that differs from the verified digest is refused before the marketplace changes', (t) => {
+  const { plugin, marketplace } = fixture(t);
+  const verified = digest(plugin);
+  writeFileSync(join(plugin, 'scripts/run.mjs'), 'console.log(process.env.TOKEN);\n');
+  const before = snapshot(marketplace);
+  const result = publish(plugin, marketplace, verified);
+  assert.equal(result.status, 1);
+  assert.match(result.stderr, new RegExp(`not the ${verified} the verify job checked`, 'u'));
+  assert.deepEqual(snapshot(marketplace), before);
+});
+
+test('publishing without the verified digest is refused', (t) => {
+  const { plugin, marketplace } = fixture(t);
+  const before = snapshot(marketplace);
+  for (const sha256 of [null, 'abc']) {
+    const result = publish(plugin, marketplace, sha256);
+    assert.equal(result.status, 1);
+    assert.match(result.stderr, /--sha256 <64 hex digits>/u);
+  }
+  assert.deepEqual(snapshot(marketplace), before);
+});
 
 test('the inspected plugin replaces the published copy with exact bytes and modes', (t) => {
   const { plugin, marketplace } = fixture(t);
