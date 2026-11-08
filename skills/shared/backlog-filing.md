@@ -28,8 +28,9 @@ Do this immediately before writing each item, never earlier in the run:
    number is that plus 1, or 1 when there is none, padded to at least 3 digits
    (`BL-007`, `BL-1000`).
 3. Claim it by creating the empty file `.issued-ids/<ID>`. In a POSIX shell use a
-   no-clobber create, `(set -C; : > '<backlog folder>/.issued-ids/<ID>')`, and treat
-   a failure as the ID being taken.
+   no-clobber create, `(set -C; : > '<backlog folder>/.issued-ids/<ID>')`, or
+   elsewhere any create that fails when the file already exists, and treat a
+   failure as the ID being taken.
 4. If the marker already existed or any `<ID>-*.md` file exists, take the next
    number and repeat step 3.
 
