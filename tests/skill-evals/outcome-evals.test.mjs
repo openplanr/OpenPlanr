@@ -14,6 +14,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
 import {
+  buildSelfTestRun,
   evaluateFreeGrader,
   evaluateGuard,
   expectFileFindings,
@@ -261,6 +262,21 @@ test('the guard fails edits outside requestedPaths and unrequested repository co
     assert.match(edited.detail, /package\.json/);
   } finally {
     rmSync(workspace, { recursive: true, force: true });
+  }
+});
+
+test("a flawed output's trace writes its own file text, not its base's", () => {
+  const runData = buildSelfTestRun(cases.get('plan-review'), 'bad-decoy-planr');
+  try {
+    const path = '.planr/reviews/PLAN-review-note-sharing.md';
+    const written = runData.trace
+      .flatMap((event) => event.message?.content ?? [])
+      .filter((block) => block.type === 'tool_use' && block.name === 'Write')
+      .map((block) => block.input.content);
+    assert.deepEqual(written, [readFileSync(join(runData.workspace, path), 'utf8')]);
+    assert.match(written[0], /snapshot/);
+  } finally {
+    rmSync(runData.root, { recursive: true, force: true });
   }
 });
 

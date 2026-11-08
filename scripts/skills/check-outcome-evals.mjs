@@ -632,12 +632,12 @@ export function expectedFor(entry, variant, id, role) {
 
 const SYNTHETIC_CWD = '/tmp/e-x/home/cwd/';
 
-// A Write written as "..." in run.json carries the overlay file's text, as a real trace would.
-function withOverlayContent(call, overlayDir) {
+// A Write written as "..." in run.json carries the final workspace file's text, as a real trace would.
+function withWorkspaceContent(call, workspace) {
   const { file_path: filePath, content } = call.input ?? {};
   if (call.name !== 'Write' || content !== '...' || !filePath?.startsWith(SYNTHETIC_CWD))
     return call;
-  const source = join(overlayDir, filePath.slice(SYNTHETIC_CWD.length));
+  const source = join(workspace, filePath.slice(SYNTHETIC_CWD.length));
   if (!existsSync(source)) return call;
   return { ...call, input: { ...call.input, content: readFileSync(source, 'utf8') } };
 }
@@ -658,16 +658,16 @@ function applyVariant(entry, variant, workspace) {
     lastMessage: existsSync(ownMessage)
       ? readFileSync(ownMessage, 'utf8').trim()
       : (inherited?.lastMessage ?? ''),
-    toolCalls: [
-      ...(inherited?.toolCalls ?? []),
-      ...(spec.toolCalls ?? []).map((call) => withOverlayContent(call, join(dir, 'files'))),
-    ],
+    toolCalls: [...(inherited?.toolCalls ?? []), ...(spec.toolCalls ?? [])],
   };
 }
 
-function buildSelfTestRun(entry, variant) {
+/** Scaffolds a case, lays one self-test output over it and returns its run data; the caller removes `root`. */
+export function buildSelfTestRun(entry, variant) {
   const { root, workspace } = scaffoldCase(entry);
-  const { lastMessage, toolCalls } = applyVariant(entry, variant, workspace);
+  const applied = applyVariant(entry, variant, workspace);
+  const { lastMessage } = applied;
+  const toolCalls = applied.toolCalls.map((call) => withWorkspaceContent(call, workspace));
   const createdFiles = run('git', ['ls-files', '--others', '--exclude-standard'], {
     cwd: workspace,
   })

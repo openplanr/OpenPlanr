@@ -42,6 +42,14 @@ const CHECKS = [
   },
 ];
 
+const ISSUE_57 = {
+  body: 'Search results should highlight the text that matched the query. Follow-up to search; not needed for the first release of search.',
+  number: 57,
+  state: 'OPEN',
+  title: 'Highlight matched text in search results',
+  url: 'https://github.com/notes-example/notes/issues/57',
+};
+
 function parse(rest, valueFlags, boolFlags) {
   const options = {};
   const positional = [];
@@ -122,6 +130,13 @@ if (group === '--version' || group === 'version') {
 } else if (group === 'pr' && command === 'list') {
   parse(rest, ['--json', '-q', '--jq', '-s', '--state', '-B', '--base', '-H', '--head', '-L', '--limit', '-R', '--repo'], ['-w', '--web', '-d', '--draft']);
   out('\nShowing 1 of 1 open pull request in notes-example/notes\n\nID   TITLE                                BRANCH                CREATED AT\n#42  Search notes and create share links  feature/search-share  about 1 day ago');
+} else if (group === 'issue' && command === 'view') {
+  const { options, positional } = parse(rest, ['--json', '-q', '--jq', '-t', '--template', '-R', '--repo'], ['-c', '--comments', '-w', '--web']);
+  if (!['57', '#57', 'https://github.com/notes-example/notes/issues/57'].includes(positional[0])) {
+    fail(`GraphQL: Could not resolve to an issue or pull request with the number of ${positional[0]}. (repository.issue)`);
+  }
+  if ('--json' in options) out(applyJq(pick(ISSUE_57, jsonFields(options['--json'], Object.keys(ISSUE_57))), options['-q'] ?? options['--jq']));
+  else out(`${ISSUE_57.title} #57\nOpen • dana-reyes opened about 2 weeks ago • 0 comments\nLabels: enhancement\n\n\n  ${ISSUE_57.body}\n\n\nView this issue on GitHub: ${ISSUE_57.url}`);
 } else if (group === 'pr' && command === 'merge') {
   const { options, positional } = parse(rest, ['-A', '--author-email', '-b', '--body', '-F', '--body-file', '--match-head-commit', '-t', '--subject', '-R', '--repo'], ['--admin', '--auto', '-d', '--delete-branch', '--disable-auto', '-m', '--merge', '-r', '--rebase', '-s', '--squash']);
   const pr = selectPr(positional);
