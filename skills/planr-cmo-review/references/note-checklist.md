@@ -86,6 +86,11 @@ Profiles: `advisor` (CEO, CTO, CPO, CMO and COO reviews), `challenger`, `chair` 
 - [ ] `Executive summary` is not empty (`E_OPERATE_REVIEW_SUMMARY_MISSING`); a missing
       `Executive summary` section is reported both as `E_OPERATE_REVIEW_SECTION_MISSING` and as
       `E_OPERATE_REVIEW_SUMMARY_MISSING`.
+- [ ] Exceptions to "a missing section yields no other code": with at least one decision, a
+      missing `Action plan` (chair or board-report) also yields
+      `E_OPERATE_REVIEW_ACTION_PLAN_INVALID`; in a contract 1.0.0 note, a missing `Executive call`
+      also yields `E_OPERATE_REVIEW_EXECUTIVE_CALL_MISSING` and a missing `Human gate` also yields
+      `E_OPERATE_REVIEW_HUMAN_GATE_INCOMPLETE`.
 - [ ] The decision queue and action plan items below.
 
 ## Decision queue and action plan (chair and board-report)
@@ -116,10 +121,11 @@ Its sections and fields differ from the lists above. A 1.0.0 board report also n
       reject or defer (`E_OPERATE_REVIEW_HUMAN_GATE_CONTRADICTORY`).
 
 A caller that requires a conforming note fails it as a whole when any item above is unresolved
-(`E_OPERATE_REVIEW_NOTE_INVALID`).
+(`E_OPERATE_REVIEW_NOTE_INVALID`); that whole-note code is never listed on the `CODES:` line.
 
 ## Report format
 
 End the reply with exactly one line: `CODES: ` followed by every distinct code from the items
-above, each written in full, sorted alphabetically and comma-separated; write `CODES: none` when every item passes. Each code
-appears once however many times the problem occurs.
+above, each written in full, sorted alphabetically and comma-separated; write
+`CODES: none` when every item passes. Each code appears once however many times the problem
+occurs.

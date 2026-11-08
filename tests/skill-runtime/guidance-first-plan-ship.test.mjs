@@ -25,7 +25,7 @@ test('Ship guides local completion without process machinery', () => {
   );
   assert.match(
     ship,
-    /task Test Requirements.*repository instructions.*package and task-runner.*CI and pre-commit/isu,
+    /task Test Requirements.*repository instructions.*package and task-runner.*CI configuration.*pre-commit hook.*pre-push hook/isu,
   );
   assert.match(ship, /Inspect these sources directly/u);
   assert.doesNotMatch(ship, /discover-verification\.mjs/u);
@@ -77,6 +77,10 @@ test('Ship discovery lists gated CI jobs as conditional and always names the git
   );
   assert.match(
     ship,
-    /lint-staged pre-commit hook and the pre-push hook are always listed as sources, whatever the change touches/u,
+    /the pre-commit hook \(for example lint-staged\) and the pre-push hook, when present, whatever the change touches/u,
+  );
+  assert.match(
+    ship,
+    /Run a conditional job when a local equivalent command exists; otherwise report it as "conditional, not run"\. Never drop one silently/u,
   );
 });
