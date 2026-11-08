@@ -341,7 +341,13 @@ test('the version grader accepts a v prefix, and the revocation grader needs rev
     .graders.find((g) => g.name === 'names-missing-revocation');
   for (const text of ['No task covers revocation (R4).', 'Nothing lets an owner revoke a link.'])
     assert.equal(evaluateFreeGrader(revocation, runData(text)).passed, true, text);
-  for (const text of ['Revoke is covered by task 5.', 'No issues. Revocation is covered.'])
+  for (const text of [
+    'Revoke is covered by task 5.',
+    'No issues. Revocation is covered.',
+    'no expiry test; revoke works',
+    'no expiry test and revoke works',
+    'There is no problem with revocation.',
+  ])
     assert.equal(evaluateFreeGrader(revocation, runData(text)).passed, false, text);
 });
 
