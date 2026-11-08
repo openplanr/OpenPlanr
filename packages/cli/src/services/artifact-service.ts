@@ -244,6 +244,10 @@ export async function updateArtifactFields(
     '(?:(?:\\r?\\n[ \\t]*(?:#[^\\r\\n]*)?)*\\r?\\n(?:[ \\t]+[^ \\t\\r\\n#][^\\r\\n]*|-[ \\t]+[^\\r\\n]*))*';
   for (const [key, value] of Object.entries(allFields)) {
     const pattern = new RegExp(`^${escapeRegExp(key)}:[^\\r\\n]*${blockLines}`, 'm');
+    if (value === undefined) {
+      frontmatter = frontmatter.replace(pattern, '');
+      continue;
+    }
     const formatted = Array.isArray(value)
       ? `[${value.map((item) => yamlEscape(item)).join(', ')}]`
       : typeof value === 'boolean'

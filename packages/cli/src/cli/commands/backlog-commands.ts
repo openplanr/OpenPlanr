@@ -30,15 +30,16 @@ export function configureBacklogCommands(program: Command, root: Command): void 
       async (options: { open?: boolean; files?: string[]; when?: boolean; json?: boolean }) => {
         const projectDir = program.opts().projectDir as string;
         await loadConfig(projectDir);
-        const items = await listBacklog(projectDir, {
+        const { items, warnings } = await listBacklog(projectDir, {
           open: options.open,
           files: options.files,
           noWhen: options.when === false,
         });
         if (options.json) {
-          display.line(JSON.stringify({ items }));
+          display.line(JSON.stringify({ items, warnings }));
           return;
         }
+        for (const warning of warnings) process.stderr.write(`${warning.message}\n`);
         for (const item of items) display.line(`${item.id}\t${item.title}`);
         if (items.length === 0) logger.info('No backlog artifacts found.');
       },

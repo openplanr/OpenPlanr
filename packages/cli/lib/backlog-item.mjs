@@ -269,6 +269,9 @@ export async function createBacklogItem(
   return { id, title: fields.title, artifactPath: relativePath(projectDir, filePath) };
 }
 
+const NON_STRING_SCALAR =
+  /^(?:null|true|false|~|[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:e[+-]?\d+)?|[+-]?0[xob][0-9a-f]+|[+-]?\.(?:inf|nan))$/iu;
+
 /** @param {string} source @returns {string[]} */
 function flowStrings(source) {
   const values = [];
@@ -280,13 +283,7 @@ function flowStrings(source) {
     if (token.startsWith('"')) values.push(JSON.parse(token));
     else if (token.startsWith("'")) values.push(token.slice(1, -1).replaceAll("''", "'"));
     else {
-      if (
-        /^(?:null|true|false|~|[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:e[+-]?\d+)?|[+-]?0[xob][0-9a-f]+|[+-]?\.(?:inf|nan))$/iu.test(
-          plain,
-        ) ||
-        /^[!&*]/u.test(plain) ||
-        /:\s|\s#/u.test(plain)
-      )
+      if (NON_STRING_SCALAR.test(plain) || /^[!&*]/u.test(plain) || /:\s|\s#/u.test(plain))
         throw new Error(`expected a string, received ${JSON.stringify(plain)}`);
       values.push(plain);
     }
@@ -298,44 +295,168 @@ function flowStrings(source) {
   return values;
 }
 
-/**
- * Top-level frontmatter strings and YAML flow arrays.
- * @param {string} text
- * @param {string} filePath
- */
-function frontmatter(text, filePath) {
+/** @param {string} text */
+function frontmatter(text) {
   const block = /^---\n([\s\S]*?)\n---/u.exec(text.replace(/\r\n/gu, '\n'))?.[1] ?? '';
-  /** @type {Record<string, string | string[]>} */
-  const fields = {};
+  /** @type {Map<string, string>} */
+  const fields = new Map();
+  const duplicates = new Set();
+  let key;
   for (const line of block.split('\n')) {
-    const match = /^(\w+):\s*(.*)$/u.exec(line);
-    if (!match) continue;
-    const value = match[2].trim();
-    if (value.startsWith('[')) {
-      try {
-        fields[match[1]] = flowStrings(value);
-      } catch (error) {
-        throw new Error(
-          `${filePath}: frontmatter field "${match[1]}" is not a valid string array: ${/** @type {Error} */ (error).message}`,
-        );
-      }
-      continue;
-    }
-    if (!value.startsWith('"')) {
-      fields[match[1]] = value.replace(/^'(.*)'$/u, (_match, quoted) =>
-        quoted.replaceAll("''", "'"),
-      );
-      continue;
-    }
-    try {
-      fields[match[1]] = String(JSON.parse(value));
-    } catch (error) {
-      throw new Error(
-        `${filePath}: frontmatter field "${match[1]}" is not a valid quoted string: ${/** @type {Error} */ (error).message}`,
-      );
+    const match = /^([^ \t:#]+):[ \t]*(.*)$/u.exec(line);
+    if (match) {
+      key = match[1];
+      if (fields.has(key)) duplicates.add(key);
+      fields.set(key, match[2].startsWith('#') ? '' : match[2]);
+    } else if (key && line.trim() && !line.trimStart().startsWith('#')) {
+      fields.set(key, `${fields.get(key)}\n${line}`);
     }
   }
-  return fields;
+  return { fields, duplicates };
+}
+
+/** @param {string} source */
+function readString(source) {
+  if (/^["']/u.test(source)) {
+    const quoted = /^("(?:\\.|[^"\\])*"|'(?:''|[^'])*')(?:\s+#.*)?$/u.exec(source)?.[1];
+    if (quoted === undefined) throw new Error('expected a quoted string');
+    const values = flowStrings(`[${quoted}]`);
+    if (values.length !== 1) throw new Error('expected one string');
+    return values[0];
+  }
+  const value = source.replace(/\s+#.*$/u, '').trim();
+  if (
+    !value ||
+    NON_STRING_SCALAR.test(value) ||
+    /^[![\]{}&*|>@`"'%#]|^[?-]\s|:\s|[\r\n]/u.test(value)
+  )
+    throw new Error('expected a string');
+  return value;
+}
+
+/** @param {string} source */
+function readStrings(source) {
+  if (source.startsWith('[')) return flowStrings(source);
+  return source.split('\n').map((line) => {
+    const match = /^\s*-\s+(.+)$/u.exec(line);
+    if (!match) throw new Error('expected a flow array or block sequence of strings');
+    return readString(match[1].trim());
+  });
+}
+
+/** @param {string} source */
+function readFiles(source) {
+  const files = readStrings(source);
+  if (files.some((file) => !FILE_PATTERN.test(file)) || new Set(files).size !== files.length)
+    throw new Error(
+      'expected distinct repo-relative paths without traversal, absolute paths, or line numbers',
+    );
+  return files;
+}
+
+/** @param {string} source */
+function readDate(source) {
+  const value = readString(source);
+  const date = new Date(`${value}T00:00:00.000Z`);
+  if (
+    !/^\d{4}-\d{2}-\d{2}$/u.test(value) ||
+    !Number.isFinite(date.getTime()) ||
+    date.toISOString().slice(0, 10) !== value
+  )
+    throw new Error('expected a calendar date in YYYY-MM-DD form');
+  return value;
+}
+
+/** @param {string} text @param {string} path @param {import('./backlog-item.d.mts').BacklogWarning[]} warnings @param {{ id: string, title: string }} fallbacks */
+function readBacklogFields(text, path, warnings, fallbacks) {
+  const { fields, duplicates } = frontmatter(text);
+  const needed = new Set(['id', 'title', 'status', 'when', 'files']);
+  let invalid = false;
+  /**
+   * @template T
+   * @param {string} field
+   * @param {(source: string) => T} parse
+   * @param {boolean} [optional]
+   * @param {T} [fallback]
+   */
+  const read = (field, parse, optional = false, fallback = undefined) => {
+    const source = fields.get(field)?.trim();
+    try {
+      if (duplicates.has(field)) throw new Error('duplicate frontmatter key');
+      if (source === undefined) {
+        if (optional) return undefined;
+        throw new Error('required field is missing');
+      }
+      if ((field === 'when' || field === 'files') && (!source || source.startsWith('#')))
+        return undefined;
+      return parse(source);
+    } catch (error) {
+      const skipped = needed.has(field) && (source !== undefined || fallback === undefined);
+      invalid ||= skipped;
+      const value = source ?? 'missing';
+      const reason = error instanceof Error ? error.message : String(error);
+      warnings.push({
+        path,
+        field,
+        value,
+        message: `${path}: ${field} = ${JSON.stringify(value)}: ${reason}${skipped ? '; skipping item' : ''}.`,
+      });
+      return source === undefined ? fallback : undefined;
+    }
+  };
+  const id = read(
+    'id',
+    (source) => {
+      const value = readString(source);
+      if (!/^[A-Z]+-\d{3,}$/u.test(value))
+        throw new Error('expected an artifact ID such as BL-001');
+      return value;
+    },
+    false,
+    fallbacks.id,
+  );
+  const nonEmptyString = (/** @type {string} */ source) => {
+    const value = readString(source);
+    if (!value.length) throw new Error('expected a non-empty string');
+    return value;
+  };
+  const title = read(
+    'title',
+    nonEmptyString,
+    false,
+    fallbacks.title.trim() ? fallbacks.title : undefined,
+  );
+  const status = read('status', nonEmptyString, false, 'open');
+  const when = read(
+    'when',
+    (source) => {
+      const value = readString(source);
+      if (!value.trim()) return undefined;
+      parseWhen(value);
+      return value;
+    },
+    true,
+  );
+  const files = read('files', readFiles, true);
+  read('priority', (source) => {
+    const value = readString(source);
+    if (!PRIORITIES.includes(value)) throw new Error(`expected one of ${PRIORITIES.join(', ')}`);
+    return value;
+  });
+  read('tags', readStrings);
+  read('created', readDate);
+  read('updated', readDate);
+  read('epicId', readString, true);
+  read(
+    'unverified',
+    (source) => {
+      if (!/^true(?:\s+#.*)?$/iu.test(source)) throw new Error('expected true');
+      return true;
+    },
+    true,
+  );
+  if (invalid || id === undefined || title === undefined || status === undefined) return undefined;
+  return { id, title, status, when, files };
 }
 
 /** @param {string} body */
@@ -357,40 +478,40 @@ export async function listBacklog(projectDir, options = {}) {
   try {
     names = await readdir(backlogDir);
   } catch (error) {
-    if (/** @type {NodeJS.ErrnoException} */ (error).code === 'ENOENT') return [];
+    if (/** @type {NodeJS.ErrnoException} */ (error).code === 'ENOENT')
+      return { items: [], warnings: [] };
     throw error;
   }
   const items = [];
+  /** @type {import('./backlog-item.d.mts').BacklogWarning[]} */
+  const warnings = [];
   for (const name of names.sort((a, b) => a.localeCompare(b, undefined, { numeric: true }))) {
     const match = /^([A-Z]+-\d{3,})-.+\.md$/u.exec(name);
     if (!match) continue;
     const filePath = join(backlogDir, name);
     const text = await readFile(filePath, 'utf8');
-    const fields = frontmatter(text, filePath);
-    const scalar = (/** @type {string} */ key) => {
-      const value = fields[key];
-      if (Array.isArray(value))
-        throw new Error(`${filePath}: frontmatter field "${key}" must be a string.`);
-      return value;
-    };
-    const status = scalar('status') ?? 'open';
+    const path = relativePath(projectDir, filePath);
+    const fields = readBacklogFields(text, path, warnings, {
+      id: match[1],
+      title: name.slice(match[1].length + 1, -3).replace(/-/g, ' '),
+    });
+    if (!fields) continue;
+    const { id, title, status, when } = fields;
     if (options.open && CLOSED_STATUSES.has(status)) continue;
-    const when = scalar('when');
     if (options.noWhen && when !== undefined) continue;
     const body = text.replace(/^---\r?\n[\s\S]*?\r?\n---(?:\r?\n|$)/u, '');
-    const files =
-      fields.files === undefined ? evidenceFiles(body) : normalizeBacklogFiles(fields.files);
+    const files = fields.files === undefined ? evidenceFiles(body) : fields.files;
     if (requestedFiles && !requestedFiles.some((file) => files.includes(file))) continue;
     items.push({
-      id: scalar('id') ?? match[1],
-      title: scalar('title') ?? name.slice(match[1].length + 1, -3).replace(/-/g, ' '),
+      id,
+      title,
       status,
-      path: relativePath(projectDir, filePath),
+      path,
       ...(when === undefined ? {} : { when }),
       files,
     });
   }
-  return items;
+  return { items, warnings };
 }
 
 /** @type {typeof import('./backlog-item.d.mts').listOpenBacklog} */
@@ -471,7 +592,7 @@ async function main(argv) {
   }
   if (command === 'list' && options.open) {
     process.stdout.write(
-      `${JSON.stringify({ items: await listOpenBacklog(projectDir, { files: Array.isArray(options.files) ? options.files : undefined, noWhen: options.noWhen === true }) })}\n`,
+      `${JSON.stringify(await listOpenBacklog(projectDir, { files: Array.isArray(options.files) ? options.files : undefined, noWhen: options.noWhen === true }))}\n`,
     );
     return;
   }

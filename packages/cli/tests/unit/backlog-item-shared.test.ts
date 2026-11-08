@@ -31,6 +31,7 @@ const helpers = [path.join(repoRoot, 'packages', 'cli', 'lib', 'backlog-item.mjs
 
 const roots: string[] = [];
 let printed: string[];
+let warningsPrinted: string[];
 
 function project(): string {
   const dir = mkdtempSync(path.join(tmpdir(), 'openplanr-backlog-shared-'));
@@ -76,9 +77,203 @@ const input = {
 
 beforeEach(() => {
   printed = [];
+  warningsPrinted = [];
   vi.spyOn(console, 'log').mockImplementation((...args: unknown[]) => {
     printed.push(args.map(String).join(' '));
   });
+  vi.spyOn(process.stderr, 'write').mockImplementation((chunk) => {
+    warningsPrinted.push(String(chunk));
+    return true;
+  });
+});
+
+describe.each(['cli', 'helper'])('backlog read warnings through %s', (surface) => {
+  const itemPath = '.planr/backlog/BL-001-candidate.md';
+
+  async function fixture(fields: Record<string, string | null>): Promise<string> {
+    const dir = project();
+    await initProject(dir);
+    let raw = renderBacklogItem('BL-001', backlogFields({ title: 'Candidate' }), '2026-11-08');
+    for (const [field, value] of Object.entries(fields)) {
+      const pattern = new RegExp(`^${field}:.*\\n`, 'm');
+      const replacement = value === null ? '' : `${field}: ${value}\n`;
+      raw = pattern.test(raw)
+        ? raw.replace(pattern, () => replacement)
+        : raw.replace('---\n', `---\n${replacement}`);
+    }
+    writeFileSync(path.join(dir, itemPath), raw);
+    writeFileSync(
+      path.join(dir, '.planr/backlog/BL-002-healthy.md'),
+      renderBacklogItem('BL-002', backlogFields({ title: 'Healthy' }), '2026-11-08'),
+    );
+    return dir;
+  }
+
+  async function list(dir: string, ...flags: string[]) {
+    let raw: string;
+    if (surface === 'cli') {
+      printed = [];
+      await expect(
+        cli(dir, 'backlog', 'list', '--open', '--json', ...flags),
+      ).resolves.toBeUndefined();
+      raw = printed.join('');
+      expect(warningsPrinted).toEqual([]);
+    } else {
+      const result = spawnSync(
+        process.execPath,
+        [helpers[0], 'list', '--project', dir, '--open', ...flags],
+        { encoding: 'utf8' },
+      );
+      expect(result.status, result.stderr).toBe(0);
+      expect(result.stderr).toBe('');
+      raw = result.stdout;
+    }
+    return JSON.parse(raw) as {
+      items: backlog.OpenBacklogItem[];
+      warnings: { path: string; field: string; value: string; message: string }[];
+    };
+  }
+
+  it('reads block files with comments and leaves unrelated YAML alone', async () => {
+    const dir = await fixture({
+      files: '\n  - "src/a.ts"\n\n  # second path\n  - \'src/b.ts\'',
+      tracker: '[not valid YAML',
+    });
+    const result = await list(dir);
+    expect(result.items.map(({ files }) => files)).toEqual([['src/a.ts', 'src/b.ts'], []]);
+    expect(result.warnings).toEqual([]);
+  });
+
+  it('lists a file without frontmatter using filename and status fallbacks', async () => {
+    const dir = project();
+    await initProject(dir);
+    const itemPath = '.planr/backlog/BL-413-extension.md';
+    writeFileSync(path.join(dir, itemPath), '\n## Extension notes\n\nKeep the extension notes.\n');
+    const result = await list(dir);
+    expect(result.items).toEqual([
+      { id: 'BL-413', title: 'extension', status: 'open', path: itemPath, files: [] },
+    ]);
+    expect(result.warnings).toEqual(
+      ['id', 'title', 'status', 'priority', 'tags', 'created', 'updated'].map((field) => ({
+        path: itemPath,
+        field,
+        value: 'missing',
+        message: expect.any(String),
+      })),
+    );
+    for (const warning of result.warnings) {
+      expect(warning.message).toContain(itemPath);
+      expect(warning.message).toContain(warning.field);
+      expect(warning.message).toContain('missing');
+      expect(warning.message).not.toContain('skipping item');
+    }
+  });
+
+  it.each([
+    ['id', 'BL-001'],
+    ['title', 'candidate'],
+    ['status', 'open'],
+  ])('falls back for missing %s with a warning', async (field, fallback) => {
+    const dir = await fixture({ [field]: null });
+    const result = await list(dir);
+    expect(result.items.map(({ id }) => id)).toEqual(['BL-001', 'BL-002']);
+    expect(result.items[0]).toMatchObject({ [field]: fallback });
+    expect(result.warnings).toEqual([
+      { path: itemPath, field, value: 'missing', message: expect.any(String) },
+    ]);
+    expect(result.warnings[0].message).not.toContain('skipping item');
+  });
+
+  it.each([
+    ['files', '["src/a.ts:41"]'],
+    ['files', '["../a.ts"]'],
+    ['files', '["/tmp/a.ts"]'],
+    ['files', '["src/a.ts", "src/a.ts"]'],
+    ['files', '[1]'],
+    ['files', '["unterminated"'],
+    ['files', '\n  - 1'],
+    ['when', '"now"'],
+    ['when', '["sprint:next"]'],
+    ['id', '[BL-001]'],
+    ['id', 'invalid'],
+    ['id', 'null'],
+    ['title', '[WIP] b'],
+    ['title', '"unterminated'],
+    ['status', 'true'],
+    ['status', 'null'],
+  ])('skips unreadable %s = %s while listing healthy items', async (field, value) => {
+    const dir = await fixture({ [field]: value });
+    const result = await list(dir);
+    expect(result.items.map(({ id }) => id)).toEqual(['BL-002']);
+    expect(result.warnings).toEqual([
+      { path: itemPath, field, value: value?.trim() ?? 'missing', message: expect.any(String) },
+    ]);
+    expect(result.items[0]).not.toHaveProperty('when');
+  });
+
+  it.each([
+    ['priority', '"highest"'],
+    ['priority', null],
+    ['tags', '[1]'],
+    ['tags', '["unterminated"'],
+    ['tags', null],
+    ['updated', null],
+    ['created', '"2026-02-30"'],
+    ['epicId', '[EPIC-001]'],
+    ['unverified', 'false'],
+  ])('warns about %s = %s without hiding the item', async (field, value) => {
+    const dir = await fixture({ [field]: value });
+    const result = await list(dir);
+    expect(result.items.map(({ id }) => id)).toEqual(['BL-001', 'BL-002']);
+    expect(result.warnings).toEqual([
+      { path: itemPath, field, value: value ?? 'missing', message: expect.any(String) },
+    ]);
+  });
+
+  it('reports every missing schema field and keeps the item', async () => {
+    const dir = await fixture({ tags: null, updated: null });
+    const result = await list(dir);
+    expect(result.items.map(({ id }) => id)).toEqual(['BL-001', 'BL-002']);
+    expect(result.warnings).toEqual([
+      { path: itemPath, field: 'tags', value: 'missing', message: expect.any(String) },
+      { path: itemPath, field: 'updated', value: 'missing', message: expect.any(String) },
+    ]);
+  });
+
+  it.each(['', '""'])('treats blank when %s as absent under --no-when', async (when) => {
+    const dir = await fixture({ when });
+    const result = await list(dir, '--no-when');
+    expect(result.items.map(({ id }) => id)).toEqual(['BL-001', 'BL-002']);
+    for (const item of result.items) expect(item).not.toHaveProperty('when');
+    expect(result.warnings).toEqual([]);
+  });
+
+  it('treats empty files as absent and still derives body evidence', async () => {
+    const dir = await fixture({ files: '' });
+    writeFileSync(
+      path.join(dir, itemPath),
+      `${readFileSync(path.join(dir, itemPath), 'utf8')}\nEvidence: src/a.ts:41\n`,
+    );
+    const result = await list(dir);
+    expect(result.items[0].files).toEqual(['src/a.ts']);
+    expect(result.warnings).toEqual([]);
+  });
+});
+
+it('prints backlog warnings only on stderr in text mode', async () => {
+  const dir = project();
+  await initProject(dir);
+  const raw = renderBacklogItem('BL-001', backlogFields({ title: 'Visible' }), '2026-11-08');
+  writeFileSync(
+    path.join(dir, '.planr/backlog/BL-001-visible.md'),
+    raw.replace('"medium"', '"highest"'),
+  );
+  await cli(dir, 'backlog', 'list');
+  expect(printed).toEqual(['BL-001\tVisible']);
+  expect(warningsPrinted).toHaveLength(1);
+  expect(warningsPrinted[0]).toContain('.planr/backlog/BL-001-visible.md');
+  expect(warningsPrinted[0]).toContain('priority');
+  expect(warningsPrinted[0]).toContain('highest');
 });
 
 afterEach(() => {
@@ -153,7 +348,7 @@ describe('shared backlog item writer', () => {
     await cli(dir, 'backlog', 'add', 'Open item', '--json');
     await cli(dir, 'backlog', 'add', 'Closed item', '--json');
     await cli(dir, 'backlog', 'update', 'BL-002', '--status', 'closed');
-    expect(await listOpenBacklog(dir)).toEqual([
+    expect((await listOpenBacklog(dir)).items).toEqual([
       {
         id: 'BL-001',
         title: 'Open item',
@@ -222,7 +417,7 @@ describe('backlog filing procedure', () => {
     const data = path.join(dir, 'input.json');
     writeFileSync(data, JSON.stringify({ title: 'New item' }));
     expect(helper(helpers[0], dir, 'add', '--data', data).id).toBe('BL-007');
-    expect((await listOpenBacklog(dir)).map(({ id }) => id)).toEqual(['BL-004', 'BL-007']);
+    expect((await listOpenBacklog(dir)).items.map(({ id }) => id)).toEqual(['BL-004', 'BL-007']);
   });
 });
 
@@ -300,7 +495,7 @@ describe('backlog priority', () => {
       path.join(dir, '.planr', 'backlog', 'BL-001-legacy.md'),
       '---\nid: "BL-001"\ntitle: "Legacy"\npriority: "highest"\ntags: []\nstatus: "open"\ncreated: "2026-01-01"\nupdated: "2026-01-01"\n---\n\n# BL-001: Legacy\n',
     );
-    expect(await listOpenBacklog(dir)).toEqual([
+    expect((await listOpenBacklog(dir)).items).toEqual([
       {
         id: 'BL-001',
         title: 'Legacy',
@@ -465,7 +660,7 @@ describe('backlog scheduling and files', () => {
         `---\nid: "${id}"\ntitle: "Old"\ntags: [old, 'a,b', "quoted"]\n${metadata}---\n${body}\n`,
       );
     }
-    const items = await listOpenBacklog(dir);
+    const { items } = await listOpenBacklog(dir);
     expect(items.map(({ files }) => files)).toEqual([['src/a.ts', 'src/b.ts', 'root.ts'], []]);
   });
 
@@ -477,9 +672,13 @@ describe('backlog scheduling and files', () => {
       const file = path.join(dir, '.planr/backlog/BL-001-invalid.md');
       for (const value of ['["missing bracket"', '[12]', '["a" "b"]']) {
         writeFileSync(file, `---\nid: "BL-001"\n${key}: ${value}\n---\n`);
-        await expect(listOpenBacklog(dir)).rejects.toThrow(
-          new RegExp(`BL-001-invalid\\.md:.*${key}.*array`),
-        );
+        const { warnings } = await listOpenBacklog(dir);
+        expect(warnings).toContainEqual({
+          path: '.planr/backlog/BL-001-invalid.md',
+          field: key,
+          value,
+          message: expect.any(String),
+        });
       }
     },
   );
@@ -526,7 +725,7 @@ describe('backlog scheduling and files', () => {
     expect(backlogFile(dir, 'BL-001')).toContain('files: ["x.ts", "y.ts"]');
     await cli(dir, 'backlog', 'update', 'BL-002', '--when', 'sprint:next');
     expect(backlogFile(dir, 'BL-002')).toContain('when: "sprint:next"');
-    expect((await listOpenBacklog(dir))[0].when).toBe('next-unit:#612');
+    expect((await listOpenBacklog(dir)).items[0].when).toBe('next-unit:#612');
     printed = [];
     await cli(dir, 'backlog', 'list', '--json');
     expect(JSON.parse(printed.join('')).items).toHaveLength(3);

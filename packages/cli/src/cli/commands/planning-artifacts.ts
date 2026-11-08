@@ -303,13 +303,11 @@ async function create(type: PlanningType, program: Command, options: Record<stri
         )
       : await createArtifact(projectDir, config, type, templates[type], data);
   if (backlogOverride) {
-    const metadata = Object.fromEntries(
-      ['when', 'files', 'unverified']
-        .filter((key) => data[key] !== undefined)
-        .map((key) => [key, data[key]]),
-    );
-    if (Object.keys(metadata).length > 0)
-      await updateArtifactFields(projectDir, config, 'backlog', result.id, metadata);
+    await updateArtifactFields(projectDir, config, 'backlog', result.id, {
+      when: data.when,
+      files: data.files ?? [],
+      ...(data.unverified === undefined ? {} : { unverified: data.unverified }),
+    });
   }
   const artifactPath = path.relative(projectDir, result.filePath).split(path.sep).join('/');
 

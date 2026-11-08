@@ -22,6 +22,20 @@ export interface OpenBacklogItem {
   readonly files: readonly string[];
 }
 
+/** One unreadable or invalid field; value is its raw YAML or "missing". */
+export interface BacklogWarning {
+  readonly path: string;
+  readonly field: string;
+  readonly value: string;
+  readonly message: string;
+}
+
+/** Readable backlog items and per-field diagnostics. */
+export interface BacklogList {
+  readonly items: OpenBacklogItem[];
+  readonly warnings: BacklogWarning[];
+}
+
 /** A stored scheduling decision. */
 export interface BacklogWhen {
   readonly kind: 'next-unit' | 'sprint' | 'trigger' | 'declined';
@@ -69,11 +83,11 @@ export declare function createBacklogItem(
 export declare function listOpenBacklog(
   projectDir: string,
   options?: BacklogFilters,
-): Promise<OpenBacklogItem[]>;
+): Promise<BacklogList>;
 /** Lists backlog items, optionally restricting them to open items. */
 export declare function listBacklog(
   projectDir: string,
   options?: BacklogFilters & { readonly open?: boolean },
-): Promise<OpenBacklogItem[]>;
+): Promise<BacklogList>;
 /** Returns the install hint and records it in `.planr/config.json`, or null once it has been shown in this project. */
 export declare function takeCliHint(projectDir: string): Promise<string | null>;

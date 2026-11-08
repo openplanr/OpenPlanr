@@ -184,14 +184,23 @@ ID, or branch. Trigger events may be `date:YYYY-MM-DD`, `closed:<BL-NNN>`,
 
 `list` includes all statuses by default. `--open` excludes `closed` and `done`;
 `--files` keeps items overlapping any supplied path; `--no-when` keeps items
-without `when`. Filters combine. `--json` returns `{ "items": [...] }` with each
+without `when`, including blank values. Filters combine. `--json` returns
+`{ "items": [...], "warnings": [...] }` with each
 item's ID, title, status, project-relative path, files, and optional when. For old
 items without `files`, listing derives distinct paths from body `file:line`,
 `file:line:column`, or `file:line-line` evidence without rewriting the item.
+Listing also accepts block-sequence `files`; an empty `files:` uses body evidence.
+Invalid `id`, `title`, `status`, `when`, or `files` skips that item with a warning.
+Missing `id` or `title` falls back to the filename; missing `status` reads as `open`.
+Each missing field still produces a warning, including for files without frontmatter.
+Other backlog schema violations warn while keeping the item. Each warning includes
+the project-relative `path`, `field`, raw YAML `value` (or `"missing"`), and `message`.
+The shared helper's `list --open` returns the same items and warnings.
 
 Custom `backlog/backlog-item.md.hbs` templates receive `when`, `files`, and
 `unverified` when provided. Those keys are post-written into the template's
-frontmatter; the custom template owns its body.
+frontmatter; omitted files become `[]` and an omitted `when` key is removed.
+The custom template owns its body.
 
 ### `openplanr sprint` refinement
 
