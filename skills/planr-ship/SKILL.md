@@ -87,8 +87,13 @@ Inspect these sources directly, in this order:
 
 List each candidate check with its `cwd` and the source that named it. Discovery
 only reads: never execute a check while discovering. Then run the candidates from
-each `cwd`. Missing commands are diagnostics, not a reason to invent or skip all
-verification.
+each `cwd`. Let the change pick checks: when it touches a build input (a
+`tsconfig*.json`, a bundler config, or a package's `main`, `exports`, `bin` or
+`build` scripts), include the build CI runs; prefer tests related to the changed
+files. Before pushing, include every CI job whose triggers and path filters fire
+for the changed paths, and for a published package that gains non-code files, a
+dry-run pack that confirms they are packed. Missing commands are diagnostics, not
+a reason to invent or skip all verification.
 
 If `openplanr` is already on `PATH`, `openplanr ship checks --json --task <task-path>`
 (omit `--task` for a direct request; add `--tier story` or `--tier push` before

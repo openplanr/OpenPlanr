@@ -57,6 +57,13 @@ test('Ship discovers verification in the specified order and treats risk metadat
   assert.match(skill, /Missing commands are diagnostics/u);
   assert.match(skill, /Inspect these sources directly, in this order/u);
   assert.match(skill, /never execute a check while discovering/u);
+  for (const rule of [
+    /touches a build input/u,
+    /prefer tests related to the changed\s+files/u,
+    /every CI job whose triggers and path filters fire/u,
+    /dry-run pack that confirms they are packed/u,
+  ])
+    assert.match(skill, rule);
   assert.match(
     skill,
     /If `openplanr` is already on `PATH`, `openplanr ship checks --json\s+--task <task-path>`/u,
