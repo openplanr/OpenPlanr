@@ -1,76 +1,11 @@
 import { readFileSync } from 'node:fs';
-import { posix } from 'node:path';
 import { sha256Bytes } from '../../packages/skill-runtime/src/compiler/index.mjs';
 
-const OPERATE_SKILL_IDS = new Set([
-  'planr-operate',
-  'planr-chair-review',
-  'planr-challenger-review',
-  'planr-ceo-review',
-  'planr-cto-review',
-  'planr-cpo-review',
-  'planr-cmo-review',
-  'planr-coo-review',
-]);
-
-function runtimeGroup(skillId, path) {
-  return OPERATE_SKILL_IDS.has(skillId) && path.startsWith('scripts/') ? 'operate' : null;
-}
-
-/** The canonical package remains portable; this mapping belongs to complete native suites. */
-export function suiteResourcePath(skillId, path, skillRoot) {
-  const group = runtimeGroup(skillId, path);
-  return group ? `runtime/${group}/${path}` : `${skillRoot}/${path}`;
-}
-
-/** Imported modules never rely on their direct-execution guard to run a helper. */
-export function renderSuiteLauncher({ skillId, path, skillRoot }) {
-  if (!runtimeGroup(skillId, path) || path !== 'scripts/validate-note.mjs') return null;
-  const target = suiteResourcePath(skillId, path, skillRoot);
-  const relative = posix.relative(posix.dirname(`${skillRoot}/${path}`), target);
-  const error = "`${error.code ?? 'E_OPERATE_NOTE'}: ${error.message}\\n`";
-  return `#!/usr/bin/env node
-// Generated package-relative launcher; no global runtime or invocation downloads.
-import { existsSync, realpathSync } from 'node:fs';
-import { resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
-import { runOperateReviewNoteValidator as run } from ${JSON.stringify(relative)};
-export * from ${JSON.stringify(relative)};
-if (process.argv[1] && existsSync(resolve(process.argv[1])) &&
-  realpathSync(fileURLToPath(import.meta.url)) === realpathSync(resolve(process.argv[1]))) {
-  try { await run(process.argv.slice(2)); }
-  catch (error) { process.stderr.write(${error}); process.exitCode = 1; }
-}
-`;
-}
-
-/** Resources kept beside the host-readable entry, including its thin helper launchers. */
-export function suiteLocalResources(packageInfo, host, skillRoot) {
+/** Resources kept beside the host-readable entry. */
+export function suiteLocalResources(packageInfo, host) {
   return packageInfo.resources
     .filter(({ hosts }) => hosts.includes(host))
-    .flatMap((resource) => {
-      const launcher = renderSuiteLauncher({
-        skillId: packageInfo.row.skillId,
-        path: resource.path,
-        skillRoot,
-      });
-      if (launcher !== null) return [{ ...resource, bytes: Buffer.from(launcher) }];
-      if (runtimeGroup(packageInfo.row.skillId, resource.path)) return [];
-      return [{ ...resource, bytes: readFileSync(resource.absolute) }];
-    });
-}
-
-/** Complete executable closures are placed once per suite and retain their relative asset layout. */
-export function suiteSharedResources(packageInfo, host, skillRoot) {
-  return packageInfo.resources
-    .filter(
-      ({ hosts, path }) => hosts.includes(host) && runtimeGroup(packageInfo.row.skillId, path),
-    )
-    .map((resource) => ({
-      ...resource,
-      path: suiteResourcePath(packageInfo.row.skillId, resource.path, skillRoot),
-      bytes: readFileSync(resource.absolute),
-    }));
+    .map((resource) => ({ ...resource, bytes: readFileSync(resource.absolute) }));
 }
 
 /** Measured inventories replace authored resource totals that drift when dependencies change. */
