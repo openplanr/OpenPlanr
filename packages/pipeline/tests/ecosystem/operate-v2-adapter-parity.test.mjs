@@ -1,16 +1,6 @@
 import assert from 'node:assert/strict';
-import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import {
-  cpSync,
-  existsSync,
-  mkdtempSync,
-  readdirSync,
-  readFileSync,
-  rmSync,
-  writeFileSync,
-} from 'node:fs';
-import { tmpdir } from 'node:os';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { dirname, join, posix, resolve } from 'node:path';
 import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
@@ -19,7 +9,6 @@ import {
   renderCursorSkillBody,
   renderNamespacedSkill,
 } from '../../../../scripts/skills/host-invocations.mjs';
-import { inspectOperateReviewNote } from '../../../skill-runtime/src/operate-review-note.mjs';
 import { BUSINESS_EXECUTIVE_SKILL_BINDINGS } from '../../lib/operate/contracts/role-skills.mjs';
 
 const PIPELINE_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
@@ -94,38 +83,18 @@ function verifyPackageInventory(host) {
 function verifyOperateResources(host, skillId, skillRoot, resources, inventory) {
   for (const resource of resources.filter(({ kind }) => kind !== 'agent-metadata')) {
     const localPath = `${skillRoot}/${resource.path}`;
-    const canonical = readFileSync(join(WORKSPACE_ROOT, `skills/${skillId}/${resource.path}`));
-    if (!resource.path.startsWith('scripts/')) {
-      assert.ok(inventory.has(localPath), `${host}/${localPath}: inventoried reference`);
-      assert.deepEqual(
-        readFileSync(join(WORKSPACE_ROOT, `dist/plugins/${host}/openplanr/${localPath}`)),
-        canonical,
-        `${skillId}: ${host} ${resource.path}`,
-      );
-      continue;
-    }
-    const sharedPath = `runtime/operate/${resource.path}`;
-    assert.ok(inventory.has(sharedPath), `${host}/${sharedPath}: inventoried shared resource`);
+    assert.ok(!resource.path.startsWith('scripts/'), `${skillId}: no packaged helper script`);
+    assert.ok(inventory.has(localPath), `${host}/${localPath}: inventoried reference`);
     assert.deepEqual(
-      readFileSync(join(WORKSPACE_ROOT, `dist/plugins/${host}/openplanr/${sharedPath}`)),
-      canonical,
-      `${skillId}: ${host} canonical shared ${resource.path}`,
+      readFileSync(join(WORKSPACE_ROOT, `dist/plugins/${host}/openplanr/${localPath}`)),
+      readFileSync(join(WORKSPACE_ROOT, `skills/${skillId}/${resource.path}`)),
+      `${skillId}: ${host} ${resource.path}`,
     );
-    if (resource.path !== 'scripts/validate-note.mjs') {
-      assert.ok(!inventory.has(localPath), `${host}/${localPath}: no duplicate runtime`);
-      continue;
-    }
-    assert.ok(inventory.has(localPath), `${host}/${localPath}: advertised launcher`);
-    const launcher = readWorkspace(`dist/plugins/${host}/openplanr/${localPath}`);
-    const target = JSON.stringify(posix.relative(posix.dirname(localPath), sharedPath));
-    assert.ok(
-      launcher.includes(`import { runOperateReviewNoteValidator as run } from ${target};`),
-      `${skillId}: ${host} launcher imports the shared entry`,
-    );
-    assert.ok(launcher.includes(`export * from ${target};`), `${skillId}: ${host} public exports`);
-    assert.match(launcher, /await run\(process\.argv\.slice\(2\)\)/u);
-    assert.doesNotMatch(launcher, /https?:|npm |npx |PLANR_HOME|NODE_PATH/u);
   }
+  assert.ok(
+    resources.some(({ path }) => path === 'references/note-checklist.md'),
+    `${skillId}: ${host} declares the note checklist`,
+  );
 }
 
 test('the canonical catalog contains one Operate orchestrator and seven role skills', () => {
@@ -168,9 +137,7 @@ test('OpenAI and Claude preserve canonical Operate instructions and one verified
       {
         ...manifest,
         resources: manifest.resources.filter(
-          ({ path, hosts }) =>
-            hosts.includes('codex') &&
-            (!path.startsWith('scripts/') || path === 'scripts/validate-note.mjs'),
+          ({ path, hosts }) => hosts.includes('codex') && !path.startsWith('scripts/'),
         ),
       },
       `${skillId}: OpenAI manifest`,
@@ -245,48 +212,28 @@ test('Cursor rules preserve canonical Operate bodies and deterministic resources
   }
 });
 
-test('all packaged Operate validators execute offline through their shared closure after relocation', () => {
-  const note = '# Invalid synthetic review\n';
-  const expected = inspectOperateReviewNote(note, { profile: 'advisor' });
-  assert.equal(expected.ok, false);
-  const temporary = mkdtempSync(join(tmpdir(), 'openplanr-operate-suite-parity-'));
-  try {
-    const input = join(temporary, 'review.md');
-    writeFileSync(input, note);
-    for (const host of ['openai', 'claude', 'cursor']) {
-      const plugin = join(temporary, host, 'openplanr');
-      cpSync(join(WORKSPACE_ROOT, `dist/plugins/${host}/openplanr`), plugin, { recursive: true });
-      for (const skillId of OPERATE_SKILL_IDS) {
-        const skillRoot =
-          host === 'cursor' ? `rules/${skillId}` : `skills/${projectedSkillName(skillId)}`;
-        const result = spawnSync(
-          process.execPath,
-          [join(plugin, skillRoot, 'scripts/validate-note.mjs'), input, '--profile', 'advisor'],
-          { cwd: temporary, encoding: 'utf8', env: { PATH: '/usr/bin:/bin' } },
-        );
-        assert.equal(result.status, 1, `${host}/${skillId}: ${result.stderr}`);
-        assert.equal(result.stderr, '', `${host}/${skillId}: structured validation result`);
-        assert.deepEqual(JSON.parse(result.stdout), expected, `${host}/${skillId}: validation`);
-      }
-      rmSync(join(plugin, 'runtime/operate/scripts/errors.mjs'));
-      const missing = spawnSync(
-        process.execPath,
-        [
-          join(
-            plugin,
-            host === 'cursor' ? 'rules/planr-ceo-review' : 'skills/ceo-review',
-            'scripts/validate-note.mjs',
-          ),
-          input,
-        ],
-        { cwd: temporary, encoding: 'utf8', env: { PATH: '/usr/bin:/bin' } },
+test('Operate bundles ship the shared note checklist and no helper scripts', () => {
+  const checklist = readFileSync(join(WORKSPACE_ROOT, 'skills/shared/note-checklist.md'));
+  for (const host of ['openai', 'claude', 'cursor']) {
+    const plugin = join(WORKSPACE_ROOT, `dist/plugins/${host}/openplanr`);
+    const files = packageFiles(plugin);
+    assert.ok(
+      !files.some((path) => path.startsWith('runtime/operate/')),
+      `${host}: runtime/operate`,
+    );
+    for (const skillId of OPERATE_SKILL_IDS) {
+      const skillRoot =
+        host === 'cursor' ? `rules/${skillId}` : `skills/${projectedSkillName(skillId)}`;
+      assert.ok(
+        !files.some((path) => path.startsWith(`${skillRoot}/scripts/`)),
+        `${host}/${skillId}: no scripts`,
       );
-      assert.equal(missing.status, 1, `${host}: missing closure fails`);
-      assert.match(missing.stderr, /ERR_MODULE_NOT_FOUND/u);
-      assert.equal(missing.stdout, '', `${host}: no source-checkout or global fallback`);
+      assert.deepEqual(
+        readFileSync(join(plugin, skillRoot, 'references/note-checklist.md')),
+        checklist,
+        `${host}/${skillId}: note checklist`,
+      );
     }
-  } finally {
-    rmSync(temporary, { recursive: true, force: true });
   }
 });
 

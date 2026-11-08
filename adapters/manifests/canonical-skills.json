@@ -158,7 +158,7 @@
     },
     {
       "id": "planr-ceo-review",
-      "version": "2.0.1",
+      "version": "2.1.0",
       "source": "skills/planr-ceo-review/openplanr.skill.json",
       "entrypoint": "skills/planr-ceo-review/SKILL.md",
       "description": "Produce a grounded strategy and finance review for an Operate cycle. Use when direction, runway, margin, investment, or cost of delay needs a CEO lens.",
@@ -174,23 +174,11 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:3153403563d422f395add6a2afd6d249737b8807e4ab31db5b830d82d7814fc5"
+          "digest": "sha256:7d33addcfea3e8de7f8fb35862fc1ee70d5b4c1557bb2e35051c48032a4f29cf"
         },
         {
-          "path": "scripts/validate-note.mjs",
-          "kind": "script",
-          "hosts": [
-            "claude-code",
-            "codex",
-            "chatgpt",
-            "cursor"
-          ],
-          "executable": true,
-          "digest": "sha256:5955daf739c410c970b998913c106c4f147b0eff47e4433c01eaf06471bfd651"
-        },
-        {
-          "path": "scripts/operate-review-note.mjs",
-          "kind": "script",
+          "path": "references/note-checklist.md",
+          "kind": "reference",
           "hosts": [
             "claude-code",
             "codex",
@@ -198,31 +186,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:10fd0d90e5ec8674a9df0b4dabcb44c0c90ca63a72ea42194d69d365034c94aa"
-        },
-        {
-          "path": "scripts/operate-review-contract.mjs",
-          "kind": "script",
-          "hosts": [
-            "claude-code",
-            "codex",
-            "chatgpt",
-            "cursor"
-          ],
-          "executable": false,
-          "digest": "sha256:76de44f9fda5444ad5b4805ae16b21221cde19a99669140ea7a6f032f383edcd"
-        },
-        {
-          "path": "scripts/errors.mjs",
-          "kind": "script",
-          "hosts": [
-            "claude-code",
-            "codex",
-            "chatgpt",
-            "cursor"
-          ],
-          "executable": false,
-          "digest": "sha256:6c02fdf441b22fc101a764c928bb0e98fa0a93a602183463c44adc3f8e1d7f79"
+          "digest": "sha256:3b90a1b5daa9d757b89d8d7a810af14dcbdb0481195ed128100b9251cc4235d1"
         },
         {
           "path": "agents/openai.yaml",
@@ -255,27 +219,15 @@
     },
     {
       "id": "planr-chair-review",
-      "version": "2.0.1",
+      "version": "2.1.0",
       "source": "skills/planr-chair-review/openplanr.skill.json",
       "entrypoint": "skills/planr-chair-review/SKILL.md",
       "description": "Synthesize an Operate cycle into a prioritized decision queue and action plan. Use after specialist reviews when leadership needs one coherent brief.",
-      "sourceDigest": "sha256:4fced17b54363f75adf5fc398ecbcd8b71d9312e6a50d200141479709941c18a",
+      "sourceDigest": "sha256:f591f38df841cd8c49cc3f682a4685c40756f8f4d8f3a4add2d0bc1ddef0191a",
       "resources": [
         {
-          "path": "scripts/validate-note.mjs",
-          "kind": "script",
-          "hosts": [
-            "claude-code",
-            "codex",
-            "chatgpt",
-            "cursor"
-          ],
-          "executable": true,
-          "digest": "sha256:5955daf739c410c970b998913c106c4f147b0eff47e4433c01eaf06471bfd651"
-        },
-        {
-          "path": "scripts/operate-review-note.mjs",
-          "kind": "script",
+          "path": "references/note-checklist.md",
+          "kind": "reference",
           "hosts": [
             "claude-code",
             "codex",
@@ -283,31 +235,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:10fd0d90e5ec8674a9df0b4dabcb44c0c90ca63a72ea42194d69d365034c94aa"
-        },
-        {
-          "path": "scripts/operate-review-contract.mjs",
-          "kind": "script",
-          "hosts": [
-            "claude-code",
-            "codex",
-            "chatgpt",
-            "cursor"
-          ],
-          "executable": false,
-          "digest": "sha256:76de44f9fda5444ad5b4805ae16b21221cde19a99669140ea7a6f032f383edcd"
-        },
-        {
-          "path": "scripts/errors.mjs",
-          "kind": "script",
-          "hosts": [
-            "claude-code",
-            "codex",
-            "chatgpt",
-            "cursor"
-          ],
-          "executable": false,
-          "digest": "sha256:6c02fdf441b22fc101a764c928bb0e98fa0a93a602183463c44adc3f8e1d7f79"
+          "digest": "sha256:3b90a1b5daa9d757b89d8d7a810af14dcbdb0481195ed128100b9251cc4235d1"
         },
         {
           "path": "agents/openai.yaml",
@@ -340,27 +268,15 @@
     },
     {
       "id": "planr-challenger-review",
-      "version": "2.0.1",
+      "version": "2.1.0",
       "source": "skills/planr-challenger-review/openplanr.skill.json",
       "entrypoint": "skills/planr-challenger-review/SKILL.md",
       "description": "Challenge an Operate cycle's claims, alternatives, downside, and confidence. Use when assumptions or executive consensus need an independent stress test.",
-      "sourceDigest": "sha256:efe067213aa85ab7857fe4afd397e9daadf0a5569dc6587ed0c5e18a12424a81",
+      "sourceDigest": "sha256:47aca9410cb193b5bb6d33fce9ee0962e8d9c1ac13ae9bb66e0edbe80810ead1",
       "resources": [
         {
-          "path": "scripts/validate-note.mjs",
-          "kind": "script",
-          "hosts": [
-            "claude-code",
-            "codex",
-            "chatgpt",
-            "cursor"
-          ],
-          "executable": true,
-          "digest": "sha256:5955daf739c410c970b998913c106c4f147b0eff47e4433c01eaf06471bfd651"
-        },
-        {
-          "path": "scripts/operate-review-note.mjs",
-          "kind": "script",
+          "path": "references/note-checklist.md",
+          "kind": "reference",
           "hosts": [
             "claude-code",
             "codex",
@@ -368,31 +284,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:10fd0d90e5ec8674a9df0b4dabcb44c0c90ca63a72ea42194d69d365034c94aa"
-        },
-        {
-          "path": "scripts/operate-review-contract.mjs",
-          "kind": "script",
-          "hosts": [
-            "claude-code",
-            "codex",
-            "chatgpt",
-            "cursor"
-          ],
-          "executable": false,
-          "digest": "sha256:76de44f9fda5444ad5b4805ae16b21221cde19a99669140ea7a6f032f383edcd"
-        },
-        {
-          "path": "scripts/errors.mjs",
-          "kind": "script",
-          "hosts": [
-            "claude-code",
-            "codex",
-            "chatgpt",
-            "cursor"
-          ],
-          "executable": false,
-          "digest": "sha256:6c02fdf441b22fc101a764c928bb0e98fa0a93a602183463c44adc3f8e1d7f79"
+          "digest": "sha256:3b90a1b5daa9d757b89d8d7a810af14dcbdb0481195ed128100b9251cc4235d1"
         },
         {
           "path": "agents/openai.yaml",
@@ -425,7 +317,7 @@
     },
     {
       "id": "planr-cmo-review",
-      "version": "2.0.1",
+      "version": "2.1.0",
       "source": "skills/planr-cmo-review/openplanr.skill.json",
       "entrypoint": "skills/planr-cmo-review/SKILL.md",
       "description": "Produce a grounded market and growth review for an Operate cycle. Use when acquisition, positioning, demand, retention, or missing measurement needs a CMO lens.",
@@ -441,23 +333,11 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:3153403563d422f395add6a2afd6d249737b8807e4ab31db5b830d82d7814fc5"
+          "digest": "sha256:7d33addcfea3e8de7f8fb35862fc1ee70d5b4c1557bb2e35051c48032a4f29cf"
         },
         {
-          "path": "scripts/validate-note.mjs",
-          "kind": "script",
-          "hosts": [
-            "claude-code",
-            "codex",
-            "chatgpt",
-            "cursor"
-          ],
-          "executable": true,
-          "digest": "sha256:5955daf739c410c970b998913c106c4f147b0eff47e4433c01eaf06471bfd651"
-        },
-        {
-          "path": "scripts/operate-review-note.mjs",
-          "kind": "script",
+          "path": "references/note-checklist.md",
+          "kind": "reference",
           "hosts": [
             "claude-code",
             "codex",
@@ -465,31 +345,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:10fd0d90e5ec8674a9df0b4dabcb44c0c90ca63a72ea42194d69d365034c94aa"
-        },
-        {
-          "path": "scripts/operate-review-contract.mjs",
-          "kind": "script",
-          "hosts": [
-            "claude-code",
-            "codex",
-            "chatgpt",
-            "cursor"
-          ],
-          "executable": false,
-          "digest": "sha256:76de44f9fda5444ad5b4805ae16b21221cde19a99669140ea7a6f032f383edcd"
-        },
-        {
-          "path": "scripts/errors.mjs",
-          "kind": "script",
-          "hosts": [
-            "claude-code",
-            "codex",
-            "chatgpt",
-            "cursor"
-          ],
-          "executable": false,
-          "digest": "sha256:6c02fdf441b22fc101a764c928bb0e98fa0a93a602183463c44adc3f8e1d7f79"
+          "digest": "sha256:3b90a1b5daa9d757b89d8d7a810af14dcbdb0481195ed128100b9251cc4235d1"
         },
         {
           "path": "agents/openai.yaml",
@@ -571,7 +427,7 @@
     },
     {
       "id": "planr-coo-review",
-      "version": "2.0.1",
+      "version": "2.1.0",
       "source": "skills/planr-coo-review/openplanr.skill.json",
       "entrypoint": "skills/planr-coo-review/SKILL.md",
       "description": "Produce a grounded operations and customer-health review for an Operate cycle. Use when readiness, service delivery, capacity, or customer health needs a COO lens.",
@@ -587,23 +443,11 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:3153403563d422f395add6a2afd6d249737b8807e4ab31db5b830d82d7814fc5"
+          "digest": "sha256:7d33addcfea3e8de7f8fb35862fc1ee70d5b4c1557bb2e35051c48032a4f29cf"
         },
         {
-          "path": "scripts/validate-note.mjs",
-          "kind": "script",
-          "hosts": [
-            "claude-code",
-            "codex",
-            "chatgpt",
-            "cursor"
-          ],
-          "executable": true,
-          "digest": "sha256:5955daf739c410c970b998913c106c4f147b0eff47e4433c01eaf06471bfd651"
-        },
-        {
-          "path": "scripts/operate-review-note.mjs",
-          "kind": "script",
+          "path": "references/note-checklist.md",
+          "kind": "reference",
           "hosts": [
             "claude-code",
             "codex",
@@ -611,31 +455,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:10fd0d90e5ec8674a9df0b4dabcb44c0c90ca63a72ea42194d69d365034c94aa"
-        },
-        {
-          "path": "scripts/operate-review-contract.mjs",
-          "kind": "script",
-          "hosts": [
-            "claude-code",
-            "codex",
-            "chatgpt",
-            "cursor"
-          ],
-          "executable": false,
-          "digest": "sha256:76de44f9fda5444ad5b4805ae16b21221cde19a99669140ea7a6f032f383edcd"
-        },
-        {
-          "path": "scripts/errors.mjs",
-          "kind": "script",
-          "hosts": [
-            "claude-code",
-            "codex",
-            "chatgpt",
-            "cursor"
-          ],
-          "executable": false,
-          "digest": "sha256:6c02fdf441b22fc101a764c928bb0e98fa0a93a602183463c44adc3f8e1d7f79"
+          "digest": "sha256:3b90a1b5daa9d757b89d8d7a810af14dcbdb0481195ed128100b9251cc4235d1"
         },
         {
           "path": "agents/openai.yaml",
@@ -668,7 +488,7 @@
     },
     {
       "id": "planr-cpo-review",
-      "version": "2.0.1",
+      "version": "2.1.0",
       "source": "skills/planr-cpo-review/openplanr.skill.json",
       "entrypoint": "skills/planr-cpo-review/SKILL.md",
       "description": "Produce a grounded product and activation review for an Operate cycle. Use when customer value, activation, prioritization, or adoption needs a CPO lens.",
@@ -684,23 +504,11 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:3153403563d422f395add6a2afd6d249737b8807e4ab31db5b830d82d7814fc5"
+          "digest": "sha256:7d33addcfea3e8de7f8fb35862fc1ee70d5b4c1557bb2e35051c48032a4f29cf"
         },
         {
-          "path": "scripts/validate-note.mjs",
-          "kind": "script",
-          "hosts": [
-            "claude-code",
-            "codex",
-            "chatgpt",
-            "cursor"
-          ],
-          "executable": true,
-          "digest": "sha256:5955daf739c410c970b998913c106c4f147b0eff47e4433c01eaf06471bfd651"
-        },
-        {
-          "path": "scripts/operate-review-note.mjs",
-          "kind": "script",
+          "path": "references/note-checklist.md",
+          "kind": "reference",
           "hosts": [
             "claude-code",
             "codex",
@@ -708,31 +516,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:10fd0d90e5ec8674a9df0b4dabcb44c0c90ca63a72ea42194d69d365034c94aa"
-        },
-        {
-          "path": "scripts/operate-review-contract.mjs",
-          "kind": "script",
-          "hosts": [
-            "claude-code",
-            "codex",
-            "chatgpt",
-            "cursor"
-          ],
-          "executable": false,
-          "digest": "sha256:76de44f9fda5444ad5b4805ae16b21221cde19a99669140ea7a6f032f383edcd"
-        },
-        {
-          "path": "scripts/errors.mjs",
-          "kind": "script",
-          "hosts": [
-            "claude-code",
-            "codex",
-            "chatgpt",
-            "cursor"
-          ],
-          "executable": false,
-          "digest": "sha256:6c02fdf441b22fc101a764c928bb0e98fa0a93a602183463c44adc3f8e1d7f79"
+          "digest": "sha256:3b90a1b5daa9d757b89d8d7a810af14dcbdb0481195ed128100b9251cc4235d1"
         },
         {
           "path": "agents/openai.yaml",
@@ -765,7 +549,7 @@
     },
     {
       "id": "planr-cto-review",
-      "version": "2.0.1",
+      "version": "2.1.0",
       "source": "skills/planr-cto-review/openplanr.skill.json",
       "entrypoint": "skills/planr-cto-review/SKILL.md",
       "description": "Produce a grounded technology and delivery-risk review for an Operate cycle. Use when architecture, reliability, security, or execution risk needs a CTO lens.",
@@ -781,23 +565,11 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:3153403563d422f395add6a2afd6d249737b8807e4ab31db5b830d82d7814fc5"
+          "digest": "sha256:7d33addcfea3e8de7f8fb35862fc1ee70d5b4c1557bb2e35051c48032a4f29cf"
         },
         {
-          "path": "scripts/validate-note.mjs",
-          "kind": "script",
-          "hosts": [
-            "claude-code",
-            "codex",
-            "chatgpt",
-            "cursor"
-          ],
-          "executable": true,
-          "digest": "sha256:5955daf739c410c970b998913c106c4f147b0eff47e4433c01eaf06471bfd651"
-        },
-        {
-          "path": "scripts/operate-review-note.mjs",
-          "kind": "script",
+          "path": "references/note-checklist.md",
+          "kind": "reference",
           "hosts": [
             "claude-code",
             "codex",
@@ -805,31 +577,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:10fd0d90e5ec8674a9df0b4dabcb44c0c90ca63a72ea42194d69d365034c94aa"
-        },
-        {
-          "path": "scripts/operate-review-contract.mjs",
-          "kind": "script",
-          "hosts": [
-            "claude-code",
-            "codex",
-            "chatgpt",
-            "cursor"
-          ],
-          "executable": false,
-          "digest": "sha256:76de44f9fda5444ad5b4805ae16b21221cde19a99669140ea7a6f032f383edcd"
-        },
-        {
-          "path": "scripts/errors.mjs",
-          "kind": "script",
-          "hosts": [
-            "claude-code",
-            "codex",
-            "chatgpt",
-            "cursor"
-          ],
-          "executable": false,
-          "digest": "sha256:6c02fdf441b22fc101a764c928bb0e98fa0a93a602183463c44adc3f8e1d7f79"
+          "digest": "sha256:3b90a1b5daa9d757b89d8d7a810af14dcbdb0481195ed128100b9251cc4235d1"
         },
         {
           "path": "agents/openai.yaml",
@@ -2207,27 +1955,15 @@
     },
     {
       "id": "planr-operate",
-      "version": "2.1.1",
+      "version": "2.2.0",
       "source": "skills/planr-operate/openplanr.skill.json",
       "entrypoint": "skills/planr-operate/SKILL.md",
       "description": "Run a focused operating review across seven executive lenses and produce a decision and action brief. Use for periodic product or company-level leadership review.",
-      "sourceDigest": "sha256:29e49eb4e992c13cfdbccba3e217240a14dc5ab0fcb9d16e74685d1f188b4c88",
+      "sourceDigest": "sha256:97a0762e488559ead6c05ea451d16bb5b4727d3a6202231427e07f254f500294",
       "resources": [
         {
-          "path": "scripts/validate-note.mjs",
-          "kind": "script",
-          "hosts": [
-            "claude-code",
-            "codex",
-            "chatgpt",
-            "cursor"
-          ],
-          "executable": true,
-          "digest": "sha256:5955daf739c410c970b998913c106c4f147b0eff47e4433c01eaf06471bfd651"
-        },
-        {
-          "path": "scripts/operate-review-note.mjs",
-          "kind": "script",
+          "path": "references/note-checklist.md",
+          "kind": "reference",
           "hosts": [
             "claude-code",
             "codex",
@@ -2235,31 +1971,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:10fd0d90e5ec8674a9df0b4dabcb44c0c90ca63a72ea42194d69d365034c94aa"
-        },
-        {
-          "path": "scripts/operate-review-contract.mjs",
-          "kind": "script",
-          "hosts": [
-            "claude-code",
-            "codex",
-            "chatgpt",
-            "cursor"
-          ],
-          "executable": false,
-          "digest": "sha256:76de44f9fda5444ad5b4805ae16b21221cde19a99669140ea7a6f032f383edcd"
-        },
-        {
-          "path": "scripts/errors.mjs",
-          "kind": "script",
-          "hosts": [
-            "claude-code",
-            "codex",
-            "chatgpt",
-            "cursor"
-          ],
-          "executable": false,
-          "digest": "sha256:6c02fdf441b22fc101a764c928bb0e98fa0a93a602183463c44adc3f8e1d7f79"
+          "digest": "sha256:3b90a1b5daa9d757b89d8d7a810af14dcbdb0481195ed128100b9251cc4235d1"
         },
         {
           "path": "agents/openai.yaml",
