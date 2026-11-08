@@ -45,15 +45,15 @@
       "executable": false
     },
     {
-      "path": "scripts/planning-ids.mjs",
-      "kind": "script",
+      "path": "references/planning-ids.md",
+      "kind": "reference",
       "hosts": [
         "claude-code",
         "codex",
         "chatgpt",
         "cursor"
       ],
-      "executable": true
+      "executable": false
     },
     {
       "path": "schemas/design-document.schema.json",

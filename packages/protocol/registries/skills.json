@@ -1310,7 +1310,7 @@
       "lifecycle": "active",
       "authorityClass": "planning-write",
       "source": "skills/planr-plan/openplanr.skill.json",
-      "sourceDigest": "sha256:4f2c0de87e8c91f0aa244f72042044e791342d5b4718cf2d0f86cf34c7d5a6ce",
+      "sourceDigest": "sha256:27a9881e2b9cfd7efd564ae911c5022079c0c7cd74ddfcc0d505cf05415b01a2",
       "triggerPolicy": {
         "include": [
           "Decompose a specification into user stories and implementation tasks",
@@ -1864,5 +1864,5 @@
     }
   ],
   "compatibilityAliases": [],
-  "documentDigest": "sha256:b96afecdc3296b6e3898596ee3493b05fc24b4637f818d94b4898e47efda10a9"
+  "documentDigest": "sha256:abdec359f5fe672aa9d8c56492863319ee2d5f57d3f5268f34b1555d741fd28e"
 }

@@ -61,7 +61,7 @@ test('suite closure shares Operate bytes and keeps design skills free of runtime
     const designLocal = suiteLocalResources(design, 'codex', skillRoot);
     assert.deepEqual(
       designLocal.filter(({ path }) => path.startsWith('scripts/')).map(({ path }) => path),
-      id === 'planr-plan' ? ['scripts/planning-ids.mjs'] : [],
+      [],
     );
     assert.ok(designLocal.some(({ path }) => path === 'schemas/design-document.schema.json'));
   }
@@ -79,8 +79,8 @@ test('standalone archive verification rejects self-consistent incomplete or subs
     /inventory/u,
   );
   const changed = entries.map((entry) =>
-    entry.path === 'scripts/planning-ids.mjs'
-      ? { ...entry, bytes: Buffer.from('process.exit(0);') }
+    entry.path === 'references/planning-ids.md'
+      ? { ...entry, bytes: Buffer.from('# Substituted\n') }
       : entry,
   );
   assert.throws(
@@ -88,7 +88,7 @@ test('standalone archive verification rejects self-consistent incomplete or subs
     /canonical standalone closure/u,
   );
   const modeChanged = entries.map((entry) =>
-    entry.path === 'scripts/planning-ids.mjs' ? { ...entry, mode: 0o644 } : entry,
+    entry.path === 'references/planning-ids.md' ? { ...entry, mode: 0o755 } : entry,
   );
   assert.throws(
     () => verifyStandaloneSkillEntries({ repoRoot: root, registryRow, entries: modeChanged }),

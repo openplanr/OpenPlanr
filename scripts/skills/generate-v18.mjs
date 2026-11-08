@@ -285,10 +285,7 @@ for (const skillId of [...DESIGN_SKILL_IDS, 'planr-plan']) {
   const manifest = JSON.parse(readFileSync(manifestPath, 'utf8'));
   const expectedResources = [
     ...manifest.resources.filter(
-      ({ path }) =>
-        !path.startsWith('schemas/') &&
-        (!path.startsWith('scripts/') ||
-          (skillId === 'planr-plan' && path === 'scripts/planning-ids.mjs')),
+      ({ path }) => !path.startsWith('schemas/') && !path.startsWith('scripts/'),
     ),
     ...resources.map(({ bytes: _bytes, ...resource }) => ({
       ...resource,
@@ -308,9 +305,6 @@ for (const skillId of [...DESIGN_SKILL_IDS, 'planr-plan']) {
     ownedRoots: [`skills/${skillId}/scripts`, `skills/${skillId}/schemas`],
     bootstrap: priorCanonicalResourceDigests,
     mode,
-    preservePaths: new Set(
-      skillId === 'planr-plan' ? ['skills/planr-plan/scripts/planning-ids.mjs'] : [],
-    ),
   });
   // Retirements are proven before changing the declaration that describes the new closure.
   if (mode === 'write') writeFileSync(manifestPath, expectedManifest);

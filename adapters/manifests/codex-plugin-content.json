@@ -828,11 +828,11 @@
       "assets": [
         {
           "path": "skills/plan/SKILL.md",
-          "digest": "sha256:0fbdb77edc87f855c1b969c286bc803eda1773b9d9175e924c220b489c2c1144"
+          "digest": "sha256:458fea55c9e8c430d573ffe9b5026169dc724f9fe524a054747992cc8fa7303f"
         },
         {
           "path": "skills/plan/openplanr.skill.json",
-          "digest": "sha256:4f2c0de87e8c91f0aa244f72042044e791342d5b4718cf2d0f86cf34c7d5a6ce"
+          "digest": "sha256:27a9881e2b9cfd7efd564ae911c5022079c0c7cd74ddfcc0d505cf05415b01a2"
         },
         {
           "path": "skills/plan/agents/openai.yaml",
@@ -847,8 +847,8 @@
           "digest": "sha256:b918cc16855412a75028e1a014832c2ced59b0349461a24d9e1fdcfc336b9f5f"
         },
         {
-          "path": "skills/plan/scripts/planning-ids.mjs",
-          "digest": "sha256:d7051fab0540e3beb176015f174e0851a3ceb8a24c43344495b43a28d2eaceae"
+          "path": "skills/plan/references/planning-ids.md",
+          "digest": "sha256:a67ef2abb66c847f99fd23391bd5713e6253dd1422b3053e24aff75bed8da541"
         },
         {
           "path": "skills/plan/schemas/design-document.schema.json",
