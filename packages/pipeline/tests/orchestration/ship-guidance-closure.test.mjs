@@ -50,7 +50,9 @@ test('Ship discovers verification in the specified order and treats risk metadat
   const task = skill.indexOf('1. task Test Requirements;');
   const repository = skill.indexOf('2. repository instructions;');
   const packageRunner = skill.indexOf('3. package and task-runner scripts;');
-  const ci = skill.indexOf('4. applicable CI and pre-commit configuration.');
+  const ci = skill.indexOf(
+    '4. applicable CI and pre-commit configuration, and the pre-push hook before pushing.',
+  );
   assert.ok(task > 0 && task < repository && repository < packageRunner && packageRunner < ci);
   assert.match(skill, /`reviewRisks` and\s+`browserSurfaces` select useful checks/u);
   assert.match(skill, /neither field\s+is a workflow gate/u);

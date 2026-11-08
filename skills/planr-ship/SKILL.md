@@ -83,7 +83,7 @@ Inspect these sources directly, in this order:
 1. task Test Requirements;
 2. repository instructions;
 3. package and task-runner scripts;
-4. applicable CI and pre-commit configuration.
+4. applicable CI and pre-commit configuration, and the pre-push hook before pushing.
 
 List each candidate check with its `cwd` and the source that named it. Discovery
 only reads: never execute a check while discovering. Then run the candidates from
