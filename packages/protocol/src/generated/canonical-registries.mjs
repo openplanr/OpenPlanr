@@ -3144,12 +3144,12 @@ export const CANONICAL_REGISTRIES = deepFreeze({
       },
       {
         "skillId": "planr-ceo-review",
-        "skillVersion": "2.0.1",
+        "skillVersion": "2.1.0",
         "description": "Produce a grounded strategy and finance review for an Operate cycle. Use when direction, runway, margin, investment, or cost of delay needs a CEO lens.",
         "lifecycle": "active",
         "authorityClass": "review-evidence",
         "source": "skills/planr-ceo-review/openplanr.skill.json",
-        "sourceDigest": "sha256:18641024d97d20d96598417377921df87b59fd8c80c760f61455bacae3643c4b",
+        "sourceDigest": "sha256:381cdcb29ce138828e7b6855a557f058e5cd3baabe461e7d850a667d37d5769c",
         "triggerPolicy": {
           "include": [
             "Run a CEO strategy and finance review",
@@ -3205,12 +3205,12 @@ export const CANONICAL_REGISTRIES = deepFreeze({
       },
       {
         "skillId": "planr-chair-review",
-        "skillVersion": "2.0.1",
+        "skillVersion": "2.1.0",
         "description": "Synthesize an Operate cycle into a prioritized decision queue and action plan. Use after specialist reviews when leadership needs one coherent brief.",
         "lifecycle": "active",
         "authorityClass": "review-evidence",
         "source": "skills/planr-chair-review/openplanr.skill.json",
-        "sourceDigest": "sha256:071704260cce7336b69d54bf8a09a2456555ba67519136163ed98ec9ed1d0f61",
+        "sourceDigest": "sha256:d0b7fb700f90e350c81751790a8d6d22b05a4a60fb10b65eba6ff81c969404b7",
         "triggerPolicy": {
           "include": [
             "Synthesize executive reviews into a decision queue",
@@ -3266,12 +3266,12 @@ export const CANONICAL_REGISTRIES = deepFreeze({
       },
       {
         "skillId": "planr-challenger-review",
-        "skillVersion": "2.0.1",
+        "skillVersion": "2.1.0",
         "description": "Challenge an Operate cycle's claims, alternatives, downside, and confidence. Use when assumptions or executive consensus need an independent stress test.",
         "lifecycle": "active",
         "authorityClass": "review-evidence",
         "source": "skills/planr-challenger-review/openplanr.skill.json",
-        "sourceDigest": "sha256:39c66bf71eb69869d60f41c53264eaa79a1ebd5fd65db8b2f6c4db18749ae6bd",
+        "sourceDigest": "sha256:22941f4efd1ddfeda603dc7ea114ed6172e0d7c171b32876fc74f044ca9072cf",
         "triggerPolicy": {
           "include": [
             "Challenge operating-review assumptions and downside",
@@ -3327,12 +3327,12 @@ export const CANONICAL_REGISTRIES = deepFreeze({
       },
       {
         "skillId": "planr-cmo-review",
-        "skillVersion": "2.0.1",
+        "skillVersion": "2.1.0",
         "description": "Produce a grounded market and growth review for an Operate cycle. Use when acquisition, positioning, demand, retention, or missing measurement needs a CMO lens.",
         "lifecycle": "active",
         "authorityClass": "review-evidence",
         "source": "skills/planr-cmo-review/openplanr.skill.json",
-        "sourceDigest": "sha256:1216f10b64cd005a6ba678a0cd143ccdf18c7fe497bd16c1fe28b7b55d83b295",
+        "sourceDigest": "sha256:a18fd5b8061651d9f921eb0631a412ab60ee6be59eccfe40f3e23097c6043a02",
         "triggerPolicy": {
           "include": [
             "Run a market and growth review",
@@ -3449,12 +3449,12 @@ export const CANONICAL_REGISTRIES = deepFreeze({
       },
       {
         "skillId": "planr-coo-review",
-        "skillVersion": "2.0.1",
+        "skillVersion": "2.1.0",
         "description": "Produce a grounded operations and customer-health review for an Operate cycle. Use when readiness, service delivery, capacity, or customer health needs a COO lens.",
         "lifecycle": "active",
         "authorityClass": "review-evidence",
         "source": "skills/planr-coo-review/openplanr.skill.json",
-        "sourceDigest": "sha256:71817f6bc15e580cc05918275f3577aa23919c9586ee5e9b21dde28883287c9c",
+        "sourceDigest": "sha256:2d14597989438a4f6804d88dd556a1218205e023e1e86999fc416bbbee171015",
         "triggerPolicy": {
           "include": [
             "Run an operations and customer-health review",
@@ -3510,12 +3510,12 @@ export const CANONICAL_REGISTRIES = deepFreeze({
       },
       {
         "skillId": "planr-cpo-review",
-        "skillVersion": "2.0.1",
+        "skillVersion": "2.1.0",
         "description": "Produce a grounded product and activation review for an Operate cycle. Use when customer value, activation, prioritization, or adoption needs a CPO lens.",
         "lifecycle": "active",
         "authorityClass": "review-evidence",
         "source": "skills/planr-cpo-review/openplanr.skill.json",
-        "sourceDigest": "sha256:53f387ac2f712d61fdda2f37b77252f2ccd2bcf8288fb72510933e5915cfd0a4",
+        "sourceDigest": "sha256:08d8eaeaab7eabd2f7df599c4f47736233cbed66024e0b0c7ef8a8eae32d75da",
         "triggerPolicy": {
           "include": [
             "Run a product and activation review",
@@ -3571,12 +3571,12 @@ export const CANONICAL_REGISTRIES = deepFreeze({
       },
       {
         "skillId": "planr-cto-review",
-        "skillVersion": "2.0.1",
+        "skillVersion": "2.1.0",
         "description": "Produce a grounded technology and delivery-risk review for an Operate cycle. Use when architecture, reliability, security, or execution risk needs a CTO lens.",
         "lifecycle": "active",
         "authorityClass": "review-evidence",
         "source": "skills/planr-cto-review/openplanr.skill.json",
-        "sourceDigest": "sha256:5633100c36b46050aedae91c733a54e965f87e218f53b151b1fc37ba59549f48",
+        "sourceDigest": "sha256:a1dccde1c1efb310e336e849dbcf8d0a9d81860a8b6dd639acacfc91e07ec91d",
         "triggerPolicy": {
           "include": [
             "Run a technology and delivery-risk review",
@@ -4257,12 +4257,12 @@ export const CANONICAL_REGISTRIES = deepFreeze({
       },
       {
         "skillId": "planr-operate",
-        "skillVersion": "2.1.1",
+        "skillVersion": "2.2.0",
         "description": "Run a focused operating review across seven executive lenses and produce a decision and action brief. Use for periodic product or company-level leadership review.",
         "lifecycle": "active",
         "authorityClass": "operate-orchestration",
         "source": "skills/planr-operate/openplanr.skill.json",
-        "sourceDigest": "sha256:9ffad9620c62955b5092ab3af5b66c308f3e95109ada783360cad7f4cd1800e3",
+        "sourceDigest": "sha256:3f3b842d8234fbae3b7c87a4f90c385c1cc51d6e2745931d7460ddee60e18242",
         "triggerPolicy": {
           "include": [
             "Run an executive operating review across product, technology, growth, operations, and strategy",
@@ -4877,7 +4877,7 @@ export const CANONICAL_REGISTRIES = deepFreeze({
       }
     ],
     "compatibilityAliases": [],
-    "documentDigest": "sha256:96dccc5fd24ab29da3da37e4570633bd35feeccbec222d83512be31f88fb902a"
+    "documentDigest": "sha256:5a0c53212e155d848844dde08d055bfddc21708a7a6b9ee9b899f2b79c9bd50e"
   },
   "outputs.json": {
     "kind": "output-catalog",

@@ -158,7 +158,7 @@
     },
     {
       "id": "planr-ceo-review",
-      "version": "2.0.1",
+      "version": "2.1.0",
       "source": "skills/planr-ceo-review/openplanr.skill.json",
       "entrypoint": "skills/planr-ceo-review/SKILL.md",
       "description": "Produce a grounded strategy and finance review for an Operate cycle. Use when direction, runway, margin, investment, or cost of delay needs a CEO lens.",
@@ -186,7 +186,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:ac31bed85068a2bf701a831a4226aa331ea528642656e0523ff3701f6dce8c4b"
+          "digest": "sha256:3b90a1b5daa9d757b89d8d7a810af14dcbdb0481195ed128100b9251cc4235d1"
         },
         {
           "path": "agents/openai.yaml",
@@ -219,7 +219,7 @@
     },
     {
       "id": "planr-chair-review",
-      "version": "2.0.1",
+      "version": "2.1.0",
       "source": "skills/planr-chair-review/openplanr.skill.json",
       "entrypoint": "skills/planr-chair-review/SKILL.md",
       "description": "Synthesize an Operate cycle into a prioritized decision queue and action plan. Use after specialist reviews when leadership needs one coherent brief.",
@@ -235,7 +235,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:ac31bed85068a2bf701a831a4226aa331ea528642656e0523ff3701f6dce8c4b"
+          "digest": "sha256:3b90a1b5daa9d757b89d8d7a810af14dcbdb0481195ed128100b9251cc4235d1"
         },
         {
           "path": "agents/openai.yaml",
@@ -268,7 +268,7 @@
     },
     {
       "id": "planr-challenger-review",
-      "version": "2.0.1",
+      "version": "2.1.0",
       "source": "skills/planr-challenger-review/openplanr.skill.json",
       "entrypoint": "skills/planr-challenger-review/SKILL.md",
       "description": "Challenge an Operate cycle's claims, alternatives, downside, and confidence. Use when assumptions or executive consensus need an independent stress test.",
@@ -284,7 +284,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:ac31bed85068a2bf701a831a4226aa331ea528642656e0523ff3701f6dce8c4b"
+          "digest": "sha256:3b90a1b5daa9d757b89d8d7a810af14dcbdb0481195ed128100b9251cc4235d1"
         },
         {
           "path": "agents/openai.yaml",
@@ -317,7 +317,7 @@
     },
     {
       "id": "planr-cmo-review",
-      "version": "2.0.1",
+      "version": "2.1.0",
       "source": "skills/planr-cmo-review/openplanr.skill.json",
       "entrypoint": "skills/planr-cmo-review/SKILL.md",
       "description": "Produce a grounded market and growth review for an Operate cycle. Use when acquisition, positioning, demand, retention, or missing measurement needs a CMO lens.",
@@ -345,7 +345,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:ac31bed85068a2bf701a831a4226aa331ea528642656e0523ff3701f6dce8c4b"
+          "digest": "sha256:3b90a1b5daa9d757b89d8d7a810af14dcbdb0481195ed128100b9251cc4235d1"
         },
         {
           "path": "agents/openai.yaml",
@@ -427,7 +427,7 @@
     },
     {
       "id": "planr-coo-review",
-      "version": "2.0.1",
+      "version": "2.1.0",
       "source": "skills/planr-coo-review/openplanr.skill.json",
       "entrypoint": "skills/planr-coo-review/SKILL.md",
       "description": "Produce a grounded operations and customer-health review for an Operate cycle. Use when readiness, service delivery, capacity, or customer health needs a COO lens.",
@@ -455,7 +455,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:ac31bed85068a2bf701a831a4226aa331ea528642656e0523ff3701f6dce8c4b"
+          "digest": "sha256:3b90a1b5daa9d757b89d8d7a810af14dcbdb0481195ed128100b9251cc4235d1"
         },
         {
           "path": "agents/openai.yaml",
@@ -488,7 +488,7 @@
     },
     {
       "id": "planr-cpo-review",
-      "version": "2.0.1",
+      "version": "2.1.0",
       "source": "skills/planr-cpo-review/openplanr.skill.json",
       "entrypoint": "skills/planr-cpo-review/SKILL.md",
       "description": "Produce a grounded product and activation review for an Operate cycle. Use when customer value, activation, prioritization, or adoption needs a CPO lens.",
@@ -516,7 +516,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:ac31bed85068a2bf701a831a4226aa331ea528642656e0523ff3701f6dce8c4b"
+          "digest": "sha256:3b90a1b5daa9d757b89d8d7a810af14dcbdb0481195ed128100b9251cc4235d1"
         },
         {
           "path": "agents/openai.yaml",
@@ -549,7 +549,7 @@
     },
     {
       "id": "planr-cto-review",
-      "version": "2.0.1",
+      "version": "2.1.0",
       "source": "skills/planr-cto-review/openplanr.skill.json",
       "entrypoint": "skills/planr-cto-review/SKILL.md",
       "description": "Produce a grounded technology and delivery-risk review for an Operate cycle. Use when architecture, reliability, security, or execution risk needs a CTO lens.",
@@ -577,7 +577,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:ac31bed85068a2bf701a831a4226aa331ea528642656e0523ff3701f6dce8c4b"
+          "digest": "sha256:3b90a1b5daa9d757b89d8d7a810af14dcbdb0481195ed128100b9251cc4235d1"
         },
         {
           "path": "agents/openai.yaml",
@@ -1955,7 +1955,7 @@
     },
     {
       "id": "planr-operate",
-      "version": "2.1.1",
+      "version": "2.2.0",
       "source": "skills/planr-operate/openplanr.skill.json",
       "entrypoint": "skills/planr-operate/SKILL.md",
       "description": "Run a focused operating review across seven executive lenses and produce a decision and action brief. Use for periodic product or company-level leadership review.",
@@ -1971,7 +1971,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:ac31bed85068a2bf701a831a4226aa331ea528642656e0523ff3701f6dce8c4b"
+          "digest": "sha256:3b90a1b5daa9d757b89d8d7a810af14dcbdb0481195ed128100b9251cc4235d1"
         },
         {
           "path": "agents/openai.yaml",
