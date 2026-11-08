@@ -93,13 +93,8 @@ unknowns specific to the decisions they affect.
 
 ## Optional quality check and return
 
-When available, use this as a structural quality check:
-
-```sh
-node "<skill-root>/scripts/validate-note.mjs" "<absolute-output-path>" --profile chair --contract-version 2.0.0 --json
-```
-
-Use diagnostics to improve the note when useful and report any remaining structural issue.
+Check the note against the chair profile in [the note checklist](references/note-checklist.md).
+Use unchecked items to improve the note when useful and report any remaining structural issue.
 
 ## Return
 

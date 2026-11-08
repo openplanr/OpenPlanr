@@ -584,7 +584,7 @@ test('standalone and suite design and Plan skills ship no design runtime', () =>
         assert.ok(
           existsSync(join(installed, 'references/utilities.md')) || skillId === 'planr-plan',
         );
-        assert.ok(existsSync(join(installed, '../../runtime/operate')), `${host} keeps Operate`);
+        assert.equal(existsSync(join(installed, '../../runtime')), false, `${host} runtime`);
         assert.equal(
           existsSync(join(installed, 'scripts/design.mjs')),
           false,

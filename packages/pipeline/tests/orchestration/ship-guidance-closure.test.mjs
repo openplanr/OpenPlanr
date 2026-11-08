@@ -1,7 +1,5 @@
 import assert from 'node:assert/strict';
-import { spawnSync } from 'node:child_process';
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
+import { existsSync, readFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
@@ -52,67 +50,28 @@ test('Ship discovers verification in the specified order and treats risk metadat
   const task = skill.indexOf('1. task Test Requirements;');
   const repository = skill.indexOf('2. repository instructions;');
   const packageRunner = skill.indexOf('3. package and task-runner scripts;');
-  const ci = skill.indexOf('4. applicable CI and pre-commit configuration.');
+  const ci = skill.indexOf(
+    '4. applicable CI and pre-commit configuration, and the pre-push hook before pushing.',
+  );
   assert.ok(task > 0 && task < repository && repository < packageRunner && packageRunner < ci);
   assert.match(skill, /`reviewRisks` and\s+`browserSurfaces` select useful checks/u);
   assert.match(skill, /neither field\s+is a workflow gate/u);
   assert.match(skill, /Missing commands are diagnostics/u);
-  assert.match(skill, /--project <repository-root> --task <task-path>/u);
-  assert.match(skill, /`set -o pipefail`/u);
-});
-
-test('the discovery helper rejects a positional path with its usage', () => {
-  const helper = join(WORKSPACE_ROOT, 'skills/planr-ship/scripts/discover-verification.mjs');
-  const result = spawnSync(process.execPath, [helper, '.', 'task.md'], { encoding: 'utf8' });
-  assert.equal(result.status, 1);
-  assert.match(result.stderr, /Unknown argument: \.\n/u);
+  assert.match(skill, /Inspect these sources directly, in this order/u);
+  assert.match(skill, /never execute a check while discovering/u);
+  for (const rule of [
+    /touches a build input/u,
+    /prefer tests related to the changed\s+files/u,
+    /every CI job whose triggers and path filters fire/u,
+    /dry-run pack that confirms they are packed/u,
+  ])
+    assert.match(skill, rule);
   assert.match(
-    result.stderr,
-    /Usage: node discover-verification\.mjs --project <repository-root> \[--task <task-path>\]/u,
+    skill,
+    /If `openplanr` is already on `PATH`, `openplanr ship checks --json\s+--task <task-path>`/u,
   );
-});
-
-test('the packaged discovery helper is read-only and returns ordered command candidates', () => {
-  const fixture = mkdtempSync(join(tmpdir(), 'openplanr-ship-discovery-'));
-  try {
-    mkdirSync(join(fixture, '.github/workflows'), { recursive: true });
-    mkdirSync(join(fixture, '.planr/specs/SPEC-001/us-001/tasks'), { recursive: true });
-    writeFileSync(
-      join(fixture, 'package.json'),
-      JSON.stringify({
-        scripts: { test: 'node --test', lint: 'biome check .', dev: 'vite' },
-      }),
-    );
-    writeFileSync(join(fixture, 'AGENTS.md'), 'Run `npm run lint` before completion.\n');
-    writeFileSync(
-      join(fixture, '.planr/specs/SPEC-001/us-001/tasks/T-001-example.md'),
-      '## Test Requirements\n\n```sh\nnpm run test -- --example\n```\n',
-    );
-    writeFileSync(join(fixture, '.github/workflows/ci.yml'), 'steps:\n  - run: npm run test\n');
-
-    const helper = join(WORKSPACE_ROOT, 'skills/planr-ship/scripts/discover-verification.mjs');
-    const result = spawnSync(
-      process.execPath,
-      [
-        helper,
-        '--project',
-        fixture,
-        '--task',
-        '.planr/specs/SPEC-001/us-001/tasks/T-001-example.md',
-      ],
-      { encoding: 'utf8' },
-    );
-    assert.equal(result.status, 0, result.stderr);
-    const output = JSON.parse(result.stdout);
-    assert.deepEqual(output.checks.slice(0, 3), [
-      { command: 'npm run test -- --example', source: 'task-requirements' },
-      { command: 'npm run lint', source: 'repository-instructions' },
-      { command: 'npm run test', source: 'package-task-runner' },
-    ]);
-    assert.deepEqual(output.diagnostics, []);
-  } finally {
-    rmSync(fixture, { recursive: true, force: true });
-  }
+  assert.doesNotMatch(skill, /discover-verification|\bnode </u);
+  assert.match(skill, /`set -o pipefail`/u);
 });
 
 test('Ship keeps the five-field result contract concise and non-governing', () => {
@@ -137,28 +96,79 @@ test('Ship and Investigate split issues into blockers and findings they offer to
   for (const skillId of ['planr-ship', 'planr-investigate']) {
     const skill = readWorkspace(`skills/${skillId}/SKILL.md`);
     assert.match(skill, /\]\(references\/findings\.md\)/u, skillId);
-    assert.match(skill, /\]\(scripts\/backlog-item\.mjs\)/u, skillId);
+    assert.match(skill, /\]\(references\/backlog-filing\.md\)/u, skillId);
     assert.match(skill, /never\s+fix them in this change unless they block/u, skillId);
-    assert.equal(
-      readWorkspace(`skills/${skillId}/references/findings.md`),
-      readWorkspace('skills/shared/findings.md'),
-    );
+    for (const reference of ['findings.md', 'backlog-filing.md'])
+      assert.equal(
+        readWorkspace(`skills/${skillId}/references/${reference}`),
+        readWorkspace(`skills/shared/${reference}`),
+      );
   }
   const findings = readWorkspace('skills/shared/findings.md');
   for (const rule of [
     /"File all N \(Recommended\)"/u,
     /"Don't file"/u,
-    /With\s+`report`, or no setting, do not run `add` at all/u,
-    /end the result with that line, word for word,\s+once/u,
+    /With\s+`report`, or no setting, do not file at all/u,
     /The request says to file findings, or not to: do that/u,
     /never file or drop a finding\s+silently/u,
-    /list\s+--project <repository-root> --open/u,
+    /list open backlog items as\s+\[backlog filing\]\(backlog-filing\.md\)/u,
     /Already tracked as BL-/u,
     /Paths are always repo-relative/u,
-    /Install only if the user says yes/u,
-    /never\s+`npx`/u,
   ]) {
     assert.match(findings, rule);
+  }
+  const filing = readWorkspace('skills/shared/backlog-filing.md');
+  for (const rule of [
+    /If `openplanr` is already on\s+`PATH`/u,
+    /immediately before writing each item/u,
+    /no-clobber create/u,
+    /take the next\s+number/u,
+    /Never overwrite or edit an existing backlog file or marker/u,
+    /`priority`: `critical`, `high`, `medium` or `low`/u,
+    /`status`: `"open"`/u,
+    /`created` and `updated`: today's date as `YYYY-MM-DD`/u,
+  ]) {
+    assert.match(filing, rule);
+  }
+  for (const text of [findings, filing]) {
+    assert.doesNotMatch(text, /\bnpx\b|\bnode </u);
+    assert.doesNotMatch(text, /cliHint|npm install/u);
+  }
+});
+
+test('no host bundle ships the backlog helper; each carries the filing procedure', () => {
+  for (const [bundle, skillRoot] of [
+    ['dist/plugins/claude/openplanr', (id) => `skills/${id.replace(/^planr-/u, '')}`],
+    ['dist/plugins/openai/openplanr', (id) => `skills/${id.replace(/^planr-/u, '')}`],
+    ['dist/plugins/cursor/openplanr', (id) => `rules/${id}`],
+  ]) {
+    for (const skillId of ['planr-ship', 'planr-investigate']) {
+      const dir = join(WORKSPACE_ROOT, bundle, skillRoot(skillId));
+      assert.equal(
+        existsSync(join(dir, 'scripts/backlog-item.mjs')),
+        false,
+        `${bundle} ${skillId}`,
+      );
+      assert.equal(
+        readFileSync(join(dir, 'references/backlog-filing.md'), 'utf8'),
+        readWorkspace('skills/shared/backlog-filing.md'),
+        `${bundle} ${skillId}`,
+      );
+    }
+  }
+});
+
+test('no host bundle ships the verification discovery helper', () => {
+  for (const dir of [
+    'dist/plugins/claude/openplanr/skills/ship',
+    'dist/plugins/openai/openplanr/skills/ship',
+    'dist/plugins/cursor/openplanr/rules/planr-ship',
+  ]) {
+    assert.equal(
+      existsSync(join(WORKSPACE_ROOT, dir, 'scripts/discover-verification.mjs')),
+      false,
+      dir,
+    );
   }
 });
 

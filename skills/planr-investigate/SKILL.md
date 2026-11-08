@@ -28,9 +28,8 @@ Prove the regression test with [fail-first](references/fail-first.md).
 
 Report other defects you notice as [findings](references/findings.md), and never
 fix them in this change unless they block the requested fix. The established cause
-is never a finding. The packaged [backlog helper](scripts/backlog-item.mjs) lists
-and files backlog items when no CLI is installed; resolve it relative to this
-`SKILL.md`.
+is never a finding. [Backlog filing](references/backlog-filing.md) lists and files
+backlog items with your own file tools.
 
 ## Return
 

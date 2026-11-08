@@ -31,9 +31,8 @@ Merge duplicates within the run. Sort by severity, highest first, and number fro
 
 ## Check what is already tracked
 
-Before showing findings, list open backlog items with the backlog helper
-linked from SKILL.md, resolved relative to that file: `node <helper> list
---project <repository-root> --open`. A finding about the same problem as an open item,
+Before showing findings, list open backlog items as
+[backlog filing](backlog-filing.md) describes. A finding about the same problem as an open item,
 normally the same evidence file and an equivalent title, is `tracked`. Never file
 it again and never edit the existing item.
 
@@ -52,26 +51,19 @@ rule that applies. File only what it allows.
    example a print or exec mode), another skill or a delegate runner started this
    run, or the user said not to ask. Read `findings.unattended` in
    `.planr/config.json`. Only `file` files every untracked finding. With
-   `report`, or no setting, do not run `add` at all: mark the findings `reported`.
+   `report`, or no setting, do not file at all: mark the findings `reported`.
 
 Never ask per finding, never ask mid-run, and never file or drop a finding
 silently.
 
 ## File
 
-Send each item as one JSON object (`title`, `priority`, `tags`, `description`)
-on stdin. Never pass `acceptanceCriteria`.
+File each item from its `title`, `priority`, `tags` and `description` as
+[backlog filing](backlog-filing.md) describes. Never add acceptance criteria.
+When the `openplanr` command files it and the result says
+`templateOverrideIgnored`, say the default format was used.
 
-- When an `openplanr` CLI resolves (the project's `node_modules/.bin`, then
-  `PATH`; never `npx`): `openplanr --project-dir <repository-root> backlog add
-  --data - --json`.
-- Otherwise: `node <helper> add --project <repository-root> --data -`. Its
-  result can carry `cliHint`; end the result with that line, word for word,
-  once. Install only if the user says yes then, by running exactly the command in
-  the line. If the result says `templateOverrideIgnored`, say the default format
-  was used.
-
-If filing fails, report the command and its error, and leave the finding
+If filing fails, report the step and its error, and leave the finding
 `reported`.
 
 ## Report
