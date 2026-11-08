@@ -5,8 +5,6 @@ import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '../../../..');
-const OPERATE_VALIDATE_NOTE_LINE =
-  /^node "<skill-root>\/scripts\/validate-note\.mjs" "<absolute-(?:advisor-output|challenger-output|chair-output|board-report-path)>" --profile (?:advisor|challenger|chair|board-report) --contract-version 2\.0\.0$/u;
 
 function files(dir, out = []) {
   for (const entry of readdirSync(dir, { withFileTypes: true })) {
@@ -70,14 +68,8 @@ test('Operate clients dispatch lens skills without foreign runtime paths', () =>
       relativePath,
     );
     assert.match(bytes, /a person, a role, or\s+`unassigned`/u, relativePath);
-    const commandLines = bytes
-      .split('\n')
-      .map((line) => line.trim())
-      .filter((line) => /^node\b/u.test(line));
-    assert.equal(commandLines.length, 4, `${relativePath}: exact optional validation commands`);
-    for (const line of commandLines) {
-      assert.match(line, OPERATE_VALIDATE_NOTE_LINE, `${relativePath}: ${line}`);
-    }
+    assert.match(bytes, /\]\([^)]*references\/note-checklist\.md\)/u, relativePath);
+    assert.doesNotMatch(bytes, /^\s*node\b|validate-note\.mjs/mu, relativePath);
     assert.doesNotMatch(
       bytes,
       /JSON\.parse|--json\b|\b(?:open)?planr operate validate-note\b|\.planr\/products|\/Users\/|\/home\/|\b(?:open)?planr-pipeline\s+(?:operate|plan|ship)\b|\/planr-pipeline:/u,

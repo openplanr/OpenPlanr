@@ -479,7 +479,7 @@ test('canonical Operate guidance keeps context and seven lenses without workflow
   assert.match(operate, /## Issues/iu);
   assert.match(operate, /Optional quality check/iu);
   assert.match(operate, /operate-review-quality-contract@2\.0\.0/u);
-  assert.match(operate, /--contract-version 2\.0\.0/u);
+  assert.match(operate, /\]\(references\/note-checklist\.md\)/u);
 });
 
 test('a suggested role or unassigned owner satisfies the decision shape', () => {
@@ -521,20 +521,8 @@ test('inspection reports structural issues without throwing; strict validation r
   );
 });
 
-test('the note validator exits 0 on a clean note and 1 on a broken one in every copy', () => {
-  const validators = [
-    'packages/skill-runtime/src/operate-review-note-cli.mjs',
-    ...[
-      'planr-operate',
-      'planr-chair-review',
-      'planr-challenger-review',
-      'planr-ceo-review',
-      'planr-cmo-review',
-      'planr-coo-review',
-      'planr-cpo-review',
-      'planr-cto-review',
-    ].map((skillId) => `skills/${skillId}/scripts/validate-note.mjs`),
-  ];
+test('the note validator exits 0 on a clean note and 1 on a broken one', () => {
+  const validators = ['packages/skill-runtime/src/operate-review-note-cli.mjs'];
   const directory = mkdtempSync(join(tmpdir(), 'operate-review-note-cli-'));
   try {
     const clean = join(directory, 'clean.md');

@@ -136,7 +136,7 @@
       "lifecycle": "active",
       "authorityClass": "review-evidence",
       "source": "skills/planr-ceo-review/openplanr.skill.json",
-      "sourceDigest": "sha256:d7326a9734612dd790818dbffd39482dbfd68be1c5f98ed662dd098830ec78f3",
+      "sourceDigest": "sha256:18641024d97d20d96598417377921df87b59fd8c80c760f61455bacae3643c4b",
       "triggerPolicy": {
         "include": [
           "Run a CEO strategy and finance review",
@@ -197,7 +197,7 @@
       "lifecycle": "active",
       "authorityClass": "review-evidence",
       "source": "skills/planr-chair-review/openplanr.skill.json",
-      "sourceDigest": "sha256:765afe35e98d1439d00c251b2a98e33a170c4a46f1e15c542fe97df0d641e56d",
+      "sourceDigest": "sha256:071704260cce7336b69d54bf8a09a2456555ba67519136163ed98ec9ed1d0f61",
       "triggerPolicy": {
         "include": [
           "Synthesize executive reviews into a decision queue",
@@ -258,7 +258,7 @@
       "lifecycle": "active",
       "authorityClass": "review-evidence",
       "source": "skills/planr-challenger-review/openplanr.skill.json",
-      "sourceDigest": "sha256:ae61fc625ec2bf91ca580dbc9d7dfebaee40762ee9c294b64031ab3798aba3b6",
+      "sourceDigest": "sha256:39c66bf71eb69869d60f41c53264eaa79a1ebd5fd65db8b2f6c4db18749ae6bd",
       "triggerPolicy": {
         "include": [
           "Challenge operating-review assumptions and downside",
@@ -319,7 +319,7 @@
       "lifecycle": "active",
       "authorityClass": "review-evidence",
       "source": "skills/planr-cmo-review/openplanr.skill.json",
-      "sourceDigest": "sha256:1d236535f888d3042244632a18e6c34bfd2f818cdc760750ea82253d14e5cc7e",
+      "sourceDigest": "sha256:1216f10b64cd005a6ba678a0cd143ccdf18c7fe497bd16c1fe28b7b55d83b295",
       "triggerPolicy": {
         "include": [
           "Run a market and growth review",
@@ -441,7 +441,7 @@
       "lifecycle": "active",
       "authorityClass": "review-evidence",
       "source": "skills/planr-coo-review/openplanr.skill.json",
-      "sourceDigest": "sha256:c0f721e0dc573661882d89af46e63c3c09fea8484b15b8c5fc74594a3903dd1a",
+      "sourceDigest": "sha256:71817f6bc15e580cc05918275f3577aa23919c9586ee5e9b21dde28883287c9c",
       "triggerPolicy": {
         "include": [
           "Run an operations and customer-health review",
@@ -502,7 +502,7 @@
       "lifecycle": "active",
       "authorityClass": "review-evidence",
       "source": "skills/planr-cpo-review/openplanr.skill.json",
-      "sourceDigest": "sha256:8745ce5fa58add27de2d42aa703e679eeff0fa2b3ad5b5d51238f615dc72ab80",
+      "sourceDigest": "sha256:53f387ac2f712d61fdda2f37b77252f2ccd2bcf8288fb72510933e5915cfd0a4",
       "triggerPolicy": {
         "include": [
           "Run a product and activation review",
@@ -563,7 +563,7 @@
       "lifecycle": "active",
       "authorityClass": "review-evidence",
       "source": "skills/planr-cto-review/openplanr.skill.json",
-      "sourceDigest": "sha256:2ea3f2b050da09464a0eed72a59c434cd51b1150ee17062312b247cf9f52bf16",
+      "sourceDigest": "sha256:5633100c36b46050aedae91c733a54e965f87e218f53b151b1fc37ba59549f48",
       "triggerPolicy": {
         "include": [
           "Run a technology and delivery-risk review",
@@ -1249,7 +1249,7 @@
       "lifecycle": "active",
       "authorityClass": "operate-orchestration",
       "source": "skills/planr-operate/openplanr.skill.json",
-      "sourceDigest": "sha256:7f765cf1c8594d67e00316b7f21850d7d0135b93aae78d70266e682ebaf18021",
+      "sourceDigest": "sha256:9ffad9620c62955b5092ab3af5b66c308f3e95109ada783360cad7f4cd1800e3",
       "triggerPolicy": {
         "include": [
           "Run an executive operating review across product, technology, growth, operations, and strategy",
@@ -1864,5 +1864,5 @@
     }
   ],
   "compatibilityAliases": [],
-  "documentDigest": "sha256:b96afecdc3296b6e3898596ee3493b05fc24b4637f818d94b4898e47efda10a9"
+  "documentDigest": "sha256:96dccc5fd24ab29da3da37e4570633bd35feeccbec222d83512be31f88fb902a"
 }
