@@ -4,5 +4,32 @@
     "RELEASE*.md",
     "docs/release*/**"
   ],
-  "allowedCommands": []
+  "allowedCommands": [],
+  "breakpoints": [
+    {
+      "name": "log-read-before-write",
+      "before": {
+        "tool": [
+          "Bash"
+        ],
+        "input": "\\bgit\\b(?:\\s+-\\S+(?:\\s+\\S+)?)*\\s+log\\b.{0,600}?v1\\.4\\.0\\.\\."
+      },
+      "after": {
+        "tool": [
+          "Edit",
+          "Write"
+        ]
+      }
+    },
+    {
+      "name": "no-version-bump-or-tag",
+      "before": {
+        "tool": [
+          "Bash"
+        ],
+        "input": "\\bnpm\\s+version\\s+(?:major|minor|patch|pre\\w*|v?\\d)|\\bgit\\b(?:\\s+-\\S+(?:\\s+\\S+)?)*\\s+tag\\s+(?:-[asf]\\s+)*v?\\d"
+      },
+      "after": "absent"
+    }
+  ]
 }

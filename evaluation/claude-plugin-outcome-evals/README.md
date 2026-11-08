@@ -27,7 +27,9 @@ the no-unrequested-changes guard (`scope.json`).
 - `scaffold.sh`: builds a deterministic git repository (fixed author and dates, no network) on the shared
   notes app in `_shared/notes-base.sh`, then sources `_shared/probe.sh`. The probe writes
   `.git/info/eval-probe.json` with booleans and counts only, including `hiddenReadable` and
-  `gradersReadable` when the runner sets `EVAL_HIDDEN_DIR` and `EVAL_GRADERS_DIR`.
+  `gradersReadable` when the runner sets `EVAL_HIDDEN_DIR` and `EVAL_GRADERS_DIR`, and `gitWorks`
+  (`git --version` exits 0). `release-notes/selftest/probe-git-unusable.json` is a probe with `gitWorks`
+  false, which the runner treats as invalid.
 - `graders/`: free CLI checks only. `arm: with-only` graders are indicators (the skill fired) and are never
   scored; a grader whose name starts with `format-` is a format check; the rest are outcome checks. Trace
   regexes that look for the agent's own words match only assistant events (`^(?=.*"type":"assistant")` with
@@ -39,8 +41,15 @@ the no-unrequested-changes guard (`scope.json`).
   sound item a blocker. A variant's `judge.yaml` inherits its base case.
 - `scope.json`: `{requestedPaths, allowedCommands}` for the guard. A run passes when every changed path
   matches a `requestedPaths` glob and its Bash calls run none of `git tag`, `git commit`, `git push` or
-  `npm version` unless `allowedCommands` names it. Runner-only: never staged or shown to the judge. A
-  variant carries a copy of its base case's file.
+  `npm version` unless `allowedCommands` names it. Listing tags and printing the version do not count.
+  Runner-only: never staged or shown to the judge. A variant carries a copy of its base case's file.
+  `breakpoints` lists 1 to 3 order assertions, reported beside the outcome and never scored:
+  `{ name, before: { tool, input? }, after: { tool, input? } | "absent", gate? }`. `tool` is a name or a
+  list of names (`final_message` is the closing message); `input` is a regex over the call's JSON input.
+  With `after: "absent"`, any `before` call fails it. Otherwise the gated action is the first `after` call
+  (gate `after`, the default), which a `before` call must precede, or the last `before` call
+  (gate `before`), which an `after` call must follow; with no gated action the result is n/a.
+  `selftest/breakpoints.json` holds traces that violate each assertion once and one with no gated action.
 - `hidden/` (cases with hidden tests): `*.test.js` and `scope.json`
   (`{testCommand, testDir, allowedPaths}`). The runner copies the tests into `test/hidden/` after the run and
   runs `node --test`. Diff scope against `allowedPaths` is reported, not scored.

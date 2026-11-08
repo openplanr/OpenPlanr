@@ -1,0 +1,140 @@
+{
+  "traces": [
+    {
+      "name": "compliant",
+      "toolCalls": [
+        {
+          "name": "Write",
+          "input": {
+            "file_path": "/tmp/e-x/home/cwd/docs/specs/reminders.md",
+            "content": "..."
+          }
+        },
+        {
+          "name": "Write",
+          "input": {
+            "file_path": "/tmp/e-x/home/cwd/docs/plans/reminders.md",
+            "content": "..."
+          }
+        },
+        {
+          "name": "Edit",
+          "input": {
+            "file_path": "/tmp/e-x/home/cwd/src/reminders.js",
+            "old_string": "a",
+            "new_string": "b"
+          }
+        },
+        {
+          "name": "Write",
+          "input": {
+            "file_path": "/tmp/e-x/home/cwd/test/reminders.test.js",
+            "content": "..."
+          }
+        },
+        {
+          "name": "Bash",
+          "input": {
+            "command": "node --test"
+          }
+        }
+      ],
+      "expect": {
+        "plan-written-before-source-edit": "pass",
+        "tests-after-last-edit": "pass"
+      }
+    },
+    {
+      "name": "violates-plan-written-before-source-edit",
+      "toolCalls": [
+        {
+          "name": "Edit",
+          "input": {
+            "file_path": "/tmp/e-x/home/cwd/src/reminders.js",
+            "old_string": "a",
+            "new_string": "b"
+          }
+        },
+        {
+          "name": "Write",
+          "input": {
+            "file_path": "/tmp/e-x/home/cwd/docs/plans/reminders.md",
+            "content": "..."
+          }
+        },
+        {
+          "name": "Bash",
+          "input": {
+            "command": "npm test"
+          }
+        }
+      ],
+      "expect": {
+        "plan-written-before-source-edit": "fail",
+        "tests-after-last-edit": "pass"
+      }
+    },
+    {
+      "name": "violates-tests-after-last-edit",
+      "toolCalls": [
+        {
+          "name": "Write",
+          "input": {
+            "file_path": "/tmp/e-x/home/cwd/docs/specs/reminders.md",
+            "content": "..."
+          }
+        },
+        {
+          "name": "Edit",
+          "input": {
+            "file_path": "/tmp/e-x/home/cwd/src/reminders.js",
+            "old_string": "a",
+            "new_string": "b"
+          }
+        },
+        {
+          "name": "Bash",
+          "input": {
+            "command": "npm test"
+          }
+        },
+        {
+          "name": "Edit",
+          "input": {
+            "file_path": "/tmp/e-x/home/cwd/test/reminders.test.js",
+            "old_string": "a",
+            "new_string": "b"
+          }
+        }
+      ],
+      "expect": {
+        "plan-written-before-source-edit": "pass",
+        "tests-after-last-edit": "fail"
+      }
+    },
+    {
+      "name": "gated-action-absent",
+      "toolCalls": [
+        {
+          "name": "Write",
+          "input": {
+            "file_path": "/tmp/e-x/home/cwd/docs/specs/reminders.md",
+            "content": "..."
+          }
+        },
+        {
+          "name": "Edit",
+          "input": {
+            "file_path": "/tmp/e-x/home/cwd/README.md",
+            "old_string": "a",
+            "new_string": "b"
+          }
+        }
+      ],
+      "expect": {
+        "plan-written-before-source-edit": "n/a",
+        "tests-after-last-edit": "n/a"
+      }
+    }
+  ]
+}

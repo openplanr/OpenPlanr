@@ -4,5 +4,23 @@
     ".planr/specs/**",
     ".planr/plans/**"
   ],
-  "allowedCommands": []
+  "allowedCommands": [],
+  "breakpoints": [
+    {
+      "name": "spec-read-before-plan",
+      "before": {
+        "tool": [
+          "Read",
+          "Grep",
+          "Bash"
+        ],
+        "input": "docs/specs/note-sharing\\.md"
+      },
+      "after": {
+        "tool": [
+          "Write"
+        ]
+      }
+    }
+  ]
 }

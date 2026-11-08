@@ -7,5 +7,38 @@
     ".planr/specs/**",
     ".planr/plans/**"
   ],
-  "allowedCommands": []
+  "allowedCommands": [],
+  "breakpoints": [
+    {
+      "name": "plan-written-before-source-edit",
+      "before": {
+        "tool": [
+          "Write"
+        ],
+        "input": "\"file_path\":\"(?:(?!\",\").){0,600}?\\.md\""
+      },
+      "after": {
+        "tool": [
+          "Edit",
+          "Write"
+        ],
+        "input": "\"file_path\":\"(?:(?!\",\").){0,600}?/src/"
+      }
+    },
+    {
+      "name": "tests-after-last-edit",
+      "gate": "before",
+      "before": {
+        "tool": [
+          "Edit",
+          "Write"
+        ],
+        "input": "\"file_path\":\"(?:(?!\",\").){0,600}?/(?:src|test)/"
+      },
+      "after": {
+        "tool": "Bash",
+        "input": "\\bnode\\s+--test\\b|\\bnpm\\s+(?:run\\s+)?test\\b"
+      }
+    }
+  ]
 }

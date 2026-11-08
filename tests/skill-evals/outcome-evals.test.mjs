@@ -15,6 +15,7 @@ import { join } from 'node:path';
 import test from 'node:test';
 import {
   buildSelfTestRun,
+  evaluateBreakpoint,
   evaluateFreeGrader,
   evaluateGuard,
   expectFileFindings,
@@ -277,6 +278,113 @@ test("a flawed output's trace writes its own file text, not its base's", () => {
     assert.match(written[0], /snapshot/);
   } finally {
     rmSync(runData.root, { recursive: true, force: true });
+  }
+});
+
+test('the probe records gitWorks false when git fails, matching the unusable-git fixture', () => {
+  const root = mkdtempSync(join(tmpdir(), 'outcome-git-'));
+  try {
+    mkdirSync(join(root, 'bin'));
+    writeFileSync(
+      join(root, 'bin', 'git'),
+      '#!/bin/sh\necho "git: error: couldn\'t create cache file" >&2\nexit 1\n',
+      { mode: 0o755 },
+    );
+    const workspace = join(root, 'cwd');
+    mkdirSync(join(workspace, '.git'), { recursive: true });
+    const probe = (path) => {
+      execFileSync(
+        'bash',
+        ['-c', `set -euo pipefail; source "${join(suiteDir, '_shared', 'probe.sh')}"`],
+        {
+          cwd: workspace,
+          env: { PATH: path, HOME: root },
+        },
+      );
+      return JSON.parse(readFileSync(join(workspace, '.git', 'info', 'eval-probe.json'), 'utf8'));
+    };
+    const broken = probe(`${join(root, 'bin')}:/usr/bin:/bin`);
+    assert.equal(broken.gitWorks, false);
+    assert.equal(probe(process.env.PATH).gitWorks, true);
+    const fixture = JSON.parse(
+      readFileSync(join(suiteDir, 'release-notes', 'selftest', 'probe-git-unusable.json'), 'utf8'),
+    );
+    assert.deepEqual(Object.keys(fixture), Object.keys(broken));
+    assert.equal(fixture.gitWorks, false);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('breakpoints report pass, fail and n/a by tool order, across JSON escaping', () => {
+  const read = { name: 'Read', input: { file_path: '/w/docs/specs/a.md' } };
+  const write = { name: 'Write', input: { file_path: '/w/docs/plans/a.md', content: 'x' } };
+  const run = (calls) => traceFromToolCalls(calls, 'Done.');
+  const ordered = {
+    name: 'o',
+    before: { tool: ['Read'], input: 'docs/specs/' },
+    after: { tool: ['Write'] },
+  };
+  assert.equal(evaluateBreakpoint(ordered, run([read, write])), 'pass');
+  assert.equal(evaluateBreakpoint(ordered, run([write, read])), 'fail');
+  assert.equal(evaluateBreakpoint(ordered, run([read])), 'n/a');
+  const last = {
+    name: 'l',
+    gate: 'before',
+    before: { tool: ['Edit', 'Write'] },
+    after: { tool: 'Bash', input: '\\bnode\\s+--test\\b' },
+  };
+  const test = { name: 'Bash', input: { command: 'node --test' } };
+  assert.equal(evaluateBreakpoint(last, run([write, test])), 'pass');
+  assert.equal(evaluateBreakpoint(last, run([test, write])), 'fail');
+  assert.equal(evaluateBreakpoint(last, run([test])), 'n/a');
+  const absent = {
+    name: 'a',
+    before: { tool: ['Bash'], input: '\\bgh\\s+pr\\s+merge\\b' },
+    after: 'absent',
+  };
+  assert.equal(evaluateBreakpoint(absent, run([test])), 'pass');
+  assert.equal(
+    evaluateBreakpoint(absent, run([{ name: 'Bash', input: { command: 'gh pr merge 42' } }])),
+    'fail',
+  );
+  const escaped = {
+    name: 'e',
+    before: { tool: ['Bash'], input: 'git log.{0,600}?v1\\.4\\.0\\.\\.' },
+    after: { tool: 'final_message' },
+  };
+  const log = { name: 'Bash', input: { command: 'git log --format="%h %s" v1.4.0..HEAD' } };
+  assert.equal(evaluateBreakpoint(escaped, run([log])), 'pass');
+});
+
+test('the guard ignores listing tags and printing versions, and fails creating or bumping them', () => {
+  const workspace = mkdtempSync(join(tmpdir(), 'outcome-guard-list-'));
+  try {
+    execFileSync('git', ['init', '-q'], { cwd: workspace });
+    const scope = { requestedPaths: ['CHANGELOG.md'], allowedCommands: [] };
+    const verdict = (command) =>
+      evaluateGuard(
+        scope,
+        workspace,
+        traceFromToolCalls([{ name: 'Bash', input: { command } }], ''),
+      ).passed;
+    for (const command of [
+      'git tag',
+      'git tag --list',
+      'git tag -l "v1*"',
+      'git tag --sort=-v:refname',
+      'npm version',
+    ])
+      assert.equal(verdict(command), true, command);
+    for (const command of [
+      'git tag v2.0.0',
+      'git tag -a v2.0.0 -m "v2.0.0"',
+      'npm version major',
+      'npm version 2.0.0',
+    ])
+      assert.equal(verdict(command), false, command);
+  } finally {
+    rmSync(workspace, { recursive: true, force: true });
   }
 });
 

@@ -1,0 +1,66 @@
+{
+  "traces": [
+    {
+      "name": "compliant",
+      "toolCalls": [
+        {
+          "name": "Bash",
+          "input": {
+            "command": "ls feedback/"
+          }
+        },
+        {
+          "name": "Read",
+          "input": {
+            "file_path": "/tmp/e-x/home/cwd/feedback/2026-10-02-harbor.md"
+          }
+        },
+        {
+          "name": "Write",
+          "input": {
+            "file_path": "/tmp/e-x/home/cwd/docs/specs/team-sharing.md",
+            "content": "..."
+          }
+        }
+      ],
+      "expect": {
+        "emails-read-before-spec": "pass"
+      }
+    },
+    {
+      "name": "violates-emails-read-before-spec",
+      "toolCalls": [
+        {
+          "name": "Write",
+          "input": {
+            "file_path": "/tmp/e-x/home/cwd/docs/specs/team-sharing.md",
+            "content": "..."
+          }
+        },
+        {
+          "name": "Read",
+          "input": {
+            "file_path": "/tmp/e-x/home/cwd/feedback/2026-10-02-harbor.md"
+          }
+        }
+      ],
+      "expect": {
+        "emails-read-before-spec": "fail"
+      }
+    },
+    {
+      "name": "gated-action-absent",
+      "toolCalls": [
+        {
+          "name": "Read",
+          "input": {
+            "file_path": "/tmp/e-x/home/cwd/feedback/2026-10-02-harbor.md"
+          }
+        }
+      ],
+      "expect": {
+        "emails-read-before-spec": "n/a"
+      }
+    }
+  ]
+}

@@ -1,0 +1,111 @@
+{
+  "traces": [
+    {
+      "name": "compliant",
+      "toolCalls": [
+        {
+          "name": "Bash",
+          "input": {
+            "command": "git tag --list"
+          }
+        },
+        {
+          "name": "Bash",
+          "input": {
+            "command": "npm version"
+          }
+        },
+        {
+          "name": "Bash",
+          "input": {
+            "command": "git log --format=\"%h %s%n%b\" v1.4.0..HEAD"
+          }
+        },
+        {
+          "name": "Write",
+          "input": {
+            "file_path": "/tmp/e-x/home/cwd/CHANGELOG.md",
+            "content": "..."
+          }
+        }
+      ],
+      "expect": {
+        "log-read-before-write": "pass",
+        "no-version-bump-or-tag": "pass"
+      }
+    },
+    {
+      "name": "violates-log-read-before-write",
+      "toolCalls": [
+        {
+          "name": "Bash",
+          "input": {
+            "command": "git log --oneline"
+          }
+        },
+        {
+          "name": "Write",
+          "input": {
+            "file_path": "/tmp/e-x/home/cwd/CHANGELOG.md",
+            "content": "..."
+          }
+        }
+      ],
+      "expect": {
+        "log-read-before-write": "fail",
+        "no-version-bump-or-tag": "pass"
+      }
+    },
+    {
+      "name": "violates-no-version-bump-or-tag",
+      "toolCalls": [
+        {
+          "name": "Bash",
+          "input": {
+            "command": "git log v1.4.0..HEAD"
+          }
+        },
+        {
+          "name": "Bash",
+          "input": {
+            "command": "git tag -a v2.0.0 -m \"v2.0.0\""
+          }
+        }
+      ],
+      "expect": {
+        "log-read-before-write": "n/a",
+        "no-version-bump-or-tag": "fail"
+      }
+    },
+    {
+      "name": "violates-no-version-bump-with-npm",
+      "toolCalls": [
+        {
+          "name": "Bash",
+          "input": {
+            "command": "npm version 2.0.0 --no-git-tag-version"
+          }
+        }
+      ],
+      "expect": {
+        "log-read-before-write": "n/a",
+        "no-version-bump-or-tag": "fail"
+      }
+    },
+    {
+      "name": "gated-action-absent",
+      "toolCalls": [
+        {
+          "name": "Bash",
+          "input": {
+            "command": "git log v1.4.0..HEAD"
+          }
+        }
+      ],
+      "expect": {
+        "log-read-before-write": "n/a",
+        "no-version-bump-or-tag": "pass"
+      }
+    }
+  ]
+}

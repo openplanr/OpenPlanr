@@ -27,14 +27,34 @@ export const suiteDir = join(repoRoot, 'evaluation', 'claude-plugin-outcome-eval
 const CORE_VARIANTS = ['good-planr', 'good-plain', 'bad-planr', 'bad-plain'];
 const UNREQUESTED_EDIT_VARIANT = 'bad-edit-plain';
 const DECOY_VARIANT = 'bad-decoy-planr';
-// Names match the runner's guard; a case's allowedCommands may name only these.
+// Names match the runner's guard; a case's allowedCommands may name only these. Listing tags or
+// printing versions is read-only, so only tag creation and version bumps count.
 const GUARDED_COMMANDS = [
-  { name: 'git tag', pattern: /\bgit\b(?:\s+-\S+(?:\s+\S+)?)*\s+tag\b/u },
+  {
+    name: 'git tag',
+    pattern: /\bgit\b(?:\s+-\S+(?:\s+\S+)?)*\s+tag\s+(?:-[asfmu]\s+(?:\S+\s+)?)*(?!-)\S/u,
+  },
   { name: 'git commit', pattern: /\bgit\b(?:\s+-\S+(?:\s+\S+)?)*\s+commit\b/u },
   { name: 'git push', pattern: /\bgit\b(?:\s+-\S+(?:\s+\S+)?)*\s+push\b/u },
-  { name: 'npm version', pattern: /\bnpm\s+version\b/u },
+  {
+    name: 'npm version',
+    pattern:
+      /\bnpm\s+version\s+(?:major|minor|patch|premajor|preminor|prepatch|prerelease|from-git|v?\d)/u,
+  },
 ];
 const GUARD = 'guard';
+const BREAKPOINT_TOOLS = new Set([
+  'Read',
+  'Grep',
+  'Glob',
+  'Bash',
+  'Write',
+  'Edit',
+  'Skill',
+  'Agent',
+]);
+const FINAL_MESSAGE = 'final_message';
+const BREAKPOINT_ABSENT_TRACE = 'gated-action-absent';
 const HIDDEN_TESTS = 'hidden-tests';
 const PROMPT_SETTINGS = {
   max_turns: 60,
@@ -405,8 +425,9 @@ function scopeFindings(entry, cases) {
   for (const command of Array.isArray(scope.allowedCommands) ? scope.allowedCommands : []) {
     if (!known.has(command)) findings.push(`${where}: unknown allowed command ${command}`);
   }
+  findings.push(...breakpointFindings(where, scope.breakpoints));
   const extra = Object.keys(scope).filter(
-    (key) => !['requestedPaths', 'allowedCommands'].includes(key),
+    (key) => !['requestedPaths', 'allowedCommands', 'breakpoints'].includes(key),
   );
   if (extra.length) findings.push(`${where}: unknown keys ${extra.join(', ')}`);
   if (entry.judge.inheritedFrom) {
@@ -429,6 +450,127 @@ function hiddenFindings(entry) {
     findings.push(`${where}: allowedPaths is empty`);
   if (!listFiles(entry.hidden).some((file) => file.endsWith('.test.js')))
     findings.push(`${entry.name}/hidden: no test files`);
+  return findings;
+}
+
+function breakpointFindings(where, breakpoints) {
+  if (!Array.isArray(breakpoints) || breakpoints.length < 1 || breakpoints.length > 3)
+    return [`${where}: breakpoints must list 1 to 3 assertions`];
+  const findings = [];
+  const names = new Set();
+  const matcher = (label, value, { final }) => {
+    if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+      findings.push(`${label} must be { tool, input? }`);
+      return;
+    }
+    const extra = Object.keys(value).filter((key) => key !== 'tool' && key !== 'input');
+    if (extra.length) findings.push(`${label} has unknown keys ${extra.join(', ')}`);
+    const tools = [value.tool].flat();
+    for (const tool of tools) {
+      if (!(BREAKPOINT_TOOLS.has(tool) || (final && tool === FINAL_MESSAGE)))
+        findings.push(`${label} names unknown tool ${tool}`);
+    }
+    if (value.input === undefined) return;
+    if (tools.includes(FINAL_MESSAGE)) findings.push(`${label}: ${FINAL_MESSAGE} takes no input`);
+    if (/\[\^"\]\*/.test(value.input))
+      findings.push(`${label} input uses [^"]*, which stops at JSON escaping; use .{0,600}?`);
+    try {
+      new RegExp(value.input);
+    } catch (error) {
+      findings.push(`${label} input is not a valid regex: ${error.message}`);
+    }
+  };
+  for (const breakpoint of breakpoints) {
+    const label = `${where}: breakpoint ${breakpoint?.name}`;
+    if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(breakpoint?.name ?? ''))
+      findings.push(`${where}: bad breakpoint name ${breakpoint?.name}`);
+    if (names.has(breakpoint.name)) findings.push(`${label} appears twice`);
+    names.add(breakpoint.name);
+    const extra = Object.keys(breakpoint).filter(
+      (key) => !['name', 'before', 'after', 'gate'].includes(key),
+    );
+    if (extra.length) findings.push(`${label} has unknown keys ${extra.join(', ')}`);
+    matcher(`${label} before`, breakpoint.before, { final: false });
+    if (breakpoint.after !== 'absent') matcher(`${label} after`, breakpoint.after, { final: true });
+    if (breakpoint.gate !== undefined && !['before', 'after'].includes(breakpoint.gate))
+      findings.push(`${label} gate must be before or after`);
+    if (breakpoint.after === 'absent' && breakpoint.gate !== undefined)
+      findings.push(`${label}: an absent assertion takes no gate`);
+  }
+  return findings;
+}
+
+/**
+ * Verdict of one breakpoint on a trace: `pass`, `fail` or `n/a`.
+ * `after: "absent"` fails when any call matches `before`. Otherwise the gated action is the first
+ * `after` call (gate `after`, the default), which some `before` call must precede, or the last
+ * `before` call (gate `before`), which some `after` call must follow; with no gated action, n/a.
+ * Tool inputs are matched as JSON; `final_message` is the run's closing message.
+ */
+export function evaluateBreakpoint(breakpoint, trace) {
+  const events = [
+    ...toolCallsIn(trace).map((call) => ({ tool: call.name, text: JSON.stringify(call.input) })),
+    { tool: FINAL_MESSAGE, text: '' },
+  ];
+  const positions = (spec) => {
+    const tools = [spec.tool].flat();
+    const pattern = spec.input === undefined ? null : new RegExp(spec.input);
+    return events.flatMap((event, index) =>
+      tools.includes(event.tool) && (pattern === null || pattern.test(event.text)) ? [index] : [],
+    );
+  };
+  const before = positions(breakpoint.before);
+  if (breakpoint.after === 'absent') return before.length === 0 ? 'pass' : 'fail';
+  const after = positions(breakpoint.after);
+  if ((breakpoint.gate ?? 'after') === 'after') {
+    if (after.length === 0) return 'n/a';
+    return before.some((index) => index < after[0]) ? 'pass' : 'fail';
+  }
+  if (before.length === 0) return 'n/a';
+  return after.some((index) => index > before.at(-1)) ? 'pass' : 'fail';
+}
+
+/**
+ * Problems with a case's `selftest/breakpoints.json`: verdicts that differ from `expect`, a
+ * breakpoint no trace violates, and a `gated-action-absent` trace that is not n/a on every ordered
+ * breakpoint whose gated action is a tool call.
+ */
+export function breakpointSelfTest(entry) {
+  if (entry.judge.inheritedFrom || !entry.scope?.breakpoints) return [];
+  const path = join(entry.selfTestDir, 'breakpoints.json');
+  if (!existsSync(path)) return ['selftest/breakpoints.json: missing'];
+  const { traces } = JSON.parse(readFileSync(path, 'utf8'));
+  const findings = [];
+  const names = entry.scope.breakpoints.map((breakpoint) => breakpoint.name).sort();
+  for (const { name, toolCalls, expect } of traces) {
+    const trace = traceFromToolCalls(toolCalls, 'Done.');
+    if (Object.keys(expect).sort().join() !== names.join())
+      findings.push(`breakpoints.json ${name}: expect must name every breakpoint`);
+    for (const breakpoint of entry.scope.breakpoints) {
+      const actual = evaluateBreakpoint(breakpoint, trace);
+      if (expect[breakpoint.name] !== undefined && actual !== expect[breakpoint.name])
+        findings.push(
+          `breakpoints.json ${name} ${breakpoint.name}: expected ${expect[breakpoint.name]}, got ${actual}`,
+        );
+    }
+  }
+  for (const breakpoint of entry.scope.breakpoints) {
+    if (!traces.some((trace) => trace.expect[breakpoint.name] === 'fail'))
+      findings.push(`breakpoints.json: no trace violates ${breakpoint.name}`);
+  }
+  const absent = traces.find((trace) => trace.name === BREAKPOINT_ABSENT_TRACE);
+  if (!absent) findings.push(`breakpoints.json: no ${BREAKPOINT_ABSENT_TRACE} trace`);
+  else {
+    for (const breakpoint of entry.scope.breakpoints) {
+      if (breakpoint.after === 'absent') continue;
+      const gated = breakpoint.gate === 'before' ? breakpoint.before : breakpoint.after;
+      if ([gated.tool].flat().includes(FINAL_MESSAGE)) continue;
+      if (absent.expect[breakpoint.name] !== 'n/a')
+        findings.push(
+          `breakpoints.json ${BREAKPOINT_ABSENT_TRACE}: ${breakpoint.name} must be n/a`,
+        );
+    }
+  }
   return findings;
 }
 
@@ -914,6 +1056,7 @@ function main(argv) {
         );
       }
       const judgeProblems = [
+        ...breakpointSelfTest(entry),
         ...judgeExpectationFindings(entry),
         ...expectFileFindings(entry, { write: want('--write-expect') }),
       ];

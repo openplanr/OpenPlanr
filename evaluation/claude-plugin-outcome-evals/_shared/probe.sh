@@ -4,6 +4,7 @@
 # name the product, and no absolute path or variable value is written.
 # EVAL_HIDDEN_DIR and EVAL_GRADERS_DIR, when set, name folders the agent must not
 # read; each gets a readability field, omitted when its variable is unset.
+# gitWorks records whether git runs at all in this environment.
 # shellcheck shell=bash
 
 # Prints true when the folder lists and its first regular file reads, else false.
@@ -15,11 +16,12 @@ eval_probe_readable() {
 }
 
 eval_probe() {
-  local cli=false claude_dir=false claude_plugins=false claude_md=false entries readable=''
+  local cli=false claude_dir=false claude_plugins=false claude_md=false git_works=false entries readable=''
   if command -v openplanr >/dev/null 2>&1 || command -v planr >/dev/null 2>&1; then cli=true; fi
   [ -d "$HOME/.claude" ] && claude_dir=true
   [ -d "$HOME/.claude/plugins" ] && claude_plugins=true
   [ -f "$HOME/.claude/CLAUDE.md" ] && claude_md=true
+  git --version >/dev/null 2>&1 && git_works=true
   entries=$(printf '%s' "$PATH" | tr ':' '\n' | grep -c . || true)
   if [ -n "${EVAL_HIDDEN_DIR:-}" ]; then
     readable+=",\"hiddenReadable\":$(eval_probe_readable "$EVAL_HIDDEN_DIR")"
@@ -28,8 +30,8 @@ eval_probe() {
     readable+=",\"gradersReadable\":$(eval_probe_readable "$EVAL_GRADERS_DIR")"
   fi
   mkdir -p .git/info
-  printf '{"schema":1,"stage":"scaffold","productCliOnPath":%s,"home":{"claudeDir":%s,"claudePlugins":%s,"claudeMd":%s},"pathEntries":%s%s}\n' \
-    "$cli" "$claude_dir" "$claude_plugins" "$claude_md" "$entries" "$readable" > .git/info/eval-probe.json
+  printf '{"schema":1,"stage":"scaffold","productCliOnPath":%s,"home":{"claudeDir":%s,"claudePlugins":%s,"claudeMd":%s},"gitWorks":%s,"pathEntries":%s%s}\n' \
+    "$cli" "$claude_dir" "$claude_plugins" "$claude_md" "$git_works" "$entries" "$readable" > .git/info/eval-probe.json
 }
 
 eval_probe

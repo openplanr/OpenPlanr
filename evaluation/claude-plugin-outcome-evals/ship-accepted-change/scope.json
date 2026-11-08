@@ -5,5 +5,38 @@
     "README.md",
     "docs/changes/0004-note-tags.md"
   ],
-  "allowedCommands": []
+  "allowedCommands": [],
+  "breakpoints": [
+    {
+      "name": "change-doc-read-before-edit",
+      "before": {
+        "tool": [
+          "Read",
+          "Grep",
+          "Bash"
+        ],
+        "input": "docs/changes/0004-note-tags\\.md"
+      },
+      "after": {
+        "tool": [
+          "Edit",
+          "Write"
+        ]
+      }
+    },
+    {
+      "name": "tests-after-last-edit",
+      "gate": "before",
+      "before": {
+        "tool": [
+          "Edit",
+          "Write"
+        ]
+      },
+      "after": {
+        "tool": "Bash",
+        "input": "\\bnode\\s+--test\\b|\\bnpm\\s+(?:run\\s+)?test\\b"
+      }
+    }
+  ]
 }

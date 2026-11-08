@@ -3,5 +3,32 @@
     "docs/**",
     ".planr/reviews/**"
   ],
-  "allowedCommands": []
+  "allowedCommands": [],
+  "breakpoints": [
+    {
+      "name": "plan-read-before-answer",
+      "before": {
+        "tool": [
+          "Read",
+          "Grep",
+          "Bash"
+        ],
+        "input": "docs/plans/note-sharing\\.md"
+      },
+      "after": {
+        "tool": "final_message"
+      }
+    },
+    {
+      "name": "no-write-outside-requested-paths",
+      "before": {
+        "tool": [
+          "Edit",
+          "Write"
+        ],
+        "input": "\"file_path\":\"(?!(?:(?!\",\").){0,600}?/(?:docs|\\.planr/reviews)/)"
+      },
+      "after": "absent"
+    }
+  ]
 }
