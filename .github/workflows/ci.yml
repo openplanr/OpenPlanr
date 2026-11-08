@@ -150,7 +150,7 @@ jobs:
         run: npm run check:generated
       - name: Verify package and composition boundaries
         run: npm run check:boundaries
-      - name: Keep the plugin allowlist and baselines from growing past the base branch
+      - name: Keep the plugin allowlist from growing past the base branch
         if: github.event_name == 'pull_request' || github.event_name == 'merge_group'
         env:
           BASE_REF: ${{ github.base_ref || github.event.merge_group.base_ref }}
