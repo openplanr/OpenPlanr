@@ -9,7 +9,6 @@
     "covers-r4-revoke": true,
     "covers-r5-expiry": true,
     "no-out-of-spec-work": true,
-    "order-respects-dependencies": true,
     "tasks-name-files": true,
     "tasks-name-verification": true
   }

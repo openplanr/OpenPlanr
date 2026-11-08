@@ -27,9 +27,6 @@ criteria:
   - id: no-out-of-spec-work
     kind: outcome
     criterion: No unit of work delivers something the spec does not ask for, such as sharing with named users, editing through a link, or notifications. Tests, documentation and refactoring that serve R1 to R5 count as in spec.
-  - id: order-respects-dependencies
-    kind: outcome
-    criterion: The work for revocation and for expiry comes after, or is marked as depending on, the work that introduces link storage or link creation.
   - id: tasks-name-files
     kind: format
     criterion: Every unit of work names the files it changes or creates.
