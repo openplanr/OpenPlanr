@@ -73,7 +73,7 @@ test('Ship discovery lists gated CI jobs as conditional and always names the git
   const ship = read('skills/planr-ship/SKILL.md').replace(/\s+/gu, ' ');
   assert.match(
     ship,
-    /`changes` or paths-filter job whose outputs gate other jobs\), list every job it gates and mark each conditional; never drop one by reading the paths yourself/u,
+    /`changes` or paths-filter job whose outputs gate other jobs\), list every job it gates and mark each conditional\. Run a conditional job/u,
   );
   assert.match(
     ship,
