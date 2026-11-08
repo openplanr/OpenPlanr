@@ -21,8 +21,8 @@ Guards are expected near ceiling in both arms and stay out of the headline delta
 
 ## Case folder
 
-- `case.yaml`, `prompt.md`: the CLI case. The prompt body is what a person would type. `tags` names the
-  tool-grant group (`grant-bash-edit-write`) and marks guards (`guard`).
+- `case.yaml`, `prompt.md`: the CLI case. The prompt body is what a person would type. `tags: [guard]`
+  marks the guard cases.
 - `scaffold.sh`: builds a deterministic git repository (fixed author and dates, no network) on the shared
   notes app in `_shared/notes-base.sh`, then sources `_shared/probe.sh`. The probe writes
   `.git/info/eval-probe.json` with booleans and counts only.

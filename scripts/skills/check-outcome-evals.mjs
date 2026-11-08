@@ -39,7 +39,6 @@ const GRADER_KEYS = {
   llm: ['type', 'criteria', 'focus', 'weight', 'arm'],
   baseline: ['type', 'baseline_file', 'criteria', 'weight', 'arm'],
 };
-const GROUP_TAG = 'grant-bash-edit-write';
 const GUARD_CASES = new Set(['bug-investigate-fix', 'ship-accepted-change']);
 const FREE_TYPES = new Set(['regex', 'tool_order', 'tool_used', 'file_exists']);
 const JUDGE_KINDS = new Set(['outcome', 'format']);
@@ -235,8 +234,6 @@ export function staticFindings(
       }
     }
     const tags = entry.prompt.data.tags ?? [];
-    if (!tags.includes(GROUP_TAG))
-      findings.push(`${name}/prompt.md: tags must include ${GROUP_TAG}`);
     if (tags.includes('guard') !== GUARD_CASES.has(name)) {
       findings.push(
         `${name}/prompt.md: the guard tag belongs on ${[...GUARD_CASES].join(' and ')} only`,
