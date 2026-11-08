@@ -36,18 +36,18 @@ with your own file tools; never reuse a deleted ID and never fall back to
    wrote, or the value from step 5 for a kind you did not use. Never lower a
    value. After writing `US-015` and `T-041`, for example:
 
-```json
-{
-  "kind": "planning-id-sequence",
-  "schemaVersion": "1.0.0",
-  "protocolVersion": "1.7.0",
-  "next": {
-    "SPEC": 4,
-    "US": 16,
-    "T": 42
-  }
-}
-```
+   ```json
+   {
+     "kind": "planning-id-sequence",
+     "schemaVersion": "1.0.0",
+     "protocolVersion": "1.7.0",
+     "next": {
+       "SPEC": 4,
+       "US": 16,
+       "T": 42
+     }
+   }
+   ```
 
 Re-run steps 2–5 right before writing rather than reusing numbers from earlier in
 the session: another writer may have added artifacts since.

@@ -67,8 +67,10 @@ describe('planning ID procedure', () => {
   );
 
   it('documents the exact sequence file the CLI writes', async () => {
-    const example = /```json\n([\s\S]*?)```/u.exec(procedure)?.[1];
-    expect(example).toBeDefined();
+    const block = /^( *)```json\n([\s\S]*?)^\1```$/mu.exec(procedure);
+    expect(block).not.toBeNull();
+    const [, indent, body] = block as RegExpExecArray;
+    const example = body.replaceAll(new RegExp(`^${indent}`, 'gmu'), '');
     const specs = path.join(projectDir, '.planr', 'specs');
     await mkdir(path.join(specs, 'SPEC-003-x', 'stories'), { recursive: true });
     await writeFile(path.join(specs, 'SPEC-003-x', 'stories', 'US-014-x.md'), '');
