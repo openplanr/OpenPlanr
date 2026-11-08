@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { lstatSync, readdirSync, readFileSync } from 'node:fs';
+import { lstatSync, readdirSync, readFileSync, rmdirSync } from 'node:fs';
 import { relative, resolve, sep } from 'node:path';
 import {
   GeneratedOwnership,
@@ -42,6 +42,30 @@ function actualOutputs(root, ownedRoots) {
     }
   }
   return [...new Set(paths)].sort();
+}
+
+/** Removes empty directories below each owned root, bottom-up; `rmdir` never deletes content. */
+function pruneEmptyDirectories(root, ownedRoots) {
+  const prune = (absolute, keep) => {
+    const target = relative(root, absolute).split(sep).join('/');
+    if (lstatSync(absolute).isSymbolicLink())
+      throw new Error(`Symlink in generated skill outputs: ${target}`);
+    const remaining = readdirSync(absolute).filter((entry) => {
+      const child = resolve(absolute, entry);
+      return !lstatSync(child).isDirectory() || !prune(child, false);
+    });
+    if (remaining.length > 0 || keep) return false;
+    rmdirSync(absolute);
+    return true;
+  };
+  for (const ownedRoot of ownedRoots) {
+    generatedPath(root, `${ownedRoot}/__ownership_probe__`);
+    try {
+      prune(resolve(root, ownedRoot), true);
+    } catch (error) {
+      if (error.code !== 'ENOENT') throw error;
+    }
+  }
 }
 
 function matches(current, bytes, mode) {
@@ -95,6 +119,9 @@ function finishSynchronization({
   scope,
   expectedPaths,
   expected,
+  root,
+  ownedRoots,
+  completeRoots,
 }) {
   if (mode === 'check') {
     drift.push(...retirement.retired.map(({ target }) => ({ target, reason: 'retired output' })));
@@ -107,6 +134,7 @@ function finishSynchronization({
         `Generated outputs changed during retirement: ${JSON.stringify(result.conflicts)}`,
       );
     custody.record(expected).save();
+    if (completeRoots) pruneEmptyDirectories(root, ownedRoots);
     return result.retired.length;
   }
   return 0;
@@ -186,6 +214,9 @@ export function syncGeneratedOutputs({
     scope,
     expectedPaths,
     expected,
+    root,
+    ownedRoots,
+    completeRoots,
   });
   return { files: expected.length, changedFiles, retiredFiles: retirement.retired.length };
 }
