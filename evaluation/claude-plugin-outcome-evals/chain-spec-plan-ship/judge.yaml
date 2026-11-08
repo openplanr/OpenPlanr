@@ -15,7 +15,7 @@ criteria:
     criterion: The built behaviour leaves out notes marked done.
   - id: spec-written
     kind: format
-    criterion: The work includes a written description of what to build before the code, such as a spec or requirements list.
+    criterion: The work includes a written description of what to build, such as a spec or requirements list, as a document separate from the code.
   - id: plan-written
     kind: format
     criterion: The work includes a written plan that breaks the build into steps or tasks.

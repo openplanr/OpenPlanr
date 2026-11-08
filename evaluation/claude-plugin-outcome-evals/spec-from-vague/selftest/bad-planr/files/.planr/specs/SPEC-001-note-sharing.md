@@ -15,8 +15,10 @@ status: draft
 
 ## Non-goals
 
-- None.
+- A mobile app.
+- Offline mode.
 
 ## Open questions
 
-- None.
+- Which pricing tier gets public links?
+- Should comments support emoji reactions?
