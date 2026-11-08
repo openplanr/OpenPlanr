@@ -21,7 +21,8 @@ Guards are expected near ceiling in both arms and stay out of the headline delta
 
 ## Case folder
 
-- `case.yaml`, `prompt.md`: the CLI case. The prompt body is what a person would type.
+- `case.yaml`, `prompt.md`: the CLI case. The prompt body is what a person would type. `tags` names the
+  tool-grant group (`grant-bash-edit-write`) and marks guards (`guard`).
 - `scaffold.sh`: builds a deterministic git repository (fixed author and dates, no network) on the shared
   notes app in `_shared/notes-base.sh`, then sources `_shared/probe.sh`. The probe writes
   `.git/info/eval-probe.json` with booleans and counts only.
@@ -35,7 +36,8 @@ Guards are expected near ceiling in both arms and stay out of the headline delta
   runs `node --test`. Diff scope against `allowedPaths` is reported, not scored.
 - `selftest/`: four hand-made outputs (`good-planr`, `good-plain`, `bad-planr`, `bad-plain`), each with
   `files/` laid over the scaffolded workspace, `last-message.md` and `run.json` (tool calls for a synthetic
-  trace, plus any judge criteria a bad output is expected to pass). These hold planning-tool-style output on
+  trace, plus any judge criteria a bad output is expected to pass) and `expect.json` (the expected hidden-test,
+  free-grader and judge verdicts, written by `--write-expect` and checked for drift). These hold planning-tool-style output on
   purpose and are never shown to a run.
 - `branch-ready-to-merge/tools/gh`: offline stand-in for the GitHub CLI, with the `gh pr view --json` field
   list recorded from gh 2.95.0.

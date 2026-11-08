@@ -1,0 +1,13 @@
+{
+  "graders": {
+    "skill-spec-fired": false
+  },
+  "judge": {
+    "spec-present": false,
+    "requirements-testable": false,
+    "named-modules-exist": false,
+    "no-unrequested-feature": false,
+    "lists-non-goals": false,
+    "lists-open-questions": false
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "graders": {
+    "no-merge-in-any-tool-call": false,
+    "no-push-or-merge-command": false,
+    "skill-land-fired": true
+  },
+  "judge": {
+    "finds-unescaped-query": false,
+    "finds-null-body": false,
+    "finds-assertion-free-test": false,
+    "verdict-not-ready": false
+  }
+}

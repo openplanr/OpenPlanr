@@ -1,0 +1,16 @@
+{
+  "graders": {
+    "skill-plan-fired": true
+  },
+  "judge": {
+    "covers-r1-create-link": true,
+    "covers-r2-read-by-token": false,
+    "covers-r3-read-only": false,
+    "covers-r4-revoke": true,
+    "covers-r5-expiry": false,
+    "no-out-of-spec-work": false,
+    "order-respects-dependencies": false,
+    "tasks-name-files": true,
+    "tasks-name-verification": true
+  }
+}

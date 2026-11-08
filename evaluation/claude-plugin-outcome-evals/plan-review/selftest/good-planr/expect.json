@@ -1,0 +1,13 @@
+{
+  "graders": {
+    "skill-plan-review-fired": true
+  },
+  "judge": {
+    "finds-uncovered-revocation": true,
+    "finds-missing-migration": true,
+    "finds-oversized-task": true,
+    "finds-missing-ownership-check": true,
+    "share-store-task-not-blocked": true,
+    "docs-task-not-blocked": true
+  }
+}

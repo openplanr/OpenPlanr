@@ -1,0 +1,14 @@
+{
+  "graders": {
+    "skill-operate-fired": true
+  },
+  "judge": {
+    "finds-activation-drop": true,
+    "finds-incident-cluster": true,
+    "finds-roadmap-gap": true,
+    "finds-short-runway": true,
+    "recommendations-cite-facts": true,
+    "flags-missing-retention": true,
+    "actions-have-owners": true
+  }
+}

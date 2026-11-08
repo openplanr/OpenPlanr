@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * Static contamination check and offline grader self-test for the Claude plugin outcome evals.
- * Usage: node scripts/skills/check-outcome-evals.mjs [--static] [--self-test] [--case <name>]
+ * Usage: node scripts/skills/check-outcome-evals.mjs [--static] [--self-test] [--write-expect] [--case <name>]
  */
 
 import { spawnSync } from 'node:child_process';
@@ -14,6 +14,7 @@ import {
   readFileSync,
   rmSync,
   statSync,
+  writeFileSync,
 } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { basename, dirname, join, matchesGlob, relative, resolve } from 'node:path';
@@ -38,6 +39,8 @@ const GRADER_KEYS = {
   llm: ['type', 'criteria', 'focus', 'weight', 'arm'],
   baseline: ['type', 'baseline_file', 'criteria', 'weight', 'arm'],
 };
+const GROUP_TAG = 'grant-bash-edit-write';
+const GUARD_CASES = new Set(['bug-investigate-fix', 'ship-accepted-change']);
 const FREE_TYPES = new Set(['regex', 'tool_order', 'tool_used', 'file_exists']);
 const JUDGE_KINDS = new Set(['outcome', 'format']);
 
@@ -230,6 +233,14 @@ export function staticFindings(
       if (JSON.stringify(entry.prompt.data[key]) !== JSON.stringify(value)) {
         findings.push(`${name}/prompt.md: ${key} must be ${JSON.stringify(value)}`);
       }
+    }
+    const tags = entry.prompt.data.tags ?? [];
+    if (!tags.includes(GROUP_TAG))
+      findings.push(`${name}/prompt.md: tags must include ${GROUP_TAG}`);
+    if (tags.includes('guard') !== GUARD_CASES.has(name)) {
+      findings.push(
+        `${name}/prompt.md: the guard tag belongs on ${[...GUARD_CASES].join(' and ')} only`,
+      );
     }
     const body = promptBody(entry);
     if (entry.explicit && body === entry.prompt.body.trim()) {
@@ -648,6 +659,34 @@ export function judgeExpectationFindings(entry) {
   return findings;
 }
 
+/** The `expect.json` content a self-test output must carry: hidden-test, free-grader and judge verdicts. */
+export function derivedExpectations(entry, variant) {
+  const expect = {};
+  if (entry.hidden) expect.hidden = expectedVerdict(variant, 'outcome');
+  expect.graders = Object.fromEntries(
+    entry.graders.map((grader) => [grader.name, expectedVerdict(variant, graderRole(grader))]),
+  );
+  expect.judge = Object.fromEntries(
+    judgeExpectations(entry).map((criterion) => [criterion.id, criterion.expected[variant]]),
+  );
+  return expect;
+}
+
+/** Base cases whose `selftest/<variant>/expect.json` is missing or differs from the derived expectations. */
+export function expectFileFindings(entry, { write = false } = {}) {
+  if (entry.judge.inheritedFrom) return [];
+  const findings = [];
+  for (const variant of SELF_TEST_VARIANTS) {
+    const path = join(entry.selfTestDir, variant, 'expect.json');
+    const text = `${JSON.stringify(derivedExpectations(entry, variant), null, 2)}\n`;
+    if (write) writeFileSync(path, text);
+    else if (!existsSync(path) || readFileSync(path, 'utf8') !== text) {
+      findings.push(`${variant}/expect.json is missing or stale (run with --write-expect)`);
+    }
+  }
+  return findings;
+}
+
 /** Confirms the untouched fixture fails its hidden tests. */
 export function hiddenFailsOnFixture(entry) {
   const { root, workspace } = scaffoldCase(entry);
@@ -694,7 +733,10 @@ function main(argv) {
           `self-test ${entry.name} ${result.variant} ${result.check}: expected ${result.expected ? 'pass' : 'fail'}, got ${result.actual ? 'pass' : 'fail'} (${result.detail})\n`,
         );
       }
-      const judgeProblems = judgeExpectationFindings(entry);
+      const judgeProblems = [
+        ...judgeExpectationFindings(entry),
+        ...expectFileFindings(entry, { write: want('--write-expect') }),
+      ];
       for (const problem of judgeProblems)
         process.stdout.write(`self-test ${entry.name} ${problem}\n`);
       const scored = results.filter((result) => !result.reportedOnly).length;

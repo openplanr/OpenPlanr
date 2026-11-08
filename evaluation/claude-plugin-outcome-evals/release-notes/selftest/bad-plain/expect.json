@@ -1,0 +1,11 @@
+{
+  "graders": {
+    "skill-release-fired": false,
+    "version-is-2-0-0": false
+  },
+  "judge": {
+    "lists-breaking-removal": false,
+    "describes-user-changes": false,
+    "excludes-internal-commits": false
+  }
+}

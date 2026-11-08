@@ -5,6 +5,7 @@ import { join } from 'node:path';
 import test from 'node:test';
 import {
   evaluateFreeGrader,
+  expectFileFindings,
   hiddenFailsOnFixture,
   judgeExpectationFindings,
   loadSuite,
@@ -158,5 +159,6 @@ for (const entry of cases.values()) {
     );
     assert.deepEqual(wrong, []);
     assert.deepEqual(judgeExpectationFindings(entry), []);
+    assert.deepEqual(expectFileFindings(entry), []);
   });
 }
