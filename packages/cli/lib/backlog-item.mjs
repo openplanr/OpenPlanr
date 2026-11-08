@@ -84,6 +84,56 @@ class BacklogInputError extends Error {
   }
 }
 
+const WHEN_PATTERN =
+  /^(?:(?:next-unit|trigger|declined):\S(?:[^\r\n]*\S)?|sprint:(?:next|SPRINT-\d{3,}))(?![\s\S])/u;
+const FILE_PATTERN =
+  /^(?!\/)(?![A-Za-z]:)(?!.*\\)(?!.*(?:^|\/)\.{1,2}(?:\/|$))(?!.*\/\/)(?!.*:\d+(?::\d+|-\d+)?$)[^\r\n]+$/u;
+
+/** @type {typeof import('./backlog-item.d.mts').parseWhen} */
+export function parseWhen(value) {
+  if (typeof value !== 'string' || !WHEN_PATTERN.test(value))
+    throw new BacklogInputError(
+      `Backlog when ${JSON.stringify(value)} is not valid; use next-unit:<ref>, sprint:<SPRINT-NNN or next>, trigger:<event>, or declined:<reason>. Do not store now.`,
+    );
+  const separator = value.indexOf(':');
+  return {
+    kind: /** @type {import('./backlog-item.d.mts').BacklogWhen['kind']} */ (
+      value.slice(0, separator)
+    ),
+    value: value.slice(separator + 1),
+  };
+}
+
+/** @param {unknown} value */
+function normalizeFilePath(value) {
+  return typeof value === 'string'
+    ? value
+        .trim()
+        .replaceAll('\\', '/')
+        .replace(/^(?:\.\/)+/u, '')
+    : '';
+}
+
+/** @type {typeof import('./backlog-item.d.mts').normalizeBacklogFiles} */
+export function normalizeBacklogFiles(value) {
+  if (!Array.isArray(value))
+    throw new BacklogInputError(
+      `Backlog files ${JSON.stringify(value)} must be an array of repo-relative paths.`,
+    );
+  return [
+    ...new Set(
+      value.map((item) => {
+        const normalized = normalizeFilePath(item);
+        if (!FILE_PATTERN.test(normalized))
+          throw new BacklogInputError(
+            `Backlog files entry ${JSON.stringify(item)} must be a repo-relative path without .. segments, absolute paths, or line numbers.`,
+          );
+        return normalized;
+      }),
+    ),
+  ];
+}
+
 /** @type {typeof import('./backlog-item.d.mts').backlogFields} */
 export function backlogFields(input) {
   const title = String(input.title ?? input.name ?? '').trim();
@@ -96,6 +146,12 @@ export function backlogFields(input) {
   const criteria = optionalText(input.acceptanceCriteria);
   const notes = optionalText(input.notes);
   const epicId = optionalText(input.epicId);
+  if (input.when !== undefined) parseWhen(input.when);
+  const files = input.files === undefined ? undefined : normalizeBacklogFiles(input.files);
+  if (input.unverified !== undefined && input.unverified !== true)
+    throw new BacklogInputError(
+      `Backlog unverified ${JSON.stringify(input.unverified)} must be true when present.`,
+    );
   return {
     title,
     priority,
@@ -105,6 +161,9 @@ export function backlogFields(input) {
       ? {}
       : { acceptanceCriteria: Array.isArray(criteria) ? criteria.map(String) : String(criteria) }),
     ...(notes === undefined ? {} : { notes: String(notes) }),
+    ...(input.when === undefined ? {} : { when: String(input.when) }),
+    ...(files === undefined ? {} : { files }),
+    ...(input.unverified === undefined ? {} : { unverified: /** @type {const} */ (true) }),
     ...(epicId === undefined ? {} : { epicId: String(epicId) }),
   };
 }
@@ -121,6 +180,11 @@ export function renderBacklogItem(id, fields, date) {
     'status: "open"',
     `created: ${quote(date)}`,
     `updated: ${quote(date)}`,
+    ...(fields.when === undefined ? [] : [`when: ${quote(fields.when)}`]),
+    ...(fields.files === undefined
+      ? []
+      : [`files: [${fields.files.map((file) => quote(file)).join(', ')}]`]),
+    ...(fields.unverified === undefined ? [] : ['unverified: true']),
     ...(fields.epicId ? [`epicId: ${quote(fields.epicId)}`] : []),
     '---',
     '',
@@ -205,21 +269,62 @@ export async function createBacklogItem(
   return { id, title: fields.title, artifactPath: relativePath(projectDir, filePath) };
 }
 
+/** @param {string} source @returns {string[]} */
+function flowStrings(source) {
+  const values = [];
+  let rest = source.slice(1).trimStart();
+  while (!rest.startsWith(']')) {
+    const token = /^(?:"(?:\\.|[^"\\])*"|'(?:''|[^'])*'|[^\s,[\]{}"'][^,[\]{}]*)/u.exec(rest)?.[0];
+    if (!token) throw new Error('expected a quoted or plain string');
+    const plain = token.trim();
+    if (token.startsWith('"')) values.push(JSON.parse(token));
+    else if (token.startsWith("'")) values.push(token.slice(1, -1).replaceAll("''", "'"));
+    else {
+      if (
+        /^(?:null|true|false|~|[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:e[+-]?\d+)?|[+-]?0[xob][0-9a-f]+|[+-]?\.(?:inf|nan))$/iu.test(
+          plain,
+        ) ||
+        /^[!&*]/u.test(plain) ||
+        /:\s|\s#/u.test(plain)
+      )
+        throw new Error(`expected a string, received ${JSON.stringify(plain)}`);
+      values.push(plain);
+    }
+    rest = rest.slice(token.length).trimStart();
+    if (rest.startsWith(',')) rest = rest.slice(1).trimStart();
+    else if (!rest.startsWith(']')) throw new Error('expected a comma or closing bracket');
+  }
+  if (!/^\](?:\s+#.*)?$/u.test(rest)) throw new Error('unexpected text after the closing bracket');
+  return values;
+}
+
 /**
- * Top-level scalar frontmatter fields; double-quoted values are read as JSON strings.
+ * Top-level frontmatter strings and YAML flow arrays.
  * @param {string} text
  * @param {string} filePath
  */
 function frontmatter(text, filePath) {
   const block = /^---\n([\s\S]*?)\n---/u.exec(text.replace(/\r\n/gu, '\n'))?.[1] ?? '';
-  /** @type {Record<string, string>} */
+  /** @type {Record<string, string | string[]>} */
   const fields = {};
   for (const line of block.split('\n')) {
     const match = /^(\w+):\s*(.*)$/u.exec(line);
     if (!match) continue;
     const value = match[2].trim();
+    if (value.startsWith('[')) {
+      try {
+        fields[match[1]] = flowStrings(value);
+      } catch (error) {
+        throw new Error(
+          `${filePath}: frontmatter field "${match[1]}" is not a valid string array: ${/** @type {Error} */ (error).message}`,
+        );
+      }
+      continue;
+    }
     if (!value.startsWith('"')) {
-      fields[match[1]] = value.replace(/^'(.*)'$/u, '$1');
+      fields[match[1]] = value.replace(/^'(.*)'$/u, (_match, quoted) =>
+        quoted.replaceAll("''", "'"),
+      );
       continue;
     }
     try {
@@ -233,8 +338,20 @@ function frontmatter(text, filePath) {
   return fields;
 }
 
-/** @type {typeof import('./backlog-item.d.mts').listOpenBacklog} */
-export async function listOpenBacklog(projectDir) {
+/** @param {string} body */
+function evidenceFiles(body) {
+  const paths = [
+    ...body.matchAll(/(?:^|[\s`(['"])([^\s`()[\]<>"']+?):\d+(?::\d+|-\d+)?(?=$|[\s`),.;\]"'])/gu),
+  ]
+    .map((match) => normalizeFilePath(match[1]))
+    .filter((file) => FILE_PATTERN.test(file));
+  return [...new Set(paths)];
+}
+
+/** @type {typeof import('./backlog-item.d.mts').listBacklog} */
+export async function listBacklog(projectDir, options = {}) {
+  const requestedFiles =
+    options.files === undefined ? undefined : normalizeBacklogFiles(options.files);
   const { backlogDir } = await projectBacklog(projectDir);
   let names;
   try {
@@ -248,17 +365,37 @@ export async function listOpenBacklog(projectDir) {
     const match = /^([A-Z]+-\d{3,})-.+\.md$/u.exec(name);
     if (!match) continue;
     const filePath = join(backlogDir, name);
-    const fields = frontmatter(await readFile(filePath, 'utf8'), filePath);
-    const status = fields.status ?? 'open';
-    if (CLOSED_STATUSES.has(status)) continue;
+    const text = await readFile(filePath, 'utf8');
+    const fields = frontmatter(text, filePath);
+    const scalar = (/** @type {string} */ key) => {
+      const value = fields[key];
+      if (Array.isArray(value))
+        throw new Error(`${filePath}: frontmatter field "${key}" must be a string.`);
+      return value;
+    };
+    const status = scalar('status') ?? 'open';
+    if (options.open && CLOSED_STATUSES.has(status)) continue;
+    const when = scalar('when');
+    if (options.noWhen && when !== undefined) continue;
+    const body = text.replace(/^---\r?\n[\s\S]*?\r?\n---(?:\r?\n|$)/u, '');
+    const files =
+      fields.files === undefined ? evidenceFiles(body) : normalizeBacklogFiles(fields.files);
+    if (requestedFiles && !requestedFiles.some((file) => files.includes(file))) continue;
     items.push({
-      id: fields.id ?? match[1],
-      title: fields.title ?? name.slice(match[1].length + 1, -3).replace(/-/g, ' '),
+      id: scalar('id') ?? match[1],
+      title: scalar('title') ?? name.slice(match[1].length + 1, -3).replace(/-/g, ' '),
       status,
       path: relativePath(projectDir, filePath),
+      ...(when === undefined ? {} : { when }),
+      files,
     });
   }
   return items;
+}
+
+/** @type {typeof import('./backlog-item.d.mts').listOpenBacklog} */
+export function listOpenBacklog(projectDir, options = {}) {
+  return listBacklog(projectDir, { ...options, open: true });
 }
 
 /** @type {typeof import('./backlog-item.d.mts').takeCliHint} */
@@ -292,17 +429,25 @@ async function readInput(source) {
 }
 
 const USAGE =
-  'Usage: backlog-item.mjs add --project <dir> --data <file|->\n       backlog-item.mjs list --project <dir> --open\n';
+  'Usage: backlog-item.mjs add --project <dir> --data <file|->\n       backlog-item.mjs list --project <dir> --open [--files <paths...>] [--no-when]\n';
 
 /** @param {string[]} argv */
 async function main(argv) {
   const [command, ...rest] = argv;
-  /** @type {Record<string, string | boolean>} */
+  /** @type {Record<string, string | boolean | string[]>} */
   const options = {};
   for (let index = 0; index < rest.length; index += 1) {
     const flag = rest[index];
     if (flag === '--open') options.open = true;
-    else if (flag === '--project' || flag === '--data')
+    else if (flag === '--no-when') options.noWhen = true;
+    else if (flag === '--files') {
+      const paths = [];
+      while (index + 1 < rest.length && !rest[index + 1].startsWith('--'))
+        paths.push(rest[++index]);
+      if (paths.length === 0)
+        throw new Error(`--files needs at least one repo-relative path.\n${USAGE}`);
+      options.files = paths;
+    } else if (flag === '--project' || flag === '--data')
       options[flag.slice(2)] = rest[++index] ?? '';
     else throw new Error(`Unknown argument: ${flag}\n${USAGE}`);
   }
@@ -325,7 +470,9 @@ async function main(argv) {
     return;
   }
   if (command === 'list' && options.open) {
-    process.stdout.write(`${JSON.stringify({ items: await listOpenBacklog(projectDir) })}\n`);
+    process.stdout.write(
+      `${JSON.stringify({ items: await listOpenBacklog(projectDir, { files: Array.isArray(options.files) ? options.files : undefined, noWhen: options.noWhen === true }) })}\n`,
+    );
     return;
   }
   throw new Error(USAGE);

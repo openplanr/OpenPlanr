@@ -146,7 +146,7 @@ Every planning type provides `list`, `show <id>`, and `update <id>`. Creation ac
 | Story | A title and `--feature <id>` |
 | Task | A title and exactly one of `--story <id>` or `--feature <id>` |
 | Quick task | A description or input file; optional `--epic <id>` |
-| Backlog item | A description; optional priority, tags, and epic |
+| Backlog item | A description; optional priority, tags, epic, `when`, and `files` |
 | Sprint | A title; duration defaults to `2w`; JSON may add `status` (`planned`/`active`), `startDate`, `endDate`, `releaseCut`, `capacityDays`, `refinedAt` and `batches` |
 
 Use deterministic JSON when an agent or integration supplies complete fields:
@@ -158,6 +158,40 @@ openplanr task create --data - --json < task.json
 ```
 
 `openplanr update <ids...>` supports bulk status changes. `--all-done` and `--all-pending` also update canonical task checkboxes for task and quick-task artifacts. Use each command's `--help` output for its exact options.
+
+### Backlog metadata and filters
+
+```bash
+openplanr backlog add "Check callback failures" --when next-unit:#612 --files src/a.ts src/b.ts
+openplanr backlog update BL-001 --files x.ts y.ts
+openplanr backlog update BL-001 --when sprint:next
+openplanr backlog list --open --files src/a.ts --json
+openplanr backlog list --open --no-when
+```
+
+`add` accepts `--when <value>` and `--files <paths...>`, or the same `when` string
+and `files` array in JSON `--data`. `update <id>` accepts both flags as replacements.
+Put the title or ID before variadic `--files` values (or use `--title` for creation).
+Files are distinct repo-relative paths without line numbers, absolute paths, or
+`..` segments. Frontmatter uses a flow array: `files: ["src/a.ts", "src/b.ts"]`.
+
+`when` accepts `next-unit:<ref>`, `sprint:<SPRINT-NNN or next>`, `trigger:<event>`,
+and `declined:<reason>`. A next-unit reference can be a PR number, task or backlog
+ID, or branch. Trigger events may be `date:YYYY-MM-DD`, `closed:<BL-NNN>`,
+`merged:#<PR>`, `merged:<branch>`, `release:<pkg>@<semver>`, or other non-empty text.
+`now` is a triage outcome and cannot be stored. JSON input also accepts
+`unverified: true`; there is no `--unverified` flag.
+
+`list` includes all statuses by default. `--open` excludes `closed` and `done`;
+`--files` keeps items overlapping any supplied path; `--no-when` keeps items
+without `when`. Filters combine. `--json` returns `{ "items": [...] }` with each
+item's ID, title, status, project-relative path, files, and optional when. For old
+items without `files`, listing derives distinct paths from body `file:line`,
+`file:line:column`, or `file:line-line` evidence without rewriting the item.
+
+Custom `backlog/backlog-item.md.hbs` templates receive `when`, `files`, and
+`unverified` when provided. Those keys are post-written into the template's
+frontmatter; the custom template owns its body.
 
 ### `openplanr sprint` refinement
 

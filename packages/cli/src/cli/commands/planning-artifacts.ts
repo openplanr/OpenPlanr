@@ -22,6 +22,7 @@ import { display, logger } from '../../utils/logger.js';
 import { parseMarkdown } from '../../utils/markdown.js';
 import { CliBoundaryError } from '../error-boundary.js';
 import { requireArtifactId } from '../helpers/artifact-id.js';
+import { configureBacklogCommands } from './backlog-commands.js';
 import { registerSprintRefinementCommands } from './sprint-refinement.js';
 
 type PlanningType = Extract<
@@ -274,6 +275,8 @@ async function creationData(
         priority: options.priority ?? input.priority,
         tags: options.tag ?? input.tags,
         epicId: options.epic ?? input.epicId,
+        when: options.when ?? input.when,
+        files: options.files ?? input.files,
       }),
     };
   return prepareSprintCreation(
@@ -288,8 +291,10 @@ async function create(type: PlanningType, program: Command, options: Record<stri
   const projectDir = program.opts().projectDir as string;
   const config = await loadConfig(projectDir);
   const data = await creationData(type, projectDir, config, options);
+  const backlogOverride =
+    type === 'backlog' && (await hasTemplateOverride(templates.backlog, config.templateOverrides));
   const result =
-    type === 'backlog' && !(await hasTemplateOverride(templates.backlog, config.templateOverrides))
+    type === 'backlog' && !backlogOverride
       ? await writeBacklogItem(
           path.join(projectDir, getArtifactDir(config, 'backlog')),
           config.idPrefix.backlog,
@@ -297,6 +302,15 @@ async function create(type: PlanningType, program: Command, options: Record<stri
           new Date().toISOString().split('T')[0],
         )
       : await createArtifact(projectDir, config, type, templates[type], data);
+  if (backlogOverride) {
+    const metadata = Object.fromEntries(
+      ['when', 'files', 'unverified']
+        .filter((key) => data[key] !== undefined)
+        .map((key) => [key, data[key]]),
+    );
+    if (Object.keys(metadata).length > 0)
+      await updateArtifactFields(projectDir, config, 'backlog', result.id, metadata);
+  }
   const artifactPath = path.relative(projectDir, result.filePath).split(path.sep).join('/');
 
   if (type === 'feature')
@@ -488,12 +502,7 @@ export function registerQuickCommand(program: Command) {
   registerCommon(program, 'quick', (command) => command.option('--epic <id>'));
 }
 export function registerBacklogCommand(program: Command) {
-  registerCommon(program, 'backlog', (command) =>
-    command
-      .option('-p, --priority <priority>', 'critical, high, medium, or low')
-      .option('-t, --tag <tags...>')
-      .option('--epic <id>'),
-  );
+  configureBacklogCommands(program, registerCommon(program, 'backlog'));
 }
 export function registerSprintCommand(program: Command) {
   const root = registerCommon(program, 'sprint', (command) =>

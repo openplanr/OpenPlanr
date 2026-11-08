@@ -9,6 +9,7 @@ import {
   readArtifactRaw,
   resolveArtifactFilename,
   updateArtifact,
+  updateArtifactFields,
 } from '../../src/services/artifact-service.js';
 
 // Mock dependencies
@@ -24,6 +25,7 @@ vi.mock('../../src/utils/slugify.js', () => ({
 }));
 
 vi.mock('../../src/utils/markdown.js', () => ({
+  parseTaskCheckboxLines: vi.fn(() => []),
   parseMarkdown: vi.fn((_raw: string) => ({
     data: { id: 'EPIC-001', title: 'Test Epic' },
     content: '# Test Epic\n\nBody content.',
@@ -297,5 +299,25 @@ _No features created yet. Run \`openplanr feature create\` to generate._
     mockListFiles.mockResolvedValueOnce([]); // readArtifactRaw finds nothing
     await addChildReference('/project', config, 'epic', 'EPIC-999', 'feature', 'FEAT-001', 'Test');
     expect(mockWriteFile).not.toHaveBeenCalled();
+  });
+});
+
+describe('updateArtifactFields arrays', () => {
+  it('writes flow arrays and preserves replacement tokens and the body', async () => {
+    const raw = '---\nid: "BL-001"\nfiles: []\ntitle: "Old"\n---\nBody: $1';
+    mockListFiles.mockResolvedValue(['BL-001-item.md']);
+    mockReadFile.mockResolvedValue(raw);
+    await updateArtifactFields('/project', config, 'backlog', 'BL-001', {
+      files: ['src/$1.ts', 'src/quote".ts', 'src/back\\slash.ts'] as readonly string[],
+      title: '$1 $& $$',
+      tags: [],
+      unverified: true,
+    });
+    const written = mockWriteFile.mock.calls.at(-1)?.[1];
+    expect(written).toContain('files: ["src/$1.ts", "src/quote\\".ts", "src/back\\\\slash.ts"]');
+    expect(written).toContain('title: "$1 $& $$"');
+    expect(written).toContain('tags: []');
+    expect(written).toContain('unverified: true');
+    expect(written).toContain('---\nBody: $1');
   });
 });
