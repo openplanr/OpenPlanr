@@ -45,7 +45,7 @@ function actualOutputs(root, ownedRoots) {
 }
 
 /** Removes empty directories below each owned root, bottom-up; `rmdir` never deletes content. */
-function pruneEmptyDirectories(root, ownedRoots) {
+export function pruneEmptyDirectories(root, ownedRoots) {
   const prune = (absolute, keep) => {
     const target = relative(root, absolute).split(sep).join('/');
     if (lstatSync(absolute).isSymbolicLink())
@@ -61,10 +61,12 @@ function pruneEmptyDirectories(root, ownedRoots) {
   for (const ownedRoot of ownedRoots) {
     generatedPath(root, `${ownedRoot}/__ownership_probe__`);
     try {
-      prune(resolve(root, ownedRoot), true);
+      lstatSync(resolve(root, ownedRoot));
     } catch (error) {
-      if (error.code !== 'ENOENT') throw error;
+      if (error.code === 'ENOENT') continue;
+      throw error;
     }
+    prune(resolve(root, ownedRoot), true);
   }
 }
 

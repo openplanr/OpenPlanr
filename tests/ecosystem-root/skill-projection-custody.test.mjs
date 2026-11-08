@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import {
+  chmodSync,
   existsSync,
   mkdirSync,
   mkdtempSync,
@@ -12,7 +13,10 @@ import {
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import test from 'node:test';
-import { syncGeneratedOutputs } from '../../scripts/skills/projection-custody.mjs';
+import {
+  pruneEmptyDirectories,
+  syncGeneratedOutputs,
+} from '../../scripts/skills/projection-custody.mjs';
 
 const digest = (bytes) => createHash('sha256').update(bytes).digest('hex');
 function fixture(t) {
@@ -173,4 +177,17 @@ test('partial roots and check mode keep empty directories', (t) => {
   assert.equal(existsSync(empty), true);
   sync({ [kept]: 'kept\n' }, { mode: 'check' });
   assert.equal(existsSync(empty), true);
+});
+
+test('pruning skips an absent owned root but surfaces walk errors', (t) => {
+  const { root, prefix } = fixture(t);
+  pruneEmptyDirectories(root, [prefix]);
+  const locked = join(root, prefix, 'locked');
+  mkdirSync(locked, { recursive: true });
+  chmodSync(locked, 0o000);
+  try {
+    assert.throws(() => pruneEmptyDirectories(root, [prefix]), { code: 'EACCES' });
+  } finally {
+    chmodSync(locked, 0o755);
+  }
 });
