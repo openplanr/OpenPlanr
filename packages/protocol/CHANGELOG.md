@@ -1,5 +1,11 @@
 # @openplanr/protocol
 
+## 0.17.0
+
+### Minor Changes
+
+- 83529dd: The command registry now matches the CLI command catalog, which lists the new `openplanr design` commands.
+
 ## 0.16.0
 
 ### Minor Changes
