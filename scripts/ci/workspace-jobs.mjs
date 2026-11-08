@@ -70,6 +70,9 @@ export const RULES = Object.freeze([
       'docs/',
       '.changeset/',
       '*.md',
+      // `*.md` only reaches the root, and the `.github/` rule below would otherwise run everything.
+      '.github/*.md',
+      '.github/ISSUE_TEMPLATE/',
       'LICENSE',
       '.editorconfig',
       '.husky/',
