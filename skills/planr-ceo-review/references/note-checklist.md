@@ -12,8 +12,9 @@ Profiles: `advisor` (CEO, CTO, CPO, CMO and COO reviews), `challenger`, `chair` 
 ## Every profile
 
 - [ ] The profile is one of the four above (`E_OPERATE_REVIEW_PROFILE_INVALID`).
-- [ ] The preamble, before the first `##` heading, holds at most one `**Contract:**` line
-      (`E_OPERATE_REVIEW_CONTRACT_DECLARATION_DUPLICATE`), and it reads exactly
+- [ ] The preamble, before the first `##` heading, holds at most one contract line, written
+      `> **Contract:** …` or `- **Contract:** …`
+      (`E_OPERATE_REVIEW_CONTRACT_DECLARATION_DUPLICATE`), and its value is exactly
       `operate-review-quality-contract@2.0.0` (`E_OPERATE_REVIEW_CONTRACT_DECLARATION_INVALID`,
       `E_OPERATE_REVIEW_CONTRACT_VERSION_INVALID`, `E_OPERATE_REVIEW_CONTRACT_VERSION_MISMATCH`).
 - [ ] The note has exactly one level-one `#` title (`E_OPERATE_REVIEW_TITLE_MISSING`,
@@ -89,7 +90,9 @@ Profiles: `advisor` (CEO, CTO, CPO, CMO and COO reviews), `challenger`, `chair` 
       `| ID | Priority | Action | Suggested owner | First step | Success measure | Check | Depends on |`
       and at least one `A<n>` row (`E_OPERATE_REVIEW_ACTION_PLAN_INVALID`).
 - [ ] The action plan has at most seven rows (`E_OPERATE_REVIEW_ACTION_LIMIT`), and every row
-      fills all eight columns with real values (`E_OPERATE_REVIEW_ACTION_ROW_INVALID`).
+      has exactly eight columns, none empty or a placeholder from the field list above (`...`,
+      `TBD`, `TODO`, `<placeholder>`); `—` is accepted, for example in `Depends on`
+      (`E_OPERATE_REVIEW_ACTION_ROW_INVALID`).
 
 ## Older notes (contract 1.0.0)
 
