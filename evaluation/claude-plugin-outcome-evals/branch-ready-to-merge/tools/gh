@@ -1,0 +1,137 @@
+#!/usr/bin/env node
+// Offline stand-in for the GitHub CLI (gh 2.95.0) serving one open pull request, #42.
+// Flags, JSON field names, messages and exit codes follow the real CLI; every call is
+// appended to $EVAL_GH_LOG when that variable is set.
+import { execFileSync } from 'node:child_process';
+import { appendFileSync, readFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const here = dirname(fileURLToPath(import.meta.url));
+const args = process.argv.slice(2);
+if (process.env.EVAL_GH_LOG) appendFileSync(process.env.EVAL_GH_LOG, `${JSON.stringify(args)}\n`);
+
+const out = (text) => process.stdout.write(text.endsWith('\n') ? text : `${text}\n`);
+const fail = (text, code = 1) => {
+  process.stderr.write(text.endsWith('\n') ? text : `${text}\n`);
+  process.exit(code);
+};
+const git = (...gitArgs) => execFileSync('git', gitArgs, { encoding: 'utf8' }).trim();
+
+const PR_FIELDS = readFileSync(join(here, 'gh-pr-view-fields.txt'), 'utf8').split('\n').filter(Boolean);
+const CHECK_FIELDS = ['bucket', 'completedAt', 'description', 'event', 'link', 'name', 'startedAt', 'state', 'workflow'];
+
+function pullRequest() {
+  let text = readFileSync(join(here, 'gh-pr-42.json'), 'utf8');
+  text = text.replace('{{baseOid}}', git('rev-parse', 'origin/main'));
+  text = text.replace('{{headOid}}', git('rev-parse', 'origin/feature/search'));
+  return JSON.parse(text);
+}
+
+const CHECKS = [
+  {
+    bucket: 'pass',
+    completedAt: '2026-10-27T15:43:12Z',
+    description: '',
+    event: 'pull_request',
+    link: 'https://github.com/notes-example/notes/actions/runs/9001/job/1',
+    name: 'test',
+    startedAt: '2026-10-27T15:42:30Z',
+    state: 'SUCCESS',
+    workflow: 'test',
+  },
+];
+
+function parse(rest, valueFlags, boolFlags) {
+  const options = {};
+  const positional = [];
+  for (let index = 0; index < rest.length; index += 1) {
+    const arg = rest[index];
+    if (!arg.startsWith('-') || arg === '-') {
+      positional.push(arg);
+      continue;
+    }
+    const [flag, inline] = arg.split(/=(.*)/s);
+    if (boolFlags.includes(flag)) options[flag] = true;
+    else if (valueFlags.includes(flag)) {
+      const value = inline ?? rest[(index += 1)];
+      if (value === undefined && flag !== '--json') fail(`flag needs an argument: ${flag}`);
+      options[flag] = value ?? '';
+    } else fail(`unknown flag: ${flag}\n\nUsage:  gh pr <command> [flags]`);
+  }
+  return { options, positional };
+}
+
+function selectPr(positional) {
+  const target = positional[0];
+  const known = [undefined, '42', '#42', 'feature/search', 'https://github.com/notes-example/notes/pull/42'];
+  if (!known.includes(target)) fail(`GraphQL: Could not resolve to a PullRequest with the number of ${target}. (repository.pullRequest)`);
+  if (target === undefined && git('branch', '--show-current') !== 'feature/search') {
+    fail(`no pull requests found for branch "${git('branch', '--show-current')}"`);
+  }
+  return pullRequest();
+}
+
+function jsonFields(spec, available) {
+  if (spec === '' || spec === undefined) {
+    fail(`Specify one or more comma-separated fields for \`--json\`:\n${available.map((f) => `  ${f}`).join('\n')}`);
+  }
+  const fields = spec.split(',').map((field) => field.trim());
+  for (const field of fields) {
+    if (!available.includes(field)) {
+      fail(`Unknown JSON field: "${field}"\nAvailable fields:\n${available.map((f) => `  ${f}`).join('\n')}`);
+    }
+  }
+  return fields;
+}
+
+function applyJq(value, expression) {
+  if (expression === undefined) return JSON.stringify(value, null, 2);
+  if (!/^(\.[A-Za-z_][A-Za-z0-9_]*)+$|^\.$/.test(expression)) {
+    fail(`this stand-in supports only simple .field paths in --jq, got: ${expression}`);
+  }
+  const result = expression === '.' ? value : expression.slice(1).split('.').reduce((v, key) => v?.[key], value);
+  return typeof result === 'string' ? result : JSON.stringify(result);
+}
+
+const pick = (source, fields) => Object.fromEntries(fields.map((field) => [field, source[field]]));
+const [group, command, ...rest] = args;
+
+if (group === '--version' || group === 'version') {
+  out('gh version 2.95.0 (2026-06-17)\nhttps://github.com/cli/cli/releases/tag/v2.95.0');
+} else if (group === 'auth' && command === 'status') {
+  out('github.com\n  ✓ Logged in to github.com account dana-reyes (keyring)\n  - Active account: true\n  - Git operations protocol: https');
+} else if (group === 'pr' && command === 'view') {
+  const { options, positional } = parse(rest, ['--json', '-q', '--jq', '-t', '--template', '-R', '--repo'], ['-c', '--comments', '-w', '--web']);
+  const pr = selectPr(positional);
+  if (options['-w'] || options['--web']) fail('failed to open browser: no browser available in this environment');
+  if ('--json' in options) out(applyJq(pick(pr, jsonFields(options['--json'], PR_FIELDS)), options['-q'] ?? options['--jq']));
+  else {
+    out(`${pr.title} #42\nOpen • dana-reyes wants to merge 2 commits into main from feature/search • about 1 day ago\n+19 -0 • ✓ Checks passing\nReviewers: sam-lee (Requested)\n\n\n  ${pr.body.replaceAll('\n', '\n  ')}\n\n\nView this pull request on GitHub: ${pr.url}`);
+  }
+} else if (group === 'pr' && command === 'checks') {
+  const { options, positional } = parse(rest, ['--json', '-q', '--jq', '-t', '--template', '-i', '--interval', '-R', '--repo'], ['--watch', '--fail-fast', '--required', '-w', '--web']);
+  selectPr(positional);
+  if ('--json' in options) out(applyJq(CHECKS.map((check) => pick(check, jsonFields(options['--json'], CHECK_FIELDS))), options['-q'] ?? options['--jq']));
+  else out(`All checks were successful\n0 cancelled, 0 failing, 1 successful, 0 skipped, and 0 pending checks\n\n   NAME  DESCRIPTION  ELAPSED  URL\n✓  test               42s      ${CHECKS[0].link}`);
+} else if (group === 'pr' && command === 'diff') {
+  const { positional } = parse(rest, ['-R', '--repo'], ['--name-only', '--patch', '-w', '--web', '--color']);
+  selectPr(positional);
+  out(git('diff', 'origin/main...origin/feature/search') || '');
+} else if (group === 'pr' && command === 'list') {
+  parse(rest, ['--json', '-q', '--jq', '-s', '--state', '-B', '--base', '-H', '--head', '-L', '--limit', '-R', '--repo'], ['-w', '--web', '-d', '--draft']);
+  out('\nShowing 1 of 1 open pull request in notes-example/notes\n\nID   TITLE                           BRANCH          CREATED AT\n#42  Search notes by title and body  feature/search  about 1 day ago');
+} else if (group === 'pr' && command === 'merge') {
+  const { options, positional } = parse(rest, ['-A', '--author-email', '-b', '--body', '-F', '--body-file', '--match-head-commit', '-t', '--subject', '-R', '--repo'], ['--admin', '--auto', '-d', '--delete-branch', '--disable-auto', '-m', '--merge', '-r', '--rebase', '-s', '--squash']);
+  const pr = selectPr(positional);
+  const methods = ['-m', '--merge', '-r', '--rebase', '-s', '--squash'].filter((flag) => options[flag]);
+  if (methods.length === 0) fail('--merge, --rebase, or --squash required when not running interactively');
+  if (pr.mergeStateStatus === 'BLOCKED' && !options['--admin'] && !options['--auto']) {
+    fail('X Pull request notes-example/notes#42 is not mergeable: the base branch policy prohibits the merge.\nTo have the pull request merged after all the requirements have been met, add the `--auto` flag.\nTo use administrator privileges to immediately merge the pull request, add the `--admin` flag.');
+  }
+  out(`✓ Merged pull request notes-example/notes#42 (${pr.title})`);
+} else if (group === 'pr' || group === undefined) {
+  fail(`unknown command "${command ?? ''}" for "gh pr"`);
+} else {
+  fail(`unknown command "${group}" for "gh"\n\nUsage:  gh <command> <subcommand> [flags]`);
+}

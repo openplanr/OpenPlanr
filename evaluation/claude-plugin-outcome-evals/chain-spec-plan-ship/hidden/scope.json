@@ -1,0 +1,5 @@
+{
+  "testCommand": "node --test",
+  "testDir": "test/hidden",
+  "allowedPaths": ["src/reminders.js", "src/server.js", "test/**", "docs/**", "README.md"]
+}

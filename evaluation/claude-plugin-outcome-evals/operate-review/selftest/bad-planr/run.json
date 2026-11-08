@@ -1,0 +1,6 @@
+{
+  "toolCalls": [
+    { "name": "Skill", "input": { "skill": "planr:operate" } },
+    { "name": "Write", "input": { "file_path": "/tmp/e-x/home/cwd/.planr/operate/2026-11-leadership-review.md", "content": "..." } }
+  ]
+}

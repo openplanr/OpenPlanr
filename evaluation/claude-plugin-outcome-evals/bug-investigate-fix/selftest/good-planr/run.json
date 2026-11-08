@@ -1,0 +1,12 @@
+{
+  "toolCalls": [
+    { "name": "Skill", "input": { "skill": "planr:investigate" } },
+    { "name": "Read", "input": { "file_path": "/tmp/e-x/home/cwd/docs/bug-report.md" } },
+    { "name": "Read", "input": { "file_path": "/tmp/e-x/home/cwd/src/dates.js" } },
+    { "name": "Bash", "input": { "command": "TZ=America/Los_Angeles node -e \"import('./src/dates.js').then(m => console.log(m.formatDueDate('2026-03-10')))\"" }, "result": "2026-03-09" },
+    { "name": "Skill", "input": { "skill": "planr:ship" } },
+    { "name": "Edit", "input": { "file_path": "/tmp/e-x/home/cwd/src/dates.js", "old_string": "return new Date(value);", "new_string": "const [year, month, day] = value.split('-').map(Number);\n  return new Date(year, month - 1, day);" } },
+    { "name": "Edit", "input": { "file_path": "/tmp/e-x/home/cwd/test/dates.test.js", "old_string": "});\n", "new_string": "});\n\ntest('a due date formats as saved west of UTC', () => {" } },
+    { "name": "Bash", "input": { "command": "npm test" }, "result": "pass 10, fail 0" }
+  ]
+}

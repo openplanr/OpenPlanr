@@ -1,0 +1,8 @@
+schema: 1
+facts: |
+  The accepted change docs/changes/0004-note-tags.md adds an optional tags array to
+  createNote and POST /notes. The project's tests run with npm test (node --test).
+criteria:
+  - id: verification-reported
+    kind: format
+    criterion: The text reports that the test suite was run and states its result.

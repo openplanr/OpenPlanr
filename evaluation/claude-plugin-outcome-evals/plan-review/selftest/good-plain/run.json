@@ -1,0 +1,1 @@
+{ "toolCalls": [ { "name": "Read", "input": { "file_path": "/tmp/e-x/home/cwd/docs/plans/note-sharing.md" } }, { "name": "Read", "input": { "file_path": "/tmp/e-x/home/cwd/README.md" } } ] }

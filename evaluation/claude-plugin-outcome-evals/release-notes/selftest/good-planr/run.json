@@ -1,0 +1,7 @@
+{
+  "toolCalls": [
+    { "name": "Skill", "input": { "skill": "planr:release" } },
+    { "name": "Bash", "input": { "command": "git log --format=\"%h %s%n%b\" v1.4.0..HEAD" }, "result": "9 commits" },
+    { "name": "Write", "input": { "file_path": "/tmp/e-x/home/cwd/CHANGELOG.md", "content": "..." } }
+  ]
+}

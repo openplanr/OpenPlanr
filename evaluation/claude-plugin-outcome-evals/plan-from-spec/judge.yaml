@@ -1,0 +1,38 @@
+schema: 1
+facts: |
+  The spec docs/specs/note-sharing.md has five numbered requirements:
+  R1 the owner creates a share link with POST /notes/:id/shares and gets a token;
+  R2 anyone with a valid token reads title, body and due date with GET /shared/:token, without x-user-id;
+  R3 links are read-only, no route accepts a token for a write;
+  R4 the owner revokes a link with DELETE /notes/:id/shares/:token, after which it returns 404;
+  R5 links expire 30 days after creation and then return 410.
+  R4 and R5 build on the link storage introduced for R1.
+  Non-goals: sharing with named users or teams, editing through a link, notifications.
+criteria:
+  - id: covers-r1-create-link
+    kind: outcome
+    criterion: Some unit of work in the plan delivers creating a share link for a note (R1).
+  - id: covers-r2-read-by-token
+    kind: outcome
+    criterion: Some unit of work in the plan delivers reading a shared note through its token without a signed-in user (R2).
+  - id: covers-r3-read-only
+    kind: outcome
+    criterion: Some unit of work in the plan delivers or verifies that a share link cannot be used to change or delete the note (R3).
+  - id: covers-r4-revoke
+    kind: outcome
+    criterion: Some unit of work in the plan delivers revoking a share link (R4).
+  - id: covers-r5-expiry
+    kind: outcome
+    criterion: Some unit of work in the plan delivers expiring share links after 30 days (R5).
+  - id: no-out-of-spec-work
+    kind: outcome
+    criterion: No unit of work delivers something the spec does not ask for, such as sharing with named users, editing through a link, or notifications. Tests, documentation and refactoring that serve R1 to R5 count as in spec.
+  - id: order-respects-dependencies
+    kind: outcome
+    criterion: The work for revocation and for expiry comes after, or is marked as depending on, the work that introduces link storage or link creation.
+  - id: tasks-name-files
+    kind: format
+    criterion: Every unit of work names the files it changes or creates.
+  - id: tasks-name-verification
+    kind: format
+    criterion: Every unit of work states how it will be verified.

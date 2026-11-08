@@ -1,0 +1,23 @@
+schema: 1
+facts: |
+  Commits since v1.4.0 (package.json version 1.4.0):
+  feat: filter the note list by done status (GET /notes?done=true|false);
+  chore: add editorconfig;
+  fix: reject updates with an invalid due date;
+  chore: rename the response helper;
+  feat!: remove the CSV export endpoint (BREAKING CHANGE: GET /notes/export is gone);
+  feat: list notes soonest due first;
+  test: cover due date validation on update;
+  chore: run tests in CI;
+  fix: trim note titles on update.
+  The correct next version is 2.0.0.
+criteria:
+  - id: lists-breaking-removal
+    kind: outcome
+    criterion: The release notes list the removal of GET /notes/export as a breaking change.
+  - id: describes-user-changes
+    kind: outcome
+    criterion: The release notes describe at least three of these four user-visible changes, in words a user of the API would understand - the done filter on the note list, rejecting updates with an invalid due date, listing notes soonest due first, trimming titles on update.
+  - id: excludes-internal-commits
+    kind: format
+    criterion: The release notes leave out the internal commits - the editorconfig, renaming the response helper, running tests in CI and the test-only commit.

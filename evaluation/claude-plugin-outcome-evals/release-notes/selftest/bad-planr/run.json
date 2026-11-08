@@ -1,0 +1,6 @@
+{
+  "toolCalls": [
+    { "name": "Skill", "input": { "skill": "planr:release" } },
+    { "name": "Write", "input": { "file_path": "/tmp/e-x/home/cwd/CHANGELOG.md", "content": "..." } }
+  ]
+}

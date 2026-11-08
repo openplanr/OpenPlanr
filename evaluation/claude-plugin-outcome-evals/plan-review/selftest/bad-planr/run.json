@@ -1,0 +1,6 @@
+{
+  "toolCalls": [
+    { "name": "Skill", "input": { "skill": "planr:plan-review" } },
+    { "name": "Write", "input": { "file_path": "/tmp/e-x/home/cwd/.planr/reviews/PLAN-review-note-sharing.md", "content": "..." } }
+  ]
+}

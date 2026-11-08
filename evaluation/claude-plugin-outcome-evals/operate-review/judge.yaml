@@ -1,0 +1,34 @@
+schema: 1
+facts: |
+  company/metrics/2026-10.csv: activation_rate was 0.410 from July to September and 0.336 in
+  October (an 18% relative drop); a new onboarding flow shipped on 2026-10-01. Signups and
+  weekly active users kept growing.
+  company/incidents/2026-10.md: three Sev-2 incidents in October (sync 4 Oct, gateway 15 Oct,
+  sync 27 Oct with 40 notes losing edits); two sync postmortems are unfinished; September had none.
+  company/roadmap.md: Q4 is team workspaces (CTO and both sync engineers all quarter), dark mode
+  and a mobile beta; nothing on activation, onboarding or reliability.
+  company/runway.md: $1.40M cash, net burn $175k per month (up from $150k), 8 months of runway;
+  the board wants at least 12 months before raising.
+  No file measures retention or churn.
+criteria:
+  - id: finds-activation-drop
+    kind: outcome
+    criterion: The review identifies that activation fell in October, from 41% to about 34%.
+  - id: finds-incident-cluster
+    kind: outcome
+    criterion: The review identifies the three Sev-2 incidents in October as a reliability problem.
+  - id: finds-roadmap-gap
+    kind: outcome
+    criterion: The review identifies that the Q4 roadmap has no work on activation or reliability.
+  - id: finds-short-runway
+    kind: outcome
+    criterion: The review identifies that runway is about 8 months, below the board's 12-month requirement.
+  - id: recommendations-cite-facts
+    kind: outcome
+    criterion: Every recommendation cites at least one specific fact from the company files, such as a number, a date, an incident or a roadmap item.
+  - id: flags-missing-retention
+    kind: outcome
+    criterion: The review notes that retention or churn is not measured in the data provided.
+  - id: actions-have-owners
+    kind: format
+    criterion: Every action item names an owner, a person or a role.

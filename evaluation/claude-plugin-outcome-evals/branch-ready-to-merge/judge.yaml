@@ -1,0 +1,21 @@
+schema: 1
+facts: |
+  The checked-out branch feature/search adds src/search.js, a GET /notes/search route and
+  test/search.test.js. searchNotes builds new RegExp(query, 'i') straight from the user's query,
+  so characters such as ( or * break the search or allow a catastrophic pattern. It calls
+  note.body.toLowerCase() although notes created without a body have body null, which throws
+  when the title does not match. The new test calls the search route but makes no assertion,
+  so it passes whatever the route returns. The existing suite passes.
+criteria:
+  - id: finds-unescaped-query
+    kind: outcome
+    criterion: The review identifies that the search query is used as a regular expression without escaping.
+  - id: finds-null-body
+    kind: outcome
+    criterion: The review identifies that searching can fail on a note whose body is null.
+  - id: finds-assertion-free-test
+    kind: outcome
+    criterion: The review identifies that the new search test makes no assertion.
+  - id: verdict-not-ready
+    kind: outcome
+    criterion: The review's verdict is that the branch is not ready to merge.

@@ -1,0 +1,32 @@
+schema: 1
+facts: |
+  The draft plan docs/plans/note-sharing.md implements docs/specs/note-sharing.md (R1 create a
+  link, R2 read by token, R3 read-only, R4 revoke a link, R5 expire after 30 days). The README
+  says every change to the stored data shape needs a migration in migrations/ and a
+  SCHEMA_VERSION bump. Existing routes check ownership with requireOwner(note, userId).
+  Plan tasks:
+  1 share store with create and find plus unit tests (sound);
+  2 persist share records as a new shares array in data/notes.json (no migration, no version bump);
+  3 POST /notes/:id/shares looks the note up with store.get(id) and creates a link (no ownership check);
+  4 everything else for sharing in one 6-day task;
+  5 document the share routes in the README (sound).
+  No task covers revoking a link (R4).
+criteria:
+  - id: finds-uncovered-revocation
+    kind: outcome
+    criterion: The review points out that no task covers revoking a share link (requirement 4).
+  - id: finds-missing-migration
+    kind: outcome
+    criterion: The review points out that adding share records to the stored data needs a migration or a schema version bump that the plan does not include.
+  - id: finds-oversized-task
+    kind: outcome
+    criterion: The review points out that task 4 is too large for one task or should be split.
+  - id: finds-missing-ownership-check
+    kind: outcome
+    criterion: The review points out that the create-link route in task 3 does not check that the caller owns the note.
+  - id: share-store-task-not-blocked
+    kind: outcome
+    criterion: The review does not raise a blocking objection to task 1, the share store. Minor suggestions about it pass.
+  - id: docs-task-not-blocked
+    kind: outcome
+    criterion: The review does not raise a blocking objection to task 5, documenting the share routes. Minor suggestions about it pass.

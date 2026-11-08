@@ -1,0 +1,6 @@
+{
+  "toolCalls": [
+    { "name": "Read", "input": { "file_path": "/tmp/e-x/home/cwd/src/dates.js" } },
+    { "name": "Edit", "input": { "file_path": "/tmp/e-x/home/cwd/src/dates.js", "old_string": "if (date === null) return '';", "new_string": "if (date === null) return '';\n  date.setDate(date.getDate() + 1);" } }
+  ]
+}

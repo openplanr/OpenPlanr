@@ -1,0 +1,34 @@
+schema: 1
+facts: |
+  The repository is a small Node notes service: src/server.js, src/http.js, src/auth.js,
+  src/notes.js, src/store.js and src/dates.js. Each note has one owner, identified by the
+  x-user-id header.
+  Two customer emails ask for sharing:
+  - Acme: share a note with specific people on my team so they can read it; they must not
+    be able to change it; the owner must be able to stop sharing with a person who leaves.
+  - Brightlane: share a note with a teammate who always sees the current version, not a copy;
+    see who a note is shared with.
+  Neither email asks for editing by recipients, public or anonymous links, comments,
+  notifications, real-time collaboration, or organisation and team management.
+criteria:
+  - id: spec-present
+    kind: outcome
+    criterion: The text contains a description of a sharing feature to build with at least two stated requirements.
+  - id: requirements-testable
+    kind: outcome
+    mode: sampled-requirements
+    sample: 5
+    min_requirements: 2
+    criterion: A tester could write a pass/fail check for this requirement as written.
+  - id: named-modules-exist
+    kind: outcome
+    criterion: Every source file the text says should change is one of src/server.js, src/http.js, src/auth.js, src/notes.js, src/store.js or src/dates.js, or is explicitly described as a new file. A text that names no source file passes.
+  - id: no-unrequested-feature
+    kind: outcome
+    criterion: The text does not commit to building any feature the emails do not ask for, such as editing by recipients, public links, comments, notifications or real-time collaboration. Mentioning such a feature only as a non-goal or an open question passes.
+  - id: lists-non-goals
+    kind: format
+    criterion: The text has a section that lists non-goals or out-of-scope items.
+  - id: lists-open-questions
+    kind: format
+    criterion: The text has a section that lists open questions.
