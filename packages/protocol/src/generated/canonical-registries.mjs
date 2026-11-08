@@ -4441,7 +4441,7 @@ export const CANONICAL_REGISTRIES = deepFreeze({
         "lifecycle": "active",
         "authorityClass": "release-preparation",
         "source": "skills/planr-release/openplanr.skill.json",
-        "sourceDigest": "sha256:3d9af6210d7a58bb2cd039ee20a918b63236f52f1277a796d5ea513f7e2c02c9",
+        "sourceDigest": "sha256:0571d8ebbd7ce9c628e04cda1ae1b3a2bcccc59b7eaa73a2e6b5b972add83087",
         "triggerPolicy": {
           "include": [
             "Choose the next SemVer or CalVer version and write user-facing release notes",
@@ -4877,7 +4877,7 @@ export const CANONICAL_REGISTRIES = deepFreeze({
       }
     ],
     "compatibilityAliases": [],
-    "documentDigest": "sha256:b96afecdc3296b6e3898596ee3493b05fc24b4637f818d94b4898e47efda10a9"
+    "documentDigest": "sha256:9cd5ed7b977c272ab370f27feb95371918e398827836fc220976656002a3d1bb"
   },
   "outputs.json": {
     "kind": "output-catalog",

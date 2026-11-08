@@ -2447,7 +2447,7 @@
       "source": "skills/planr-release/openplanr.skill.json",
       "entrypoint": "skills/planr-release/SKILL.md",
       "description": "Choose and maintain a product's versioning scheme, classify shipped changes, and write user-facing changelogs or release notes. Use for SemVer or CalVer decisions, version bumps, release cadence, and preparing a versioned release after landing.",
-      "sourceDigest": "sha256:650c84fc062afd62f0435efb4865cf7aed3b10a7f77ef5ac941847e10da9b79d",
+      "sourceDigest": "sha256:27885169abf6348c3e2fc403c8cbc397f35dde176fcd35fd7a6b8512df6aaa8d",
       "resources": [
         {
           "path": "agents/openai.yaml",
@@ -2518,18 +2518,6 @@
           ],
           "executable": false,
           "digest": "sha256:fd59787371b67ec545c0f613c96761d31e4482ae45d23ba9e5a1dd9ed66300e7"
-        },
-        {
-          "path": "scripts/collect_changes.sh",
-          "kind": "script",
-          "hosts": [
-            "claude-code",
-            "codex",
-            "chatgpt",
-            "cursor"
-          ],
-          "executable": true,
-          "digest": "sha256:6271a1d8ea7d0a8c86dd52f85fa78666845d7d152cc95ae5148fde68dcd2f652"
         }
       ],
       "contracts": {

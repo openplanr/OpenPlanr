@@ -1,7 +1,7 @@
 {
   "$comment": "Host bundle files the instructions-only policy refuses today. Each later change deletes the entries it fixes and updates count and sha256; entries may never be added.",
-  "count": 233,
-  "sha256": "c004bdaf90f809f3ce15608b43cc88fe5f080904ac75573464e3a827510fb0e4",
+  "count": 224,
+  "sha256": "f622e9bcbafa63b5ec279f80d00d6fc5e801e9cbb727a6f04b1f851e0204ae1f",
   "entries": [
     {
       "host": "claude",
@@ -332,21 +332,6 @@
       "host": "claude",
       "path": "skills/plan/SKILL.md",
       "code": "unpinned-launcher"
-    },
-    {
-      "host": "claude",
-      "path": "skills/release/scripts/collect_changes.sh",
-      "code": "executable-bit"
-    },
-    {
-      "host": "claude",
-      "path": "skills/release/scripts/collect_changes.sh",
-      "code": "shebang"
-    },
-    {
-      "host": "claude",
-      "path": "skills/release/scripts/collect_changes.sh",
-      "code": "type-not-allowed"
     },
     {
       "host": "claude",
@@ -717,21 +702,6 @@
       "host": "codex",
       "path": "skills/plan/SKILL.md",
       "code": "unpinned-launcher"
-    },
-    {
-      "host": "codex",
-      "path": "skills/release/scripts/collect_changes.sh",
-      "code": "executable-bit"
-    },
-    {
-      "host": "codex",
-      "path": "skills/release/scripts/collect_changes.sh",
-      "code": "shebang"
-    },
-    {
-      "host": "codex",
-      "path": "skills/release/scripts/collect_changes.sh",
-      "code": "type-not-allowed"
     },
     {
       "host": "codex",
@@ -1071,21 +1041,6 @@
     {
       "host": "cursor",
       "path": "rules/planr-plan/scripts/planning-ids.mjs",
-      "code": "type-not-allowed"
-    },
-    {
-      "host": "cursor",
-      "path": "rules/planr-release/scripts/collect_changes.sh",
-      "code": "executable-bit"
-    },
-    {
-      "host": "cursor",
-      "path": "rules/planr-release/scripts/collect_changes.sh",
-      "code": "shebang"
-    },
-    {
-      "host": "cursor",
-      "path": "rules/planr-release/scripts/collect_changes.sh",
       "code": "type-not-allowed"
     },
     {

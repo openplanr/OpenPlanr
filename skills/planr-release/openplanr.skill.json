@@ -76,17 +76,6 @@
         "cursor"
       ],
       "executable": false
-    },
-    {
-      "path": "scripts/collect_changes.sh",
-      "kind": "script",
-      "hosts": [
-        "claude-code",
-        "codex",
-        "chatgpt",
-        "cursor"
-      ],
-      "executable": true
     }
   ]
 }

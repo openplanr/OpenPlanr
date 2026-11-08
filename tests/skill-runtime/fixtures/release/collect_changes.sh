@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Collect everything that shipped in a window, as raw material for release notes.
+# Test oracle for the release skill's change-collection procedure; never shipped.
 #
 # Usage:
 #   ./collect_changes.sh                         # since the last tag
