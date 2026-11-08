@@ -898,7 +898,7 @@
         },
         {
           "path": "skills/release/openplanr.skill.json",
-          "digest": "sha256:0571d8ebbd7ce9c628e04cda1ae1b3a2bcccc59b7eaa73a2e6b5b972add83087"
+          "digest": "sha256:d940f56ddc30a4c1665060dc7ce85e3cb6278070cded71d7d216aec8797798f5"
         },
         {
           "path": "skills/release/agents/openai.yaml",
