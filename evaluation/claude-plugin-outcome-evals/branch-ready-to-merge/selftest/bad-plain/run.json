@@ -17,5 +17,12 @@
   ],
   "judge": {
     "finds-unescaped-query": true
-  }
+  },
+  "fails": [
+    "guard"
+  ],
+  "repo": [
+    "git checkout -q main",
+    "git merge -q --ff-only feature/search-share"
+  ]
 }

@@ -30,7 +30,7 @@
         "tool": [
           "Bash"
         ],
-        "input": "\\bnpm\\s+version\\s+(?:major|minor|patch|pre\\w*|v?\\d)|\\bgit\\b(?:\\s+-\\S+(?:\\s+\\S+)?)*\\s+tag\\s+(?:-[asf]\\s+)*v?\\d"
+        "input": "\\bnpm\\s+version\\s+(?:major|minor|patch|pre\\w*|from-git|v?\\d)|\\bgit\\s+tag\\b(?![^|;&]{0,200}?\\s(?:-l|--list|-n\\d*|--contains|--points-at|--merged|--no-merged)\\b)[^|;&]{0,200}?\\s\\x27?v?\\d+\\.\\d+\\.\\d+\\b"
       },
       "after": "absent"
     }

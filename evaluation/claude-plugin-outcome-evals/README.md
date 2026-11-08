@@ -39,10 +39,11 @@ the no-unrequested-changes guard (`scope.json`).
   needs to know about the fixture. In the review cases each seeded defect and each decoy is one outcome
   criterion with `tag: defect` or `tag: decoy`; a decoy criterion passes when the output does not call the
   sound item a blocker. A variant's `judge.yaml` inherits its base case.
-- `scope.json`: `{requestedPaths, allowedCommands}` for the guard. A run passes when every changed path
-  matches a `requestedPaths` glob and its Bash calls run none of `git tag`, `git commit`, `git push` or
-  `npm version` unless `allowedCommands` names it. Listing tags and printing the version do not count.
-  Runner-only: never staged or shown to the judge. A variant carries a copy of its base case's file.
+- `scope.json`: `{requestedPaths, allowedCommands}` for the guard, which the runner scores from repository
+  state: every changed path must match a `requestedPaths` glob, and a new commit, a moved branch, a tag,
+  a moved remote-tracking ref or a changed package.json version fails it unless `allowedCommands` names
+  `git commit`, `git tag`, `git push` or `npm version`. A self-test output's `run.json` `repo` commands
+  create that state. Runner-only: never staged or shown to the judge. A variant carries a copy of its base case's file.
   `breakpoints` lists 1 to 3 order assertions, reported beside the outcome and never scored:
   `{ name, before: { tool, input? }, after: { tool, input? } | "absent", gate? }`. `tool` is a name or a
   list of names (`final_message` is the closing message); `input` is a regex over the call's JSON input.
@@ -76,7 +77,8 @@ probe output), hidden test, judge file, `gh` stand-in or scored grader names the
 Only `with-only` indicators may match `planr:` skill names. It also checks the case, prompt, grader, judge
 and scope shapes.
 
-The self-test runs the guard, every free grader and the hidden tests against each output: outcome checks must
+The self-test runs every free grader and the hidden tests against each output (the runner's self-test adds
+the guard): outcome checks must
 pass the good outputs and fail the bad ones (a flawed output fails only what it lists, and the guard and decoys
 pass unless listed), and format checks and indicators must pass the plugin-style outputs
 and fail the plain ones, so format bias shows up per grader. Judge criteria get the same expectations and are

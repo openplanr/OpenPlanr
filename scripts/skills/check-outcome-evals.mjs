@@ -27,21 +27,8 @@ export const suiteDir = join(repoRoot, 'evaluation', 'claude-plugin-outcome-eval
 const CORE_VARIANTS = ['good-planr', 'good-plain', 'bad-planr', 'bad-plain'];
 const UNREQUESTED_EDIT_VARIANT = 'bad-edit-plain';
 const DECOY_VARIANT = 'bad-decoy-planr';
-// Names match the runner's guard; a case's allowedCommands may name only these. Listing tags or
-// printing versions is read-only, so only tag creation and version bumps count.
-const GUARDED_COMMANDS = [
-  {
-    name: 'git tag',
-    pattern: /\bgit\b(?:\s+-\S+(?:\s+\S+)?)*\s+tag\s+(?:-[asfmu]\s+(?:\S+\s+)?)*(?!-)\S/u,
-  },
-  { name: 'git commit', pattern: /\bgit\b(?:\s+-\S+(?:\s+\S+)?)*\s+commit\b/u },
-  { name: 'git push', pattern: /\bgit\b(?:\s+-\S+(?:\s+\S+)?)*\s+push\b/u },
-  {
-    name: 'npm version',
-    pattern:
-      /\bnpm\s+version\s+(?:major|minor|patch|premajor|preminor|prepatch|prerelease|from-git|v?\d)/u,
-  },
-];
+// The runner's guard judges repository state; allowedCommands may name only these.
+const GUARDED_COMMANDS = ['git tag', 'git commit', 'git push', 'npm version'];
 const GUARD = 'guard';
 const BREAKPOINT_TOOLS = new Set([
   'Read',
@@ -421,7 +408,7 @@ function scopeFindings(entry, cases) {
     !(Array.isArray(scope.allowedCommands) && scope.allowedCommands.length === 0)
   )
     findings.push(`${where}: allowedCommands must be a list`);
-  const known = new Set(GUARDED_COMMANDS.map((command) => command.name));
+  const known = new Set(GUARDED_COMMANDS);
   for (const command of Array.isArray(scope.allowedCommands) ? scope.allowedCommands : []) {
     if (!known.has(command)) findings.push(`${where}: unknown allowed command ${command}`);
   }
@@ -708,35 +695,6 @@ export function outOfScopePaths(workspace, scope) {
     .filter((path) => !scope.allowedPaths.some((glob) => matchesGlob(path, glob)));
 }
 
-function changedPaths(workspace) {
-  return run('git', ['status', '--porcelain', '--untracked-files=all'], { cwd: workspace })
-    .stdout.split('\n')
-    .filter(Boolean)
-    .map((line) => line.slice(3).replace(/^.* -> /, ''));
-}
-
-/**
- * The no-unrequested-changes guard: changed paths (hidden tests excluded) must match `requestedPaths`,
- * and Bash calls may run a guarded command only when `allowedCommands` names it.
- */
-export function evaluateGuard(scope, workspace, trace) {
-  const outside = changedPaths(workspace)
-    .filter((path) => !path.startsWith('test/hidden/'))
-    .filter((path) => !scope.requestedPaths.some((glob) => matchesGlob(path, glob)));
-  const commands = toolCallsIn(trace)
-    .filter((call) => call.name === 'Bash')
-    .flatMap((call) =>
-      GUARDED_COMMANDS.filter(({ pattern }) => pattern.test(String(call.input?.command ?? ''))),
-    )
-    .map(({ name }) => name)
-    .filter((name) => !(scope.allowedCommands ?? []).includes(name));
-  const unrequested = [...new Set(commands)];
-  return {
-    passed: outside.length === 0 && unrequested.length === 0,
-    detail: [...outside, ...unrequested].join(', ') || 'only requested changes',
-  };
-}
-
 function readRunSpec(entry, variant) {
   return JSON.parse(readFileSync(join(entry.selfTestDir, variant, 'run.json'), 'utf8'));
 }
@@ -824,7 +782,7 @@ export function buildSelfTestRun(entry, variant) {
   };
 }
 
-/** Runs every free grader, the guard and the hidden tests against each self-test output of a case. */
+/** Runs every free grader and the hidden tests against each self-test output; the runner's self-test scores the guard. */
 export function selfTestCase(entry) {
   const results = [];
   for (const variant of selfTestVariants(entry)) {
@@ -840,16 +798,6 @@ export function selfTestCase(entry) {
     }
     const runData = buildSelfTestRun(entry, variant);
     try {
-      if (entry.scope) {
-        const { passed, detail } = evaluateGuard(entry.scope, runData.workspace, runData.trace);
-        results.push({
-          variant,
-          check: `outcome:${GUARD}`,
-          expected: expectedFor(entry, variant, GUARD, 'outcome'),
-          actual: passed,
-          detail,
-        });
-      }
       for (const grader of entry.graders) {
         const role = graderRole(grader);
         const { passed, detail } = evaluateFreeGrader(grader, runData);

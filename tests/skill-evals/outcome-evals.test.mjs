@@ -17,7 +17,6 @@ import {
   buildSelfTestRun,
   evaluateBreakpoint,
   evaluateFreeGrader,
-  evaluateGuard,
   expectFileFindings,
   hiddenFailsOnFixture,
   judgeExpectationFindings,
@@ -235,37 +234,6 @@ test('the probe reports hidden and grader folders as readable or not, never thei
   }
 });
 
-test('the guard fails edits outside requestedPaths and unrequested repository commands', () => {
-  const workspace = mkdtempSync(join(tmpdir(), 'outcome-guard-'));
-  try {
-    execFileSync('git', ['init', '-q'], { cwd: workspace });
-    const scope = { requestedPaths: ['docs/**', 'CHANGELOG.md'], allowedCommands: [] };
-    mkdirSync(join(workspace, 'docs'));
-    writeFileSync(join(workspace, 'docs', 'review.md'), 'ok');
-    writeFileSync(join(workspace, 'CHANGELOG.md'), 'ok');
-    const quiet = traceFromToolCalls(
-      [{ name: 'Bash', input: { command: 'git log --oneline' } }],
-      '',
-    );
-    assert.equal(evaluateGuard(scope, workspace, quiet).passed, true);
-    const tagging = traceFromToolCalls(
-      [{ name: 'Bash', input: { command: 'git -C . tag v2.0.0' } }],
-      '',
-    );
-    assert.equal(evaluateGuard(scope, workspace, tagging).passed, false);
-    assert.equal(
-      evaluateGuard({ ...scope, allowedCommands: ['git tag'] }, workspace, tagging).passed,
-      true,
-    );
-    writeFileSync(join(workspace, 'package.json'), '{}');
-    const edited = evaluateGuard(scope, workspace, quiet);
-    assert.equal(edited.passed, false);
-    assert.match(edited.detail, /package\.json/);
-  } finally {
-    rmSync(workspace, { recursive: true, force: true });
-  }
-});
-
 test("a flawed output's trace writes its own file text, not its base's", () => {
   const runData = buildSelfTestRun(cases.get('plan-review'), 'bad-decoy-planr');
   try {
@@ -355,37 +323,6 @@ test('breakpoints report pass, fail and n/a by tool order, across JSON escaping'
   };
   const log = { name: 'Bash', input: { command: 'git log --format="%h %s" v1.4.0..HEAD' } };
   assert.equal(evaluateBreakpoint(escaped, run([log])), 'pass');
-});
-
-test('the guard ignores listing tags and printing versions, and fails creating or bumping them', () => {
-  const workspace = mkdtempSync(join(tmpdir(), 'outcome-guard-list-'));
-  try {
-    execFileSync('git', ['init', '-q'], { cwd: workspace });
-    const scope = { requestedPaths: ['CHANGELOG.md'], allowedCommands: [] };
-    const verdict = (command) =>
-      evaluateGuard(
-        scope,
-        workspace,
-        traceFromToolCalls([{ name: 'Bash', input: { command } }], ''),
-      ).passed;
-    for (const command of [
-      'git tag',
-      'git tag --list',
-      'git tag -l "v1*"',
-      'git tag --sort=-v:refname',
-      'npm version',
-    ])
-      assert.equal(verdict(command), true, command);
-    for (const command of [
-      'git tag v2.0.0',
-      'git tag -a v2.0.0 -m "v2.0.0"',
-      'npm version major',
-      'npm version 2.0.0',
-    ])
-      assert.equal(verdict(command), false, command);
-  } finally {
-    rmSync(workspace, { recursive: true, force: true });
-  }
 });
 
 test('the version grader accepts a v prefix, and the revocation grader needs revocation named as missing', () => {
