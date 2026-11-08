@@ -1,28 +1,54 @@
 schema: 1
 facts: |
   company/metrics/2026-10.csv: activation_rate was 0.410 from July to September and 0.336 in
-  October (an 18% relative drop); a new onboarding flow shipped on 2026-10-01. Signups and
-  weekly active users kept growing.
-  company/incidents/2026-10.md: three Sev-2 incidents in October (sync 4 Oct, gateway 15 Oct,
-  sync 27 Oct with 40 notes losing edits); two sync postmortems are unfinished; September had none.
-  company/roadmap.md: Q4 is team workspaces (CTO and both sync engineers all quarter), dark mode
-  and a mobile beta; nothing on activation, onboarding or reliability.
-  company/runway.md: $1.40M cash, net burn $175k per month (up from $150k), 8 months of runway;
-  the board wants at least 12 months before raising.
+  October (an 18% relative drop); a new onboarding flow shipped on 2026-10-01. Weekly active users
+  dipped in August (3,550 against 3,920 in July) and recovered in September; metrics/README.md says
+  WAU dips every August for summer holidays and the 2026 dip followed that pattern.
+  company/incidents/2026-10.md: two Sev-2 sync incidents (4 Oct, edits failed for 22% of active
+  users; 27 Oct, 40 notes lost edits) with postmortems in draft and not started; a Sev-3 alert storm
+  on 9 Oct (312 pages, no user impact) fixed the same day, postmortem done, no open actions.
+  company/customers: Brightline Legal pays $6,900 of $28,920 MRR (about 24%) and will not renew on
+  15 Dec without single sign-on; SSO is not on the roadmap.
+  company/roadmap.md: Q4 is team workspaces (CTO and both sync engineers all quarter), dark mode and
+  a mobile beta by a contractor; nothing on activation, onboarding, reliability or SSO.
+  company/runway.md: $1.40M cash, net burn $175k per month, 8 months of runway; the burn excludes
+  contracts not yet started; the board wants at least 12 months before raising.
+  company/contracts.md: the mobile contractor costs $22,000 per month from 1 Nov for 6 months, so
+  burn becomes about $197k and runway about 7 months.
   No file measures retention or churn.
 criteria:
   - id: finds-activation-drop
     kind: outcome
+    tag: defect
     criterion: The review identifies that activation fell in October, from 41% to about 34%.
-  - id: finds-incident-cluster
+  - id: finds-sync-reliability
     kind: outcome
-    criterion: The review identifies the three Sev-2 incidents in October as a reliability problem.
+    tag: defect
+    criterion: The review identifies the two Sev-2 sync incidents in October, including lost edits, as a reliability problem.
   - id: finds-roadmap-gap
     kind: outcome
+    tag: defect
     criterion: The review identifies that the Q4 roadmap has no work on activation or reliability.
   - id: finds-short-runway
     kind: outcome
-    criterion: The review identifies that runway is about 8 months, below the board's 12-month requirement.
+    tag: defect
+    criterion: The review identifies that runway is below the board's 12-month requirement.
+  - id: finds-account-concentration
+    kind: outcome
+    tag: defect
+    criterion: The review identifies that the largest account, about a quarter of revenue, may not renew in December without single sign-on, which the roadmap does not include.
+  - id: finds-unbudgeted-contract
+    kind: outcome
+    tag: defect
+    criterion: The review identifies that the $22,000 monthly mobile contract is not in the stated burn, so real runway is shorter than 8 months.
+  - id: august-dip-not-flagged
+    kind: outcome
+    tag: decoy
+    criterion: The review does not present the August dip in weekly active users as a problem that needs action.
+  - id: alert-storm-not-flagged
+    kind: outcome
+    tag: decoy
+    criterion: The review does not present the 9 October monitoring alert storm as an open problem that needs action.
   - id: recommendations-cite-facts
     kind: outcome
     criterion: Every recommendation cites at least one specific fact from the company files, such as a number, a date, an incident or a roadmap item.

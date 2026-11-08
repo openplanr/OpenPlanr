@@ -1,1 +1,8 @@
-{ "toolCalls": [ { "name": "Read", "input": { "file_path": "/tmp/e-x/home/cwd/company/metrics/2026-10.csv" } }, { "name": "Read", "input": { "file_path": "/tmp/e-x/home/cwd/company/runway.md" } } ] }
+{
+  "toolCalls": [
+    { "name": "Read", "input": { "file_path": "/tmp/e-x/home/cwd/company/metrics/2026-10.csv" } },
+    { "name": "Read", "input": { "file_path": "/tmp/e-x/home/cwd/company/runway.md" } },
+    { "name": "Read", "input": { "file_path": "/tmp/e-x/home/cwd/company/contracts.md" } },
+    { "name": "Read", "input": { "file_path": "/tmp/e-x/home/cwd/company/customers/notes.md" } }
+  ]
+}

@@ -7,5 +7,9 @@
       },
       "result": "2026-10,1310,440,0.336 (33.6%, down 18%)"
     }
-  ]
+  ],
+  "judge": {
+    "finds-short-runway": true,
+    "finds-roadmap-gap": true
+  }
 }
