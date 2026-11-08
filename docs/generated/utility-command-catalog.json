@@ -134,6 +134,10 @@
       "classification": "deterministic-preserved"
     },
     {
+      "path": "company export-organization",
+      "classification": "deterministic-preserved"
+    },
+    {
       "path": "company adopt",
       "classification": "deterministic-preserved"
     },

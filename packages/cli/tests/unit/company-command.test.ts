@@ -207,3 +207,38 @@ describe('company authentication output', () => {
     expect(logger.warn).toHaveBeenCalledExactlyOnceWith(result.notice);
   });
 });
+
+describe('company organization export command', () => {
+  it('requires --out before any request', async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+    try {
+      await expect(company('export-organization')).rejects.toThrow(/required option.*--out/);
+      expect(fetchMock).not.toHaveBeenCalled();
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it('rejects an invalid API origin before any request', async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+    try {
+      await expect(
+        company('export-organization', '--out', '/unused', '--api-url', 'file:///invalid'),
+      ).rejects.toThrow(/HTTPS company API origin/);
+      expect(fetchMock).not.toHaveBeenCalled();
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it('advertises the output, origin and JSON options', () => {
+    const program = new Command();
+    registerCompanyCommand(program);
+    const command = program.commands
+      .find((item) => item.name() === 'company')
+      ?.commands.find((item) => item.name() === 'export-organization');
+    expect(command?.options.map((option) => option.long)).toEqual(['--out', '--api-url', '--json']);
+  });
+});
