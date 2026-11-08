@@ -30,9 +30,9 @@ function fixture(t) {
   const plugin = join(root, 'plugin');
   const marketplace = join(root, 'marketplace');
   mkdirSync(join(plugin, '.claude-plugin'), { recursive: true });
-  mkdirSync(join(plugin, 'scripts'));
+  mkdirSync(join(plugin, 'skills/run'), { recursive: true });
   writeFileSync(join(plugin, '.claude-plugin/plugin.json'), manifest);
-  writeFileSync(join(plugin, 'scripts/run.mjs'), 'console.log("new");\n', { mode: 0o755 });
+  writeFileSync(join(plugin, 'skills/run/SKILL.md'), '# New\n', { mode: 0o600 });
   mkdirSync(join(marketplace, 'plugins/planr'), { recursive: true });
   writeFileSync(join(marketplace, 'plugins/planr/old.txt'), 'published plugin\n');
   writeFileSync(join(marketplace, 'README.md'), '# Marketplace\n');
@@ -66,7 +66,7 @@ const publish = (plugin, marketplace, sha256 = digest(plugin)) =>
 test('a plugin that differs from the verified digest is refused before the marketplace changes', (t) => {
   const { plugin, marketplace } = fixture(t);
   const verified = digest(plugin);
-  writeFileSync(join(plugin, 'scripts/run.mjs'), 'console.log(process.env.TOKEN);\n');
+  writeFileSync(join(plugin, 'skills/run/SKILL.md'), 'console.log(process.env.TOKEN);\n');
   const before = snapshot(marketplace);
   const result = publish(plugin, marketplace, verified);
   assert.equal(result.status, 1);
@@ -90,7 +90,10 @@ test('the inspected plugin replaces the published copy with exact bytes and mode
   const result = publish(plugin, marketplace);
   assert.equal(result.status, 0, result.stderr);
   assert.deepEqual(snapshot(join(marketplace, 'plugins/planr')), snapshot(plugin));
-  assert.equal(statSync(join(marketplace, 'plugins/planr/scripts/run.mjs')).mode & 0o111, 0o111);
+  assert.equal(
+    statSync(join(marketplace, 'plugins/planr/skills/run/SKILL.md')).mode & 0o777,
+    0o644,
+  );
   assert.deepEqual(readdirSync(join(marketplace, 'plugins')), ['planr']);
   assert.deepEqual(
     snapshot(marketplace)
@@ -103,6 +106,22 @@ test('the inspected plugin replaces the published copy with exact bytes and mode
       .version,
     '2.0.1',
   );
+});
+
+test('a plugin carrying a script or an executable file is refused before the marketplace changes', (t) => {
+  for (const [path, mode, code] of [
+    ['skills/run/scripts/run.mjs', 0o644, 'type-not-allowed'],
+    ['skills/run/notes.md', 0o755, 'executable-bit'],
+  ]) {
+    const { plugin, marketplace } = fixture(t);
+    mkdirSync(join(plugin, 'skills/run/scripts'), { recursive: true });
+    writeFileSync(join(plugin, path), 'console.log("x");\n', { mode });
+    const before = snapshot(marketplace);
+    const result = publish(plugin, marketplace);
+    assert.equal(result.status, 1, path);
+    assert.match(result.stderr, new RegExp(code, 'u'), path);
+    assert.deepEqual(snapshot(marketplace), before, path);
+  }
 });
 
 test('malformed, oversized and linked manifests fail before the marketplace changes', (t) => {
@@ -138,9 +157,9 @@ test('source edits after inspection cannot change the installed bytes', (t) => {
     pluginDir: plugin,
     marketplaceDir: marketplace,
     afterInspection: () => {
-      writeFileSync(join(plugin, 'scripts/run.mjs'), 'console.log("uninspected");\n');
-      writeFileSync(join(plugin, 'scripts/added.mjs'), 'console.log("uninspected");\n');
-      chmodSync(join(plugin, 'scripts/run.mjs'), 0o644);
+      writeFileSync(join(plugin, 'skills/run/SKILL.md'), 'console.log("uninspected");\n');
+      writeFileSync(join(plugin, 'skills/run/added.md'), 'console.log("uninspected");\n');
+      chmodSync(join(plugin, 'skills/run/SKILL.md'), 0o755);
     },
   });
   assert.deepEqual(snapshot(join(marketplace, 'plugins/planr')), inspected);
@@ -219,7 +238,10 @@ test('rollback keeps a plugin changed after the swap and retains the previous co
       marketplaceDir: marketplace,
       onCommitStep: (step) => {
         if (step !== 'plugin') return;
-        writeFileSync(join(marketplace, 'plugins/planr/scripts/run.mjs'), 'console.log("edit");\n');
+        writeFileSync(
+          join(marketplace, 'plugins/planr/skills/run/SKILL.md'),
+          'console.log("edit");\n',
+        );
         throw new Error('interrupted after plugin');
       },
     });
@@ -231,7 +253,7 @@ test('rollback keeps a plugin changed after the swap and retains the previous co
   assert.ok(kept, error.message);
   assert.deepEqual(snapshot(kept), [['old.txt', 'published plugin\n', 0]]);
   assert.equal(
-    readFileSync(join(marketplace, 'plugins/planr/scripts/run.mjs'), 'utf8'),
+    readFileSync(join(marketplace, 'plugins/planr/skills/run/SKILL.md'), 'utf8'),
     'console.log("edit");\n',
   );
   assert.equal(

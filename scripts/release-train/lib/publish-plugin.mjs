@@ -11,7 +11,7 @@ import {
 import { basename, dirname, join } from 'node:path';
 import { TextDecoder } from 'node:util';
 import {
-  assertDirectoryEntries,
+  assertHostBundle,
   readDirectoryEntries,
 } from '../../skills/plugin-artifact-validation.mjs';
 import {
@@ -119,7 +119,7 @@ export function publishMarketplacePlugin({
       `${join(pluginDir, MANIFEST)} is missing. The generated plugin keeps its manifest in .claude-plugin/, so an artifact carrying it must be uploaded with include-hidden-files: true.`,
     );
   }
-  assertDirectoryEntries(entries);
+  assertHostBundle(entries, { host: 'claude' });
   let manifest;
   try {
     manifest = JSON.parse(utf8.decode(manifestEntry.bytes));

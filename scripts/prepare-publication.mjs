@@ -14,10 +14,7 @@ import {
 import { dirname, join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { CLI_GENERATED_RESOURCES } from './skills/cli-resources.mjs';
-import {
-  assertDirectoryEntries,
-  readDirectoryEntries,
-} from './skills/plugin-artifact-validation.mjs';
+import { assertHostBundle, readDirectoryEntries } from './skills/plugin-artifact-validation.mjs';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const targets = {
@@ -159,11 +156,19 @@ if (generatedFiles.size || name === 'openplanr') {
       stdio: 'pipe',
     });
     if (name === 'openplanr') {
-      // The bundled Claude plugin is installed from these packed bytes.
+      // The bundled host plugins are installed from these packed bytes.
       const plugin = join(extracted, 'package', 'lib/host-packages/claude/openplanr');
       if (!existsSync(join(plugin, '.claude-plugin/plugin.json')))
         throw new Error('Packed CLI is missing its bundled Claude plugin');
-      assertDirectoryEntries(readDirectoryEntries(plugin));
+      assertHostBundle(readDirectoryEntries(plugin), { host: 'claude' });
+      for (const [host, directory] of [
+        ['codex', 'openai'],
+        ['cursor', 'cursor'],
+      ]) {
+        const copy = join(extracted, 'package', 'lib/host-packages', directory, 'openplanr');
+        if (!existsSync(copy)) throw new Error(`Packed CLI is missing its bundled ${host} plugin`);
+        assertHostBundle(readDirectoryEntries(copy), { host });
+      }
     }
     for (const [file, digest] of generatedFiles) {
       const candidate = join(extracted, 'package', file);

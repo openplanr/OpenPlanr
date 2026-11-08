@@ -24,4 +24,4 @@ export const CLAUDE_PLUGIN_LISTING = Object.freeze({
 });
 
 /** Square app icon the plugin directory shows beside the listing. */
-export const CLAUDE_PLUGIN_ICON = 'docs/assets/brand/openplanr-app-icon.svg';
+export const CLAUDE_PLUGIN_ICON = 'docs/assets/brand/png/openplanr-app-icon-512.png';
