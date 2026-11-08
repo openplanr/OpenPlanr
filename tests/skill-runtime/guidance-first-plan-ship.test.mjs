@@ -27,7 +27,8 @@ test('Ship guides local completion without process machinery', () => {
     ship,
     /task Test Requirements.*repository instructions.*package and task-runner.*CI and pre-commit/isu,
   );
-  assert.match(ship, /discover-verification\.mjs/u);
+  assert.match(ship, /Inspect these sources directly/u);
+  assert.doesNotMatch(ship, /discover-verification\.mjs/u);
   assert.match(ship, /never executes checks or writes files/u);
   assert.match(ship, /reviewRisks.*check/isu);
   assert.match(ship, /browserSurfaces.*useful checks/isu);

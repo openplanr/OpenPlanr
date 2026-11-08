@@ -1,16 +1,6 @@
 import assert from 'node:assert/strict';
-import { spawnSync } from 'node:child_process';
-import {
-  existsSync,
-  mkdirSync,
-  mkdtempSync,
-  readdirSync,
-  readFileSync,
-  rmSync,
-  writeFileSync,
-} from 'node:fs';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
-import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import test from 'node:test';
 
@@ -235,54 +225,6 @@ test('Plan, Spec, and Ship are host-native and independent of CLI or provider cr
   assert.match(read('skills/planr-plan/SKILL.md'), /acceptanceRefs/iu);
   assert.match(read('skills/planr-plan/SKILL.md'), /reviewRisks/iu);
   assert.match(read('skills/planr-plan/SKILL.md'), /browserSurfaces/iu);
-});
-
-test('packaged Ship helper runs offline with no planr executable or model credentials', () => {
-  const project = mkdtempSync(join(tmpdir(), 'openplanr-host-native-'));
-  try {
-    const env = {
-      PATH: '/usr/bin:/bin',
-      HOME: project,
-      NO_COLOR: '1',
-      ANTHROPIC_API_KEY: '',
-      OPENAI_API_KEY: '',
-      OLLAMA_HOST: '',
-    };
-    mkdirSync(resolve(project, '.planr/specs/SPEC-001-demo/tasks'), { recursive: true });
-    writeFileSync(
-      resolve(project, '.planr/config.json'),
-      JSON.stringify({ outputPaths: { agile: '.planr' } }),
-    );
-    writeFileSync(
-      resolve(project, 'package.json'),
-      JSON.stringify({ scripts: { test: 'node --test', lint: 'node lint.mjs' } }),
-    );
-    writeFileSync(
-      resolve(project, '.planr/specs/SPEC-001-demo/tasks/T-001-demo.md'),
-      '## Test Requirements\n\n- AC-001: npm test\n',
-    );
-    const checks = spawnSync(
-      process.execPath,
-      [
-        resolve(
-          root,
-          'dist/plugins/openai/openplanr/skills/ship/scripts/discover-verification.mjs',
-        ),
-        '--project',
-        project,
-        '--task',
-        '.planr/specs/SPEC-001-demo/tasks/T-001-demo.md',
-      ],
-      { cwd: project, encoding: 'utf8', env },
-    );
-    assert.equal(checks.status, 0, checks.stderr);
-    const report = JSON.parse(checks.stdout);
-    assert.deepEqual(report.checks.slice(0, 1), [
-      { command: 'npm run test', source: 'package-task-runner' },
-    ]);
-  } finally {
-    rmSync(project, { recursive: true, force: true });
-  }
 });
 
 test('Plan allocates IDs by a written procedure and ships no ID helper', () => {
