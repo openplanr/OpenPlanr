@@ -25,9 +25,7 @@ import { toCliFailureEnvelope } from '../../src/cli/error-boundary.js';
 import { createDefaultConfig, loadConfig, saveConfig } from '../../src/services/config-service.js';
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../../..');
-const helpers = ['planr-ship', 'planr-investigate'].map((skill) =>
-  path.join(repoRoot, 'skills', skill, 'scripts', 'backlog-item.mjs'),
-);
+const helpers = [path.join(repoRoot, 'packages', 'cli', 'lib', 'backlog-item.mjs')];
 
 const roots: string[] = [];
 let printed: string[];
@@ -162,7 +160,7 @@ describe('shared backlog item writer', () => {
     writeFileSync(data, JSON.stringify({ title: 'Hinted' }));
 
     expect(helper(helpers[0], dir, 'add', '--data', data).cliHint).toBe(CLI_HINT);
-    expect(helper(helpers[1], dir, 'add', '--data', data).cliHint).toBeUndefined();
+    expect(helper(helpers[0], dir, 'add', '--data', data).cliHint).toBeUndefined();
     expect(readFileSync(path.join(dir, '.planr', 'config.json'), 'utf8')).toBe(
       '{\n\t"projectName": "tabs",\n\t"findings": {\n\t\t"cliHintShown": true\n\t}\n}\n',
     );
@@ -174,6 +172,42 @@ describe('shared backlog item writer', () => {
     await cli(dir, 'backlog', 'add', 'Via the CLI', '--json');
     expect(printed.join('\n')).not.toContain('npm install -g openplanr');
     expect((await loadConfig(dir)).findings).toBeUndefined();
+  });
+});
+
+describe('backlog filing procedure', () => {
+  const procedure = readFileSync(
+    path.join(repoRoot, 'skills', 'shared', 'backlog-filing.md'),
+    'utf8',
+  );
+
+  it('documents the exact file the CLI writes for the same item', () => {
+    const example = /```markdown\n([\s\S]*?)```/u.exec(procedure)?.[1];
+    expect(example).toBeDefined();
+    const fields = backlogFields({
+      title: 'Import endpoint has no rate limit',
+      priority: 'medium',
+      tags: ['security', 'api'],
+      description:
+        '## Problem\n\n`/import` accepts unlimited requests (`src/routes/import.ts:41`).',
+    });
+    expect(example).toBe(renderBacklogItem('BL-007', fields, '2026-11-08'));
+  });
+
+  it('takes the ID after both a file and an issued marker, and the item lists as open', async () => {
+    const dir = project();
+    const backlog = path.join(dir, '.planr', 'backlog');
+    mkdirSync(path.join(backlog, '.issued-ids'), { recursive: true });
+    writeFileSync(path.join(dir, '.planr', 'config.json'), '{}\n');
+    writeFileSync(
+      path.join(backlog, 'BL-004-existing.md'),
+      renderBacklogItem('BL-004', backlogFields({ title: 'Existing' }), '2026-11-01'),
+    );
+    writeFileSync(path.join(backlog, '.issued-ids', 'BL-006'), '');
+    const data = path.join(dir, 'input.json');
+    writeFileSync(data, JSON.stringify({ title: 'New item' }));
+    expect(helper(helpers[0], dir, 'add', '--data', data).id).toBe('BL-007');
+    expect((await listOpenBacklog(dir)).map(({ id }) => id)).toEqual(['BL-004', 'BL-007']);
   });
 });
 

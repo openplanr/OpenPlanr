@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { test } from 'node:test';
@@ -137,28 +137,65 @@ test('Ship and Investigate split issues into blockers and findings they offer to
   for (const skillId of ['planr-ship', 'planr-investigate']) {
     const skill = readWorkspace(`skills/${skillId}/SKILL.md`);
     assert.match(skill, /\]\(references\/findings\.md\)/u, skillId);
-    assert.match(skill, /\]\(scripts\/backlog-item\.mjs\)/u, skillId);
+    assert.match(skill, /\]\(references\/backlog-filing\.md\)/u, skillId);
     assert.match(skill, /never\s+fix them in this change unless they block/u, skillId);
-    assert.equal(
-      readWorkspace(`skills/${skillId}/references/findings.md`),
-      readWorkspace('skills/shared/findings.md'),
-    );
+    for (const reference of ['findings.md', 'backlog-filing.md'])
+      assert.equal(
+        readWorkspace(`skills/${skillId}/references/${reference}`),
+        readWorkspace(`skills/shared/${reference}`),
+      );
   }
   const findings = readWorkspace('skills/shared/findings.md');
   for (const rule of [
     /"File all N \(Recommended\)"/u,
     /"Don't file"/u,
-    /With\s+`report`, or no setting, do not run `add` at all/u,
-    /end the result with that line, word for word,\s+once/u,
+    /With\s+`report`, or no setting, do not file at all/u,
     /The request says to file findings, or not to: do that/u,
     /never file or drop a finding\s+silently/u,
-    /list\s+--project <repository-root> --open/u,
+    /list open backlog items as\s+\[backlog filing\]\(backlog-filing\.md\)/u,
     /Already tracked as BL-/u,
     /Paths are always repo-relative/u,
-    /Install only if the user says yes/u,
-    /never\s+`npx`/u,
   ]) {
     assert.match(findings, rule);
+  }
+  const filing = readWorkspace('skills/shared/backlog-filing.md');
+  for (const rule of [
+    /If `openplanr` is already on\s+`PATH`/u,
+    /immediately before writing each item/u,
+    /no-clobber create/u,
+    /take the next\s+number/u,
+    /Never overwrite or edit an existing backlog file or marker/u,
+    /`priority`: `critical`, `high`, `medium` or `low`/u,
+    /`status`: `"open"`/u,
+    /`created` and `updated`: today's date as `YYYY-MM-DD`/u,
+  ]) {
+    assert.match(filing, rule);
+  }
+  for (const text of [findings, filing]) {
+    assert.doesNotMatch(text, /\bnpx\b|\bnode </u);
+    assert.doesNotMatch(text, /cliHint|npm install/u);
+  }
+});
+
+test('no host bundle ships the backlog helper; each carries the filing procedure', () => {
+  for (const [bundle, skillRoot] of [
+    ['dist/plugins/claude/openplanr', (id) => `skills/${id.replace(/^planr-/u, '')}`],
+    ['dist/plugins/openai/openplanr', (id) => `skills/${id.replace(/^planr-/u, '')}`],
+    ['dist/plugins/cursor/openplanr', (id) => `rules/${id}`],
+  ]) {
+    for (const skillId of ['planr-ship', 'planr-investigate']) {
+      const dir = join(WORKSPACE_ROOT, bundle, skillRoot(skillId));
+      assert.equal(
+        existsSync(join(dir, 'scripts/backlog-item.mjs')),
+        false,
+        `${bundle} ${skillId}`,
+      );
+      assert.equal(
+        readFileSync(join(dir, 'references/backlog-filing.md'), 'utf8'),
+        readWorkspace('skills/shared/backlog-filing.md'),
+        `${bundle} ${skillId}`,
+      );
+    }
   }
 });
 

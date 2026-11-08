@@ -1060,12 +1060,12 @@
     },
     {
       "skillId": "planr-investigate",
-      "skillVersion": "2.3.0",
+      "skillVersion": "2.4.0",
       "description": "Diagnose a bug, regression, error, or unexplained behavior and optionally implement a bounded fix. Use for root-cause investigation, including before any fix, not planned feature delivery.",
       "lifecycle": "active",
       "authorityClass": "diagnostic",
       "source": "skills/planr-investigate/openplanr.skill.json",
-      "sourceDigest": "sha256:2a0fcaacd12fe22b78d4c72e0c6ef27effc2f9c5c1d04758920ec3810c1e6ce4",
+      "sourceDigest": "sha256:da39f2845857a3f7f7edcebb59de474659f919bca885e63eb997a2b67f90be09",
       "triggerPolicy": {
         "include": [
           "Investigate a bug, regression, error, or unexplained behavior",
@@ -1548,12 +1548,12 @@
     },
     {
       "skillId": "planr-ship",
-      "skillVersion": "1.6.0",
+      "skillVersion": "1.7.0",
       "description": "Implement an OpenPlanr plan, specification, task, or clearly stated request end to end in the current repository. Use when the user asks to build, implement, fix, finish, or ship local work, or to plan and implement an accepted change. Invoke before editing files for the requested change. Not for planning only, landing, release, or work handed to another coding agent.",
       "lifecycle": "active",
       "authorityClass": "implementation",
       "source": "skills/planr-ship/openplanr.skill.json",
-      "sourceDigest": "sha256:46b7912188268e8f50125cb4554869c05d274544ebd90c59721e206538731cc5",
+      "sourceDigest": "sha256:928cc947817db7d9406ac7f243895eb24dce761683d7b4ec7854824bbe3c518e",
       "triggerPolicy": {
         "include": [
           "Implement a plan, specification, task, fix, or clearly stated local request",
@@ -1864,5 +1864,5 @@
     }
   ],
   "compatibilityAliases": [],
-  "documentDigest": "sha256:b96afecdc3296b6e3898596ee3493b05fc24b4637f818d94b4898e47efda10a9"
+  "documentDigest": "sha256:85b05ccc4cc7736e8bb6cf1c162413d7d6f3a1e6ae7326f4ccae429a8f926624"
 }
