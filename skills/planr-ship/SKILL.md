@@ -111,9 +111,9 @@ For an acceptance check written or changed for this task, follow
 Read [the result contract](references/result-contract.md) before reporting.
 
 Report defects you notice outside the task as [findings](references/findings.md),
-and never fix them in this change unless they block it. The packaged
-[backlog helper](scripts/backlog-item.mjs) lists and files backlog items when no
-CLI is installed; resolve it relative to this `SKILL.md`.
+and never fix them in this change unless they block it.
+[Backlog filing](references/backlog-filing.md) lists and files backlog items with
+your own file tools.
 
 Do not write progress into an approved design package. The studio derives
 approved, planned, implementing, and verified state from canonical planning and

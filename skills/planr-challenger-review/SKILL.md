@@ -78,13 +78,9 @@ review. The Chair needs exceptions, surviving decisions, dissent, and resolution
 
 ## Optional quality check and return
 
-When available, use this as a structural quality check:
-
-```sh
-node "<skill-root>/scripts/validate-note.mjs" "<absolute-output-path>" --profile challenger --contract-version 2.0.0 --json
-```
-
-Use diagnostics when useful and report any remaining structural issue.
+Check the note against the challenger profile in
+[the note checklist](references/note-checklist.md). Use unchecked items when useful and report any
+remaining structural issue.
 
 ## Return
 
