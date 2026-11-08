@@ -1639,6 +1639,25 @@ async function enterpriseRuntime() {
     pathToFileURL(path.join(resolved.root, 'lib/protocol/enterprise-contracts.mjs')).href
   );
 }
+
+type CompanyJourneyContracts = Pick<
+  typeof import('../../../protocol/src/enterprise-journey-contracts.mjs'),
+  'assertEnterpriseJourneyContract' | 'enterprisePageQueryDigest'
+>;
+export async function companyJourneyContracts(): Promise<CompanyJourneyContracts> {
+  const resolved = resolvePipelinePackage(true);
+  if (!resolved) return fail('E_COMPANY_RUNTIME', 'The OpenPlanr workflow package is unavailable.');
+  const contracts = await import(
+    pathToFileURL(path.join(resolved.root, 'lib/protocol/enterprise-journey-contracts.mjs')).href
+  );
+  if (
+    typeof contracts.assertEnterpriseJourneyContract !== 'function' ||
+    typeof contracts.enterprisePageQueryDigest !== 'function'
+  )
+    throw new TypeError('Company journey contracts are incomplete.');
+  return contracts as CompanyJourneyContracts;
+}
+
 export async function previewCompanyProposal(root: string, bindingId: string, proposalId: string) {
   const binding = (await loadState(root, 'bindings', bindingId)) as CompanyBinding;
   requireApplicableSource(binding);

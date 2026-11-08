@@ -189,6 +189,11 @@ export function registerCompanyCommand(program: Command) {
       logger.success(
         `Exported ${result.summary.projects} projects, ${result.summary.artifacts} artifacts and ${result.summary.revisions} revisions. See manifest.json in the output directory.`,
       );
+      for (const notice of result.notices) logger.warn(notice);
+      if (result.summary.notExported)
+        logger.warn(
+          `${result.summary.notExported} projects not exported. See manifest.json for details.`,
+        );
     });
   company
     .command('adopt')

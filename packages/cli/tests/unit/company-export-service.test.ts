@@ -5,14 +5,30 @@ import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { packCompanyResourceBundle } from '../../../artifact/lib/artifact/resource-pack.mjs';
 import { canonicalizeJson } from '../../../protocol/src/canonical-json.mjs';
+import {
+  assertEnterpriseJourneyContract,
+  enterprisePageQueryDigest,
+} from '../../../protocol/src/enterprise-journey-contracts.mjs';
 import * as companyAuth from '../../src/services/company-auth-service.js';
+import * as pipelinePackage from '../../src/services/pipeline-package-service.js';
 
-const diskFault = vi.hoisted(() => ({ partialWrite: false }));
+const diskFault = vi.hoisted(() => ({
+  partialWrite: false,
+  cleanup: false,
+  manifest: false,
+}));
 vi.mock('node:fs/promises', async (importOriginal) => {
   const actual = await importOriginal<typeof import('node:fs/promises')>();
   return {
     ...actual,
+    unlink: async (...args: Parameters<typeof actual.unlink>) => {
+      if (diskFault.cleanup && String(args[0]).endsWith('/content.txt'))
+        throw Object.assign(new Error('Simulated cleanup failure'), { code: 'EACCES' });
+      return actual.unlink(...args);
+    },
     writeFile: async (...args: Parameters<typeof actual.writeFile>) => {
+      if (diskFault.manifest && String(args[0]).endsWith('/manifest.json'))
+        throw Object.assign(new Error('Simulated manifest write failure'), { code: 'ENOSPC' });
       if (diskFault.partialWrite && String(args[0]).endsWith('/content.txt')) {
         diskFault.partialWrite = false;
         await actual.writeFile(args[0], 'partial', args[2]);
@@ -39,19 +55,34 @@ const project = {
 const catalogRoute = '/v1/project-catalog?status=all&pageSize=100';
 const adminNotice =
   'admin listing unavailable: needs an MFA-verified browser session; projects without a role not checked';
-const catalogPage = (items: unknown[] = [project], nextCursor: unknown = null) => ({
-  kind: 'openplanr-enterprise-project-page',
-  schemaVersion: '1.0.0',
-  protocolVersion: '1.19.0',
-  query: {
-    organizationId: 'org1',
-    actorId: 'actor1',
-    scope: 'projects',
-    filter: { status: 'all', search: '' },
-  },
-  items,
-  nextCursor,
-});
+const catalogQuery = {
+  organizationId: 'org1',
+  actorId: 'actor1',
+  scope: 'projects',
+  filter: { status: 'all', search: '' },
+};
+const catalogPage = (
+  items: unknown[] = [project],
+  cursor: string | null = null,
+  query = catalogQuery,
+) =>
+  assertEnterpriseJourneyContract(
+    {
+      kind: 'openplanr-enterprise-project-page',
+      schemaVersion: '1.0.0',
+      protocolVersion: '1.19.0',
+      query,
+      items,
+      nextCursor:
+        cursor === null ? null : { token: cursor, queryDigest: enterprisePageQueryDigest(query) },
+    },
+    'enterprise-project-page',
+  );
+const invalidCatalogPage = (overrides: Record<string, unknown>) => {
+  const page = { ...catalogPage([]), ...overrides };
+  expect(() => assertEnterpriseJourneyContract(page, 'enterprise-project-page')).toThrow(TypeError);
+  return page;
+};
 const artifact = { id: 'a1', organizationId: 'org1', projectId: 'p1', title: '../Artifact' };
 const revision = (id = 'r1', artifactId = 'a1', content = 'hello') => ({
   kind: 'openplanr-enterprise-artifact-revision',
@@ -138,6 +169,8 @@ beforeEach(async () => {
 });
 afterEach(async () => {
   diskFault.partialWrite = false;
+  diskFault.cleanup = false;
+  diskFault.manifest = false;
   vi.restoreAllMocks();
   vi.unstubAllGlobals();
   vi.unstubAllEnvs();
@@ -189,7 +222,7 @@ describe('organization export', () => {
     expect(saved.notices).toContain(adminNotice);
   });
 
-  it('exports more than 100 projects over three catalog pages, echoing string cursors until null', async () => {
+  it('exports more than 100 projects over three catalog pages, echoing object cursor tokens until null', async () => {
     const projects = Array.from({ length: 102 }, (_, index) => ({
       ...project,
       projectId: `p${index}`,
@@ -211,8 +244,8 @@ describe('organization export', () => {
       fetchMock.mock.calls.filter(([url]) => url.includes('/project-catalog')).map(([url]) => url),
     ).toEqual([
       origin + catalogRoute,
-      origin + catalogRoute + '&cursor=page_2-A',
-      origin + catalogRoute + '&cursor=page_3-B',
+      origin + catalogRoute + `&cursor=${encodeURIComponent('page_2-A')}`,
+      origin + catalogRoute + `&cursor=${encodeURIComponent('page_3-B')}`,
     ]);
     expect(JSON.parse((await output('projects/p101/project.json')).toString())).toEqual(
       projects[101],
@@ -240,16 +273,72 @@ describe('organization export', () => {
     expect(fetchMock.mock.calls.some(([url]) => /projects\/old/.test(url))).toBe(false);
   });
 
-  it.each([0, '', 'a=b', 'a/b', 'a'.repeat(2049), undefined])(
-    'rejects invalid catalog cursor %#',
-    async (cursor) => {
-      routes.set(catalogRoute, () => json(catalogPage([], cursor)));
-      if (cursor === undefined)
-        routes.set(catalogRoute, () => json({ ...catalogPage([]), nextCursor: undefined }));
-      await expect(exportOrganization()).rejects.toThrow(/catalog.*cursor/);
+  it.each([0, '', 'legacy-string', {}, [], { token: 'next' }, undefined])(
+    'rejects malformed catalog cursor %#',
+    async (nextCursor) => {
+      const page = invalidCatalogPage({ nextCursor });
+      routes.set(catalogRoute, () => json(page));
+      await expect(exportOrganization()).rejects.toThrow(
+        /project catalog: TypeError: Invalid enterprise-project-page/,
+      );
       expect((await manifest()).complete).toBe(false);
+      expect(fetchMock).toHaveBeenCalledTimes(1);
     },
   );
+
+  it.each(['', 'a=b', 'a/b', 'a\n', 'a'.repeat(2049)])(
+    'rejects malformed catalog token %#',
+    async (cursor) => {
+      const nextCursor = { token: cursor, queryDigest: enterprisePageQueryDigest(catalogQuery) };
+      const page =
+        cursor === '' || cursor.length > 2048
+          ? invalidCatalogPage({ nextCursor })
+          : catalogPage([], cursor);
+      routes.set(catalogRoute, () => json(page));
+      await expect(exportOrganization()).rejects.toThrow(
+        /project catalog:.*(?:cursor|nextCursor)/i,
+      );
+      expect((await manifest()).complete).toBe(false);
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+    },
+  );
+
+  it('rejects a cursor queryDigest that does not match its page', async () => {
+    const page = invalidCatalogPage({ nextCursor: { token: 'next', queryDigest: '0'.repeat(64) } });
+    routes.set(catalogRoute, () => json(page));
+    await expect(exportOrganization()).rejects.toMatchObject({
+      message:
+        'project catalog: TypeError: Cursor does not match the selected actor, project and filters.',
+      cause: expect.any(TypeError),
+    });
+    expect((await manifest()).complete).toBe(false);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it.each(['another_page', null])(
+    'rejects queryDigest drift when the next token is %s',
+    async (cursor) => {
+      routes.set(catalogRoute, () => json(catalogPage([], 'next')));
+      routes.set(catalogRoute + '&cursor=next', () =>
+        json(catalogPage([], cursor, { ...catalogQuery, actorId: 'actor2' })),
+      );
+      await expect(exportOrganization()).rejects.toThrow('queryDigest changed across pages');
+      expect((await manifest()).complete).toBe(false);
+      expect(fetchMock).toHaveBeenCalledTimes(2);
+    },
+  );
+
+  it.each([
+    { ...catalogQuery, scope: 'artifacts' },
+    { ...catalogQuery, filter: { status: 'active', search: '' } },
+    { ...catalogQuery, filter: { status: 'all', search: 'other' } },
+  ])('rejects catalog query scope or filter drift %#', async (query) => {
+    const page =
+      query.scope === 'projects' ? catalogPage([], null, query) : invalidCatalogPage({ query });
+    routes.set(catalogRoute, () => json(page));
+    await expect(exportOrganization()).rejects.toThrow(/project catalog:.*(?:scope|query)/);
+    expect((await manifest()).complete).toBe(false);
+  });
 
   it('rejects a repeated catalog cursor', async () => {
     routes.set(catalogRoute, () => json(catalogPage([], 'same')));
@@ -276,9 +365,12 @@ describe('organization export', () => {
         organizationId: drift === 'organization' ? 'foreign' : 'org1',
         status: drift === 'status' ? 'unknown' : drift === 'status-array' ? ['active'] : 'active',
       };
-      routes.set(catalogRoute + '&cursor=next', () => json(catalogPage([next])));
+      const page = drift.startsWith('status')
+        ? invalidCatalogPage({ items: [next] })
+        : catalogPage([next], null, { ...catalogQuery, organizationId: next.organizationId });
+      routes.set(catalogRoute + '&cursor=next', () => json(page));
       await expect(exportOrganization()).rejects.toThrow(
-        /Duplicate project|different organizations|project status/,
+        /Duplicate project|different organizations|items\[0\].status/,
       );
       expect((await manifest()).complete).toBe(false);
     },
@@ -305,7 +397,14 @@ describe('organization export', () => {
         json({ error: { code, message: token } }, 403),
       );
       await exportOrganization();
-      expect(await manifest()).toMatchObject({ complete: true, notices: [adminNotice] });
+      expect(await manifest()).toMatchObject({
+        complete: true,
+        notices: [
+          code === 'E_ROLE'
+            ? 'admin listing unavailable: not an organization admin; projects without a role not checked'
+            : adminNotice,
+        ],
+      });
     },
   );
 
@@ -348,6 +447,22 @@ describe('organization export', () => {
       },
     });
     expect((await manifest()).error).toBe('project catalog: Invalid company JSON response.');
+  });
+
+  it('reports a missing pipeline package with its original reason and cause', async () => {
+    const cause = new Error('The pipeline package is not installed.');
+    cause.name = 'E_PIPELINE_NOT_INSTALLED';
+    vi.spyOn(pipelinePackage, 'resolvePipelinePackage').mockImplementation(() => {
+      throw cause;
+    });
+    await expect(exportOrganization()).rejects.toMatchObject({
+      message: 'project catalog: E_PIPELINE_NOT_INSTALLED: The pipeline package is not installed.',
+      cause,
+    });
+    expect((await manifest()).error).toBe(
+      'project catalog: E_PIPELINE_NOT_INSTALLED: The pipeline package is not installed.',
+    );
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 
   it.each([403, 413, 500])('retains HTTP %s and its malformed error-body cause', async (status) => {
@@ -511,8 +626,9 @@ describe('organization export', () => {
   );
 
   it('rejects unsafe IDs before constructing filesystem or request paths', async () => {
-    routes.set(catalogRoute, () => json(catalogPage([{ ...project, projectId: '../escape' }])));
-    await expect(exportOrganization()).rejects.toThrow(/identifier/);
+    const page = invalidCatalogPage({ items: [{ ...project, projectId: '../escape' }] });
+    routes.set(catalogRoute, () => json(page));
+    await expect(exportOrganization()).rejects.toThrow(/projectId/);
     expect((await manifest()).complete).toBe(false);
   });
 
@@ -547,18 +663,35 @@ describe('organization export', () => {
     expect(JSON.stringify(stderr.mock.calls).includes(token)).toBe(false);
   });
 
-  it('does not expose a credential embedded in an invalid output path', async () => {
-    const parent = path.join(root, token);
+  it.each(['file', 'null-byte', 'long-name'])(
+    'does not expose a credential embedded in an invalid output path: %s',
+    async (kind) => {
+      const parent = path.join(root, token);
+      if (kind === 'file') {
+        await writeFile(parent, 'not a directory');
+        out = path.join(parent, 'export');
+      } else out = parent + (kind === 'null-byte' ? '\0' : 'a'.repeat(300));
+      let message = '';
+      try {
+        await exportOrganization();
+      } catch (error) {
+        message = error instanceof Error ? error.message : String(error);
+      }
+      expect(message.length).toBeGreaterThan(0);
+      expect(message.includes(token)).toBe(false);
+      expect(fetchMock).not.toHaveBeenCalled();
+    },
+  );
+
+  it('retains the filesystem cause when preparing the output directory fails', async () => {
+    const parent = path.join(root, 'file');
     await writeFile(parent, 'not a directory');
     out = path.join(parent, 'export');
-    let message = '';
-    try {
-      await exportOrganization();
-    } catch (error) {
-      message = error instanceof Error ? error.message : String(error);
-    }
-    expect(message.length).toBeGreaterThan(0);
-    expect(message.includes(token)).toBe(false);
+    await expect(exportOrganization()).rejects.toMatchObject({
+      code: 'E_COMPANY_EXPORT',
+      message: expect.stringContaining('ENOTDIR'),
+      cause: expect.objectContaining({ code: 'ENOTDIR' }),
+    });
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
@@ -569,7 +702,51 @@ describe('organization export', () => {
     await expect(output(revisionDir + '/content.txt')).rejects.toMatchObject({ code: 'ENOENT' });
   });
 
-  it.each(['none', 'chunk', 'catalog'])(
+  it('retains both payload and cleanup errors when removing a partial file fails', async () => {
+    diskFault.partialWrite = true;
+    diskFault.cleanup = true;
+    await expect(exportOrganization()).rejects.toMatchObject({
+      cause: {
+        cause: expect.objectContaining({
+          name: 'AggregateError',
+          errors: [
+            expect.objectContaining({ code: 'ENOSPC' }),
+            expect.objectContaining({ code: 'EACCES' }),
+          ],
+        }),
+      },
+    });
+    expect((await manifest()).error).toMatch(/ENOSPC.*cleanup failed.*EACCES/);
+    expect((await output(revisionDir + '/content.txt')).toString()).toBe('partial');
+  });
+
+  it.each([false, true])(
+    'retains manifest write failure and prior export failure=%s',
+    async (failed) => {
+      diskFault.manifest = true;
+      if (failed) routes.set(catalogRoute, () => new Response('{'));
+      await expect(exportOrganization()).rejects.toMatchObject({
+        message: expect.stringContaining(
+          'Cannot write manifest.json: Filesystem operation failed (ENOSPC).',
+        ),
+        cause: failed
+          ? expect.objectContaining({
+              name: 'AggregateError',
+              errors: [
+                expect.objectContaining({ code: 'ENOSPC' }),
+                expect.objectContaining({
+                  message: 'Invalid company JSON response.',
+                  cause: expect.any(SyntaxError),
+                }),
+              ],
+            })
+          : expect.objectContaining({ code: 'ENOSPC' }),
+      });
+      await expect(manifest()).rejects.toMatchObject({ code: 'ENOENT' });
+    },
+  );
+
+  it.each(['none', 'chunk', 'catalog', 'manifest'])(
     'verifies and exports a multi-chunk package; corrupt=%s',
     async (corrupt) => {
       const resourceId = 'r1'.repeat(12);
@@ -605,6 +782,7 @@ describe('organization export', () => {
       });
       expect(packed.chunks.length).toBeGreaterThan(1);
       if (corrupt === 'catalog') packed.manifest.contentDigest = `sha256:${'0'.repeat(64)}`;
+      if (corrupt === 'manifest') packed.manifest.chunks[0].byteLength = 0;
       const remote = {
         ...revision(resourceId),
         schemaVersion: '1.1.0',
@@ -643,6 +821,20 @@ describe('organization export', () => {
           },
         });
         expect((await manifest()).complete).toBe(false);
+      } else if (corrupt === 'manifest') {
+        await expect(exportOrganization()).rejects.toMatchObject({
+          message: expect.stringMatching(
+            /TypeError: Invalid company-resource-manifest:.*chunks\[0\].byteLength/,
+          ),
+          cause: expect.any(TypeError),
+        });
+        const saved = await manifest();
+        expect(saved.complete).toBe(false);
+        expect(saved.error).toMatch(
+          /TypeError: Invalid company-resource-manifest:.*chunks\[0\].byteLength/,
+        );
+        expect(saved.error).not.toContain('filesystem');
+        expect(fetchMock.mock.calls.some(([url]) => url.includes('/chunks/'))).toBe(false);
       } else if (corrupt === 'chunk') {
         await expect(exportOrganization()).rejects.toThrow(/artifact a1.*revision r1.*chunk/);
         expect((await manifest()).complete).toBe(false);

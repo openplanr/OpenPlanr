@@ -8,6 +8,7 @@ import {
   assertRemoteRevision,
   type CompanyRemoteRevision,
   CompanySyncError,
+  companyJourneyContracts,
   companyResourceContracts,
   companyResourceRuntime,
   companyResponse,
@@ -87,7 +88,7 @@ function parse(content: string): RecordData {
     return fail('Invalid company JSON response.', cause);
   }
 }
-function filesystemCode(error: unknown): string {
+function filesystemCode(error: unknown): string | undefined {
   const codes = [
     'EACCES',
     'EPERM',
@@ -104,7 +105,13 @@ function filesystemCode(error: unknown): string {
     typeof error.code === 'string' &&
     codes.includes(error.code)
     ? error.code
-    : 'filesystem operation failed';
+    : undefined;
+}
+function errorDetail(error: unknown): string {
+  if (error instanceof CompanySyncError) return error.message;
+  const code = filesystemCode(error);
+  if (code) return `Filesystem operation failed (${code}).`;
+  return error instanceof Error ? `${error.name}: ${error.message}` : 'Unknown export failure.';
 }
 async function prepareDirectory(directory: string) {
   if (!directory.trim()) fail('Supply a non-existent or empty output directory.');
@@ -129,7 +136,10 @@ export async function exportCompanyOrganization(
     await prepareDirectory(outDir);
   } catch (error) {
     if (error instanceof CompanySyncError) throw error;
-    fail(`Cannot prepare the output directory (${filesystemCode(error)}).`);
+    fail(
+      `Cannot prepare the output directory (${filesystemCode(error) ?? 'invalid or inaccessible path'}).`,
+      error,
+    );
   }
   const manifest: CompanyOrganizationExport = {
     schemaVersion: '1.0.0',
@@ -193,7 +203,11 @@ export async function exportCompanyOrganization(
         } catch (cleanup) {
           if (!(cleanup instanceof Error && 'code' in cleanup && cleanup.code === 'ENOENT'))
             fail(
-              `Payload write failed (${filesystemCode(error)}); partial file cleanup failed (${filesystemCode(cleanup)}).`,
+              `Payload write failed: ${errorDetail(error)} Partial file cleanup failed: ${errorDetail(cleanup)}`,
+              new AggregateError(
+                [error, cleanup],
+                'Payload write and partial file cleanup failed.',
+              ),
             );
         }
       }
@@ -234,13 +248,21 @@ export async function exportCompanyOrganization(
     fail(`${key} pagination exceeded 2000 pages; export incomplete.`);
   }
   async function* projectCatalog(): AsyncGenerator<RecordData> {
+    const { assertEnterpriseJourneyContract, enterprisePageQueryDigest } =
+      await companyJourneyContracts();
     const route = '/v1/project-catalog?status=all&pageSize=100';
     let cursor: string | undefined;
+    let queryDigest: string | undefined;
     let organizationId: string | undefined;
     const seenProjects = new Set<string>();
     const seenCursors = new Set<string>();
     for (let page = 0; page < 2000; page++) {
-      const result = await readJson(route + (cursor === undefined ? '' : `&cursor=${cursor}`));
+      const result = assertEnterpriseJourneyContract(
+        await readJson(
+          route + (cursor === undefined ? '' : `&cursor=${encodeURIComponent(cursor)}`),
+        ),
+        'enterprise-project-page',
+      );
       if (
         result.kind !== 'openplanr-enterprise-project-page' ||
         result.schemaVersion !== '1.0.0' ||
@@ -257,6 +279,10 @@ export async function exportCompanyOrganization(
       if (organizationId && organizationId !== organization)
         fail('Catalog pages belong to different organizations.');
       organizationId = organization;
+      const digest = enterprisePageQueryDigest(query);
+      if (queryDigest !== undefined && queryDigest !== digest)
+        fail('The project catalog queryDigest changed across pages.');
+      queryDigest = digest;
       for (const value of result.items) {
         const project = record(value);
         const projectId = id(project.projectId);
@@ -274,14 +300,14 @@ export async function exportCompanyOrganization(
       if (result.nextCursor === null) return;
       const next = result.nextCursor;
       if (
-        typeof next !== 'string' ||
-        next.trim() !== next ||
-        !/^[A-Za-z0-9_-]{1,2048}$/.test(next) ||
-        seenCursors.has(next)
+        !/^[A-Za-z0-9_-]{1,2048}$/.test(next.token) ||
+        next.token.trim() !== next.token ||
+        next.queryDigest !== queryDigest ||
+        seenCursors.has(next.token)
       )
         fail('Invalid or repeated project catalog cursor.');
-      seenCursors.add(next);
-      cursor = next;
+      seenCursors.add(next.token);
+      cursor = next.token;
     }
     fail('Project catalog pagination exceeded 2000 pages; export incomplete.');
   }
@@ -460,7 +486,9 @@ export async function exportCompanyOrganization(
       )
         throw error;
       manifest.notices.push(
-        'admin listing unavailable: needs an MFA-verified browser session; projects without a role not checked',
+        error.apiCode === 'E_ROLE'
+          ? 'admin listing unavailable: not an organization admin; projects without a role not checked'
+          : 'admin listing unavailable: needs an MFA-verified browser session; projects without a role not checked',
       );
     }
     for (const project of projects) await exportProject(project);
@@ -470,11 +498,7 @@ export async function exportCompanyOrganization(
     manifest.complete = true;
   } catch (error) {
     failure = error;
-    const detail =
-      error instanceof CompanySyncError
-        ? error.message
-        : `Export failed while reading, verifying or writing the selected item (${filesystemCode(error)}).`;
-    manifest.error = `${item}: ${detail}`;
+    manifest.error = `${item}: ${errorDetail(error)}`;
   }
   manifest.summary.notExported = manifest.notExported.length;
   const bytes = serialize(manifest);
@@ -482,7 +506,10 @@ export async function exportCompanyOrganization(
     await writeFile(path.join(directory, 'manifest.json'), bytes, { flag: 'wx', mode: 0o600 });
   } catch (error) {
     fail(
-      `Cannot write manifest.json (${filesystemCode(error)}). ${manifest.error ?? 'The export could not be finalized.'}`,
+      `Cannot write manifest.json: ${errorDetail(error)} ${manifest.error ?? 'The export could not be finalized.'}`,
+      failure === undefined
+        ? error
+        : new AggregateError([error, failure], 'Manifest write and organization export failed.'),
     );
   }
   if (!manifest.complete)

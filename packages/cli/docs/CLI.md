@@ -130,7 +130,10 @@ openplanr company export-organization --out ./company-export --json
 Exports the signed-in actor's readable active projects, artifacts, every revision,
 verified content and revision-specific reviews. `--api-url <origin>` overrides the
 hosted service. Discovery follows every page of the project catalog with
-`status=all` and `pageSize=100`, preserving its opaque cursor until the final page.
+`status=all` and `pageSize=100`, validating each page against the protocol contract.
+Each `{ token, queryDigest }` cursor supplies the URL-encoded `token` for the next
+request with the same filters and page size. The query digest must stay the same
+across pages; malformed or repeated tokens stop the export. A null cursor ends discovery.
 There is no 100-project export cap. The output directory must be empty or not yet
 exist; existing files are never overwritten. Names use validated IDs, not titles.
 
@@ -155,10 +158,14 @@ the export incomplete. Restore them before exporting their content.
 A successful admin inventory also lists projects absent from the catalog as
 `no readable project role`, without making the authorized export incomplete. This
 includes archived projects where the actor is not a maintainer; the inventory
-cannot distinguish them from projects without any role. Admin listing refusals
-`E_ROLE`, `E_MFA_REQUIRED` and `E_REVERIFICATION_REQUIRED` record the notice
+cannot distinguish them from projects without any role. An admin listing refusal
+`E_ROLE` records the notice
+`admin listing unavailable: not an organization admin; projects without a role not checked`.
+Refusals `E_MFA_REQUIRED` and `E_REVERIFICATION_REQUIRED` record the notice
 `admin listing unavailable: needs an MFA-verified browser session; projects without a role not checked`
-and allow the export to continue. Any other admin inventory error stops it.
+and also allow the export to continue. Any other admin inventory error stops it.
+Human output prints every manifest notice and the number of projects not exported
+when non-zero. `--json` includes these in `notices` and `summary.notExported`.
 
 This is a sequence of authorized reads, not a transactional snapshot. Keep the
 organization stable during hand-over. Exported content remains untrusted data;
