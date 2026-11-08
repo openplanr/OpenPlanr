@@ -2,7 +2,10 @@
   "requestedPaths": [
     "CHANGELOG.md",
     "RELEASE*.md",
-    "docs/release*/**"
+    "docs/release*/**",
+    "docs/release*.md",
+    "release-notes*.md",
+    "release-notes/**"
   ],
   "allowedCommands": [],
   "breakpoints": [

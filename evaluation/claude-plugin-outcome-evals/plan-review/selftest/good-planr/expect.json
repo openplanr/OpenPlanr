@@ -13,7 +13,7 @@
     "finds-header-required": true,
     "finds-response-overexposes": true,
     "finds-guessable-token": true,
-    "read-only-task-not-blocked": true,
+    "error-helpers-task-not-blocked": true,
     "docs-task-not-blocked": true,
     "no-cleanup-job-not-blocked": true,
     "live-content-not-blocked": true

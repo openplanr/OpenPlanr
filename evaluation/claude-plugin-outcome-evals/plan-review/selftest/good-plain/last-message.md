@@ -14,5 +14,5 @@ Several things to fix before starting:
   The README says every change to the stored shape needs both, or existing files stop loading.
 - Task 6 is six days of unrelated work in one task; split it.
 
-Task 5 and the README task look right as they are. Showing the current note content is what the spec
+Task 5 (errors through the existing helpers) and the README task look right as they are. Showing the current note content is what the spec
 wants, and keeping expired records is how an expired token can return 410, so leave both design notes.

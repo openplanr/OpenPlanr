@@ -1,7 +1,11 @@
 {
   "requestedPaths": [
     "docs/**",
-    ".planr/reviews/**"
+    ".planr/reviews/**",
+    "REVIEW*.md",
+    "review*.md",
+    "*-review.md",
+    "*_review.md"
   ],
   "allowedCommands": [],
   "breakpoints": [
@@ -26,7 +30,7 @@
           "Edit",
           "Write"
         ],
-        "input": "\"file_path\":\"(?!(?:(?!\",\").){0,600}?/(?:docs|\\.planr/reviews)/)"
+        "input": "\"file_path\":\"(?!(?:(?!\",\").){0,600}?/(?:docs|\\.planr/reviews)/)(?!(?:(?!\",\").){0,600}?/(?:REVIEW[^/\"]*|review[^/\"]*|[^/\"]*[-_]review)\\.md\")"
       },
       "after": "absent"
     }

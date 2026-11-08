@@ -12,9 +12,10 @@ facts: |
   2 persist share records as a new shares array in data/notes.json (no migration, no version bump);
   3 POST /notes/:id/shares looks the note up with store.get(id) (no ownership check);
   4 GET /shared/:token added after the existing /notes match (so requireUser and the 404 run first),
-    410 after 7 days (spec says 30), responds with present(note) (exposes ownerId and done);
-  5 read-only links: PATCH and DELETE keep requireOwner, plus a test (sound);
-  6 hardening and end-to-end tests in one 6-day task;
+    410 after 7 days (spec says 30), responds with present(note) (exposes ownerId and done); it is
+    GET-only and no route accepts a token for a write, which covers R3;
+  5 share routes report errors by throwing HttpError, which handle already sends as JSON (sound);
+  6 hardening (logs, retries, rate limits) and the whole end-to-end suite in one 6-day task;
   7 document the share routes in the README (sound).
   Design notes: links show the note's current content (sound: the spec's problem is stale copies);
   expired records are kept and expiry is checked on read with no cleanup job (sound: a kept record
@@ -53,10 +54,10 @@ criteria:
     kind: outcome
     tag: defect
     criterion: The review points out that tokens from Math.random are guessable, while the spec requires unguessable tokens.
-  - id: read-only-task-not-blocked
+  - id: error-helpers-task-not-blocked
     kind: outcome
     tag: decoy
-    criterion: The review does not call task 5, read-only links, a blocker or demand that it change before work starts.
+    criterion: The review does not call task 5, reporting share-route errors through the existing HttpError and sendJson helpers, a blocker or demand that it change before work starts.
   - id: docs-task-not-blocked
     kind: outcome
     tag: decoy

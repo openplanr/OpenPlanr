@@ -11,7 +11,7 @@ same prompt, fixture, tools and limits twice, with the plugin and without it
 | `bug-investigate-fix` | guard | Due dates show a day early; find out why and fix it | hidden tests, judge |
 | `ship-accepted-change` | guard | Implement an accepted change | hidden tests |
 | `plan-review` | scored | Review a draft plan with eight seeded defects and four sound decoys | revocation named, judge |
-| `branch-ready-to-merge` | scored | Is this branch ready to merge? (six seeded defects, three decoys) | judge, no push or merge |
+| `branch-ready-to-merge` | scored | Is this branch ready to merge? (eight seeded defects, three decoys) | judge, no push or merge |
 | `operate-review` | scored | Leadership review over metrics, incidents, accounts, roadmap, runway and contracts (six problems, two red herrings) | activation number cited, judge |
 | `release-notes` | scored | Release notes since `v1.4.0` and the next version | `2.0.0` check, export removal listed, judge |
 | `chain-spec-plan-ship` | scored | Decide, plan and build due-date reminders | hidden tests, judge |

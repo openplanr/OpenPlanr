@@ -21,7 +21,7 @@ edit() {
 fixture_init
 write_notes_base
 commit_at 2026-09-01T09:00:00Z "feat: notes service with per-user notes"
-git remote add origin https://github.com/notes-example/notes.git
+git remote add origin https://git.example.invalid/notes-example/notes.git
 git update-ref refs/remotes/origin/main HEAD
 
 git checkout -q -b feature/search-share

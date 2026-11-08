@@ -13,8 +13,8 @@ verdict: revise
 | R-5 | Security | Blocking | Task 4 responds with `present(note)`, which returns `ownerId`, `id` and `done`. The spec allows title, body and due date only. |
 | R-6 | Product | Major | Task 4 expires links after 7 days; the spec says 30. |
 | R-7 | Engineering | Major | Task 2 adds a `shares` array to `data/notes.json` without a migration or a `SCHEMA_VERSION` bump, which the README requires for every change to the stored shape. |
-| R-8 | Delivery | Major | Task 6 bundles six days of unrelated work (errors, logging, retries, the whole end-to-end suite). Split it, and move each route's tests into its own task. |
-| R-9 | Engineering | Note | Task 5 is sound: writes keep `requireOwner`, and the 401 test is right. |
+| R-8 | Delivery | Major | Task 6 bundles six days of unrelated work (logging, retries, rate limits, the whole end-to-end suite). Split it, and move each route's tests into its own task. |
+| R-9 | Engineering | Note | Task 5 is sound: throwing `HttpError` reuses the existing JSON error path. |
 | R-10 | Product | Note | Showing the note's current content matches the spec's goal of avoiding stale copies, and keeping expired records is what lets an expired token return 410. Neither needs to change. |
 | R-11 | Docs | Note | Task 7 is fine as written. |
 

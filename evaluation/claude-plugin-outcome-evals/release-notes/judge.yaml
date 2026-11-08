@@ -17,6 +17,9 @@ facts: |
   400 when done is not a boolean).
   The correct next version is 2.0.0.
 criteria:
+  - id: recommends-single-version
+    kind: outcome
+    criterion: The answer recommends 2.0.0 as the single next version, without offering another version as an alternative.
   - id: lists-breaking-removal
     kind: outcome
     criterion: The release notes list the removal of GET /notes/export as a breaking change.

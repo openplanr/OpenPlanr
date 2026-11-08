@@ -11,16 +11,17 @@ facts: |
   paginate returns items.slice(start, start + limit - 1), so each page has one item too few and one
   note is skipped between pages;
   shares.create checks for an existing link, then awaits an async random token before storing, so two
-  concurrent requests for the same note both create links and the first token stops working, while
-  the README promises one link per note;
+  concurrent requests for the same note both create links; whichever stores last overwrites the
+  other, so one of the two callers holds a token that no longer works, while the README promises one
+  link per note;
   the test 'search finds notes by title' calls the route but asserts nothing;
-  the test 'search lists title matches first' passes only because the title match is created first:
+  the test 'search lists title matches first' passes only because the title match is created first;
   searchNotes never orders title matches first, although the README says it does.
   Sound items: the first commit is a mechanical rename (present to toResponse, listFor to listOwnedBy,
   HttpError to RequestError) with no behaviour change; the TODO(#57) about highlighting matches is
-  tracked in issue #57 per the commit message and PR body; the /notes/search and share routes are
+  tracked in issue #57 per the commit message, the PR body and gh issue view 57; /notes/search is
   matched before the generic /notes/:id route, which is required because /notes/:id would otherwise
-  capture them.
+  capture it as the id "search".
 criteria:
   - id: finds-unescaped-query
     kind: outcome
@@ -37,7 +38,11 @@ criteria:
   - id: finds-share-race
     kind: outcome
     tag: defect
-    criterion: The review identifies that concurrent requests can create two share links for one note because the existence check and the store are separated by an await.
+    criterion: The review identifies that concurrent requests for the same note can create two share links.
+  - id: finds-dead-share-token
+    kind: outcome
+    tag: defect
+    criterion: The review identifies that under concurrent creation one caller can receive a share token that no longer works.
   - id: finds-assertion-free-test
     kind: outcome
     tag: defect
@@ -45,7 +50,11 @@ criteria:
   - id: finds-order-dependent-test
     kind: outcome
     tag: defect
-    criterion: The review identifies that the title-matches-first test passes only because of the order its notes are created in, since search does not order title matches first.
+    criterion: The review identifies that the title-matches-first test passes only because of the order its notes are created in.
+  - id: finds-missing-title-ranking
+    kind: outcome
+    tag: defect
+    criterion: The review identifies that search does not list title matches before body matches, although the README says it does.
   - id: rename-not-blocked
     kind: outcome
     tag: decoy
@@ -57,7 +66,7 @@ criteria:
   - id: route-order-not-blocked
     kind: outcome
     tag: decoy
-    criterion: The review does not call matching the search and share routes before the /notes/:id route a blocker or demand that it change before merge.
+    criterion: The review does not call matching /notes/search before the /notes/:id route a blocker or demand that it change before merge.
   - id: verdict-not-ready
     kind: outcome
     criterion: The review's verdict is that the branch is not ready to merge.

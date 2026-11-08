@@ -44,6 +44,9 @@ cat > company/metrics/README.md <<'EOF'
 
 The new onboarding flow shipped on 2026-10-01 for all new signups.
 
+This export ran on 2026-11-09, so every October signup has had its full seven
+days to activate.
+
 Weekly active users dip every August while most of our customers' staff are on
 summer holiday; August 2025 was 11% below July 2025 and recovered in September.
 The August 2026 dip followed the same pattern and recovered in September.
@@ -106,7 +109,7 @@ cat > company/contracts.md <<'EOF'
 | Kite Studio | Mobile app beta (iOS) | $22,000 per month | 6 months from 2026-11-01  | 2026-10-25 |
 | Hostwell    | Hosting               | Usage based       | Monthly, included in burn | 2025-03-02 |
 EOF
-commit_at 2026-11-01T09:00:00Z "docs: october operating files"
+commit_at 2026-11-09T09:00:00Z "docs: october operating files"
 
 # shellcheck source=../_shared/probe.sh
 source "$here/../_shared/probe.sh"

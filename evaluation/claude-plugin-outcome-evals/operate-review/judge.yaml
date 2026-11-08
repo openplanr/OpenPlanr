@@ -1,7 +1,8 @@
 schema: 1
 facts: |
   company/metrics/2026-10.csv: activation_rate was 0.410 from July to September and 0.336 in
-  October (an 18% relative drop); a new onboarding flow shipped on 2026-10-01. Weekly active users
+  October (an 18% relative drop); a new onboarding flow shipped on 2026-10-01. The export ran on 2026-11-09,
+  so every October signup had its full seven days to activate; the drop is not a data-maturity artifact. Weekly active users
   dipped in August (3,550 against 3,920 in July) and recovered in September; metrics/README.md says
   WAU dips every August for summer holidays and the 2026 dip followed that pattern.
   company/incidents/2026-10.md: two Sev-2 sync incidents (4 Oct, edits failed for 22% of active

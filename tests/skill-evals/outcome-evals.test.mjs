@@ -388,6 +388,26 @@ test('the guard ignores listing tags and printing versions, and fails creating o
   }
 });
 
+test('the version grader accepts a v prefix, and the revocation grader needs revocation named as missing', () => {
+  const runData = (text) => ({
+    trace: traceFromToolCalls([], text),
+    lastMessage: text,
+    createdFiles: [],
+    workspace: tmpdir(),
+  });
+  const version = cases.get('release-notes').graders.find((g) => g.name === 'version-is-2-0-0');
+  for (const text of ['Next version: v2.0.0.', 'Next version: `v2.0.0`', 'version 2.0.0'])
+    assert.equal(evaluateFreeGrader(version, runData(text)).passed, true, text);
+  assert.equal(evaluateFreeGrader(version, runData('Next version: 1.5.0.')).passed, false);
+  const revocation = cases
+    .get('plan-review')
+    .graders.find((g) => g.name === 'names-missing-revocation');
+  for (const text of ['No task covers revocation (R4).', 'Nothing lets an owner revoke a link.'])
+    assert.equal(evaluateFreeGrader(revocation, runData(text)).passed, true, text);
+  for (const text of ['Revoke is covered by task 5.', 'No issues. Revocation is covered.'])
+    assert.equal(evaluateFreeGrader(revocation, runData(text)).passed, false, text);
+});
+
 for (const entry of cases.values()) {
   test(`${entry.name}: every free grader passes its correct output and fails its wrong one`, () => {
     if (entry.hidden)

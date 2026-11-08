@@ -103,20 +103,21 @@ Estimate: 0.5 day.
 Add `GET /shared/:token` to `handle` in `src/server.js`, as a new branch after
 the existing `/notes` path match. Look the token up with `shares.find`; an
 unknown token returns 404, and a link older than 7 days returns 410. Otherwise
-respond with `present(note)`, like the other read routes. Estimate: 1 day.
+respond with `present(note)`, like the other read routes. The route is
+GET-only, and no other route accepts a token, so links stay read-only.
+Estimate: 1 day.
 
-### 5. Read-only links
+### 5. Errors through the existing helpers
 
-No route accepts a token for a write. `PATCH /notes/:id` and
-`DELETE /notes/:id` keep their existing `requireOwner` check. Add a test that a
-`PATCH` carrying only a share token and no `x-user-id` header gets 401.
-Estimate: 0.5 day.
+Share routes report errors by throwing `HttpError` (404 for an unknown token,
+410 for an expired one), which `handle` already turns into a JSON error body
+with `sendJson`. No new error format. Estimate: 0.25 day.
 
 ### 6. Hardening and end-to-end tests
 
-Return consistent error bodies from every share route, keep tokens out of
-logs, retry persistence failures, and write an end-to-end suite covering every
-share route and error case. Estimate: 6 days.
+Keep tokens out of logs, retry persistence failures, rate-limit link reads,
+and write an end-to-end suite covering every share route and error case.
+Estimate: 6 days.
 
 ### 7. Document share links
 

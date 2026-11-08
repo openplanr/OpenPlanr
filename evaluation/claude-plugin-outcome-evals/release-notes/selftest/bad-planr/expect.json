@@ -6,6 +6,7 @@
     "version-is-2-0-0": false
   },
   "judge": {
+    "recommends-single-version": false,
     "lists-breaking-removal": false,
     "lists-footer-breaking": false,
     "describes-title-limit": false,

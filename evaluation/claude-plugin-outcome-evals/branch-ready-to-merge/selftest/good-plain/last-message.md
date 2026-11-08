@@ -7,11 +7,11 @@ No, not yet. Six problems:
 3. `paginate` slices to `start + limit - 1`, so each page returns one item fewer than `limit` and the
    skipped item never shows up on any page.
 4. `shares.create` checks for an existing link, then awaits the random token before saving. Two requests
-   at the same time both pass the check, so one note gets two links and the first token stops working.
+   at the same time both pass the check, so one note gets two links and one caller ends up with a token that no longer works.
    The README promises one link per note.
 5. "search lists title matches first" only passes because the title match is created first. Search never
    sorts title matches ahead of body matches, even though the README says it does.
 6. "search finds notes by title" calls the endpoint but never checks the result, so it can't fail.
 
-The rename commit, the TODO for #57 and putting the search and share routes before `/notes/:id` are all
+The rename commit, the TODO for #57 and matching `/notes/search` before `/notes/:id` are all
 fine as they are.

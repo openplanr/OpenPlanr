@@ -1,7 +1,11 @@
 {
   "requestedPaths": [
     "docs/**",
-    ".planr/operate/**"
+    ".planr/operate/**",
+    "REVIEW*.md",
+    "review*.md",
+    "*-review.md",
+    "*_review.md"
   ],
   "allowedCommands": [],
   "breakpoints": [

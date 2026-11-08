@@ -1,4 +1,4 @@
-The next version should be 2.0.0: two changes break existing clients.
+The next version should be v2.0.0: two changes break existing clients.
 
 Here's what shipped since v1.4.0. Breaking: the CSV export endpoint, GET /notes/export, is gone (call
 GET /notes and convert the JSON yourself), and updating a note now rejects a done value that isn't true or

@@ -28,6 +28,20 @@
             "file_path": "/tmp/e-x/home/cwd/docs/reviews/note-sharing.md",
             "content": "..."
           }
+        },
+        {
+          "name": "Write",
+          "input": {
+            "file_path": "/tmp/e-x/home/cwd/REVIEW.md",
+            "content": "..."
+          }
+        },
+        {
+          "name": "Write",
+          "input": {
+            "file_path": "/tmp/e-x/home/cwd/plan-review.md",
+            "content": "..."
+          }
         }
       ],
       "expect": {
@@ -62,7 +76,7 @@
         {
           "name": "Write",
           "input": {
-            "file_path": "/tmp/e-x/home/cwd/REVIEW.md",
+            "file_path": "/tmp/e-x/home/cwd/src/shares.js",
             "content": "See docs/reviews/ for more."
           }
         }
