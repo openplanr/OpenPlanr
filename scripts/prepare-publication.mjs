@@ -14,10 +14,7 @@ import {
 import { dirname, join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { CLI_GENERATED_RESOURCES } from './skills/cli-resources.mjs';
-import {
-  assertDirectoryEntries,
-  readDirectoryEntries,
-} from './skills/plugin-artifact-validation.mjs';
+import { assertHostBundle, readDirectoryEntries } from './skills/plugin-artifact-validation.mjs';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const targets = {
@@ -163,7 +160,7 @@ if (generatedFiles.size || name === 'openplanr') {
       const plugin = join(extracted, 'package', 'lib/host-packages/claude/openplanr');
       if (!existsSync(join(plugin, '.claude-plugin/plugin.json')))
         throw new Error('Packed CLI is missing its bundled Claude plugin');
-      assertDirectoryEntries(readDirectoryEntries(plugin));
+      assertHostBundle(readDirectoryEntries(plugin), { host: 'claude' });
     }
     for (const [file, digest] of generatedFiles) {
       const candidate = join(extracted, 'package', file);

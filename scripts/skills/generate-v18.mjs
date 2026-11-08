@@ -565,7 +565,7 @@ add(
   }),
 );
 add(
-  'dist/plugins/claude/openplanr/.claude-plugin/icon.svg',
+  'dist/plugins/claude/openplanr/.claude-plugin/icon.png',
   readFileSync(resolve(root, CLAUDE_PLUGIN_ICON)),
 );
 add(

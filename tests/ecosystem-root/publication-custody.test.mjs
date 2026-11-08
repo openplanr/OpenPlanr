@@ -16,6 +16,7 @@ import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 import { load } from 'js-yaml';
 import { CLI_GENERATED_RESOURCES } from '../../scripts/skills/cli-resources.mjs';
+import { baselineDigest } from '../../scripts/skills/plugin-artifact-validation.mjs';
 
 const repository = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 
@@ -35,6 +36,10 @@ function fixture() {
   );
   for (const helper of ['cli-resources.mjs', 'plugin-artifact-validation.mjs'])
     copyFileSync(join(repository, 'scripts/skills', helper), join(root, 'scripts/skills', helper));
+  writeFileSync(
+    join(root, 'scripts/skills/plugin-allowed-types-baseline.json'),
+    JSON.stringify({ count: 0, sha256: baselineDigest([]), entries: [] }),
+  );
   writeFileSync(
     join(root, 'package.json'),
     JSON.stringify({
@@ -200,6 +205,10 @@ test('publication applies the Directory file preflight to the packed Claude plug
     [
       (plugin) => writeFileSync(join(plugin, 'large.js'), 'x'.repeat(256 * 1024)),
       /Plugin artifact validation failed:[\s\S]*text-size: large\.js/u,
+    ],
+    [
+      (plugin) => writeFileSync(join(plugin, 'run.mjs'), 'console.log("x");\n'),
+      /Plugin artifact validation failed:[\s\S]*type-not-allowed: run\.mjs/u,
     ],
     [
       (plugin) => rmSync(join(plugin, '.claude-plugin'), { recursive: true }),

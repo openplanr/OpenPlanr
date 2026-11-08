@@ -6,7 +6,7 @@ import { dirname, join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { createDeterministicZip } from '../../packages/skill-runtime/src/packaging/index.mjs';
-import { assertDirectoryEntries, readDirectoryEntries } from './plugin-artifact-validation.mjs';
+import { assertHostBundle, readDirectoryEntries } from './plugin-artifact-validation.mjs';
 import { syncSkillRelease } from './release-custody.mjs';
 import { buildStandaloneSkillEntries } from './standalone-resources.mjs';
 
@@ -51,7 +51,7 @@ function entries(directory) {
 // and no oversized, linked or special entry reaches the archive.
 function directoryEntries(directory) {
   const inspected = readDirectoryEntries(directory);
-  assertDirectoryEntries(inspected);
+  assertHostBundle(inspected, { host: 'claude' });
   return inspected.map(({ path, bytes, mode }) => ({
     path,
     bytes,

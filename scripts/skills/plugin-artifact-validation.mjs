@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import {
   closeSync,
   constants,
@@ -5,9 +6,11 @@ import {
   lstatSync,
   openSync,
   readdirSync,
+  readFileSync,
   readSync,
 } from 'node:fs';
-import { extname, join, resolve } from 'node:path';
+import { basename, dirname, extname, join, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { TextDecoder } from 'node:util';
 
 export const PLUGIN_CHECKLIST_URL = 'https://claude.com/docs/plugins/pre-submission-checklist';
@@ -526,20 +529,225 @@ export function inspectDirectoryEntries(entries) {
   };
 }
 
+function invalidArtifact(report) {
+  const error = new Error(
+    `Plugin artifact validation failed:\n${report.findings
+      .map(
+        ({ code, path, size, reason }) =>
+          `- ${code}: ${path ?? '(inventory)'}${size == null ? '' : ` (${size} bytes)`}: ${reason}`,
+      )
+      .join('\n')}`,
+  );
+  error.code = 'E_PLUGIN_ARTIFACT_INVALID';
+  error.report = report;
+  return error;
+}
+
 export function assertDirectoryEntries(entries) {
   const report = inspectDirectoryEntries(entries);
-  if (!report.passed) {
-    const error = new Error(
-      `Plugin artifact validation failed:\n${report.findings
-        .map(
-          ({ code, path, size, reason }) =>
-            `- ${code}: ${path ?? '(inventory)'}${size === null ? '' : ` (${size} bytes)`}: ${reason}`,
-        )
-        .join('\n')}`,
-    );
-    error.code = 'E_PLUGIN_ARTIFACT_INVALID';
-    error.report = report;
-    throw error;
+  if (!report.passed) throw invalidArtifact(report);
+  return report;
+}
+
+/** Generated host bundles, relative to the workspace root. */
+export const HOST_BUNDLE_ROOTS = Object.freeze({
+  claude: 'dist/plugins/claude/openplanr',
+  codex: 'dist/plugins/openai/openplanr',
+  cursor: 'dist/plugins/cursor/openplanr',
+});
+
+/** `plugin.json` keys the Claude directory accepts without changing the plugin's reach. */
+export const CLAUDE_MANIFEST_KEYS = Object.freeze([
+  'name',
+  'version',
+  'description',
+  'author',
+  'homepage',
+  'repository',
+  'license',
+  'displayName',
+  'keywords',
+  'privacyPolicyUrl',
+  'termsOfServiceUrl',
+  'supportUrl',
+  'documentationUrl',
+]);
+
+const HOST_BUNDLE_BASELINE = join(
+  dirname(fileURLToPath(import.meta.url)),
+  'plugin-allowed-types-baseline.json',
+);
+const instructionText = new Set(['.md', '.txt', '.json', '.yaml', '.yml']);
+const allowedTypes = new Set([...instructionText, ...imageExtensions.keys()]);
+// Cursor rules are Markdown under Cursor's own extension.
+const hostTypes = { claude: [], codex: [], cursor: ['.mdc'] };
+const packageManagerFile =
+  /^(?:package\.json|package-lock\.json|npm-shrinkwrap\.json|yarn\.lock|pnpm-lock\.yaml|pnpm-workspace\.yaml|bun\.lockb?|\.npmrc|\.yarnrc.*|requirements.*\.txt|pyproject\.toml|poetry\.lock|uv\.lock|Pipfile.*|Cargo\..*|go\.(?:mod|sum)|Gemfile.*|composer\.(?:json|lock))$/iu;
+const launcher =
+  /(?<![\w./-])(?:npx|bunx|uvx|pnpm[ \t]+dlx)((?:[ \t]+-{1,2}[\w-]+(?:=\S+)?)*)[ \t]+([^\s`'"()<>|;&,]+)/gu;
+const exactPin =
+  /^(?:@[\w.-]+\/)?[\w.-]+(?:@|==)\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$/u;
+const floatingOpenplanr = /\bopenplanr@(?:latest\b|[\^~>])/u;
+const privilegedDirectories = new Set(['hooks', 'monitors', 'bin', 'commands']);
+const privilegedFiles = new Set(['hooks.json', '.mcp.json', '.lsp.json', 'settings.json']);
+
+function frontmatter(text) {
+  return /^\ufeff?---\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)/u.exec(text)?.[1] ?? null;
+}
+
+function unpinnedLaunchers(text) {
+  const found = [];
+  for (const [command, flags, target] of text.matchAll(launcher)) {
+    const packageFlag = /--package=(\S+)/u.exec(flags)?.[1];
+    const spec = (packageFlag ?? target).replace(/[.:]+$/u, '');
+    if (!exactPin.test(spec)) found.push(command.trim());
   }
+  return found;
+}
+
+/**
+ * Instructions-only policy for a generated host bundle: allowed file types, no `#!`, package
+ * manager files, executable bits or unpinned launchers, and for Claude the `contained` label.
+ */
+export function inspectHostBundle(entries, { host } = {}) {
+  if (!Array.isArray(entries)) throw new TypeError('Directory entries must be an array.');
+  if (!Object.hasOwn(hostTypes, host))
+    throw new Error(
+      `Unknown host bundle ${JSON.stringify(host)}; expected claude, codex or cursor.`,
+    );
+  const findings = [];
+  const fail = (code, path, reason) => findings.push({ code, path, reason });
+  for (const entry of entries) {
+    const path = entry.path;
+    const name = basename(path);
+    const extension = extname(path).toLowerCase();
+    if (name !== 'LICENSE' && !allowedTypes.has(extension) && !hostTypes[host].includes(extension))
+      fail(
+        'type-not-allowed',
+        path,
+        'Host bundles carry only Markdown, text, JSON, YAML, LICENSE and PNG, JPEG, GIF or WebP images.',
+      );
+    if (packageManagerFile.test(name))
+      fail('package-manager-file', path, 'Host bundles carry no package-manager configuration.');
+    if ((entry.mode ?? 0) & 0o111)
+      fail('executable-bit', path, 'Host bundle files must not be executable.');
+    if (host === 'claude') {
+      const [first] = path.split('/');
+      if (privilegedDirectories.has(first) || privilegedFiles.has(path))
+        fail(
+          'privileged-component',
+          path,
+          'Hooks, monitors, MCP or LSP servers, settings, executables and commands remove the "Only adds instructions" label.',
+        );
+    }
+    if (!(entry.bytes instanceof Uint8Array)) continue;
+    const bytes = Buffer.from(entry.bytes);
+    if (bytes[0] === 0x23 && bytes[1] === 0x21)
+      fail('shebang', path, 'Host bundle files must not start with #!.');
+    if (!instructionText.has(extension) && !hostTypes[host].includes(extension)) continue;
+    let text;
+    try {
+      text = utf8.decode(bytes);
+    } catch {
+      // inspectDirectoryEntries reports invalid UTF-8.
+      continue;
+    }
+    if (unpinnedLaunchers(text).length || floatingOpenplanr.test(text))
+      fail(
+        'unpinned-launcher',
+        path,
+        'npx, bunx, pnpm dlx and uvx must name an exact version, and no openplanr@ line may float to @latest or a range.',
+      );
+    if (/^allowed-tools\s*:/mu.test(frontmatter(text) ?? ''))
+      fail('pre-approved-tools', path, 'allowed-tools frontmatter makes the plugin privileged.');
+    if (host === 'claude' && path === '.claude-plugin/plugin.json') {
+      let manifest;
+      try {
+        manifest = JSON.parse(text);
+      } catch {
+        // Callers that parse the manifest report malformed JSON with its own error.
+        continue;
+      }
+      const extra = Object.keys(manifest ?? {}).filter(
+        (key) => !CLAUDE_MANIFEST_KEYS.includes(key),
+      );
+      if (extra.length)
+        fail(
+          'manifest-key',
+          path,
+          `plugin.json declares keys outside the listing: ${extra.join(', ')}.`,
+        );
+    }
+  }
+  return { passed: findings.length === 0, findings };
+}
+
+const baselineKey = ({ host, path, code }) => `${host}\u0000${path}\u0000${code}`;
+
+/** Digest of baseline entries in canonical order. */
+export function baselineDigest(entries) {
+  const canonical = entries
+    .map(({ host, path, code }) => ({ host, path, code }))
+    .sort((a, b) => baselineKey(a).localeCompare(baselineKey(b)));
+  return createHash('sha256').update(JSON.stringify(canonical)).digest('hex');
+}
+
+/** Reads the shrink-only offender baseline and refuses one its count and digest do not pin. */
+export function readHostBundleBaseline(path = HOST_BUNDLE_BASELINE) {
+  const value = JSON.parse(readFileSync(path, 'utf8'));
+  const entries = value.entries;
+  if (
+    !Array.isArray(entries) ||
+    entries.some(
+      (entry) =>
+        !Object.hasOwn(hostTypes, entry?.host) ||
+        typeof entry.path !== 'string' ||
+        typeof entry.code !== 'string',
+    )
+  )
+    throw new Error(`${path} must list entries of {host, path, code}.`);
+  const sha256 = baselineDigest(entries);
+  if (value.count !== entries.length || value.sha256 !== sha256)
+    throw new Error(
+      `${path} entries no longer match its pin (${value.count} entries, ${value.sha256}). If entries were only removed, set "count": ${entries.length} and "sha256": "${sha256}".`,
+    );
+  return value;
+}
+
+/** Splits host-policy findings into baseline-excused and blocking ones; lists unmatched entries. */
+export function splitByBaseline(findings, host, baseline) {
+  const pending = new Map(
+    baseline.entries
+      .filter((entry) => entry.host === host)
+      .map((entry) => [baselineKey(entry), entry]),
+  );
+  const excusedKeys = new Set(pending.keys());
+  const blocking = [];
+  const excused = [];
+  for (const finding of findings) {
+    const key = baselineKey({ host, ...finding });
+    if (excusedKeys.has(key)) {
+      pending.delete(key);
+      excused.push(finding);
+    } else blocking.push(finding);
+  }
+  return { blocking, excused, stale: [...pending.values()] };
+}
+
+/** Release check for one host bundle: checklist findings and policy findings the baseline does not excuse. */
+export function assertHostBundle(entries, { host, baseline = readHostBundleBaseline() } = {}) {
+  const directory = inspectDirectoryEntries(entries);
+  const { blocking, excused } = splitByBaseline(
+    inspectHostBundle(entries, { host }).findings,
+    host,
+    baseline,
+  );
+  const report = {
+    ...directory,
+    passed: directory.passed && blocking.length === 0,
+    findings: [...directory.findings, ...blocking],
+    excused,
+  };
+  if (!report.passed) throw invalidArtifact(report);
   return report;
 }

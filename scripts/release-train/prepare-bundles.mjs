@@ -6,7 +6,11 @@ import { appendFileSync, readFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { assertReleasablePlugin } from '../check-plugin-network-boundary.mjs';
-import { readDirectoryEntries } from '../skills/plugin-artifact-validation.mjs';
+import {
+  assertHostBundle,
+  HOST_BUNDLE_ROOTS,
+  readDirectoryEntries,
+} from '../skills/plugin-artifact-validation.mjs';
 import { pluginDigest } from './lib/plugin-digest.mjs';
 import { bundleDirectory, PUBLIC_TARGETS } from './lib/targets.mjs';
 
@@ -21,6 +25,8 @@ const pending =
 
 // The npm packages carry the host plugins, so none may ship while a plugin bundle is unclean.
 assertReleasablePlugin({ workspace: root });
+for (const [host, path] of Object.entries(HOST_BUNDLE_ROOTS))
+  assertHostBundle(readDirectoryEntries(join(root, path)), { host });
 
 // The marketplace job has no dependencies installed, so it checks this digest instead of the guard.
 const pluginSha256 = pluginDigest(

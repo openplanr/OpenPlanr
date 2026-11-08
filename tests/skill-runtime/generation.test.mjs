@@ -21,6 +21,10 @@ import {
 } from '../../packages/skill-runtime/src/catalog.mjs';
 import { projectedSkillName } from '../../scripts/skills/host-invocations.mjs';
 import {
+  inspectHostBundle,
+  readDirectoryEntries,
+} from '../../scripts/skills/plugin-artifact-validation.mjs';
+import {
   countReadmeWords,
   PLUGIN_README_MINIMUM_WORDS,
 } from '../../scripts/skills/plugin-readme.mjs';
@@ -145,11 +149,17 @@ test('the Claude plugin ships a directory-ready README and discovery metadata', 
   ])
     assert.ok(URL.canParse(manifest[field]), `${field}: ${manifest[field]}`);
   assert.ok(Array.isArray(manifest.keywords) && manifest.keywords.length > 0);
-  const icon = read('dist/plugins/claude/openplanr/.claude-plugin/icon.svg');
-  assert.match(icon, /^<svg [^>]*viewBox="0 0 (\d+) \1"/u, 'the icon is a square SVG');
+  const icon = readFileSync(resolve(root, 'dist/plugins/claude/openplanr/.claude-plugin/icon.png'));
+  assert.equal(icon.toString('ascii', 12, 16), 'IHDR', 'the icon is a PNG');
+  assert.equal(icon.readUInt32BE(16), icon.readUInt32BE(20), 'the icon is square');
   assert.equal(
-    read('packages/cli/lib/host-packages/claude/openplanr/.claude-plugin/icon.svg'),
-    icon,
+    existsSync(resolve(root, 'dist/plugins/claude/openplanr/.claude-plugin/icon.svg')),
+    false,
+  );
+  assert.ok(
+    readFileSync(
+      resolve(root, 'packages/cli/lib/host-packages/claude/openplanr/.claude-plugin/icon.png'),
+    ).equals(icon),
   );
 });
 
@@ -196,6 +206,14 @@ test('the Claude plugin ships independently parseable source and pre-approves no
   const manifest = JSON.parse(read('dist/plugins/claude/openplanr/.claude-plugin/plugin.json'));
   for (const key of ['hooks', 'mcpServers', 'lspServers', 'settings', 'experimental'])
     assert.equal(key in manifest, false, `plugin.json declares ${key}`);
+  const labelCodes = new Set(['privileged-component', 'manifest-key', 'pre-approved-tools']);
+  assert.deepEqual(
+    inspectHostBundle(readDirectoryEntries(pluginRoot), { host: 'claude' }).findings.filter(
+      ({ code }) => labelCodes.has(code),
+    ),
+    [],
+    'the release label predicate passes',
+  );
 });
 
 test('Plan, Spec, and Ship are host-native and independent of CLI or provider credentials', () => {

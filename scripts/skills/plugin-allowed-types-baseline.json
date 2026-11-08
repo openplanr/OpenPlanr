@@ -1,0 +1,1167 @@
+{
+  "$comment": "Host bundle files the instructions-only policy refuses today. Each later change deletes the entries it fixes and updates count and sha256; entries may never be added.",
+  "count": 232,
+  "sha256": "6f574136bca83832592a64edd076872d179fb77b48316d5c6c11da95df0513f6",
+  "entries": [
+    {
+      "host": "claude",
+      "path": "references/pipeline/stacks/database/prisma.md",
+      "code": "unpinned-launcher"
+    },
+    {
+      "host": "claude",
+      "path": "runtime/operate/scripts/errors.mjs",
+      "code": "type-not-allowed"
+    },
+    {
+      "host": "claude",
+      "path": "runtime/operate/scripts/operate-review-contract.mjs",
+      "code": "type-not-allowed"
+    },
+    {
+      "host": "claude",
+      "path": "runtime/operate/scripts/operate-review-note.mjs",
+      "code": "type-not-allowed"
+    },
+    {
+      "host": "claude",
+      "path": "runtime/operate/scripts/validate-note.mjs",
+      "code": "executable-bit"
+    },
+    {
+      "host": "claude",
+      "path": "runtime/operate/scripts/validate-note.mjs",
+      "code": "shebang"
+    },
+    {
+      "host": "claude",
+      "path": "runtime/operate/scripts/validate-note.mjs",
+      "code": "type-not-allowed"
+    },
+    {
+      "host": "claude",
+      "path": "skills/ceo-review/scripts/validate-note.mjs",
+      "code": "executable-bit"
+    },
+    {
+      "host": "claude",
+      "path": "skills/ceo-review/scripts/validate-note.mjs",
+      "code": "shebang"
+    },
+    {
+      "host": "claude",
+      "path": "skills/ceo-review/scripts/validate-note.mjs",
+      "code": "type-not-allowed"
+    },
+    {
+      "host": "claude",
+      "path": "skills/chair-review/scripts/validate-note.mjs",
+      "code": "executable-bit"
+    },
+    {
+      "host": "claude",
+      "path": "skills/chair-review/scripts/validate-note.mjs",
+      "code": "shebang"
+    },
+    {
+      "host": "claude",
+      "path": "skills/chair-review/scripts/validate-note.mjs",
+      "code": "type-not-allowed"
+    },
+    {
+      "host": "claude",
+      "path": "skills/challenger-review/scripts/validate-note.mjs",
+      "code": "executable-bit"
+    },
+    {
+      "host": "claude",
+      "path": "skills/challenger-review/scripts/validate-note.mjs",
+      "code": "shebang"
+    },
+    {
+      "host": "claude",
+      "path": "skills/challenger-review/scripts/validate-note.mjs",
+      "code": "type-not-allowed"
+    },
+    {
+      "host": "claude",
+      "path": "skills/cmo-review/scripts/validate-note.mjs",
+      "code": "executable-bit"
+    },
+    {
+      "host": "claude",
+      "path": "skills/cmo-review/scripts/validate-note.mjs",
+      "code": "shebang"
+    },
+    {
+      "host": "claude",
+      "path": "skills/cmo-review/scripts/validate-note.mjs",
+      "code": "type-not-allowed"
+    },
+    {
+      "host": "claude",
+      "path": "skills/coo-review/scripts/validate-note.mjs",
+      "code": "executable-bit"
+    },
+    {
+      "host": "claude",
+      "path": "skills/coo-review/scripts/validate-note.mjs",
+      "code": "shebang"
+    },
+    {
+      "host": "claude",
+      "path": "skills/coo-review/scripts/validate-note.mjs",
+      "code": "type-not-allowed"
+    },
+    {
+      "host": "claude",
+      "path": "skills/cpo-review/scripts/validate-note.mjs",
+      "code": "executable-bit"
+    },
+    {
+      "host": "claude",
+      "path": "skills/cpo-review/scripts/validate-note.mjs",
+      "code": "shebang"
+    },
+    {
+      "host": "claude",
+      "path": "skills/cpo-review/scripts/validate-note.mjs",
+      "code": "type-not-allowed"
+    },
+    {
+      "host": "claude",
+      "path": "skills/cto-review/scripts/validate-note.mjs",
+      "code": "executable-bit"
+    },
+    {
+      "host": "claude",
+      "path": "skills/cto-review/scripts/validate-note.mjs",
+      "code": "shebang"
+    },
+    {
+      "host": "claude",
+      "path": "skills/cto-review/scripts/validate-note.mjs",
+      "code": "type-not-allowed"
+    },
+    {
+      "host": "claude",
+      "path": "skills/delegate/scripts/adapters/capsule.mjs",
+      "code": "type-not-allowed"
+    },
+    {
+      "host": "claude",
+      "path": "skills/delegate/scripts/adapters/claude.mjs",
+      "code": "type-not-allowed"
+    },
+    {
+      "host": "claude",
+      "path": "skills/delegate/scripts/adapters/codex.mjs",
+      "code": "type-not-allowed"
+    },
+    {
+      "host": "claude",
+      "path": "skills/delegate/scripts/adapters/cursor.mjs",
+      "code": "type-not-allowed"
+    },
+    {
+      "host": "claude",
+      "path": "skills/delegate/scripts/adapters/generic.mjs",
+      "code": "type-not-allowed"
+    },
+    {
+      "host": "claude",
+      "path": "skills/delegate/scripts/adapters/native.mjs",
+      "code": "type-not-allowed"
+    },
+    {
+      "host": "claude",
+      "path": "skills/delegate/scripts/backend-diagnostics.mjs",
+      "code": "type-not-allowed"
+    },
+    {
+      "host": "claude",
+      "path": "skills/delegate/scripts/context.mjs",
+      "code": "type-not-allowed"
+    },
+    {
+      "host": "claude",
+      "path": "skills/delegate/scripts/credentials.mjs",
+      "code": "type-not-allowed"
+    },
+    {
+      "host": "claude",
+      "path": "skills/delegate/scripts/custody.mjs",
+      "code": "type-not-allowed"
+    },
+    {
+      "host": "claude",
+      "path": "skills/delegate/scripts/handoff.mjs",
+      "code": "type-not-allowed"
+    },
+    {
+      "host": "claude",
+      "path": "skills/delegate/scripts/helper-snapshot.mjs",
+      "code": "type-not-allowed"
+    },
+    {
+      "host": "claude",
+      "path": "skills/delegate/scripts/integrate.mjs",
+      "code": "type-not-allowed"
+    },
+    {
+      "host": "claude",
+      "path": "skills/delegate/scripts/integration-checks.mjs",
+      "code": "type-not-allowed"
+    },
+    {
+      "host": "claude",
+      "path": "skills/delegate/scripts/integration-files.mjs",
+      "code": "type-not-allowed"
+    },
+    {
+      "host": "claude",
+      "path": "skills/delegate/scripts/presentation.mjs",
+      "code": "type-not-allowed"
+    },
+    {
+      "host": "claude",
+      "path": "skills/delegate/scripts/profiles.mjs",
+      "code": "type-not-allowed"
+    },
+    {
+      "host": "claude",
+      "path": "skills/delegate/scripts/run-contract.mjs",
+      "code": "type-not-allowed"
+    },
+    {
+      "host": "claude",
+      "path": "skills/delegate/scripts/run-execution.mjs",
+      "code": "type-not-allowed"
+    },
+    {
+      "host": "claude",
+      "path": "skills/delegate/scripts/run-lifecycle.mjs",
+      "code": "type-not-allowed"
+    },
+    {
+      "host": "claude",
+      "path": "skills/delegate/scripts/run-preflight.mjs",
+      "code": "type-not-allowed"
+    },
+    {
+      "host": "claude",
+      "path": "skills/delegate/scripts/run-preparation.mjs",
+      "code": "type-not-allowed"
+    },
+    {
+      "host": "claude",
+      "path": "skills/delegate/scripts/run-record.mjs",
+      "code": "type-not-allowed"
+    },
+    {
+      "host": "claude",
+      "path": "skills/delegate/scripts/runner.mjs",
+      "code": "type-not-allowed"
+    },
+    {
+      "host": "claude",
+      "path": "skills/design-loop/references/utilities.md",
+      "code": "unpinned-launcher"
+    },
+    {
+      "host": "claude",
+      "path": "skills/design-review/references/utilities.md",
+      "code": "unpinned-launcher"
+    },
+    {
+      "host": "claude",
+      "path": "skills/design/references/utilities.md",
+      "code": "unpinned-launcher"
+    },
+    {
+      "host": "claude",
+      "path": "skills/investigate/scripts/backlog-item.mjs",
+      "code": "executable-bit"
+    },
+    {
+      "host": "claude",
+      "path": "skills/investigate/scripts/backlog-item.mjs",
+      "code": "shebang"
+    },
+    {
+      "host": "claude",
+      "path": "skills/investigate/scripts/backlog-item.mjs",
+      "code": "type-not-allowed"
+    },
+    {
+      "host": "claude",
+      "path": "skills/operate/scripts/validate-note.mjs",
+      "code": "executable-bit"
+    },
+    {
+      "host": "claude",
+      "path": "skills/operate/scripts/validate-note.mjs",
+      "code": "shebang"
+    },
+    {
+      "host": "claude",
+      "path": "skills/operate/scripts/validate-note.mjs",
+      "code": "type-not-allowed"
+    },
+    {
+      "host": "claude",
+      "path": "skills/plan/scripts/planning-ids.mjs",
+      "code": "executable-bit"
+    },
+    {
+      "host": "claude",
+      "path": "skills/plan/scripts/planning-ids.mjs",
+      "code": "shebang"
+    },
+    {
+      "host": "claude",
+      "path": "skills/plan/scripts/planning-ids.mjs",
+      "code": "type-not-allowed"
+    },
+    {
+      "host": "claude",
+      "path": "skills/plan/SKILL.md",
+      "code": "unpinned-launcher"
+    },
+    {
+      "host": "claude",
+      "path": "skills/release/scripts/collect_changes.sh",
+      "code": "executable-bit"
+    },
+    {
+      "host": "claude",
+      "path": "skills/release/scripts/collect_changes.sh",
+      "code": "shebang"
+    },
+    {
+      "host": "claude",
+      "path": "skills/release/scripts/collect_changes.sh",
+      "code": "type-not-allowed"
+    },
+    {
+      "host": "claude",
+      "path": "skills/ship/scripts/backlog-item.mjs",
+      "code": "executable-bit"
+    },
+    {
+      "host": "claude",
+      "path": "skills/ship/scripts/backlog-item.mjs",
+      "code": "shebang"
+    },
+    {
+      "host": "claude",
+      "path": "skills/ship/scripts/backlog-item.mjs",
+      "code": "type-not-allowed"
+    },
+    {
+      "host": "claude",
+      "path": "skills/ship/scripts/discover-verification.mjs",
+      "code": "executable-bit"
+    },
+    {
+      "host": "claude",
+      "path": "skills/ship/scripts/discover-verification.mjs",
+      "code": "shebang"
+    },
+    {
+      "host": "claude",
+      "path": "skills/ship/scripts/discover-verification.mjs",
+      "code": "type-not-allowed"
+    },
+    {
+      "host": "claude",
+      "path": "skills/sync/scripts/names.mjs",
+      "code": "type-not-allowed"
+    },
+    {
+      "host": "claude",
+      "path": "skills/sync/scripts/sync.mjs",
+      "code": "executable-bit"
+    },
+    {
+      "host": "claude",
+      "path": "skills/sync/scripts/sync.mjs",
+      "code": "shebang"
+    },
+    {
+      "host": "claude",
+      "path": "skills/sync/scripts/sync.mjs",
+      "code": "type-not-allowed"
+    },
+    {
+      "host": "codex",
+      "path": "runtime/operate/scripts/errors.mjs",
+      "code": "type-not-allowed"
+    },
+    {
+      "host": "codex",
+      "path": "runtime/operate/scripts/operate-review-contract.mjs",
+      "code": "type-not-allowed"
+    },
+    {
+      "host": "codex",
+      "path": "runtime/operate/scripts/operate-review-note.mjs",
+      "code": "type-not-allowed"
+    },
+    {
+      "host": "codex",
+      "path": "runtime/operate/scripts/validate-note.mjs",
+      "code": "executable-bit"
+    },
+    {
+      "host": "codex",
+      "path": "runtime/operate/scripts/validate-note.mjs",
+      "code": "shebang"
+    },
+    {
+      "host": "codex",
+      "path": "runtime/operate/scripts/validate-note.mjs",
+      "code": "type-not-allowed"
+    },
+    {
+      "host": "codex",
+      "path": "skills/ceo-review/scripts/validate-note.mjs",
+      "code": "executable-bit"
+    },
+    {
+      "host": "codex",
+      "path": "skills/ceo-review/scripts/validate-note.mjs",
+      "code": "shebang"
+    },
+    {
+      "host": "codex",
+      "path": "skills/ceo-review/scripts/validate-note.mjs",
+      "code": "type-not-allowed"
+    },
+    {
+      "host": "codex",
+      "path": "skills/chair-review/scripts/validate-note.mjs",
+      "code": "executable-bit"
+    },
+    {
+      "host": "codex",
+      "path": "skills/chair-review/scripts/validate-note.mjs",
+      "code": "shebang"
+    },
+    {
+      "host": "codex",
+      "path": "skills/chair-review/scripts/validate-note.mjs",
+      "code": "type-not-allowed"
+    },
+    {
+      "host": "codex",
+      "path": "skills/challenger-review/scripts/validate-note.mjs",
+      "code": "executable-bit"
+    },
+    {
+      "host": "codex",
+      "path": "skills/challenger-review/scripts/validate-note.mjs",
+      "code": "shebang"
+    },
+    {
+      "host": "codex",
+      "path": "skills/challenger-review/scripts/validate-note.mjs",
+      "code": "type-not-allowed"
+    },
+    {
+      "host": "codex",
+      "path": "skills/cmo-review/scripts/validate-note.mjs",
+      "code": "executable-bit"
+    },
+    {
+      "host": "codex",
+      "path": "skills/cmo-review/scripts/validate-note.mjs",
+      "code": "shebang"
+    },
+    {
+      "host": "codex",
+      "path": "skills/cmo-review/scripts/validate-note.mjs",
+      "code": "type-not-allowed"
+    },
+    {
+      "host": "codex",
+      "path": "skills/coo-review/scripts/validate-note.mjs",
+      "code": "executable-bit"
+    },
+    {
+      "host": "codex",
+      "path": "skills/coo-review/scripts/validate-note.mjs",
+      "code": "shebang"
+    },
+    {
+      "host": "codex",
+      "path": "skills/coo-review/scripts/validate-note.mjs",
+      "code": "type-not-allowed"
+    },
+    {
+      "host": "codex",
+      "path": "skills/cpo-review/scripts/validate-note.mjs",
+      "code": "executable-bit"
+    },
+    {
+      "host": "codex",
+      "path": "skills/cpo-review/scripts/validate-note.mjs",
+      "code": "shebang"
+    },
+    {
+      "host": "codex",
+      "path": "skills/cpo-review/scripts/validate-note.mjs",
+      "code": "type-not-allowed"
+    },
+    {
+      "host": "codex",
+      "path": "skills/cto-review/scripts/validate-note.mjs",
+      "code": "executable-bit"
+    },
+    {
+      "host": "codex",
+      "path": "skills/cto-review/scripts/validate-note.mjs",
+      "code": "shebang"
+    },
+    {
+      "host": "codex",
+      "path": "skills/cto-review/scripts/validate-note.mjs",
+      "code": "type-not-allowed"
+    },
+    {
+      "host": "codex",
+      "path": "skills/delegate/scripts/adapters/capsule.mjs",
+      "code": "type-not-allowed"
+    },
+    {
+      "host": "codex",
+      "path": "skills/delegate/scripts/adapters/claude.mjs",
+      "code": "type-not-allowed"
+    },
+    {
+      "host": "codex",
+      "path": "skills/delegate/scripts/adapters/codex.mjs",
+      "code": "type-not-allowed"
+    },
+    {
+      "host": "codex",
+      "path": "skills/delegate/scripts/adapters/cursor.mjs",
+      "code": "type-not-allowed"
+    },
+    {
+      "host": "codex",
+      "path": "skills/delegate/scripts/adapters/generic.mjs",
+      "code": "type-not-allowed"
+    },
+    {
+      "host": "codex",
+      "path": "skills/delegate/scripts/adapters/native.mjs",
+      "code": "type-not-allowed"
+    },
+    {
+      "host": "codex",
+      "path": "skills/delegate/scripts/backend-diagnostics.mjs",
+      "code": "type-not-allowed"
+    },
+    {
+      "host": "codex",
+      "path": "skills/delegate/scripts/context.mjs",
+      "code": "type-not-allowed"
+    },
+    {
+      "host": "codex",
+      "path": "skills/delegate/scripts/credentials.mjs",
+      "code": "type-not-allowed"
+    },
+    {
+      "host": "codex",
+      "path": "skills/delegate/scripts/custody.mjs",
+      "code": "type-not-allowed"
+    },
+    {
+      "host": "codex",
+      "path": "skills/delegate/scripts/handoff.mjs",
+      "code": "type-not-allowed"
+    },
+    {
+      "host": "codex",
+      "path": "skills/delegate/scripts/helper-snapshot.mjs",
+      "code": "type-not-allowed"
+    },
+    {
+      "host": "codex",
+      "path": "skills/delegate/scripts/integrate.mjs",
+      "code": "type-not-allowed"
+    },
+    {
+      "host": "codex",
+      "path": "skills/delegate/scripts/integration-checks.mjs",
+      "code": "type-not-allowed"
+    },
+    {
+      "host": "codex",
+      "path": "skills/delegate/scripts/integration-files.mjs",
+      "code": "type-not-allowed"
+    },
+    {
+      "host": "codex",
+      "path": "skills/delegate/scripts/presentation.mjs",
+      "code": "type-not-allowed"
+    },
+    {
+      "host": "codex",
+      "path": "skills/delegate/scripts/profiles.mjs",
+      "code": "type-not-allowed"
+    },
+    {
+      "host": "codex",
+      "path": "skills/delegate/scripts/run-contract.mjs",
+      "code": "type-not-allowed"
+    },
+    {
+      "host": "codex",
+      "path": "skills/delegate/scripts/run-execution.mjs",
+      "code": "type-not-allowed"
+    },
+    {
+      "host": "codex",
+      "path": "skills/delegate/scripts/run-lifecycle.mjs",
+      "code": "type-not-allowed"
+    },
+    {
+      "host": "codex",
+      "path": "skills/delegate/scripts/run-preflight.mjs",
+      "code": "type-not-allowed"
+    },
+    {
+      "host": "codex",
+      "path": "skills/delegate/scripts/run-preparation.mjs",
+      "code": "type-not-allowed"
+    },
+    {
+      "host": "codex",
+      "path": "skills/delegate/scripts/run-record.mjs",
+      "code": "type-not-allowed"
+    },
+    {
+      "host": "codex",
+      "path": "skills/delegate/scripts/runner.mjs",
+      "code": "type-not-allowed"
+    },
+    {
+      "host": "codex",
+      "path": "skills/design-loop/references/utilities.md",
+      "code": "unpinned-launcher"
+    },
+    {
+      "host": "codex",
+      "path": "skills/design-review/references/utilities.md",
+      "code": "unpinned-launcher"
+    },
+    {
+      "host": "codex",
+      "path": "skills/design/references/utilities.md",
+      "code": "unpinned-launcher"
+    },
+    {
+      "host": "codex",
+      "path": "skills/investigate/scripts/backlog-item.mjs",
+      "code": "executable-bit"
+    },
+    {
+      "host": "codex",
+      "path": "skills/investigate/scripts/backlog-item.mjs",
+      "code": "shebang"
+    },
+    {
+      "host": "codex",
+      "path": "skills/investigate/scripts/backlog-item.mjs",
+      "code": "type-not-allowed"
+    },
+    {
+      "host": "codex",
+      "path": "skills/operate/scripts/validate-note.mjs",
+      "code": "executable-bit"
+    },
+    {
+      "host": "codex",
+      "path": "skills/operate/scripts/validate-note.mjs",
+      "code": "shebang"
+    },
+    {
+      "host": "codex",
+      "path": "skills/operate/scripts/validate-note.mjs",
+      "code": "type-not-allowed"
+    },
+    {
+      "host": "codex",
+      "path": "skills/plan/scripts/planning-ids.mjs",
+      "code": "executable-bit"
+    },
+    {
+      "host": "codex",
+      "path": "skills/plan/scripts/planning-ids.mjs",
+      "code": "shebang"
+    },
+    {
+      "host": "codex",
+      "path": "skills/plan/scripts/planning-ids.mjs",
+      "code": "type-not-allowed"
+    },
+    {
+      "host": "codex",
+      "path": "skills/plan/SKILL.md",
+      "code": "unpinned-launcher"
+    },
+    {
+      "host": "codex",
+      "path": "skills/release/scripts/collect_changes.sh",
+      "code": "executable-bit"
+    },
+    {
+      "host": "codex",
+      "path": "skills/release/scripts/collect_changes.sh",
+      "code": "shebang"
+    },
+    {
+      "host": "codex",
+      "path": "skills/release/scripts/collect_changes.sh",
+      "code": "type-not-allowed"
+    },
+    {
+      "host": "codex",
+      "path": "skills/ship/scripts/backlog-item.mjs",
+      "code": "executable-bit"
+    },
+    {
+      "host": "codex",
+      "path": "skills/ship/scripts/backlog-item.mjs",
+      "code": "shebang"
+    },
+    {
+      "host": "codex",
+      "path": "skills/ship/scripts/backlog-item.mjs",
+      "code": "type-not-allowed"
+    },
+    {
+      "host": "codex",
+      "path": "skills/ship/scripts/discover-verification.mjs",
+      "code": "executable-bit"
+    },
+    {
+      "host": "codex",
+      "path": "skills/ship/scripts/discover-verification.mjs",
+      "code": "shebang"
+    },
+    {
+      "host": "codex",
+      "path": "skills/ship/scripts/discover-verification.mjs",
+      "code": "type-not-allowed"
+    },
+    {
+      "host": "codex",
+      "path": "skills/sync/scripts/names.mjs",
+      "code": "type-not-allowed"
+    },
+    {
+      "host": "codex",
+      "path": "skills/sync/scripts/sync.mjs",
+      "code": "executable-bit"
+    },
+    {
+      "host": "codex",
+      "path": "skills/sync/scripts/sync.mjs",
+      "code": "shebang"
+    },
+    {
+      "host": "codex",
+      "path": "skills/sync/scripts/sync.mjs",
+      "code": "type-not-allowed"
+    },
+    {
+      "host": "cursor",
+      "path": "rules/planr-ceo-review/scripts/validate-note.mjs",
+      "code": "executable-bit"
+    },
+    {
+      "host": "cursor",
+      "path": "rules/planr-ceo-review/scripts/validate-note.mjs",
+      "code": "shebang"
+    },
+    {
+      "host": "cursor",
+      "path": "rules/planr-ceo-review/scripts/validate-note.mjs",
+      "code": "type-not-allowed"
+    },
+    {
+      "host": "cursor",
+      "path": "rules/planr-chair-review/scripts/validate-note.mjs",
+      "code": "executable-bit"
+    },
+    {
+      "host": "cursor",
+      "path": "rules/planr-chair-review/scripts/validate-note.mjs",
+      "code": "shebang"
+    },
+    {
+      "host": "cursor",
+      "path": "rules/planr-chair-review/scripts/validate-note.mjs",
+      "code": "type-not-allowed"
+    },
+    {
+      "host": "cursor",
+      "path": "rules/planr-challenger-review/scripts/validate-note.mjs",
+      "code": "executable-bit"
+    },
+    {
+      "host": "cursor",
+      "path": "rules/planr-challenger-review/scripts/validate-note.mjs",
+      "code": "shebang"
+    },
+    {
+      "host": "cursor",
+      "path": "rules/planr-challenger-review/scripts/validate-note.mjs",
+      "code": "type-not-allowed"
+    },
+    {
+      "host": "cursor",
+      "path": "rules/planr-cmo-review/scripts/validate-note.mjs",
+      "code": "executable-bit"
+    },
+    {
+      "host": "cursor",
+      "path": "rules/planr-cmo-review/scripts/validate-note.mjs",
+      "code": "shebang"
+    },
+    {
+      "host": "cursor",
+      "path": "rules/planr-cmo-review/scripts/validate-note.mjs",
+      "code": "type-not-allowed"
+    },
+    {
+      "host": "cursor",
+      "path": "rules/planr-coo-review/scripts/validate-note.mjs",
+      "code": "executable-bit"
+    },
+    {
+      "host": "cursor",
+      "path": "rules/planr-coo-review/scripts/validate-note.mjs",
+      "code": "shebang"
+    },
+    {
+      "host": "cursor",
+      "path": "rules/planr-coo-review/scripts/validate-note.mjs",
+      "code": "type-not-allowed"
+    },
+    {
+      "host": "cursor",
+      "path": "rules/planr-cpo-review/scripts/validate-note.mjs",
+      "code": "executable-bit"
+    },
+    {
+      "host": "cursor",
+      "path": "rules/planr-cpo-review/scripts/validate-note.mjs",
+      "code": "shebang"
+    },
+    {
+      "host": "cursor",
+      "path": "rules/planr-cpo-review/scripts/validate-note.mjs",
+      "code": "type-not-allowed"
+    },
+    {
+      "host": "cursor",
+      "path": "rules/planr-cto-review/scripts/validate-note.mjs",
+      "code": "executable-bit"
+    },
+    {
+      "host": "cursor",
+      "path": "rules/planr-cto-review/scripts/validate-note.mjs",
+      "code": "shebang"
+    },
+    {
+      "host": "cursor",
+      "path": "rules/planr-cto-review/scripts/validate-note.mjs",
+      "code": "type-not-allowed"
+    },
+    {
+      "host": "cursor",
+      "path": "rules/planr-delegate/scripts/adapters/capsule.mjs",
+      "code": "type-not-allowed"
+    },
+    {
+      "host": "cursor",
+      "path": "rules/planr-delegate/scripts/adapters/claude.mjs",
+      "code": "type-not-allowed"
+    },
+    {
+      "host": "cursor",
+      "path": "rules/planr-delegate/scripts/adapters/codex.mjs",
+      "code": "type-not-allowed"
+    },
+    {
+      "host": "cursor",
+      "path": "rules/planr-delegate/scripts/adapters/cursor.mjs",
+      "code": "type-not-allowed"
+    },
+    {
+      "host": "cursor",
+      "path": "rules/planr-delegate/scripts/adapters/generic.mjs",
+      "code": "type-not-allowed"
+    },
+    {
+      "host": "cursor",
+      "path": "rules/planr-delegate/scripts/adapters/native.mjs",
+      "code": "type-not-allowed"
+    },
+    {
+      "host": "cursor",
+      "path": "rules/planr-delegate/scripts/backend-diagnostics.mjs",
+      "code": "type-not-allowed"
+    },
+    {
+      "host": "cursor",
+      "path": "rules/planr-delegate/scripts/context.mjs",
+      "code": "type-not-allowed"
+    },
+    {
+      "host": "cursor",
+      "path": "rules/planr-delegate/scripts/credentials.mjs",
+      "code": "type-not-allowed"
+    },
+    {
+      "host": "cursor",
+      "path": "rules/planr-delegate/scripts/custody.mjs",
+      "code": "type-not-allowed"
+    },
+    {
+      "host": "cursor",
+      "path": "rules/planr-delegate/scripts/handoff.mjs",
+      "code": "type-not-allowed"
+    },
+    {
+      "host": "cursor",
+      "path": "rules/planr-delegate/scripts/helper-snapshot.mjs",
+      "code": "type-not-allowed"
+    },
+    {
+      "host": "cursor",
+      "path": "rules/planr-delegate/scripts/integrate.mjs",
+      "code": "type-not-allowed"
+    },
+    {
+      "host": "cursor",
+      "path": "rules/planr-delegate/scripts/integration-checks.mjs",
+      "code": "type-not-allowed"
+    },
+    {
+      "host": "cursor",
+      "path": "rules/planr-delegate/scripts/integration-files.mjs",
+      "code": "type-not-allowed"
+    },
+    {
+      "host": "cursor",
+      "path": "rules/planr-delegate/scripts/presentation.mjs",
+      "code": "type-not-allowed"
+    },
+    {
+      "host": "cursor",
+      "path": "rules/planr-delegate/scripts/profiles.mjs",
+      "code": "type-not-allowed"
+    },
+    {
+      "host": "cursor",
+      "path": "rules/planr-delegate/scripts/run-contract.mjs",
+      "code": "type-not-allowed"
+    },
+    {
+      "host": "cursor",
+      "path": "rules/planr-delegate/scripts/run-execution.mjs",
+      "code": "type-not-allowed"
+    },
+    {
+      "host": "cursor",
+      "path": "rules/planr-delegate/scripts/run-lifecycle.mjs",
+      "code": "type-not-allowed"
+    },
+    {
+      "host": "cursor",
+      "path": "rules/planr-delegate/scripts/run-preflight.mjs",
+      "code": "type-not-allowed"
+    },
+    {
+      "host": "cursor",
+      "path": "rules/planr-delegate/scripts/run-preparation.mjs",
+      "code": "type-not-allowed"
+    },
+    {
+      "host": "cursor",
+      "path": "rules/planr-delegate/scripts/run-record.mjs",
+      "code": "type-not-allowed"
+    },
+    {
+      "host": "cursor",
+      "path": "rules/planr-delegate/scripts/runner.mjs",
+      "code": "type-not-allowed"
+    },
+    {
+      "host": "cursor",
+      "path": "rules/planr-design-loop/references/utilities.md",
+      "code": "unpinned-launcher"
+    },
+    {
+      "host": "cursor",
+      "path": "rules/planr-design-review/references/utilities.md",
+      "code": "unpinned-launcher"
+    },
+    {
+      "host": "cursor",
+      "path": "rules/planr-design/references/utilities.md",
+      "code": "unpinned-launcher"
+    },
+    {
+      "host": "cursor",
+      "path": "rules/planr-investigate/scripts/backlog-item.mjs",
+      "code": "executable-bit"
+    },
+    {
+      "host": "cursor",
+      "path": "rules/planr-investigate/scripts/backlog-item.mjs",
+      "code": "shebang"
+    },
+    {
+      "host": "cursor",
+      "path": "rules/planr-investigate/scripts/backlog-item.mjs",
+      "code": "type-not-allowed"
+    },
+    {
+      "host": "cursor",
+      "path": "rules/planr-operate/scripts/validate-note.mjs",
+      "code": "executable-bit"
+    },
+    {
+      "host": "cursor",
+      "path": "rules/planr-operate/scripts/validate-note.mjs",
+      "code": "shebang"
+    },
+    {
+      "host": "cursor",
+      "path": "rules/planr-operate/scripts/validate-note.mjs",
+      "code": "type-not-allowed"
+    },
+    {
+      "host": "cursor",
+      "path": "rules/planr-plan.mdc",
+      "code": "unpinned-launcher"
+    },
+    {
+      "host": "cursor",
+      "path": "rules/planr-plan/scripts/planning-ids.mjs",
+      "code": "executable-bit"
+    },
+    {
+      "host": "cursor",
+      "path": "rules/planr-plan/scripts/planning-ids.mjs",
+      "code": "shebang"
+    },
+    {
+      "host": "cursor",
+      "path": "rules/planr-plan/scripts/planning-ids.mjs",
+      "code": "type-not-allowed"
+    },
+    {
+      "host": "cursor",
+      "path": "rules/planr-release/scripts/collect_changes.sh",
+      "code": "executable-bit"
+    },
+    {
+      "host": "cursor",
+      "path": "rules/planr-release/scripts/collect_changes.sh",
+      "code": "shebang"
+    },
+    {
+      "host": "cursor",
+      "path": "rules/planr-release/scripts/collect_changes.sh",
+      "code": "type-not-allowed"
+    },
+    {
+      "host": "cursor",
+      "path": "rules/planr-ship/scripts/backlog-item.mjs",
+      "code": "executable-bit"
+    },
+    {
+      "host": "cursor",
+      "path": "rules/planr-ship/scripts/backlog-item.mjs",
+      "code": "shebang"
+    },
+    {
+      "host": "cursor",
+      "path": "rules/planr-ship/scripts/backlog-item.mjs",
+      "code": "type-not-allowed"
+    },
+    {
+      "host": "cursor",
+      "path": "rules/planr-ship/scripts/discover-verification.mjs",
+      "code": "executable-bit"
+    },
+    {
+      "host": "cursor",
+      "path": "rules/planr-ship/scripts/discover-verification.mjs",
+      "code": "shebang"
+    },
+    {
+      "host": "cursor",
+      "path": "rules/planr-ship/scripts/discover-verification.mjs",
+      "code": "type-not-allowed"
+    },
+    {
+      "host": "cursor",
+      "path": "rules/planr-sync/scripts/names.mjs",
+      "code": "type-not-allowed"
+    },
+    {
+      "host": "cursor",
+      "path": "rules/planr-sync/scripts/sync.mjs",
+      "code": "executable-bit"
+    },
+    {
+      "host": "cursor",
+      "path": "rules/planr-sync/scripts/sync.mjs",
+      "code": "shebang"
+    },
+    {
+      "host": "cursor",
+      "path": "rules/planr-sync/scripts/sync.mjs",
+      "code": "type-not-allowed"
+    },
+    {
+      "host": "cursor",
+      "path": "runtime/operate/scripts/errors.mjs",
+      "code": "type-not-allowed"
+    },
+    {
+      "host": "cursor",
+      "path": "runtime/operate/scripts/operate-review-contract.mjs",
+      "code": "type-not-allowed"
+    },
+    {
+      "host": "cursor",
+      "path": "runtime/operate/scripts/operate-review-note.mjs",
+      "code": "type-not-allowed"
+    },
+    {
+      "host": "cursor",
+      "path": "runtime/operate/scripts/validate-note.mjs",
+      "code": "executable-bit"
+    },
+    {
+      "host": "cursor",
+      "path": "runtime/operate/scripts/validate-note.mjs",
+      "code": "shebang"
+    },
+    {
+      "host": "cursor",
+      "path": "runtime/operate/scripts/validate-note.mjs",
+      "code": "type-not-allowed"
+    }
+  ]
+}
