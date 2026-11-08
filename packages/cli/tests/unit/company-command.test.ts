@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { registerCompanyCommand } from '../../src/cli/commands/company.js';
 import { loginCompany, logoutCompany } from '../../src/services/company-auth-service.js';
 import { CompanySyncError } from '../../src/services/company-common.js';
+import * as companyExport from '../../src/services/company-export-service.js';
 import { logger } from '../../src/utils/logger.js';
 
 vi.mock('../../src/services/company-auth-service.js', () => ({
@@ -205,5 +206,90 @@ describe('company authentication output', () => {
     await company('logout');
     expect(logger.success).not.toHaveBeenCalled();
     expect(logger.warn).toHaveBeenCalledExactlyOnceWith(result.notice);
+  });
+});
+
+describe('company organization export command', () => {
+  it.each([
+    { json: false, notExported: 2 },
+    { json: false, notExported: 0 },
+    { json: true, notExported: 2 },
+  ])(
+    'reports export notices and exclusions with $json JSON and $notExported exclusions',
+    async ({ json, notExported }) => {
+      const result: companyExport.CompanyOrganizationExport = {
+        schemaVersion: '1.0.0',
+        complete: true,
+        apiUrl: 'https://api.openplanr.dev',
+        generatedAt: '2026-11-08T10:00:00.000Z',
+        summary: { projects: 1, artifacts: 2, revisions: 3, files: 0, bytes: 0, notExported },
+        files: [],
+        notExported: Array.from({ length: notExported }, (_, index) => ({
+          project: { id: `excluded${index}` },
+          reason: 'no readable project role',
+        })),
+        reviews: [],
+        notices: [
+          'admin listing unavailable: not an organization admin; projects without a role not checked',
+          'Additional export notice',
+        ],
+      };
+      const exportMock = vi
+        .spyOn(companyExport, 'exportCompanyOrganization')
+        .mockResolvedValue(result);
+      await company('export-organization', '--out', '/unused', ...(json ? ['--json'] : []));
+      expect(exportMock).toHaveBeenCalledWith('https://api.openplanr.dev', '/unused');
+      if (json) {
+        expect(process.stdout.write).toHaveBeenCalledExactlyOnceWith(
+          JSON.stringify(result, null, 2) + '\n',
+        );
+        expect(logger.warn).not.toHaveBeenCalled();
+        expect(logger.success).not.toHaveBeenCalled();
+      } else {
+        expect(logger.success).toHaveBeenCalledExactlyOnceWith(
+          'Exported 1 projects, 2 artifacts and 3 revisions. See manifest.json in the output directory.',
+        );
+        for (const notice of result.notices) expect(logger.warn).toHaveBeenCalledWith(notice);
+        expect(logger.warn).toHaveBeenCalledTimes(result.notices.length + (notExported ? 1 : 0));
+        if (notExported)
+          expect(logger.warn).toHaveBeenCalledWith(
+            '2 projects not exported. See manifest.json for details.',
+          );
+        expect(process.stdout.write).not.toHaveBeenCalled();
+      }
+    },
+  );
+
+  it('requires --out before any request', async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+    try {
+      await expect(company('export-organization')).rejects.toThrow(/required option.*--out/);
+      expect(fetchMock).not.toHaveBeenCalled();
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it('rejects an invalid API origin before any request', async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+    try {
+      await expect(
+        company('export-organization', '--out', '/unused', '--api-url', 'file:///invalid'),
+      ).rejects.toThrow(/HTTPS company API origin/);
+      expect(fetchMock).not.toHaveBeenCalled();
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it('advertises the output, origin and JSON options', () => {
+    const program = new Command();
+    registerCompanyCommand(program);
+    const command = program.commands
+      .find((item) => item.name() === 'company')
+      ?.commands.find((item) => item.name() === 'export-organization');
+    expect(command?.options.map((option) => option.long)).toEqual(['--out', '--api-url', '--json']);
   });
 });

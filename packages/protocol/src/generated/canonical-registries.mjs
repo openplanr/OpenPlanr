@@ -1438,7 +1438,7 @@ export const CANONICAL_REGISTRIES = deepFreeze({
         "ownerPackage": "openplanr",
         "source": {
           "path": "docs/generated/utility-command-catalog.json",
-          "digest": "sha256:08cfb9cc8a5c6d97e5add1ef0cf879c076ddd9bc84f7979c4de7cc2fcdd75d0b"
+          "digest": "sha256:408f518c6185b482eb63f248b31cfbcbcddf845fc2e90555a8fe98ecc5744ffb"
         },
         "authorityClass": "workflow",
         "machineJson": false,
@@ -1627,7 +1627,7 @@ export const CANONICAL_REGISTRIES = deepFreeze({
         "ownerPackage": "openplanr",
         "source": {
           "path": "docs/generated/utility-command-catalog.json",
-          "digest": "sha256:08cfb9cc8a5c6d97e5add1ef0cf879c076ddd9bc84f7979c4de7cc2fcdd75d0b"
+          "digest": "sha256:408f518c6185b482eb63f248b31cfbcbcddf845fc2e90555a8fe98ecc5744ffb"
         },
         "authorityClass": "workflow",
         "machineJson": true,
@@ -3009,7 +3009,7 @@ export const CANONICAL_REGISTRIES = deepFreeze({
         ]
       }
     ],
-    "documentDigest": "sha256:1475d95f414ebdb0beda10c49b998c89d729fe478ee0911cd0ef013e620194bd"
+    "documentDigest": "sha256:b2094ed180b070d77a96a1264be45afb33344b9a0c942965db0aae0b085030c8"
   },
   "skills.json": {
     "kind": "skill-catalog",
