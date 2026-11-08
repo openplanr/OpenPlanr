@@ -391,7 +391,7 @@ function readBacklogFields(text, path, warnings, fallbacks) {
         return undefined;
       return parse(source);
     } catch (error) {
-      const skipped = needed.has(field) && (source !== undefined || fallback === undefined);
+      const skipped = needed.has(field) && fallback === undefined;
       invalid ||= skipped;
       const value = source ?? 'missing';
       const reason = error instanceof Error ? error.message : String(error);
@@ -401,7 +401,7 @@ function readBacklogFields(text, path, warnings, fallbacks) {
         value,
         message: `${path}: ${field} = ${JSON.stringify(value)}: ${reason}${skipped ? '; skipping item' : ''}.`,
       });
-      return source === undefined ? fallback : undefined;
+      return fallback;
     }
   };
   const id = read(

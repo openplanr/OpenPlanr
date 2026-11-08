@@ -170,6 +170,32 @@ describe.each(['cli', 'helper'])('backlog read warnings through %s', (surface) =
   });
 
   it.each([
+    ['id', '[BL-001]', 'BL-001'],
+    ['id', 'invalid', 'BL-001'],
+    ['id', 'null', 'BL-001'],
+    ['id', 'BL-2', 'BL-001'],
+    ['title', '[WIP] b', 'candidate'],
+    ['title', '100', 'candidate'],
+    ['title', '>\n  Folded title', 'candidate'],
+    ['title', '"unterminated', 'candidate'],
+    ['status', 'true', 'open'],
+    ['status', 'null', 'open'],
+    ['status', '5', 'open'],
+  ])('falls back for unreadable %s = %s with a warning', async (field, value, fallback) => {
+    const dir = await fixture({ [field]: value });
+    const result = await list(dir);
+    expect(result.items.map(({ id }) => id)).toEqual(['BL-001', 'BL-002']);
+    expect(result.items[0]).toMatchObject({ [field]: fallback });
+    expect(result.warnings).toEqual([
+      { path: itemPath, field, value, message: expect.any(String) },
+    ]);
+    expect(result.warnings[0].message).toContain(itemPath);
+    expect(result.warnings[0].message).toContain(field);
+    expect(result.warnings[0].message).toContain(JSON.stringify(value));
+    expect(result.warnings[0].message).not.toContain('skipping item');
+  });
+
+  it.each([
     ['id', 'BL-001'],
     ['title', 'candidate'],
     ['status', 'open'],
@@ -194,13 +220,6 @@ describe.each(['cli', 'helper'])('backlog read warnings through %s', (surface) =
     ['files', '\n  - 1'],
     ['when', '"now"'],
     ['when', '["sprint:next"]'],
-    ['id', '[BL-001]'],
-    ['id', 'invalid'],
-    ['id', 'null'],
-    ['title', '[WIP] b'],
-    ['title', '"unterminated'],
-    ['status', 'true'],
-    ['status', 'null'],
   ])('skips unreadable %s = %s while listing healthy items', async (field, value) => {
     const dir = await fixture({ [field]: value });
     const result = await list(dir);
@@ -208,6 +227,7 @@ describe.each(['cli', 'helper'])('backlog read warnings through %s', (surface) =
     expect(result.warnings).toEqual([
       { path: itemPath, field, value: value?.trim() ?? 'missing', message: expect.any(String) },
     ]);
+    expect(result.warnings[0].message).toContain('skipping item');
     expect(result.items[0]).not.toHaveProperty('when');
   });
 

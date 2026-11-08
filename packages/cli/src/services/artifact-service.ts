@@ -245,7 +245,7 @@ export async function updateArtifactFields(
   for (const [key, value] of Object.entries(allFields)) {
     const pattern = new RegExp(`^${escapeRegExp(key)}:[^\\r\\n]*${blockLines}`, 'm');
     if (value === undefined) {
-      frontmatter = frontmatter.replace(pattern, '');
+      frontmatter = frontmatter.replace(new RegExp(`\\r?\\n${pattern.source}`, 'm'), '');
       continue;
     }
     const formatted = Array.isArray(value)

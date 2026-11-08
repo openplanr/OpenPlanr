@@ -190,9 +190,10 @@ item's ID, title, status, project-relative path, files, and optional when. For o
 items without `files`, listing derives distinct paths from body `file:line`,
 `file:line:column`, or `file:line-line` evidence without rewriting the item.
 Listing also accepts block-sequence `files`; an empty `files:` uses body evidence.
-Invalid `id`, `title`, `status`, `when`, or `files` skips that item with a warning.
-Missing `id` or `title` falls back to the filename; missing `status` reads as `open`.
-Each missing field still produces a warning, including for files without frontmatter.
+Invalid `when` or `files` skips that item with a warning.
+Missing or unreadable `id` and `title` fall back to the filename; `status` falls back
+to `open`. Each produces a warning, including for files without frontmatter. An
+item is skipped if its filename cannot supply a fallback.
 Other backlog schema violations warn while keeping the item. Each warning includes
 the project-relative `path`, `field`, raw YAML `value` (or `"missing"`), and `message`.
 The shared helper's `list --open` returns the same items and warnings.

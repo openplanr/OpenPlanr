@@ -11,6 +11,7 @@ import {
   updateArtifact,
   updateArtifactFields,
 } from '../../src/services/artifact-service.js';
+import { toOptionalStringArray } from '../../src/services/linear/body-formatters.js';
 
 // Mock dependencies
 vi.mock('../../src/utils/fs.js', () => ({
@@ -303,6 +304,35 @@ _No features created yet. Run \`openplanr feature create\` to generate._
 });
 
 describe('updateArtifactFields arrays', () => {
+  it('preserves Linear label IDs through the push frontmatter reader', async () => {
+    mockListFiles.mockResolvedValue(['FEAT-001-item.md']);
+    mockReadFile.mockResolvedValue('---\nid: "FEAT-001"\ntitle: "Item"\n---\nBody');
+    await updateArtifactFields('/project', config, 'feature', 'FEAT-001', {
+      linearLabelIds: ['id1', 'id2'],
+    });
+    const written = mockWriteFile.mock.calls.at(-1)?.[1];
+    if (typeof written !== 'string') throw new Error('Feature frontmatter was not written');
+    mockReadFile.mockResolvedValue(written);
+    const actual = await vi.importActual<typeof import('../../src/utils/markdown.js')>(
+      '../../src/utils/markdown.js',
+    );
+    const { parseMarkdown } = await import('../../src/utils/markdown.js');
+    vi.mocked(parseMarkdown).mockImplementationOnce(actual.parseMarkdown);
+    const artifact = await readArtifact('/project', config, 'feature', 'FEAT-001');
+    expect(toOptionalStringArray(artifact?.data.linearLabelIds)).toEqual(['id1', 'id2']);
+  });
+
+  it('removes an undefined key without leaving a blank frontmatter line', async () => {
+    mockListFiles.mockResolvedValue(['BL-001-item.md']);
+    mockReadFile.mockResolvedValue(
+      '---\nid: "BL-001"\nwhen: "sprint:next"\ntitle: "Item"\n---\nBody',
+    );
+    await updateArtifactFields('/project', config, 'backlog', 'BL-001', { when: undefined });
+    expect(mockWriteFile.mock.calls.at(-1)?.[1]).toBe(
+      `---\nid: "BL-001"\ntitle: "Item"\nupdated: "${new Date().toISOString().split('T')[0]}"\n---\nBody`,
+    );
+  });
+
   it('writes flow arrays and preserves replacement tokens and the body', async () => {
     const raw = '---\nid: "BL-001"\nfiles: []\ntitle: "Old"\n---\nBody: $1';
     mockListFiles.mockResolvedValue(['BL-001-item.md']);
