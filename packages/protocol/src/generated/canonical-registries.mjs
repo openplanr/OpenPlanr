@@ -4318,12 +4318,12 @@ export const CANONICAL_REGISTRIES = deepFreeze({
       },
       {
         "skillId": "planr-plan",
-        "skillVersion": "1.3.0",
+        "skillVersion": "1.4.0",
         "description": "Turn a Protocol-compatible specification or product intent into schema-compatible OpenPlanr stories and implementation tasks. Use for planning and decomposition, not implementation.",
         "lifecycle": "active",
         "authorityClass": "planning-write",
         "source": "skills/planr-plan/openplanr.skill.json",
-        "sourceDigest": "sha256:27a9881e2b9cfd7efd564ae911c5022079c0c7cd74ddfcc0d505cf05415b01a2",
+        "sourceDigest": "sha256:06131440bcf758507383900bee9f208483524fb31352a062675a999a7d74efc7",
         "triggerPolicy": {
           "include": [
             "Decompose a specification into user stories and implementation tasks",
@@ -4877,7 +4877,7 @@ export const CANONICAL_REGISTRIES = deepFreeze({
       }
     ],
     "compatibilityAliases": [],
-    "documentDigest": "sha256:abdec359f5fe672aa9d8c56492863319ee2d5f57d3f5268f34b1555d741fd28e"
+    "documentDigest": "sha256:2671bdae5c9c239722e891eacebb46065d51e62cc41d51884c351346db3e8b53"
   },
   "outputs.json": {
     "kind": "output-catalog",

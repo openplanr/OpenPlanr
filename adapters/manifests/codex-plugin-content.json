@@ -832,7 +832,7 @@
         },
         {
           "path": "skills/plan/openplanr.skill.json",
-          "digest": "sha256:27a9881e2b9cfd7efd564ae911c5022079c0c7cd74ddfcc0d505cf05415b01a2"
+          "digest": "sha256:06131440bcf758507383900bee9f208483524fb31352a062675a999a7d74efc7"
         },
         {
           "path": "skills/plan/agents/openai.yaml",

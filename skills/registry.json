@@ -995,7 +995,7 @@
       "skillId": "planr-plan",
       "family": "planning",
       "contribution": "workflows",
-      "skillVersion": "1.3.0",
+      "skillVersion": "1.4.0",
       "description": "Turn a Protocol-compatible specification or product intent into schema-compatible OpenPlanr stories and implementation tasks. Use for planning and decomposition, not implementation.",
       "lifecycle": "active",
       "authorityClass": "planning-write",
