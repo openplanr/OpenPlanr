@@ -1,32 +1,71 @@
 schema: 1
 facts: |
   The draft plan docs/plans/note-sharing.md implements docs/specs/note-sharing.md (R1 create a
-  link, R2 read by token, R3 read-only, R4 revoke a link, R5 expire after 30 days). The README
-  says every change to the stored data shape needs a migration in migrations/ and a
-  SCHEMA_VERSION bump. Existing routes check ownership with requireOwner(note, userId).
+  link with an unguessable token, R2 read title, body and due date by token without an x-user-id
+  header, R3 read-only, R4 revoke a link, R5 expire after 30 days with 410). The README says every
+  change to the stored data shape needs a migration in migrations/ and a SCHEMA_VERSION bump.
+  src/server.js calls requireUser (401 without x-user-id) before any route, throws 404 for any path
+  that is not /notes or /notes/:id, and present(note) returns the whole stored note including id,
+  ownerId and done. Existing routes check ownership with requireOwner(note, userId).
   Plan tasks:
-  1 share store with create and find plus unit tests (sound);
+  1 share store; tokens from Math.random().toString(36).slice(2, 10), which are guessable;
   2 persist share records as a new shares array in data/notes.json (no migration, no version bump);
-  3 POST /notes/:id/shares looks the note up with store.get(id) and creates a link (no ownership check);
-  4 everything else for sharing in one 6-day task;
-  5 document the share routes in the README (sound).
+  3 POST /notes/:id/shares looks the note up with store.get(id) (no ownership check);
+  4 GET /shared/:token added after the existing /notes match (so requireUser and the 404 run first),
+    410 after 7 days (spec says 30), responds with present(note) (exposes ownerId and done);
+  5 read-only links: PATCH and DELETE keep requireOwner, plus a test (sound);
+  6 hardening and end-to-end tests in one 6-day task;
+  7 document the share routes in the README (sound).
+  Design notes: links show the note's current content (sound: the spec's problem is stale copies);
+  expired records are kept and expiry is checked on read with no cleanup job (sound: a kept record
+  is what lets an expired token return 410 rather than 404).
   No task covers revoking a link (R4).
 criteria:
   - id: finds-uncovered-revocation
     kind: outcome
+    tag: defect
     criterion: The review points out that no task covers revoking a share link (requirement 4).
   - id: finds-missing-migration
     kind: outcome
+    tag: defect
     criterion: The review points out that adding share records to the stored data needs a migration or a schema version bump that the plan does not include.
-  - id: finds-oversized-task
-    kind: outcome
-    criterion: The review points out that task 4 is too large for one task or should be split.
   - id: finds-missing-ownership-check
     kind: outcome
+    tag: defect
     criterion: The review points out that the create-link route in task 3 does not check that the caller owns the note.
-  - id: share-store-task-not-blocked
+  - id: finds-oversized-task
     kind: outcome
-    criterion: The review does not raise a blocking objection to task 1, the share store. Minor suggestions about it pass.
+    tag: defect
+    criterion: The review points out that task 6 is too large for one task or should be split.
+  - id: finds-wrong-expiry
+    kind: outcome
+    tag: defect
+    criterion: The review points out that the plan expires links after 7 days while the spec says 30 days.
+  - id: finds-header-required
+    kind: outcome
+    tag: defect
+    criterion: The review points out that the read-through-link route, placed after the existing routing in src/server.js, would require an x-user-id header or never be reached, although the spec says no header is needed.
+  - id: finds-response-overexposes
+    kind: outcome
+    tag: defect
+    criterion: The review points out that responding with present(note) exposes more than the title, body and due date the spec allows, such as the owner's id.
+  - id: finds-guessable-token
+    kind: outcome
+    tag: defect
+    criterion: The review points out that tokens from Math.random are guessable, while the spec requires unguessable tokens.
+  - id: read-only-task-not-blocked
+    kind: outcome
+    tag: decoy
+    criterion: The review does not call task 5, read-only links, a blocker or demand that it change before work starts.
   - id: docs-task-not-blocked
     kind: outcome
-    criterion: The review does not raise a blocking objection to task 5, documenting the share routes. Minor suggestions about it pass.
+    tag: decoy
+    criterion: The review does not call task 7, documenting the share routes, a blocker or demand that it change before work starts.
+  - id: no-cleanup-job-not-blocked
+    kind: outcome
+    tag: decoy
+    criterion: The review does not call keeping expired share records without a cleanup job a blocker or demand that it change before work starts.
+  - id: live-content-not-blocked
+    kind: outcome
+    tag: decoy
+    criterion: The review does not call links showing the note's current content a blocker or demand that it change before work starts.

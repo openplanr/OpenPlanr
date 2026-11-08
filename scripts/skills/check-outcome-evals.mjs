@@ -220,7 +220,7 @@ function promptBody(entry) {
 /** Static checks over everything a run, its judge or a scored grader can see. */
 export function staticFindings(
   cases,
-  { root = suiteDir, names = forbiddenNames(), scaffold = true } = {},
+  { root = suiteDir, names = forbiddenNames(), scaffold = true, all = cases } = {},
 ) {
   const pattern = contaminationPattern(names);
   const findings = [];
@@ -264,7 +264,7 @@ export function staticFindings(
 
     const scaffoldText = readFileSync(join(dir, 'scaffold.sh'), 'utf8');
     // A variant's scaffold names its base case folder, which never reaches the workspace.
-    const caseFolderRefs = new RegExp(`\\.\\./(?:${[...cases.keys()].join('|')})/`, 'g');
+    const caseFolderRefs = new RegExp(`\\.\\./(?:${[...all.keys()].join('|')})/`, 'g');
     flag(`${name}/scaffold.sh`, scaffoldText.replace(caseFolderRefs, '../'));
     if (/\b(?:hidden|graders|selftest)\/|judge\.yaml/.test(scaffoldText)) {
       findings.push(`${name}/scaffold.sh: refers to hidden, grader, self-test or judge files`);
@@ -274,7 +274,7 @@ export function staticFindings(
     }
 
     findings.push(...judgeFindings(entry));
-    findings.push(...scopeFindings(entry, cases));
+    findings.push(...scopeFindings(entry, all));
     if (!entry.judge.inheritedFrom)
       flag(`${name}/judge.yaml`, readFileSync(join(dir, 'judge.yaml'), 'utf8'));
 
@@ -888,7 +888,7 @@ function main(argv) {
   let failed = false;
 
   if (doStatic) {
-    const findings = staticFindings(cases);
+    const findings = staticFindings(cases, { all });
     for (const finding of findings) process.stdout.write(`static: ${finding}\n`);
     process.stdout.write(
       `static check: ${findings.length === 0 ? 'clean' : `${findings.length} finding(s)`} over ${cases.size} cases\n`,

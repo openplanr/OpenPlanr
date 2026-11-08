@@ -20,5 +20,9 @@
         "content": "..."
       }
     }
-  ]
+  ],
+  "judge": {
+    "finds-missing-migration": true,
+    "finds-oversized-task": true
+  }
 }

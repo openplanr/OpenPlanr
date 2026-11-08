@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Notes app with file persistence and migrations, the sharing spec, and a draft
-# plan that has four defects and two sound tasks.
+# plan with eight seeded defects and four sound decoys.
 set -euo pipefail
 here=$(cd "$(dirname "$0")" && pwd)
 # shellcheck source=../_shared/notes-base.sh
@@ -82,9 +82,9 @@ Spec: `docs/specs/note-sharing.md`. Author: Sam Lee. Review requested before wor
 
 Add `src/shares.js` with `create(noteId)`, which stores `{ token, noteId,
 createdAt }` and returns the token, and `find(token)`, which returns the record
-or `null`. Tokens are 32 random bytes from `crypto.randomBytes`, hex encoded.
-Unit tests in `test/shares.test.js` cover create, find and unknown tokens.
-Estimate: 0.5 day.
+or `null`. Tokens are short and readable:
+`Math.random().toString(36).slice(2, 10)`. Unit tests in `test/shares.test.js`
+cover create, find and unknown tokens. Estimate: 0.5 day.
 
 ### 2. Persist share links
 
@@ -98,21 +98,41 @@ Add `POST /notes/:id/shares` to `src/server.js`. Look the note up with
 `shares.create(note.id)` and return `{ token }` with status 201.
 Estimate: 0.5 day.
 
-### 4. Everything else for sharing
+### 4. Read-through-link route
 
-Add `GET /shared/:token`, enforce read-only access, add expiry with 410
-responses, return consistent errors for every share route, handle tokens in
-logs, and write an end-to-end test suite covering every share route and error
-case. Estimate: 6 days.
+Add `GET /shared/:token` to `handle` in `src/server.js`, as a new branch after
+the existing `/notes` path match. Look the token up with `shares.find`; an
+unknown token returns 404, and a link older than 7 days returns 410. Otherwise
+respond with `present(note)`, like the other read routes. Estimate: 1 day.
 
-### 5. Document share links
+### 5. Read-only links
+
+No route accepts a token for a write. `PATCH /notes/:id` and
+`DELETE /notes/:id` keep their existing `requireOwner` check. Add a test that a
+`PATCH` carrying only a share token and no `x-user-id` header gets 401.
+Estimate: 0.5 day.
+
+### 6. Hardening and end-to-end tests
+
+Return consistent error bodies from every share route, keep tokens out of
+logs, retry persistence failures, and write an end-to-end suite covering every
+share route and error case. Estimate: 6 days.
+
+### 7. Document share links
 
 Add the share routes to the API table in `README.md`, with one example request
 and response for each. Estimate: 0.25 day.
 
+## Design notes
+
+- A link always shows the note as it is now, so edits made after the link was
+  created are visible to anyone holding it.
+- Expired share records stay in `data/notes.json`. Expiry is checked when a
+  token is read; there is no cleanup job.
+
 ## Order
 
-1, then 2, then 3, then 4, then 5.
+1, 2, 3, 4, 5, 6, 7.
 EOF
 commit_at 2026-10-24T09:00:00Z "docs: draft the note sharing plan"
 

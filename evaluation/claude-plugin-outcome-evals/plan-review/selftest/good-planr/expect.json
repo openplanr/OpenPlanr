@@ -7,9 +7,15 @@
   "judge": {
     "finds-uncovered-revocation": true,
     "finds-missing-migration": true,
-    "finds-oversized-task": true,
     "finds-missing-ownership-check": true,
-    "share-store-task-not-blocked": true,
-    "docs-task-not-blocked": true
+    "finds-oversized-task": true,
+    "finds-wrong-expiry": true,
+    "finds-header-required": true,
+    "finds-response-overexposes": true,
+    "finds-guessable-token": true,
+    "read-only-task-not-blocked": true,
+    "docs-task-not-blocked": true,
+    "no-cleanup-job-not-blocked": true,
+    "live-content-not-blocked": true
   }
 }

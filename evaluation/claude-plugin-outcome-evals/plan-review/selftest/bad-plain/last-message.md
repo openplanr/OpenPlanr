@@ -1,2 +1,2 @@
-The plan looks solid overall. Two blockers: the share store in task 1 should not use random bytes for
-tokens, and task 5 shouldn't put docs in the README. Everything else is fine to start.
+The plan looks solid overall. One thing: task 3 should check that the caller owns the note before creating
+a link, using `requireOwner` like the other routes. Everything else is fine to start.

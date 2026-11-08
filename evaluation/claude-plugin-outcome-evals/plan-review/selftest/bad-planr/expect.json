@@ -6,10 +6,16 @@
   },
   "judge": {
     "finds-uncovered-revocation": false,
-    "finds-missing-migration": false,
-    "finds-oversized-task": false,
+    "finds-missing-migration": true,
     "finds-missing-ownership-check": false,
-    "share-store-task-not-blocked": false,
-    "docs-task-not-blocked": false
+    "finds-oversized-task": true,
+    "finds-wrong-expiry": false,
+    "finds-header-required": false,
+    "finds-response-overexposes": false,
+    "finds-guessable-token": false,
+    "read-only-task-not-blocked": true,
+    "docs-task-not-blocked": true,
+    "no-cleanup-job-not-blocked": true,
+    "live-content-not-blocked": true
   }
 }

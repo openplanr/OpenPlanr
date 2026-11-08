@@ -6,6 +6,8 @@ verdict: revise
 
 | ID | Lens | Severity | Finding |
 |----|------|----------|---------|
-| R-1 | Engineering | Blocking | Task 1 uses `crypto.randomBytes`; tokens must be UUIDv4 instead. |
-| R-2 | Docs | Blocking | Task 5 documents the routes in the README; API docs must not live in the README. |
-| R-3 | Delivery | Minor | Task 4's estimate looks right. |
+| R-1 | Engineering | Blocking | Task 2 adds a `shares` array without a migration or a `SCHEMA_VERSION` bump. |
+| R-2 | Delivery | Major | Task 6 is six days in one task. Split it. |
+| R-3 | Docs | Minor | Task 7 could include a curl example. |
+
+**Verdict:** revise task 2, then start.
