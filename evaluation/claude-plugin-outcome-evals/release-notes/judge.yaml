@@ -5,16 +5,30 @@ facts: |
   chore: add editorconfig;
   fix: reject updates with an invalid due date;
   chore: rename the response helper;
+  refactor: extract title validation (also adds a new limit: titles over 120 characters are now
+  rejected with 400 when creating a note);
   feat!: remove the CSV export endpoint (BREAKING CHANGE: GET /notes/export is gone);
   feat: list notes soonest due first;
+  feat: pin notes when creating them, then Revert "feat: pin notes when creating them" (net: no pinning);
   test: cover due date validation on update;
   chore: run tests in CI;
-  fix: trim note titles on update.
+  fix: trim note titles on update;
+  fix: validate the done flag on update (body footer only: BREAKING CHANGE: PATCH /notes/:id returns
+  400 when done is not a boolean).
   The correct next version is 2.0.0.
 criteria:
   - id: lists-breaking-removal
     kind: outcome
     criterion: The release notes list the removal of GET /notes/export as a breaking change.
+  - id: lists-footer-breaking
+    kind: outcome
+    criterion: The release notes list, as a breaking change, that updating a note now rejects a done value that is not true or false.
+  - id: describes-title-limit
+    kind: outcome
+    criterion: The release notes tell users that note titles longer than 120 characters are now rejected.
+  - id: omits-reverted-pinning
+    kind: outcome
+    criterion: The release notes do not present note pinning as a shipped feature.
   - id: describes-user-changes
     kind: outcome
     criterion: The release notes describe at least three of these four user-visible changes, in words a user of the API would understand - the done filter on the note list, rejecting updates with an invalid due date, listing notes soonest due first, trimming titles on update.

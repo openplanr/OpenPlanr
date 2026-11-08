@@ -7,6 +7,9 @@
   },
   "judge": {
     "lists-breaking-removal": false,
+    "lists-footer-breaking": false,
+    "describes-title-limit": false,
+    "omits-reverted-pinning": false,
     "describes-user-changes": false,
     "excludes-internal-commits": true
   }

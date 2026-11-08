@@ -6,3 +6,4 @@
 
 - feat!: remove the CSV export endpoint
 - feat: filter the note list by done status
+- feat: pin notes when creating them

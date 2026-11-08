@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
-# Notes app tagged v1.3.0 and v1.4.0, then nine commits: five user-facing
-# (one removes an endpoint), three chores and one test-only change.
+# Notes app tagged v1.3.0 and v1.4.0, then thirteen commits: user-facing changes
+# (one removes an endpoint, one hides a new limit in a refactor, one states a
+# breaking change only in its footer), a feature and its revert, three chores
+# and one test-only change.
 set -euo pipefail
 here=$(cd "$(dirname "$0")" && pwd)
 # shellcheck source=../_shared/notes-base.sh
@@ -74,6 +76,30 @@ node -e '
 '
 commit_at 2026-08-28T10:00:00Z "chore: rename the response helper"
 
+node -e '
+  const fs = require("node:fs");
+  const text = fs.readFileSync("src/notes.js", "utf8");
+  const before = `  if (typeof title !== "string" || title.trim() === "") {
+    throw new TypeError("A note needs a title");
+  }
+`.replaceAll("\"", "\x27");
+  const after = `  validateTitle(title);
+`;
+  if (!text.includes(before)) throw new Error("src/notes.js: title check not found");
+  const helper = `function validateTitle(title) {
+  if (typeof title !== "string" || title.trim() === "") {
+    throw new TypeError("A note needs a title");
+  }
+  if (title.trim().length > 120) {
+    throw new TypeError("A title has at most 120 characters");
+  }
+}
+
+`.replaceAll("\"", "\x27");
+  fs.writeFileSync("src/notes.js", text.replace(before, after).replace("export function createNote", helper + "export function createNote"));
+'
+commit_at 2026-08-30T10:00:00Z "refactor: extract title validation"
+
 rm src/export.js
 edit src/server.js "import { toCsv } from './export.js';
 " ""
@@ -93,6 +119,13 @@ edit src/server.js "          .filter((note) => done === null || String(note.don
           .sort((a, b) => (a.due ?? '9999-99-99').localeCompare(b.due ?? '9999-99-99'));"
 edit README.md "| GET    | /notes        | List the caller's notes (\`?done=true\`)   |" "| GET    | /notes        | List notes, soonest due first (\`?done\`)  |"
 commit_at 2026-09-05T10:00:00Z "feat: list notes soonest due first"
+
+edit src/notes.js "    done: false," "    done: false,
+    pinned: options.pinned === true,"
+edit src/server.js "{ due: input.due }" "{ due: input.due, pinned: input.pinned }"
+edit README.md "| POST   | /notes        | Create a note \`{title, body, due?}\`      |" "| POST   | /notes        | Create a note \`{title, body, due?, pinned?}\` |"
+commit_at 2026-09-06T10:00:00Z "feat: pin notes when creating them"
+GIT_AUTHOR_DATE=2026-09-08T10:00:00Z GIT_COMMITTER_DATE=2026-09-08T10:00:00Z git revert --no-edit HEAD >/dev/null
 
 cat > test/update.test.js <<'EOF'
 import assert from 'node:assert/strict';
@@ -127,6 +160,17 @@ commit_at 2026-09-12T10:00:00Z "chore: run tests in CI"
 
 edit src/server.js "            if (key in input) changes[key] = input[key];" "            if (key in input) changes[key] = key === 'title' ? String(input.title).trim() : input[key];"
 commit_at 2026-09-15T10:00:00Z "fix: trim note titles on update"
+
+edit src/server.js "          if ('due' in input) parseDueDate(input.due);" "          if ('due' in input) parseDueDate(input.due);
+          if ('done' in input && typeof input.done !== 'boolean') {
+            throw new TypeError('done must be true or false');
+          }"
+commit_at 2026-09-18T10:00:00Z "fix: validate the done flag on update
+
+PATCH /notes/:id stored whatever value it was given for done.
+
+BREAKING CHANGE: PATCH /notes/:id now returns 400 when done is not true or
+false. Clients that send \"true\" as a string must send a boolean."
 
 # shellcheck source=../_shared/probe.sh
 source "$here/../_shared/probe.sh"
