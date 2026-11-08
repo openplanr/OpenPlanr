@@ -67,3 +67,56 @@ test('the proof fixtures trigger the seeded validator diagnostics', () => {
     assert.deepEqual([...new Set(result.diagnostics.map(({ code }) => code))].sort(), codes, file);
   }
 });
+
+test('notes missing whole sections and a contract line yield only the validator codes', () => {
+  const expected = {
+    'challenger-missing-sections.md': [
+      'E_OPERATE_REVIEW_FIELD_MISSING',
+      'E_OPERATE_REVIEW_SECTION_MISSING',
+      'E_OPERATE_REVIEW_SECTION_UNEXPECTED',
+    ],
+    'board-report-missing-sections.md': [
+      'E_OPERATE_REVIEW_SECTION_MISSING',
+      'E_OPERATE_REVIEW_SECTION_UNEXPECTED',
+      'E_OPERATE_REVIEW_SUMMARY_MISSING',
+    ],
+  };
+  const text = checklist();
+  for (const [file, codes] of Object.entries(expected)) {
+    const result = inspectOperateReviewNote(
+      read(`tests/skill-runtime/fixtures/operate-note-proof/${file}`),
+      { profile: file.replace('-missing-sections.md', ''), contractVersion: '2.0.0' },
+    );
+    const actual = [...new Set(result.diagnostics.map(({ code }) => code))].sort();
+    assert.deepEqual(actual, codes, file);
+    for (const code of codes) assert.ok(text.includes(`\`${code}\``), `${file}: ${code}`);
+  }
+});
+
+test('the checklist keeps missing sections and an absent contract line from producing false codes', () => {
+  const text = checklist().replace(/\s+/gu, ' ');
+  assert.match(text, /A note with no contract line passes/u);
+  assert.match(
+    text,
+    /`E_OPERATE_REVIEW_CONTRACT_DECLARATION_INVALID` for an unsupported kind or version/u,
+  );
+  assert.match(text, /only in sections that are present/u);
+  assert.match(
+    text,
+    /reported once, as `E_OPERATE_REVIEW_SECTION_MISSING`, and yields no field or item code/u,
+  );
+  assert.match(text, /missing `Executive summary` section is reported both as/u);
+});
+
+test('the checklist fixes the report line and forbids searching for a validator', () => {
+  const text = checklist().replace(/\s+/gu, ' ');
+  assert.match(
+    text,
+    /exactly one line: `CODES: ` followed by every distinct code .* sorted alphabetically and comma-separated; write `CODES: none`/u,
+  );
+  assert.match(
+    text,
+    /Never run `npx`, install or download anything, or search the filesystem for a validator or the CLI/u,
+  );
+  assert.match(text, /only if `command -v openplanr` succeeds/u);
+});

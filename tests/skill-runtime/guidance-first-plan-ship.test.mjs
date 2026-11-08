@@ -68,3 +68,15 @@ test('Ship package is host-native, locally scoped, and excludes remote effects',
   assert.match(ship, /read, edit, shell, browser, and test capabilities/iu);
   assert.match(ship, /Keep the work local; do not publish or deploy/iu);
 });
+
+test('Ship discovery lists gated CI jobs as conditional and always names the git hooks', () => {
+  const ship = read('skills/planr-ship/SKILL.md').replace(/\s+/gu, ' ');
+  assert.match(
+    ship,
+    /`changes` or paths-filter job whose outputs gate other jobs\), list every job it gates and mark each conditional; never drop one by reading the paths yourself/u,
+  );
+  assert.match(
+    ship,
+    /lint-staged pre-commit hook and the pre-push hook are always listed as sources, whatever the change touches/u,
+  );
+});

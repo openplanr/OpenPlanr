@@ -85,7 +85,7 @@
         },
         {
           "path": "skills/ceo-review/references/note-checklist.md",
-          "digest": "sha256:3b90a1b5daa9d757b89d8d7a810af14dcbdb0481195ed128100b9251cc4235d1"
+          "digest": "sha256:f9dcc7510a2d21cf27b28c7155e05a74c2a6460f13b78b242ef6f638a8e25a85"
         },
         {
           "path": "skills/ceo-review/agents/openai.yaml",
@@ -110,7 +110,7 @@
         },
         {
           "path": "skills/chair-review/references/note-checklist.md",
-          "digest": "sha256:3b90a1b5daa9d757b89d8d7a810af14dcbdb0481195ed128100b9251cc4235d1"
+          "digest": "sha256:f9dcc7510a2d21cf27b28c7155e05a74c2a6460f13b78b242ef6f638a8e25a85"
         },
         {
           "path": "skills/chair-review/agents/openai.yaml",
@@ -135,7 +135,7 @@
         },
         {
           "path": "skills/challenger-review/references/note-checklist.md",
-          "digest": "sha256:3b90a1b5daa9d757b89d8d7a810af14dcbdb0481195ed128100b9251cc4235d1"
+          "digest": "sha256:f9dcc7510a2d21cf27b28c7155e05a74c2a6460f13b78b242ef6f638a8e25a85"
         },
         {
           "path": "skills/challenger-review/agents/openai.yaml",
@@ -164,7 +164,7 @@
         },
         {
           "path": "skills/cmo-review/references/note-checklist.md",
-          "digest": "sha256:3b90a1b5daa9d757b89d8d7a810af14dcbdb0481195ed128100b9251cc4235d1"
+          "digest": "sha256:f9dcc7510a2d21cf27b28c7155e05a74c2a6460f13b78b242ef6f638a8e25a85"
         },
         {
           "path": "skills/cmo-review/agents/openai.yaml",
@@ -218,7 +218,7 @@
         },
         {
           "path": "skills/coo-review/references/note-checklist.md",
-          "digest": "sha256:3b90a1b5daa9d757b89d8d7a810af14dcbdb0481195ed128100b9251cc4235d1"
+          "digest": "sha256:f9dcc7510a2d21cf27b28c7155e05a74c2a6460f13b78b242ef6f638a8e25a85"
         },
         {
           "path": "skills/coo-review/agents/openai.yaml",
@@ -247,7 +247,7 @@
         },
         {
           "path": "skills/cpo-review/references/note-checklist.md",
-          "digest": "sha256:3b90a1b5daa9d757b89d8d7a810af14dcbdb0481195ed128100b9251cc4235d1"
+          "digest": "sha256:f9dcc7510a2d21cf27b28c7155e05a74c2a6460f13b78b242ef6f638a8e25a85"
         },
         {
           "path": "skills/cpo-review/agents/openai.yaml",
@@ -276,7 +276,7 @@
         },
         {
           "path": "skills/cto-review/references/note-checklist.md",
-          "digest": "sha256:3b90a1b5daa9d757b89d8d7a810af14dcbdb0481195ed128100b9251cc4235d1"
+          "digest": "sha256:f9dcc7510a2d21cf27b28c7155e05a74c2a6460f13b78b242ef6f638a8e25a85"
         },
         {
           "path": "skills/cto-review/agents/openai.yaml",
@@ -811,7 +811,7 @@
         },
         {
           "path": "skills/operate/references/note-checklist.md",
-          "digest": "sha256:3b90a1b5daa9d757b89d8d7a810af14dcbdb0481195ed128100b9251cc4235d1"
+          "digest": "sha256:f9dcc7510a2d21cf27b28c7155e05a74c2a6460f13b78b242ef6f638a8e25a85"
         },
         {
           "path": "skills/operate/agents/openai.yaml",
@@ -960,7 +960,7 @@
       "assets": [
         {
           "path": "skills/ship/SKILL.md",
-          "digest": "sha256:faaea77a925652df8c293777ccf01d33f58262f60f64126c7f8e3936f4ddd67b"
+          "digest": "sha256:08aaf4f0887875f309e2ff16879ad20fc50d45f49cb6e904c717e80f0994f3bc"
         },
         {
           "path": "skills/ship/openplanr.skill.json",

@@ -84,6 +84,8 @@ Inspect these sources directly, in this order:
 2. repository instructions;
 3. package and task-runner scripts;
 4. applicable CI and pre-commit configuration, and the pre-push hook before pushing.
+   The lint-staged pre-commit hook and the pre-push hook are always listed as sources,
+   whatever the change touches.
 
 List each candidate check with its `cwd` and the source that named it. Discovery
 only reads: never execute a check while discovering. Then run the candidates from
@@ -92,8 +94,10 @@ each `cwd`. Let the change pick checks: when it touches a build input (a
 `build` scripts), include the build CI runs; prefer tests related to the changed
 files. Before pushing, include every CI job whose triggers and path filters fire
 for the changed paths, and for a published package that gains non-code files, a
-dry-run pack that confirms they are packed. Missing commands are diagnostics, not
-a reason to invent or skip all verification.
+dry-run pack that confirms they are packed. When a workflow selects jobs at
+runtime (a `changes` or paths-filter job whose outputs gate other jobs), list every job it
+gates and mark each conditional; never drop one by reading the paths yourself. Missing
+commands are diagnostics, not a reason to invent or skip all verification.
 
 If `openplanr` is already on `PATH`, `openplanr ship checks --json --task <task-path>`
 (omit `--task` for a direct request; add `--tier story` or `--tier push` before
