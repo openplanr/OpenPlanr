@@ -2326,7 +2326,7 @@
       "source": "skills/planr-ship/openplanr.skill.json",
       "entrypoint": "skills/planr-ship/SKILL.md",
       "description": "Implement an OpenPlanr plan, specification, task, or clearly stated request end to end in the current repository. Use when the user asks to build, implement, fix, finish, or ship local work, or to plan and implement an accepted change. Invoke before editing files for the requested change. Not for planning only, landing, release, or work handed to another coding agent.",
-      "sourceDigest": "sha256:22c893e2a47f7cc169d6ea32464aa95ec9f7b60c92eab3df6184e83212216f0a",
+      "sourceDigest": "sha256:a328a8422f8b5154f5ddf02aad160decfbdec5a95b484a7e192acfb8c4f5ae0f",
       "resources": [
         {
           "path": "agents/openai.yaml",
@@ -2361,18 +2361,6 @@
           ],
           "executable": false,
           "digest": "sha256:0cf8cce235b6e258c066e65dcc25480f10aca6f0c3200de332fc278e3b7975a9"
-        },
-        {
-          "path": "scripts/discover-verification.mjs",
-          "kind": "script",
-          "hosts": [
-            "claude-code",
-            "codex",
-            "chatgpt",
-            "cursor"
-          ],
-          "executable": true,
-          "digest": "sha256:8805ac8d814a1d94364d455df6da350983d4c8436faa3749717da5f1b3ae63b1"
         },
         {
           "path": "references/fail-first.md",

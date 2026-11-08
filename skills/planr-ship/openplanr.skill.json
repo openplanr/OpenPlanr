@@ -45,17 +45,6 @@
       "executable": false
     },
     {
-      "path": "scripts/discover-verification.mjs",
-      "kind": "script",
-      "hosts": [
-        "claude-code",
-        "codex",
-        "chatgpt",
-        "cursor"
-      ],
-      "executable": true
-    },
-    {
       "path": "references/fail-first.md",
       "kind": "reference",
       "hosts": [
