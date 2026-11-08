@@ -104,6 +104,11 @@ test('launchers pass only with an exact version', () => {
     'uvx ruff==0.6.9 check',
     'the `npx` launcher is described elsewhere',
     'npm install -g openplanr@3.6.0',
+    'Never use npx and never prompt for an install.',
+    'Codex: npx is blocked by the sandbox.',
+    'Remove the remote plugin (`openplanr@openplanr`).',
+    'Pin it as openplanr@3.6.0.',
+    'Run it with npx, bunx or uvx only when the version is pinned.',
   ])
     assert.deepEqual(launch(pinned), [], pinned);
   for (const unpinned of [
@@ -120,6 +125,14 @@ test('launchers pass only with an exact version', () => {
     'npx prisma migrate dev',
     'npm install -g openplanr@latest',
     'npm install -g openplanr@^3.6.0',
+    'npx foo',
+    'npx foo@latest',
+    'npx foo@^1',
+    'npm install -g openplanr',
+    'pnpm add -g openplanr',
+    'Install openplanr@3 first.',
+    'Install openplanr@* first.',
+    'Install openplanr@next first.',
   ])
     assert.deepEqual(launch(unpinned), ['unpinned-launcher'], unpinned);
 });
@@ -157,6 +170,19 @@ test('the Claude label predicate refuses components and manifest keys that make 
       ...Object.keys(CLAUDE_PLUGIN_LISTING),
     ].sort(),
   );
+});
+
+test('skill hooks frontmatter and a BOM-prefixed #! are refused', () => {
+  const codes = (path, bytes) =>
+    inspectHostBundle([{ path, bytes: Buffer.from(bytes), mode: 0o644 }], {
+      host: 'claude',
+    }).findings.map(({ code }) => code);
+  assert.deepEqual(
+    codes('skills/x/SKILL.md', '---\nname: x\nhooks:\n  PreToolUse: []\n---\nBody.\n'),
+    ['privileged-frontmatter'],
+  );
+  assert.deepEqual(codes('skills/x/SKILL.md', '---\nname: x\n---\nhooks: are prose here.\n'), []);
+  assert.deepEqual(codes('skills/x/run.md', '\ufeff#!/bin/sh\necho hidden\n'), ['shebang']);
 });
 
 test('Markdown rules are allowed only in the Cursor bundle; text must be UTF-8 without NUL', () => {

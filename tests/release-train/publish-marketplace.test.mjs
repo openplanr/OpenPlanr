@@ -32,7 +32,7 @@ function fixture(t) {
   mkdirSync(join(plugin, '.claude-plugin'), { recursive: true });
   mkdirSync(join(plugin, 'skills/run'), { recursive: true });
   writeFileSync(join(plugin, '.claude-plugin/plugin.json'), manifest);
-  writeFileSync(join(plugin, 'skills/run/SKILL.md'), '# New\n');
+  writeFileSync(join(plugin, 'skills/run/SKILL.md'), '# New\n', { mode: 0o600 });
   mkdirSync(join(marketplace, 'plugins/planr'), { recursive: true });
   writeFileSync(join(marketplace, 'plugins/planr/old.txt'), 'published plugin\n');
   writeFileSync(join(marketplace, 'README.md'), '# Marketplace\n');
@@ -90,7 +90,10 @@ test('the inspected plugin replaces the published copy with exact bytes and mode
   const result = publish(plugin, marketplace);
   assert.equal(result.status, 0, result.stderr);
   assert.deepEqual(snapshot(join(marketplace, 'plugins/planr')), snapshot(plugin));
-  assert.equal(statSync(join(marketplace, 'plugins/planr/skills/run/SKILL.md')).mode & 0o111, 0);
+  assert.equal(
+    statSync(join(marketplace, 'plugins/planr/skills/run/SKILL.md')).mode & 0o777,
+    0o644,
+  );
   assert.deepEqual(readdirSync(join(marketplace, 'plugins')), ['planr']);
   assert.deepEqual(
     snapshot(marketplace)
@@ -156,7 +159,7 @@ test('source edits after inspection cannot change the installed bytes', (t) => {
     afterInspection: () => {
       writeFileSync(join(plugin, 'skills/run/SKILL.md'), 'console.log("uninspected");\n');
       writeFileSync(join(plugin, 'skills/run/added.md'), 'console.log("uninspected");\n');
-      chmodSync(join(plugin, 'skills/run/SKILL.md'), 0o644);
+      chmodSync(join(plugin, 'skills/run/SKILL.md'), 0o755);
     },
   });
   assert.deepEqual(snapshot(join(marketplace, 'plugins/planr')), inspected);

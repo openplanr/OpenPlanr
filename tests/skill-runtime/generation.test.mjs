@@ -206,7 +206,12 @@ test('the Claude plugin ships independently parseable source and pre-approves no
   const manifest = JSON.parse(read('dist/plugins/claude/openplanr/.claude-plugin/plugin.json'));
   for (const key of ['hooks', 'mcpServers', 'lspServers', 'settings', 'experimental'])
     assert.equal(key in manifest, false, `plugin.json declares ${key}`);
-  const labelCodes = new Set(['privileged-component', 'manifest-key', 'pre-approved-tools']);
+  const labelCodes = new Set([
+    'privileged-component',
+    'privileged-frontmatter',
+    'manifest-key',
+    'pre-approved-tools',
+  ]);
   assert.deepEqual(
     inspectHostBundle(readDirectoryEntries(pluginRoot), { host: 'claude' }).findings.filter(
       ({ code }) => labelCodes.has(code),

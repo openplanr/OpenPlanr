@@ -1,8 +1,13 @@
 {
   "$comment": "Host bundle files the instructions-only policy refuses today. Each later change deletes the entries it fixes and updates count and sha256; entries may never be added.",
-  "count": 232,
-  "sha256": "6f574136bca83832592a64edd076872d179fb77b48316d5c6c11da95df0513f6",
+  "count": 233,
+  "sha256": "c004bdaf90f809f3ce15608b43cc88fe5f080904ac75573464e3a827510fb0e4",
   "entries": [
+    {
+      "host": "claude",
+      "path": "README.md",
+      "code": "unpinned-launcher"
+    },
     {
       "host": "claude",
       "path": "references/pipeline/stacks/database/prisma.md",

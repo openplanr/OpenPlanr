@@ -153,6 +153,10 @@ function cliFixture() {
   mkdirSync(join(plugin, '.claude-plugin'), { recursive: true });
   writeFileSync(join(plugin, '.claude-plugin/plugin.json'), '{"name":"planr"}\n');
   writeFileSync(join(plugin, 'README.md'), '# OpenPlanr\n');
+  for (const host of ['openai', 'cursor']) {
+    mkdirSync(join(cli, 'lib/host-packages', host, 'openplanr'), { recursive: true });
+    writeFileSync(join(cli, 'lib/host-packages', host, 'openplanr/README.md'), '# OpenPlanr\n');
+  }
   // Deterministic tracked checkers stand in for compilation and projection.
   // An ignored output cannot justify its own admission into a release archive.
   const compiler = `import assert from 'node:assert/strict'; import { readFileSync } from 'node:fs';
@@ -209,6 +213,18 @@ test('publication applies the Directory file preflight to the packed Claude plug
     [
       (plugin) => writeFileSync(join(plugin, 'run.mjs'), 'console.log("x");\n'),
       /Plugin artifact validation failed:[\s\S]*type-not-allowed: run\.mjs/u,
+    ],
+    [
+      (plugin) => writeFileSync(join(plugin, '../../openai/openplanr/run.mjs'), 'x\n'),
+      /Plugin artifact validation failed:[\s\S]*type-not-allowed: run\.mjs/u,
+    ],
+    [
+      (plugin) => writeFileSync(join(plugin, '../../cursor/openplanr/run.md'), '#!/bin/sh\n'),
+      /Plugin artifact validation failed:[\s\S]*shebang: run\.md/u,
+    ],
+    [
+      (plugin) => rmSync(join(plugin, '../../cursor'), { recursive: true }),
+      /missing its bundled cursor plugin/u,
     ],
     [
       (plugin) => rmSync(join(plugin, '.claude-plugin'), { recursive: true }),

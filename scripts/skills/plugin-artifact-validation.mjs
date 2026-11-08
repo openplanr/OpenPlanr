@@ -587,7 +587,18 @@ const launcher =
   /(?<![\w./-])(?:npx|bunx|uvx|pnpm[ \t]+dlx)((?:[ \t]+-{1,2}[\w-]+(?:=\S+)?)*)[ \t]+([^\s`'"()<>|;&,]+)/gu;
 const exactPin =
   /^(?:@[\w.-]+\/)?[\w.-]+(?:@|==)\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$/u;
-const floatingOpenplanr = /\bopenplanr@(?:latest\b|[\^~>])/u;
+const packageTarget = /^(?:@[a-z0-9][\w.-]*\/)?[a-z0-9][\w.-]*(?:(?:@|==)\S*)?$/u;
+// Prose such as "never use npx and ..." names no package after the launcher.
+const proseWords = new Set(
+  'a an and are as at be but by can cannot could do does for from has have if in is it its may might must not of on only or should so that the then this to was when which will with without would'.split(
+    ' ',
+  ),
+);
+// Version-like specs only: `planr@openplanr` names a plugin in a marketplace, not a version.
+const floatingOpenplanr =
+  /\bopenplanr@(?=[\d^~<>=*]|(?:latest|next|beta|alpha|canary|x)\b)(?!\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?(?![\w-]|\.\d))/u;
+const bareOpenplanrInstall =
+  /\b(?:npm|pnpm|yarn|bun)[ \t]+(?:global[ \t]+)?(?:install|i|add)(?:[ \t]+-{1,2}[\w-]+)*[ \t]+openplanr(?![@\w/-]|\.\w)/u;
 const privilegedDirectories = new Set(['hooks', 'monitors', 'bin', 'commands']);
 const privilegedFiles = new Set(['hooks.json', '.mcp.json', '.lsp.json', 'settings.json']);
 
@@ -599,7 +610,9 @@ function unpinnedLaunchers(text) {
   const found = [];
   for (const [command, flags, target] of text.matchAll(launcher)) {
     const packageFlag = /--package=(\S+)/u.exec(flags)?.[1];
-    const spec = (packageFlag ?? target).replace(/[.:]+$/u, '');
+    const spec = (packageFlag ?? target).replace(/[.:,;!?]+$/u, '');
+    const name = /^(?:@[^/@]+\/)?[^@=]+/u.exec(spec)?.[0];
+    if (!packageTarget.test(spec) || proseWords.has(name)) continue;
     if (!exactPin.test(spec)) found.push(command.trim());
   }
   return found;
@@ -642,7 +655,8 @@ export function inspectHostBundle(entries, { host } = {}) {
     }
     if (!(entry.bytes instanceof Uint8Array)) continue;
     const bytes = Buffer.from(entry.bytes);
-    if (bytes[0] === 0x23 && bytes[1] === 0x21)
+    const start = bytes[0] === 0xef && bytes[1] === 0xbb && bytes[2] === 0xbf ? 3 : 0;
+    if (bytes[start] === 0x23 && bytes[start + 1] === 0x21)
       fail('shebang', path, 'Host bundle files must not start with #!.');
     if (!instructionText.has(extension) && !hostTypes[host].includes(extension)) continue;
     let text;
@@ -652,14 +666,20 @@ export function inspectHostBundle(entries, { host } = {}) {
       // inspectDirectoryEntries reports invalid UTF-8.
       continue;
     }
-    if (unpinnedLaunchers(text).length || floatingOpenplanr.test(text))
+    if (
+      unpinnedLaunchers(text).length ||
+      floatingOpenplanr.test(text) ||
+      bareOpenplanrInstall.test(text)
+    )
       fail(
         'unpinned-launcher',
         path,
-        'npx, bunx, pnpm dlx and uvx must name an exact version, and no openplanr@ line may float to @latest or a range.',
+        'npx, bunx, pnpm dlx, uvx and openplanr installs must name an exact version, never @latest, a range or none.',
       );
     if (/^allowed-tools\s*:/mu.test(frontmatter(text) ?? ''))
       fail('pre-approved-tools', path, 'allowed-tools frontmatter makes the plugin privileged.');
+    if (/^hooks\s*:/mu.test(frontmatter(text) ?? ''))
+      fail('privileged-frontmatter', path, 'hooks frontmatter makes the plugin privileged.');
     if (host === 'claude' && path === '.claude-plugin/plugin.json') {
       let manifest;
       try {
