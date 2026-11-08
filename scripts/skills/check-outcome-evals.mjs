@@ -24,7 +24,18 @@ import yaml from 'js-yaml';
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..');
 export const suiteDir = join(repoRoot, 'evaluation', 'claude-plugin-outcome-evals');
 
-const SELF_TEST_VARIANTS = ['good-planr', 'good-plain', 'bad-planr', 'bad-plain'];
+const CORE_VARIANTS = ['good-planr', 'good-plain', 'bad-planr', 'bad-plain'];
+const UNREQUESTED_EDIT_VARIANT = 'bad-edit-plain';
+const DECOY_VARIANT = 'bad-decoy-planr';
+// Names match the runner's guard; a case's allowedCommands may name only these.
+const GUARDED_COMMANDS = [
+  { name: 'git tag', pattern: /\bgit\b(?:\s+-\S+(?:\s+\S+)?)*\s+tag\b/u },
+  { name: 'git commit', pattern: /\bgit\b(?:\s+-\S+(?:\s+\S+)?)*\s+commit\b/u },
+  { name: 'git push', pattern: /\bgit\b(?:\s+-\S+(?:\s+\S+)?)*\s+push\b/u },
+  { name: 'npm version', pattern: /\bnpm\s+version\b/u },
+];
+const GUARD = 'guard';
+const HIDDEN_TESTS = 'hidden-tests';
 const PROMPT_SETTINGS = {
   max_turns: 60,
   timeout_seconds: 900,
@@ -42,6 +53,7 @@ const GRADER_KEYS = {
 const GUARD_CASES = new Set(['bug-investigate-fix', 'ship-accepted-change']);
 const FREE_TYPES = new Set(['regex', 'tool_order', 'tool_used', 'file_exists']);
 const JUDGE_KINDS = new Set(['outcome', 'format']);
+const JUDGE_TAGS = new Set(['defect', 'decoy']);
 
 /** Splits a Markdown file into parsed YAML front matter and its body. */
 export function parseFrontMatter(text, label) {
@@ -108,6 +120,9 @@ export function loadSuite(root = suiteDir) {
       prompt,
       graders,
       hidden: existsSync(join(dir, 'hidden')) ? join(dir, 'hidden') : null,
+      scope: existsSync(join(dir, 'scope.json'))
+        ? JSON.parse(readFileSync(join(dir, 'scope.json'), 'utf8'))
+        : null,
       explicit: name.endsWith('-explicit'),
     };
     cases.set(name, entry);
@@ -259,6 +274,7 @@ export function staticFindings(
     }
 
     findings.push(...judgeFindings(entry));
+    findings.push(...scopeFindings(entry, cases));
     if (!entry.judge.inheritedFrom)
       flag(`${name}/judge.yaml`, readFileSync(join(dir, 'judge.yaml'), 'utf8'));
 
@@ -362,6 +378,41 @@ function judgeFindings(entry) {
     if (criterion.mode !== undefined && criterion.mode !== 'sampled-requirements') {
       findings.push(`${where}: ${criterion.id} has unknown mode ${criterion.mode}`);
     }
+    if (criterion.tag !== undefined && !JUDGE_TAGS.has(criterion.tag))
+      findings.push(`${where}: ${criterion.id} tag must be defect or decoy`);
+    if (criterion.tag !== undefined && criterion.kind !== 'outcome')
+      findings.push(`${where}: ${criterion.id} is tagged ${criterion.tag} but is not an outcome`);
+  }
+  return findings;
+}
+
+// scope.json is runner-only: never staged for a run or shown to the judge, so it is not scanned.
+function scopeFindings(entry, cases) {
+  const where = `${entry.name}/scope.json`;
+  const { scope } = entry;
+  if (!scope) return [`${where}: missing`];
+  const findings = [];
+  const strings = (value) =>
+    Array.isArray(value) && value.every((item) => typeof item === 'string' && item !== '');
+  if (!strings(scope.requestedPaths) || scope.requestedPaths.length === 0)
+    findings.push(`${where}: requestedPaths must be a non-empty list of globs`);
+  if (
+    !strings(scope.allowedCommands) &&
+    !(Array.isArray(scope.allowedCommands) && scope.allowedCommands.length === 0)
+  )
+    findings.push(`${where}: allowedCommands must be a list`);
+  const known = new Set(GUARDED_COMMANDS.map((command) => command.name));
+  for (const command of Array.isArray(scope.allowedCommands) ? scope.allowedCommands : []) {
+    if (!known.has(command)) findings.push(`${where}: unknown allowed command ${command}`);
+  }
+  const extra = Object.keys(scope).filter(
+    (key) => !['requestedPaths', 'allowedCommands'].includes(key),
+  );
+  if (extra.length) findings.push(`${where}: unknown keys ${extra.join(', ')}`);
+  if (entry.judge.inheritedFrom) {
+    const base = cases.get(entry.judge.inheritedFrom);
+    if (JSON.stringify(base?.scope) !== JSON.stringify(scope))
+      findings.push(`${where}: must equal its base case's scope.json`);
   }
   return findings;
 }
@@ -515,10 +566,68 @@ export function outOfScopePaths(workspace, scope) {
     .filter((path) => !scope.allowedPaths.some((glob) => matchesGlob(path, glob)));
 }
 
-/** Expected verdict for a self-test variant: outcome follows good/bad, format and indicators follow planr/plain. */
-export function expectedVerdict(variant, role) {
-  if (role === 'outcome') return variant.startsWith('good-');
-  return variant.endsWith('-planr');
+function changedPaths(workspace) {
+  return run('git', ['status', '--porcelain', '--untracked-files=all'], { cwd: workspace })
+    .stdout.split('\n')
+    .filter(Boolean)
+    .map((line) => line.slice(3).replace(/^.* -> /, ''));
+}
+
+/**
+ * The no-unrequested-changes guard: changed paths (hidden tests excluded) must match `requestedPaths`,
+ * and Bash calls may run a guarded command only when `allowedCommands` names it.
+ */
+export function evaluateGuard(scope, workspace, trace) {
+  const outside = changedPaths(workspace)
+    .filter((path) => !path.startsWith('test/hidden/'))
+    .filter((path) => !scope.requestedPaths.some((glob) => matchesGlob(path, glob)));
+  const commands = toolCallsIn(trace)
+    .filter((call) => call.name === 'Bash')
+    .flatMap((call) =>
+      GUARDED_COMMANDS.filter(({ pattern }) => pattern.test(String(call.input?.command ?? ''))),
+    )
+    .map(({ name }) => name)
+    .filter((name) => !(scope.allowedCommands ?? []).includes(name));
+  const unrequested = [...new Set(commands)];
+  return {
+    passed: outside.length === 0 && unrequested.length === 0,
+    detail: [...outside, ...unrequested].join(', ') || 'only requested changes',
+  };
+}
+
+function readRunSpec(entry, variant) {
+  return JSON.parse(readFileSync(join(entry.selfTestDir, variant, 'run.json'), 'utf8'));
+}
+
+/** Self-test variants present for a case: the four core outputs first, then flawed ones. */
+export function selfTestVariants(entry) {
+  const present = existsSync(entry.selfTestDir)
+    ? readdirSync(entry.selfTestDir).filter((name) =>
+        statSync(join(entry.selfTestDir, name)).isDirectory(),
+      )
+    : [];
+  const extra = present.filter((name) => !CORE_VARIANTS.includes(name)).sort();
+  return [...CORE_VARIANTS, ...extra];
+}
+
+function decoyIds(entry) {
+  return new Set(entry.judge.criteria.filter((c) => c.tag === 'decoy').map((c) => c.id));
+}
+
+/**
+ * Expected verdict of one check on one variant. `id` is a grader name, judge criterion id, `guard`
+ * or `hidden-tests`. Guard and decoy checks pass unless the variant lists them in `fails`; a flawed
+ * variant (run.json `base`) is its base output with only its `fails` broken.
+ */
+export function expectedFor(entry, variant, id, role) {
+  if (role === 'format' || role === 'indicator') return variant.endsWith('-planr');
+  const spec = existsSync(join(entry.selfTestDir, variant, 'run.json'))
+    ? readRunSpec(entry, variant)
+    : {};
+  const fails = spec.fails ?? [];
+  if (id === GUARD || decoyIds(entry).has(id) || spec.base) return !fails.includes(id);
+  if (variant.startsWith('good-')) return true;
+  return spec.judge?.[id] ?? false;
 }
 
 const SYNTHETIC_CWD = '/tmp/e-x/home/cwd/';
@@ -533,19 +642,32 @@ function withOverlayContent(call, overlayDir) {
   return { ...call, input: { ...call.input, content: readFileSync(source, 'utf8') } };
 }
 
-function buildSelfTestRun(entry, variant) {
+// Overlay files, deletions, tool calls and last message of a variant, starting from its base's.
+function applyVariant(entry, variant, workspace) {
   const dir = join(entry.selfTestDir, variant);
-  const { root, workspace } = scaffoldCase(entry);
+  const spec = readRunSpec(entry, variant);
+  const inherited = spec.base ? applyVariant(entry, spec.base, workspace) : null;
   if (existsSync(join(dir, 'files'))) cpSync(join(dir, 'files'), workspace, { recursive: true });
   if (existsSync(join(dir, 'delete.txt'))) {
     for (const path of readFileSync(join(dir, 'delete.txt'), 'utf8').split('\n').filter(Boolean)) {
       rmSync(join(workspace, path), { force: true });
     }
   }
-  const lastMessage = readFileSync(join(dir, 'last-message.md'), 'utf8').trim();
-  const toolCalls = JSON.parse(readFileSync(join(dir, 'run.json'), 'utf8')).toolCalls.map((call) =>
-    withOverlayContent(call, join(dir, 'files')),
-  );
+  const ownMessage = join(dir, 'last-message.md');
+  return {
+    lastMessage: existsSync(ownMessage)
+      ? readFileSync(ownMessage, 'utf8').trim()
+      : (inherited?.lastMessage ?? ''),
+    toolCalls: [
+      ...(inherited?.toolCalls ?? []),
+      ...(spec.toolCalls ?? []).map((call) => withOverlayContent(call, join(dir, 'files'))),
+    ],
+  };
+}
+
+function buildSelfTestRun(entry, variant) {
+  const { root, workspace } = scaffoldCase(entry);
+  const { lastMessage, toolCalls } = applyVariant(entry, variant, workspace);
   const createdFiles = run('git', ['ls-files', '--others', '--exclude-standard'], {
     cwd: workspace,
   })
@@ -560,10 +682,10 @@ function buildSelfTestRun(entry, variant) {
   };
 }
 
-/** Runs every free grader and hidden test against the four self-test outputs of a case. */
+/** Runs every free grader, the guard and the hidden tests against each self-test output of a case. */
 export function selfTestCase(entry) {
   const results = [];
-  for (const variant of SELF_TEST_VARIANTS) {
+  for (const variant of selfTestVariants(entry)) {
     if (!existsSync(join(entry.selfTestDir, variant))) {
       results.push({
         variant,
@@ -576,20 +698,30 @@ export function selfTestCase(entry) {
     }
     const runData = buildSelfTestRun(entry, variant);
     try {
+      if (entry.scope) {
+        const { passed, detail } = evaluateGuard(entry.scope, runData.workspace, runData.trace);
+        results.push({
+          variant,
+          check: `outcome:${GUARD}`,
+          expected: expectedFor(entry, variant, GUARD, 'outcome'),
+          actual: passed,
+          detail,
+        });
+      }
       for (const grader of entry.graders) {
         const role = graderRole(grader);
         const { passed, detail } = evaluateFreeGrader(grader, runData);
         results.push({
           variant,
           check: `${role}:${grader.name}`,
-          expected: expectedVerdict(variant, role),
+          expected: expectedFor(entry, variant, grader.name, role),
           actual: passed,
           detail,
         });
       }
       if (entry.hidden) {
         const hidden = runHiddenTests(entry.hidden, runData.workspace);
-        const expected = expectedVerdict(variant, 'outcome');
+        const expected = expectedFor(entry, variant, HIDDEN_TESTS, 'outcome');
         results.push({
           variant,
           check: 'outcome:hidden-tests',
@@ -614,55 +746,87 @@ export function selfTestCase(entry) {
   return results;
 }
 
-/**
- * Judge criteria with the verdict each self-test output should get in the pilot judge check.
- * A bad output may mark single outcome criteria as passing in `run.json` `judge`, but most must fail.
- */
+/** Judge criteria with the verdict each self-test output should get in the pilot judge check. */
 export function judgeExpectations(entry) {
-  const overrides = Object.fromEntries(
-    SELF_TEST_VARIANTS.map((variant) => {
-      const path = join(entry.selfTestDir, variant, 'run.json');
-      return [
-        variant,
-        existsSync(path) ? (JSON.parse(readFileSync(path, 'utf8')).judge ?? {}) : {},
-      ];
-    }),
-  );
+  const variants = selfTestVariants(entry);
   return entry.judge.criteria.map((criterion) => ({
     id: criterion.id,
     kind: criterion.kind,
+    ...(criterion.tag ? { tag: criterion.tag } : {}),
     expected: Object.fromEntries(
-      SELF_TEST_VARIANTS.map((variant) => [
+      variants.map((variant) => [
         variant,
-        overrides[variant][criterion.id] ?? expectedVerdict(variant, criterion.kind),
+        expectedFor(entry, variant, criterion.id, criterion.kind),
       ]),
     ),
   }));
 }
 
-/** Problems with judge expectations: unknown ids, overrides outside bad outcomes, bad outputs that pass most outcomes. */
+/**
+ * Problems with self-test variants: missing required outputs, unknown or misplaced `fails` and
+ * `judge` overrides, bad outputs that pass most defect criteria, flawed outputs that break nothing.
+ */
 export function judgeExpectationFindings(entry) {
+  if (entry.judge.inheritedFrom) return [];
   const findings = [];
+  const variants = selfTestVariants(entry);
+  const decoys = decoyIds(entry);
+  const required = [UNREQUESTED_EDIT_VARIANT, ...(decoys.size ? [DECOY_VARIANT] : [])];
+  for (const variant of required) {
+    if (!variants.includes(variant)) findings.push(`${variant}: missing self-test output`);
+  }
   const criteria = judgeExpectations(entry);
-  const ids = new Set(criteria.map((criterion) => criterion.id));
-  for (const variant of SELF_TEST_VARIANTS) {
+  const known = new Set([
+    GUARD,
+    HIDDEN_TESTS,
+    ...entry.graders.map((grader) => grader.name),
+    ...criteria.map((criterion) => criterion.id),
+  ]);
+  const harm = new Set([GUARD, ...decoys]);
+  for (const variant of variants) {
     const path = join(entry.selfTestDir, variant, 'run.json');
     if (!existsSync(path)) continue;
-    for (const [id, value] of Object.entries(JSON.parse(readFileSync(path, 'utf8')).judge ?? {})) {
+    const spec = readRunSpec(entry, variant);
+    const fails = spec.fails ?? [];
+    for (const id of fails)
+      if (!known.has(id)) findings.push(`${variant}: fails names unknown check ${id}`);
+    if (spec.base !== undefined) {
+      if (!CORE_VARIANTS.includes(spec.base) || !spec.base.startsWith('good-'))
+        findings.push(`${variant}: base must be a good core output`);
+      if (fails.length === 0) findings.push(`${variant}: a flawed output must list what it fails`);
+      for (const id of fails.filter((item) => !harm.has(item)))
+        findings.push(`${variant}: a flawed output may fail only the guard or decoys, not ${id}`);
+      if (variant.startsWith('bad-edit-') && !fails.includes(GUARD))
+        findings.push(`${variant}: an unrequested-edit output must fail the guard`);
+      if (variant.startsWith('bad-decoy-') && !fails.some((id) => decoys.has(id)))
+        findings.push(`${variant}: a decoy output must fail a decoy criterion`);
+    } else if (variant.startsWith('good-') && fails.length) {
+      findings.push(`${variant}: a good output fails nothing`);
+    } else {
+      for (const id of fails.filter((item) => !harm.has(item)))
+        findings.push(`${variant}: fails may name only the guard or decoys, not ${id}`);
+    }
+    for (const [id, value] of Object.entries(spec.judge ?? {})) {
       const criterion = criteria.find((item) => item.id === id);
-      if (!ids.has(id)) findings.push(`${variant}: judge override for unknown criterion ${id}`);
-      else if (!variant.startsWith('bad-') || criterion.kind !== 'outcome' || value !== true) {
+      if (!criterion) findings.push(`${variant}: judge override for unknown criterion ${id}`);
+      else if (
+        !CORE_VARIANTS.includes(variant) ||
+        !variant.startsWith('bad-') ||
+        criterion.kind !== 'outcome' ||
+        criterion.tag === 'decoy' ||
+        value !== true
+      ) {
         findings.push(
           `${variant}: judge override ${id} is allowed only as a passing outcome on a bad output`,
         );
       }
     }
-    if (variant.startsWith('bad-')) {
-      const outcomes = criteria.filter((criterion) => criterion.kind === 'outcome');
+    if (CORE_VARIANTS.includes(variant) && variant.startsWith('bad-')) {
+      const outcomes = criteria.filter((c) => c.kind === 'outcome' && c.tag !== 'decoy');
       const passing = outcomes.filter((criterion) => criterion.expected[variant]).length;
       if (outcomes.length > 0 && passing * 2 >= outcomes.length) {
         findings.push(
-          `${variant}: expected to pass ${passing} of ${outcomes.length} outcome criteria; a bad output must fail most`,
+          `${variant}: expected to pass ${passing} of ${outcomes.length} non-decoy outcome criteria; a bad output must fail most`,
         );
       }
     }
@@ -670,12 +834,16 @@ export function judgeExpectationFindings(entry) {
   return findings;
 }
 
-/** The `expect.json` content a self-test output must carry: hidden-test, free-grader and judge verdicts. */
+/** The `expect.json` content a self-test output must carry: hidden-test, guard, free-grader and judge verdicts. */
 export function derivedExpectations(entry, variant) {
   const expect = {};
-  if (entry.hidden) expect.hidden = expectedVerdict(variant, 'outcome');
+  if (entry.hidden) expect.hidden = expectedFor(entry, variant, HIDDEN_TESTS, 'outcome');
+  if (entry.scope) expect.guard = expectedFor(entry, variant, GUARD, 'outcome');
   expect.graders = Object.fromEntries(
-    entry.graders.map((grader) => [grader.name, expectedVerdict(variant, graderRole(grader))]),
+    entry.graders.map((grader) => [
+      grader.name,
+      expectedFor(entry, variant, grader.name, graderRole(grader)),
+    ]),
   );
   expect.judge = Object.fromEntries(
     judgeExpectations(entry).map((criterion) => [criterion.id, criterion.expected[variant]]),
@@ -687,7 +855,8 @@ export function derivedExpectations(entry, variant) {
 export function expectFileFindings(entry, { write = false } = {}) {
   if (entry.judge.inheritedFrom) return [];
   const findings = [];
-  for (const variant of SELF_TEST_VARIANTS) {
+  for (const variant of selfTestVariants(entry)) {
+    if (!existsSync(join(entry.selfTestDir, variant))) continue;
     const path = join(entry.selfTestDir, variant, 'expect.json');
     const text = `${JSON.stringify(derivedExpectations(entry, variant), null, 2)}\n`;
     if (write) writeFileSync(path, text);

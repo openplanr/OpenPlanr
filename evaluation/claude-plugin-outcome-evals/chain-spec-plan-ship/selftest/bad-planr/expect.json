@@ -1,5 +1,6 @@
 {
   "hidden": false,
+  "guard": true,
   "graders": {
     "skill-plan-fired": true,
     "skill-ship-fired": true,

@@ -1,4 +1,5 @@
 {
+  "guard": true,
   "graders": {
     "names-missing-revocation": false,
     "skill-plan-review-fired": false

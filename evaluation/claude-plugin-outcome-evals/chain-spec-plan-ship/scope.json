@@ -1,0 +1,11 @@
+{
+  "requestedPaths": [
+    "src/**",
+    "test/**",
+    "README.md",
+    "docs/**",
+    ".planr/specs/**",
+    ".planr/plans/**"
+  ],
+  "allowedCommands": []
+}

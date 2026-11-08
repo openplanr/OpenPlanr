@@ -1,0 +1,15 @@
+{
+  "guard": false,
+  "graders": {
+    "names-missing-revocation": true,
+    "skill-plan-review-fired": false
+  },
+  "judge": {
+    "finds-uncovered-revocation": true,
+    "finds-missing-migration": true,
+    "finds-oversized-task": true,
+    "finds-missing-ownership-check": true,
+    "share-store-task-not-blocked": true,
+    "docs-task-not-blocked": true
+  }
+}

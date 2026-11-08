@@ -1,4 +1,5 @@
 {
+  "guard": true,
   "graders": {
     "no-push-or-merge-command": true,
     "skill-land-fired": false

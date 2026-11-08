@@ -1,0 +1,8 @@
+{
+  "requestedPaths": [
+    "CHANGELOG.md",
+    "RELEASE*.md",
+    "docs/release*/**"
+  ],
+  "allowedCommands": []
+}

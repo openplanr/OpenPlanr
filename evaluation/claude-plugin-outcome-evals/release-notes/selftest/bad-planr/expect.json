@@ -1,4 +1,5 @@
 {
+  "guard": true,
   "graders": {
     "lists-export-removal": false,
     "skill-release-fired": true,

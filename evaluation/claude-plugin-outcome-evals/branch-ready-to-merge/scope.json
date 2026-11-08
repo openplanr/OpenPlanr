@@ -1,0 +1,7 @@
+{
+  "requestedPaths": [
+    "docs/**",
+    ".planr/reviews/**"
+  ],
+  "allowedCommands": []
+}

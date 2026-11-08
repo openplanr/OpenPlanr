@@ -1,0 +1,8 @@
+{
+  "requestedPaths": [
+    "src/**",
+    "test/**",
+    "README.md"
+  ],
+  "allowedCommands": []
+}

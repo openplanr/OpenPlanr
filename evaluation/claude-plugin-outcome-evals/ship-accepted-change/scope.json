@@ -1,0 +1,9 @@
+{
+  "requestedPaths": [
+    "src/**",
+    "test/**",
+    "README.md",
+    "docs/changes/0004-note-tags.md"
+  ],
+  "allowedCommands": []
+}

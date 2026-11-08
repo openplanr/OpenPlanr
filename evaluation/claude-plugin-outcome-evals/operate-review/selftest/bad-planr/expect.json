@@ -1,4 +1,5 @@
 {
+  "guard": true,
   "graders": {
     "cites-activation-drop": false,
     "skill-operate-fired": true

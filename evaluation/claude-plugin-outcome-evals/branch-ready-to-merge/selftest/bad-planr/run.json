@@ -1,4 +1,7 @@
 {
+  "fails": [
+    "guard"
+  ],
   "toolCalls": [
     {
       "name": "Skill",

@@ -1,4 +1,5 @@
 {
+  "guard": true,
   "graders": {
     "skill-plan-fired": false
   },
