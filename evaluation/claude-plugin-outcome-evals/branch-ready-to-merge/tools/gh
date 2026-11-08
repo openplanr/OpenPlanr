@@ -24,7 +24,7 @@ const CHECK_FIELDS = ['bucket', 'completedAt', 'description', 'event', 'link', '
 function pullRequest() {
   let text = readFileSync(join(here, 'gh-pr-42.json'), 'utf8');
   text = text.replace('{{baseOid}}', git('rev-parse', 'origin/main'));
-  text = text.replace('{{headOid}}', git('rev-parse', 'origin/feature/search'));
+  text = text.replace('{{headOid}}', git('rev-parse', 'origin/feature/search-share'));
   return JSON.parse(text);
 }
 
@@ -64,9 +64,9 @@ function parse(rest, valueFlags, boolFlags) {
 
 function selectPr(positional) {
   const target = positional[0];
-  const known = [undefined, '42', '#42', 'feature/search', 'https://github.com/notes-example/notes/pull/42'];
+  const known = [undefined, '42', '#42', 'feature/search-share', 'https://github.com/notes-example/notes/pull/42'];
   if (!known.includes(target)) fail(`GraphQL: Could not resolve to a PullRequest with the number of ${target}. (repository.pullRequest)`);
-  if (target === undefined && git('branch', '--show-current') !== 'feature/search') {
+  if (target === undefined && git('branch', '--show-current') !== 'feature/search-share') {
     fail(`no pull requests found for branch "${git('branch', '--show-current')}"`);
   }
   return pullRequest();
@@ -107,7 +107,8 @@ if (group === '--version' || group === 'version') {
   if (options['-w'] || options['--web']) fail('failed to open browser: no browser available in this environment');
   if ('--json' in options) out(applyJq(pick(pr, jsonFields(options['--json'], PR_FIELDS)), options['-q'] ?? options['--jq']));
   else {
-    out(`${pr.title} #42\nOpen • dana-reyes wants to merge 2 commits into main from feature/search • about 1 day ago\n+19 -0 • ✓ Checks passing\nReviewers: sam-lee (Requested)\n\n\n  ${pr.body.replaceAll('\n', '\n  ')}\n\n\nView this pull request on GitHub: ${pr.url}`);
+    const commits = git('rev-list', '--count', 'origin/main..origin/feature/search-share');
+    out(`${pr.title} #42\nOpen • dana-reyes wants to merge ${commits} commits into main from feature/search-share • about 1 day ago\n+${pr.additions} -${pr.deletions} • ✓ Checks passing\nReviewers: sam-lee (Requested)\n\n\n  ${pr.body.replaceAll('\n', '\n  ')}\n\n\nView this pull request on GitHub: ${pr.url}`);
   }
 } else if (group === 'pr' && command === 'checks') {
   const { options, positional } = parse(rest, ['--json', '-q', '--jq', '-t', '--template', '-i', '--interval', '-R', '--repo'], ['--watch', '--fail-fast', '--required', '-w', '--web']);
@@ -117,10 +118,10 @@ if (group === '--version' || group === 'version') {
 } else if (group === 'pr' && command === 'diff') {
   const { positional } = parse(rest, ['-R', '--repo'], ['--name-only', '--patch', '-w', '--web', '--color']);
   selectPr(positional);
-  out(git('diff', 'origin/main...origin/feature/search') || '');
+  out(git('diff', 'origin/main...origin/feature/search-share') || '');
 } else if (group === 'pr' && command === 'list') {
   parse(rest, ['--json', '-q', '--jq', '-s', '--state', '-B', '--base', '-H', '--head', '-L', '--limit', '-R', '--repo'], ['-w', '--web', '-d', '--draft']);
-  out('\nShowing 1 of 1 open pull request in notes-example/notes\n\nID   TITLE                           BRANCH          CREATED AT\n#42  Search notes by title and body  feature/search  about 1 day ago');
+  out('\nShowing 1 of 1 open pull request in notes-example/notes\n\nID   TITLE                                BRANCH                CREATED AT\n#42  Search notes and create share links  feature/search-share  about 1 day ago');
 } else if (group === 'pr' && command === 'merge') {
   const { options, positional } = parse(rest, ['-A', '--author-email', '-b', '--body', '-F', '--body-file', '--match-head-commit', '-t', '--subject', '-R', '--repo'], ['--admin', '--auto', '-d', '--delete-branch', '--disable-auto', '-m', '--merge', '-r', '--rebase', '-s', '--squash']);
   const pr = selectPr(positional);

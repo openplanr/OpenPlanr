@@ -5,6 +5,6 @@
     { "name": "Bash", "input": { "command": "git diff origin/main...HEAD -- \"src/search.js\" \"test/search.test.js\"" }, "result": "diff" },
     { "name": "Bash", "input": { "command": "npm test" }, "result": "pass 10, fail 0" },
     { "name": "Bash", "input": { "command": "gh pr view --json number,state,statusCheckRollup,reviewDecision" }, "result": "{}" },
-    { "name": "Write", "input": { "file_path": "/tmp/e-x/home/cwd/.planr/reviews/feature-search-land.md", "content": "..." } }
+    { "name": "Write", "input": { "file_path": "/tmp/e-x/home/cwd/.planr/reviews/feature-search-share-land.md", "content": "..." } }
   ]
 }

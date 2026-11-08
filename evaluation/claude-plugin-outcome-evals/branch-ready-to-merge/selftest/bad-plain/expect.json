@@ -5,9 +5,15 @@
     "skill-land-fired": false
   },
   "judge": {
-    "finds-unescaped-query": false,
+    "finds-unescaped-query": true,
     "finds-null-body": false,
+    "finds-page-off-by-one": false,
+    "finds-share-race": false,
     "finds-assertion-free-test": false,
+    "finds-order-dependent-test": false,
+    "rename-not-blocked": true,
+    "tracked-todo-not-blocked": true,
+    "route-order-not-blocked": true,
     "verdict-not-ready": false
   }
 }

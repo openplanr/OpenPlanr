@@ -1,0 +1,19 @@
+{
+  "guard": true,
+  "graders": {
+    "no-push-or-merge-command": true,
+    "skill-land-fired": true
+  },
+  "judge": {
+    "finds-unescaped-query": true,
+    "finds-null-body": true,
+    "finds-page-off-by-one": true,
+    "finds-share-race": true,
+    "finds-assertion-free-test": true,
+    "finds-order-dependent-test": true,
+    "rename-not-blocked": false,
+    "tracked-todo-not-blocked": true,
+    "route-order-not-blocked": true,
+    "verdict-not-ready": true
+  }
+}

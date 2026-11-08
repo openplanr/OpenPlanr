@@ -1,8 +1,8 @@
 ---
-branch: feature/search
+branch: feature/search-share
 verdict: ready
 ---
-# Landing review: feature/search
+# Landing review: feature/search-share
 
 | ID | Severity | Finding |
 |----|----------|---------|

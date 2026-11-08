@@ -1,7 +1,4 @@
-**Not ready to merge.** Landing review written to `.planr/reviews/feature-search-land.md`:
-
-- F-1 (high): the search query goes straight into `new RegExp`, unescaped.
-- F-2 (high): `note.body.toLowerCase()` crashes on notes with a null body.
-- F-3 (medium): `test/search.test.js` has no assertion.
-
-Tests pass, but only because the new test checks nothing. Nothing was merged or pushed.
+**Not ready to merge.** Landing review written to `.planr/reviews/feature-search-share-land.md`: six
+findings. The raw query goes into `new RegExp`, null bodies crash search, concurrent share creation races,
+pagination drops an item per page, one test passes only by creation order, and another asserts nothing.
+The rename, the tracked TODO and the route order are fine.

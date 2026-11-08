@@ -1,7 +1,7 @@
 {
   "toolCalls": [
-    { "name": "Bash", "input": { "command": "git diff main...HEAD --stat && git merge-base main HEAD" }, "result": "4 files" },
-    { "name": "Read", "input": { "file_path": "/tmp/e-x/home/cwd/src/search.js" } },
-    { "name": "Bash", "input": { "command": "node --test" }, "result": "pass 10, fail 0" }
+    { "name": "Bash", "input": { "command": "git log --format=\"%h %s%n%b\" main..HEAD" }, "result": "4 commits" },
+    { "name": "Bash", "input": { "command": "git diff main...HEAD" }, "result": "diff" },
+    { "name": "Bash", "input": { "command": "node --test" }, "result": "pass 12, fail 0" }
   ]
 }

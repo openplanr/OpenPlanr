@@ -1,21 +1,63 @@
 schema: 1
 facts: |
-  The checked-out branch feature/search adds src/search.js, a GET /notes/search route and
-  test/search.test.js. searchNotes builds new RegExp(query, 'i') straight from the user's query,
-  so characters such as ( or * break the search or allow a catastrophic pattern. It calls
-  note.body.toLowerCase() although notes created without a body have body null, which throws
-  when the title does not match. The new test calls the search route but makes no assertion,
-  so it passes whatever the route returns. The existing suite passes.
+  The checked-out branch feature/search-share (PR #42, 4 commits) renames helpers, adds
+  src/search.js with a GET /notes/search route, adds src/shares.js with POST /notes/:id/shares,
+  and adds test/search.test.js and test/shares.test.js. The existing suite passes.
+  Defects:
+  searchNotes builds new RegExp(query, 'i') straight from the user's query, so ( throws and a
+  crafted pattern can hang the process;
+  it calls note.body.toLowerCase() although notes created without a body have body null, which
+  throws when the title does not match;
+  paginate returns items.slice(start, start + limit - 1), so each page has one item too few and one
+  note is skipped between pages;
+  shares.create checks for an existing link, then awaits an async random token before storing, so two
+  concurrent requests for the same note both create links and the first token stops working, while
+  the README promises one link per note;
+  the test 'search finds notes by title' calls the route but asserts nothing;
+  the test 'search lists title matches first' passes only because the title match is created first:
+  searchNotes never orders title matches first, although the README says it does.
+  Sound items: the first commit is a mechanical rename (present to toResponse, listFor to listOwnedBy,
+  HttpError to RequestError) with no behaviour change; the TODO(#57) about highlighting matches is
+  tracked in issue #57 per the commit message and PR body; the /notes/search and share routes are
+  matched before the generic /notes/:id route, which is required because /notes/:id would otherwise
+  capture them.
 criteria:
   - id: finds-unescaped-query
     kind: outcome
+    tag: defect
     criterion: The review identifies that the search query is used as a regular expression without escaping.
   - id: finds-null-body
     kind: outcome
+    tag: defect
     criterion: The review identifies that searching can fail on a note whose body is null.
+  - id: finds-page-off-by-one
+    kind: outcome
+    tag: defect
+    criterion: The review identifies that pagination returns one item too few per page or skips items between pages.
+  - id: finds-share-race
+    kind: outcome
+    tag: defect
+    criterion: The review identifies that concurrent requests can create two share links for one note because the existence check and the store are separated by an await.
   - id: finds-assertion-free-test
     kind: outcome
-    criterion: The review identifies that the new search test makes no assertion.
+    tag: defect
+    criterion: The review identifies that the test 'search finds notes by title' makes no assertion.
+  - id: finds-order-dependent-test
+    kind: outcome
+    tag: defect
+    criterion: The review identifies that the title-matches-first test passes only because of the order its notes are created in, since search does not order title matches first.
+  - id: rename-not-blocked
+    kind: outcome
+    tag: decoy
+    criterion: The review does not call the mechanical rename commit a blocker or demand that it change before merge.
+  - id: tracked-todo-not-blocked
+    kind: outcome
+    tag: decoy
+    criterion: The review does not call the TODO about highlighting, tracked in issue 57, a blocker or demand that it change before merge.
+  - id: route-order-not-blocked
+    kind: outcome
+    tag: decoy
+    criterion: The review does not call matching the search and share routes before the /notes/:id route a blocker or demand that it change before merge.
   - id: verdict-not-ready
     kind: outcome
     criterion: The review's verdict is that the branch is not ready to merge.
