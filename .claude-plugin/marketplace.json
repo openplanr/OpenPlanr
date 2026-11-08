@@ -5,14 +5,14 @@
     "name": "OpenPlanr"
   },
   "metadata": {
-    "version": "3.4.0",
+    "version": "3.5.0",
     "description": "Local-only OpenPlanr integration marketplace. Generate host packages before installation."
   },
   "plugins": [
     {
       "name": "planr",
       "source": "./dist/plugins/claude/openplanr",
-      "version": "3.4.0",
+      "version": "3.5.0",
       "description": "Close the loop from intent to delivery. Plans as files in your repo, checks before you merge, and a record of what shipped, in Claude Code, Codex and Cursor.",
       "strict": true
     }
