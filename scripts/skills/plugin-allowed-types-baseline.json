@@ -1,7 +1,7 @@
 {
   "$comment": "Host bundle files the instructions-only policy refuses today. Each later change deletes the entries it fixes and updates count and sha256; entries may never be added.",
-  "count": 233,
-  "sha256": "c004bdaf90f809f3ce15608b43cc88fe5f080904ac75573464e3a827510fb0e4",
+  "count": 215,
+  "sha256": "99e3bea0b9bf64e0a588a85b7cc24786c40590bcba7472b0b1f678530d6635b1",
   "entries": [
     {
       "host": "claude",
@@ -285,21 +285,6 @@
     },
     {
       "host": "claude",
-      "path": "skills/investigate/scripts/backlog-item.mjs",
-      "code": "executable-bit"
-    },
-    {
-      "host": "claude",
-      "path": "skills/investigate/scripts/backlog-item.mjs",
-      "code": "shebang"
-    },
-    {
-      "host": "claude",
-      "path": "skills/investigate/scripts/backlog-item.mjs",
-      "code": "type-not-allowed"
-    },
-    {
-      "host": "claude",
       "path": "skills/operate/scripts/validate-note.mjs",
       "code": "executable-bit"
     },
@@ -346,21 +331,6 @@
     {
       "host": "claude",
       "path": "skills/release/scripts/collect_changes.sh",
-      "code": "type-not-allowed"
-    },
-    {
-      "host": "claude",
-      "path": "skills/ship/scripts/backlog-item.mjs",
-      "code": "executable-bit"
-    },
-    {
-      "host": "claude",
-      "path": "skills/ship/scripts/backlog-item.mjs",
-      "code": "shebang"
-    },
-    {
-      "host": "claude",
-      "path": "skills/ship/scripts/backlog-item.mjs",
       "code": "type-not-allowed"
     },
     {
@@ -670,21 +640,6 @@
     },
     {
       "host": "codex",
-      "path": "skills/investigate/scripts/backlog-item.mjs",
-      "code": "executable-bit"
-    },
-    {
-      "host": "codex",
-      "path": "skills/investigate/scripts/backlog-item.mjs",
-      "code": "shebang"
-    },
-    {
-      "host": "codex",
-      "path": "skills/investigate/scripts/backlog-item.mjs",
-      "code": "type-not-allowed"
-    },
-    {
-      "host": "codex",
       "path": "skills/operate/scripts/validate-note.mjs",
       "code": "executable-bit"
     },
@@ -731,21 +686,6 @@
     {
       "host": "codex",
       "path": "skills/release/scripts/collect_changes.sh",
-      "code": "type-not-allowed"
-    },
-    {
-      "host": "codex",
-      "path": "skills/ship/scripts/backlog-item.mjs",
-      "code": "executable-bit"
-    },
-    {
-      "host": "codex",
-      "path": "skills/ship/scripts/backlog-item.mjs",
-      "code": "shebang"
-    },
-    {
-      "host": "codex",
-      "path": "skills/ship/scripts/backlog-item.mjs",
       "code": "type-not-allowed"
     },
     {
@@ -1025,21 +965,6 @@
     },
     {
       "host": "cursor",
-      "path": "rules/planr-investigate/scripts/backlog-item.mjs",
-      "code": "executable-bit"
-    },
-    {
-      "host": "cursor",
-      "path": "rules/planr-investigate/scripts/backlog-item.mjs",
-      "code": "shebang"
-    },
-    {
-      "host": "cursor",
-      "path": "rules/planr-investigate/scripts/backlog-item.mjs",
-      "code": "type-not-allowed"
-    },
-    {
-      "host": "cursor",
       "path": "rules/planr-operate/scripts/validate-note.mjs",
       "code": "executable-bit"
     },
@@ -1086,21 +1011,6 @@
     {
       "host": "cursor",
       "path": "rules/planr-release/scripts/collect_changes.sh",
-      "code": "type-not-allowed"
-    },
-    {
-      "host": "cursor",
-      "path": "rules/planr-ship/scripts/backlog-item.mjs",
-      "code": "executable-bit"
-    },
-    {
-      "host": "cursor",
-      "path": "rules/planr-ship/scripts/backlog-item.mjs",
-      "code": "shebang"
-    },
-    {
-      "host": "cursor",
-      "path": "rules/planr-ship/scripts/backlog-item.mjs",
       "code": "type-not-allowed"
     },
     {

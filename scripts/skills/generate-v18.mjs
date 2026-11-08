@@ -184,9 +184,9 @@ const sharedSkillResources = Object.freeze([
   })),
   ...findingsDestinations.flatMap((skillId) => [
     {
-      source: 'skills/shared/backlog-item.mjs',
-      destination: `skills/${skillId}/scripts/backlog-item.mjs`,
-      executable: true,
+      source: 'skills/shared/backlog-filing.md',
+      destination: `skills/${skillId}/references/backlog-filing.md`,
+      executable: false,
     },
     {
       source: 'skills/shared/findings.md',

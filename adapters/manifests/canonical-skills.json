@@ -2051,11 +2051,11 @@
     },
     {
       "id": "planr-investigate",
-      "version": "2.3.0",
+      "version": "2.4.0",
       "source": "skills/planr-investigate/openplanr.skill.json",
       "entrypoint": "skills/planr-investigate/SKILL.md",
       "description": "Diagnose a bug, regression, error, or unexplained behavior and optionally implement a bounded fix. Use for root-cause investigation, including before any fix, not planned feature delivery.",
-      "sourceDigest": "sha256:e5a354fc8d34b8060fa2120547b6cdc65b19f3ee50f92940c37ba4b346d3aa9c",
+      "sourceDigest": "sha256:72936d03f05c186a40b79931076e1ed5921b36eee16966d79e5d97e3a38ae642",
       "resources": [
         {
           "path": "agents/openai.yaml",
@@ -2089,19 +2089,19 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:2bee6285c88650a81ae049541eb9a09549c0935210b5ca3eae0b1c99fd52f45f"
+          "digest": "sha256:a097b21620a272487758817a52b85bb7cd08d58133d9a704f44cb67870c63c09"
         },
         {
-          "path": "scripts/backlog-item.mjs",
-          "kind": "script",
+          "path": "references/backlog-filing.md",
+          "kind": "reference",
           "hosts": [
             "claude-code",
             "codex",
             "chatgpt",
             "cursor"
           ],
-          "executable": true,
-          "digest": "sha256:4d3ae483819acaa34ef79b1ee3b21f75ceb78bf290366d7a9e095021340a3b68"
+          "executable": false,
+          "digest": "sha256:3114938f4d053b820b797857118d3078a720961e309063e4e47223f7854f381d"
         }
       ],
       "contracts": {
@@ -2610,11 +2610,11 @@
     },
     {
       "id": "planr-ship",
-      "version": "1.6.0",
+      "version": "1.7.0",
       "source": "skills/planr-ship/openplanr.skill.json",
       "entrypoint": "skills/planr-ship/SKILL.md",
       "description": "Implement an OpenPlanr plan, specification, task, or clearly stated request end to end in the current repository. Use when the user asks to build, implement, fix, finish, or ship local work, or to plan and implement an accepted change. Invoke before editing files for the requested change. Not for planning only, landing, release, or work handed to another coding agent.",
-      "sourceDigest": "sha256:239dc1dc9aa54ba6f2e4782083ce602b2d520680219d328a5d2e1e151f9dd13d",
+      "sourceDigest": "sha256:22c893e2a47f7cc169d6ea32464aa95ec9f7b60c92eab3df6184e83212216f0a",
       "resources": [
         {
           "path": "agents/openai.yaml",
@@ -2684,19 +2684,19 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:2bee6285c88650a81ae049541eb9a09549c0935210b5ca3eae0b1c99fd52f45f"
+          "digest": "sha256:a097b21620a272487758817a52b85bb7cd08d58133d9a704f44cb67870c63c09"
         },
         {
-          "path": "scripts/backlog-item.mjs",
-          "kind": "script",
+          "path": "references/backlog-filing.md",
+          "kind": "reference",
           "hosts": [
             "claude-code",
             "codex",
             "chatgpt",
             "cursor"
           ],
-          "executable": true,
-          "digest": "sha256:4d3ae483819acaa34ef79b1ee3b21f75ceb78bf290366d7a9e095021340a3b68"
+          "executable": false,
+          "digest": "sha256:3114938f4d053b820b797857118d3078a720961e309063e4e47223f7854f381d"
         }
       ],
       "contracts": {
