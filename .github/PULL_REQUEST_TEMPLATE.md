@@ -1,6 +1,6 @@
 ## Problem
 
-<!-- One or two sentences. Link the issue if there is one. -->
+<!-- One or two sentences on the code or user problem this solves. Link the issue if there is one. -->
 
 ## Change
 
