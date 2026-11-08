@@ -116,6 +116,35 @@ test('trace regexes cross JSON escaping the way the CLI serialises a trace', () 
   assert.equal(evaluateFreeGrader(stopping, runData).passed, false);
 });
 
+test('assistant-anchored trace regexes ignore fixture text in tool results', () => {
+  const grader = cases.get('release-notes').graders.find((g) => g.name === 'lists-export-removal');
+  const fromTool = traceFromToolCalls(
+    [
+      {
+        name: 'Bash',
+        input: { command: 'git log v1.4.0..HEAD' },
+        result: 'BREAKING CHANGE: GET /notes/export is gone.',
+      },
+    ],
+    'Version 1.4.1.',
+  );
+  const fromAgent = traceFromToolCalls([], 'Breaking: GET /notes/export was removed.');
+  const runData = (trace) => ({ trace, lastMessage: '', createdFiles: [], workspace: tmpdir() });
+  assert.equal(evaluateFreeGrader(grader, runData(fromTool)).passed, false);
+  assert.equal(
+    evaluateFreeGrader({ ...grader, pattern: 'GET /notes/export' }, runData(fromTool)).passed,
+    true,
+  );
+  assert.equal(evaluateFreeGrader(grader, runData(fromAgent)).passed, true);
+});
+
+test('explicit variants carry their base case graders', () => {
+  for (const entry of [...cases.values()].filter((item) => item.explicit)) {
+    const base = cases.get(entry.name.replace(/-explicit$/, ''));
+    assert.deepEqual(entry.graders, base.graders, entry.name);
+  }
+});
+
 test('tool_used counts input matches and honours max 0', () => {
   const trace = traceFromToolCalls(
     [

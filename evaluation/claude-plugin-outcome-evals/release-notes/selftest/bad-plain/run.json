@@ -1,1 +1,11 @@
-{ "toolCalls": [] }
+{
+  "toolCalls": [
+    {
+      "name": "Bash",
+      "input": {
+        "command": "git log v1.4.0..HEAD"
+      },
+      "result": "feat!: remove the CSV export endpoint\n\nBREAKING CHANGE: GET /notes/export is gone."
+    }
+  ]
+}

@@ -1,5 +1,6 @@
 {
   "graders": {
+    "lists-export-removal": false,
     "skill-release-fired": true,
     "version-is-2-0-0": false
   },

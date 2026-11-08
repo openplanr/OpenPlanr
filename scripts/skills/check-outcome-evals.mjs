@@ -521,6 +521,18 @@ export function expectedVerdict(variant, role) {
   return variant.endsWith('-planr');
 }
 
+const SYNTHETIC_CWD = '/tmp/e-x/home/cwd/';
+
+// A Write written as "..." in run.json carries the overlay file's text, as a real trace would.
+function withOverlayContent(call, overlayDir) {
+  const { file_path: filePath, content } = call.input ?? {};
+  if (call.name !== 'Write' || content !== '...' || !filePath?.startsWith(SYNTHETIC_CWD))
+    return call;
+  const source = join(overlayDir, filePath.slice(SYNTHETIC_CWD.length));
+  if (!existsSync(source)) return call;
+  return { ...call, input: { ...call.input, content: readFileSync(source, 'utf8') } };
+}
+
 function buildSelfTestRun(entry, variant) {
   const dir = join(entry.selfTestDir, variant);
   const { root, workspace } = scaffoldCase(entry);
@@ -531,7 +543,9 @@ function buildSelfTestRun(entry, variant) {
     }
   }
   const lastMessage = readFileSync(join(dir, 'last-message.md'), 'utf8').trim();
-  const { toolCalls } = JSON.parse(readFileSync(join(dir, 'run.json'), 'utf8'));
+  const toolCalls = JSON.parse(readFileSync(join(dir, 'run.json'), 'utf8')).toolCalls.map((call) =>
+    withOverlayContent(call, join(dir, 'files')),
+  );
   const createdFiles = run('git', ['ls-files', '--others', '--exclude-standard'], {
     cwd: workspace,
   })

@@ -10,10 +10,10 @@ same prompt, fixture, tools and limits twice, with the plugin and without it
 | `plan-from-spec` | scored | Break an accepted spec into work | judge |
 | `bug-investigate-fix` | guard | Due dates show a day early; find out why and fix it | hidden tests, judge |
 | `ship-accepted-change` | guard | Implement an accepted change | hidden tests |
-| `plan-review` | scored | Review a draft plan with four seeded defects and two sound tasks | judge |
+| `plan-review` | scored | Review a draft plan with four seeded defects and two sound tasks | revocation named, judge |
 | `branch-ready-to-merge` | scored | Is this branch ready to merge? (three seeded defects) | judge, no push or merge |
-| `operate-review` | scored | Leadership review over metrics, incidents, roadmap and runway | judge |
-| `release-notes` | scored | Release notes since `v1.4.0` and the next version | `2.0.0` check, judge |
+| `operate-review` | scored | Leadership review over metrics, incidents, roadmap and runway | activation number cited, judge |
+| `release-notes` | scored | Release notes since `v1.4.0` and the next version | `2.0.0` check, export removal listed, judge |
 | `chain-spec-plan-ship` | scored | Decide, plan and build due-date reminders | hidden tests, judge |
 | `*-explicit` | routing loss | Cases 1, 5 and 8 with the skill invoked by name | same as the base case |
 
@@ -27,7 +27,9 @@ Guards are expected near ceiling in both arms and stay out of the headline delta
   notes app in `_shared/notes-base.sh`, then sources `_shared/probe.sh`. The probe writes
   `.git/info/eval-probe.json` with booleans and counts only.
 - `graders/`: free CLI checks only. `arm: with-only` graders are indicators (the skill fired) and are never
-  scored; a grader whose name starts with `format-` is a format check; the rest are outcome checks.
+  scored; a grader whose name starts with `format-` is a format check; the rest are outcome checks. Trace
+  regexes that look for the agent's own words match only assistant events (`^(?=.*"type":"assistant")` with
+  the `m` flag), so fixture text returned by a tool cannot satisfy them.
 - `judge.yaml`: criteria for the runner's blind judge, each one condition, tagged `outcome` (follows from the
   prompt or a reasonable user's ask) or `format` (follows from a template). `facts` gives the judge what it
   needs to know about the fixture. A variant's `judge.yaml` inherits its base case.

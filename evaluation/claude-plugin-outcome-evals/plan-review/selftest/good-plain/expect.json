@@ -1,5 +1,6 @@
 {
   "graders": {
+    "names-missing-revocation": true,
     "skill-plan-review-fired": false
   },
   "judge": {

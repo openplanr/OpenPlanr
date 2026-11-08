@@ -1,5 +1,6 @@
 {
   "graders": {
+    "cites-activation-drop": true,
     "skill-operate-fired": true
   },
   "judge": {

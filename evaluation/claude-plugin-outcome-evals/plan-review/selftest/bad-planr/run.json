@@ -1,6 +1,24 @@
 {
   "toolCalls": [
-    { "name": "Skill", "input": { "skill": "planr:plan-review" } },
-    { "name": "Write", "input": { "file_path": "/tmp/e-x/home/cwd/.planr/reviews/PLAN-review-note-sharing.md", "content": "..." } }
+    {
+      "name": "Read",
+      "input": {
+        "file_path": "/tmp/e-x/home/cwd/docs/specs/note-sharing.md"
+      },
+      "result": "4. **Revoke a link.** The owner can revoke a link with `DELETE /notes/:id/shares/:token`."
+    },
+    {
+      "name": "Skill",
+      "input": {
+        "skill": "planr:plan-review"
+      }
+    },
+    {
+      "name": "Write",
+      "input": {
+        "file_path": "/tmp/e-x/home/cwd/.planr/reviews/PLAN-review-note-sharing.md",
+        "content": "..."
+      }
+    }
   ]
 }
