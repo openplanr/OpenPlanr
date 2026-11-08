@@ -136,6 +136,24 @@ describe('root release proof and public package artifacts', () => {
     expect(publishIfNeeded).not.toContain("spawnSync('npm', ['publish']");
   });
 
+  it('hands the guarded Claude plugin digest from verify to the marketplace job', () => {
+    type Step = { id?: string; run?: string; env?: Record<string, string> };
+    const { jobs } = YAML.parse(publishPackagesWorkflow) as {
+      jobs: Record<string, { needs: string[]; outputs?: Record<string, string>; steps: Step[] }>;
+    };
+    const bundles = jobs.verify.steps.find((step) => step.id === 'bundles');
+    const project = jobs.marketplace.steps.find((step) =>
+      step.run?.includes('publish-marketplace.mjs'),
+    );
+
+    expect(bundles?.run).toContain('prepare-bundles.mjs');
+    expect(bundles?.run).toContain('--github-output');
+    expect(jobs.verify.outputs?.plugin_sha256).toBe('${{ steps.bundles.outputs.plugin_sha256 }}');
+    expect(jobs.marketplace.needs).toContain('verify');
+    expect(project?.env?.PLUGIN_SHA256).toBe('${{ needs.verify.outputs.plugin_sha256 }}');
+    expect(project?.run).toContain('--sha256 "$PLUGIN_SHA256"');
+  });
+
   it('gates publication on the Workspace CI event its workflow_run trigger selects', () => {
     const workflow = YAML.parse(publishPackagesWorkflow) as {
       on: { workflow_run: { branches: string[] } };

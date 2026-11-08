@@ -19,6 +19,7 @@ import {
   renderPluginTable,
   replacePluginTable,
 } from './marketplace.mjs';
+import { pluginDigest } from './plugin-digest.mjs';
 
 const MANIFEST = '.claude-plugin/plugin.json';
 const utf8 = new TextDecoder('utf-8', { fatal: true });
@@ -95,14 +96,23 @@ function rollback({ error, committed, snapshot, target, previousPlugin, files, s
 /**
  * Replace `plugins/planr` in a marketplace checkout with an inspected snapshot of the plugin.
  * Plugin and metadata are staged first; previous copies are restored if any step fails.
+ * With `expectedSha256`, the inspected bytes must match the digest the verify job recorded.
  */
 export function publishMarketplacePlugin({
   pluginDir,
   marketplaceDir,
+  expectedSha256,
   afterInspection,
   onCommitStep,
 }) {
   const entries = readDirectoryEntries(pluginDir);
+  if (expectedSha256 !== undefined) {
+    const actual = pluginDigest(entries.filter(({ type }) => type === 'file'));
+    if (actual !== expectedSha256)
+      throw new Error(
+        `${pluginDir} has sha256 ${actual}, not the ${expectedSha256} the verify job checked; refusing to publish it.`,
+      );
+  }
   const manifestEntry = entries.find(({ path }) => path === MANIFEST);
   if (!manifestEntry) {
     throw new Error(

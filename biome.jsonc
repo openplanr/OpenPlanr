@@ -54,7 +54,8 @@
       "!packages/pipeline/conformance/fixture-design",
       "!packages/pipeline/conformance/fixture-spec",
       "!packages/pipeline/tests/dashboard/fixtures",
-      "!packages/pipeline/tests/fixtures"
+      "!packages/pipeline/tests/fixtures",
+      "!tests/release-train/fixtures"
     ]
   },
   "formatter": {
