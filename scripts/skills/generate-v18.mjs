@@ -46,11 +46,7 @@ import {
 import { renderClaudePluginReadme } from './plugin-readme.mjs';
 import { syncGeneratedOutputs } from './projection-custody.mjs';
 import { resourceBytes } from './resource-bytes.mjs';
-import {
-  resourceFootprint,
-  suiteLocalResources,
-  suiteSharedResources,
-} from './suite-resources.mjs';
+import { resourceFootprint, suiteLocalResources } from './suite-resources.mjs';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const option = process.argv[2];
@@ -108,12 +104,6 @@ const findingsDestinations = Object.freeze(['planr-ship', 'planr-investigate']);
 const failFirstDestinations = Object.freeze(['planr-ship', 'planr-investigate']);
 const connectionsCatalog = readConnectionsCatalog(root);
 const connectorsMarkdown = renderConnectors(connectionsCatalog);
-const operateValidatorDestinations = Object.freeze([
-  'planr-operate',
-  'planr-chair-review',
-  'planr-challenger-review',
-  ...operateAdvisorDestinations,
-]);
 const sharedSkillResources = Object.freeze([
   {
     source: 'packages/design/references/design-spec-template.md',
@@ -167,6 +157,13 @@ const sharedSkillResources = Object.freeze([
     executable: false,
   },
   ...CLI_GENERATED_RESOURCES,
+  ...['planr-operate', 'planr-chair-review', 'planr-challenger-review']
+    .concat(operateAdvisorDestinations)
+    .map((skillId) => ({
+      source: 'skills/shared/note-checklist.md',
+      destination: `skills/${skillId}/references/note-checklist.md`,
+      executable: false,
+    })),
   ...operateAdvisorDestinations.map((skillId) => ({
     source: 'skills/shared/operate-advisor-contract.md',
     destination: `skills/${skillId}/references/operate-advisor-contract.md`,
@@ -209,28 +206,6 @@ const sharedSkillResources = Object.freeze([
     destination: 'skills/planr-sync/scripts/names.mjs',
     executable: false,
   },
-  ...operateValidatorDestinations.flatMap((skillId) => [
-    {
-      source: 'packages/skill-runtime/src/operate-review-note-cli.mjs',
-      destination: `skills/${skillId}/scripts/validate-note.mjs`,
-      executable: true,
-    },
-    {
-      source: 'packages/skill-runtime/src/operate-review-note.mjs',
-      destination: `skills/${skillId}/scripts/operate-review-note.mjs`,
-      executable: false,
-    },
-    {
-      source: 'packages/skill-runtime/src/operate-review-contract.mjs',
-      destination: `skills/${skillId}/scripts/operate-review-contract.mjs`,
-      executable: false,
-    },
-    {
-      source: 'packages/skill-runtime/src/errors.mjs',
-      destination: `skills/${skillId}/scripts/errors.mjs`,
-      executable: false,
-    },
-  ]),
 ]);
 
 const sourceProjections = new Map(
@@ -333,16 +308,6 @@ function add(path, bytes, { checkedIn = false, isExecutable = false } = {}) {
   if (isExecutable) executable.add(path);
 }
 
-function addSharedResources(packageInfo, host, pluginRoot, skillRoot) {
-  for (const resource of suiteSharedResources(packageInfo, host, skillRoot)) {
-    const path = `${pluginRoot}/${resource.path}`;
-    if (outputs.has(path)) {
-      if (!outputs.get(path).equals(resource.bytes) || executable.has(path) !== resource.executable)
-        throw new Error(`Shared suite closure differs between canonical skills: ${path}`);
-    } else add(path, resource.bytes, { isExecutable: resource.executable });
-  }
-}
-
 function hostResources(packageInfo, host) {
   return packageInfo.resources.filter(({ hosts }) => hosts.includes(host));
 }
@@ -430,7 +395,7 @@ for (const row of registry.skills) {
         ? renderUserOnlySkill(hostMarkdown, row.skillId)
         : hostMarkdown,
     );
-    const localResources = suiteLocalResources(packageInfo, host, skillRoot);
+    const localResources = suiteLocalResources(packageInfo, host);
     // The native suite declaration lists local files; its complete closure is owned by
     // the exhaustive package content inventory, rather than a standalone skill directory.
     if (host === 'codex')
@@ -459,7 +424,6 @@ for (const row of registry.skills) {
           isExecutable: resource.executable,
         });
     }
-    addSharedResources(packageInfo, host, pluginRoot, skillRoot);
   }
 
   const cursorBody = renderCursorSkillBody(
@@ -473,13 +437,12 @@ for (const row of registry.skills) {
     `${cursorPluginRoot}/rules/${row.skillId}.mdc`,
     renderCursorRule({ description: parsed.fields.description, body: cursorBody, userOnly }),
   );
-  for (const resource of suiteLocalResources(packageInfo, 'cursor', cursorSkillRoot).filter(
+  for (const resource of suiteLocalResources(packageInfo, 'cursor').filter(
     ({ path }) => !path.startsWith('agents/'),
   ))
     add(`${cursorPluginRoot}/${cursorSkillRoot}/${resource.path}`, resource.bytes, {
       isExecutable: resource.executable,
     });
-  addSharedResources(packageInfo, 'cursor', cursorPluginRoot, cursorSkillRoot);
 
   skillRows.push({
     id: row.skillId,

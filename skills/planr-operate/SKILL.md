@@ -161,16 +161,9 @@ watch items and the context needed to improve the next review.
 
 ## Optional quality check
 
-The packaged [note validator](scripts/validate-note.mjs) can identify missing sections, fields, or limits:
-
-```sh
-node "<skill-root>/scripts/validate-note.mjs" "<absolute-advisor-output>" --profile advisor --contract-version 2.0.0
-node "<skill-root>/scripts/validate-note.mjs" "<absolute-challenger-output>" --profile challenger --contract-version 2.0.0
-node "<skill-root>/scripts/validate-note.mjs" "<absolute-chair-output>" --profile chair --contract-version 2.0.0
-node "<skill-root>/scripts/validate-note.mjs" "<absolute-board-report-path>" --profile board-report --contract-version 2.0.0
-```
-
-Use their diagnostics as editing help. Include unresolved structural problems under `Issues` with
+Check each lens note against its profile in [the note checklist](references/note-checklist.md)
+(`advisor`, `challenger` or `chair`) and the board report against `board-report`, to find missing
+sections, fields, or limits. Use unchecked items as editing help. Include unresolved structural problems under `Issues` with
 their impact and next action while preserving the useful parts of the report.
 
 ## Return
