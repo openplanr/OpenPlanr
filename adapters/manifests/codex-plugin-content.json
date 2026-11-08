@@ -8,7 +8,7 @@
   "canonicalSkillCount": 30,
   "compatibilityAliasCount": 0,
   "skillCount": 30,
-  "assetCount": 213,
+  "assetCount": 212,
   "skills": [
     {
       "skillId": "planr-artifact",
@@ -964,11 +964,11 @@
       "assets": [
         {
           "path": "skills/ship/SKILL.md",
-          "digest": "sha256:5babf6b0a49bc478337c1c96c410aa62f0de06266be739a645bea48fa5016aba"
+          "digest": "sha256:faaea77a925652df8c293777ccf01d33f58262f60f64126c7f8e3936f4ddd67b"
         },
         {
           "path": "skills/ship/openplanr.skill.json",
-          "digest": "sha256:928cc947817db7d9406ac7f243895eb24dce761683d7b4ec7854824bbe3c518e"
+          "digest": "sha256:ea31c9c4a13dca0061a64c242265ca359751b11e2018597b7465b341f68640e6"
         },
         {
           "path": "skills/ship/agents/openai.yaml",
@@ -981,10 +981,6 @@
         {
           "path": "skills/ship/references/design-lineage.md",
           "digest": "sha256:0cf8cce235b6e258c066e65dcc25480f10aca6f0c3200de332fc278e3b7975a9"
-        },
-        {
-          "path": "skills/ship/scripts/discover-verification.mjs",
-          "digest": "sha256:8805ac8d814a1d94364d455df6da350983d4c8436faa3749717da5f1b3ae63b1"
         },
         {
           "path": "skills/ship/references/fail-first.md",

@@ -1,7 +1,7 @@
 {
   "$comment": "Host bundle files the instructions-only policy refuses today. Each later change deletes the entries it fixes and updates count and sha256; entries may never be added.",
-  "count": 125,
-  "sha256": "651cc458137aa7de960a5d3fa41859a0bbb3816fbee06592ee414975dfe25593",
+  "count": 116,
+  "sha256": "c9760b7a4b53ba17c972b888c5019d47b79ab42c009ec550ba52c6a5e2e211ed",
   "entries": [
     {
       "host": "claude",
@@ -181,21 +181,6 @@
     {
       "host": "claude",
       "path": "skills/release/scripts/collect_changes.sh",
-      "code": "type-not-allowed"
-    },
-    {
-      "host": "claude",
-      "path": "skills/ship/scripts/discover-verification.mjs",
-      "code": "executable-bit"
-    },
-    {
-      "host": "claude",
-      "path": "skills/ship/scripts/discover-verification.mjs",
-      "code": "shebang"
-    },
-    {
-      "host": "claude",
-      "path": "skills/ship/scripts/discover-verification.mjs",
       "code": "type-not-allowed"
     },
     {
@@ -386,21 +371,6 @@
     {
       "host": "codex",
       "path": "skills/release/scripts/collect_changes.sh",
-      "code": "type-not-allowed"
-    },
-    {
-      "host": "codex",
-      "path": "skills/ship/scripts/discover-verification.mjs",
-      "code": "executable-bit"
-    },
-    {
-      "host": "codex",
-      "path": "skills/ship/scripts/discover-verification.mjs",
-      "code": "shebang"
-    },
-    {
-      "host": "codex",
-      "path": "skills/ship/scripts/discover-verification.mjs",
       "code": "type-not-allowed"
     },
     {
@@ -591,21 +561,6 @@
     {
       "host": "cursor",
       "path": "rules/planr-release/scripts/collect_changes.sh",
-      "code": "type-not-allowed"
-    },
-    {
-      "host": "cursor",
-      "path": "rules/planr-ship/scripts/discover-verification.mjs",
-      "code": "executable-bit"
-    },
-    {
-      "host": "cursor",
-      "path": "rules/planr-ship/scripts/discover-verification.mjs",
-      "code": "shebang"
-    },
-    {
-      "host": "cursor",
-      "path": "rules/planr-ship/scripts/discover-verification.mjs",
       "code": "type-not-allowed"
     },
     {

@@ -1553,7 +1553,7 @@
       "lifecycle": "active",
       "authorityClass": "implementation",
       "source": "skills/planr-ship/openplanr.skill.json",
-      "sourceDigest": "sha256:928cc947817db7d9406ac7f243895eb24dce761683d7b4ec7854824bbe3c518e",
+      "sourceDigest": "sha256:ea31c9c4a13dca0061a64c242265ca359751b11e2018597b7465b341f68640e6",
       "triggerPolicy": {
         "include": [
           "Implement a plan, specification, task, fix, or clearly stated local request",
@@ -1864,5 +1864,5 @@
     }
   ],
   "compatibilityAliases": [],
-  "documentDigest": "sha256:4d5b98e64f5bce060edc74e920607ab3615d5b17e5e874fa45834080029c952d"
+  "documentDigest": "sha256:41ab4719d02395061e010a02e85afc46c4f9b4f7152b9c7b665c419a774765c7"
 }
