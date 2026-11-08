@@ -1,7 +1,7 @@
 {
   "$comment": "Host bundle files the instructions-only policy refuses today. Each later change deletes the entries it fixes and updates count and sha256; entries may never be added.",
-  "count": 116,
-  "sha256": "c9760b7a4b53ba17c972b888c5019d47b79ab42c009ec550ba52c6a5e2e211ed",
+  "count": 107,
+  "sha256": "df4c299436449d2ede35a82c0f133c41eb9849632d3f94005299c04f809691e1",
   "entries": [
     {
       "host": "claude",
@@ -167,21 +167,6 @@
       "host": "claude",
       "path": "skills/plan/SKILL.md",
       "code": "unpinned-launcher"
-    },
-    {
-      "host": "claude",
-      "path": "skills/release/scripts/collect_changes.sh",
-      "code": "executable-bit"
-    },
-    {
-      "host": "claude",
-      "path": "skills/release/scripts/collect_changes.sh",
-      "code": "shebang"
-    },
-    {
-      "host": "claude",
-      "path": "skills/release/scripts/collect_changes.sh",
-      "code": "type-not-allowed"
     },
     {
       "host": "claude",
@@ -357,21 +342,6 @@
       "host": "codex",
       "path": "skills/plan/SKILL.md",
       "code": "unpinned-launcher"
-    },
-    {
-      "host": "codex",
-      "path": "skills/release/scripts/collect_changes.sh",
-      "code": "executable-bit"
-    },
-    {
-      "host": "codex",
-      "path": "skills/release/scripts/collect_changes.sh",
-      "code": "shebang"
-    },
-    {
-      "host": "codex",
-      "path": "skills/release/scripts/collect_changes.sh",
-      "code": "type-not-allowed"
     },
     {
       "host": "codex",
@@ -546,21 +516,6 @@
     {
       "host": "cursor",
       "path": "rules/planr-plan/scripts/planning-ids.mjs",
-      "code": "type-not-allowed"
-    },
-    {
-      "host": "cursor",
-      "path": "rules/planr-release/scripts/collect_changes.sh",
-      "code": "executable-bit"
-    },
-    {
-      "host": "cursor",
-      "path": "rules/planr-release/scripts/collect_changes.sh",
-      "code": "shebang"
-    },
-    {
-      "host": "cursor",
-      "path": "rules/planr-release/scripts/collect_changes.sh",
       "code": "type-not-allowed"
     },
     {

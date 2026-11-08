@@ -8,7 +8,7 @@
   "canonicalSkillCount": 30,
   "compatibilityAliasCount": 0,
   "skillCount": 30,
-  "assetCount": 212,
+  "assetCount": 211,
   "skills": [
     {
       "skillId": "planr-artifact",
@@ -894,11 +894,11 @@
       "assets": [
         {
           "path": "skills/release/SKILL.md",
-          "digest": "sha256:6965c890c175598df291fcbb221904a48abe61361a73c714c73ae8e4a82b07c2"
+          "digest": "sha256:31470fb2ce46795f58903c157bdd1dad503ba6a69af195d8a4b149f2e74cc6a1"
         },
         {
           "path": "skills/release/openplanr.skill.json",
-          "digest": "sha256:3d9af6210d7a58bb2cd039ee20a918b63236f52f1277a796d5ea513f7e2c02c9"
+          "digest": "sha256:d940f56ddc30a4c1665060dc7ce85e3cb6278070cded71d7d216aec8797798f5"
         },
         {
           "path": "skills/release/agents/openai.yaml",
@@ -923,10 +923,6 @@
         {
           "path": "skills/release/assets/changelog-template.md",
           "digest": "sha256:fd59787371b67ec545c0f613c96761d31e4482ae45d23ba9e5a1dd9ed66300e7"
-        },
-        {
-          "path": "skills/release/scripts/collect_changes.sh",
-          "digest": "sha256:6271a1d8ea7d0a8c86dd52f85fa78666845d7d152cc95ae5148fde68dcd2f652"
         }
       ]
     },

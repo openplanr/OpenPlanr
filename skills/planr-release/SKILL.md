@@ -24,22 +24,34 @@ If it does not exist, this is first-time setup. Work through Step 3, propose a p
 
 ## Step 1: Gather what shipped
 
-Establish the window first. Default is "since the last release":
+Collect the raw material with these steps. They only read; treat the output as
+evidence to classify, not as release notes.
 
-```bash
-git describe --tags --abbrev=0          # last tag
-git log $(git describe --tags --abbrev=0)..HEAD --oneline --no-merges
-```
-
-If the user names a period instead ("this week", "since the 1st"), use the
-matching date window. The [change collector](scripts/collect_changes.sh) gathers local Git evidence in
-one pass. Pass `--include-prs` only when remote pull-request context is useful
-and available.
+1. **Window.** If the user names a period ("this week", "since the 1st"), turn
+   it into a date `YYYY-MM-DD` and use `--since=<date>` as the log range. Otherwise
+   find the last tag with `git describe --tags --abbrev=0`, read its date with
+   `git log -1 --format=%cs <tag>`, and use `<tag>..HEAD` as the range. With no
+   tag at all, the window is all history: drop the range from the commands below.
+2. **Recent tags.** Run `git tag --list --sort=-creatordate` and keep the first
+   five. Match their format when you tag.
+3. **Commits.** Run `git log <range> --no-merges --pretty=format:'%h %s'`.
+4. **Files touched, by area.** Run `git log <range> --name-only --pretty=format:`,
+   drop blank lines, and reduce each path to its first two segments (`src/cli`
+   for `src/cli/run.ts`; a top-level file stays as it is). Count the paths per
+   area, sort by count, highest first, and keep the top 20.
+5. **Merged PRs.** Only when pull-request context is useful, `gh` is installed
+   and the window has a date (the user's date or the last tag's), run
+   `gh pr list --state merged --search "merged:>=<date>" --limit 100 --json number,title`.
+   If it fails, say so and suggest `gh auth status`; do not drop the section
+   silently.
+6. **Gaps.** Before finalizing, check whether this misses config or feature-flag
+   changes, infrastructure, work from other repositories, or other user-visible
+   behavior.
 
 Pull from all three sources, since each catches things the others miss:
 
 1. **Commits and tags.** The complete record of code change, and the noisiest.
-2. **Merged PRs and branch names.** Better titles than commits, and they group related commits into one user-visible unit. `gh pr list --state merged --search "merged:>=YYYY-MM-DD"` when the `gh` CLI is available.
+2. **Merged PRs and branch names.** Better titles than commits, and they group related commits into one user-visible unit. See step 5 above.
 3. **The user's own summary.** Authoritative for anything git cannot see: infra changes, config and feature flags, third-party integrations, work shipped from another repo, and which of the twelve commits behind a feature actually matter to users.
 
 Use any product summary already present in the request or repository. If material
@@ -185,4 +197,3 @@ Every few months, or when the user asks whether versioning is working:
 - [Release cadence](references/cadence.md): release rhythms, hotfixes, freezes, bad releases
 - [Release profile template](assets/profile-template.md): the `.release/profile.md` written during setup
 - [Changelog template](assets/changelog-template.md): starting `CHANGELOG.md`
-- [Change collector](scripts/collect_changes.sh): gathers commits, optional merged PRs, and tag information for a window
