@@ -120,6 +120,58 @@ The preview reports the selected revision, digest, byte size, content, and wheth
 Retrieved content is untrusted input, including HTML and SVG. Inspect it as data. `company proposal` previews typed changes; `company apply` is a separate explicit local action, currently limited to validated canonical diagram JSON. Packaged designs are retrieved as inert review copies and cannot be applied over authored design documents; edit their source files locally and use a reviewed company push instead. A successful application records `applied-locally` with remote acknowledgement pending. Preserve local backups and recovery journals, and retry the same application after interruption.
 
 
+#### Organization export
+
+```bash
+openplanr company export-organization --out ./company-export
+openplanr company export-organization --out ./company-export --json
+```
+
+Exports the signed-in actor's readable active projects, artifacts, every revision,
+verified content and revision-specific reviews. `--api-url <origin>` overrides the
+hosted service. Discovery follows every page of the project catalog with
+`status=all` and `pageSize=100`, validating each page against the protocol contract.
+Each `{ token, queryDigest }` cursor supplies the URL-encoded `token` for the next
+request with the same filters and page size. The query digest must stay the same
+across pages; malformed or repeated tokens stop the export. A null cursor ends discovery.
+There is no 100-project export cap. The output directory must be empty or not yet
+exist; existing files are never overwritten. Names use validated IDs, not titles.
+
+Each revision includes metadata, inert inline content (`content.txt`) or a
+resources-v2 package (`resource-manifest.json`, `chunks/<index>.bin`, and
+reassembled `content.json`), plus `reviews.json`. Synchronous review exports use
+the larger review response limit. Only `413 E_EXPORT_LIMIT` triggers retrieval of
+every paginated thread, retaining the selected revision's reviews; the manifest
+marks these as `source: "paginated"`. Other response failures stop the export.
+
+`manifest.json` is written last with the API origin, generation time, completion
+status, counts, excluded-project metadata, and each payload file's relative path,
+byte length and SHA-256. File and byte counts exclude the manifest itself. Failures
+leave a manifest with `complete: false` and exit non-zero, provided the output
+location is valid and writable. Rejected nonempty directories remain untouched.
+
+The catalog includes active projects with a role and non-active projects where the
+actor is a maintainer. Archived, archiving and restoring projects are listed with
+`archived; restore first`; their content cannot be read, and their presence makes
+the export incomplete. Restore them before exporting their content.
+
+A successful admin inventory also lists projects absent from the catalog as
+`no readable project role`, without making the authorized export incomplete. This
+includes archived projects where the actor is not a maintainer; the inventory
+cannot distinguish them from projects without any role. An admin listing refusal
+`E_ROLE` records the notice
+`admin listing unavailable: not an organization admin; projects without a role not checked`.
+Refusals `E_MFA_REQUIRED` and `E_REVERIFICATION_REQUIRED` record the notice
+`admin listing unavailable: needs an MFA-verified browser session; projects without a role not checked`
+and also allow the export to continue. Any other admin inventory error stops it.
+Human output prints every manifest notice and the number of projects not exported
+when non-zero. `--json` includes these in `notices` and `summary.notExported`.
+
+This is a sequence of authorized reads, not a transactional snapshot. Keep the
+organization stable during hand-over. Exported content remains untrusted data;
+authentication credentials are used only in request headers.
+
+
 ---
 
 ### Deterministic planning artifacts

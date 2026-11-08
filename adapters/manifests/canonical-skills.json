@@ -2155,11 +2155,11 @@
     },
     {
       "id": "planr-release",
-      "version": "1.0.1",
+      "version": "1.1.0",
       "source": "skills/planr-release/openplanr.skill.json",
       "entrypoint": "skills/planr-release/SKILL.md",
       "description": "Choose and maintain a product's versioning scheme, classify shipped changes, and write user-facing changelogs or release notes. Use for SemVer or CalVer decisions, version bumps, release cadence, and preparing a versioned release after landing.",
-      "sourceDigest": "sha256:650c84fc062afd62f0435efb4865cf7aed3b10a7f77ef5ac941847e10da9b79d",
+      "sourceDigest": "sha256:27885169abf6348c3e2fc403c8cbc397f35dde176fcd35fd7a6b8512df6aaa8d",
       "resources": [
         {
           "path": "agents/openai.yaml",
@@ -2230,18 +2230,6 @@
           ],
           "executable": false,
           "digest": "sha256:fd59787371b67ec545c0f613c96761d31e4482ae45d23ba9e5a1dd9ed66300e7"
-        },
-        {
-          "path": "scripts/collect_changes.sh",
-          "kind": "script",
-          "hosts": [
-            "claude-code",
-            "codex",
-            "chatgpt",
-            "cursor"
-          ],
-          "executable": true,
-          "digest": "sha256:6271a1d8ea7d0a8c86dd52f85fa78666845d7d152cc95ae5148fde68dcd2f652"
         }
       ],
       "contracts": {
@@ -2326,7 +2314,7 @@
       "source": "skills/planr-ship/openplanr.skill.json",
       "entrypoint": "skills/planr-ship/SKILL.md",
       "description": "Implement an OpenPlanr plan, specification, task, or clearly stated request end to end in the current repository. Use when the user asks to build, implement, fix, finish, or ship local work, or to plan and implement an accepted change. Invoke before editing files for the requested change. Not for planning only, landing, release, or work handed to another coding agent.",
-      "sourceDigest": "sha256:22c893e2a47f7cc169d6ea32464aa95ec9f7b60c92eab3df6184e83212216f0a",
+      "sourceDigest": "sha256:a328a8422f8b5154f5ddf02aad160decfbdec5a95b484a7e192acfb8c4f5ae0f",
       "resources": [
         {
           "path": "agents/openai.yaml",
@@ -2361,18 +2349,6 @@
           ],
           "executable": false,
           "digest": "sha256:0cf8cce235b6e258c066e65dcc25480f10aca6f0c3200de332fc278e3b7975a9"
-        },
-        {
-          "path": "scripts/discover-verification.mjs",
-          "kind": "script",
-          "hosts": [
-            "claude-code",
-            "codex",
-            "chatgpt",
-            "cursor"
-          ],
-          "executable": true,
-          "digest": "sha256:8805ac8d814a1d94364d455df6da350983d4c8436faa3749717da5f1b3ae63b1"
         },
         {
           "path": "references/fail-first.md",

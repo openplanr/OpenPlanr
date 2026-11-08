@@ -224,6 +224,27 @@ test('Workspace CI selects the test jobs each kind of change reaches', () => {
     assert.deepEqual(selectJobs(files, pullRequest), expected, files.join(', '));
 });
 
+test('Workspace CI skips test jobs for documentation under .github but not its configuration', () => {
+  for (const file of [
+    '.github/PULL_REQUEST_TEMPLATE.md',
+    '.github/ISSUE_TEMPLATE/bug_report.yml',
+    '.github/ISSUE_TEMPLATE/config.yml',
+  ])
+    assert.deepEqual(selectJobs([file], pullRequest), only(), file);
+  for (const file of [
+    '.github/workflows/ci.yml',
+    '.github/dependabot.yml',
+    '.github/CODEOWNERS',
+    '.github/FUNDING.yml',
+    '.github/workflows/scripts/nested.md',
+  ])
+    assert.deepEqual(selectJobs([file], pullRequest), only(...JOBS), file);
+  assert.deepEqual(
+    selectJobs(['.github/PULL_REQUEST_TEMPLATE.md', '.github/workflows/ci.yml'], pullRequest),
+    only(...JOBS),
+  );
+});
+
 test('Workspace CI runs every job outside a complete pull request file list', () => {
   const all = only(...JOBS);
   assert.deepEqual(selectJobs(['docs/x.md'], { event: 'merge_group' }), all);

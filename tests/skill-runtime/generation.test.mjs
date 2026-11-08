@@ -237,7 +237,7 @@ test('Plan, Spec, and Ship are host-native and independent of CLI or provider cr
   assert.match(read('skills/planr-plan/SKILL.md'), /browserSurfaces/iu);
 });
 
-test('packaged Plan and Ship helpers run offline with no planr executable or model credentials', () => {
+test('the packaged Plan helper runs offline with no planr executable or model credentials', () => {
   const project = mkdtempSync(join(tmpdir(), 'openplanr-host-native-'));
   try {
     const env = {
@@ -292,25 +292,6 @@ test('packaged Plan and Ship helpers run offline with no planr executable or mod
       US: ['US-001', 'US-002'],
       T: ['T-002', 'T-003'],
     });
-    const checks = spawnSync(
-      process.execPath,
-      [
-        resolve(
-          root,
-          'dist/plugins/openai/openplanr/skills/ship/scripts/discover-verification.mjs',
-        ),
-        '--project',
-        project,
-        '--task',
-        '.planr/specs/SPEC-001-demo/tasks/T-001-demo.md',
-      ],
-      { cwd: project, encoding: 'utf8', env },
-    );
-    assert.equal(checks.status, 0, checks.stderr);
-    const report = JSON.parse(checks.stdout);
-    assert.deepEqual(report.checks.slice(0, 1), [
-      { command: 'npm run test', source: 'package-task-runner' },
-    ]);
   } finally {
     rmSync(project, { recursive: true, force: true });
   }

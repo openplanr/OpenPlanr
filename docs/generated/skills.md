@@ -287,7 +287,7 @@ Implement an OpenPlanr plan, specification, task, or clearly stated request end 
 - Invocation from the plugin: `$planr:ship` in Codex/ChatGPT; `/planr:ship` in Claude Code.
 - Hosts: Claude Code, Codex, ChatGPT, and Cursor where supported by the package manifest.
 - Aliases: none.
-- Packaged support: `references/result-contract.md`, `references/design-lineage.md`, `references/fail-first.md`, `references/findings.md`, `references/backlog-filing.md`, with packaged validators and runtime support. See the [resource inventory](../../skills/planr-ship/openplanr.skill.json).
+- Packaged support: `references/result-contract.md`, `references/design-lineage.md`, `references/fail-first.md`, `references/findings.md`, `references/backlog-filing.md`. See the [resource inventory](../../skills/planr-ship/openplanr.skill.json).
 
 ## `planr-spec`
 

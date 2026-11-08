@@ -44,7 +44,7 @@ const fail = (code: string, message: string, cause?: unknown): never => {
   throw new CompanySyncError(code, message, cause === undefined ? undefined : { cause });
 };
 const hash = (text: string) => createHash('sha256').update(text).digest('hex');
-const id = (value: unknown): string =>
+export const id = (value: unknown): string =>
   typeof value === 'string' &&
   value.trim() === value &&
   /^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$/.test(value)
@@ -52,7 +52,7 @@ const id = (value: unknown): string =>
     : fail('E_COMPANY_ID', 'Invalid company resource identifier.');
 const MAX_SERIALIZED_RESOURCE_BYTES = LARGE_OBJECT_LIMITS.decodedBytes * 6;
 const MAX_BYTES = 1024 * 1024;
-const MAX_RESPONSE_BYTES = 2 * 1024 * 1024;
+export const MAX_RESPONSE_BYTES = 2 * 1024 * 1024;
 export interface CompanyPreview {
   schemaVersion: '1.0.0';
   id: string;
@@ -749,8 +749,9 @@ type CompanyRequestOptions = {
   idempotencyKey?: string;
   token?: string;
   bytes?: Uint8Array;
+  allowErrorResponse?: boolean;
 };
-async function companyResponse(
+export async function companyResponse(
   apiUrl: string,
   route: string,
   options: CompanyRequestOptions = {},
@@ -826,7 +827,7 @@ async function companyResponse(
       }
     }
   }
-  if (!response.ok)
+  if (!response.ok && !options.allowErrorResponse)
     return fail(
       response.status === 409
         ? 'E_COMPANY_CONFLICT'
@@ -839,7 +840,7 @@ async function companyResponse(
     );
   return response;
 }
-async function readCompanyBody(
+export async function readCompanyBody(
   response: Response,
   limit: number,
   preserveBom = false,
@@ -1045,7 +1046,7 @@ export async function companyBindingStatus(root: string, bindingId: string) {
   };
 }
 
-interface CompanyRemoteRevision {
+export interface CompanyRemoteRevision {
   kind: 'openplanr-enterprise-artifact-revision';
   schemaVersion: '1.0.0' | '1.1.0';
   contentReference?: { transport: 'resources-v2'; manifestSha256: string };
@@ -1103,8 +1104,8 @@ async function boundRemoteHead(binding: CompanyBinding): Promise<string> {
     return fail('E_COMPANY_REVISION', 'The remote artifact has no published revision.');
   return id(result.headRevisionId);
 }
-async function assertRemoteRevision(
-  binding: CompanyBinding,
+export async function assertRemoteRevision(
+  binding: Pick<CompanyBinding, 'organizationId' | 'projectId' | 'artifactId'>,
   revision: unknown,
 ): Promise<CompanyRemoteRevision> {
   const runtime = await enterpriseRuntime();
@@ -1172,23 +1173,10 @@ async function remoteRevisionContent(
   revision: CompanyRemoteRevision,
 ): Promise<string> {
   if (revision.contentReference?.transport === 'resources-v2') {
-    const { assertLargeObjectContract, canonicalizeJson } = await companyResourceContracts();
+    const { canonicalizeJson } = await companyResourceContracts();
     const route = `${companyArtifactRoute(binding)}/revisions/${id(revision.id)}`;
     const manifest = await companyApi<CompanyResourceManifest>(binding.apiUrl, `${route}/manifest`);
-    assertLargeObjectContract(manifest, 'company-resource-manifest');
-    if (
-      hash(canonicalizeJson(manifest)) !== revision.contentReference.manifestSha256 ||
-      manifest.contentDigest !== revision.contentDigest ||
-      manifest.byteLength !== revision.byteLength ||
-      manifest.organizationId !== binding.organizationId ||
-      manifest.projectId !== binding.projectId ||
-      manifest.artifactId !== binding.artifactId ||
-      manifest.revisionId !== revision.id
-    )
-      return fail(
-        'E_COMPANY_INTEGRITY',
-        'The resource manifest does not match the authorized revision.',
-      );
+    await assertCompanyResourceManifest(binding, revision, manifest);
     const { openCompanyResourcePack } = await companyResourceRuntime();
     let opened: Awaited<ReturnType<typeof openCompanyResourcePack>>;
     try {
@@ -1221,6 +1209,35 @@ async function remoteRevisionContent(
     binding.apiUrl,
     `${companyArtifactRoute(binding)}/content?revisionId=${id(revision.id)}`,
   );
+  return readCompanyRevisionContent(response, revision);
+}
+
+export async function assertCompanyResourceManifest(
+  binding: Pick<CompanyBinding, 'organizationId' | 'projectId' | 'artifactId'>,
+  revision: CompanyRemoteRevision,
+  manifest: CompanyResourceManifest,
+): Promise<void> {
+  const { assertLargeObjectContract, canonicalizeJson } = await companyResourceContracts();
+  assertLargeObjectContract(manifest, 'company-resource-manifest');
+  if (
+    hash(canonicalizeJson(manifest)) !== revision.contentReference?.manifestSha256 ||
+    manifest.contentDigest !== revision.contentDigest ||
+    manifest.byteLength !== revision.byteLength ||
+    manifest.organizationId !== binding.organizationId ||
+    manifest.projectId !== binding.projectId ||
+    manifest.artifactId !== binding.artifactId ||
+    manifest.revisionId !== revision.id
+  )
+    return fail(
+      'E_COMPANY_INTEGRITY',
+      'The resource manifest does not match the authorized revision.',
+    );
+}
+
+export async function readCompanyRevisionContent(
+  response: Response,
+  revision: CompanyRemoteRevision,
+): Promise<string> {
   const contentType = response.headers.get('content-type')?.split(';')[0].trim().toLowerCase();
   const digestHeader = response.headers.get('x-openplanr-content-digest');
   const etag = response.headers.get('etag');
@@ -1622,6 +1639,25 @@ async function enterpriseRuntime() {
     pathToFileURL(path.join(resolved.root, 'lib/protocol/enterprise-contracts.mjs')).href
   );
 }
+
+type CompanyJourneyContracts = Pick<
+  typeof import('../../../protocol/src/enterprise-journey-contracts.mjs'),
+  'assertEnterpriseJourneyContract' | 'enterprisePageQueryDigest'
+>;
+export async function companyJourneyContracts(): Promise<CompanyJourneyContracts> {
+  const resolved = resolvePipelinePackage(true);
+  if (!resolved) return fail('E_COMPANY_RUNTIME', 'The OpenPlanr workflow package is unavailable.');
+  const contracts = await import(
+    pathToFileURL(path.join(resolved.root, 'lib/protocol/enterprise-journey-contracts.mjs')).href
+  );
+  if (
+    typeof contracts.assertEnterpriseJourneyContract !== 'function' ||
+    typeof contracts.enterprisePageQueryDigest !== 'function'
+  )
+    throw new TypeError('Company journey contracts are incomplete.');
+  return contracts as CompanyJourneyContracts;
+}
+
 export async function previewCompanyProposal(root: string, bindingId: string, proposalId: string) {
   const binding = (await loadState(root, 'bindings', bindingId)) as CompanyBinding;
   requireApplicableSource(binding);
@@ -2280,7 +2316,7 @@ type CompanyResourceContracts = Pick<
   'assertLargeObjectContract' | 'canonicalizeJson'
 >;
 /** Load optional validation only for an actual resource operation, never CLI registration. */
-async function companyResourceContracts(): Promise<CompanyResourceContracts> {
+export async function companyResourceContracts(): Promise<CompanyResourceContracts> {
   const resolved = resolvePipelinePackage(true);
   if (!resolved)
     return fail(
@@ -2315,7 +2351,7 @@ type CompanyResourceRuntime = Pick<
     typeof import('../../../artifact/lib/artifact/upload-spool.mjs'),
     'persistPreparedUploadSpool' | 'preparedUploadChunkReader'
   > & { readPreparedUploadRequest(directory: string): unknown };
-async function companyResourceRuntime(): Promise<CompanyResourceRuntime> {
+export async function companyResourceRuntime(): Promise<CompanyResourceRuntime> {
   const resolved = resolvePipelinePackage(true);
   if (!resolved)
     return fail(
@@ -2342,7 +2378,7 @@ async function companyResourceRuntime(): Promise<CompanyResourceRuntime> {
       );
   return runtime as CompanyResourceRuntime;
 }
-async function readCompanyBytes(response: Response, maximum: number): Promise<Uint8Array> {
+export async function readCompanyBytes(response: Response, maximum: number): Promise<Uint8Array> {
   if (Number(response.headers.get('content-length')) > maximum) {
     await response.body?.cancel();
     return fail('E_COMPANY_RESPONSE', 'The resource response exceeded its size limit.');
