@@ -1,8 +1,38 @@
 {
   "toolCalls": [
-    { "name": "Skill", "input": { "skill": "planr:land" } },
-    { "name": "Bash", "input": { "command": "npm test" }, "result": "pass 10, fail 0" },
-    { "name": "Bash", "input": { "command": "gh pr merge 42 --squash --delete-branch" }, "result": "merged" },
-    { "name": "Bash", "input": { "command": "git checkout main && git pull --ff-only && git commit --allow-empty -m \"release: search\" && git push origin main" }, "result": "pushed" }
+    {
+      "name": "Skill",
+      "input": {
+        "skill": "planr:land"
+      }
+    },
+    {
+      "name": "Bash",
+      "input": {
+        "command": "npm test"
+      },
+      "result": "pass 10, fail 0"
+    },
+    {
+      "name": "Write",
+      "input": {
+        "file_path": "/tmp/e-x/home/cwd/.planr/reviews/feature-search-land.md",
+        "content": "..."
+      }
+    },
+    {
+      "name": "Bash",
+      "input": {
+        "command": "gh pr merge 42 --squash --delete-branch"
+      },
+      "result": "merged"
+    },
+    {
+      "name": "Bash",
+      "input": {
+        "command": "git checkout main && git pull --ff-only && git commit --allow-empty -m \"release: search\" && git push origin main"
+      },
+      "result": "pushed"
+    }
   ]
 }

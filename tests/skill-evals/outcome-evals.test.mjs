@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { execFileSync } from 'node:child_process';
 import { appendFileSync, cpSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -39,6 +40,15 @@ test('the suite holds the nine cases and three explicit variants', () => {
       .sort(),
     ['bug-investigate-fix', 'chain-spec-plan-ship', 'ship-accepted-change'],
   );
+});
+
+test('every suite file is tracked by git, none ignored', () => {
+  const ignored = execFileSync(
+    'git',
+    ['ls-files', '--others', '--ignored', '--exclude-standard', '--', suiteDir],
+    { encoding: 'utf8' },
+  );
+  assert.equal(ignored, '');
 });
 
 test('no scaffold, workspace, prompt, judge or scored grader names the plugin', () => {

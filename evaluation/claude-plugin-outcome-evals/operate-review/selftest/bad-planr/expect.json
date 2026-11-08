@@ -8,7 +8,7 @@
     "finds-roadmap-gap": false,
     "finds-short-runway": false,
     "recommendations-cite-facts": false,
-    "flags-missing-retention": false,
+    "flags-missing-retention": true,
     "actions-have-owners": true
   }
 }

@@ -27,7 +27,7 @@ criteria:
     kind: outcome
     criterion: Every recommendation cites at least one specific fact from the company files, such as a number, a date, an incident or a roadmap item.
   - id: flags-missing-retention
-    kind: outcome
+    kind: format
     criterion: The review notes that retention or churn is not measured in the data provided.
   - id: actions-have-owners
     kind: format

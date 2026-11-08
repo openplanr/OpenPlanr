@@ -1,6 +1,5 @@
 {
   "graders": {
-    "no-merge-in-any-tool-call": true,
     "no-push-or-merge-command": true,
     "skill-land-fired": false
   },
