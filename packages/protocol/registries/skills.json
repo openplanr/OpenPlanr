@@ -1305,12 +1305,12 @@
     },
     {
       "skillId": "planr-plan",
-      "skillVersion": "1.3.0",
+      "skillVersion": "1.4.0",
       "description": "Turn a Protocol-compatible specification or product intent into schema-compatible OpenPlanr stories and implementation tasks. Use for planning and decomposition, not implementation.",
       "lifecycle": "active",
       "authorityClass": "planning-write",
       "source": "skills/planr-plan/openplanr.skill.json",
-      "sourceDigest": "sha256:4f2c0de87e8c91f0aa244f72042044e791342d5b4718cf2d0f86cf34c7d5a6ce",
+      "sourceDigest": "sha256:06131440bcf758507383900bee9f208483524fb31352a062675a999a7d74efc7",
       "triggerPolicy": {
         "include": [
           "Decompose a specification into user stories and implementation tasks",
@@ -1864,5 +1864,5 @@
     }
   ],
   "compatibilityAliases": [],
-  "documentDigest": "sha256:d7b6ccc57b03855b06277df18d100342daaf5dd0291627c996c23b6ea93f7572"
+  "documentDigest": "sha256:424ef48b01db29dd1567e54d9f9872480802e247908039b8d857fbae10ce9d09"
 }

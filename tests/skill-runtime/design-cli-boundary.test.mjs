@@ -64,7 +64,7 @@ test('no shipped skill text or manifest names scripts/design.mjs', () => {
     const manifest = JSON.parse(read(`skills/${id}/openplanr.skill.json`));
     assert.deepEqual(
       manifest.resources.map(({ path }) => path).filter((path) => path.startsWith('scripts/')),
-      id === 'planr-plan' ? ['scripts/planning-ids.mjs'] : [],
+      [],
       `${id} declares no design runtime`,
     );
   }

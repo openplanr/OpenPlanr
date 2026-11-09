@@ -1,16 +1,6 @@
 import assert from 'node:assert/strict';
-import { spawnSync } from 'node:child_process';
-import {
-  existsSync,
-  mkdirSync,
-  mkdtempSync,
-  readdirSync,
-  readFileSync,
-  rmSync,
-  writeFileSync,
-} from 'node:fs';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
-import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import test from 'node:test';
 
@@ -237,64 +227,26 @@ test('Plan, Spec, and Ship are host-native and independent of CLI or provider cr
   assert.match(read('skills/planr-plan/SKILL.md'), /browserSurfaces/iu);
 });
 
-test('the packaged Plan helper runs offline with no planr executable or model credentials', () => {
-  const project = mkdtempSync(join(tmpdir(), 'openplanr-host-native-'));
-  try {
-    const env = {
-      PATH: '/usr/bin:/bin',
-      HOME: project,
-      NO_COLOR: '1',
-      ANTHROPIC_API_KEY: '',
-      OPENAI_API_KEY: '',
-      OLLAMA_HOST: '',
-    };
-    const previewIds = (planningRoot) =>
-      spawnSync(
-        process.execPath,
-        [
-          resolve(root, 'dist/plugins/openai/openplanr/skills/plan/scripts/planning-ids.mjs'),
-          '--root',
-          planningRoot,
-          '--stories',
-          '2',
-          '--tasks',
-          '2',
-          '--preview',
-        ],
-        { cwd: project, encoding: 'utf8', env },
-      );
-    const missingRoot = resolve(project, 'missing-plan');
-    const rejected = previewIds(missingRoot);
-    assert.equal(rejected.status, 1);
-    assert.match(
-      rejected.stderr,
-      /Planning root .*missing-plan is not inside an OpenPlanr project/u,
-    );
-    assert.equal(existsSync(missingRoot), false, 'preview must perform zero writes');
-
-    mkdirSync(resolve(project, '.planr/specs/SPEC-001-demo/tasks'), { recursive: true });
-    writeFileSync(
-      resolve(project, '.planr/config.json'),
-      JSON.stringify({ outputPaths: { agile: '.planr' } }),
-    );
-    writeFileSync(
-      resolve(project, 'package.json'),
-      JSON.stringify({ scripts: { test: 'node --test', lint: 'node lint.mjs' } }),
-    );
-    writeFileSync(
-      resolve(project, '.planr/specs/SPEC-001-demo/tasks/T-001-demo.md'),
-      '## Test Requirements\n\n- AC-001: npm test\n',
-    );
-    const ids = previewIds(resolve(project, '.planr/specs'));
-    assert.equal(ids.status, 0, ids.stderr);
-    assert.deepEqual(JSON.parse(ids.stdout).ids, {
-      SPEC: [],
-      US: ['US-001', 'US-002'],
-      T: ['T-002', 'T-003'],
-    });
-  } finally {
-    rmSync(project, { recursive: true, force: true });
+test('Plan allocates IDs by a written procedure and ships no ID helper', () => {
+  const bundles = [
+    'dist/plugins/claude/openplanr/skills/plan',
+    'dist/plugins/openai/openplanr/skills/plan',
+    'dist/plugins/cursor/openplanr/rules/planr-plan',
+  ];
+  for (const bundle of bundles) {
+    assert.equal(existsSync(resolve(root, bundle, 'scripts/planning-ids.mjs')), false, bundle);
+    assert.match(read(`${bundle}/references/planning-ids.md`), /\.id-sequence\.json/u, bundle);
   }
+  for (const text of [
+    read('dist/plugins/claude/openplanr/skills/plan/SKILL.md'),
+    read('dist/plugins/openai/openplanr/skills/plan/SKILL.md'),
+    read('dist/plugins/cursor/openplanr/rules/planr-plan.mdc'),
+  ]) {
+    assert.match(text, /\((?:planr-plan\/)?references\/planning-ids\.md\)/u);
+    assert.doesNotMatch(text, /planning-ids\.mjs/u);
+  }
+  const procedure = read('skills/planr-plan/references/planning-ids.md');
+  assert.doesNotMatch(procedure, /\bnode\s|\bnpx\b|\bnpm\b/u);
 });
 
 test('optional CLI is provider-free and exposes only the classified deterministic roots', () => {

@@ -1,7 +1,8 @@
-import { existsSync } from 'node:fs';
-import { mkdir, mkdtemp, rm, unlink, writeFile } from 'node:fs/promises';
+import { existsSync, readFileSync } from 'node:fs';
+import { mkdir, mkdtemp, readFile, rm, unlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import type { OpenPlanrConfig } from '../../src/models/types.js';
@@ -53,5 +54,44 @@ describe('planning ID allocation', () => {
     await expect(reservePlanningIds(projectDir, config, { T: 1 })).resolves.toMatchObject({
       T: ['T-042'],
     });
+  });
+});
+
+describe('planning ID procedure', () => {
+  const procedure = readFileSync(
+    path.resolve(
+      path.dirname(fileURLToPath(import.meta.url)),
+      '../../../../skills/planr-plan/references/planning-ids.md',
+    ),
+    'utf8',
+  );
+
+  it('documents the exact sequence file the CLI writes', async () => {
+    const block = /^( *)```json\n([\s\S]*?)^\1```$/mu.exec(procedure);
+    expect(block).not.toBeNull();
+    const [, indent, body] = block as RegExpExecArray;
+    const example = body.replaceAll(new RegExp(`^${indent}`, 'gmu'), '');
+    const specs = path.join(projectDir, '.planr', 'specs');
+    await mkdir(path.join(specs, 'SPEC-003-x', 'stories'), { recursive: true });
+    await writeFile(path.join(specs, 'SPEC-003-x', 'stories', 'US-014-x.md'), '');
+    await writeFile(
+      path.join(specs, '.id-sequence.json'),
+      JSON.stringify({
+        kind: 'planning-id-sequence',
+        schemaVersion: '1.0.0',
+        protocolVersion: '1.7.0',
+        next: { SPEC: 4, US: 12, T: 41 },
+      }),
+    );
+    await expect(reservePlanningIds(projectDir, config, { US: 1, T: 1 })).resolves.toEqual({
+      SPEC: [],
+      US: ['US-015'],
+      T: ['T-041'],
+    });
+    expect(await readFile(path.join(specs, '.id-sequence.json'), 'utf8')).toBe(example);
+  });
+
+  it('names the lock file the CLI holds while reserving', () => {
+    expect(procedure).toContain('`<specs root>/.id-sequence.lock`');
   });
 });

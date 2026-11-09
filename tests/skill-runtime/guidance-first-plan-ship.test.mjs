@@ -9,7 +9,7 @@ test('Plan defines Protocol 1.7 decomposition and an exact non-chaining Ship han
   const contract = read('skills/planr-plan/references/artifact-contract.md');
   assert.match(plan, /project-global monotonic `US-NNN` and `T-NNN`/u);
   assert.match(plan, /Write stories and tasks directly/iu);
-  assert.match(plan, /planning ID helper.*inspect or reserve IDs/isu);
+  assert.match(plan, /\[the planning ID procedure\]\(references\/planning-ids\.md\)/u);
   assert.match(plan, /reviewRisks.*browserSurfaces/isu);
   assert.match(plan, /map every acceptance ID.*acceptanceRefs/isu);
   assert.match(plan, /\/planr:ship T-NNN[\s\S]*\$planr:ship T-NNN[\s\S]*`planr-ship` rule/u);
