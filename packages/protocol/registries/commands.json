@@ -356,7 +356,7 @@
       "ownerPackage": "openplanr",
       "source": {
         "path": "skills/planr-plan/SKILL.md",
-        "digest": "sha256:9d95cb915d88f8b16a55d94b6e6ea2eb378f093d7c3477da8d8b865d4cbd578b"
+        "digest": "sha256:fd33578b217003c9dc9937bc65fe6bc1e3752eb40f7746a904951ee00b96e163"
       },
       "authorityClass": "workflow",
       "machineJson": false,
@@ -587,7 +587,7 @@
       "ownerPackage": "openplanr",
       "source": {
         "path": "skills/planr-plan/SKILL.md",
-        "digest": "sha256:9d95cb915d88f8b16a55d94b6e6ea2eb378f093d7c3477da8d8b865d4cbd578b"
+        "digest": "sha256:fd33578b217003c9dc9937bc65fe6bc1e3752eb40f7746a904951ee00b96e163"
       },
       "authorityClass": "workflow",
       "machineJson": false,
@@ -629,7 +629,7 @@
       "ownerPackage": "openplanr",
       "source": {
         "path": "skills/planr-spec/SKILL.md",
-        "digest": "sha256:63ab943e7a269f691865b8e3cf68ae160aae0d0ddb71af1834fe50c078ba14a9"
+        "digest": "sha256:e874c8a86a346a6f759bb13e2e9b60483c2eb20a429c2ebad98b68c976d97649"
       },
       "authorityClass": "workflow",
       "machineJson": false,
@@ -692,7 +692,7 @@
       "ownerPackage": "openplanr",
       "source": {
         "path": "skills/planr-spec/SKILL.md",
-        "digest": "sha256:63ab943e7a269f691865b8e3cf68ae160aae0d0ddb71af1834fe50c078ba14a9"
+        "digest": "sha256:e874c8a86a346a6f759bb13e2e9b60483c2eb20a429c2ebad98b68c976d97649"
       },
       "authorityClass": "workflow",
       "machineJson": false,
@@ -1091,7 +1091,7 @@
       "ownerPackage": "planr-pipeline",
       "source": {
         "path": "skills/planr-plan/SKILL.md",
-        "digest": "sha256:9d95cb915d88f8b16a55d94b6e6ea2eb378f093d7c3477da8d8b865d4cbd578b"
+        "digest": "sha256:fd33578b217003c9dc9937bc65fe6bc1e3752eb40f7746a904951ee00b96e163"
       },
       "authorityClass": "compatibility-router",
       "machineJson": false,
@@ -1948,5 +1948,5 @@
       ]
     }
   ],
-  "documentDigest": "sha256:7177f328ccd7219a489d37ec0e22a7fec5781a4a5867082aa9fb9422814fe6fe"
+  "documentDigest": "sha256:d0d004dbd8c824c025fe57459326f2711a930870b1f3d7098fa759ae03219b7b"
 }

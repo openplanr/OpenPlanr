@@ -2029,7 +2029,7 @@
       "source": "skills/planr-plan/openplanr.skill.json",
       "entrypoint": "skills/planr-plan/SKILL.md",
       "description": "Turn a Protocol-compatible specification or product intent into schema-compatible OpenPlanr stories and implementation tasks. Use for planning and decomposition, not implementation.",
-      "sourceDigest": "sha256:9d95cb915d88f8b16a55d94b6e6ea2eb378f093d7c3477da8d8b865d4cbd578b",
+      "sourceDigest": "sha256:fd33578b217003c9dc9937bc65fe6bc1e3752eb40f7746a904951ee00b96e163",
       "resources": [
         {
           "path": "agents/openai.yaml",
@@ -2051,7 +2051,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:79914583ab6f668eaef24cbe8a498a3d08d07da84ec80f5160b42f1719b5c7b2"
+          "digest": "sha256:6b861dbfbe675624c4a32545d936da599e263f2399b1e46091f6fc3fd3086f88"
         },
         {
           "path": "references/design-handoff.md",
@@ -2063,7 +2063,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:b918cc16855412a75028e1a014832c2ced59b0349461a24d9e1fdcfc336b9f5f"
+          "digest": "sha256:456f33cd0386b7fd8be1c5ee2c62723d776db6c6f740453d7125816794565af4"
         },
         {
           "path": "references/planning-ids.md",
@@ -2466,11 +2466,11 @@
     },
     {
       "id": "planr-spec",
-      "version": "1.1.0",
+      "version": "1.2.0",
       "source": "skills/planr-spec/openplanr.skill.json",
       "entrypoint": "skills/planr-spec/SKILL.md",
       "description": "Shape vague product or engineering intent into a clear, measurable Protocol-compatible specification grounded in the current repository. Use when requirements need clarification before planning or implementation.",
-      "sourceDigest": "sha256:63ab943e7a269f691865b8e3cf68ae160aae0d0ddb71af1834fe50c078ba14a9",
+      "sourceDigest": "sha256:e874c8a86a346a6f759bb13e2e9b60483c2eb20a429c2ebad98b68c976d97649",
       "resources": [
         {
           "path": "agents/openai.yaml",
@@ -2492,7 +2492,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:eaaf58e5d2e5cf788856c8d0e156a1ff49111d3578556bfb7c8fe2466df15b15"
+          "digest": "sha256:bbecd3b43ff88a245199c89d08e17ebbf04580a6e0491140d8e69edfdbd69038"
         },
         {
           "path": "references/return-contract.md",

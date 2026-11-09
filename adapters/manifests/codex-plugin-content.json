@@ -832,7 +832,7 @@
       "assets": [
         {
           "path": "skills/plan/SKILL.md",
-          "digest": "sha256:fc1e96d94163cd0996cb388b44435324ae6361be4c5b23723bbc230b18740ff2"
+          "digest": "sha256:5053dba5c0c58cab97883a48d4f683fec84957ef209e99ff653af09928d1cc70"
         },
         {
           "path": "skills/plan/openplanr.skill.json",
@@ -844,11 +844,11 @@
         },
         {
           "path": "skills/plan/references/artifact-contract.md",
-          "digest": "sha256:79914583ab6f668eaef24cbe8a498a3d08d07da84ec80f5160b42f1719b5c7b2"
+          "digest": "sha256:6b861dbfbe675624c4a32545d936da599e263f2399b1e46091f6fc3fd3086f88"
         },
         {
           "path": "skills/plan/references/design-handoff.md",
-          "digest": "sha256:b918cc16855412a75028e1a014832c2ced59b0349461a24d9e1fdcfc336b9f5f"
+          "digest": "sha256:456f33cd0386b7fd8be1c5ee2c62723d776db6c6f740453d7125816794565af4"
         },
         {
           "path": "skills/plan/references/planning-ids.md",
@@ -1021,11 +1021,11 @@
       "assets": [
         {
           "path": "skills/spec/SKILL.md",
-          "digest": "sha256:b72b49d62edf4455ff8ce32992a7d780b650535608b9325076799ad549782a0a"
+          "digest": "sha256:e79e0654f960eb7ee02dda3d493e3779f4d5021c24e4abe5cd0c36a10c5b33ba"
         },
         {
           "path": "skills/spec/openplanr.skill.json",
-          "digest": "sha256:bfcf20909007f5698b205c552efbbe4366e76884df7dbdc9cca7ef02a47c3eb1"
+          "digest": "sha256:02ebd36e5c211ca734d81a0ea91796ed897252fbe1e8590775146e5ffbcb46e0"
         },
         {
           "path": "skills/spec/agents/openai.yaml",
@@ -1033,7 +1033,7 @@
         },
         {
           "path": "skills/spec/references/specification-contract.md",
-          "digest": "sha256:eaaf58e5d2e5cf788856c8d0e156a1ff49111d3578556bfb7c8fe2466df15b15"
+          "digest": "sha256:bbecd3b43ff88a245199c89d08e17ebbf04580a6e0491140d8e69edfdbd69038"
         },
         {
           "path": "skills/spec/references/return-contract.md",

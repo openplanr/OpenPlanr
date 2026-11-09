@@ -177,7 +177,9 @@ test('Loop delivers unverified variants and Review uses hosted canvas comments',
 });
 
 test('Plan inspects a local handoff through the CLI and names each stop', () => {
-  const text = prose(skill('planr-plan'));
+  const text = prose(
+    `${skill('planr-plan')}\n${read('skills/planr-plan/references/design-handoff.md')}`,
+  );
   assert.match(text, /`openplanr design handoff <design-document\.json> --action inspect --json`/u);
   assert.match(
     text,

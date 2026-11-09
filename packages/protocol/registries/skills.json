@@ -1621,12 +1621,12 @@
     },
     {
       "skillId": "planr-spec",
-      "skillVersion": "1.1.0",
+      "skillVersion": "1.2.0",
       "description": "Shape vague product or engineering intent into a clear, measurable Protocol-compatible specification grounded in the current repository. Use when requirements need clarification before planning or implementation.",
       "lifecycle": "active",
       "authorityClass": "planning-write",
       "source": "skills/planr-spec/openplanr.skill.json",
-      "sourceDigest": "sha256:bfcf20909007f5698b205c552efbbe4366e76884df7dbdc9cca7ef02a47c3eb1",
+      "sourceDigest": "sha256:02ebd36e5c211ca734d81a0ea91796ed897252fbe1e8590775146e5ffbcb46e0",
       "triggerPolicy": {
         "include": [
           "Turn vague product or engineering intent into a precise specification",
@@ -1864,5 +1864,5 @@
     }
   ],
   "compatibilityAliases": [],
-  "documentDigest": "sha256:f4acc20a0e3f87dd88f7f1c9fd7e899474d1a1dafc43337b9dabcdf6c862ee2c"
+  "documentDigest": "sha256:1611614140737d2e3a2e8627bb11c464f9529d74642a950c8b49d93fa86106fb"
 }
