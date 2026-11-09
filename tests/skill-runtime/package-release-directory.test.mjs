@@ -16,7 +16,6 @@ import { join, resolve } from 'node:path';
 import test from 'node:test';
 import { pathToFileURL } from 'node:url';
 import { readDeterministicZip } from '../../packages/skill-runtime/src/packaging/index.mjs';
-import { baselineDigest } from '../../scripts/skills/plugin-artifact-validation.mjs';
 
 const repository = resolve(import.meta.dirname, '../..');
 const moduleUrl = (path) => pathToFileURL(join(repository, path)).href;
@@ -29,10 +28,6 @@ function fixture(t) {
   mkdirSync(join(root, 'skills'));
   for (const script of ['package-v18-release.mjs', 'plugin-artifact-validation.mjs'])
     copyFileSync(join(repository, 'scripts/skills', script), join(root, 'scripts/skills', script));
-  writeFileSync(
-    join(root, 'scripts/skills/plugin-allowed-types-baseline.json'),
-    JSON.stringify({ count: 0, sha256: baselineDigest([]), entries: [] }),
-  );
   writeFileSync(
     join(root, 'scripts/skills/release-custody.mjs'),
     `export * from '${moduleUrl('scripts/skills/release-custody.mjs')}';\n`,

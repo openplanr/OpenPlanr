@@ -1,4 +1,3 @@
-import { createHash } from 'node:crypto';
 import {
   closeSync,
   constants,
@@ -6,11 +5,9 @@ import {
   lstatSync,
   openSync,
   readdirSync,
-  readFileSync,
   readSync,
 } from 'node:fs';
-import { basename, dirname, extname, join, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { basename, extname, join, resolve } from 'node:path';
 import { TextDecoder } from 'node:util';
 
 export const PLUGIN_CHECKLIST_URL = 'https://claude.com/docs/plugins/pre-submission-checklist';
@@ -573,10 +570,6 @@ export const CLAUDE_MANIFEST_KEYS = Object.freeze([
   'documentationUrl',
 ]);
 
-const HOST_BUNDLE_BASELINE = join(
-  dirname(fileURLToPath(import.meta.url)),
-  'plugin-allowed-types-baseline.json',
-);
 const instructionText = new Set(['.md', '.txt', '.json', '.yaml', '.yml']);
 const allowedTypes = new Set([...instructionText, ...imageExtensions.keys()]);
 // Cursor rules are Markdown under Cursor's own extension.
@@ -599,6 +592,13 @@ const floatingOpenplanr =
   /\bopenplanr@(?=[\d^~<>=*]|(?:latest|next|beta|alpha|canary|x)\b)(?!\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?(?![\w-]|\.\d))/u;
 const bareOpenplanrInstall =
   /\b(?:npm|pnpm|yarn|bun)[ \t]+(?:global[ \t]+)?(?:install|i|add)(?:[ \t]+-{1,2}[\w-]+)*[ \t]+openplanr(?![@\w/-]|\.\w)/u;
+const shareHost = /share\.openplanr\.dev|OPENPLANR_SHARE_BASE/u;
+const figmaHost = /\b(?:[a-z0-9-]+\.)*figma\.com\b|FIGMA_TOKEN|X-Figma-Token|\bfigd_/iu;
+const credentialName = '[A-Za-z0-9_]*(?:TOKEN|SECRET|PASSWORD|API_KEY|AUTH)\\b';
+const credentialEnv = new RegExp(
+  `\\$\\{?${credentialName}|\\$env:${credentialName}|%${credentialName}%|process\\.env\\.${credentialName}`,
+  'u',
+);
 const privilegedDirectories = new Set(['hooks', 'monitors', 'bin', 'commands']);
 const privilegedFiles = new Set(['hooks.json', '.mcp.json', '.lsp.json', 'settings.json']);
 
@@ -676,6 +676,24 @@ export function inspectHostBundle(entries, { host } = {}) {
         path,
         'npx, bunx, pnpm dlx, uvx and openplanr installs must name an exact version, never @latest, a range or none.',
       );
+    if (extension === '.json' && shareHost.test(text))
+      fail(
+        'share-host',
+        path,
+        'Host bundles carry no share service address; the CLI owns sharing.',
+      );
+    if (extension !== '.txt' && figmaHost.test(text))
+      fail(
+        'figma-host',
+        path,
+        'Host bundles name no Figma host or token; the CLI owns Figma access.',
+      );
+    if (credentialEnv.test(text))
+      fail(
+        'credential-env',
+        path,
+        'Skill text must not tell an agent to read or forward a credential environment variable.',
+      );
     if (/^allowed-tools\s*:/mu.test(frontmatter(text) ?? ''))
       fail('pre-approved-tools', path, 'allowed-tools frontmatter makes the plugin privileged.');
     if (/^hooks\s*:/mu.test(frontmatter(text) ?? ''))
@@ -702,72 +720,40 @@ export function inspectHostBundle(entries, { host } = {}) {
   return { passed: findings.length === 0, findings };
 }
 
-const baselineKey = ({ host, path, code }) => `${host}\u0000${path}\u0000${code}`;
-
-/** Digest of baseline entries in canonical order. */
-export function baselineDigest(entries) {
-  const canonical = entries
-    .map(({ host, path, code }) => ({ host, path, code }))
-    .sort((a, b) => baselineKey(a).localeCompare(baselineKey(b)));
-  return createHash('sha256').update(JSON.stringify(canonical)).digest('hex');
-}
-
-/** Reads the shrink-only offender baseline and refuses one its count and digest do not pin. */
-export function readHostBundleBaseline(path = HOST_BUNDLE_BASELINE) {
-  const value = JSON.parse(readFileSync(path, 'utf8'));
-  const entries = value.entries;
-  if (
-    !Array.isArray(entries) ||
-    entries.some(
-      (entry) =>
-        !Object.hasOwn(hostTypes, entry?.host) ||
-        typeof entry.path !== 'string' ||
-        typeof entry.code !== 'string',
-    )
-  )
-    throw new Error(`${path} must list entries of {host, path, code}.`);
-  const sha256 = baselineDigest(entries);
-  if (value.count !== entries.length || value.sha256 !== sha256)
-    throw new Error(
-      `${path} entries no longer match its pin (${value.count} entries, ${value.sha256}). If entries were only removed, set "count": ${entries.length} and "sha256": "${sha256}".`,
-    );
-  return value;
-}
-
-/** Splits host-policy findings into baseline-excused and blocking ones; lists unmatched entries. */
-export function splitByBaseline(findings, host, baseline) {
-  const pending = new Map(
-    baseline.entries
-      .filter((entry) => entry.host === host)
-      .map((entry) => [baselineKey(entry), entry]),
-  );
-  const excusedKeys = new Set(pending.keys());
-  const blocking = [];
-  const excused = [];
-  for (const finding of findings) {
-    const key = baselineKey({ host, ...finding });
-    if (excusedKeys.has(key)) {
-      pending.delete(key);
-      excused.push(finding);
-    } else blocking.push(finding);
-  }
-  return { blocking, excused, stale: [...pending.values()] };
-}
-
-/** Release check for one host bundle: checklist findings and policy findings the baseline does not excuse. */
-export function assertHostBundle(entries, { host, baseline = readHostBundleBaseline() } = {}) {
+/** Release check for one host bundle: checklist findings plus the instructions-only policy. */
+export function assertHostBundle(entries, { host } = {}) {
   const directory = inspectDirectoryEntries(entries);
-  const { blocking, excused } = splitByBaseline(
-    inspectHostBundle(entries, { host }).findings,
-    host,
-    baseline,
-  );
+  const policy = inspectHostBundle(entries, { host }).findings;
   const report = {
     ...directory,
-    passed: directory.passed && blocking.length === 0,
-    findings: [...directory.findings, ...blocking],
-    excused,
+    passed: directory.passed && policy.length === 0,
+    findings: [...directory.findings, ...policy],
   };
   if (!report.passed) throw invalidArtifact(report);
   return report;
+}
+
+/** Plugin entry keys the marketplace may declare without changing the plugin's reach. */
+export const MARKETPLACE_ENTRY_KEYS = Object.freeze([
+  'name',
+  'source',
+  'version',
+  'description',
+  'strict',
+]);
+
+/** Marketplace manifest policy: plugin entries declare no components and defer to `plugin.json`. */
+export function inspectMarketplaceManifest(manifest) {
+  const path = '.claude-plugin/marketplace.json';
+  const findings = [];
+  for (const plugin of Array.isArray(manifest?.plugins) ? manifest.plugins : [null]) {
+    const extra = Object.keys(plugin ?? {}).filter((key) => !MARKETPLACE_ENTRY_KEYS.includes(key));
+    if (!plugin || extra.length || plugin.strict !== true)
+      findings.push({
+        code: 'marketplace-entry-key',
+        path,
+        reason: `Each plugin entry declares only ${MARKETPLACE_ENTRY_KEYS.join(', ')} with strict: true${extra.length ? `; found ${extra.join(', ')}` : ''}.`,
+      });
+  }
+  return { passed: findings.length === 0, findings };
 }

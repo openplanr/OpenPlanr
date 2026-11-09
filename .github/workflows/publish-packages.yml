@@ -161,7 +161,7 @@ jobs:
       - run: npm audit --omit=dev --audit-level=high
       - run: npm run generate && npm run build
       - run: git diff --exit-code HEAD --
-      # Runs the plugin network boundary guard and records the Claude plugin digest.
+      # Checks every host plugin bundle and records the Claude plugin digest.
       - name: Pack the pending packages with their publication proofs
         id: bundles
         env:

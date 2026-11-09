@@ -33,18 +33,19 @@ The same skills ship for Codex and Cursor through the `openplanr` package.
 
 - Skills run inside Claude Code. The plugin makes no model calls of its own and sends no
   telemetry. It has no hooks and no MCP servers.
-- Skills call the `openplanr` CLI, bundled Node.js scripts, `git`, and the GitHub CLI (`gh`). They
-  read and write files in your repository. The design skills run every local design operation
-  through `openplanr design`; the plugin ships no design runtime.
+- The plugin ships instructions only: skills, agents, references, metadata and its icon. It has
+  no scripts or executables.
+- Skills call the `openplanr` CLI, `git`, and the GitHub CLI (`gh`). They read and write files in
+  your repository. The design skills run every local design operation through `openplanr design`;
+  the plugin ships no design runtime.
 - The planning dashboard and local artifact reviews bind to loopback only.
-- Bundled scripts are readable JavaScript.
-- Skills and bundled scripts store and read no GitHub, Linear or model-provider credentials and
+- Skills store and read no GitHub, Linear or model-provider credentials and
   send no agent credentials to OpenPlanr services. Coding-agent runs you request use that
   agent's own sign-in, described below.
 - Sharing a design or diagram review runs in the `openplanr` CLI, not in the plugin. The CLI
   creates the review's owner access keys, stores them readable only by you under `~/.planr` (or
-  `PLANR_HOME`), and sends them only to the review address stored with them. The plugin's
-  bundled scripts read no owner keys and contact no OpenPlanr host.
+  `PLANR_HOME`), and sends them only to the review address stored with them. The plugin
+  reads no owner keys and contacts no OpenPlanr host.
 - Without the CLI, the design skills still write the design document, sources and
   specification, marked unverified, and tell you the command to install it. On Claude Code,
   the design skill can build on Claude's hosted design canvas instead.

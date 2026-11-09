@@ -12,6 +12,7 @@ import { basename, dirname, join } from 'node:path';
 import { TextDecoder } from 'node:util';
 import {
   assertHostBundle,
+  inspectMarketplaceManifest,
   readDirectoryEntries,
 } from '../../skills/plugin-artifact-validation.mjs';
 import {
@@ -150,9 +151,16 @@ export function publishMarketplacePlugin({
   const readmePath = join(marketplaceDir, 'README.md');
   const previousMetadata = readOptional(metadataPath);
   const previousReadme = readOptional(readmePath);
-  const metadata = Buffer.from(
-    `${JSON.stringify(renderMarketplaceManifest({ version: manifest.version, description: manifest.description }), null, 2)}\n`,
-  );
+  const marketplace = renderMarketplaceManifest({
+    version: manifest.version,
+    description: manifest.description,
+  });
+  const entryPolicy = inspectMarketplaceManifest(marketplace);
+  if (!entryPolicy.passed)
+    throw new Error(
+      `The marketplace manifest would change the plugin's reach: ${entryPolicy.findings.map(({ reason }) => reason).join(' ')}`,
+    );
+  const metadata = Buffer.from(`${JSON.stringify(marketplace, null, 2)}\n`);
   const readme = Buffer.from(
     replacePluginTable(
       previousReadme?.toString('utf8') ?? '# OpenPlanr Marketplace\n',

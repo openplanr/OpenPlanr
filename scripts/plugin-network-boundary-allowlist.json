@@ -1,4 +1,0 @@
-{
-  "$comment": "Permanent entries are findings that are safe by construction; each says why. plugin-network-boundary-baseline.json pins this list, and on pull requests the count may not exceed the base branch's baseline.",
-  "permanent": []
-}

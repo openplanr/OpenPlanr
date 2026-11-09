@@ -12,11 +12,16 @@ import {
   writeFileSync,
 } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join, resolve } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
 import test from 'node:test';
 import { pluginDigest } from '../../scripts/release-train/lib/plugin-digest.mjs';
 import { publishMarketplacePlugin } from '../../scripts/release-train/lib/publish-plugin.mjs';
-import { readDirectoryEntries } from '../../scripts/skills/plugin-artifact-validation.mjs';
+import {
+  assertHostBundle,
+  HOST_BUNDLE_ROOTS,
+  inspectMarketplaceManifest,
+  readDirectoryEntries,
+} from '../../scripts/skills/plugin-artifact-validation.mjs';
 
 const script = resolve(import.meta.dirname, '../../scripts/release-train/publish-marketplace.mjs');
 const manifest = JSON.stringify({ name: 'planr', version: '2.0.1', description: 'Planr.' });
@@ -122,6 +127,43 @@ test('a plugin carrying a script or an executable file is refused before the mar
     assert.match(result.stderr, new RegExp(code, 'u'), path);
     assert.deepEqual(snapshot(marketplace), before, path);
   }
+});
+
+test('a plugin that would lose the instructions-only label is refused before the marketplace changes', (t) => {
+  for (const [path, content, code] of [
+    ['hooks/hooks.json', '{"hooks":{}}\n', 'privileged-component'],
+    ['hooks.json', '{"hooks":{}}\n', 'privileged-component'],
+    [
+      'skills/run/SKILL.md',
+      '---\nname: run\nallowed-tools: Bash\n---\nRun.\n',
+      'pre-approved-tools',
+    ],
+  ]) {
+    const { plugin, marketplace } = fixture(t);
+    mkdirSync(dirname(join(plugin, path)), { recursive: true });
+    writeFileSync(join(plugin, path), content);
+    const before = snapshot(marketplace);
+    const result = publish(plugin, marketplace);
+    assert.equal(result.status, 1, path);
+    assert.match(result.stderr, new RegExp(code, 'u'), path);
+    assert.deepEqual(snapshot(marketplace), before, path);
+  }
+});
+
+test('the generated Claude plugin projects into a marketplace tree that keeps the label', (t) => {
+  const { marketplace } = fixture(t);
+  const plugin = resolve(import.meta.dirname, '../..', HOST_BUNDLE_ROOTS.claude);
+  const result = publish(plugin, marketplace);
+  assert.equal(result.status, 0, result.stderr);
+  const projected = readDirectoryEntries(join(marketplace, 'plugins/planr'));
+  assert.equal(assertHostBundle(projected, { host: 'claude' }).passed, true);
+  assert.ok(projected.some(({ path }) => path === '.claude-plugin/icon.png'));
+  assert.deepEqual(
+    inspectMarketplaceManifest(
+      JSON.parse(readFileSync(join(marketplace, '.claude-plugin/marketplace.json'), 'utf8')),
+    ).findings,
+    [],
+  );
 });
 
 test('malformed, oversized and linked manifests fail before the marketplace changes', (t) => {

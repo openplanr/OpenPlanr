@@ -1,26 +1,27 @@
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import test from 'node:test';
-import {
-  assertHostBundle,
-  baselineDigest,
-  CLAUDE_MANIFEST_KEYS,
-  inspectHostBundle,
-  readDirectoryEntries,
-  readHostBundleBaseline,
-} from '../../scripts/skills/plugin-artifact-validation.mjs';
+import * as validation from '../../scripts/skills/plugin-artifact-validation.mjs';
 import {
   CLAUDE_PLUGIN_ICON,
   CLAUDE_PLUGIN_LISTING,
 } from '../../scripts/skills/plugin-metadata.mjs';
 
+const {
+  assertHostBundle,
+  CLAUDE_MANIFEST_KEYS,
+  HOST_BUNDLE_ROOTS,
+  inspectHostBundle,
+  inspectMarketplaceManifest,
+  readDirectoryEntries,
+} = validation;
+
 const root = resolve(import.meta.dirname, '../..');
 const checker = join(root, 'scripts/check-plugin-allowed-types.mjs');
 const png = readFileSync(join(root, 'docs/assets/brand/png/openplanr-mark-16.png'));
-const empty = { entries: [] };
 const manifest = JSON.stringify({ name: 'planr', version: '1.0.0', description: 'Planr.' });
 
 function writeBundle(t, files) {
@@ -78,7 +79,6 @@ test('a bundle carrying code, packaging, refused media, tool grants or an unpinn
     () =>
       assertHostBundle(readDirectoryEntries(writeBundle(t, dirty)), {
         host: 'claude',
-        baseline: empty,
       }),
     (error) =>
       error.code === 'E_PLUGIN_ARTIFACT_INVALID' && /type-not-allowed/u.test(error.message),
@@ -88,7 +88,7 @@ test('a bundle carrying code, packaging, refused media, tool grants or an unpinn
 test('a bundle of instructions, metadata and a raster icon passes', (t) => {
   const entries = readDirectoryEntries(writeBundle(t, clean));
   assert.deepEqual(inspectHostBundle(entries, { host: 'claude' }).findings, []);
-  assert.equal(assertHostBundle(entries, { host: 'claude', baseline: empty }).passed, true);
+  assert.equal(assertHostBundle(entries, { host: 'claude' }).passed, true);
 });
 
 test('launchers pass only with an exact version', () => {
@@ -196,33 +196,104 @@ test('Markdown rules are allowed only in the Cursor bundle; text must be UTF-8 w
     () =>
       assertHostBundle([{ path: 'a.md', bytes: Buffer.from([65, 0, 66]), mode: 0o644 }], {
         host: 'claude',
-        baseline: empty,
       }),
     /binary-text/u,
   );
   assert.throws(() => inspectHostBundle([], { host: 'other' }), /host/u);
 });
 
-test('baseline entries excuse only their own host, path and rule', () => {
-  const entries = [{ path: 'scripts/x.mjs', bytes: Buffer.from('x\n'), mode: 0o644 }];
-  const baseline = {
-    entries: [{ host: 'claude', path: 'scripts/x.mjs', code: 'type-not-allowed' }],
-  };
-  assert.equal(assertHostBundle(entries, { host: 'claude', baseline }).passed, true);
-  assert.throws(() => assertHostBundle(entries, { host: 'codex', baseline }), /type-not-allowed/u);
-});
-
-test('the committed baseline is pinned by count and digest', () => {
-  const baseline = readHostBundleBaseline();
-  assert.equal(baseline.count, baseline.entries.length);
-  assert.equal(baseline.sha256, baselineDigest(baseline.entries));
-});
-
-test('every launcher and openplanr install in the bundles names an exact version', () => {
-  const unpinned = readHostBundleBaseline().entries.filter(
-    ({ code }) => code === 'unpinned-launcher',
+test('no offender baseline remains: the rule allows nothing it finds', () => {
+  assert.deepEqual(
+    readdirSync(join(root, 'scripts/skills')).filter((name) => /^plugin-.*baseline/iu.test(name)),
+    [],
   );
-  assert.deepEqual(unpinned, []);
+  assert.deepEqual(
+    Object.keys(validation).filter((name) => /baseline/iu.test(name)),
+    [],
+  );
+});
+
+test('each generated bundle passes the type, launcher and label checks', () => {
+  for (const [host, path] of Object.entries(HOST_BUNDLE_ROOTS)) {
+    const entries = readDirectoryEntries(join(root, path));
+    assert.deepEqual(inspectHostBundle(entries, { host }).findings, [], host);
+    assert.equal(assertHostBundle(entries, { host }).passed, true, host);
+  }
+});
+
+test('shipped text names no share or Figma host and forwards no credential variable', () => {
+  const codes = (path, text, host = 'codex') =>
+    inspectHostBundle([{ path, bytes: Buffer.from(text), mode: 0o644 }], { host }).findings.map(
+      ({ code }) => code,
+    );
+  assert.deepEqual(codes('a.json', '{"base":"https://share.openplanr.dev"}'), ['share-host']);
+  assert.deepEqual(codes('a.json', '{"env":"OPENPLANR_SHARE_BASE"}'), ['share-host']);
+  assert.deepEqual(codes('README.md', 'Sharing sends it to `share.openplanr.dev`.\n'), []);
+  for (const text of [
+    'Open https://www.figma.com/design/abc.\n',
+    'Set FIGMA_TOKEN first.\n',
+    'Send the X-Figma-Token header.\n',
+    'Paste figd_abc123.\n',
+  ])
+    assert.deepEqual(codes('skills/x/SKILL.md', text), ['figma-host'], text);
+  assert.deepEqual(codes('rules/x.mdc', 'See figma.com.\n', 'cursor'), ['figma-host']);
+  assert.deepEqual(codes('notes.txt', 'figma.com\n'), []);
+  for (const text of [
+    'Run `curl -H "Authorization: Bearer $GITHUB_TOKEN" https://api.github.com`.\n',
+    'Pass `--token ${LINEAR_API_KEY}` to the command.\n',
+    'Export `OPENAI_API_KEY=$OPENAI_API_KEY` into the child.\n',
+    'Read `process.env.NPM_AUTH_TOKEN` and send it.\n',
+    'Use `%GH_TOKEN%` on Windows.\n',
+    'Use `$env:CLOUDFLARE_API_TOKEN` in PowerShell.\n',
+  ])
+    assert.deepEqual(codes('skills/x/SKILL.md', text), ['credential-env'], text);
+  for (const text of [
+    'The CLI passes no credential variable unless a profile lists it in `allowedEnv`.\n',
+    'An unrelated FOO_TOKEN stays out of the child.\n',
+    'Costs $5 per run.\n',
+    'Set `$AUTHOR` and `${TOKENIZER}` in the template.\n',
+  ])
+    assert.deepEqual(codes('skills/x/SKILL.md', text), [], text);
+});
+
+test('each reintroduced offender under skills/ fails the boundary check on its own', (t) => {
+  const offenders = [
+    ['skills/sync/scripts/sync.mjs', 'export {};\n', 'type-not-allowed'],
+    ['skills/sync/references/run.md', '#!/usr/bin/env node\n', 'shebang'],
+    ['skills/sync/package.json', '{"name":"sync"}\n', 'package-manager-file'],
+    [
+      'skills/sync/references/launch.md',
+      'Run `npx -y openplanr@latest sync tracker`.\n',
+      'unpinned-launcher',
+    ],
+  ];
+  for (const [path, content, code] of offenders) {
+    const result = spawnSync(
+      process.execPath,
+      [checker, '--host', 'claude', '--plugin-root', writeBundle(t, [...clean, [path, content]])],
+      { encoding: 'utf8' },
+    );
+    assert.equal(result.status, 1, `${path}: ${result.stdout}`);
+    assert.match(result.stderr, new RegExp(`${path.replaceAll('.', '\\.')} \\[${code}\\]`, 'u'));
+  }
+});
+
+test('marketplace plugin entries carry only listing keys', () => {
+  const entry = { name: 'planr', source: './plugins/planr', version: '1.0.0', strict: true };
+  const codes = (plugins) =>
+    inspectMarketplaceManifest({ name: 'openplanr', plugins }).findings.map(
+      ({ code, path }) => `${code} ${path}`,
+    );
+  assert.deepEqual(codes([{ ...entry, description: 'Planr.' }]), []);
+  for (const key of ['hooks', 'mcpServers', 'lspServers', 'commands', 'agents', 'skills'])
+    assert.deepEqual(
+      codes([{ ...entry, [key]: {} }]),
+      ['marketplace-entry-key .claude-plugin/marketplace.json'],
+      key,
+    );
+  assert.deepEqual(codes([{ ...entry, strict: false }]), [
+    'marketplace-entry-key .claude-plugin/marketplace.json',
+  ]);
 });
 
 test('the Claude icon is a PNG source', () => {
