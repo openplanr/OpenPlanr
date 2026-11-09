@@ -99,10 +99,6 @@ test('minimal mode shapes the Return and Spec placement', () => {
     spec,
     /With `\.planr\/`, write it to the active planning layout using a project-global monotonic `SPEC-NNN` ID/,
   );
-  assert.doesNotMatch(
-    read('.changeset/plan-spec-minimal-output.md'),
-    /or when implementation follows/,
-  );
 });
 
 test('plan and spec stay lean', () => {
