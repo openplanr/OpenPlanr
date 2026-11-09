@@ -1075,7 +1075,7 @@
       "skillId": "planr-release",
       "family": "release",
       "contribution": "release",
-      "skillVersion": "1.2.0",
+      "skillVersion": "1.3.0",
       "description": "Choose and maintain a product's versioning scheme, classify shipped changes, and write user-facing changelogs or release notes. Use for SemVer or CalVer decisions, version bumps, release cadence, and preparing a versioned release after landing.",
       "lifecycle": "active",
       "authorityClass": "release-preparation",

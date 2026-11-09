@@ -906,11 +906,11 @@
       "assets": [
         {
           "path": "skills/release/SKILL.md",
-          "digest": "sha256:13b702c84da58d9fc00ffa35f22624d8afefa5d5814d8290412b785741df8964"
+          "digest": "sha256:5566b960f74642d7f3dfdb07e420dbfacff41e178578d797d968fc6a84e0c1e5"
         },
         {
           "path": "skills/release/openplanr.skill.json",
-          "digest": "sha256:e040f496cf4d2f16bcdb072b2b96c58745df01ed9a9f16b2b3eb27454adf261f"
+          "digest": "sha256:167271f868b1f82de306fb66444c6bb3541cfb7ca553f602213922336618d3f8"
         },
         {
           "path": "skills/release/agents/openai.yaml",
@@ -926,7 +926,7 @@
         },
         {
           "path": "skills/release/references/cadence.md",
-          "digest": "sha256:c9d0e67e35aaa4db563a8f520dc3ff441be8a8c54b86be274b44a20dfa363077"
+          "digest": "sha256:5de7f757f7b280b3086eb7b7e86d93fd31c1a29502eea60e4d6bb5dc8869e86a"
         },
         {
           "path": "skills/release/assets/profile-template.md",

@@ -2191,11 +2191,11 @@
     },
     {
       "id": "planr-release",
-      "version": "1.2.0",
+      "version": "1.3.0",
       "source": "skills/planr-release/openplanr.skill.json",
       "entrypoint": "skills/planr-release/SKILL.md",
       "description": "Choose and maintain a product's versioning scheme, classify shipped changes, and write user-facing changelogs or release notes. Use for SemVer or CalVer decisions, version bumps, release cadence, and preparing a versioned release after landing.",
-      "sourceDigest": "sha256:efeb8ea3e3212b7e1ba79a0d81b507a77294d33a54afbe916c5a2f8262c0b69e",
+      "sourceDigest": "sha256:2a79d8eecec933e842ad2928c583483edebe7cc17fb05629bb9d86c29de99893",
       "resources": [
         {
           "path": "agents/openai.yaml",
@@ -2241,7 +2241,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:c9d0e67e35aaa4db563a8f520dc3ff441be8a8c54b86be274b44a20dfa363077"
+          "digest": "sha256:5de7f757f7b280b3086eb7b7e86d93fd31c1a29502eea60e4d6bb5dc8869e86a"
         },
         {
           "path": "assets/profile-template.md",

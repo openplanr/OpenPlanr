@@ -4436,12 +4436,12 @@ export const CANONICAL_REGISTRIES = deepFreeze({
       },
       {
         "skillId": "planr-release",
-        "skillVersion": "1.2.0",
+        "skillVersion": "1.3.0",
         "description": "Choose and maintain a product's versioning scheme, classify shipped changes, and write user-facing changelogs or release notes. Use for SemVer or CalVer decisions, version bumps, release cadence, and preparing a versioned release after landing.",
         "lifecycle": "active",
         "authorityClass": "release-preparation",
         "source": "skills/planr-release/openplanr.skill.json",
-        "sourceDigest": "sha256:e040f496cf4d2f16bcdb072b2b96c58745df01ed9a9f16b2b3eb27454adf261f",
+        "sourceDigest": "sha256:167271f868b1f82de306fb66444c6bb3541cfb7ca553f602213922336618d3f8",
         "triggerPolicy": {
           "include": [
             "Choose the next SemVer or CalVer version and write user-facing release notes",
@@ -4877,7 +4877,7 @@ export const CANONICAL_REGISTRIES = deepFreeze({
       }
     ],
     "compatibilityAliases": [],
-    "documentDigest": "sha256:af222705d0a9d6338e0c957d6d33d2ff1ff8763e4d1be287056d4999440be1d2"
+    "documentDigest": "sha256:015bd0b5307b056c8e4d4ba075eeac5b31586ba0873211b7333c92dfbefbca7f"
   },
   "outputs.json": {
     "kind": "output-catalog",
