@@ -1,6 +1,6 @@
 {
   "name": "openplanr",
-  "version": "3.5.0",
+  "version": "3.6.0",
   "description": "The openplanr CLI: validates plans in your repo, lists the checks a change needs, renders diagrams, installs 25+ skills into Claude Code, Codex and Cursor, and syncs GitHub Issues and Linear. No model calls.",
   "type": "module",
   "main": "./dist/cli/index.js",
