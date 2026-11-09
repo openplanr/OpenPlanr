@@ -21,9 +21,10 @@ import {
 import { loadConfig } from '../../services/config-service.js';
 import { CLI_COMMAND } from '../../utils/constants.js';
 import { display, logger } from '../../utils/logger.js';
+import { registerSyncTrackerCommand } from './sync-tracker.js';
 
 export function registerSyncCommand(program: Command) {
-  program
+  const sync = program
     .command('sync')
     .description('Validate and fix cross-references across all artifacts')
     .option('--dry-run', 'show what would change without writing files')
@@ -77,6 +78,7 @@ export function registerSyncCommand(program: Command) {
         logger.success(`Fixed ${totalFixes} cross-reference issue(s).`);
       }
     });
+  registerSyncTrackerCommand(sync, program);
 }
 
 interface SyncOptions {

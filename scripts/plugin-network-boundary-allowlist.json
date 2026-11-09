@@ -52,16 +52,6 @@
       "reason": "The local-backend probe sends an unauthenticated GET to the user's own enrolled local model server, only for profiles whose destination class is local, with redirects refused. Not flagged by the directory in 3.1.0 or 3.4.0."
     },
     {
-      "path": "skills/sync/scripts/sync.mjs",
-      "rule": "env-forward",
-      "reason": "Sync runs the user's own gh CLI, which inherits the environment so gh can use its own GitHub sign-in. Not flagged by the directory in 3.1.0 or 3.4.0."
-    },
-    {
-      "path": "rules/planr-sync/scripts/sync.mjs",
-      "rule": "env-forward",
-      "reason": "Sync runs the user's own gh CLI, which inherits the environment so gh can use its own GitHub sign-in. Not flagged by the directory in 3.1.0 or 3.4.0."
-    },
-    {
       "path": "skills/delegate/scripts/integrate.mjs",
       "rule": "dynamic-code",
       "reason": "Delegate re-enters a run through the helper snapshot pinned in that run's record: it imports runner.mjs or integrate.mjs from the run directory only after verifiedHelper has checked the recorded path and SHA-256 digest. The specifier is a file URL, never a remote module. Not flagged by the directory in 3.1.0 or 3.4.0."

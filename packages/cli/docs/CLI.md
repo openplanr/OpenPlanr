@@ -1035,6 +1035,65 @@ skill is unclear.
 
 Handles both story-level and feature-level task relationships.
 
+#### `openplanr sync tracker`
+
+Inspect a tracker, or preview and apply GitHub issue changes through the GitHub CLI
+(`gh`). The `planr-sync` skill calls it when the coding agent has no tracker connection
+but `gh` is signed in. Linear and other trackers sync through the coding agent's own
+connection.
+
+```bash
+openplanr sync tracker github inspect --json                           # repository gh resolves
+openplanr sync tracker github sync --input ops.json --json             # preview only
+openplanr sync tracker github sync --input - --apply --json < ops.json # apply
+openplanr sync tracker local inspect                                   # configured planning roots
+```
+
+| Option           | Description                                                   | Default |
+| ---------------- | ------------------------------------------------------------- | ------- |
+| `--input <path>` | JSON array of operations, relative to the project; `-` reads stdin | none |
+| `--apply`        | Run the operations; without it `sync` only previews          | `false` |
+| `--json`         | Machine-readable output                                       | `false` |
+
+Operations: `{"action":"create","title":…,"body"?,"labels"?}`,
+`{"action":"update","id":…,"title"?,"body"?,"labels"?}` (at least one field), and
+`{"action":"close"|"reopen","id":…,"comment"?}`. `id` is an issue number, or an issue URL in
+the repository `gh` resolves (another repository's URL fails with
+`E_SYNC_TRACKER_FOREIGN_ISSUE`). `update` only adds `labels`; it never removes one. Every
+operation is validated before any runs; unknown fields are refused.
+
+Success (`--json`):
+
+```json
+{
+  "ok": true,
+  "contract": 1,
+  "provider": "github",
+  "action": "sync",
+  "applied": true,
+  "complete": true,
+  "results": [
+    { "index": 0, "action": "create", "title": "Add sign-in", "id": "31", "url": "https://github.com/acme/app/issues/31", "status": "applied" }
+  ],
+  "next": "Record each new issue's id as githubIssue in its planning file, then report the changes."
+}
+```
+
+`inspect` returns `repository` (github) or `roots` and `configured` (local) in place of
+`applied`, `complete` and `results`. Each result's `status` is `planned`, `applied`,
+`failed` or `not-run`. An `--apply` run stops at the first failed change and exits 1
+with `ok: false`, `code: "E_SYNC_TRACKER_APPLY_INCOMPLETE"`, the same `results`, and a
+`recovery` that names the operations to rerun. Other failures exit 1 with the standard
+`{ "ok": false, "code", "problem", "recovery" }`: `E_SYNC_TRACKER_USAGE`,
+`E_SYNC_TRACKER_INPUT`, `E_SYNC_TRACKER_FOREIGN_ISSUE`, `E_SYNC_TRACKER_LINEAR`, `E_SYNC_TRACKER_GH_MISSING`,
+`E_SYNC_TRACKER_GH_AUTH`, `E_SYNC_TRACKER_NOT_A_REPOSITORY`, `E_SYNC_TRACKER_NO_REMOTE`
+and `E_SYNC_TRACKER_GH_FAILED`. Human output ends with a `Next:` line.
+
+`gh` runs with an allowlisted environment: `PATH`, home, locale, temporary, XDG,
+proxy and CA variables, Windows system paths, and gh's own `GH_*`/`GITHUB_*` host and
+token variables, plus `GH_PROMPT_DISABLED=1`. Every other variable, such as an
+unrelated `*_TOKEN`, stays out of the child.
+
 ---
 
 ### `openplanr status`

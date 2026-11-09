@@ -218,6 +218,13 @@ test('the committed baseline is pinned by count and digest', () => {
   assert.equal(baseline.sha256, baselineDigest(baseline.entries));
 });
 
+test('every launcher and openplanr install in the bundles names an exact version', () => {
+  const unpinned = readHostBundleBaseline().entries.filter(
+    ({ code }) => code === 'unpinned-launcher',
+  );
+  assert.deepEqual(unpinned, []);
+});
+
 test('the Claude icon is a PNG source', () => {
   assert.match(CLAUDE_PLUGIN_ICON, /\.png$/u);
 });

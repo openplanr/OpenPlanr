@@ -750,12 +750,12 @@
     },
     {
       "skillId": "planr-design",
-      "skillVersion": "2.1.1",
+      "skillVersion": "2.1.2",
       "description": "Design a polished product interface through adaptive consultation, a shared canvas/prototype/walkthrough studio, and an implementation-ready specification. Use for a new design or an existing interface that needs a coherent direction.",
       "lifecycle": "active",
       "authorityClass": "planning-write",
       "source": "skills/planr-design/openplanr.skill.json",
-      "sourceDigest": "sha256:da6e4b51fa16e55425d9d7460dcdceab4cfc414f20050d532464a76d988d34b8",
+      "sourceDigest": "sha256:cbfdee1cd28659b8873869cb4818bb492e5bdac772a4a118b388d0a270871152",
       "triggerPolicy": {
         "include": [
           "Create an initial product design direction",
@@ -811,12 +811,12 @@
     },
     {
       "skillId": "planr-design-loop",
-      "skillVersion": "2.0.1",
+      "skillVersion": "2.0.2",
       "description": "Compare three materially different product design directions in a live review studio, collect pins and ratings, and develop the selected direction. Use for visual alternatives, comparison or a remix.",
       "lifecycle": "active",
       "authorityClass": "planning-write",
       "source": "skills/planr-design-loop/openplanr.skill.json",
-      "sourceDigest": "sha256:f96a6bceaaabff1acbdaad257ee0d602705305661c102bc22c21b2d40db50f6f",
+      "sourceDigest": "sha256:0f562caa714f68b8b2a48899fe6a41dbd7ed041f9f60aeaf6a74f5a31da4e762",
       "triggerPolicy": {
         "include": [
           "Explore multiple design directions or variants",
@@ -872,12 +872,12 @@
     },
     {
       "skillId": "planr-design-review",
-      "skillVersion": "2.1.1",
+      "skillVersion": "2.1.2",
       "description": "Review and revise an existing product design using stable board pins and scoped browser-verified changes. Use for focused improvements while preserving unrelated screens and feedback.",
       "lifecycle": "active",
       "authorityClass": "review-evidence",
       "source": "skills/planr-design-review/openplanr.skill.json",
-      "sourceDigest": "sha256:3151d0c1d1e306305256271abfbbab7408ce55b178868159ec9d82f426de499b",
+      "sourceDigest": "sha256:443e581bd1f590734359192689607175d8a9c1cde7a91e9402b14da7a9237564",
       "triggerPolicy": {
         "include": [
           "Review or critique an existing OpenPlanr design",
@@ -1803,12 +1803,12 @@
     },
     {
       "skillId": "planr-sync",
-      "skillVersion": "1.0.1",
+      "skillVersion": "1.1.0",
       "description": "Audit OpenPlanr planning artifacts for graph and protocol drift. Use when statuses, references, schemas, or generated planning views may be inconsistent.",
       "lifecycle": "active",
       "authorityClass": "planning-write",
       "source": "skills/planr-sync/openplanr.skill.json",
-      "sourceDigest": "sha256:c8061714181e6f4e330c65ba033a3586bf4118352e778865e3e3e0e802ad2cf6",
+      "sourceDigest": "sha256:ea6e4e22c03606b305afc046825d12d394301488de276ac19ac1004116b7ee45",
       "triggerPolicy": {
         "include": [
           "Audit planning artifacts for graph, schema, or protocol drift",
@@ -1864,5 +1864,5 @@
     }
   ],
   "compatibilityAliases": [],
-  "documentDigest": "sha256:84ee697e0052ad8798ef7332e3e05b95abe03dfeb090640300bc72c5d14421d0"
+  "documentDigest": "sha256:1611614140737d2e3a2e8627bb11c464f9529d74642a950c8b49d93fa86106fb"
 }

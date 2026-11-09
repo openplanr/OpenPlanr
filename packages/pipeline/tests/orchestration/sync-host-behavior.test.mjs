@@ -1,7 +1,5 @@
 import assert from 'node:assert/strict';
-import { spawnSync } from 'node:child_process';
-import { mkdtempSync, readdirSync, readFileSync, rmSync } from 'node:fs';
-import { tmpdir } from 'node:os';
+import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
@@ -12,7 +10,7 @@ const read = (path) => readFileSync(join(root, path), 'utf8');
 // The one-time extraction accounting belonged to the retired command
 // router. Keep the legacy procedure guardrails and verify the active package's
 // authorization guidance and executable preview behavior instead of historical
-// line equality. Integrations' portable-sync/linear-failure-paths suites own
+// line equality. The integrations suites and the CLI's sync-tracker tests own
 // conflict resolution, GitHub mutation responses and Linear routing.
 test('the retained legacy procedure keeps its branch and outward-action guardrails', () => {
   const procedure = read('packages/pipeline/procedures/sync-workflow.md');
@@ -24,26 +22,27 @@ test('the retained legacy procedure keeps its branch and outward-action guardrai
   assert.match(procedure, /## Termination/);
 });
 
+// Each surface's skill entrypoint and the directory its references sit in.
 const surfaces = [
-  ['canonical', 'skills/planr-sync/SKILL.md', 'skills/planr-sync/scripts/sync.mjs'],
+  ['canonical', 'skills/planr-sync/SKILL.md', 'skills/planr-sync'],
   [
     'openai',
     'dist/plugins/openai/openplanr/skills/sync/SKILL.md',
-    'dist/plugins/openai/openplanr/skills/sync/scripts/sync.mjs',
+    'dist/plugins/openai/openplanr/skills/sync',
   ],
   [
     'claude',
     'dist/plugins/claude/openplanr/skills/sync/SKILL.md',
-    'dist/plugins/claude/openplanr/skills/sync/scripts/sync.mjs',
+    'dist/plugins/claude/openplanr/skills/sync',
   ],
   [
     'cursor',
     'dist/plugins/cursor/openplanr/rules/planr-sync.mdc',
-    'dist/plugins/cursor/openplanr/rules/planr-sync/scripts/sync.mjs',
+    'dist/plugins/cursor/openplanr/rules/planr-sync',
   ],
 ];
 
-for (const [surface, entrypoint, helper] of surfaces) {
+for (const [surface, entrypoint, skillRoot] of surfaces) {
   test(`${surface}: sync guidance scopes local and remote changes to the request`, () => {
     const guidance = read(entrypoint);
     assert.match(guidance, /Audit is read-only by default/);
@@ -60,60 +59,37 @@ for (const [surface, entrypoint, helper] of surfaces) {
       guidance.replace(/\s+/gu, ' '),
       /Summarize aligned, locally repairable, conflict and unavailable counts/u,
     );
-    assert.match(guidance, /Local and tracker work never require\s+the OpenPlanr CLI/);
+    assert.match(
+      guidance.replace(/\s+/gu, ' '),
+      /Local work and tracker work through the host's connection never require the OpenPlanr CLI/u,
+    );
     assert.match(guidance, /Remote steps run through the host's own ~~project tracker connection/);
     assert.doesNotMatch(guidance, /planr linear|access\s+token|PLANR_LINEAR_TOKEN/u);
     assert.doesNotMatch(guidance, /procedures\/sync-workflow\.md|commands\/sync\.md/);
   });
 
   test(`${surface}: the sync reference uses host connections and the catalog names each host`, () => {
-    const guide = read(helper.replace('scripts/sync.mjs', 'references/tracker-connections.md'));
+    const guide = read(`${skillRoot}/references/tracker-connections.md`);
     assert.match(guide, /These skills store and read no tracker or source control credentials/);
     assert.match(guide, /\*\*Linear:\*\* the host's Linear connection/);
     assert.doesNotMatch(guide, /Bearer|Authorization|_TOKEN|personal access token/iu);
-    const connectors = read(helper.replace('scripts/sync.mjs', 'references/connectors.md'));
+    const connectors = read(`${skillRoot}/references/connectors.md`);
     for (const host of ['Claude Code', 'Codex', 'Cursor'])
       assert.match(connectors, new RegExp(host));
     assert.doesNotMatch(connectors, /Bearer|Authorization|_TOKEN/u);
   });
 
-  test(`${surface}: github synchronization previews without credentials or installed tools`, (t) => {
-    const project = mkdtempSync(join(tmpdir(), 'openplanr-sync-preview-'));
-    t.after(() => rmSync(project, { recursive: true, force: true }));
-    const operations = [{ action: 'create', title: 'Preview only' }];
-    const result = spawnSync(process.execPath, [join(root, helper), 'github', 'sync'], {
-      cwd: project,
-      encoding: 'utf8',
-      input: JSON.stringify(operations),
-      // A regression cannot reach installed tools or inherit provider secrets.
-      env: { PATH: '' },
-      timeout: 5_000,
-    });
-    assert.equal(result.status, 0, result.stderr || result.error?.message);
-    assert.deepEqual(JSON.parse(result.stdout), {
-      provider: 'github',
-      applied: false,
-      operations,
-    });
-    assert.deepEqual(readdirSync(project), [], 'preview must not write project files');
-  });
-
-  test(`${surface}: the helper sends Linear to the host's Linear connection`, (t) => {
-    const project = mkdtempSync(join(tmpdir(), 'openplanr-sync-linear-'));
-    t.after(() => rmSync(project, { recursive: true, force: true }));
-    const result = spawnSync(process.execPath, [join(root, helper), 'linear', 'sync'], {
-      cwd: project,
-      encoding: 'utf8',
-      input: '[]',
-      env: { PATH: '', PLANR_LINEAR_TOKEN: 'must-not-be-read' },
-      timeout: 5_000,
-    });
-    assert.equal(result.status, 1);
+  test(`${surface}: GitHub writes go through the pinned CLI and the skill ships no script`, () => {
+    const guidance = read(entrypoint).replace(/\s+/gu, ' ');
     assert.match(
-      result.stderr,
-      /^E_SYNC_USAGE: Linear synchronization runs through the host's Linear connection\./u,
+      guidance,
+      /`openplanr sync tracker github sync --input <operations\.json> --json`/u,
     );
-    assert.deepEqual(readdirSync(project), []);
+    assert.match(guidance, /\((?:planr-sync\/)?references\/openplanr-cli\.md\)/u);
+    const probe = read(`${skillRoot}/references/openplanr-cli.md`);
+    assert.match(probe, /`npm install -g openplanr@\d+\.\d+\.\d+`/u);
+    assert.doesNotMatch(probe, /\{\{|openplanr@(?:latest|[\^~>])/u);
+    assert.equal(existsSync(join(root, skillRoot, 'scripts')), false);
   });
 }
 

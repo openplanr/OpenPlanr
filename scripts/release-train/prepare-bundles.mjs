@@ -11,6 +11,7 @@ import {
   HOST_BUNDLE_ROOTS,
   readDirectoryEntries,
 } from '../skills/plugin-artifact-validation.mjs';
+import { assertPinServesSkills } from '../skills/skill-cli.mjs';
 import { pluginDigest } from './lib/plugin-digest.mjs';
 import { bundleDirectory, PUBLIC_TARGETS } from './lib/targets.mjs';
 
@@ -23,6 +24,10 @@ const pending =
     ? PUBLIC_TARGETS.map((target) => target.name)
     : JSON.parse(rest[pendingIndex + 1]);
 
+// The host plugins pin the CLI version they ship with, so that version must serve their commands.
+assertPinServesSkills(
+  JSON.parse(readFileSync(join(root, 'packages/cli/package.json'), 'utf8')).version,
+);
 // The npm packages carry the host plugins, so none may ship while a plugin bundle is unclean.
 assertReleasablePlugin({ workspace: root });
 for (const [host, path] of Object.entries(HOST_BUNDLE_ROOTS))

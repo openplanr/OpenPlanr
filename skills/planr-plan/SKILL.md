@@ -28,9 +28,8 @@ implementation package), read
 [the design handoff contract](references/design-handoff.md) before decomposing UI
 work. Without a design, ordinary planning from a clear specification is
 unchanged. If `openplanr` is not found, lacks `design`, or reports
-`E_DESIGN_RUNTIME_MISSING`, name the fix: `npm install -g openplanr`,
-`npm install -g openplanr@latest`, or `npm install -g openplanr` without
-`--omit=optional`, respectively.
+`E_DESIGN_RUNTIME_MISSING`, name the fix: install the `openplanr` CLI at this plugin's version, upgrade it to
+that version, or reinstall it without `--omit=optional`, respectively.
 
 For a consequential unresolved choice, use the host's structured question
 interface. Ask at most three short, mutually exclusive questions at once. If the
