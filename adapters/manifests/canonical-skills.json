@@ -660,7 +660,7 @@
       "source": "skills/planr-delegate/openplanr.skill.json",
       "entrypoint": "skills/planr-delegate/SKILL.md",
       "description": "Coordinate an explicitly requested implementation with Claude Code, Codex or Cursor, then independently review and integrate its observed changes. Use when the user asks another coding agent to implement.",
-      "sourceDigest": "sha256:9779830f07702e67c58aae54646b2fc794f428f6774155170f8e30a3cdac7518",
+      "sourceDigest": "sha256:24359219f2dbde3c0f07ba5268377e70b2ead0b75694fe9df757521b462078e3",
       "resources": [
         {
           "path": "agents/openai.yaml",
@@ -709,6 +709,18 @@
           "digest": "sha256:c1ddacaa47e35e63035a6b2c6e5e2884c1e2cc5ac253a37606964530153ae614"
         },
         {
+          "path": "references/native-commands.md",
+          "kind": "reference",
+          "hosts": [
+            "claude-code",
+            "codex",
+            "chatgpt",
+            "cursor"
+          ],
+          "executable": false,
+          "digest": "sha256:117b46b9255ea59c7bf7706d0824082937219bf2bb3b77c79be21d68ac936bae"
+        },
+        {
           "path": "references/openplanr-cli.md",
           "kind": "reference",
           "hosts": [
@@ -718,7 +730,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:8a20f70284b92483490088e9649c1b861c9c47f203ffb212e74bd031532e5715"
+          "digest": "sha256:5cbf20aaca07db68e2003c61ab15b8cced3484af08638c18d5daae8b20d016f3"
         },
         {
           "path": "references/operator-guide.md",
@@ -730,7 +742,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:8e85e155e8693196f5cce6e13a7bf5a0699249fcb3a9dd74b828229bc9a833e4"
+          "digest": "sha256:93b3e09e4447b19ff6443502fee87ef7c540d3e4d52d70a7f1d17e9504702e84"
         },
         {
           "path": "references/run-handoff.md",

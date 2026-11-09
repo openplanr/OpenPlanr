@@ -39,15 +39,18 @@ Each child process gets an explicit environment, never the whole parent environm
 - every child: `PATH`, `HOME`, user, shell, temporary-directory, terminal, locale
   (`LANG`, `LC_*`), `XDG_*`, proxy and certificate variables, and the Windows system
   variables;
-- the native agent also: its own variables only (Claude Code `ANTHROPIC_*` and
+- the native agent also gets its own engine's settings (Claude Code `ANTHROPIC_*` and
   `CLAUDE_*`, plus `AWS_*` with `CLAUDE_CODE_USE_BEDROCK` or `GOOGLE_*`, `GCLOUD_*`,
   `CLOUDSDK_*` and `CLOUD_ML_*` with `CLAUDE_CODE_USE_VERTEX`; Codex `OPENAI_*`,
-  `CODEX_*`, `AZURE_OPENAI_*`; Cursor `CURSOR_*`), plus the profile's `allowedEnv`;
+  `CODEX_*`, `AZURE_OPENAI_*`; Cursor `CURSOR_*`), except names containing `KEY`,
+  `TOKEN`, `SECRET`, `PASSWORD`, `CREDENTIAL` or `AUTH`, and the profile's
+  `allowedEnv`;
 - a check: the names in its `env` list.
 
-Anything else, such as a `GITHUB_TOKEN` an MCP server reads, a Codex provider's
-`env_key`, or `NPM_TOKEN` for a private registry, reaches the agent only when a saved
-profile names it in `allowedEnv`.
+The native CLI signs in with its own login in its config directory (`CLAUDE_CONFIG_DIR`,
+`CODEX_HOME`). A credential variable such as `ANTHROPIC_API_KEY`, a token an MCP server
+reads, or `NPM_TOKEN` for a private registry reaches the agent only when the user saves
+a profile that names it in `allowedEnv`.
 
 ## Prepare a run
 

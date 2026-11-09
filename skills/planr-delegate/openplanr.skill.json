@@ -56,6 +56,17 @@
       "executable": false
     },
     {
+      "path": "references/native-commands.md",
+      "kind": "reference",
+      "hosts": [
+        "claude-code",
+        "codex",
+        "chatgpt",
+        "cursor"
+      ],
+      "executable": false
+    },
+    {
       "path": "references/openplanr-cli.md",
       "kind": "reference",
       "hosts": [

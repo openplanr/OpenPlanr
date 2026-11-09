@@ -62,9 +62,17 @@ test('Claude and Codex installed routers and Ship expose only the opt-in handoff
     const delegate = read(`${base}/delegate/SKILL.md`);
     assert.match(router, /Ask another coding agent to implement[^\n]*`planr-delegate`/u);
     assert.match(ship, /plain Ship never launches its helper/u);
-    assert.match(delegate, /context inventory once before/u);
-    assert.match(delegate, /including required\s+ignored planning files/u);
-    assert.match(delegate, /before\s+`dispatch`/u);
+    assert.match(delegate, /git worktree add -b planr-delegate\/<slug>/u);
+    assert.match(delegate, /required ignored planning files by path/u);
+    assert.match(delegate, /"Do not commit\."/u);
+    assert.match(delegate, /Every changed path must be in scope\. Run the gates\s+yourself/u);
+    assert.match(
+      delegate,
+      /Never\s+read, copy or forward tokens, credential files or the keychain/u,
+    );
+    const cli = read(`${base}/delegate/references/openplanr-cli.md`);
+    assert.match(cli, /context inventory once before `dispatch`/u);
+    assert.doesNotMatch(cli, /npx -y|npx openplanr/u);
   }
 });
 

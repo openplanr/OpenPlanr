@@ -81,20 +81,16 @@ test('every host bundle ships the delegate skill as instructions only', () => {
   }
 });
 
-test('the CLI reference pins the exact plugin version and the minimum CLI', () => {
+test('the optional CLI path pins the exact plugin version and the minimum CLI, without npx', () => {
   const version = JSON.parse(read('packages/cli/package.json')).version;
   const minimum = /SKILL_CLI_MINIMUM = '([^']+)'/u.exec(
     read('scripts/skills/plugin-metadata.mjs'),
   )[1];
   const reference = read('skills/planr-delegate/references/openplanr-cli.md');
-  assert.ok(reference.includes(`npx -y openplanr@${version} <command>`));
   assert.ok(reference.includes(`npm install -g openplanr@${version}`));
   assert.ok(reference.includes(`version ${minimum} or later`));
-  assert.doesNotMatch(reference, /\{\{/u);
-  assert.match(
-    read('skills/planr-delegate/SKILL.md'),
-    /\[openplanr-cli\]\(references\/openplanr-cli\.md\)/u,
-  );
+  assert.doesNotMatch(reference, /\{\{|npx -y|npx openplanr/u);
+  assert.match(read('skills/planr-delegate/SKILL.md'), /\]\(references\/openplanr-cli\.md\)/u);
 });
 
 test('an installed runtime classifies the reported sources and still rejects a recognizable credential', () => {

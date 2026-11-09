@@ -8,7 +8,7 @@
   "canonicalSkillCount": 30,
   "compatibilityAliasCount": 0,
   "skillCount": 30,
-  "assetCount": 194,
+  "assetCount": 195,
   "skills": [
     {
       "skillId": "planr-artifact",
@@ -314,11 +314,11 @@
       "assets": [
         {
           "path": "skills/delegate/SKILL.md",
-          "digest": "sha256:af44cf844d4526ee65f50ab1899dfbb8475fa6819436ee0d7d48cdd24baf6349"
+          "digest": "sha256:ef25b5d42a4212dbb767fe50efa05325ceb3b17420239728556b62824dc42a2a"
         },
         {
           "path": "skills/delegate/openplanr.skill.json",
-          "digest": "sha256:142adc760acfbefe89c7b1cefa83cc42c080cf929ae97f2f716760011f0cc7a1"
+          "digest": "sha256:b966f9e694e90d31202d9814290ab0d97efe6c0cafe495a4809230d5df3d6a8d"
         },
         {
           "path": "skills/delegate/agents/openai.yaml",
@@ -337,12 +337,16 @@
           "digest": "sha256:c1ddacaa47e35e63035a6b2c6e5e2884c1e2cc5ac253a37606964530153ae614"
         },
         {
+          "path": "skills/delegate/references/native-commands.md",
+          "digest": "sha256:117b46b9255ea59c7bf7706d0824082937219bf2bb3b77c79be21d68ac936bae"
+        },
+        {
           "path": "skills/delegate/references/openplanr-cli.md",
-          "digest": "sha256:8a20f70284b92483490088e9649c1b861c9c47f203ffb212e74bd031532e5715"
+          "digest": "sha256:5cbf20aaca07db68e2003c61ab15b8cced3484af08638c18d5daae8b20d016f3"
         },
         {
           "path": "skills/delegate/references/operator-guide.md",
-          "digest": "sha256:8e85e155e8693196f5cce6e13a7bf5a0699249fcb3a9dd74b828229bc9a833e4"
+          "digest": "sha256:93b3e09e4447b19ff6443502fee87ef7c540d3e4d52d70a7f1d17e9504702e84"
         },
         {
           "path": "skills/delegate/references/run-handoff.md",

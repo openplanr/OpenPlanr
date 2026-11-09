@@ -1,39 +1,45 @@
-# OpenPlanr CLI for runtime skills
+# OpenPlanr CLI path
 
-This skill's runtime is the `openplanr` command-line tool,
-version 3.7.0 or later. Use the `openplanr` on `PATH`; never search
-`node_modules`, import its packages, or look for bundled scripts.
+Use this path only when `openplanr` is already on `PATH` and the user wants what it adds
+over the native loop: a recorded context capsule, worktree custody, recorded checks and
+exact-session resume. Never install it, run it through `npx`, or search
+`node_modules` for it; without it, use the native loop.
 
 ## Probe
 
-Run once before the first command:
+Run `openplanr --version`. Use this path only at version 3.7.0 or later.
+An older version, `unknown command 'delegate'` or `E_DELEGATE_RUNTIME_MISSING` means the
+native loop; tell the user that `npm install -g openplanr@3.6.0` (without
+`--omit=optional`) enables this path.
 
-```sh
-openplanr --version
-```
+## Commands
 
-| Result | Stop | Next action |
-|---|---|---|
-| A version ≥ 3.7.0 | None | Use the commands in the skill. |
-| `openplanr` not found | Stop 1: no CLI | Tell the user, then run the one command as `npx -y openplanr@3.6.0 <command>`, or give `npm install -g openplanr@3.6.0`. On Codex give only the install command. |
-| A version below 3.7.0, or `unknown command` | Stop 2: CLI too old | `npm install -g openplanr@3.6.0` |
-| Delegate: `E_DELEGATE_RUNTIME_MISSING` | Stop 3: CLI without its workflow package | `npm install -g openplanr@3.6.0`, without `--omit=optional` |
+Each action is `openplanr delegate <action> --input - --json` with one JSON object on
+stdin; `--run <runId>` alone is enough for `dispatch`, `wait`, `status` and `abandon`.
 
-| Host | Missing CLI |
-|---|---|
-| Claude Code, Cursor | Say that the CLI is missing, then run the pinned `npx` form. |
-| Codex | Give `npm install -g openplanr@3.6.0` and stop; never run `npx`, which the sandbox may block. |
-| ChatGPT, or no local shell | Stop 1 with the install command for a coding agent that has a shell. |
+1. `probe` with `repositoryRoot`: engines, saved profiles, readiness and destination.
+2. `prepare` with the engine or profile, `request` or `taskSelector`, `selectedFiles`
+   and `scopePaths`. Show the context inventory once before `dispatch`, with the model,
+   routing and trusted configuration; the worktree is not an OS sandbox.
+3. `dispatch`, then `wait` or `status`. A question or block is an attention state:
+   `resume` the same run with an `answer` or `correction`.
+4. `integrate review` with `scopePaths`, then `integrate apply` with the checks you
+   selected as `{ executable, args, cwd, timeoutMs?, env? }`. Apply leaves an
+   uncommitted diff.
 
-At a stop, report the step as not run and name the command the user can run. Never
-replace the CLI with your own scripts.
+`E_CAPSULE_SECRET`: show the masked findings. Never edit, redact or drop a required
+source to pass. Resolve a finding only after the user confirms that exact value is not
+a credential, by preparing again with `credentialResolutions` (`id`, `contentDigest`).
 
 ## Results
 
-Pass `--json` on every call. Read `ok` first.
+Read `ok` first. `ok: true` carries `result` and `next`, the step to take. `ok: false`
+(exit code 1) carries `code`, `problem` and `recovery`, plus `runId` and `details` when
+they apply.
 
-- `ok: true`: `result` holds the command's fields and `next` says what to run or
-  decide next.
-- `ok: false`, exit code 1: `code`, `problem` and `recovery` say what failed and how to
-  recover; `runId` and `details` appear when they apply. Show the problem and the
-  recovery; never retry with changed input the user did not approve.
+The CLI starts each child with an explicit environment and passes no credential
+variable unless a saved profile lists it in `allowedEnv`.
+
+Details: [operator guide](operator-guide.md), [capsule](capsule-contract.md),
+[lifecycle](run-handoff.md), [integration](integration-review.md),
+[custody](worktree-custody.md), [adapters](adapter-protocol.md).

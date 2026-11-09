@@ -4,15 +4,18 @@ import { mkdir, mkdtemp, readdir, readFile, realpath, rm, writeFile } from 'node
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import test from 'node:test';
+import { captureFileState, gitFileState } from '../../packages/pipeline/lib/delegate/custody.mjs';
+import { snapshotTip } from '../../packages/pipeline/lib/delegate/handoff.mjs';
 import {
   resolveSelectedChecks,
   runDelegateChecks,
 } from '../../packages/pipeline/lib/delegate/integration-checks.mjs';
+import { git as integrationGit } from '../../packages/pipeline/lib/delegate/integration-files.mjs';
 import { prepareProfile } from '../../packages/pipeline/lib/delegate/profiles.mjs';
+import { processIdentity } from '../../packages/pipeline/lib/delegate/run-record.mjs';
 
 const DELEGATE = resolve(import.meta.dirname, '../../packages/pipeline/lib/delegate');
 const UNRELATED = { FOO_TOKEN: 'foo-secret', GITHUB_TOKEN: 'gh-secret', NPM_TOKEN: 'npm-secret' };
-const HOST_AUTH = { ANTHROPIC_API_KEY: 'anthropic-key', OPENAI_API_KEY: 'openai-key' };
 
 async function workspace(t) {
   const base = await realpath(await mkdtemp(join(tmpdir(), 'planr-delegate-env-')));
@@ -46,38 +49,58 @@ async function recordedEnvironments(log) {
     .map((line) => JSON.parse(line));
 }
 
-for (const [engine, command, own, other] of [
-  ['claude', 'claude', 'ANTHROPIC_API_KEY', 'OPENAI_API_KEY'],
-  ['codex', 'codex', 'OPENAI_API_KEY', 'ANTHROPIC_API_KEY'],
-  ['cursor', 'agent', null, 'ANTHROPIC_API_KEY'],
+const CREDENTIALS = {
+  ANTHROPIC_API_KEY: 'anthropic-key',
+  ANTHROPIC_AUTH_TOKEN: 'anthropic-token',
+  CLAUDE_CODE_OAUTH_TOKEN: 'claude-oauth',
+  OPENAI_API_KEY: 'openai-key',
+  CODEX_API_KEY: 'codex-key',
+  CURSOR_API_KEY: 'cursor-key',
+};
+const ENGINE_SETTINGS = {
+  CLAUDE_FIXTURE_SETTING: 'claude-setting',
+  OPENAI_FIXTURE_SETTING: 'openai-setting',
+  CURSOR_FIXTURE_SETTING: 'cursor-setting',
+};
+
+for (const [engine, command, own, chosen] of [
+  ['claude', 'claude', 'CLAUDE_FIXTURE_SETTING', 'ANTHROPIC_API_KEY'],
+  ['codex', 'codex', 'OPENAI_FIXTURE_SETTING', 'OPENAI_API_KEY'],
+  ['cursor', 'agent', 'CURSOR_FIXTURE_SETTING', 'CURSOR_API_KEY'],
 ]) {
-  test(`${engine} children receive their own host variables and no unrelated token`, async (t) => {
+  test(`${engine} children get their engine settings, no credential unless chosen, and no unrelated token`, async (t) => {
     const { base, bin, root } = await workspace(t);
-    const log = join(base, `${engine}.jsonl`);
-    await recordingCli(bin, command, log);
     const env = {
       PATH: `${bin}:/usr/bin:/bin`,
       HOME: base,
       LANG: 'C.UTF-8',
       ...UNRELATED,
-      ...HOST_AUTH,
-      CURSOR_API_KEY: 'cursor-key',
+      ...CREDENTIALS,
+      ...ENGINE_SETTINGS,
       PROFILE_EXTRA: 'named-extra',
     };
-    await prepareProfile(
-      { kind: engine, executable: join(bin, command), argv: [], allowedEnv: ['PROFILE_EXTRA'] },
-      { env, cwd: root, directory: join(base, 'profiles') },
-    ).catch(() => undefined);
-    const seen = await recordedEnvironments(log);
-    assert.ok(seen.length > 0, `${engine} was never started`);
-    for (const child of seen) {
-      for (const name of Object.keys(UNRELATED)) assert.equal(child[name], undefined, name);
-      assert.equal(child[other], undefined, other);
-      if (own) assert.equal(child[own], HOST_AUTH[own]);
-      if (engine === 'cursor') assert.equal(child.CURSOR_API_KEY, 'cursor-key');
-      else assert.equal(child.CURSOR_API_KEY, undefined);
-      assert.equal(child.PROFILE_EXTRA, 'named-extra');
-      assert.equal(child.LANG, 'C.UTF-8');
+    for (const allowedEnv of [['PROFILE_EXTRA'], ['PROFILE_EXTRA', chosen]]) {
+      const log = join(base, `${engine}-${allowedEnv.length}.jsonl`);
+      await recordingCli(bin, command, log);
+      await prepareProfile(
+        { kind: engine, executable: join(bin, command), argv: [], allowedEnv },
+        { env, cwd: root, directory: join(base, 'profiles') },
+      ).catch(() => undefined);
+      const seen = await recordedEnvironments(log);
+      assert.ok(seen.length > 0, `${engine} was never started`);
+      for (const child of seen) {
+        for (const name of Object.keys(UNRELATED)) assert.equal(child[name], undefined, name);
+        for (const name of Object.keys(CREDENTIALS))
+          assert.equal(
+            child[name],
+            allowedEnv.includes(name) ? CREDENTIALS[name] : undefined,
+            `${name} with allowedEnv ${allowedEnv}`,
+          );
+        for (const name of Object.keys(ENGINE_SETTINGS))
+          assert.equal(child[name], name === own ? ENGINE_SETTINGS[name] : undefined, name);
+        assert.equal(child.PROFILE_EXTRA, 'named-extra');
+        assert.equal(child.LANG, 'C.UTF-8');
+      }
     }
   });
 }
@@ -91,7 +114,7 @@ test('parent-selected checks receive the base environment plus only the names th
     for (const name of Object.keys(process.env)) if (!(name in saved)) delete process.env[name];
     Object.assign(process.env, saved);
   });
-  Object.assign(process.env, UNRELATED, HOST_AUTH, { DATABASE_URL: 'postgres://fixture' });
+  Object.assign(process.env, UNRELATED, CREDENTIALS, { DATABASE_URL: 'postgres://fixture' });
   const checks = await resolveSelectedChecks(root, [
     { executable: process.execPath, args: ['-e', record], cwd: '.' },
     { executable: process.execPath, args: ['-e', record], cwd: '.', env: ['DATABASE_URL'] },
@@ -103,12 +126,51 @@ test('parent-selected checks receive the base environment plus only the names th
   );
   const [plain, named] = await recordedEnvironments(log);
   for (const child of [plain, named]) {
-    for (const name of [...Object.keys(UNRELATED), ...Object.keys(HOST_AUTH)])
+    for (const name of [...Object.keys(UNRELATED), ...Object.keys(CREDENTIALS)])
       assert.equal(child[name], undefined, name);
     assert.equal(child.PATH, process.env.PATH);
   }
   assert.equal(plain.DATABASE_URL, undefined);
   assert.equal(named.DATABASE_URL, 'postgres://fixture');
+});
+
+// Wraps a real tool so each call records the environment it was started with.
+async function recordingWrapper(bin, tool, log) {
+  const real = execFileSync('/bin/sh', ['-c', `command -v ${tool}`], { encoding: 'utf8' }).trim();
+  await writeFile(
+    join(bin, tool),
+    `#!/bin/sh\n${JSON.stringify(process.execPath)} -e 'require("node:fs").appendFileSync(process.argv[1], JSON.stringify({ tool: process.argv[2], env: process.env }) + "\\n")' ${JSON.stringify(log)} ${tool}\nexec ${JSON.stringify(real)} "$@"\n`,
+    { mode: 0o700 },
+  );
+}
+
+test('git and ps children get the base environment and no token or credential', async (t) => {
+  const { base, bin, root } = await workspace(t);
+  const log = join(base, 'tools.jsonl');
+  await recordingWrapper(bin, 'git', log);
+  await recordingWrapper(bin, 'ps', log);
+  execFileSync('git', ['config', 'user.name', 'Fixture'], { cwd: root });
+  execFileSync('git', ['config', 'user.email', 'fixture@example.test'], { cwd: root });
+  await writeFile(join(root, 'a.txt'), 'a\n');
+  const saved = { ...process.env };
+  t.after(() => {
+    for (const name of Object.keys(process.env)) if (!(name in saved)) delete process.env[name];
+    Object.assign(process.env, saved);
+  });
+  Object.assign(process.env, UNRELATED, CREDENTIALS, { PATH: `${bin}:${process.env.PATH}` });
+  await snapshotTip({ worktreePath: root, runId: 'environment-run' });
+  await integrationGit(root, 'status', '--porcelain');
+  await gitFileState(root, 'a.txt', await captureFileState(root, 'a.txt'));
+  await processIdentity();
+  const calls = await recordedEnvironments(log);
+  const tools = new Set(calls.map(({ tool }) => tool));
+  assert.ok(tools.has('git'));
+  if (process.platform !== 'linux') assert.ok(tools.has('ps'));
+  for (const { tool, env } of calls) {
+    for (const name of [...Object.keys(UNRELATED), ...Object.keys(CREDENTIALS)])
+      assert.equal(env[name], undefined, `${tool} received ${name}`);
+    assert.equal(env.HOME, process.env.HOME);
+  }
 });
 
 test('every child process the delegate runtime starts names an explicit environment', async () => {

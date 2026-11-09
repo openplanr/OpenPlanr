@@ -6,62 +6,56 @@ license: MIT
 
 # OpenPlanr Delegate
 
-Delegate one coherent repository scope through the user's installed native CLI.
-The delegate owns investigation, implementation, build/test and correction. The
-parent owns scope, complete context, independent review, acceptance and integration.
-Ordinary implementation remains with `planr-ship`.
+Hand one coherent repository scope to the user's installed Claude Code, Codex or Cursor
+CLI. The delegate investigates, implements, builds, tests and corrects. You own the
+scope, the brief, independent review, acceptance and integration. Ordinary
+implementation stays with `planr-ship`.
 
-## Start
+Use the native loop below. Only when `openplanr` is already on `PATH` and the user wants
+its capsule, custody, recorded checks or resume, use [the CLI path](references/openplanr-cli.md)
+instead.
 
-Probe the CLI as [openplanr-cli](references/openplanr-cli.md) says; at a stop, stop.
-Every action is `openplanr delegate <action> --input - --json` with one JSON object on
-stdin (`--run <runId>` alone is enough for `dispatch`, `wait`, `status` and `abandon`).
-Review is `openplanr delegate integrate <review|apply|recover>`.
+## Native loop
 
-Run `probe` with `repositoryRoot`. Selection precedence: explicit engine/profile,
-saved choice, then a sole compatible native choice; otherwise ask, engine first if the
-chooser is short. Show each choice's engine, profile/model, readiness and effective
-destination; keep saved local-model profiles visible. A name does not prove local
-routing: for an explicit local request, confirm effective routing before dispatch and
-never substitute cloud execution. Conflicting routes block preparation. See the
-[operator guide](references/operator-guide.md) for inputs, profiles and environment,
-and the [adapter contract](references/adapter-protocol.md) for native CLI compatibility.
+Agree the engine, model and optional profile with the user first. A profile is a native
+config directory plus a model: `CODEX_HOME=<dir>` or `CLAUDE_CONFIG_DIR=<dir>`. Confirm
+identity only with `codex login status`, `claude auth status` or `agent status`. Never
+read, copy or forward tokens, credential files or the keychain.
 
-Read the task, binding repository instructions and relevant source/tests. Build the
-[complete capsule](references/capsule-contract.md), including required
-ignored planning files. Never silently omit, truncate or summarize a required source;
-for a large local task, narrow the sources or split the task.
+1. **Worktree.** From a clean base, `git worktree add -b planr-delegate/<slug> <dir> HEAD`
+   with `<dir>` outside the checkout. Copy any uncommitted parent file the task needs,
+   then commit it there with `--no-verify` as the base. Record the base commit.
+2. **Brief.** Write it to a file outside the worktree: goal, current state, scope paths,
+   paths not to touch, the repository's real gate commands, the report you expect back,
+   and "Do not commit." Include required ignored planning files by path; never summarize
+   a required source.
+3. **Run.** Start the native CLI in the worktree with its edit permission and the brief,
+   as [native commands](references/native-commands.md) shows. Check each command and
+   flag against the installed `--help` first and name any you could not verify. No
+   bypass, force, yolo or approve-all flags.
+4. **Observe.** Read its final message, then `git -C <dir> add -A` and
+   `git -C <dir> diff --cached --stat <base>` and the full diff. A summary is a claim,
+   not evidence.
+5. **Review and integrate.** Every changed path must be in scope. Run the gates
+   yourself in the worktree. Send findings back to the same session; do not fix its
+   work yourself. When accepted, write `git -C <dir> diff --cached --binary <base>` to a
+   patch, run `git apply --check` then `git apply` in the parent checkout, and remove
+   the worktree and branch. The delegate never commits; you commit only when the user
+   asked. Keep the worktree on any stop.
 
-`E_CAPSULE_SECRET`: show the masked findings. Never edit, redact or drop a required
-source to pass. Resolve a finding only after the user confirms that exact value is not a
-credential, by preparing again with `credentialResolutions` (`id`, `contentDigest`).
+## Stops
 
-Call `prepare` with engine/profile, context and explicit `scopePaths`. Show the
-engine, model selection, routing, trusted configuration, working directory and
-context inventory once before `dispatch`. Trusted hooks, plugins and MCP may run code;
-the worktree is not an OS sandbox. Use `prepare-worktree` for dependencies.
-
-## Run and review
-
-`dispatch`, bounded `wait` and `status` report the exact session and progress. No
-bypass, force or yolo flags, tool exclusions or model fallbacks. A permission denial is
-an attention state: resolve it in the native CLI, then `resume` the recorded session
-with an answer or correction. Never use the latest session. Send review findings to the
-delegate; do not implement its changes yourself. See [lifecycle](references/run-handoff.md).
-
-When execution stops, `integrate review` the run branch's patch against the scope.
-Select independent checks from the task and repository as
-`{ executable, args, cwd, timeoutMs?, env? }`, and `integrate apply` only the reviewed
-candidate. Failed checks stay blocked; changes made by checks need another review. See
-[verification and integration](references/integration-review.md) and
-[worktree custody](references/worktree-custody.md).
-
-`apply` leaves an uncommitted diff and saves the report. Commit, landing, publication
-and deployment are separate decisions. `abandon` only a run that never executed.
+| Stop | Condition | Next |
+|---|---|---|
+| CLI missing | The engine's command is not on `PATH` | Name its install command; do not install it yourself. |
+| Not signed in | The status command reports no login | The user signs in with that CLI's own login. |
+| Credential in environment | `ANTHROPIC_API_KEY`, `ANTHROPIC_AUTH_TOKEN`, `CLAUDE_CODE_OAUTH_TOKEN`, `OPENAI_API_KEY`, `CODEX_API_KEY` or `CURSOR_API_KEY` is set (test with `[ -n "${NAME+x}" ]`; never print it) | Ask whether the user chose that; otherwise run with it unset. |
+| Out of scope | A changed path is outside scope or in a protected path | Send it back, or ask the user to widen the scope. |
+| Gates fail | A gate exits non-zero | Send the output back to the same session; integrate nothing. |
+| Patch conflict | `git apply --check` fails | Report the paths; never overwrite the user's edits. |
 
 ## Return
 
-Lead with the outcome: integrated, blocked with its attention state, or stopped at a
-named CLI stop. Then the five-field report: changed files, independent checks, the
-native agent's own claims labelled as claims, issues, and the report location. End with
-`next` from the last result, or the stop's command.
+Lead with the outcome: integrated, sent back, or stopped (name the stop). Then the
+changed files with line counts, each gate with its exit code, the delegate's own claims
+labelled as claims, the worktree and branch if kept, and the next step.

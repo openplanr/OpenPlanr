@@ -947,6 +947,60 @@ exits 1 for an unknown tier, a missing `--task` file or a directory outside git.
 
 ---
 
+### `openplanr delegate`
+
+Hand one scoped implementation to Claude Code, Codex or Cursor, then review and
+integrate its observed changes. The `delegate` skill runs the native CLIs directly by
+default and uses these commands when `openplanr` is installed and you want a recorded
+capsule, custody, checks and resume. Delegation needs the workflow package that installs with
+`openplanr` (not with `--omit=optional`).
+
+```bash
+openplanr delegate probe --json
+openplanr delegate prepare --input prepare.json --json
+openplanr delegate dispatch --run <runId> --json
+openplanr delegate wait --run <runId> --json
+echo '{"runId":"<runId>","correction":"Fix the failing test."}' | openplanr delegate resume --input - --json
+echo '{"runId":"<runId>","scopePaths":["src"]}' | openplanr delegate integrate review --input - --json
+openplanr delegate integrate apply --input apply.json --json
+```
+
+| Action | Does |
+| --- | --- |
+| `probe` | Finds Git, the installed `claude`, `codex` and Cursor `agent` CLIs, and saved profiles |
+| `profile-preview`, `profile-enroll`, `profile-remove` | Shows, saves or removes an optional profile |
+| `prepare` | Builds the context capsule and owned worktree; returns the preview to confirm |
+| `prepare-worktree` | Runs selected setup commands, such as `npm ci`, in the owned worktree |
+| `dispatch`, `wait`, `status` | Starts the native agent, waits up to 60 seconds, reports the run |
+| `resume` | Continues the recorded session with an `answer` or `correction` |
+| `recover`, `close`, `cleanup`, `abandon`, `prune` | Reconciles, closes, cleans up, discards or prunes runs |
+| `integrate review`, `integrate apply`, `integrate recover` | Reviews the patch, applies it as an uncommitted diff after the selected checks, or finishes an interrupted apply |
+
+| Option | Description | Default |
+| --- | --- | --- |
+| `--input <file>` | The action's JSON object; `-` reads stdin (2 MiB, or 64 KiB for `integrate`) | `{}` |
+| `--run <runId>` | Sets `runId`; must match any `runId` already in the input | none |
+| `--json` | Print the result envelope | `false` |
+
+With `--json`, success prints `{ "ok": true, "action", "contractVersion", "result", "next" }`
+and exits 0. `result` holds the action's fields, and `next` is the command or decision
+that comes next. A run that stops for attention (`status: "blocked"` or `"question"`)
+is still a success. A failure prints
+`{ "ok": false, "action", "contractVersion", "code", "problem", "recovery", "runId"?, "details"? }`
+and exits 1, for example `E_DELEGATE_INPUT`, `E_RUN_NOT_FOUND`, `E_CAPSULE_SECRET`
+(masked findings in `details.findings`) or `E_DELEGATE_RUNTIME_MISSING`. Without
+`--json`, the command prints a short summary and a `Next:` line.
+
+Each child process gets an explicit environment: paths, locale, terminal, proxy and
+certificate variables. The native agent adds its own engine's settings (`ANTHROPIC_*`
+and `CLAUDE_*`, `OPENAI_*` and `CODEX_*`, or `CURSOR_*`) except credential names
+(containing `KEY`, `TOKEN`, `SECRET`, `PASSWORD`, `CREDENTIAL` or `AUTH`), and the
+profile's `allowedEnv`; a check adds the names in its `env` list. A credential variable,
+such as a token an MCP server reads, reaches the agent only through a profile that lists
+it in `allowedEnv`; otherwise the agent uses its own login.
+
+---
+
 ### `openplanr sync`
 
 Validate and repair cross-references across all artifacts.

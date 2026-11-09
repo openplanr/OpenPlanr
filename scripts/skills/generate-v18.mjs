@@ -101,7 +101,10 @@ const operateAdvisorDestinations = Object.freeze([
   'planr-coo-review',
 ]);
 const trackerConnectionDestinations = Object.freeze(['planr-sync', 'planr-sprint', 'planr-status']);
-const cliRuntimeDestinations = Object.freeze(['planr-delegate']);
+// Each runtime skill's CLI reference and the shared template it is rendered from.
+const cliReferenceSources = Object.freeze({
+  'planr-delegate': 'skills/shared/openplanr-cli-optional.md',
+});
 const findingsDestinations = Object.freeze(['planr-ship', 'planr-investigate']);
 const failFirstDestinations = Object.freeze(['planr-ship', 'planr-investigate']);
 const returnContractDestinations = Object.freeze([
@@ -232,13 +235,14 @@ const sourceProjections = new Map(
 const sourceExecutables = new Set(
   sharedSkillResources.filter(({ executable }) => executable).map(({ destination }) => destination),
 );
-const cliReference = readFileSync(resolve(root, 'skills/shared/openplanr-cli.md'), 'utf8')
-  .replaceAll('{{OPENPLANR_VERSION}}', pluginVersion)
-  .replaceAll('{{SKILL_CLI_MINIMUM}}', SKILL_CLI_MINIMUM);
-if (cliReference.includes('{{'))
-  throw new Error('skills/shared/openplanr-cli.md has a placeholder the generator does not fill.');
-for (const skillId of cliRuntimeDestinations)
-  sourceProjections.set(`skills/${skillId}/references/openplanr-cli.md`, Buffer.from(cliReference));
+for (const [skillId, source] of Object.entries(cliReferenceSources)) {
+  const reference = readFileSync(resolve(root, source), 'utf8')
+    .replaceAll('{{OPENPLANR_VERSION}}', pluginVersion)
+    .replaceAll('{{SKILL_CLI_MINIMUM}}', SKILL_CLI_MINIMUM);
+  if (reference.includes('{{'))
+    throw new Error(`${source} has a placeholder the generator does not fill.`);
+  sourceProjections.set(`skills/${skillId}/references/openplanr-cli.md`, Buffer.from(reference));
+}
 for (const skillId of CONNECTION_SKILL_IDS)
   sourceProjections.set(
     `skills/${skillId}/${CONNECTORS_REFERENCE}`,
