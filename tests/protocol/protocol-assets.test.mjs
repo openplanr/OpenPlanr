@@ -44,6 +44,11 @@ test('canonical JSON and dependency-free SHA-256 match known vectors', () => {
 });
 
 test('all 180 schemas and 12 registries preserve exact source bytes and modes', () => {
+  assert.ok(
+    listProtocolSchemas().some(
+      ({ kind, protocolVersion }) => kind === 'backlog-item' && protocolVersion === '1.24.0',
+    ),
+  );
   const additiveVersions = new Set([
     'v1.5.0',
     'v1.6.0',
@@ -64,6 +69,7 @@ test('all 180 schemas and 12 registries preserve exact source bytes and modes', 
     'v1.21.0',
     'v1.22.0',
     'v1.23.0',
+    'v1.24.0',
   ]);
   const schemas = walk(join(protocol, 'schemas')).filter(
     ({ key }) => !additiveVersions.has(key.split('/')[0]) && key.endsWith('.json'),

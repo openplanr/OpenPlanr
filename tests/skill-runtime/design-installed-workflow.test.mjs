@@ -578,7 +578,7 @@ test('standalone and suite design and Plan skills ship no design runtime', () =>
       const scripts = buildStandaloneSkillEntries({ repoRoot: root, registryRow })
         .map(({ path }) => path)
         .filter((path) => path.startsWith('scripts/'));
-      assert.deepEqual(scripts, skillId === 'planr-plan' ? ['scripts/planning-ids.mjs'] : []);
+      assert.deepEqual(scripts, []);
       for (const host of ['openai', 'claude', 'cursor']) {
         const installed = install(join(directory, host, skillId), skillId, host, { suite: true });
         assert.ok(

@@ -34,7 +34,7 @@ test('suite resources keep Operate and design skills free of helper scripts', ()
     );
     assert.deepEqual(
       local.filter(({ path }) => path.startsWith('scripts/')).map(({ path }) => path),
-      id === 'planr-plan' ? ['scripts/planning-ids.mjs'] : [],
+      [],
       id,
     );
     if (id.startsWith('planr-design') || id === 'planr-plan')
@@ -62,8 +62,8 @@ test('standalone archive verification rejects self-consistent incomplete or subs
     /inventory/u,
   );
   const changed = entries.map((entry) =>
-    entry.path === 'scripts/planning-ids.mjs'
-      ? { ...entry, bytes: Buffer.from('process.exit(0);') }
+    entry.path === 'references/planning-ids.md'
+      ? { ...entry, bytes: Buffer.from('# Substituted\n') }
       : entry,
   );
   assert.throws(
@@ -71,7 +71,7 @@ test('standalone archive verification rejects self-consistent incomplete or subs
     /canonical standalone closure/u,
   );
   const modeChanged = entries.map((entry) =>
-    entry.path === 'scripts/planning-ids.mjs' ? { ...entry, mode: 0o644 } : entry,
+    entry.path === 'references/planning-ids.md' ? { ...entry, mode: 0o755 } : entry,
   );
   assert.throws(
     () => verifyStandaloneSkillEntries({ repoRoot: root, registryRow, entries: modeChanged }),

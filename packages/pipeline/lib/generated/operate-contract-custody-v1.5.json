@@ -210,7 +210,7 @@
       "path": "lib/protocol/contracts.mjs",
       "kind": "validator",
       "legacySha256": "410d6f3bce30402f00948a750bd93cdc85541337e548dcb8f138ea924ef6e03e",
-      "sha256": "67b23dc2832824f16f50f74786c70fe5635d91323a9b38b77017d5a99795b71a",
+      "sha256": "b835f956fde0812193cd1cde7e04c7691e12d31afbec8fadc77877efb4d38113",
       "custody": "canonical-protocol-projection",
       "source": "packages/protocol/projections/pipeline/lib/protocol/contracts.mjs"
     },

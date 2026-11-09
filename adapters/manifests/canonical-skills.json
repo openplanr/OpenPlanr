@@ -1849,7 +1849,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:0d41a9f9c853036a07b509b937297fa554941ad9393012998d9e4bd9cb2e188a"
+          "digest": "sha256:4e86fca9f2ad70ab1dfc7f0984009a1fb64e9459666093552c8405aa0d3084be"
         }
       ],
       "contracts": {
@@ -2013,11 +2013,11 @@
     },
     {
       "id": "planr-plan",
-      "version": "1.3.0",
+      "version": "1.4.0",
       "source": "skills/planr-plan/openplanr.skill.json",
       "entrypoint": "skills/planr-plan/SKILL.md",
       "description": "Turn a Protocol-compatible specification or product intent into schema-compatible OpenPlanr stories and implementation tasks. Use for planning and decomposition, not implementation.",
-      "sourceDigest": "sha256:dedf2805f8387fb68da633b70a9de93fed3e9179ca2299b4a7ee68c7fe517306",
+      "sourceDigest": "sha256:8b26285d3a66bd8733a29c49556b6a14d9379ed5d247e8f2ef1e37a5706073d6",
       "resources": [
         {
           "path": "agents/openai.yaml",
@@ -2054,16 +2054,16 @@
           "digest": "sha256:b918cc16855412a75028e1a014832c2ced59b0349461a24d9e1fdcfc336b9f5f"
         },
         {
-          "path": "scripts/planning-ids.mjs",
-          "kind": "script",
+          "path": "references/planning-ids.md",
+          "kind": "reference",
           "hosts": [
             "claude-code",
             "codex",
             "chatgpt",
             "cursor"
           ],
-          "executable": true,
-          "digest": "sha256:d7051fab0540e3beb176015f174e0851a3ceb8a24c43344495b43a28d2eaceae"
+          "executable": false,
+          "digest": "sha256:5028070be05aefca33e4f835f7dfc096e55e46e976fd1745a2e9adfaa2759527"
         },
         {
           "path": "schemas/design-document.schema.json",
@@ -2384,7 +2384,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:0d41a9f9c853036a07b509b937297fa554941ad9393012998d9e4bd9cb2e188a"
+          "digest": "sha256:4e86fca9f2ad70ab1dfc7f0984009a1fb64e9459666093552c8405aa0d3084be"
         }
       ],
       "contracts": {

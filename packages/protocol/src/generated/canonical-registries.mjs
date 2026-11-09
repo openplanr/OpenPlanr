@@ -1417,7 +1417,7 @@ export const CANONICAL_REGISTRIES = deepFreeze({
         "ownerPackage": "openplanr",
         "source": {
           "path": "skills/planr-plan/SKILL.md",
-          "digest": "sha256:dedf2805f8387fb68da633b70a9de93fed3e9179ca2299b4a7ee68c7fe517306"
+          "digest": "sha256:8b26285d3a66bd8733a29c49556b6a14d9379ed5d247e8f2ef1e37a5706073d6"
         },
         "authorityClass": "workflow",
         "machineJson": false,
@@ -1648,7 +1648,7 @@ export const CANONICAL_REGISTRIES = deepFreeze({
         "ownerPackage": "openplanr",
         "source": {
           "path": "skills/planr-plan/SKILL.md",
-          "digest": "sha256:dedf2805f8387fb68da633b70a9de93fed3e9179ca2299b4a7ee68c7fe517306"
+          "digest": "sha256:8b26285d3a66bd8733a29c49556b6a14d9379ed5d247e8f2ef1e37a5706073d6"
         },
         "authorityClass": "workflow",
         "machineJson": false,
@@ -2152,7 +2152,7 @@ export const CANONICAL_REGISTRIES = deepFreeze({
         "ownerPackage": "planr-pipeline",
         "source": {
           "path": "skills/planr-plan/SKILL.md",
-          "digest": "sha256:dedf2805f8387fb68da633b70a9de93fed3e9179ca2299b4a7ee68c7fe517306"
+          "digest": "sha256:8b26285d3a66bd8733a29c49556b6a14d9379ed5d247e8f2ef1e37a5706073d6"
         },
         "authorityClass": "compatibility-router",
         "machineJson": false,
@@ -3009,7 +3009,7 @@ export const CANONICAL_REGISTRIES = deepFreeze({
         ]
       }
     ],
-    "documentDigest": "sha256:879f9373afab11bf0f9e8d411fad04a40f1d6210a53a497f8afa79628bb4f42e"
+    "documentDigest": "sha256:8059ba4316338b9846dc1f2cf197f72aa1e3d9ab5d8d24bb0be2826b8876f2bf"
   },
   "skills.json": {
     "kind": "skill-catalog",
@@ -4318,12 +4318,12 @@ export const CANONICAL_REGISTRIES = deepFreeze({
       },
       {
         "skillId": "planr-plan",
-        "skillVersion": "1.3.0",
+        "skillVersion": "1.4.0",
         "description": "Turn a Protocol-compatible specification or product intent into schema-compatible OpenPlanr stories and implementation tasks. Use for planning and decomposition, not implementation.",
         "lifecycle": "active",
         "authorityClass": "planning-write",
         "source": "skills/planr-plan/openplanr.skill.json",
-        "sourceDigest": "sha256:4f2c0de87e8c91f0aa244f72042044e791342d5b4718cf2d0f86cf34c7d5a6ce",
+        "sourceDigest": "sha256:06131440bcf758507383900bee9f208483524fb31352a062675a999a7d74efc7",
         "triggerPolicy": {
           "include": [
             "Decompose a specification into user stories and implementation tasks",
@@ -4877,7 +4877,7 @@ export const CANONICAL_REGISTRIES = deepFreeze({
       }
     ],
     "compatibilityAliases": [],
-    "documentDigest": "sha256:d7b6ccc57b03855b06277df18d100342daaf5dd0291627c996c23b6ea93f7572"
+    "documentDigest": "sha256:424ef48b01db29dd1567e54d9f9872480802e247908039b8d857fbae10ce9d09"
   },
   "outputs.json": {
     "kind": "output-catalog",

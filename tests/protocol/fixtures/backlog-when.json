@@ -1,0 +1,118 @@
+[
+  {
+    "value": "next-unit:#612",
+    "valid": true
+  },
+  {
+    "value": "next-unit:TASK-012",
+    "valid": true
+  },
+  {
+    "value": "next-unit:QT-034",
+    "valid": true
+  },
+  {
+    "value": "next-unit:BL-123",
+    "valid": true
+  },
+  {
+    "value": "next-unit:fix/rate-limit",
+    "valid": true
+  },
+  {
+    "value": "sprint:SPRINT-001",
+    "valid": true
+  },
+  {
+    "value": "sprint:SPRINT-1000",
+    "valid": true
+  },
+  {
+    "value": "sprint:next",
+    "valid": true
+  },
+  {
+    "value": "trigger:date:2026-12-01",
+    "valid": true
+  },
+  {
+    "value": "trigger:closed:BL-001",
+    "valid": true
+  },
+  {
+    "value": "trigger:merged:#612",
+    "valid": true
+  },
+  {
+    "value": "trigger:merged:fix/rate-limit",
+    "valid": true
+  },
+  {
+    "value": "trigger:release:@openplanr/protocol@1.24.0",
+    "valid": true
+  },
+  {
+    "value": "trigger:customer asks again",
+    "valid": true
+  },
+  {
+    "value": "declined:outside scope",
+    "valid": true
+  },
+  {
+    "value": "now",
+    "valid": false
+  },
+  {
+    "value": "",
+    "valid": false
+  },
+  {
+    "value": "later",
+    "valid": false
+  },
+  {
+    "value": "next-unit:",
+    "valid": false
+  },
+  {
+    "value": "trigger:",
+    "valid": false
+  },
+  {
+    "value": "declined:",
+    "valid": false
+  },
+  {
+    "value": "sprint:",
+    "valid": false
+  },
+  {
+    "value": "sprint:soon",
+    "valid": false
+  },
+  {
+    "value": "sprint:SPRINT-01",
+    "valid": false
+  },
+  {
+    "value": "sprint:next ",
+    "valid": false
+  },
+  {
+    "value": " next-unit:#612",
+    "valid": false
+  },
+  {
+    "value": "trigger:   ",
+    "valid": false
+  },
+  {
+    "value": "trigger:event\n",
+    "valid": false
+  },
+  {
+    "value": "trigger:a\nb",
+    "valid": false
+  }
+]
