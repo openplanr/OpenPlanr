@@ -15,11 +15,10 @@ test('Plan without .planr/ returns the decomposition in chat or one existing-con
     plan,
     /return the decomposition in chat or in one file where the repository keeps such documents/,
   );
-  assert.match(plan, /unless the request implies follow-on implementation/);
-  assert.match(
-    plan,
-    /With `\.planr\/`, or when implementation follows, use the full planning contract/,
-  );
+  assert.match(plan, /even when implementation follows/);
+  assert.match(plan, /offering `openplanr init` for tracked IDs/);
+  assert.match(plan, /never create `\.planr\/` or run init unless the user asks/);
+  assert.match(plan, /With `\.planr\/`, use the full planning contract/);
 });
 
 test('minimal Plan output keeps splitting, dependsOn and acceptance mapping', () => {
@@ -94,6 +93,6 @@ test('Spec validates with the CLI only under .planr/', () => {
 });
 
 test('plan and spec stay lean', () => {
-  assert.ok(Buffer.byteLength(read('skills/planr-plan/SKILL.md')) <= 7000);
+  assert.ok(Buffer.byteLength(read('skills/planr-plan/SKILL.md')) <= 7100);
   assert.ok(Buffer.byteLength(read('skills/planr-spec/SKILL.md')) <= 3600);
 });

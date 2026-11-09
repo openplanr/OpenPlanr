@@ -27,9 +27,8 @@ When a design exists (a design spec, a review handoff or an approved
 implementation package), read
 [the design handoff contract](references/design-handoff.md) before decomposing UI
 work. Without a design, ordinary planning from a clear specification is
-unchanged.
-When `openplanr` is not found, does not know `design`, or reports
-`E_DESIGN_RUNTIME_MISSING`, the fix to name is `npm install -g openplanr`,
+unchanged. If `openplanr` is not found, lacks `design`, or reports
+`E_DESIGN_RUNTIME_MISSING`, name the fix: `npm install -g openplanr`,
 `npm install -g openplanr@latest`, or `npm install -g openplanr` without
 `--omit=optional`, respectively.
 
@@ -61,11 +60,12 @@ and disclose capability limitations; never claim an unavailable specialist ran.
 ## Choose where the plan goes
 
 When the repository has no `.planr/`, return the decomposition in chat or in one
-file where the repository keeps such documents, unless the request implies
-follow-on implementation. Use plain task and acceptance numbering, write no
-`.planr/` files and skip frontmatter and the ID procedure; task splitting,
-`dependsOn` and mapping every acceptance item to a task still apply. With `.planr/`, or when implementation
-follows, use the full planning contract below.
+file where the repository keeps such documents, even when implementation follows.
+Use plain task and acceptance numbering, write no `.planr/` files and skip
+frontmatter and the ID procedure; task splitting, `dependsOn` and mapping every
+acceptance item to a task still apply. End with one line offering `openplanr init`
+for tracked IDs and the full planning contract; never create `.planr/` or run init
+unless the user asks. With `.planr/`, use the full planning contract below.
 
 An existing specification stays where it is: never copy an existing specification
 into `.planr/specs/`; reference its path from each story's Notes. Write Gherkin
