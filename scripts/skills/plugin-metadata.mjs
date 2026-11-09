@@ -25,3 +25,6 @@ export const CLAUDE_PLUGIN_LISTING = Object.freeze({
 
 /** Square app icon the plugin directory shows beside the listing. */
 export const CLAUDE_PLUGIN_ICON = 'docs/assets/brand/png/openplanr-app-icon-512.png';
+
+/** Oldest `openplanr` CLI whose runtime commands the delegate and sync skills call; moves only when that contract changes. */
+export const SKILL_CLI_MINIMUM = '3.7.0';

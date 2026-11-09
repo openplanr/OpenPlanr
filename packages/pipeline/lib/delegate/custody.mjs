@@ -17,6 +17,7 @@ import {
 } from 'node:fs/promises';
 import { basename, dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { promisify } from 'node:util';
+import { gitEnvironment } from './child-environment.mjs';
 import { readRunRecord } from './run-record.mjs';
 
 const execFileAsync = promisify(execFile);
@@ -57,6 +58,7 @@ async function git(root, args, { allowFailure = false } = {}) {
     const { stdout } = await execFileAsync('git', args, {
       cwd: root,
       encoding: 'buffer',
+      env: gitEnvironment(),
       maxBuffer: 32 * 1024 * 1024,
     });
     return stdout;
@@ -74,7 +76,7 @@ function gitInput(root, args, input) {
     const child = execFile(
       'git',
       args,
-      { cwd: root, encoding: 'buffer', maxBuffer: 32 * 1024 * 1024 },
+      { cwd: root, encoding: 'buffer', env: gitEnvironment(), maxBuffer: 32 * 1024 * 1024 },
       (error, stdout) => {
         const operation = args.find((arg) => !arg.startsWith('-'));
         if (error)
@@ -147,7 +149,7 @@ async function unresolvedRun(runDirectory, runId) {
     const { integration } = await readRunRecord(runId, { directory: runDirectory });
     return ['applying', 'interrupted'].includes(integration?.status);
   } catch (error) {
-    if (['ENOENT', 'E_RUN_ID'].includes(error.code)) return false;
+    if (['ENOENT', 'E_RUN_ID', 'E_RUN_NOT_FOUND'].includes(error.code)) return false;
     throw error;
   }
 }
@@ -321,7 +323,7 @@ export async function gitFileState(root, path, state) {
     const child = execFile(
       'git',
       ['hash-object', '--stdin', `--path=${path}`],
-      { cwd: root, encoding: 'utf8', maxBuffer: 1024 * 1024 },
+      { cwd: root, encoding: 'utf8', env: gitEnvironment(), maxBuffer: 1024 * 1024 },
       (error, stdout) => {
         if (error)
           reject(

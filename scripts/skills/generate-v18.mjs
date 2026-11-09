@@ -42,6 +42,7 @@ import {
   PLUGIN_AUTHOR,
   PLUGIN_DESCRIPTION,
   PLUGIN_LICENSE,
+  SKILL_CLI_MINIMUM,
 } from './plugin-metadata.mjs';
 import { renderClaudePluginReadme } from './plugin-readme.mjs';
 import { syncGeneratedOutputs } from './projection-custody.mjs';
@@ -100,6 +101,7 @@ const operateAdvisorDestinations = Object.freeze([
   'planr-coo-review',
 ]);
 const trackerConnectionDestinations = Object.freeze(['planr-sync', 'planr-sprint', 'planr-status']);
+const cliRuntimeDestinations = Object.freeze(['planr-delegate']);
 const findingsDestinations = Object.freeze(['planr-ship', 'planr-investigate']);
 const failFirstDestinations = Object.freeze(['planr-ship', 'planr-investigate']);
 const returnContractDestinations = Object.freeze([
@@ -230,6 +232,13 @@ const sourceProjections = new Map(
 const sourceExecutables = new Set(
   sharedSkillResources.filter(({ executable }) => executable).map(({ destination }) => destination),
 );
+const cliReference = readFileSync(resolve(root, 'skills/shared/openplanr-cli.md'), 'utf8')
+  .replaceAll('{{OPENPLANR_VERSION}}', pluginVersion)
+  .replaceAll('{{SKILL_CLI_MINIMUM}}', SKILL_CLI_MINIMUM);
+if (cliReference.includes('{{'))
+  throw new Error('skills/shared/openplanr-cli.md has a placeholder the generator does not fill.');
+for (const skillId of cliRuntimeDestinations)
+  sourceProjections.set(`skills/${skillId}/references/openplanr-cli.md`, Buffer.from(cliReference));
 for (const skillId of CONNECTION_SKILL_IDS)
   sourceProjections.set(
     `skills/${skillId}/${CONNECTORS_REFERENCE}`,

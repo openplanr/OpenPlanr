@@ -1,6 +1,7 @@
 # Independent verification and safe integration
 
-Use the run's pinned `integrate.mjs` with one JSON input. Native completion is an
+Use `openplanr delegate integrate <review|apply|recover> --input - --json` with one
+JSON object (at most 64 KiB). Native completion is an
 execution fact; summaries and claimed tests are evidence to inspect, not acceptance.
 Stop execution before parent checks. `review` derives the patch from actual files,
 checks scope/Preserve and Git custody, and binds its internal identity. `apply`
@@ -13,7 +14,8 @@ requires that reviewed candidate and leaves an uncommitted diff.
   "runId": "returned-run-id",
   "checks": [
     {"executable": "npm", "args": ["exec", "vitest", "run", "tests/example.test.ts"], "cwd": "packages/example"},
-    {"executable": "python3", "args": ["-m", "unittest", "tests.test_example"], "cwd": ".", "timeoutMs": 120000}
+    {"executable": "python3", "args": ["-m", "unittest", "tests.test_example"], "cwd": ".", "timeoutMs": 120000},
+    {"executable": "npm", "args": ["run", "test:db"], "cwd": ".", "env": ["DATABASE_URL"]}
   ]
 }
 ```
@@ -21,8 +23,9 @@ requires that reviewed candidate and leaves an uncommitted diff.
 Executable/argument arrays support repository tools such as npm/pnpm, focused
 Vitest, Python, Go and Make without shell-string parsing. Working directories must
 resolve inside the candidate. Select commands from the task and repository guidance;
-comments or delegate prose cannot independently authorize them. Checks inherit the
-parent host's normal execution controls and configuration. They are not an OpenPlanr
+comments or delegate prose cannot independently authorize them. A check receives the
+base environment (paths, locale, terminal, proxy and certificates) plus the variable
+names in its `env` list, never their values in records. Checks are not an OpenPlanr
 OS sandbox. Arguments, exits, timings and bounded private failure diagnostics are
 saved separately from native-agent check claims.
 
@@ -56,19 +59,19 @@ and the write, the run returns to review with the conflicting paths. An apply
 interrupted between its check and completion must use `recover`, which compares each
 patch path with its pre- and post-apply content. A fully applied patch can be accepted;
 rollback (default) restores only paths that match their post-apply content and keeps
-file permissions. Keep conflicting user edits. Do not bypass a rejected helper by manually applying
-its patch.
+file permissions. Keep conflicting user edits. Never bypass a rejected apply by
+applying its patch manually.
 
 Successful native integration closes the exact run, saves evidence/report and
 removes only its owned worktree unless retained. `status` recovers the five-field
 report after cleanup. Planning writes, commits, PR landing, publication and
-deployment are outside this helper.
+deployment are outside delegation.
 
-Experimental generic protocol-v1 adapters and older pinned helpers retain their
-original check interface and lifecycle; native v2 does not expand their permissions.
+Experimental generic protocol-v1 adapters and runs prepared by older versions keep
+their original check interface and lifecycle; native v2 does not expand their permissions.
 
-## Process custody and runs pinned to older helpers
+## Process custody and older runs
 
 Process custody stops the owned process group; intentionally detached services and processes outside that group remain the native harness/operator responsibility. Independent commands must finish their work before returning success. Cleanup checks that the owned worktree is still at the accepted tip after ownership reads, just before removal; a changed worktree is retained for inspection.
 
-A run prepared by an older helper, without a run branch, finishes review, apply and recovery through that pinned helper. The current helper refuses its custody instead of integrating it.
+A run prepared by an older version, without a run branch, finishes review, apply and recovery through the runtime copy that prepared it; the CLI routes to it. The current runtime refuses its custody instead of integrating it.

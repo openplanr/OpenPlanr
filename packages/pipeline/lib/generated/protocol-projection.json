@@ -540,7 +540,7 @@
     {
       "source": "packages/protocol/registries/skills.json",
       "target": "registry/v1.5.0/skills.json",
-      "sha256": "a8e35abdb6e460f24dd7cf063c535192c51d92011e993ebb16d9f474b2517d3e",
+      "sha256": "e8309d8bc71920225ed41fb1273a48e7348a26097ef919644c1701978c26d0fe",
       "mode": "644"
     },
     {

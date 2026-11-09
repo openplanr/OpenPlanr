@@ -1,9 +1,9 @@
 # Run/session lifecycle
 
 Each new run has private v3 records, a complete readable capsule, one owned worktree
-on its run branch and a pinned helper snapshot. Records contain configuration references,
-not credential values. Old runs route operations through their unchanged pinned
-helpers; there is no automatic migration or permission expansion.
+on its run branch and a private copy of the runtime that prepared it. Records contain
+configuration references, not credential values. The CLI routes an old run's actions to
+its unchanged copy; there is no automatic migration or permission expansion.
 
 `dispatch` starts the native implementation loop. Native session identifiers and
 terminal events establish execution completion. Plain native summaries are saved;
@@ -30,4 +30,4 @@ worktree unless `retainWorktree` was requested. The patch, context, verification
 report and exact native session reference remain. Failed/interrupted worktrees are
 retained. Cleanup failure is reported without undoing successful integration.
 Explicit `cleanup` operates only on a closed owned worktree; abandonment must be
-explicit. Unresolved integration must use the integration helper's recovery action.
+explicit. Unresolved integration must use `openplanr delegate integrate recover`.

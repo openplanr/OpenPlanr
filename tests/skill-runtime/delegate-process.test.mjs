@@ -2,8 +2,10 @@ import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
 import test from 'node:test';
 
-const adapter = new URL('../../skills/planr-delegate/scripts/adapters/generic.mjs', import.meta.url)
-  .href;
+const adapter = new URL(
+  '../../packages/pipeline/lib/delegate/adapters/generic.mjs',
+  import.meta.url,
+).href;
 
 for (const trigger of ['abort', 'exit']) {
   test(`termination denial is observed before delayed stream completion (${trigger})`, {

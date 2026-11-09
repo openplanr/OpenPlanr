@@ -1,5 +1,4 @@
-// Public helper entrypoint. Retained runs route to their pinned copy before any mutation.
-import { existsSync, realpathSync } from 'node:fs';
+// Delegate runtime entry for `openplanr delegate`. Retained runs route to their pinned copy before any mutation.
 import { mkdir, realpath } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import { resolve } from 'node:path';
@@ -53,26 +52,6 @@ export {
 } from './run-lifecycle.mjs';
 export { readDelegateCustody, validateDelegateCapsule } from './run-preflight.mjs';
 export { prepareDelegateRun, probeDelegateHost } from './run-preparation.mjs';
-
-async function commandInput() {
-  const chunks = [];
-  let size = 0;
-  for await (const chunk of process.stdin) {
-    size += chunk.length;
-    if (size > 2 * 1024 * 1024) {
-      throw new DelegateRunError(
-        'E_DELEGATE_INPUT',
-        'Command input exceeds its private size limit.',
-      );
-    }
-    chunks.push(chunk);
-  }
-  try {
-    return JSON.parse(Buffer.concat(chunks).toString('utf8') || '{}');
-  } catch {
-    throw new DelegateRunError('E_DELEGATE_INPUT', 'Command input must be one JSON object.');
-  }
-}
 
 function probeFailure(error) {
   const details = error instanceof AdapterError ? safeAdapterDetails(error.details) : error.details;
@@ -396,6 +375,19 @@ const COMMANDS = Object.freeze({
   }),
 });
 
+/** The public failure for a delegate or integration error: its code, message, run and safe details. */
+export function delegateFailure(error) {
+  const known = typeof error?.code === 'string' && /^E_[A-Z0-9_]+$/u.test(error.code);
+  const details =
+    error instanceof AdapterError ? safeAdapterDetails(error.details) : error?.details;
+  return {
+    code: known ? error.code : 'E_DELEGATE_UNKNOWN',
+    message: known ? error.message : 'Delegate command failed; inspect private run custody.',
+    ...(known && error.runId ? { runId: error.runId } : {}),
+    ...(known && details ? { details } : {}),
+  };
+}
+
 export async function delegateRunnerCommand(action, input = {}) {
   if (!input || typeof input !== 'object' || Array.isArray(input)) {
     throw new DelegateRunError('E_DELEGATE_INPUT', 'Command input must be one JSON object.');
@@ -411,8 +403,6 @@ export async function delegateRunnerCommand(action, input = {}) {
       'cleanup',
       'abandon',
       'prepare-worktree',
-      'setup-preview',
-      'setup-accept',
     ].includes(action) &&
     input.runId
   ) {
@@ -427,7 +417,7 @@ export async function delegateRunnerCommand(action, input = {}) {
   if (!Object.hasOwn(COMMANDS, action))
     throw new DelegateRunError(
       'E_DELEGATE_COMMAND',
-      'Unknown delegate runner action. Use node runner.mjs <action> with one JSON object on stdin, or include action in that object.',
+      'Unknown delegate action. Run `openplanr delegate --help` to list the actions.',
       null,
       { actions: Object.keys(COMMANDS) },
     );
@@ -472,46 +462,4 @@ function publicRecordView(record) {
     planning: record.planning ? { ...record.planning, status: 'not-updated' } : null,
     helper: record.helper ?? null,
   };
-}
-
-if (
-  process.argv[1] &&
-  existsSync(resolve(process.argv[1])) &&
-  realpathSync(fileURLToPath(import.meta.url)) === realpathSync(resolve(process.argv[1]))
-) {
-  const interruption = new AbortController();
-  const interrupted = () => interruption.abort();
-  process.once('SIGINT', interrupted);
-  process.once('SIGTERM', interrupted);
-  try {
-    const input = await commandInput();
-    if (!input || typeof input !== 'object' || Array.isArray(input))
-      throw new DelegateRunError('E_DELEGATE_INPUT', 'Command input must be one JSON object.');
-    const action = process.argv[2] ?? input.action;
-    if (process.argv[2] && input.action !== undefined && input.action !== process.argv[2])
-      throw new DelegateRunError('E_DELEGATE_INPUT', 'Command-line and stdin actions disagree.');
-    const result = await delegateRunnerCommand(action, {
-      ...input,
-      signal: interruption.signal,
-    });
-    process.stdout.write(`${JSON.stringify(result)}\n`);
-  } catch (error) {
-    const details =
-      error instanceof AdapterError ? safeAdapterDetails(error.details) : error.details;
-    process.stderr.write(
-      `${JSON.stringify({
-        code: typeof error?.code === 'string' ? error.code : 'E_DELEGATE_UNKNOWN',
-        message:
-          typeof error?.code === 'string'
-            ? error.message
-            : 'Delegate command failed; inspect private run custody.',
-        ...(error?.runId ? { runId: error.runId } : {}),
-        ...(details ? { details } : {}),
-      })}\n`,
-    );
-    process.exitCode = 1;
-  } finally {
-    process.removeListener('SIGINT', interrupted);
-    process.removeListener('SIGTERM', interrupted);
-  }
 }

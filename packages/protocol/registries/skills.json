@@ -680,12 +680,12 @@
     },
     {
       "skillId": "planr-delegate",
-      "skillVersion": "0.1.1",
+      "skillVersion": "0.2.0",
       "description": "Coordinate an explicitly requested implementation with Claude Code, Codex or Cursor, then independently review and integrate its observed changes. Use when the user asks another coding agent to implement.",
       "lifecycle": "active",
       "authorityClass": "implementation",
       "source": "skills/planr-delegate/openplanr.skill.json",
-      "sourceDigest": "sha256:f6a7e2a965dff4dab0f6414ae0bcb7289903dfbc2022a88d0528b8b9c0ea2c91",
+      "sourceDigest": "sha256:142adc760acfbefe89c7b1cefa83cc42c080cf929ae97f2f716760011f0cc7a1",
       "triggerPolicy": {
         "include": [
           "Delegate implementation to another coding agent",
@@ -1864,5 +1864,5 @@
     }
   ],
   "compatibilityAliases": [],
-  "documentDigest": "sha256:8cd6ae30df680d6b4d3789f1f42d52219649f49b62c9503249c6c30bccc3575c"
+  "documentDigest": "sha256:499de836e65cc1a2cc0bfe857e9239c46cac4d12c06419f6d396bda1f528ffdd"
 }

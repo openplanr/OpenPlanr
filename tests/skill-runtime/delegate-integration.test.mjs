@@ -17,23 +17,23 @@ import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { afterEach, test } from 'node:test';
 import { promisify } from 'node:util';
-import { createWorktreeCustody } from '../../skills/planr-delegate/scripts/custody.mjs';
+import { createWorktreeCustody } from '../../packages/pipeline/lib/delegate/custody.mjs';
 import {
   checkoutLock,
   integrateBranchDelta,
   reviewBranchDelta,
-} from '../../skills/planr-delegate/scripts/handoff.mjs';
-import { snapshotHelper } from '../../skills/planr-delegate/scripts/helper-snapshot.mjs';
+} from '../../packages/pipeline/lib/delegate/handoff.mjs';
+import { snapshotHelper } from '../../packages/pipeline/lib/delegate/helper-snapshot.mjs';
 import {
   delegateIntegrationCommand,
   discoverDelegateChecks,
-} from '../../skills/planr-delegate/scripts/integrate.mjs';
+} from '../../packages/pipeline/lib/delegate/integrate.mjs';
 import {
   handoffPresentation,
   implementationReport,
   preparationPresentation,
   reviewPresentation,
-} from '../../skills/planr-delegate/scripts/presentation.mjs';
+} from '../../packages/pipeline/lib/delegate/presentation.mjs';
 import {
   closeRunRecord,
   compactIntegrationState,
@@ -42,12 +42,12 @@ import {
   readRunRecord,
   updateRunRecord,
   verifyIntegrationState,
-} from '../../skills/planr-delegate/scripts/run-record.mjs';
+} from '../../packages/pipeline/lib/delegate/run-record.mjs';
 import {
   delegateRunnerCommand,
   delegateRunStatus,
   resumeDelegateRun,
-} from '../../skills/planr-delegate/scripts/runner.mjs';
+} from '../../packages/pipeline/lib/delegate/runner.mjs';
 
 const execFile = promisify(execFileCallback);
 const roots = [];
@@ -837,7 +837,7 @@ test('physical permissions and unrelated source commits do not cause false drift
   assert.equal((await lstat(join(data.repositoryRoot, 'tracked.txt'))).mode & 0o777, 0o664);
 });
 
-test('parent-selected checks inherit the parent host environment without storing its credentials', async () => {
+test('parent-selected checks receive the environment names they list without storing their values', async () => {
   const data = await fixture({
     files: {
       'package.json': JSON.stringify({ scripts: { test: 'node check.mjs' } }),
@@ -855,9 +855,10 @@ test('parent-selected checks inherit the parent host environment without storing
       custody: data.custody,
       run,
       scopePaths: ['tracked.txt'],
-      checks: ['npm run test'],
+      checks: [{ command: 'npm', args: ['run', 'test'], env: ['PLANR_TEST_SECRET'] }],
     });
     assert.equal(result.status, 'completed', JSON.stringify(result));
+    assert.ok(!JSON.stringify(result).includes('private-sentinel'));
   } finally {
     if (old === undefined) delete process.env.PLANR_TEST_SECRET;
     else process.env.PLANR_TEST_SECRET = old;
@@ -1181,7 +1182,7 @@ test('stale checkout recovery serializes competing applies despite slow identity
     script,
     'import {checkoutLock} from ' +
       JSON.stringify(
-        new URL('../../skills/planr-delegate/scripts/handoff.mjs', import.meta.url).href,
+        new URL('../../packages/pipeline/lib/delegate/handoff.mjs', import.meta.url).href,
       ) +
       '; import {writeFileSync} from "node:fs"; const originalKill = process.kill.bind(process);' +
       // Delay the native liveness probe inside this child, independent of /proc versus ps.

@@ -2,56 +2,6 @@
   "$comment": "Permanent entries are findings that are safe by construction; each says why. plugin-network-boundary-baseline.json pins this list, and on pull requests the count may not exceed the base branch's baseline.",
   "permanent": [
     {
-      "path": "skills/delegate/scripts/**",
-      "rule": "env-read",
-      "reason": "Delegate hands the user's environment to the coding agent it runs (Claude Code, Codex, Cursor) so the agent can use its own sign-in, and reads backend profile settings from it. The Claude adapter also reads Claude Code's user, project and managed settings.json files (under CLAUDE_CONFIG_DIR or HOME, the project's .claude/ and the managed settings directory) and copies ANTHROPIC_BASE_URL and the provider routing variables from their env blocks into the child's environment. Not flagged by the directory in 3.1.0 or 3.4.0; an explicit allowlisted child environment would remove it."
-    },
-    {
-      "path": "rules/planr-delegate/scripts/**",
-      "rule": "env-read",
-      "reason": "Delegate hands the user's environment to the coding agent it runs (Claude Code, Codex, Cursor) so the agent can use its own sign-in, and reads backend profile settings from it. The Claude adapter also reads Claude Code's user, project and managed settings.json files (under CLAUDE_CONFIG_DIR or HOME, the project's .claude/ and the managed settings directory) and copies ANTHROPIC_BASE_URL and the provider routing variables from their env blocks into the child's environment. Not flagged by the directory in 3.1.0 or 3.4.0; an explicit allowlisted child environment would remove it."
-    },
-    {
-      "path": "skills/delegate/scripts/**",
-      "rule": "env-forward",
-      "reason": "Delegate runs git and the coding agent as child processes that inherit the environment. Not flagged by the directory in 3.1.0 or 3.4.0; an explicit allowlisted child environment would remove it."
-    },
-    {
-      "path": "rules/planr-delegate/scripts/**",
-      "rule": "env-forward",
-      "reason": "Delegate runs git and the coding agent as child processes that inherit the environment. Not flagged by the directory in 3.1.0 or 3.4.0; an explicit allowlisted child environment would remove it."
-    },
-    {
-      "path": "skills/delegate/scripts/**",
-      "rule": "home-read",
-      "reason": "Delegate keeps its run records and backend profiles under ~/.openplanr and ~/.config/openplanr; it reads no credential file. Not flagged by the directory in 3.1.0 or 3.4.0."
-    },
-    {
-      "path": "rules/planr-delegate/scripts/**",
-      "rule": "home-read",
-      "reason": "Delegate keeps its run records and backend profiles under ~/.openplanr and ~/.config/openplanr; it reads no credential file. Not flagged by the directory in 3.1.0 or 3.4.0."
-    },
-    {
-      "path": "skills/delegate/scripts/**",
-      "rule": "credential-forward",
-      "reason": "The delegate entry points combine the environment and home reads above with the child processes above; nothing else is sent. Not flagged by the directory in 3.1.0 or 3.4.0."
-    },
-    {
-      "path": "rules/planr-delegate/scripts/**",
-      "rule": "credential-forward",
-      "reason": "The delegate entry points combine the environment and home reads above with the child processes above; nothing else is sent. Not flagged by the directory in 3.1.0 or 3.4.0."
-    },
-    {
-      "path": "skills/delegate/scripts/backend-diagnostics.mjs",
-      "rule": "network-send",
-      "reason": "The local-backend probe sends an unauthenticated GET to the user's own enrolled local model server, only for profiles whose destination class is local, with redirects refused. Not flagged by the directory in 3.1.0 or 3.4.0."
-    },
-    {
-      "path": "rules/planr-delegate/scripts/backend-diagnostics.mjs",
-      "rule": "network-send",
-      "reason": "The local-backend probe sends an unauthenticated GET to the user's own enrolled local model server, only for profiles whose destination class is local, with redirects refused. Not flagged by the directory in 3.1.0 or 3.4.0."
-    },
-    {
       "path": "skills/sync/scripts/sync.mjs",
       "rule": "env-forward",
       "reason": "Sync runs the user's own gh CLI, which inherits the environment so gh can use its own GitHub sign-in. Not flagged by the directory in 3.1.0 or 3.4.0."
@@ -60,26 +10,6 @@
       "path": "rules/planr-sync/scripts/sync.mjs",
       "rule": "env-forward",
       "reason": "Sync runs the user's own gh CLI, which inherits the environment so gh can use its own GitHub sign-in. Not flagged by the directory in 3.1.0 or 3.4.0."
-    },
-    {
-      "path": "skills/delegate/scripts/integrate.mjs",
-      "rule": "dynamic-code",
-      "reason": "Delegate re-enters a run through the helper snapshot pinned in that run's record: it imports runner.mjs or integrate.mjs from the run directory only after verifiedHelper has checked the recorded path and SHA-256 digest. The specifier is a file URL, never a remote module. Not flagged by the directory in 3.1.0 or 3.4.0."
-    },
-    {
-      "path": "skills/delegate/scripts/runner.mjs",
-      "rule": "dynamic-code",
-      "reason": "Delegate re-enters a run through the helper snapshot pinned in that run's record: it imports runner.mjs or integrate.mjs from the run directory only after verifiedHelper has checked the recorded path and SHA-256 digest. The specifier is a file URL, never a remote module. Not flagged by the directory in 3.1.0 or 3.4.0."
-    },
-    {
-      "path": "rules/planr-delegate/scripts/integrate.mjs",
-      "rule": "dynamic-code",
-      "reason": "Delegate re-enters a run through the helper snapshot pinned in that run's record: it imports runner.mjs or integrate.mjs from the run directory only after verifiedHelper has checked the recorded path and SHA-256 digest. The specifier is a file URL, never a remote module. Not flagged by the directory in 3.1.0 or 3.4.0."
-    },
-    {
-      "path": "rules/planr-delegate/scripts/runner.mjs",
-      "rule": "dynamic-code",
-      "reason": "Delegate re-enters a run through the helper snapshot pinned in that run's record: it imports runner.mjs or integrate.mjs from the run directory only after verifiedHelper has checked the recorded path and SHA-256 digest. The specifier is a file URL, never a remote module. Not flagged by the directory in 3.1.0 or 3.4.0."
     }
   ]
 }

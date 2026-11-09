@@ -24,8 +24,8 @@ import {
   genericAdapter,
   validateDestination,
 } from './adapters/generic.mjs';
-
 import { inspectLocalBackend, profileReadiness } from './backend-diagnostics.mjs';
+import { agentEnvironment, ENV_NAME } from './child-environment.mjs';
 
 export { inspectLocalBackend, profileReadiness } from './backend-diagnostics.mjs';
 
@@ -35,7 +35,6 @@ export const PROFILE_LIFETIME_MS = 30 * 24 * 60 * 60 * 1000;
 export const PROFILE_RENEWAL_WARNING_MS = 7 * 24 * 60 * 60 * 1000;
 export const MAX_PROFILE_BYTES = 16 * 1024;
 // Claude's macOS keychain lookup uses USER as its account identity. It is not a credential.
-const BASE_ENV = ['PATH', 'HOME', 'USER', 'TMPDIR', 'LANG', 'LC_ALL'];
 const ADAPTERS = Object.freeze({
   claude: claudeAdapter,
   codex: codexAdapter,
@@ -43,7 +42,6 @@ const ADAPTERS = Object.freeze({
   generic: genericAdapter,
 });
 const PROFILE_NAME = /^[a-z][a-z0-9-]{0,63}$/u;
-const ENV_NAME = /^[A-Za-z_][A-Za-z0-9_]*$/u;
 const FORBIDDEN_ENV = /^(?:NODE_OPTIONS|BASH_ENV|ENV|LD_PRELOAD|DYLD_.+|ELECTRON_RUN_AS_NODE)$/u;
 const BUILTIN_ARG = /^(?:--model|-m)$/u;
 
@@ -414,7 +412,7 @@ export async function listProfiles({ directory, now = Date.now() } = {}) {
 }
 
 export async function inspectEnrolledBackend(profile, { env = process.env, cwd } = {}) {
-  return inspectLocalBackend(profile, { env: childEnvironment(profile, env), cwd });
+  return inspectLocalBackend(profile, { env: agentEnvironment(profile, env), cwd });
 }
 
 // Inspect a candidate before enrollment. No task text, capsule, worktree, or profile write is involved.
@@ -430,7 +428,7 @@ export async function previewProfileCandidate(
   const profile = validateProfileFields(declaration);
   if (profile.configDir) profile.configDir = await canonicalConfigDir(profile.configDir);
   const raw = adapterFor(profile.kind);
-  const effectiveEnv = childEnvironment(profile, env);
+  const effectiveEnv = agentEnvironment(profile, env);
   const found = await raw.probe({ profile, cwd, env: effectiveEnv, signal, timeoutMs });
   if (profile.kind !== 'generic') assertDestination(profile, found);
   if (
@@ -481,16 +479,6 @@ export async function removeProfile(name, { directory } = {}) {
     throw new AdapterError('E_PROFILE_PERMISSIONS', 'Profile path is not a regular file.');
   await rm(path);
   return true;
-}
-
-function childEnvironment(profile, source) {
-  const output = profile.kind === 'generic' ? {} : { ...source };
-  for (const key of [...BASE_ENV, ...profile.allowedEnv]) {
-    if (typeof source[key] === 'string') output[key] = source[key];
-  }
-  if (profile.configDir && profile.kind === 'claude') output.CLAUDE_CONFIG_DIR = profile.configDir;
-  if (profile.configDir && profile.kind === 'codex') output.CODEX_HOME = profile.configDir;
-  return output;
 }
 
 export function adapterFor(kind) {
@@ -616,7 +604,7 @@ export async function prepareProfile(choice, options = {}) {
   const profile = native ? { ...fields, version: 2 } : validateProfile(declaration);
   if (profile.configDir) profile.configDir = await canonicalConfigDir(profile.configDir);
   const raw = adapterFor(profile.kind);
-  const effectiveEnv = childEnvironment(profile, env);
+  const effectiveEnv = agentEnvironment(profile, env);
   const found = await raw.probe({ profile, cwd, env: effectiveEnv, signal, timeoutMs });
   if (
     !(native ? ['implementation', 'exactResume'] : Object.keys(CAPABILITIES)).every(

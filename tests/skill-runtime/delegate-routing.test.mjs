@@ -68,7 +68,7 @@ test('Claude and Codex installed routers and Ship expose only the opt-in handoff
   }
 });
 
-test('plain Ship package has no delegate runner executable', () => {
+test('neither Ship nor delegate ships a runner script; delegate runs through the CLI', () => {
   const ship = JSON.parse(read('skills/planr-ship/openplanr.skill.json'));
   const delegate = JSON.parse(read('skills/planr-delegate/openplanr.skill.json'));
   assert.equal(ship.execution, 'host-agent');
@@ -76,8 +76,8 @@ test('plain Ship package has no delegate runner executable', () => {
     ship.resources.some(({ path }) => path.includes('delegate') || path.includes('runner.mjs')),
     false,
   );
-  assert.equal(
-    delegate.resources.some(({ path }) => path === 'scripts/runner.mjs'),
-    true,
+  assert.deepEqual(
+    delegate.resources.filter(({ path }) => !/\.(?:md|yaml)$/u.test(path)),
+    [],
   );
 });

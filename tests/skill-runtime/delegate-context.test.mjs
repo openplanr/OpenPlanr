@@ -11,7 +11,7 @@ import {
   resolvePlanningArtifact,
   validateContextMirror,
   writeContextCapsule,
-} from '../../skills/planr-delegate/scripts/context.mjs';
+} from '../../packages/pipeline/lib/delegate/context.mjs';
 
 const specDir = '.planr/specs/SPEC-016-delegate';
 const taskPath = `${specDir}/tasks/T-068-context.md`;

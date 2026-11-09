@@ -8,7 +8,7 @@
   "canonicalSkillCount": 30,
   "compatibilityAliasCount": 0,
   "skillCount": 30,
-  "assetCount": 217,
+  "assetCount": 194,
   "skills": [
     {
       "skillId": "planr-artifact",
@@ -314,11 +314,11 @@
       "assets": [
         {
           "path": "skills/delegate/SKILL.md",
-          "digest": "sha256:0fb1a4eb4c890ba45aeefbd113c492fcc65682d6dcec0274da2103c83bd64868"
+          "digest": "sha256:af44cf844d4526ee65f50ab1899dfbb8475fa6819436ee0d7d48cdd24baf6349"
         },
         {
           "path": "skills/delegate/openplanr.skill.json",
-          "digest": "sha256:f6a7e2a965dff4dab0f6414ae0bcb7289903dfbc2022a88d0528b8b9c0ea2c91"
+          "digest": "sha256:142adc760acfbefe89c7b1cefa83cc42c080cf929ae97f2f716760011f0cc7a1"
         },
         {
           "path": "skills/delegate/agents/openai.yaml",
@@ -330,119 +330,27 @@
         },
         {
           "path": "skills/delegate/references/capsule-contract.md",
-          "digest": "sha256:22e5daac9ad9cb0951222fef4d0f45ae35de4a6b7ee2b47d660cc6b672188fff"
+          "digest": "sha256:89de15960cbcb406a1ada6432e8a4ed5f61dcd96d95b034531bbfad258ee304a"
         },
         {
           "path": "skills/delegate/references/integration-review.md",
-          "digest": "sha256:5c5457cb8c7865ba6ba0b11686c229ebda2a0a7faa65c9b02746442bc213107b"
+          "digest": "sha256:c1ddacaa47e35e63035a6b2c6e5e2884c1e2cc5ac253a37606964530153ae614"
+        },
+        {
+          "path": "skills/delegate/references/openplanr-cli.md",
+          "digest": "sha256:8a20f70284b92483490088e9649c1b861c9c47f203ffb212e74bd031532e5715"
         },
         {
           "path": "skills/delegate/references/operator-guide.md",
-          "digest": "sha256:d85dea381c092daf1fce8feaaa2baa56bbd95c85c1f1f0ca50bdaecc87fea578"
+          "digest": "sha256:8e85e155e8693196f5cce6e13a7bf5a0699249fcb3a9dd74b828229bc9a833e4"
         },
         {
           "path": "skills/delegate/references/run-handoff.md",
-          "digest": "sha256:a677ed12b04f9c53a7027736ac00fa83e962af72536b24c23cc9d12cbd300541"
+          "digest": "sha256:f4cb980e48c82e32e6669be224ca3ac51a8071d72e05f48c010f83abc73aaf66"
         },
         {
           "path": "skills/delegate/references/worktree-custody.md",
-          "digest": "sha256:a7bb2dc84ed3861f283f2dbec978b717ed35fe5fc70d368a25cac701eaff4a10"
-        },
-        {
-          "path": "skills/delegate/scripts/adapters/claude.mjs",
-          "digest": "sha256:f9e4d3c54ebcf7695939d4da71bef1a651f2450f0fb0985e831944b7244faf86"
-        },
-        {
-          "path": "skills/delegate/scripts/adapters/codex.mjs",
-          "digest": "sha256:07fffd239bdb2e7a1e7f742b3a24ed3e4c18ff612c740baa7668e36a63406eb8"
-        },
-        {
-          "path": "skills/delegate/scripts/adapters/generic.mjs",
-          "digest": "sha256:90a22ee52f992c43a7432f6bfb56a25af34a23e43e5730cca1cefa49a893ee05"
-        },
-        {
-          "path": "skills/delegate/scripts/context.mjs",
-          "digest": "sha256:632a59c12d8fc4b6b738279cbee5f8d001e76d9ef379fc065f62031647462d42"
-        },
-        {
-          "path": "skills/delegate/scripts/credentials.mjs",
-          "digest": "sha256:a7b55c9598a8a5301c4e0ff79f3471a587a5f26686c9a7d97fe662ee0babb49d"
-        },
-        {
-          "path": "skills/delegate/scripts/custody.mjs",
-          "digest": "sha256:8c127a851e321a217621a76636a70a8326f8e3a02e9eda6db849ad89626da228"
-        },
-        {
-          "path": "skills/delegate/scripts/helper-snapshot.mjs",
-          "digest": "sha256:146430502bb25dda5b31433d574aba41428a93f2f1de67b1a01fdaca3b990832"
-        },
-        {
-          "path": "skills/delegate/scripts/integrate.mjs",
-          "digest": "sha256:9ee8d17a28aad8edf29ebda6edcef21b86124081f7c933a53473cf8e90d7380a"
-        },
-        {
-          "path": "skills/delegate/scripts/presentation.mjs",
-          "digest": "sha256:84b8b49479806187ff3a502897f4cd901fdfe00d6cbd6a371b641fe2091892fd"
-        },
-        {
-          "path": "skills/delegate/scripts/profiles.mjs",
-          "digest": "sha256:6162266e2a5e7b9a6fb38754156eafd76f742d0142df681c43f3dc42e36b6ff6"
-        },
-        {
-          "path": "skills/delegate/scripts/run-record.mjs",
-          "digest": "sha256:42492bdb49583c271e5a2439deb43b3119aadb672c5be3349667890718bc055f"
-        },
-        {
-          "path": "skills/delegate/scripts/runner.mjs",
-          "digest": "sha256:3fd196a6ac2073f217d888a1a95f40bc6c6ec7937ca7deced6257d00bfee10a4"
-        },
-        {
-          "path": "skills/delegate/scripts/run-contract.mjs",
-          "digest": "sha256:c2001a897a93788e9047f601d90cde9b1a6eb3a46c439af86da23dd214392f60"
-        },
-        {
-          "path": "skills/delegate/scripts/run-preflight.mjs",
-          "digest": "sha256:81a36c610c8d5b422c392dc5d6384285ad125303b8ae4a3519ff44f14a3076dc"
-        },
-        {
-          "path": "skills/delegate/scripts/run-preparation.mjs",
-          "digest": "sha256:d1c2564cf22dbec09bdd133db2f2580700ad1d2a2488f080c4521cb819afcb58"
-        },
-        {
-          "path": "skills/delegate/scripts/run-execution.mjs",
-          "digest": "sha256:c3aed8483c1e086a6d4e8110f78ec8f5bcca250fc289d2e6ee907c9e51e97950"
-        },
-        {
-          "path": "skills/delegate/scripts/run-lifecycle.mjs",
-          "digest": "sha256:13165f8fd68c9560187d02a6f79f30ad6aa5c146d4d98639739bc4d182aaad41"
-        },
-        {
-          "path": "skills/delegate/scripts/integration-files.mjs",
-          "digest": "sha256:94845c938bbf67f7b81f6ca0344ef778e8db978af242f8e8a499b8c8b156a294"
-        },
-        {
-          "path": "skills/delegate/scripts/integration-checks.mjs",
-          "digest": "sha256:28da3e3ead865d923a75d4b111028e69c9e8bc72c83348067300d54ac8d37d05"
-        },
-        {
-          "path": "skills/delegate/scripts/handoff.mjs",
-          "digest": "sha256:07ff51c3da9774b11a6227838ec71c63289a9038f2d11fb7305255ad833396d2"
-        },
-        {
-          "path": "skills/delegate/scripts/adapters/capsule.mjs",
-          "digest": "sha256:ef2087fa2e505c97cc413ed038645a8def0618647de0d10afb9944762b0495a6"
-        },
-        {
-          "path": "skills/delegate/scripts/adapters/cursor.mjs",
-          "digest": "sha256:f9b23fca75b3e174134ea9bfde1637fac975866ffba3c293525dfef59975d76c"
-        },
-        {
-          "path": "skills/delegate/scripts/adapters/native.mjs",
-          "digest": "sha256:602f45bb308f637ecc9ec7175bd28f5b89aebf6d3b5e6d14f499edda5acac7c7"
-        },
-        {
-          "path": "skills/delegate/scripts/backend-diagnostics.mjs",
-          "digest": "sha256:989c307c6a42c19f799b17bbe7067211b5d9435a6ebabd2609d15d312d3d2715"
+          "digest": "sha256:3b2cef2df3dd7586b755902795541176e338e64ea2b5ca0aba02731fe12d6687"
         }
       ]
     },

@@ -4,6 +4,7 @@ import { createHash, randomUUID } from 'node:crypto';
 import { chmod, copyFile, lstat, mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { gitEnvironment } from './child-environment.mjs';
 import { captureFileState, HOOKLESS_COMMIT, validateWorktreeCustody } from './custody.mjs';
 import {
   resolveSelectedChecks,
@@ -208,7 +209,7 @@ function git(cwd, args, { input, allowFailure = false, env } = {}) {
         cwd,
         encoding: 'buffer',
         maxBuffer: 256 * 1024 * 1024,
-        ...(env ? { env: { ...process.env, ...env } } : {}),
+        env: gitEnvironment(env),
       },
       (error, stdout, stderr) => {
         const result = {

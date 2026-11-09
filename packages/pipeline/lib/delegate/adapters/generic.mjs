@@ -1,6 +1,7 @@
 import { execFile as execFileCallback, spawn } from 'node:child_process';
 import { StringDecoder } from 'node:string_decoder';
 import { promisify } from 'node:util';
+import { baseEnvironment } from '../child-environment.mjs';
 import { processIdentity, processIdentityState } from '../run-record.mjs';
 
 export const ADAPTER_PROTOCOL = 'openplanr.delegate.adapter';
@@ -41,6 +42,7 @@ export async function terminateProcessGroup(identity, { graceMs = 100 } = {}) {
         // macOS can report EPERM for a group consisting only of zombies.
         // Ignore it only after proving there are no live writers in that group.
         const { stdout } = await promisify(execFileCallback)('ps', ['-axo', 'pgid=,stat='], {
+          env: baseEnvironment(),
           timeout: 5000,
           maxBuffer: 1024 * 1024,
         });

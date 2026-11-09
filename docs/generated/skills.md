@@ -133,7 +133,7 @@ Coordinate an explicitly requested implementation with Claude Code, Codex or Cur
 - Invocation from the plugin: `$planr:delegate` in Codex/ChatGPT; `/planr:delegate` in Claude Code.
 - Hosts: Claude Code, Codex, ChatGPT, and Cursor where supported by the package manifest.
 - Aliases: none.
-- Packaged support: `references/adapter-protocol.md`, `references/capsule-contract.md`, `references/integration-review.md`, `references/operator-guide.md`, `references/run-handoff.md`, `references/worktree-custody.md`, with packaged validators and runtime support. See the [resource inventory](../../skills/planr-delegate/openplanr.skill.json).
+- Packaged support: `references/adapter-protocol.md`, `references/capsule-contract.md`, `references/integration-review.md`, `references/openplanr-cli.md`, `references/operator-guide.md`, `references/run-handoff.md`, `references/worktree-custody.md`. See the [resource inventory](../../skills/planr-delegate/openplanr.skill.json).
 
 ## `planr-design`
 
