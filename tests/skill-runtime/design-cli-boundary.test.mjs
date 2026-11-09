@@ -96,7 +96,7 @@ test('the CLI-missing stop still delivers unverified work and names the install'
   for (const id of DESIGN_SKILLS) {
     const text = utilities(id);
     const row = stopRow(text, /not found/u);
-    assert.match(row, /`npm install -g openplanr`/u);
+    assert.match(row, /`npm install -g openplanr@\d+\.\d+\.\d+`/u);
     assert.doesNotMatch(row, /openplanr@latest|--omit/u);
     assert.match(
       prose(text),
@@ -114,7 +114,7 @@ test('the CLI-missing stop still delivers unverified work and names the install'
 test('the CLI-too-old stop names the upgrade', () => {
   for (const id of DESIGN_SKILLS) {
     const row = stopRow(utilities(id), /unknown command 'design'/u);
-    assert.match(row, /`npm install -g openplanr@latest`/u);
+    assert.match(row, /`npm install -g openplanr@\d+\.\d+\.\d+`/u);
     assert.match(row, /`supported`/u, 'a range without the contract is also too old');
   }
 });
@@ -122,7 +122,7 @@ test('the CLI-too-old stop names the upgrade', () => {
 test('the CLI-without-workflow-package stop names the reinstall', () => {
   for (const id of DESIGN_SKILLS) {
     const row = stopRow(utilities(id), /E_DESIGN_RUNTIME_MISSING/u);
-    assert.match(row, /`npm install -g openplanr`/u);
+    assert.match(row, /`npm install -g openplanr@\d+\.\d+\.\d+`/u);
     assert.match(row, /without `--omit=optional`/u);
   }
 });
@@ -177,12 +177,13 @@ test('Loop delivers unverified variants and Review uses hosted canvas comments',
 });
 
 test('Plan inspects a local handoff through the CLI and names each stop', () => {
-  const text = prose(skill('planr-plan'));
+  const text = prose(
+    `${skill('planr-plan')}\n${read('skills/planr-plan/references/design-handoff.md')}`,
+  );
   assert.match(text, /`openplanr design handoff <design-document\.json> --action inspect --json`/u);
-  for (const action of [
-    /`npm install -g openplanr`/u,
-    /`npm install -g openplanr@latest`/u,
-    /--omit=optional/u,
-  ])
-    assert.match(text, action);
+  assert.match(
+    text,
+    /install the `openplanr` CLI at this plugin's version, upgrade it to that version, or reinstall it without `--omit=optional`/u,
+  );
+  assert.doesNotMatch(text, /npm install -g openplanr(?!@\d)/u);
 });

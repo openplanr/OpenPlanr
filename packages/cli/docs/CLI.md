@@ -363,6 +363,33 @@ Each violation is printed with the file, the rule, and what was found. The comma
 
 ---
 
+#### `openplanr spec validate-plan`
+
+Check a spec's stories and tasks (`stories/US-NNN-*.md` and `tasks/T-NNN-*.md` inside the spec directory). It reads the files and writes nothing. The spec file itself is checked by `spec validate`; the older `output/feats/` layout is not checked.
+
+```bash
+openplanr spec validate-plan SPEC-001
+openplanr spec validate-plan SPEC-001 --json
+```
+
+| Option     | Description                                                            | Required |
+| ---------- | ---------------------------------------------------------------------- | -------- |
+| `<specId>` | Spec whose stories and tasks to check                                  | Yes      |
+| `--json`   | Print `{ ok, specId, stories, tasks, violations[] }` instead of text   | No       |
+
+**Rules:**
+1. **`frontmatter`** — each story and task frontmatter parses as YAML and is valid against the Protocol story or task schema for its `schemaVersion` (`1.0.0` or `1.7.0`); a `specId` names this spec.
+2. **`id-mismatch`** — the frontmatter `id` matches the id in the filename.
+3. **`duplicate-id`** — no `US-NNN` or `T-NNN` in this spec is used by another file anywhere under the specs root, and no acceptance id repeats within a story.
+4. **`reference`** — each task's `storyId` is a story in this spec, and each `acceptanceRefs` entry is declared by that story.
+5. **`coverage`** — every story acceptance id is mapped by at least one task through `acceptanceRefs`.
+6. **`verification`** — at least one mapped task names the acceptance id under `## Test Requirements`.
+7. **`empty`** — the spec has at least one story.
+
+The command exits 1 when there is any violation or the spec is not found, and 0 otherwise.
+
+---
+
 #### `openplanr spec sync`
 
 Validate spec integrity and auto-fix safe inconsistencies. Use after manual edits, interrupted work, or when in doubt.
@@ -1004,6 +1031,40 @@ it in `allowedEnv`; otherwise the agent uses its own login.
 
 ---
 
+### `openplanr release collect`
+
+Collect the commits in a release window so they can be classified. It runs Git
+read commands only and writes nothing.
+
+```bash
+openplanr release collect --json                          # last tag .. HEAD
+openplanr release collect --base v1.4.0 --head HEAD --json
+openplanr release collect --since 2026-11-01 --json
+```
+
+| Option              | Description                                                   | Default                              |
+| ------------------- | ------------------------------------------------------------- | ------------------------------------ |
+| `--base <revision>` | Start of the window, exclusive                                | Last tag reachable from head         |
+| `--head <revision>` | End of the window, inclusive                                  | `HEAD`                               |
+| `--since <date>`    | Start the window at a `YYYY-MM-DD` date instead of a revision | none                                 |
+| `--json`            | Print `{ ok, base, since, head, tags, commits, areas }`       | `false`                              |
+
+`base` and `head` carry the revision as given and the resolved commit SHA; `base`
+also has `tag` and its committer `date` (`YYYY-MM-DD`), and is `null` when the window is all history (no tag) or a date. `tags` lists the five
+most recent tags. Each commit, merges excluded, has `sha`, `shortSha`, `subject`,
+`body`, `type` and `scope` from a Conventional Commits subject, `breaking` (a `!`
+after the type or a `BREAKING CHANGE:` or `BREAKING-CHANGE:` footer),
+`breakingNotes` (each footer value with its continuation lines, up to the next footer token), `reverts` (the SHA named by `This reverts commit <sha>`) and
+`files`. `areas` counts touched paths by their first two segments, highest
+first, top 20.
+
+Any Git failure other than "no tag found", such as an unknown revision or a
+directory outside a repository, exits 1 with `E_RELEASE_GIT_FAILED` and the Git
+error text; the command never reports an empty window instead. Passing both
+`--base` and `--since` exits 1 with `E_RELEASE_RANGE_CONFLICT`, and a `--since` that is not a real calendar date with `E_RELEASE_SINCE_INVALID`.
+
+---
+
 ### `openplanr sync`
 
 Validate and repair cross-references across all artifacts.
@@ -1030,6 +1091,65 @@ skill is unclear.
 - **Duplicates:** Same child linked more than once in a parent
 
 Handles both story-level and feature-level task relationships.
+
+#### `openplanr sync tracker`
+
+Inspect a tracker, or preview and apply GitHub issue changes through the GitHub CLI
+(`gh`). The `planr-sync` skill calls it when the coding agent has no tracker connection
+but `gh` is signed in. Linear and other trackers sync through the coding agent's own
+connection.
+
+```bash
+openplanr sync tracker github inspect --json                           # repository gh resolves
+openplanr sync tracker github sync --input ops.json --json             # preview only
+openplanr sync tracker github sync --input - --apply --json < ops.json # apply
+openplanr sync tracker local inspect                                   # configured planning roots
+```
+
+| Option           | Description                                                   | Default |
+| ---------------- | ------------------------------------------------------------- | ------- |
+| `--input <path>` | JSON array of operations, relative to the project; `-` reads stdin | none |
+| `--apply`        | Run the operations; without it `sync` only previews          | `false` |
+| `--json`         | Machine-readable output                                       | `false` |
+
+Operations: `{"action":"create","title":…,"body"?,"labels"?}`,
+`{"action":"update","id":…,"title"?,"body"?,"labels"?}` (at least one field), and
+`{"action":"close"|"reopen","id":…,"comment"?}`. `id` is an issue number, or an issue URL in
+the repository `gh` resolves (another repository's URL fails with
+`E_SYNC_TRACKER_FOREIGN_ISSUE`). `update` only adds `labels`; it never removes one. Every
+operation is validated before any runs; unknown fields are refused.
+
+Success (`--json`):
+
+```json
+{
+  "ok": true,
+  "contract": 1,
+  "provider": "github",
+  "action": "sync",
+  "applied": true,
+  "complete": true,
+  "results": [
+    { "index": 0, "action": "create", "title": "Add sign-in", "id": "31", "url": "https://github.com/acme/app/issues/31", "status": "applied" }
+  ],
+  "next": "Record each new issue's id as githubIssue in its planning file, then report the changes."
+}
+```
+
+`inspect` returns `repository` (github) or `roots` and `configured` (local) in place of
+`applied`, `complete` and `results`. Each result's `status` is `planned`, `applied`,
+`failed` or `not-run`. An `--apply` run stops at the first failed change and exits 1
+with `ok: false`, `code: "E_SYNC_TRACKER_APPLY_INCOMPLETE"`, the same `results`, and a
+`recovery` that names the operations to rerun. Other failures exit 1 with the standard
+`{ "ok": false, "code", "problem", "recovery" }`: `E_SYNC_TRACKER_USAGE`,
+`E_SYNC_TRACKER_INPUT`, `E_SYNC_TRACKER_FOREIGN_ISSUE`, `E_SYNC_TRACKER_LINEAR`, `E_SYNC_TRACKER_GH_MISSING`,
+`E_SYNC_TRACKER_GH_AUTH`, `E_SYNC_TRACKER_NOT_A_REPOSITORY`, `E_SYNC_TRACKER_NO_REMOTE`
+and `E_SYNC_TRACKER_GH_FAILED`. Human output ends with a `Next:` line.
+
+`gh` runs with an allowlisted environment: `PATH`, home, locale, temporary, XDG,
+proxy and CA variables, Windows system paths, and gh's own `GH_*`/`GITHUB_*` host and
+token variables, plus `GH_PROMPT_DISABLED=1`. Every other variable, such as an
+unrelated `*_TOKEN`, stays out of the child.
 
 ---
 

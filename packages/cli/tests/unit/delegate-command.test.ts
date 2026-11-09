@@ -188,8 +188,12 @@ describe('delegate runtime envelope', () => {
     );
   });
 
-  it('pins the contract to the minimum CLI version the skills require', () => {
-    const metadata = readFileSync(resolve('../../scripts/skills/plugin-metadata.mjs'), 'utf8');
-    expect(metadata).toContain(`export const SKILL_CLI_MINIMUM = '${DELEGATE_CONTRACT_VERSION}';`);
+  it('reports the CLI version the skills record for the delegate contract', () => {
+    const { commands } = JSON.parse(
+      readFileSync(resolve('../../scripts/skills/skill-cli-contracts.json'), 'utf8'),
+    ) as { commands: Record<string, { contracts: Record<string, string> }> };
+    const contracts = commands.delegate?.contracts ?? {};
+    const newest = Math.max(...Object.keys(contracts).map(Number));
+    expect(contracts[String(newest)]).toBe(DELEGATE_CONTRACT_VERSION);
   });
 });

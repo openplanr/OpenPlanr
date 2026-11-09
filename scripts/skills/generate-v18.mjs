@@ -42,11 +42,11 @@ import {
   PLUGIN_AUTHOR,
   PLUGIN_DESCRIPTION,
   PLUGIN_LICENSE,
-  SKILL_CLI_MINIMUM,
 } from './plugin-metadata.mjs';
 import { renderClaudePluginReadme } from './plugin-readme.mjs';
 import { syncGeneratedOutputs } from './projection-custody.mjs';
 import { resourceBytes } from './resource-bytes.mjs';
+import { fillSkillCliTokens } from './skill-cli.mjs';
 import { resourceFootprint, suiteLocalResources } from './suite-resources.mjs';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..');
@@ -101,8 +101,9 @@ const operateAdvisorDestinations = Object.freeze([
   'planr-coo-review',
 ]);
 const trackerConnectionDestinations = Object.freeze(['planr-sync', 'planr-sprint', 'planr-status']);
-// Each runtime skill's CLI reference and the shared template it is rendered from.
+// Skills that call the openplanr CLI, and the shared template each one's CLI reference uses.
 const cliReferenceSources = Object.freeze({
+  'planr-sync': 'skills/shared/openplanr-cli.md',
   'planr-delegate': 'skills/shared/openplanr-cli-optional.md',
 });
 const findingsDestinations = Object.freeze(['planr-ship', 'planr-investigate']);
@@ -214,35 +215,24 @@ const sharedSkillResources = Object.freeze([
     destination: `skills/${skillId}/references/return-contract.md`,
     executable: false,
   })),
-  {
-    source: 'packages/integrations/src/portable-sync.mjs',
-    destination: 'skills/planr-sync/scripts/sync.mjs',
-    executable: true,
-  },
-  {
-    source: 'packages/protocol/src/names.mjs',
-    destination: 'skills/planr-sync/scripts/names.mjs',
+  ...Object.entries(cliReferenceSources).map(([skillId, source]) => ({
+    source,
+    destination: `skills/${skillId}/references/openplanr-cli.md`,
     executable: false,
-  },
+  })),
 ]);
 
 const sourceProjections = new Map(
   sharedSkillResources.map(({ source, destination }) => [
     destination,
-    readFileSync(resolve(root, source)),
+    source.endsWith('.md')
+      ? Buffer.from(fillSkillCliTokens(read(source), pluginVersion))
+      : readFileSync(resolve(root, source)),
   ]),
 );
 const sourceExecutables = new Set(
   sharedSkillResources.filter(({ executable }) => executable).map(({ destination }) => destination),
 );
-for (const [skillId, source] of Object.entries(cliReferenceSources)) {
-  const reference = readFileSync(resolve(root, source), 'utf8')
-    .replaceAll('{{OPENPLANR_VERSION}}', pluginVersion)
-    .replaceAll('{{SKILL_CLI_MINIMUM}}', SKILL_CLI_MINIMUM);
-  if (reference.includes('{{'))
-    throw new Error(`${source} has a placeholder the generator does not fill.`);
-  sourceProjections.set(`skills/${skillId}/references/openplanr-cli.md`, Buffer.from(reference));
-}
 for (const skillId of CONNECTION_SKILL_IDS)
   sourceProjections.set(
     `skills/${skillId}/${CONNECTORS_REFERENCE}`,

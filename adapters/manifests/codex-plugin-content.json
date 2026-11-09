@@ -8,7 +8,7 @@
   "canonicalSkillCount": 30,
   "compatibilityAliasCount": 0,
   "skillCount": 30,
-  "assetCount": 195,
+  "assetCount": 194,
   "skills": [
     {
       "skillId": "planr-artifact",
@@ -371,7 +371,7 @@
         },
         {
           "path": "skills/design/openplanr.skill.json",
-          "digest": "sha256:da6e4b51fa16e55425d9d7460dcdceab4cfc414f20050d532464a76d988d34b8"
+          "digest": "sha256:cbfdee1cd28659b8873869cb4818bb492e5bdac772a4a118b388d0a270871152"
         },
         {
           "path": "skills/design/agents/openai.yaml",
@@ -411,7 +411,7 @@
         },
         {
           "path": "skills/design/references/utilities.md",
-          "digest": "sha256:bc2acee8cc926a698f2efd9397e5d00a284c6701587a0abcf85e4484fbc4be46"
+          "digest": "sha256:22f8be8cadf08006d88b1c68d0fef43893ae080766c60b20073a7eea0d8985fd"
         },
         {
           "path": "skills/design/references/team-review.md",
@@ -444,7 +444,7 @@
         },
         {
           "path": "skills/design-loop/openplanr.skill.json",
-          "digest": "sha256:f96a6bceaaabff1acbdaad257ee0d602705305661c102bc22c21b2d40db50f6f"
+          "digest": "sha256:0f562caa714f68b8b2a48899fe6a41dbd7ed041f9f60aeaf6a74f5a31da4e762"
         },
         {
           "path": "skills/design-loop/agents/openai.yaml",
@@ -480,7 +480,7 @@
         },
         {
           "path": "skills/design-loop/references/utilities.md",
-          "digest": "sha256:bc2acee8cc926a698f2efd9397e5d00a284c6701587a0abcf85e4484fbc4be46"
+          "digest": "sha256:22f8be8cadf08006d88b1c68d0fef43893ae080766c60b20073a7eea0d8985fd"
         },
         {
           "path": "skills/design-loop/references/team-review.md",
@@ -513,7 +513,7 @@
         },
         {
           "path": "skills/design-review/openplanr.skill.json",
-          "digest": "sha256:3151d0c1d1e306305256271abfbbab7408ce55b178868159ec9d82f426de499b"
+          "digest": "sha256:443e581bd1f590734359192689607175d8a9c1cde7a91e9402b14da7a9237564"
         },
         {
           "path": "skills/design-review/agents/openai.yaml",
@@ -549,7 +549,7 @@
         },
         {
           "path": "skills/design-review/references/utilities.md",
-          "digest": "sha256:bc2acee8cc926a698f2efd9397e5d00a284c6701587a0abcf85e4484fbc4be46"
+          "digest": "sha256:22f8be8cadf08006d88b1c68d0fef43893ae080766c60b20073a7eea0d8985fd"
         },
         {
           "path": "skills/design-review/references/team-review.md",
@@ -744,11 +744,11 @@
       "assets": [
         {
           "path": "skills/plan/SKILL.md",
-          "digest": "sha256:9467d6abce56d62677b95dd5e0c3a814ce4ad60733704beef91c5245e0445b2c"
+          "digest": "sha256:5053dba5c0c58cab97883a48d4f683fec84957ef209e99ff653af09928d1cc70"
         },
         {
           "path": "skills/plan/openplanr.skill.json",
-          "digest": "sha256:f0f14bc031b18945eea6bce2a733c1038ee623d6eee95afbd61809cb534c56c7"
+          "digest": "sha256:74a76845fa903eb29b67b1627295420a7a47107774ea72d1f58be1d731d8a8cf"
         },
         {
           "path": "skills/plan/agents/openai.yaml",
@@ -756,11 +756,11 @@
         },
         {
           "path": "skills/plan/references/artifact-contract.md",
-          "digest": "sha256:79914583ab6f668eaef24cbe8a498a3d08d07da84ec80f5160b42f1719b5c7b2"
+          "digest": "sha256:6b861dbfbe675624c4a32545d936da599e263f2399b1e46091f6fc3fd3086f88"
         },
         {
           "path": "skills/plan/references/design-handoff.md",
-          "digest": "sha256:b918cc16855412a75028e1a014832c2ced59b0349461a24d9e1fdcfc336b9f5f"
+          "digest": "sha256:456f33cd0386b7fd8be1c5ee2c62723d776db6c6f740453d7125816794565af4"
         },
         {
           "path": "skills/plan/references/planning-ids.md",
@@ -793,11 +793,11 @@
       "assets": [
         {
           "path": "skills/plan-review/SKILL.md",
-          "digest": "sha256:09e614a279a3bcdcc858fa5bf7a0c5bc3010d91f922a85718dea9dc3f84c1787"
+          "digest": "sha256:21291840966711012694fcf676de228f56928b20bd3bddca30d69c3914ba27c6"
         },
         {
           "path": "skills/plan-review/openplanr.skill.json",
-          "digest": "sha256:a307b480a249f03ea88fb89672c369a5773fb92c89156a7e96b02d2a0c6bc0d1"
+          "digest": "sha256:7809b687c81e71f19c1e83cedc8104a6ba857c016e7058b44f099d1231aca6e1"
         },
         {
           "path": "skills/plan-review/agents/openai.yaml",
@@ -818,11 +818,11 @@
       "assets": [
         {
           "path": "skills/release/SKILL.md",
-          "digest": "sha256:271a64e265ff0b5b7bd423abd45dc19d41fe5cbe2bb98da35f40385f58e66e58"
+          "digest": "sha256:c5bfd8b5457bd38c9e6a99201299344dc43da0b2a25653996d608ad79aba5560"
         },
         {
           "path": "skills/release/openplanr.skill.json",
-          "digest": "sha256:167271f868b1f82de306fb66444c6bb3541cfb7ca553f602213922336618d3f8"
+          "digest": "sha256:c3def69f96b24589059b00c425de62981ac7f705d70611e8f43d6cd2dd2dc0e8"
         },
         {
           "path": "skills/release/agents/openai.yaml",
@@ -933,11 +933,11 @@
       "assets": [
         {
           "path": "skills/spec/SKILL.md",
-          "digest": "sha256:b72b49d62edf4455ff8ce32992a7d780b650535608b9325076799ad549782a0a"
+          "digest": "sha256:e79e0654f960eb7ee02dda3d493e3779f4d5021c24e4abe5cd0c36a10c5b33ba"
         },
         {
           "path": "skills/spec/openplanr.skill.json",
-          "digest": "sha256:bfcf20909007f5698b205c552efbbe4366e76884df7dbdc9cca7ef02a47c3eb1"
+          "digest": "sha256:02ebd36e5c211ca734d81a0ea91796ed897252fbe1e8590775146e5ffbcb46e0"
         },
         {
           "path": "skills/spec/agents/openai.yaml",
@@ -945,7 +945,7 @@
         },
         {
           "path": "skills/spec/references/specification-contract.md",
-          "digest": "sha256:eaaf58e5d2e5cf788856c8d0e156a1ff49111d3578556bfb7c8fe2466df15b15"
+          "digest": "sha256:bbecd3b43ff88a245199c89d08e17ebbf04580a6e0491140d8e69edfdbd69038"
         },
         {
           "path": "skills/spec/references/return-contract.md",
@@ -1032,11 +1032,11 @@
       "assets": [
         {
           "path": "skills/sync/SKILL.md",
-          "digest": "sha256:79cb62f3f8b0c36ef55c9424ca694a37448f90170183d13d0654d500613da414"
+          "digest": "sha256:41a5cf7855d2c093625dbf9ee0e006e2275c63109e8483210aa31593c6c155a1"
         },
         {
           "path": "skills/sync/openplanr.skill.json",
-          "digest": "sha256:c8061714181e6f4e330c65ba033a3586bf4118352e778865e3e3e0e802ad2cf6"
+          "digest": "sha256:ea6e4e22c03606b305afc046825d12d394301488de276ac19ac1004116b7ee45"
         },
         {
           "path": "skills/sync/references/connectors.md",
@@ -1047,12 +1047,8 @@
           "digest": "sha256:f9617486a5e2ecc861566d7a7eaf1c97725f9acfcc6bc64cfda1f9b6fd3c4d36"
         },
         {
-          "path": "skills/sync/scripts/sync.mjs",
-          "digest": "sha256:7ef90127444f270dc30d119c88a41c898fe7e0b82b1d72d95b1bffc9393a1492"
-        },
-        {
-          "path": "skills/sync/scripts/names.mjs",
-          "digest": "sha256:85d080c6a4a0ed31cb60daaf0dc8739a0d9ddbd060e63126d81a3b2b84294bd9"
+          "path": "skills/sync/references/openplanr-cli.md",
+          "digest": "sha256:842ded737e6a1ae2eeb98e1730de8e9bd97c92ed159c961f36003e7205214454"
         },
         {
           "path": "skills/sync/agents/openai.yaml",

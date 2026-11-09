@@ -1,0 +1,7 @@
+{
+  "$comment": "CLI commands runtime skills call. `contracts` maps each JSON contract version to the first CLI version that ships it; a new contract adds a row with a later version. SKILL_CLI_MINIMUM is the highest current `since`.",
+  "commands": {
+    "delegate": { "contracts": { "1": "3.7.0" } },
+    "sync tracker": { "contracts": { "1": "3.7.0" } }
+  }
+}

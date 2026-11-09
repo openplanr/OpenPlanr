@@ -34,6 +34,9 @@ lens applies. Under `## Notes for Decomposition`, list each decision made withou
 an answer as a bullet starting `Assumption:` that names the decision and the
 alternative not taken.
 
+When the repository has no `.planr/`, write the specification where it already keeps
+specifications, using the sections below.
+
 For a repository intentionally using default mode, write
 `input/specs/spec-{slug}.md` and preserve its active schema. Do not create a
 parallel `.planr` spec solely to normalize the project.

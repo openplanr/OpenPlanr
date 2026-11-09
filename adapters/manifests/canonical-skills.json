@@ -788,7 +788,7 @@
     },
     {
       "id": "planr-design",
-      "version": "2.1.1",
+      "version": "2.1.2",
       "source": "skills/planr-design/openplanr.skill.json",
       "entrypoint": "skills/planr-design/SKILL.md",
       "description": "Design a polished product interface through adaptive consultation, a shared canvas/prototype/walkthrough studio, and an implementation-ready specification. Use for a new design or an existing interface that needs a coherent direction.",
@@ -910,7 +910,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:bc2acee8cc926a698f2efd9397e5d00a284c6701587a0abcf85e4484fbc4be46"
+          "digest": "sha256:22f8be8cadf08006d88b1c68d0fef43893ae080766c60b20073a7eea0d8985fd"
         },
         {
           "path": "references/team-review.md",
@@ -990,7 +990,7 @@
     },
     {
       "id": "planr-design-loop",
-      "version": "2.0.1",
+      "version": "2.0.2",
       "source": "skills/planr-design-loop/openplanr.skill.json",
       "entrypoint": "skills/planr-design-loop/SKILL.md",
       "description": "Compare three materially different product design directions in a live review studio, collect pins and ratings, and develop the selected direction. Use for visual alternatives, comparison or a remix.",
@@ -1100,7 +1100,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:bc2acee8cc926a698f2efd9397e5d00a284c6701587a0abcf85e4484fbc4be46"
+          "digest": "sha256:22f8be8cadf08006d88b1c68d0fef43893ae080766c60b20073a7eea0d8985fd"
         },
         {
           "path": "references/team-review.md",
@@ -1180,7 +1180,7 @@
     },
     {
       "id": "planr-design-review",
-      "version": "2.1.1",
+      "version": "2.1.2",
       "source": "skills/planr-design-review/openplanr.skill.json",
       "entrypoint": "skills/planr-design-review/SKILL.md",
       "description": "Review and revise an existing product design using stable board pins and scoped browser-verified changes. Use for focused improvements while preserving unrelated screens and feedback.",
@@ -1290,7 +1290,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:bc2acee8cc926a698f2efd9397e5d00a284c6701587a0abcf85e4484fbc4be46"
+          "digest": "sha256:22f8be8cadf08006d88b1c68d0fef43893ae080766c60b20073a7eea0d8985fd"
         },
         {
           "path": "references/team-review.md",
@@ -1761,11 +1761,11 @@
     },
     {
       "id": "planr-plan",
-      "version": "1.5.0",
+      "version": "1.6.0",
       "source": "skills/planr-plan/openplanr.skill.json",
       "entrypoint": "skills/planr-plan/SKILL.md",
       "description": "Turn a Protocol-compatible specification or product intent into schema-compatible OpenPlanr stories and implementation tasks. Use for planning and decomposition, not implementation.",
-      "sourceDigest": "sha256:5ff41d809f97bc77ba57d99a41d81afafe9ed132527a5fbddeb414e230d87fc9",
+      "sourceDigest": "sha256:fd33578b217003c9dc9937bc65fe6bc1e3752eb40f7746a904951ee00b96e163",
       "resources": [
         {
           "path": "agents/openai.yaml",
@@ -1787,7 +1787,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:79914583ab6f668eaef24cbe8a498a3d08d07da84ec80f5160b42f1719b5c7b2"
+          "digest": "sha256:6b861dbfbe675624c4a32545d936da599e263f2399b1e46091f6fc3fd3086f88"
         },
         {
           "path": "references/design-handoff.md",
@@ -1799,7 +1799,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:b918cc16855412a75028e1a014832c2ced59b0349461a24d9e1fdcfc336b9f5f"
+          "digest": "sha256:456f33cd0386b7fd8be1c5ee2c62723d776db6c6f740453d7125816794565af4"
         },
         {
           "path": "references/planning-ids.md",
@@ -1880,11 +1880,11 @@
     },
     {
       "id": "planr-plan-review",
-      "version": "1.1.0",
+      "version": "1.2.0",
       "source": "skills/planr-plan-review/openplanr.skill.json",
       "entrypoint": "skills/planr-plan-review/SKILL.md",
       "description": "Review an OpenPlanr plan for product, engineering, design, and developer-experience problems. Use after planning and before implementation to improve the plan.",
-      "sourceDigest": "sha256:bef96331f6c0ba386d16c6954d86b968c292a39b5d2cc2162262b3c56e9eae23",
+      "sourceDigest": "sha256:d87c78b1586f94bab5e4b20f4b8cf8b0c3c2ce701d14ffe425fbb512f4af7553",
       "resources": [
         {
           "path": "agents/openai.yaml",
@@ -1927,11 +1927,11 @@
     },
     {
       "id": "planr-release",
-      "version": "1.3.0",
+      "version": "1.4.0",
       "source": "skills/planr-release/openplanr.skill.json",
       "entrypoint": "skills/planr-release/SKILL.md",
       "description": "Choose and maintain a product's versioning scheme, classify shipped changes, and write user-facing changelogs or release notes. Use for SemVer or CalVer decisions, version bumps, release cadence, and preparing a versioned release after landing.",
-      "sourceDigest": "sha256:4a161866c721b2f5b357d9d9032a24edcd6a8b943bafbf8c5c3aed6a85a421f4",
+      "sourceDigest": "sha256:c4c8bc8cc8668ebb8949e078f1a1ed234c757823fd9dd6071aacdf2129e34859",
       "resources": [
         {
           "path": "agents/openai.yaml",
@@ -2202,11 +2202,11 @@
     },
     {
       "id": "planr-spec",
-      "version": "1.1.0",
+      "version": "1.2.0",
       "source": "skills/planr-spec/openplanr.skill.json",
       "entrypoint": "skills/planr-spec/SKILL.md",
       "description": "Shape vague product or engineering intent into a clear, measurable Protocol-compatible specification grounded in the current repository. Use when requirements need clarification before planning or implementation.",
-      "sourceDigest": "sha256:63ab943e7a269f691865b8e3cf68ae160aae0d0ddb71af1834fe50c078ba14a9",
+      "sourceDigest": "sha256:e874c8a86a346a6f759bb13e2e9b60483c2eb20a429c2ebad98b68c976d97649",
       "resources": [
         {
           "path": "agents/openai.yaml",
@@ -2228,7 +2228,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:eaaf58e5d2e5cf788856c8d0e156a1ff49111d3578556bfb7c8fe2466df15b15"
+          "digest": "sha256:bbecd3b43ff88a245199c89d08e17ebbf04580a6e0491140d8e69edfdbd69038"
         },
         {
           "path": "references/return-contract.md",
@@ -2437,11 +2437,11 @@
     },
     {
       "id": "planr-sync",
-      "version": "1.0.1",
+      "version": "1.1.0",
       "source": "skills/planr-sync/openplanr.skill.json",
       "entrypoint": "skills/planr-sync/SKILL.md",
       "description": "Audit OpenPlanr planning artifacts for graph and protocol drift. Use when statuses, references, schemas, or generated planning views may be inconsistent.",
-      "sourceDigest": "sha256:4fb542bc7a0685904b6d6f58ec9fae3c539531793e1933474fbc3c3d34702e24",
+      "sourceDigest": "sha256:813672528446c7b2fa6798b4b76d970870f2e51b1d90fffe9867a9cc6c0f0c66",
       "resources": [
         {
           "path": "references/connectors.md",
@@ -2468,20 +2468,8 @@
           "digest": "sha256:f9617486a5e2ecc861566d7a7eaf1c97725f9acfcc6bc64cfda1f9b6fd3c4d36"
         },
         {
-          "path": "scripts/sync.mjs",
-          "kind": "script",
-          "hosts": [
-            "claude-code",
-            "codex",
-            "chatgpt",
-            "cursor"
-          ],
-          "executable": true,
-          "digest": "sha256:7ef90127444f270dc30d119c88a41c898fe7e0b82b1d72d95b1bffc9393a1492"
-        },
-        {
-          "path": "scripts/names.mjs",
-          "kind": "script",
+          "path": "references/openplanr-cli.md",
+          "kind": "reference",
           "hosts": [
             "claude-code",
             "codex",
@@ -2489,7 +2477,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:85d080c6a4a0ed31cb60daaf0dc8739a0d9ddbd060e63126d81a3b2b84294bd9"
+          "digest": "sha256:842ded737e6a1ae2eeb98e1730de8e9bd97c92ed159c961f36003e7205214454"
         },
         {
           "path": "agents/openai.yaml",

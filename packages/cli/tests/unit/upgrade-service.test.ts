@@ -856,7 +856,9 @@ describe('upgradeNextSteps', () => {
       manageExternalRuntimes: false,
     });
     const script = installed.actions.find(
-      (action) => action.target.includes('/runtime/packages/') && action.target.endsWith('.mjs'),
+      (action) =>
+        action.target.includes('/runtime/packages/') &&
+        !action.target.endsWith('.openplanr-content.json'),
     );
     const inventory = installed.actions.find((action) =>
       action.target.endsWith('.openplanr-content.json'),

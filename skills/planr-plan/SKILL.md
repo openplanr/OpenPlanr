@@ -17,47 +17,19 @@ automatically.
 Read the request, the selected specification and the files either names, plus
 `AGENTS.md` and `CLAUDE.md` when tracked, in one batch. Expand only for a missing
 contract, a dependency or a contradiction, and stop when each claim has evidence
-or a named gap. Read design inputs when a browser surface is involved and the
-schema or persistence code when data behavior is involved.
+or a named gap. Read the schema or persistence code when data behavior is involved.
 
 Use repository-local conventions first. Missing legacy `input/` or `.planr/`
 paths do not block a clear request. State what was unavailable and continue when
 the remaining context is sufficient.
 
-For a completed Design handoff, read `design-document.json`, the selected
-direction, and the authored ten-section `design-spec.md`. The specification lives
-inside `design/` in spec-driven mode and beside `design/` in default feature mode.
-For a studio-backed design, read its `.design/studio-state.json`: the recorded
-`selectedVariant` is authoritative. Verify that the authored document and the
-specification describe that same direction before decomposing UI work. If they
-disagree, synchronize the design handoff using the settled choice or report the
-specific unsynced inputs; do not silently plan the original preview direction.
-A hosted design canvas handoff has no `design-document.json` or studio state:
-its `design-spec.md` names the canvas URL and the local board sources, which are
-the design inputs; read the boards rather than the hosted canvas.
-Use stable screen IDs, component recipes, responsive frames, and interaction
-flows as UI-task context. Read the current render's verification result and
-unresolved feedback; carry relevant gaps into explicit task checks. Preserve
-`finalized.json` compatibility inputs for older designs. Do not regenerate an
-existing design or re-extract an authored specification from preview images.
-
-When `review-handoff.json` is present beside `design-spec.md`, read its current
-approval and freshness with
-`openplanr design handoff <design-document.json> --action inspect --json`. Use approved, current
-handoff items as additional planning context, retaining revision/comment links and
-unresolved questions. When `openplanr` is not found, does not know `design`, or
-reports `E_DESIGN_RUNTIME_MISSING`, treat the handoff as unverified evidence rather
-than agreed scope, continue when the specification is decision-complete, and name
-the fix: `npm install -g openplanr`, `npm install -g openplanr@latest`, or
-`npm install -g openplanr` without `--omit=optional`, respectively. An outdated or unapproved draft is evidence, not agreed scope;
-report the changed inputs and obtain the missing decision only when it affects the
-requested plan. Never silently substitute a newer draft for an approved snapshot.
-A missing review handoff does not block ordinary planning from a clear specification.
-
-When the request carries an approved implementation package, read
-[the design handoff contract](references/design-handoff.md). Validate that the
-package is still the current approved version before treating its numbered
-requirements as scope. A missing package leaves ordinary Plan unchanged.
+When a design exists (a design spec, a review handoff or an approved
+implementation package), read
+[the design handoff contract](references/design-handoff.md) before decomposing UI
+work. Without a design, ordinary planning from a clear specification is
+unchanged. If `openplanr` is not found, lacks `design`, or reports
+`E_DESIGN_RUNTIME_MISSING`, name the fix: install the `openplanr` CLI at this plugin's version, upgrade it to
+that version, or reinstall it without `--omit=optional`, respectively.
 
 For a consequential unresolved choice, use the host's structured question
 interface. Ask at most three short, mutually exclusive questions at once. If the
@@ -80,9 +52,22 @@ Select the exact registered identity from the host's roster; Claude plugin
 agents use names such as `planr:planr-specification`. Give each worker its outcome,
 authoritative paths, relevant decisions, file ownership, verification requirements,
 and concise return expectations. Parallel workers need disjoint writes or an
-agreed interface. Explain the delegation's purpose briefly in commentary.
-When the host lacks the native role, perform the work sequentially in this session
+agreed interface. When the host lacks the native role, perform the work sequentially in this session
 and disclose capability limitations; never claim an unavailable specialist ran.
+
+## Choose where the plan goes
+
+When the repository has no `.planr/`, return the decomposition in chat or in one
+file where the repository keeps such documents, even when implementation follows.
+Use plain task and acceptance numbering, write no `.planr/` files and skip
+frontmatter and the ID procedure; task splitting, `dependsOn` and mapping every
+acceptance item to a task still apply. End with one line offering `openplanr init`
+for tracked IDs and the full planning contract; never create `.planr/` or run init
+unless the user asks. With `.planr/`, use the full planning contract below.
+
+An existing specification stays where it is: never copy an existing specification
+into `.planr/specs/`; reference its path from each story's Notes. Write Gherkin
+`.feature` files only when the user asks.
 
 ## Author the decomposition
 
@@ -116,15 +101,9 @@ Before finishing, check directly that every story and task frontmatter is
 valid, every acceptance ID is mapped through `acceptanceRefs` and named under
 `## Test Requirements`, and no ID repeats an existing one. When
 `command -v openplanr` succeeds and a `SPEC-NNN` exists,
-`openplanr spec sync <SPEC-ID> --dry-run` adds an orphan and schema-drift check
-and writes nothing. Do not route semantic work to a CLI fallback.
-
-For approved design input, author the complete story and task bytes before
-touching target paths, then commit those bytes and the sibling
-`design-lineage.json` through the public atomic planning-lineage helper described
-in the reference. A failed requirement-to-acceptance-to-task mapping writes
-nothing. This deterministic commit validates content; it does not generate the
-plan or invoke another phase.
+`openplanr spec validate-plan <SPEC-ID>` also checks the spec's stories and
+tasks, and `openplanr spec sync <SPEC-ID> --dry-run` adds an orphan and
+schema-drift check; both write nothing. Do not route semantic work to a CLI fallback.
 
 ## Return
 
@@ -138,10 +117,10 @@ instead of repeating every path in chat.
 - **Issues:** unresolved inputs or material assumptions, with their impact and recovery step; omit when empty.
 - **Next:** the exact ready task selector and a copy-ready host-native
   invocation such as `/planr:ship T-NNN` (Claude Code), `$planr:ship T-NNN`
-  (Codex/ChatGPT) or the `planr-ship` rule (Cursor).
+  (Codex/ChatGPT) or the `planr-ship` rule (Cursor). In minimal mode, name the
+  task number or file instead of a selector.
 
-Mention the planning layout or consulted lenses only when they explain a material
-choice. Follow [the shared return rules](references/return-contract.md).
+Mention the layout or lenses only when they explain a material choice. Follow [the shared return rules](references/return-contract.md).
 
 When the OpenPlanr dashboard is running, the planned graph is browsable at
 `#/board`; open one story at `#/detail/<US-###>`.

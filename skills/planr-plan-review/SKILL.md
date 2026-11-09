@@ -6,42 +6,22 @@ license: MIT
 
 # OpenPlanr Plan Review
 
-Give the plan a senior, practical review. Read the plan and the files it names,
-plus `AGENTS.md` and `CLAUDE.md` when tracked, in one batch. Expand only for a
-missing contract, a dependency or a contradiction, and stop when each claim has
-evidence or a named gap. Use only the review lenses relevant to the work; do not
-manufacture a fixed committee.
+Review the plan as a senior engineer would before implementation. Read the plan
+and the files it names, plus `AGENTS.md` and `CLAUDE.md` when tracked, in one
+batch. Expand only for a missing contract, a dependency or a contradiction, and
+stop when each claim has evidence or a named gap.
 
-## Review
+Lead with one verdict: `ready`, `ready with improvements` or `needs revision`.
+Use `needs revision` only while a must-fix remains.
 
-- Check that the outcome and user value are clear and measurable.
-- Check scope, sequencing, ownership, architecture, migration, security,
-  operability, testing, and rollback in proportion to the change.
-- Check the first-run and everyday developer experience, including setup,
-  diagnostics, defaults, and recovery.
-- Prefer concrete corrections over abstract criticism. Name the affected plan
-  section and the change that would resolve each material issue.
-- Use subagents or tools when they improve the review, but return one coherent
-  result rather than their raw transcripts.
+- **Must fix**: what would make the implementation wrong or unsafe. Give each
+  one its evidence (the plan section plus the file and line, or the quoted
+  text, that shows it) and the change that resolves it. A concern without
+  evidence is an improvement or an open question, never a must-fix.
+- **Improvements**: worthwhile, non-blocking changes.
+- **Decisions and assumptions**: unresolved choices, each with a recommended
+  default. Ask only when a missing answer would change the verdict; otherwise
+  state the assumption and continue.
 
-Ask through the host's native structured question UI only when a missing answer
-would materially change the review. Otherwise state the assumption and continue.
-
-## Output
-
-Lead with one verdict: `ready`, `ready with improvements`, or `needs revision`.
-Use `needs revision` when a must-fix issue remains; reserve `ready with improvements`
-for nonblocking changes.
-Then report:
-
-1. Must fix — only issues that would make the implementation wrong or unsafe.
-2. Improvements — worthwhile changes that are not blockers.
-3. Decisions and assumptions — unresolved choices with a recommended default.
-4. Next action — the smallest useful next step.
-
-Return the useful findings directly. Revisit the review when the user asks or
-the plan materially changes.
-
-Link the reviewed plan and locate each actionable finding. State what was
-inspected and any material evidence gap; a source review is not a passing test
-run. Follow [the shared return rules](references/return-contract.md).
+End with the smallest useful next step. Link the reviewed plan. Follow
+[the shared return rules](references/return-contract.md).

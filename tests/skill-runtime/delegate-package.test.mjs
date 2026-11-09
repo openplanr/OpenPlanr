@@ -16,6 +16,7 @@ import test from 'node:test';
 import { pathToFileURL } from 'node:url';
 
 import { matchSkillRequest } from '../../packages/skill-runtime/src/matching/index.mjs';
+import { SKILL_CLI_MINIMUM } from '../../scripts/skills/skill-cli.mjs';
 
 const root = resolve(import.meta.dirname, '..', '..');
 const read = (path) => readFileSync(resolve(root, path), 'utf8');
@@ -82,12 +83,9 @@ test('every host bundle ships the delegate skill as instructions only', () => {
 });
 
 test('the optional CLI path names the minimum CLI for its probe and install line, without npx', () => {
-  const minimum = /SKILL_CLI_MINIMUM = '([^']+)'/u.exec(
-    read('scripts/skills/plugin-metadata.mjs'),
-  )[1];
   const reference = read('skills/planr-delegate/references/openplanr-cli.md');
-  assert.ok(reference.includes(`npm install -g openplanr@${minimum}`));
-  assert.ok(reference.includes(`version ${minimum} or later`));
+  assert.ok(reference.includes(`npm install -g openplanr@${SKILL_CLI_MINIMUM}`));
+  assert.ok(reference.includes(`version ${SKILL_CLI_MINIMUM} or later`));
   assert.doesNotMatch(reference, /\{\{|npx -y|npx openplanr/u);
   assert.match(read('skills/planr-delegate/SKILL.md'), /\]\(references\/openplanr-cli\.md\)/u);
 });

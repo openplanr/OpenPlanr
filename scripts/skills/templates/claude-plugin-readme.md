@@ -20,7 +20,7 @@ Several skills call the deterministic `openplanr` CLI from the `openplanr` npm p
 this plugin at the same version ({{PLUGIN_VERSION}}):
 
 ```bash
-npm install -g openplanr
+npm install -g openplanr@{{PLUGIN_VERSION}}
 cd your-project
 openplanr init
 ```

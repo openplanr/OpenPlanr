@@ -2939,9 +2939,9 @@ describe('changed runtime packages', () => {
     const script = installed.actions.find(
       (action) =>
         action.target.includes(`${sep}runtime${sep}packages${sep}`) &&
-        action.target.endsWith('.mjs'),
+        !action.target.endsWith('.openplanr-content.json'),
     );
-    if (!script) throw new Error('No packaged script was installed.');
+    if (!script) throw new Error('No packaged file was installed.');
     const packageRoot = dirname(
       installed.actions.find((action) => action.target.endsWith('.openplanr-content.json'))
         ?.target ?? '',
@@ -3082,7 +3082,9 @@ describe('thin project installations', () => {
         ...(runtime === 'codex' ? { skillMode: 'direct' as const } : {}),
       });
       const support = result.actions.find(
-        (action) => action.target.includes('/runtime/packages/') && action.target.endsWith('.mjs'),
+        (action) =>
+          action.target.includes('/runtime/packages/') &&
+          !action.target.endsWith('.openplanr-content.json'),
       );
       expect(support).toBeDefined();
       if (!support) throw new Error('No packaged support file was installed.');

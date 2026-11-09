@@ -1,15 +1,4 @@
 {
   "$comment": "Permanent entries are findings that are safe by construction; each says why. plugin-network-boundary-baseline.json pins this list, and on pull requests the count may not exceed the base branch's baseline.",
-  "permanent": [
-    {
-      "path": "skills/sync/scripts/sync.mjs",
-      "rule": "env-forward",
-      "reason": "Sync runs the user's own gh CLI, which inherits the environment so gh can use its own GitHub sign-in. Not flagged by the directory in 3.1.0 or 3.4.0."
-    },
-    {
-      "path": "rules/planr-sync/scripts/sync.mjs",
-      "rule": "env-forward",
-      "reason": "Sync runs the user's own gh CLI, which inherits the environment so gh can use its own GitHub sign-in. Not flagged by the directory in 3.1.0 or 3.4.0."
-    }
-  ]
+  "permanent": []
 }

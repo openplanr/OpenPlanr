@@ -1,8 +1,11 @@
 export {
   executeGitHubOperations,
+  GH_ENVIRONMENT,
+  ghEnvironment,
   IntegrationError,
   inspectGitHub,
+  inspectLocal,
   isLikelyLinearIssueId,
   reconcileStatus,
-  runPortableSync,
+  validateGitHubOperations,
 } from './portable-sync.mjs';
