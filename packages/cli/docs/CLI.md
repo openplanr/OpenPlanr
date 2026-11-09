@@ -996,7 +996,9 @@ openplanr sync tracker local inspect                                   # configu
 
 Operations: `{"action":"create","title":…,"body"?,"labels"?}`,
 `{"action":"update","id":…,"title"?,"body"?,"labels"?}` (at least one field), and
-`{"action":"close"|"reopen","id":…,"comment"?}`. `id` is an issue number or URL. Every
+`{"action":"close"|"reopen","id":…,"comment"?}`. `id` is an issue number, or an issue URL in
+the repository `gh` resolves (another repository's URL fails with
+`E_SYNC_TRACKER_FOREIGN_ISSUE`). `update` only adds `labels`; it never removes one. Every
 operation is validated before any runs; unknown fields are refused.
 
 Success (`--json`):
@@ -1022,7 +1024,7 @@ Success (`--json`):
 with `ok: false`, `code: "E_SYNC_TRACKER_APPLY_INCOMPLETE"`, the same `results`, and a
 `recovery` that names the operations to rerun. Other failures exit 1 with the standard
 `{ "ok": false, "code", "problem", "recovery" }`: `E_SYNC_TRACKER_USAGE`,
-`E_SYNC_TRACKER_INPUT`, `E_SYNC_TRACKER_LINEAR`, `E_SYNC_TRACKER_GH_MISSING`,
+`E_SYNC_TRACKER_INPUT`, `E_SYNC_TRACKER_FOREIGN_ISSUE`, `E_SYNC_TRACKER_LINEAR`, `E_SYNC_TRACKER_GH_MISSING`,
 `E_SYNC_TRACKER_GH_AUTH`, `E_SYNC_TRACKER_NOT_A_REPOSITORY`, `E_SYNC_TRACKER_NO_REMOTE`
 and `E_SYNC_TRACKER_GH_FAILED`. Human output ends with a `Next:` line.
 

@@ -19,7 +19,8 @@ Operations (--input, a JSON array):
   {"action":"update","id":"12","title":"...","body":"...","labels":["..."]}
   {"action":"close","id":"12","comment":"..."}
   {"action":"reopen","id":"12","comment":"..."}
-  "id" is an issue number or issue URL. Without --apply, sync only previews.
+  "id" is an issue number or an issue URL in the repository gh resolves.
+  update only adds "labels"; it never removes one. Without --apply, sync only previews.
 
 gh runs with an allowlisted environment: its own GH_*/GITHUB_* host and token
 variables, PATH, home, locale, proxy and CA settings. Other variables never reach it.
@@ -41,35 +42,46 @@ function operationLine(result: GitHubOperationResult): string[] {
   ]
     .filter(Boolean)
     .join(' ');
-  const line = `  ${result.status}  ${result.action}  ${target}${result.url && !result.title ? ` ${result.url}` : ''}`;
+  const url = result.url && !result.title ? ` ${result.url}` : '';
+  const line = `  ${result.status}  ${result.action}  ${target}${url}`;
   return result.error ? [line, `    ${result.error.code}: ${result.error.problem}`] : [line];
 }
 
+type SyncOutcome = Extract<SyncTrackerSuccess | SyncTrackerIncomplete, { results: unknown }>;
+
+function localLines(result: { roots: string[]; configured: boolean }): string[] {
+  return [
+    result.configured
+      ? `Local planning roots: ${result.roots.join(', ')}`
+      : 'No local planning root is configured.',
+  ];
+}
+
+function repositoryLines(repository: unknown): string[] {
+  const { nameWithOwner, url } = repository as { nameWithOwner?: string; url?: string };
+  return [`GitHub repository: ${nameWithOwner ?? 'unknown'}${url ? ` (${url})` : ''}`];
+}
+
+function syncLines(result: SyncOutcome): string[] {
+  const total = plural(result.results.length);
+  const applied = result.results.filter(({ status }) => status === 'applied').length;
+  const heading = result.applied
+    ? `GitHub sync: ${applied} of ${total} applied`
+    : `GitHub sync preview: ${total}, nothing applied`;
+  return [heading, ...result.results.flatMap(operationLine)];
+}
+
 function render(result: SyncTrackerSuccess | SyncTrackerIncomplete): void {
-  if ('roots' in result)
-    display.line(
-      result.configured
-        ? `Local planning roots: ${result.roots.join(', ')}`
-        : 'No local planning root is configured.',
-    );
-  else if ('repository' in result) {
-    const { nameWithOwner, url } = result.repository as { nameWithOwner?: string; url?: string };
-    display.line(`GitHub repository: ${nameWithOwner ?? 'unknown'}${url ? ` (${url})` : ''}`);
-  } else {
-    const applied = result.results.filter(({ status }) => status === 'applied').length;
-    display.line(
-      result.applied
-        ? `GitHub sync: ${applied} of ${plural(result.results.length)} applied`
-        : `GitHub sync preview: ${plural(result.results.length)}, nothing applied`,
-    );
-    for (const operation of result.results)
-      for (const line of operationLine(operation)) display.line(line);
-  }
-  display.line(
-    result.ok
-      ? `Next: ${result.next}`
-      : `${result.code}: ${result.problem}\nNext: ${result.recovery}`,
-  );
+  const body =
+    'roots' in result
+      ? localLines(result)
+      : 'repository' in result
+        ? repositoryLines(result.repository)
+        : syncLines(result);
+  const tail = result.ok
+    ? [`Next: ${result.next}`]
+    : [`${result.code}: ${result.problem}`, `Next: ${result.recovery}`];
+  for (const line of [...body, ...tail]) display.line(line);
 }
 
 /** Registers `sync tracker` under the `sync` command. */

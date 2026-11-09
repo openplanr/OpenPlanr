@@ -1,6 +1,6 @@
 {
-  "$comment": "CLI commands runtime skills call, with the contract version their JSON follows and the first CLI version that ships it. SKILL_CLI_MINIMUM in the skill text is the highest `since`; change `contract` and `since` together.",
+  "$comment": "CLI commands runtime skills call. `contracts` maps each JSON contract version to the first CLI version that ships it; a new contract adds a row with a later version. SKILL_CLI_MINIMUM is the highest current `since`.",
   "commands": {
-    "sync tracker": { "contract": 1, "since": "3.7.0" }
+    "sync tracker": { "contracts": { "1": "3.7.0" } }
   }
 }

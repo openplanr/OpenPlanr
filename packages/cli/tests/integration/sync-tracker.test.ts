@@ -212,6 +212,17 @@ describe('openplanr sync tracker', { timeout: 60_000 }, () => {
     }
   });
 
+  it('refuses an issue URL from another repository before changing anything', async () => {
+    const { bin, run } = await setup({ 'repo view': REPOSITORY });
+    const result = run(
+      ['sync', 'tracker', 'github', 'sync', '--input', '-', '--apply', '--json'],
+      JSON.stringify([{ action: 'close', id: 'https://github.com/other/app/issues/4' }]),
+    );
+    expect(result.status).toBe(1);
+    expect(json(result)).toMatchObject({ ok: false, code: 'E_SYNC_TRACKER_FOREIGN_ISSUE' });
+    expect(fakeGhCalls(bin)).toEqual(['repo view --json nameWithOwner,url']);
+  });
+
   it('keeps openplanr sync repairing local cross-references', async () => {
     const { run } = await setup();
     const result = run(['sync', '--dry-run']);

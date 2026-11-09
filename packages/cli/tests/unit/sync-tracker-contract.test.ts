@@ -4,10 +4,11 @@ import { describe, expect, it } from 'vitest';
 import { SYNC_TRACKER_CONTRACT } from '../../src/services/sync-tracker-service.js';
 
 describe('sync tracker contract', () => {
-  it('matches the contract the runtime skills pin', () => {
+  it('is the newest contract the runtime skills record, with its first CLI version', () => {
     const { commands } = JSON.parse(
       readFileSync(resolve('../../scripts/skills/skill-cli-contracts.json'), 'utf8'),
-    ) as { commands: Record<string, { contract: number; since: string }> };
-    expect(commands['sync tracker']?.contract).toBe(SYNC_TRACKER_CONTRACT);
+    ) as { commands: Record<string, { contracts: Record<string, string> }> };
+    const recorded = Object.keys(commands['sync tracker']?.contracts ?? {}).map(Number);
+    expect(Math.max(...recorded)).toBe(SYNC_TRACKER_CONTRACT);
   });
 });

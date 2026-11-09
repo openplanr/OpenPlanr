@@ -174,18 +174,66 @@ function invalid(index, problem) {
 }
 
 const OPERATION_FIELDS = {
-  create: { required: ['title'], optional: ['body', 'labels'] },
-  update: { required: ['id'], optional: ['title', 'body', 'labels'] },
-  close: { required: ['id'], optional: ['comment'] },
-  reopen: { required: ['id'], optional: ['comment'] },
+  create: ['title', 'body', 'labels'],
+  update: ['id', 'title', 'body', 'labels'],
+  close: ['id', 'comment'],
+  reopen: ['id', 'comment'],
 };
 
-function normalizeIssueId(value, index) {
-  const text = typeof value === 'number' ? String(value) : value;
+function readId(operation, index) {
+  const { id } = operation;
+  const text = typeof id === 'number' ? String(id) : id;
   if (typeof text !== 'string' || !(/^[1-9]\d*$/u.test(text) || ISSUE_URL.test(text)))
     throw invalid(index, '"id" must be an issue number or an issue URL.');
   return text;
 }
+
+function readString(operation, key, index) {
+  if (!(key in operation)) return {};
+  if (typeof operation[key] !== 'string') throw invalid(index, `"${key}" must be a string.`);
+  return { [key]: operation[key] };
+}
+
+function readLabels(operation, index) {
+  if (!('labels' in operation)) return {};
+  const { labels } = operation;
+  if (!Array.isArray(labels) || labels.some((label) => typeof label !== 'string' || !label.trim()))
+    throw invalid(index, '"labels" must be an array of non-empty strings.');
+  return { labels };
+}
+
+const NORMALIZE = {
+  create(operation, index) {
+    const { title } = readString(operation, 'title', index);
+    if (!title?.trim()) throw invalid(index, 'create needs a non-empty "title".');
+    return {
+      action: 'create',
+      title,
+      ...readString(operation, 'body', index),
+      ...readLabels(operation, index),
+    };
+  },
+  update(operation, index) {
+    const changes = {
+      ...readString(operation, 'title', index),
+      ...readString(operation, 'body', index),
+      ...readLabels(operation, index),
+    };
+    if (Object.keys(changes).length === 0)
+      throw invalid(index, 'update needs at least one of "title", "body" or "labels".');
+    return { action: 'update', id: readId(operation, index), ...changes };
+  },
+  close: (operation, index) => ({
+    action: 'close',
+    id: readId(operation, index),
+    ...readString(operation, 'comment', index),
+  }),
+  reopen: (operation, index) => ({
+    action: 'reopen',
+    id: readId(operation, index),
+    ...readString(operation, 'comment', index),
+  }),
+};
 
 function normalizeOperation(operation, index) {
   if (operation === null || typeof operation !== 'object' || Array.isArray(operation))
@@ -196,32 +244,37 @@ function normalizeOperation(operation, index) {
       index,
       `unknown action ${JSON.stringify(operation.action)}; expected create, update, close or reopen.`,
     );
-  const known = new Set(['action', ...fields.required, ...fields.optional]);
-  const unknown = Object.keys(operation).filter((key) => !known.has(key));
+  const unknown = Object.keys(operation).filter((key) => key !== 'action' && !fields.includes(key));
   if (unknown.length)
     throw invalid(index, `${operation.action} does not take ${unknown.join(', ')}.`);
-  const normalized = { action: operation.action };
-  if ('id' in operation || fields.required.includes('id'))
-    normalized.id = normalizeIssueId(operation.id, index);
-  for (const key of ['title', 'body', 'comment']) {
-    if (!(key in operation)) continue;
-    if (typeof operation[key] !== 'string') throw invalid(index, `"${key}" must be a string.`);
-    normalized[key] = operation[key];
+  return NORMALIZE[operation.action](operation, index);
+}
+
+/** Refuses issue URLs outside the repository `gh` resolves; runs `gh` only when a URL is present. */
+async function assertSameRepository(batch, { cwd, env }) {
+  if (!batch.some(({ id }) => id !== undefined && ISSUE_URL.test(id))) return;
+  const { repository } = await inspectGitHub({ cwd, env });
+  const home = typeof repository?.url === 'string' ? repository.url.replace(/\/+$/u, '') : '';
+  if (!home)
+    throw new IntegrationError(
+      'E_SYNC_TRACKER_GH_FAILED',
+      'gh repo view returned no repository URL.',
+      {
+        recovery: 'Run `gh repo view --json nameWithOwner,url` to see what gh resolves.',
+      },
+    );
+  for (const [index, { id }] of batch.entries()) {
+    if (id === undefined || !ISSUE_URL.test(id)) continue;
+    if (!id.toLowerCase().startsWith(`${home.toLowerCase()}/issues/`))
+      throw new IntegrationError(
+        'E_SYNC_TRACKER_FOREIGN_ISSUE',
+        `Operation ${index}: ${id} is not an issue in ${repository.nameWithOwner ?? home}, the repository gh resolves here.`,
+        {
+          recovery:
+            'Use the issue number, or run the command from the repository that owns the issue.',
+        },
+      );
   }
-  if (fields.required.includes('title') && !normalized.title?.trim())
-    throw invalid(index, 'create needs a non-empty "title".');
-  if ('labels' in operation) {
-    const { labels } = operation;
-    if (
-      !Array.isArray(labels) ||
-      labels.some((label) => typeof label !== 'string' || !label.trim())
-    )
-      throw invalid(index, '"labels" must be an array of non-empty strings.');
-    normalized.labels = labels;
-  }
-  if (operation.action === 'update' && Object.keys(normalized).length === 2)
-    throw invalid(index, 'update needs at least one of "title", "body" or "labels".');
-  return normalized;
 }
 
 /** Validates a GitHub operation batch and returns the normalized operations, or throws `E_SYNC_TRACKER_INPUT`. */
@@ -281,6 +334,7 @@ export async function executeGitHubOperations(
   { cwd = process.cwd(), env = process.env, apply = false } = {},
 ) {
   const batch = validateGitHubOperations(operations);
+  await assertSameRepository(batch, { cwd, env });
   const describe = (operation, index) => ({
     index,
     action: operation.action,

@@ -191,3 +191,32 @@ test('inspect reports the repository, a missing gh, and configured planning root
     configured: true,
   });
 });
+
+test('an issue URL must belong to the repository gh resolves', async (t) => {
+  const dir = scratch(t);
+  const gh = fakeGh(dir);
+  const preview = await executeGitHubOperations(
+    [{ action: 'close', id: 'https://github.com/acme/app/issues/9' }],
+    { cwd: dir, env: gh.env },
+  );
+  assert.equal(preview.results[0].status, 'planned');
+  await assert.rejects(
+    executeGitHubOperations(
+      [
+        { action: 'close', id: '3' },
+        { action: 'reopen', id: 'https://github.com/other/app/issues/9' },
+      ],
+      { cwd: dir, env: gh.env, apply: true },
+    ),
+    (error) =>
+      error.code === 'E_SYNC_TRACKER_FOREIGN_ISSUE' &&
+      /Operation 1: https:\/\/github\.com\/other\/app\/issues\/9 is not an issue in acme\/app/u.test(
+        error.message,
+      ),
+  );
+  assert.deepEqual(
+    gh.calls().map(({ args }) => args[0]),
+    ['repo', 'repo'],
+    'only the repository lookups ran; no issue changed',
+  );
+});
