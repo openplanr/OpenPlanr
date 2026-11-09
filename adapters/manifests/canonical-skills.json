@@ -660,7 +660,7 @@
       "source": "skills/planr-delegate/openplanr.skill.json",
       "entrypoint": "skills/planr-delegate/SKILL.md",
       "description": "Coordinate an explicitly requested implementation with Claude Code, Codex or Cursor, then independently review and integrate its observed changes. Use when the user asks another coding agent to implement.",
-      "sourceDigest": "sha256:683d16cd0b493a89302040ccd8e425e2ed19af2ab52803150c3d656d5aa9b4f1",
+      "sourceDigest": "sha256:a0a39addcb31ff7f7993dda77fd8048fbca343c2af421a5972f5dd4e50fd96f4",
       "resources": [
         {
           "path": "agents/openai.yaml",

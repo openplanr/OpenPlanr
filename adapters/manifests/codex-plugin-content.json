@@ -314,7 +314,7 @@
       "assets": [
         {
           "path": "skills/delegate/SKILL.md",
-          "digest": "sha256:97f31b58fdb2ad3b076d0936a951a28a6cc85a1e031956e788ccf67f2227e395"
+          "digest": "sha256:9dfc2d37b67e95a54d68c0009ae8d451ff43a38ea3a2b55f2cf9cdd1046f596e"
         },
         {
           "path": "skills/delegate/openplanr.skill.json",

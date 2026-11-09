@@ -59,4 +59,6 @@ read, copy or forward tokens, credential files or the keychain.
 
 Lead with the outcome: integrated, sent back, or stopped (name the stop). Then the
 changed files with line counts, each gate with its exit code, the delegate's own claims
-labelled as claims, the worktree and branch if kept, and the next step.
+labelled as claims, the worktree and branch if kept, and a `Next:` line. After an
+integration the user did not ask you to commit, that line offers the exact command:
+`git add <changed paths> && git commit -m "<type(scope): summary>"`.
