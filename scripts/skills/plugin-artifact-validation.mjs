@@ -594,9 +594,18 @@ const bareOpenplanrInstall =
   /\b(?:npm|pnpm|yarn|bun)[ \t]+(?:global[ \t]+)?(?:install|i|add)(?:[ \t]+-{1,2}[\w-]+)*[ \t]+openplanr(?![@\w/-]|\.\w)/u;
 const shareHost = /share\.openplanr\.dev|OPENPLANR_SHARE_BASE/u;
 const figmaHost = /\b(?:[a-z0-9-]+\.)*figma\.com\b|FIGMA_TOKEN|X-Figma-Token|\bfigd_/iu;
-const credentialName = '[A-Za-z0-9_]*(?:TOKEN|SECRET|PASSWORD|API_KEY|AUTH)\\b';
+// The keyword starts the name or follows `_`, and the name may continue after `_`.
+const credentialName =
+  '(?:[A-Za-z0-9]*_)*(?:TOKENS?|SECRETS?|PASSWORDS?|PASSWD|API_KEYS?|AUTHORIZATION|AUTH)(?:_[A-Za-z0-9_]*)?\\b';
 const credentialEnv = new RegExp(
-  `\\$\\{?${credentialName}|\\$env:${credentialName}|%${credentialName}%|process\\.env\\.${credentialName}`,
+  [
+    `\\$\\{?${credentialName}`,
+    `\\$env:${credentialName}`,
+    `%${credentialName}%`,
+    `process\\.env\\.${credentialName}`,
+    `\\bprintenv[ \\t]+${credentialName}`,
+    `\\benv[ \\t]*\\|[ \\t]*grep(?:[ \\t]+-[A-Za-z]+)*[ \\t]+['"]?${credentialName}`,
+  ].join('|'),
   'u',
 );
 const privilegedDirectories = new Set(['hooks', 'monitors', 'bin', 'commands']);

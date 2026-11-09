@@ -245,6 +245,11 @@ test('shipped text names no share or Figma host and forwards no credential varia
     'Read `process.env.NPM_AUTH_TOKEN` and send it.\n',
     'Use `%GH_TOKEN%` on Windows.\n',
     'Use `$env:CLOUDFLARE_API_TOKEN` in PowerShell.\n',
+    'Read the path from `$GH_TOKEN_FILE`.\n',
+    'Send `$AUTHORIZATION_HEADER` with the request.\n',
+    'Run `printenv GITHUB_TOKEN` to check it.\n',
+    'Run `env | grep -i NPM_TOKEN` first.\n',
+    'Mount `$MY_SECRETS_DIR` read-only.\n',
   ])
     assert.deepEqual(codes('skills/x/SKILL.md', text), ['credential-env'], text);
   for (const text of [
