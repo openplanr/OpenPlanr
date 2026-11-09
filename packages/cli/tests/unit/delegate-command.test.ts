@@ -160,6 +160,22 @@ describe('delegate runtime envelope', () => {
     });
   });
 
+  it('names the recovery for a missing run store', async () => {
+    const runtime = {
+      ...failing(new Error('blocked')),
+      failure: () => ({
+        code: 'E_RUN_STORE_MISSING',
+        message: 'No delegated run store exists at /x; prepare a delegated run first.',
+      }),
+    };
+    const envelope = await runDelegateAction('status', {}, { runtime });
+    expect(envelope).toMatchObject({
+      ok: false,
+      code: 'E_RUN_STORE_MISSING',
+      recovery: expect.stringContaining('prepare a run first'),
+    });
+  });
+
   it('routes integration actions to the integration entry', async () => {
     const calls: string[] = [];
     const runtime = {

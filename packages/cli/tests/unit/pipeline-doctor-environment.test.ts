@@ -28,4 +28,13 @@ describe('pipelineDoctorEnvironment', () => {
       PLANR_HOME: '/resolved/.planr',
     });
   });
+
+  it('matches names case-insensitively, as Windows spells Path', () => {
+    expect(
+      pipelineDoctorEnvironment(
+        { Path: 'C:\\bin', SystemRoot: 'C:\\Windows', Foo_Token: 'x' },
+        'h',
+      ),
+    ).toEqual({ Path: 'C:\\bin', SystemRoot: 'C:\\Windows', PLANR_HOME: 'h' });
+  });
 });

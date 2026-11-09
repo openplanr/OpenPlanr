@@ -53,13 +53,16 @@ const APPLY = [
 const CHECK_ENVIRONMENT_RECOVERY =
   "If a check failed for a missing variable (such as JAVA_HOME, VIRTUAL_ENV, CARGO_HOME, NVM_DIR or npm_config_*), list it in that check's env, or in the profile's allowedEnv for the agent.";
 const MISSING_TOOLCHAIN =
-  /command not found|ENOENT|JAVA_HOME|VIRTUAL_ENV|CARGO_HOME|NVM_DIR|npm_config_|\bis not set\b/u;
+  /command not found|is not recognized as an internal or external command|spawn \S+ ENOENT|JAVA_HOME|VIRTUAL_ENV|CARGO_HOME|NVM_DIR|npm_config_/u;
+const MISSING_COMMAND_EXIT_CODES = [127, 9009];
 
 function missingToolchain(results) {
-  return (results ?? []).some(
+  return results.some(
     (result) =>
       result.status === 'failed' &&
-      (result.exitCode === 127 || MISSING_TOOLCHAIN.test(result.diagnostic ?? '')),
+      (result.code === 'E_ADAPTER_LAUNCH' ||
+        MISSING_COMMAND_EXIT_CODES.includes(result.exitCode) ||
+        MISSING_TOOLCHAIN.test(result.diagnostic ?? '')),
   );
 }
 
@@ -889,7 +892,7 @@ export async function integrateBranchDelta({
           ? 'Recover the recorded owned parent command before checks, continuation or cleanup.'
           : failureCode === 'E_INTEGRATION_CHECK_TIMEOUT'
             ? 'Retry apply with a measured timeoutMs.'
-            : `Send the findings to the same delegate session for correction; the worktree remains available.${missingToolchain(results) ? ` ${CHECK_ENVIRONMENT_RECOVERY}` : ''}`,
+            : `Send the findings to the same delegate session for correction; the worktree remains available.${missingToolchain([...results, ...verification.preparation, ...(error.details?.results ?? [])]) ? ` ${CHECK_ENVIRONMENT_RECOVERY}` : ''}`,
     };
   } finally {
     process.removeListener('SIGINT', interrupt);

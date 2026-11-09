@@ -201,35 +201,33 @@ export function diagnoseRetiredCommandSkills(
   };
 }
 
+// Lowercase: Windows environment names are case-insensitive (`Path`).
 const PIPELINE_DOCTOR_ENV_NAMES = new Set([
-  'PATH',
-  'HOME',
-  'USER',
-  'LOGNAME',
-  'TMPDIR',
-  'TMP',
-  'TEMP',
-  'TERM',
-  'NO_COLOR',
-  'FORCE_COLOR',
-  'TZ',
-  'LANG',
-  'SystemRoot',
-  'SYSTEMROOT',
+  'path',
+  'home',
+  'user',
+  'logname',
+  'tmpdir',
+  'tmp',
+  'temp',
+  'term',
+  'no_color',
+  'force_color',
+  'tz',
+  'lang',
+  'systemroot',
   'windir',
-  'WINDIR',
-  'ComSpec',
-  'COMSPEC',
-  'PATHEXT',
-  'USERPROFILE',
-  'APPDATA',
-  'LOCALAPPDATA',
-  'ProgramData',
-  'HOMEDRIVE',
-  'HOMEPATH',
-  'OPENPLANR_ECOSYSTEM_ROOT',
-  'OPENPLANR_STRICT_ECOSYSTEM',
-  'OPENPLANR_DOCTOR_PACKAGE_MODE',
+  'comspec',
+  'pathext',
+  'userprofile',
+  'appdata',
+  'localappdata',
+  'programdata',
+  'homedrive',
+  'homepath',
+  'openplanr_ecosystem_root',
+  'openplanr_strict_ecosystem',
+  'openplanr_doctor_package_mode',
 ]);
 
 /**
@@ -243,7 +241,11 @@ export function pipelineDoctorEnvironment(
   const env: Record<string, string> = {};
   for (const [name, value] of Object.entries(source)) {
     if (value === undefined) continue;
-    if (PIPELINE_DOCTOR_ENV_NAMES.has(name) || name.startsWith('LC_') || name.startsWith('XDG_'))
+    if (
+      PIPELINE_DOCTOR_ENV_NAMES.has(name.toLowerCase()) ||
+      name.startsWith('LC_') ||
+      name.startsWith('XDG_')
+    )
       env[name] = value;
   }
   env.PLANR_HOME = home;
