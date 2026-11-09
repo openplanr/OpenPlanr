@@ -239,7 +239,7 @@ test('Operate bundles ship the shared note checklist and no helper scripts', () 
 
 test('Operate dispatch is host-native and contains no model-backed subprocess', () => {
   const parent = readWorkspace('skills/planr-operate/SKILL.md');
-  assert.match(parent, /Build shared context once/u);
+  assert.match(parent, /Read the sources/u);
   assert.match(parent, /in parallel when subagents are\s+available/u);
   assert.match(parent, /native structured-question UI/u);
   assert.match(parent, /If the directory is ignored by Git, continue locally/u);

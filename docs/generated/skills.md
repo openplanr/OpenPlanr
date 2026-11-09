@@ -232,7 +232,7 @@ Run a focused operating review across seven executive lenses and produce a decis
 - Invocation from the plugin: `$planr:operate` in Codex/ChatGPT; `/planr:operate` in Claude Code.
 - Hosts: Claude Code, Codex, ChatGPT, and Cursor where supported by the package manifest.
 - Aliases: none.
-- Packaged support: `references/note-checklist.md`. See the [resource inventory](../../skills/planr-operate/openplanr.skill.json).
+- Packaged support: `references/note-checklist.md`, `references/return-contract.md`. See the [resource inventory](../../skills/planr-operate/openplanr.skill.json).
 
 ## `planr-plan`
 
@@ -243,7 +243,7 @@ Turn a Protocol-compatible specification or product intent into schema-compatibl
 - Invocation from the plugin: `$planr:plan` in Codex/ChatGPT; `/planr:plan` in Claude Code.
 - Hosts: Claude Code, Codex, ChatGPT, and Cursor where supported by the package manifest.
 - Aliases: none.
-- Packaged support: `references/artifact-contract.md`, `references/design-handoff.md`, `references/planning-ids.md`, with packaged validators and runtime support. See the [resource inventory](../../skills/planr-plan/openplanr.skill.json).
+- Packaged support: `references/artifact-contract.md`, `references/design-handoff.md`, `references/planning-ids.md`, `references/return-contract.md`, with packaged validators and runtime support. See the [resource inventory](../../skills/planr-plan/openplanr.skill.json).
 
 ## `planr-plan-review`
 
@@ -254,7 +254,7 @@ Review an OpenPlanr plan for product, engineering, design, and developer-experie
 - Invocation from the plugin: `$planr:plan-review` in Codex/ChatGPT; `/planr:plan-review` in Claude Code.
 - Hosts: Claude Code, Codex, ChatGPT, and Cursor where supported by the package manifest.
 - Aliases: none.
-- Packaged support: none; the skill is intentionally single-file. See the [resource inventory](../../skills/planr-plan-review/openplanr.skill.json).
+- Packaged support: `references/return-contract.md`. See the [resource inventory](../../skills/planr-plan-review/openplanr.skill.json).
 
 ## `planr-release`
 
@@ -265,7 +265,7 @@ Choose and maintain a product's versioning scheme, classify shipped changes, and
 - Invocation from the plugin: `$planr:release` in Codex/ChatGPT; `/planr:release` in Claude Code.
 - Hosts: Claude Code, Codex, ChatGPT, and Cursor where supported by the package manifest.
 - Aliases: none.
-- Packaged support: `references/schemes.md`, `references/release-notes.md`, `references/cadence.md`, with packaged validators and runtime support. See the [resource inventory](../../skills/planr-release/openplanr.skill.json).
+- Packaged support: `references/schemes.md`, `references/release-notes.md`, `references/cadence.md`, `references/return-contract.md`, with packaged validators and runtime support. See the [resource inventory](../../skills/planr-release/openplanr.skill.json).
 
 ## `planr-share`
 
@@ -287,7 +287,7 @@ Implement an OpenPlanr plan, specification, task, or clearly stated request end 
 - Invocation from the plugin: `$planr:ship` in Codex/ChatGPT; `/planr:ship` in Claude Code.
 - Hosts: Claude Code, Codex, ChatGPT, and Cursor where supported by the package manifest.
 - Aliases: none.
-- Packaged support: `references/result-contract.md`, `references/design-lineage.md`, `references/fail-first.md`, `references/findings.md`, `references/backlog-filing.md`. See the [resource inventory](../../skills/planr-ship/openplanr.skill.json).
+- Packaged support: `references/result-contract.md`, `references/design-lineage.md`, `references/fail-first.md`, `references/findings.md`, `references/backlog-filing.md`, `references/return-contract.md`. See the [resource inventory](../../skills/planr-ship/openplanr.skill.json).
 
 ## `planr-spec`
 
@@ -298,7 +298,7 @@ Shape vague product or engineering intent into a clear, measurable Protocol-comp
 - Invocation from the plugin: `$planr:spec` in Codex/ChatGPT; `/planr:spec` in Claude Code.
 - Hosts: Claude Code, Codex, ChatGPT, and Cursor where supported by the package manifest.
 - Aliases: none.
-- Packaged support: `references/specification-contract.md`. See the [resource inventory](../../skills/planr-spec/openplanr.skill.json).
+- Packaged support: `references/specification-contract.md`, `references/return-contract.md`. See the [resource inventory](../../skills/planr-spec/openplanr.skill.json).
 
 ## `planr-sprint`
 

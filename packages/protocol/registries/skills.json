@@ -1244,12 +1244,12 @@
     },
     {
       "skillId": "planr-operate",
-      "skillVersion": "2.2.0",
+      "skillVersion": "2.4.0",
       "description": "Run a focused operating review across seven executive lenses and produce a decision and action brief. Use for periodic product or company-level leadership review.",
       "lifecycle": "active",
       "authorityClass": "operate-orchestration",
       "source": "skills/planr-operate/openplanr.skill.json",
-      "sourceDigest": "sha256:3f3b842d8234fbae3b7c87a4f90c385c1cc51d6e2745931d7460ddee60e18242",
+      "sourceDigest": "sha256:fb521d29bb5f3aa048877f9d8df6c0ea97d1f05efbf86b2c940f6f2e0fe81f3c",
       "triggerPolicy": {
         "include": [
           "Run an executive operating review across product, technology, growth, operations, and strategy",
@@ -1305,12 +1305,12 @@
     },
     {
       "skillId": "planr-plan",
-      "skillVersion": "1.4.0",
+      "skillVersion": "1.5.0",
       "description": "Turn a Protocol-compatible specification or product intent into schema-compatible OpenPlanr stories and implementation tasks. Use for planning and decomposition, not implementation.",
       "lifecycle": "active",
       "authorityClass": "planning-write",
       "source": "skills/planr-plan/openplanr.skill.json",
-      "sourceDigest": "sha256:06131440bcf758507383900bee9f208483524fb31352a062675a999a7d74efc7",
+      "sourceDigest": "sha256:f0f14bc031b18945eea6bce2a733c1038ee623d6eee95afbd61809cb534c56c7",
       "triggerPolicy": {
         "include": [
           "Decompose a specification into user stories and implementation tasks",
@@ -1364,12 +1364,12 @@
     },
     {
       "skillId": "planr-plan-review",
-      "skillVersion": "1.0.1",
+      "skillVersion": "1.1.0",
       "description": "Review an OpenPlanr plan for product, engineering, design, and developer-experience problems. Use after planning and before implementation to improve the plan.",
       "lifecycle": "active",
       "authorityClass": "review-evidence",
       "source": "skills/planr-plan-review/openplanr.skill.json",
-      "sourceDigest": "sha256:2e9922d0116b6efbda889527ae022c7a7a1b5d601307b2ed7fb529f7eada0273",
+      "sourceDigest": "sha256:a307b480a249f03ea88fb89672c369a5773fb92c89156a7e96b02d2a0c6bc0d1",
       "triggerPolicy": {
         "include": [
           "Review an implementation plan for product, engineering, design, and developer-experience problems",
@@ -1423,12 +1423,12 @@
     },
     {
       "skillId": "planr-release",
-      "skillVersion": "1.1.0",
+      "skillVersion": "1.3.0",
       "description": "Choose and maintain a product's versioning scheme, classify shipped changes, and write user-facing changelogs or release notes. Use for SemVer or CalVer decisions, version bumps, release cadence, and preparing a versioned release after landing.",
       "lifecycle": "active",
       "authorityClass": "release-preparation",
       "source": "skills/planr-release/openplanr.skill.json",
-      "sourceDigest": "sha256:d940f56ddc30a4c1665060dc7ce85e3cb6278070cded71d7d216aec8797798f5",
+      "sourceDigest": "sha256:167271f868b1f82de306fb66444c6bb3541cfb7ca553f602213922336618d3f8",
       "triggerPolicy": {
         "include": [
           "Choose the next SemVer or CalVer version and write user-facing release notes",
@@ -1548,12 +1548,12 @@
     },
     {
       "skillId": "planr-ship",
-      "skillVersion": "1.7.0",
+      "skillVersion": "1.8.0",
       "description": "Implement an OpenPlanr plan, specification, task, or clearly stated request end to end in the current repository. Use when the user asks to build, implement, fix, finish, or ship local work, or to plan and implement an accepted change. Invoke before editing files for the requested change. Not for planning only, landing, release, or work handed to another coding agent.",
       "lifecycle": "active",
       "authorityClass": "implementation",
       "source": "skills/planr-ship/openplanr.skill.json",
-      "sourceDigest": "sha256:ea31c9c4a13dca0061a64c242265ca359751b11e2018597b7465b341f68640e6",
+      "sourceDigest": "sha256:5f718747b2801000ceab302d19a96494c9f833f2d014e1b56394215a8009a9d2",
       "triggerPolicy": {
         "include": [
           "Implement a plan, specification, task, fix, or clearly stated local request",
@@ -1621,12 +1621,12 @@
     },
     {
       "skillId": "planr-spec",
-      "skillVersion": "1.0.2",
+      "skillVersion": "1.1.0",
       "description": "Shape vague product or engineering intent into a clear, measurable Protocol-compatible specification grounded in the current repository. Use when requirements need clarification before planning or implementation.",
       "lifecycle": "active",
       "authorityClass": "planning-write",
       "source": "skills/planr-spec/openplanr.skill.json",
-      "sourceDigest": "sha256:aaf4a2660b2310e312d6b9aa25a099ca4057c44129d634e2f45fbc8a7862c621",
+      "sourceDigest": "sha256:bfcf20909007f5698b205c552efbbe4366e76884df7dbdc9cca7ef02a47c3eb1",
       "triggerPolicy": {
         "include": [
           "Turn vague product or engineering intent into a precise specification",
@@ -1864,5 +1864,5 @@
     }
   ],
   "compatibilityAliases": [],
-  "documentDigest": "sha256:424ef48b01db29dd1567e54d9f9872480802e247908039b8d857fbae10ce9d09"
+  "documentDigest": "sha256:8cd6ae30df680d6b4d3789f1f42d52219649f49b62c9503249c6c30bccc3575c"
 }

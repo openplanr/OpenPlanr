@@ -38,7 +38,8 @@ test('Ship resolves full task context without turning overlap into semantic depe
   const skill = readWorkspace('skills/planr-ship/SKILL.md');
   assert.match(skill, /read it completely/u);
   assert.match(skill, /follow its\s+`storyId` and `specId`/u);
-  assert.match(skill, /repository instructions, ADRs,\s+planning rules/u);
+  assert.match(skill, /`AGENTS\.md` and\s+`CLAUDE\.md` when tracked, in one batch/u);
+  assert.match(skill, /Expand only for a missing contract/u);
   assert.match(skill, /Only `dependsOn` defines semantic ordering/u);
   assert.match(skill, /Never infer a\s+dependency from order or overlapping paths/u);
   assert.match(skill, /serialize only overlapping writes/u);

@@ -7,6 +7,7 @@ Contents:
 4. Hotfixes
 5. When a release goes out wrong
 6. Freezes and quiet periods
+7. Long-term health
 
 ---
 
@@ -90,3 +91,12 @@ Worth declaring in the profile if they apply:
 - If the product serves businesses with their own peak periods, avoid their peak. A booking product should not ship a breaking change into a salon's Saturday.
 
 A freeze is a schedule decision, not a code freeze. Work continues and accumulates in `Unreleased`.
+
+## 7. Long-term health
+
+Every few months, or when the user asks whether versioning is working:
+
+- **Drift check.** Do the tag, the manifest and what is deployed agree.
+- **Deprecation hygiene.** Every deprecation announced needs a stated removal target and eventual follow-through. Deprecations that never get removed teach users to ignore them.
+- **Stuck at 0.x.** A product with real paying users on `0.x` is signalling instability it does not have. Cutting 1.0 is a decision about the public surface being stable enough to promise, not about feature completeness.
+- **Scheme fit.** A product that grew an API since the profile was written probably needs a second version line now.

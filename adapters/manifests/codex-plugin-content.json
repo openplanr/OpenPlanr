@@ -8,7 +8,7 @@
   "canonicalSkillCount": 30,
   "compatibilityAliasCount": 0,
   "skillCount": 30,
-  "assetCount": 211,
+  "assetCount": 217,
   "skills": [
     {
       "skillId": "planr-artifact",
@@ -803,11 +803,11 @@
       "assets": [
         {
           "path": "skills/operate/SKILL.md",
-          "digest": "sha256:f0561b27d991e66c84d950c5caf09a4f2e2fc478485908fba7585f38a9c0b9b4"
+          "digest": "sha256:fd655ac1eace4821e007e46d6e01af6f45b7dd11d72ca83d2a366074db11ce26"
         },
         {
           "path": "skills/operate/openplanr.skill.json",
-          "digest": "sha256:3f3b842d8234fbae3b7c87a4f90c385c1cc51d6e2745931d7460ddee60e18242"
+          "digest": "sha256:fb521d29bb5f3aa048877f9d8df6c0ea97d1f05efbf86b2c940f6f2e0fe81f3c"
         },
         {
           "path": "skills/operate/references/note-checklist.md",
@@ -816,6 +816,10 @@
         {
           "path": "skills/operate/agents/openai.yaml",
           "digest": "sha256:35334282c4df104e513ad150f8aeaee7bcf9b4648d5eb6d7da4af29cc76a8e23"
+        },
+        {
+          "path": "skills/operate/references/return-contract.md",
+          "digest": "sha256:65081a1dd594dbe5136e2892a64110270e85a6b246a0ee74d43edc1f55d69bde"
         }
       ]
     },
@@ -828,11 +832,11 @@
       "assets": [
         {
           "path": "skills/plan/SKILL.md",
-          "digest": "sha256:458fea55c9e8c430d573ffe9b5026169dc724f9fe524a054747992cc8fa7303f"
+          "digest": "sha256:9467d6abce56d62677b95dd5e0c3a814ce4ad60733704beef91c5245e0445b2c"
         },
         {
           "path": "skills/plan/openplanr.skill.json",
-          "digest": "sha256:06131440bcf758507383900bee9f208483524fb31352a062675a999a7d74efc7"
+          "digest": "sha256:f0f14bc031b18945eea6bce2a733c1038ee623d6eee95afbd61809cb534c56c7"
         },
         {
           "path": "skills/plan/agents/openai.yaml",
@@ -849,6 +853,10 @@
         {
           "path": "skills/plan/references/planning-ids.md",
           "digest": "sha256:5028070be05aefca33e4f835f7dfc096e55e46e976fd1745a2e9adfaa2759527"
+        },
+        {
+          "path": "skills/plan/references/return-contract.md",
+          "digest": "sha256:65081a1dd594dbe5136e2892a64110270e85a6b246a0ee74d43edc1f55d69bde"
         },
         {
           "path": "skills/plan/schemas/design-document.schema.json",
@@ -873,15 +881,19 @@
       "assets": [
         {
           "path": "skills/plan-review/SKILL.md",
-          "digest": "sha256:c60ba860c021d1bc79361fb9434eb8bedc7797053e49d91b9418d022fc1c947b"
+          "digest": "sha256:09e614a279a3bcdcc858fa5bf7a0c5bc3010d91f922a85718dea9dc3f84c1787"
         },
         {
           "path": "skills/plan-review/openplanr.skill.json",
-          "digest": "sha256:2e9922d0116b6efbda889527ae022c7a7a1b5d601307b2ed7fb529f7eada0273"
+          "digest": "sha256:a307b480a249f03ea88fb89672c369a5773fb92c89156a7e96b02d2a0c6bc0d1"
         },
         {
           "path": "skills/plan-review/agents/openai.yaml",
           "digest": "sha256:272813fe39137748513f5aa40cc7c24b0ff62309b92947e18d048b84bb5370f8"
+        },
+        {
+          "path": "skills/plan-review/references/return-contract.md",
+          "digest": "sha256:65081a1dd594dbe5136e2892a64110270e85a6b246a0ee74d43edc1f55d69bde"
         }
       ]
     },
@@ -894,11 +906,11 @@
       "assets": [
         {
           "path": "skills/release/SKILL.md",
-          "digest": "sha256:31470fb2ce46795f58903c157bdd1dad503ba6a69af195d8a4b149f2e74cc6a1"
+          "digest": "sha256:271a64e265ff0b5b7bd423abd45dc19d41fe5cbe2bb98da35f40385f58e66e58"
         },
         {
           "path": "skills/release/openplanr.skill.json",
-          "digest": "sha256:d940f56ddc30a4c1665060dc7ce85e3cb6278070cded71d7d216aec8797798f5"
+          "digest": "sha256:167271f868b1f82de306fb66444c6bb3541cfb7ca553f602213922336618d3f8"
         },
         {
           "path": "skills/release/agents/openai.yaml",
@@ -906,15 +918,15 @@
         },
         {
           "path": "skills/release/references/schemes.md",
-          "digest": "sha256:79769004c106f31ddb6a74a4f7a902b3f1d8c43617fb11d56f9f7455855cfa69"
+          "digest": "sha256:9279cb628c5fae52d3119b5a229d644131c9699abcff74cf27e2f21af1f4706c"
         },
         {
           "path": "skills/release/references/release-notes.md",
-          "digest": "sha256:9dd1784dc10f40dc4e1962e9eab4373cc0dc04c111935fb8f145772a8f6c2fec"
+          "digest": "sha256:15645f09c3906c05d6fe994ef8a97b939742ff31be18a0b4d13465e3ceab8f8d"
         },
         {
           "path": "skills/release/references/cadence.md",
-          "digest": "sha256:c9d0e67e35aaa4db563a8f520dc3ff441be8a8c54b86be274b44a20dfa363077"
+          "digest": "sha256:73786c9d4b5174d66e28d90163a0f705e3a316aa778220119cb3c3326ed5a5dc"
         },
         {
           "path": "skills/release/assets/profile-template.md",
@@ -923,6 +935,10 @@
         {
           "path": "skills/release/assets/changelog-template.md",
           "digest": "sha256:fd59787371b67ec545c0f613c96761d31e4482ae45d23ba9e5a1dd9ed66300e7"
+        },
+        {
+          "path": "skills/release/references/return-contract.md",
+          "digest": "sha256:65081a1dd594dbe5136e2892a64110270e85a6b246a0ee74d43edc1f55d69bde"
         }
       ]
     },
@@ -960,11 +976,11 @@
       "assets": [
         {
           "path": "skills/ship/SKILL.md",
-          "digest": "sha256:1a56049e5d0c2d429f11bf8d0d42a97385048020f31da90b8b417d7de006022b"
+          "digest": "sha256:f351cc3c9ddd6326915b97521580d4649de7d405d7e0f4e79f63424ace27c854"
         },
         {
           "path": "skills/ship/openplanr.skill.json",
-          "digest": "sha256:ea31c9c4a13dca0061a64c242265ca359751b11e2018597b7465b341f68640e6"
+          "digest": "sha256:5f718747b2801000ceab302d19a96494c9f833f2d014e1b56394215a8009a9d2"
         },
         {
           "path": "skills/ship/agents/openai.yaml",
@@ -989,6 +1005,10 @@
         {
           "path": "skills/ship/references/backlog-filing.md",
           "digest": "sha256:4e86fca9f2ad70ab1dfc7f0984009a1fb64e9459666093552c8405aa0d3084be"
+        },
+        {
+          "path": "skills/ship/references/return-contract.md",
+          "digest": "sha256:65081a1dd594dbe5136e2892a64110270e85a6b246a0ee74d43edc1f55d69bde"
         }
       ]
     },
@@ -1001,11 +1021,11 @@
       "assets": [
         {
           "path": "skills/spec/SKILL.md",
-          "digest": "sha256:8da00648b861c64b675384fc0524f1c8b48cf5e245e23eb416e35519a44c9eba"
+          "digest": "sha256:b72b49d62edf4455ff8ce32992a7d780b650535608b9325076799ad549782a0a"
         },
         {
           "path": "skills/spec/openplanr.skill.json",
-          "digest": "sha256:aaf4a2660b2310e312d6b9aa25a099ca4057c44129d634e2f45fbc8a7862c621"
+          "digest": "sha256:bfcf20909007f5698b205c552efbbe4366e76884df7dbdc9cca7ef02a47c3eb1"
         },
         {
           "path": "skills/spec/agents/openai.yaml",
@@ -1014,6 +1034,10 @@
         {
           "path": "skills/spec/references/specification-contract.md",
           "digest": "sha256:eaaf58e5d2e5cf788856c8d0e156a1ff49111d3578556bfb7c8fe2466df15b15"
+        },
+        {
+          "path": "skills/spec/references/return-contract.md",
+          "digest": "sha256:65081a1dd594dbe5136e2892a64110270e85a6b246a0ee74d43edc1f55d69bde"
         }
       ]
     },
