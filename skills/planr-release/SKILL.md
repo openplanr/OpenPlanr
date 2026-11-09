@@ -16,7 +16,9 @@ implementation. Do not turn a release request into a new implementation pass.
 
 ## Step 0: Load the release profile
 
-Look for `.release/profile.md` at the repo root. It records the scheme, cadence, public surface and voice already chosen for this product.
+Read `.release/profile.md` at the repo root, plus `AGENTS.md` and `CLAUDE.md` when tracked, in one
+batch. Expand only for a missing contract, a dependency or a contradiction, and stop when each
+claim has evidence or a named gap. The profile records the scheme, cadence, public surface and voice already chosen for this product.
 
 If it exists, read it and follow it. Do not re-argue the scheme on every release. Re-deciding is how version histories become incoherent, and the whole value of a version number is that it means the same thing this month as it did last month.
 
@@ -178,8 +180,8 @@ performed, and name any incomplete step with its impact and recovery action.
 - **Next:** the one remaining local or external release action, or `none`.
 
 Keep the complete release window in the notes rather than repeating its commit
-inventory. Omit empty sections in the human summary; different wording does not
-require a second version bump or release action.
+inventory. Follow [the shared return rules](references/return-contract.md); different wording
+never calls for a second version bump or release action.
 
 ## Long-term health
 

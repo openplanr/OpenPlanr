@@ -60,13 +60,12 @@ Write `brief.md` as a compact orientation aid, not a conclusion. Include:
 - effective subject, window, requested decision, and roster;
 - current revision and working-tree state when relevant;
 - the requested range and a short change summary when the review is historical;
-- paths to relevant planning, product, customer, financial, operational, delivery, architecture,
-  incident, and metric sources;
+- paths to the sources the request names, plus `AGENTS.md` and `CLAUDE.md` when tracked;
 - important context that was searched for but not found.
 
-Open enough of the repository to make these pointers useful. Keep observations separate from
-interpretation so every lens can reach its own conclusion. The brief is a starting point; lenses
-may inspect other relevant project sources.
+Read those sources in one batch. Expand only for a missing contract, a dependency or a
+contradiction, and stop when each claim has evidence or a named gap. Keep observations separate
+from interpretation so every lens can reach its own conclusion.
 
 ## Run the selected lenses (seven by default)
 
@@ -173,8 +172,8 @@ evidence. Link `board-report.md`, summarize decision/action counts and the revie
 coverage actually completed, and name any unavailable or unsynthesized lens.
 Keep the full decision queue, source inventories and diagnostic output in their
 existing artifacts. Include unresolved issues with their impact and next action,
-omitting empty chat sections. Preserve the durable report contract; different
-summary wording never requires another review or corrective run.
+omitting empty chat sections. Preserve the durable report contract and follow
+[the shared return rules](references/return-contract.md).
 
 When the OpenPlanr dashboard is running, the operating cycle is browsable at
 `#/operate/cycles/<id>`, the completed review index at `#/operate/cycles`, and the latest

@@ -102,6 +102,14 @@ const operateAdvisorDestinations = Object.freeze([
 const trackerConnectionDestinations = Object.freeze(['planr-sync', 'planr-sprint', 'planr-status']);
 const findingsDestinations = Object.freeze(['planr-ship', 'planr-investigate']);
 const failFirstDestinations = Object.freeze(['planr-ship', 'planr-investigate']);
+const returnContractDestinations = Object.freeze([
+  'planr-spec',
+  'planr-plan',
+  'planr-plan-review',
+  'planr-operate',
+  'planr-ship',
+  'planr-release',
+]);
 const connectionsCatalog = readConnectionsCatalog(root);
 const connectorsMarkdown = renderConnectors(connectionsCatalog);
 const sharedSkillResources = Object.freeze([
@@ -194,6 +202,11 @@ const sharedSkillResources = Object.freeze([
   ...failFirstDestinations.map((skillId) => ({
     source: 'skills/shared/fail-first.md',
     destination: `skills/${skillId}/references/fail-first.md`,
+    executable: false,
+  })),
+  ...returnContractDestinations.map((skillId) => ({
+    source: 'skills/shared/return-contract.md',
+    destination: `skills/${skillId}/references/return-contract.md`,
     executable: false,
   })),
   {

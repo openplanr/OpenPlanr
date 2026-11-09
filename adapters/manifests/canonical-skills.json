@@ -1955,11 +1955,11 @@
     },
     {
       "id": "planr-operate",
-      "version": "2.2.0",
+      "version": "2.3.0",
       "source": "skills/planr-operate/openplanr.skill.json",
       "entrypoint": "skills/planr-operate/SKILL.md",
       "description": "Run a focused operating review across seven executive lenses and produce a decision and action brief. Use for periodic product or company-level leadership review.",
-      "sourceDigest": "sha256:97a0762e488559ead6c05ea451d16bb5b4727d3a6202231427e07f254f500294",
+      "sourceDigest": "sha256:69d7a13b865be610e13b8949551c7a566790f8057b97582b4d282cf63429dbd4",
       "resources": [
         {
           "path": "references/note-checklist.md",
@@ -1982,6 +1982,18 @@
           ],
           "executable": false,
           "digest": "sha256:d7e7c98b64d056129c64a88293bac840feb821ced0f2a3047feee5cd62400754"
+        },
+        {
+          "path": "references/return-contract.md",
+          "kind": "reference",
+          "hosts": [
+            "claude-code",
+            "codex",
+            "chatgpt",
+            "cursor"
+          ],
+          "executable": false,
+          "digest": "sha256:65081a1dd594dbe5136e2892a64110270e85a6b246a0ee74d43edc1f55d69bde"
         }
       ],
       "contracts": {
@@ -2013,11 +2025,11 @@
     },
     {
       "id": "planr-plan",
-      "version": "1.4.0",
+      "version": "1.5.0",
       "source": "skills/planr-plan/openplanr.skill.json",
       "entrypoint": "skills/planr-plan/SKILL.md",
       "description": "Turn a Protocol-compatible specification or product intent into schema-compatible OpenPlanr stories and implementation tasks. Use for planning and decomposition, not implementation.",
-      "sourceDigest": "sha256:8b26285d3a66bd8733a29c49556b6a14d9379ed5d247e8f2ef1e37a5706073d6",
+      "sourceDigest": "sha256:56d6e0d2c805fafc8b98aea7aa123aea17c3418a25e835901de98d25ce60237a",
       "resources": [
         {
           "path": "agents/openai.yaml",
@@ -2064,6 +2076,18 @@
           ],
           "executable": false,
           "digest": "sha256:5028070be05aefca33e4f835f7dfc096e55e46e976fd1745a2e9adfaa2759527"
+        },
+        {
+          "path": "references/return-contract.md",
+          "kind": "reference",
+          "hosts": [
+            "claude-code",
+            "codex",
+            "chatgpt",
+            "cursor"
+          ],
+          "executable": false,
+          "digest": "sha256:65081a1dd594dbe5136e2892a64110270e85a6b246a0ee74d43edc1f55d69bde"
         },
         {
           "path": "schemas/design-document.schema.json",
@@ -2120,11 +2144,11 @@
     },
     {
       "id": "planr-plan-review",
-      "version": "1.0.1",
+      "version": "1.1.0",
       "source": "skills/planr-plan-review/openplanr.skill.json",
       "entrypoint": "skills/planr-plan-review/SKILL.md",
       "description": "Review an OpenPlanr plan for product, engineering, design, and developer-experience problems. Use after planning and before implementation to improve the plan.",
-      "sourceDigest": "sha256:f1799c576de99b01923a6ad4e3c4c62f0144fb226cf0026f7aa78b1a6182e5e3",
+      "sourceDigest": "sha256:bef96331f6c0ba386d16c6954d86b968c292a39b5d2cc2162262b3c56e9eae23",
       "resources": [
         {
           "path": "agents/openai.yaml",
@@ -2135,6 +2159,18 @@
           ],
           "executable": false,
           "digest": "sha256:10e80a67947be6c801dc63cc83cd1f47e08f583113b7e89349cb909897036f2f"
+        },
+        {
+          "path": "references/return-contract.md",
+          "kind": "reference",
+          "hosts": [
+            "claude-code",
+            "codex",
+            "chatgpt",
+            "cursor"
+          ],
+          "executable": false,
+          "digest": "sha256:65081a1dd594dbe5136e2892a64110270e85a6b246a0ee74d43edc1f55d69bde"
         }
       ],
       "contracts": {
@@ -2155,11 +2191,11 @@
     },
     {
       "id": "planr-release",
-      "version": "1.1.0",
+      "version": "1.2.0",
       "source": "skills/planr-release/openplanr.skill.json",
       "entrypoint": "skills/planr-release/SKILL.md",
       "description": "Choose and maintain a product's versioning scheme, classify shipped changes, and write user-facing changelogs or release notes. Use for SemVer or CalVer decisions, version bumps, release cadence, and preparing a versioned release after landing.",
-      "sourceDigest": "sha256:27885169abf6348c3e2fc403c8cbc397f35dde176fcd35fd7a6b8512df6aaa8d",
+      "sourceDigest": "sha256:efeb8ea3e3212b7e1ba79a0d81b507a77294d33a54afbe916c5a2f8262c0b69e",
       "resources": [
         {
           "path": "agents/openai.yaml",
@@ -2230,6 +2266,18 @@
           ],
           "executable": false,
           "digest": "sha256:fd59787371b67ec545c0f613c96761d31e4482ae45d23ba9e5a1dd9ed66300e7"
+        },
+        {
+          "path": "references/return-contract.md",
+          "kind": "reference",
+          "hosts": [
+            "claude-code",
+            "codex",
+            "chatgpt",
+            "cursor"
+          ],
+          "executable": false,
+          "digest": "sha256:65081a1dd594dbe5136e2892a64110270e85a6b246a0ee74d43edc1f55d69bde"
         }
       ],
       "contracts": {
@@ -2310,11 +2358,11 @@
     },
     {
       "id": "planr-ship",
-      "version": "1.7.0",
+      "version": "1.8.0",
       "source": "skills/planr-ship/openplanr.skill.json",
       "entrypoint": "skills/planr-ship/SKILL.md",
       "description": "Implement an OpenPlanr plan, specification, task, or clearly stated request end to end in the current repository. Use when the user asks to build, implement, fix, finish, or ship local work, or to plan and implement an accepted change. Invoke before editing files for the requested change. Not for planning only, landing, release, or work handed to another coding agent.",
-      "sourceDigest": "sha256:a95447dd582794345f3286715fd0a34a9d09a7e0a5acee3ba6038a1f51a4bc8b",
+      "sourceDigest": "sha256:a2d4763a9a72065aa412295983bd9f41c0dcf9ba515318b248b4b21b5b27cd57",
       "resources": [
         {
           "path": "agents/openai.yaml",
@@ -2385,6 +2433,18 @@
           ],
           "executable": false,
           "digest": "sha256:4e86fca9f2ad70ab1dfc7f0984009a1fb64e9459666093552c8405aa0d3084be"
+        },
+        {
+          "path": "references/return-contract.md",
+          "kind": "reference",
+          "hosts": [
+            "claude-code",
+            "codex",
+            "chatgpt",
+            "cursor"
+          ],
+          "executable": false,
+          "digest": "sha256:65081a1dd594dbe5136e2892a64110270e85a6b246a0ee74d43edc1f55d69bde"
         }
       ],
       "contracts": {
@@ -2406,11 +2466,11 @@
     },
     {
       "id": "planr-spec",
-      "version": "1.0.2",
+      "version": "1.1.0",
       "source": "skills/planr-spec/openplanr.skill.json",
       "entrypoint": "skills/planr-spec/SKILL.md",
       "description": "Shape vague product or engineering intent into a clear, measurable Protocol-compatible specification grounded in the current repository. Use when requirements need clarification before planning or implementation.",
-      "sourceDigest": "sha256:150d31da1f87918ce7966706230779c19fadf261f7afd78ae5ef0924ea6a4be1",
+      "sourceDigest": "sha256:63ab943e7a269f691865b8e3cf68ae160aae0d0ddb71af1834fe50c078ba14a9",
       "resources": [
         {
           "path": "agents/openai.yaml",
@@ -2433,6 +2493,18 @@
           ],
           "executable": false,
           "digest": "sha256:eaaf58e5d2e5cf788856c8d0e156a1ff49111d3578556bfb7c8fe2466df15b15"
+        },
+        {
+          "path": "references/return-contract.md",
+          "kind": "reference",
+          "hosts": [
+            "claude-code",
+            "codex",
+            "chatgpt",
+            "cursor"
+          ],
+          "executable": false,
+          "digest": "sha256:65081a1dd594dbe5136e2892a64110270e85a6b246a0ee74d43edc1f55d69bde"
         }
       ],
       "contracts": {

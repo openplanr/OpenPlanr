@@ -6,9 +6,11 @@ license: MIT
 
 # OpenPlanr Plan Review
 
-Give the plan a senior, practical review. Read the plan, its repository context,
-and the decisions it depends on. Use only the review lenses relevant to the
-work; do not manufacture a fixed committee.
+Give the plan a senior, practical review. Read the plan and the files it names,
+plus `AGENTS.md` and `CLAUDE.md` when tracked, in one batch. Expand only for a
+missing contract, a dependency or a contradiction, and stop when each claim has
+evidence or a named gap. Use only the review lenses relevant to the work; do not
+manufacture a fixed committee.
 
 ## Review
 
@@ -42,6 +44,4 @@ the plan materially changes.
 
 Link the reviewed plan and locate each actionable finding. State what was
 inspected and any material evidence gap; a source review is not a passing test
-run. Omit empty categories and raw agent transcripts. Expand findings when their
-impact needs explanation, without requiring a fixed chat layout or a corrective
-review just for wording.
+run. Follow [the shared return rules](references/return-contract.md).

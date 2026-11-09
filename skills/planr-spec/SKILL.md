@@ -12,10 +12,10 @@ another model process.
 
 ## Ground the specification
 
-Read the request, repository instructions, ADRs, product documentation,
-existing planning artifacts, relevant implementation code and tests, stack
-configuration, design inputs, database context, and current behavior. Infer
-facts the repository already answers.
+Read the files the request names, plus `AGENTS.md` and `CLAUDE.md` when tracked,
+in one batch. Expand only for a missing contract, a dependency or a contradiction,
+and stop when each claim has evidence or a named gap. Infer facts the repository
+already answers.
 
 When a missing decision materially changes scope or observable behavior, use
 the host's structured question interface. Ask no more than three short,
@@ -45,9 +45,10 @@ out-of-scope boundaries. Record concrete repository paths and verification
 signals when they are known. Keep unresolved questions out of the saved
 contract when a repository-backed default exists.
 
-Validate the completed artifact before returning. If a helper is unavailable,
-perform the same deterministic checks directly; never fall back to a
-model-backed CLI.
+Validate the completed artifact before returning: run `openplanr spec validate <SPEC-ID>`
+when `command -v openplanr` succeeds, otherwise check the path, frontmatter,
+headings and acceptance IDs against the specification contract directly. Never
+fall back to a model-backed CLI.
 
 ## Return
 
@@ -62,5 +63,4 @@ If the specification is partial or blocked, name the missing decision and its im
   none remains.
 - **Next:** a copy-ready host-native `planr-plan` invocation for the saved spec.
 
-The summary is a human view of the specification, not another schema or a reason
-to rerun a completed operation for different wording.
+Follow [the shared return rules](references/return-contract.md).

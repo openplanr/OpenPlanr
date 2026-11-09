@@ -17,10 +17,11 @@ plain Ship never launches its helper. Keep the work local; do not publish or dep
 
 For a selector, locate exactly one task and read it completely. Then follow its
 `storyId` and `specId` to the parent story, acceptance criteria, Gherkin file
-when present, and specification. Also read repository instructions, ADRs,
-planning rules, applicable stack guidance, relevant design/database context,
-implementation code, tests, and interfaces produced by declared dependencies. Read any
-`.planr/conventions/<area>.md`, indexed from AGENTS.md, for the areas this task touches.
+when present, and specification. Read the files the task names, plus `AGENTS.md` and
+`CLAUDE.md` when tracked, in one batch, and any `.planr/conventions/<area>.md` indexed
+from AGENTS.md for the areas this task touches. Expand only for a missing contract, a
+dependency's interface or a contradiction, and stop when each claim has evidence or a
+named gap.
 
 Read [the design lineage contract](references/design-lineage.md). If the selected
 planning root contains `design-lineage.json`, load only the selected task's mapped
@@ -149,10 +150,8 @@ results instead of reproducing them in chat.
 - **Issues:** blockers with problem, impact, and next action, or `none`; then
   findings outside the task, each with its disposition.
 
-Keep the five machine fields unchanged. A human summary may omit empty or unavailable fields,
-but must make partial, blocked or unverified work clear and give the smallest
-recovery action. Preserve native transcripts; never require another execution
-or correction just to change summary wording.
+Keep the five machine fields unchanged. Follow [the shared return rules](references/return-contract.md);
+the summary must make partial, blocked or unverified work clear.
 
 Suggest `planr-land` only when a landing step remains in the requested workflow.
 Do not add a next action when the requested scope is fulfilled. This guidance

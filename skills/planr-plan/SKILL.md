@@ -14,14 +14,11 @@ automatically.
 
 ## Resolve context directly
 
-Read the strongest available inputs:
-
-1. the request and selected specification;
-2. repository instructions (`AGENTS.md`, `CLAUDE.md`, or equivalents), ADRs,
-   planning rules, and active stack files named by the repository;
-3. relevant implementation code, tests, package scripts, and CI configuration;
-4. design inputs and design specifications when a browser surface is involved;
-5. the database schema or persistence code when data behavior is involved.
+Read the request, the selected specification and the files either names, plus
+`AGENTS.md` and `CLAUDE.md` when tracked, in one batch. Expand only for a missing
+contract, a dependency or a contradiction, and stop when each claim has evidence
+or a named gap. Read design inputs when a browser surface is involved and the
+schema or persistence code when data behavior is involved.
 
 Use repository-local conventions first. Missing legacy `input/` or `.planr/`
 paths do not block a clear request. State what was unavailable and continue when
@@ -115,9 +112,10 @@ Write stories and tasks directly in the repository's active planning mode.
 - Name concrete files and repository-grounded checks. Preserve established
   repository headings when they carry additional information.
 
-Validate all frontmatter and acceptance coverage before finishing. If a helper
-is unavailable, inspect existing IDs and validate the same invariants directly;
-do not route semantic work to a CLI fallback.
+Validate all frontmatter and acceptance coverage before finishing: run
+`openplanr spec validate <SPEC-ID>` when `command -v openplanr` succeeds,
+otherwise check the same invariants and existing IDs directly. Do not route
+semantic work to a CLI fallback.
 
 For approved design input, author the complete story and task bytes before
 touching target paths, then commit those bytes and the sibling
@@ -141,7 +139,7 @@ instead of repeating every path in chat.
   (Codex/ChatGPT) or the `planr-ship` rule (Cursor).
 
 Mention the planning layout or consulted lenses only when they explain a material
-choice. Different summary wording never requires another planning run.
+choice. Follow [the shared return rules](references/return-contract.md).
 
 When the OpenPlanr dashboard is running, the planned graph is browsable at
 `#/board`; open one story at `#/detail/<US-###>`.
