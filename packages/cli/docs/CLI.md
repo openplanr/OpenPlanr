@@ -997,14 +997,14 @@ also has `tag` and its committer `date` (`YYYY-MM-DD`), and is `null` when the w
 most recent tags. Each commit, merges excluded, has `sha`, `shortSha`, `subject`,
 `body`, `type` and `scope` from a Conventional Commits subject, `breaking` (a `!`
 after the type or a `BREAKING CHANGE:` or `BREAKING-CHANGE:` footer),
-`breakingNotes`, `reverts` (the SHA named by `This reverts commit <sha>`) and
+`breakingNotes` (each footer value with its continuation lines, up to the next footer token), `reverts` (the SHA named by `This reverts commit <sha>`) and
 `files`. `areas` counts touched paths by their first two segments, highest
 first, top 20.
 
 Any Git failure other than "no tag found", such as an unknown revision or a
 directory outside a repository, exits 1 with `E_RELEASE_GIT_FAILED` and the Git
 error text; the command never reports an empty window instead. Passing both
-`--base` and `--since` exits 1 with `E_RELEASE_RANGE_CONFLICT`, and a malformed date with `E_RELEASE_SINCE_INVALID`.
+`--base` and `--since` exits 1 with `E_RELEASE_RANGE_CONFLICT`, and a `--since` that is not a real calendar date with `E_RELEASE_SINCE_INVALID`.
 
 ---
 

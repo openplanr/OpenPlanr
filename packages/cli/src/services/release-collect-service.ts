@@ -8,7 +8,8 @@ const RECORD = '\x1e';
 const FIELD = '\x1f';
 const NO_TAG = /No names found|No tags can describe|cannot describe anything/u;
 const CONVENTIONAL = /^([A-Za-z]+)(?:\(([^)]*)\))?(!)?:\s/u;
-const BREAKING_FOOTER = /^BREAKING[ -]CHANGE:\s*(.+)$/gmu;
+const BREAKING_FOOTER = /^BREAKING[ -]CHANGE:\s*(.*)$/u;
+const FOOTER_TOKEN = /^(?:BREAKING[ -]CHANGE|[A-Za-z][\w-]*)(?:: | #)/u;
 const REVERTED_SHA = /This reverts commit ([0-9a-f]{7,40})/u;
 const RECENT_TAGS = 5;
 const TOP_AREAS = 20;
@@ -94,11 +95,36 @@ async function lastTag(cwd: string, headSha: string): Promise<string | null> {
   }
 }
 
+/** Each `BREAKING CHANGE:` footer value, including continuation lines up to the next footer token. */
+function breakingNotes(body: string): string[] {
+  const notes: string[] = [];
+  let current: string[] | null = null;
+  for (const line of body.split('\n')) {
+    const start = BREAKING_FOOTER.exec(line);
+    if (start) {
+      current = [start[1]];
+      notes.push('');
+    } else if (current && !FOOTER_TOKEN.test(line)) {
+      current.push(line);
+    } else {
+      current = null;
+    }
+    if (current) notes[notes.length - 1] = current.join('\n').trim();
+  }
+  return notes.filter((note) => note !== '');
+}
+
+function isCalendarDate(value: string): boolean {
+  if (!/^\d{4}-\d{2}-\d{2}$/u.test(value)) return false;
+  const date = new Date(`${value}T00:00:00Z`);
+  return !Number.isNaN(date.getTime()) && date.toISOString().slice(0, 10) === value;
+}
+
 function parseCommit(record: string): ReleaseCommit {
   const [sha = '', shortSha = '', subject = '', rawBody = '', rawFiles = ''] = record.split(FIELD);
   const body = rawBody.trim();
   const conventional = CONVENTIONAL.exec(subject);
-  const breakingNotes = [...body.matchAll(BREAKING_FOOTER)].map((match) => match[1].trim());
+  const notes = breakingNotes(body);
   const isRevert = subject.startsWith('Revert "') || conventional?.[1] === 'revert';
   return {
     sha,
@@ -107,8 +133,8 @@ function parseCommit(record: string): ReleaseCommit {
     body,
     type: conventional?.[1] ?? null,
     scope: conventional?.[2] ?? null,
-    breaking: conventional?.[3] === '!' || breakingNotes.length > 0,
-    breakingNotes,
+    breaking: conventional?.[3] === '!' || notes.length > 0,
+    breakingNotes: notes,
     reverts: isRevert ? (REVERTED_SHA.exec(body)?.[1] ?? null) : null,
     files: rawFiles.split('\n').filter((line) => line.trim() !== ''),
   };
@@ -144,10 +170,10 @@ export async function collectReleaseChanges(
       'E_RELEASE_RANGE_CONFLICT',
       'Pass either --base or --since, not both.',
     );
-  if (options.since !== undefined && !/^\d{4}-\d{2}-\d{2}$/u.test(options.since))
+  if (options.since !== undefined && !isCalendarDate(options.since))
     throw new CliBoundaryError(
       'E_RELEASE_SINCE_INVALID',
-      `--since must be a date in YYYY-MM-DD form; got "${options.since}".`,
+      `--since must be a calendar date in YYYY-MM-DD form; got "${options.since}".`,
     );
 
   const headRevision = options.head ?? 'HEAD';

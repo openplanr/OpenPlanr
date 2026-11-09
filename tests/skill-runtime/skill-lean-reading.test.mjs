@@ -55,7 +55,10 @@ test('Spec validates with the CLI when present; Plan keeps the direct check mand
   const plan = skillText('plan').replace(/\s+/g, ' ');
   assert.doesNotMatch(plan, /spec validate(?!-plan)/);
   assert.match(plan, /check directly that every story and task frontmatter is valid/);
-  assert.match(plan, /`openplanr spec validate-plan <SPEC-ID>` runs the same check/);
+  assert.match(
+    plan,
+    /`openplanr spec validate-plan <SPEC-ID>` also checks the spec's stories and tasks/,
+  );
   assert.match(read('packages/cli/docs/CLI.md'), /#### `openplanr spec validate-plan`/);
   assert.match(
     plan,

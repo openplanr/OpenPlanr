@@ -1417,7 +1417,7 @@ export const CANONICAL_REGISTRIES = deepFreeze({
         "ownerPackage": "openplanr",
         "source": {
           "path": "skills/planr-plan/SKILL.md",
-          "digest": "sha256:790e61709551ddf996e18693fa6bd52b883754e336cfecbcb7718f4fbf0dfb3c"
+          "digest": "sha256:ffb6606562b4d7b4942af7b3476c7efb2fabe6d4b88e47ebecdf26bf4c75667d"
         },
         "authorityClass": "workflow",
         "machineJson": false,
@@ -1648,7 +1648,7 @@ export const CANONICAL_REGISTRIES = deepFreeze({
         "ownerPackage": "openplanr",
         "source": {
           "path": "skills/planr-plan/SKILL.md",
-          "digest": "sha256:790e61709551ddf996e18693fa6bd52b883754e336cfecbcb7718f4fbf0dfb3c"
+          "digest": "sha256:ffb6606562b4d7b4942af7b3476c7efb2fabe6d4b88e47ebecdf26bf4c75667d"
         },
         "authorityClass": "workflow",
         "machineJson": false,
@@ -2152,7 +2152,7 @@ export const CANONICAL_REGISTRIES = deepFreeze({
         "ownerPackage": "planr-pipeline",
         "source": {
           "path": "skills/planr-plan/SKILL.md",
-          "digest": "sha256:790e61709551ddf996e18693fa6bd52b883754e336cfecbcb7718f4fbf0dfb3c"
+          "digest": "sha256:ffb6606562b4d7b4942af7b3476c7efb2fabe6d4b88e47ebecdf26bf4c75667d"
         },
         "authorityClass": "compatibility-router",
         "machineJson": false,
@@ -3009,7 +3009,7 @@ export const CANONICAL_REGISTRIES = deepFreeze({
         ]
       }
     ],
-    "documentDigest": "sha256:87fd73a25c5a6216ddfde32442919895a7158ddc89e8e26a8d6a86f325c7e265"
+    "documentDigest": "sha256:3a38cf03d3d74dac8f060d2e9c16c6a9e697198d6c5394274df6e0ef138d3cb0"
   },
   "skills.json": {
     "kind": "skill-catalog",
@@ -4318,12 +4318,12 @@ export const CANONICAL_REGISTRIES = deepFreeze({
       },
       {
         "skillId": "planr-plan",
-        "skillVersion": "1.5.0",
+        "skillVersion": "1.6.0",
         "description": "Turn a Protocol-compatible specification or product intent into schema-compatible OpenPlanr stories and implementation tasks. Use for planning and decomposition, not implementation.",
         "lifecycle": "active",
         "authorityClass": "planning-write",
         "source": "skills/planr-plan/openplanr.skill.json",
-        "sourceDigest": "sha256:f0f14bc031b18945eea6bce2a733c1038ee623d6eee95afbd61809cb534c56c7",
+        "sourceDigest": "sha256:74a76845fa903eb29b67b1627295420a7a47107774ea72d1f58be1d731d8a8cf",
         "triggerPolicy": {
           "include": [
             "Decompose a specification into user stories and implementation tasks",
@@ -4436,12 +4436,12 @@ export const CANONICAL_REGISTRIES = deepFreeze({
       },
       {
         "skillId": "planr-release",
-        "skillVersion": "1.3.0",
+        "skillVersion": "1.4.0",
         "description": "Choose and maintain a product's versioning scheme, classify shipped changes, and write user-facing changelogs or release notes. Use for SemVer or CalVer decisions, version bumps, release cadence, and preparing a versioned release after landing.",
         "lifecycle": "active",
         "authorityClass": "release-preparation",
         "source": "skills/planr-release/openplanr.skill.json",
-        "sourceDigest": "sha256:167271f868b1f82de306fb66444c6bb3541cfb7ca553f602213922336618d3f8",
+        "sourceDigest": "sha256:c3def69f96b24589059b00c425de62981ac7f705d70611e8f43d6cd2dd2dc0e8",
         "triggerPolicy": {
           "include": [
             "Choose the next SemVer or CalVer version and write user-facing release notes",
@@ -4877,7 +4877,7 @@ export const CANONICAL_REGISTRIES = deepFreeze({
       }
     ],
     "compatibilityAliases": [],
-    "documentDigest": "sha256:8cd6ae30df680d6b4d3789f1f42d52219649f49b62c9503249c6c30bccc3575c"
+    "documentDigest": "sha256:758fefa2e0931bac69682cc369dd71579c6aa47a33897416220fb1fb8bb8c4ae"
   },
   "outputs.json": {
     "kind": "output-catalog",

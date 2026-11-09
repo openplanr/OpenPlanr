@@ -164,6 +164,31 @@ describe('openplanr release collect', { timeout: 60_000 }, () => {
     expect(failure.problem).toContain('v9.9.9');
   });
 
+  it('captures a multi-line breaking footer up to the next footer token', () => {
+    const root = repo();
+    commit(
+      root,
+      'a.md',
+      'fix: tighten parser\n\nBody text.\n\nBREAKING CHANGE: empty input is rejected\nand whitespace-only input too.\nRefs: #12',
+    );
+    const { status, report } = collect(root);
+    expect(status).toBe(0);
+    expect(report.commits[0].breakingNotes).toEqual([
+      'empty input is rejected\nand whitespace-only input too.',
+    ]);
+  });
+
+  it('rejects a --since that is not a calendar date', () => {
+    const root = repo();
+    commit(root, 'a.md', 'chore: one');
+    for (const since of ['2026-02-30', '2026-13-01', 'yesterday']) {
+      const result = run(root, ['release', 'collect', '--json', '--since', since]);
+      expect(result.status, since).toBe(1);
+      expect(JSON.parse(result.stdout)).toMatchObject({ code: 'E_RELEASE_SINCE_INVALID' });
+    }
+    expect(collect(root, ['--since', '2024-02-29']).status).toBe(0);
+  });
+
   it('fails outside a git repository', () => {
     const root = mkdtempSync(path.join(tmpdir(), 'openplanr-release-nogit-'));
     roots.push(root);
