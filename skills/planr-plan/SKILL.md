@@ -53,8 +53,7 @@ Select the exact registered identity from the host's roster; Claude plugin
 agents use names such as `planr:planr-specification`. Give each worker its outcome,
 authoritative paths, relevant decisions, file ownership, verification requirements,
 and concise return expectations. Parallel workers need disjoint writes or an
-agreed interface. Explain the delegation's purpose briefly in commentary.
-When the host lacks the native role, perform the work sequentially in this session
+agreed interface. When the host lacks the native role, perform the work sequentially in this session
 and disclose capability limitations; never claim an unavailable specialist ran.
 
 ## Choose where the plan goes
@@ -103,8 +102,9 @@ Before finishing, check directly that every story and task frontmatter is
 valid, every acceptance ID is mapped through `acceptanceRefs` and named under
 `## Test Requirements`, and no ID repeats an existing one. When
 `command -v openplanr` succeeds and a `SPEC-NNN` exists,
-`openplanr spec sync <SPEC-ID> --dry-run` adds an orphan and schema-drift check
-and writes nothing. Do not route semantic work to a CLI fallback.
+`openplanr spec validate-plan <SPEC-ID>` also checks the spec's stories and
+tasks, and `openplanr spec sync <SPEC-ID> --dry-run` adds an orphan and
+schema-drift check; both write nothing. Do not route semantic work to a CLI fallback.
 
 ## Return
 
@@ -121,8 +121,7 @@ instead of repeating every path in chat.
   (Codex/ChatGPT) or the `planr-ship` rule (Cursor). In minimal mode, name the
   task number or file instead of a selector.
 
-Mention the planning layout or consulted lenses only when they explain a material
-choice. Follow [the shared return rules](references/return-contract.md).
+Mention the layout or lenses only when they explain a material choice. Follow [the shared return rules](references/return-contract.md).
 
 When the OpenPlanr dashboard is running, the planned graph is browsable at
 `#/board`; open one story at `#/detail/<US-###>`.

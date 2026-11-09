@@ -642,6 +642,10 @@
       "classification": "deterministic-preserved"
     },
     {
+      "path": "spec validate-plan",
+      "classification": "deterministic-preserved"
+    },
+    {
       "path": "spec promote",
       "classification": "deterministic-preserved"
     },
@@ -739,6 +743,14 @@
     },
     {
       "path": "search",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "release",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "release collect",
       "classification": "deterministic-preserved"
     },
     {

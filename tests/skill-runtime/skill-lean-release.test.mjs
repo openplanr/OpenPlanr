@@ -39,6 +39,16 @@ test('collection names a base revision, reads bodies and footers, and surfaces g
   assert.match(skill, /never read it as an empty window/);
 });
 
+test('collection calls openplanr release collect when present and keeps the git steps', () => {
+  const text = skill.replace(/\s+/g, ' ');
+  assert.match(
+    text,
+    /With `openplanr` on PATH, `openplanr release collect --json` \(plus step 1's `--since`\) does steps 1 to 5; otherwise run each git command/,
+  );
+  assert.match(skill, /`git log <range> --no-merges --pretty=format:'%h %s'`/);
+  assert.match(read('packages/cli/docs/CLI.md'), /### `openplanr release collect`/);
+});
+
 test('the bodies command surfaces a footer-only breaking change the subject hides', () => {
   const cwd = mkdtempSync(join(tmpdir(), 'release-bodies-'));
   try {

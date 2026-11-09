@@ -2029,7 +2029,7 @@
       "source": "skills/planr-plan/openplanr.skill.json",
       "entrypoint": "skills/planr-plan/SKILL.md",
       "description": "Turn a Protocol-compatible specification or product intent into schema-compatible OpenPlanr stories and implementation tasks. Use for planning and decomposition, not implementation.",
-      "sourceDigest": "sha256:e22aad1755b17e2a91839487ded683c7ee1c78f73e8c3527143713f145641d71",
+      "sourceDigest": "sha256:e03bceb8cfc2c894ea4825bd7032ce6f109d52fc0bc12d1f8e2a5737af3ce13c",
       "resources": [
         {
           "path": "agents/openai.yaml",
@@ -2144,11 +2144,11 @@
     },
     {
       "id": "planr-plan-review",
-      "version": "1.1.0",
+      "version": "1.2.0",
       "source": "skills/planr-plan-review/openplanr.skill.json",
       "entrypoint": "skills/planr-plan-review/SKILL.md",
       "description": "Review an OpenPlanr plan for product, engineering, design, and developer-experience problems. Use after planning and before implementation to improve the plan.",
-      "sourceDigest": "sha256:bef96331f6c0ba386d16c6954d86b968c292a39b5d2cc2162262b3c56e9eae23",
+      "sourceDigest": "sha256:d87c78b1586f94bab5e4b20f4b8cf8b0c3c2ce701d14ffe425fbb512f4af7553",
       "resources": [
         {
           "path": "agents/openai.yaml",
@@ -2191,11 +2191,11 @@
     },
     {
       "id": "planr-release",
-      "version": "1.3.0",
+      "version": "1.4.0",
       "source": "skills/planr-release/openplanr.skill.json",
       "entrypoint": "skills/planr-release/SKILL.md",
       "description": "Choose and maintain a product's versioning scheme, classify shipped changes, and write user-facing changelogs or release notes. Use for SemVer or CalVer decisions, version bumps, release cadence, and preparing a versioned release after landing.",
-      "sourceDigest": "sha256:4a161866c721b2f5b357d9d9032a24edcd6a8b943bafbf8c5c3aed6a85a421f4",
+      "sourceDigest": "sha256:c4c8bc8cc8668ebb8949e078f1a1ed234c757823fd9dd6071aacdf2129e34859",
       "resources": [
         {
           "path": "agents/openai.yaml",

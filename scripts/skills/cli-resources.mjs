@@ -12,6 +12,11 @@ export const CLI_GENERATED_RESOURCES = Object.freeze([
       executable: false,
     },
     {
+      source: `packages/protocol/src/planning-contracts.${extension}`,
+      destination: `packages/cli/lib/planning-contracts.${extension}`,
+      executable: false,
+    },
+    {
       source: `packages/artifact/lib/artifact/internal/credential-writer.${extension}`,
       destination: `packages/cli/lib/credential-writer.${extension}`,
       executable: false,
