@@ -4,6 +4,7 @@ import { mkdir, mkdtemp, readdir, readFile, realpath, rm, writeFile } from 'node
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import test from 'node:test';
+import { agentEnvironment } from '../../packages/pipeline/lib/delegate/child-environment.mjs';
 import { captureFileState, gitFileState } from '../../packages/pipeline/lib/delegate/custody.mjs';
 import { snapshotTip } from '../../packages/pipeline/lib/delegate/handoff.mjs';
 import {
@@ -57,26 +58,31 @@ const CREDENTIALS = {
   CODEX_API_KEY: 'codex-key',
   CURSOR_API_KEY: 'cursor-key',
 };
-const ENGINE_SETTINGS = {
+// Engine variables no adapter reads; ANTHROPIC_CUSTOM_HEADERS often carries an Authorization header.
+const UNREAD_ENGINE_SETTINGS = {
+  ANTHROPIC_CUSTOM_HEADERS: 'Authorization: Bearer header-secret',
   CLAUDE_FIXTURE_SETTING: 'claude-setting',
-  OPENAI_FIXTURE_SETTING: 'openai-setting',
+  OPENAI_ORGANIZATION: 'openai-organization',
   CURSOR_FIXTURE_SETTING: 'cursor-setting',
 };
 
-for (const [engine, command, own, chosen] of [
-  ['claude', 'claude', 'CLAUDE_FIXTURE_SETTING', 'ANTHROPIC_API_KEY'],
-  ['codex', 'codex', 'OPENAI_FIXTURE_SETTING', 'OPENAI_API_KEY'],
-  ['cursor', 'agent', 'CURSOR_FIXTURE_SETTING', 'CURSOR_API_KEY'],
+for (const [engine, command, configVariable, chosen] of [
+  ['claude', 'claude', 'CLAUDE_CONFIG_DIR', 'ANTHROPIC_API_KEY'],
+  ['codex', 'codex', 'CODEX_HOME', 'OPENAI_API_KEY'],
+  ['cursor', 'agent', null, 'CURSOR_API_KEY'],
 ]) {
-  test(`${engine} children get their engine settings, no credential unless chosen, and no unrelated token`, async (t) => {
+  test(`${engine} children get their config directory, no credential unless chosen, and no unrelated variable`, async (t) => {
     const { base, bin, root } = await workspace(t);
+    const configDirectory = join(base, 'native-config');
+    await mkdir(configDirectory);
     const env = {
       PATH: `${bin}:/usr/bin:/bin`,
       HOME: base,
       LANG: 'C.UTF-8',
       ...UNRELATED,
       ...CREDENTIALS,
-      ...ENGINE_SETTINGS,
+      ...UNREAD_ENGINE_SETTINGS,
+      ...(configVariable ? { [configVariable]: configDirectory } : {}),
       PROFILE_EXTRA: 'named-extra',
     };
     for (const allowedEnv of [['PROFILE_EXTRA'], ['PROFILE_EXTRA', chosen]]) {
@@ -89,21 +95,51 @@ for (const [engine, command, own, chosen] of [
       const seen = await recordedEnvironments(log);
       assert.ok(seen.length > 0, `${engine} was never started`);
       for (const child of seen) {
-        for (const name of Object.keys(UNRELATED)) assert.equal(child[name], undefined, name);
+        for (const name of [...Object.keys(UNRELATED), ...Object.keys(UNREAD_ENGINE_SETTINGS)])
+          assert.equal(child[name], undefined, name);
         for (const name of Object.keys(CREDENTIALS))
           assert.equal(
             child[name],
             allowedEnv.includes(name) ? CREDENTIALS[name] : undefined,
             `${name} with allowedEnv ${allowedEnv}`,
           );
-        for (const name of Object.keys(ENGINE_SETTINGS))
-          assert.equal(child[name], name === own ? ENGINE_SETTINGS[name] : undefined, name);
+        if (configVariable) assert.equal(child[configVariable], configDirectory);
         assert.equal(child.PROFILE_EXTRA, 'named-extra');
         assert.equal(child.LANG, 'C.UTF-8');
       }
     }
   });
 }
+
+test('each engine receives only the routing names its adapter reads', () => {
+  const source = {
+    PATH: '/usr/bin',
+    ANTHROPIC_BASE_URL: 'http://127.0.0.1:1234',
+    OPENAI_BASE_URL: 'http://127.0.0.1:5678',
+    CURSOR_API_ENDPOINT: 'https://cursor.example.test',
+    AWS_REGION: 'eu-west-1',
+    AWS_SESSION_TOKEN: 'aws-token',
+    CLOUD_ML_REGION: 'us-east5',
+  };
+  const names = (kind, extra = {}) =>
+    Object.keys(agentEnvironment({ kind, allowedEnv: [] }, { ...source, ...extra })).sort();
+  assert.deepEqual(names('claude'), ['ANTHROPIC_BASE_URL', 'PATH']);
+  assert.deepEqual(names('claude', { CLAUDE_CODE_USE_BEDROCK: '1' }), [
+    'ANTHROPIC_BASE_URL',
+    'AWS_REGION',
+    'CLAUDE_CODE_USE_BEDROCK',
+    'PATH',
+  ]);
+  assert.deepEqual(names('claude', { CLAUDE_CODE_USE_VERTEX: '1' }), [
+    'ANTHROPIC_BASE_URL',
+    'CLAUDE_CODE_USE_VERTEX',
+    'CLOUD_ML_REGION',
+    'PATH',
+  ]);
+  assert.deepEqual(names('codex'), ['OPENAI_BASE_URL', 'PATH']);
+  assert.deepEqual(names('cursor'), ['CURSOR_API_ENDPOINT', 'PATH']);
+  assert.deepEqual(names('generic'), ['PATH']);
+});
 
 test('parent-selected checks receive the base environment plus only the names they list', async (t) => {
   const { base, root } = await workspace(t);

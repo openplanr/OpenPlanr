@@ -992,10 +992,10 @@ and exits 1, for example `E_DELEGATE_INPUT`, `E_RUN_NOT_FOUND`, `E_CAPSULE_SECRE
 `--json`, the command prints a short summary and a `Next:` line.
 
 Each child process gets an explicit environment: paths, locale, terminal, proxy and
-certificate variables. The native agent adds its own engine's settings (`ANTHROPIC_*`
-and `CLAUDE_*`, `OPENAI_*` and `CODEX_*`, or `CURSOR_*`) except credential names
-(containing `KEY`, `TOKEN`, `SECRET`, `PASSWORD`, `CREDENTIAL` or `AUTH`), and the
-profile's `allowedEnv`; a check adds the names in its `env` list. A credential variable,
+certificate variables. The native agent adds only the routing variables delegation reads
+(for example `CLAUDE_CONFIG_DIR`, `ANTHROPIC_BASE_URL`, `CODEX_HOME`, `OPENAI_BASE_URL`,
+`CURSOR_API_ENDPOINT`) and the profile's `allowedEnv`; a check adds the names in its
+`env` list. A credential variable,
 such as a token an MCP server reads, reaches the agent only through a profile that lists
 it in `allowedEnv`; otherwise the agent uses its own login.
 

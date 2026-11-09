@@ -47,34 +47,38 @@ const BASE_NAMES = Object.freeze([
 ]);
 const BASE_PREFIXES = Object.freeze(['LC_', 'XDG_']);
 
-// Each native CLI receives only its own configuration and provider-routing variables; credential
-// variables (see CREDENTIAL_NAME) pass only when the profile names them in `allowedEnv`.
-const ENGINE_PREFIXES = Object.freeze({
-  claude: ['ANTHROPIC_', 'CLAUDE_'],
-  codex: ['OPENAI_', 'CODEX_', 'AZURE_OPENAI_'],
-  cursor: ['CURSOR_'],
+// Each native CLI receives only the configuration and routing variables the adapters read to
+// compute its destination, so the preview matches what the child sees. Credentials pass only
+// when the profile names them in `allowedEnv`.
+const ENGINE_NAMES = Object.freeze({
+  claude: [
+    'CLAUDE_CONFIG_DIR',
+    'ANTHROPIC_BASE_URL',
+    'CLAUDE_CODE_USE_BEDROCK',
+    'CLAUDE_CODE_USE_VERTEX',
+    'CLAUDE_CODE_USE_FOUNDRY',
+  ],
+  codex: ['CODEX_HOME', 'OPENAI_BASE_URL'],
+  cursor: ['CURSOR_API_ENDPOINT'],
   generic: [],
 });
-// Claude Code on Bedrock or Vertex reads the cloud provider's own region and profile variables.
-const CLAUDE_PROVIDER_PREFIXES = Object.freeze({
-  CLAUDE_CODE_USE_BEDROCK: ['AWS_'],
-  CLAUDE_CODE_USE_VERTEX: ['GOOGLE_', 'GCLOUD_', 'CLOUDSDK_', 'CLOUD_ML_'],
+// Claude Code on Bedrock or Vertex reads the cloud provider's region, project and profile names.
+const CLAUDE_PROVIDER_NAMES = Object.freeze({
+  CLAUDE_CODE_USE_BEDROCK: ['AWS_REGION', 'AWS_DEFAULT_REGION', 'AWS_PROFILE'],
+  CLAUDE_CODE_USE_VERTEX: [
+    'CLOUD_ML_REGION',
+    'ANTHROPIC_VERTEX_PROJECT_ID',
+    'GOOGLE_CLOUD_PROJECT',
+  ],
 });
 
 function copyNames(output, source, names) {
   for (const name of names) if (typeof source[name] === 'string') output[name] = source[name];
 }
 
-const CREDENTIAL_NAME = /KEY|TOKEN|SECRET|PASSWORD|CREDENTIAL|AUTH/u;
-
-function copyPrefixes(output, source, prefixes, { credentials = true } = {}) {
-  if (!prefixes.length) return;
+function copyPrefixes(output, source, prefixes) {
   for (const [name, value] of Object.entries(source))
-    if (
-      typeof value === 'string' &&
-      prefixes.some((prefix) => name.startsWith(prefix)) &&
-      (credentials || !CREDENTIAL_NAME.test(name))
-    )
+    if (typeof value === 'string' && prefixes.some((prefix) => name.startsWith(prefix)))
       output[name] = value;
 }
 
@@ -95,13 +99,13 @@ export function gitEnvironment(overrides = {}, source = process.env) {
   return { ...baseEnvironment(source), ...overrides };
 }
 
-/** The environment for one agent: base, its engine's non-credential variables, and the profile's `allowedEnv`. */
+/** The environment for one agent: base, the routing names its adapter reads, and the profile's `allowedEnv`. */
 export function agentEnvironment(profile, source = process.env) {
   const output = baseEnvironment(source);
-  copyPrefixes(output, source, ENGINE_PREFIXES[profile.kind] ?? [], { credentials: false });
+  copyNames(output, source, ENGINE_NAMES[profile.kind] ?? []);
   if (profile.kind === 'claude')
-    for (const [selector, prefixes] of Object.entries(CLAUDE_PROVIDER_PREFIXES))
-      if (enabled(source[selector])) copyPrefixes(output, source, prefixes, { credentials: false });
+    for (const [selector, names] of Object.entries(CLAUDE_PROVIDER_NAMES))
+      if (enabled(source[selector])) copyNames(output, source, names);
   copyNames(output, source, profile.allowedEnv ?? []);
   if (profile.configDir && profile.kind === 'claude') output.CLAUDE_CONFIG_DIR = profile.configDir;
   if (profile.configDir && profile.kind === 'codex') output.CODEX_HOME = profile.configDir;

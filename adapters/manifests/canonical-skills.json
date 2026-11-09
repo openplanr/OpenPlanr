@@ -660,7 +660,7 @@
       "source": "skills/planr-delegate/openplanr.skill.json",
       "entrypoint": "skills/planr-delegate/SKILL.md",
       "description": "Coordinate an explicitly requested implementation with Claude Code, Codex or Cursor, then independently review and integrate its observed changes. Use when the user asks another coding agent to implement.",
-      "sourceDigest": "sha256:24359219f2dbde3c0f07ba5268377e70b2ead0b75694fe9df757521b462078e3",
+      "sourceDigest": "sha256:683d16cd0b493a89302040ccd8e425e2ed19af2ab52803150c3d656d5aa9b4f1",
       "resources": [
         {
           "path": "agents/openai.yaml",
@@ -718,7 +718,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:117b46b9255ea59c7bf7706d0824082937219bf2bb3b77c79be21d68ac936bae"
+          "digest": "sha256:75c33a9f24447c33814b55f25361deb7b5403a4728646a0effc8caa76f811443"
         },
         {
           "path": "references/openplanr-cli.md",
@@ -742,7 +742,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:93b3e09e4447b19ff6443502fee87ef7c540d3e4d52d70a7f1d17e9504702e84"
+          "digest": "sha256:650db332ca2133cf465dcb6dde364f569a34dfbcf41fb26ef92305f96f9ec2e0"
         },
         {
           "path": "references/run-handoff.md",

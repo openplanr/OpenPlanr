@@ -39,18 +39,18 @@ Each child process gets an explicit environment, never the whole parent environm
 - every child: `PATH`, `HOME`, user, shell, temporary-directory, terminal, locale
   (`LANG`, `LC_*`), `XDG_*`, proxy and certificate variables, and the Windows system
   variables;
-- the native agent also gets its own engine's settings (Claude Code `ANTHROPIC_*` and
-  `CLAUDE_*`, plus `AWS_*` with `CLAUDE_CODE_USE_BEDROCK` or `GOOGLE_*`, `GCLOUD_*`,
-  `CLOUDSDK_*` and `CLOUD_ML_*` with `CLAUDE_CODE_USE_VERTEX`; Codex `OPENAI_*`,
-  `CODEX_*`, `AZURE_OPENAI_*`; Cursor `CURSOR_*`), except names containing `KEY`,
-  `TOKEN`, `SECRET`, `PASSWORD`, `CREDENTIAL` or `AUTH`, and the profile's
-  `allowedEnv`;
+- the native agent also gets only the routing names its adapter reads: Claude Code
+  `CLAUDE_CONFIG_DIR`, `ANTHROPIC_BASE_URL` and the `CLAUDE_CODE_USE_BEDROCK`,
+  `CLAUDE_CODE_USE_VERTEX` and `CLAUDE_CODE_USE_FOUNDRY` selectors (with Bedrock,
+  `AWS_REGION`, `AWS_DEFAULT_REGION` and `AWS_PROFILE`; with Vertex, `CLOUD_ML_REGION`,
+  `ANTHROPIC_VERTEX_PROJECT_ID` and `GOOGLE_CLOUD_PROJECT`); Codex `CODEX_HOME` and
+  `OPENAI_BASE_URL`; Cursor `CURSOR_API_ENDPOINT`; plus the profile's `allowedEnv`;
 - a check: the names in its `env` list.
 
-The native CLI signs in with its own login in its config directory (`CLAUDE_CONFIG_DIR`,
-`CODEX_HOME`). A credential variable such as `ANTHROPIC_API_KEY`, a token an MCP server
-reads, or `NPM_TOKEN` for a private registry reaches the agent only when the user saves
-a profile that names it in `allowedEnv`.
+The native CLI signs in with its own login in its config directory. Any other variable,
+such as an API key, a custom header, a token an MCP server reads, or `NPM_TOKEN` for a
+private registry, reaches the agent only when the user saves a profile that names it in
+`allowedEnv`.
 
 ## Prepare a run
 

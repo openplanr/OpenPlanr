@@ -76,13 +76,15 @@ async function fixture(t, kind = 'codex', mode = '') {
     'Required ignored context: use implemented then corrected.\n',
   );
   const executable = join(bin, kind === 'cursor' ? 'agent' : kind);
-  // Native children receive only their own engine's variables, so the fixture control uses that prefix.
-  const modeVariable = `${kind.toUpperCase()}_FIXTURE_MODE`;
+  // Native children receive an allowlisted environment, so the fixture reads its mode from HOME.
+  const modeFile = join(base, 'fixture-mode');
+  const setMode = (next) => writeFile(modeFile, next);
+  await setMode(mode);
   await writeFile(
     executable,
     `#!${process.execPath}
 const fs=require('node:fs'),path=require('node:path');
-const args=process.argv.slice(2),kind=${JSON.stringify(kind)},mode=process.env[${JSON.stringify(modeVariable)}];
+const args=process.argv.slice(2),kind=${JSON.stringify(kind)},mode=fs.readFileSync(path.join(process.env.HOME,'fixture-mode'),'utf8');
 if(args.includes('--help')) { console.log('--print --output-format stream-json --resume --session-id --add-dir --json resume --sandbox --auto-review --workspace'); process.exit(0); }
 if(args.includes('status')) { console.log(JSON.stringify({isAuthenticated:true,email:'account-is-not-evidence@example.test'})); process.exit(0); }
 const resume=args.includes('--resume')||args.includes('resume');
@@ -127,7 +129,6 @@ let input='';process.stdin.on('data',chunk=>input+=chunk);process.stdin.on('end'
     ...process.env,
     HOME: base,
     PATH: `${bin}:/usr/bin:/bin`,
-    [modeVariable]: mode,
     TRUSTED_EXTENSION: 'unrelated-value',
     ANTHROPIC_BASE_URL: '',
     OPENAI_BASE_URL: '',
@@ -157,7 +158,7 @@ let input='';process.stdin.on('data',chunk=>input+=chunk);process.stdin.on('end'
     bin,
     executable,
     env,
-    modeVariable,
+    setMode,
     profile,
     profileDirectory,
     runDirectory,
@@ -423,9 +424,10 @@ test('native permission denial remains actionable and continues the same session
     code: 'E_INTEGRATION_RUN',
     message: /resume with this runId and an answer or correction/,
   });
+  await f.setMode('');
   const resumed = await resumeDelegateRun({
     ...input,
-    env: { ...f.env, [f.modeVariable]: '' },
+    env: f.env,
     correction: 'Native approval is resolved; continue the task.',
   });
   assert.equal(resumed.status, 'completed');
@@ -445,9 +447,10 @@ for (const mode of ['readonly-command', 'readonly-summary', 'readonly-capability
       await readFile(join(prepared.record.worktreePath, 'source.txt'), 'utf8'),
       'base\n',
     );
+    await f.setMode('');
     const resumed = await resumeDelegateRun({
       ...input,
-      env: { ...f.env, [f.modeVariable]: '' },
+      env: f.env,
       correction: 'Native approval is resolved; implement the same task.',
     });
     assert.equal(resumed.status, 'completed');
@@ -1480,9 +1483,10 @@ test('failed native termination retains custody and blocks resume until recovery
   const record = await readRunRecord(prepared.runId, { directory: f.runDirectory });
   assert.equal(record.delegateProcess, null);
   assert.equal(record.delegateTerminationConfirmed, true);
+  await f.setMode('');
   const resumed = await resumeDelegateRun({
     ...input,
-    env: { ...f.env, [f.modeVariable]: '' },
+    env: f.env,
     correction: 'Continue the same task after native process recovery.',
   });
   assert.equal(resumed.status, 'completed');

@@ -262,11 +262,11 @@ async function syntheticAdapter(t, engine, mode) {
   await writeFile(
     executable,
     `#!${process.execPath}
-if(process.argv.includes('--help')) { if(process.env.CODEX_FIXTURE_PROBE_FAILURE) { console.log('Not logged in sk-'+ 'xY'.repeat(15)); process.exit(1); } console.log('--print --output-format stream-json --resume --session-id --add-dir --json resume'); process.exit(0); }
+if(process.argv.includes('--help')) { if(require('node:fs').existsSync(require('node:path').join(process.env.HOME,'probe-failure'))) { console.log('Not logged in sk-'+ 'xY'.repeat(15)); process.exit(1); } console.log('--print --output-format stream-json --resume --session-id --add-dir --json resume'); process.exit(0); }
 const emit = event => console.log(JSON.stringify(event));
 process.stdin.resume(); process.stdin.on('end', () => {
 const engine = ${JSON.stringify(engine)}, mode = ${JSON.stringify(mode)};
-if (mode === 'stderr') { if(process.env.CODEX_FIXTURE_OBSERVED_SESSION) emit({type:'thread.started',thread_id:'exact'}); process.stderr.write('HTTP 500 Model is unloaded. password=do-not-retain'); process.exitCode = 1; return; }
+if (mode === 'stderr') { if(require('node:fs').existsSync(require('node:path').join(process.env.HOME,'observed-session'))) emit({type:'thread.started',thread_id:'exact'}); process.stderr.write('HTTP 500 Model is unloaded. password=do-not-retain'); process.exitCode = 1; return; }
 if (engine === 'codex') { emit({type:'thread.started',thread_id:'exact'}); emit({type:'item.started',item:{type:'command_execution',command:'echo secret'}}); emit({type:'item.completed',item:{type:'agent_message',text:'Completed'}}); emit({type:'turn.completed'}); }
 else { emit({type:'system',subtype:'init',session_id:'exact'}); if (engine === 'claude') emit({type:'assistant',session_id:'exact',message:{content:[{type:'tool_use',id:'read-1',name:'Read',input:{file_path:process.cwd()+'/source.ts'}}]}}); else { emit({type:'tool_call',subtype:'started',session_id:'exact',tool_call:{readToolCall:{args:{path:'source.ts'}}}}); emit({type:'assistant',session_id:'exact',message:{content:[{type:'text',text:'Completed'}]}}); } emit({type:'result',subtype:'success',is_error:false,session_id:'exact',result:'Completed'}); }
 });
@@ -339,29 +339,33 @@ test('dispatch returns the recognized native failure and exact destination direc
     runDirectory,
     env,
   });
-  const denied = await delegateRunnerCommand('dispatch', {
-    runId: fresh.runId,
-    runDirectory,
-    env: { ...env, CODEX_FIXTURE_PROBE_FAILURE: '1' },
-  });
+  // Native children receive an allowlisted environment, so fixture flags are files under HOME.
+  const flag = (name, on) =>
+    on ? writeFile(join(input.cwd, name), '') : rm(join(input.cwd, name), { force: true });
+  await flag('probe-failure', true);
+  const denied = await delegateRunnerCommand('dispatch', { runId: fresh.runId, runDirectory, env });
+  await flag('probe-failure', false);
   assert.equal(denied.status, 'prepared');
   assert.equal(
     denied.diagnostic.details.native.reason,
     'Native CLI reported that it is not logged in.',
   );
   assert.ok(!JSON.stringify(denied).includes(`sk-${'xY'.repeat(15)}`));
+  await flag('observed-session', true);
   const started = await delegateRunnerCommand('dispatch', {
     runId: fresh.runId,
     runDirectory,
-    env: { ...env, CODEX_FIXTURE_OBSERVED_SESSION: '1' },
+    env,
   });
+  await flag('observed-session', false);
   assert.equal(started.status, 'blocked');
   assert.equal(started.record.backendSessionId, 'exact');
+  await flag('probe-failure', true);
   const resumed = await delegateRunnerCommand('resume', {
     runId: fresh.runId,
     runDirectory,
     correction: 'Retry the observed failure.',
-    env: { ...env, CODEX_FIXTURE_PROBE_FAILURE: '1' },
+    env,
   });
   assert.equal(resumed.status, 'blocked');
   assert.equal(
