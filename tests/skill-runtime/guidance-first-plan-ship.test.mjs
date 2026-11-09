@@ -85,11 +85,11 @@ test('Ship discovery lists gated CI jobs as conditional and always names the git
   );
 });
 
-test('Ship discovery reads every workflow file, including dedicated browser and scheduled ones', () => {
+test('Ship discovery reads every workflow file, including dedicated browser ones', () => {
   const ship = read('skills/planr-ship/SKILL.md').replace(/\s+/gu, ' ');
   assert.match(
     ship,
-    /Read every workflow file, not only the main one: dedicated browser, end-to-end, sandbox and scheduled workflows are sources too/u,
+    /Read every workflow file whose triggers fire for the change, not only the main one: dedicated browser, end-to-end and sandbox workflows are sources too/u,
   );
 });
 
