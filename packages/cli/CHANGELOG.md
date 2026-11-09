@@ -1,5 +1,36 @@
 # Changelog
 
+## 3.6.0
+
+### Minor Changes
+
+- cb976b0: `/ship` and `/investigate` now file findings as backlog items with the agent's own file tools, so the plugin no longer needs Node for this. They re-check the next free ID right before writing, never overwrite an existing item, and write the same file `openplanr backlog add` does. If `openplanr` is on your `PATH`, they can still use it. The one-time "install the CLI" hint is gone.
+- b9bd7ff: Add scheduling decisions and file paths to backlog items. Filter backlog lists by open status, affected files, or missing scheduling decisions, including with custom templates.
+- eed3925: Export readable company projects, artifact revisions, verified content and reviews into a local directory with an integrity manifest for hand-over and offboarding.
+- 73aee8e: Operate and its CEO, CTO, CPO, CMO, COO, Challenger and Chair reviews now check their notes against a written checklist (`references/note-checklist.md`) instead of running a bundled Node script. Plugin installs no longer ship `scripts/validate-note.mjs` or `runtime/operate/`, so the check works without Node. If `openplanr` is on your PATH, `openplanr operate validate-note` still runs the same checks. The checklist reports a missing section once, treats a note without a contract line as valid, and ends with one sorted `CODES:` line.
+- 1bfd903: `/operate` now runs one agent through all seven lenses and writes one report by default instead of fanning out to a subagent per lens. With no `.planr/` folder it answers in chat. It still fans out to independent advisors, the Challenger and the Chair when you name a roster or ask for independent reviewers, and `cycle.md`, `brief.md` and per-lens notes are written only then or when you ask to keep the cycle. The coverage table, decision-changing gaps and a source for every recommendation are unchanged, and notes are validated with `openplanr operate validate-note` when the CLI is installed.
+- a13753c: Plan now picks story and task IDs by following written steps, so the OpenPlanr plugins for Claude Code, Codex and Cursor no longer ship a script for it and Plan needs no Node to number your work.
+  
+  Plan reads `.id-sequence.json` and your existing specs, takes the next free `US-` and `T-` number, never overwrites an existing file, and moves the sequence forward in the same format the CLI writes. Projects planned with either one keep counting from the same place.
+  
+  Plan waits for, and then stops on, the lock an `openplanr` command holds while it reserves IDs. It can't take that lock itself, so two Plan sessions, or a Plan session and an `openplanr` command, working in the same checkout at the same moment can still pick the same number. Plan in one session at a time, or create specs with the `openplanr` CLI when you need that guarantee.
+- 1bfd903: `/release` now does only what you ask. Asking for release notes or a proposed version no longer writes `CHANGELOG.md`, bumps a version or runs tests; those happen when you ask to prepare or cut a release. Collecting changes now reads commit bodies and footers, so a footer-only breaking change is no longer missed, records the base and head revisions, and reports a failing git command instead of treating it as an empty release.
+- 551887d: The Release skill now gathers what shipped by following written steps with `git`, instead of running a bundled shell script. The OpenPlanr plugins for Claude Code, Codex and Cursor no longer ship that script.
+  
+  - It finds the window the same way: your date, else since the last tag, else all history.
+  - It lists the five most recent tags, the commits in the window without merges, and the files touched grouped by area.
+  - It lists merged pull requests only when they help and `gh` is installed, and it tells you if the `gh` query fails.
+  
+  Nothing changes in how you ask for a release, with or without the CLI installed.
+- eb40e9b: `/ship` now finds verification checks by reading the task's test requirements, repository instructions, package scripts and CI config itself, so the plugin no longer bundles a discovery script that needed Node. If `openplanr` is on your `PATH`, `openplanr ship checks` still adds its completeness report. It always lists the pre-commit and pre-push hooks when present, and lists every CI job a `changes` job gates as conditional, running it when a local equivalent exists.
+- 1bfd903: Spec, Plan, Plan Review, Operate, Ship and Release now read the files your request names plus `AGENTS.md` and `CLAUDE.md` in one batch, and widen the search only when something is missing or contradictory. Their closing summaries share one set of rules, and Spec checks its work with `openplanr spec validate <SPEC-ID>` when the CLI is installed, while Plan can add `openplanr spec sync <SPEC-ID> --dry-run` to its own checks.
+
+### Patch Changes
+
+- b9bd7ff: Keep backlog listings available when individual items contain invalid metadata, with warnings identifying each affected file and field. Read block-list file paths, treat blank scheduling values as absent, and normalize empty metadata from custom templates.
+  
+  Linear label IDs now persist correctly between pushes.
+
 ## 3.5.0
 
 ### Minor Changes
