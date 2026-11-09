@@ -12,11 +12,11 @@ import {
   planWritableScopes,
   sameGitState,
   validateWorktreeCustody,
-} from '../../skills/planr-delegate/scripts/custody.mjs';
+} from '../../packages/pipeline/lib/delegate/custody.mjs';
 import {
   createRunRecord,
   updateRunRecord,
-} from '../../skills/planr-delegate/scripts/run-record.mjs';
+} from '../../packages/pipeline/lib/delegate/run-record.mjs';
 
 function git(root, ...args) {
   return execFileSync('git', args, { cwd: root, encoding: 'utf8' }).trim();
@@ -533,7 +533,8 @@ test('ignore inspection failures retain the Git cause and cannot masquerade as a
       '#!/bin/sh\nif [ "$1" = check-ignore ]; then exit 128; fi\nexec /usr/bin/git "$@"\n',
       { mode: 0o700 },
     );
-    const module = new URL('../../skills/planr-delegate/scripts/custody.mjs', import.meta.url).href;
+    const module = new URL('../../packages/pipeline/lib/delegate/custody.mjs', import.meta.url)
+      .href;
     const input = { repositoryRoot: root, worktreeParent, capsule: capsule(['untracked.txt']) };
     const script =
       'import {createWorktreeCustody} from ' +

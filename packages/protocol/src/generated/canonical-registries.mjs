@@ -1438,7 +1438,7 @@ export const CANONICAL_REGISTRIES = deepFreeze({
         "ownerPackage": "openplanr",
         "source": {
           "path": "docs/generated/utility-command-catalog.json",
-          "digest": "sha256:77a16f80e7131820d6d5953263c63b70649dacb8d487bdf6e004305c680975fa"
+          "digest": "sha256:aa78028462cd8cd2d88e8b41d6c5ec8c027e49840c48ac1d994bc50064bd9dbf"
         },
         "authorityClass": "workflow",
         "machineJson": false,
@@ -1627,7 +1627,7 @@ export const CANONICAL_REGISTRIES = deepFreeze({
         "ownerPackage": "openplanr",
         "source": {
           "path": "docs/generated/utility-command-catalog.json",
-          "digest": "sha256:77a16f80e7131820d6d5953263c63b70649dacb8d487bdf6e004305c680975fa"
+          "digest": "sha256:aa78028462cd8cd2d88e8b41d6c5ec8c027e49840c48ac1d994bc50064bd9dbf"
         },
         "authorityClass": "workflow",
         "machineJson": true,
@@ -3009,7 +3009,7 @@ export const CANONICAL_REGISTRIES = deepFreeze({
         ]
       }
     ],
-    "documentDigest": "sha256:d0d004dbd8c824c025fe57459326f2711a930870b1f3d7098fa759ae03219b7b"
+    "documentDigest": "sha256:351f8c1b7741ba6250892375c261c8b6d78e2da60cbfcd10f62676691713dcba"
   },
   "skills.json": {
     "kind": "skill-catalog",
@@ -3693,12 +3693,12 @@ export const CANONICAL_REGISTRIES = deepFreeze({
       },
       {
         "skillId": "planr-delegate",
-        "skillVersion": "0.1.1",
+        "skillVersion": "0.2.0",
         "description": "Coordinate an explicitly requested implementation with Claude Code, Codex or Cursor, then independently review and integrate its observed changes. Use when the user asks another coding agent to implement.",
         "lifecycle": "active",
         "authorityClass": "implementation",
         "source": "skills/planr-delegate/openplanr.skill.json",
-        "sourceDigest": "sha256:f6a7e2a965dff4dab0f6414ae0bcb7289903dfbc2022a88d0528b8b9c0ea2c91",
+        "sourceDigest": "sha256:b966f9e694e90d31202d9814290ab0d97efe6c0cafe495a4809230d5df3d6a8d",
         "triggerPolicy": {
           "include": [
             "Delegate implementation to another coding agent",
@@ -4877,7 +4877,7 @@ export const CANONICAL_REGISTRIES = deepFreeze({
       }
     ],
     "compatibilityAliases": [],
-    "documentDigest": "sha256:1611614140737d2e3a2e8627bb11c464f9529d74642a950c8b49d93fa86106fb"
+    "documentDigest": "sha256:435a5d655d8a9ff8bfb80392991f1ca1ddb787bc87714829fd3178347cb3fb99"
   },
   "outputs.json": {
     "kind": "output-catalog",

@@ -1,10 +1,8 @@
-# Native onboarding and private helper inputs
+# Native onboarding and action inputs
 
-Run `node <installed-skill>/scripts/runner.mjs <action>` with one JSON object on
-stdin. The helper is private skill infrastructure, not a public `openplanr` command.
-The equivalent stdin form includes `"action":"probe"` without a command-line
-action. When both forms supply an action they must agree. Unknown actions return
-the supported action list and usage.
+Run `openplanr delegate <action> --input - --json` with one JSON object on stdin, or
+`--input <file>`. `--run <runId>` sets `runId`. `openplanr delegate <action> --help`
+lists each action; unknown actions return `E_DELEGATE_COMMAND` with the action list.
 
 `probe` accepts `repositoryRoot` and optionally `engine` or `profile`. It discovers
 `claude`, `codex` and Cursor's `agent` on PATH and checks compatible native event
@@ -29,10 +27,30 @@ is unknown or inconsistent, show the diagnostic and resolve the native configura
 before dispatch. Do not silently switch to a cloud default. Unavailable profiles
 remain visible with their exact recovery action. Missing CLIs are not installed
 automatically, and discovery does not establish that a backend is ready.
-The runner blocks conflicting routes and concrete declared/effective destination
+Preparation blocks conflicting routes and concrete declared/effective destination
 mismatches. Its diagnostic names the routing sources and safe origins, without
 printing configuration contents or credentials. Resolve that conflict in the native
-configuration and prepare a new preview; the helper does not strip routing variables.
+configuration and prepare a new preview; delegation does not strip routing variables.
+
+## Environment
+
+Each child process gets an explicit environment, never the whole parent environment:
+
+- every child: `PATH`, `HOME`, user, shell, temporary-directory, terminal, locale
+  (`LANG`, `LC_*`), `XDG_*`, proxy and certificate variables, and the Windows system
+  variables;
+- the native agent also gets only the routing names its adapter reads: Claude Code
+  `CLAUDE_CONFIG_DIR`, `ANTHROPIC_BASE_URL` and the `CLAUDE_CODE_USE_BEDROCK`,
+  `CLAUDE_CODE_USE_VERTEX` and `CLAUDE_CODE_USE_FOUNDRY` selectors (with Bedrock,
+  `AWS_REGION`, `AWS_DEFAULT_REGION` and `AWS_PROFILE`; with Vertex, `CLOUD_ML_REGION`,
+  `ANTHROPIC_VERTEX_PROJECT_ID` and `GOOGLE_CLOUD_PROJECT`); Codex `CODEX_HOME` and
+  `OPENAI_BASE_URL`; Cursor `CURSOR_API_ENDPOINT`; plus the profile's `allowedEnv`;
+- a check: the names in its `env` list.
+
+The native CLI signs in with its own login in its config directory. Any other variable,
+such as an API key, a custom header, a token an MCP server reads, or `NPM_TOKEN` for a
+private registry, reaches the agent only when the user saves a profile that names it in
+`allowedEnv`.
 
 ## Prepare a run
 
@@ -50,8 +68,9 @@ configuration and prepare a new preview; the helper does not strip routing varia
 `taskSelector` can replace `request` when an exact planning task exists.
 `selectedPaths` separately chooses dirty files to copy; other checkout edits remain
 untouched. `preservePaths` adds immutable paths. The returned preview includes the
-complete context inventory, owned worktree, configuration trust and pinned helper.
-Use its runner/integration paths for this run even after a package update.
+complete context inventory, owned worktree and configuration trust. The run keeps a
+private copy of the runtime that prepared it; later CLI versions route the run's
+actions to that copy.
 The context diagnostic separates encoded package size from decoded source bytes,
 reports required and optional file counts and the largest sources, and includes
 measured model capacity when available. It does not invent a tokenizer result or
@@ -91,13 +110,13 @@ A native profile is a convenience for a pinned model or alternate configuration:
 
 Use `profile-preview`, then `profile-enroll` to save a private v2 profile. It has
 no renewal period. Do not put credential values in arguments or records. Native
-configuration/environment is inherited, including trusted hooks, plugins and MCP.
+configuration is inherited, including trusted hooks, plugins and MCP; environment
+variables follow the Environment section above, and `allowedEnv` lists extra names.
 The profile's explicit model stays pinned; an empty model selection preserves the
 native default/automatic routing. Observed models are reported when events expose them.
 
 Existing v1 profile files remain unchanged. They can supply an explicit selection
-for a new native v2 run; retained runs still use their original pinned helper and
-policy. Saving over a legacy native profile is refused; use a new optional name.
+for a new native v2 run; retained runs keep their original runtime copy and policy. Saving over a legacy native profile is refused; use a new optional name.
 Experimental generic adapters retain their versioned enrollment/protocol.
 
 Local server/model probes are diagnostic and send no task content and no
@@ -151,12 +170,12 @@ reports its before/after values or named routing candidates and requires a fresh
 
 `status` and `wait` report live execution duration and the latest observed native
 event. Tool names and safe file references are evidence of activity, not proof
-that the task is complete. Missing events remain unavailable; the helper does not
+that the task is complete. Missing events remain unavailable; delegation does not
 scan unrelated native transcripts.
 
 `abandon` accepts `runId` and optional `runDirectory` for a run that never executed.
 It closes the private record and removes only an owned, unchanged worktree. Active
 processes, retained sessions, setup/verification work, changed custody and unknown
 or modified files require inspection and remain retained. Repeating a successful
-abandon is safe. Existing sessions continue through their original pinned helper;
-new commands do not retroactively replace retained code.
+abandon is safe. Existing runs continue through the runtime copy that prepared them;
+a CLI upgrade never replaces it.

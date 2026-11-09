@@ -510,7 +510,7 @@
     {
       "source": "packages/protocol/registries/commands.json",
       "target": "registry/v1.5.0/commands.json",
-      "sha256": "966a2a3e5c6b974b64b7063e9cb4b0fd32809efb2e7c39896c52592229a322ff",
+      "sha256": "cafc0cddc01dfcc0bdfd44d55e3ca84233e7128d92ce16eb8e52714798d12c87",
       "mode": "644"
     },
     {
@@ -540,7 +540,7 @@
     {
       "source": "packages/protocol/registries/skills.json",
       "target": "registry/v1.5.0/skills.json",
-      "sha256": "2cc9c272f5e06954694a1422349ff535f1f34b8f651f97902b56e36bad8c4e66",
+      "sha256": "77b9753cb4df28c0eafd5c6f7bebb2e8802bb1c64215212b568feae384ef76cb",
       "mode": "644"
     },
     {

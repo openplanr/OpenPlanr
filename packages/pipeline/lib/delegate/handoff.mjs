@@ -4,6 +4,7 @@ import { createHash, randomUUID } from 'node:crypto';
 import { chmod, copyFile, lstat, mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { gitEnvironment } from './child-environment.mjs';
 import { captureFileState, HOOKLESS_COMMIT, validateWorktreeCustody } from './custody.mjs';
 import {
   resolveSelectedChecks,
@@ -48,6 +49,9 @@ const APPLY = [
   'apply',
   '--whitespace=nowarn',
 ];
+// Checks start with only the base environment, so toolchain variables must be named.
+const CHECK_ENVIRONMENT_RECOVERY =
+  "If a check failed for a missing variable (such as JAVA_HOME, VIRTUAL_ENV, CARGO_HOME, NVM_DIR or npm_config_*), list it in that check's env, or in the profile's allowedEnv for the agent.";
 const BRANCH_VIOLATIONS = ['E_CUSTODY_BRANCH', 'E_CUSTODY_BASE'];
 const SELECTION_ERRORS = [
   'E_INTEGRATION_CHECK_SELECTION',
@@ -208,7 +212,7 @@ function git(cwd, args, { input, allowFailure = false, env } = {}) {
         cwd,
         encoding: 'buffer',
         maxBuffer: 256 * 1024 * 1024,
-        ...(env ? { env: { ...process.env, ...env } } : {}),
+        env: gitEnvironment(env),
       },
       (error, stdout, stderr) => {
         const result = {
@@ -874,7 +878,7 @@ export async function integrateBranchDelta({
           ? 'Recover the recorded owned parent command before checks, continuation or cleanup.'
           : failureCode === 'E_INTEGRATION_CHECK_TIMEOUT'
             ? 'Retry apply with a measured timeoutMs.'
-            : 'Send the findings to the same delegate session for correction; the worktree remains available.',
+            : `Send the findings to the same delegate session for correction; the worktree remains available. ${CHECK_ENVIRONMENT_RECOVERY}`,
     };
   } finally {
     process.removeListener('SIGINT', interrupt);

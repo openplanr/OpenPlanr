@@ -1,5 +1,4 @@
 import { randomUUID } from 'node:crypto';
-import { existsSync, realpathSync } from 'node:fs';
 import { lstat, readFile, rename, writeFile } from 'node:fs/promises';
 import { join, resolve, sep } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -370,37 +369,4 @@ async function integrationCommandLocked(action, input, record) {
     planning: record.planning ? { ...record.planning, status: 'not-updated' } : null,
     report: implementationReport(output, capsule.selector),
   };
-}
-
-if (
-  process.argv[1] &&
-  existsSync(resolve(process.argv[1])) &&
-  realpathSync(fileURLToPath(import.meta.url)) === realpathSync(resolve(process.argv[1]))
-) {
-  try {
-    const chunks = [];
-    let size = 0;
-    for await (const chunk of process.stdin) {
-      size += chunk.length;
-      if (size > 64 * 1024)
-        throw new IntegrationError('E_INTEGRATION_INPUT', 'Command input is oversized.');
-      chunks.push(chunk);
-    }
-    const input = JSON.parse(Buffer.concat(chunks).toString('utf8') || '{}');
-    process.stdout.write(
-      `${JSON.stringify(await delegateIntegrationCommand(process.argv[2], input))}\n`,
-    );
-  } catch (error) {
-    process.stderr.write(
-      `${JSON.stringify({
-        code: typeof error?.code === 'string' ? error.code : 'E_INTEGRATION_UNKNOWN',
-        message:
-          typeof error?.code === 'string'
-            ? error.message
-            : 'Integration failed; inspect retained custody.',
-        ...(error.details ? { details: error.details } : {}),
-      })}\n`,
-    );
-    process.exitCode = 1;
-  }
 }

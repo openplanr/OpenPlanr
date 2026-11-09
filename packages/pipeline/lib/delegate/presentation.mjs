@@ -184,7 +184,7 @@ export function runStatusPresentation(record, integration, processState, verific
     return {
       phase: 'integration-recovery',
       nextAction:
-        'Source integration is unresolved; run the integration helper recover action for this run before dispatch, resume, review, apply, or abandon.',
+        'Source integration is unresolved; run openplanr delegate integrate recover for this run before dispatch, resume, review, apply, or abandon.',
     };
   if (record.abandonment?.kind === 'never-started') {
     const cleaned = ['removed', 'not-created'].includes(record.cleanup?.status);

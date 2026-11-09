@@ -14,6 +14,7 @@ import {
 import { homedir } from 'node:os';
 import { join, resolve, sep } from 'node:path';
 import { promisify } from 'node:util';
+import { baseEnvironment } from './child-environment.mjs';
 import { CREDENTIAL_FORMAT } from './credentials.mjs';
 import { captureFileState } from './custody.mjs';
 
@@ -101,10 +102,22 @@ export async function createRunRecord(record, { directory } = {}) {
   return normalized;
 }
 
+function runNotFound(runId, root) {
+  return (error) => {
+    if (error.code !== 'ENOENT') throw error;
+    throw new RunRecordError(
+      'E_RUN_NOT_FOUND',
+      `No delegated run ${runId} exists in ${root}; check the runId that prepare returned.`,
+    );
+  };
+}
+
 export async function readRunRecord(runId, { directory } = {}) {
-  const root = await privateRoot(directory);
+  const root = await privateRoot(directory).catch(
+    runNotFound(runId, resolve(directory ?? defaultRunDirectory())),
+  );
   const runPath = join(root, checkedId(runId));
-  const physical = await realpath(runPath);
+  const physical = await realpath(runPath).catch(runNotFound(runId, root));
   if (!physical.startsWith(`${root}${sep}`)) {
     throw new RunRecordError('E_RUN_PATH', 'Delegated run path escapes private storage.');
   }
@@ -206,7 +219,7 @@ export async function closeRunRecord(runId, { disposition, directory } = {}) {
     if (record.status !== 'completed' || record.integration?.status !== 'applied')
       throw new RunRecordError(
         'E_RUN_NOT_INTEGRATED',
-        'An integrated closure requires a completed run applied through the integration helper.',
+        'An integrated closure requires a completed run applied through openplanr delegate integrate apply.',
       );
     const verification = await verifyIntegrationState(record);
     if (verification.driftPaths.length)
@@ -305,6 +318,7 @@ export async function processIdentity(pid = process.pid) {
   }
   try {
     const { stdout } = await execute('ps', ['-p', String(pid), '-o', 'lstart='], {
+      env: baseEnvironment(),
       timeout: 5000,
       maxBuffer: 4096,
     });

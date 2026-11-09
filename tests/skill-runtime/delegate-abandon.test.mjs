@@ -15,14 +15,14 @@ import {
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import test from 'node:test';
-import { createWorktreeCustody } from '../../skills/planr-delegate/scripts/custody.mjs';
-import { abandonDelegateRun } from '../../skills/planr-delegate/scripts/run-lifecycle.mjs';
+import { createWorktreeCustody } from '../../packages/pipeline/lib/delegate/custody.mjs';
+import { abandonDelegateRun } from '../../packages/pipeline/lib/delegate/run-lifecycle.mjs';
 import {
   createRunRecord,
   readRunRecord,
   updateRunRecord,
   withRunTransitionLock,
-} from '../../skills/planr-delegate/scripts/run-record.mjs';
+} from '../../packages/pipeline/lib/delegate/run-record.mjs';
 
 async function fixture(
   t,

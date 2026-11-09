@@ -1,6 +1,7 @@
 import { readFile, realpath } from 'node:fs/promises';
 import { isAbsolute, join, resolve, sep } from 'node:path';
 import { invokeProcess } from './adapters/generic.mjs';
+import { checkEnvironment, ENV_NAME } from './child-environment.mjs';
 import { assertCredentialFreeText } from './context.mjs';
 import { captureFileState, gitFileState, headFileState, sameGitState } from './custody.mjs';
 import {
@@ -72,6 +73,7 @@ export async function resolveSelectedChecks(repositoryRoot, supplied, { legacy =
         args: parsed.args,
         cwd: entry?.cwd ?? '.',
         kind: parsed.kind,
+        ...(entry?.env ? { env: entry.env } : {}),
       };
     }
     const executable = entry?.executable;
@@ -94,6 +96,16 @@ export async function resolveSelectedChecks(repositoryRoot, supplied, { legacy =
       code: 'E_INTEGRATION_CHECK_SELECTION',
       label: 'Command arguments',
     });
+    if (
+      entry.env !== undefined &&
+      (!Array.isArray(entry.env) ||
+        entry.env.length > 32 ||
+        entry.env.some((name) => typeof name !== 'string' || !ENV_NAME.test(name)))
+    )
+      throw new IntegrationError(
+        'E_INTEGRATION_CHECK_SELECTION',
+        'Check env must list at most 32 environment variable names, such as ["DATABASE_URL"].',
+      );
     const cwd = entry.cwd ?? '.';
     if (typeof cwd !== 'string' || isAbsolute(cwd) || cwd.includes('\0'))
       throw new IntegrationError(
@@ -137,6 +149,7 @@ export async function resolveSelectedChecks(repositoryRoot, supplied, { legacy =
       cwd,
       kind: entry.kind ?? 'focused',
       ...(entry.timeoutMs ? { timeoutMs: entry.timeoutMs } : {}),
+      ...(entry.env?.length ? { env: [...new Set(entry.env)] } : {}),
     };
     if (!checks.some((other) => JSON.stringify(other) === JSON.stringify(check)))
       checks.push(check);
@@ -200,11 +213,6 @@ export async function discoverDelegateChecks({
   );
 }
 
-export function executionEnvironment() {
-  // Parent-selected checks run under the parent host's normal execution controls.
-  return { ...process.env };
-}
-
 function privateDiagnostic(text) {
   const bounded = Buffer.from(text ?? '')
     .subarray(-4096)
@@ -231,7 +239,7 @@ async function executeCheck(root, check, timeoutMs, home, signal, onProcess) {
     const result = await invokeProcess(check.command, check.args, {
       cwd: resolve(root, check.cwd ?? '.'),
       timeoutMs: check.timeoutMs ?? timeoutMs,
-      env: executionEnvironment(home),
+      env: checkEnvironment(check),
       signal,
       onProcess,
       retainStdout: true,

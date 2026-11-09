@@ -2,6 +2,7 @@ import { execFile as execFileCallback } from 'node:child_process';
 import { lstat } from 'node:fs/promises';
 import { dirname, isAbsolute, resolve, sep } from 'node:path';
 import { promisify } from 'node:util';
+import { gitEnvironment } from './child-environment.mjs';
 import { captureFileState, headFileState } from './custody.mjs';
 
 const execFile = promisify(execFileCallback);
@@ -45,7 +46,7 @@ export function sameState(left, right) {
 }
 
 export async function git(cwd, ...args) {
-  const { stdout } = await execFile('git', args, { ...gitOptions, cwd });
+  const { stdout } = await execFile('git', args, { ...gitOptions, cwd, env: gitEnvironment() });
   return Buffer.isBuffer(stdout) ? stdout : Buffer.from(stdout);
 }
 

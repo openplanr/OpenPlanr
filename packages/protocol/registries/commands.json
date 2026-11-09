@@ -377,7 +377,7 @@
       "ownerPackage": "openplanr",
       "source": {
         "path": "docs/generated/utility-command-catalog.json",
-        "digest": "sha256:77a16f80e7131820d6d5953263c63b70649dacb8d487bdf6e004305c680975fa"
+        "digest": "sha256:aa78028462cd8cd2d88e8b41d6c5ec8c027e49840c48ac1d994bc50064bd9dbf"
       },
       "authorityClass": "workflow",
       "machineJson": false,
@@ -566,7 +566,7 @@
       "ownerPackage": "openplanr",
       "source": {
         "path": "docs/generated/utility-command-catalog.json",
-        "digest": "sha256:77a16f80e7131820d6d5953263c63b70649dacb8d487bdf6e004305c680975fa"
+        "digest": "sha256:aa78028462cd8cd2d88e8b41d6c5ec8c027e49840c48ac1d994bc50064bd9dbf"
       },
       "authorityClass": "workflow",
       "machineJson": true,
@@ -1948,5 +1948,5 @@
       ]
     }
   ],
-  "documentDigest": "sha256:d0d004dbd8c824c025fe57459326f2711a930870b1f3d7098fa759ae03219b7b"
+  "documentDigest": "sha256:351f8c1b7741ba6250892375c261c8b6d78e2da60cbfcd10f62676691713dcba"
 }

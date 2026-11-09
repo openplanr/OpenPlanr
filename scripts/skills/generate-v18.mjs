@@ -101,8 +101,11 @@ const operateAdvisorDestinations = Object.freeze([
   'planr-coo-review',
 ]);
 const trackerConnectionDestinations = Object.freeze(['planr-sync', 'planr-sprint', 'planr-status']);
-// Runtime skills that call the openplanr CLI through the pinned probe.
-const cliRuntimeDestinations = Object.freeze(['planr-sync']);
+// Skills that call the openplanr CLI, and the shared template each one's CLI reference uses.
+const cliReferenceSources = Object.freeze({
+  'planr-sync': 'skills/shared/openplanr-cli.md',
+  'planr-delegate': 'skills/shared/openplanr-cli-optional.md',
+});
 const findingsDestinations = Object.freeze(['planr-ship', 'planr-investigate']);
 const failFirstDestinations = Object.freeze(['planr-ship', 'planr-investigate']);
 const returnContractDestinations = Object.freeze([
@@ -212,8 +215,8 @@ const sharedSkillResources = Object.freeze([
     destination: `skills/${skillId}/references/return-contract.md`,
     executable: false,
   })),
-  ...cliRuntimeDestinations.map((skillId) => ({
-    source: 'skills/shared/openplanr-cli.md',
+  ...Object.entries(cliReferenceSources).map(([skillId, source]) => ({
+    source,
     destination: `skills/${skillId}/references/openplanr-cli.md`,
     executable: false,
   })),

@@ -457,7 +457,7 @@ export async function delegateRunStatus({ runId, runDirectory = defaultRunDirect
       ? {
           status: record.integration.status,
           phase: record.integration.phase,
-          nextAction: `Run node ${record.helper?.integrationPath ?? 'integrate.mjs'} recover with this run ID and resolution rollback (default) or accept after verifying every written path.`,
+          nextAction: `Run openplanr delegate integrate recover with runId ${record.runId} and resolution rollback (default), or accept after verifying every written path.`,
         }
       : null,
     repositoryRoot: record.repositoryRoot,

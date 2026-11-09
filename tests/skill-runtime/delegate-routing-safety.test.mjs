@@ -4,9 +4,9 @@ import { createServer } from 'node:http';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
-import { resolveClaudeRouting } from '../../skills/planr-delegate/scripts/adapters/claude.mjs';
-import { inspectLocalBackend } from '../../skills/planr-delegate/scripts/backend-diagnostics.mjs';
-import { enrollProfile, prepareProfile } from '../../skills/planr-delegate/scripts/profiles.mjs';
+import { resolveClaudeRouting } from '../../packages/pipeline/lib/delegate/adapters/claude.mjs';
+import { inspectLocalBackend } from '../../packages/pipeline/lib/delegate/backend-diagnostics.mjs';
+import { enrollProfile, prepareProfile } from '../../packages/pipeline/lib/delegate/profiles.mjs';
 
 const local = { class: 'local', origin: 'http://localhost:1234' };
 const external = { class: 'external', origin: 'https://api.example.test' };

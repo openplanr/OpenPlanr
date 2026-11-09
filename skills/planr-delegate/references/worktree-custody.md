@@ -27,7 +27,6 @@ Successful native integration removes only the owned worktree by checking its
 ownership token and Git registration, then deletes its run branch. Retention can be requested before dispatch.
 Failures/interruption retain custody. The private run keeps context, accepted patch,
 verification evidence, report and exact native session reference after cleanup.
-Old runs continue through their pinned helper; never broaden their policy or migrate
-their records automatically.
-
-Runs prepared by older helpers use detached worktrees and their own integration; they finish through that pinned helper.
+Old runs continue through the runtime copy that prepared them; never broaden their
+policy or migrate their records automatically. Runs prepared before the run branch use
+detached worktrees and their own integration.

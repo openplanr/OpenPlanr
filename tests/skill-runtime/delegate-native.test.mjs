@@ -17,39 +17,39 @@ import { syncBuiltinESMExports } from 'node:module';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
-import { claudeWriteFlags } from '../../skills/planr-delegate/scripts/adapters/claude.mjs';
+import { claudeWriteFlags } from '../../packages/pipeline/lib/delegate/adapters/claude.mjs';
 import {
   codexWriteFlags,
   resolveCodexDestination,
-} from '../../skills/planr-delegate/scripts/adapters/codex.mjs';
-import { terminateProcessGroup } from '../../skills/planr-delegate/scripts/adapters/generic.mjs';
-import { failureCode, nativeTurn } from '../../skills/planr-delegate/scripts/adapters/native.mjs';
-import { integrateBranchDelta } from '../../skills/planr-delegate/scripts/handoff.mjs';
-import { delegateIntegrationCommand } from '../../skills/planr-delegate/scripts/integrate.mjs';
+} from '../../packages/pipeline/lib/delegate/adapters/codex.mjs';
+import { terminateProcessGroup } from '../../packages/pipeline/lib/delegate/adapters/generic.mjs';
+import { failureCode, nativeTurn } from '../../packages/pipeline/lib/delegate/adapters/native.mjs';
+import { integrateBranchDelta } from '../../packages/pipeline/lib/delegate/handoff.mjs';
+import { delegateIntegrationCommand } from '../../packages/pipeline/lib/delegate/integrate.mjs';
 import {
   resolveSelectedChecks,
   runDelegateChecks,
-} from '../../skills/planr-delegate/scripts/integration-checks.mjs';
+} from '../../packages/pipeline/lib/delegate/integration-checks.mjs';
 import {
   enrollProfile,
   loadProfile,
   nativeReadiness,
   prepareProfile,
   saveEngineChoice,
-} from '../../skills/planr-delegate/scripts/profiles.mjs';
-import { cleanupAcceptedWorktree } from '../../skills/planr-delegate/scripts/run-lifecycle.mjs';
+} from '../../packages/pipeline/lib/delegate/profiles.mjs';
+import { cleanupAcceptedWorktree } from '../../packages/pipeline/lib/delegate/run-lifecycle.mjs';
 import {
   processIdentity,
   readRunRecord,
   updateRunRecord,
-} from '../../skills/planr-delegate/scripts/run-record.mjs';
+} from '../../packages/pipeline/lib/delegate/run-record.mjs';
 import {
   delegateRunnerCommand,
   delegateRunStatus,
   dispatchDelegateRun,
   prepareDelegateRun,
   resumeDelegateRun,
-} from '../../skills/planr-delegate/scripts/runner.mjs';
+} from '../../packages/pipeline/lib/delegate/runner.mjs';
 
 async function fixture(t, kind = 'codex', mode = '') {
   const base = await realpath(await mkdtemp(join(tmpdir(), 'planr-native-v2-')));
@@ -76,17 +76,21 @@ async function fixture(t, kind = 'codex', mode = '') {
     'Required ignored context: use implemented then corrected.\n',
   );
   const executable = join(bin, kind === 'cursor' ? 'agent' : kind);
+  // Native children receive an allowlisted environment, so the fixture reads its mode from HOME.
+  const modeFile = join(base, 'fixture-mode');
+  const setMode = (next) => writeFile(modeFile, next);
+  await setMode(mode);
   await writeFile(
     executable,
     `#!${process.execPath}
 const fs=require('node:fs'),path=require('node:path');
-const args=process.argv.slice(2),kind=${JSON.stringify(kind)},mode=process.env.FIXTURE_MODE;
+const args=process.argv.slice(2),kind=${JSON.stringify(kind)},mode=fs.readFileSync(path.join(process.env.HOME,'fixture-mode'),'utf8');
 if(args.includes('--help')) { console.log('--print --output-format stream-json --resume --session-id --add-dir --json resume --sandbox --auto-review --workspace'); process.exit(0); }
 if(args.includes('status')) { console.log(JSON.stringify({isAuthenticated:true,email:'account-is-not-evidence@example.test'})); process.exit(0); }
 const resume=args.includes('--resume')||args.includes('resume');
 const id=resume?(args.includes('--resume')?args[args.indexOf('--resume')+1]:args.at(-2)):(args.includes('--session-id')?args[args.indexOf('--session-id')+1]:'native-session');
 let input='';process.stdin.on('data',chunk=>input+=chunk);process.stdin.on('end',()=>{
- fs.appendFileSync('invocations.jsonl',JSON.stringify({args,input,extension:process.env.TRUSTED_EXTENSION,configuration:process.env.CLAUDE_CONFIG_DIR})+'\\n');
+ fs.appendFileSync('invocations.jsonl',JSON.stringify({args,input,extension:process.env.TRUSTED_EXTENSION,configuration:process.env.CLAUDE_CONFIG_DIR,secrets:Object.keys(process.env).filter(name=>/TOKEN|KEY|SECRET/.test(name))})+'\\n');
  const emit=event=>console.log(JSON.stringify(event));
  if(kind==='codex')emit({type:'thread.started',thread_id:id});else emit({type:'system',subtype:'init',session_id:id,model:'observed-model'});
  if(mode==='malformed')return console.log('invalid event');
@@ -125,8 +129,12 @@ let input='';process.stdin.on('data',chunk=>input+=chunk);process.stdin.on('end'
     ...process.env,
     HOME: base,
     PATH: `${bin}:/usr/bin:/bin`,
-    FIXTURE_MODE: mode,
-    TRUSTED_EXTENSION: 'trusted-value',
+    TRUSTED_EXTENSION: 'unrelated-value',
+    FOO_TOKEN: 'foo-secret',
+    GITHUB_TOKEN: 'gh-secret',
+    ANTHROPIC_API_KEY: 'anthropic-key',
+    OPENAI_API_KEY: 'openai-key',
+    CURSOR_API_KEY: 'cursor-key',
     ANTHROPIC_BASE_URL: '',
     OPENAI_BASE_URL: '',
     CURSOR_API_ENDPOINT: '',
@@ -149,7 +157,18 @@ let input='';process.stdin.on('data',chunk=>input+=chunk);process.stdin.on('end'
       env,
       ...extra,
     });
-  return { base, root, bin, executable, env, profile, profileDirectory, runDirectory, prepare };
+  return {
+    base,
+    root,
+    bin,
+    executable,
+    env,
+    setMode,
+    profile,
+    profileDirectory,
+    runDirectory,
+    prepare,
+  };
 }
 
 for (const kind of ['claude', 'codex', 'cursor']) {
@@ -179,7 +198,12 @@ for (const kind of ['claude', 'codex', 'cursor']) {
       .split('\n')
       .map(JSON.parse);
     assert.equal(calls.length, 2);
-    assert.equal(calls[0].extension, 'trusted-value');
+    assert.equal(calls[0].extension, undefined, 'unrelated variables stay out of the native child');
+    for (const [phase, call] of [
+      ['dispatch', calls[0]],
+      ['resume', calls[1]],
+    ])
+      assert.deepEqual(call.secrets, [], `${phase} child received a token or key`);
     assert.match(calls[0].input, /ordered|INDEX|index/i);
     assert.ok(!calls[1].input.includes('capsule.json'), 'resume does not resend full context');
     const writeFlags = {
@@ -410,9 +434,10 @@ test('native permission denial remains actionable and continues the same session
     code: 'E_INTEGRATION_RUN',
     message: /resume with this runId and an answer or correction/,
   });
+  await f.setMode('');
   const resumed = await resumeDelegateRun({
     ...input,
-    env: { ...f.env, FIXTURE_MODE: '' },
+    env: f.env,
     correction: 'Native approval is resolved; continue the task.',
   });
   assert.equal(resumed.status, 'completed');
@@ -432,9 +457,10 @@ for (const mode of ['readonly-command', 'readonly-summary', 'readonly-capability
       await readFile(join(prepared.record.worktreePath, 'source.txt'), 'utf8'),
       'base\n',
     );
+    await f.setMode('');
     const resumed = await resumeDelegateRun({
       ...input,
-      env: { ...f.env, FIXTURE_MODE: '' },
+      env: f.env,
       correction: 'Native approval is resolved; implement the same task.',
     });
     assert.equal(resumed.status, 'completed');
@@ -1467,9 +1493,10 @@ test('failed native termination retains custody and blocks resume until recovery
   const record = await readRunRecord(prepared.runId, { directory: f.runDirectory });
   assert.equal(record.delegateProcess, null);
   assert.equal(record.delegateTerminationConfirmed, true);
+  await f.setMode('');
   const resumed = await resumeDelegateRun({
     ...input,
-    env: { ...f.env, FIXTURE_MODE: '' },
+    env: f.env,
     correction: 'Continue the same task after native process recovery.',
   });
   assert.equal(resumed.status, 'completed');

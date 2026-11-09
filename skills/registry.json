@@ -489,7 +489,7 @@
       "skillId": "planr-delegate",
       "family": "implementation",
       "contribution": "workflows",
-      "skillVersion": "0.1.1",
+      "skillVersion": "0.2.0",
       "description": "Coordinate an explicitly requested implementation with Claude Code, Codex or Cursor, then independently review and integrate its observed changes. Use when the user asks another coding agent to implement.",
       "lifecycle": "active",
       "authorityClass": "implementation",
