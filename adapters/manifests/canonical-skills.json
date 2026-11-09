@@ -2029,7 +2029,7 @@
       "source": "skills/planr-plan/openplanr.skill.json",
       "entrypoint": "skills/planr-plan/SKILL.md",
       "description": "Turn a Protocol-compatible specification or product intent into schema-compatible OpenPlanr stories and implementation tasks. Use for planning and decomposition, not implementation.",
-      "sourceDigest": "sha256:a1f28762910e9e5b480e565902217cf8bc57de016d3d6839a97384f8e92f63af",
+      "sourceDigest": "sha256:e22aad1755b17e2a91839487ded683c7ee1c78f73e8c3527143713f145641d71",
       "resources": [
         {
           "path": "agents/openai.yaml",
@@ -2470,7 +2470,7 @@
       "source": "skills/planr-spec/openplanr.skill.json",
       "entrypoint": "skills/planr-spec/SKILL.md",
       "description": "Shape vague product or engineering intent into a clear, measurable Protocol-compatible specification grounded in the current repository. Use when requirements need clarification before planning or implementation.",
-      "sourceDigest": "sha256:db3516d228abeb574728953d5e82c1d609913017e263e14b9a67a6b77f0b87ba",
+      "sourceDigest": "sha256:e874c8a86a346a6f759bb13e2e9b60483c2eb20a429c2ebad98b68c976d97649",
       "resources": [
         {
           "path": "agents/openai.yaml",

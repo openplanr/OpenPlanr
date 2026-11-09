@@ -118,7 +118,8 @@ instead of repeating every path in chat.
 - **Issues:** unresolved inputs or material assumptions, with their impact and recovery step; omit when empty.
 - **Next:** the exact ready task selector and a copy-ready host-native
   invocation such as `/planr:ship T-NNN` (Claude Code), `$planr:ship T-NNN`
-  (Codex/ChatGPT) or the `planr-ship` rule (Cursor).
+  (Codex/ChatGPT) or the `planr-ship` rule (Cursor). In minimal mode, name the
+  task number or file instead of a selector.
 
 Mention the planning layout or consulted lenses only when they explain a material
 choice. Follow [the shared return rules](references/return-contract.md).

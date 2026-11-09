@@ -37,9 +37,10 @@ the decision. Otherwise perform those lenses sequentially in the active agent.
 
 Read [the specification contract](references/specification-contract.md). When the
 repository has no `.planr/`, write the specification where it already keeps
-specifications; with `.planr/`, write it to the active planning layout. Use a
-project-global monotonic `SPEC-NNN` ID in `.planr/`. Inspect the repository's existing
-sequence and planning files before choosing it; never reuse a deleted ID.
+specifications, or return it in chat or one file when it keeps none. With
+`.planr/`, write it to the active planning layout using a project-global monotonic
+`SPEC-NNN` ID: inspect the existing sequence and planning files before choosing it
+and never reuse a deleted ID.
 
 Requirements and acceptance criteria must be observable. Put non-goals under
 out-of-scope boundaries. Record concrete repository paths and verification

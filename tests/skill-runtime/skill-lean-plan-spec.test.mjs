@@ -92,6 +92,19 @@ test('Spec validates with the CLI only under .planr/', () => {
   );
 });
 
+test('minimal mode shapes the Return and Spec placement', () => {
+  assert.match(plan, /In minimal mode, name the task number or file instead of a selector/);
+  assert.match(spec, /or return it in chat or one file when it keeps none/);
+  assert.match(
+    spec,
+    /With `\.planr\/`, write it to the active planning layout using a project-global monotonic `SPEC-NNN` ID/,
+  );
+  assert.doesNotMatch(
+    read('.changeset/plan-spec-minimal-output.md'),
+    /or when implementation follows/,
+  );
+});
+
 test('plan and spec stay lean', () => {
   assert.ok(Buffer.byteLength(read('skills/planr-plan/SKILL.md')) <= 7100);
   assert.ok(Buffer.byteLength(read('skills/planr-spec/SKILL.md')) <= 3600);
