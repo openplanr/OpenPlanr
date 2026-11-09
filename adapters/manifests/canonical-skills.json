@@ -2144,11 +2144,11 @@
     },
     {
       "id": "planr-plan-review",
-      "version": "1.1.0",
+      "version": "1.2.0",
       "source": "skills/planr-plan-review/openplanr.skill.json",
       "entrypoint": "skills/planr-plan-review/SKILL.md",
       "description": "Review an OpenPlanr plan for product, engineering, design, and developer-experience problems. Use after planning and before implementation to improve the plan.",
-      "sourceDigest": "sha256:bef96331f6c0ba386d16c6954d86b968c292a39b5d2cc2162262b3c56e9eae23",
+      "sourceDigest": "sha256:d87c78b1586f94bab5e4b20f4b8cf8b0c3c2ce701d14ffe425fbb512f4af7553",
       "resources": [
         {
           "path": "agents/openai.yaml",
