@@ -1035,7 +1035,7 @@
       "skillId": "planr-plan-review",
       "family": "planning",
       "contribution": "professional",
-      "skillVersion": "1.1.0",
+      "skillVersion": "1.2.0",
       "description": "Review an OpenPlanr plan for product, engineering, design, and developer-experience problems. Use after planning and before implementation to improve the plan.",
       "lifecycle": "active",
       "authorityClass": "review-evidence",
