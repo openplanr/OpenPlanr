@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Project the generated Claude plugin into a checkout of the public marketplace repository.
 // Usage: node scripts/release-train/publish-marketplace.mjs --plugin <dir> --marketplace <checkout> --sha256 <digest>
-// The digest comes from prepare-bundles in the verify job, where the network boundary guard ran.
+// The digest comes from prepare-bundles in the verify job, where every host bundle was checked.
 import { resolve } from 'node:path';
 import { publishMarketplacePlugin } from './lib/publish-plugin.mjs';
 

@@ -101,10 +101,10 @@ const operateAdvisorDestinations = Object.freeze([
   'planr-coo-review',
 ]);
 const trackerConnectionDestinations = Object.freeze(['planr-sync', 'planr-sprint', 'planr-status']);
-// Skills that call the openplanr CLI, and the shared template each one's CLI reference uses.
+// Skills that call the openplanr CLI, the shared template each one's CLI reference uses and its command.
 const cliReferenceSources = Object.freeze({
-  'planr-sync': 'skills/shared/openplanr-cli.md',
-  'planr-delegate': 'skills/shared/openplanr-cli-optional.md',
+  'planr-sync': { source: 'skills/shared/openplanr-cli.md', command: 'sync tracker' },
+  'planr-delegate': { source: 'skills/shared/openplanr-cli-optional.md', command: 'delegate' },
 });
 const findingsDestinations = Object.freeze(['planr-ship', 'planr-investigate']);
 const failFirstDestinations = Object.freeze(['planr-ship', 'planr-investigate']);
@@ -215,18 +215,19 @@ const sharedSkillResources = Object.freeze([
     destination: `skills/${skillId}/references/return-contract.md`,
     executable: false,
   })),
-  ...Object.entries(cliReferenceSources).map(([skillId, source]) => ({
+  ...Object.entries(cliReferenceSources).map(([skillId, { source, command }]) => ({
     source,
     destination: `skills/${skillId}/references/openplanr-cli.md`,
     executable: false,
+    command,
   })),
 ]);
 
 const sourceProjections = new Map(
-  sharedSkillResources.map(({ source, destination }) => [
+  sharedSkillResources.map(({ source, destination, command }) => [
     destination,
     source.endsWith('.md')
-      ? Buffer.from(fillSkillCliTokens(read(source), pluginVersion))
+      ? Buffer.from(fillSkillCliTokens(read(source), pluginVersion, command))
       : readFileSync(resolve(root, source)),
   ]),
 );

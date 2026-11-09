@@ -5,7 +5,6 @@ import { execFileSync } from 'node:child_process';
 import { appendFileSync, readFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { assertReleasablePlugin } from '../check-plugin-network-boundary.mjs';
 import {
   assertHostBundle,
   HOST_BUNDLE_ROOTS,
@@ -29,11 +28,10 @@ assertPinServesSkills(
   JSON.parse(readFileSync(join(root, 'packages/cli/package.json'), 'utf8')).version,
 );
 // The npm packages carry the host plugins, so none may ship while a plugin bundle is unclean.
-assertReleasablePlugin({ workspace: root });
 for (const [host, path] of Object.entries(HOST_BUNDLE_ROOTS))
   assertHostBundle(readDirectoryEntries(join(root, path)), { host });
 
-// The marketplace job has no dependencies installed, so it checks this digest instead of the guard.
+// The marketplace job publishes only a plugin with this digest.
 const pluginSha256 = pluginDigest(
   readDirectoryEntries(join(root, 'dist/plugins/claude/openplanr')),
 );

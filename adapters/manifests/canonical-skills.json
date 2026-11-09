@@ -730,7 +730,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:2c4d49f94d524569062e97954c784470518fd34fc21f21f7175bcfb6b06d18a8"
+          "digest": "sha256:ea67cbb7933bf1d04373dc7e67f0789f29378e2cd973b1a050d2b2659e0c7f4c"
         },
         {
           "path": "references/operator-guide.md",

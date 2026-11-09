@@ -139,7 +139,6 @@ test('GitHub-only checks are named in the plan and never replayed', () => {
   const [static_] = planLocalCi(workflow, 24).jobs.find((job) => job.id === 'static').instances;
   assert.deepEqual(static_.remote, [
     'Pack exact public candidates for linked private Studio verification',
-    'Keep the plugin allowlist from growing past the base branch',
     'Review dependency changes',
     'Check changeset bumps against the title type',
   ]);

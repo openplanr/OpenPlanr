@@ -1009,11 +1009,11 @@ openplanr delegate integrate apply --input apply.json --json
 | `--run <runId>` | Sets `runId`; must match any `runId` already in the input | none |
 | `--json` | Print the result envelope | `false` |
 
-With `--json`, success prints `{ "ok": true, "action", "contractVersion", "result", "next" }`
-and exits 0. `result` holds the action's fields, and `next` is the command or decision
+With `--json`, success prints `{ "ok": true, "action", "contract", "result", "next" }`
+and exits 0. `contract` is the integer JSON contract, `1` today. `result` holds the action's fields, and `next` is the command or decision
 that comes next. A run that stops for attention (`status: "blocked"` or `"question"`)
 is still a success. A failure prints
-`{ "ok": false, "action", "contractVersion", "code", "problem", "recovery", "runId"?, "details"? }`
+`{ "ok": false, "action", "contract", "code", "problem", "recovery", "runId"?, "details"? }`
 and exits 1, for example `E_DELEGATE_INPUT`, `E_RUN_NOT_FOUND`, `E_CAPSULE_SECRET`
 (masked findings in `details.findings`) or `E_DELEGATE_RUNTIME_MISSING`. Without
 `--json`, the command prints a short summary and a `Next:` line.

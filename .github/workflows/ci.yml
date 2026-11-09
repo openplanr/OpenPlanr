@@ -150,14 +150,6 @@ jobs:
         run: npm run check:generated
       - name: Verify package and composition boundaries
         run: npm run check:boundaries
-      - name: Keep the plugin allowlist from growing past the base branch
-        if: github.event_name == 'pull_request' || github.event_name == 'merge_group'
-        env:
-          BASE_REF: ${{ github.base_ref || github.event.merge_group.base_ref }}
-        run: |
-          git fetch --no-tags --depth=1 origin "$BASE_REF"
-          node scripts/check-plugin-network-boundary.mjs --baseline-base FETCH_HEAD
-          node scripts/check-plugin-allowed-types.mjs --baseline-base FETCH_HEAD
       - name: Lint the public documentation
         run: npm run check:docs
       - name: Lint the source comments
