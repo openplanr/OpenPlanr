@@ -960,7 +960,7 @@
       "assets": [
         {
           "path": "skills/ship/SKILL.md",
-          "digest": "sha256:b82f5457122abca0bf6f4923c2853ff8495f105b3abb2b516e48d3e0b54c9ee2"
+          "digest": "sha256:1d4a817e9483ea47f7945a26f9391641c03f097f4de7a84e9ecdba36a1abf71b"
         },
         {
           "path": "skills/ship/openplanr.skill.json",

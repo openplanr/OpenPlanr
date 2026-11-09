@@ -97,7 +97,12 @@ dry-run pack that confirms they are packed. When a workflow selects jobs at
 runtime (a `changes` or paths-filter job whose outputs gate other jobs), list every job it
 gates and mark each conditional. Run a conditional job when a local equivalent command
 exists; otherwise report it as "conditional, not run". Never drop one silently or by
-reading the paths yourself. Missing commands are diagnostics, not a reason to invent or
+reading the paths yourself. Read every workflow file, not only the main one: dedicated
+browser, end-to-end, sandbox and scheduled workflows are sources too. List a git hook as
+its own command and, when it delegates to a script, also each check that script runs.
+Discovery lists what the sources define whatever the size or kind of the change, a
+documentation-only change included; the change picks only which listed checks you run.
+Missing commands are diagnostics, not a reason to invent or
 skip all verification.
 
 If `openplanr` is already on `PATH`, `openplanr ship checks --json --task <task-path>`

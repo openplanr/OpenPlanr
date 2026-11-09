@@ -84,3 +84,27 @@ test('Ship discovery lists gated CI jobs as conditional and always names the git
     /Run a conditional job when a local equivalent command exists; otherwise report it as "conditional, not run"\. Never drop one silently/u,
   );
 });
+
+test('Ship discovery reads every workflow file, including dedicated browser and scheduled ones', () => {
+  const ship = read('skills/planr-ship/SKILL.md').replace(/\s+/gu, ' ');
+  assert.match(
+    ship,
+    /Read every workflow file, not only the main one: dedicated browser, end-to-end, sandbox and scheduled workflows are sources too/u,
+  );
+});
+
+test('Ship discovery lists a delegating git hook and the checks its script runs', () => {
+  const ship = read('skills/planr-ship/SKILL.md').replace(/\s+/gu, ' ');
+  assert.match(
+    ship,
+    /List a git hook as its own command and, when it delegates to a script, also each check that script runs/u,
+  );
+});
+
+test('Ship discovery lists checks whatever the change kind and only runs the relevant ones', () => {
+  const ship = read('skills/planr-ship/SKILL.md').replace(/\s+/gu, ' ');
+  assert.match(
+    ship,
+    /Discovery lists what the sources define whatever the size or kind of the change, a documentation-only change included; the change picks only which listed checks you run/u,
+  );
+});
