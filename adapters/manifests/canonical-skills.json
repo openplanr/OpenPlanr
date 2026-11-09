@@ -2029,7 +2029,7 @@
       "source": "skills/planr-plan/openplanr.skill.json",
       "entrypoint": "skills/planr-plan/SKILL.md",
       "description": "Turn a Protocol-compatible specification or product intent into schema-compatible OpenPlanr stories and implementation tasks. Use for planning and decomposition, not implementation.",
-      "sourceDigest": "sha256:5ff41d809f97bc77ba57d99a41d81afafe9ed132527a5fbddeb414e230d87fc9",
+      "sourceDigest": "sha256:790e61709551ddf996e18693fa6bd52b883754e336cfecbcb7718f4fbf0dfb3c",
       "resources": [
         {
           "path": "agents/openai.yaml",
@@ -2195,7 +2195,7 @@
       "source": "skills/planr-release/openplanr.skill.json",
       "entrypoint": "skills/planr-release/SKILL.md",
       "description": "Choose and maintain a product's versioning scheme, classify shipped changes, and write user-facing changelogs or release notes. Use for SemVer or CalVer decisions, version bumps, release cadence, and preparing a versioned release after landing.",
-      "sourceDigest": "sha256:4a161866c721b2f5b357d9d9032a24edcd6a8b943bafbf8c5c3aed6a85a421f4",
+      "sourceDigest": "sha256:c4c8bc8cc8668ebb8949e078f1a1ed234c757823fd9dd6071aacdf2129e34859",
       "resources": [
         {
           "path": "agents/openai.yaml",

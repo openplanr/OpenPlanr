@@ -53,8 +53,10 @@ test('Spec validates with the CLI when present; Plan keeps the direct check mand
   assert.doesNotMatch(spec, /If a helper is unavailable/);
   assert.match(spec, /`openplanr spec validate <SPEC-ID>`/);
   const plan = skillText('plan').replace(/\s+/g, ' ');
-  assert.doesNotMatch(plan, /spec validate/);
+  assert.doesNotMatch(plan, /spec validate(?!-plan)/);
   assert.match(plan, /check directly that every story and task frontmatter is valid/);
+  assert.match(plan, /`openplanr spec validate-plan <SPEC-ID>` runs the same check/);
+  assert.match(read('packages/cli/docs/CLI.md'), /#### `openplanr spec validate-plan`/);
   assert.match(
     plan,
     /`openplanr spec sync <SPEC-ID> --dry-run` adds an orphan and schema-drift check/,

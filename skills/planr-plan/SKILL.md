@@ -116,8 +116,9 @@ Before finishing, check directly that every story and task frontmatter is
 valid, every acceptance ID is mapped through `acceptanceRefs` and named under
 `## Test Requirements`, and no ID repeats an existing one. When
 `command -v openplanr` succeeds and a `SPEC-NNN` exists,
-`openplanr spec sync <SPEC-ID> --dry-run` adds an orphan and schema-drift check
-and writes nothing. Do not route semantic work to a CLI fallback.
+`openplanr spec validate-plan <SPEC-ID>` runs the same check and
+`openplanr spec sync <SPEC-ID> --dry-run` adds an orphan and schema-drift check;
+both write nothing. Do not route semantic work to a CLI fallback.
 
 For approved design input, author the complete story and task bytes before
 touching target paths, then commit those bytes and the sibling
