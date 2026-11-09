@@ -1305,12 +1305,12 @@
     },
     {
       "skillId": "planr-plan",
-      "skillVersion": "1.5.0",
+      "skillVersion": "1.6.0",
       "description": "Turn a Protocol-compatible specification or product intent into schema-compatible OpenPlanr stories and implementation tasks. Use for planning and decomposition, not implementation.",
       "lifecycle": "active",
       "authorityClass": "planning-write",
       "source": "skills/planr-plan/openplanr.skill.json",
-      "sourceDigest": "sha256:f0f14bc031b18945eea6bce2a733c1038ee623d6eee95afbd61809cb534c56c7",
+      "sourceDigest": "sha256:74a76845fa903eb29b67b1627295420a7a47107774ea72d1f58be1d731d8a8cf",
       "triggerPolicy": {
         "include": [
           "Decompose a specification into user stories and implementation tasks",
@@ -1621,12 +1621,12 @@
     },
     {
       "skillId": "planr-spec",
-      "skillVersion": "1.1.0",
+      "skillVersion": "1.2.0",
       "description": "Shape vague product or engineering intent into a clear, measurable Protocol-compatible specification grounded in the current repository. Use when requirements need clarification before planning or implementation.",
       "lifecycle": "active",
       "authorityClass": "planning-write",
       "source": "skills/planr-spec/openplanr.skill.json",
-      "sourceDigest": "sha256:bfcf20909007f5698b205c552efbbe4366e76884df7dbdc9cca7ef02a47c3eb1",
+      "sourceDigest": "sha256:02ebd36e5c211ca734d81a0ea91796ed897252fbe1e8590775146e5ffbcb46e0",
       "triggerPolicy": {
         "include": [
           "Turn vague product or engineering intent into a precise specification",
@@ -1864,5 +1864,5 @@
     }
   ],
   "compatibilityAliases": [],
-  "documentDigest": "sha256:8cd6ae30df680d6b4d3789f1f42d52219649f49b62c9503249c6c30bccc3575c"
+  "documentDigest": "sha256:d9694727f986eb9dc0ed46ddc9fdbaf9253a1fff71e5f2bae594514a022ff369"
 }

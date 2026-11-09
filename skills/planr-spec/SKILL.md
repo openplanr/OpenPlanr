@@ -35,9 +35,10 @@ the decision. Otherwise perform those lenses sequentially in the active agent.
 
 ## Author directly
 
-Read [the specification contract](references/specification-contract.md). Write
-the specification to the repository's active planning layout, using a
-project-global monotonic `SPEC-NNN` ID. Inspect the repository's existing
+Read [the specification contract](references/specification-contract.md). When the
+repository has no `.planr/`, write the specification where it already keeps
+specifications; with `.planr/`, write it to the active planning layout. Use a
+project-global monotonic `SPEC-NNN` ID in `.planr/`. Inspect the repository's existing
 sequence and planning files before choosing it; never reuse a deleted ID.
 
 Requirements and acceptance criteria must be observable. Put non-goals under
@@ -46,7 +47,7 @@ signals when they are known. Keep unresolved questions out of the saved
 contract when a repository-backed default exists.
 
 Validate the completed artifact before returning: run `openplanr spec validate <SPEC-ID>`
-when `command -v openplanr` succeeds, otherwise check the path, frontmatter,
+when the specification is under `.planr/` and `command -v openplanr` succeeds, otherwise check the path, frontmatter,
 headings and acceptance IDs against the specification contract directly. Never
 fall back to a model-backed CLI.
 

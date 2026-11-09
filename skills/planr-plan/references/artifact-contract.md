@@ -6,7 +6,6 @@
 .planr/specs/SPEC-NNN-{slug}/
   SPEC-NNN-{slug}.md
   stories/US-NNN-{slug}.md
-  stories/US-NNN-gherkin.feature
   tasks/T-NNN-{slug}.md
 ```
 
@@ -27,6 +26,8 @@ Story body headings are `## User Story`, `## Scope`, `## Acceptance Criteria`,
 `## Objective`, `## Files` with `### Create`, `### Modify`, and
 `### Preserve (do not touch)` subsections, `## Technical Spec`,
 `## Test Requirements`, and `## Definition of Done`.
+
+Gherkin `.feature` files are written only on request, beside the story.
 
 Each story criterion must be referenced by at least one task, and that task's
 Test Requirements must name the same ID with an observable verification.

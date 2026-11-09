@@ -832,11 +832,11 @@
       "assets": [
         {
           "path": "skills/plan/SKILL.md",
-          "digest": "sha256:9467d6abce56d62677b95dd5e0c3a814ce4ad60733704beef91c5245e0445b2c"
+          "digest": "sha256:67102c071fbbd46948cbb52048272b681d433e42d0c5ffa2cc60b75d863fcf4b"
         },
         {
           "path": "skills/plan/openplanr.skill.json",
-          "digest": "sha256:f0f14bc031b18945eea6bce2a733c1038ee623d6eee95afbd61809cb534c56c7"
+          "digest": "sha256:74a76845fa903eb29b67b1627295420a7a47107774ea72d1f58be1d731d8a8cf"
         },
         {
           "path": "skills/plan/agents/openai.yaml",
@@ -844,11 +844,11 @@
         },
         {
           "path": "skills/plan/references/artifact-contract.md",
-          "digest": "sha256:79914583ab6f668eaef24cbe8a498a3d08d07da84ec80f5160b42f1719b5c7b2"
+          "digest": "sha256:6b861dbfbe675624c4a32545d936da599e263f2399b1e46091f6fc3fd3086f88"
         },
         {
           "path": "skills/plan/references/design-handoff.md",
-          "digest": "sha256:b918cc16855412a75028e1a014832c2ced59b0349461a24d9e1fdcfc336b9f5f"
+          "digest": "sha256:456f33cd0386b7fd8be1c5ee2c62723d776db6c6f740453d7125816794565af4"
         },
         {
           "path": "skills/plan/references/planning-ids.md",
@@ -1021,11 +1021,11 @@
       "assets": [
         {
           "path": "skills/spec/SKILL.md",
-          "digest": "sha256:b72b49d62edf4455ff8ce32992a7d780b650535608b9325076799ad549782a0a"
+          "digest": "sha256:a324e6e701a7d5371423df3d17c005412f5493dc8a53f04f1c5251b4725c327c"
         },
         {
           "path": "skills/spec/openplanr.skill.json",
-          "digest": "sha256:bfcf20909007f5698b205c552efbbe4366e76884df7dbdc9cca7ef02a47c3eb1"
+          "digest": "sha256:02ebd36e5c211ca734d81a0ea91796ed897252fbe1e8590775146e5ffbcb46e0"
         },
         {
           "path": "skills/spec/agents/openai.yaml",
@@ -1033,7 +1033,7 @@
         },
         {
           "path": "skills/spec/references/specification-contract.md",
-          "digest": "sha256:eaaf58e5d2e5cf788856c8d0e156a1ff49111d3578556bfb7c8fe2466df15b15"
+          "digest": "sha256:bbecd3b43ff88a245199c89d08e17ebbf04580a6e0491140d8e69edfdbd69038"
         },
         {
           "path": "skills/spec/references/return-contract.md",

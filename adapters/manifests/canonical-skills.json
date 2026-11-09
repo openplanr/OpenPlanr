@@ -2025,11 +2025,11 @@
     },
     {
       "id": "planr-plan",
-      "version": "1.5.0",
+      "version": "1.6.0",
       "source": "skills/planr-plan/openplanr.skill.json",
       "entrypoint": "skills/planr-plan/SKILL.md",
       "description": "Turn a Protocol-compatible specification or product intent into schema-compatible OpenPlanr stories and implementation tasks. Use for planning and decomposition, not implementation.",
-      "sourceDigest": "sha256:5ff41d809f97bc77ba57d99a41d81afafe9ed132527a5fbddeb414e230d87fc9",
+      "sourceDigest": "sha256:6b8a9843050a7d4cfe41fba0d45953e532fc9531dcc3af609d9f4b2d7008a374",
       "resources": [
         {
           "path": "agents/openai.yaml",
@@ -2051,7 +2051,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:79914583ab6f668eaef24cbe8a498a3d08d07da84ec80f5160b42f1719b5c7b2"
+          "digest": "sha256:6b861dbfbe675624c4a32545d936da599e263f2399b1e46091f6fc3fd3086f88"
         },
         {
           "path": "references/design-handoff.md",
@@ -2063,7 +2063,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:b918cc16855412a75028e1a014832c2ced59b0349461a24d9e1fdcfc336b9f5f"
+          "digest": "sha256:456f33cd0386b7fd8be1c5ee2c62723d776db6c6f740453d7125816794565af4"
         },
         {
           "path": "references/planning-ids.md",
@@ -2466,11 +2466,11 @@
     },
     {
       "id": "planr-spec",
-      "version": "1.1.0",
+      "version": "1.2.0",
       "source": "skills/planr-spec/openplanr.skill.json",
       "entrypoint": "skills/planr-spec/SKILL.md",
       "description": "Shape vague product or engineering intent into a clear, measurable Protocol-compatible specification grounded in the current repository. Use when requirements need clarification before planning or implementation.",
-      "sourceDigest": "sha256:63ab943e7a269f691865b8e3cf68ae160aae0d0ddb71af1834fe50c078ba14a9",
+      "sourceDigest": "sha256:db3516d228abeb574728953d5e82c1d609913017e263e14b9a67a6b77f0b87ba",
       "resources": [
         {
           "path": "agents/openai.yaml",
@@ -2492,7 +2492,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:eaaf58e5d2e5cf788856c8d0e156a1ff49111d3578556bfb7c8fe2466df15b15"
+          "digest": "sha256:bbecd3b43ff88a245199c89d08e17ebbf04580a6e0491140d8e69edfdbd69038"
         },
         {
           "path": "references/return-contract.md",

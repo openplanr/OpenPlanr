@@ -1417,7 +1417,7 @@ export const CANONICAL_REGISTRIES = deepFreeze({
         "ownerPackage": "openplanr",
         "source": {
           "path": "skills/planr-plan/SKILL.md",
-          "digest": "sha256:5ff41d809f97bc77ba57d99a41d81afafe9ed132527a5fbddeb414e230d87fc9"
+          "digest": "sha256:6b8a9843050a7d4cfe41fba0d45953e532fc9531dcc3af609d9f4b2d7008a374"
         },
         "authorityClass": "workflow",
         "machineJson": false,
@@ -1648,7 +1648,7 @@ export const CANONICAL_REGISTRIES = deepFreeze({
         "ownerPackage": "openplanr",
         "source": {
           "path": "skills/planr-plan/SKILL.md",
-          "digest": "sha256:5ff41d809f97bc77ba57d99a41d81afafe9ed132527a5fbddeb414e230d87fc9"
+          "digest": "sha256:6b8a9843050a7d4cfe41fba0d45953e532fc9531dcc3af609d9f4b2d7008a374"
         },
         "authorityClass": "workflow",
         "machineJson": false,
@@ -1690,7 +1690,7 @@ export const CANONICAL_REGISTRIES = deepFreeze({
         "ownerPackage": "openplanr",
         "source": {
           "path": "skills/planr-spec/SKILL.md",
-          "digest": "sha256:63ab943e7a269f691865b8e3cf68ae160aae0d0ddb71af1834fe50c078ba14a9"
+          "digest": "sha256:db3516d228abeb574728953d5e82c1d609913017e263e14b9a67a6b77f0b87ba"
         },
         "authorityClass": "workflow",
         "machineJson": false,
@@ -1753,7 +1753,7 @@ export const CANONICAL_REGISTRIES = deepFreeze({
         "ownerPackage": "openplanr",
         "source": {
           "path": "skills/planr-spec/SKILL.md",
-          "digest": "sha256:63ab943e7a269f691865b8e3cf68ae160aae0d0ddb71af1834fe50c078ba14a9"
+          "digest": "sha256:db3516d228abeb574728953d5e82c1d609913017e263e14b9a67a6b77f0b87ba"
         },
         "authorityClass": "workflow",
         "machineJson": false,
@@ -2152,7 +2152,7 @@ export const CANONICAL_REGISTRIES = deepFreeze({
         "ownerPackage": "planr-pipeline",
         "source": {
           "path": "skills/planr-plan/SKILL.md",
-          "digest": "sha256:5ff41d809f97bc77ba57d99a41d81afafe9ed132527a5fbddeb414e230d87fc9"
+          "digest": "sha256:6b8a9843050a7d4cfe41fba0d45953e532fc9531dcc3af609d9f4b2d7008a374"
         },
         "authorityClass": "compatibility-router",
         "machineJson": false,
@@ -3009,7 +3009,7 @@ export const CANONICAL_REGISTRIES = deepFreeze({
         ]
       }
     ],
-    "documentDigest": "sha256:7af148e74d70d49c36211cdd5f0553e343bce094b32686d61e83ca8942e0e252"
+    "documentDigest": "sha256:1038b8f63a6345865889227563249a5b4146c376b55fb4918a924641bfc9bbb9"
   },
   "skills.json": {
     "kind": "skill-catalog",
@@ -4318,12 +4318,12 @@ export const CANONICAL_REGISTRIES = deepFreeze({
       },
       {
         "skillId": "planr-plan",
-        "skillVersion": "1.5.0",
+        "skillVersion": "1.6.0",
         "description": "Turn a Protocol-compatible specification or product intent into schema-compatible OpenPlanr stories and implementation tasks. Use for planning and decomposition, not implementation.",
         "lifecycle": "active",
         "authorityClass": "planning-write",
         "source": "skills/planr-plan/openplanr.skill.json",
-        "sourceDigest": "sha256:f0f14bc031b18945eea6bce2a733c1038ee623d6eee95afbd61809cb534c56c7",
+        "sourceDigest": "sha256:74a76845fa903eb29b67b1627295420a7a47107774ea72d1f58be1d731d8a8cf",
         "triggerPolicy": {
           "include": [
             "Decompose a specification into user stories and implementation tasks",
@@ -4634,12 +4634,12 @@ export const CANONICAL_REGISTRIES = deepFreeze({
       },
       {
         "skillId": "planr-spec",
-        "skillVersion": "1.1.0",
+        "skillVersion": "1.2.0",
         "description": "Shape vague product or engineering intent into a clear, measurable Protocol-compatible specification grounded in the current repository. Use when requirements need clarification before planning or implementation.",
         "lifecycle": "active",
         "authorityClass": "planning-write",
         "source": "skills/planr-spec/openplanr.skill.json",
-        "sourceDigest": "sha256:bfcf20909007f5698b205c552efbbe4366e76884df7dbdc9cca7ef02a47c3eb1",
+        "sourceDigest": "sha256:02ebd36e5c211ca734d81a0ea91796ed897252fbe1e8590775146e5ffbcb46e0",
         "triggerPolicy": {
           "include": [
             "Turn vague product or engineering intent into a precise specification",
@@ -4877,7 +4877,7 @@ export const CANONICAL_REGISTRIES = deepFreeze({
       }
     ],
     "compatibilityAliases": [],
-    "documentDigest": "sha256:8cd6ae30df680d6b4d3789f1f42d52219649f49b62c9503249c6c30bccc3575c"
+    "documentDigest": "sha256:d9694727f986eb9dc0ed46ddc9fdbaf9253a1fff71e5f2bae594514a022ff369"
   },
   "outputs.json": {
     "kind": "output-catalog",
