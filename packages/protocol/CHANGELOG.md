@@ -1,5 +1,11 @@
 # @openplanr/protocol
 
+## 0.18.0
+
+### Minor Changes
+
+- b9bd7ff: Add the backlog-item 1.24.0 frontmatter contract with optional scheduling, file paths, and unverified status.
+
 ## 0.17.0
 
 ### Minor Changes
