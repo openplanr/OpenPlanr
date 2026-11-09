@@ -2,8 +2,8 @@ import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { resolvePipelinePackage } from './pipeline-package-service.js';
 
-/** The `openplanr delegate` contract; the plugin's minimum CLI version follows it. */
-export const DELEGATE_CONTRACT_VERSION = '3.7.0';
+/** The `openplanr delegate` JSON contract; `scripts/skills/skill-cli-contracts.json` records its first CLI version. */
+export const DELEGATE_CONTRACT = 1;
 
 export const DELEGATE_RUN_ACTIONS = [
   'probe',
@@ -32,7 +32,7 @@ export type DelegateInput = Record<string, unknown>;
 export interface DelegateSuccess {
   ok: true;
   action: DelegateAction;
-  contractVersion: string;
+  contract: typeof DELEGATE_CONTRACT;
   result: Record<string, unknown>;
   next: string;
 }
@@ -40,7 +40,7 @@ export interface DelegateSuccess {
 export interface DelegateFailure {
   ok: false;
   action: DelegateAction;
-  contractVersion: string;
+  contract: typeof DELEGATE_CONTRACT;
   code: string;
   problem: string;
   recovery: string;
@@ -205,7 +205,7 @@ function failureEnvelope(
   return {
     ok: false,
     action,
-    contractVersion: DELEGATE_CONTRACT_VERSION,
+    contract: DELEGATE_CONTRACT,
     code: failure.code,
     problem: failure.message,
     recovery: failure.recovery ?? recoveryFor(failure.code, failure.details),
@@ -243,7 +243,7 @@ export async function runDelegateAction(
     return {
       ok: true,
       action,
-      contractVersion: DELEGATE_CONTRACT_VERSION,
+      contract: DELEGATE_CONTRACT,
       result,
       next: delegateNext(action, result),
     };

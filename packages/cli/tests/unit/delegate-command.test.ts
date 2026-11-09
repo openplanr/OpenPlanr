@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import {
-  DELEGATE_CONTRACT_VERSION,
+  DELEGATE_CONTRACT,
   DELEGATE_INTEGRATION_ACTIONS,
   DELEGATE_RUN_ACTIONS,
   delegateNext,
@@ -46,9 +46,10 @@ describe('openplanr delegate', () => {
       expect(envelope).toMatchObject({
         ok: true,
         action: 'probe',
-        contractVersion: DELEGATE_CONTRACT_VERSION,
+        contract: 1,
         result: { localExecutable: true, profiles: [] },
       });
+      expect(envelope).not.toHaveProperty('contractVersion');
       expect(envelope.next).toMatch(/openplanr delegate prepare/u);
     },
     TIMEOUT_MS,
@@ -151,7 +152,7 @@ describe('delegate runtime envelope', () => {
     expect(envelope).toEqual({
       ok: false,
       action: 'prepare',
-      contractVersion: DELEGATE_CONTRACT_VERSION,
+      contract: DELEGATE_CONTRACT,
       code: 'E_CAPSULE_SECRET',
       problem: 'A required source holds a possible credential.',
       recovery: expect.stringContaining('credentialResolutions'),
@@ -188,12 +189,11 @@ describe('delegate runtime envelope', () => {
     );
   });
 
-  it('reports the CLI version the skills record for the delegate contract', () => {
+  it('is the newest contract the runtime skills record for delegate', () => {
     const { commands } = JSON.parse(
       readFileSync(resolve('../../scripts/skills/skill-cli-contracts.json'), 'utf8'),
     ) as { commands: Record<string, { contracts: Record<string, string> }> };
-    const contracts = commands.delegate?.contracts ?? {};
-    const newest = Math.max(...Object.keys(contracts).map(Number));
-    expect(contracts[String(newest)]).toBe(DELEGATE_CONTRACT_VERSION);
+    const recorded = Object.keys(commands.delegate?.contracts ?? {}).map(Number);
+    expect(Math.max(...recorded)).toBe(DELEGATE_CONTRACT);
   });
 });

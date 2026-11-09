@@ -33,7 +33,7 @@ a credential, by preparing again with `credentialResolutions` (`id`, `contentDig
 
 ## Results
 
-Read `ok` first. `ok: true` carries `result` and `next`, the step to take. `ok: false`
+Read `ok` first; every result has `contract`, `1` for this skill. `ok: true` carries `result` and `next`, the step to take. `ok: false`
 (exit code 1) carries `code`, `problem` and `recovery`, plus `runId` and `details` when
 they apply.
 

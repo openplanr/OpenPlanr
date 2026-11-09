@@ -43,7 +43,7 @@ export const SKILL_CLI_CONTRACTS = Object.freeze(
   readSkillCliContracts(JSON.parse(readFileSync(CONTRACTS, 'utf8')).commands),
 );
 
-/** Lowest CLI version that serves every runtime skill's commands. */
+/** Lowest CLI version that serves every runtime skill's commands; the release pin must reach it. */
 export const SKILL_CLI_MINIMUM = Object.values(SKILL_CLI_CONTRACTS)
   .map(({ since }) => since)
   .sort(compareVersions)
@@ -58,9 +58,18 @@ export function assertPinServesSkills(pluginVersion, minimum = SKILL_CLI_MINIMUM
     );
 }
 
-/** Fills the exact CLI pin and the minimum into projected skill text. */
-export function fillSkillCliTokens(text, pluginVersion) {
-  return text
-    .replaceAll('{{PLUGIN_VERSION}}', pluginVersion)
-    .replaceAll('{{SKILL_CLI_MINIMUM}}', SKILL_CLI_MINIMUM);
+/**
+ * Fills the exact CLI pin and `command`'s own minimum CLI version into projected skill text.
+ * Text that names the minimum must say which command it is for.
+ */
+export function fillSkillCliTokens(text, pluginVersion, command, contracts = SKILL_CLI_CONTRACTS) {
+  const filled = text.replaceAll('{{PLUGIN_VERSION}}', pluginVersion);
+  if (!filled.includes('{{SKILL_CLI_MINIMUM}}')) return filled;
+  if (command === undefined)
+    throw new Error('Skill text uses {{SKILL_CLI_MINIMUM}} but names no command to take it from.');
+  if (!Object.hasOwn(contracts, command))
+    throw new Error(
+      `Skill text needs the minimum CLI for ${JSON.stringify(command)}, which scripts/skills/skill-cli-contracts.json does not list.`,
+    );
+  return filled.replaceAll('{{SKILL_CLI_MINIMUM}}', contracts[command].since);
 }

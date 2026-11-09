@@ -2,7 +2,7 @@ import { open } from 'node:fs/promises';
 import type { Readable } from 'node:stream';
 import type { Command } from 'commander';
 import {
-  DELEGATE_CONTRACT_VERSION,
+  DELEGATE_CONTRACT,
   DELEGATE_INTEGRATION_ACTIONS,
   DELEGATE_RUN_ACTIONS,
   type DelegateAction,
@@ -197,7 +197,7 @@ async function execute(action: DelegateAction, options: DelegateOptions, limit: 
       {
         ok: false,
         action,
-        contractVersion: DELEGATE_CONTRACT_VERSION,
+        contract: DELEGATE_CONTRACT,
         code: 'E_DELEGATE_INPUT',
         problem: error.message,
         recovery: `Pass one JSON object with --input <file> or --input -. See \`openplanr delegate ${action} --help\`.`,
@@ -238,7 +238,7 @@ export function registerDelegateCommand(program: Command): void {
     )
     .addHelpText(
       'after',
-      '\nEvery action prints { ok, action, contractVersion, result, next } with --json, or\n{ ok: false, code, problem, recovery } with exit code 1. See docs/CLI.md.\n',
+      '\nEvery action prints { ok, action, contract, result, next } with --json, or\n{ ok: false, code, problem, recovery } with exit code 1. See docs/CLI.md.\n',
     );
   for (const action of DELEGATE_RUN_ACTIONS) addAction(delegate, action, action, RUN_INPUT_LIMIT);
   const integrate = delegate
