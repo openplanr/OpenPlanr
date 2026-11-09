@@ -87,8 +87,8 @@ Inspect these sources directly, in this order:
    pre-push hook, when present, whatever the change touches.
 
 List each candidate check with its `cwd` and the source that named it. Discovery
-only reads: never execute a check while discovering. Then run the candidates from
-each `cwd`. Let the change pick checks: when it touches a build input (a
+only reads sources: never build, install or execute a check while discovering;
+running checks is a later step. Then run the candidates from each `cwd`. Let the change pick checks: when it touches a build input (a
 `tsconfig*.json`, a bundler config, or a package's `main`, `exports`, `bin` or
 `build` scripts), include the build CI runs; prefer tests related to the changed
 files. Before pushing, include every CI job whose triggers and path filters fire

@@ -108,3 +108,11 @@ test('Ship discovery lists checks whatever the change kind and only runs the rel
     /Discovery lists what the sources define whatever the size or kind of the change, a documentation-only change included; the change picks only which listed checks you run/u,
   );
 });
+
+test('Ship discovery only reads sources and never builds, installs or runs a check', () => {
+  const ship = read('skills/planr-ship/SKILL.md').replace(/\s+/gu, ' ');
+  assert.match(
+    ship,
+    /Discovery only reads sources: never build, install or execute a check while discovering; running checks is a later step/u,
+  );
+});
