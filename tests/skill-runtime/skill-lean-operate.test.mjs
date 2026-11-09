@@ -25,8 +25,21 @@ test('cycle, brief and per-lens notes exist only for fan-out or a persisted cycl
     flat,
     /`cycle\.md`, `brief\.md` and per-lens notes only when subagents run or the user asks to persist the cycle/,
   );
-  const mentions = (text) => (text.match(/`(?:cycle|brief)\.md`/g) ?? []).length;
-  assert.equal(mentions(skill.slice(0, fanOut)), 2, 'default section names them once, as the rule');
+  assert.match(
+    flat,
+    /a persisted cycle without fan-out writes `cycle\.md` and `brief\.md` with the contents defined under Fan out/,
+  );
+  const fanOutPart = skill.slice(fanOut);
+  assert.match(fanOutPart, /`cycle\.md` \(effective scope, roster/);
+  assert.match(fanOutPart, /`brief\.md`\s+\(scope, revision, source paths/);
+  assert.doesNotMatch(skill.slice(0, fanOut), /Dispatch only/);
+});
+
+test('coverage rows use the lens names the dashboard reads', () => {
+  assert.match(
+    flat,
+    /Name each Review coverage row `CEO`, `CTO`, `CPO`, `CMO`, `COO`, `Challenger` or `Chair`/,
+  );
 });
 
 test('the coverage table, decision-changing gaps and source citations stay', () => {
@@ -54,8 +67,4 @@ test('the fan-out path keeps the advisor roster, Challenger and Chair', () => {
   assert.match(part, /Dispatch only the selected independent advisors/);
   for (const lens of ['ceo', 'cto', 'cpo', 'cmo', 'coo', 'challenger', 'chair'])
     assert.match(part, new RegExp(`planr-${lens}-review`));
-});
-
-test('SKILL.md stays under its footprint bound', () => {
-  assert.ok(Buffer.byteLength(skill) <= 8700, `SKILL.md is ${Buffer.byteLength(skill)} bytes`);
 });

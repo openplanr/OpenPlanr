@@ -48,10 +48,15 @@ test('the return rules are not repeated in the skills', () => {
   }
 });
 
-test('Spec and Plan name the validation command instead of an unnamed helper', () => {
-  for (const name of ['spec', 'plan']) {
-    const text = skillText(name);
-    assert.doesNotMatch(text, /If a helper is unavailable/, name);
-    assert.match(text, /`openplanr spec validate <SPEC-ID>`/, name);
-  }
+test('Spec validates with the CLI when present; Plan keeps the direct check mandatory', () => {
+  const spec = skillText('spec');
+  assert.doesNotMatch(spec, /If a helper is unavailable/);
+  assert.match(spec, /`openplanr spec validate <SPEC-ID>`/);
+  const plan = skillText('plan').replace(/\s+/g, ' ');
+  assert.doesNotMatch(plan, /spec validate/);
+  assert.match(plan, /check directly that every story and task frontmatter is valid/);
+  assert.match(
+    plan,
+    /`openplanr spec sync <SPEC-ID> --dry-run` adds an orphan and schema-drift check/,
+  );
 });

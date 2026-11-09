@@ -35,7 +35,7 @@ asks for independent reviewers; then follow Fan out.
 
 Where the report goes: with no `.planr/` in the repository, answer in chat, or write one file where
 the repository already keeps such documents. With `.planr/`, write `board-report.md` in a cycle
-directory (below). `cycle.md`, `brief.md` and per-lens notes only when subagents run or the user asks to persist the cycle.
+directory (below). `cycle.md`, `brief.md` and per-lens notes only when subagents run or the user asks to persist the cycle; a persisted cycle without fan-out writes `cycle.md` and `brief.md` with the contents defined under Fan out.
 
 ## Read the sources
 
@@ -49,13 +49,15 @@ Work through each selected lens in one pass:
 
 | Lens | Focus |
 |---|---|
-| Strategy and finance | direction, runway, margin, cost of delay |
-| Technology and delivery risk | architecture, reliability, security, execution risk |
-| Product and activation | customer value, activation, prioritization, adoption |
-| Growth and market | acquisition, positioning, demand, retention, measurement |
-| Operations and customer health | process, support, incidents, capacity |
+| CEO | strategy and finance: direction, runway, margin, cost of delay |
+| CTO | technology and delivery risk: architecture, reliability, security, execution risk |
+| CPO | product and activation: customer value, activation, prioritization, adoption |
+| CMO | growth and market: acquisition, positioning, demand, retention, measurement |
+| COO | operations and customer health: process, support, incidents, capacity |
 | Challenger | for each material claim: the strongest alternative, the downside, and the confidence |
 | Chair | the decision queue and action plan, from the findings above |
+
+Name each Review coverage row `CEO`, `CTO`, `CPO`, `CMO`, `COO`, `Challenger` or `Chair`; the dashboard matches on those names.
 
 Every recommendation cites a source: a project path, command output, or a named gap. Do not
 fabricate a lens with no evidence; record it as `no material finding` or `unavailable` in review
@@ -147,7 +149,7 @@ Use these sections in this order:
 ## Review coverage
 | Lens | Outcome | Note | Informed |
 |---|---|---|---|
-| ... | reported / no material finding / unavailable / omitted by scope | `file.md` or `—` | D1 / watch / none |
+| CEO | reported / no material finding / unavailable / omitted by scope | `file.md` or `—` | D1 / watch / none |
 
 ## Issues
 - **I1 — <problem>:** <impact and practical next action>

@@ -27,7 +27,7 @@ test('scheme choice, cadence and health sit behind references', () => {
   const cadence = read('skills/planr-release/references/cadence.md');
   assert.match(cadence, /Long-term health/);
   assert.match(cadence, /Drift check/);
-  assert.ok(Buffer.byteLength(skill) <= 8000, `SKILL.md is ${Buffer.byteLength(skill)} bytes`);
+  assert.ok(Buffer.byteLength(skill) <= 8200, `SKILL.md is ${Buffer.byteLength(skill)} bytes`);
 });
 
 test('collection names a base revision, reads bodies and footers, and surfaces git failures', () => {

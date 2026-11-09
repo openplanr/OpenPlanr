@@ -1959,7 +1959,7 @@
       "source": "skills/planr-operate/openplanr.skill.json",
       "entrypoint": "skills/planr-operate/SKILL.md",
       "description": "Run a focused operating review across seven executive lenses and produce a decision and action brief. Use for periodic product or company-level leadership review.",
-      "sourceDigest": "sha256:e2cc2d54e6e77eb947baa358f85c885502f41a9038fc03ae110f936f14d47fec",
+      "sourceDigest": "sha256:09fce5335a01af0085d9b70d1c0e9a9cfc10df1e70abad7bd5cc541e4a633b91",
       "resources": [
         {
           "path": "references/note-checklist.md",
@@ -2029,7 +2029,7 @@
       "source": "skills/planr-plan/openplanr.skill.json",
       "entrypoint": "skills/planr-plan/SKILL.md",
       "description": "Turn a Protocol-compatible specification or product intent into schema-compatible OpenPlanr stories and implementation tasks. Use for planning and decomposition, not implementation.",
-      "sourceDigest": "sha256:56d6e0d2c805fafc8b98aea7aa123aea17c3418a25e835901de98d25ce60237a",
+      "sourceDigest": "sha256:5ff41d809f97bc77ba57d99a41d81afafe9ed132527a5fbddeb414e230d87fc9",
       "resources": [
         {
           "path": "agents/openai.yaml",
@@ -2195,7 +2195,7 @@
       "source": "skills/planr-release/openplanr.skill.json",
       "entrypoint": "skills/planr-release/SKILL.md",
       "description": "Choose and maintain a product's versioning scheme, classify shipped changes, and write user-facing changelogs or release notes. Use for SemVer or CalVer decisions, version bumps, release cadence, and preparing a versioned release after landing.",
-      "sourceDigest": "sha256:2a79d8eecec933e842ad2928c583483edebe7cc17fb05629bb9d86c29de99893",
+      "sourceDigest": "sha256:4a161866c721b2f5b357d9d9032a24edcd6a8b943bafbf8c5c3aed6a85a421f4",
       "resources": [
         {
           "path": "agents/openai.yaml",
@@ -2217,7 +2217,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:79769004c106f31ddb6a74a4f7a902b3f1d8c43617fb11d56f9f7455855cfa69"
+          "digest": "sha256:9279cb628c5fae52d3119b5a229d644131c9699abcff74cf27e2f21af1f4706c"
         },
         {
           "path": "references/release-notes.md",
@@ -2229,7 +2229,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:9dd1784dc10f40dc4e1962e9eab4373cc0dc04c111935fb8f145772a8f6c2fec"
+          "digest": "sha256:15645f09c3906c05d6fe994ef8a97b939742ff31be18a0b4d13465e3ceab8f8d"
         },
         {
           "path": "references/cadence.md",
@@ -2241,7 +2241,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:5de7f757f7b280b3086eb7b7e86d93fd31c1a29502eea60e4d6bb5dc8869e86a"
+          "digest": "sha256:73786c9d4b5174d66e28d90163a0f705e3a316aa778220119cb3c3326ed5a5dc"
         },
         {
           "path": "assets/profile-template.md",

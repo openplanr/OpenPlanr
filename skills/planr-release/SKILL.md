@@ -12,17 +12,17 @@ Classify what shipped by what users must do or expect differently, then say so i
 
 | The user asks for | Do | Never, unless also asked |
 |---|---|---|
-| Release notes, a summary of what changed, or a proposed version | Steps 1 to 4. Return the notes and the proposed version in chat. | Write `CHANGELOG.md`, bump a version, run tests, tag |
-| Prepare or cut a release | Steps 1 to 5 | Push, tag, publish, deploy |
+| Release notes, a summary of what changed, or a proposed version | Steps 0 to 4 (Step 0 only reads). Return the notes and the proposed version in chat. | Write `CHANGELOG.md` or `.release/profile.md`, bump a version, run tests, tag |
+| Prepare or cut a release | Steps 0 to 5 | Push, tag, publish, deploy |
 | A tag, a publication or an announcement | That one external effect, after Step 5 is done | Anything else external |
 
-A request for release notes or a proposed version changes no file, bumps no version and runs no tests.
+A request for release notes or a proposed version changes no file, bumps no version and runs no tests, and never writes the profile.
 
 ## Step 0: Load the release profile
 
 Read `.release/profile.md`, plus `AGENTS.md` and `CLAUDE.md` when tracked, in one batch. Expand only for a missing contract, a dependency or a contradiction, and stop when each claim has evidence or a named gap.
 
-When the profile exists, follow it; do not re-argue the scheme. When it does not, propose the bump from the recent tags and the declared public surface, and say the profile is missing. Choose a scheme and write a profile only on first-time setup, when the user asks to set one up, or when preparing the first release: read [the versioning schemes guide](references/schemes.md), get the user's agreement, then write it with the [release profile template](assets/profile-template.md).
+When the profile exists, follow it; do not re-argue the scheme. When it does not, propose a scheme and the bump in your answer from the recent tags and the public surface, and say the profile is missing; do not write it for a notes-only request. Choose a scheme and write a profile only on first-time setup, when the user asks to set one up, or when preparing the first release: read [the versioning schemes guide](references/schemes.md), get the user's agreement, then write it with the [release profile template](assets/profile-template.md).
 
 ## Step 1: Gather what shipped
 

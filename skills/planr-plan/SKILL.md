@@ -112,10 +112,12 @@ Write stories and tasks directly in the repository's active planning mode.
 - Name concrete files and repository-grounded checks. Preserve established
   repository headings when they carry additional information.
 
-Validate all frontmatter and acceptance coverage before finishing: run
-`openplanr spec validate <SPEC-ID>` when `command -v openplanr` succeeds,
-otherwise check the same invariants and existing IDs directly. Do not route
-semantic work to a CLI fallback.
+Before finishing, check directly that every story and task frontmatter is
+valid, every acceptance ID is mapped through `acceptanceRefs` and named under
+`## Test Requirements`, and no ID repeats an existing one. When
+`command -v openplanr` succeeds and a `SPEC-NNN` exists,
+`openplanr spec sync <SPEC-ID> --dry-run` adds an orphan and schema-drift check
+and writes nothing. Do not route semantic work to a CLI fallback.
 
 For approved design input, author the complete story and task bytes before
 touching target paths, then commit those bytes and the sibling

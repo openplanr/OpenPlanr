@@ -7,6 +7,7 @@ Contents:
 4. Hotfixes
 5. When a release goes out wrong
 6. Freezes and quiet periods
+7. Long-term health
 
 ---
 
