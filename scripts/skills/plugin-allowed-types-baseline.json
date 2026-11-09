@@ -1,20 +1,10 @@
 {
   "$comment": "Host bundle files the instructions-only policy refuses today. Each later change deletes the entries it fixes and updates count and sha256; entries may never be added.",
-  "count": 98,
-  "sha256": "10e14a6e5467e078e14acd02cad04bd6090e30854081fe103e84b6062ab06975",
+  "count": 72,
+  "sha256": "46dec08468361749f1542dbcbcfcd855c22335e088989bdc7f2e69fe0808cc8c",
   "entries": [
     {
       "host": "claude",
-      "path": "README.md",
-      "code": "unpinned-launcher"
-    },
-    {
-      "host": "claude",
-      "path": "references/pipeline/stacks/database/prisma.md",
-      "code": "unpinned-launcher"
-    },
-    {
-      "host": "claude",
       "path": "skills/delegate/scripts/adapters/capsule.mjs",
       "code": "type-not-allowed"
     },
@@ -131,46 +121,6 @@
     {
       "host": "claude",
       "path": "skills/delegate/scripts/runner.mjs",
-      "code": "type-not-allowed"
-    },
-    {
-      "host": "claude",
-      "path": "skills/design-loop/references/utilities.md",
-      "code": "unpinned-launcher"
-    },
-    {
-      "host": "claude",
-      "path": "skills/design-review/references/utilities.md",
-      "code": "unpinned-launcher"
-    },
-    {
-      "host": "claude",
-      "path": "skills/design/references/utilities.md",
-      "code": "unpinned-launcher"
-    },
-    {
-      "host": "claude",
-      "path": "skills/plan/SKILL.md",
-      "code": "unpinned-launcher"
-    },
-    {
-      "host": "claude",
-      "path": "skills/sync/scripts/names.mjs",
-      "code": "type-not-allowed"
-    },
-    {
-      "host": "claude",
-      "path": "skills/sync/scripts/sync.mjs",
-      "code": "executable-bit"
-    },
-    {
-      "host": "claude",
-      "path": "skills/sync/scripts/sync.mjs",
-      "code": "shebang"
-    },
-    {
-      "host": "claude",
-      "path": "skills/sync/scripts/sync.mjs",
       "code": "type-not-allowed"
     },
     {
@@ -291,46 +241,6 @@
     {
       "host": "codex",
       "path": "skills/delegate/scripts/runner.mjs",
-      "code": "type-not-allowed"
-    },
-    {
-      "host": "codex",
-      "path": "skills/design-loop/references/utilities.md",
-      "code": "unpinned-launcher"
-    },
-    {
-      "host": "codex",
-      "path": "skills/design-review/references/utilities.md",
-      "code": "unpinned-launcher"
-    },
-    {
-      "host": "codex",
-      "path": "skills/design/references/utilities.md",
-      "code": "unpinned-launcher"
-    },
-    {
-      "host": "codex",
-      "path": "skills/plan/SKILL.md",
-      "code": "unpinned-launcher"
-    },
-    {
-      "host": "codex",
-      "path": "skills/sync/scripts/names.mjs",
-      "code": "type-not-allowed"
-    },
-    {
-      "host": "codex",
-      "path": "skills/sync/scripts/sync.mjs",
-      "code": "executable-bit"
-    },
-    {
-      "host": "codex",
-      "path": "skills/sync/scripts/sync.mjs",
-      "code": "shebang"
-    },
-    {
-      "host": "codex",
-      "path": "skills/sync/scripts/sync.mjs",
       "code": "type-not-allowed"
     },
     {
@@ -451,46 +361,6 @@
     {
       "host": "cursor",
       "path": "rules/planr-delegate/scripts/runner.mjs",
-      "code": "type-not-allowed"
-    },
-    {
-      "host": "cursor",
-      "path": "rules/planr-design-loop/references/utilities.md",
-      "code": "unpinned-launcher"
-    },
-    {
-      "host": "cursor",
-      "path": "rules/planr-design-review/references/utilities.md",
-      "code": "unpinned-launcher"
-    },
-    {
-      "host": "cursor",
-      "path": "rules/planr-design/references/utilities.md",
-      "code": "unpinned-launcher"
-    },
-    {
-      "host": "cursor",
-      "path": "rules/planr-plan.mdc",
-      "code": "unpinned-launcher"
-    },
-    {
-      "host": "cursor",
-      "path": "rules/planr-sync/scripts/names.mjs",
-      "code": "type-not-allowed"
-    },
-    {
-      "host": "cursor",
-      "path": "rules/planr-sync/scripts/sync.mjs",
-      "code": "executable-bit"
-    },
-    {
-      "host": "cursor",
-      "path": "rules/planr-sync/scripts/sync.mjs",
-      "code": "shebang"
-    },
-    {
-      "host": "cursor",
-      "path": "rules/planr-sync/scripts/sync.mjs",
       "code": "type-not-allowed"
     }
   ]

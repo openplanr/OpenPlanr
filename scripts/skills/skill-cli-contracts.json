@@ -1,0 +1,6 @@
+{
+  "$comment": "CLI commands runtime skills call, with the contract version their JSON follows and the first CLI version that ships it. SKILL_CLI_MINIMUM in the skill text is the highest `since`; change `contract` and `since` together.",
+  "commands": {
+    "sync tracker": { "contract": 1, "since": "3.7.0" }
+  }
+}

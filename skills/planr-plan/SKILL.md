@@ -48,8 +48,8 @@ handoff items as additional planning context, retaining revision/comment links a
 unresolved questions. When `openplanr` is not found, does not know `design`, or
 reports `E_DESIGN_RUNTIME_MISSING`, treat the handoff as unverified evidence rather
 than agreed scope, continue when the specification is decision-complete, and name
-the fix: `npm install -g openplanr`, `npm install -g openplanr@latest`, or
-`npm install -g openplanr` without `--omit=optional`, respectively. An outdated or unapproved draft is evidence, not agreed scope;
+the fix: install the `openplanr` CLI at this plugin's version, upgrade it to that
+version, or reinstall it without `--omit=optional`, respectively. An outdated or unapproved draft is evidence, not agreed scope;
 report the changed inputs and obtain the missing decision only when it affects the
 requested plan. Never silently substitute a newer draft for an approved snapshot.
 A missing review handoff does not block ordinary planning from a clear specification.
