@@ -469,7 +469,7 @@ test('canonical Operate guidance keeps context and seven lenses without workflow
   const operate = read('skills/planr-operate/SKILL.md');
   assert.match(operate, /native structured-question UI/iu);
   assert.match(operate, /one concise chat question at a time/iu);
-  assert.match(operate, /Build shared context once/iu);
+  assert.match(operate, /Read the sources/iu);
   assert.match(
     operate,
     /`planr-ceo-review`[\s\S]*`planr-cto-review`[\s\S]*`planr-cpo-review`[\s\S]*`planr-cmo-review`[\s\S]*`planr-coo-review`/iu,
@@ -477,7 +477,7 @@ test('canonical Operate guidance keeps context and seven lenses without workflow
   assert.match(operate, /`planr-challenger-review`/iu);
   assert.match(operate, /`planr-chair-review`/iu);
   assert.match(operate, /## Issues/iu);
-  assert.match(operate, /Optional quality check/iu);
+  assert.match(operate, /## Quality check/iu);
   assert.match(operate, /operate-review-quality-contract@2\.0\.0/u);
   assert.match(operate, /\]\(references\/note-checklist\.md\)/u);
 });

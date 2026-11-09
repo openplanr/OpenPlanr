@@ -4257,12 +4257,12 @@ export const CANONICAL_REGISTRIES = deepFreeze({
       },
       {
         "skillId": "planr-operate",
-        "skillVersion": "2.3.0",
+        "skillVersion": "2.4.0",
         "description": "Run a focused operating review across seven executive lenses and produce a decision and action brief. Use for periodic product or company-level leadership review.",
         "lifecycle": "active",
         "authorityClass": "operate-orchestration",
         "source": "skills/planr-operate/openplanr.skill.json",
-        "sourceDigest": "sha256:99ee0311ab80a10d772ef02daa84178ca190095a6c6f8dc9ca33d67e86fe2e6f",
+        "sourceDigest": "sha256:fb521d29bb5f3aa048877f9d8df6c0ea97d1f05efbf86b2c940f6f2e0fe81f3c",
         "triggerPolicy": {
           "include": [
             "Run an executive operating review across product, technology, growth, operations, and strategy",
@@ -4877,7 +4877,7 @@ export const CANONICAL_REGISTRIES = deepFreeze({
       }
     ],
     "compatibilityAliases": [],
-    "documentDigest": "sha256:015bd0b5307b056c8e4d4ba075eeac5b31586ba0873211b7333c92dfbefbca7f"
+    "documentDigest": "sha256:8cd6ae30df680d6b4d3789f1f42d52219649f49b62c9503249c6c30bccc3575c"
   },
   "outputs.json": {
     "kind": "output-catalog",

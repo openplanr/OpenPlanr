@@ -944,7 +944,7 @@
       "skillId": "planr-operate",
       "family": "operate",
       "contribution": "operate",
-      "skillVersion": "2.3.0",
+      "skillVersion": "2.4.0",
       "description": "Run a focused operating review across seven executive lenses and produce a decision and action brief. Use for periodic product or company-level leadership review.",
       "lifecycle": "active",
       "authorityClass": "operate-orchestration",

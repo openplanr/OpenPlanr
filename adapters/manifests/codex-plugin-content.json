@@ -803,11 +803,11 @@
       "assets": [
         {
           "path": "skills/operate/SKILL.md",
-          "digest": "sha256:191c43314884c0a90418784c20c897b231c2665827ba320c01e0dca63c55779f"
+          "digest": "sha256:e91bcc6092dda6364ab430a5c19bbd7368018b9ac1f6e88527f6116c1ef17ea0"
         },
         {
           "path": "skills/operate/openplanr.skill.json",
-          "digest": "sha256:99ee0311ab80a10d772ef02daa84178ca190095a6c6f8dc9ca33d67e86fe2e6f"
+          "digest": "sha256:fb521d29bb5f3aa048877f9d8df6c0ea97d1f05efbf86b2c940f6f2e0fe81f3c"
         },
         {
           "path": "skills/operate/references/note-checklist.md",

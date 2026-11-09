@@ -1955,11 +1955,11 @@
     },
     {
       "id": "planr-operate",
-      "version": "2.3.0",
+      "version": "2.4.0",
       "source": "skills/planr-operate/openplanr.skill.json",
       "entrypoint": "skills/planr-operate/SKILL.md",
       "description": "Run a focused operating review across seven executive lenses and produce a decision and action brief. Use for periodic product or company-level leadership review.",
-      "sourceDigest": "sha256:69d7a13b865be610e13b8949551c7a566790f8057b97582b4d282cf63429dbd4",
+      "sourceDigest": "sha256:e2cc2d54e6e77eb947baa358f85c885502f41a9038fc03ae110f936f14d47fec",
       "resources": [
         {
           "path": "references/note-checklist.md",
