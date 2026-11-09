@@ -832,7 +832,7 @@
       "assets": [
         {
           "path": "skills/plan/SKILL.md",
-          "digest": "sha256:d1a3df9ebfa9a41d61098d3626b126c10047d8befb850104fc9efe6773e62f8e"
+          "digest": "sha256:fc1e96d94163cd0996cb388b44435324ae6361be4c5b23723bbc230b18740ff2"
         },
         {
           "path": "skills/plan/openplanr.skill.json",
