@@ -83,17 +83,27 @@ Inspect these sources directly, in this order:
 1. task Test Requirements;
 2. repository instructions;
 3. package and task-runner scripts;
-4. applicable CI and pre-commit configuration, and the pre-push hook before pushing.
+4. applicable CI configuration, the pre-commit hook (for example lint-staged) and the
+   pre-push hook, when present, whatever the change touches.
 
 List each candidate check with its `cwd` and the source that named it. Discovery
-only reads: never execute a check while discovering. Then run the candidates from
-each `cwd`. Let the change pick checks: when it touches a build input (a
+only reads sources: never build, install or execute a check while discovering;
+running checks is a later step. Then run the candidates from each `cwd`. Let the change pick checks: when it touches a build input (a
 `tsconfig*.json`, a bundler config, or a package's `main`, `exports`, `bin` or
 `build` scripts), include the build CI runs; prefer tests related to the changed
 files. Before pushing, include every CI job whose triggers and path filters fire
 for the changed paths, and for a published package that gains non-code files, a
-dry-run pack that confirms they are packed. Missing commands are diagnostics, not
-a reason to invent or skip all verification.
+dry-run pack that confirms they are packed. When a workflow selects jobs at
+runtime (a `changes` or paths-filter job whose outputs gate other jobs), list every job it
+gates and mark each conditional. Run a conditional job when a local equivalent command
+exists; otherwise report it as "conditional, not run". Never drop one silently or by
+reading the paths yourself. Read every workflow file whose triggers fire for the
+change, not only the main one: dedicated browser, end-to-end and sandbox workflows are sources too. List a git hook as
+its own command and, when it delegates to a script, also each check that script runs.
+Discovery lists what the sources define whatever the size or kind of the change, a
+documentation-only change included; the change picks only which listed checks you run.
+Missing commands are diagnostics, not a reason to invent or
+skip all verification.
 
 If `openplanr` is already on `PATH`, `openplanr ship checks --json --task <task-path>`
 (omit `--task` for a direct request; add `--tier story` or `--tier push` before

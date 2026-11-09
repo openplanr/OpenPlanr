@@ -186,7 +186,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:3b90a1b5daa9d757b89d8d7a810af14dcbdb0481195ed128100b9251cc4235d1"
+          "digest": "sha256:dfdf3cb1fea507a58b9a273561bb66b57f657ba6d9b4f6093170093c70bf9a11"
         },
         {
           "path": "agents/openai.yaml",
@@ -235,7 +235,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:3b90a1b5daa9d757b89d8d7a810af14dcbdb0481195ed128100b9251cc4235d1"
+          "digest": "sha256:dfdf3cb1fea507a58b9a273561bb66b57f657ba6d9b4f6093170093c70bf9a11"
         },
         {
           "path": "agents/openai.yaml",
@@ -284,7 +284,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:3b90a1b5daa9d757b89d8d7a810af14dcbdb0481195ed128100b9251cc4235d1"
+          "digest": "sha256:dfdf3cb1fea507a58b9a273561bb66b57f657ba6d9b4f6093170093c70bf9a11"
         },
         {
           "path": "agents/openai.yaml",
@@ -345,7 +345,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:3b90a1b5daa9d757b89d8d7a810af14dcbdb0481195ed128100b9251cc4235d1"
+          "digest": "sha256:dfdf3cb1fea507a58b9a273561bb66b57f657ba6d9b4f6093170093c70bf9a11"
         },
         {
           "path": "agents/openai.yaml",
@@ -455,7 +455,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:3b90a1b5daa9d757b89d8d7a810af14dcbdb0481195ed128100b9251cc4235d1"
+          "digest": "sha256:dfdf3cb1fea507a58b9a273561bb66b57f657ba6d9b4f6093170093c70bf9a11"
         },
         {
           "path": "agents/openai.yaml",
@@ -516,7 +516,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:3b90a1b5daa9d757b89d8d7a810af14dcbdb0481195ed128100b9251cc4235d1"
+          "digest": "sha256:dfdf3cb1fea507a58b9a273561bb66b57f657ba6d9b4f6093170093c70bf9a11"
         },
         {
           "path": "agents/openai.yaml",
@@ -577,7 +577,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:3b90a1b5daa9d757b89d8d7a810af14dcbdb0481195ed128100b9251cc4235d1"
+          "digest": "sha256:dfdf3cb1fea507a58b9a273561bb66b57f657ba6d9b4f6093170093c70bf9a11"
         },
         {
           "path": "agents/openai.yaml",
@@ -1971,7 +1971,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:3b90a1b5daa9d757b89d8d7a810af14dcbdb0481195ed128100b9251cc4235d1"
+          "digest": "sha256:dfdf3cb1fea507a58b9a273561bb66b57f657ba6d9b4f6093170093c70bf9a11"
         },
         {
           "path": "agents/openai.yaml",
@@ -2314,7 +2314,7 @@
       "source": "skills/planr-ship/openplanr.skill.json",
       "entrypoint": "skills/planr-ship/SKILL.md",
       "description": "Implement an OpenPlanr plan, specification, task, or clearly stated request end to end in the current repository. Use when the user asks to build, implement, fix, finish, or ship local work, or to plan and implement an accepted change. Invoke before editing files for the requested change. Not for planning only, landing, release, or work handed to another coding agent.",
-      "sourceDigest": "sha256:a328a8422f8b5154f5ddf02aad160decfbdec5a95b484a7e192acfb8c4f5ae0f",
+      "sourceDigest": "sha256:a95447dd582794345f3286715fd0a34a9d09a7e0a5acee3ba6038a1f51a4bc8b",
       "resources": [
         {
           "path": "agents/openai.yaml",

@@ -50,15 +50,13 @@ test('Ship discovers verification in the specified order and treats risk metadat
   const task = skill.indexOf('1. task Test Requirements;');
   const repository = skill.indexOf('2. repository instructions;');
   const packageRunner = skill.indexOf('3. package and task-runner scripts;');
-  const ci = skill.indexOf(
-    '4. applicable CI and pre-commit configuration, and the pre-push hook before pushing.',
-  );
+  const ci = skill.indexOf('4. applicable CI configuration, the pre-commit hook');
   assert.ok(task > 0 && task < repository && repository < packageRunner && packageRunner < ci);
   assert.match(skill, /`reviewRisks` and\s+`browserSurfaces` select useful checks/u);
   assert.match(skill, /neither field\s+is a workflow gate/u);
   assert.match(skill, /Missing commands are diagnostics/u);
   assert.match(skill, /Inspect these sources directly, in this order/u);
-  assert.match(skill, /never execute a check while discovering/u);
+  assert.match(skill, /never build, install or execute a check while discovering/u);
   for (const rule of [
     /touches a build input/u,
     /prefer tests related to the changed\s+files/u,

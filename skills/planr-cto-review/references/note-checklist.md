@@ -2,9 +2,12 @@
 
 Check a written Operate note line by line before returning it. Each item names the diagnostic
 code `openplanr operate validate-note` reports for the same problem. Fix what you can; report each
-item that stays unresolved as a structural issue, with its code. If `openplanr` is already on
-PATH, you may run `openplanr operate validate-note <note> --profile <profile> --contract-version 2.0.0`
-instead of checking by hand; treat its diagnostics the same way.
+item that stays unresolved as a structural issue, with its code.
+
+This checklist is the check. Never run `npx`, install or download anything, or search the
+filesystem for a validator or the CLI. Run `openplanr operate validate-note <note> --profile
+<profile> --contract-version 2.0.0` only if `command -v openplanr` succeeds, and treat its
+diagnostics the same way.
 
 Profiles: `advisor` (CEO, CTO, CPO, CMO and COO reviews), `challenger`, `chair` and
 `board-report`. Notes written now use contract 2.0.0.
@@ -14,9 +17,11 @@ Profiles: `advisor` (CEO, CTO, CPO, CMO and COO reviews), `challenger`, `chair` 
 - [ ] The profile is one of the four above (`E_OPERATE_REVIEW_PROFILE_INVALID`).
 - [ ] The preamble, before the first `##` heading, holds at most one contract line, written
       `> **Contract:** …` or `- **Contract:** …`
-      (`E_OPERATE_REVIEW_CONTRACT_DECLARATION_DUPLICATE`), and its value is exactly
-      `operate-review-quality-contract@2.0.0` (`E_OPERATE_REVIEW_CONTRACT_DECLARATION_INVALID`,
-      `E_OPERATE_REVIEW_CONTRACT_VERSION_INVALID`, `E_OPERATE_REVIEW_CONTRACT_VERSION_MISMATCH`).
+      (`E_OPERATE_REVIEW_CONTRACT_DECLARATION_DUPLICATE`). A note with no contract line passes.
+      Only a contract line that is present is checked: its value must be exactly
+      `operate-review-quality-contract@2.0.0` (`E_OPERATE_REVIEW_CONTRACT_DECLARATION_INVALID`
+      for an unsupported kind or version, `E_OPERATE_REVIEW_CONTRACT_VERSION_INVALID`,
+      `E_OPERATE_REVIEW_CONTRACT_VERSION_MISMATCH`).
 - [ ] The note has exactly one level-one `#` title (`E_OPERATE_REVIEW_TITLE_MISSING`,
       `E_OPERATE_REVIEW_TITLE_DUPLICATE`).
 - [ ] The note fits its size limit in UTF-8 bytes: advisor 16 KiB, challenger 12 KiB, chair and
@@ -25,6 +30,9 @@ Profiles: `advisor` (CEO, CTO, CPO, CMO and COO reviews), `challenger`, `chair` 
       and appears once (`E_OPERATE_REVIEW_SECTION_DUPLICATE`); there is no other `##` section
       (`E_OPERATE_REVIEW_SECTION_UNEXPECTED`); and the sections follow the order listed below
       (`E_OPERATE_REVIEW_SECTION_ORDER`).
+- [ ] Check section items, section fields and item fields only in sections that are present. A
+      missing section is reported once, as `E_OPERATE_REVIEW_SECTION_MISSING`, and yields no
+      field or item code for what it would have held. The preamble fields are always checked.
 - [ ] Each required field is written as `- **Name:** value` or `> **Name:** value`, appears once
       in its scope (`E_OPERATE_REVIEW_FIELD_DUPLICATE`), and holds a real value, not empty, `...`,
       `TBD`, `TODO` or a `<placeholder>` (`E_OPERATE_REVIEW_FIELD_MISSING`).
@@ -75,7 +83,14 @@ Profiles: `advisor` (CEO, CTO, CPO, CMO and COO reviews), `challenger`, `chair` 
 - [ ] Sections: `Scope`, `Executive summary`, `Decision queue`, `Action plan`,
       `Risks and dissent`, `Decision-changing gaps`, `Review coverage`, `Issues`.
 - [ ] `Scope` has `Subject`, `Window`, `Requested decision` and `Custody`.
-- [ ] `Executive summary` is not empty (`E_OPERATE_REVIEW_SUMMARY_MISSING`).
+- [ ] `Executive summary` is not empty (`E_OPERATE_REVIEW_SUMMARY_MISSING`); a missing
+      `Executive summary` section is reported both as `E_OPERATE_REVIEW_SECTION_MISSING` and as
+      `E_OPERATE_REVIEW_SUMMARY_MISSING`.
+- [ ] Exceptions to "a missing section yields no other code": with at least one decision, a
+      missing `Action plan` (chair or board-report) also yields
+      `E_OPERATE_REVIEW_ACTION_PLAN_INVALID`; in a contract 1.0.0 note, a missing `Executive call`
+      also yields `E_OPERATE_REVIEW_EXECUTIVE_CALL_MISSING` and a missing `Human gate` also yields
+      `E_OPERATE_REVIEW_HUMAN_GATE_INCOMPLETE`.
 - [ ] The decision queue and action plan items below.
 
 ## Decision queue and action plan (chair and board-report)
@@ -106,4 +121,11 @@ Its sections and fields differ from the lists above. A 1.0.0 board report also n
       reject or defer (`E_OPERATE_REVIEW_HUMAN_GATE_CONTRADICTORY`).
 
 A caller that requires a conforming note fails it as a whole when any item above is unresolved
-(`E_OPERATE_REVIEW_NOTE_INVALID`).
+(`E_OPERATE_REVIEW_NOTE_INVALID`); that whole-note code is never listed on the `CODES:` line.
+
+## Report format
+
+End the reply with exactly one line: `CODES: ` followed by every distinct code from the items
+above, each written in full, sorted alphabetically and comma-separated; write
+`CODES: none` when every item passes. Each code appears once however many times the problem
+occurs.
