@@ -23,6 +23,7 @@
     "linear": "deterministic-preserved",
     "operate": "deterministic-preserved",
     "quick": "deterministic-preserved",
+    "release": "deterministic-preserved",
     "report": "deterministic-preserved",
     "report-linter": "deterministic-preserved",
     "rules": "deterministic-preserved",
