@@ -995,7 +995,10 @@ Each child process gets an explicit environment: paths, locale, terminal, proxy 
 certificate variables. The native agent adds only the routing variables delegation reads
 (for example `CLAUDE_CONFIG_DIR`, `ANTHROPIC_BASE_URL`, `CODEX_HOME`, `OPENAI_BASE_URL`,
 `CURSOR_API_ENDPOINT`) and the profile's `allowedEnv`; a check adds the names in its
-`env` list. A credential variable,
+`env` list. Toolchain variables such as `JAVA_HOME`, `VIRTUAL_ENV`, `CARGO_HOME`,
+`NVM_DIR` or `npm_config_*` are not passed either; when a check fails for one, its
+`next` names the fix: list the variable in that check's `env`, or in the profile's
+`allowedEnv` for the agent. A credential variable,
 such as a token an MCP server reads, reaches the agent only through a profile that lists
 it in `allowedEnv`; otherwise the agent uses its own login.
 

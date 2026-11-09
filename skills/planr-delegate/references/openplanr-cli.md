@@ -9,7 +9,7 @@ exact-session resume. Never install it, run it through `npx`, or search
 
 Run `openplanr --version`. Use this path only at version 3.7.0 or later.
 An older version, `unknown command 'delegate'` or `E_DELEGATE_RUNTIME_MISSING` means the
-native loop; tell the user that `npm install -g openplanr@3.6.0` (without
+native loop; tell the user that `npm install -g openplanr@3.7.0` (without
 `--omit=optional`) enables this path.
 
 ## Commands

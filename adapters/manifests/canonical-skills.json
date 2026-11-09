@@ -718,7 +718,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:75c33a9f24447c33814b55f25361deb7b5403a4728646a0effc8caa76f811443"
+          "digest": "sha256:1e6e327cf01783b0cf9f5b926c8304de289cf3e8c2eee8fab6e495dadb8da96e"
         },
         {
           "path": "references/openplanr-cli.md",
@@ -730,7 +730,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:5cbf20aaca07db68e2003c61ab15b8cced3484af08638c18d5daae8b20d016f3"
+          "digest": "sha256:2c4d49f94d524569062e97954c784470518fd34fc21f21f7175bcfb6b06d18a8"
         },
         {
           "path": "references/operator-guide.md",

@@ -38,6 +38,7 @@ for (const trigger of ['abort', 'exit']) {
           ? "console.log('ready'); setTimeout(() => process.exit(0), 5000);"
           : "console.log('ready');";
         await assert.rejects(invokeProcess(process.execPath, ['-e', command], {
+          env: { PATH: process.env.PATH },
           signal: controller.signal,
           timeoutMs: 5000,
           onProcess: (value) => { identity = value; },

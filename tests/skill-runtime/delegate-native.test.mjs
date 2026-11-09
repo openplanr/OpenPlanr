@@ -90,7 +90,7 @@ if(args.includes('status')) { console.log(JSON.stringify({isAuthenticated:true,e
 const resume=args.includes('--resume')||args.includes('resume');
 const id=resume?(args.includes('--resume')?args[args.indexOf('--resume')+1]:args.at(-2)):(args.includes('--session-id')?args[args.indexOf('--session-id')+1]:'native-session');
 let input='';process.stdin.on('data',chunk=>input+=chunk);process.stdin.on('end',()=>{
- fs.appendFileSync('invocations.jsonl',JSON.stringify({args,input,extension:process.env.TRUSTED_EXTENSION,configuration:process.env.CLAUDE_CONFIG_DIR})+'\\n');
+ fs.appendFileSync('invocations.jsonl',JSON.stringify({args,input,extension:process.env.TRUSTED_EXTENSION,configuration:process.env.CLAUDE_CONFIG_DIR,secrets:Object.keys(process.env).filter(name=>/TOKEN|KEY|SECRET/.test(name))})+'\\n');
  const emit=event=>console.log(JSON.stringify(event));
  if(kind==='codex')emit({type:'thread.started',thread_id:id});else emit({type:'system',subtype:'init',session_id:id,model:'observed-model'});
  if(mode==='malformed')return console.log('invalid event');
@@ -130,6 +130,11 @@ let input='';process.stdin.on('data',chunk=>input+=chunk);process.stdin.on('end'
     HOME: base,
     PATH: `${bin}:/usr/bin:/bin`,
     TRUSTED_EXTENSION: 'unrelated-value',
+    FOO_TOKEN: 'foo-secret',
+    GITHUB_TOKEN: 'gh-secret',
+    ANTHROPIC_API_KEY: 'anthropic-key',
+    OPENAI_API_KEY: 'openai-key',
+    CURSOR_API_KEY: 'cursor-key',
     ANTHROPIC_BASE_URL: '',
     OPENAI_BASE_URL: '',
     CURSOR_API_ENDPOINT: '',
@@ -194,6 +199,11 @@ for (const kind of ['claude', 'codex', 'cursor']) {
       .map(JSON.parse);
     assert.equal(calls.length, 2);
     assert.equal(calls[0].extension, undefined, 'unrelated variables stay out of the native child');
+    for (const [phase, call] of [
+      ['dispatch', calls[0]],
+      ['resume', calls[1]],
+    ])
+      assert.deepEqual(call.secrets, [], `${phase} child received a token or key`);
     assert.match(calls[0].input, /ordered|INDEX|index/i);
     assert.ok(!calls[1].input.includes('capsule.json'), 'resume does not resend full context');
     const writeFlags = {

@@ -40,7 +40,7 @@ Record the session id: Codex's `thread.started` event `thread_id`, Claude's
 
 | Engine | Resume |
 |---|---|
-| Codex | `codex exec resume <session-id> - < <correction>` with the same `-C`, `-s` and `-o` |
+| Codex | `codex exec --json -o <out>/last.md -C <dir> -s workspace-write resume <session-id> - < <correction>` (the `exec` flags come before `resume`, which rejects `-C` and `-s`) |
 | Claude Code | `cd <dir> && claude -p -r <session-id> --permission-mode acceptEdits --output-format json < <correction>` |
 | Cursor | `agent -p --resume <session-id> --trust --workspace <dir> --output-format json "$(cat <correction>)"` |
 

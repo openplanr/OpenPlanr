@@ -79,6 +79,11 @@ export async function invokeProcess(executable, args, options = {}) {
   } = options;
   if (!Array.isArray(args) || args.some((arg) => typeof arg !== 'string'))
     throw new AdapterError('E_ADAPTER_ARGUMENTS', 'Adapter arguments must be an array of strings.');
+  if (env === null || typeof env !== 'object')
+    throw new AdapterError(
+      'E_ADAPTER_ENVIRONMENT',
+      `No explicit environment was given for ${executable}; a child never inherits the parent environment.`,
+    );
   if (
     timeoutMs !== null &&
     (!Number.isSafeInteger(timeoutMs) || timeoutMs < 1 || timeoutMs > 4 * 3_600_000)

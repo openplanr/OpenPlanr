@@ -412,6 +412,7 @@ test('launch bookkeeping failure terminates the owned child without awaiting its
   const started = Date.now();
   await assert.rejects(
     invokeProcess(process.execPath, ['-e', 'process.stdin.resume(); setInterval(() => {}, 1000)'], {
+      env: { PATH: process.env.PATH },
       timeoutMs: 2000,
       onProcess: () => {
         throw Object.assign(new Error('synthetic bookkeeping failure'), {
@@ -443,7 +444,7 @@ test('unavailable process inspection fails before spawning an adapter', {
     childProcess.spawn = () => { spawned++; throw new Error('must not launch'); };
     syncBuiltinESMExports();
     const { invokeProcess } = await import(${JSON.stringify(adapter)});
-    await assert.rejects(invokeProcess(process.execPath, ['-e', 'throw new Error("must not execute")']), { code: 'E_ADAPTER_PROCESS_IDENTITY' });
+    await assert.rejects(invokeProcess(process.execPath, ['-e', 'throw new Error("must not execute")'], { env: {} }), { code: 'E_ADAPTER_PROCESS_IDENTITY' });
     assert.equal(spawned, 0);
   `;
   execFileSync(process.execPath, ['--input-type=module', '-'], {

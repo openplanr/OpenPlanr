@@ -81,16 +81,25 @@ test('every host bundle ships the delegate skill as instructions only', () => {
   }
 });
 
-test('the optional CLI path pins the exact plugin version and the minimum CLI, without npx', () => {
-  const version = JSON.parse(read('packages/cli/package.json')).version;
+test('the optional CLI path names the minimum CLI for its probe and install line, without npx', () => {
   const minimum = /SKILL_CLI_MINIMUM = '([^']+)'/u.exec(
     read('scripts/skills/plugin-metadata.mjs'),
   )[1];
   const reference = read('skills/planr-delegate/references/openplanr-cli.md');
-  assert.ok(reference.includes(`npm install -g openplanr@${version}`));
+  assert.ok(reference.includes(`npm install -g openplanr@${minimum}`));
   assert.ok(reference.includes(`version ${minimum} or later`));
   assert.doesNotMatch(reference, /\{\{|npx -y|npx openplanr/u);
   assert.match(read('skills/planr-delegate/SKILL.md'), /\]\(references\/openplanr-cli\.md\)/u);
+});
+
+test('Codex resume puts the exec flags before resume, which rejects -C and -s', () => {
+  const commands = read('skills/planr-delegate/references/native-commands.md');
+  assert.ok(
+    commands.includes(
+      '`codex exec --json -o <out>/last.md -C <dir> -s workspace-write resume <session-id> - < <correction>`',
+    ),
+  );
+  assert.doesNotMatch(commands, /exec resume[^\n|]*(?:-C|-s|--cd|--sandbox)\b/u);
 });
 
 test('an installed runtime classifies the reported sources and still rejects a recognizable credential', () => {

@@ -4,6 +4,7 @@ import { mkdir, mkdtemp, readdir, readFile, realpath, rm, writeFile } from 'node
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import test from 'node:test';
+import { invokeProcess } from '../../packages/pipeline/lib/delegate/adapters/generic.mjs';
 import { agentEnvironment } from '../../packages/pipeline/lib/delegate/child-environment.mjs';
 import { captureFileState, gitFileState } from '../../packages/pipeline/lib/delegate/custody.mjs';
 import { snapshotTip } from '../../packages/pipeline/lib/delegate/handoff.mjs';
@@ -209,6 +210,13 @@ test('git and ps children get the base environment and no token or credential', 
   }
 });
 
+test('starting a process without an explicit environment fails instead of inheriting one', async () => {
+  for (const options of [{}, { env: undefined }, { env: null }])
+    await assert.rejects(invokeProcess(process.execPath, ['-e', ''], options), {
+      code: 'E_ADAPTER_ENVIRONMENT',
+    });
+});
+
 test('every child process the delegate runtime starts names an explicit environment', async () => {
   const files = [];
   for (const entry of await readdir(DELEGATE, { recursive: true, withFileTypes: true }))
@@ -221,7 +229,14 @@ test('every child process the delegate runtime starts names an explicit environm
       /\b(?:execFile|execFileAsync|spawn|promisify\(execFileCallback\))\(|\bexecute\(\s*['"]/gu,
     )) {
       const call = source.slice(match.index, source.indexOf(');', match.index) + 2);
-      if (!/\benv\b/u.test(call)) unbounded.push(`${file.slice(DELEGATE.length + 1)}:${call}`);
+      const relative = file.slice(DELEGATE.length + 1);
+      // invokeProcess rejects a missing env before this spawn; every other site builds one by name.
+      const guardedSpawn =
+        relative === 'adapters/generic.mjs' &&
+        call.startsWith('spawn(') &&
+        source.includes("'E_ADAPTER_ENVIRONMENT'");
+      if (!guardedSpawn && !/\benv: (?:base|git|check|agent)Environment\(/u.test(call))
+        unbounded.push(`${relative}:${call}`);
     }
     if (/\.\.\.process\.env\b/u.test(source))
       unbounded.push(`${file.slice(DELEGATE.length + 1)}: spreads process.env`);
