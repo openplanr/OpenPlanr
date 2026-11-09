@@ -1291,27 +1291,81 @@ function receiptByHash(prepared, receiptHash) {
   return terminalReceipts(prepared).find((receipt) => receipt.receiptHash === receiptHash) ?? null;
 }
 
+const REOPEN_OWNER_CAPABILITIES = new WeakMap();
+
+function assertReopenRequest(receiptHash, reason) {
+  if (!/^sha256:[a-f0-9]{64}$/.test(receiptHash ?? ''))
+    fail('E_SHIP_RECEIPT_HASH_INVALID', 'reopen-ship requires an exact receipt hash.');
+  if (typeof reason !== 'string' || !reason.trim())
+    fail('E_SHIP_REOPEN_REASON_REQUIRED', 'reopen-ship requires a non-empty reason.');
+}
+
+/** Returns the phrase an owner types to reopen one exact terminal receipt. */
+export function shipReopenConfirmationPhrase({ receiptHash, reason } = {}) {
+  assertReopenRequest(receiptHash, reason);
+  return `REOPEN SHIP ${receiptHash}`;
+}
+
+/** Issues a one-shot owner capability for reopening one exact receipt with one reason. */
+export function issueShipReopenOwnerCapability({ receiptHash, reason, confirmation } = {}) {
+  const phrase = shipReopenConfirmationPhrase({ receiptHash, reason });
+  if (typeof confirmation !== 'string' || confirmation.trim() !== phrase)
+    fail(
+      'E_SHIP_OWNER_CONFIRMATION_MISMATCH',
+      'Owner confirmation did not match the exact terminal SHIP receipt hash.',
+    );
+  const capability = Object.freeze({
+    kind: 'ship-reopen-owner-capability',
+    schemaVersion: '1.0.0',
+    receiptHash,
+    reasonDigest: sha256Jcs(reason.trim()),
+  });
+  REOPEN_OWNER_CAPABILITIES.set(capability, {
+    receiptHash,
+    reason: reason.trim(),
+    consumed: false,
+  });
+  return capability;
+}
+
+function consumeReopenOwnerCapability(capability, receiptHash, reason) {
+  const binding =
+    capability && typeof capability === 'object'
+      ? REOPEN_OWNER_CAPABILITIES.get(capability)
+      : undefined;
+  if (!binding)
+    fail(
+      'E_SHIP_OWNER_REQUIRED',
+      'Only an explicit owner action may reopen terminal SHIP custody.',
+      'Run reopen-ship in an attached terminal and type the confirmation phrase for the exact receipt hash.',
+    );
+  if (binding.receiptHash !== receiptHash || binding.reason !== reason.trim())
+    fail(
+      'E_SHIP_OWNER_AUTHORITY_FOREIGN',
+      'Owner reopen capability was issued for a different receipt hash or reason.',
+    );
+  if (binding.consumed)
+    fail(
+      'E_SHIP_OWNER_AUTHORITY_REPLAYED',
+      'Owner reopen capability was already used; confirm the reopen again.',
+    );
+  binding.consumed = true;
+}
+
 export function reopenStoredShipClosure({
   projectRoot,
   prepared,
   receiptHash,
   reason,
-  ownerConfirmed = false,
+  ownerCapability,
   runtime = 'unknown',
   runId,
   repositories,
   gates,
   now = new Date().toISOString(),
 } = {}) {
-  if (!ownerConfirmed)
-    fail(
-      'E_SHIP_OWNER_REQUIRED',
-      'Only an explicit owner action may reopen terminal SHIP custody.',
-    );
-  if (!/^sha256:[a-f0-9]{64}$/.test(receiptHash ?? ''))
-    fail('E_SHIP_RECEIPT_HASH_INVALID', 'reopen-ship requires an exact receipt hash.');
-  if (typeof reason !== 'string' || !reason.trim())
-    fail('E_SHIP_REOPEN_REASON_REQUIRED', 'reopen-ship requires a non-empty reason.');
+  assertReopenRequest(receiptHash, reason);
+  consumeReopenOwnerCapability(ownerCapability, receiptHash, reason);
   ensureClosureDirs(
     closurePaths(
       prepared.root,

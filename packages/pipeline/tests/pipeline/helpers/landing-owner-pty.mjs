@@ -18,6 +18,8 @@ config = json.loads(sys.argv[1])
 owner_prompt = b'OPENPLANR_LANDING_OWNER_ID> '
 choice_prompt = b'OPENPLANR_LANDING_CHOICE [confirm/cancel; no default]> '
 choices = config['choices']
+answers = [(entry['prompt'].encode('utf-8'), entry['reply'].encode('utf-8')) for entry in config.get('answers', [])]
+answered = [0] * len(answers)
 output = bytearray()
 owner_count = 0
 choice_count = 0
@@ -51,6 +53,10 @@ while status is None or not eof:
                     else:
                         os.write(master, choices[choice_count].encode('utf-8') + b'\n')
                     choice_count += 1
+                for index, (prompt, reply) in enumerate(answers):
+                    while answered[index] < output.count(prompt):
+                        os.write(master, reply + b'\n')
+                        answered[index] += 1
         except OSError as cause:
             if cause.errno == errno.EIO:
                 eof = True
@@ -89,6 +95,44 @@ export function isDirectTestModule(url) {
   return (
     typeof process.argv[1] === 'string' && resolve(process.argv[1]) === resolve(fileURLToPath(url))
   );
+}
+
+/** Runs one command in a pseudo-terminal, typing each reply after its prompt appears. */
+export function runCommandInOwnerPty(argv, { cwd, answers = [] } = {}) {
+  return new Promise((resolveRun, rejectRun) => {
+    const child = spawn(
+      'python3',
+      ['-c', PTY_DRIVER, JSON.stringify({ argv, choices: [], answers })],
+      {
+        cwd,
+        stdio: ['ignore', 'pipe', 'pipe'],
+      },
+    );
+    let driverOutput = '';
+    let driverError = '';
+    child.stdout.on('data', (chunk) => {
+      driverOutput += chunk.toString();
+    });
+    child.stderr.on('data', (chunk) => {
+      driverError += chunk.toString();
+    });
+    child.once('error', (cause) =>
+      rejectRun(new Error(`Unable to start the owner PTY harness: ${cause.message}`)),
+    );
+    child.once('close', (code, signal) => {
+      if (code !== 0) {
+        rejectRun(
+          new Error(`Owner PTY driver failed (${signal ?? code}).\n${driverError || driverOutput}`),
+        );
+        return;
+      }
+      const result = JSON.parse(driverOutput);
+      resolveRun({
+        childStatus: result.childStatus,
+        output: Buffer.from(result.output, 'base64').toString().replaceAll('\r', ''),
+      });
+    });
+  });
 }
 
 export function runTestFileInOwnerPty(testFile, { choices = [], env = {}, testNamePattern } = {}) {

@@ -125,6 +125,14 @@ Low-level `prepare-ship`, `start-ship`, `advance-ship`, `run-ship-gates`,
 requested auditable release candidate. Their integrity records are not loaded
 by normal Plan or Ship skills and do not govern ordinary coding.
 
+`openplanr-pipeline reopen-ship <feature> --receipt-hash <hash> --reason <text>`
+reopens one terminal SHIP receipt and is owner-only. Run it in an attached
+terminal and type `REOPEN SHIP <hash>` for the exact receipt hash when prompted.
+It refuses `--json` and non-interactive input with
+`E_SHIP_OWNER_INTERACTIVE_REQUIRED`, and a different phrase with
+`E_SHIP_OWNER_CONFIRMATION_MISMATCH`. Each confirmation reopens only the receipt
+and reason it was typed for, once.
+
 ## STATUS — read-only rollup
 
 ### Inputs

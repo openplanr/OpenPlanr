@@ -237,7 +237,7 @@ test('professional plan review issues one immutable content-addressed PASS recei
         runId: summary.runId,
         event: ownerEvent,
       }),
-    { code: 'E_PLAN_REVIEW_OWNER_BOUNDARY_REQUIRED' },
+    { code: 'E_PLAN_REVIEW_OWNER_BOUNDARY_REQUIRED', fix: /owner decisions were retired/u },
   );
   const decision = decide(root, summary);
   summary = decision.summary;
@@ -435,7 +435,7 @@ test('owner PASS requires an engine-issued exact capability and rejects forged, 
         runId: summary.runId,
         capability: structuredClone(valid),
       }),
-    { code: 'E_PLAN_REVIEW_OWNER_AUTHORITY_REQUIRED' },
+    { code: 'E_PLAN_REVIEW_OWNER_AUTHORITY_REQUIRED', fix: /owner decisions were retired/u },
   );
   const foreign = issuePlanningReviewOwnerDecisionCapability({
     runId: `prr_${'f'.repeat(32)}`,
