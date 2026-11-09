@@ -1052,7 +1052,7 @@
     },
     {
       "id": "planr-design",
-      "version": "2.1.1",
+      "version": "2.1.2",
       "source": "skills/planr-design/openplanr.skill.json",
       "entrypoint": "skills/planr-design/SKILL.md",
       "description": "Design a polished product interface through adaptive consultation, a shared canvas/prototype/walkthrough studio, and an implementation-ready specification. Use for a new design or an existing interface that needs a coherent direction.",
@@ -1174,7 +1174,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:bc2acee8cc926a698f2efd9397e5d00a284c6701587a0abcf85e4484fbc4be46"
+          "digest": "sha256:22f8be8cadf08006d88b1c68d0fef43893ae080766c60b20073a7eea0d8985fd"
         },
         {
           "path": "references/team-review.md",
@@ -1254,7 +1254,7 @@
     },
     {
       "id": "planr-design-loop",
-      "version": "2.0.1",
+      "version": "2.0.2",
       "source": "skills/planr-design-loop/openplanr.skill.json",
       "entrypoint": "skills/planr-design-loop/SKILL.md",
       "description": "Compare three materially different product design directions in a live review studio, collect pins and ratings, and develop the selected direction. Use for visual alternatives, comparison or a remix.",
@@ -1364,7 +1364,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:bc2acee8cc926a698f2efd9397e5d00a284c6701587a0abcf85e4484fbc4be46"
+          "digest": "sha256:22f8be8cadf08006d88b1c68d0fef43893ae080766c60b20073a7eea0d8985fd"
         },
         {
           "path": "references/team-review.md",
@@ -1444,7 +1444,7 @@
     },
     {
       "id": "planr-design-review",
-      "version": "2.1.1",
+      "version": "2.1.2",
       "source": "skills/planr-design-review/openplanr.skill.json",
       "entrypoint": "skills/planr-design-review/SKILL.md",
       "description": "Review and revise an existing product design using stable board pins and scoped browser-verified changes. Use for focused improvements while preserving unrelated screens and feedback.",
@@ -1554,7 +1554,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:bc2acee8cc926a698f2efd9397e5d00a284c6701587a0abcf85e4484fbc4be46"
+          "digest": "sha256:22f8be8cadf08006d88b1c68d0fef43893ae080766c60b20073a7eea0d8985fd"
         },
         {
           "path": "references/team-review.md",
@@ -2029,7 +2029,7 @@
       "source": "skills/planr-plan/openplanr.skill.json",
       "entrypoint": "skills/planr-plan/SKILL.md",
       "description": "Turn a Protocol-compatible specification or product intent into schema-compatible OpenPlanr stories and implementation tasks. Use for planning and decomposition, not implementation.",
-      "sourceDigest": "sha256:ffb6606562b4d7b4942af7b3476c7efb2fabe6d4b88e47ebecdf26bf4c75667d",
+      "sourceDigest": "sha256:9d95cb915d88f8b16a55d94b6e6ea2eb378f093d7c3477da8d8b865d4cbd578b",
       "resources": [
         {
           "path": "agents/openai.yaml",
@@ -2701,11 +2701,11 @@
     },
     {
       "id": "planr-sync",
-      "version": "1.0.1",
+      "version": "1.1.0",
       "source": "skills/planr-sync/openplanr.skill.json",
       "entrypoint": "skills/planr-sync/SKILL.md",
       "description": "Audit OpenPlanr planning artifacts for graph and protocol drift. Use when statuses, references, schemas, or generated planning views may be inconsistent.",
-      "sourceDigest": "sha256:4fb542bc7a0685904b6d6f58ec9fae3c539531793e1933474fbc3c3d34702e24",
+      "sourceDigest": "sha256:813672528446c7b2fa6798b4b76d970870f2e51b1d90fffe9867a9cc6c0f0c66",
       "resources": [
         {
           "path": "references/connectors.md",
@@ -2732,20 +2732,8 @@
           "digest": "sha256:f9617486a5e2ecc861566d7a7eaf1c97725f9acfcc6bc64cfda1f9b6fd3c4d36"
         },
         {
-          "path": "scripts/sync.mjs",
-          "kind": "script",
-          "hosts": [
-            "claude-code",
-            "codex",
-            "chatgpt",
-            "cursor"
-          ],
-          "executable": true,
-          "digest": "sha256:7ef90127444f270dc30d119c88a41c898fe7e0b82b1d72d95b1bffc9393a1492"
-        },
-        {
-          "path": "scripts/names.mjs",
-          "kind": "script",
+          "path": "references/openplanr-cli.md",
+          "kind": "reference",
           "hosts": [
             "claude-code",
             "codex",
@@ -2753,7 +2741,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:85d080c6a4a0ed31cb60daaf0dc8739a0d9ddbd060e63126d81a3b2b84294bd9"
+          "digest": "sha256:842ded737e6a1ae2eeb98e1730de8e9bd97c92ed159c961f36003e7205214454"
         },
         {
           "path": "agents/openai.yaml",

@@ -802,6 +802,10 @@
       "classification": "deterministic-preserved"
     },
     {
+      "path": "sync tracker",
+      "classification": "deterministic-preserved"
+    },
+    {
       "path": "template",
       "classification": "deterministic-preserved"
     },

@@ -46,6 +46,7 @@ import {
 import { renderClaudePluginReadme } from './plugin-readme.mjs';
 import { syncGeneratedOutputs } from './projection-custody.mjs';
 import { resourceBytes } from './resource-bytes.mjs';
+import { fillSkillCliTokens } from './skill-cli.mjs';
 import { resourceFootprint, suiteLocalResources } from './suite-resources.mjs';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..');
@@ -100,6 +101,8 @@ const operateAdvisorDestinations = Object.freeze([
   'planr-coo-review',
 ]);
 const trackerConnectionDestinations = Object.freeze(['planr-sync', 'planr-sprint', 'planr-status']);
+// Runtime skills that call the openplanr CLI through the pinned probe.
+const cliRuntimeDestinations = Object.freeze(['planr-sync']);
 const findingsDestinations = Object.freeze(['planr-ship', 'planr-investigate']);
 const failFirstDestinations = Object.freeze(['planr-ship', 'planr-investigate']);
 const returnContractDestinations = Object.freeze([
@@ -209,22 +212,19 @@ const sharedSkillResources = Object.freeze([
     destination: `skills/${skillId}/references/return-contract.md`,
     executable: false,
   })),
-  {
-    source: 'packages/integrations/src/portable-sync.mjs',
-    destination: 'skills/planr-sync/scripts/sync.mjs',
-    executable: true,
-  },
-  {
-    source: 'packages/protocol/src/names.mjs',
-    destination: 'skills/planr-sync/scripts/names.mjs',
+  ...cliRuntimeDestinations.map((skillId) => ({
+    source: 'skills/shared/openplanr-cli.md',
+    destination: `skills/${skillId}/references/openplanr-cli.md`,
     executable: false,
-  },
+  })),
 ]);
 
 const sourceProjections = new Map(
   sharedSkillResources.map(({ source, destination }) => [
     destination,
-    readFileSync(resolve(root, source)),
+    source.endsWith('.md')
+      ? Buffer.from(fillSkillCliTokens(read(source), pluginVersion))
+      : readFileSync(resolve(root, source)),
   ]),
 );
 const sourceExecutables = new Set(

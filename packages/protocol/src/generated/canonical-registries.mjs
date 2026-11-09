@@ -1417,7 +1417,7 @@ export const CANONICAL_REGISTRIES = deepFreeze({
         "ownerPackage": "openplanr",
         "source": {
           "path": "skills/planr-plan/SKILL.md",
-          "digest": "sha256:ffb6606562b4d7b4942af7b3476c7efb2fabe6d4b88e47ebecdf26bf4c75667d"
+          "digest": "sha256:9d95cb915d88f8b16a55d94b6e6ea2eb378f093d7c3477da8d8b865d4cbd578b"
         },
         "authorityClass": "workflow",
         "machineJson": false,
@@ -1438,7 +1438,7 @@ export const CANONICAL_REGISTRIES = deepFreeze({
         "ownerPackage": "openplanr",
         "source": {
           "path": "docs/generated/utility-command-catalog.json",
-          "digest": "sha256:6c6ccf971d4e42481d50145b999ecc1e19bff8e494db9c57487473ae93594a42"
+          "digest": "sha256:77a16f80e7131820d6d5953263c63b70649dacb8d487bdf6e004305c680975fa"
         },
         "authorityClass": "workflow",
         "machineJson": false,
@@ -1627,7 +1627,7 @@ export const CANONICAL_REGISTRIES = deepFreeze({
         "ownerPackage": "openplanr",
         "source": {
           "path": "docs/generated/utility-command-catalog.json",
-          "digest": "sha256:6c6ccf971d4e42481d50145b999ecc1e19bff8e494db9c57487473ae93594a42"
+          "digest": "sha256:77a16f80e7131820d6d5953263c63b70649dacb8d487bdf6e004305c680975fa"
         },
         "authorityClass": "workflow",
         "machineJson": true,
@@ -1648,7 +1648,7 @@ export const CANONICAL_REGISTRIES = deepFreeze({
         "ownerPackage": "openplanr",
         "source": {
           "path": "skills/planr-plan/SKILL.md",
-          "digest": "sha256:ffb6606562b4d7b4942af7b3476c7efb2fabe6d4b88e47ebecdf26bf4c75667d"
+          "digest": "sha256:9d95cb915d88f8b16a55d94b6e6ea2eb378f093d7c3477da8d8b865d4cbd578b"
         },
         "authorityClass": "workflow",
         "machineJson": false,
@@ -1942,7 +1942,7 @@ export const CANONICAL_REGISTRIES = deepFreeze({
         "ownerPackage": "openplanr",
         "source": {
           "path": "packages/cli/src/cli/commands/sync.ts",
-          "digest": "sha256:0c9d3cc2eb3ea2859c04f66d9c006389e457477626ad27703dc0ec075c521139"
+          "digest": "sha256:cb5b8490f16d518fa7c261895ec5543c2888fa93c0c43600c170fc226b244ffb"
         },
         "authorityClass": "workflow",
         "machineJson": false,
@@ -2152,7 +2152,7 @@ export const CANONICAL_REGISTRIES = deepFreeze({
         "ownerPackage": "planr-pipeline",
         "source": {
           "path": "skills/planr-plan/SKILL.md",
-          "digest": "sha256:ffb6606562b4d7b4942af7b3476c7efb2fabe6d4b88e47ebecdf26bf4c75667d"
+          "digest": "sha256:9d95cb915d88f8b16a55d94b6e6ea2eb378f093d7c3477da8d8b865d4cbd578b"
         },
         "authorityClass": "compatibility-router",
         "machineJson": false,
@@ -2215,7 +2215,7 @@ export const CANONICAL_REGISTRIES = deepFreeze({
         "ownerPackage": "planr-pipeline",
         "source": {
           "path": "skills/planr-sync/SKILL.md",
-          "digest": "sha256:4fb542bc7a0685904b6d6f58ec9fae3c539531793e1933474fbc3c3d34702e24"
+          "digest": "sha256:813672528446c7b2fa6798b4b76d970870f2e51b1d90fffe9867a9cc6c0f0c66"
         },
         "authorityClass": "compatibility-router",
         "machineJson": false,
@@ -3009,7 +3009,7 @@ export const CANONICAL_REGISTRIES = deepFreeze({
         ]
       }
     ],
-    "documentDigest": "sha256:3a38cf03d3d74dac8f060d2e9c16c6a9e697198d6c5394274df6e0ef138d3cb0"
+    "documentDigest": "sha256:7177f328ccd7219a489d37ec0e22a7fec5781a4a5867082aa9fb9422814fe6fe"
   },
   "skills.json": {
     "kind": "skill-catalog",
@@ -3763,12 +3763,12 @@ export const CANONICAL_REGISTRIES = deepFreeze({
       },
       {
         "skillId": "planr-design",
-        "skillVersion": "2.1.1",
+        "skillVersion": "2.1.2",
         "description": "Design a polished product interface through adaptive consultation, a shared canvas/prototype/walkthrough studio, and an implementation-ready specification. Use for a new design or an existing interface that needs a coherent direction.",
         "lifecycle": "active",
         "authorityClass": "planning-write",
         "source": "skills/planr-design/openplanr.skill.json",
-        "sourceDigest": "sha256:da6e4b51fa16e55425d9d7460dcdceab4cfc414f20050d532464a76d988d34b8",
+        "sourceDigest": "sha256:cbfdee1cd28659b8873869cb4818bb492e5bdac772a4a118b388d0a270871152",
         "triggerPolicy": {
           "include": [
             "Create an initial product design direction",
@@ -3824,12 +3824,12 @@ export const CANONICAL_REGISTRIES = deepFreeze({
       },
       {
         "skillId": "planr-design-loop",
-        "skillVersion": "2.0.1",
+        "skillVersion": "2.0.2",
         "description": "Compare three materially different product design directions in a live review studio, collect pins and ratings, and develop the selected direction. Use for visual alternatives, comparison or a remix.",
         "lifecycle": "active",
         "authorityClass": "planning-write",
         "source": "skills/planr-design-loop/openplanr.skill.json",
-        "sourceDigest": "sha256:f96a6bceaaabff1acbdaad257ee0d602705305661c102bc22c21b2d40db50f6f",
+        "sourceDigest": "sha256:0f562caa714f68b8b2a48899fe6a41dbd7ed041f9f60aeaf6a74f5a31da4e762",
         "triggerPolicy": {
           "include": [
             "Explore multiple design directions or variants",
@@ -3885,12 +3885,12 @@ export const CANONICAL_REGISTRIES = deepFreeze({
       },
       {
         "skillId": "planr-design-review",
-        "skillVersion": "2.1.1",
+        "skillVersion": "2.1.2",
         "description": "Review and revise an existing product design using stable board pins and scoped browser-verified changes. Use for focused improvements while preserving unrelated screens and feedback.",
         "lifecycle": "active",
         "authorityClass": "review-evidence",
         "source": "skills/planr-design-review/openplanr.skill.json",
-        "sourceDigest": "sha256:3151d0c1d1e306305256271abfbbab7408ce55b178868159ec9d82f426de499b",
+        "sourceDigest": "sha256:443e581bd1f590734359192689607175d8a9c1cde7a91e9402b14da7a9237564",
         "triggerPolicy": {
           "include": [
             "Review or critique an existing OpenPlanr design",
@@ -4816,12 +4816,12 @@ export const CANONICAL_REGISTRIES = deepFreeze({
       },
       {
         "skillId": "planr-sync",
-        "skillVersion": "1.0.1",
+        "skillVersion": "1.1.0",
         "description": "Audit OpenPlanr planning artifacts for graph and protocol drift. Use when statuses, references, schemas, or generated planning views may be inconsistent.",
         "lifecycle": "active",
         "authorityClass": "planning-write",
         "source": "skills/planr-sync/openplanr.skill.json",
-        "sourceDigest": "sha256:c8061714181e6f4e330c65ba033a3586bf4118352e778865e3e3e0e802ad2cf6",
+        "sourceDigest": "sha256:ea6e4e22c03606b305afc046825d12d394301488de276ac19ac1004116b7ee45",
         "triggerPolicy": {
           "include": [
             "Audit planning artifacts for graph, schema, or protocol drift",
@@ -4877,7 +4877,7 @@ export const CANONICAL_REGISTRIES = deepFreeze({
       }
     ],
     "compatibilityAliases": [],
-    "documentDigest": "sha256:20bcd4641393c1d2a20c83acebcfb479c3126b932fa59885128c027d9e9d9482"
+    "documentDigest": "sha256:f4acc20a0e3f87dd88f7f1c9fd7e899474d1a1dafc43337b9dabcdf6c862ee2c"
   },
   "outputs.json": {
     "kind": "output-catalog",
