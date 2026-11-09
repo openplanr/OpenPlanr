@@ -146,6 +146,8 @@ release/
 /packages/cli/lib/skill-runtime/*.mjs
 /packages/cli/lib/json-schema.mjs
 /packages/cli/lib/json-schema.d.mts
+/packages/cli/lib/planning-contracts.mjs
+/packages/cli/lib/planning-contracts.d.mts
 /packages/cli/lib/runtime-lock.schema.json
 /packages/cli/lib/schemas/
 

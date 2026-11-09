@@ -363,6 +363,33 @@ Each violation is printed with the file, the rule, and what was found. The comma
 
 ---
 
+#### `openplanr spec validate-plan`
+
+Check a spec's stories and tasks (`stories/US-NNN-*.md` and `tasks/T-NNN-*.md` inside the spec directory). It reads the files and writes nothing. The spec file itself is checked by `spec validate`; the older `output/feats/` layout is not checked.
+
+```bash
+openplanr spec validate-plan SPEC-001
+openplanr spec validate-plan SPEC-001 --json
+```
+
+| Option     | Description                                                            | Required |
+| ---------- | ---------------------------------------------------------------------- | -------- |
+| `<specId>` | Spec whose stories and tasks to check                                  | Yes      |
+| `--json`   | Print `{ ok, specId, stories, tasks, violations[] }` instead of text   | No       |
+
+**Rules:**
+1. **`frontmatter`** — each story and task frontmatter parses as YAML and is valid against the Protocol story or task schema for its `schemaVersion` (`1.0.0` or `1.7.0`); a `specId` names this spec.
+2. **`id-mismatch`** — the frontmatter `id` matches the id in the filename.
+3. **`duplicate-id`** — no `US-NNN` or `T-NNN` in this spec is used by another file anywhere under the specs root, and no acceptance id repeats within a story.
+4. **`reference`** — each task's `storyId` is a story in this spec, and each `acceptanceRefs` entry is declared by that story.
+5. **`coverage`** — every story acceptance id is mapped by at least one task through `acceptanceRefs`.
+6. **`verification`** — at least one mapped task names the acceptance id under `## Test Requirements`.
+7. **`empty`** — the spec has at least one story.
+
+The command exits 1 when there is any violation or the spec is not found, and 0 otherwise.
+
+---
+
 #### `openplanr spec sync`
 
 Validate spec integrity and auto-fix safe inconsistencies. Use after manual edits, interrupted work, or when in doubt.
@@ -944,6 +971,40 @@ the info diagnostic `TYPESCRIPT_UNAVAILABLE`.
 `complete` is `false` when any diagnostic is an `error`, for example a workflow
 that fails to parse: the listed checks are then not the full CI set. The command
 exits 1 for an unknown tier, a missing `--task` file or a directory outside git.
+
+---
+
+### `openplanr release collect`
+
+Collect the commits in a release window so they can be classified. It runs Git
+read commands only and writes nothing.
+
+```bash
+openplanr release collect --json                          # last tag .. HEAD
+openplanr release collect --base v1.4.0 --head HEAD --json
+openplanr release collect --since 2026-11-01 --json
+```
+
+| Option              | Description                                                   | Default                              |
+| ------------------- | ------------------------------------------------------------- | ------------------------------------ |
+| `--base <revision>` | Start of the window, exclusive                                | Last tag reachable from head         |
+| `--head <revision>` | End of the window, inclusive                                  | `HEAD`                               |
+| `--since <date>`    | Start the window at a `YYYY-MM-DD` date instead of a revision | none                                 |
+| `--json`            | Print `{ ok, base, since, head, tags, commits, areas }`       | `false`                              |
+
+`base` and `head` carry the revision as given and the resolved commit SHA; `base`
+also has `tag` and its committer `date` (`YYYY-MM-DD`), and is `null` when the window is all history (no tag) or a date. `tags` lists the five
+most recent tags. Each commit, merges excluded, has `sha`, `shortSha`, `subject`,
+`body`, `type` and `scope` from a Conventional Commits subject, `breaking` (a `!`
+after the type or a `BREAKING CHANGE:` or `BREAKING-CHANGE:` footer),
+`breakingNotes` (each footer value with its continuation lines, up to the next footer token), `reverts` (the SHA named by `This reverts commit <sha>`) and
+`files`. `areas` counts touched paths by their first two segments, highest
+first, top 20.
+
+Any Git failure other than "no tag found", such as an unknown revision or a
+directory outside a repository, exits 1 with `E_RELEASE_GIT_FAILED` and the Git
+error text; the command never reports an empty window instead. Passing both
+`--base` and `--since` exits 1 with `E_RELEASE_RANGE_CONFLICT`, and a `--since` that is not a real calendar date with `E_RELEASE_SINCE_INVALID`.
 
 ---
 

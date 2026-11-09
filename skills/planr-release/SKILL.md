@@ -26,9 +26,9 @@ When the profile exists, follow it; do not re-argue the scheme. When it does not
 
 ## Step 1: Gather what shipped
 
-These steps only read. Treat the output as evidence to classify, not as release notes. Run each git command on its own and check its exit status. A failure other than "no tag found" stops collection: report the command and its error text, and never read it as an empty window.
+These steps only read. Treat the output as evidence to classify, not as release notes. With `openplanr` on PATH, `openplanr release collect --json` (plus step 1's `--since`) does steps 1 to 5; otherwise run each git command on its own and check its exit status. A failure other than "no tag found" stops collection: report the command and its error text, and never read it as an empty window.
 
-1. **Base.** If the user names a period ("this week", "since the 1st"), turn it into a date `YYYY-MM-DD` and use `--since=<date>` as the log range. Otherwise find the last tag with `git describe --tags --abbrev=0`, read its date with `git log -1 --format=%cs <tag>`, and use `<tag>..HEAD` as the range. With no tag at all, the window is all history: drop the range from the commands below. Record the base (`git rev-parse <tag>`, or the date) and the head (`git rev-parse HEAD`) in your return.
+1. **Base.** If the user names a period ("this week", "since the 1st"), use `--since=YYYY-MM-DD` as the log range. Otherwise find the last tag with `git describe --tags --abbrev=0`, read its date with `git log -1 --format=%cs <tag>`, and use `<tag>..HEAD` as the range. With no tag at all, the window is all history: drop the range from the commands below. Record the base (`git rev-parse <tag>`, or the date) and the head (`git rev-parse HEAD`) in your return.
 2. **Recent tags.** Run `git tag --list --sort=-creatordate` and keep the first five. Match their format when you tag.
 3. **Commits.** Run `git log <range> --no-merges --pretty=format:'%h %s'`.
 4. **Bodies and footers.** Run `git log <range> --no-merges --pretty=format:'--- %h%n%b'` and read every body. A `BREAKING CHANGE:` footer, or `!` after the type, makes the change Breaking whatever its subject says; a `Revert` subject and the change it reverts cancel out.

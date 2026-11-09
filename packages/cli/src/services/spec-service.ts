@@ -28,7 +28,7 @@
  */
 
 import { randomUUID } from 'node:crypto';
-import { existsSync, readdirSync, readFileSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
 import fsPromises from 'node:fs/promises';
 import path from 'node:path';
 import { validateJson } from '../../lib/json-schema.mjs';
@@ -42,6 +42,7 @@ import { parseMarkdown, toMarkdownWithFrontmatter } from '../utils/markdown.js';
 import { slugify } from '../utils/slugify.js';
 import { atomicWriteFile } from './atomic-write-service.js';
 import { previewPlanningIds, reservePlanningIds } from './planning-id-service.js';
+import { supportedProtocolSchemas } from './protocol-schemas.js';
 import { appendOpenPlanrProvenance, readOpenPlanrVersion } from './provenance-service.js';
 import { renderTemplate } from './template-service.js';
 
@@ -2085,7 +2086,7 @@ const PROFESSIONAL_SPEC_REQUIRED_SECTIONS = Object.freeze(
   ),
 );
 
-function markdownSection(content: string, heading: string, level = 2): string | null {
+export function markdownSection(content: string, heading: string, level = 2): string | null {
   const lines = content.split(/\r?\n/u);
   const prefix = '#'.repeat(level);
   const start = lines.findIndex((line) => line.trim() === `${prefix} ${heading}`);
@@ -2247,21 +2248,6 @@ export interface SpecContractReport {
   violations: SpecContractViolation[];
 }
 
-/** Spec frontmatter schemas projected from the Protocol, keyed by their `schemaVersion` const. */
-function supportedSpecSchemas(): Map<string, unknown> {
-  const root = new URL('../../lib/schemas/', import.meta.url);
-  const schemas = new Map<string, unknown>();
-  for (const entry of readdirSync(root, { withFileTypes: true })) {
-    const file = new URL(`${entry.name}/spec.schema.json`, root);
-    if (!entry.isDirectory() || !existsSync(file)) continue;
-    const schema: unknown = JSON.parse(readFileSync(file, 'utf8'));
-    const properties = plainRecord(plainRecord(schema)?.properties);
-    const version = plainRecord(properties?.schemaVersion)?.const;
-    if (typeof version === 'string') schemas.set(version, schema);
-  }
-  return schemas;
-}
-
 /** Headings outside fenced code blocks, with their level and text. */
 function markdownHeadings(content: string): Array<{ level: number; text: string }> {
   const headings: Array<{ level: number; text: string }> = [];
@@ -2386,7 +2372,7 @@ export async function validateSpecContract(
     );
   }
 
-  const schemas = supportedSpecSchemas();
+  const schemas = supportedProtocolSchemas('spec');
   const versions = [...schemas.keys()].sort((a, b) => a.localeCompare(b, 'en', { numeric: true }));
   const declared = data.schemaVersion;
   let schema = typeof declared === 'string' ? schemas.get(declared) : undefined;

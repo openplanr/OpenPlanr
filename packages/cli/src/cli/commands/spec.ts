@@ -19,6 +19,7 @@
  *   - openplanr spec destroy <id>            rm -rf one self-contained spec dir
  *   - openplanr spec attach-design <id> --files <png>...   Attach UI mockups
  *   - openplanr spec validate <id>           Check one spec against the contract; read-only
+ *   - openplanr spec validate-plan <id>      Check a spec's stories, tasks and acceptance coverage; read-only
  *   - openplanr spec promote <id>            Validate, mark ready-for-pipeline, print handoff
  */
 
@@ -27,6 +28,7 @@ import path from 'node:path';
 import type { Command } from 'commander';
 import { loadConfig, saveConfig } from '../../services/config-service.js';
 import { isNonInteractive, requireInteractiveForManual } from '../../services/interactive-state.js';
+import { validateSpecPlan } from '../../services/plan-validation-service.js';
 import { promptConfirm, promptMultiText, promptText } from '../../services/prompt-service.js';
 import {
   attachSpecDesigns,
@@ -627,6 +629,45 @@ export function registerSpecCommand(program: Command) {
           `${specId} has ${report.violations.length} contract violation${
             report.violations.length === 1 ? '' : 's'
           }:`,
+        );
+        for (const violation of report.violations) {
+          logger.error(`  ${violation.file}: [${violation.rule}] ${violation.message}`);
+        }
+      }
+      if (!ok) process.exitCode = 1;
+    });
+
+  // ------------------------------------------------------------------------
+  // openplanr spec validate-plan <id>
+  // ------------------------------------------------------------------------
+  spec
+    .command('validate-plan')
+    .description(
+      "Check a spec's stories and tasks (frontmatter, project-global ids, acceptance coverage) without writing",
+    )
+    .argument('<specId>', 'spec ID (e.g., SPEC-001)')
+    .option('--json', 'emit machine-readable output', false)
+    .action(async (specId: string, opts: { json?: boolean }) => {
+      requireArtifactId(specId, 'specId', 'SPEC-001');
+      const projectDir = program.opts().projectDir as string;
+      const config = await loadConfig(projectDir);
+
+      const report = await validateSpecPlan(projectDir, config, specId);
+      if (!report) {
+        throw new CliBoundaryError('E_SPEC_NOT_FOUND', `Spec ${specId} not found.`, {
+          recovery: `Run \`${CLI_COMMAND} spec list\` to see the specs in this project.`,
+        });
+      }
+      const ok = report.violations.length === 0;
+      if (opts.json) {
+        display.line(JSON.stringify({ ok, ...report }));
+      } else if (ok) {
+        logger.success(
+          `${specId} plan is valid: ${report.stories} ${report.stories === 1 ? 'story' : 'stories'}, ${report.tasks} task${report.tasks === 1 ? '' : 's'}.`,
+        );
+      } else {
+        logger.error(
+          `${specId} plan has ${report.violations.length} violation${report.violations.length === 1 ? '' : 's'}:`,
         );
         for (const violation of report.violations) {
           logger.error(`  ${violation.file}: [${violation.rule}] ${violation.message}`);
