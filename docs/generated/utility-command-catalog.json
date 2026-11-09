@@ -742,6 +742,86 @@
       "classification": "deterministic-preserved"
     },
     {
+      "path": "delegate",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "delegate probe",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "delegate profile-preview",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "delegate profile-enroll",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "delegate profile-remove",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "delegate prepare",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "delegate prepare-worktree",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "delegate dispatch",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "delegate wait",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "delegate status",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "delegate resume",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "delegate recover",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "delegate close",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "delegate cleanup",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "delegate abandon",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "delegate prune",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "delegate integrate",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "delegate integrate review",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "delegate integrate apply",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "delegate integrate recover",
+      "classification": "deterministic-preserved"
+    },
+    {
       "path": "ship",
       "classification": "deterministic-preserved"
     },
