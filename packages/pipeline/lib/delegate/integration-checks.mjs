@@ -61,7 +61,9 @@ export async function resolveSelectedChecks(repositoryRoot, supplied, { legacy =
   for (let entry of supplied) {
     if (legacy) {
       const parsed = parseCheck(
-        typeof entry === 'string' ? entry : [entry.command, ...(entry.args ?? [])].join(' '),
+        typeof entry === 'string'
+          ? entry
+          : [entry.command ?? entry.executable, ...(entry.args ?? [])].join(' '),
       );
       if (!parsed)
         throw new IntegrationError(

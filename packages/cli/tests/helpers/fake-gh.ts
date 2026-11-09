@@ -4,8 +4,8 @@ import { join } from 'node:path';
 const CALL_LOG = 'gh-calls.log';
 const ENV_LOG = 'gh-env.log';
 
-/** Write a `gh` stand-in into `bin`; it answers a command by the first prefix it starts with and logs each call. */
-export function fakeGh(bin: string, responses: Record<string, string>): void {
+/** Write a `gh` stand-in into `bin`; it answers a command by the first prefix it starts with and logs each call. A `{ stderr }` response fails with that text. */
+export function fakeGh(bin: string, responses: Record<string, string | { stderr: string }>): void {
   const script = join(bin, 'gh');
   writeFileSync(
     script,
@@ -19,7 +19,12 @@ if (key === undefined) {
   process.stderr.write('unexpected gh ' + command);
   process.exit(1);
 }
-process.stdout.write(responses[key]);
+const response = responses[key];
+if (typeof response !== 'string') {
+  process.stderr.write(response.stderr);
+  process.exit(1);
+}
+process.stdout.write(response);
 `,
   );
   chmodSync(script, 0o755);

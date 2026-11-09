@@ -48,7 +48,13 @@ function checkedId(runId) {
 async function privateRoot(directory, create = false) {
   const path = resolve(directory ?? defaultRunDirectory());
   if (create) await mkdir(path, { recursive: true, mode: 0o700 });
-  const physical = await realpath(path);
+  const physical = await realpath(path).catch((error) => {
+    if (error.code !== 'ENOENT') throw error;
+    throw new RunRecordError(
+      'E_RUN_STORE_MISSING',
+      `No delegated run store exists at ${path}; prepare a delegated run first.`,
+    );
+  });
   const details = await stat(physical);
   if (!details.isDirectory() || (details.mode & 0o077) !== 0) {
     throw new RunRecordError('E_RUN_PRIVATE', 'Delegated run storage must be a private directory.');
@@ -104,7 +110,7 @@ export async function createRunRecord(record, { directory } = {}) {
 
 function runNotFound(runId, root) {
   return (error) => {
-    if (error.code !== 'ENOENT') throw error;
+    if (error.code !== 'ENOENT' && error.code !== 'E_RUN_STORE_MISSING') throw error;
     throw new RunRecordError(
       'E_RUN_NOT_FOUND',
       `No delegated run ${runId} exists in ${root}; check the runId that prepare returned.`,
@@ -248,7 +254,11 @@ export async function pruneClosedRunRecords({
   if (!Number.isSafeInteger(retentionMs) || retentionMs < 0) {
     throw new RunRecordError('E_RUN_RETENTION', 'Retention must be a nonnegative duration.');
   }
-  const root = await privateRoot(directory);
+  const root = await privateRoot(directory).catch((error) => {
+    if (error.code === 'E_RUN_STORE_MISSING') return null;
+    throw error;
+  });
+  if (root === null) return [];
   const removed = [];
   for (const entry of await readdir(root, { withFileTypes: true })) {
     if (!entry.isDirectory() || !RUN_ID.test(entry.name)) continue;

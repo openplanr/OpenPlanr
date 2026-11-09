@@ -376,6 +376,35 @@ test('failed check rolls back source and reports independent finding', async () 
   assert.equal(await readFile(join(repositoryRoot, 'tracked.txt'), 'utf8'), 'base\n');
 });
 
+test('the toolchain environment hint appears only when a check failed for a missing toolchain', async () => {
+  const hint = /allowedEnv/u;
+  const scripts = {
+    'test:plain': 'node -e "process.exit(1)"',
+    'test:toolchain': 'node -e "console.error(\'JAVA_HOME is not set\'); process.exit(1)"',
+  };
+  const outcomes = {};
+  for (const script of Object.keys(scripts)) {
+    const { custody } = await fixture({ files: { 'package.json': JSON.stringify({ scripts }) } });
+    await writeFile(join(custody.worktreePath, 'tracked.txt'), 'delegate\n');
+    outcomes[script] = await integrateBranchDelta({
+      custody,
+      run,
+      scopePaths: ['tracked.txt'],
+      checks: [`npm run ${script}`],
+    });
+  }
+  assert.equal(outcomes['test:plain'].code, 'E_INTEGRATION_CHECKS');
+  assert.doesNotMatch(outcomes['test:plain'].nextAction, hint);
+  assert.match(outcomes['test:toolchain'].nextAction, hint);
+
+  const { custody, repositoryRoot } = await fixture({});
+  await writeFile(join(custody.worktreePath, 'tracked.txt'), 'delegate\n');
+  await writeFile(join(repositoryRoot, 'tracked.txt'), 'source moved\n');
+  const drift = await integrateBranchDelta({ custody, run, scopePaths: ['tracked.txt'] });
+  assert.equal(drift.status, 'blocked');
+  assert.doesNotMatch(drift.nextAction ?? '', hint);
+});
+
 test('timed-out check rolls back without labeling the patch a regression or retrying the baseline', async () => {
   const { custody, repositoryRoot } = await fixture({
     files: {

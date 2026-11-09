@@ -2,6 +2,7 @@ export {
   executeGitHubOperations,
   GH_ENVIRONMENT,
   ghEnvironment,
+  ghFailure,
   IntegrationError,
   inspectGitHub,
   inspectLocal,

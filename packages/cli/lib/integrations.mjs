@@ -111,7 +111,8 @@ export function ghEnvironment(env = process.env) {
   return { ...child, ...GH_FIXED_ENVIRONMENT };
 }
 
-function ghFailure(args, error) {
+/** Maps a failed `gh` invocation to a coded `IntegrationError`. */
+export function ghFailure(args, error) {
   const command = `gh ${args.slice(0, 2).join(' ')}`;
   if (error?.code === 'ENOENT')
     return new IntegrationError(
