@@ -45,7 +45,8 @@ whitespace removed, runs of whitespace, `_` and `-` turned into one `-`, and
 leading or trailing `-` removed. When it is longer than 80 characters, cut it at 80, then back to the last
 `-`.
 
-The frontmatter needs every field below, each value a double-quoted JSON string:
+The frontmatter needs every field below. Scalar values are double-quoted JSON strings;
+arrays use the flow form shown in the example:
 
 - `id`: the claimed ID.
 - `title`: one line.
@@ -53,6 +54,17 @@ The frontmatter needs every field below, each value a double-quoted JSON string:
 - `tags`: a list of quoted strings, `[]` when there are none.
 - `status`: `"open"`.
 - `created` and `updated`: today's date as `YYYY-MM-DD`.
+- `when`: `next-unit:<ref>`, `sprint:<SPRINT-NNN or next>`, `trigger:<event>`, or
+  `declined:<reason>`. Use a PR number, task ID, backlog ID, or branch for `<ref>`.
+  Never store `now`; it is a triage outcome. Trigger forms include
+  `date:YYYY-MM-DD`, `closed:<BL-NNN>`, `merged:#<PR>`, `merged:<branch>`, and
+  `release:<pkg>@<semver>`; other non-empty event text is allowed.
+- `files`: a list of quoted repo-relative paths, such as `["src/routes/import.ts"]`.
+  Omit line numbers, absolute paths and `..` segments. Use distinct paths from
+  the evidence, or `[]` when there are none.
+
+Older items may omit `when` and `files`. When listing them, derive files from
+body evidence such as `src/routes/import.ts:41` only if `files` is absent.
 
 The body is `# <ID>: <title>`, then `## Tags` with one `- <tag>` line per tag
 (omitted when there are none), then the description. A description that starts
@@ -68,6 +80,8 @@ tags: ["security", "api"]
 status: "open"
 created: "2026-11-08"
 updated: "2026-11-08"
+when: "next-unit:#612"
+files: ["src/routes/import.ts"]
 ---
 
 # BL-007: Import endpoint has no rate limit

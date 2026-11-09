@@ -125,6 +125,8 @@ test('Ship and Investigate split issues into blockers and findings they offer to
     /take the next\s+number/u,
     /Never overwrite or edit an existing backlog file or marker/u,
     /`priority`: `critical`, `high`, `medium` or `low`/u,
+    /`when`:.*`next-unit:<ref>`/u,
+    /`files`:.*quoted repo-relative paths/u,
     /`status`: `"open"`/u,
     /`created` and `updated`: today's date as `YYYY-MM-DD`/u,
   ]) {

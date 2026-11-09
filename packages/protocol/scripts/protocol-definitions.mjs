@@ -1283,6 +1283,43 @@ export function buildImplementationResultSchemaV123() {
   return schema;
 }
 
+/** Backlog item frontmatter with optional scheduling and evidence paths. */
+export function buildBacklogItemSchemaV124() {
+  return {
+    $schema: SCHEMA,
+    $id: 'https://openplanr.dev/schemas/v1.24.0/backlog-item.schema.json',
+    'x-openplanr-contract': { id: 'backlog-item', version: '1.24.0' },
+    type: 'object',
+    additionalProperties: true,
+    required: ['id', 'title', 'priority', 'tags', 'status', 'created', 'updated'],
+    properties: {
+      id: { type: 'string', pattern: '^[A-Z]+-\\d{3,}$' },
+      title: { type: 'string', minLength: 1 },
+      priority: { enum: ['critical', 'high', 'medium', 'low'] },
+      tags: { type: 'array', items: { type: 'string' } },
+      status: { type: 'string', minLength: 1 },
+      created: { type: 'string', format: 'date', pattern: '^\\d{4}-\\d{2}-\\d{2}$' },
+      updated: { type: 'string', format: 'date', pattern: '^\\d{4}-\\d{2}-\\d{2}$' },
+      epicId: { type: 'string' },
+      when: {
+        type: 'string',
+        pattern:
+          '^(?:(?:next-unit|trigger|declined):\\S(?:[^\\r\\n]*\\S)?|sprint:(?:next|SPRINT-\\d{3,}))(?![\\s\\S])',
+      },
+      files: {
+        type: 'array',
+        uniqueItems: true,
+        items: {
+          type: 'string',
+          pattern:
+            '^(?!/)(?![A-Za-z]:)(?!.*\\\\)(?!.*(?:^|/)\\.{1,2}(?:/|$))(?!.*//)(?!.*:\\d+(?::\\d+|-\\d+)?$)[^\\r\\n]+$',
+        },
+      },
+      unverified: { const: true },
+    },
+  };
+}
+
 const workspaceRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..', '..');
 const digestFor = (value) => `sha256:${sha256Hex(value)}`;
 const digestForCanonicalPath = (path, fallbackNamespace) => {

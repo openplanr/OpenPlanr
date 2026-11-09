@@ -84,6 +84,56 @@ class BacklogInputError extends Error {
   }
 }
 
+const WHEN_PATTERN =
+  /^(?:(?:next-unit|trigger|declined):\S(?:[^\r\n]*\S)?|sprint:(?:next|SPRINT-\d{3,}))(?![\s\S])/u;
+const FILE_PATTERN =
+  /^(?!\/)(?![A-Za-z]:)(?!.*\\)(?!.*(?:^|\/)\.{1,2}(?:\/|$))(?!.*\/\/)(?!.*:\d+(?::\d+|-\d+)?$)[^\r\n]+$/u;
+
+/** @type {typeof import('./backlog-item.d.mts').parseWhen} */
+export function parseWhen(value) {
+  if (typeof value !== 'string' || !WHEN_PATTERN.test(value))
+    throw new BacklogInputError(
+      `Backlog when ${JSON.stringify(value)} is not valid; use next-unit:<ref>, sprint:<SPRINT-NNN or next>, trigger:<event>, or declined:<reason>. Do not store now.`,
+    );
+  const separator = value.indexOf(':');
+  return {
+    kind: /** @type {import('./backlog-item.d.mts').BacklogWhen['kind']} */ (
+      value.slice(0, separator)
+    ),
+    value: value.slice(separator + 1),
+  };
+}
+
+/** @param {unknown} value */
+function normalizeFilePath(value) {
+  return typeof value === 'string'
+    ? value
+        .trim()
+        .replaceAll('\\', '/')
+        .replace(/^(?:\.\/)+/u, '')
+    : '';
+}
+
+/** @type {typeof import('./backlog-item.d.mts').normalizeBacklogFiles} */
+export function normalizeBacklogFiles(value) {
+  if (!Array.isArray(value))
+    throw new BacklogInputError(
+      `Backlog files ${JSON.stringify(value)} must be an array of repo-relative paths.`,
+    );
+  return [
+    ...new Set(
+      value.map((item) => {
+        const normalized = normalizeFilePath(item);
+        if (!FILE_PATTERN.test(normalized))
+          throw new BacklogInputError(
+            `Backlog files entry ${JSON.stringify(item)} must be a repo-relative path without .. segments, absolute paths, or line numbers.`,
+          );
+        return normalized;
+      }),
+    ),
+  ];
+}
+
 /** @type {typeof import('./backlog-item.d.mts').backlogFields} */
 export function backlogFields(input) {
   const title = String(input.title ?? input.name ?? '').trim();
@@ -96,6 +146,12 @@ export function backlogFields(input) {
   const criteria = optionalText(input.acceptanceCriteria);
   const notes = optionalText(input.notes);
   const epicId = optionalText(input.epicId);
+  if (input.when !== undefined) parseWhen(input.when);
+  const files = input.files === undefined ? undefined : normalizeBacklogFiles(input.files);
+  if (input.unverified !== undefined && input.unverified !== true)
+    throw new BacklogInputError(
+      `Backlog unverified ${JSON.stringify(input.unverified)} must be true when present.`,
+    );
   return {
     title,
     priority,
@@ -105,6 +161,9 @@ export function backlogFields(input) {
       ? {}
       : { acceptanceCriteria: Array.isArray(criteria) ? criteria.map(String) : String(criteria) }),
     ...(notes === undefined ? {} : { notes: String(notes) }),
+    ...(input.when === undefined ? {} : { when: String(input.when) }),
+    ...(files === undefined ? {} : { files }),
+    ...(input.unverified === undefined ? {} : { unverified: /** @type {const} */ (true) }),
     ...(epicId === undefined ? {} : { epicId: String(epicId) }),
   };
 }
@@ -121,6 +180,11 @@ export function renderBacklogItem(id, fields, date) {
     'status: "open"',
     `created: ${quote(date)}`,
     `updated: ${quote(date)}`,
+    ...(fields.when === undefined ? [] : [`when: ${quote(fields.when)}`]),
+    ...(fields.files === undefined
+      ? []
+      : [`files: [${fields.files.map((file) => quote(file)).join(', ')}]`]),
+    ...(fields.unverified === undefined ? [] : ['unverified: true']),
     ...(fields.epicId ? [`epicId: ${quote(fields.epicId)}`] : []),
     '---',
     '',
@@ -205,60 +269,254 @@ export async function createBacklogItem(
   return { id, title: fields.title, artifactPath: relativePath(projectDir, filePath) };
 }
 
-/**
- * Top-level scalar frontmatter fields; double-quoted values are read as JSON strings.
- * @param {string} text
- * @param {string} filePath
- */
-function frontmatter(text, filePath) {
-  const block = /^---\n([\s\S]*?)\n---/u.exec(text.replace(/\r\n/gu, '\n'))?.[1] ?? '';
-  /** @type {Record<string, string>} */
-  const fields = {};
-  for (const line of block.split('\n')) {
-    const match = /^(\w+):\s*(.*)$/u.exec(line);
-    if (!match) continue;
-    const value = match[2].trim();
-    if (!value.startsWith('"')) {
-      fields[match[1]] = value.replace(/^'(.*)'$/u, '$1');
-      continue;
+const NON_STRING_SCALAR =
+  /^(?:null|true|false|~|[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:e[+-]?\d+)?|[+-]?0[xob][0-9a-f]+|[+-]?\.(?:inf|nan))$/iu;
+
+/** @param {string} source @returns {string[]} */
+function flowStrings(source) {
+  const values = [];
+  let rest = source.slice(1).trimStart();
+  while (!rest.startsWith(']')) {
+    const token = /^(?:"(?:\\.|[^"\\])*"|'(?:''|[^'])*'|[^\s,[\]{}"'][^,[\]{}]*)/u.exec(rest)?.[0];
+    if (!token) throw new Error('expected a quoted or plain string');
+    const plain = token.trim();
+    if (token.startsWith('"')) values.push(JSON.parse(token));
+    else if (token.startsWith("'")) values.push(token.slice(1, -1).replaceAll("''", "'"));
+    else {
+      if (NON_STRING_SCALAR.test(plain) || /^[!&*]/u.test(plain) || /:\s|\s#/u.test(plain))
+        throw new Error(`expected a string, received ${JSON.stringify(plain)}`);
+      values.push(plain);
     }
-    try {
-      fields[match[1]] = String(JSON.parse(value));
-    } catch (error) {
-      throw new Error(
-        `${filePath}: frontmatter field "${match[1]}" is not a valid quoted string: ${/** @type {Error} */ (error).message}`,
-      );
-    }
+    rest = rest.slice(token.length).trimStart();
+    if (rest.startsWith(',')) rest = rest.slice(1).trimStart();
+    else if (!rest.startsWith(']')) throw new Error('expected a comma or closing bracket');
   }
-  return fields;
+  if (!/^\](?:\s+#.*)?$/u.test(rest)) throw new Error('unexpected text after the closing bracket');
+  return values;
 }
 
-/** @type {typeof import('./backlog-item.d.mts').listOpenBacklog} */
-export async function listOpenBacklog(projectDir) {
+/** @param {string} text */
+function frontmatter(text) {
+  const block = /^---\n([\s\S]*?)\n---/u.exec(text.replace(/\r\n/gu, '\n'))?.[1] ?? '';
+  /** @type {Map<string, string>} */
+  const fields = new Map();
+  const duplicates = new Set();
+  let key;
+  for (const line of block.split('\n')) {
+    const match = /^([^ \t:#]+):[ \t]*(.*)$/u.exec(line);
+    if (match) {
+      key = match[1];
+      if (fields.has(key)) duplicates.add(key);
+      fields.set(key, match[2].startsWith('#') ? '' : match[2]);
+    } else if (key && line.trim() && !line.trimStart().startsWith('#')) {
+      fields.set(key, `${fields.get(key)}\n${line}`);
+    }
+  }
+  return { fields, duplicates };
+}
+
+/** @param {string} source */
+function readString(source) {
+  if (/^["']/u.test(source)) {
+    const quoted = /^("(?:\\.|[^"\\])*"|'(?:''|[^'])*')(?:\s+#.*)?$/u.exec(source)?.[1];
+    if (quoted === undefined) throw new Error('expected a quoted string');
+    const values = flowStrings(`[${quoted}]`);
+    if (values.length !== 1) throw new Error('expected one string');
+    return values[0];
+  }
+  const value = source.replace(/\s+#.*$/u, '').trim();
+  if (
+    !value ||
+    NON_STRING_SCALAR.test(value) ||
+    /^[![\]{}&*|>@`"'%#]|^[?-]\s|:\s|[\r\n]/u.test(value)
+  )
+    throw new Error('expected a string');
+  return value;
+}
+
+/** @param {string} source */
+function readStrings(source) {
+  if (source.startsWith('[')) return flowStrings(source);
+  return source.split('\n').map((line) => {
+    const match = /^\s*-\s+(.+)$/u.exec(line);
+    if (!match) throw new Error('expected a flow array or block sequence of strings');
+    return readString(match[1].trim());
+  });
+}
+
+/** @param {string} source */
+function readFiles(source) {
+  const files = readStrings(source);
+  if (files.some((file) => !FILE_PATTERN.test(file)) || new Set(files).size !== files.length)
+    throw new Error(
+      'expected distinct repo-relative paths without traversal, absolute paths, or line numbers',
+    );
+  return files;
+}
+
+/** @param {string} source */
+function readDate(source) {
+  const value = readString(source);
+  const date = new Date(`${value}T00:00:00.000Z`);
+  if (
+    !/^\d{4}-\d{2}-\d{2}$/u.test(value) ||
+    !Number.isFinite(date.getTime()) ||
+    date.toISOString().slice(0, 10) !== value
+  )
+    throw new Error('expected a calendar date in YYYY-MM-DD form');
+  return value;
+}
+
+/** @param {string} text @param {string} path @param {import('./backlog-item.d.mts').BacklogWarning[]} warnings @param {{ id: string, title: string }} fallbacks */
+function readBacklogFields(text, path, warnings, fallbacks) {
+  const { fields, duplicates } = frontmatter(text);
+  const needed = new Set(['id', 'title', 'status', 'when', 'files']);
+  let invalid = false;
+  /**
+   * @template T
+   * @param {string} field
+   * @param {(source: string) => T} parse
+   * @param {boolean} [optional]
+   * @param {T} [fallback]
+   */
+  const read = (field, parse, optional = false, fallback = undefined) => {
+    const source = fields.get(field)?.trim();
+    try {
+      if (duplicates.has(field)) throw new Error('duplicate frontmatter key');
+      if (source === undefined) {
+        if (optional) return undefined;
+        throw new Error('required field is missing');
+      }
+      if ((field === 'when' || field === 'files') && (!source || source.startsWith('#')))
+        return undefined;
+      return parse(source);
+    } catch (error) {
+      const skipped = needed.has(field) && fallback === undefined;
+      invalid ||= skipped;
+      const value = source ?? 'missing';
+      const reason = error instanceof Error ? error.message : String(error);
+      warnings.push({
+        path,
+        field,
+        value,
+        message: `${path}: ${field} = ${JSON.stringify(value)}: ${reason}${skipped ? '; skipping item' : ''}.`,
+      });
+      return fallback;
+    }
+  };
+  const id = read(
+    'id',
+    (source) => {
+      const value = readString(source);
+      if (!/^[A-Z]+-\d{3,}$/u.test(value))
+        throw new Error('expected an artifact ID such as BL-001');
+      return value;
+    },
+    false,
+    fallbacks.id,
+  );
+  const nonEmptyString = (/** @type {string} */ source) => {
+    const value = readString(source);
+    if (!value.length) throw new Error('expected a non-empty string');
+    return value;
+  };
+  const title = read(
+    'title',
+    nonEmptyString,
+    false,
+    fallbacks.title.trim() ? fallbacks.title : undefined,
+  );
+  const status = read('status', nonEmptyString, false, 'open');
+  const when = read(
+    'when',
+    (source) => {
+      const value = readString(source);
+      if (!value.trim()) return undefined;
+      parseWhen(value);
+      return value;
+    },
+    true,
+  );
+  const files = read('files', readFiles, true);
+  read('priority', (source) => {
+    const value = readString(source);
+    if (!PRIORITIES.includes(value)) throw new Error(`expected one of ${PRIORITIES.join(', ')}`);
+    return value;
+  });
+  read('tags', readStrings);
+  read('created', readDate);
+  read('updated', readDate);
+  read('epicId', readString, true);
+  read(
+    'unverified',
+    (source) => {
+      if (!/^true(?:\s+#.*)?$/iu.test(source)) throw new Error('expected true');
+      return true;
+    },
+    true,
+  );
+  if (invalid || id === undefined || title === undefined || status === undefined) return undefined;
+  return { id, title, status, when, files };
+}
+
+/** @param {string} body */
+function evidenceFiles(body) {
+  const paths = [
+    ...body.matchAll(/(?:^|[\s`(['"])([^\s`()[\]<>"']+?):\d+(?::\d+|-\d+)?(?=$|[\s`),.;\]"'])/gu),
+  ]
+    .map((match) => normalizeFilePath(match[1]))
+    .filter((file) => FILE_PATTERN.test(file));
+  return [...new Set(paths)];
+}
+
+/** @type {typeof import('./backlog-item.d.mts').listBacklog} */
+export async function listBacklog(projectDir, options = {}) {
+  const requestedFiles =
+    options.files === undefined ? undefined : normalizeBacklogFiles(options.files);
   const { backlogDir } = await projectBacklog(projectDir);
   let names;
   try {
     names = await readdir(backlogDir);
   } catch (error) {
-    if (/** @type {NodeJS.ErrnoException} */ (error).code === 'ENOENT') return [];
+    if (/** @type {NodeJS.ErrnoException} */ (error).code === 'ENOENT')
+      return { items: [], warnings: [] };
     throw error;
   }
   const items = [];
+  /** @type {import('./backlog-item.d.mts').BacklogWarning[]} */
+  const warnings = [];
   for (const name of names.sort((a, b) => a.localeCompare(b, undefined, { numeric: true }))) {
     const match = /^([A-Z]+-\d{3,})-.+\.md$/u.exec(name);
     if (!match) continue;
     const filePath = join(backlogDir, name);
-    const fields = frontmatter(await readFile(filePath, 'utf8'), filePath);
-    const status = fields.status ?? 'open';
-    if (CLOSED_STATUSES.has(status)) continue;
+    const text = await readFile(filePath, 'utf8');
+    const path = relativePath(projectDir, filePath);
+    const fields = readBacklogFields(text, path, warnings, {
+      id: match[1],
+      title: name.slice(match[1].length + 1, -3).replace(/-/g, ' '),
+    });
+    if (!fields) continue;
+    const { id, title, status, when } = fields;
+    if (options.open && CLOSED_STATUSES.has(status)) continue;
+    if (options.noWhen && when !== undefined) continue;
+    const body = text.replace(/^---\r?\n[\s\S]*?\r?\n---(?:\r?\n|$)/u, '');
+    const files = fields.files === undefined ? evidenceFiles(body) : fields.files;
+    if (requestedFiles && !requestedFiles.some((file) => files.includes(file))) continue;
     items.push({
-      id: fields.id ?? match[1],
-      title: fields.title ?? name.slice(match[1].length + 1, -3).replace(/-/g, ' '),
+      id,
+      title,
       status,
-      path: relativePath(projectDir, filePath),
+      path,
+      ...(when === undefined ? {} : { when }),
+      files,
     });
   }
-  return items;
+  return { items, warnings };
+}
+
+/** @type {typeof import('./backlog-item.d.mts').listOpenBacklog} */
+export function listOpenBacklog(projectDir, options = {}) {
+  return listBacklog(projectDir, { ...options, open: true });
 }
 
 /** @type {typeof import('./backlog-item.d.mts').takeCliHint} */
@@ -292,17 +550,25 @@ async function readInput(source) {
 }
 
 const USAGE =
-  'Usage: backlog-item.mjs add --project <dir> --data <file|->\n       backlog-item.mjs list --project <dir> --open\n';
+  'Usage: backlog-item.mjs add --project <dir> --data <file|->\n       backlog-item.mjs list --project <dir> --open [--files <paths...>] [--no-when]\n';
 
 /** @param {string[]} argv */
 async function main(argv) {
   const [command, ...rest] = argv;
-  /** @type {Record<string, string | boolean>} */
+  /** @type {Record<string, string | boolean | string[]>} */
   const options = {};
   for (let index = 0; index < rest.length; index += 1) {
     const flag = rest[index];
     if (flag === '--open') options.open = true;
-    else if (flag === '--project' || flag === '--data')
+    else if (flag === '--no-when') options.noWhen = true;
+    else if (flag === '--files') {
+      const paths = [];
+      while (index + 1 < rest.length && !rest[index + 1].startsWith('--'))
+        paths.push(rest[++index]);
+      if (paths.length === 0)
+        throw new Error(`--files needs at least one repo-relative path.\n${USAGE}`);
+      options.files = paths;
+    } else if (flag === '--project' || flag === '--data')
       options[flag.slice(2)] = rest[++index] ?? '';
     else throw new Error(`Unknown argument: ${flag}\n${USAGE}`);
   }
@@ -325,7 +591,9 @@ async function main(argv) {
     return;
   }
   if (command === 'list' && options.open) {
-    process.stdout.write(`${JSON.stringify({ items: await listOpenBacklog(projectDir) })}\n`);
+    process.stdout.write(
+      `${JSON.stringify(await listOpenBacklog(projectDir, { files: Array.isArray(options.files) ? options.files : undefined, noWhen: options.noWhen === true }))}\n`,
+    );
     return;
   }
   throw new Error(USAGE);

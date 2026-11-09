@@ -9,7 +9,9 @@ import {
   readArtifactRaw,
   resolveArtifactFilename,
   updateArtifact,
+  updateArtifactFields,
 } from '../../src/services/artifact-service.js';
+import { toOptionalStringArray } from '../../src/services/linear/body-formatters.js';
 
 // Mock dependencies
 vi.mock('../../src/utils/fs.js', () => ({
@@ -24,6 +26,7 @@ vi.mock('../../src/utils/slugify.js', () => ({
 }));
 
 vi.mock('../../src/utils/markdown.js', () => ({
+  parseTaskCheckboxLines: vi.fn(() => []),
   parseMarkdown: vi.fn((_raw: string) => ({
     data: { id: 'EPIC-001', title: 'Test Epic' },
     content: '# Test Epic\n\nBody content.',
@@ -297,5 +300,54 @@ _No features created yet. Run \`openplanr feature create\` to generate._
     mockListFiles.mockResolvedValueOnce([]); // readArtifactRaw finds nothing
     await addChildReference('/project', config, 'epic', 'EPIC-999', 'feature', 'FEAT-001', 'Test');
     expect(mockWriteFile).not.toHaveBeenCalled();
+  });
+});
+
+describe('updateArtifactFields arrays', () => {
+  it('preserves Linear label IDs through the push frontmatter reader', async () => {
+    mockListFiles.mockResolvedValue(['FEAT-001-item.md']);
+    mockReadFile.mockResolvedValue('---\nid: "FEAT-001"\ntitle: "Item"\n---\nBody');
+    await updateArtifactFields('/project', config, 'feature', 'FEAT-001', {
+      linearLabelIds: ['id1', 'id2'],
+    });
+    const written = mockWriteFile.mock.calls.at(-1)?.[1];
+    if (typeof written !== 'string') throw new Error('Feature frontmatter was not written');
+    mockReadFile.mockResolvedValue(written);
+    const actual = await vi.importActual<typeof import('../../src/utils/markdown.js')>(
+      '../../src/utils/markdown.js',
+    );
+    const { parseMarkdown } = await import('../../src/utils/markdown.js');
+    vi.mocked(parseMarkdown).mockImplementationOnce(actual.parseMarkdown);
+    const artifact = await readArtifact('/project', config, 'feature', 'FEAT-001');
+    expect(toOptionalStringArray(artifact?.data.linearLabelIds)).toEqual(['id1', 'id2']);
+  });
+
+  it('removes an undefined key without leaving a blank frontmatter line', async () => {
+    mockListFiles.mockResolvedValue(['BL-001-item.md']);
+    mockReadFile.mockResolvedValue(
+      '---\nid: "BL-001"\nwhen: "sprint:next"\ntitle: "Item"\n---\nBody',
+    );
+    await updateArtifactFields('/project', config, 'backlog', 'BL-001', { when: undefined });
+    expect(mockWriteFile.mock.calls.at(-1)?.[1]).toBe(
+      `---\nid: "BL-001"\ntitle: "Item"\nupdated: "${new Date().toISOString().split('T')[0]}"\n---\nBody`,
+    );
+  });
+
+  it('writes flow arrays and preserves replacement tokens and the body', async () => {
+    const raw = '---\nid: "BL-001"\nfiles: []\ntitle: "Old"\n---\nBody: $1';
+    mockListFiles.mockResolvedValue(['BL-001-item.md']);
+    mockReadFile.mockResolvedValue(raw);
+    await updateArtifactFields('/project', config, 'backlog', 'BL-001', {
+      files: ['src/$1.ts', 'src/quote".ts', 'src/back\\slash.ts'] as readonly string[],
+      title: '$1 $& $$',
+      tags: [],
+      unverified: true,
+    });
+    const written = mockWriteFile.mock.calls.at(-1)?.[1];
+    expect(written).toContain('files: ["src/$1.ts", "src/quote\\".ts", "src/back\\\\slash.ts"]');
+    expect(written).toContain('title: "$1 $& $$"');
+    expect(written).toContain('tags: []');
+    expect(written).toContain('unverified: true');
+    expect(written).toContain('---\nBody: $1');
   });
 });

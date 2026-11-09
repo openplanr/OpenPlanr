@@ -50,6 +50,7 @@ import {
 import { buildDiagramRegistries, buildDiagramSchemas } from './diagram-definitions.mjs';
 import { buildPlanningSchemas } from './planning-definitions.mjs';
 import {
+  buildBacklogItemSchemaV124,
   buildImplementationResultSchemaV123,
   buildRegistries,
   buildSchemas,
@@ -151,6 +152,8 @@ expected.set(
   'schemas/v1.23.0/implementation-result.schema.json',
   json(buildImplementationResultSchemaV123()),
 );
+
+expected.set('schemas/v1.24.0/backlog-item.schema.json', json(buildBacklogItemSchemaV124()));
 
 const envelopeMetadataPath = 'src/generated/artifact-envelope-metadata.mjs';
 const envelopeMetadataSource = [
@@ -359,7 +362,7 @@ function walk(root, prefix = '') {
 
 const originalSchemaFiles = walk(join(packageRoot, 'schemas')).filter(
   ({ key }) =>
-    !/^v1\.(?:[5-9]|10|11|12|13|14|15|16|17|18|19|20|21|22|23)\.0\//u.test(key) &&
+    !/^v1\.(?:[5-9]|10|11|12|13|14|15|16|17|18|19|20|21|22|23|24)\.0\//u.test(key) &&
     key.endsWith('.json'),
 );
 const originalRegistryFiles = walk(join(packageRoot, 'registry')).filter(
