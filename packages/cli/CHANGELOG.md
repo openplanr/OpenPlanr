@@ -1,5 +1,39 @@
 # Changelog
 
+## 3.7.0
+
+### Minor Changes
+
+- d2bb920: Two new read-only commands. `openplanr release collect` lists the commits between two revisions, by default the last tag and `HEAD`, with bodies, `BREAKING CHANGE:` footers, reverts and the areas they touched, and exits with the Git error instead of an empty list when Git fails; `/release` uses it when the CLI is installed. `openplanr spec validate-plan <SPEC-ID>` checks a spec's stories and tasks: valid frontmatter, ids that match their filenames and repeat nowhere else, tasks that point at real stories, and every acceptance id mapped through `acceptanceRefs` and named under `## Test Requirements`; `/plan` runs it alongside its own checks. Both accept `--json`.
+- 2314041: The Delegate skill now hands work to Claude Code, Codex or Cursor with written steps, so the OpenPlanr plugins for Claude Code, Codex and Cursor no longer ship its scripts and Delegate needs neither Node nor the CLI.
+  
+  - It creates a git worktree for the task, writes a brief with the scope and your repository's real checks, and runs `codex exec`, `claude -p` or Cursor's `agent` there with edit permission.
+  - It reads the diff itself, runs the checks, and applies only in-scope changes to your checkout. The delegated agent never commits.
+  - It stops and tells you when the CLI is missing or signed out, when an API key is set in your environment that you did not choose, when the agent edits outside the scope, or when a check fails.
+  - A profile is a native config directory and a model, such as `CODEX_HOME` or `CLAUDE_CONFIG_DIR`. Delegate checks who is signed in with the CLI's own status command and never reads credentials.
+  
+  The new `openplanr delegate` command keeps the recorded flow (context capsule, worktree custody, recorded checks and exact-session resume). Delegate uses it when `openplanr` 3.7.0 or later is installed and you want that record. With `--json`, each command prints `ok`, `contract`, its result and a `next` step, or a `code`, `problem` and `recovery` on failure. Runs you started with an earlier version finish on the code that prepared them.
+  
+  In that command, the coding agent no longer inherits your whole environment. It gets the basics (paths, locale, terminal, proxy and certificates), its config directory and the routing variables delegation reads, and nothing else (no key, token or custom header) unless a saved profile lists it in `allowedEnv`. A check gets the variables named in its `env` list, such as `"env": ["DATABASE_URL"]`. Toolchain variables such as `JAVA_HOME`, `VIRTUAL_ENV`, `CARGO_HOME`, `NVM_DIR` and `npm_config_*` are no longer passed to checks or the agent either; when a check fails for one, the result says to add it to that check's `env` or the profile's `allowedEnv`.
+- 5ae9ab4: Plan Review is shorter: it keeps one batched read with a stop condition, the three verdicts, the split between must-fix issues and improvements, and requires evidence for every must-fix. The generic review checklist is gone.
+- 4c504bf: In a repository with no `.planr/` folder, Plan now returns the decomposition in chat or in one file where the repository keeps such documents, and Spec writes the specification where the repository already keeps specifications. Plan ends by offering `openplanr init` for tracked IDs and never creates `.planr/` on its own. With `.planr/`, both work as before.
+  
+  Plan no longer copies an existing specification into `.planr/specs/`; it references the specification's path. Gherkin files are written only when you ask.
+- d5c88b2: New `openplanr sync tracker` command. It shows which GitHub repository `gh` resolves, previews a batch of issue changes, and with `--apply` creates, updates, closes or reopens each issue through `gh`.
+  
+  - Every change is checked before any runs, and unknown fields are refused.
+  - `--json` returns each change as `planned`, `applied`, `failed` or `not-run`, plus a `next` step. A run that fails part way names the changes to run again.
+  - `gh` gets only the variables it needs: its own sign-in, `PATH`, home, locale and proxy settings. Other variables, such as unrelated tokens, never reach it.
+  
+  The sync skill now calls this command instead of a bundled script, so the OpenPlanr plugins for Claude Code, Codex and Cursor no longer ship a script for sync. If `openplanr` is missing, the skill tells you and runs the command once through `npx` at this exact version, or gives the install command (install only on Codex). Syncing through your coding agent's own tracker connection needs no CLI, as before.
+  
+  Install commands in the design and plan skills and the plugin README now name an exact `openplanr` version, and the Prisma stack reference runs `prisma` through your project's package manager.
+
+### Patch Changes
+
+- e5cb862: `openplanr github` and `openplanr doctor` now start their child processes with a limited environment instead of the full one. `openplanr delegate prune` reports nothing to prune when no run has been recorded yet, and a missing run store gives a clear error elsewhere. Protocol v1 checks accept `executable`, and the environment hint after a failed apply appears only when a check failed for a missing toolchain.
+- 2a11e7b: The OpenPlanr plugins for Claude Code, Codex and Cursor now carry instructions only: skills, agents, references, metadata and the icon, with no scripts or executables. Every release checks that no plugin ships a script, a `#!` file, package-manager files, an `npx` launcher without an exact version or pre-approved tools, that no skill text names a credential variable to read or pass on, and that the Claude Code plugin declares no hooks, MCP or LSP servers or settings. The Claude Code plugin README now says the same.
+
 ## 3.6.0
 
 ### Minor Changes

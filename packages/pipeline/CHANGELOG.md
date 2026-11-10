@@ -1,5 +1,36 @@
 # Changelog
 
+## 0.64.0
+
+### Minor Changes
+
+- 2314041: The Delegate skill now hands work to Claude Code, Codex or Cursor with written steps, so the OpenPlanr plugins for Claude Code, Codex and Cursor no longer ship its scripts and Delegate needs neither Node nor the CLI.
+  
+  - It creates a git worktree for the task, writes a brief with the scope and your repository's real checks, and runs `codex exec`, `claude -p` or Cursor's `agent` there with edit permission.
+  - It reads the diff itself, runs the checks, and applies only in-scope changes to your checkout. The delegated agent never commits.
+  - It stops and tells you when the CLI is missing or signed out, when an API key is set in your environment that you did not choose, when the agent edits outside the scope, or when a check fails.
+  - A profile is a native config directory and a model, such as `CODEX_HOME` or `CLAUDE_CONFIG_DIR`. Delegate checks who is signed in with the CLI's own status command and never reads credentials.
+  
+  The new `openplanr delegate` command keeps the recorded flow (context capsule, worktree custody, recorded checks and exact-session resume). Delegate uses it when `openplanr` 3.7.0 or later is installed and you want that record. With `--json`, each command prints `ok`, `contract`, its result and a `next` step, or a `code`, `problem` and `recovery` on failure. Runs you started with an earlier version finish on the code that prepared them.
+  
+  In that command, the coding agent no longer inherits your whole environment. It gets the basics (paths, locale, terminal, proxy and certificates), its config directory and the routing variables delegation reads, and nothing else (no key, token or custom header) unless a saved profile lists it in `allowedEnv`. A check gets the variables named in its `env` list, such as `"env": ["DATABASE_URL"]`. Toolchain variables such as `JAVA_HOME`, `VIRTUAL_ENV`, `CARGO_HOME`, `NVM_DIR` and `npm_config_*` are no longer passed to checks or the agent either; when a check fails for one, the result says to add it to that check's `env` or the profile's `allowedEnv`.
+
+### Patch Changes
+
+- e5cb862: `openplanr github` and `openplanr doctor` now start their child processes with a limited environment instead of the full one. `openplanr delegate prune` reports nothing to prune when no run has been recorded yet, and a missing run store gives a clear error elsewhere. Protocol v1 checks accept `executable`, and the environment hint after a failed apply appears only when a check failed for a missing toolchain.
+- 2e652da: `openplanr-pipeline reopen-ship` now asks the owner to confirm. Run it in a terminal and type `REOPEN SHIP <receipt hash>` when prompted. It refuses `--json` and non-interactive calls with `E_SHIP_OWNER_INTERACTIVE_REQUIRED` instead of reopening shipped work unconfirmed.
+  
+  Plan review errors no longer point to a command that does not exist.
+- d5c88b2: New `openplanr sync tracker` command. It shows which GitHub repository `gh` resolves, previews a batch of issue changes, and with `--apply` creates, updates, closes or reopens each issue through `gh`.
+  
+  - Every change is checked before any runs, and unknown fields are refused.
+  - `--json` returns each change as `planned`, `applied`, `failed` or `not-run`, plus a `next` step. A run that fails part way names the changes to run again.
+  - `gh` gets only the variables it needs: its own sign-in, `PATH`, home, locale and proxy settings. Other variables, such as unrelated tokens, never reach it.
+  
+  The sync skill now calls this command instead of a bundled script, so the OpenPlanr plugins for Claude Code, Codex and Cursor no longer ship a script for sync. If `openplanr` is missing, the skill tells you and runs the command once through `npx` at this exact version, or gives the install command (install only on Codex). Syncing through your coding agent's own tracker connection needs no CLI, as before.
+  
+  Install commands in the design and plan skills and the plugin README now name an exact `openplanr` version, and the Prisma stack reference runs `prisma` through your project's package manager.
+
 ## 0.63.0
 
 ### Minor Changes
