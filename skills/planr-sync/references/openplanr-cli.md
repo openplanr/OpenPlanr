@@ -1,7 +1,7 @@
 # OpenPlanr CLI
 
 This step runs in the `openplanr` CLI. The skill ships no runtime of its own.
-Version 3.7.0 matches this plugin; the commands need 3.7.0 or later.
+Version 3.7.1 matches this plugin; the commands need 3.7.0 or later.
 
 ## Probe
 
@@ -11,8 +11,8 @@ another copy, inspect `node_modules`, or import its modules.
 | Probe result | Next action |
 |---|---|
 | A version of 3.7.0 or later | Run the command. |
-| `openplanr` not found | **Stop: no CLI.** Tell the user the step needs the CLI, then run that one command as `npx -y openplanr@3.7.0 <command>`, or give `npm install -g openplanr@3.7.0`. On Codex, give only the install command; never run `npx` there. |
-| A version below 3.7.0, or `unknown command`, `unknown option` or `too many arguments` from the command | **Stop: CLI too old.** Give `npm install -g openplanr@3.7.0`. |
+| `openplanr` not found | **Stop: no CLI.** Tell the user the step needs the CLI, then run that one command as `npx -y openplanr@3.7.1 <command>`, or give `npm install -g openplanr@3.7.1`. On Codex, give only the install command; never run `npx` there. |
+| A version below 3.7.0, or `unknown command`, `unknown option` or `too many arguments` from the command | **Stop: CLI too old.** Give `npm install -g openplanr@3.7.1`. |
 
 After any stop, finish the work that does not need the CLI, report the step as not
 run, and name the command that would run it.
