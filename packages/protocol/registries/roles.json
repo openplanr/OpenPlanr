@@ -103,7 +103,7 @@
       },
       "source": {
         "path": "agents/po/preflight/planr-database/AGENT.md",
-        "digest": "sha256:9322833b948d96a0bbf8b5adb577e5c4e6e8765228992f2c206c690890447f65"
+        "digest": "sha256:91dea85d44a1762885a7c8bbcd612545ce3725b3af4c90e5694d46c1b2e1c939"
       },
       "taskKinds": [
         "database"
@@ -567,5 +567,5 @@
       ]
     }
   ],
-  "documentDigest": "sha256:55046ed4cd5bbfae5df429efeb6a122558332035772f90cac4d178717174754e"
+  "documentDigest": "sha256:652e81cc14b690f6947140bec43aef6e5ee48cc1267d3bcaed268cce53aa8f17"
 }

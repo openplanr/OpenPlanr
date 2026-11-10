@@ -44,7 +44,7 @@ parallel work; agent availability alone is not a reason to dispatch.
 
 Use specification for a distinct planning assignment or completeness review,
 designer for a separate design deliverable or critique, and database only for
-authorized read-only live introspection when repository schemas are insufficient.
+authorized read-only introspection when repository schemas are insufficient.
 Do not have two planners decompose the same request. Entity scaffolding remains
 manual, on explicit request.
 

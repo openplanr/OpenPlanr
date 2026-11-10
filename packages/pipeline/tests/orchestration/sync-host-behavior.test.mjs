@@ -79,16 +79,11 @@ for (const [surface, entrypoint, skillRoot] of surfaces) {
     assert.doesNotMatch(connectors, /Bearer|Authorization|_TOKEN/u);
   });
 
-  test(`${surface}: GitHub writes go through the pinned CLI and the skill ships no script`, () => {
+  test(`${surface}: tracker writes go through the host's connection and the skill ships no script`, () => {
     const guidance = read(entrypoint).replace(/\s+/gu, ' ');
-    assert.match(
-      guidance,
-      /`openplanr sync tracker github sync --input <operations\.json> --json`/u,
-    );
-    assert.match(guidance, /\((?:planr-sync\/)?references\/openplanr-cli\.md\)/u);
-    const probe = read(`${skillRoot}/references/openplanr-cli.md`);
-    assert.match(probe, /`npm install -g openplanr@\d+\.\d+\.\d+`/u);
-    assert.doesNotMatch(probe, /\{\{|openplanr@(?:latest|[\^~>])/u);
+    assert.match(guidance, /Every tracker syncs only through the host's connection/u);
+    assert.doesNotMatch(guidance, /sync tracker github|GitHub CLI|gh CLI/u);
+    assert.equal(existsSync(join(root, skillRoot, 'references/openplanr-cli.md')), false);
     assert.equal(existsSync(join(root, skillRoot, 'scripts')), false);
   });
 }
