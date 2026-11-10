@@ -50,7 +50,7 @@ read, copy or forward tokens, credential files or the keychain.
 | No local shell | The host cannot run commands, such as ChatGPT | Say that delegation needs a coding agent with a shell. |
 | CLI missing | The engine's command is not on `PATH` | Name its install command; do not install it yourself. |
 | Not signed in | The status command reports no login | The user signs in with that CLI's own login. |
-| Credential in environment | `ANTHROPIC_API_KEY`, `ANTHROPIC_AUTH_TOKEN`, `CLAUDE_CODE_OAUTH_TOKEN`, `OPENAI_API_KEY`, `CODEX_API_KEY` or `CURSOR_API_KEY` is set (test with `[ -n "${NAME+x}" ]`; never print it) | Ask whether the user chose that; otherwise run with `env -u <NAME>`. |
+| API-key sign-in | The status command reports an API key or token instead of the user's own account login | Tell the user before running and let them choose whether to continue. |
 | Out of scope | A changed path is outside scope or in a protected path | Send it back, or ask the user to widen the scope. |
 | Gates fail | A gate exits non-zero | Send the output back to the same session; integrate nothing. |
 | Patch conflict | `git apply --check` fails | Report the paths; never overwrite the user's edits. |

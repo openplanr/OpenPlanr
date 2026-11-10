@@ -67,7 +67,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:38fbf85cd7e3342de16933debde9ffb39468b283e3c70bdcf2beffdd0ebee147"
+          "digest": "sha256:f5801a3e02a874f511ce904fcb05f8385dd1d4405f3c12c1713c065c547adf03"
         },
         {
           "path": "agents/openai.yaml",
@@ -404,7 +404,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:66b21a5127afc673f8e4acf6946c29f9f1e52d9d579c66cad46803e6052a4862"
+          "digest": "sha256:cb15d41cd314989baf87f48e0279bd994a92b7644d19a3f42dbc0f0d290f48c7"
         }
       ],
       "contracts": {
@@ -660,7 +660,7 @@
       "source": "skills/planr-delegate/openplanr.skill.json",
       "entrypoint": "skills/planr-delegate/SKILL.md",
       "description": "Coordinate an explicitly requested implementation with Claude Code, Codex or Cursor, then independently review and integrate its observed changes. Use when the user asks another coding agent to implement.",
-      "sourceDigest": "sha256:a0a39addcb31ff7f7993dda77fd8048fbca343c2af421a5972f5dd4e50fd96f4",
+      "sourceDigest": "sha256:38de8890354fc417bbba8e23ba66e72e1d992d618918ff38ae50e337b8c5e4a1",
       "resources": [
         {
           "path": "agents/openai.yaml",
@@ -706,7 +706,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:c1ddacaa47e35e63035a6b2c6e5e2884c1e2cc5ac253a37606964530153ae614"
+          "digest": "sha256:ad9fa5b13765c70e5104b9ed2ce7188537e16dedc604c0eee7db59b075d6ade1"
         },
         {
           "path": "references/native-commands.md",
@@ -718,7 +718,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:1e6e327cf01783b0cf9f5b926c8304de289cf3e8c2eee8fab6e495dadb8da96e"
+          "digest": "sha256:ce016fa5180c03b7e399fe1c441cb4d04bd9e9ea3aeab39e7a176c9bfbace221"
         },
         {
           "path": "references/openplanr-cli.md",
@@ -730,7 +730,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:ea67cbb7933bf1d04373dc7e67f0789f29378e2cd973b1a050d2b2659e0c7f4c"
+          "digest": "sha256:d7139633b0d9ee0ebfe66fd07575e23ee2dc44f89f12d9ef4bbce2efb91b00ad"
         },
         {
           "path": "references/operator-guide.md",
@@ -742,7 +742,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:650db332ca2133cf465dcb6dde364f569a34dfbcf41fb26ef92305f96f9ec2e0"
+          "digest": "sha256:5a27a1712f14a9f4eaca680b13b22a0880f9b70d8684cd48b4aac00cead0fa84"
         },
         {
           "path": "references/run-handoff.md",
@@ -2062,7 +2062,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:66b21a5127afc673f8e4acf6946c29f9f1e52d9d579c66cad46803e6052a4862"
+          "digest": "sha256:cb15d41cd314989baf87f48e0279bd994a92b7644d19a3f42dbc0f0d290f48c7"
         }
       ],
       "contracts": {
@@ -2311,7 +2311,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:66b21a5127afc673f8e4acf6946c29f9f1e52d9d579c66cad46803e6052a4862"
+          "digest": "sha256:cb15d41cd314989baf87f48e0279bd994a92b7644d19a3f42dbc0f0d290f48c7"
         },
         {
           "path": "references/tracker-connections.md",
@@ -2393,7 +2393,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:66b21a5127afc673f8e4acf6946c29f9f1e52d9d579c66cad46803e6052a4862"
+          "digest": "sha256:cb15d41cd314989baf87f48e0279bd994a92b7644d19a3f42dbc0f0d290f48c7"
         },
         {
           "path": "references/tracker-connections.md",
@@ -2453,7 +2453,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:66b21a5127afc673f8e4acf6946c29f9f1e52d9d579c66cad46803e6052a4862"
+          "digest": "sha256:cb15d41cd314989baf87f48e0279bd994a92b7644d19a3f42dbc0f0d290f48c7"
         },
         {
           "path": "references/tracker-connections.md",
