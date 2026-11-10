@@ -50,8 +50,7 @@ same session.
 Precedence: what the user named, then their saved profile, then the only installed
 engine; otherwise ask, engine first. A profile or model name does not prove where
 inference runs. For a request to run locally, confirm the routing in the engine's own
-configuration (Claude `ANTHROPIC_BASE_URL` in its settings, Codex `model_provider` in
-`config.toml`) before the run, and never fall back to a cloud model.
+settings (Claude's settings file, Codex `config.toml`) before the run, and never fall back to a cloud model.
 
 ## Several tasks
 

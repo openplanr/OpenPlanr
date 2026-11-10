@@ -34,18 +34,7 @@ configuration and prepare a new preview; delegation does not strip routing varia
 
 ## Environment
 
-Each child process gets an explicit environment, never the whole parent environment:
-
-- every child: `PATH`, `HOME`, user, shell, temporary-directory, terminal, locale
-  (`LANG`, `LC_*`), `XDG_*`, proxy and certificate variables, and the Windows system
-  variables;
-- the native agent also gets only the routing names its adapter reads: Claude Code
-  `CLAUDE_CONFIG_DIR`, `ANTHROPIC_BASE_URL` and the `CLAUDE_CODE_USE_BEDROCK`,
-  `CLAUDE_CODE_USE_VERTEX` and `CLAUDE_CODE_USE_FOUNDRY` selectors (with Bedrock,
-  `AWS_REGION`, `AWS_DEFAULT_REGION` and `AWS_PROFILE`; with Vertex, `CLOUD_ML_REGION`,
-  `ANTHROPIC_VERTEX_PROJECT_ID` and `GOOGLE_CLOUD_PROJECT`); Codex `CODEX_HOME` and
-  `OPENAI_BASE_URL`; Cursor `CURSOR_API_ENDPOINT`;
-- a check: the names in its `env` list.
+Each child process gets an explicit environment, never the whole parent environment.
 
 The native CLI signs in with its own login in its config directory. Advanced environment
 options are described in the `openplanr delegate` section of `docs/CLI.md` in the

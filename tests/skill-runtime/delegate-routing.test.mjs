@@ -70,6 +70,18 @@ test('Claude and Codex installed routers and Ship expose only the opt-in handoff
       delegate,
       /Never\s+read, copy or forward tokens, credential files or the keychain/u,
     );
+    assert.match(delegate, /openplanr delegate probe --json/u);
+    assert.match(delegate, /local-model ones included/u);
+    assert.match(delegate, /`result\.profiles`/u);
+    assert.match(delegate, /`kind`/u);
+    assert.match(delegate, /`selectedModel`/u);
+    assert.match(delegate, /`destination\.class`/u);
+    assert.match(delegate, /never fall back to a cloud model/u);
+    assert.doesNotMatch(
+      read(`${base}/artifact/references/company-review.md`),
+      /environment-token/u,
+    );
+    assert.doesNotMatch(read(`${base}/browser-qa/SKILL.md`), /credentials cannot be\s+inferred/u);
     const cli = read(`${base}/delegate/references/openplanr-cli.md`);
     assert.match(cli, /context inventory once before `dispatch`/u);
     assert.doesNotMatch(cli, /npx -y|npx openplanr/u);
