@@ -1,5 +1,12 @@
 # Changelog
 
+## 3.7.1
+
+### Patch Changes
+
+- 02f9abd: Delegate offers saved delegate profiles, including local-model profiles, when choosing the engine. Company review and browser QA guidance no longer mention environment-token overrides or inferring credentials.
+- c99e3f8: Delegate no longer inspects credential environment variables; it reads the engine's sign-in status instead.
+
 ## 3.7.0
 
 ### Minor Changes
