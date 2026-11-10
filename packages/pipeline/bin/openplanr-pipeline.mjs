@@ -33,6 +33,10 @@ import {
   prepareInvestigationFixAuthorization,
 } from '../lib/pipeline/engine.mjs';
 import { issueInvestigationFixStartCapability } from '../lib/pipeline/investigation-runtime.mjs';
+import {
+  issueShipReopenOwnerCapability,
+  shipReopenConfirmationPhrase,
+} from '../lib/pipeline/ship-closure.mjs';
 import { composeRuntimePrompt } from '../lib/pipeline/runtime.mjs';
 import { buildGraph } from '../lib/dashboard/graph-engine.mjs';
 import { CLI_COMMAND, PLANNING_FOLDER } from '../lib/protocol/names.mjs';
@@ -154,6 +158,25 @@ async function confirmInvestigationFixStart(preview) {
     );
   }
   return issueInvestigationFixStartCapability(preview);
+}
+
+async function confirmShipReopen({ receiptHash, reason }) {
+  if (json || process.stdin.isTTY !== true || process.stderr.isTTY !== true) {
+    throw new PipelineError(
+      'E_SHIP_OWNER_INTERACTIVE_REQUIRED',
+      'Reopening terminal SHIP custody is owner-only and requires one interactive non-JSON terminal.',
+      'Run `openplanr-pipeline reopen-ship <feature> --receipt-hash <hash> --reason <text>` directly in an attached terminal without --json and type the confirmation phrase.',
+    );
+  }
+  const phrase = shipReopenConfirmationPhrase({ receiptHash, reason });
+  const terminal = createInterface({ input: process.stdin, output: process.stderr, terminal: true });
+  let answer;
+  try {
+    answer = await terminal.question(`Type ${phrase} to reopen this shipped work: `);
+  } finally {
+    terminal.close();
+  }
+  return issueShipReopenOwnerCapability({ receiptHash, reason, confirmation: answer });
 }
 
 function trustedRuntimeRequired(code, subject, recovery) {
@@ -362,9 +385,12 @@ try {
     const unsupported = ['--repositories-file', '--run-id'].find((flag) => argv.includes(flag));
     if (unsupported) throw new PipelineError('E_SHIP_OWNER_CONFIG_FORBIDDEN', `${unsupported} is not part of reopen-ship; the runtime derives successor custody.`);
     const { feature, options } = featureArguments({ '--receipt-hash': 'value', '--reason': 'value', '--runtime': 'value', '--json': 'boolean' });
+    const receiptHash = options.get('--receipt-hash');
+    const reason = options.get('--reason');
+    const ownerCapability = await confirmShipReopen({ receiptHash, reason });
     output(reopenShip({
-      projectRoot: process.cwd(), feature, receiptHash: options.get('--receipt-hash'), reason: options.get('--reason'),
-      ownerConfirmed: true, runtime: options.get('--runtime') ?? 'unknown',
+      projectRoot: process.cwd(), feature, receiptHash, reason,
+      ownerCapability, runtime: options.get('--runtime') ?? 'unknown',
     }));
   } else if (command === 'land') {
     const parsed = closedArguments({

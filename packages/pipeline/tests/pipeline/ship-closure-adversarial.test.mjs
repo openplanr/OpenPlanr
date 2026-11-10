@@ -31,7 +31,12 @@ import {
   startShip,
   verifyShipCompatibilityProjection,
 } from '../../lib/pipeline/index.mjs';
-import { createShipClosure, finalizeStoredShipClosure } from '../../lib/pipeline/ship-closure.mjs';
+import {
+  createShipClosure,
+  finalizeStoredShipClosure,
+  issueShipReopenOwnerCapability,
+  shipReopenConfirmationPhrase,
+} from '../../lib/pipeline/ship-closure.mjs';
 import { sha256Jcs } from '../../lib/protocol/jcs.mjs';
 
 const repositoryRoot = dirname(dirname(dirname(fileURLToPath(import.meta.url))));
@@ -345,6 +350,14 @@ function correctedReceipt(root, slug) {
 
 function errorCode(fn, expected) {
   assert.throws(fn, (error) => error?.code === expected, `expected ${expected}`);
+}
+
+function ownerReopen(receiptHash, reason) {
+  return issueShipReopenOwnerCapability({
+    receiptHash,
+    reason,
+    confirmation: shipReopenConfirmationPhrase({ receiptHash, reason }),
+  });
 }
 
 function cli(root, args, { input, expectFailure = false } = {}) {
@@ -1643,7 +1656,7 @@ test('replaying a superseded receipt cannot overwrite the latest leaf projection
     feature: 'projection-leaf',
     receiptHash: first.receiptHash,
     reason: 'Owner authorizes one successor.',
-    ownerConfirmed: true,
+    ownerCapability: ownerReopen(first.receiptHash, 'Owner authorizes one successor.'),
     runtime: 'codex',
   });
   writeFileSync(join(root, 'src', 'app.js'), 'export const successor = true;\n');
@@ -1831,7 +1844,7 @@ test('owner reopen permits only cross-repository input expansion and forms one l
           feature: 'multi-reopen',
           receiptHash: receipt.receiptHash,
           reason: 'Owner authorizes a bounded repair.',
-          ownerConfirmed: true,
+          ownerCapability: ownerReopen(receipt.receiptHash, 'Owner authorizes a bounded repair.'),
           runtime: 'codex',
           gates,
         }),
@@ -1884,7 +1897,7 @@ test('owner reopen permits only cross-repository input expansion and forms one l
     feature: 'multi-reopen',
     receiptHash: receipt.receiptHash,
     reason: 'Owner authorizes a bounded repair.',
-    ownerConfirmed: true,
+    ownerCapability: ownerReopen(receipt.receiptHash, 'Owner authorizes a bounded repair.'),
     runtime: 'codex',
   });
   const successor = getShipClosure({
@@ -1909,10 +1922,111 @@ test('owner reopen permits only cross-repository input expansion and forms one l
         feature: 'multi-reopen',
         receiptHash: receipt.receiptHash,
         reason: 'Attempt a branch.',
-        ownerConfirmed: true,
+        ownerCapability: ownerReopen(receipt.receiptHash, 'Attempt a branch.'),
       }),
     'E_SHIP_REOPENED',
   );
+});
+
+test('reopen-ship refuses JSON and non-interactive callers before reopening custody', () => {
+  const { root } = project('cli-reopen-owner');
+  const receipt = passRun(root, 'cli-reopen-owner');
+  for (const json of [true, false]) {
+    const result = spawnSync(
+      process.execPath,
+      [
+        cliPath,
+        'reopen-ship',
+        'cli-reopen-owner',
+        '--receipt-hash',
+        receipt.receiptHash,
+        '--reason',
+        'Owner requests one bounded retry.',
+        ...(json ? ['--json'] : []),
+      ],
+      { cwd: root, encoding: 'utf8', input: 'yes\n' },
+    );
+    assert.notEqual(result.status, 0, result.stdout);
+    const failure = JSON.parse(result.stderr.trim());
+    assert.equal(failure.code, 'E_SHIP_OWNER_INTERACTIVE_REQUIRED');
+    assert.match(failure.fix, /openplanr-pipeline reopen-ship <feature>/u);
+  }
+  errorCode(
+    () => startShip({ projectRoot: root, feature: 'cli-reopen-owner', humanReviewConfirmed: true }),
+    'E_SHIP_SCOPE_COMPLETE',
+  );
+});
+
+test('reopen requires a one-shot owner capability bound to the exact receipt and reason', () => {
+  const { root } = project('owner-reopen');
+  const receipt = passRun(root, 'owner-reopen');
+  const reason = 'Owner authorizes one bounded successor.';
+  const request = (ownerAuthority) => () =>
+    reopenShip({
+      projectRoot: root,
+      feature: 'owner-reopen',
+      receiptHash: receipt.receiptHash,
+      reason,
+      runtime: 'codex',
+      ...ownerAuthority,
+    });
+  errorCode(request({}), 'E_SHIP_OWNER_REQUIRED');
+  errorCode(request({ ownerConfirmed: true }), 'E_SHIP_OWNER_REQUIRED');
+  errorCode(
+    request({
+      ownerCapability: {
+        kind: 'ship-reopen-owner-capability',
+        schemaVersion: '1.0.0',
+        receiptHash: receipt.receiptHash,
+      },
+    }),
+    'E_SHIP_OWNER_REQUIRED',
+  );
+  assert.equal(
+    shipReopenConfirmationPhrase({ receiptHash: receipt.receiptHash, reason }),
+    `REOPEN SHIP ${receipt.receiptHash}`,
+  );
+  errorCode(
+    () =>
+      issueShipReopenOwnerCapability({
+        receiptHash: receipt.receiptHash,
+        reason,
+        confirmation: 'yes',
+      }),
+    'E_SHIP_OWNER_CONFIRMATION_MISMATCH',
+  );
+  const otherHash = `sha256:${'b'.repeat(64)}`;
+  const foreignReceipt = issueShipReopenOwnerCapability({
+    receiptHash: otherHash,
+    reason,
+    confirmation: `REOPEN SHIP ${otherHash}`,
+  });
+  errorCode(request({ ownerCapability: foreignReceipt }), 'E_SHIP_OWNER_AUTHORITY_FOREIGN');
+  const foreignReason = issueShipReopenOwnerCapability({
+    receiptHash: receipt.receiptHash,
+    reason: 'A different reason.',
+    confirmation: `REOPEN SHIP ${receipt.receiptHash}`,
+  });
+  errorCode(request({ ownerCapability: foreignReason }), 'E_SHIP_OWNER_AUTHORITY_FOREIGN');
+  errorCode(
+    () => startShip({ projectRoot: root, feature: 'owner-reopen', humanReviewConfirmed: true }),
+    'E_SHIP_SCOPE_COMPLETE',
+  );
+
+  const ownerCapability = issueShipReopenOwnerCapability({
+    receiptHash: receipt.receiptHash,
+    reason: `  ${reason}  `,
+    confirmation: `  REOPEN SHIP ${receipt.receiptHash}\n`,
+  });
+  const reopened = request({ ownerCapability })();
+  const successor = getShipClosure({
+    projectRoot: root,
+    feature: 'owner-reopen',
+    runId: reopened.runId,
+  });
+  assert.equal(successor.startedFromReceiptHash, receipt.receiptHash);
+  assert.equal(successor.reopenReason, reason);
+  errorCode(request({ ownerCapability }), 'E_SHIP_OWNER_AUTHORITY_REPLAYED');
 });
 
 test('terminal start replay is exact-only and ordinary overlap cannot mint a new run', () => {
@@ -2311,7 +2425,7 @@ test('terminal summaries use one latest-owner verification result when successor
     feature: 'global-projection-verification',
     receiptHash: first.receiptHash,
     reason: 'Owner authorizes one bounded successor.',
-    ownerConfirmed: true,
+    ownerCapability: ownerReopen(first.receiptHash, 'Owner authorizes one bounded successor.'),
     runtime: 'codex',
   });
   writeFileSync(join(root, 'src', 'app.js'), 'export const successor = true;\n');

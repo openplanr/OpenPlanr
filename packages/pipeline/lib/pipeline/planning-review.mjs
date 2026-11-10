@@ -199,7 +199,7 @@ function ownerDecisionCapability(value) {
     fail(
       'E_PLAN_REVIEW_OWNER_AUTHORITY_REQUIRED',
       'Planning-review disposition requires an engine-issued interactive owner capability.',
-      'Use the owner-facing decide-plan-review command; owner decisions are not accepted through advance event files.',
+      'Planning-review owner decisions were retired with the planning-review commands; plan review now returns findings without a recorded owner decision.',
     );
   }
   return binding;
@@ -325,7 +325,7 @@ export function advanceStoredPlanningReview({
     fail(
       'E_PLAN_REVIEW_OWNER_BOUNDARY_REQUIRED',
       'owner.decided is not accepted through the general planning-review event boundary.',
-      'Use the owner-facing decide-plan-review command with an interactive confirmation.',
+      'Planning-review owner decisions were retired with the planning-review commands; plan review now returns findings without a recorded owner decision.',
     );
   }
   ensureDirs(value);

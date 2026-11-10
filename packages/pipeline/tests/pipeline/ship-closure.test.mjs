@@ -33,11 +33,24 @@ import {
   runShipGates,
   startShip,
 } from '../../lib/pipeline/index.mjs';
-import { createShipClosure } from '../../lib/pipeline/ship-closure.mjs';
+import {
+  createShipClosure,
+  issueShipReopenOwnerCapability,
+  shipReopenConfirmationPhrase,
+} from '../../lib/pipeline/ship-closure.mjs';
 import { sha256Jcs } from '../../lib/protocol/jcs.mjs';
+import { runCommandInOwnerPty } from './helpers/landing-owner-pty.mjs';
 
 function git(root, ...args) {
   return execFileSync('git', args, { cwd: root, encoding: 'utf8' }).trim();
+}
+
+function ownerReopen(receiptHash, reason) {
+  return issueShipReopenOwnerCapability({
+    receiptHash,
+    reason,
+    confirmation: shipReopenConfirmationPhrase({ receiptHash, reason }),
+  });
 }
 
 function project(slug = 'closure') {
@@ -975,7 +988,10 @@ test('disjoint task receipts aggregate planning truth and reopen one exact prior
     feature: 'disjoint',
     receiptHash: firstPass.finalized.receiptHash,
     reason: 'Recheck the first bounded task.',
-    ownerConfirmed: true,
+    ownerCapability: ownerReopen(
+      firstPass.finalized.receiptHash,
+      'Recheck the first bounded task.',
+    ),
   });
   assert.deepEqual(reopened.approvedScope.taskIds, ['T-001']);
   assert.equal(reopened.tasks[0].status, 'pending');
@@ -984,12 +1000,15 @@ test('disjoint task receipts aggregate planning truth and reopen one exact prior
     feature: 'disjoint',
     receiptHash: firstPass.finalized.receiptHash,
     reason: 'Recheck the first bounded task.',
-    ownerConfirmed: true,
+    ownerCapability: ownerReopen(
+      firstPass.finalized.receiptHash,
+      'Recheck the first bounded task.',
+    ),
   });
   assert.equal(exactReplay.replayed, true);
 });
 
-test('config-owned multi-repository gates round-trip through CLI start, block, finalize, and reopen', () => {
+test('config-owned multi-repository gates round-trip through CLI start, block, finalize, and owner reopen', async () => {
   const { root } = project('multi-cli');
   const secondary = mkdtempSync(join(tmpdir(), 'openplanr-multi-cli-'));
   mkdirSync(join(secondary, 'input', 'tech'), { recursive: true });
@@ -1090,14 +1109,29 @@ test('config-owned multi-repository gates round-trip through CLI start, block, f
     path: 'tests/smoke.test.mjs',
   });
   writeFileSync(configPath, JSON.stringify(config));
-  const reopened = run(
-    'reopen-ship',
-    'multi-cli',
-    '--receipt-hash',
-    finalized.receiptHash,
-    '--reason',
-    'Owner requests one bounded retry.',
-  );
+  const ownerReopenCli = async (reply) => {
+    const { childStatus, output } = await runCommandInOwnerPty(
+      [
+        process.execPath,
+        cli,
+        'reopen-ship',
+        'multi-cli',
+        '--receipt-hash',
+        finalized.receiptHash,
+        '--reason',
+        'Owner requests one bounded retry.',
+      ],
+      { cwd: root, answers: [{ prompt: 'to reopen this shipped work: ', reply }] },
+    );
+    assert.match(output, new RegExp(`Type REOPEN SHIP ${finalized.receiptHash} to reopen`, 'u'));
+    return { childStatus, value: JSON.parse(output.slice(output.indexOf('\n{') + 1)) };
+  };
+  const mismatch = await ownerReopenCli('yes');
+  assert.notEqual(mismatch.childStatus, 0);
+  assert.equal(mismatch.value.code, 'E_SHIP_OWNER_CONFIRMATION_MISMATCH');
+  const confirmed = await ownerReopenCli(`REOPEN SHIP ${finalized.receiptHash}`);
+  assert.equal(confirmed.childStatus, 0);
+  const reopened = confirmed.value;
   assert.deepEqual(
     reopened.repositories.map(({ repositoryKey }) => repositoryKey),
     ['project', 'secondary'],
@@ -1106,15 +1140,5 @@ test('config-owned multi-repository gates round-trip through CLI start, block, f
   assert.notEqual(reopened.gateSetDigest, finalized.gateSetDigest);
   assert.equal(readFileSync(finalized.receiptPath, 'utf8'), blockedReceiptBytes);
   assert.equal(reopened.tasks[0].status, 'pending');
-  assert.equal(
-    run(
-      'reopen-ship',
-      'multi-cli',
-      '--receipt-hash',
-      finalized.receiptHash,
-      '--reason',
-      'Owner requests one bounded retry.',
-    ).replayed,
-    true,
-  );
+  assert.equal((await ownerReopenCli(`REOPEN SHIP ${finalized.receiptHash}`)).value.replayed, true);
 });
