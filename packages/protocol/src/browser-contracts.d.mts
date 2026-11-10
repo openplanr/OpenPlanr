@@ -1,3 +1,5 @@
+/** Protocol version of the command and skill catalogs, which carry no whole-document digest. */
+export declare const CATALOG_PROTOCOL_VERSION: '1.25.0';
 export declare const PROTOCOL_V15_CONTRACTS: Readonly<Record<string, string>>;
 export declare const PROTOCOL_V16_CONTRACTS: Readonly<Record<string, string>>;
 export declare const PROTOCOL_V17_CONTRACTS: Readonly<Record<string, string>>;

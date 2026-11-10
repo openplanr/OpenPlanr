@@ -3,6 +3,7 @@ import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import {
   existsSync,
+  lstatSync,
   mkdirSync,
   mkdtempSync,
   readdirSync,
@@ -17,6 +18,23 @@ import { CLI_GENERATED_RESOURCES } from './skills/cli-resources.mjs';
 import { assertHostBundle, readDirectoryEntries } from './skills/plugin-artifact-validation.mjs';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
+
+// Rejects the same paths as the operate runtime purity check.
+const safeRelativePath = (path) =>
+  typeof path === 'string' &&
+  !path.includes('\\') &&
+  !path.includes(':') &&
+  !path.split('/').some((part) => !part || part === '.' || part === '..');
+
+/** Digest of a protocol projection entry's workspace source; throws when the source is unusable. */
+function projectedSourceDigest(entry) {
+  if (!safeRelativePath(entry.source))
+    throw new Error(`Unsafe protocol projection source for ${entry.target}: ${entry.source}`);
+  const source = join(root, entry.source);
+  if (!existsSync(source) || !lstatSync(source).isFile())
+    throw new Error(`Protocol projection source is missing for ${entry.target}: ${entry.source}`);
+  return createHash('sha256').update(readFileSync(source)).digest('hex');
+}
 const targets = {
   '@openplanr/protocol': 'packages/protocol',
   'planr-pipeline': 'packages/pipeline',
@@ -104,17 +122,14 @@ if (name === 'planr-pipeline') {
     ),
   ]) {
     const projection = JSON.parse(readFileSync(join(root, targets[name], file), 'utf8'));
+    const sourceBound = file === 'lib/generated/protocol-projection.json';
     for (const entry of projection.entries) {
-      if (
-        typeof entry.target !== 'string' ||
-        entry.target.startsWith('/') ||
-        entry.target.split('/').some((part) => !part || part === '.' || part === '..')
-      )
-        throw new Error('Unsafe generated package path');
+      if (!safeRelativePath(entry.target)) throw new Error('Unsafe generated package path');
       const absolute = join(root, targets[name], entry.target);
-      if (createHash('sha256').update(readFileSync(absolute)).digest('hex') !== entry.sha256)
-        throw new Error(`Generated package bytes changed: ${entry.target}`);
-      generatedFiles.set(entry.target, entry.sha256);
+      const actual = createHash('sha256').update(readFileSync(absolute)).digest('hex');
+      const expected = sourceBound ? projectedSourceDigest(entry) : entry.sha256;
+      if (actual !== expected) throw new Error(`Generated package bytes changed: ${entry.target}`);
+      generatedFiles.set(entry.target, expected);
     }
   }
 }

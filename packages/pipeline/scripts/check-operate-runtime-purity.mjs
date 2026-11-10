@@ -27,8 +27,9 @@ import { PLANNING_FOLDER } from '../lib/protocol/names.mjs';
 
 const repositoryRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 
+const PROTOCOL_PROJECTION_MANIFEST = 'lib/generated/protocol-projection.json';
 const DEVELOPMENT_PROJECTION_MANIFESTS = Object.freeze([
-  'lib/generated/protocol-projection.json',
+  PROTOCOL_PROJECTION_MANIFEST,
   'lib/generated/domain-projections/artifact.json',
   'lib/generated/domain-projections/design.json',
   'lib/generated/domain-projections/operate.json',
@@ -486,7 +487,24 @@ function assertOverlayParents(root, path) {
   }
 }
 
-function developmentProjectionEntries(source) {
+// Rejects the same paths as scripts/prepare-publication.mjs at the repository root.
+const isPortableRelativePath = (path) =>
+  typeof path === 'string' &&
+  !path.includes('\\') &&
+  !path.includes(':') &&
+  !path.split('/').some((part) => !part || part === '.' || part === '..');
+
+/** Digest of a protocol projection entry's workspace source; fails when the source is unusable. */
+function projectionSourceDigest(workspaceRoot, manifestPath, { source, target }) {
+  if (!isPortableRelativePath(source))
+    fail(`Invalid development projection source in ${manifestPath}: ${target}`);
+  const sourcePath = join(workspaceRoot, source);
+  if (!existsSync(sourcePath) || !lstatSync(sourcePath).isFile())
+    fail(`Development projection source is missing for ${target}: ${source}`);
+  return sha256File(sourcePath);
+}
+
+function developmentProjectionEntries(source, workspaceRoot) {
   const entries = new Map();
   for (const path of DEVELOPMENT_PROJECTION_MANIFESTS) {
     assertOverlayParents(source, path);
@@ -496,19 +514,21 @@ function developmentProjectionEntries(source) {
       fail(`Development projection manifest has no entries: ${path}`);
     }
     entries.set(path, createHash('sha256').update(bytes).digest('hex'));
-    for (const { target, sha256 } of manifest.entries) {
+    const sourceBound = path === PROTOCOL_PROJECTION_MANIFEST;
+    for (const entry of manifest.entries) {
+      const { target } = entry;
       if (
-        typeof target !== 'string' ||
-        target.includes('\\') ||
-        target.includes(':') ||
-        target.split('/').some((part) => !part || part === '.' || part === '..') ||
+        !isPortableRelativePath(target) ||
         USER_OWNED_EXCLUDED_PATHS.includes(target) ||
-        !/^[a-f0-9]{64}$/.test(sha256)
+        (!sourceBound && !/^[a-f0-9]{64}$/.test(entry.sha256))
       ) {
         fail(`Invalid development projection entry in ${path}: ${target}`);
       }
       if (entries.has(target)) fail(`Duplicate development projection target: ${target}`);
-      entries.set(target, sha256);
+      entries.set(
+        target,
+        sourceBound ? projectionSourceDigest(workspaceRoot, path, entry) : entry.sha256,
+      );
     }
   }
   return entries;
@@ -554,11 +574,14 @@ function removeLegacySnapshotPaths(destination, paths) {
 
 export function createOperateV2DevelopmentSnapshot(
   destinationRoot,
-  { sourceRoot = repositoryRoot } = {},
+  { sourceRoot = repositoryRoot, workspaceRoot } = {},
 ) {
   const source = realpathSync(sourceRoot);
   const sourceGit = gitLocation(source);
-  const projectionEntries = developmentProjectionEntries(source);
+  const projectionEntries = developmentProjectionEntries(
+    source,
+    workspaceRoot ?? sourceGit.topLevel,
+  );
   mkdirSync(destinationRoot, { recursive: true });
   const destination = realpathSync(destinationRoot);
   const dirtyPaths = listedDirtyPaths(source);

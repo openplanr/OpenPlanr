@@ -1,7 +1,7 @@
 {
   "kind": "skill-catalog",
   "schemaVersion": "1.0.0",
-  "protocolVersion": "1.5.0",
+  "protocolVersion": "1.25.0",
   "documentVersion": "1.0.0",
   "digestAlgorithm": "sha256",
   "canonicalization": "rfc8785",
@@ -1863,6 +1863,5 @@
       ]
     }
   ],
-  "compatibilityAliases": [],
-  "documentDigest": "sha256:435a5d655d8a9ff8bfb80392991f1ca1ddb787bc87714829fd3178347cb3fb99"
+  "compatibilityAliases": []
 }

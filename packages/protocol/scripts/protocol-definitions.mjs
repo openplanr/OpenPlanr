@@ -1,6 +1,7 @@
 /**
  * Protocol 1.5.0 canonical definitions: the JSON Schemas and the role, task-kind, rule, command,
- * skill, output and output-path registries; each registry carries its canonical `documentDigest`.
+ * skill, output and output-path registries. The command and skill catalogs follow Protocol 1.25.0
+ * and carry no `documentDigest`; the other registries carry their canonical `documentDigest`.
  * Entry points: `buildSchemas`, `buildRegistries`, `ROOT_COMMAND_SLUGS`.
  * Writing and drift-checking the generated files belongs to `generate-protocol-assets.mjs`.
  */
@@ -8,12 +9,14 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-
 import { sha256Hex, withDocumentDigest } from '../src/canonical-json.mjs';
 import { readCanonicalSkillRegistry, sourceDigest } from './skill-registry-source.mjs';
 
 const SCHEMA = 'https://json-schema.org/draft/2020-12/schema';
 const BASE = 'https://openplanr.dev/schemas/v1.5.0/';
+// Generation runs before src/generated exists, so this cannot import browser-contracts.mjs;
+// validateCanonicalRegistries fails the protocol tests if the two values differ.
+const CATALOG_PROTOCOL_VERSION = '1.25.0';
 const ref = (name) => ({ $ref: `common.schema.json#/$defs/${name}` });
 const nullableRef = (name) => ({ anyOf: [ref(name), { type: 'null' }] });
 const nullableString = (schema = {}) => ({
@@ -1250,10 +1253,8 @@ export function buildSchemas() {
   ]);
 }
 
-/** Protocol 1.23 implementation result: adds `awaiting-acceptance` and per-check acceptance IDs. */
-export function buildImplementationResultSchemaV123() {
-  const schemas = buildSchemas();
-  const commonDefs = schemas.get('common.schema.json').$defs;
+/** Returns `schema` with `common.schema.json` references rewritten to local `$defs` names. */
+function localizeCommonRefs(schema) {
   const usedDefs = new Set();
   const localize = (value) => {
     if (Array.isArray(value)) return value.map(localize);
@@ -1267,7 +1268,14 @@ export function buildImplementationResultSchemaV123() {
       Object.entries(value).map(([key, nested]) => [key, localize(nested)]),
     );
   };
-  const schema = localize(schemas.get('implementation-result.schema.json'));
+  return { schema: localize(schema), usedDefs };
+}
+
+/** Protocol 1.23 implementation result: adds `awaiting-acceptance` and per-check acceptance IDs. */
+export function buildImplementationResultSchemaV123() {
+  const schemas = buildSchemas();
+  const commonDefs = schemas.get('common.schema.json').$defs;
+  const { schema, usedDefs } = localizeCommonRefs(schemas.get('implementation-result.schema.json'));
   schema.$id = 'https://openplanr.dev/schemas/v1.23.0/implementation-result.schema.json';
   schema['x-openplanr-contract'] = { id: 'implementation-result', version: '1.23.0' };
   schema.properties.outcome.properties.status = {
@@ -1281,6 +1289,35 @@ export function buildImplementationResultSchemaV123() {
   );
   schema.$defs = Object.fromEntries([...usedDefs].sort().map((name) => [name, commonDefs[name]]));
   return schema;
+}
+
+/** Protocol 1.25 command and skill catalogs: the 1.5 shape without a whole-document digest. */
+export function buildCatalogSchemasV125() {
+  const schemas = buildSchemas();
+  const commonDefs = schemas.get('common.schema.json').$defs;
+  return new Map(
+    ['command-catalog', 'skill-catalog'].map((name) => {
+      const { schema, usedDefs } = localizeCommonRefs(schemas.get(`${name}.schema.json`));
+      const pending = [...usedDefs];
+      while (pending.length > 0) {
+        const nested = JSON.stringify(commonDefs[pending.pop()]);
+        for (const [, defName] of nested.matchAll(/"#\/\$defs\/([^"/]+)"/gu)) {
+          if (usedDefs.has(defName)) continue;
+          usedDefs.add(defName);
+          pending.push(defName);
+        }
+      }
+      schema.$id = `https://openplanr.dev/schemas/v${CATALOG_PROTOCOL_VERSION}/${name}.schema.json`;
+      schema['x-openplanr-contract'] = { id: name, version: CATALOG_PROTOCOL_VERSION };
+      schema.required = schema.required.filter((key) => key !== 'documentDigest');
+      const { documentDigest: _documentDigest, ...properties } = schema.properties;
+      schema.properties = { ...properties, protocolVersion: { const: CATALOG_PROTOCOL_VERSION } };
+      schema.$defs = Object.fromEntries(
+        [...usedDefs].sort().map((defName) => [defName, commonDefs[defName]]),
+      );
+      return [`${name}.schema.json`, schema];
+    }),
+  );
 }
 
 /** Backlog item frontmatter with optional scheduling and evidence paths. */
@@ -1335,16 +1372,21 @@ const producer = (id) => ({
   version: '1.0.0',
   sourceDigest: digestFor(`producer:${id}@1.0.0`),
 });
+const envelope = (kind, schemaVersion, protocolVersion) => ({
+  kind,
+  schemaVersion,
+  protocolVersion,
+  documentVersion: '1.0.0',
+  digestAlgorithm: 'sha256',
+  canonicalization: 'rfc8785',
+});
 const document = (kind, schemaVersion, fields) =>
-  withDocumentDigest({
-    kind,
-    schemaVersion,
-    protocolVersion: '1.5.0',
-    documentVersion: '1.0.0',
-    digestAlgorithm: 'sha256',
-    canonicalization: 'rfc8785',
-    ...fields,
-  });
+  withDocumentDigest({ ...envelope(kind, schemaVersion, '1.5.0'), ...fields });
+// Every skill change touches these catalogs, so a whole-document digest would make independent changes conflict.
+const catalogDocument = (kind, schemaVersion, fields) => ({
+  ...envelope(kind, schemaVersion, CATALOG_PROTOCOL_VERSION),
+  ...fields,
+});
 
 // Registry definitions follow below. Keeping them in this generator makes the
 // JSON files deterministic products and prevents prose or host files becoming
@@ -1883,7 +1925,7 @@ function buildCommands() {
       }),
     ),
   ].sort((left, right) => left.commandId.localeCompare(right.commandId));
-  return document('command-catalog', '1.0.0', {
+  return catalogDocument('command-catalog', '1.0.0', {
     binaries: [
       { id: 'openplanr', lifecycle: 'exact-alias', aliasOf: 'planr' },
       { id: 'opr', lifecycle: 'deprecated-exact-alias', aliasOf: 'planr' },
@@ -1931,7 +1973,7 @@ export const CANONICAL_SKILL_IDS = Object.freeze(
 
 function buildSkills() {
   const projectedName = (skillId) => skillId.replace(/^planr-/u, '');
-  return document('skill-catalog', '1.0.0', {
+  return catalogDocument('skill-catalog', '1.0.0', {
     matchingPolicyVersion: '1.0.0',
     skills: CANONICAL_SKILL_REGISTRY.skills.map((row) => ({
       skillId: row.skillId,

@@ -20,6 +20,9 @@ import {
   PROTOCOL_V18_CONTRACT_FILES,
 } from './skill-source-contracts.mjs';
 
+/** @type {typeof import('./browser-contracts.d.mts').CATALOG_PROTOCOL_VERSION} */
+export const CATALOG_PROTOCOL_VERSION = '1.25.0';
+
 /** @type {typeof import('./browser-contracts.d.mts').PROTOCOL_V15_CONTRACTS} */
 export const PROTOCOL_V15_CONTRACTS = Object.freeze({
   'command-catalog': 'command-catalog.schema.json',

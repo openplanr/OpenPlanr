@@ -32,6 +32,7 @@
     "check:diagrams": "node scripts/docs/check-diagrams.mjs",
     "check:docs": "node scripts/docs/check-public-docs.mjs",
     "check:comments": "node scripts/check-source-comments.mjs",
+    "check:skill-merge": "node scripts/check-independent-skill-merge.mjs",
     "skill:lint": "node scripts/skills/lint.mjs",
     "skill:generate": "node scripts/skills/generate-v18.mjs --write",
     "skill:check": "node scripts/skills/generate-v18.mjs --check",

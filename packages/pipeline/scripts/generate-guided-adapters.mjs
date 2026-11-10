@@ -25,6 +25,7 @@ import {
   PROFESSIONAL_SKILLS_MANIFEST_PATH,
   readProfessionalSkillsCatalog,
 } from '../lib/pipeline/professional-skills.mjs';
+import { CATALOG_PROTOCOL_VERSION } from '../lib/protocol/browser-contracts.mjs';
 import { assertProtocolArtifact } from '../lib/protocol/contracts.mjs';
 import { sha256Jcs } from '../lib/protocol/jcs.mjs';
 import { CLI_COMMAND } from '../lib/protocol/names.mjs';
@@ -145,7 +146,7 @@ export function readGeneratedSkillCustody({ projectRoot = root } = {}) {
   const skillRegistry = readJson(projectRoot, SKILL_REGISTRY_PATH);
   if (
     skillRegistry.kind !== 'skill-catalog' ||
-    skillRegistry.protocolVersion !== '1.5.0' ||
+    skillRegistry.protocolVersion !== CATALOG_PROTOCOL_VERSION ||
     !Array.isArray(skillRegistry.skills)
   ) {
     throw new GuidedAdapterGenerationError(

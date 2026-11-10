@@ -407,7 +407,8 @@ test('CI prepares contributor tooling before switching to published consumer run
     assert.ok(preparation.includes(command), `Release proof retains ${command} before the switch`);
 });
 
-function pipelineFixture() {
+/** `protocolEntry` adds one source-bound protocol projection entry; a null `sourceBytes` leaves its source missing. */
+function pipelineFixture({ protocolEntry } = {}) {
   const f = fixture();
   const pipeline = join(f.root, 'packages/pipeline');
   mkdirSync(join(pipeline, 'lib/artifact'), { recursive: true });
@@ -446,12 +447,26 @@ function pipelineFixture() {
   const manifestFile = 'lib/generated/domain-projections/artifact.json';
   writeFileSync(join(pipeline, manifestFile), JSON.stringify(manifest));
   for (const path of [
-    'lib/generated/protocol-projection.json',
     'lib/generated/domain-projections/design.json',
     'lib/generated/domain-projections/operate.json',
   ]) {
     writeFileSync(join(pipeline, path), JSON.stringify({ entries: [] }));
   }
+  const protocolEntries = [];
+  if (protocolEntry) {
+    const source = protocolEntry.source ?? 'packages/protocol/registries/projected.json';
+    const target = 'lib/artifact/projected.json';
+    if (protocolEntry.sourceBytes !== null && !protocolEntry.source) {
+      mkdirSync(join(f.protocol, 'registries'), { recursive: true });
+      writeFileSync(join(f.root, source), protocolEntry.sourceBytes);
+    }
+    writeFileSync(join(pipeline, target), protocolEntry.targetBytes);
+    protocolEntries.push({ source, target, mode: '644' });
+  }
+  writeFileSync(
+    join(pipeline, 'lib/generated/protocol-projection.json'),
+    JSON.stringify({ entries: protocolEntries }),
+  );
   // The fixture's tracked generator stands in for a reproducible build. Altering
   // ignored output or its claimed manifest must not turn it into reviewed input.
   const checker = `import assert from 'node:assert/strict'; import { readFileSync } from 'node:fs';
@@ -521,6 +536,40 @@ test('publication rejects an ignored extra file inside a generated pipeline dire
     );
   } finally {
     rmSync(f.temporary, { recursive: true, force: true });
+  }
+});
+
+test('publication checks protocol projections against their tracked sources', () => {
+  const cases = [
+    [{ sourceBytes: '{"a":1}\n', targetBytes: '{"a":1}\n' }, null],
+    [
+      { sourceBytes: null, targetBytes: '{"a":1}\n' },
+      /Protocol projection source is missing for lib\/artifact\/projected.json/u,
+    ],
+    [
+      { sourceBytes: '{"a":1}\n', targetBytes: '{"a":2}\n' },
+      /Generated package bytes changed: lib\/artifact\/projected.json/u,
+    ],
+    ...['packages\\protocol\\registries\\projected.json', 'C:/protocol/projected.json'].map(
+      (source) => [
+        { source, sourceBytes: '{"a":1}\n', targetBytes: '{"a":1}\n' },
+        /Unsafe protocol projection source for lib\/artifact\/projected.json/u,
+      ],
+    ),
+  ];
+  for (const [protocolEntry, failure] of cases) {
+    const f = pipelineFixture({ protocolEntry });
+    try {
+      const result = preparePipeline(f);
+      if (failure) {
+        assert.notEqual(result.status, 0);
+        assert.match(result.stderr, failure);
+      } else {
+        assert.equal(result.status, 0, result.stderr);
+      }
+    } finally {
+      rmSync(f.temporary, { recursive: true, force: true });
+    }
   }
 });
 
