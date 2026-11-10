@@ -67,7 +67,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:f5801a3e02a874f511ce904fcb05f8385dd1d4405f3c12c1713c065c547adf03"
+          "digest": "sha256:0b26cdaf9cd872d3ad62d21ad7d2f30d5ebf226609ce0b8ac73da36ca776ea64"
         },
         {
           "path": "agents/openai.yaml",
@@ -125,7 +125,7 @@
       "source": "skills/planr-browser-qa/openplanr.skill.json",
       "entrypoint": "skills/planr-browser-qa/SKILL.md",
       "description": "Run practical browser-backed QA against real routes, forms, viewports, accessibility, console, and network behavior. Use for UI, authentication, session, navigation, or browser-network changes.",
-      "sourceDigest": "sha256:fc8d122a89459321b0328f3437aded5c8e9a882d3db9b8a6eca5105b31d1d888",
+      "sourceDigest": "sha256:0cb0bf08efaa30a7eac9634cb80a7c8822e4f2fbbd66b41c95c1a9aedce8e28f",
       "resources": [
         {
           "path": "agents/openai.yaml",
@@ -660,7 +660,7 @@
       "source": "skills/planr-delegate/openplanr.skill.json",
       "entrypoint": "skills/planr-delegate/SKILL.md",
       "description": "Coordinate an explicitly requested implementation with Claude Code, Codex or Cursor, then independently review and integrate its observed changes. Use when the user asks another coding agent to implement.",
-      "sourceDigest": "sha256:38de8890354fc417bbba8e23ba66e72e1d992d618918ff38ae50e337b8c5e4a1",
+      "sourceDigest": "sha256:619202ce5efa67ff8b9ea5217a51d05a042434716cb085896795678ad15c0faf",
       "resources": [
         {
           "path": "agents/openai.yaml",
@@ -718,7 +718,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:ce016fa5180c03b7e399fe1c441cb4d04bd9e9ea3aeab39e7a176c9bfbace221"
+          "digest": "sha256:4c113dc3a08f8a2ba0bdc48017cd9323e50a01f9f4a4f79cad362177e8975143"
         },
         {
           "path": "references/openplanr-cli.md",
@@ -742,7 +742,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:5a27a1712f14a9f4eaca680b13b22a0880f9b70d8684cd48b4aac00cead0fa84"
+          "digest": "sha256:070cb1f7e1e7e4bb6a7d03fb2eefb3023c55250a32035af5166eb4e8daf78ee2"
         },
         {
           "path": "references/run-handoff.md",
