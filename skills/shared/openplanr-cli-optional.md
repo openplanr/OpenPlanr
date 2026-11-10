@@ -37,8 +37,8 @@ Read `ok` first; every result has `contract`, `1` for this skill. `ok: true` car
 (exit code 1) carries `code`, `problem` and `recovery`, plus `runId` and `details` when
 they apply.
 
-The CLI starts each child with an explicit environment and passes no credential
-variable unless a saved profile lists it in `allowedEnv`.
+The CLI starts each child with an explicit environment. Advanced environment options are
+described in the `openplanr delegate` section of `docs/CLI.md` in the `openplanr` package.
 
 Details: [operator guide](operator-guide.md), [capsule](capsule-contract.md),
 [lifecycle](run-handoff.md), [integration](integration-review.md),

@@ -21,9 +21,6 @@ Claude `permissions.defaultMode`), leave the flag out so their choice applies. C
 `-p` can already run shell commands its allowlist permits; add the commands the task
 needs to `~/.cursor/cli-config.json` before the run.
 
-To run without a credential variable the user did not choose, prefix the command with
-`env -u <NAME>` for each one, for example `env -u ANTHROPIC_API_KEY claude -p …`.
-
 From inside Codex, its default `workspace-write` sandbox blocks network and writes
 outside the workspace, so a nested `claude -p` or `codex exec` may not reach its model or
 its config directory. Ask the user to run the command in their own terminal, or to

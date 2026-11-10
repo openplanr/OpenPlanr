@@ -15,7 +15,7 @@ requires that reviewed candidate and leaves an uncommitted diff.
   "checks": [
     {"executable": "npm", "args": ["exec", "vitest", "run", "tests/example.test.ts"], "cwd": "packages/example"},
     {"executable": "python3", "args": ["-m", "unittest", "tests.test_example"], "cwd": ".", "timeoutMs": 120000},
-    {"executable": "npm", "args": ["run", "test:db"], "cwd": ".", "env": ["DATABASE_URL"]}
+    {"executable": "npm", "args": ["run", "test:db"], "cwd": ".", "env": ["JAVA_HOME"]}
   ]
 }
 ```
