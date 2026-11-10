@@ -142,6 +142,8 @@ const RECOVERY: Readonly<Record<string, string>> = {
   E_DELEGATE_HELPER_DRIFT:
     "The run's pinned copy changed after preparation; inspect it with status and prepare a new run.",
   E_RUN_NOT_FOUND: 'Use the runId that prepare returned, or prepare a new run.',
+  E_RUN_STORE_MISSING:
+    'No delegated run has been recorded on this machine; prepare a run first, or omit runDirectory to use the default store.',
   E_RUN_LOCKED: 'Another delegate action holds this run; wait for it, then retry.',
 };
 

@@ -26,6 +26,7 @@ import {
 } from '../../packages/pipeline/lib/delegate/profiles.mjs';
 import { integrationPaths } from '../../packages/pipeline/lib/delegate/run-contract.mjs';
 import {
+  acquireRunTransitionLock,
   closeRunRecord,
   createRunRecord,
   pruneClosedRunRecords,
@@ -1258,4 +1259,17 @@ test('onboarding distinguishes inaccessible engines from missing PATH entries', 
   assert.equal(result.git.ready, false);
   assert.deepEqual(result.discoveryDiagnostics, [{ kind: 'claude', code: 'EACCES' }]);
   assert.deepEqual(result.engines, []);
+});
+
+test('prune on a machine with no run store removes nothing; other commands name the missing store', async (t) => {
+  const base = await mkdtemp(join(tmpdir(), 'planr-runner-test-'));
+  t.after(() => rm(base, { recursive: true, force: true }));
+  const runDirectory = join(base, 'never-created');
+  assert.deepEqual(await delegateRunnerCommand('prune', { runDirectory }), { removed: [] });
+  await assert.rejects(acquireRunTransitionLock('missing', { directory: runDirectory }), {
+    code: 'E_RUN_STORE_MISSING',
+  });
+  await assert.rejects(readRunRecord('missing', { directory: runDirectory }), {
+    code: 'E_RUN_NOT_FOUND',
+  });
 });

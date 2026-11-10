@@ -376,6 +376,84 @@ test('failed check rolls back source and reports independent finding', async () 
   assert.equal(await readFile(join(repositoryRoot, 'tracked.txt'), 'utf8'), 'base\n');
 });
 
+test('the toolchain environment hint appears only when a step failed for a missing toolchain', async () => {
+  const hint = /allowedEnv/u;
+  const script = (body) => `node -e "${body}"`;
+  const scripts = {
+    plain: script('process.exit(1)'),
+    'missing-file': script(
+      "console.error(\'Error: ENOENT: no such file or directory, open fixture.json\'); process.exit(1)",
+    ),
+    toolchain: script("console.error(\'JAVA_HOME is not set\'); process.exit(1)"),
+    'no-command': script('process.exit(127)'),
+  };
+  const run_ = async ({ checks = [], preparation, generators, files = {} }) => {
+    const { custody } = await fixture({
+      files: { 'package.json': JSON.stringify({ scripts }), ...files },
+    });
+    await writeFile(join(custody.worktreePath, 'tracked.txt'), 'delegate\n');
+    return integrateBranchDelta({
+      custody,
+      run,
+      scopePaths: ['tracked.txt'],
+      checks,
+      ...(preparation ? { preparation } : {}),
+      ...(generators ? { generators } : {}),
+    });
+  };
+
+  const plain = await run_({ checks: ['npm run plain'] });
+  assert.equal(plain.code, 'E_INTEGRATION_CHECKS');
+  assert.doesNotMatch(plain.nextAction, hint);
+  const missingFile = await run_({ checks: ['npm run missing-file'] });
+  assert.doesNotMatch(missingFile.nextAction, hint);
+  assert.match((await run_({ checks: ['npm run toolchain'] })).nextAction, hint);
+  assert.match((await run_({ checks: ['npm run no-command'] })).nextAction, hint);
+
+  const preparation = await run_({ preparation: ['npm run toolchain'] });
+  assert.equal(preparation.code, 'E_INTEGRATION_PREPARATION');
+  assert.match(preparation.nextAction, hint);
+  const plainPreparation = await run_({ preparation: ['npm run plain'] });
+  assert.equal(plainPreparation.code, 'E_INTEGRATION_PREPARATION');
+  assert.doesNotMatch(plainPreparation.nextAction, hint);
+
+  const generatorScripts = { generate: script('process.exit(127)') };
+  const generation = await integrateBranchDelta(
+    await (async () => {
+      const { custody } = await fixture({
+        files: {
+          'packages/widget/package.json': JSON.stringify({ scripts: generatorScripts }),
+          'packages/widget/generated.txt': 'base\n',
+          'packages/widget/source.txt': 'base\n',
+        },
+      });
+      await writeFile(join(custody.worktreePath, 'packages/widget/source.txt'), 'delegate\n');
+      return {
+        custody,
+        run,
+        scopePaths: ['packages/widget'],
+        checks: [],
+        generators: [
+          {
+            packagePath: 'packages/widget',
+            script: 'generate',
+            outputPaths: ['packages/widget/generated.txt'],
+          },
+        ],
+      };
+    })(),
+  );
+  assert.equal(generation.code, 'E_INTEGRATION_GENERATION');
+  assert.match(generation.nextAction, hint);
+
+  const { custody, repositoryRoot } = await fixture({});
+  await writeFile(join(custody.worktreePath, 'tracked.txt'), 'delegate\n');
+  await writeFile(join(repositoryRoot, 'tracked.txt'), 'source moved\n');
+  const drift = await integrateBranchDelta({ custody, run, scopePaths: ['tracked.txt'] });
+  assert.equal(drift.status, 'blocked');
+  assert.doesNotMatch(drift.nextAction ?? '', hint);
+});
+
 test('timed-out check rolls back without labeling the patch a regression or retrying the baseline', async () => {
   const { custody, repositoryRoot } = await fixture({
     files: {

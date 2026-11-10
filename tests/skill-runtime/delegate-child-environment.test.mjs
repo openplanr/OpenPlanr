@@ -171,6 +171,24 @@ test('parent-selected checks receive the base environment plus only the names th
   assert.equal(named.DATABASE_URL, 'postgres://fixture');
 });
 
+test('legacy protocol checks accept the documented executable field', async (t) => {
+  const { root } = await workspace(t);
+  const checks = await resolveSelectedChecks(
+    root,
+    [{ executable: 'node', args: ['--test', 'example.test.mjs'] }],
+    { legacy: true },
+  );
+  assert.deepEqual(checks, [
+    {
+      executable: 'node',
+      command: 'node',
+      args: ['--test', 'example.test.mjs'],
+      cwd: '.',
+      kind: 'focused',
+    },
+  ]);
+});
+
 // Wraps a real tool so each call records the environment it was started with.
 async function recordingWrapper(bin, tool, log) {
   const real = execFileSync('/bin/sh', ['-c', `command -v ${tool}`], { encoding: 'utf8' }).trim();

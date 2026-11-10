@@ -51,6 +51,7 @@ export declare function reconcileStatus(
   strategy: ConflictStrategy,
 ): StatusDecision;
 export declare function ghEnvironment(env?: NodeJS.ProcessEnv): Record<string, string>;
+export declare function ghFailure(args: readonly string[], error: unknown): IntegrationError;
 export declare function validateGitHubOperations(operations: unknown): GitHubOperation[];
 export declare function executeGitHubOperations(
   operations: unknown,
