@@ -72,8 +72,8 @@ async function fixture() {
               <div data-hit-group="dense-metadata" style={{padding:24}}>
                 <div className="pc-home__card">
                   <CardHeader title="Dense row" />
-                  <ul className="pc-home__rows" style={artifactRowStyle(['T-002'])}>
-                    <li className="pc-home__row pc-artifact-row" data-mobile-layout="stacked">
+                  <ul className="pc-artifact-rows" style={artifactRowStyle(['T-002'])}>
+                    <li className="pc-artifact-row" data-mobile-layout="stacked">
                       <a className="pc-artifact-row__link" href="#/detail/T-002">
                         <span className="pc-artifact-row__id"><WorkItemChip type="task" id="T-002" /></span>
                         <ArtifactRowTitle>Compact metadata and copy</ArtifactRowTitle>

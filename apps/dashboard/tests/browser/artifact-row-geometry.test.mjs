@@ -188,9 +188,8 @@ test('keeps rows, complete tags, titles and copy hit targets inside their geomet
                 top: r.top,
                 bottom: r.bottom,
                 height: r.height,
-                stacked:
-                  row.dataset.layout === 'stacked' ||
-                  (window.innerWidth < 900 && row.dataset.mobileLayout === 'stacked'),
+                stacked: getComputedStyle(row).gridTemplateRows.trim().split(/\s+/u).length > 1,
+                border: Number.parseFloat(getComputedStyle(row).borderTopWidth),
                 linkTop: l.top,
                 linkBottom: l.bottom,
                 tagRight: a.right,
@@ -219,7 +218,7 @@ test('keeps rows, complete tags, titles and copy hit targets inside their geomet
                   (row.merged ? row.linkWidth : row.rowWidth - (width < 900 ? 32 : 40)) - 1,
               );
             } else {
-              assert.equal(row.height, 44);
+              assert.equal(row.height - row.border, 44);
               assert(row.tagRight <= row.titleLeft);
             }
             assert(row.linkTop >= row.top && row.linkBottom <= row.bottom + 0.5);
@@ -240,9 +239,7 @@ test('keeps rows, complete tags, titles and copy hit targets inside their geomet
       );
       assert.equal(await page.locator('.pc-home__specs > li').count(), 5);
       const homeTitleOffsets = await page
-        .locator(
-          '.pc-home__card .pc-artifact-row:not([data-layout="stacked"]) .pc-artifact-row__title',
-        )
+        .locator('.pc-home__card .pc-home__row .pc-artifact-row__title')
         .evaluateAll((elements) =>
           elements.map((element) =>
             Math.round(
@@ -256,75 +253,79 @@ test('keeps rows, complete tags, titles and copy hit targets inside their geomet
       const homeLink = page.locator('.pc-home__row .pc-artifact-row__link').first();
       await homeLink.focus();
       const rings = await homeLink.evaluate((element) => ({
-        row: getComputedStyle(element.closest('.pc-artifact-row')).outlineStyle,
+        row: getComputedStyle(element.closest('.pc-artifact-row')).boxShadow,
         link: getComputedStyle(element).outlineStyle,
         children: [...element.querySelectorAll('*')].map(
           (child) => getComputedStyle(child).outlineStyle,
         ),
       }));
-      assert.equal(rings.row, 'none');
-      assert.equal(rings.link, 'solid');
+      assert.match(rings.row, / 0px 0px 0px 2px inset$/u);
+      assert.equal(rings.link, 'none');
       assert(rings.children.every((outline) => outline === 'none'));
-      for (const selector of ['.pc-artifact-row__meta', '.pc-command-hint__copy']) {
-        const control = page.locator(`.pc-home__row ${selector}`).first();
-        await control.focus();
-        const outline = await control.evaluate((element) => ({
+      if (width >= 600) {
+        const dependency = page.locator('.pc-home__row .pc-home__dependency').first();
+        await dependency.focus();
+        const outline = await dependency.evaluate((element) => ({
           width: getComputedStyle(element).outlineWidth,
           offset: getComputedStyle(element).outlineOffset,
           style: getComputedStyle(element).outlineStyle,
         }));
         assert.deepEqual(outline, { width: '2px', offset: '2px', style: 'solid' });
+      } else {
+        assert.equal(
+          await page.locator('.pc-home__row .pc-home__waits').first().isVisible(),
+          false,
+        );
       }
-      const eyebrow = await page.locator('.pc-home__header .op-eyebrow').evaluate((element) => ({
-        size: getComputedStyle(element).fontSize,
-        weight: getComputedStyle(element).fontWeight,
-        spacing: getComputedStyle(element).letterSpacing,
-      }));
+      const eyebrow = await page
+        .locator('.pc-home__header .pc-home__eyebrow')
+        .evaluate((element) => ({
+          size: getComputedStyle(element).fontSize,
+          weight: getComputedStyle(element).fontWeight,
+          spacing: getComputedStyle(element).letterSpacing,
+        }));
       assert.deepEqual(eyebrow, { size: '12px', weight: '600', spacing: '1.68px' });
       if (width === 390) {
         const mobile = await page.locator('.pc-home__card').evaluateAll((cards) =>
-          cards.map((card) => ({
-            overflows: card.scrollWidth > card.clientWidth,
-            heading: (() => {
-              const title = card.querySelector('.pc-card__title');
-              return {
-                height: title.getBoundingClientRect().height,
-                lineHeight: Number.parseFloat(getComputedStyle(title).lineHeight),
-                overflow: getComputedStyle(title).overflow,
-                whiteSpace: getComputedStyle(title).whiteSpace,
-              };
-            })(),
-            meta: [...card.querySelectorAll('.pc-artifact-row__meta')].map((meta) => ({
-              width: meta.getBoundingClientRect().width,
-              value: getComputedStyle(meta.querySelector('.pc-artifact-row__meta-value')).display,
-            })),
-          })),
+          cards.map((card) => {
+            const title = card.querySelector('.pc-card__title, .pc-home__sprint-title');
+            return {
+              overflows: card.scrollWidth > card.clientWidth,
+              titleTruncated: title.scrollWidth > title.clientWidth,
+              head: card.querySelector('.pc-card__head')?.getBoundingClientRect().height ?? null,
+              seeAll:
+                card.querySelector('.pc-card__see-all')?.getBoundingClientRect().height ?? null,
+              meta: [...card.querySelectorAll('.pc-home__meta')].map(
+                (meta) => meta.getBoundingClientRect().width,
+              ),
+            };
+          }),
         );
         for (const card of mobile) {
           assert.equal(card.overflows, false);
-          assert.equal(card.heading.overflow, 'visible');
-          assert.equal(card.heading.whiteSpace, 'normal');
-          assert(card.heading.height <= 2 * card.heading.lineHeight + 1);
-          assert(card.meta.every((meta) => meta.width >= 24 && meta.value !== 'none'));
+          assert.equal(card.titleTruncated, false);
+          if (card.head !== null) assert.equal(card.head, 53);
+          if (card.seeAll !== null) assert.equal(card.seeAll, 44);
+          assert(card.meta.every((meta) => meta > 0));
         }
       }
-      const homeCopy = page.locator('.pc-home__specs .pc-command-hint[data-variant="row"]').first();
-      await page.mouse.move(0, 0);
-      const touch = await page.evaluate(() => matchMedia('(hover: none)').matches);
-      assert.equal(
-        await homeCopy.evaluate((element) => getComputedStyle(element).opacity),
-        touch ? '1' : '0',
-      );
-      await homeCopy.locator('button').focus();
-      assert.equal(await homeCopy.evaluate((element) => getComputedStyle(element).opacity), '1');
+      await homeLink.click();
+      assert.equal(await page.locator('.pc-selection-bar').count(), 1);
+      await page.locator('.pc-selection-bar__clear').click();
+      assert.equal(await page.locator('.pc-selection-bar').count(), 0);
       if (width === 1440) {
         const home = await page.locator('.pc-home__columns').evaluate((element) => {
           const columns = getComputedStyle(element)
             .gridTemplateColumns.split(' ')
             .map(Number.parseFloat);
+          const [attention, context] = [...element.children].map(
+            (column) => column.getBoundingClientRect().width,
+          );
           const specs = element.querySelector('.pc-home__specs').closest('section');
           return {
             columns,
+            attention,
+            context,
             align: getComputedStyle(element).alignItems,
             gap: getComputedStyle(element).columnGap,
             specsHeight: specs.getBoundingClientRect().height,
@@ -339,12 +340,14 @@ test('keeps rows, complete tags, titles and copy hit targets inside their geomet
             }),
           };
         });
-        assert(Math.abs(home.columns[0] / home.columns[1] - 1.65) < 0.01);
-        assert(home.columns[1] >= 280);
+        assert.equal(home.columns.length, 12);
+        assert(home.columns.every((track) => Math.abs(track - home.columns[0]) < 0.5));
+        assert(Math.abs(home.attention - (8 * home.columns[0] + 7 * 24)) < 1);
+        assert(Math.abs(home.context - (4 * home.columns[0] + 3 * 24)) < 1);
         assert.equal(home.align, 'start');
         assert.equal(home.gap, '24px');
-        assert(home.specsHeight <= 280);
-        assert(home.cardGaps.every((gap) => Math.abs(gap - 20) < 0.5));
+        assert(Math.abs(home.specsHeight - (2 + 57 + 16 + 5 * 50)) < 1);
+        assert(home.cardGaps.every((gap) => Math.abs(gap - 24) < 0.5));
       }
       const titles = page.locator('#palette [data-search-result]');
       for (let index = 0; index < (await titles.count()); index++) {
@@ -404,26 +407,13 @@ test('keeps rows, complete tags, titles and copy hit targets inside their geomet
   }
 });
 
-function triggerFocusReport(element) {
-  const active = document.activeElement;
-  return {
-    restored: active === element,
-    activeElement: active
-      ? {
-          tag: active.tagName,
-          class: active.getAttribute('class'),
-          ariaLabel: active.getAttribute('aria-label'),
-        }
-      : null,
-  };
-}
-
-test('merges touch row metadata into an exclusive details target and preserves fine tooltips', {
+test('keeps one plain row meta with its full sentence on touch and fine pointers', {
   timeout: 60_000,
 }, async (t) => {
   const code = (await bundleFixture()).outputFiles[0].text;
   const browser = await launchBrowser();
   t.after(() => browser.close());
+  const sentence = '0 open tasks wait on this. It waits on SPEC-001, SPEC-002.';
   for (const theme of ['dark', 'light']) {
     for (const coarse of [true, false]) {
       for (const width of [390, 1440]) {
@@ -445,159 +435,34 @@ test('merges touch row metadata into an exclusive details target and preserves f
             await document.fonts.ready;
             await new Promise((done) => requestAnimationFrame(() => requestAnimationFrame(done)));
           });
-          assert.equal(await page.evaluate(() => matchMedia('(pointer: coarse)').matches), coarse);
+          const report = JSON.stringify({ theme, coarse, width });
           const row = page.locator('[data-attention="waiting"] .pc-home__row').first();
           await row.scrollIntoViewIfNeeded();
-          const details = row.getByRole('button', { name: /^Details for T-901:/u });
-          const labels = [
-            '0 downstream open tasks',
-            'Waits on unfinished dependencies: SPEC-001, SPEC-002',
-          ];
-          if (!coarse) {
-            assert.equal(await details.count(), 0);
-            assert.equal(await row.locator('.pc-artifact-row__meta').count(), 2);
-            for (const [index, label] of labels.entries()) {
-              await row.locator('.pc-artifact-row__meta').nth(index).focus();
-              await page.getByRole('tooltip', { name: label, exact: true }).waitFor();
-              await page.keyboard.press('Escape');
-              await page.getByRole('tooltip').waitFor({ state: 'hidden' });
-            }
+          assert.equal(await row.locator('.pc-home__meta').count(), 1, report);
+          assert.equal(await row.locator('.pc-home__meta').getAttribute('title'), sentence, report);
+          const description = await row
+            .locator('.pc-artifact-row__link')
+            .evaluate(
+              (link) =>
+                document.getElementById(link.getAttribute('aria-describedby') ?? '')?.textContent,
+            );
+          assert.equal(description, sentence, report);
+          assert.equal(await row.getByRole('button').count(), 0, report);
+          const dependency = row.locator('.pc-home__dependency');
+          if (width < 600) {
+            assert.equal(await dependency.isVisible(), false, report);
             continue;
           }
-          assert.equal(await row.locator('.pc-artifact-row__meta').count(), 0);
-          assert.equal(
-            await details.getAttribute('aria-label'),
-            `Details for T-901: ${labels.join(', ')}`,
-          );
-          const hit = await details.evaluate((element) => {
+          assert.equal(await dependency.textContent(), 'SPEC-001', report);
+          const bounds = await dependency.evaluate((element) => {
+            const link = element
+              .closest('.pc-artifact-row')
+              .querySelector('.pc-artifact-row__link')
+              .getBoundingClientRect();
             const rect = element.getBoundingClientRect();
-            const row = element.closest('.pc-artifact-row');
-            const link = row.querySelector('.pc-artifact-row__link').getBoundingClientRect();
-            const copy = row.querySelector('.pc-command-hint__copy').getBoundingClientRect();
-            const copyArea = {
-              left: (copy.left + copy.right) / 2 - 22,
-              right: (copy.left + copy.right) / 2 + 22,
-              top: (copy.top + copy.bottom) / 2 - 22,
-              bottom: (copy.top + copy.bottom) / 2 + 22,
-            };
-            const overlaps = (other) =>
-              rect.left < other.right &&
-              rect.right > other.left &&
-              rect.top < other.bottom &&
-              rect.bottom > other.top;
-            const sampleBox = {
-              left: (rect.left + rect.right) / 2 - 22,
-              top: (rect.top + rect.bottom) / 2 - 22,
-            };
-            const misses = [];
-            let owned = 0;
-            // Sample cell centres inside [0, 44) to avoid ambiguous outer-edge hits.
-            for (let offsetY = 1; offsetY < 44; offsetY += 2) {
-              for (let offsetX = 1; offsetX < 44; offsetX += 2) {
-                const x = sampleBox.left + offsetX;
-                const y = sampleBox.top + offsetY;
-                const target = document.elementFromPoint(x, y);
-                if (target && element.contains(target)) owned++;
-                else
-                  misses.push({
-                    x,
-                    y,
-                    offsetX,
-                    offsetY,
-                    element: target?.outerHTML.slice(0, 500) ?? null,
-                  });
-              }
-            }
-            return {
-              width: rect.width,
-              height: rect.height,
-              owned,
-              sampleBox,
-              misses,
-              overlapsLink: overlaps(link),
-              overlapsCopy: overlaps(copyArea),
-            };
+            return { overlapsLink: rect.left < link.right && rect.right > link.left };
           });
-          const report = JSON.stringify({ theme, viewportWidth: width, ...hit });
-          assert(hit.width >= 44 && hit.height >= 44, report);
-          assert.equal(hit.owned, 484, report);
-          assert.equal(hit.overlapsLink, false, report);
-          assert.equal(hit.overlapsCopy, false, report);
-          const before = await row.boundingBox();
-          await page.evaluate(() => {
-            window.rowShiftTotal = 0;
-            window.rowShifts = [];
-            new PerformanceObserver((list) => {
-              for (const entry of list.getEntries()) {
-                window.rowShiftTotal += entry.value;
-                window.rowShifts.push({
-                  value: entry.value,
-                  startTime: entry.startTime,
-                  hadRecentInput: entry.hadRecentInput,
-                  scrollX: window.scrollX,
-                  scrollY: window.scrollY,
-                  sources: entry.sources.map((source) => ({
-                    node:
-                      source.node instanceof Element
-                        ? source.node.outerHTML.slice(0, 500)
-                        : (source.node?.nodeName ?? null),
-                    previousRect: source.previousRect.toJSON(),
-                    currentRect: source.currentRect.toJSON(),
-                  })),
-                });
-              }
-            }).observe({ type: 'layout-shift' });
-          });
-          await details.tap();
-          const popover = page.getByRole('dialog', { name: 'Details for T-901', exact: true });
-          await popover.waitFor();
-          assert.equal(
-            await popover.evaluate((element) => {
-              const overlay = element.closest('[data-radix-popper-content-wrapper]');
-              if (!overlay) throw new Error('Details popover is missing its positioning wrapper');
-              return getComputedStyle(overlay).position;
-            }),
-            'fixed',
-          );
-          assert.equal(await page.locator('body').getAttribute('data-scroll-locked'), null);
-          const text = (await popover.textContent()).replace(/\s+/gu, ' ');
-          assert(text.includes(labels[0]));
-          assert(text.includes('Waits on unfinished dependencies:'));
-          assert.deepEqual(await popover.locator('.pc-artifact-tag').allTextContents(), [
-            'SPEC-001',
-            'SPEC-002',
-          ]);
-          assert.equal(await popover.locator('li').count(), labels.length);
-          await page.keyboard.press('Escape');
-          await popover.waitFor({ state: 'hidden' });
-          const focusAfterEscape = await details.evaluate(triggerFocusReport);
-          assert(
-            focusAfterEscape.restored,
-            JSON.stringify({ theme, viewportWidth: width, close: 'Escape', ...focusAfterEscape }),
-          );
-          await details.tap();
-          await popover.waitFor();
-          await page.touchscreen.tap(1, 1);
-          await popover.waitFor({ state: 'hidden' });
-          const focusAfterOutsideTap = await details.evaluate(triggerFocusReport);
-          assert(
-            focusAfterOutsideTap.restored,
-            JSON.stringify({
-              theme,
-              viewportWidth: width,
-              close: 'outside tap',
-              ...focusAfterOutsideTap,
-            }),
-          );
-          assert.deepEqual(await row.boundingBox(), before);
-          await page.evaluate(
-            () => new Promise((done) => requestAnimationFrame(() => requestAnimationFrame(done))),
-          );
-          const shifts = await page.evaluate(() => ({
-            total: window.rowShiftTotal,
-            entries: window.rowShifts,
-          }));
-          assert.equal(shifts.total, 0, JSON.stringify({ theme, viewportWidth: width, ...shifts }));
+          assert.equal(bounds.overlapsLink, false, report);
         } finally {
           await context.close();
         }

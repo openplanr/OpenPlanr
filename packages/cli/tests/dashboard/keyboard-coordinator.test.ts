@@ -385,6 +385,35 @@ describe('dashboard keyboard coordinator', () => {
     expect(context.selectedId).not.toHaveBeenCalled();
   });
 
+  it('copies through a rendered selection bar instead of the row identity', async () => {
+    const { item, root, context } = fixture(
+      `<section data-route-kind="planning.overview">${row('a')}<section class="pc-selection-bar"><button class="pc-selection-bar__copy">Copy command</button></section></section>`,
+    );
+    const copy = vi.fn();
+    root.querySelector('.pc-selection-bar__copy')?.addEventListener('click', copy);
+    key(item('a'), 'c');
+    await Promise.resolve();
+    expect(copy).toHaveBeenCalledTimes(1);
+    expect(context.copy).not.toHaveBeenCalled();
+  });
+
+  it('announces a disabled selection bar command without copying the identity', async () => {
+    const { item, context } = fixture(
+      `${row('a')}<section class="pc-selection-bar"><button class="pc-selection-bar__copy" disabled>Copy command</button></section>`,
+    );
+    key(item('a'), 'c');
+    await Promise.resolve();
+    expect(context.announce).toHaveBeenLastCalledWith('This command is unavailable.');
+    expect(context.copy).not.toHaveBeenCalled();
+  });
+
+  it('keeps copying the bare List identity when no selection bar is rendered', async () => {
+    const { item, context } = fixture(list);
+    key(item('a'), 'c');
+    await Promise.resolve();
+    expect(context.copy).toHaveBeenCalledExactlyOnceWith('a');
+  });
+
   it('falls back to the selected identity for an empty row sentinel', async () => {
     const { root, context } = fixture(row(''));
     key(root.firstElementChild as HTMLElement, 'c');

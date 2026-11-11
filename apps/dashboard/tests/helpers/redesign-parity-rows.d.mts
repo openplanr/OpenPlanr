@@ -8,6 +8,7 @@ export type ParityRow = Readonly<{
   viewport: 'D' | 'T' | 'M';
   theme: 'both';
   setup?: 'select' | 'lanes' | null;
+  items?: string;
 }>;
 export type ParitySample = Readonly<{
   id: string;
@@ -21,4 +22,5 @@ export type ParitySample = Readonly<{
 export function resolveParityToken(value: string, theme: string): string;
 export const redesignParityRows: readonly ParityRow[];
 export const boardParityRows: readonly ParityRow[];
+export const homeParityRows: readonly ParityRow[];
 export function assertParityRow(page: Page, row: ParityRow, theme: string): Promise<ParitySample[]>;

@@ -207,7 +207,8 @@ describe('Home attention', () => {
     expect(card(CARDS[1]).textContent).toMatch(
       /7\+? days|days since authored update|no authored update/iu,
     );
-    expect(container.textContent).toContain('Phase 2');
+    expect(container.textContent).not.toContain('Phase 2');
+    expect(container.textContent).not.toMatch(/Since your last visit|\bUnknown\b/u);
   });
 
   it('passes equivalent validated filters to every See all destination', () => {
@@ -246,24 +247,56 @@ describe('Home attention', () => {
     if (!inspect) throw new Error('Expected an inspect link');
     const item = first.closest('li');
     if (!item) throw new Error('Expected an attention item');
+    const bar = () => screen.getByRole('region', { name: 'Selected items' });
     fireEvent.click(inspect);
     const selected = JSON.parse(screen.getByTestId('selection').textContent ?? '{}');
     expect(selected.selection.id).toBe(first.dataset.keyboardItem);
     expect(selected.openTick).toBeGreaterThan(0);
+    expect(bar().querySelector('code')?.textContent).toBe('/planr:ship SPEC-026/T-109');
     const dependency = within(item).getAllByRole('link')[1];
     expect(dependency.textContent).toContain('T-109');
     fireEvent.click(dependency);
     expect(JSON.parse(screen.getByTestId('selection').textContent ?? '{}').selection.id).toBe(
       'SPEC-026/T-109',
     );
-    const command = item.querySelector('code')?.textContent;
+    const command = bar().querySelector('code')?.textContent;
     expect(command).toBe('/planr:ship SPEC-026/T-109');
-    fireEvent.click(within(item).getByRole('button', { name: 'Copy command for T-036' }));
+    fireEvent.click(within(bar()).getByRole('button', { name: 'Copy command' }));
     await act(async () => {});
     expect(writeText).toHaveBeenCalledExactlyOnceWith(command);
     expect(JSON.parse(screen.getByTestId('selection').textContent ?? '{}').selection.id).toBe(
       'SPEC-026/T-109',
     );
+  });
+
+  it('copies the selection bar command when C is pressed on a Home row', async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    vi.stubGlobal('navigator', { clipboard: { writeText } });
+    const { container } = render(<Home />);
+    const copy = vi.fn(async () => undefined);
+    const dispose = installKeyboardCoordinator(document, () => ({
+      root: container,
+      singleLetters: true,
+      paletteOpen: false,
+      togglePalette: vi.fn(),
+      openHelp: vi.fn(),
+      navigate: vi.fn(),
+      closeInspector: vi.fn(() => false),
+      selectedId: () => null,
+      copy,
+      announce: vi.fn(),
+    }));
+    try {
+      const first = card(CARDS[0]).querySelector<HTMLElement>('[data-keyboard-item]');
+      if (!first) throw new Error('Expected a waiting row');
+      act(() => first.focus());
+      fireEvent.keyDown(first, { key: 'c' });
+      await act(async () => {});
+      expect(writeText).toHaveBeenCalledExactlyOnceWith('/planr:ship SPEC-026/T-109');
+      expect(copy).not.toHaveBeenCalled();
+    } finally {
+      dispose();
+    }
   });
 
   it('keeps the attention order without a sprint and copies the registered sprint continuation', async () => {
@@ -301,52 +334,6 @@ describe('Home attention', () => {
     expect(screen.getByRole('link', { name: 'Open Diagnostics' })).toBeTruthy();
     expect(localStorage.getItem(STORAGE_KEY)).toBeNull();
     expect(screen.queryByRole('heading', { name: /Waiting on a dependency/u })).toBeNull();
-  });
-
-  it('records the browser-local timestamp after a successful visit and scopes it by project', () => {
-    const previous = '2026-10-17T09:00:00.000Z';
-    localStorage.setItem(STORAGE_KEY, previous);
-    const { rerender, unmount } = render(<Home current={fixture(DATASET.graph, 'refreshing')} />);
-    expect(localStorage.getItem(STORAGE_KEY)).toBe(previous);
-    rerender(<Home />);
-    expect(screen.getByText(/Since your last visit:/u).querySelector('time')?.dateTime).toBe(
-      previous,
-    );
-    expect(localStorage.getItem(STORAGE_KEY)).toBe(ARTBOARD_FIXTURE_CLOCK);
-    unmount();
-    const otherProject = `sha256:${'8'.repeat(64)}`;
-    render(<Home current={fixture(DATASET.graph, 'ready', otherProject)} />);
-    expect(screen.getByText(/First visit in this browser/u)).toBeTruthy();
-    expect(localStorage.getItem(`op-home-seen:v1:${otherProject}`)).toBe(ARTBOARD_FIXTURE_CLOCK);
-    expect(localStorage.getItem(STORAGE_KEY)).toBe(ARTBOARD_FIXTURE_CLOCK);
-  });
-
-  it.each(['loading', 'stale', 'offline', 'refreshing'] as const)(
-    'does not record a %s visit',
-    (kind) => {
-      localStorage.setItem(STORAGE_KEY, '2026-10-17T09:00:00.000Z');
-      render(<Home current={fixture(DATASET.graph, kind)} />);
-      expect(localStorage.getItem(STORAGE_KEY)).toBe('2026-10-17T09:00:00.000Z');
-    },
-  );
-
-  it('surfaces storage denial while keeping attention available', () => {
-    vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
-      throw new DOMException('Storage denied', 'SecurityError');
-    });
-    render(<Home />);
-    expect(screen.getByText(/Since your last visit is unavailable/iu)).toBeTruthy();
-    expect(ids(card(CARDS[0])).length).toBeGreaterThan(0);
-  });
-
-  it('surfaces a failed timestamp write without claiming a recorded visit', () => {
-    vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
-      throw new DOMException('Storage full', 'QuotaExceededError');
-    });
-    render(<Home />);
-    expect(screen.getByText(/Since your last visit is unavailable/iu)).toBeTruthy();
-    expect(screen.queryByText(/First visit in this browser/u)).toBeNull();
-    expect(localStorage.getItem(STORAGE_KEY)).toBeNull();
   });
 
   it.each([false, true])(
@@ -442,106 +429,117 @@ it('caps each Home card at five rows and keeps the full count reachable', () => 
   }
 });
 
-it('keeps single-line Home cards on the shared row grid without tag and title overlap', () => {
-  const stylesheet = readFileSync(
+it('keeps Home attention rows on one row grid without tag and title overlap', () => {
+  const shared = readFileSync(
     `${process.cwd()}/../../apps/dashboard/src/design-system/components/artifact-row.css`,
     'utf8',
   );
-  const rowRule = stylesheet.match(/\.pc-artifact-row\s*\{([^}]+)\}/u)?.[1];
-  expect(rowRule).toBeDefined();
-  expect(rowRule).toMatch(
-    /grid-template-columns:\s*var\(--id-col[^;]+minmax\(0,\s*1fr\) auto var\(--action-col/u,
-  );
+  const rowRule = shared.match(/\.pc-artifact-row\s*\{([^}]+)\}/u)?.[1];
   const padding = Number(rowRule?.match(/padding:\s*0 (\d+)px/u)?.[1]);
   const gap = Number(rowRule?.match(/column-gap:\s*(\d+)px/u)?.[1]);
-  const height = Number(rowRule?.match(/height:\s*(\d+)px/u)?.[1]);
-  expect([padding, gap, height]).toEqual([20, 12, 44]);
-  expect(stylesheet).toMatch(
-    /\.pc-artifact-row__title\s*\{[^}]*overflow:\s*hidden;[^}]*text-overflow:\s*ellipsis/u,
-  );
-  const { container } = render(<Home />);
-  const cards = [...container.querySelectorAll('.pc-home__card')];
-  expect(cards).toHaveLength(6);
-  const home = container.querySelector<HTMLElement>('.pc-overview');
-  const idColumn = idColumnWidth(home?.style.getPropertyValue('--id-col') ?? '');
-  const titleColumns: number[] = [];
-  for (const section of cards) {
-    expect(section.querySelector('.pc-card__head')).toBeTruthy();
-    for (const list of section.querySelectorAll<HTMLElement>('ul')) {
-      const rows = [...list.querySelectorAll<HTMLElement>(':scope > .pc-artifact-row')];
-      if (!rows.length) continue;
-      expect(list.style.getPropertyValue('--id-col')).toBe('');
-      expect(idColumn).toBeGreaterThanOrEqual(9 * 7.2);
-      const titles = rows.map((row) => {
-        const title = row.querySelector('.pc-artifact-row__title');
-        const tag = row.querySelector('.pc-artifact-row__id .pc-artifact-tag');
-        expect(title).toBeTruthy();
-        expect(tag).toBeTruthy();
-        expect(title?.parentElement?.classList.contains('pc-artifact-row__link')).toBe(true);
-        if (row.dataset.layout === 'stacked') {
-          expect(section.getAttribute('data-attention')).toBe('changed-today');
-          return padding;
-        }
-        const ch = 7.2;
-        const length = tag?.textContent?.length ?? 0;
-        const tagRight = padding + length * (ch + 0.03 * 12) + 14;
-        const titleLeft = padding + idColumn + gap;
-        titleColumns.push(titleLeft);
-        expect(tagRight).toBeLessThanOrEqual(titleLeft);
-        return titleLeft;
-      });
-      expect(new Set(titles).size).toBe(1);
-    }
-  }
-  expect(new Set(titleColumns).size).toBe(1);
-});
-
-it('stacks changed-today titles below their tag and summary without truncation', () => {
-  const { container } = render(<Home />);
-  const changed = container.querySelector('[data-attention="changed-today"]');
-  const rows = [...(changed?.querySelectorAll('.pc-artifact-row') ?? [])];
-  expect(rows.length).toBeGreaterThan(0);
-  for (const row of rows) {
-    expect(row.getAttribute('data-layout')).toBe('stacked');
-    expect(row.querySelector('.pc-artifact-row__id')).toBeTruthy();
-    expect(row.querySelector('.pc-artifact-row__meta-value')?.textContent).toBeTruthy();
-    expect(row.querySelector('.pc-artifact-row__title')?.getAttribute('title')).toBe(
-      row.querySelector('.pc-artifact-row__title')?.textContent,
-    );
-  }
+  expect([padding, gap]).toEqual([20, 12]);
   const stylesheet = readFileSync(
-    `${process.cwd()}/../../apps/dashboard/src/design-system/components/artifact-row.css`,
+    `${process.cwd()}/../../apps/dashboard/src/features/planning/overview.css`,
     'utf8',
   );
-  expect(stylesheet).toMatch(
-    /\[data-layout="stacked"\] \.pc-artifact-row__title\s*\{[^}]*grid-column:\s*1 \/ -1;[^}]*grid-row:\s*2;[^}]*white-space:\s*normal;[^}]*font-size:\s*13\.5px/u,
+  const homeRule = stylesheet.match(/\.pc-home__card \.pc-home__row\s*\{([^}]+)\}/u)?.[1];
+  expect(homeRule).toMatch(/--pc-home-id-col:\s*max\(10ch, var\(--id-col, 10ch\)\)/u);
+  expect(homeRule).toMatch(
+    /grid-template-columns:\s*var\(--pc-home-id-col\) minmax\(0, 1fr\) auto/u,
   );
+  expect(homeRule).toMatch(/height:\s*45px/u);
+  expect(homeRule).toMatch(/font:\s*400 16px var\(--op-font-ui\)/u);
+  const { container } = render(<Home />);
+  expect(container.querySelectorAll('.pc-home__card')).toHaveLength(6);
+  const home = container.querySelector<HTMLElement>('.pc-overview');
+  // 10ch of the 16px UI face is at least 100px; the row recipe only widens it for long IDs.
+  const idColumn = Math.max(100, idColumnWidth(home?.style.getPropertyValue('--id-col') ?? ''));
+  const cards = container.querySelectorAll(
+    '.pc-home__card[data-attention]:not([data-attention="changed-today"])',
+  );
+  expect(cards).toHaveLength(3);
+  for (const section of cards) {
+    expect(section.querySelector('.pc-card__head')).toBeTruthy();
+    const list = section.querySelector<HTMLElement>('ul');
+    if (!list) continue;
+    expect(list.style.getPropertyValue('--id-col')).toBe('');
+    for (const row of list.querySelectorAll<HTMLElement>(':scope > .pc-home__row')) {
+      const title = row.querySelector('.pc-artifact-row__title');
+      const tag = row.querySelector('.pc-artifact-row__id .pc-artifact-tag');
+      expect(title?.parentElement?.classList.contains('pc-artifact-row__link')).toBe(true);
+      const length = tag?.textContent?.length ?? 0;
+      expect(padding + length * (7.2 + 0.03 * 12) + 14).toBeLessThanOrEqual(
+        padding + idColumn + gap,
+      );
+    }
+  }
 });
 
-it('uses plain summary glyphs and compact attention metadata', () => {
+it('groups changed-today entries by spec with a stories and tasks summary', () => {
+  const attention = deriveAttention(DATASET.graph, ARTBOARD_FIXTURE_CLOCK);
   const { container } = render(<Home />);
-  const legend = screen.getByRole('region', { name: 'Project status' });
+  const changed = container.querySelector<HTMLElement>('[data-attention="changed-today"]');
+  if (!changed) throw new Error('Missing Changed today card');
+  expect(within(changed).getByRole('heading').textContent).toBe('Changed today');
+  expect(changed.querySelector('.pc-card__meta')?.textContent).toBe(
+    String(attention.changedToday.groups.length),
+  );
+  expect(within(changed).getByRole('link', { name: 'Activity' }).getAttribute('href')).toBe(
+    '#/activity',
+  );
+  const entries = [...changed.querySelectorAll<HTMLElement>('.pc-home__change')];
+  const specGroups = attention.changedToday.groups.filter((group) => group.specId !== null);
+  expect(specGroups.length).toBeGreaterThan(0);
+  expect(entries.length).toBe(Math.min(5, attention.changedToday.groups.length));
+  for (const entry of entries) {
+    const title = entry.querySelector<HTMLElement>('.pc-home__change-title');
+    expect(title?.textContent).toBeTruthy();
+    for (const note of entry.querySelectorAll('.pc-home__change-note'))
+      expect(note.textContent).toMatch(/^\+ ?\d+(?: (?:story|stories), \d+ tasks?)?$/u);
+    const specId = title?.dataset.keyboardItem;
+    if (specId) expect(specGroups.some((group) => group.specId === specId)).toBe(true);
+    else
+      expect(title?.textContent).toMatch(
+        /^\d+ (?:backlog items?|items? outside a spec) (?:filed|changed)$/u,
+      );
+  }
+  expect(changed.textContent).not.toMatch(/\bUnknown\b/u);
+});
+
+it('uses status rings, an ordered legend and one tinted meta per attention card', () => {
+  const { container } = render(<Home />);
+  const legend = screen.getByRole('list', { name: 'Project status' });
+  expect(
+    [...legend.querySelectorAll('.pc-artifact__label')].map((label) => label.textContent),
+  ).toEqual(['Outstanding', 'In progress', 'Blocked', 'Addressed', 'Done']);
   for (const status of legend.querySelectorAll<HTMLElement>('.pc-artifact')) {
     expect(status.dataset.variant).toBe('legend');
     expect(status.style.background).toBe('');
   }
-  for (const [filter, glyph] of [
-    ['waiting', 'diamond'],
-    ['stale', 'half-ring'],
-    ['high-not-started', 'ring'],
+  expect(
+    legend.querySelector('[data-status="blocked"] .pc-artifact__dot')?.getAttribute('data-glyph'),
+  ).toBe('diamond');
+  for (const [filter, tone] of [
+    ['waiting', 'danger'],
+    ['stale', 'warning'],
+    ['high-not-started', 'info'],
   ]) {
     expect(
       container
-        .querySelector(`[data-attention="${filter}"] .pc-card__glyph [data-glyph]`)
-        ?.getAttribute('data-glyph'),
-    ).toBe(glyph);
+        .querySelector(`[data-attention="${filter}"] .pc-card__glyph .pc-home__ring`)
+        ?.getAttribute('data-tone'),
+    ).toBe(tone);
   }
-  expect(
-    container.querySelector('[data-attention="changed-today"] [data-live="true"]'),
-  ).toBeTruthy();
-  expect(container.querySelectorAll('.pc-home__dependency-tag')).toHaveLength(0);
-  const quiet = container.querySelector('[data-attention="stale"] .pc-artifact-row__meta-value');
+  expect(container.querySelector('[data-attention="changed-today"] .pc-card__glyph')).toBeNull();
+  const quiet = container.querySelector<HTMLElement>('[data-attention="stale"] .pc-home__meta');
   expect(quiet?.textContent).toMatch(/^\d+d$/u);
+  expect(quiet?.dataset.tone).toBe('warning');
+  const high = container.querySelector<HTMLElement>(
+    '[data-attention="high-not-started"] .pc-home__meta',
+  );
+  expect(high?.textContent).toMatch(/^[a-z0-9]+(?: · \d{1,2} [A-Za-z]+)?$/u);
+  expect(high?.dataset.tone).toBe('danger');
+  expect(screen.getByText(/items? needs? you\. \d+ specs? changed today\./u)).toBeTruthy();
 });
 
 it('summarizes multiple waiting dependencies with their full accessible ID list', () => {
@@ -563,18 +561,18 @@ it('summarizes multiple waiting dependencies with their full accessible ID list'
     ],
   };
   const { container } = render(<Home current={fixture(graph)} />);
-  const row = container
-    .querySelector('[data-attention="waiting"] [data-keyboard-item="T-001"]')
-    ?.closest('li');
-  if (!row) throw new Error('Missing waiting row with multiple dependencies');
-  const summary = within(row).getByRole('button', {
-    name: '2 Waits on unfinished dependencies: T-109, T-110',
-  });
-  expect(summary.querySelector('.pc-artifact-row__meta-value')?.textContent).toBe('2');
-  expect(document.getElementById(summary.getAttribute('aria-describedby') ?? '')?.textContent).toBe(
-    'Waits on unfinished dependencies: T-109, T-110',
+  const link = container.querySelector<HTMLElement>(
+    '[data-attention="waiting"] [data-keyboard-item="T-001"]',
   );
-  expect(row.querySelectorAll('.pc-home__dependency-tag')).toHaveLength(0);
+  const row = link?.closest('li');
+  if (!link || !row) throw new Error('Missing waiting row with multiple dependencies');
+  const sentence = '0 open tasks wait on this. It waits on T-109, T-110.';
+  expect(row.querySelector('.pc-home__meta')?.textContent).toBe('0 downstream · waits T-109 +1');
+  expect(row.querySelector('.pc-home__meta')?.getAttribute('title')).toBe(sentence);
+  expect(document.getElementById(link.getAttribute('aria-describedby') ?? '')?.textContent).toBe(
+    sentence,
+  );
+  expect(within(row).getByRole('link', { name: 'T-109' })).toBeTruthy();
 });
 
 it('keeps every metadata item in one touch popover and restores focus on Escape', async () => {
@@ -756,14 +754,17 @@ it('copies a Home row through the supplied adapter while single-letter shortcuts
       <Home current={current} />
     </PlanningPresentationProvider>,
   );
-  const button = container.querySelector<HTMLButtonElement>('.pc-home__row .pc-command-hint__copy');
+  const row = container.querySelector<HTMLElement>('.pc-home__row [data-keyboard-item]');
+  if (!row) throw new Error('Missing Home row');
+  fireEvent.click(row);
+  const button = container.querySelector<HTMLButtonElement>('.pc-selection-bar__copy');
   expect(button).toBeTruthy();
   expect(button?.getAttribute('aria-keyshortcuts')).toBeNull();
-  if (!button) throw new Error('Missing Home row copy action');
+  if (!button) throw new Error('Missing Home selection bar copy action');
   fireEvent.keyDown(button, { key: 'c' });
   expect(onCopy).not.toHaveBeenCalled();
   fireEvent.click(button);
   await act(async () => {});
   expect(onCopy).toHaveBeenCalledTimes(1);
-  expect(onCopy.mock.calls[0][0]).toMatch(/^\/planr:/u);
+  expect(onCopy.mock.calls[0][0]).toMatch(/^(?:\/planr:|openplanr )/u);
 });

@@ -211,14 +211,74 @@ export const boardParityRows = [
   ...boardRow('B-18', '.pc-status-board__card', { 'min-height': '44px' }, { viewport: 'M' }),
 ];
 
-function sampleRows(nodes, { property, expected }) {
+const home = '[data-route-kind="planning.overview"]';
+const homeRow = (id, selector, properties, options = {}) =>
+  row(id, `${home} ${selector}`, properties, options.viewport).map((entry) => ({
+    ...entry,
+    setup: null,
+    ...(options.items ? { items: options.items } : {}),
+  }));
+export const homeParityRows = [
+  ...homeRow('H-01', 'h1', {
+    'font-family': 'Outfit',
+    'font-size': '28px',
+    'font-weight': '700',
+    'letter-spacing': '-0.56px',
+  }),
+  ...homeRow('H-02', '.pc-home__columns', {
+    tracks: Array.from({ length: 12 }, () => '1fr').join(' '),
+    'column-gap': '24px',
+  }),
+  ...homeRow('H-03', '.pc-home__attention', { 'grid-column-start': 'span 8' }),
+  ...homeRow('H-03', '.pc-home__context', { 'grid-column-start': 'span 4' }),
+  ...homeRow(
+    'H-04',
+    '.pc-home__attention',
+    { 'text-order': 'Waiting on a dependency,In progress, gone quiet,High priority, not started' },
+    { items: '.pc-card__title' },
+  ),
+  ...homeRow(
+    'H-05',
+    '.pc-home__context',
+    { 'text-order': 'Changed today,Specs in flight,Active sprint' },
+    { items: '.pc-card__title, .pc-home__sprint' },
+  ),
+  ...homeRow('H-06', '.pc-home__row', {
+    height: '44px',
+    'padding-left': '20px',
+    'padding-right': '20px',
+    'padding-top': '0px',
+  }),
+  ...homeRow('H-07', '.pc-home__row', { tracks: '109px 1fr auto' }),
+  ...homeRow(
+    'H-08',
+    '.pc-home__legend',
+    { 'text-order': 'Outstanding,In progress,Blocked,Addressed,Done' },
+    { items: '.pc-artifact__label' },
+  ),
+  ...homeRow(
+    'H-09',
+    '.pc-home__row',
+    { 'min-height': '64px', padding: '10px 16px' },
+    { viewport: 'M' },
+  ),
+  ...homeRow('H-10', '.pc-home__card .pc-card__head', { height: '52px' }, { viewport: 'M' }),
+  ...homeRow(
+    'H-11',
+    '.pc-home__card .pc-card__see-all',
+    { 'min-height': '44px' },
+    { viewport: 'M' },
+  ),
+];
+
+function sampleRows(nodes, { property, expected, items }) {
   return nodes.map((node) => {
     if (property === 'text')
       return { actual: node.querySelector('[data-active="true"]')?.textContent, expected };
     if (property === 'text-order')
       return {
-        actual: [...node.querySelectorAll('.pc-status-board__name')]
-          .map((entry) => entry.textContent)
+        actual: [...node.querySelectorAll(items ?? '.pc-status-board__name')]
+          .map((entry) => entry.getAttribute('aria-label') ?? entry.textContent)
           .join(','),
         expected,
       };
@@ -230,12 +290,15 @@ function sampleRows(nodes, { property, expected }) {
       const actual = getComputedStyle(node).gridTemplateColumns.split(' ').map(parseFloat);
       const fixed = expected
         .split(' ')
-        .map((track) => (track.endsWith('px') ? parseFloat(track) : null));
+        .map((track) =>
+          track.endsWith('px') ? parseFloat(track) : track === 'auto' ? track : null,
+        );
       const flexible = actual.filter((_, index) => fixed[index] === null);
       const matches =
         actual.length === fixed.length &&
         actual.every(
-          (track, index) => fixed[index] === null || Math.abs(track - fixed[index]) <= 2,
+          (track, index) =>
+            fixed[index] === null || fixed[index] === 'auto' || Math.abs(track - fixed[index]) <= 2,
         ) &&
         flexible.every((track) => Math.abs(track - flexible[0]) <= 2);
       return { actual: matches ? expected : actual.join(' '), expected };
@@ -272,7 +335,11 @@ export async function assertParityRow(page, entry, theme) {
   const expected = resolveParityToken(entry.expected, theme);
   const elements = page.locator(entry.selector);
   assert((await elements.count()) > 0, `${entry.id}: missing ${entry.selector}`);
-  const samples = await elements.evaluateAll(sampleRows, { property: entry.property, expected });
+  const samples = await elements.evaluateAll(sampleRows, {
+    property: entry.property,
+    expected,
+    items: entry.items,
+  });
   for (const sample of samples) {
     const label = `${entry.id} ${theme} ${entry.viewport} ${entry.property}: ${JSON.stringify(sample)}`;
     if (typeof sample.actual === 'number' || /^-?[\d.]+px$/u.test(sample.expected))

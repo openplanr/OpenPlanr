@@ -45,6 +45,7 @@ import {
 import {
   assertParityRow,
   boardParityRows,
+  homeParityRows,
 } from '../../../../apps/dashboard/tests/helpers/redesign-parity-rows.mjs';
 import { installDashboardLayoutShifts } from '../dashboard/fixtures/dashboard-layout-shifts.js';
 import { registerDashboardPerformanceTraceTests } from './fixtures/dashboard-performance-trace.js';
@@ -1288,7 +1289,7 @@ test.describe('dashboard real-browser quality', () => {
     await expect(
       overview.getByRole('heading', { level: 1, name: 'Needs attention', exact: true }),
     ).toBeVisible();
-    await expect(overview).toContainText('1 item');
+    await expect(overview).toContainText(/\d+ items? needs? you\./u);
     await expect(
       overview.getByRole('heading', { name: /^Waiting on a dependency/u }),
     ).toBeVisible();
@@ -1298,7 +1299,7 @@ test.describe('dashboard real-browser quality', () => {
     await expect(
       overview.getByRole('heading', { name: /^High priority, not started/u }),
     ).toBeVisible();
-    await expect(overview).toContainText('Commit-aware detection is available in Phase 2');
+    await expect(overview).not.toContainText('Phase 2');
     await expect(overview).toContainText('No active sprint');
     expect((await layoutReport(page)).horizontalOverflow).toBe(false);
     await expectGoldenScreenshot(page, 'console-planning-overview-wide.png');
@@ -1476,6 +1477,69 @@ test.describe('dashboard real-browser quality', () => {
     const parity = testInfo.outputPath('board-parity.json');
     writeFileSync(parity, JSON.stringify(results, null, 2));
     await testInfo.attach('board-parity.json', { path: parity, contentType: 'application/json' });
+  });
+
+  test('matches Home to its canvas parity rows in both themes', async ({ page }, testInfo) => {
+    const results: unknown[] = [];
+    await page.context().grantPermissions(['clipboard-read', 'clipboard-write']);
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    const viewports = {
+      D: { width: 1440, height: 900 },
+      T: { width: 768, height: 1024 },
+      M: { width: 390, height: 844 },
+    } as const;
+    for (const theme of ['dark', 'light'] as const) {
+      for (const viewport of ['D', 'M'] as const) {
+        await page.setViewportSize(viewports[viewport]);
+        await page.goto(fixtureUrl('#/home', { dataset: 'representative', theme }));
+        await page.evaluate(() => document.fonts.ready);
+        const home = page.locator('[data-route-kind="planning.overview"]');
+        await expect(home.locator('.pc-home__row').first()).toBeVisible();
+        for (const row of homeParityRows.filter((entry) => entry.viewport === viewport))
+          results.push(...(await assertParityRow(page, row, theme)));
+        const text = await page.locator('#main-content').innerText();
+        for (const banned of ['Unknown', 'Not recorded', 'None declared', 'Phase 2'])
+          expect(text, `S-21 ${banned}`).not.toContain(banned);
+        expect(text, 'S-21 none').not.toMatch(/\bnone\b/u);
+        await home.locator('.pc-home__row .pc-artifact-row__link').first().focus();
+        const bar = page.locator('.pc-selection-bar');
+        await expect(bar).toBeVisible();
+        const accents = await page.evaluate(() => {
+          const accent = getComputedStyle(document.documentElement)
+            .getPropertyValue('--op-accent')
+            .trim();
+          const probe = document.createElement('span');
+          probe.style.backgroundColor = accent;
+          document.body.append(probe);
+          const resolved = getComputedStyle(probe).backgroundColor;
+          probe.remove();
+          return [...document.querySelectorAll<HTMLElement>('#main-content *')].filter(
+            (node) =>
+              getComputedStyle(node).backgroundColor === resolved &&
+              !node.closest('nav, :focus, [data-selected="true"], .pc-home__progress'),
+          ).length;
+        });
+        expect(accents, 'S-22 accent backgrounds').toBeLessThanOrEqual(1);
+        const command = await bar.locator('code').textContent();
+        expect(command).toMatch(/^(?:\/planr:|openplanr )/u);
+        await page.keyboard.press('c');
+        await expect(bar.locator('.pc-selection-bar__copy')).toContainText('Copied');
+        expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(command);
+      }
+      for (const [viewport, size] of Object.entries(viewports)) {
+        await page.setViewportSize(size);
+        await page.goto(fixtureUrl('#/home', { dataset: 'artboard', theme }));
+        await page.evaluate(() => document.fonts.ready);
+        await expect(page.locator('.pc-home__card').first()).toBeVisible();
+        await page.screenshot({
+          path: testInfo.outputPath(`home-${viewport}-${theme}.png`),
+          fullPage: true,
+        });
+      }
+    }
+    const parity = testInfo.outputPath('home-parity.json');
+    writeFileSync(parity, JSON.stringify(results, null, 2));
+    await testInfo.attach('home-parity.json', { path: parity, contentType: 'application/json' });
   });
 
   test.describe('sprint and activity evidence', () => {

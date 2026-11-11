@@ -230,6 +230,14 @@ function stateFor(
   );
 }
 
+function legendTotal(html: string): number {
+  const legend = html.match(/aria-label="Project status">(.*?)<\/ul>/su)?.[1] ?? '';
+  return [...legend.matchAll(/pc-artifact__count">(\d+)</gu)].reduce(
+    (sum, match) => sum + Number(match[1]),
+    0,
+  );
+}
+
 describe('T-021 Planning workspace UI', () => {
   it('renders Overview, Graph, Board, List, Sprints, Activity, and Detail from one graph', () => {
     const overview = identity('#/home');
@@ -240,7 +248,7 @@ describe('T-021 Planning workspace UI', () => {
     const overviewDocument = overviewDom.window.document;
     expect(overviewDocument.querySelector('h1')?.textContent).toBe('Needs attention');
     expect(overviewDocument.querySelectorAll('h1')).toHaveLength(1);
-    expect(overviewHtml).toContain('4 items');
+    expect(legendTotal(overviewHtml)).toBe(4);
     expect(overviewHtml).toContain('High priority, not started');
     expect(overviewHtml).toContain('Unified dashboard');
     expect(overviewHtml).toContain('Sprint one');
@@ -363,7 +371,7 @@ describe('T-021 Planning workspace UI', () => {
         current={stateFor(overview, envelope(overview, unknownGraph))}
       />,
     );
-    expect(unknownHtml).toContain('2 items');
+    expect(legendTotal(unknownHtml)).toBe(2);
     expect(unknownHtml).toContain('Waiting on a dependency');
     expect(unknownHtml).toContain('In progress, gone quiet');
     expect(unknownHtml).not.toContain('data-keyboard-item="SPEC-020/T-022"');

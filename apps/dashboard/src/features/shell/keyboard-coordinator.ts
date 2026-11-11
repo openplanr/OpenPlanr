@@ -239,6 +239,12 @@ function copyFocused(stroke: KeyStroke): void {
     return;
   }
   if (routeIs(context, 'board') && managedRows(stroke)) return;
+  const barCopy = context.root.querySelector<HTMLButtonElement>('.pc-selection-bar__copy');
+  if (barCopy) {
+    if (!barCopy.disabled) barCopy.click();
+    else context.announce('This command is unavailable.');
+    return;
+  }
   const id = focusedCanonicalId(target) || context.selectedId();
   if (!id) {
     context.announce('Select an item or focus a command to copy.');
