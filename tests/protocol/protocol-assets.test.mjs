@@ -44,6 +44,11 @@ test('canonical JSON and dependency-free SHA-256 match known vectors', () => {
 });
 
 test('all 180 schemas and 12 registries preserve exact source bytes and modes', () => {
+  assert.ok(
+    listProtocolSchemas().some(
+      ({ kind, protocolVersion }) => kind === 'backlog-item' && protocolVersion === '1.24.0',
+    ),
+  );
   const additiveVersions = new Set([
     'v1.5.0',
     'v1.6.0',
@@ -62,6 +67,10 @@ test('all 180 schemas and 12 registries preserve exact source bytes and modes', 
     'v1.19.0',
     'v1.20.0',
     'v1.21.0',
+    'v1.22.0',
+    'v1.23.0',
+    'v1.24.0',
+    'v1.25.0',
   ]);
   const schemas = walk(join(protocol, 'schemas')).filter(
     ({ key }) => !additiveVersions.has(key.split('/')[0]) && key.endsWith('.json'),
@@ -102,26 +111,35 @@ test('Protocol 1.5 owns thirteen additive schemas with exact identities', () => 
   assert.equal(table.length, 12, 'definitions-only common schema is not a document contract');
 });
 
-test('all canonical registries satisfy schemas and their RFC 8785 digest', () => {
+test('all canonical registries satisfy their schemas; Protocol 1.5 registries carry an RFC 8785 digest', () => {
   const pairs = [
-    ['roles.json', 'role-registry'],
-    ['task-kinds.json', 'task-kind-registry'],
-    ['rules.json', 'rule-catalog'],
-    ['commands.json', 'command-catalog'],
-    ['skills.json', 'skill-catalog'],
-    ['outputs.json', 'output-catalog'],
-    ['output-paths.json', 'output-path-catalog'],
+    ['roles.json', 'role-registry', '1.5.0'],
+    ['task-kinds.json', 'task-kind-registry', '1.5.0'],
+    ['rules.json', 'rule-catalog', '1.5.0'],
+    ['commands.json', 'command-catalog', '1.25.0'],
+    ['skills.json', 'skill-catalog', '1.25.0'],
+    ['outputs.json', 'output-catalog', '1.5.0'],
+    ['output-paths.json', 'output-path-catalog', '1.5.0'],
   ];
-  for (const [file, kind] of pairs) {
+  for (const [file, kind, protocolVersion] of pairs) {
     const value = JSON.parse(readFileSync(join(protocol, 'registries', file), 'utf8'));
-    assert.equal(verifyDocumentDigest(value), true, file);
-    assert.deepEqual(validateProtocolArtifact(kind, value, { protocolVersion: '1.5.0' }), [], file);
-    const invalid = { ...value, unexpected: true };
-    assert.ok(
-      validateProtocolArtifact(kind, invalid, { protocolVersion: '1.5.0' }).some(
-        ({ rule }) => rule === 'additionalProperties',
-      ),
-    );
+    assert.equal(value.protocolVersion, protocolVersion, file);
+    if (protocolVersion === '1.5.0') assert.equal(verifyDocumentDigest(value), true, file);
+    else assert.equal(Object.hasOwn(value, 'documentDigest'), false, file);
+    assert.deepEqual(validateProtocolArtifact(kind, value, { protocolVersion }), [], file);
+    for (const invalid of [
+      { ...value, unexpected: true },
+      ...(protocolVersion === '1.5.0'
+        ? []
+        : [{ ...value, documentDigest: `sha256:${'a'.repeat(64)}` }]),
+    ]) {
+      assert.ok(
+        validateProtocolArtifact(kind, invalid, { protocolVersion }).some(
+          ({ rule }) => rule === 'additionalProperties',
+        ),
+        file,
+      );
+    }
   }
 });
 

@@ -100,9 +100,19 @@ jobs:
         run: |
           npm run build
           git diff --exit-code HEAD --
+      # The Playwright image has no jq, which the CI selector test runs, and the non-root user cannot apt-get.
+      - name: Install jq
+        run: |
+          mkdir -p "$RUNNER_TEMP/jq-bin"
+          curl -fsSL -o "$RUNNER_TEMP/jq-bin/jq" https://github.com/jqlang/jq/releases/download/jq-1.8.1/jq-linux-amd64
+          echo "020468de7539ce70ef1bceaf7cde2e8c4f2ca6c3afb84642aabc5c97d9fc2a0d  $RUNNER_TEMP/jq-bin/jq" | sha256sum --check --strict
+          chmod +x "$RUNNER_TEMP/jq-bin/jq"
+          echo "$RUNNER_TEMP/jq-bin" >> "$GITHUB_PATH"
       - name: Run the focused gates
         run: npm run test:focused
       - name: Test the packages that own the contributor studio and skill suites
+        env:
+          PLANR_VIEW_CONTEXT_BUDGET_MS: 500
         run: |
           npm test --workspace=@openplanr/protocol
           npm test --workspace=@openplanr/canvas
@@ -194,12 +204,12 @@ jobs:
         run: |
           npm run generate
           npm run build
-      - name: Trace the canvas benches at both edge densities with the runner budgets
+      - name: Trace the canvas benches at both edge densities; runner timing is reported
         run: npm run test:browser --workspace=@openplanr/canvas -- bench-trace budgets
         env:
           CI: 'true'
           CANVAS_SECOND_DENSITY: '1'
-      - name: Trace the diagram editor on the canvas engine with the runner budgets
+      - name: Trace the diagram editor on the canvas engine; runner timing is reported
         working-directory: packages/artifact
         run: node --import ../../tests/support/isolate-user-state.mjs --test tests/diagram-editor-canvas.browser.test.mjs
         env:
@@ -257,6 +267,42 @@ jobs:
           name: dashboard-trace-results-2
           path: packages/cli/test-results/
           if-no-files-found: ignore
+          retention-days: 14
+
+  canvas-cross-browser-traces:
+    name: Canvas WebKit and Firefox timing traces
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-24.04
+    # Firefox refuses the runner-owned HOME when launched as root.
+    container:
+      image: mcr.microsoft.com/playwright:v1.64.1-noble
+      options: --user 1001
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Trust the workspace for git
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+          cache: npm
+      - name: Install the root lockfile
+        run: npm ci
+      - name: Generate and build
+        run: |
+          npm run generate
+          npm run build
+      - name: Trace the canvas benches in WebKit and Firefox
+        run: npm run bench:trace:cross-browser --workspace=@openplanr/canvas
+        env:
+          CI: 'true'
+      - name: Preserve cross-browser canvas trace results
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: canvas-cross-browser-trace-results
+          path: packages/canvas/test-results/
+          if-no-files-found: warn
           retention-days: 14
 
   artifact-browsers:
@@ -355,6 +401,7 @@ jobs:
       - packed-public-packages
       - canvas-traces
       - dashboard-traces
+      - canvas-cross-browser-traces
       - artifact-browsers
       - first-run-linux
       - first-run-windows

@@ -1,3 +1,4 @@
+export declare const DESIGN_REVIEW_BUNDLE_V120_SCHEMA: Readonly<Record<string, unknown>>;
 export declare const DESIGN_REVIEW_BUNDLE_CURRENT_SCHEMA: Readonly<Record<string, unknown>>;
 export declare const DESIGN_REVIEW_CONTEXT_SCHEMA: Readonly<Record<string, unknown>>;
 export declare const DESIGN_FINGERPRINT_SCHEMA: Readonly<Record<string, unknown>>;

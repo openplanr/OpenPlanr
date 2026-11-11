@@ -1,15 +1,14 @@
-# Native onboarding and private helper inputs
+# Native onboarding and action inputs
 
-Run `node <installed-skill>/scripts/runner.mjs <action>` with one JSON object on
-stdin. The helper is private skill infrastructure, not a public `openplanr` command.
-The equivalent stdin form includes `"action":"probe"` without a command-line
-action. When both forms supply an action they must agree. Unknown actions return
-the supported action list and usage.
+Run `openplanr delegate <action> --input - --json` with one JSON object on stdin, or
+`--input <file>`. `--run <runId>` sets `runId`. `openplanr delegate <action> --help`
+lists each action; unknown actions return `E_DELEGATE_COMMAND` with the action list.
 
 `probe` accepts `repositoryRoot` and optionally `engine` or `profile`. It discovers
 `claude`, `codex` and Cursor's `agent` on PATH and checks compatible native event
-streaming and exact continuation. Authenticate with the selected CLI's normal
-login flow; OpenPlanr does not copy authentication tokens into its records.
+streaming and exact continuation. Sign-in stays in each engine's own CLI; `probe`
+reports it as `identity.state` (`account`, `api-key`, `signed-out` with a `nextAction`,
+`provider-managed`, `not-required` for a local destination, or `not-checked`).
 Terminal-less hosts return an actionable unsupported-host diagnostic.
 
 Keep selection precedence: explicit engine/profile, saved choice, a sole
@@ -29,10 +28,18 @@ is unknown or inconsistent, show the diagnostic and resolve the native configura
 before dispatch. Do not silently switch to a cloud default. Unavailable profiles
 remain visible with their exact recovery action. Missing CLIs are not installed
 automatically, and discovery does not establish that a backend is ready.
-The runner blocks conflicting routes and concrete declared/effective destination
+Preparation blocks conflicting routes and concrete declared/effective destination
 mismatches. Its diagnostic names the routing sources and safe origins, without
 printing configuration contents or credentials. Resolve that conflict in the native
-configuration and prepare a new preview; the helper does not strip routing variables.
+configuration and prepare a new preview; delegation does not strip routing variables.
+
+## Environment
+
+Each child process gets an explicit environment, never the whole parent environment.
+
+The CLI sets a profile's configuration directory for the child. Advanced environment
+options are described in the `openplanr delegate` section of `docs/CLI.md` in the
+`openplanr` package.
 
 ## Prepare a run
 
@@ -50,8 +57,9 @@ configuration and prepare a new preview; the helper does not strip routing varia
 `taskSelector` can replace `request` when an exact planning task exists.
 `selectedPaths` separately chooses dirty files to copy; other checkout edits remain
 untouched. `preservePaths` adds immutable paths. The returned preview includes the
-complete context inventory, owned worktree, configuration trust and pinned helper.
-Use its runner/integration paths for this run even after a package update.
+complete context inventory, owned worktree and configuration trust. The run keeps a
+private copy of the runtime that prepared it; later CLI versions route the run's
+actions to that copy.
 The context diagnostic separates encoded package size from decoded source bytes,
 reports required and optional file counts and the largest sources, and includes
 measured model capacity when available. It does not invent a tokenizer result or
@@ -90,14 +98,14 @@ A native profile is a convenience for a pinned model or alternate configuration:
 ```
 
 Use `profile-preview`, then `profile-enroll` to save a private v2 profile. It has
-no renewal period. Do not put credential values in arguments or records. Native
-configuration/environment is inherited, including trusted hooks, plugins and MCP.
+no renewal period. Native
+configuration is inherited, including trusted hooks, plugins and MCP; environment
+variables follow the Environment section above.
 The profile's explicit model stays pinned; an empty model selection preserves the
 native default/automatic routing. Observed models are reported when events expose them.
 
 Existing v1 profile files remain unchanged. They can supply an explicit selection
-for a new native v2 run; retained runs still use their original pinned helper and
-policy. Saving over a legacy native profile is refused; use a new optional name.
+for a new native v2 run; retained runs keep their original runtime copy and policy. Saving over a legacy native profile is refused; use a new optional name.
 Experimental generic adapters retain their versioned enrollment/protocol.
 
 Local server/model probes are diagnostic and send no task content and no
@@ -114,7 +122,25 @@ a GGUF filename or display label is not automatically its request ID. Apply an
 explicit model override only to this run through the existing native options;
 rewrite or enroll a saved profile only when the user requests it.
 
-If a native CLI uses read-only permissions for non-interactive runs, delegation reports attention rather than enabling writes. Resolve access in that CLI’s own configuration or explicitly authorized exact-session invocation, then continue the recorded session. Model summaries are never sufficient evidence of implementation.
+When the CLI's own settings choose no permission mode, dispatch and resume start
+Claude Code with `--permission-mode acceptEdits` and Codex with `--sandbox
+workspace-write`, so a stock install can edit files in its worktree. In
+`acceptEdits`, Claude also runs `mkdir`, `touch`, `rm`, `rmdir`, `mv`, `cp` and `sed`
+without asking, for paths in the worktree and the added context directory. A
+permission or sandbox mode the user configured for that engine, including a project
+one, always wins; the CLI detects it from the engine's settings and rechecks it on each
+`resume`. System or device-managed policies are not detected. Cursor runs with
+`--trust`. Other shell commands still follow the CLI's allowlist and approval
+settings, and no bypass flag is passed.
+
+If the CLI still denies an action, delegation
+reports attention rather than widening access. Resolve access in that CLI’s own configuration or explicitly authorized exact-session invocation, then continue the recorded session. Model summaries are never sufficient evidence of implementation.
+
+Cursor rewrites its own settings when a run ends, so commands the user allows while a
+run is active can be lost. Ask the user to allow the commands the task needs in Cursor
+(for example `Shell(pnpm)`) before `dispatch`. After an `E_ADAPTER_PERMISSION` attention
+state, wait until the run has stopped, ask the user to allow the command, then `resume`
+the same run.
 
 ## Diagnostics and unused runs
 
@@ -127,12 +153,12 @@ reports its before/after values or named routing candidates and requires a fresh
 
 `status` and `wait` report live execution duration and the latest observed native
 event. Tool names and safe file references are evidence of activity, not proof
-that the task is complete. Missing events remain unavailable; the helper does not
+that the task is complete. Missing events remain unavailable; delegation does not
 scan unrelated native transcripts.
 
 `abandon` accepts `runId` and optional `runDirectory` for a run that never executed.
 It closes the private record and removes only an owned, unchanged worktree. Active
 processes, retained sessions, setup/verification work, changed custody and unknown
 or modified files require inspection and remain retained. Repeating a successful
-abandon is safe. Existing sessions continue through their original pinned helper;
-new commands do not retroactively replace retained code.
+abandon is safe. Existing runs continue through the runtime copy that prepared them;
+a CLI upgrade never replaces it.

@@ -25,11 +25,7 @@ import {
   readConnectionsCatalog,
   renderConnectors,
 } from './connectors.mjs';
-import {
-  buildDesignSkillResources,
-  buildPlanSkillResources,
-  DESIGN_SKILL_IDS,
-} from './design-resources.mjs';
+import { buildDesignSkillResources, DESIGN_SKILL_IDS } from './design-resources.mjs';
 import { readHistoricalCustody } from './historical-custody.mjs';
 import {
   HOST_PLUGIN_NAME,
@@ -50,11 +46,8 @@ import {
 import { renderClaudePluginReadme } from './plugin-readme.mjs';
 import { syncGeneratedOutputs } from './projection-custody.mjs';
 import { resourceBytes } from './resource-bytes.mjs';
-import {
-  resourceFootprint,
-  suiteLocalResources,
-  suiteSharedResources,
-} from './suite-resources.mjs';
+import { fillSkillCliTokens } from './skill-cli.mjs';
+import { resourceFootprint, suiteLocalResources } from './suite-resources.mjs';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const option = process.argv[2];
@@ -108,15 +101,22 @@ const operateAdvisorDestinations = Object.freeze([
   'planr-coo-review',
 ]);
 const trackerConnectionDestinations = Object.freeze(['planr-sync', 'planr-sprint', 'planr-status']);
+// Skills that call the openplanr CLI, the shared template each one's CLI reference uses and its command.
+const cliReferenceSources = Object.freeze({
+  'planr-delegate': { source: 'skills/shared/openplanr-cli-optional.md', command: 'delegate' },
+});
 const findingsDestinations = Object.freeze(['planr-ship', 'planr-investigate']);
+const failFirstDestinations = Object.freeze(['planr-ship', 'planr-investigate']);
+const returnContractDestinations = Object.freeze([
+  'planr-spec',
+  'planr-plan',
+  'planr-plan-review',
+  'planr-operate',
+  'planr-ship',
+  'planr-release',
+]);
 const connectionsCatalog = readConnectionsCatalog(root);
 const connectorsMarkdown = renderConnectors(connectionsCatalog);
-const operateValidatorDestinations = Object.freeze([
-  'planr-operate',
-  'planr-chair-review',
-  'planr-challenger-review',
-  ...operateAdvisorDestinations,
-]);
 const sharedSkillResources = Object.freeze([
   {
     source: 'packages/design/references/design-spec-template.md',
@@ -170,6 +170,13 @@ const sharedSkillResources = Object.freeze([
     executable: false,
   },
   ...CLI_GENERATED_RESOURCES,
+  ...['planr-operate', 'planr-chair-review', 'planr-challenger-review']
+    .concat(operateAdvisorDestinations)
+    .map((skillId) => ({
+      source: 'skills/shared/note-checklist.md',
+      destination: `skills/${skillId}/references/note-checklist.md`,
+      executable: false,
+    })),
   ...operateAdvisorDestinations.map((skillId) => ({
     source: 'skills/shared/operate-advisor-contract.md',
     destination: `skills/${skillId}/references/operate-advisor-contract.md`,
@@ -187,9 +194,9 @@ const sharedSkillResources = Object.freeze([
   })),
   ...findingsDestinations.flatMap((skillId) => [
     {
-      source: 'skills/shared/backlog-item.mjs',
-      destination: `skills/${skillId}/scripts/backlog-item.mjs`,
-      executable: true,
+      source: 'skills/shared/backlog-filing.md',
+      destination: `skills/${skillId}/references/backlog-filing.md`,
+      executable: false,
     },
     {
       source: 'skills/shared/findings.md',
@@ -197,44 +204,30 @@ const sharedSkillResources = Object.freeze([
       executable: false,
     },
   ]),
-  {
-    source: 'packages/integrations/src/portable-sync.mjs',
-    destination: 'skills/planr-sync/scripts/sync.mjs',
-    executable: true,
-  },
-  {
-    source: 'packages/protocol/src/names.mjs',
-    destination: 'skills/planr-sync/scripts/names.mjs',
+  ...failFirstDestinations.map((skillId) => ({
+    source: 'skills/shared/fail-first.md',
+    destination: `skills/${skillId}/references/fail-first.md`,
     executable: false,
-  },
-  ...operateValidatorDestinations.flatMap((skillId) => [
-    {
-      source: 'packages/skill-runtime/src/operate-review-note-cli.mjs',
-      destination: `skills/${skillId}/scripts/validate-note.mjs`,
-      executable: true,
-    },
-    {
-      source: 'packages/skill-runtime/src/operate-review-note.mjs',
-      destination: `skills/${skillId}/scripts/operate-review-note.mjs`,
-      executable: false,
-    },
-    {
-      source: 'packages/skill-runtime/src/operate-review-contract.mjs',
-      destination: `skills/${skillId}/scripts/operate-review-contract.mjs`,
-      executable: false,
-    },
-    {
-      source: 'packages/skill-runtime/src/errors.mjs',
-      destination: `skills/${skillId}/scripts/errors.mjs`,
-      executable: false,
-    },
-  ]),
+  })),
+  ...returnContractDestinations.map((skillId) => ({
+    source: 'skills/shared/return-contract.md',
+    destination: `skills/${skillId}/references/return-contract.md`,
+    executable: false,
+  })),
+  ...Object.entries(cliReferenceSources).map(([skillId, { source, command }]) => ({
+    source,
+    destination: `skills/${skillId}/references/openplanr-cli.md`,
+    executable: false,
+    command,
+  })),
 ]);
 
 const sourceProjections = new Map(
-  sharedSkillResources.map(({ source, destination }) => [
+  sharedSkillResources.map(({ source, destination, command }) => [
     destination,
-    readFileSync(resolve(root, source)),
+    source.endsWith('.md')
+      ? Buffer.from(fillSkillCliTokens(read(source), pluginVersion, command))
+      : readFileSync(resolve(root, source)),
   ]),
 );
 const sourceExecutables = new Set(
@@ -277,18 +270,13 @@ syncGeneratedOutputs({
   completeRoots: false,
 });
 
-const designResources = await buildDesignSkillResources({ repoRoot: root });
-const planResources = await buildPlanSkillResources({ repoRoot: root });
+const resources = buildDesignSkillResources({ repoRoot: root });
 for (const skillId of [...DESIGN_SKILL_IDS, 'planr-plan']) {
-  const resources = skillId === 'planr-plan' ? planResources : designResources;
   const manifestPath = resolve(root, `skills/${skillId}/openplanr.skill.json`);
   const manifest = JSON.parse(readFileSync(manifestPath, 'utf8'));
   const expectedResources = [
     ...manifest.resources.filter(
-      ({ path }) =>
-        !path.startsWith('schemas/') &&
-        (!path.startsWith('scripts/') ||
-          (skillId === 'planr-plan' && path === 'scripts/planning-ids.mjs')),
+      ({ path }) => !path.startsWith('schemas/') && !path.startsWith('scripts/'),
     ),
     ...resources.map(({ bytes: _bytes, ...resource }) => ({
       ...resource,
@@ -308,9 +296,6 @@ for (const skillId of [...DESIGN_SKILL_IDS, 'planr-plan']) {
     ownedRoots: [`skills/${skillId}/scripts`, `skills/${skillId}/schemas`],
     bootstrap: priorCanonicalResourceDigests,
     mode,
-    preservePaths: new Set(
-      skillId === 'planr-plan' ? ['skills/planr-plan/scripts/planning-ids.mjs'] : [],
-    ),
   });
   // Retirements are proven before changing the declaration that describes the new closure.
   if (mode === 'write') writeFileSync(manifestPath, expectedManifest);
@@ -331,16 +316,6 @@ function add(path, bytes, { checkedIn = false, isExecutable = false } = {}) {
   outputs.set(path, resourceBytes(bytes));
   if (checkedIn) tracked.add(path);
   if (isExecutable) executable.add(path);
-}
-
-function addSharedResources(packageInfo, host, pluginRoot, skillRoot) {
-  for (const resource of suiteSharedResources(packageInfo, host, skillRoot)) {
-    const path = `${pluginRoot}/${resource.path}`;
-    if (outputs.has(path)) {
-      if (!outputs.get(path).equals(resource.bytes) || executable.has(path) !== resource.executable)
-        throw new Error(`Shared suite closure differs between canonical skills: ${path}`);
-    } else add(path, resource.bytes, { isExecutable: resource.executable });
-  }
 }
 
 function hostResources(packageInfo, host) {
@@ -430,7 +405,7 @@ for (const row of registry.skills) {
         ? renderUserOnlySkill(hostMarkdown, row.skillId)
         : hostMarkdown,
     );
-    const localResources = suiteLocalResources(packageInfo, host, skillRoot);
+    const localResources = suiteLocalResources(packageInfo, host);
     // The native suite declaration lists local files; its complete closure is owned by
     // the exhaustive package content inventory, rather than a standalone skill directory.
     if (host === 'codex')
@@ -459,7 +434,6 @@ for (const row of registry.skills) {
           isExecutable: resource.executable,
         });
     }
-    addSharedResources(packageInfo, host, pluginRoot, skillRoot);
   }
 
   const cursorBody = renderCursorSkillBody(
@@ -473,13 +447,12 @@ for (const row of registry.skills) {
     `${cursorPluginRoot}/rules/${row.skillId}.mdc`,
     renderCursorRule({ description: parsed.fields.description, body: cursorBody, userOnly }),
   );
-  for (const resource of suiteLocalResources(packageInfo, 'cursor', cursorSkillRoot).filter(
+  for (const resource of suiteLocalResources(packageInfo, 'cursor').filter(
     ({ path }) => !path.startsWith('agents/'),
   ))
     add(`${cursorPluginRoot}/${cursorSkillRoot}/${resource.path}`, resource.bytes, {
       isExecutable: resource.executable,
     });
-  addSharedResources(packageInfo, 'cursor', cursorPluginRoot, cursorSkillRoot);
 
   skillRows.push({
     id: row.skillId,
@@ -565,7 +538,7 @@ add(
   }),
 );
 add(
-  'dist/plugins/claude/openplanr/.claude-plugin/icon.svg',
+  'dist/plugins/claude/openplanr/.claude-plugin/icon.png',
   readFileSync(resolve(root, CLAUDE_PLUGIN_ICON)),
 );
 add(

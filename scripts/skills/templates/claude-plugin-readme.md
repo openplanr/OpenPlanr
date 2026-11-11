@@ -20,7 +20,7 @@ Several skills call the deterministic `openplanr` CLI from the `openplanr` npm p
 this plugin at the same version ({{PLUGIN_VERSION}}):
 
 ```bash
-npm install -g openplanr
+npm install -g openplanr@{{PLUGIN_VERSION}}
 cd your-project
 openplanr init
 ```
@@ -33,33 +33,32 @@ The same skills ship for Codex and Cursor through the `openplanr` package.
 
 - Skills run inside Claude Code. The plugin makes no model calls of its own and sends no
   telemetry. It has no hooks and no MCP servers.
-- Skills call the `openplanr` CLI, bundled Node.js scripts, `git`, and the GitHub CLI (`gh`). They
-  read and write files in your repository.
+- The plugin ships instructions only: skills, agents, references, metadata and its icon. It has
+  no scripts or executables.
+- Skills call the `openplanr` CLI and `git`. They read and write files in
+  your repository. The design skills run every local design operation through `openplanr design`;
+  the plugin ships no design runtime.
 - The planning dashboard and local artifact reviews bind to loopback only.
-- Bundled scripts are readable JavaScript. The design studio and review stage pages ship as
-  readable source files; the local review server joins them after checking their recorded
-  SHA-256 digests, without downloading or decoding code.
-- Skills and bundled scripts store and read no GitHub, Linear or model-provider credentials and
-  send no agent credentials to OpenPlanr services. Coding-agent runs you request use that
-  agent's own sign-in, described below.
-- Sharing a design or diagram review creates owner access keys for that review and stores them,
-  readable only by you, in `design-shares` or `diagram-shares` under `~/.planr` (or
-  `PLANR_HOME`; earlier installs used `~/.openplanr`). Design reviews and handoffs read the
-  record locally to show an existing share's link and status. The keys are sent only to the
-  review address stored with them, without cookies or redirects, when you share, update, sync
-  or export feedback, hand off, revoke, or recover that review. Recovery reads only the file
-  path you give.
-- While a local design studio page is visible, it syncs a review you shared before every 15
-  seconds. This pulls published team feedback and finishes delivering previously queued
-  review metadata; it never publishes local design changes.
+- The plugin reads no credentials. Sign-in stays in each vendor's own CLI and in
+  `openplanr`.
+- Sharing a design or diagram review runs in the `openplanr` CLI, not in the plugin. The CLI
+  creates the review's owner access keys, stores them readable only by you under `~/.planr` (or
+  `PLANR_HOME`), and sends them only to the review address stored with them. The plugin
+  reads no owner keys and contacts no OpenPlanr host.
+- Without the CLI, the design skills still write the design document, sources and
+  specification, marked unverified, and tell you the command to install it. On Claude Code,
+  the design skill can build on Claude's hosted design canvas instead.
+- While a local design studio page for a shared design is visible, it asks the CLI to sync the
+  review every 15 seconds. This pulls published team feedback and finishes delivering
+  previously queued review metadata; it never publishes local design changes.
 - When you ask `delegate` to run another coding agent, that agent's own CLI runs with its normal
-  sign-in, environment, model routing, and trusted hooks or plugins. Checking a profile that
-  uses a local model server reads its model list from that server's address without
-  credentials; a server that requires sign-in is reported as not checked.
+  sign-in, model routing, and trusted hooks or plugins. Saved profiles, sign-in checks and
+  local model checks run in the `openplanr` CLI.
 - Only when you ask:
   - `sync`, `sprint` and `status` reach GitHub and Linear through your coding agent's own
-    GitHub or Linear connection, or through the GitHub CLI (`gh`) when it is signed in.
-  - `artifact` and the design skills share an encrypted review through `share.openplanr.dev`.
+    GitHub or Linear connection.
+  - `artifact` and the design skills share an encrypted review through the `openplanr` CLI,
+    which sends it to `share.openplanr.dev`.
   - Company workspaces, a pre-release hosted service, are used only when you configure one.
 
 ## Links

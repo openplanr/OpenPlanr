@@ -132,7 +132,9 @@ test('connection skills name categories, never a catalog product', () => {
     findProductMentions('Post the update to Slack and close the GitHub issue.', catalog).sort(),
     ['GitHub', 'Slack'],
   );
-  assert.deepEqual(findProductMentions('Run the sync helper through the GitHub CLI.', catalog), []);
+  assert.deepEqual(findProductMentions('Run the sync helper through the GitHub CLI.', catalog), [
+    'GitHub',
+  ]);
   assert.deepEqual(findProductMentions('Open a GitHub pull request.', catalog), ['GitHub']);
 });
 
@@ -143,6 +145,38 @@ test('the tracker reference keeps sync semantics and leaves connect steps to the
   assert.match(reference, /`linearIssueId`/u);
   assert.doesNotMatch(reference, /\/plugin install|codex mcp|\| Claude Code \||Marketplace/u);
   assert.doesNotMatch(reference, /Bearer|Authorization|_TOKEN|personal access token/iu);
+});
+
+const LOCAL_SIGN_IN =
+  /\bgh (?:auth|pr|api)\b|`gh`|cli\.github\.com|pgpass|pg_service|PGSERVICE|login-path|mysql_config_editor|MONGODB-(?:AWS|OIDC|X509)|sqlcmd|DB_(?:HOST|PORT|NAME|USER)/u;
+
+test('GitHub and database guidance routes through host connectors, never a local client sign-in', () => {
+  const sources = [
+    'agents/po/preflight/planr-database/AGENT.md',
+    'skills/shared/tracker-connections.md',
+    'skills/planr-connect/SKILL.md',
+    'skills/planr-release/SKILL.md',
+    ...CONNECTION_SKILL_IDS.map((id) => `skills/${id}/${CONNECTORS_REFERENCE}`),
+  ];
+  const built = packages.flatMap(([, pluginRoot, skillRoot]) => [
+    `${pluginRoot}/CONNECTORS.md`,
+    `${pluginRoot}/${skillRoot('planr-release')}${pluginRoot.includes('cursor') ? '.mdc' : '/SKILL.md'}`,
+    ...['planr-sync', 'planr-sprint', 'planr-status'].map(
+      (id) => `${pluginRoot}/${skillRoot(id)}/references/tracker-connections.md`,
+    ),
+  ]);
+  for (const path of [
+    ...sources,
+    ...built,
+    'dist/plugins/claude/openplanr/agents/planr-database.md',
+  ])
+    assert.doesNotMatch(read(path), LOCAL_SIGN_IN, path);
+  const database = read('agents/po/preflight/planr-database/AGENT.md');
+  assert.match(database, /database MCP server the user already added to the host/u);
+  assert.match(
+    database,
+    /add their database's connector to the\s+host, or supply a schema snapshot or dump/u,
+  );
 });
 
 test('every built host package carries instructions only', () => {

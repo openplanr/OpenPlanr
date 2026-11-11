@@ -12,6 +12,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { promisify } from 'node:util';
 import { z } from 'zod';
+import { ghEnvironment, ghFailure } from '../../lib/integrations.mjs';
 import { which } from '../agents/utils.js';
 import type {
   ArtifactFrontmatter,
@@ -129,7 +130,6 @@ const ARTIFACT_TO_ISSUE_TYPE: Record<string, string> = {
 // ---------------------------------------------------------------------------
 
 const GH_CLI_INSTALL_URL = 'https://cli.github.com/';
-const GH_REMOTE_EXAMPLE = 'https://github.com/<owner>/<repo>.git';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -148,9 +148,21 @@ async function ensureGhCli(): Promise<string> {
   return ghPath;
 }
 
+/** A user-facing error for a classified `gh` failure; unclassified failures return null. */
+function classifiedGhError(args: string[], err: unknown): Error | null {
+  const failure = ghFailure(args, err);
+  if (failure.code === 'E_SYNC_TRACKER_GH_FAILED') return null;
+  return new Error(`${failure.message}${failure.recovery ? `\n\n  ${failure.recovery}` : ''}`, {
+    cause: failure,
+  });
+}
+
 async function ensureGhAuth(ghPath: string): Promise<void> {
   try {
-    await execFileAsync(ghPath, ['auth', 'status'], { maxBuffer: 1024 * 1024 });
+    await execFileAsync(ghPath, ['auth', 'status'], {
+      maxBuffer: 1024 * 1024,
+      env: ghEnvironment(),
+    });
   } catch (err) {
     logger.debug('GitHub CLI auth check failed', err);
     throw new Error(
@@ -163,31 +175,13 @@ async function ensureGhAuth(ghPath: string): Promise<void> {
 async function gh(args: string[]): Promise<string> {
   const ghPath = await ensureGhCli();
   try {
-    const { stdout } = await execFileAsync(ghPath, args, { maxBuffer: 10 * 1024 * 1024 });
+    const { stdout } = await execFileAsync(ghPath, args, {
+      maxBuffer: 10 * 1024 * 1024,
+      env: ghEnvironment(),
+    });
     return stdout.trim();
   } catch (err) {
-    const errObj = err as Error & { stderr?: string };
-    const stderr = (errObj.stderr || '').toLowerCase();
-
-    if (stderr.includes('auth login') || stderr.includes('not logged')) {
-      throw new Error(
-        'GitHub CLI is not authenticated.\n\n' +
-          `  Run \`gh auth login\` to sign in, then re-run your ${CLI_COMMAND} github command.`,
-      );
-    }
-    if (stderr.includes('not a git repository')) {
-      throw new Error(
-        'This directory is not a git repository.\n\n' +
-          '  Run `git init` and add a GitHub remote, or cd into a GitHub-hosted repo.',
-      );
-    }
-    if (stderr.includes('no git remotes') || stderr.includes('no github remotes')) {
-      throw new Error(
-        'No GitHub remote found in this repository.\n\n' +
-          `  Add one with: git remote add origin ${GH_REMOTE_EXAMPLE}`,
-      );
-    }
-    throw err;
+    throw classifiedGhError(args, err) ?? err;
   }
 }
 

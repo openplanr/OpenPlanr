@@ -3,12 +3,12 @@
   "schemaVersion": "2.0.0",
   "protocolVersion": "1.8.0",
   "plugin": "planr",
-  "version": "3.2.0",
+  "version": "3.7.3",
   "skillRoot": "./skills/",
   "canonicalSkillCount": 30,
   "compatibilityAliasCount": 0,
   "skillCount": 30,
-  "assetCount": 215,
+  "assetCount": 193,
   "skills": [
     {
       "skillId": "planr-artifact",
@@ -27,11 +27,11 @@
         },
         {
           "path": "skills/artifact/references/design-sharing.md",
-          "digest": "sha256:ceea82f5e1edcc4bebb6885b1a480c0da96f5e4acaa1f71eba131bdb37c4eb65"
+          "digest": "sha256:8cf602c9b9bdb54bfe3636d1e2f9d4c497fea6371dd876c5a7607e52ca791056"
         },
         {
           "path": "skills/artifact/references/company-review.md",
-          "digest": "sha256:38fbf85cd7e3342de16933debde9ffb39468b283e3c70bdcf2beffdd0ebee147"
+          "digest": "sha256:bbaaac2b2c33d192da8037e903505bd051e25d2e52ea8d6232a06c9851e5ebab"
         },
         {
           "path": "skills/artifact/agents/openai.yaml",
@@ -52,7 +52,7 @@
       "assets": [
         {
           "path": "skills/browser-qa/SKILL.md",
-          "digest": "sha256:dc9fdcc48a53ea2f708f1922e0a6d587d005c51f7e86965d611bcbb333ac115f"
+          "digest": "sha256:112057721fc7a2f83954f519fdb5691f7473a4e57ed80ffe34f7c101094bbd16"
         },
         {
           "path": "skills/browser-qa/openplanr.skill.json",
@@ -77,15 +77,15 @@
         },
         {
           "path": "skills/ceo-review/openplanr.skill.json",
-          "digest": "sha256:0e7d78c16ef7b064cb75149c4151fabd2ee40fab00cc29778b7106f04ed889f1"
+          "digest": "sha256:381cdcb29ce138828e7b6855a557f058e5cd3baabe461e7d850a667d37d5769c"
         },
         {
           "path": "skills/ceo-review/references/operate-advisor-contract.md",
-          "digest": "sha256:3153403563d422f395add6a2afd6d249737b8807e4ab31db5b830d82d7814fc5"
+          "digest": "sha256:7d33addcfea3e8de7f8fb35862fc1ee70d5b4c1557bb2e35051c48032a4f29cf"
         },
         {
-          "path": "skills/ceo-review/scripts/validate-note.mjs",
-          "digest": "sha256:9c3c94842059fb884c9a1b22413395f7a0169f788cded3c04bd3b251acd564ae"
+          "path": "skills/ceo-review/references/note-checklist.md",
+          "digest": "sha256:dfdf3cb1fea507a58b9a273561bb66b57f657ba6d9b4f6093170093c70bf9a11"
         },
         {
           "path": "skills/ceo-review/agents/openai.yaml",
@@ -102,15 +102,15 @@
       "assets": [
         {
           "path": "skills/chair-review/SKILL.md",
-          "digest": "sha256:07077d1c317495fcaa5b1a278eec9f466f94c62f9c0ce1a7e04759a46d1cac71"
+          "digest": "sha256:8d6fe0f2566bd55fefa1ef4b9819bc030a096a26fa9b3797162adf38fe8e85b2"
         },
         {
           "path": "skills/chair-review/openplanr.skill.json",
-          "digest": "sha256:34be0fe4dfc5e2875280f663b15010a245a5a90b1736fa42f393c524a250bd60"
+          "digest": "sha256:d0b7fb700f90e350c81751790a8d6d22b05a4a60fb10b65eba6ff81c969404b7"
         },
         {
-          "path": "skills/chair-review/scripts/validate-note.mjs",
-          "digest": "sha256:9c3c94842059fb884c9a1b22413395f7a0169f788cded3c04bd3b251acd564ae"
+          "path": "skills/chair-review/references/note-checklist.md",
+          "digest": "sha256:dfdf3cb1fea507a58b9a273561bb66b57f657ba6d9b4f6093170093c70bf9a11"
         },
         {
           "path": "skills/chair-review/agents/openai.yaml",
@@ -127,15 +127,15 @@
       "assets": [
         {
           "path": "skills/challenger-review/SKILL.md",
-          "digest": "sha256:c614fc0a921cf061bfdd543d2d14b6dec0921c3d3eb87a8f98209524ca6cc2d7"
+          "digest": "sha256:dd985a05d3e526f1879cc81ce11da52a6e6823a85f84cc6ae1a7bda49dedef3a"
         },
         {
           "path": "skills/challenger-review/openplanr.skill.json",
-          "digest": "sha256:8ec2ba56d1338b31f0c64036504df7d8b61a01239803e53e6714db5eb83961c9"
+          "digest": "sha256:22941f4efd1ddfeda603dc7ea114ed6172e0d7c171b32876fc74f044ca9072cf"
         },
         {
-          "path": "skills/challenger-review/scripts/validate-note.mjs",
-          "digest": "sha256:9c3c94842059fb884c9a1b22413395f7a0169f788cded3c04bd3b251acd564ae"
+          "path": "skills/challenger-review/references/note-checklist.md",
+          "digest": "sha256:dfdf3cb1fea507a58b9a273561bb66b57f657ba6d9b4f6093170093c70bf9a11"
         },
         {
           "path": "skills/challenger-review/agents/openai.yaml",
@@ -156,15 +156,15 @@
         },
         {
           "path": "skills/cmo-review/openplanr.skill.json",
-          "digest": "sha256:4fd7c7c7acad38453185de9dd17c5c4469859877b87e0905f4ed816dd570005f"
+          "digest": "sha256:a18fd5b8061651d9f921eb0631a412ab60ee6be59eccfe40f3e23097c6043a02"
         },
         {
           "path": "skills/cmo-review/references/operate-advisor-contract.md",
-          "digest": "sha256:3153403563d422f395add6a2afd6d249737b8807e4ab31db5b830d82d7814fc5"
+          "digest": "sha256:7d33addcfea3e8de7f8fb35862fc1ee70d5b4c1557bb2e35051c48032a4f29cf"
         },
         {
-          "path": "skills/cmo-review/scripts/validate-note.mjs",
-          "digest": "sha256:9c3c94842059fb884c9a1b22413395f7a0169f788cded3c04bd3b251acd564ae"
+          "path": "skills/cmo-review/references/note-checklist.md",
+          "digest": "sha256:dfdf3cb1fea507a58b9a273561bb66b57f657ba6d9b4f6093170093c70bf9a11"
         },
         {
           "path": "skills/cmo-review/agents/openai.yaml",
@@ -181,7 +181,7 @@
       "assets": [
         {
           "path": "skills/connect/SKILL.md",
-          "digest": "sha256:b76c1a09f732243e151a02c0bd6931bfe91487eb2f66fe6ec2263188d6e98271"
+          "digest": "sha256:14d8a09f44f063b18f98723580e188bbd30e0b49da3b5ba6a2d171910c5dd310"
         },
         {
           "path": "skills/connect/openplanr.skill.json",
@@ -193,7 +193,7 @@
         },
         {
           "path": "skills/connect/references/connectors.md",
-          "digest": "sha256:66b21a5127afc673f8e4acf6946c29f9f1e52d9d579c66cad46803e6052a4862"
+          "digest": "sha256:ab71e79082d1bc8b7e5e9975141cb94a8e0af0e38fe2c8d71c027e899cc3be1d"
         }
       ]
     },
@@ -210,15 +210,15 @@
         },
         {
           "path": "skills/coo-review/openplanr.skill.json",
-          "digest": "sha256:13e075e0854fafce2febdbd9e01d54845ba0468b4b0e5d94d9178e33ed36f8e1"
+          "digest": "sha256:2d14597989438a4f6804d88dd556a1218205e023e1e86999fc416bbbee171015"
         },
         {
           "path": "skills/coo-review/references/operate-advisor-contract.md",
-          "digest": "sha256:3153403563d422f395add6a2afd6d249737b8807e4ab31db5b830d82d7814fc5"
+          "digest": "sha256:7d33addcfea3e8de7f8fb35862fc1ee70d5b4c1557bb2e35051c48032a4f29cf"
         },
         {
-          "path": "skills/coo-review/scripts/validate-note.mjs",
-          "digest": "sha256:9c3c94842059fb884c9a1b22413395f7a0169f788cded3c04bd3b251acd564ae"
+          "path": "skills/coo-review/references/note-checklist.md",
+          "digest": "sha256:dfdf3cb1fea507a58b9a273561bb66b57f657ba6d9b4f6093170093c70bf9a11"
         },
         {
           "path": "skills/coo-review/agents/openai.yaml",
@@ -239,15 +239,15 @@
         },
         {
           "path": "skills/cpo-review/openplanr.skill.json",
-          "digest": "sha256:b90782e7a62461c39284233bb45f753269c986ec0d84670d867fea691e51828f"
+          "digest": "sha256:08d8eaeaab7eabd2f7df599c4f47736233cbed66024e0b0c7ef8a8eae32d75da"
         },
         {
           "path": "skills/cpo-review/references/operate-advisor-contract.md",
-          "digest": "sha256:3153403563d422f395add6a2afd6d249737b8807e4ab31db5b830d82d7814fc5"
+          "digest": "sha256:7d33addcfea3e8de7f8fb35862fc1ee70d5b4c1557bb2e35051c48032a4f29cf"
         },
         {
-          "path": "skills/cpo-review/scripts/validate-note.mjs",
-          "digest": "sha256:9c3c94842059fb884c9a1b22413395f7a0169f788cded3c04bd3b251acd564ae"
+          "path": "skills/cpo-review/references/note-checklist.md",
+          "digest": "sha256:dfdf3cb1fea507a58b9a273561bb66b57f657ba6d9b4f6093170093c70bf9a11"
         },
         {
           "path": "skills/cpo-review/agents/openai.yaml",
@@ -268,15 +268,15 @@
         },
         {
           "path": "skills/cto-review/openplanr.skill.json",
-          "digest": "sha256:912dfc5504e94b6a7ba480f1c79977999dbaba021c97ca873b2b5dc8c96224b3"
+          "digest": "sha256:a1dccde1c1efb310e336e849dbcf8d0a9d81860a8b6dd639acacfc91e07ec91d"
         },
         {
           "path": "skills/cto-review/references/operate-advisor-contract.md",
-          "digest": "sha256:3153403563d422f395add6a2afd6d249737b8807e4ab31db5b830d82d7814fc5"
+          "digest": "sha256:7d33addcfea3e8de7f8fb35862fc1ee70d5b4c1557bb2e35051c48032a4f29cf"
         },
         {
-          "path": "skills/cto-review/scripts/validate-note.mjs",
-          "digest": "sha256:9c3c94842059fb884c9a1b22413395f7a0169f788cded3c04bd3b251acd564ae"
+          "path": "skills/cto-review/references/note-checklist.md",
+          "digest": "sha256:dfdf3cb1fea507a58b9a273561bb66b57f657ba6d9b4f6093170093c70bf9a11"
         },
         {
           "path": "skills/cto-review/agents/openai.yaml",
@@ -314,11 +314,11 @@
       "assets": [
         {
           "path": "skills/delegate/SKILL.md",
-          "digest": "sha256:344d272793e81025c73d2c62333e786f4a073dec30f1ac8eb8ed560bea2c8e4f"
+          "digest": "sha256:c29dbd7b4b997d114800041d314a9ef3b88228fcd28b0b8a53909cc554e5a1d7"
         },
         {
           "path": "skills/delegate/openplanr.skill.json",
-          "digest": "sha256:01c074a24328c5eeba8571f75bea5d51e1b6f27a702e390c680055684a105717"
+          "digest": "sha256:b966f9e694e90d31202d9814290ab0d97efe6c0cafe495a4809230d5df3d6a8d"
         },
         {
           "path": "skills/delegate/agents/openai.yaml",
@@ -330,119 +330,31 @@
         },
         {
           "path": "skills/delegate/references/capsule-contract.md",
-          "digest": "sha256:22e5daac9ad9cb0951222fef4d0f45ae35de4a6b7ee2b47d660cc6b672188fff"
+          "digest": "sha256:89de15960cbcb406a1ada6432e8a4ed5f61dcd96d95b034531bbfad258ee304a"
         },
         {
           "path": "skills/delegate/references/integration-review.md",
-          "digest": "sha256:4ed5dceda80d3dfa3027793a472a408cb9dd5a847e251a3dfa3c5cca509b9f7b"
+          "digest": "sha256:ad9fa5b13765c70e5104b9ed2ce7188537e16dedc604c0eee7db59b075d6ade1"
+        },
+        {
+          "path": "skills/delegate/references/native-commands.md",
+          "digest": "sha256:14216a651ea97dd4496a6c4ee19f489b3aa565b3227899557a34c2e83db49d9d"
+        },
+        {
+          "path": "skills/delegate/references/openplanr-cli.md",
+          "digest": "sha256:29557d1d253bce98b673b63db0623fcded6226d2e1dedd1d7f235e63dc7c432d"
         },
         {
           "path": "skills/delegate/references/operator-guide.md",
-          "digest": "sha256:436c12e8ff06e67a529df1aaeb736407d85a63c636260f4a193f458c94fd2ec4"
+          "digest": "sha256:52bcd96b681968b1dc790c06b40ab0b134e22b4aac6e7cddacd9a3eef255e5f7"
         },
         {
           "path": "skills/delegate/references/run-handoff.md",
-          "digest": "sha256:6468f7fa3ddf8d561f08c4d8a368564958c21f88777b33bb6e482c9180d997b2"
+          "digest": "sha256:f4cb980e48c82e32e6669be224ca3ac51a8071d72e05f48c010f83abc73aaf66"
         },
         {
           "path": "skills/delegate/references/worktree-custody.md",
-          "digest": "sha256:8e78648690cfa1d786af5383aec0d567955ad8bd173a96558fac339a2efedae2"
-        },
-        {
-          "path": "skills/delegate/scripts/adapters/claude.mjs",
-          "digest": "sha256:98dae19b18c18b372edc77985a889303e595b0fc4556f1f42dcfd69d5f037acc"
-        },
-        {
-          "path": "skills/delegate/scripts/adapters/codex.mjs",
-          "digest": "sha256:6e606a02058e725a4c4cfe9341db6bcfd402060d69dd2eb0f5210e2161816d3e"
-        },
-        {
-          "path": "skills/delegate/scripts/adapters/generic.mjs",
-          "digest": "sha256:90a22ee52f992c43a7432f6bfb56a25af34a23e43e5730cca1cefa49a893ee05"
-        },
-        {
-          "path": "skills/delegate/scripts/context.mjs",
-          "digest": "sha256:632a59c12d8fc4b6b738279cbee5f8d001e76d9ef379fc065f62031647462d42"
-        },
-        {
-          "path": "skills/delegate/scripts/credentials.mjs",
-          "digest": "sha256:a7b55c9598a8a5301c4e0ff79f3471a587a5f26686c9a7d97fe662ee0babb49d"
-        },
-        {
-          "path": "skills/delegate/scripts/custody.mjs",
-          "digest": "sha256:f9ce2ecad8bd7417091cd734691781b406abfff4ce94a93aa1a965dc685e70ab"
-        },
-        {
-          "path": "skills/delegate/scripts/helper-snapshot.mjs",
-          "digest": "sha256:146430502bb25dda5b31433d574aba41428a93f2f1de67b1a01fdaca3b990832"
-        },
-        {
-          "path": "skills/delegate/scripts/integrate.mjs",
-          "digest": "sha256:45372038ee72614f81b1d146431ea6e841882f581e05c4486b8871d47d84d86b"
-        },
-        {
-          "path": "skills/delegate/scripts/presentation.mjs",
-          "digest": "sha256:32ca0c561e99bb02dc8f88e0823a0b826a24cd61404b165fe306bbbce9ee99b9"
-        },
-        {
-          "path": "skills/delegate/scripts/profiles.mjs",
-          "digest": "sha256:6162266e2a5e7b9a6fb38754156eafd76f742d0142df681c43f3dc42e36b6ff6"
-        },
-        {
-          "path": "skills/delegate/scripts/run-record.mjs",
-          "digest": "sha256:cbceec29880e4af92fc2dbd692edd10dcd6cb24ab87108b3a492f94797d93473"
-        },
-        {
-          "path": "skills/delegate/scripts/runner.mjs",
-          "digest": "sha256:3fd196a6ac2073f217d888a1a95f40bc6c6ec7937ca7deced6257d00bfee10a4"
-        },
-        {
-          "path": "skills/delegate/scripts/run-contract.mjs",
-          "digest": "sha256:f87f0bd16249266ef6f044a37db608d852a5d893628de26ab9844dc92df57c46"
-        },
-        {
-          "path": "skills/delegate/scripts/run-preflight.mjs",
-          "digest": "sha256:81a36c610c8d5b422c392dc5d6384285ad125303b8ae4a3519ff44f14a3076dc"
-        },
-        {
-          "path": "skills/delegate/scripts/run-preparation.mjs",
-          "digest": "sha256:746630b00e1c252cae6dd7e78cde4b2d6c65e75f1ef19a092111e1e4de5152e3"
-        },
-        {
-          "path": "skills/delegate/scripts/run-execution.mjs",
-          "digest": "sha256:3e9333862d26b10307623d0fd715b7c4387d3788e3eb578326374cfd23682306"
-        },
-        {
-          "path": "skills/delegate/scripts/run-lifecycle.mjs",
-          "digest": "sha256:1b3dfe50152ef63bb174fb19aef9b3351f7d25be49c2557f6187cbba8db37317"
-        },
-        {
-          "path": "skills/delegate/scripts/integration-files.mjs",
-          "digest": "sha256:0630912abe3992664b50012fb36dd6dec26f741449800ab6a6c421def219424e"
-        },
-        {
-          "path": "skills/delegate/scripts/integration-checks.mjs",
-          "digest": "sha256:28da3e3ead865d923a75d4b111028e69c9e8bc72c83348067300d54ac8d37d05"
-        },
-        {
-          "path": "skills/delegate/scripts/integration-transaction.mjs",
-          "digest": "sha256:c3914e4fdb6e12258b209178fca07ffc39e2f5376c770a27aa9a1858c5d833ed"
-        },
-        {
-          "path": "skills/delegate/scripts/adapters/capsule.mjs",
-          "digest": "sha256:ef2087fa2e505c97cc413ed038645a8def0618647de0d10afb9944762b0495a6"
-        },
-        {
-          "path": "skills/delegate/scripts/adapters/cursor.mjs",
-          "digest": "sha256:f9b23fca75b3e174134ea9bfde1637fac975866ffba3c293525dfef59975d76c"
-        },
-        {
-          "path": "skills/delegate/scripts/adapters/native.mjs",
-          "digest": "sha256:ff2a8c9365264c4065b8be742ba98ba7b5c8269779c66f217140e9fbf6609727"
-        },
-        {
-          "path": "skills/delegate/scripts/backend-diagnostics.mjs",
-          "digest": "sha256:989c307c6a42c19f799b17bbe7067211b5d9435a6ebabd2609d15d312d3d2715"
+          "digest": "sha256:3b2cef2df3dd7586b755902795541176e338e64ea2b5ca0aba02731fe12d6687"
         }
       ]
     },
@@ -455,11 +367,11 @@
       "assets": [
         {
           "path": "skills/design/SKILL.md",
-          "digest": "sha256:0212722ce9516be2b2144e8b8a247eaa4a452d4347c8c9e1d1acdb0219d1caa1"
+          "digest": "sha256:895961e62880dcbc545865ff7fb6ed354ec71dcd8873db0e84ce5de3782f767a"
         },
         {
           "path": "skills/design/openplanr.skill.json",
-          "digest": "sha256:5dcbc3e5fedaeb1c57e7f32dc3a2c7f8b34cb58a98bf47737f654450f3a38fce"
+          "digest": "sha256:cbfdee1cd28659b8873869cb4818bb492e5bdac772a4a118b388d0a270871152"
         },
         {
           "path": "skills/design/agents/openai.yaml",
@@ -467,7 +379,7 @@
         },
         {
           "path": "skills/design/references/hosted-canvas.md",
-          "digest": "sha256:901f0d95d47784bcf15f33bf4413e9a5de7aaf03401ca447451f5ccc0d6a2324"
+          "digest": "sha256:c2c3b6be629c21391473c160e36d35c81ba67d140f5c3366e3aabae2819d4e07"
         },
         {
           "path": "skills/design/references/craft.md",
@@ -479,7 +391,7 @@
         },
         {
           "path": "skills/design/references/design-system.md",
-          "digest": "sha256:d97ad4aca7c6a21d2e6208620d928beb3e34eac4460c64943b33f5835f9b432f"
+          "digest": "sha256:3c62b433fcb3c9f0a441a3aef932e0ea2dcc26085c8fb346936f5fcb92de293c"
         },
         {
           "path": "skills/design/references/discovery.md",
@@ -487,7 +399,7 @@
         },
         {
           "path": "skills/design/references/generation.md",
-          "digest": "sha256:4837ad37da9a028e92b63611f81bb764f5fb7818a8ba25df0b21a5ac276ae71a"
+          "digest": "sha256:a827f8f0e83f0fc50c2b8c56111635c559aab4e6fe4f0fd374461ea19329c357"
         },
         {
           "path": "skills/design/references/handoff.md",
@@ -495,23 +407,19 @@
         },
         {
           "path": "skills/design/references/review.md",
-          "digest": "sha256:b0f09ff889729bde5ded2fd5f8667adb440bc78484212f855c56db2ccb7c61f6"
+          "digest": "sha256:afcc24432943a9040ce6858d31d2cef8d66d895fea34a384d31cdc341c17ca3c"
         },
         {
           "path": "skills/design/references/utilities.md",
-          "digest": "sha256:bcb057b0599bf48cee3d2955808c6f3ab6377b8d520f1981782b7353cb22ba6a"
+          "digest": "sha256:5eff46777fcb5f905f2b69ad1c857292450f83b98d375fd33835a63393dedc06"
         },
         {
           "path": "skills/design/references/team-review.md",
-          "digest": "sha256:086389a07d8c4de55f6c26205d3a2c48befc792e66adc654566e6b7f363e6831"
-        },
-        {
-          "path": "skills/design/scripts/design.mjs",
-          "digest": "sha256:cca181a784f5dab67fc31fd55679481b35147f4798ee3f49bd29017f5044573b"
+          "digest": "sha256:f80c2fd8260705d7e9db15afd25db79ff10389c64bf12e6a6c12ae3e35f617e8"
         },
         {
           "path": "skills/design/schemas/design-document.schema.json",
-          "digest": "sha256:9782c8c130b19f7c47b17ec59a216f4699e3a6f3b81120ecc0442d2576d58fa2"
+          "digest": "sha256:33d74abce73ec6631ee1a4f5037bb49571f81cedaebac5bf37d77d91a170b507"
         },
         {
           "path": "skills/design/schemas/design-review-context.schema.json",
@@ -532,11 +440,11 @@
       "assets": [
         {
           "path": "skills/design-loop/SKILL.md",
-          "digest": "sha256:889727eb6f71c289e210cfa3c34a5740492bf75dbdb23cb26250aaa1226413d7"
+          "digest": "sha256:55d85e6dab78e9988b4e8d2a91263e467f2f2bef65b3b8e39e1cdf784eba1eb7"
         },
         {
           "path": "skills/design-loop/openplanr.skill.json",
-          "digest": "sha256:60a80012891cf356b086f2766da383981d640714a04a2fd2bf931f0af37a910f"
+          "digest": "sha256:0f562caa714f68b8b2a48899fe6a41dbd7ed041f9f60aeaf6a74f5a31da4e762"
         },
         {
           "path": "skills/design-loop/agents/openai.yaml",
@@ -552,7 +460,7 @@
         },
         {
           "path": "skills/design-loop/references/design-system.md",
-          "digest": "sha256:d97ad4aca7c6a21d2e6208620d928beb3e34eac4460c64943b33f5835f9b432f"
+          "digest": "sha256:3c62b433fcb3c9f0a441a3aef932e0ea2dcc26085c8fb346936f5fcb92de293c"
         },
         {
           "path": "skills/design-loop/references/discovery.md",
@@ -560,7 +468,7 @@
         },
         {
           "path": "skills/design-loop/references/generation.md",
-          "digest": "sha256:4837ad37da9a028e92b63611f81bb764f5fb7818a8ba25df0b21a5ac276ae71a"
+          "digest": "sha256:a827f8f0e83f0fc50c2b8c56111635c559aab4e6fe4f0fd374461ea19329c357"
         },
         {
           "path": "skills/design-loop/references/handoff.md",
@@ -568,23 +476,19 @@
         },
         {
           "path": "skills/design-loop/references/review.md",
-          "digest": "sha256:b0f09ff889729bde5ded2fd5f8667adb440bc78484212f855c56db2ccb7c61f6"
+          "digest": "sha256:afcc24432943a9040ce6858d31d2cef8d66d895fea34a384d31cdc341c17ca3c"
         },
         {
           "path": "skills/design-loop/references/utilities.md",
-          "digest": "sha256:bcb057b0599bf48cee3d2955808c6f3ab6377b8d520f1981782b7353cb22ba6a"
+          "digest": "sha256:5eff46777fcb5f905f2b69ad1c857292450f83b98d375fd33835a63393dedc06"
         },
         {
           "path": "skills/design-loop/references/team-review.md",
-          "digest": "sha256:086389a07d8c4de55f6c26205d3a2c48befc792e66adc654566e6b7f363e6831"
-        },
-        {
-          "path": "skills/design-loop/scripts/design.mjs",
-          "digest": "sha256:cca181a784f5dab67fc31fd55679481b35147f4798ee3f49bd29017f5044573b"
+          "digest": "sha256:f80c2fd8260705d7e9db15afd25db79ff10389c64bf12e6a6c12ae3e35f617e8"
         },
         {
           "path": "skills/design-loop/schemas/design-document.schema.json",
-          "digest": "sha256:9782c8c130b19f7c47b17ec59a216f4699e3a6f3b81120ecc0442d2576d58fa2"
+          "digest": "sha256:33d74abce73ec6631ee1a4f5037bb49571f81cedaebac5bf37d77d91a170b507"
         },
         {
           "path": "skills/design-loop/schemas/design-review-context.schema.json",
@@ -605,11 +509,11 @@
       "assets": [
         {
           "path": "skills/design-review/SKILL.md",
-          "digest": "sha256:97988d521baec52754f62776d134cd33b76620835c4098bafdd5b7a97ad16ce3"
+          "digest": "sha256:f1304449cd4600a874eeaf255be1af0e7924a2a8db0dd6578a1a2184a28ccd46"
         },
         {
           "path": "skills/design-review/openplanr.skill.json",
-          "digest": "sha256:a352cac3b4e0bb072afd8e525352574e9f30a50c044341096f273eff58c1ce39"
+          "digest": "sha256:443e581bd1f590734359192689607175d8a9c1cde7a91e9402b14da7a9237564"
         },
         {
           "path": "skills/design-review/agents/openai.yaml",
@@ -625,7 +529,7 @@
         },
         {
           "path": "skills/design-review/references/design-system.md",
-          "digest": "sha256:d97ad4aca7c6a21d2e6208620d928beb3e34eac4460c64943b33f5835f9b432f"
+          "digest": "sha256:3c62b433fcb3c9f0a441a3aef932e0ea2dcc26085c8fb346936f5fcb92de293c"
         },
         {
           "path": "skills/design-review/references/discovery.md",
@@ -633,7 +537,7 @@
         },
         {
           "path": "skills/design-review/references/generation.md",
-          "digest": "sha256:4837ad37da9a028e92b63611f81bb764f5fb7818a8ba25df0b21a5ac276ae71a"
+          "digest": "sha256:a827f8f0e83f0fc50c2b8c56111635c559aab4e6fe4f0fd374461ea19329c357"
         },
         {
           "path": "skills/design-review/references/handoff.md",
@@ -641,23 +545,19 @@
         },
         {
           "path": "skills/design-review/references/review.md",
-          "digest": "sha256:b0f09ff889729bde5ded2fd5f8667adb440bc78484212f855c56db2ccb7c61f6"
+          "digest": "sha256:afcc24432943a9040ce6858d31d2cef8d66d895fea34a384d31cdc341c17ca3c"
         },
         {
           "path": "skills/design-review/references/utilities.md",
-          "digest": "sha256:bcb057b0599bf48cee3d2955808c6f3ab6377b8d520f1981782b7353cb22ba6a"
+          "digest": "sha256:5eff46777fcb5f905f2b69ad1c857292450f83b98d375fd33835a63393dedc06"
         },
         {
           "path": "skills/design-review/references/team-review.md",
-          "digest": "sha256:086389a07d8c4de55f6c26205d3a2c48befc792e66adc654566e6b7f363e6831"
-        },
-        {
-          "path": "skills/design-review/scripts/design.mjs",
-          "digest": "sha256:cca181a784f5dab67fc31fd55679481b35147f4798ee3f49bd29017f5044573b"
+          "digest": "sha256:f80c2fd8260705d7e9db15afd25db79ff10389c64bf12e6a6c12ae3e35f617e8"
         },
         {
           "path": "skills/design-review/schemas/design-document.schema.json",
-          "digest": "sha256:9782c8c130b19f7c47b17ec59a216f4699e3a6f3b81120ecc0442d2576d58fa2"
+          "digest": "sha256:33d74abce73ec6631ee1a4f5037bb49571f81cedaebac5bf37d77d91a170b507"
         },
         {
           "path": "skills/design-review/schemas/design-review-context.schema.json",
@@ -715,7 +615,7 @@
       "assets": [
         {
           "path": "skills/doctor/SKILL.md",
-          "digest": "sha256:ae1c90830273a51d54c60a846ea00e8c4412f50e43ad8172a2e112e2b51e6412"
+          "digest": "sha256:9f0265681d9c2bea57f0bd7e043496f97cd98697dedf50e7d4381e7697b26c3e"
         },
         {
           "path": "skills/doctor/openplanr.skill.json",
@@ -735,28 +635,32 @@
       "skillId": "planr-investigate",
       "projectedName": "investigate",
       "invocation": "$planr:investigate",
-      "description": "Diagnose a bug, regression, error, or unexplained behavior and optionally implement a bounded fix. Use for root-cause investigation, not planned feature delivery.",
+      "description": "Diagnose a bug, regression, error, or unexplained behavior and optionally implement a bounded fix. Use for root-cause investigation, including before any fix, not planned feature delivery.",
       "entrypoint": "skills/investigate/SKILL.md",
       "assets": [
         {
           "path": "skills/investigate/SKILL.md",
-          "digest": "sha256:26c361a3851a2d7edb17156546d16e3811925f8d990b8a75643d0995b79f4d05"
+          "digest": "sha256:10ca66e7d350ab820d3f71232053e92fb5a2f6e76af7720397da431b1faf7a45"
         },
         {
           "path": "skills/investigate/openplanr.skill.json",
-          "digest": "sha256:ad1422ac497f638b739d362a93af8eddc9cd0634c8a737a2c408023bd5cb9797"
+          "digest": "sha256:da39f2845857a3f7f7edcebb59de474659f919bca885e63eb997a2b67f90be09"
         },
         {
           "path": "skills/investigate/agents/openai.yaml",
-          "digest": "sha256:f9248c50312de3fced05e1f550ad9a539d8fbb97f62335f00d55cb0e08bb091c"
+          "digest": "sha256:a351007ce74261258a793cb856e3f3a279f49054a9d441fc051f61ce9904f29a"
+        },
+        {
+          "path": "skills/investigate/references/fail-first.md",
+          "digest": "sha256:8fb3ac5b32e2a13e099b728423b8962b15559430bf2b7f6f70a1927df2044b4a"
         },
         {
           "path": "skills/investigate/references/findings.md",
-          "digest": "sha256:2bee6285c88650a81ae049541eb9a09549c0935210b5ca3eae0b1c99fd52f45f"
+          "digest": "sha256:a097b21620a272487758817a52b85bb7cd08d58133d9a704f44cb67870c63c09"
         },
         {
-          "path": "skills/investigate/scripts/backlog-item.mjs",
-          "digest": "sha256:4d3ae483819acaa34ef79b1ee3b21f75ceb78bf290366d7a9e095021340a3b68"
+          "path": "skills/investigate/references/backlog-filing.md",
+          "digest": "sha256:4e86fca9f2ad70ab1dfc7f0984009a1fb64e9459666093552c8405aa0d3084be"
         }
       ]
     },
@@ -811,19 +715,23 @@
       "assets": [
         {
           "path": "skills/operate/SKILL.md",
-          "digest": "sha256:6bc1de840850496637881024c6aa0c45156486a660bf6a40672dbbb75be94507"
+          "digest": "sha256:fd655ac1eace4821e007e46d6e01af6f45b7dd11d72ca83d2a366074db11ce26"
         },
         {
           "path": "skills/operate/openplanr.skill.json",
-          "digest": "sha256:9f2c0f3b9d1651d60372cb8fcad54838aaf829d22a76a671373ebcb4d91046aa"
+          "digest": "sha256:fb521d29bb5f3aa048877f9d8df6c0ea97d1f05efbf86b2c940f6f2e0fe81f3c"
         },
         {
-          "path": "skills/operate/scripts/validate-note.mjs",
-          "digest": "sha256:9c3c94842059fb884c9a1b22413395f7a0169f788cded3c04bd3b251acd564ae"
+          "path": "skills/operate/references/note-checklist.md",
+          "digest": "sha256:dfdf3cb1fea507a58b9a273561bb66b57f657ba6d9b4f6093170093c70bf9a11"
         },
         {
           "path": "skills/operate/agents/openai.yaml",
           "digest": "sha256:35334282c4df104e513ad150f8aeaee7bcf9b4648d5eb6d7da4af29cc76a8e23"
+        },
+        {
+          "path": "skills/operate/references/return-contract.md",
+          "digest": "sha256:65081a1dd594dbe5136e2892a64110270e85a6b246a0ee74d43edc1f55d69bde"
         }
       ]
     },
@@ -836,11 +744,11 @@
       "assets": [
         {
           "path": "skills/plan/SKILL.md",
-          "digest": "sha256:64cb23d5e4e7fdd131d1284e18927a8d1dd2fbc34732c797b49ae0ab288bff19"
+          "digest": "sha256:64bf3c96e57e1656049fb8b5f5c93deee28f8e352baedbc072208af6a59a80de"
         },
         {
           "path": "skills/plan/openplanr.skill.json",
-          "digest": "sha256:e8c99328f94d04c47aabac80c85dd4422f220036fee675bea6fc5979e1338df6"
+          "digest": "sha256:74a76845fa903eb29b67b1627295420a7a47107774ea72d1f58be1d731d8a8cf"
         },
         {
           "path": "skills/plan/agents/openai.yaml",
@@ -848,23 +756,23 @@
         },
         {
           "path": "skills/plan/references/artifact-contract.md",
-          "digest": "sha256:79914583ab6f668eaef24cbe8a498a3d08d07da84ec80f5160b42f1719b5c7b2"
+          "digest": "sha256:6b861dbfbe675624c4a32545d936da599e263f2399b1e46091f6fc3fd3086f88"
         },
         {
           "path": "skills/plan/references/design-handoff.md",
-          "digest": "sha256:b918cc16855412a75028e1a014832c2ced59b0349461a24d9e1fdcfc336b9f5f"
+          "digest": "sha256:456f33cd0386b7fd8be1c5ee2c62723d776db6c6f740453d7125816794565af4"
         },
         {
-          "path": "skills/plan/scripts/planning-ids.mjs",
-          "digest": "sha256:d7051fab0540e3beb176015f174e0851a3ceb8a24c43344495b43a28d2eaceae"
+          "path": "skills/plan/references/planning-ids.md",
+          "digest": "sha256:5028070be05aefca33e4f835f7dfc096e55e46e976fd1745a2e9adfaa2759527"
         },
         {
-          "path": "skills/plan/scripts/design.mjs",
-          "digest": "sha256:8ec9264e3b70d1d9789b3d356005ca26caf258c4d2f4bb335071d7d199defa0c"
+          "path": "skills/plan/references/return-contract.md",
+          "digest": "sha256:65081a1dd594dbe5136e2892a64110270e85a6b246a0ee74d43edc1f55d69bde"
         },
         {
           "path": "skills/plan/schemas/design-document.schema.json",
-          "digest": "sha256:9782c8c130b19f7c47b17ec59a216f4699e3a6f3b81120ecc0442d2576d58fa2"
+          "digest": "sha256:33d74abce73ec6631ee1a4f5037bb49571f81cedaebac5bf37d77d91a170b507"
         },
         {
           "path": "skills/plan/schemas/design-review-context.schema.json",
@@ -885,15 +793,19 @@
       "assets": [
         {
           "path": "skills/plan-review/SKILL.md",
-          "digest": "sha256:c60ba860c021d1bc79361fb9434eb8bedc7797053e49d91b9418d022fc1c947b"
+          "digest": "sha256:21291840966711012694fcf676de228f56928b20bd3bddca30d69c3914ba27c6"
         },
         {
           "path": "skills/plan-review/openplanr.skill.json",
-          "digest": "sha256:2e9922d0116b6efbda889527ae022c7a7a1b5d601307b2ed7fb529f7eada0273"
+          "digest": "sha256:7809b687c81e71f19c1e83cedc8104a6ba857c016e7058b44f099d1231aca6e1"
         },
         {
           "path": "skills/plan-review/agents/openai.yaml",
           "digest": "sha256:272813fe39137748513f5aa40cc7c24b0ff62309b92947e18d048b84bb5370f8"
+        },
+        {
+          "path": "skills/plan-review/references/return-contract.md",
+          "digest": "sha256:65081a1dd594dbe5136e2892a64110270e85a6b246a0ee74d43edc1f55d69bde"
         }
       ]
     },
@@ -906,11 +818,11 @@
       "assets": [
         {
           "path": "skills/release/SKILL.md",
-          "digest": "sha256:6965c890c175598df291fcbb221904a48abe61361a73c714c73ae8e4a82b07c2"
+          "digest": "sha256:8bb422cb0568f5cd2dcaa45aae7b6a70a923daf8c0f3bf046e9a02c0db6c071d"
         },
         {
           "path": "skills/release/openplanr.skill.json",
-          "digest": "sha256:3d9af6210d7a58bb2cd039ee20a918b63236f52f1277a796d5ea513f7e2c02c9"
+          "digest": "sha256:c3def69f96b24589059b00c425de62981ac7f705d70611e8f43d6cd2dd2dc0e8"
         },
         {
           "path": "skills/release/agents/openai.yaml",
@@ -918,15 +830,15 @@
         },
         {
           "path": "skills/release/references/schemes.md",
-          "digest": "sha256:79769004c106f31ddb6a74a4f7a902b3f1d8c43617fb11d56f9f7455855cfa69"
+          "digest": "sha256:9279cb628c5fae52d3119b5a229d644131c9699abcff74cf27e2f21af1f4706c"
         },
         {
           "path": "skills/release/references/release-notes.md",
-          "digest": "sha256:9dd1784dc10f40dc4e1962e9eab4373cc0dc04c111935fb8f145772a8f6c2fec"
+          "digest": "sha256:15645f09c3906c05d6fe994ef8a97b939742ff31be18a0b4d13465e3ceab8f8d"
         },
         {
           "path": "skills/release/references/cadence.md",
-          "digest": "sha256:c9d0e67e35aaa4db563a8f520dc3ff441be8a8c54b86be274b44a20dfa363077"
+          "digest": "sha256:73786c9d4b5174d66e28d90163a0f705e3a316aa778220119cb3c3326ed5a5dc"
         },
         {
           "path": "skills/release/assets/profile-template.md",
@@ -937,8 +849,8 @@
           "digest": "sha256:fd59787371b67ec545c0f613c96761d31e4482ae45d23ba9e5a1dd9ed66300e7"
         },
         {
-          "path": "skills/release/scripts/collect_changes.sh",
-          "digest": "sha256:6271a1d8ea7d0a8c86dd52f85fa78666845d7d152cc95ae5148fde68dcd2f652"
+          "path": "skills/release/references/return-contract.md",
+          "digest": "sha256:65081a1dd594dbe5136e2892a64110270e85a6b246a0ee74d43edc1f55d69bde"
         }
       ]
     },
@@ -963,7 +875,7 @@
         },
         {
           "path": "skills/share/references/connectors.md",
-          "digest": "sha256:66b21a5127afc673f8e4acf6946c29f9f1e52d9d579c66cad46803e6052a4862"
+          "digest": "sha256:ab71e79082d1bc8b7e5e9975141cb94a8e0af0e38fe2c8d71c027e899cc3be1d"
         }
       ]
     },
@@ -971,40 +883,44 @@
       "skillId": "planr-ship",
       "projectedName": "ship",
       "invocation": "$planr:ship",
-      "description": "Implement an OpenPlanr plan, specification, task, or clearly stated request end to end in the current repository. Use when the user asks to build, implement, fix, finish, or ship local work.",
+      "description": "Implement an OpenPlanr plan, specification, task, or clearly stated request end to end in the current repository. Use when the user asks to build, implement, fix, finish, or ship local work, or to plan and implement an accepted change. Invoke before editing files for the requested change. Not for planning only, landing, release, or work handed to another coding agent.",
       "entrypoint": "skills/ship/SKILL.md",
       "assets": [
         {
           "path": "skills/ship/SKILL.md",
-          "digest": "sha256:35d7312a76a393d89b1da8b78b6bed143254b6df90164e9799d6945ec08efe21"
+          "digest": "sha256:f351cc3c9ddd6326915b97521580d4649de7d405d7e0f4e79f63424ace27c854"
         },
         {
           "path": "skills/ship/openplanr.skill.json",
-          "digest": "sha256:fb92ddb223243c1a4a918384f1d5db32e5ba01add49ef8d441d97c34a3a07075"
+          "digest": "sha256:5f718747b2801000ceab302d19a96494c9f833f2d014e1b56394215a8009a9d2"
         },
         {
           "path": "skills/ship/agents/openai.yaml",
-          "digest": "sha256:f084aa98cd3470deb54e535ed0b298bca82c91a1b7eff9700630e0d8bafb7c13"
+          "digest": "sha256:884dab0cf43c9afb90944b40b529b8d1b6fa6f0b4f7d66ebc5d3a0a01e9a7d31"
         },
         {
           "path": "skills/ship/references/result-contract.md",
-          "digest": "sha256:687f53f2d6682dbe628bb2bfd52edd5685d9611e2695497516d37a1ef355b57f"
+          "digest": "sha256:1c8bf48c8bbae9b6a7ef7b6e1d444412c9bf6f3c67fc0233c159c3b084cc7e0e"
         },
         {
           "path": "skills/ship/references/design-lineage.md",
           "digest": "sha256:0cf8cce235b6e258c066e65dcc25480f10aca6f0c3200de332fc278e3b7975a9"
         },
         {
-          "path": "skills/ship/scripts/discover-verification.mjs",
-          "digest": "sha256:8805ac8d814a1d94364d455df6da350983d4c8436faa3749717da5f1b3ae63b1"
+          "path": "skills/ship/references/fail-first.md",
+          "digest": "sha256:8fb3ac5b32e2a13e099b728423b8962b15559430bf2b7f6f70a1927df2044b4a"
         },
         {
           "path": "skills/ship/references/findings.md",
-          "digest": "sha256:2bee6285c88650a81ae049541eb9a09549c0935210b5ca3eae0b1c99fd52f45f"
+          "digest": "sha256:a097b21620a272487758817a52b85bb7cd08d58133d9a704f44cb67870c63c09"
         },
         {
-          "path": "skills/ship/scripts/backlog-item.mjs",
-          "digest": "sha256:4d3ae483819acaa34ef79b1ee3b21f75ceb78bf290366d7a9e095021340a3b68"
+          "path": "skills/ship/references/backlog-filing.md",
+          "digest": "sha256:4e86fca9f2ad70ab1dfc7f0984009a1fb64e9459666093552c8405aa0d3084be"
+        },
+        {
+          "path": "skills/ship/references/return-contract.md",
+          "digest": "sha256:65081a1dd594dbe5136e2892a64110270e85a6b246a0ee74d43edc1f55d69bde"
         }
       ]
     },
@@ -1017,11 +933,11 @@
       "assets": [
         {
           "path": "skills/spec/SKILL.md",
-          "digest": "sha256:1ff5c57c86757aaed8693a2bb448099f810d23a532f5ccdfd241e972c7e43d9a"
+          "digest": "sha256:e79e0654f960eb7ee02dda3d493e3779f4d5021c24e4abe5cd0c36a10c5b33ba"
         },
         {
           "path": "skills/spec/openplanr.skill.json",
-          "digest": "sha256:f4d06e96f07db140706108b16e0a48f377d1c50d170b0a0c1b4a93d7642a4fb6"
+          "digest": "sha256:02ebd36e5c211ca734d81a0ea91796ed897252fbe1e8590775146e5ffbcb46e0"
         },
         {
           "path": "skills/spec/agents/openai.yaml",
@@ -1029,7 +945,11 @@
         },
         {
           "path": "skills/spec/references/specification-contract.md",
-          "digest": "sha256:55ecc8361256073324d2507097862f6222589e22887dffe5b5e25cdc89199df5"
+          "digest": "sha256:bbecd3b43ff88a245199c89d08e17ebbf04580a6e0491140d8e69edfdbd69038"
+        },
+        {
+          "path": "skills/spec/references/return-contract.md",
+          "digest": "sha256:65081a1dd594dbe5136e2892a64110270e85a6b246a0ee74d43edc1f55d69bde"
         }
       ]
     },
@@ -1062,11 +982,11 @@
         },
         {
           "path": "skills/sprint/references/connectors.md",
-          "digest": "sha256:66b21a5127afc673f8e4acf6946c29f9f1e52d9d579c66cad46803e6052a4862"
+          "digest": "sha256:ab71e79082d1bc8b7e5e9975141cb94a8e0af0e38fe2c8d71c027e899cc3be1d"
         },
         {
           "path": "skills/sprint/references/tracker-connections.md",
-          "digest": "sha256:f9617486a5e2ecc861566d7a7eaf1c97725f9acfcc6bc64cfda1f9b6fd3c4d36"
+          "digest": "sha256:4e99cd89f7760f3f664e7182f610072a1120e1879ae79a8b08392ec650609c6b"
         },
         {
           "path": "skills/sprint/schemas/refinement.schema.json",
@@ -1095,11 +1015,11 @@
         },
         {
           "path": "skills/status/references/connectors.md",
-          "digest": "sha256:66b21a5127afc673f8e4acf6946c29f9f1e52d9d579c66cad46803e6052a4862"
+          "digest": "sha256:ab71e79082d1bc8b7e5e9975141cb94a8e0af0e38fe2c8d71c027e899cc3be1d"
         },
         {
           "path": "skills/status/references/tracker-connections.md",
-          "digest": "sha256:f9617486a5e2ecc861566d7a7eaf1c97725f9acfcc6bc64cfda1f9b6fd3c4d36"
+          "digest": "sha256:4e99cd89f7760f3f664e7182f610072a1120e1879ae79a8b08392ec650609c6b"
         }
       ]
     },
@@ -1112,27 +1032,19 @@
       "assets": [
         {
           "path": "skills/sync/SKILL.md",
-          "digest": "sha256:79cb62f3f8b0c36ef55c9424ca694a37448f90170183d13d0654d500613da414"
+          "digest": "sha256:15ae31f53fb518422f8d258a5090af4a420e0fa2b886ee37b73e4df6cc838d5e"
         },
         {
           "path": "skills/sync/openplanr.skill.json",
-          "digest": "sha256:c8061714181e6f4e330c65ba033a3586bf4118352e778865e3e3e0e802ad2cf6"
+          "digest": "sha256:9becb7838e59bcd705a35e6227b89ef05bda75bb34167a299d75d3cc64d04369"
         },
         {
           "path": "skills/sync/references/connectors.md",
-          "digest": "sha256:66b21a5127afc673f8e4acf6946c29f9f1e52d9d579c66cad46803e6052a4862"
+          "digest": "sha256:ab71e79082d1bc8b7e5e9975141cb94a8e0af0e38fe2c8d71c027e899cc3be1d"
         },
         {
           "path": "skills/sync/references/tracker-connections.md",
-          "digest": "sha256:f9617486a5e2ecc861566d7a7eaf1c97725f9acfcc6bc64cfda1f9b6fd3c4d36"
-        },
-        {
-          "path": "skills/sync/scripts/sync.mjs",
-          "digest": "sha256:7ef90127444f270dc30d119c88a41c898fe7e0b82b1d72d95b1bffc9393a1492"
-        },
-        {
-          "path": "skills/sync/scripts/names.mjs",
-          "digest": "sha256:85d080c6a4a0ed31cb60daaf0dc8739a0d9ddbd060e63126d81a3b2b84294bd9"
+          "digest": "sha256:4e99cd89f7760f3f664e7182f610072a1120e1879ae79a8b08392ec650609c6b"
         },
         {
           "path": "skills/sync/agents/openai.yaml",

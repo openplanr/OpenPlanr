@@ -50,14 +50,14 @@ selector, searched location, and matching candidates instead of guessing.
 
 Return one concise implementation result:
 
-- **Outcome:** a `status` of completed, partial, or blocked, plus a concise
-  `summary`.
+- **Outcome:** a `status` of completed, partial, blocked, or
+  awaiting-acceptance, plus a concise `summary`.
 - **Task:** `planr-task` with its ID and path, or `direct-request` when no task
   artifact was used.
 - **Changed:** each path and its purpose, including directly required companion
   files not named by the task.
-- **Checks:** each command, its passed, failed, or not-run status, and a concise
-  detail.
+- **Checks:** each command, its passed, failed, or not-run status, a concise
+  detail, and the acceptance IDs it covers.
 - **Issues:** always include this field. For each issue, give the problem, impact,
   and next action; write `none` when the issues array is empty.
 

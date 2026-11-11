@@ -34,15 +34,27 @@
   "series": [
     {
       "id": "series-main",
-      "label": "Primary series",
+      "label": "Orders shipped",
       "values": [
         {
-          "key": "A",
-          "value": 3
+          "key": "Jan",
+          "value": 24
         },
         {
-          "key": "B",
-          "value": 5
+          "key": "Feb",
+          "value": 31
+        },
+        {
+          "key": "Mar",
+          "value": 28
+        },
+        {
+          "key": "Apr",
+          "value": 42
+        },
+        {
+          "key": "May",
+          "value": 49
         }
       ]
     }
@@ -50,12 +62,12 @@
   "axes": [
     {
       "id": "axis-horizontal",
-      "label": "Horizontal meaning",
-      "scale": "linear"
+      "label": "Month",
+      "scale": "categorical"
     },
     {
       "id": "axis-vertical",
-      "label": "Vertical meaning",
+      "label": "Orders shipped",
       "scale": "linear"
     }
   ],
@@ -69,5 +81,5 @@
       "series-main"
     ]
   },
-  "documentDigest": "sha256:7fe8d1ec1d048507a6c94cd2cdc180afb81560c3304b77cbd4522b36050f6054"
+  "documentDigest": "sha256:7d9abe72766b46ba144c029fbdf722bdcc1216810ba29968c3f2aab48bacf2e8"
 }

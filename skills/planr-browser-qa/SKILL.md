@@ -11,8 +11,8 @@ repository context.
 ## Establish the target
 
 Infer the routes, user journeys, runtime command, and relevant viewports from the request and
-repository. Ask one concise question only when the target or required credentials cannot be
-inferred. Never persist credentials, cookies, or session secrets.
+repository. Ask one concise question only when the target is unclear or the route needs a sign-in; use
+an existing authenticated session or ask the user to sign in. Never persist credentials, cookies, or session secrets.
 
 ## Run focused browser checks
 

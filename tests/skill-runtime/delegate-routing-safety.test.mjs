@@ -4,9 +4,9 @@ import { createServer } from 'node:http';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
-import { resolveClaudeRouting } from '../../skills/planr-delegate/scripts/adapters/claude.mjs';
-import { inspectLocalBackend } from '../../skills/planr-delegate/scripts/backend-diagnostics.mjs';
-import { enrollProfile, prepareProfile } from '../../skills/planr-delegate/scripts/profiles.mjs';
+import { resolveClaudeRouting } from '../../packages/pipeline/lib/delegate/adapters/claude.mjs';
+import { inspectLocalBackend } from '../../packages/pipeline/lib/delegate/backend-diagnostics.mjs';
+import { enrollProfile, prepareProfile } from '../../packages/pipeline/lib/delegate/profiles.mjs';
 
 const local = { class: 'local', origin: 'http://localhost:1234' };
 const external = { class: 'external', origin: 'https://api.example.test' };
@@ -26,6 +26,8 @@ async function fixture(t) {
       "if (process.argv.includes('--help')) {",
       "console.log('--print --output-format stream-json --resume --session-id --add-dir');",
       'setTimeout(() => process.exit(0), 100);',
+      "} else if (process.argv.slice(2, 4).join(' ') === 'auth status') {",
+      "console.log(JSON.stringify({ loggedIn: false, authMethod: 'none', apiProvider: 'firstParty' }));",
       "} else { require('node:fs').writeFileSync('unexpected-execution.txt', 'started'); }",
     ].join('\n'),
     { mode: 0o700 },

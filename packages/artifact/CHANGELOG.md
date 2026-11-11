@@ -1,5 +1,42 @@
 # @openplanr/artifact
 
+## 0.8.3
+
+### Patch Changes
+
+- Updated dependencies [b9bd7ff]
+  - @openplanr/protocol@0.18.0
+
+## 0.8.2
+
+### Patch Changes
+
+- Updated dependencies [83529dd]
+  - @openplanr/protocol@0.17.0
+
+## 0.8.1
+
+### Patch Changes
+
+- Updated dependencies [8a7403c]
+- Updated dependencies [c1da084]
+  - @openplanr/protocol@0.16.0
+
+## 0.8.0
+
+### Minor Changes
+
+- 818ff59: Adds typed enum and boolean screen props and variant instance values to design documents (schema 1.1.0).
+
+### Patch Changes
+
+- ae8c1fe: Includes the updated canvas gesture handling.
+- Updated dependencies [5150182]
+- Updated dependencies [1354de0]
+- Updated dependencies [818ff59]
+  - @openplanr/canvas@0.0.1
+  - @openplanr/protocol@0.15.0
+
 ## 0.7.0
 
 ### Minor Changes

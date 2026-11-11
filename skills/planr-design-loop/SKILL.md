@@ -9,6 +9,16 @@ license: MIT
 Help the user choose and refine a direction through a real comparison board.
 Generate three alternatives by default; honor an explicit requested count.
 
+Before consultation, run `openplanr design capabilities --json` and read the probe
+and host tables in [utilities.md](references/utilities.md). Treat a successful
+`openplanr design capabilities --json` as proof the runtime is ready. Never locate
+or import the OpenPlanr workflow package, inspect `node_modules`, or call internal
+runtime modules. The comparison board has no hosted canvas, so the host's artifact
+tool does not replace it. At a stop, still consult and author the shared document,
+every direction's sources and the specification, mark them **unverified** and
+awaiting a board, and end with the stop's next action. On Claude Code, also offer
+`/planr:design` to develop one direction on the hosted canvas.
+
 1. Read [discovery.md](references/discovery.md) and
    [design-system.md](references/design-system.md). Inspect the brief, existing
    product, assets, reference screens, design document and previous preferences.
@@ -25,11 +35,9 @@ Generate three alternatives by default; honor an explicit requested count.
    sibling `review-context.json` before rendering. Ground its welcome purpose and
    up to three consequential review questions in the supplied brief and the
    directions' actual tradeoffs, without implying a winner or inventing requirements.
-3. Build the comparison from those sources using
-   [utilities.md](references/utilities.md) and
-   [scripts/design.mjs](scripts/design.mjs), or the public `openplanr artifact` route
-   when the CLI is present. All variants use the same screen identities and frame
-   coverage. Show failures explicitly without inventing results or discarding
+3. Build the comparison from those sources with the `openplanr design` commands
+   in [utilities.md](references/utilities.md). All variants use the same screen
+   identities and frame coverage. Show failures explicitly without inventing results or discarding
    completed variants. Canvas, Prototype and Walkthrough share one document and
    can be switched without regenerating content.
 4. Inspect rendered screenshots and exercise each available direction's primary
@@ -50,8 +58,8 @@ Generate three alternatives by default; honor an explicit requested count.
    Selection does not start Plan or Ship or authorize creating
    or sending a review link or deployment.
 
-The bundled utilities perform deterministic work only. No provider credentials,
-semantic command subprocess, runtime downloads or global CLI are required.
+The `openplanr design` commands perform deterministic work only. They need no
+provider credentials, semantic command subprocess or runtime downloads.
 
 For company reviews and implementation handoff, follow
 [team-review.md](references/team-review.md). Keep review guidance outside product

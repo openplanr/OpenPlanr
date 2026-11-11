@@ -1,0 +1,13 @@
+{
+  "id": "BL-001",
+  "title": "Existing tracked item",
+  "priority": "medium",
+  "tags": [
+    "maintenance"
+  ],
+  "status": "closed",
+  "created": "2026-11-08",
+  "updated": "2026-11-08",
+  "linearStatusReconciled": "",
+  "owner": "maintainer"
+}

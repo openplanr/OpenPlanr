@@ -7,8 +7,8 @@ license: MIT
 # OpenPlanr Sync
 
 Reconcile local planning artifacts and, when requested, ~~project tracker state.
-Reason about conflicts in this active session. Local and tracker work never require
-the OpenPlanr CLI.
+Reason about conflicts in this active session. Local work and tracker work through
+the host's connection never require the OpenPlanr CLI.
 
 Remote steps run through the host's own ~~project tracker connection. The
 [tracker sync reference](references/tracker-connections.md) holds which connection to
@@ -16,9 +16,8 @@ use per tracker, the status mapping, link shapes and what to tell the user when 
 connection is missing; [connectors](references/connectors.md) lists the trackers
 OpenPlanr syncs with and how to connect each in the current host.
 
-When the GitHub CLI is signed in, the packaged [sync helper](scripts/sync.mjs) creates
-and edits issues through `gh`; close or reopen an issue with `gh issue close` or
-`gh issue reopen`. Other trackers go through the host's connection only.
+Every tracker syncs only through the host's connection; when the host has none,
+do not run the remote step and say so.
 `openplanr sync` only repairs local cross-references.
 
 Audit is read-only by default. Apply local changes only when the request asks for

@@ -1,5 +1,39 @@
 # @openplanr/skill-runtime
 
+## 0.3.3
+
+### Patch Changes
+
+- Updated dependencies [b9bd7ff]
+  - @openplanr/protocol@0.18.0
+
+## 0.3.2
+
+### Patch Changes
+
+- Updated dependencies [83529dd]
+  - @openplanr/protocol@0.17.0
+
+## 0.3.1
+
+### Patch Changes
+
+- Updated dependencies [8a7403c]
+- Updated dependencies [c1da084]
+  - @openplanr/protocol@0.16.0
+
+## 0.3.0
+
+### Minor Changes
+
+- 1354de0: Updates Plan and Ship delegation guidance: delegate only bounded work, route persistence to backend, and use separate QA for material-risk changes.
+
+### Patch Changes
+
+- Updated dependencies [1354de0]
+- Updated dependencies [818ff59]
+  - @openplanr/protocol@0.15.0
+
 ## 0.2.20
 
 ### Patch Changes

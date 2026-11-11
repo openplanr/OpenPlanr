@@ -25,7 +25,7 @@ import {
   profileIdentity,
   profileReadiness,
   removeProfile,
-} from '../../skills/planr-delegate/scripts/profiles.mjs';
+} from '../../packages/pipeline/lib/delegate/profiles.mjs';
 
 const local = { class: 'local', origin: 'http://127.0.0.1:11434' };
 const external = { class: 'external', origin: 'https://example.invalid' };

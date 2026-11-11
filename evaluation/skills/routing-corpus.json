@@ -31,7 +31,10 @@
       "id": "ceo-finance",
       "kind": "positive",
       "input": "Run a CEO review of strategy, runway, and margin",
-      "expectedSkillId": "planr-ceo-review"
+      "expectedSkillId": "planr-ceo-review",
+      "claudePluginEval": {
+        "rivalSkillId": "planr-operate"
+      }
     },
     {
       "id": "ceo-investment",
@@ -139,7 +142,11 @@
       "id": "design-loop-variants",
       "kind": "collision",
       "input": "Explore multiple competing design variants",
-      "expectedSkillId": "planr-design-loop"
+      "expectedSkillId": "planr-design-loop",
+      "claudePluginEval": {
+        "rivalSkillId": "planr-design",
+        "scaffold": "design-brief.sh"
+      }
     },
     {
       "id": "design-loop-feedback",
@@ -151,13 +158,23 @@
       "id": "design-review-critique",
       "kind": "collision",
       "input": "Critique the existing completed OpenPlanr design",
-      "expectedSkillId": "planr-design-review"
+      "expectedSkillId": "planr-design-review",
+      "claudePluginEval": {
+        "rivalSkillId": "planr-design",
+        "scaffold": "completed-design.sh"
+      }
     },
     {
       "id": "design-review-pinned",
       "kind": "positive",
       "input": "Apply pinned feedback only to affected design regions",
       "expectedSkillId": "planr-design-review"
+    },
+    {
+      "id": "design-review-pin-fix-not-ship",
+      "kind": "near-miss",
+      "input": "Fix the spacing issue pinned on the settings board",
+      "forbiddenSkillId": "planr-ship"
     },
     {
       "id": "diagram-create",
@@ -226,6 +243,12 @@
       "expectedSkillId": "planr-release"
     },
     {
+      "id": "release-changelog-not-ship",
+      "kind": "near-miss",
+      "input": "Update the CHANGELOG for what shipped",
+      "forbiddenSkillId": "planr-ship"
+    },
+    {
       "id": "operate-board",
       "kind": "positive",
       "input": "Run an executive operating review across product, technology, growth, operations, and strategy",
@@ -253,7 +276,10 @@
       "id": "plan-review-cross",
       "kind": "collision",
       "input": "Review the implementation plan for product, engineering, design, and developer-experience problems",
-      "expectedSkillId": "planr-plan-review"
+      "expectedSkillId": "planr-plan-review",
+      "claudePluginEval": {
+        "rivalSkillId": "planr-plan"
+      }
     },
     {
       "id": "plan-review-challenge",
@@ -283,13 +309,49 @@
       "id": "investigate-before-ship",
       "kind": "collision",
       "input": "Investigate why checkout fails; do not implement a fix yet",
-      "expectedSkillId": "planr-investigate"
+      "expectedSkillId": "planr-investigate",
+      "claudePluginEval": {
+        "rivalSkillId": "planr-ship",
+        "scaffold": "checkout-failing-test.sh"
+      }
     },
     {
       "id": "plan-and-implement",
       "kind": "collision",
       "input": "Plan and implement this accepted local repository change end to end",
+      "expectedSkillId": "planr-ship",
+      "claudePluginEval": {
+        "rivalSkillId": "planr-plan",
+        "scaffold": "accepted-change.sh",
+        "allowedTools": [
+          "Write",
+          "Edit"
+        ]
+      }
+    },
+    {
+      "id": "investigate-failing-test-before-fix",
+      "kind": "collision",
+      "input": "Find out why the checkout test fails before fixing anything",
+      "expectedSkillId": "planr-investigate"
+    },
+    {
+      "id": "investigate-debug-root-cause",
+      "kind": "paraphrase",
+      "input": "Debug the failing test and find its root cause",
+      "expectedSkillId": "planr-investigate"
+    },
+    {
+      "id": "ship-plan-implement-accepted",
+      "kind": "paraphrase",
+      "input": "Plan and implement the accepted change to the export flow",
       "expectedSkillId": "planr-ship"
+    },
+    {
+      "id": "ship-accepted-not-plan",
+      "kind": "near-miss",
+      "input": "Plan and implement the accepted change to the export flow",
+      "forbiddenSkillId": "planr-plan"
     },
     {
       "id": "ship-missing-selector",
@@ -313,13 +375,21 @@
       "id": "ship-versus-land",
       "kind": "collision",
       "input": "Prepare the already implemented work for release without changing code",
-      "expectedSkillId": "planr-land"
+      "expectedSkillId": "planr-land",
+      "claudePluginEval": {
+        "rivalSkillId": "planr-ship",
+        "scaffold": "implemented-change.sh"
+      }
     },
     {
       "id": "spec-vague",
       "kind": "collision",
       "input": "Turn this vague product intent into a precise specification",
-      "expectedSkillId": "planr-spec"
+      "expectedSkillId": "planr-spec",
+      "claudePluginEval": {
+        "rivalSkillId": "planr-plan",
+        "scaffold": "product-intent.sh"
+      }
     },
     {
       "id": "spec-criteria",
@@ -337,7 +407,10 @@
       "id": "status-feature",
       "kind": "collision",
       "input": "Show text progress for this feature, not the visual dashboard",
-      "expectedSkillId": "planr-status"
+      "expectedSkillId": "planr-status",
+      "claudePluginEval": {
+        "rivalSkillId": "planr-dashboard"
+      }
     },
     {
       "id": "sync-graph",
@@ -370,7 +443,8 @@
       "kind": "negative",
       "input": "Translate this paragraph into French",
       "expectedStatus": "deferred",
-      "expectedReason": "no-confident-match"
+      "expectedReason": "no-confident-match",
+      "claudePluginEval": {}
     },
     {
       "id": "negative-weather",
@@ -489,6 +563,12 @@
       "id": "delegate-codex-fix-review",
       "kind": "paraphrase",
       "input": "Please use Codex to implement the fix, then review the resulting patch",
+      "expectedSkillId": "planr-delegate"
+    },
+    {
+      "id": "delegate-codex-fix-failing-test",
+      "kind": "collision",
+      "input": "Have Codex fix the failing checkout test",
       "expectedSkillId": "planr-delegate"
     },
     {

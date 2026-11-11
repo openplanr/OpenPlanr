@@ -68,6 +68,7 @@ const VALIDATION_KEYWORDS = [
   'maxContains',
   'required',
   'properties',
+  'propertyNames',
   'additionalProperties',
   'maxProperties',
   'dependentRequired',
@@ -156,6 +157,7 @@ const KEYWORD_SHAPES = {
   maxContains: ['a non-negative integer', isCount],
   required: ['an array of unique strings', isUniqueStrings],
   properties: ['an object of schemas', isSchemaMap],
+  propertyNames: ['a schema', isSchema],
   additionalProperties: ['a schema', isSchema],
   maxProperties: ['a non-negative integer', isCount],
   dependentRequired: [
@@ -463,6 +465,8 @@ const validateNode = (value, schema, path, errs, context) => {
     }
     const props = schema.properties || {};
     for (const [k, v] of Object.entries(value)) {
+      if (schema.propertyNames !== undefined)
+        validateNode(k, schema.propertyNames, `${path}.${k}`, errs, context);
       if (Object.hasOwn(props, k)) evaluated.add(k);
       else if (schema.additionalProperties !== undefined) evaluated.add(k);
       if (!Object.hasOwn(props, k)) {

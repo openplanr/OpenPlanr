@@ -13,7 +13,7 @@
     {
       "source": "packages/artifact/fixtures/diagram/grammars/bar.planr-diagram.json",
       "target": "fixtures/diagram/grammars/bar.planr-diagram.json",
-      "sha256": "18c0be3867520115cf7baaf310a5a4a3d73801792cc886a9db1117072419eb5e",
+      "sha256": "7684b861414a11b09c2204f987de1bd9530c3abdfee7d13cf1d2de96be9b0f61",
       "mode": "644"
     },
     {
@@ -103,7 +103,7 @@
     {
       "source": "packages/artifact/fixtures/diagram/grammars/line.planr-diagram.json",
       "target": "fixtures/diagram/grammars/line.planr-diagram.json",
-      "sha256": "dd79a916212d532bbc974567ce5ca37feb834d5884559e3c5ebe31a86e73b67d",
+      "sha256": "87408b06f677e992f3795e0db5f4de59e85ab246acbbb37a83feacdba0b14ef8",
       "mode": "644"
     },
     {
@@ -133,7 +133,7 @@
     {
       "source": "packages/artifact/fixtures/diagram/grammars/polar.planr-diagram.json",
       "target": "fixtures/diagram/grammars/polar.planr-diagram.json",
-      "sha256": "77f3eb5f1fcf43f342af02969a732987e08690cf05ff67546d6e1afb2a959757",
+      "sha256": "0eb9866307e0aead947d7a19f051d05846ad50bbbfe341b4c54043fc92e52e49",
       "mode": "644"
     },
     {
@@ -157,7 +157,7 @@
     {
       "source": "packages/artifact/fixtures/diagram/grammars/radar.planr-diagram.json",
       "target": "fixtures/diagram/grammars/radar.planr-diagram.json",
-      "sha256": "2f0c12dc514269edd02e74561432369cc966e33fa10f9817fed23bad064d9cb0",
+      "sha256": "3ec465cd0e044f6389134aea88930c45c8777819cdd5903590b9df9133a66314",
       "mode": "644"
     },
     {
@@ -169,7 +169,7 @@
     {
       "source": "packages/artifact/fixtures/diagram/grammars/scatter.planr-diagram.json",
       "target": "fixtures/diagram/grammars/scatter.planr-diagram.json",
-      "sha256": "d05238445b95b5c6f175ce2017fffdf8707ad97fcf45dfc1d3cb78d47f9d8f8c",
+      "sha256": "06e3131911f591eeea128467a8042898b1816e8e4ecf3add314b25902eacfec1",
       "mode": "644"
     },
     {
@@ -337,7 +337,7 @@
     {
       "source": "packages/artifact/gallery/diagram/inventory.json",
       "target": "gallery/diagram/inventory.json",
-      "sha256": "8b2f3f3dcc731e9edaafefba075ab3dafa24a9a551f3fd7b14fb8aeb216c85be",
+      "sha256": "0aeb9d692b0e0c035686c849be12a00ed6cc92ca41d9045762d6e0b1729d2a6a",
       "mode": "644"
     },
     {
@@ -727,7 +727,7 @@
     {
       "source": "packages/artifact/lib/artifact/diagram/index.d.mts",
       "target": "lib/artifact/diagram/index.d.mts",
-      "sha256": "a228a720bbbe9163fa24c94709926abc0c0bce4d681b5dcab283a6c3fb423601",
+      "sha256": "be74a7c52466e42effabd3630aeb35ea382c5ec34a4fdfd538367ea76e183125",
       "mode": "644"
     },
     {
@@ -757,7 +757,7 @@
     {
       "source": "packages/artifact/lib/artifact/diagram/projection/excalidraw.mjs",
       "target": "lib/artifact/diagram/projection/excalidraw.mjs",
-      "sha256": "f765408e20559d7d6633d003d9478eaca3915e7cc282a65c5169d1711081da88",
+      "sha256": "b7169d6bac727e3a22b321e05e01677f5e9eb38ffe572670bc42f8a7f790828b",
       "mode": "644"
     },
     {
@@ -805,7 +805,19 @@
     {
       "source": "packages/artifact/lib/artifact/diagram/rendering/layout.mjs",
       "target": "lib/artifact/diagram/rendering/layout.mjs",
-      "sha256": "fefc9918b43111756797c262a56b242fd50e4a1b848ea6bfa87f8c1e8521fb62",
+      "sha256": "fe2f8f3e1bc2631ec64f2debe6d1527a164b0c28890ec3f1b82f9f6f2f918026",
+      "mode": "644"
+    },
+    {
+      "source": "packages/artifact/lib/artifact/diagram/rendering/layouts/chart-cartesian.mjs",
+      "target": "lib/artifact/diagram/rendering/layouts/chart-cartesian.mjs",
+      "sha256": "020c65ab43be0bec1edb6ef367aec946e5568ad0f6c20a4deed7c33c2981219d",
+      "mode": "644"
+    },
+    {
+      "source": "packages/artifact/lib/artifact/diagram/rendering/layouts/chart-radial.mjs",
+      "target": "lib/artifact/diagram/rendering/layouts/chart-radial.mjs",
+      "sha256": "ea541db996a37f393be933803a4ade5ac38b25e3874fb3f1e3d592c9aa8569d0",
       "mode": "644"
     },
     {
@@ -817,13 +829,13 @@
     {
       "source": "packages/artifact/lib/artifact/diagram/rendering/reports.mjs",
       "target": "lib/artifact/diagram/rendering/reports.mjs",
-      "sha256": "35e6b59c35d3d29c9f646b7d0e8e3f848c1976ec5e5674baf14856fd8eed1c1f",
+      "sha256": "af7124e437907e9afbcd8eb6df255b09f0d7c3aa9e66cfcea93e350ac616bda7",
       "mode": "644"
     },
     {
       "source": "packages/artifact/lib/artifact/diagram/rendering/svg.mjs",
       "target": "lib/artifact/diagram/rendering/svg.mjs",
-      "sha256": "8d70286c1aff846167a0af4063bb6ea5f7a9fe5cec813f81487f423c25cb087c",
+      "sha256": "d1c695bb4b3eccd2cecf42d4c14f379143dcff6a0d4c3a99ab1ae469944de387",
       "mode": "644"
     },
     {
@@ -835,7 +847,7 @@
     {
       "source": "packages/artifact/lib/artifact/diagram/rendering/theme.mjs",
       "target": "lib/artifact/diagram/rendering/theme.mjs",
-      "sha256": "b0368790c0cfd44abca658ddfb81b06d694a6720f811dada10fd976621cd8ccd",
+      "sha256": "5e818248d18d49abddd2527e8c2b16b2bc2a65e340a8af9bfa122b458ca90546",
       "mode": "644"
     },
     {
@@ -937,7 +949,7 @@
     {
       "source": "packages/artifact/lib/artifact/envelope.mjs",
       "target": "lib/artifact/envelope.mjs",
-      "sha256": "4e615d8b233a13822ffb98c38693e19fa48611ac1e54a9246a3d655f918cafcd",
+      "sha256": "ca65e52d06559efd33f24bb75f5e46980dea9a13f3764c477df7265f2fc6eee1",
       "mode": "644"
     },
     {
@@ -1031,6 +1043,12 @@
       "mode": "644"
     },
     {
+      "source": "packages/artifact/lib/artifact/internal/review-state-store.mjs",
+      "target": "lib/artifact/internal/review-state-store.mjs",
+      "sha256": "b3a867781a7102bc44ae9dacda271c2610a48fc21086486f455199f8d2a3c0b6",
+      "mode": "644"
+    },
+    {
       "source": "packages/artifact/lib/artifact/internal/runtime-asset.d.mts",
       "target": "lib/artifact/internal/runtime-asset.d.mts",
       "sha256": "e13a6950ef0ef730d977f15084ee317d04b1694ceb5f7b95f0243b1676e0ecbc",
@@ -1081,7 +1099,7 @@
     {
       "source": "packages/artifact/lib/artifact/local-document.mjs",
       "target": "lib/artifact/local-document.mjs",
-      "sha256": "ac1addf34cb90ac0a28790812138aed7fd37e48ca0b652cf8359c83f1b561025",
+      "sha256": "3888be62a4fc0981ea05ce81c0e0358a2bb7541e13db0d55bc0727d7924bea45",
       "mode": "644"
     },
     {
@@ -1117,7 +1135,7 @@
     {
       "source": "packages/artifact/lib/artifact/review-server.mjs",
       "target": "lib/artifact/review-server.mjs",
-      "sha256": "79936d34b7a3529869a587c2b9524ac17c085e9699a1dab4460001d7b544ff30",
+      "sha256": "c3fd53287a5376e4622f4c7a38f85ad4cbc00e7188a7b942644caab19385d9c1",
       "mode": "644"
     },
     {
@@ -1519,7 +1537,7 @@
     {
       "source": "packages/artifact/lib/artifact/ui/generated/artifact-shell-assets.json",
       "target": "lib/artifact/ui/generated/artifact-shell-assets.json",
-      "sha256": "5420d985a7580cc6d837aac95c2f82947c36575e8a1323184531cc2e7111074e",
+      "sha256": "69eb2353c97d36572b1e0ec44fdcc3dc5c1f46d45317ad801c37788e9cd87b71",
       "mode": "644"
     },
     {
@@ -1807,7 +1825,7 @@
     {
       "source": "packages/artifact/references/diagram/bar.md",
       "target": "references/diagram/bar.md",
-      "sha256": "3eab1ab786e891361f36ad1b73f03931d30ede3187c9e762ba6c253400c03a46",
+      "sha256": "d6a000e16da311887af875e681e8fac39988351622babe0d916a1849ad6e4561",
       "mode": "644"
     },
     {
@@ -1897,7 +1915,7 @@
     {
       "source": "packages/artifact/references/diagram/line.md",
       "target": "references/diagram/line.md",
-      "sha256": "ff2e5d3273c4f0bc91bde2d1015b9502d26339d79e46b1e290e9e67ea3fa384a",
+      "sha256": "a6bc3331fd2de64b222d578d1ed71c44fafe952a1ab7161794e60a6af8299b67",
       "mode": "644"
     },
     {
@@ -1927,7 +1945,7 @@
     {
       "source": "packages/artifact/references/diagram/polar.md",
       "target": "references/diagram/polar.md",
-      "sha256": "419278767dd04635cf3b28347871b047086fea07ef86365ba3f27a352a1e831f",
+      "sha256": "1afca8de1dda5b193350f92fc231624a216f8a858afc90fdd7ba5e7334ebccf8",
       "mode": "644"
     },
     {
@@ -1951,7 +1969,7 @@
     {
       "source": "packages/artifact/references/diagram/radar.md",
       "target": "references/diagram/radar.md",
-      "sha256": "c8a5d51a0a4c40c7b37f864a99f346574bf23ef1ae2503aa3d165c20b8604b12",
+      "sha256": "97b5c45d4c9a6f0af66990c1a7df5e82465fea49c1e1a47c943db74e401c1bdb",
       "mode": "644"
     },
     {
@@ -1963,7 +1981,7 @@
     {
       "source": "packages/artifact/references/diagram/scatter.md",
       "target": "references/diagram/scatter.md",
-      "sha256": "16ffd416c56aaa0d1baa48d73716e60ef9582ce213e5dd40523992d74995ed64",
+      "sha256": "b987314f5d431c8fc357c0ba42e2d1666014fb344319e007ce83856ba013bb11",
       "mode": "644"
     },
     {
@@ -2041,7 +2059,7 @@
     {
       "source": "packages/artifact/scripts/generate-artifact-shell.mjs",
       "target": "scripts/generate-artifact-shell.mjs",
-      "sha256": "68c78916e54e44c79cba55743cfc0f33677ea940e99e6f2f2de7ae5f89ac16f6",
+      "sha256": "b5665fdc6fb834ffb797b68aeb66599117c8ea0ca976e0adb74d1c2877c38c18",
       "mode": "644"
     },
     {
@@ -2059,19 +2077,19 @@
     {
       "source": "packages/artifact/templates/artifact-review-stage.js",
       "target": "templates/artifact-review-stage.js",
-      "sha256": "ff2d2d2b31944b8f8131a5c39400db9810f046f26c19f62404e458ff76023011",
+      "sha256": "e86f099d81e184fffe134a8792fcaec2eb31d195cde62b3a535da8c1d62f3314",
       "mode": "644"
     },
     {
       "source": "packages/artifact/templates/design/design-board-adapter.js",
       "target": "templates/design/design-board-adapter.js",
-      "sha256": "8f3a3d1fece1fdb78a263e400ea0d9e015d74643bc05fd2908579bbf11e51d4f",
+      "sha256": "e5cea055ff2416d1a8bfb16186569026f5739d8e9cbda016dd3377a8176277d2",
       "mode": "644"
     },
     {
       "source": "packages/artifact/templates/diagram-owner.js",
       "target": "templates/diagram-owner.js",
-      "sha256": "6f867f715dab2d063247a70c8211599949ff516ac8c36f5e54ac3741fc2e7aaa",
+      "sha256": "60052c7eece2aa3ebf6aa3d0491ca94433d14380413b7c7c035a2226c5626a98",
       "mode": "644"
     },
     {

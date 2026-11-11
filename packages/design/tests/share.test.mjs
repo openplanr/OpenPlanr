@@ -35,6 +35,7 @@ import {
   prepareWorkspaceEvent,
 } from '../lib/design/workspace-client.mjs';
 import { designFixture } from './design-fixture.mjs';
+import { createFakeShareHost } from './fake-share-host.mjs';
 import { fetch, startDesignReview } from './studio-http-fixture.mjs';
 
 async function fixture(t) {
@@ -49,96 +50,15 @@ async function fixture(t) {
     env: { ...process.env, PLANR_HOME: join(outer, 'home') },
     baseUrl: 'https://share.test',
   };
-  const state = {
-    revisions: new Map(),
-    events: [],
-    requests: [],
-    failNext: false,
-    failAfter: false,
-  };
-  options.fetchImpl = async (url, init = {}) => {
-    if (new URL(url).pathname === '/.well-known/openplanr-sharing')
-      return new Response(null, { status: 404 });
-    const path = new URL(url).pathname.split('/').filter(Boolean),
-      route = path[4];
-    const body = init.body ? JSON.parse(init.body) : null;
-    state.requests.push({ url, init });
-    if (state.failNext) {
-      state.failNext = false;
-      throw new Error('disconnected');
-    }
-    if (init.method === 'PUT') {
+  const host = createFakeShareHost({
+    beforeCreate() {
       const files = readdirSync(options.custodyRoot).filter((name) => name.endsWith('.json'));
       assert.equal(files.length, 1, 'Owner custody must exist before creating the review');
       assert.equal(statSync(join(options.custodyRoot, files[0])).mode & 0o777, 0o600);
-      if (!state.workspace) {
-        state.workspace = {
-          schemaVersion: body.schemaVersion,
-          id: body.id,
-          version: 1,
-          epoch: 1,
-          currentRevision: body.revision.id,
-          commentsPaused: false,
-          ownerPublicKey: body.ownerPublicKey,
-          keyring: body.keyring,
-        };
-        state.revisions.set(body.revision.id, body.revision);
-      }
-      if (state.failAfter) {
-        state.failAfter = false;
-        throw new Error('response lost');
-      }
-      return Response.json(state.workspace);
-    }
-    if (route === 'publish' && init.method === 'POST') {
-      if (state.conflictNext) {
-        state.conflictNext = false;
-        state.workspace.version++;
-        return new Response('{}', { status: 409 });
-      }
-      state.workspace.version++;
-      state.workspace.currentRevision = body.revision.id;
-      state.revisions.set(body.revision.id, body.revision);
-      return Response.json(state.workspace);
-    }
-    if (route === 'rotate') {
-      Object.assign(state.workspace, {
-        epoch: body.epoch,
-        keyring: body.keyring,
-        version: state.workspace.version + 1,
-      });
-      return Response.json(state.workspace);
-    }
-    if (route === 'manage') {
-      if (body.action === 'pause' || body.action === 'resume')
-        state.workspace.commentsPaused = body.action === 'pause';
-      state.workspace.version++;
-      return Response.json(state.workspace);
-    }
-    if (route === 'revisions') return Response.json(state.revisions.get(path[5]));
-    if (route === 'events') {
-      if (init.method === 'POST') {
-        let event = state.events.find((event) => event.id === body.id);
-        if (!event) {
-          event = { ...body, sequence: state.events.length + 1 };
-          state.events.push(event);
-        }
-        if (state.badEventReceipt)
-          return Response.json({
-            event: { ...event, id: 'changed-receipt-abcdefghijkl' },
-            sequence: event.sequence,
-          });
-        return Response.json({ event, sequence: event.sequence });
-      }
-      const after = Number(new URL(url).searchParams.get('after'));
-      return Response.json({
-        events: state.events.filter((item) => item.sequence > after),
-        cursor: state.events.length,
-        hasMore: false,
-      });
-    }
-    return Response.json(state.workspace);
-  };
+    },
+  });
+  const state = host.state;
+  options.fetchImpl = host.fetchImpl;
   const record = () =>
     JSON.parse(
       readFileSync(
@@ -179,6 +99,21 @@ test('design publishing keeps credentials local and bundles only presentation ma
   await exportDesignShareRecovery(file, { ...options, output });
   assert.equal(statSync(output).mode & 0o777, 0o600);
   await assert.rejects(exportDesignShareRecovery(file, { ...options, output }), /exist/);
+});
+
+test('owner keys go only to the address stored with them, whatever the share base says later', async (t) => {
+  const { file, options, state } = await fixture(t);
+  await shareDesign(file, options);
+  const created = state.requests.length;
+  const elsewhere = 'https://elsewhere.test';
+  await publishDesignShare(file, {
+    ...options,
+    baseUrl: elsewhere,
+    env: { ...options.env, OPENPLANR_SHARE_BASE: elsewhere },
+  });
+  const later = state.requests.slice(created);
+  assert.ok(later.length > 0);
+  for (const { url } of later) assert.equal(new URL(url).origin, 'https://share.test');
 });
 
 test('lost creation response retries the same request and keeps original revision identity', async (t) => {

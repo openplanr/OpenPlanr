@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import {
+  chmodSync,
   existsSync,
   mkdirSync,
   mkdtempSync,
@@ -12,7 +13,10 @@ import {
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import test from 'node:test';
-import { syncGeneratedOutputs } from '../../scripts/skills/projection-custody.mjs';
+import {
+  pruneEmptyDirectories,
+  syncGeneratedOutputs,
+} from '../../scripts/skills/projection-custody.mjs';
 
 const digest = (bytes) => createHash('sha256').update(bytes).digest('hex');
 function fixture(t) {
@@ -143,4 +147,47 @@ test('unrelated checkout files and explicitly preserved inputs remain outside ow
     readFileSync(join(root, 'customer-project/source.mjs'), 'utf8'),
     'customer source\n',
   );
+});
+
+test('retired outputs leave no empty directories in a complete root', (t) => {
+  const { root, path, sync } = fixture(t);
+  const kept = path('skills/design/SKILL.md');
+  const old = path('skills/design/scripts/x.mjs');
+  sync({ [kept]: 'kept\n', [old]: 'old\n' });
+  sync({ [kept]: 'kept\n' });
+  assert.equal(existsSync(join(root, dirname(old))), false);
+  assert.equal(existsSync(join(root, kept)), true);
+});
+
+test('empty directories left by an earlier run are pruned and the root stays', (t) => {
+  const { root, prefix, path, sync } = fixture(t);
+  const kept = path('skills/design/SKILL.md');
+  mkdirSync(join(root, path('skills/design/scripts/nested')), { recursive: true });
+  sync({ [kept]: 'kept\n' });
+  assert.equal(existsSync(join(root, path('skills/design/scripts'))), false);
+  assert.equal(existsSync(join(root, prefix)), true);
+});
+
+test('partial roots and check mode keep empty directories', (t) => {
+  const { root, path, sync } = fixture(t);
+  const kept = path('skills/design/SKILL.md');
+  const empty = join(root, path('skills/design/scripts'));
+  mkdirSync(empty, { recursive: true });
+  sync({ [kept]: 'kept\n' }, { completeRoots: false });
+  assert.equal(existsSync(empty), true);
+  sync({ [kept]: 'kept\n' }, { mode: 'check' });
+  assert.equal(existsSync(empty), true);
+});
+
+test('pruning skips an absent owned root but surfaces walk errors', (t) => {
+  const { root, prefix } = fixture(t);
+  pruneEmptyDirectories(root, [prefix]);
+  const locked = join(root, prefix, 'locked');
+  mkdirSync(locked, { recursive: true });
+  chmodSync(locked, 0o000);
+  try {
+    assert.throws(() => pruneEmptyDirectories(root, [prefix]), { code: 'EACCES' });
+  } finally {
+    chmodSync(locked, 0o755);
+  }
 });

@@ -161,11 +161,11 @@
       "grammarId": "radar",
       "fixture": {
         "path": "fixtures/diagram/grammars/radar.planr-diagram.json",
-        "digest": "sha256:2f0c12dc514269edd02e74561432369cc966e33fa10f9817fed23bad064d9cb0"
+        "digest": "sha256:3ec465cd0e044f6389134aea88930c45c8777819cdd5903590b9df9133a66314"
       },
       "reference": {
         "path": "references/diagram/radar.md",
-        "digest": "sha256:c8a5d51a0a4c40c7b37f864a99f346574bf23ef1ae2503aa3d165c20b8604b12"
+        "digest": "sha256:97b5c45d4c9a6f0af66990c1a7df5e82465fea49c1e1a47c943db74e401c1bdb"
       },
       "rendererContract": {
         "layoutFamily": "chart",
@@ -178,11 +178,11 @@
       "grammarId": "polar",
       "fixture": {
         "path": "fixtures/diagram/grammars/polar.planr-diagram.json",
-        "digest": "sha256:77f3eb5f1fcf43f342af02969a732987e08690cf05ff67546d6e1afb2a959757"
+        "digest": "sha256:0eb9866307e0aead947d7a19f051d05846ad50bbbfe341b4c54043fc92e52e49"
       },
       "reference": {
         "path": "references/diagram/polar.md",
-        "digest": "sha256:419278767dd04635cf3b28347871b047086fea07ef86365ba3f27a352a1e831f"
+        "digest": "sha256:1afca8de1dda5b193350f92fc231624a216f8a858afc90fdd7ba5e7334ebccf8"
       },
       "rendererContract": {
         "layoutFamily": "chart",
@@ -314,11 +314,11 @@
       "grammarId": "bar",
       "fixture": {
         "path": "fixtures/diagram/grammars/bar.planr-diagram.json",
-        "digest": "sha256:18c0be3867520115cf7baaf310a5a4a3d73801792cc886a9db1117072419eb5e"
+        "digest": "sha256:7684b861414a11b09c2204f987de1bd9530c3abdfee7d13cf1d2de96be9b0f61"
       },
       "reference": {
         "path": "references/diagram/bar.md",
-        "digest": "sha256:3eab1ab786e891361f36ad1b73f03931d30ede3187c9e762ba6c253400c03a46"
+        "digest": "sha256:d6a000e16da311887af875e681e8fac39988351622babe0d916a1849ad6e4561"
       },
       "rendererContract": {
         "layoutFamily": "chart",
@@ -348,11 +348,11 @@
       "grammarId": "line",
       "fixture": {
         "path": "fixtures/diagram/grammars/line.planr-diagram.json",
-        "digest": "sha256:dd79a916212d532bbc974567ce5ca37feb834d5884559e3c5ebe31a86e73b67d"
+        "digest": "sha256:87408b06f677e992f3795e0db5f4de59e85ab246acbbb37a83feacdba0b14ef8"
       },
       "reference": {
         "path": "references/diagram/line.md",
-        "digest": "sha256:ff2e5d3273c4f0bc91bde2d1015b9502d26339d79e46b1e290e9e67ea3fa384a"
+        "digest": "sha256:a6bc3331fd2de64b222d578d1ed71c44fafe952a1ab7161794e60a6af8299b67"
       },
       "rendererContract": {
         "layoutFamily": "chart",
@@ -382,11 +382,11 @@
       "grammarId": "scatter",
       "fixture": {
         "path": "fixtures/diagram/grammars/scatter.planr-diagram.json",
-        "digest": "sha256:d05238445b95b5c6f175ce2017fffdf8707ad97fcf45dfc1d3cb78d47f9d8f8c"
+        "digest": "sha256:06e3131911f591eeea128467a8042898b1816e8e4ecf3add314b25902eacfec1"
       },
       "reference": {
         "path": "references/diagram/scatter.md",
-        "digest": "sha256:16ffd416c56aaa0d1baa48d73716e60ef9582ce213e5dd40523992d74995ed64"
+        "digest": "sha256:b987314f5d431c8fc357c0ba42e2d1666014fb344319e007ce83856ba013bb11"
       },
       "rendererContract": {
         "layoutFamily": "chart",

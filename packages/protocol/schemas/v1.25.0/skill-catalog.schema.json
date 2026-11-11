@@ -1,0 +1,352 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://openplanr.dev/schemas/v1.25.0/skill-catalog.schema.json",
+  "x-openplanr-contract": {
+    "id": "skill-catalog",
+    "version": "1.25.0"
+  },
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "kind",
+    "schemaVersion",
+    "protocolVersion",
+    "documentVersion",
+    "digestAlgorithm",
+    "canonicalization",
+    "matchingPolicyVersion",
+    "skills",
+    "compatibilityAliases"
+  ],
+  "properties": {
+    "kind": {
+      "const": "skill-catalog"
+    },
+    "schemaVersion": {
+      "const": "1.0.0"
+    },
+    "protocolVersion": {
+      "const": "1.25.0"
+    },
+    "documentVersion": {
+      "$ref": "#/$defs/semver"
+    },
+    "digestAlgorithm": {
+      "const": "sha256"
+    },
+    "canonicalization": {
+      "const": "rfc8785"
+    },
+    "matchingPolicyVersion": {
+      "$ref": "#/$defs/semver"
+    },
+    "skills": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "skillId",
+          "skillVersion",
+          "description",
+          "lifecycle",
+          "authorityClass",
+          "source",
+          "sourceDigest",
+          "triggerPolicy",
+          "contracts",
+          "cliRequirements",
+          "ruleIds",
+          "contributionManifestRefs",
+          "hosts",
+          "testRefs",
+          "certificationRefs"
+        ],
+        "properties": {
+          "skillId": {
+            "$ref": "#/$defs/skillId"
+          },
+          "skillVersion": {
+            "$ref": "#/$defs/semver"
+          },
+          "description": {
+            "$ref": "#/$defs/nonBlankText"
+          },
+          "lifecycle": {
+            "enum": [
+              "active",
+              "deprecated",
+              "retired"
+            ]
+          },
+          "authorityClass": {
+            "$ref": "#/$defs/identifier"
+          },
+          "source": {
+            "$ref": "#/$defs/relativePath"
+          },
+          "sourceDigest": {
+            "$ref": "#/$defs/digest"
+          },
+          "triggerPolicy": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "include",
+              "exclude",
+              "deferTo"
+            ],
+            "properties": {
+              "include": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/$defs/nonBlankText"
+                },
+                "minItems": 1,
+                "maxItems": 64,
+                "uniqueItems": true
+              },
+              "exclude": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/$defs/nonBlankText"
+                },
+                "minItems": 1,
+                "maxItems": 64,
+                "uniqueItems": true
+              },
+              "deferTo": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/$defs/skillId"
+                },
+                "minItems": 0,
+                "maxItems": 32,
+                "uniqueItems": true
+              }
+            }
+          },
+          "contracts": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "inputs",
+              "outputs"
+            ],
+            "properties": {
+              "inputs": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/$defs/contractRef"
+                },
+                "minItems": 0,
+                "maxItems": 32
+              },
+              "outputs": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/$defs/contractRef"
+                },
+                "minItems": 1,
+                "maxItems": 32
+              }
+            }
+          },
+          "cliRequirements": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "commandId",
+                "argv",
+                "requiredOptions"
+              ],
+              "properties": {
+                "commandId": {
+                  "$ref": "#/$defs/identifier"
+                },
+                "argv": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "minItems": 1,
+                  "maxItems": 16
+                },
+                "requiredOptions": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "pattern": "^--[a-z0-9-]+$"
+                  },
+                  "minItems": 0,
+                  "maxItems": 32,
+                  "uniqueItems": true
+                }
+              }
+            },
+            "minItems": 0,
+            "maxItems": 64
+          },
+          "ruleIds": {
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/ruleId"
+            },
+            "minItems": 1,
+            "maxItems": 10,
+            "uniqueItems": true
+          },
+          "contributionManifestRefs": {
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/relativePath"
+            },
+            "minItems": 1,
+            "maxItems": 64,
+            "uniqueItems": true
+          },
+          "hosts": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "host",
+                "entrypoint",
+                "path"
+              ],
+              "properties": {
+                "host": {
+                  "enum": [
+                    "claude-code",
+                    "codex",
+                    "cursor"
+                  ]
+                },
+                "entrypoint": {
+                  "$ref": "#/$defs/nonBlankText"
+                },
+                "path": {
+                  "$ref": "#/$defs/relativePath"
+                }
+              }
+            },
+            "minItems": 1,
+            "maxItems": 8
+          },
+          "testRefs": {
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/relativePath"
+            },
+            "minItems": 1,
+            "maxItems": 64,
+            "uniqueItems": true
+          },
+          "certificationRefs": {
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/relativePath"
+            },
+            "minItems": 1,
+            "maxItems": 64,
+            "uniqueItems": true
+          }
+        }
+      },
+      "minItems": 1,
+      "maxItems": 256
+    },
+    "compatibilityAliases": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "aliasId",
+          "canonicalSkillId",
+          "lifecycle",
+          "generatedPaths"
+        ],
+        "properties": {
+          "aliasId": {
+            "$ref": "#/$defs/identifier"
+          },
+          "canonicalSkillId": {
+            "$ref": "#/$defs/skillId"
+          },
+          "lifecycle": {
+            "const": "deprecated"
+          },
+          "generatedPaths": {
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/relativePath"
+            },
+            "minItems": 1,
+            "maxItems": 16,
+            "uniqueItems": true
+          }
+        }
+      },
+      "minItems": 0,
+      "maxItems": 64
+    }
+  },
+  "$defs": {
+    "contractRef": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "version"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/identifier"
+        },
+        "version": {
+          "$ref": "#/$defs/semver"
+        }
+      }
+    },
+    "digest": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "identifier": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$",
+      "minLength": 1,
+      "maxLength": 128
+    },
+    "nonBlankText": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 16384,
+      "pattern": ".*\\S.*"
+    },
+    "relativePath": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 1024,
+      "pattern": "^(?!/)(?![A-Za-z]:)(?!.*\\\\)(?!.*(?:^|/)\\.{1,2}(?:/|$))(?!.*//).+$"
+    },
+    "ruleId": {
+      "type": "string",
+      "pattern": "^R(?:[1-9]|[1-9][0-9]+)$"
+    },
+    "semver": {
+      "type": "string",
+      "pattern": "^(?:0|[1-9][0-9]*)\\.(?:0|[1-9][0-9]*)\\.(?:0|[1-9][0-9]*)(?:-[0-9A-Za-z.-]+)?(?:\\+[0-9A-Za-z.-]+)?$"
+    },
+    "skillId": {
+      "type": "string",
+      "pattern": "^planr-[a-z0-9]+(?:-[a-z0-9]+)*$",
+      "maxLength": 128
+    }
+  }
+}

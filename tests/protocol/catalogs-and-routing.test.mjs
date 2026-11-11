@@ -76,6 +76,27 @@ test('alias collision fails with a stable typed diagnostic', () => {
   );
 });
 
+test('command and skill catalogs load as undigested 1.25 or digest-bound 1.5 documents', () => {
+  const documentInvalid = (error) =>
+    error instanceof ProtocolError && error.code === 'E_PROTOCOL_DOCUMENT_INVALID';
+  assert.equal(validateCanonicalRegistries(), true);
+  for (const file of ['commands.json', 'skills.json']) {
+    assert.equal(Object.hasOwn(CANONICAL_REGISTRIES[file], 'documentDigest'), false, file);
+
+    const withDigest = clone();
+    withDigest[file] = withDocumentDigest(withDigest[file]);
+    assert.throws(() => validateCanonicalRegistries(withDigest), documentInvalid, file);
+
+    const legacy = clone();
+    legacy[file] = withDocumentDigest({ ...legacy[file], protocolVersion: '1.5.0' });
+    assert.equal(validateCanonicalRegistries(legacy), true, file);
+
+    const legacyWithoutDigest = clone();
+    legacyWithoutDigest[file] = { ...legacyWithoutDigest[file], protocolVersion: '1.5.0' };
+    assert.throws(() => validateCanonicalRegistries(legacyWithoutDigest), documentInvalid, file);
+  }
+});
+
 test('roles advertise only packaged Claude agents and real coverage', () => {
   const registry = CANONICAL_REGISTRIES['roles.json'];
   assert.equal(registry.documentVersion, '1.1.0');

@@ -9,7 +9,7 @@ test('Plan defines Protocol 1.7 decomposition and an exact non-chaining Ship han
   const contract = read('skills/planr-plan/references/artifact-contract.md');
   assert.match(plan, /project-global monotonic `US-NNN` and `T-NNN`/u);
   assert.match(plan, /Write stories and tasks directly/iu);
-  assert.match(plan, /planning ID helper.*inspect or reserve IDs/isu);
+  assert.match(plan, /\[the planning ID procedure\]\(references\/planning-ids\.md\)/u);
   assert.match(plan, /reviewRisks.*browserSurfaces/isu);
   assert.match(plan, /map every acceptance ID.*acceptanceRefs/isu);
   assert.match(plan, /\/planr:ship T-NNN[\s\S]*\$planr:ship T-NNN[\s\S]*`planr-ship` rule/u);
@@ -25,9 +25,10 @@ test('Ship guides local completion without process machinery', () => {
   );
   assert.match(
     ship,
-    /task Test Requirements.*repository instructions.*package and task-runner.*CI and pre-commit/isu,
+    /task Test Requirements.*repository instructions.*package and task-runner.*CI configuration.*pre-commit hook.*pre-push hook/isu,
   );
-  assert.match(ship, /discover-verification\.mjs/u);
+  assert.match(ship, /Inspect these sources directly/u);
+  assert.doesNotMatch(ship, /discover-verification\.mjs/u);
   assert.match(ship, /never executes checks or writes files/u);
   assert.match(ship, /reviewRisks.*check/isu);
   assert.match(ship, /browserSurfaces.*useful checks/isu);
@@ -66,4 +67,52 @@ test('Ship package is host-native, locally scoped, and excludes remote effects',
   assert.equal(registration.authorityClass, 'implementation');
   assert.match(ship, /read, edit, shell, browser, and test capabilities/iu);
   assert.match(ship, /Keep the work local; do not publish or deploy/iu);
+});
+
+test('Ship discovery lists gated CI jobs as conditional and always names the git hooks', () => {
+  const ship = read('skills/planr-ship/SKILL.md').replace(/\s+/gu, ' ');
+  assert.match(
+    ship,
+    /`changes` or paths-filter job whose outputs gate other jobs\), list every job it gates and mark each conditional\. Run a conditional job/u,
+  );
+  assert.match(
+    ship,
+    /the pre-commit hook \(for example lint-staged\) and the pre-push hook, when present, whatever the change touches/u,
+  );
+  assert.match(
+    ship,
+    /Run a conditional job when a local equivalent command exists; otherwise report it as "conditional, not run"\. Never drop one silently/u,
+  );
+});
+
+test('Ship discovery reads every workflow file, including dedicated browser ones', () => {
+  const ship = read('skills/planr-ship/SKILL.md').replace(/\s+/gu, ' ');
+  assert.match(
+    ship,
+    /Read every workflow file whose triggers fire for the change, not only the main one: dedicated browser, end-to-end and sandbox workflows are sources too/u,
+  );
+});
+
+test('Ship discovery lists a delegating git hook and the checks its script runs', () => {
+  const ship = read('skills/planr-ship/SKILL.md').replace(/\s+/gu, ' ');
+  assert.match(
+    ship,
+    /List a git hook as its own command and, when it delegates to a script, also each check that script runs/u,
+  );
+});
+
+test('Ship discovery lists checks whatever the change kind and only runs the relevant ones', () => {
+  const ship = read('skills/planr-ship/SKILL.md').replace(/\s+/gu, ' ');
+  assert.match(
+    ship,
+    /Discovery lists what the sources define whatever the size or kind of the change, a documentation-only change included; the change picks only which listed checks you run/u,
+  );
+});
+
+test('Ship discovery only reads sources and never builds, installs or runs a check', () => {
+  const ship = read('skills/planr-ship/SKILL.md').replace(/\s+/gu, ' ');
+  assert.match(
+    ship,
+    /Discovery only reads sources: never build, install or execute a check while discovering; running checks is a later step/u,
+  );
 });

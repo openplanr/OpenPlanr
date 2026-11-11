@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { mkdtemp, rm } from 'node:fs/promises';
+import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
@@ -8,6 +8,7 @@ import { createReviewLedger } from '@openplanr/artifact/merge.mjs';
 import { writeArtifactReviewState } from '@openplanr/artifact/review.mjs';
 import { browserEngine, launchBrowser } from '../../../tests/support/browser-launcher.mjs';
 import { atomicJson, currentDesign, renderDesignDocument } from '../lib/design/document.mjs';
+import { readDesignHandoff, updateDesignHandoff } from '../lib/design/handoff.mjs';
 import { designReviewKey, designReviewPath } from '../lib/design/review.mjs';
 import { designFixture } from './design-fixture.mjs';
 import { fetch, startDesignReview } from './studio-http-fixture.mjs';
@@ -327,5 +328,101 @@ test(`the five-step owner center preserves canvas context and prepares a separat
     await browser?.close();
     await fixture.server.close();
     await rm(fixture.root, { recursive: true, force: true });
+  }
+});
+
+/** Approves a handoff under an older renderer, then re-renders with the current one. */
+async function upgradedFixture({ changeSource }) {
+  const root = await mkdtemp(join(tmpdir(), 'openplanr-handoff-upgrade-'));
+  const { file } = designFixture(root);
+  const env = { ...process.env, PLANR_HOME: join(root, 'home') };
+  const { revision } = await renderDesignDocument(file, { rendererRevision: 'renderer-3.4.0' });
+  const drafted = await updateDesignHandoff(
+    file,
+    { action: 'draft', revision, version: 0 },
+    { env },
+  );
+  const content = { ...drafted.draft.content, summary: 'The approved design is ready.' };
+  await updateDesignHandoff(file, { action: 'update', revision, version: 1, content }, { env });
+  const { draft } = readDesignHandoff(file, { env });
+  await updateDesignHandoff(
+    file,
+    { action: 'approve', revision, version: 2, contentHash: draft.contentHash },
+    { env },
+  );
+  if (changeSource) {
+    const style = join(root, 'source/style.css');
+    await writeFile(style, (await readFile(style, 'utf8')).replace('#275c46', '#275c47'));
+  }
+  const upgraded = await renderDesignDocument(file);
+  assert.notEqual(upgraded.revision, revision);
+  atomicJson(join(root, '.design/verification', `${upgraded.revision}.json`), {
+    status: 'verified',
+    revision: upgraded.revision,
+  });
+  const server = await startDesignReview(file, {
+    env,
+    noOpen: true,
+    clock: () => new Date('2026-11-06T12:00:00.000Z'),
+  });
+  return { root, server };
+}
+
+test(`the owner center keeps an approval through a renderer upgrade and drops it on a content change (${engine})`, {
+  timeout: 90000,
+}, async () => {
+  const fixtures = [];
+  let browser;
+  try {
+    browser = await launchBrowser({ engine });
+    const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+    const errors = [];
+    page.on('pageerror', (error) => errors.push(error.message));
+    const statuses = () =>
+      page.evaluate(() => window.__openPlanrDesignHandoffCenter.getState().statuses);
+    for (const changeSource of [false, true]) {
+      const fixture = await upgradedFixture({ changeSource });
+      fixtures.push(fixture);
+      await page.goto(fixture.server.url, { waitUntil: 'domcontentloaded' });
+      await page.locator('[data-design-ready="true"]').waitFor();
+      await page.getByRole('button', { name: 'Prepare handoff' }).click();
+      const center = page.getByRole('dialog', { name: 'Handoff Center' });
+      await center.waitFor();
+      await page.waitForFunction(() => {
+        const value = window.__openPlanrDesignHandoffCenter?.getState().statuses;
+        return value && value.readiness !== 'absent' && value.review !== 'blocked';
+      });
+      await center.getByRole('button', { name: /2\. Review resolution/ }).click();
+      if (!changeSource) {
+        const value = await statuses();
+        assert.equal(value.readiness, 'ready');
+        assert.equal(value.review, 'pass');
+        await center.getByRole('button', { name: 'Continue to implementation package' }).click();
+        await center.getByRole('button', { name: 'Save implementation package' }).click();
+        await page.waitForFunction(
+          () => window.__openPlanrDesignHandoffCenter?.getState().statuses.package === 'pass',
+        );
+      } else {
+        const value = await statuses();
+        assert.equal(value.review, 'stale');
+        assert.notEqual(value.readiness, 'ready');
+        assert.equal(value.package, 'blocked');
+        await center.getByRole('button', { name: 'Regenerate current decisions' }).waitFor();
+        await center.getByRole('button', { name: /1\. Readiness/ }).click();
+        await center
+          .getByText('The approved review handoff no longer matches the current design.', {
+            exact: true,
+          })
+          .waitFor();
+      }
+      await center.getByRole('button', { name: 'Close Handoff Center' }).click();
+    }
+    assert.deepEqual(errors, []);
+  } finally {
+    await browser?.close();
+    for (const fixture of fixtures) {
+      await fixture.server.close();
+      await rm(fixture.root, { recursive: true, force: true });
+    }
   }
 });

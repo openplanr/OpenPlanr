@@ -37,7 +37,8 @@ import { custodyLocation, FORMAT, presentationFingerprint, safeStatus } from './
 import * as workspace from './workspace-client.mjs';
 import { mergeWorkspaceFeedback } from './workspace-feedback.mjs';
 
-export { getDesignShareStatus } from './share-status.mjs';
+export { defaultDesignRecoveryOutput } from './recovery-location.mjs';
+export { getDesignShareStatus, getDesignShareStatusAsync } from './share-status.mjs';
 
 /** Never upload source paths, local provenance, arbitrary state, or owner keys. */
 export function prepareDesignShareBundle(file) {
@@ -308,6 +309,9 @@ export async function publishDesignReviewMetadata(file, payload, { revisionId, .
     }
   });
 }
+
+/** In-process sharing holds the keys itself, so it never needs to refuse ahead of a change. */
+export function assertDesignShareAvailable() {}
 
 /** Explicit recovery export; normal status/CLI output never contains credentials. */
 export async function exportDesignShareRecovery(file, { output, ...options } = {}) {

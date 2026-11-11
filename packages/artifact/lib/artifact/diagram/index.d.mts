@@ -8,6 +8,65 @@ export type DiagramSourceChoice =
   | 'accept-mermaid'
   | 'accept-excalidraw';
 export type DiagramDocument = Record<string, unknown>;
+export interface DiagramBounds {
+  readonly x: number;
+  readonly y: number;
+  readonly width: number;
+  readonly height: number;
+}
+export interface DiagramChartText extends DiagramBounds {
+  readonly id: string;
+  readonly lines: readonly string[];
+}
+export interface DiagramAxis extends DiagramBounds {
+  readonly id: string;
+  readonly label: string;
+  readonly scale: string;
+  readonly x1: number;
+  readonly y1: number;
+  readonly x2: number;
+  readonly y2: number;
+  readonly text: DiagramChartText;
+  readonly ticks: readonly Readonly<{ x: number; y: number; text: DiagramChartText }>[];
+  readonly emphasis: string | null;
+  readonly radial?: boolean;
+  readonly grid?: Readonly<{
+    cx: number;
+    cy: number;
+    radius: number;
+    polygon: boolean;
+    spokes: readonly (readonly [number, number])[];
+    rings: readonly number[];
+  }>;
+}
+export type DiagramMark = DiagramBounds &
+  Readonly<{
+    id: string;
+    label: string;
+    seriesIndex: number;
+    emphasis: string | null;
+  }> &
+  (
+    | Readonly<{ kind: 'bar' | 'point'; key?: string; value?: number }>
+    | Readonly<{ kind: 'polyline' | 'polygon'; points: readonly (readonly [number, number])[] }>
+    | Readonly<{
+        kind: 'arc';
+        key: string;
+        value: number;
+        cx: number;
+        cy: number;
+        radius: number;
+        startAngle: number;
+        endAngle: number;
+      }>
+  );
+export interface DiagramScene extends Readonly<Record<string, unknown>> {
+  readonly kind: 'graph' | 'sequence' | 'chart';
+  readonly width: number;
+  readonly height: number;
+  readonly axes: readonly DiagramAxis[];
+  readonly marks?: readonly DiagramMark[];
+}
 export interface DiagramRenderCompletion {
   readonly status: 'created' | 'replaced' | 'unchanged';
   readonly directory: string;
@@ -35,7 +94,7 @@ export interface DiagramRenderedOutputs {
   readonly html: string;
   readonly png: DiagramPng;
   readonly quality: Readonly<Record<string, unknown>>;
-  readonly scene: Readonly<Record<string, unknown>>;
+  readonly scene: DiagramScene;
   readonly svg: string;
   readonly theme: DiagramTheme;
 }
@@ -113,13 +172,13 @@ export declare const EXCALIDRAW_EXPORT_CAPABILITIES: Readonly<
 export declare function layoutDiagram(
   document: DiagramDocument,
   options?: Readonly<{ theme?: DiagramTheme }>,
-): Readonly<Record<string, unknown>>;
+): DiagramScene;
 export declare function wrapDiagramLabel(label: string, maximum?: number): readonly string[];
 export declare function escapeXml(value: unknown): string;
 export declare function renderDiagramSvg(
   document: DiagramDocument,
   options?: Record<string, unknown>,
-): Readonly<{ svg: string; scene: Readonly<Record<string, unknown>> }>;
+): Readonly<{ svg: string; scene: DiagramScene }>;
 export declare function renderDiagramHtml(
   document: DiagramDocument,
   svg: string,

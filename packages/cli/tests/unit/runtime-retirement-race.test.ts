@@ -186,7 +186,9 @@ it('resumes missing immutable bytes without treating interrupted staging as pack
   };
   const installed = await applySetup(options);
   const support = installed.actions.find(
-    (file) => file.target.includes('/runtime/packages/') && file.target.endsWith('.mjs'),
+    (file) =>
+      file.target.includes('/runtime/packages/') &&
+      !file.target.endsWith('.openplanr-content.json'),
   );
   if (!support) throw new Error('No immutable support resource was installed.');
   const original = readFileSync(support.target);

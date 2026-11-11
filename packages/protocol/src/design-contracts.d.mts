@@ -14,11 +14,18 @@ export interface DesignFrame {
   height: number | 'auto';
 }
 
+export type DesignProp =
+  | { type: 'enum'; options: string[]; default: string }
+  | { type: 'boolean'; default: boolean };
+
+export type DesignPropValue = string | boolean;
+
 export interface DesignScreen {
   id: string;
   title: string;
   description?: string;
   source: DesignSource;
+  props?: Record<string, DesignProp>;
   /** Stable feedback anchors, unique within this screen. */
   anchors?: string[];
 }
@@ -32,6 +39,7 @@ export interface DesignVariant {
   issue?: string;
   /** Sparse screen overrides inherit unchanged sources from screens. */
   sources?: Record<string, DesignSource>;
+  props?: Record<string, Record<string, DesignPropValue>>;
 }
 
 export interface DesignBoardPosition {
@@ -56,7 +64,7 @@ export interface DesignLayout {
 
 export interface DesignDocument {
   kind: 'openplanr-design-document';
-  schemaVersion: '1.0.0';
+  schemaVersion: '1.0.0' | '1.1.0';
   id: string;
   title: string;
   brief: {
@@ -79,8 +87,14 @@ export interface DesignDocument {
 
 export declare const DESIGN_DOCUMENT_VERSION: '1.0.0';
 export declare const DESIGN_DOCUMENT_V1_SCHEMA: Readonly<Record<string, unknown>>;
+export declare const DESIGN_DOCUMENT_V120_SCHEMA: Readonly<Record<string, unknown>>;
 export declare const DESIGN_DOCUMENT_SCHEMA: Readonly<Record<string, unknown>>;
 export declare function validateDesignDocument(value: unknown): { ok: boolean; errors: string[] };
 export declare function assertDesignDocument(value: unknown): DesignDocument;
 
 export declare function initialFrameHeight(document: Pick<DesignDocument, 'frames'>): number;
+
+export declare function validateDesignProps(document: {
+  screens: Pick<DesignScreen, 'id' | 'props'>[];
+  variants: Pick<DesignVariant, 'props'>[];
+}): string[];

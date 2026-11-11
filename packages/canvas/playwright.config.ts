@@ -32,6 +32,16 @@ export default defineConfig({
       },
     },
     {
+      name: 'webkit',
+      testMatch: ['**/bench-trace.spec.ts', '**/budgets.spec.ts'],
+      use: { browserName: 'webkit' },
+    },
+    {
+      name: 'firefox-trace',
+      testMatch: ['**/bench-trace.spec.ts', '**/budgets.spec.ts'],
+      use: { browserName: 'firefox' },
+    },
+    {
       name: 'firefox',
       testMatch: '**/*.firefox.spec.ts',
       use: {

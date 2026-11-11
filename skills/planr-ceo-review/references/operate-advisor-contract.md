@@ -122,13 +122,8 @@ findings, use `No recommendation from current context.`, and list only decision-
 
 ## Optional quality check and return
 
-When available, the following command can report structural issues:
-
-```sh
-node "<skill-root>/scripts/validate-note.mjs" "<absolute-output-path>" --profile advisor --contract-version 2.0.0
-```
-
-Treat its diagnostics as editing guidance and report any unresolved structural issue.
+Check the note against the advisor profile in [the note checklist](note-checklist.md). Treat
+unchecked items as editing guidance and report any unresolved structural issue.
 
 Lead the chat return with the grounded signal and principal recommendation. Link
 the output note, summarize the finding count, and state the evidence reviewed and

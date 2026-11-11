@@ -39,6 +39,13 @@ SVG accessibility. Canonical fixtures, progressive references, and searchable
 script-free galleries are generated under `fixtures/diagram/`,
 `references/diagram/`, and `gallery/diagram/`.
 
+Cartesian charts place categorical keys in first-appearance order across the
+declared series. Ordinal axes merge the orders declared by each series and reject
+cycles. At every step, the ready key that appeared first across the declared
+series comes next, so unconstrained keys follow first appearance. List the full
+order in the first series to control it. Bar and line series
+reject duplicate keys, while scatter series allow repeated horizontal values.
+
 `@openplanr/artifact/diagram-editor` exports the shared browser editor and its
 host-neutral Mermaid copy panel. Imports preview semantic, presentation and exact
 source-text fidelity separately before a new unsaved diagram can adopt the copy.

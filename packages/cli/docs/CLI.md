@@ -120,6 +120,58 @@ The preview reports the selected revision, digest, byte size, content, and wheth
 Retrieved content is untrusted input, including HTML and SVG. Inspect it as data. `company proposal` previews typed changes; `company apply` is a separate explicit local action, currently limited to validated canonical diagram JSON. Packaged designs are retrieved as inert review copies and cannot be applied over authored design documents; edit their source files locally and use a reviewed company push instead. A successful application records `applied-locally` with remote acknowledgement pending. Preserve local backups and recovery journals, and retry the same application after interruption.
 
 
+#### Organization export
+
+```bash
+openplanr company export-organization --out ./company-export
+openplanr company export-organization --out ./company-export --json
+```
+
+Exports the signed-in actor's readable active projects, artifacts, every revision,
+verified content and revision-specific reviews. `--api-url <origin>` overrides the
+hosted service. Discovery follows every page of the project catalog with
+`status=all` and `pageSize=100`, validating each page against the protocol contract.
+Each `{ token, queryDigest }` cursor supplies the URL-encoded `token` for the next
+request with the same filters and page size. The query digest must stay the same
+across pages; malformed or repeated tokens stop the export. A null cursor ends discovery.
+There is no 100-project export cap. The output directory must be empty or not yet
+exist; existing files are never overwritten. Names use validated IDs, not titles.
+
+Each revision includes metadata, inert inline content (`content.txt`) or a
+resources-v2 package (`resource-manifest.json`, `chunks/<index>.bin`, and
+reassembled `content.json`), plus `reviews.json`. Synchronous review exports use
+the larger review response limit. Only `413 E_EXPORT_LIMIT` triggers retrieval of
+every paginated thread, retaining the selected revision's reviews; the manifest
+marks these as `source: "paginated"`. Other response failures stop the export.
+
+`manifest.json` is written last with the API origin, generation time, completion
+status, counts, excluded-project metadata, and each payload file's relative path,
+byte length and SHA-256. File and byte counts exclude the manifest itself. Failures
+leave a manifest with `complete: false` and exit non-zero, provided the output
+location is valid and writable. Rejected nonempty directories remain untouched.
+
+The catalog includes active projects with a role and non-active projects where the
+actor is a maintainer. Archived, archiving and restoring projects are listed with
+`archived; restore first`; their content cannot be read, and their presence makes
+the export incomplete. Restore them before exporting their content.
+
+A successful admin inventory also lists projects absent from the catalog as
+`no readable project role`, without making the authorized export incomplete. This
+includes archived projects where the actor is not a maintainer; the inventory
+cannot distinguish them from projects without any role. An admin listing refusal
+`E_ROLE` records the notice
+`admin listing unavailable: not an organization admin; projects without a role not checked`.
+Refusals `E_MFA_REQUIRED` and `E_REVERIFICATION_REQUIRED` record the notice
+`admin listing unavailable: needs an MFA-verified browser session; projects without a role not checked`
+and also allow the export to continue. Any other admin inventory error stops it.
+Human output prints every manifest notice and the number of projects not exported
+when non-zero. `--json` includes these in `notices` and `summary.notExported`.
+
+This is a sequence of authorized reads, not a transactional snapshot. Keep the
+organization stable during hand-over. Exported content remains untrusted data;
+authentication credentials are used only in request headers.
+
+
 ---
 
 ### Deterministic planning artifacts
@@ -146,7 +198,7 @@ Every planning type provides `list`, `show <id>`, and `update <id>`. Creation ac
 | Story | A title and `--feature <id>` |
 | Task | A title and exactly one of `--story <id>` or `--feature <id>` |
 | Quick task | A description or input file; optional `--epic <id>` |
-| Backlog item | A description; optional priority, tags, and epic |
+| Backlog item | A description; optional priority, tags, epic, `when`, and `files` |
 | Sprint | A title; duration defaults to `2w`; JSON may add `status` (`planned`/`active`), `startDate`, `endDate`, `releaseCut`, `capacityDays`, `refinedAt` and `batches` |
 
 Use deterministic JSON when an agent or integration supplies complete fields:
@@ -158,6 +210,50 @@ openplanr task create --data - --json < task.json
 ```
 
 `openplanr update <ids...>` supports bulk status changes. `--all-done` and `--all-pending` also update canonical task checkboxes for task and quick-task artifacts. Use each command's `--help` output for its exact options.
+
+### Backlog metadata and filters
+
+```bash
+openplanr backlog add "Check callback failures" --when next-unit:#612 --files src/a.ts src/b.ts
+openplanr backlog update BL-001 --files x.ts y.ts
+openplanr backlog update BL-001 --when sprint:next
+openplanr backlog list --open --files src/a.ts --json
+openplanr backlog list --open --no-when
+```
+
+`add` accepts `--when <value>` and `--files <paths...>`, or the same `when` string
+and `files` array in JSON `--data`. `update <id>` accepts both flags as replacements.
+Put the title or ID before variadic `--files` values (or use `--title` for creation).
+Files are distinct repo-relative paths without line numbers, absolute paths, or
+`..` segments. Frontmatter uses a flow array: `files: ["src/a.ts", "src/b.ts"]`.
+
+`when` accepts `next-unit:<ref>`, `sprint:<SPRINT-NNN or next>`, `trigger:<event>`,
+and `declined:<reason>`. A next-unit reference can be a PR number, task or backlog
+ID, or branch. Trigger events may be `date:YYYY-MM-DD`, `closed:<BL-NNN>`,
+`merged:#<PR>`, `merged:<branch>`, `release:<pkg>@<semver>`, or other non-empty text.
+`now` is a triage outcome and cannot be stored. JSON input also accepts
+`unverified: true`; there is no `--unverified` flag.
+
+`list` includes all statuses by default. `--open` excludes `closed` and `done`;
+`--files` keeps items overlapping any supplied path; `--no-when` keeps items
+without `when`, including blank values. Filters combine. `--json` returns
+`{ "items": [...], "warnings": [...] }` with each
+item's ID, title, status, project-relative path, files, and optional when. For old
+items without `files`, listing derives distinct paths from body `file:line`,
+`file:line:column`, or `file:line-line` evidence without rewriting the item.
+Listing also accepts block-sequence `files`; an empty `files:` uses body evidence.
+Invalid `when` or `files` skips that item with a warning.
+Missing or unreadable `id` and `title` fall back to the filename; `status` falls back
+to `open`. Each produces a warning, including for files without frontmatter. An
+item is skipped if its filename cannot supply a fallback.
+Other backlog schema violations warn while keeping the item. Each warning includes
+the project-relative `path`, `field`, raw YAML `value` (or `"missing"`), and `message`.
+The shared helper's `list --open` returns the same items and warnings.
+
+Custom `backlog/backlog-item.md.hbs` templates receive `when`, `files`, and
+`unverified` when provided. Those keys are post-written into the template's
+frontmatter; omitted files become `[]` and an omitted `when` key is removed.
+The custom template owns its body.
 
 ### `openplanr sprint` refinement
 
@@ -243,6 +339,57 @@ openplanr spec shape SPEC-001
 
 ---
 
+#### `openplanr spec validate`
+
+Check one spec file against the specification contract. It reads the file and writes nothing.
+
+```bash
+openplanr spec validate SPEC-001
+openplanr spec validate SPEC-001 --json
+```
+
+| Option     | Description                                                     | Required |
+| ---------- | --------------------------------------------------------------- | -------- |
+| `<specId>` | Spec ID to check                                                | Yes      |
+| `--json`   | Print `{ ok, specId, file, violations[] }` instead of text      | No       |
+
+**Rules:**
+1. **`path`** — the file is `SPEC-NNN-{slug}/SPEC-NNN-{slug}.md`, and its frontmatter `id` and `slug` match that path.
+2. **`frontmatter`** — the frontmatter is valid against the Protocol spec schema for the `schemaVersion` it declares (`1.0.0` or `1.7.0`): every required key (including `id`), allowed values, no unknown keys. A missing or unsupported `schemaVersion` is an error that lists the supported versions.
+3. **`headings`** — the 13 contract headings, from `## Context & Goal` to `## Notes for Decomposition`, appear in order, and `## Scope Boundaries` has `### In Scope` and `### Out of Scope`. Other headings may sit between them.
+4. **`acceptance-ids`** — every top-level item under `## Acceptance Criteria` starts with a unique `AC-NNN` id (a checkbox and bold markers before it are fine).
+
+Each violation is printed with the file, the rule, and what was found. The command exits 1 when there is any violation or the spec is not found, and 0 otherwise.
+
+---
+
+#### `openplanr spec validate-plan`
+
+Check a spec's stories and tasks (`stories/US-NNN-*.md` and `tasks/T-NNN-*.md` inside the spec directory). It reads the files and writes nothing. The spec file itself is checked by `spec validate`; the older `output/feats/` layout is not checked.
+
+```bash
+openplanr spec validate-plan SPEC-001
+openplanr spec validate-plan SPEC-001 --json
+```
+
+| Option     | Description                                                            | Required |
+| ---------- | ---------------------------------------------------------------------- | -------- |
+| `<specId>` | Spec whose stories and tasks to check                                  | Yes      |
+| `--json`   | Print `{ ok, specId, stories, tasks, violations[] }` instead of text   | No       |
+
+**Rules:**
+1. **`frontmatter`** — each story and task frontmatter parses as YAML and is valid against the Protocol story or task schema for its `schemaVersion` (`1.0.0` or `1.7.0`); a `specId` names this spec.
+2. **`id-mismatch`** — the frontmatter `id` matches the id in the filename.
+3. **`duplicate-id`** — no `US-NNN` or `T-NNN` in this spec is used by another file anywhere under the specs root, and no acceptance id repeats within a story.
+4. **`reference`** — each task's `storyId` is a story in this spec, and each `acceptanceRefs` entry is declared by that story.
+5. **`coverage`** — every story acceptance id is mapped by at least one task through `acceptanceRefs`.
+6. **`verification`** — at least one mapped task names the acceptance id under `## Test Requirements`.
+7. **`empty`** — the spec has at least one story.
+
+The command exits 1 when there is any violation or the spec is not found, and 0 otherwise.
+
+---
+
 #### `openplanr spec sync`
 
 Validate spec integrity and auto-fix safe inconsistencies. Use after manual edits, interrupted work, or when in doubt.
@@ -322,11 +469,19 @@ openplanr spec attach-design SPEC-001 --files login.png signup.png
 
 #### `openplanr spec promote`
 
-Validate that a spec is ready for handoff to `planr-pipeline` (has stories, tasks, non-trivial body) and print the next-step pipeline command. Updates SPEC frontmatter `status: ready-for-pipeline`.
+Validate that a spec is ready for handoff (has stories, tasks, and a non-trivial body), mark the spec ready-for-pipeline by writing `status: "ready-for-pipeline"` into its frontmatter, and print the next-step pipeline command.
 
 ```bash
 openplanr spec promote SPEC-001
+openplanr spec promote SPEC-001 --dry-run   # validate and print the handoff; write nothing
 ```
+
+| Option      | Description                                                                     | Required |
+| ----------- | ------------------------------------------------------------------------------- | -------- |
+| `<specId>`  | Spec ID to promote                                                              | Yes      |
+| `--dry-run` | Validate and print the handoff command without marking the spec ready-for-pipeline | No    |
+
+To check a spec's structure without changing its status, use `openplanr spec validate`.
 
 After promotion, run from any configured runtime:
 
@@ -612,6 +767,12 @@ openplanr artifact open <file> [--title <title>] [--root <asset-root>] [--theme 
 openplanr artifact share <file> [--title <title>] [--root <asset-root>] [--presentation auto|document|canvas] [--snapshot] [--short] [--ttl 1d|7d|30d] [--secret-output <private-file>] [--no-open] [--json] [--yes]
 openplanr artifact publish <diagram-manifest|diagram-bundle|design-document> [--yes] [--json]
 openplanr artifact sync <diagram-manifest|diagram-bundle|design-document> [--json]
+openplanr artifact status <design-document> [--json]
+openplanr artifact manage <design-document> --action rotate|pause|resume|revoke|delete|access|recovery|restore [--output <new-path>] [--input <recovery-file>] [--yes] [--json]
+openplanr artifact feedback <design-document> [--action inspect|export|import|select|resolve] [--format json|markdown] [--scope current|all] [--output <new-path>] [--input <file>] [--json]
+openplanr artifact handoff <design-document> [--action draft|inspect|update|approve|category|disposition] [--input <file|->] [--json]
+openplanr artifact share-runtime [--json]
+openplanr artifact review-metadata <design-document> --revision <hosted-revision> --input <file|-> [--json]
 openplanr artifact import --secret-input <private-file|-> [--output <path>] [--allow-stale] [--json] [--yes]
 openplanr artifact export <session-id> [--format json|markdown] [--output <path>]
 ```
@@ -623,6 +784,22 @@ Owner keys stay privately outside the repository. Publish revisions
 explicitly; `sync` imports revision-bound feedback without changing the diagram.
 Native diagram sharing does not accept `--snapshot`, `--short`, or `--ttl`;
 export HTML first to choose the generic snapshot transport.
+
+A shared design is managed from the same command. `status` shows the review link
+and whether the current revision is published, without printing secrets. `manage`
+rotates the reviewer access token, pauses or resumes comments, revokes or deletes
+the review, prints the reviewer token with `--action access --json`, and writes or
+restores a private recovery file. Without `--output`, the recovery file is a new
+file in `PLANR_HOME/design-recovery` (folder 0700, file 0600). Rotate, revoke, delete and restore ask first;
+`--yes` confirms them non-interactively. `feedback` syncs a shared design before it
+inspects or exports feedback. `handoff` drafts the review handoff by default, and
+its other actions update it from a JSON object; on a shared design, category and
+disposition changes also publish to the review. `share-runtime` reports the CLI,
+workflow package and design sharing format versions, and `review-metadata` publishes
+one owner category or disposition; the bundled design helpers use both to hand sharing
+to the CLI. Design sharing needs the
+optional `planr-pipeline` package; without it these commands fail with
+`E_DESIGN_SHARE_PIPELINE_MISSING`.
 
 When `--root` is omitted, the artifact file's directory is the asset root. This
 makes `openplanr artifact share /absolute/path/to/artifact.html` work without
@@ -650,6 +827,35 @@ headless `document` page; multi-variant and design-board reviews use `canvas`.
 Explicit `document` or `canvas` overrides the inference, and JSON output reports
 the resolved value. Artifact review bundles source and runs it inside an
 invisible opaque-origin Blob sandbox; it is not standalone website publishing.
+
+---
+
+### `openplanr design`
+
+Validate, render, review, export and inspect a local design document.
+
+```bash
+openplanr design capabilities [--json]
+openplanr design inspect|validate|render <design-document> [--json]
+openplanr design open <design-document> [--view canvas|prototype|walkthrough] [--port <port>] [--no-open] [--json]
+openplanr design studio status|stop <design-document> [--instance-id <id>] [--json]
+openplanr design view-context <design-document> [--request-time <timestamp>] [--json]
+openplanr design export <design-document> [--view <view>] [--format html] [--output <new-path>] [--json]
+openplanr design verify <design-document> --report <browser-report.json> [--json]
+openplanr design handoff <design-document> [--action inspect] [--json]
+openplanr design fonts fetch --family "<Name>:<weights>" [--family ...] --dest <dir> [--json]
+```
+
+`capabilities` reports the design command contract and the range of contracts this
+install serves. Without the optional `planr-pipeline` package it still exits 0, with
+`pipeline: null` and `E_DESIGN_RUNTIME_MISSING`; reinstall with
+`npm install -g openplanr` (without `--omit=optional`). The other commands fail with
+the same code in that case. `open` keeps running until you stop it, and
+`studio stop` stops a design's studio from another terminal. `verify` exits 1 when
+the report fails. `handoff` never changes a file: while a render is unfinished it
+fails with `E_DESIGN_PUBLICATION_PENDING`, and `render` finishes it. Other failures
+without their own code use `E_DESIGN_UTILITY_FAILED`. Sharing and feedback stay
+under `openplanr artifact`.
 
 ---
 
@@ -710,7 +916,7 @@ openplanr ship checks --tier push --json
 | `--task <path>` | Task file whose Test Requirements to include                   | none                                      |
 | `--tier <tier>` | `task`, `story`, `push` or `planning`                          | `planning` for a `.planr`-only change, else `task` |
 | `--base <ref>`  | Compare against the merge base with this ref                   | `origin/HEAD`, then `main`                |
-| `--json`        | Print the `openplanr-ship-checks` result (schema `1.0.0`)      | `false`                                   |
+| `--json`        | Print the `openplanr-ship-checks` result (schema `1.2.0`)      | `false`                                   |
 
 **Tiers:**
 
@@ -723,6 +929,21 @@ openplanr ship checks --tier push --json
 - `story`: `task` plus every `run` step of the pull-request and merge-queue
   workflows whose path filters match the change.
 - `push`: `story` without path filters, plus push workflows and pre-push hooks.
+  When the change adds non-code files (for example JSON data or templates) to a
+  package that is not `private`, it also lists
+  `npm pack --dry-run --json --ignore-scripts` from that package's directory,
+  tagged `package-contents`. Its `expectFiles` names the new files relative to
+  the package. Run it after the build and account for each one: it, or the copy
+  the build writes for it, appears in the tarball's `files`, or the package
+  deliberately leaves it out. The command lists what npm would pack; it exits 0
+  either way, and a package that publishes another directory (for example with
+  pnpm `publishConfig.directory`) needs its own check. Files in any
+  dot-directory, dotfiles and files under `test`, `tests`, `__tests__`,
+  `fixture`, `fixtures` or `node_modules` folders are not listed, unless the
+  package's `files` names that folder. New code files are out of scope: a
+  package that ships unbuilt `.js` or `.mjs` scripts needs another check that
+  they are packed.
+  `--ignore-scripts` keeps `prepack`, `prepare` and `postpack` from running.
 
 Each CI step is kept verbatim with its `cwd` (step, then job, then workflow
 `working-directory`). Install steps and `uses` steps are skipped. A static matrix
@@ -732,9 +953,132 @@ runs directly mentions `lint-staged`, `ls-files`, `--cached` or `--staged`;
 deeper calls are not followed. `relatedTests` lists test files that mention a
 name the change exports, a `.command()` name, or a route path.
 
+`coverage` names changed files that a passing run may not have checked.
+`trackedOnly.unseen` lists untracked files when any check is `tracked-only`
+(warning `UNTRACKED_NOT_SEEN`); `git add -N` makes them visible.
+`typescript.uncovered` lists new `.ts`, `.tsx`, `.mts` and `.cts` files outside
+`.planr/` that no `tsconfig*.json` root file set includes (`files`, `include`,
+`exclude`, `extends`, and `references` one level deep; warning `TS_NOT_COVERED`).
+A file reached only through an import is still reported, and the command does
+not check which tsconfig CI runs. A tsconfig that TypeScript reports errors for
+raises `TSCONFIG_ERROR` with its first message, and a config whose `extends`
+cannot be read adds no coverage. To read tsconfigs, the command loads the
+`typescript` package that Node resolves from the project root, which can be a
+copy in a parent directory, and that runs the package's code; it never executes
+checks. When Node cannot resolve `typescript` there, `typescript` is `null` with
+the info diagnostic `TYPESCRIPT_UNAVAILABLE`.
+
 `complete` is `false` when any diagnostic is an `error`, for example a workflow
 that fails to parse: the listed checks are then not the full CI set. The command
 exits 1 for an unknown tier, a missing `--task` file or a directory outside git.
+
+---
+
+### `openplanr delegate`
+
+Hand one scoped implementation to Claude Code, Codex or Cursor, then review and
+integrate its observed changes. The `delegate` skill runs the native CLIs directly by
+default and uses these commands when `openplanr` is installed and you want a recorded
+capsule, custody, checks and resume. Delegation needs the workflow package that installs with
+`openplanr` (not with `--omit=optional`).
+
+```bash
+openplanr delegate probe --json
+openplanr delegate prepare --input prepare.json --json
+openplanr delegate dispatch --run <runId> --json
+openplanr delegate wait --run <runId> --json
+echo '{"runId":"<runId>","correction":"Fix the failing test."}' | openplanr delegate resume --input - --json
+echo '{"runId":"<runId>","scopePaths":["src"]}' | openplanr delegate integrate review --input - --json
+openplanr delegate integrate apply --input apply.json --json
+```
+
+| Action | Does |
+| --- | --- |
+| `probe` | Finds Git, the installed `claude`, `codex` and Cursor `agent` CLIs, and saved profiles, with each one's destination and sign-in |
+| `profile-preview`, `profile-enroll`, `profile-remove` | Shows, saves or removes an optional profile |
+| `prepare` | Builds the context capsule and owned worktree; returns the preview to confirm |
+| `prepare-worktree` | Runs selected setup commands, such as `npm ci`, in the owned worktree |
+| `dispatch`, `wait`, `status` | Starts the native agent, waits up to 60 seconds, reports the run |
+| `resume` | Continues the recorded session with an `answer` or `correction` |
+| `recover`, `close`, `cleanup`, `abandon`, `prune` | Reconciles, closes, cleans up, discards or prunes runs |
+| `integrate review`, `integrate apply`, `integrate recover` | Reviews the patch, applies it as an uncommitted diff after the selected checks, or finishes an interrupted apply |
+
+| Option | Description | Default |
+| --- | --- | --- |
+| `--input <file>` | The action's JSON object; `-` reads stdin (2 MiB, or 64 KiB for `integrate`) | `{}` |
+| `--run <runId>` | Sets `runId`; must match any `runId` already in the input | none |
+| `--json` | Print the result envelope | `false` |
+
+With `--json`, success prints `{ "ok": true, "action", "contract", "result", "next" }`
+and exits 0. `contract` is the integer JSON contract, `1` today. `result` holds the action's fields, and `next` is the command or decision
+that comes next. A run that stops for attention (`status: "blocked"` or `"question"`)
+is still a success. A failure prints
+`{ "ok": false, "action", "contract", "code", "problem", "recovery", "runId"?, "details"? }`
+and exits 1, for example `E_DELEGATE_INPUT`, `E_RUN_NOT_FOUND`, `E_CAPSULE_SECRET`
+(masked findings in `details.findings`) or `E_DELEGATE_RUNTIME_MISSING`. Without
+`--json`, the command prints a short summary and a `Next:` line.
+
+`probe` (for each saved profile, and for the `engine` or `profile` in its input) and
+`profile-preview` report sign-in as `identity.state`, read from the engine's own status
+command (`claude auth status`, `codex login status`, `agent status`) with the profile's
+configuration directory:
+
+| `identity.state` | Means |
+| --- | --- |
+| `account` | Signed in with the user's own account |
+| `api-key` | Signed in with an API key instead of an account |
+| `signed-out` | Not signed in; `identity.nextAction` names the engine's login command |
+| `provider-managed` | Claude Code routes through a cloud provider such as Bedrock or Vertex |
+| `not-required` | Not signed in, but the destination is a local model server |
+| `not-checked` | The status command failed, timed out or printed something unrecognized; `identity.reason` says which |
+
+Only the state is reported. Account names, emails, organizations and account IDs from the
+status command never appear in results or run records.
+
+Each child process gets an explicit environment: paths, locale, terminal, proxy and
+certificate variables. The native agent adds only the routing variables delegation reads
+(for example `CLAUDE_CONFIG_DIR`, `ANTHROPIC_BASE_URL`, `CODEX_HOME`, `OPENAI_BASE_URL`,
+`CURSOR_API_ENDPOINT`) and the profile's `allowedEnv`; a check adds the names in its
+`env` list. Toolchain variables such as `JAVA_HOME`, `VIRTUAL_ENV`, `CARGO_HOME`,
+`NVM_DIR` or `npm_config_*` are not passed either; when a check fails for one, its
+`next` names the fix: list the variable in that check's `env`, or in the profile's
+`allowedEnv` for the agent. A credential variable,
+such as a token an MCP server reads, reaches the agent only through a profile that lists
+it in `allowedEnv`; otherwise the agent uses its own login.
+
+---
+
+### `openplanr release collect`
+
+Collect the commits in a release window so they can be classified. It runs Git
+read commands only and writes nothing.
+
+```bash
+openplanr release collect --json                          # last tag .. HEAD
+openplanr release collect --base v1.4.0 --head HEAD --json
+openplanr release collect --since 2026-11-01 --json
+```
+
+| Option              | Description                                                   | Default                              |
+| ------------------- | ------------------------------------------------------------- | ------------------------------------ |
+| `--base <revision>` | Start of the window, exclusive                                | Last tag reachable from head         |
+| `--head <revision>` | End of the window, inclusive                                  | `HEAD`                               |
+| `--since <date>`    | Start the window at a `YYYY-MM-DD` date instead of a revision | none                                 |
+| `--json`            | Print `{ ok, base, since, head, tags, commits, areas }`       | `false`                              |
+
+`base` and `head` carry the revision as given and the resolved commit SHA; `base`
+also has `tag` and its committer `date` (`YYYY-MM-DD`), and is `null` when the window is all history (no tag) or a date. `tags` lists the five
+most recent tags. Each commit, merges excluded, has `sha`, `shortSha`, `subject`,
+`body`, `type` and `scope` from a Conventional Commits subject, `breaking` (a `!`
+after the type or a `BREAKING CHANGE:` or `BREAKING-CHANGE:` footer),
+`breakingNotes` (each footer value with its continuation lines, up to the next footer token), `reverts` (the SHA named by `This reverts commit <sha>`) and
+`files`. `areas` counts touched paths by their first two segments, highest
+first, top 20.
+
+Any Git failure other than "no tag found", such as an unknown revision or a
+directory outside a repository, exits 1 with `E_RELEASE_GIT_FAILED` and the Git
+error text; the command never reports an empty window instead. Passing both
+`--base` and `--since` exits 1 with `E_RELEASE_RANGE_CONFLICT`, and a `--since` that is not a real calendar date with `E_RELEASE_SINCE_INVALID`.
 
 ---
 
@@ -764,6 +1108,65 @@ skill is unclear.
 - **Duplicates:** Same child linked more than once in a parent
 
 Handles both story-level and feature-level task relationships.
+
+#### `openplanr sync tracker`
+
+Inspect a tracker, or preview and apply GitHub issue changes through the GitHub CLI
+(`gh`). The `planr-sync` skill calls it when the coding agent has no tracker connection
+but `gh` is signed in. Linear and other trackers sync through the coding agent's own
+connection.
+
+```bash
+openplanr sync tracker github inspect --json                           # repository gh resolves
+openplanr sync tracker github sync --input ops.json --json             # preview only
+openplanr sync tracker github sync --input - --apply --json < ops.json # apply
+openplanr sync tracker local inspect                                   # configured planning roots
+```
+
+| Option           | Description                                                   | Default |
+| ---------------- | ------------------------------------------------------------- | ------- |
+| `--input <path>` | JSON array of operations, relative to the project; `-` reads stdin | none |
+| `--apply`        | Run the operations; without it `sync` only previews          | `false` |
+| `--json`         | Machine-readable output                                       | `false` |
+
+Operations: `{"action":"create","title":…,"body"?,"labels"?}`,
+`{"action":"update","id":…,"title"?,"body"?,"labels"?}` (at least one field), and
+`{"action":"close"|"reopen","id":…,"comment"?}`. `id` is an issue number, or an issue URL in
+the repository `gh` resolves (another repository's URL fails with
+`E_SYNC_TRACKER_FOREIGN_ISSUE`). `update` only adds `labels`; it never removes one. Every
+operation is validated before any runs; unknown fields are refused.
+
+Success (`--json`):
+
+```json
+{
+  "ok": true,
+  "contract": 1,
+  "provider": "github",
+  "action": "sync",
+  "applied": true,
+  "complete": true,
+  "results": [
+    { "index": 0, "action": "create", "title": "Add sign-in", "id": "31", "url": "https://github.com/acme/app/issues/31", "status": "applied" }
+  ],
+  "next": "Record each new issue's id as githubIssue in its planning file, then report the changes."
+}
+```
+
+`inspect` returns `repository` (github) or `roots` and `configured` (local) in place of
+`applied`, `complete` and `results`. Each result's `status` is `planned`, `applied`,
+`failed` or `not-run`. An `--apply` run stops at the first failed change and exits 1
+with `ok: false`, `code: "E_SYNC_TRACKER_APPLY_INCOMPLETE"`, the same `results`, and a
+`recovery` that names the operations to rerun. Other failures exit 1 with the standard
+`{ "ok": false, "code", "problem", "recovery" }`: `E_SYNC_TRACKER_USAGE`,
+`E_SYNC_TRACKER_INPUT`, `E_SYNC_TRACKER_FOREIGN_ISSUE`, `E_SYNC_TRACKER_LINEAR`, `E_SYNC_TRACKER_GH_MISSING`,
+`E_SYNC_TRACKER_GH_AUTH`, `E_SYNC_TRACKER_NOT_A_REPOSITORY`, `E_SYNC_TRACKER_NO_REMOTE`
+and `E_SYNC_TRACKER_GH_FAILED`. Human output ends with a `Next:` line.
+
+`gh` runs with an allowlisted environment: `PATH`, home, locale, temporary, XDG,
+proxy and CA variables, Windows system paths, and gh's own `GH_*`/`GITHUB_*` host and
+token variables, plus `GH_PROMPT_DISABLED=1`. Every other variable, such as an
+unrelated `*_TOKEN`, stays out of the child.
 
 ---
 

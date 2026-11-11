@@ -1,4 +1,6 @@
 // @ts-check
+
+import { CATALOG_PROTOCOL_VERSION } from './browser-contracts.mjs';
 import { verifyDocumentDigest } from './canonical-json.mjs';
 import { PROTOCOL_ERROR_CODES, ProtocolError } from './errors.mjs';
 import { CANONICAL_REGISTRIES } from './generated/canonical-registries.mjs';
@@ -9,20 +11,29 @@ const fail = (code, message, details) => {
 };
 const equal = (left, right) => JSON.stringify(left) === JSON.stringify(right);
 
+const UNDIGESTED_CATALOG_KINDS = new Set(['command-catalog', 'skill-catalog']);
+
+/** Accepts a digest-bound Protocol 1.5 document, or a Protocol 1.25 command or skill catalog without a digest. */
 function assertDocument(name, value, kind) {
+  const undigested =
+    UNDIGESTED_CATALOG_KINDS.has(kind) &&
+    value?.protocolVersion === CATALOG_PROTOCOL_VERSION &&
+    !Object.hasOwn(value, 'documentDigest');
   if (
     !value ||
     typeof value !== 'object' ||
     Array.isArray(value) ||
     value.kind !== kind ||
-    value.protocolVersion !== '1.5.0' ||
+    (!undigested && value.protocolVersion !== '1.5.0') ||
     value.digestAlgorithm !== 'sha256' ||
     value.canonicalization !== 'rfc8785' ||
-    !verifyDocumentDigest(value)
+    (!undigested && !verifyDocumentDigest(value))
   ) {
     fail(
       PROTOCOL_ERROR_CODES.DOCUMENT_INVALID,
-      `${name} is not a digest-bound Protocol 1.5 document.`,
+      undigested
+        ? `${name} is not a valid Protocol ${CATALOG_PROTOCOL_VERSION} catalog.`
+        : `${name} is not a digest-bound Protocol 1.5 document.`,
       { name },
     );
   }

@@ -1,6 +1,6 @@
 {
   "name": "@openplanr/protocol",
-  "version": "0.14.0",
+  "version": "0.18.0",
   "type": "module",
   "description": "Canonical OpenPlanr schemas, registries, typed errors, and portable contract validation",
   "license": "MIT",
@@ -107,6 +107,10 @@
     "./large-object-contracts": {
       "types": "./src/large-object-contracts.d.mts",
       "import": "./src/large-object-contracts.mjs"
+    },
+    "./large-object-limits": {
+      "types": "./src/large-object-limits.d.mts",
+      "import": "./src/large-object-limits.mjs"
     },
     "./studio-presentation-contracts": {
       "types": "./src/studio-presentation-contracts.d.mts",

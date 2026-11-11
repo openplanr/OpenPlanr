@@ -15,8 +15,8 @@ and deletion always require explicit confirmation.
 `PLANR_HOME` names the user-level state directory, `~/.planr` by default: runtime
 installs, backups, daemon state and design sessions live there. `OPENPLANR_HOME` is
 deprecated; with `PLANR_HOME` unset it still resolves to `$OPENPLANR_HOME/.planr` and
-prints one warning, and when both are set `PLANR_HOME` wins. CLI credentials,
-company sign-in and design share custody honor that home. Existing private design
+prints one warning, and when both are set `PLANR_HOME` wins. The CLI keeps company
+sign-in and design share custody under that home; the skills read no credentials. Existing private design
 share custody under `~/.openplanr/design-shares` is read and safely moved only when
 its canonical destination is absent. Existing destinations are never overwritten.
 When state seems missing, check which variable is set.

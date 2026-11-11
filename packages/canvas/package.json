@@ -1,6 +1,6 @@
 {
   "name": "@openplanr/canvas",
-  "version": "0.0.0",
+  "version": "0.0.1",
   "private": true,
   "type": "module",
   "description": "Shared OpenPlanr infinite-canvas engine and React bindings",
@@ -33,9 +33,11 @@
   "scripts": {
     "build": "node ../../scripts/typescript/compile-sources.mjs",
     "test": "vitest run",
+    "test:packed": "npm run build && vitest run --config vitest.packed.config.ts",
     "test:browser": "playwright test --project=chromium",
     "test:browser:nightly": "playwright test --project=firefox",
-    "bench:trace": "playwright test tests/browser/bench-trace.spec.ts"
+    "bench:trace": "playwright test --project=chromium tests/browser/bench-trace.spec.ts",
+    "bench:trace:cross-browser": "playwright test --project=webkit --project=firefox-trace tests/browser/bench-trace.spec.ts"
   },
   "engines": {
     "node": ">=22.13.0"
@@ -68,6 +70,6 @@
     "jsdom": "26.1.0",
     "react": "19.3.1",
     "react-dom": "19.3.1",
-    "vite": "6.4.5"
+    "vite": "8.3.5"
   }
 }

@@ -112,6 +112,13 @@ test('every tracked or untracked canonical module and authored registry remains 
   assert.deepEqual([...ignored(authored)], []);
 });
 
+test('root agent instructions remain visible to repository ignore rules', () => {
+  const repositoryIgnored = [...ignored(['AGENTS.md', 'CLAUDE.md'])].filter((path) =>
+    git(['check-ignore', '--no-index', '--verbose', path]).startsWith('.gitignore:'),
+  );
+  assert.deepEqual(repositoryIgnored, []);
+});
+
 test('wildcard consolidation preserves private state and handwritten projection seams', () => {
   const privatePaths = [
     '.env',
@@ -122,8 +129,6 @@ test('wildcard consolidation preserves private state and handwritten projection 
     '.planr/artifacts/owner.json',
     '.planr/specs/context.md',
     '.cursor/runtime.json',
-    'AGENTS.md',
-    'CLAUDE.md',
     '.design/current.json',
     '.artifact-review/review.json',
     '.wrangler/state.json',

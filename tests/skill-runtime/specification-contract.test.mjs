@@ -159,6 +159,22 @@ test('host-native skill references and deterministic templates share one artifac
   }
 });
 
+test('spec questions stay interactive and unanswered decisions become recorded assumptions', () => {
+  const specSkill = read('skills/planr-spec/SKILL.md');
+  const specContract = read('skills/planr-spec/references/specification-contract.md');
+
+  assert.match(specSkill, /structured question interface/u);
+  assert.match(specSkill, /lacks that interface, ask one concise chat question/u);
+  assert.match(specSkill, /If no one can answer,.*headless run, do not ask/su);
+  assert.match(specSkill, /bullet starting `Assumption:` under\s+`## Notes for Decomposition`/u);
+  assert.match(specSkill, /the decision and the alternative not taken/u);
+  assert.match(specSkill, /decision you settle inside a functional requirement/u);
+  assert.match(
+    specContract,
+    /`## Notes for Decomposition`.*`Assumption:`.*alternative not taken/su,
+  );
+});
+
 test('task dependencies and diagnostics guide execution without workflow bookkeeping', () => {
   for (const path of [agentPath, defaultPath, specDrivenPath]) {
     const guidance = read(path);

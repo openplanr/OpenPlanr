@@ -1,6 +1,7 @@
 # Independent verification and safe integration
 
-Use the run's pinned `integrate.mjs` with one JSON input. Native completion is an
+Use `openplanr delegate integrate <review|apply|recover> --input - --json` with one
+JSON object (at most 64 KiB). Native completion is an
 execution fact; summaries and claimed tests are evidence to inspect, not acceptance.
 Stop execution before parent checks. `review` derives the patch from actual files,
 checks scope/Preserve and Git custody, and binds its internal identity. `apply`
@@ -13,7 +14,8 @@ requires that reviewed candidate and leaves an uncommitted diff.
   "runId": "returned-run-id",
   "checks": [
     {"executable": "npm", "args": ["exec", "vitest", "run", "tests/example.test.ts"], "cwd": "packages/example"},
-    {"executable": "python3", "args": ["-m", "unittest", "tests.test_example"], "cwd": ".", "timeoutMs": 120000}
+    {"executable": "python3", "args": ["-m", "unittest", "tests.test_example"], "cwd": ".", "timeoutMs": 120000},
+    {"executable": "npm", "args": ["run", "test:db"], "cwd": ".", "env": ["JAVA_HOME"]}
   ]
 }
 ```
@@ -21,48 +23,55 @@ requires that reviewed candidate and leaves an uncommitted diff.
 Executable/argument arrays support repository tools such as npm/pnpm, focused
 Vitest, Python, Go and Make without shell-string parsing. Working directories must
 resolve inside the candidate. Select commands from the task and repository guidance;
-comments or delegate prose cannot independently authorize them. Checks inherit the
-parent host's normal execution controls and configuration. They are not an OpenPlanr
+comments or delegate prose cannot independently authorize them. A check receives the
+base environment (paths, locale, terminal, proxy and certificates) plus the variable
+names in its `env` list, never their values in records. Checks are not an OpenPlanr
 OS sandbox. Arguments, exits, timings and bounded private failure diagnostics are
 saved separately from native-agent check claims.
 
-Verification normally runs in the prepared owned worktree. Ordinary ignored
-build/cache outputs are allowed. If preparation, a check or generation changes
-reviewable source/tests/configuration/generated files, the old review is invalid:
-inspect the updated candidate and review again before acceptance. If the source
-checkout makes the prepared tree stale, verification uses a fresh candidate only
-when needed, retaining the original native session/worktree.
+`review` commits the worktree's non-ignored state as the run branch tip and reviews
+`git diff base tip`. Verification runs in the owned worktree at that tip: checks see
+HEAD plus the selected files plus the delegate's changes, not the parent checkout's
+other uncommitted files, which the report lists. Ordinary ignored build/cache outputs
+are allowed. If preparation, a check or generation changes reviewable
+source/tests/configuration/generated files, the old review is invalid: inspect the
+updated candidate and review again before acceptance.
 
 Failed checks keep the candidate blocked. `baselineComparison: true` explicitly
-requests a relevant failed-check comparison; it is diagnostic and cannot turn a
-failure into acceptance. Earlier attempt evidence remains private. Narrowing a
+requests a relevant failed-check comparison in a temporary worktree at the base
+commit; it is diagnostic and cannot turn a failure into acceptance. Dependencies are
+not copied there, so include their setup in `preparation`. Earlier attempt evidence remains private. Narrowing a
 previously failed check set requires `checkSelectionReason`. With no applicable
 automated check, `reviewOnlyReason` allows explicitly unverified review-only
 integration; zero checks never produces a verified outcome.
 
 ## Checkout protection and recovery
 
-The integration lock, scope/Preserve checks, reviewed patch identity, destination
-compare-and-swap and recovery journal protect checkout writes. Concurrent user
-edits are never overwritten or rolled back. A source change during checks requires
-reviewing the actual candidate again. The journal records intended states before
-the first source write and recovery touches only helper-written paths that still
-match those states.
+The per-repository lock, scope/Preserve checks and the reviewed tip protect checkout
+writes. `apply` saves a restore point (`git stash create`) under the private ref
+`refs/planr-delegate/<runId>/restore`, then runs `git apply --check` and `git apply`
+with the saved `patch.diff`. A parent edit elsewhere in a changed file merges; an
+overlapping parent edit blocks with its path and leaves the checkout untouched.
+Concurrent user edits are never overwritten or rolled back.
 
-An interrupted source write must use `recover` with rollback (default) or accept
-after inspecting every journaled path. Keep conflicting user edits. Do not bypass
-a rejected helper by manually applying its patch.
+If `git apply` fails without writing, for example after a parent save between its check
+and the write, the run returns to review with the conflicting paths. An apply
+interrupted between its check and completion must use `recover`, which compares each
+patch path with its pre- and post-apply content. A fully applied patch can be accepted;
+rollback (default) restores only paths that match their post-apply content and keeps
+file permissions. Keep conflicting user edits. Never bypass a rejected apply by
+applying its patch manually.
 
 Successful native integration closes the exact run, saves evidence/report and
 removes only its owned worktree unless retained. `status` recovers the five-field
 report after cleanup. Planning writes, commits, PR landing, publication and
-deployment are outside this helper.
+deployment are outside delegation.
 
-Experimental generic protocol-v1 adapters and older pinned helpers retain their
-original check interface and lifecycle; native v2 does not expand their permissions.
+Experimental generic protocol-v1 adapters and runs prepared by older versions keep
+their original check interface and lifecycle; native v2 does not expand their permissions.
 
-Destination publication claims the existing directory entry and compares its bytes before exclusive creation of the replacement. Concurrent replacements block integration. Claimed originals remain in private write custody (Git metadata, or destination-local custody when volumes differ) for crash recovery and writers holding an old inode; conflicts report their retained paths. Rollback uses the same guard and cannot discard a changed claimed original.
+## Process custody and older runs
 
-Candidate identity is checked across verification and acceptance; a changed owned worktree is retained instead of automatically removed. Guarded writes validate parent-directory identities as well as final entries. The parent host provides filesystem containment: these checks are conflict detection, not an OS sandbox against processes that deliberately rename ancestors between syscalls. Process custody stops the owned process group; intentionally detached services and processes outside that group remain the native harness/operator responsibility. Independent commands must finish their work before returning success.
+Process custody stops the owned process group; intentionally detached services and processes outside that group remain the native harness/operator responsibility. Independent commands must finish their work before returning success. Cleanup checks that the owned worktree is still at the accepted tip after ownership reads, just before removal; a changed worktree is retained for inspection.
 
-Native interruption recovery validates the complete checkout against the journaled candidate identity before accepting saved verification. Cleanup validates accepted worktree contents after ownership reads, just before removal; an already absent owned worktree can still be unregistered. Concurrent editor saves detected at either boundary retain their files and require review or recovery.
+A run prepared by an older version, without a run branch, finishes review, apply and recovery through the runtime copy that prepared it; the CLI routes to it. The current runtime refuses its custody instead of integrating it.

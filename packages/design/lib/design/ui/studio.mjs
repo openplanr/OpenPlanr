@@ -144,6 +144,7 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
   let root = null;
   let chrome = null;
   let scroll = null;
+  let scrollSize = null;
   let surface = null;
   let grid = null;
   let canvasAttached = false;
@@ -314,6 +315,13 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
     return result;
   }
 
+  // The stage ResizeObserver clears this, so camera frames never read stage layout.
+  function stageSize() {
+    const size = scrollSize ?? { width: scroll.clientWidth, height: scroll.clientHeight };
+    if (typeof ResizeObserver === 'function') scrollSize = size;
+    return size;
+  }
+
   function scheduleViewContext() {
     if (!options.viewContextUrl || !stage || !scroll || destroyed) return;
     if (state.view === 'canvas' && !canvasAttached) return;
@@ -321,6 +329,7 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
     viewContextConflictRevision = null;
     if (inspectedSelection?.artifactId !== activeArtifactId) inspectedSelection = null;
     const board = ({ screenId, frameId, variantId }) => ({ screenId, frameId, variantId });
+    const viewport = state.view === 'canvas' ? stageSize() : null;
     const visible =
       state.view === 'canvas'
         ? visibleEntries().filter((entry) => {
@@ -329,8 +338,8 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
             const { width, height } = bounds;
             const { x, y } = canvas.worldToScreen(bounds);
             return (
-              x < scroll.clientWidth &&
-              y < scroll.clientHeight &&
+              x < viewport.width &&
+              y < viewport.height &&
               x + width * state.zoom > 0 &&
               y + height * state.zoom > 0
             );
@@ -1149,24 +1158,43 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
         },
       ];
     });
+    // Write every size-affecting style, read all sizes in one layout, then position.
+    const labels = placed.map(({ entry }) => {
+      const label = panels.get(entry.artifactId).querySelector('.design-artboard-label');
+      const title = label.querySelector('strong');
+      const size = label.querySelector('span');
+      label.title = `${title.textContent} · ${size.textContent}`;
+      size.hidden = false;
+      return { title, size };
+    });
     sectionHeadings.forEach((heading, index) => {
       const section = layout.sections[index];
       heading.hidden = false;
       heading.style.fontSize = `${clamp(28 * state.zoom, 14, 28) / state.zoom}px`;
       if (section.maxW) heading.style.maxWidth = `${section.maxW / state.zoom}px`;
+    });
+    const headingSizes = sectionHeadings.map((heading) => ({
+      width: heading.offsetWidth,
+      height: heading.offsetHeight,
+    }));
+    const truncated = labels.map(
+      ({ title, size }) =>
+        title.scrollWidth > title.clientWidth || size.scrollWidth > size.clientWidth,
+    );
+    sectionHeadings.forEach((heading, index) => {
+      const section = layout.sections[index];
+      const { width, height } = headingSizes[index];
       const below = placed.filter(
         ({ bounds: board }) =>
-          board.y >= section.y &&
-          section.x < board.x + board.width &&
-          section.x + heading.offsetWidth > board.x,
+          board.y >= section.y && section.x < board.x + board.width && section.x + width > board.x,
       );
       const bottom = Math.min(section.y, ...below.map(({ bounds }) => bounds.y - 42 / state.zoom));
-      heading.style.top = `${bottom - heading.offsetHeight}px`;
+      heading.style.top = `${bottom - height}px`;
       const bounds = {
         x: parseFloat(heading.style.left),
         y: parseFloat(heading.style.top),
-        width: heading.offsetWidth,
-        height: heading.offsetHeight,
+        width,
+        height,
       };
       heading.hidden = nodes.some(
         ({ bounds: other }) =>
@@ -1178,17 +1206,13 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
       if (!heading.hidden && Object.values(bounds).every(Number.isFinite))
         nodes.push({ id: `section:${section.id}`, bounds });
     });
+    labels.forEach(({ size }, index) => {
+      size.hidden = truncated[index];
+    });
     sectionZoom = state.zoom;
     canvas.setNodes(nodes);
-    for (const { entry } of placed) {
+    for (const { entry } of placed)
       canvas.registerNodeElement(entry.artifactId, panels.get(entry.artifactId));
-      const label = panels.get(entry.artifactId).querySelector('.design-artboard-label');
-      const title = label.querySelector('strong');
-      const size = label.querySelector('span');
-      label.title = `${title.textContent} · ${size.textContent}`;
-      size.hidden = false;
-      size.hidden = title.scrollWidth > title.clientWidth || size.scrollWidth > size.clientWidth;
-    }
     canvas.setSelection(
       placed.some(({ entry }) => entry.artifactId === activeArtifactId) ? [activeArtifactId] : [],
     );
@@ -1987,6 +2011,7 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
     // the focused views; the free canvas retains its personal camera position.
     if (typeof ResizeObserver === 'function') {
       const observer = new ResizeObserver(() => {
+        scrollSize = null;
         if (state.view !== 'canvas' && root.dataset.designRestoring !== 'true')
           fit({ save: false });
         syncCanvasChrome();

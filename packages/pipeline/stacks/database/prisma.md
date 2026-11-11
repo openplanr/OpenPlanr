@@ -119,21 +119,25 @@ await prisma.$transaction([
 
 ## Migration Commands
 
+Run the Prisma CLI that the project's `package.json` pins, through the project's
+package manager (for example a `package.json` script such as `npm run prisma -- <args>`),
+never an unpinned download.
+
 ```bash
 # Create + apply migration
-npx prisma migrate dev --name {migration_name}
+prisma migrate dev --name {migration_name}
 
 # Apply to production
-npx prisma migrate deploy
+prisma migrate deploy
 
 # Reset (dev only — destroys data)
-npx prisma migrate reset
+prisma migrate reset
 
 # Generate client after schema change
-npx prisma generate
+prisma generate
 
 # Open Prisma Studio
-npx prisma studio
+prisma studio
 ```
 
 ---
@@ -151,5 +155,5 @@ npx prisma studio
 
 - Schema file: `prisma/schema.prisma` — Backend Agent modifies this for new models
 - Client import: `import { prisma } from '@/lib/prisma'`
-- After schema changes: agent must note "Run `npx prisma migrate dev`"
+- After schema changes: agent must note "Run `prisma migrate dev` through the project's package manager"
 - Types: use generated Prisma types — never manually type DB entities

@@ -196,10 +196,11 @@ function handoffState(handoff, designId, revision, selectedVariant) {
   )
     return 'blocked';
   const basisRevision = optionalDigest(handoff.basis?.sourceRevision, 'review handoff revision');
+  // An earlier render revision is accepted only when the caller found the same content under it.
   if (
     handoff.current === false ||
     handoff.basis?.designId !== designId ||
-    basisRevision !== revision ||
+    (basisRevision !== revision && handoff.current !== true) ||
     handoff.basis?.selectedVariant !== selectedVariant
   )
     return 'stale';
@@ -217,7 +218,7 @@ export function compileDesignHandoffReadiness(input) {
   if (
     !document ||
     document.kind !== 'openplanr-design-document' ||
-    document.schemaVersion !== '1.0.0' ||
+    !['1.0.0', '1.1.0'].includes(document.schemaVersion) ||
     typeof document.id !== 'string' ||
     !document.id
   )

@@ -175,8 +175,8 @@ export const DESIGN_DOCUMENT_V1_SCHEMA = freeze({
   },
 });
 
-/** @type {typeof import('./design-contracts.d.mts').DESIGN_DOCUMENT_SCHEMA} */
-export const DESIGN_DOCUMENT_SCHEMA = freeze({
+/** @type {typeof import('./design-contracts.d.mts').DESIGN_DOCUMENT_V120_SCHEMA} */
+export const DESIGN_DOCUMENT_V120_SCHEMA = freeze({
   ...DESIGN_DOCUMENT_V1_SCHEMA,
   $id: 'https://openplanr.dev/schemas/v1.20.0/design-document.schema.json',
   'x-openplanr-contract': { id: 'design-document', version: '1.20.0' },
@@ -235,6 +235,135 @@ export const DESIGN_DOCUMENT_SCHEMA = freeze({
   },
 });
 
+const PROP_TOKEN_SCHEMA = {
+  type: 'string',
+  minLength: 1,
+  maxLength: 128,
+  pattern: '^[a-z][a-z0-9-]*(?![\\s\\S])',
+};
+const propTokenPattern = new RegExp(PROP_TOKEN_SCHEMA.pattern, 'u');
+const isPropToken = (value) =>
+  typeof value === 'string' &&
+  value.length <= PROP_TOKEN_SCHEMA.maxLength &&
+  propTokenPattern.test(value);
+
+const currentDocument =
+  /** @type {{ properties: Record<string, unknown>; [key: string]: unknown }} */ (
+    structuredClone(DESIGN_DOCUMENT_V120_SCHEMA)
+  );
+currentDocument.$id = 'https://openplanr.dev/schemas/v1.22.0/design-document.schema.json';
+currentDocument['x-openplanr-contract'] = { id: 'design-document', version: '1.22.0' };
+currentDocument.properties.schemaVersion = { enum: ['1.0.0', '1.1.0'] };
+const screenSchema = /** @type {{ items: { properties: Record<string, unknown> } }} */ (
+  currentDocument.properties.screens
+);
+screenSchema.items.properties.props = {
+  type: 'object',
+  propertyNames: PROP_TOKEN_SCHEMA,
+  additionalProperties: {
+    oneOf: [
+      {
+        type: 'object',
+        additionalProperties: false,
+        required: ['type', 'options', 'default'],
+        properties: {
+          type: { const: 'enum' },
+          options: {
+            type: 'array',
+            minItems: 1,
+            uniqueItems: true,
+            items: PROP_TOKEN_SCHEMA,
+          },
+          default: PROP_TOKEN_SCHEMA,
+        },
+      },
+      {
+        type: 'object',
+        additionalProperties: false,
+        required: ['type', 'default'],
+        properties: { type: { const: 'boolean' }, default: { type: 'boolean' } },
+      },
+    ],
+  },
+};
+const variantSchema = /** @type {{ items: { properties: Record<string, unknown> } }} */ (
+  currentDocument.properties.variants
+);
+variantSchema.items.properties.props = {
+  type: 'object',
+  propertyNames: { $ref: '#/$defs/id' },
+  additionalProperties: {
+    type: 'object',
+    propertyNames: PROP_TOKEN_SCHEMA,
+    additionalProperties: { anyOf: [PROP_TOKEN_SCHEMA, { type: 'boolean' }] },
+  },
+};
+currentDocument.allOf = [
+  {
+    if: { properties: { schemaVersion: { const: '1.1.0' } }, required: ['schemaVersion'] },
+    else: {
+      properties: {
+        screens: { items: { not: { required: ['props'] } } },
+        variants: { items: { not: { required: ['props'] } } },
+      },
+    },
+  },
+];
+/** @type {typeof import('./design-contracts.d.mts').DESIGN_DOCUMENT_SCHEMA} */
+export const DESIGN_DOCUMENT_SCHEMA = freeze(currentDocument);
+
+/** Validate prop references and values after structural validation.
+ * @type {typeof import('./design-contracts.d.mts').validateDesignProps}
+ */
+export function validateDesignProps(document) {
+  const errors = [];
+  const checkToken = (value, path) => {
+    if (!isPropToken(value))
+      errors.push(
+        `${path}: ${JSON.stringify(value)} must be a lowercase token matching ${PROP_TOKEN_SCHEMA.pattern} with at most ${PROP_TOKEN_SCHEMA.maxLength} characters`,
+      );
+  };
+  const screens = new Map(document.screens.map((screen) => [screen.id, screen]));
+  for (const [index, screen] of document.screens.entries()) {
+    for (const [name, prop] of Object.entries(screen.props ?? {})) {
+      const path = `$.screens[${index}].props.${name}`;
+      checkToken(name, path);
+      if (prop.type === 'enum') {
+        for (const [optionIndex, option] of prop.options.entries())
+          checkToken(option, `${path}.options[${optionIndex}]`);
+        checkToken(prop.default, `${path}.default`);
+        if (!prop.options.includes(prop.default))
+          errors.push(`${path}.default: '${prop.default}' is not an enum option`);
+      }
+    }
+  }
+  for (const [index, variant] of document.variants.entries()) {
+    for (const [screenId, values] of Object.entries(variant.props ?? {})) {
+      const screen = screens.get(screenId);
+      const path = `$.variants[${index}].props.${screenId}`;
+      if (!screen) {
+        errors.push(`${path}: unknown screen '${screenId}'`);
+        continue;
+      }
+      for (const [name, value] of Object.entries(values)) {
+        checkToken(name, `${path}.${name}`);
+        if (typeof value === 'string') checkToken(value, `${path}.${name}`);
+        const props = screen.props ?? {};
+        const prop = Object.hasOwn(props, name) ? props[name] : undefined;
+        if (!prop) errors.push(`${path}.${name}: unknown prop '${name}' on screen '${screenId}'`);
+        else if (prop.type === 'boolean' && typeof value !== 'boolean')
+          errors.push(`${path}.${name}: expected a boolean, received ${JSON.stringify(value)}`);
+        else if (
+          prop.type === 'enum' &&
+          (typeof value !== 'string' || !prop.options.includes(value))
+        )
+          errors.push(`${path}.${name}: ${JSON.stringify(value)} is not an enum option`);
+      }
+    }
+  }
+  return errors;
+}
+
 /**
  * Validate structure plus stable identity and cross-reference constraints.
  * @returns {ReturnType<typeof import('./design-contracts.d.mts').validateDesignDocument>}
@@ -243,7 +372,17 @@ export function validateDesignDocument(value) {
   const errors = validateJson(value, DESIGN_DOCUMENT_SCHEMA).map(
     ({ path, detail }) => `${path}: ${detail}`,
   );
+  if (
+    value?.schemaVersion === '1.0.0' &&
+    ['screens', 'variants'].some(
+      (field) =>
+        Array.isArray(value[field]) &&
+        value[field].some((item) => item && Object.hasOwn(item, 'props')),
+    )
+  )
+    errors.push('$.schemaVersion: props require schemaVersion "1.1.0"');
   if (errors.length > 0) return { ok: false, errors };
+  errors.push(...validateDesignProps(value));
 
   for (const field of ['frames', 'screens', 'flows', 'variants']) {
     const seen = new Set();

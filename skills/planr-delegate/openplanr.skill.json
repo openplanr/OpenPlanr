@@ -3,7 +3,7 @@
   "schemaVersion": "1.0.0",
   "protocolVersion": "1.8.0",
   "skillId": "planr-delegate",
-  "skillVersion": "0.1.1",
+  "skillVersion": "0.2.0",
   "entrypoint": "SKILL.md",
   "hosts": [
     "claude-code",
@@ -56,6 +56,28 @@
       "executable": false
     },
     {
+      "path": "references/native-commands.md",
+      "kind": "reference",
+      "hosts": [
+        "claude-code",
+        "codex",
+        "chatgpt",
+        "cursor"
+      ],
+      "executable": false
+    },
+    {
+      "path": "references/openplanr-cli.md",
+      "kind": "reference",
+      "hosts": [
+        "claude-code",
+        "codex",
+        "chatgpt",
+        "cursor"
+      ],
+      "executable": false
+    },
+    {
       "path": "references/operator-guide.md",
       "kind": "reference",
       "hosts": [
@@ -80,270 +102,6 @@
     {
       "path": "references/worktree-custody.md",
       "kind": "reference",
-      "hosts": [
-        "claude-code",
-        "codex",
-        "chatgpt",
-        "cursor"
-      ],
-      "executable": false
-    },
-    {
-      "path": "scripts/adapters/claude.mjs",
-      "kind": "script",
-      "hosts": [
-        "claude-code",
-        "codex",
-        "chatgpt",
-        "cursor"
-      ],
-      "executable": false
-    },
-    {
-      "path": "scripts/adapters/codex.mjs",
-      "kind": "script",
-      "hosts": [
-        "claude-code",
-        "codex",
-        "chatgpt",
-        "cursor"
-      ],
-      "executable": false
-    },
-    {
-      "path": "scripts/adapters/generic.mjs",
-      "kind": "script",
-      "hosts": [
-        "claude-code",
-        "codex",
-        "chatgpt",
-        "cursor"
-      ],
-      "executable": false
-    },
-    {
-      "path": "scripts/context.mjs",
-      "kind": "script",
-      "hosts": [
-        "claude-code",
-        "codex",
-        "chatgpt",
-        "cursor"
-      ],
-      "executable": false
-    },
-    {
-      "path": "scripts/credentials.mjs",
-      "kind": "script",
-      "hosts": [
-        "claude-code",
-        "codex",
-        "chatgpt",
-        "cursor"
-      ],
-      "executable": false
-    },
-    {
-      "path": "scripts/custody.mjs",
-      "kind": "script",
-      "hosts": [
-        "claude-code",
-        "codex",
-        "chatgpt",
-        "cursor"
-      ],
-      "executable": false
-    },
-    {
-      "path": "scripts/helper-snapshot.mjs",
-      "kind": "script",
-      "hosts": [
-        "claude-code",
-        "codex",
-        "chatgpt",
-        "cursor"
-      ],
-      "executable": false
-    },
-    {
-      "path": "scripts/integrate.mjs",
-      "kind": "script",
-      "hosts": [
-        "claude-code",
-        "codex",
-        "chatgpt",
-        "cursor"
-      ],
-      "executable": false
-    },
-    {
-      "path": "scripts/presentation.mjs",
-      "kind": "script",
-      "hosts": [
-        "claude-code",
-        "codex",
-        "chatgpt",
-        "cursor"
-      ],
-      "executable": false
-    },
-    {
-      "path": "scripts/profiles.mjs",
-      "kind": "script",
-      "hosts": [
-        "claude-code",
-        "codex",
-        "chatgpt",
-        "cursor"
-      ],
-      "executable": false
-    },
-    {
-      "path": "scripts/run-record.mjs",
-      "kind": "script",
-      "hosts": [
-        "claude-code",
-        "codex",
-        "chatgpt",
-        "cursor"
-      ],
-      "executable": false
-    },
-    {
-      "path": "scripts/runner.mjs",
-      "kind": "script",
-      "hosts": [
-        "claude-code",
-        "codex",
-        "chatgpt",
-        "cursor"
-      ],
-      "executable": false
-    },
-    {
-      "path": "scripts/run-contract.mjs",
-      "kind": "script",
-      "hosts": [
-        "claude-code",
-        "codex",
-        "chatgpt",
-        "cursor"
-      ],
-      "executable": false
-    },
-    {
-      "path": "scripts/run-preflight.mjs",
-      "kind": "script",
-      "hosts": [
-        "claude-code",
-        "codex",
-        "chatgpt",
-        "cursor"
-      ],
-      "executable": false
-    },
-    {
-      "path": "scripts/run-preparation.mjs",
-      "kind": "script",
-      "hosts": [
-        "claude-code",
-        "codex",
-        "chatgpt",
-        "cursor"
-      ],
-      "executable": false
-    },
-    {
-      "path": "scripts/run-execution.mjs",
-      "kind": "script",
-      "hosts": [
-        "claude-code",
-        "codex",
-        "chatgpt",
-        "cursor"
-      ],
-      "executable": false
-    },
-    {
-      "path": "scripts/run-lifecycle.mjs",
-      "kind": "script",
-      "hosts": [
-        "claude-code",
-        "codex",
-        "chatgpt",
-        "cursor"
-      ],
-      "executable": false
-    },
-    {
-      "path": "scripts/integration-files.mjs",
-      "kind": "script",
-      "hosts": [
-        "claude-code",
-        "codex",
-        "chatgpt",
-        "cursor"
-      ],
-      "executable": false
-    },
-    {
-      "path": "scripts/integration-checks.mjs",
-      "kind": "script",
-      "hosts": [
-        "claude-code",
-        "codex",
-        "chatgpt",
-        "cursor"
-      ],
-      "executable": false
-    },
-    {
-      "path": "scripts/integration-transaction.mjs",
-      "kind": "script",
-      "hosts": [
-        "claude-code",
-        "codex",
-        "chatgpt",
-        "cursor"
-      ],
-      "executable": false
-    },
-    {
-      "path": "scripts/adapters/capsule.mjs",
-      "kind": "script",
-      "hosts": [
-        "claude-code",
-        "codex",
-        "chatgpt",
-        "cursor"
-      ],
-      "executable": false
-    },
-    {
-      "path": "scripts/adapters/cursor.mjs",
-      "kind": "script",
-      "hosts": [
-        "claude-code",
-        "codex",
-        "chatgpt",
-        "cursor"
-      ],
-      "executable": false
-    },
-    {
-      "path": "scripts/adapters/native.mjs",
-      "kind": "script",
-      "hosts": [
-        "claude-code",
-        "codex",
-        "chatgpt",
-        "cursor"
-      ],
-      "executable": false
-    },
-    {
-      "path": "scripts/backend-diagnostics.mjs",
-      "kind": "script",
       "hosts": [
         "claude-code",
         "codex",

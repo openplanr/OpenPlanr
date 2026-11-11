@@ -18,6 +18,18 @@ export const DIAGRAM_THEME = Object.freeze({
   fontSize: 16,
 });
 
+const SERIES_PALETTES = Object.freeze({
+  light: Object.freeze(['#0072b2', '#d55e00', '#009e73', '#bf6a9a', '#b07800', '#2b8cc4']),
+  dark: Object.freeze(['#0072b2', '#d55e00', '#009e73', '#cc79a7', '#e69f00', '#56b4e9']),
+});
+
+/** Series colours by mode, kept separate from serialized non-chart theme receipts. */
+export function diagramSeriesColors(theme) {
+  return SERIES_PALETTES[
+    theme.mode === 'dark' || theme.page?.colorScheme === 'dark' ? 'dark' : 'light'
+  ];
+}
+
 /**
  * Type scale and spacing for themes that declare no `metrics`. Kept off
  * DIAGRAM_THEME so the default asset receipt and its digest stay unchanged.

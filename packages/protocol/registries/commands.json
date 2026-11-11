@@ -1,7 +1,7 @@
 {
   "kind": "command-catalog",
   "schemaVersion": "1.0.0",
-  "protocolVersion": "1.5.0",
+  "protocolVersion": "1.25.0",
   "documentVersion": "1.0.0",
   "digestAlgorithm": "sha256",
   "canonicalization": "rfc8785",
@@ -188,7 +188,7 @@
       "ownerPackage": "openplanr",
       "source": {
         "path": "packages/cli/src/cli/commands/artifact.ts",
-        "digest": "sha256:0909468799893a62b11c987af2bcd4f44e9be45544418a1309d58c2b028e4575"
+        "digest": "sha256:69a3d163c58a5764fa558f1f9929a123230549eb4a2b180e334a71069d573b60"
       },
       "authorityClass": "workflow",
       "machineJson": false,
@@ -356,7 +356,7 @@
       "ownerPackage": "openplanr",
       "source": {
         "path": "skills/planr-plan/SKILL.md",
-        "digest": "sha256:b58fd784d77400e33b08e348003ac59ab2b8ecc77eea03ef20be6e8becf57826"
+        "digest": "sha256:cf7b4b0dfc001caf1da3fab7577c60b9200daa41a9889105ff9c1580f82130a6"
       },
       "authorityClass": "workflow",
       "machineJson": false,
@@ -377,7 +377,7 @@
       "ownerPackage": "openplanr",
       "source": {
         "path": "docs/generated/utility-command-catalog.json",
-        "digest": "sha256:70f33f5d875899bb2c2b861b6c880aebda58c071d9c11abd3712362318974f15"
+        "digest": "sha256:aa78028462cd8cd2d88e8b41d6c5ec8c027e49840c48ac1d994bc50064bd9dbf"
       },
       "authorityClass": "workflow",
       "machineJson": false,
@@ -566,7 +566,7 @@
       "ownerPackage": "openplanr",
       "source": {
         "path": "docs/generated/utility-command-catalog.json",
-        "digest": "sha256:70f33f5d875899bb2c2b861b6c880aebda58c071d9c11abd3712362318974f15"
+        "digest": "sha256:aa78028462cd8cd2d88e8b41d6c5ec8c027e49840c48ac1d994bc50064bd9dbf"
       },
       "authorityClass": "workflow",
       "machineJson": true,
@@ -587,7 +587,7 @@
       "ownerPackage": "openplanr",
       "source": {
         "path": "skills/planr-plan/SKILL.md",
-        "digest": "sha256:b58fd784d77400e33b08e348003ac59ab2b8ecc77eea03ef20be6e8becf57826"
+        "digest": "sha256:cf7b4b0dfc001caf1da3fab7577c60b9200daa41a9889105ff9c1580f82130a6"
       },
       "authorityClass": "workflow",
       "machineJson": false,
@@ -629,7 +629,7 @@
       "ownerPackage": "openplanr",
       "source": {
         "path": "skills/planr-spec/SKILL.md",
-        "digest": "sha256:040841d2b63504fd4ad9e07222ba0356cdd3084045fbb70f665bb043e4d006fa"
+        "digest": "sha256:e874c8a86a346a6f759bb13e2e9b60483c2eb20a429c2ebad98b68c976d97649"
       },
       "authorityClass": "workflow",
       "machineJson": false,
@@ -692,7 +692,7 @@
       "ownerPackage": "openplanr",
       "source": {
         "path": "skills/planr-spec/SKILL.md",
-        "digest": "sha256:040841d2b63504fd4ad9e07222ba0356cdd3084045fbb70f665bb043e4d006fa"
+        "digest": "sha256:e874c8a86a346a6f759bb13e2e9b60483c2eb20a429c2ebad98b68c976d97649"
       },
       "authorityClass": "workflow",
       "machineJson": false,
@@ -797,7 +797,7 @@
       "ownerPackage": "openplanr",
       "source": {
         "path": "packages/cli/src/cli/commands/spec.ts",
-        "digest": "sha256:c73ebb2f1ffc580840239c82e86eb8f21e37e51a47b037387ee24872a8f274ab"
+        "digest": "sha256:29c629148d85def9e7cc25aa18e04894a0c139a488233b4cdb8c6925f6dd4880"
       },
       "authorityClass": "workflow",
       "machineJson": false,
@@ -881,7 +881,7 @@
       "ownerPackage": "openplanr",
       "source": {
         "path": "packages/cli/src/cli/commands/sync.ts",
-        "digest": "sha256:0c9d3cc2eb3ea2859c04f66d9c006389e457477626ad27703dc0ec075c521139"
+        "digest": "sha256:cb5b8490f16d518fa7c261895ec5543c2888fa93c0c43600c170fc226b244ffb"
       },
       "authorityClass": "workflow",
       "machineJson": false,
@@ -1028,7 +1028,7 @@
       "ownerPackage": "planr-pipeline",
       "source": {
         "path": "skills/planr-design/SKILL.md",
-        "digest": "sha256:d4f027660fe2cc6e2a1bce254916fe65d01d0ad484f96eebb13f4711685143b8"
+        "digest": "sha256:e584637a3adaaa4d64384c073b5c212124b0af53f1dd0c97336b97fee3e5374f"
       },
       "authorityClass": "compatibility-router",
       "machineJson": false,
@@ -1049,7 +1049,7 @@
       "ownerPackage": "planr-pipeline",
       "source": {
         "path": "skills/planr-design-loop/SKILL.md",
-        "digest": "sha256:3aeaaec08e55d75377c211c0b2689bb85adf4457939fd8ca6ba3833815a0505b"
+        "digest": "sha256:b90b1153ee7df23b31022ebb480f153c8e2048cdc04c2708cab2cc3104efa303"
       },
       "authorityClass": "compatibility-router",
       "machineJson": false,
@@ -1070,7 +1070,7 @@
       "ownerPackage": "planr-pipeline",
       "source": {
         "path": "skills/planr-design-review/SKILL.md",
-        "digest": "sha256:981117d807042f5f1a1be5c4c3c773dde94bc0c5243b75c17d5e493c0ff3ce90"
+        "digest": "sha256:d4074dfdb3f50eb95fde37f1029a11d379afb29cfc19e8091ee55f4e02956058"
       },
       "authorityClass": "compatibility-router",
       "machineJson": false,
@@ -1091,7 +1091,7 @@
       "ownerPackage": "planr-pipeline",
       "source": {
         "path": "skills/planr-plan/SKILL.md",
-        "digest": "sha256:b58fd784d77400e33b08e348003ac59ab2b8ecc77eea03ef20be6e8becf57826"
+        "digest": "sha256:cf7b4b0dfc001caf1da3fab7577c60b9200daa41a9889105ff9c1580f82130a6"
       },
       "authorityClass": "compatibility-router",
       "machineJson": false,
@@ -1112,7 +1112,7 @@
       "ownerPackage": "planr-pipeline",
       "source": {
         "path": "skills/planr-ship/SKILL.md",
-        "digest": "sha256:b4d71fc7aed441e0cbb0dfa7559ff02cdd5a3b92a566d3c4890426f1e48c6590"
+        "digest": "sha256:a2d4763a9a72065aa412295983bd9f41c0dcf9ba515318b248b4b21b5b27cd57"
       },
       "authorityClass": "compatibility-router",
       "machineJson": false,
@@ -1154,7 +1154,7 @@
       "ownerPackage": "planr-pipeline",
       "source": {
         "path": "skills/planr-sync/SKILL.md",
-        "digest": "sha256:4fb542bc7a0685904b6d6f58ec9fae3c539531793e1933474fbc3c3d34702e24"
+        "digest": "sha256:dd9bcd90a86c15d2f42f10c6a8c508d0455270ba4d9b690d829e5fc400c29ef2"
       },
       "authorityClass": "compatibility-router",
       "machineJson": false,
@@ -1176,7 +1176,7 @@
       "ownerPackage": "planr-pipeline",
       "source": {
         "path": "packages/pipeline/bin/openplanr-pipeline.mjs",
-        "digest": "sha256:a5f2874b2fc8ce7f8a2db5934923bfc54dd90914b6c1ba1b8c6ddc66cc92153f"
+        "digest": "sha256:1b76f1405af5a3129d8f5fe414042b3e42316ff63f1f2176af479d2f4116ac1c"
       },
       "authorityClass": "workflow",
       "machineJson": true,
@@ -1198,7 +1198,7 @@
       "ownerPackage": "planr-pipeline",
       "source": {
         "path": "packages/pipeline/bin/openplanr-pipeline.mjs",
-        "digest": "sha256:a5f2874b2fc8ce7f8a2db5934923bfc54dd90914b6c1ba1b8c6ddc66cc92153f"
+        "digest": "sha256:1b76f1405af5a3129d8f5fe414042b3e42316ff63f1f2176af479d2f4116ac1c"
       },
       "authorityClass": "workflow",
       "machineJson": true,
@@ -1220,7 +1220,7 @@
       "ownerPackage": "planr-pipeline",
       "source": {
         "path": "packages/pipeline/bin/openplanr-pipeline.mjs",
-        "digest": "sha256:a5f2874b2fc8ce7f8a2db5934923bfc54dd90914b6c1ba1b8c6ddc66cc92153f"
+        "digest": "sha256:1b76f1405af5a3129d8f5fe414042b3e42316ff63f1f2176af479d2f4116ac1c"
       },
       "authorityClass": "workflow",
       "machineJson": true,
@@ -1242,7 +1242,7 @@
       "ownerPackage": "planr-pipeline",
       "source": {
         "path": "packages/pipeline/bin/openplanr-pipeline.mjs",
-        "digest": "sha256:a5f2874b2fc8ce7f8a2db5934923bfc54dd90914b6c1ba1b8c6ddc66cc92153f"
+        "digest": "sha256:1b76f1405af5a3129d8f5fe414042b3e42316ff63f1f2176af479d2f4116ac1c"
       },
       "authorityClass": "workflow",
       "machineJson": true,
@@ -1264,7 +1264,7 @@
       "ownerPackage": "planr-pipeline",
       "source": {
         "path": "packages/pipeline/bin/openplanr-pipeline.mjs",
-        "digest": "sha256:a5f2874b2fc8ce7f8a2db5934923bfc54dd90914b6c1ba1b8c6ddc66cc92153f"
+        "digest": "sha256:1b76f1405af5a3129d8f5fe414042b3e42316ff63f1f2176af479d2f4116ac1c"
       },
       "authorityClass": "workflow",
       "machineJson": true,
@@ -1286,7 +1286,7 @@
       "ownerPackage": "planr-pipeline",
       "source": {
         "path": "packages/pipeline/bin/openplanr-pipeline.mjs",
-        "digest": "sha256:a5f2874b2fc8ce7f8a2db5934923bfc54dd90914b6c1ba1b8c6ddc66cc92153f"
+        "digest": "sha256:1b76f1405af5a3129d8f5fe414042b3e42316ff63f1f2176af479d2f4116ac1c"
       },
       "authorityClass": "workflow",
       "machineJson": true,
@@ -1308,7 +1308,7 @@
       "ownerPackage": "planr-pipeline",
       "source": {
         "path": "packages/pipeline/bin/openplanr-pipeline.mjs",
-        "digest": "sha256:a5f2874b2fc8ce7f8a2db5934923bfc54dd90914b6c1ba1b8c6ddc66cc92153f"
+        "digest": "sha256:1b76f1405af5a3129d8f5fe414042b3e42316ff63f1f2176af479d2f4116ac1c"
       },
       "authorityClass": "workflow",
       "machineJson": true,
@@ -1330,7 +1330,7 @@
       "ownerPackage": "planr-pipeline",
       "source": {
         "path": "packages/pipeline/bin/openplanr-pipeline.mjs",
-        "digest": "sha256:a5f2874b2fc8ce7f8a2db5934923bfc54dd90914b6c1ba1b8c6ddc66cc92153f"
+        "digest": "sha256:1b76f1405af5a3129d8f5fe414042b3e42316ff63f1f2176af479d2f4116ac1c"
       },
       "authorityClass": "workflow",
       "machineJson": true,
@@ -1352,7 +1352,7 @@
       "ownerPackage": "planr-pipeline",
       "source": {
         "path": "packages/pipeline/bin/openplanr-pipeline.mjs",
-        "digest": "sha256:a5f2874b2fc8ce7f8a2db5934923bfc54dd90914b6c1ba1b8c6ddc66cc92153f"
+        "digest": "sha256:1b76f1405af5a3129d8f5fe414042b3e42316ff63f1f2176af479d2f4116ac1c"
       },
       "authorityClass": "workflow",
       "machineJson": true,
@@ -1374,7 +1374,7 @@
       "ownerPackage": "planr-pipeline",
       "source": {
         "path": "packages/pipeline/bin/openplanr-pipeline.mjs",
-        "digest": "sha256:a5f2874b2fc8ce7f8a2db5934923bfc54dd90914b6c1ba1b8c6ddc66cc92153f"
+        "digest": "sha256:1b76f1405af5a3129d8f5fe414042b3e42316ff63f1f2176af479d2f4116ac1c"
       },
       "authorityClass": "workflow",
       "machineJson": true,
@@ -1396,7 +1396,7 @@
       "ownerPackage": "planr-pipeline",
       "source": {
         "path": "packages/pipeline/bin/openplanr-pipeline.mjs",
-        "digest": "sha256:a5f2874b2fc8ce7f8a2db5934923bfc54dd90914b6c1ba1b8c6ddc66cc92153f"
+        "digest": "sha256:1b76f1405af5a3129d8f5fe414042b3e42316ff63f1f2176af479d2f4116ac1c"
       },
       "authorityClass": "workflow",
       "machineJson": true,
@@ -1419,7 +1419,7 @@
       "ownerPackage": "planr-pipeline",
       "source": {
         "path": "packages/pipeline/bin/openplanr-pipeline.mjs",
-        "digest": "sha256:a5f2874b2fc8ce7f8a2db5934923bfc54dd90914b6c1ba1b8c6ddc66cc92153f"
+        "digest": "sha256:1b76f1405af5a3129d8f5fe414042b3e42316ff63f1f2176af479d2f4116ac1c"
       },
       "authorityClass": "workflow",
       "machineJson": true,
@@ -1442,7 +1442,7 @@
       "ownerPackage": "planr-pipeline",
       "source": {
         "path": "packages/pipeline/bin/openplanr-pipeline.mjs",
-        "digest": "sha256:a5f2874b2fc8ce7f8a2db5934923bfc54dd90914b6c1ba1b8c6ddc66cc92153f"
+        "digest": "sha256:1b76f1405af5a3129d8f5fe414042b3e42316ff63f1f2176af479d2f4116ac1c"
       },
       "authorityClass": "workflow",
       "machineJson": true,
@@ -1465,7 +1465,7 @@
       "ownerPackage": "planr-pipeline",
       "source": {
         "path": "packages/pipeline/bin/openplanr-pipeline.mjs",
-        "digest": "sha256:a5f2874b2fc8ce7f8a2db5934923bfc54dd90914b6c1ba1b8c6ddc66cc92153f"
+        "digest": "sha256:1b76f1405af5a3129d8f5fe414042b3e42316ff63f1f2176af479d2f4116ac1c"
       },
       "authorityClass": "workflow",
       "machineJson": true,
@@ -1488,7 +1488,7 @@
       "ownerPackage": "planr-pipeline",
       "source": {
         "path": "packages/pipeline/bin/openplanr-pipeline.mjs",
-        "digest": "sha256:a5f2874b2fc8ce7f8a2db5934923bfc54dd90914b6c1ba1b8c6ddc66cc92153f"
+        "digest": "sha256:1b76f1405af5a3129d8f5fe414042b3e42316ff63f1f2176af479d2f4116ac1c"
       },
       "authorityClass": "workflow",
       "machineJson": true,
@@ -1510,7 +1510,7 @@
       "ownerPackage": "planr-pipeline",
       "source": {
         "path": "packages/pipeline/bin/openplanr-pipeline.mjs",
-        "digest": "sha256:a5f2874b2fc8ce7f8a2db5934923bfc54dd90914b6c1ba1b8c6ddc66cc92153f"
+        "digest": "sha256:1b76f1405af5a3129d8f5fe414042b3e42316ff63f1f2176af479d2f4116ac1c"
       },
       "authorityClass": "workflow",
       "machineJson": true,
@@ -1532,7 +1532,7 @@
       "ownerPackage": "planr-pipeline",
       "source": {
         "path": "packages/pipeline/bin/openplanr-pipeline.mjs",
-        "digest": "sha256:a5f2874b2fc8ce7f8a2db5934923bfc54dd90914b6c1ba1b8c6ddc66cc92153f"
+        "digest": "sha256:1b76f1405af5a3129d8f5fe414042b3e42316ff63f1f2176af479d2f4116ac1c"
       },
       "authorityClass": "workflow",
       "machineJson": true,
@@ -1554,7 +1554,7 @@
       "ownerPackage": "planr-pipeline",
       "source": {
         "path": "packages/pipeline/bin/openplanr-pipeline.mjs",
-        "digest": "sha256:a5f2874b2fc8ce7f8a2db5934923bfc54dd90914b6c1ba1b8c6ddc66cc92153f"
+        "digest": "sha256:1b76f1405af5a3129d8f5fe414042b3e42316ff63f1f2176af479d2f4116ac1c"
       },
       "authorityClass": "workflow",
       "machineJson": true,
@@ -1576,7 +1576,7 @@
       "ownerPackage": "planr-pipeline",
       "source": {
         "path": "packages/pipeline/bin/openplanr-pipeline.mjs",
-        "digest": "sha256:a5f2874b2fc8ce7f8a2db5934923bfc54dd90914b6c1ba1b8c6ddc66cc92153f"
+        "digest": "sha256:1b76f1405af5a3129d8f5fe414042b3e42316ff63f1f2176af479d2f4116ac1c"
       },
       "authorityClass": "workflow",
       "machineJson": true,
@@ -1598,7 +1598,7 @@
       "ownerPackage": "planr-pipeline",
       "source": {
         "path": "packages/pipeline/bin/openplanr-pipeline.mjs",
-        "digest": "sha256:a5f2874b2fc8ce7f8a2db5934923bfc54dd90914b6c1ba1b8c6ddc66cc92153f"
+        "digest": "sha256:1b76f1405af5a3129d8f5fe414042b3e42316ff63f1f2176af479d2f4116ac1c"
       },
       "authorityClass": "workflow",
       "machineJson": true,
@@ -1620,7 +1620,7 @@
       "ownerPackage": "planr-pipeline",
       "source": {
         "path": "packages/pipeline/bin/openplanr-pipeline.mjs",
-        "digest": "sha256:a5f2874b2fc8ce7f8a2db5934923bfc54dd90914b6c1ba1b8c6ddc66cc92153f"
+        "digest": "sha256:1b76f1405af5a3129d8f5fe414042b3e42316ff63f1f2176af479d2f4116ac1c"
       },
       "authorityClass": "workflow",
       "machineJson": true,
@@ -1642,7 +1642,7 @@
       "ownerPackage": "planr-pipeline",
       "source": {
         "path": "packages/pipeline/bin/openplanr-pipeline.mjs",
-        "digest": "sha256:a5f2874b2fc8ce7f8a2db5934923bfc54dd90914b6c1ba1b8c6ddc66cc92153f"
+        "digest": "sha256:1b76f1405af5a3129d8f5fe414042b3e42316ff63f1f2176af479d2f4116ac1c"
       },
       "authorityClass": "workflow",
       "machineJson": true,
@@ -1664,7 +1664,7 @@
       "ownerPackage": "planr-pipeline",
       "source": {
         "path": "packages/pipeline/bin/openplanr-pipeline.mjs",
-        "digest": "sha256:a5f2874b2fc8ce7f8a2db5934923bfc54dd90914b6c1ba1b8c6ddc66cc92153f"
+        "digest": "sha256:1b76f1405af5a3129d8f5fe414042b3e42316ff63f1f2176af479d2f4116ac1c"
       },
       "authorityClass": "workflow",
       "machineJson": true,
@@ -1686,7 +1686,7 @@
       "ownerPackage": "planr-pipeline",
       "source": {
         "path": "packages/pipeline/bin/openplanr-pipeline.mjs",
-        "digest": "sha256:a5f2874b2fc8ce7f8a2db5934923bfc54dd90914b6c1ba1b8c6ddc66cc92153f"
+        "digest": "sha256:1b76f1405af5a3129d8f5fe414042b3e42316ff63f1f2176af479d2f4116ac1c"
       },
       "authorityClass": "workflow",
       "machineJson": true,
@@ -1708,7 +1708,7 @@
       "ownerPackage": "planr-pipeline",
       "source": {
         "path": "packages/pipeline/bin/openplanr-pipeline.mjs",
-        "digest": "sha256:a5f2874b2fc8ce7f8a2db5934923bfc54dd90914b6c1ba1b8c6ddc66cc92153f"
+        "digest": "sha256:1b76f1405af5a3129d8f5fe414042b3e42316ff63f1f2176af479d2f4116ac1c"
       },
       "authorityClass": "workflow",
       "machineJson": true,
@@ -1730,7 +1730,7 @@
       "ownerPackage": "planr-pipeline",
       "source": {
         "path": "packages/pipeline/bin/openplanr-pipeline.mjs",
-        "digest": "sha256:a5f2874b2fc8ce7f8a2db5934923bfc54dd90914b6c1ba1b8c6ddc66cc92153f"
+        "digest": "sha256:1b76f1405af5a3129d8f5fe414042b3e42316ff63f1f2176af479d2f4116ac1c"
       },
       "authorityClass": "workflow",
       "machineJson": true,
@@ -1752,7 +1752,7 @@
       "ownerPackage": "planr-pipeline",
       "source": {
         "path": "packages/pipeline/bin/openplanr-pipeline.mjs",
-        "digest": "sha256:a5f2874b2fc8ce7f8a2db5934923bfc54dd90914b6c1ba1b8c6ddc66cc92153f"
+        "digest": "sha256:1b76f1405af5a3129d8f5fe414042b3e42316ff63f1f2176af479d2f4116ac1c"
       },
       "authorityClass": "workflow",
       "machineJson": true,
@@ -1774,7 +1774,7 @@
       "ownerPackage": "planr-pipeline",
       "source": {
         "path": "packages/pipeline/bin/openplanr-pipeline.mjs",
-        "digest": "sha256:a5f2874b2fc8ce7f8a2db5934923bfc54dd90914b6c1ba1b8c6ddc66cc92153f"
+        "digest": "sha256:1b76f1405af5a3129d8f5fe414042b3e42316ff63f1f2176af479d2f4116ac1c"
       },
       "authorityClass": "workflow",
       "machineJson": true,
@@ -1796,7 +1796,7 @@
       "ownerPackage": "planr-pipeline",
       "source": {
         "path": "packages/pipeline/bin/openplanr-pipeline.mjs",
-        "digest": "sha256:a5f2874b2fc8ce7f8a2db5934923bfc54dd90914b6c1ba1b8c6ddc66cc92153f"
+        "digest": "sha256:1b76f1405af5a3129d8f5fe414042b3e42316ff63f1f2176af479d2f4116ac1c"
       },
       "authorityClass": "workflow",
       "machineJson": true,
@@ -1818,7 +1818,7 @@
       "ownerPackage": "planr-pipeline",
       "source": {
         "path": "packages/pipeline/bin/openplanr-pipeline.mjs",
-        "digest": "sha256:a5f2874b2fc8ce7f8a2db5934923bfc54dd90914b6c1ba1b8c6ddc66cc92153f"
+        "digest": "sha256:1b76f1405af5a3129d8f5fe414042b3e42316ff63f1f2176af479d2f4116ac1c"
       },
       "authorityClass": "workflow",
       "machineJson": true,
@@ -1840,7 +1840,7 @@
       "ownerPackage": "planr-pipeline",
       "source": {
         "path": "packages/pipeline/bin/openplanr-pipeline.mjs",
-        "digest": "sha256:a5f2874b2fc8ce7f8a2db5934923bfc54dd90914b6c1ba1b8c6ddc66cc92153f"
+        "digest": "sha256:1b76f1405af5a3129d8f5fe414042b3e42316ff63f1f2176af479d2f4116ac1c"
       },
       "authorityClass": "workflow",
       "machineJson": true,
@@ -1947,6 +1947,5 @@
         "packages/cli/tests/unit/command-registration-parity.test.ts"
       ]
     }
-  ],
-  "documentDigest": "sha256:236cbd288b484b25178c3bb58e6daa3e462c31f7672820a91d95b8be6b33cf04"
+  ]
 }

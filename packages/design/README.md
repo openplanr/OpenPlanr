@@ -59,7 +59,8 @@ specification handoff; Plan and Ship are separate user invocations.
 ## Persistent company review
 
 `share.mjs` owns local private custody and explicit publishing. `workspace-client.mjs`
-is the portable encrypted transport shared with the hosted viewer. Protocol's
+is the portable encrypted transport shared with the hosted viewer. Both run in the
+`openplanr` CLI; the design skills ship no design runtime. Protocol's
 additive design-workspace contracts describe immutable revisions and signed,
 revision-bound feedback; existing generic artifact room contracts are unchanged.
 The hosted companion lives in the separate `openplanr-web` repository.
@@ -78,7 +79,8 @@ information toggles, with viewport-contained scrolling and restored keyboard foc
 Focused checks run with `node --test packages/design/tests/*.test.mjs` from the
 workspace root. Browser integration uses the locally available Playwright browser
 or installed Chrome. Installed-skill checks live in
-`tests/skill-runtime/design-installed-workflow.test.mjs`.
+`tests/skill-runtime/design-installed-workflow.test.mjs` and
+`tests/skill-runtime/design-cli-boundary.test.mjs`.
 
 ### OpenPlanr review chrome
 
@@ -98,8 +100,7 @@ across the local review and hosted viewer. Author review purpose, questions,
 and share-safe implementation guidance in sibling `review-context.json`.
 Product and guidance fingerprints are independent of studio runtime changes.
 
-Use `openplanr artifact handoff design-document.json` or the skill's bundled
-`design.mjs handoff design-document.json --action draft` to prepare a factual
+Use `openplanr artifact handoff design-document.json` to prepare a factual
 handoff. The active host agent refines it, preserving reviewer quotations and
 source citations. The owner reviews and approves the exact draft in the local
 studio. Approval does not resolve pins or run Plan. Future source, guidance,

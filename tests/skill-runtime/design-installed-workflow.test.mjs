@@ -16,13 +16,9 @@ import { createRequire } from 'node:module';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import test from 'node:test';
-import { Script } from 'node:vm';
 import { resolveArtifactHtml } from '../../packages/artifact/lib/artifact/artifact-sources.mjs';
 import { digestArtifactEnvelope } from '../../packages/artifact/lib/artifact/envelope.mjs';
-import { readRuntimeAsset } from '../../packages/artifact/lib/artifact/internal/runtime-asset.mjs';
 import { createArtifactReview } from '../../packages/artifact/lib/artifact/review.mjs';
-import { renderArtifactStageRuntimeAsset } from '../../packages/artifact/scripts/generate-artifact-shell.mjs';
-import { renderDesignStudioRuntimeAsset } from '../../packages/design/scripts/generate-design-studio.mjs';
 import { readSkillSourceRegistry } from '../../packages/skill-runtime/src/catalog.mjs';
 import {
   createDeterministicZip,
@@ -30,7 +26,6 @@ import {
 } from '../../packages/skill-runtime/src/packaging/index.mjs';
 import {
   buildDesignSkillResources,
-  buildPlanSkillResources,
   DESIGN_SKILL_IDS,
 } from '../../scripts/skills/design-resources.mjs';
 import { projectedSkillName } from '../../scripts/skills/host-invocations.mjs';
@@ -38,6 +33,11 @@ import { resourceBytes } from '../../scripts/skills/resource-bytes.mjs';
 import { buildStandaloneSkillEntries } from '../../scripts/skills/standalone-resources.mjs';
 
 const root = resolve(import.meta.dirname, '../..');
+// The workflow package files `openplanr design` and Plan's handoff inspection run.
+const UTILITY = join(root, 'packages/pipeline/lib/design/utility.mjs');
+const PLAN_UTILITY = join(root, 'packages/pipeline/lib/design/plan-handoff-utility.mjs');
+const CLI = join(root, 'packages/cli/src/cli/index.ts');
+const TSX = createRequire(import.meta.url).resolve('tsx/cli');
 const pixel = Buffer.from(
   'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Wl6F8sAAAAASUVORK5CYII=',
   'base64',
@@ -136,7 +136,9 @@ function install(directory, skillId, host = 'openai', { suite = false } = {}) {
     cpSync(join(root, `dist/plugins/${host}/openplanr`), destination, {
       recursive: true,
     });
-    return join(destination, 'skills', hostSkillName, 'scripts/design.mjs');
+    return host === 'cursor'
+      ? join(destination, 'rules', skillId)
+      : join(destination, 'skills', hostSkillName);
   }
   const destination = join(directory, 'installed', skillId);
   const registryRow = readSkillSourceRegistry({ repoRoot: root }).skills.find(
@@ -144,11 +146,11 @@ function install(directory, skillId, host = 'openai', { suite = false } = {}) {
   );
   for (const entry of buildStandaloneSkillEntries({ repoRoot: root, registryRow }))
     write(join(destination, entry.path), entry.bytes);
-  return join(destination, 'scripts/design.mjs');
+  return destination;
 }
 
 function environment(directory) {
-  // Child utilities cannot resolve the source checkout or a global openplanr CLI.
+  // Child utilities cannot reach a global openplanr CLI.
   return {
     HOME: directory,
     PLANR_HOME: join(directory, '.runtime-home'),
@@ -170,6 +172,17 @@ function run(script, directory, args, { success = true } = {}) {
   }
   assert.notEqual(result.status, 0);
   return result;
+}
+
+/** Runs `openplanr <args> --json` from the CLI source, as Plan runs it. */
+function planr(directory, args, { status = 0 } = {}) {
+  const result = spawnSync(
+    process.execPath,
+    [TSX, CLI, '--project-dir', directory, ...args, '--json'],
+    { cwd: directory, env: environment(directory), encoding: 'utf8', timeout: 60_000 },
+  );
+  assert.equal(result.status, status, `${result.stderr}\n${result.stdout}`);
+  return JSON.parse(result.stdout.trim().split('\n').at(-1));
 }
 
 async function open(script, directory, file) {
@@ -225,16 +238,17 @@ async function open(script, directory, file) {
   };
 }
 
-test('standalone and suite design skills render authored journeys with complete local resources', async () => {
+test('installed design skills carry no runtime, and the design utility renders their authored journeys', async () => {
   const temporary = realpathSync(mkdtempSync(join(tmpdir(), 'openplanr-design-install-')));
   try {
     for (const [index, skillId] of DESIGN_SKILL_IDS.entries()) {
       const directory = join(temporary, skillId);
       mkdirSync(directory);
-      const script = install(directory, skillId, index === 1 ? 'claude' : 'openai', {
+      const skillRoot = install(directory, skillId, index === 1 ? 'claude' : 'openai', {
         suite: index === 1,
       });
-      const skillRoot = resolve(dirname(script), '..');
+      assert.equal(existsSync(join(skillRoot, 'scripts')), false, `${skillId} ships no runtime`);
+      const script = UTILITY;
       assert.match(
         readFileSync(join(skillRoot, 'SKILL.md'), 'utf8'),
         /review-context\.json/u,
@@ -297,7 +311,7 @@ test('standalone and suite design skills render authored journeys with complete 
       assert.deepEqual(
         record.reviewContext,
         context,
-        "the installed renderer retains this design's authored welcome and implementation guidance",
+        "the renderer retains this design's authored welcome and implementation guidance",
       );
       assert.equal(
         record.envelope.artifacts.length,
@@ -365,11 +379,11 @@ test('installed Artifact skill requires design-specific welcome preparation befo
   }
 });
 
-test('installed review retains pins, selection and arrangement across restart, scoped revision and failed rendering', async () => {
+test('the design utility retains pins, selection and arrangement across restart, scoped revision and failed rendering', async () => {
   const directory = realpathSync(mkdtempSync(join(tmpdir(), 'openplanr-design-review-install-')));
   let session;
   try {
-    const script = install(directory, 'planr-design-review');
+    const script = UTILITY;
     const source = fixture(directory, { variants: 3 });
     const rendered = run(script, directory, ['render', source.path]);
     const record = json(join(dirname(rendered.artifact), 'render.json'));
@@ -504,106 +518,30 @@ test('installed review retains pins, selection and arrangement across restart, s
   }
 });
 
-test('design runtime bundling and release archives preserve binary assets without executable dependencies', async () => {
-  const resources = await buildDesignSkillResources({ repoRoot: root });
-  for (const name of [
-    'design-handoff-readiness',
-    'design-implementation-handoff',
-    'design-planning-lineage',
-  ]) {
-    assert.ok(
-      resources.some(
-        ({ path }) =>
-          path === `scripts/runtime/packages/protocol/schemas/v1.11.0/${name}.schema.json`,
-      ),
-      `portable Design resources include ${name}`,
-    );
-  }
-  for (const sourcePath of [
-    'packages/design/package.json',
-    'packages/protocol/schemas/v1.16.0/artifact-envelope.schema.json',
-    'packages/protocol/schemas/v1.16.0/design-review-bundle.schema.json',
-  ]) {
-    const portablePath = `scripts/runtime/${sourcePath}`;
-    const resource = resources.find(({ path }) => path === portablePath);
-    assert.ok(resource, `portable Design resources include ${sourcePath}`);
-    assert.deepEqual(resourceBytes(resource.bytes), readFileSync(join(root, sourcePath)));
-  }
+test('design skill archives preserve their schemas and binary assets byte for byte', () => {
+  const resources = buildDesignSkillResources({ repoRoot: root });
+  assert.deepEqual(
+    resources.map(({ path }) => path),
+    [
+      'schemas/design-document.schema.json',
+      'schemas/design-review-context.schema.json',
+      'schemas/design-review-handoff.schema.json',
+    ],
+  );
   const binary = Buffer.from([0, 255, 128, 13, 10, 193, 240, 159, 255, 0]);
   const entries = [
-    ...resources.map(({ path, bytes }) => ({
-      path,
-      bytes: resourceBytes(bytes),
-    })),
+    ...resources.map(({ path, bytes }) => ({ path, bytes: resourceBytes(bytes) })),
     { path: 'assets/opaque-font.woff2', bytes: resourceBytes(binary) },
   ];
-  const archive = createDeterministicZip(entries);
-  const extracted = readDeterministicZip(archive);
+  const extracted = readDeterministicZip(createDeterministicZip(entries));
   assert.deepEqual(extracted.find(({ path }) => path === 'assets/opaque-font.woff2').bytes, binary);
   for (const entry of resources)
-    assert.deepEqual(extracted.find(({ path }) => path === entry.path).bytes, entry.bytes);
-  assert.ok(
-    resources.length < 200,
-    'portable closure fits the frozen skill-package resource limit',
-  );
-  const { transformSync } = createRequire(join(root, 'packages/artifact/package.json'))('esbuild');
-  for (const { path, bytes } of resources) {
-    assert.doesNotMatch(path, /\.part-\d+|\.parts\.json$/u, `${path} is complete source`);
-    assert.ok(bytes.length < 256 * 1024, `${path} is ${bytes.length} bytes`);
-    if (/\.(?:mjs|js)$/u.test(path))
-      assert.doesNotThrow(() => transformSync(bytes.toString('utf8'), { loader: 'js' }), path);
-  }
-  const installed = mkdtempSync(join(tmpdir(), 'openplanr-runtime-sources-'));
-  try {
-    for (const { path, bytes } of resources) write(join(installed, path), bytes);
-    for (const [path, render] of [
-      [
-        'scripts/runtime/packages/artifact/templates/artifact-review-stage.js',
-        () =>
-          renderArtifactStageRuntimeAsset({
-            projectRoot: join(root, 'packages/artifact'),
-            compact: false,
-          }),
-      ],
-      [
-        'scripts/runtime/packages/design/templates/studio/studio.js',
-        () => renderDesignStudioRuntimeAsset({ projectRoot: join(root, 'packages/design') }),
-      ],
-    ]) {
-      assert.ok(
-        !resources.some((resource) => resource.path === path),
-        `${path} ships as readable units`,
-      );
-      assert.ok(resources.some((resource) => resource.path === `${path}.sources.json`));
-      const bytes = readRuntimeAsset(join(installed, path));
-      assert.deepEqual(bytes, Buffer.from(render()));
-      assert.doesNotThrow(() => new Script(bytes.toString('utf8')), path);
-    }
-  } finally {
-    rmSync(installed, { recursive: true, force: true });
-  }
-  assert.deepEqual(
-    resources.filter(({ executable }) => executable).map(({ path }) => path),
-    ['scripts/design.mjs'],
-  );
-  const scripts = new Set(
-    resources.filter(({ path }) => path.startsWith('scripts/design')).map(({ path }) => path),
-  );
-  for (const path of scripts)
-    for (const [, imported] of resourceBytes(
-      resources.find((resource) => resource.path === path).bytes,
-    )
-      .toString('utf8')
-      .matchAll(/from "\.\/([^"]+)"/gu))
-      assert.ok(scripts.has(`scripts/${imported}`), `${path} imports shipped ${imported}`);
+    assert.ok(extracted.find(({ path }) => path === entry.path).bytes.equals(entry.bytes));
 });
 
-test('portable Design renders 93 shared sources into 465 viewport references outside the checkout', async () => {
+test('the design utility renders 93 shared sources into 465 viewport references', async () => {
   const directory = realpathSync(mkdtempSync(join(tmpdir(), 'openplanr-design-pooled-')));
   try {
-    const resources = await buildDesignSkillResources({ repoRoot: root });
-    const installed = join(directory, 'installed');
-    for (const { path, bytes } of resources) write(join(installed, path), resourceBytes(bytes));
     const source = fixture(directory, { screens: 93 });
     source.document.frames = Array.from({ length: 5 }, (_, index) => ({
       id: `viewport-${index + 1}`,
@@ -612,7 +550,7 @@ test('portable Design renders 93 shared sources into 465 viewport references out
       height: 800,
     }));
     write(source.path, JSON.stringify(source.document));
-    const rendered = run(join(installed, 'scripts/design.mjs'), directory, ['render', source.path]);
+    const rendered = run(UTILITY, directory, ['render', source.path]);
     const { envelope } = json(join(dirname(rendered.artifact), 'render.json'));
     assert.equal(envelope.schemaVersion, '1.1.0');
     assert.equal(envelope.sources.length, 93);
@@ -630,53 +568,50 @@ test('portable Design renders 93 shared sources into 465 viewport references out
   }
 });
 
-test('every installed design helper loads its split modules outside the source checkout', () => {
+test('standalone and suite design and Plan skills ship no design runtime', () => {
   const directory = realpathSync(mkdtempSync(join(tmpdir(), 'openplanr-design-modules-')));
   try {
-    for (const host of ['openai', 'claude'])
-      for (const skillId of [...DESIGN_SKILL_IDS, 'planr-plan']) {
-        const help = run(install(join(directory, host), skillId, host), directory, ['--help']);
-        assert.match(help.usage, /^design\.mjs /u, `${host} ${skillId}`);
+    for (const skillId of [...DESIGN_SKILL_IDS, 'planr-plan']) {
+      const registryRow = readSkillSourceRegistry({ repoRoot: root }).skills.find(
+        (row) => row.skillId === skillId,
+      );
+      const scripts = buildStandaloneSkillEntries({ repoRoot: root, registryRow })
+        .map(({ path }) => path)
+        .filter((path) => path.startsWith('scripts/'));
+      assert.deepEqual(scripts, []);
+      for (const host of ['openai', 'claude', 'cursor']) {
+        const installed = install(join(directory, host, skillId), skillId, host, { suite: true });
+        assert.ok(
+          existsSync(join(installed, 'references/utilities.md')) || skillId === 'planr-plan',
+        );
+        assert.equal(existsSync(join(installed, '../../runtime')), false, `${host} runtime`);
+        assert.equal(
+          existsSync(join(installed, 'scripts/design.mjs')),
+          false,
+          `${host} ${skillId}`,
+        );
+        assert.equal(existsSync(join(installed, '../../runtime/design')), false, host);
+        assert.equal(existsSync(join(installed, '../../runtime/plan')), false, host);
       }
+    }
   } finally {
     rmSync(directory, { recursive: true, force: true });
   }
 });
 
-test('Plan carries only handoff inspection and rejects authoring operations offline', async () => {
+test('Plan handoff inspection through the CLI is read-only and rejects authoring operations', () => {
   const directory = realpathSync(mkdtempSync(join(tmpdir(), 'openplanr-plan-handoff-only-')));
   try {
-    const resources = await buildPlanSkillResources({ repoRoot: root });
-    assert.deepEqual(
-      resources.filter(({ kind }) => kind === 'script').map(({ path }) => path),
-      ['scripts/design.mjs', 'scripts/design-protocol-contracts.mjs'],
-    );
-    assert.ok(
-      resources.every(({ path }) => !/templates|\.css$|artifact-shell|design-share/u.test(path)),
-    );
-    const installed = join(directory, 'plan');
-    for (const { path, bytes } of resources) write(join(installed, path), bytes);
-    const script = join(installed, 'scripts/design.mjs');
-    const help = run(script, directory, ['--help']);
-    assert.match(help.usage, /handoff.*inspect/u);
-    assert.doesNotMatch(help.usage, /render|publish|studio/u);
     const source = fixture(directory);
-    const rendered = run(install(directory, 'planr-design'), directory, ['render', source.path]);
-    const inspected = run(script, directory, [
-      'handoff',
-      source.path,
-      '--action',
-      'inspect',
-      '--json',
-    ]);
+    const rendered = planr(directory, ['design', 'render', source.path]);
+    const inspected = planr(directory, ['design', 'handoff', source.path, '--action', 'inspect']);
     assert.equal(inspected.revision, rendered.revision);
     assert.equal(inspected.draft, null);
     const before = readFileSync(join(source.design, '.design/current.json'));
-    for (const args of [
-      ['render', source.path],
-      ['handoff', source.path, '--action', 'approve'],
-    ])
-      run(script, directory, args, { success: false });
+    const approve = planr(directory, ['design', 'handoff', source.path, '--action', 'approve'], {
+      status: 1,
+    });
+    assert.equal(approve.code, 'commander.invalidArgument');
     assert.deepEqual(readFileSync(join(source.design, '.design/current.json')), before);
     const directoryBytes = (path) =>
       readdirSync(path, { withFileTypes: true })
@@ -697,9 +632,10 @@ test('Plan carries only handoff inspection and rejects authoring operations offl
     for (const bytes of [journal, 'null\n', '{malformed']) {
       writeFileSync(journalPath, bytes);
       const unchanged = directoryBytes(directory);
-      const failure = run(script, directory, ['handoff', source.path], { success: false });
-      assert.match(failure.stderr, /E_DESIGN_PUBLICATION_PENDING/u);
-      assert.match(failure.stderr, /Design utility/u);
+      const failure = planr(directory, ['design', 'handoff', source.path, '--action', 'inspect'], {
+        status: 1,
+      });
+      assert.equal(failure.code, 'E_DESIGN_PUBLICATION_PENDING');
       assert.deepEqual(
         directoryBytes(directory),
         unchanged,
@@ -707,12 +643,7 @@ test('Plan carries only handoff inspection and rejects authoring operations offl
       );
     }
     writeFileSync(journalPath, journal);
-    run(install(directory, 'planr-design'), directory, [
-      'handoff',
-      source.path,
-      '--action',
-      'inspect',
-    ]);
+    run(UTILITY, directory, ['handoff', source.path, '--action', 'inspect']);
     assert.equal(
       existsSync(journalPath),
       false,
@@ -723,11 +654,12 @@ test('Plan carries only handoff inspection and rejects authoring operations offl
   }
 });
 
-test('isolated Design and Plan installations preserve explicit review handoff approval and freshness', () => {
+test('Design and Plan handoff utilities preserve explicit review handoff approval and freshness', () => {
   const directory = realpathSync(mkdtempSync(join(tmpdir(), 'openplanr-team-review-install-')));
   try {
-    const designScript = install(directory, 'planr-design-review', 'claude', { suite: true });
-    const planScript = install(directory, 'planr-plan');
+    const designScript = UTILITY;
+    const planScript = PLAN_UTILITY;
+    const planSkill = install(directory, 'planr-plan');
     const source = fixture(directory);
     write(
       join(source.design, 'review-context.json'),
@@ -784,7 +716,7 @@ test('isolated Design and Plan installations preserve explicit review handoff ap
     const consumed = run(planScript, directory, ['handoff', source.path, '--action', 'inspect']);
     assert.equal(consumed.current, true);
     assert.equal(consumed.draft.contentHash, approved.draft.contentHash);
-    assert.ok(readFileSync(join(dirname(planScript), '../SKILL.md'), 'utf8').includes('approved'));
+    assert.ok(readFileSync(join(planSkill, 'SKILL.md'), 'utf8').includes('approved'));
     const previous = readFileSync(approved.path);
     const context = json(join(source.design, 'review-context.json'));
     context.brief.requests.push('Is mobile navigation clear?');

@@ -240,15 +240,23 @@ export async function updateArtifactFields(
   let frontmatter = raw.slice(openIdx, closeIdx);
   let body = raw.slice(closeIdx);
 
+  const blockLines =
+    '(?:(?:\\r?\\n[ \\t]*(?:#[^\\r\\n]*)?)*\\r?\\n(?:[ \\t]+[^ \\t\\r\\n#][^\\r\\n]*|-[ \\t]+[^\\r\\n]*))*';
   for (const [key, value] of Object.entries(allFields)) {
-    const pattern = new RegExp(`^${escapeRegExp(key)}:\\s*.*$`, 'm');
-    const replacement = `${key}: ${yamlEscape(value)}`;
+    const pattern = new RegExp(`^${escapeRegExp(key)}:[^\\r\\n]*${blockLines}`, 'm');
+    if (value === undefined) {
+      frontmatter = frontmatter.replace(new RegExp(`\\r?\\n${pattern.source}`, 'm'), '');
+      continue;
+    }
+    const formatted = Array.isArray(value)
+      ? `[${value.map((item) => yamlEscape(item)).join(', ')}]`
+      : typeof value === 'boolean'
+        ? String(value)
+        : yamlEscape(value);
+    const replacement = `${key}: ${formatted}`;
 
     if (pattern.test(frontmatter)) {
-      // Function form bypasses regex replacement specials (`$1`, `$&`, `` $` ``,
-      // `$'`, `$$`) in the replacement string. Needed because `yamlEscape`
-      // only escapes `\` and `"`; a value containing `$1` would otherwise be
-      // interpreted as a backreference and silently corrupt the frontmatter.
+      // Keep replacement tokens such as $1 literal.
       frontmatter = frontmatter.replace(pattern, () => replacement);
     } else {
       // Insert missing field before the closing ---

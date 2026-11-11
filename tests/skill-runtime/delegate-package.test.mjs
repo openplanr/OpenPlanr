@@ -16,73 +16,92 @@ import test from 'node:test';
 import { pathToFileURL } from 'node:url';
 
 import { matchSkillRequest } from '../../packages/skill-runtime/src/matching/index.mjs';
+import { SKILL_CLI_CONTRACTS } from '../../scripts/skills/skill-cli.mjs';
 
 const root = resolve(import.meta.dirname, '..', '..');
 const read = (path) => readFileSync(resolve(root, path), 'utf8');
 const manifest = JSON.parse(read('skills/planr-delegate/openplanr.skill.json'));
 const registry = JSON.parse(read('skills/registry.json'));
 
-function runProbe(helper, input, cwd) {
-  return spawnSync(process.execPath, [helper, 'probe'], {
-    cwd,
-    input: JSON.stringify(input),
-    encoding: 'utf8',
-    env: {
-      PATH: '/usr/bin:/bin',
-      HOME: cwd,
-      NO_COLOR: '1',
-      ANTHROPIC_API_KEY: '',
-      OPENAI_API_KEY: '',
-      CLAUDE_CONFIG_DIR: '',
-    },
-  });
+const DELEGATE_RUNTIME = resolve(root, 'packages/pipeline/lib/delegate');
+const BUNDLES = [
+  ['claude', 'dist/plugins/claude/openplanr/skills/delegate'],
+  ['openai', 'dist/plugins/openai/openplanr/skills/delegate'],
+  ['cursor', 'dist/plugins/cursor/openplanr/rules/planr-delegate'],
+];
+
+/** Copies the delegate runtime out of the checkout, as an installed workflow package holds it. */
+function installedRuntime(temporary) {
+  const copied = join(temporary, 'lib', 'delegate');
+  cpSync(DELEGATE_RUNTIME, copied, { recursive: true });
+  return copied;
 }
 
-function runAction(helper, action, input, cwd) {
-  return spawnSync(process.execPath, [helper, action], {
-    cwd,
-    input: JSON.stringify(input),
-    encoding: 'utf8',
-    env: { PATH: process.env.PATH, HOME: cwd, NO_COLOR: '1' },
-  });
+/** Calls one runner action in a fresh Node process and returns its exit status and JSON. */
+function runAction(runtime, action, input, cwd, env = {}) {
+  const runner = pathToFileURL(join(runtime, 'runner.mjs')).href;
+  const result = spawnSync(
+    process.execPath,
+    [
+      '--input-type=module',
+      '-e',
+      [
+        `const { delegateRunnerCommand, delegateFailure } = await import(${JSON.stringify(runner)});`,
+        `try { console.log(JSON.stringify(await delegateRunnerCommand(${JSON.stringify(action)}, ${JSON.stringify(input)}))); }`,
+        'catch (error) { console.log(JSON.stringify(delegateFailure(error))); process.exitCode = 1; }',
+      ].join('\n'),
+    ],
+    { cwd, encoding: 'utf8', env: { PATH: '/usr/bin:/bin', HOME: cwd, NO_COLOR: '1', ...env } },
+  );
+  return {
+    status: result.status,
+    stderr: result.stderr,
+    output: JSON.parse(result.stdout || 'null'),
+  };
 }
 
-test('installed helpers can be imported from a stdin script without executing a CLI action', () => {
-  const temporary = mkdtempSync(join(tmpdir(), 'openplanr-delegate-stdin-'));
-  try {
-    for (const host of ['claude', 'openai']) {
-      const copied = join(temporary, host);
-      cpSync(resolve(root, `dist/plugins/${host}/openplanr/skills/delegate`), copied, {
-        recursive: true,
-      });
-      const workspace = join(temporary, `${host}-workspace`);
-      mkdirSync(workspace);
-      const runner = pathToFileURL(join(copied, 'scripts/runner.mjs')).href;
-      const integration = pathToFileURL(join(copied, 'scripts/integrate.mjs')).href;
-      const result = spawnSync(process.execPath, ['--input-type=module', '-'], {
-        cwd: workspace,
-        input: [
-          `const runner = await import(${JSON.stringify(runner)});`,
-          `const integration = await import(${JSON.stringify(integration)});`,
-          'console.log(JSON.stringify({ runner: typeof runner.delegateRunnerCommand, integration: typeof integration.delegateIntegrationCommand }));',
-        ].join('\n'),
-        encoding: 'utf8',
-        env: { PATH: '/usr/bin:/bin', HOME: workspace, NO_COLOR: '1' },
-      });
-      assert.equal(result.status, 0, result.stderr);
-      assert.equal(result.stderr, '');
-      assert.deepEqual(JSON.parse(result.stdout), {
-        runner: 'function',
-        integration: 'function',
-      });
-      assert.deepEqual(readdirSync(workspace), []);
-    }
-  } finally {
-    rmSync(temporary, { recursive: true, force: true });
+test('every host bundle ships the delegate skill as instructions only', () => {
+  for (const [host, projection] of BUNDLES) {
+    const files = readdirSync(resolve(root, projection), { recursive: true, withFileTypes: true })
+      .filter((entry) => entry.isFile())
+      .map((entry) =>
+        join(entry.parentPath, entry.name).slice(resolve(root, projection).length + 1),
+      );
+    assert.ok(files.includes('references/openplanr-cli.md'), host);
+    assert.deepEqual(
+      files.filter((file) => !/\.(?:md|yaml|json)$/u.test(file)),
+      [],
+      `${host} ships a non-instruction file`,
+    );
+    for (const file of files.filter((name) => name.endsWith('.md')))
+      assert.doesNotMatch(
+        readFileSync(resolve(root, projection, file), 'utf8'),
+        /scripts\/|\.mjs\b|openplanr@(?:latest|[\^~>])/u,
+        `${host}/${file}`,
+      );
   }
 });
 
-test('copied installations classify the reported sources and still reject a recognizable credential', () => {
+test('the optional CLI path names the minimum CLI for its probe and install line, without npx', () => {
+  const reference = read('skills/planr-delegate/references/openplanr-cli.md');
+  const minimum = SKILL_CLI_CONTRACTS.delegate.since;
+  assert.ok(reference.includes(`npm install -g openplanr@${minimum}`));
+  assert.ok(reference.includes(`version ${minimum} or later`));
+  assert.doesNotMatch(reference, /\{\{|npx -y|npx openplanr/u);
+  assert.match(read('skills/planr-delegate/SKILL.md'), /\]\(references\/openplanr-cli\.md\)/u);
+});
+
+test('Codex resume puts the exec flags before resume, which rejects -C and -s', () => {
+  const commands = read('skills/planr-delegate/references/native-commands.md');
+  assert.ok(
+    commands.includes(
+      '`codex exec --json -o <out>/last.md -C <dir> -s workspace-write resume <session-id> - < <correction>`',
+    ),
+  );
+  assert.doesNotMatch(commands, /exec resume[^\n|]*(?:-C|-s|--cd|--sandbox)\b/u);
+});
+
+test('an installed runtime classifies the reported sources and still rejects a recognizable credential', () => {
   const temporary = mkdtempSync(join(tmpdir(), 'openplanr-delegate-credentials-'));
   const source = [
     '  secret: recording.secretAccessKey,',
@@ -93,51 +112,44 @@ test('copied installations classify the reported sources and still reject a reco
     '',
   ].join('\n');
   try {
-    for (const [host, projection] of [
-      ['claude', 'dist/plugins/claude/openplanr/skills/delegate'],
-      ['openai', 'dist/plugins/openai/openplanr/skills/delegate'],
-      ['cursor', 'dist/plugins/cursor/openplanr/rules/planr-delegate'],
-    ]) {
-      const copied = join(temporary, host);
-      cpSync(resolve(root, projection), copied, { recursive: true });
-      const repository = join(temporary, `${host}-repository`);
-      mkdirSync(join(repository, 'src'), { recursive: true });
-      writeFileSync(join(repository, 'src/booking.ts'), source);
-      writeFileSync(join(repository, 'src/token.ts'), `const token = "ghp_${'A'.repeat(30)}";\n`);
-      const context = pathToFileURL(join(copied, 'scripts/context.mjs')).href;
-      const result = spawnSync(process.execPath, ['--input-type=module', '-'], {
-        cwd: repository,
-        input: [
-          `const { assertCredentialFreeText, buildContextCapsule } = await import(${JSON.stringify(context)});`,
-          `const lines = ${JSON.stringify(source.split('\n'))};`,
-          'for (const line of lines) assertCredentialFreeText(line);',
-          `const capsule = await buildContextCapsule({ repositoryRoot: ${JSON.stringify(repository)}, request: 'Review.', selectedFiles: ['src/booking.ts'] });`,
-          'let rejected;',
-          `try { await buildContextCapsule({ repositoryRoot: ${JSON.stringify(repository)}, request: 'Review.', selectedFiles: ['src/token.ts'] }); } catch (error) { rejected = error; }`,
-          'console.log(JSON.stringify({ copied: capsule.files.some((file) => file.path === "src/booking.ts"), code: rejected?.code, finding: rejected?.details?.findings?.[0], leaked: JSON.stringify(rejected?.details ?? {}).includes("ghp_") }));',
-        ].join('\n'),
-        encoding: 'utf8',
-        env: { PATH: '/usr/bin:/bin', HOME: repository, NO_COLOR: '1' },
-      });
-      assert.equal(result.status, 0, `${host}: ${result.stderr}`);
-      const observed = JSON.parse(result.stdout);
-      assert.equal(observed.copied, true, host);
-      assert.equal(observed.code, 'E_CAPSULE_SECRET', host);
-      assert.equal(observed.finding.rule, 'credential-format', host);
-      assert.equal(observed.finding.resolvable, false, host);
-      assert.equal(observed.leaked, false, host);
-    }
+    const runtime = installedRuntime(temporary);
+    const repository = join(temporary, 'repository');
+    mkdirSync(join(repository, 'src'), { recursive: true });
+    writeFileSync(join(repository, 'src/booking.ts'), source);
+    writeFileSync(join(repository, 'src/token.ts'), `const token = "ghp_${'A'.repeat(30)}";\n`);
+    const context = pathToFileURL(join(runtime, 'context.mjs')).href;
+    const result = spawnSync(process.execPath, ['--input-type=module', '-'], {
+      cwd: repository,
+      input: [
+        `const { assertCredentialFreeText, buildContextCapsule } = await import(${JSON.stringify(context)});`,
+        `const lines = ${JSON.stringify(source.split('\n'))};`,
+        'for (const line of lines) assertCredentialFreeText(line);',
+        `const capsule = await buildContextCapsule({ repositoryRoot: ${JSON.stringify(repository)}, request: 'Review.', selectedFiles: ['src/booking.ts'] });`,
+        'let rejected;',
+        `try { await buildContextCapsule({ repositoryRoot: ${JSON.stringify(repository)}, request: 'Review.', selectedFiles: ['src/token.ts'] }); } catch (error) { rejected = error; }`,
+        'console.log(JSON.stringify({ copied: capsule.files.some((file) => file.path === "src/booking.ts"), code: rejected?.code, finding: rejected?.details?.findings?.[0], leaked: JSON.stringify(rejected?.details ?? {}).includes("ghp_") }));',
+      ].join('\n'),
+      encoding: 'utf8',
+      env: { PATH: '/usr/bin:/bin', HOME: repository, NO_COLOR: '1' },
+    });
+    assert.equal(result.status, 0, result.stderr);
+    const observed = JSON.parse(result.stdout);
+    assert.equal(observed.copied, true);
+    assert.equal(observed.code, 'E_CAPSULE_SECRET');
+    assert.equal(observed.finding.rule, 'credential-format');
+    assert.equal(observed.finding.resolvable, false);
+    assert.equal(observed.leaked, false);
   } finally {
     rmSync(temporary, { recursive: true, force: true });
   }
 });
 
-test('delegate is a canonical opt-in package with installed Claude and Codex resources', () => {
+test('delegate is a canonical opt-in package whose bundles match its sources', () => {
   assert.equal(manifest.skillId, 'planr-delegate');
   assert.equal(manifest.execution, 'host-agent');
   assert.deepEqual(manifest.hosts, ['claude-code', 'codex', 'chatgpt', 'cursor']);
-  assert.ok(manifest.resources.some(({ path }) => path === 'scripts/runner.mjs'));
-  assert.ok(manifest.resources.some(({ path }) => path === 'references/operator-guide.md'));
+  assert.ok(manifest.resources.some(({ path }) => path === 'references/openplanr-cli.md'));
+  assert.ok(manifest.resources.every(({ executable }) => executable === false));
   for (const host of ['openai', 'claude']) {
     const projection = `dist/plugins/${host}/openplanr/skills/delegate`;
     assert.match(read(`${projection}/SKILL.md`), /^name: delegate$/mu);
@@ -156,48 +168,37 @@ test('delegate is a canonical opt-in package with installed Claude and Codex res
   }
 });
 
-test('the installed helper probes offline without the source checkout or model credentials', () => {
+test('the installed runtime probes offline without the source checkout or model credentials', () => {
   const temporary = mkdtempSync(join(tmpdir(), 'openplanr-delegate-package-'));
   try {
-    for (const host of ['openai', 'claude']) {
-      const packaged = resolve(root, `dist/plugins/${host}/openplanr/skills/delegate`);
-      const copied = join(temporary, host);
-      cpSync(packaged, copied, { recursive: true });
-      const workspace = join(temporary, `${host}-workspace`);
-      mkdirSync(workspace);
-      const ok = runProbe(join(copied, 'scripts/runner.mjs'), {}, workspace);
-      assert.equal(ok.status, 0, ok.stderr);
-      assert.equal(JSON.parse(ok.stdout).localExecutable, true);
-      const unsupported = runProbe(
-        join(copied, 'scripts/runner.mjs'),
-        { hostCapabilities: { localExecution: false } },
-        workspace,
-      );
-      assert.equal(unsupported.status, 1);
-      assert.equal(JSON.parse(unsupported.stderr).code, 'E_DELEGATE_HOST_UNSUPPORTED');
-      assert.deepEqual(readdirSync(workspace), [], 'probe must not create project state');
-      assert.deepEqual(readdirSync(copied).sort(), [
-        'SKILL.md',
-        ...(host === 'openai' ? ['agents', 'openplanr.skill.json'] : []),
-        'references',
-        'scripts',
-      ]);
-    }
+    const runtime = installedRuntime(temporary);
+    const workspace = join(temporary, 'workspace');
+    mkdirSync(workspace);
+    const credentials = { ANTHROPIC_API_KEY: '', OPENAI_API_KEY: '', CLAUDE_CONFIG_DIR: '' };
+    const ok = runAction(runtime, 'probe', {}, workspace, credentials);
+    assert.equal(ok.status, 0, ok.stderr);
+    assert.equal(ok.output.localExecutable, true);
+    const unsupported = runAction(
+      runtime,
+      'probe',
+      { hostCapabilities: { localExecution: false } },
+      workspace,
+      credentials,
+    );
+    assert.equal(unsupported.status, 1);
+    assert.equal(unsupported.output.code, 'E_DELEGATE_HOST_UNSUPPORTED');
+    assert.deepEqual(readdirSync(workspace), [], 'probe must not create project state');
   } finally {
     rmSync(temporary, { recursive: true, force: true });
   }
 });
 
-test('a copied skill supports first-use setup with an empty user profile store', () => {
+test('an installed runtime supports first-use setup with an empty user profile store', () => {
   const temporary = mkdtempSync(join(tmpdir(), 'openplanr-delegate-first-use-'));
   try {
-    const copied = join(temporary, 'skill');
-    cpSync(resolve(root, 'dist/plugins/claude/openplanr/skills/delegate'), copied, {
-      recursive: true,
-    });
+    const runtime = installedRuntime(temporary);
     const workspace = join(temporary, 'workspace');
     mkdirSync(workspace);
-    const helper = join(copied, 'scripts/runner.mjs');
     const executable = join(temporary, 'adapter.mjs');
     writeFileSync(
       executable,
@@ -220,32 +221,28 @@ test('a copied skill supports first-use setup with an empty user profile store',
       workingDirectory: 'worktree',
     };
     const input = { repositoryRoot: workspace, profile };
-    const empty = runAction(helper, 'probe', { repositoryRoot: workspace }, workspace);
+    const path = { PATH: process.env.PATH };
+    const empty = runAction(runtime, 'probe', { repositoryRoot: workspace }, workspace, path);
     assert.equal(empty.status, 0, empty.stderr);
-    assert.deepEqual(JSON.parse(empty.stdout).profiles, []);
-    const preview = runAction(helper, 'profile-preview', input, workspace);
+    assert.deepEqual(empty.output.profiles, []);
+    const preview = runAction(runtime, 'profile-preview', input, workspace, path);
     assert.equal(preview.status, 0, preview.stderr);
-    const destination = JSON.parse(preview.stdout).destination;
+    const destination = preview.output.destination;
     assert.deepEqual(destination, { class: 'external', origin: 'https://example.test' });
-    assert.ok(!preview.stdout.includes(executable));
+    assert.ok(!JSON.stringify(preview.output).includes(executable));
     assert.deepEqual(readdirSync(workspace), [], 'preview must not create a capsule or worktree');
     const enrolled = runAction(
-      helper,
+      runtime,
       'profile-enroll',
-      {
-        ...input,
-        expectedDestination: destination,
-        allowBackendDefault: true,
-      },
+      { ...input, expectedDestination: destination, allowBackendDefault: true },
       workspace,
+      path,
     );
     assert.equal(enrolled.status, 0, enrolled.stderr);
-    const choices = runAction(helper, 'probe', { repositoryRoot: workspace }, workspace);
-    assert.equal(choices.status, 0, choices.stderr);
-    assert.equal(JSON.parse(choices.stdout).profiles[0].name, 'first-use');
-    const removed = runAction(helper, 'profile-remove', { name: 'first-use' }, workspace);
-    assert.equal(removed.status, 0, removed.stderr);
-    assert.equal(JSON.parse(removed.stdout).removed, true);
+    const choices = runAction(runtime, 'probe', { repositoryRoot: workspace }, workspace, path);
+    assert.equal(choices.output.profiles[0].name, 'first-use');
+    const removed = runAction(runtime, 'profile-remove', { name: 'first-use' }, workspace, path);
+    assert.equal(removed.output.removed, true);
   } finally {
     rmSync(temporary, { recursive: true, force: true });
   }

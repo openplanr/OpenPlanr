@@ -34,15 +34,61 @@
   "series": [
     {
       "id": "series-main",
-      "label": "Primary series",
+      "label": "New accounts",
       "values": [
         {
-          "key": "A",
-          "value": 3
+          "key": "Jan",
+          "value": 18
         },
         {
-          "key": "B",
-          "value": 5
+          "key": "Feb",
+          "value": 26
+        },
+        {
+          "key": "Mar",
+          "value": 23
+        },
+        {
+          "key": "Apr",
+          "value": 38
+        },
+        {
+          "key": "May",
+          "value": 42
+        },
+        {
+          "key": "Jun",
+          "value": 51
+        }
+      ]
+    },
+    {
+      "id": "series-secondary",
+      "label": "Returning accounts",
+      "values": [
+        {
+          "key": "Jan",
+          "value": 28
+        },
+        {
+          "key": "Feb",
+          "value": 24
+        },
+        {
+          "key": "Mar",
+          "value": 32
+        },
+        {
+          "key": "Apr",
+          "value": 30
+        },
+        {
+          "key": "May",
+          "value": 46
+        },
+        {
+          "key": "Jun",
+          "value": 43
         }
       ]
     }
@@ -50,12 +96,12 @@
   "axes": [
     {
       "id": "axis-horizontal",
-      "label": "Horizontal meaning",
-      "scale": "linear"
+      "label": "Month",
+      "scale": "categorical"
     },
     {
       "id": "axis-vertical",
-      "label": "Vertical meaning",
+      "label": "Active accounts",
       "scale": "linear"
     }
   ],
@@ -66,8 +112,9 @@
     "title": "Line chart fixture",
     "description": "A compact line chart example with semantic reading order.",
     "readingOrder": [
-      "series-main"
+      "series-main",
+      "series-secondary"
     ]
   },
-  "documentDigest": "sha256:b2631bd07085e87a6d0d45fa2767a5871fe42696c86549de55758ec183c876aa"
+  "documentDigest": "sha256:2c1db2e3809e25ff676a6d81546c40dd4a04b3b989930387ff83c645aec735a7"
 }

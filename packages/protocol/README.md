@@ -86,7 +86,21 @@ current design validator accepts authored `schemaVersion: "1.0.0"`, including
 frame makes `board-root-box-sizing`, `vertical-overflow` and `outside-frame`
 errors throughout the document. Otherwise these checks are warnings and do not
 block verification or handoff readiness. Layout and schema version never change
-severity. The original Protocol 1.9 schema bytes are unchanged.
+severity. The Protocol 1.9 and 1.20 schema bytes are unchanged.
+
+The current `schemas/v1.22.0/design-document.schema.json` adds typed screen props
+and sparse variant values. Declare enum props with unique string `options` and
+an included `default`, or boolean props with a boolean `default`. Prop names,
+enum options and enum defaults must match `^[a-z][a-z0-9-]*$` and contain at most
+128 characters. `variants[].props[screenId][propName]`
+overrides that screen's default; an omitted value inherits it. Props apply to the
+source selected by `variants[].sources`, or the screen source when no override
+exists. Documents containing either props field require authored
+`schemaVersion: "1.1.0"`; documents without props remain valid at `"1.0.0"`.
+The current design validators also reject unknown screen or prop references,
+invalid enum defaults and invalid instance values. The additive Protocol 1.22
+review bundle retains declarations and instance values without authored sources;
+its design model includes `schemaVersion: "1.1.0"` when props are present.
 
 Design comment categories are separate from the frozen artifact pin intent.
 Protocol 1.11 adds metadata payload `schemaVersion: "1.1.0"` for the explicit

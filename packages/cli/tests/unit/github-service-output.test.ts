@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os';
 import { delimiter, join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { fetchRecentCommits, verifyGitHubRepo } from '../../src/services/github-service.js';
-import { fakeGh } from '../helpers/fake-gh.js';
+import { fakeGh, fakeGhEnvironments } from '../helpers/fake-gh.js';
 
 let bin: string;
 
@@ -63,5 +63,30 @@ describe.skipIf(process.platform === 'win32')('gh output is validated where it i
         },
       ],
     });
+  });
+
+  it('starts gh with the allowlisted environment only', async () => {
+    vi.stubEnv('FOO_TOKEN', 'unrelated-secret');
+    vi.stubEnv('GH_TOKEN', 'gh-secret');
+    fakeGh(bin, { 'auth status': '', 'repo view': '{"nameWithOwner":"acme/app"}' });
+    await verifyGitHubRepo();
+    const environments = fakeGhEnvironments(bin);
+    expect(environments).toHaveLength(2);
+    for (const names of environments) {
+      expect(names).not.toContain('FOO_TOKEN');
+      expect(names).toContain('GH_TOKEN');
+    }
+  });
+
+  it('reports a missing GitHub remote with the recovery step', async () => {
+    fakeGh(bin, { 'auth status': '', 'repo view': { stderr: 'fatal: no git remotes found' } });
+    await expect(verifyGitHubRepo()).rejects.toThrow(
+      /no GitHub remote[\s\S]*git remote add origin <url>/u,
+    );
+  });
+
+  it('rethrows an unclassified gh failure unchanged', async () => {
+    fakeGh(bin, { 'auth status': '', 'repo view': { stderr: 'boom' } });
+    await expect(verifyGitHubRepo()).rejects.toMatchObject({ stderr: 'boom' });
   });
 });

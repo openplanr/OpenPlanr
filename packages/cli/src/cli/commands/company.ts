@@ -5,6 +5,7 @@ import {
   storeCompanyManualToken,
 } from '../../services/company-auth-service.js';
 import { CompanySyncError } from '../../services/company-common.js';
+import { exportCompanyOrganization } from '../../services/company-export-service.js';
 import {
   adoptCompanyDiagramRevision,
   applyCompanyProposal,
@@ -173,6 +174,27 @@ export function registerCompanyCommand(program: Command) {
     .action(async (options: { apiUrl?: string }) =>
       print(await companyApi(resolveCompanyOrigin(options.apiUrl), '/v1/projects')),
     );
+  company
+    .command('export-organization')
+    .requiredOption('--out <directory>', 'non-existent or empty export directory')
+    .option('--api-url <origin>', 'company API HTTPS origin override')
+    .option('--json', 'structured output')
+    .description('Export readable company projects, revisions, content and reviews')
+    .action(async (options: { out: string; apiUrl?: string; json?: boolean }) => {
+      const result = await exportCompanyOrganization(
+        resolveCompanyOrigin(options.apiUrl),
+        options.out,
+      );
+      if (options.json) return print(result);
+      logger.success(
+        `Exported ${result.summary.projects} projects, ${result.summary.artifacts} artifacts and ${result.summary.revisions} revisions. See manifest.json in the output directory.`,
+      );
+      for (const notice of result.notices) logger.warn(notice);
+      if (result.summary.notExported)
+        logger.warn(
+          `${result.summary.notExported} projects not exported. See manifest.json for details.`,
+        );
+    });
   company
     .command('adopt')
     .argument('<artifact-id>', 'company diagram artifact ID')

@@ -22,6 +22,19 @@ test('maxProperties rejects objects with too many properties', () => {
   assert.deepEqual(rules(validateJson({ a: 1, b: 2, c: 3 }, schema)), ['maxProperties']);
 });
 
+test('propertyNames validates keys with local references and boolean schemas', () => {
+  const schema = {
+    type: 'object',
+    $defs: { id: { type: 'string', pattern: '^[A-Za-z][A-Za-z0-9_-]*$' } },
+    propertyNames: { $ref: '#/$defs/id' },
+  };
+  assert.deepEqual(validateJson({ theme: true, 'is-open': false }, schema), []);
+  assert.deepEqual(rules(validateJson({ '1theme': true }, schema)), ['pattern']);
+  assert.deepEqual(validateJson({}, { propertyNames: false }), []);
+  assert.ok(validateJson({ theme: true }, { propertyNames: false }).length > 0);
+  assert.deepEqual(rules(validateJson({ theme: true }, { propertyNames: 'string' })), ['schema']);
+});
+
 test('dependentRequired requires dependencies only when the trigger property is present', () => {
   const schema = { type: 'object', dependentRequired: { boardId: ['reviewId', 'semanticHash'] } };
   assert.deepEqual(validateJson({}, schema), []);

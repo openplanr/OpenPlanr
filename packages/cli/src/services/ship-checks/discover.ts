@@ -13,7 +13,9 @@ import {
   type ShipDiagnostic,
   type ShipTier,
 } from './contract.js';
+import { readCoverage } from './coverage.js';
 import { readHuskyHook, readPreCommitFramework } from './hooks.js';
+import { packageContentsChecks } from './package-contents.js';
 import {
   isBuildCommand,
   ManifestError,
@@ -282,7 +284,11 @@ export async function discoverShipChecks(
       );
     }
     candidates.push(...readHuskyHook(root, 'pre-commit'), ...readPreCommitFramework(root));
-    if (tier === 'push') candidates.push(...readHuskyHook(root, 'pre-push'));
+    if (tier === 'push')
+      candidates.push(
+        ...readHuskyHook(root, 'pre-push'),
+        ...packageContentsChecks(root, changes.files, diagnostics),
+      );
     const taskChecks = task?.requirements.checks ?? [];
     candidates.push(...taskChecks);
     if (taskChecks.length === 0)
@@ -308,6 +314,13 @@ export async function discoverShipChecks(
       diagnostic('NO_CHECKS', 'warning', `No checks were discovered for the ${tier} tier.`),
     );
   }
+  const coverage = await readCoverage(
+    root,
+    changes.files,
+    checks,
+    () => listFiles(root),
+    diagnostics,
+  );
   return {
     kind: SHIP_CHECKS_KIND,
     schemaVersion: SHIP_CHECKS_SCHEMA_VERSION,
@@ -322,6 +335,7 @@ export async function discoverShipChecks(
     requirements: task?.requirements.requirements ?? [],
     acceptance: task?.requirements.acceptance ?? [],
     relatedTests,
+    coverage,
     diagnostics,
   };
 }

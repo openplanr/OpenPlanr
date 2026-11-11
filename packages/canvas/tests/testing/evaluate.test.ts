@@ -6,6 +6,7 @@ import {
   type CanvasTraceResults,
   evaluateCanvasTrace,
   toClockResolution,
+  traceOwnership,
 } from '../../src/testing/index.mjs';
 
 function complete(count: 708 | 5000) {
@@ -290,6 +291,57 @@ describe('canvas trace evaluation', () => {
     },
   );
 
+  const timingMetrics = new Set([
+    'rendererMainP95Ms',
+    'longTasksOver50Ms',
+    'rafIntervalP95Ms',
+    'firstFrameP50Ms',
+  ]);
+  const runnerTiming = failures.filter(
+    ([metric], index) =>
+      timingMetrics.has(metric) ||
+      (metric === 'hitTestP95Ms' && index !== failures.findLastIndex(([m]) => m === metric)),
+  );
+  const runnerStructural = failures.filter((entry) => !runnerTiming.includes(entry));
+
+  it('classifies every failure case as runner timing or structural', () => {
+    expect(runnerTiming.map(([metric]) => metric)).toEqual([
+      'rendererMainP95Ms',
+      'rendererMainP95Ms',
+      'longTasksOver50Ms',
+      'longTasksOver50Ms',
+      'rafIntervalP95Ms',
+      'firstFrameP50Ms',
+      'hitTestP95Ms',
+      'hitTestP95Ms',
+      'hitTestP95Ms',
+    ]);
+    expect(runnerStructural.map(([metric]) => metric)).toContain('admittedCls');
+  });
+
+  for (const tier of [708, 5000] as const) {
+    it.each(runnerStructural)(
+      `still fails %s at tier ${tier} with runner budgets`,
+      (metric, mutate) => {
+        const results = complete(tier);
+        results.budgetSet = 'runner';
+        mutate(results);
+        const evaluation = evaluate(results);
+        expect(evaluation.passed).toBe(false);
+        expect(evaluation.failures.some((failure) => failure.includes(metric))).toBe(true);
+      },
+    );
+
+    it.each(runnerTiming)(`reports %s at tier ${tier} with runner budgets`, (metric, mutate) => {
+      const results = complete(tier);
+      results.budgetSet = 'runner';
+      mutate(results);
+      const evaluation = evaluate(results);
+      expect(evaluation.failures).toEqual([]);
+      expect(evaluation.reported.some((line) => line.includes(`${metric} measured`))).toBe(true);
+    });
+  }
+
   for (const tier of [708, 5000] as const) {
     it.each(failures)(`fails %s at tier ${tier}`, (metric, mutate) => {
       const results = complete(tier);
@@ -325,10 +377,99 @@ describe('canvas trace evaluation', () => {
     expect(evaluate(results).failures).toEqual([]);
     for (const run of item.runs) run.rendererMainP95Ms += 0.001;
     const evaluation = evaluate(results);
-    expect(
-      (world === 'svg' && tier === 5000 ? evaluation.reported : evaluation.failures).join('\n'),
-    ).toContain('rendererMainP95Ms');
+    expect(evaluation.failures.join('\n')).toContain('rendererMainP95Ms');
   });
+
+  it.each([
+    ['vanilla', 5000, 'zoom-sweep', 8],
+    ['react', 5000, 'zoom-sweep', 10],
+    ['vanilla', 708, 'pan-40', 6],
+    ['vanilla', 708, 'zoom-sweep', 6],
+  ] as const)('gates local %s html tier %i %s main at %i', (renderer, tier, scenario, limit) => {
+    for (const dpr of [1, 2] as const) {
+      const results = complete(tier);
+      const item = results.measurements[0];
+      Object.assign(item, { renderer, scenario, dpr });
+      for (const run of item.runs) run.rendererMainP95Ms = limit;
+      expect(evaluate(results).failures).toEqual([]);
+      for (const run of item.runs) run.rendererMainP95Ms += 0.001;
+      expect(evaluate(results).failures.join('\n')).toContain(
+        `${scenario}: rendererMainP95Ms measured ${limit + 0.001}, limit ${limit}`,
+      );
+    }
+  });
+
+  it.each([
+    ['vanilla', 5000, 'zoom-sweep', 14],
+    ['react', 5000, 'zoom-sweep', 14],
+    ['vanilla', 5000, 'pan-40', 8],
+    ['react', 5000, 'pan-fit', 10],
+    ['vanilla', 708, 'pan-40', 8],
+    ['vanilla', 708, 'zoom-sweep', 8],
+    ['vanilla', 708, 'pan-100', 6],
+    ['react', 708, 'zoom-sweep', 8],
+    ['vanilla', 'svg-5000', 'zoom-sweep', 12],
+  ] as const)(
+    'reports runner %s tier %s %s main against %i without failing',
+    (renderer, tier, scenario, limit) => {
+      for (const dpr of [1, 2] as const) {
+        const results = complete(tier === 'svg-5000' ? 5000 : tier);
+        results.budgetSet = 'runner';
+        if (tier === 'svg-5000')
+          for (const key of ['measurements', 'hitTests', 'chrome', 'lod', 'pins'] as const)
+            for (const item of results[key]) item.world = 'svg';
+        const item = results.measurements[0];
+        Object.assign(item, { renderer, scenario, dpr });
+        for (const run of item.runs) run.rendererMainP95Ms = limit + 5;
+        const evaluation = evaluate(results);
+        expect(evaluation.failures).toEqual([]);
+        expect(evaluation.reported.join('\n')).toContain(
+          `${scenario}: rendererMainP95Ms measured ${limit + 5}, limit ${limit}`,
+        );
+      }
+    },
+  );
+
+  it.each([
+    ['webkit', 'react', 708],
+    ['webkit', 'react', 5000],
+    ['chromium', 'vanilla', 5000],
+  ] as const)('gates local %s %s html tier %i first frame at 150', (browser, renderer, tier) => {
+    for (const dpr of [1, 2] as const) {
+      const results = complete(tier);
+      results.browser.name = browser;
+      Object.assign(results.measurements[0], { renderer, dpr });
+      setFirstFrame(results, 150);
+      expect(evaluate(results).failures).toEqual([]);
+      setFirstFrame(results, 150.001);
+      expect(evaluate(results).failures.join('\n')).toContain(
+        'firstFrameP50Ms measured 150.001, limit 150',
+      );
+    }
+  });
+
+  it.each([
+    ['webkit', 'react', 708, 350],
+    ['webkit', 'react', 5000, 350],
+    ['webkit', 'vanilla', 708, 250],
+    ['chromium', 'react', 5000, 250],
+  ] as const)(
+    'reports runner %s %s html tier %i first frame against %i without failing',
+    (browser, renderer, tier, limit) => {
+      for (const dpr of [1, 2] as const) {
+        const results = complete(tier);
+        results.browser.name = browser;
+        results.budgetSet = 'runner';
+        Object.assign(results.measurements[0], { renderer, dpr });
+        setFirstFrame(results, limit + 1);
+        const evaluation = evaluate(results);
+        expect(evaluation.failures).toEqual([]);
+        expect(evaluation.exceeded.join('\n')).toContain(
+          `DPR ${dpr} pan-100: firstFrameP50Ms measured ${limit + 1}, limit ${limit}`,
+        );
+      }
+    },
+  );
 
   it.each([
     [16.80000000000291, true],
@@ -352,7 +493,7 @@ describe('canvas trace evaluation', () => {
     expect(toClockResolution(16.7)).toBe(16.7);
   });
 
-  it('reports runner rAF and remount while preserving the 250 ms first-frame gate', () => {
+  it('reports runner rAF, remount, first frame, long tasks and hit-test timing', () => {
     const results = complete(5000);
     results.budgetSet = 'runner';
     results.measurements[0].scenario = 'remount';
@@ -366,9 +507,32 @@ describe('canvas trace evaluation', () => {
     expect(evaluation.reported.join('\n')).toContain('rendererMainP95Ms measured 1000, limit 16');
     expect(evaluation.reported.join('\n')).toContain('rafIntervalP95Ms measured 1000, limit 16.8');
     setFirstFrame(results, 250.001);
-    expect(evaluate(results).failures.join('\n')).toContain('firstFrameP50Ms');
     results.measurements[0].runs[0].longTasksOver50Ms = 1;
-    expect(evaluate(results).failures.join('\n')).toContain('longTasksOver50Ms');
+    results.measurements[0].runs[0].hitTestP95Ms = 0.2;
+    const timing = evaluate(results);
+    expect(timing.failures).toEqual([]);
+    for (const metric of [
+      'firstFrameP50Ms measured 250.001, limit 250',
+      'longTasksOver50Ms measured 1, limit 0',
+      'hitTestP95Ms measured 0.2, limit 0.1',
+    ]) {
+      expect(timing.reported.join('\n')).toContain(metric);
+      expect(timing.exceeded.join('\n')).toContain(metric);
+    }
+    expect(timing.reported.join('\n')).toContain('hitTestP95Ms measured 0.01, limit 0.1');
+    expect(timing.exceeded.join('\n')).not.toContain('hitTestP95Ms measured 0.01,');
+  });
+
+  it('keeps runner structural gates while timing is reported', () => {
+    const results = complete(5000);
+    results.budgetSet = 'runner';
+    results.measurements[0].runs[0].hitTestP95Ms = 0;
+    results.measurements[0].runs[1].domNodes = 2001;
+    results.pins[0].droppedPins = 1;
+    const failures = evaluate(results).failures.join('\n');
+    expect(failures).toContain('hitTestP95Ms measured 0, limit > 0');
+    expect(failures).toContain('domNodes measured 2001, limit 2000');
+    expect(failures).toContain('droppedPins measured 1, limit 0');
   });
 
   it('keeps remount DOM and 500-pin DOM reported', () => {
@@ -382,15 +546,56 @@ describe('canvas trace evaluation', () => {
     ).toHaveLength(2);
   });
 
-  it('reports traced SVG stress-tier measurements instead of gating them', () => {
-    const results = complete(5000);
-    for (const key of ['measurements', 'hitTests', 'chrome', 'lod', 'pins'] as const)
-      for (const item of results[key]) item.world = 'svg';
-    for (const run of results.measurements[0].runs) run.rendererMainP95Ms = 1000;
-    expect(evaluate(results).failures).toEqual([]);
-    expect(evaluate(results).reported.join('\n')).toContain(
-      'rendererMainP95Ms measured 1000, limit 12',
-    );
+  for (const tier of [708, 5000] as const) {
+    const svg = (mutate: (item: Complete['measurements'][number]) => void = () => {}) => {
+      const results = complete(tier);
+      for (const key of ['measurements', 'hitTests', 'chrome', 'lod', 'pins'] as const)
+        for (const item of results[key]) item.world = 'svg';
+      mutate(results.measurements[0]);
+      return evaluate(results);
+    };
+    const limit = CANVAS_TRACE_BUDGETS.rendererMainP95Ms.svg[tier];
+
+    it(`gates SVG tier ${tier} renderer main p95 at ${limit} ms and long tasks at 0`, () => {
+      expect(svg().failures).toEqual([]);
+      const slow = svg((item) => {
+        for (const run of item.runs) run.rendererMainP95Ms = limit + 0.001;
+      });
+      expect(slow.failures).toEqual([
+        `${tier}-fixture vanilla svg DPR 2 pan-100: rendererMainP95Ms measured ${limit + 0.001}, limit ${limit}`,
+      ]);
+      const blocked = svg((item) => {
+        item.runs[1].longTasksOver50Ms = 1;
+      });
+      expect(blocked.failures).toEqual([
+        `${tier}-fixture vanilla svg DPR 2 pan-100 run 2: longTasksOver50Ms measured 1, limit 0`,
+      ]);
+    });
+
+    it(`reports card-world DOM, rAF and first-frame budgets for SVG tier ${tier}`, () => {
+      const evaluation = svg((item) => {
+        for (const run of item.runs) {
+          run.domNodes = 70243;
+          run.rafIntervalP95Ms = 17.5;
+        }
+        item.firstFrameTrialsMs = [960, 970, 980, 990, 1000];
+        item.firstFrameP50Ms = 980;
+      });
+      expect(evaluation.failures).toEqual([]);
+      const reported = evaluation.reported.join('\n');
+      expect(reported).toContain('domNodes measured 70243, limit 2000');
+      expect(reported).toContain('rafIntervalP95Ms measured 17.5, limit 16.8');
+      expect(reported).toContain('firstFrameP50Ms measured 980, limit 150');
+      expect(reported).not.toMatch(/rendererMainP95Ms|longTasksOver50Ms|hitTest/u);
+    });
+  }
+
+  it('names the budget table each world is gated against', () => {
+    for (const count of [708, 5000])
+      for (const scenario of ['pan-100', 'zoom-sweep', 'remount']) {
+        expect(traceOwnership({ count, world: 'svg', scenario })).toBe('gated, SVG tier');
+        expect(traceOwnership({ count, world: 'html', scenario })).toBe('gated, card tier');
+      }
   });
 
   it.each([
@@ -496,6 +701,131 @@ describe('canvas trace evaluation', () => {
     },
   );
 
+  it.each(['webkit', 'firefox'] as const)(
+    'keeps unsupported %s metrics pending while gating supported timing',
+    (name) => {
+      const results = complete(708);
+      const measurements = results.measurements.map((item) => ({
+        ...item,
+        scenario: 'pan-100' as const,
+        runs: item.runs.map((run) => ({
+          ...run,
+          rendererMainP95Ms: 'unsupported' as const,
+          longTasksOver50Ms: 'unsupported' as const,
+          layoutShiftValue: 'unsupported' as const,
+        })),
+      }));
+      const evaluation = evaluateCanvasTrace(
+        { ...results, browser: { ...results.browser, name }, measurements },
+        708,
+      );
+      expect(evaluation.failures).toEqual([]);
+      expect(evaluation.reported.filter((line) => line.includes('pan-100'))).toEqual([]);
+      for (const metric of ['rendererMainP95Ms', 'longTasksOver50Ms', 'layoutShiftValue']) {
+        const pending = evaluation.pending.filter((line) => line.includes(`${metric} unsupported`));
+        expect(pending).toHaveLength(3);
+        expect(pending[0]).toContain('708-fixture vanilla html DPR 2 pan-100 run 1');
+        expect(pending[0]).toContain('tier 708');
+      }
+      expect(
+        evaluateCanvasTrace(
+          { ...results, browser: { ...results.browser, name }, measurements },
+          5000,
+        ).pending.filter((line) => line.includes('unsupported')),
+      ).toEqual([]);
+      for (const run of measurements[0].runs) run.rafIntervalP95Ms = 1000;
+      expect(
+        evaluateCanvasTrace(
+          { ...results, browser: { ...results.browser, name }, measurements },
+          708,
+        ).failures.join('\n'),
+      ).toContain(name === 'webkit' ? 'rafIntervalP95Ms' : 'frameP95Ms');
+    },
+  );
+
+  for (const budgetSet of ['local', 'runner'] as const) {
+    it.each([
+      ['chromium', 'rendererMainP95Ms'],
+      ['chromium', 'rafIntervalP95Ms'],
+      ['chromium', 'longTasksOver50Ms'],
+      ['webkit', 'rafIntervalP95Ms'],
+      ['firefox', 'rafIntervalP95Ms'],
+      ['chromium', 'worstFrameMs'],
+      ['webkit', 'worstFrameMs'],
+      ['firefox', 'worstFrameMs'],
+      ['chromium', 'engineFrameSamples'],
+      ['webkit', 'engineFrameSamples'],
+      ['firefox', 'engineFrameSamples'],
+    ] as const)(`rejects unsupported %s %s with ${budgetSet} budgets`, (name, metric) => {
+      const results = complete(708);
+      const measurements = results.measurements.map((item) => ({
+        ...item,
+        scenario: metric === 'worstFrameMs' ? ('pan-40' as const) : item.scenario,
+        runs: item.runs.map((run) => ({ ...run, [metric]: 'unsupported' })),
+      }));
+      const malformed = {
+        ...results,
+        budgetSet,
+        browser: { ...results.browser, name },
+        measurements,
+      } as CanvasTraceResults;
+      expect(() => evaluateCanvasTrace(malformed, 708)).toThrow(TypeError);
+      expect(() => evaluateCanvasTrace(malformed, 708)).toThrow(metric);
+    });
+  }
+
+  it('still gates supported long tasks alongside unsupported observations', () => {
+    const results = complete(708);
+    results.browser.name = 'firefox';
+    const measurements = results.measurements.map((item) => ({
+      ...item,
+      runs: item.runs.map((run, index) => ({
+        ...run,
+        longTasksOver50Ms: index === 0 ? ('unsupported' as const) : 1,
+      })),
+    }));
+    const evaluation = evaluateCanvasTrace({ ...results, measurements }, 708);
+    expect(evaluation.failures).toHaveLength(2);
+    expect(evaluation.failures.join('\n')).toContain('longTasksOver50Ms measured 1, limit 0');
+    expect(evaluation.pending.join('\n')).toContain('longTasksOver50Ms unsupported');
+  });
+
+  it('accepts numeric optional browser evidence without marking it unsupported', () => {
+    const results = complete(708);
+    const measurements = results.measurements.map((item) => ({
+      ...item,
+      runs: item.runs.map((run) => ({ ...run, layoutShiftValue: 0, engineFrameSamples: 180 })),
+    }));
+    expect(evaluateCanvasTrace({ ...results, measurements }, 708).pending).toEqual([
+      'dropped frames at fit: compositor trace is not measured',
+    ]);
+  });
+
+  it('keeps chrome geometry and toggle gates active when layout shifts are unsupported', () => {
+    const results = complete(708);
+    const chrome = results.chrome.map((item) => ({
+      ...item,
+      layoutShifts: 'unsupported' as const,
+    }));
+    const evaluation = evaluateCanvasTrace({ ...results, chrome }, 708);
+    expect(evaluation.failures).toEqual([]);
+    expect(evaluation.pending.join('\n')).toContain('layoutShifts unsupported for tier 708');
+    chrome[0].snapshots.pop();
+    chrome[0].after.camera.x = 1;
+    chrome[0].after.stage.width = 1200;
+    const failures = evaluateCanvasTrace({ ...results, chrome }, 708).failures;
+    expect(failures).toHaveLength(3);
+    expect(failures.join('\n')).toContain('toggles');
+    expect(failures.join('\n')).toContain('camera unchanged');
+    expect(failures.join('\n')).toContain('stage unchanged');
+    expect(failures.join('\n')).not.toMatch(/admittedCls|phases/u);
+    expect(
+      evaluateCanvasTrace({ ...results, chrome }, 5000).pending.filter((line) =>
+        line.includes('unsupported'),
+      ),
+    ).toEqual([]);
+  });
+
   it('enforces WebKit rAF and worst pan-40 frame limits', () => {
     const results = complete(708);
     results.browser.name = 'webkit';
@@ -511,6 +841,20 @@ describe('canvas trace evaluation', () => {
     expect(evaluate(results).failures.join('\n')).toContain('worstFrameMs');
   });
 
+  it('requires WebKit pan-40 worst-frame evidence even with runner timing budgets', () => {
+    const results = complete(708);
+    results.browser.name = 'webkit';
+    results.budgetSet = 'runner';
+    results.measurements[0].scenario = 'pan-40';
+    const measurements = results.measurements.map((item) => ({
+      ...item,
+      runs: item.runs.map(({ worstFrameMs: _worst, ...run }) => run),
+    }));
+    expect(() => evaluateCanvasTrace({ ...results, measurements }, 708)).toThrow(
+      'worstFrameMs is required for WebKit pan-40',
+    );
+  });
+
   it.each([708, 5000] as const)('enforces Firefox frame limits at tier %i', (tier) => {
     const results = complete(tier);
     results.browser.name = 'firefox';
@@ -524,6 +868,52 @@ describe('canvas trace evaluation', () => {
     expect(evaluate(results).failures).toEqual([]);
     for (const run of results.measurements[0].runs) run.rafIntervalP95Ms = limit + 0.05;
     expect(evaluate(results).failures.join('\n')).toContain(`limit ${limit}`);
+  });
+
+  it.each([
+    ['webkit', 'pan-40', 708, 'rafIntervalP95Ms', 19],
+    ['firefox', 'pan-100', 708, 'frameP95Ms', 17],
+    ['firefox', 'pan-fit', 708, 'frameP95Ms', 20],
+    ['firefox', 'pan-fit', 5000, 'frameP95Ms', 25],
+  ] as const)(
+    'reports runner %s %s timing at tier %i while retaining structural gates',
+    (name, scenario, tier, metric, limit) => {
+      const results = complete(tier);
+      results.browser.name = name;
+      results.budgetSet = 'runner';
+      results.measurements[0].scenario = scenario;
+      for (const run of results.measurements[0].runs) {
+        run.rafIntervalP95Ms = 1000;
+        run.worstFrameMs = 1000;
+      }
+      const evaluation = evaluate(results);
+      expect(evaluation.failures).toEqual([]);
+      expect(evaluation.reported.join('\n')).toContain(`${metric} measured 1000, limit ${limit}`);
+      if (name === 'webkit')
+        expect(evaluation.reported.filter((line) => line.includes('worstFrameMs'))).toHaveLength(3);
+      results.measurements[0].runs[0].domNodes = 2001;
+      results.measurements[0].runs[0].longTasksOver50Ms = 1;
+      expect(evaluate(results).failures.join('\n')).toContain('domNodes');
+      expect(evaluate(results).reported.join('\n')).toContain('longTasksOver50Ms');
+    },
+  );
+
+  it.each([
+    ['rendererMainP95Ms', '16'],
+    ['rafIntervalP95Ms', null],
+    ['longTasksOver50Ms', undefined],
+    ['worstFrameMs', -1],
+    ['layoutShiftValue', NaN],
+    ['engineFrameSamples', Infinity],
+  ] as const)('rejects malformed %s browser evidence', (metric, value) => {
+    const results = complete(708);
+    const measurements = results.measurements.map((item) => ({
+      ...item,
+      runs: item.runs.map((run) => ({ ...run, [metric]: value })),
+    }));
+    const malformed = { ...results, measurements } as CanvasTraceResults;
+    expect(() => evaluateCanvasTrace(malformed, 708)).toThrow(TypeError);
+    expect(() => evaluateCanvasTrace(malformed, 708)).toThrow(String(metric));
   });
 
   it.each([
@@ -585,6 +975,10 @@ describe('canvas trace evaluation', () => {
       },
     ],
     ['before', (r: Complete) => ({ ...r, chrome: [{ ...r.chrome[0], before: null }] })],
+    [
+      'layoutShifts',
+      (r: Complete) => ({ ...r, chrome: [{ ...r.chrome[0], layoutShifts: 'unavailable' }] }),
+    ],
     [
       'startTime',
       (r: Complete) => {

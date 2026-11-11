@@ -71,11 +71,7 @@ function isPendingRouteProjection(
   return binding !== null && isCurrentDashboardQuery(projection.binding, binding);
 }
 
-/**
- * Keep an ordinary route recognisable while its exact owner-issued projection is in flight:
- * the real header, a skeleton body in the shape the route will have. Booting, loading, and
- * refreshing are expected transit states, not a refused or unavailable product surface.
- */
+/** Preserve route chrome while its owner projection is pending. */
 function PendingRouteFrame({
   route,
   projection,

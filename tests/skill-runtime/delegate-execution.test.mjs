@@ -7,9 +7,9 @@ import test from 'node:test';
 import {
   codexAdapter,
   resolveCodexDestination,
-} from '../../skills/planr-delegate/scripts/adapters/codex.mjs';
-import { invokeProcess } from '../../skills/planr-delegate/scripts/adapters/generic.mjs';
-import { enrollProfile } from '../../skills/planr-delegate/scripts/profiles.mjs';
+} from '../../packages/pipeline/lib/delegate/adapters/codex.mjs';
+import { invokeProcess } from '../../packages/pipeline/lib/delegate/adapters/generic.mjs';
+import { enrollProfile } from '../../packages/pipeline/lib/delegate/profiles.mjs';
 import {
   acquireRunTransitionLock,
   closeRunRecord,
@@ -18,7 +18,7 @@ import {
   pruneClosedRunRecords,
   readRunRecord,
   updateRunRecord,
-} from '../../skills/planr-delegate/scripts/run-record.mjs';
+} from '../../packages/pipeline/lib/delegate/run-record.mjs';
 import {
   cleanupDelegateRun,
   delegateRunnerCommand,
@@ -27,7 +27,7 @@ import {
   prepareDelegateRun,
   recoverDelegateRun,
   resumeDelegateRun,
-} from '../../skills/planr-delegate/scripts/runner.mjs';
+} from '../../packages/pipeline/lib/delegate/runner.mjs';
 
 async function fixture(t) {
   const base = await mkdtemp(join(tmpdir(), 'planr-execution-test-'));

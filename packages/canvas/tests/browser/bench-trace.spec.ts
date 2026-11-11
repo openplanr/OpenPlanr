@@ -1,4 +1,4 @@
-import { mkdir, writeFile } from 'node:fs/promises';
+import { appendFile, mkdir, writeFile } from 'node:fs/promises';
 import { arch, cpus, platform, release } from 'node:os';
 import { resolve } from 'node:path';
 import {
@@ -12,6 +12,7 @@ import {
 import type { Scenario } from '../../bench/main';
 import {
   CANVAS_TRACE_BUDGETS,
+  type CanvasTraceMeasurement,
   evaluateCanvasTrace,
   percentile95,
   type RendererTraceEvent,
@@ -20,6 +21,7 @@ import {
 } from '../../src/testing/index.mts';
 import { waitForBench } from './bench';
 import { benchMetadata } from './metadata';
+import { recordRafRun } from './raf-trace';
 import {
   aggregateTraceRuns,
   DOM_NODE_BUDGET,
@@ -29,10 +31,20 @@ import {
   type TraceRun,
   traceBudgetPolicy,
   traceOwnership,
+  traceSpeedIndex,
 } from './trace-results';
 
 // Software-GL runners can present at 30 fps and have noisy chunked remount timings.
 const budgets = traceBudgetPolicy(RUNNER_BUDGETS);
+const TIMING_METRIC =
+  /: (?:rendererMainP95Ms|rafIntervalP95Ms|firstFrameP50Ms|hitTestP95Ms|longTasksOver50Ms) measured /u;
+
+/** Labels a report-only limit, naming the comparison value when it differs from the reference. */
+function reportedLimit(comparison: number, reference: number): string {
+  return comparison === reference
+    ? `reported (reference ${reference})`
+    : `reported (comparison ${comparison}, reference ${reference})`;
+}
 
 function traceEvents(input: unknown): RendererTraceEvent[] {
   if (
@@ -123,11 +135,14 @@ type Measurement = {
   firstFrameTrialsMs: number[];
   effectiveBudgets: Omit<
     Measurement['referenceBudgets'],
-    'rendererMainP95Ms' | 'rafIntervalP95Ms'
+    'rendererMainP95Ms' | 'rafIntervalP95Ms' | 'firstFrameP50Ms'
   > & {
     rendererMainP95Ms: number | null;
     rafIntervalP95Ms: number | null;
+    firstFrameP50Ms: number | null;
   };
+  /** Values the evaluator compares against; they only report when the effective budget is null. */
+  comparisonBudgets: { rendererMainP95Ms: number; firstFrameP50Ms: number };
   referenceBudgets: {
     hitTestP95Ms: number;
     rendererMainP95Ms: number;
@@ -242,6 +257,17 @@ async function measureTier(browser: Browser, baseURL: string, tier: Tier): Promi
       for (const scenario of scenarios) {
         const runs = await recordRuns(page, session, scenario);
         const aggregate = aggregateTraceRuns(runs);
+        const comparisonMain =
+          scenario === 'remount'
+            ? CANVAS_TRACE_BUDGETS.remountRendererMainP95Ms
+            : scenario === 'zoom-sweep' && world === 'html' && count === 5000
+              ? (budgets.htmlZoomSweep5000RendererMainP95Ms ?? mainBudget)
+              : (scenario === 'pan-40' || scenario === 'zoom-sweep') &&
+                  renderer === 'vanilla' &&
+                  world === 'html' &&
+                  count === 708
+                ? (budgets.vanillaHtml708PanZoomRendererMainP95Ms ?? mainBudget)
+                : mainBudget;
         const referenceBudgets = {
           rendererMainP95Ms:
             scenario === 'remount' ? CANVAS_TRACE_BUDGETS.remountRendererMainP95Ms : mainBudget,
@@ -269,8 +295,15 @@ async function measureTier(browser: Browser, baseURL: string, tier: Tier): Promi
           effectiveBudgets: {
             ...referenceBudgets,
             rendererMainP95Ms:
-              scenario === 'remount' ? budgets.remountRendererMainP95Ms : mainBudget,
-            rafIntervalP95Ms: budgets.rafIntervalP95Ms,
+              budgets.timingReportOnly ||
+              (scenario === 'remount' && budgets.remountRendererMainP95Ms === null)
+                ? null
+                : comparisonMain,
+            rafIntervalP95Ms: budgets.timingReportOnly ? null : budgets.rafIntervalP95Ms,
+            firstFrameP50Ms: budgets.timingReportOnly ? null : budgets.firstFrameP50Ms,
+          },
+          comparisonBudgets: {
+            rendererMainP95Ms: comparisonMain,
             firstFrameP50Ms: budgets.firstFrameP50Ms,
           },
         });
@@ -289,6 +322,7 @@ test('records production camera traces beside the reference budgets', async ({
   browser,
   browserName,
 }, testInfo) => {
+  test.skip(browserName !== 'chromium', 'Renderer main-thread traces require Chromium CDP');
   test.setTimeout(1_800_000);
   const baseURL = testInfo.project.use.baseURL;
   if (!baseURL) throw new Error('Canvas trace baseURL is missing');
@@ -338,9 +372,14 @@ test('records production camera traces beside the reference budgets', async ({
     measurements,
   };
   const evaluations = ([708, 5000] as const).map((tier) => evaluateCanvasTrace(results, tier));
+  const speedIndex = {
+    ...traceSpeedIndex(measurements),
+    method: 'geometric mean of non-remount renderer main p95 medians',
+  };
   const report = {
     ...metadata,
     secondDensity: SECOND_DENSITY,
+    speedIndex,
     evaluations,
     runner: {
       os: platform(),
@@ -403,18 +442,179 @@ test('records production camera traces beside the reference budgets', async ({
       '| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |',
       ...measurements.map(
         (item) =>
-          `| ${item.fixture} | ${item.renderer} | ${item.world} | ${item.dpr} | ${item.scenario} | ${item.ownership} | ${budgets.budgetSet} | ${item.rendererMainP95Ms} / ${item.effectiveBudgets.rendererMainP95Ms ?? `reported (reference ${item.referenceBudgets.rendererMainP95Ms})`} | ${JSON.stringify(item.runs.map((run) => run.rendererMainP95Ms))} | ${item.rafIntervalP95MsAtClockResolution} (${item.rafIntervalP95Ms}) / ${item.effectiveBudgets.rafIntervalP95Ms ?? `reported (reference ${item.referenceBudgets.rafIntervalP95Ms})`} | ${JSON.stringify(item.runs.map((run) => run.rafIntervalP95Ms))} | ${JSON.stringify(item.runs.map((run) => run.longTasksOver50Ms))} | ${JSON.stringify(item.runs.map((run) => run.longTaskDurationsMs))} | ${item.firstFrameP50Ms} / ${item.effectiveBudgets.firstFrameP50Ms}${item.effectiveBudgets.firstFrameP50Ms === item.referenceBudgets.firstFrameP50Ms ? '' : ` (reference ${item.referenceBudgets.firstFrameP50Ms})`} | ${JSON.stringify(item.runs.map((run) => run.domNodes))} | ${item.gpuRenderer} | ${item.hitTestP95Ms} / ${item.referenceBudgets.hitTestP95Ms} | ${item.domBudget.ownership} | ${item.referenceBudgets.domNodes} / ${item.domBudget.regressionLimit ?? 'reported'} | ${JSON.stringify(item.runs.map((run) => run.hitTestProbe.queryCount))} | ${JSON.stringify(item.runs.map((run) => run.overview.redraws))} | ${JSON.stringify(item.runs.map((run) => run.overview.cachePixelBytes))} | ${JSON.stringify(item.runs.map((run) => run.overview.peakCachePixelBytes))} | ${JSON.stringify(item.runs.map((run) => run.react ?? null))} |`,
+          `| ${item.fixture} | ${item.renderer} | ${item.world} | ${item.dpr} | ${item.scenario} | ${item.ownership} | ${budgets.budgetSet} | ${item.rendererMainP95Ms} / ${item.effectiveBudgets.rendererMainP95Ms ?? reportedLimit(item.comparisonBudgets.rendererMainP95Ms, item.referenceBudgets.rendererMainP95Ms)} | ${JSON.stringify(item.runs.map((run) => run.rendererMainP95Ms))} | ${item.rafIntervalP95MsAtClockResolution} (${item.rafIntervalP95Ms}) / ${item.effectiveBudgets.rafIntervalP95Ms ?? `reported (reference ${item.referenceBudgets.rafIntervalP95Ms})`} | ${JSON.stringify(item.runs.map((run) => run.rafIntervalP95Ms))} | ${JSON.stringify(item.runs.map((run) => run.longTasksOver50Ms))} | ${JSON.stringify(item.runs.map((run) => run.longTaskDurationsMs))} | ${item.firstFrameP50Ms} / ${item.effectiveBudgets.firstFrameP50Ms === null ? reportedLimit(item.comparisonBudgets.firstFrameP50Ms, item.referenceBudgets.firstFrameP50Ms) : `${item.effectiveBudgets.firstFrameP50Ms}${item.effectiveBudgets.firstFrameP50Ms === item.referenceBudgets.firstFrameP50Ms ? '' : ` (reference ${item.referenceBudgets.firstFrameP50Ms})`}`} | ${JSON.stringify(item.runs.map((run) => run.domNodes))} | ${item.gpuRenderer} | ${item.hitTestP95Ms} / ${item.referenceBudgets.hitTestP95Ms} | ${item.domBudget.ownership} | ${item.referenceBudgets.domNodes} / ${item.domBudget.regressionLimit ?? 'reported'} | ${JSON.stringify(item.runs.map((run) => run.hitTestProbe.queryCount))} | ${JSON.stringify(item.runs.map((run) => run.overview.redraws))} | ${JSON.stringify(item.runs.map((run) => run.overview.cachePixelBytes))} | ${JSON.stringify(item.runs.map((run) => run.overview.peakCachePixelBytes))} | ${JSON.stringify(item.runs.map((run) => run.react ?? null))} |`,
       ),
       '',
     ].join('\n'),
   );
+  const summary = [
+    `### Canvas Chromium timing traces (${budgets.budgetSet} budgets)`,
+    '',
+    `Speed index ${speedIndex.valueMs === null ? 'unavailable' : `${speedIndex.valueMs} ms`} (${speedIndex.method}, ${speedIndex.rows} rows, ${speedIndex.skipped} non-positive skipped).`,
+    budgets.timingReportOnly
+      ? 'Timing and long tasks are reported only on this runner; structural checks still gate.'
+      : 'Timing and long tasks gate at the local limits.',
+    '',
+    ...evaluations.flatMap((evaluation) => {
+      const timing = evaluation.exceeded.filter((line) => TIMING_METRIC.test(line));
+      return [
+        `Tier ${evaluation.tier}: ${evaluation.failures.length} failures, ${timing.length} timing entries over their comparison limit.`,
+        ...timing.map((line) => `- ${line}`),
+      ];
+    }),
+    '',
+  ].join('\n');
+  process.stdout.write(summary);
+  if (process.env.GITHUB_STEP_SUMMARY) await appendFile(process.env.GITHUB_STEP_SUMMARY, summary);
   for (const evaluation of evaluations)
     expect.soft(evaluation.failures, `canvas trace tier ${evaluation.tier}`).toEqual([]);
 });
 
+async function measureRafTier(
+  browser: Browser,
+  baseURL: string,
+  tier: Tier,
+  browserName: 'webkit' | 'firefox',
+) {
+  const { count, fixture, dpr, renderer = 'vanilla' } = tier;
+  const url = `${baseURL}/${renderer === 'react' ? 'react.html' : ''}?fixture=${fixture}`;
+  const context = await browser.newContext({
+    viewport: { width: 1440, height: 900 },
+    deviceScaleFactor: dpr,
+  });
+  try {
+    const firstFrameTrialsMs = await firstFrames(context, url);
+    const firstFrameP50Ms = [...firstFrameTrialsMs].sort((a, b) => a - b)[2];
+    const page = await context.newPage();
+    await page.goto(url);
+    await waitForBench(page);
+    if (count === 708) await page.evaluate(() => window.bench.run('pan-100'));
+    const scenarios: Scenario[] =
+      browserName === 'webkit'
+        ? ['pan-100', 'pan-40', 'pan-fit', 'zoom-sweep']
+        : ['pan-100', 'pan-fit'];
+    const measurements = [];
+    for (const scenario of scenarios) {
+      const runs = [];
+      for (let run = 1; run <= 3; run += 1)
+        runs.push({ run, ...(await recordRafRun(page, scenario)) });
+      const item = {
+        count,
+        fixture,
+        renderer,
+        world: 'html' as const,
+        dpr,
+        scenario,
+        firstFrameP50Ms,
+        firstFrameTrialsMs,
+        runs,
+      } satisfies CanvasTraceMeasurement;
+      measurements.push(item);
+    }
+    return measurements;
+  } finally {
+    await context.close();
+  }
+}
+
+test('records non-CDP camera traces beside the browser reference budgets', async ({
+  browser,
+  browserName,
+}, testInfo) => {
+  test.skip(browserName === 'chromium', 'Chromium uses its renderer main-thread trace');
+  if (browserName === 'chromium') return;
+  test.setTimeout(1_800_000);
+  const started = Date.now();
+  const baseURL = testInfo.project.use.baseURL;
+  if (!baseURL) throw new Error('Canvas rAF trace baseURL is missing');
+  const measurements = [];
+  for (const dpr of [2, 1] as const) {
+    for (const count of [708, 5000] as const) {
+      for (const renderer of ['vanilla', 'react'] as const) {
+        measurements.push(
+          ...(await measureRafTier(
+            browser,
+            baseURL,
+            {
+              count,
+              fixture: count === 708 ? '708-997' : '5000-7312',
+              world: 'html',
+              dpr,
+              renderer,
+            },
+            browserName,
+          )),
+        );
+      }
+    }
+  }
+  const metadata = benchMetadata(browser, browserName);
+  const results = { ...metadata, budgetSet: budgets.budgetSet, measurements };
+  const evaluations = ([708, 5000] as const).map((tier) => evaluateCanvasTrace(results, tier));
+  const durationMs = Date.now() - started;
+  const report = {
+    ...results,
+    evaluations,
+    secondDensity: false,
+    runner: {
+      os: platform(),
+      release: release(),
+      arch: arch(),
+      cpu: cpus()[0]?.model,
+      ci: RUNNER_BUDGETS,
+    },
+    durationMs,
+    runnerMinutes: durationMs / 60_000,
+    stage: { width: 1440, height: 900 },
+    frames: 180,
+    recordedRunsPerScenario: 3,
+    aggregation: 'median of three per-run rAF p95s; worst frame checked per run',
+    clockResolution: 'interval gates compare values rounded to 0.1 ms; raw intervals are kept',
+    measurementPath:
+      'bench requestAnimationFrame intervals bounded by canvas interaction and frame marks',
+    referenceBudgets: CANVAS_TRACE_BUDGETS[browserName],
+    effectiveBudgets: {
+      ...CANVAS_TRACE_BUDGETS[browserName],
+      ...(budgets.timingReportOnly || budgets.rafIntervalP95Ms === null
+        ? browserName === 'webkit'
+          ? { rafIntervalP95Ms: null, pan40WorstFrameMs: null }
+          : { pan100FrameP95Ms: null, panFitFrameP95Ms: null }
+        : {}),
+      firstFrameP50Ms: budgets.timingReportOnly ? null : budgets.firstFrameP50Ms,
+      ...(browserName === 'webkit'
+        ? {
+            reactFirstFrameP50Ms: budgets.timingReportOnly
+              ? null
+              : (budgets.webkitReactFirstFrameP50Ms ?? budgets.firstFrameP50Ms),
+          }
+        : {}),
+    },
+    comparisonBudgets: {
+      firstFrameP50Ms: budgets.firstFrameP50Ms,
+      ...(browserName === 'webkit'
+        ? { reactFirstFrameP50Ms: budgets.webkitReactFirstFrameP50Ms ?? budgets.firstFrameP50Ms }
+        : {}),
+    },
+  };
+  const directory = resolve(import.meta.dirname, '../../test-results');
+  await mkdir(directory, { recursive: true });
+  const output = resolve(directory, `bench-trace-${browserName}-${metadata.gpuMode}.json`);
+  await writeFile(output, `${JSON.stringify(report, null, 2)}\n`);
+  await testInfo.attach(`bench-trace-${browserName}`, {
+    path: output,
+    contentType: 'application/json',
+  });
+  for (const evaluation of evaluations)
+    expect
+      .soft(evaluation.failures, `canvas ${browserName} trace tier ${evaluation.tier}`)
+      .toEqual([]);
+});
+
 test('measures cached canvas and worker overview work, cache memory and presentation lag', async ({
   browser,
+  browserName,
 }, testInfo) => {
+  test.skip(browserName !== 'chromium', 'Overview renderer comparison requires Chromium CDP');
   test.setTimeout(600_000);
   const baseURL = testInfo.project.use.baseURL;
   if (!baseURL) throw new Error('Overview comparison baseURL is missing');

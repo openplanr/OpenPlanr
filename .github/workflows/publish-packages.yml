@@ -113,6 +113,8 @@ jobs:
     if: needs.plan.outputs.has_pending == 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 60
+    outputs:
+      plugin_sha256: ${{ steps.bundles.outputs.plugin_sha256 }}
     steps:
       - name: Require the successful exact-commit merge queue verification on main
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
@@ -159,10 +161,12 @@ jobs:
       - run: npm audit --omit=dev --audit-level=high
       - run: npm run generate && npm run build
       - run: git diff --exit-code HEAD --
+      # Checks every host plugin bundle and records the Claude plugin digest.
       - name: Pack the pending packages with their publication proofs
+        id: bundles
         env:
           RELEASE_PENDING: ${{ needs.plan.outputs.pending }}
-        run: node scripts/release-train/prepare-bundles.mjs "$RUNNER_TEMP/openplanr-npm" --pending "$RELEASE_PENDING"
+        run: node scripts/release-train/prepare-bundles.mjs "$RUNNER_TEMP/openplanr-npm" --pending "$RELEASE_PENDING" --github-output
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: verified-public-packages
@@ -215,7 +219,7 @@ jobs:
           retention-days: 90
 
   marketplace:
-    needs: [plan, publish]
+    needs: [plan, verify, publish]
     if: vars.RELEASE_APP_ID != '' && needs.plan.outputs.cli_pending == 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 15
@@ -244,7 +248,9 @@ jobs:
           name: claude-plugin
           path: plugin
       - name: Project the Claude plugin into the marketplace checkout
-        run: node scripts/release-train/publish-marketplace.mjs --plugin plugin --marketplace marketplace
+        env:
+          PLUGIN_SHA256: ${{ needs.verify.outputs.plugin_sha256 }}
+        run: node scripts/release-train/publish-marketplace.mjs --plugin plugin --marketplace marketplace --sha256 "$PLUGIN_SHA256"
       - name: Publish the marketplace change
         env:
           GH_TOKEN: ${{ steps.app.outputs.token }}

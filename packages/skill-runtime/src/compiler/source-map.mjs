@@ -10,7 +10,7 @@ export function byteLength(text) {
 /** sha256 over the exact literal bytes on disk (no line-ending normalization). */
 export function sha256Bytes(text) {
   return `sha256:${createHash('sha256')
-    .update(Buffer.from(String(text), 'utf8'))
+    .update(text instanceof Uint8Array ? text : Buffer.from(String(text), 'utf8'))
     .digest('hex')}`;
 }
 

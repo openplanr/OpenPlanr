@@ -12,10 +12,16 @@ import {
   writeFileSync,
 } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join, resolve } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
 import test from 'node:test';
+import { pluginDigest } from '../../scripts/release-train/lib/plugin-digest.mjs';
 import { publishMarketplacePlugin } from '../../scripts/release-train/lib/publish-plugin.mjs';
-import { readDirectoryEntries } from '../../scripts/skills/plugin-artifact-validation.mjs';
+import {
+  assertHostBundle,
+  HOST_BUNDLE_ROOTS,
+  inspectMarketplaceManifest,
+  readDirectoryEntries,
+} from '../../scripts/skills/plugin-artifact-validation.mjs';
 
 const script = resolve(import.meta.dirname, '../../scripts/release-train/publish-marketplace.mjs');
 const manifest = JSON.stringify({ name: 'planr', version: '2.0.1', description: 'Planr.' });
@@ -29,9 +35,9 @@ function fixture(t) {
   const plugin = join(root, 'plugin');
   const marketplace = join(root, 'marketplace');
   mkdirSync(join(plugin, '.claude-plugin'), { recursive: true });
-  mkdirSync(join(plugin, 'scripts'));
+  mkdirSync(join(plugin, 'skills/run'), { recursive: true });
   writeFileSync(join(plugin, '.claude-plugin/plugin.json'), manifest);
-  writeFileSync(join(plugin, 'scripts/run.mjs'), 'console.log("new");\n', { mode: 0o755 });
+  writeFileSync(join(plugin, 'skills/run/SKILL.md'), '# New\n', { mode: 0o600 });
   mkdirSync(join(marketplace, 'plugins/planr'), { recursive: true });
   writeFileSync(join(marketplace, 'plugins/planr/old.txt'), 'published plugin\n');
   writeFileSync(join(marketplace, 'README.md'), '# Marketplace\n');
@@ -46,18 +52,53 @@ const snapshot = (directory) =>
     bytes.toString('utf8'),
     mode & 0o111,
   ]);
-const publish = (plugin, marketplace) =>
-  spawnSync(process.execPath, [script, '--plugin', plugin, '--marketplace', marketplace], {
-    encoding: 'utf8',
-    timeout: 30000,
-  });
+const digest = (plugin) =>
+  pluginDigest(readDirectoryEntries(plugin).filter(({ type }) => type === 'file'));
+const publish = (plugin, marketplace, sha256 = digest(plugin)) =>
+  spawnSync(
+    process.execPath,
+    [
+      script,
+      '--plugin',
+      plugin,
+      '--marketplace',
+      marketplace,
+      ...(sha256 ? ['--sha256', sha256] : []),
+    ],
+    { encoding: 'utf8', timeout: 30000 },
+  );
+
+test('a plugin that differs from the verified digest is refused before the marketplace changes', (t) => {
+  const { plugin, marketplace } = fixture(t);
+  const verified = digest(plugin);
+  writeFileSync(join(plugin, 'skills/run/SKILL.md'), 'console.log(process.env.TOKEN);\n');
+  const before = snapshot(marketplace);
+  const result = publish(plugin, marketplace, verified);
+  assert.equal(result.status, 1);
+  assert.match(result.stderr, new RegExp(`not the ${verified} the verify job checked`, 'u'));
+  assert.deepEqual(snapshot(marketplace), before);
+});
+
+test('publishing without the verified digest is refused', (t) => {
+  const { plugin, marketplace } = fixture(t);
+  const before = snapshot(marketplace);
+  for (const sha256 of [null, 'abc']) {
+    const result = publish(plugin, marketplace, sha256);
+    assert.equal(result.status, 1);
+    assert.match(result.stderr, /--sha256 <64 hex digits>/u);
+  }
+  assert.deepEqual(snapshot(marketplace), before);
+});
 
 test('the inspected plugin replaces the published copy with exact bytes and modes', (t) => {
   const { plugin, marketplace } = fixture(t);
   const result = publish(plugin, marketplace);
   assert.equal(result.status, 0, result.stderr);
   assert.deepEqual(snapshot(join(marketplace, 'plugins/planr')), snapshot(plugin));
-  assert.equal(statSync(join(marketplace, 'plugins/planr/scripts/run.mjs')).mode & 0o111, 0o111);
+  assert.equal(
+    statSync(join(marketplace, 'plugins/planr/skills/run/SKILL.md')).mode & 0o777,
+    0o644,
+  );
   assert.deepEqual(readdirSync(join(marketplace, 'plugins')), ['planr']);
   assert.deepEqual(
     snapshot(marketplace)
@@ -69,6 +110,59 @@ test('the inspected plugin replaces the published copy with exact bytes and mode
     JSON.parse(readFileSync(join(marketplace, '.claude-plugin/marketplace.json'), 'utf8')).metadata
       .version,
     '2.0.1',
+  );
+});
+
+test('a plugin carrying a script or an executable file is refused before the marketplace changes', (t) => {
+  for (const [path, mode, code] of [
+    ['skills/run/scripts/run.mjs', 0o644, 'type-not-allowed'],
+    ['skills/run/notes.md', 0o755, 'executable-bit'],
+  ]) {
+    const { plugin, marketplace } = fixture(t);
+    mkdirSync(join(plugin, 'skills/run/scripts'), { recursive: true });
+    writeFileSync(join(plugin, path), 'console.log("x");\n', { mode });
+    const before = snapshot(marketplace);
+    const result = publish(plugin, marketplace);
+    assert.equal(result.status, 1, path);
+    assert.match(result.stderr, new RegExp(code, 'u'), path);
+    assert.deepEqual(snapshot(marketplace), before, path);
+  }
+});
+
+test('a plugin that would lose the instructions-only label is refused before the marketplace changes', (t) => {
+  for (const [path, content, code] of [
+    ['hooks/hooks.json', '{"hooks":{}}\n', 'privileged-component'],
+    ['hooks.json', '{"hooks":{}}\n', 'privileged-component'],
+    [
+      'skills/run/SKILL.md',
+      '---\nname: run\nallowed-tools: Bash\n---\nRun.\n',
+      'pre-approved-tools',
+    ],
+  ]) {
+    const { plugin, marketplace } = fixture(t);
+    mkdirSync(dirname(join(plugin, path)), { recursive: true });
+    writeFileSync(join(plugin, path), content);
+    const before = snapshot(marketplace);
+    const result = publish(plugin, marketplace);
+    assert.equal(result.status, 1, path);
+    assert.match(result.stderr, new RegExp(code, 'u'), path);
+    assert.deepEqual(snapshot(marketplace), before, path);
+  }
+});
+
+test('the generated Claude plugin projects into a marketplace tree that keeps the label', (t) => {
+  const { marketplace } = fixture(t);
+  const plugin = resolve(import.meta.dirname, '../..', HOST_BUNDLE_ROOTS.claude);
+  const result = publish(plugin, marketplace);
+  assert.equal(result.status, 0, result.stderr);
+  const projected = readDirectoryEntries(join(marketplace, 'plugins/planr'));
+  assert.equal(assertHostBundle(projected, { host: 'claude' }).passed, true);
+  assert.ok(projected.some(({ path }) => path === '.claude-plugin/icon.png'));
+  assert.deepEqual(
+    inspectMarketplaceManifest(
+      JSON.parse(readFileSync(join(marketplace, '.claude-plugin/marketplace.json'), 'utf8')),
+    ).findings,
+    [],
   );
 });
 
@@ -105,9 +199,9 @@ test('source edits after inspection cannot change the installed bytes', (t) => {
     pluginDir: plugin,
     marketplaceDir: marketplace,
     afterInspection: () => {
-      writeFileSync(join(plugin, 'scripts/run.mjs'), 'console.log("uninspected");\n');
-      writeFileSync(join(plugin, 'scripts/added.mjs'), 'console.log("uninspected");\n');
-      chmodSync(join(plugin, 'scripts/run.mjs'), 0o644);
+      writeFileSync(join(plugin, 'skills/run/SKILL.md'), 'console.log("uninspected");\n');
+      writeFileSync(join(plugin, 'skills/run/added.md'), 'console.log("uninspected");\n');
+      chmodSync(join(plugin, 'skills/run/SKILL.md'), 0o755);
     },
   });
   assert.deepEqual(snapshot(join(marketplace, 'plugins/planr')), inspected);
@@ -186,7 +280,10 @@ test('rollback keeps a plugin changed after the swap and retains the previous co
       marketplaceDir: marketplace,
       onCommitStep: (step) => {
         if (step !== 'plugin') return;
-        writeFileSync(join(marketplace, 'plugins/planr/scripts/run.mjs'), 'console.log("edit");\n');
+        writeFileSync(
+          join(marketplace, 'plugins/planr/skills/run/SKILL.md'),
+          'console.log("edit");\n',
+        );
         throw new Error('interrupted after plugin');
       },
     });
@@ -198,7 +295,7 @@ test('rollback keeps a plugin changed after the swap and retains the previous co
   assert.ok(kept, error.message);
   assert.deepEqual(snapshot(kept), [['old.txt', 'published plugin\n', 0]]);
   assert.equal(
-    readFileSync(join(marketplace, 'plugins/planr/scripts/run.mjs'), 'utf8'),
+    readFileSync(join(marketplace, 'plugins/planr/skills/run/SKILL.md'), 'utf8'),
     'console.log("edit");\n',
   );
   assert.equal(

@@ -21,9 +21,8 @@ category it belongs to.
 
 A category is connected when the host exposes a tool for one of its products,
 loaded or deferred; search the host's deferred tool list by product name when it
-has one. For ~~project tracker and ~~source control, a signed-in GitHub CLI also
-counts: `gh auth status --hostname github.com` succeeds. Judge by the tools you
-can see; never call a tool that writes, posts or changes anything to find out.
+has one. Judge by the tools you can see; never call a tool that writes, posts or
+changes anything to find out.
 
 ## Connect a missing category
 

@@ -15,7 +15,6 @@
       "apps/*/src/**",
       "apps/*/tests/**",
       "scripts/**",
-      "skills/planr-delegate/scripts/**",
       "tests/**",
       "conformance/**",
       // Generated outputs: edit the canonical sources and run `npm run generate`.
@@ -54,7 +53,8 @@
       "!packages/pipeline/conformance/fixture-design",
       "!packages/pipeline/conformance/fixture-spec",
       "!packages/pipeline/tests/dashboard/fixtures",
-      "!packages/pipeline/tests/fixtures"
+      "!packages/pipeline/tests/fixtures",
+      "!tests/release-train/fixtures"
     ]
   },
   "formatter": {
@@ -139,7 +139,6 @@
       // Command-line entry points and conformance runners report through the console.
       "includes": [
         "scripts/**",
-        "skills/planr-delegate/scripts/**",
         "packages/*/scripts/**",
         "packages/*/conformance/**",
         "conformance/**",

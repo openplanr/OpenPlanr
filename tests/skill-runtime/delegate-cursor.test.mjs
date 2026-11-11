@@ -3,12 +3,12 @@ import { mkdir, mkdtemp, readFile, realpath, rm, writeFile } from 'node:fs/promi
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
-import { cursorAdapter } from '../../skills/planr-delegate/scripts/adapters/cursor.mjs';
+import { cursorAdapter } from '../../packages/pipeline/lib/delegate/adapters/cursor.mjs';
 import {
   enrollProfile,
   prepareProfile,
   previewProfileCandidate,
-} from '../../skills/planr-delegate/scripts/profiles.mjs';
+} from '../../packages/pipeline/lib/delegate/profiles.mjs';
 
 async function fixture(t, mode = '') {
   const root = await mkdtemp(join(tmpdir(), 'delegate-cursor-'));
@@ -136,7 +136,7 @@ test('Cursor stdin dispatch and correction use the exact session, capsule root a
   const call = JSON.parse(await readFile(join(f.cwd, 'invocation.json'), 'utf8'));
   assert.equal(call.input, 'correct fixture over stdin');
   assert.equal(call.home, f.root);
-  assert.equal(call.secret, 'withheld');
+  assert.equal(call.secret, undefined, 'unlisted variables stay out of the native child');
   for (const flag of [
     '--force',
     '--yolo',

@@ -5,6 +5,9 @@
   if (!options.shareUrl) return;
   const button = document.querySelector('[data-planr-action="share"]');
   if (!button) return;
+  // Claims the control so a stage without its own share dialog keeps it visible.
+  button.setAttribute('data-planr-share-adapter', '');
+  button.hidden = false;
   button.setAttribute('aria-label', 'Share design');
   let dialog, status, busy = false, opener;
   const element = (tag, text, attributes = {}) => {
@@ -39,6 +42,7 @@
       details.append(element('dt', term), element('dd', value));
     }
     content.append(details);
+    if (status.unavailable) { content.append(element('p', status.unavailable.message)); return; }
     if (!status.shared || status.pending) {
       content.append(element('p', 'Publish an encrypted review that your team can open while your laptop is offline. Share the link and access token separately.'));
       content.append(action(status.pending ? `Retry ${status.pendingAction || 'sharing'}` : 'Create shared review', status.pendingAction || 'create', 'design-share-primary'));
@@ -84,7 +88,7 @@
       else if (name === 'copy-token') { const value = await request('access'); await copy(value.token, 'Access token copied. Send it separately from the link.'); }
       else {
         const result = await request(name);
-        if (name === 'recovery') announce(`Recovery file saved privately: ${result.output}`);
+        if (name === 'recovery') announce(`Recovery file saved to ${result.output}. It holds the owner keys, so keep it private.`);
         else { status = await request(); render(); announce(name === 'rotate' ? 'Token rotated. Copy the new access token for your team.' : name === 'sync' ? (result.issues?.length ? `Feedback synchronized; ${result.issues.length} invalid events need attention. Open feedback diagnostics.` : 'Team reviews synchronized.') : 'Changes saved.'); }
       }
     } catch (error) { announce(error.message, true); }
@@ -111,7 +115,7 @@
   // Periodic pull imports only published feedback, never publishes local changes.
   let syncing = false;
   const sync = async () => {
-    if (syncing || document.hidden) return;
+    if (syncing || document.hidden || !status?.shared) return;
     syncing = true;
     try {
       const result = await request('sync');
@@ -128,6 +132,8 @@
       button.title = error.message;
     } finally { syncing = false; }
   };
+  // Only a design shared before this page loaded is polled; sharing from the dialog refreshes status.
+  request().then((value) => { status ??= value; }, (error) => { button.title = error.message; });
   const timer = setInterval(sync, 15000);
   addEventListener('pagehide', () => clearInterval(timer), { once: true });
 })();

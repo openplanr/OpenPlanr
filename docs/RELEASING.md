@@ -82,8 +82,11 @@ version PR and approving the `npm-release` environment once per release.
    (`scripts/release-train/publish-archives.mjs`). The same job creates the package-qualified
    annotated tags and GitHub releases (changelog section plus the publication evidence;
    only the CLI release is marked Latest).
-3. **Marketplace.** `marketplace` projects the generated Claude plugin into `openplanr/marketplace`
-   (`plugins/planr/`, `.claude-plugin/marketplace.json`, the README plugin table) and
+3. **Marketplace.** `verify` holds every host plugin bundle to instructions only
+   (`scripts/skills/plugin-artifact-validation.mjs`) and records the Claude plugin's SHA-256;
+   `marketplace` refuses an artifact with any other digest. It then projects the generated Claude plugin into `openplanr/marketplace`
+   (`plugins/planr/`, `.claude-plugin/marketplace.json`, the README plugin table), checks the
+   projected tree with the same rules and the marketplace entry policy, and
    opens a PR there, or pushes to its `main` when the repository variable
    `MARKETPLACE_DIRECT_PUSH` is `true`.
 4. **Fallback.** `workflow_dispatch` on `publish-packages.yml` publishes all pending

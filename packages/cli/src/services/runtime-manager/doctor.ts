@@ -201,6 +201,57 @@ export function diagnoseRetiredCommandSkills(
   };
 }
 
+// Lowercase: Windows environment names are case-insensitive (`Path`).
+const PIPELINE_DOCTOR_ENV_NAMES = new Set([
+  'path',
+  'home',
+  'user',
+  'logname',
+  'tmpdir',
+  'tmp',
+  'temp',
+  'term',
+  'no_color',
+  'force_color',
+  'tz',
+  'lang',
+  'systemroot',
+  'windir',
+  'comspec',
+  'pathext',
+  'userprofile',
+  'appdata',
+  'localappdata',
+  'programdata',
+  'homedrive',
+  'homepath',
+  'openplanr_ecosystem_root',
+  'openplanr_strict_ecosystem',
+  'openplanr_doctor_package_mode',
+]);
+
+/**
+ * The environment the pipeline doctor child receives: system basics and its own settings, with
+ * the resolved home so the child does not repeat the deprecated-home warning.
+ */
+export function pipelineDoctorEnvironment(
+  source: NodeJS.ProcessEnv,
+  home: string,
+): Record<string, string> {
+  const env: Record<string, string> = {};
+  for (const [name, value] of Object.entries(source)) {
+    if (value === undefined) continue;
+    if (
+      PIPELINE_DOCTOR_ENV_NAMES.has(name.toLowerCase()) ||
+      name.startsWith('LC_') ||
+      name.startsWith('XDG_')
+    )
+      env[name] = value;
+  }
+  env.PLANR_HOME = home;
+  return env;
+}
+
 export async function runtimeDoctor(
   projectDir: string,
   options: {
@@ -718,8 +769,6 @@ export async function runtimeDoctor(
   if (provenanceDiagnostic) diagnostics.push(provenanceDiagnostic);
 
   if (pipeline) {
-    // The child gets the resolved home only, so it does not repeat the OPENPLANR_HOME warning.
-    const { OPENPLANR_HOME: _deprecatedHome, ...inheritedEnvironment } = process.env;
     const result = spawnSync(
       process.execPath,
       [
@@ -732,7 +781,7 @@ export async function runtimeDoctor(
         cwd: projectDir,
         encoding: 'utf8',
         windowsHide: true,
-        env: { ...inheritedEnvironment, PLANR_HOME: planrHome() },
+        env: pipelineDoctorEnvironment(process.env, planrHome()),
       },
     );
     try {

@@ -11,7 +11,8 @@ import {
 import { basename, dirname, join } from 'node:path';
 import { TextDecoder } from 'node:util';
 import {
-  assertDirectoryEntries,
+  assertHostBundle,
+  inspectMarketplaceManifest,
   readDirectoryEntries,
 } from '../../skills/plugin-artifact-validation.mjs';
 import {
@@ -19,6 +20,7 @@ import {
   renderPluginTable,
   replacePluginTable,
 } from './marketplace.mjs';
+import { pluginDigest } from './plugin-digest.mjs';
 
 const MANIFEST = '.claude-plugin/plugin.json';
 const utf8 = new TextDecoder('utf-8', { fatal: true });
@@ -95,21 +97,30 @@ function rollback({ error, committed, snapshot, target, previousPlugin, files, s
 /**
  * Replace `plugins/planr` in a marketplace checkout with an inspected snapshot of the plugin.
  * Plugin and metadata are staged first; previous copies are restored if any step fails.
+ * With `expectedSha256`, the inspected bytes must match the digest the verify job recorded.
  */
 export function publishMarketplacePlugin({
   pluginDir,
   marketplaceDir,
+  expectedSha256,
   afterInspection,
   onCommitStep,
 }) {
   const entries = readDirectoryEntries(pluginDir);
+  if (expectedSha256 !== undefined) {
+    const actual = pluginDigest(entries.filter(({ type }) => type === 'file'));
+    if (actual !== expectedSha256)
+      throw new Error(
+        `${pluginDir} has sha256 ${actual}, not the ${expectedSha256} the verify job checked; refusing to publish it.`,
+      );
+  }
   const manifestEntry = entries.find(({ path }) => path === MANIFEST);
   if (!manifestEntry) {
     throw new Error(
       `${join(pluginDir, MANIFEST)} is missing. The generated plugin keeps its manifest in .claude-plugin/, so an artifact carrying it must be uploaded with include-hidden-files: true.`,
     );
   }
-  assertDirectoryEntries(entries);
+  assertHostBundle(entries, { host: 'claude' });
   let manifest;
   try {
     manifest = JSON.parse(utf8.decode(manifestEntry.bytes));
@@ -140,9 +151,16 @@ export function publishMarketplacePlugin({
   const readmePath = join(marketplaceDir, 'README.md');
   const previousMetadata = readOptional(metadataPath);
   const previousReadme = readOptional(readmePath);
-  const metadata = Buffer.from(
-    `${JSON.stringify(renderMarketplaceManifest({ version: manifest.version, description: manifest.description }), null, 2)}\n`,
-  );
+  const marketplace = renderMarketplaceManifest({
+    version: manifest.version,
+    description: manifest.description,
+  });
+  const entryPolicy = inspectMarketplaceManifest(marketplace);
+  if (!entryPolicy.passed)
+    throw new Error(
+      `The marketplace manifest would change the plugin's reach: ${entryPolicy.findings.map(({ reason }) => reason).join(' ')}`,
+    );
+  const metadata = Buffer.from(`${JSON.stringify(marketplace, null, 2)}\n`);
   const readme = Buffer.from(
     replacePluginTable(
       previousReadme?.toString('utf8') ?? '# OpenPlanr Marketplace\n',

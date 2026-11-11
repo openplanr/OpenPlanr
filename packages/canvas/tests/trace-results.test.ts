@@ -6,6 +6,7 @@ import {
   type TraceRun,
   traceBudgetPolicy,
   traceOwnership,
+  traceSpeedIndex,
 } from './browser/trace-results';
 
 describe('second edge density selection', () => {
@@ -28,22 +29,61 @@ describe('second edge density selection', () => {
   );
 });
 
+describe('trace speed index', () => {
+  it('takes the geometric mean of non-remount main p95 medians', () => {
+    expect(
+      traceSpeedIndex([
+        { scenario: 'pan-100', rendererMainP95Ms: 2 },
+        { scenario: 'zoom-sweep', rendererMainP95Ms: 8 },
+        { scenario: 'remount', rendererMainP95Ms: 1000 },
+      ]),
+    ).toEqual({ valueMs: 4, rows: 2, skipped: 0 });
+  });
+
+  it('skips and counts non-positive or non-finite medians without throwing', () => {
+    expect(
+      traceSpeedIndex([
+        { scenario: 'pan-100', rendererMainP95Ms: 0 },
+        { scenario: 'pan-40', rendererMainP95Ms: Number.NaN },
+        { scenario: 'zoom-sweep', rendererMainP95Ms: 9 },
+      ]),
+    ).toEqual({ valueMs: 9, rows: 1, skipped: 2 });
+  });
+
+  it('records a null index when no median is usable', () => {
+    expect(traceSpeedIndex([])).toEqual({ valueMs: null, rows: 0, skipped: 0 });
+    expect(traceSpeedIndex([{ scenario: 'pan-40', rendererMainP95Ms: 0 }])).toEqual({
+      valueMs: null,
+      rows: 0,
+      skipped: 1,
+    });
+  });
+});
+
 describe('trace budget selection', () => {
   it('enforces local remount, rAF and first-frame limits at the reference budgets', () => {
     expect(traceBudgetPolicy(false)).toEqual({
       budgetSet: 'local',
+      timingReportOnly: false,
       remountRendererMainP95Ms: 16,
+      htmlZoomSweep5000RendererMainP95Ms: null,
+      vanillaHtml708PanZoomRendererMainP95Ms: null,
       rafIntervalP95Ms: 16.8,
       firstFrameP50Ms: 150,
+      webkitReactFirstFrameP50Ms: null,
     });
   });
 
-  it('reports runner remount and rAF and gates the runner first frame at 250 ms', () => {
+  it('reports runner timing against the runner comparison values', () => {
     expect(traceBudgetPolicy(true)).toEqual({
       budgetSet: 'runner',
+      timingReportOnly: true,
       remountRendererMainP95Ms: null,
+      htmlZoomSweep5000RendererMainP95Ms: 14,
+      vanillaHtml708PanZoomRendererMainP95Ms: 8,
       rafIntervalP95Ms: null,
       firstFrameP50Ms: 250,
+      webkitReactFirstFrameP50Ms: 350,
     });
   });
 });
@@ -144,7 +184,7 @@ describe('trace budget ownership', () => {
       for (const scenario of ['pan-100', 'pan-40', 'pan-fit', 'zoom-sweep']) {
         it(`${count} ${world} ${scenario}`, () => {
           expect(traceOwnership({ count, world, scenario })).toBe(
-            world === 'html' || count === 708 ? 'gated' : 'reported, SVG stress tier',
+            world === 'html' ? 'gated, card tier' : 'gated, SVG tier',
           );
         });
       }
@@ -154,23 +194,21 @@ describe('trace budget ownership', () => {
 
 describe('DOM budget ownership', () => {
   for (const count of [708, 5000]) {
-    for (const world of ['html', 'svg'] as const) {
-      it(`gates ${count} ${world} fit DOM with its timing ownership`, () => {
-        expect(domBudgetPolicy({ count, world, scenario: 'pan-fit' })).toEqual({
-          ownership: world === 'html' || count === 708 ? 'gated' : 'reported, SVG stress tier',
-          regressionLimit: world === 'html' || count === 708 ? 2000 : null,
-        });
-        expect(traceOwnership({ count, world, scenario: 'pan-fit' })).toBe(
-          world === 'html' || count === 708 ? 'gated' : 'reported, SVG stress tier',
-        );
+    it(`gates ${count} html fit DOM and reports ${count} svg fit DOM`, () => {
+      expect(domBudgetPolicy({ count, world: 'html', scenario: 'pan-fit' })).toEqual({
+        ownership: 'gated',
+        regressionLimit: 2000,
       });
-    }
+      expect(domBudgetPolicy({ count, world: 'svg', scenario: 'pan-fit' })).toEqual({
+        ownership: 'reported, SVG tier',
+        regressionLimit: null,
+      });
+    });
     it(`gates ${count} HTML compact cards at the reference budget`, () => {
       expect(domBudgetPolicy({ count, world: 'html', scenario: 'pan-40' })).toEqual({
         ownership: 'gated',
         regressionLimit: 2000,
       });
-      expect(traceOwnership({ count, world: 'html', scenario: 'pan-40' })).toBe('gated');
     });
     for (const scenario of ['pan-100', 'zoom-sweep']) {
       it(`keeps ${count} HTML ${scenario} DOM gated at the reference budget`, () => {
@@ -181,16 +219,6 @@ describe('DOM budget ownership', () => {
       });
     }
   }
-  it('keeps the SVG DOM-level tier gated and the stress tier reported', () => {
-    expect(domBudgetPolicy({ count: 708, world: 'svg', scenario: 'pan-40' })).toEqual({
-      ownership: 'gated',
-      regressionLimit: 2000,
-    });
-    expect(domBudgetPolicy({ count: 5000, world: 'svg', scenario: 'pan-40' })).toEqual({
-      ownership: 'reported, SVG stress tier',
-      regressionLimit: null,
-    });
-  });
   it('preserves the remount trace as a timing-only gate', () => {
     expect(domBudgetPolicy({ count: 708, world: 'html', scenario: 'remount' })).toEqual({
       ownership: 'reported, remount timing only',

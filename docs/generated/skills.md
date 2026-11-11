@@ -34,7 +34,7 @@ Produce a grounded strategy and finance review for an Operate cycle. Use when di
 - Invocation from the plugin: `$planr:ceo-review` in Codex/ChatGPT; `/planr:ceo-review` in Claude Code.
 - Hosts: Claude Code, Codex, ChatGPT, and Cursor where supported by the package manifest.
 - Aliases: none.
-- Packaged support: `references/operate-advisor-contract.md`, with packaged validators and runtime support. See the [resource inventory](../../skills/planr-ceo-review/openplanr.skill.json).
+- Packaged support: `references/operate-advisor-contract.md`, `references/note-checklist.md`. See the [resource inventory](../../skills/planr-ceo-review/openplanr.skill.json).
 
 ## `planr-chair-review`
 
@@ -45,7 +45,7 @@ Synthesize an Operate cycle into a prioritized decision queue and action plan. U
 - Invocation from the plugin: `$planr:chair-review` in Codex/ChatGPT; `/planr:chair-review` in Claude Code.
 - Hosts: Claude Code, Codex, ChatGPT, and Cursor where supported by the package manifest.
 - Aliases: none.
-- Packaged support: packaged validators and runtime support. See the [resource inventory](../../skills/planr-chair-review/openplanr.skill.json).
+- Packaged support: `references/note-checklist.md`. See the [resource inventory](../../skills/planr-chair-review/openplanr.skill.json).
 
 ## `planr-challenger-review`
 
@@ -56,7 +56,7 @@ Challenge an Operate cycle's claims, alternatives, downside, and confidence. Use
 - Invocation from the plugin: `$planr:challenger-review` in Codex/ChatGPT; `/planr:challenger-review` in Claude Code.
 - Hosts: Claude Code, Codex, ChatGPT, and Cursor where supported by the package manifest.
 - Aliases: none.
-- Packaged support: packaged validators and runtime support. See the [resource inventory](../../skills/planr-challenger-review/openplanr.skill.json).
+- Packaged support: `references/note-checklist.md`. See the [resource inventory](../../skills/planr-challenger-review/openplanr.skill.json).
 
 ## `planr-cmo-review`
 
@@ -67,7 +67,7 @@ Produce a grounded market and growth review for an Operate cycle. Use when acqui
 - Invocation from the plugin: `$planr:cmo-review` in Codex/ChatGPT; `/planr:cmo-review` in Claude Code.
 - Hosts: Claude Code, Codex, ChatGPT, and Cursor where supported by the package manifest.
 - Aliases: none.
-- Packaged support: `references/operate-advisor-contract.md`, with packaged validators and runtime support. See the [resource inventory](../../skills/planr-cmo-review/openplanr.skill.json).
+- Packaged support: `references/operate-advisor-contract.md`, `references/note-checklist.md`. See the [resource inventory](../../skills/planr-cmo-review/openplanr.skill.json).
 
 ## `planr-connect`
 
@@ -89,7 +89,7 @@ Produce a grounded operations and customer-health review for an Operate cycle. U
 - Invocation from the plugin: `$planr:coo-review` in Codex/ChatGPT; `/planr:coo-review` in Claude Code.
 - Hosts: Claude Code, Codex, ChatGPT, and Cursor where supported by the package manifest.
 - Aliases: none.
-- Packaged support: `references/operate-advisor-contract.md`, with packaged validators and runtime support. See the [resource inventory](../../skills/planr-coo-review/openplanr.skill.json).
+- Packaged support: `references/operate-advisor-contract.md`, `references/note-checklist.md`. See the [resource inventory](../../skills/planr-coo-review/openplanr.skill.json).
 
 ## `planr-cpo-review`
 
@@ -100,7 +100,7 @@ Produce a grounded product and activation review for an Operate cycle. Use when 
 - Invocation from the plugin: `$planr:cpo-review` in Codex/ChatGPT; `/planr:cpo-review` in Claude Code.
 - Hosts: Claude Code, Codex, ChatGPT, and Cursor where supported by the package manifest.
 - Aliases: none.
-- Packaged support: `references/operate-advisor-contract.md`, with packaged validators and runtime support. See the [resource inventory](../../skills/planr-cpo-review/openplanr.skill.json).
+- Packaged support: `references/operate-advisor-contract.md`, `references/note-checklist.md`. See the [resource inventory](../../skills/planr-cpo-review/openplanr.skill.json).
 
 ## `planr-cto-review`
 
@@ -111,7 +111,7 @@ Produce a grounded technology and delivery-risk review for an Operate cycle. Use
 - Invocation from the plugin: `$planr:cto-review` in Codex/ChatGPT; `/planr:cto-review` in Claude Code.
 - Hosts: Claude Code, Codex, ChatGPT, and Cursor where supported by the package manifest.
 - Aliases: none.
-- Packaged support: `references/operate-advisor-contract.md`, with packaged validators and runtime support. See the [resource inventory](../../skills/planr-cto-review/openplanr.skill.json).
+- Packaged support: `references/operate-advisor-contract.md`, `references/note-checklist.md`. See the [resource inventory](../../skills/planr-cto-review/openplanr.skill.json).
 
 ## `planr-dashboard`
 
@@ -133,7 +133,7 @@ Coordinate an explicitly requested implementation with Claude Code, Codex or Cur
 - Invocation from the plugin: `$planr:delegate` in Codex/ChatGPT; `/planr:delegate` in Claude Code.
 - Hosts: Claude Code, Codex, ChatGPT, and Cursor where supported by the package manifest.
 - Aliases: none.
-- Packaged support: `references/adapter-protocol.md`, `references/capsule-contract.md`, `references/integration-review.md`, `references/operator-guide.md`, `references/run-handoff.md`, `references/worktree-custody.md`, with packaged validators and runtime support. See the [resource inventory](../../skills/planr-delegate/openplanr.skill.json).
+- Packaged support: `references/adapter-protocol.md`, `references/capsule-contract.md`, `references/integration-review.md`, `references/native-commands.md`, `references/openplanr-cli.md`, `references/operator-guide.md`, `references/run-handoff.md`, `references/worktree-custody.md`. See the [resource inventory](../../skills/planr-delegate/openplanr.skill.json).
 
 ## `planr-design`
 
@@ -192,14 +192,14 @@ Diagnose OpenPlanr CLI, pipeline, runtime-adapter, installation, and lock health
 
 ## `planr-investigate`
 
-Diagnose a bug, regression, error, or unexplained behavior and optionally implement a bounded fix. Use for root-cause investigation, not planned feature delivery.
+Diagnose a bug, regression, error, or unexplained behavior and optionally implement a bounded fix. Use for root-cause investigation, including before any fix, not planned feature delivery.
 
 - Select for: Investigate a bug, regression, error, or unexplained behavior; Reproduce a defect, establish its root cause, or apply a bounded fix; Investigate why this fails.
 - Defer for: Plan a new feature; Run a broad product review.
 - Invocation from the plugin: `$planr:investigate` in Codex/ChatGPT; `/planr:investigate` in Claude Code.
 - Hosts: Claude Code, Codex, ChatGPT, and Cursor where supported by the package manifest.
 - Aliases: none.
-- Packaged support: `references/findings.md`, with packaged validators and runtime support. See the [resource inventory](../../skills/planr-investigate/openplanr.skill.json).
+- Packaged support: `references/fail-first.md`, `references/findings.md`, `references/backlog-filing.md`. See the [resource inventory](../../skills/planr-investigate/openplanr.skill.json).
 
 ## `planr-land`
 
@@ -232,7 +232,7 @@ Run a focused operating review across seven executive lenses and produce a decis
 - Invocation from the plugin: `$planr:operate` in Codex/ChatGPT; `/planr:operate` in Claude Code.
 - Hosts: Claude Code, Codex, ChatGPT, and Cursor where supported by the package manifest.
 - Aliases: none.
-- Packaged support: packaged validators and runtime support. See the [resource inventory](../../skills/planr-operate/openplanr.skill.json).
+- Packaged support: `references/note-checklist.md`, `references/return-contract.md`. See the [resource inventory](../../skills/planr-operate/openplanr.skill.json).
 
 ## `planr-plan`
 
@@ -243,7 +243,7 @@ Turn a Protocol-compatible specification or product intent into schema-compatibl
 - Invocation from the plugin: `$planr:plan` in Codex/ChatGPT; `/planr:plan` in Claude Code.
 - Hosts: Claude Code, Codex, ChatGPT, and Cursor where supported by the package manifest.
 - Aliases: none.
-- Packaged support: `references/artifact-contract.md`, `references/design-handoff.md`, with packaged validators and runtime support. See the [resource inventory](../../skills/planr-plan/openplanr.skill.json).
+- Packaged support: `references/artifact-contract.md`, `references/design-handoff.md`, `references/planning-ids.md`, `references/return-contract.md`, with packaged validators and runtime support. See the [resource inventory](../../skills/planr-plan/openplanr.skill.json).
 
 ## `planr-plan-review`
 
@@ -254,7 +254,7 @@ Review an OpenPlanr plan for product, engineering, design, and developer-experie
 - Invocation from the plugin: `$planr:plan-review` in Codex/ChatGPT; `/planr:plan-review` in Claude Code.
 - Hosts: Claude Code, Codex, ChatGPT, and Cursor where supported by the package manifest.
 - Aliases: none.
-- Packaged support: none; the skill is intentionally single-file. See the [resource inventory](../../skills/planr-plan-review/openplanr.skill.json).
+- Packaged support: `references/return-contract.md`. See the [resource inventory](../../skills/planr-plan-review/openplanr.skill.json).
 
 ## `planr-release`
 
@@ -265,7 +265,7 @@ Choose and maintain a product's versioning scheme, classify shipped changes, and
 - Invocation from the plugin: `$planr:release` in Codex/ChatGPT; `/planr:release` in Claude Code.
 - Hosts: Claude Code, Codex, ChatGPT, and Cursor where supported by the package manifest.
 - Aliases: none.
-- Packaged support: `references/schemes.md`, `references/release-notes.md`, `references/cadence.md`, with packaged validators and runtime support. See the [resource inventory](../../skills/planr-release/openplanr.skill.json).
+- Packaged support: `references/schemes.md`, `references/release-notes.md`, `references/cadence.md`, `references/return-contract.md`, with packaged validators and runtime support. See the [resource inventory](../../skills/planr-release/openplanr.skill.json).
 
 ## `planr-share`
 
@@ -280,14 +280,14 @@ Share a status report, sprint note or release notes with the team as a chat mess
 
 ## `planr-ship`
 
-Implement an OpenPlanr plan, specification, task, or clearly stated request end to end in the current repository. Use when the user asks to build, implement, fix, finish, or ship local work.
+Implement an OpenPlanr plan, specification, task, or clearly stated request end to end in the current repository. Use when the user asks to build, implement, fix, finish, or ship local work, or to plan and implement an accepted change. Invoke before editing files for the requested change. Not for planning only, landing, release, or work handed to another coding agent.
 
 - Select for: Implement a plan, specification, task, fix, or clearly stated local request; Build and verify the requested repository change; Ship this; Ship task; Implement this task; Implement this plan with parallel coding agents; Use native parallel agents to implement this task; Fix the delegate runner in the active agent.
 - Defer for: Only plan the work; Prepare a release without changing code; Have Codex implement this task; Use Codex to implement this; Have Claude Code implement this task; Ask another coding agent to implement this task; Use another coding agent to build this change.
 - Invocation from the plugin: `$planr:ship` in Codex/ChatGPT; `/planr:ship` in Claude Code.
 - Hosts: Claude Code, Codex, ChatGPT, and Cursor where supported by the package manifest.
 - Aliases: none.
-- Packaged support: `references/result-contract.md`, `references/design-lineage.md`, `references/findings.md`, with packaged validators and runtime support. See the [resource inventory](../../skills/planr-ship/openplanr.skill.json).
+- Packaged support: `references/result-contract.md`, `references/design-lineage.md`, `references/fail-first.md`, `references/findings.md`, `references/backlog-filing.md`, `references/return-contract.md`. See the [resource inventory](../../skills/planr-ship/openplanr.skill.json).
 
 ## `planr-spec`
 
@@ -298,7 +298,7 @@ Shape vague product or engineering intent into a clear, measurable Protocol-comp
 - Invocation from the plugin: `$planr:spec` in Codex/ChatGPT; `/planr:spec` in Claude Code.
 - Hosts: Claude Code, Codex, ChatGPT, and Cursor where supported by the package manifest.
 - Aliases: none.
-- Packaged support: `references/specification-contract.md`. See the [resource inventory](../../skills/planr-spec/openplanr.skill.json).
+- Packaged support: `references/specification-contract.md`, `references/return-contract.md`. See the [resource inventory](../../skills/planr-spec/openplanr.skill.json).
 
 ## `planr-sprint`
 
@@ -331,4 +331,4 @@ Audit OpenPlanr planning artifacts for graph and protocol drift. Use when status
 - Invocation from the plugin: `$planr:sync` in Codex/ChatGPT; `/planr:sync` in Claude Code.
 - Hosts: Claude Code, Codex, ChatGPT, and Cursor where supported by the package manifest.
 - Aliases: none.
-- Packaged support: `references/connectors.md`, `references/tracker-connections.md`, with packaged validators and runtime support. See the [resource inventory](../../skills/planr-sync/openplanr.skill.json).
+- Packaged support: `references/connectors.md`, `references/tracker-connections.md`. See the [resource inventory](../../skills/planr-sync/openplanr.skill.json).

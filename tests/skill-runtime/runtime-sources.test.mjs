@@ -102,7 +102,16 @@ test('Studio ships complete readable statement units that reassemble the canonic
   const joined = units.files.map(({ bytes }) => bytes.toString('utf8')).join('');
   for (const notice of [/@license React/u, /MIT/u])
     assert.match(joined, notice, 'inline license comments stay with their source');
-  assert.deepEqual(split('studio.js', studio, designRoot), units, 'generation is deterministic');
+  const again = split('studio.js', studio, designRoot);
+  assert.ok(
+    JSON.stringify(again.manifest) === JSON.stringify(units.manifest) &&
+      again.files.length === units.files.length &&
+      again.files.every(
+        ({ path, bytes }, index) =>
+          path === units.files[index].path && bytes.equals(units.files[index].bytes),
+      ),
+    'generation is deterministic',
+  );
 });
 
 test('the readable stage keeps the compact stage program and the same public behavior', () => {
@@ -117,9 +126,10 @@ test('the readable stage keeps the compact stage program and the same public beh
     assert.doesNotThrow(() => new Script(bytes.toString('utf8')), 'a unit is a complete script');
 
   const compact = renderArtifactStageRuntimeAsset({ projectRoot: artifactRoot });
-  assert.equal(
-    compact,
-    renderArtifactStageRuntimeAsset({ projectRoot: artifactRoot, compact: true }),
+  const explicit = renderArtifactStageRuntimeAsset({ projectRoot: artifactRoot, compact: true });
+  assert.ok(
+    compact === explicit,
+    `the default stage is ${compact.length} characters, compact: true ${explicit.length}`,
   );
   assert.ok(readableStage.length > compact.length);
   const load = (source) => {

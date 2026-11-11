@@ -4,7 +4,7 @@ import { createHash } from 'node:crypto';
 import { readFileSync, realpathSync, statSync } from 'node:fs';
 import { dirname, extname, isAbsolute, relative, resolve } from 'node:path';
 import { Script } from 'node:vm';
-import { parse, parseFragment, serialize } from 'parse5';
+import { Parser, parse, parseFragment, serialize } from 'parse5';
 import { MAX_ARTIFACT_HTML_BYTES } from './envelope.mjs';
 
 const MIME = {
@@ -22,6 +22,8 @@ const MIME = {
 };
 const children = (node) => [...(node.childNodes ?? []), ...(node.content?.childNodes ?? [])];
 const attr = (node, name) => node.attrs?.find((item) => item.name === name);
+const isPropToken = (value) =>
+  typeof value === 'string' && value.length <= 128 && /^[a-z][a-z0-9-]*(?![\s\S])/u.test(value);
 const text = (node) =>
   children(node)
     .map((item) => item.value ?? '')
@@ -33,6 +35,32 @@ function element(name, value) {
   const node = parseFragment(`<${name}></${name}>`).childNodes[0];
   setText(node, value);
   return node;
+}
+
+function parseBodySource(html) {
+  const roots = [];
+  const parser = new Parser({ sourceCodeLocationInfo: true });
+  const onStartTag = parser.onStartTag.bind(parser);
+  parser.onStartTag = (token) => {
+    if (token.tagName === 'body') roots.push(token);
+    onStartTag(token);
+  };
+  parser.tokenizer.write(html, true);
+  const body = parser.document.childNodes
+    .find((node) => node.tagName === 'html')
+    ?.childNodes.find((node) => node.tagName === 'body');
+  const root =
+    roots.length === 1 &&
+    body?.sourceCodeLocation?.startTag?.startOffset === roots[0].location?.startOffset
+      ? roots[0]
+      : null;
+  return { document: parser.document, roots, root };
+}
+
+/** Returns the single authored body tag and attribute locations, or null. */
+export function inspectLocalDocumentBody(html) {
+  const { root } = parseBodySource(html);
+  return root ? { attrs: root.attrs, location: root.location } : null;
 }
 
 export function resolveLocalDocumentFile(root, path, from = root) {
@@ -63,6 +91,7 @@ export function bundleLocalDocument({
   maxBytes = MAX_ARTIFACT_HTML_BYTES,
   readSource,
   passive = false,
+  screenProps,
 }) {
   const root = realpathSync(inputRoot);
   const files = new Map();
@@ -201,7 +230,16 @@ export function bundleLocalDocument({
     return value.replace(/<\/script/giu, '<\\/script');
   }
   const input = read(source.html);
-  const document = parse(input.value.toString('utf8'));
+  const propEntries = Object.entries(screenProps ?? {});
+  let document;
+  if (propEntries.length) {
+    const parsed = parseBodySource(input.value.toString('utf8'));
+    if (!parsed.root)
+      throw new Error(
+        `Screen ${screenId} source ${source.html} requires a single authored <body> root for props; found ${parsed.roots.length}.`,
+      );
+    document = parsed.document;
+  } else document = parse(input.value.toString('utf8'));
   let head, body;
   const deferredScripts = [];
   const queue = [...children(document)];
@@ -299,6 +337,25 @@ export function bundleLocalDocument({
     body.childNodes.push(node);
   }
   body.attrs.push({ name: 'data-planr-screen', value: screenId });
+  if (propEntries.length) {
+    const classes = (attr(body, 'class')?.value ?? '')
+      .split(/\s+/u)
+      .filter(Boolean)
+      .filter((item) => !propEntries.some(([name]) => item.startsWith(`prop-${name}-`)));
+    for (const [name, value] of propEntries) {
+      if (!isPropToken(name) || !(typeof value === 'boolean' || isPropToken(value)))
+        throw new TypeError(
+          `Screen ${screenId} source ${source.html} has invalid prop ${name}: ${JSON.stringify(value)}.`,
+        );
+      const attribute = `data-prop-${name}`;
+      body.attrs = body.attrs.filter((item) => item.name !== attribute);
+      body.attrs.push({ name: attribute, value: String(value) });
+      const prefix = `prop-${name}-`;
+      classes.push(`${prefix}${value}`);
+    }
+    body.attrs = body.attrs.filter((item) => item.name !== 'class');
+    body.attrs.push({ name: 'class', value: classes.join(' ') });
+  }
   const html = serialize(document);
   if (Buffer.byteLength(html) > maxBytes)
     throw new Error('Bundled design exceeds the output budget.');

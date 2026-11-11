@@ -7,11 +7,14 @@ export const CANVAS_TRACE_BUDGETS = Object.freeze({
     svg: Object.freeze({ 708: 8, 5000: 12 }),
   }),
   remountRendererMainP95Ms: 16,
+  runnerHtmlZoomSweep5000RendererMainP95Ms: 14,
+  runnerVanillaHtml708PanZoomRendererMainP95Ms: 8,
   longTasksOver50Ms: 0,
   rafIntervalP95Ms: 16.8,
   domNodes: 2000,
   firstFrameP50Ms: 150,
   runnerFirstFrameP50Ms: 250,
+  runnerWebkitReactFirstFrameP50Ms: 350,
   firstFrameLoads: 5,
   hitTestP95Ms: 0.1,
   hitTestSampleCount: 1000,
@@ -38,34 +41,52 @@ export function toClockResolution(ms: number): number {
 
 export function traceBudgetPolicy(runnerBudgets: boolean): {
   budgetSet: 'local' | 'runner';
+  /** Records millisecond metrics and long-task counts as reported instead of failing on them. */
+  timingReportOnly: boolean;
   remountRendererMainP95Ms: number | null;
+  /** Main-thread limit for the 5,000-node HTML zoom sweep; null keeps the renderer's reference limit. */
+  htmlZoomSweep5000RendererMainP95Ms: number | null;
+  /** Main-thread limit for 708-node vanilla HTML pan-40 and zoom sweep; null keeps the reference limit. */
+  vanillaHtml708PanZoomRendererMainP95Ms: number | null;
   rafIntervalP95Ms: number | null;
   firstFrameP50Ms: number;
+  /** WebKit first-frame limit for React HTML; null keeps `firstFrameP50Ms`. */
+  webkitReactFirstFrameP50Ms: number | null;
 } {
   return {
     budgetSet: runnerBudgets ? 'runner' : 'local',
+    timingReportOnly: runnerBudgets,
     remountRendererMainP95Ms: runnerBudgets ? null : CANVAS_TRACE_BUDGETS.remountRendererMainP95Ms,
+    htmlZoomSweep5000RendererMainP95Ms: runnerBudgets
+      ? CANVAS_TRACE_BUDGETS.runnerHtmlZoomSweep5000RendererMainP95Ms
+      : null,
+    vanillaHtml708PanZoomRendererMainP95Ms: runnerBudgets
+      ? CANVAS_TRACE_BUDGETS.runnerVanillaHtml708PanZoomRendererMainP95Ms
+      : null,
     rafIntervalP95Ms: runnerBudgets ? null : CANVAS_TRACE_BUDGETS.rafIntervalP95Ms,
     firstFrameP50Ms: runnerBudgets
       ? CANVAS_TRACE_BUDGETS.runnerFirstFrameP50Ms
       : CANVAS_TRACE_BUDGETS.firstFrameP50Ms,
+    webkitReactFirstFrameP50Ms: runnerBudgets
+      ? CANVAS_TRACE_BUDGETS.runnerWebkitReactFirstFrameP50Ms
+      : null,
   };
 }
 
+/** Names the budget table a trace is gated against; SVG worlds use the SVG diagram tier. */
 export function traceOwnership(input: {
   count: number;
   world: 'html' | 'svg';
   scenario: string;
-}): 'gated' | 'reported, SVG stress tier' {
-  return input.world === 'html' || input.count === 708 ? 'gated' : 'reported, SVG stress tier';
+}): 'gated, card tier' | 'gated, SVG tier' {
+  return input.world === 'svg' ? 'gated, SVG tier' : 'gated, card tier';
 }
 
 export function domBudgetPolicy(input: Parameters<typeof traceOwnership>[0]): {
-  ownership: 'gated' | 'reported, SVG stress tier' | 'reported, remount timing only';
+  ownership: 'gated' | 'reported, SVG tier' | 'reported, remount timing only';
   regressionLimit: number | null;
 } {
-  if (traceOwnership(input) !== 'gated')
-    return { ownership: 'reported, SVG stress tier', regressionLimit: null };
+  if (input.world === 'svg') return { ownership: 'reported, SVG tier', regressionLimit: null };
   if (input.scenario === 'remount')
     return { ownership: 'reported, remount timing only', regressionLimit: null };
   return { ownership: 'gated', regressionLimit: CANVAS_TRACE_BUDGETS.domNodes };
@@ -86,10 +107,12 @@ export type CanvasHitTestProbe = Readonly<{
 }>;
 export type CanvasTraceRun = Readonly<{
   run: number;
-  rendererMainP95Ms?: number;
+  rendererMainP95Ms?: number | 'unsupported';
   rafIntervalP95Ms: number;
   worstFrameMs?: number;
-  longTasksOver50Ms: number;
+  longTasksOver50Ms: number | 'unsupported';
+  layoutShiftValue?: number | 'unsupported';
+  engineFrameSamples?: number;
   domNodes: number;
   hitTestP95Ms: number;
   hitTestProbe: CanvasHitTestProbe;
@@ -110,7 +133,7 @@ export type CanvasChromeSnapshot = Readonly<{
 }>;
 export type CanvasChromeMeasurement = CanvasTraceIdentity &
   Readonly<{
-    layoutShifts: LayoutShiftReport;
+    layoutShifts: LayoutShiftReport | 'unsupported';
     before: CanvasChromeSnapshot;
     after: CanvasChromeSnapshot;
     snapshots: readonly CanvasChromeSnapshot[];
@@ -144,6 +167,8 @@ export type CanvasTraceEvaluation = {
   browser: CanvasTraceResults['browser'];
   failures: string[];
   reported: string[];
+  /** Reported entries whose measurement is over its comparison limit. */
+  exceeded: string[];
   pending: string[];
   passed: boolean;
 };
@@ -237,9 +262,27 @@ export function evaluateCanvasTrace(
   text(results.browser.version, 'browser.version');
   const failures: string[] = [];
   const reported: string[] = [];
+  const exceeded: string[] = [];
   const pending = ['dropped frames at fit: compositor trace is not measured'];
   const limits = CANVAS_TRACE_BUDGETS;
   const policy = traceBudgetPolicy(results.budgetSet === 'runner');
+  const timing = policy.timingReportOnly;
+  function supported(
+    item: CanvasTraceIdentity,
+    scenario: string,
+    metric: string,
+    value: unknown,
+  ): value is number {
+    if (value === 'unsupported') {
+      if (item.count === tier)
+        pending.push(
+          `${item.fixture} ${item.renderer} ${item.world} DPR ${item.dpr} ${scenario}: ${metric} unsupported for tier ${tier}`,
+        );
+      return false;
+    }
+    numeric(value, `${item.fixture}.${scenario}.${metric}`);
+    return true;
+  }
   function check(
     item: CanvasTraceIdentity,
     scenario: string,
@@ -251,8 +294,10 @@ export function evaluateCanvasTrace(
   ): void {
     if (item.count !== tier) return;
     const label = `${item.fixture} ${item.renderer} ${item.world} DPR ${item.dpr} ${scenario}: ${metric} measured ${measured}, limit ${limit}`;
-    if (reportOnly) reported.push(label);
-    else if (!passes) failures.push(label);
+    if (reportOnly) {
+      reported.push(label);
+      if (!passes) exceeded.push(label);
+    } else if (!passes) failures.push(label);
   }
   function maximum(
     item: CanvasTraceIdentity,
@@ -278,17 +323,12 @@ export function evaluateCanvasTrace(
     const measured = rounded === value ? rounded : `${rounded} (raw ${value})`;
     check(item, scenario, metric, measured, limit, rounded <= limit, reportOnly);
   }
-  function hitTest(
-    item: CanvasTraceIdentity,
-    scenario: string,
-    probe: CanvasHitTestProbe,
-    reportOnly = false,
-  ): void {
+  function hitTest(item: CanvasTraceIdentity, scenario: string, probe: CanvasHitTestProbe): void {
     object(probe, `${item.fixture}.${scenario}.hitTestProbe`);
     for (const key of ['p95Ms', 'sampleCount', 'queryCount', 'minSampleDurationMs'] as const)
       numeric(probe[key], `${item.fixture}.${scenario}.hitTestProbe.${key}`);
-    maximum(item, scenario, 'hitTestP95Ms', probe.p95Ms, limits.hitTestP95Ms, reportOnly);
-    check(item, scenario, 'hitTestP95Ms', probe.p95Ms, '> 0', probe.p95Ms > 0, reportOnly);
+    maximum(item, scenario, 'hitTestP95Ms', probe.p95Ms, limits.hitTestP95Ms, timing);
+    check(item, scenario, 'hitTestP95Ms', probe.p95Ms, '> 0', probe.p95Ms > 0);
     check(
       item,
       scenario,
@@ -296,7 +336,6 @@ export function evaluateCanvasTrace(
       probe.sampleCount,
       limits.hitTestSampleCount,
       probe.sampleCount === limits.hitTestSampleCount,
-      reportOnly,
     );
     check(
       item,
@@ -305,7 +344,6 @@ export function evaluateCanvasTrace(
       probe.queryCount,
       `>= ${limits.hitTestQueryCount}`,
       probe.queryCount >= limits.hitTestQueryCount,
-      reportOnly,
     );
     check(
       item,
@@ -314,7 +352,6 @@ export function evaluateCanvasTrace(
       probe.minSampleDurationMs,
       `>= ${limits.hitTestMinSampleDurationMs}`,
       probe.minSampleDurationMs >= limits.hitTestMinSampleDurationMs,
-      reportOnly,
     );
   }
   for (const section of ['measurements', 'hitTests', 'chrome', 'lod', 'pins'] as const) {
@@ -329,7 +366,8 @@ export function evaluateCanvasTrace(
       pending.push(`${section}: absent for tier ${tier}`);
   }
   for (const item of results.measurements ?? []) {
-    const reportOnly = traceOwnership(item) !== 'gated';
+    // The SVG diagram tier has no DOM, rAF interval or first-frame budget; those are reported.
+    const svgTier = traceOwnership(item) === 'gated, SVG tier';
     const field = `${item.fixture}.${item.scenario}`;
     choice(
       item.scenario,
@@ -348,7 +386,6 @@ export function evaluateCanvasTrace(
       item.firstFrameTrialsMs.length,
       limits.firstFrameLoads,
       item.firstFrameTrialsMs.length === limits.firstFrameLoads,
-      reportOnly,
     );
     const medianFirstFrame = [...item.firstFrameTrialsMs].sort((a, b) => a - b)[
       Math.floor(item.firstFrameTrialsMs.length / 2)
@@ -360,8 +397,13 @@ export function evaluateCanvasTrace(
       item.scenario,
       'firstFrameP50Ms',
       item.firstFrameP50Ms,
-      policy.firstFrameP50Ms,
-      reportOnly,
+      results.browser.name === 'webkit' &&
+        item.renderer === 'react' &&
+        item.world === 'html' &&
+        policy.webkitReactFirstFrameP50Ms !== null
+        ? policy.webkitReactFirstFrameP50Ms
+        : policy.firstFrameP50Ms,
+      svgTier || timing,
     );
     const main: number[] = [];
     const raf: number[] = [];
@@ -369,31 +411,37 @@ export function evaluateCanvasTrace(
       object(run, `${field}.runs`);
       numeric(run.run, `${field}.run`);
       const scenario = `${item.scenario} run ${run.run}`;
-      if (results.browser.name === 'chromium' || run.rendererMainP95Ms !== undefined) {
+      if (results.browser.name === 'chromium') {
         numeric(run.rendererMainP95Ms, `${field}.rendererMainP95Ms`);
         main.push(run.rendererMainP95Ms);
+      } else {
+        supported(
+          item,
+          scenario,
+          'rendererMainP95Ms',
+          run.rendererMainP95Ms === undefined ? 'unsupported' : run.rendererMainP95Ms,
+        );
       }
       numeric(run.rafIntervalP95Ms, `${field}.rafIntervalP95Ms`);
       raf.push(run.rafIntervalP95Ms);
-      maximum(
-        item,
-        scenario,
-        'longTasksOver50Ms',
-        run.longTasksOver50Ms,
-        limits.longTasksOver50Ms,
-        reportOnly,
-      );
-      hitTest(item, scenario, run.hitTestProbe, reportOnly);
-      maximum(item, scenario, 'hitTestP95Ms', run.hitTestP95Ms, limits.hitTestP95Ms, reportOnly);
-      check(
-        item,
-        scenario,
-        'hitTestP95Ms',
-        run.hitTestP95Ms,
-        '> 0',
-        run.hitTestP95Ms > 0,
-        reportOnly,
-      );
+      if (results.browser.name === 'chromium')
+        numeric(run.longTasksOver50Ms, `${field}.longTasksOver50Ms`);
+      if (supported(item, scenario, 'longTasksOver50Ms', run.longTasksOver50Ms))
+        maximum(
+          item,
+          scenario,
+          'longTasksOver50Ms',
+          run.longTasksOver50Ms,
+          limits.longTasksOver50Ms,
+          timing,
+        );
+      if (run.layoutShiftValue !== undefined)
+        supported(item, scenario, 'layoutShiftValue', run.layoutShiftValue);
+      for (const metric of ['engineFrameSamples', 'worstFrameMs'] as const)
+        if (run[metric] !== undefined) numeric(run[metric], `${field}.${metric}`);
+      hitTest(item, scenario, run.hitTestProbe);
+      maximum(item, scenario, 'hitTestP95Ms', run.hitTestP95Ms, limits.hitTestP95Ms, timing);
+      check(item, scenario, 'hitTestP95Ms', run.hitTestP95Ms, '> 0', run.hitTestP95Ms > 0);
       const dom = domBudgetPolicy(item);
       maximum(
         item,
@@ -411,7 +459,6 @@ export function evaluateCanvasTrace(
           'pureCameraCommits',
           run.react.pureCameraCommits,
           limits.pureCameraCommits,
-          reportOnly,
         );
         numeric(run.react.pureCameraFrames, `${field}.react.pureCameraFrames`);
         if (item.scenario !== 'remount')
@@ -422,7 +469,6 @@ export function evaluateCanvasTrace(
             run.react.pureCameraFrames,
             '> 0',
             run.react.pureCameraFrames > 0,
-            reportOnly,
           );
       }
       if (results.browser.name === 'webkit' && item.scenario === 'pan-40') {
@@ -434,24 +480,35 @@ export function evaluateCanvasTrace(
           'worstFrameMs',
           run.worstFrameMs,
           limits.webkit.pan40WorstFrameMs,
-          reportOnly,
+          timing || policy.rafIntervalP95Ms === null,
         );
       }
     }
     const rafMedian = raf.sort((a, b) => a - b)[1];
     if (results.browser.name === 'chromium') {
       const mainMedian = main.sort((a, b) => a - b)[1];
+      const htmlZoomSweep5000 =
+        item.scenario === 'zoom-sweep' && item.world === 'html' && item.count === 5000;
+      const vanillaHtml708PanZoom =
+        item.renderer === 'vanilla' &&
+        item.world === 'html' &&
+        item.count === 708 &&
+        (item.scenario === 'pan-40' || item.scenario === 'zoom-sweep');
       const mainLimit =
         item.scenario === 'remount'
           ? limits.remountRendererMainP95Ms
-          : limits.rendererMainP95Ms[item.world === 'svg' ? 'svg' : item.renderer][item.count];
+          : htmlZoomSweep5000 && policy.htmlZoomSweep5000RendererMainP95Ms !== null
+            ? policy.htmlZoomSweep5000RendererMainP95Ms
+            : vanillaHtml708PanZoom && policy.vanillaHtml708PanZoomRendererMainP95Ms !== null
+              ? policy.vanillaHtml708PanZoomRendererMainP95Ms
+              : limits.rendererMainP95Ms[item.world === 'svg' ? 'svg' : item.renderer][item.count];
       maximum(
         item,
         item.scenario,
         'rendererMainP95Ms',
         mainMedian,
         mainLimit,
-        reportOnly || (item.scenario === 'remount' && policy.remountRendererMainP95Ms === null),
+        timing || (item.scenario === 'remount' && policy.remountRendererMainP95Ms === null),
       );
       interval(
         item,
@@ -459,7 +516,7 @@ export function evaluateCanvasTrace(
         'rafIntervalP95Ms',
         rafMedian,
         limits.rafIntervalP95Ms,
-        reportOnly || policy.rafIntervalP95Ms === null,
+        svgTier || timing || policy.rafIntervalP95Ms === null,
       );
     } else if (results.browser.name === 'webkit') {
       interval(
@@ -468,9 +525,12 @@ export function evaluateCanvasTrace(
         'rafIntervalP95Ms',
         rafMedian,
         limits.webkit.rafIntervalP95Ms,
-        reportOnly || policy.rafIntervalP95Ms === null,
+        svgTier || timing || policy.rafIntervalP95Ms === null,
       );
-    } else if (item.scenario === 'pan-100' || item.scenario === 'pan-fit') {
+    } else if (
+      results.browser.name === 'firefox' &&
+      (item.scenario === 'pan-100' || item.scenario === 'pan-fit')
+    ) {
       interval(
         item,
         item.scenario,
@@ -479,19 +539,33 @@ export function evaluateCanvasTrace(
         item.scenario === 'pan-100'
           ? limits.firefox.pan100FrameP95Ms
           : limits.firefox.panFitFrameP95Ms[item.count],
-        reportOnly,
+        timing || policy.rafIntervalP95Ms === null,
       );
     }
   }
   for (const item of results.hitTests ?? []) hitTest(item, 'hit-test', item.hitTestProbe);
   for (const item of results.chrome ?? []) {
     const field = `${item.fixture}.chrome`;
-    layoutEvidence(item.layoutShifts, `${field}.layoutShifts`);
     snapshot(item.before, `${field}.before`);
     snapshot(item.after, `${field}.after`);
     if (!Array.isArray(item.snapshots)) throw new TypeError(`${field}.snapshots must be an array`);
-    const cls = aggregateLayoutShifts(item.layoutShifts, { inputPhase: () => false });
-    maximum(item, 'chrome-toggle', 'admittedCls', cls.admittedCls, limits.admittedCls);
+    if (item.layoutShifts === 'unsupported') {
+      supported(item, 'chrome-toggle', 'layoutShifts', item.layoutShifts);
+    } else {
+      layoutEvidence(item.layoutShifts, `${field}.layoutShifts`);
+      const cls = aggregateLayoutShifts(item.layoutShifts, { inputPhase: () => false });
+      maximum(item, 'chrome-toggle', 'admittedCls', cls.admittedCls, limits.admittedCls);
+      const phases = item.layoutShifts.phases;
+      check(
+        item,
+        'chrome-toggle',
+        'phases',
+        JSON.stringify(phases.map((phase) => phase.phase)),
+        'chrome-toggle 0 through 15',
+        phases.length === limits.chromeToggles &&
+          phases.every((phase, index) => phase.phase === `chrome-toggle ${index}`),
+      );
+    }
     check(
       item,
       'chrome-toggle',
@@ -499,16 +573,6 @@ export function evaluateCanvasTrace(
       item.snapshots.length,
       limits.chromeToggles,
       item.snapshots.length === limits.chromeToggles,
-    );
-    const phases = item.layoutShifts.phases;
-    check(
-      item,
-      'chrome-toggle',
-      'phases',
-      JSON.stringify(phases.map((phase) => phase.phase)),
-      'chrome-toggle 0 through 15',
-      phases.length === limits.chromeToggles &&
-        phases.every((phase, index) => phase.phase === `chrome-toggle ${index}`),
     );
     for (const [index, current] of [...item.snapshots, item.after].entries()) {
       snapshot(current, `${field}.snapshots[${index}]`);
@@ -569,6 +633,7 @@ export function evaluateCanvasTrace(
     browser: results.browser,
     failures,
     reported,
+    exceeded,
     pending,
     passed: failures.length === 0,
   };

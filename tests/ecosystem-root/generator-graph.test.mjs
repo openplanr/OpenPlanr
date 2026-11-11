@@ -19,6 +19,7 @@ const expectedOrder = [
   'landing-workflow-custody',
   'dashboard-package-assets',
   'ecosystem-marketplace',
+  'claude-plugin-evals',
 ];
 
 test('the consolidated generator graph has one deterministic bounded order', () => {

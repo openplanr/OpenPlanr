@@ -3,12 +3,14 @@
 import { render } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import { DashboardProviders } from '../../../../apps/dashboard/src/app/providers.js';
+import { parsePlanningGraphEnvelope } from '../../../../apps/dashboard/src/features/planning/planning-api.js';
 import { UnifiedShell } from '../../../../apps/dashboard/src/features/shell/UnifiedShell.js';
 import {
   dashboardProductStatePolicy,
   parseDashboardProductState,
 } from '../../../../apps/dashboard/src/lib/api/product-state.js';
 import { createDashboardQueryIdentity } from '../../../../apps/dashboard/src/lib/binding/query-identity.js';
+import { createDashboardApiFixture } from '../e2e/fixtures/dashboard-api-fixture.mjs';
 
 describe('dashboard shell binding summary', () => {
   it('keeps a connected workspace out of the page hierarchy', () => {
@@ -132,58 +134,61 @@ describe('dashboard shell binding summary', () => {
     expect(container.textContent).toContain('The file watcher disconnected');
   });
 
-  it.each([['loading', 'loading']] as const)(
-    'keeps a %s Planning projection in its route frame',
-    (kind, status) => {
-      const binding = createDashboardQueryIdentity({
-        productArea: 'planning',
-        actorId: 'owner-bound',
-        projectId: `sha256:${'1'.repeat(64)}`,
-        scopeId: 'scope-bound',
-        domainId: 'planning',
-        domainVersion: '1.0.0',
-        cycleId: null,
-        route: '#/home',
-        subjectId: null,
-        generation: 4,
-        eventHead: { sequence: 1, hash: `sha256:${'2'.repeat(64)}` },
-        viewHash: `sha256:${'3'.repeat(64)}`,
-      });
-      const projection = parseDashboardProductState(
-        {
-          kind,
-          binding,
-          data: kind === 'refreshing' ? {} : null,
-          reasonCodes: kind === 'refreshing' ? ['DASHBOARD_REFRESHING'] : [],
-          error: null,
-          mutationEnabled: false,
-          policy: dashboardProductStatePolicy(kind),
+  it.each([
+    ['loading', 'loading'],
+    ['refreshing', 'refreshing'],
+  ] as const)('keeps a %s Planning projection in its route frame', (kind, status) => {
+    const { planning } = createDashboardApiFixture();
+    const binding = createDashboardQueryIdentity({
+      ...planning.binding,
+      ...planning.cursor,
+      productArea: 'planning',
+      route: '#/home',
+      cycleId: null,
+      subjectId: null,
+    });
+    const projection = parseDashboardProductState(
+      {
+        kind,
+        binding,
+        data: kind === 'refreshing' ? JSON.parse(JSON.stringify(planning)) : null,
+        reasonCodes: kind === 'refreshing' ? ['DASHBOARD_REFRESHING'] : [],
+        error: null,
+        mutationEnabled: false,
+        policy: dashboardProductStatePolicy(kind),
+      },
+      {
+        currentBinding: binding,
+        validateData: (value): value is Record<string, unknown> => {
+          parsePlanningGraphEnvelope(value, binding);
+          return true;
         },
-        {
-          currentBinding: binding,
-          validateData: (value): value is Record<string, unknown> =>
-            typeof value === 'object' && value !== null,
-        },
-      );
-      const { container } = render(
-        <DashboardProviders
-          buildId="binding-test"
-          initialHash="#/overview"
-          connection={{ state: 'connected', label: 'Connected', reason: 'Verified.' }}
-          binding={binding}
-          projection={projection}
-        >
-          <UnifiedShell />
-        </DashboardProviders>,
-      );
+      },
+    );
+    const { container } = render(
+      <DashboardProviders
+        buildId="binding-test"
+        initialHash="#/overview"
+        connection={{ state: 'connected', label: 'Connected', reason: 'Verified.' }}
+        binding={binding}
+        projection={projection}
+      >
+        <UnifiedShell />
+      </DashboardProviders>,
+    );
 
-      const pending = container.querySelector<HTMLElement>('.op-route-pending');
+    const pending = container.querySelector<HTMLElement>('.op-route-pending');
+    if (kind === 'loading') {
       expect(pending?.dataset.routePending).toBe(kind);
       expect(pending?.getAttribute('aria-busy')).toBe('true');
       expect(pending?.textContent).toContain(status);
       expect(pending?.querySelector('h1')?.textContent).toBe('Home');
-      expect(container.querySelector('.op-state-panel')).toBeNull();
-      expect(container.textContent).not.toContain('Planning cannot be trusted');
-    },
-  );
+    } else {
+      expect(pending).toBeNull();
+      expect(container.querySelector('h1')?.textContent).toBe('Needs attention');
+      expect(container.textContent).toContain('Improve appointment reminder delivery');
+    }
+    expect(container.querySelector('.op-state-panel')).toBeNull();
+    expect(container.textContent).not.toContain('Planning cannot be trusted');
+  });
 });

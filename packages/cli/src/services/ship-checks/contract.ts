@@ -1,5 +1,5 @@
 export const SHIP_CHECKS_KIND = 'openplanr-ship-checks';
-export const SHIP_CHECKS_SCHEMA_VERSION = '1.0.0';
+export const SHIP_CHECKS_SCHEMA_VERSION = '1.2.0';
 
 export const SHIP_TIERS = ['task', 'story', 'push', 'planning'] as const;
 export type ShipTier = (typeof SHIP_TIERS)[number];
@@ -30,6 +30,8 @@ export type ShipCheck = {
   script?: PackageScript;
   condition?: string;
   shell?: string;
+  /** Package-relative files the change adds; each must be in the tarball or deliberately excluded. */
+  expectFiles?: string[];
   acceptanceIds: string[];
 };
 
@@ -50,6 +52,12 @@ export type ChangedFileStatus = 'added' | 'modified' | 'deleted' | 'renamed' | '
 
 export type ChangedFile = { path: string; status: ChangedFileStatus };
 
+/** Changed files that the listed checks may not see. `typescript` is null when the project cannot resolve TypeScript. */
+export type ShipCoverage = {
+  trackedOnly: { checks: string[]; unseen: string[] };
+  typescript: { tsconfigs: string[]; uncovered: string[] } | null;
+};
+
 export type ShipChecksResult = {
   kind: typeof SHIP_CHECKS_KIND;
   schemaVersion: typeof SHIP_CHECKS_SCHEMA_VERSION;
@@ -64,6 +72,7 @@ export type ShipChecksResult = {
   requirements: ShipRequirement[];
   acceptance: string[];
   relatedTests: RelatedTest[];
+  coverage: ShipCoverage;
   diagnostics: ShipDiagnostic[];
 };
 

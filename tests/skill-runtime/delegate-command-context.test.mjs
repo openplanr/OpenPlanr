@@ -1,54 +1,31 @@
 import assert from 'node:assert/strict';
-import { execFileSync, spawnSync } from 'node:child_process';
+import { execFileSync } from 'node:child_process';
 import { mkdir, mkdtemp, readFile, realpath, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
-import { fileURLToPath } from 'node:url';
-import { contextCapacity } from '../../skills/planr-delegate/scripts/run-preflight.mjs';
+import { contextCapacity } from '../../packages/pipeline/lib/delegate/run-preflight.mjs';
 import {
   delegateRunnerCommand,
   prepareDelegateRun,
-} from '../../skills/planr-delegate/scripts/runner.mjs';
+} from '../../packages/pipeline/lib/delegate/runner.mjs';
 
-const runner = fileURLToPath(
-  new URL('../../skills/planr-delegate/scripts/runner.mjs', import.meta.url),
-);
-
-test('CLI accepts documented argument and stdin action forms and returns actionable usage', async (t) => {
-  const home = await mkdtemp(join(tmpdir(), 'delegate-command-'));
-  t.after(() => rm(home, { recursive: true, force: true }));
-  const call = (args, input) =>
-    spawnSync(process.execPath, [runner, ...args], {
-      input: JSON.stringify(input),
-      encoding: 'utf8',
-      env: { PATH: '/usr/bin:/bin', HOME: home },
+test('unknown and malformed actions return actionable codes', async () => {
+  for (const [action, input, code] of [
+    [undefined, {}, 'E_DELEGATE_COMMAND'],
+    ['unknown', {}, 'E_DELEGATE_COMMAND'],
+    ['probe', [], 'E_DELEGATE_INPUT'],
+    ['probe', null, 'E_DELEGATE_INPUT'],
+  ]) {
+    await assert.rejects(delegateRunnerCommand(action, input), (error) => {
+      assert.equal(error.code, code);
+      if (code === 'E_DELEGATE_COMMAND') {
+        assert.ok(error.details.actions.includes('probe'));
+        assert.ok(error.details.actions.includes('abandon'));
+        assert.match(error.message, /openplanr delegate --help/);
+      }
+      return true;
     });
-  for (const [args, input] of [
-    [['probe'], {}],
-    [[], { action: 'probe' }],
-    [['probe'], { action: 'probe' }],
-  ]) {
-    const result = call(args, input);
-    assert.equal(result.status, 0, result.stderr);
-    assert.equal(JSON.parse(result.stdout).ok, true);
-  }
-  for (const [args, input, code] of [
-    [[], {}, 'E_DELEGATE_COMMAND'],
-    [[], { action: 'unknown' }, 'E_DELEGATE_COMMAND'],
-    [['probe'], { action: 'prepare' }, 'E_DELEGATE_INPUT'],
-    [['probe'], [], 'E_DELEGATE_INPUT'],
-    [['probe'], null, 'E_DELEGATE_INPUT'],
-  ]) {
-    const result = call(args, input);
-    assert.equal(result.status, 1);
-    const error = JSON.parse(result.stderr);
-    assert.equal(error.code, code);
-    if (code === 'E_DELEGATE_COMMAND') {
-      assert.ok(error.details.actions.includes('probe'));
-      assert.ok(error.details.actions.includes('abandon'));
-      assert.match(error.message, /node runner.mjs <action>/);
-    }
   }
 });
 

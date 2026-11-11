@@ -5,9 +5,9 @@
  * Review ledger storage and locking belong to `review.mjs`.
  */
 
-import { existsSync, lstatSync, readdirSync, readFileSync, rmSync } from 'node:fs';
+import { existsSync, lstatSync, readFileSync, rmSync } from 'node:fs';
 import { createServer } from 'node:http';
-import { dirname, isAbsolute, join, resolve } from 'node:path';
+import { basename, dirname, isAbsolute, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { ARTIFACT_ERROR_CODES, PipelineError } from '@openplanr/protocol/errors';
 import { CLI_COMMAND } from '@openplanr/protocol/names';
@@ -29,7 +29,13 @@ import {
   mintCapabilityToken,
   timingSafeTokenEqual,
 } from './internal/board-token.mjs';
-import { planrHome } from './internal/paths.mjs';
+import {
+  artifactReviewStatePath,
+  reviewControlHeaders,
+  reviewInstanceStatePath,
+  reviewStateLockPath,
+  reviewStateRecordPaths,
+} from './internal/review-state-store.mjs';
 import { readRuntimeAsset } from './internal/runtime-asset.mjs';
 import {
   acquireStartLock,
@@ -61,7 +67,6 @@ const CONTROL_HEADER = 'x-openplanr-control';
 // Version 2 servers stay controllable; version 1 servers only export their exact sessions.
 const CONTROLLABLE_SERVER_VERSIONS = new Set([2, ARTIFACT_REVIEW_SERVER_VERSION]);
 const EXPORT_ONLY_SERVER_VERSIONS = new Set([1]);
-const AUTHORIZATION_CONTROL_VERSIONS = new Set([1, 2]);
 // Legacy registration reserves space for ordinary JSON escaping and review state,
 // rounded to a 64 MiB control window. Large hosted publications use resource chunks.
 const CONTROL_WINDOW_BYTES = 64 * 1024 * 1024;
@@ -135,20 +140,10 @@ export function artifactReviewControlHeaders(controlToken) {
 }
 
 function stateControlHeaders(state) {
-  // Servers before version 3 read the control token from the Authorization header.
-  return AUTHORIZATION_CONTROL_VERSIONS.has(state.serverVersion)
-    ? { authorization: `Bearer ${state.controlToken}` }
-    : artifactReviewControlHeaders(state.controlToken);
+  return reviewControlHeaders(state, CONTROL_HEADER);
 }
 
-function reviewStateDir(env = process.env) {
-  return join(planrHome(env), 'artifact-daemon');
-}
-
-export function artifactReviewStatePath(port = 0, env = process.env) {
-  const suffix = port === 0 ? 'default' : String(port);
-  return join(reviewStateDir(env), `state-${suffix}.json`);
-}
+export { artifactReviewStatePath };
 
 /** Export a live review by public session ID without exposing daemon credentials. */
 export async function exportArtifactReviewSession(
@@ -167,22 +162,16 @@ export async function exportArtifactReviewSession(
       'Artifact review export format must be json or markdown.',
     );
   }
-  const directory = reviewStateDir(env);
-  let names = [];
+  let statePaths;
   try {
-    names = readdirSync(directory)
-      .filter((name) => /^(?:instance-[A-Za-z0-9_-]{22}|state-(?:default|\d+))\.json$/u.test(name))
-      .sort();
-  } catch (error) {
-    if (error?.code !== 'ENOENT') {
-      throw artifactError(
-        ARTIFACT_ERROR_CODES.REVIEW_EXPORT,
-        'Artifact review daemon state is unavailable.',
-      );
-    }
+    statePaths = reviewStateRecordPaths(env);
+  } catch {
+    throw artifactError(
+      ARTIFACT_ERROR_CODES.REVIEW_EXPORT,
+      'Artifact review daemon state is unavailable.',
+    );
   }
-  for (const name of names) {
-    const statePath = join(directory, name);
+  for (const statePath of statePaths) {
     const state = readReviewServerState(statePath);
     if (
       !validState(state, 0, { allowLegacy: true }) ||
@@ -223,11 +212,6 @@ export async function exportArtifactReviewSession(
     'Artifact review session was not found.',
     'Keep the local review session open, verify the session ID, and retry.',
   );
-}
-
-function stateLockPath(port, env) {
-  const suffix = port === 0 ? 'default' : String(port);
-  return join(reviewStateDir(env), `start-${suffix}.lock`);
 }
 
 function statusForError(error) {
@@ -642,9 +626,7 @@ export function createArtifactReviewServer({
       !isAbsolute(serverMetadata.projectRoot))
   )
     throw artifactError(ARTIFACT_ERROR_CODES.LOOPBACK_STATE, 'Local server metadata is invalid.');
-  const instanceStatePath = serverMetadata
-    ? join(reviewStateDir(env), `instance-${instanceId}.json`)
-    : null;
+  const instanceStatePath = serverMetadata ? reviewInstanceStatePath(instanceId, env) : null;
   const sessions = new Map();
   const pendingStudioIds = new Set();
   const pendingMutations = new Set();
@@ -1454,7 +1436,7 @@ async function ensureArtifactReviewServer({
   if (cached?.reviewServer.accepting()) return cached;
   if (cached) await cached.closed;
 
-  const release = await acquireStartLock(stateLockPath(port, env));
+  const release = await acquireStartLock(reviewStateLockPath(port, env));
   try {
     const existing = readReviewServerState(statePath);
     if (validState(existing, port) && (await stateIsHealthy(existing, fetchImpl))) {
@@ -1463,7 +1445,7 @@ async function ensureArtifactReviewServer({
     if (existing) {
       // Retain exact custody even when a health response is unavailable. A failed
       // probe cannot authorize destroying the prior service/session reference.
-      const legacyPath = join(reviewStateDir(env), `instance-${existing.instanceId}.json`);
+      const legacyPath = reviewInstanceStatePath(existing.instanceId, env);
       const retained = readReviewServerState(legacyPath);
       if (
         retained &&
@@ -1760,20 +1742,11 @@ export function artifactReviewServerStateExists(port = 0, env = process.env) {
 }
 
 async function discoveredArtifactServers({ env, fetchImpl }) {
-  let names;
-  try {
-    names = readdirSync(reviewStateDir(env));
-  } catch (error) {
-    if (error.code === 'ENOENT') return [];
-    throw error;
-  }
   const live = new Map();
-  for (const name of names.sort()) {
-    if (!/^(?:instance-[A-Za-z0-9_-]{22}|state-(?:default|\d+))\.json$/u.test(name)) continue;
-    const path = join(reviewStateDir(env), name);
+  for (const path of reviewStateRecordPaths(env)) {
     const state = readReviewServerState(path);
     if (!validState(state, 0) || !(await stateIsHealthy(state, fetchImpl))) continue;
-    if (!live.has(state.instanceId) || name.startsWith('instance-'))
+    if (!live.has(state.instanceId) || basename(path).startsWith('instance-'))
       live.set(state.instanceId, state);
   }
   return [...live.values()];

@@ -1,6 +1,6 @@
 ---
 name: planr-ship
-description: Implement an OpenPlanr plan, specification, task, or clearly stated request end to end in the current repository. Use when the user asks to build, implement, fix, finish, or ship local work.
+description: Implement an OpenPlanr plan, specification, task, or clearly stated request end to end in the current repository. Use when the user asks to build, implement, fix, finish, or ship local work, or to plan and implement an accepted change. Invoke before editing files for the requested change. Not for planning only, landing, release, or work handed to another coding agent.
 license: MIT
 ---
 
@@ -17,9 +17,11 @@ plain Ship never launches its helper. Keep the work local; do not publish or dep
 
 For a selector, locate exactly one task and read it completely. Then follow its
 `storyId` and `specId` to the parent story, acceptance criteria, Gherkin file
-when present, and specification. Also read repository instructions, ADRs,
-planning rules, applicable stack guidance, relevant design/database context,
-implementation code, tests, and interfaces produced by declared dependencies.
+when present, and specification. Read the files the task names, plus `AGENTS.md` and
+`CLAUDE.md` when tracked, in one batch, and any `.planr/conventions/<area>.md` indexed
+from AGENTS.md for the areas this task touches. Expand only for a missing contract, a
+dependency's interface or a contradiction, and stop when each claim has evidence or a
+named gap.
 
 Read [the design lineage contract](references/design-lineage.md). If the selected
 planning root contains `design-lineage.json`, load only the selected task's mapped
@@ -62,8 +64,9 @@ QA retains verification tools, subject to role policy and session permissions.
 
 Select the exact registered identity from the host's roster; Claude plugin
 agents use names such as `planr:planr-backend` and `planr:planr-qa`. Give each worker
-its outcome, authoritative paths, relevant decisions, file ownership, verification
-requirements, and concise return expectations. Parallel workers need disjoint
+its outcome, the absolute task path with `MODE` and, in spec-driven mode, `SPEC_DIR`,
+authoritative paths, relevant decisions, file ownership, verification requirements,
+and concise return expectations. Parallel workers need disjoint
 writes or an agreed interface. Explain the delegation's purpose briefly in
 commentary. Host-native workers do not invoke the separate `planr-delegate` helper.
 When the host lacks the native role, perform the work sequentially in this session
@@ -71,39 +74,61 @@ and disclose capability limitations; never claim an unavailable specialist ran.
 
 Integrate the complete change, then verify behavior. `reviewRisks` and
 `browserSurfaces` select useful checks; empty arrays are normal and neither field
-is a workflow gate.
+is a workflow gate. Re-run the cheap checks a worker reports as passed, and compare
+its `changed` list with `git diff --name-only` plus untracked files; report any difference.
 
 ## Discover and run verification
 
-Discover checks in this order:
+Inspect these sources directly, in this order:
 
 1. task Test Requirements;
 2. repository instructions;
 3. package and task-runner scripts;
-4. applicable CI and pre-commit configuration.
+4. applicable CI configuration, the pre-commit hook (for example lint-staged) and the
+   pre-push hook, when present, whatever the change touches.
 
-Run `openplanr ship checks --json --task <task-path>` (omit `--task` for a direct
-request; add `--tier story` or `--tier push` before pushing) and run its `checks`
-from each `cwd`. The command never executes checks or writes files. When
+List each candidate check with its `cwd` and the source that named it. Discovery
+only reads sources: never build, install or execute a check while discovering;
+running checks is a later step. Then run the candidates from each `cwd`. Let the change pick checks: when it touches a build input (a
+`tsconfig*.json`, a bundler config, or a package's `main`, `exports`, `bin` or
+`build` scripts), include the build CI runs; prefer tests related to the changed
+files. Before pushing, include every CI job whose triggers and path filters fire
+for the changed paths, and for a published package that gains non-code files, a
+dry-run pack that confirms they are packed. When a workflow selects jobs at
+runtime (a `changes` or paths-filter job whose outputs gate other jobs), list every job it
+gates and mark each conditional. Run a conditional job when a local equivalent command
+exists; otherwise report it as "conditional, not run". Never drop one silently or by
+reading the paths yourself. Read every workflow file whose triggers fire for the
+change, not only the main one: dedicated browser, end-to-end and sandbox workflows are sources too. List a git hook as
+its own command and, when it delegates to a script, also each check that script runs.
+Discovery lists what the sources define whatever the size or kind of the change, a
+documentation-only change included; the change picks only which listed checks you run.
+Missing commands are diagnostics, not a reason to invent or
+skip all verification.
+
+If `openplanr` is already on `PATH`, `openplanr ship checks --json --task <task-path>`
+(omit `--task` for a direct request; add `--tier story` or `--tier push` before
+pushing) adds `complete` and diagnostics. The command never executes checks or writes files. When
 `complete` is `false`, report its error diagnostics and treat the check set as
-incomplete: a pass is not CI-equivalent. Without the CLI, the packaged read-only
-[verification discovery helper](scripts/discover-verification.mjs) may list
-candidates. Resolve it relative to this `SKILL.md` and run
-`node <helper> --project <repository-root> --task <task-path>`; omit `--task` for a
-direct request. It never executes checks or writes files. If both are unavailable,
-inspect those four sources directly. Missing commands are diagnostics, not a
-reason to invent or skip all verification.
+incomplete: a pass is not CI-equivalent. Act on warning diagnostics too; each names
+the files or checks it affects. A diagnostic that a check could not run, such as
+`TYPESCRIPT_UNAVAILABLE`, is not a pass: name that check in `checks` and verify its
+concern yourself where you can (for a new test file, confirm some tsconfig includes
+it). For a `package-contents` check, account for every `expectFiles` entry in the
+tarball's `files`: packed or deliberately left out.
 
 Run the strongest applicable focused checks while working, then the relevant
 regression checks. Run each check on its own or under `set -o pipefail`, and judge
 it by its own exit code; to shorten output, write it to a log and read the tail.
 Fix failures caused by the change and rerun affected checks.
+For an acceptance check written or changed for this task, follow
+[fail-first](references/fail-first.md) and report what it proved in that check's result.
 Read [the result contract](references/result-contract.md) before reporting.
 
 Report defects you notice outside the task as [findings](references/findings.md),
-and never fix them in this change unless they block it. The packaged
-[backlog helper](scripts/backlog-item.mjs) lists and files backlog items when no
-CLI is installed; resolve it relative to this `SKILL.md`.
+and never fix them in this change unless they block it.
+[Backlog filing](references/backlog-filing.md) lists and files backlog items with
+your own file tools.
 
 Do not write progress into an approved design package. The studio derives
 approved, planned, implementing, and verified state from canonical planning and
@@ -116,17 +141,17 @@ behavior, link material changes by purpose, and summarize actual verification.
 Retain complete file inventories and command diagnostics in their existing
 results instead of reproducing them in chat.
 
-- **Outcome:** `completed`, `partial`, or `blocked`, followed by what now works.
+- **Outcome:** `completed`, `partial`, `blocked`, or `awaiting-acceptance` (repository
+  work done; acceptance needs a run only the owner can do), followed by what now works.
 - **Task:** task ID and path, or `direct-request`.
-- **Changed:** material paths grouped by purpose.
-- **Checks:** command, `passed`, `failed`, or `not-run`, plus a concise result.
+- **Changed:** material paths grouped by purpose, files outside Create and Modify apart.
+- **Checks:** command, `passed`, `failed`, or `not-run`, plus a concise result and the
+  acceptance IDs it covers; list acceptance criteria no check covers.
 - **Issues:** blockers with problem, impact, and next action, or `none`; then
   findings outside the task, each with its disposition.
 
-Keep the five machine fields unchanged. A human summary may omit empty or unavailable fields,
-but must make partial, blocked or unverified work clear and give the smallest
-recovery action. Preserve native transcripts; never require another execution
-or correction just to change summary wording.
+Keep the five machine fields unchanged. Follow [the shared return rules](references/return-contract.md);
+the summary must make partial, blocked or unverified work clear.
 
 Suggest `planr-land` only when a landing step remains in the requested workflow.
 Do not add a next action when the requested scope is fulfilled. This guidance

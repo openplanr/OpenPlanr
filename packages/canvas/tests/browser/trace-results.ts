@@ -33,6 +33,23 @@ export type TraceRun = {
   mountCounts?: readonly number[];
 };
 
+/**
+ * Geometric mean of the non-remount renderer main p95 medians: one number for runner speed.
+ * Non-positive or non-finite medians are counted in `skipped`; with no usable row the value is null.
+ */
+export function traceSpeedIndex(
+  measurements: readonly { scenario: string; rendererMainP95Ms: number }[],
+): { valueMs: number | null; rows: number; skipped: number } {
+  const candidates = measurements
+    .filter((item) => item.scenario !== 'remount')
+    .map((item) => item.rendererMainP95Ms);
+  const values = candidates.filter((value) => Number.isFinite(value) && value > 0);
+  const skipped = candidates.length - values.length;
+  if (values.length === 0) return { valueMs: null, rows: 0, skipped };
+  const logMean = values.reduce((sum, value) => sum + Math.log(value), 0) / values.length;
+  return { valueMs: Math.round(Math.exp(logMean) * 1000) / 1000, rows: values.length, skipped };
+}
+
 export function aggregateTraceRuns(runs: readonly TraceRun[]): {
   hitTestP95Ms: number;
   rendererMainP95Ms: number;

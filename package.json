@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "OpenPlanr planning, diagramming, design review, host-native skills, and deterministic delivery tools.",
+  "description": "The open harness around your coding agent: OpenPlanr skills for Claude Code, Codex and Cursor, the openplanr CLI and the protocol.",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -28,16 +28,18 @@
     "build": "node scripts/workspace-command.mjs build",
     "generate": "node scripts/generate-all.mjs",
     "check:generated": "node scripts/generate-all.mjs --check",
-    "check:boundaries": "node scripts/check-workspace-boundaries.mjs && node scripts/check-composition-boundaries.mjs && node conformance/skills/check-toolchain-ownership.mjs",
+    "check:boundaries": "node scripts/check-workspace-boundaries.mjs && node scripts/check-composition-boundaries.mjs && node conformance/skills/check-toolchain-ownership.mjs && node scripts/check-plugin-allowed-types.mjs",
     "check:diagrams": "node scripts/docs/check-diagrams.mjs",
     "check:docs": "node scripts/docs/check-public-docs.mjs",
     "check:comments": "node scripts/check-source-comments.mjs",
+    "check:skill-merge": "node scripts/check-independent-skill-merge.mjs",
     "skill:lint": "node scripts/skills/lint.mjs",
     "skill:generate": "node scripts/skills/generate-v18.mjs --write",
     "skill:check": "node scripts/skills/generate-v18.mjs --check",
     "skill:preview": "node scripts/skills/preview.mjs",
     "skill:evaluate": "node scripts/skills/evaluate.mjs",
     "skill:evaluate:catalog": "node scripts/skills/evaluate-catalog.mjs",
+    "skill:evaluate:claude": "node scripts/skills/evaluate-claude-plugin.mjs",
     "skill:evaluate:model": "node scripts/skills/evaluate-model-release.mjs",
     "skill:impact": "node scripts/skills/impact.mjs",
     "skill:verify:codex-plugin": "node scripts/skills/verify-openai-v18.mjs",
@@ -65,18 +67,21 @@
   "devDependencies": {
     "@changesets/cli": "^3.0.3",
     "@types/node": "25.9.8",
-    "@vitest/coverage-v8": "4.1.11",
+    "@vitest/coverage-v8": "4.1.12",
     "husky": "^9.1.7",
     "js-yaml": "^4.3.2",
     "jsdom": "26.1.0",
     "lint-staged": "^16.4.0",
     "typescript": "6.0.3",
-    "vitest": "4.1.11"
+    "vitest": "4.1.12"
   },
   "overrides": {
     "miniflare": {
       "sharp": "0.35.5",
-      "undici": "7.29.1"
+      "undici": "7.30.1"
+    },
+    "vitest": {
+      "vite": "8.3.5"
     }
   }
 }

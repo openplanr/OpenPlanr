@@ -83,7 +83,7 @@ A breaking change entry needs four things in one or two lines: what changed, wha
 
 Rules:
 
-- Put it first, before Added. The reader who stops after three lines must have seen it.
+- Put it first, before Added. A Removed entry always carries its migration step inline, in the entry itself, and names features exactly as the product UI does. The reader who stops after three lines must have seen it.
 - Never bundle it into a list of unrelated improvements. It gets its own section and, where possible, its own release.
 - A changelog entry is not sufficient notice on its own. Anything with an integration cost also needs an in-product notice or a direct message to affected users, because most people do not read changelogs.
 - State the date, not "soon".

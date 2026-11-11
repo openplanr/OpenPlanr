@@ -12,7 +12,11 @@ import {
   planWritableScopes,
   sameGitState,
   validateWorktreeCustody,
-} from '../../skills/planr-delegate/scripts/custody.mjs';
+} from '../../packages/pipeline/lib/delegate/custody.mjs';
+import {
+  createRunRecord,
+  updateRunRecord,
+} from '../../packages/pipeline/lib/delegate/run-record.mjs';
 
 function git(root, ...args) {
   return execFileSync('git', args, { cwd: root, encoding: 'utf8' }).trim();
@@ -157,6 +161,174 @@ test('unrelated source checkout HEAD and index advances do not block a run', asy
     git(root, 'add', 'unrelated.txt');
     assert.equal((await validateWorktreeCustody(record)).valid, true);
     git(root, 'commit', '-qm', 'source unrelated advance');
+    assert.equal((await validateWorktreeCustody(record)).valid, true);
+  }));
+
+test('a run branch commits selected files as its base and accepts delegate commits on top', async () =>
+  fixture(async ({ root, worktreeParent }) => {
+    await writeFile(join(root, 'changed.txt'), 'selected dirty');
+    await writeFile(join(root, 'ignored.txt'), 'force-added');
+    git(root, 'add', '--force', 'ignored.txt');
+    git(root, 'commit', '-qm', 'track an ignored file');
+    await writeFile(join(root, 'ignored.txt'), 'selected ignored edit');
+    const record = await createWorktreeCustody({
+      repositoryRoot: root,
+      capsule: capsule(['changed.txt', 'ignored.txt']),
+      selectedPaths: ['changed.txt', 'ignored.txt'],
+      worktreeParent,
+      branch: true,
+    });
+    assert.equal(record.branch, `planr-delegate/${record.runId}`);
+    assert.equal(git(record.worktreePath, 'rev-parse', 'HEAD'), record.base);
+    assert.equal(git(record.worktreePath, 'show', `${record.base}:changed.txt`), 'selected dirty');
+    assert.equal(
+      git(record.worktreePath, 'show', `${record.base}:ignored.txt`),
+      'selected ignored edit',
+    );
+    assert.equal(git(record.worktreePath, 'status', '--porcelain'), '');
+    assert.match(git(root, 'worktree', 'list', '--porcelain'), /locked planr-delegate /u);
+    await writeFile(join(record.worktreePath, 'changed.txt'), 'delegate');
+    git(record.worktreePath, 'add', 'changed.txt');
+    git(record.worktreePath, 'commit', '-qm', 'delegate commit');
+    git(root, 'commit', '--allow-empty', '-qm', 'owner keeps working');
+    assert.deepEqual((await validateWorktreeCustody(record)).violations, []);
+    git(record.worktreePath, 'tag', 'delegate-tag');
+    const tagged = await validateWorktreeCustody(record);
+    assert.deepEqual(tagged.violations, []);
+    assert.deepEqual(tagged.warnings, [
+      {
+        code: 'W_CUSTODY_REFS',
+        refs: [git(root, 'symbolic-ref', 'HEAD'), 'refs/tags/delegate-tag'],
+      },
+    ]);
+    git(root, 'tag', '-d', 'delegate-tag');
+    git(record.worktreePath, 'reset', '-q', '--hard', record.initialHead);
+    assert.deepEqual(
+      (await validateWorktreeCustody(record)).violations.map(({ code }) => code),
+      ['E_CUSTODY_BASE'],
+    );
+    git(record.worktreePath, 'checkout', '-q', '-b', 'elsewhere');
+    assert.ok(
+      (await validateWorktreeCustody(record)).violations.some(
+        ({ code }) => code === 'E_CUSTODY_BRANCH',
+      ),
+    );
+    git(record.worktreePath, 'checkout', '-q', record.branch);
+    git(root, 'branch', '-D', 'elsewhere');
+    git(record.worktreePath, 'reset', '-q', '--hard', record.base);
+    const removed = await cleanupWorktreeCustody(record, { disposition: 'abandoned' });
+    assert.equal(removed.removed, record.worktreePath);
+    assert.equal(git(root, 'branch', '--list', record.branch), '');
+    assert.doesNotMatch(git(root, 'worktree', 'list', '--porcelain'), /planr-delegate/u);
+  }));
+
+async function refRun({ base, root, worktreeParent }) {
+  const runDirectory = join(base, 'records');
+  for (const runId of ['pending-run', 'finished-run']) {
+    await createRunRecord(
+      { runId, integration: { status: 'applying' } },
+      { directory: runDirectory },
+    );
+    git(root, 'update-ref', `refs/planr-delegate/${runId}/restore`, 'HEAD');
+  }
+  const parentBranch = git(root, 'symbolic-ref', 'HEAD');
+  const record = await createWorktreeCustody({
+    repositoryRoot: root,
+    capsule: capsule(['changed.txt']),
+    selectedPaths: ['changed.txt'],
+    worktreeParent,
+    branch: true,
+    runDirectory,
+  });
+  const warned = async (ref) => {
+    const result = await validateWorktreeCustody(record);
+    assert.deepEqual(result.violations, [], ref);
+    assert.ok(result.warnings[0]?.refs.includes(ref), ref);
+  };
+  return { record, parentBranch, runDirectory, warned };
+}
+
+test('owner ref activity during a run warns; delegate moves of protected refs block', async () =>
+  fixture(async ({ base, root, worktreeParent }) => {
+    const remote = join(base, 'remote');
+    git(base, 'clone', '-q', root, remote);
+    git(root, 'remote', 'add', 'origin', remote);
+    const { record, parentBranch, warned } = await refRun({ base, root, worktreeParent });
+    git(root, 'commit', '--allow-empty', '-qm', 'owner commit');
+    await warned(parentBranch);
+    git(root, 'switch', '-q', '-c', 'feature');
+    git(root, 'commit', '--allow-empty', '-qm', 'owner feature commit');
+    await warned('refs/heads/feature');
+    git(root, 'switch', '-q', '-');
+    git(root, 'branch', 'scratch');
+    await warned('refs/heads/scratch');
+    await writeFile(join(root, 'unrelated.txt'), 'owner stash\n');
+    git(root, 'stash', 'push', '-q');
+    await warned('refs/stash');
+    const sibling = join(base, 'sibling');
+    git(root, 'worktree', 'add', '-q', '-b', 'claude/sibling', sibling);
+    git(root, 'worktree', 'remove', sibling);
+    await warned('refs/heads/claude/sibling');
+    git(root, 'update-ref', 'refs/prefetch/remotes/origin/main', 'HEAD');
+    await warned('refs/prefetch/remotes/origin/main');
+    git(root, 'bisect', 'start');
+    git(root, 'bisect', 'bad', 'HEAD');
+    await warned('refs/bisect/bad');
+    git(root, 'bisect', 'reset');
+    git(remote, 'config', 'user.name', 'Fixture');
+    git(remote, 'config', 'user.email', 'fixture@example.test');
+    git(remote, 'commit', '--allow-empty', '-qm', 'upstream release');
+    git(remote, 'tag', 'v1');
+    git(root, 'fetch', '-q', 'origin');
+    await warned('refs/tags/v1');
+
+    const owned = git(root, 'rev-parse', parentBranch);
+    const parentMoved = async (target) => {
+      git(record.worktreePath, 'update-ref', parentBranch, target);
+      assert.deepEqual(
+        (await validateWorktreeCustody(record)).violations.map(({ code, ref }) => [code, ref]),
+        [['E_CUSTODY_PARENT_BRANCH', parentBranch]],
+      );
+    };
+    await parentMoved(record.base);
+    git(record.worktreePath, 'commit', '--allow-empty', '-qm', 'delegate commit');
+    await parentMoved('HEAD');
+    git(root, 'update-ref', parentBranch, owned);
+    git(record.worktreePath, 'update-ref', '-d', 'refs/planr-delegate/pending-run/restore');
+    assert.deepEqual(
+      (await validateWorktreeCustody(record)).violations.map(({ code, ref }) => [code, ref]),
+      [['E_CUSTODY_RESTORE_REF', 'refs/planr-delegate/pending-run/restore']],
+    );
+  }));
+
+test('an owner amend of the parent branch during a run only warns', async () =>
+  fixture(async (paths) => {
+    const { record, parentBranch, warned } = await refRun(paths);
+    git(paths.root, 'commit', '--amend', '--allow-empty', '-qm', 'owner amend');
+    await warned(parentBranch);
+    assert.equal((await validateWorktreeCustody(record)).valid, true);
+  }));
+
+test('deleting the parent branch during a run blocks', async () =>
+  fixture(async (paths) => {
+    const { record, parentBranch } = await refRun(paths);
+    git(record.worktreePath, 'update-ref', '-d', parentBranch);
+    assert.deepEqual(
+      (await validateWorktreeCustody(record)).violations.map(({ code, ref }) => [code, ref]),
+      [['E_CUSTODY_PARENT_BRANCH', parentBranch]],
+    );
+  }));
+
+test("another run's restore ref removed after that run resolves only warns", async () =>
+  fixture(async (paths) => {
+    const { record, runDirectory, warned } = await refRun(paths);
+    await updateRunRecord(
+      'finished-run',
+      { integration: { status: 'rolled-back' } },
+      { directory: runDirectory },
+    );
+    git(paths.root, 'update-ref', '-d', 'refs/planr-delegate/finished-run/restore');
+    await warned('refs/planr-delegate/finished-run/restore');
     assert.equal((await validateWorktreeCustody(record)).valid, true);
   }));
 
@@ -361,7 +533,8 @@ test('ignore inspection failures retain the Git cause and cannot masquerade as a
       '#!/bin/sh\nif [ "$1" = check-ignore ]; then exit 128; fi\nexec /usr/bin/git "$@"\n',
       { mode: 0o700 },
     );
-    const module = new URL('../../skills/planr-delegate/scripts/custody.mjs', import.meta.url).href;
+    const module = new URL('../../packages/pipeline/lib/delegate/custody.mjs', import.meta.url)
+      .href;
     const input = { repositoryRoot: root, worktreeParent, capsule: capsule(['untracked.txt']) };
     const script =
       'import {createWorktreeCustody} from ' +

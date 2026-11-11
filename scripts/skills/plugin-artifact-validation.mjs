@@ -7,7 +7,7 @@ import {
   readdirSync,
   readSync,
 } from 'node:fs';
-import { extname, join, resolve } from 'node:path';
+import { basename, extname, join, resolve } from 'node:path';
 import { TextDecoder } from 'node:util';
 
 export const PLUGIN_CHECKLIST_URL = 'https://claude.com/docs/plugins/pre-submission-checklist';
@@ -526,20 +526,243 @@ export function inspectDirectoryEntries(entries) {
   };
 }
 
+function invalidArtifact(report) {
+  const error = new Error(
+    `Plugin artifact validation failed:\n${report.findings
+      .map(
+        ({ code, path, size, reason }) =>
+          `- ${code}: ${path ?? '(inventory)'}${size == null ? '' : ` (${size} bytes)`}: ${reason}`,
+      )
+      .join('\n')}`,
+  );
+  error.code = 'E_PLUGIN_ARTIFACT_INVALID';
+  error.report = report;
+  return error;
+}
+
 export function assertDirectoryEntries(entries) {
   const report = inspectDirectoryEntries(entries);
-  if (!report.passed) {
-    const error = new Error(
-      `Plugin artifact validation failed:\n${report.findings
-        .map(
-          ({ code, path, size, reason }) =>
-            `- ${code}: ${path ?? '(inventory)'}${size === null ? '' : ` (${size} bytes)`}: ${reason}`,
-        )
-        .join('\n')}`,
-    );
-    error.code = 'E_PLUGIN_ARTIFACT_INVALID';
-    error.report = report;
-    throw error;
-  }
+  if (!report.passed) throw invalidArtifact(report);
   return report;
+}
+
+/** Generated host bundles, relative to the workspace root. */
+export const HOST_BUNDLE_ROOTS = Object.freeze({
+  claude: 'dist/plugins/claude/openplanr',
+  codex: 'dist/plugins/openai/openplanr',
+  cursor: 'dist/plugins/cursor/openplanr',
+});
+
+/** `plugin.json` keys the Claude directory accepts without changing the plugin's reach. */
+export const CLAUDE_MANIFEST_KEYS = Object.freeze([
+  'name',
+  'version',
+  'description',
+  'author',
+  'homepage',
+  'repository',
+  'license',
+  'displayName',
+  'keywords',
+  'privacyPolicyUrl',
+  'termsOfServiceUrl',
+  'supportUrl',
+  'documentationUrl',
+]);
+
+const instructionText = new Set(['.md', '.txt', '.json', '.yaml', '.yml']);
+const allowedTypes = new Set([...instructionText, ...imageExtensions.keys()]);
+// Cursor rules are Markdown under Cursor's own extension.
+const hostTypes = { claude: [], codex: [], cursor: ['.mdc'] };
+const packageManagerFile =
+  /^(?:package\.json|package-lock\.json|npm-shrinkwrap\.json|yarn\.lock|pnpm-lock\.yaml|pnpm-workspace\.yaml|bun\.lockb?|\.npmrc|\.yarnrc.*|requirements.*\.txt|pyproject\.toml|poetry\.lock|uv\.lock|Pipfile.*|Cargo\..*|go\.(?:mod|sum)|Gemfile.*|composer\.(?:json|lock))$/iu;
+const launcher =
+  /(?<![\w./-])(?:npx|bunx|uvx|pnpm[ \t]+dlx)((?:[ \t]+-{1,2}[\w-]+(?:=\S+)?)*)[ \t]+([^\s`'"()<>|;&,]+)/gu;
+const exactPin =
+  /^(?:@[\w.-]+\/)?[\w.-]+(?:@|==)\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$/u;
+const packageTarget = /^(?:@[a-z0-9][\w.-]*\/)?[a-z0-9][\w.-]*(?:(?:@|==)\S*)?$/u;
+// Prose such as "never use npx and ..." names no package after the launcher.
+const proseWords = new Set(
+  'a an and are as at be but by can cannot could do does for from has have if in is it its may might must not of on only or should so that the then this to was when which will with without would'.split(
+    ' ',
+  ),
+);
+// Version-like specs only: `planr@openplanr` names a plugin in a marketplace, not a version.
+const floatingOpenplanr =
+  /\bopenplanr@(?=[\d^~<>=*]|(?:latest|next|beta|alpha|canary|x)\b)(?!\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?(?![\w-]|\.\d))/u;
+const bareOpenplanrInstall =
+  /\b(?:npm|pnpm|yarn|bun)[ \t]+(?:global[ \t]+)?(?:install|i|add)(?:[ \t]+-{1,2}[\w-]+)*[ \t]+openplanr(?![@\w/-]|\.\w)/u;
+const shareHost = /share\.openplanr\.dev|OPENPLANR_SHARE_BASE/u;
+const figmaHost = /\b(?:[a-z0-9-]+\.)*figma\.com\b|FIGMA_TOKEN|X-Figma-Token|\bfigd_/iu;
+// The keyword starts the name or follows `_`, and the name may continue after `_`.
+const credentialName =
+  '(?:[A-Za-z0-9]*_)*(?:TOKENS?|SECRETS?|PASSWORDS?|PASSWD|API_KEYS?|AUTHORIZATION|AUTH)(?:_[A-Za-z0-9_]*)?\\b';
+const credentialEnv = new RegExp(
+  [
+    `\\$\\{?${credentialName}`,
+    `\\$env:${credentialName}`,
+    `%${credentialName}%`,
+    `process\\.env\\.${credentialName}`,
+    `\\bprintenv[ \\t]+${credentialName}`,
+    `\\benv[ \\t]*\\|[ \\t]*grep(?:[ \\t]+-[A-Za-z]+)*[ \\t]+['"]?${credentialName}`,
+  ].join('|'),
+  'u',
+);
+const privilegedDirectories = new Set(['hooks', 'monitors', 'bin', 'commands']);
+const privilegedFiles = new Set(['hooks.json', '.mcp.json', '.lsp.json', 'settings.json']);
+
+function frontmatter(text) {
+  return /^\ufeff?---\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)/u.exec(text)?.[1] ?? null;
+}
+
+function unpinnedLaunchers(text) {
+  const found = [];
+  for (const [command, flags, target] of text.matchAll(launcher)) {
+    const packageFlag = /--package=(\S+)/u.exec(flags)?.[1];
+    const spec = (packageFlag ?? target).replace(/[.:,;!?]+$/u, '');
+    const name = /^(?:@[^/@]+\/)?[^@=]+/u.exec(spec)?.[0];
+    if (!packageTarget.test(spec) || proseWords.has(name)) continue;
+    if (!exactPin.test(spec)) found.push(command.trim());
+  }
+  return found;
+}
+
+/**
+ * Instructions-only policy for a generated host bundle: allowed file types, no `#!`, package
+ * manager files, executable bits or unpinned launchers, and for Claude the `contained` label.
+ */
+export function inspectHostBundle(entries, { host } = {}) {
+  if (!Array.isArray(entries)) throw new TypeError('Directory entries must be an array.');
+  if (!Object.hasOwn(hostTypes, host))
+    throw new Error(
+      `Unknown host bundle ${JSON.stringify(host)}; expected claude, codex or cursor.`,
+    );
+  const findings = [];
+  const fail = (code, path, reason) => findings.push({ code, path, reason });
+  for (const entry of entries) {
+    const path = entry.path;
+    const name = basename(path);
+    const extension = extname(path).toLowerCase();
+    if (name !== 'LICENSE' && !allowedTypes.has(extension) && !hostTypes[host].includes(extension))
+      fail(
+        'type-not-allowed',
+        path,
+        'Host bundles carry only Markdown, text, JSON, YAML, LICENSE and PNG, JPEG, GIF or WebP images.',
+      );
+    if (packageManagerFile.test(name))
+      fail('package-manager-file', path, 'Host bundles carry no package-manager configuration.');
+    if ((entry.mode ?? 0) & 0o111)
+      fail('executable-bit', path, 'Host bundle files must not be executable.');
+    if (host === 'claude') {
+      const [first] = path.split('/');
+      if (privilegedDirectories.has(first) || privilegedFiles.has(path))
+        fail(
+          'privileged-component',
+          path,
+          'Hooks, monitors, MCP or LSP servers, settings, executables and commands remove the "Only adds instructions" label.',
+        );
+    }
+    if (!(entry.bytes instanceof Uint8Array)) continue;
+    const bytes = Buffer.from(entry.bytes);
+    const start = bytes[0] === 0xef && bytes[1] === 0xbb && bytes[2] === 0xbf ? 3 : 0;
+    if (bytes[start] === 0x23 && bytes[start + 1] === 0x21)
+      fail('shebang', path, 'Host bundle files must not start with #!.');
+    if (!instructionText.has(extension) && !hostTypes[host].includes(extension)) continue;
+    let text;
+    try {
+      text = utf8.decode(bytes);
+    } catch {
+      // inspectDirectoryEntries reports invalid UTF-8.
+      continue;
+    }
+    if (
+      unpinnedLaunchers(text).length ||
+      floatingOpenplanr.test(text) ||
+      bareOpenplanrInstall.test(text)
+    )
+      fail(
+        'unpinned-launcher',
+        path,
+        'npx, bunx, pnpm dlx, uvx and openplanr installs must name an exact version, never @latest, a range or none.',
+      );
+    if (extension === '.json' && shareHost.test(text))
+      fail(
+        'share-host',
+        path,
+        'Host bundles carry no share service address; the CLI owns sharing.',
+      );
+    if (extension !== '.txt' && figmaHost.test(text))
+      fail(
+        'figma-host',
+        path,
+        'Host bundles name no Figma host or token; the CLI owns Figma access.',
+      );
+    if (credentialEnv.test(text))
+      fail(
+        'credential-env',
+        path,
+        'Skill text must not tell an agent to read or forward a credential environment variable.',
+      );
+    if (/^allowed-tools\s*:/mu.test(frontmatter(text) ?? ''))
+      fail('pre-approved-tools', path, 'allowed-tools frontmatter makes the plugin privileged.');
+    if (/^hooks\s*:/mu.test(frontmatter(text) ?? ''))
+      fail('privileged-frontmatter', path, 'hooks frontmatter makes the plugin privileged.');
+    if (host === 'claude' && path === '.claude-plugin/plugin.json') {
+      let manifest;
+      try {
+        manifest = JSON.parse(text);
+      } catch {
+        // Callers that parse the manifest report malformed JSON with its own error.
+        continue;
+      }
+      const extra = Object.keys(manifest ?? {}).filter(
+        (key) => !CLAUDE_MANIFEST_KEYS.includes(key),
+      );
+      if (extra.length)
+        fail(
+          'manifest-key',
+          path,
+          `plugin.json declares keys outside the listing: ${extra.join(', ')}.`,
+        );
+    }
+  }
+  return { passed: findings.length === 0, findings };
+}
+
+/** Release check for one host bundle: checklist findings plus the instructions-only policy. */
+export function assertHostBundle(entries, { host } = {}) {
+  const directory = inspectDirectoryEntries(entries);
+  const policy = inspectHostBundle(entries, { host }).findings;
+  const report = {
+    ...directory,
+    passed: directory.passed && policy.length === 0,
+    findings: [...directory.findings, ...policy],
+  };
+  if (!report.passed) throw invalidArtifact(report);
+  return report;
+}
+
+/** Plugin entry keys the marketplace may declare without changing the plugin's reach. */
+export const MARKETPLACE_ENTRY_KEYS = Object.freeze([
+  'name',
+  'source',
+  'version',
+  'description',
+  'strict',
+]);
+
+/** Marketplace manifest policy: plugin entries declare no components and defer to `plugin.json`. */
+export function inspectMarketplaceManifest(manifest) {
+  const path = '.claude-plugin/marketplace.json';
+  const findings = [];
+  for (const plugin of Array.isArray(manifest?.plugins) ? manifest.plugins : [null]) {
+    const extra = Object.keys(plugin ?? {}).filter((key) => !MARKETPLACE_ENTRY_KEYS.includes(key));
+    if (!plugin || extra.length || plugin.strict !== true)
+      findings.push({
+        code: 'marketplace-entry-key',
+        path,
+        reason: `Each plugin entry declares only ${MARKETPLACE_ENTRY_KEYS.join(', ')} with strict: true${extra.length ? `; found ${extra.join(', ')}` : ''}.`,
+      });
+  }
+  return { passed: findings.length === 0, findings };
 }

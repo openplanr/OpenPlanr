@@ -219,7 +219,7 @@ test('CI and Browser report on every pull request and merge queue run', () => {
   assert.equal(loadWorkflow('browser.yml').jobs.browser.name, 'Browser');
 });
 
-test('the Browser gate passes skipped lanes and fails anything else', () => {
+test('the Browser gate passes only the lanes the selector skipped and fails anything else', () => {
   const gate = loadWorkflow('browser.yml').jobs.browser;
   const lanes = Object.keys(loadWorkflow('browser.yml').jobs).filter(
     (id) => id !== 'browser' && id !== 'changes',
@@ -231,12 +231,24 @@ test('the Browser gate passes skipped lanes and fails anything else', () => {
       encoding: 'utf8',
     }).status;
   const result = (value) => ({ result: value, outputs: {} });
+  const selector = (selected, value = 'success') => ({
+    result: value,
+    outputs: Object.fromEntries(lanes.map((id) => [id, String(selected.includes(id))])),
+  });
   const skipped = Object.fromEntries(lanes.map((id) => [id, result('skipped')]));
-  assert.equal(verdict({ changes: result('success'), ...skipped }), 0, 'a queue run passes');
-  assert.equal(verdict({ changes: result('success'), ...skipped, canvas: result('success') }), 0);
+  const passed = Object.fromEntries(lanes.map((id) => [id, result('success')]));
+  assert.equal(verdict({ changes: selector(lanes), ...passed }), 0, 'a queue run passes');
+  assert.equal(verdict({ changes: selector([]), ...skipped }), 0);
+  assert.equal(
+    verdict({ changes: selector(['canvas']), ...skipped, canvas: result('success') }),
+    0,
+  );
+  assert.equal(verdict({ changes: selector(['canvas']), ...skipped }), 1, 'a selected lane ran');
   for (const value of ['failure', 'cancelled'])
-    assert.equal(verdict({ changes: result('success'), ...skipped, canvas: result(value) }), 1);
+    assert.equal(verdict({ changes: selector(['canvas']), ...skipped, canvas: result(value) }), 1);
+  assert.equal(verdict({ changes: selector([], 'failure'), ...skipped }), 1);
   assert.equal(verdict({ changes: result('failure'), ...skipped }), 1);
+  assert.equal(verdict({ changes: result('success'), ...passed }), 1, 'no selector outputs');
   assert.equal(verdict({}), 1);
 });
 

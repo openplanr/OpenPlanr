@@ -12,13 +12,18 @@ import {
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { sha256Hex } from '../src/canonical-json.mjs';
-import { DESIGN_DOCUMENT_SCHEMA, DESIGN_DOCUMENT_V1_SCHEMA } from '../src/design-contracts.mjs';
+import {
+  DESIGN_DOCUMENT_SCHEMA,
+  DESIGN_DOCUMENT_V1_SCHEMA,
+  DESIGN_DOCUMENT_V120_SCHEMA,
+} from '../src/design-contracts.mjs';
 import { DESIGN_HANDOFF_SCHEMAS } from '../src/design-handoff-contracts.mjs';
 import { DIAGRAM_REVIEW_SCHEMAS } from '../src/diagram-review-contracts.mjs';
 import { ENTERPRISE_SCHEMAS } from '../src/enterprise-contracts.mjs';
 import {
   DESIGN_REVIEW_BUNDLE_CURRENT_SCHEMA,
   DESIGN_REVIEW_BUNDLE_V12_SCHEMA,
+  DESIGN_REVIEW_BUNDLE_V120_SCHEMA,
   DESIGN_REVIEW_METADATA_PAYLOAD_V11_SCHEMA,
   REVIEW_EXPERIENCE_SCHEMAS,
 } from '../src/review-experience-contracts.mjs';
@@ -44,7 +49,13 @@ import {
 } from './diagram-authoring-definitions.mjs';
 import { buildDiagramRegistries, buildDiagramSchemas } from './diagram-definitions.mjs';
 import { buildPlanningSchemas } from './planning-definitions.mjs';
-import { buildRegistries, buildSchemas } from './protocol-definitions.mjs';
+import {
+  buildBacklogItemSchemaV124,
+  buildCatalogSchemasV125,
+  buildImplementationResultSchemaV123,
+  buildRegistries,
+  buildSchemas,
+} from './protocol-definitions.mjs';
 import { buildRuntimeLockSchemasV118 } from './runtime-lock-definitions-v118.mjs';
 import { buildSkillPackageSchemasV18 } from './skill-package-definitions-v18.mjs';
 import { buildSkillSourceSchemas } from './skill-source-definitions.mjs';
@@ -91,7 +102,8 @@ for (const [name, value] of buildSkillPackageSchemasV18())
 for (const [name, value] of buildRuntimeLockSchemasV118())
   expected.set(`schemas/v1.18.0/${name}`, json(value));
 expected.set('schemas/v1.9.0/design-document.schema.json', json(DESIGN_DOCUMENT_V1_SCHEMA));
-expected.set('schemas/v1.20.0/design-document.schema.json', json(DESIGN_DOCUMENT_SCHEMA));
+expected.set('schemas/v1.20.0/design-document.schema.json', json(DESIGN_DOCUMENT_V120_SCHEMA));
+expected.set('schemas/v1.22.0/design-document.schema.json', json(DESIGN_DOCUMENT_SCHEMA));
 for (const [name, value] of Object.entries(DESIGN_WORKSPACE_SCHEMAS))
   expected.set(`schemas/v1.9.0/${name}.schema.json`, json(value));
 
@@ -131,8 +143,20 @@ expected.set(
 
 expected.set(
   'schemas/v1.20.0/design-review-bundle.schema.json',
+  json(DESIGN_REVIEW_BUNDLE_V120_SCHEMA),
+);
+expected.set(
+  'schemas/v1.22.0/design-review-bundle.schema.json',
   json(DESIGN_REVIEW_BUNDLE_CURRENT_SCHEMA),
 );
+expected.set(
+  'schemas/v1.23.0/implementation-result.schema.json',
+  json(buildImplementationResultSchemaV123()),
+);
+
+expected.set('schemas/v1.24.0/backlog-item.schema.json', json(buildBacklogItemSchemaV124()));
+for (const [name, schema] of buildCatalogSchemasV125())
+  expected.set(`schemas/v1.25.0/${name}`, json(schema));
 
 const envelopeMetadataPath = 'src/generated/artifact-envelope-metadata.mjs';
 const envelopeMetadataSource = [
@@ -272,6 +296,7 @@ const projectionFiles = new Map([
   ['design-publication-contracts.d.mts', read('src/design-publication-contracts.d.mts')],
   ['design-handoff-contracts.mjs', read('src/design-handoff-contracts.mjs')],
   ['design-handoff-contracts.d.mts', read('src/design-handoff-contracts.d.mts')],
+  ['design-review-bundle-contracts.mjs', read('src/design-review-bundle-contracts.mjs')],
   ['workspace-contracts.mjs', read('src/workspace-contracts.mjs')],
   ['enterprise-contracts.mjs', read('src/enterprise-contracts.mjs')],
   ['enterprise-contracts.d.mts', read('src/enterprise-contracts.d.mts')],
@@ -340,7 +365,8 @@ function walk(root, prefix = '') {
 
 const originalSchemaFiles = walk(join(packageRoot, 'schemas')).filter(
   ({ key }) =>
-    !/^v1\.(?:[5-9]|10|11|12|13|14|15|16|17|18|19|20|21)\.0\//u.test(key) && key.endsWith('.json'),
+    !/^v1\.(?:[5-9]|10|11|12|13|14|15|16|17|18|19|20|21|22|23|24|25)\.0\//u.test(key) &&
+    key.endsWith('.json'),
 );
 const originalRegistryFiles = walk(join(packageRoot, 'registry')).filter(
   ({ key }) => !key.startsWith('v1.17.0/') && key.endsWith('.json'),

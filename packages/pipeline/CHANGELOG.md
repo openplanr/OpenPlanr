@@ -1,5 +1,134 @@
 # Changelog
 
+## 0.64.3
+
+### Patch Changes
+
+- 253bbc9: `openplanr delegate probe` and `profile-preview` report each engine's sign-in state as `identity`, read from Claude Code's, Codex's and Cursor's own status commands without account details. The delegate skill now takes profiles, sign-in and local routing from the CLI and runs a saved profile through `openplanr delegate`. Company review, doctor and the plugin README describe sign-in as staying in each vendor's CLI and in `openplanr`.
+
+## 0.64.2
+
+### Patch Changes
+
+- c66dc80: Database introspection and GitHub context use the host's connectors instead of local client sign-ins. Tracker sync runs only through the host's connection.
+
+## 0.64.1
+
+### Patch Changes
+
+- 02f9abd: Delegate offers saved delegate profiles, including local-model profiles, when choosing the engine. Company review and browser QA guidance no longer mention environment-token overrides or inferring credentials.
+- c99e3f8: Delegate no longer inspects credential environment variables; it reads the engine's sign-in status instead.
+
+## 0.64.0
+
+### Minor Changes
+
+- 2314041: The Delegate skill now hands work to Claude Code, Codex or Cursor with written steps, so the OpenPlanr plugins for Claude Code, Codex and Cursor no longer ship its scripts and Delegate needs neither Node nor the CLI.
+  
+  - It creates a git worktree for the task, writes a brief with the scope and your repository's real checks, and runs `codex exec`, `claude -p` or Cursor's `agent` there with edit permission.
+  - It reads the diff itself, runs the checks, and applies only in-scope changes to your checkout. The delegated agent never commits.
+  - It stops and tells you when the CLI is missing or signed out, when an API key is set in your environment that you did not choose, when the agent edits outside the scope, or when a check fails.
+  - A profile is a native config directory and a model, such as `CODEX_HOME` or `CLAUDE_CONFIG_DIR`. Delegate checks who is signed in with the CLI's own status command and never reads credentials.
+  
+  The new `openplanr delegate` command keeps the recorded flow (context capsule, worktree custody, recorded checks and exact-session resume). Delegate uses it when `openplanr` 3.7.0 or later is installed and you want that record. With `--json`, each command prints `ok`, `contract`, its result and a `next` step, or a `code`, `problem` and `recovery` on failure. Runs you started with an earlier version finish on the code that prepared them.
+  
+  In that command, the coding agent no longer inherits your whole environment. It gets the basics (paths, locale, terminal, proxy and certificates), its config directory and the routing variables delegation reads, and nothing else (no key, token or custom header) unless a saved profile lists it in `allowedEnv`. A check gets the variables named in its `env` list, such as `"env": ["DATABASE_URL"]`. Toolchain variables such as `JAVA_HOME`, `VIRTUAL_ENV`, `CARGO_HOME`, `NVM_DIR` and `npm_config_*` are no longer passed to checks or the agent either; when a check fails for one, the result says to add it to that check's `env` or the profile's `allowedEnv`.
+
+### Patch Changes
+
+- e5cb862: `openplanr github` and `openplanr doctor` now start their child processes with a limited environment instead of the full one. `openplanr delegate prune` reports nothing to prune when no run has been recorded yet, and a missing run store gives a clear error elsewhere. Protocol v1 checks accept `executable`, and the environment hint after a failed apply appears only when a check failed for a missing toolchain.
+- 2e652da: `openplanr-pipeline reopen-ship` now asks the owner to confirm. Run it in a terminal and type `REOPEN SHIP <receipt hash>` when prompted. It refuses `--json` and non-interactive calls with `E_SHIP_OWNER_INTERACTIVE_REQUIRED` instead of reopening shipped work unconfirmed.
+  
+  Plan review errors no longer point to a command that does not exist.
+- d5c88b2: New `openplanr sync tracker` command. It shows which GitHub repository `gh` resolves, previews a batch of issue changes, and with `--apply` creates, updates, closes or reopens each issue through `gh`.
+  
+  - Every change is checked before any runs, and unknown fields are refused.
+  - `--json` returns each change as `planned`, `applied`, `failed` or `not-run`, plus a `next` step. A run that fails part way names the changes to run again.
+  - `gh` gets only the variables it needs: its own sign-in, `PATH`, home, locale and proxy settings. Other variables, such as unrelated tokens, never reach it.
+  
+  The sync skill now calls this command instead of a bundled script, so the OpenPlanr plugins for Claude Code, Codex and Cursor no longer ship a script for sync. If `openplanr` is missing, the skill tells you and runs the command once through `npx` at this exact version, or gives the install command (install only on Codex). Syncing through your coding agent's own tracker connection needs no CLI, as before.
+  
+  Install commands in the design and plan skills and the plugin README now name an exact `openplanr` version, and the Prisma stack reference runs `prisma` through your project's package manager.
+
+## 0.63.0
+
+### Minor Changes
+
+- e907c78: The design skills now run local design work through `openplanr design`. The OpenPlanr plugins for Claude Code, Codex and Cursor no longer ship a design runtime of their own.
+  
+  - Design, Design Loop and Design Review check `openplanr design capabilities --json` before they ask you anything. On Claude Code, Design builds on Claude's hosted design canvas when it's available, and that needs no CLI.
+  - Without a working CLI, the skills still write the design document, its sources and `design-spec.md`, marked unverified, then tell you what to run:
+    - `openplanr` not found: `npm install -g openplanr`
+    - an older `openplanr`: `npm install -g openplanr@latest`
+    - `openplanr` installed with `--omit=optional`: `npm install -g openplanr` without that flag
+  - Design Review of a hosted canvas design works from the canvas comments.
+  - Plan reads a local design handoff with `openplanr design handoff`.
+  - In Codex's default sandbox the design studio can't start. The skills tell you how to run it: in your own terminal, or with Codex's local network and `~/.planr` write access turned on.
+  
+  Removing a working feature normally waits for a major release. This one ships in a minor release as a deliberate exception: if you used the local design studio from the plugin without the CLI, install it with `npm install -g openplanr` and run the skill again.
+
+### Patch Changes
+
+- 83529dd: You can now work on a local design from the CLI with `openplanr design`:
+  
+  - `inspect`, `validate` and `render` check and render a design document.
+  - `open` starts the local design studio, and `studio status` and `studio stop` report or stop it from another terminal, including a studio a design skill started.
+  - `view-context`, `export`, `verify` and `handoff` report what the studio shows, export standalone HTML, record a browser check and read the review handoff.
+  - `fonts fetch` downloads open-license fonts into the design.
+  - `capabilities --json` reports which design command contract your install serves.
+  
+  These commands need the optional `planr-pipeline` package. Without it, `openplanr design capabilities` still succeeds and reports `E_DESIGN_RUNTIME_MISSING`, and the other commands stop with that code. Reinstall with `npm install -g openplanr`, without `--omit=optional`.
+  
+  `openplanr artifact open` on a design gives the same reinstall step when that package is missing.
+- 83529dd: An approved design review handoff now stays current when only the design renderer changes, for example after an upgrade. Plan and the studio's Handoff Center agree on this, so you can still assemble the implementation package without approving again. The handoff still goes out of date when the design's sources, `design-spec.md` or review feedback change. Browser verification of the new render is reported separately, as before.
+
+## 0.62.0
+
+### Minor Changes
+
+- 6a629c8: Render bar, line and scatter diagrams with labelled axes and data marks from their series values. Preserve chart content in SVG, HTML and PNG, with explicit diagnostics for unsupported axis mappings and editable exports.
+- 807f3e5: Render radar charts as closed series polygons and polar charts as value-scaled sectors with radial grids, category labels and legends. Reject negative values and report unsupported editable chart exports explicitly.
+
+### Patch Changes
+
+- 7cee602: The design skills now share through the `openplanr` CLI. Their bundled scripts no longer read a shared review's owner keys or contact the share service: `design.mjs share`, `publish`, `sync` and `manage`, the studio's Share dialog, feedback sync and handoff decisions on a shared design all run `openplanr artifact` for the network step. Local design work is unchanged and needs no CLI.
+  
+  - Without the CLI, sharing stops with `E_DESIGN_SHARE_CLI_REQUIRED` and asks you to run `npm install -g openplanr`. Feedback inspection still works and reports that sync was skipped, and the studio's Share dialog says the CLI is needed.
+  - If the skills and the CLI use different sharing formats, sharing refuses with `E_DESIGN_SHARE_RUNTIME_MISMATCH` and names which one to update. An older CLI is refused the same way.
+  - Existing shares keep working. The CLI reads the same owner records, sends to the same address, and `OPENPLANR_SHARE_BASE` still chooses the origin for a new share.
+  - The studio syncs a shared design every 15 seconds only while its page is visible, and no longer polls designs that are not shared.
+  - A recovery file exported without `--output` goes to a new file in `PLANR_HOME/design-recovery`, a private folder next to the owner keys, from the CLI and from the studio's Share dialog. The file holds the owner keys, so keep it private when you move it.
+  - If the CLI does not answer within a few seconds, the studio keeps working and reports that the CLI did not respond. Changing the category or decision on a hosted reviewer's comment is refused, and nothing is saved, until sharing can run, instead of being saved locally and never sent.
+  - On Windows the skills start the CLI's own script from the `openplanr.cmd` that npm installs.
+- 103c244: You can now manage a shared design from the CLI, the same way the local studio does:
+  
+  - `openplanr artifact status <design-document>` shows the review link and whether the current revision is published.
+  - `openplanr artifact manage <design-document> --action ...` rotates the reviewer access token, pauses or resumes comments, revokes or deletes the review, prints the reviewer token, and writes or restores a private recovery file. Rotate, revoke, delete and restore ask first; `--yes` confirms them.
+  - `openplanr artifact feedback <design-document>` syncs a shared design, then inspects, exports, imports, selects or resolves its feedback.
+  - `openplanr artifact handoff <design-document> --action ...` now inspects and updates a handoff as well as drafting it. On a shared design, category and disposition changes also reach the review.
+  
+  If the optional `planr-pipeline` package is missing, these commands say so with `E_DESIGN_SHARE_PIPELINE_MISSING` instead of failing with a generic error.
+  
+  `design.mjs <command> --help` and `-h` now print help wherever they appear. Before, `design.mjs share --help` ran the share command instead of printing help.
+- 8a7403c: The design skills now ship a smaller review stage and contract set. Their copy of the review stage leaves out link sharing, the hosted viewer and live rooms, and their scripts no longer bundle the sharing and hosted workspace contracts or the paste and workspace schemas. The studio, prototype, walkthrough and feedback rail work as before, and sharing still runs through the `openplanr` CLI. A portable HTML export from the skills no longer shows a Share button, which could only report that sharing was unavailable.
+  
+  `@openplanr/protocol` adds a `large-object-limits` entry point, so you can read the resource limits without loading the sharing contracts.
+- 6d86c9a: The npm package, README and plugin descriptions now say what OpenPlanr is: the open harness around your coding agent, with plans as files in your repo, checks before you merge, and a record of what shipped. The package keywords drop `sprint` and `user-story` and add `code-review` and `agent-harness`. Commands and behavior are unchanged.
+
+## 0.61.0
+
+### Minor Changes
+
+- 818ff59: Adds typed enum and boolean screen props and variant instance values to design documents (schema 1.1.0).
+
+### Patch Changes
+
+- 1354de0: Bounds runtime version probes and reports stalled launchers as unknown instead of missing. Explicit or saved runtime choices probe only the selected runtime.
+- ae8c1fe: Includes the updated canvas gesture handling.
+- bc70471: Updates the conformance example projects to patched vitest and vite.
+- 1354de0: Native role metadata references the generated Claude agents and their scoped identities, marks QA and specification activation as conditional, and keeps task type and agent in prepared Ship context.
+- 3b7b87d: The studio minimap no longer forces a layout each time it redraws during a pinch zoom.
+
 ## 0.60.0
 
 ### Minor Changes

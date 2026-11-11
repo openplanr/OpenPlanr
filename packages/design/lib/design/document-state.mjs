@@ -17,6 +17,14 @@ import { isProcessAlive } from '@openplanr/artifact/internal/server-util.mjs';
 
 export const hash = (value) => createHash('sha256').update(value).digest('hex');
 export const json = (value) => `${JSON.stringify(value, null, 2)}\n`;
+/** Identity of the authored document, review context and bundled sources. */
+export const designSourceRevision = (document, contextDigest, envelopeDigest) =>
+  hash(json({ document, contextDigest, digest: envelopeDigest }));
+/** Identity of a render's authored content; a renderer-only re-render keeps it. */
+export const designContentRevision = (source, spec) => hash(json({ source, spec }));
+/** Identity of a render: its authored content under one renderer. */
+export const designRenderRevision = (source, spec, rendererRevision) =>
+  hash(json({ source, spec, rendererRevision }));
 export function readJson(path, fallback = undefined) {
   try {
     return JSON.parse(readFileSync(path, 'utf8'));

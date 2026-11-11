@@ -37,7 +37,7 @@
     {
       "source": "packages/canvas/src/controller.mjs",
       "target": "lib/canvas/controller.mjs",
-      "sha256": "ae28da3ded0b80a48160e4a17fa6baf3c745d9dd1ea9b7c3a98a71fa06af0474",
+      "sha256": "629f71a18aca5b942090f502d1317f56120119a73f512c06867632fb175c7aa4",
       "mode": "644"
     },
     {
@@ -49,7 +49,7 @@
     {
       "source": "packages/canvas/src/culling.mjs",
       "target": "lib/canvas/culling.mjs",
-      "sha256": "83af62db74e0b97522c1bc9447eade3ddd78e5418be4e405a33f2f706729b246",
+      "sha256": "08757ad1d8e70db376195c697d2eeb5ef22aa99cb0f97a0beb1968f74af2bca9",
       "mode": "644"
     },
     {
@@ -61,7 +61,7 @@
     {
       "source": "packages/canvas/src/edges.mjs",
       "target": "lib/canvas/edges.mjs",
-      "sha256": "1436efe781271814bf5323f0b1b557c0bdc8a375093e5519663438522a6c1c96",
+      "sha256": "707ab630d58a775082bedd1e29d196ea9a30f22d01c8f55b26e996737b91cbc2",
       "mode": "644"
     },
     {
@@ -121,7 +121,7 @@
     {
       "source": "packages/canvas/src/input.mjs",
       "target": "lib/canvas/input.mjs",
-      "sha256": "9230ff0acbeb82835ca5badf578db0b3942168c90e3ca15c9e13dd04a30b2113",
+      "sha256": "04ef4a6744c1fb340a1b2d142d0347b805da8ca40f0e5408e028f47574d0756a",
       "mode": "644"
     },
     {
@@ -217,7 +217,7 @@
     {
       "source": "packages/canvas/src/types.d.mts",
       "target": "lib/canvas/types.d.mts",
-      "sha256": "a87b4047f8a42947ac10bdb8741cf793a4b71a6fd5a325d41243fdcd4f3324fe",
+      "sha256": "c6a18b57024db4357fd14c92ede441e175bc83ef0b0d4861cce639f5d7bdb157",
       "mode": "644"
     },
     {
@@ -325,7 +325,7 @@
     {
       "source": "packages/design/lib/design/context.mjs",
       "target": "lib/design/context.mjs",
-      "sha256": "4705fdb4468d766d0f29063d09ef2e26cf25ec67abda78bdfbcdb9466a829bb2",
+      "sha256": "6951e500f408a145d46074f2d393b1b1f3effcc6d2eecc4593c0406f42b95629",
       "mode": "644"
     },
     {
@@ -367,13 +367,13 @@
     {
       "source": "packages/design/lib/design/document-state.mjs",
       "target": "lib/design/document-state.mjs",
-      "sha256": "f506b142c58e41e14d948f95ab98fa0e55463772389a000ed106a10e4dd4d577",
+      "sha256": "8a9a95f6086399ad381df2885634adce6a720f2d9fa90a0027fbd61895b78c29",
       "mode": "644"
     },
     {
       "source": "packages/design/lib/design/document.mjs",
       "target": "lib/design/document.mjs",
-      "sha256": "d7887a4c84f4abf74f31fa1bd3ef5d1609f980a44074022a7d4c1c930082dbf0",
+      "sha256": "2ad6771187b8e3d73f9302ab1144a887f9de3d0563dbe7cefc67b0a47afcf870",
       "mode": "644"
     },
     {
@@ -395,6 +395,12 @@
       "mode": "644"
     },
     {
+      "source": "packages/design/lib/design/font-fetch.mjs",
+      "target": "lib/design/font-fetch.mjs",
+      "sha256": "5b2671918fdc6c17e0f312c3393109dc22b5daad84a87e126a33991590161690",
+      "mode": "644"
+    },
+    {
       "source": "packages/design/lib/design/frame-size.mjs",
       "target": "lib/design/frame-size.mjs",
       "sha256": "500eb139717050494d94a2a394c7cd0ae37b154df4934f95cfc4868bdc452873",
@@ -409,19 +415,19 @@
     {
       "source": "packages/design/lib/design/handoff-reader.mjs",
       "target": "lib/design/handoff-reader.mjs",
-      "sha256": "eca6836d64b3aedf2fe6136781c13441ce260bcf595ba98f4a45127955562b45",
+      "sha256": "5f06a265bdc8c8f8b00cdbbba72921378c064223b562cc4779d504691f86de5d",
       "mode": "644"
     },
     {
       "source": "packages/design/lib/design/handoff-readiness.d.mts",
       "target": "lib/design/handoff-readiness.d.mts",
-      "sha256": "61085a5867c9fba1366df3c436638d87255513a8e2423cae759babcdd7e0c2fc",
+      "sha256": "90bef93d2a29ab9b876d905eaadb3260415123b4130d8f820825013aa6190c00",
       "mode": "644"
     },
     {
       "source": "packages/design/lib/design/handoff-readiness.mjs",
       "target": "lib/design/handoff-readiness.mjs",
-      "sha256": "9cc4c6021ce4427c022fcb37e94f8ecdb7c703bb07066dbb1ac47e3f06bd94f6",
+      "sha256": "dab2947a868750898c33ab75f4300aaf92c52b3cd3bede5c1871dda3594a8d81",
       "mode": "644"
     },
     {
@@ -439,7 +445,7 @@
     {
       "source": "packages/design/lib/design/handoff.mjs",
       "target": "lib/design/handoff.mjs",
-      "sha256": "c4e384b22f493cc66140b0e6b8c9a9bc730f902c369afebe5fd9bddff2c91cf8",
+      "sha256": "7f5fe437a95b28ac2229e2d18d2e00745b3c7c2379619f3f63114252cf19e0f0",
       "mode": "644"
     },
     {
@@ -493,7 +499,7 @@
     {
       "source": "packages/design/lib/design/lint.mjs",
       "target": "lib/design/lint.mjs",
-      "sha256": "c086228fefd37eac44efdc22589c23ac058e9083792b7ef400c43ce34546a55f",
+      "sha256": "eb93fc503a8886fd8273812029dc1e0a204c984e686b23b26850a87eb43a233c",
       "mode": "644"
     },
     {
@@ -517,13 +523,19 @@
     {
       "source": "packages/design/lib/design/plan-handoff-utility.mjs",
       "target": "lib/design/plan-handoff-utility.mjs",
-      "sha256": "bf98190e678c5d8cc9ff3da262076c42dccab5e0ce116f71faf25d97e751d699",
+      "sha256": "cee623d1b34dc79fd1c20a21371124977e48b1f3d7e5ae19170c42a3b514e280",
       "mode": "644"
     },
     {
       "source": "packages/design/lib/design/recommend-format.mjs",
       "target": "lib/design/recommend-format.mjs",
       "sha256": "63acf64d0fee350039e2e5bd3300ff40c0e9647bfad398f5923fefc5985522f5",
+      "mode": "644"
+    },
+    {
+      "source": "packages/design/lib/design/recovery-location.mjs",
+      "target": "lib/design/recovery-location.mjs",
+      "sha256": "a8a76b5b99769c9e3c8bb2df9269a5eca70f659b86504bbd185cde20c3c85a35",
       "mode": "644"
     },
     {
@@ -535,7 +547,7 @@
     {
       "source": "packages/design/lib/design/review.mjs",
       "target": "lib/design/review.mjs",
-      "sha256": "374af7633958583c44da312f3e0541f54f37f85f74dfa2e60f72422a88e85d67",
+      "sha256": "b710282c72b906c3eafcefcf76ae1846a8e059e40159b3428d92b47bd1945114",
       "mode": "644"
     },
     {
@@ -551,15 +563,27 @@
       "mode": "644"
     },
     {
+      "source": "packages/design/lib/design/share-cli-bridge.mjs",
+      "target": "lib/design/share-cli-bridge.mjs",
+      "sha256": "4931569c9e2699c36a224c707d2283e6c446d55d6e826ca1302f221c0e9c7b52",
+      "mode": "644"
+    },
+    {
+      "source": "packages/design/lib/design/share-compat.mjs",
+      "target": "lib/design/share-compat.mjs",
+      "sha256": "37eef995bb45f4a760bae446c004a388d4e23c8e703986583f829175cf9b6232",
+      "mode": "644"
+    },
+    {
       "source": "packages/design/lib/design/share-status.mjs",
       "target": "lib/design/share-status.mjs",
-      "sha256": "f2763e1c6bc4133215b5a901153ae23eaae5a5df350fb8fc607032bd7825ddff",
+      "sha256": "bb46cfe7b719fc469c23b9bffb6f0e0146041348010be86daee29db9a1fb6edf",
       "mode": "644"
     },
     {
       "source": "packages/design/lib/design/share.mjs",
       "target": "lib/design/share.mjs",
-      "sha256": "0bc25921e52e3d020824450d4a4e4d79a8f25519121a18c887c87add566848b5",
+      "sha256": "36417ed4423f4a3c0f290ee471e9d8c8aa67a84b706ee611b66067bad9146d0d",
       "mode": "644"
     },
     {
@@ -589,7 +613,7 @@
     {
       "source": "packages/design/lib/design/ui/enhancements.mjs",
       "target": "lib/design/ui/enhancements.mjs",
-      "sha256": "9c00faddb345be1f948e85bbcbc38a9cb7f453bc6dfc844a229d0df503a875d7",
+      "sha256": "cbdc572dbce3563c66c70beee9b9c0b47c6bc2e365290f742074bb56f4fa4ac3",
       "mode": "644"
     },
     {
@@ -625,13 +649,13 @@
     {
       "source": "packages/design/lib/design/ui/studio.mjs",
       "target": "lib/design/ui/studio.mjs",
-      "sha256": "ef59ac730b8275b2941aa84f65a1d1132bd2b09b1bdcd30beb9a95a7214f1c4c",
+      "sha256": "9e092f1a6220fb25c5a7d011573c66c076ac0a72ce3fee9c8268c31086ebfb8e",
       "mode": "644"
     },
     {
       "source": "packages/design/lib/design/utility.mjs",
       "target": "lib/design/utility.mjs",
-      "sha256": "95197755d7f1d570ef2de55040bacc388e51724c0ac20ae00eec0db5d333b812",
+      "sha256": "e8743e7c92b0dd8e67c2c7b36a2abb701c1fdb0b73fa411f4a440efb6229d5b0",
       "mode": "644"
     },
     {
@@ -685,7 +709,7 @@
     {
       "source": "packages/design/templates/studio/share.js",
       "target": "templates/studio/share.js",
-      "sha256": "b388471dccec997c49ce9638ff9a312037d311d63cbe980dceeb9c3c02ca037b",
+      "sha256": "f76e2c70cb047927769b7d42a796cc222d078e7c6dda08806eef7455aeeeee09",
       "mode": "644"
     },
     {
@@ -697,7 +721,7 @@
     {
       "source": "packages/design/templates/studio/studio.js",
       "target": "templates/studio/studio.js",
-      "sha256": "07416d39dcbf2cf7e633f54bfe32bab8ed3e817e6e9c553192cbb7adb30821d3",
+      "sha256": "10dcbf9b4ee2a039f4b6502d741bb9064d668f7ff776f311330e83f2086eccec",
       "mode": "644"
     }
   ]

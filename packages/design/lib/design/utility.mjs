@@ -14,6 +14,7 @@ import {
   standaloneDesignHtml,
 } from './document.mjs';
 import { importDesignFeedback } from './feedback-import.mjs';
+import { fetchDesignFonts } from './font-fetch.mjs';
 import { matchesDesignFrame } from './frame-size.mjs';
 import { readDesignHandoff, updateDesignHandoff } from './handoff.mjs';
 import {
@@ -37,6 +38,11 @@ import { readDesignViewContext } from './view-context.mjs';
 
 export { auditDesignPage, auditRenderedScreen } from './browser-audit.mjs';
 export { readDesignViewContext } from './view-context.mjs';
+
+/** Version of the `openplanr design` commands and their JSON; skills check it before calling them. */
+export const DESIGN_UTILITY_CONTRACT = 1;
+/** Contracts this runtime still serves. Raise `min` only in a planned major release. */
+export const DESIGN_UTILITY_SUPPORTED = Object.freeze({ min: 1, max: DESIGN_UTILITY_CONTRACT });
 
 function isPng(bytes) {
   if (
@@ -127,6 +133,40 @@ export function verifyDesignDocument(file, report) {
   return saved;
 }
 
+const HELP_FLAGS = new Set(['--help', '-h']);
+
+const COMMAND_SUMMARIES = Object.freeze({
+  inspect: 'Report the design document and its current render.',
+  validate: 'Validate the design document without rendering.',
+  render: 'Render the design document into its review revision.',
+  open: 'Open the local review studio.',
+  studio: 'Report or stop a running local studio (--action status|stop).',
+  'view-context': 'Report what the studio is showing.',
+  export: 'Export the design as html, json, or markdown.',
+  feedback: 'Inspect, export, or import review feedback.',
+  verify: 'Record a browser verification report.',
+  share: 'Create a hosted review of the current revision.',
+  publish: 'Publish the current revision to the existing hosted review.',
+  sync: 'Retrieve hosted review feedback.',
+  manage: 'Manage a hosted review (--action rotate|pause|resume|revoke|delete|recovery|restore).',
+  handoff: 'Inspect or update the review handoff.',
+  fonts: 'Download open-license fonts (fonts fetch --family ... --dest ...).',
+});
+
+function commandHelp(command) {
+  if (!Object.hasOwn(COMMAND_SUMMARIES, command))
+    throw new Error(`Unknown command: ${command}. Run design.mjs --help for the command list.`);
+  return {
+    command,
+    usage:
+      command === 'fonts'
+        ? 'design.mjs fonts fetch --family "<Name>:<weights>" [--family ...] --dest <dir>'
+        : `design.mjs ${command} <design-document.json> [options]`,
+    summary: COMMAND_SUMMARIES[command],
+    note: 'Run design.mjs --help for every option. A help request never reads, renders, or sends anything.',
+  };
+}
+
 export async function designUtility(
   argv,
   {
@@ -136,10 +176,10 @@ export async function designUtility(
     fetchImpl = fetch,
   } = {},
 ) {
-  if (argv.length === 0 || argv[0] === '--help' || argv[0] === 'help') {
+  if (argv.length === 0 || ['--help', '-h', 'help'].includes(argv[0])) {
     const help = {
       usage:
-        'design.mjs inspect|validate|render|open|studio|view-context|export|feedback|verify|share|publish|sync|manage|handoff <design-document.json>',
+        'design.mjs inspect|validate|render|open|studio|view-context|export|feedback|verify|share|publish|sync|manage|handoff <design-document.json> | design.mjs fonts fetch --family "<Name>:<weights>" [--family ...] --dest <dir>',
       flags: [
         '--json',
         '--no-open',
@@ -157,13 +197,23 @@ export async function designUtility(
         '--variant <id>',
         '--pins <id,id>',
         '--summary <text>',
+        '--family <Name>:<weight,weight> (fonts fetch; at most 2 families, 3 weights each)',
+        '--dest <design>/source/assets/fonts (fonts fetch)',
       ],
-      note: 'The host authors design sources. This utility only validates, renders, reviews and exports them.',
+      note: 'The host authors design sources. This utility only validates, renders, reviews and exports them; fonts fetch downloads open-license fonts only when run.',
     };
     stdout(help);
     return help;
   }
   const [command, input, ...args] = argv;
+  // Help wins over every other argument so a help request can never act.
+  if (argv.some((value) => HELP_FLAGS.has(value))) {
+    const help = commandHelp(command);
+    stdout(help);
+    return help;
+  }
+  if (typeof input === 'string' && input.startsWith('-'))
+    throw new Error(`${input} must be a design document path, not an option.`);
   if (
     ![
       'inspect',
@@ -180,11 +230,12 @@ export async function designUtility(
       'sync',
       'manage',
       'handoff',
+      'fonts',
     ].includes(command) ||
     !input
   )
     throw new Error(
-      'Usage: design.mjs inspect|validate|render|open|studio|view-context|export|feedback|verify|share|publish|sync|manage|handoff <design-document.json> [--json] [--no-open] [--view canvas|prototype|walkthrough]',
+      'Usage: design.mjs inspect|validate|render|open|studio|view-context|export|feedback|verify|share|publish|sync|manage|handoff <design-document.json> [--json] [--no-open] [--view canvas|prototype|walkthrough] | design.mjs fonts fetch --family "<Name>:<weights>" [--family ...] --dest <dir>',
     );
   const flags = {};
   for (let i = 0; i < args.length; i++) {
@@ -209,13 +260,27 @@ export async function designUtility(
         'revision',
         'request-time',
         'allow-stale',
+        'family',
+        'dest',
       ].includes(key)
     )
       throw new Error(`Unknown option: ${args[i]}`);
-    flags[key] = ['json', 'no-open', 'allow-stale'].includes(key) ? true : args[++i];
+    if (['family', 'dest'].includes(key) && command !== 'fonts')
+      throw new Error(`Unknown option for ${command}: ${args[i]}`);
+    if (key === 'family') flags.family = [...(flags.family ?? []), args[++i]];
+    else flags[key] = ['json', 'no-open', 'allow-stale'].includes(key) ? true : args[++i];
   }
   if (flags.view && !['canvas', 'prototype', 'walkthrough'].includes(flags.view))
     throw new Error('View must be canvas, prototype, or walkthrough.');
+  if (command === 'fonts') {
+    if (input !== 'fetch')
+      throw new Error(
+        'Usage: design.mjs fonts fetch --family "<Name>:<weights>" [--family ...] --dest <dir>',
+      );
+    const result = await fetchDesignFonts({ families: flags.family, dest: flags.dest, fetchImpl });
+    stdout(result);
+    return result;
+  }
   const file = resolve(input);
   let result;
   if (command === 'view-context')
@@ -313,7 +378,10 @@ export async function designUtility(
   }
   if (command === 'feedback') {
     const action = flags.action ?? 'inspect';
-    if (action !== 'import') await syncDesignShare(file, { env, fetchImpl });
+    const synced =
+      action === 'import'
+        ? undefined
+        : await syncDesignShare(file, { env, fetchImpl, unavailable: 'skip' });
     if (action === 'import')
       result = await importDesignFeedback(file, {
         input: flags.input,
@@ -376,6 +444,8 @@ export async function designUtility(
         revision: current.revision,
       };
     } else throw new Error('Feedback action must be inspect, export, import, select, or resolve.');
+    if (synced?.skipped)
+      result = { ...result, sync: { skipped: synced.skipped, reason: synced.reason } };
   }
   stdout(result);
   return result;

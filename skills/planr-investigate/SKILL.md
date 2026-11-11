@@ -1,6 +1,6 @@
 ---
 name: planr-investigate
-description: "Diagnose a bug, regression, error, or unexplained behavior and optionally implement a bounded fix. Use for root-cause investigation, not planned feature delivery."
+description: "Diagnose a bug, regression, error, or unexplained behavior and optionally implement a bounded fix. Use for root-cause investigation, including before any fix, not planned feature delivery."
 ---
 
 # OpenPlanr Investigate
@@ -22,14 +22,14 @@ the requested outcome.
 When the user asked for a fix, implement the smallest coherent correction within the requested
 repository and run focused regression checks. Preserve unrelated work. Ask only when a missing
 product decision or an irreversible external action genuinely blocks progress.
+Prove the regression test with [fail-first](references/fail-first.md).
 
 ## Findings outside the cause
 
 Report other defects you notice as [findings](references/findings.md), and never
 fix them in this change unless they block the requested fix. The established cause
-is never a finding. The packaged [backlog helper](scripts/backlog-item.mjs) lists
-and files backlog items when no CLI is installed; resolve it relative to this
-`SKILL.md`.
+is never a finding. [Backlog filing](references/backlog-filing.md) lists and files
+backlog items with your own file tools.
 
 ## Return
 

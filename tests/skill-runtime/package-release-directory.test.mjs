@@ -46,7 +46,10 @@ function fixture(t) {
     const plugin = join(root, 'dist/plugins', host, 'openplanr');
     mkdirSync(join(plugin, 'scripts'), { recursive: true });
     writeFileSync(join(plugin, 'README.md'), `# ${host}\n`);
-    writeFileSync(join(plugin, 'scripts/run.mjs'), 'console.log("ok");\n', { mode: 0o755 });
+    if (host === 'claude') {
+      mkdirSync(join(plugin, 'references'));
+      writeFileSync(join(plugin, 'references/run.md'), '# Run\n');
+    } else writeFileSync(join(plugin, 'scripts/run.mjs'), 'console.log("ok");\n', { mode: 0o755 });
   }
   return { root, claude: join(root, 'dist/plugins/claude/openplanr') };
 }
@@ -69,16 +72,17 @@ test('the Claude archive is built from inspected bytes and modes, deterministica
     assert.equal(checked.status, 0, checked.stderr);
   }
   const bytes = readFileSync(join(first.root, archive));
-  assert.deepEqual(bytes, readFileSync(join(second.root, archive)));
+  const again = readFileSync(join(second.root, archive));
+  assert.ok(bytes.equals(again), `${archive} is ${bytes.length} bytes, then ${again.length}`);
   const entries = readDeterministicZip(bytes);
   assert.deepEqual(
     entries.map(({ path, mode }) => [path, mode & 0o777]),
     [
       ['openplanr-claude/README.md', 0o644],
-      ['openplanr-claude/scripts/run.mjs', 0o755],
+      ['openplanr-claude/references/run.md', 0o644],
     ],
   );
-  assert.equal(entries[1].bytes.toString('utf8'), 'console.log("ok");\n');
+  assert.equal(entries[1].bytes.toString('utf8'), '# Run\n');
 });
 
 test('oversized, linked and special Claude entries stop packaging before any release output', (t) => {

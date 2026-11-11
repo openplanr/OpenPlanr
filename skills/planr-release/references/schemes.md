@@ -35,9 +35,11 @@ Anything outside the declared surface can change in a patch. This is what makes 
 
 **Bump rules:**
 
-- MAJOR: remove or rename anything in the surface, change a response or return shape, change a default that alters outcomes, tighten validation to reject formerly valid input, add a required parameter, change error semantics that callers branch on.
-- MINOR: add to the surface, add an optional parameter, add a new endpoint or export, ship a deprecation warning.
+- MAJOR: remove or rename anything in the surface, change a response or return shape, change a default that alters outcomes, tighten validation to reject formerly valid input, rename config, add a required field or parameter, change error semantics that callers branch on.
+- MINOR: add to the surface, add an optional parameter, add a new endpoint or export. The release that first ships a deprecation warning is a MINOR; the removal it announces is the MAJOR.
 - PATCH: fix behavior to match documentation, performance, internal changes, dependency updates with no surface impact.
+
+**Hosted products.** SemVer's "breaking" needs translating, because there is no compilation step to fail. Treat a change as breaking if a user's saved workflow, integration, bookmark, muscle memory or stored data stops working the way it did. Moving a primary action to a different screen is a change users must relearn.
 
 **The judgement call that comes up most:** a bug fix that changes behavior people depend on. Strictly it is a fix, but if the buggy behavior is load-bearing for existing users, treat it as breaking. The test is whether shipping it silently would generate support tickets.
 

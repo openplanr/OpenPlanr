@@ -1,5 +1,33 @@
 # @openplanr/protocol
 
+## 0.18.0
+
+### Minor Changes
+
+- b9bd7ff: Add the backlog-item 1.24.0 frontmatter contract with optional scheduling, file paths, and unverified status.
+
+## 0.17.0
+
+### Minor Changes
+
+- 83529dd: The command registry now matches the CLI command catalog, which lists the new `openplanr design` commands.
+
+## 0.16.0
+
+### Minor Changes
+
+- 8a7403c: The design skills now ship a smaller review stage and contract set. Their copy of the review stage leaves out link sharing, the hosted viewer and live rooms, and their scripts no longer bundle the sharing and hosted workspace contracts or the paste and workspace schemas. The studio, prototype, walkthrough and feedback rail work as before, and sharing still runs through the `openplanr` CLI. A portable HTML export from the skills no longer shows a Share button, which could only report that sharing was unavailable.
+  
+  `@openplanr/protocol` adds a `large-object-limits` entry point, so you can read the resource limits without loading the sharing contracts.
+- c1da084: The `implementation-result` contract gains Protocol `1.23.0`: the outcome status adds `awaiting-acceptance` for repository work that only the owner can accept, and each check can list the `acceptanceIds` it covers. Results written for `1.5.0` remain valid, and `1.5.0` still rejects the new status.
+
+## 0.15.0
+
+### Minor Changes
+
+- 1354de0: Native role metadata references the generated Claude agents and their scoped identities, marks QA and specification activation as conditional, and keeps task type and agent in prepared Ship context.
+- 818ff59: Adds typed enum and boolean screen props and variant instance values to design documents (schema 1.1.0).
+
 ## 0.14.0
 
 ### Minor Changes

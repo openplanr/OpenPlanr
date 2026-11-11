@@ -4,6 +4,7 @@ import { createHash } from 'node:crypto';
 import {
   chmod,
   cp,
+  lstat,
   mkdir,
   mkdtemp,
   readdir,
@@ -16,20 +17,22 @@ import {
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
-import { fileURLToPath } from 'node:url';
-import { delegateIntegrationCommand } from '../../skills/planr-delegate/scripts/integrate.mjs';
+import { fileURLToPath, pathToFileURL } from 'node:url';
+import { delegateIntegrationCommand } from '../../packages/pipeline/lib/delegate/integrate.mjs';
 import {
   enrollProfile,
   loadProfile,
   PROFILE_LIFETIME_MS,
-} from '../../skills/planr-delegate/scripts/profiles.mjs';
+} from '../../packages/pipeline/lib/delegate/profiles.mjs';
+import { integrationPaths } from '../../packages/pipeline/lib/delegate/run-contract.mjs';
 import {
+  acquireRunTransitionLock,
   closeRunRecord,
   createRunRecord,
   pruneClosedRunRecords,
   readRunRecord,
   updateRunRecord,
-} from '../../skills/planr-delegate/scripts/run-record.mjs';
+} from '../../packages/pipeline/lib/delegate/run-record.mjs';
 import {
   delegateRunnerCommand,
   delegateRunStatus,
@@ -41,7 +44,7 @@ import {
   resumeDelegateRun,
   validateDelegateCapsule,
   waitDelegateRun,
-} from '../../skills/planr-delegate/scripts/runner.mjs';
+} from '../../packages/pipeline/lib/delegate/runner.mjs';
 
 function git(root, ...args) {
   return execFileSync('git', args, { cwd: root, encoding: 'utf8' }).trim();
@@ -191,6 +194,21 @@ async function modelServer(t) {
   };
 }
 
+/** Runs one delegate entry export in a fresh Node process, as the CLI does, and returns its JSON result. */
+function runInProcess(modulePath, exportName, action, input, env) {
+  const script = [
+    `const entry = await import(${JSON.stringify(pathToFileURL(modulePath).href)});`,
+    `const result = await entry.${exportName}(${JSON.stringify(action)}, ${JSON.stringify(input)});`,
+    'process.stdout.write(JSON.stringify(result));',
+  ].join('\n');
+  return JSON.parse(
+    execFileSync(process.execPath, ['--input-type=module', '-e', script], {
+      env,
+      encoding: 'utf8',
+    }),
+  );
+}
+
 test('first-use preview is read-only; enrollment rechecks destination and model readiness', async (t) => {
   const { base, root, runDirectory, profileDirectory } = await fixture(t);
   const backend = await modelServer(t);
@@ -327,22 +345,23 @@ test('expired profile can be previewed and renewed under the same name', async (
   assert.equal(after.profiles[0].readiness.state, 'ready');
 });
 
-test('installed helper command accepts bounded JSON stdin and reports the preview without running the adapter', async (t) => {
+test('a fresh runtime process reports the preview without running the adapter', async (t) => {
   const { root, runDirectory, profileDirectory, base } = await fixture(t);
   const { logPath } = await fakeProfile({ base, profileDirectory });
   const runnerPath = fileURLToPath(
-    new URL('../../skills/planr-delegate/scripts/runner.mjs', import.meta.url),
+    new URL('../../packages/pipeline/lib/delegate/runner.mjs', import.meta.url),
   );
-  const probe = JSON.parse(
-    execFileSync(process.execPath, [runnerPath, 'probe'], { input: '', encoding: 'utf8' }),
-  );
+  const probe = runInProcess(runnerPath, 'delegateRunnerCommand', 'probe', {}, process.env);
   assert.equal(probe.localExecutable, true);
   await assert.rejects(
     delegateRunnerCommand('probe', { hostCapabilities: { localExecution: false } }),
     (error) => error.code === 'E_DELEGATE_HOST_UNSUPPORTED',
   );
-  const output = execFileSync(process.execPath, [runnerPath, 'prepare'], {
-    input: JSON.stringify({
+  const preview = runInProcess(
+    runnerPath,
+    'delegateRunnerCommand',
+    'prepare',
+    {
       repositoryRoot: root,
       request: 'Change source.txt.',
       selectedFiles: ['source.txt'],
@@ -350,11 +369,9 @@ test('installed helper command accepts bounded JSON stdin and reports the previe
       profile: 'fake',
       profileDirectory,
       runDirectory: join(base, '.openplanr', 'delegate', 'runs'),
-    }),
-    env: { ...environment(logPath), HOME: base },
-    encoding: 'utf8',
-  });
-  const preview = JSON.parse(output);
+    },
+    { ...environment(logPath), HOME: base },
+  );
   assert.ok(preview.runId);
   assert.equal(preview.preview.profile, 'fake');
   assert.equal(preview.presentation.phase, 'preview');
@@ -374,80 +391,89 @@ test('installed helper command accepts bounded JSON stdin and reports the previe
   await assert.rejects(delegateRunnerCommand('prepare', { repositoryRoot: root }), {
     code: 'E_DELEGATE_SCOPE',
   });
+  await assert.rejects(
+    delegateRunnerCommand('prepare', { repositoryRoot: root, scopePaths: ['apps/**'] }),
+    { code: 'E_DELEGATE_SCOPE', message: /use "apps" instead of "apps\/\*\*"/ },
+  );
+  await assert.rejects(
+    delegateRunnerCommand('prepare', { repositoryRoot: root, scopePaths: ['*.ts'] }),
+    { code: 'E_DELEGATE_SCOPE', message: /literal path prefixes, not globs/ },
+  );
+  assert.deepEqual(integrationPaths(['app/[slug]/page.tsx']), ['app/[slug]/page.tsx']);
 });
 
 test('prepared helper survives projection replacement and detects changes to its private copy', async (t) => {
   const { root, base, profileDirectory } = await fixture(t);
   const { logPath } = await fakeProfile({ base, profileDirectory });
-  const source = fileURLToPath(new URL('../../skills/planr-delegate/scripts/', import.meta.url));
+  const source = fileURLToPath(new URL('../../packages/pipeline/lib/delegate/', import.meta.url));
   const projection = join(base, 'projection');
   await cp(source, projection, { recursive: true });
   const runDirectory = join(base, '.openplanr', 'delegate', 'runs');
   const environmentVariables = { ...environment(logPath), HOME: base };
-  const prepared = JSON.parse(
-    execFileSync(process.execPath, [join(projection, 'runner.mjs'), 'prepare'], {
-      input: JSON.stringify({
-        repositoryRoot: root,
-        request: 'Inspect source.txt.',
-        selectedFiles: ['source.txt'],
-        scopePaths: ['source.txt'],
-        profile: 'fake',
-        profileDirectory,
-        runDirectory,
-      }),
-      env: environmentVariables,
-      encoding: 'utf8',
-    }),
+  const prepared = runInProcess(
+    join(projection, 'runner.mjs'),
+    'delegateRunnerCommand',
+    'prepare',
+    {
+      repositoryRoot: root,
+      request: 'Inspect source.txt.',
+      selectedFiles: ['source.txt'],
+      scopePaths: ['source.txt'],
+      profile: 'fake',
+      profileDirectory,
+      runDirectory,
+    },
+    environmentVariables,
   );
   assert.equal(prepared.preview.helper.schemaVersion, '1.0.0');
   await rm(projection, { recursive: true }); // A generate/rebuild removes the active projection.
-  const status = JSON.parse(
-    execFileSync(process.execPath, [prepared.preview.helper.runnerPath, 'status'], {
-      input: JSON.stringify({ runId: prepared.runId, runDirectory }),
-      env: environmentVariables,
-      encoding: 'utf8',
-    }),
+  const status = runInProcess(
+    prepared.preview.helper.runnerPath,
+    'delegateRunnerCommand',
+    'status',
+    { runId: prepared.runId, runDirectory },
+    environmentVariables,
   );
   assert.equal(status.status, 'prepared');
   assert.equal(status.helper.digest, prepared.preview.helper.digest);
-  const handoff = JSON.parse(
-    execFileSync(process.execPath, [prepared.preview.helper.runnerPath, 'dispatch'], {
-      input: JSON.stringify({ runId: prepared.runId, runDirectory, profileDirectory }),
-      env: environmentVariables,
-      encoding: 'utf8',
-    }),
+  const handoff = runInProcess(
+    prepared.preview.helper.runnerPath,
+    'delegateRunnerCommand',
+    'dispatch',
+    { runId: prepared.runId, runDirectory, profileDirectory },
+    environmentVariables,
   );
   assert.equal(handoff.status, 'completed');
   await writeFile(join(status.worktreePath, 'source.txt'), 'implemented by delegate\n');
-  const review = JSON.parse(
-    execFileSync(process.execPath, [prepared.preview.helper.integrationPath, 'review'], {
-      input: JSON.stringify({ runId: prepared.runId, runDirectory, scopePaths: ['source.txt'] }),
-      env: environmentVariables,
-      encoding: 'utf8',
-    }),
+  const review = runInProcess(
+    prepared.preview.helper.integrationPath,
+    'delegateIntegrationCommand',
+    'review',
+    { runId: prepared.runId, runDirectory, scopePaths: ['source.txt'] },
+    environmentVariables,
   );
   assert.equal(review.ready, true);
   assert.deepEqual(review.changedPaths, ['source.txt']);
-  const applied = JSON.parse(
-    execFileSync(process.execPath, [prepared.preview.helper.integrationPath, 'apply'], {
-      input: JSON.stringify({
-        runId: prepared.runId,
-        runDirectory,
-        scopePaths: ['source.txt'],
-        checks: [],
-      }),
-      env: environmentVariables,
-      encoding: 'utf8',
-    }),
+  const applied = runInProcess(
+    prepared.preview.helper.integrationPath,
+    'delegateIntegrationCommand',
+    'apply',
+    {
+      runId: prepared.runId,
+      runDirectory,
+      scopePaths: ['source.txt'],
+      checks: [],
+    },
+    environmentVariables,
   );
   assert.equal(applied.status, 'completed');
   assert.equal(await readFile(join(root, 'source.txt'), 'utf8'), 'implemented by delegate\n');
-  const finished = JSON.parse(
-    execFileSync(process.execPath, [prepared.preview.helper.runnerPath, 'status'], {
-      input: JSON.stringify({ runId: prepared.runId, runDirectory }),
-      env: environmentVariables,
-      encoding: 'utf8',
-    }),
+  const finished = runInProcess(
+    prepared.preview.helper.runnerPath,
+    'delegateRunnerCommand',
+    'status',
+    { runId: prepared.runId, runDirectory },
+    environmentVariables,
   );
   assert.equal(finished.phase, 'integrated');
   assert.deepEqual(finished.report, applied.report);
@@ -455,6 +481,46 @@ test('prepared helper survives projection replacement and detects changes to its
   await assert.rejects(delegateRunnerCommand('status', { runId: prepared.runId, runDirectory }), {
     code: 'E_DELEGATE_HELPER_DRIFT',
   });
+});
+
+test('a 2.0.0 run record routes integration to its pinned helper', async (t) => {
+  const { root, base, runDirectory, profileDirectory } = await fixture(t);
+  const { logPath } = await fakeProfile({ base, profileDirectory });
+  const prepared = await prepareDelegateRun({
+    repositoryRoot: root,
+    request: 'Inspect source.txt.',
+    selectedFiles: ['source.txt'],
+    scopePaths: ['source.txt'],
+    profile: 'fake',
+    profileDirectory,
+    runDirectory,
+    env: environment(logPath),
+  });
+  const record = await readRunRecord(prepared.runId, { directory: runDirectory });
+  await writeFile(
+    record.helper.integrationPath,
+    'export async function delegateIntegrationCommand(action) {\n  return { routed: "pinned", action };\n}\n',
+  );
+  const hash = createHash('sha256');
+  for (const path of (await readdir(record.helper.directory, { recursive: true })).sort()) {
+    const file = join(record.helper.directory, path);
+    if (!(await lstat(file)).isFile()) continue;
+    const bytes = await readFile(file);
+    hash.update(path).update('\0').update(String(bytes.length)).update('\0').update(bytes);
+  }
+  const recordPath = join(record.runPath, 'record.json');
+  await writeFile(
+    recordPath,
+    `${JSON.stringify({
+      ...record,
+      schemaVersion: '2.0.0',
+      helper: { ...record.helper, digest: hash.digest('hex') },
+    })}\n`,
+  );
+  assert.deepEqual(
+    await delegateIntegrationCommand('review', { runId: prepared.runId, runDirectory }),
+    { routed: 'pinned', action: 'review' },
+  );
 });
 
 test('tool-capable generic adapter edits, resumes its exact session, and integrates observed changes', async (t) => {
@@ -614,7 +680,7 @@ test('private records are bounded, credential-free, and retained until explicit 
     { runId: 'closed', status: 'completed' },
     { directory: runDirectory },
   );
-  assert.equal(active.schemaVersion, '2.0.0');
+  assert.equal(active.schemaVersion, '3.0.0');
   assert.equal((await stat(join(runDirectory, 'active', 'record.json'))).mode & 0o077, 0);
   await assert.rejects(
     updateRunRecord(
@@ -1193,4 +1259,17 @@ test('onboarding distinguishes inaccessible engines from missing PATH entries', 
   assert.equal(result.git.ready, false);
   assert.deepEqual(result.discoveryDiagnostics, [{ kind: 'claude', code: 'EACCES' }]);
   assert.deepEqual(result.engines, []);
+});
+
+test('prune on a machine with no run store removes nothing; other commands name the missing store', async (t) => {
+  const base = await mkdtemp(join(tmpdir(), 'planr-runner-test-'));
+  t.after(() => rm(base, { recursive: true, force: true }));
+  const runDirectory = join(base, 'never-created');
+  assert.deepEqual(await delegateRunnerCommand('prune', { runDirectory }), { removed: [] });
+  await assert.rejects(acquireRunTransitionLock('missing', { directory: runDirectory }), {
+    code: 'E_RUN_STORE_MISSING',
+  });
+  await assert.rejects(readRunRecord('missing', { directory: runDirectory }), {
+    code: 'E_RUN_NOT_FOUND',
+  });
 });

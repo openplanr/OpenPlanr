@@ -5,6 +5,6 @@ export default defineConfig({
   test: {
     setupFiles: ['tests/canvas-context.ts'],
     include: ['tests/**/*.test.ts', 'tests/**/*.test.tsx'],
-    exclude: ['tests/browser/**'],
+    exclude: ['tests/browser/**', 'tests/packed-consumer.test.ts'],
   },
 });
