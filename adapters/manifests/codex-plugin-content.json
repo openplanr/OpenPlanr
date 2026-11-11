@@ -3,7 +3,7 @@
   "schemaVersion": "2.0.0",
   "protocolVersion": "1.8.0",
   "plugin": "planr",
-  "version": "3.7.2",
+  "version": "3.7.3",
   "skillRoot": "./skills/",
   "canonicalSkillCount": 30,
   "compatibilityAliasCount": 0,
@@ -411,7 +411,7 @@
         },
         {
           "path": "skills/design/references/utilities.md",
-          "digest": "sha256:1ebec3098adefc4e45d8506170222189a304c82b42ffea145b00f78e9fa8ffd2"
+          "digest": "sha256:5eff46777fcb5f905f2b69ad1c857292450f83b98d375fd33835a63393dedc06"
         },
         {
           "path": "skills/design/references/team-review.md",
@@ -480,7 +480,7 @@
         },
         {
           "path": "skills/design-loop/references/utilities.md",
-          "digest": "sha256:1ebec3098adefc4e45d8506170222189a304c82b42ffea145b00f78e9fa8ffd2"
+          "digest": "sha256:5eff46777fcb5f905f2b69ad1c857292450f83b98d375fd33835a63393dedc06"
         },
         {
           "path": "skills/design-loop/references/team-review.md",
@@ -549,7 +549,7 @@
         },
         {
           "path": "skills/design-review/references/utilities.md",
-          "digest": "sha256:1ebec3098adefc4e45d8506170222189a304c82b42ffea145b00f78e9fa8ffd2"
+          "digest": "sha256:5eff46777fcb5f905f2b69ad1c857292450f83b98d375fd33835a63393dedc06"
         },
         {
           "path": "skills/design-review/references/team-review.md",

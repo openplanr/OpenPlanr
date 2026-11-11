@@ -1,6 +1,6 @@
 {
   "name": "openplanr",
-  "version": "3.7.2",
+  "version": "3.7.3",
   "description": "The openplanr CLI: validates plans in your repo, lists the checks a change needs, renders diagrams, installs 25+ skills into Claude Code, Codex and Cursor, and syncs GitHub Issues and Linear. No model calls.",
   "type": "module",
   "main": "./dist/cli/index.js",
@@ -114,7 +114,7 @@
     "zod": "^4.6.7"
   },
   "optionalDependencies": {
-    "planr-pipeline": "0.64.2"
+    "planr-pipeline": "0.64.3"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.6.3",
