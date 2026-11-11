@@ -59,7 +59,6 @@ test('each CLI reference names its own command minimum, not the highest one', ()
 
 test('the rendered CLI references name their own command minimum', () => {
   for (const [skill, command, phrase] of [
-    ['planr-sync', 'sync tracker', 'need {minimum} or later'],
     ['planr-delegate', 'delegate', 'version {minimum} or later'],
   ]) {
     const reference = readFileSync(

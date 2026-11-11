@@ -103,7 +103,6 @@ const operateAdvisorDestinations = Object.freeze([
 const trackerConnectionDestinations = Object.freeze(['planr-sync', 'planr-sprint', 'planr-status']);
 // Skills that call the openplanr CLI, the shared template each one's CLI reference uses and its command.
 const cliReferenceSources = Object.freeze({
-  'planr-sync': { source: 'skills/shared/openplanr-cli.md', command: 'sync tracker' },
   'planr-delegate': { source: 'skills/shared/openplanr-cli-optional.md', command: 'delegate' },
 });
 const findingsDestinations = Object.freeze(['planr-ship', 'planr-investigate']);

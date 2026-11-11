@@ -112,7 +112,7 @@ export const CANONICAL_REGISTRIES = deepFreeze({
         },
         "source": {
           "path": "agents/po/preflight/planr-database/AGENT.md",
-          "digest": "sha256:9322833b948d96a0bbf8b5adb577e5c4e6e8765228992f2c206c690890447f65"
+          "digest": "sha256:91dea85d44a1762885a7c8bbcd612545ce3725b3af4c90e5694d46c1b2e1c939"
         },
         "taskKinds": [
           "database"
@@ -576,7 +576,7 @@ export const CANONICAL_REGISTRIES = deepFreeze({
         ]
       }
     ],
-    "documentDigest": "sha256:55046ed4cd5bbfae5df429efeb6a122558332035772f90cac4d178717174754e"
+    "documentDigest": "sha256:652e81cc14b690f6947140bec43aef6e5ee48cc1267d3bcaed268cce53aa8f17"
   },
   "task-kinds.json": {
     "kind": "task-kind-registry",
@@ -585,7 +585,7 @@ export const CANONICAL_REGISTRIES = deepFreeze({
     "documentVersion": "1.0.0",
     "digestAlgorithm": "sha256",
     "canonicalization": "rfc8785",
-    "roleRegistryDigest": "sha256:55046ed4cd5bbfae5df429efeb6a122558332035772f90cac4d178717174754e",
+    "roleRegistryDigest": "sha256:652e81cc14b690f6947140bec43aef6e5ee48cc1267d3bcaed268cce53aa8f17",
     "bindings": [
       {
         "taskKind": "backend",
@@ -796,7 +796,7 @@ export const CANONICAL_REGISTRIES = deepFreeze({
         "precedence": 4
       }
     ],
-    "documentDigest": "sha256:3706b13a36281ba035afba6184ff18690d2934e431623e91b83d904827b5cb7a"
+    "documentDigest": "sha256:2ec38d4bf2e6f54af4bac5ebe7b70220eff8e6ebd72a9dddf0b3a4e3fc046034"
   },
   "rules.json": {
     "kind": "rule-catalog",
@@ -1417,7 +1417,7 @@ export const CANONICAL_REGISTRIES = deepFreeze({
         "ownerPackage": "openplanr",
         "source": {
           "path": "skills/planr-plan/SKILL.md",
-          "digest": "sha256:fd33578b217003c9dc9937bc65fe6bc1e3752eb40f7746a904951ee00b96e163"
+          "digest": "sha256:cf7b4b0dfc001caf1da3fab7577c60b9200daa41a9889105ff9c1580f82130a6"
         },
         "authorityClass": "workflow",
         "machineJson": false,
@@ -1648,7 +1648,7 @@ export const CANONICAL_REGISTRIES = deepFreeze({
         "ownerPackage": "openplanr",
         "source": {
           "path": "skills/planr-plan/SKILL.md",
-          "digest": "sha256:fd33578b217003c9dc9937bc65fe6bc1e3752eb40f7746a904951ee00b96e163"
+          "digest": "sha256:cf7b4b0dfc001caf1da3fab7577c60b9200daa41a9889105ff9c1580f82130a6"
         },
         "authorityClass": "workflow",
         "machineJson": false,
@@ -2152,7 +2152,7 @@ export const CANONICAL_REGISTRIES = deepFreeze({
         "ownerPackage": "planr-pipeline",
         "source": {
           "path": "skills/planr-plan/SKILL.md",
-          "digest": "sha256:fd33578b217003c9dc9937bc65fe6bc1e3752eb40f7746a904951ee00b96e163"
+          "digest": "sha256:cf7b4b0dfc001caf1da3fab7577c60b9200daa41a9889105ff9c1580f82130a6"
         },
         "authorityClass": "compatibility-router",
         "machineJson": false,
@@ -2215,7 +2215,7 @@ export const CANONICAL_REGISTRIES = deepFreeze({
         "ownerPackage": "planr-pipeline",
         "source": {
           "path": "skills/planr-sync/SKILL.md",
-          "digest": "sha256:813672528446c7b2fa6798b4b76d970870f2e51b1d90fffe9867a9cc6c0f0c66"
+          "digest": "sha256:dd9bcd90a86c15d2f42f10c6a8c508d0455270ba4d9b690d829e5fc400c29ef2"
         },
         "authorityClass": "compatibility-router",
         "machineJson": false,
@@ -4820,7 +4820,7 @@ export const CANONICAL_REGISTRIES = deepFreeze({
         "lifecycle": "active",
         "authorityClass": "planning-write",
         "source": "skills/planr-sync/openplanr.skill.json",
-        "sourceDigest": "sha256:ea6e4e22c03606b305afc046825d12d394301488de276ac19ac1004116b7ee45",
+        "sourceDigest": "sha256:9becb7838e59bcd705a35e6227b89ef05bda75bb34167a299d75d3cc64d04369",
         "triggerPolicy": {
           "include": [
             "Audit planning artifacts for graph, schema, or protocol drift",

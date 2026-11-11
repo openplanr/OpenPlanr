@@ -82,8 +82,7 @@ that QT's status mirrors the spec's *evidenced* state, and it is pushed to the c
    are native file writes to `.planr/` (frontmatter + new `quick/QT-*.md`).
 6. **Push** — only with `--push` (or confirmation). Push through the host's own connection for the
    configured tracker: Linear through the host's Linear connection; GitHub through the host's GitHub
-   connection, else `gh issue` when the GitHub CLI is signed in. Never ask for, read or pass a
-   tracker token.
+   connection. Never ask for, read or pass a tracker token.
    Push only `QT/EPIC/FEAT/US/TASK` ids — **never** a SPEC (the SPEC has no tracker issue; its QT
    does). If no connection is available, print each changed QT + the connection to set up and
    **stop short of pushing** (never fail the run). After a successful push: `git add` ONLY the

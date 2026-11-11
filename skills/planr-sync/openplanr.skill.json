@@ -36,17 +36,6 @@
       "executable": false
     },
     {
-      "path": "references/openplanr-cli.md",
-      "kind": "reference",
-      "hosts": [
-        "claude-code",
-        "codex",
-        "chatgpt",
-        "cursor"
-      ],
-      "executable": false
-    },
-    {
       "path": "agents/openai.yaml",
       "kind": "agent-metadata",
       "hosts": [

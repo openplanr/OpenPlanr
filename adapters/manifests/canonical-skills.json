@@ -382,7 +382,7 @@
       "source": "skills/planr-connect/openplanr.skill.json",
       "entrypoint": "skills/planr-connect/SKILL.md",
       "description": "Report which chat, project tracker and source control connections the host has, and guide connecting the missing ones through the host. Use when the user wants to connect a service for OpenPlanr or asks what is connected.",
-      "sourceDigest": "sha256:0134ec4b9f91854c80a9eeeac66599761ee958aabae2f542ffd4f2e0603d7d97",
+      "sourceDigest": "sha256:1010dff956c5df996d7c6fc6896d0d16571ff63499a586e621627c038433bed9",
       "resources": [
         {
           "path": "agents/openai.yaml",
@@ -404,7 +404,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:cb15d41cd314989baf87f48e0279bd994a92b7644d19a3f42dbc0f0d290f48c7"
+          "digest": "sha256:ab71e79082d1bc8b7e5e9975141cb94a8e0af0e38fe2c8d71c027e899cc3be1d"
         }
       ],
       "contracts": {
@@ -1765,7 +1765,7 @@
       "source": "skills/planr-plan/openplanr.skill.json",
       "entrypoint": "skills/planr-plan/SKILL.md",
       "description": "Turn a Protocol-compatible specification or product intent into schema-compatible OpenPlanr stories and implementation tasks. Use for planning and decomposition, not implementation.",
-      "sourceDigest": "sha256:fd33578b217003c9dc9937bc65fe6bc1e3752eb40f7746a904951ee00b96e163",
+      "sourceDigest": "sha256:cf7b4b0dfc001caf1da3fab7577c60b9200daa41a9889105ff9c1580f82130a6",
       "resources": [
         {
           "path": "agents/openai.yaml",
@@ -1931,7 +1931,7 @@
       "source": "skills/planr-release/openplanr.skill.json",
       "entrypoint": "skills/planr-release/SKILL.md",
       "description": "Choose and maintain a product's versioning scheme, classify shipped changes, and write user-facing changelogs or release notes. Use for SemVer or CalVer decisions, version bumps, release cadence, and preparing a versioned release after landing.",
-      "sourceDigest": "sha256:c4c8bc8cc8668ebb8949e078f1a1ed234c757823fd9dd6071aacdf2129e34859",
+      "sourceDigest": "sha256:22fa32290b16abf5ab4c748b4fa9dd06b37eec61eb2559e3ce6bfb012a62bc22",
       "resources": [
         {
           "path": "agents/openai.yaml",
@@ -2062,7 +2062,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:cb15d41cd314989baf87f48e0279bd994a92b7644d19a3f42dbc0f0d290f48c7"
+          "digest": "sha256:ab71e79082d1bc8b7e5e9975141cb94a8e0af0e38fe2c8d71c027e899cc3be1d"
         }
       ],
       "contracts": {
@@ -2311,7 +2311,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:cb15d41cd314989baf87f48e0279bd994a92b7644d19a3f42dbc0f0d290f48c7"
+          "digest": "sha256:ab71e79082d1bc8b7e5e9975141cb94a8e0af0e38fe2c8d71c027e899cc3be1d"
         },
         {
           "path": "references/tracker-connections.md",
@@ -2323,7 +2323,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:f9617486a5e2ecc861566d7a7eaf1c97725f9acfcc6bc64cfda1f9b6fd3c4d36"
+          "digest": "sha256:4e99cd89f7760f3f664e7182f610072a1120e1879ae79a8b08392ec650609c6b"
         },
         {
           "path": "schemas/refinement.schema.json",
@@ -2393,7 +2393,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:cb15d41cd314989baf87f48e0279bd994a92b7644d19a3f42dbc0f0d290f48c7"
+          "digest": "sha256:ab71e79082d1bc8b7e5e9975141cb94a8e0af0e38fe2c8d71c027e899cc3be1d"
         },
         {
           "path": "references/tracker-connections.md",
@@ -2405,7 +2405,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:f9617486a5e2ecc861566d7a7eaf1c97725f9acfcc6bc64cfda1f9b6fd3c4d36"
+          "digest": "sha256:4e99cd89f7760f3f664e7182f610072a1120e1879ae79a8b08392ec650609c6b"
         }
       ],
       "contracts": {
@@ -2441,7 +2441,7 @@
       "source": "skills/planr-sync/openplanr.skill.json",
       "entrypoint": "skills/planr-sync/SKILL.md",
       "description": "Audit OpenPlanr planning artifacts for graph and protocol drift. Use when statuses, references, schemas, or generated planning views may be inconsistent.",
-      "sourceDigest": "sha256:813672528446c7b2fa6798b4b76d970870f2e51b1d90fffe9867a9cc6c0f0c66",
+      "sourceDigest": "sha256:dd9bcd90a86c15d2f42f10c6a8c508d0455270ba4d9b690d829e5fc400c29ef2",
       "resources": [
         {
           "path": "references/connectors.md",
@@ -2453,7 +2453,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:cb15d41cd314989baf87f48e0279bd994a92b7644d19a3f42dbc0f0d290f48c7"
+          "digest": "sha256:ab71e79082d1bc8b7e5e9975141cb94a8e0af0e38fe2c8d71c027e899cc3be1d"
         },
         {
           "path": "references/tracker-connections.md",
@@ -2465,19 +2465,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:f9617486a5e2ecc861566d7a7eaf1c97725f9acfcc6bc64cfda1f9b6fd3c4d36"
-        },
-        {
-          "path": "references/openplanr-cli.md",
-          "kind": "reference",
-          "hosts": [
-            "claude-code",
-            "codex",
-            "chatgpt",
-            "cursor"
-          ],
-          "executable": false,
-          "digest": "sha256:e8bbf8a703747c360a439c0110289f5d542dfde9363656e0616e5156d6369df3"
+          "digest": "sha256:4e99cd89f7760f3f664e7182f610072a1120e1879ae79a8b08392ec650609c6b"
         },
         {
           "path": "agents/openai.yaml",

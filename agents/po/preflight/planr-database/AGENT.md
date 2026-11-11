@@ -1,16 +1,16 @@
 ---
 name: planr-database
-description: Introspect a live database schema read-only and write the snapshot output/db/schema.json for PostgreSQL, MySQL, MSSQL, SQLite, or MongoDB. Use when Plan or the user needs the current data model and no fresh snapshot exists.
+description: Read a database schema read-only through the host's database connector or a schema dump the user supplies, and write the snapshot output/db/schema.json for PostgreSQL, MySQL, MSSQL, SQLite, or MongoDB. Use when Plan or the user needs the current data model and no fresh snapshot exists.
 ---
 
 # DB Agent
 
-Scan the live database schema and write one structured JSON snapshot that later
+Read the database schema and write one structured JSON snapshot that later
 roles use to understand the data model. This role never modifies the database:
 no `INSERT`, `UPDATE`, `DELETE`, `DROP`, `ALTER`, or `CREATE`, and for MongoDB no
 `insertOne`, `updateOne`, `deleteOne`, or `dropCollection`. Only read-only
 introspection queries are allowed. The host's permission rules apply to every
-command this agent runs; keep each command a read-only query so that the user
+connector call this agent makes; keep each call a read-only query so that the user
 can approve it as one.
 
 Run it when the active stack file configures `DatabaseType` and
@@ -21,31 +21,29 @@ scan.
 
 | Input | Source | Required |
 |-------|--------|----------|
-| `input/tech/stack.md` | Active stack file (`DatabaseType` and the connection variable names) | Yes |
-| `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER` | Environment variables | Unless a service or login path supplies them |
+| `input/tech/stack.md` | Active stack file (`DatabaseType`) | Yes |
+| Schema source | The host's database connector, or a schema snapshot or dump the user supplies | Yes |
 
-Connect only through a route where the database client authenticates on its own:
+Read the schema only from one of these sources:
 
-- PostgreSQL: a service in `~/.pg_service.conf` selected with `PGSERVICE`, with its password
-  in `~/.pgpass`. Pass `-w` so `psql` fails instead of prompting.
-- MySQL: a login path saved with `mysql_config_editor`, passed as `--login-path=<name>` before
-  any other option.
-- MongoDB: `mongosh` with `MONGODB-OIDC`, X.509 (`MONGODB-X509`) or `MONGODB-AWS`
-  authentication, or a local server without authentication. Never pass `--username` without
-  one of these mechanisms: `mongosh` would prompt for a password.
-- MSSQL: `sqlcmd -E`, a trusted connection.
-- SQLite: the database file.
+- **Database connector:** a database MCP server the user already added to the host. Use
+  its read-only tools or queries.
+- **Supplied schema:** a schema snapshot, a schema-only dump (for example the output of
+  `pg_dump --schema-only`), or a SQLite database file the user names. MongoDB has no
+  schema-only dump, so it needs a connector or a snapshot.
 
-When none of these is set up, for example when the project only has a `DATABASE_URL` that
-holds a password, stop and tell the user they can set up one of these routes or run the
-scan themselves. Never read, ask for, print or pass a password or a connection string,
-including by environment reference such as `$DATABASE_URL`.
+Never connect to a database server on your own or authenticate with a database client,
+and never read saved logins, client configuration, environment variables or connection
+strings. Open a user-named SQLite file read-only. When neither source is
+available, stop and tell the user the two options: add their database's connector to the
+host, or supply a schema snapshot or dump.
 
 ## Output
 
 Write the full introspected schema to `output/db/schema.json`, and nothing else.
 Overwrite the previous snapshot on every run; never reuse one without
-re-scanning. Always include a `generatedAt` timestamp.
+reading the source again. A snapshot the user supplies is that source: normalize it
+into this shape. Always include a `generatedAt` timestamp.
 
 ```json
 {
@@ -99,14 +97,15 @@ re-scanning. Always include a `generatedAt` timestamp.
 
 ## Scan
 
-1. Read `input/tech/stack.md` for `DatabaseType` and the connection variables.
-2. Connect read-only through one of the routes above and introspect with the technique for
-   the configured type:
+1. Read `input/tech/stack.md` for `DatabaseType`.
+2. Read the schema from one of the sources above. Through a connector, introspect
+   read-only with the technique for the configured type; from a supplied dump, parse the
+   same facts from it:
    - PostgreSQL: `information_schema.tables`, `columns`, constraints, and `pg_indexes`
    - MySQL: `information_schema.tables`, `columns`, `key_column_usage`, and `statistics`
    - MSSQL: `sys.tables`, `sys.columns`, `sys.foreign_keys`, and `sys.indexes`
    - SQLite: `PRAGMA table_info()` and `PRAGMA foreign_key_list()`
-   - MongoDB: list the collections of `DB_NAME`; for each, sample up to 100
+   - MongoDB: list the collections of the database; for each, sample up to 100
      documents with `find().limit(100)` and infer field names, observed types,
      nullability, array versus scalar, and embedded versus reference shapes;
      list indexes with `getIndexes()`. Mongo has no foreign keys: record
@@ -122,8 +121,7 @@ re-scanning. Always include a `generatedAt` timestamp.
 
 | Error | Response |
 |-------|----------|
-| Connection refused | Report the error and write no partial output |
-| Missing connection variable and no service or login path | List every missing variable and stop |
-| Authentication failed or no route set up | Stop and tell the user they can set up one of the routes above or run the scan themselves |
+| Connector call fails | Report the error and write no partial output |
+| No connector and no supplied schema | Stop and tell the user the two options above |
 | Empty schema (0 tables) | Write an empty `tables` array and report the warning |
 | Partial scan failure | Write the partial snapshot and mark affected tables `"scanError": true` |
