@@ -1,0 +1,10 @@
+{
+  "toolCalls": [
+    { "name": "Skill", "input": { "skill": "planr:spec" } },
+    { "name": "Write", "input": { "file_path": "/tmp/e-x/home/cwd/.planr/specs/SPEC-001-due-date-reminders.md", "content": "..." } },
+    { "name": "Skill", "input": { "skill": "planr:plan" } },
+    { "name": "Write", "input": { "file_path": "/tmp/e-x/home/cwd/.planr/plans/PLAN-001-due-date-reminders.md", "content": "..." } },
+    { "name": "Skill", "input": { "skill": "planr:ship" } },
+    { "name": "Write", "input": { "file_path": "/tmp/e-x/home/cwd/src/reminders.js", "content": "..." } }
+  ]
+}

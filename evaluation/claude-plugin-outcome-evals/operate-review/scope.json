@@ -1,0 +1,41 @@
+{
+  "requestedPaths": [
+    "docs/**",
+    ".planr/operate/**",
+    "REVIEW*.md",
+    "review*.md",
+    "*-review.md",
+    "*_review.md"
+  ],
+  "allowedCommands": [],
+  "breakpoints": [
+    {
+      "name": "metrics-read-before-answer",
+      "before": {
+        "tool": [
+          "Read",
+          "Grep",
+          "Bash"
+        ],
+        "input": "company/metrics/2026-10\\.csv"
+      },
+      "after": {
+        "tool": "final_message"
+      }
+    },
+    {
+      "name": "incidents-read-before-answer",
+      "before": {
+        "tool": [
+          "Read",
+          "Grep",
+          "Bash"
+        ],
+        "input": "company/incidents/2026-10\\.md"
+      },
+      "after": {
+        "tool": "final_message"
+      }
+    }
+  ]
+}

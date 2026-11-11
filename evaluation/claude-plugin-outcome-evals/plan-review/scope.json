@@ -1,0 +1,41 @@
+{
+  "requestedPaths": [
+    "docs/reviews/**",
+    "docs/review*.md",
+    "docs/*-review.md",
+    "docs/plans/*review*.md",
+    ".planr/reviews/**",
+    "REVIEW*.md",
+    "review*.md",
+    "*-review.md",
+    "*_review.md"
+  ],
+  "allowedCommands": [],
+  "breakpoints": [
+    {
+      "name": "plan-read-before-answer",
+      "before": {
+        "tool": [
+          "Read",
+          "Grep",
+          "Bash"
+        ],
+        "input": "docs/plans/note-sharing\\.md"
+      },
+      "after": {
+        "tool": "final_message"
+      }
+    },
+    {
+      "name": "no-write-outside-requested-paths",
+      "before": {
+        "tool": [
+          "Edit",
+          "Write"
+        ],
+        "input": "\"file_path\":\"(?!(?:(?!\",\").){0,600}?/(?:docs/reviews|\\.planr/reviews)/)(?!(?:(?!\",\").){0,600}?/(?:REVIEW[^/\"]*|review[^/\"]*|[^/\"]*[-_]review|[^/\"]*review[^/\"]*)\\.md\")"
+      },
+      "after": "absent"
+    }
+  ]
+}

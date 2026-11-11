@@ -1,0 +1,121 @@
+{
+  "additions": 102,
+  "assignees": [],
+  "author": {
+    "id": "U_dana",
+    "is_bot": false,
+    "login": "dana-reyes",
+    "name": "Dana Reyes"
+  },
+  "autoMergeRequest": null,
+  "baseRefName": "main",
+  "baseRefOid": "{{baseOid}}",
+  "body": "Adds `GET /notes/search?q=` with pages, and `POST /notes/:id/shares` to create a share link.\n\nThe first commit is a mechanical rename (present, listFor, HttpError); no behaviour change.\nHighlighting matched text is tracked in #57 and stays out of this PR.\n\nTested locally with `npm test`.",
+  "changedFiles": 9,
+  "closed": false,
+  "closedAt": null,
+  "closingIssuesReferences": [],
+  "comments": [],
+  "commits": [],
+  "createdAt": "2026-10-27T15:40:00Z",
+  "deletions": 16,
+  "files": [
+    {
+      "path": "README.md",
+      "additions": 7,
+      "deletions": 0
+    },
+    {
+      "path": "src/auth.js",
+      "additions": 3,
+      "deletions": 3
+    },
+    {
+      "path": "src/http.js",
+      "additions": 2,
+      "deletions": 2
+    },
+    {
+      "path": "src/search.js",
+      "additions": 12,
+      "deletions": 0
+    },
+    {
+      "path": "src/server.js",
+      "additions": 25,
+      "deletions": 10
+    },
+    {
+      "path": "src/shares.js",
+      "additions": 20,
+      "deletions": 0
+    },
+    {
+      "path": "src/store.js",
+      "additions": 1,
+      "deletions": 1
+    },
+    {
+      "path": "test/search.test.js",
+      "additions": 19,
+      "deletions": 0
+    },
+    {
+      "path": "test/shares.test.js",
+      "additions": 13,
+      "deletions": 0
+    }
+  ],
+  "fullDatabaseId": "2210457042",
+  "headRefName": "feature/search-share",
+  "headRefOid": "{{headOid}}",
+  "headRepository": {
+    "id": "R_notes",
+    "name": "notes"
+  },
+  "headRepositoryOwner": {
+    "id": "O_notes",
+    "login": "notes-example"
+  },
+  "id": "PR_kwDOnotes42",
+  "isCrossRepository": false,
+  "isDraft": false,
+  "labels": [],
+  "latestReviews": [],
+  "maintainerCanModify": false,
+  "mergeCommit": null,
+  "mergeStateStatus": "BLOCKED",
+  "mergeable": "MERGEABLE",
+  "mergedAt": null,
+  "mergedBy": null,
+  "milestone": null,
+  "number": 42,
+  "potentialMergeCommit": null,
+  "projectCards": [],
+  "projectItems": [],
+  "reactionGroups": [],
+  "reviewDecision": "REVIEW_REQUIRED",
+  "reviewRequests": [
+    {
+      "__typename": "User",
+      "login": "sam-lee"
+    }
+  ],
+  "reviews": [],
+  "state": "OPEN",
+  "statusCheckRollup": [
+    {
+      "__typename": "CheckRun",
+      "completedAt": "2026-10-27T15:43:12Z",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/notes-example/notes/actions/runs/9001/job/1",
+      "name": "test",
+      "startedAt": "2026-10-27T15:42:30Z",
+      "status": "COMPLETED",
+      "workflowName": "test"
+    }
+  ],
+  "title": "Search notes and create share links",
+  "updatedAt": "2026-10-27T15:43:12Z",
+  "url": "https://github.com/notes-example/notes/pull/42"
+}

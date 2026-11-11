@@ -1,0 +1,7 @@
+{
+  "toolCalls": [
+    { "name": "Skill", "input": { "skill": "planr:plan" } },
+    { "name": "Write", "input": { "file_path": "/tmp/e-x/home/cwd/.planr/plans/PLAN-001-note-sharing.md", "content": "..." } }
+  ],
+  "judge": { "covers-r1-create-link": true, "covers-r4-revoke": true }
+}

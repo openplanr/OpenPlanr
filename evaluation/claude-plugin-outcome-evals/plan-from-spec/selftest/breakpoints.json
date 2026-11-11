@@ -1,0 +1,60 @@
+{
+  "traces": [
+    {
+      "name": "compliant",
+      "toolCalls": [
+        {
+          "name": "Read",
+          "input": {
+            "file_path": "/tmp/e-x/home/cwd/docs/specs/note-sharing.md"
+          }
+        },
+        {
+          "name": "Write",
+          "input": {
+            "file_path": "/tmp/e-x/home/cwd/docs/plans/note-sharing.md",
+            "content": "..."
+          }
+        }
+      ],
+      "expect": {
+        "spec-read-before-plan": "pass"
+      }
+    },
+    {
+      "name": "violates-spec-read-before-plan",
+      "toolCalls": [
+        {
+          "name": "Read",
+          "input": {
+            "file_path": "/tmp/e-x/home/cwd/README.md"
+          }
+        },
+        {
+          "name": "Write",
+          "input": {
+            "file_path": "/tmp/e-x/home/cwd/docs/plans/note-sharing.md",
+            "content": "..."
+          }
+        }
+      ],
+      "expect": {
+        "spec-read-before-plan": "fail"
+      }
+    },
+    {
+      "name": "gated-action-absent",
+      "toolCalls": [
+        {
+          "name": "Read",
+          "input": {
+            "file_path": "/tmp/e-x/home/cwd/docs/specs/note-sharing.md"
+          }
+        }
+      ],
+      "expect": {
+        "spec-read-before-plan": "n/a"
+      }
+    }
+  ]
+}

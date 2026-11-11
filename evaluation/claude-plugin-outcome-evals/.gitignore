@@ -1,0 +1,2 @@
+# Self-test outputs imitate a planning tool on purpose; the repository-wide .planr/ rule must not drop them.
+!*/selftest/*/files/.planr/

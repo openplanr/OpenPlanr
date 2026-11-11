@@ -1,0 +1,4 @@
+{
+  "base": "good-planr",
+  "fails": ["rename-not-blocked"]
+}

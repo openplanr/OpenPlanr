@@ -83,6 +83,7 @@ export const RULES = Object.freeze([
       'tests/release-train/',
       'tests/dashboard-app/',
       'tests/performance/',
+      'tests/skill-evals/',
     ],
     jobs: [],
   },

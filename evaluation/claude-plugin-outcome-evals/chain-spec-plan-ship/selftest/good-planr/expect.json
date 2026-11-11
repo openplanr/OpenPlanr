@@ -1,0 +1,16 @@
+{
+  "hidden": true,
+  "guard": true,
+  "graders": {
+    "skill-plan-fired": true,
+    "skill-ship-fired": true,
+    "skill-spec-fired": true
+  },
+  "judge": {
+    "includes-two-day-window": true,
+    "overdue-first": true,
+    "excludes-done": true,
+    "spec-written": true,
+    "plan-written": true
+  }
+}

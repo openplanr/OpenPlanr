@@ -1,0 +1,4 @@
+{
+  "base": "good-planr",
+  "fails": ["august-dip-not-flagged"]
+}

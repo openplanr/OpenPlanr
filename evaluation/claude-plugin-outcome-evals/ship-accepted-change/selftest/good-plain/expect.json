@@ -1,0 +1,10 @@
+{
+  "hidden": true,
+  "guard": true,
+  "graders": {
+    "skill-ship-fired": false
+  },
+  "judge": {
+    "verification-reported": false
+  }
+}

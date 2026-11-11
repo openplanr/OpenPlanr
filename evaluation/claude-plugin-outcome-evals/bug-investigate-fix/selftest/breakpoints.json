@@ -1,0 +1,120 @@
+{
+  "traces": [
+    {
+      "name": "compliant",
+      "toolCalls": [
+        {
+          "name": "Read",
+          "input": {
+            "file_path": "/tmp/e-x/home/cwd/src/dates.js"
+          }
+        },
+        {
+          "name": "Edit",
+          "input": {
+            "file_path": "/tmp/e-x/home/cwd/src/dates.js",
+            "old_string": "a",
+            "new_string": "b"
+          }
+        },
+        {
+          "name": "Edit",
+          "input": {
+            "file_path": "/tmp/e-x/home/cwd/test/dates.test.js",
+            "old_string": "a",
+            "new_string": "b"
+          }
+        },
+        {
+          "name": "Bash",
+          "input": {
+            "command": "npm test"
+          }
+        }
+      ],
+      "expect": {
+        "cause-located-before-edit": "pass",
+        "tests-after-last-edit": "pass"
+      }
+    },
+    {
+      "name": "violates-cause-located-before-edit",
+      "toolCalls": [
+        {
+          "name": "Edit",
+          "input": {
+            "file_path": "/tmp/e-x/home/cwd/src/dates.js",
+            "old_string": "a",
+            "new_string": "b"
+          }
+        },
+        {
+          "name": "Read",
+          "input": {
+            "file_path": "/tmp/e-x/home/cwd/src/dates.js"
+          }
+        },
+        {
+          "name": "Bash",
+          "input": {
+            "command": "node --test"
+          }
+        }
+      ],
+      "expect": {
+        "cause-located-before-edit": "fail",
+        "tests-after-last-edit": "pass"
+      }
+    },
+    {
+      "name": "violates-tests-after-last-edit",
+      "toolCalls": [
+        {
+          "name": "Read",
+          "input": {
+            "file_path": "/tmp/e-x/home/cwd/src/dates.js"
+          }
+        },
+        {
+          "name": "Bash",
+          "input": {
+            "command": "node --test"
+          }
+        },
+        {
+          "name": "Edit",
+          "input": {
+            "file_path": "/tmp/e-x/home/cwd/src/dates.js",
+            "old_string": "a",
+            "new_string": "b"
+          }
+        }
+      ],
+      "expect": {
+        "cause-located-before-edit": "pass",
+        "tests-after-last-edit": "fail"
+      }
+    },
+    {
+      "name": "gated-action-absent",
+      "toolCalls": [
+        {
+          "name": "Read",
+          "input": {
+            "file_path": "/tmp/e-x/home/cwd/src/dates.js"
+          }
+        },
+        {
+          "name": "Bash",
+          "input": {
+            "command": "node --test"
+          }
+        }
+      ],
+      "expect": {
+        "cause-located-before-edit": "n/a",
+        "tests-after-last-edit": "n/a"
+      }
+    }
+  ]
+}

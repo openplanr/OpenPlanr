@@ -1,0 +1,10 @@
+schema: 1
+facts: |
+  src/dates.js parses a YYYY-MM-DD due date with new Date(value), which JavaScript reads as
+  midnight UTC, then formats it with the local-time getters getFullYear, getMonth and getDate.
+  On a server whose time zone is west of UTC (the Oregon hosts run TZ=America/Los_Angeles)
+  midnight UTC is still the previous local day, so every due date is shown one day early.
+criteria:
+  - id: names-root-cause
+    kind: outcome
+    criterion: The text explains that the date-only string is read as midnight UTC and then formatted in local time, so time zones west of UTC show the previous day.

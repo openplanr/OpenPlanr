@@ -1,0 +1,8 @@
+{
+  "toolCalls": [
+    { "name": "Skill", "input": { "skill": "planr:plan" } },
+    { "name": "Read", "input": { "file_path": "/tmp/e-x/home/cwd/docs/specs/note-sharing.md" } },
+    { "name": "Agent", "input": { "subagent_type": "planr:planr-specification", "prompt": "Decompose docs/specs/note-sharing.md" } },
+    { "name": "Write", "input": { "file_path": "/tmp/e-x/home/cwd/.planr/plans/PLAN-001-note-sharing.md", "content": "..." } }
+  ]
+}

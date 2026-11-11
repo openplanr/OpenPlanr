@@ -1,0 +1,14 @@
+{
+  "toolCalls": [
+    {
+      "name": "Read",
+      "input": {
+        "file_path": "/tmp/e-x/home/cwd/docs/specs/note-sharing.md"
+      },
+      "result": "4. **Revoke a link.** The owner can revoke a link with `DELETE /notes/:id/shares/:token`."
+    }
+  ],
+  "judge": {
+    "finds-missing-ownership-check": true
+  }
+}

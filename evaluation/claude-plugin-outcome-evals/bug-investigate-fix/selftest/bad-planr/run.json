@@ -1,0 +1,10 @@
+{
+  "toolCalls": [
+    { "name": "Skill", "input": { "skill": "planr:investigate" } },
+    { "name": "Read", "input": { "file_path": "/tmp/e-x/home/cwd/src/dates.js" } },
+    { "name": "Skill", "input": { "skill": "planr:ship" } },
+    { "name": "Edit", "input": { "file_path": "/tmp/e-x/home/cwd/src/dates.js", "old_string": "if (date === null) return '';", "new_string": "if (date === null) return '';\n  date.setDate(date.getDate() + 1);" } },
+    { "name": "Write", "input": { "file_path": "/tmp/e-x/home/cwd/test/dates.test.js", "content": "..." } },
+    { "name": "Bash", "input": { "command": "TZ=America/Los_Angeles npm test" }, "result": "pass 10, fail 0" }
+  ]
+}

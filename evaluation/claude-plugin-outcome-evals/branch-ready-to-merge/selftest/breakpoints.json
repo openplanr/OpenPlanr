@@ -1,0 +1,88 @@
+{
+  "traces": [
+    {
+      "name": "compliant",
+      "toolCalls": [
+        {
+          "name": "Bash",
+          "input": {
+            "command": "git log --oneline origin/main..HEAD"
+          }
+        },
+        {
+          "name": "Bash",
+          "input": {
+            "command": "git diff origin/main...HEAD"
+          }
+        },
+        {
+          "name": "Bash",
+          "input": {
+            "command": "gh pr view --json number"
+          }
+        }
+      ],
+      "expect": {
+        "diff-read-before-verdict": "pass",
+        "no-merge-or-push": "pass"
+      }
+    },
+    {
+      "name": "violates-diff-read-before-verdict",
+      "toolCalls": [
+        {
+          "name": "Bash",
+          "input": {
+            "command": "git status"
+          }
+        },
+        {
+          "name": "Read",
+          "input": {
+            "file_path": "/tmp/e-x/home/cwd/src/search.js"
+          }
+        }
+      ],
+      "expect": {
+        "diff-read-before-verdict": "fail",
+        "no-merge-or-push": "pass"
+      }
+    },
+    {
+      "name": "violates-no-merge-or-push",
+      "toolCalls": [
+        {
+          "name": "Bash",
+          "input": {
+            "command": "gh pr diff 42"
+          }
+        },
+        {
+          "name": "Bash",
+          "input": {
+            "command": "gh pr merge 42 --squash"
+          }
+        }
+      ],
+      "expect": {
+        "diff-read-before-verdict": "pass",
+        "no-merge-or-push": "fail"
+      }
+    },
+    {
+      "name": "gated-action-absent",
+      "toolCalls": [
+        {
+          "name": "Bash",
+          "input": {
+            "command": "git diff main..feature/search-share"
+          }
+        }
+      ],
+      "expect": {
+        "diff-read-before-verdict": "pass",
+        "no-merge-or-push": "pass"
+      }
+    }
+  ]
+}
