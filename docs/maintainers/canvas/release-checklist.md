@@ -16,8 +16,8 @@ that all consumers use the engine; add its dependency and approved boundary edge
 as part of that integration.
 
 The package exposes the core, React bindings, testing helpers, and structural CSS.
-Its [README](../../../packages/canvas/README.md) describes the built API and the
-effective local and runner budgets. React remains an optional peer; the core has
+Its [README](../../../packages/canvas/README.md) describes the built API, the
+local budgets and what the runner reports. React remains an optional peer; the core has
 no runtime dependencies.
 
 ## Gates before a first release
@@ -48,9 +48,10 @@ git diff --check
   console or page errors. This opt-in check needs network access and Chromium.
 - [ ] Functional Chromium and Firefox suites pass. The command above excludes
   timing suites using their file names, matching the browser workflow.
-- [ ] Traced budgets pass nightly against main and on the release PR, using
-  `.github/workflows/nightly.yml`. Ordinary PRs run functional browser coverage.
-  Reproduce the Chromium runner budgets with:
+- [ ] Traced structural checks pass nightly against main and on the release PR,
+  using `.github/workflows/nightly.yml`, and the job summary shows no unexplained
+  over-limit timing. Ordinary PRs run functional browser coverage. Reproduce the
+  Chromium runner traces with:
 
   ```bash
   CI=true CANVAS_SECOND_DENSITY=1 npm run test:browser -w @openplanr/canvas -- bench-trace budgets
@@ -59,9 +60,8 @@ git diff --check
   Retain the Firefox canvas cache check and the artifact Chromium, Firefox and
   WebKit evidence from that workflow. The current canvas configuration has no
   WebKit project; do not claim cross-browser canvas traces from artifact runs.
-  Locally, omit `CI=true` to enforce
-  the stricter local limits. Runner remount timing and rAF intervals are reported
-  only; the first-frame limit is 250 ms rather than the local 150 ms.
+  The runner reports timing and long tasks without failing. Locally, omit
+  `CI=true`: the local run enforces every timing limit and is the timing gate.
 - [ ] `npm run verify` passes, including generated assets, declarations and strict
   packed workspace verification. Keep the pipeline projection self-contained
   while canvas is private. Regenerate custody metadata after package script

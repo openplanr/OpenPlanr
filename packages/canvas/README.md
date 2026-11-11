@@ -133,9 +133,9 @@ Each table lists both runtime values and TypeScript types exported by that entry
 | `classifyLayoutShift` | Classifies a shift against input-window policy. |
 | `aggregateLayoutShifts` | Aggregates measured shifts with input-phase evidence. |
 | `CANVAS_TRACE_BUDGETS` | Shared reference limits and measurement sample counts. |
-| `evaluateCanvasTrace` | Validates evidence and returns failures, reports and pending coverage. |
+| `evaluateCanvasTrace` | Validates evidence and returns failures, reports, over-limit reports and pending coverage. |
 | `toClockResolution` | Rounds frame intervals to 0.1 ms browser clock resolution. |
-| `traceBudgetPolicy` | Selects effective local or runner trace limits. |
+| `traceBudgetPolicy` | Selects local or runner trace limits and whether timing only reports. |
 | `traceOwnership` | Names the card or SVG tier a trace is gated against. |
 | `domBudgetPolicy` | Selects gated DOM counts or report-only remount/SVG measurements. |
 | `CanvasFixture` | Fixture nodes, edges and aggregate world bounds. |
@@ -443,27 +443,28 @@ and release PRs. Routine changes use the unit and functional browser suites.
 The trace script remains available for reproducing those runs locally.
 
 The following limits come from `CANVAS_TRACE_BUDGETS` and
-`traceBudgetPolicy`. Only `CI=true` selects runner limits in the trace harness;
+`traceBudgetPolicy`. Only `CI=true` selects the runner set in the trace harness;
 all other environments use the local set. Values below are maxima unless a
-sample count or exact count is stated.
+sample count or exact count is stated. On the runner, every millisecond metric and
+the long-task count are reported against the listed value without failing.
 
 | Metric | Local reference | `CI=true` runner |
 | --- | --- | --- |
-| Chromium renderer main-thread p95, vanilla HTML, 708 / 5,000 nodes | 6 / 8 ms | Same, except the 708-node 40% pan and zoom sweep and the 5,000-node zoom sweep |
-| Chromium renderer main-thread p95, 708-node vanilla HTML 40% pan and zoom sweep | 6 ms | 8 ms |
-| Chromium renderer main-thread p95, React HTML, 708 / 5,000 nodes | 8 / 10 ms | Same, except the 5,000-node zoom sweep |
-| Chromium renderer main-thread p95, 5,000-node HTML zoom sweep | 8 ms vanilla / 10 ms React | 14 ms |
-| Chromium renderer main-thread p95, SVG, 708 / 5,000 nodes | 8 / 12 ms | Same |
-| Remount renderer main-thread p95 | 16 ms | Reported only (16 ms reference) |
-| Chromium rAF interval p95 | 16.8 ms; SVG worlds are reported only | Reported only (16.8 ms reference) |
-| WebKit rAF interval p95 | 19 ms | Reported only (19 ms reference) |
-| WebKit 40% pan worst frame | 33 ms | Same |
-| Firefox 100% pan frame p95 | 17 ms | Same |
-| Firefox fit pan frame p95, 708 / 5,000 nodes | 20 / 25 ms | Same |
-| Long tasks over 50 ms | 0 | Same |
+| Chromium renderer main-thread p95, vanilla HTML, 708 / 5,000 nodes | 6 / 8 ms | Reported against the same, except the 708-node 40% pan and zoom sweep and the 5,000-node zoom sweep |
+| Chromium renderer main-thread p95, 708-node vanilla HTML 40% pan and zoom sweep | 6 ms | Reported against 8 ms |
+| Chromium renderer main-thread p95, React HTML, 708 / 5,000 nodes | 8 / 10 ms | Reported against the same, except the 5,000-node zoom sweep |
+| Chromium renderer main-thread p95, 5,000-node HTML zoom sweep | 8 ms vanilla / 10 ms React | Reported against 14 ms |
+| Chromium renderer main-thread p95, SVG, 708 / 5,000 nodes | 8 / 12 ms | Reported against the same |
+| Remount renderer main-thread p95 | 16 ms | Reported against 16 ms |
+| Chromium rAF interval p95 | 16.8 ms; SVG worlds are reported only | Reported against 16.8 ms |
+| WebKit rAF interval p95 | 19 ms | Reported against 19 ms |
+| WebKit 40% pan worst frame | 33 ms | Reported against 33 ms |
+| Firefox 100% pan frame p95 | 17 ms | Reported against 17 ms |
+| Firefox fit pan frame p95, 708 / 5,000 nodes | 20 / 25 ms | Reported against 20 / 25 ms |
+| Long tasks over 50 ms | 0 | Reported against 0 |
 | Stage DOM nodes | 2,000; SVG worlds are reported only | Same; remount DOM count is reported only |
-| First fixture frame p50 | 150 ms across exactly 5 loads; SVG worlds are reported only | 250 ms across exactly 5 loads; WebKit React HTML 350 ms |
-| Hit-test p95 | Greater than 0 and at most 0.1 ms | Same |
+| First fixture frame p50 | 150 ms across exactly 5 loads; SVG worlds are reported only | Exactly 5 loads; p50 reported against 250 ms, WebKit React HTML 350 ms |
+| Hit-test p95 | Greater than 0 and at most 0.1 ms | Greater than 0; reported against 0.1 ms |
 | Hit-test sampling | Exactly 1,000 points, at least 1,000 queries, at least 1 ms per sample batch | Same |
 | Chrome toggles / admitted layout shift | Exactly 16 toggles / 0 admitted CLS | Same |
 | LOD switches per band | Exactly 20 | Same |
@@ -484,20 +485,23 @@ seeded screen points outside each interaction window. Each point repeats queries
 until its batch spans at least 1 ms; the report includes actual call counts and
 unrounded milliseconds per query. A separate 968-node remount trace gates its 16 ms main-thread
 p95 and checks at most 200 admissions per frame across at least five frames.
-Only `CI=true` selects runner budgets: remount main-thread p95 and rAF intervals
-remain recorded without failing assertions because software GL has noisy remount
-timings and can present at 30 fps. The first fixture frame p50 gates at 250 ms on
-the runner, whose cold software-GL page loads measure about three times the local
-time, and at 150 ms locally. The 5,000-node HTML zoom sweep gates its main-thread
-p95 at 14 ms on the runner, and the 708-node vanilla HTML 40% pan and zoom sweep at
-8 ms, where software GL measures about four to five times the local time. Local
-remounts keep the 16 ms limit enforced.
-Every other budget and gate is the same in both sets. The printed table,
-JSON report and its attachment identify the `local` or `runner` budget set and
-effective limits. Runner remounts show `reported (reference 16)` and runner first
-frames `250 (reference 150)` in the table,
-JSON report and attachment. The JSON retains reference limits; a `null` effective
-remount or rAF limit means it is reported only.
+Only `CI=true` selects the runner set. Shared software-GL runners run about four to
+five times slower than the reference machine, and that speed varies by up to about
+two times between jobs on identical code, so fixed millisecond limits on the runner
+either fail without a regression or stop catching one. Until budgets are calibrated
+to the measured runner speed, the runner records every timing metric and long-task
+count without failing; DOM counts, sample counts, hit-test presence, layout shift,
+LOD, blank frames, pins and React commits still gate. Each evaluation lists the
+reported entries over their comparison value in `exceeded`. The Chromium trace
+writes a speed index, the geometric mean of the non-remount renderer main p95
+medians, to its JSON report, its output and the job summary, with the timing
+entries over their comparison value; non-positive medians are skipped and counted.
+Local runs gate every limit above, including remounts at 16 ms.
+The printed table, JSON report and its attachment identify the `local` or `runner`
+budget set. The JSON keeps reference limits and the evaluator's comparison values;
+a `null` effective limit means that metric is reported only. On the runner every
+timing limit is `null`, and the table shows `reported (reference …)`, or
+`reported (comparison …, reference …)` where the runner comparison differs.
 Browser traces
 require the external browser runner; results depend on its GPU and rendering mode.
 The overview comparison records main-thread work, worst frames, bitmap bytes and
@@ -520,11 +524,11 @@ whether long-task and layout-shift observations are available; unavailable
 metrics are reported as `unsupported`. CDP main-thread work is `unsupported`
 outside Chromium. First-frame timing and DOM counts remain supported.
 
-The release-candidate job uses `CI=true`. It gates long tasks where supported,
-stage DOM counts, first-frame p50 (250 ms; 350 ms for WebKit React HTML, whose
-runner loads measure about four times the local time) and hit-test budgets, plus React
-pure-camera commit checks. As in Chromium, the runner only reports interaction
-rAF p95 and worst-frame limits; local runs enforce the existing browser limits.
+The release-candidate job uses `CI=true`. As in Chromium, it reports long tasks,
+first-frame p50 (against 250 ms; 350 ms for WebKit React HTML, whose runner loads
+measure about four times the local time), hit-test p95, interaction rAF p95 and
+worst frames, and gates stage DOM counts, hit-test sampling and React pure-camera
+commit checks. Local runs enforce the existing browser limits.
 Frame timings must still be numeric; missing or `unsupported` timing is invalid.
 
 | Measurement | Chromium | WebKit | Firefox |
