@@ -24,9 +24,9 @@ for bundled design scripts. A failed probe means the matching stop below.
 | Probe result | Runtime | Next action |
 |---|---|---|
 | `ok: true` and `supported.min` ≤ 1 ≤ `supported.max` | Ready | Use the commands below. |
-| `openplanr` not found | Stop 1: no CLI | `npm install -g openplanr@3.7.1` |
-| `unknown command 'design'`, `E_DESIGN_RUNTIME_UNSUPPORTED`, or a `supported` range without 1 | Stop 2: CLI too old | `npm install -g openplanr@3.7.1` |
-| `ok: false` with `E_DESIGN_RUNTIME_MISSING` and `pipeline: null` | Stop 3: CLI without its workflow package | `npm install -g openplanr@3.7.1`, run without `--omit=optional` |
+| `openplanr` not found | Stop 1: no CLI | `npm install -g openplanr@3.7.2` |
+| `unknown command 'design'`, `E_DESIGN_RUNTIME_UNSUPPORTED`, or a `supported` range without 1 | Stop 2: CLI too old | `npm install -g openplanr@3.7.2` |
+| `ok: false` with `E_DESIGN_RUNTIME_MISSING` and `pipeline: null` | Stop 3: CLI without its workflow package | `npm install -g openplanr@3.7.2`, run without `--omit=optional` |
 
 A design on the hosted canvas needs no CLI. At a stop, consultation and
 authoring still happen: author `design-document.json`, its sources and
@@ -41,7 +41,7 @@ run the skill again.
 | Claude Code | Design builds on the hosted canvas when the artifact tool offers a Design type. When it does not, also name the canvas actions: sign in with `/login` on a claude.ai Pro, Max, Ultra, Team or Enterprise plan; or, when artifacts are turned off, re-enable them in `/config`. An API key or gateway token means no claude.ai login: name `/login` with a claude.ai plan, or the CLI. On Bedrock, Google Cloud or Foundry, or in an organisation with CMEK, HIPAA or Zero Data Retention, the canvas is unavailable and the CLI is the path. |
 | Codex | The stop's command. `openplanr setup` installs the workflow package beside the skills, but `PATH` can resolve a different `openplanr`; `which openplanr` shows the one that runs. Codex's default `workspace-write` sandbox stops the studio: `design open` fails with `listen EPERM`. Tell the user to run `openplanr design open <design-document.json>` in their own terminal, or to restart Codex with `-c sandbox_workspace_write.network_access=true -c 'sandbox_workspace_write.writable_roots=["<absolute path of ~/.planr>"]'` (use `PLANR_HOME` instead when it is set). That setting also lets commands reach the network. |
 | Cursor | The stop's command. `openplanr setup` installs the workflow package beside the skills, but `PATH` can resolve a different `openplanr`; `which openplanr` shows the one that runs. |
-| ChatGPT | Without a local shell, take stop 1: deliver the unverified sources and specification, and name `npm install -g openplanr@3.7.1` for a coding agent with a shell. |
+| ChatGPT | Without a local shell, take stop 1: deliver the unverified sources and specification, and name `npm install -g openplanr@3.7.2` for a coding agent with a shell. |
 
 ## Commands
 
