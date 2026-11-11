@@ -230,11 +230,15 @@ const foundationPaths = {
     '1.23.0': 'schemas/v1.23.0/implementation-result.schema.json',
   },
   'rule-catalog': { '1.5.0': 'schemas/v1.5.0/rule-catalog.schema.json' },
-  'command-catalog': { '1.5.0': 'schemas/v1.5.0/command-catalog.schema.json' },
+  'command-catalog': {
+    '1.5.0': 'schemas/v1.5.0/command-catalog.schema.json',
+    '1.25.0': 'schemas/v1.25.0/command-catalog.schema.json',
+  },
   'skill-catalog': {
     '1.5.0': 'schemas/v1.5.0/skill-catalog.schema.json',
     '1.6.0': v16Schema('skill-catalog'),
     '1.7.0': v17Schema('skill-catalog'),
+    '1.25.0': 'schemas/v1.25.0/skill-catalog.schema.json',
   },
   'output-catalog': { '1.5.0': 'schemas/v1.5.0/output-catalog.schema.json' },
   'output-path-catalog': { '1.5.0': 'schemas/v1.5.0/output-path-catalog.schema.json' },

@@ -1,7 +1,7 @@
 {
   "kind": "command-catalog",
   "schemaVersion": "1.0.0",
-  "protocolVersion": "1.5.0",
+  "protocolVersion": "1.25.0",
   "documentVersion": "1.0.0",
   "digestAlgorithm": "sha256",
   "canonicalization": "rfc8785",
@@ -1947,6 +1947,5 @@
         "packages/cli/tests/unit/command-registration-parity.test.ts"
       ]
     }
-  ],
-  "documentDigest": "sha256:dea612487b9c2a39cc38efe07a4d1042b230dcf4369eff4f23baf9ea7a2aeb9a"
+  ]
 }

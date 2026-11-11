@@ -1,6 +1,5 @@
 #!/usr/bin/env node
 
-import { createHash } from 'node:crypto';
 import {
   chmodSync,
   existsSync,
@@ -25,8 +24,9 @@ const workspaceRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..
 const manifestRelative = 'lib/generated/protocol-projection.json';
 
 // The additive Protocol 1.6 registries share the flat protocol registries/
-// directory but project only to registry/v1.6.0; the seven v1.5 canonical
-// catalogs continue to project to registry/v1.5.0.
+// directory but project only to registry/v1.6.0; the seven canonical catalogs
+// project to registry/v1.5.0, including the 1.25.0 command and skill catalogs,
+// so readers and the ./registry/* export path stay stable.
 const V16_REGISTRIES = new Set(Object.keys(DIAGRAM_V16_REGISTRIES));
 const V17_REGISTRIES = new Set(Object.keys(PROTOCOL_V17_REGISTRIES));
 const V113_REGISTRIES = new Set(['diagram-authoring-capabilities.json']);
@@ -136,8 +136,6 @@ function walk(root, prefix = '') {
   return files;
 }
 
-const sha256 = (bytes) => createHash('sha256').update(bytes).digest('hex');
-
 function contained(root, path) {
   const child = relative(root, path);
   return child !== '..' && !child.startsWith(`..${sep}`) && !isAbsolute(child);
@@ -173,7 +171,6 @@ for (const mapping of mappings) {
       target: targetRelative,
       targetPath,
       bytes,
-      sha256: sha256(bytes),
       mode: statSync(source.absolute).mode & 0o777,
     });
   }
@@ -250,12 +247,11 @@ const renderedManifest = Buffer.from(
   `${JSON.stringify(
     {
       kind: 'openplanr-protocol-projection',
-      schemaVersion: '1.0.0',
+      schemaVersion: '2.0.0',
       generator: 'scripts/protocol/project-protocol.mjs',
-      entries: entries.map(({ source, target: targetPath, sha256: digest, mode: fileMode }) => ({
+      entries: entries.map(({ source, target: targetPath, mode: fileMode }) => ({
         source,
         target: targetPath,
-        sha256: digest,
         mode: fileMode.toString(8),
       })),
     },

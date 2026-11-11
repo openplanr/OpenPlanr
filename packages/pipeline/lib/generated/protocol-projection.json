@@ -1,2640 +1,2211 @@
 {
   "kind": "openplanr-protocol-projection",
-  "schemaVersion": "1.0.0",
+  "schemaVersion": "2.0.0",
   "generator": "scripts/protocol/project-protocol.mjs",
   "entries": [
     {
       "source": "packages/protocol/projections/pipeline/lib/dashboard/closed-json-contract.mjs",
       "target": "lib/dashboard/closed-json-contract.mjs",
-      "sha256": "ac5b8f21d4b7f0c3c7087add9b16ae63f679f89c19d8ebe8da9b23ddc5250bb7",
       "mode": "644"
     },
     {
       "source": "packages/protocol/lib/dashboard/generated/operate-schema-token-codec.mjs",
       "target": "lib/dashboard/generated/operate-schema-token-codec.mjs",
-      "sha256": "dfd8f5bf819dd6cc84085472116ee43ce47c8a376830599b043bfbeacc64c86a",
       "mode": "644"
     },
     {
       "source": "packages/protocol/lib/dashboard/operate-experience-audit-display-contract.d.mts",
       "target": "lib/dashboard/operate-experience-audit-display-contract.d.mts",
-      "sha256": "cde09ec78e053e520d4e83c84382a54ae2dbd10ac171969b82588d13d0897af6",
       "mode": "644"
     },
     {
       "source": "packages/protocol/projections/pipeline/lib/dashboard/operate-experience-audit-display-contract.mjs",
       "target": "lib/dashboard/operate-experience-audit-display-contract.mjs",
-      "sha256": "ab473b018b6d432d62d6a1bdf802cb9cd95d6b3c13286657b462fbd18e1c1669",
       "mode": "644"
     },
     {
       "source": "packages/protocol/lib/dashboard/operate-experience-display-contract.d.mts",
       "target": "lib/dashboard/operate-experience-display-contract.d.mts",
-      "sha256": "b565a480f2c2dc7bd4fba7e0a1fe15d8008d202aea8298fd9b583059d1387333",
       "mode": "644"
     },
     {
       "source": "packages/protocol/projections/pipeline/lib/dashboard/operate-experience-display-contract.mjs",
       "target": "lib/dashboard/operate-experience-display-contract.mjs",
-      "sha256": "7525c178ddbc6d33ca579857107f4b5c16a86def3f251f9aee1bfdab1c539e7c",
       "mode": "644"
     },
     {
       "source": "packages/protocol/lib/dashboard/operate-experience-surface-contract.d.mts",
       "target": "lib/dashboard/operate-experience-surface-contract.d.mts",
-      "sha256": "5be66493a2137e6c3f16a765b386046e063dd6ee75bc488f54f03388bc645c32",
       "mode": "644"
     },
     {
       "source": "packages/protocol/projections/pipeline/lib/dashboard/operate-experience-surface-contract.mjs",
       "target": "lib/dashboard/operate-experience-surface-contract.mjs",
-      "sha256": "acc6ee177751d2e9a1e2f3abf7baf717935697cdd076fb683b9c8ecc18d4042e",
       "mode": "644"
     },
     {
       "source": "packages/protocol/lib/dashboard/operate-review-contract.d.mts",
       "target": "lib/dashboard/operate-review-contract.d.mts",
-      "sha256": "0d871983b8b2ad0561b063f29ab75525e89d10531293f1cd4df49d8360cd0dc2",
       "mode": "644"
     },
     {
       "source": "packages/protocol/projections/pipeline/lib/dashboard/operate-review-contract.mjs",
       "target": "lib/dashboard/operate-review-contract.mjs",
-      "sha256": "9446721b7591b3286fd9e9c756f22d8f76d52f18931c8d277e690769370ae9ae",
       "mode": "644"
     },
     {
       "source": "packages/protocol/lib/dashboard/operate-review-display-workspace-contract.d.mts",
       "target": "lib/dashboard/operate-review-display-workspace-contract.d.mts",
-      "sha256": "6cff9b4af4360ad1eedfa6abf8db93d28056e2bfc9a9ff7b5f1141db2265c0cf",
       "mode": "644"
     },
     {
       "source": "packages/protocol/projections/pipeline/lib/dashboard/operate-review-display-workspace-contract.mjs",
       "target": "lib/dashboard/operate-review-display-workspace-contract.mjs",
-      "sha256": "b352568d883656bdb6e204eb5e811c7cbcf7400f80899a3b088d3483386e25ee",
       "mode": "644"
     },
     {
       "source": "packages/protocol/lib/dashboard/operate-review-payload-safety.d.mts",
       "target": "lib/dashboard/operate-review-payload-safety.d.mts",
-      "sha256": "24a6c6e9752d871ec4eca1ac0826f9223a3c844201c3d3be2efcdd410719a5f5",
       "mode": "644"
     },
     {
       "source": "packages/protocol/lib/dashboard/operate-review-payload-safety.mjs",
       "target": "lib/dashboard/operate-review-payload-safety.mjs",
-      "sha256": "af11057196d38b2b441c765784d631122577651a0a7f4f008a764b9777856ad9",
       "mode": "644"
     },
     {
       "source": "packages/protocol/lib/dashboard/operate-review-workspace-projection-v2.d.mts",
       "target": "lib/dashboard/operate-review-workspace-projection-v2.d.mts",
-      "sha256": "c3699081e05c6e02c1fa7a9e570823c01f684451308151755cf8e7c7e6a96e20",
       "mode": "644"
     },
     {
       "source": "packages/protocol/projections/pipeline/lib/protocol/bounded-json-data.d.mts",
       "target": "lib/protocol/bounded-json-data.d.mts",
-      "sha256": "f5a8d0c4df7a53e82f23cd6b857810f8cf761b17f6bdcc2d1dc3f0bb35538f60",
       "mode": "644"
     },
     {
       "source": "packages/protocol/projections/pipeline/lib/protocol/bounded-json-data.mjs",
       "target": "lib/protocol/bounded-json-data.mjs",
-      "sha256": "743bdbfa245087338d2bed1b8a5bd6c792eb06bba4179eb7fcff5ac011a4130a",
       "mode": "644"
     },
     {
       "source": "packages/protocol/projections/pipeline/lib/protocol/browser-contracts.d.mts",
       "target": "lib/protocol/browser-contracts.d.mts",
-      "sha256": "42b452c5cbc485b63669021b99fed3b4ca08577b6afe2f724063a29e208c59ee",
       "mode": "644"
     },
     {
       "source": "packages/protocol/projections/pipeline/lib/protocol/browser-contracts.mjs",
       "target": "lib/protocol/browser-contracts.mjs",
-      "sha256": "87dbdbecc5530102bc70250b850cc3966d01d67e94354badd8410f505d652650",
       "mode": "644"
     },
     {
       "source": "packages/protocol/projections/pipeline/lib/protocol/canonical-json.d.mts",
       "target": "lib/protocol/canonical-json.d.mts",
-      "sha256": "d50829162f6817a8f381268b88f4b2b1518af2605b3e52cdc1ab1c9e365870e6",
       "mode": "644"
     },
     {
       "source": "packages/protocol/projections/pipeline/lib/protocol/canonical-json.mjs",
       "target": "lib/protocol/canonical-json.mjs",
-      "sha256": "b8078554f91d547de80df7612872560a0ad945af2143aae9dae4e38b4c309e30",
       "mode": "644"
     },
     {
       "source": "packages/protocol/projections/pipeline/lib/protocol/contracts.mjs",
       "target": "lib/protocol/contracts.mjs",
-      "sha256": "b835f956fde0812193cd1cde7e04c7691e12d31afbec8fadc77877efb4d38113",
       "mode": "644"
     },
     {
       "source": "packages/protocol/projections/pipeline/lib/protocol/design-contracts.mjs",
       "target": "lib/protocol/design-contracts.mjs",
-      "sha256": "2801fc22ada371956bf87671bce9ba947e4f5aa33f1758d95ed348023a3df72e",
       "mode": "644"
     },
     {
       "source": "packages/protocol/projections/pipeline/lib/protocol/design-handoff-contracts.d.mts",
       "target": "lib/protocol/design-handoff-contracts.d.mts",
-      "sha256": "37a689ff734e9fd20b37e4578874edc9451c5d35072b2c52f486d0a8a4203803",
       "mode": "644"
     },
     {
       "source": "packages/protocol/projections/pipeline/lib/protocol/design-handoff-contracts.mjs",
       "target": "lib/protocol/design-handoff-contracts.mjs",
-      "sha256": "f8badd90327bbbd48a46769ff7b3fe20d6472d586f68e5088e3a956d1226d849",
       "mode": "644"
     },
     {
       "source": "packages/protocol/projections/pipeline/lib/protocol/design-publication-contracts.d.mts",
       "target": "lib/protocol/design-publication-contracts.d.mts",
-      "sha256": "e17dd1da4e0ac71a7317a229efdd72cdbee7053ec5b1a21d3640498e90c4e8f9",
       "mode": "644"
     },
     {
       "source": "packages/protocol/projections/pipeline/lib/protocol/design-publication-contracts.mjs",
       "target": "lib/protocol/design-publication-contracts.mjs",
-      "sha256": "0e07ffc737eed2b913f14c58fae9eecb7264bff29d6c8b9f0ef931ddac16b941",
       "mode": "644"
     },
     {
       "source": "packages/protocol/projections/pipeline/lib/protocol/design-review-bundle-contracts.mjs",
       "target": "lib/protocol/design-review-bundle-contracts.mjs",
-      "sha256": "689b3d06f37e6f8cc1ddfa541159511a3cac125d171c21b00e5e432f9779fa3b",
       "mode": "644"
     },
     {
       "source": "packages/protocol/projections/pipeline/lib/protocol/diagram-authoring-contracts.d.mts",
       "target": "lib/protocol/diagram-authoring-contracts.d.mts",
-      "sha256": "0ebb0a43d875a4e1387fedc7c2e272ebe874ad708bd6f31e472da7b532be700e",
       "mode": "644"
     },
     {
       "source": "packages/protocol/projections/pipeline/lib/protocol/diagram-authoring-contracts.mjs",
       "target": "lib/protocol/diagram-authoring-contracts.mjs",
-      "sha256": "3dcaf7c09d312abbfc4e47964c81214702eb8128a91ca2fd1cdcc97a64a35397",
       "mode": "644"
     },
     {
       "source": "packages/protocol/projections/pipeline/lib/protocol/diagram-contracts.mjs",
       "target": "lib/protocol/diagram-contracts.mjs",
-      "sha256": "f5c1fea3eb52db8187baf834aa2c147aaacf8c8b100a078ae1b9adc707bb0f0c",
       "mode": "644"
     },
     {
       "source": "packages/protocol/projections/pipeline/lib/protocol/diagram-review-contracts.d.mts",
       "target": "lib/protocol/diagram-review-contracts.d.mts",
-      "sha256": "8d4b0d5634f5ded723b6be47c8264dcd39e6d2fbb8625ed62196e51887ed2bbf",
       "mode": "644"
     },
     {
       "source": "packages/protocol/projections/pipeline/lib/protocol/diagram-review-contracts.mjs",
       "target": "lib/protocol/diagram-review-contracts.mjs",
-      "sha256": "7478f7d4c97acbf4fe0cf6db587a7f40ee6e8e9222a712c42f8d67f1fb2bcd46",
       "mode": "644"
     },
     {
       "source": "packages/protocol/projections/pipeline/lib/protocol/enterprise-contract-validation.d.mts",
       "target": "lib/protocol/enterprise-contract-validation.d.mts",
-      "sha256": "ef6c9d07633b1a90dff1951999f75285cf9145fc9de1a064b9fe3a7209754fc1",
       "mode": "644"
     },
     {
       "source": "packages/protocol/projections/pipeline/lib/protocol/enterprise-contract-validation.mjs",
       "target": "lib/protocol/enterprise-contract-validation.mjs",
-      "sha256": "9babc91d29f576ce85fbc17232bdcbc42fd4289d0b97a0d784100bf6799d8a70",
       "mode": "644"
     },
     {
       "source": "packages/protocol/projections/pipeline/lib/protocol/enterprise-contracts.d.mts",
       "target": "lib/protocol/enterprise-contracts.d.mts",
-      "sha256": "bbbe4e977ee1dd8850e63e1b656120a911b55cfdd0ccd162cbdacadbece413e4",
       "mode": "644"
     },
     {
       "source": "packages/protocol/projections/pipeline/lib/protocol/enterprise-contracts.mjs",
       "target": "lib/protocol/enterprise-contracts.mjs",
-      "sha256": "04a29c5a60c92a2b40c34d877bcf3583ebb9779456c6117a47ac7ffbd94231bd",
       "mode": "644"
     },
     {
       "source": "packages/protocol/projections/pipeline/lib/protocol/enterprise-journey-contracts.d.mts",
       "target": "lib/protocol/enterprise-journey-contracts.d.mts",
-      "sha256": "e6515edc81ef4a84b8768f377806ab1eeb2e5590e6ea22e0df686053abe48961",
       "mode": "644"
     },
     {
       "source": "packages/protocol/projections/pipeline/lib/protocol/enterprise-journey-contracts.mjs",
       "target": "lib/protocol/enterprise-journey-contracts.mjs",
-      "sha256": "be16521c55977eaac10413efe76e0ab52233e582369ea6bb773529c3f4015395",
       "mode": "644"
     },
     {
       "source": "packages/protocol/projections/pipeline/lib/protocol/enterprise-resource-contracts.d.mts",
       "target": "lib/protocol/enterprise-resource-contracts.d.mts",
-      "sha256": "705af14038683464b8a8d3091816f06a525628d5bcf1249d085eed873b7b428e",
       "mode": "644"
     },
     {
       "source": "packages/protocol/projections/pipeline/lib/protocol/enterprise-resource-contracts.mjs",
       "target": "lib/protocol/enterprise-resource-contracts.mjs",
-      "sha256": "bf91d37d98ae10be9c9a5eb72549ae381a194d874a97d6275b7ba3b8c0a0ea58",
       "mode": "644"
     },
     {
       "source": "packages/protocol/projections/pipeline/lib/protocol/errors.mjs",
       "target": "lib/protocol/errors.mjs",
-      "sha256": "49c41e1e5c13b5dc5cbe0ee426b03fb9d076de78c6bf99d4824f9b7f2d8a214f",
       "mode": "644"
     },
     {
       "source": "packages/protocol/projections/pipeline/lib/protocol/generated/artifact-envelope-metadata.mjs",
       "target": "lib/protocol/generated/artifact-envelope-metadata.mjs",
-      "sha256": "e3ac101ea3e1fbf10a21b66e5e780e1cef70a941dd3b05d4574b88313488fe66",
       "mode": "644"
     },
     {
       "source": "packages/protocol/projections/pipeline/lib/protocol/generated/contract-catalog-v2.mjs",
       "target": "lib/protocol/generated/contract-catalog-v2.mjs",
-      "sha256": "781b988d3d796e3a959452738d91eb6745a3df274ccfc7c18563e1ce3042ab17",
       "mode": "644"
     },
     {
       "source": "packages/protocol/projections/pipeline/lib/protocol/generated/diagram-registries.mjs",
       "target": "lib/protocol/generated/diagram-registries.mjs",
-      "sha256": "89aca6f22b129272178345e45f51577b0e7e7af45df205de602b14b1541dc31a",
       "mode": "644"
     },
     {
       "source": "packages/protocol/projections/pipeline/lib/protocol/generated/legacy-diagram-schema.mjs",
       "target": "lib/protocol/generated/legacy-diagram-schema.mjs",
-      "sha256": "4e47160c3fe8ee4f5df3c85f71a87d9116c7cb9f77283ce5b3cfceb5850d0013",
       "mode": "644"
     },
     {
       "source": "packages/protocol/projections/pipeline/lib/protocol/jcs.mjs",
       "target": "lib/protocol/jcs.mjs",
-      "sha256": "b8078554f91d547de80df7612872560a0ad945af2143aae9dae4e38b4c309e30",
       "mode": "644"
     },
     {
       "source": "packages/protocol/projections/pipeline/lib/protocol/json-schema.mjs",
       "target": "lib/protocol/json-schema.mjs",
-      "sha256": "934172a1cb98971403ed3b105ed2d2f5d26fda7857a90cc768e29179dbed8d7b",
       "mode": "644"
     },
     {
       "source": "packages/protocol/projections/pipeline/lib/protocol/large-object-contracts.d.mts",
       "target": "lib/protocol/large-object-contracts.d.mts",
-      "sha256": "0198f65ee5a8f2661cf8e518a0028f3d1aae643d21bf8622d9fc17cf1ee8c39e",
       "mode": "644"
     },
     {
       "source": "packages/protocol/projections/pipeline/lib/protocol/large-object-contracts.mjs",
       "target": "lib/protocol/large-object-contracts.mjs",
-      "sha256": "930fd2ded54365e02f6c175912e05e9dcb9170f3b64bca463de9dcfd3f052049",
       "mode": "644"
     },
     {
       "source": "packages/protocol/projections/pipeline/lib/protocol/large-object-limits.d.mts",
       "target": "lib/protocol/large-object-limits.d.mts",
-      "sha256": "4be027e389ede1e42ec0108f641f4e33fcb9b702a9a583e5ed4ceecf4b12727a",
       "mode": "644"
     },
     {
       "source": "packages/protocol/projections/pipeline/lib/protocol/large-object-limits.mjs",
       "target": "lib/protocol/large-object-limits.mjs",
-      "sha256": "2d0d04ac6ad37ab7bfaa64c777ca9820fe84ab5d86d80cece06f67edecb10f74",
       "mode": "644"
     },
     {
       "source": "packages/protocol/projections/pipeline/lib/protocol/live-evidence-v2.mjs",
       "target": "lib/protocol/live-evidence-v2.mjs",
-      "sha256": "2f08d221b717f36810dd68b3097fb0fe88b29cae4edf700c5d93d33b4d159938",
       "mode": "644"
     },
     {
       "source": "packages/protocol/projections/pipeline/lib/protocol/names.d.mts",
       "target": "lib/protocol/names.d.mts",
-      "sha256": "90b6f64bd3876f08389d1285639098464b922b041d4cb34e5b05d1ed5f45e968",
       "mode": "644"
     },
     {
       "source": "packages/protocol/projections/pipeline/lib/protocol/names.mjs",
       "target": "lib/protocol/names.mjs",
-      "sha256": "85d080c6a4a0ed31cb60daaf0dc8739a0d9ddbd060e63126d81a3b2b84294bd9",
       "mode": "644"
     },
     {
       "source": "packages/protocol/projections/pipeline/lib/protocol/operate-experience-live-patch.mjs",
       "target": "lib/protocol/operate-experience-live-patch.mjs",
-      "sha256": "77135be126709047fed17bda773407e4821b22f42ba9864551c3b6f450e95769",
       "mode": "644"
     },
     {
       "source": "packages/protocol/projections/pipeline/lib/protocol/operating-planning-contracts.mjs",
       "target": "lib/protocol/operating-planning-contracts.mjs",
-      "sha256": "46eb1d93acce9e07f60ccaabdaaca3b068799f1158cfa5965295d81e0473ca26",
       "mode": "644"
     },
     {
       "source": "packages/protocol/projections/pipeline/lib/protocol/planning-contracts.mjs",
       "target": "lib/protocol/planning-contracts.mjs",
-      "sha256": "8a3c46f63fdb225af6649522227a7cc35bb8b49e56830099941a59cfccd5d74a",
       "mode": "644"
     },
     {
       "source": "packages/protocol/projections/pipeline/lib/protocol/planning-folder.d.mts",
       "target": "lib/protocol/planning-folder.d.mts",
-      "sha256": "55ed186e18abeb7435d8884ea5a9d0a2069419335887a05657bfaa92d69fdeda",
       "mode": "644"
     },
     {
       "source": "packages/protocol/projections/pipeline/lib/protocol/planning-folder.mjs",
       "target": "lib/protocol/planning-folder.mjs",
-      "sha256": "9c4b1398891b5810fe67dd75d8c87960738e25faac16a1f04f150b99bceda403",
       "mode": "644"
     },
     {
       "source": "packages/protocol/projections/pipeline/lib/protocol/review-experience-contracts.mjs",
       "target": "lib/protocol/review-experience-contracts.mjs",
-      "sha256": "844220cc0d829cb438f906afd81de05c00643eaa820ffe4ad4e9650ab4d2797d",
       "mode": "644"
     },
     {
       "source": "packages/protocol/projections/pipeline/lib/protocol/shape-library-contracts.d.mts",
       "target": "lib/protocol/shape-library-contracts.d.mts",
-      "sha256": "119220c655801c2b95931a505833202bc430979fa50c258f67776f0cd8e2c57c",
       "mode": "644"
     },
     {
       "source": "packages/protocol/projections/pipeline/lib/protocol/shape-library-contracts.mjs",
       "target": "lib/protocol/shape-library-contracts.mjs",
-      "sha256": "47bf861a138c9cb25e8928ad3e3d77fb2cfbc58dc6ee963ae74746fe1c15b011",
       "mode": "644"
     },
     {
       "source": "packages/protocol/projections/pipeline/lib/protocol/sharing-security-contracts.d.mts",
       "target": "lib/protocol/sharing-security-contracts.d.mts",
-      "sha256": "17d27c5d87da5554954e5dea9a4c94e4492d1055d6164bbb46387411fdfdae29",
       "mode": "644"
     },
     {
       "source": "packages/protocol/projections/pipeline/lib/protocol/sharing-security-contracts.mjs",
       "target": "lib/protocol/sharing-security-contracts.mjs",
-      "sha256": "992b5b59a26caf350369c5da2bd06e83e06915570beffab086cac32e1bd96fbd",
       "mode": "644"
     },
     {
       "source": "packages/protocol/projections/pipeline/lib/protocol/skill-source-contracts.mjs",
       "target": "lib/protocol/skill-source-contracts.mjs",
-      "sha256": "fed759ae6799756d3f946cb94a12ed76f16a79d610cea392b957a29b361539db",
       "mode": "644"
     },
     {
       "source": "packages/protocol/projections/pipeline/lib/protocol/studio-presentation-contracts.d.mts",
       "target": "lib/protocol/studio-presentation-contracts.d.mts",
-      "sha256": "5b9e492a80112a7b51dd6f92f780839507c9439338a5b54ce025e695e68e49a0",
       "mode": "644"
     },
     {
       "source": "packages/protocol/projections/pipeline/lib/protocol/studio-presentation-contracts.mjs",
       "target": "lib/protocol/studio-presentation-contracts.mjs",
-      "sha256": "6fe4853bc32f117258ae39f6a353f12ea8b0910d9a9924c12df03c4dfd4325d4",
       "mode": "644"
     },
     {
       "source": "packages/protocol/projections/pipeline/lib/protocol/workspace-contracts.mjs",
       "target": "lib/protocol/workspace-contracts.mjs",
-      "sha256": "a77a427bb2e1fb07d043b5f7d1a53151f3077bc4a395d862bff0daf7c36c6a6d",
       "mode": "644"
     },
     {
       "source": "packages/protocol/registry/adapters.json",
       "target": "registry/adapters.json",
-      "sha256": "4f5c47977aac550ddfc2fc87b8cbaa8258ca96b61b66cd745d466c3f993c8d94",
       "mode": "644"
     },
     {
       "source": "packages/protocol/registry/artifact-theme.json",
       "target": "registry/artifact-theme.json",
-      "sha256": "c3c79c71d5e594bd1c18647f85a1482b3fa805fc7cb76c8b86da6fc28fa45693",
       "mode": "644"
     },
     {
       "source": "packages/protocol/registry/evaluation-graders.json",
       "target": "registry/evaluation-graders.json",
-      "sha256": "aae843fe55fa84b1a04e02fef3ed8bbeafe0d8a65b071922013368b7c987a68e",
       "mode": "644"
     },
     {
       "source": "packages/protocol/registry/evaluation-host-profiles.json",
       "target": "registry/evaluation-host-profiles.json",
-      "sha256": "125e755d4c09d9e8949f5bf727a7a69669b4991d2d94d6b36a87eff71d310552",
       "mode": "644"
     },
     {
       "source": "packages/protocol/registry/frozen-commands.json",
       "target": "registry/frozen-commands.json",
-      "sha256": "2d04417a24536e6ea3a82f0ea5ec2351722701257808a312a5a224dcdc850f60",
       "mode": "644"
     },
     {
       "source": "packages/protocol/registry/landing-operations.json",
       "target": "registry/landing-operations.json",
-      "sha256": "f8765638680f1a4bfd45ea615e7634965aa21b034ca62b6004550d3e38628238",
       "mode": "644"
     },
     {
       "source": "packages/protocol/registry/landing-workflows.json",
       "target": "registry/landing-workflows.json",
-      "sha256": "7bff6d6150b6cef7d46603216d4225bc9000f9f286a203c65e668a077b3ead80",
       "mode": "644"
     },
     {
       "source": "packages/protocol/registry/live-evidence-providers.json",
       "target": "registry/live-evidence-providers.json",
-      "sha256": "d20af36b3b4abda117d1a50e34a93e5b53c48a2a8545c44b225ae1e094e8b74e",
       "mode": "644"
     },
     {
       "source": "packages/protocol/registry/operate-v2-contracts.json",
       "target": "registry/operate-v2-contracts.json",
-      "sha256": "bcd86d29a23e44b7ee605423dfa9a92a2e616c6d34b1ec4a97c6b8c889e77035",
       "mode": "644"
     },
     {
       "source": "packages/protocol/registry/professional-skills.json",
       "target": "registry/professional-skills.json",
-      "sha256": "76ebfb7eabbce94f46c6943de78c69d231378604dfef33e15886c2b78a11398d",
       "mode": "644"
     },
     {
       "source": "packages/protocol/registry/roles.json",
       "target": "registry/roles.json",
-      "sha256": "d984c27df99e9bfb66b325efb1fc390861557b689cbbec22ea1386a935f51f5a",
       "mode": "644"
     },
     {
       "source": "packages/protocol/registry/ship-review-specialists.json",
       "target": "registry/ship-review-specialists.json",
-      "sha256": "5de54a544c77c1f2b50a040e5cfffd57d194bdfc8d15a6c9cae3f7414c1fae76",
       "mode": "644"
     },
     {
       "source": "packages/protocol/registries/diagram-authoring-capabilities.json",
       "target": "registry/v1.13.0/diagram-authoring-capabilities.json",
-      "sha256": "c802c69d5bf14bb067356b281cd97ff30fde8dc74bb2d2caaa401435e799a50c",
       "mode": "644"
     },
     {
       "source": "packages/protocol/registries/artifact-theme.json",
       "target": "registry/v1.14.0/artifact-theme.json",
-      "sha256": "6cf3548040d555d2f2618ba14345e73ca59c5b7f77d66119f49b0d62a55fa2ea",
       "mode": "644"
     },
     {
       "source": "packages/protocol/registry/v1.17.0/commands.json",
       "target": "registry/v1.17.0/commands.json",
-      "sha256": "dfbb6d3fbc8d6db33cb81428af0082cb56449b05892822ef204eac25e1013145",
       "mode": "644"
     },
     {
       "source": "packages/protocol/registries/commands.json",
       "target": "registry/v1.5.0/commands.json",
-      "sha256": "636d72a6ccee0b57b30d36b2a4686c490ba4672fd4232a08796dc8d12d4308ab",
       "mode": "644"
     },
     {
       "source": "packages/protocol/registries/output-paths.json",
       "target": "registry/v1.5.0/output-paths.json",
-      "sha256": "19513acdf5c718c8ca6f35f271313ec40f6e2d9eac69d39bfb2058a3c1eacfa1",
       "mode": "644"
     },
     {
       "source": "packages/protocol/registries/outputs.json",
       "target": "registry/v1.5.0/outputs.json",
-      "sha256": "3fe574b6957cda821b1bc8255168445be8b0a123669d76e556576dda4604454b",
       "mode": "644"
     },
     {
       "source": "packages/protocol/registries/roles.json",
       "target": "registry/v1.5.0/roles.json",
-      "sha256": "f0dbe051f3eb110262c50b4697fcc61c0fc6efa4c6cafac4f0b1724bb9857b13",
       "mode": "644"
     },
     {
       "source": "packages/protocol/registries/rules.json",
       "target": "registry/v1.5.0/rules.json",
-      "sha256": "f47ed322259ac19fae8caa43e6af5736bec05c07f9a6d24dad313a06ae0d35b8",
       "mode": "644"
     },
     {
       "source": "packages/protocol/registries/skills.json",
       "target": "registry/v1.5.0/skills.json",
-      "sha256": "944f0d2c47ff09c913c22fc4861e92ab5cce04bcb22b0f30aba50059fdf4260e",
       "mode": "644"
     },
     {
       "source": "packages/protocol/registries/task-kinds.json",
       "target": "registry/v1.5.0/task-kinds.json",
-      "sha256": "a2b462f3d6ccc0dec50d0172844c27a1d4bd3a1dfe352be278273d5b64cc60b4",
       "mode": "644"
     },
     {
       "source": "packages/protocol/registries/diagram-grammars.json",
       "target": "registry/v1.6.0/diagram-grammars.json",
-      "sha256": "ed1d99d00b9e5a8cff32053fc61da7f9c658221a059251508ec2884931bb5f7e",
       "mode": "644"
     },
     {
       "source": "packages/protocol/registries/diagram-semantic-patterns.json",
       "target": "registry/v1.6.0/diagram-semantic-patterns.json",
-      "sha256": "f2dcc38d54bfc3a6a7fe081a18dc06bc32a0bba9d8738fc6cd111d8a60d18c2a",
       "mode": "644"
     },
     {
       "source": "packages/protocol/registries/skill-host-profiles.json",
       "target": "registry/v1.7.0/skill-host-profiles.json",
-      "sha256": "2fef204e93e2d3eede2f9cc16df8842717af39d574d32ba6feda860d57d60b2c",
       "mode": "644"
     },
     {
       "source": "packages/protocol/registries/skill-modules.json",
       "target": "registry/v1.7.0/skill-modules.json",
-      "sha256": "48f52ac02b4cc5cf89826ae8a49de814b03141a4d765454abf32c9c425054a45",
       "mode": "644"
     },
     {
       "source": "packages/protocol/registries/skill-routing.json",
       "target": "registry/v1.7.0/skill-routing.json",
-      "sha256": "bd1d286e32d07fee32b09ea52ae9c5db5f5002741e703e9791516be3cdea1882",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.0.0/design-approved.schema.json",
       "target": "schemas/v1.0.0/design-approved.schema.json",
-      "sha256": "64f4990ffe6ac8a26fb86d90658df6621989e50aa88606ed0c7efb0f97cf6dda",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.0.0/design-feedback.schema.json",
       "target": "schemas/v1.0.0/design-feedback.schema.json",
-      "sha256": "de9d07617054f29c9f7ce00d0a10301468cab33e98d9065f1dcca5d6ac521d46",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.0.0/design-manifest.schema.json",
       "target": "schemas/v1.0.0/design-manifest.schema.json",
-      "sha256": "3a3880f80f0600ec426bd72d490ce5dfd0528c42bf5b6834e0ab0a40d5ca0a5d",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.0.0/design-session.schema.json",
       "target": "schemas/v1.0.0/design-session.schema.json",
-      "sha256": "1c0faa93c0a882819f14117bceebe899bc6be8a477ab72feedf106caea83a0e1",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.0.0/graph.schema.json",
       "target": "schemas/v1.0.0/graph.schema.json",
-      "sha256": "df33eb9b72822e42d6477e8e5f4963a8bc74812c0afe4410d39fd629a7f9d70c",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.0.0/pipeline-shipped.schema.json",
       "target": "schemas/v1.0.0/pipeline-shipped.schema.json",
-      "sha256": "4e4b3e75e6637288b69218d6aaeb969adf53c6e2f729eac2ad61861a334bd97b",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.0.0/run-manifest.schema.json",
       "target": "schemas/v1.0.0/run-manifest.schema.json",
-      "sha256": "b6f04cd6793eaf0904d89920c5f5a0fe73effaf0d611f710605825b14f6eeec4",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.0.0/spec.schema.json",
       "target": "schemas/v1.0.0/spec.schema.json",
-      "sha256": "03b3b54e32cc8d71f310afaba1cb0051b631840e1e0e47d9e16e8458eeb1d57f",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.0.0/stack.schema.json",
       "target": "schemas/v1.0.0/stack.schema.json",
-      "sha256": "32793b9d08c0825e2cc96a81ca78182906cf44a0902d741ec015967737a86110",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.0.0/story.schema.json",
       "target": "schemas/v1.0.0/story.schema.json",
-      "sha256": "d6e91a20d4cd1c8a79a63f0f50d3e4f3d1a83379ece292361ae2fd8cf4463145",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.0.0/task.schema.json",
       "target": "schemas/v1.0.0/task.schema.json",
-      "sha256": "4ef50ef97fd0f0d6606c2c66580523452141cce322b9172bf32e05f7bd01e6b3",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.0.0/taste-profile.schema.json",
       "target": "schemas/v1.0.0/taste-profile.schema.json",
-      "sha256": "cd09e5e073c19d6d38e29bb3df270577b963d99edafb172bc45f8f1cf49e70b6",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.1.0/adapter-registry.schema.json",
       "target": "schemas/v1.1.0/adapter-registry.schema.json",
-      "sha256": "2538879daf3267a07768ef65f185ef17c58831773cfb4dd926d8ad40e21e41ee",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.1.0/artifact-envelope.schema.json",
       "target": "schemas/v1.1.0/artifact-envelope.schema.json",
-      "sha256": "f14df0e38200e2d73325939de962efb2c6e2c594b86c1d5c12afe55479dabf23",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.1.0/artifact-paste.schema.json",
       "target": "schemas/v1.1.0/artifact-paste.schema.json",
-      "sha256": "b689a07de579018b628ee3383a10aff5f2aee6d31eee7a1527f996a4592b8d4f",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.1.0/artifact-review.schema.json",
       "target": "schemas/v1.1.0/artifact-review.schema.json",
-      "sha256": "b4db7b75b694c2aef2a37be2128e4635302f3473e09236aa1f37a33dcf3590b4",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.1.0/artifact-room-descriptor.schema.json",
       "target": "schemas/v1.1.0/artifact-room-descriptor.schema.json",
-      "sha256": "5993b332a5b9102699650ef243c7cbd8cbf8bbe6a677ad45e4650d0e301d6b85",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.1.0/artifact-room-event.schema.json",
       "target": "schemas/v1.1.0/artifact-room-event.schema.json",
-      "sha256": "d4ab068b8af41f59fb1cd723a01f3a683f23ef13b8131f37737f432d9186c1bb",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.1.0/artifact-room-signed-event.schema.json",
       "target": "schemas/v1.1.0/artifact-room-signed-event.schema.json",
-      "sha256": "a9530fb454a49484e9f26cea0234849e1299844f0ab1fe58477f1524b418f5f4",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.1.0/artifact-theme.schema.json",
       "target": "schemas/v1.1.0/artifact-theme.schema.json",
-      "sha256": "e5df076154594ed0de8aef12971c09dd98231ebc4c16b5ce597a76fb81f3cf9c",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.1.0/browser-qa-gate.schema.json",
       "target": "schemas/v1.1.0/browser-qa-gate.schema.json",
-      "sha256": "e3bb82813a57aa4a5afc23e214216cabae225340f4f440a5ff849bbf2e9458c9",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.1.0/browser-qa-result.schema.json",
       "target": "schemas/v1.1.0/browser-qa-result.schema.json",
-      "sha256": "18914575f53005a230a95632658dcbb5b28f0cad0c74a6175eb620b8a122c676",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.1.0/browser-qa-session.schema.json",
       "target": "schemas/v1.1.0/browser-qa-session.schema.json",
-      "sha256": "83e943da313b05376a2dbd7ae2b88aaf3eab79a18f98a3cf6fbfac5428636119",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.1.0/ecosystem-manifest.schema.json",
       "target": "schemas/v1.1.0/ecosystem-manifest.schema.json",
-      "sha256": "69288636afc2692229e59952417aef7602eb92436478e3e21a991d355584f61a",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.1.0/investigation-diagnosis.schema.json",
       "target": "schemas/v1.1.0/investigation-diagnosis.schema.json",
-      "sha256": "e64f3c6894075d1ed70e59c0a1275bfe7630acb0651c1eb806dc03f83324de2f",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.1.0/investigation-event.schema.json",
       "target": "schemas/v1.1.0/investigation-event.schema.json",
-      "sha256": "d68e2080986067d658c3e21639ecc9f9439659476bb84e5e8372a783892ad954",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.1.0/investigation-experiment.schema.json",
       "target": "schemas/v1.1.0/investigation-experiment.schema.json",
-      "sha256": "664b4fbdf0e9bc763ad89f4e5e9a352a0784599db3090cecebddef21009e4042",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.1.0/investigation-fix.schema.json",
       "target": "schemas/v1.1.0/investigation-fix.schema.json",
-      "sha256": "7fe78a7a68195e8061998b3479113e8ca888b31689bf6dd7d68c89702e1b5f75",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.1.0/investigation-hypothesis.schema.json",
       "target": "schemas/v1.1.0/investigation-hypothesis.schema.json",
-      "sha256": "0f14e063cc01f23450df125bd0c67b86aa0defdc5c7d8b1ec4b043bcc0a13680",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.1.0/investigation-observation.schema.json",
       "target": "schemas/v1.1.0/investigation-observation.schema.json",
-      "sha256": "cd269049e44d3c37d51cace1e5ec918b2add1267dbabb6ccf81302222c71f3e7",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.1.0/investigation-receipt.schema.json",
       "target": "schemas/v1.1.0/investigation-receipt.schema.json",
-      "sha256": "a22ddec4a03460ae44ebe2a29440f6fe16cad8d1ec528654e6767a5571ba9b04",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.1.0/investigation-record.schema.json",
       "target": "schemas/v1.1.0/investigation-record.schema.json",
-      "sha256": "184e604bd74a7b983c814cbd31ae1e3d3d9d39b93d733a6121751942f0345295",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.1.0/investigation-request.schema.json",
       "target": "schemas/v1.1.0/investigation-request.schema.json",
-      "sha256": "08a6a04eb7b28355aaff514658b3c6e1eacbf5161d3e90d33178b255aa99c081",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.1.0/planning-review-event.schema.json",
       "target": "schemas/v1.1.0/planning-review-event.schema.json",
-      "sha256": "17fb99e2f2e4a5eb66db3d3c862198a7d90b3e725122de170f1d71a8d3637896",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.1.0/planning-review-receipt.schema.json",
       "target": "schemas/v1.1.0/planning-review-receipt.schema.json",
-      "sha256": "7407883d5f8962762ad55093913c0d92968ec7346dbb6e95b1935487747a78c6",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.1.0/planning-review-record.schema.json",
       "target": "schemas/v1.1.0/planning-review-record.schema.json",
-      "sha256": "4f458efc968826d12995055358c27c019c258566d00c0f643254662bf110c6d9",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.1.0/planning-review-state.schema.json",
       "target": "schemas/v1.1.0/planning-review-state.schema.json",
-      "sha256": "a36a2fea406cdcbfaac697ce63805c3da4a34acb156436be59949960bb27f00f",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.1.0/professional-skills.schema.json",
       "target": "schemas/v1.1.0/professional-skills.schema.json",
-      "sha256": "d675a76be915e57b1e106ffa036b49c6b3a6e349f0e87e2afea244e8aa287f7d",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.1.0/professional-specification.schema.json",
       "target": "schemas/v1.1.0/professional-specification.schema.json",
-      "sha256": "f5c1330e2ec5ec5066fc3be2de676746ebf65b28551374cdd8d6730f409390b5",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.1.0/provenance-event.schema.json",
       "target": "schemas/v1.1.0/provenance-event.schema.json",
-      "sha256": "4c19eb8fd2d56a021514bbfdf07e28009b98cf996d8fe24a7d2879199593f79e",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.1.0/role-registry.schema.json",
       "target": "schemas/v1.1.0/role-registry.schema.json",
-      "sha256": "4eee824aeddeff56fe365e5b2ee092a9bf922356af6fd2aee35d2e511ce5c2cd",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.1.0/runtime-lock.schema.json",
       "target": "schemas/v1.1.0/runtime-lock.schema.json",
-      "sha256": "bb8da266fe1422968f4a59d820cb51ce8dbbd6ecbf207e42eb3c44c8bf66f41c",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.1.0/ship-closure.schema.json",
       "target": "schemas/v1.1.0/ship-closure.schema.json",
-      "sha256": "e183f885dcdbfd638482228777a0868c188e45d6553b49326514a55c10c4ec1b",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.1.0/ship-review-specialist-registry.schema.json",
       "target": "schemas/v1.1.0/ship-review-specialist-registry.schema.json",
-      "sha256": "0fc3a42fc647c1d1d5123306dd2dce11983c43c45b80d93d6b2920ccc69b6370",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.1.0/ship-risk-classification.schema.json",
       "target": "schemas/v1.1.0/ship-risk-classification.schema.json",
-      "sha256": "9a72bbe5cbc3ef357886e35ddc5bd6de1489e1e1b540355dd8972ee5fe3d0de0",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.1.0/specialist-review-result.schema.json",
       "target": "schemas/v1.1.0/specialist-review-result.schema.json",
-      "sha256": "73995ae5ac74bee2d4cdd77ddd528c3093f2e2465cc3c8d11a30092490783955",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.10.0/design-review-bundle.schema.json",
       "target": "schemas/v1.10.0/design-review-bundle.schema.json",
-      "sha256": "f7f4c559ac9f394ffbba3dd8b7854ff5c0e5abac9b608dfa62188b7a04ae6767",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.10.0/design-review-context.schema.json",
       "target": "schemas/v1.10.0/design-review-context.schema.json",
-      "sha256": "7a3ac0281880b6226faf52533032471d2bf5384f6f8aa639a12851c529caa78e",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.10.0/design-review-handoff.schema.json",
       "target": "schemas/v1.10.0/design-review-handoff.schema.json",
-      "sha256": "402b25238f93f8269b98697bf77fa11dda1fd284f44e41d73cdb813f5244a4e0",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.10.0/design-review-metadata-payload.schema.json",
       "target": "schemas/v1.10.0/design-review-metadata-payload.schema.json",
-      "sha256": "ba8ac124e47e8f8310214445b1752cc6706d3a7265a87c9f9685a7e9df84f0b1",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.11.0/design-handoff-readiness.schema.json",
       "target": "schemas/v1.11.0/design-handoff-readiness.schema.json",
-      "sha256": "51277b0c353989c7166535b6b8c752226fd436b735e451940c79a3f6a9c8eb12",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.11.0/design-implementation-handoff.schema.json",
       "target": "schemas/v1.11.0/design-implementation-handoff.schema.json",
-      "sha256": "706227c6663dce427f724584bd2d6cb4c65123171ec6540c3ec30e6a36b4d68b",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.11.0/design-planning-lineage.schema.json",
       "target": "schemas/v1.11.0/design-planning-lineage.schema.json",
-      "sha256": "e54a4026444de9cd6092aae4b3bfe7f527254941c07fb29253ea8bb6f2ee8486",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.11.0/design-review-metadata-payload.schema.json",
       "target": "schemas/v1.11.0/design-review-metadata-payload.schema.json",
-      "sha256": "2339f1babeef83bb7a19d53232a12ac432652a4da7e49c8a5417ff795a0265ed",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.12.0/enterprise-access-context.schema.json",
       "target": "schemas/v1.12.0/enterprise-access-context.schema.json",
-      "sha256": "fb27064fd80c5e065816e3c1a4f05c7ecdd320d782c20a0581fa94a4fcf1f793",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.12.0/enterprise-agent-handoff.schema.json",
       "target": "schemas/v1.12.0/enterprise-agent-handoff.schema.json",
-      "sha256": "072157824d9078e1cb9c82106f4d7fb41801a153cf41866905cfa700e501664a",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.12.0/enterprise-artifact-revision.schema.json",
       "target": "schemas/v1.12.0/enterprise-artifact-revision.schema.json",
-      "sha256": "05eaa70dbba22bce048fba6a5b4a7b6c58c6608f7038773699559bea911add2c",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.12.0/enterprise-change-proposal.schema.json",
       "target": "schemas/v1.12.0/enterprise-change-proposal.schema.json",
-      "sha256": "726ea43d86e35e3fb0472ea2ae2b0df0f8b66e99f440f072bcee64e965267438",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.12.0/enterprise-evidence-reference.schema.json",
       "target": "schemas/v1.12.0/enterprise-evidence-reference.schema.json",
-      "sha256": "faeaf15189df0eb7c41de00bb4af55bed05bbb19863df3604d5a0acaa828b8fb",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.12.0/enterprise-review-thread.schema.json",
       "target": "schemas/v1.12.0/enterprise-review-thread.schema.json",
-      "sha256": "1c226ebab52cf21088eae1b6f5d505c239788cf43a67163c01447ae53bb2e556",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.12.0/enterprise-sync-state.schema.json",
       "target": "schemas/v1.12.0/enterprise-sync-state.schema.json",
-      "sha256": "c5b41d49118b888a2138940b885d653d8affe432c8a94e6e3f772b055bf32f02",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.13.0/diagram-authoring-bundle.schema.json",
       "target": "schemas/v1.13.0/diagram-authoring-bundle.schema.json",
-      "sha256": "9a9c606c431d362335005f5a413f11757c583c99abd892691daed66f8033b069",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.13.0/diagram-authoring-capabilities.schema.json",
       "target": "schemas/v1.13.0/diagram-authoring-capabilities.schema.json",
-      "sha256": "a792065513b97780c197fe46b6f3948e83ad0a94eaed739c4aaf88d5f249988a",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.13.0/diagram-change-proposal.schema.json",
       "target": "schemas/v1.13.0/diagram-change-proposal.schema.json",
-      "sha256": "465d61cf6602dde13ab3974a2ebba1e796492ffe1c3db739c6956f220d57089c",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.13.0/diagram-document.schema.json",
       "target": "schemas/v1.13.0/diagram-document.schema.json",
-      "sha256": "47c4a8dc23716628011cef62c97428d6027c43cfe8986f094e6fcf1d1adc7e9e",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.13.0/diagram-edit-transaction.schema.json",
       "target": "schemas/v1.13.0/diagram-edit-transaction.schema.json",
-      "sha256": "8e0744f6afb5cf0fc115386804d3e93df9e9bc200270e88d908c7631daea912b",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.13.0/diagram-fidelity-report.schema.json",
       "target": "schemas/v1.13.0/diagram-fidelity-report.schema.json",
-      "sha256": "2361cb6dadfe7cfd973db06a57f16f514dc8752bb348fac07653afe01fb048bd",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.13.0/diagram-manifest.schema.json",
       "target": "schemas/v1.13.0/diagram-manifest.schema.json",
-      "sha256": "cf2a7e86e86fcd670cff7dadba7aba296f8ca7720c541a04a1124a2c9183b2dc",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.13.0/diagram-presentation.schema.json",
       "target": "schemas/v1.13.0/diagram-presentation.schema.json",
-      "sha256": "1510cfcdc63725e0933ddef7682f0ac676039717e3695a9482adab7618ea7d4a",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.13.0/diagram-publication-state.schema.json",
       "target": "schemas/v1.13.0/diagram-publication-state.schema.json",
-      "sha256": "d7d8b67afe598fa9f3d631cbfcfc1aa3593cfc5e299b3c216e00299bd9fedc25",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.13.0/diagram-source-map.schema.json",
       "target": "schemas/v1.13.0/diagram-source-map.schema.json",
-      "sha256": "ee134485fd02f5c42c79cf1940106adcefdcdacfd4e00ff6e11f169668ffef63",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.14.0/artifact-theme.schema.json",
       "target": "schemas/v1.14.0/artifact-theme.schema.json",
-      "sha256": "1742be23b045154ebb260c87edbc28c101f7c2e3ef498ddde86ee0b4ffef7b0a",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.15.0/diagram-review-bundle.schema.json",
       "target": "schemas/v1.15.0/diagram-review-bundle.schema.json",
-      "sha256": "b5585ab7c0d10a8b413ffb84884573233578e613fbcce0f0e4cf14847f137042",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.15.0/diagram-review-feedback.schema.json",
       "target": "schemas/v1.15.0/diagram-review-feedback.schema.json",
-      "sha256": "33cff09ab09a83095a477a3786eebd1ef30683781b570e8e8cfe441cc645b60a",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.15.0/diagram-review-workspace.schema.json",
       "target": "schemas/v1.15.0/diagram-review-workspace.schema.json",
-      "sha256": "3dda1818076f1efda3e20f01b29e39f01f92e7ba3e9c4a80fc8404f1e63d5c14",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.15.0/diagram-workspace-create.schema.json",
       "target": "schemas/v1.15.0/diagram-workspace-create.schema.json",
-      "sha256": "f39696c6f4dcff9cdd8b7644142e759a12b8f586273210cc61582e1f54804425",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.15.0/diagram-workspace-event.schema.json",
       "target": "schemas/v1.15.0/diagram-workspace-event.schema.json",
-      "sha256": "2a39381e3d0bcd6acebea5258df02aea406dae6a828b557477737dd61c9de430",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.15.0/diagram-workspace-revision.schema.json",
       "target": "schemas/v1.15.0/diagram-workspace-revision.schema.json",
-      "sha256": "8e8e1cf8c8ef136d88a33912db19b065a46a93176424b612dff157da9c3d3562",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.16.0/artifact-envelope.schema.json",
       "target": "schemas/v1.16.0/artifact-envelope.schema.json",
-      "sha256": "765797b2fe12e57259b1ffdc7dc2bca3884bace5bd7badc850d6150136a3e68b",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.16.0/design-review-bundle.schema.json",
       "target": "schemas/v1.16.0/design-review-bundle.schema.json",
-      "sha256": "f5616731ad5bb0399514e1cd36f6ffbaf9adaa1b378107b677b857f6312dfa52",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.17.0/artifact-paste-v2.schema.json",
       "target": "schemas/v1.17.0/artifact-paste-v2.schema.json",
-      "sha256": "95d8486fdfa0f7ab33d79a423713a13a4f79573aaf00d928539c574de3e102be",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.17.0/artifact-room-append-v3.schema.json",
       "target": "schemas/v1.17.0/artifact-room-append-v3.schema.json",
-      "sha256": "4c3e8b24b472eafd0ce4d2b8f985433380fa069eeffea8587a3f0b7683e15cde",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.17.0/artifact-room-create-v3.schema.json",
       "target": "schemas/v1.17.0/artifact-room-create-v3.schema.json",
-      "sha256": "88d633ef4a57fabbd7c30e44aac0619b0efeafc690f2d33273d797b02a318a8a",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.17.0/artifact-room-descriptor-v3.schema.json",
       "target": "schemas/v1.17.0/artifact-room-descriptor-v3.schema.json",
-      "sha256": "7e57fafc880728068ca16872eac4519d2e91795b154eda00730f6d9f031f3efd",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.17.0/artifact-room-event-v3.schema.json",
       "target": "schemas/v1.17.0/artifact-room-event-v3.schema.json",
-      "sha256": "b9f4b45ca8a6af4bc8ec43cd11ec4c5b7f89fd35ffe0b87babe515938eb13403",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.17.0/artifact-room-management-v3.schema.json",
       "target": "schemas/v1.17.0/artifact-room-management-v3.schema.json",
-      "sha256": "6f786823e27ee6a34db65ffb1e477c04ddb1b1ea1c8009c0334c2947a8c81777",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.17.0/artifact-room-read-page-v3.schema.json",
       "target": "schemas/v1.17.0/artifact-room-read-page-v3.schema.json",
-      "sha256": "8cc6899bc85b6d58d5e737f9ca02a34eed2b4f605cf8c8dc6f809de825c6fd3d",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.17.0/company-resource-manifest.schema.json",
       "target": "schemas/v1.17.0/company-resource-manifest.schema.json",
-      "sha256": "35c6733d9a46cd9dcb818839d945cbcf9968907191471fcdef9096c026106084",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.17.0/company-resource-upload-prepare.schema.json",
       "target": "schemas/v1.17.0/company-resource-upload-prepare.schema.json",
-      "sha256": "b42302f8420ae82aac62ebe2c918bdbd5c201f2097f68724cb4038df1b9e2fdd",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.17.0/company-resource-upload-receipt.schema.json",
       "target": "schemas/v1.17.0/company-resource-upload-receipt.schema.json",
-      "sha256": "c4cb4d6b2fd3db2b9e60f4e8c186c8ff912e25f5a300f991611c9887addc093a",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.17.0/company-resource-upload-status.schema.json",
       "target": "schemas/v1.17.0/company-resource-upload-status.schema.json",
-      "sha256": "7d91554439f0d29277505c158cfe75c566764e4d15eae0d1ed2e541dc4de228f",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.17.0/diagram-authoring-bundle.schema.json",
       "target": "schemas/v1.17.0/diagram-authoring-bundle.schema.json",
-      "sha256": "95dabb2c20c3360f0593b2615451428ba7a485d74fa08e81fd4ea552ca9ee24c",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.17.0/diagram-edit-transaction.schema.json",
       "target": "schemas/v1.17.0/diagram-edit-transaction.schema.json",
-      "sha256": "db2ec9eeced8d946d2609fa30122597853dbe8a99883ce43a2f1b762022895bf",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.17.0/diagram-presentation.schema.json",
       "target": "schemas/v1.17.0/diagram-presentation.schema.json",
-      "sha256": "63887168cc5983b07626ff6029cfd493b1424dbc334ac7dfd85a20ca6bb5466e",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.17.0/diagram-review-bundle.schema.json",
       "target": "schemas/v1.17.0/diagram-review-bundle.schema.json",
-      "sha256": "80f89856c8912816e036c09dfce0451e9cf94ecbdc569164413876094dcbad42",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.17.0/encrypted-resource-manifest.schema.json",
       "target": "schemas/v1.17.0/encrypted-resource-manifest.schema.json",
-      "sha256": "a7c90d4ac0525e31725fdab396586270dddd5fceb615c1a8c4610c655c4780d6",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.17.0/encrypted-upload-commit.schema.json",
       "target": "schemas/v1.17.0/encrypted-upload-commit.schema.json",
-      "sha256": "b68c702c167d40b074242f36a6552f3efc39c9b8f4c688057655737e7e55ae6b",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.17.0/encrypted-upload-prepare.schema.json",
       "target": "schemas/v1.17.0/encrypted-upload-prepare.schema.json",
-      "sha256": "363961aa13d77d4a6e16614913af2d7990b90ffc58be2f8f8d99c6e5f0f11897",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.17.0/encrypted-upload-receipt.schema.json",
       "target": "schemas/v1.17.0/encrypted-upload-receipt.schema.json",
-      "sha256": "160a57098529cf58d0458177314317c3f7be71d12b5951f4d43f9d34968dd74b",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.17.0/encrypted-upload-status.schema.json",
       "target": "schemas/v1.17.0/encrypted-upload-status.schema.json",
-      "sha256": "3ddff03e06402c3593b0299b3dcb6e2922036f21a3b59403b92974240dca2c2f",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.17.0/encrypted-workspace-event-v2.schema.json",
       "target": "schemas/v1.17.0/encrypted-workspace-event-v2.schema.json",
-      "sha256": "2c07decde75615fba0af2f303eff8f5e2ea9b3472102faa194454fe3ab528640",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.17.0/encrypted-workspace-v2.schema.json",
       "target": "schemas/v1.17.0/encrypted-workspace-v2.schema.json",
-      "sha256": "937cc2e99d51319504e0a826b90e3d53a517907374ab49f1c3d40689dadc8cba",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.17.0/enterprise-agent-handoff.schema.json",
       "target": "schemas/v1.17.0/enterprise-agent-handoff.schema.json",
-      "sha256": "be59508e1c8045af36c374a912176c1c426ef22282c6ce74b3b585931c76be64",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.17.0/enterprise-artifact-revision.schema.json",
       "target": "schemas/v1.17.0/enterprise-artifact-revision.schema.json",
-      "sha256": "adb60aeebc6fdf1cecf474aaa5517e341490a6ab343ce82eaad4a46cc9388a7a",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.17.0/enterprise-change-proposal.schema.json",
       "target": "schemas/v1.17.0/enterprise-change-proposal.schema.json",
-      "sha256": "b93160d2fca55f3ff7840d524e81b2d975006f1f7028483ff7f01fe5c49f7a50",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.17.0/enterprise-evidence-reference.schema.json",
       "target": "schemas/v1.17.0/enterprise-evidence-reference.schema.json",
-      "sha256": "d538e26682134f0ba3a62330cd7b0fe4a8e066e4b9e2c6f66d44f04963e7b483",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.17.0/enterprise-review-thread.schema.json",
       "target": "schemas/v1.17.0/enterprise-review-thread.schema.json",
-      "sha256": "86f7443499ed248483d61f8f9f602b1c7e54c7091e19e60e615ee291bb81cfea",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.17.0/enterprise-sync-state.schema.json",
       "target": "schemas/v1.17.0/enterprise-sync-state.schema.json",
-      "sha256": "f7bff4594b179c04a03b6e4cdc841862f1369a3d95fecec97a6f126fdd20ad11",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.17.0/preview-bridge-message.schema.json",
       "target": "schemas/v1.17.0/preview-bridge-message.schema.json",
-      "sha256": "9c268b7f12734e2c46f618041b03cb37df0fd5937a946017d786a265ddfd43c6",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.17.0/resource-catalog.schema.json",
       "target": "schemas/v1.17.0/resource-catalog.schema.json",
-      "sha256": "7968f60406ed3e9c5030ed18f68c5610cfbd3bd78043b4af4759e5c1a69fd452",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.17.0/sharing-crypto-aad.schema.json",
       "target": "schemas/v1.17.0/sharing-crypto-aad.schema.json",
-      "sha256": "92122ed04cb670c694215077d1c2e84e1de0ad4ca34fa83e88d402801354c677",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.17.0/workspace-management-v2.schema.json",
       "target": "schemas/v1.17.0/workspace-management-v2.schema.json",
-      "sha256": "881b8ab1202b80fd3b8f9c47bd9cc0ef748ee2d9d9529ab339cd5164057fcbdb",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.17.0/workspace-rotation-v2.schema.json",
       "target": "schemas/v1.17.0/workspace-rotation-v2.schema.json",
-      "sha256": "7546c25f4f831e51de6597ee8ca79e08865fe0460ab2f9e0c37f14bc825df3c6",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.18.0/runtime-lock.schema.json",
       "target": "schemas/v1.18.0/runtime-lock.schema.json",
-      "sha256": "7a1409cbaf8ac98aad7739bfc7d89ad50669df60f18174bc61bb4def45255aa3",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.19.0/company-resource-upload-prepare.schema.json",
       "target": "schemas/v1.19.0/company-resource-upload-prepare.schema.json",
-      "sha256": "e37e988feb0437c0f42d5bf3801f37b2bda2344964869e69108af8b47583c9fb",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.19.0/company-resource-upload-receipt.schema.json",
       "target": "schemas/v1.19.0/company-resource-upload-receipt.schema.json",
-      "sha256": "ea83327ed0e119bf468bfd08bb669ee238c05dbcafbbe2d47aade7c83a4cfd90",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.19.0/company-resource-upload-status.schema.json",
       "target": "schemas/v1.19.0/company-resource-upload-status.schema.json",
-      "sha256": "35e37f2b73afba4986ae865c5085449c3a3700bc309c7c123827e8ec36698b31",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.19.0/enterprise-artifact-page.schema.json",
       "target": "schemas/v1.19.0/enterprise-artifact-page.schema.json",
-      "sha256": "d3aa9c9368c946bd5b02f3a028a7718b8646e64bf49042dcbf6e9d002f7ef5b8",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.19.0/enterprise-guest-authorization.schema.json",
       "target": "schemas/v1.19.0/enterprise-guest-authorization.schema.json",
-      "sha256": "de9f81733e882d732fb6b1346706e68b33234fc57f0b177acb25eb0527463acb",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.19.0/enterprise-guest-invitation.schema.json",
       "target": "schemas/v1.19.0/enterprise-guest-invitation.schema.json",
-      "sha256": "4b6ac3b26ab0130f7c3599fdec870169903ff5c505264c1f6dc9150dff237363",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.19.0/enterprise-journey-capabilities.schema.json",
       "target": "schemas/v1.19.0/enterprise-journey-capabilities.schema.json",
-      "sha256": "e8d6da7ab0608947dd30481807efcda05b5e7bae9e45ef9d62d8e84bce6b489a",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.19.0/enterprise-project-lifecycle.schema.json",
       "target": "schemas/v1.19.0/enterprise-project-lifecycle.schema.json",
-      "sha256": "58c949932719c364156a068d86196c099dc66e8113b69cc4f6fed80709ceb0f3",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.19.0/enterprise-project-page.schema.json",
       "target": "schemas/v1.19.0/enterprise-project-page.schema.json",
-      "sha256": "098b84248605505b0f606437a3859c4f151cbbc6696a930661dec030c7ca3e18",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.19.0/enterprise-project-transition.schema.json",
       "target": "schemas/v1.19.0/enterprise-project-transition.schema.json",
-      "sha256": "e759de4ba0fd5b94a9093e3aab3e90f4344a2a7917215c8adcec81a8d796b4f9",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.19.0/enterprise-review-mention.schema.json",
       "target": "schemas/v1.19.0/enterprise-review-mention.schema.json",
-      "sha256": "a009c8a984262472f58ede098c11bba712f02fd9980bca11629ca1509f64d65f",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.19.0/enterprise-review-projection.schema.json",
       "target": "schemas/v1.19.0/enterprise-review-projection.schema.json",
-      "sha256": "62ceb8526e7d050d3fe364386be9cc9a73835c722cd7ad911fb1cf43571deae6",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.2.0/adapter-registry.schema.json",
       "target": "schemas/v1.2.0/adapter-registry.schema.json",
-      "sha256": "5f392eb8a742d5ea1b1e634f0a4193f47ed65fe5b2440b89b67c26050447d7d0",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.2.0/dashboard-bootstrap.schema.json",
       "target": "schemas/v1.2.0/dashboard-bootstrap.schema.json",
-      "sha256": "3256fc19b8d4c9410bd93b7deb77f025e08cf00d4ecd86af12ad527acb12ce85",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.2.0/ecosystem-release-operation.schema.json",
       "target": "schemas/v1.2.0/ecosystem-release-operation.schema.json",
-      "sha256": "529cc8c453d2ff3b412737f4af91da0faede5f04654f1d18642cda0a6054da7f",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.2.0/ecosystem-saga.schema.json",
       "target": "schemas/v1.2.0/ecosystem-saga.schema.json",
-      "sha256": "a4927f6c6c802c8fa85d905938fd10420cd05461f6fd94fdf168394ecb5bd1fb",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.2.0/evidence-diagnostic.schema.json",
       "target": "schemas/v1.2.0/evidence-diagnostic.schema.json",
-      "sha256": "d57f4055ef4815fc0f1f6a30a5f25d1f686d4c86245f3bd9166a789da127fee2",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.2.0/guided-answer-envelope.schema.json",
       "target": "schemas/v1.2.0/guided-answer-envelope.schema.json",
-      "sha256": "8a63cb14c3eacaa875ae808c9b4e314aa830aa2c488b1868003ac65410cfed8a",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.2.0/guided-confirmation.schema.json",
       "target": "schemas/v1.2.0/guided-confirmation.schema.json",
-      "sha256": "ef7adebcd82f73529d8216f801eae2166ce1e78f62066cbfdd97989580248f96",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.2.0/guided-question.schema.json",
       "target": "schemas/v1.2.0/guided-question.schema.json",
-      "sha256": "1c994f0b974c02f201900f8c7139419cc0c334dd6032f805840587ee7c8aeb5d",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.2.0/guided-questionnaire.schema.json",
       "target": "schemas/v1.2.0/guided-questionnaire.schema.json",
-      "sha256": "d0b4acfc19693ee2a2fcbc599640e51f01277562ab2d2509d41307a86f2a6e9f",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.2.0/guided-session.schema.json",
       "target": "schemas/v1.2.0/guided-session.schema.json",
-      "sha256": "ae58a46812965f6667b73269e2ee8a96a138a40deab294d4c3274fce90a11394",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.2.0/landing-confirmation.schema.json",
       "target": "schemas/v1.2.0/landing-confirmation.schema.json",
-      "sha256": "1a49a450d2f84d066a5c8fed2a19de21a4b26234c0b72f1c908304377effdee1",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.2.0/landing-event.schema.json",
       "target": "schemas/v1.2.0/landing-event.schema.json",
-      "sha256": "69757f64736ac05cb93934f413540aeb2bc332e09809e3935d612c23e9fb6431",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.2.0/landing-operation-registry.schema.json",
       "target": "schemas/v1.2.0/landing-operation-registry.schema.json",
-      "sha256": "5e6417690ab9941ebd9e1695fe6ad91042d5437e4985e6e1fc77cbaaf2adba37",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.2.0/landing-phase-receipt.schema.json",
       "target": "schemas/v1.2.0/landing-phase-receipt.schema.json",
-      "sha256": "7e8e1c37d14ee63dc04f396487e06f0ebe503b8f60c9fb1de7400ffffbfdc1c6",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.2.0/landing-plan.schema.json",
       "target": "schemas/v1.2.0/landing-plan.schema.json",
-      "sha256": "a4510d83b672783edba87a8ea9dd29b05f2b6c87e7c2834f934fbc566087d99c",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.2.0/landing-receipt.schema.json",
       "target": "schemas/v1.2.0/landing-receipt.schema.json",
-      "sha256": "ea2d7053bc6d97f68dfc016f9df3361966f64717d34a95a36f8f1f18c63e918a",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.2.0/landing-workflow-catalog.schema.json",
       "target": "schemas/v1.2.0/landing-workflow-catalog.schema.json",
-      "sha256": "af482aacfe418f9fac868f45d18bd8ca2e816de8259ff0f427049cb1e37d5561",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.2.0/operate-action-display-workspace.d.mts",
       "target": "schemas/v1.2.0/operate-action-display-workspace.d.mts",
-      "sha256": "8b7f86816e48b5d00eda79645f9590e8c727cb015a86851913ce33d90c63d640",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.2.0/operate-action-display-workspace.mjs",
       "target": "schemas/v1.2.0/operate-action-display-workspace.mjs",
-      "sha256": "c96d9611be254153992bbb0d143023063f4e20b055ed3ed3b40ea2fb3a361bd3",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.2.0/operate-action-display-workspace.schema.json",
       "target": "schemas/v1.2.0/operate-action-display-workspace.schema.json",
-      "sha256": "a7d5ef5f7b5b977983dc900c391d971fd8511110dab90caea8a66952588c106c",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.2.0/operate-cycle-display-workspace.d.mts",
       "target": "schemas/v1.2.0/operate-cycle-display-workspace.d.mts",
-      "sha256": "4c572495a2cdd8d7d633a391f0f47de27ca9b005daaf62b8f0fd95e5301e5be7",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.2.0/operate-cycle-display-workspace.mjs",
       "target": "schemas/v1.2.0/operate-cycle-display-workspace.mjs",
-      "sha256": "4485af65cfb595a2e6f22962d06873ecc2387522c7041b05c520e07fe09e57ac",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.2.0/operate-cycle-display-workspace.schema.json",
       "target": "schemas/v1.2.0/operate-cycle-display-workspace.schema.json",
-      "sha256": "942e11cbbcee14010926b0cb5729ba2b25582a3af4ed707a511f853c58c07aab",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.2.0/operate-executive-board-display-surface.d.mts",
       "target": "schemas/v1.2.0/operate-executive-board-display-surface.d.mts",
-      "sha256": "647496d973c79af26cde546a35a644d494a3786070c110295485e847d088bc8b",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.2.0/operate-executive-board-display-surface.mjs",
       "target": "schemas/v1.2.0/operate-executive-board-display-surface.mjs",
-      "sha256": "f14da0d16aaf2910bda8a26ac1da48383e3aa4c4c1a797234f8f844a6f78f16f",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.2.0/operate-executive-board-display-surface.schema.json",
       "target": "schemas/v1.2.0/operate-executive-board-display-surface.schema.json",
-      "sha256": "07719cd6c93cfdc2f1b038fb2371dddcf682d5f5933f204f22c2869d70ed334a",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.2.0/operate-experience-audit-display-surface.d.mts",
       "target": "schemas/v1.2.0/operate-experience-audit-display-surface.d.mts",
-      "sha256": "055aac56adc275b321b86561acc9256b465ddb250137bf424cf9c68761c9a53a",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.2.0/operate-experience-audit-display-surface.mjs",
       "target": "schemas/v1.2.0/operate-experience-audit-display-surface.mjs",
-      "sha256": "7b92a6a5ac458cc4a6079983b232c81ae4b703aa99f65991ca9638f92b8d35f2",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.2.0/operate-experience-audit-display-surface.schema.json",
       "target": "schemas/v1.2.0/operate-experience-audit-display-surface.schema.json",
-      "sha256": "bd884fb6102ff49150b610c8513f8f5f862be3ecbcbccbd586b021cdb6cfb503",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.2.0/operate-experience-display-surface.d.mts",
       "target": "schemas/v1.2.0/operate-experience-display-surface.d.mts",
-      "sha256": "1fea3e63c5a1faf2bd71ce3fb364dfad2cf1306fff64d5ec07a0c1ed23077e82",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.2.0/operate-experience-display-surface.mjs",
       "target": "schemas/v1.2.0/operate-experience-display-surface.mjs",
-      "sha256": "35b824cf6bd4fdd08af755811ed148b25ba54068fab7367a66f6f16833fcae44",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.2.0/operate-experience-display-surface.schema.json",
       "target": "schemas/v1.2.0/operate-experience-display-surface.schema.json",
-      "sha256": "defe23f746710f6cb34bcf6bad3a6d17eec5f6cd60a1a138f360e6b0b193ce13",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.2.0/operate-experience-surface.d.mts",
       "target": "schemas/v1.2.0/operate-experience-surface.d.mts",
-      "sha256": "efd80b3e81e4ad374e48e251bcc2bc21677b9bcb62ffbce73868942daf39595a",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.2.0/operate-experience-surface.mjs",
       "target": "schemas/v1.2.0/operate-experience-surface.mjs",
-      "sha256": "cf7a3e52f5e2822be6242d09b1f0de957c5b7d867c8f7ba56b4e0395025caee2",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.2.0/operate-experience-surface.schema.json",
       "target": "schemas/v1.2.0/operate-experience-surface.schema.json",
-      "sha256": "352a5d7e7f060c1b8fae0fbf02784cbd388c79efff4dad8a5a3b57163f752d23",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.2.0/operate-recovery-display-surface.d.mts",
       "target": "schemas/v1.2.0/operate-recovery-display-surface.d.mts",
-      "sha256": "6f3ee7a5bca9dd384e942183be57a7083cd86080df17b6f28a4a25a352ec0300",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.2.0/operate-recovery-display-surface.mjs",
       "target": "schemas/v1.2.0/operate-recovery-display-surface.mjs",
-      "sha256": "760bd6d11c13c06b2490f25636c0bf38cb2e611eea5b26a7ffd96357c90931ec",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.2.0/operate-recovery-display-surface.schema.json",
       "target": "schemas/v1.2.0/operate-recovery-display-surface.schema.json",
-      "sha256": "f3eb4d8e89ad22f3faff44db4e21c5491ac75aa1cc48c7aa285b6d0e2fd20172",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.2.0/structured-action.schema.json",
       "target": "schemas/v1.2.0/structured-action.schema.json",
-      "sha256": "354097be83cd3457b68cbb93ff3148afcd598f030f4b5aa26b59bf4c464edcaa",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.20.0/design-document.schema.json",
       "target": "schemas/v1.20.0/design-document.schema.json",
-      "sha256": "9782c8c130b19f7c47b17ec59a216f4699e3a6f3b81120ecc0442d2576d58fa2",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.20.0/design-review-bundle.schema.json",
       "target": "schemas/v1.20.0/design-review-bundle.schema.json",
-      "sha256": "72db7c04d4a96ee8fc2a9c1c4146dd1cfc4352a80ea8cacda50aceeb9ad172c7",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.21.0/diagram-authoring-bundle.schema.json",
       "target": "schemas/v1.21.0/diagram-authoring-bundle.schema.json",
-      "sha256": "35ef92d8c888b4d1fd2a8e6a6b6077740761ee564aa34257c4e08e0916bb20f7",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.21.0/diagram-edit-transaction.schema.json",
       "target": "schemas/v1.21.0/diagram-edit-transaction.schema.json",
-      "sha256": "e1734a1fd9fd2ad09ad21eadf94778d6e544370c1e768b192bad44e53e560cbe",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.21.0/diagram-review-bundle.schema.json",
       "target": "schemas/v1.21.0/diagram-review-bundle.schema.json",
-      "sha256": "d5dabde34dff716f015526265d2cfb51032c8d61fed6ffb2f99093fcde4a0e2d",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.21.0/diagram-shape-definition.schema.json",
       "target": "schemas/v1.21.0/diagram-shape-definition.schema.json",
-      "sha256": "bf3a43250216ea34efe44b1cb12414e98cb78e1d196af25f22bcf4686d90b6a7",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.22.0/design-document.schema.json",
       "target": "schemas/v1.22.0/design-document.schema.json",
-      "sha256": "33d74abce73ec6631ee1a4f5037bb49571f81cedaebac5bf37d77d91a170b507",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.22.0/design-review-bundle.schema.json",
       "target": "schemas/v1.22.0/design-review-bundle.schema.json",
-      "sha256": "92e42b05c54f7773f89e93de45fad1c6bfc4027160079d52dcabe59fc0612933",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.23.0/implementation-result.schema.json",
       "target": "schemas/v1.23.0/implementation-result.schema.json",
-      "sha256": "a7fc37f981227dc3698c707d22b136d562dfa6f63e03f4f248d75576a78ea5a0",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.24.0/backlog-item.schema.json",
       "target": "schemas/v1.24.0/backlog-item.schema.json",
-      "sha256": "ec9e99f8d1fa2f39df2c7ba3eafafffb1b39dc436de73b3252b5c0768b38d272",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.25.0/command-catalog.schema.json",
+      "target": "schemas/v1.25.0/command-catalog.schema.json",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.25.0/skill-catalog.schema.json",
+      "target": "schemas/v1.25.0/skill-catalog.schema.json",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.3.0/adapter-registry.schema.json",
       "target": "schemas/v1.3.0/adapter-registry.schema.json",
-      "sha256": "a55427a13c44e37a678b789731aba91d091aa423a87cfa901fe79c39471462e4",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.3.0/ecosystem-manifest.schema.json",
       "target": "schemas/v1.3.0/ecosystem-manifest.schema.json",
-      "sha256": "aaecc2dbc45eb3c4eb2013c9bb9fe591de0cdc824b07fa5e992653cd585397b6",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.3.0/release-compatibility-claim.schema.json",
       "target": "schemas/v1.3.0/release-compatibility-claim.schema.json",
-      "sha256": "ef73ea13a321ebe0987df89ccaeb8c1e641792daea9ca00b5cf9f7a3531e30c0",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.3.0/release-ledger-receipt.schema.json",
       "target": "schemas/v1.3.0/release-ledger-receipt.schema.json",
-      "sha256": "9ec8639c04a6cbf01b0a516c7ceefe21a3447a345df984dd677c9c7d2c5d6ddb",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.3.0/release-ledger.schema.json",
       "target": "schemas/v1.3.0/release-ledger.schema.json",
-      "sha256": "3d8148d59b3bb902bea6f841bc66e1c899053dc05852bd29fe94974e7fba1bd5",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.4.0/adapter-registry.schema.json",
       "target": "schemas/v1.4.0/adapter-registry.schema.json",
-      "sha256": "f80de88035b4fb895d92a5c3a7cfe95296e2b053880c468506e4a55f2070dda1",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.4.0/evaluation-aggregate-report.schema.json",
       "target": "schemas/v1.4.0/evaluation-aggregate-report.schema.json",
-      "sha256": "971ebd558e27e34330a0287505fefe2c48ca9170c3668133a833da98a5c11ff5",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.4.0/evaluation-budget.schema.json",
       "target": "schemas/v1.4.0/evaluation-budget.schema.json",
-      "sha256": "31c6d9dbf906b803dc88fd09ad07595cddca3ddaa93ffed3c54ef4e82dfb5f6d",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.4.0/evaluation-corpus.schema.json",
       "target": "schemas/v1.4.0/evaluation-corpus.schema.json",
-      "sha256": "b0e0d202af3a2bff3721a02a9acf367f1e74f9f0cd831338a5e1f5dfb4d19efa",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.4.0/evaluation-fixture.schema.json",
       "target": "schemas/v1.4.0/evaluation-fixture.schema.json",
-      "sha256": "54fe417abdf74d4b8b1fdae54af4ea5e7c849df2f72cedf8819dacfb5e530c48",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.4.0/evaluation-gate-policy.schema.json",
       "target": "schemas/v1.4.0/evaluation-gate-policy.schema.json",
-      "sha256": "d78a2adc82e8fb82d624f5cf1e5984fcd9246eb2b9fc36f22068e54d170148b1",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.4.0/evaluation-grader-registration.schema.json",
       "target": "schemas/v1.4.0/evaluation-grader-registration.schema.json",
-      "sha256": "8524e8b06c3ec5a06059275445d5c215be29cac584f60a4f640e6423a6b7173c",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.4.0/evaluation-grader-registry.schema.json",
       "target": "schemas/v1.4.0/evaluation-grader-registry.schema.json",
-      "sha256": "8da34d5abce0a8824bab36e330162065b22e698498167801d19f66f4032a38ab",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.4.0/evaluation-host-profile-registry.schema.json",
       "target": "schemas/v1.4.0/evaluation-host-profile-registry.schema.json",
-      "sha256": "f43718a2e1cec30d9c812cdb73123ac22b262cd4a3b7a414932e96a46e726cff",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.4.0/evaluation-host-profile.schema.json",
       "target": "schemas/v1.4.0/evaluation-host-profile.schema.json",
-      "sha256": "3b2acde1679b26aa18e747dbcc5ed25d6fb081d20f3067503954f4cbd6a42f32",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.4.0/evaluation-observation.schema.json",
       "target": "schemas/v1.4.0/evaluation-observation.schema.json",
-      "sha256": "0e2669207520ac3bf228ff787daedaa23c3954b82db8bc2376bf08b8478e6073",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.4.0/evaluation-run-result.schema.json",
       "target": "schemas/v1.4.0/evaluation-run-result.schema.json",
-      "sha256": "17567933710ea376bbf279e455e96eff79b860090d7603a2f163162e2d4a37d3",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.4.0/evaluation-scenario.schema.json",
       "target": "schemas/v1.4.0/evaluation-scenario.schema.json",
-      "sha256": "975aef16555d749198df7631a7213505e6a586f33b9304e9f76484cce8d6d6f0",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.4.0/evaluation-waiver.schema.json",
       "target": "schemas/v1.4.0/evaluation-waiver.schema.json",
-      "sha256": "fd60daba363c51f08ab4f6d554c9b44289e7a6f1dbda49f1dfe5651dca50b284",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.4.0/skill-certification-receipt.schema.json",
       "target": "schemas/v1.4.0/skill-certification-receipt.schema.json",
-      "sha256": "0373c04796eab010784a7202db36ecb6cd967575d8f54a0cfaecdeaee52f14f8",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.5.0/command-catalog.schema.json",
       "target": "schemas/v1.5.0/command-catalog.schema.json",
-      "sha256": "faa5a72e3e0a3a0afe8688f6df46b383be1ef82a09ca1d3a635f4eabb9952bec",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.5.0/common.schema.json",
       "target": "schemas/v1.5.0/common.schema.json",
-      "sha256": "7dd1889dfad51115d43244a765c64f0c98c8f47e07a201eae1438fe22f93b151",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.5.0/generated-asset-manifest.schema.json",
       "target": "schemas/v1.5.0/generated-asset-manifest.schema.json",
-      "sha256": "37c4a2c0d157dcdde5aed9613f1b1945cf0db9fc76f1882f38b30aaa674fcc66",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.5.0/implementation-result.schema.json",
       "target": "schemas/v1.5.0/implementation-result.schema.json",
-      "sha256": "2efba9f3c79976783d1c867f8e8d91ae47d50846f1b92e8a8ea5a0ced5ab02c5",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.5.0/migration-preservation-manifest.schema.json",
       "target": "schemas/v1.5.0/migration-preservation-manifest.schema.json",
-      "sha256": "ae069a7651a67db155f46f861d51541cd69fd5be1829495f3586c8fc7bf5cca7",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.5.0/output-catalog.schema.json",
       "target": "schemas/v1.5.0/output-catalog.schema.json",
-      "sha256": "fb791aecac6b1311125bf7c874d7d773a67ec19fe18170e4bd0b475e72e72cdc",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.5.0/output-path-catalog.schema.json",
       "target": "schemas/v1.5.0/output-path-catalog.schema.json",
-      "sha256": "a0a06f35f7e6cc23332fbee6f433b89d3adc0ebf7cd7846a0f902b41e1ea56ca",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.5.0/role-registry.schema.json",
       "target": "schemas/v1.5.0/role-registry.schema.json",
-      "sha256": "4ddc23ea42a23b3d1830ab1bcd10431443c4b88c869093162daabafb09e9a156",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.5.0/rule-catalog.schema.json",
       "target": "schemas/v1.5.0/rule-catalog.schema.json",
-      "sha256": "aa4c72d0b9b5226d1b47085da94e290eb1c7f49d41effdc817a3d96c088e7f87",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.5.0/skill-catalog.schema.json",
       "target": "schemas/v1.5.0/skill-catalog.schema.json",
-      "sha256": "95537ebe06acd2e1d489fd1134d5ed59642104ac7e54dc1d3d15ec4483b9b5c8",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.5.0/task-kind-registry.schema.json",
       "target": "schemas/v1.5.0/task-kind-registry.schema.json",
-      "sha256": "e0c796937ad02ba00b6dcbe38779b3d667818ffe9a0184c4d7de44ec8e7548f5",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.5.0/task-manifest.schema.json",
       "target": "schemas/v1.5.0/task-manifest.schema.json",
-      "sha256": "fa7bfb734576cc111672db7760535a1b78af39fdf0279411bd7eb5c6de9b9d86",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.5.0/task-output-manifest.schema.json",
       "target": "schemas/v1.5.0/task-output-manifest.schema.json",
-      "sha256": "f0d665d969575c0e87fd701d0b625560e0df040126b0d91d82e5689b4020b2ed",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.6.0/common.schema.json",
       "target": "schemas/v1.6.0/common.schema.json",
-      "sha256": "89dad16f50b06d8e0f4363f8a3417c0551206db778a8717f49ee0df9941aa445",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.6.0/diagram-consumer-reference.schema.json",
       "target": "schemas/v1.6.0/diagram-consumer-reference.schema.json",
-      "sha256": "1ca00d884b168fb56470b9c6df15c0ef08a77f6aff0ea06a34648ba8e1b35000",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.6.0/diagram-document.schema.json",
       "target": "schemas/v1.6.0/diagram-document.schema.json",
-      "sha256": "1dab7374840ecfb367810b518374d5b80d072e6a22e395f6b3f4df06f5c88f67",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.6.0/diagram-fidelity-report.schema.json",
       "target": "schemas/v1.6.0/diagram-fidelity-report.schema.json",
-      "sha256": "c562440eafff129010c366362d60c52364ab74cb1d97c28314b5164e38dcdf76",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.6.0/diagram-manifest.schema.json",
       "target": "schemas/v1.6.0/diagram-manifest.schema.json",
-      "sha256": "639cca0e297507782baaeffcb12bfb6ae983577aafaa073d504a7c300900b325",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.6.0/diagram-quality-report.schema.json",
       "target": "schemas/v1.6.0/diagram-quality-report.schema.json",
-      "sha256": "ae233fc376bfcda94a274049ce40a39397f063f8b7b48e2c764ec1167254a93b",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.6.0/diagram-review-binding.schema.json",
       "target": "schemas/v1.6.0/diagram-review-binding.schema.json",
-      "sha256": "eb9d5e3f58f4fdd993823db675a78c80d2a748c7e3ecb3ca4aefb97583ce31db",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.6.0/diagram-semantic-pattern-registry.schema.json",
       "target": "schemas/v1.6.0/diagram-semantic-pattern-registry.schema.json",
-      "sha256": "4a61d6b72d048e42649113f91beeb6a3ee8868fda3d4709c63dc1599eb8cc764",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.6.0/diagram-type-registry.schema.json",
       "target": "schemas/v1.6.0/diagram-type-registry.schema.json",
-      "sha256": "521e83a06989c93264409b9347f6111fd50c8e577f8039131a7ee4f4845aea7a",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.6.0/generated-asset-manifest.schema.json",
       "target": "schemas/v1.6.0/generated-asset-manifest.schema.json",
-      "sha256": "15ad2c14245997ef6f82ad1ce65cec0d23feb60de46ef8fc738bfa9bdfaeb6bf",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.6.0/skill-catalog.schema.json",
       "target": "schemas/v1.6.0/skill-catalog.schema.json",
-      "sha256": "4dc8bc7d73f8770a8116fc33b10d2f2a4c0bb4ad4ff3c8308d439891ce7f5a10",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.6.0/skill-completion-receipt.schema.json",
       "target": "schemas/v1.6.0/skill-completion-receipt.schema.json",
-      "sha256": "8894077511fa0caae6cc30c31321617b586164def10f8c7d10f1d5ebe03da388",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.6.0/skill-consent-record.schema.json",
       "target": "schemas/v1.6.0/skill-consent-record.schema.json",
-      "sha256": "8552168137ef43ce04a8ade2418e7aae320f3d1296fb6e56dae15935798b3580",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.6.0/skill-host-profile-registry.schema.json",
       "target": "schemas/v1.6.0/skill-host-profile-registry.schema.json",
-      "sha256": "aa6bac84239b0409842a3f1537c099bb7a781b00d8e1c223595db40cb7692f3f",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.6.0/skill-learning-record.schema.json",
       "target": "schemas/v1.6.0/skill-learning-record.schema.json",
-      "sha256": "3e5fc47dbb81a2c18dcb92897cbb9ecb6fd98b6e306cad4c3885ae5ec1c4a2b3",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.6.0/skill-module-registry.schema.json",
       "target": "schemas/v1.6.0/skill-module-registry.schema.json",
-      "sha256": "9a333fe260033ecf7268a8e86365de0dba0f3c1f385c09ce570395da4d2867cf",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.6.0/skill-routing-registry.schema.json",
       "target": "schemas/v1.6.0/skill-routing-registry.schema.json",
-      "sha256": "6ee3e94622e30563e78649840cf20d41184dcabdbb88747d4ff82d747e5884e8",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.6.0/skill-session.schema.json",
       "target": "schemas/v1.6.0/skill-session.schema.json",
-      "sha256": "8c734d6a14b3209511271510c87f065eb7dc2b65780b1214ea1a791f806cddc4",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.6.0/skill-source.schema.json",
       "target": "schemas/v1.6.0/skill-source.schema.json",
-      "sha256": "d5645f455b72a4d5e9735d877c807a25f7708abf8b4a5627abf418a3b94108f1",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.7.0/common.schema.json",
       "target": "schemas/v1.7.0/common.schema.json",
-      "sha256": "e866de7a527b4d55faf77f1264136b67f4e4166600155816d9a450bf6fb9c918",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.7.0/generated-asset-manifest.schema.json",
       "target": "schemas/v1.7.0/generated-asset-manifest.schema.json",
-      "sha256": "64d3b1e5bb95833b867ead496ac3224413590206b1620c2d828bbc06387872eb",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.7.0/planning-id-sequence.schema.json",
       "target": "schemas/v1.7.0/planning-id-sequence.schema.json",
-      "sha256": "0af8589ecf046cf03f5f189b9a294141d707043187aaed09e74727d72d2544f8",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.7.0/request-authority.schema.json",
       "target": "schemas/v1.7.0/request-authority.schema.json",
-      "sha256": "9fb98277f231e34fa1a3bca4f2fb2dccfd839f9a668b9c012c7b49a107be4af7",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.7.0/skill-catalog.schema.json",
       "target": "schemas/v1.7.0/skill-catalog.schema.json",
-      "sha256": "316b8f6e809e28d1967ffd9d4352e7f04366add435045bc40ea08d0ac337677b",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.7.0/skill-completion-receipt.schema.json",
       "target": "schemas/v1.7.0/skill-completion-receipt.schema.json",
-      "sha256": "012e2dce81fc7c969306415aa23d0627bc27c42cf040ee0063df47d8b6a23e46",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.7.0/skill-consent-record.schema.json",
       "target": "schemas/v1.7.0/skill-consent-record.schema.json",
-      "sha256": "8ab936a1f1eb28de4e6476468795a891f7a42bf1d33bfc2dddb612978e6d9595",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.7.0/skill-host-profile-registry.schema.json",
       "target": "schemas/v1.7.0/skill-host-profile-registry.schema.json",
-      "sha256": "afe6016dede633922dc3bbeb9610561587bdaaedca8d0166f41e29dd83ea22a6",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.7.0/skill-learning-record.schema.json",
       "target": "schemas/v1.7.0/skill-learning-record.schema.json",
-      "sha256": "38c94253a42d27f26f7318bc2d3dfc1eedf5f53c03753544db3683dadf840aa8",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.7.0/skill-module-registry.schema.json",
       "target": "schemas/v1.7.0/skill-module-registry.schema.json",
-      "sha256": "7c42d9b76cfd429067da4522a4297390cffa930ed3bcf87e809b7b969b307a0b",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.7.0/skill-routing-registry.schema.json",
       "target": "schemas/v1.7.0/skill-routing-registry.schema.json",
-      "sha256": "2ac4487f7386c14aff831ff4855301c1919edac396ef6fa312faef1c69ed00aa",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.7.0/skill-session.schema.json",
       "target": "schemas/v1.7.0/skill-session.schema.json",
-      "sha256": "fd42557d6bb19bb8c5138df64524c2712b9832723f2d884a25bb87bfe5968e54",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.7.0/skill-source.schema.json",
       "target": "schemas/v1.7.0/skill-source.schema.json",
-      "sha256": "1c7eacb4caf00dc73f60da787aef5ea89f9ed8d67f072ddd2ebed7334aa12d26",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.7.0/spec.schema.json",
       "target": "schemas/v1.7.0/spec.schema.json",
-      "sha256": "5c0ae53b641577802874e49072f59b6472b76324958e81f928be7b611e49a6a3",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.7.0/story.schema.json",
       "target": "schemas/v1.7.0/story.schema.json",
-      "sha256": "6770fdf32ff656519b9d24cbba8e9287dd423c37920877cc50e91063b58682cb",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.7.0/task.schema.json",
       "target": "schemas/v1.7.0/task.schema.json",
-      "sha256": "f52f1fb247e3a55fee832650bdf54194ed61ded306029db0cc625b59bf725edb",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.8.0/common.schema.json",
       "target": "schemas/v1.8.0/common.schema.json",
-      "sha256": "1fc3e8ddc78116143668217aefae8a8be8f94e82ccd17ecc0c7b18297154786f",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.8.0/skill-package.schema.json",
       "target": "schemas/v1.8.0/skill-package.schema.json",
-      "sha256": "e8bb9decb48a1493b39d26e9c79bf217a52879574ab804836feb6fbb8c8989b7",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.8.0/utility-command-catalog.schema.json",
       "target": "schemas/v1.8.0/utility-command-catalog.schema.json",
-      "sha256": "4900671e1ceb52c11b4c1f1cfa20dcba572273aafbe97f149c7010db46497e05",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.9.0/design-document.schema.json",
       "target": "schemas/v1.9.0/design-document.schema.json",
-      "sha256": "bd84d34b42f9451f9ff836105a7a6c92b2d74209aa82f6a0dd973532edf99422",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.9.0/design-review-bundle.schema.json",
       "target": "schemas/v1.9.0/design-review-bundle.schema.json",
-      "sha256": "560bbc0f147f20f5b3d65a36b10ae1c4209fd5d9ec0a199f0d23f818684dcba8",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.9.0/design-review-workspace.schema.json",
       "target": "schemas/v1.9.0/design-review-workspace.schema.json",
-      "sha256": "e09129fd8428c62285a308f23fda8235636d0c0061730761a94eecf7622a580f",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.9.0/design-workspace-create.schema.json",
       "target": "schemas/v1.9.0/design-workspace-create.schema.json",
-      "sha256": "d385984298db9fd130735ad5a4d59b80f7a4e70818276c0060b86c38fa1d339c",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.9.0/design-workspace-event.schema.json",
       "target": "schemas/v1.9.0/design-workspace-event.schema.json",
-      "sha256": "3fa3a0e578a54060a7a279de6190afbb77d39d1f04cb1ad2d5f33a6ad76932c4",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v1.9.0/design-workspace-revision.schema.json",
       "target": "schemas/v1.9.0/design-workspace-revision.schema.json",
-      "sha256": "9cb7cea43bad0b3a51d608e1e5645539ad7e8a4473b036d288cc8f4996b2a04a",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v2.0.0/agent-runtime-manifest.schema.json",
       "target": "schemas/v2.0.0/agent-runtime-manifest.schema.json",
-      "sha256": "6bb0b5bcd1158eb18b460b84db8739f9dddef2d889b5a90b3d019159597a2ede",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v2.0.0/business-operating-snapshot-projection.schema.json",
       "target": "schemas/v2.0.0/business-operating-snapshot-projection.schema.json",
-      "sha256": "e5f982db50000e2ba4b010bf090dee130432b3d0923421873bf26db3c6490312",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v2.0.0/operate-allowed-action.schema.json",
       "target": "schemas/v2.0.0/operate-allowed-action.schema.json",
-      "sha256": "02165283bbcf2e4954a2d6dc4bb2d8f172aaac0e78a5ca8474b509f45d32a4b6",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v2.0.0/operate-api-envelope.schema.json",
       "target": "schemas/v2.0.0/operate-api-envelope.schema.json",
-      "sha256": "d4aa4213533cdb506a594e0355743eea857be23fc8ebce94b51734bed7993a4c",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v2.0.0/operate-capability-provider-registration.schema.json",
       "target": "schemas/v2.0.0/operate-capability-provider-registration.schema.json",
-      "sha256": "1c43d5a1048e118c6b576909c2129ab09cfda344e2af468095ba09fdcf5dd928",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v2.0.0/operate-domain-registration.schema.json",
       "target": "schemas/v2.0.0/operate-domain-registration.schema.json",
-      "sha256": "e4f2f21a85045480fee0adaa090962cf53e4c083f646f7dd45022a64fd826f50",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v2.0.0/operate-evidence-provider-registration.schema.json",
       "target": "schemas/v2.0.0/operate-evidence-provider-registration.schema.json",
-      "sha256": "27aaeb3447a20fa8040d261b56aa138ef443cd819407ffd81b6e952467ebf497",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v2.0.0/operate-evidence-resolver-registration.schema.json",
       "target": "schemas/v2.0.0/operate-evidence-resolver-registration.schema.json",
-      "sha256": "ed27e45d6c0a57f1ee4361d4f0c52e23b0dbd160f1a50ceb63dd089b4c3e1a84",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v2.0.0/operate-executor-registration.schema.json",
       "target": "schemas/v2.0.0/operate-executor-registration.schema.json",
-      "sha256": "6201b16317b54fe8610f65e8090f35bb110160213b8eff76bb5b4bcd691c1f31",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v2.0.0/operate-experience-live-patch.schema.json",
       "target": "schemas/v2.0.0/operate-experience-live-patch.schema.json",
-      "sha256": "77dae6e31afd8df4ce96b9d62f876a18b59941a2939d1da57dc67f2d4bf2d3c6",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v2.0.0/operate-experience-preview.schema.json",
       "target": "schemas/v2.0.0/operate-experience-preview.schema.json",
-      "sha256": "244e3accee69de98c143ed2fbcb2e009b480fee65b7aca3f191c3d89cac1d462",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v2.0.0/operate-experience-view.schema.json",
       "target": "schemas/v2.0.0/operate-experience-view.schema.json",
-      "sha256": "5a65301cb5cc4340b9695f1438572a51d83f87b3032155ed312b201ee17a0c8c",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v2.0.0/operate-live-evidence-provider-registration.schema.json",
       "target": "schemas/v2.0.0/operate-live-evidence-provider-registration.schema.json",
-      "sha256": "065c0f212a58f6e89a36dd3c0a0f5d70cc5d6e914e99635923444b73b34e03c8",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v2.0.0/operate-live-evidence-provider-registry.schema.json",
       "target": "schemas/v2.0.0/operate-live-evidence-provider-registry.schema.json",
-      "sha256": "8d9558e4670e12e7c07648d2d90a892456c9ada9415f3068202970de90763594",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v2.0.0/operate-metric-provider-registration.schema.json",
       "target": "schemas/v2.0.0/operate-metric-provider-registration.schema.json",
-      "sha256": "ff4d32df5df7e25944b89977a18b482d2a9a4bb458771f26bf3cf2354c0b3cec",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v2.0.0/operate-policy-provider-registration.schema.json",
       "target": "schemas/v2.0.0/operate-policy-provider-registration.schema.json",
-      "sha256": "666ec7f61705d33637c7e3afbc8dca8f5e9db1bb464678f91da0d391bc020e40",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v2.0.0/operate-review-bound-submission.schema.json",
       "target": "schemas/v2.0.0/operate-review-bound-submission.schema.json",
-      "sha256": "c3b3ad5d04fd012aa6584f36c5c99a3c3550cd1336c906b1612f7026f47f7ac8",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v2.0.0/operate-review-display-workspace.d.mts",
       "target": "schemas/v2.0.0/operate-review-display-workspace.d.mts",
-      "sha256": "8f968c564414115c6a4c4843be55a1af651ec40af81c26447ab6c6dcd7dc0b46",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v2.0.0/operate-review-display-workspace.mjs",
       "target": "schemas/v2.0.0/operate-review-display-workspace.mjs",
-      "sha256": "5a46874009aa3ba0ed9e9a19117e6ceca4fd96f12c84e2187e84b7efb36986e8",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v2.0.0/operate-review-display-workspace.schema.json",
       "target": "schemas/v2.0.0/operate-review-display-workspace.schema.json",
-      "sha256": "0b318d41a193ab231a6a198ef59c3e894821dc1f69c74ddaecf65ed2805bf113",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v2.0.0/operate-snapshot-provider-registration.schema.json",
       "target": "schemas/v2.0.0/operate-snapshot-provider-registration.schema.json",
-      "sha256": "9d4e849f5ce5349059c2f9550c2cd8e79fe2fcead75f5c00f07419a8815e8288",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v2.0.0/operate-tool-call.schema.json",
       "target": "schemas/v2.0.0/operate-tool-call.schema.json",
-      "sha256": "e2149a889ea8bc85762f51381cdcf2bdbba46e9eb195999421d6749702dbf904",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v2.0.0/operate-verification-provider-registration.schema.json",
       "target": "schemas/v2.0.0/operate-verification-provider-registration.schema.json",
-      "sha256": "b2792d1baf0d4fe1cec2df1aeb70f7046ccaac522e7ba13f444fc66616ced0d9",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v2.0.0/operating-action-policy.schema.json",
       "target": "schemas/v2.0.0/operating-action-policy.schema.json",
-      "sha256": "e6b9c2f4859c91d663fc63e35a77a00b0395c00b92f7dee1931d822e9de114f4",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v2.0.0/operating-action-verification-plan.schema.json",
       "target": "schemas/v2.0.0/operating-action-verification-plan.schema.json",
-      "sha256": "66744f9d707b082467073cd8e5404608f503da38a53109da14451fdd03ca0e64",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v2.0.0/operating-action.schema.json",
       "target": "schemas/v2.0.0/operating-action.schema.json",
-      "sha256": "90735b7166378bf3a83bcd152996db473096bafdc7dc651fc6aaca7419f7418f",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v2.0.0/operating-advisor-result.schema.json",
       "target": "schemas/v2.0.0/operating-advisor-result.schema.json",
-      "sha256": "5b1148471219da538efd45b7ea6b003e5149a03f9807cbf7ccdbb890af05891b",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v2.0.0/operating-approval-record.schema.json",
       "target": "schemas/v2.0.0/operating-approval-record.schema.json",
-      "sha256": "89eed59544306f795f2a09bc5a72b3f48040dd4b17cebcf7717605978fc8b7df",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v2.0.0/operating-approval-requirement.schema.json",
       "target": "schemas/v2.0.0/operating-approval-requirement.schema.json",
-      "sha256": "da478923e1c65d58134c8d898425b2ab17cd5faa01768d39c4b87db1d33e5042",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v2.0.0/operating-artifact.schema.json",
       "target": "schemas/v2.0.0/operating-artifact.schema.json",
-      "sha256": "d7045b75944dfc41637d6908fa823784b422771793535447a758b04aa870b2a9",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v2.0.0/operating-assignment.schema.json",
       "target": "schemas/v2.0.0/operating-assignment.schema.json",
-      "sha256": "f2dd0915afbf3c166858b952a249a3e30ce477d5d51fe6ae74f6c319b0512780",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v2.0.0/operating-assumption.schema.json",
       "target": "schemas/v2.0.0/operating-assumption.schema.json",
-      "sha256": "75412b9952d39f182984c7816c5807a8f2c0a3410fe17316e1a4ff1bbf4190a3",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v2.0.0/operating-capability-availability.schema.json",
       "target": "schemas/v2.0.0/operating-capability-availability.schema.json",
-      "sha256": "a20b09fb010232f4a86fe67fad684bd36d38e79f26a56b68844afadb66b68192",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v2.0.0/operating-capability-grant.schema.json",
       "target": "schemas/v2.0.0/operating-capability-grant.schema.json",
-      "sha256": "5a2a2718e9f12de8b8e733464fa12a5de86a92500bf95b323a4bc0ce5a6a2295",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v2.0.0/operating-challenger-review.schema.json",
       "target": "schemas/v2.0.0/operating-challenger-review.schema.json",
-      "sha256": "1a9449388118e14831dbda0c6676939131b6206b78ba98731e1c85a7d9e743b9",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v2.0.0/operating-checkpoint.schema.json",
       "target": "schemas/v2.0.0/operating-checkpoint.schema.json",
-      "sha256": "40838332a2ee46251c85a95a3e181855c4ef260b1142d2d59edfe861dea49750",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v2.0.0/operating-claim.schema.json",
       "target": "schemas/v2.0.0/operating-claim.schema.json",
-      "sha256": "26f0bedaba08dc5c59da818d55ac1a63aefb5a49d4c32d5f4b4c4acad97f9fe4",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v2.0.0/operating-connector-checkpoint.schema.json",
       "target": "schemas/v2.0.0/operating-connector-checkpoint.schema.json",
-      "sha256": "ff68f8caf43665376472ac129a000f982ad5baf67f7879ba0d4eb76c0fb2d990",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v2.0.0/operating-context-capture.schema.json",
       "target": "schemas/v2.0.0/operating-context-capture.schema.json",
-      "sha256": "b665426c6e196870a1dc6dc8413f0474f52d095c4e96316df5638dc12e1248f5",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v2.0.0/operating-cycle-input-binding.schema.json",
       "target": "schemas/v2.0.0/operating-cycle-input-binding.schema.json",
-      "sha256": "a0a9d92dffcdd018f59612079bf948515fd3e1b4e6e645c7a27cc07d11dcc0d3",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v2.0.0/operating-cycle.schema.json",
       "target": "schemas/v2.0.0/operating-cycle.schema.json",
-      "sha256": "1ab61b30ff2880efbc47832f0fd14b6b98ff7fc1f5b210337fe2dd4e220e8c7d",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v2.0.0/operating-decision-ledger.schema.json",
       "target": "schemas/v2.0.0/operating-decision-ledger.schema.json",
-      "sha256": "7a2617e0b685c40d2c5c55fae2a21b3ca805c4817470122c3e6eb70f8482cc69",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v2.0.0/operating-decision.schema.json",
       "target": "schemas/v2.0.0/operating-decision.schema.json",
-      "sha256": "c8fb593149c23c3f2f89c8b8af9af5c123b0b9532ab268261c9b42dc4689162f",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v2.0.0/operating-delivery-evidence.schema.json",
       "target": "schemas/v2.0.0/operating-delivery-evidence.schema.json",
-      "sha256": "35310dd4e51da857bfaef0d902061a52957f522132a6086e04b5ad46b58f7c58",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v2.0.0/operating-delivery-route.schema.json",
       "target": "schemas/v2.0.0/operating-delivery-route.schema.json",
-      "sha256": "34a97d9bc4681acc2555c7414a86010d738f974b9f5bb7987e7c78d2b9380e5e",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v2.0.0/operating-delta.schema.json",
       "target": "schemas/v2.0.0/operating-delta.schema.json",
-      "sha256": "7ee71e85c6b03121d7bf4415c712e6dd659b460dbc0a08e32c0f532502f50393",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v2.0.0/operating-domain-projection.schema.json",
       "target": "schemas/v2.0.0/operating-domain-projection.schema.json",
-      "sha256": "c1f184f3fff5de63f1d97ecefe10dffa3be440f1dfa65c82c54e33562642e43d",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v2.0.0/operating-event-trigger.schema.json",
       "target": "schemas/v2.0.0/operating-event-trigger.schema.json",
-      "sha256": "bea9ca34b22c9f4ab4f40688a6da3cb03ec66cd6e5a21e4a9c33bfdfe14b12d9",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v2.0.0/operating-event.schema.json",
       "target": "schemas/v2.0.0/operating-event.schema.json",
-      "sha256": "b19f266ee0dcd9a6e9dfbefc8a4fe1c57ee15c261a09a1c24c9b411ebaa85cb2",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v2.0.0/operating-evidence-candidate.schema.json",
       "target": "schemas/v2.0.0/operating-evidence-candidate.schema.json",
-      "sha256": "b4a2400cc8eee71cbef100fa652b9344c40354ca20c73f3b4f2ede73af16db81",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v2.0.0/operating-evidence-edge.schema.json",
       "target": "schemas/v2.0.0/operating-evidence-edge.schema.json",
-      "sha256": "a9569eec302a488437efc31546836668757c18f43cc989e89538954c331387a2",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v2.0.0/operating-evidence-graph.schema.json",
       "target": "schemas/v2.0.0/operating-evidence-graph.schema.json",
-      "sha256": "3c2e2f26f6aee5c6c65ea7702d2c2be1e081a8a3f65db157e7fee89c439ce3e2",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v2.0.0/operating-evidence-observation.schema.json",
       "target": "schemas/v2.0.0/operating-evidence-observation.schema.json",
-      "sha256": "69b0145a2cdbfca4316b0301228545fdcb8ff46a42d0757967159f720cab0061",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v2.0.0/operating-evidence-ref.schema.json",
       "target": "schemas/v2.0.0/operating-evidence-ref.schema.json",
-      "sha256": "520dbc6d93ac2d67593dcc49d98b0be6e77f3205fb9a6b76db6557eeccc9e433",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v2.0.0/operating-evidence-resolution.schema.json",
       "target": "schemas/v2.0.0/operating-evidence-resolution.schema.json",
-      "sha256": "13716c49a38cca957428e24065b7bed467cc5a21614e2fe6a7a8a1f422b5f7e8",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v2.0.0/operating-execution-result.schema.json",
       "target": "schemas/v2.0.0/operating-execution-result.schema.json",
-      "sha256": "763c1f86e56a87edc4e92bf5d923b27d55db0435b8c39da7cca516af50cfa33b",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v2.0.0/operating-executive-board.schema.json",
       "target": "schemas/v2.0.0/operating-executive-board.schema.json",
-      "sha256": "654062c246f97414dd3989f054e37b8376c177bd7597461190fecc4f4c80e5bb",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v2.0.0/operating-finding.schema.json",
       "target": "schemas/v2.0.0/operating-finding.schema.json",
-      "sha256": "db4264e161b3cef4d42302c08413606ff4749332b214bb42fbfb2452f7eb035c",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v2.0.0/operating-governed-operation.schema.json",
       "target": "schemas/v2.0.0/operating-governed-operation.schema.json",
-      "sha256": "5ca9e77b20aa42378255364b88ea950c6410cf44da374e293b0d886c3462e5dc",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v2.0.0/operating-intelligence-input-bundle.schema.json",
       "target": "schemas/v2.0.0/operating-intelligence-input-bundle.schema.json",
-      "sha256": "e94886e9076b8d95d8db84720591a4034bc84fbc6445b7fa71b64d57a1b3079e",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v2.0.0/operating-intelligence-plan.schema.json",
       "target": "schemas/v2.0.0/operating-intelligence-plan.schema.json",
-      "sha256": "14d2f5f3f645b2ade79b1176ff9a1c80758a9fd2f00f7e2c4d91f4d112c4c23e",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v2.0.0/operating-learning-receipt.schema.json",
       "target": "schemas/v2.0.0/operating-learning-receipt.schema.json",
-      "sha256": "aec3b39c87335b0f1eac885ab7f2c5e3e73f5babcf9dba4f8d47e05d8841bb84",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v2.0.0/operating-learning.schema.json",
       "target": "schemas/v2.0.0/operating-learning.schema.json",
-      "sha256": "ff6227b943a2f06fc589eb67cd217ca90916988413865434c16659b72a06ba7e",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v2.0.0/operating-live-evidence-consent-record.schema.json",
       "target": "schemas/v2.0.0/operating-live-evidence-consent-record.schema.json",
-      "sha256": "e7dcb3f3c2d8b28556e0b79cb4beb00e2c3ff3e054a67e90af8dcd4cb9f5d443",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v2.0.0/operating-live-evidence-ingestion.schema.json",
       "target": "schemas/v2.0.0/operating-live-evidence-ingestion.schema.json",
-      "sha256": "63579268ea91595667cfc654ac43e2e21f0b2f6a42ca36c215de2232cb079623",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v2.0.0/operating-measurement-plan.schema.json",
       "target": "schemas/v2.0.0/operating-measurement-plan.schema.json",
-      "sha256": "b0d5a50fc4c5fc0d60ed92394801b4cf9995b930984b06700400a5955c60464d",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v2.0.0/operating-measurement-schedule-receipt.schema.json",
       "target": "schemas/v2.0.0/operating-measurement-schedule-receipt.schema.json",
-      "sha256": "82a4cbbe294424ca8babb4ac177bec7e3a7af8a78db34760cfc8d741311c4951",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v2.0.0/operating-measurement-schedule.schema.json",
       "target": "schemas/v2.0.0/operating-measurement-schedule.schema.json",
-      "sha256": "17b2c62388b80caa73ddc3192d3011938c21f486d8477189bb108d3244c67ac7",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v2.0.0/operating-metric-observation.schema.json",
       "target": "schemas/v2.0.0/operating-metric-observation.schema.json",
-      "sha256": "2beee93b7d5ea5fe2735e89101471ab535bfe9c03a6d4ec057873cb239b2acd4",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v2.0.0/operating-metric.schema.json",
       "target": "schemas/v2.0.0/operating-metric.schema.json",
-      "sha256": "c4e1c2e192e89f9b440cff1fb730f1d1d761bc941ab7e2b02b4790b3198730b8",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v2.0.0/operating-model-state.schema.json",
       "target": "schemas/v2.0.0/operating-model-state.schema.json",
-      "sha256": "c6d905992a36239b6b20e6286acb90606102d562cac951b7938b04387c5e751d",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v2.0.0/operating-objective.schema.json",
       "target": "schemas/v2.0.0/operating-objective.schema.json",
-      "sha256": "6fefe292c4ed12e3dbe6c11dbd0eb4ee8e8aaef5a312abef2c412ce3e9ad562b",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v2.0.0/operating-origin.schema.json",
       "target": "schemas/v2.0.0/operating-origin.schema.json",
-      "sha256": "7c684dcbdeb7534239e1db489bd6dcae2ea83d7beacfa581473ceac3bd9aedba",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v2.0.0/operating-outcome-evaluation.schema.json",
       "target": "schemas/v2.0.0/operating-outcome-evaluation.schema.json",
-      "sha256": "8aeb9d959a57456a8546727ecf6bc5047746d040df91607bd5fb35513636ce9b",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v2.0.0/operating-outcome.schema.json",
       "target": "schemas/v2.0.0/operating-outcome.schema.json",
-      "sha256": "91e0bf09382edd30e0aa19d320fd4ba736d19cfa2a35ef02eafaea8d1fb770fe",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v2.0.0/operating-planning-proposal.schema.json",
       "target": "schemas/v2.0.0/operating-planning-proposal.schema.json",
-      "sha256": "ca74cbb57b37bc499b3e999111decdedf13f3dcd4f68c949b3d9226e08283976",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v2.0.0/operating-policy-evaluation.schema.json",
       "target": "schemas/v2.0.0/operating-policy-evaluation.schema.json",
-      "sha256": "6ef4938742d58cd99a47913881b72537f0f2147543184acb84e9c1ecba73bc28",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v2.0.0/operating-review-read.schema.json",
       "target": "schemas/v2.0.0/operating-review-read.schema.json",
-      "sha256": "4fc4a69a3412497cad09a7c1bbfa0f75fa7587c037a969e7afcddce470e58c88",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v2.0.0/operating-review-receipt.schema.json",
       "target": "schemas/v2.0.0/operating-review-receipt.schema.json",
-      "sha256": "801628a2aeaf5f3e7799a13f9eeab7ad90b092b3bc8f22d8a04b0f775bb56bba",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v2.0.0/operating-review.schema.json",
       "target": "schemas/v2.0.0/operating-review.schema.json",
-      "sha256": "cb063fd9c090211bfb8eb3e2b19c3e87feb1d9fa9aea902deae9a0f07c82fe78",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v2.0.0/operating-risk.schema.json",
       "target": "schemas/v2.0.0/operating-risk.schema.json",
-      "sha256": "ccfb005907b012611247a46ff4d01832c125de71912f8ac1fa2f50ca3b292b5c",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v2.0.0/operating-rollback-plan.schema.json",
       "target": "schemas/v2.0.0/operating-rollback-plan.schema.json",
-      "sha256": "e165c536898bf31197d5001fe18484b19ece47711cce60720c11889c41f2b0e0",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v2.0.0/operating-rollback-result.schema.json",
       "target": "schemas/v2.0.0/operating-rollback-result.schema.json",
-      "sha256": "03b150a969e6e75666663e024bb8ac936a1532d9b5dfb4e91e4b284f0faf23f0",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v2.0.0/operating-runtime-state.schema.json",
       "target": "schemas/v2.0.0/operating-runtime-state.schema.json",
-      "sha256": "489466d7dff245b19057343dd14739674d2ea2e87315e962692ea31e345c5b7d",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v2.0.0/operating-scenario.schema.json",
       "target": "schemas/v2.0.0/operating-scenario.schema.json",
-      "sha256": "db197719b9f5f61008b8ddf88450bf20867d063d2615bfbbeed5a76e1d5134c9",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v2.0.0/operating-snapshot.schema.json",
       "target": "schemas/v2.0.0/operating-snapshot.schema.json",
-      "sha256": "f2c04193114aea20573f68a9844e4cd49d5e350ee2a3448b33731a7fc667fa9b",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v2.0.0/operating-submission.schema.json",
       "target": "schemas/v2.0.0/operating-submission.schema.json",
-      "sha256": "bc42635599e1e33c709ec712bac592648bc3c8622b4b2c534ed4137ed760a986",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v2.0.0/operating-trace-matrix.schema.json",
       "target": "schemas/v2.0.0/operating-trace-matrix.schema.json",
-      "sha256": "f0dbcc249eff1069e058160c82ca85cf6a7095b10ddc7b1fd668cefb0b0691cf",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v2.0.0/operating-work-change-set.schema.json",
       "target": "schemas/v2.0.0/operating-work-change-set.schema.json",
-      "sha256": "8cd3831ac299f496d18dbdb07f3f5f606a83f1edc099b57fa625e3976e7e0da0",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v2.0.0/operating-work-ledger.schema.json",
       "target": "schemas/v2.0.0/operating-work-ledger.schema.json",
-      "sha256": "d0bfd767344f6c78b84023c5a4f17ed0fd91db0602a8da659efcc874743c70b6",
       "mode": "644"
     },
     {
       "source": "packages/protocol/schemas/v2.0.0/software-operating-snapshot-projection.schema.json",
       "target": "schemas/v2.0.0/software-operating-snapshot-projection.schema.json",
-      "sha256": "97488fd706c7c61e6c35d3584a3fe7b36968681b5e2fa283415d20aba730bc74",
       "mode": "644"
     }
   ]

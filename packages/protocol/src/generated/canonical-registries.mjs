@@ -1062,7 +1062,7 @@ export const CANONICAL_REGISTRIES = deepFreeze({
   "commands.json": {
     "kind": "command-catalog",
     "schemaVersion": "1.0.0",
-    "protocolVersion": "1.5.0",
+    "protocolVersion": "1.25.0",
     "documentVersion": "1.0.0",
     "digestAlgorithm": "sha256",
     "canonicalization": "rfc8785",
@@ -3008,13 +3008,12 @@ export const CANONICAL_REGISTRIES = deepFreeze({
           "packages/cli/tests/unit/command-registration-parity.test.ts"
         ]
       }
-    ],
-    "documentDigest": "sha256:dea612487b9c2a39cc38efe07a4d1042b230dcf4369eff4f23baf9ea7a2aeb9a"
+    ]
   },
   "skills.json": {
     "kind": "skill-catalog",
     "schemaVersion": "1.0.0",
-    "protocolVersion": "1.5.0",
+    "protocolVersion": "1.25.0",
     "documentVersion": "1.0.0",
     "digestAlgorithm": "sha256",
     "canonicalization": "rfc8785",
@@ -4876,8 +4875,7 @@ export const CANONICAL_REGISTRIES = deepFreeze({
         ]
       }
     ],
-    "compatibilityAliases": [],
-    "documentDigest": "sha256:380f7b7334ffb7a885992fa5fca1f96b3a029bff62eb86afbc1b9aa30efe30c2"
+    "compatibilityAliases": []
   },
   "outputs.json": {
     "kind": "output-catalog",

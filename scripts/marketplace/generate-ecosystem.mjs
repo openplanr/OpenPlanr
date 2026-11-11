@@ -21,6 +21,7 @@ import {
 import { dirname, relative, resolve, sep } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { buildRuntimeLockSchemasV118 } from '../../packages/protocol/scripts/runtime-lock-definitions-v118.mjs';
+import { CATALOG_PROTOCOL_VERSION } from '../../packages/protocol/src/browser-contracts.mjs';
 import { DIAGRAM_AUTHORING_CONTRACT_FILES } from '../../packages/protocol/src/diagram-authoring-contracts.mjs';
 import { validateJson } from '../../packages/protocol/src/json-schema.mjs';
 import { LARGE_OBJECT_SCHEMAS } from '../../packages/protocol/src/large-object-contracts.mjs';
@@ -402,8 +403,9 @@ async function buildOutputs() {
     outputs,
     outputPaths,
   })) {
-    if (catalog.protocolVersion !== '1.5.0')
-      fail('E_ECOSYSTEM_PROTOCOL_CATALOG', `${name} is not a Protocol 1.5 catalog.`);
+    const expected = name === 'commands' || name === 'skills' ? CATALOG_PROTOCOL_VERSION : '1.5.0';
+    if (catalog.protocolVersion !== expected)
+      fail('E_ECOSYSTEM_PROTOCOL_CATALOG', `${name} is not a Protocol ${expected} catalog.`);
   }
 
   const skillAssets = verifyGeneratedAssets('adapters/manifests/generated-assets.json');
