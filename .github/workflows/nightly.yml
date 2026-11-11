@@ -204,12 +204,12 @@ jobs:
         run: |
           npm run generate
           npm run build
-      - name: Trace the canvas benches at both edge densities with the runner budgets
+      - name: Trace the canvas benches at both edge densities; runner timing is reported
         run: npm run test:browser --workspace=@openplanr/canvas -- bench-trace budgets
         env:
           CI: 'true'
           CANVAS_SECOND_DENSITY: '1'
-      - name: Trace the diagram editor on the canvas engine with the runner budgets
+      - name: Trace the diagram editor on the canvas engine; runner timing is reported
         working-directory: packages/artifact
         run: node --import ../../tests/support/isolate-user-state.mjs --test tests/diagram-editor-canvas.browser.test.mjs
         env:

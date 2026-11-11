@@ -1,5 +1,17 @@
 # Changelog
 
+## 3.7.3
+
+### Patch Changes
+
+- 253bbc9: `openplanr delegate probe` and `profile-preview` report each engine's sign-in state as `identity`, read from Claude Code's, Codex's and Cursor's own status commands without account details. The delegate skill now takes profiles, sign-in and local routing from the CLI and runs a saved profile through `openplanr delegate`. Company review, doctor and the plugin README describe sign-in as staying in each vendor's CLI and in `openplanr`.
+
+## 3.7.2
+
+### Patch Changes
+
+- c66dc80: Database introspection and GitHub context use the host's connectors instead of local client sign-ins. Tracker sync runs only through the host's connection.
+
 ## 3.7.1
 
 ### Patch Changes

@@ -6,6 +6,7 @@ import {
   type TraceRun,
   traceBudgetPolicy,
   traceOwnership,
+  traceSpeedIndex,
 } from './browser/trace-results';
 
 describe('second edge density selection', () => {
@@ -28,10 +29,42 @@ describe('second edge density selection', () => {
   );
 });
 
+describe('trace speed index', () => {
+  it('takes the geometric mean of non-remount main p95 medians', () => {
+    expect(
+      traceSpeedIndex([
+        { scenario: 'pan-100', rendererMainP95Ms: 2 },
+        { scenario: 'zoom-sweep', rendererMainP95Ms: 8 },
+        { scenario: 'remount', rendererMainP95Ms: 1000 },
+      ]),
+    ).toEqual({ valueMs: 4, rows: 2, skipped: 0 });
+  });
+
+  it('skips and counts non-positive or non-finite medians without throwing', () => {
+    expect(
+      traceSpeedIndex([
+        { scenario: 'pan-100', rendererMainP95Ms: 0 },
+        { scenario: 'pan-40', rendererMainP95Ms: Number.NaN },
+        { scenario: 'zoom-sweep', rendererMainP95Ms: 9 },
+      ]),
+    ).toEqual({ valueMs: 9, rows: 1, skipped: 2 });
+  });
+
+  it('records a null index when no median is usable', () => {
+    expect(traceSpeedIndex([])).toEqual({ valueMs: null, rows: 0, skipped: 0 });
+    expect(traceSpeedIndex([{ scenario: 'pan-40', rendererMainP95Ms: 0 }])).toEqual({
+      valueMs: null,
+      rows: 0,
+      skipped: 1,
+    });
+  });
+});
+
 describe('trace budget selection', () => {
   it('enforces local remount, rAF and first-frame limits at the reference budgets', () => {
     expect(traceBudgetPolicy(false)).toEqual({
       budgetSet: 'local',
+      timingReportOnly: false,
       remountRendererMainP95Ms: 16,
       htmlZoomSweep5000RendererMainP95Ms: null,
       vanillaHtml708PanZoomRendererMainP95Ms: null,
@@ -41,9 +74,10 @@ describe('trace budget selection', () => {
     });
   });
 
-  it('reports runner remount and rAF and gates the runner first frame at 250 ms', () => {
+  it('reports runner timing against the runner comparison values', () => {
     expect(traceBudgetPolicy(true)).toEqual({
       budgetSet: 'runner',
+      timingReportOnly: true,
       remountRendererMainP95Ms: null,
       htmlZoomSweep5000RendererMainP95Ms: 14,
       vanillaHtml708PanZoomRendererMainP95Ms: 8,

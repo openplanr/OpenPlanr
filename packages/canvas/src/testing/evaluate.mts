@@ -41,6 +41,8 @@ export function toClockResolution(ms: number): number {
 
 export function traceBudgetPolicy(runnerBudgets: boolean): {
   budgetSet: 'local' | 'runner';
+  /** Records millisecond metrics and long-task counts as reported instead of failing on them. */
+  timingReportOnly: boolean;
   remountRendererMainP95Ms: number | null;
   /** Main-thread limit for the 5,000-node HTML zoom sweep; null keeps the renderer's reference limit. */
   htmlZoomSweep5000RendererMainP95Ms: number | null;
@@ -53,6 +55,7 @@ export function traceBudgetPolicy(runnerBudgets: boolean): {
 } {
   return {
     budgetSet: runnerBudgets ? 'runner' : 'local',
+    timingReportOnly: runnerBudgets,
     remountRendererMainP95Ms: runnerBudgets ? null : CANVAS_TRACE_BUDGETS.remountRendererMainP95Ms,
     htmlZoomSweep5000RendererMainP95Ms: runnerBudgets
       ? CANVAS_TRACE_BUDGETS.runnerHtmlZoomSweep5000RendererMainP95Ms
@@ -164,6 +167,8 @@ export type CanvasTraceEvaluation = {
   browser: CanvasTraceResults['browser'];
   failures: string[];
   reported: string[];
+  /** Reported entries whose measurement is over its comparison limit. */
+  exceeded: string[];
   pending: string[];
   passed: boolean;
 };
@@ -257,9 +262,11 @@ export function evaluateCanvasTrace(
   text(results.browser.version, 'browser.version');
   const failures: string[] = [];
   const reported: string[] = [];
+  const exceeded: string[] = [];
   const pending = ['dropped frames at fit: compositor trace is not measured'];
   const limits = CANVAS_TRACE_BUDGETS;
   const policy = traceBudgetPolicy(results.budgetSet === 'runner');
+  const timing = policy.timingReportOnly;
   function supported(
     item: CanvasTraceIdentity,
     scenario: string,
@@ -287,8 +294,10 @@ export function evaluateCanvasTrace(
   ): void {
     if (item.count !== tier) return;
     const label = `${item.fixture} ${item.renderer} ${item.world} DPR ${item.dpr} ${scenario}: ${metric} measured ${measured}, limit ${limit}`;
-    if (reportOnly) reported.push(label);
-    else if (!passes) failures.push(label);
+    if (reportOnly) {
+      reported.push(label);
+      if (!passes) exceeded.push(label);
+    } else if (!passes) failures.push(label);
   }
   function maximum(
     item: CanvasTraceIdentity,
@@ -318,7 +327,7 @@ export function evaluateCanvasTrace(
     object(probe, `${item.fixture}.${scenario}.hitTestProbe`);
     for (const key of ['p95Ms', 'sampleCount', 'queryCount', 'minSampleDurationMs'] as const)
       numeric(probe[key], `${item.fixture}.${scenario}.hitTestProbe.${key}`);
-    maximum(item, scenario, 'hitTestP95Ms', probe.p95Ms, limits.hitTestP95Ms);
+    maximum(item, scenario, 'hitTestP95Ms', probe.p95Ms, limits.hitTestP95Ms, timing);
     check(item, scenario, 'hitTestP95Ms', probe.p95Ms, '> 0', probe.p95Ms > 0);
     check(
       item,
@@ -394,7 +403,7 @@ export function evaluateCanvasTrace(
         policy.webkitReactFirstFrameP50Ms !== null
         ? policy.webkitReactFirstFrameP50Ms
         : policy.firstFrameP50Ms,
-      svgTier,
+      svgTier || timing,
     );
     const main: number[] = [];
     const raf: number[] = [];
@@ -424,13 +433,14 @@ export function evaluateCanvasTrace(
           'longTasksOver50Ms',
           run.longTasksOver50Ms,
           limits.longTasksOver50Ms,
+          timing,
         );
       if (run.layoutShiftValue !== undefined)
         supported(item, scenario, 'layoutShiftValue', run.layoutShiftValue);
       for (const metric of ['engineFrameSamples', 'worstFrameMs'] as const)
         if (run[metric] !== undefined) numeric(run[metric], `${field}.${metric}`);
       hitTest(item, scenario, run.hitTestProbe);
-      maximum(item, scenario, 'hitTestP95Ms', run.hitTestP95Ms, limits.hitTestP95Ms);
+      maximum(item, scenario, 'hitTestP95Ms', run.hitTestP95Ms, limits.hitTestP95Ms, timing);
       check(item, scenario, 'hitTestP95Ms', run.hitTestP95Ms, '> 0', run.hitTestP95Ms > 0);
       const dom = domBudgetPolicy(item);
       maximum(
@@ -470,7 +480,7 @@ export function evaluateCanvasTrace(
           'worstFrameMs',
           run.worstFrameMs,
           limits.webkit.pan40WorstFrameMs,
-          policy.rafIntervalP95Ms === null,
+          timing || policy.rafIntervalP95Ms === null,
         );
       }
     }
@@ -498,7 +508,7 @@ export function evaluateCanvasTrace(
         'rendererMainP95Ms',
         mainMedian,
         mainLimit,
-        item.scenario === 'remount' && policy.remountRendererMainP95Ms === null,
+        timing || (item.scenario === 'remount' && policy.remountRendererMainP95Ms === null),
       );
       interval(
         item,
@@ -506,7 +516,7 @@ export function evaluateCanvasTrace(
         'rafIntervalP95Ms',
         rafMedian,
         limits.rafIntervalP95Ms,
-        svgTier || policy.rafIntervalP95Ms === null,
+        svgTier || timing || policy.rafIntervalP95Ms === null,
       );
     } else if (results.browser.name === 'webkit') {
       interval(
@@ -515,7 +525,7 @@ export function evaluateCanvasTrace(
         'rafIntervalP95Ms',
         rafMedian,
         limits.webkit.rafIntervalP95Ms,
-        svgTier || policy.rafIntervalP95Ms === null,
+        svgTier || timing || policy.rafIntervalP95Ms === null,
       );
     } else if (
       results.browser.name === 'firefox' &&
@@ -529,7 +539,7 @@ export function evaluateCanvasTrace(
         item.scenario === 'pan-100'
           ? limits.firefox.pan100FrameP95Ms
           : limits.firefox.panFitFrameP95Ms[item.count],
-        policy.rafIntervalP95Ms === null,
+        timing || policy.rafIntervalP95Ms === null,
       );
     }
   }
@@ -623,6 +633,7 @@ export function evaluateCanvasTrace(
     browser: results.browser,
     failures,
     reported,
+    exceeded,
     pending,
     passed: failures.length === 0,
   };

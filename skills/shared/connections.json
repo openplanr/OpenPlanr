@@ -51,7 +51,6 @@
         {
           "name": "GitHub Issues",
           "aliases": ["GitHub"],
-          "tools": ["GitHub CLI"],
           "use": "sync",
           "docs": "https://github.com/github/github-mcp-server",
           "verifiedOn": "2026-11-10",

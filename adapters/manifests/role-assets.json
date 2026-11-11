@@ -25,7 +25,7 @@
       "id": "planr-database",
       "source": "agents/po/preflight/planr-database/AGENT.md",
       "path": "dist/plugins/claude/openplanr/agents/planr-database.md",
-      "digest": "sha256:91dea85d44a1762885a7c8bbcd612545ce3725b3af4c90e5694d46c1b2e1c939"
+      "digest": "sha256:bf2b582a224f4c8baa0aa76709a073e63cf0e09e3230f72d3f3a8a137fad8c1e"
     },
     {
       "id": "planr-designer",

@@ -26,6 +26,8 @@ async function fixture(t) {
       "if (process.argv.includes('--help')) {",
       "console.log('--print --output-format stream-json --resume --session-id --add-dir');",
       'setTimeout(() => process.exit(0), 100);',
+      "} else if (process.argv.slice(2, 4).join(' ') === 'auth status') {",
+      "console.log(JSON.stringify({ loggedIn: false, authMethod: 'none', apiProvider: 'firstParty' }));",
       "} else { require('node:fs').writeFileSync('unexpected-execution.txt', 'started'); }",
     ].join('\n'),
     { mode: 0o700 },

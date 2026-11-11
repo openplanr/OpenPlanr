@@ -453,6 +453,7 @@ export async function previewProfileCandidate(
     capabilities: found.capabilities,
     ...(found.executionPolicy ? { executionPolicy: found.executionPolicy } : {}),
     ...(found.routing ? { routing: found.routing } : {}),
+    ...(found.identity ? { identity: found.identity } : {}),
     backend,
     readiness:
       profile.kind === 'generic'
@@ -653,6 +654,7 @@ export async function prepareProfile(choice, options = {}) {
     adapter,
     ...(found.executionPolicy ? { executionPolicy: found.executionPolicy } : {}),
     ...(found.routing ? { routing: found.routing } : {}),
+    ...(found.identity ? { identity: found.identity } : {}),
   };
 }
 
