@@ -7,7 +7,12 @@ import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
-for (const mode of ['success', 'failure', 'timeout']) {
+const failureExpectations = {
+  failure: { status: /failed \(7\)/u, output: /synthetic prerequisite failed/u },
+  signal: { status: /failed \(signal SIGTERM\)/u, output: /synthetic signalled host/u },
+  timeout: { status: /300000ms limit.*ETIMEDOUT/su, output: /synthetic stalled host/u },
+};
+for (const mode of ['success', 'failure', 'signal', 'timeout']) {
   test(`model evaluator handles ${mode} without a paid model call`, () => {
     const dir = mkdtempSync(join(tmpdir(), 'model-eval-process-'));
     try {
@@ -22,7 +27,8 @@ const fs = require('node:fs');
 const args = process.argv.slice(2);
 fs.writeFileSync(process.env.EVAL_ARGS, JSON.stringify(args));
 if (process.env.EVAL_MODE === 'failure') { console.error('synthetic prerequisite failed'); process.exit(7); }
-if (process.env.EVAL_MODE === 'timeout') { console.error('synthetic stalled host'); process.on('SIGTERM', () => {}); setInterval(() => {}, 1000); }
+if (process.env.EVAL_MODE === 'signal') { console.error('synthetic signalled host'); process.kill(process.pid, 'SIGTERM'); setTimeout(() => process.exit(0), 10_000); }
+else if (process.env.EVAL_MODE === 'timeout') { console.error('synthetic stalled host'); process.on('SIGTERM', () => {}); setTimeout(() => process.exit(0), 10_000); }
 else {
  const cases = JSON.parse(fs.readFileSync(process.env.EVAL_CORPUS, 'utf8')).cases;
  fs.writeFileSync(args[args.indexOf('--output-last-message')+1], JSON.stringify({results: cases.map(c => ({id:c.id, skillId:c.expectedSkillId ?? null, reason:'fixture'}))}));
@@ -86,14 +92,8 @@ require('node:module').syncBuiltinESMExports();
         assert.equal(JSON.parse(readFileSync(output, 'utf8')).status, 'pass');
       } else {
         assert.notEqual(run.status, 0);
-        assert.match(
-          run.stderr,
-          mode === 'timeout' ? /300000ms limit.*ETIMEDOUT/su : /failed \(7\)/u,
-        );
-        assert.match(
-          run.stderr,
-          mode === 'timeout' ? /synthetic stalled host/u : /synthetic prerequisite failed/u,
-        );
+        assert.match(run.stderr, failureExpectations[mode].status);
+        assert.match(run.stderr, failureExpectations[mode].output);
       }
     } finally {
       rmSync(dir, { recursive: true, force: true });

@@ -128,7 +128,9 @@ try {
     );
   }
   if (run.status !== 0)
-    throw new Error(`Codex model evaluation failed (${run.status})\n${run.stdout}${run.stderr}`);
+    throw new Error(
+      `Codex model evaluation failed (${run.signal ? `signal ${run.signal}` : run.status})\n${run.stdout}${run.stderr}`,
+    );
   const response = JSON.parse(readFileSync(responsePath, 'utf8'));
   const byId = new Map(response.results.map((result) => [result.id, result]));
   if (byId.size !== cases.length)
