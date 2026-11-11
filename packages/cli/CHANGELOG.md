@@ -1,5 +1,9 @@
 # Changelog
 
+## 3.7.4
+
+No changes in this release.
+
 ## 3.7.3
 
 ### Patch Changes
