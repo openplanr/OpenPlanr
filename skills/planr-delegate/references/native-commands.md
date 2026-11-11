@@ -15,20 +15,19 @@ worktree.
 | Claude Code | `cd <dir> && claude -p --permission-mode acceptEdits --output-format json [--model <model>] < <brief> > <out>/result.json` |
 | Cursor | `agent -p --trust --workspace <dir> --output-format json [--model <model>] "$(cat <brief>)" > <out>/result.json` |
 
-`workspace-write` and `acceptEdits` let a stock install edit files in the worktree. When
-the user's own settings choose a sandbox or permission mode (Codex `sandbox_mode`,
-Claude `permissions.defaultMode`), leave the flag out so their choice applies. Cursor's
-`-p` can already run shell commands its allowlist permits; add the commands the task
-needs to `~/.cursor/cli-config.json` before the run.
+`workspace-write` and `acceptEdits` let a stock install edit files in the worktree. They
+can loosen a stricter mode the user configured, so ask the user before adding either flag
+and leave it out unless they agree. Cursor's `-p` runs only the shell commands its
+allowlist permits; ask the user to allow the commands the task needs in Cursor before the
+run.
 
 From inside Codex, its default `workspace-write` sandbox blocks network and writes
 outside the workspace, so a nested `claude -p` or `codex exec` may not reach its model or
 its config directory. Ask the user to run the command in their own terminal, or to
 restart Codex with network and the config directory allowed.
 
-With a profile, prefix the command with its directory: `CODEX_HOME=<dir> codex …` or
-`CLAUDE_CONFIG_DIR=<dir> claude …`. Never share a Claude config directory's
-`projects/` or `history.jsonl` with another directory.
+These commands run the engine with its default sign-in. A saved profile runs through
+[the CLI path](openplanr-cli.md), never through these commands.
 
 ## Session and resume
 
@@ -49,8 +48,8 @@ same session.
 
 Precedence: what the user named, then their saved profile, then the only installed
 engine; otherwise ask, engine first. A profile or model name does not prove where
-inference runs. For a request to run locally, confirm the routing in the engine's own
-settings (Claude's settings file, Codex `config.toml`) before the run, and never fall back to a cloud model.
+inference runs. For a request to run locally, rely on `openplanr delegate probe`'s
+`destination.class`; if it is not `local`, stop, and never fall back to a cloud model.
 
 ## Several tasks
 

@@ -6,8 +6,9 @@ lists each action; unknown actions return `E_DELEGATE_COMMAND` with the action l
 
 `probe` accepts `repositoryRoot` and optionally `engine` or `profile`. It discovers
 `claude`, `codex` and Cursor's `agent` on PATH and checks compatible native event
-streaming and exact continuation. Authenticate with the selected CLI's normal
-login flow; OpenPlanr does not copy authentication tokens into its records.
+streaming and exact continuation. Sign-in stays in each engine's own CLI; `probe`
+reports it as `identity.state` (`account`, `api-key`, `signed-out` with a `nextAction`,
+`provider-managed`, `not-required` for a local destination, or `not-checked`).
 Terminal-less hosts return an actionable unsupported-host diagnostic.
 
 Keep selection precedence: explicit engine/profile, saved choice, a sole
@@ -36,7 +37,7 @@ configuration and prepare a new preview; delegation does not strip routing varia
 
 Each child process gets an explicit environment, never the whole parent environment.
 
-The native CLI signs in with its own login in its config directory. Advanced environment
+The CLI sets a profile's configuration directory for the child. Advanced environment
 options are described in the `openplanr delegate` section of `docs/CLI.md` in the
 `openplanr` package.
 
@@ -97,7 +98,7 @@ A native profile is a convenience for a pinned model or alternate configuration:
 ```
 
 Use `profile-preview`, then `profile-enroll` to save a private v2 profile. It has
-no renewal period. Do not put credential values in arguments or records. Native
+no renewal period. Native
 configuration is inherited, including trusted hooks, plugins and MCP; environment
 variables follow the Environment section above.
 The profile's explicit model stays pinned; an empty model selection preserves the
@@ -126,26 +127,20 @@ Claude Code with `--permission-mode acceptEdits` and Codex with `--sandbox
 workspace-write`, so a stock install can edit files in its worktree. In
 `acceptEdits`, Claude also runs `mkdir`, `touch`, `rm`, `rmdir`, `mv`, `cp` and `sed`
 without asking, for paths in the worktree and the added context directory. A
-configured mode always wins: Claude `permissions.defaultMode` in user, project, local
-or managed settings files, or Codex `sandbox_mode` in `config.toml` or the project's
-`.codex/config.toml`, outside an inactive profile. Unreadable or oversized settings
-count as configured. Cursor runs with `--trust`. Other shell commands still follow
-the CLI's allowlist and approval settings, and no bypass flag is passed.
-
-Limits of this check: it reads settings files only, so system or MDM-delivered
-policies and Codex managed configuration are not seen. A Codex profile selected in
-one file but defined in the other is not matched. A project-level Claude
-`defaultMode`, including `"auto"`, counts as configured. The check runs again on each
-`resume`, so a settings change between turns can change the flag.
+permission or sandbox mode the user configured for that engine, including a project
+one, always wins; the CLI detects it from the engine's settings and rechecks it on each
+`resume`. System or device-managed policies are not detected. Cursor runs with
+`--trust`. Other shell commands still follow the CLI's allowlist and approval
+settings, and no bypass flag is passed.
 
 If the CLI still denies an action, delegation
 reports attention rather than widening access. Resolve access in that CLI’s own configuration or explicitly authorized exact-session invocation, then continue the recorded session. Model summaries are never sufficient evidence of implementation.
 
-Cursor's CLI writes its own state back to `~/.cursor/cli-config.json` when a run
-ends, so `permissions.allow` entries added while a run is active can be lost. Add
-the commands the task needs (for example `Shell(pnpm)`) before `dispatch`. After an
-`E_ADAPTER_PERMISSION` attention state, wait until the run has stopped, edit the
-allowlist, then `resume` the same run.
+Cursor rewrites its own settings when a run ends, so commands the user allows while a
+run is active can be lost. Ask the user to allow the commands the task needs in Cursor
+(for example `Shell(pnpm)`) before `dispatch`. After an `E_ADAPTER_PERMISSION` attention
+state, wait until the run has stopped, ask the user to allow the command, then `resume`
+the same run.
 
 ## Diagnostics and unused runs
 

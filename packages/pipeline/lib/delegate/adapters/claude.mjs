@@ -3,6 +3,7 @@ import { lstat, open, readdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import { capsuleDirectory } from './capsule.mjs';
 import { AdapterError, destinationFromEndpoint, invokeProcess } from './generic.mjs';
+import { claudeIdentity, identityForDestination, readNativeIdentity } from './identity.mjs';
 import {
   createNativeProgress,
   EDIT_DEFAULT_EXECUTION_POLICY,
@@ -326,9 +327,16 @@ export const claudeAdapter = Object.freeze({
         'Claude CLI lacks native event streaming or exact resume. Update it.',
       );
     const routing = await resolveClaudeRouting(profile, env, cwd);
+    const identity = await readNativeIdentity(
+      profile.executable,
+      ['auth', 'status', '--json'],
+      claudeIdentity,
+      { cwd, env, signal, timeoutMs },
+    );
     return {
       capabilities: NATIVE_CAPABILITIES,
       ...routing,
+      identity: identityForDestination('claude', identity, routing.destination),
       executionPolicy: EDIT_DEFAULT_EXECUTION_POLICY,
     };
   },
