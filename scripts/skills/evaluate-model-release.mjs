@@ -7,6 +7,8 @@ import { dirname, join, resolve } from 'node:path';
 import { performance } from 'node:perf_hooks';
 import { fileURLToPath } from 'node:url';
 
+const CODEX_TIMEOUT_MS = 300_000;
+
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..');
 
 function parseArgs(argv) {
@@ -109,11 +111,26 @@ try {
       '--json',
       '-',
     ],
-    { input: prompt, encoding: 'utf8', env: { ...process.env, NO_COLOR: '1' } },
+    {
+      input: prompt,
+      encoding: 'utf8',
+      env: { ...process.env, NO_COLOR: '1' },
+      timeout: CODEX_TIMEOUT_MS,
+      killSignal: 'SIGKILL',
+    },
   );
   const latencyMs = Number((performance.now() - started).toFixed(3));
+  if (run.error) {
+    const limit = run.error.code === 'ETIMEDOUT' ? ` (${CODEX_TIMEOUT_MS}ms limit)` : '';
+    throw new Error(
+      `Codex model evaluation failed for ${model}${limit}: ${run.error.message}\n${run.stdout ?? ''}${run.stderr ?? ''}`,
+      { cause: run.error },
+    );
+  }
   if (run.status !== 0)
-    throw new Error(`Codex model evaluation failed (${run.status})\n${run.stdout}${run.stderr}`);
+    throw new Error(
+      `Codex model evaluation failed (${run.signal ? `signal ${run.signal}` : run.status})\n${run.stdout}${run.stderr}`,
+    );
   const response = JSON.parse(readFileSync(responsePath, 'utf8'));
   const byId = new Map(response.results.map((result) => [result.id, result]));
   if (byId.size !== cases.length)
