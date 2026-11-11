@@ -1,8 +1,8 @@
 # OpenPlanr CLI path
 
-Use this path only when `openplanr` is already on `PATH` and the user wants what it adds
-over the native loop: a recorded context capsule, worktree custody, recorded checks and
-exact-session resume. Never install it, run it through `npx`, or search
+Use this path when `openplanr` is already on `PATH` and the run uses a saved profile, or
+the user wants what it adds over the native loop: a recorded context capsule, worktree
+custody, recorded checks and exact-session resume. Never install it, run it through `npx`, or search
 `node_modules` for it; without it, use the native loop.
 
 ## Probe
@@ -17,7 +17,8 @@ native loop; tell the user that `npm install -g openplanr@3.7.0` (without
 Each action is `openplanr delegate <action> --input - --json` with one JSON object on
 stdin; `--run <runId>` alone is enough for `dispatch`, `wait`, `status` and `abandon`.
 
-1. `probe` with `repositoryRoot`: engines, saved profiles, readiness and destination.
+1. `probe` with `repositoryRoot`: engines, saved profiles, readiness, destination and
+   sign-in (`identity.state`).
 2. `prepare` with the engine or profile, `request` or `taskSelector`, `selectedFiles`
    and `scopePaths`. Show the context inventory once before `dispatch`, with the model,
    routing and trusted configuration; the worktree is not an OS sandbox.

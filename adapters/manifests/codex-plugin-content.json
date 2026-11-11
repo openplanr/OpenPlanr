@@ -31,7 +31,7 @@
         },
         {
           "path": "skills/artifact/references/company-review.md",
-          "digest": "sha256:0b26cdaf9cd872d3ad62d21ad7d2f30d5ebf226609ce0b8ac73da36ca776ea64"
+          "digest": "sha256:bbaaac2b2c33d192da8037e903505bd051e25d2e52ea8d6232a06c9851e5ebab"
         },
         {
           "path": "skills/artifact/agents/openai.yaml",
@@ -314,7 +314,7 @@
       "assets": [
         {
           "path": "skills/delegate/SKILL.md",
-          "digest": "sha256:910d147c9496359ac49f744e3d8f1d67e0e9ed7467d77a1e1d7aa4ff80c2c2be"
+          "digest": "sha256:cacc5b175b5b7a4a473951dcf1ede0ee359096561ddc5f4fe5608b03d0860fb5"
         },
         {
           "path": "skills/delegate/openplanr.skill.json",
@@ -338,15 +338,15 @@
         },
         {
           "path": "skills/delegate/references/native-commands.md",
-          "digest": "sha256:4c113dc3a08f8a2ba0bdc48017cd9323e50a01f9f4a4f79cad362177e8975143"
+          "digest": "sha256:ac4494e905db626ea056560f217eda9b72762da0c28e8e4d56daf9ebf5eda96e"
         },
         {
           "path": "skills/delegate/references/openplanr-cli.md",
-          "digest": "sha256:d7139633b0d9ee0ebfe66fd07575e23ee2dc44f89f12d9ef4bbce2efb91b00ad"
+          "digest": "sha256:29557d1d253bce98b673b63db0623fcded6226d2e1dedd1d7f235e63dc7c432d"
         },
         {
           "path": "skills/delegate/references/operator-guide.md",
-          "digest": "sha256:070cb1f7e1e7e4bb6a7d03fb2eefb3023c55250a32035af5166eb4e8daf78ee2"
+          "digest": "sha256:5a96f5a17def14f7677688a99134c329d5bc324b549b7a89bb2c4f1ab1401dc9"
         },
         {
           "path": "skills/delegate/references/run-handoff.md",
@@ -615,7 +615,7 @@
       "assets": [
         {
           "path": "skills/doctor/SKILL.md",
-          "digest": "sha256:ae1c90830273a51d54c60a846ea00e8c4412f50e43ad8172a2e112e2b51e6412"
+          "digest": "sha256:9f0265681d9c2bea57f0bd7e043496f97cd98697dedf50e7d4381e7697b26c3e"
         },
         {
           "path": "skills/doctor/openplanr.skill.json",

@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { readdirSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import test from 'node:test';
 import { matchSkillRequest } from '../../packages/skill-runtime/src/matching/index.mjs';
@@ -66,10 +66,14 @@ test('Claude and Codex installed routers and Ship expose only the opt-in handoff
     assert.match(delegate, /required ignored planning files by path/u);
     assert.match(delegate, /"Do not commit\."/u);
     assert.match(delegate, /Every changed path must be in scope\. Run the gates\s+yourself/u);
-    assert.match(
-      delegate,
-      /Never\s+read, copy or forward tokens, credential files or the keychain/u,
-    );
+    assert.match(delegate, /`result\.selected\.identity`/u);
+    assert.match(delegate, /saved profile runs only through/u);
+    const references = readdirSync(resolve(root, base, 'delegate/references'));
+    for (const path of ['SKILL.md', ...references.map((name) => `references/${name}`)])
+      assert.doesNotMatch(
+        read(`${base}/delegate/${path}`),
+        /CODEX_HOME|CLAUDE_CONFIG_DIR|auth status|login status|agent status|keychain|config\.toml/u,
+      );
     assert.match(delegate, /openplanr delegate probe --json/u);
     assert.match(delegate, /local-model ones included/u);
     assert.match(delegate, /`result\.profiles`/u);

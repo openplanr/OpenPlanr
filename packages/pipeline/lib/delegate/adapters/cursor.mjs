@@ -2,6 +2,7 @@ import { realpath } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { capsuleDirectory } from './capsule.mjs';
 import { AdapterError, invokeProcess, parseJson } from './generic.mjs';
+import { cursorIdentity } from './identity.mjs';
 import {
   createNativeProgress,
   knownDestination,
@@ -214,6 +215,7 @@ export const cursorAdapter = Object.freeze({
     return {
       capabilities: NATIVE_CAPABILITIES,
       destination,
+      identity: cursorIdentity(auth),
       executionPolicy: CURSOR_EXECUTION_POLICY,
     };
   },

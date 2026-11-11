@@ -39,9 +39,8 @@ The same skills ship for Codex and Cursor through the `openplanr` package.
   your repository. The design skills run every local design operation through `openplanr design`;
   the plugin ships no design runtime.
 - The planning dashboard and local artifact reviews bind to loopback only.
-- Skills store and read no GitHub, Linear or model-provider credentials and
-  send no agent credentials to OpenPlanr services. Coding-agent runs you request use that
-  agent's own sign-in, described below.
+- The plugin reads no credentials. Sign-in stays in each vendor's own CLI and in
+  `openplanr`.
 - Sharing a design or diagram review runs in the `openplanr` CLI, not in the plugin. The CLI
   creates the review's owner access keys, stores them readable only by you under `~/.planr` (or
   `PLANR_HOME`), and sends them only to the review address stored with them. The plugin
@@ -53,9 +52,8 @@ The same skills ship for Codex and Cursor through the `openplanr` package.
   review every 15 seconds. This pulls published team feedback and finishes delivering
   previously queued review metadata; it never publishes local design changes.
 - When you ask `delegate` to run another coding agent, that agent's own CLI runs with its normal
-  sign-in, environment, model routing, and trusted hooks or plugins. Checking a profile that
-  uses a local model server reads its model list from that server's address without
-  credentials; a server that requires sign-in is reported as not checked.
+  sign-in, model routing, and trusted hooks or plugins. Saved profiles, sign-in checks and
+  local model checks run in the `openplanr` CLI.
 - Only when you ask:
   - `sync`, `sprint` and `status` reach GitHub and Linear through your coding agent's own
     GitHub or Linear connection.

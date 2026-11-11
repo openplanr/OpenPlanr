@@ -2,6 +2,7 @@ import { readFile, stat } from 'node:fs/promises';
 import { join } from 'node:path';
 import { capsuleDirectory } from './capsule.mjs';
 import { AdapterError, invokeProcess } from './generic.mjs';
+import { codexIdentity, identityForDestination, readNativeIdentity } from './identity.mjs';
 import {
   createNativeProgress,
   EDIT_DEFAULT_EXECUTION_POLICY,
@@ -174,9 +175,21 @@ export const codexAdapter = Object.freeze({
         'E_ADAPTER_INCOMPATIBLE',
         'Codex CLI lacks native events, worktree access or exact resume. Update it.',
       );
+    const destination = await resolveCodexDestination(profile, env);
+    const identity = await readNativeIdentity(
+      profile.executable,
+      ['login', 'status'],
+      codexIdentity,
+      {
+        env,
+        signal,
+        timeoutMs,
+      },
+    );
     return {
       capabilities: NATIVE_CAPABILITIES,
-      destination: await resolveCodexDestination(profile, env),
+      destination,
+      identity: identityForDestination('codex', identity, destination),
       executionPolicy: EDIT_DEFAULT_EXECUTION_POLICY,
     };
   },

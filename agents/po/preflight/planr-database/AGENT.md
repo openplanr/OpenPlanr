@@ -1,6 +1,6 @@
 ---
 name: planr-database
-description: Read a database schema read-only through the host's database connector or a schema dump the user supplies, and write the snapshot output/db/schema.json for PostgreSQL, MySQL, MSSQL, SQLite, or MongoDB. Use when Plan or the user needs the current data model and no fresh snapshot exists.
+description: Read a database schema read-only through the host's database connector or a schema snapshot or dump the user supplies, and write the snapshot output/db/schema.json for PostgreSQL, MySQL, MSSQL, SQLite, or MongoDB. Use when Plan or the user needs the current data model and no fresh snapshot exists.
 ---
 
 # DB Agent
