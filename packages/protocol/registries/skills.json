@@ -1808,7 +1808,7 @@
       "lifecycle": "active",
       "authorityClass": "planning-write",
       "source": "skills/planr-sync/openplanr.skill.json",
-      "sourceDigest": "sha256:ea6e4e22c03606b305afc046825d12d394301488de276ac19ac1004116b7ee45",
+      "sourceDigest": "sha256:9becb7838e59bcd705a35e6227b89ef05bda75bb34167a299d75d3cc64d04369",
       "triggerPolicy": {
         "include": [
           "Audit planning artifacts for graph, schema, or protocol drift",
@@ -1864,5 +1864,5 @@
     }
   ],
   "compatibilityAliases": [],
-  "documentDigest": "sha256:435a5d655d8a9ff8bfb80392991f1ca1ddb787bc87714829fd3178347cb3fb99"
+  "documentDigest": "sha256:380f7b7334ffb7a885992fa5fca1f96b3a029bff62eb86afbc1b9aa30efe30c2"
 }

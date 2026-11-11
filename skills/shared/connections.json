@@ -53,12 +53,12 @@
           "aliases": ["GitHub"],
           "tools": ["GitHub CLI"],
           "use": "sync",
-          "docs": "https://cli.github.com/manual/gh_auth_login",
-          "verifiedOn": "2026-10-09",
+          "docs": "https://github.com/github/github-mcp-server",
+          "verifiedOn": "2026-11-10",
           "connect": {
-            "claude-code": "Install the GitHub CLI from cli.github.com and run `gh auth login`.",
-            "codex": "Install GitHub from `/plugins` and sign in when asked, or install the GitHub CLI and run `gh auth login`.",
-            "cursor": "Install the GitHub CLI from cli.github.com and run `gh auth login`."
+            "claude-code": "Run `/plugin install github@claude-plugins-official` and follow GitHub's setup for it.",
+            "codex": "Install GitHub from `/plugins` and sign in when asked.",
+            "cursor": "Add GitHub's MCP server in Cursor's MCP settings, following [GitHub's Cursor guide](https://github.com/github/github-mcp-server/blob/main/docs/installation-guides/install-cursor.md)."
           }
         },
         {
@@ -84,12 +84,12 @@
         {
           "name": "GitHub",
           "use": "context",
-          "docs": "https://cli.github.com/manual/gh_auth_login",
-          "verifiedOn": "2026-10-09",
+          "docs": "https://github.com/github/github-mcp-server",
+          "verifiedOn": "2026-11-10",
           "connect": {
-            "claude-code": "Install the GitHub CLI from cli.github.com and run `gh auth login`.",
-            "codex": "Install GitHub from `/plugins` and sign in when asked, or install the GitHub CLI and run `gh auth login`.",
-            "cursor": "Install the GitHub CLI from cli.github.com and run `gh auth login`."
+            "claude-code": "Run `/plugin install github@claude-plugins-official` and follow GitHub's setup for it.",
+            "codex": "Install GitHub from `/plugins` and sign in when asked.",
+            "cursor": "Add GitHub's MCP server in Cursor's MCP settings, following [GitHub's Cursor guide](https://github.com/github/github-mcp-server/blob/main/docs/installation-guides/install-cursor.md)."
           }
         },
         {

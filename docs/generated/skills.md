@@ -331,4 +331,4 @@ Audit OpenPlanr planning artifacts for graph and protocol drift. Use when status
 - Invocation from the plugin: `$planr:sync` in Codex/ChatGPT; `/planr:sync` in Claude Code.
 - Hosts: Claude Code, Codex, ChatGPT, and Cursor where supported by the package manifest.
 - Aliases: none.
-- Packaged support: `references/connectors.md`, `references/tracker-connections.md`, `references/openplanr-cli.md`. See the [resource inventory](../../skills/planr-sync/openplanr.skill.json).
+- Packaged support: `references/connectors.md`, `references/tracker-connections.md`. See the [resource inventory](../../skills/planr-sync/openplanr.skill.json).

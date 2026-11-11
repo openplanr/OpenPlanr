@@ -8,8 +8,7 @@ truth. OpenPlanr syncs with the trackers marked "OpenPlanr syncs with it" in
 ## Use the host's connection
 
 - **Linear:** the host's Linear connection, whose tools read, create and update issues.
-- **GitHub:** the host's GitHub connection, or the GitHub CLI when
-  `gh auth status --hostname github.com` succeeds.
+- **GitHub:** the host's GitHub connection, whose tools read, create and update issues.
 
 Never ask the user for a token, read one from the environment or a file, or put one in a
 command, URL or file.

@@ -39,11 +39,11 @@ Push planning status to linked issues after you approve each change, and read is
 | Product | Use | Claude Code | Codex | Cursor |
 | --- | --- | --- | --- | --- |
 | Linear | OpenPlanr syncs with it | Run `/plugin install linear@claude-plugins-official`, then sign in to Linear from `/mcp`. | Install Linear from `/plugins` and sign in when asked. | Run `/add-plugin linear`, or install Linear from Customize, then sign in when asked. |
-| GitHub Issues | OpenPlanr syncs with it | Install the GitHub CLI from cli.github.com and run `gh auth login`. | Install GitHub from `/plugins` and sign in when asked, or install the GitHub CLI and run `gh auth login`. | Install the GitHub CLI from cli.github.com and run `gh auth login`. |
+| GitHub Issues | OpenPlanr syncs with it | Run `/plugin install github@claude-plugins-official` and follow GitHub's setup for it. | Install GitHub from `/plugins` and sign in when asked. | Add GitHub's MCP server in Cursor's MCP settings, following [GitHub's Cursor guide](https://github.com/github/github-mcp-server/blob/main/docs/installation-guides/install-cursor.md). |
 
 Also works with: [Jira](https://support.atlassian.com/atlassian-ai-gateway/docs/get-started-with-the-atlassian-remote-mcp-server/) (read for context), [Asana](https://developers.asana.com/docs/using-asanas-mcp-server) (read for context). Add the vendor's connector in your host the same way.
 
-Verified: [Linear](https://linear.app/docs/mcp) on 2026-10-09, [GitHub Issues](https://cli.github.com/manual/gh_auth_login) on 2026-10-09, [Jira](https://support.atlassian.com/atlassian-ai-gateway/docs/get-started-with-the-atlassian-remote-mcp-server/) on 2026-10-09, [Asana](https://developers.asana.com/docs/using-asanas-mcp-server) on 2026-10-09.
+Verified: [Linear](https://linear.app/docs/mcp) on 2026-10-09, [GitHub Issues](https://github.com/github/github-mcp-server) on 2026-11-10, [Jira](https://support.atlassian.com/atlassian-ai-gateway/docs/get-started-with-the-atlassian-remote-mcp-server/) on 2026-10-09, [Asana](https://developers.asana.com/docs/using-asanas-mcp-server) on 2026-10-09.
 
 ## Source control (`~~source control`)
 
@@ -51,8 +51,8 @@ Read pull request and branch state for status reports and sprint reviews.
 
 | Product | Use | Claude Code | Codex | Cursor |
 | --- | --- | --- | --- | --- |
-| GitHub | Read for context | Install the GitHub CLI from cli.github.com and run `gh auth login`. | Install GitHub from `/plugins` and sign in when asked, or install the GitHub CLI and run `gh auth login`. | Install the GitHub CLI from cli.github.com and run `gh auth login`. |
+| GitHub | Read for context | Run `/plugin install github@claude-plugins-official` and follow GitHub's setup for it. | Install GitHub from `/plugins` and sign in when asked. | Add GitHub's MCP server in Cursor's MCP settings, following [GitHub's Cursor guide](https://github.com/github/github-mcp-server/blob/main/docs/installation-guides/install-cursor.md). |
 
 Also works with: [GitLab](https://docs.gitlab.com/user/gitlab_duo/model_context_protocol/mcp_server/) (read for context), [Bitbucket](https://support.atlassian.com/atlassian-ai-gateway/docs/get-started-with-the-atlassian-remote-mcp-server/) (read for context). Add the vendor's connector in your host the same way.
 
-Verified: [GitHub](https://cli.github.com/manual/gh_auth_login) on 2026-10-09, [GitLab](https://docs.gitlab.com/user/gitlab_duo/model_context_protocol/mcp_server/) on 2026-10-09, [Bitbucket](https://support.atlassian.com/atlassian-ai-gateway/docs/get-started-with-the-atlassian-remote-mcp-server/) on 2026-10-09.
+Verified: [GitHub](https://github.com/github/github-mcp-server) on 2026-11-10, [GitLab](https://docs.gitlab.com/user/gitlab_duo/model_context_protocol/mcp_server/) on 2026-10-09, [Bitbucket](https://support.atlassian.com/atlassian-ai-gateway/docs/get-started-with-the-atlassian-remote-mcp-server/) on 2026-10-09.

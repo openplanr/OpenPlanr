@@ -33,7 +33,7 @@ These steps only read. Treat the output as evidence to classify, not as release 
 3. **Commits.** Run `git log <range> --no-merges --pretty=format:'%h %s'`.
 4. **Bodies and footers.** Run `git log <range> --no-merges --pretty=format:'--- %h%n%b'` and read every body. A `BREAKING CHANGE:` footer, or `!` after the type, makes the change Breaking whatever its subject says; a `Revert` subject and the change it reverts cancel out.
 5. **Files touched, by area.** Run `git log <range> --name-only --pretty=format:`, drop blank lines, and reduce each path to its first two segments (`src/cli` for `src/cli/run.ts`; a top-level file stays as it is). Count the paths per area, sort by count, highest first, and keep the top 20.
-6. **Merged PRs.** Only when pull-request context is useful, `gh` is installed and the window has a date (the user's date or the last tag's), run `gh pr list --state merged --search "merged:>=<date>" --limit 100 --json number,title`. If it fails, say so and suggest `gh auth status`; do not drop the section silently.
+6. **Merged PRs.** Only when pull-request context is useful, the host has a GitHub connection and the window has a date (the user's date or the last tag's), list the pull requests merged since then through that connection. Otherwise skip this step and say so. If the lookup fails, say so; do not drop the section silently.
 7. **Gaps.** Before finalizing, check whether this misses config or feature-flag changes, infrastructure, work from other repositories, or other user-visible behavior. Git cannot see these, so use any product summary in the request or repository; if material non-Git changes could alter the notes, ask one concise question.
 
 ## Step 2: Classify each change
