@@ -1,6 +1,6 @@
 {
   "name": "planr-pipeline",
-  "version": "0.64.1",
+  "version": "0.64.2",
   "private": false,
   "type": "module",
   "description": "The delivery pipeline behind OpenPlanr's skills: specification, design, implementation, QA and release outputs. Installed with openplanr.",

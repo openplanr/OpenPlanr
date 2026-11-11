@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.64.2
+
+### Patch Changes
+
+- c66dc80: Database introspection and GitHub context use the host's connectors instead of local client sign-ins. Tracker sync runs only through the host's connection.
+
 ## 0.64.1
 
 ### Patch Changes
