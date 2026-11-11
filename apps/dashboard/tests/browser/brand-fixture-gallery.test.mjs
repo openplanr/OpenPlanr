@@ -157,6 +157,7 @@ async function assertGalleryState(page, evidence, state) {
       'filter',
       'segmented',
       'switch',
+      'checkbox',
       'tabs',
     ]) {
       const entry = evidence.recipes.find((sample) => sample.name === recipe);

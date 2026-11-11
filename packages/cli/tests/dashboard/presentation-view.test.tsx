@@ -337,11 +337,14 @@ describe('presentation consumers', () => {
       ),
     );
     expect(document.querySelectorAll('.pc-status-board__card')).toHaveLength(nodes.length - 1);
-    const hideDone = screen.getByRole('button', { name: 'Hide done', exact: true });
-    expect(hideDone.getAttribute('aria-pressed')).toBe('true');
+    const hideDone = screen.getByRole<HTMLInputElement>('checkbox', {
+      name: 'Hide done',
+      exact: true,
+    });
+    expect(hideDone.checked).toBe(true);
     expect(document.querySelector('[data-keyboard-column="done"]')?.textContent).toContain('1');
     fireEvent.click(hideDone);
-    expect(hideDone.getAttribute('aria-pressed')).toBe('false');
+    expect(hideDone.checked).toBe(false);
     expect(document.querySelectorAll('.pc-status-board__card')).toHaveLength(nodes.length);
     expect(document.body.textContent).toContain('Older story');
   });

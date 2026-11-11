@@ -1,17 +1,10 @@
+import { useLayoutEffect, useMemo, useRef } from 'react';
+import { ArtifactTag, artifactTagType } from '../../design-system/components/artifact-recipes.js';
+import { ArtifactStatus, PriorityChip } from '../../design-system/components/index.js';
+import { boardCardMeta } from './planning-board-projection.js';
 import {
-  ArtifactRowCopy,
-  ArtifactRowMeta,
-  artifactRowStyle,
-} from '../../design-system/components/artifact-row.js';
-import {
-  ArtifactRowTitle,
-  ArtifactStatus,
-  PriorityChip,
-  WorkItemChip,
-} from '../../design-system/components/index.js';
-import { usePlanningCopy, usePlanningShortcuts } from '../../lib/routing/planning-presentation.js';
-import {
-  BOARD_CARD_PITCH,
+  BOARD_COLUMN_CAP,
+  type BoardLayout,
   type BoardTarget,
   boardCellKey,
   useBoardCellWindow,
@@ -19,20 +12,29 @@ import {
 import { inspectPlanningNode } from './planning-inspector.js';
 import {
   type PlanningGroup,
+  type PlanningModelGraph,
   type PlanningModelNode,
-  planningContinuation,
+  planningArtifactStatusLabel,
   planningDisplayId,
 } from './planning-model.js';
-import { authoredTimestamp } from './presentation-view.js';
 
-function BoardCard({ node, selected }: { node: PlanningModelNode; selected: boolean }) {
-  const copy = usePlanningCopy();
-  const shortcutsEnabled = usePlanningShortcuts();
-  const timestamp = authoredTimestamp(node.frontmatter.updated);
-  const updated = timestamp === null ? 'Unknown' : new Date(timestamp).toISOString().slice(0, 10);
+function BoardCard({
+  node,
+  graph,
+  selected,
+  plainId,
+}: {
+  node: PlanningModelNode;
+  graph: PlanningModelGraph;
+  selected: boolean;
+  plainId: boolean;
+}) {
+  const meta = boardCardMeta(graph, node);
+  const priority = node.frontmatter.priority;
+  const tag = artifactTagType(node.type);
   return (
     <div
-      className="pc-status-board__card pc-artifact-row"
+      className="pc-status-board__card"
       data-status={node.status}
       data-selected={selected || undefined}
     >
@@ -49,93 +51,146 @@ function BoardCard({ node, selected }: { node: PlanningModelNode; selected: bool
         onFocus={() => inspectPlanningNode(node, false)}
       >
         <span className="pc-status-board__identity">
-          <WorkItemChip type={node.type} id={planningDisplayId(node)} surface="card" />
+          {tag && plainId ? (
+            <span className="pc-status-board__plain-id" style={{ color: `var(--pc-type-${tag})` }}>
+              {planningDisplayId(node)}
+            </span>
+          ) : tag ? (
+            <ArtifactTag type={tag} variant="id" surface="card">
+              {planningDisplayId(node)}
+            </ArtifactTag>
+          ) : (
+            <span className="pc-artifact-tag pc-artifact-row__id">{planningDisplayId(node)}</span>
+          )}
+          {typeof priority === 'string' ? (
+            <PriorityChip priority={priority} variant="text" />
+          ) : null}
         </span>
-        <ArtifactRowTitle>{node.title}</ArtifactRowTitle>
+        <span className="pc-status-board__title">{node.title}</span>
+        {meta ? <span className="pc-status-board__meta">{meta}</span> : null}
       </button>
-      <ArtifactRowCopy
-        onCopy={copy}
-        shortcutsEnabled={shortcutsEnabled}
-        id={planningDisplayId(node)}
-        command={planningContinuation(node)}
-      />
-      <span className="pc-status-board__foot">
-        <ArtifactStatus status={node.status} size="sm" surface="card" variant="glyph" />
-        <PriorityChip priority={String(node.frontmatter.priority ?? 'none')} />
-        <ArtifactRowMeta label={`Updated ${updated}`}>
-          {timestamp === null
-            ? 'Unknown'
-            : new Date(timestamp).toLocaleDateString('en-GB', {
-                day: 'numeric',
-                month: 'short',
-                timeZone: 'UTC',
-              })}
-        </ArtifactRowMeta>
-      </span>
     </div>
+  );
+}
+
+export function BoardColumnHead({ group, total }: { group: PlanningGroup; total: number }) {
+  return (
+    <header className="pc-status-board__head" data-status={group.key}>
+      <span className="pc-status-board__head-row">
+        <ArtifactStatus status={group.key} variant="legend" size="sm" label="" />
+        <span className="pc-status-board__name">{planningArtifactStatusLabel(group.key)}</span>
+        {group.key === 'done' ? null : (
+          <span className="pc-status-board__count">{group.nodes.length}</span>
+        )}
+      </span>
+      <span className="pc-status-board__share" aria-hidden="true">
+        <span
+          style={{
+            width: `${group.key === 'done' ? 100 : total ? (group.nodes.length / total) * 100 : 0}%`,
+          }}
+          data-status={group.key}
+        />
+      </span>
+    </header>
   );
 }
 
 export function BoardColumn({
   group,
+  graph,
   laneKey,
   selectedId,
   collapsed,
+  expanded,
+  head,
+  layout,
   toggleDone,
+  expand,
   target,
 }: {
   group: PlanningGroup;
+  graph: PlanningModelGraph;
   laneKey: string;
   selectedId?: string;
   collapsed: boolean;
+  expanded: boolean;
+  head: number | null;
+  layout: BoardLayout;
   toggleDone: () => void;
+  expand: (cell: string) => void;
   target: BoardTarget | null;
 }) {
   const cell = boardCellKey(laneKey, group.key);
-  const window = useBoardCellWindow(group.nodes, selectedId, target?.cell === cell ? target : null);
+  const capped = !collapsed && !expanded && group.nodes.length > BOARD_COLUMN_CAP;
+  const nodes = useMemo(
+    () => (capped ? group.nodes.slice(0, BOARD_COLUMN_CAP) : group.nodes),
+    [capped, group.nodes],
+  );
+  const section = useRef<HTMLElement>(null);
+  const refocus = useRef<string | null>(null);
+  useLayoutEffect(() => {
+    const selector = refocus.current;
+    if (!selector) return;
+    refocus.current = null;
+    if (document.activeElement && document.activeElement !== document.body) return;
+    section.current?.querySelector<HTMLElement>(selector)?.focus();
+  });
+  const toggle = () => {
+    refocus.current = '[data-keyboard-item]';
+    toggleDone();
+  };
+  const showMore = () => {
+    refocus.current = `[data-ordinal="${BOARD_COLUMN_CAP}"] [data-keyboard-item]`;
+    expand(cell);
+  };
+  const window = useBoardCellWindow(
+    nodes,
+    selectedId,
+    target?.cell === cell ? target : null,
+    layout,
+  );
   return (
     <section
+      ref={section}
       data-keyboard-column={group.key}
       data-board-cell={cell}
       data-collapsed={collapsed || undefined}
       className="pc-status-board__column"
-      style={artifactRowStyle(group.nodes.map(planningDisplayId))}
       aria-label={group.key}
     >
-      {group.key === 'done' && group.nodes.length > 0 ? (
+      {head === null ? null : <BoardColumnHead group={group} total={head} />}
+      {collapsed ? (
+        <div className="pc-status-board__done-summary">
+          <strong>{group.nodes.length}</strong>
+          <span>done and hidden</span>
+          <button
+            type="button"
+            className="pc-status-board__done-toggle"
+            data-keyboard-item={`empty:${cell}`}
+            onClick={toggle}
+          >
+            Show done
+          </button>
+        </div>
+      ) : group.nodes.length === 0 ? (
         <button
           type="button"
-          className="pc-status-board__empty pc-status-board__toggle"
-          data-keyboard-item={collapsed ? `empty:${cell}` : undefined}
-          aria-expanded={!collapsed}
-          onClick={toggleDone}
+          className="pc-status-board__empty"
+          data-keyboard-item={`empty:${cell}`}
         >
-          {group.nodes.length} done · {collapsed ? 'Expand' : 'Collapse'}
+          Nothing is {planningArtifactStatusLabel(group.key).toLowerCase()}.
         </button>
-      ) : null}
-      <div
-        ref={window.root}
-        data-scroll-context={`board-cell:${cell}`}
-        className="pc-status-board__cards"
-        hidden={collapsed}
-      >
-        {group.nodes.length === 0 ? (
-          <ul className="pc-status-board__empty-list">
-            <li>
-              <button
-                type="button"
-                className="pc-status-board__empty"
-                data-keyboard-item={`empty:${cell}`}
-                aria-label={`${group.key}: no cards`}
-              >
-                No cards
-              </button>
-            </li>
-          </ul>
-        ) : collapsed ? null : (
+      ) : (
+        <div
+          ref={window.root}
+          data-scroll-context={`board-cell:${cell}`}
+          data-expanded={expanded || undefined}
+          className="pc-status-board__cards"
+        >
           <ul
             className="pc-status-board__window"
-            style={{ height: group.nodes.length * BOARD_CARD_PITCH }}
+            data-virtual={expanded || undefined}
+            style={expanded ? { height: nodes.length * window.pitch - window.gap } : undefined}
           >
             {window.mounted.map(({ node, index }) => (
               <li
@@ -143,15 +198,30 @@ export function BoardColumn({
                 aria-posinset={index + 1}
                 aria-setsize={group.nodes.length}
                 className="pc-status-board__slot"
-                style={{ top: index * BOARD_CARD_PITCH }}
+                style={expanded ? { top: index * window.pitch } : undefined}
                 data-ordinal={index}
               >
-                <BoardCard node={node} selected={selectedId === node.id} />
+                <BoardCard
+                  node={node}
+                  graph={graph}
+                  selected={selectedId === node.id}
+                  plainId={layout === 'lanes'}
+                />
               </li>
             ))}
           </ul>
-        )}
-      </div>
+        </div>
+      )}
+      {capped ? (
+        <button type="button" className="pc-status-board__more" onClick={showMore}>
+          Show {group.nodes.length - BOARD_COLUMN_CAP} more
+        </button>
+      ) : null}
+      {group.key === 'done' && !collapsed && group.nodes.length > 0 ? (
+        <button type="button" className="pc-status-board__done-toggle" onClick={toggle}>
+          Hide done cards
+        </button>
+      ) : null}
     </section>
   );
 }

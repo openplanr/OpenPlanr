@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import type { ChipSurface } from './artifact-recipes.js';
+import { PcIcon, type PcIconName } from './console-icon.js';
 import { ArtifactStatus } from './console-planr.js';
 import './planr-console.css';
 
@@ -140,7 +141,7 @@ export function MetricStat({
   );
 }
 
-export type SegmentedOption = Readonly<{ key: string; label: string }>;
+export type SegmentedOption = Readonly<{ key: string; label: string; icon?: PcIconName }>;
 
 export type SegmentedControlProps = Readonly<{
   label: string;
@@ -162,6 +163,7 @@ export function SegmentedControl({ label, options, value, onChange }: SegmentedC
           aria-pressed={option.key === value}
           onClick={() => onChange(option.key)}
         >
+          {option.icon ? <PcIcon name={option.icon} size={14} /> : null}
           {option.label}
         </button>
       ))}

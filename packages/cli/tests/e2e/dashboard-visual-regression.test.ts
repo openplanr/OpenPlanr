@@ -8,7 +8,7 @@
  * source-text constants or a blank page.
  */
 
-import { readFileSync } from 'node:fs';
+import { readFileSync, writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { performance } from 'node:perf_hooks';
 import { fileURLToPath } from 'node:url';
@@ -42,6 +42,10 @@ import {
   brandGalleryStates,
   recordBrandGalleryEvidence,
 } from '../../../../apps/dashboard/tests/helpers/brand-gallery-fixture.mjs';
+import {
+  assertParityRow,
+  boardParityRows,
+} from '../../../../apps/dashboard/tests/helpers/redesign-parity-rows.mjs';
 import { installDashboardLayoutShifts } from '../dashboard/fixtures/dashboard-layout-shifts.js';
 import { registerDashboardPerformanceTraceTests } from './fixtures/dashboard-performance-trace.js';
 import {
@@ -1064,7 +1068,11 @@ test.describe('dashboard real-browser quality', () => {
     await openFixture(page, '#/board', { planningScenario: 'delivery' });
     const doneCards = page.locator('[data-keyboard-column="done"] .pc-status-board__cards');
     await expect(doneCards.locator('.pc-status-board__card')).toHaveCount(0);
-    await page.getByRole('button', { name: 'Hide done', exact: true }).click();
+    await page.getByRole('checkbox', { name: 'Hide done', exact: true }).click();
+    await page
+      .locator('[data-keyboard-column="done"]')
+      .getByRole('button', { name: /^Show \d+ more$/u })
+      .click();
     await expect(doneCards.locator('li[aria-setsize="33"]').first()).toBeAttached();
     expect(await doneCards.locator('.pc-status-board__card').count()).toBeLessThan(10);
     await doneCards.evaluate((element) => {
@@ -1304,16 +1312,25 @@ test.describe('dashboard real-browser quality', () => {
       await page.setViewportSize(viewport);
       await openFixture(page, '#/board');
 
+      const phone = viewport.width < 900;
+      const workspace = page.locator('[data-route-kind="planning.board"]');
       const board = page.locator('.pc-status-board');
       const columns = board.locator('.pc-status-board__column');
-      await expect(columns).toHaveCount(5);
-      const inProgress = columns.filter({ hasText: 'in progress' });
+      await expect(columns).toHaveCount(phone ? 1 : 5);
+      if (phone) await workspace.getByRole('tab', { name: /^In progress/u }).click();
+      const inProgress = board.locator('[data-keyboard-column="in-progress"]');
       await expect(inProgress).toContainText('Improve appointment reminder delivery');
-      for (const status of ['outstanding', 'blocked', 'addressed', 'done']) {
+      for (const [status, label] of [
+        ['outstanding', 'Outstanding'],
+        ['blocked', 'Blocked'],
+        ['addressed', 'Addressed'],
+        ['done', 'Done'],
+      ]) {
+        if (phone) await workspace.getByRole('tab', { name: new RegExp(`^${label}`, 'u') }).click();
         const emptySlot = board
           .getByRole('region', { name: status, exact: true })
-          .getByRole('button', { name: `${status}: no cards`, exact: true });
-        await expect(emptySlot).toHaveText('No cards');
+          .getByRole('button', { name: `Nothing is ${label.toLowerCase()}.`, exact: true });
+        await expect(emptySlot).toBeVisible();
         await emptySlot.focus();
         await expect(emptySlot).toBeFocused();
       }
@@ -1344,10 +1361,7 @@ test.describe('dashboard real-browser quality', () => {
         await page.evaluate(() => document.fonts.ready);
         expect(await page.evaluate(() => localStorage.getItem('op-theme'))).toBe(theme);
         const board = page.locator('[data-route-kind="planning.board"]');
-        await expect(board.getByRole('button', { name: 'Hide done', exact: true })).toHaveAttribute(
-          'aria-pressed',
-          'true',
-        );
+        await expect(board.getByRole('checkbox', { name: 'Hide done', exact: true })).toBeChecked();
         const card = board.locator('.pc-status-board__card [data-keyboard-item]').first();
         await card.focus();
         await page.keyboard.press('Enter');
@@ -1361,13 +1375,12 @@ test.describe('dashboard real-browser quality', () => {
         await expect(card).toBeFocused();
         await page.keyboard.press('ArrowRight');
         await expect(board.locator('[data-keyboard-item]:focus')).toHaveCount(1);
-        await board.getByRole('combobox', { name: /^Swimlanes:/u }).click();
-        await page.getByRole('option', { name: /spec/iu }).click();
+        await board.getByRole('button', { name: /^Lanes/u }).click();
         await expect(board.locator('.pc-status-board__lane')).not.toHaveCount(0);
         expect(await board.locator('[draggable="true"]').count()).toBe(0);
         await board.locator('.pc-status-board__card').first().dispatchEvent('dragstart');
         await board.locator('.pc-status-board__column').last().dispatchEvent('drop');
-        await expect(board).toContainText('Proposed for Phase 2');
+        await expect(board).not.toContainText('Phase 2');
         expect((await layoutReport(page)).horizontalOverflow).toBe(false);
         expect(await axeViolations(page)).toEqual([]);
         await attachScreenshot(
@@ -1378,6 +1391,91 @@ test.describe('dashboard real-browser quality', () => {
       }
     }
     expect(writes).toEqual([]);
+  });
+
+  test('matches the Board to its canvas parity rows in both themes', async ({ page }, testInfo) => {
+    const results: unknown[] = [];
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    const viewports = {
+      D: { width: 1440, height: 900 },
+      T: { width: 768, height: 1024 },
+      M: { width: 390, height: 844 },
+    } as const;
+    for (const theme of ['dark', 'light'] as const) {
+      for (const viewport of ['D', 'M'] as const) {
+        await page.setViewportSize(viewports[viewport]);
+        for (const setup of [null, 'select', 'lanes'] as const) {
+          const rows = boardParityRows.filter(
+            (row) => row.viewport === viewport && row.setup === setup,
+          );
+          if (!rows.length) continue;
+          const dataset = setup === 'lanes' ? 'artboard' : 'representative';
+          await page.goto(fixtureUrl('#/board', { dataset, theme }));
+          await page.evaluate(() => localStorage.removeItem('op-board-view:v1'));
+          await page.reload();
+          await page.evaluate(() => document.fonts.ready);
+          const board = page.locator('[data-route-kind="planning.board"]');
+          await expect(board.locator('.pc-status-board__card').first()).toBeVisible();
+          if (setup === 'select') await board.locator('.pc-status-board__open').first().focus();
+          if (setup === 'lanes') {
+            await board.getByRole('button', { name: /^Lanes/u }).click();
+            await expect(board.locator('.pc-status-board__lane').first()).toBeVisible();
+          }
+          for (const row of rows) results.push(...(await assertParityRow(page, row, theme)));
+          if (setup === null) {
+            const text = await page.locator('#main-content').innerText();
+            for (const banned of ['Unknown', 'Not recorded', 'None declared', 'Phase 2'])
+              expect(text, `S-21 ${banned}`).not.toContain(banned);
+            expect(text, 'S-21 none').not.toMatch(/\bnone\b/u);
+          }
+          if (setup === 'select') {
+            const accents = await page.evaluate(() => {
+              const accent = getComputedStyle(document.documentElement)
+                .getPropertyValue('--op-accent')
+                .trim();
+              const probe = document.createElement('span');
+              probe.style.backgroundColor = accent;
+              document.body.append(probe);
+              const resolved = getComputedStyle(probe).backgroundColor;
+              probe.remove();
+              return [...document.querySelectorAll<HTMLElement>('#main-content *')].filter(
+                (node) =>
+                  getComputedStyle(node).backgroundColor === resolved &&
+                  !node.closest(
+                    'nav, :focus, [aria-pressed="true"], [data-selected="true"], [data-status="in-progress"]',
+                  ) &&
+                  !node.matches('.pc-checkbox__box'),
+              ).length;
+            });
+            expect(accents, 'S-22 accent backgrounds').toBeLessThanOrEqual(1);
+            await page.keyboard.press('Tab');
+            await page.keyboard.press('Shift+Tab');
+            const outline = await page.evaluate(() => {
+              const focused = document.querySelector(':focus-visible');
+              const style = focused ? getComputedStyle(focused) : null;
+              return style && [style.outlineStyle, style.outlineWidth, style.outlineOffset];
+            });
+            expect(outline, 'S-20 focus outline').toEqual(['solid', '2px', '2px']);
+          }
+        }
+      }
+      for (const [viewport, size] of Object.entries(viewports)) {
+        await page.setViewportSize(size);
+        for (const view of ['columns', 'lanes']) {
+          await page.goto(fixtureUrl('#/board', { dataset: 'artboard', theme }));
+          await page.evaluate((value) => localStorage.setItem('op-board-view:v1', value), view);
+          await page.reload();
+          await page.evaluate(() => document.fonts.ready);
+          await expect(page.locator('.pc-status-board__card').first()).toBeVisible();
+          await page.screenshot({
+            path: testInfo.outputPath(`board-${view}-${viewport}-${theme}.png`),
+          });
+        }
+      }
+    }
+    const parity = testInfo.outputPath('board-parity.json');
+    writeFileSync(parity, JSON.stringify(results, null, 2));
+    await testInfo.attach('board-parity.json', { path: parity, contentType: 'application/json' });
   });
 
   test.describe('sprint and activity evidence', () => {

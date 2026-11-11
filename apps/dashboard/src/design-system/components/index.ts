@@ -25,6 +25,8 @@ export {
   CardHeader,
   type CardHeaderProps,
   type CardProps,
+  Checkbox,
+  type CheckboxProps,
   ChipToggle,
   type ChipToggleProps,
   CommandHint,

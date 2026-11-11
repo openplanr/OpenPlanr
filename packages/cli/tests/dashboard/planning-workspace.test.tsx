@@ -276,10 +276,8 @@ describe('T-021 Planning workspace UI', () => {
     expect(boardDom.window.document.querySelectorAll('.pc-status-board__card')).toHaveLength(3);
     expect(boardHtml).not.toContain('comparison board');
     expect(
-      boardDom.window.document.querySelector(
-        '.pc-status-board__totals > div:last-child > span:last-child',
-      )?.textContent,
-    ).toBe('0');
+      boardDom.window.document.querySelector('section[aria-label="done"]')?.textContent,
+    ).toContain('Nothing is done.');
     boardDom.window.close();
 
     const listBinding = identity('#/list');
@@ -627,6 +625,7 @@ function boardHarness(
   singleLetters = true,
 ) {
   clearInspector();
+  localStorage.removeItem('op-board-view:v1');
   let current = createDashboardQueryIdentity({
     ...identity('#/board'),
     viewHash: fixtureHash(source),
@@ -699,41 +698,41 @@ describe('read-only status Board', () => {
     const board = boardHarness(extra);
     try {
       expect(board.container.querySelectorAll('.pc-status-board__column')).toHaveLength(5);
-      expect(board.container.querySelectorAll('.pc-status-board__head')).toHaveLength(0);
+      expect(
+        Array.from(board.container.querySelectorAll('.pc-status-board__name'), (node) =>
+          node.textContent?.toLowerCase(),
+        ),
+      ).toEqual(['outstanding', 'in progress', 'blocked', 'addressed', 'done']);
       expect(board.container.querySelector('.pc-status-board__pager')).toBeNull();
-      expect(
-        board.container.querySelector('.pc-status-board .pc-status-board__proposal')?.textContent,
-      ).toContain('Proposed for Phase 2');
-      expect(
-        board.container.querySelector('.pc-toolbar-bar .pc-status-board__command'),
-      ).toBeTruthy();
-      expect(board.getByRole('region', { name: 'Status totals' }).children).toHaveLength(5);
+      expect(board.container.textContent).not.toContain('Phase 2');
+      expect(board.container.querySelector('.pc-selection-bar')).toBeNull();
       expect(board.card('BL-002')).toBeUndefined();
-      const doneToggle = board.getByRole('button', { name: '1 done · Expand' });
-      expect(doneToggle.getAttribute('aria-expanded')).toBe('false');
+      const summary = board.container.querySelector('.pc-status-board__done-summary');
+      expect(summary?.textContent).toContain('1done and hidden');
       const blocked = board.card('SPEC-020/T-022');
       if (!blocked) throw new Error('Missing blocked card.');
       act(() => blocked.focus());
       fireEvent.keyDown(blocked, { key: 'ArrowRight' });
       expect(document.activeElement).toBe(board.card('BL-001'));
       fireEvent.keyDown(document.activeElement as Element, { key: 'ArrowRight' });
-      expect((document.activeElement as HTMLElement).textContent).toContain('1 done');
+      expect(document.activeElement).toBe(board.getByRole('button', { name: 'Show done' }));
       fireEvent.keyDown(document.activeElement as Element, { key: 'Enter' });
       expect(board.card('BL-002')).toBeTruthy();
-      expect(doneToggle.getAttribute('aria-expanded')).toBe('true');
-      expect(doneToggle.textContent).toContain('Collapse');
-      fireEvent.click(doneToggle);
-      expect(doneToggle.getAttribute('aria-expanded')).toBe('false');
+      expect(document.activeElement).toBe(board.card('BL-002'));
+      expect(
+        board.getByRole<HTMLInputElement>('checkbox', { name: 'Hide done', exact: true }).checked,
+      ).toBe(false);
+      fireEvent.click(board.getByRole('button', { name: 'Hide done cards' }));
       expect(board.card('BL-002')).toBeUndefined();
-      fireEvent.click(doneToggle);
-      expect(doneToggle.getAttribute('aria-expanded')).toBe('true');
+      expect(document.activeElement).toBe(board.getByRole('button', { name: 'Show done' }));
+      fireEvent.click(board.getByRole('button', { name: 'Show done' }));
       const done = board.card('BL-002');
       if (!done) throw new Error('Done card did not expand.');
       act(() => done.focus());
       fireEvent.keyDown(done, { key: 'Enter' });
       expect(board.getByTestId('board-inspector').textContent).toContain('"id":"BL-002"');
       expect(board.getByTestId('board-inspector').textContent).toMatch(/"openTick":[1-9]/u);
-      fireEvent.click(board.getByRole('button', { name: 'Hide done', exact: true }));
+      fireEvent.click(board.getByRole('checkbox', { name: 'Hide done', exact: true }));
       expect(board.card('BL-002')).toBeUndefined();
       expect(
         (await axe.run(board.container, { rules: { 'color-contrast': { enabled: false } } }))
@@ -749,12 +748,12 @@ describe('read-only status Board', () => {
       act(() => blocked.focus());
       fireEvent.keyDown(blocked, { key: 'ArrowRight' });
       expect(document.activeElement).toBe(
-        sparse.getByRole('button', { name: 'addressed: no cards' }),
+        sparse.getByRole('button', { name: 'Nothing is addressed.' }),
       );
       fireEvent.keyDown(document.activeElement as Element, { key: 'ArrowRight' });
-      expect(document.activeElement).toBe(sparse.getByRole('button', { name: 'done: no cards' }));
+      expect(document.activeElement).toBe(sparse.getByRole('button', { name: 'Nothing is done.' }));
       fireEvent.keyDown(document.activeElement as Element, { key: 'ArrowRight' });
-      expect(document.activeElement).toBe(sparse.getByRole('button', { name: 'done: no cards' }));
+      expect(document.activeElement).toBe(sparse.getByRole('button', { name: 'Nothing is done.' }));
       expect(sparse.container.textContent).toContain('No item in that direction.');
     } finally {
       sparse.close();
@@ -844,8 +843,8 @@ describe('read-only status Board', () => {
           ?.getAttribute('data-keyboard-column'),
       ).toBe('done');
       expect(
-        board.getByRole('button', { name: 'Hide done', exact: true }).getAttribute('aria-pressed'),
-      ).toBe('false');
+        board.getByRole<HTMLInputElement>('checkbox', { name: 'Hide done', exact: true }).checked,
+      ).toBe(false);
       const removed: PlanningGraph = {
         ...moved,
         nodes: moved.nodes.filter((node) => node.id !== 'SPEC-020/T-022'),
@@ -867,13 +866,12 @@ describe('read-only status Board', () => {
     const before = fixtureHash(source);
     const board = boardHarness(source);
     try {
-      fireEvent.click(board.getByRole('combobox', { name: /^Swimlanes:/u }));
-      fireEvent.click(screen.getByRole('option', { name: /spec/iu }));
+      fireEvent.click(board.getByRole('button', { name: 'Lanes by spec' }));
       expect(board.container.querySelectorAll('.pc-status-board__lane').length).toBeLessThanOrEqual(
         6,
       );
       expect(board.container.querySelectorAll('.pc-status-board__columns')).toHaveLength(6);
-      expect(board.container.textContent).toContain('No tasks');
+      expect(board.container.textContent).not.toContain('No tasks');
       let sawTaskProgress = false;
       let attempts = 0;
       while (
@@ -881,7 +879,7 @@ describe('read-only status Board', () => {
         attempts++ < 20
       ) {
         fireEvent.click(board.getByRole('button', { name: 'Next lanes' }));
-        sawTaskProgress ||= /\d+ of \d+ tasks done/u.test(board.container.textContent ?? '');
+        sawTaskProgress ||= /\d+ of \d+ done/u.test(board.container.textContent ?? '');
       }
       expect(sawTaskProgress).toBe(true);
       expect(board.container.textContent).toContain('Backlog, not in a spec');
@@ -893,7 +891,7 @@ describe('read-only status Board', () => {
     }
   });
 
-  it('copies only a verified status command with C, keeps focused command precedence, and surfaces clipboard denial', async () => {
+  it('copies the selected card command with C, once per press, and surfaces clipboard denial', async () => {
     const source: PlanningGraph = {
       ...graph,
       nodes: [
@@ -902,6 +900,13 @@ describe('read-only status Board', () => {
           id: 'BL-001',
           type: 'backlog',
           title: 'Ready backlog',
+          status: 'outstanding',
+          frontmatter: {},
+        },
+        {
+          id: 'draft note',
+          type: 'task',
+          title: 'Unnumbered draft',
           status: 'outstanding',
           frontmatter: {},
         },
@@ -921,12 +926,11 @@ describe('read-only status Board', () => {
       expect(copy).toHaveBeenCalledExactlyOnceWith(
         'openplanr backlog update BL-001 --status outstanding',
       );
-      expect(screen.getByRole('alert').textContent).toContain(
-        'Select the command and copy it manually.',
-      );
-      const command = board.container.querySelector<HTMLButtonElement>(
-        '.pc-status-board__command .pc-command-hint__copy',
-      );
+      const bar = board.getByRole('region', { name: 'Selected items' });
+      expect(bar.textContent).toContain('openplanr backlog update BL-001 --status outstanding');
+      expect(bar.textContent).toContain('Copy failed');
+      expect(bar.textContent).toContain('denied');
+      const command = bar.querySelector<HTMLButtonElement>('.pc-selection-bar__copy');
       if (!command) throw new Error('Missing copy control.');
       act(() => command.focus());
       await act(async () => {
@@ -936,9 +940,23 @@ describe('read-only status Board', () => {
       const scoped = board.card('SPEC-020/T-022');
       if (!scoped) throw new Error('Missing scoped task.');
       act(() => scoped.focus());
-      fireEvent.keyDown(scoped, { key: 'c' });
-      expect(board.container.textContent).toContain('no verified status writer');
-      expect(copy).toHaveBeenCalledTimes(2);
+      await act(async () => {
+        fireEvent.keyDown(scoped, { key: 'c' });
+      });
+      expect(copy).toHaveBeenCalledTimes(3);
+      expect(copy).toHaveBeenLastCalledWith('/planr:ship SPEC-020/T-022');
+      expect(board.getByRole('region', { name: 'Selected items' }).textContent).toContain(
+        '/planr:ship SPEC-020/T-022',
+      );
+      const unnamed = board.card('draft note');
+      if (!unnamed) throw new Error('Missing card without a canonical id.');
+      act(() => unnamed.focus());
+      expect(board.getByTestId('board-inspector').textContent).toContain('"id":"draft note"');
+      expect(board.container.querySelector('.pc-selection-bar')).toBeNull();
+      await act(async () => {
+        fireEvent.keyDown(unnamed, { key: 'c' });
+      });
+      expect(copy).toHaveBeenCalledTimes(3);
     } finally {
       board.close();
     }
@@ -988,8 +1006,8 @@ describe('read-only status Board', () => {
     try {
       expect(board.card('SPEC-010/T-001')).toBeTruthy();
       expect(
-        board.getByRole('button', { name: 'Hide done', exact: true }).getAttribute('aria-pressed'),
-      ).toBe('false');
+        board.getByRole<HTMLInputElement>('checkbox', { name: 'Hide done', exact: true }).checked,
+      ).toBe(false);
       expect(board.container.textContent).toContain('Lanes 7-10 of 10');
       expect(board.container.querySelector('.pc-status-board__pager')).toBeTruthy();
       expect(board.getByTestId('board-inspector').textContent).toContain('"id":"SPEC-010/T-001"');
@@ -1006,12 +1024,10 @@ describe('read-only status Board', () => {
       ),
       'utf8',
     );
-    expect(BOARD_CARD_PITCH).toBe(100);
-    expect(styles).toMatch(/\.pc-status-board__slot\s*\{[^}]*height:\s*100px/u);
-    expect(styles).toMatch(/\.pc-status-board__card\.pc-artifact-row\s*\{[^}]*height:\s*90px/u);
-    expect(styles).toMatch(
-      /\.pc-status-board__open \.pc-artifact-row__title\s*\{[^}]*grid-column:\s*1/u,
-    );
+    expect(BOARD_CARD_PITCH).toBe(126);
+    expect(styles).toMatch(/\.pc-status-board__slot\s*\{[^}]*height:\s*118px/u);
+    expect(styles).toMatch(/\.pc-status-board__card\s*\{[^}]*height:\s*118px/u);
+    expect(styles).toMatch(/\.pc-status-board__title\s*\{[^}]*-webkit-line-clamp:\s*2/u);
   });
 
   it('restores the logical card scroll anchor when a preceding card disappears', () => {
@@ -1030,8 +1046,12 @@ describe('read-only status Board', () => {
     };
     const board = boardHarness(source);
     try {
+      fireEvent.click(board.getByRole('button', { name: /^Show \d+ more$/u }));
+      expect(document.activeElement?.closest('[data-ordinal]')?.getAttribute('data-ordinal')).toBe(
+        '4',
+      );
       const scroller = board.container.querySelector<HTMLElement>(
-        '[data-keyboard-column="outstanding"] .pc-status-board__cards',
+        '[data-keyboard-column="outstanding"] .pc-status-board__cards[data-expanded]',
       );
       if (!scroller) throw new Error('Missing card scroll window.');
       scroller.scrollTop = 10 * BOARD_CARD_PITCH + 7;

@@ -11,6 +11,7 @@ import {
   artifactRowStyle,
   Button,
   Card,
+  Checkbox,
   type ChipSurface,
   CommandHint,
   DataTable,
@@ -496,6 +497,14 @@ export function BrandFixtureGallery({ state, clock, graph, sources }: BrandFixtu
                     onChange={setChecked}
                     disabled={disabled}
                     disabledReason={reason}
+                  />
+                </Recipe>
+                <Recipe name="checkbox">
+                  <Checkbox
+                    label="Hide done"
+                    checked={checked}
+                    onChange={setChecked}
+                    disabled={disabled}
                   />
                 </Recipe>
                 <Recipe name="tabs">

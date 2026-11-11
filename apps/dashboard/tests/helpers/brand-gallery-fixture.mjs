@@ -404,7 +404,7 @@ export async function recordBrandGalleryEvidence(page, { theme, state }) {
         ),
         geometry: [
           ...element.querySelectorAll(
-            '.pc-button, .pc-icon-button, .pc-input, .pc-chip, .pc-switch__track, .pc-segmented, .pc-command-hint__row, .pc-artifact-tag, .pc-artifact, tbody tr, .pc-toast, .pc-empty, .pc-kbd, .pc-priority, .pc-tabs__tab, .op-state-panel, .pc-artifact-row, .pc-skeleton-table, .pc-skeleton-table__row',
+            '.pc-button, .pc-icon-button, .pc-input, .pc-chip, .pc-switch__track, .pc-checkbox__box, .pc-segmented, .pc-command-hint__row, .pc-artifact-tag, .pc-artifact, tbody tr, .pc-toast, .pc-empty, .pc-kbd, .pc-priority, .pc-tabs__tab, .op-state-panel, .pc-artifact-row, .pc-skeleton-table, .pc-skeleton-table__row',
           ),
         ].map((child) => {
           const css = getComputedStyle(child);
@@ -656,6 +656,7 @@ function assertGalleryGeometry(evidence) {
     'filter',
     'segmented',
     'switch',
+    'checkbox',
     'command',
     'table',
     'trace',
@@ -695,6 +696,7 @@ function assertGeometrySample(sample, label, commandReference) {
     'pc-input': { height: 36, radius: 8 },
     'pc-chip': { height: 32, radius: 999 },
     'pc-switch__track': { height: 19, radius: 999 },
+    'pc-checkbox__box': { height: 16, width: 16, radius: 4 },
     'pc-segmented': { height: 38, radius: 10 },
     'pc-artifact-tag': { height: 22, radius: 6 },
     'pc-artifact': { height: 22 },

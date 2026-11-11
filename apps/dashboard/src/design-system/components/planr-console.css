@@ -802,6 +802,52 @@
   outline-offset: 2px;
 }
 
+.pc-checkbox {
+  position: relative;
+  display: inline-flex;
+  min-height: 30px;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--op-body);
+}
+.pc-checkbox[data-disabled="true"] {
+  cursor: not-allowed;
+  color: var(--op-muted);
+}
+.pc-checkbox__input {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  opacity: 0;
+  cursor: inherit;
+}
+.pc-checkbox__box {
+  display: inline-grid;
+  place-items: center;
+  flex: 0 0 auto;
+  box-sizing: border-box;
+  width: 16px;
+  height: 16px;
+  border: 1px solid var(--op-line3);
+  border-radius: 4px;
+  background: var(--op-card);
+  color: transparent;
+}
+.pc-checkbox__input:checked + .pc-checkbox__box {
+  border-color: var(--op-accent);
+  background: var(--op-accent);
+  color: var(--op-on-accent);
+}
+.pc-checkbox__input:focus-visible + .pc-checkbox__box {
+  outline: 2px solid var(--op-accent);
+  outline-offset: 2px;
+}
+
 /* ===== inline alert / command hint ===== */
 .pc-alert {
   display: flex;

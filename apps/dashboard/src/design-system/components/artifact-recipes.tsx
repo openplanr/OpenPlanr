@@ -3,6 +3,20 @@ import type { CSSProperties, ReactNode } from 'react';
 export type ChipSurface = 'bg' | 'panel' | 'card' | 'raised';
 export type ArtifactType = 'spec' | 'us' | 't' | 'bl' | 'adr' | 'epic' | 'sprint' | 'qt';
 
+const ARTIFACT_TYPES: readonly string[] = ['spec', 'us', 't', 'bl', 'adr', 'epic', 'sprint', 'qt'];
+const PLANNING_TAG_TYPES: Readonly<Record<string, ArtifactType>> = {
+  story: 'us',
+  task: 't',
+  backlog: 'bl',
+  quick: 'qt',
+};
+
+/** Tag recipe for a planning artifact type, or null when the type has no tag colour. */
+export function artifactTagType(type: string): ArtifactType | null {
+  const tag = PLANNING_TAG_TYPES[type] ?? type;
+  return ARTIFACT_TYPES.includes(tag) ? (tag as ArtifactType) : null;
+}
+
 export type ArtifactTagProps = Readonly<{
   type: ArtifactType;
   children: ReactNode;

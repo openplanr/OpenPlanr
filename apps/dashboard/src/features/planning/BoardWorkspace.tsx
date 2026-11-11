@@ -1,36 +1,41 @@
-import { useCallback, useEffect, useMemo } from 'react';
-import {
-  ArtifactStatus,
-  Button,
-  ChipToggle,
-  CommandHint,
-  EmptyState,
-  SectionHeader,
-  Select,
-  Toolbar,
-  WorkItemChip,
-} from '../../design-system/components/index.js';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef } from 'react';
+import { SelectionBar } from '../../design-system/components/index.js';
 import {
   usePlanningCopy,
   usePlanningPresentation,
   usePlanningShortcuts,
 } from '../../lib/routing/planning-presentation.js';
 import type { PlanningView } from '../../lib/routing/planning-view-codec.js';
-import { useInspectorStore } from '../shell/inspector-selection.js';
-import { BoardColumn } from './BoardColumn.js';
+import { clearInspector, useInspectorStore } from '../shell/inspector-selection.js';
+import { BoardColumn, BoardColumnHead } from './BoardColumn.js';
+import {
+  BoardBlank,
+  BoardHeader,
+  BoardLaneHead,
+  BoardPager,
+  BoardStatusTabs,
+} from './BoardParts.js';
 import {
   retainGraphRevision,
   selectBoardLanes,
   selectBoardProjection,
 } from './planning-board-projection.js';
-import { BOARD_LANE_PAGE_SIZE, useBoardKeyboard } from './planning-board-window.js';
+import { boardSelectionItems, useBoardPhoneWidth, useBoardView } from './planning-board-view.js';
 import {
+  BOARD_COLUMN_CAP,
+  BOARD_LANE_PAGE_SIZE,
+  type BoardTarget,
+  useBoardKeyboard,
+} from './planning-board-window.js';
+import {
+  inspectPlanningNode,
   useLiveListOrder,
   useLiveListSelection,
   usePlanningViewFocus,
 } from './planning-inspector.js';
-import { bulkListCommands } from './planning-list-filter.js';
 import { PlanningNotice, type PlanningWorkspaceModel } from './planning-workspace.js';
+
+const STATUS_ORDER = ['outstanding', 'in-progress', 'blocked', 'addressed', 'done'];
 
 export function BoardWorkspace({
   model,
@@ -39,20 +44,44 @@ export function BoardWorkspace({
   model: PlanningWorkspaceModel;
   presentation: PlanningView | null;
 }) {
-  const [swimlanes, setSwimlanes] = usePlanningPresentation(
-    'board:swimlanes',
-    () => presentation?.groupBy === 'spec',
-  );
   const [doneExpanded, setDoneExpanded] = usePlanningPresentation('board:done', () => false);
   const [page, setPage] = usePlanningPresentation('board:page', () => 0);
-  const expandDone = useCallback(() => setDoneExpanded(true), [setDoneExpanded]);
+  const [expanded, setExpanded] = usePlanningPresentation<readonly string[]>(
+    'board:expanded',
+    () => [],
+  );
+  const [chosenStatus, setActiveStatus] = usePlanningPresentation<string | null>(
+    'board:status',
+    () => null,
+  );
+  const { swimlanes, changeView, storageNotice } = useBoardView(presentation, setPage);
+  const phone = useBoardPhoneWidth();
+  const layout = phone ? 'phone' : swimlanes ? 'lanes' : 'columns';
   const inspector = useInspectorStore();
   const selectedId = inspector.selection?.kind === 'node' ? inspector.selection.id : undefined;
   const graph = retainGraphRevision(model.graph, model.binding);
   const projection = selectBoardProjection(graph, presentation, 'status');
   const presentationKey = JSON.stringify([presentation?.filters, presentation?.sort, swimlanes]);
   const items = useLiveListOrder(projection.items, presentationKey);
-  const lanes = selectBoardLanes(graph, items, swimlanes);
+  const allLanes = selectBoardLanes(graph, items, swimlanes);
+  const activeStatus =
+    chosenStatus ??
+    projection.columns.find((column) => column.nodes.length > 0)?.key ??
+    'outstanding';
+  const lanes = useMemo(
+    () =>
+      phone || (swimlanes && !doneExpanded)
+        ? allLanes
+            .map((lane) => ({
+              ...lane,
+              columns: lane.columns.filter((column) =>
+                phone ? column.key === activeStatus : column.key !== 'done',
+              ),
+            }))
+            .filter((lane) => !swimlanes || lane.columns.some((column) => column.nodes.length > 0))
+        : allLanes,
+    [allLanes, phone, swimlanes, doneExpanded, activeStatus],
+  );
   const pages = Math.max(1, Math.ceil(lanes.length / BOARD_LANE_PAGE_SIZE));
   const currentPage = Math.min(page, pages - 1);
   const visibleLanes = lanes.slice(
@@ -61,27 +90,57 @@ export function BoardWorkspace({
   );
   const missingFocus = usePlanningViewFocus(presentation, graph.nodes);
   const { rootRef, removalNotice } = useLiveListSelection(graph.nodes, items, selectedId);
+  const expand = useCallback(
+    (cell: string) =>
+      setExpanded((current) => (current.includes(cell) ? current : [...current, cell])),
+    [setExpanded],
+  );
+  const reveal = useCallback(
+    (target: BoardTarget, status: string) => {
+      if (target.id.startsWith('empty:')) return;
+      if (status === 'done') setDoneExpanded(true);
+      if (target.ordinal >= BOARD_COLUMN_CAP) expand(target.cell);
+    },
+    [expand, setDoneExpanded],
+  );
+  const stepped = useRef(false);
+  const stepColumn = useCallback(
+    (delta: number) => {
+      const next = STATUS_ORDER[STATUS_ORDER.indexOf(activeStatus) + delta];
+      if (!next) return;
+      stepped.current = true;
+      setActiveStatus(next);
+    },
+    [activeStatus, setActiveStatus],
+  );
   const { target, notice } = useBoardKeyboard({
     root: rootRef,
     lanes,
     selectedId,
     focusId: presentation?.focusId,
     doneExpanded,
-    expandDone,
+    reveal,
     setPage,
+    stepColumn: phone ? stepColumn : undefined,
   });
+  useLayoutEffect(() => {
+    if (!stepped.current) return;
+    stepped.current = false;
+    rootRef.current?.querySelector<HTMLElement>('[data-board-cell] [data-keyboard-item]')?.focus();
+  });
+  const focusStatus = items.find((entry) => entry.id === presentation?.focusId)?.status;
+  useEffect(() => {
+    if (focusStatus === 'done') setDoneExpanded(true);
+    if (phone && focusStatus && STATUS_ORDER.includes(focusStatus)) setActiveStatus(focusStatus);
+  }, [phone, focusStatus, setActiveStatus, setDoneExpanded]);
   const selected = useMemo(() => items.find((node) => node.id === selectedId), [items, selectedId]);
-  const statusCopy = useMemo(
-    () => (selected ? bulkListCommands([selected], selected.status) : null),
-    [selected],
-  );
+  const barItems = useMemo(() => boardSelectionItems(selected), [selected]);
   const copy = usePlanningCopy();
   const shortcuts = usePlanningShortcuts();
-  useEffect(() => {
-    if (!presentation) return;
-    setSwimlanes(presentation.groupBy === 'spec');
-    if (!presentation.focusId) setPage(0);
-  }, [presentation, setPage, setSwimlanes]);
+  const statusHeads = useMemo(
+    () => projection.columns.filter((column) => doneExpanded || column.key !== 'done'),
+    [projection.columns, doneExpanded],
+  );
   return (
     <div
       ref={rootRef}
@@ -89,165 +148,87 @@ export function BoardWorkspace({
       data-route-kind="planning.board"
       data-managed-rows
       data-density={presentation?.density}
+      data-board-layout={layout}
     >
       <PlanningNotice presentation={model.presentation} />
-      <SectionHeader
-        headingLevel={1}
-        eyebrow="Plan"
-        title="Board"
-        count={`${items.length} artifacts`}
-        description="Read-only · cards do not drag"
+      <BoardHeader
+        count={items.length}
+        lanes={swimlanes}
+        phone={phone}
+        hideDone={!doneExpanded}
+        onView={changeView}
+        onHideDone={(hidden) => setDoneExpanded(!hidden)}
       />
       <div className="pc-visually-hidden" role="status" aria-live="polite">
-        {notice || removalNotice || missingFocus}
+        {notice || removalNotice || missingFocus || storageNotice}
       </div>
-      <Toolbar
-        right={
-          <div className="pc-status-board__command">
-            <CommandHint
-              command={statusCopy?.commands[0] ?? ''}
-              label="Copy status command"
-              disabled={!statusCopy?.commands.length}
-              disabledReason={
-                statusCopy?.skipped[0] ??
-                (selected ? undefined : 'Focus a card to inspect its status command.')
-              }
-              onCopy={copy}
-              shortcutsEnabled={shortcuts}
-              size="sm"
-            />
-          </div>
-        }
-      >
-        <Select
-          ariaLabel="Columns"
-          value="status"
-          onChange={() => undefined}
-          options={[{ value: 'status', label: 'Columns: status' }]}
+      {phone && items.length ? (
+        <BoardStatusTabs
+          columns={projection.columns}
+          value={activeStatus}
+          onChange={setActiveStatus}
         />
-        <Select
-          value={swimlanes ? 'spec' : 'none'}
-          onChange={(value) => {
-            setSwimlanes(value === 'spec');
-            setPage(0);
-          }}
-          options={[
-            { value: 'none', label: 'Lanes: none' },
-            { value: 'spec', label: 'Lanes: spec' },
-          ]}
-          ariaLabel="Swimlanes"
-          size="sm"
-          clearValue="none"
-        />
-        <ChipToggle checked={!doneExpanded} onChange={(hidden) => setDoneExpanded(!hidden)}>
-          Hide done
-        </ChipToggle>
-      </Toolbar>
+      ) : null}
       {items.length === 0 ? (
-        <div className="pc-status-board__blank">
-          <EmptyState
-            icon="columns-3"
-            title={graph.nodes.length ? 'No matching artifacts' : 'No artifacts yet'}
-            description={
-              graph.nodes.length
-                ? 'The shared presentation filters exclude all Board cards. Open Board without filters to see the full plan.'
-                : 'The board fills in as the plan gains artifacts.'
-            }
-            action={
-              graph.nodes.length ? (
-                <a href="#/board" className="op-inline-action">
-                  Clear filters
-                </a>
-              ) : (
-                <CommandHint command="/planr:spec" label="Shape the next spec" size="sm" />
-              )
-            }
-          />
-        </div>
+        <BoardBlank filtered={graph.nodes.length > 0} />
       ) : (
-        <div data-scroll-context="board" data-swimlanes={swimlanes} className="pc-status-board">
-          <p className="pc-status-board__proposal">
-            Proposed for Phase 2: drag a card to copy a status command, with a keyboard equivalent.
-            Cards remain read-only.
-          </p>
-          <section
-            className="pc-status-board__totals"
-            data-done-expanded={doneExpanded}
-            aria-label="Status totals"
-          >
-            {projection.columns.map((column) => (
-              <div key={column.key}>
-                <ArtifactStatus status={column.key} size="sm" variant="legend" />
-                <span>{column.nodes.length}</span>
-              </div>
-            ))}
-          </section>
+        <div
+          data-scroll-context="board"
+          data-swimlanes={swimlanes}
+          data-done-expanded={doneExpanded}
+          className="pc-status-board"
+        >
+          {layout === 'lanes' ? (
+            <div className="pc-status-board__lanes-head pc-status-board__lane-grid">
+              <span>Spec</span>
+              {statusHeads.map((column) => (
+                <BoardColumnHead key={column.key} group={column} total={items.length} />
+              ))}
+            </div>
+          ) : null}
           {visibleLanes.map((lane) => (
-            <section key={lane.key} className="pc-status-board__lane" aria-label={lane.label}>
-              {swimlanes ? (
-                <header className="pc-status-board__lane-head">
-                  {lane.spec ? <WorkItemChip type="spec" id={lane.key} /> : null}
-                  <h2>{lane.spec?.title ?? lane.label}</h2>
-                  <span>{lane.nodes.length} artifacts</span>
-                  {lane.spec ? (
-                    <span>
-                      {lane.progress?.total
-                        ? `${lane.progress.done} of ${lane.progress.total} tasks done`
-                        : 'No tasks'}
-                    </span>
-                  ) : null}
-                  {lane.spec && lane.progress?.total ? (
-                    <progress
-                      aria-label={`${lane.key} task progress`}
-                      value={lane.progress.done}
-                      max={lane.progress.total}
-                    />
-                  ) : null}
-                </header>
-              ) : null}
+            <section
+              key={lane.key}
+              className={
+                swimlanes
+                  ? 'pc-status-board__lane pc-status-board__lane-grid'
+                  : 'pc-status-board__lane'
+              }
+              aria-label={lane.label}
+            >
+              {swimlanes ? <BoardLaneHead lane={lane} /> : null}
               <div className="pc-status-board__columns" data-done-expanded={doneExpanded}>
                 {lane.columns.map((group) => (
                   <BoardColumn
                     key={group.key}
                     group={group}
+                    graph={graph}
                     laneKey={lane.key}
                     selectedId={selectedId}
-                    collapsed={
-                      group.key === 'done' && doneExpanded === false && group.nodes.length > 0
-                    }
+                    collapsed={group.key === 'done' && !doneExpanded && group.nodes.length > 0}
+                    expanded={expanded.includes(`${lane.key}:${group.key}`)}
+                    head={layout === 'columns' ? items.length : null}
+                    layout={layout}
                     toggleDone={() => setDoneExpanded(!doneExpanded)}
+                    expand={expand}
                     target={target}
                   />
                 ))}
               </div>
             </section>
           ))}
+          <BoardPager page={currentPage} pages={pages} lanes={lanes.length} setPage={setPage} />
         </div>
       )}
-      {pages > 1 ? (
-        <div className="pc-status-board__pager">
-          <Button
-            size="sm"
-            disabled={currentPage === 0}
-            disabledReason={currentPage === 0 ? 'First page of spec lanes' : undefined}
-            onClick={() => setPage(currentPage - 1)}
-          >
-            Previous lanes
-          </Button>
-          <span>
-            Lanes {currentPage * BOARD_LANE_PAGE_SIZE + 1}-
-            {Math.min(lanes.length, (currentPage + 1) * BOARD_LANE_PAGE_SIZE)} of {lanes.length}
-          </span>
-          <Button
-            size="sm"
-            disabled={currentPage + 1 === pages}
-            disabledReason={currentPage + 1 === pages ? 'Last page of spec lanes' : undefined}
-            onClick={() => setPage(currentPage + 1)}
-          >
-            Next lanes
-          </Button>
-        </div>
-      ) : null}
+      <SelectionBar
+        items={barItems}
+        onCopy={copy}
+        shortcutsEnabled={shortcuts}
+        onClear={clearInspector}
+        onOpen={() => {
+          if (selected) inspectPlanningNode(selected);
+        }}
+      />
     </div>
   );
 }

@@ -16,6 +16,7 @@ export type SelectionBarProps = Readonly<{
   onOpen: () => void;
   onCopy?: (text: string) => Promise<void>;
   disabled?: boolean;
+  shortcutsEnabled?: boolean;
 }>;
 
 /** Floating command actions for the current selection. */
@@ -25,13 +26,14 @@ export function SelectionBar({
   onOpen,
   onCopy,
   disabled = false,
+  shortcutsEnabled = true,
 }: SelectionBarProps) {
   const root = useRef<HTMLElement>(null);
   const command = items.map((item) => item.command).join('\n');
   const feedback = useCopyFeedback(command, disabled, onCopy);
   const visible = items.length > 0;
   useEffect(() => {
-    if (!visible) return;
+    if (!visible || !shortcutsEnabled) return;
     const keydown = (event: KeyboardEvent) => {
       const target = event.target instanceof Element ? event.target : null;
       if (
@@ -58,7 +60,7 @@ export function SelectionBar({
     };
     document.addEventListener('keydown', keydown, true);
     return () => document.removeEventListener('keydown', keydown, true);
-  }, [visible, disabled, feedback.copy]);
+  }, [visible, disabled, shortcutsEnabled, feedback.copy]);
   const first = items[0];
   if (!first) return null;
   const label = items.length === 1 ? 'Copy command' : `Copy ${items.length} commands`;
@@ -94,14 +96,16 @@ export function SelectionBar({
         data-state={feedback.state}
         onClick={feedback.copy}
         disabled={disabled || feedback.state === 'pending'}
-        aria-keyshortcuts="C"
+        aria-keyshortcuts={shortcutsEnabled ? 'C' : undefined}
         aria-busy={feedback.state === 'pending' || undefined}
         title={feedback.error || undefined}
       >
         <CopyLabels idle={label} current={currentLabel} />
-        <span aria-hidden="true">
-          <kbd>C</kbd>
-        </span>
+        {shortcutsEnabled ? (
+          <span aria-hidden="true">
+            <kbd>C</kbd>
+          </span>
+        ) : null}
       </button>
       <button
         type="button"

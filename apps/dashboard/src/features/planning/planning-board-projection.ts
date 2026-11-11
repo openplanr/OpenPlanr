@@ -1,14 +1,20 @@
 import { ARTIFACT_STATUS_ORDER } from '../../design-system/components/index.js';
 import type { PlanningView } from '../../lib/routing/planning-view-codec.js';
+import { graphFocusIndex } from './graph-focus-model.js';
 import {
   groupPlanningNodes,
   type PlanningModelGraph,
   type PlanningModelNode,
+  planningDisplayId,
   planningGroupingDimensions,
   planningSpecOf,
 } from './planning-model.js';
 import { createPlanningProjectionCache, planningClockKey } from './planning-projection-cache.js';
-import { applyPlanningView, groupPresentationNodes } from './presentation-view.js';
+import {
+  applyPlanningView,
+  authoredTimestamp,
+  groupPresentationNodes,
+} from './presentation-view.js';
 
 function buildItems(graph: PlanningModelGraph, presentation: PlanningView | null, now: Date) {
   const items = applyPlanningView(
@@ -135,4 +141,26 @@ export function selectBoardLanes(
     entries.set(swimlanes, value);
   }
   return value.lanes;
+}
+
+const isOpen = (node: PlanningModelNode | null): node is PlanningModelNode =>
+  node !== null && node.status !== 'done' && node.status !== 'addressed';
+
+/** One meta line for a Board card: open dependency, else what it unblocks, else the authored date. */
+export function boardCardMeta(graph: PlanningModelGraph, node: PlanningModelNode): string | null {
+  const index = graphFocusIndex(graph);
+  const waits = (index.dependencies.get(node.id) ?? []).map((ref) => ref.node).filter(isOpen);
+  if (waits.length) return `waits on ${waits.map(planningDisplayId).join(', ')}`;
+  const unblocks = (index.dependents.get(node.id) ?? []).map((ref) => ref.node).filter(isOpen);
+  if (unblocks.length === 1) return `unblocks ${planningDisplayId(unblocks[0])}`;
+  if (unblocks.length > 1)
+    return `unblocks ${unblocks.length} ${unblocks.every((entry) => entry.type === 'task') ? 'tasks' : 'items'}`;
+  const updated = authoredTimestamp(node.frontmatter.updated);
+  if (updated === null) return null;
+  const date = new Date(updated).toLocaleDateString('en-GB', {
+    day: 'numeric',
+    month: 'short',
+    timeZone: 'UTC',
+  });
+  return `updated ${date}`;
 }

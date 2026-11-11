@@ -5,7 +5,7 @@ import { join } from 'node:path';
 import test from 'node:test';
 import { launchBrowser } from '../../../../tests/support/browser-launcher.mjs';
 import { bundleBrandGalleryFixture, mountBrandGallery } from '../helpers/brand-gallery-fixture.mjs';
-import { redesignParityRows, resolveParityToken } from '../helpers/redesign-parity-rows.mjs';
+import { assertParityRow, redesignParityRows } from '../helpers/redesign-parity-rows.mjs';
 
 async function clipboard(page, mode = 'success') {
   await page.evaluate((mode) => {
@@ -49,10 +49,8 @@ async function copyWithFeedback(page, selector, label) {
 }
 
 async function checkRow(page, row, theme) {
-  const expected = resolveParityToken(row.expected, theme);
-  const elements = page.locator(row.selector);
-  assert((await elements.count()) > 0, `${row.id}: missing ${row.selector}`);
   if (row.property === 'clipboard' || row.property === 'text-after-copy') {
+    assert((await page.locator(row.selector).count()) > 0, `${row.id}: missing ${row.selector}`);
     await copyWithFeedback(page, row.selector, 'Copied');
     if (row.property === 'clipboard') {
       const ids = await page
@@ -64,44 +62,7 @@ async function checkRow(page, row, theme) {
     }
     return;
   }
-  const samples = await elements.evaluateAll(
-    (nodes, { property, expected }) =>
-      nodes.map((node) => {
-        if (property === 'text')
-          return { actual: node.querySelector('[data-active="true"]')?.textContent, expected };
-        if (['role', 'aria-live'].includes(property))
-          return { actual: node.getAttribute(property), expected };
-        const rect = node.getBoundingClientRect();
-        const distances = {
-          'bottom-distance': innerHeight - rect.bottom,
-          'left-distance': rect.left,
-          'right-distance': innerWidth - rect.right,
-        };
-        if (property in distances)
-          return { actual: distances[property], expected: parseFloat(expected) };
-        if (expected.startsWith('min('))
-          return {
-            actual: rect.width,
-            expected: Math.min(800, node.parentElement.getBoundingClientRect().width - 128),
-          };
-        const probe = document.createElement('span');
-        probe.style.setProperty(property, expected);
-        document.body.append(probe);
-        const resolved = getComputedStyle(probe).getPropertyValue(property);
-        const actual = getComputedStyle(node).getPropertyValue(property);
-        probe.remove();
-        if (property === 'font-family')
-          return { actual: actual.split(',')[0].replaceAll('"', ''), expected };
-        return { actual, expected: resolved };
-      }),
-    { property: row.property, expected },
-  );
-  for (const sample of samples) {
-    const label = `${row.id} ${theme} ${row.viewport} ${row.property}: ${JSON.stringify(sample)}`;
-    if (typeof sample.actual === 'number' || /^-?[\d.]+px$/u.test(sample.expected))
-      assert(Math.abs(parseFloat(sample.actual) - parseFloat(sample.expected)) <= 2, label);
-    else assert.equal(sample.actual, sample.expected, label);
-  }
+  await assertParityRow(page, row, theme);
 }
 
 test('shared patterns match token parity in both themes and viewports', {

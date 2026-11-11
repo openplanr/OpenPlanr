@@ -89,7 +89,7 @@ function bundleFixture() {
             </div>
           </section>
           <div id="board" style={{width:300,height:600}}>
-            <BoardColumn group={{key:'in-progress',nodes}} laneKey="none" collapsed={false} toggleDone={()=>undefined} target={null} />
+            <BoardColumn group={{key:'in-progress',label:'In progress',nodes}} graph={{nodes,edges:[]}} laneKey="none" collapsed={false} expanded head={null} layout="columns" toggleDone={()=>undefined} expand={()=>undefined} target={null} />
           </div>
         </>));
       `,
@@ -372,14 +372,18 @@ test('keeps rows, complete tags, titles and copy hit targets inside their geomet
         .locator('#board .pc-status-board__cards')
         .evaluate((element) => ({
           height: element.clientHeight,
+          expected: Math.min(744, innerHeight * 0.7),
           overflow: getComputedStyle(element).overflowY,
         }));
-      assert.equal(boardViewport.height, 584, 'Board cards fill the column inside its padding');
+      assert(
+        Math.abs(boardViewport.height - boardViewport.expected) <= 1,
+        'An expanded Board cell scrolls inside its capped height',
+      );
       assert.equal(boardViewport.overflow, 'auto');
       const cards = await page.locator('#board .pc-status-board__card').evaluateAll((elements) =>
         elements.map((element) => {
           const r = element.getBoundingClientRect(),
-            t = element.querySelector('.pc-artifact-row__title').getBoundingClientRect();
+            t = element.querySelector('.pc-status-board__title').getBoundingClientRect();
           return {
             top: r.top,
             bottom: r.bottom,
@@ -390,9 +394,9 @@ test('keeps rows, complete tags, titles and copy hit targets inside their geomet
         }),
       );
       cards.forEach((card, index) => {
-        assert.equal(card.height, 90);
+        assert.equal(card.height, 118);
         assert(card.titleWidth > 200 && card.titleHeight > 0);
-        if (index) assert.equal(card.top - cards[index - 1].bottom, 10);
+        if (index) assert.equal(card.top - cards[index - 1].bottom, 8);
       });
     } finally {
       await context.close();

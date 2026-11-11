@@ -331,21 +331,20 @@ describe('visible control names', () => {
         expect(copy.classList.contains('pc-command-hint__copy')).toBe(true);
         expect(visibleText(copy)).toBe('Copy command');
       }
-      if (route === 'board') {
+      if (route === 'board' && view.container.querySelector('[data-board-layout="columns"]')) {
         const expansion = view.container.querySelector<HTMLButtonElement>(
-          '[data-keyboard-column="done"] .pc-status-board__empty',
+          '[data-keyboard-column="done"] .pc-status-board__done-toggle',
         );
-        expect(expansion?.textContent).toContain('Expand');
+        expect(['Show done', 'Hide done cards']).toContain(expansion?.textContent);
         expect(expansion?.hasAttribute('aria-label')).toBe(false);
         if (!expansion) throw new Error('Missing collapsed Done control.');
         expect(normalise(computeAccessibleName(expansion))).toBe(normalise(visibleText(expansion)));
       }
       expect(await nameFailures(view.container)).toEqual([]);
       if (route === 'board') {
-        fireEvent.click(view.getByRole('combobox', { name: /^Swimlanes:/u }));
-        fireEvent.click(screen.getByRole('option', { name: /spec/iu }));
+        fireEvent.click(view.getByRole('button', { name: 'Lanes by spec' }));
         expect(await nameFailures(view.container)).toEqual([]);
-        fireEvent.click(view.getByRole('button', { name: 'Hide done', exact: true }));
+        fireEvent.click(view.getByRole('checkbox', { name: 'Hide done', exact: true }));
         expect(await nameFailures(view.container)).toEqual([]);
       }
     });

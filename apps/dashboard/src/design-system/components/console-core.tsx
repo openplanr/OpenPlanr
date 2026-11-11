@@ -688,6 +688,34 @@ export function Switch({
   );
 }
 
+export type CheckboxProps = Readonly<{
+  checked: boolean;
+  onChange: (checked: boolean) => void;
+  label: string;
+  disabled?: boolean;
+}>;
+
+/** Drawn 16px checkbox over a visually hidden native input. */
+export function Checkbox({ checked, onChange, label, disabled = false }: CheckboxProps) {
+  return (
+    <label className="pc-checkbox" data-disabled={disabled || undefined}>
+      <input
+        type="checkbox"
+        className="pc-checkbox__input"
+        checked={checked}
+        disabled={disabled}
+        onChange={(event) => {
+          if (!disabled) onChange(event.target.checked);
+        }}
+      />
+      <span className="pc-checkbox__box" aria-hidden="true">
+        <PcIcon name="check" size={12} />
+      </span>
+      <span className="pc-checkbox__label">{label}</span>
+    </label>
+  );
+}
+
 // ---------------------------------------------------------------- InlineAlert / CommandHint
 
 export type InlineAlertTone = 'warn' | 'danger' | 'info' | 'success';

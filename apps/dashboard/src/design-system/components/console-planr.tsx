@@ -1,5 +1,11 @@
 import { type ReactNode, useCallback, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { ArtifactTag, type ArtifactType, type ChipSurface, chipStyle } from './artifact-recipes.js';
+import {
+  ArtifactTag,
+  type ArtifactType,
+  artifactTagType,
+  type ChipSurface,
+  chipStyle,
+} from './artifact-recipes.js';
 import { Badge, type BadgeTone, CommandHint } from './console-core.js';
 import { PcIcon, type PcIconName } from './console-icon.js';
 import { Tooltip } from './tooltip.js';
@@ -215,15 +221,11 @@ export function WorkItemChip({
   disabledReason,
   surface = 'panel',
 }: WorkItemChipProps) {
-  const tagType =
-    ({ story: 'us', task: 't', backlog: 'bl', quick: 'qt' } as Record<string, ArtifactType>)[
-      type
-    ] ?? type;
-  const knownType = ['spec', 'us', 't', 'bl', 'adr', 'epic', 'sprint', 'qt'].includes(tagType);
+  const tagType = artifactTagType(type);
   const inner = (
     <>
-      {knownType ? (
-        <ArtifactTag type={tagType as ArtifactType} surface={surface}>
+      {tagType ? (
+        <ArtifactTag type={tagType} surface={surface}>
           {id}
         </ArtifactTag>
       ) : (
