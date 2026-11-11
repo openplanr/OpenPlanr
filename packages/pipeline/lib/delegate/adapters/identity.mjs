@@ -63,23 +63,25 @@ export function identityForDestination(kind, identity, destination) {
 
 /**
  * Runs a native status command with the agent's environment and parses its output.
- * A failed, slow or unrecognized command reports `not-checked`; cancellation still throws.
+ * A failed, slow or unrecognized command reports `not-checked`; cancellation and an
+ * unconfirmed process stop still throw.
  */
 export async function readNativeIdentity(executable, args, parse, options) {
-  const { cwd, env, signal, timeoutMs } = options;
+  const { cwd, env, signal, timeoutMs, captureStderr = false, invoke = invokeProcess } = options;
   let result;
   try {
-    result = await invokeProcess(executable, args, {
+    result = await invoke(executable, args, {
       cwd,
       env,
       signal,
       timeoutMs: Math.min(timeoutMs ?? 10000, 10000),
       maxOutputBytes: 16 * 1024,
       withExitCode: true,
-      captureStderr: true,
+      captureStderr,
     });
   } catch (error) {
-    if (error?.code === 'E_ADAPTER_CANCELLED') throw error;
+    if (error?.code === 'E_ADAPTER_CANCELLED' || error?.processTerminationConfirmed === false)
+      throw error;
     return notChecked(typeof error?.code === 'string' ? error.code : 'status-failed');
   }
   return parse(result.output);

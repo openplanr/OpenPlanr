@@ -136,11 +136,11 @@ settings, and no bypass flag is passed.
 If the CLI still denies an action, delegation
 reports attention rather than widening access. Resolve access in that CLI’s own configuration or explicitly authorized exact-session invocation, then continue the recorded session. Model summaries are never sufficient evidence of implementation.
 
-Cursor's CLI writes its own state back to `~/.cursor/cli-config.json` when a run
-ends, so `permissions.allow` entries added while a run is active can be lost. Add
-the commands the task needs (for example `Shell(pnpm)`) before `dispatch`. After an
-`E_ADAPTER_PERMISSION` attention state, wait until the run has stopped, edit the
-allowlist, then `resume` the same run.
+Cursor rewrites its own settings when a run ends, so commands the user allows while a
+run is active can be lost. Ask the user to allow the commands the task needs in Cursor
+(for example `Shell(pnpm)`) before `dispatch`. After an `E_ADAPTER_PERMISSION` attention
+state, wait until the run has stopped, ask the user to allow the command, then `resume`
+the same run.
 
 ## Diagnostics and unused runs
 

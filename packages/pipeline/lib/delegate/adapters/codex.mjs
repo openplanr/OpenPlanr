@@ -180,11 +180,7 @@ export const codexAdapter = Object.freeze({
       profile.executable,
       ['login', 'status'],
       codexIdentity,
-      {
-        env,
-        signal,
-        timeoutMs,
-      },
+      { env, signal, timeoutMs, captureStderr: true },
     );
     return {
       capabilities: NATIVE_CAPABILITIES,

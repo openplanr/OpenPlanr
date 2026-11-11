@@ -68,12 +68,22 @@ test('Claude and Codex installed routers and Ship expose only the opt-in handoff
     assert.match(delegate, /Every changed path must be in scope\. Run the gates\s+yourself/u);
     assert.match(delegate, /`result\.selected\.identity`/u);
     assert.match(delegate, /saved profile runs only through/u);
+    assert.match(
+      delegate,
+      /Without `openplanr`, a local run cannot\s+be confirmed: stop and ask the user to install it\./u,
+    );
+    assert.match(delegate, /\| Not local \|[^\n]*`openplanr` is not on `PATH`/u);
+    assert.match(delegate, /openplanr delegate probe --input - --json/u);
     const references = readdirSync(resolve(root, base, 'delegate/references'));
     for (const path of ['SKILL.md', ...references.map((name) => `references/${name}`)])
       assert.doesNotMatch(
         read(`${base}/delegate/${path}`),
-        /CODEX_HOME|CLAUDE_CONFIG_DIR|auth status|login status|agent status|keychain|config\.toml/u,
+        /CODEX_HOME|CLAUDE_CONFIG_DIR|auth status|login status|agent status|keychain|config\.toml|settings\.json|cli-config\.json|\.claude\/|\.codex\/|\.cursor\//u,
       );
+    assert.match(
+      read(`${base}/delegate/references/native-commands.md`),
+      /ask the user before adding either flag/u,
+    );
     assert.match(delegate, /openplanr delegate probe --json/u);
     assert.match(delegate, /local-model ones included/u);
     assert.match(delegate, /`result\.profiles`/u);

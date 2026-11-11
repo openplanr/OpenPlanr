@@ -15,11 +15,11 @@ worktree.
 | Claude Code | `cd <dir> && claude -p --permission-mode acceptEdits --output-format json [--model <model>] < <brief> > <out>/result.json` |
 | Cursor | `agent -p --trust --workspace <dir> --output-format json [--model <model>] "$(cat <brief>)" > <out>/result.json` |
 
-`workspace-write` and `acceptEdits` let a stock install edit files in the worktree. When
-the user says their own settings already choose a sandbox or permission mode, leave the
-flag out so their choice applies. Cursor's `-p` can already run shell commands its
-allowlist permits; add the commands the task needs to `~/.cursor/cli-config.json` before
-the run.
+`workspace-write` and `acceptEdits` let a stock install edit files in the worktree. They
+can loosen a stricter mode the user configured, so ask the user before adding either flag
+and leave it out unless they agree. Cursor's `-p` runs only the shell commands its
+allowlist permits; ask the user to allow the commands the task needs in Cursor before the
+run.
 
 From inside Codex, its default `workspace-write` sandbox blocks network and writes
 outside the workspace, so a nested `claude -p` or `codex exec` may not reach its model or

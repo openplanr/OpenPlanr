@@ -994,7 +994,7 @@ openplanr delegate integrate apply --input apply.json --json
 
 | Action | Does |
 | --- | --- |
-| `probe` | Finds Git, the installed `claude`, `codex` and Cursor `agent` CLIs, and saved profiles |
+| `probe` | Finds Git, the installed `claude`, `codex` and Cursor `agent` CLIs, and saved profiles, with each one's destination and sign-in |
 | `profile-preview`, `profile-enroll`, `profile-remove` | Shows, saves or removes an optional profile |
 | `prepare` | Builds the context capsule and owned worktree; returns the preview to confirm |
 | `prepare-worktree` | Runs selected setup commands, such as `npm ci`, in the owned worktree |
@@ -1017,6 +1017,23 @@ is still a success. A failure prints
 and exits 1, for example `E_DELEGATE_INPUT`, `E_RUN_NOT_FOUND`, `E_CAPSULE_SECRET`
 (masked findings in `details.findings`) or `E_DELEGATE_RUNTIME_MISSING`. Without
 `--json`, the command prints a short summary and a `Next:` line.
+
+`probe` (for each saved profile, and for the `engine` or `profile` in its input) and
+`profile-preview` report sign-in as `identity.state`, read from the engine's own status
+command (`claude auth status`, `codex login status`, `agent status`) with the profile's
+configuration directory:
+
+| `identity.state` | Means |
+| --- | --- |
+| `account` | Signed in with the user's own account |
+| `api-key` | Signed in with an API key instead of an account |
+| `signed-out` | Not signed in; `identity.nextAction` names the engine's login command |
+| `provider-managed` | Claude Code routes through a cloud provider such as Bedrock or Vertex |
+| `not-required` | Not signed in, but the destination is a local model server |
+| `not-checked` | The status command failed, timed out or printed something unrecognized; `identity.reason` says which |
+
+Only the state is reported. Account names, emails, organizations and account IDs from the
+status command never appear in results or run records.
 
 Each child process gets an explicit environment: paths, locale, terminal, proxy and
 certificate variables. The native agent adds only the routing variables delegation reads

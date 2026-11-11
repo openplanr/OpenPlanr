@@ -21,12 +21,14 @@ Agree the engine, model and optional profile with the user first. When `openplan
 `PATH`, run `openplanr delegate probe --json` and offer `result.profiles` (saved profiles,
 local-model ones included) alongside the installed engines, each labelled with its `kind`,
 `selectedModel` (none means the native default) and `destination.class`. Then probe the
-chosen engine or profile with `engine` or `profile` and read `result.selected.identity`
-(missing means sign-in was not checked) and `destination.class`. A profile's name does not
-prove local routing: for a local run, rely on the probe's destination; if it is not local,
-stop, and never fall back to a cloud model. Without `openplanr`, run the engine with its
-own default sign-in and no profile, and offer to have the user install `openplanr` for
-profiles or a local run. Sign-in stays in each engine's own CLI.
+choice with
+`echo '{"repositoryRoot":"<root>","engine":"<claude|codex|cursor>"}' | openplanr delegate probe --input - --json`,
+or `"profile":"<name>"` in place of `engine`, and read `result.selected.identity` (missing
+means sign-in was not checked) and `result.selected.destination.class`. A profile's name
+does not prove local routing: for a local run, rely on the probe's destination; if it is
+not local, stop, and never fall back to a cloud model. If `openplanr` is missing, run the
+engine with its own default sign-in and no profile. Without `openplanr`, a local run cannot
+be confirmed: stop and ask the user to install it. Sign-in stays in each engine's own CLI.
 
 1. **Worktree.** From a clean base, `git worktree add -b planr-delegate/<slug> <dir> HEAD`
    with `<dir>` outside the checkout. Copy any uncommitted parent file the task needs,
@@ -57,7 +59,7 @@ profiles or a local run. Sign-in stays in each engine's own CLI.
 | CLI missing | The engine's command is not on `PATH` | Name its install command; do not install it yourself. |
 | Not signed in | The probe's `identity.state` is `signed-out`, or the run reports a sign-in failure | Show the probe's `nextAction`, or ask the user to sign in with that CLI's own login. |
 | API-key sign-in | The probe's `identity.state` is `api-key` | Tell the user before running and let them choose whether to continue. |
-| Not local | The user asked for a local run and the probe's `destination.class` is not `local` | Stop; never fall back to a cloud model. |
+| Not local | The user asked for a local run and the probe's `destination.class` is not `local`, or `openplanr` is not on `PATH` | Stop and ask the user to fix the routing or install `openplanr`; never fall back to a cloud model. |
 | Out of scope | A changed path is outside scope or in a protected path | Send it back, or ask the user to widen the scope. |
 | Gates fail | A gate exits non-zero | Send the output back to the same session; integrate nothing. |
 | Patch conflict | `git apply --check` fails | Report the paths; never overwrite the user's edits. |

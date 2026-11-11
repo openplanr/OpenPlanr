@@ -10,6 +10,7 @@ import {
   codexIdentity,
   cursorIdentity,
   identityForDestination,
+  readNativeIdentity,
 } from '../../packages/pipeline/lib/delegate/adapters/identity.mjs';
 import { prepareProfile } from '../../packages/pipeline/lib/delegate/profiles.mjs';
 
@@ -179,4 +180,59 @@ test('a prepared profile carries the identity from its own configuration directo
     { cwd: f.root, env: f.env },
   );
   assert.deepEqual(prepared.identity, { state: 'account' });
+});
+
+test('a Claude profile status call sees its configuration directory and ignores stderr', async (t) => {
+  const f = await fakeEngine(
+    t,
+    'claude',
+    [
+      "if (process.argv.includes('--help')) { console.log('--print --output-format stream-json --resume --session-id --add-dir'); process.exit(0); }",
+      "if (process.argv.slice(2, 4).join(' ') === 'auth status') {",
+      "  process.stderr.write('Warning: a newer version is available\\n');",
+      "  const signedIn = process.env.CLAUDE_CONFIG_DIR?.endsWith('work');",
+      "  console.log(JSON.stringify({ loggedIn: signedIn, authMethod: signedIn ? 'claude.ai' : 'none', apiProvider: 'firstParty' }));",
+      '  process.exit(0);',
+      '}',
+      'process.exit(9);',
+    ].join('\n'),
+  );
+  const prepare = async (name) => {
+    const configDir = join(f.root, name);
+    await mkdir(configDir);
+    return prepareProfile(
+      { name: `claude-${name}`, kind: 'claude', executable: f.executable, argv: [], configDir },
+      { cwd: f.root, env: f.env },
+    );
+  };
+  assert.deepEqual((await prepare('work')).identity, { state: 'account' });
+  assert.deepEqual((await prepare('other')).identity, {
+    state: 'signed-out',
+    nextAction: 'Run claude auth login in your terminal, then probe again.',
+  });
+});
+
+test('an unconfirmed status process stop is raised, other failures report not checked', async () => {
+  const failing = (fields) => async () => {
+    throw Object.assign(new Error('status failed'), fields);
+  };
+  const options = (fields) => ({ env: {}, invoke: failing(fields) });
+  await assert.rejects(
+    readNativeIdentity('claude', ['auth', 'status'], claudeIdentity, {
+      ...options({ code: 'E_ADAPTER_TIMEOUT', processTerminationConfirmed: false }),
+    }),
+    { processTerminationConfirmed: false },
+  );
+  await assert.rejects(
+    readNativeIdentity('claude', ['auth', 'status'], claudeIdentity, {
+      ...options({ code: 'E_ADAPTER_CANCELLED' }),
+    }),
+    { code: 'E_ADAPTER_CANCELLED' },
+  );
+  assert.deepEqual(
+    await readNativeIdentity('claude', ['auth', 'status'], claudeIdentity, {
+      ...options({ code: 'E_ADAPTER_TIMEOUT' }),
+    }),
+    { state: 'not-checked', reason: 'E_ADAPTER_TIMEOUT' },
+  );
 });
