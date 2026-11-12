@@ -189,6 +189,31 @@ describe('palette keyboard copy', () => {
   });
 });
 
+describe('palette paths to full Search', () => {
+  it('opens the Search page from the palette view with Enter and with Cmd/Ctrl+Enter', () => {
+    for (const modifier of [{}, { ctrlKey: true }, { metaKey: true }]) {
+      const onNavigate = vi.fn();
+      const onClose = vi.fn();
+      const view = render(
+        <CommandPalette
+          open
+          onClose={onClose}
+          onNavigate={onNavigate}
+          sources={sources}
+          initialQuery="@view search"
+        />,
+      );
+      expect(
+        view.container.querySelector('[data-search-result]')?.getAttribute('data-search-result'),
+      ).toBe('route:planning.search');
+      fireEvent.keyDown(screen.getByRole('searchbox'), { key: 'Enter', ...modifier });
+      expect(onNavigate).toHaveBeenCalledExactlyOnceWith('#/search');
+      expect(onClose).toHaveBeenCalledOnce();
+      view.unmount();
+    }
+  });
+});
+
 describe('palette Operate loading', () => {
   it('shows a searching Operate group below Planning rows without moving them', () => {
     vi.stubGlobal(
