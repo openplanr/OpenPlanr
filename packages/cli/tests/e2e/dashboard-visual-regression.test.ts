@@ -2919,6 +2919,47 @@ test.describe('dashboard real-browser quality', () => {
     await expect(palette.locator('.pc-palette__copy')).toHaveCount(0);
   });
 
+  test('opens the Operate cycle menu inside the palette and selects a cycle', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    expect((await page.request.post('/__fixture/reset?dataset=artboard')).ok()).toBe(true);
+    await page.goto(fixtureUrl('#/list', { dataset: 'artboard' }));
+    await expect(page.locator('.pc-list')).toBeVisible();
+    await page.keyboard.press('Control+K');
+    const palette = page.getByRole('dialog', { name: 'Command palette', exact: true });
+    const cycle = palette.getByRole('combobox', { name: /^Operate Cycle for search results/u });
+    await cycle.click();
+    const listbox = page.getByRole('listbox', { name: 'Operate Cycle for search results' });
+    await expect(listbox).toBeVisible();
+    const placement = await page.evaluate(() => {
+      const dialog = document.querySelector('dialog.pc-palette');
+      const popup = document.querySelector('.pc-chip-menu__popup');
+      const anchor = document.querySelector('.pc-palette__cycle .pc-chip');
+      const option = popup?.querySelector('[role="option"]:last-child');
+      if (!dialog || !popup || !anchor || !option) return null;
+      const box = option.getBoundingClientRect();
+      const hit = document.elementFromPoint(box.left + box.width / 2, box.top + box.height / 2);
+      return {
+        insideDialog: dialog.contains(popup),
+        optionHit: hit !== null && option.contains(hit),
+        belowAnchor: popup.getBoundingClientRect().top >= anchor.getBoundingClientRect().bottom,
+        inViewport: box.bottom <= window.innerHeight && box.right <= window.innerWidth,
+        label: option.getAttribute('aria-label') ?? '',
+      };
+    });
+    expect(placement).toMatchObject({
+      insideDialog: true,
+      optionHit: true,
+      belowAnchor: true,
+      inViewport: true,
+    });
+    const label = placement?.label ?? '';
+    expect(label).toMatch(/cycle/u);
+    await listbox.getByRole('option', { name: label }).click();
+    await expect(listbox).toBeHidden();
+    await expect(cycle).toHaveAccessibleName(`Operate Cycle for search results: ${label}`);
+    await expect(palette).toBeVisible();
+  });
+
   test('starts the handoff trace through palette search and promotes only on full-page activation', async ({
     page,
   }) => {

@@ -1,4 +1,12 @@
-import { type KeyboardEvent, useEffect, useId, useMemo, useRef, useState } from 'react';
+import {
+  type KeyboardEvent,
+  type RefObject,
+  useEffect,
+  useId,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import { Input, Kbd, PcIcon, SectionHeader, Select } from '../../design-system/components/index.js';
 import type { DashboardQueryIdentity } from '../../lib/binding/query-identity.js';
 import { usePlanningShortcuts } from '../../lib/routing/planning-presentation.js';
@@ -80,10 +88,12 @@ function OperateCycleSelector({
   bindings,
   selectedCycleId,
   onSelect,
+  portalContainer,
 }: Readonly<{
   bindings: readonly DashboardQueryIdentity[];
   selectedCycleId: string | null;
   onSelect: (cycleId: string | null) => void;
+  portalContainer?: RefObject<HTMLElement | null>;
 }>) {
   if (bindings.length === 0) return null;
   return (
@@ -92,6 +102,7 @@ function OperateCycleSelector({
       <Select
         size="sm"
         ariaLabel="Operate Cycle for search results"
+        portalContainer={portalContainer}
         value={selectedCycleId ?? ''}
         onChange={(value) => onSelect(value || null)}
         options={[
@@ -650,6 +661,7 @@ export function CommandPalette({
             bindings={operateBindings}
             selectedCycleId={search.selectedOperate.selectedCycleId}
             onSelect={search.selectedOperate.setSelectedCycleId}
+            portalContainer={dialogRef}
           />
         </div>
         <div className="pc-palette__body">

@@ -1,6 +1,7 @@
 import {
   type KeyboardEvent,
   type ReactNode,
+  type RefObject,
   useEffect,
   useId,
   useLayoutEffect,
@@ -31,6 +32,8 @@ export type SelectProps = Readonly<{
   /** Filter menus: a fixed 240px option column and 36px options. */
   variant?: 'filter';
   clearLabel?: string;
+  /** Element the popup renders into; a modal dialog must own it to keep it above the backdrop. */
+  portalContainer?: RefObject<HTMLElement | null>;
 }>;
 
 /** Overlay listbox opened by a filter chip. */
@@ -52,6 +55,7 @@ export function Select({
   active,
   variant,
   clearLabel,
+  portalContainer,
 }: SelectProps) {
   const id = useId();
   const [open, setOpen] = useState(false);
@@ -336,7 +340,7 @@ export function Select({
                 </button>
               ) : null}
             </div>,
-            document.body,
+            portalContainer?.current ?? document.body,
           )
         : null}
     </span>
