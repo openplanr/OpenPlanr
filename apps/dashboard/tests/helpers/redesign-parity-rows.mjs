@@ -702,6 +702,114 @@ export const activityParityRows = [
   ),
 ];
 
+const palette = 'dialog.pc-palette';
+const paletteRow = (id, selector, properties, options = {}) =>
+  row(id, `${palette} ${selector}`, properties, options.viewport).map((entry) => ({
+    ...entry,
+    setup: options.setup ?? 'palette',
+    ...(options.items ? { items: options.items } : {}),
+  }));
+export const paletteParityRows = [
+  ...paletteRow('P-01', '.pc-palette__panel', {
+    width: '960px',
+    'border-top-left-radius': '16px',
+    'top-distance': '96px',
+    'left-distance': '240px',
+    'border-top-color': '--op-line3',
+    'background-color': '--op-panel',
+  }),
+  ...paletteRow('P-02', '.pc-palette__panel', { 'max-height': '600px' }),
+  ...paletteRow('P-03', '.pc-palette__input-row', {
+    height: '56px',
+    'border-bottom-width': '1px',
+    'border-bottom-color': '--op-line',
+  }),
+  ...paletteRow('P-04', '.pc-palette__input', {
+    'font-size': '16px',
+    'font-weight': '400',
+    'font-family': 'DM Sans Variable',
+  }),
+  ...paletteRow('P-04', '.pc-palette__input-row .pc-kbd', {
+    height: '17px',
+    'border-top-left-radius': '5px',
+    'font-family': 'Source Code Pro',
+    'font-size': '11px',
+    'font-weight': '600',
+  }),
+  ...paletteRow('P-05', '.pc-palette__scopes', { height: '44px' }),
+  ...paletteRow('P-05', '.pc-palette__scope', {
+    height: '28px',
+    'border-top-left-radius': '7px',
+    'font-size': '12px',
+    'font-weight': '500',
+  }),
+  ...paletteRow('P-05', '.pc-palette__scope[aria-pressed="true"]', {
+    'background-color': '--op-raised',
+    color: '--op-heading',
+  }),
+  ...paletteRow('P-06', '.pc-palette__group-title', {
+    height: '28px',
+    'font-family': 'Source Code Pro',
+    'font-weight': '600',
+    'font-size': '11px',
+    'text-transform': 'uppercase',
+    color: '--op-dim',
+  }),
+  ...paletteRow('P-07', '.pc-palette__result', { height: '44px', 'border-top-left-radius': '8px' }),
+  ...paletteRow('P-07', '.pc-palette__id', {
+    width: '76px',
+    'font-family': 'Source Code Pro',
+    'font-size': '12px',
+  }),
+  ...paletteRow('P-07', '.pc-palette__title', { 'font-size': '14px', color: '--op-heading' }),
+  ...paletteRow('P-08', '.pc-palette__result[data-selected="true"]', {
+    '--palette-row-fill': '--op-raised',
+    'background-color': 'transparent',
+  }),
+  ...paletteRow('P-08', '.pc-palette__result[data-selected="true"] .pc-palette__row', {
+    'background-color': 'transparent',
+  }),
+  ...paletteRow('P-09', '.pc-palette__preview', {
+    width: '360px',
+    'padding-top': '20px',
+    'padding-left': '20px',
+    'row-gap': '14px',
+  }),
+  ...paletteRow('P-09', '.pc-palette__command-copy', {
+    height: '40px',
+    'border-top-left-radius': '8px',
+    'background-color': '--op-card',
+  }),
+  ...paletteRow('P-10', '.pc-palette__foot', { height: '44px', 'border-top-width': '1px' }),
+  ...paletteRow(
+    'P-11',
+    '.pc-palette__results',
+    { 'text-order': 'Recent,Go to' },
+    { setup: 'palette-open', items: '.pc-palette__group-title' },
+  ),
+  ...paletteRow(
+    'P-12',
+    '.pc-palette__panel',
+    { count: '0' },
+    { setup: 'palette-empty', items: '.pc-palette__preview' },
+  ),
+  ...paletteRow(
+    'P-12',
+    '.pc-palette__empty-title',
+    { contains: 'Nothing matches' },
+    { setup: 'palette-empty' },
+  ),
+  ...paletteRow('P-13', '.pc-palette__match', {
+    'background-color': 'color-mix(in srgb, var(--op-accent) 18%, transparent)',
+  }),
+  ...paletteRow(
+    'P-14',
+    '.pc-palette__group[aria-busy="true"]',
+    { contains: 'Operate|searching…' },
+    { setup: 'palette-operate' },
+  ),
+];
+
 function sampleRows(nodes, { property, expected, items }) {
   return nodes.map((node) => {
     if (property === 'text')
@@ -776,6 +884,7 @@ function sampleRows(nodes, { property, expected, items }) {
       return { actual: node.getAttribute(property), expected };
     const rect = node.getBoundingClientRect();
     const distances = {
+      'top-distance': rect.top,
       'bottom-distance': innerHeight - rect.bottom,
       'left-distance': rect.left,
       'right-distance': innerWidth - rect.right,

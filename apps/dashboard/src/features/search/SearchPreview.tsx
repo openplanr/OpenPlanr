@@ -1,42 +1,98 @@
-import { useMemo } from 'react';
+import { type MouseEvent, type ReactNode, useMemo } from 'react';
 import {
   ArtifactStatus,
-  CommandHint,
-  PriorityChip,
-  WorkItemChip,
+  ArtifactTag,
+  type ArtifactType,
 } from '../../design-system/components/index.js';
-import { StructuralTrace } from '../planning/DeliveryTrace.js';
-import { type PlanningModelNode, planningContinuation } from '../planning/planning-model.js';
+import { homeDate } from '../planning/planning-home-view.js';
+import {
+  type PlanningModelNode,
+  planningContinuation,
+  planningDetailHref,
+  planningDisplayId,
+} from '../planning/planning-model.js';
 import {
   type StructuralDetailModel,
   selectStructuralDetail,
 } from '../planning/planning-structural-model.js';
 import type { DashboardSearchHit, DashboardSearchSources } from './search-index.js';
-import '../planning/detail.css';
 
-function PreviewDependencies({ detail }: { detail: StructuralDetailModel }) {
+const PREVIEW_TAG: Readonly<Record<string, ArtifactType>> = {
+  spec: 'spec',
+  story: 'us',
+  task: 't',
+  backlog: 'bl',
+  adr: 'adr',
+  epic: 'epic',
+  feature: 'epic',
+  sprint: 'sprint',
+  quick: 'qt',
+};
+
+function PreviewLink({
+  node,
+  onPreview,
+}: Readonly<{ node: PlanningModelNode; onPreview: (id: string) => void }>) {
+  const href = planningDetailHref(node);
+  const label = planningDisplayId(node);
+  if (!href) return <span>{label}</span>;
   return (
-    <section aria-label="Preview dependencies">
-      <h3>Depends on</h3>
-      {detail.dependencies.length ? (
-        <ul>
-          {detail.dependencies.map((ref) => (
-            <li key={ref.reference}>
-              {ref.node ? (
-                <>
-                  {ref.node.id} · {ref.node.title}{' '}
-                  <ArtifactStatus status={ref.node.status} size="sm" />
-                </>
-              ) : (
-                `${ref.reference}: Unresolved. ${ref.reason}`
-              )}
-            </li>
-          ))}
-        </ul>
-      ) : (
-        <p>None declared.</p>
-      )}
-    </section>
+    <a
+      className="pc-palette__fact-link"
+      href={href}
+      title={node.title}
+      onClick={(event: MouseEvent<HTMLAnchorElement>) => {
+        if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey)
+          return;
+        event.preventDefault();
+        onPreview(node.id);
+      }}
+    >
+      {label}
+    </a>
+  );
+}
+
+function ancestor(detail: StructuralDetailModel, type: string): PlanningModelNode | null {
+  const current = detail.trace.findIndex((entry) => entry.role === 'Current artifact');
+  const before = current < 0 ? [] : detail.trace.slice(0, current);
+  return [...before].reverse().find((entry) => entry.node.type === type)?.node ?? null;
+}
+
+function PlanningFacts({
+  node,
+  detail,
+  onPreview,
+}: Readonly<{
+  node: PlanningModelNode;
+  detail: StructuralDetailModel;
+  onPreview: (id: string) => void;
+}>) {
+  const spec = node.type === 'spec' ? null : ancestor(detail, 'spec');
+  const story = node.type === 'story' ? null : ancestor(detail, 'story');
+  const dependencies = detail.dependencies.flatMap((ref) => (ref.node ? [ref.node] : []));
+  const updated = homeDate(node.frontmatter.updated ?? node.frontmatter.created);
+  const facts: [string, ReactNode][] = [];
+  if (spec) facts.push(['Spec', <PreviewLink key="spec" node={spec} onPreview={onPreview} />]);
+  if (story) facts.push(['Story', <PreviewLink key="story" node={story} onPreview={onPreview} />]);
+  if (dependencies.length)
+    facts.push([
+      'Depends on',
+      dependencies.map((dependency) => (
+        <PreviewLink key={dependency.id} node={dependency} onPreview={onPreview} />
+      )),
+    ]);
+  if (updated) facts.push(['Updated', <span key="updated">{updated}</span>]);
+  if (!facts.length) return null;
+  return (
+    <dl className="pc-palette__facts">
+      {facts.map(([term, value]) => (
+        <div key={term} className="pc-palette__fact">
+          <dt>{term}</dt>
+          <dd data-date={term === 'Updated' || undefined}>{value}</dd>
+        </div>
+      ))}
+    </dl>
   );
 }
 
@@ -55,32 +111,17 @@ function PlanningPreview({
   return (
     <>
       <div className="pc-palette__identity">
-        <WorkItemChip type={node.type} id={node.id} />
-        <ArtifactStatus status={blocked ? 'blocked' : node.status} size="sm" />
-        <PriorityChip
-          priority={
-            typeof node.frontmatter.priority === 'string' ? node.frontmatter.priority : 'none'
-          }
-        />
+        <ArtifactTag type={PREVIEW_TAG[node.type] ?? 'qt'}>{planningDisplayId(node)}</ArtifactTag>
+        <ArtifactStatus status={blocked ? 'blocked' : node.status} size="sm" variant="legend" />
       </div>
       <h3>{node.title}</h3>
-      <StructuralTrace model={detail} onNavigate={(related) => onPreview(related.id)} />
-      <PreviewDependencies detail={detail} />
-      {node.status === 'in-progress' ? (
-        <p>Quiet: unknown. Commit-aware evidence is unavailable in this preview.</p>
-      ) : null}
+      <PlanningFacts node={node} detail={detail} onPreview={onPreview} />
     </>
   );
 }
 
 function DestinationPreview({ hit }: { hit: DashboardSearchHit | null }) {
-  if (!hit || hit.source === 'planning')
-    return (
-      <p>
-        Preview unavailable. Search for an item, view or command, then use the arrow keys to choose
-        a result.
-      </p>
-    );
+  if (!hit || hit.source === 'planning') return null;
   const reason = {
     command: 'Enter copies this command. Nothing is executed.',
     operate: 'Accessible Operate result. Open the full page to inspect its evidence and authority.',
@@ -94,17 +135,61 @@ function DestinationPreview({ hit }: { hit: DashboardSearchHit | null }) {
   );
 }
 
+function PreviewCommand({
+  command,
+  busy,
+  singleLetters,
+  onCopy,
+}: Readonly<{
+  command: string;
+  busy: boolean;
+  singleLetters: boolean;
+  onCopy: (command: string) => void;
+}>) {
+  return (
+    <button
+      type="button"
+      className="pc-palette__command-copy"
+      aria-disabled={busy || undefined}
+      aria-keyshortcuts={singleLetters ? 'C' : undefined}
+      onClick={() => {
+        if (!busy) onCopy(command);
+      }}
+      onKeyDown={(event) => {
+        if (
+          !singleLetters ||
+          event.key.toLowerCase() !== 'c' ||
+          event.metaKey ||
+          event.ctrlKey ||
+          event.altKey ||
+          event.shiftKey ||
+          event.nativeEvent.isComposing
+        )
+          return;
+        event.preventDefault();
+        event.stopPropagation();
+        if (!busy) onCopy(command);
+      }}
+    >
+      <span className="pc-visually-hidden">Copy command </span>
+      <code>{command}</code>
+    </button>
+  );
+}
+
 export function SearchPreview({
   hit,
   sources,
   onPreview,
-  onCopy,
+  onCopyCommand,
+  commandBusy,
   singleLetters,
 }: Readonly<{
   hit: DashboardSearchHit | null;
   sources: DashboardSearchSources;
   onPreview: (id: string) => void;
-  onCopy?: (command: string) => Promise<void>;
+  onCopyCommand: (command: string) => void;
+  commandBusy: boolean;
   singleLetters: boolean;
 }>) {
   const graph = useMemo(
@@ -129,7 +214,6 @@ export function SearchPreview({
       data-preview-id={node?.id ?? hit?.id}
       data-preview-state={ready ? 'ready' : 'unavailable'}
     >
-      <h2>Preview</h2>
       {stale ? <p>Last validated planning snapshot. Reconnect to check for changes.</p> : null}
       {node && detail ? (
         <PlanningPreview node={node} detail={detail} onPreview={onPreview} />
@@ -137,15 +221,13 @@ export function SearchPreview({
         <DestinationPreview hit={hit} />
       )}
       {command ? (
-        <CommandHint
-          key={command}
+        <PreviewCommand
           command={command}
-          label="Next command"
-          onCopy={onCopy}
-          shortcutsEnabled={singleLetters}
+          busy={commandBusy}
+          singleLetters={singleLetters}
+          onCopy={onCopyCommand}
         />
       ) : null}
-      {node && !command ? <p>A copyable command is unavailable for this identity.</p> : null}
     </aside>
   );
 }

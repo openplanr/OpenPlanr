@@ -2682,6 +2682,15 @@ button.pc-work-item:disabled {
   height: 22px;
   border-color: var(--pc-line3);
 }
+.pc-kbd[data-size="sm"] {
+  min-width: 17px;
+  height: 17px;
+  padding: 0 5px;
+  font: 600 11px / 14px var(--pc-font-mono);
+  color: var(--op-muted);
+  border-color: var(--op-line3);
+  border-radius: 5px;
+}
 .pc-button[data-variant="primary"]:hover:not(:disabled) {
   background: color-mix(in srgb, var(--pc-accent) 92%, var(--pc-on-accent) 8%);
 }

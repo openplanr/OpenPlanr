@@ -49,6 +49,7 @@ import {
   detailParityRows,
   homeParityRows,
   listParityRows,
+  paletteParityRows,
   sprintsParityRows,
 } from '../../../../apps/dashboard/tests/helpers/redesign-parity-rows.mjs';
 import { installDashboardLayoutShifts } from '../dashboard/fixtures/dashboard-layout-shifts.js';
@@ -2673,6 +2674,205 @@ test.describe('dashboard real-browser quality', () => {
       }
     }
     expect(writes).toEqual([]);
+  });
+
+  test('matches the command palette to its canvas parity rows in both themes', async ({
+    page,
+  }, testInfo) => {
+    test.setTimeout(120_000);
+    const results: unknown[] = [];
+    const heights: Record<string, number[]> = {};
+    await page.context().grantPermissions(['clipboard-read', 'clipboard-write']);
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await page.addInitScript(() => localStorage.setItem('op-rail-compact:v1', 'true'));
+    const rowsFor = (setup: string) => paletteParityRows.filter((entry) => entry.setup === setup);
+    const settle = () =>
+      page.evaluate(async () => {
+        for (let frame = 0; frame < 2; frame += 1)
+          await new Promise((resolve) => requestAnimationFrame(resolve));
+      });
+    for (const theme of ['dark', 'light'] as const) {
+      await page.setViewportSize({ width: 1440, height: 900 });
+      expect((await page.request.post('/__fixture/reset?dataset=artboard')).ok()).toBe(true);
+      await page.goto(fixtureUrl('#/list', { dataset: 'artboard', theme }));
+      await expect(page.locator('.pc-list')).toBeVisible();
+      await page.evaluate(() => document.fonts.ready);
+      const palette = page.getByRole('dialog', { name: 'Command palette', exact: true });
+      const input = palette.getByRole('searchbox', { name: 'Search views and artifacts' });
+      const panel = palette.locator('.pc-palette__panel');
+
+      await page.keyboard.press('Control+K');
+      await input.fill('SPEC-014/T-046');
+      await expect(palette.locator('[data-search-result]').first()).toHaveAttribute(
+        'data-search-result',
+        'planning:SPEC-014/T-046',
+      );
+      await input.press('Enter');
+      await expect(palette).not.toBeVisible();
+      await page.keyboard.press('Escape');
+      await page.keyboard.press('Control+K');
+      await expect(input).toHaveValue('');
+      await settle();
+      for (const row of rowsFor('palette-open'))
+        results.push(...(await assertParityRow(page, row, theme)));
+      await expect(palette.getByRole('list', { name: 'Recent' })).toContainText('T-046');
+      const opened = (await panel.boundingBox())?.height ?? 0;
+      expect(opened).toBeLessThan(600);
+      await page.screenshot({ path: testInfo.outputPath(`palette-open-1440-${theme}.png`) });
+
+      heights[theme] = [opened];
+      for (const prefix of ['f', 'fi', 'fin', 'find']) {
+        await input.fill(prefix);
+        await settle();
+        heights[theme].push((await panel.boundingBox())?.height ?? 0);
+      }
+      await expect(palette.locator('.pc-palette__match').first()).toBeVisible();
+      for (const row of rowsFor('palette'))
+        results.push(...(await assertParityRow(page, row, theme)));
+      expect((await layoutReport(page)).horizontalOverflow).toBe(false);
+      expect(await axeViolations(page)).toEqual([]);
+      await page.screenshot({ path: testInfo.outputPath(`palette-find-1440-${theme}.png`) });
+
+      const selected = palette.locator('.pc-palette__result[data-selected="true"]');
+      await selected.hover();
+      await settle();
+      const layers = await selected.evaluate((item) => {
+        const fill = getComputedStyle(item, '::before');
+        return {
+          painted: [item, ...item.querySelectorAll(':not(.pc-palette__match)')]
+            .map((node) => getComputedStyle(node).backgroundColor)
+            .filter((color) => color !== 'rgba(0, 0, 0, 0)'),
+          fill: fill.backgroundColor,
+          inset: [fill.top, fill.bottom],
+        };
+      });
+      expect(layers.painted, 'one background on the hovered selected row').toEqual([]);
+      expect(layers.fill).not.toBe('rgba(0, 0, 0, 0)');
+      expect(layers.inset, 'a 2px gap between adjacent highlights').toEqual(['1px', '1px']);
+      await page.screenshot({
+        path: testInfo.outputPath(`palette-hover-selected-1440-${theme}.png`),
+        clip: { x: 240, y: 96, width: 960, height: 400 },
+      });
+
+      const rings: { element: string; ring: string[]; clipped: boolean }[] = [];
+      const ringOf = () =>
+        page.evaluate(async () => {
+          for (let frame = 0; frame < 2; frame += 1)
+            await new Promise((resolve) => requestAnimationFrame(resolve));
+          // Focus also selects the row, which restarts the reduced-motion transition.
+          await new Promise((resolve) => setTimeout(resolve, 50));
+          const focused = document.querySelector<HTMLElement>('dialog.pc-palette :focus-visible');
+          if (!focused) return null;
+          const style = getComputedStyle(focused);
+          const box = focused.getBoundingClientRect();
+          const reach = parseFloat(style.outlineWidth) + parseFloat(style.outlineOffset);
+          let clipped = false;
+          for (let parent = focused.parentElement; parent; parent = parent.parentElement) {
+            const overflow = getComputedStyle(parent);
+            if (![overflow.overflowX, overflow.overflowY].some((value) => value !== 'visible'))
+              continue;
+            const frame = parent.getBoundingClientRect();
+            if (
+              box.left - reach < frame.left - 0.5 ||
+              box.right + reach > frame.right + 0.5 ||
+              box.top - reach < frame.top - 0.5 ||
+              box.bottom + reach > frame.bottom + 0.5
+            )
+              clipped = true;
+            break;
+          }
+          return {
+            element: `${focused.tagName.toLowerCase()}.${focused.className}`,
+            ring: [style.outlineStyle, style.outlineWidth, style.outlineOffset],
+            clipped,
+          };
+        });
+      await input.focus();
+      for (let step = 0; step < 12; step += 1) {
+        await page.keyboard.press('Tab');
+        const ring = await ringOf();
+        if (ring) rings.push(ring);
+      }
+      const results1440 = palette.locator('[data-search-result]');
+      await results1440.first().focus();
+      await page.keyboard.press('Tab');
+      await page.keyboard.press('Shift+Tab');
+      for (let step = 0; step < 40; step += 1) await page.keyboard.press('ArrowDown');
+      await expect(results1440.last()).toBeFocused();
+      const lastRing = await ringOf();
+      if (lastRing) rings.push(lastRing);
+      expect(rings.some((ring) => ring.element.includes('pc-palette__row'))).toBe(true);
+      expect(rings.some((ring) => ring.element.includes('pc-palette__scope'))).toBe(true);
+      for (const { element, ring, clipped } of rings) {
+        expect(ring, `S-20 ${theme} ${element} ${JSON.stringify(rings)}`).toEqual([
+          'solid',
+          '2px',
+          '2px',
+        ]);
+        expect(clipped, `S-20 ${element} clipped`).toBe(false);
+      }
+
+      await input.fill('SPEC-014/T-046');
+      await expect(palette.locator('[data-search-result]').first()).toHaveAttribute(
+        'data-active',
+        'true',
+      );
+      await input.press('End');
+      await input.press('Control+C');
+      const copied = palette.locator('.pc-palette__copy');
+      await expect(copied).toContainText('✓ Copied');
+      const command = await copied.locator('code').textContent();
+      expect(command).toBe('/planr:ship SPEC-014/T-046');
+      expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(command);
+      await page.screenshot({ path: testInfo.outputPath(`palette-copied-1440-${theme}.png`) });
+
+      await input.fill('qzxqzx');
+      await settle();
+      for (const row of rowsFor('palette-empty'))
+        results.push(...(await assertParityRow(page, row, theme)));
+      expect((await panel.boundingBox())?.height ?? 600).toBeLessThan(260);
+      await page.screenshot({ path: testInfo.outputPath(`palette-empty-1440-${theme}.png`) });
+
+      await page.setViewportSize({ width: 1024, height: 768 });
+      await input.fill('find');
+      await settle();
+      expect((await panel.boundingBox())?.width).toBe(960);
+      expect((await layoutReport(page)).horizontalOverflow).toBe(false);
+      await page.screenshot({ path: testInfo.outputPath(`palette-find-1024-${theme}.png`) });
+      await input.fill('');
+      await settle();
+      await page.screenshot({ path: testInfo.outputPath(`palette-open-1024-${theme}.png`) });
+      await page.keyboard.press('Escape');
+      await expect(palette).not.toBeVisible();
+      await page.setViewportSize({ width: 1440, height: 900 });
+      let release: (() => void) | undefined;
+      const held = new Promise<void>((resolve) => {
+        release = resolve;
+      });
+      await page.route('**/api/operate/search**', async (route) => {
+        await held;
+        await route.continue();
+      });
+      await page.goto(fixtureUrl('#/operate/today', { dataset: 'artboard', theme }));
+      await expect(page.locator('[data-route-kind="operate.today"]')).toBeVisible();
+      await page.keyboard.press('Control+K');
+      await input.fill('handoff');
+      const busy = palette.locator('.pc-palette__group[aria-busy="true"]');
+      await expect(busy).toBeVisible();
+      for (const row of rowsFor('palette-operate'))
+        results.push(...(await assertParityRow(page, row, theme)));
+      const before = await palette.locator('[data-search-result]').first().boundingBox();
+      release?.();
+      await expect(busy).toHaveCount(0);
+      const after = await palette.locator('[data-search-result]').first().boundingBox();
+      expect(after?.y, 'P-14 planning rows stay put').toBe(before?.y);
+      await page.unroute('**/api/operate/search**');
+      await page.keyboard.press('Escape');
+      await expect(palette).not.toBeVisible();
+    }
+    const parity = testInfo.outputPath('palette-parity.json');
+    writeFileSync(parity, JSON.stringify({ results, heights }, null, 2));
+    await testInfo.attach('palette-parity.json', { path: parity, contentType: 'application/json' });
   });
 
   test('starts the handoff trace through palette search and promotes only on full-page activation', async ({

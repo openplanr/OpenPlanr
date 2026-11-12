@@ -176,7 +176,7 @@ describe('Full Search reference interactions', () => {
     const view = render(
       <SearchWorkspace initialQuery="@task" sources={{ planningNodes: oldNodes }} />,
     );
-    const results = screen.getByRole('list', { name: 'Nodes' });
+    const results = screen.getByRole('list', { name: 'Items' });
     const selected = within(results).getByRole('button', {
       name: /Findings contract, consent and filing guidance/,
     });
@@ -206,10 +206,10 @@ describe('Full Search reference interactions', () => {
     expect(selected.getAttribute('data-search-result')).toBe(`planning:${selectedId}`);
     expect(scroller.scrollTop).toBe(120);
     expect(
-      screen.getByRole('list', { name: 'Nodes' }).querySelectorAll('button[data-search-result]'),
+      screen.getByRole('list', { name: 'Items' }).querySelectorAll('button[data-search-result]'),
     ).toHaveLength(4);
     expect(
-      within(screen.getByRole('list', { name: 'Nodes' })).getAllByRole('button', {
+      within(screen.getByRole('list', { name: 'Items' })).getAllByRole('button', {
         name: /^Copy command for /u,
       }),
     ).toHaveLength(4);

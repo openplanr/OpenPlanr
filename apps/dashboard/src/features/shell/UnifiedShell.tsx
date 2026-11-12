@@ -386,6 +386,8 @@ export function UnifiedShell({
         onCopy={adapters?.copy}
         onClose={search.close}
         sources={search.sources}
+        recentItems={adapters?.recentItems}
+        projectId={binding?.projectId ?? null}
         operateBindings={operateSearchBindings}
         preferredOperateCycleId={route.product === 'operate' ? binding?.cycleId : null}
         connectionState={connection.state}

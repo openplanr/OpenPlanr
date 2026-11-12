@@ -117,7 +117,7 @@ describe('command palette and callable search UI', () => {
         onSelect={() => undefined}
       />,
     );
-    expect(html).toContain('Nodes');
+    expect(html).toContain('Items');
     expect(html).toContain('Callable search');
     expect(html).toContain('Unavailable destinations');
     expect(html).toContain('aria-disabled="true"');
@@ -187,7 +187,7 @@ describe('command palette and callable search UI', () => {
     ).toEqual([]);
   });
 
-  it('switches type chips without losing the search term or opening the selected result', () => {
+  it('filters shown groups by scope without changing the query or opening the selected result', () => {
     const onClose = vi.fn();
     const onNavigate = vi.fn();
     const subject = render(
@@ -210,32 +210,34 @@ describe('command palette and callable search UI', () => {
         }}
       />,
     );
-    const filters = screen.getByRole('group', { name: 'Filter search results' });
-    expect(filters.closest('.pc-palette__input-row')).toBeTruthy();
+    const scopes = screen.getByRole('group', { name: 'Result scope' });
     const input = screen.getByRole<HTMLInputElement>('searchbox');
-    expect(within(filters).getByRole('button', { name: 'All' }).getAttribute('aria-pressed')).toBe(
-      'true',
-    );
-    fireEvent.click(within(filters).getByRole('button', { name: 'BL' }));
-    expect(input.value).toBe('@backlog Unified');
+    const scope = (name: string) =>
+      within(scopes).getByRole('button', { name: new RegExp(`^${name} \\d+$`, 'u') });
+    expect(scope('All').getAttribute('aria-pressed')).toBe('true');
+    expect(scope('Items').textContent).toBe('Items2');
+    fireEvent.click(scope('Items'));
+    expect(input.value).toBe('Unified');
     expect(document.activeElement).toBe(input);
+    expect(scope('Items').getAttribute('aria-pressed')).toBe('true');
+    expect(subject.container.querySelectorAll('[data-canonical-id]')).toHaveLength(2);
+    expect(screen.queryByRole('heading', { name: 'Views' })).toBeNull();
+    fireEvent.click(scope('Views'));
+    expect(subject.container.querySelectorAll('[data-canonical-id]')).toHaveLength(0);
+    expect(screen.getByRole('heading', { name: 'Views' })).toBeTruthy();
+    fireEvent.click(scope('All'));
+    expect(subject.container.querySelectorAll('[data-canonical-id]')).toHaveLength(2);
+    expect(screen.getByRole('heading', { name: 'Views' })).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'Commands' })).toBeTruthy();
+    fireEvent.change(input, { target: { value: '@backlog Unified' } });
     expect(subject.container.querySelectorAll('[data-search-result]')).toHaveLength(1);
     expect(
       subject.container.querySelector('[data-search-result]')?.getAttribute('data-canonical-id'),
     ).toBe('BL-001');
-    expect(within(filters).getByRole('button', { name: 'BL' }).getAttribute('aria-pressed')).toBe(
-      'true',
-    );
-    fireEvent.click(within(filters).getByRole('button', { name: 'SPEC' }));
-    expect(input.value).toBe('@spec Unified');
+    fireEvent.change(input, { target: { value: '@spec Unified' } });
     expect(
       subject.container.querySelector('[data-search-result]')?.getAttribute('data-canonical-id'),
     ).toBe('SPEC-020');
-    fireEvent.click(within(filters).getByRole('button', { name: 'All' }));
-    expect(input.value).toBe('Unified');
-    expect(subject.container.querySelectorAll('[data-canonical-id]')).toHaveLength(2);
-    expect(screen.getByRole('heading', { name: 'Views' })).toBeTruthy();
-    expect(screen.getByRole('heading', { name: 'Commands' })).toBeTruthy();
     expect(onClose).not.toHaveBeenCalled();
     expect(onNavigate).not.toHaveBeenCalled();
   });
@@ -515,7 +517,9 @@ describe('command palette and callable search UI', () => {
     const result = screen.getByRole('button', { name: /Callable search/u });
     act(() => result.focus());
     fireEvent.keyDown(result, { key: 'c' });
-    await waitFor(() => expect(screen.getByRole('status').textContent).toContain('ID copied.'));
+    await waitFor(() =>
+      expect(screen.getByRole('status').textContent).toBe('✓ CopiedSPEC-020/US-013'),
+    );
     expect(onCopy).toHaveBeenCalledExactlyOnceWith(planningNodes[1].id);
     expect(screen.getByRole('status').textContent).not.toContain('Command copied.');
     expect(onClose).not.toHaveBeenCalled();
@@ -644,7 +648,7 @@ describe('command palette and callable search UI', () => {
     await act(async () => {
       finish?.();
     });
-    expect(screen.getByRole('status').textContent).toContain('Command copied.');
+    expect(screen.getByRole('status').textContent).toBe('✓ Copied/planr:sprint');
     expect(onNavigate).not.toHaveBeenCalled();
     expect(onClose).not.toHaveBeenCalled();
   });
@@ -746,12 +750,10 @@ describe('command palette and callable search UI', () => {
     const preview = screen.getByRole('complementary', { name: 'Search result preview' });
     expect(preview.getAttribute('data-preview-id')).toBe('SPEC-014/T-046');
     expect(preview.textContent).toContain('/planr:ship SPEC-014/T-046');
-    expect(within(preview).getByRole('region', { name: 'Structural trace' }).textContent).toContain(
-      'SPEC-014',
-    );
-    expect(
-      within(preview).getByRole('region', { name: 'Preview dependencies' }).textContent,
-    ).toContain('T-045');
+    const facts = preview.querySelector<HTMLElement>('dl');
+    if (!facts) throw new Error('Preview facts missing');
+    expect(within(facts).getByRole('link', { name: 'SPEC-014' })).toBeTruthy();
+    expect(within(facts).getByRole('link', { name: 'T-045' })).toBeTruthy();
     const first = document.querySelector('[data-search-result]');
     expect(first?.getAttribute('data-search-result')).toBe('planning:SPEC-014/T-046');
     expect(onNavigate).not.toHaveBeenCalled();
@@ -769,7 +771,7 @@ describe('command palette and callable search UI', () => {
     expect(queryDashboardSearchIndex(index, 'spec-020')[0].id).toBe('planning:SPEC-020');
   });
 
-  it('changes the preview with arrows and trace links while retaining the route', () => {
+  it('changes the preview with arrows and fact links while retaining the route', () => {
     const onNavigate = vi.fn();
     render(
       <CommandPalette
@@ -777,15 +779,15 @@ describe('command palette and callable search UI', () => {
         onClose={() => undefined}
         onNavigate={onNavigate}
         sources={sources}
-        initialQuery="@spec"
+        initialQuery="Callable"
       />,
     );
     const preview = screen.getByRole('complementary', { name: 'Search result preview' });
     const query = screen.getByRole('searchbox');
-    expect(preview.getAttribute('data-preview-id')).toBe('SPEC-020');
-    fireEvent.click(within(preview).getByRole('link', { name: /US-013/u }));
     expect(preview.getAttribute('data-preview-id')).toBe('SPEC-020/US-013');
-    expect((query as HTMLInputElement).value).toBe('SPEC-020/US-013');
+    fireEvent.click(within(preview).getByRole('link', { name: /SPEC-020/u }));
+    expect(preview.getAttribute('data-preview-id')).toBe('SPEC-020');
+    expect((query as HTMLInputElement).value).toBe('SPEC-020');
     fireEvent.change(query, { target: { value: '@view' } });
     fireEvent.keyDown(query, { key: 'ArrowDown' });
     fireEvent.keyDown(query, { key: 'ArrowDown' });
@@ -868,7 +870,7 @@ describe('command palette and callable search UI', () => {
     );
   });
 
-  it('copies the selected ID from trace focus while leaving editable fields alone', async () => {
+  it('copies the selected ID from fact link focus while leaving editable fields alone', async () => {
     const onCopy = vi.fn(async () => undefined);
     render(
       <CommandPalette
@@ -880,7 +882,7 @@ describe('command palette and callable search UI', () => {
       />,
     );
     const preview = screen.getByRole('complementary', { name: 'Search result preview' });
-    const traceLink = within(preview).getByRole('link', { name: /US-013/u });
+    const traceLink = within(preview).getByRole('link', { name: /SPEC-020/u });
     act(() => traceLink.focus());
     fireEvent.keyDown(traceLink, { key: 'c' });
     await waitFor(() => expect(onCopy).toHaveBeenCalledExactlyOnceWith('SPEC-020/US-013'));
@@ -960,7 +962,7 @@ describe('command palette and callable search UI', () => {
     expect(subject.container.textContent).not.toContain('SPEC-020/US-013');
   });
 
-  it('keeps unavailable, empty and offline previews truthful and exposes full Search', () => {
+  it('keeps empty and offline previews truthful and reaches full Search from Views', () => {
     const onNavigate = vi.fn();
     const subject = render(
       <CommandPalette
@@ -974,12 +976,13 @@ describe('command palette and callable search UI', () => {
     const preview = screen.getByRole('complementary', { name: 'Search result preview' });
     expect(preview.textContent).toContain('Last validated planning snapshot');
     fireEvent.change(screen.getByRole('searchbox'), { target: { value: 'zzzzzzzzz' } });
-    expect(preview.getAttribute('data-preview-state')).toBe('unavailable');
-    expect(preview.textContent).toContain('Preview unavailable');
+    expect(screen.queryByRole('complementary', { name: 'Search result preview' })).toBeNull();
+    expect(screen.getByRole('status').textContent).toContain('Nothing matches “zzzzzzzzz”');
     fireEvent.change(screen.getByRole('searchbox'), { target: { value: 'Unsupported' } });
-    expect(preview.textContent).not.toContain('/planr:ship');
+    expect(subject.container.textContent).not.toContain('/planr:ship');
     expect(subject.container.textContent).not.toContain(PRIVATE_MARKER);
-    fireEvent.click(screen.getByRole('button', { name: 'Full Search' }));
+    fireEvent.change(screen.getByRole('searchbox'), { target: { value: '@view search' } });
+    fireEvent.click(screen.getByRole('button', { name: /^Search View$/u }));
     expect(onNavigate).toHaveBeenCalledExactlyOnceWith('#/search');
   });
 
@@ -1010,7 +1013,7 @@ describe('command palette and callable search UI', () => {
   });
 });
 
-it('copies the focused palette action once while pending and honors disabled single-letter shortcuts', async () => {
+it('copies the focused palette command once while pending and honors disabled single-letter shortcuts', async () => {
   let finish: (() => void) | undefined;
   const onCopy = vi.fn(
     () =>
@@ -1021,17 +1024,16 @@ it('copies the focused palette action once while pending and honors disabled sin
   const subject = render(
     <CommandPalette open onClose={() => undefined} onCopy={onCopy} initialQuery="@command" />,
   );
-  const actions = [
-    ...subject.container.querySelectorAll<HTMLButtonElement>('.pc-artifact-row__action'),
-  ];
-  expect(actions.length).toBeGreaterThan(1);
-  const last = screen.getByRole('button', { name: 'Copy command for command:sprint' });
+  expect(subject.container.querySelectorAll('.pc-artifact-row__action')).toHaveLength(0);
+  const rows = [...subject.container.querySelectorAll<HTMLButtonElement>('[data-copy-command]')];
+  expect(rows.length).toBeGreaterThan(1);
+  const last = screen.getByRole('button', { name: /Plan a sprint/u });
   act(() => last.focus());
   fireEvent.keyDown(last, { key: 'c' });
   expect(onCopy).toHaveBeenCalledExactlyOnceWith('/planr:sprint');
-  expect(last.getAttribute('aria-disabled')).toBe('true');
+  expect(last.hasAttribute('disabled')).toBe(true);
   fireEvent.keyDown(last, { key: 'c' });
-  fireEvent.click(actions[0]);
+  fireEvent.click(rows[0]);
   expect(onCopy).toHaveBeenCalledTimes(1);
   await act(async () => {
     finish?.();
@@ -1045,7 +1047,12 @@ it('copies the focused palette action once while pending and honors disabled sin
       initialQuery="@command"
     />,
   );
-  expect(last.getAttribute('aria-keyshortcuts')).toBeNull();
+  const preview = screen.getByRole('complementary', { name: 'Search result preview' });
+  expect(
+    within(preview)
+      .getByRole('button', { name: /^Copy command /u })
+      .getAttribute('aria-keyshortcuts'),
+  ).toBeNull();
   fireEvent.keyDown(last, { key: 'c' });
   expect(onCopy).toHaveBeenCalledTimes(1);
 });
@@ -1087,7 +1094,12 @@ it.each(['palette', 'workspace'] as const)(
         <SearchWorkspace sources={sources} onCopy={onCopy} initialQuery="Callable" />
       ),
     );
-    const action = screen.getByRole('button', { name: 'Copy command for SPEC-020/US-013' });
+    const action = screen.getByRole('button', {
+      name:
+        surface === 'palette'
+          ? 'Copy command openplanr status SPEC-020/US-013 --md'
+          : 'Copy command for SPEC-020/US-013',
+    });
     act(() => action.focus());
     fireEvent.keyDown(action, { key: 'c' });
     expect(onCopy).toHaveBeenCalledExactlyOnceWith('openplanr status SPEC-020/US-013 --md');
@@ -1099,7 +1111,9 @@ it.each(['palette', 'workspace'] as const)(
     await act(async () => {
       finish?.();
     });
-    expect(subject.container.textContent).toContain('Command copied.');
+    expect(subject.container.textContent).toContain(
+      surface === 'palette' ? '✓ Copied' : 'Command copied.',
+    );
   },
 );
 
@@ -1157,8 +1171,12 @@ it.each(['palette', 'workspace'] as const)(
     const result = subject.container.querySelector<HTMLButtonElement>('[data-search-result]');
     expect(result?.dataset.canonicalId).toBe(canonicalId);
     expect(result?.dataset.searchResult).toBe(`planning:${canonicalId}`);
-    expect(result?.querySelector('.pc-artifact-tag')?.textContent).toBe('BL-431');
-    expect(result?.querySelector('.pc-artifact-row__title')?.textContent).toBe(title);
+    const [idSelector, titleSelector] =
+      surface === 'palette'
+        ? ['.pc-palette__id', '.pc-palette__title']
+        : ['.pc-artifact-tag', '.pc-artifact-row__title'];
+    expect(result?.querySelector(idSelector)?.textContent).toBe('BL-431');
+    expect(result?.querySelector(titleSelector)?.textContent).toBe(title);
     expect(result?.closest('ol')?.style.getPropertyValue('--id-col')).not.toContain(
       `${canonicalId.length}ch`,
     );

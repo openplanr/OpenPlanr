@@ -350,6 +350,52 @@ export function queryDashboardSearchIndex(
   return Object.freeze(distinct.filter((hit) => selected.has(hit)));
 }
 
+const GO_TO_KINDS = Object.freeze([
+  'planning.overview',
+  'planning.list',
+  'planning.graph',
+  'planning.board',
+  'planning.sprints',
+  'planning.activity',
+  'planning.search',
+]);
+
+export type DashboardOpeningHits = Readonly<{
+  recent: readonly DashboardSearchPlanningHit[];
+  goTo: readonly DashboardSearchDestinationHit[];
+}>;
+
+/** Hits shown before typing: recent items still in the graph, then the Plan views in rail order. */
+export function openingDashboardSearchHits(
+  index: DashboardSearchIndex,
+  recentIds: readonly string[],
+): DashboardOpeningHits {
+  const byId = new Map(index.planningNodes.map((node) => [node.id, node]));
+  const recent: DashboardSearchPlanningHit[] = [];
+  for (const id of recentIds) {
+    const node = byId.get(id);
+    if (!node || planningRouteSubjectId(node) === null) continue;
+    recent.push(
+      Object.freeze({
+        id: `planning:${node.id}`,
+        title: node.title,
+        href: planningDetailHref(node),
+        source: 'planning',
+        kind: node.type,
+        status: node.status,
+      }),
+    );
+  }
+  const goTo = GO_TO_KINDS.map((kind) => index.routes.find((route) => route.kind === kind))
+    .map((route) =>
+      route
+        ? canonicalHit(`route:${route.kind}`, route.title, route.href, 'route', route.kind)
+        : null,
+    )
+    .filter((hit): hit is DashboardSearchDestinationHit => hit !== null);
+  return Object.freeze({ recent: Object.freeze(recent), goTo: Object.freeze(goTo) });
+}
+
 /** Malformed graph identities remain visible without an interactive destination. */
 export function queryUnsupportedPlanningIdentities(
   index: DashboardSearchIndex,
