@@ -1,4 +1,12 @@
-import { type RefObject, useCallback, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import {
+  type RefObject,
+  useCallback,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from 'react';
 import type { PlanningModelNode } from './planning-model.js';
 
 export function useListKeyboardWindow({
@@ -201,6 +209,36 @@ export function useListScrollAnchor(
   }, [root, presentationKey, revision]);
 }
 
+export type ListLayout = 'desktop' | 'tablet' | 'phone';
+
+const TABLET_QUERY = '(max-width: 1199px)';
+const PHONE_QUERY = '(max-width: 599px)';
+
+function listLayout(): ListLayout {
+  if (window.matchMedia?.(PHONE_QUERY).matches) return 'phone';
+  return window.matchMedia?.(TABLET_QUERY).matches ? 'tablet' : 'desktop';
+}
+
+function subscribeListLayout(onChange: () => void) {
+  const queries = [TABLET_QUERY, PHONE_QUERY].map((query) => window.matchMedia?.(query));
+  for (const query of queries) query?.addEventListener?.('change', onChange);
+  return () => {
+    for (const query of queries) query?.removeEventListener?.('change', onChange);
+  };
+}
+
+/** Desktop from 1200px, tablet from 600px, phone below. */
+export function useListLayout(): ListLayout {
+  return useSyncExternalStore(subscribeListLayout, listLayout, () => 'desktop');
+}
+
+/** Fixed pitches the row window estimates with; rows and groups render at these heights. */
+const LIST_PITCH: Readonly<Record<ListLayout, { row: number; group: number; head: number }>> = {
+  desktop: { row: 44, group: 44, head: 36 },
+  tablet: { row: 53, group: 49, head: 0 },
+  phone: { row: 84, group: 46, head: 0 },
+};
+
 export function useListRowViewport({
   root,
   groups,
@@ -210,6 +248,7 @@ export function useListRowViewport({
   collapsedGroups,
   selectedId,
   scope,
+  layout = 'desktop',
 }: {
   root: RefObject<HTMLDivElement | null>;
   groups: readonly { key: string; nodes: readonly PlanningModelNode[] }[];
@@ -220,21 +259,23 @@ export function useListRowViewport({
   collapsedGroups: readonly string[];
   selectedId?: string;
   scope: string;
+  layout?: ListLayout;
 }) {
   const [viewport, setViewport] = useState({ scope, top: 0, height: 560, origin: 0 });
   const previousScope = useRef(scope);
   const [target, setTarget] = useState<number | null>(null);
-  const rowHeight = 44;
+  const pitch = LIST_PITCH[layout];
+  const rowHeight = pitch.row;
   const geometry = useMemo(() => {
-    let top = 36;
+    let top = pitch.head;
     return groups.map((group) => {
-      const header = grouped ? 44 : 0;
+      const header = grouped ? pitch.group : 0;
       const collapsed = collapsedGroups.includes(group.key);
       const value = { key: group.key, top, body: top + header, nodes: group.nodes, collapsed };
-      top += header + (collapsed ? 0 : group.nodes.length * rowHeight);
+      top += header + (collapsed ? 0 : group.nodes.length * pitch.row);
       return value;
     });
-  }, [groups, grouped, collapsedGroups]);
+  }, [groups, grouped, collapsedGroups, pitch]);
   const savedTop = viewport.scope === scope ? viewport.top : -viewport.origin;
   let top = savedTop;
   if (target !== null && target >= pageStart) {
@@ -244,7 +285,7 @@ export function useListRowViewport({
       );
       if (index < 0) continue;
       const offset = group.body + index * rowHeight;
-      if (offset < top + 36) top = Math.max(0, offset - 36);
+      if (offset < top + pitch.head) top = Math.max(0, offset - pitch.head);
       else if (offset + rowHeight > top + viewport.height)
         top = offset + rowHeight - viewport.height;
       break;

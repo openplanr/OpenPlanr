@@ -206,3 +206,15 @@ export const LIST_COLUMNS: readonly Column[] = [
     },
   },
 ];
+
+const NARROW_WIDTHS: Readonly<Record<string, number | undefined>> = {
+  id: 80,
+  title: undefined,
+  status: 120,
+  updated: 64,
+};
+
+/** Tablet and phone columns: ID, title, status and updated, without sorting. */
+export const LIST_NARROW_COLUMNS: readonly Column[] = LIST_COLUMNS.filter(
+  (column) => column.key in NARROW_WIDTHS,
+).map((column) => ({ ...column, width: NARROW_WIDTHS[column.key], sortable: false }));

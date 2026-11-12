@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import {
   ARTIFACT_STATUS_ORDER,
   ArtifactStatus,
@@ -9,14 +10,17 @@ import {
   Tabs,
 } from '../../design-system/components/index.js';
 import type { PlanningView } from '../../lib/routing/planning-view-codec.js';
+import { ClearableChip, ListFiltersSheet } from './ListFiltersSheet.js';
 import { LIST_PRESETS, listPreset } from './planning-list-filter.js';
 import {
   type ListClearableFilter,
   type ListValueFilter,
   listChipLabel,
   listClearableChips,
+  listFilterButtonCount,
   listFilterValueLabel,
 } from './planning-list-view.js';
+import type { ListLayout } from './planning-list-window.js';
 import { planningArtifactTypeLabel } from './planning-model.js';
 import './planning.css';
 import './list.css';
@@ -28,29 +32,70 @@ const GROUPS = ['none', 'spec', 'type', 'status', 'label'] as const;
 
 type Filters = PlanningView['filters'];
 
-/** Title, count and preset tabs. */
+const PRESETS = LIST_PRESETS.slice(0, 5);
+
+function activePreset(view: PlanningView): string {
+  return (
+    PRESETS.find(([key]) => {
+      const preset = listPreset(key);
+      return (
+        JSON.stringify(view.filters) === JSON.stringify(preset.filters) &&
+        view.groupBy === preset.groupBy
+      );
+    })?.[0] ?? ''
+  );
+}
+
+function PresetTabs({
+  view,
+  counts,
+  onPreset,
+}: {
+  view: PlanningView;
+  counts: ReadonlyMap<string, number> | undefined;
+  onPreset: (view: PlanningView) => void;
+}) {
+  return (
+    <div className="pc-list__presets">
+      <Tabs
+        label="List presets"
+        variant="pill"
+        value={activePreset(view)}
+        tabs={PRESETS.map(([id, label]) => ({ id, label, count: counts?.get(id) }))}
+        onChange={(id) => {
+          const preset = PRESETS.find(([key]) => key === id);
+          if (preset) onPreset({ ...listPreset(preset[0]), density: view.density });
+        }}
+      />
+    </div>
+  );
+}
+
+/** Title, count and preset tabs; below 1200px the top bar carries the title. */
 export function ListTitle({
   shown,
   total,
   view,
   counts,
+  layout = 'desktop',
   onPreset,
 }: {
   shown: number;
   total: number;
   view: PlanningView;
   counts: ReadonlyMap<string, number> | undefined;
+  layout?: ListLayout;
   onPreset: (view: PlanningView) => void;
 }) {
-  const presets = LIST_PRESETS.slice(0, 5);
-  const active =
-    presets.find(([key]) => {
-      const preset = listPreset(key);
-      return (
-        JSON.stringify(view.filters) === JSON.stringify(preset.filters) &&
-        view.groupBy === preset.groupBy
-      );
-    })?.[0] ?? '';
+  if (layout !== 'desktop')
+    return (
+      <div className="pc-visually-hidden">
+        <h1>List</h1>
+        <span>
+          {shown} of {total}
+        </span>
+      </div>
+    );
   return (
     <div className="pc-list__head">
       <span className="pc-list__title-heading">
@@ -60,18 +105,7 @@ export function ListTitle({
         </span>
       </span>
       <span className="pc-list__divider" aria-hidden="true" />
-      <div className="pc-list__presets">
-        <Tabs
-          label="List presets"
-          variant="pill"
-          value={active}
-          tabs={presets.map(([id, label]) => ({ id, label, count: counts?.get(id) }))}
-          onChange={(id) => {
-            const preset = presets.find(([key]) => key === id);
-            if (preset) onPreset({ ...listPreset(preset[0]), density: view.density });
-          }}
-        />
-      </div>
+      <PresetTabs view={view} counts={counts} onPreset={onPreset} />
     </div>
   );
 }
@@ -100,28 +134,18 @@ function valueOptions(field: ListValueFilter, labels: readonly string[]) {
   }));
 }
 
-/** Search, filter chips, density and the filter link, on one row. */
-export function ListToolbar({
-  filters,
-  groupBy,
-  labels,
-  compact,
-  sharePending,
-  dateNote,
-  onQuery,
-  onFilters,
-  onGroupBy,
-  onClear,
-  onClearChip,
-  onDensity,
-  onShare,
-}: {
+type ToolbarProps = {
   filters: Filters;
   groupBy: PlanningView['groupBy'];
   labels: readonly string[];
   compact: boolean;
   sharePending: boolean;
   dateNote: string;
+  layout?: ListLayout;
+  view: PlanningView;
+  counts: ReadonlyMap<string, number> | undefined;
+  shown: number;
+  onPreset: (view: PlanningView) => void;
   onQuery: (query: string) => void;
   onFilters: (filters: Partial<Filters>) => void;
   onGroupBy: (groupBy: PlanningView['groupBy']) => void;
@@ -129,7 +153,104 @@ export function ListToolbar({
   onClearChip: (field: ListClearableFilter) => void;
   onDensity: (compact: boolean) => void;
   onShare: () => void;
-}) {
+};
+
+const SHEET_FIELDS = [
+  ['status', 'Status'],
+  ['type', 'Type'],
+  ['priority', 'Priority'],
+  ['label', 'Label'],
+] as const;
+
+/** Tablet and phone: search, a Filters button that opens the sheet, and the presets. */
+function NarrowToolbar({
+  filters,
+  groupBy,
+  labels,
+  dateNote,
+  layout,
+  view,
+  counts,
+  shown,
+  onPreset,
+  onQuery,
+  onFilters,
+  onGroupBy,
+  onClear,
+  onClearChip,
+}: ToolbarProps) {
+  const [open, setOpen] = useState(false);
+  const count = listFilterButtonCount(filters);
+  const active = activePreset(view);
+  return (
+    <>
+      <div className="pc-list__toolbar" data-layout={layout}>
+        <Input
+          icon="search"
+          placeholder="Filter by id or title"
+          ariaLabel="Filter by id or title"
+          value={filters.query}
+          onChange={(value) => onQuery(value.slice(0, 200))}
+        />
+        <ListFiltersSheet
+          trigger={
+            <button type="button" className="pc-list__filters" data-active={count > 0 || undefined}>
+              {layout === 'phone' ? <PcIcon name="filter" size={14} /> : null}
+              {count ? `Filters ${count}` : 'Filters'}
+            </button>
+          }
+          open={open}
+          onOpenChange={setOpen}
+          filters={filters}
+          groupBy={groupBy}
+          sections={SHEET_FIELDS.filter(([field]) => field !== 'label' || labels.length).map(
+            ([field, legend]) => ({ field, legend, options: valueOptions(field, labels) }),
+          )}
+          clearable={listClearableChips(filters)}
+          dateNote={dateNote}
+          shown={shown}
+          onFilters={onFilters}
+          onGroupBy={onGroupBy}
+          onClear={onClear}
+          onClearChip={onClearChip}
+        />
+        {layout === 'tablet' ? (
+          <Select
+            ariaLabel="Preset"
+            triggerLabel={PRESETS.find(([key]) => key === active)?.[1] ?? 'Presets'}
+            value={active}
+            onChange={(id) => {
+              const preset = PRESETS.find(([key]) => key === id);
+              if (preset) onPreset({ ...listPreset(preset[0]), density: view.density });
+            }}
+            options={PRESETS.map(([value, label]) => ({ value, label }))}
+          />
+        ) : null}
+      </div>
+      {layout === 'phone' ? <PresetTabs view={view} counts={counts} onPreset={onPreset} /> : null}
+    </>
+  );
+}
+
+/** Search, filter chips, density and the filter link, on one row. */
+export function ListToolbar(props: ToolbarProps) {
+  const {
+    filters,
+    groupBy,
+    labels,
+    compact,
+    sharePending,
+    dateNote,
+    layout = 'desktop',
+    onFilters,
+    onGroupBy,
+    onClear,
+    onClearChip,
+    onDensity,
+    onShare,
+    onQuery,
+  } = props;
+  if (layout !== 'desktop') return <NarrowToolbar {...props} layout={layout} />;
   return (
     <div className="pc-list__toolbar">
       <Input
@@ -197,31 +318,5 @@ export function ListToolbar({
       </div>
       <IconButton icon="link" label="Copy filter link" disabled={sharePending} onClick={onShare} />
     </div>
-  );
-}
-
-function ClearableChip({
-  field,
-  label,
-  note,
-  onClear,
-}: {
-  field: ListClearableFilter;
-  label: string;
-  note: string;
-  onClear: (field: ListClearableFilter) => void;
-}) {
-  return (
-    <button
-      type="button"
-      className="pc-chip pc-list__clearable"
-      data-active="true"
-      title={note || undefined}
-      aria-label={`Clear filter ${label}`}
-      onClick={() => onClear(field)}
-    >
-      <span className="pc-chip__label">{label}</span>
-      <PcIcon name="x" size={12} />
-    </button>
   );
 }

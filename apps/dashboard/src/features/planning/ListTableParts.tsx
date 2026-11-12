@@ -1,6 +1,6 @@
-import { useEffect, useRef } from 'react';
+import { type FocusEvent, type KeyboardEvent, type MouseEvent, useEffect, useRef } from 'react';
 import { Button, PcIcon } from '../../design-system/components/index.js';
-import { planningDisplayId } from './planning-model.js';
+import { type PlanningModelNode, planningDetailHref, planningDisplayId } from './planning-model.js';
 
 /** Drawn 16px checkbox with a visually hidden name. */
 export function ListCheckbox({
@@ -35,13 +35,81 @@ export function ListCheckbox({
   );
 }
 
-/** Group row: chevron, spec ID and title, and task progress for spec groups. */
+type GroupRow = Readonly<{
+  node: PlanningModelNode;
+  checked: boolean;
+  inspected: boolean;
+  onInspect: (node: PlanningModelNode, open?: boolean) => void;
+  onSelect: (node: PlanningModelNode) => void;
+}>;
+
+function modified(event: {
+  metaKey: boolean;
+  ctrlKey: boolean;
+  altKey: boolean;
+  shiftKey: boolean;
+}) {
+  return event.metaKey || event.ctrlKey || event.altKey || event.shiftKey;
+}
+
+/** Props that make a spec-led group header behave as that spec's row. */
+function rowProps(row: GroupRow | undefined) {
+  if (!row) return {};
+  const { node, checked, inspected, onInspect, onSelect } = row;
+  return {
+    tabIndex: 0,
+    'data-keyboard-item': node.id,
+    'data-spec-row': 'true',
+    'aria-selected': checked,
+    'data-selected': inspected || undefined,
+    onFocus: (event: FocusEvent<HTMLDivElement>) => {
+      if (event.target === event.currentTarget) onInspect(node, false);
+    },
+    onClick: (event: MouseEvent<HTMLDivElement>) => {
+      if (modified(event) || (event.target instanceof Element && event.target.closest('a, button')))
+        return;
+      event.currentTarget.focus({ preventScroll: true });
+      onInspect(node);
+    },
+    onKeyDown: (event: KeyboardEvent<HTMLDivElement>) => {
+      if (event.target !== event.currentTarget) return;
+      if (event.key === ' ') {
+        event.preventDefault();
+        onSelect(node);
+      } else if (event.key === 'Enter') {
+        event.preventDefault();
+        onInspect(node);
+      }
+    },
+  };
+}
+
+function GroupId({ groupKey, row }: { groupKey: string; row: GroupRow | undefined }) {
+  if (!row) return <span className="pc-list__group-id">{planningDisplayId(groupKey)}</span>;
+  return (
+    <a
+      className="pc-list__group-id"
+      href={planningDetailHref(row.node) ?? undefined}
+      onClick={(event) => {
+        if (modified(event)) return;
+        event.preventDefault();
+        row.onInspect(row.node);
+      }}
+    >
+      {planningDisplayId(groupKey)}
+    </a>
+  );
+}
+
+/** Group row: chevron, spec ID and title, and task progress; a spec-led group is the spec's row. */
 export function ListGroupHeader({
   groupKey,
   label,
   specTitle,
   collapsed,
   progress,
+  narrow = false,
+  row,
   onToggle,
 }: {
   groupKey: string;
@@ -49,10 +117,52 @@ export function ListGroupHeader({
   specTitle: string | undefined;
   collapsed: boolean;
   progress: Readonly<{ done: number; total: number }> | undefined;
+  narrow?: boolean;
+  row?: GroupRow;
   onToggle: () => void;
 }) {
+  const id = specTitle !== undefined ? <GroupId groupKey={groupKey} row={row} /> : null;
+  const title = <span className="pc-list__group-title">{specTitle ?? label}</span>;
+  const unit = progress?.total === 1 ? 'task' : 'tasks';
+  const count = progress ? (
+    <span className="pc-list__group-progress-count">
+      {progress.done}/{progress.total}
+      <span className="pc-visually-hidden"> {unit}</span>
+    </span>
+  ) : null;
+  if (narrow && row)
+    return (
+      <div className="pc-list__group-header" data-narrow="true" {...rowProps(row)}>
+        {id}
+        {title}
+        {count}
+        <Button
+          size="sm"
+          variant="ghost"
+          icon={collapsed ? 'chevron-right' : 'chevron-down'}
+          aria-expanded={!collapsed}
+          ariaLabel={label}
+          onClick={onToggle}
+        />
+      </div>
+    );
+  if (narrow)
+    return (
+      <div className="pc-list__group-header" data-narrow="true">
+        <button
+          type="button"
+          className="pc-list__group-toggle"
+          aria-expanded={!collapsed}
+          onClick={onToggle}
+        >
+          {id}
+          {title}
+          {count}
+        </button>
+      </div>
+    );
   return (
-    <div className="pc-list__group-header">
+    <div className="pc-list__group-header" {...rowProps(row)}>
       <Button
         size="sm"
         variant="ghost"
@@ -61,10 +171,8 @@ export function ListGroupHeader({
         ariaLabel={label}
         onClick={onToggle}
       />
-      {specTitle !== undefined ? (
-        <span className="pc-list__group-id">{planningDisplayId(groupKey)}</span>
-      ) : null}
-      <span className="pc-list__group-title">{specTitle ?? label}</span>
+      {id}
+      {title}
       {progress ? (
         <>
           <span
@@ -78,7 +186,7 @@ export function ListGroupHeader({
             <span style={{ width: `${(progress.done / Math.max(1, progress.total)) * 100}%` }} />
           </span>
           <span className="pc-list__group-progress-count">
-            {progress.done}/{progress.total} tasks
+            {progress.done}/{progress.total} {unit}
           </span>
         </>
       ) : null}
@@ -110,7 +218,7 @@ export function ListEmpty({
         </button>
         {hiddenDone ? (
           <button type="button" onClick={onShowDone}>
-            Show {hiddenDone} done matches
+            Show {hiddenDone} done {hiddenDone === 1 ? 'match' : 'matches'}
           </button>
         ) : null}
       </span>

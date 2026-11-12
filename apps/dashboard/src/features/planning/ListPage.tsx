@@ -9,7 +9,7 @@ import {
 import type { DashboardProductState } from '../../lib/api/product-state.js';
 import { ListCheckbox, ListEmpty, ListGroupHeader, ListPagination } from './ListTableParts.js';
 import { ListTitle, ListToolbar } from './ListToolbar.js';
-import { LIST_COLUMNS } from './planning-columns.js';
+import { LIST_COLUMNS, LIST_NARROW_COLUMNS } from './planning-columns.js';
 import {
   inspectPlanningNode,
   useLiveListOrder,
@@ -26,7 +26,9 @@ import {
   type ListClearableFilter,
   listActiveFilterCount,
   listFilterSentence,
+  listHeaderOffsets,
   listSelectionItems,
+  listSpecLeads,
 } from './planning-list-view.js';
 import {
   browserListPreferences,
@@ -36,6 +38,7 @@ import {
   takeListStatus,
   useInspectorStore,
   useListKeyboardWindow,
+  useListLayout,
   useListPresentation,
   useListRowViewport,
   useListScrollAnchor,
@@ -88,6 +91,7 @@ export function ListPage({
     setSelected,
   } = useListPresentation(() => takeListStatus() ?? ALL);
   const inspector = useInspectorStore();
+  const layout = useListLayout();
 
   const model = resolvePlanningWorkspace(current, currentBinding);
   const graph = model ? retainGraphRevision(model.graph, model.binding) : undefined;
@@ -146,14 +150,25 @@ export function ListPage({
     [appearances, pageStart],
   );
   const visibleGroups = useMemo(() => {
-    const groups = new Map<string, { key: string; label: string; nodes: PlanningModelNode[] }>();
+    const groups = new Map<
+      string,
+      { key: string; label: string; nodes: PlanningModelNode[]; spec?: PlanningModelNode }
+    >();
     for (const { group, node } of visibleRows) {
-      const current = groups.get(group.key);
-      if (current) current.nodes.push(node);
-      else groups.set(group.key, { key: group.key, label: group.label, nodes: [node] });
+      let current = groups.get(group.key);
+      if (!current) {
+        current = { key: group.key, label: group.label, nodes: [] };
+        groups.set(group.key, current);
+      }
+      if (node.id === group.key && listSpecLeads(group, effectiveView.groupBy)) current.spec = node;
+      else current.nodes.push(node);
     }
     return [...groups.values()];
-  }, [visibleRows]);
+  }, [visibleRows, effectiveView.groupBy]);
+  const headerOffsets = useMemo(
+    () => listHeaderOffsets(grouped, effectiveView.groupBy),
+    [grouped, effectiveView.groupBy],
+  );
   const appliedFocus = useRef<PlanningView | null>(null);
   useEffect(() => {
     if (appliedFocus.current === view) return;
@@ -214,7 +229,10 @@ export function ListPage({
     () =>
       appearances
         .map((entry, index) => ({ ...entry, index }))
-        .filter((entry) => !collapsedGroups.includes(entry.group.key)),
+        .filter(
+          (entry) =>
+            !collapsedGroups.includes(entry.group.key) || entry.node.id === entry.group.key,
+        ),
     [appearances, collapsedGroups],
   );
   const rowViewport = useListRowViewport({
@@ -227,6 +245,7 @@ export function ListPage({
     collapsedGroups,
     selectedId,
     scope: `${presentationKey}:${currentPage}`,
+    layout,
   });
   const keyboardNotice = useListKeyboardWindow({
     root: rootRef,
@@ -258,7 +277,7 @@ export function ListPage({
   const hiddenDone = projection?.hiddenDone ?? 0;
   const dateExcluded = projection?.dateExcluded ?? 0;
   const dateNote = dateExcluded
-    ? `${dateExcluded} items excluded: unknown, invalid or future authored dates.`
+    ? `${dateExcluded} ${dateExcluded === 1 ? 'item' : 'items'} excluded: unknown, invalid or future authored dates.`
     : '';
   const activeFilterCount = listActiveFilterCount(effectiveView.filters);
   const allChecked = rows.length > 0 && rows.every((node) => selectedSet.has(node.id));
@@ -282,6 +301,7 @@ export function ListPage({
       data-route-kind="planning.list"
       data-managed-rows="true"
       data-checked={selected.length > 0 || undefined}
+      data-list-layout={layout}
     >
       <PlanningNotice presentation={model.presentation} />
       {removalNotice ? (
@@ -315,6 +335,7 @@ export function ListPage({
             total={all.length}
             view={effectiveView}
             counts={totals}
+            layout={layout}
             onPreset={setPresentation}
           />
           <ListToolbar
@@ -324,6 +345,11 @@ export function ListPage({
             compact={compact}
             sharePending={sharePending}
             dateNote={dateNote}
+            layout={layout}
+            view={effectiveView}
+            counts={totals}
+            shown={rows.length}
+            onPreset={setPresentation}
             onQuery={(value) => {
               setQuery(value);
               resetPage();
@@ -352,11 +378,9 @@ export function ListPage({
                   rows={visibleRows.map((entry) => entry.node)}
                   compact={compact}
                   groups={visibleGroups.map((group) => {
-                    const headerOffset =
-                      effectiveView.groupBy === 'none'
-                        ? 0
-                        : grouped.findIndex((entry) => entry.key === group.key) + 1;
+                    const headerOffset = headerOffsets.get(group.key) ?? 0;
                     const groupCollapsed = collapsedGroups.includes(group.key);
+                    const { spec } = group;
                     return {
                       ...group,
                       rows: group.nodes,
@@ -365,7 +389,9 @@ export function ListPage({
                       rowPosition: (node: PlanningModelNode) =>
                         (positions.get(group.key)?.get(node.id) ?? 1) + headerOffset,
                       headerRowPosition:
-                        (positions.get(group.key)?.values().next().value ?? 1) + headerOffset,
+                        (positions.get(group.key)?.values().next().value ?? 1) +
+                        headerOffset +
+                        (spec ? 1 : 0),
                       header:
                         effectiveView.groupBy === 'none' ? undefined : (
                           <ListGroupHeader
@@ -377,6 +403,16 @@ export function ListPage({
                                 : undefined
                             }
                             collapsed={groupCollapsed}
+                            narrow={layout !== 'desktop'}
+                            row={
+                              spec && {
+                                node: spec,
+                                checked: selectedSet.has(spec.id),
+                                inspected: spec.id === selectedId,
+                                onInspect: inspectPlanningNode,
+                                onSelect: toggleSelection,
+                              }
+                            }
                             progress={
                               effectiveView.groupBy === 'spec'
                                 ? progress?.get(group.key)
@@ -397,7 +433,8 @@ export function ListPage({
                   selectedIds={selectedSet}
                   onRowSelect={toggleSelection}
                   rowCount={
-                    appearances.length + (effectiveView.groupBy === 'none' ? 0 : grouped.length)
+                    appearances.length +
+                    (grouped.length ? (headerOffsets.get(grouped.at(-1)?.key ?? '') ?? 0) : 0)
                   }
                   rowHref={planningDetailHref}
                   sort={sort}
@@ -411,31 +448,35 @@ export function ListPage({
                   onRowClick={inspectPlanningNode}
                   onRowFocus={(node) => inspectPlanningNode(node, false)}
                   caption="Planning artifacts"
-                  columns={[
-                    {
-                      key: 'select',
-                      label: 'Select',
-                      width: 40,
-                      header: (
-                        <ListCheckbox
-                          label={`Select all ${rows.length} filtered items`}
-                          checked={allChecked}
-                          indeterminate={someChecked}
-                          onChange={(checked) =>
-                            setSelected(checked ? rows.map((node) => node.id) : [])
-                          }
-                        />
-                      ),
-                      render: (node: PlanningModelNode) => (
-                        <ListCheckbox
-                          label={`Select ${planningDisplayId(node)}`}
-                          checked={selectedSet.has(node.id)}
-                          onChange={() => toggleSelection(node)}
-                        />
-                      ),
-                    },
-                    ...LIST_COLUMNS,
-                  ]}
+                  columns={
+                    layout !== 'desktop'
+                      ? LIST_NARROW_COLUMNS
+                      : [
+                          {
+                            key: 'select',
+                            label: 'Select',
+                            width: 40,
+                            header: (
+                              <ListCheckbox
+                                label={`Select all ${rows.length} filtered ${rows.length === 1 ? 'item' : 'items'}`}
+                                checked={allChecked}
+                                indeterminate={someChecked}
+                                onChange={(checked) =>
+                                  setSelected(checked ? rows.map((node) => node.id) : [])
+                                }
+                              />
+                            ),
+                            render: (node: PlanningModelNode) => (
+                              <ListCheckbox
+                                label={`Select ${planningDisplayId(node)}`}
+                                checked={selectedSet.has(node.id)}
+                                onChange={() => toggleSelection(node)}
+                              />
+                            ),
+                          },
+                          ...LIST_COLUMNS,
+                        ]
+                  }
                 />
               ) : (
                 <ListEmpty

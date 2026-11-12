@@ -83,6 +83,11 @@ export function listActiveFilterCount(filters: Filters): number {
   );
 }
 
+/** Count on the narrow-layout Filters button: every active filter except the query. */
+export function listFilterButtonCount(filters: Filters): number {
+  return listActiveFilterCount(filters) - Number(Boolean(filters.query.trim()));
+}
+
 /** Sentence naming the active filters, e.g. `Status: blocked, Label: security and "entra".` */
 export function listFilterSentence(filters: Filters): string {
   const parts: string[] = [];
@@ -108,4 +113,27 @@ export function listSelectionItems(
   const nodes = checked.length ? checked : inspected ? [inspected] : [];
   const items = nodes.flatMap((node) => boardSelectionItems(node));
   return { items, missing: nodes.length - items.length };
+}
+
+/** True when a spec group starts with the spec itself, which the List draws as the header row. */
+export function listSpecLeads(
+  group: Readonly<{ key: string; nodes: readonly PlanningModelNode[] }>,
+  groupBy: PlanningView['groupBy'],
+): boolean {
+  return groupBy === 'spec' && group.nodes[0]?.id === group.key;
+}
+
+/** Separate header rows up to and including each group; a spec-led header is an item row. */
+export function listHeaderOffsets(
+  grouped: readonly Readonly<{ key: string; nodes: readonly PlanningModelNode[] }>[],
+  groupBy: PlanningView['groupBy'],
+): ReadonlyMap<string, number> {
+  const offsets = new Map<string, number>();
+  if (groupBy === 'none') return offsets;
+  let count = 0;
+  for (const group of grouped) {
+    if (!listSpecLeads(group, groupBy)) count++;
+    offsets.set(group.key, count);
+  }
+  return offsets;
 }

@@ -99,13 +99,18 @@ function buildGroups(
   groupBy: PlanningView['groupBy'],
 ) {
   const specs = selectListMetadata(graph).specs;
-  const grouped = groupPresentationNodes(rows, groupBy).map((group) => ({
-    ...group,
-    label:
-      groupBy === 'spec' && specs.has(group.key)
-        ? `${group.key} · ${specs.get(group.key)?.title}`
-        : group.label,
-  }));
+  const grouped = groupPresentationNodes(rows, groupBy).map((group) => {
+    const spec = groupBy === 'spec' ? group.nodes.find((node) => node.id === group.key) : undefined;
+    return {
+      ...group,
+      // A spec leads its own group: the List draws it as the group's header row.
+      nodes: spec ? [spec, ...group.nodes.filter((node) => node !== spec)] : group.nodes,
+      label:
+        groupBy === 'spec' && specs.has(group.key)
+          ? `${group.key} · ${specs.get(group.key)?.title}`
+          : group.label,
+    };
+  });
   const appearances = grouped.flatMap((group) => group.nodes.map((node) => ({ group, node })));
   const positions = new Map<string, Map<string, number>>();
   appearances.forEach((entry, index) => {

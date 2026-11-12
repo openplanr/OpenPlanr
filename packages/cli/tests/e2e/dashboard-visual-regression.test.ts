@@ -1559,6 +1559,11 @@ test.describe('dashboard real-browser quality', () => {
         await page.evaluate(() => document.fonts.ready);
         await expect(list.locator('.pc-list__toolbar')).toBeVisible();
       };
+      // Specs head their own groups, so item rows start below the spec-only groups.
+      const revealRows = async () => {
+        await list.locator('.pc-list__group-header').last().scrollIntoViewIfNeeded();
+        await expect(list.locator('tbody tr[data-keyboard-item]').first()).toBeVisible();
+      };
       const check = async (setup: string | null) => {
         // Reduced motion still runs a 0.01ms transition; read styles once it has settled.
         await page.evaluate(
@@ -1569,7 +1574,7 @@ test.describe('dashboard real-browser quality', () => {
       };
       await open('#/list');
       await list.getByRole('tab', { name: /^Open by spec/u }).click();
-      await expect(list.locator('tbody tr[data-keyboard-item]').first()).toBeVisible();
+      await revealRows();
       await check(null);
       const text = await list.innerText();
       for (const banned of ['Unknown', 'Not recorded', 'None declared', 'Phase 2'])
@@ -1598,6 +1603,7 @@ test.describe('dashboard real-browser quality', () => {
       await check('list-labels');
       await list.getByRole('button', { name: 'Compact', exact: true }).click();
       await expect(list.locator('table')).toHaveAttribute('data-compact', 'true');
+      await revealRows();
       await check('list-compact');
       await list.getByRole('button', { name: 'Comfortable', exact: true }).click();
       await list.getByRole('combobox', { name: /^Status:/u }).click();
@@ -1609,10 +1615,52 @@ test.describe('dashboard real-browser quality', () => {
       await check('list-empty');
       await open('#/list', 'artboard');
       await page.screenshot({ path: testInfo.outputPath(`list-D-${theme}.png`) });
+      await page.setViewportSize({ width: 768, height: 1024 });
+      await open('#/list');
+      await expect(list).toHaveAttribute('data-list-layout', 'tablet');
+      await revealRows();
+      await check('list-T');
+      await open('#/list', 'artboard');
+      await page.screenshot({ path: testInfo.outputPath(`list-T-${theme}.png`) });
+      await page.setViewportSize({ width: 390, height: 844 });
+      await open('#/list');
+      await expect(list).toHaveAttribute('data-list-layout', 'phone');
+      await revealRows();
+      await check('list-M');
+      const overflow = await list
+        .locator('.pc-list__window')
+        .evaluate((node) => node.getBoundingClientRect().right - innerWidth);
+      expect(overflow).toBeLessThanOrEqual(0);
+      await list.getByRole('button', { name: /^Filters/u }).click();
+      await expect(page.getByRole('dialog', { name: 'Filters' })).toBeVisible();
+      await expect(page.locator('.pc-list-sheet__apply')).toHaveText(/^Show \d+ items?$/u);
+      await check('list-sheet');
+      await page.keyboard.press('Escape');
+      await open('#/list', 'artboard');
+      await page.screenshot({ path: testInfo.outputPath(`list-M-${theme}.png`) });
+      await page.setViewportSize({ width: 1440, height: 900 });
     }
     const parity = testInfo.outputPath('list-parity.json');
     writeFileSync(parity, JSON.stringify(results, null, 2));
     await testInfo.attach('list-parity.json', { path: parity, contentType: 'application/json' });
+  });
+
+  test.describe('List under a coarse pointer', () => {
+    test.use({ hasTouch: true });
+    test('keeps compact List rows at the 44px touch height', async ({ page }) => {
+      await page.emulateMedia({ reducedMotion: 'reduce' });
+      await page.setViewportSize({ width: 1440, height: 900 });
+      await page.addInitScript(() => localStorage.setItem('op-rail-compact:v1', 'true'));
+      const list = page.locator('[data-route-kind="planning.list"]');
+      await page.goto(fixtureUrl('#/list', { dataset: 'representative', theme: 'dark' }));
+      expect(await page.evaluate(() => matchMedia('(pointer: coarse)').matches)).toBe(true);
+      await list.getByRole('button', { name: 'Compact', exact: true }).click();
+      await expect(list.locator('table')).toHaveAttribute('data-compact', 'true');
+      await list.locator('.pc-list__group-header').last().scrollIntoViewIfNeeded();
+      await expect(list.locator('tbody tr[data-keyboard-item]').first()).toBeVisible();
+      for (const row of listParityRows.filter((entry) => entry.setup === 'list-coarse'))
+        await assertParityRow(page, row, 'dark');
+    });
   });
 
   test.describe('sprint and activity evidence', () => {

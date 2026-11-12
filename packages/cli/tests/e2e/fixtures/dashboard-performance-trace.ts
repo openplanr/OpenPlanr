@@ -60,7 +60,10 @@ async function installMetrics(page: Page) {
     const observer = new MutationObserver(() => {
       if (metrics.shellAt === null && document.querySelector('.pc-shell'))
         metrics.shellAt = performance.now();
-      if (metrics.usefulAt === null && document.querySelector('.pc-list tbody tr[tabindex]'))
+      if (
+        metrics.usefulAt === null &&
+        document.querySelector('.pc-list tbody [data-keyboard-item]')
+      )
         metrics.usefulAt = performance.now();
     });
     observer.observe(document, { subtree: true, childList: true });
@@ -371,7 +374,7 @@ export function registerDashboardPerformanceTraceTests() {
       await cdp.send('Network.clearBrowserCache');
       await cdp.send('Network.setCacheDisabled', { cacheDisabled: true });
       await page.goto(`/__production/?dataset=${dataset}#/list`);
-      await expect(page.locator('.pc-list tbody tr[tabindex]').first()).toBeVisible();
+      await expect(page.locator('.pc-list tbody [data-keyboard-item]').first()).toBeVisible();
       const cold = await page.evaluate(() => window.__dashboardMetrics);
       expect(cold.shellAt).not.toBeNull();
       expect(cold.usefulAt).not.toBeNull();
@@ -421,7 +424,7 @@ export function registerDashboardPerformanceTraceTests() {
       await page.keyboard.press('Escape');
       await markInputAction(page, 'filter-input selected item');
       await filter.fill(fixture.manifest.selectedId);
-      const rows = page.locator('.pc-list tbody tr[tabindex]');
+      const rows = page.locator('.pc-list tbody [data-keyboard-item]');
       await expect(rows).toHaveCount(1);
       const row = rows.first();
       for (let index = 0; index < 20; index += 1) {

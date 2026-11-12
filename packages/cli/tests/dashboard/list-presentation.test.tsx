@@ -195,7 +195,7 @@ function View({
 }
 
 function rowIds(container: HTMLElement): string[] {
-  return Array.from(container.querySelectorAll<HTMLElement>('tbody tr[data-keyboard-item]')).map(
+  return Array.from(container.querySelectorAll<HTMLElement>('tbody [data-keyboard-item]')).map(
     (row) => row.dataset.keyboardItem ?? '',
   );
 }
@@ -330,7 +330,7 @@ describe('List presentation tokens against validated projections', () => {
         onCopy={copy}
       />,
     );
-    await user.click(screen.getByRole('checkbox', { name: 'Select all 1 filtered items' }));
+    await user.click(screen.getByRole('checkbox', { name: 'Select all 1 filtered item' }));
     const bar = screen.getByRole('region', { name: 'Selected items' });
     const button = within(bar).getByRole('button', { name: 'Copy command' });
     fireEvent.keyDown(button, { key: 'c' });
@@ -612,7 +612,7 @@ describe('List live refetch retention', () => {
       await user.click(screen.getByRole('button', { name: 'Updated' }));
       await user.click(screen.getByRole('button', { name: 'Next' }));
       const ids = rowIds(container);
-      const row = container.querySelector<HTMLElement>(`tr[data-keyboard-item="${ids[0]}"]`);
+      const row = container.querySelector<HTMLElement>(`[data-keyboard-item="${ids[0]}"]`);
       if (!row) throw new Error('Expected a second-page item');
       act(() => row.focus());
       const scroll = container.querySelector<HTMLElement>('.pc-shell__scroll');
@@ -621,7 +621,7 @@ describe('List live refetch retention', () => {
       scroll.scrollTop = 30;
       table.scrollLeft = 21;
       const assertRetained = () => {
-        expect(container.querySelector(`tr[data-keyboard-item="${ids[0]}"]`)).toBe(row);
+        expect(container.querySelector(`[data-keyboard-item="${ids[0]}"]`)).toBe(row);
         expect(row.dataset.selected).toBe('true');
         expect(document.activeElement).toBe(row);
         expect(scroll.scrollTop).toBe(30);
@@ -845,19 +845,19 @@ describe('List triage, bounded windows and command-only selection', () => {
     ];
     const { container } = render(<View nodes={nodes} view={null} />);
     const table = screen.getByRole('table', { name: 'Planning artifacts' });
-    expect(table.getAttribute('aria-rowcount')).toBe('153');
+    expect(table.getAttribute('aria-rowcount')).toBe('152');
     expect(table.querySelector('.pc-table__group-header')?.getAttribute('aria-rowindex')).toBe('2');
-    expect(table.querySelector('[data-keyboard-item]')?.getAttribute('aria-rowindex')).toBe('3');
+    expect(table.querySelector('tr[data-keyboard-item]')?.getAttribute('aria-rowindex')).toBe('3');
     expect(rowIds(container).length).toBeLessThanOrEqual(24);
     const scroller = container.querySelector('.pc-list__window');
     if (!scroller) throw new Error('Missing grouped List window');
     fireEvent.scroll(scroller, { target: { scrollTop: 3000 } });
     const index = Number(
-      table.querySelector('[data-keyboard-item]')?.getAttribute('aria-rowindex'),
+      table.querySelector('tr[data-keyboard-item]')?.getAttribute('aria-rowindex'),
     );
     expect(index).toBeGreaterThan(3);
-    expect(index).toBeLessThanOrEqual(153);
-    expect(table.getAttribute('aria-rowcount')).toBe('153');
+    expect(index).toBeLessThanOrEqual(152);
+    expect(table.getAttribute('aria-rowcount')).toBe('152');
   });
 
   function coordinate(container: HTMLElement, singleLetters = true) {
@@ -1061,8 +1061,8 @@ describe('List triage, bounded windows and command-only selection', () => {
     ];
     const { container } = render(<View nodes={nodes} view={null} />);
     await user.click(screen.getByRole('tab', { name: /^Open by spec/u }));
-    expect(screen.getByRole('button', { name: 'Show 1 done matches' })).toBeTruthy();
-    await user.click(screen.getByRole('button', { name: 'Show 1 done matches' }));
+    expect(screen.getByRole('button', { name: 'Show 1 done match' })).toBeTruthy();
+    await user.click(screen.getByRole('button', { name: 'Show 1 done match' }));
     expect(rowIds(container)).toEqual(['BL-910']);
     expect(container.querySelector('[data-done="true"]')).toBeTruthy();
     await user.click(screen.getByRole('button', { name: 'Clear filters' }));
@@ -1326,4 +1326,161 @@ it('collapses a group with [ when no row is focused and never opens a filter men
   } finally {
     dispose();
   }
+});
+
+function stubListLayout(layout: 'tablet' | 'phone') {
+  vi.stubGlobal(
+    'matchMedia',
+    vi.fn((query: string) => ({
+      matches:
+        query === '(max-width: 1199px)' || (layout === 'phone' && query === '(max-width: 599px)'),
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+    })),
+  );
+}
+
+function listCoordinator(container: HTMLElement) {
+  return installKeyboardCoordinator(document, () => ({
+    root: container,
+    selectionScope: 'fixture-list',
+    singleLetters: true,
+    paletteOpen: false,
+    togglePalette: () => undefined,
+    openHelp: () => undefined,
+    navigate: () => undefined,
+    closeInspector: () => false,
+    selectedId: () => null,
+    copy: async () => undefined,
+    announce: () => undefined,
+  }));
+}
+
+const SPEC_NODES = [
+  node('SPEC-901', 'Delivery', {}, 'outstanding', 'spec'),
+  node('SPEC-901/T-901', 'Open task', { specId: 'SPEC-901' }),
+  node('SPEC-902', 'Empty spec', {}, 'outstanding', 'spec'),
+];
+
+describe('List spec groups', () => {
+  it('draws each spec as its group header row, never again inside its own group', async () => {
+    const user = userEvent.setup();
+    const { container } = render(<View nodes={SPEC_NODES} view={null} />);
+    expect(container.querySelector('tr[data-keyboard-item="SPEC-901"]')).toBeNull();
+    const header = container.querySelector<HTMLElement>(
+      '.pc-list__group-header[data-keyboard-item="SPEC-901"]',
+    );
+    expect(header?.getAttribute('tabindex')).toBe('0');
+    expect(
+      container.querySelector('.pc-list__group-header[data-keyboard-item="SPEC-902"]'),
+    ).not.toBeNull();
+    expect(rowIds(container)).toEqual(['SPEC-901', 'SPEC-901/T-901', 'SPEC-902']);
+    if (!header) throw new Error('Missing spec header row');
+    await user.click(within(header).getByText('Delivery'));
+    expect(screen.getByTestId('selection').textContent).toBe('SPEC-901');
+    expect(header.dataset.selected).toBe('true');
+    fireEvent.keyDown(header, { key: ' ' });
+    expect(header.getAttribute('aria-selected')).toBe('true');
+  });
+});
+
+describe('List at tablet and phone widths', () => {
+  it('replaces the chips and checkboxes with search, Filters and a preset menu at tablet width', () => {
+    stubListLayout('tablet');
+    const { container } = render(<View />);
+    expect(container.querySelector('.pc-list')?.getAttribute('data-list-layout')).toBe('tablet');
+    expect(screen.queryByRole('checkbox')).toBeNull();
+    expect(screen.queryByRole('combobox', { name: /^Type:/u })).toBeNull();
+    expect(screen.getByRole('textbox', { name: 'Filter by id or title' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Filters 5' })).toBeTruthy();
+    expect(screen.getByRole('combobox', { name: 'Preset: Presets' })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Copy filter link' })).toBeNull();
+    expect(screen.queryByRole('group', { name: 'Density' })).toBeNull();
+  });
+
+  it('filters live from the sheet, shows every active filter and returns focus on close', async () => {
+    stubListLayout('phone');
+    const user = userEvent.setup();
+    render(
+      <View
+        nodes={[node('T-930', 'Lone task', { created: '2026-11-12' })]}
+        view={{ ...listPreset('today'), filters: { ...listPreset('today').filters, type: [] } }}
+      />,
+    );
+    expect(screen.getByRole('tablist', { name: 'List presets' })).toBeTruthy();
+    const open = screen.getByRole('button', { name: 'Filters 1' });
+    await user.click(open);
+    const sheet = screen.getByRole('dialog', { name: 'Filters' });
+    expect(sheet.getAttribute('aria-modal')).toBe('true');
+    expect(
+      within(sheet).getByRole('button', { name: /^Clear filter Filed: today$/u }),
+    ).toBeTruthy();
+    const blocked = within(sheet).getByRole('button', { name: 'Blocked' });
+    await user.click(blocked);
+    expect(blocked.getAttribute('aria-pressed')).toBe('true');
+    expect(within(sheet).getByRole('button', { name: 'Show 0 items' })).toBeTruthy();
+    await user.click(blocked);
+    await user.click(within(sheet).getByRole('button', { name: 'Clear all' }));
+    expect(within(sheet).getByRole('button', { name: 'Show 1 item' })).toBeTruthy();
+    await user.keyboard('{Escape}');
+    expect(screen.queryByRole('dialog', { name: 'Filters' })).toBeNull();
+    expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Filters' }));
+  });
+
+  it('keeps List shortcuts inside the sheet while it is open', async () => {
+    stubListLayout('phone');
+    const user = userEvent.setup();
+    const { container } = render(<View view={null} />);
+    const dispose = listCoordinator(container);
+    try {
+      await user.click(screen.getByRole('button', { name: /^Filters/u }));
+      fireEvent.keyDown(document.activeElement ?? document.body, { key: 'j' });
+      expect(screen.getByTestId('selection').textContent).toBe('none');
+      expect(screen.getByRole('dialog', { name: 'Filters' })).toBeTruthy();
+    } finally {
+      dispose();
+    }
+  });
+
+  it('collapses a group by tapping its row and names the task count in full', async () => {
+    stubListLayout('phone');
+    const user = userEvent.setup();
+    const { container } = render(
+      <View
+        nodes={[node('T-901', 'Open task', {}, 'done')]}
+        view={{ ...listPreset('all'), groupBy: 'status' }}
+      />,
+    );
+    const toggle = container.querySelector<HTMLButtonElement>('.pc-list__group-toggle');
+    if (!toggle) throw new Error('Missing group toggle');
+    expect(toggle.getAttribute('aria-expanded')).toBe('true');
+    await user.click(toggle);
+    expect(toggle.getAttribute('aria-expanded')).toBe('false');
+    expect(container.querySelector('tr[data-keyboard-item="T-901"]')?.hidden).toBe(true);
+  });
+
+  it('inspects a spec on tapping its group row and collapses it from the chevron', async () => {
+    stubListLayout('phone');
+    const user = userEvent.setup();
+    const { container } = render(
+      <View
+        nodes={[
+          node('SPEC-901', 'Delivery', {}, 'outstanding', 'spec'),
+          node('SPEC-901/T-901', 'Open task', { specId: 'SPEC-901' }, 'done'),
+        ]}
+        view={null}
+      />,
+    );
+    const header = container.querySelector<HTMLElement>('[data-keyboard-item="SPEC-901"]');
+    if (!header) throw new Error('Missing spec header row');
+    expect(header.textContent).toContain('1/1 task');
+    expect(container.querySelector('.pc-list__group-bar')).toBeNull();
+    await user.click(within(header).getByText('Delivery'));
+    expect(screen.getByTestId('selection').textContent).toBe('SPEC-901');
+    const chevron = within(header).getByRole('button', { name: 'SPEC-901 · Delivery' });
+    expect(chevron.getAttribute('aria-expanded')).toBe('true');
+    await user.click(chevron);
+    expect(chevron.getAttribute('aria-expanded')).toBe('false');
+    expect(container.querySelector('tr[data-keyboard-item="SPEC-901/T-901"]')?.hidden).toBe(true);
+  });
 });

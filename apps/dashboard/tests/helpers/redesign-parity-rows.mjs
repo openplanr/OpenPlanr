@@ -362,6 +362,56 @@ export const listParityRows = [
     { content: 'Clear 3 filters' },
     { setup: 'list-empty' },
   ),
+  ...listRow('L-17', 'tbody tr[data-keyboard-item]', { height: '44px' }, { setup: 'list-coarse' }),
+  ...listRow(
+    'M-11',
+    '.pc-list__toolbar :is(.pc-input, .pc-list__filters, .pc-chip)',
+    { height: '44px' },
+    { setup: 'list-T', viewport: 'T' },
+  ),
+  ...listRow(
+    'L-25',
+    'tbody tr[data-keyboard-item]',
+    { height: '52px', tracks: '80px 1fr 120px 64px' },
+    { setup: 'list-T', viewport: 'T' },
+  ),
+  ...listRow(
+    'L-22',
+    '.pc-list__toolbar :is(.pc-input, .pc-list__filters)',
+    { height: '44px' },
+    { setup: 'list-M', viewport: 'M' },
+  ),
+  ...listRow(
+    'L-23',
+    '.pc-list__presets [role="tab"]',
+    { height: '36px', 'border-radius': '999px' },
+    { setup: 'list-M', viewport: 'M' },
+  ),
+  // L-24 is a 64px minimum; rows keep one 84px pitch (two-line title box) for the row window.
+  ...listRow(
+    'L-24',
+    'tbody tr[data-keyboard-item]',
+    { height: '84px' },
+    { setup: 'list-M', viewport: 'M' },
+  ),
+  ...listRow(
+    'M-07',
+    '.pc-list-sheet',
+    { top: '120px', 'border-radius': '16px 16px 0 0' },
+    { setup: 'list-sheet', viewport: 'M', portal: true },
+  ),
+  ...listRow(
+    'M-08',
+    '.pc-list-sheet__chip',
+    { height: '40px' },
+    { setup: 'list-sheet', viewport: 'M', portal: true },
+  ),
+  ...listRow(
+    'M-09',
+    '.pc-list-sheet__apply',
+    { height: '48px' },
+    { setup: 'list-sheet', viewport: 'M', portal: true },
+  ),
 ];
 
 function sampleRows(nodes, { property, expected, items }) {

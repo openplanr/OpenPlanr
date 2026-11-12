@@ -13,7 +13,7 @@ export {
   ArtifactRowTitle,
   artifactRowStyle,
 } from './artifact-row.js';
-export { AlertDialog, Tabs as RadixTabs } from './composite-primitives.js';
+export { AlertDialog, Dialog, Tabs as RadixTabs } from './composite-primitives.js';
 export {
   Badge,
   type BadgeProps,

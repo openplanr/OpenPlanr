@@ -15,6 +15,10 @@ export type ParityRow = Readonly<{
     | 'list-compact'
     | 'list-menu'
     | 'list-empty'
+    | 'list-coarse'
+    | 'list-T'
+    | 'list-M'
+    | 'list-sheet'
     | null;
   items?: string;
 }>;

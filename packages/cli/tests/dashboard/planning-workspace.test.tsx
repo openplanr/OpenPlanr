@@ -300,11 +300,11 @@ describe('T-021 Planning workspace UI', () => {
     expect(listDom.window.document.querySelector('h1')?.textContent).toBe('List');
     expect(listDom.window.document.querySelectorAll('h1')).toHaveLength(1);
     expect(listDom.window.document.querySelectorAll('h3')).toHaveLength(0);
-    expect(listDom.window.document.querySelectorAll('tbody tr[tabindex="0"]')).toHaveLength(
+    expect(listDom.window.document.querySelectorAll('tbody [data-keyboard-item]')).toHaveLength(
       graph.nodes.length,
     );
     const rowLabels = [
-      ...listDom.window.document.querySelectorAll('tbody tr[data-keyboard-item]'),
+      ...listDom.window.document.querySelectorAll('tbody [data-keyboard-item]'),
     ].map((row) => row.textContent);
     for (const node of graph.nodes) {
       expect(rowLabels.filter((label) => label?.includes(node.title))).toHaveLength(1);
