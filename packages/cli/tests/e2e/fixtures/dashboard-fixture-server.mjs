@@ -363,6 +363,118 @@ const LOCAL_REVIEW_DETAIL = Object.freeze({
   markdown: LOCAL_REVIEW_MARKDOWN,
 });
 
+const TODAY_REVIEW_ID = '2026-W43';
+const TODAY_REVIEW_ITEM = Object.freeze({
+  cycleId: TODAY_REVIEW_ID,
+  title: 'Operating board report — week 43',
+  summary: 'Hold the release until the redesign ships.',
+  signal: 'hold',
+  updatedAt: '2026-10-25T09:00:00.000Z',
+  counts: Object.freeze({ decisions: 2, actions: 1, gaps: 2, issues: 0 }),
+  href: `#/operate/cycles/${TODAY_REVIEW_ID}`,
+});
+const todayDecision = (fields) =>
+  Object.freeze({
+    priority: 'P1',
+    recommendation: '',
+    whyNow: '',
+    owner: 'Chair',
+    confidence: 'Medium',
+    firstStep: '',
+    expectedResult: '',
+    check: '',
+    dependencies: 'None',
+    revisitWhen: '',
+    sources: '',
+    dissent: '',
+    ...fields,
+  });
+// Mirrors the Operate Today canvas so the page can be measured against it.
+const TODAY_REVIEW_DETAIL = Object.freeze({
+  ...LOCAL_REVIEW_DETAIL,
+  ...TODAY_REVIEW_ITEM,
+  decisions: Object.freeze([
+    todayDecision({
+      id: 'D-031',
+      title: 'Hold the next release until the dashboard redesign ships?',
+      whyNow: 'Four fixes already merged stay unreleased for about two weeks.',
+      expectedResult:
+        'One release with the approved screens, re-approved baselines and runner trace budgets.',
+      dissent: 'CTO: ship the fixes now as a patch; the redesign is a minor on its own.',
+    }),
+    todayDecision({
+      id: 'D-032',
+      title: 'Keep the CLI-bundled plugin channel or rename it',
+    }),
+  ]),
+  actions: Object.freeze([
+    Object.freeze({
+      id: 'A-014',
+      priority: 'P1',
+      action: 'Rotate the Cloudflare deploy token before it expires',
+      owner: 'COO',
+      firstStep: 'Create the new token',
+      successMeasure: 'Deploys use the new token',
+      check: 'Run one deploy',
+      dependencies: 'None',
+      state: 'proposed',
+    }),
+  ]),
+  gaps: Object.freeze([
+    Object.freeze({
+      id: 'G-001',
+      title: 'Linux screenshot baselines',
+      detail: 'Not captured yet.',
+    }),
+    Object.freeze({
+      id: 'Q-009',
+      title: 'Is the share-key flow in scope for this cycle?',
+      detail: 'No owner has answered.',
+    }),
+  ]),
+  risks: Object.freeze([]),
+  issues: Object.freeze([]),
+  lenses: Object.freeze(
+    [
+      ['CEO', true, 'action'],
+      ['CTO', true, 'dissent'],
+      ['CPO', true, 'action'],
+      ['CMO', false, ''],
+      ['COO', true, 'action'],
+      ['Challenger', true, 'holds'],
+      ['Chair', true, 'reported'],
+    ].map(([name, present, signal]) =>
+      Object.freeze({
+        name,
+        filename: `${String(name).toLowerCase()}.md`,
+        present,
+        outcome: present ? `reported (signal: ${signal})` : 'missing',
+        signal,
+        informed: 'D-031',
+        findings: present ? 3 : 0,
+        recommendation: '',
+      }),
+    ),
+  ),
+  evidence: Object.freeze([
+    Object.freeze({
+      id: 'E-001',
+      reference: 'Staging receipt for 0.55.1',
+      kind: 'receipt',
+      freshness: 'checkpoint',
+    }),
+  ]),
+});
+
+function todayScenario(request) {
+  try {
+    const referer = new URL(request.headers.referer ?? DASHBOARD_FIXTURE_ORIGIN);
+    return referer.searchParams.get('operateScenario') === 'today';
+  } catch {
+    return false;
+  }
+}
+
 function localReviewRequest(request) {
   try {
     const referer = new URL(request.headers.referer ?? DASHBOARD_FIXTURE_ORIGIN);
@@ -865,7 +977,17 @@ async function routeApi(request, response, next) {
               pageCount: 1,
               total: empty ? 0 : 1,
             },
-            items: empty ? [] : [LOCAL_REVIEW_ITEM],
+            items: empty ? [] : [todayScenario(request) ? TODAY_REVIEW_ITEM : LOCAL_REVIEW_ITEM],
+          })
+        : refuse(response);
+    }
+    if (pathname === `/api/operate/local-reviews/${TODAY_REVIEW_ID}`) {
+      return request.method === 'GET' && exactQuery(url, {}) && todayScenario(request)
+        ? responseJson(response, 200, {
+            kind: 'local-operate-review',
+            schemaVersion: '1.0.0',
+            readOnly: true,
+            item: TODAY_REVIEW_DETAIL,
           })
         : refuse(response);
     }

@@ -884,6 +884,64 @@ export const paletteParityRows = [
   ),
 ];
 
+const today = '[data-route-kind="operate.today"] .pc-operate-today';
+const todayRow = (id, selector, properties, options = {}) =>
+  row(id, `${today} ${selector}`, properties, options.viewport).map((entry) => ({
+    ...entry,
+    setup: options.setup ?? 'today-local',
+    ...(options.items ? { items: options.items } : {}),
+  }));
+export const todayParityRows = [
+  ...todayRow('O-01', '.pc-operate-today__heading h1', {
+    'font-family': 'Outfit',
+    'font-weight': '700',
+    'font-size': '28px',
+    'line-height': '36px',
+  }),
+  ...todayRow('O-02', '.pc-operate-today__eyebrow', {
+    'font-family': 'Source Code Pro',
+    'font-weight': '600',
+    'font-size': '12px',
+    'letter-spacing': '1.68px',
+    'text-transform': 'uppercase',
+    color: '--op-accent',
+  }),
+  ...todayRow('O-03', '.pc-operate-today__main', { 'grid-column-start': 'span 8' }),
+  ...todayRow('O-03', '.pc-operate-today__side', { 'grid-column-start': 'span 4' }),
+  ...todayRow('O-04', '.pc-operate-today__decision-body h2', {
+    'font-family': 'Outfit',
+    'font-weight': '600',
+    'font-size': '20px',
+    'line-height': '28px',
+  }),
+  ...todayRow(
+    'O-05',
+    '.pc-operate-today__tiles',
+    { count: '3', tracks: '1fr 1fr 1fr' },
+    { items: '.pc-operate-today__tile' },
+  ),
+  ...todayRow('O-05', '.pc-operate-today__tile', { 'padding-top': '14px', 'padding-left': '16px' }),
+  ...todayRow('O-06', '.pc-operate-today__brief', { tracks: '140px 1fr' }),
+  ...todayRow('O-08', '.pc-operate-today__row-link', {
+    height: '44px',
+    tracks: '104px 72px 1fr 120px',
+  }),
+  ...todayRow(
+    'O-09',
+    '.pc-operate-today__seats ul',
+    { count: '7' },
+    { items: '.pc-operate-today__seat' },
+  ),
+  ...todayRow('O-09', '.pc-operate-today__seat', { height: '44px' }),
+  ...todayRow('O-10', '.pc-operate-today__evidence-row', { 'min-height': '56px' }),
+  ...todayRow('O-10', '.pc-operate-today__evidence-row:not(:last-child)', {
+    'border-bottom-width': '1px',
+    'border-bottom-color': '--op-line',
+  }),
+  ...todayRow('O-11', '.pc-operate-today__evidence-title', { 'font-size': '14px' }),
+  ...todayRow('O-11', '.pc-operate-today__evidence-state', { 'font-size': '12px' }),
+];
+
 function sampleRows(nodes, { property, expected, items }) {
   return nodes.map((node) => {
     if (property === 'text')

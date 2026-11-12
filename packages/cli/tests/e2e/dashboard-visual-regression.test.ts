@@ -51,6 +51,7 @@ import {
   listParityRows,
   paletteParityRows,
   sprintsParityRows,
+  todayParityRows,
 } from '../../../../apps/dashboard/tests/helpers/redesign-parity-rows.mjs';
 import { installDashboardLayoutShifts } from '../dashboard/fixtures/dashboard-layout-shifts.js';
 import { ARTBOARD_FIXTURE_CLOCK } from '../dashboard/fixtures/premium-artboard-fixture.js';
@@ -671,6 +672,59 @@ test.describe('dashboard real-browser quality', () => {
     expect(errors).toEqual([]);
     expect((await layoutReport(page)).horizontalOverflow).toBe(false);
     expect(await axeViolations(page)).toEqual([]);
+  });
+
+  test('shows the latest local review on Today with its decision, actions and gaps', async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 1440, height: 1120 });
+    await page.goto(fixtureUrl('#/operate/today', { localOperate: '1' }));
+    const today = page.locator('[data-route-kind="operate.today"] .pc-operate-today');
+    const cycle = today.locator('.pc-operate-today__eyebrow a');
+    await expect(cycle).toBeVisible();
+    await expect(cycle).toHaveText('cycle 2026-09-14-modul-events');
+    await expect(cycle).toHaveAttribute('href', '#/operate/cycles/2026-09-14-modul-events');
+    await expect(
+      today.getByRole('heading', { level: 2, name: 'Verify the CRM flow' }),
+    ).toBeVisible();
+    const gaps = today.locator('.pc-operate-today__tile', { hasText: 'Evidence gaps' });
+    await expect(gaps).toBeVisible();
+    await expect(gaps.locator('dd')).toHaveText('1');
+    await expect(today.getByRole('link', { name: /Run the CRM smoke test/u })).toBeVisible();
+    await expect(today.getByRole('link', { name: /Live flow state/u })).toBeVisible();
+    await expect(today.locator('.pc-operate-today__summary')).toHaveText(
+      '7 of 7 seats reported. 1 action and 1 open question are waiting.',
+    );
+    const text = await page.locator('#main-content').innerText();
+    expect(text).not.toMatch(/\bnone\b|Not recorded|Unassigned/iu);
+    expect(text).not.toContain('Depends on');
+  });
+
+  test('keeps the top bar unchanged when the route tabs slot is empty', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    for (const [route, query] of [
+      ['#/home', {}],
+      ['#/operate/inbox', { localOperate: '1' }],
+    ] as const) {
+      await page.goto(fixtureUrl(route, query));
+      await expect(page.locator('.pc-topbar__palette')).toBeVisible();
+      await page.evaluate(() => document.fonts.ready);
+      const slot = page.locator('.pc-topbar__route-tabs');
+      expect(await slot.evaluate((element) => element.childElementCount)).toBe(0);
+      await expect(slot).toBeHidden();
+      const boxes = () =>
+        page.evaluate(() =>
+          [...document.querySelectorAll('.pc-topbar *')]
+            .filter((element) => !element.classList.contains('pc-topbar__route-tabs'))
+            .map((element) => {
+              const box = element.getBoundingClientRect();
+              return [box.x, box.y, box.width, box.height].map(Math.round).join(',');
+            }),
+        );
+      const withSlot = await boxes();
+      await slot.evaluate((element) => element.remove());
+      expect(await boxes(), route).toEqual(withSlot);
+    }
   });
 
   test('renders the pending Review from exact GET-only reads without mutation or private custody', async ({
@@ -1945,6 +1999,76 @@ test.describe('dashboard real-browser quality', () => {
     const parity = testInfo.outputPath('sprints-parity.json');
     writeFileSync(parity, JSON.stringify(results, null, 2));
     await testInfo.attach('sprints-parity.json', { path: parity, contentType: 'application/json' });
+  });
+
+  test('matches Today to its canvas parity rows in both themes', async ({ page }, testInfo) => {
+    test.setTimeout(90_000);
+    const results: unknown[] = [];
+    const deltas: unknown[] = [];
+    await page.context().grantPermissions(['clipboard-read', 'clipboard-write']);
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await page.setViewportSize({ width: 1440, height: 1120 });
+    await page.addInitScript(() => localStorage.setItem('op-rail-compact:v1', 'true'));
+    // Offsets from the header's top-left in operate-Main, for the blocks the scenario fills as drawn.
+    const canvas = {
+      '.pc-operate-today__eyebrow': [0, 0],
+      '.pc-operate-today__heading h1': [0, 21],
+      '.pc-operate-today__summary': [0, 63],
+      '.pc-operate-today__decision': [0, 105],
+      '.pc-operate-today__pill': [21, 121],
+      '.pc-operate-today__decision-body h2': [21, 183],
+      '.pc-operate-today__tiles': [21, 231],
+      '.pc-operate-today__tile dd': [38, 246],
+      '.pc-operate-today__brief': [21, 326],
+      '.pc-operate-today__next': [1, 436],
+      '.pc-operate-today__waiting': [0, 534],
+      '.pc-operate-today__seats': [890, 105],
+      '.pc-operate-today__seat': [891, 167],
+      '.pc-operate-today__evidence': [890, 504],
+    } as const;
+    for (const theme of ['dark', 'light'] as const) {
+      await page.goto(
+        fixtureUrl('#/operate/today', { localOperate: '1', operateScenario: 'today', theme }),
+      );
+      await page.evaluate(() => document.fonts.ready);
+      const today = page.locator('[data-route-kind="operate.today"] .pc-operate-today');
+      await expect(today.locator('.pc-operate-today__decision')).toBeVisible();
+      for (const row of todayParityRows.filter((entry) => entry.setup === 'today-local'))
+        results.push(...(await assertParityRow(page, row, theme)));
+      const origin = await today.locator('.pc-operate-today__header').boundingBox();
+      if (!origin) throw new Error('Today header has no box');
+      for (const [selector, [x, y]] of Object.entries(canvas)) {
+        const box = await today.locator(selector).first().boundingBox();
+        if (!box) throw new Error(`${selector} has no box`);
+        const actual = [Math.round(box.x - origin.x), Math.round(box.y - origin.y)];
+        deltas.push({ theme, selector, canvas: [x, y], actual });
+        expect(Math.abs(actual[0] - x), `${selector} x`).toBeLessThanOrEqual(2);
+        expect(Math.abs(actual[1] - y), `${selector} y`).toBeLessThanOrEqual(2);
+      }
+      await expect(today.getByRole('heading', { level: 1 })).toHaveText('2 decisions need you');
+      const text = await page.locator('#main-content').innerText();
+      expect(text).not.toMatch(/\bnone\b|Not recorded|Unassigned/iu);
+      expect((await layoutReport(page)).horizontalOverflow).toBe(false);
+      await page.screenshot({
+        path: testInfo.outputPath(`today-local-D-${theme}.png`),
+        fullPage: true,
+      });
+      const row = today.locator('.pc-operate-today__row-link').first();
+      await row.focus();
+      await expect(row).toHaveAttribute('aria-current', 'true');
+      const bar = page.locator('.pc-selection-bar');
+      await expect(bar.getByRole('button', { name: /Copy ID and title/u })).toBeVisible();
+      await expect(bar.locator('code')).toHaveCount(0);
+      await page.keyboard.press('c');
+      await expect(bar.locator('.pc-selection-bar__copy')).toContainText('Copied');
+      expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(
+        'D-031 Hold the next release until the dashboard redesign ships?',
+      );
+      await page.screenshot({ path: testInfo.outputPath(`today-local-selected-D-${theme}.png`) });
+    }
+    const parity = testInfo.outputPath('today-parity.json');
+    writeFileSync(parity, JSON.stringify({ results, deltas }, null, 2));
+    await testInfo.attach('today-parity.json', { path: parity, contentType: 'application/json' });
   });
 
   test('matches Activity to its canvas parity rows in both themes', async ({ page }, testInfo) => {
