@@ -321,7 +321,7 @@ describe('T-021 Planning workspace UI', () => {
     const activityHtml = renderToStaticMarkup(
       <ActivityPage currentBinding={activityBinding} current={stateFor(activityBinding)} />,
     );
-    expect(activityHtml).toContain('No activity returned');
+    expect(activityHtml).toContain('Changes saved to the plan appear here as they happen.');
 
     const detailBinding = identity('#/plan/specs/SPEC-020', 'SPEC-020');
     const detailHtml = renderToStaticMarkup(

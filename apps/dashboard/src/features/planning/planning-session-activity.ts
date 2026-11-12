@@ -11,6 +11,12 @@ export type PlanningSessionActivityEntry = Readonly<{
   sequence: number;
   kind: 'added' | 'updated' | 'removed' | 'relationships';
   node: PlanningModelNode | null;
+  /** Browser arrival time; null for patches replayed after a reconnect, whose time is unknown. */
+  receivedAt: number | null;
+  /** Status before an update, when the node was known. */
+  previousStatus: string | null;
+  /** Fields an update changed; status and the authored updated date are not listed. */
+  fields: readonly string[];
 }>;
 
 export type PlanningSessionActivity = Readonly<{
@@ -45,12 +51,29 @@ export function planningActivityScope(
   ]);
 }
 
+const UNLISTED_FIELDS = new Set(['status', 'updated']);
+
+function changedFields(previous: PlanningModelNode | undefined, next: PlanningModelNode) {
+  if (!previous) return Object.freeze([]);
+  const fields: string[] = [];
+  if (previous.title !== next.title) fields.push('title');
+  if ((previous.body ?? '') !== (next.body ?? '')) fields.push('body');
+  const keys = new Set([...Object.keys(previous.frontmatter), ...Object.keys(next.frontmatter)]);
+  for (const key of keys) {
+    if (UNLISTED_FIELDS.has(key)) continue;
+    if (JSON.stringify(previous.frontmatter[key]) !== JSON.stringify(next.frontmatter[key]))
+      fields.push(key);
+  }
+  return Object.freeze(fields);
+}
+
 /** Called only by the owner reconciler after a complete patch has been accepted. */
 export function appendPlanningSessionPatch(
   activity: PlanningSessionActivity,
   scope: string,
   before: PlanningGraphEnvelope,
   signal: PlanningPatchSignal,
+  receivedAt: number | null = null,
 ): PlanningSessionActivity {
   if (planningActivityScope(before.binding) !== scope) return activity;
   const retained = activity.scope === scope ? activity : EMPTY_SESSION_ACTIVITY;
@@ -60,6 +83,7 @@ export function appendPlanningSessionPatch(
   for (const kind of ['added', 'updated', 'removed'] as const) {
     for (const value of signal.patch[kind]) {
       const node = typeof value === 'string' ? (previous.get(value) ?? null) : value;
+      const prior = typeof value === 'string' ? undefined : previous.get(value.id);
       entries.push(
         Object.freeze({
           id: `${signal.patchId}:${kind}:${typeof value === 'string' ? value : value.id}`,
@@ -67,6 +91,12 @@ export function appendPlanningSessionPatch(
           sequence: signal.to.eventHead.sequence,
           kind,
           node,
+          receivedAt,
+          previousStatus: kind === 'updated' ? (prior?.status ?? null) : null,
+          fields:
+            kind === 'updated' && typeof value !== 'string'
+              ? changedFields(prior, value)
+              : Object.freeze([]),
         }),
       );
     }
@@ -79,6 +109,9 @@ export function appendPlanningSessionPatch(
         sequence: signal.to.eventHead.sequence,
         kind: 'relationships',
         node: null,
+        receivedAt,
+        previousStatus: null,
+        fields: Object.freeze([]),
       }),
     );
   }

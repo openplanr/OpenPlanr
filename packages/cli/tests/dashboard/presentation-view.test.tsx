@@ -316,16 +316,19 @@ describe('presentation consumers', () => {
     expect(document.body.textContent).not.toContain('Alpha transport');
   });
 
-  it('applies Activity filters to snapshot aids while keeping the missing history explicit', () => {
+  it('applies the Activity type and range from the view while keeping the missing history explicit', () => {
+    vi.useFakeTimers({ now: new Date(2026, 11, 31, 12), toFake: ['Date'] });
     const html = renderToStaticMarkup(
       wrap(
-        view('activity', { status: ['blocked'] }),
+        view('activity', { type: ['task'], updatedWithinDays: 30 }),
         <ActivityPage currentBinding={binding} current={current} />,
       ),
     );
-    expect(html).toContain('1 matching snapshot items');
-    expect(html).toContain('No activity returned');
-    expect(html).toContain('1 of 1 matching items carry one');
+    vi.useRealTimers();
+    expect(html).toContain('Type: Task');
+    expect(html).toContain('Last 30 days');
+    expect(html).toContain('No matching changes in the last 30 days');
+    expect(html).toContain('Changes saved to the plan appear here as they happen.');
     expect(html).not.toContain('activity event');
   });
 

@@ -582,6 +582,78 @@ export const sprintsParityRows = [
   ),
 ];
 
+const activity = '[data-route-kind="planning.activity"]';
+const activityRow = (id, selector, properties, options = {}) =>
+  row(id, `${activity} ${selector}`, properties, options.viewport).map((entry) => ({
+    ...entry,
+    setup: options.setup ?? 'activity',
+    ...(options.items ? { items: options.items } : {}),
+  }));
+const KIND_ICONS = { created: 'plus', status: 'arrow-right', edited: 'pencil', removed: 'minus' };
+export const activityParityRows = [
+  ...activityRow('A-01', '.pc-activity__chart', { count: '14' }, { items: '.pc-activity__bar' }),
+  ...activityRow('A-01', '.pc-activity__chart', { 'column-gap': '3px' }),
+  ...activityRow('A-01', '.pc-activity__bar', { width: '8px' }),
+  ...activityRow('A-02', '.pc-activity__bar[data-today]', { 'background-color': '--op-accent' }),
+  ...activityRow('A-02', '.pc-activity__bar:not([data-today])', {
+    'background-color': '--op-line3',
+  }),
+  ...activityRow('A-03', '.pc-activity__kinds .pc-tabs__tab', {
+    height: '26px',
+    'border-radius': '7px',
+  }),
+  ...activityRow('A-04', '.pc-activity__main', { 'grid-column-start': 'span 8' }),
+  ...activityRow('A-04', '.pc-activity__side', { 'grid-column-start': 'span 4' }),
+  ...activityRow(
+    'A-05',
+    '.pc-activity__day:first-child .pc-activity__row:first-child',
+    { 'distance-below': '64px' },
+    { items: `${activity} .pc-activity__filters` },
+  ),
+  ...activityRow('A-06', '.pc-activity__day-head', {
+    height: '40px',
+    'border-bottom-width': '1px',
+    'border-bottom-color': '--op-line',
+  }),
+  ...activityRow('A-07', '.pc-activity__row', { height: '44px' }),
+  ...activityRow('A-07', '.pc-activity__cells', { tracks: '20px 92px 1fr 200px 56px' }),
+  ...activityRow(
+    'A-08',
+    '.pc-activity__feed',
+    { 'space-below': '0px' },
+    { items: '.pc-activity__row' },
+  ),
+  ...activityRow(
+    'A-09',
+    '.pc-activity__connection > .pc-badge',
+    { 'right-inset': '20px' },
+    { items: '.pc-activity__live .pc-card' },
+  ),
+  ...activityRow('A-10', '.pc-activity__live-row', { 'min-height': '56px' }),
+  ...activityRow('A-11', '.pc-activity__busiest-row', {
+    height: '44px',
+    tracks: '76px 1fr 64px 32px',
+  }),
+  ...Object.entries(KIND_ICONS).flatMap(([kind, icon]) =>
+    activityRow('A-12', `.pc-activity__kind[data-kind="${kind}"] .pc-icon`, { 'data-icon': icon }),
+  ),
+  ...activityRow('A-13', '.pc-activity__row[data-gone] .pc-activity__struck', {
+    'text-decoration-line': 'line-through',
+  }),
+  ...activityRow(
+    'A-13',
+    '.pc-activity__row[data-gone]',
+    { count: '0' },
+    { items: 'a, [data-keyboard-item]' },
+  ),
+  ...activityRow(
+    'A-14',
+    '.pc-activity__body',
+    { count: '0' },
+    { items: '.pc-activity__explanation, .pc-activity__footnote' },
+  ),
+];
+
 function sampleRows(nodes, { property, expected, items }) {
   return nodes.map((node) => {
     if (property === 'text')
@@ -615,6 +687,20 @@ function sampleRows(nodes, { property, expected, items }) {
         expected: parseFloat(expected),
       };
     }
+    if (property === 'space-below') {
+      const last = [...node.querySelectorAll(items)].at(-1);
+      return {
+        actual: node.getBoundingClientRect().bottom - (last?.getBoundingClientRect().bottom ?? 0),
+        expected: parseFloat(expected),
+      };
+    }
+    if (property === 'right-inset')
+      return {
+        actual:
+          (node.closest(items)?.getBoundingClientRect().right ?? 0) -
+          node.getBoundingClientRect().right,
+        expected: parseFloat(expected),
+      };
     if (property === 'no-overflow')
       return { actual: String(node.scrollWidth <= node.clientWidth), expected };
     if (property === 'contains') {
@@ -638,7 +724,7 @@ function sampleRows(nodes, { property, expected, items }) {
         flexible.every((track) => Math.abs(track - flexible[0]) <= 2);
       return { actual: matches ? expected : actual.join(' '), expected };
     }
-    if (['role', 'aria-live'].includes(property))
+    if (['role', 'aria-live', 'data-icon'].includes(property))
       return { actual: node.getAttribute(property), expected };
     const rect = node.getBoundingClientRect();
     const distances = {

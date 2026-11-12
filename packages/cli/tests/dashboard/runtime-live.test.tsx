@@ -371,6 +371,41 @@ describe('Planning live connection custody', () => {
     expect(first.isCurrent()).toBe(false);
   });
 
+  it('stamps live patches with their arrival time and leaves patches replayed after a reconnect without one', async () => {
+    const { result } = renderHook(() =>
+      useDashboardRuntimeComposition(bootstrap, parseDashboardRoute('#/activity')),
+    );
+    await waitFor(() => expect(planning.connect).toHaveBeenCalledTimes(1));
+    act(() => callbacks().onReady());
+    vi.useFakeTimers();
+    planning.fetch.mockImplementationOnce(() => new Promise(() => {}));
+    const live = acceptedUpdate(graph, 'Live patch');
+    act(() => callbacks().onPatch(live.snapshot, live.signal));
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(500);
+    });
+    await act(async () => leases[0].resolve());
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(500);
+    });
+    expect(planning.connect).toHaveBeenCalledTimes(2);
+    const replayed = acceptedUpdate(live.snapshot, 'Replayed patch');
+    const after = acceptedUpdate(replayed.snapshot, 'Patch after the replay');
+    act(() => callbacks().onPatch(replayed.snapshot, replayed.signal));
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(250);
+    });
+    act(() => callbacks().onPatch(after.snapshot, after.signal));
+    const entries = result.current.planningLive.activity?.entries ?? [];
+    expect(entries.map((entry) => entry.node?.title)).toEqual([
+      'Live patch',
+      'Replayed patch',
+      'Patch after the replay',
+    ]);
+    expect(entries.map((entry) => typeof entry.receivedAt)).toEqual(['number', 'object', 'number']);
+    expect(entries[1].receivedAt).toBeNull();
+  });
+
   it('coalesces accepted patches for 500 ms without pausing and resumes at their latest checkpoint', async () => {
     const { result } = renderHook(() =>
       useDashboardRuntimeComposition(bootstrap, parseDashboardRoute('#/list')),
@@ -397,6 +432,9 @@ describe('Planning live connection custody', () => {
         sequence: snapshot.cursor.eventHead.sequence,
         kind: 'updated',
         node: snapshot.graph.nodes[0],
+        receivedAt: expect.any(Number),
+        previousStatus: 'in-progress',
+        fields: ['title'],
       })),
     };
     await act(async () => {

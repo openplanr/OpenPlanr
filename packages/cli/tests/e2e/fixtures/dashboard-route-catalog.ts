@@ -49,7 +49,7 @@ const ROUTE_FIXTURES = [
   {
     kind: 'planning.activity',
     hash: '#/activity',
-    readyText: 'No activity returned',
+    readyText: 'Since you opened',
     composition: 'shell',
   },
   {

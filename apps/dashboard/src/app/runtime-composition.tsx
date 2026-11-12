@@ -666,6 +666,8 @@ function boundDisplayState(
   );
 }
 
+const REPLAY_SETTLE_MS = 250;
+
 function usePlanningLiveConnection(
   origin: string | null,
   base: DashboardQueryIdentity | null,
@@ -759,6 +761,17 @@ function usePlanningLiveConnection(
       }
       close();
       const currentLease = lease;
+      // A resumed stream opens with the patches it missed; their real times are unknown.
+      let replaying = attempt > 0;
+      let lastReplayAt = 0;
+      const arrival = () => {
+        const at = Date.now();
+        if (replaying && lastReplayAt > 0 && at - lastReplayAt >= REPLAY_SETTLE_MS)
+          replaying = false;
+        if (!replaying) return at;
+        lastReplayAt = at;
+        return null;
+      };
       const identity = dashboardRuntime.identity.create({
         ...base,
         eventHead: current.cursor.eventHead,
@@ -769,15 +782,26 @@ function usePlanningLiveConnection(
         initial: current,
         isCurrent: () => active && lease === currentLease,
         onSnapshot: (next) => {
+          replaying = false;
           current = next;
           connected();
         },
-        onReady: connected,
+        onReady: () => {
+          replaying = false;
+          connected();
+        },
         onPatch: (next, signal) => {
+          const receivedAt = arrival();
           if (activityScope) {
             const before = current;
             setActivity((retained) =>
-              planningRuntime.appendSessionPatch(retained, activityScope, before, signal),
+              planningRuntime.appendSessionPatch(
+                retained,
+                activityScope,
+                before,
+                signal,
+                receivedAt,
+              ),
             );
           }
           if (next) current = next;

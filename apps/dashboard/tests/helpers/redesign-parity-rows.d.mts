@@ -26,6 +26,7 @@ export type ParityRow = Readonly<{
     | 'sprints-active'
     | 'sprints-bare'
     | 'sprints-none'
+    | 'activity'
     | null;
   items?: string;
 }>;
@@ -45,4 +46,5 @@ export const homeParityRows: readonly ParityRow[];
 export const listParityRows: readonly ParityRow[];
 export const detailParityRows: readonly ParityRow[];
 export const sprintsParityRows: readonly ParityRow[];
+export const activityParityRows: readonly ParityRow[];
 export function assertParityRow(page: Page, row: ParityRow, theme: string): Promise<ParitySample[]>;

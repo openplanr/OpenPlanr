@@ -1,24 +1,37 @@
-import {
-  Card,
-  CommandHint,
-  EmptyState,
-  InlineAlert,
-  SectionHeader,
-  Skeleton,
-} from '../../design-system/components/index.js';
+import { useId, useMemo, useState } from 'react';
+import { Skeleton } from '../../design-system/components/index.js';
 import type { DashboardProductState } from '../../lib/api/product-state.js';
 import type { DashboardQueryIdentity } from '../../lib/binding/query-identity.js';
-import { usePlanningView } from '../../lib/routing/planning-presentation.js';
-import { ActivitySessionFeed } from './ActivitySessionFeed.js';
+import { useInspectorStore } from '../shell/inspector-selection.js';
+import { ActivityFilterRow } from './ActivityFilters.js';
+import {
+  ActivityChart,
+  ActivityFeed,
+  ActivityHeader,
+  ActivitySelectionBar,
+  ActivitySinceOpened,
+  ActivityState,
+  BusiestSpecs,
+} from './ActivityParts.js';
+import {
+  activityEmptyState,
+  activityModel,
+  nextActivityRange,
+  useActivityFilters,
+} from './planning-activity-state.js';
+import { useLiveListSelection } from './planning-inspector.js';
 import {
   EMPTY_SESSION_ACTIVITY,
   type PlanningSessionActivity,
   planningActivityScope,
   usePlanningSessionActivity,
 } from './planning-session-activity.js';
-import { PlanningNotice, PlanningRefusal, resolvePlanningWorkspace } from './planning-workspace.js';
-import { applyPlanningView } from './presentation-view.js';
-import './planning.css';
+import {
+  PlanningNotice,
+  PlanningRefusal,
+  type PlanningWorkspaceModel,
+  resolvePlanningWorkspace,
+} from './planning-workspace.js';
 import './activity.css';
 
 export type ActivityPageProps = Readonly<{
@@ -27,68 +40,93 @@ export type ActivityPageProps = Readonly<{
   sessionActivity?: PlanningSessionActivity;
 }>;
 
-export function ActivityPage({ currentBinding, current, sessionActivity }: ActivityPageProps) {
-  const token = usePlanningView();
-  const contextualActivity = usePlanningSessionActivity();
-  const presentation = token?.route === 'activity' ? token : null;
-  const model = resolvePlanningWorkspace(current, currentBinding);
-  const supplied = sessionActivity ?? contextualActivity;
-  const activity =
-    supplied.scope === planningActivityScope(currentBinding) ? supplied : EMPTY_SESSION_ACTIVITY;
-  if (current.kind === 'booting' || current.kind === 'loading') return <ActivityLoading />;
-  if (!model) {
-    return <PlanningRefusal routeKind="planning.activity" title="Planning cannot be trusted" />;
-  }
-  const entries = activity.entries.filter(
-    (entry) =>
-      !presentation ||
-      (entry.node !== null && applyPlanningView([entry.node], presentation).length > 0),
+function ActivityContent({
+  model,
+  activity,
+}: {
+  model: PlanningWorkspaceModel;
+  activity: PlanningSessionActivity;
+}) {
+  const feedId = useId();
+  const { nodes } = model.graph;
+  const [filters, setFilters] = useActivityFilters();
+  const data = useMemo(
+    () => activityModel(nodes, activity.entries, filters, Date.now()),
+    [nodes, activity.entries, filters],
   );
-  const snapshotItems = applyPlanningView(model.graph.nodes, presentation);
-  const withUpdated = snapshotItems.filter(
-    (node) => node.frontmatter.updated != null && node.frontmatter.updated !== '',
-  ).length;
-
+  const rows = data.days.flatMap((day) => day.rows);
+  const inspector = useInspectorStore();
+  const selectedId = inspector.selection?.kind === 'node' ? inspector.selection.id : undefined;
+  const visible = rows.flatMap((row) =>
+    row.kind !== 'removed' && row.current ? [row.current] : [],
+  );
+  const { rootRef, removalNotice } = useLiveListSelection(nodes, visible, selectedId);
+  const [selectedKey, setSelectedKey] = useState<string | null>(null);
+  const selected = rows.find(
+    (row) => row.key === selectedKey && row.kind !== 'removed' && row.current?.id === selectedId,
+  );
+  const empty = activityEmptyState(data, filters);
+  const earlier = data.earlier ? nextActivityRange(filters.days) : null;
+  const specs =
+    filters.spec && !data.specs.includes(filters.spec) ? [...data.specs, filters.spec] : data.specs;
   return (
     <div
-      className="op-workspace op-planning pc-pipeline pc-activity"
+      ref={rootRef}
+      className="op-workspace op-planning pc-activity"
       data-route-kind="planning.activity"
-      data-density={presentation?.density}
     >
       <PlanningNotice presentation={model.presentation} />
-      <SectionHeader
-        headingLevel={1}
-        eyebrow="What changed"
-        title="Activity"
-        count={presentation ? `${snapshotItems.length} matching snapshot items` : undefined}
-        description="Durable history is unavailable. Live patches below belong to this browser session only."
+      {removalNotice ? (
+        <p className="pc-visually-hidden" role="status">
+          {removalNotice}
+        </p>
+      ) : null}
+      <ActivityHeader
+        total={data.total}
+        days={filters.days}
+        chart={<ActivityChart bars={data.chart} />}
       />
-      <Card padding={0}>
-        <div className="pc-activity__durable" data-activity-source="durable-unavailable">
-          <EmptyState
-            icon="activity"
-            title="Durable activity history unavailable"
-            description="There is no durable history in the current graph. A graph snapshot is not a change log. Authored-date history and day groups are unavailable in this phase."
-          />
-          <div className="pc-activity__aid">
-            <CommandHint
-              command="openplanr status --md"
-              label="inspect delivery status without changing state"
-              size="sm"
+      <ActivityFilterRow
+        filters={filters}
+        counts={data.counts}
+        specs={specs}
+        panelId={feedId}
+        onChange={setFilters}
+      />
+      <div className="pc-activity__body">
+        <div id={feedId} className="pc-activity__main">
+          {empty ? (
+            <ActivityState
+              heading={empty.heading}
+              line={empty.line}
+              action={empty.action}
+              onAction={() => setFilters(empty.next)}
             />
-            <InlineAlert tone="info" title="Current snapshot only">
-              {withUpdated} of {snapshotItems.length} matching items carry one authored updated
-              date, shown on List. A graph snapshot carries no history. These dates do not establish
-              a status transition or a durable event.
-            </InlineAlert>
-          </div>
+          ) : (
+            <ActivityFeed
+              days={data.days}
+              selectedKey={selected ? selected.key : null}
+              onSelect={setSelectedKey}
+            />
+          )}
+          {earlier && !empty ? (
+            <button
+              type="button"
+              className="pc-activity__button pc-activity__earlier"
+              onClick={() => setFilters({ days: earlier })}
+            >
+              Show earlier days
+            </button>
+          ) : null}
         </div>
-      </Card>
-      <ActivitySessionFeed
-        activity={{ ...activity, connection: supplied.connection }}
-        entries={entries}
-        nodes={model.graph.nodes}
-      />
+        <aside className="pc-activity__side" aria-label="Activity summary">
+          <ActivitySinceOpened connection={activity.connection} rows={data.session} />
+          {data.busiest.length ? (
+            <BusiestSpecs specs={data.busiest} onSpec={(spec) => setFilters({ spec })} />
+          ) : null}
+        </aside>
+      </div>
+      <ActivitySelectionBar selected={selected?.current ?? undefined} />
     </div>
   );
 }
@@ -96,42 +134,42 @@ export function ActivityPage({ currentBinding, current, sessionActivity }: Activ
 function ActivityLoading() {
   return (
     <div
-      className="op-workspace op-planning pc-pipeline pc-activity"
+      className="op-workspace op-planning pc-activity"
       data-route-kind="planning.activity"
       aria-busy="true"
     >
-      <SectionHeader
-        headingLevel={1}
-        eyebrow="What changed"
-        title="Activity"
-        description="Durable history is unavailable. Live patches below belong to this browser session only."
-      />
-      <Card padding={0}>
-        <div className="pc-activity__loading pc-activity__durable">
-          <span className="pc-visually-hidden" role="status">
-            Loading Activity
-          </span>
-          <Skeleton w="40%" h={24} />
-          <Skeleton w="80%" h={16} />
-          <Skeleton w="60%" h={16} />
+      <header className="pc-activity__header">
+        <h1>Activity</h1>
+      </header>
+      <span className="pc-visually-hidden" role="status">
+        Loading Activity
+      </span>
+      <div className="pc-activity__body pc-activity__loading">
+        <div className="pc-activity__main">
+          <Skeleton h={41} />
+          <Skeleton h={45} />
+          <Skeleton h={45} />
+          <Skeleton h={45} />
         </div>
-      </Card>
-      <Card padding={0}>
-        <div className="pc-activity__feed-head">
-          <Skeleton w="30%" h={24} />
+        <div className="pc-activity__side">
+          <Skeleton h={235} radius="12px" />
         </div>
-        <p className="pc-activity__explanation">
-          <Skeleton w="70%" h={16} />
-        </p>
-        <div className="pc-activity__feed pc-activity__loading">
-          <Skeleton h={40} />
-          <Skeleton h={40} />
-          <Skeleton h={40} />
-        </div>
-        <p className="pc-activity__footnote">
-          <Skeleton w="60%" h={16} />
-        </p>
-      </Card>
+      </div>
     </div>
+  );
+}
+
+export function ActivityPage({ currentBinding, current, sessionActivity }: ActivityPageProps) {
+  const contextual = usePlanningSessionActivity();
+  if (current.kind === 'booting' || current.kind === 'loading') return <ActivityLoading />;
+  const model = resolvePlanningWorkspace(current, currentBinding);
+  if (!model) {
+    return <PlanningRefusal routeKind="planning.activity" title="Planning cannot be trusted" />;
+  }
+  const supplied = sessionActivity ?? contextual;
+  const activity =
+    supplied.scope === planningActivityScope(currentBinding) ? supplied : EMPTY_SESSION_ACTIVITY;
+  return (
+    <ActivityContent model={model} activity={{ ...activity, connection: supplied.connection }} />
   );
 }

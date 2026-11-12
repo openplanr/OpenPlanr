@@ -66,7 +66,10 @@ export function servePremiumFixture(
       states.set(dataset, state);
     } else if (url.pathname === '/__fixture/patch' && request.method === 'POST' && state) {
       if (state.streams.size === 0) throw new Error('No Planning SSE consumer is connected.');
-      const next = fixturePatch(state.snapshot, state.fixture.manifest.selectedId);
+      const kind = url.searchParams.get('kind') ?? 'title';
+      if (kind !== 'title' && kind !== 'status' && kind !== 'remove')
+        throw new TypeError(`Unknown fixture patch kind: ${kind}`);
+      const next = fixturePatch(state.snapshot, state.fixture.manifest.selectedId, kind);
       state.snapshot = next.snapshot;
       for (const stream of state.streams)
         stream.write(`event: patch\ndata: ${JSON.stringify(next.event)}\n\n`);

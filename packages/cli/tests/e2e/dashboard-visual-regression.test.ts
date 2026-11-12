@@ -43,6 +43,7 @@ import {
   recordBrandGalleryEvidence,
 } from '../../../../apps/dashboard/tests/helpers/brand-gallery-fixture.mjs';
 import {
+  activityParityRows,
   assertParityRow,
   boardParityRows,
   detailParityRows,
@@ -51,6 +52,7 @@ import {
   sprintsParityRows,
 } from '../../../../apps/dashboard/tests/helpers/redesign-parity-rows.mjs';
 import { installDashboardLayoutShifts } from '../dashboard/fixtures/dashboard-layout-shifts.js';
+import { ARTBOARD_FIXTURE_CLOCK } from '../dashboard/fixtures/premium-artboard-fixture.js';
 import { registerDashboardPerformanceTraceTests } from './fixtures/dashboard-performance-trace.js';
 import {
   DASHBOARD_FIXTURE_CYCLE_ID,
@@ -1903,6 +1905,90 @@ test.describe('dashboard real-browser quality', () => {
     await testInfo.attach('sprints-parity.json', { path: parity, contentType: 'application/json' });
   });
 
+  test('matches Activity to its canvas parity rows in both themes', async ({ page }, testInfo) => {
+    test.setTimeout(90_000);
+    const results: unknown[] = [];
+    await page.context().grantPermissions(['clipboard-read', 'clipboard-write']);
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await page.setViewportSize({ width: 1440, height: 1100 });
+    await page.addInitScript(() => localStorage.setItem('op-rail-compact:v1', 'true'));
+    await page.clock.setFixedTime(new Date(ARTBOARD_FIXTURE_CLOCK));
+    const banned = ['Unknown', 'Not recorded', 'None declared', 'Phase 2'];
+    for (const theme of ['dark', 'light'] as const) {
+      expect((await page.request.post('/__fixture/reset?dataset=artboard')).ok()).toBe(true);
+      await page.goto(fixtureUrl('#/activity', { dataset: 'artboard', theme }));
+      await page.evaluate(() => document.fonts.ready);
+      const activity = page.locator('[data-route-kind="planning.activity"]');
+      await expect(activity.locator('.pc-activity__connection')).toContainText('Watching');
+      await expect(activity.locator('.pc-activity__row').first()).toBeVisible();
+      for (const kind of ['title', 'status', 'remove'])
+        expect(
+          (await page.request.post(`/__fixture/patch?dataset=artboard&kind=${kind}`)).ok(),
+        ).toBe(true);
+      await expect(activity.locator('.pc-activity__live-row')).toHaveCount(3);
+      for (const row of activityParityRows.filter((entry) => entry.setup === 'activity'))
+        results.push(...(await assertParityRow(page, row, theme)));
+      const text = await page.locator('#main-content').innerText();
+      for (const word of banned) expect(text, `S-21 ${word}`).not.toContain(word);
+      expect(text, 'S-21 none').not.toMatch(/\bnone\b/u);
+      expect((await activity.locator('.pc-activity__header h1').boundingBox())?.x).toBeCloseTo(
+        97,
+        -1,
+      );
+      expect((await layoutReport(page)).horizontalOverflow).toBe(false);
+      expect(await axeViolations(page)).toEqual([]);
+      await page.screenshot({
+        path: testInfo.outputPath(`activity-D-${theme}.png`),
+        fullPage: true,
+      });
+      const row = activity.locator('a.pc-activity__cells').first();
+      await row.click();
+      await expect(row).toHaveAttribute('aria-current', 'true');
+      const bar = page.locator('.pc-selection-bar');
+      await expect(bar).toBeVisible();
+      const command = await bar.locator('code').textContent();
+      expect(command).toMatch(/^(?:\/planr:|openplanr )/u);
+      await page.screenshot({ path: testInfo.outputPath(`activity-selected-D-${theme}.png`) });
+      await page.keyboard.press('Escape');
+      await row.focus();
+      await page.keyboard.press('c');
+      await expect(bar.locator('.pc-selection-bar__copy')).toContainText('Copied');
+      expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(command);
+      await page.goto(fixtureUrl('#/activity', { dataset: 'artboard', theme }));
+      await expect(activity.locator('.pc-activity__row').first()).toBeVisible();
+      await page.locator('body').click({ position: { x: 1, y: 1 } });
+      const rings: { element: string; ring: string[] }[] = [];
+      for (let press = 0; press < 30; press += 1) {
+        await page.keyboard.press('Tab');
+        const ring = await page.evaluate(async () => {
+          for (let frame = 0; frame < 2; frame += 1)
+            await new Promise((resolve) => requestAnimationFrame(resolve));
+          // Focus also selects the row, which restarts the reduced-motion transition.
+          await new Promise((resolve) => setTimeout(resolve, 50));
+          const focused = document.querySelector(
+            '[data-route-kind="planning.activity"] :focus-visible',
+          );
+          if (!focused) return null;
+          const style = getComputedStyle(focused);
+          return {
+            element: `${focused.tagName.toLowerCase()}.${focused.className}`,
+            ring: [style.outlineStyle, style.outlineWidth, style.outlineOffset],
+          };
+        });
+        if (ring) rings.push(ring);
+      }
+      expect(rings.length).toBeGreaterThan(10);
+      for (const { element, ring } of rings)
+        expect(ring, `S-20 ${element} at 1440`).toEqual(['solid', '2px', '2px']);
+    }
+    const parity = testInfo.outputPath('activity-parity.json');
+    writeFileSync(parity, JSON.stringify(results, null, 2));
+    await testInfo.attach('activity-parity.json', {
+      path: parity,
+      contentType: 'application/json',
+    });
+  });
+
   test.describe('List under a coarse pointer', () => {
     test.use({ hasTouch: true });
     test('keeps compact List rows at the 44px touch height', async ({ page }) => {
@@ -2001,10 +2087,14 @@ test.describe('dashboard real-browser quality', () => {
           expect((await layoutReport(page)).horizontalOverflow).toBe(false);
           expect(await axeViolations(page)).toEqual([]);
 
+          // The Sprints scenario clock above would put the artboard history inside the window.
+          await page.clock.setFixedTime(Date.now());
           await page.goto(fixtureUrl('#/activity', { dataset: 'artboard', evidenceTheme: theme }));
           const activity = page.locator('[data-route-kind="planning.activity"]');
-          await expect(activity).toContainText('A graph snapshot is not a change log');
-          await expect(activity).toContainText('No activity returned');
+          await expect(activity).toContainText('Nothing changed in the last 14 days');
+          await expect(activity).toContainText(
+            'Changes saved to the plan appear here as they happen.',
+          );
           await expect(activity).toContainText('This session only');
           await expect(activity.locator('[data-keyboard-item]')).toHaveCount(0);
           expect((await layoutReport(page)).horizontalOverflow).toBe(false);
@@ -2039,13 +2129,28 @@ test.describe('dashboard real-browser quality', () => {
       const row = activity.locator('[data-keyboard-item]').first();
       await expect(row).toBeVisible();
       await row.focus();
+      // Both patches retitle one item, so the focused row is held by element identity.
+      const focused = await row.elementHandle();
+      if (!focused) throw new Error('Activity row is unavailable');
       const feed = activity.getByRole('region', { name: 'Live patches from this session' });
       await feed.evaluate((element) => {
         element.scrollTop = 0;
       });
+      // New rows land where the current first rows are; everything above that must hold still.
+      // A shift rect includes the focused row's ring: 2px wide at a 2px offset.
+      const FOCUS_RING_INK = 4;
+      const insertion = await activity.evaluate((root) => {
+        const top = (selector: string) =>
+          root.querySelector(selector)?.getBoundingClientRect().top ?? 0;
+        return {
+          side: root.querySelector('.pc-activity__side')?.getBoundingClientRect().left ?? 0,
+          feed: top('[data-keyboard-item]'),
+          card: top('.pc-activity__live-row'),
+        };
+      });
       expect((await page.request.post('/__fixture/patch?dataset=artboard')).ok()).toBe(true);
       await expect(activity.locator('[data-keyboard-item]')).toHaveCount(2);
-      await expect(row).toBeFocused();
+      expect(await focused.evaluate((element) => element === document.activeElement)).toBe(true);
       expect(await feed.evaluate((element) => element.scrollTop)).toBe(0);
       const indicator = activity.locator('.pc-activity__connection');
       const badge = indicator.locator('.pc-badge');
@@ -2053,12 +2158,15 @@ test.describe('dashboard real-browser quality', () => {
       const badgeBefore = await badge.boundingBox();
       expect(indicatorBefore).not.toBeNull();
       expect(badgeBefore).not.toBeNull();
-      expect(badgeBefore?.height).toBe(28);
+      expect(badgeBefore?.height).toBe(26);
       await page.evaluate(() => window.__dashboardLayoutShifts.markPhase('activity-disconnect'));
       await page.context().setOffline(true);
       await expect(
         activity.getByRole('region', { name: 'Live session activity', exact: true }),
-      ).toContainText('Disconnected · session retained');
+      ).toContainText('Reconnecting');
+      await expect(
+        activity.getByRole('region', { name: 'Live session activity', exact: true }),
+      ).toContainText('changes so far are kept');
       await expect(
         activity.getByRole('region', { name: 'Live session activity', exact: true }),
       ).not.toContainText('Watching');
@@ -2076,13 +2184,36 @@ test.describe('dashboard real-browser quality', () => {
           !shift.hadRecentInput &&
           ['activity-patches', 'activity-disconnect'].includes(shift.phase),
       );
-      const cls = shifts.reduce((sum, shift) => sum + shift.value, 0);
-      if (cls !== 0)
+      if (shifts.length > 0)
         await testInfo.attach('activity-layout-shifts.json', {
           body: JSON.stringify(report, null, 2),
           contentType: 'application/json',
         });
-      expect(cls, `Activity layout shifts: ${JSON.stringify(shifts, null, 2)}`).toBe(0);
+      // Newest-first rows push down what sits below a live insert; nothing above it may move.
+      const patchShifts = shifts.filter((shift) => shift.phase === 'activity-patches');
+      const aboveInsertion = [
+        ...patchShifts.filter((shift) => shift.sources.length === 0).map(() => 'unattributed'),
+        ...patchShifts.flatMap((shift) =>
+          shift.sources
+            .filter(
+              (source) =>
+                source.previousRect.top + FOCUS_RING_INK <
+                (source.previousRect.left >= insertion.side ? insertion.card : insertion.feed),
+            )
+            .map((source) => source.selector ?? source.nodeKind),
+        ),
+      ];
+      expect(
+        aboveInsertion,
+        `Activity shifts above a live insert ${JSON.stringify(insertion)}: ${JSON.stringify(shifts, null, 2)}`,
+      ).toEqual([]);
+      const disconnectShift = shifts
+        .filter((shift) => shift.phase === 'activity-disconnect')
+        .reduce((sum, shift) => sum + shift.value, 0);
+      expect(
+        disconnectShift,
+        `Activity disconnect shifts: ${JSON.stringify(shifts, null, 2)}`,
+      ).toBe(0);
       expect(await indicator.boundingBox()).toEqual(indicatorBefore);
       const badgeAfter = await badge.boundingBox();
       expect(badgeAfter?.height).toBe(badgeBefore?.height);

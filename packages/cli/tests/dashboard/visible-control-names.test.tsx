@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { computeAccessibleName } from 'dom-accessibility-api';
 import type { ReactNode } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -323,9 +323,12 @@ describe('visible control names', () => {
       if (route === 'detail') await findDetailReady(view.container);
       expect(view.container.querySelectorAll('button').length).toBeGreaterThan(0);
       if (route === 'activity') {
-        const copy = view.getByRole('button', { name: 'Copy command' });
-        expect(copy.classList.contains('pc-command-hint__copy')).toBe(true);
-        expect(visibleText(copy)).toBe('Copy command');
+        const row = view.container.querySelector<HTMLElement>('[data-keyboard-item]');
+        if (!row) throw new Error('Missing Activity row.');
+        act(() => row.focus());
+        const copy = view.getByRole('button', { name: /^Copy command/u });
+        expect(copy.classList.contains('pc-selection-bar__copy')).toBe(true);
+        expect(normalise(computeAccessibleName(copy))).toBe(normalise(visibleText(copy)));
       }
       if (route === 'sprints') {
         const copy = view.getByRole('button', { name: /\/planr:sprint$/u });

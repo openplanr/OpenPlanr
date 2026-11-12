@@ -240,16 +240,41 @@ export function fixtureSnapshot(
   });
 }
 
-export function fixturePatch(snapshot: PlanningGraphEnvelope, selectedId: string) {
+export type FixturePatchKind = 'title' | 'status' | 'remove';
+
+/** One live patch on the selected node: a retitle by default, or a status change or removal. */
+export function fixturePatch(
+  snapshot: PlanningGraphEnvelope,
+  selectedId: string,
+  kind: FixturePatchKind = 'title',
+) {
   const original = snapshot.graph.nodes.find((node) => node.id === selectedId);
   if (!original) throw new TypeError('Patch target is absent.');
   const sequence = snapshot.cursor.eventHead.sequence + 1;
-  const updated = { ...original, title: `Fixture patch ${sequence}` };
-  const patch = { updated: [updated], added: [], removed: [], edges: { added: [], removed: [] } };
-  const graph = {
-    ...snapshot.graph,
-    nodes: snapshot.graph.nodes.map((node) => (node.id === selectedId ? updated : node)),
-  };
+  const touching = snapshot.graph.edges.filter(
+    (edge) => edge.from === selectedId || edge.to === selectedId,
+  );
+  const updated =
+    kind === 'status'
+      ? {
+          ...original,
+          status: original.status === 'blocked' ? ('in-progress' as const) : ('blocked' as const),
+        }
+      : { ...original, title: `Fixture patch ${sequence}` };
+  const patch =
+    kind === 'remove'
+      ? { updated: [], added: [], removed: [selectedId], edges: { added: [], removed: touching } }
+      : { updated: [updated], added: [], removed: [], edges: { added: [], removed: [] } };
+  const graph =
+    kind === 'remove'
+      ? {
+          nodes: snapshot.graph.nodes.filter((node) => node.id !== selectedId),
+          edges: snapshot.graph.edges.filter((edge) => !touching.includes(edge)),
+        }
+      : {
+          ...snapshot.graph,
+          nodes: snapshot.graph.nodes.map((node) => (node.id === selectedId ? updated : node)),
+        };
   const viewHash = fixtureHash(graph);
   const from = snapshot.cursor;
   const to = {

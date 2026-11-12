@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { cleanup, fireEvent, render } from '@testing-library/react';
+import { cleanup, fireEvent, render, waitFor } from '@testing-library/react';
 import { sha256Jcs } from 'planr-pipeline/protocol';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -10,6 +10,7 @@ import {
   type PlanningPatchSignal,
   parsePlanningGraphEnvelope,
 } from '../../../../apps/dashboard/src/features/planning/planning-api.js';
+import { boardSelectionItems } from '../../../../apps/dashboard/src/features/planning/planning-board-view.js';
 import {
   appendPlanningSessionPatch,
   EMPTY_SESSION_ACTIVITY,
@@ -25,6 +26,7 @@ import {
   parseDashboardProductState,
 } from '../../../../apps/dashboard/src/lib/api/product-state.js';
 import { createDashboardQueryIdentity } from '../../../../apps/dashboard/src/lib/binding/query-identity.js';
+import { PlanningPresentationProvider } from '../../../../apps/dashboard/src/lib/routing/planning-presentation.js';
 
 const task = Object.freeze({
   id: 'SPEC-001/T-001',
@@ -153,6 +155,52 @@ describe('Phase 1 session Activity', () => {
     expect(replaced.entries).toHaveLength(1);
     expect(replaced.scope).toBe(foreignScope);
   });
+  it('shows the arrival time of a live change and no time for one replayed after a reconnect', () => {
+    const arrival = new Date();
+    arrival.setHours(9, 5, 0, 0);
+    const live = appendPlanningSessionPatch(
+      EMPTY_SESSION_ACTIVITY,
+      scope,
+      envelope,
+      patch(),
+      arrival.getTime(),
+    );
+    const replayed = appendPlanningSessionPatch(live, scope, envelope, patch(2), null);
+    expect(replayed.entries.map((entry) => entry.receivedAt)).toEqual([arrival.getTime(), null]);
+    const view = render(
+      <ActivityPage currentBinding={binding} current={state} sessionActivity={replayed} />,
+    );
+    const times = Array.from(
+      view.container.querySelectorAll('.pc-activity__feed .pc-activity__time'),
+      (cell) => cell.textContent,
+    );
+    expect(times).toEqual(['', '09:05']);
+  });
+  it('lists the five newest changes first in Since you opened, so a sixth replaces the oldest', () => {
+    let activity = EMPTY_SESSION_ACTIVITY;
+    for (let minute = 1; minute <= 6; minute += 1) {
+      const arrival = new Date();
+      arrival.setHours(9, minute, 0, 0);
+      activity = appendPlanningSessionPatch(
+        activity,
+        scope,
+        envelope,
+        patch(minute),
+        arrival.getTime(),
+      );
+    }
+    const view = render(
+      <ActivityPage currentBinding={binding} current={state} sessionActivity={activity} />,
+    );
+    const times = Array.from(
+      view.container.querySelectorAll('.pc-activity__live-row .pc-activity__time'),
+      (cell) => cell.textContent,
+    );
+    expect(times).toEqual(['09:06', '09:05', '09:04', '09:03', '09:02']);
+    expect(view.container.querySelector('.pc-activity__live .pc-card__meta')?.textContent).toBe(
+      '6',
+    );
+  });
   it('reserves the Activity frame while the first verified graph is loading', () => {
     const loading = parseDashboardProductState(
       {
@@ -172,10 +220,10 @@ describe('Phase 1 session Activity', () => {
     expect(view.queryByText('Planning cannot be trusted')).toBeNull();
   });
 
-  it('renders snapshot-only durable unavailability without manufacturing activity', () => {
+  it('renders a quiet snapshot without manufacturing activity', () => {
     const html = renderToStaticMarkup(<ActivityPage currentBinding={binding} current={state} />);
-    expect(html).toContain('Durable activity history unavailable');
-    expect(html).toContain('No activity returned');
+    expect(html).toContain('Nothing changed in the last 14 days');
+    expect(html).toContain('Changes saved to the plan appear here as they happen.');
     expect(html).toContain('This session only');
     expect(html).not.toContain('Session patch example');
   });
@@ -192,7 +240,8 @@ describe('Phase 1 session Activity', () => {
       />,
     );
     const session = view.getByRole('region', { name: 'Live session activity', exact: true });
-    expect(session.textContent).toContain('Disconnected · session retained');
+    expect(session.textContent).toContain('Reconnecting');
+    expect(session.textContent).toContain('changes so far are kept');
     expect(session.textContent).not.toContain('Watching');
     expect(view.getByText('Removed from the graph')).toBeTruthy();
     expect(view.container.querySelector('[data-keyboard-item]')).toBeNull();
@@ -204,7 +253,7 @@ describe('Phase 1 session Activity', () => {
         sessionActivity={{ ...activity, scope: 'foreign' }}
       />,
     );
-    expect(view.getByText('No activity returned')).toBeTruthy();
+    expect(view.getByText('Changes saved to the plan appear here as they happen.')).toBeTruthy();
     expect(view.queryByText('Session patch example')).toBeNull();
   });
   it('names offline snapshot recovery and keeps stale data separate from a disconnected watcher', () => {
@@ -233,7 +282,7 @@ describe('Phase 1 session Activity', () => {
       />,
     );
     expect(view.getByRole('status').textContent).toContain('Offline.');
-    expect(view.getByText('Disconnected · session retained')).toBeTruthy();
+    expect(view.getByText('Reconnecting')).toBeTruthy();
     expect(view.container.querySelectorAll('[data-keyboard-item]')).toHaveLength(1);
     view.rerender(
       <ActivityPage
@@ -244,7 +293,7 @@ describe('Phase 1 session Activity', () => {
     );
     expect(view.getByRole('status').textContent).toContain('This plan may be out of date.');
     expect(view.getByText('Watching')).toBeTruthy();
-    expect(view.queryByText('Disconnected · session retained')).toBeNull();
+    expect(view.queryByText('Reconnecting')).toBeNull();
   });
   it('keeps row focus, selection, scroll and native detail links while appending patches', () => {
     const activity = appendPlanningSessionPatch(EMPTY_SESSION_ACTIVITY, scope, envelope, patch());
@@ -268,9 +317,10 @@ describe('Phase 1 session Activity', () => {
         <InspectorProbe />
       </>,
     );
-    expect(view.container.querySelector('[data-keyboard-item]')).toBe(row);
+    expect(view.container.contains(row)).toBe(true);
     expect(document.activeElement).toBe(row);
     expect(row.dataset.selected).toBe('true');
+    expect(row.getAttribute('aria-current')).toBe('true');
     expect(region.scrollTop).toBe(84);
     expect(view.getByText('Session patch example', { selector: 'output' })).toBeTruthy();
   });
@@ -339,11 +389,13 @@ describe('Phase 1 session Activity', () => {
   it('uses the shared keyboard coordinator and preserves modified anchor clicks', async () => {
     const first = appendPlanningSessionPatch(EMPTY_SESSION_ACTIVITY, scope, envelope, patch());
     const activity = appendPlanningSessionPatch(first, scope, envelope, patch(2));
+    const copy = vi.fn(async (_text: string) => undefined);
     const view = render(
-      <ActivityPage currentBinding={binding} current={state} sessionActivity={activity} />,
+      <PlanningPresentationProvider scope={scope} view={null} onCopy={copy}>
+        <ActivityPage currentBinding={binding} current={state} sessionActivity={activity} />
+      </PlanningPresentationProvider>,
     );
     const rows = Array.from(view.container.querySelectorAll<HTMLElement>('[data-keyboard-item]'));
-    const copy = vi.fn(async (_text: string) => undefined);
     const dispose = installKeyboardCoordinator(document, () => ({
       root: view.container,
       selectionScope: scope,
@@ -362,7 +414,9 @@ describe('Phase 1 session Activity', () => {
       fireEvent.keyDown(rows[0], { key: 'j' });
       expect(document.activeElement).toBe(rows[1]);
       fireEvent.keyDown(rows[1], { key: 'c' });
-      expect(copy).toHaveBeenCalledExactlyOnceWith(task.id);
+      await waitFor(() =>
+        expect(copy).toHaveBeenCalledExactlyOnceWith(boardSelectionItems(task)[0].command),
+      );
       const modified = new MouseEvent('click', { bubbles: true, cancelable: true, ctrlKey: true });
       rows[1].dispatchEvent(modified);
       expect(modified.defaultPrevented).toBe(false);

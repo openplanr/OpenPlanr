@@ -38,8 +38,7 @@ function bundleFixture() {
         import { UnifiedShell } from './src/features/shell/UnifiedShell.tsx';
         import { NavRail, StatusBar } from './src/features/shell/shell-navigation.tsx';
         import { parseDashboardRoute } from './src/app/router.tsx';
-        import { ActivitySessionFeed } from './src/features/planning/ActivitySessionFeed.tsx';
-        import { EMPTY_SESSION_ACTIVITY } from './src/features/planning/planning-session-activity.ts';
+        import { ActivitySinceOpened } from './src/features/planning/ActivityParts.tsx';
         import { createDashboardQueryIdentity } from './src/lib/binding/query-identity.ts';
         import { dashboardProductStatePolicy, parseDashboardProductState } from './src/lib/api/product-state.ts';
         import { parsePlanningGraphEnvelope } from './src/features/planning/planning-api.ts';
@@ -119,9 +118,7 @@ function bundleFixture() {
           },
           renderFeed: (connection) => {
             flushSync(() => root.render(createElement('div', { className: 'op-planning pc-activity' },
-              createElement(ActivitySessionFeed, {
-                activity: { ...EMPTY_SESSION_ACTIVITY, connection }, entries: [], nodes: [],
-              }))));
+              createElement(ActivitySinceOpened, { connection, rows: [] }))));
           },
           preference: () => ({ savedCompact, saves: [...saves] }),
           clearPreference: () => { savedCompact = undefined; },
@@ -573,7 +570,7 @@ test('status bootstrap and Activity disconnect preserve their painted geometry w
         header: rect('[aria-label="Live session activity"] .pc-card__head'),
         connection: rect('.pc-activity__connection'),
         badge: rect('.pc-activity__connection > .pc-badge'),
-        feed: rect('.pc-activity__feed'),
+        feed: rect('.pc-activity__live'),
         reserveVisibility: getComputedStyle(
           element.querySelector('.pc-activity__connection'),
           '::before',
@@ -584,7 +581,7 @@ test('status bootstrap and Activity disconnect preserve their painted geometry w
   assert.equal(await page.locator('.pc-activity__connection > .pc-badge').innerText(), 'Watching');
   assert.equal(watching.reserveVisibility, 'hidden');
   assert(watching.badge.width <= watching.connection.width);
-  assert.equal(watching.badge.height, 28, 'Activity artboard pill height');
+  assert.equal(watching.badge.height, 26, 'Activity artboard pill height');
   assert.equal(watching.badge.x, watching.connection.x);
   await page.evaluate(() => {
     window.__dashboardLayoutShifts.markPhase('activity-disconnect');
@@ -594,7 +591,7 @@ test('status bootstrap and Activity disconnect preserve their painted geometry w
   const paused = await feedGeometry();
   assert.equal(
     await page.locator('.pc-activity__connection > .pc-badge').innerText(),
-    'Disconnected · session retained',
+    'Reconnecting · changes so far are kept',
   );
   assert.deepEqual(paused.header, watching.header);
   assert.deepEqual(
