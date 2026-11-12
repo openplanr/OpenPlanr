@@ -3141,8 +3141,13 @@ button.pc-work-item:disabled {
   font: 400 14px var(--op-font-ui);
 }
 .pc-selection-bar > .pc-artifact-tag,
-.pc-selection-bar > strong {
+.pc-selection-bar > strong,
+.pc-selection-bar__id {
   flex-shrink: 0;
+}
+.pc-selection-bar__id {
+  font: 600 12px var(--op-font-technical);
+  color: var(--op-heading);
 }
 .pc-selection-bar__title,
 .pc-selection-bar__command {
@@ -3153,6 +3158,10 @@ button.pc-work-item:disabled {
 }
 .pc-selection-bar__title {
   max-width: 260px;
+}
+.pc-selection-bar:not(:has(.pc-selection-bar__command)) .pc-selection-bar__title {
+  flex: 1;
+  max-width: none;
 }
 .pc-selection-bar__command {
   flex: 1;
@@ -3247,7 +3256,8 @@ button.pc-work-item:disabled {
     gap: 12px;
   }
   .pc-selection-bar > .pc-artifact-tag,
-  .pc-selection-bar > strong {
+  .pc-selection-bar > strong,
+  .pc-selection-bar__id {
     justify-self: start;
     grid-column: 1 / 3;
   }

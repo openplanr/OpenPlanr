@@ -80,7 +80,10 @@ describe('Completed local operating reviews', () => {
           origin="http://localhost"
         />,
       );
-      await screen.findByRole('heading', { name: 'Review the latest operating cycle' });
+      await screen.findByRole('heading', {
+        name:
+          kind === 'operate.today' ? 'No decision is waiting' : 'Review the latest operating cycle',
+      });
       const workspace = container.querySelector<HTMLElement>(`[data-route-kind="${kind}"]`);
       if (!workspace) throw new Error(`Missing workspace for ${kind}`);
       const view = within(workspace);

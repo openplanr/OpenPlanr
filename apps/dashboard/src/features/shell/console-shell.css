@@ -290,6 +290,24 @@
   min-width: 0;
   overflow: hidden;
 }
+.pc-topbar__route-tabs {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 4px;
+  margin-left: 20px;
+}
+.pc-topbar__route-tabs:empty {
+  display: none;
+}
+@media (min-width: 1200px) {
+  .pc-topbar:has(.pc-topbar__route-tabs:not(:empty)) {
+    grid-template-columns: max-content minmax(44px, 300px) 482px;
+  }
+  .pc-topbar:has(.pc-topbar__route-tabs:not(:empty)) .pc-topbar__palette {
+    width: auto;
+  }
+}
 .pc-topbar__actions {
   display: flex;
   align-items: center;
@@ -679,6 +697,12 @@
   gap: 10px;
   max-width: 640px;
   padding: 16px 0 4px;
+}
+
+@media (max-width: 1199px) {
+  .pc-topbar__route-tabs {
+    display: none;
+  }
 }
 
 @media (min-width: 900px) and (max-width: 1199px) {

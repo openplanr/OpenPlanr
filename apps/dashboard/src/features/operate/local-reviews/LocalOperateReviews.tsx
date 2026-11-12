@@ -20,6 +20,8 @@ import {
 } from '../../../design-system/components/index.js';
 import './local-operate-reviews.css';
 import { OperateSetup } from '../OperateSetup.js';
+import { TodayLayout } from '../today/TodayParts.js';
+import { todayViewFromLocalReview } from '../today/today-view.js';
 import '../operate.css';
 
 type ReviewCounts = Readonly<{ decisions: number; actions: number; gaps: number; issues: number }>;
@@ -864,42 +866,8 @@ function SectionBlock({
   );
 }
 
-function TodayView({ item }: Readonly<{ item: LocalReviewItem }>) {
-  return (
-    <>
-      <SignalPanel item={item} />
-      <MetricStrip item={item} />
-      <div className="pc-local-review__split">
-        <SectionBlock
-          title="Priority decisions"
-          description="Recommendations waiting for owner disposition."
-          action={<a href="#/operate/inbox">View all</a>}
-        >
-          <DecisionGrid decisions={item.decisions} limit={2} />
-        </SectionBlock>
-        <SectionBlock
-          title="Lens coverage"
-          description="Independent perspectives and where they converged."
-        >
-          <LensBoard lenses={item.lenses} />
-        </SectionBlock>
-      </div>
-      <SectionBlock
-        title="Next actions"
-        description="Concrete first steps extracted from the Chair action plan."
-        action={<a href="#/operate/actions">Open register</a>}
-      >
-        <ActionRegister actions={item.actions} limit={4} />
-      </SectionBlock>
-      <SectionBlock
-        title="Uncertainty to resolve"
-        description="Evidence gaps that can change the decision order."
-        action={<a href="#/operate/evidence">Inspect evidence</a>}
-      >
-        <NamedItems items={item.gaps.slice(0, 3)} />
-      </SectionBlock>
-    </>
-  );
+function TodayView({ item, places }: Readonly<{ item: LocalReviewItem; places: boolean }>) {
+  return <TodayLayout view={todayViewFromLocalReview(item)} places={places} />;
 }
 
 function InboxView({ item }: Readonly<{ item: LocalReviewItem }>) {
@@ -1173,7 +1141,7 @@ function LocalRouteView({
 }: Readonly<{ route: ParsedDashboardRoute; item: LocalReviewItem }>) {
   switch (route.kind) {
     case 'operate.today':
-      return <TodayView item={item} />;
+      return <TodayView item={item} places />;
     case 'operate.inbox':
       return <InboxView item={item} />;
     case 'operate.actions':
@@ -1192,7 +1160,7 @@ function LocalRouteView({
     case 'operate.review':
       return <CycleDetailView item={item} />;
     default:
-      return <TodayView item={item} />;
+      return <TodayView item={item} places={false} />;
   }
 }
 
@@ -1278,11 +1246,12 @@ export function LocalOperateReviews({
       : (routeCopy?.[1] ?? 'Completed local operating review.');
   const showSetup =
     route.kind === 'operate.today' && indexState.status === 'ready' && selectedCycleId === null;
+  const todayReady = route.kind === 'operate.today' && detail !== null;
 
   return (
     <div className="pc-shell__scroll">
       <div className="pc-local-review pc-operate" data-route-kind={route.kind}>
-        {!showSetup ? (
+        {!showSetup && !todayReady ? (
           <SectionHeader
             headingLevel={1}
             eyebrow="planr-operate · local"
@@ -1329,10 +1298,12 @@ export function LocalOperateReviews({
             <LocalRouteView route={route} item={detail} />
           </>
         )}
-        <div className="pc-local-review__footnote">
-          <PcIcon name="lock" size={12} /> Local projections are review records. Approval and
-          execution require an actor-bound Operate session.
-        </div>
+        {todayReady ? null : (
+          <div className="pc-local-review__footnote">
+            <PcIcon name="lock" size={12} /> Local projections are review records. Approval and
+            execution require an actor-bound Operate session.
+          </div>
+        )}
       </div>
     </div>
   );

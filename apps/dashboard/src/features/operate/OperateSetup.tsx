@@ -1,14 +1,5 @@
 import { Badge, CommandHint } from '../../design-system/components/index.js';
-
-const EXAMPLE_SEATS = [
-  ['CEO', 'Strategy, runway, cost of delay'],
-  ['CTO', 'Architecture and delivery risk'],
-  ['CPO', 'Product bets and user value'],
-  ['CMO', 'Positioning, demand, retention'],
-  ['COO', 'Execution and operating cadence'],
-  ['CHAIR', 'Brings the reports together'],
-  ['CHALLENGER', 'Tests the board’s assumptions'],
-] as const;
+import { OPERATE_SEATS } from './today/today-view.js';
 
 function ExampleCycle() {
   return (
@@ -57,7 +48,7 @@ function ExampleCycle() {
           >
             <h2 id="op-example-seats-title">Executive seats</h2>
             <div className="op-example-cycle__seat-grid">
-              {EXAMPLE_SEATS.map(([role, description]) => (
+              {OPERATE_SEATS.map(([role, description]) => (
                 <div className="op-example-cycle__seat" data-role={role.toLowerCase()} key={role}>
                   <strong>{role}</strong>
                   <p>{description}</p>

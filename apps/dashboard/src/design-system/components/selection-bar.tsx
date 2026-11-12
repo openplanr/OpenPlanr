@@ -7,13 +7,17 @@ import { useCopyFeedback } from './use-copy-feedback.js';
 export type SelectionBarItem = Readonly<{
   id: string;
   title: string;
-  type: ArtifactType;
+  /** Planning items get the artifact ID tag; other items show the ID as plain text. */
+  type?: ArtifactType;
   command: string;
 }>;
 export type SelectionBarProps = Readonly<{
   items: readonly SelectionBarItem[];
   onClear: () => void;
-  onOpen: () => void;
+  /** Open renders only when given. */
+  onOpen?: () => void;
+  /** Names a copy that is not a command; the command preview is then left out. */
+  copyLabel?: string;
   onCopy?: (text: string) => Promise<void>;
   disabled?: boolean;
   shortcutsEnabled?: boolean;
@@ -24,6 +28,7 @@ export function SelectionBar({
   items,
   onClear,
   onOpen,
+  copyLabel,
   onCopy,
   disabled = false,
   shortcutsEnabled = true,
@@ -63,7 +68,8 @@ export function SelectionBar({
   }, [visible, disabled, shortcutsEnabled, feedback.copy]);
   const first = items[0];
   if (!first) return null;
-  const label = items.length === 1 ? 'Copy command' : `Copy ${items.length} commands`;
+  const label =
+    copyLabel ?? (items.length === 1 ? 'Copy command' : `Copy ${items.length} commands`);
   const currentLabel = feedback.message || (feedback.state === 'pending' ? 'Copying' : label);
   return (
     <section
@@ -73,9 +79,13 @@ export function SelectionBar({
       data-selection-count={items.length}
     >
       {items.length === 1 ? (
-        <ArtifactTag type={first.type} variant="id" surface="raised">
-          {first.id}
-        </ArtifactTag>
+        first.type ? (
+          <ArtifactTag type={first.type} variant="id" surface="raised">
+            {first.id}
+          </ArtifactTag>
+        ) : (
+          <span className="pc-selection-bar__id">{first.id}</span>
+        )
       ) : (
         <strong>{items.length} selected</strong>
       )}
@@ -84,12 +94,21 @@ export function SelectionBar({
           {first.title}
         </span>
       ) : null}
-      <code className="pc-selection-bar__command" title={command}>
-        {command}
-      </code>
-      <button type="button" className="pc-selection-bar__open" onClick={onOpen} disabled={disabled}>
-        Open
-      </button>
+      {copyLabel === undefined ? (
+        <code className="pc-selection-bar__command" title={command}>
+          {command}
+        </code>
+      ) : null}
+      {onOpen ? (
+        <button
+          type="button"
+          className="pc-selection-bar__open"
+          onClick={onOpen}
+          disabled={disabled}
+        >
+          Open
+        </button>
+      ) : null}
       <button
         type="button"
         className="pc-selection-bar__copy"

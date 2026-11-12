@@ -34,6 +34,8 @@ type ConnectionState = DashboardConnection['state'];
 
 const RAIL_PALETTE_LABEL = 'Search or jump';
 const TOPBAR_PALETTE_LABEL = 'Jump to a view or an artifact…';
+/** Top-bar slot a route may portal its own place tabs into; empty and hidden otherwise. */
+export const TOPBAR_ROUTE_TABS_ID = 'topbar-route-tabs';
 
 function BrandMark({ className, size }: { className: string; size: number }) {
   return (
@@ -750,6 +752,7 @@ export function TopBar({
             </span>
           </>
         ) : null}
+        <div id={TOPBAR_ROUTE_TABS_ID} className="pc-topbar__route-tabs" />
       </div>
       <button
         type="button"

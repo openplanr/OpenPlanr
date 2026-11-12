@@ -593,9 +593,13 @@ test.describe('dashboard real-browser quality', () => {
 
     await navigation.getByRole('link', { name: 'Today', exact: true }).click();
     const today = page.locator('[data-route-kind="operate.today"]');
-    await expect(today.getByRole('heading', { level: 1, name: 'Operate today' })).toBeVisible();
-    await expect(today.getByRole('heading', { name: 'Lens coverage' })).toBeVisible();
-    await expect(today).toContainText('Board signal · act now');
+    await expect(
+      today.getByRole('heading', { level: 1, name: 'One decision needs you' }),
+    ).toBeVisible();
+    await expect(today.getByRole('region', { name: 'Executive seats' })).toBeVisible();
+    await expect(
+      today.getByRole('heading', { level: 2, name: 'Verify the CRM flow' }),
+    ).toBeVisible();
 
     await navigation.getByRole('link', { name: 'Inbox', exact: true }).click();
     const inbox = page.locator('[data-route-kind="operate.inbox"]');
@@ -652,11 +656,11 @@ test.describe('dashboard real-browser quality', () => {
     await page.goto(fixtureUrl('#/operate/today', { localOperate: '1' }));
     const compactToday = page.locator('[data-route-kind="operate.today"]');
     await expect(
-      compactToday.getByRole('heading', { level: 1, name: 'Operate today' }),
+      compactToday.getByRole('heading', { level: 1, name: 'One decision needs you' }),
     ).toBeVisible();
     expect(
       await compactToday
-        .locator('.pc-local-review__signal')
+        .locator('.pc-operate-today__decision')
         .evaluate((element) => element.scrollHeight <= element.clientHeight + 1),
     ).toBe(true);
     expect((await layoutReport(page)).horizontalOverflow).toBe(false);

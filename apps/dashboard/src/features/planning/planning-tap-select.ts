@@ -17,8 +17,15 @@ function plainPointer(event: MouseEvent) {
  * the Inspector. Keyboard activation, modified and non-primary clicks are left to the row.
  */
 export function useTapSelect(): (node: PlanningModelNode) => TapSelectHandlers | undefined {
+  return useTapSelectWith((node: PlanningModelNode) => inspectPlanningNode(node, false));
+}
+
+/** The same tap rule for rows that select through `onSelect` instead of the planning Inspector. */
+export function useTapSelectWith<T>(
+  onSelect: (item: T) => void,
+): (item: T) => TapSelectHandlers | undefined {
   const narrow = useBoardPhoneWidth();
-  return (node) =>
+  return (item) =>
     narrow
       ? {
           // Focusing on mousedown would show the selection bar under the finger before the click lands.
@@ -29,7 +36,7 @@ export function useTapSelect(): (node: PlanningModelNode) => TapSelectHandlers |
             if (event.detail === 0 || !plainPointer(event)) return;
             event.preventDefault();
             event.currentTarget.focus({ preventScroll: true });
-            inspectPlanningNode(node, false);
+            onSelect(item);
           },
         }
       : undefined;
