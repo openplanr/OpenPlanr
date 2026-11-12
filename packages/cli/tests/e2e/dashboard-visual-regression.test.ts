@@ -698,6 +698,21 @@ test.describe('dashboard real-browser quality', () => {
     const text = await page.locator('#main-content').innerText();
     expect(text).not.toMatch(/\bnone\b|Not recorded|Unassigned/iu);
     expect(text).not.toContain('Depends on');
+    for (const width of [1200, 1279, 1280]) {
+      await page.setViewportSize({ width, height: 900 });
+      const actions = await page.locator('.pc-topbar__actions').boundingBox();
+      expect((actions?.x ?? 0) + (actions?.width ?? 0), `top bar at ${width}`).toBeLessThanOrEqual(
+        width,
+      );
+      await expect(page.locator('.pc-operate-places'), `tabs at ${width}`)[
+        width < 1280 ? 'toBeHidden' : 'toBeVisible'
+      ]();
+    }
+    for (const route of ['#/operate/inbox/D1', '#/operate/outcomes/D1']) {
+      await page.goto(fixtureUrl(route, { localOperate: '1' }));
+      await expect(page.locator('.pc-operate-today__title')).toBeVisible();
+      await expect(page.locator('#main-content h1'), route).toHaveCount(1);
+    }
   });
 
   test('keeps the top bar unchanged when the route tabs slot is empty', async ({ page }) => {

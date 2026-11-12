@@ -94,7 +94,9 @@ function CommandButton({ label, primary = false }: { label: string; primary?: bo
   );
 }
 
-function TodayHeader({ view }: { view: TodayView }) {
+function TodayHeader({ view, page }: { view: TodayView; page: boolean }) {
+  // Off Today the route keeps its own h1, so the situation title steps down a level.
+  const Title = page ? 'h1' : 'h2';
   return (
     <header className="pc-operate-today__header">
       <div className="pc-operate-today__heading">
@@ -102,7 +104,7 @@ function TodayHeader({ view }: { view: TodayView }) {
           {view.date ? `${view.date} · ` : null}
           <a href={view.cycleHref}>cycle {view.cycleId}</a>
         </p>
-        <h1>{view.title}</h1>
+        <Title className="pc-operate-today__title">{view.title}</Title>
         {view.summary ? <p className="pc-operate-today__summary">{view.summary}</p> : null}
       </div>
       <CommandButton label="Run a review" />
@@ -315,7 +317,7 @@ export function TodayLayout({
   return (
     <div className="pc-operate-today">
       {places ? <PlaceTabs inboxCount={inboxCount} /> : null}
-      <TodayHeader view={view} />
+      <TodayHeader view={view} page={places} />
       <div className="pc-operate-today__main">
         {view.decision ? <DecisionCard decision={view.decision} /> : null}
         {view.rows.length ? (

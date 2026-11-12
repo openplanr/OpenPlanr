@@ -300,7 +300,7 @@
 .pc-topbar__route-tabs:empty {
   display: none;
 }
-@media (min-width: 1200px) {
+@media (min-width: 1280px) {
   .pc-topbar:has(.pc-topbar__route-tabs:not(:empty)) {
     grid-template-columns: max-content minmax(44px, 300px) 482px;
   }
@@ -699,7 +699,7 @@
   padding: 16px 0 4px;
 }
 
-@media (max-width: 1199px) {
+@media (max-width: 1279px) {
   .pc-topbar__route-tabs {
     display: none;
   }
