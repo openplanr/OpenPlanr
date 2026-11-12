@@ -144,6 +144,16 @@ export function activeSprintViews(
     });
 }
 
+function phoneRank(item: SprintItem): number {
+  if (item.bucket === 'blocked') return 0;
+  return item.bucket !== 'done' && item.last?.kind === 'carried' ? 1 : 2;
+}
+
+/** Phone row order: blocked, then carried, then the desktop row order. */
+export function phoneSprintOrder(items: readonly SprintItem[]): readonly SprintItem[] {
+  return [...items].sort((a, b) => phoneRank(a) - phoneRank(b));
+}
+
 /** Closed sprints, latest end first. */
 export function pastSprints(records: readonly SprintRecord[]): readonly SprintRecord[] {
   return records

@@ -1989,6 +1989,169 @@ test.describe('dashboard real-browser quality', () => {
     });
   });
 
+  test.describe('Sprints below 1200px', () => {
+    test.use({ hasTouch: true });
+    test('matches Sprints on tablets and phones in both themes', async ({ page }, testInfo) => {
+      test.setTimeout(90_000);
+      const results: unknown[] = [];
+      await page.emulateMedia({ reducedMotion: 'reduce' });
+      await page.addInitScript(() => localStorage.setItem('op-rail-compact:v1', 'true'));
+      await page.clock.setFixedTime(new Date(SPRINT_SCENARIO_NOW));
+      const sprints = page.locator('[data-route-kind="planning.sprints"]');
+      const rings = async (count: number) => {
+        await page.locator('body').click({ position: { x: 1, y: 1 } });
+        const read: { element: string; ring: string[] }[] = [];
+        for (let press = 0; press < count; press += 1) {
+          await page.keyboard.press('Tab');
+          const ring = await page.evaluate(async () => {
+            for (let frame = 0; frame < 2; frame += 1)
+              await new Promise((resolve) => requestAnimationFrame(resolve));
+            await new Promise((resolve) => setTimeout(resolve, 50));
+            const focused = document.querySelector(
+              '[data-route-kind="planning.sprints"] :focus-visible',
+            );
+            if (!focused) return null;
+            const style = getComputedStyle(focused);
+            return {
+              element: `${focused.tagName.toLowerCase()}.${focused.className}`,
+              ring: [style.outlineStyle, style.outlineWidth, style.outlineOffset],
+            };
+          });
+          if (ring) read.push(ring);
+        }
+        return read;
+      };
+      for (const theme of ['dark', 'light'] as const) {
+        for (const width of [1024, 768, 390, 320]) {
+          await page.setViewportSize({ width, height: 1000 });
+          await page.goto(fixtureUrl('#/sprints', { planningScenario: 'sprint', theme }));
+          await page.evaluate(() => document.fonts.ready);
+          await expect(sprints.locator('.pc-sprints__active')).toBeVisible();
+          const widths = await page.evaluate(() => {
+            const main = document.querySelector('#main-content');
+            const root = document.querySelector('[data-route-kind="planning.sprints"]');
+            return [main, root].map((node) => (node ? node.scrollWidth - node.clientWidth : -1));
+          });
+          expect(widths, `no clipped overflow at ${width}`).toEqual([0, 0]);
+          expect((await layoutReport(page)).horizontalOverflow).toBe(false);
+          await page.screenshot({
+            path: testInfo.outputPath(`sprints-${width}-${theme}.png`),
+            fullPage: true,
+          });
+          if (width < 600) {
+            const boxes = await sprints.locator('.pc-sprints__item-link').evaluateAll((links) =>
+              links.map((link) =>
+                ['.pc-artifact-tag', '.pc-sprints__item-status', '.pc-sprints__last'].map(
+                  (selector) => {
+                    const box = link.querySelector(selector)?.getBoundingClientRect();
+                    return box ? [box.left, box.right] : [0, 0];
+                  },
+                ),
+              ),
+            );
+            expect(boxes).toHaveLength(4);
+            for (const [tag, status, last] of boxes) {
+              expect(tag[1]).toBeLessThanOrEqual(status[0]);
+              if (last[1] > last[0]) expect(status[1]).toBeLessThanOrEqual(last[0]);
+            }
+            const head = await sprints.locator('.pc-sprints__active-head').boundingBox();
+            const day = await sprints.locator('.pc-sprints__day').boundingBox();
+            expect((day?.x ?? 0) + (day?.width ?? 0)).toBeLessThanOrEqual(
+              (head?.x ?? 0) + (head?.width ?? 0),
+            );
+            await expect(sprints.getByRole('tab')).toHaveCount(0);
+            await expect(sprints.locator('.pc-sprints__timeline')).toBeHidden();
+          }
+          if (width === 390) {
+            for (const row of sprintsParityRows.filter((entry) => entry.setup === 'sprints-M'))
+              results.push(...(await assertParityRow(page, row, theme)));
+            const active = await sprints.locator('.pc-sprints__active').boundingBox();
+            const past = sprints.getByRole('button', { name: 'Past sprints 3', exact: true });
+            const pastBox = await past.boundingBox();
+            expect(pastBox?.height).toBeCloseTo(54, 0);
+            expect((pastBox?.y ?? 0) - ((active?.y ?? 0) + (active?.height ?? 0))).toBeCloseTo(
+              16,
+              0,
+            );
+            const read = await rings(24);
+            const kinds = read.map(({ element }) => element).join(' | ');
+            for (const part of [
+              'a.pc-sprints__item-link',
+              'button.pc-sprints__all',
+              'button.pc-sprints__past',
+            ])
+              expect(kinds, `S-20 reach ${part}`).toContain(part);
+            for (const { element, ring } of read)
+              expect(ring, `S-20 ${element} at 390`).toEqual(['solid', '2px', '2px']);
+          }
+          if (width === 768) {
+            const read = await rings(20);
+            expect(read.some(({ element }) => element.includes('pc-tabs__tab'))).toBe(true);
+            expect(read.some(({ element }) => element.includes('pc-sprints__item-link'))).toBe(
+              true,
+            );
+            for (const { element, ring } of read)
+              expect(ring, `S-20 ${element} at 768`).toEqual(['solid', '2px', '2px']);
+          }
+        }
+      }
+
+      // A row under the selection bar's Open: the tap selects it and the Inspector stays closed.
+      await page.setViewportSize({ width: 390, height: 1000 });
+      await page.goto(fixtureUrl('#/sprints', { planningScenario: 'sprint', theme: 'dark' }));
+      await sprints.getByRole('button', { name: 'All 18 items', exact: true }).tap();
+      const rows = sprints.locator('.pc-sprints__item-link');
+      await expect(rows).toHaveCount(18);
+      await rows.first().tap();
+      const bar = page.locator('.pc-selection-bar');
+      const open = bar.getByRole('button', { name: 'Open', exact: true });
+      const openBox = await open.boundingBox();
+      if (!openBox) throw new Error('Expected the selection bar Open button.');
+      await bar.getByRole('button', { name: 'Clear selection', exact: true }).tap();
+      await expect(bar).toBeHidden();
+      const target = rows.nth(9);
+      await target.evaluate(
+        (link, y) => {
+          const box = link.getBoundingClientRect();
+          const scroller = link.closest('.pc-shell__scroll') ?? document.scrollingElement;
+          scroller?.scrollBy(0, box.top + box.height / 2 - y);
+        },
+        openBox.y + openBox.height / 2,
+      );
+      const targetBox = await target.boundingBox();
+      if (!targetBox) throw new Error('Expected the target row.');
+      expect(
+        Math.abs(targetBox.y + targetBox.height / 2 - (openBox.y + openBox.height / 2)),
+      ).toBeLessThan(4);
+      await page.touchscreen.tap(openBox.x + openBox.width / 2, openBox.y + openBox.height / 2);
+      await expect(target).toHaveAttribute('aria-current', 'true');
+      await expect(open).toBeVisible();
+      await expect(page.getByRole('dialog', { name: 'Inspector', exact: true })).toBeHidden();
+
+      // With a selection, the page still scrolls its last content clear of the bar.
+      await expect
+        .poll(() =>
+          page.evaluate(() => {
+            const scroller = document.querySelector<HTMLElement>('.pc-shell__scroll');
+            const past = document.querySelector('.pc-sprints__past');
+            const bar = document.querySelector('.pc-selection-bar');
+            if (!scroller || !past || !bar) return Number.POSITIVE_INFINITY;
+            scroller.style.scrollBehavior = 'auto';
+            scroller.scrollTop = scroller.scrollHeight;
+            return past.getBoundingClientRect().bottom - bar.getBoundingClientRect().top;
+          }),
+        )
+        .toBeLessThanOrEqual(0);
+
+      const parity = testInfo.outputPath('sprints-M-parity.json');
+      writeFileSync(parity, JSON.stringify(results, null, 2));
+      await testInfo.attach('sprints-M-parity.json', {
+        path: parity,
+        contentType: 'application/json',
+      });
+    });
+  });
+
   test.describe('List under a coarse pointer', () => {
     test.use({ hasTouch: true });
     test('keeps compact List rows at the 44px touch height', async ({ page }) => {
@@ -2032,6 +2195,12 @@ test.describe('dashboard real-browser quality', () => {
           await expect(
             sprints.getByRole('region', { name: 'No active sprint', exact: true }),
           ).toBeVisible();
+          if (width < 600) {
+            const past = sprints.getByRole('button', { name: 'Past sprints 3', exact: true });
+            await expect(past).toHaveAttribute('aria-expanded', 'false');
+            await past.tap();
+            await expect(past).toHaveAttribute('aria-expanded', 'true');
+          }
           const launch = sprints.getByRole('article', {
             name: 'SPRINT-001: Launch sprint 1',
             exact: true,
@@ -2065,17 +2234,20 @@ test.describe('dashboard real-browser quality', () => {
           await expect(row.locator('.pc-sprints__last')).toHaveText('carried from SPRINT-003');
           const inspector = page.getByRole('dialog', { name: 'Inspector', exact: true });
           if (width < 900) {
-            // A tap selects the row; when the selection bar covers it, the bar's Open opens the Inspector.
+            // A tap selects the row; the bar's Open opens the Inspector.
             await row.tap();
             const open = page.locator('.pc-selection-bar').getByRole('button', {
               name: 'Open',
               exact: true,
             });
-            await expect(inspector.or(open)).toBeVisible();
-            if (!(await inspector.isVisible())) await open.tap();
+            await expect(row).toHaveAttribute('aria-current', 'true');
+            await expect(open).toBeVisible();
+            await expect(inspector).toBeHidden();
+            await open.tap();
             await expect(inspector).toBeVisible();
             await page.keyboard.press('Escape');
             await expect(inspector).toBeHidden();
+            await expect(row).toBeFocused();
             await expect(row).toHaveAttribute('aria-current', 'true');
           } else {
             await row.focus();
@@ -2105,6 +2277,8 @@ test.describe('dashboard real-browser quality', () => {
           });
         }
       }
+      // The header's sprint command is hidden on phones, so the last checks run on desktop.
+      await page.setViewportSize({ width: 1440, height: 1000 });
       await openFixture(page, '#/sprints');
       await expect(page.locator('[data-route-kind="planning.sprints"]')).toContainText(
         'No sprints yet',

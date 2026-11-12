@@ -1,8 +1,15 @@
-import { CopyLabels, SelectionBar, useCopyFeedback } from '../../design-system/components/index.js';
+import { useId, useState } from 'react';
+import {
+  CopyLabels,
+  PcIcon,
+  SelectionBar,
+  useCopyFeedback,
+} from '../../design-system/components/index.js';
 import { usePlanningCopy, usePlanningShortcuts } from '../../lib/routing/planning-presentation.js';
 import { clearInspector } from '../shell/inspector-selection.js';
 import { boardSelectionItems } from './planning-board-view.js';
 import { inspectPlanningNode } from './planning-inspector.js';
+import { useListLayout } from './planning-list-window.js';
 import { type PlanningModelNode, planningDetailHref, planningDisplayId } from './planning-model.js';
 import type { SprintRecord } from './planning-sprints.js';
 import {
@@ -125,6 +132,34 @@ export function PastSprintCard({ record }: { record: SprintRecord }) {
         ) : null}
       </p>
     </article>
+  );
+}
+
+/** Past sprint cards; on a phone they sit behind a "Past sprints N" disclosure. */
+export function PastSprints({ records }: { records: readonly SprintRecord[] }) {
+  const phone = useListLayout() === 'phone';
+  const [open, setOpen] = useState(false);
+  const listId = useId();
+  if (!records.length) return null;
+  const cards = records.map((record) => <PastSprintCard key={record.node.id} record={record} />);
+  if (!phone) return <>{cards}</>;
+  return (
+    <>
+      <button
+        type="button"
+        className="pc-sprints__past"
+        aria-expanded={open}
+        aria-controls={listId}
+        onClick={() => setOpen((current) => !current)}
+      >
+        <span className="pc-sprints__past-label">Past sprints</span>{' '}
+        <span className="pc-sprints__past-count">{records.length}</span>
+        <PcIcon name="chevron-down" size={14} />
+      </button>
+      <div id={listId} className="pc-sprints__past-list" hidden={!open}>
+        {open ? cards : null}
+      </div>
+    </>
   );
 }
 

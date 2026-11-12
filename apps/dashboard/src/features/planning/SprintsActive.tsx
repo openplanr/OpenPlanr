@@ -3,13 +3,16 @@ import { ArtifactTag, artifactTagType } from '../../design-system/components/art
 import { ArtifactStatus, PriorityChip, Tabs } from '../../design-system/components/index.js';
 import { NodeLink } from './HomeParts.js';
 import { useLiveListOrder } from './planning-inspector.js';
+import { useListLayout } from './planning-list-window.js';
 import { planningDetailHref, planningDisplayId } from './planning-model.js';
 import {
   type ActiveSprintView,
+  phoneSprintOrder,
   SPRINT_BUCKET_LABEL,
   SPRINT_BUCKETS,
   type SprintItem,
 } from './planning-sprints-view.js';
+import { type TapSelectHandlers, useTapSelect } from './planning-tap-select.js';
 
 type SprintTab = 'open' | 'blocked' | 'done' | 'all';
 const TABS: readonly (readonly [SprintTab, string])[] = [
@@ -18,6 +21,7 @@ const TABS: readonly (readonly [SprintTab, string])[] = [
   ['done', 'Done'],
   ['all', 'All'],
 ];
+const PHONE_ROWS = 4;
 
 function inTab(item: SprintItem, tab: SprintTab) {
   if (tab === 'all') return true;
@@ -51,7 +55,15 @@ function LastCell({ item }: { item: SprintItem }) {
   );
 }
 
-export function SprintItemRow({ item, selected }: { item: SprintItem; selected: boolean }) {
+export function SprintItemRow({
+  item,
+  selected,
+  tap,
+}: {
+  item: SprintItem;
+  selected: boolean;
+  tap?: TapSelectHandlers;
+}) {
   const { node } = item;
   const priority = node.frontmatter.priority;
   return (
@@ -62,6 +74,7 @@ export function SprintItemRow({ item, selected }: { item: SprintItem; selected: 
         selected={selected}
         aria-current={selected ? 'true' : undefined}
         className="pc-sprints__item-link"
+        {...tap}
       >
         <span className="pc-sprints__item-id">
           <ArtifactTag type={artifactTagType(node.type) ?? 't'}>
@@ -143,6 +156,34 @@ function SprintStatusBar({ view }: { view: ActiveSprintView }) {
   );
 }
 
+function SprintCardHead({ view, id }: { view: ActiveSprintView; id: string }) {
+  const { record } = view;
+  return (
+    <header className="pc-sprints__active-head">
+      <span className="pc-sprints__tag">{id}</span>
+      <h2>
+        <a href={planningDetailHref(record.node) ?? undefined}>{record.title}</a>
+      </h2>
+      <span className="pc-sprints__pill">Active</span>
+      {view.dates || view.day ? (
+        <span className="pc-sprints__dates">
+          {view.dates ? (
+            <span className="pc-sprints__when">
+              {view.dates}
+              {view.day ? ' · ' : ''}
+            </span>
+          ) : null}
+          {view.day ? (
+            <span className="pc-sprints__day">
+              day {view.day.day} of {view.day.days}
+            </span>
+          ) : null}
+        </span>
+      ) : null}
+    </header>
+  );
+}
+
 export function ActiveSprintCard({
   view,
   selectedId,
@@ -151,64 +192,90 @@ export function ActiveSprintCard({
   selectedId: string | undefined;
 }) {
   const [tab, setTab] = useState<SprintTab>('open');
+  const [expanded, setExpanded] = useState(false);
+  const phone = useListLayout() === 'phone';
+  const tapSelect = useTapSelect();
   const panelId = useId();
   const { record } = view;
   const id = planningDisplayId(record.node);
   const shown = useRef<readonly string[]>([]);
-  // Keep the inspected row in place when a live patch moves it out of the current tab.
-  const items = view.items.filter(
-    (item) =>
-      inTab(item, tab) || (item.node.id === selectedId && shown.current.includes(item.node.id)),
+  const rows = phone ? phoneSprintOrder(view.items) : view.items;
+  const capped = new Set(
+    rows
+      .filter((item) => item.bucket !== 'done')
+      .slice(0, PHONE_ROWS)
+      .map((item) => item.node.id),
+  );
+  const listed = (item: SprintItem) =>
+    phone ? expanded || capped.has(item.node.id) : inTab(item, tab);
+  // Keep the inspected row in place when a live patch moves it out of the current list.
+  const items = rows.filter(
+    (item) => listed(item) || (item.node.id === selectedId && shown.current.includes(item.node.id)),
   );
   // Live patches keep rows where they were; a fresh tab or sprint uses the row order.
   const ordered = useLiveListOrder(
     items.map((item) => ({ id: item.node.id, item })),
-    `${record.node.id}:${tab}`,
+    `${record.node.id}:${phone ? 'phone' : tab}`,
   ).map((entry) => entry.item);
   useEffect(() => {
     shown.current = ordered.map((item) => item.node.id);
   });
-  const meta = [view.dates, view.day ? `day ${view.day.day} of ${view.day.days}` : null]
-    .filter(Boolean)
-    .join(' · ');
+  const list = (
+    <ul className="pc-sprints__items" aria-label={phone ? `${id} items` : undefined}>
+      {ordered.map((item) => (
+        <SprintItemRow
+          key={item.node.id}
+          item={item}
+          selected={selectedId === item.node.id}
+          tap={tapSelect(item.node)}
+        />
+      ))}
+    </ul>
+  );
   return (
     <section className="pc-sprints__active" aria-label={`${id}: ${record.title}`}>
-      <header className="pc-sprints__active-head">
-        <span className="pc-sprints__tag">{id}</span>
-        <h2>
-          <a href={planningDetailHref(record.node) ?? undefined}>{record.title}</a>
-        </h2>
-        <span className="pc-sprints__pill">Active</span>
-        {meta ? <span className="pc-sprints__dates">{meta}</span> : null}
-      </header>
+      <SprintCardHead view={view} id={id} />
       <div className="pc-sprints__overview">
         <SprintStats view={view} />
         <SprintStatusBar view={view} />
       </div>
-      <div className="pc-sprints__tabs">
-        <Tabs
-          label={`${id} items`}
-          variant="pill"
-          value={tab}
-          tabs={TABS.map(([key, label]) => ({
-            id: key,
-            label,
-            panelId,
-            count: view.items.filter((item) => inTab(item, key)).length,
-          }))}
-          onChange={(next) => {
-            const match = TABS.find(([key]) => key === next);
-            if (match) setTab(match[0]);
-          }}
-        />
-      </div>
-      <div id={panelId} role="tabpanel" aria-label={`${id} items`}>
-        <ul className="pc-sprints__items">
-          {ordered.map((item) => (
-            <SprintItemRow key={item.node.id} item={item} selected={selectedId === item.node.id} />
-          ))}
-        </ul>
-      </div>
+      {phone ? (
+        <div id={panelId}>{list}</div>
+      ) : (
+        <>
+          <div className="pc-sprints__tabs">
+            <Tabs
+              label={`${id} items`}
+              variant="pill"
+              value={tab}
+              tabs={TABS.map(([key, label]) => ({
+                id: key,
+                label,
+                panelId,
+                count: view.items.filter((item) => inTab(item, key)).length,
+              }))}
+              onChange={(next) => {
+                const match = TABS.find(([key]) => key === next);
+                if (match) setTab(match[0]);
+              }}
+            />
+          </div>
+          <div id={panelId} role="tabpanel" aria-label={`${id} items`}>
+            {list}
+          </div>
+        </>
+      )}
+      {phone && rows.length > capped.size ? (
+        <button
+          type="button"
+          className="pc-sprints__all"
+          aria-expanded={expanded}
+          aria-controls={panelId}
+          onClick={() => setExpanded((open) => !open)}
+        >
+          {expanded ? 'Fewer items' : `All ${rows.length} items`}
+        </button>
+      ) : null}
     </section>
   );
 }

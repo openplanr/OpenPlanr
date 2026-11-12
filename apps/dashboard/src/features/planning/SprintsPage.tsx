@@ -14,7 +14,7 @@ import {
 import { ActiveSprintCard } from './SprintsActive.js';
 import {
   NoActiveSprint,
-  PastSprintCard,
+  PastSprints,
   SprintsHeader,
   SprintsSelectionBar,
   SprintTimeline,
@@ -62,9 +62,7 @@ function SprintsContent({ model }: { model: PlanningWorkspaceModel }) {
           activeIds={new Set(active.map((view) => view.record.node.id))}
         />
       ) : null}
-      {past.map((record) => (
-        <PastSprintCard key={record.node.id} record={record} />
-      ))}
+      <PastSprints records={past} />
       <SprintsSelectionBar selected={selected} />
     </div>
   );

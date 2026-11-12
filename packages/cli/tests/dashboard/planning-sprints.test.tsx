@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { act, cleanup, fireEvent, render } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { DataHealth } from '../../../../apps/dashboard/src/features/diagnostics/DataHealth.js';
 import { graphFocusIndex } from '../../../../apps/dashboard/src/features/planning/graph-focus-model.js';
@@ -10,7 +10,10 @@ import type {
   PlanningModelNode,
 } from '../../../../apps/dashboard/src/features/planning/planning-model.js';
 import { projectSprints } from '../../../../apps/dashboard/src/features/planning/planning-sprints.js';
-import { sprintTimeline } from '../../../../apps/dashboard/src/features/planning/planning-sprints-view.js';
+import {
+  phoneSprintOrder,
+  sprintTimeline,
+} from '../../../../apps/dashboard/src/features/planning/planning-sprints-view.js';
 import { SprintsPage } from '../../../../apps/dashboard/src/features/planning/SprintsPage.js';
 import {
   clearInspector,
@@ -93,7 +96,7 @@ function sprint(frontmatter: Record<string, unknown> = {}): PlanningModelNode {
 function Selection() {
   const store = useInspectorStore();
   return (
-    <output data-testid="selection">
+    <output data-testid="selection" data-open={store.openTick}>
       {store.selection?.kind === 'node' ? store.selection.id : ''}
     </output>
   );
@@ -495,5 +498,176 @@ describe('sprint evidence', () => {
     expect(document.activeElement).toBe(links[1]);
     expect(view.getByTestId('selection').textContent).toBe('T-156');
     stop();
+  });
+});
+
+/** Answers `max-width` queries for a viewport of the given width; every other query is false. */
+function stubWidth(width: number) {
+  vi.stubGlobal('matchMedia', (query: string) => {
+    const max = /max-width:\s*(\d+)px/u.exec(query);
+    return {
+      matches: max ? width <= Number(max[1]) : false,
+      media: query,
+      onchange: null,
+      addEventListener() {},
+      removeEventListener() {},
+      addListener() {},
+      removeListener() {},
+      dispatchEvent: () => false,
+    };
+  });
+}
+function ids(links: readonly HTMLAnchorElement[]) {
+  return links.map((link) => link.querySelector('.pc-artifact-tag')?.textContent);
+}
+function opened(view: ReturnType<typeof render>) {
+  return Number(view.getByTestId('selection').getAttribute('data-open'));
+}
+
+describe('sprints below 1200px', () => {
+  it('orders phone rows blocked, then carried, then in desktop order', () => {
+    pinClock();
+    stubWidth(390);
+    const view = render(<SprintsPage {...props(sprintPlanningGraph())} />);
+    expect(ids(rows(view))).toEqual(['T-157', 'T-159', 'T-158', 'T-156']);
+    const bucket = (status: string) =>
+      ({ blocked: 'blocked', done: 'done', 'in-progress': 'in-progress' })[status] ?? 'outstanding';
+    const item = (id: string, status: string, carried = false) => ({
+      node: { id, type: 'task', status, title: id, frontmatter: { id } } as PlanningModelNode,
+      bucket: bucket(status) as 'blocked' | 'done' | 'in-progress' | 'outstanding',
+      last: carried ? ({ kind: 'carried', from: 'SPRINT-001' } as const) : null,
+    });
+    expect(
+      phoneSprintOrder([
+        item('A', 'in-progress'),
+        item('B', 'blocked'),
+        item('C', 'pending', true),
+        item('D', 'pending'),
+        item('E', 'done', true),
+        item('F', 'blocked'),
+      ]).map((entry) => entry.node.id),
+    ).toEqual(['B', 'F', 'C', 'A', 'D', 'E']);
+  });
+
+  it('shows four open rows on a phone, expands every item in place and hides the tabs', () => {
+    pinClock();
+    stubWidth(390);
+    const view = render(<SprintsPage {...props(sprintPlanningGraph())} />);
+    expect(view.queryAllByRole('tab')).toHaveLength(0);
+    expect(view.getByRole('list', { name: 'SPRINT-004 items' })).toBeTruthy();
+    const card = view.getByRole('region', {
+      name: 'SPRINT-004: Dashboard redesign build and canvas engine',
+    });
+    expect(card.querySelector('.pc-sprints__dates')?.textContent).toBe(
+      '18 Oct – 31 Oct · day 6 of 14',
+    );
+    expect(card.querySelector('.pc-sprints__day')?.textContent).toBe('day 6 of 14');
+    const all = view.getByRole('button', { name: 'All 18 items' });
+    expect(all.getAttribute('aria-expanded')).toBe('false');
+    const first = ids(rows(view));
+    fireEvent.click(all);
+    const expanded = ids(rows(view));
+    expect(expanded).toHaveLength(18);
+    expect(expanded.slice(0, 4)).toEqual(first);
+    expect(new Set(expanded).size).toBe(18);
+    const done = rows(view)
+      .map((link) => link.querySelector('.pc-artifact')?.textContent ?? '')
+      .findIndex((status) => /Done/u.test(status));
+    expect(done).toBe(11);
+    expect(all.getAttribute('aria-expanded')).toBe('true');
+    expect(all.textContent).toBe('Fewer items');
+    fireEvent.click(all);
+    expect(ids(rows(view))).toEqual(first);
+  });
+
+  it('keeps the past sprint cards behind a disclosure on a phone', () => {
+    pinClock();
+    stubWidth(390);
+    const view = render(<SprintsPage {...props(sprintPlanningGraph())} />);
+    const past = view.getByRole('button', { name: 'Past sprints 3' });
+    expect(past.getAttribute('aria-expanded')).toBe('false');
+    expect(view.queryAllByRole('article')).toHaveLength(0);
+    fireEvent.click(past);
+    expect(past.getAttribute('aria-expanded')).toBe('true');
+    expect(view.getAllByRole('article').map((card) => card.getAttribute('aria-label'))).toEqual(
+      expect.arrayContaining([expect.stringMatching(/^SPRINT-003: /u)]),
+    );
+    expect(view.getAllByRole('article')).toHaveLength(3);
+  });
+
+  it('shows the tabs and every past card from 600px', () => {
+    pinClock();
+    stubWidth(768);
+    const view = render(<SprintsPage {...props(sprintPlanningGraph())} />);
+    expect(view.getAllByRole('tab')).toHaveLength(4);
+    expect(view.getAllByRole('article')).toHaveLength(3);
+    expect(view.queryByRole('button', { name: /Past sprints/ })).toBeNull();
+    expect(view.queryByRole('button', { name: /All \d+ items/ })).toBeNull();
+  });
+
+  it('selects on a tap below 900px and leaves the Inspector to the bar, while Enter still opens it', () => {
+    pinClock();
+    stubWidth(768);
+    const view = render(
+      <>
+        <SprintsPage {...props(sprintPlanningGraph())} />
+        <Selection />
+      </>,
+    );
+    const row = rows(view).find((link) => link.textContent?.includes('T-158'));
+    if (!row) throw new Error('Missing T-158 row');
+    const before = opened(view);
+    expect(fireEvent.mouseDown(row, { button: 0 })).toBe(false);
+    expect(fireEvent.click(row, { detail: 1 })).toBe(false);
+    expect(view.getByTestId('selection').textContent).toBe('T-158');
+    expect(row.getAttribute('aria-current')).toBe('true');
+    expect(document.activeElement).toBe(row);
+    expect(opened(view)).toBe(before);
+    const bar = view.getByRole('region', { name: 'Selected items' });
+    fireEvent.click(within(bar).getByRole('button', { name: 'Open' }));
+    expect(opened(view)).toBe(before + 1);
+    fireEvent.click(row, { detail: 0 });
+    expect(opened(view)).toBe(before + 2);
+  });
+
+  it('leaves modified and non-primary clicks to the browser at every width', () => {
+    pinClock();
+    for (const width of [768, 1440]) {
+      stubWidth(width);
+      const view = render(
+        <>
+          <SprintsPage {...props(sprintPlanningGraph())} />
+          <Selection />
+        </>,
+      );
+      const row = rows(view).find((link) => link.textContent?.includes('T-156'));
+      if (!row) throw new Error('Missing T-156 row');
+      const before = opened(view);
+      expect(fireEvent.mouseDown(row, { button: 2 })).toBe(true);
+      expect(fireEvent.mouseDown(row, { button: 0, ctrlKey: true })).toBe(true);
+      for (const modifier of ['metaKey', 'ctrlKey', 'shiftKey', 'altKey'])
+        expect(fireEvent.click(row, { detail: 1, [modifier]: true }), modifier).toBe(true);
+      expect(view.getByTestId('selection').textContent).toBe('');
+      expect(opened(view)).toBe(before);
+      cleanup();
+      clearInspector();
+    }
+  });
+
+  it('keeps the desktop click opening the Inspector from 900px', () => {
+    pinClock();
+    stubWidth(1024);
+    const view = render(
+      <>
+        <SprintsPage {...props(sprintPlanningGraph())} />
+        <Selection />
+      </>,
+    );
+    const row = rows(view).find((link) => link.textContent?.includes('T-158'));
+    if (!row) throw new Error('Missing T-158 row');
+    const before = opened(view);
+    expect(fireEvent.mouseDown(row, { button: 0 })).toBe(true);
+    fireEvent.click(row, { detail: 1 });
+    expect(opened(view)).toBe(before + 1);
   });
 });

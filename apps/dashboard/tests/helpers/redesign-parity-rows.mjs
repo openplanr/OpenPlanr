@@ -580,6 +580,24 @@ export const sprintsParityRows = [
     { 'background-color': '--op-accent' },
     { setup: 'sprints-none' },
   ),
+  ...sprintRow(
+    'SP-17',
+    '.pc-sprints__item-link',
+    { 'min-height': '64px', 'padding-top': '10px', 'padding-left': '16px', 'row-gap': '6px' },
+    { setup: 'sprints-M', viewport: 'M' },
+  ),
+  ...sprintRow(
+    'SP-17',
+    '.pc-sprints__item-title',
+    { 'font-size': '14px', 'line-height': '20px', '-webkit-line-clamp': '2' },
+    { setup: 'sprints-M', viewport: 'M' },
+  ),
+  ...sprintRow(
+    'SP-18',
+    '.pc-sprints__all',
+    { height: '44px', color: '--op-accent', 'font-size': '13px' },
+    { setup: 'sprints-M', viewport: 'M' },
+  ),
 ];
 
 const activity = '[data-route-kind="planning.activity"]';
