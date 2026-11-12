@@ -192,6 +192,40 @@ describe('palette keyboard copy', () => {
   });
 });
 
+describe('palette keyboard copy with a selection elsewhere', () => {
+  it('leaves Cmd/Ctrl+C to the browser when text outside the input is selected', async () => {
+    const onCopy = vi.fn(async () => undefined);
+    render(
+      <CommandPalette
+        open
+        onClose={() => undefined}
+        onCopy={onCopy}
+        sources={sources}
+        initialQuery="Callable"
+      />,
+    );
+    const input = screen.getByRole<HTMLInputElement>('searchbox');
+    const preview = screen.getByRole('complementary', { name: 'Search result preview' });
+    const title = within(preview).getByRole('heading', { name: 'Callable search' });
+    const selection = document.getSelection();
+    if (!selection) throw new Error('jsdom returned no document selection');
+    const range = document.createRange();
+    range.selectNodeContents(title);
+    selection.removeAllRanges();
+    selection.addRange(range);
+    input.setSelectionRange(input.value.length, input.value.length);
+    expect(document.activeElement).toBe(input);
+    for (const modifier of [{ ctrlKey: true }, { metaKey: true }])
+      expect(fireEvent.keyDown(input, { key: 'c', ...modifier })).toBe(true);
+    await act(async () => undefined);
+    expect(onCopy).not.toHaveBeenCalled();
+    selection.removeAllRanges();
+    expect(fireEvent.keyDown(input, { key: 'c', ctrlKey: true })).toBe(false);
+    await act(async () => undefined);
+    expect(onCopy).toHaveBeenCalledExactlyOnceWith('openplanr status SPEC-020/US-013 --md');
+  });
+});
+
 describe('palette paths to full Search', () => {
   it('opens the Search page from the palette view with Enter and with Cmd/Ctrl+Enter', () => {
     for (const modifier of [{}, { ctrlKey: true }, { metaKey: true }]) {

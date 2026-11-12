@@ -9,6 +9,7 @@ import {
   type PaletteScope,
   PaletteScopes,
   type RecentItemsPreference,
+  selectionOutside,
   shownScope,
   useRecentItems,
 } from './PaletteParts.js';
@@ -611,6 +612,7 @@ export function CommandPalette({
                 !event.shiftKey &&
                 event.key.toLowerCase() === 'c' &&
                 !hasSelectedText(event.currentTarget) &&
+                !selectionOutside(event.currentTarget.parentElement) &&
                 copyActiveCommand()
               ) {
                 event.preventDefault();

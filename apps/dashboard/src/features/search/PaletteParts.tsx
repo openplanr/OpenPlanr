@@ -101,6 +101,13 @@ export function PaletteScopes({
   );
 }
 
+/** Whether the document holds a text selection that starts outside `container`. */
+export function selectionOutside(container: Element | null): boolean {
+  const selection = document.getSelection();
+  if (!selection || selection.isCollapsed || selection.anchorNode === null) return false;
+  return !container?.contains(selection.anchorNode);
+}
+
 export type PaletteCopyFeedback = Readonly<{
   command: string;
   kind: 'command' | 'id';

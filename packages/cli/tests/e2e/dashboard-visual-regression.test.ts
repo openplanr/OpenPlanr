@@ -2878,6 +2878,47 @@ test.describe('dashboard real-browser quality', () => {
     await testInfo.attach('palette-parity.json', { path: parity, contentType: 'application/json' });
   });
 
+  test('leaves Ctrl+C to the browser when preview text is selected with the palette input focused', async ({
+    page,
+  }) => {
+    await page.context().grantPermissions(['clipboard-read', 'clipboard-write']);
+    await page.setViewportSize({ width: 1440, height: 900 });
+    expect((await page.request.post('/__fixture/reset?dataset=artboard')).ok()).toBe(true);
+    await page.goto(fixtureUrl('#/list', { dataset: 'artboard' }));
+    await expect(page.locator('.pc-list')).toBeVisible();
+    await page.keyboard.press('Control+K');
+    const palette = page.getByRole('dialog', { name: 'Command palette', exact: true });
+    await palette.getByRole('searchbox').fill('SPEC-014/T-046');
+    const preview = palette.getByRole('complementary', { name: 'Search result preview' });
+    await expect(preview).toHaveAttribute('data-preview-state', 'ready');
+    await page.evaluate(() => navigator.clipboard.writeText('before'));
+    const selected = await page.evaluate(() => {
+      const title = document.querySelector('[data-preview-id] h3');
+      const selection = document.getSelection();
+      if (!title || !selection) return null;
+      const range = document.createRange();
+      range.selectNodeContents(title);
+      selection.removeAllRanges();
+      selection.addRange(range);
+      return {
+        text: selection.toString(),
+        inputFocused: document.activeElement?.classList.contains('pc-palette__input') ?? false,
+      };
+    });
+    expect(selected?.text).toBe('Connect Plan Ship company sync and release proof');
+    expect(selected?.inputFocused).toBe(true);
+    await page.keyboard.press('Control+C');
+    // Chromium's own copy acts on the focused input's empty selection, so the clipboard keeps its value.
+    const clipboard = await page.evaluate(async () => {
+      for (let frame = 0; frame < 2; frame += 1)
+        await new Promise((resolve) => requestAnimationFrame(resolve));
+      await new Promise((resolve) => setTimeout(resolve, 200));
+      return navigator.clipboard.readText();
+    });
+    expect(clipboard).toBe('before');
+    await expect(palette.locator('.pc-palette__copy')).toHaveCount(0);
+  });
+
   test('starts the handoff trace through palette search and promotes only on full-page activation', async ({
     page,
   }) => {
