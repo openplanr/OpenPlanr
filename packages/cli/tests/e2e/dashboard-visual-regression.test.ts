@@ -1709,6 +1709,89 @@ test.describe('dashboard real-browser quality', () => {
     await testInfo.attach('detail-parity.json', { path: parity, contentType: 'application/json' });
   });
 
+  test('fits Detail to phone width with selection and focus rings in both themes', async ({
+    page,
+  }, testInfo) => {
+    const results: unknown[] = [];
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await page.context().grantPermissions(['clipboard-read', 'clipboard-write']);
+    const focusRings = async (presses: number) => {
+      const rings: unknown[] = [];
+      for (let press = 0; press < presses; press += 1) {
+        await page.keyboard.press('Tab');
+        rings.push(
+          await page.evaluate(async () => {
+            for (let frame = 0; frame < 2; frame += 1)
+              await new Promise((resolve) => requestAnimationFrame(resolve));
+            const focused = document.querySelector(':focus-visible');
+            if (!focused) return null;
+            const style = getComputedStyle(focused);
+            return {
+              element: `${focused.tagName.toLowerCase()}.${focused.className}`,
+              ring: [style.outlineStyle, style.outlineWidth, style.outlineOffset],
+            };
+          }),
+        );
+      }
+      return rings.filter(Boolean) as { element: string; ring: string[] }[];
+    };
+    for (const theme of ['dark', 'light'] as const) {
+      await page.setViewportSize({ width: 390, height: 844 });
+      await page.goto(fixtureUrl('#/detail/SPEC-026%2FT-112', { dataset: 'artboard', theme }));
+      await page.evaluate(() => document.fonts.ready);
+      const detail = page.locator('[data-route-kind="planning.detail"]');
+      await expect(detail.locator('[data-detail-state="ready"] .pc-detail__columns')).toBeVisible();
+      for (const row of detailParityRows.filter((entry) => entry.setup === 'detail-M'))
+        results.push(...(await assertParityRow(page, row, theme)));
+      const header = page.locator('.pc-topbar[data-detail-header]');
+      await expect(header.getByRole('link', { name: 'Back to List' })).toHaveAttribute(
+        'href',
+        '#/list',
+      );
+      await expect(header.locator('[aria-current="page"]')).toHaveText('T-112');
+      await expect(header.getByRole('button', { name: 'Copy link' })).toBeVisible();
+      await expect(detail.locator('.pc-detail__navigation')).toHaveCount(0);
+      expect((await layoutReport(page)).horizontalOverflow).toBe(false);
+      const dock = page.getByRole('region', { name: 'Next step command' });
+      await expect(dock).toBeVisible();
+      const dockBox = await dock.boundingBox();
+      const navBox = await page.locator('.pc-mobile-nav').boundingBox();
+      expect(Math.round((dockBox?.y ?? 0) + (dockBox?.height ?? 0))).toBe(
+        Math.round(navBox?.y ?? -1),
+      );
+      await page.screenshot({ path: testInfo.outputPath(`detail-M-${theme}.png`) });
+      const spec = detail
+        .locator('.pc-detail__trace a.pc-detail__step')
+        .filter({ hasText: 'SPEC-026' });
+      await spec.click();
+      await expect(spec).toHaveAttribute('data-selected', 'true');
+      await expect(dock).toHaveCount(0);
+      const bar = page.getByRole('region', { name: 'Selected items' });
+      const command = (await bar.locator('.pc-selection-bar__command').textContent()) ?? '';
+      expect(command).toContain('SPEC-026');
+      await page.screenshot({ path: testInfo.outputPath(`detail-M-selected-${theme}.png`) });
+      await page.keyboard.press('c');
+      await expect.poll(() => page.evaluate(() => navigator.clipboard.readText())).toBe(command);
+      await page.keyboard.press('Escape');
+      await expect(bar).toHaveCount(0);
+      await expect(dock).toBeVisible();
+      for (const { element, ring } of await focusRings(24))
+        expect(ring, `S-20 ${element} at 390`).toEqual(['solid', '2px', '2px']);
+      await page.setViewportSize({ width: 1440, height: 1276 });
+      await page.goto(fixtureUrl('#/detail/SPEC-026%2FT-112', { dataset: 'artboard', theme }));
+      await expect(detail.locator('[data-detail-state="ready"] .pc-detail__columns')).toBeVisible();
+      await detail.locator('.pc-detail__trace a.pc-detail__step').first().click();
+      for (const { element, ring } of await focusRings(20))
+        expect(ring, `S-20 ${element} at 1440`).toEqual(['solid', '2px', '2px']);
+    }
+    const parity = testInfo.outputPath('detail-m-parity.json');
+    writeFileSync(parity, JSON.stringify(results, null, 2));
+    await testInfo.attach('detail-m-parity.json', {
+      path: parity,
+      contentType: 'application/json',
+    });
+  });
+
   test.describe('List under a coarse pointer', () => {
     test.use({ hasTouch: true });
     test('keeps compact List rows at the 44px touch height', async ({ page }) => {

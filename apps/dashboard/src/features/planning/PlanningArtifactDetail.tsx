@@ -1,6 +1,7 @@
 import { memo, type ReactNode, useRef } from 'react';
 import { EmptyState } from '../../design-system/components/index.js';
 import { DetailColumns, LoadingColumns, ReadError } from './DetailSections.js';
+import { DetailSelectionScope, useDetailCompact } from './DetailSelection.js';
 import { DetailSummary } from './DetailSummary.js';
 import { DetailTrace } from './DetailTrace.js';
 import { PlanningOperatingOriginSection } from './PlanningOperatingOriginSection.js';
@@ -38,6 +39,7 @@ function ArtifactDetail({
   panel?: boolean;
 }) {
   const verifiedColumns = useRef<VerifiedColumns | null>(null);
+  const compact = useDetailCompact(panel);
   const columnsKey = JSON.stringify([origin, model.envelope.binding, nodeId]);
   const summary = model.graph.nodes.find((entry) => entry.id === nodeId) ?? null;
   const read = usePlanningDetail(model, summary, origin);
@@ -93,36 +95,43 @@ function ArtifactDetail({
         read.error || parentRead.error ? 'error' : detailLoading ? 'loading' : 'ready'
       }
       aria-busy={detailLoading || undefined}
+      data-compact={compact || undefined}
     >
-      <DetailSummary node={node} status={status} blockers={blockers} link={link} panel={panel} />
-      <p className="pc-visually-hidden" role="status">
-        {read.loading
-          ? columns
-            ? 'Updating verified detail…'
-            : 'Loading verified detail…'
-          : parentSummary && !parentRead.node && !parentRead.error
-            ? 'Loading referenced criteria…'
-            : ''}
-      </p>
-      <DetailTrace key={node.id} model={detail} />
-      {read.error ? (
-        <ReadError
-          title={`${planningDisplayId(node)} could not be read`}
-          message={read.error}
-          onRetry={read.retry}
-        />
-      ) : null}
-      {parentRead.error && parentSummary ? (
-        <ReadError
-          title={`Criteria from ${planningDisplayId(parentSummary)} could not be read`}
-          message={parentRead.error}
-          onRetry={parentRead.retry}
-        />
-      ) : null}
-      {columns ?? (read.error || parentRead.error ? null : <LoadingColumns />)}
-      {node.type === 'spec' ? (
-        <PlanningOperatingOriginSection specId={node.id} binding={model.binding} node={read.node} />
-      ) : null}
+      <DetailSelectionScope nodes={model.graph.nodes} node={node} detail={detail} panel={panel}>
+        <DetailSummary node={node} status={status} blockers={blockers} link={link} panel={panel} />
+        <p className="pc-visually-hidden" role="status">
+          {read.loading
+            ? columns
+              ? 'Updating verified detail…'
+              : 'Loading verified detail…'
+            : parentSummary && !parentRead.node && !parentRead.error
+              ? 'Loading referenced criteria…'
+              : ''}
+        </p>
+        <DetailTrace key={node.id} model={detail} />
+        {read.error ? (
+          <ReadError
+            title={`${planningDisplayId(node)} could not be read`}
+            message={read.error}
+            onRetry={read.retry}
+          />
+        ) : null}
+        {parentRead.error && parentSummary ? (
+          <ReadError
+            title={`Criteria from ${planningDisplayId(parentSummary)} could not be read`}
+            message={parentRead.error}
+            onRetry={parentRead.retry}
+          />
+        ) : null}
+        {columns ?? (read.error || parentRead.error ? null : <LoadingColumns />)}
+        {node.type === 'spec' ? (
+          <PlanningOperatingOriginSection
+            specId={node.id}
+            binding={model.binding}
+            node={read.node}
+          />
+        ) : null}
+      </DetailSelectionScope>
     </article>
   );
 }

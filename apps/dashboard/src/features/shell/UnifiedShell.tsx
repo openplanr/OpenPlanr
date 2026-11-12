@@ -217,6 +217,7 @@ export function UnifiedShell({
           projectName={identity.projectName}
           showSubject={hasCurrentRouteSubject({ route, projection, binding })}
           detailTrail={detailRoute ? planningDetailTrail(graph, route.subjectId) : null}
+          onCopy={adapters?.copy}
           connectionState={connection.state}
           inspectorOpen={inspectorOpen}
           inspectorAvailable={!detailRoute && inspectorStore.selection !== null}

@@ -1,8 +1,9 @@
 import { type CSSProperties, memo, useId } from 'react';
 import { artifactTagType } from '../../design-system/components/artifact-recipes.js';
 import { ArtifactStatus, InlineAlert, PcIcon } from '../../design-system/components/index.js';
+import { useDetailSelectable } from './DetailSelection.js';
 import { type DetailTraceStep, detailTraceSteps } from './planning-detail-trace.js';
-import { planningDetailHref, planningDisplayId } from './planning-model.js';
+import { type PlanningModelNode, planningDetailHref, planningDisplayId } from './planning-model.js';
 import type { StructuralDetailModel } from './planning-structural-model.js';
 
 const COLUMNS = 5;
@@ -14,8 +15,10 @@ function StepBody({ step }: { step: DetailTraceStep }) {
         <span className="pc-detail__step-head">
           <span className="pc-detail__step-role">{step.role}</span>
         </span>
-        <span className="pc-detail__step-count">{step.count}</span>
-        <span className="pc-detail__step-summary">{step.summary}</span>
+        <span className="pc-detail__step-name">
+          <span className="pc-detail__step-count">{step.count}</span>
+          <span className="pc-detail__step-summary">{step.summary}</span>
+        </span>
       </>
     );
   const tag = artifactTagType(step.node.type);
@@ -29,14 +32,32 @@ function StepBody({ step }: { step: DetailTraceStep }) {
           size="sm"
         />
       </span>
-      <span
-        className="pc-detail__step-id"
-        style={tag ? { color: `var(--pc-type-${tag})` } : undefined}
-      >
-        {planningDisplayId(step.node)}
+      <span className="pc-detail__step-name">
+        <span
+          className="pc-detail__step-id"
+          style={tag ? { color: `var(--pc-type-${tag})` } : undefined}
+        >
+          {planningDisplayId(step.node)}
+        </span>
+        <span className="pc-detail__step-title">{step.node.title}</span>
       </span>
-      <span className="pc-detail__step-title">{step.node.title}</span>
     </>
+  );
+}
+
+function StepLink({
+  node,
+  href,
+  step,
+}: {
+  node: PlanningModelNode;
+  href: string;
+  step: DetailTraceStep;
+}) {
+  return (
+    <a className="pc-detail__step" href={href} {...useDetailSelectable(node)}>
+      <StepBody step={step} />
+    </a>
   );
 }
 
@@ -71,10 +92,8 @@ function DetailTraceContent({ model }: Readonly<{ model: StructuralDetailModel }
                   <PcIcon name="arrow-right" size={16} />
                 </span>
               ) : null}
-              {href ? (
-                <a className="pc-detail__step" href={href}>
-                  <StepBody step={step} />
-                </a>
+              {href && step.kind === 'node' ? (
+                <StepLink node={step.node} href={href} step={step} />
               ) : (
                 <div
                   className="pc-detail__step"

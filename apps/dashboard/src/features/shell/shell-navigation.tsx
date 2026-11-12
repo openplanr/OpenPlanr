@@ -26,6 +26,7 @@ import {
   Tooltip,
   WorkItemChip,
 } from '../../design-system/components/index.js';
+import { useCopyFeedback } from '../../design-system/components/use-copy-feedback.js';
 import type { InspectorSelection } from './inspector-selection.js';
 import './console-shell.css';
 
@@ -555,6 +556,7 @@ export type TopBarProps = Readonly<{
   shortcutHelp?: ReactNode;
   showSubject?: boolean;
   detailTrail?: DetailTrail | null;
+  onCopy?: (text: string) => Promise<void>;
   route: ParsedDashboardRoute;
   connectionState: ConnectionState;
   inspectorOpen: boolean;
@@ -568,7 +570,51 @@ export type DetailTrail = Readonly<{
   origin: string;
   spec: Readonly<{ label: string; href: string }> | null;
   current: string;
+  tag: string | null;
+  link: string | null;
 }>;
+
+/** The narrow Detail header: back to where it was opened from, its ID, and Copy link. */
+function DetailHeader({
+  trail,
+  onCopy,
+}: {
+  trail: DetailTrail;
+  onCopy?: (text: string) => Promise<void>;
+}) {
+  const feedback = useCopyFeedback(trail.link ?? '', !trail.link, onCopy);
+  const origin = dashboardRouteDefinition(parseDashboardRoute(trail.origin))?.label ?? 'List';
+  return (
+    <div className="pc-topbar__detail">
+      <a className="pc-topbar__back" href={trail.origin} aria-label={`Back to ${origin}`}>
+        <PcIcon name="chevron-left" size={18} />
+      </a>
+      <span
+        className="pc-topbar__detail-id"
+        aria-current="page"
+        style={trail.tag ? { color: `var(--pc-type-${trail.tag})` } : undefined}
+      >
+        {trail.current}
+      </span>
+      {trail.link ? (
+        <button
+          type="button"
+          className="pc-topbar__copy-link"
+          aria-label="Copy link"
+          title={feedback.error || undefined}
+          data-state={feedback.state}
+          onClick={() => void feedback.copy()}
+        >
+          <PcIcon name={feedback.state === 'copied' ? 'check' : 'link'} size={18} />
+        </button>
+      ) : null}
+      <span className="pc-visually-hidden" aria-live="polite" aria-atomic="true">
+        {feedback.message}
+        {feedback.error ? `: ${feedback.error}` : ''}
+      </span>
+    </div>
+  );
+}
 
 /** Breadcrumb, palette field, connection chips, theme and inspector controls. */
 export function TopBar({
@@ -579,6 +625,7 @@ export function TopBar({
   shortcutHelp,
   showSubject = false,
   detailTrail = null,
+  onCopy,
   route,
   connectionState,
   inspectorOpen,
@@ -629,6 +676,13 @@ export function TopBar({
       </span>
     </div>
   );
+  if (detailTrail && mobile)
+    return (
+      <header className="pc-topbar" data-product={product} data-detail-header>
+        <DetailHeader trail={detailTrail} onCopy={onCopy} />
+        {mobileControls ? createPortal(utilities, mobileControls) : null}
+      </header>
+    );
   return (
     <header className="pc-topbar" data-product={product}>
       <div className="pc-topbar__breadcrumbs">

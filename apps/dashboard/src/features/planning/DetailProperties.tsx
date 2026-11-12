@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { ArtifactTag, artifactTagType } from '../../design-system/components/artifact-recipes.js';
 import { ArtifactStatus } from '../../design-system/components/index.js';
+import { useDetailSelectable } from './DetailSelection.js';
 import { authoredDay } from './DetailSummary.js';
 import { DeclaredFile } from './PlanningDetailActions.js';
 import { DetailDisclosure } from './PlanningMarkdown.js';
@@ -13,6 +14,27 @@ import {
 import type { StructuralDetailModel, StructuralReference } from './planning-structural-model.js';
 import type { PlanningWorkspaceModel } from './planning-workspace.js';
 import { planningLabels } from './presentation-view.js';
+
+function ChipLink({
+  node,
+  href,
+  children,
+}: {
+  node: PlanningModelNode;
+  href: string;
+  children: ReactNode;
+}) {
+  return (
+    <a
+      className="pc-detail__property-reference"
+      href={href}
+      title={node.title}
+      {...useDetailSelectable(node)}
+    >
+      {children}
+    </a>
+  );
+}
 
 /** A reference chip: a link to a resolved item, or a dashed warning for a missing one. */
 export function ReferenceChip({ reference }: { reference: StructuralReference }) {
@@ -37,9 +59,9 @@ export function ReferenceChip({ reference }: { reference: StructuralReference })
     <span className="pc-artifact-tag">{content}</span>
   );
   return href ? (
-    <a className="pc-detail__property-reference" href={href} title={node.title}>
+    <ChipLink node={node} href={href}>
       {chip}
-    </a>
+    </ChipLink>
   ) : (
     <span className="pc-detail__property-reference" title={node.title}>
       {chip}

@@ -22,6 +22,7 @@ export type ParityRow = Readonly<{
     | 'detail-task'
     | 'detail-spec'
     | 'detail-missing'
+    | 'detail-M'
     | null;
   items?: string;
 }>;

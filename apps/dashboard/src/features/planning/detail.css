@@ -7,21 +7,6 @@
 .pc-shell .pc-detail {
   padding-inline: max(0px, calc(33px - var(--pc-gutter)));
 }
-.pc-detail__navigation {
-  display: flex;
-  align-items: center;
-  min-height: 44px;
-}
-.pc-detail__navigation .pc-button {
-  padding: 0 12px;
-  color: var(--op-muted);
-  text-decoration: none;
-}
-@media (width >= 600px) {
-  .pc-detail__navigation {
-    display: none;
-  }
-}
 .pc-detail__artifact {
   display: grid;
   gap: 24px;
@@ -123,6 +108,10 @@
 .pc-detail__artifact .pc-card {
   overflow: hidden;
 }
+/* The Frontmatter focus ring sits outside the card edge. */
+.pc-detail__artifact .pc-detail__properties-card {
+  overflow: visible;
+}
 .pc-detail__meta {
   font: 500 12px / 15px var(--op-font-technical);
   color: var(--op-dim);
@@ -216,6 +205,13 @@ a.pc-detail__step:focus-visible {
 .pc-detail__step-head .pc-artifact__dot {
   width: 9px;
   height: 9px;
+}
+.pc-detail__step-name {
+  display: contents;
+}
+.pc-detail__step[data-selected] {
+  border-color: var(--op-line3);
+  background: var(--op-raised);
 }
 .pc-detail__step-id {
   font: 600 12px / 15px var(--op-font-technical);
@@ -627,6 +623,10 @@ a.pc-detail__inline-id:hover {
 a.pc-detail__property-reference:hover .pc-artifact-tag {
   box-shadow: inset 0 0 0 1px currentColor;
 }
+a.pc-detail__property-reference[data-selected] .pc-artifact-tag {
+  background: var(--op-raised);
+  box-shadow: inset 0 0 0 1px var(--op-line3);
+}
 a.pc-detail__property-reference:focus-visible {
   outline: 2px solid var(--op-accent);
   outline-offset: 2px;
@@ -681,7 +681,7 @@ a.pc-detail__property-reference:focus-visible {
 }
 .pc-detail__disclosure summary:focus-visible {
   outline: 2px solid var(--op-accent);
-  outline-offset: -2px;
+  outline-offset: 2px;
 }
 .pc-detail__raw {
   margin: 0;
@@ -707,6 +707,45 @@ a.pc-detail__property-reference:focus-visible {
   overflow-wrap: anywhere;
 }
 
+/* Next step docked above the phone navigation */
+.pc-detail__next-bar {
+  position: fixed;
+  right: 0;
+  bottom: calc(58px + env(safe-area-inset-bottom, 0px));
+  left: 0;
+  z-index: 79;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 69px;
+  padding: 12px 16px;
+  border-top: 1px solid var(--op-line);
+  background: var(--op-raised);
+}
+.pc-detail__next-bar-command {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font: 500 12px / 15px var(--op-font-technical);
+  color: var(--op-body);
+}
+.pc-detail__next-bar .pc-button {
+  flex: 0 0 auto;
+  height: 44px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 8px;
+  background: var(--op-accent);
+  font: 600 14px / 18px var(--op-font-ui);
+  color: var(--op-on-accent);
+}
+.pc-detail:has(.pc-detail__next-bar) {
+  padding-bottom: calc(48px + 69px);
+}
+
 /* Inspector panel */
 .pc-detail__artifact--panel .pc-detail__columns {
   grid-template-columns: minmax(0, 1fr);
@@ -722,10 +761,93 @@ a.pc-detail__property-reference:focus-visible {
 .pc-detail__artifact--panel .pc-detail__title-row {
   flex-wrap: wrap;
 }
-.pc-detail__artifact--panel .pc-detail__trace {
-  grid-template-columns: minmax(0, 1fr);
+
+/* Compact: phone width and the Inspector panel */
+.pc-detail__artifact[data-compact] {
+  gap: 16px;
 }
-.pc-detail__artifact--panel .pc-detail__step-arrow {
+.pc-detail__artifact[data-compact] .pc-detail__header {
+  gap: 10px;
+}
+.pc-detail__artifact[data-compact] .pc-card__head {
+  gap: 8px;
+  height: 49px;
+  padding: 0 16px;
+}
+.pc-detail__artifact[data-compact] .pc-detail__trace-note,
+.pc-detail__artifact[data-compact] .pc-detail__step-arrow,
+.pc-detail__artifact[data-compact] .pc-detail__step-head .pc-artifact {
+  display: none;
+}
+/* Full-bleed rows keep their focus ring outside the card edge. */
+.pc-detail__artifact[data-compact] .pc-detail__trace-card {
+  overflow: visible;
+}
+.pc-detail__artifact[data-compact] .pc-detail__trace > li:last-child > .pc-detail__step {
+  border-radius: 0 0 11px 11px;
+}
+.pc-detail__artifact[data-compact] .pc-detail__trace {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0;
+  padding: 0;
+}
+.pc-detail__artifact[data-compact] .pc-detail__trace > li + li > .pc-detail__step {
+  border-top: 1px solid var(--op-line);
+}
+.pc-detail__artifact[data-compact] .pc-detail__step {
+  display: grid;
+  grid-template-columns: 76px minmax(0, 1fr);
+  align-items: center;
+  gap: 4px 12px;
+  height: auto;
+  min-height: 52px;
+  padding: 8px 16px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+.pc-detail__artifact[data-compact] .pc-detail__step-head {
+  display: contents;
+}
+.pc-detail__artifact[data-compact] .pc-detail__step-name {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.pc-detail__artifact[data-compact] .pc-detail__step-id {
+  flex: none;
+  white-space: nowrap;
+}
+.pc-detail__artifact[data-compact] .pc-detail__step-title {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+  line-height: 17px;
+}
+.pc-detail__artifact[data-compact] .pc-detail__step-count {
+  font: 600 12px / 15px var(--op-font-technical);
+}
+.pc-detail__artifact[data-compact] .pc-detail__step[data-selected] {
+  background: var(--op-raised);
+}
+.pc-detail__artifact[data-compact] .pc-detail__trace > li[data-current] .pc-detail__step {
+  background: var(--op-accent-soft);
+  box-shadow: inset 2px 0 0 var(--op-accent);
+}
+.pc-detail__artifact[data-compact] .pc-detail__criteria {
+  padding: 4px 0;
+}
+.pc-detail__artifact[data-compact] .pc-detail__criteria[data-tracked] > li {
+  grid-template-columns: 16px minmax(0, 1fr);
+}
+.pc-detail__artifact[data-compact] .pc-detail__criteria > li {
+  grid-template-columns: minmax(0, 1fr);
+  padding: 10px 16px;
+}
+.pc-detail__artifact[data-compact] .pc-detail__criteria > li > code {
   display: none;
 }
 
@@ -750,6 +872,12 @@ a.pc-detail__property-reference:focus-visible {
   .pc-shell .pc-detail {
     padding-inline: 2px;
   }
+  .op-planning.pc-detail {
+    padding-top: 16px;
+  }
+  .pc-detail__updated {
+    display: none;
+  }
   .pc-detail .pc-detail__artifact h1 {
     font-size: 22px;
     line-height: 28px;
@@ -758,9 +886,6 @@ a.pc-detail__property-reference:focus-visible {
   .pc-detail__title-row {
     flex-wrap: wrap;
   }
-  .pc-detail__trace {
-    grid-template-columns: minmax(0, 1fr);
-  }
 }
 @media (max-width: 899px), (pointer: coarse) {
   .pc-detail__file-controls--compact .pc-detail__actions > .pc-icon-button,
@@ -768,14 +893,6 @@ a.pc-detail__property-reference:focus-visible {
     min-height: 44px;
     min-width: 44px;
     opacity: 1;
-  }
-  .pc-detail__navigation .pc-button {
-    position: relative;
-  }
-  .pc-detail__navigation .pc-button::after {
-    content: "";
-    position: absolute;
-    inset: -5px;
   }
 }
 @media (hover: none) {

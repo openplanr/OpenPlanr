@@ -507,6 +507,18 @@ export const detailParityRows = [
     { 'text-order': 'Origin,This spec,Stories,Tasks' },
     { setup: 'detail-spec', items: '.pc-detail__step-role' },
   ),
+  ...detailRow(
+    'DT-19',
+    '.pc-detail__step',
+    { 'min-height': '52px', tracks: '76px 1fr' },
+    { setup: 'detail-M', viewport: 'M' },
+  ),
+  ...detailRow(
+    'DT-20',
+    '.pc-detail__next-bar .pc-button',
+    { height: '44px' },
+    { setup: 'detail-M', viewport: 'M' },
+  ),
 ];
 
 function sampleRows(nodes, { property, expected, items }) {

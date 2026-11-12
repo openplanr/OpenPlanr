@@ -1,5 +1,6 @@
 import { ArtifactTag, artifactTagType } from '../../design-system/components/artifact-recipes.js';
 import { ArtifactStatus, PriorityChip } from '../../design-system/components/index.js';
+import { useDetailNarrow } from './DetailSelection.js';
 import { CopyDetailValue } from './PlanningDetailActions.js';
 import { type PlanningModelNode, planningDisplayId } from './planning-model.js';
 import { authoredTimestamp } from './presentation-view.js';
@@ -44,10 +45,11 @@ export function DetailSummary({
       : null;
   const updated = authoredDay(node.frontmatter.updated);
   const tag = artifactTagType(node.type);
+  const inTopBar = useDetailNarrow() && !panel;
   return (
     <header className="pc-detail__header">
       <div className="pc-detail__identity">
-        {tag ? (
+        {inTopBar ? null : tag ? (
           <ArtifactTag type={tag} variant="id">
             {planningDisplayId(node)}
           </ArtifactTag>
@@ -74,7 +76,7 @@ export function DetailSummary({
       </div>
       <div className="pc-detail__title-row">
         {panel ? <h2>{node.title}</h2> : <h1>{node.title}</h1>}
-        {link ? <CopyDetailValue value={link} label="Copy link" icon="link" /> : null}
+        {link && !inTopBar ? <CopyDetailValue value={link} label="Copy link" icon="link" /> : null}
       </div>
     </header>
   );

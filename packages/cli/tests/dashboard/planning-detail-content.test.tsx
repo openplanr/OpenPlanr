@@ -12,7 +12,9 @@ import {
   type PlanningNode,
   parsePlanningGraphEnvelope,
 } from '../../../../apps/dashboard/src/features/planning/planning-api.js';
+import { boardSelectionItems } from '../../../../apps/dashboard/src/features/planning/planning-board-view.js';
 import {
+  planningContinuation,
   planningDetailHref,
   planningDisplayId,
 } from '../../../../apps/dashboard/src/features/planning/planning-model.js';
@@ -613,6 +615,105 @@ describe('shared Planning artifact detail', () => {
     expect(copy).toHaveBeenCalledWith(
       `${window.location.href.split('#')[0]}#/detail/SPEC-026%2FT-121`,
     );
+  });
+
+  it('selects trace steps and reference chips, copies the selection command and opens on Enter or double-click', async () => {
+    const model = fixture();
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => response(detailEnvelope(model))),
+    );
+    const copy = vi.fn(async () => {});
+    const start = window.location.hash;
+    const view = render(
+      <PlanningPresentationProvider scope="detail-select" view={null} onCopy={copy}>
+        <PlanningArtifactDetail model={model} nodeId={nodeId} origin={origin} />
+      </PlanningPresentationProvider>,
+    );
+    await findDetailReady(view.container);
+    const consumer = model.graph.nodes.find((node) => node.id === 'SPEC-026/T-122');
+    const story = model.graph.nodes.find((node) => node.id === 'SPEC-026/US-104');
+    if (!consumer || !story) throw new Error('Missing selection fixture');
+    const trace = screen.getByRole('list', { name: 'Artifact lineage' });
+    const step = within(trace).getByRole('link', { name: /T-122/u });
+    expect(screen.queryByRole('region', { name: 'Selected items' })).toBeNull();
+    fireEvent.click(step, { detail: 1 });
+    expect(step.dataset.selected).toBe('true');
+    expect(window.location.hash).toBe(start);
+    const bar = screen.getByRole('region', { name: 'Selected items' });
+    expect(within(bar).getByText(boardSelectionItems(consumer)[0].command)).toBeTruthy();
+    fireEvent.keyDown(document.body, { key: 'c' });
+    await waitFor(() =>
+      expect(copy).toHaveBeenCalledExactlyOnceWith(boardSelectionItems(consumer)[0].command),
+    );
+    const chip = within(screen.getByRole('region', { name: 'Story' })).getByRole('link');
+    fireEvent.keyDown(chip, { key: ' ' });
+    expect(chip.dataset.selected).toBe('true');
+    expect(step.dataset.selected).toBeUndefined();
+    expect(
+      within(screen.getByRole('region', { name: 'Selected items' })).getByText(
+        boardSelectionItems(story)[0].command,
+      ),
+    ).toBeTruthy();
+    fireEvent.keyDown(document, { key: 'Escape' });
+    expect(screen.queryByRole('region', { name: 'Selected items' })).toBeNull();
+    fireEvent.doubleClick(step);
+    expect(window.location.hash).toBe(planningDetailHref(consumer));
+    window.location.hash = start;
+    fireEvent.click(step, { detail: 0 });
+    await waitFor(() => expect(window.location.hash).toBe(planningDetailHref(consumer)));
+    window.location.hash = start;
+    view.unmount();
+    const panel = render(
+      <PlanningArtifactDetail model={model} nodeId={nodeId} origin={origin} panel />,
+    );
+    await findDetailReady(panel.container);
+    const panelStep = within(
+      within(panel.container).getByRole('list', { name: 'Artifact lineage' }),
+    ).getByRole('link', { name: /T-122/u });
+    panelStep.addEventListener('click', (event) => event.preventDefault());
+    fireEvent.click(panelStep, { detail: 1 });
+    expect(panelStep.dataset.selected).toBeUndefined();
+    expect(screen.queryByRole('region', { name: 'Selected items' })).toBeNull();
+  });
+
+  it('docks the next step above the phone navigation until an item is selected', async () => {
+    vi.stubGlobal(
+      'matchMedia',
+      vi.fn((query: string) => ({
+        matches: /max-width: (599|899|1199)px/u.test(query),
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+      })),
+    );
+    const model = fixture();
+    const consumerId = 'SPEC-026/T-122';
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => response(detailEnvelope(model, body, consumerId))),
+    );
+    const view = render(
+      <PlanningPresentationProvider scope="detail-dock" view={null}>
+        <PlanningArtifactDetail model={model} nodeId={consumerId} origin={origin} />
+      </PlanningPresentationProvider>,
+    );
+    await findDetailReady(view.container);
+    const article = view.container.querySelector<HTMLElement>('.pc-detail__artifact');
+    expect(article?.dataset.compact).toBe('true');
+    const dock = screen.getByRole('region', { name: 'Next step command' });
+    const blocker = model.graph.nodes.find((node) => node.id === nodeId);
+    if (!blocker) throw new Error('Missing blocker fixture');
+    expect(within(dock).getByText(planningContinuation(blocker) ?? '')).toBeTruthy();
+    expect(screen.getAllByRole('button', { name: 'Copy command' })).toHaveLength(1);
+    expect(screen.queryByRole('button', { name: 'Copy link' })).toBeNull();
+    fireEvent.click(
+      within(screen.getByRole('list', { name: 'Artifact lineage' })).getByRole('link', {
+        name: /SPEC-026 /u,
+      }),
+      { detail: 1 },
+    );
+    expect(screen.queryByRole('region', { name: 'Next step command' })).toBeNull();
+    expect(screen.getByRole('region', { name: 'Selected items' })).toBeTruthy();
   });
 
   it('resolves a declared file through the bound GET before exposing its trusted editor URI', async () => {

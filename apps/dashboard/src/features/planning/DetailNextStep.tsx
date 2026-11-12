@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import { createContext, type ReactNode, useContext } from 'react';
 import { CopyDetailValue } from './PlanningDetailActions.js';
 import {
   type PlanningModelNode,
@@ -9,6 +9,9 @@ import {
 import type { StructuralReference } from './planning-structural-model.js';
 
 const CLOSED = ['done', 'addressed'];
+
+/** True while the command is docked in the bar above the phone navigation. */
+export const NextStepDocked = createContext(false);
 
 function IdLink({ node }: { node: PlanningModelNode }) {
   const href = planningDetailHref(node);
@@ -84,6 +87,7 @@ export function DetailNextStep({
   dependencies: readonly StructuralReference[];
 }) {
   const step = nextStep(node, dependencies);
+  const docked = useContext(NextStepDocked);
   return (
     <section className="pc-card pc-detail__next-card" aria-label="Next step">
       <header className="pc-card__head pc-card__header">
@@ -91,7 +95,7 @@ export function DetailNextStep({
       </header>
       <div className="pc-detail__next-body">
         <p>{step.sentence}</p>
-        {step.command ? (
+        {step.command && !docked ? (
           <>
             <code className="pc-detail__command">{step.command}</code>
             <CopyDetailValue value={step.command} label="Copy command" icon={null} />

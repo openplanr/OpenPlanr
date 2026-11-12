@@ -1,4 +1,5 @@
-import { Button, EmptyState, PcIcon } from '../../design-system/components/index.js';
+import { artifactTagType } from '../../design-system/components/artifact-recipes.js';
+import { Button, EmptyState } from '../../design-system/components/index.js';
 import type { DashboardProductState } from '../../lib/api/product-state.js';
 import type { DashboardQueryIdentity } from '../../lib/binding/query-identity.js';
 import { PlanningArtifactDetail } from './PlanningArtifactDetail.js';
@@ -50,6 +51,8 @@ export function planningDetailTrail(
   origin: string;
   spec: Readonly<{ label: string; href: string }> | null;
   current: string;
+  tag: string | null;
+  link: string | null;
 }> | null {
   if (!graph || subjectId === null) return null;
   const nodeId = planningNodeIdFromRouteSubject(subjectId);
@@ -59,10 +62,16 @@ export function planningDetailTrail(
   const spec =
     specId && specId !== node.id ? graph.nodes.find((entry) => entry.id === specId) : undefined;
   const specHref = spec ? planningDetailHref(spec) : null;
+  const href = planningDetailHref(node);
   return {
     origin: detailSourceHref(),
     spec: spec && specHref ? { label: planningDisplayId(spec), href: specHref } : null,
     current: planningDisplayId(node),
+    tag: artifactTagType(node.type),
+    link:
+      href && typeof window !== 'undefined'
+        ? `${window.location.origin}${window.location.pathname}${href}`
+        : href,
   };
 }
 
@@ -95,12 +104,6 @@ export function DetailPage({ currentBinding, current }: DetailPageProps) {
     <div className="op-workspace op-planning pc-pipeline pc-detail" data-route-kind={routeKind}>
       <DetailSelection node={node} />
       <PlanningNotice presentation={model.presentation} />
-      <nav className="pc-detail__navigation" aria-label="Detail navigation">
-        <a className="pc-button" data-variant="ghost" data-size="sm" href={detailSourceHref()}>
-          <PcIcon name="chevron-left" size={15} />
-          List
-        </a>
-      </nav>
       <PlanningArtifactDetail
         model={model}
         nodeId={node.id}

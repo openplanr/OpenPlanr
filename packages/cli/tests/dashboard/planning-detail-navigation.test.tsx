@@ -284,9 +284,10 @@ describe('Planning detail shell navigation', () => {
       render(<ShellHarness snapshot={snapshot} />);
       const main = screen.getByRole('main');
       await within(main).findByRole('heading', { name: 'Review artifact 2', level: 1 });
-      const navigation = within(main).getByRole('navigation', { name: 'Detail navigation' });
+      const topBar = document.querySelector<HTMLElement>('.pc-topbar');
+      if (!topBar) throw new Error('Missing top bar');
       expect(
-        within(navigation).getByRole('link', { name: 'List', exact: true }).getAttribute('href'),
+        within(topBar).getByRole('link', { name: 'List', exact: true }).getAttribute('href'),
       ).toBe('#/list');
       main.focus();
       fireEvent.keyDown(main, { key: 'c' });
@@ -295,6 +296,46 @@ describe('Planning detail shell navigation', () => {
       expect(window.location.hash).toBe(href);
     },
   );
+
+  it('replaces the trail with back, ID and Copy link on a narrow Detail', async () => {
+    vi.stubGlobal('innerWidth', 390);
+    vi.stubGlobal(
+      'matchMedia',
+      vi.fn((query: string) => ({
+        matches: /max-width: (599|899|1199)px/u.test(query),
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+      })),
+    );
+    const snapshot = fixture();
+    const href = '#/detail/SPEC-026%2FT-002';
+    window.history.replaceState({ planningDetailOrigin: '#/board' }, '', href);
+    const copy = vi.spyOn(adapters, 'copy').mockResolvedValue(undefined);
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: RequestInfo | URL) => {
+        const id = decodeURIComponent(new URL(String(input)).pathname.split('/').at(-1) ?? '');
+        return json(detail(snapshot, id));
+      }),
+    );
+    render(<ShellHarness snapshot={snapshot} />);
+    const main = screen.getByRole('main');
+    await findDetailReady(main);
+    const topBar = document.querySelector<HTMLElement>('.pc-topbar[data-detail-header]');
+    if (!topBar) throw new Error('Missing narrow Detail header');
+    expect(within(topBar).getByRole('link', { name: 'Back to Board' }).getAttribute('href')).toBe(
+      '#/board',
+    );
+    expect(topBar.querySelector('[aria-current="page"]')?.textContent).toBe('T-002');
+    expect(within(topBar).queryByText('Plan')).toBeNull();
+    expect(within(main).queryByRole('button', { name: 'Copy link' })).toBeNull();
+    fireEvent.click(within(topBar).getByRole('button', { name: 'Copy link' }));
+    await waitFor(() =>
+      expect(copy).toHaveBeenCalledExactlyOnceWith(
+        `${window.location.origin}${window.location.pathname}${href}`,
+      ),
+    );
+  });
 
   it('moves between real List artifacts with J/K from the shared desktop inspector', async () => {
     vi.stubGlobal('innerWidth', 1440);
@@ -388,11 +429,11 @@ describe('Planning detail shell navigation', () => {
           'Current verified criterion for SPEC-026/T-002.',
         ),
       ).toBeTruthy();
-      const navigation = within(main).getByRole('navigation', { name: 'Detail navigation' });
-      const list = within(navigation).getByRole('link', { name: 'List', exact: true });
+      const topBar = document.querySelector<HTMLElement>('.pc-topbar');
+      if (!topBar) throw new Error('Missing top bar');
+      const list = within(topBar).getByRole('link', { name: 'List', exact: true });
       expect(list.getAttribute('href')).toBe(sourceHref);
-      expect(within(navigation).getAllByRole('link')).toHaveLength(1);
-      expect(within(navigation).queryByRole('button')).toBeNull();
+      expect(within(main).queryByRole('navigation', { name: 'Detail navigation' })).toBeNull();
       fireEvent.click(list);
       await waitFor(() => expect(window.location.hash).toBe(sourceHref));
       await waitFor(() =>
