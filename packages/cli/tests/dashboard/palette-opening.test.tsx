@@ -400,3 +400,42 @@ describe('palette Operate scope', () => {
     ).toBe('true');
   });
 });
+
+describe('palette copy status on a phone', () => {
+  const phone = (matches: boolean) =>
+    vi.stubGlobal('matchMedia', (query: string) => ({
+      matches: matches && query === '(max-width: 599px)',
+      media: query,
+      addEventListener: () => undefined,
+      removeEventListener: () => undefined,
+    }));
+
+  it.each([
+    [true, 'focuses'],
+    [false, 'leaves'],
+  ] as const)('%s: a blocked copy %s the selected manual input', async (isPhone) => {
+    phone(isPhone);
+    render(
+      <CommandPalette
+        open
+        onClose={() => undefined}
+        onCopy={async () => {
+          throw new Error('Clipboard refused');
+        }}
+        sources={sources}
+        initialQuery="Callable"
+      />,
+    );
+    const input = screen.getByRole<HTMLInputElement>('searchbox');
+    input.setSelectionRange(input.value.length, input.value.length);
+    fireEvent.keyDown(input, { key: 'c', ctrlKey: true });
+    await act(async () => undefined);
+    const manual = screen.getByRole<HTMLInputElement>('textbox', {
+      name: 'Command to copy manually',
+    });
+    if (isPhone) {
+      expect(document.activeElement).toBe(manual);
+      expect([manual.selectionStart, manual.selectionEnd]).toEqual([0, manual.value.length]);
+    } else expect(document.activeElement).toBe(input);
+  });
+});

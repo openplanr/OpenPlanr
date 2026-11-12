@@ -134,6 +134,40 @@ function fixtureUrl(
   return `/?${query.toString()}`;
 }
 
+/** Reads the palette's focus ring and whether its nearest scroller clips it. */
+function readPaletteRing(page: Page) {
+  return page.evaluate(async () => {
+    for (let frame = 0; frame < 2; frame += 1)
+      await new Promise((resolve) => requestAnimationFrame(resolve));
+    // Focus also selects the row, which restarts the reduced-motion transition.
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    const focused = document.querySelector<HTMLElement>('dialog.pc-palette :focus-visible');
+    if (!focused) return null;
+    const style = getComputedStyle(focused);
+    const box = focused.getBoundingClientRect();
+    const reach = parseFloat(style.outlineWidth) + parseFloat(style.outlineOffset);
+    let clipped = false;
+    for (let parent = focused.parentElement; parent; parent = parent.parentElement) {
+      const overflow = getComputedStyle(parent);
+      if (![overflow.overflowX, overflow.overflowY].some((value) => value !== 'visible')) continue;
+      const frame = parent.getBoundingClientRect();
+      if (
+        box.left - reach < frame.left - 0.5 ||
+        box.right + reach > frame.right + 0.5 ||
+        box.top - reach < frame.top - 0.5 ||
+        box.bottom + reach > frame.bottom + 0.5
+      )
+        clipped = true;
+      break;
+    }
+    return {
+      element: `${focused.tagName.toLowerCase()}.${focused.className}`,
+      ring: [style.outlineStyle, style.outlineWidth, style.outlineOffset],
+      clipped,
+    };
+  });
+}
+
 async function openFixture(page: Page, route = '#/overview', options = {}) {
   const browserErrors: string[] = [];
   const responseErrors: string[] = [];
@@ -2640,12 +2674,18 @@ test.describe('dashboard real-browser quality', () => {
         await input.fill('SPEC-014/T-046');
         const first = palette.locator('[data-search-result]').first();
         await expect(first).toHaveAttribute('data-search-result', 'planning:SPEC-014/T-046');
-        const preview = palette.getByRole('complementary', { name: 'Search result preview' });
-        await expect(preview).toHaveAttribute('data-preview-id', 'SPEC-014/T-046');
-        await expect(preview).toHaveAttribute('data-preview-state', 'ready');
-        await expect(preview).toContainText('Connect Plan Ship company sync and release proof');
-        await expect(preview).toContainText('SPEC-014');
-        await expect(preview).toContainText('T-045');
+        if (width === 1440) {
+          const preview = palette.getByRole('complementary', { name: 'Search result preview' });
+          await expect(preview).toHaveAttribute('data-preview-id', 'SPEC-014/T-046');
+          await expect(preview).toHaveAttribute('data-preview-state', 'ready');
+          await expect(preview).toContainText('Connect Plan Ship company sync and release proof');
+          await expect(preview).toContainText('SPEC-014');
+          await expect(preview).toContainText('T-045');
+        } else {
+          await expect(palette.locator('[data-preview-id]')).toBeHidden();
+          await expect(first).toContainText('T-046');
+          await expect(first).toContainText('Connect Plan Ship company sync and release proof');
+        }
         await expect(page).toHaveURL(/#\/list$/u);
         for (const control of await palette.locator(ACTIVE_TARGET_SELECTOR).all()) {
           if (await control.isVisible()) await expect(control).toHaveAccessibleName(/\S/u);
@@ -2758,38 +2798,7 @@ test.describe('dashboard real-browser quality', () => {
       });
 
       const rings: { element: string; ring: string[]; clipped: boolean }[] = [];
-      const ringOf = () =>
-        page.evaluate(async () => {
-          for (let frame = 0; frame < 2; frame += 1)
-            await new Promise((resolve) => requestAnimationFrame(resolve));
-          // Focus also selects the row, which restarts the reduced-motion transition.
-          await new Promise((resolve) => setTimeout(resolve, 50));
-          const focused = document.querySelector<HTMLElement>('dialog.pc-palette :focus-visible');
-          if (!focused) return null;
-          const style = getComputedStyle(focused);
-          const box = focused.getBoundingClientRect();
-          const reach = parseFloat(style.outlineWidth) + parseFloat(style.outlineOffset);
-          let clipped = false;
-          for (let parent = focused.parentElement; parent; parent = parent.parentElement) {
-            const overflow = getComputedStyle(parent);
-            if (![overflow.overflowX, overflow.overflowY].some((value) => value !== 'visible'))
-              continue;
-            const frame = parent.getBoundingClientRect();
-            if (
-              box.left - reach < frame.left - 0.5 ||
-              box.right + reach > frame.right + 0.5 ||
-              box.top - reach < frame.top - 0.5 ||
-              box.bottom + reach > frame.bottom + 0.5
-            )
-              clipped = true;
-            break;
-          }
-          return {
-            element: `${focused.tagName.toLowerCase()}.${focused.className}`,
-            ring: [style.outlineStyle, style.outlineWidth, style.outlineOffset],
-            clipped,
-          };
-        });
+      const ringOf = () => readPaletteRing(page);
       await input.focus();
       for (let step = 0; step < 12; step += 1) {
         await page.keyboard.press('Tab');
@@ -2920,49 +2929,160 @@ test.describe('dashboard real-browser quality', () => {
   });
 
   test('opens the Operate cycle menu inside the palette and selects a cycle', async ({ page }) => {
-    await page.setViewportSize({ width: 1440, height: 900 });
-    expect((await page.request.post('/__fixture/reset?dataset=artboard')).ok()).toBe(true);
-    await page.goto(fixtureUrl('#/list', { dataset: 'artboard' }));
-    await expect(page.locator('.pc-list')).toBeVisible();
-    await page.keyboard.press('Control+K');
+    for (const size of [
+      { width: 1440, height: 900 },
+      { width: 390, height: 844 },
+    ]) {
+      await page.setViewportSize(size);
+      expect((await page.request.post('/__fixture/reset?dataset=artboard')).ok()).toBe(true);
+      await page.goto(fixtureUrl('#/list', { dataset: 'artboard' }));
+      await expect(page.locator('.pc-list')).toBeVisible();
+      await page.keyboard.press('Control+K');
+      const palette = page.getByRole('dialog', { name: 'Command palette', exact: true });
+      const operateScope = palette
+        .getByRole('group', { name: 'Result scope' })
+        .getByRole('button', { name: /^Operate/u });
+      await expect(operateScope).toHaveCount(0);
+      const cycle = palette.getByRole('combobox', { name: /^Operate Cycle for search results/u });
+      await cycle.click();
+      const listbox = page.getByRole('listbox', { name: 'Operate Cycle for search results' });
+      await expect(listbox).toBeVisible();
+      const placement = await page.evaluate(() => {
+        const dialog = document.querySelector('dialog.pc-palette');
+        const popup = document.querySelector('.pc-chip-menu__popup');
+        const anchor = document.querySelector('.pc-palette__cycle .pc-chip');
+        const option = popup?.querySelector('[role="option"]:last-child');
+        if (!dialog || !popup || !anchor || !option) return null;
+        const box = option.getBoundingClientRect();
+        const hit = document.elementFromPoint(box.left + box.width / 2, box.top + box.height / 2);
+        return {
+          insideDialog: dialog.contains(popup),
+          optionHit: hit !== null && option.contains(hit),
+          belowAnchor: popup.getBoundingClientRect().top >= anchor.getBoundingClientRect().bottom,
+          inViewport: box.bottom <= window.innerHeight && box.right <= window.innerWidth,
+          label: option.getAttribute('aria-label') ?? '',
+        };
+      });
+      expect(placement, `cycle menu at ${size.width}`).toMatchObject({
+        insideDialog: true,
+        optionHit: true,
+        belowAnchor: true,
+        inViewport: true,
+      });
+      const label = placement?.label ?? '';
+      expect(label).toMatch(/cycle/u);
+      await listbox.getByRole('option', { name: label }).click();
+      await expect(listbox).toBeHidden();
+      await expect(cycle).toHaveAccessibleName(`Operate Cycle for search results: ${label}`);
+      await expect(palette).toBeVisible();
+      if (size.width === 1440) await expect(operateScope).toBeVisible();
+      else
+        await expect(palette.locator('.pc-palette__scope', { hasText: 'Operate' })).toHaveCount(1);
+      await page.keyboard.press('Escape');
+      await expect(palette).not.toBeVisible();
+    }
+  });
+
+  test('fits the command palette to tablets and phones in both themes', async ({
+    page,
+  }, testInfo) => {
+    test.setTimeout(120_000);
+    const results: unknown[] = [];
+    const rings: unknown[] = [];
+    await page.context().grantPermissions(['clipboard-read', 'clipboard-write']);
+    await page.emulateMedia({ reducedMotion: 'reduce' });
     const palette = page.getByRole('dialog', { name: 'Command palette', exact: true });
-    const operateScope = palette
-      .getByRole('group', { name: 'Result scope' })
-      .getByRole('button', { name: /^Operate/u });
-    await expect(operateScope).toHaveCount(0);
-    const cycle = palette.getByRole('combobox', { name: /^Operate Cycle for search results/u });
-    await cycle.click();
-    const listbox = page.getByRole('listbox', { name: 'Operate Cycle for search results' });
-    await expect(listbox).toBeVisible();
-    const placement = await page.evaluate(() => {
-      const dialog = document.querySelector('dialog.pc-palette');
-      const popup = document.querySelector('.pc-chip-menu__popup');
-      const anchor = document.querySelector('.pc-palette__cycle .pc-chip');
-      const option = popup?.querySelector('[role="option"]:last-child');
-      if (!dialog || !popup || !anchor || !option) return null;
-      const box = option.getBoundingClientRect();
-      const hit = document.elementFromPoint(box.left + box.width / 2, box.top + box.height / 2);
-      return {
-        insideDialog: dialog.contains(popup),
-        optionHit: hit !== null && option.contains(hit),
-        belowAnchor: popup.getBoundingClientRect().top >= anchor.getBoundingClientRect().bottom,
-        inViewport: box.bottom <= window.innerHeight && box.right <= window.innerWidth,
-        label: option.getAttribute('aria-label') ?? '',
-      };
+    const input = palette.getByRole('searchbox', { name: 'Search views and artifacts' });
+    const panel = palette.locator('.pc-palette__panel');
+    const rows = palette.locator('[data-search-result]');
+    const open = async (width: number, height: number, theme: string) => {
+      await page.setViewportSize({ width, height });
+      expect((await page.request.post('/__fixture/reset?dataset=artboard')).ok()).toBe(true);
+      await page.goto(fixtureUrl('#/list', { dataset: 'artboard', theme }));
+      await expect(page.locator('.pc-list')).toBeVisible();
+      await page.evaluate(() => document.fonts.ready);
+      await page.keyboard.press('Control+K');
+      await expect(input).toBeFocused();
+      await page.screenshot({ path: testInfo.outputPath(`palette-open-${width}-${theme}.png`) });
+      await input.fill('find');
+      await expect(rows.first()).toBeVisible();
+    };
+    const firstAndLastRings = async (width: number, theme: string) => {
+      await rows.first().focus();
+      await page.keyboard.press('Tab');
+      await page.keyboard.press('Shift+Tab');
+      const first = await readPaletteRing(page);
+      for (let step = 0; step < 40; step += 1) await page.keyboard.press('ArrowDown');
+      await expect(rows.last()).toBeFocused();
+      const last = await readPaletteRing(page);
+      for (const ring of [first, last]) {
+        rings.push({ width, theme, ...ring });
+        expect(ring?.element, `S-20 ${width} ${theme}`).toContain('pc-palette__row');
+        expect(ring?.ring, `S-20 ${width} ${theme}`).toEqual(['solid', '2px', '2px']);
+        expect(ring?.clipped, `S-20 ${width} ${theme} clipped`).toBe(false);
+      }
+      await input.focus();
+    };
+    for (const theme of ['dark', 'light'] as const) {
+      await open(768, 1024, theme);
+      expect((await panel.boundingBox())?.width).toBe(736);
+      await expect(palette.locator('.pc-palette__preview')).toBeHidden();
+      await expect(palette.getByRole('group', { name: 'Result scope' })).toBeVisible();
+      await expect(palette.locator('.pc-palette__key').first()).toBeVisible();
+      await expect(palette.getByRole('button', { name: 'Cancel' })).toBeHidden();
+      expect((await palette.locator('.pc-palette__results').boundingBox())?.width).toBe(734);
+      await firstAndLastRings(768, theme);
+      expect((await layoutReport(page)).horizontalOverflow).toBe(false);
+      expect(await axeViolations(page)).toEqual([]);
+      await page.screenshot({ path: testInfo.outputPath(`palette-find-768-${theme}.png`) });
+      await page.keyboard.press('Escape');
+
+      await open(390, 844, theme);
+      for (const row of paletteParityRows.filter((entry) => entry.setup === 'palette-M'))
+        results.push(...(await assertParityRow(page, row, theme)));
+      const cycleRow = await palette.locator('.pc-palette__cycle .pc-chip').boundingBox();
+      const inputRow = await palette.locator('.pc-palette__input-row').boundingBox();
+      expect(cycleRow?.height).toBe(44);
+      expect(
+        Math.abs((cycleRow?.y ?? 0) - ((inputRow?.y ?? 0) + (inputRow?.height ?? 0) + 1)),
+      ).toBeLessThanOrEqual(1);
+      await firstAndLastRings(390, theme);
+      expect((await layoutReport(page)).horizontalOverflow).toBe(false);
+      expect(await axeViolations(page)).toEqual([]);
+      await page.screenshot({ path: testInfo.outputPath(`palette-find-390-${theme}.png`) });
+      const command = palette
+        .locator('.pc-palette__result[data-source="command"] [data-search-result]')
+        .first();
+      await command.click();
+      const status = palette.locator('.pc-palette__foot');
+      await expect(status.getByRole('status')).toContainText('✓ Copied');
+      const copied = await status.locator('code').textContent();
+      expect(copied).toBeTruthy();
+      expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(copied);
+      const line = await status.evaluate((node) => ({
+        height: getComputedStyle(node).height,
+        bottom: node.getBoundingClientRect().bottom,
+        panelBottom: node.closest('.pc-palette__panel')?.getBoundingClientRect().bottom ?? 0,
+      }));
+      expect(line.height, 'B6 status line').toBe('44px');
+      expect(Math.abs(line.bottom - line.panelBottom)).toBeLessThanOrEqual(1);
+      await page.screenshot({ path: testInfo.outputPath(`palette-copied-390-${theme}.png`) });
+      await expect(status).toBeHidden({ timeout: 4_000 });
+      await expect(palette).toBeVisible();
+      await palette.getByRole('button', { name: 'Cancel' }).click();
+      await expect(palette).not.toBeVisible();
+
+      await open(320, 568, theme);
+      expect((await layoutReport(page)).horizontalOverflow).toBe(false);
+      await page.screenshot({ path: testInfo.outputPath(`palette-find-320-${theme}.png`) });
+      await page.keyboard.press('Escape');
+    }
+    const parity = testInfo.outputPath('palette-narrow-parity.json');
+    writeFileSync(parity, JSON.stringify({ results, rings }, null, 2));
+    await testInfo.attach('palette-narrow-parity.json', {
+      path: parity,
+      contentType: 'application/json',
     });
-    expect(placement).toMatchObject({
-      insideDialog: true,
-      optionHit: true,
-      belowAnchor: true,
-      inViewport: true,
-    });
-    const label = placement?.label ?? '';
-    expect(label).toMatch(/cycle/u);
-    await listbox.getByRole('option', { name: label }).click();
-    await expect(listbox).toBeHidden();
-    await expect(cycle).toHaveAccessibleName(`Operate Cycle for search results: ${label}`);
-    await expect(palette).toBeVisible();
-    await expect(operateScope).toBeVisible();
   });
 
   test('starts the handoff trace through palette search and promotes only on full-page activation', async ({

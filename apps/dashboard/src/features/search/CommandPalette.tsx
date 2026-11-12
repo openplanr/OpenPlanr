@@ -251,7 +251,11 @@ function trapPaletteTab(event: KeyboardEvent<HTMLDialogElement>): void {
     event.currentTarget.querySelectorAll<HTMLElement>(
       'button:not(:disabled), a[href], input:not(:disabled), select:not(:disabled), textarea:not(:disabled), [tabindex="0"]',
     ),
-  ).filter((control) => !control.closest('[hidden], [inert], [aria-hidden="true"]'));
+  ).filter(
+    (control) =>
+      !control.closest('[hidden], [inert], [aria-hidden="true"]') &&
+      (control.checkVisibility?.() ?? true),
+  );
   const first = controls[0];
   const last = controls[controls.length - 1];
   if (event.shiftKey && document.activeElement === first) {
@@ -645,6 +649,9 @@ export function CommandPalette({
             </button>
           ) : null}
           <Kbd size="sm">Esc</Kbd>
+          <button type="button" className="pc-palette__cancel" onClick={onClose}>
+            Cancel
+          </button>
         </div>
         <div className="pc-palette__scopes">
           <PaletteScopes

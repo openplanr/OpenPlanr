@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { type RecentItemsPreference, rememberRecentItem } from '../../app/browser-preferences.js';
 import { Kbd } from '../../design-system/components/index.js';
 import type { DashboardSearchHit } from './search-index.js';
@@ -133,8 +133,16 @@ function FooterKeys() {
   );
 }
 
+const PHONE_QUERY = '(max-width: 599px)';
+
 function FooterFeedback({ feedback }: Readonly<{ feedback: PaletteCopyFeedback }>) {
   const label = feedback.kind === 'command' ? 'command' : 'ID';
+  const manual = useRef<HTMLInputElement>(null);
+  // Phones have no footer keys to fall back on, so a blocked copy hands over the selected text.
+  useEffect(() => {
+    if (feedback.state === 'blocked' && window.matchMedia?.(PHONE_QUERY).matches)
+      manual.current?.focus();
+  }, [feedback.state]);
   return (
     <div
       className="pc-palette__copy"
@@ -147,6 +155,7 @@ function FooterFeedback({ feedback }: Readonly<{ feedback: PaletteCopyFeedback }
         <>
           <span>Copy blocked. Select the {label} and copy it manually.</span>
           <input
+            ref={manual}
             aria-label={
               feedback.kind === 'command'
                 ? 'Command to copy manually'

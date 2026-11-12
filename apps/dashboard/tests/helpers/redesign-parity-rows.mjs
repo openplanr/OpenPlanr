@@ -808,6 +808,80 @@ export const paletteParityRows = [
     { contains: 'Operate|searching…' },
     { setup: 'palette-operate' },
   ),
+  ...paletteRow(
+    'P-15',
+    '.pc-palette__panel',
+    {
+      width: '390px',
+      'top-distance': '48px',
+      'left-distance': '0px',
+      'border-top-left-radius': '16px',
+      'border-bottom-left-radius': '0px',
+      'border-bottom-width': '0px',
+      'border-top-color': '--op-line3',
+    },
+    { setup: 'palette-M', viewport: 'M' },
+  ),
+  ...paletteRow(
+    'P-15',
+    '.pc-palette__input-row',
+    { height: '56px', 'padding-left': '16px', 'padding-right': '8px', 'column-gap': '10px' },
+    { setup: 'palette-M', viewport: 'M' },
+  ),
+  ...paletteRow(
+    'P-15',
+    '.pc-palette__input',
+    { height: '46px' },
+    { setup: 'palette-M', viewport: 'M' },
+  ),
+  ...paletteRow(
+    'P-15',
+    '.pc-palette__cancel',
+    {
+      width: '70px',
+      height: '44px',
+      'font-size': '14px',
+      'font-weight': '500',
+      color: '--op-accent',
+    },
+    { setup: 'palette-M', viewport: 'M' },
+  ),
+  ...paletteRow(
+    'P-15',
+    '.pc-palette__group-title',
+    { height: '32px', 'padding-left': '8px' },
+    { setup: 'palette-M', viewport: 'M' },
+  ),
+  ...paletteRow(
+    'P-15',
+    '.pc-palette__scope-set, .pc-palette__preview, .pc-palette__foot, .pc-palette__input-row .pc-kbd',
+    { display: 'none' },
+    { setup: 'palette-M', viewport: 'M' },
+  ),
+  ...paletteRow(
+    'P-16',
+    '.pc-palette__result[data-source="planning"]',
+    { height: '60px' },
+    { setup: 'palette-M', viewport: 'M' },
+  ),
+  ...paletteRow(
+    'P-16',
+    '.pc-palette__result[data-source="planning"] .pc-palette__row',
+    { 'row-count': '2' },
+    { setup: 'palette-M', viewport: 'M' },
+  ),
+  ...paletteRow(
+    'P-16',
+    '.pc-palette__result[data-source="planning"] .pc-palette__title',
+    { 'font-size': '14px', 'line-height': '20px' },
+    { setup: 'palette-M', viewport: 'M' },
+  ),
+  ...paletteRow(
+    'P-16',
+    '.pc-palette__result[data-source="command"]',
+    { height: '52px' },
+    { setup: 'palette-M', viewport: 'M' },
+  ),
 ];
 
 function sampleRows(nodes, { property, expected, items }) {
