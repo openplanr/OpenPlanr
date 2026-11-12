@@ -12,7 +12,7 @@ import {
 
 export { activityModel, nextActivityRange } from './planning-activity-view.js';
 
-const DEFAULT_DAYS = 14;
+export const ACTIVITY_DEFAULT_DAYS = 14;
 const WIDEST_DAYS = ACTIVITY_RANGES[ACTIVITY_RANGES.length - 1];
 
 type ActivityState = ActivityFilters & Readonly<{ applied: string | null }>;
@@ -25,7 +25,7 @@ export function useActivityFilters(): [ActivityFilters, (next: Partial<ActivityF
     kind: 'all',
     spec: null,
     types: view?.filters.type ?? [],
-    days: view?.filters.updatedWithinDays ?? DEFAULT_DAYS,
+    days: view?.filters.updatedWithinDays ?? ACTIVITY_DEFAULT_DAYS,
     applied: view ? JSON.stringify(view) : null,
   }));
   useEffect(() => {
@@ -38,7 +38,7 @@ export function useActivityFilters(): [ActivityFilters, (next: Partial<ActivityF
             ...current,
             applied,
             types: view.filters.type,
-            days: view.filters.updatedWithinDays ?? DEFAULT_DAYS,
+            days: view.filters.updatedWithinDays ?? ACTIVITY_DEFAULT_DAYS,
           },
     );
   }, [view, set]);

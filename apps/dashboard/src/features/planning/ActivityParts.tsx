@@ -24,6 +24,7 @@ import { boardSelectionItems } from './planning-board-view.js';
 import { inspectPlanningNode } from './planning-inspector.js';
 import { type PlanningModelNode, planningDisplayId } from './planning-model.js';
 import type { PlanningSessionActivity } from './planning-session-activity.js';
+import { type TapSelectHandlers, useTapSelect } from './planning-tap-select.js';
 
 const KIND_ICON: Readonly<Record<ActivityKind, PcIconName>> = {
   created: 'plus',
@@ -110,10 +111,12 @@ function ActivityRowItem({
   row,
   selected,
   onSelect,
+  tap,
 }: {
   row: ActivityRow;
   selected: boolean;
   onSelect: (key: string) => void;
+  tap?: TapSelectHandlers;
 }) {
   const icon = (
     <span className="pc-activity__kind" data-kind={row.kind}>
@@ -148,7 +151,11 @@ function ActivityRowItem({
         aria-current={selected ? 'true' : undefined}
         className="pc-activity__cells"
         onFocus={() => onSelect(row.key)}
-        onClick={() => onSelect(row.key)}
+        onMouseDown={tap?.onMouseDown}
+        onClick={(event) => {
+          onSelect(row.key);
+          tap?.onClick(event);
+        }}
       >
         {icon}
         <span className="pc-activity__id">
@@ -173,6 +180,7 @@ export function ActivityFeed({
   selectedKey: string | null;
   onSelect: (key: string) => void;
 }) {
+  const tapSelect = useTapSelect();
   return (
     <section className="pc-activity__feed" aria-label="Changes">
       {days.map((group) => (
@@ -188,6 +196,7 @@ export function ActivityFeed({
                 row={row}
                 selected={row.key === selectedKey}
                 onSelect={onSelect}
+                tap={row.kind !== 'removed' && row.current ? tapSelect(row.current) : undefined}
               />
             ))}
           </ul>

@@ -2152,6 +2152,171 @@ test.describe('dashboard real-browser quality', () => {
     });
   });
 
+  test.describe('Activity below 1200px', () => {
+    test.use({ hasTouch: true });
+    test('matches Activity on tablets and phones in both themes', async ({ page }, testInfo) => {
+      test.setTimeout(120_000);
+      const results: unknown[] = [];
+      await page.emulateMedia({ reducedMotion: 'reduce' });
+      await page.addInitScript(() => localStorage.setItem('op-rail-compact:v1', 'true'));
+      await page.clock.setFixedTime(new Date(ARTBOARD_FIXTURE_CLOCK));
+      const activity = page.locator('[data-route-kind="planning.activity"]');
+      const open = async (theme: 'dark' | 'light') => {
+        expect((await page.request.post('/__fixture/reset?dataset=artboard')).ok()).toBe(true);
+        await page.goto(fixtureUrl('#/activity', { dataset: 'artboard', theme }));
+        await page.evaluate(() => document.fonts.ready);
+        await expect(activity.locator('.pc-activity__connection')).toContainText('Watching');
+        for (const kind of ['title', 'status', 'remove'])
+          expect(
+            (await page.request.post(`/__fixture/patch?dataset=artboard&kind=${kind}`)).ok(),
+          ).toBe(true);
+        await expect(activity.locator('.pc-activity__live-row')).toHaveCount(3);
+        await expect(activity.locator('.pc-activity__row[data-gone]').first()).toBeVisible();
+      };
+      const rings = async (count: number) => {
+        await page.locator('body').click({ position: { x: 1, y: 1 } });
+        const read: { element: string; ring: string[] }[] = [];
+        for (let press = 0; press < count; press += 1) {
+          await page.keyboard.press('Tab');
+          const ring = await page.evaluate(async () => {
+            for (let frame = 0; frame < 2; frame += 1)
+              await new Promise((resolve) => requestAnimationFrame(resolve));
+            await new Promise((resolve) => setTimeout(resolve, 50));
+            const focused = document.querySelector(
+              '[data-route-kind="planning.activity"] :focus-visible',
+            );
+            if (!focused) return null;
+            const style = getComputedStyle(focused);
+            return {
+              element: `${focused.tagName.toLowerCase()}.${focused.className}`,
+              ring: [style.outlineStyle, style.outlineWidth, style.outlineOffset],
+            };
+          });
+          if (ring) read.push(ring);
+        }
+        return read;
+      };
+      for (const theme of ['dark', 'light'] as const) {
+        for (const width of [1024, 768, 390, 320]) {
+          await page.setViewportSize({ width, height: 1000 });
+          await open(theme);
+          const widths = await page.evaluate(() => {
+            // The filter row bleeds into the shell gutter by design; the scroller is what clips.
+            const main = document.querySelector('#main-content');
+            const scroller = document.querySelector('.pc-shell__scroll');
+            return [main, scroller].map((node) =>
+              node ? node.scrollWidth - node.clientWidth : -1,
+            );
+          });
+          expect(widths, `no clipped overflow at ${width}`).toEqual([0, 0]);
+          expect((await layoutReport(page)).horizontalOverflow).toBe(false);
+          expect(await axeViolations(page)).toEqual([]);
+          await page.screenshot({
+            path: testInfo.outputPath(`activity-${width}-${theme}.png`),
+            fullPage: true,
+          });
+          const chart = activity.locator('.pc-activity__chart');
+          if (width >= 600) {
+            const feed = await activity.locator('.pc-activity__main').boundingBox();
+            const live = await activity.locator('.pc-activity__live').boundingBox();
+            const busiest = await activity.locator('.pc-activity__busiest').boundingBox();
+            if (!feed || !live || !busiest) throw new Error(`Missing Activity column at ${width}`);
+            expect(live.y, 'feed first').toBeGreaterThan(feed.y + feed.height - 1);
+            if (width >= 900) {
+              expect(busiest.y, 'side cards paired').toBeCloseTo(live.y, 0);
+              await expect(chart).toBeVisible();
+            } else {
+              expect(busiest.y, 'side cards stacked').toBeGreaterThan(live.y + live.height - 1);
+              await expect(chart).toBeHidden();
+              const tracks = await activity
+                .locator('a.pc-activity__cells')
+                .first()
+                .evaluate((element) => getComputedStyle(element).gridTemplateColumns.split(' '));
+              expect(tracks[3]).toBe('160px');
+            }
+          } else {
+            const header = activity.locator('.pc-activity__header');
+            expect((await header.boundingBox())?.width).toBe(1);
+            await expect(header.getByRole('heading', { level: 1 })).toHaveText(/^Activity/u);
+            await expect(activity.getByRole('tab', { name: 'Removed', exact: true })).toBeVisible();
+            await expect(activity.locator('.pc-activity__side')).toBeHidden();
+            await expect(chart).toBeHidden();
+          }
+          if (width === 390) {
+            for (const row of activityParityRows.filter((entry) => entry.setup === 'activity-M'))
+              results.push(...(await assertParityRow(page, row, theme)));
+            const read = await rings(24);
+            const kinds = read.map(({ element }) => element).join(' | ');
+            for (const part of ['a.pc-activity__cells', 'pc-tabs__tab', 'pc-activity__more'])
+              expect(kinds, `S-20 reach ${part}`).toContain(part);
+            for (const { element, ring } of read)
+              expect(ring, `S-20 ${element} at 390`).toEqual(
+                element.startsWith('a.pc-activity__cells')
+                  ? ['solid', '2px', '-2px']
+                  : ['solid', '2px', '2px'],
+              );
+            const more = activity.locator('.pc-activity__more');
+            await more.tap();
+            const sheet = page.getByRole('dialog', { name: 'Filters', exact: true });
+            await expect(sheet).toBeVisible();
+            await sheet.getByRole('button', { name: 'Last 30 days', exact: true }).tap();
+            await expect(more).toHaveText('More filters 1');
+            await sheet.locator('.pc-list-sheet__apply').tap();
+            await expect(sheet).toBeHidden();
+            await expect(activity).toContainText('in 30 days');
+          }
+          if (width === 768) {
+            const read = await rings(20);
+            expect(read.some(({ element }) => element.includes('pc-tabs__tab'))).toBe(true);
+            expect(read.some(({ element }) => element.startsWith('a.pc-activity__cells'))).toBe(
+              true,
+            );
+            for (const { element, ring } of read)
+              expect(ring, `S-20 ${element} at 768`).toEqual(['solid', '2px', '2px']);
+          }
+        }
+      }
+
+      // Below 900 a tap selects the row; the selection bar's Open opens the Inspector.
+      await page.setViewportSize({ width: 390, height: 1000 });
+      await open('dark');
+      const inspector = page.getByRole('dialog', { name: 'Inspector', exact: true });
+      const row = activity.locator('a.pc-activity__cells').nth(4);
+      await row.tap();
+      await expect(row).toHaveAttribute('aria-current', 'true');
+      await expect(inspector).toBeHidden();
+      const bar = page.locator('.pc-selection-bar');
+      await bar.getByRole('button', { name: 'Open', exact: true }).tap();
+      await expect(inspector).toBeVisible();
+      await page.keyboard.press('Escape');
+      await expect(inspector).toBeHidden();
+      await expect(row).toHaveAttribute('aria-current', 'true');
+
+      // With a selection, the page still scrolls its last row clear of the bar.
+      await expect
+        .poll(() =>
+          page.evaluate(() => {
+            const scroller = document.querySelector<HTMLElement>('.pc-shell__scroll');
+            const rows = document.querySelectorAll('.pc-activity__row');
+            const last = rows[rows.length - 1];
+            const bar = document.querySelector('.pc-selection-bar');
+            if (!scroller || !last || !bar) return Number.POSITIVE_INFINITY;
+            scroller.style.scrollBehavior = 'auto';
+            scroller.scrollTop = scroller.scrollHeight;
+            return last.getBoundingClientRect().bottom - bar.getBoundingClientRect().top;
+          }),
+        )
+        .toBeLessThanOrEqual(0);
+
+      const parity = testInfo.outputPath('activity-M-parity.json');
+      writeFileSync(parity, JSON.stringify(results, null, 2));
+      await testInfo.attach('activity-M-parity.json', {
+        path: parity,
+        contentType: 'application/json',
+      });
+    });
+  });
+
   test.describe('List under a coarse pointer', () => {
     test.use({ hasTouch: true });
     test('keeps compact List rows at the 44px touch height', async ({ page }) => {

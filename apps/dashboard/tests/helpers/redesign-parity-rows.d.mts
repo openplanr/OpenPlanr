@@ -28,6 +28,7 @@ export type ParityRow = Readonly<{
     | 'sprints-none'
     | 'sprints-M'
     | 'activity'
+    | 'activity-M'
     | null;
   items?: string;
 }>;

@@ -670,6 +670,36 @@ export const activityParityRows = [
     { count: '0' },
     { items: '.pc-activity__explanation, .pc-activity__footnote' },
   ),
+  ...activityRow(
+    'A-15',
+    ':is(.pc-activity__kinds .pc-tabs__tab, .pc-activity__more)',
+    { height: '36px', 'border-radius': '999px', 'padding-left': '12px' },
+    { setup: 'activity-M', viewport: 'M' },
+  ),
+  ...activityRow(
+    'A-16',
+    '.pc-activity__row',
+    { height: '64px', 'border-bottom-color': '--op-line' },
+    { setup: 'activity-M', viewport: 'M' },
+  ),
+  ...activityRow(
+    'A-16',
+    '.pc-activity__cells',
+    { 'padding-top': '10px', 'padding-left': '16px', 'left-distance': '0px' },
+    { setup: 'activity-M', viewport: 'M' },
+  ),
+  ...activityRow(
+    'A-16',
+    '.pc-activity__day-head',
+    { height: '42px', 'background-color': '--op-panel', 'left-distance': '0px' },
+    { setup: 'activity-M', viewport: 'M' },
+  ),
+  ...activityRow(
+    'A-16',
+    ':is(.pc-activity__side, .pc-activity__chart)',
+    { display: 'none' },
+    { setup: 'activity-M', viewport: 'M' },
+  ),
 ];
 
 function sampleRows(nodes, { property, expected, items }) {
