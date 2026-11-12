@@ -126,8 +126,12 @@
   border-radius: 7px;
   cursor: pointer;
 }
-.pc-palette__scope:hover {
+.pc-palette__scope:hover:not(:disabled) {
   background: var(--pc-surface-hover);
+}
+.pc-palette__scope:disabled {
+  color: var(--op-dim);
+  cursor: default;
 }
 .pc-palette__scope[aria-pressed="true"] {
   color: var(--op-heading);

@@ -9,6 +9,7 @@ import {
   type PaletteScope,
   PaletteScopes,
   type RecentItemsPreference,
+  shownScope,
   useRecentItems,
 } from './PaletteParts.js';
 import { SearchPreview } from './SearchPreview.js';
@@ -290,9 +291,14 @@ function useSearchState(
       (left, right) => groups.indexOf(left.source) - groups.indexOf(right.source),
     );
   }, [stableHits]);
+  const operateLoading = operateSearch.state === 'loading';
+  const shown = shownScope(scope, allHits, operateLoading);
+  useEffect(() => {
+    if (shown !== scope) setScope(shown);
+  }, [shown, scope]);
   const hits = useMemo(
-    () => (scope === 'all' ? allHits : allHits.filter((hit) => hit.source === scope)),
-    [allHits, scope],
+    () => (shown === 'all' ? allHits : allHits.filter((hit) => hit.source === shown)),
+    [allHits, shown],
   );
   const unsupported = useMemo(
     () => queryUnsupportedPlanningIdentities(index, query),
@@ -338,7 +344,7 @@ function useSearchState(
     allHits,
     hits,
     opening,
-    scope,
+    scope: shown,
     setScope,
     unsupported,
     active: hits.find((hit) => hit.id === nav.getActive()?.id) ?? hits[0] ?? null,
@@ -380,7 +386,7 @@ export function CommandPalette({
     connectionState,
     recent.ids,
   );
-  const { setQuery } = search;
+  const { setQuery, setScope } = search;
   const commandCopy = useCommandCopy(onCopy, sources, COPIED_MS);
   const [copyHint, setCopyHint] = useState<string | null>(null);
   const selectedCommand = search.active ?? search.hits[0];
@@ -389,7 +395,8 @@ export function CommandPalette({
   useEffect(() => {
     if (!open) return;
     setQuery(initialQuery);
-  }, [open, initialQuery, setQuery]);
+    setScope('all');
+  }, [open, initialQuery, setQuery, setScope]);
 
   useEffect(() => {
     const dialog = dialogRef.current;
@@ -631,6 +638,7 @@ export function CommandPalette({
             hits={search.allHits}
             scope={search.scope}
             operate={operateBindings.length > 0}
+            operateLoading={search.operateSearchState === 'loading'}
             onChange={(scope) => {
               search.setScope(scope);
               inputRef.current?.focus();

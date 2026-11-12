@@ -45,6 +45,16 @@ export function useRecentItems(
 
 export type PaletteScope = 'all' | DashboardSearchHit['source'];
 
+/** The scope to show: an empty scope falls back to All, except Operate while its read loads. */
+export function shownScope(
+  scope: PaletteScope,
+  hits: readonly DashboardSearchHit[],
+  operateLoading: boolean,
+): PaletteScope {
+  if (scope === 'all' || (scope === 'operate' && operateLoading)) return scope;
+  return hits.some((hit) => hit.source === scope) ? scope : 'all';
+}
+
 const SCOPE_LABEL = Object.freeze({
   all: 'All',
   planning: 'Items',
@@ -57,11 +67,13 @@ export function PaletteScopes({
   hits,
   scope,
   operate,
+  operateLoading,
   onChange,
 }: Readonly<{
   hits: readonly DashboardSearchHit[];
   scope: PaletteScope;
   operate: boolean;
+  operateLoading: boolean;
   onChange: (scope: PaletteScope) => void;
 }>) {
   const keys: readonly PaletteScope[] = operate
@@ -69,20 +81,22 @@ export function PaletteScopes({
     : ['all', 'planning', 'route', 'command'];
   return (
     <fieldset className="pc-palette__scope-set" aria-label="Result scope">
-      {keys.map((key) => (
-        <button
-          key={key}
-          type="button"
-          className="pc-palette__scope"
-          aria-pressed={key === scope}
-          onClick={() => onChange(key)}
-        >
-          {SCOPE_LABEL[key]}
-          <span className="pc-palette__scope-count">
-            {key === 'all' ? hits.length : hits.filter((hit) => hit.source === key).length}
-          </span>
-        </button>
-      ))}
+      {keys.map((key) => {
+        const count = key === 'all' ? hits.length : hits.filter((hit) => hit.source === key).length;
+        return (
+          <button
+            key={key}
+            type="button"
+            className="pc-palette__scope"
+            aria-pressed={key === scope}
+            disabled={key !== 'all' && count === 0 && !(key === 'operate' && operateLoading)}
+            onClick={() => onChange(key)}
+          >
+            {SCOPE_LABEL[key]}
+            <span className="pc-palette__scope-count">{count}</span>
+          </button>
+        );
+      })}
     </fieldset>
   );
 }

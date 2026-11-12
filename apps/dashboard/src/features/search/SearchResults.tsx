@@ -152,7 +152,8 @@ export function SearchResults({
   const hasHits = hits.length > 0;
   const hasUnsupported = unsupported.length > 0;
 
-  if (!hasHits && !hasUnsupported) {
+  // Under the Operate scope a loading read still draws its searching row.
+  if (!hasHits && !hasUnsupported && !(palette && operateLoading)) {
     if (palette) return null;
     return (
       <p className="pc-palette__empty" role="status">

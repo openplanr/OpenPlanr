@@ -9,6 +9,9 @@ import {
 } from '../../../../apps/dashboard/src/app/browser-preferences.js';
 import type { PlanningModelNode } from '../../../../apps/dashboard/src/features/planning/planning-model.js';
 import { CommandPalette } from '../../../../apps/dashboard/src/features/search/CommandPalette.js';
+import { shownScope } from '../../../../apps/dashboard/src/features/search/PaletteParts.js';
+import { SearchResults } from '../../../../apps/dashboard/src/features/search/SearchResults.js';
+import type { DashboardSearchHit } from '../../../../apps/dashboard/src/features/search/search-index.js';
 import { createDashboardQueryIdentity } from '../../../../apps/dashboard/src/lib/binding/query-identity.js';
 
 afterEach(() => {
@@ -252,5 +255,71 @@ describe('palette Operate loading', () => {
     expect(headings).toContain('Operate searching…');
     expect(headings.indexOf('Operate searching…')).toBeGreaterThan(0);
     expect(screen.getByRole('group', { name: 'Result scope' }).textContent).toContain('Operate');
+  });
+});
+
+describe('palette scopes', () => {
+  const scopeButton = (name: string) =>
+    within(screen.getByRole('group', { name: 'Result scope' })).getByRole<HTMLButtonElement>(
+      'button',
+      { name: new RegExp(`^${name} \\d+$`, 'u') },
+    );
+
+  it('returns to All when the selected scope empties under a new query', () => {
+    const view = render(
+      <CommandPalette open onClose={() => undefined} sources={sources} initialQuery="Callable" />,
+    );
+    fireEvent.click(scopeButton('Items'));
+    expect(scopeButton('Items').getAttribute('aria-pressed')).toBe('true');
+    fireEvent.change(screen.getByRole('searchbox'), { target: { value: 'Graph' } });
+    expect(scopeButton('All').getAttribute('aria-pressed')).toBe('true');
+    expect(view.container.querySelectorAll('[data-search-result]').length).toBeGreaterThan(0);
+    fireEvent.change(screen.getByRole('searchbox'), { target: { value: 'Callable' } });
+    expect(scopeButton('All').getAttribute('aria-pressed')).toBe('true');
+  });
+
+  it('reopens on All so a scope from the last search never blanks the opening state', () => {
+    const view = render(
+      <CommandPalette open onClose={() => undefined} sources={sources} initialQuery="Callable" />,
+    );
+    fireEvent.click(scopeButton('Items'));
+    view.rerender(
+      <CommandPalette
+        open={false}
+        onClose={() => undefined}
+        sources={sources}
+        initialQuery="Callable"
+      />,
+    );
+    view.rerender(<CommandPalette open onClose={() => undefined} sources={sources} />);
+    expect(scopeButton('All').getAttribute('aria-pressed')).toBe('true');
+    expect(screen.getByRole('list', { name: 'Go to' })).toBeTruthy();
+  });
+
+  it('disables scopes with no rows but never All', () => {
+    render(
+      <CommandPalette open onClose={() => undefined} sources={sources} initialQuery="qzxqzx" />,
+    );
+    expect(scopeButton('All').disabled).toBe(false);
+    for (const name of ['Items', 'Views', 'Commands'])
+      expect(scopeButton(name).disabled).toBe(true);
+  });
+
+  it('keeps Operate selected while its read loads and draws the searching row', () => {
+    const hits: readonly DashboardSearchHit[] = [];
+    expect(shownScope('operate', hits, true)).toBe('operate');
+    expect(shownScope('operate', hits, false)).toBe('all');
+    expect(shownScope('command', hits, true)).toBe('all');
+    const view = render(
+      <SearchResults
+        hits={hits}
+        activeHref={null}
+        listId="scoped"
+        onSelect={() => undefined}
+        variant="palette"
+        operateLoading
+      />,
+    );
+    expect(view.container.querySelector('.pc-palette__group[aria-busy="true"]')).not.toBeNull();
   });
 });
