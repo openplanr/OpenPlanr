@@ -98,7 +98,7 @@ export function projectSprints(graph: PlanningModelGraph): readonly SprintRecord
       ] as const) {
         if (value.time === null && (value.raw !== null || required))
           diagnostics.push(
-            `${field}: ${value.raw === null ? 'Unknown (missing-date)' : `Invalid date (invalid-date): ${value.raw}`}`,
+            `${field}: ${value.raw === null ? 'not authored (missing-date)' : `Invalid date (invalid-date): ${value.raw}`}`,
           );
       }
       if (start.time !== null && end.time !== null && end.time < start.time)

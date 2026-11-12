@@ -322,10 +322,15 @@ describe('visible control names', () => {
       );
       if (route === 'detail') await findDetailReady(view.container);
       expect(view.container.querySelectorAll('button').length).toBeGreaterThan(0);
-      if (route === 'sprints' || route === 'activity') {
+      if (route === 'activity') {
         const copy = view.getByRole('button', { name: 'Copy command' });
         expect(copy.classList.contains('pc-command-hint__copy')).toBe(true);
         expect(visibleText(copy)).toBe('Copy command');
+      }
+      if (route === 'sprints') {
+        const copy = view.getByRole('button', { name: /\/planr:sprint$/u });
+        expect(copy.classList.contains('pc-sprints__command')).toBe(true);
+        expect(normalise(computeAccessibleName(copy))).toBe(normalise(visibleText(copy)));
       }
       if (route === 'board' && view.container.querySelector('[data-board-layout="columns"]')) {
         const expansion = view.container.querySelector<HTMLButtonElement>(

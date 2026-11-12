@@ -48,6 +48,7 @@ import {
   detailParityRows,
   homeParityRows,
   listParityRows,
+  sprintsParityRows,
 } from '../../../../apps/dashboard/tests/helpers/redesign-parity-rows.mjs';
 import { installDashboardLayoutShifts } from '../dashboard/fixtures/dashboard-layout-shifts.js';
 import { registerDashboardPerformanceTraceTests } from './fixtures/dashboard-performance-trace.js';
@@ -57,6 +58,7 @@ import {
   DASHBOARD_ROUTE_FIXTURES,
   dashboardRouteFixture,
 } from './fixtures/dashboard-route-catalog.js';
+import { SPRINT_SCENARIO_NOW } from './fixtures/dashboard-sprint-graph.js';
 
 registerDashboardPerformanceTraceTests();
 
@@ -1088,17 +1090,25 @@ test.describe('dashboard real-browser quality', () => {
     }));
     expect(boardScroll).toEqual({ overflowY: 'auto', scrolls: true });
 
+    const operateReads: string[] = [];
+    page.on('request', (request) => {
+      if (new URL(request.url()).pathname.startsWith('/api/operate/local-reviews'))
+        operateReads.push(request.url());
+    });
     await openFixture(page, '#/sprints', { planningScenario: 'delivery' });
     const sprint = page.locator('[data-route-kind="planning.sprints"]');
     await expect(
       sprint.getByRole('heading', { name: 'CRM recovery and observability' }),
     ).toBeVisible();
-    const members = sprint.getByRole('list', { name: 'Members of SPRINT-009' });
+    const members = sprint.getByRole('tabpanel', { name: 'SPRINT-009 items' });
     await expect(members).toContainText('QT-071');
     await expect(members.getByRole('listitem')).toHaveCount(3);
-    await expect(sprint).toContainText('Latest operating review');
-    await expect(sprint).toContainText('1 reference this scope');
-    await expect(sprint).toContainText('Submit one test registration before dispatching QT-071');
+    await expect(sprint).toContainText('Recover failed registrations');
+    await expect(members.locator('.pc-sprints__last[data-kind="blocker"]')).toHaveText([
+      'by T-072',
+      'by QT-071',
+    ]);
+    expect(operateReads).toEqual([]);
     expect((await layoutReport(page)).horizontalOverflow).toBe(false);
     expect(await axeViolations(page)).toEqual([]);
   });
@@ -1803,6 +1813,96 @@ test.describe('dashboard real-browser quality', () => {
     });
   });
 
+  test('matches Sprints to its canvas parity rows in both themes', async ({ page }, testInfo) => {
+    test.setTimeout(90_000);
+    const results: unknown[] = [];
+    await page.context().grantPermissions(['clipboard-read', 'clipboard-write']);
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await page.setViewportSize({ width: 1440, height: 1400 });
+    await page.addInitScript(() => localStorage.setItem('op-rail-compact:v1', 'true'));
+    await page.clock.setFixedTime(new Date(SPRINT_SCENARIO_NOW));
+    const scenarios = {
+      'sprints-active': { planningScenario: 'sprint' },
+      'sprints-bare': { planningScenario: 'sprint-bare' },
+      'sprints-none': { dataset: 'artboard' },
+    } as const;
+    const banned = ['Unknown', 'Not recorded', 'None declared', 'Phase 2', 'Release cut:'];
+    for (const theme of ['dark', 'light'] as const) {
+      for (const [setup, query] of Object.entries(scenarios)) {
+        await page.goto(fixtureUrl('#/sprints', { ...query, theme }));
+        await page.evaluate(() => document.fonts.ready);
+        const sprints = page.locator('[data-route-kind="planning.sprints"]');
+        await expect(
+          sprints.locator(setup === 'sprints-none' ? '.pc-sprints__none' : '.pc-sprints__active'),
+        ).toBeVisible();
+        for (const row of sprintsParityRows.filter((entry) => entry.setup === setup))
+          results.push(...(await assertParityRow(page, row, theme)));
+        const text = await page.locator('#main-content').innerText();
+        for (const word of banned) expect(text, `S-21 ${word}`).not.toContain(word);
+        expect(text, 'S-21 none').not.toMatch(/\bnone\b/u);
+        expect((await sprints.locator('.pc-sprints__header').boundingBox())?.x).toBeCloseTo(97, -1);
+        expect((await layoutReport(page)).horizontalOverflow).toBe(false);
+        await page.screenshot({
+          path: testInfo.outputPath(`${setup}-D-${theme}.png`),
+          fullPage: true,
+        });
+        if (setup === 'sprints-none') {
+          const primary = sprints.getByRole('button', { name: 'Copy /planr:sprint' });
+          await primary.click();
+          await expect(primary.locator('.pc-copy-label > [data-active="true"]')).toHaveText(
+            'Copied',
+          );
+          await expect(primary).toBeVisible();
+          expect(await page.evaluate(() => navigator.clipboard.readText())).toBe('/planr:sprint');
+          continue;
+        }
+        if (setup !== 'sprints-active') continue;
+        const row = sprints.locator('.pc-sprints__item-link').first();
+        await row.click();
+        await expect(row).toHaveAttribute('aria-current', 'true');
+        const bar = page.locator('.pc-selection-bar');
+        await expect(bar).toBeVisible();
+        const command = await bar.locator('code').textContent();
+        expect(command).toMatch(/^(?:\/planr:|openplanr )/u);
+        await page.keyboard.press('Escape');
+        await row.focus();
+        await page.keyboard.press('c');
+        await expect(bar.locator('.pc-selection-bar__copy')).toContainText('Copied');
+        expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(command);
+        await page.screenshot({ path: testInfo.outputPath(`sprints-selected-D-${theme}.png`) });
+        await page.goto(fixtureUrl('#/sprints', { ...query, theme }));
+        await expect(sprints.locator('.pc-sprints__active')).toBeVisible();
+        await page.locator('body').click({ position: { x: 1, y: 1 } });
+        const rings: { element: string; ring: string[] }[] = [];
+        for (let press = 0; press < 30; press += 1) {
+          await page.keyboard.press('Tab');
+          const ring = await page.evaluate(async () => {
+            for (let frame = 0; frame < 2; frame += 1)
+              await new Promise((resolve) => requestAnimationFrame(resolve));
+            // Focus also selects the row, which restarts the reduced-motion transition.
+            await new Promise((resolve) => setTimeout(resolve, 50));
+            const focused = document.querySelector(
+              '[data-route-kind="planning.sprints"] :focus-visible',
+            );
+            if (!focused) return null;
+            const style = getComputedStyle(focused);
+            return {
+              element: `${focused.tagName.toLowerCase()}.${focused.className}`,
+              ring: [style.outlineStyle, style.outlineWidth, style.outlineOffset],
+            };
+          });
+          if (ring) rings.push(ring);
+        }
+        expect(rings.length).toBeGreaterThan(10);
+        for (const { element, ring } of rings)
+          expect(ring, `S-20 ${element} at 1440`).toEqual(['solid', '2px', '2px']);
+      }
+    }
+    const parity = testInfo.outputPath('sprints-parity.json');
+    writeFileSync(parity, JSON.stringify(results, null, 2));
+    await testInfo.attach('sprints-parity.json', { path: parity, contentType: 'application/json' });
+  });
+
   test.describe('List under a coarse pointer', () => {
     test.use({ hasTouch: true });
     test('keeps compact List rows at the 44px touch height', async ({ page }) => {
@@ -1844,44 +1944,62 @@ test.describe('dashboard real-browser quality', () => {
           await page.evaluate(() => document.fonts.ready);
           const sprints = page.locator('[data-route-kind="planning.sprints"]');
           await expect(
-            sprints.getByRole('heading', { name: 'No active sprint', exact: true }),
+            sprints.getByRole('region', { name: 'No active sprint', exact: true }),
           ).toBeVisible();
-          await expect(
-            sprints.getByRole('article', { name: 'SPRINT-001: Launch sprint 1', exact: true }),
-          ).toContainText('78 of 82 sprint items done');
+          const launch = sprints.getByRole('article', {
+            name: 'SPRINT-001: Launch sprint 1',
+            exact: true,
+          });
+          await expect(launch).toContainText('78 of 82 done');
+          await expect(launch).toContainText('4 carried over');
           await expect(sprints).toContainText('closed-before-start');
-          const carry = sprints.getByRole('region', { name: 'Carry-over from SPRINT-001' });
-          await expect(carry).toContainText('Still open after close');
-          expect(
-            await carry
-              .locator('a[data-keyboard-item]')
-              .evaluateAll((links) => links.map((link) => link.getAttribute('href'))),
-          ).toEqual([
-            '#/detail/QT-006',
-            '#/detail/BL-007',
-            '#/detail/QT-005',
-            '#/detail/SPEC-015%2FT-055',
-          ]);
-          const link = carry.locator('a[data-keyboard-item]').last();
-          if (width < 900) await link.tap();
-          else {
-            await link.focus();
-            await page.keyboard.press('Enter');
-          }
-          await expect(
-            page.getByRole('dialog', {
-              name: 'Inspector',
-              exact: true,
-            }),
-          ).toBeVisible();
-          await page.keyboard.press('Escape');
-          await expect(link).toBeFocused();
           expect((await layoutReport(page)).horizontalOverflow).toBe(false);
           expect(await axeViolations(page)).toEqual([]);
           await testInfo.attach(`sprints-${theme}-${width}.png`, {
             body: await page.screenshot({ fullPage: true }),
             contentType: 'image/png',
           });
+          // Carried items stay reachable through the closed sprint's Detail.
+          await launch.getByRole('link').click();
+          const detail = page.locator('[data-route-kind="planning.detail"]');
+          await expect(detail.locator('[data-detail-state="ready"]')).toBeVisible();
+          for (const href of [
+            '#/detail/QT-006',
+            '#/detail/BL-007',
+            '#/detail/QT-005',
+            '#/detail/SPEC-015%2FT-055',
+          ])
+            await expect(detail.locator(`a[href="${href}"]`).first()).toBeAttached();
+
+          await page.clock.setFixedTime(new Date(SPRINT_SCENARIO_NOW));
+          await page.goto(
+            fixtureUrl('#/sprints', { planningScenario: 'sprint', evidenceTheme: theme }),
+          );
+          const row = sprints.locator('.pc-sprints__item-link').filter({ hasText: 'T-159' });
+          await expect(row.locator('.pc-sprints__last')).toHaveText('carried from SPRINT-003');
+          const inspector = page.getByRole('dialog', { name: 'Inspector', exact: true });
+          if (width < 900) {
+            // A tap selects the row; when the selection bar covers it, the bar's Open opens the Inspector.
+            await row.tap();
+            const open = page.locator('.pc-selection-bar').getByRole('button', {
+              name: 'Open',
+              exact: true,
+            });
+            await expect(inspector.or(open)).toBeVisible();
+            if (!(await inspector.isVisible())) await open.tap();
+            await expect(inspector).toBeVisible();
+            await page.keyboard.press('Escape');
+            await expect(inspector).toBeHidden();
+            await expect(row).toHaveAttribute('aria-current', 'true');
+          } else {
+            await row.focus();
+            await page.keyboard.press('Enter');
+            await expect(inspector).toBeVisible();
+            await page.keyboard.press('Escape');
+            await expect(row).toBeFocused();
+          }
+          expect((await layoutReport(page)).horizontalOverflow).toBe(false);
+          expect(await axeViolations(page)).toEqual([]);
 
           await page.goto(fixtureUrl('#/activity', { dataset: 'artboard', evidenceTheme: theme }));
           const activity = page.locator('[data-route-kind="planning.activity"]');
@@ -1902,7 +2020,7 @@ test.describe('dashboard real-browser quality', () => {
         'No sprints yet',
       );
       await openFixture(page, '#/sprints', { planningScenario: 'delivery' });
-      await expect(page.getByRole('heading', { name: 'Continue sprint planning' })).toBeVisible();
+      await expect(page.getByRole('button', { name: /Plan the next sprint/ })).toBeVisible();
       expect(writes).toEqual([]);
     });
 

@@ -15,6 +15,7 @@ import {
   DASHBOARD_FIXTURE_REVIEW_ID,
 } from './dashboard-api-fixture.mjs';
 import { deliveryPlanningGraph } from './dashboard-delivery-graph.js';
+import { sprintPlanningGraph } from './dashboard-sprint-graph.js';
 import {
   premiumRequestState,
   productionManifest,
@@ -171,13 +172,21 @@ function planningForRequest(request) {
   if (premium) return premium.snapshot;
   const live = liveListScenario(request);
   if (live) return live.snapshot;
+  let scenario = null;
   try {
-    const referer = new URL(request.headers.referer ?? DASHBOARD_FIXTURE_ORIGIN);
-    if (referer.searchParams.get('planningScenario') !== 'delivery') return fixture.planning;
+    scenario = new URL(request.headers.referer ?? DASHBOARD_FIXTURE_ORIGIN).searchParams.get(
+      'planningScenario',
+    );
   } catch {
     return fixture.planning;
   }
-  const graph = deliveryPlanningGraph;
+  const graph =
+    scenario === 'delivery'
+      ? deliveryPlanningGraph
+      : scenario === 'sprint' || scenario === 'sprint-bare'
+        ? sprintPlanningGraph(scenario === 'sprint-bare')
+        : null;
+  if (!graph) return fixture.planning;
   return {
     ...fixture.planning,
     cursor: { ...fixture.planning.cursor, viewHash: sha256Jcs(graph) },

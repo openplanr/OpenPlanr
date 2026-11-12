@@ -13,6 +13,7 @@ export {
   ArtifactRowTitle,
   artifactRowStyle,
 } from './artifact-row.js';
+export { CopyLabels } from './command-hint.js';
 export { AlertDialog, Dialog, Tabs as RadixTabs } from './composite-primitives.js';
 export {
   Badge,
@@ -131,3 +132,4 @@ export { SelectionBar, type SelectionBarItem, type SelectionBarProps } from './s
 export { StatePanel, type StatePanelProps, type StatePanelState } from './state-panel.js';
 export { Toast, type ToastKind, type ToastProps } from './toast.js';
 export { Tooltip, type TooltipProps } from './tooltip.js';
+export { useCopyFeedback } from './use-copy-feedback.js';

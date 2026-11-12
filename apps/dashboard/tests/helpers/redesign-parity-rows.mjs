@@ -521,6 +521,67 @@ export const detailParityRows = [
   ),
 ];
 
+const sprints = '[data-route-kind="planning.sprints"]';
+const sprintRow = (id, selector, properties, options = {}) =>
+  row(id, `${sprints} ${selector}`, properties, options.viewport).map((entry) => ({
+    ...entry,
+    setup: options.setup ?? 'sprints-active',
+    ...(options.items ? { items: options.items } : {}),
+  }));
+const SEGMENTS = ['--op-dim', '--op-accent', '--op-info', '--op-danger'];
+export const sprintsParityRows = [
+  ...sprintRow('SP-01', '.pc-sprints__active-head', { height: '56px' }),
+  ...sprintRow('SP-02', '.pc-sprints__stats', {
+    tracks: '1fr 1fr 1fr 1fr',
+    'column-gap': '24px',
+  }),
+  ...sprintRow('SP-02', '.pc-sprints__stat[data-goal]', { 'grid-column-start': 'span 2' }),
+  ...sprintRow('SP-03', '.pc-sprints__value strong', {
+    'font-family': 'Outfit',
+    'font-weight': '600',
+    'font-size': '24px',
+  }),
+  ...sprintRow('SP-04', '.pc-sprints__status-bar', {
+    height: '8px',
+    'border-radius': '4px',
+    'column-gap': '2px',
+  }),
+  ...SEGMENTS.flatMap((token, index) =>
+    sprintRow('SP-05', `.pc-sprints__status-bar > span:nth-child(${index + 1})`, {
+      'background-color': token,
+    }),
+  ),
+  ...sprintRow('SP-06', '.pc-sprints__tabs', { height: '48px' }),
+  ...sprintRow('SP-07', '.pc-sprints__item', { height: '44px' }),
+  ...sprintRow('SP-08', '.pc-sprints__last[data-kind="carried"]', {
+    contains: 'carried',
+    color: '--op-warning',
+  }),
+  ...sprintRow('SP-09', '.pc-sprints__timeline-row', { height: '40px' }),
+  ...sprintRow(
+    'SP-10',
+    '.pc-sprints__timeline-body',
+    { 'text-order': 'SPRINT-001,SPRINT-003,SPRINT-002,SPRINT-004' },
+    { items: '.pc-sprints__timeline-label .pc-sprints__id' },
+  ),
+  ...sprintRow('SP-11', '.pc-sprints__timeline-row', { tracks: '220px 1fr 88px' }),
+  ...sprintRow('SP-12', '.pc-sprints__legend', { 'row-count': '1' }),
+  ...sprintRow('SP-13', '.pc-sprints__card', { height: '152px', 'grid-column-start': 'span 4' }),
+  ...sprintRow('SP-14', '.pc-sprints__card-title', { '-webkit-line-clamp': '2' }),
+  ...sprintRow(
+    'SP-15',
+    '.pc-sprints__active',
+    { count: '0' },
+    { setup: 'sprints-bare', items: '.pc-sprints__stat[data-goal], .pc-sprints__release' },
+  ),
+  ...sprintRow(
+    'SP-16',
+    '.pc-sprints__none .pc-sprints__command[data-variant="primary"]',
+    { 'background-color': '--op-accent' },
+    { setup: 'sprints-none' },
+  ),
+];
+
 function sampleRows(nodes, { property, expected, items }) {
   return nodes.map((node) => {
     if (property === 'text')

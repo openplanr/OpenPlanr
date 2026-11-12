@@ -2,12 +2,15 @@
 
 import { act, cleanup, fireEvent, render } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { DataHealth } from '../../../../apps/dashboard/src/features/diagnostics/DataHealth.js';
+import { graphFocusIndex } from '../../../../apps/dashboard/src/features/planning/graph-focus-model.js';
 import { parsePlanningGraphEnvelope } from '../../../../apps/dashboard/src/features/planning/planning-api.js';
 import type {
   PlanningModelGraph,
   PlanningModelNode,
 } from '../../../../apps/dashboard/src/features/planning/planning-model.js';
 import { projectSprints } from '../../../../apps/dashboard/src/features/planning/planning-sprints.js';
+import { sprintTimeline } from '../../../../apps/dashboard/src/features/planning/planning-sprints-view.js';
 import { SprintsPage } from '../../../../apps/dashboard/src/features/planning/SprintsPage.js';
 import {
   clearInspector,
@@ -19,6 +22,11 @@ import {
   parseDashboardProductState,
 } from '../../../../apps/dashboard/src/lib/api/product-state.js';
 import { createDashboardQueryIdentity } from '../../../../apps/dashboard/src/lib/binding/query-identity.js';
+import { createPlanningReadModel } from '../../../pipeline/lib/dashboard/graph-read-model.mjs';
+import {
+  SPRINT_SCENARIO_NOW,
+  sprintPlanningGraph,
+} from '../e2e/fixtures/dashboard-sprint-graph.js';
 import {
   buildPremiumDashboardFixture,
   fixtureSnapshot,
@@ -97,14 +105,26 @@ beforeEach(() =>
   ),
 );
 afterEach(() => {
+  vi.useRealTimers();
   cleanup();
   clearInspector();
   vi.restoreAllMocks();
   vi.unstubAllGlobals();
 });
 
+function pinClock() {
+  vi.useFakeTimers({ toFake: ['Date'] });
+  vi.setSystemTime(new Date(SPRINT_SCENARIO_NOW));
+}
+function shownLabel(button: HTMLElement) {
+  return button.querySelector('.pc-copy-label > [data-active="true"]')?.textContent ?? '';
+}
+function rows(view: ReturnType<typeof render>) {
+  return Array.from(view.container.querySelectorAll<HTMLAnchorElement>('.pc-sprints__item-link'));
+}
+
 describe('sprint evidence', () => {
-  it('renders the artboard all-item denominator and ordered carry-over with scoped navigation', () => {
+  it('renders the artboard no-active state, past cards with the all-item denominator and carried items reachable through Detail', () => {
     const fixture = buildPremiumDashboardFixture('artboard');
     const original = JSON.stringify(fixture.graph);
     const record = projectSprints(fixture.graph).find((entry) => entry.node.id === 'SPRINT-001');
@@ -116,43 +136,31 @@ describe('sprint evidence', () => {
       'QT-005',
       'SPEC-015/T-055',
     ]);
-    const view = render(
-      <>
-        <SprintsPage {...props(fixture.graph)} />
-        <Selection />
-      </>,
-    );
-    expect(view.getByRole('heading', { name: 'No active sprint' })).toBeTruthy();
+    const view = render(<SprintsPage {...props(fixture.graph)} />);
+    const none = view.getByRole('region', { name: 'No active sprint' });
+    expect(none.textContent).toContain('No sprint is running');
+    expect(none.textContent).toContain('SPRINT-003 closed on 28 Sep.');
+    expect(view.queryByRole('button', { name: /Plan the next sprint/ })).toBeNull();
     const launch = view.getByRole('article', { name: 'SPRINT-001: Launch sprint 1', exact: true });
-    expect(launch.textContent).toContain('78 / 82 sprint items done');
-    expect(view.getByText('78 of 82 sprint items done').className).toBe('pc-visually-hidden');
-    expect(launch.querySelector('[aria-hidden="true"]')?.textContent).toContain('78 / 82');
-    const completion = view.getByRole('progressbar', {
-      name: 'Launch sprint 1: sprint items done',
-    });
-    expect(completion.getAttribute('value')).toBe('78');
-    expect(completion.getAttribute('max')).toBe('82');
-    const members = view.getByRole('list', { name: 'Members of SPRINT-001' });
-    expect(members.querySelectorAll('li')).toHaveLength(82);
-    expect(members.textContent).toContain('QT-006');
-    const carry = view.getByRole('region', { name: 'Carry-over from SPRINT-001' });
-    expect(carry.textContent).toContain('Still open after close');
-    expect(view.getAllByRole('region', { name: /^Carry-over from/ })).toHaveLength(1);
-    expect(members.querySelectorAll('a .pc-artifact[data-variant="glyph"]')).toHaveLength(82);
-    const links = Array.from(carry.querySelectorAll<HTMLAnchorElement>('a[data-keyboard-item]'));
-    expect(links.map((link) => link.getAttribute('href'))).toEqual([
-      '#/detail/QT-006',
-      '#/detail/BL-007',
-      '#/detail/QT-005',
-      '#/detail/SPEC-015%2FT-055',
-    ]);
-    fireEvent.click(links[3]);
-    expect(view.getByTestId('selection').textContent).toBe('SPEC-015/T-055');
+    expect(launch.textContent).toContain('78 of 82 done');
+    expect(launch.textContent).toContain('4 carried over');
+    const detail = launch.querySelector('a')?.getAttribute('href');
+    expect(detail).toBe('#/detail/SPRINT-001');
+    // Carried items stay reachable from the sprint's Detail, which lists its members.
+    const members = (graphFocusIndex(fixture.graph).children.get('SPRINT-001') ?? []).map(
+      (ref) => ref.node?.id,
+    );
+    for (const id of record?.carryOver.map((node) => node.id) ?? []) expect(members).toContain(id);
+    expect(
+      view.getAllByRole('article').map((card) => card.getAttribute('aria-label')?.split(':')[0]),
+    ).toEqual(['SPRINT-003', 'SPRINT-002', 'SPRINT-001']);
     expect(view.container.textContent).toContain('closed-before-start');
+    expect(view.container.textContent).not.toMatch(/Unknown|Not recorded|· none/);
+    expect(view.container.querySelector('.pc-sprints__carry, .pc-sprints__members')).toBeNull();
     expect(JSON.stringify(fixture.graph)).toBe(original);
   });
 
-  it('deduplicates scoped aliases, rejects ambiguous refs and separates addressed from done and open', () => {
+  it('deduplicates scoped aliases, counts addressed with done and reports unresolved refs through Data Health', () => {
     const nodes: PlanningModelNode[] = [
       sprint({
         taskIds: ['T-010', 'SPEC-002/T-010', 'T-020', 'QT-090', 'BL-090', 'US-090', 'T-999'],
@@ -189,14 +197,22 @@ describe('sprint evidence', () => {
     expect(record.carryOver.map((node) => node.id)).toEqual(['QT-090', 'US-090']);
     expect(record.unresolved.map((ref) => ref.reference)).toEqual(['T-020', 'T-999']);
     const view = render(<SprintsPage {...props(graph, 'partial')} />);
-    const unresolved = view.getByRole('region', { name: 'Unresolved sprint items' });
-    expect(unresolved.textContent).toContain('Ambiguous reference');
-    expect(unresolved.querySelector('a,button')).toBeNull();
-    expect(view.container.textContent).toContain('1 addressed terminal items');
-    expect(view.container.textContent).toContain('closedAt: Unknown');
+    const card = view.getByRole('article', { name: 'SPRINT-090: Release preparation' });
+    expect(card.textContent).toContain('2 of 4 done');
+    expect(card.textContent).toContain('2 carried over');
+    expect(view.container.textContent).not.toContain('Unknown');
+    cleanup();
+    const sources = new Map(nodes.map((node) => [node.id, `.planr/${node.id}.md`]));
+    const { diagnostics } = createPlanningReadModel(graph, sources);
+    const health = render(<DataHealth read={{ state: 'available', diagnostics }} />);
+    const sprintRows = health
+      .getAllByRole('link', { name: 'SPRINT-090' })
+      .map((link) => link.closest('li, tr, article')?.textContent ?? '');
+    expect(sprintRows.some((text) => text.includes('Unresolved reference'))).toBe(true);
+    expect(sprintRows.some((text) => text.includes('Ambiguous reference'))).toBe(true);
   });
 
-  it('shows authored dates and release cut without repairing invalid chronology or missing closedAt', async () => {
+  it('keeps authored chronology unrepaired, draws Monday week ticks and a cut diamond without placeholders', () => {
     const graph = {
       nodes: [
         sprint({
@@ -210,42 +226,116 @@ describe('sprint evidence', () => {
       edges: [],
     };
     const view = render(<SprintsPage {...props(graph)} />);
-    expect(view.container.textContent).toContain('end-before-start');
-    expect(view.container.textContent).toContain('closed-before-start');
-    expect(view.container.textContent).toContain('invalid-date');
-    expect(view.container.textContent).toContain('Release cut: 2026-10-10');
-    expect(view.container.querySelectorAll('.pc-sprints__window')).toHaveLength(0);
-    const markers = view.container.querySelectorAll('.pc-sprints__close');
-    expect(markers).toHaveLength(1);
-    expect(markers[0].getAttribute('data-invalid')).toBe('true');
-    expect(view.container.querySelectorAll('time[datetime="2026-09-30"]')).toHaveLength(1);
-    const timeline = view.getByRole('region', { name: 'Sprint timeline' });
-    const axis = timeline.querySelector('.pc-sprints__axis');
-    expect(axis?.children).toHaveLength(5);
-    expect(Array.from(axis?.querySelectorAll('span') ?? []).map((tick) => tick.style.left)).toEqual(
-      ['0%', '25%', '50%', '75%', '100%'],
+    const timeline = view.getByRole('region', { name: 'Timeline' });
+    expect(timeline.textContent).toContain('end-before-start');
+    expect(timeline.textContent).toContain('closed-before-start');
+    expect(timeline.textContent).toContain('invalid-date');
+    expect(timeline.textContent).toContain('release cut 2026-10-10');
+    expect(view.container.querySelectorAll('.pc-sprints__bar')).toHaveLength(0);
+    expect(view.container.querySelectorAll('.pc-sprints__cut')).toHaveLength(1);
+    const ticks = Array.from(timeline.querySelectorAll('.pc-sprints__ticks > span')).map(
+      (tick) => tick.textContent,
     );
-    expect(axis?.textContent).toContain('30 Sep');
-    expect(axis?.textContent).not.toContain('Sept');
-    const details = view.getByRole('button', {
-      name: /Release preparation · Start: 2026-10-15 · End: 2026-10-01/,
-    });
-    expect(details.getAttribute('aria-label')).toContain('closed-before-start');
-    expect(details.querySelector('time')?.closest('.pc-visually-hidden')).toBeTruthy();
-    fireEvent.focus(details);
-    const tooltip = await view.findByRole('tooltip');
-    expect(tooltip.textContent).toContain('closedAt: 2026-09-30');
-    expect(tooltip.textContent).toContain('end-before-start');
+    expect(ticks).toEqual(['28 Sep', '5 Oct', '12 Oct']);
+    expect(timeline.textContent).not.toContain('Sept');
+    expect(view.getByRole('list', { name: 'Timeline legend' }).textContent).toBe('Release cut');
+    expect(
+      Array.from(timeline.querySelectorAll('.pc-sprints__timeline-label')).map((link) =>
+        link.getAttribute('href'),
+      ),
+    ).toEqual(['#/detail/SPRINT-090', '#/detail/SPRINT-091']);
+    expect(view.container.textContent).not.toMatch(/Unknown|Not recorded/);
   });
 
-  it('distinguishes active, planned and no-sprint states with the copy-only sprint command', () => {
+  it('draws the active card with the shared partition, row order and last column', () => {
+    pinClock();
+    const view = render(<SprintsPage {...props(sprintPlanningGraph())} />);
+    const card = view.getByRole('region', {
+      name: 'SPRINT-004: Dashboard redesign build and canvas engine',
+    });
+    expect(card.textContent).toContain('18 Oct – 31 Oct · day 6 of 14');
+    expect(card.textContent).toContain('Ship the approved Home');
+    expect(card.textContent).toContain('40 days');
+    expect(
+      view.getByRole('img', { name: 'Done 7, In progress 4, Outstanding 6, Blocked 1' }),
+    ).toBeTruthy();
+    expect(card.textContent).toContain('Release cut 31 Oct');
+    expect(view.getAllByRole('tab').map((tab) => tab.textContent)).toEqual([
+      'Open11',
+      'Blocked1',
+      'Done7',
+      'All18',
+    ]);
+    const open = rows(view);
+    expect(open.map((link) => link.querySelector('.pc-artifact-tag')?.textContent)).toEqual([
+      'T-158',
+      'T-156',
+      'US-101',
+      'T-160',
+      'T-157',
+      'T-159',
+      'BL-446',
+      'T-128',
+      'T-161',
+      'T-162',
+      'T-163',
+    ]);
+    const last = (id: string) =>
+      open.find((link) => link.textContent?.includes(id))?.querySelector('.pc-sprints__last');
+    expect(last('T-157')?.textContent).toBe('by T-156');
+    expect(last('T-159')?.textContent).toBe('carried from SPRINT-003');
+    expect(last('T-159')?.getAttribute('title')).toBe('Carried from SPRINT-003');
+    expect(last('T-158')?.getAttribute('title')).toBe('Updated 2 days ago');
+    expect(last('T-160')?.textContent).toContain('Updated today');
+    expect(last('BL-446')?.textContent).toBe('');
+    expect(view.getByRole('list', { name: 'Timeline legend' }).textContent).toBe(
+      'TodayRelease cut',
+    );
+    expect(view.getByRole('button', { name: /Plan the next sprint/ })).toBeTruthy();
+    expect(view.queryByRole('region', { name: 'No active sprint' })).toBeNull();
+  });
+
+  it('omits the goal and release cut when the sprint has none, and keeps the stats in their place', () => {
+    pinClock();
+    const view = render(<SprintsPage {...props(sprintPlanningGraph(true))} />);
+    const card = view.getByRole('region', { name: /^SPRINT-004/ });
+    expect(card.textContent).not.toContain('Goal');
+    expect(card.textContent).not.toContain('Release cut');
+    const stats = Array.from(card.querySelectorAll<HTMLElement>('.pc-sprints__stat'));
+    expect(stats.map((stat) => stat.dataset.span)).toEqual(['2', '2']);
+    cleanup();
+    const graph = sprintPlanningGraph();
+    const withoutCapacity = {
+      ...graph,
+      nodes: graph.nodes.map((node) =>
+        node.id === 'SPRINT-004'
+          ? {
+              ...node,
+              frontmatter: Object.fromEntries(
+                Object.entries(node.frontmatter).filter(([key]) => key !== 'capacityDays'),
+              ),
+            }
+          : node,
+      ),
+    };
+    const goalOnly = render(<SprintsPage {...props(withoutCapacity)} />);
+    const goalStats = Array.from(
+      goalOnly.container.querySelectorAll<HTMLElement>('.pc-sprints__stat'),
+    );
+    expect(goalStats.map((stat) => stat.textContent?.slice(0, 4))).toEqual(['Goal', 'Done']);
+    expect(goalStats.map((stat) => stat.dataset.span)).toEqual(['2', '2']);
+  });
+
+  it('distinguishes active, planned and no-sprint states with the copy-only sprint command', async () => {
     const active = {
       ...sprint({ status: 'active', closedAt: null }),
       status: 'in-progress' as const,
     };
+    const writeText = vi.fn(async () => {});
+    vi.stubGlobal('navigator', { ...navigator, clipboard: { writeText } });
     const view = render(<SprintsPage {...props({ nodes: [active], edges: [] })} />);
-    expect(view.getByRole('heading', { name: 'Continue sprint planning' })).toBeTruthy();
-    expect(view.container.textContent).not.toContain('Carry-over from');
+    expect(view.getByRole('region', { name: 'SPRINT-090: Release preparation' })).toBeTruthy();
+    expect(view.queryByRole('region', { name: 'No active sprint' })).toBeNull();
     view.rerender(
       <SprintsPage
         {...props({
@@ -254,47 +344,109 @@ describe('sprint evidence', () => {
         })}
       />,
     );
-    expect(view.getByRole('heading', { name: 'No active sprint' })).toBeTruthy();
+    const none = view.getByRole('region', { name: 'No active sprint' });
+    expect(none.textContent).not.toContain('No sprints yet');
+    expect(view.queryByRole('button', { name: /Plan the next sprint/ })).toBeNull();
     view.rerender(<SprintsPage {...props({ nodes: [], edges: [] })} />);
     expect(view.container.textContent).toContain('No sprints yet');
-    expect(view.container.textContent).toContain('/planr:sprint');
+    const copy = view.getByRole('button', { name: 'Copy /planr:sprint' });
+    await act(async () => {
+      fireEvent.click(copy);
+    });
+    expect(writeText).toHaveBeenCalledWith('/planr:sprint');
+    expect(shownLabel(copy)).toBe('Copied');
+    expect(copy.dataset.state).toBe('copied');
   });
 
-  it('omits empty carry-over cards while retaining the last inspected item after completion', () => {
-    const item: PlanningModelNode = {
-      id: 'QT-090',
-      type: 'quick',
-      title: 'Close the final item',
-      status: 'outstanding',
-      frontmatter: {},
-    };
-    const authoredSprint = sprint({ itemIds: [item.id] });
-    const view = render(<SprintsPage {...props({ nodes: [authoredSprint, item], edges: [] })} />);
-    const carry = view.getByRole('region', { name: 'Carry-over from SPRINT-090' });
-    const link = carry.querySelector<HTMLAnchorElement>('a[data-keyboard-item]');
-    if (!link) throw new Error('Missing carry-over item link');
-    fireEvent.click(link);
-    view.rerender(
-      <SprintsPage
-        {...props(
-          { nodes: [authoredSprint, { ...item, status: 'done' }], edges: [] },
-          'refreshing',
-        )}
-      />,
-    );
-    expect(carry.contains(link)).toBe(true);
-    expect(link.textContent).toContain('No longer open after close');
-    act(() => clearInspector());
-    expect(view.queryByRole('region', { name: 'Carry-over from SPRINT-090' })).toBeNull();
-    expect(view.queryByText('See all 0')).toBeNull();
+  it('shows the copy result in the header and no-active buttons, including a blocked copy', async () => {
+    pinClock();
+    for (const outcome of ['copied', 'blocked'] as const) {
+      const writeText = vi.fn(async () => {
+        if (outcome === 'blocked') throw new Error('Permission denied');
+      });
+      vi.stubGlobal('navigator', { ...navigator, clipboard: { writeText } });
+      for (const graph of [sprintPlanningGraph(), { nodes: [], edges: [] }]) {
+        const view = render(<SprintsPage {...props(graph)} />);
+        const button = view.container.querySelector<HTMLButtonElement>('.pc-sprints__command');
+        if (!button) throw new Error('Missing sprint command button');
+        const idle = shownLabel(button);
+        expect(idle).toBe(graph.nodes.length ? 'Plan the next sprint' : 'Copy');
+        await act(async () => {
+          fireEvent.click(button);
+        });
+        expect(writeText).toHaveBeenCalledWith('/planr:sprint');
+        expect(button.dataset.state).toBe(outcome);
+        expect(shownLabel(button)).toBe(outcome === 'copied' ? 'Copied' : 'Copy failed');
+        expect(view.getByRole('button', { name: new RegExp(shownLabel(button)) })).toBe(button);
+        if (outcome === 'blocked')
+          expect(button.getAttribute('title')).toContain('Permission denied');
+        cleanup();
+      }
+    }
   });
 
-  it('uses coordinator navigation and retains focus, scroll and selection across refresh and disconnect', () => {
-    const fixture = buildPremiumDashboardFixture('artboard');
-    const source = props(fixture.graph);
+  it('labels every Nth Monday so a long timeline keeps at most ten ticks', () => {
+    const long = (id: string, startDate: string, endDate: string): PlanningModelNode => ({
+      ...sprint({ startDate, endDate }),
+      id,
+      frontmatter: { id, status: 'closed', startDate, endDate },
+    });
+    const records = projectSprints({
+      nodes: [
+        long('SPRINT-090', '2026-01-07', '2026-01-20'),
+        long('SPRINT-091', '2026-11-02', '2027-02-10'),
+      ],
+      edges: [],
+    });
+    const { ticks } = sprintTimeline(records, Date.parse(SPRINT_SCENARIO_NOW));
+    const weeks = (ticks.at(-1)?.time ?? 0) / 604_800_000 - ticks[0].time / 604_800_000;
+    expect(weeks).toBeGreaterThanOrEqual(30);
+    expect(ticks.length).toBeLessThanOrEqual(10);
+    expect(new Set(ticks.map((tick) => tick.time)).size).toBe(ticks.length);
+    const gaps = ticks.slice(1).map((tick, index) => tick.time - ticks[index].time);
+    expect(new Set(gaps).size).toBe(1);
+    expect(gaps[0] % 604_800_000).toBe(0);
+    expect(ticks.every((tick) => new Date(tick.time).getUTCDay() === 1)).toBe(true);
+  });
+
+  it('retains the inspected row in its tab after a live patch completes it, and exposes the selection', () => {
+    pinClock();
+    const graph = sprintPlanningGraph();
     const view = render(
       <>
-        <SprintsPage {...source} />
+        <SprintsPage {...props(graph)} />
+        <Selection />
+      </>,
+    );
+    const row = rows(view).find((link) => link.textContent?.includes('T-161'));
+    if (!row) throw new Error('Missing T-161 row');
+    fireEvent.click(row);
+    expect(view.getByTestId('selection').textContent).toBe('T-161');
+    expect(row.getAttribute('aria-current')).toBe('true');
+    expect(view.getByRole('region', { name: 'Selected items' }).textContent).toContain('T-161');
+    const next = {
+      ...graph,
+      nodes: graph.nodes.map((node) =>
+        node.id === 'T-161' ? { ...node, status: 'done' as const } : node,
+      ),
+    };
+    view.rerender(
+      <>
+        <SprintsPage {...props(next, 'refreshing')} />
+        <Selection />
+      </>,
+    );
+    expect(rows(view)).toContain(row);
+    act(() => clearInspector());
+    expect(rows(view).some((link) => link.textContent?.includes('T-161'))).toBe(false);
+  });
+
+  it('uses coordinator navigation and retains focus and selection across refresh and disconnect', () => {
+    pinClock();
+    const graph = sprintPlanningGraph();
+    const view = render(
+      <>
+        <SprintsPage {...props(graph)} />
         <Selection />
       </>,
     );
@@ -310,24 +462,18 @@ describe('sprint evidence', () => {
       copy: async () => {},
       announce: vi.fn(),
     }));
-    const carry = view.getByRole('region', { name: 'Carry-over from SPRINT-001' });
-    const links = Array.from(carry.querySelectorAll<HTMLAnchorElement>('a[data-keyboard-item]'));
+    const links = rows(view);
     fireEvent.focus(links[0]);
     act(() => links[0].focus());
     fireEvent.keyDown(links[0], { key: 'j' });
     expect(document.activeElement).toBe(links[1]);
     fireEvent.keyDown(links[1], { key: 'Enter' });
-    expect(view.getByTestId('selection').textContent).toBe('BL-007');
-    const region = view.container.querySelector<HTMLElement>(
-      '[data-scroll-context="sprint:SPRINT-001"]',
-    );
-    if (!region) throw new Error('Missing sprint scroll region');
-    region.scrollTop = 123;
+    expect(view.getByTestId('selection').textContent).toBe('T-156');
     const next = {
-      ...fixture.graph,
-      nodes: fixture.graph.nodes.map((node) =>
-        node.id === 'BL-007'
-          ? { ...node, title: 'Updated submission title', status: 'done' as const }
+      ...graph,
+      nodes: graph.nodes.map((node) =>
+        node.id === 'T-156'
+          ? { ...node, title: 'Updated gesture layer title', status: 'done' as const }
           : node,
       ),
     };
@@ -338,17 +484,16 @@ describe('sprint evidence', () => {
       </>,
     );
     expect(document.activeElement).toBe(links[1]);
-    expect(links[1].textContent).toContain('No longer open after close');
-    expect(region.scrollTop).toBe(123);
+    expect(rows(view)).toEqual(links);
     view.rerender(
       <>
         <SprintsPage {...props(next, 'offline')} />
         <Selection />
       </>,
     );
-    expect(view.container.textContent).toContain('Updated submission title');
+    expect(view.container.textContent).toContain('Updated gesture layer title');
     expect(document.activeElement).toBe(links[1]);
-    expect(view.getByTestId('selection').textContent).toBe('BL-007');
+    expect(view.getByTestId('selection').textContent).toBe('T-156');
     stop();
   });
 });
