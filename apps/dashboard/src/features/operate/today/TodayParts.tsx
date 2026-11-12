@@ -132,8 +132,8 @@ function DecisionCard({ decision }: { decision: TodayDecision }) {
         <dl className="pc-operate-today__tiles">
           {decision.tiles.map((tile) => (
             <div key={tile.label} className="pc-operate-today__tile" data-tone={tile.tone}>
-              <dd>{tile.value}</dd>
               <dt>{tile.label}</dt>
+              <dd>{tile.value}</dd>
             </div>
           ))}
         </dl>
