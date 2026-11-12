@@ -758,6 +758,8 @@ export type DataTableColumn<Row> = Readonly<{
   align?: 'left' | 'right';
   mono?: boolean;
   sortable?: boolean;
+  /** Replaces the text heading, e.g. a select-all control. */
+  header?: ReactNode;
   render?: (row: Row) => ReactNode;
 }>;
 
@@ -931,7 +933,9 @@ export function DataTable<Row extends { readonly id: string }>({
                     active ? (sort?.dir === 'asc' ? 'ascending' : 'descending') : undefined
                   }
                 >
-                  {column.sortable && onSort ? (
+                  {column.header !== undefined ? (
+                    column.header
+                  ) : column.sortable && onSort ? (
                     <button
                       type="button"
                       className="pc-table__sort"
@@ -1010,7 +1014,7 @@ export function DataTable<Row extends { readonly id: string }>({
                               event.altKey ||
                               event.shiftKey ||
                               (event.target instanceof Element &&
-                                event.target.closest('a, button, input, [role="combobox"]'))
+                                event.target.closest('a, button, input, label, [role="combobox"]'))
                             )
                               return;
                             event.currentTarget.focus({ preventScroll: true });

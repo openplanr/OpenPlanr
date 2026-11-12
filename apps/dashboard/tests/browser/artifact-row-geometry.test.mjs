@@ -73,11 +73,11 @@ function bundleFixture() {
             <SearchResults hits={hits} activeHref={null} listId="row-results" onSelect={() => undefined} displayIdForHit={hit => searchHitDisplayId(hit,{planningNodes:paletteNodes})} />
           </section>
           <section className="op-workspace op-planning pc-list" id="list" style={artifactRowStyle(nodes.map(node=>node.id))}>
-            <DataTable columns={LIST_COLUMNS} rows={nodes} caption="Geometry artifacts" />
+            <DataTable columns={[{key:'select',label:'Select',width:40},...LIST_COLUMNS]} rows={nodes} caption="Geometry artifacts" />
           </section>
           <section className="op-workspace op-planning pc-list" id="grouped-list" style={artifactRowStyle(nodes.map(node=>node.id))}>
             <div className="pc-list__window">
-              <DataTable columns={LIST_COLUMNS} rows={nodes} groups={[{
+              <DataTable columns={[{key:'select',label:'Select',width:40},...LIST_COLUMNS]} rows={nodes} groups={[{
                 key:'specs',label:'Specifications',rows:nodes,
                 header:<div className="pc-list__group-header"><button type="button">Specifications</button><span className="pc-list__group-meta"><span>11 items</span><progress max="11" value="3"/><span>3/11 tasks</span></span></div>
               }]} caption="Grouped geometry artifacts" />
@@ -85,7 +85,7 @@ function bundleFixture() {
           </section>
           <section className="op-workspace op-planning pc-list" id="short-list" style={artifactRowStyle([nodes[0].id])}>
             <div className="pc-list__window">
-              <DataTable columns={LIST_COLUMNS} rows={[nodes[0]]} caption="One geometry artifact" />
+              <DataTable columns={[{key:'select',label:'Select',width:40},...LIST_COLUMNS]} rows={[nodes[0]]} caption="One geometry artifact" />
             </div>
           </section>
           <div id="board" style={{width:300,height:600}}>

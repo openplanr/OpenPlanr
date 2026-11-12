@@ -13,6 +13,7 @@ import {
   type PlanningNode,
   parsePlanningGraphEnvelope,
 } from '../../../../apps/dashboard/src/features/planning/planning-api.js';
+import { listPreset } from '../../../../apps/dashboard/src/features/planning/planning-list-filter.js';
 import {
   clearInspector,
   useInspectorStore,
@@ -199,11 +200,6 @@ function rowIds(container: HTMLElement): string[] {
   );
 }
 
-async function openListOptions(user: ReturnType<typeof userEvent.setup>) {
-  const summary = screen.getByText('List options');
-  if (!summary.closest('details')?.open) await user.click(summary);
-}
-
 afterEach(() => {
   cleanup();
   clearInspector();
@@ -226,7 +222,7 @@ describe('List presentation tokens against validated projections', () => {
         .getByRole('button', { name: 'SPEC-901 · Delivery' })
         .getAttribute('aria-expanded'),
     ).toBe('true');
-    expect(within(group).getByRole('progressbar').getAttribute('value')).toBe('1');
+    expect(within(group).getByRole('progressbar').getAttribute('aria-valuenow')).toBe('1');
     expect(rowIds(container)).toHaveLength(3);
     rerender(
       <View
@@ -262,7 +258,8 @@ describe('List presentation tokens against validated projections', () => {
         }}
       />,
     );
-    expect(container.querySelectorAll('.pc-empty[data-variant="tile"]')).toHaveLength(1);
+    expect(container.querySelectorAll('.pc-list__empty')).toHaveLength(1);
+    expect(screen.getByRole('heading', { name: 'No items match these filters' })).toBeTruthy();
     expect(container.querySelector('table')).toBeNull();
     expect(screen.queryByText('No node matches this filter.')).toBeNull();
     await user.click(screen.getByRole('button', { name: 'Clear 8 filters', exact: true }));
@@ -271,10 +268,8 @@ describe('List presentation tokens against validated projections', () => {
     expect(
       (screen.getByRole('textbox', { name: 'Filter by id or title' }) as HTMLInputElement).value,
     ).toBe('');
-    const hints = screen.getByRole('region', { name: 'List keyboard shortcuts' });
-    expect(hints.querySelectorAll('kbd')).toHaveLength(11);
-    expect(hints.textContent).toContain('collapse / expand group');
-    expect(hints.textContent).toContain('5 filtered items');
+    expect(screen.queryByRole('region', { name: 'List keyboard shortcuts' })).toBeNull();
+    expect(container.querySelector('.pc-list__count')?.textContent).toBe('5 of 5');
   });
 
   it('applies URL filter, density, sorting and grouping without changing the bound graph', () => {
@@ -300,32 +295,31 @@ describe('List presentation tokens against validated projections', () => {
     expect(screen.queryByText('Blocked review')).toBeNull();
   });
 
-  it('keeps advanced controls on demand and retains selection across closing and reopening them', async () => {
+  it('selects every filtered row from the header checkbox and marks a partial selection', async () => {
     const user = userEvent.setup();
     const { container } = render(<View view={null} />);
-    const options = screen.getByText('List options').closest('details');
-    expect(options?.open).toBe(false);
-    expect(screen.getByRole('button', { name: 'Copy bulk commands' }).closest('details')).toBe(
-      options,
-    );
+    expect(screen.queryByText('List options')).toBeNull();
     const filter = screen.getByRole('textbox', { name: 'Filter by id or title' });
     await user.type(filter, 'Alpha');
-    expect(options?.open).toBe(false);
     expect(rowIds(container)).toEqual([FIXTURE_SECOND]);
     await user.clear(filter);
     expect(rowIds(container)).toHaveLength(FIXTURE_NODES.length);
-    await openListOptions(user);
-    await user.click(screen.getByRole('button', { name: 'Select all 5 filtered' }));
-    const summary = screen.getByText('List options');
-    fireEvent.keyDown(summary, { key: 'Escape' });
-    expect(options?.open).toBe(false);
-    expect(document.activeElement).toBe(summary);
-    await openListOptions(user);
-    expect(screen.getByText('5 selected · 0 eligible · 5 skipped')).toBeTruthy();
+    const all = screen.getByRole('checkbox', { name: 'Select all 5 filtered items' });
+    await user.click(screen.getByRole('checkbox', { name: `Select ${FIXTURE_FIRST}` }));
+    expect((all as HTMLInputElement).indeterminate).toBe(true);
+    expect((all as HTMLInputElement).checked).toBe(false);
+    await user.click(all);
+    expect((all as HTMLInputElement).indeterminate).toBe(false);
+    expect((all as HTMLInputElement).checked).toBe(true);
+    const bar = screen.getByRole('region', { name: 'Selected items' });
+    expect(within(bar).getByText('5 selected')).toBeTruthy();
+    expect(screen.queryByRole('dialog', { name: 'Inspector' })).toBeNull();
+    await user.click(within(bar).getByRole('button', { name: 'Clear selection' }));
+    expect((all as HTMLInputElement).checked).toBe(false);
     expect(rowIds(container)).toHaveLength(FIXTURE_NODES.length);
   });
 
-  it('respects disabled single-letter shortcuts inside advanced command controls', async () => {
+  it('respects disabled single-letter shortcuts in the selection bar', async () => {
     const user = userEvent.setup();
     const copy = vi.fn(async (_text: string) => undefined);
     render(
@@ -336,14 +330,14 @@ describe('List presentation tokens against validated projections', () => {
         onCopy={copy}
       />,
     );
-    await openListOptions(user);
-    await user.click(screen.getByRole('button', { name: 'Select all 1 filtered' }));
-    const bulk = screen.getByRole('button', { name: 'Copy bulk commands' });
-    fireEvent.keyDown(bulk, { key: 'c' });
+    await user.click(screen.getByRole('checkbox', { name: 'Select all 1 filtered items' }));
+    const bar = screen.getByRole('region', { name: 'Selected items' });
+    const button = within(bar).getByRole('button', { name: 'Copy command' });
+    fireEvent.keyDown(button, { key: 'c' });
     expect(copy).not.toHaveBeenCalled();
-    await user.click(bulk);
+    await user.click(button);
     expect(copy).toHaveBeenCalledExactlyOnceWith(
-      'openplanr backlog update BL-910 --status in-progress',
+      'openplanr backlog update BL-910 --status outstanding',
     );
   });
 
@@ -439,7 +433,7 @@ describe('List presentation tokens against validated projections', () => {
     scrollPage(100);
     expect(
       screen.getByRole('navigation', { name: 'Planning artifact pages' }).textContent,
-    ).toContain('Page 1 of 3');
+    ).toContain('Showing 1–100 of 210');
     expect(container.querySelector('h1')?.parentElement?.textContent).toContain('105 of 105');
     await user.click(screen.getByRole('button', { name: 'Next' }));
     scrollPage(100);
@@ -458,8 +452,7 @@ describe('List presentation tokens against validated projections', () => {
     render(<View onCopy={copy} />);
     await user.clear(screen.getByRole('textbox'));
     await user.type(screen.getByRole('textbox'), 'Alpha');
-    await user.click(screen.getByRole('button', { name: 'Compact', exact: true }));
-    await openListOptions(user);
+    await user.click(screen.getByRole('button', { name: 'Comfortable', exact: true }));
     await user.click(screen.getByRole('button', { name: 'Copy filter link' }));
     expect(copy).toHaveBeenCalledTimes(1);
     const href = copy.mock.calls[0]?.[0] as string | undefined;
@@ -489,7 +482,6 @@ describe('List presentation tokens against validated projections', () => {
           }
         />,
       );
-      await openListOptions(user);
       await user.click(screen.getByRole('button', { name: 'Copy filter link' }));
       const message = await screen.findByText(
         /^Copy blocked\. Select and copy this filter link manually:/u,
@@ -556,7 +548,6 @@ describe('List presentation tokens against validated projections', () => {
         />
       </DashboardProviders>,
     );
-    await openListOptions(user);
     await user.click(screen.getByRole('button', { name: 'Copy filter link' }));
     expect(copy).toHaveBeenCalledTimes(1);
     expect(screen.getByText('Filter link copied.')).toBeTruthy();
@@ -614,7 +605,7 @@ describe('List live refetch retention', () => {
       const user = userEvent.setup();
       const nodes = buildPremiumDashboardFixture(dataset).graph.nodes;
       const { container, rerender } = render(<LiveShell current={fixture(nodes)} />);
-      await user.click(screen.getByRole('combobox', { name: /^Filter by status:/u }));
+      await user.click(screen.getByRole('combobox', { name: /^Status:/u }));
       await user.click(screen.getByRole('option', { name: 'Outstanding', exact: true }));
       await user.keyboard('{Escape}');
       await user.type(screen.getByRole('textbox', { name: 'Filter by id or title' }), 'Fixture');
@@ -637,15 +628,13 @@ describe('List live refetch retention', () => {
         expect(table.scrollLeft).toBe(21);
         expect(rowIds(container)).toEqual(ids);
         expect((screen.getByRole('textbox') as HTMLInputElement).value).toBe('Fixture');
-        expect(screen.getByRole('combobox', { name: /^Filter by type:/u }).textContent).toContain(
-          'All types',
-        );
-        expect(screen.getByRole('combobox', { name: /^Filter by status:/u }).textContent).toContain(
-          'Outstanding',
+        expect(screen.getByRole('combobox', { name: /^Type:/u }).textContent).toBe('Type: any');
+        expect(screen.getByRole('combobox', { name: /^Status:/u }).textContent).toBe(
+          'Status: outstanding',
         );
         expect(
           screen.getByRole('navigation', { name: 'Planning artifact pages' }).textContent,
-        ).toContain('Page 2');
+        ).toContain('Showing 101–');
         expect(container.querySelector('th[aria-sort="ascending"]')?.textContent).toContain(
           'Updated',
         );
@@ -766,8 +755,8 @@ describe('List live refetch retention', () => {
     const { container } = render(
       <View view={{ ...FIXTURE_VIEW, filters: { ...FIXTURE_VIEW.filters, query: 'No match' } }} />,
     );
-    expect(screen.getByText('Nothing matches “No match”')).toBeTruthy();
-    await openListOptions(user);
+    expect(screen.getByRole('heading', { name: 'No items match these filters' })).toBeTruthy();
+    expect(container.querySelector('.pc-list__empty p')?.textContent).toContain('"No match".');
     await user.click(screen.getByRole('button', { name: 'Clear filters' }));
     expect(rowIds(container)).toHaveLength(FIXTURE_NODES.length);
   });
@@ -892,10 +881,10 @@ describe('List triage, bounded windows and command-only selection', () => {
     async (dataset) => {
       const user = userEvent.setup();
       const nodes = buildPremiumDashboardFixture(dataset).graph.nodes;
-      const { container } = render(<View nodes={nodes} view={null} />);
+      const { container, rerender } = render(<View nodes={nodes} view={null} />);
       for (const name of [
         'All',
-        'Open, by spec',
+        'Open by spec',
         'High priority',
         'Blocked',
         'ADRs',
@@ -903,9 +892,17 @@ describe('List triage, bounded windows and command-only selection', () => {
         'Filed since yesterday',
       ]) {
         if (name.startsWith('Filed ')) {
-          await openListOptions(user);
-          await user.click(screen.getByRole('combobox', { name: /^Date preset:/u }));
-          await user.click(screen.getByRole('option', { name, exact: true }));
+          rerender(
+            <View
+              nodes={nodes}
+              view={listPreset(name === 'Filed today' ? 'today' : 'yesterday')}
+            />,
+          );
+          expect(
+            screen.getByRole('button', {
+              name: `Clear filter ${name === 'Filed today' ? 'Filed: today' : 'Filed: since yesterday'}`,
+            }),
+          ).toBeTruthy();
         } else {
           await user.click(
             screen.getByRole('tab', {
@@ -918,7 +915,7 @@ describe('List triage, bounded windows and command-only selection', () => {
         const shown = nodes.filter((node) => ids.includes(node.id));
         if (name === 'ADRs') expect(shown.every((node) => node.type === 'adr')).toBe(true);
         if (name === 'Blocked') expect(shown.every((node) => node.status === 'blocked')).toBe(true);
-        if (name === 'Open, by spec')
+        if (name === 'Open by spec')
           expect(shown.every((node) => !['done', 'addressed'].includes(node.status))).toBe(true);
         expect(screen.queryByRole('button', { name: /Save view/u })).toBeNull();
       }
@@ -994,18 +991,20 @@ describe('List triage, bounded windows and command-only selection', () => {
       expect(next?.closest('table')?.getAttribute('aria-rowcount')).toBe('111');
       expect(next?.getAttribute('aria-selected')).toBe('true');
       expect(screen.getByText('BL-1100, 101 of 110')).toBeTruthy();
-      expect(screen.getByText('2 selected · 2 eligible · 0 skipped')).toBeTruthy();
+      expect(
+        within(screen.getByRole('region', { name: 'Selected items' })).getByText('2 selected'),
+      ).toBeTruthy();
       fireEvent.keyDown(next ?? container, { key: 'k' });
       expect(document.activeElement?.getAttribute('data-keyboard-item')).toBe('BL-1099');
       expect(document.activeElement?.getAttribute('aria-selected')).toBe('true');
       fireEvent.keyDown(document.activeElement ?? container, { key: 'Escape' });
-      expect(screen.getByText('0 selected · 0 eligible · 0 skipped')).toBeTruthy();
+      expect(container.querySelectorAll('tr[aria-selected="true"]')).toHaveLength(0);
     } finally {
       dispose();
     }
   });
 
-  it('copies registered backlog status commands once, skips scoped tasks, and exposes clipboard failure', async () => {
+  it("copies each selected item's command once through the selection bar and exposes clipboard failure", async () => {
     const user = userEvent.setup();
     const copy = vi.fn(async () => {
       throw new Error('denied');
@@ -1015,21 +1014,21 @@ describe('List triage, bounded windows and command-only selection', () => {
       node('SPEC-901/T-910', 'Task'),
     ];
     const { container } = render(<View nodes={nodes} view={null} onCopy={copy} />);
-    await openListOptions(user);
-    await user.click(screen.getByRole('button', { name: 'Select all 2 filtered' }));
-    expect(screen.getByText('2 selected · 1 eligible · 1 skipped')).toBeTruthy();
-    await user.click(screen.getByRole('button', { name: 'Copy bulk commands' }));
+    await user.click(screen.getByRole('checkbox', { name: 'Select all 2 filtered items' }));
+    const bar = screen.getByRole('region', { name: 'Selected items' });
+    expect(within(bar).getByText('2 selected')).toBeTruthy();
+    await user.click(within(bar).getByRole('button', { name: 'Copy 2 commands' }));
     expect(copy).toHaveBeenCalledExactlyOnceWith(
-      'openplanr backlog update BL-910 --status in-progress',
+      'openplanr backlog update BL-910 --status outstanding\n/planr:ship SPEC-901/T-910',
     );
-    expect(
-      screen.getByText(
-        'Copy blocked. Select and copy manually: openplanr backlog update BL-910 --status in-progress',
+    await waitFor(() =>
+      expect(bar.querySelector('.pc-selection-bar__copy')?.getAttribute('data-state')).toBe(
+        'blocked',
       ),
-    ).toBeTruthy();
+    );
+    expect(bar.querySelector('.pc-selection-bar__copy')?.getAttribute('title')).toContain('denied');
     expect(container.textContent).not.toContain('openplanr task update');
-    await user.click(screen.getByRole('button', { name: 'Copy sprint command' }));
-    expect(copy).toHaveBeenLastCalledWith('/planr:sprint');
+    expect(screen.queryByRole('button', { name: 'Copy sprint command' })).toBeNull();
   });
 
   it('keeps Cmd/Ctrl-click native and preserves selection through patches/removals', async () => {
@@ -1039,8 +1038,7 @@ describe('List triage, bounded windows and command-only selection', () => {
       node('BL-911', 'Second', {}, 'outstanding', 'backlog'),
     ];
     const { container, rerender } = render(<View nodes={nodes} view={null} />);
-    await openListOptions(user);
-    await user.click(screen.getByRole('button', { name: 'Select all 2 filtered' }));
+    await user.click(screen.getByRole('checkbox', { name: 'Select all 2 filtered items' }));
     const row = container.querySelector('[data-keyboard-item="BL-910"]');
     const link = row?.querySelector('a');
     if (!link) throw new Error('Expected canonical item link');
@@ -1050,7 +1048,9 @@ describe('List triage, bounded windows and command-only selection', () => {
     expect(container.querySelector('[data-keyboard-item="BL-910"]')).toBe(row);
     expect(row?.getAttribute('aria-selected')).toBe('true');
     rerender(<View nodes={[nodes[1]]} view={null} />);
-    expect(screen.getByText('1 selected · 1 eligible · 0 skipped')).toBeTruthy();
+    expect(
+      screen.getByRole('region', { name: 'Selected items' }).getAttribute('data-selection-count'),
+    ).toBe('1');
   });
 
   it('recovers hidden done matches and distinguishes addressed groups', async () => {
@@ -1060,15 +1060,14 @@ describe('List triage, bounded windows and command-only selection', () => {
       node('BL-911', 'Addressed finding', {}, 'addressed', 'backlog'),
     ];
     const { container } = render(<View nodes={nodes} view={null} />);
-    await user.click(screen.getByRole('tab', { name: /^Open, by spec/u }));
+    await user.click(screen.getByRole('tab', { name: /^Open by spec/u }));
     expect(screen.getByRole('button', { name: 'Show 1 done matches' })).toBeTruthy();
     await user.click(screen.getByRole('button', { name: 'Show 1 done matches' }));
     expect(rowIds(container)).toEqual(['BL-910']);
     expect(container.querySelector('[data-done="true"]')).toBeTruthy();
-    await openListOptions(user);
     await user.click(screen.getByRole('button', { name: 'Clear filters' }));
-    await user.click(screen.getByRole('combobox', { name: /^Group by:/u }));
-    await user.click(screen.getByRole('option', { name: 'Group: Status', exact: true }));
+    await user.click(screen.getByRole('combobox', { name: /^Group:/u }));
+    await user.click(screen.getByRole('option', { name: 'Status', exact: true }));
     expect(screen.getByRole('rowgroup', { name: 'addressed' })).toBeTruthy();
     expect(screen.getByRole('rowgroup', { name: 'done' })).toBeTruthy();
   });
@@ -1082,17 +1081,17 @@ describe('List triage, bounded windows and command-only selection', () => {
       node('BL-911', 'Unknown', {}, 'outstanding', 'backlog'),
       node('BL-912', 'Future', { created: '2026-10-19T14:00:00Z' }, 'outstanding', 'backlog'),
     ];
-    const { container } = render(<View nodes={nodes} view={null} />);
-    await openListOptions(user);
-    await user.click(screen.getByRole('combobox', { name: /^Date preset:/u }));
-    await user.click(screen.getByRole('option', { name: 'Filed today', exact: true }));
+    const { container } = render(<View nodes={nodes} view={listPreset('today')} />);
     expect(rowIds(container)).toEqual(['BL-910']);
     expect(
       screen.getByText('2 items excluded: unknown, invalid or future authored dates.'),
     ).toBeTruthy();
-    await user.click(screen.getByRole('tab', { name: /^Open, by spec/u }));
-    await user.click(screen.getByRole('combobox', { name: /^Filter by status:/u }));
-    await user.click(screen.getByRole('button', { name: 'Clear Filter by status', exact: true }));
+    expect(screen.getByRole('button', { name: 'Clear filter Filed: today' }).title).toBe(
+      '2 items excluded: unknown, invalid or future authored dates.',
+    );
+    await user.click(screen.getByRole('tab', { name: /^Open by spec/u }));
+    await user.click(screen.getByRole('combobox', { name: /^Status:/u }));
+    await user.click(screen.getByRole('button', { name: 'Clear status', exact: true }));
     await user.keyboard('{Escape}');
     expect(rowIds(container)).toHaveLength(3);
   });
@@ -1110,7 +1109,7 @@ describe('List density and URL focus recovery', () => {
     const { container } = render(<View view={null} preferences={preferences} />);
     expect(container.querySelector('table')?.getAttribute('data-compact')).toBe('true');
     expect(preferences.load).toHaveBeenCalledWith(`op-density:v1:${fixture().binding.projectId}`);
-    await user.click(screen.getByRole('button', { name: 'Compact', exact: true }));
+    await user.click(screen.getByRole('button', { name: 'Comfortable', exact: true }));
     expect(container.querySelector('table')?.hasAttribute('data-compact')).toBe(false);
     expect(preferences.save).toHaveBeenCalledWith(
       `op-density:v1:${fixture().binding.projectId}`,
@@ -1144,7 +1143,7 @@ describe('List density and URL focus recovery', () => {
     ).toBe('true');
     expect(
       screen.getByRole('navigation', { name: 'Planning artifact pages' }).textContent,
-    ).toContain('Page 2');
+    ).toContain('Showing 101–');
   });
 
   it('uses canonical IDs to break equal sort values and reports full-spec task progress', async () => {
@@ -1155,8 +1154,8 @@ describe('List density and URL focus recovery', () => {
       node('SPEC-901/T-901', 'Same title', { specId: 'SPEC-901' }),
     ];
     const { container } = render(<View nodes={nodes} view={null} />);
-    await user.click(screen.getByRole('combobox', { name: /^Group by:/u }));
-    await user.click(screen.getByRole('option', { name: 'Group: Spec', exact: true }));
+    await user.click(screen.getByRole('combobox', { name: /^Group:/u }));
+    await user.click(screen.getByRole('option', { name: 'Spec', exact: true }));
     expect(screen.getByText('1/2 tasks', { exact: false })).toBeTruthy();
     await user.click(screen.getByRole('button', { name: 'Title' }));
     expect(rowIds(container).filter((id) => id.includes('/'))).toEqual([
@@ -1166,7 +1165,7 @@ describe('List density and URL focus recovery', () => {
   });
 });
 
-it('completes filed-findings triage with keyboard selection and copy precedence', async () => {
+it('completes filed-findings triage with keyboard selection and bar copy', async () => {
   vi.useFakeTimers({ toFake: ['Date'] });
   vi.setSystemTime(new Date('2026-10-19T12:00:00Z'));
   const user = userEvent.setup();
@@ -1187,7 +1186,7 @@ it('completes filed-findings triage with keyboard selection and copy precedence'
       'backlog',
     ),
   ];
-  const { container } = render(<View nodes={nodes} view={null} onCopy={copy} />);
+  const { container } = render(<View nodes={nodes} view={listPreset('yesterday')} onCopy={copy} />);
   const dispose = installKeyboardCoordinator(document, () => ({
     root: container,
     selectionScope: 'triage',
@@ -1202,33 +1201,28 @@ it('completes filed-findings triage with keyboard selection and copy precedence'
     announce: () => undefined,
   }));
   try {
-    await openListOptions(user);
-    await user.click(screen.getByRole('combobox', { name: /^Date preset:/u }));
-    await user.click(screen.getByRole('option', { name: 'Filed since yesterday', exact: true }));
+    expect(
+      screen.getByRole('button', { name: 'Clear filter Filed: since yesterday' }),
+    ).toBeTruthy();
     expect(screen.getByRole('rowgroup', { name: 'ship' })).toBeTruthy();
     const first = container.querySelector<HTMLElement>('[data-keyboard-item]');
     act(() => first?.focus());
     fireEvent.keyDown(first ?? container, { key: 'j' });
     const selected = document.activeElement as HTMLElement;
     fireEvent.keyDown(selected, { key: ' ' });
-    const bulk = screen.getByRole('button', { name: 'Copy bulk commands' });
-    act(() => bulk.focus());
-    fireEvent.keyDown(bulk, { key: 'c' });
+    expect(selected.getAttribute('aria-selected')).toBe('true');
+    fireEvent.keyDown(selected, { key: 'c' });
     await waitFor(() =>
-      expect(copy).toHaveBeenCalledWith(
-        `openplanr backlog update ${selected.dataset.keyboardItem} --status in-progress`,
+      expect(copy).toHaveBeenCalledExactlyOnceWith(
+        `openplanr backlog update ${selected.dataset.keyboardItem} --status outstanding`,
       ),
     );
-    const sprint = screen.getByRole('button', { name: 'Copy sprint command' });
-    act(() => sprint.focus());
-    fireEvent.keyDown(sprint, { key: 'c' });
-    await waitFor(() => expect(copy).toHaveBeenLastCalledWith('/planr:sprint'));
   } finally {
     dispose();
   }
 });
 
-it('shows short dates with full descriptions and copies a row command without opening it', async () => {
+it('shows short dates with full descriptions and copies the row command from the bar without opening it', async () => {
   const user = userEvent.setup();
   const copy = vi.fn(async () => undefined);
   const nodes = [node('BL-910', 'Finding', { updated: '2026-10-19' }, 'outstanding', 'backlog')];
@@ -1241,7 +1235,95 @@ it('shows short dates with full descriptions and copies a row command without op
   await user.click(date);
   expect(row.dataset.selected).toBe('true');
   expect(screen.getByTestId('selection').getAttribute('data-open-tick')).toBe(openTick);
-  await user.click(within(row).getByRole('button', { name: 'Copy command for BL-910' }));
-  expect(copy).toHaveBeenCalledExactlyOnceWith('openplanr status BL-910 --md');
+  const bar = screen.getByRole('region', { name: 'Selected items' });
+  await user.click(within(bar).getByRole('button', { name: 'Copy command' }));
+  expect(copy).toHaveBeenCalledExactlyOnceWith(
+    'openplanr backlog update BL-910 --status outstanding',
+  );
   expect(screen.getByTestId('selection').getAttribute('data-open-tick')).toBe(openTick);
+});
+
+it('shows every active filter as a chip and clears URL-only filters one at a time', async () => {
+  const user = userEvent.setup();
+  render(
+    <View
+      view={{
+        ...FIXTURE_VIEW,
+        filters: {
+          attention: 'waiting',
+          type: ['task'],
+          status: ['outstanding', 'in-progress', 'blocked'],
+          priority: ['P0', 'P1'],
+          label: ['ready'],
+          query: 'review',
+          createdWithinDays: 30,
+          updatedWithinDays: 7,
+        },
+      }}
+    />,
+  );
+  for (const name of ['Type: task', 'Status: open', 'Priority: 2 selected', 'Label: ready'])
+    expect(screen.getByRole('combobox', { name }).getAttribute('data-active')).toBe('true');
+  expect(
+    (screen.getByRole('textbox', { name: 'Filter by id or title' }) as HTMLInputElement).value,
+  ).toBe('review');
+  for (const name of ['Created: 30d', 'Updated: 7d', 'Attention: waiting'])
+    expect(screen.getByRole('button', { name: `Clear filter ${name}` })).toBeTruthy();
+  await user.click(screen.getByRole('button', { name: 'Clear filter Updated: 7d' }));
+  expect(screen.queryByRole('button', { name: 'Clear filter Updated: 7d' })).toBeNull();
+  await user.click(screen.getByRole('button', { name: 'Clear filter Attention: waiting' }));
+  expect(screen.queryByRole('button', { name: 'Clear filter Attention: waiting' })).toBeNull();
+  expect(screen.getByRole('button', { name: 'Clear filter Created: 30d' })).toBeTruthy();
+  expect(screen.getByRole('combobox', { name: 'Label: ready' })).toBeTruthy();
+});
+
+it('names hidden labels behind the overflow count', () => {
+  const nodes = [node('T-930', 'Labelled', { labels: ['cli', 'skills', 'docs', 'ci'] })];
+  const { container } = render(<View nodes={nodes} view={null} />);
+  const labels = container.querySelector('.pc-list__labels');
+  expect([...(labels?.children ?? [])].map((label) => label.textContent)).toEqual([
+    'cli',
+    'skills',
+    '+2',
+  ]);
+  expect(labels?.querySelector('.pc-list__labels-more')?.getAttribute('title')).toBe('docs, ci');
+});
+
+it('counts selected items that have no command instead of copying them', async () => {
+  const user = userEvent.setup();
+  const nodes = [node('BL-910', 'Finding', {}, 'outstanding', 'backlog'), node('misc', 'Loose')];
+  const { container } = render(<View nodes={nodes} view={null} />);
+  await user.click(screen.getByRole('checkbox', { name: 'Select all 2 filtered items' }));
+  const bar = screen.getByRole('region', { name: 'Selected items' });
+  expect(bar.getAttribute('data-selection-count')).toBe('1');
+  expect(container.querySelector('.pc-list__feedback')?.textContent).toBe(
+    '1 selected item has no command.',
+  );
+});
+
+it('collapses a group with [ when no row is focused and never opens a filter menu', () => {
+  const { container } = render(<View view={{ ...FIXTURE_VIEW, groupBy: 'label' }} />);
+  const dispose = installKeyboardCoordinator(document, () => ({
+    root: container,
+    selectionScope: 'fixture-list',
+    singleLetters: true,
+    paletteOpen: false,
+    togglePalette: () => undefined,
+    openHelp: () => undefined,
+    navigate: () => undefined,
+    closeInspector: () => false,
+    selectedId: () => null,
+    copy: async () => undefined,
+    announce: () => undefined,
+  }));
+  try {
+    const first = screen.getByRole('button', { name: 'ready' });
+    fireEvent.keyDown(document.body, { key: '[' });
+    expect(first.getAttribute('aria-expanded')).toBe('false');
+    fireEvent.keyDown(document.body, { key: ']' });
+    expect(first.getAttribute('aria-expanded')).toBe('true');
+    expect(container.querySelector('[role="combobox"][aria-expanded="true"]')).toBeNull();
+  } finally {
+    dispose();
+  }
 });

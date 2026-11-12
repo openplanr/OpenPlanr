@@ -16,7 +16,7 @@ export function takeListStatus(): PlanningArtifactStatus | null {
 
 export const LIST_PRESETS = [
   ['all', 'All'],
-  ['open', 'Open, by spec'],
+  ['open', 'Open by spec'],
   ['priority', 'High priority'],
   ['blocked', 'Blocked'],
   ['adrs', 'ADRs'],

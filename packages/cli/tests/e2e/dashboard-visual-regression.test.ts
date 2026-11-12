@@ -46,6 +46,7 @@ import {
   assertParityRow,
   boardParityRows,
   homeParityRows,
+  listParityRows,
 } from '../../../../apps/dashboard/tests/helpers/redesign-parity-rows.mjs';
 import { installDashboardLayoutShifts } from '../dashboard/fixtures/dashboard-layout-shifts.js';
 import { registerDashboardPerformanceTraceTests } from './fixtures/dashboard-performance-trace.js';
@@ -1125,10 +1126,10 @@ test.describe('dashboard real-browser quality', () => {
     const initial = parsePlanningGraphEnvelope(initialWire, identity);
     const list = page.locator('[data-route-kind="planning.list"]');
     await list.getByRole('textbox', { name: 'Filter by id or title' }).fill('Live list artifact');
-    await list.getByRole('combobox', { name: /^Filter by type:/u }).click();
+    await list.getByRole('combobox', { name: /^Type:/u }).click();
     await page.getByRole('option', { name: 'Task', exact: true }).click();
     await page.keyboard.press('Escape');
-    await list.getByRole('combobox', { name: /^Filter by status:/u }).click();
+    await list.getByRole('combobox', { name: /^Status:/u }).click();
     await page.getByRole('option', { name: 'Outstanding', exact: true }).click();
     await page.keyboard.press('Escape');
     const compact = list.getByRole('button', { name: 'Compact', exact: true });
@@ -1143,7 +1144,7 @@ test.describe('dashboard real-browser quality', () => {
     const selected = list.getByRole('row').filter({ hasText: 'list-item-101' });
     await selected.click();
     await expect(selected).toHaveAttribute('data-selected', 'true');
-    await expect(list.locator('.pc-list__page-status')).toContainText('Page 2 of 2');
+    await expect(list.locator('.pc-list__page-status')).toContainText('Showing 101–');
 
     await page.evaluate(() => {
       const state = { pending: false, removedList: false, notice: false };
@@ -1211,15 +1212,15 @@ test.describe('dashboard real-browser quality', () => {
       await expect(list.getByRole('textbox', { name: 'Filter by id or title' })).toHaveValue(
         'Live list artifact',
       );
-      await expect(list.getByRole('combobox', { name: /^Filter by type:/u })).toContainText('Task');
-      await expect(list.getByRole('combobox', { name: /^Filter by status:/u })).toContainText(
-        'Outstanding',
+      await expect(list.getByRole('combobox', { name: /^Type:/u })).toHaveText('Type: task');
+      await expect(list.getByRole('combobox', { name: /^Status:/u })).toHaveText(
+        'Status: outstanding',
       );
       await expect(compact).toHaveAttribute('aria-pressed', 'true');
       await expect(
         list.getByRole('columnheader', { name: 'Updated', exact: true }),
       ).toHaveAttribute('aria-sort', 'ascending');
-      await expect(list.locator('.pc-list__page-status')).toContainText('Page 2 of 2');
+      await expect(list.locator('.pc-list__page-status')).toContainText('Showing 101–');
       await expect(selected).toHaveAttribute('data-selected', 'true');
       await expect(page.locator('[data-route-pending]')).toHaveCount(0);
       await expect(list.locator('.op-planning-notice:not(.pc-visually-hidden)')).toHaveCount(0);
@@ -1540,6 +1541,78 @@ test.describe('dashboard real-browser quality', () => {
     const parity = testInfo.outputPath('home-parity.json');
     writeFileSync(parity, JSON.stringify(results, null, 2));
     await testInfo.attach('home-parity.json', { path: parity, contentType: 'application/json' });
+  });
+
+  test('matches the List to its canvas parity rows in both themes', async ({ page }, testInfo) => {
+    const results: unknown[] = [];
+    const emptyView =
+      '#/list?v=eyJzY2hlbWFWZXJzaW9uIjoiMS4wLjAiLCJyb3V0ZSI6Imxpc3QiLCJmaWx0ZXJzIjp7InR5cGUiOltdLCJzdGF0dXMiOlsiYmxvY2tlZCJdLCJwcmlvcml0eSI6W10sImxhYmVsIjpbInNlY3VyaXR5Il0sInF1ZXJ5IjoiZW50cmEiLCJjcmVhdGVkV2l0aGluRGF5cyI6bnVsbCwidXBkYXRlZFdpdGhpbkRheXMiOm51bGx9LCJncm91cEJ5Ijoic3BlYyIsInNvcnQiOnsiZmllbGQiOiJ1cGRhdGVkIiwiZGlyZWN0aW9uIjoiZGVzYyJ9LCJkZW5zaXR5IjoiY29tZm9ydGFibGUiLCJmb2N1c0lkIjpudWxsfQ';
+    await page.context().grantPermissions(['clipboard-read', 'clipboard-write']);
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await page.setViewportSize({ width: 1440, height: 900 });
+    // The canvases draw the compact rail.
+    await page.addInitScript(() => localStorage.setItem('op-rail-compact:v1', 'true'));
+    const list = page.locator('[data-route-kind="planning.list"]');
+    for (const theme of ['dark', 'light'] as const) {
+      const open = async (hash: string, dataset = 'representative') => {
+        await page.goto(fixtureUrl(hash, { dataset, theme }));
+        await page.evaluate(() => document.fonts.ready);
+        await expect(list.locator('.pc-list__toolbar')).toBeVisible();
+      };
+      const check = async (setup: string | null) => {
+        // Reduced motion still runs a 0.01ms transition; read styles once it has settled.
+        await page.evaluate(
+          () => new Promise((done) => requestAnimationFrame(() => requestAnimationFrame(done))),
+        );
+        for (const row of listParityRows.filter((entry) => (entry.setup ?? null) === setup))
+          results.push(...(await assertParityRow(page, row, theme)));
+      };
+      await open('#/list');
+      await list.getByRole('tab', { name: /^Open by spec/u }).click();
+      await expect(list.locator('tbody tr[data-keyboard-item]').first()).toBeVisible();
+      await check(null);
+      const text = await list.innerText();
+      for (const banned of ['Unknown', 'Not recorded', 'None declared', 'Phase 2'])
+        expect(text, `S-21 ${banned}`).not.toContain(banned);
+      expect(text, 'S-21 none').not.toMatch(/\bnone\b/u);
+      const first = list.locator('tbody tr[data-keyboard-item]').first();
+      await first.locator('.pc-list__check').click();
+      const bar = page.locator('.pc-selection-bar');
+      await expect(bar).toBeVisible();
+      await expect(first).toHaveAttribute('aria-selected', 'true');
+      await check('list-select');
+      const command = await bar.locator('code').textContent();
+      expect(command).toMatch(/^(?:\/planr:|openplanr )/u);
+      await first.focus();
+      await page.keyboard.press('c');
+      await expect(bar.locator('.pc-selection-bar__copy')).toContainText('Copied');
+      expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(command);
+      await bar.getByRole('button', { name: 'Clear selection' }).click();
+      await page.evaluate(() => {
+        // The fixtures carry no labels, so one cell takes drawn label markup to measure its recipe.
+        const cell = document.querySelector('[data-route-kind="planning.list"] .pc-list__labels');
+        if (!cell) throw new Error('Missing List labels cell.');
+        cell.innerHTML =
+          '<span>dashboard</span><span>ci</span><span class="pc-list__labels-more" title="cli, docs">+2</span>';
+      });
+      await check('list-labels');
+      await list.getByRole('button', { name: 'Compact', exact: true }).click();
+      await expect(list.locator('table')).toHaveAttribute('data-compact', 'true');
+      await check('list-compact');
+      await list.getByRole('button', { name: 'Comfortable', exact: true }).click();
+      await list.getByRole('combobox', { name: /^Status:/u }).click();
+      await expect(page.locator('.pc-chip-menu__popup')).toBeVisible();
+      await check('list-menu');
+      await page.keyboard.press('Escape');
+      await open(emptyView);
+      await expect(list.locator('.pc-list__empty')).toBeVisible();
+      await check('list-empty');
+      await open('#/list', 'artboard');
+      await page.screenshot({ path: testInfo.outputPath(`list-D-${theme}.png`) });
+    }
+    const parity = testInfo.outputPath('list-parity.json');
+    writeFileSync(parity, JSON.stringify(results, null, 2));
+    await testInfo.attach('list-parity.json', { path: parity, contentType: 'application/json' });
   });
 
   test.describe('sprint and activity evidence', () => {

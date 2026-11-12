@@ -110,7 +110,8 @@ export {
   usePlanningShortcuts,
 } from '../../lib/routing/planning-presentation.js';
 export type { PlanningView } from '../../lib/routing/planning-view-codec.js';
-export { useInspectorStore } from '../shell/inspector-selection.js';
+export { clearInspector, useInspectorStore } from '../shell/inspector-selection.js';
+export { takeListStatus } from './planning-list-filter.js';
 
 function listScrollElements(root: RefObject<HTMLDivElement | null>) {
   const list = root.current?.querySelector<HTMLElement>('.pc-list__window');

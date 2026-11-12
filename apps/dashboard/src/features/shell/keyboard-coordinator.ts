@@ -19,7 +19,7 @@ export const SHORTCUT_MAP = [
   ['Cmd/Ctrl-Enter', 'Open the palette item as a full page'],
   ['@spec/@story/@task/@backlog/@adr/@sprint/@view/@command', 'Filter palette results by type'],
   ['C', 'Copy the focused command first, otherwise the selected canonical ID'],
-  ['C on a Board card', 'Copy its verified status command, or explain why it is unavailable'],
+  ['C with a selection', 'Copy the selection bar commands, or explain why they are unavailable'],
   ['/', 'Focus the current filter, or open search'],
   [
     'G then H/L/G/B/S/A/O',

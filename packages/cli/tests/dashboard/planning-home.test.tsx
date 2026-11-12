@@ -714,16 +714,11 @@ it('keeps List titles in one column with room for every identifier', () => {
     `${process.cwd()}/../../apps/dashboard/src/features/planning/list.css`,
     'utf8',
   );
-  expect(stylesheet).toMatch(/font-size:\s*12px/u);
+  expect(stylesheet).toMatch(/font: (?:500|600) 12px/u);
   for (const group of groups) {
-    const idColumn = idColumnWidth(
-      container
-        .querySelector<HTMLElement>('.pc-list__window')
-        ?.style.getPropertyValue('--id-col') ?? '',
-    );
-    expect(idColumn).toBeGreaterThanOrEqual(9 * 7.2);
     const header = container.querySelector<HTMLElement>('th[data-column="id"]');
-    expect(header?.style.width).toBe('max(92px, var(--id-col))');
+    expect(header?.style.width).toBe('112px');
+    const idColumn = 112;
     const rows = [...group.querySelectorAll<HTMLElement>('tr[data-keyboard-item]')];
     expect(rows.length).toBeGreaterThan(0);
     const titlePositions = rows.map((row) => {

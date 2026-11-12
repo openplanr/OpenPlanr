@@ -271,6 +271,99 @@ export const homeParityRows = [
   ),
 ];
 
+const list = '[data-route-kind="planning.list"]';
+const listRow = (id, selector, properties, options = {}) =>
+  row(id, `${options.portal ? '' : `${list} `}${selector}`, properties, options.viewport).map(
+    (entry) => ({
+      ...entry,
+      setup: options.setup ?? null,
+      ...(options.items ? { items: options.items } : {}),
+    }),
+  );
+export const listParityRows = [
+  ...listRow('L-01', '.pc-list__presets [role="tab"]', {
+    height: '32px',
+    'border-radius': '8px',
+  }),
+  ...listRow('L-02', '.pc-list__presets [role="tab"][data-active]', {
+    'background-color': '--op-raised',
+    color: '--op-heading',
+  }),
+  ...listRow('L-03', '.pc-list__toolbar', { 'row-count': '1' }),
+  ...listRow('L-04', '.pc-list__toolbar .pc-input', {
+    width: '300px',
+    height: '34px',
+    'border-color': '--op-line-strong',
+  }),
+  ...listRow('L-05', '.pc-list__toolbar .pc-chip-menu > .pc-chip', {
+    height: '32px',
+    'border-radius': '999px',
+  }),
+  ...listRow('L-06', '.pc-list__toolbar .pc-chip[data-active="true"]', {
+    'border-color': '--op-accent',
+    'background-color': '--op-accent-soft',
+  }),
+  ...listRow('L-07', '.pc-table thead tr', { height: '40px' }),
+  ...listRow('L-07', '.pc-table', { count: '1' }, { items: 'thead tr' }),
+  ...listRow('L-08', '.pc-table thead th:not([data-column="select"])', {
+    'font-family': 'Source Code Pro',
+    'font-size': '11px',
+    'font-weight': '600',
+    'letter-spacing': '0.88px',
+    'text-transform': 'uppercase',
+  }),
+  ...listRow('L-09', '.pc-table thead tr', { tracks: '40px 112px 1fr 132px 96px 200px 88px' }),
+  ...listRow('L-10', '.pc-list__group-header', { height: '48px' }),
+  ...listRow('L-11', '.pc-list__group-bar', { width: '120px', height: '4px' }),
+  ...listRow('L-12', 'tbody tr[data-keyboard-item]', { height: '44px' }),
+  ...listRow(
+    'L-13',
+    'tbody tr[aria-selected="true"]',
+    {
+      'background-color': '--op-accent-soft',
+      'box-shadow': 'inset 2px 0 0 var(--op-accent)',
+    },
+    { setup: 'list-select' },
+  ),
+  ...listRow(
+    'L-14',
+    '.pc-list__labels > span:not(.pc-list__labels-more)',
+    { height: '22px', 'border-color': '--op-line3' },
+    { setup: 'list-labels' },
+  ),
+  ...listRow('L-15', 'tbody td[data-column="updated"]', {
+    'text-align': 'right',
+    'font-family': 'Source Code Pro',
+    'font-size': '12px',
+    'font-weight': '500',
+  }),
+  ...listRow('L-16', 'tbody tr[data-keyboard-item]', { height: '32px' }, { setup: 'list-compact' }),
+  ...listRow(
+    'L-18',
+    '.pc-chip-menu__popup[data-variant="filter"]',
+    { padding: '6px', 'border-radius': '10px' },
+    { setup: 'list-menu', portal: true },
+  ),
+  ...listRow(
+    'L-18',
+    '.pc-chip-menu__popup[data-variant="filter"] .pc-chip-menu__option',
+    { width: '240px' },
+    { setup: 'list-menu', portal: true },
+  ),
+  ...listRow(
+    'L-19',
+    '.pc-chip-menu__popup[data-variant="filter"] .pc-chip-menu__option',
+    { height: '36px' },
+    { setup: 'list-menu', portal: true },
+  ),
+  ...listRow(
+    'L-20',
+    '.pc-list__empty-actions > button:first-child',
+    { content: 'Clear 3 filters' },
+    { setup: 'list-empty' },
+  ),
+];
+
 function sampleRows(nodes, { property, expected, items }) {
   return nodes.map((node) => {
     if (property === 'text')
@@ -282,6 +375,21 @@ function sampleRows(nodes, { property, expected, items }) {
           .join(','),
         expected,
       };
+    if (property === 'content') return { actual: node.textContent?.trim(), expected };
+    if (property === 'count')
+      return { actual: String(node.querySelectorAll(items).length), expected };
+    if (property === 'row-count') {
+      const tops = [...node.children]
+        .filter((child) => child.getBoundingClientRect().width > 0)
+        .map((child) => {
+          const box = child.getBoundingClientRect();
+          return box.top + box.height / 2;
+        });
+      const rows = tops.filter(
+        (top, index) => tops.findIndex((other) => Math.abs(other - top) <= 4) === index,
+      );
+      return { actual: String(rows.length), expected };
+    }
     if (property === 'contains') {
       const text = node.textContent ?? '';
       return { actual: expected.split('|').every((part) => text.includes(part)), expected: true };

@@ -11,7 +11,7 @@ import { createPortal } from 'react-dom';
 import { PcIcon } from './console-icon.js';
 import './chip-menu.css';
 
-export type SelectOption = Readonly<{ value: string; label: string }>;
+export type SelectOption = Readonly<{ value: string; label: string; icon?: ReactNode }>;
 export type SelectProps = Readonly<{
   value: string;
   onChange: (value: string) => void;
@@ -28,6 +28,9 @@ export type SelectProps = Readonly<{
   trigger?: ReactNode;
   triggerLabel?: string;
   active?: boolean;
+  /** Filter menus: a fixed 240px option column and 36px options. */
+  variant?: 'filter';
+  clearLabel?: string;
 }>;
 
 /** Overlay listbox opened by a filter chip. */
@@ -47,6 +50,8 @@ export function Select({
   trigger,
   triggerLabel,
   active,
+  variant,
+  clearLabel,
 }: SelectProps) {
   const id = useId();
   const [open, setOpen] = useState(false);
@@ -77,16 +82,20 @@ export function Select({
     const place = () => {
       const rect = anchor.current?.getBoundingClientRect();
       if (!rect) return;
-      const menuWidth = Math.min(Math.max(rect.width, 220), window.innerWidth - 16);
+      const menuWidth = Math.min(
+        variant === 'filter' ? 254 : Math.max(rect.width, 220),
+        window.innerWidth - 16,
+      );
       const menuHeight = Math.min(popup.current?.scrollHeight ?? 360, 360);
+      const offset = variant === 'filter' ? 12 : 6;
       const below = window.innerHeight - rect.bottom - 14;
       const above = rect.top - 14;
       const opensAbove = below < menuHeight && above > below;
       const maxHeight = Math.max(0, Math.min(360, opensAbove ? above : below));
       setPosition({
         top: opensAbove
-          ? Math.max(8, rect.top - 6 - Math.min(menuHeight, maxHeight))
-          : rect.bottom + 6,
+          ? Math.max(8, rect.top - offset - Math.min(menuHeight, maxHeight))
+          : rect.bottom + offset,
         maxHeight,
         left: Math.max(8, Math.min(rect.left, window.innerWidth - menuWidth - 8)),
         width: menuWidth,
@@ -99,7 +108,7 @@ export function Select({
       window.removeEventListener('resize', place);
       window.removeEventListener('scroll', place, true);
     };
-  }, [open]);
+  }, [open, variant]);
   useEffect(() => {
     if (!open) return;
     const outside = (event: PointerEvent) => {
@@ -254,7 +263,12 @@ export function Select({
       ) : null}
       {open
         ? createPortal(
-            <div ref={popup} className="pc-chip-menu__popup" style={position}>
+            <div
+              ref={popup}
+              className="pc-chip-menu__popup"
+              data-variant={variant}
+              style={position}
+            >
               <div
                 id={`${id}-list`}
                 role="listbox"
@@ -284,7 +298,14 @@ export function Select({
                     onPointerDown={(event) => event.preventDefault()}
                     onClick={() => choose(item.value)}
                   >
-                    <span>{item.label}</span>
+                    {item.icon ? (
+                      <span className="pc-chip-menu__option-label">
+                        {item.icon}
+                        <span>{item.label}</span>
+                      </span>
+                    ) : (
+                      <span>{item.label}</span>
+                    )}
                     <PcIcon name="check" size={15} />
                   </div>
                 ))}
@@ -311,7 +332,7 @@ export function Select({
                     close(true);
                   }}
                 >
-                  Clear {ariaLabel}
+                  {clearLabel ?? `Clear ${ariaLabel}`}
                 </button>
               ) : null}
             </div>,

@@ -93,7 +93,7 @@ async function fixture() {
               </div>
               <div data-hit-group="table" className="pc-list" style={{padding:24,'--pc-list-gutter':'0px','--id-col':'92px'}}>
                 <div className="pc-list__window">
-                  <DataTable columns={[{key:'id',label:'ID',sortable:true},{key:'title',label:'Title',sortable:true}]}
+                  <DataTable columns={[{key:'select',label:'Select',width:40},{key:'id',label:'ID',sortable:true},{key:'title',label:'Title',sortable:true}]}
                     rows={[{id:'T-001',title:'Open item'}]} onSort={() => undefined} onRowClick={() => undefined} />
                 </div>
               </div>
@@ -283,7 +283,7 @@ test('renders compact desktop controls and keeps touch targets through state cha
           heights: [24, 24, 28],
         },
         { id: 'tabs', selector: '.pc-tabs__tab', heights: [34, 34] },
-        { id: 'table', selector: '.pc-table__sort', heights: [36, 36] },
+        { id: 'table', selector: '.pc-table__sort', heights: [39, 39] },
         { id: 'utilities', selector: '.pc-touch-target', heights: [24, 6] },
       ]) {
         const region = page.locator(`[data-hit-group="${group.id}"]`);

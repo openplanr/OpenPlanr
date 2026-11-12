@@ -358,7 +358,7 @@ describe('Planning detail shell navigation', () => {
         fireEvent.change(screen.getByRole('textbox', { name: 'Filter by id or title' }), {
           target: { value: 'artifact' },
         });
-        fireEvent.click(screen.getByRole('combobox', { name: /^Group by:/u }));
+        fireEvent.click(screen.getByRole('combobox', { name: /^Group:/u }));
         fireEvent.click(screen.getByRole('option', { name: /type/iu }));
         fireEvent.click(screen.getByRole('button', { name: 'Title', exact: true }));
         fireEvent.click(screen.getByRole('button', { name: 'Title', exact: true }));
@@ -403,7 +403,7 @@ describe('Planning detail shell navigation', () => {
       expect(
         screen.getByRole('textbox', { name: 'Filter by id or title' }).getAttribute('value'),
       ).toBe(localEdits ? 'artifact' : 'Review');
-      expect(screen.getByRole('combobox', { name: /^Group by:/u }).textContent).toMatch(
+      expect(screen.getByRole('combobox', { name: /^Group:/u }).textContent).toMatch(
         localEdits ? /type/iu : /status/iu,
       );
       expect(restored.getAttribute('aria-selected')).toBe('true');
@@ -670,43 +670,46 @@ describe('Planning detail shell navigation', () => {
   }
 
   it.each([
-    ['Filter by type', 'Task'],
-    ['Filter by status', 'Outstanding'],
-    ['Filter by priority', 'P0'],
-    ['Filter by label', 'All labels'],
-    ['Group by', 'Group: Type'],
-    ['Date preset', 'Filed today'],
-  ])('opens the %s menu on one click outside the real inspector', async (label, optionName) => {
-    const { user } = await openListInspector();
-    const trigger = screen.getByRole('combobox', { name: new RegExp(`^${label}:`, 'u') });
-    await clickOutsideInspector(user, trigger, () =>
-      screen.getByRole('combobox', { name: new RegExp(`^${label}:`, 'u') }),
-    );
-    await settleInspectorDismissal();
-    expect(screen.queryByRole('dialog', { name: 'Inspector', exact: true })).toBeNull();
-    expect(trigger.getAttribute('aria-expanded')).toBe('true');
-    expect(document.activeElement).toBe(trigger);
-    const list = screen.getByRole('listbox', { name: label, exact: true });
-    const option = within(list).getByRole('option', { name: optionName, exact: true });
-    const selected = option.getAttribute('aria-selected');
-    if (label === 'Date preset')
-      expect(within(list).getByRole('option', { name: 'Any date', exact: true })).toBeTruthy();
-    await user.click(option);
-    if (list.getAttribute('aria-multiselectable') === 'true') {
-      expect(option.getAttribute('aria-selected')).toBe(
-        optionName === 'All labels' ? 'true' : selected === 'true' ? 'false' : 'true',
+    ['Type', 'Task'],
+    ['Status', 'Outstanding'],
+    ['Priority', 'P0'],
+    ['Label', null],
+    ['Group', 'Type'],
+  ] as const)(
+    'opens the %s menu on one click outside the real inspector',
+    async (label, optionName) => {
+      const { user } = await openListInspector();
+      const trigger = screen.getByRole('combobox', { name: new RegExp(`^${label}:`, 'u') });
+      await clickOutsideInspector(user, trigger, () =>
+        screen.getByRole('combobox', { name: new RegExp(`^${label}:`, 'u') }),
       );
+      await settleInspectorDismissal();
+      expect(screen.queryByRole('dialog', { name: 'Inspector', exact: true })).toBeNull();
+      expect(trigger.getAttribute('aria-expanded')).toBe('true');
       expect(document.activeElement).toBe(trigger);
-    } else {
-      expect(trigger.textContent).toBe(optionName);
-      expect(screen.queryByRole('listbox')).toBeNull();
-    }
-  });
+      const list = screen.getByRole('listbox', { name: label, exact: true });
+      if (optionName === null) {
+        expect(within(list).queryAllByRole('option')).toHaveLength(0);
+        expect(screen.getByRole('button', { name: 'Clear label', exact: true })).toBeTruthy();
+        return;
+      }
+      const option = within(list).getByRole('option', { name: optionName, exact: true });
+      const selected = option.getAttribute('aria-selected');
+      await user.click(option);
+      if (list.getAttribute('aria-multiselectable') === 'true') {
+        expect(option.getAttribute('aria-selected')).toBe(selected === 'true' ? 'false' : 'true');
+        expect(document.activeElement).toBe(trigger);
+      } else {
+        expect(trigger.textContent).toBe(`${label}: ${optionName.toLowerCase()}`);
+        expect(screen.queryByRole('listbox')).toBeNull();
+      }
+    },
+  );
 
   it('retains canonical row selection after outside dismissal and reopens verified detail with Enter', async () => {
     const { user, view, tableRows } = await openListInspector();
     const initial = tableRows[0];
-    const type = screen.getByRole('combobox', { name: /^Filter by type:/u });
+    const type = screen.getByRole('combobox', { name: /^Type:/u });
     await user.click(type);
     await settleInspectorDismissal();
     expect(screen.queryByRole('dialog', { name: 'Inspector', exact: true })).toBeNull();
@@ -763,19 +766,21 @@ describe('Planning detail shell navigation', () => {
     expect(rows(view.container).map((row) => row.dataset.keyboardItem)).toEqual([taskIds[2]]);
   });
 
-  it('changes Compact with one click outside the inspector and retains toggle focus', async () => {
+  it('changes density with one click outside the inspector and retains segment focus', async () => {
     const { user, view } = await openListInspector();
     const compact = screen.getByRole('button', { name: 'Compact', exact: true });
+    const comfortable = screen.getByRole('button', { name: 'Comfortable', exact: true });
     expect(compact.getAttribute('aria-pressed')).toBe('true');
-    await clickOutsideInspector(user, compact, () =>
-      screen.getByRole('button', { name: 'Compact', exact: true }),
+    await clickOutsideInspector(user, comfortable, () =>
+      screen.getByRole('button', { name: 'Comfortable', exact: true }),
     );
     await settleInspectorDismissal();
+    expect(comfortable.getAttribute('aria-pressed')).toBe('true');
     expect(compact.getAttribute('aria-pressed')).toBe('false');
     expect(view.container.querySelector('.pc-table')?.getAttribute('data-compact')).not.toBe(
       'true',
     );
-    expect(document.activeElement).toBe(compact);
+    expect(document.activeElement).toBe(comfortable);
   });
 
   it('applies the All preset with one click outside the inspector and retains tab focus', async () => {
@@ -790,36 +795,6 @@ describe('Planning detail shell navigation', () => {
     expect(rows(view.container)).toHaveLength(4);
     expect(rows(view.container).map((row) => row.dataset.keyboardItem)).toContain('SPEC-026');
     expect(document.activeElement).toBe(all);
-  });
-
-  it.each(['Created within UTC days', 'Updated within UTC days'])(
-    'types in %s after one click outside the inspector',
-    async (name) => {
-      const { user } = await openListInspector();
-      const input = screen.getByRole('spinbutton', { name, exact: true });
-      await clickOutsideInspector(user, input, () =>
-        screen.getByRole('spinbutton', { name, exact: true }),
-      );
-      await settleInspectorDismissal();
-      expect(document.activeElement).toBe(input);
-      await user.type(input, '7', { skipClick: true });
-      expect((input as HTMLInputElement).value).toBe('7');
-      expect(document.activeElement).toBe(input);
-    },
-  );
-
-  it('collapses artifacts with one click outside the inspector and retains button focus', async () => {
-    const { user, view } = await openListInspector();
-    const collapse = screen.getByRole('button', { name: 'Collapse artifacts', exact: true });
-    expect(collapse.getAttribute('aria-expanded')).toBe('true');
-    await clickOutsideInspector(user, collapse, () =>
-      screen.getByRole('button', { name: 'Collapse artifacts', exact: true }),
-    );
-    await settleInspectorDismissal();
-    expect(screen.getByRole('button', { name: 'Expand artifacts', exact: true })).toBe(collapse);
-    expect(collapse.getAttribute('aria-expanded')).toBe('false');
-    expect(view.container.querySelector<HTMLElement>('.pc-list__window')?.hidden).toBe(true);
-    expect(document.activeElement).toBe(collapse);
   });
 
   it('switches the real inspector selection with one click on another List row', async () => {
@@ -901,6 +876,6 @@ describe('Planning detail shell navigation', () => {
     expect(
       (screen.getByRole('textbox', { name: 'Filter by id or title' }) as HTMLInputElement).value,
     ).toBe('artifact 1');
-    expect(screen.getByRole('combobox', { name: /^Group by:/u }).textContent).toMatch(/none/iu);
+    expect(screen.getByRole('combobox', { name: /^Group:/u }).textContent).toMatch(/none/iu);
   });
 });

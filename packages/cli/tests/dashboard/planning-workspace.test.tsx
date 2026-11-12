@@ -292,10 +292,9 @@ describe('T-021 Planning workspace UI', () => {
     const listHtml = renderToStaticMarkup(
       <ListPage currentBinding={listBinding} current={stateFor(listBinding)} />,
     );
-    expect(listHtml).toContain('Every node in the graph, filterable by text, type and status.');
     expect(listHtml).toContain('Filter by id or title');
-    expect(listHtml).toContain('Filter by type');
-    expect(listHtml).toContain('Filter by status');
+    expect(listHtml).toContain('Type: any');
+    expect(listHtml).toContain('Status: any');
     expect(listHtml).toContain('SPEC-020');
     const listDom = new JSDOM(`<!doctype html><html><body>${listHtml}</body></html>`);
     expect(listDom.window.document.querySelector('h1')?.textContent).toBe('List');

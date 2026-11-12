@@ -457,7 +457,7 @@ export function registerDashboardPerformanceTraceTests() {
         panelsMs.push(latency);
       }
       await markInputAction(page, 'filter-input type task');
-      await page.getByRole('combobox', { name: /^Filter by type:/u }).click();
+      await page.getByRole('combobox', { name: /^Type:/u }).click();
       await page.getByRole('option', { name: 'Task', exact: true }).click();
       await page.keyboard.press('Escape');
       await markInputAction(page, 'filter-input clear text');
@@ -495,8 +495,8 @@ export function registerDashboardPerformanceTraceTests() {
         contentType: 'application/json',
       });
       await markInputAction(page, 'filter-input clear type');
-      await page.getByRole('combobox', { name: /^Filter by type:/u }).click();
-      await page.getByRole('button', { name: 'Clear Filter by type', exact: true }).click();
+      await page.getByRole('combobox', { name: /^Type:/u }).click();
+      await page.getByRole('button', { name: 'Clear type', exact: true }).click();
       await page.keyboard.press('Escape');
       await expect(page.locator('.pc-list')).toContainText(
         `${fixture.manifest.nodeCount} of ${fixture.manifest.nodeCount}`,

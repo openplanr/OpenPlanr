@@ -1,10 +1,8 @@
 import {
   Absent,
-  ArtifactRowCopy,
   ArtifactRowMeta,
   ArtifactStatus,
   ArtifactTag,
-  type CommandHintProps,
   type DataTableColumn,
   PriorityChip,
   WorkItemChip,
@@ -12,7 +10,6 @@ import {
 import {
   type PlanningModelEdge,
   type PlanningModelNode,
-  planningContinuation,
   planningDisplayId,
 } from './planning-model.js';
 
@@ -121,6 +118,8 @@ export function dependencyCountColumn(
   });
 }
 
+const LIST_LABELS_SHOWN = 2;
+
 const TAG_TYPES = {
   spec: 'spec',
   story: 'us',
@@ -137,7 +136,7 @@ export const LIST_COLUMNS: readonly Column[] = [
   {
     key: 'id',
     label: 'ID',
-    width: 'max(92px, var(--id-col))',
+    width: 112,
     sortable: true,
     render: (node) => (
       <ArtifactTag type={TAG_TYPES[node.type]}>{planningDisplayId(node)}</ArtifactTag>
@@ -153,33 +152,51 @@ export const LIST_COLUMNS: readonly Column[] = [
       </span>
     ),
   },
-  { ...STATUS_COLUMN, width: 138, sortable: true },
+  {
+    ...STATUS_COLUMN,
+    width: 132,
+    sortable: true,
+    render: (node) => <ArtifactStatus status={node.status} variant="legend" />,
+  },
   {
     key: 'priority',
     label: 'Priority',
-    width: 74,
+    width: 96,
     sortable: true,
-    render: (node) => <PriorityChip priority={frontmatterString(node, 'priority') ?? undefined} />,
+    render: (node) => (
+      <PriorityChip priority={frontmatterString(node, 'priority') ?? undefined} variant="text" />
+    ),
   },
   {
     key: 'labels',
     label: 'Labels',
-    width: 150,
-    render: (node) => (
-      <span className="pc-list__labels" title={planningLabels(node).join(', ')}>
-        {planningLabels(node).map((label) => (
-          <span key={label}>{label}</span>
-        ))}
-      </span>
-    ),
+    width: 200,
+    render: (node) => {
+      const labels = planningLabels(node);
+      const hidden = labels.slice(LIST_LABELS_SHOWN);
+      return (
+        <span className="pc-list__labels">
+          {labels.slice(0, LIST_LABELS_SHOWN).map((label) => (
+            <span key={label} title={label}>
+              {label}
+            </span>
+          ))}
+          {hidden.length ? (
+            <span className="pc-list__labels-more" title={hidden.join(', ')}>
+              +{hidden.length}
+            </span>
+          ) : null}
+        </span>
+      );
+    },
   },
   {
     ...UPDATED_COLUMN,
-    width: 70,
+    width: 88,
     sortable: true,
     render: (node) => {
       const timestamp = authoredTimestamp(node.frontmatter.updated);
-      if (timestamp === null) return 'Unknown';
+      if (timestamp === null) return null;
       const date = new Date(timestamp);
       return (
         <ArtifactRowMeta label={`Updated ${date.toISOString().slice(0, 10)}`}>
@@ -189,22 +206,3 @@ export const LIST_COLUMNS: readonly Column[] = [
     },
   },
 ];
-
-export function listCommandColumn(
-  onCopy: CommandHintProps['onCopy'],
-  shortcutsEnabled: boolean,
-): Column {
-  return {
-    key: 'command',
-    label: '',
-    width: 28,
-    render: (node) => (
-      <ArtifactRowCopy
-        id={planningDisplayId(node)}
-        command={planningContinuation(node)}
-        onCopy={onCopy}
-        shortcutsEnabled={shortcutsEnabled}
-      />
-    ),
-  };
-}

@@ -1,21 +1,15 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  ARTIFACT_STATUS_ORDER,
-  artifactRowStyle,
-  Button,
   Card,
-  ChipToggle,
   CommandHint,
   DataTable,
   EmptyState,
-  Input,
-  SectionHeader,
-  Select,
-  Tabs,
-  Toolbar,
+  SelectionBar,
 } from '../../design-system/components/index.js';
 import type { DashboardProductState } from '../../lib/api/product-state.js';
-import { LIST_COLUMNS, listCommandColumn } from './planning-columns.js';
+import { ListCheckbox, ListEmpty, ListGroupHeader, ListPagination } from './ListTableParts.js';
+import { ListTitle, ListToolbar } from './ListToolbar.js';
+import { LIST_COLUMNS } from './planning-columns.js';
 import {
   inspectPlanningNode,
   useLiveListOrder,
@@ -23,22 +17,23 @@ import {
   usePlanningViewFocus,
 } from './planning-inspector.js';
 import {
-  BACKLOG_STATUSES,
-  bulkListCommands,
-  LIST_PRESETS,
-  listPreset,
-  takeListStatus,
-} from './planning-list-filter.js';
-import {
   retainGraphRevision,
   selectListGroups,
   selectListMetadata,
   selectListProjection,
 } from './planning-list-projection.js';
 import {
+  type ListClearableFilter,
+  listActiveFilterCount,
+  listFilterSentence,
+  listSelectionItems,
+} from './planning-list-view.js';
+import {
   browserListPreferences,
+  clearInspector,
   type ListPreferenceAdapter,
   type PlanningView,
+  takeListStatus,
   useInspectorStore,
   useListKeyboardWindow,
   useListPresentation,
@@ -47,21 +42,13 @@ import {
   usePlanningCopy,
   usePlanningShortcuts,
 } from './planning-list-window.js';
-import {
-  type PlanningArtifactType,
-  type PlanningModelNode,
-  planningArtifactTypeLabel,
-  planningDetailHref,
-  planningDisplayId,
-} from './planning-model.js';
+import { type PlanningModelNode, planningDetailHref, planningDisplayId } from './planning-model.js';
 import {
   PlanningNotice,
   PlanningRefusal,
   type PlanningWorkspaceModel,
   resolvePlanningWorkspace,
 } from './planning-workspace.js';
-import './planning.css';
-import './list.css';
 
 export type ListPageProps = Readonly<{
   currentBinding: PlanningWorkspaceModel['binding'];
@@ -72,30 +59,6 @@ export type ListPageProps = Readonly<{
 const EMPTY_NODES: readonly PlanningModelNode[] = Object.freeze([]);
 const ALL = 'all';
 const PAGE_SIZE = 100;
-const TYPES: readonly PlanningArtifactType[] = Object.freeze([
-  'epic',
-  'feature',
-  'story',
-  'task',
-  'spec',
-  'backlog',
-  'quick',
-  'sprint',
-  'adr',
-]);
-const TYPE_OPTIONS = Object.freeze([
-  { value: ALL, label: 'All types' },
-  ...TYPES.map((type) => ({ value: type, label: planningArtifactTypeLabel(type) })),
-]);
-const STATUS_OPTIONS = Object.freeze([
-  { value: ALL, label: 'All statuses' },
-  ...ARTIFACT_STATUS_ORDER.map((status) => ({
-    value: status,
-    label:
-      status === 'in-progress' ? 'In progress' : status.charAt(0).toUpperCase() + status.slice(1),
-  })),
-]);
-const PRIORITIES = ['P0', 'P1', 'P2', 'P3', 'critical', 'high', 'medium', 'low'];
 
 export function ListPage({
   currentBinding,
@@ -113,8 +76,6 @@ export function ListPage({
     setSort,
     page,
     setPage,
-    collapsed,
-    setCollapsed,
     collapsedGroups,
     setCollapsedGroups,
     view,
@@ -211,17 +172,12 @@ export function ListPage({
   );
   useListScrollAnchor(
     rootRef,
-    `${presentationKey}:${currentPage}:${collapsed}:${collapsedGroups.join()}`,
+    `${presentationKey}:${currentPage}:${collapsedGroups.join()}`,
     graph,
   );
   const copy = usePlanningCopy();
   const shortcutsEnabled = usePlanningShortcuts();
-  const [copyState, setCopyState] = useState('');
-  const [copyPending, setCopyPending] = useState(false);
-  const copyLock = useRef(false);
-  const [bulkStatus, setBulkStatus] = useState('in-progress');
   const [storageNotice, setStorageNotice] = useState('');
-  const [dateError, setDateError] = useState('');
   const densityKey = `op-density:v1:${currentBinding.projectId}`;
   useEffect(() => {
     try {
@@ -249,16 +205,17 @@ export function ListPage({
     () => all.filter((node) => selectedSet.has(node.id)),
     [all, selectedSet],
   );
-  const bulk = useMemo(
-    () => bulkListCommands(selectedNodes, bulkStatus),
-    [selectedNodes, bulkStatus],
+  const inspectedNode = selectedId ? all.find((node) => node.id === selectedId) : undefined;
+  const bar = useMemo(
+    () => listSelectionItems(selectedNodes, inspectedNode),
+    [selectedNodes, inspectedNode],
   );
   const keyboardAppearances = useMemo(
     () =>
       appearances
         .map((entry, index) => ({ ...entry, index }))
-        .filter((entry) => !collapsed && !collapsedGroups.includes(entry.group.key)),
-    [appearances, collapsed, collapsedGroups],
+        .filter((entry) => !collapsedGroups.includes(entry.group.key)),
+    [appearances, collapsedGroups],
   );
   const rowViewport = useListRowViewport({
     root: rootRef,
@@ -285,42 +242,27 @@ export function ListPage({
     setSelected((ids) =>
       ids.includes(node.id) ? ids.filter((id) => id !== node.id) : [...ids, node.id],
     );
-  const copyText = async (text: string) => {
-    if (copyLock.current) return;
-    copyLock.current = true;
-    setCopyPending(true);
-    try {
-      if (!copy) throw new Error('Clipboard unavailable');
-      await copy(text);
-      setCopyState(`Copied: ${text}`);
-    } catch {
-      setCopyState(`Copy blocked. Select and copy manually: ${text}`);
-    } finally {
-      copyLock.current = false;
-      setCopyPending(false);
-    }
-  };
-  const updateFilters = (filters: Partial<PlanningView['filters']>) =>
+  const updateFilters = (filters: Partial<PlanningView['filters']>) => {
     setPresentation({
       ...effectiveView,
       focusId: null,
       filters: { ...effectiveView.filters, ...filters },
     });
+  };
+  const clearChip = (field: ListClearableFilter) =>
+    updateFilters(field === 'attention' ? { attention: undefined } : { [field]: null });
   const metadata = graph ? selectListMetadata(graph) : null;
   const totals = metadata?.totals;
   const labels = metadata?.labels ?? [];
   const progress = metadata?.progress;
   const hiddenDone = projection?.hiddenDone ?? 0;
   const dateExcluded = projection?.dateExcluded ?? 0;
-  const activeFilterCount =
-    effectiveView.filters.type.length +
-    effectiveView.filters.status.length +
-    effectiveView.filters.priority.length +
-    effectiveView.filters.label.length +
-    Number(Boolean(query.trim())) +
-    Number(effectiveView.filters.createdWithinDays !== null) +
-    Number(effectiveView.filters.updatedWithinDays !== null) +
-    Number(Boolean(effectiveView.filters.attention));
+  const dateNote = dateExcluded
+    ? `${dateExcluded} items excluded: unknown, invalid or future authored dates.`
+    : '';
+  const activeFilterCount = listActiveFilterCount(effectiveView.filters);
+  const allChecked = rows.length > 0 && rows.every((node) => selectedSet.has(node.id));
+  const someChecked = !allChecked && rows.some((node) => selectedSet.has(node.id));
   useEffect(() => {
     const existing = metadata?.ids ?? new Set<string>();
     if (selected.some((id) => !existing.has(id)))
@@ -329,6 +271,9 @@ export function ListPage({
   if (!model) {
     return <PlanningRefusal routeKind="planning.list" title="Planning cannot be trusted" />;
   }
+  const missingNote = bar.missing
+    ? `${bar.missing} selected ${bar.missing === 1 ? 'item has' : 'items have'} no command.`
+    : '';
 
   return (
     <div
@@ -336,6 +281,7 @@ export function ListPage({
       className="op-workspace op-planning pc-pipeline pc-list"
       data-route-kind="planning.list"
       data-managed-rows="true"
+      data-checked={selected.length > 0 || undefined}
     >
       <PlanningNotice presentation={model.presentation} />
       {removalNotice ? (
@@ -347,531 +293,188 @@ export function ListPage({
         {keyboardNotice}
       </p>
       {focusNotice ? <p role="status">{focusNotice}</p> : null}
-      <div className="pc-visually-hidden">
-        <SectionHeader
-          inset
-          headingLevel={1}
-          eyebrow="planr-plan · list"
-          title="List"
-          count={`${rows.length} of ${all.length}`}
-          description="Every node in the graph, filterable by text, type and status."
-        />
-      </div>
+      <p className="pc-visually-hidden pc-list__feedback" role="status">
+        {[storageNotice, copyMessage, missingNote, dateNote].filter(Boolean).join(' ')}
+      </p>
       {all.length === 0 ? (
-        <Card padding={0}>
-          <EmptyState
-            icon="list"
-            title="No planning files yet"
-            description="No planning artifacts were found in this snapshot. Shape intent into a spec, then plan its stories and tasks."
-            action={<CommandHint command="/planr:spec" label="create the graph" size="sm" />}
-          />
-        </Card>
+        <>
+          <h1 className="pc-visually-hidden">List</h1>
+          <Card padding={0}>
+            <EmptyState
+              icon="list"
+              title="No planning files yet"
+              description="No planning artifacts were found in this snapshot. Shape intent into a spec, then plan its stories and tasks."
+              action={<CommandHint command="/planr:spec" label="create the graph" size="sm" />}
+            />
+          </Card>
+        </>
       ) : (
-        <section
-          data-keyboard-group="all"
-          className="pc-list__surface"
-          aria-label="Planning artifact index"
-        >
-          <div className="pc-list__presets">
-            <Tabs
-              label="List presets"
-              variant="pill"
-              value={
-                LIST_PRESETS.slice(0, 5).find(([key]) => {
-                  const preset = listPreset(key);
-                  return (
-                    JSON.stringify(effectiveView.filters) === JSON.stringify(preset.filters) &&
-                    effectiveView.groupBy === preset.groupBy
-                  );
-                })?.[0] ?? ''
-              }
-              tabs={LIST_PRESETS.slice(0, 5).map(([id, label]) => ({
-                id,
-                label,
-                count: totals?.get(id),
-              }))}
-              onChange={(id) => {
-                const preset = LIST_PRESETS.find(([key]) => key === id);
-                if (preset)
-                  setPresentation({ ...listPreset(preset[0]), density: effectiveView.density });
-              }}
-            />
-          </div>
-          <Toolbar
-            right={
-              <>
-                <ChipToggle checked={compact} onChange={changeDensity}>
-                  Compact
-                </ChipToggle>
-                <details
-                  className="pc-list__options"
-                  onKeyDown={(event) => {
-                    if (
-                      shortcutsEnabled &&
-                      event.key.toLowerCase() === 'c' &&
-                      !event.metaKey &&
-                      !event.ctrlKey &&
-                      !event.altKey &&
-                      !event.nativeEvent.isComposing &&
-                      event.target instanceof Element
-                    ) {
-                      const command = event.target.closest<HTMLButtonElement>(
-                        'button[data-copy-command]',
-                      );
-                      if (command && !command.disabled) {
-                        event.preventDefault();
-                        command.click();
-                      }
-                    }
-                    if (
-                      event.key !== 'Escape' ||
-                      !(event.target instanceof Element) ||
-                      event.target.closest('details[open]') !== event.currentTarget
-                    )
-                      return;
-                    event.preventDefault();
-                    event.stopPropagation();
-                    event.currentTarget.open = false;
-                    event.currentTarget.querySelector('summary')?.focus();
-                  }}
-                >
-                  <summary className="pc-touch-target">List options</summary>
-                  <div className="pc-list__options-panel">
-                    <Button
-                      size="sm"
-                      variant="secondary"
-                      disabled={sharePending}
-                      onClick={() => {
-                        void share({ ...effectiveView, focusId: selectedId ?? null });
-                      }}
-                    >
-                      Copy filter link
-                    </Button>
-                    {view?.filters.attention ? (
-                      <Button size="sm" variant="secondary" onClick={clearFilters}>
-                        Clear attention filter: {view.filters.attention}
-                      </Button>
-                    ) : null}
-                    <span className="pc-list__note">read-only view of .planr/</span>
-                    <fieldset className="pc-list__dates" aria-label="Relative date filters">
-                      <Select
-                        ariaLabel="Date preset"
-                        value={
-                          effectiveView.filters.createdWithinDays === 1
-                            ? 'today'
-                            : effectiveView.filters.createdWithinDays === 2
-                              ? 'yesterday'
-                              : 'none'
-                        }
-                        options={[
-                          { value: 'none', label: 'Any date' },
-                          { value: 'today', label: 'Filed today' },
-                          { value: 'yesterday', label: 'Filed since yesterday' },
-                        ]}
-                        onChange={(value) => {
-                          if (value === 'today' || value === 'yesterday')
-                            setPresentation({
-                              ...listPreset(value),
-                              density: effectiveView.density,
-                            });
-                          else updateFilters({ createdWithinDays: null });
-                        }}
-                        clearValue="none"
-                      />
-                      {(['createdWithinDays', 'updatedWithinDays'] as const).map((field) => (
-                        <label className="pc-list__relative" key={field}>
-                          {field === 'createdWithinDays' ? 'Created' : 'Updated'} within UTC days
-                          <input
-                            type="number"
-                            min={1}
-                            max={365}
-                            step={1}
-                            placeholder="Any"
-                            aria-label={
-                              field === 'createdWithinDays'
-                                ? 'Created within UTC days'
-                                : 'Updated within UTC days'
-                            }
-                            value={effectiveView.filters[field] ?? ''}
-                            onChange={(event) => {
-                              const value = event.currentTarget.value;
-                              const days = value ? Number(value) : null;
-                              if (
-                                days !== null &&
-                                (!Number.isInteger(days) || days < 1 || days > 365)
-                              ) {
-                                setDateError(
-                                  'Relative dates must be whole UTC days from 1 to 365.',
-                                );
-                                return;
-                              }
-                              setDateError('');
-                              updateFilters({ [field]: days });
-                            }}
-                          />
-                        </label>
-                      ))}
-                      <Button size="sm" variant="secondary" onClick={clearFilters}>
-                        Clear filters
-                      </Button>
-                    </fieldset>
-                    <fieldset className="pc-list__selection" aria-label="Bulk command copy">
-                      <Button
-                        size="sm"
-                        variant="secondary"
-                        onClick={() => setSelected(rows.map((node) => node.id))}
-                      >
-                        Select all {rows.length} filtered
-                      </Button>
-                      <Button size="sm" variant="secondary" onClick={() => setSelected([])}>
-                        Clear selection
-                      </Button>
-                      <span className="pc-list__selection-count">
-                        {selectedNodes.length} selected · {bulk.commands.length} eligible ·{' '}
-                        {bulk.skipped.length} skipped
-                      </span>
-                      <Select
-                        size="sm"
-                        ariaLabel="Suggested backlog status"
-                        value={bulkStatus}
-                        onChange={setBulkStatus}
-                        options={BACKLOG_STATUSES.map((value) => ({
-                          value,
-                          label:
-                            value === 'in-progress'
-                              ? 'In progress'
-                              : value.charAt(0).toUpperCase() + value.slice(1),
-                        }))}
-                      />
-                      <Button
-                        size="sm"
-                        data-copy-command="true"
-                        disabled={!bulk.commands.length || copyPending}
-                        onClick={() => void copyText(bulk.commands.join('\n'))}
-                      >
-                        Copy bulk commands
-                      </Button>
-                      <Button
-                        size="sm"
-                        data-copy-command="true"
-                        disabled={copyPending}
-                        onClick={() => void copyText('/planr:sprint')}
-                      >
-                        Copy sprint command
-                      </Button>
-                    </fieldset>
-                    <details className="pc-list__commands">
-                      <summary className="pc-touch-target">
-                        Review {bulk.commands.length} commands to copy
-                      </summary>
-                      <pre>{bulk.commands.join('\n')}</pre>
-                    </details>
-                    <code className="pc-list__sprint-command">/planr:sprint</code>
-                    <details className="pc-list__skipped">
-                      <summary className="pc-touch-target">
-                        Why {bulk.skipped.length} items are skipped
-                      </summary>
-                      <ul>
-                        {bulk.skipped.slice(0, 20).map((reason) => (
-                          <li key={reason}>{reason}</li>
-                        ))}
-                      </ul>
-                      {bulk.skipped.length > 20 ? (
-                        <p>{bulk.skipped.length - 20} more items have no verified status writer.</p>
-                      ) : null}
-                    </details>
-                    <div className="pc-list__utilities">
-                      <Button
-                        variant="secondary"
-                        size="sm"
-                        aria-expanded={!collapsed}
-                        onClick={() => setCollapsed((value) => !value)}
-                      >
-                        {collapsed ? 'Expand artifacts' : 'Collapse artifacts'}
-                      </Button>
-                    </div>
-                  </div>
-                </details>
-              </>
-            }
+        <>
+          <ListTitle
+            shown={rows.length}
+            total={all.length}
+            view={effectiveView}
+            counts={totals}
+            onPreset={setPresentation}
+          />
+          <ListToolbar
+            filters={effectiveView.filters}
+            groupBy={effectiveView.groupBy}
+            labels={labels}
+            compact={compact}
+            sharePending={sharePending}
+            dateNote={dateNote}
+            onQuery={(value) => {
+              setQuery(value);
+              resetPage();
+            }}
+            onFilters={updateFilters}
+            onGroupBy={(groupBy) => setPresentation({ ...effectiveView, groupBy })}
+            onClear={clearFilters}
+            onClearChip={clearChip}
+            onDensity={changeDensity}
+            onShare={() => {
+              void share({ ...effectiveView, focusId: selectedId ?? null });
+            }}
+          />
+          <section
+            data-keyboard-group="all"
+            className="pc-list__surface"
+            aria-label="Planning artifact index"
           >
-            <Input
-              icon="search"
-              suffix="/"
-              width={340}
-              placeholder="Filter by id or title"
-              ariaLabel="Filter by id or title"
-              value={query}
-              onChange={(value) => {
-                setQuery(value.slice(0, 200));
-                resetPage();
-              }}
-            />
-            <Select
-              size="sm"
-              width={128}
-              ariaLabel="Filter by type"
-              value={type}
-              onChange={(value) => updateFilters({ type: value === ALL ? [] : [value] })}
-              values={effectiveView.filters.type}
-              onValuesChange={(values) => {
-                updateFilters({ type: values as PlanningArtifactType[] });
-                resetPage();
-              }}
-              clearValue={ALL}
-              options={TYPE_OPTIONS}
-            />
-            <Select
-              size="sm"
-              width={138}
-              ariaLabel="Filter by status"
-              value={status}
-              onChange={(value) => updateFilters({ status: value === ALL ? [] : [value] })}
-              values={effectiveView.filters.status}
-              onValuesChange={(values) => {
-                updateFilters({ status: values });
-                resetPage();
-              }}
-              clearValue={ALL}
-              options={STATUS_OPTIONS}
-            />
-            <Select
-              size="sm"
-              ariaLabel="Filter by priority"
-              value={ALL}
-              onChange={(value) => updateFilters({ priority: value === ALL ? [] : [value] })}
-              values={effectiveView.filters.priority}
-              onValuesChange={(values) => {
-                updateFilters({ priority: values });
-                resetPage();
-              }}
-              clearValue={ALL}
-              options={[
-                { value: ALL, label: 'All priorities' },
-                ...PRIORITIES.map((value) => ({
-                  value,
-                  label: value.charAt(0).toUpperCase() + value.slice(1),
-                })),
-              ]}
-            />
-            <Select
-              size="sm"
-              ariaLabel="Filter by label"
-              value={ALL}
-              onChange={(value) => updateFilters({ label: value === ALL ? [] : [value] })}
-              values={effectiveView.filters.label}
-              onValuesChange={(values) => {
-                updateFilters({ label: values });
-                resetPage();
-              }}
-              clearValue={ALL}
-              options={[
-                { value: ALL, label: 'All labels' },
-                ...labels.map((value) => ({ value, label: value })),
-              ]}
-            />
-            <Select
-              size="sm"
-              ariaLabel="Group by"
-              value={effectiveView.groupBy}
-              onChange={(value) =>
-                setPresentation({ ...effectiveView, groupBy: value as PlanningView['groupBy'] })
-              }
-              options={['none', 'spec', 'type', 'status', 'label'].map((value) => ({
-                value,
-                label: `Group: ${value.charAt(0).toUpperCase() + value.slice(1)}`,
-              }))}
-            />
-          </Toolbar>
-          <div
-            className="pc-list__window"
-            data-scroll-context="list-window"
-            style={artifactRowStyle(visibleRows.map(({ node }) => planningDisplayId(node)))}
-            data-empty={rows.length === 0 || undefined}
-            hidden={collapsed}
-          >
-            {rows.length > 0 ? (
-              <DataTable
-                rows={visibleRows.map((entry) => entry.node)}
-                compact={compact}
-                groups={visibleGroups.map((group) => {
-                  const headerOffset =
-                    effectiveView.groupBy === 'none'
-                      ? 0
-                      : grouped.findIndex((entry) => entry.key === group.key) + 1;
-                  const itemCount = grouped.find((entry) => entry.key === group.key)?.nodes.length;
-                  return {
-                    ...group,
-                    rows: group.nodes,
-                    collapsed: collapsedGroups.includes(group.key),
-                    rowWindow: rowViewport.windows.get(group.key),
-                    rowPosition: (node: PlanningModelNode) =>
-                      (positions.get(group.key)?.get(node.id) ?? 1) + headerOffset,
-                    headerRowPosition:
-                      (positions.get(group.key)?.values().next().value ?? 1) + headerOffset,
-                    header:
-                      effectiveView.groupBy === 'none' ? undefined : (
-                        <div className="pc-list__group-header">
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            icon={
-                              collapsedGroups.includes(group.key) ? 'chevron-right' : 'chevron-down'
+            <div
+              className="pc-list__window"
+              data-scroll-context="list-window"
+              data-empty={rows.length === 0 || undefined}
+            >
+              {rows.length > 0 ? (
+                <DataTable
+                  rows={visibleRows.map((entry) => entry.node)}
+                  compact={compact}
+                  groups={visibleGroups.map((group) => {
+                    const headerOffset =
+                      effectiveView.groupBy === 'none'
+                        ? 0
+                        : grouped.findIndex((entry) => entry.key === group.key) + 1;
+                    const groupCollapsed = collapsedGroups.includes(group.key);
+                    return {
+                      ...group,
+                      rows: group.nodes,
+                      collapsed: groupCollapsed,
+                      rowWindow: rowViewport.windows.get(group.key),
+                      rowPosition: (node: PlanningModelNode) =>
+                        (positions.get(group.key)?.get(node.id) ?? 1) + headerOffset,
+                      headerRowPosition:
+                        (positions.get(group.key)?.values().next().value ?? 1) + headerOffset,
+                      header:
+                        effectiveView.groupBy === 'none' ? undefined : (
+                          <ListGroupHeader
+                            groupKey={group.key}
+                            label={group.label}
+                            specTitle={
+                              effectiveView.groupBy === 'spec'
+                                ? metadata?.specs.get(group.key)?.title
+                                : undefined
                             }
-                            aria-expanded={!collapsedGroups.includes(group.key)}
-                            onClick={() =>
+                            collapsed={groupCollapsed}
+                            progress={
+                              effectiveView.groupBy === 'spec'
+                                ? progress?.get(group.key)
+                                : undefined
+                            }
+                            onToggle={() =>
                               setCollapsedGroups((groups) =>
                                 groups.includes(group.key)
                                   ? groups.filter((key) => key !== group.key)
                                   : [...groups, group.key],
                               )
                             }
-                          >
-                            <span className="pc-list__group-title">{group.label}</span>
-                          </Button>
-                          <span className="pc-list__group-meta">
-                            <span className="pc-list__group-item-count">
-                              {itemCount} {itemCount === 1 ? 'item' : 'items'}
-                            </span>
-                            {effectiveView.groupBy === 'spec'
-                              ? (() => {
-                                  const value = progress?.get(group.key);
-                                  return value ? (
-                                    <>
-                                      <progress
-                                        max={value.total}
-                                        value={value.done}
-                                        aria-label={`${group.label} task progress`}
-                                      />
-                                      <span className="pc-list__group-progress-count">
-                                        {value.done}/{value.total} tasks
-                                      </span>
-                                    </>
-                                  ) : (
-                                    ' · No tasks'
-                                  );
-                                })()
-                              : ''}
-                          </span>
-                        </div>
+                          />
+                        ),
+                    };
+                  })}
+                  selectedId={selectedId}
+                  selectedIds={selectedSet}
+                  onRowSelect={toggleSelection}
+                  rowCount={
+                    appearances.length + (effectiveView.groupBy === 'none' ? 0 : grouped.length)
+                  }
+                  rowHref={planningDetailHref}
+                  sort={sort}
+                  onSort={(key) => {
+                    setSort((current) => ({
+                      key,
+                      dir: current.key === key && current.dir === 'desc' ? 'asc' : 'desc',
+                    }));
+                    resetPage();
+                  }}
+                  onRowClick={inspectPlanningNode}
+                  onRowFocus={(node) => inspectPlanningNode(node, false)}
+                  caption="Planning artifacts"
+                  columns={[
+                    {
+                      key: 'select',
+                      label: 'Select',
+                      width: 40,
+                      header: (
+                        <ListCheckbox
+                          label={`Select all ${rows.length} filtered items`}
+                          checked={allChecked}
+                          indeterminate={someChecked}
+                          onChange={(checked) =>
+                            setSelected(checked ? rows.map((node) => node.id) : [])
+                          }
+                        />
                       ),
-                  };
-                })}
-                selectedId={selectedId}
-                selectedIds={selectedSet}
-                onRowSelect={toggleSelection}
-                rowCount={
-                  appearances.length + (effectiveView.groupBy === 'none' ? 0 : grouped.length)
-                }
-                rowHref={planningDetailHref}
-                sort={sort}
-                onSort={(key) => {
-                  setSort((current) => ({
-                    key,
-                    dir: current.key === key && current.dir === 'desc' ? 'asc' : 'desc',
-                  }));
-                  resetPage();
-                }}
-                onRowClick={inspectPlanningNode}
-                onRowFocus={(node) => inspectPlanningNode(node, false)}
-                caption="Planning artifacts"
-                columns={[...LIST_COLUMNS, listCommandColumn(copy, shortcutsEnabled)]}
+                      render: (node: PlanningModelNode) => (
+                        <ListCheckbox
+                          label={`Select ${planningDisplayId(node)}`}
+                          checked={selectedSet.has(node.id)}
+                          onChange={() => toggleSelection(node)}
+                        />
+                      ),
+                    },
+                    ...LIST_COLUMNS,
+                  ]}
+                />
+              ) : (
+                <ListEmpty
+                  sentence={[listFilterSentence(effectiveView.filters), dateNote]
+                    .filter(Boolean)
+                    .join(' ')}
+                  activeFilterCount={activeFilterCount}
+                  hiddenDone={hiddenDone}
+                  onClear={clearFilters}
+                  onShowDone={() => updateFilters({ status: ['done'] })}
+                />
+              )}
+            </div>
+            {all.length > PAGE_SIZE ? (
+              <ListPagination
+                start={pageStart}
+                end={Math.min(pageStart + PAGE_SIZE, appearances.length)}
+                total={appearances.length}
+                page={currentPage}
+                pageCount={pageCount}
+                onPage={setPage}
               />
             ) : null}
-            {rows.length === 0 ? (
-              <div className="pc-list__empty">
-                <EmptyState
-                  variant="tile"
-                  icon="search"
-                  title={
-                    query.trim()
-                      ? `Nothing matches “${query.trim()}”`
-                      : 'Nothing matches these filters'
-                  }
-                  description={`${all.length} planning artifacts searched. Clear the filters to see all available items.`}
-                  action={
-                    <span className="pc-list__empty-actions">
-                      <Button size="sm" onClick={clearFilters}>
-                        Clear {activeFilterCount} {activeFilterCount === 1 ? 'filter' : 'filters'}
-                      </Button>
-                      {hiddenDone ? (
-                        <Button size="sm" onClick={() => updateFilters({ status: ['done'] })}>
-                          Show {hiddenDone} done matches
-                        </Button>
-                      ) : null}
-                    </span>
-                  }
-                />
-              </div>
-            ) : null}
-          </div>
-          {all.length > PAGE_SIZE ? (
-            <nav className="pc-list__pagination" aria-label="Planning artifact pages">
-              <span className="pc-list__page-status" aria-live="polite">
-                Page {currentPage + 1} of {pageCount} · {appearances.length ? pageStart + 1 : 0}–
-                {Math.min(pageStart + PAGE_SIZE, appearances.length)} of {appearances.length}{' '}
-                appearances
-              </span>
-              <div className="pc-list__page-actions">
-                <Button
-                  size="sm"
-                  icon="chevron-left"
-                  disabled={currentPage === 0}
-                  onClick={() => setPage(Math.max(0, currentPage - 1))}
-                >
-                  Previous
-                </Button>
-                <Button
-                  size="sm"
-                  iconAfter="chevron-right"
-                  disabled={currentPage + 1 >= pageCount}
-                  onClick={() => setPage(Math.min(pageCount - 1, currentPage + 1))}
-                >
-                  Next
-                </Button>
-              </div>
-            </nav>
-          ) : null}
-        </section>
+          </section>
+          <SelectionBar
+            items={bar.items}
+            onCopy={copy}
+            shortcutsEnabled={shortcutsEnabled}
+            onClear={() => {
+              setSelected([]);
+              clearInspector();
+            }}
+            onOpen={() => {
+              const first = selectedNodes[0] ?? inspectedNode;
+              if (first) inspectPlanningNode(first);
+            }}
+          />
+        </>
       )}
-      {all.length > 0 ? (
-        <section className="pc-list__hints" aria-label="List keyboard shortcuts">
-          <span>
-            <kbd>J</kbd> <kbd>K</kbd> move
-          </span>
-          <span>
-            <kbd>Enter</kbd> opens panel
-          </span>
-          <span>
-            <kbd>Space</kbd> selects
-          </span>
-          <span>
-            <kbd>Shift</kbd> + <kbd>↑</kbd> <kbd>↓</kbd> extends
-          </span>
-          <span>
-            <kbd>/</kbd> filters
-          </span>
-          <span>
-            <kbd>C</kbd> copies ID
-          </span>
-          <span>
-            <kbd>[</kbd> <kbd>]</kbd> collapse / expand group
-          </span>
-          <span className="pc-list__hint-count">
-            {rows.length} filtered items · {grouped.length}{' '}
-            {grouped.length === 1 ? 'group' : 'groups'}
-          </span>
-          <p className="pc-list__feedback" role="status">
-            {dateError ||
-              storageNotice ||
-              copyState ||
-              copyMessage ||
-              (dateExcluded
-                ? `${dateExcluded} items excluded: unknown, invalid or future authored dates.`
-                : '')}
-          </p>
-        </section>
-      ) : null}
     </div>
   );
 }
