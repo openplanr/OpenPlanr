@@ -4,6 +4,7 @@ import {
   usePlanningView,
 } from '../../lib/routing/planning-presentation.js';
 import {
+  ACTIVITY_RANGES,
   type ActivityFilters,
   type ActivityModel,
   activityShortDate,
@@ -12,6 +13,7 @@ import {
 export { activityModel, nextActivityRange } from './planning-activity-view.js';
 
 const DEFAULT_DAYS = 14;
+const WIDEST_DAYS = ACTIVITY_RANGES[ACTIVITY_RANGES.length - 1];
 
 type ActivityState = ActivityFilters & Readonly<{ applied: string | null }>;
 
@@ -53,8 +55,7 @@ const KIND_WORDS = {
 export type ActivityEmpty = Readonly<{
   heading: string;
   line?: string;
-  action: string;
-  next: Partial<ActivityFilters>;
+  action?: Readonly<{ label: string; next: Partial<ActivityFilters> }>;
 }>;
 
 /** The quiet or no-match state, or null when the feed has rows. */
@@ -71,15 +72,16 @@ export function activityEmptyState(
         filters.kind !== 'all' && filters.spec === null && filters.types.length === 0
           ? `No ${KIND_WORDS[filters.kind]} ${range}`
           : `No matching changes ${range}`,
-      action: 'Show all changes',
-      next: { kind: 'all', spec: null, types: [] },
+      action: { label: 'Show all changes', next: { kind: 'all', spec: null, types: [] } },
     };
   return {
     heading: `Nothing changed ${range}`,
     line: model.last
       ? `The last change was ${model.last.id} on ${activityShortDate(model.last.day)}.`
       : undefined,
-    action: 'Show the last 90 days',
-    next: { days: 90 },
+    action:
+      filters.days < WIDEST_DAYS
+        ? { label: `Show the last ${WIDEST_DAYS} days`, next: { days: WIDEST_DAYS } }
+        : undefined,
   };
 }

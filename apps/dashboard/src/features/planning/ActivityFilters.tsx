@@ -33,6 +33,12 @@ export function ActivityFilterRow({
   onChange: (next: Partial<ActivityFilters>) => void;
 }) {
   const type = filters.types.length === 1 ? filters.types[0] : ANY;
+  const typeLabel =
+    filters.types.length > 1
+      ? `${filters.types.length} types`
+      : type === ANY
+        ? 'any'
+        : planningArtifactTypeLabel(type);
   const ranges = ACTIVITY_RANGES.includes(filters.days as (typeof ACTIVITY_RANGES)[number])
     ? ACTIVITY_RANGES
     : [...ACTIVITY_RANGES, filters.days].sort((left, right) => left - right);
@@ -58,8 +64,8 @@ export function ActivityFilterRow({
       <Select
         variant="filter"
         ariaLabel="Type"
-        triggerLabel={`Type: ${type === ANY ? 'any' : planningArtifactTypeLabel(type)}`}
-        active={type !== ANY}
+        triggerLabel={`Type: ${typeLabel}`}
+        active={filters.types.length > 0}
         value={type}
         onChange={(value) => onChange({ types: value === ANY ? [] : [value] })}
         options={[

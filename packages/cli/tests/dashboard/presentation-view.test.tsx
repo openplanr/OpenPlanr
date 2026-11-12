@@ -332,6 +332,18 @@ describe('presentation consumers', () => {
     expect(html).not.toContain('activity event');
   });
 
+  it('marks the Activity Type chip active and counts the types when the view sets several', () => {
+    const html = renderToStaticMarkup(
+      wrap(
+        view('activity', { type: ['task', 'story'] }),
+        <ActivityPage currentBinding={binding} current={current} />,
+      ),
+    );
+    expect(html).toContain('Type: 2 types');
+    expect(html).not.toContain('Type: any');
+    expect(html).toMatch(/data-active="true"[^>]*>(?:(?!<\/button>).)*Type: 2 types/su);
+  });
+
   it('does not apply a token intended for another surface', () => {
     render(
       wrap(

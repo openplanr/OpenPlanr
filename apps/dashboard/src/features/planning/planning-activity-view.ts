@@ -207,6 +207,13 @@ export function activityModel(
 ): ActivityModel {
   const today = localDay(now);
   const current = new Map(nodes.map((node) => [node.id, node]));
+  // A node whose latest session entry is a removal is gone, even before the graph refetch lands.
+  const removed = new Set<string>();
+  for (const entry of entries) {
+    if (entry.kind === 'removed' && entry.node) removed.add(entry.node.id);
+    else if (entry.kind === 'added' && entry.node) removed.delete(entry.node.id);
+  }
+  for (const id of removed) current.delete(id);
   const session: ActivityRow[] = [];
   for (const entry of [...entries].reverse()) {
     if (!entry.node || entry.kind === 'relationships') continue;

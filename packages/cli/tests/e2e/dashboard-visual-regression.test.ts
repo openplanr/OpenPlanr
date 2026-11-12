@@ -2314,12 +2314,15 @@ test.describe('dashboard real-browser quality', () => {
       // A shift rect includes the focused row's ring: 2px wide at a 2px offset.
       const FOCUS_RING_INK = 4;
       const insertion = await activity.evaluate((root) => {
-        const top = (selector: string) =>
-          root.querySelector(selector)?.getBoundingClientRect().top ?? 0;
+        const rect = (selector: string) => {
+          const target = root.querySelector(selector);
+          if (!target) throw new Error(`Missing Activity insertion point: ${selector}`);
+          return target.getBoundingClientRect();
+        };
         return {
-          side: root.querySelector('.pc-activity__side')?.getBoundingClientRect().left ?? 0,
-          feed: top('[data-keyboard-item]'),
-          card: top('.pc-activity__live-row'),
+          side: rect('.pc-activity__side').left,
+          feed: rect('[data-keyboard-item]').top,
+          card: rect('.pc-activity__live-row').top,
         };
       });
       expect((await page.request.post('/__fixture/patch?dataset=artboard')).ok()).toBe(true);

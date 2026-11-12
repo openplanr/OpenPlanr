@@ -424,6 +424,9 @@ a.pc-activity__cells:hover {
   white-space: nowrap;
   text-overflow: ellipsis;
 }
+.pc-activity__live-row[data-gone] .pc-activity__live-title {
+  color: var(--op-muted);
+}
 a.pc-activity__live-title:hover {
   text-decoration: underline;
 }

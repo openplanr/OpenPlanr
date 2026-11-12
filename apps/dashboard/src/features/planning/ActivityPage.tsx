@@ -100,7 +100,7 @@ function ActivityContent({
               heading={empty.heading}
               line={empty.line}
               action={empty.action}
-              onAction={() => setFilters(empty.next)}
+              onAction={setFilters}
             />
           ) : (
             <ActivityFeed

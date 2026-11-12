@@ -15,6 +15,7 @@ import { NodeLink } from './HomeParts.js';
 import type {
   ActivityBar,
   ActivityDay,
+  ActivityFilters,
   ActivityKind,
   ActivityRow,
   BusiestSpec,
@@ -318,16 +319,18 @@ export function ActivityState({
 }: {
   heading: string;
   line?: string;
-  action: string;
-  onAction: () => void;
+  action?: Readonly<{ label: string; next: Partial<ActivityFilters> }>;
+  onAction: (next: Partial<ActivityFilters>) => void;
 }) {
   return (
     <section className="pc-activity__state" aria-label={heading}>
       <h2>{heading}</h2>
       {line ? <p>{line}</p> : null}
-      <button type="button" className="pc-activity__button" onClick={onAction}>
-        {action}
-      </button>
+      {action ? (
+        <button type="button" className="pc-activity__button" onClick={() => onAction(action.next)}>
+          {action.label}
+        </button>
+      ) : null}
     </section>
   );
 }

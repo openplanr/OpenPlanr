@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { activityEmptyState } from '../../../../apps/dashboard/src/features/planning/planning-activity-state.js';
 import {
   activityModel,
   localDay,
@@ -123,5 +124,34 @@ describe('Activity view model', () => {
 
   it('steps the range 14, 30, 90 and stops at the widest', () => {
     expect([14, 30, 90].map(nextActivityRange)).toEqual([30, 90, null]);
+  });
+
+  it('treats every row of a removed node as gone before the graph refetch drops it', () => {
+    const patched = node('SPEC-1/T-1', { updated: '2026-10-23' });
+    const kept = node('SPEC-1/T-2', { updated: '2026-10-23' });
+    const model = activityModel(
+      [patched, kept],
+      [
+        entry('a', 'updated', patched, { fields: ['title'] }),
+        entry('b', 'removed', patched),
+        entry('c', 'removed', kept),
+        entry('d', 'added', kept),
+      ],
+      all,
+      now,
+    );
+    const current = (id: string) =>
+      model.session.filter((row) => row.node.id === id).map((row) => row.current?.id ?? null);
+    expect(current('SPEC-1/T-1')).toEqual([null, null]);
+    expect(current('SPEC-1/T-2')).toEqual(['SPEC-1/T-2', null]);
+  });
+
+  it('offers a wider range in the quiet state only below 90 days', () => {
+    const quiet = (days: number) =>
+      activityEmptyState(activityModel([], [], { ...all, days }, now), { ...all, days });
+    expect(quiet(14)?.action).toEqual({ label: 'Show the last 90 days', next: { days: 90 } });
+    expect(quiet(30)?.action?.next).toEqual({ days: 90 });
+    expect(quiet(90)?.heading).toBe('Nothing changed in the last 90 days');
+    expect(quiet(90)?.action).toBeUndefined();
   });
 });
