@@ -13,6 +13,7 @@ import {
   CommandPalette,
   PlanningDetailInspector,
   PlanningPresentationProvider,
+  planningDetailTrail,
   type ShellAdapters,
   selectPlanningAttention,
   useSearchCoordinator,
@@ -215,6 +216,7 @@ export function UnifiedShell({
           route={route}
           projectName={identity.projectName}
           showSubject={hasCurrentRouteSubject({ route, projection, binding })}
+          detailTrail={detailRoute ? planningDetailTrail(graph, route.subjectId) : null}
           connectionState={connection.state}
           inspectorOpen={inspectorOpen}
           inspectorAvailable={!detailRoute && inspectorStore.selection !== null}

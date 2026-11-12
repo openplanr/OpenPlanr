@@ -28,6 +28,7 @@ import {
   serializePlanningViewHref,
 } from '../../../../apps/dashboard/src/lib/routing/planning-view-codec.js';
 import { deliveryPlanningGraph } from '../e2e/fixtures/dashboard-delivery-graph.js';
+import { findDetailReady } from './detail-ready.js';
 import { fixtureSnapshot } from './fixtures/premium-dashboard-fixtures.js';
 
 const sourceView: PlanningView = {
@@ -247,7 +248,7 @@ describe('Planning detail shell navigation', () => {
     const selected = rows(view.container).find((row) => row.dataset.keyboardItem === taskIds[0]);
     if (!selected) throw new Error('Missing selected List row');
     fireEvent.click(selected);
-    await within(inspector()).findByText('Detail verified against the current planning snapshot.');
+    await findDetailReady(inspector());
     const dependencies = within(inspector()).getByRole('region', { name: 'Depends on' });
     const status = within(dependencies).getByText('Done').closest('[data-status]');
     expect(status?.getAttribute('data-status')).toBe('done');
@@ -311,8 +312,8 @@ describe('Planning detail shell navigation', () => {
     expect(tableRows.map((row) => row.dataset.keyboardItem)).toEqual(taskIds);
     tableRows[0].focus();
     fireEvent.click(tableRows[0]);
-    await within(inspector()).findByText('Detail verified against the current planning snapshot.');
-    const copy = within(inspector()).getByRole('button', { name: 'Copy link to item' });
+    await findDetailReady(inspector());
+    const copy = within(inspector()).getByRole('button', { name: 'Copy link' });
     copy.focus();
     fireEvent.keyDown(copy, { key: 'j' });
     await within(inspector()).findByRole('heading', { name: 'Review artifact 2', exact: true });
@@ -323,7 +324,7 @@ describe('Planning detail shell navigation', () => {
     expect(document.activeElement).toBe(tableRows[0]);
     fireEvent.keyDown(tableRows[0], { key: 'j' });
     await within(inspector()).findByRole('heading', { name: 'Review artifact 2', exact: true });
-    const latestCopy = within(inspector()).getByRole('button', { name: 'Copy link to item' });
+    const latestCopy = within(inspector()).getByRole('button', { name: 'Copy link' });
     latestCopy.focus();
     fireEvent.keyDown(latestCopy, { key: 'Escape' });
     await waitFor(() => {
@@ -370,9 +371,7 @@ describe('Planning detail shell navigation', () => {
       fireEvent.click(second);
       fireEvent.keyDown(second, { key: ' ' });
       expect(second.getAttribute('aria-selected')).toBe('true');
-      await within(inspector()).findByText(
-        'Detail verified against the current planning snapshot.',
-      );
+      await findDetailReady(inspector());
       const scroll = view.container.querySelector<HTMLElement>('.pc-shell__scroll') as HTMLElement;
       const tableScroll = second.closest<HTMLElement>('[data-scroll-context]') as HTMLElement;
       const listWindow = second.closest<HTMLElement>('.pc-list__window') as HTMLElement;
@@ -435,15 +434,13 @@ describe('Planning detail shell navigation', () => {
       const view = render(<ShellHarness snapshot={snapshot} />);
       fireEvent.click(rows(view.container)[0]);
       const panel = inspector();
-      await within(panel).findByText('Detail verified against the current planning snapshot.');
+      await findDetailReady(panel);
       const article = panel.querySelector('[data-artifact-id]');
       const criteria = within(panel).getByRole('region', { name: 'Acceptance criteria' });
       const files = within(panel).getByRole('region', { name: 'Declared files' });
-      const evidence = within(panel).getByRole('region', { name: 'Artifact evidence' });
       const scroller = panel.querySelector<HTMLElement>('.pc-inspector-sheet__body') ?? panel;
-      const focused = within(panel).getByRole('button', { name: 'Copy link to item' });
+      const focused = within(panel).getByRole('button', { name: 'Copy link' });
       focused.focus();
-      evidence.scrollTop = 86;
       scroller.scrollTop = 420;
       current = revised;
       serveOldCursor = true;
@@ -455,18 +452,16 @@ describe('Planning detail shell navigation', () => {
       expect(criteria.hasAttribute('data-scroll-context')).toBe(false);
       expect(within(panel).getByRole('region', { name: 'Declared files' })).toBe(files);
       expect(files.hasAttribute('data-scroll-context')).toBe(false);
-      expect(evidence.scrollTop).toBe(86);
       expect(scroller.scrollTop).toBe(420);
       expect(document.activeElement).toBe(focused);
       expect(
         within(criteria).getByText('Current verified criterion for SPEC-026/T-003.'),
       ).toBeTruthy();
       serveOldCursor = false;
-      fireEvent.click(within(panel).getByRole('button', { name: 'Retry detail' }));
-      await within(panel).findByText('Detail verified against the current planning snapshot.');
+      fireEvent.click(within(panel).getByRole('button', { name: 'Try again' }));
+      await findDetailReady(panel);
       expect(within(panel).getByRole('region', { name: 'Acceptance criteria' })).toBe(criteria);
       expect(within(panel).getByRole('region', { name: 'Declared files' })).toBe(files);
-      expect(evidence.scrollTop).toBe(86);
       expect(scroller.scrollTop).toBe(420);
       expect(document.activeElement).toBe(focused);
       expect(fetcher).toHaveBeenCalledTimes(3);
@@ -508,9 +503,7 @@ describe('Planning detail shell navigation', () => {
       const release = pending.get(id);
       if (!release) throw new Error(`Missing pending detail read for ${id}`);
       await act(async () => release());
-      await within(inspector()).findByText(
-        'Detail verified against the current planning snapshot.',
-      );
+      await findDetailReady(inspector());
       await settleInspectorDismissal();
     };
     return { user, view, complete };
@@ -552,14 +545,14 @@ describe('Planning detail shell navigation', () => {
       await user.click(latest);
       expect(document.activeElement).toBe(latest);
       const panel = inspector();
-      await within(panel).findByText('Detail verified against the current planning snapshot.');
+      await findDetailReady(panel);
       await settleInspectorDismissal();
       expect(document.activeElement).toBe(latest);
       expect(rows(view.container)[1]).toBe(latest);
       expect(panel.querySelector('[data-artifact-id]')?.getAttribute('data-artifact-id')).toBe(
         taskIds[1],
       );
-      const copy = within(panel).getByRole('button', { name: 'Copy link to item', exact: true });
+      const copy = within(panel).getByRole('button', { name: 'Copy link', exact: true });
       act(() => copy.focus());
       expect(document.activeElement).toBe(copy);
       if (method === 'Escape') await user.keyboard('{Escape}');
@@ -598,7 +591,7 @@ describe('Planning detail shell navigation', () => {
       expect(document.activeElement).toBe(latest);
       expect(graphNode(view.container, 'T-072')).toBe(latest);
       const panel = inspector();
-      const copy = within(panel).getByRole('button', { name: 'Copy link to item', exact: true });
+      const copy = within(panel).getByRole('button', { name: 'Copy link', exact: true });
       act(() => copy.focus());
       expect(document.activeElement).toBe(copy);
       if (method === 'Escape') await user.keyboard('{Escape}');
@@ -649,7 +642,7 @@ describe('Planning detail shell navigation', () => {
     const tableRows = rows(view.container);
     expect(tableRows.map((row) => row.dataset.keyboardItem)).toEqual(taskIds);
     await user.click(tableRows[0]);
-    await within(inspector()).findByText('Detail verified against the current planning snapshot.');
+    await findDetailReady(inspector());
     return { user, view, tableRows };
   }
 
@@ -727,7 +720,7 @@ describe('Planning detail shell navigation', () => {
     expect(screen.queryByRole('dialog', { name: 'Inspector', exact: true })).toBeNull();
     await user.keyboard('{Enter}');
     const panel = inspector();
-    await within(panel).findByText('Detail verified against the current planning snapshot.');
+    await findDetailReady(panel);
     await settleInspectorDismissal();
     const artifact = panel.querySelector('[data-artifact-id]');
     expect(artifact?.getAttribute('data-artifact-id')).toBe(taskIds[0]);
@@ -802,7 +795,7 @@ describe('Planning detail shell navigation', () => {
     await clickOutsideInspector(user, tableRows[1], () => rows(view.container)[1]);
     const panel = await screen.findByRole('dialog', { name: 'Inspector', exact: true });
     await within(panel).findByRole('heading', { name: 'Review artifact 2', exact: true });
-    await within(panel).findByText('Detail verified against the current planning snapshot.');
+    await findDetailReady(panel);
     await settleInspectorDismissal();
     expect(panel.querySelector('[data-artifact-id]')?.getAttribute('data-artifact-id')).toBe(
       taskIds[1],

@@ -118,7 +118,8 @@ export function planningArtifactTypeLabel(value: string): string {
   return TYPE_LABEL.get(value) ?? titleCase(value);
 }
 
-function typePlural(value: string): string {
+/** Plural artifact type label for counts. */
+export function typePlural(value: string): string {
   return TYPE_PLURAL.get(value) ?? planningArtifactTypeLabel(value);
 }
 

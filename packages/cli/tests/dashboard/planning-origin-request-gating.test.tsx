@@ -62,9 +62,7 @@ describe('operating origin request evidence', () => {
     ['another spec', { ...operatingSpec, id: 'SPEC-005' }],
   ] as const)('does not request a speculative trace for %s', (_label, node) => {
     render(<PlanningOperatingOriginSection specId={spec.id} binding={binding} node={node} />);
-    expect(screen.getByText('Operating origin unavailable')).toBeTruthy();
-    expect(screen.getByText(/No operating origin is declared in the verified Spec/)).toBeTruthy();
-    expect(screen.queryByRole('button', { name: 'Retry operating origin' })).toBeNull();
+    expect(screen.queryByRole('region', { name: 'Operating origin' })).toBeNull();
     expect(mocks.fetch).not.toHaveBeenCalled();
   });
 
@@ -92,7 +90,7 @@ describe('operating origin request evidence', () => {
       <PlanningOperatingOriginSection specId={spec.id} binding={binding} node={spec} />,
     );
     expect(screen.queryByText(`Why ${spec.id} exists`)).toBeNull();
-    expect(screen.getByText('Operating origin unavailable')).toBeTruthy();
+    expect(screen.queryByRole('region', { name: 'Operating origin' })).toBeNull();
     await waitFor(() => expect(mocks.fetch).toHaveBeenCalledTimes(1));
     expect(mocks.fetch.mock.calls[0][0].signal.aborted).toBe(true);
   });

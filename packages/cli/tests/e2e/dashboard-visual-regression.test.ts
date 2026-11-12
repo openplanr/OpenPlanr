@@ -45,6 +45,7 @@ import {
 import {
   assertParityRow,
   boardParityRows,
+  detailParityRows,
   homeParityRows,
   listParityRows,
 } from '../../../../apps/dashboard/tests/helpers/redesign-parity-rows.mjs';
@@ -1643,6 +1644,69 @@ test.describe('dashboard real-browser quality', () => {
     const parity = testInfo.outputPath('list-parity.json');
     writeFileSync(parity, JSON.stringify(results, null, 2));
     await testInfo.attach('list-parity.json', { path: parity, contentType: 'application/json' });
+  });
+
+  test('matches Detail to its canvas parity rows in both themes', async ({ page }, testInfo) => {
+    const results: unknown[] = [];
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await page.setViewportSize({ width: 1440, height: 1276 });
+    await page.addInitScript(() => localStorage.setItem('op-rail-compact:v1', 'true'));
+    const routes = {
+      'detail-task': '#/detail/SPEC-026%2FT-112',
+      'detail-missing': '#/detail/SPEC-026%2FT-112',
+      'detail-spec': '#/detail/SPEC-026',
+    } as const;
+    const banned = ['Unknown', 'Not recorded', 'None declared', 'Phase 2', 'Source:'];
+    for (const theme of ['dark', 'light'] as const) {
+      for (const [setup, hash] of Object.entries(routes)) {
+        await page.goto(fixtureUrl(hash, { dataset: 'artboard', theme }));
+        await page.evaluate(() => document.fonts.ready);
+        const detail = page.locator('[data-route-kind="planning.detail"]');
+        await expect(
+          detail.locator('[data-detail-state="ready"] .pc-detail__columns'),
+        ).toBeVisible();
+        if (setup === 'detail-missing')
+          // No fixture item declares a missing reference; measure the drawn chip recipe.
+          await detail
+            .locator('.pc-detail__properties dd')
+            .first()
+            .evaluate((dd) => {
+              const chip = document.createElement('span');
+              chip.className = 'pc-detail__property-reference';
+              chip.dataset.missing = '';
+              chip.innerHTML = '<code>T-301</code> not found';
+              dd.append(chip);
+            });
+        for (const row of detailParityRows.filter((entry) => entry.setup === setup))
+          results.push(...(await assertParityRow(page, row, theme)));
+        const text = await page.locator('#main-content').innerText();
+        for (const word of banned) expect(text, `S-21 ${word}`).not.toContain(word);
+        expect(text, 'S-21 none').not.toMatch(/\bnone\b/u);
+        if (setup !== 'detail-task') continue;
+        await expect(page.locator('.pc-rail')).toBeVisible();
+        expect(await page.locator('.pc-topbar__breadcrumbs').innerText()).toMatch(
+          /^Plan\s*\/\s*List\s*\/\s*SPEC-026\s*\/\s*T-112$/u,
+        );
+        expect((await detail.locator('.pc-detail__header').boundingBox())?.x).toBeCloseTo(97, -1);
+        expect((await layoutReport(page)).horizontalOverflow).toBe(false);
+        await page.screenshot({
+          path: testInfo.outputPath(`detail-D-${theme}.png`),
+          fullPage: true,
+        });
+      }
+      await page.goto(fixtureUrl('#/list', { dataset: 'artboard', theme }));
+      const row = page.locator('.pc-list tbody [data-keyboard-item]').first();
+      await row.click();
+      const inspector = page.getByRole('dialog', { name: 'Inspector', exact: true });
+      await expect(inspector.locator('[data-detail-state="ready"]')).toBeVisible();
+      const inspectorText = await inspector.innerText();
+      for (const word of banned)
+        expect(inspectorText, `S-21 Inspector ${word}`).not.toContain(word);
+      expect(inspectorText, 'S-21 Inspector none').not.toMatch(/\bnone\b/u);
+    }
+    const parity = testInfo.outputPath('detail-parity.json');
+    writeFileSync(parity, JSON.stringify(results, null, 2));
+    await testInfo.attach('detail-parity.json', { path: parity, contentType: 'application/json' });
   });
 
   test.describe('List under a coarse pointer', () => {

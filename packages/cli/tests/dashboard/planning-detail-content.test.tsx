@@ -5,14 +5,22 @@ import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testi
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { PlanningArtifactDetail } from '../../../../apps/dashboard/src/features/planning/DetailPage.js';
+import { DetailProperties } from '../../../../apps/dashboard/src/features/planning/DetailProperties.js';
+import { DetailTrace } from '../../../../apps/dashboard/src/features/planning/DetailTrace.js';
 import {
   type PlanningGraph,
   type PlanningNode,
   parsePlanningGraphEnvelope,
 } from '../../../../apps/dashboard/src/features/planning/planning-api.js';
+import {
+  planningDetailHref,
+  planningDisplayId,
+} from '../../../../apps/dashboard/src/features/planning/planning-model.js';
+import { selectStructuralDetail } from '../../../../apps/dashboard/src/features/planning/planning-structural-model.js';
 import type { PlanningWorkspaceModel } from '../../../../apps/dashboard/src/features/planning/planning-workspace.js';
 import { createDashboardQueryIdentity } from '../../../../apps/dashboard/src/lib/binding/query-identity.js';
 import { PlanningPresentationProvider } from '../../../../apps/dashboard/src/lib/routing/planning-presentation.js';
+import { findDetailReady } from './detail-ready.js';
 
 const origin = 'http://localhost:7473';
 const nodeId = 'SPEC-026/T-121';
@@ -213,6 +221,63 @@ afterEach(() => {
 });
 
 describe('shared Planning artifact detail', () => {
+  it('keeps every parent, child and dependency reachable and prints no placeholder text', async () => {
+    const model = fixture();
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (url: string) => {
+        const subject = decodeURIComponent(
+          String(url).split('/api/planning/detail/')[1].split('?')[0],
+        );
+        return response(detailEnvelope(model, body, subject));
+      }),
+    );
+    for (const node of model.graph.nodes) {
+      const detail = selectStructuralDetail(model.graph, node);
+      const parts = render(
+        <>
+          <DetailTrace model={detail} />
+          <DetailProperties
+            node={node}
+            detail={detail}
+            sourceNode={null}
+            model={model}
+            origin={origin}
+          />
+        </>,
+      );
+      const hrefs = new Set(
+        [...parts.container.querySelectorAll<HTMLAnchorElement>('a[href]')].map((link) =>
+          link.getAttribute('href'),
+        ),
+      );
+      for (const ref of [
+        ...detail.parents,
+        ...detail.children,
+        ...detail.dependencies,
+        ...detail.dependents,
+      ]) {
+        if (ref.node)
+          expect(hrefs, `${node.id} -> ${ref.node.id}`).toContain(planningDetailHref(ref.node));
+        else
+          expect(parts.container.textContent, `${node.id} -> ${ref.reference}`).toContain(
+            `${ref.reference} not found`,
+          );
+      }
+      parts.unmount();
+      if (node.type === 'spec') continue;
+      const view = render(
+        <PlanningArtifactDetail model={model} nodeId={node.id} origin={origin} />,
+      );
+      await findDetailReady(view.container);
+      const text = view.container.textContent ?? '';
+      for (const banned of ['Unknown', 'Not recorded', 'None declared', 'Phase 2', 'Source:'])
+        expect(text, `${planningDisplayId(node)} ${banned}`).not.toContain(banned);
+      expect(text, `${planningDisplayId(node)} none`).not.toMatch(/\bnone\b/u);
+      view.unmount();
+    }
+  });
+
   it('waits for referenced criteria before the first verified column presentation', async () => {
     const model = fixture(['AC-reference']);
     let complete: ((value: Response) => void) | undefined;
@@ -269,7 +334,7 @@ describe('shared Planning artifact detail', () => {
     const view = render(
       <PlanningArtifactDetail model={model} nodeId={nodeId} origin={origin} panel />,
     );
-    await screen.findByText('Detail verified against the current planning snapshot.');
+    await findDetailReady(document.body);
     const columns = view.container.querySelector('.pc-detail__columns');
     const files = screen.getByRole('region', { name: 'Declared files' });
     const evidence = screen.getByRole('region', { name: 'Artifact evidence' });
@@ -294,7 +359,7 @@ describe('shared Planning artifact detail', () => {
       complete(response(detailEnvelope(revised)));
       await pending;
     });
-    await screen.findByText('Detail verified against the current planning snapshot.');
+    await findDetailReady(document.body);
     expect(view.container.querySelector('.pc-detail__columns')).toBe(columns);
     expect(document.activeElement).toBe(copy);
     expect(screen.getByRole('region', { name: 'Declared files' })).toBe(files);
@@ -315,7 +380,7 @@ describe('shared Planning artifact detail', () => {
     const view = render(
       <PlanningArtifactDetail model={model} nodeId={nodeId} origin={origin} panel />,
     );
-    await screen.findByText('Detail verified against the current planning snapshot.');
+    await findDetailReady(document.body);
     expect(view.container.querySelector('.pc-detail__columns')).toBeTruthy();
     view.rerender(<PlanningArtifactDetail model={foreign} nodeId={nodeId} origin={origin} panel />);
     expect(screen.getByText('Loading verified detail…')).toBeTruthy();
@@ -355,7 +420,7 @@ describe('shared Planning artifact detail', () => {
         complete(response(detailEnvelope(model)));
         await pending;
       });
-      await screen.findByText('Detail verified against the current planning snapshot.');
+      await findDetailReady(document.body);
       const criteria = screen.getByRole('region', { name: 'Acceptance criteria' });
       expect(within(criteria).getByText('The trace is navigable.')).toBeTruthy();
       expect(view.container.querySelector('.pc-detail__files-card')).toBeTruthy();
@@ -377,7 +442,7 @@ describe('shared Planning artifact detail', () => {
       vi.fn(async () => response(detailEnvelope(model, text))),
     );
     render(<PlanningArtifactDetail model={model} nodeId={nodeId} origin={origin} />);
-    await screen.findByText('Detail verified against the current planning snapshot.');
+    await findDetailReady(document.body);
     const files = screen.getByRole('region', { name: 'Declared files' });
     expect(files.textContent).not.toContain('`');
     const description = within(files).getByText('.changeset/: Add a release note for the change.');
@@ -400,7 +465,7 @@ describe('shared Planning artifact detail', () => {
         <PlanningArtifactDetail model={model} nodeId={nodeId} origin={origin} />
       </PlanningPresentationProvider>,
     );
-    await screen.findByText('Detail verified against the current planning snapshot.');
+    await findDetailReady(document.body);
     const region = screen.getByRole('region', { name: 'Acceptance criteria' });
     expect(within(region).getAllByRole('listitem')).toHaveLength(12);
     expect(within(region).getByText('Verify requirement 12.')).toBeTruthy();
@@ -418,7 +483,7 @@ describe('shared Planning artifact detail', () => {
   });
 
   it.each([false, true])(
-    'renders verified trace, criteria, files and both statuses with panel=%s',
+    'renders verified trace, criteria, files and the derived status with panel=%s',
     async (panel) => {
       const model = fixture();
       const fetcher = vi.fn(async () => response(detailEnvelope(model)));
@@ -426,11 +491,10 @@ describe('shared Planning artifact detail', () => {
       const view = render(
         <PlanningArtifactDetail model={model} nodeId={nodeId} origin={origin} panel={panel} />,
       );
-      await screen.findByText('Detail verified against the current planning snapshot.');
+      await findDetailReady(document.body);
       expect(view.container.textContent).toContain('Declared files can be opened safely.');
-      expect(view.container.querySelector('[data-status="pending"]')?.textContent).toBe('Pending');
       expect(view.container.textContent?.toLowerCase()).toContain('blocked');
-      expect(view.container.querySelector('header')?.textContent).toContain('Source: Pending');
+      expect(view.container.querySelector('header')?.textContent).not.toContain('Source:');
       expect(view.container.querySelector('header [data-status="blocked"]')).toBeTruthy();
       expect(view.container.textContent).toContain('T-999');
       expect(view.container.textContent).toMatch(/unresolved|not in|missing/iu);
@@ -440,14 +504,17 @@ describe('shared Planning artifact detail', () => {
       const property = (label: string) =>
         [...(properties?.querySelectorAll('dt') ?? [])].find((term) => term.textContent === label)
           ?.nextElementSibling;
-      expect(property('Status')?.textContent).toBe('pending in frontmatter');
+      expect(property('Status')).toBeUndefined();
       expect(property('Depends on')?.textContent).toContain('T-120');
       expect(property('Depends on')?.textContent).toContain('T-999');
       expect(property('Unblocks')?.textContent).toContain('T-122');
       expect(property('Story')?.textContent).toContain('US-104');
       expect(property('Spec')?.textContent).toContain('SPEC-026');
       expect(property('Created')?.textContent).toBe('2 Sept 2026');
-      expect(property('Updated')?.textContent).toBe('12 Sept 2026');
+      expect(property('Updated')).toBeUndefined();
+      expect(view.container.querySelector('.pc-detail__updated')?.textContent).toBe(
+        'Updated 12 Sept',
+      );
       expect(property('File')?.textContent).toBe(sourcePath);
       expect(screen.queryByRole('heading', { name: 'History', exact: true })).toBeNull();
       const hrefs = [...view.container.querySelectorAll<HTMLAnchorElement>('a[href]')].map((link) =>
@@ -466,22 +533,22 @@ describe('shared Planning artifact detail', () => {
     },
   );
 
-  it('renders hostile Markdown as text while preserving safe links and raw source', async () => {
+  it('renders the hostile Markdown description as text while preserving safe links', async () => {
     const model = fixture();
     vi.stubGlobal(
       'fetch',
       vi.fn(async () => response(detailEnvelope(model))),
     );
     const view = render(<PlanningArtifactDetail model={model} nodeId={nodeId} origin={origin} />);
-    await screen.findByText('Detail verified against the current planning snapshot.');
-    fireEvent.click(screen.getByText('Read Markdown source'));
+    await findDetailReady(document.body);
+    expect(screen.queryByText('Verified detail body.')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Show all' }));
     await screen.findByText('Verified detail body.');
     expect(view.container.querySelector('script, img, iframe')).toBeNull();
     expect(view.container.querySelector('a[href^="javascript:"], a[href^="data:"]')).toBeNull();
     expect(screen.getByRole('link', { name: 'reference' }).getAttribute('href')).toBe(
       'https://example.com/reference',
     );
-    expect(screen.getByText('Read Markdown source').closest('details')?.open).toBe(true);
     expect(view.container.textContent).toContain('<script>window.hostile=true</script>');
   });
 
@@ -500,8 +567,8 @@ describe('shared Planning artifact detail', () => {
     const view = render(<PlanningArtifactDetail model={model} nodeId={nodeId} origin={origin} />);
     await screen.findByText(/detail could not be verified/iu);
     expect(view.container.textContent).not.toContain('UNTRUSTED_BODY');
-    fireEvent.click(screen.getByRole('button', { name: /retry/iu }));
-    await screen.findByText('Detail verified against the current planning snapshot.');
+    fireEvent.click(screen.getByRole('button', { name: /try again/iu }));
+    await findDetailReady(document.body);
     expect(fetcher).toHaveBeenCalledTimes(2);
   });
 
@@ -519,7 +586,7 @@ describe('shared Planning artifact detail', () => {
         <PlanningArtifactDetail model={model} nodeId={nodeId} origin={origin} />
       </PlanningPresentationProvider>,
     );
-    await screen.findByText('Detail verified against the current planning snapshot.');
+    await findDetailReady(document.body);
     fireEvent.click(
       within(screen.getByLabelText('Declared files')).getByRole('button', { name: 'Copy path' }),
     );
@@ -540,8 +607,8 @@ describe('shared Planning artifact detail', () => {
         <PlanningArtifactDetail model={model} nodeId={nodeId} origin={origin} />
       </PlanningPresentationProvider>,
     );
-    await screen.findByText('Detail verified against the current planning snapshot.');
-    fireEvent.click(screen.getByRole('button', { name: 'Copy link to item' }));
+    await findDetailReady(document.body);
+    fireEvent.click(screen.getByRole('button', { name: 'Copy link' }));
     await screen.findByText('Copied', { selector: '[role="status"] > strong' });
     expect(copy).toHaveBeenCalledWith(
       `${window.location.href.split('#')[0]}#/detail/SPEC-026%2FT-121`,
@@ -555,7 +622,7 @@ describe('shared Planning artifact detail', () => {
     );
     vi.stubGlobal('fetch', fetcher);
     render(<PlanningArtifactDetail model={model} nodeId={nodeId} origin={origin} />);
-    await screen.findByText('Detail verified against the current planning snapshot.');
+    await findDetailReady(document.body);
     expect(screen.queryByRole('link', { name: 'Launch editor' })).toBeNull();
     fireEvent.click(
       within(screen.getByLabelText('Declared files')).getByRole('button', {
@@ -585,7 +652,7 @@ describe('shared Planning artifact detail', () => {
       ),
     );
     const view = render(<PlanningArtifactDetail model={model} nodeId={nodeId} origin={origin} />);
-    await screen.findByText('Detail verified against the current planning snapshot.');
+    await findDetailReady(document.body);
     fireEvent.click(
       within(screen.getByLabelText('Declared files')).getByRole('button', {
         name: 'Open in editor',
@@ -623,7 +690,7 @@ describe('shared Planning artifact detail', () => {
       ),
     );
     render(<PlanningArtifactDetail model={model} nodeId={nodeId} origin={origin} />);
-    await screen.findByText('Detail verified against the current planning snapshot.');
+    await findDetailReady(document.body);
     const files = within(screen.getByLabelText('Declared files'));
     fireEvent.click(files.getByRole('button', { name: 'Open in editor' }));
     await files.findByText(outcome.reason);
@@ -648,7 +715,7 @@ describe('shared Planning artifact detail', () => {
       }),
     );
     const view = render(<PlanningArtifactDetail model={model} nodeId={nodeId} origin={origin} />);
-    await screen.findByText('Detail verified against the current planning snapshot.');
+    await findDetailReady(document.body);
     fireEvent.click(
       within(screen.getByLabelText('Declared files')).getByRole('button', {
         name: 'Open in editor',
@@ -679,7 +746,7 @@ describe('shared Planning artifact detail', () => {
     const view = render(<PlanningArtifactDetail model={model} nodeId={nodeId} origin={origin} />);
     await waitFor(() => expect(fetcher).toHaveBeenCalledOnce());
     view.rerender(<PlanningArtifactDetail model={revised} nodeId={nodeId} origin={origin} />);
-    await screen.findByText('Detail verified against the current planning snapshot.');
+    await findDetailReady(document.body);
     await act(async () => {
       resolveOld(response(detailEnvelope(model, 'OLDER_BODY_MUST_NOT_REPLACE_CURRENT')));
       await olderRead;

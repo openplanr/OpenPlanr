@@ -139,6 +139,7 @@ export function PlanningOperatingOriginSection({
   }, [key, unavailableReason, sourceRoot, specId]);
 
   const current = read.key === key ? read : null;
+  if (!declared) return null;
   const reason = unavailableReason ?? current?.reason;
   if (!unavailableReason && current?.status === 'ready' && current.envelope) {
     return <OperatingOriginPanel envelope={current.envelope} />;

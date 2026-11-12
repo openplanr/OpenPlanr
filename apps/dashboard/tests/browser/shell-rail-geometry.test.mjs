@@ -351,7 +351,7 @@ test('keeps rail preferences and startup top-bar geometry stable across mounted 
     assertRail(await geometry(page), expanded, 236, `default expanded ${route}`);
   }
   await render(page, { route: '#/detail/QT-071' });
-  assert.equal(await page.locator('nav.pc-rail').count(), 0, 'detail has no navigation rail');
+  assertRail(await geometry(page), expanded, 236, 'detail keeps the List rail');
 
   await render(page, { route: '#/list', projectName: 'OpenPlanr', connectionState: 'booting' });
   const startup = await geometry(page);

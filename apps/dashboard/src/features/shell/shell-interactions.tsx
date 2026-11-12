@@ -9,7 +9,7 @@ import {
 
 export type { ShellAdapters } from '../../app/browser-preferences.js';
 export { PlanningPresentationProvider } from '../../lib/routing/planning-presentation.js';
-export { PlanningDetailInspector } from '../planning/DetailPage.js';
+export { PlanningDetailInspector, planningDetailTrail } from '../planning/DetailPage.js';
 export { selectPlanningAttention } from '../planning/planning-model.js';
 export { CommandPalette } from '../search/CommandPalette.js';
 export { useSearchCoordinator } from '../search/search-coordinator.js';

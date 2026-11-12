@@ -1,5 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
-import { Button, IconButton, PcIcon, Toast } from '../../design-system/components/index.js';
+import {
+  Button,
+  IconButton,
+  PcIcon,
+  type PcIconName,
+  Toast,
+} from '../../design-system/components/index.js';
 import { usePlanningCopy } from '../../lib/routing/planning-presentation.js';
 import { fetchPlanningFileLink } from './planning-api.js';
 import type { PlanningModelNode } from './planning-model.js';
@@ -10,10 +16,12 @@ export function CopyDetailValue({
   value,
   label,
   compact = false,
+  icon = 'copy',
 }: {
   value: string;
   label: string;
   compact?: boolean;
+  icon?: PcIconName | null;
 }) {
   const copy = usePlanningCopy();
   const [state, setState] = useState<'idle' | 'pending' | 'copied' | 'denied'>('idle');
@@ -60,7 +68,7 @@ export function CopyDetailValue({
       ) : (
         <Button
           size="sm"
-          icon="copy"
+          icon={icon ?? undefined}
           loading={state === 'pending'}
           ariaLabel={label}
           onClick={() => void activate()}

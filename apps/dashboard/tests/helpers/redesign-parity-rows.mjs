@@ -414,6 +414,101 @@ export const listParityRows = [
   ),
 ];
 
+const detail = '[data-route-kind="planning.detail"]';
+const detailRow = (id, selector, properties, options = {}) =>
+  row(id, `${detail} ${selector}`, properties, options.viewport).map((entry) => ({
+    ...entry,
+    setup: options.setup ?? 'detail-task',
+    ...(options.items ? { items: options.items } : {}),
+  }));
+export const detailParityRows = [
+  ...detailRow('DT-01', '.pc-detail__header h1', {
+    'font-family': 'Outfit',
+    'font-weight': '700',
+    'font-size': '28px',
+    'line-height': '36px',
+  }),
+  ...detailRow(
+    'DT-02',
+    '.pc-detail__trace-card',
+    { 'distance-below': '24px' },
+    { items: '.pc-detail__header h1' },
+  ),
+  ...detailRow(
+    'DT-03',
+    '.pc-detail__artifact',
+    { count: '0' },
+    { items: '.pc-detail__read-status' },
+  ),
+  ...detailRow('DT-04', '.pc-detail__step', {
+    height: '112px',
+    padding: '14px 16px',
+    'border-radius': '10px',
+  }),
+  ...detailRow('DT-05', '.pc-detail__trace', { 'column-gap': '32px', 'no-overflow': 'true' }),
+  ...detailRow('DT-06', '.pc-detail__step-title', { '-webkit-line-clamp': '2' }),
+  ...detailRow('DT-07', 'li[data-current] .pc-detail__step', {
+    'border-color': '--op-accent',
+    'background-color': '--op-accent-soft',
+  }),
+  ...detailRow('DT-08', '.pc-detail__columns', {
+    tracks: Array.from({ length: 12 }, () => '1fr').join(' '),
+    'column-gap': '24px',
+  }),
+  ...detailRow('DT-08', '.pc-detail__columns > .pc-detail__stack:first-child', {
+    'grid-column-start': 'span 8',
+  }),
+  ...detailRow('DT-08', '.pc-detail__columns > .pc-detail__stack:last-child', {
+    'grid-column-start': 'span 4',
+  }),
+  ...detailRow('DT-09', '.pc-detail__criteria > li', {
+    'min-height': '44px',
+    tracks: '64px 1fr',
+  }),
+  ...detailRow(
+    'DT-10',
+    '.pc-detail__columns .pc-card[aria-label="Acceptance criteria"] .pc-detail__meta',
+    { contains: 'criteria' },
+  ),
+  ...detailRow('DT-11', '.pc-detail__file', { 'min-height': '44px' }),
+  ...detailRow('DT-12', '.pc-detail__properties > div', {
+    'min-height': '40px',
+    tracks: '96px 1fr',
+  }),
+  ...detailRow('DT-13', '.pc-detail__properties', { count: '0' }, { items: 'dd:empty' }),
+  ...detailRow('DT-14', '.pc-detail__property-reference .pc-artifact-tag', {
+    height: '24px',
+    'border-radius': '6px',
+    'font-family': 'Source Code Pro',
+    'font-weight': '600',
+    'font-size': '12px',
+  }),
+  ...detailRow('DT-15', '.pc-detail__command', {
+    'font-family': 'Source Code Pro',
+    'font-weight': '500',
+    'font-size': '12px',
+    'background-color': '--op-card',
+  }),
+  ...detailRow(
+    'DT-16',
+    '.pc-detail__properties-card',
+    { count: '0' },
+    { items: '.pc-detail__raw' },
+  ),
+  ...detailRow(
+    'DT-17',
+    '.pc-detail__property-reference[data-missing]',
+    { 'border-top-style': 'dashed', color: '--op-warning' },
+    { setup: 'detail-missing' },
+  ),
+  ...detailRow(
+    'DT-18',
+    '.pc-detail__trace',
+    { 'text-order': 'Origin,This spec,Stories,Tasks' },
+    { setup: 'detail-spec', items: '.pc-detail__step-role' },
+  ),
+];
+
 function sampleRows(nodes, { property, expected, items }) {
   return nodes.map((node) => {
     if (property === 'text')
@@ -440,6 +535,15 @@ function sampleRows(nodes, { property, expected, items }) {
       );
       return { actual: String(rows.length), expected };
     }
+    if (property === 'distance-below') {
+      const reference = document.querySelector(items);
+      return {
+        actual: node.getBoundingClientRect().top - (reference?.getBoundingClientRect().bottom ?? 0),
+        expected: parseFloat(expected),
+      };
+    }
+    if (property === 'no-overflow')
+      return { actual: String(node.scrollWidth <= node.clientWidth), expected };
     if (property === 'contains') {
       const text = node.textContent ?? '';
       return { actual: expected.split('|').every((part) => text.includes(part)), expected: true };

@@ -4,9 +4,12 @@ import type { DashboardQueryIdentity } from '../../lib/binding/query-identity.js
 import { PlanningArtifactDetail } from './PlanningArtifactDetail.js';
 import { inspectPlanningNode } from './planning-inspector.js';
 import {
+  type PlanningModelGraph,
   type PlanningModelNode,
   planningDetailHref,
+  planningDisplayId,
   planningNodeIdFromRouteSubject,
+  planningSpecOf,
 } from './planning-model.js';
 import {
   PlanningNotice,
@@ -37,6 +40,30 @@ function detailSourceHref(): string {
     state.planningDetailOrigin.startsWith('#/')
     ? state.planningDetailOrigin
     : '#/list';
+}
+
+/** Top bar crumbs for a detail route, or null when the subject is not in the graph. */
+export function planningDetailTrail(
+  graph: PlanningModelGraph | undefined,
+  subjectId: string | null,
+): Readonly<{
+  origin: string;
+  spec: Readonly<{ label: string; href: string }> | null;
+  current: string;
+}> | null {
+  if (!graph || subjectId === null) return null;
+  const nodeId = planningNodeIdFromRouteSubject(subjectId);
+  const node = graph.nodes.find((entry) => entry.id === nodeId);
+  if (!node) return null;
+  const specId = planningSpecOf(node);
+  const spec =
+    specId && specId !== node.id ? graph.nodes.find((entry) => entry.id === specId) : undefined;
+  const specHref = spec ? planningDetailHref(spec) : null;
+  return {
+    origin: detailSourceHref(),
+    spec: spec && specHref ? { label: planningDisplayId(spec), href: specHref } : null,
+    current: planningDisplayId(node),
+  };
 }
 
 export function DetailPage({ currentBinding, current }: DetailPageProps) {

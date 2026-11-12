@@ -47,6 +47,7 @@ import {
 import { createDashboardQueryIdentity } from '../../../../apps/dashboard/src/lib/binding/query-identity.js';
 import { DASHBOARD_ROUTE_FIXTURES } from '../e2e/fixtures/dashboard-route-catalog.js';
 import { nameFailures, normalise, visibleText } from './control-name-guard.js';
+import { findDetailReady } from './detail-ready.js';
 import {
   buildPremiumDashboardFixture,
   type FixtureDataset,
@@ -319,12 +320,7 @@ describe('visible control names', () => {
           ),
         ),
       );
-      if (route === 'detail')
-        await waitFor(() =>
-          expect(view.container.textContent).toContain(
-            'Detail verified against the current planning snapshot.',
-          ),
-        );
+      if (route === 'detail') await findDetailReady(view.container);
       expect(view.container.querySelectorAll('button').length).toBeGreaterThan(0);
       if (route === 'sprints' || route === 'activity') {
         const copy = view.getByRole('button', { name: 'Copy command' });

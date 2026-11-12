@@ -8,6 +8,7 @@ import {
   type DashboardRouteKind,
   dashboardRouteDefinition,
   type ParsedDashboardRoute,
+  parseDashboardRoute,
 } from '../../app/router.js';
 import {
   Absent,
@@ -284,7 +285,6 @@ export function NavRail({
   counts,
   branch = null,
 }: NavRailProps) {
-  const detailRoute = route.kind === 'planning.detail' || route.kind === 'planning.spec';
   const sections = compact
     ? product === 'operate'
       ? OPERATE_SECTIONS
@@ -299,80 +299,78 @@ export function NavRail({
       ];
   return (
     <>
-      {!detailRoute ? (
-        <nav
-          className="pc-rail"
-          data-compact={compact || undefined}
-          aria-label="Dashboard navigation"
+      <nav
+        className="pc-rail"
+        data-compact={compact || undefined}
+        aria-label="Dashboard navigation"
+      >
+        <div className="pc-rail__brand">
+          <BrandMark className="pc-rail__tile" size={28} />
+          <div className="pc-rail__identity">
+            <span className="pc-rail__wordmark">OpenPlanr</span>
+            <span className="pc-rail__branch">
+              {branch === null ? null : `${branch} · .planr/`}
+            </span>
+          </div>
+        </div>
+        <button
+          type="button"
+          className="pc-rail__palette"
+          onClick={onOpenPalette}
+          aria-keyshortcuts="Meta+K Control+K"
+          aria-label={compact ? RAIL_PALETTE_LABEL : undefined}
         >
-          <div className="pc-rail__brand">
-            <BrandMark className="pc-rail__tile" size={28} />
-            <div className="pc-rail__identity">
-              <span className="pc-rail__wordmark">OpenPlanr</span>
-              <span className="pc-rail__branch">
-                {branch === null ? null : `${branch} · .planr/`}
+          <PcIcon name="search" size={15} />
+          {!compact ? (
+            <>
+              <span>{RAIL_PALETTE_LABEL}</span>
+              <span className="pc-rail__keys">
+                <Kbd>⌘K</Kbd>
               </span>
-            </div>
-          </div>
-          <button
-            type="button"
-            className="pc-rail__palette"
-            onClick={onOpenPalette}
-            aria-keyshortcuts="Meta+K Control+K"
-            aria-label={compact ? RAIL_PALETTE_LABEL : undefined}
-          >
-            <PcIcon name="search" size={15} />
-            {!compact ? (
-              <>
-                <span>{RAIL_PALETTE_LABEL}</span>
-                <span className="pc-rail__keys">
-                  <Kbd>⌘K</Kbd>
-                </span>
-              </>
-            ) : null}
-          </button>
-          <div className="pc-rail__sections">
-            {sections.map((section) => (
-              <section className="pc-rail__section" key={section.label} aria-label={section.label}>
-                <div className="pc-rail__label">{section.label}</div>
-                <div className="pc-rail__items">
-                  {section.items.map((item) => (
-                    <RailLink
-                      key={item.kind}
-                      item={item}
-                      route={route}
-                      count={counts?.[item.kind]}
-                      compact={compact}
-                    />
-                  ))}
-                </div>
-              </section>
-            ))}
-          </div>
-          <div className="pc-rail__footer">
-            {onToggleCompact ? (
-              <button
-                type="button"
-                className="pc-rail__toggle"
-                aria-label={compact ? 'Expand navigation' : 'Collapse navigation'}
-                aria-expanded={!compact}
-                onClick={onToggleCompact}
-                title={compact ? 'Expand navigation' : 'Collapse navigation'}
-              >
-                <PcIcon name={compact ? 'chevron-right' : 'chevron-left'} size={14} />
-                <span>{compact ? 'Expand navigation' : 'Collapse navigation'}</span>
-              </button>
-            ) : null}
-            {preferenceError ? (
-              <p role="status" className="pc-rail__preference-error">
-                {preferenceError}
-              </p>
-            ) : null}
-            {!compact &&
-              REFERENCE_ITEMS.map((item) => <RailLink key={item.kind} item={item} route={route} />)}
-          </div>
-        </nav>
-      ) : null}
+            </>
+          ) : null}
+        </button>
+        <div className="pc-rail__sections">
+          {sections.map((section) => (
+            <section className="pc-rail__section" key={section.label} aria-label={section.label}>
+              <div className="pc-rail__label">{section.label}</div>
+              <div className="pc-rail__items">
+                {section.items.map((item) => (
+                  <RailLink
+                    key={item.kind}
+                    item={item}
+                    route={route}
+                    count={counts?.[item.kind]}
+                    compact={compact}
+                  />
+                ))}
+              </div>
+            </section>
+          ))}
+        </div>
+        <div className="pc-rail__footer">
+          {onToggleCompact ? (
+            <button
+              type="button"
+              className="pc-rail__toggle"
+              aria-label={compact ? 'Expand navigation' : 'Collapse navigation'}
+              aria-expanded={!compact}
+              onClick={onToggleCompact}
+              title={compact ? 'Expand navigation' : 'Collapse navigation'}
+            >
+              <PcIcon name={compact ? 'chevron-right' : 'chevron-left'} size={14} />
+              <span>{compact ? 'Expand navigation' : 'Collapse navigation'}</span>
+            </button>
+          ) : null}
+          {preferenceError ? (
+            <p role="status" className="pc-rail__preference-error">
+              {preferenceError}
+            </p>
+          ) : null}
+          {!compact &&
+            REFERENCE_ITEMS.map((item) => <RailLink key={item.kind} item={item} route={route} />)}
+        </div>
+      </nav>
       <MobileNavigation product={product} route={route} operateAvailable={operateAvailable} />
     </>
   );
@@ -556,12 +554,20 @@ export type TopBarProps = Readonly<{
   mobile?: boolean;
   shortcutHelp?: ReactNode;
   showSubject?: boolean;
+  detailTrail?: DetailTrail | null;
   route: ParsedDashboardRoute;
   connectionState: ConnectionState;
   inspectorOpen: boolean;
   inspectorAvailable?: boolean;
   onToggleInspector: () => void;
   onOpenPalette: () => void;
+}>;
+
+/** Crumbs after the product on a detail route: where it was opened from, its spec, its ID. */
+export type DetailTrail = Readonly<{
+  origin: string;
+  spec: Readonly<{ label: string; href: string }> | null;
+  current: string;
 }>;
 
 /** Breadcrumb, palette field, connection chips, theme and inspector controls. */
@@ -572,6 +578,7 @@ export function TopBar({
   mobile = false,
   shortcutHelp,
   showSubject = false,
+  detailTrail = null,
   route,
   connectionState,
   inspectorOpen,
@@ -632,8 +639,32 @@ export function TopBar({
         <span className="pc-topbar__separator" aria-hidden="true">
           /
         </span>
-        <span className="pc-topbar__view">{definition?.label ?? 'Closed route'}</span>
-        {subject ? (
+        {detailTrail ? (
+          <>
+            <a className="pc-topbar__crumb-link" href={detailTrail.origin}>
+              {dashboardRouteDefinition(parseDashboardRoute(detailTrail.origin))?.label ?? 'List'}
+            </a>
+            {detailTrail.spec ? (
+              <>
+                <span className="pc-topbar__separator" aria-hidden="true">
+                  /
+                </span>
+                <a className="pc-topbar__crumb-link" href={detailTrail.spec.href}>
+                  {detailTrail.spec.label}
+                </a>
+              </>
+            ) : null}
+            <span className="pc-topbar__separator" aria-hidden="true">
+              /
+            </span>
+            <span className="pc-topbar__view" aria-current="page">
+              {detailTrail.current}
+            </span>
+          </>
+        ) : (
+          <span className="pc-topbar__view">{definition?.label ?? 'Closed route'}</span>
+        )}
+        {subject && !detailTrail ? (
           <>
             <span className="pc-topbar__separator" aria-hidden="true">
               /

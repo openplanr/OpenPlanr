@@ -21,6 +21,7 @@ import {
   parseDashboardProductState,
 } from '../../../../apps/dashboard/src/lib/api/product-state.js';
 import { createDashboardQueryIdentity } from '../../../../apps/dashboard/src/lib/binding/query-identity.js';
+import { findDetailReady } from './detail-ready.js';
 import {
   buildPremiumDashboardFixture,
   type FixtureDataset,
@@ -181,9 +182,7 @@ describe('Planning detail render work', () => {
       const row = rendered.container.querySelector<HTMLElement>('.pc-list tbody tr[tabindex]');
       if (!row) throw new Error('Missing selected performance row');
       await act(async () => row.click());
-      await within(screen.getByRole('dialog', { name: 'Inspector', exact: true })).findByText(
-        'Detail verified against the current planning snapshot.',
-      );
+      await findDetailReady(screen.getByRole('dialog', { name: 'Inspector', exact: true }));
       const panel = screen.getByRole('dialog', { name: 'Inspector', exact: true });
       const initial = {
         projectionSelects: projectionSpy.mock.calls.length,
@@ -218,9 +217,7 @@ describe('Planning detail render work', () => {
         );
         expect(screen.queryByRole('dialog', { name: 'Inspector', exact: true })).toBeNull();
         await act(async () => row.click());
-        await within(screen.getByRole('dialog', { name: 'Inspector', exact: true })).findByText(
-          'Detail verified against the current planning snapshot.',
-        );
+        await findDetailReady(screen.getByRole('dialog', { name: 'Inspector', exact: true }));
       }
       const reopenedProjections = projectionSpy.mock.results
         .filter((result) => result.type === 'return')

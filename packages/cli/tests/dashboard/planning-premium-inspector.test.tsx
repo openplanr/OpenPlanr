@@ -15,6 +15,7 @@ import {
   parseDashboardProductState,
 } from '../../../../apps/dashboard/src/lib/api/product-state.js';
 import { createDashboardQueryIdentity } from '../../../../apps/dashboard/src/lib/binding/query-identity.js';
+import { findDetailReady } from './detail-ready.js';
 import {
   buildPremiumDashboardFixture,
   fixtureSnapshot,
@@ -155,7 +156,7 @@ describe('premium inspector repeated selection', () => {
       const panel = screen.getByRole('dialog', {
         name: 'Inspector',
       });
-      await within(panel).findByText('Detail verified against the current planning snapshot.');
+      await findDetailReady(panel);
       expect(
         within(panel).getByRole('heading', { name: expectedTitle ?? '', exact: true }),
       ).toBeTruthy();
