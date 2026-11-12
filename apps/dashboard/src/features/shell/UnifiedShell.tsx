@@ -226,6 +226,7 @@ export function UnifiedShell({
           themePreference={adapters?.themePreference}
           paletteIconOnly={width < 1200}
           mobile={narrow}
+          phone={width < 600}
           shortcutHelp={interactions.help}
         />
         {fontLoadFailed && !fontNoticeDismissed ? (

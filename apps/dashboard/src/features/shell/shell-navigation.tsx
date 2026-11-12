@@ -557,6 +557,7 @@ export type TopBarProps = Readonly<{
   showSubject?: boolean;
   detailTrail?: DetailTrail | null;
   onCopy?: (text: string) => Promise<void>;
+  phone?: boolean;
   route: ParsedDashboardRoute;
   connectionState: ConnectionState;
   inspectorOpen: boolean;
@@ -578,9 +579,11 @@ export type DetailTrail = Readonly<{
 function DetailHeader({
   trail,
   onCopy,
+  children,
 }: {
   trail: DetailTrail;
   onCopy?: (text: string) => Promise<void>;
+  children?: ReactNode;
 }) {
   const feedback = useCopyFeedback(trail.link ?? '', !trail.link, onCopy);
   const origin = dashboardRouteDefinition(parseDashboardRoute(trail.origin))?.label ?? 'List';
@@ -596,6 +599,7 @@ function DetailHeader({
       >
         {trail.current}
       </span>
+      {children}
       {trail.link ? (
         <button
           type="button"
@@ -626,6 +630,7 @@ export function TopBar({
   showSubject = false,
   detailTrail = null,
   onCopy,
+  phone = false,
   route,
   connectionState,
   inspectorOpen,
@@ -679,7 +684,24 @@ export function TopBar({
   if (detailTrail && mobile)
     return (
       <header className="pc-topbar" data-product={product} data-detail-header>
-        <DetailHeader trail={detailTrail} onCopy={onCopy} />
+        <DetailHeader trail={detailTrail} onCopy={onCopy}>
+          {phone ? null : (
+            <>
+              <output className="pc-topbar__end" aria-live="polite">
+                <ConnectionChip state={connectionState} compact />
+              </output>
+              <button
+                type="button"
+                className="pc-topbar__palette"
+                aria-label={TOPBAR_PALETTE_LABEL}
+                onClick={onOpenPalette}
+                aria-keyshortcuts="Meta+K Control+K"
+              >
+                <PcIcon name="search" size={15} />
+              </button>
+            </>
+          )}
+        </DetailHeader>
         {mobileControls ? createPortal(utilities, mobileControls) : null}
       </header>
     );

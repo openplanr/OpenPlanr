@@ -1750,6 +1750,8 @@ test.describe('dashboard real-browser quality', () => {
       );
       await expect(header.locator('[aria-current="page"]')).toHaveText('T-112');
       await expect(header.getByRole('button', { name: 'Copy link' })).toBeVisible();
+      await expect(header.getByRole('button', { name: /^Jump to a view/u })).toHaveCount(0);
+      await expect(header.locator('.pc-topbar__end')).toHaveCount(0);
       await expect(detail.locator('.pc-detail__navigation')).toHaveCount(0);
       expect((await layoutReport(page)).horizontalOverflow).toBe(false);
       const dock = page.getByRole('region', { name: 'Next step command' });
@@ -1777,6 +1779,15 @@ test.describe('dashboard real-browser quality', () => {
       await expect(dock).toBeVisible();
       for (const { element, ring } of await focusRings(24))
         expect(ring, `S-20 ${element} at 390`).toEqual(['solid', '2px', '2px']);
+      await page.setViewportSize({ width: 768, height: 1024 });
+      await expect(header.getByRole('link', { name: 'Back to List' })).toBeVisible();
+      await expect(header.locator('.pc-topbar__end')).toContainText('Live');
+      const palette = header.getByRole('button', { name: /^Jump to a view/u });
+      await expect(palette).toBeVisible();
+      expect((await palette.boundingBox())?.width).toBe(44);
+      await expect(header.getByRole('button', { name: 'Copy link' })).toBeVisible();
+      expect((await layoutReport(page)).horizontalOverflow).toBe(false);
+      await page.screenshot({ path: testInfo.outputPath(`detail-T-${theme}.png`) });
       await page.setViewportSize({ width: 1440, height: 1276 });
       await page.goto(fixtureUrl('#/detail/SPEC-026%2FT-112', { dataset: 'artboard', theme }));
       await expect(detail.locator('[data-detail-state="ready"] .pc-detail__columns')).toBeVisible();

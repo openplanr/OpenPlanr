@@ -826,8 +826,13 @@
     color: var(--op-muted);
     cursor: pointer;
   }
-  .pc-topbar__copy-link {
-    margin-left: auto;
+  .pc-topbar__detail .pc-topbar__end {
+    flex: none;
+    width: auto;
+  }
+  .pc-topbar__detail .pc-topbar__palette {
+    flex: none;
+    width: 44px;
   }
   .pc-topbar__copy-link[data-state="copied"] {
     color: var(--op-accent);
@@ -843,6 +848,7 @@
     outline-offset: 2px;
   }
   .pc-topbar__detail-id {
+    margin-right: auto;
     min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;

@@ -328,6 +328,7 @@ describe('Planning detail shell navigation', () => {
     );
     expect(topBar.querySelector('[aria-current="page"]')?.textContent).toBe('T-002');
     expect(within(topBar).queryByText('Plan')).toBeNull();
+    expect(within(topBar).queryByRole('button', { name: /^Jump to a view/u })).toBeNull();
     expect(within(main).queryByRole('button', { name: 'Copy link' })).toBeNull();
     fireEvent.click(within(topBar).getByRole('button', { name: 'Copy link' }));
     await waitFor(() =>
@@ -335,6 +336,35 @@ describe('Planning detail shell navigation', () => {
         `${window.location.origin}${window.location.pathname}${href}`,
       ),
     );
+  });
+
+  it('keeps search and the live state in the narrow Detail header between 600 and 899px', async () => {
+    vi.stubGlobal('innerWidth', 768);
+    vi.stubGlobal(
+      'matchMedia',
+      vi.fn((query: string) => ({
+        matches: /max-width: (899|1199)px/u.test(query),
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+      })),
+    );
+    const snapshot = fixture();
+    window.history.replaceState(null, '', '#/detail/SPEC-026%2FT-002');
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: RequestInfo | URL) => {
+        const id = decodeURIComponent(new URL(String(input)).pathname.split('/').at(-1) ?? '');
+        return json(detail(snapshot, id));
+      }),
+    );
+    render(<ShellHarness snapshot={snapshot} />);
+    await findDetailReady(screen.getByRole('main'));
+    const topBar = document.querySelector<HTMLElement>('.pc-topbar[data-detail-header]');
+    if (!topBar) throw new Error('Missing narrow Detail header');
+    expect(within(topBar).getByRole('link', { name: 'Back to List' })).toBeTruthy();
+    expect(within(topBar).getByRole('button', { name: /^Jump to a view/u })).toBeTruthy();
+    expect(topBar.querySelector('.pc-topbar__end')).not.toBeNull();
+    expect(within(topBar).getByRole('button', { name: 'Copy link' })).toBeTruthy();
   });
 
   it('moves between real List artifacts with J/K from the shared desktop inspector', async () => {
