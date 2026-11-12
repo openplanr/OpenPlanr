@@ -157,6 +157,24 @@
   height: 28px;
   min-height: 28px;
 }
+.pc-palette__scopes .pc-palette__cycle-label {
+  display: none;
+}
+.pc-palette__scopes .pc-palette__cycle .pc-chip {
+  padding: 0 10px;
+  font: 500 12px / 16px var(--pc-font-sans);
+  color: var(--op-muted);
+  background: transparent;
+  border: 0;
+  border-radius: 7px;
+}
+.pc-palette__scopes .pc-palette__cycle .pc-chip:hover:not(:disabled) {
+  background: var(--pc-surface-hover);
+}
+.pc-palette__scopes .pc-palette__cycle[data-bound] .pc-chip {
+  color: var(--op-heading);
+  background: var(--op-raised);
+}
 .pc-palette__notice {
   flex: none;
   margin: 0;

@@ -97,8 +97,8 @@ function OperateCycleSelector({
 }>) {
   if (bindings.length === 0) return null;
   return (
-    <div className="pc-palette__cycle">
-      <span>operate cycle</span>
+    <div className="pc-palette__cycle" data-bound={selectedCycleId !== null || undefined}>
+      <span className="pc-palette__cycle-label">operate cycle</span>
       <Select
         size="sm"
         ariaLabel="Operate Cycle for search results"
@@ -650,7 +650,7 @@ export function CommandPalette({
           <PaletteScopes
             hits={search.allHits}
             scope={search.scope}
-            operate={operateBindings.length > 0}
+            operate={search.selectedOperate.binding !== null}
             operateLoading={search.operateSearchState === 'loading'}
             onChange={(scope) => {
               search.setScope(scope);

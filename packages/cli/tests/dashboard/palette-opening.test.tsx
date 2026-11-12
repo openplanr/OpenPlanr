@@ -44,6 +44,23 @@ function store(ids: readonly string[]) {
   };
 }
 
+function cycleBinding() {
+  return createDashboardQueryIdentity({
+    productArea: 'operate',
+    route: '#/operate/today',
+    actorId: 'palette-reader',
+    projectId: `sha256:${'a'.repeat(64)}`,
+    scopeId: 'project',
+    domainId: 'software-delivery',
+    domainVersion: '2.0.0',
+    cycleId: 'cycle-current',
+    subjectId: null,
+    eventHead: { sequence: 1, hash: `sha256:${'b'.repeat(64)}` },
+    viewHash: `sha256:${'c'.repeat(64)}`,
+    generation: 1,
+  });
+}
+
 describe('recent palette items', () => {
   it('parses stored IDs, keeps five, and refuses anything else', () => {
     expect(parseRecentItems(null)).toEqual([]);
@@ -257,20 +274,7 @@ describe('palette Operate loading', () => {
       'fetch',
       vi.fn(() => new Promise<Response>(() => undefined)),
     );
-    const binding = createDashboardQueryIdentity({
-      productArea: 'operate',
-      route: '#/operate/today',
-      actorId: 'palette-reader',
-      projectId: `sha256:${'a'.repeat(64)}`,
-      scopeId: 'project',
-      domainId: 'software-delivery',
-      domainVersion: '2.0.0',
-      cycleId: 'cycle-current',
-      subjectId: null,
-      eventHead: { sequence: 1, hash: `sha256:${'b'.repeat(64)}` },
-      viewHash: `sha256:${'c'.repeat(64)}`,
-      generation: 1,
-    });
+    const binding = cycleBinding();
     const view = render(
       <CommandPalette
         open
@@ -355,5 +359,44 @@ describe('palette scopes', () => {
       />,
     );
     expect(view.container.querySelector('.pc-palette__group[aria-busy="true"]')).not.toBeNull();
+  });
+});
+
+describe('palette Operate scope', () => {
+  it('shows the Operate scope only while a cycle is bound and returns to All when it goes', () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(() => new Promise<Response>(() => undefined)),
+    );
+    render(
+      <CommandPalette
+        open
+        onClose={() => undefined}
+        sources={sources}
+        initialQuery="Callable"
+        connectionState="connected"
+        operateBindings={[cycleBinding()]}
+      />,
+    );
+    const scopes = () => screen.getByRole('group', { name: 'Result scope' });
+    const chooseCycle = (label: string) => {
+      fireEvent.click(screen.getByRole('combobox', { name: /^Operate Cycle for search results/u }));
+      fireEvent.click(
+        within(screen.getByRole('listbox', { name: 'Operate Cycle for search results' })).getByRole(
+          'option',
+          { name: label },
+        ),
+      );
+    };
+    expect(within(scopes()).queryByRole('button', { name: /^Operate/u })).toBeNull();
+    chooseCycle('Software delivery cycle');
+    const operate = within(scopes()).getByRole('button', { name: /^Operate/u });
+    fireEvent.click(operate);
+    expect(operate.getAttribute('aria-pressed')).toBe('true');
+    chooseCycle('Select a cycle');
+    expect(within(scopes()).queryByRole('button', { name: /^Operate/u })).toBeNull();
+    expect(
+      within(scopes()).getByRole('button', { name: /^All/u }).getAttribute('aria-pressed'),
+    ).toBe('true');
   });
 });

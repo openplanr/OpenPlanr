@@ -2926,6 +2926,10 @@ test.describe('dashboard real-browser quality', () => {
     await expect(page.locator('.pc-list')).toBeVisible();
     await page.keyboard.press('Control+K');
     const palette = page.getByRole('dialog', { name: 'Command palette', exact: true });
+    const operateScope = palette
+      .getByRole('group', { name: 'Result scope' })
+      .getByRole('button', { name: /^Operate/u });
+    await expect(operateScope).toHaveCount(0);
     const cycle = palette.getByRole('combobox', { name: /^Operate Cycle for search results/u });
     await cycle.click();
     const listbox = page.getByRole('listbox', { name: 'Operate Cycle for search results' });
@@ -2958,6 +2962,7 @@ test.describe('dashboard real-browser quality', () => {
     await expect(listbox).toBeHidden();
     await expect(cycle).toHaveAccessibleName(`Operate Cycle for search results: ${label}`);
     await expect(palette).toBeVisible();
+    await expect(operateScope).toBeVisible();
   });
 
   test('starts the handoff trace through palette search and promotes only on full-page activation', async ({
