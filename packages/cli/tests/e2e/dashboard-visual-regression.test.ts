@@ -1466,7 +1466,10 @@ test.describe('dashboard real-browser quality', () => {
             expect(accents, 'S-22 accent backgrounds').toBeLessThanOrEqual(1);
             await page.keyboard.press('Tab');
             await page.keyboard.press('Shift+Tab');
-            const outline = await page.evaluate(() => {
+            const outline = await page.evaluate(async () => {
+              for (let frame = 0; frame < 2; frame += 1)
+                await new Promise((resolve) => requestAnimationFrame(resolve));
+              await new Promise((resolve) => setTimeout(resolve, 50));
               const focused = document.querySelector(':focus-visible');
               const style = focused ? getComputedStyle(focused) : null;
               return style && [style.outlineStyle, style.outlineWidth, style.outlineOffset];
