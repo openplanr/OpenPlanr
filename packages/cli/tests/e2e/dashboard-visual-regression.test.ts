@@ -1449,15 +1449,10 @@ test.describe('dashboard real-browser quality', () => {
       if (phone) await workspace.getByRole('tab', { name: /^In progress/u }).click();
       const inProgress = board.locator('[data-keyboard-column="in-progress"]');
       await expect(inProgress).toContainText('Improve appointment reminder delivery');
-      for (const [status, label] of [
-        ['outstanding', 'Outstanding'],
-        ['blocked', 'Blocked'],
-        ['addressed', 'Addressed'],
-        ['done', 'Done'],
-      ]) {
+      for (const label of ['Outstanding', 'Blocked', 'Addressed', 'Done']) {
         if (phone) await workspace.getByRole('tab', { name: new RegExp(`^${label}`, 'u') }).click();
         const emptySlot = board
-          .getByRole('region', { name: status, exact: true })
+          .getByRole('region', { name: label, exact: true })
           .getByRole('button', { name: `Nothing is ${label.toLowerCase()}.`, exact: true });
         await expect(emptySlot).toBeVisible();
         await emptySlot.focus();
