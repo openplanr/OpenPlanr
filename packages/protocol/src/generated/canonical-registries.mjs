@@ -1522,7 +1522,7 @@ export const CANONICAL_REGISTRIES = deepFreeze({
         "ownerPackage": "openplanr",
         "source": {
           "path": "packages/cli/src/cli/commands/graph.ts",
-          "digest": "sha256:9da09af7cac3260a85c559aeb7dbfa8d57439407647a5471d33f68b0528db85c"
+          "digest": "sha256:3b95ade48104ca9bd607772559d05d0a1617c5f4fdfcbf67678304ae389fa79a"
         },
         "authorityClass": "workflow",
         "machineJson": false,
