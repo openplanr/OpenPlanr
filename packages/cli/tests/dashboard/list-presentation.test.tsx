@@ -336,9 +336,7 @@ describe('List presentation tokens against validated projections', () => {
     fireEvent.keyDown(button, { key: 'c' });
     expect(copy).not.toHaveBeenCalled();
     await user.click(button);
-    expect(copy).toHaveBeenCalledExactlyOnceWith(
-      'openplanr backlog update BL-910 --status outstanding',
-    );
+    expect(copy).toHaveBeenCalledExactlyOnceWith('openplanr status BL-910 --md');
   });
 
   it('collapses and expands the focused List label group without affecting its neighbours', () => {
@@ -1036,7 +1034,7 @@ describe('List triage, bounded windows and command-only selection', () => {
     expect(within(bar).getByText('2 selected')).toBeTruthy();
     await user.click(within(bar).getByRole('button', { name: 'Copy 2 commands' }));
     expect(copy).toHaveBeenCalledExactlyOnceWith(
-      'openplanr backlog update BL-910 --status outstanding\n/planr:ship SPEC-901/T-910',
+      'openplanr status BL-910 --md\n/planr:ship SPEC-901/T-910',
     );
     await waitFor(() =>
       expect(bar.querySelector('.pc-selection-bar__copy')?.getAttribute('data-state')).toBe(
@@ -1231,7 +1229,7 @@ it('completes filed-findings triage with keyboard selection and bar copy', async
     fireEvent.keyDown(selected, { key: 'c' });
     await waitFor(() =>
       expect(copy).toHaveBeenCalledExactlyOnceWith(
-        `openplanr backlog update ${selected.dataset.keyboardItem} --status outstanding`,
+        `openplanr status ${selected.dataset.keyboardItem} --md`,
       ),
     );
   } finally {
@@ -1254,9 +1252,7 @@ it('shows short dates with full descriptions and copies the row command from the
   expect(screen.getByTestId('selection').getAttribute('data-open-tick')).toBe(openTick);
   const bar = screen.getByRole('region', { name: 'Selected items' });
   await user.click(within(bar).getByRole('button', { name: 'Copy command' }));
-  expect(copy).toHaveBeenCalledExactlyOnceWith(
-    'openplanr backlog update BL-910 --status outstanding',
-  );
+  expect(copy).toHaveBeenCalledExactlyOnceWith('openplanr status BL-910 --md');
   expect(screen.getByTestId('selection').getAttribute('data-open-tick')).toBe(openTick);
 });
 

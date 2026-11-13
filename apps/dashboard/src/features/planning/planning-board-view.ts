@@ -6,7 +6,6 @@ import {
   usePlanningPresentation,
 } from '../../lib/routing/planning-presentation.js';
 import type { PlanningView } from '../../lib/routing/planning-view-codec.js';
-import { bulkListCommands } from './planning-list-filter.js';
 import {
   type PlanningModelNode,
   planningContinuation,
@@ -70,10 +69,10 @@ export function useBoardView(presentation: PlanningView | null, setPage: (page: 
   return { swimlanes, changeView, storageNotice };
 }
 
-/** Selection bar entry: the verified status command, else the item's continuation command. */
+/** Selection bar entry: the item's continuation command; none for a non-canonical id. */
 export function boardSelectionItems(node: PlanningModelNode | undefined): SelectionBarItem[] {
   if (!node) return [];
-  const command = bulkListCommands([node], node.status).commands[0] ?? planningContinuation(node);
+  const command = planningContinuation(node);
   if (!command) return [];
   const type = artifactTagType(node.type) ?? 't';
   return [{ id: planningDisplayId(node), title: node.title, type, command }];

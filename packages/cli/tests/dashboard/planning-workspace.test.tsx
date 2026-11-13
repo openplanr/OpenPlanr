@@ -953,11 +953,9 @@ describe('read-only status Board', () => {
       await act(async () => {
         fireEvent.keyDown(card, { key: 'c' });
       });
-      expect(copy).toHaveBeenCalledExactlyOnceWith(
-        'openplanr backlog update BL-001 --status outstanding',
-      );
+      expect(copy).toHaveBeenCalledExactlyOnceWith('openplanr status BL-001 --md');
       const bar = board.getByRole('region', { name: 'Selected items' });
-      expect(bar.textContent).toContain('openplanr backlog update BL-001 --status outstanding');
+      expect(bar.textContent).toContain('openplanr status BL-001 --md');
       expect(bar.textContent).toContain('Copy failed');
       expect(bar.textContent).toContain('denied');
       const command = bar.querySelector<HTMLButtonElement>('.pc-selection-bar__copy');
