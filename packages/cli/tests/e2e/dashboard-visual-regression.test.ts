@@ -2072,6 +2072,11 @@ test.describe('dashboard real-browser quality', () => {
       await page.evaluate(() => document.fonts.ready);
       const today = page.locator('[data-route-kind="operate.today"] .pc-operate-today');
       await expect(today.locator('.pc-operate-today__decision')).toBeVisible();
+      // The canvas has no scrollbar; widen by the stable gutter a classic scrollbar reserves.
+      const gutter = await page
+        .locator('.pc-shell__scroll')
+        .evaluate((scroll: HTMLElement) => scroll.offsetWidth - scroll.clientWidth);
+      await page.setViewportSize({ width: 1440 + gutter, height: 1120 });
       for (const row of todayParityRows.filter((entry) => entry.setup === 'today-local'))
         results.push(...(await assertParityRow(page, row, theme)));
       const origin = await today.locator('.pc-operate-today__header').boundingBox();
