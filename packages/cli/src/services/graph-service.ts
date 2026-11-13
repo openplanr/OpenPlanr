@@ -436,7 +436,7 @@ export function readGraph(planrDir: string, opts: ReadGraphOptions = {}): Projec
 
 /** Display path for diagnostics: a backslash, which the path contract rejects, becomes U+FFFD. */
 function displaySourcePath(sourcePath: string): string {
-  return sourcePath.replaceAll('\\', '�');
+  return sourcePath.replaceAll('\\', '\uFFFD');
 }
 
 export function readPlanningModel(planrDir: string): PlanningReadModel {
