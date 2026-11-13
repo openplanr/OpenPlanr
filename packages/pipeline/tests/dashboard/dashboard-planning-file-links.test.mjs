@@ -9,6 +9,7 @@ import { readGraph } from '../../lib/dashboard/graph-reader.mjs';
 import { assertPlanningFileLinkEnvelope } from '../../lib/dashboard/planning-file-link-contracts.mjs';
 import {
   declaredPlanningFiles,
+  readPlanningFileLinkArtifact,
   resolvePlanningFileLink,
 } from '../../lib/dashboard/server/planning-file-links.mjs';
 import { createPlanningState } from '../../lib/dashboard/server/planning-state.mjs';
@@ -511,4 +512,24 @@ test('selected-source read failures retain safe diagnostics without opening targ
     t.mock.restoreAll();
     syncBuiltinESMExports();
   }
+});
+
+test('an artifact whose file name a file link cannot use says so instead of asking for a refresh', (t) => {
+  const root = fs.mkdtempSync(join(tmpdir(), 'planning-file-links-name-'));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  const planrDir = join(root, '.planr');
+  fs.mkdirSync(join(planrDir, 'backlog'), { recursive: true });
+  fs.writeFileSync(
+    join(planrDir, 'backlog', 'BL-002-a\\b.md'),
+    '---\nid: BL-002\ntitle: Backslash item\nstatus: outstanding\n---\n## Files\n- `src/a.ts`\n',
+  );
+  assert.deepEqual(
+    readGraph(planrDir).nodes.map((node) => node.id),
+    ['BL-002'],
+  );
+  const { detail, result } = readPlanningFileLinkArtifact(planrDir, { id: 'BL-002' });
+  assert.equal(detail, null);
+  assert.equal(result.state, 'unavailable');
+  assert.match(result.reason, /file name/);
+  assert.doesNotMatch(result.reason, /Refresh/);
 });

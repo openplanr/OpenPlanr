@@ -117,20 +117,19 @@ export function resolvePlanningFileLink(projectRoot, path) {
 
 export function readPlanningFileLinkArtifact(planrDir, summary) {
   const source = findPlanningArtifactSource(planrDir, summary.id);
-  const unavailable = () => ({
+  const unavailable = (
+    reason = 'The selected artifact source is unavailable. Refresh its detail before requesting a file link.',
+  ) => ({
     detail: null,
-    result: {
-      state: 'unavailable',
-      reason:
-        'The selected artifact source is unavailable. Refresh its detail before requesting a file link.',
-      errorCode: null,
-      editorUrl: null,
-    },
+    result: { state: 'unavailable', reason, errorCode: null, editorUrl: null },
   });
   if (!source) return unavailable();
   const projectRoot = dirname(planrDir);
   const sourcePath = relative(projectRoot, source).split(sep).join('/');
-  if (!validPlanningFilePath(sourcePath)) return unavailable();
+  if (!validPlanningFilePath(sourcePath))
+    return unavailable(
+      'The artifact file name has characters a file link cannot use, so its files cannot be linked. Rename the file to link them.',
+    );
   const { canonicalPath, ...result } = inspectPlanningFile(projectRoot, sourcePath);
   if (!canonicalPath) return { detail: null, result: { ...result, editorUrl: null } };
   // Only the selected artifact supplies declarations; target file bodies are never opened.
