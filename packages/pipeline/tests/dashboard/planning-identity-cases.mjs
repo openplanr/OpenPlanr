@@ -64,7 +64,7 @@ export const identityCases = [
   [
     'excludes README and other documentation from canonical discovery',
     (graph) => {
-      assert.equal(graph.nodes.length, 23);
+      assert.equal(graph.nodes.length, 24);
       assert.ok(!graph.nodes.some((node) => /README|notes|guide/.test(node.id)));
     },
   ],
@@ -78,6 +78,7 @@ export const identityCases = [
         ['my-bl-002', 'backlog'],
         ['Задача-003', 'backlog'],
         ['my_bl-004-no-id', 'backlog'],
+        ['my-bl-006', 'backlog'],
       ])
         assert.equal(read(id)?.type, type, id);
       assert.equal(read('my_bl-004-no-id').title, 'Template without an id');
