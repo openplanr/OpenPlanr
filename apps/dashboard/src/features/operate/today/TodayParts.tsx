@@ -1,4 +1,4 @@
-import { useLayoutEffect, useState } from 'react';
+import { type ReactNode, useLayoutEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import {
   CopyLabels,
@@ -20,19 +20,37 @@ import {
 } from './today-view.js';
 import './today.css';
 
-const KIND_LABEL: Record<TodayRowKind, string> = {
+const KIND_LABEL: Record<TodayRowKind | 'current', string> = {
   decision: 'Decision',
+  approval: 'Approval',
   action: 'Action',
+  verification: 'To verify',
+  outcome: 'Outcome',
   question: 'Question',
+  current: 'Current work',
 };
 const KIND_TAB: Record<TodayRowKind, string> = {
   decision: 'Decisions',
+  approval: 'Approvals',
   action: 'Actions',
+  verification: 'To verify',
+  outcome: 'Outcomes',
   question: 'Questions',
 };
+const KIND_ORDER = [
+  'decision',
+  'approval',
+  'action',
+  'verification',
+  'outcome',
+  'question',
+] as const;
 const KIND_HREF: Record<TodayRowKind, (id: string) => string> = {
   decision: () => '#/operate/inbox',
+  approval: () => '#/operate/inbox',
   action: (id) => `#/operate/actions/${encodeURIComponent(id)}`,
+  verification: () => '#/operate/inbox',
+  outcome: (id) => `#/operate/outcomes/${encodeURIComponent(id)}`,
   question: () => '#/operate/inbox',
 };
 const SEAT_LABEL = { reported: 'Reported', dissent: 'Dissent', waiting: 'Waiting' } as const;
@@ -112,33 +130,38 @@ function TodayHeader({ view, page }: { view: TodayView; page: boolean }) {
   );
 }
 
-function KindMark({ kind }: { kind: TodayRowKind }) {
+function KindMark({ kind }: { kind: TodayRowKind | 'current' }) {
   return <span className="pc-operate-today__kind-mark" data-kind={kind} aria-hidden="true" />;
 }
 
-function DecisionCard({ decision }: { decision: TodayDecision }) {
+function DecisionCard({ decision, next }: { decision: TodayDecision; next?: ReactNode }) {
   return (
-    <section className="pc-operate-today__card pc-operate-today__decision" aria-label="Decision">
+    <section
+      className="pc-operate-today__card pc-operate-today__decision"
+      aria-label={KIND_LABEL[decision.kind]}
+    >
       <header className="pc-operate-today__decision-head">
-        <span className="pc-operate-today__pill">
-          <KindMark kind="decision" />
-          Decision
+        <span className="pc-operate-today__pill" data-kind={decision.kind}>
+          <KindMark kind={decision.kind} />
+          {KIND_LABEL[decision.kind]}
         </span>
-        <span className="pc-operate-today__id">{decision.id}</span>
+        {decision.id ? <span className="pc-operate-today__id">{decision.id}</span> : null}
         {decision.owner ? (
-          <span className="pc-operate-today__raised">Owner · {decision.owner}</span>
+          <span className="pc-operate-today__owner-line">Owner · {decision.owner}</span>
         ) : null}
       </header>
       <div className="pc-operate-today__decision-body">
         <h2>{decision.title}</h2>
-        <dl className="pc-operate-today__tiles">
-          {decision.tiles.map((tile) => (
-            <div key={tile.label} className="pc-operate-today__tile" data-tone={tile.tone}>
-              <dt>{tile.label}</dt>
-              <dd>{tile.value}</dd>
-            </div>
-          ))}
-        </dl>
+        {decision.tiles.length ? (
+          <dl className="pc-operate-today__tiles">
+            {decision.tiles.map((tile) => (
+              <div key={tile.label} className="pc-operate-today__tile" data-tone={tile.tone}>
+                <dt>{tile.label}</dt>
+                <dd>{tile.value}</dd>
+              </div>
+            ))}
+          </dl>
+        ) : null}
         {decision.facts.length ? (
           <dl className="pc-operate-today__brief">
             {decision.facts.map((fact) => (
@@ -152,8 +175,12 @@ function DecisionCard({ decision }: { decision: TodayDecision }) {
       </div>
       <footer className="pc-operate-today__next">
         <span className="pc-operate-today__label">Next safe step</span>
-        <code>{TODAY_COMMAND}</code>
-        <CommandButton label="Copy command" primary />
+        {next ?? (
+          <>
+            <code>{TODAY_COMMAND}</code>
+            <CommandButton label="Copy command" primary />
+          </>
+        )}
       </footer>
     </section>
   );
@@ -170,9 +197,7 @@ function WaitingOnYou({
 }) {
   const [kind, setKind] = useState<'all' | TodayRowKind>('all');
   const tap = useTapSelectWith((row: TodayRow) => onSelect(row.key));
-  const kinds = (['decision', 'action', 'question'] as const).filter((entry) =>
-    rows.some((row) => row.kind === entry),
-  );
+  const kinds = KIND_ORDER.filter((entry) => rows.some((row) => row.kind === entry));
   const shown = kind === 'all' ? rows : rows.filter((row) => row.kind === kind);
   return (
     <section
@@ -287,14 +312,15 @@ function EvidenceCard({ evidence }: { evidence: readonly TodayEvidence[] }) {
         {evidence.map((entry) => (
           <li key={entry.key} className="pc-operate-today__evidence-row" data-state={entry.state}>
             <span className="pc-operate-today__evidence-title">{entry.title}</span>
-            <span className="pc-operate-today__evidence-state">
-              {entry.state === 'verified' ? (
-                <PcIcon name="check" size={13} />
-              ) : (
-                <span className="pc-operate-today__diamond" aria-hidden="true" />
-              )}
-              {entry.note}
-            </span>
+            {entry.note ? (
+              <span className="pc-operate-today__evidence-state">
+                {entry.state === 'verified' ? <PcIcon name="check" size={13} /> : null}
+                {entry.state === 'unproven' ? (
+                  <span className="pc-operate-today__diamond" aria-hidden="true" />
+                ) : null}
+                {entry.note}
+              </span>
+            ) : null}
           </li>
         ))}
       </ul>
@@ -307,10 +333,14 @@ export function TodayLayout({
   view,
   places,
   inboxCount,
+  next,
+  notices,
 }: {
   view: TodayView;
   places: boolean;
   inboxCount?: number;
+  next?: ReactNode;
+  notices?: ReactNode;
 }) {
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
   const selected = view.rows.find((row) => row.key === selectedKey);
@@ -318,12 +348,13 @@ export function TodayLayout({
     <div className="pc-operate-today">
       {places ? <PlaceTabs inboxCount={inboxCount} /> : null}
       <TodayHeader view={view} page={places} />
-      <div className="pc-operate-today__main">
-        {view.decision ? <DecisionCard decision={view.decision} /> : null}
+      {notices}
+      <section className="pc-operate-today__main" aria-label="Today decision workspace">
+        {view.decision ? <DecisionCard decision={view.decision} next={next} /> : null}
         {view.rows.length ? (
           <WaitingOnYou rows={view.rows} selectedKey={selectedKey} onSelect={setSelectedKey} />
         ) : null}
-      </div>
+      </section>
       <div className="pc-operate-today__side">
         {view.seats.length ? <SeatsCard seats={view.seats} /> : null}
         {view.evidence.length ? <EvidenceCard evidence={view.evidence} /> : null}

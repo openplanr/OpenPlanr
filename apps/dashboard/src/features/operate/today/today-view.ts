@@ -1,6 +1,14 @@
+import type { OperateTodaySurfaceModel } from './today-model.js';
+
 /** Presentation model for Operate Today, built from whichever Operate source the page has. */
 
-export type TodayRowKind = 'decision' | 'action' | 'question';
+export type TodayRowKind =
+  | 'decision'
+  | 'approval'
+  | 'action'
+  | 'verification'
+  | 'outcome'
+  | 'question';
 export type TodayRow = Readonly<{
   key: string;
   kind: TodayRowKind;
@@ -13,12 +21,13 @@ export type TodaySeat = Readonly<{ name: string; focus: string | null; state: To
 export type TodayEvidence = Readonly<{
   key: string;
   title: string;
-  state: 'verified' | 'unproven';
+  state: 'verified' | 'unproven' | 'reference';
   note: string;
 }>;
 export type TodayFact = Readonly<{ label: string; value: string; muted?: boolean }>;
 export type TodayTile = Readonly<{ label: string; value: string; tone?: 'warning' }>;
 export type TodayDecision = Readonly<{
+  kind: TodayRowKind | 'current';
   id: string;
   title: string;
   owner: string | null;
@@ -78,11 +87,13 @@ function recorded(value: string): string | null {
   return READER_PLACEHOLDERS.has(trimmed.toLowerCase()) ? null : trimmed;
 }
 
-function dayLabel(value: string): string | null {
+/** "Sat, 25 Oct"; a date without a time is read in UTC so the browser's time zone cannot move it. */
+export function dayLabel(value: string): string | null {
   const date = new Date(value);
   if (Number.isNaN(date.valueOf())) return null;
+  const timeZone = /^\d{4}-\d{2}-\d{2}$/u.test(value.trim()) ? 'UTC' : undefined;
   const part = (options: Intl.DateTimeFormatOptions) =>
-    new Intl.DateTimeFormat('en-US', options).format(date);
+    new Intl.DateTimeFormat('en-US', { ...options, timeZone }).format(date);
   return `${part({ weekday: 'short' })}, ${part({ day: 'numeric' })} ${part({ month: 'short' })}`;
 }
 
@@ -131,15 +142,15 @@ export function todayViewFromLocalReview(item: LocalReviewInput): TodayView {
   ].filter(Boolean);
   const seatLine = seats.length ? `${reported} of ${seats.length} seats reported.` : '';
   const summary = `${seatLine}${waitingSentence(waiting, item.actions.length + item.gaps.length)}`;
+  const confidence = first ? recorded(first.confidence) : null;
   const decision: TodayDecision | null = first
     ? {
+        kind: 'decision',
         id: first.id,
         title: first.title,
         owner: recorded(first.owner),
         tiles: [
-          ...(recorded(first.confidence)
-            ? [{ label: 'Confidence', value: recorded(first.confidence) ?? '' }]
-            : []),
+          ...(confidence ? [{ label: 'Confidence', value: confidence }] : []),
           {
             label: 'Evidence gaps',
             value: String(item.gaps.length),
@@ -206,6 +217,131 @@ export function todayViewFromLocalReview(item: LocalReviewInput): TodayView {
         title: entry.title,
         state: 'unproven' as const,
         note: 'Not proven yet',
+      })),
+    ],
+  };
+}
+
+type Attention = OperateTodaySurfaceModel['attention'][number];
+
+const ATTENTION_ROW_KIND: Record<Attention['kind'], TodayRowKind> = {
+  decision: 'decision',
+  approval: 'approval',
+  action: 'action',
+  verification: 'verification',
+  outcome: 'outcome',
+  uncertainty: 'question',
+};
+
+const SITUATION: Record<TodayRowKind, readonly [string, (count: number) => string]> = {
+  decision: ['One decision needs you', (n) => `${n} decisions need you`],
+  approval: ['One approval waits for you', (n) => `${n} approvals wait for you`],
+  action: ['One action is waiting', (n) => `${n} actions are waiting`],
+  verification: ['One result needs checking', (n) => `${n} results need checking`],
+  outcome: ['One outcome needs review', (n) => `${n} outcomes need review`],
+  question: ['One open question', (n) => `${n} open questions`],
+};
+
+/** Page title for the gateway's attention list; a mixed list never names one kind. */
+export function attentionSituation(kinds: readonly Attention['kind'][]): string | null {
+  const rowKinds = new Set(kinds.map((kind) => ATTENTION_ROW_KIND[kind]));
+  const [only] = rowKinds;
+  if (!only) return null;
+  if (rowKinds.size > 1) return `${kinds.length} items need you`;
+  const [one, many] = SITUATION[only];
+  return kinds.length === 1 ? one : many(kinds.length);
+}
+
+const METRIC_CHANGE = {
+  added: 'is now available.',
+  removed: 'is no longer available.',
+  changed: 'has changed.',
+  stale: 'may be out of date.',
+  conflict: 'needs review.',
+} as const;
+
+function readableStatus(value: string): string {
+  return value
+    .split(/[-_]/u)
+    .filter(Boolean)
+    .map((part) => `${part.slice(0, 1).toUpperCase()}${part.slice(1)}`)
+    .join(' ');
+}
+
+function metricValue(value: number | null, unit: string | null): string {
+  if (value === null) return 'Not observed';
+  return unit ? `${value} ${unit}` : String(value);
+}
+
+function materialChange(model: OperateTodaySurfaceModel): string {
+  const metric = model.domainMetrics[0];
+  if (metric) {
+    const metricTitle = metric.title ?? 'A key signal';
+    if (metric.change) return `${metricTitle} ${METRIC_CHANGE[metric.change.kind]}`;
+    const value = metric.value === null ? null : String(metric.value);
+    return value
+      ? `${metricTitle} is currently ${value}${metric.unit ? ` ${metric.unit}` : ''}.`
+      : `${metricTitle} is current.`;
+  }
+  return model.priorityAttention?.whyNow ?? 'A fuller update is not available yet.';
+}
+
+function fact(label: string, value: string | null | undefined): TodayFact[] {
+  return value?.trim() ? [{ label, value: value.trim() }] : [];
+}
+
+/** Today from the gateway's verified surface; the protocol carries no owner, confidence or seats. */
+export function todayViewFromSurface(model: OperateTodaySurfaceModel): TodayView {
+  const attention = model.priorityAttention;
+  const focus = model.activeCycle.focus[0] ?? null;
+  const action = model.continuation
+    ? (model.actions.find((entry) => entry.actionId === model.continuation?.subjectId) ?? null)
+    : null;
+  const refs = [...new Set(model.attention.flatMap((entry) => entry.evidenceRefIds))];
+  return {
+    date: dayLabel(model.surface.generatedAt),
+    cycleId: model.activeCycle.cycleId,
+    cycleHref: model.activeCycle.deepLink,
+    title:
+      attentionSituation(model.attention.map((entry) => entry.kind)) ??
+      focus ??
+      'Continue this work',
+    summary: materialChange(model),
+    decision: {
+      kind: attention ? ATTENTION_ROW_KIND[attention.kind] : 'current',
+      id: attention?.subjectId ?? model.continuation?.subjectId ?? '',
+      title: attention?.title ?? 'Continue this work',
+      owner: null,
+      tiles: [],
+      facts: [
+        ...fact('Why now', attention?.whyNow),
+        ...fact('Expected result', action?.expectedResult),
+        ...fact('If we wait', attention?.consequence),
+      ],
+    },
+    rows: model.attention.map((entry) => ({
+      key: entry.attentionId,
+      kind: ATTENTION_ROW_KIND[entry.kind],
+      id: entry.subjectId,
+      title: entry.title,
+      owner: null,
+    })),
+    seats: [],
+    evidence: [
+      ...model.domainMetrics.map((metric) => ({
+        key: `metric:${metric.metricId}`,
+        title: `${metric.title ?? 'Key signal'} · ${metricValue(metric.value, metric.unit)}`,
+        state: 'reference' as const,
+        note:
+          readableStatus(metric.freshness) === readableStatus(metric.state)
+            ? `${readableStatus(metric.freshness)} data`
+            : `${readableStatus(metric.freshness)} data · ${readableStatus(metric.state)}`,
+      })),
+      ...refs.map((ref) => ({
+        key: `ref:${ref}`,
+        title: ref,
+        state: 'reference' as const,
+        note: '',
       })),
     ],
   };

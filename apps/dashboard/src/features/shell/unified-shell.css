@@ -1311,36 +1311,8 @@ a {
   }
 }
 
-/* Operate Today spends its visual emphasis on the canonical lifecycle spine. */
 .op-today {
   width: min(var(--op-layout-content-width), 100%);
-}
-
-.op-today__header {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: var(--op-space-8);
-  align-items: end;
-  padding-bottom: var(--op-space-6);
-  border-bottom: 1px solid var(--op-divider);
-}
-
-.op-today__header > div {
-  min-width: 0;
-  max-width: var(--op-measure-copy);
-}
-
-.op-today__header h1 {
-  min-width: 0;
-  max-width: 20ch;
-  margin: var(--op-space-2) 0;
-  font-size: var(--op-type-page-size);
-  line-height: var(--op-type-page-leading);
-  overflow-wrap: anywhere;
-}
-
-.op-today__header p:last-child {
-  margin-bottom: 0;
 }
 
 .op-today__status {
@@ -1357,9 +1329,7 @@ a {
   border-inline-start: 1px solid var(--op-divider);
 }
 
-.op-today__status dt,
-.op-today-focus__brief dt,
-.op-today-evidence dt {
+.op-today__status dt {
   color: var(--op-muted);
   font-size: var(--op-type-eyebrow-size);
   font-weight: var(--op-type-eyebrow-weight);
@@ -1368,9 +1338,7 @@ a {
   text-transform: uppercase;
 }
 
-.op-today__status dd,
-.op-today-focus__brief dd,
-.op-today-evidence dd {
+.op-today__status dd {
   margin: var(--op-space-1) 0 0;
   overflow-wrap: anywhere;
 }
@@ -1381,8 +1349,6 @@ a {
   line-height: var(--op-type-technical-leading);
 }
 
-.op-today__resume,
-.op-today__notice,
 .op-today__context-note {
   max-width: none;
   padding: var(--op-space-3) var(--op-space-4);
@@ -1392,377 +1358,13 @@ a {
   color: var(--op-ink);
 }
 
-.op-today__notice,
 .op-today__context-note {
   border-inline-start-color: var(--op-attention);
 }
 
-.op-today__desk-layout {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(280px, 0.36fr);
-  gap: var(--op-space-10);
-  align-items: start;
-}
-
-.op-today__work {
-  display: grid;
-  min-width: 0;
-  gap: var(--op-space-8);
-}
-
-.op-today-focus {
-  min-width: 0;
-  overflow: hidden;
-  border: 1px solid var(--op-divider);
-  border-inline-start: var(--op-space-1) solid var(--op-control);
-  border-radius: var(--op-radius-surface);
-  background: var(--op-surface);
-}
-
-.op-today-focus__custody {
-  display: flex;
-  min-width: 0;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--op-space-4);
-  padding: var(--op-space-5) var(--op-space-6) 0;
-}
-
-.op-today-focus__custody code,
-.op-today-focus__relationship code,
-.op-today-attention code,
-.op-today-evidence code {
-  color: var(--op-muted);
-  font-family: var(--op-font-technical);
-  font-size: var(--op-type-technical-size);
-  line-height: var(--op-type-technical-leading);
-  overflow-wrap: anywhere;
-}
-
-.op-today-focus__question {
-  min-width: 0;
-  padding: var(--op-space-4) var(--op-space-6) var(--op-space-6);
-}
-
-.op-today-focus__question h2 {
-  min-width: 0;
-  max-width: 28ch;
-  margin: 0 0 var(--op-space-2);
-  font-size: var(--op-type-page-size);
-  line-height: var(--op-type-page-leading);
-  overflow-wrap: anywhere;
-}
-
-.op-today-focus__question p,
-.op-today-focus__relationship {
-  margin-bottom: 0;
-}
-
-.op-today-focus__brief {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  margin: 0;
-  border-block: 1px solid var(--op-divider);
-}
-
-.op-today-focus__brief > div {
-  min-width: 0;
-  padding: var(--op-space-5) var(--op-space-6);
-}
-
-.op-today-focus__brief > div + div {
-  border-inline-start: 1px solid var(--op-divider);
-}
-
-.op-today-focus__brief dd {
-  color: var(--op-ink);
-  font-size: var(--op-type-section-size);
-  line-height: var(--op-type-section-leading);
-}
-
-.op-today-focus__relationship {
-  max-width: none;
-  padding: var(--op-space-4) var(--op-space-6);
-  border-bottom: 1px solid var(--op-divider);
-  background: var(--op-canvas);
-}
-
-.op-today-focus__relationship a {
-  display: inline-flex;
-  min-width: var(--op-density-control);
-  min-height: var(--op-density-control);
-  align-items: center;
-  justify-content: center;
-  padding-inline: var(--op-space-2);
-  border-radius: var(--op-radius-control);
-  color: var(--op-control);
-  font-weight: var(--op-type-control-weight);
-}
-
-.op-today-focus__actions {
-  display: flex;
-  min-width: 0;
-  align-items: flex-start;
-  gap: var(--op-space-3);
-  padding: var(--op-space-4) var(--op-space-6);
-}
-
-.op-today-focus__actions > small {
-  margin-inline-start: auto;
-  align-self: center;
-  color: var(--op-muted);
-  font-family: var(--op-font-technical);
-  font-size: var(--op-type-eyebrow-size);
-  line-height: var(--op-type-eyebrow-leading);
-  text-align: end;
-}
-
-.op-today-focus__evidence-link {
-  display: inline-flex;
-  min-height: var(--op-density-control);
-  align-items: center;
-  padding: 0 var(--op-space-4);
-  border: 1px solid var(--op-divider);
-  border-radius: var(--op-radius-control);
-  font-size: var(--op-type-control-size);
-  font-weight: var(--op-type-control-weight);
-  line-height: var(--op-type-control-leading);
-  text-decoration: none;
-}
-
-.op-today-attention {
-  padding-top: var(--op-space-5);
-  border-top: 1px solid var(--op-divider);
-}
-
-.op-today-attention__heading {
-  display: flex;
-  align-items: end;
-  justify-content: space-between;
-  gap: var(--op-space-5);
-}
-
-.op-today-attention__heading > span {
-  color: var(--op-muted);
-  font-family: var(--op-font-technical);
-  font-size: var(--op-type-technical-size);
-}
-
-.op-today-attention ol,
-.op-today-evidence__references {
-  padding: 0;
-  margin: var(--op-space-4) 0 0;
-  list-style: none;
-}
-
-.op-today-attention li {
-  display: grid;
-  min-width: 0;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: var(--op-space-5);
-  padding: var(--op-space-3) 0;
-  border-bottom: 1px solid var(--op-divider);
-}
-
-.op-today-attention li > div {
-  display: grid;
-  min-width: 0;
-  grid-template-columns: auto minmax(0, 1fr);
-  gap: var(--op-space-1) var(--op-space-3);
-}
-
-.op-today-attention li span {
-  color: var(--op-control);
-  font-size: var(--op-type-eyebrow-size);
-  font-weight: var(--op-type-eyebrow-weight);
-  letter-spacing: var(--op-tracking-eyebrow);
-  line-height: var(--op-type-eyebrow-leading);
-  text-transform: uppercase;
-}
-
-.op-today-attention li strong {
-  min-width: 0;
-  overflow-wrap: anywhere;
-}
-
-.op-today-attention li small {
-  grid-column: 2;
-  color: var(--op-muted);
-}
-
-.op-today-evidence {
-  min-width: 0;
-  padding-inline-start: var(--op-space-6);
-  border-inline-start: 1px solid var(--op-divider);
-}
-
-.op-today-evidence > h2 {
-  margin-top: 0;
-}
-
-.op-today-evidence--compact {
-  display: none;
-}
-
-.op-today-evidence__summary {
-  display: flex;
-  gap: var(--op-space-3);
-  padding-bottom: var(--op-space-4);
-  color: var(--op-muted);
-  font-family: var(--op-font-technical);
-  font-size: var(--op-type-eyebrow-size);
-  line-height: var(--op-type-eyebrow-leading);
-}
-
-.op-today-evidence section {
-  padding: var(--op-space-5) 0;
-  border-top: 1px solid var(--op-divider);
-}
-
-.op-today-evidence section > p:last-child {
-  margin-bottom: 0;
-}
-
-.op-today-evidence__metrics,
-.op-today-evidence__custody {
-  display: grid;
-  gap: var(--op-space-3);
-  margin: var(--op-space-3) 0 0;
-}
-
-.op-today-evidence__metrics > div,
-.op-today-evidence__custody > div {
-  min-width: 0;
-}
-
-.op-today-evidence__metrics dd {
-  display: grid;
-  gap: var(--op-space-1);
-  color: var(--op-ink);
-  font-size: var(--op-type-section-size);
-  line-height: var(--op-type-section-leading);
-}
-
-.op-today-evidence__metrics small,
-.op-today-evidence__references small {
-  display: block;
-  color: var(--op-muted);
-  font-size: var(--op-type-eyebrow-size);
-  line-height: var(--op-type-eyebrow-leading);
-}
-
-.op-today-evidence__references li {
-  padding: var(--op-space-2) 0;
-}
-
-.op-today-evidence__custody time {
-  font-family: var(--op-font-technical);
-  font-size: var(--op-type-technical-size);
-  line-height: var(--op-type-technical-leading);
-  overflow-wrap: anywhere;
-}
-
-@media (max-width: 1120px) {
-  .op-today__desk-layout {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
-  .op-today-evidence--wide {
-    display: none;
-  }
-
-  .op-today-evidence--compact {
-    display: block;
-    padding: 0;
-    border: 1px solid var(--op-divider);
-    border-radius: var(--op-radius-surface);
-    background: var(--op-surface);
-  }
-
-  .op-today-evidence--compact > summary {
-    display: flex;
-    min-height: var(--op-density-control);
-    align-items: center;
-    padding: 0 var(--op-space-4);
-    cursor: pointer;
-    font-size: var(--op-type-control-size);
-    font-weight: var(--op-type-control-weight);
-    line-height: var(--op-type-control-leading);
-  }
-
-  .op-today-evidence__body {
-    padding: 0 var(--op-space-5) var(--op-space-5);
-  }
-}
-
 @media (max-width: 800px) {
-  .op-today__header,
-  .op-today-attention__heading {
-    grid-template-columns: minmax(0, 1fr);
-    flex-direction: column;
-    align-items: flex-start;
-  }
-
   .op-today__status {
     width: 100%;
-  }
-
-  .op-today-focus__brief {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
-  .op-today-focus__brief > div + div {
-    border-inline-start: 0;
-    border-top: 1px solid var(--op-divider);
-  }
-
-  .op-today-focus__actions {
-    flex-wrap: wrap;
-  }
-
-  .op-today-focus__actions > small {
-    width: 100%;
-    margin-inline-start: 0;
-    text-align: start;
-  }
-}
-
-@media (max-width: 480px) {
-  .op-today__header h1 {
-    max-width: none;
-  }
-
-  .op-today-focus__custody,
-  .op-today-focus__actions,
-  .op-today-focus__question,
-  .op-today-focus__brief > div,
-  .op-today-focus__relationship {
-    padding-inline: var(--op-space-4);
-  }
-
-  .op-today-focus__custody,
-  .op-today-focus__actions,
-  .op-today-attention li {
-    grid-template-columns: minmax(0, 1fr);
-    flex-direction: column;
-  }
-
-  .op-today-focus__evidence-link,
-  .op-today-focus__actions .op-governed-action {
-    width: 100%;
-  }
-
-  .op-today-attention li code {
-    justify-self: start;
-  }
-}
-
-@media (forced-colors: active) {
-  .op-today-focus,
-  .op-today-evidence--compact,
-  .op-today-focus__evidence-link {
-    border-color: ButtonText;
-    forced-color-adjust: auto;
   }
 }
 

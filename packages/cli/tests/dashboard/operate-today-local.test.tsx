@@ -3,7 +3,10 @@
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { LocalOperateReviews } from '../../../../apps/dashboard/src/features/operate/local-reviews/LocalOperateReviews.js';
-import { todayViewFromLocalReview } from '../../../../apps/dashboard/src/features/operate/today/today-view.js';
+import {
+  dayLabel,
+  todayViewFromLocalReview,
+} from '../../../../apps/dashboard/src/features/operate/today/today-view.js';
 
 const decision = {
   id: 'D1',
@@ -71,6 +74,22 @@ afterEach(() => {
 });
 
 describe('Operate Today from a local review', () => {
+  it('labels a date without a time by its calendar day in every time zone', () => {
+    const zone = process.env.TZ;
+    try {
+      for (const tz of ['Pacific/Honolulu', 'UTC', 'Pacific/Kiritimati']) {
+        process.env.TZ = tz;
+        expect(dayLabel('2026-10-25')).toBe('Sun, 25 Oct');
+      }
+      process.env.TZ = 'UTC';
+      expect(dayLabel('2026-10-25T09:00:00.000Z')).toBe('Sun, 25 Oct');
+      expect(dayLabel('not a date')).toBeNull();
+    } finally {
+      if (zone === undefined) delete process.env.TZ;
+      else process.env.TZ = zone;
+    }
+  });
+
   it('leaves out the placeholders the review reader writes for missing fields', () => {
     const view = todayViewFromLocalReview({
       ...review,

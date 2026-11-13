@@ -13,10 +13,15 @@ import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { DashboardProviders } from '../../../../apps/dashboard/src/app/providers.js';
 import { DecisionFocus } from '../../../../apps/dashboard/src/features/operate/today/DecisionFocus.js';
 import { TodayPage } from '../../../../apps/dashboard/src/features/operate/today/TodayPage.js';
+import { TodayLayout } from '../../../../apps/dashboard/src/features/operate/today/TodayParts.js';
 import {
   createOperateTodayDisplayValidator,
   resolveOperateTodayModel,
 } from '../../../../apps/dashboard/src/features/operate/today/today-model.js';
+import {
+  attentionSituation,
+  todayViewFromSurface,
+} from '../../../../apps/dashboard/src/features/operate/today/today-view.js';
 import { UnifiedShell } from '../../../../apps/dashboard/src/features/shell/UnifiedShell.js';
 import {
   type DashboardProductState,
@@ -386,5 +391,124 @@ describe('T-037 verified Today display consumption', () => {
       ).violations,
     ).toEqual([]);
     dom.window.close();
+  });
+});
+
+describe('Operate Today on the gateway path', () => {
+  const KINDS = [
+    'decision',
+    'approval',
+    'action',
+    'verification',
+    'outcome',
+    'uncertainty',
+  ] as const;
+  const LABELS = {
+    decision: 'Decision',
+    approval: 'Approval',
+    action: 'Action',
+    verification: 'To verify',
+    outcome: 'Outcome',
+    uncertainty: 'Question',
+  } as const;
+
+  function surfaceModel() {
+    const model = resolveOperateTodayModel(
+      { current: productState(fixture.binding, fixture.display) },
+      fixture.binding,
+    );
+    if (model?.kind !== 'surface') throw new Error('Expected verified Today model.');
+    return model;
+  }
+
+  function attentionOf(kind: (typeof KINDS)[number], index: number) {
+    return {
+      attentionId: `attention_${kind}`,
+      kind,
+      subjectId: `${kind}_${index + 1}`,
+      priority: index + 1,
+      title: `The ${kind} item`,
+      whyNow: `Why the ${kind} item matters now.`,
+      consequence: `What waiting on the ${kind} item costs.`,
+      state: 'available',
+      dueAt: null,
+      evidenceRefIds: [],
+    };
+  }
+
+  function rendered(attention: ReturnType<typeof attentionOf>[]) {
+    const model = surfaceModel();
+    const view = todayViewFromSurface({
+      ...model,
+      attention,
+      priorityAttention: attention[0] ?? null,
+    });
+    const html = renderToStaticMarkup(<TodayLayout view={view} places={false} />);
+    return new JSDOM(`<!doctype html><body>${html}</body>`).window.document;
+  }
+
+  it('titles the page by the kind of item waiting and never claims a decision for another kind', () => {
+    const titles = {
+      decision: ['One decision needs you', '2 decisions need you'],
+      approval: ['One approval waits for you', '2 approvals wait for you'],
+      action: ['One action is waiting', '2 actions are waiting'],
+      verification: ['One result needs checking', '2 results need checking'],
+      outcome: ['One outcome needs review', '2 outcomes need review'],
+      uncertainty: ['One open question', '2 open questions'],
+    } as const;
+    for (const kind of KINDS) {
+      expect(attentionSituation([kind])).toBe(titles[kind][0]);
+      expect(attentionSituation([kind, kind])).toBe(titles[kind][1]);
+      if (kind !== 'decision') expect(titles[kind].join(' ')).not.toMatch(/decision/iu);
+    }
+    expect(attentionSituation(['decision', 'verification'])).toBe('2 items need you');
+    expect(attentionSituation([])).toBeNull();
+    const document = rendered([attentionOf('verification', 0)]);
+    expect(document.querySelector('.pc-operate-today__title')?.textContent).toBe(
+      'One result needs checking',
+    );
+  });
+
+  it('renders every attention kind as a row and as the decision card pill', () => {
+    const attention = KINDS.map(attentionOf);
+    const document = rendered(attention);
+    const rows = [...document.querySelectorAll('.pc-operate-today__row-link')];
+    expect(rows.map((row) => row.querySelector('.pc-operate-today__kind')?.textContent)).toEqual(
+      KINDS.map((kind) => LABELS[kind]),
+    );
+    expect(
+      rows.map((row) => row.querySelector('.pc-operate-today__row-title')?.textContent),
+    ).toEqual(KINDS.map((kind) => `The ${kind} item`));
+    expect(document.querySelector('.pc-operate-today__title')?.textContent).toBe(
+      '6 items need you',
+    );
+    for (const [index, kind] of KINDS.entries()) {
+      const single = rendered([attention[index], ...attention.filter((_, at) => at !== index)]);
+      const card = single.querySelector('.pc-operate-today__decision');
+      expect(card?.querySelector('.pc-operate-today__pill')?.textContent).toBe(LABELS[kind]);
+      expect(card?.querySelector('h2')?.textContent).toBe(`The ${kind} item`);
+      expect(card?.querySelector('.pc-operate-today__id')?.textContent).toBe(
+        `${kind}_${index + 1}`,
+      );
+    }
+  });
+
+  it('keeps the cycle focus as the title and the governed control mounted when nothing is ranked', () => {
+    const document = rendered([]);
+    expect(document.querySelector('.pc-operate-today__title')?.textContent).toBe(
+      fixture.publicText,
+    );
+    expect(document.querySelector('.pc-operate-today__pill')?.textContent).toBe('Current work');
+    expect(document.querySelector('.pc-operate-today__waiting')).toBeNull();
+    const html = renderToStaticMarkup(
+      <TodayPage
+        currentBinding={fixture.binding}
+        sources={{ current: productState(fixture.binding, fixture.display) }}
+      />,
+    );
+    const page = new JSDOM(`<!doctype html><body>${html}</body>`).window.document;
+    const next = page.querySelector('.pc-operate-today__next');
+    expect(next?.querySelector('.op-governed-button, [data-review-navigation]')).not.toBeNull();
+    expect(page.querySelector('.op-cycle-spine')).toBeNull();
   });
 });

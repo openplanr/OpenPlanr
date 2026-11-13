@@ -464,16 +464,16 @@ test.describe('dashboard real-browser quality', () => {
             await attachScreenshot(page, `${kind}-${theme}.png`, testInfo.attach.bind(testInfo));
           }
           if (kind === 'operate.today' && width === 1440) {
-            const focus = workspace.locator('.op-today-focus');
-            const evidence = workspace.locator('.op-today-evidence--wide');
+            const focus = workspace.locator('.pc-operate-today__decision');
+            const evidence = workspace.locator('.pc-operate-today__evidence');
             const [focusBox, evidenceBox] = await Promise.all([
               focus.boundingBox(),
               evidence.boundingBox(),
             ]);
-            if (!focusBox || !evidenceBox) throw new Error('Missing focus or evidence desk.');
+            if (!focusBox || !evidenceBox) throw new Error('Missing decision or evidence card.');
             expect(evidenceBox.x - focusBox.x - focusBox.width).toBeCloseTo(24, 0);
-            await expect(focus).toHaveCSS('border-radius', '14px');
-            await expect(evidence).toHaveCSS('border-radius', '14px');
+            await expect(focus).toHaveCSS('border-radius', '12px');
+            await expect(evidence).toHaveCSS('border-radius', '12px');
           }
         }
       }
@@ -3475,15 +3475,12 @@ test.describe('dashboard real-browser quality', () => {
     }
   });
 
-  test('keeps the minimum-width Today heading and current lifecycle state clear of bottom navigation', async ({
-    page,
-  }) => {
+  test('keeps the minimum-width Today heading clear of bottom navigation', async ({ page }) => {
     await page.setViewportSize({ width: 320, height: 568 });
     await openFixture(page, '#/operate/today');
 
     const navigation = page.getByRole('navigation', { name: 'Mobile Operate navigation' });
     const title = page.getByRole('heading', { name: 'Confirm appointment reminders are arriving' });
-    const currentStage = page.locator('.op-cycle-spine li[aria-current="step"]');
     const [navigationBox, titleBox] = await Promise.all([
       navigation.boundingBox(),
       title.boundingBox(),
@@ -3497,22 +3494,7 @@ test.describe('dashboard real-browser quality', () => {
     expect((titleBox?.y ?? Number.POSITIVE_INFINITY) + (titleBox?.height ?? 0)).toBeLessThanOrEqual(
       navigationBox?.y ?? Number.NEGATIVE_INFINITY,
     );
-
-    await currentStage.scrollIntoViewIfNeeded();
-    const [headerBox, currentStageBox, currentNavigationBox] = await Promise.all([
-      page.locator('.pc-topbar').boundingBox(),
-      currentStage.boundingBox(),
-      navigation.boundingBox(),
-    ]);
-    expect(headerBox).not.toBeNull();
-    expect(currentStageBox).not.toBeNull();
-    expect(currentNavigationBox).not.toBeNull();
-    expect(currentStageBox?.y ?? Number.NEGATIVE_INFINITY).toBeGreaterThanOrEqual(
-      (headerBox?.y ?? 0) + (headerBox?.height ?? 0),
-    );
-    expect(
-      (currentStageBox?.y ?? Number.POSITIVE_INFINITY) + (currentStageBox?.height ?? 0),
-    ).toBeLessThanOrEqual(currentNavigationBox?.y ?? Number.NEGATIVE_INFINITY);
+    await expect(page.locator('.op-cycle-spine')).toHaveCount(0);
   });
 
   for (const viewport of VIEWPORTS) {

@@ -50,6 +50,11 @@
   letter-spacing: 0.14em;
   text-transform: uppercase;
 }
+.pc-operate .pc-operate-today .pc-operate-today__eyebrow a {
+  display: inline-block;
+  padding-block: 4.5px;
+  margin-block: -4.5px;
+}
 .pc-operate .pc-operate-today .pc-operate-today__eyebrow a:hover {
   text-decoration: underline;
 }
@@ -152,6 +157,19 @@
 .pc-operate .pc-operate-today .pc-operate-today__kind-mark[data-kind="question"] {
   border-color: var(--op-warning);
 }
+.pc-operate .pc-operate-today .pc-operate-today__kind-mark[data-kind="approval"] {
+  border-color: var(--op-addressed);
+  border-radius: 50%;
+}
+.pc-operate .pc-operate-today .pc-operate-today__kind-mark[data-kind="verification"] {
+  border-color: var(--op-info);
+}
+.pc-operate .pc-operate-today .pc-operate-today__kind-mark[data-kind="outcome"] {
+  border-color: var(--op-verified);
+}
+.pc-operate .pc-operate-today .pc-operate-today__kind-mark[data-kind="current"] {
+  border-color: var(--op-line3);
+}
 
 /* Decision */
 .pc-operate .pc-operate-today .pc-operate-today__pill {
@@ -167,7 +185,10 @@
   color: var(--op-heading);
   font: 400 12px / 16px var(--op-font-ui);
 }
-.pc-operate .pc-operate-today .pc-operate-today__raised {
+.pc-operate .pc-operate-today .pc-operate-today__pill:not([data-kind="decision"]) {
+  border-color: var(--op-line3);
+}
+.pc-operate .pc-operate-today .pc-operate-today__owner-line {
   min-width: 0;
   margin-left: auto;
   overflow: hidden;
@@ -258,6 +279,48 @@
   font: 500 12px / 15px var(--op-font-technical);
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.pc-operate .pc-operate-today .pc-operate-today__next:has(.pc-operate-today__relationship) {
+  flex-wrap: wrap;
+}
+.pc-operate .pc-operate-today .pc-operate-today__next-control {
+  display: flex;
+  flex: 1;
+  justify-content: flex-end;
+  min-width: 0;
+}
+.pc-operate .pc-operate-today .pc-operate-today__next-control .op-governed-action {
+  display: flex;
+  flex-direction: row-reverse;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+.pc-operate .pc-operate-today .pc-operate-today__next-control .op-governed-action__trigger {
+  flex: none;
+}
+.pc-operate .pc-operate-today .pc-operate-today__next-control .op-governed-button {
+  min-height: 40px;
+}
+.pc-operate .pc-operate-today .pc-operate-today__next-control .op-governed-reason {
+  flex: 1 1 auto;
+  min-width: 0;
+  margin: 0;
+  text-align: start;
+  color: var(--op-muted);
+  font: 400 13px / 18px var(--op-font-ui);
+}
+.pc-operate .pc-operate-today .pc-operate-today__relationship {
+  display: grid;
+  flex-basis: 100%;
+  gap: 8px;
+  color: var(--op-body);
+  font: 400 13px / 18px var(--op-font-ui);
+}
+.pc-operate .pc-operate-today .pc-operate-today__relationship a {
+  color: var(--op-accent);
+  text-decoration: underline;
 }
 
 /* Waiting on you */
@@ -481,15 +544,25 @@
   font: 500 11px / 14px var(--op-font-technical);
 }
 
-/* Below 1200 the page stacks into one column; the narrow layout is not drawn yet. */
+/* Below 1200 the page stacks into one column. */
 @media (max-width: 1199px) {
   .pc-operate .pc-operate-today :is(.pc-operate-today__main, .pc-operate-today__side) {
     grid-column: 1 / -1;
   }
 }
+@media (min-width: 900px) {
+  .pc-operate .pc-operate-today .pc-operate-today__next-control .op-governed-button {
+    white-space: nowrap;
+  }
+}
 @media (max-width: 899px) {
   .pc-operate .pc-operate-today {
     padding-inline: 0;
+  }
+  .pc-operate .pc-operate-today .pc-operate-today__next-control,
+  .pc-operate .pc-operate-today .pc-operate-today__next-control .op-governed-action {
+    flex-direction: column;
+    align-items: stretch;
   }
   .pc-operate .pc-operate-today .pc-operate-today__header,
   .pc-operate .pc-operate-today .pc-operate-today__next {
