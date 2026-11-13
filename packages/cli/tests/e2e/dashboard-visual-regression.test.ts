@@ -2377,6 +2377,14 @@ test.describe('dashboard real-browser quality', () => {
           0,
         );
         expect((await layoutReport(page)).horizontalOverflow).toBe(false);
+        if (width === 390) {
+          // A row selects on a phone here; the shared clearance keeps the last card above the bar.
+          await today.locator('.pc-operate-today__row-link').first().click();
+          await expect(page.locator('.pc-selection-bar')).toBeVisible();
+          await expect
+            .poll(() => overlap('.pc-operate-today__side > *', '.pc-selection-bar'))
+            .toBeLessThanOrEqual(0);
+        }
         await detail('unread');
         await open(local, theme);
         const unread = today.locator('.pc-operate-today__unread');
@@ -2454,6 +2462,21 @@ test.describe('dashboard real-browser quality', () => {
     await expect(evidence).toBeFocused();
     await page.keyboard.press('Enter');
     await expect((await listOf(evidence)).getByText('Not proven yet').first()).toBeVisible();
+
+    // Inbox item and Outcome reuse the Today layout, so they take the phone layout too.
+    for (const route of ['#/operate/inbox/D1', '#/operate/outcomes/D1']) {
+      await page.goto(fixtureUrl(route, { localOperate: '1', theme: 'dark' }));
+      await page.evaluate(() => document.fonts.ready);
+      await expect(page.locator('.pc-operate-today__next'), route).toHaveCSS('position', 'fixed');
+      expect(
+        await overlap(
+          '#main-content .pc-operate-today__side > *, #main-content .pc-local-review__footnote',
+          '.pc-operate-today__next',
+        ),
+        route,
+      ).toBeLessThanOrEqual(0);
+      expect((await layoutReport(page)).horizontalOverflow, route).toBe(false);
+    }
 
     // A selected row at 768: the shared clearance keeps the last card above the selection bar.
     await page.setViewportSize({ width: 768, height: 1024 });
