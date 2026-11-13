@@ -711,7 +711,7 @@
   }
   .pc-operate .pc-operate-today .pc-operate-today__owner-line,
   .pc-operate
-    .pc-operate-today:has(.pc-operate-today__decision)
+    .pc-operate-today:has(.pc-operate-today__next > code)
     .pc-operate-today__header
     > .pc-operate-today__command,
   .pc-operate

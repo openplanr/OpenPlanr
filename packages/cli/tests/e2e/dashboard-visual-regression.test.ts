@@ -2333,6 +2333,13 @@ test.describe('dashboard real-browser quality', () => {
         await expect(today.locator('.pc-operate-today__decision')).toBeVisible();
         await expect(next).toHaveCSS('position', 'static');
         await expect(next.locator('.op-governed-button')).toHaveCSS('height', '44px');
+        // With no copy bar, Run a review stays in the header as the way to copy the command.
+        const header = today.locator('.pc-operate-today__header');
+        await expect(header.locator('.pc-operate-today__command')).toBeVisible();
+        expect(
+          await header.evaluate((element) => element.scrollWidth <= element.clientWidth),
+          `gateway header fits at ${width}`,
+        ).toBe(true);
         await expect(today.getByRole('button', { name: 'Evidence 1', exact: true })).toBeVisible();
         expect(await overlap('.pc-operate-today__side > *', '.pc-mobile-nav')).toBeLessThanOrEqual(
           0,
