@@ -7,4 +7,4 @@ Compare planning work in status columns with optional spec swimlanes, artifact c
 
 Window long columns and page spec lanes while retaining keyboard positions, selection, scroll anchors and presentation across live updates and navigation. Copy verified status commands without executing them; explain unavailable writers and clipboard failures.
 
-Keep the visible Done expansion label as its accessible name and audit control names across shared recipes and planning views.
+Keep the visible Done expansion label as its accessible name and check control names across shared controls and planning views.
