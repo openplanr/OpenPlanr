@@ -6,6 +6,10 @@ const page = await readFile(
   new URL('../../src/features/planning/ListPage.tsx', import.meta.url),
   'utf8',
 );
+const tableParts = await readFile(
+  new URL('../../src/features/planning/ListTableParts.tsx', import.meta.url),
+  'utf8',
+);
 const columns = await readFile(
   new URL('../../src/features/planning/planning-columns.tsx', import.meta.url),
   'utf8',
@@ -18,8 +22,15 @@ test('planning list bounds mounted rows and exposes accessible pagination', () =
   assert.match(page, /current\.nodes\.push\(node\)/u);
   assert.doesNotMatch(page, /visibleRows\.filter/u);
   assert.match(page, /rows: group.nodes/u);
-  assert.match(page, /aria-label="Planning artifact pages"/u);
-  assert.match(page, /Page \{currentPage \+ 1\} of \{pageCount\}/u);
+  assert.match(
+    page,
+    /<ListPagination[^>]*total=\{appearances\.length\}[^>]*pageCount=\{pageCount\}/u,
+  );
+  assert.match(tableParts, /aria-label="Planning artifact pages"/u);
+  assert.match(
+    tableParts,
+    /aria-live="polite">\s*Showing \{total \? start \+ 1 : 0\}–\{end\} of \{total\}/u,
+  );
 });
 
 test('dependency counts are indexed once instead of filtering edges per row', () => {
@@ -32,11 +43,12 @@ test('bounded List rows retain global position and React-owned selection semanti
   assert.match(page, /rowCount=\{/u);
   assert.match(
     page,
-    /appearances.length \+ \(effectiveView.groupBy === 'none' \? 0 : grouped.length\)/u,
+    /appearances\.length \+\s*\(grouped\.length \? \(headerOffsets\.get\(grouped\.at\(-1\)\?\.key \?\? ''\) \?\? 0\) : 0\)/u,
   );
   assert.match(page, /rowPosition: \(node:/u);
   assert.match(page, /selectedIds=\{selectedSet\}/u);
   assert.match(page, /useListKeyboardWindow/u);
   assert.match(page, /useListScrollAnchor/u);
-  assert.match(page, /bulk\.skipped\.slice\(0, 20\)/u);
+  assert.match(page, /bar\.missing\s*\?\s*`\$\{bar\.missing\} selected/u);
+  assert.doesNotMatch(page, /(?:skipped|missing)\.map\(/u);
 });
