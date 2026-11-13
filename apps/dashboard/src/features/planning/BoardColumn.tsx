@@ -99,6 +99,7 @@ export function BoardColumn({
   group,
   graph,
   laneKey,
+  laneLabel,
   selectedId,
   collapsed,
   expanded,
@@ -111,6 +112,8 @@ export function BoardColumn({
   group: PlanningGroup;
   graph: PlanningModelGraph;
   laneKey: string;
+  /** Set in lanes mode so each status region is named for its lane. */
+  laneLabel: string | null;
   selectedId?: string;
   collapsed: boolean;
   expanded: boolean;
@@ -156,7 +159,7 @@ export function BoardColumn({
       data-board-cell={cell}
       data-collapsed={collapsed || undefined}
       className="pc-status-board__column"
-      aria-label={group.key}
+      aria-label={laneLabel ? `${laneLabel}, ${group.label}` : group.label}
     >
       {head === null ? null : <BoardColumnHead group={group} total={head} />}
       {collapsed ? (

@@ -278,13 +278,13 @@ describe('T-021 Planning workspace UI', () => {
     expect(boardHtml).toContain('outstanding');
     const boardDom = new JSDOM(`<!doctype html><html><body>${boardHtml}</body></html>`);
     const blockedCard = boardDom.window.document.querySelector(
-      'section[aria-label="blocked"] button',
+      'section[aria-label="Blocked"] button',
     );
     expect(blockedCard?.textContent).toContain('Bound Planning transport');
     expect(boardDom.window.document.querySelectorAll('.pc-status-board__card')).toHaveLength(3);
     expect(boardHtml).not.toContain('comparison board');
     expect(
-      boardDom.window.document.querySelector('section[aria-label="done"]')?.textContent,
+      boardDom.window.document.querySelector('section[aria-label="Done"]')?.textContent,
     ).toContain('Nothing is done.');
     boardDom.window.close();
 
@@ -863,6 +863,29 @@ describe('read-only status Board', () => {
       expect(board.getByTestId('board-inspector').textContent).not.toContain(
         '"id":"SPEC-020/T-022"',
       );
+    } finally {
+      board.close();
+    }
+  });
+
+  it('names Board column regions by status label, and by lane and status in lanes mode', () => {
+    const source = buildPremiumDashboardFixture('artboard').graph;
+    const board = boardHarness(source);
+    const names = () =>
+      [...board.container.querySelectorAll<HTMLElement>('.pc-status-board__column')].map(
+        (column) => column.getAttribute('aria-label') ?? '',
+      );
+    try {
+      const columns = names();
+      expect(columns).toContain('In progress');
+      expect(columns.some((name) => /^[a-z]+(?:-[a-z]+)*$/u.test(name))).toBe(false);
+      fireEvent.click(board.getByRole('button', { name: 'Lanes by spec' }));
+      const lanes = board.container.querySelectorAll<HTMLElement>('.pc-status-board__lane');
+      const lane = lanes[0]?.getAttribute('aria-label');
+      if (!lane) throw new Error('Expected a named lane');
+      const cells = names();
+      expect(cells).toContain(`${lane}, In progress`);
+      expect(new Set(cells).size).toBe(cells.length);
     } finally {
       board.close();
     }

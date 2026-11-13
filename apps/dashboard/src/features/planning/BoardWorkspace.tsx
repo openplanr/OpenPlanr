@@ -204,6 +204,7 @@ export function BoardWorkspace({
                     group={group}
                     graph={graph}
                     laneKey={lane.key}
+                    laneLabel={swimlanes ? lane.label : null}
                     selectedId={selectedId}
                     collapsed={group.key === 'done' && !doneExpanded && group.nodes.length > 0}
                     expanded={expanded.includes(`${lane.key}:${group.key}`)}
