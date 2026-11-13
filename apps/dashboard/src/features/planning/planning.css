@@ -391,7 +391,9 @@
 
 /* The fixed selection bar on touch and narrow screens: room to scroll the last content above it. */
 @media (max-width: 899px), (pointer: coarse) {
-  .op-planning:is(.pc-sprints, .pc-activity):has(> .pc-selection-bar) {
+  :is(.op-planning:is(.pc-sprints, .pc-activity), .pc-operate > .pc-operate-today):has(
+    > .pc-selection-bar
+  ) {
     padding-bottom: 240px;
   }
 }

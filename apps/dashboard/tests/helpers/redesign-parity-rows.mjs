@@ -977,7 +977,62 @@ export const todayParityRows = [
       setup: 'today-setup',
     },
   ),
+  ...todayMobileRows(),
 ];
+
+/** Today at 390 against operate-Mobile, on the local review scenario. */
+function todayMobileRows() {
+  const mobile = { setup: 'today-M', viewport: 'M' };
+  return [
+    ...todayRow(
+      'O-01',
+      '.pc-operate-today__heading h1',
+      { 'font-size': '24px', 'line-height': '30px' },
+      mobile,
+    ),
+    ...todayRow(
+      'O-04',
+      '.pc-operate-today__decision-body h2',
+      { 'font-size': '17px', 'line-height': '24px' },
+      mobile,
+    ),
+    ...todayRow(
+      'O-05',
+      '.pc-operate-today__tiles',
+      { count: '3', tracks: '1fr 1fr 1fr', 'column-gap': '8px' },
+      { ...mobile, items: '.pc-operate-today__tile' },
+    ),
+    ...todayRow(
+      'O-05',
+      '.pc-operate-today__tile dd',
+      { 'font-size': '15px', 'line-height': '19px' },
+      mobile,
+    ),
+    ...todayRow(
+      'O-09',
+      '.pc-operate-today__disclosure',
+      { height: '52px', 'padding-left': '16px', 'font-size': '14px', 'font-weight': '600' },
+      mobile,
+    ),
+    ...todayRow(
+      'O-16',
+      '.pc-operate-today__next',
+      {
+        position: 'fixed',
+        height: '69px',
+        'padding-left': '16px',
+        'background-color': '--op-raised',
+      },
+      mobile,
+    ),
+    ...todayRow(
+      'O-16',
+      '.pc-operate-today__next .pc-operate-today__command[data-variant="primary"]',
+      { height: '44px', 'font-size': '14px' },
+      mobile,
+    ),
+  ];
+}
 
 function sampleRows(nodes, { property, expected, items }) {
   return nodes.map((node) => {

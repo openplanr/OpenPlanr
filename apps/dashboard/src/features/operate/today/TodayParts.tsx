@@ -1,4 +1,4 @@
-import { type ReactNode, useLayoutEffect, useState } from 'react';
+import { type ReactNode, useId, useLayoutEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import {
   CopyLabels,
@@ -7,6 +7,7 @@ import {
   Tabs,
   useCopyFeedback,
 } from '../../../design-system/components/index.js';
+import { useHomePhoneWidth } from '../../planning/planning-home-view.js';
 import { useTapSelectWith } from '../../planning/planning-tap-select.js';
 import { TOPBAR_ROUTE_TABS_ID } from '../../shell/shell-navigation.js';
 import {
@@ -52,6 +53,10 @@ const KIND_HREF: Record<TodayRowKind, (id: string) => string> = {
   verification: () => '#/operate/inbox',
   outcome: (id) => `#/operate/outcomes/${encodeURIComponent(id)}`,
   question: () => '#/operate/inbox',
+};
+const PHONE_TILE_LABEL: Readonly<Record<string, string>> = {
+  'Evidence gaps': 'Gaps',
+  'Dissent kept': 'Dissent',
 };
 const SEAT_LABEL = { reported: 'Reported', dissent: 'Dissent', waiting: 'Waiting' } as const;
 const PLACES = [
@@ -112,14 +117,14 @@ function CommandButton({ label, primary = false }: { label: string; primary?: bo
   );
 }
 
-function TodayHeader({ view, page }: { view: TodayView; page: boolean }) {
+function TodayHeader({ view, page, phone }: { view: TodayView; page: boolean; phone: boolean }) {
   // Off Today the route keeps its own h1, so the situation title steps down a level.
   const Title = page ? 'h1' : 'h2';
   return (
     <header className="pc-operate-today__header">
       <div className="pc-operate-today__heading">
         <p className="pc-operate-today__eyebrow">
-          {view.date ? `${view.date} · ` : null}
+          {view.date && !phone ? `${view.date} · ` : null}
           <a href={view.cycleHref}>cycle {view.cycleId}</a>
         </p>
         <Title className="pc-operate-today__title">{view.title}</Title>
@@ -134,7 +139,15 @@ function KindMark({ kind }: { kind: TodayRowKind | 'current' }) {
   return <span className="pc-operate-today__kind-mark" data-kind={kind} aria-hidden="true" />;
 }
 
-function DecisionCard({ decision, next }: { decision: TodayDecision; next?: ReactNode }) {
+function DecisionCard({
+  decision,
+  next,
+  phone,
+}: {
+  decision: TodayDecision;
+  next?: ReactNode;
+  phone: boolean;
+}) {
   return (
     <section
       className="pc-operate-today__card pc-operate-today__decision"
@@ -156,7 +169,7 @@ function DecisionCard({ decision, next }: { decision: TodayDecision; next?: Reac
           <dl className="pc-operate-today__tiles">
             {decision.tiles.map((tile) => (
               <div key={tile.label} className="pc-operate-today__tile" data-tone={tile.tone}>
-                <dt>{tile.label}</dt>
+                <dt>{(phone && PHONE_TILE_LABEL[tile.label]) || tile.label}</dt>
                 <dd>{tile.value}</dd>
               </div>
             ))}
@@ -273,20 +286,70 @@ function WaitingOnYou({
   );
 }
 
-function SeatsCard({ seats }: { seats: readonly TodaySeat[] }) {
+/** A card head; on a phone it is a disclosure that shows the card's list in place. */
+function CardHead({
+  title,
+  count,
+  listId,
+  phone,
+  open,
+  onToggle,
+}: {
+  title: string;
+  count: ReactNode;
+  listId: string;
+  phone: boolean;
+  open: boolean;
+  onToggle: () => void;
+}) {
+  return (
+    <header className="pc-operate-today__card-head">
+      {phone ? (
+        <h2>
+          <button
+            type="button"
+            className="pc-operate-today__disclosure"
+            aria-expanded={open}
+            aria-controls={listId}
+            onClick={onToggle}
+          >
+            {title}
+            {count}
+            <PcIcon name="chevron-right" size={15} />
+          </button>
+        </h2>
+      ) : (
+        <>
+          <h2>{title}</h2>
+          {count}
+        </>
+      )}
+    </header>
+  );
+}
+
+function SeatsCard({ seats, phone }: { seats: readonly TodaySeat[]; phone: boolean }) {
   const reported = seats.filter((seat) => seat.state !== 'waiting').length;
+  const [open, setOpen] = useState(false);
+  const listId = useId();
   return (
     <section
       className="pc-operate-today__card pc-operate-today__seats"
       aria-label="Executive seats"
     >
-      <header className="pc-operate-today__card-head">
-        <h2>Executive seats</h2>
-        <span className="pc-operate-today__count">
-          {reported}/{seats.length}
-        </span>
-      </header>
-      <ul>
+      <CardHead
+        title="Executive seats"
+        count={
+          <span className="pc-operate-today__count">
+            {reported}/{seats.length}
+          </span>
+        }
+        listId={listId}
+        phone={phone}
+        open={open}
+        onToggle={() => setOpen(!open)}
+      />
+      <ul id={listId} hidden={phone && !open}>
         {seats.map((seat) => (
           <li key={seat.name} className="pc-operate-today__seat" data-state={seat.state}>
             <span className="pc-operate-today__seat-name">{seat.name}</span>
@@ -302,13 +365,38 @@ function SeatsCard({ seats }: { seats: readonly TodaySeat[] }) {
   );
 }
 
-function EvidenceCard({ evidence }: { evidence: readonly TodayEvidence[] }) {
+/** The phone disclosure's count: what is not proven first, else what is verified, else the total. */
+function evidenceCount(evidence: readonly TodayEvidence[]) {
+  const unproven = evidence.filter((entry) => entry.state === 'unproven').length;
+  const verified = evidence.filter((entry) => entry.state === 'verified').length;
+  if (unproven) return { text: `${unproven} not proven`, warning: true };
+  return { text: verified ? `${verified} verified` : String(evidence.length), warning: false };
+}
+
+function EvidenceCard({ evidence, phone }: { evidence: readonly TodayEvidence[]; phone: boolean }) {
+  const [open, setOpen] = useState(false);
+  const listId = useId();
+  const count = evidenceCount(evidence);
   return (
     <section className="pc-operate-today__card pc-operate-today__evidence" aria-label="Evidence">
-      <header className="pc-operate-today__card-head">
-        <h2>Evidence</h2>
-      </header>
-      <ul>
+      <CardHead
+        title="Evidence"
+        count={
+          phone ? (
+            <span
+              className="pc-operate-today__evidence-count"
+              data-tone={count.warning ? 'warning' : undefined}
+            >
+              {count.text}
+            </span>
+          ) : null
+        }
+        listId={listId}
+        phone={phone}
+        open={open}
+        onToggle={() => setOpen(!open)}
+      />
+      <ul id={listId} hidden={phone && !open}>
         {evidence.map((entry) => (
           <li key={entry.key} className="pc-operate-today__evidence-row" data-state={entry.state}>
             <span className="pc-operate-today__evidence-title">{entry.title}</span>
@@ -343,21 +431,22 @@ export function TodayLayout({
   notices?: ReactNode;
 }) {
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
+  const phone = useHomePhoneWidth();
   const selected = view.rows.find((row) => row.key === selectedKey);
   return (
     <div className="pc-operate-today">
       {places ? <PlaceTabs inboxCount={inboxCount} /> : null}
-      <TodayHeader view={view} page={places} />
+      <TodayHeader view={view} page={places} phone={phone} />
       {notices}
       <section className="pc-operate-today__main" aria-label="Today decision workspace">
-        {view.decision ? <DecisionCard decision={view.decision} next={next} /> : null}
+        {view.decision ? <DecisionCard decision={view.decision} next={next} phone={phone} /> : null}
         {view.rows.length ? (
           <WaitingOnYou rows={view.rows} selectedKey={selectedKey} onSelect={setSelectedKey} />
         ) : null}
       </section>
       <div className="pc-operate-today__side">
-        {view.seats.length ? <SeatsCard seats={view.seats} /> : null}
-        {view.evidence.length ? <EvidenceCard evidence={view.evidence} /> : null}
+        {view.seats.length ? <SeatsCard seats={view.seats} phone={phone} /> : null}
+        {view.evidence.length ? <EvidenceCard evidence={view.evidence} phone={phone} /> : null}
       </div>
       <SelectionBar
         items={

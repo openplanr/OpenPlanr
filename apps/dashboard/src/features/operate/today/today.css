@@ -29,6 +29,12 @@
 .pc-operate .pc-operate-today a:focus-visible,
 .pc-operate .pc-operate-today button:focus-visible {
   outline: 2px solid var(--op-accent);
+  outline-offset: 2px;
+}
+/* Rows and disclosures fill a clipping card, so their ring sits inside. */
+.pc-operate
+  .pc-operate-today
+  :is(.pc-operate-today__row-link, .pc-operate-today__disclosure):focus-visible {
   outline-offset: -2px;
 }
 
@@ -627,7 +633,7 @@
   font: 500 11px / 14px var(--op-font-technical);
 }
 
-/* Below 1200 the page stacks into one column. */
+/* Below 1200 the page stacks into one column; Seats and Evidence pair up from 600. */
 @media (max-width: 1199px) {
   .pc-operate
     .pc-operate-today
@@ -639,6 +645,13 @@
       .pc-operate-today__unread
     ) {
     grid-column: 1 / -1;
+  }
+}
+@media (min-width: 600px) and (max-width: 1199px) {
+  .pc-operate .pc-operate-today .pc-operate-today__side {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: start;
   }
 }
 @media (min-width: 900px) {
@@ -669,13 +682,134 @@
     min-height: 57px;
     padding-block: 8px;
   }
-  .pc-operate .pc-operate-today .pc-operate-today__tiles,
+  .pc-operate .pc-operate-today .pc-operate-today__seat {
+    grid-template-columns: 96px minmax(0, 1fr);
+    height: auto;
+    min-height: 44px;
+    padding-block: 8px;
+  }
+  .pc-operate .pc-operate-today .pc-operate-today__seat-focus {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    white-space: normal;
+  }
+}
+
+/* Phone: the operate-Mobile canvas. */
+@media (max-width: 599px) {
+  /* The shell's 14px narrow gutter plus 2px gives the drawn 16px. */
+  .pc-operate .pc-operate-today {
+    gap: 16px;
+    padding: 16px 2px 120px;
+  }
+  .pc-operate .pc-operate-today :is(.pc-operate-today__main, .pc-operate-today__side) {
+    gap: 16px;
+  }
+  .pc-operate .pc-operate-today .pc-operate-today__title {
+    font-size: 24px;
+    line-height: 30px;
+  }
+  .pc-operate .pc-operate-today .pc-operate-today__owner-line,
+  .pc-operate
+    .pc-operate-today:has(.pc-operate-today__decision)
+    .pc-operate-today__header
+    > .pc-operate-today__command,
+  .pc-operate
+    .pc-operate-today
+    .pc-operate-today__main:has(> .pc-operate-today__decision)
+    > .pc-operate-today__waiting {
+    display: none;
+  }
+
+  /* Decision card */
+  .pc-operate .pc-operate-today .pc-operate-today__decision-head {
+    gap: 8px;
+    height: auto;
+    padding: 16px 16px 0;
+    border-bottom: 0;
+  }
+  .pc-operate .pc-operate-today .pc-operate-today__decision-body {
+    gap: 12px;
+    padding: 12px 16px 16px;
+  }
+  .pc-operate .pc-operate-today .pc-operate-today__decision-body h2 {
+    font-size: 17px;
+    line-height: 24px;
+  }
+  .pc-operate .pc-operate-today .pc-operate-today__tiles {
+    gap: 8px;
+  }
+  .pc-operate .pc-operate-today .pc-operate-today__tile {
+    gap: 4px;
+    padding: 9px;
+    border-radius: 8px;
+  }
+  .pc-operate .pc-operate-today .pc-operate-today__tile dd {
+    font-size: 15px;
+    line-height: 19px;
+  }
   .pc-operate .pc-operate-today .pc-operate-today__brief {
     grid-template-columns: minmax(0, 1fr);
+    gap: 10px;
+  }
+  .pc-operate .pc-operate-today .pc-operate-today__brief > div {
+    display: grid;
+    gap: 2px;
   }
   .pc-operate .pc-operate-today .pc-operate-today__brief dt {
-    margin-bottom: -10px;
+    font-size: 12px;
+    line-height: 16px;
   }
+  .pc-operate .pc-operate-today .pc-operate-today__brief dd {
+    font-size: 14px;
+    line-height: 20px;
+  }
+
+  .pc-operate .pc-operate-today .pc-operate-today__next {
+    padding: 16px;
+  }
+  /* A copyable next step becomes a bar on the phone navigation; a governed one stays in its card. */
+  .pc-operate .pc-operate-today .pc-operate-today__next:has(> code) {
+    position: fixed;
+    right: 0;
+    bottom: calc(58px + env(safe-area-inset-bottom, 0px));
+    left: 0;
+    z-index: 70;
+    align-items: center;
+    box-sizing: border-box;
+    min-height: 69px;
+    padding: 12px 16px;
+    border-top: 1px solid var(--op-line);
+    background: var(--op-raised);
+  }
+  .pc-operate .pc-operate-today .pc-operate-today__next:has(> code) > .pc-operate-today__label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+  .pc-operate .pc-operate-today .pc-operate-today__next:has(> code) > code {
+    align-self: center;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: var(--op-body);
+  }
+  .pc-operate .pc-operate-today .pc-operate-today__next .pc-operate-today__command[data-variant],
+  .pc-operate .pc-operate-today .pc-operate-today__next .op-governed-button {
+    min-height: 44px;
+    height: 44px;
+    font-size: 14px;
+    line-height: 18px;
+  }
+  .pc-operate .pc-operate-today .pc-operate-today__next-control .op-governed-reason {
+    font-size: 12px;
+    line-height: 16px;
+  }
+
+  /* Waiting on you, shown on a phone only when no decision card is drawn */
   .pc-operate .pc-operate-today .pc-operate-today__row-link {
     grid-template-columns: auto minmax(0, 1fr);
     height: auto;
@@ -690,15 +824,59 @@
     grid-column: 1 / -1;
     text-align: left;
   }
-  .pc-operate .pc-operate-today .pc-operate-today__seat {
-    grid-template-columns: 96px minmax(0, 1fr);
-    height: auto;
-    min-height: 44px;
-    padding-block: 8px;
+
+  /* Executive seats and Evidence as disclosure rows */
+  .pc-operate
+    .pc-operate-today
+    .pc-operate-today__card-head:has(> h2 > .pc-operate-today__disclosure) {
+    min-height: 0;
+    padding: 0;
   }
-  .pc-operate .pc-operate-today .pc-operate-today__seat-focus {
-    grid-column: 1 / -1;
-    grid-row: 2;
-    white-space: normal;
+  .pc-operate .pc-operate-today .pc-operate-today__card-head:has(> h2 > [aria-expanded="false"]) {
+    border-bottom: 0;
+  }
+  .pc-operate
+    .pc-operate-today
+    .pc-operate-today__card-head
+    > h2:has(> .pc-operate-today__disclosure) {
+    flex: 1;
+    min-width: 0;
+  }
+  .pc-operate .pc-operate-today .pc-operate-today__disclosure {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    box-sizing: border-box;
+    width: 100%;
+    height: 52px;
+    padding: 0 16px;
+    border: 0;
+    background: transparent;
+    color: var(--op-heading);
+    font: 600 14px / 18px var(--op-font-ui);
+    text-align: start;
+    cursor: pointer;
+  }
+  .pc-operate .pc-operate-today .pc-operate-today__disclosure > .pc-icon {
+    flex: none;
+    margin-left: auto;
+  }
+  .pc-operate .pc-operate-today .pc-operate-today__disclosure[aria-expanded="true"] > .pc-icon {
+    transform: rotate(90deg);
+  }
+  .pc-operate .pc-operate-today .pc-operate-today__evidence-count {
+    color: var(--op-muted);
+    font: 400 12px / 16px var(--op-font-ui);
+  }
+  .pc-operate .pc-operate-today .pc-operate-today__evidence-count[data-tone="warning"] {
+    color: var(--op-warning);
+  }
+
+  /* States */
+  .pc-operate .pc-operate-today .pc-operate-setup {
+    gap: 16px;
+  }
+  .pc-operate .pc-operate-today :is(.pc-operate-setup, .pc-operate-today__unread) {
+    padding: 16px;
   }
 }

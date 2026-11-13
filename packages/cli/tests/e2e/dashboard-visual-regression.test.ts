@@ -448,7 +448,9 @@ test.describe('dashboard real-browser quality', () => {
           });
           expect(typography.body).toContain('DM Sans');
           expect(typography.heading).toContain('Outfit');
-          expect(typography.size).toBe(typography.isPageTitle ? 28 : 20);
+          // Today's phone title is 24 on operate-Mobile.
+          const pageTitle = kind === 'operate.today' && width < 600 ? 24 : 28;
+          expect(typography.size).toBe(typography.isPageTitle ? pageTitle : 20);
           expect(typography.overflow, `${kind} at ${width}px in ${theme}`).toBe(false);
           if (kind === 'operate.recovery' && width === 390) {
             const history = workspace.getByRole('region', { name: 'Immutable recovery history' });
@@ -2182,6 +2184,280 @@ test.describe('dashboard real-browser quality', () => {
     const parity = testInfo.outputPath('today-parity.json');
     writeFileSync(parity, JSON.stringify({ results, deltas }, null, 2));
     await testInfo.attach('today-parity.json', { path: parity, contentType: 'application/json' });
+  });
+
+  test('matches Today to its canvas on tablets and phones in both themes', async ({
+    page,
+  }, testInfo) => {
+    test.setTimeout(240_000);
+    const results: unknown[] = [];
+    const deltas: unknown[] = [];
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    const today = page.locator('[data-route-kind="operate.today"] .pc-operate-today');
+    const next = today.locator('.pc-operate-today__next');
+    const local = { localOperate: '1', operateScenario: 'today' };
+    const open = async (query: Readonly<Record<string, string>>, theme: string) => {
+      await page.goto(fixtureUrl('#/operate/today', { ...query, theme }));
+      await page.evaluate(() => document.fonts.ready);
+    };
+    const boxOf = async (locator: Locator) => {
+      const box = await locator.boundingBox();
+      if (!box) throw new Error(`No box for ${locator}`);
+      return box;
+    };
+    // Scrolls the shell to its end; how far the last `last` runs past the top of `cover` (≤ 0 is clear).
+    const overlap = (last: string, cover: string) =>
+      page.evaluate(
+        ([lastSelector, coverSelector]) => {
+          const scroller = document.querySelector<HTMLElement>('.pc-shell__scroll');
+          const target = [...document.querySelectorAll(lastSelector)].at(-1);
+          const top = document.querySelector(coverSelector);
+          if (!scroller || !target || !top) throw new Error(`Missing ${lastSelector}`);
+          scroller.style.scrollBehavior = 'auto';
+          scroller.scrollTop = scroller.scrollHeight;
+          return target.getBoundingClientRect().bottom - top.getBoundingClientRect().top;
+        },
+        [last, cover] as const,
+      );
+    const reviewDetail = (url: URL) => /^\/api\/operate\/local-reviews\/[^/]+$/u.test(url.pathname);
+    // Serves the local review detail with the named lists emptied, or as a failed read.
+    const detail = async (change: 'unread' | readonly ('decisions' | 'actions' | 'gaps')[]) => {
+      await page.unroute(reviewDetail);
+      await page.route(reviewDetail, async (route) => {
+        if (change === 'unread') {
+          await route.fulfill({ status: 500, json: { ok: false } });
+          return;
+        }
+        const response = await route.fetch();
+        const body = await response.json();
+        for (const field of change) body.item[field] = [];
+        await route.fulfill({ response, json: body });
+      });
+    };
+    const rings = async (count: number) => {
+      await page.locator('body').click({ position: { x: 1, y: 1 } });
+      await page.locator('#main-content').focus();
+      const read: { element: string; ring: string[] }[] = [];
+      for (let press = 0; press < count; press += 1) {
+        await page.keyboard.press('Tab');
+        const ring = await page.evaluate(async () => {
+          for (let frame = 0; frame < 2; frame += 1)
+            await new Promise((resolve) => requestAnimationFrame(resolve));
+          await new Promise((resolve) => setTimeout(resolve, 50));
+          const focused = document.querySelector(
+            '[data-route-kind="operate.today"] :focus-visible',
+          );
+          if (!focused) return null;
+          const style = getComputedStyle(focused);
+          return {
+            // The eyebrow link has no class of its own, so it is named by its parent.
+            element: `${focused.tagName.toLowerCase()}.${focused.className || focused.parentElement?.className}`,
+            ring: [style.outlineStyle, style.outlineWidth, style.outlineOffset],
+          };
+        });
+        if (ring) read.push(ring);
+      }
+      return read;
+    };
+    const inset = /pc-operate-today__(row-link|disclosure)/u;
+    const expectRings = (read: { element: string; ring: string[] }[], width: number) => {
+      for (const { element, ring } of read)
+        expect(ring, `S-20 ${element} at ${width}`).toEqual([
+          'solid',
+          '2px',
+          inset.test(element) ? '-2px' : '2px',
+        ]);
+    };
+    // operate-Mobile: offsets inside the decision card, the disclosure row, and the bar.
+    const canvas = { pill: [17, 17], title: [17, 55], tiles: [17, 115], row: 54, bar: 69 };
+
+    for (const theme of ['dark', 'light'] as const) {
+      for (const width of [390, 320]) {
+        await page.setViewportSize({ width, height: width === 390 ? 844 : 568 });
+        await open(local, theme);
+        await expect(next).toHaveCSS('position', 'fixed');
+        await expect(today.locator('.pc-operate-today__waiting')).toBeHidden();
+        await expect(
+          today.locator('.pc-operate-today__header .pc-operate-today__command'),
+        ).toBeHidden();
+        await expect(today.locator('.pc-operate-today__owner-line')).toBeHidden();
+        await expect(today.locator('.pc-operate-today__summary')).toBeVisible();
+        await expect(today.getByText('If we wait', { exact: true })).toBeVisible();
+        await expect(today.locator('.pc-operate-today__eyebrow')).toHaveText('cycle 2026-W43');
+        const [title, bar, navigation] = await Promise.all(
+          [
+            today.locator('.pc-operate-today__decision-body h2'),
+            next,
+            page.locator('.pc-mobile-nav'),
+          ].map(boxOf),
+        );
+        expect(
+          title.y + title.height,
+          `decision title clear of the bar at ${width}`,
+        ).toBeLessThanOrEqual(bar.y);
+        expect(
+          Math.abs(bar.y + bar.height - navigation.y),
+          'bar on the navigation',
+        ).toBeLessThanOrEqual(1);
+        if (width === 390) {
+          for (const row of todayParityRows.filter((entry) => entry.setup === 'today-M'))
+            results.push(...(await assertParityRow(page, row, theme)));
+          const card = await boxOf(today.locator('.pc-operate-today__decision'));
+          const actual = {
+            pill: await boxOf(today.locator('.pc-operate-today__pill')),
+            title,
+            tiles: await boxOf(today.locator('.pc-operate-today__tiles')),
+          };
+          for (const part of ['pill', 'title', 'tiles'] as const) {
+            const box = actual[part];
+            const [x, y] = canvas[part];
+            const offset = [Math.round(box.x - card.x), Math.round(box.y - card.y)];
+            deltas.push({ theme, part, canvas: [x, y], actual: offset });
+            expect(Math.abs(offset[0] - x), `${part} x`).toBeLessThanOrEqual(2);
+            expect(Math.abs(offset[1] - y), `${part} y`).toBeLessThanOrEqual(2);
+          }
+          const seatsRow = await boxOf(today.locator('.pc-operate-today__seats'));
+          deltas.push({ theme, part: 'row', canvas: canvas.row, actual: seatsRow.height });
+          deltas.push({ theme, part: 'bar', canvas: canvas.bar, actual: bar.height });
+          expect(Math.abs(seatsRow.height - canvas.row)).toBeLessThanOrEqual(2);
+          expect(await axeViolations(page)).toEqual([]);
+          await page.screenshot({ path: testInfo.outputPath(`today-local-M-${theme}.png`) });
+        }
+        expect(
+          await overlap('.pc-operate-today__side > *', '.pc-operate-today__next'),
+        ).toBeLessThanOrEqual(0);
+        expect((await layoutReport(page)).horizontalOverflow).toBe(false);
+
+        // The gateway's governed next step stays in its card on a phone.
+        await open({}, theme);
+        await expect(today.locator('.pc-operate-today__decision')).toBeVisible();
+        await expect(next).toHaveCSS('position', 'static');
+        await expect(next.locator('.op-governed-button')).toHaveCSS('height', '44px');
+        await expect(today.getByRole('button', { name: 'Evidence 1', exact: true })).toBeVisible();
+        expect(await overlap('.pc-operate-today__side > *', '.pc-mobile-nav')).toBeLessThanOrEqual(
+          0,
+        );
+        expect((await layoutReport(page)).horizontalOverflow).toBe(false);
+        if (width === 390)
+          await page.screenshot({ path: testInfo.outputPath(`today-gateway-M-${theme}.png`) });
+
+        // States: setup, nothing waiting, no decision card, could not read.
+        await open({ localOperate: 'empty' }, theme);
+        await expect(today.locator('.pc-operate-setup')).toBeVisible();
+        await expect(next).toHaveCount(0);
+        expect(await overlap('.pc-operate-setup__seats', '.pc-mobile-nav')).toBeLessThanOrEqual(0);
+        if (width === 390)
+          await page.screenshot({ path: testInfo.outputPath(`today-setup-M-${theme}.png`) });
+        await detail(['decisions', 'actions', 'gaps']);
+        await open(local, theme);
+        const heading = today.getByRole('heading', { level: 1, name: 'Nothing needs you today' });
+        await expect(heading).toBeVisible();
+        await expect(heading).toHaveCSS('font-size', '24px');
+        expect(await overlap('.pc-operate-today__side > *', '.pc-mobile-nav')).toBeLessThanOrEqual(
+          0,
+        );
+        if (width === 390)
+          await page.screenshot({ path: testInfo.outputPath(`today-nothing-M-${theme}.png`) });
+        await detail(['decisions']);
+        await open(local, theme);
+        await expect(
+          today.getByRole('heading', { level: 1, name: 'No decision is waiting' }),
+        ).toBeVisible();
+        await expect(today.locator('.pc-operate-today__decision')).toHaveCount(0);
+        await expect(today.locator('.pc-operate-today__waiting')).toBeVisible();
+        await expect(today.getByRole('button', { name: 'Run a review' })).toBeVisible();
+        expect(await overlap('.pc-operate-today__side > *', '.pc-mobile-nav')).toBeLessThanOrEqual(
+          0,
+        );
+        expect((await layoutReport(page)).horizontalOverflow).toBe(false);
+        await detail('unread');
+        await open(local, theme);
+        const unread = today.locator('.pc-operate-today__unread');
+        await expect(unread).toBeVisible();
+        await expect(unread).toHaveCSS('padding-top', '16px');
+        expect(await overlap('.pc-operate-today__unread', '.pc-mobile-nav')).toBeLessThanOrEqual(0);
+        if (width === 390)
+          await page.screenshot({ path: testInfo.outputPath(`today-unread-M-${theme}.png`) });
+        await page.unroute(reviewDetail);
+      }
+
+      // Tablets: one column, Seats and Evidence side by side, the next step in its card.
+      for (const width of [768, 1024]) {
+        await page.setViewportSize({ width, height: 1024 });
+        await open(local, theme);
+        const [seats, evidence] = await Promise.all(
+          [
+            today.locator('.pc-operate-today__seats'),
+            today.locator('.pc-operate-today__evidence'),
+          ].map(boxOf),
+        );
+        expect(Math.abs(seats.y - evidence.y)).toBeLessThanOrEqual(1);
+        expect(evidence.x - seats.x - seats.width).toBeCloseTo(24, 0);
+        await expect(next).toHaveCSS('position', 'static');
+        await expect(today.locator('.pc-operate-today__waiting')).toBeVisible();
+        await expect(today.locator('.pc-operate-today__tile')).toHaveCount(3);
+        expect((await layoutReport(page)).horizontalOverflow).toBe(false);
+        expect(await axeViolations(page)).toEqual([]);
+        await page.screenshot({
+          path: testInfo.outputPath(`today-local-T${width}-${theme}.png`),
+          fullPage: true,
+        });
+        await open({ localOperate: 'empty' }, theme);
+        await expect(today.locator('.pc-operate-setup')).toBeVisible();
+        expect((await layoutReport(page)).horizontalOverflow).toBe(false);
+      }
+
+      // S-20: outset rings, inset only on rows and disclosures inside clipping cards.
+      for (const width of [390, 768, 1440]) {
+        await page.setViewportSize({ width, height: 1000 });
+        await open(local, theme);
+        const read = await rings(width === 390 ? 14 : 16);
+        const kinds = read.map(({ element }) => element).join(' | ');
+        expect(kinds, `S-20 reach at ${width}`).toContain('pc-operate-today__eyebrow');
+        expect(kinds, `S-20 reach at ${width}`).toContain('pc-operate-today__command');
+        expect(kinds, `S-20 reach at ${width}`).toContain(
+          width === 390 ? 'pc-operate-today__disclosure' : 'pc-operate-today__row-link',
+        );
+        expectRings(read, width);
+      }
+    }
+
+    // Disclosures: named, controlling their lists, toggled from the keyboard.
+    await page.setViewportSize({ width: 390, height: 844 });
+    await open(local, 'dark');
+    const seats = today.getByRole('button', { name: 'Executive seats 6/7', exact: true });
+    const evidence = today.getByRole('button', { name: 'Evidence 2 not proven', exact: true });
+    const listOf = async (button: Locator) =>
+      page.locator(`[id="${await button.getAttribute('aria-controls')}"]`);
+    for (const button of [seats, evidence]) {
+      await expect(button).toHaveAttribute('aria-expanded', 'false');
+      await expect(await listOf(button)).toBeHidden();
+    }
+    await seats.focus();
+    await page.keyboard.press('Enter');
+    await expect(seats).toHaveAttribute('aria-expanded', 'true');
+    await expect((await listOf(seats)).locator('.pc-operate-today__seat')).toHaveCount(7);
+    await expect(await listOf(seats)).toBeVisible();
+    await page.keyboard.press('Space');
+    await expect(seats).toHaveAttribute('aria-expanded', 'false');
+    await expect(await listOf(seats)).toBeHidden();
+    await page.keyboard.press('Tab');
+    await expect(evidence).toBeFocused();
+    await page.keyboard.press('Enter');
+    await expect((await listOf(evidence)).getByText('Not proven yet').first()).toBeVisible();
+
+    // A selected row at 768: the shared clearance keeps the last card above the selection bar.
+    await page.setViewportSize({ width: 768, height: 1024 });
+    await open(local, 'dark');
+    await today.locator('.pc-operate-today__row-link').first().click();
+    await expect(page.locator('.pc-selection-bar')).toBeVisible();
+    await expect
+      .poll(() => overlap('.pc-operate-today__side > *', '.pc-selection-bar'))
+      .toBeLessThanOrEqual(0);
+
+    const parity = testInfo.outputPath('today-M-parity.json');
+    writeFileSync(parity, JSON.stringify({ results, deltas }, null, 2));
+    await testInfo.attach('today-M-parity.json', { path: parity, contentType: 'application/json' });
   });
 
   test('matches Activity to its canvas parity rows in both themes', async ({ page }, testInfo) => {

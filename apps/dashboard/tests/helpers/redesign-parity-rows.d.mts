@@ -37,6 +37,7 @@ export type ParityRow = Readonly<{
     | 'today'
     | 'today-local'
     | 'today-setup'
+    | 'today-M'
     | null;
   items?: string;
 }>;
