@@ -64,7 +64,7 @@ export const identityCases = [
   [
     'excludes README and other documentation from canonical discovery',
     (graph) => {
-      assert.equal(graph.nodes.length, 21);
+      assert.equal(graph.nodes.length, 23);
       assert.ok(!graph.nodes.some((node) => /README|notes|guide/.test(node.id)));
     },
   ],
@@ -94,21 +94,30 @@ export const identityCases = [
         [
           ['guide', 'tasks/guide.md', 'id'],
           ['notes', 'quick/notes.md', 'id'],
+          ['scratch', 'sprints/Sprint-004/scratch.md', 'id'],
         ],
       );
       assert.ok(!graph.nodes.some((node) => /refinement|qa-report|clarifications/.test(node.id)));
     },
   ],
   [
-    'skips id-named sprint note folders and still reads sprint files and nested stories',
+    'reads every folder under sprints except SPRINT- note folders, and nested stories',
     (graph, model) => {
       const read = (id) => graph.nodes.find((node) => node.id === id);
       assert.equal(read('Sprint-004')?.type, 'sprint');
       assert.equal(read('SPRINT-001')?.type, 'sprint');
+      assert.equal(read('SPRINT-005')?.type, 'sprint');
+      assert.equal(read('BL-010')?.type, 'sprint');
       assert.equal(read('US-101')?.type, 'story');
       assert.ok(!graph.nodes.some((node) => node.id === 'scratch'));
+      assert.deepEqual(
+        model.diagnostics
+          .filter((entry) => entry.sourcePath.startsWith('sprints/Sprint-004/'))
+          .map((entry) => [entry.reason, entry.sourcePath]),
+        [['unrecognized-identity', 'sprints/Sprint-004/scratch.md']],
+      );
       assert.ok(
-        !model.diagnostics.some((entry) => entry.sourcePath.startsWith('sprints/Sprint-004/')),
+        !model.diagnostics.some((entry) => entry.sourcePath.startsWith('sprints/SPRINT-001/')),
       );
     },
   ],

@@ -78,7 +78,7 @@ function isArtifactFile(name: string): boolean {
   return name.endsWith('.md');
 }
 
-function walkAgileDir(dir: string, acc: string[], sprintsRoot = false): string[] {
+function walkAgileDir(dir: string, acc: string[]): string[] {
   let entries: Dirent[];
   try {
     entries = readdirSync(dir, { withFileTypes: true });
@@ -89,11 +89,7 @@ function walkAgileDir(dir: string, acc: string[], sprintsRoot = false): string[]
   for (const entry of entries) {
     const fullPath = path.join(dir, entry.name);
     if (entry.isDirectory()) {
-      if (
-        !entry.name.startsWith('.') &&
-        !SPRINT_NOTES_DIR.test(entry.name) &&
-        !(sprintsRoot && ARTIFACT_ID.test(entry.name))
-      )
+      if (!entry.name.startsWith('.') && !SPRINT_NOTES_DIR.test(entry.name))
         walkAgileDir(fullPath, acc);
     } else if (entry.isFile() && isArtifactFile(entry.name)) {
       acc.push(fullPath);
@@ -134,7 +130,7 @@ function collectSpecDir(specDir: string, acc: string[]): string[] {
 function collectArtifacts(planrDir: string): string[] {
   const acc: string[] = [];
   for (const dir of AGILE_DIRS) {
-    walkAgileDir(path.join(planrDir, dir), acc, dir === 'sprints');
+    walkAgileDir(path.join(planrDir, dir), acc);
   }
 
   const specsRoot = path.join(planrDir, 'specs');

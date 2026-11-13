@@ -258,7 +258,7 @@ function isArtifactFile(name) {
 }
 
 /** Recursively collect artifact `.md` paths under a flat agile dir (handles `us-NNN/` nesting). */
-function walkAgileDir(dir, acc, strict = false, sprintsRoot = false) {
+function walkAgileDir(dir, acc, strict = false) {
   let entries;
   try {
     entries = readdirSync(dir, { withFileTypes: true });
@@ -269,13 +269,8 @@ function walkAgileDir(dir, acc, strict = false, sprintsRoot = false) {
   for (const ent of entries) {
     const full = join(dir, ent.name);
     if (ent.isDirectory()) {
-      // `sprints/<sprint id>/` holds refinement notes, not artifacts.
-      if (
-        ent.name.startsWith('.') ||
-        /^SPRINT-\d+/u.test(ent.name) ||
-        (sprintsRoot && ARTIFACT_ID.test(ent.name))
-      )
-        continue;
+      // `sprints/SPRINT-NNN/` holds refinement notes, not artifacts.
+      if (ent.name.startsWith('.') || /^SPRINT-\d+/u.test(ent.name)) continue;
       walkAgileDir(full, acc, strict);
     } else if (ent.isFile() && isArtifactFile(ent.name)) {
       acc.push(full);
@@ -323,7 +318,7 @@ function collectSpecDir(specDir, acc, strict = false) {
 function collectArtifacts(planrDir, strict = false) {
   const acc = [];
   for (const d of AGILE_DIRS) {
-    walkAgileDir(join(planrDir, d), acc, strict, d === 'sprints');
+    walkAgileDir(join(planrDir, d), acc, strict);
   }
   const specsRoot = join(planrDir, 'specs');
   let specEntries;
