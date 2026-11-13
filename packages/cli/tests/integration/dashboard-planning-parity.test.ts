@@ -817,4 +817,22 @@ describe('planning artifact identity parity', async () => {
       assert.deepEqual(fixtureContents(root), before);
     });
   }
+
+  // Tracked files keep ASCII names, so the non-ASCII file name lives in a temporary project.
+  it('reads a non-ASCII prefix from a file name without an id', async () => {
+    const { mkdtempSync, mkdirSync, rmSync, writeFileSync } = await import('node:fs');
+    const { tmpdir } = await import('node:os');
+    const { join } = await import('node:path');
+    const planr = mkdtempSync(join(tmpdir(), 'planning-identity-'));
+    try {
+      mkdirSync(join(planr, 'backlog'));
+      writeFileSync(join(planr, 'backlog', 'Задача-005-no-id.md'), '---\ntitle: No id\n---\n');
+      const graph = cli.readGraph(planr);
+      expect(graph.nodes.map((node) => node.id)).toEqual(['Задача-005-no-id']);
+      expect(graph).toEqual(native.readGraph(planr));
+      expect(cli.readPlanningModel(planr).diagnostics).toEqual([]);
+    } finally {
+      rmSync(planr, { recursive: true, force: true });
+    }
+  });
 });
