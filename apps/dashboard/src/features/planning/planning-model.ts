@@ -1,5 +1,8 @@
 import type { AttentionProjection } from '@openplanr/protocol/dashboard/planning-attention.mjs';
-import { deriveAttention } from '@openplanr/protocol/dashboard/planning-attention.mjs';
+import {
+  deriveAttention,
+  planningReferenceValues,
+} from '@openplanr/protocol/dashboard/planning-attention.mjs';
 import { PLANNING_FOLDER } from '@openplanr/protocol/names';
 import { canonicalDashboardHref } from '../../app/router.js';
 import type {
@@ -933,9 +936,7 @@ export function selectPlanningDetail(node: PlanningModelNode): PlanningDetailSel
     meta[key] = stringifyPlanningMeta(value);
   }
   const dependencyValue = node.frontmatter.dependsOn;
-  const depIds = Array.isArray(dependencyValue)
-    ? dependencyValue.map((dependency) => String(dependency))
-    : [];
+  const depIds = planningReferenceValues(dependencyValue).map((dependency) => String(dependency));
   const shipRef = node.frontmatter.shipRef;
   const qaRef = node.frontmatter.qaRef;
   return Object.freeze({

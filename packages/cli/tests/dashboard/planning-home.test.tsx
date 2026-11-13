@@ -320,16 +320,25 @@ describe('Home attention', () => {
     expect(container.querySelector('h1')?.textContent).toBe('Needs attention');
   });
 
-  it('surfaces derivation errors without recording a successful browser visit', () => {
-    const invalid = {
+  it('keeps Home available when an item has a scalar, empty or non-string dependsOn', () => {
+    const values = ['T-001', '', { id: 'T-001' }];
+    const authored = {
       ...DATASET.graph,
       nodes: DATASET.graph.nodes.map((node, index) =>
-        index === 0
-          ? { ...node, frontmatter: { ...node.frontmatter, dependsOn: 'invalid' } }
+        index < values.length
+          ? { ...node, frontmatter: { ...node.frontmatter, dependsOn: values[index] } }
           : node,
       ),
     };
-    render(<Home current={fixture(invalid)} />);
+    render(<Home current={fixture(authored)} />);
+    expect(screen.queryByRole('heading', { name: 'Attention could not be derived' })).toBeNull();
+    for (const title of CARDS) expect(card(title)).toBeTruthy();
+  });
+
+  it('surfaces derivation errors without recording a successful browser visit', () => {
+    const current = fixture();
+    vi.spyOn(Date.prototype, 'toISOString').mockReturnValue('today');
+    render(<Home current={current} />);
     expect(screen.getByRole('heading', { name: 'Attention could not be derived' })).toBeTruthy();
     expect(screen.getByRole('link', { name: 'Open Diagnostics' })).toBeTruthy();
     expect(localStorage.getItem(STORAGE_KEY)).toBeNull();

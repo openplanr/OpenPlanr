@@ -2,7 +2,10 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
 import { runInNewContext } from 'node:vm';
-import { deriveAttention } from '@openplanr/protocol/dashboard/planning-attention.mjs';
+import {
+  deriveAttention,
+  planningReferenceValues,
+} from '@openplanr/protocol/dashboard/planning-attention.mjs';
 import {
   ARTBOARD_FIXTURE_CLOCK,
   artboardManifestData,
@@ -347,7 +350,7 @@ test('browser execution has no imports or ambient Node dependencies and leaves g
   const graph = { nodes: [node('T-001', 'outstanding', { dependsOn: ['missing'] })], edges: [] };
   const before = JSON.stringify(graph);
   const browserResult = runInNewContext(
-    `${source.replace('export function', 'function')}\nderiveAttention(graph, nowUTC)`,
+    `${source.replaceAll('export function', 'function')}\nderiveAttention(graph, nowUTC)`,
     { graph: freeze(graph), nowUTC: NOW },
   );
   assert.equal(JSON.stringify(browserResult), JSON.stringify(deriveAttention(graph, NOW)));
@@ -356,7 +359,7 @@ test('browser execution has no imports or ambient Node dependencies and leaves g
   assert.ok(Object.isFrozen(browserResult.byId['T-001'].unresolvedDependencies));
 });
 
-test('invalid clock, thresholds, dependency shape and conflicting identities surface errors', () => {
+test('invalid clock, thresholds and conflicting identities surface errors', () => {
   const graph = { nodes: [], edges: [] };
   for (const clock of ['2026-02-30T00:00:00Z', '2026-10-18', '2026-10-18T00:00:00+00:00', 'today'])
     assert.throws(() => deriveAttention(graph, clock), TypeError);
@@ -369,15 +372,30 @@ test('invalid clock, thresholds, dependency shape and conflicting identities sur
   ])
     assert.throws(() => deriveAttention(graph, NOW, options), RangeError);
   assert.throws(
-    () =>
-      deriveAttention(
-        { nodes: [node('T-001', 'outstanding', { dependsOn: 'T-002' })], edges: [] },
-        NOW,
-      ),
-    /dependsOn must be an array/u,
-  );
-  assert.throws(
     () => deriveAttention({ nodes: [node('T-001'), node('T-001', 'done')], edges: [] }, NOW),
     /Conflicting graph identity/u,
   );
+});
+
+test('a scalar, empty or non-string dependsOn is read as references instead of failing', () => {
+  assert.deepEqual(planningReferenceValues('T-002'), ['T-002']);
+  assert.deepEqual(planningReferenceValues(''), []);
+  assert.deepEqual(planningReferenceValues(null), []);
+  assert.deepEqual(planningReferenceValues(['T-002']), ['T-002']);
+  const graph = {
+    nodes: [
+      node('T-001', 'outstanding', { dependsOn: 'T-002' }),
+      node('T-002'),
+      node('T-003', 'outstanding', { dependsOn: '' }),
+      node('T-004', 'outstanding', { dependsOn: { id: 'T-002' } }),
+    ],
+    edges: [],
+  };
+  const result = deriveAttention(freeze(graph), NOW);
+  assert.deepEqual(result.byId['T-001'].dependencyIds, ['T-002']);
+  assert.equal(result.byId['T-001'].readiness, 'blocked');
+  assert.deepEqual(result.byId['T-003'].dependencyIds, []);
+  assert.deepEqual(result.byId['T-004'].unresolvedDependencies, [
+    { reference: '[object Object]', reason: 'invalid', candidates: [] },
+  ]);
 });

@@ -11,6 +11,12 @@ const PRIORITIES = new Map([
   ['low', 3],
 ]);
 
+/** An authored reference field as a list: null or '' is none, a scalar is one reference. */
+export function planningReferenceValues(value) {
+  if (Array.isArray(value)) return value;
+  return value == null || value === '' ? [] : [value];
+}
+
 function compareId(left, right) {
   return left < right ? -1 : left > right ? 1 : 0;
 }
@@ -170,10 +176,8 @@ export function deriveAttention(graph, nowUTC, options = {}) {
       parents.get(edge.to).add(edge.from);
   }
   for (const node of nodes.values()) {
-    const authored = node.frontmatter.dependsOn;
-    if (authored != null && !Array.isArray(authored))
-      throw new TypeError(`dependsOn must be an array: ${node.id}`);
-    for (const reference of authored ?? []) addDependency(node.id, reference);
+    for (const reference of planningReferenceValues(node.frontmatter.dependsOn))
+      addDependency(node.id, reference);
   }
   for (const [id, targets] of dependencies) {
     if (terminal(nodes.get(id))) continue;

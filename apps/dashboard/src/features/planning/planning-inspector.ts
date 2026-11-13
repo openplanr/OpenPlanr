@@ -1,3 +1,4 @@
+import { planningReferenceValues } from '@openplanr/protocol/dashboard/planning-attention.mjs';
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { PlanningView } from '../../lib/routing/planning-view-codec.js';
 import {
@@ -28,9 +29,11 @@ export function planningInspectorSnapshot(node: PlanningModelNode): InspectorNod
       frontmatterString(node.frontmatter, 'sprintId') ??
       frontmatterString(node.frontmatter, 'sprint'),
     updated: frontmatterString(node.frontmatter, 'updated'),
-    dependsOn: Array.isArray(dependsOn)
-      ? Object.freeze(dependsOn.filter((entry): entry is string => typeof entry === 'string'))
-      : Object.freeze([]),
+    dependsOn: Object.freeze(
+      planningReferenceValues(dependsOn).filter(
+        (entry): entry is string => typeof entry === 'string',
+      ),
+    ),
     ref:
       node.githubIssue !== undefined
         ? `#${node.githubIssue}`

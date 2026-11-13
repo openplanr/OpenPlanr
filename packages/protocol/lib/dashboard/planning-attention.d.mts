@@ -1,3 +1,6 @@
+/** An authored reference field as a list: null or '' is none, a scalar is one reference. */
+export function planningReferenceValues(value: unknown): readonly unknown[];
+
 export type AttentionNode = Readonly<{
   id: string;
   type: string;
