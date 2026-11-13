@@ -8,6 +8,7 @@ import {
   percentile95,
   rendererFrameWork,
   TRACE_PLAN,
+  traceBudgetPolicy,
 } from '../dashboard/fixtures/dashboard-trace-model.js';
 import { buildPremiumDashboardFixture } from '../dashboard/fixtures/premium-dashboard-fixtures.js';
 import { premiumRequestState, servePremiumFixture } from './fixtures/premium-dashboard-server.js';
@@ -230,11 +231,15 @@ describe('offline dashboard trace contract smoke', () => {
       [92.1, false],
     ] as const) {
       const samples = [{ route: '#/list', durationMs }];
-      const result = evaluateDashboardTrace('representative', {
-        ...smokeMeasurements('representative'),
-        warmRouteSamples: samples,
-        warmRoutesMs: [durationMs],
-      });
+      const result = evaluateDashboardTrace(
+        'representative',
+        {
+          ...smokeMeasurements('representative'),
+          warmRouteSamples: samples,
+          warmRoutesMs: [durationMs],
+        },
+        traceBudgetPolicy(false),
+      );
       expect(result.passed).toBe(passed);
       expect(result.failures).toEqual(passed ? [] : ['#/list warmRouteP95Ms exceeds budget.']);
     }
@@ -242,27 +247,31 @@ describe('offline dashboard trace contract smoke', () => {
 
   it('reports each latency, stability, integrity and interaction violation', () => {
     const base = smokeMeasurements('representative');
-    const result = evaluateDashboardTrace('representative', {
-      ...base,
-      coldShellMs: 501,
-      usefulSnapshotMs: 1_001,
-      warmRoutesMs: [101],
-      panelsMs: [101],
-      filterMs: Array(100).fill(101),
-      paletteMs: Array(100).fill(101),
-      patchesMs: Array(50).fill(101),
-      graph: {
-        ...base.graph,
-        frameWorkMs: [16.8],
-        longTasksMs: [51],
+    const result = evaluateDashboardTrace(
+      'representative',
+      {
+        ...base,
+        coldShellMs: 501,
+        usefulSnapshotMs: 1_001,
+        warmRoutesMs: [101],
+        panelsMs: [101],
+        filterMs: Array(100).fill(101),
+        paletteMs: Array(100).fill(101),
+        patchesMs: Array(50).fill(101),
+        graph: {
+          ...base.graph,
+          frameWorkMs: [16.8],
+          longTasksMs: [51],
+          cls: 0.01,
+          interactionObserved: false,
+        },
         cls: 0.01,
-        interactionObserved: false,
+        selectionAfter: [{ ...base.selectionBefore, id: null, focusedId: null, anchorTop: 500 }],
+        nodeCount: 707,
+        browserErrors: ['Renderer crashed.'],
       },
-      cls: 0.01,
-      selectionAfter: [{ ...base.selectionBefore, id: null, focusedId: null, anchorTop: 500 }],
-      nodeCount: 707,
-      browserErrors: ['Renderer crashed.'],
-    });
+      traceBudgetPolicy(false),
+    );
     expect(result.passed).toBe(false);
     expect(result.failures).toHaveLength(14);
   });
