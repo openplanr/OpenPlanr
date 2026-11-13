@@ -2392,11 +2392,13 @@ test.describe('dashboard real-browser quality', () => {
       for (const width of [768, 1024]) {
         await page.setViewportSize({ width, height: 1024 });
         await open(local, theme);
-        const [seats, evidence] = await Promise.all(
-          [
-            today.locator('.pc-operate-today__seats'),
-            today.locator('.pc-operate-today__evidence'),
-          ].map(boxOf),
+        // Both boxes come from one frame, so a scroll or layout change cannot fall between them.
+        const [seats, evidence] = await today.evaluate((root) =>
+          ['.pc-operate-today__seats', '.pc-operate-today__evidence'].map((selector) => {
+            const box = root.querySelector(selector)?.getBoundingClientRect();
+            if (!box) throw new Error(`No box for ${selector}`);
+            return { x: box.x, y: box.y, width: box.width };
+          }),
         );
         expect(Math.abs(seats.y - evidence.y)).toBeLessThanOrEqual(1);
         expect(evidence.x - seats.x - seats.width).toBeCloseTo(24, 0);
