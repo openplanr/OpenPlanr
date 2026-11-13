@@ -1961,10 +1961,33 @@ test.describe('dashboard real-browser quality', () => {
         });
         if (setup === 'sprints-none') {
           const primary = sprints.getByRole('button', { name: 'Copy /planr:sprint' });
+          // "Copied" shows for two seconds, so record every label rather than poll for it.
+          await primary.evaluate((button) => {
+            const labels: string[] = [];
+            const read = () => {
+              const label = button.querySelector('.pc-copy-label > [data-active="true"]');
+              const text = label?.textContent ?? '';
+              if (labels.at(-1) !== text) labels.push(text);
+              document.documentElement.dataset.copyLabels = labels.join('|');
+            };
+            read();
+            new MutationObserver(read).observe(button, {
+              subtree: true,
+              attributes: true,
+              attributeFilter: ['data-active'],
+            });
+          });
           await primary.click();
-          await expect(primary.locator('.pc-copy-label > [data-active="true"]')).toHaveText(
-            'Copied',
-          );
+          await expect
+            .poll(async () => {
+              const labels = await page.evaluate(
+                () => document.documentElement.dataset.copyLabels?.split('|') ?? [],
+              );
+              return (
+                labels.includes('Copying') && labels.indexOf('Copied') > labels.indexOf('Copying')
+              );
+            })
+            .toBe(true);
           await expect(primary).toBeVisible();
           expect(await page.evaluate(() => navigator.clipboard.readText())).toBe('/planr:sprint');
           continue;
