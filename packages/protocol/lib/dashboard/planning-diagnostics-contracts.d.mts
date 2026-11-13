@@ -37,6 +37,8 @@ export type PlanningDiagnosticsEnvelope = Readonly<{
   totalCount: number | null;
   truncated: boolean;
 }>;
+/** A repository-relative source path for display; `:` and `%` are allowed, unlike file links. */
+export function validPlanningSourcePath(value: unknown): value is string;
 /** expected must come from a validated current Planning graph read. */
 export function assertPlanningDiagnosticsEnvelope(
   value: unknown,

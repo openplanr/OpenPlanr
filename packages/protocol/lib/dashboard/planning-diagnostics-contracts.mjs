@@ -1,7 +1,7 @@
 import { deepFreeze, exactJson, safeDataClone } from './closed-json-contract.mjs';
 import {
   PLANNING_FILE_LINK_ERROR_CODES,
-  validPlanningFilePath,
+  PLANNING_FILE_PATH_LIMIT,
 } from './planning-file-link-contracts.mjs';
 
 export const PLANNING_DIAGNOSTICS_MAX_BYTES = 256 * 1024;
@@ -44,6 +44,17 @@ const text = (value, limit) =>
     (character) => character.codePointAt(0) < 32 || character.codePointAt(0) === 127,
   );
 
+/** A repository-relative source path for display; `:` and `%` are allowed, unlike file links. */
+export function validPlanningSourcePath(value) {
+  return (
+    text(value, PLANNING_FILE_PATH_LIMIT) &&
+    !value.startsWith('/') &&
+    !value.includes('\\') &&
+    !/^[A-Za-z]:/u.test(value) &&
+    !value.split('/').some((part) => part === '' || part === '.' || part === '..')
+  );
+}
+
 // The caller supplies the already verified graph identity so diagnostics cannot introduce new authority.
 export function assertPlanningDiagnosticsEnvelope(value, expected) {
   const record = safeDataClone(value);
@@ -74,8 +85,7 @@ export function assertPlanningDiagnosticsEnvelope(value, expected) {
       (entry) =>
         !keys(entry, ['nodeId', 'sourcePath', 'field', 'reason', 'classification']) ||
         !text(entry.nodeId, 256) ||
-        !validPlanningFilePath(entry.nodeId) ||
-        !validPlanningFilePath(entry.sourcePath) ||
+        !validPlanningSourcePath(entry.sourcePath) ||
         !FIELDS.has(entry.field) ||
         !PLANNING_DIAGNOSTIC_REASONS.includes(entry.reason) ||
         entry.classification !== 'source-data',

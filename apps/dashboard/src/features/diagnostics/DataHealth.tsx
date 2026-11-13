@@ -1,4 +1,7 @@
-import type { PlanningReadDiagnostic } from '@openplanr/protocol/dashboard/planning-diagnostics-contracts.mjs';
+import {
+  type PlanningReadDiagnostic,
+  validPlanningSourcePath,
+} from '@openplanr/protocol/dashboard/planning-diagnostics-contracts.mjs';
 import { useMemo, useState } from 'react';
 import {
   Badge,
@@ -11,7 +14,6 @@ import {
   Toolbar,
 } from '../../design-system/components/index.js';
 import { planningDetailHref } from '../planning/planning-model.js';
-import { structuralFilePath } from '../planning/planning-structural-model.js';
 
 const REASONS = {
   'missing-reference': 'Unresolved reference',
@@ -62,6 +64,12 @@ const RECOVERY = {
     'Inspect the authored sprint dates. Use valid calendar dates and a closing or ending date on or after the start.',
 } as const;
 
+/** The source path as written, or null when it is absolute or steps outside the repository. */
+function displaySource(value: string): string | null {
+  if (!validPlanningSourcePath(value)) return null;
+  return value.split('/').some((part) => /^(?:\.|%2e){1,2}$/iu.test(part)) ? null : value;
+}
+
 function category(reason: ReadDiagnostic['reason']): keyof typeof RECOVERY {
   if (reason.includes('reference')) return 'references';
   if (reason === 'duplicate-identity') return 'identities';
@@ -88,7 +96,7 @@ export function DataHealth({
     const occurrences = new Map<string, number>();
     return (read?.diagnostics ?? []).map((entry) => {
       const nodeId = planningDetailHref(entry.nodeId) ? entry.nodeId : '';
-      const sourcePath = structuralFilePath(entry.sourcePath) ?? '';
+      const sourcePath = displaySource(entry.sourcePath) ?? '';
       const field = FIELDS.has(entry.field) ? entry.field : 'Authored field';
       const identity = JSON.stringify([nodeId, sourcePath, field, entry.reason]);
       const occurrence = occurrences.get(identity) ?? 0;
@@ -99,7 +107,7 @@ export function DataHealth({
   const available = read !== null && (!read.state || read.state === 'available');
   const needle = query.trim().toLowerCase();
   const shown = rows.filter((entry) => {
-    const source = structuralFilePath(entry.sourcePath) ?? '';
+    const source = displaySource(entry.sourcePath) ?? '';
     return (
       (filter === 'all' || category(entry.reason) === filter) &&
       `${entry.nodeId} ${source} ${entry.field} ${REASONS[entry.reason]}`
@@ -228,7 +236,7 @@ export function DataHealth({
           <ol className="op-diagnostics__list" aria-label="Data health findings">
             {shown.map((entry) => {
               const href = planningDetailHref(entry.nodeId);
-              const path = structuralFilePath(entry.sourcePath);
+              const path = displaySource(entry.sourcePath);
               return (
                 <li key={entry.id} data-diagnostic={entry.reason}>
                   <article>

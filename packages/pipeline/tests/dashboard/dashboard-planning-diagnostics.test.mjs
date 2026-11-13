@@ -149,6 +149,33 @@ test('diagnostics refreshes source evidence even when duplicate edits leave grap
   assert.equal(after.totalCount, before.totalCount + 1);
 });
 
+test('one unusual id or source path is reported without failing the other findings', async (t) => {
+  const root = fs.mkdtempSync(join(tmpdir(), 'planning-diagnostics-unusual-'));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  fs.mkdirSync(join(root, 'backlog'));
+  const item = (name, frontmatter) =>
+    fs.writeFileSync(
+      join(root, 'backlog', name),
+      `---\n${frontmatter}title: Item\nstatus: outstanding\ndependsOn: [MISSING-1]\n---\n`,
+    );
+  item('BL-001-100%-done.md', 'id: BL-001\n');
+  item('BL-002-colon.md', 'id: "BL:002"\n');
+  item('BL-003-a\u0001b.md', 'id: BL-003\n');
+  item('BL-004-plain.md', 'id: BL-004\n');
+  const { request, binding, cursor } = harness(root);
+  const response = await request();
+  const envelope = assertPlanningDiagnosticsEnvelope(response.json, { binding, cursor });
+  assert.equal(envelope.state, 'available');
+  assert.equal(envelope.totalCount, 4);
+  const shown = envelope.diagnostics.map((entry) => [entry.nodeId, entry.sourcePath]);
+  assert.deepEqual(shown, [
+    ['BL-001', '.planr/backlog/BL-001-100%-done.md'],
+    ['BL:002', '.planr/backlog/BL-002-colon.md'],
+    ['BL-003', '.planr/backlog/BL-003-a\uFFFDb.md'],
+    ['BL-004', '.planr/backlog/BL-004-plain.md'],
+  ]);
+});
+
 test('diagnostics caps records and bytes and explicitly discloses omitted evidence', async (t) => {
   const root = fs.mkdtempSync(join(tmpdir(), 'planning-diagnostics-limit-'));
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));

@@ -164,6 +164,19 @@ describe('Data health evidence boundaries', () => {
     expect(screen.queryByRole('list')).toBeNull();
   });
 
+  it('shows ids and source paths that contain colons or percent signs as written', () => {
+    const diagnostics = [
+      { nodeId: 'BL:002', sourcePath: '.planr/backlog/BL-002-colon.md' },
+      { nodeId: 'BL-001', sourcePath: '.planr/backlog/BL-001-100%-done.md' },
+    ].map((entry) => ({ ...required(findings[0]), ...entry }));
+    render(<DataHealth read={{ diagnostics }} />);
+    for (const entry of diagnostics) {
+      expect(screen.getByText(entry.sourcePath)).not.toBeNull();
+      expect(screen.getByRole('link', { name: entry.nodeId })).not.toBeNull();
+    }
+    expect(screen.queryByText('Repository-relative source unavailable')).toBeNull();
+  });
+
   it('does not render or search absolute paths, traversal, unsafe fields or unsafe item identities', async () => {
     const user = userEvent.setup();
     const unsafeSources = [

@@ -10,6 +10,7 @@ import {
 import {
   assertPlanningFileLinkEnvelope,
   PLANNING_FILE_LINK_ERROR_CODES,
+  PLANNING_FILE_PATH_LIMIT,
   validPlanningFilePath,
 } from '../planning-file-link-contracts.mjs';
 import { sha256Jcs } from './operate.mjs';
@@ -106,6 +107,18 @@ export function handlePlanningGraph(context) {
   return planningJson(context.res, 200, context.dashboard.planning.graphEnvelope(binding));
 }
 
+/** Source paths are display text: control characters become U+FFFD and long paths end in `…`. */
+function displaySourcePath(path) {
+  const characters = Array.from(path, (character) => {
+    const code = character.codePointAt(0);
+    return code < 32 || code === 127 ? '\uFFFD' : character;
+  });
+  let text = characters.join('');
+  if (text.length <= PLANNING_FILE_PATH_LIMIT) return text;
+  while (text.length > PLANNING_FILE_PATH_LIMIT - 1) text = text.slice(0, -characters.pop().length);
+  return `${text}\u2026`;
+}
+
 export function handlePlanningDiagnostics(context) {
   const { dashboard, req, res, url } = context;
   const params = new URLSearchParams(url.searchParams);
@@ -164,7 +177,7 @@ export function handlePlanningDiagnostics(context) {
       return key(left) < key(right) ? -1 : key(left) > key(right) ? 1 : 0;
     })
     .slice(0, PLANNING_DIAGNOSTICS_MAX_COUNT)
-    .map((entry) => ({ ...entry, sourcePath: `.planr/${entry.sourcePath}` }));
+    .map((entry) => ({ ...entry, sourcePath: displaySourcePath(`.planr/${entry.sourcePath}`) }));
   const result = {
     ...base,
     state: 'available',

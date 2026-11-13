@@ -61,6 +61,18 @@ test('closed diagnostics accepts bound native evidence and explicit partial or u
   }
 });
 
+test('diagnostics accepts colons and percent signs in authored ids and source paths', () => {
+  for (const [nodeId, sourcePath] of [
+    ['BL:002', '.planr/backlog/BL-002-colon.md'],
+    ['BL-001', '.planr/backlog/BL-001-100%-done.md'],
+    ['T-001', '.planr/tasks/source%2f.md'],
+  ]) {
+    const value = envelope();
+    Object.assign(value.diagnostics[0], { nodeId, sourcePath });
+    assert.equal(assertPlanningDiagnosticsEnvelope(value, expected).diagnostics[0].nodeId, nodeId);
+  }
+});
+
 test('diagnostics rejects closed-shape, binding, cursor, truncation and safety violations', () => {
   for (const mutate of [
     (value) => {
@@ -91,7 +103,16 @@ test('diagnostics rejects closed-shape, binding, cursor, truncation and safety v
       value.diagnostics[0].sourcePath = 'C:\\source.md';
     },
     (value) => {
-      value.diagnostics[0].sourcePath = 'source%2f.md';
+      value.diagnostics[0].sourcePath = 'C:source.md';
+    },
+    (value) => {
+      value.diagnostics[0].sourcePath = '.planr\\backlog.md';
+    },
+    (value) => {
+      value.diagnostics[0].nodeId = 'BL-001\u0007';
+    },
+    (value) => {
+      value.diagnostics[0].nodeId = `BL-${'1'.repeat(300)}`;
     },
     (value) => {
       value.diagnostics[0].field = 'body';
