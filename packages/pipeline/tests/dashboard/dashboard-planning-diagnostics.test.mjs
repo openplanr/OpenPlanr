@@ -198,6 +198,31 @@ test('a skipped file is reported beside the other findings without a node', asyn
   );
 });
 
+test('a backslash in a file name is reported without failing the other findings', async (t) => {
+  const root = fs.mkdtempSync(join(tmpdir(), 'planning-diagnostics-backslash-'));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  fs.mkdirSync(join(root, 'backlog'));
+  const item = (name, id) =>
+    fs.writeFileSync(
+      join(root, 'backlog', name),
+      `---\nid: ${id}\ntitle: Item\nstatus: outstanding\ndependsOn: [MISSING-1]\n---\n`,
+    );
+  item('BL-001-plain.md', 'BL-001');
+  item('BL-002-a\\b.md', 'BL-002');
+  fs.writeFileSync(join(root, 'backlog', 'a\\b.md'), '---\ntitle: Stray\n---\n');
+  const { request, binding, cursor } = harness(root);
+  const envelope = assertPlanningDiagnosticsEnvelope((await request()).json, { binding, cursor });
+  assert.equal(envelope.state, 'available');
+  assert.deepEqual(
+    envelope.diagnostics.map((entry) => [entry.reason, entry.nodeId, entry.sourcePath]),
+    [
+      ['missing-reference', 'BL-001', '.planr/backlog/BL-001-plain.md'],
+      ['missing-reference', 'BL-002', '.planr/backlog/BL-002-a�b.md'],
+      ['unrecognized-identity', 'a\\b', '.planr/backlog/a�b.md'],
+    ],
+  );
+});
+
 test('diagnostics caps records and bytes and explicitly discloses omitted evidence', async (t) => {
   const root = fs.mkdtempSync(join(tmpdir(), 'planning-diagnostics-limit-'));
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));

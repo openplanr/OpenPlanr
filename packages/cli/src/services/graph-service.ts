@@ -411,11 +411,20 @@ export function readGraph(planrDir: string, opts: ReadGraphOptions = {}): Projec
   return readGraphData(planrDir, opts);
 }
 
+/** Display path for diagnostics: a backslash, which the path contract rejects, becomes U+FFFD. */
+function displaySourcePath(sourcePath: string): string {
+  return sourcePath.replaceAll('\\', '�');
+}
+
 export function readPlanningModel(planrDir: string): PlanningReadModel {
   const sourcePaths = new Map<string, string>();
   const diagnostics: PlanningDiagnostic[] = [];
   const graph = readGraphData(planrDir, {}, sourcePaths, diagnostics);
-  return createPlanningReadModel(graph, sourcePaths, diagnostics);
+  return createPlanningReadModel(
+    graph,
+    new Map([...sourcePaths].map(([id, sourcePath]) => [id, displaySourcePath(sourcePath)])),
+    diagnostics.map((entry) => ({ ...entry, sourcePath: displaySourcePath(entry.sourcePath) })),
+  );
 }
 
 export function readProjectGraph(

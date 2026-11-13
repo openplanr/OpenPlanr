@@ -588,12 +588,21 @@ export function readGraph(planrDir, opts = {}) {
   return readGraphData(planrDir, opts);
 }
 
+/** Display path for diagnostics: a backslash, which the path contract rejects, becomes U+FFFD. */
+function displaySourcePath(path) {
+  return path.replaceAll('\\', '\uFFFD');
+}
+
 /** Diagnostic evidence stays separate from the closed graph wire projection. */
 export function readPlanningModel(planrDir) {
   const sourcePaths = new Map();
   const diagnostics = [];
   const graph = readGraphData(planrDir, { strict: true }, sourcePaths, diagnostics);
-  return createPlanningReadModel(graph, sourcePaths, diagnostics);
+  return createPlanningReadModel(
+    graph,
+    new Map([...sourcePaths].map(([id, path]) => [id, displaySourcePath(path)])),
+    diagnostics.map((entry) => ({ ...entry, sourcePath: displaySourcePath(entry.sourcePath) })),
+  );
 }
 
 /**

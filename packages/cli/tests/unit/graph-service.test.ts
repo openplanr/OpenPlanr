@@ -60,6 +60,37 @@ describe('graph-service', () => {
     }
   });
 
+  it('reports a backslash file name with a display-safe path instead of failing the read', () => {
+    const root = mkdtempSync(join(tmpdir(), 'planr-graph-backslash-'));
+    try {
+      mkdirSync(join(root, 'backlog'));
+      const item = (name: string, id: string) =>
+        writeFileSync(
+          join(root, 'backlog', name),
+          `---\nid: ${id}\ntitle: Item\nstatus: outstanding\ndependsOn: [MISSING-1]\n---\n`,
+        );
+      item('BL-001-plain.md', 'BL-001');
+      item('BL-002-a\\b.md', 'BL-002');
+      writeFileSync(join(root, 'backlog', 'a\\b.md'), '---\ntitle: Stray\n---\n');
+      const model = readPlanningModel(root);
+      expect(model.graph.nodes.map((node) => node.id).sort()).toEqual(['BL-001', 'BL-002']);
+      expect(
+        model.diagnostics
+          .map((entry) => [entry.reason, entry.nodeId, entry.sourcePath])
+          .sort((a, b) => a.join().localeCompare(b.join())),
+      ).toEqual([
+        ['missing-reference', 'BL-001', 'backlog/BL-001-plain.md'],
+        ['missing-reference', 'BL-002', 'backlog/BL-002-a�b.md'],
+        ['unrecognized-identity', 'a\\b', 'backlog/a�b.md'],
+      ]);
+      expect(model.references.find((reference) => reference.nodeId === 'BL-002')?.sourcePath).toBe(
+        'backlog/BL-002-a�b.md',
+      );
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
   it('classifies statuses with the protocol graph status set', () => {
     expect(classifyGraphStatus('done')).toBe('done');
     expect(classifyGraphStatus('closed')).toBe('done');
