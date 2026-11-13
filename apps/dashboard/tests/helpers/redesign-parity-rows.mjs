@@ -891,7 +891,7 @@ const todayRow = (id, selector, properties, options = {}) =>
     setup: options.setup ?? 'today-local',
     ...(options.items ? { items: options.items } : {}),
   }));
-export const todayParityRows = [
+const todayLocalRows = [
   ...todayRow('O-01', '.pc-operate-today__heading h1', {
     'font-family': 'Outfit',
     'font-weight': '700',
@@ -940,6 +940,43 @@ export const todayParityRows = [
   }),
   ...todayRow('O-11', '.pc-operate-today__evidence-title', { 'font-size': '14px' }),
   ...todayRow('O-11', '.pc-operate-today__evidence-state', { 'font-size': '12px' }),
+];
+const gatewayIds = new Set(['O-01', 'O-02', 'O-03', 'O-04', 'O-10', 'O-11']);
+export const todayParityRows = [
+  ...todayLocalRows,
+  ...todayLocalRows
+    .filter((entry) => gatewayIds.has(entry.id) && !entry.selector.includes(':not(:last-child)'))
+    .map((entry) => ({ ...entry, setup: 'today' })),
+  ...todayRow(
+    'O-07',
+    '.pc-operate-today__next .op-governed-button',
+    { height: '40px' },
+    {
+      setup: 'today',
+    },
+  ),
+  ...todayRow(
+    'O-15',
+    '.pc-operate-setup',
+    { tracks: '1fr 280px', 'padding-top': '24px', 'padding-left': '24px' },
+    { setup: 'today-setup' },
+  ),
+  ...todayRow(
+    'O-15',
+    '.pc-operate-setup .pc-command-hint__command',
+    { height: '37px' },
+    {
+      setup: 'today-setup',
+    },
+  ),
+  ...todayRow(
+    'O-15',
+    '.pc-operate-setup .pc-command-hint__copy',
+    { height: '40px' },
+    {
+      setup: 'today-setup',
+    },
+  ),
 ];
 
 function sampleRows(nodes, { property, expected, items }) {

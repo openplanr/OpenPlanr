@@ -34,7 +34,9 @@ export type ParityRow = Readonly<{
     | 'palette-empty'
     | 'palette-operate'
     | 'palette-M'
+    | 'today'
     | 'today-local'
+    | 'today-setup'
     | null;
   items?: string;
 }>;

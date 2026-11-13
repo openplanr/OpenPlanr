@@ -2107,6 +2107,77 @@ test.describe('dashboard real-browser quality', () => {
         'D-031 Hold the next release until the dashboard redesign ships?',
       );
       await page.screenshot({ path: testInfo.outputPath(`today-local-selected-D-${theme}.png`) });
+
+      await page.goto(fixtureUrl('#/operate/today', { theme }));
+      await page.evaluate(() => document.fonts.ready);
+      await expect(today.locator('.pc-operate-today__decision')).toBeVisible();
+      for (const row of todayParityRows.filter((entry) => entry.setup === 'today'))
+        results.push(...(await assertParityRow(page, row, theme)));
+      const gatewayOrigin = await today.locator('.pc-operate-today__header').boundingBox();
+      if (!gatewayOrigin) throw new Error('Gateway Today header has no box');
+      for (const selector of [
+        '.pc-operate-today__eyebrow',
+        '.pc-operate-today__heading h1',
+        '.pc-operate-today__summary',
+        '.pc-operate-today__decision',
+        '.pc-operate-today__pill',
+        '.pc-operate-today__decision-body h2',
+      ] as const) {
+        const [x, y] = canvas[selector];
+        const box = await today.locator(selector).first().boundingBox();
+        if (!box) throw new Error(`Gateway ${selector} has no box`);
+        const actual = [Math.round(box.x - gatewayOrigin.x), Math.round(box.y - gatewayOrigin.y)];
+        deltas.push({ theme, path: 'gateway', selector, canvas: [x, y], actual });
+        expect(Math.abs(actual[0] - x), `gateway ${selector} x`).toBeLessThanOrEqual(2);
+        expect(Math.abs(actual[1] - y), `gateway ${selector} y`).toBeLessThanOrEqual(2);
+      }
+      const governed = today.locator('.pc-operate-today__next .op-governed-button');
+      await expect(governed).toHaveAttribute('data-variant', 'secondary');
+      await expect(today.locator('.pc-operate-today__next .op-governed-reason')).toBeVisible();
+      expect((await layoutReport(page)).horizontalOverflow).toBe(false);
+      await page.screenshot({
+        path: testInfo.outputPath(`today-gateway-D-${theme}.png`),
+        fullPage: true,
+      });
+
+      await page.goto(fixtureUrl('#/operate/today', { localOperate: 'empty', theme }));
+      await page.evaluate(() => document.fonts.ready);
+      const setup = today.locator('.pc-operate-setup');
+      await expect(setup).toBeVisible();
+      for (const row of todayParityRows.filter((entry) => entry.setup === 'today-setup'))
+        results.push(...(await assertParityRow(page, row, theme)));
+      const main = page.locator('#main-content');
+      await expect(main.getByText('Proposed', { exact: true })).toHaveCount(0);
+      await expect(main.locator('.pc-section-header')).toHaveCount(0);
+      await expect(main.locator('.pc-local-review__footnote')).toHaveCount(0);
+      const [card, code, copy] = await Promise.all(
+        ['', ' .pc-command-hint__command', ' .pc-command-hint__copy'].map((part) =>
+          page.locator(`.pc-operate-setup${part}`).boundingBox(),
+        ),
+      );
+      if (!card || !code || !copy) throw new Error('Setup card parts have no box');
+      const setupActual = {
+        height: Math.round(card.height),
+        code: [Math.round(card.x + card.width - code.x - code.width), Math.round(code.y - card.y)],
+        gap: Math.round(copy.y - code.y - code.height),
+      };
+      deltas.push({
+        theme,
+        path: 'setup',
+        canvas: { height: 135, code: [26, 25], gap: 8 },
+        setupActual,
+      });
+      expect(Math.abs(setupActual.height - 135), 'setup card height').toBeLessThanOrEqual(2);
+      expect(Math.abs(setupActual.code[0] - 26), 'setup command right inset').toBeLessThanOrEqual(
+        2,
+      );
+      expect(Math.abs(setupActual.code[1] - 25), 'setup command top').toBeLessThanOrEqual(2);
+      expect(setupActual.gap).toBe(8);
+      expect((await layoutReport(page)).horizontalOverflow).toBe(false);
+      await page.screenshot({
+        path: testInfo.outputPath(`today-setup-D-${theme}.png`),
+        fullPage: true,
+      });
     }
     const parity = testInfo.outputPath('today-parity.json');
     writeFileSync(parity, JSON.stringify({ results, deltas }, null, 2));
