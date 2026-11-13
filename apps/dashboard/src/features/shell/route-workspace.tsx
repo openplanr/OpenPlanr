@@ -11,6 +11,7 @@ import {
   isValidatedDashboardProductState,
 } from '../../lib/api/product-state.js';
 import { isCurrentDashboardQuery } from '../../lib/binding/query-identity.js';
+import { CouldNotRead } from '../operate/today/TodayStates.js';
 import type { DashboardSearchSources } from '../search/search-index.js';
 import { ProjectionBoundary } from './ProjectionBoundary.js';
 import { type OperateReviewNavigation, operateRouteRegistry } from './routes/operate/index.js';
@@ -283,13 +284,25 @@ export function RouteWorkspace(props: RouteWorkspaceProps) {
         />
       );
     }
+    const reason =
+      'The Operate session returned a state this page could not verify, so none of it is shown.';
+    if (
+      isPendingRouteProjection(projection, binding) ||
+      (isValidatedDashboardProductState(projection) && projection.data === null)
+    ) {
+      return (
+        <RouteProjectionFallback
+          {...props}
+          eyebrow="Today projection"
+          title="Today could not be read"
+          description={reason}
+        />
+      );
+    }
     return (
-      <RouteProjectionFallback
-        {...props}
-        eyebrow="Today projection"
-        title="Today cannot be trusted"
-        description="The current state is not a parser-verified owner-issued Today projection."
-      />
+      <div className="op-workspace pc-operate" data-route-kind={route.kind}>
+        <CouldNotRead title="Today could not be read" reason={reason} />
+      </div>
     );
   }
 

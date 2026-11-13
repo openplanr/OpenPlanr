@@ -82,7 +82,9 @@ describe('Completed local operating reviews', () => {
       );
       await screen.findByRole('heading', {
         name:
-          kind === 'operate.today' ? 'No decision is waiting' : 'Review the latest operating cycle',
+          kind === 'operate.today'
+            ? 'Nothing needs you today'
+            : 'Review the latest operating cycle',
       });
       const workspace = container.querySelector<HTMLElement>(`[data-route-kind="${kind}"]`);
       if (!workspace) throw new Error(`Missing workspace for ${kind}`);
@@ -112,12 +114,12 @@ describe('Operate first-run presentation', () => {
     Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText } });
     const { container } = render(<LocalOperateReviews route={route} origin="http://localhost" />);
     expect(
-      await screen.findByRole('heading', { name: 'Operate is not set up here yet' }),
+      await screen.findByRole('heading', { name: 'Operate is not set up in this project' }),
     ).toBeTruthy();
-    expect(screen.getByText('Proposed')).toBeTruthy();
+    expect(screen.queryByText('Proposed')).toBeNull();
     expect(screen.queryByRole('heading', { name: 'Operate today' })).toBeNull();
     expect(
-      screen.getByRole('heading', { level: 1, name: 'Operate is not set up here yet' }),
+      screen.getByRole('heading', { level: 1, name: 'Operate is not set up in this project' }),
     ).toBeTruthy();
     expect(screen.queryByText('Governed actions')).toBeNull();
     expect(container.querySelector('.pc-shell__scroll > .pc-local-review.pc-operate')).toBeTruthy();
@@ -127,27 +129,18 @@ describe('Operate first-run presentation', () => {
     expect(
       fetch.mock.calls.every(([, options]) => !options.method || options.method === 'GET'),
     ).toBe(true);
-    const example = within(
-      screen.getByRole('region', { name: /How Today reads once a cycle exists/ }),
-    );
-    expect(example.getByText('Example cycle')).toBeTruthy();
-    expect(example.getByText('Focus item')).toBeTruthy();
-    expect(example.getByText('Cycle [ID] · Chair synthesis')).toBeTruthy();
+    expect(screen.queryByText('Example cycle')).toBeNull();
+    const seats = within(screen.getByRole('region', { name: 'Executive seats' }));
+    const rows = seats.getAllByRole('listitem');
     expect(
-      example.getByRole('heading', { name: '[The one decision this cycle asks for]' }),
-    ).toBeTruthy();
-    expect(example.getByText('Confidence in this cycle')).toBeTruthy();
-    expect(example.getByText('[level]')).toBeTruthy();
-    expect(example.getAllByText('[n]')).toHaveLength(5);
-    expect(example.getByRole('heading', { name: 'Executive seats' })).toBeTruthy();
-    for (const role of ['CEO', 'CTO', 'CPO', 'CMO', 'COO', 'CHAIR', 'CHALLENGER']) {
-      expect(example.getByText(role)).toBeTruthy();
+      rows.map((row) => row.querySelector('.pc-operate-today__seat-name')?.textContent),
+    ).toEqual(['CEO', 'CTO', 'CPO', 'CMO', 'COO', 'CHAIR', 'CHALLENGER']);
+    for (const row of rows) {
+      expect(row.querySelector('.pc-operate-today__seat-focus')?.textContent).toBeTruthy();
+      expect(row.querySelector('.pc-operate-today__seat-state')).toBeNull();
     }
-    expect(example.getByRole('heading', { name: 'Evidence desk' })).toBeTruthy();
-    expect(example.getByRole('heading', { name: 'Inbox' })).toBeTruthy();
-    expect(example.getByRole('heading', { name: 'Planning handoff' })).toBeTruthy();
-    expect(example.queryByRole('button')).toBeNull();
-    expect(example.queryByRole('link')).toBeNull();
+    expect(seats.queryByRole('button')).toBeNull();
+    expect(seats.queryByRole('link')).toBeNull();
   });
 
   it('surfaces clipboard denial and keeps the exact command selectable', async () => {
@@ -167,8 +160,12 @@ describe('Operate first-run presentation', () => {
     vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('Local review read failed')));
     render(<LocalOperateReviews route={route} origin="http://localhost" />);
     expect(await screen.findByText('Local review read failed')).toBeTruthy();
-    expect(screen.getByRole('heading', { level: 1, name: 'Operate today' })).toBeTruthy();
-    expect(screen.queryByRole('heading', { name: 'Operate is not set up here yet' })).toBeNull();
+    expect(
+      screen.getByRole('heading', { level: 1, name: 'Local reviews could not be read' }),
+    ).toBeTruthy();
+    expect(
+      screen.queryByRole('heading', { name: 'Operate is not set up in this project' }),
+    ).toBeNull();
     expect(screen.queryByRole('button', { name: 'Copy command' })).toBeNull();
     expect(screen.queryByText('Example cycle')).toBeNull();
   });

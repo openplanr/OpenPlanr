@@ -528,9 +528,9 @@ test.describe('dashboard real-browser quality', () => {
         expect(await indexRead.json()).toMatchObject({ pagination: { total: 0 }, items: [] });
         const workspace = page.locator('[data-route-kind="operate.today"]');
         await expect(
-          workspace.getByRole('heading', { name: 'Operate is not set up here yet' }),
+          workspace.getByRole('heading', { name: 'Operate is not set up in this project' }),
         ).toBeVisible();
-        await expect(workspace.getByText('Proposed', { exact: true })).toBeVisible();
+        await expect(workspace.getByText('Proposed', { exact: true })).toHaveCount(0);
         if (width === 1440) {
           await expect(page.locator('.pc-shell-inspector, .pc-inspector-sheet')).toHaveCount(0);
           await expect(
@@ -549,7 +549,11 @@ test.describe('dashboard real-browser quality', () => {
           await expectControlsHitTestable(page);
         }
 
-        await expect(workspace.locator('.op-today-focus, .pc-local-review__signal')).toHaveCount(0);
+        await expect(
+          workspace.locator(
+            '.op-today-focus, .pc-local-review__signal, .pc-operate-today__decision',
+          ),
+        ).toHaveCount(0);
         await workspace.getByRole('button', { name: 'Copy command', exact: true }).click();
         await expect(workspace.getByRole('button', { name: 'Copied', exact: true })).toBeVisible();
         expect(await page.evaluate(() => navigator.clipboard.readText())).toBe('/planr:operate');

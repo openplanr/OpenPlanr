@@ -211,7 +211,7 @@ describe('T-037 verified Today display consumption', () => {
     );
     expect(linkedHtml).toContain(`href="${model.activeCycle.deepLink}"`);
     expect(html).toContain('Today decision workspace');
-    expect(html).not.toContain('Today cannot be trusted');
+    expect(html).not.toContain('Today could not be read');
   });
 
   it.each([
@@ -282,11 +282,40 @@ describe('T-037 verified Today display consumption', () => {
     const html = renderToStaticMarkup(
       <TodayPage currentBinding={fixture.binding} sources={{ current: unbranded }} />,
     );
-    expect(html).toContain('Today cannot be trusted');
+    expect(html).toContain('Today could not be read');
     expect(html).not.toContain('<header');
     expect(html).not.toContain('Today decision workspace');
     expect(html).not.toContain('Operating spine');
     expect(html).not.toContain(TAMPER);
+    expect(html).not.toContain(fixture.cycleId);
+    expect(html).not.toMatch(/pc-operate-today__(?:eyebrow|title|decision|rows|evidence)/u);
+  });
+
+  it('refuses an unverified Today projection in the shell without rendering any of it', () => {
+    const trusted = productState(fixture.binding, fixture.display);
+    const tampered = mutated((display) => {
+      if (display.payload.surface !== 'today' || !display.payload.data.activeCycle) {
+        throw new Error('Expected active Today display.');
+      }
+      Reflect.set(display.payload.data.activeCycle, 'focus', [TAMPER]);
+    });
+    const html = renderToStaticMarkup(
+      <DashboardProviders
+        connection={{ state: 'connected', label: 'Connected', reason: 'Verified test connection.' }}
+        buildId="t037-today-refusal"
+        initialHash="#/operate/today"
+        binding={fixture.binding}
+        projection={Object.freeze({ ...trusted, data: tampered })}
+      >
+        <UnifiedShell />
+      </DashboardProviders>,
+    );
+    expect(html).toContain('Today could not be read');
+    expect(html).not.toContain('Today cannot be trusted');
+    expect(html).not.toContain(TAMPER);
+    expect(html).not.toContain(fixture.publicText);
+    expect(html).not.toContain('Today decision workspace');
+    expect(html).not.toMatch(/pc-operate-today__(?:eyebrow|title|decision|rows|evidence)/u);
   });
 
   it('prefers a verified durable resume over first-use and empty presentations', () => {
@@ -311,13 +340,13 @@ describe('T-037 verified Today display consumption', () => {
     });
     const current = contextState('first-use', noCycle);
     const html = renderToStaticMarkup(<TodayPage currentBinding={noCycle} sources={{ current }} />);
-    expect(html).toContain('Operate is not set up here yet');
-    expect(html).toContain('Proposed');
+    expect(html).toContain('Operate is not set up in this project');
+    expect(html).not.toContain('Proposed');
     expect(html).not.toContain('The current operating context for this project.');
     expect(html).toContain('/planr:operate');
-    expect(html).toContain('Example cycle');
-    expect(html).toContain('Content below is illustrative, not this project’s data.');
-    expect(html).toContain('No governed next step is available until work is returned');
+    expect(html).not.toContain('Example cycle');
+    expect(html).not.toContain('Content below is illustrative, not this project’s data.');
+    expect(html).not.toContain('No governed next step is available until work is returned');
     expect(html).not.toContain(fixture.cycleId);
   });
 
@@ -337,8 +366,9 @@ describe('T-037 verified Today display consumption', () => {
       const html = renderToStaticMarkup(
         <TodayPage currentBinding={binding} sources={{ current: state }} />,
       );
-      expect(html).toContain('Today cannot be trusted');
+      expect(html).toContain('Today could not be read');
       expect(html).not.toContain(fixture.publicText);
+      expect(html).not.toMatch(/pc-operate-today__(?:eyebrow|title|decision|rows|evidence)/u);
     }
   });
 

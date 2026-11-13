@@ -88,13 +88,14 @@ function recorded(value: string): string | null {
 }
 
 /** "Sat, 25 Oct"; a date without a time is read in UTC so the browser's time zone cannot move it. */
-export function dayLabel(value: string): string | null {
+export function dayLabel(value: string, weekday = true): string | null {
   const date = new Date(value);
   if (Number.isNaN(date.valueOf())) return null;
   const timeZone = /^\d{4}-\d{2}-\d{2}$/u.test(value.trim()) ? 'UTC' : undefined;
   const part = (options: Intl.DateTimeFormatOptions) =>
     new Intl.DateTimeFormat('en-US', { ...options, timeZone }).format(date);
-  return `${part({ weekday: 'short' })}, ${part({ day: 'numeric' })} ${part({ month: 'short' })}`;
+  const day = `${part({ day: 'numeric' })} ${part({ month: 'short' })}`;
+  return weekday ? `${part({ weekday: 'short' })}, ${day}` : day;
 }
 
 function counted(count: number, one: string, many: string): string {
@@ -130,8 +131,10 @@ export function todayViewFromLocalReview(item: LocalReviewInput): TodayView {
   }));
   const reported = seats.filter((seat) => seat.state !== 'waiting').length;
   const decisionCount = item.decisions.length;
-  const title =
-    decisionCount === 0
+  const nothingWaiting = decisionCount + item.actions.length + item.gaps.length === 0;
+  const title = nothingWaiting
+    ? 'Nothing needs you today'
+    : decisionCount === 0
       ? 'No decision is waiting'
       : decisionCount === 1
         ? 'One decision needs you'
@@ -141,7 +144,10 @@ export function todayViewFromLocalReview(item: LocalReviewInput): TodayView {
     item.gaps.length ? counted(item.gaps.length, 'open question', 'open questions') : '',
   ].filter(Boolean);
   const seatLine = seats.length ? `${reported} of ${seats.length} seats reported.` : '';
-  const summary = `${seatLine}${waitingSentence(waiting, item.actions.length + item.gaps.length)}`;
+  const closed = dayLabel(item.updatedAt, false);
+  const summary = nothingWaiting
+    ? `Cycle ${item.cycleId} closed${closed ? ` on ${closed}` : ''} with no decisions recorded.`
+    : `${seatLine}${waitingSentence(waiting, item.actions.length + item.gaps.length)}`;
   const confidence = first ? recorded(first.confidence) : null;
   const decision: TodayDecision | null = first
     ? {

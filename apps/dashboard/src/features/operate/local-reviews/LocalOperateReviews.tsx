@@ -21,6 +21,7 @@ import {
 import './local-operate-reviews.css';
 import { OperateSetup } from '../OperateSetup.js';
 import { TodayLayout } from '../today/TodayParts.js';
+import { CouldNotRead } from '../today/TodayStates.js';
 import { todayViewFromLocalReview } from '../today/today-view.js';
 import '../operate.css';
 
@@ -1247,6 +1248,24 @@ export function LocalOperateReviews({
   const showSetup =
     route.kind === 'operate.today' && indexState.status === 'ready' && selectedCycleId === null;
   const todayReady = route.kind === 'operate.today' && detail !== null;
+  const todayFailure =
+    route.kind !== 'operate.today'
+      ? null
+      : !selectedCycleId && indexState.status === 'failed'
+        ? { title: 'Local reviews could not be read', reason: indexState.error }
+        : selectedCycleId && !detail && detailState.status === 'failed'
+          ? { title: `Cycle ${selectedCycleId} could not be read`, reason: detailState.error }
+          : null;
+
+  if (todayFailure) {
+    return (
+      <div className="pc-shell__scroll">
+        <div className="pc-local-review pc-operate" data-route-kind={route.kind}>
+          <CouldNotRead title={todayFailure.title} reason={todayFailure.reason} />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="pc-shell__scroll">
@@ -1298,7 +1317,7 @@ export function LocalOperateReviews({
             <LocalRouteView route={route} item={detail} />
           </>
         )}
-        {todayReady ? null : (
+        {todayReady || showSetup ? null : (
           <div className="pc-local-review__footnote">
             <PcIcon name="lock" size={12} /> Local projections are review records. Approval and
             execution require an actor-bound Operate session.

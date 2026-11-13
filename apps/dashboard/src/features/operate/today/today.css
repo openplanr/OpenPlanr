@@ -511,6 +511,89 @@
   transform: rotate(45deg);
 }
 
+/* States: not set up, could not read */
+.pc-operate
+  .pc-operate-today
+  :is(.pc-operate-setup, .pc-operate-setup__seats, .pc-operate-today__unread) {
+  grid-column: span 8;
+}
+.pc-operate .pc-operate-today .pc-operate-setup {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 280px;
+  align-items: center;
+  gap: 24px;
+  padding: 24px;
+}
+.pc-operate .pc-operate-today .pc-operate-setup h1 {
+  color: var(--op-heading);
+  font: 600 20px / 28px var(--op-font-display);
+}
+.pc-operate .pc-operate-today .pc-operate-setup__copy p {
+  margin-top: 8px;
+  color: var(--op-body);
+  font: 400 14px / 22px var(--op-font-ui);
+}
+.pc-operate .pc-operate-today .pc-operate-setup .pc-command-hint__row {
+  display: grid;
+  gap: 8px;
+  height: auto;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+.pc-operate
+  .pc-operate-today
+  .pc-operate-setup
+  .pc-command-hint__copy
+  :is(.pc-command-hint__key, .pc-command-hint__touch-icon) {
+  display: none;
+}
+.pc-operate .pc-operate-today .pc-operate-setup .pc-command-hint__copy > .pc-copy-label {
+  position: static;
+}
+.pc-operate .pc-operate-today .pc-operate-setup .pc-command-hint__copy > .pc-copy-label > span {
+  position: static;
+  width: auto;
+  height: auto;
+  margin: 0;
+  overflow: visible;
+  clip: auto;
+  background: transparent;
+}
+.pc-operate .pc-operate-today .pc-operate-setup .pc-command-hint__command {
+  box-sizing: border-box;
+  height: 37px;
+  padding: 10px 12px;
+  border: 1px solid var(--op-line);
+  border-radius: 8px;
+  background: var(--op-card);
+  color: var(--op-heading);
+  font: 500 12px / 15px var(--op-font-technical);
+}
+.pc-operate .pc-operate-today .pc-operate-setup .pc-command-hint__copy {
+  width: 100%;
+  height: 40px;
+  border: 0;
+  border-radius: 8px;
+  background: var(--op-accent);
+  color: var(--op-on-accent);
+  font: 600 13px / 17px var(--op-font-ui);
+}
+.pc-operate .pc-operate-today .pc-operate-today__unread {
+  display: grid;
+  gap: 10px;
+  padding: 20px;
+  border-color: color-mix(in srgb, var(--op-danger) 45%, transparent);
+}
+.pc-operate .pc-operate-today .pc-operate-today__unread h1 {
+  color: var(--op-heading);
+  font: 600 15px / 20px var(--op-font-ui);
+}
+.pc-operate .pc-operate-today .pc-operate-today__unread p {
+  color: var(--op-body);
+  font: 400 14px / 20px var(--op-font-ui);
+}
+
 /* Operate place tabs in the top bar */
 .pc-operate-places {
   display: flex;
@@ -546,7 +629,15 @@
 
 /* Below 1200 the page stacks into one column. */
 @media (max-width: 1199px) {
-  .pc-operate .pc-operate-today :is(.pc-operate-today__main, .pc-operate-today__side) {
+  .pc-operate
+    .pc-operate-today
+    :is(
+      .pc-operate-today__main,
+      .pc-operate-today__side,
+      .pc-operate-setup,
+      .pc-operate-setup__seats,
+      .pc-operate-today__unread
+    ) {
     grid-column: 1 / -1;
   }
 }
@@ -558,6 +649,9 @@
 @media (max-width: 899px) {
   .pc-operate .pc-operate-today {
     padding-inline: 0;
+  }
+  .pc-operate .pc-operate-today .pc-operate-setup {
+    grid-template-columns: minmax(0, 1fr);
   }
   .pc-operate .pc-operate-today .pc-operate-today__next-control,
   .pc-operate .pc-operate-today .pc-operate-today__next-control .op-governed-action {

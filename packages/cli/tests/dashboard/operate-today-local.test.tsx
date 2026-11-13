@@ -116,6 +116,54 @@ describe('Operate Today from a local review', () => {
     expect(view.rows.find((row) => row.id === 'A1')?.owner).toBeNull();
   });
 
+  it('carries the nothing-waiting state in the headline and keeps the no-decision title otherwise', () => {
+    const empty = todayViewFromLocalReview({ ...review, decisions: [], actions: [], gaps: [] });
+    expect(empty.title).toBe('Nothing needs you today');
+    expect(empty.summary).toBe(
+      'Cycle 2026-09-14-modul-events closed on 14 Sep with no decisions recorded.',
+    );
+    expect(empty.decision).toBeNull();
+    expect(empty.rows).toEqual([]);
+    expect(todayViewFromLocalReview({ ...review, decisions: [] }).title).toBe(
+      'No decision is waiting',
+    );
+  });
+
+  it('shows which cycle could not be read, and nothing from it, when its detail read fails', async () => {
+    const fetch = vi.fn(async (url: URL, _options?: RequestInit) =>
+      url.pathname.endsWith(review.cycleId)
+        ? new Response('{}', { status: 500 })
+        : new Response(
+            JSON.stringify({
+              kind: 'local-operate-review-index',
+              schemaVersion: '1.0.0',
+              readOnly: true,
+              pagination: { page: 1, pageSize: 12, pageCount: 1, total: 1 },
+              items: [review],
+            }),
+          ),
+    );
+    vi.stubGlobal('fetch', fetch);
+    const { container } = render(
+      <LocalOperateReviews
+        route={{ kind: 'operate.today', product: 'operate', subjectId: null }}
+        origin="http://localhost"
+      />,
+    );
+    expect(
+      await screen.findByRole('heading', {
+        level: 1,
+        name: 'Cycle 2026-09-14-modul-events could not be read',
+      }),
+    ).toBeTruthy();
+    expect(screen.getByText('OpenPlanr could not read this report (500).')).toBeTruthy();
+    expect(
+      container.querySelector('.pc-operate-today__decision, .pc-operate-today__rows'),
+    ).toBeNull();
+    expect(screen.queryByText('planr-operate · local')).toBeNull();
+    expect(screen.queryByRole('button', { name: /copy/i })).toBeNull();
+  });
+
   it('shows the latest review with its cycle, decision, actions, gaps and seats', async () => {
     const fetch = vi.fn(
       async (url: URL, _options?: RequestInit) =>
