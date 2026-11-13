@@ -768,9 +768,9 @@
   .pc-operate .pc-operate-today .pc-operate-today__next {
     padding: 16px;
   }
-  /* Routes that reuse the layout end on a footnote below it, which must also scroll clear of the bar. */
-  .pc-shell .pc-operate:has(.pc-operate-today__next > code) {
-    padding-bottom: 80px;
+  /* Routes that reuse the layout end on a footnote, which must also scroll clear of the copy bar. */
+  .pc-operate-today ~ .pc-local-review__footnote {
+    margin-bottom: 80px;
   }
   /* A copyable next step becomes a bar on the phone navigation; a governed one stays in its card. */
   .pc-operate .pc-operate-today .pc-operate-today__next:has(> code) {
