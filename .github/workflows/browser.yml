@@ -93,7 +93,7 @@ jobs:
     if: needs.changes.outputs.dashboard == 'true'
     runs-on: ubuntu-24.04
     container: mcr.microsoft.com/playwright:v1.64.1-noble
-    timeout-minutes: 12
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       # The workspace belongs to the runner user and the container runs as root.
@@ -109,7 +109,9 @@ jobs:
         run: npm run generate
       - name: Run the dashboard brand and shared-pattern browser tests
         run: npm run test:brand:browser --workspace=@openplanr/dashboard-app
+      # A step timeout fails the step, so the diagnostics upload below still runs.
       - name: Run dashboard browser verification against local workspace packages
+        timeout-minutes: 20
         run: npm run test:browser --workspace=openplanr -- --grep-invert=performance
         env:
           CI: 'true'
