@@ -206,11 +206,12 @@ describe('structural detail projection', () => {
       current,
     );
     expect(detail.criteria).toEqual([
-      { id: 'AC-local', text: 'Verify the task', sourceId: current.id },
-      { id: 'AC-b', text: 'Preserve audit history', sourceId: spec.id },
+      { id: 'AC-local', text: 'Verify the task', checked: false, sourceId: current.id },
+      { id: 'AC-b', text: 'Preserve audit history', checked: null, sourceId: spec.id },
       {
         id: 'AC-missing',
         text: 'Referenced criterion is unavailable in the current detail.',
+        checked: null,
         sourceId: spec.id,
       },
     ]);

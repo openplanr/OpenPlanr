@@ -452,6 +452,29 @@ describe('shared Planning artifact detail', () => {
     expect(description.closest('.pc-detail__file')?.querySelector('button')).toBeNull();
   });
 
+  it.each([
+    [['- [x] AC-1: Ship it.', '- [ ] AC-2: Test it.', '- [X] AC-3: Note it.'], '2 of 3 met', 2],
+    [['- AC-1: Ship it.', '- [x] AC-2: Test it.'], '2 criteria', 1],
+  ])('reads authored check markers in %j as %s', async (lines, meta, met) => {
+    const model = fixture();
+    const text = ['## Acceptance Criteria', ...lines].join('\n');
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => response(detailEnvelope(model, text))),
+    );
+    render(
+      <PlanningPresentationProvider scope="criteria-progress" view={null}>
+        <PlanningArtifactDetail model={model} nodeId={nodeId} origin={origin} />
+      </PlanningPresentationProvider>,
+    );
+    await findDetailReady(document.body);
+    const region = screen.getByRole('region', { name: 'Acceptance criteria' });
+    expect(within(region).getByText(meta)).toBeTruthy();
+    expect(region.querySelectorAll('li[data-met]')).toHaveLength(met);
+    expect(within(region).getByText('Test it.')).toBeTruthy();
+    expect(region.textContent).not.toMatch(/\[[ xX]\]/u);
+  });
+
   it('keeps long criteria in page flow and compact file actions keyboard-operable', async () => {
     const model = fixture();
     const criteria = Array.from({ length: 12 }, (_, index) => `- Verify requirement ${index + 1}.`);

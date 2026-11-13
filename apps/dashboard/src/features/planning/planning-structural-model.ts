@@ -14,6 +14,8 @@ export type StructuralReference = Readonly<{
 export type StructuralCriterion = Readonly<{
   id: string | null;
   text: string;
+  /** The authored `[x]` or `[ ]` marker; null when the criterion has none. */
+  checked: boolean | null;
   sourceId?: string;
 }>;
 export type StructuralFile = Readonly<{ group: string; path: string | null; text: string }>;
@@ -126,11 +128,13 @@ export function createStructuralIndex(graph: PlanningModelGraph): StructuralInde
 }
 
 function criterion(text: string, sourceId?: string, authoredId?: string): StructuralCriterion {
-  const clean = text.replace(/^\s*\[[ xX]\]\s*/u, '').trim();
+  const marker = text.match(/^\s*\[([ xX])\]\s*/u);
+  const clean = text.slice(marker?.[0].length ?? 0).trim();
   const match = clean.match(/^(?:\*\*)?(AC-[\w.-]+)(?:\*\*)?\s*[:.)-]?\s*(.*)$/u);
   return Object.freeze({
     id: authoredId ?? match?.[1] ?? null,
     text: match?.[2] || clean,
+    checked: marker ? marker[1] !== ' ' : null,
     ...(sourceId ? { sourceId } : {}),
   });
 }
@@ -425,6 +429,7 @@ export function buildStructuralDetail(
         Object.freeze({
           id: ref,
           text: 'Referenced criterion is unavailable in the current detail.',
+          checked: null,
           ...(spec ? { sourceId: spec.id } : {}),
         }),
       );

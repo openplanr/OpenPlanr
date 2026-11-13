@@ -12,7 +12,6 @@ import {
 } from './planning-structural-model.js';
 import type { PlanningWorkspaceModel } from './planning-workspace.js';
 
-const MARKER = /^\[([ xX])\]\s+/u;
 const FILE_KIND: Readonly<Record<string, string>> = {
   Create: 'new',
   Modify: 'edit',
@@ -47,9 +46,8 @@ function DetailCard({
 }
 
 function Criteria({ rows, nodeId }: { rows: readonly StructuralCriterion[]; nodeId: string }) {
-  const marked = rows.map((row) => ({ row, marker: row.text.match(MARKER) }));
-  const tracked = marked.every((entry) => entry.marker);
-  const met = marked.filter((entry) => entry.marker && entry.marker[1] !== ' ').length;
+  const tracked = rows.every((row) => row.checked !== null);
+  const met = rows.filter((row) => row.checked).length;
   return (
     <DetailCard
       title="Acceptance criteria"
@@ -67,15 +65,12 @@ function Criteria({ rows, nodeId }: { rows: readonly StructuralCriterion[]; node
       }
     >
       <ul className="pc-detail__criteria" data-tracked={tracked || undefined}>
-        {marked.map(({ row, marker }, position) => (
-          <li
-            key={`${row.sourceId}:${row.id ?? position}`}
-            data-met={(marker && marker[1] !== ' ') || undefined}
-          >
+        {rows.map((row, position) => (
+          <li key={`${row.sourceId}:${row.id ?? position}`} data-met={row.checked || undefined}>
             {tracked ? <span className="pc-detail__check" aria-hidden="true" /> : null}
             <code>{row.id ?? String(position + 1)}</code>
             <div>
-              <PlanningMarkdown text={marker ? row.text.slice(marker[0].length) : row.text} />
+              <PlanningMarkdown text={row.text} />
               {row.sourceId && row.sourceId !== nodeId ? (
                 <a href={planningDetailHref(row.sourceId) ?? undefined}>From {row.sourceId}</a>
               ) : null}
