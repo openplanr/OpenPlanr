@@ -446,6 +446,23 @@ describe('List presentation tokens against validated projections', () => {
       expect([...visited.values()].filter((entry) => entry === id)).toHaveLength(2);
   });
 
+  it('pages label rows past 100 when the project has 100 or fewer items', async () => {
+    const user = userEvent.setup();
+    const nodes = Array.from({ length: 60 }, (_, index) =>
+      node(`T-${2000 + index}`, `Review ${index}`, { labels: ['ready', 'review'] }),
+    );
+    const view = {
+      ...FIXTURE_VIEW,
+      groupBy: 'label' as const,
+      filters: { ...FIXTURE_VIEW.filters, query: '' },
+    };
+    render(<View nodes={nodes} view={view} />);
+    const pages = screen.getByRole('navigation', { name: 'Planning artifact pages' });
+    expect(pages.textContent).toContain('Showing 1–100 of 120');
+    await user.click(within(pages).getByRole('button', { name: 'Next' }));
+    expect(pages.textContent).toContain('Showing 101–120 of 120');
+  });
+
   it('copies current presentation through the injected adapter, without binding or authority', async () => {
     const user = userEvent.setup();
     const copy = vi.fn(async (_text: string) => undefined);

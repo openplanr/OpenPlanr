@@ -490,7 +490,7 @@ export function ListPage({
                 />
               )}
             </div>
-            {all.length > PAGE_SIZE ? (
+            {appearances.length > PAGE_SIZE ? (
               <ListPagination
                 start={pageStart}
                 end={Math.min(pageStart + PAGE_SIZE, appearances.length)}
