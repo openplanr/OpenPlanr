@@ -19,10 +19,15 @@ const fixtureDir = fileURLToPath(
 );
 const projectId = `sha256:${'b'.repeat(64)}`;
 const actorId = 'diagnostics-owner';
-function harness(planrDir = fixtureDir, getGraph = () => readGraph(planrDir)) {
+function harness(
+  planrDir = fixtureDir,
+  getGraph = () => readGraph(planrDir),
+  { lazyCursor = false } = {},
+) {
   const planning = createPlanningState({ planrDir, getGraph });
   const dashboard = { planrDir, project: { projectId }, planningActorId: actorId, planning };
-  const cursor = planning.cursor();
+  // A lazy harness lets a test observe the first route response even when reading the graph fails.
+  const cursor = lazyCursor ? null : planning.cursor();
   const binding = {
     actorId,
     projectId,
@@ -32,6 +37,7 @@ function harness(planrDir = fixtureDir, getGraph = () => readGraph(planrDir)) {
     generation: 4,
   };
   const request = async ({
+    pathname = '/api/planning/diagnostics',
     params = {},
     actor = actorId,
     append,
@@ -40,14 +46,14 @@ function harness(planrDir = fixtureDir, getGraph = () => readGraph(planrDir)) {
   } = {}) => {
     const query = new URLSearchParams({
       ...Object.fromEntries(Object.entries(binding).filter(([key]) => key !== 'actorId')),
-      sourceViewHash: cursor.viewHash,
+      ...(cursor ? { sourceViewHash: cursor.viewHash } : {}),
       ...params,
     });
     if (append) query.append(...append);
     if (remove) query.delete(remove);
     const req = {
       method: 'GET',
-      url: `/api/planning/diagnostics?${query}`,
+      url: `${pathname}?${query}`,
       headers: { host: 'localhost:7473', ...(actor ? { 'x-openplanr-actor': actor } : {}) },
       headersDistinct,
       socket: { localPort: 7473, remoteAddress: '127.0.0.1' },
@@ -219,6 +225,39 @@ test('a backslash in a file name is reported without failing the other findings'
       ['missing-reference', 'BL-001', '.planr/backlog/BL-001-plain.md'],
       ['missing-reference', 'BL-002', '.planr/backlog/BL-002-a�b.md'],
       ['unrecognized-identity', 'a\\b', '.planr/backlog/a�b.md'],
+    ],
+  );
+});
+
+test('a file name that cannot be a node id is a finding, not a failed graph', async (t) => {
+  const root = fs.mkdtempSync(join(tmpdir(), 'planning-diagnostics-node-id-'));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  fs.mkdirSync(join(root, 'backlog'));
+  fs.writeFileSync(
+    join(root, 'backlog', 'BL-001-plain.md'),
+    '---\nid: BL-001\ntitle: Healthy\nstatus: outstanding\n---\n',
+  );
+  fs.writeFileSync(join(root, 'backlog', 'x\\y-5.md'), '---\ntitle: Backslash\n---\n');
+  fs.writeFileSync(join(root, 'backlog', 'x\u0001y-6.md'), '---\ntitle: Control\n---\n');
+  const { dashboard, request } = harness(root, () => readGraph(root), { lazyCursor: true });
+  const graph = await request({ pathname: '/api/planning/graph' });
+  assert.equal(graph.status, 200);
+  assert.deepEqual(
+    graph.json.graph.nodes.map((node) => node.id),
+    ['BL-001'],
+  );
+  const detail = await request({ pathname: '/api/planning/detail/BL-001' });
+  assert.equal(detail.status, 200);
+  assert.equal(detail.json.node.id, 'BL-001');
+  const diagnostics = await request({
+    params: { sourceViewHash: dashboard.planning.cursor().viewHash },
+  });
+  assert.equal(diagnostics.json.state, 'available');
+  assert.deepEqual(
+    diagnostics.json.diagnostics.map((entry) => [entry.reason, entry.nodeId, entry.sourcePath]),
+    [
+      ['unrecognized-identity', 'x\uFFFDy-6', '.planr/backlog/x\uFFFDy-6.md'],
+      ['unrecognized-identity', 'x\\y-5', '.planr/backlog/x\uFFFDy-5.md'],
     ],
   );
 });

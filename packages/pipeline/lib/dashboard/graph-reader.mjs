@@ -16,7 +16,11 @@ import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { basename, dirname, join, relative, sep } from 'node:path';
 
 import { validate } from '../design/schema-loader.mjs';
-import { createPlanningReadModel, createReferenceResolver } from './graph-read-model.mjs';
+import {
+  createPlanningReadModel,
+  createReferenceResolver,
+  validNodeId,
+} from './graph-read-model.mjs';
 
 // ── Minimal YAML frontmatter parser (stdlib only) ─────────────────────────
 //
@@ -417,6 +421,10 @@ function buildNode(absPath, planrDir, includeBody, throwOnReadError = false, onS
   let id = localId;
   if (scope && type !== 'spec') {
     id = `${scope}/${localId}`;
+  }
+  if (!validNodeId(id)) {
+    onSkip(stem);
+    return null;
   }
 
   // Keep the LOCAL id in frontmatter (the frontend displays that). frontmatter

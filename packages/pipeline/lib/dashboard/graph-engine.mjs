@@ -20,6 +20,7 @@ import { dirname } from 'node:path';
 import { validate } from '../design/schema-loader.mjs';
 import { deepFreeze } from '../protocol/jcs.mjs';
 import { CLI_COMMAND } from '../protocol/names.mjs';
+import { validNodeId } from './graph-read-model.mjs';
 import { readGraph, readNode, readPlanningModel } from './graph-reader.mjs';
 
 /** Lowest openplanr CLI version that emits the graph/status --json the dashboard consumes. */
@@ -181,7 +182,6 @@ export function getNode(planrDir, id) {
 const MAX_GRAPH_BYTES = 16 * 1024 * 1024;
 const MAX_GRAPH_DEPTH = 96;
 const MAX_GRAPH_VALUES = 250_000;
-const MAX_NODE_ID_LENGTH = 256;
 
 function clonePlainJson(value, path = '$') {
   const seen = new WeakSet();
@@ -249,26 +249,6 @@ function clonePlainJson(value, path = '$') {
   if (bytes > MAX_GRAPH_BYTES)
     throw new TypeError('Planning graph exceeds the public response limit.');
   return result;
-}
-
-function validNodeId(value) {
-  if (typeof value !== 'string' || value.length < 1 || value.length > MAX_NODE_ID_LENGTH)
-    return false;
-  if (value === '.' || value === '..' || value.includes('\\')) return false;
-  for (let index = 0; index < value.length; index += 1) {
-    const codeUnit = value.charCodeAt(index);
-    if (codeUnit >= 0xd800 && codeUnit <= 0xdbff) {
-      const next = value.charCodeAt(index + 1);
-      if (!(next >= 0xdc00 && next <= 0xdfff)) return false;
-      index += 1;
-    } else if (codeUnit >= 0xdc00 && codeUnit <= 0xdfff) {
-      return false;
-    }
-  }
-  return ![...value].some((character) => {
-    const codePoint = character.codePointAt(0) ?? 0;
-    return codePoint <= 31 || codePoint === 127;
-  });
 }
 
 /**

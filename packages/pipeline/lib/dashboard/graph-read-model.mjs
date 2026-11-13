@@ -11,6 +11,29 @@ const REASONS = new Set([
   'duplicate-identity',
   'unrecognized-identity',
 ]);
+const MAX_NODE_ID_LENGTH = 256;
+
+/** True when a value can be a Planning node id: bounded, well-formed, no backslash or control character. */
+export function validNodeId(value) {
+  if (typeof value !== 'string' || value.length < 1 || value.length > MAX_NODE_ID_LENGTH)
+    return false;
+  if (value === '.' || value === '..' || value.includes('\\')) return false;
+  for (let index = 0; index < value.length; index += 1) {
+    const codeUnit = value.charCodeAt(index);
+    if (codeUnit >= 0xd800 && codeUnit <= 0xdbff) {
+      const next = value.charCodeAt(index + 1);
+      if (!(next >= 0xdc00 && next <= 0xdfff)) return false;
+      index += 1;
+    } else if (codeUnit >= 0xdc00 && codeUnit <= 0xdfff) {
+      return false;
+    }
+  }
+  return ![...value].some((character) => {
+    const codePoint = character.codePointAt(0) ?? 0;
+    return codePoint <= 31 || codePoint === 127;
+  });
+}
+
 export function createReferenceResolver(graph) {
   const ids = new Set(graph.nodes.map((node) => node.id));
   const localIds = new Map();

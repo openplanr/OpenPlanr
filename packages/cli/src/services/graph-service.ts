@@ -71,6 +71,29 @@ const ID_PREFIX_TYPE: Record<string, GraphNodeType> = {
   ADR: 'adr',
 };
 
+const MAX_NODE_ID_LENGTH = 256;
+
+/** The pipeline's Planning node-id rule, copied because the CLI must run without the pipeline package. */
+export function validNodeId(value: unknown): boolean {
+  if (typeof value !== 'string' || value.length < 1 || value.length > MAX_NODE_ID_LENGTH)
+    return false;
+  if (value === '.' || value === '..' || value.includes('\\')) return false;
+  for (let index = 0; index < value.length; index += 1) {
+    const codeUnit = value.charCodeAt(index);
+    if (codeUnit >= 0xd800 && codeUnit <= 0xdbff) {
+      const next = value.charCodeAt(index + 1);
+      if (!(next >= 0xdc00 && next <= 0xdfff)) return false;
+      index += 1;
+    } else if (codeUnit >= 0xdc00 && codeUnit <= 0xdfff) {
+      return false;
+    }
+  }
+  return ![...value].some((character) => {
+    const codePoint = character.codePointAt(0) ?? 0;
+    return codePoint <= 31 || codePoint === 127;
+  });
+}
+
 function isArtifactFile(name: string): boolean {
   if (name.startsWith('.')) return false;
   if (name.endsWith('-error-report.md')) return false;
@@ -268,6 +291,10 @@ function buildNode(
     return null;
   }
   const id = scope && type !== 'spec' ? `${scope}/${localId}` : localId;
+  if (!validNodeId(id)) {
+    onSkip(stem);
+    return null;
+  }
   const authoredTitle = frontmatter.title ?? frontmatter.name;
   const title =
     authoredTitle != null && String(authoredTitle).trim() !== '' ? String(authoredTitle) : localId;
