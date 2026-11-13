@@ -16,6 +16,7 @@ export const PLANNING_DIAGNOSTIC_REASONS = Object.freeze([
   'dependency-cycle',
   'containment-cycle',
   'duplicate-identity',
+  'unrecognized-identity',
 ]);
 const FIELDS = new Set([
   'epicId',

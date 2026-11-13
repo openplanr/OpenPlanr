@@ -15,6 +15,7 @@ export const PLANNING_DIAGNOSTIC_REASONS: readonly [
   'dependency-cycle',
   'containment-cycle',
   'duplicate-identity',
+  'unrecognized-identity',
 ];
 export type PlanningReadDiagnostic = Readonly<{
   nodeId: string;

@@ -164,6 +164,28 @@ describe('Data health evidence boundaries', () => {
     expect(screen.queryByRole('list')).toBeNull();
   });
 
+  it('names a skipped file as plain text beside the other findings', () => {
+    const skipped = {
+      nodeId: 'notes',
+      sourcePath: '.planr/quick/notes.md',
+      field: 'id',
+      reason: 'unrecognized-identity',
+      classification: 'source-data',
+    } as const;
+    render(<DataHealth read={{ diagnostics: [skipped, required(findings[0])] }} />);
+    const rows = within(screen.getByRole('list', { name: 'Data health findings' })).getAllByRole(
+      'listitem',
+    );
+    expect(rows).toHaveLength(2);
+    const row = within(required(rows[0]));
+    expect(row.getByText('No artifact id')).toBeTruthy();
+    expect(row.getByRole('heading', { name: 'notes' })).toBeTruthy();
+    expect(row.queryByRole('link')).toBeNull();
+    expect(row.getByText(skipped.sourcePath)).toBeTruthy();
+    expect(row.getByText(/Give it an id such as BL-001/u)).toBeTruthy();
+    expect(within(required(rows[1])).getByRole('link')).toBeTruthy();
+  });
+
   it('shows ids and source paths that contain colons or percent signs as written', () => {
     const diagnostics = [
       { nodeId: 'BL:002', sourcePath: '.planr/backlog/BL-002-colon.md' },

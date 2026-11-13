@@ -35,6 +35,7 @@ const REASONS = new Set([
   'dependency-cycle',
   'containment-cycle',
   'duplicate-identity',
+  'unrecognized-identity',
 ]);
 
 export function createReferenceResolver(graph: ProjectGraph) {
@@ -287,8 +288,7 @@ export function assertPlanningReadModel(model: PlanningReadModel): PlanningReadM
       JSON.stringify(entry.candidates) === JSON.stringify(expected.candidates)
     );
   };
-  const source = (entry: PlanningDiagnostic | PlanningReference) =>
-    ids.has(entry.nodeId) &&
+  const sourcePath = (entry: PlanningDiagnostic | PlanningReference) =>
     typeof entry.sourcePath === 'string' &&
     entry.sourcePath.length > 0 &&
     !entry.sourcePath.startsWith('/') &&
@@ -296,6 +296,15 @@ export function assertPlanningReadModel(model: PlanningReadModel): PlanningReadM
     !entry.sourcePath.split('/').some((part) => part === '.' || part === '..' || part === '') &&
     !/^[A-Za-z]:/.test(entry.sourcePath) &&
     typeof entry.field === 'string';
+  const source = (entry: PlanningDiagnostic | PlanningReference) =>
+    ids.has(entry.nodeId) && sourcePath(entry);
+  // A skipped file has no node, so its finding names the file stem instead.
+  const skipped = (entry: PlanningDiagnostic) =>
+    entry.reason === 'unrecognized-identity' &&
+    typeof entry.nodeId === 'string' &&
+    entry.nodeId.length > 0 &&
+    entry.field === 'id' &&
+    sourcePath(entry);
   if (
     !exactKeys(model, ['graph', 'references', 'diagnostics']) ||
     ids.size !== model.graph.nodes.length ||
@@ -334,7 +343,7 @@ export function assertPlanningReadModel(model: PlanningReadModel): PlanningReadM
     ) ||
     model.diagnostics.some(
       (entry) =>
-        !source(entry) ||
+        !(entry.reason === 'unrecognized-identity' ? skipped(entry) : source(entry)) ||
         !exactKeys(entry, ['nodeId', 'sourcePath', 'field', 'reason', 'classification']) ||
         !REASONS.has(entry.reason) ||
         entry.classification !== 'source-data',

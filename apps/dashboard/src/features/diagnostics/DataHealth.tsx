@@ -19,6 +19,7 @@ const REASONS = {
   'missing-reference': 'Unresolved reference',
   'ambiguous-reference': 'Ambiguous reference',
   'duplicate-identity': 'Duplicate identity',
+  'unrecognized-identity': 'No artifact id',
   'dependency-cycle': 'Dependency cycle',
   'containment-cycle': 'Containment cycle',
   'invalid-date': 'Invalid authored date',
@@ -64,6 +65,9 @@ const RECOVERY = {
     'Inspect the authored sprint dates. Use valid calendar dates and a closing or ending date on or after the start.',
 } as const;
 
+const UNRECOGNIZED_RECOVERY =
+  'This file is not read as an item. Give it an id such as BL-001 in its file name or frontmatter, or move it out of the planning folder.';
+
 /** The source path as written, or null when it is absolute or steps outside the repository. */
 function displaySource(value: string): string | null {
   if (!validPlanningSourcePath(value)) return null;
@@ -72,7 +76,7 @@ function displaySource(value: string): string | null {
 
 function category(reason: ReadDiagnostic['reason']): keyof typeof RECOVERY {
   if (reason.includes('reference')) return 'references';
-  if (reason === 'duplicate-identity') return 'identities';
+  if (reason.includes('identity')) return 'identities';
   if (reason.includes('cycle')) return 'cycles';
   return 'dates';
 }
@@ -235,7 +239,9 @@ export function DataHealth({
         ) : (
           <ol className="op-diagnostics__list" aria-label="Data health findings">
             {shown.map((entry) => {
-              const href = planningDetailHref(entry.nodeId);
+              // A skipped file has no item to open, so its name stays plain text.
+              const href =
+                entry.reason === 'unrecognized-identity' ? null : planningDetailHref(entry.nodeId);
               const path = displaySource(entry.sourcePath);
               return (
                 <li key={entry.id} data-diagnostic={entry.reason}>
@@ -253,6 +259,8 @@ export function DataHealth({
                           >
                             {entry.nodeId}
                           </a>
+                        ) : entry.reason === 'unrecognized-identity' && entry.nodeId ? (
+                          entry.nodeId
                         ) : (
                           'Item identity unavailable'
                         )}
@@ -266,7 +274,9 @@ export function DataHealth({
                       <strong>Field:</strong> {entry.field}
                     </p>
                     <p className="op-diagnostics__remediation">
-                      {RECOVERY[category(entry.reason)]}
+                      {entry.reason === 'unrecognized-identity'
+                        ? UNRECOGNIZED_RECOVERY
+                        : RECOVERY[category(entry.reason)]}
                     </p>
                   </article>
                 </li>

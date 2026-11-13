@@ -176,6 +176,28 @@ test('one unusual id or source path is reported without failing the other findin
   ]);
 });
 
+test('a skipped file is reported beside the other findings without a node', async (t) => {
+  const root = fs.mkdtempSync(join(tmpdir(), 'planning-diagnostics-skipped-'));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  fs.mkdirSync(join(root, 'backlog'));
+  fs.writeFileSync(
+    join(root, 'backlog', 'BL-001-a.md'),
+    '---\nid: BL-001\ntitle: Item\nstatus: outstanding\ndependsOn: [MISSING-1]\n---\n',
+  );
+  fs.writeFileSync(join(root, 'backlog', 'notes\u0001.md'), '---\ntitle: Notes\n---\n');
+  fs.writeFileSync(join(root, 'backlog', 'README.md'), '# Backlog\n');
+  const { request, binding, cursor } = harness(root);
+  const envelope = assertPlanningDiagnosticsEnvelope((await request()).json, { binding, cursor });
+  assert.equal(envelope.state, 'available');
+  assert.deepEqual(
+    envelope.diagnostics.map((entry) => [entry.reason, entry.nodeId, entry.sourcePath]),
+    [
+      ['missing-reference', 'BL-001', '.planr/backlog/BL-001-a.md'],
+      ['unrecognized-identity', 'notes\uFFFD', '.planr/backlog/notes\uFFFD.md'],
+    ],
+  );
+});
+
 test('diagnostics caps records and bytes and explicitly discloses omitted evidence', async (t) => {
   const root = fs.mkdtempSync(join(tmpdir(), 'planning-diagnostics-limit-'));
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));

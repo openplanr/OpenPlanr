@@ -12,10 +12,15 @@ export function registerGraphCommand(program: Command) {
     .action(async (opts: { json?: boolean }) => {
       const projectDir = program.opts().projectDir as string;
       const config = await loadConfig(projectDir);
-      const { graph, duplicates } = readProjectGraphReport(projectDir, config);
+      const { graph, duplicates, unrecognized } = readProjectGraphReport(projectDir, config);
       for (const duplicate of duplicates) {
         process.stderr.write(
           `Duplicate id ${duplicate.id}: kept ${duplicate.keptPath}, skipped ${duplicate.skippedPath}\n`,
+        );
+      }
+      for (const skippedPath of unrecognized) {
+        process.stderr.write(
+          `Skipped ${skippedPath}: no artifact id such as BL-001 in its file name or frontmatter\n`,
         );
       }
 

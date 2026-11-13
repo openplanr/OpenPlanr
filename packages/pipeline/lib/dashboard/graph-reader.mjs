@@ -243,6 +243,11 @@ export function classifyStatus(rawStatus) {
 
 /** The flat agile artifact dirs that live directly under `.planr/`. */
 const AGILE_DIRS = ['epics', 'features', 'stories', 'tasks', 'backlog', 'quick', 'sprints', 'adrs'];
+// The CLI writer names ids `<prefix>-<number>` for any configured prefix, and files `<id>-<slug>.md`.
+const ARTIFACT_ID = /^\p{L}[^/]*-\d+$/u;
+const ARTIFACT_STEM = /^\p{L}[^/]*?-\d+(?:-[^/]*)?$/u;
+// Notes the tools write beside artifacts; they are never nodes and never findings.
+const TOOL_NOTES = new Set(['README.md', 'qa-report.md', 'clarifications.md', 'refinement.md']);
 
 /** True when a filename is an artifact `.md` node (not gherkin/error-report/dotfile). */
 function isArtifactFile(name) {
@@ -253,7 +258,7 @@ function isArtifactFile(name) {
 }
 
 /** Recursively collect artifact `.md` paths under a flat agile dir (handles `us-NNN/` nesting). */
-function walkAgileDir(dir, acc, strict = false) {
+function walkAgileDir(dir, acc, strict = false, sprintsRoot = false) {
   let entries;
   try {
     entries = readdirSync(dir, { withFileTypes: true });
@@ -264,8 +269,13 @@ function walkAgileDir(dir, acc, strict = false) {
   for (const ent of entries) {
     const full = join(dir, ent.name);
     if (ent.isDirectory()) {
-      // `sprints/SPRINT-NNN/` holds refinement notes, not artifacts.
-      if (ent.name.startsWith('.') || /^SPRINT-\d+/u.test(ent.name)) continue;
+      // `sprints/<sprint id>/` holds refinement notes, not artifacts.
+      if (
+        ent.name.startsWith('.') ||
+        /^SPRINT-\d+/u.test(ent.name) ||
+        (sprintsRoot && ARTIFACT_ID.test(ent.name))
+      )
+        continue;
       walkAgileDir(full, acc, strict);
     } else if (ent.isFile() && isArtifactFile(ent.name)) {
       acc.push(full);
@@ -313,7 +323,7 @@ function collectSpecDir(specDir, acc, strict = false) {
 function collectArtifacts(planrDir, strict = false) {
   const acc = [];
   for (const d of AGILE_DIRS) {
-    walkAgileDir(join(planrDir, d), acc, strict);
+    walkAgileDir(join(planrDir, d), acc, strict, d === 'sprints');
   }
   const specsRoot = join(planrDir, 'specs');
   let specEntries;
@@ -368,7 +378,7 @@ function legacyAdrMetadata(filename, body) {
  * @param {string} planrDir absolute path to the `.planr/` directory
  * @param {boolean} includeBody include the markdown body on the node
  */
-function buildNode(absPath, planrDir, includeBody, throwOnReadError = false) {
+function buildNode(absPath, planrDir, includeBody, throwOnReadError = false, onSkip = () => {}) {
   let text;
   try {
     text = readFileSync(absPath, 'utf-8');
@@ -401,11 +411,14 @@ function buildNode(absPath, planrDir, includeBody, throwOnReadError = false) {
   const scope = specScopeOf(relDir);
   const prefix = scope ? (type === 'story' ? 'US-' : type === 'task' ? 'T-' : 'SPEC-') : '';
   const filename = basename(absPath);
-  const hasArtifactFilename =
-    filename.startsWith(prefix) && /^[A-Z][A-Z0-9]*-\d+(?:-[^/]*)?\.md$/u.test(filename);
+  const stem = basename(absPath, '.md');
+  const hasArtifactFilename = filename.startsWith(prefix) && ARTIFACT_STEM.test(stem);
   const hasArtifactId =
-    typeof fm.id === 'string' && fm.id.startsWith(prefix) && /^[A-Z][A-Z0-9]*-\d+$/u.test(fm.id);
-  if (!hasArtifactFilename && !hasArtifactId) return null;
+    typeof fm.id === 'string' && fm.id.startsWith(prefix) && ARTIFACT_ID.test(fm.id);
+  if (!hasArtifactFilename && !hasArtifactId) {
+    if (!TOOL_NOTES.has(filename)) onSkip(stem);
+    return null;
+  }
   let id = localId;
   if (scope && type !== 'spec') {
     id = `${scope}/${localId}`;
@@ -480,9 +493,18 @@ function readGraphData(planrDir, opts = {}, sourcePaths = new Map(), diagnostics
   const files = collectArtifacts(planrDir, opts.strict === true);
   const entries = [];
   for (const file of files) {
-    const node = buildNode(file, planrDir, includeBody, opts.strict === true);
+    const sourcePath = relative(planrDir, file).split(sep).join('/');
+    const node = buildNode(file, planrDir, includeBody, opts.strict === true, (stem) =>
+      diagnostics.push({
+        nodeId: stem,
+        sourcePath,
+        field: 'id',
+        reason: 'unrecognized-identity',
+        classification: 'source-data',
+      }),
+    );
     if (!node || !node.id) continue;
-    entries.push({ node, sourcePath: relative(planrDir, file).split(sep).join('/') });
+    entries.push({ node, sourcePath });
   }
   const winners = new Map();
   for (const entry of entries) {

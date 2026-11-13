@@ -1,5 +1,5 @@
 import { execFileSync, spawnSync } from 'node:child_process';
-import { cpSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { cpSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
@@ -58,6 +58,34 @@ describe('openplanr graph', () => {
       const graph = JSON.parse(result.stdout);
       expect(Object.keys(graph)).toEqual(['nodes', 'edges']);
       expect(graph.nodes.filter((node: { id: string }) => node.id === 'SPEC-001')).toHaveLength(1);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it('keeps a custom id prefix and reports a file it skips on stderr', () => {
+    const root = mkdtempSync(join(tmpdir(), 'planr-graph-command-'));
+    try {
+      cpSync(fixtureRoot, root, { recursive: true });
+      mkdirSync(join(root, '.planr/backlog'), { recursive: true });
+      writeFileSync(
+        join(root, '.planr/backlog/my_bl-001-custom.md'),
+        '---\nid: my_bl-001\ntitle: Custom\n---\n',
+      );
+      writeFileSync(join(root, '.planr/backlog/notes.md'), '---\ntitle: Notes\n---\n');
+      writeFileSync(join(root, '.planr/backlog/README.md'), '# Backlog\n');
+      const result = spawnSync(
+        process.execPath,
+        [TSX, CLI, '--project-dir', root, 'graph', '--json'],
+        { encoding: 'utf-8', env: { ...process.env, NO_COLOR: '1' } },
+      );
+
+      expect(result.status).toBe(0);
+      expect(result.stderr).toBe(
+        'Skipped backlog/notes.md: no artifact id such as BL-001 in its file name or frontmatter\n',
+      );
+      const ids = JSON.parse(result.stdout).nodes.map((node: { id: string }) => node.id);
+      expect(ids).toContain('my_bl-001');
     } finally {
       rmSync(root, { recursive: true, force: true });
     }

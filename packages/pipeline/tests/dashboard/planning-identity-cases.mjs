@@ -64,8 +64,52 @@ export const identityCases = [
   [
     'excludes README and other documentation from canonical discovery',
     (graph) => {
-      assert.equal(graph.nodes.length, 14);
+      assert.equal(graph.nodes.length, 21);
       assert.ok(!graph.nodes.some((node) => /README|notes|guide/.test(node.id)));
+    },
+  ],
+  [
+    'keeps artifacts written with any configured id prefix',
+    (graph) => {
+      const read = (id) => graph.nodes.find((node) => node.id === id);
+      for (const [id, type] of [
+        ['Task-001', 'task'],
+        ['my_bl-001', 'backlog'],
+        ['my-bl-002', 'backlog'],
+        ['Задача-003', 'backlog'],
+        ['my_bl-004-no-id', 'backlog'],
+      ])
+        assert.equal(read(id)?.type, type, id);
+      assert.equal(read('my_bl-004-no-id').title, 'Template without an id');
+    },
+  ],
+  [
+    'reports a skipped file and stays silent for files the tools write themselves',
+    (graph, model) => {
+      assert.ok(model, 'a validated diagnostic read model must be available');
+      assert.deepEqual(
+        model.diagnostics
+          .filter((entry) => entry.reason === 'unrecognized-identity')
+          .map((entry) => [entry.nodeId, entry.sourcePath, entry.field]),
+        [
+          ['guide', 'tasks/guide.md', 'id'],
+          ['notes', 'quick/notes.md', 'id'],
+        ],
+      );
+      assert.ok(!graph.nodes.some((node) => /refinement|qa-report|clarifications/.test(node.id)));
+    },
+  ],
+  [
+    'skips id-named sprint note folders and still reads sprint files and nested stories',
+    (graph, model) => {
+      const read = (id) => graph.nodes.find((node) => node.id === id);
+      assert.equal(read('Sprint-004')?.type, 'sprint');
+      assert.equal(read('SPRINT-001')?.type, 'sprint');
+      assert.equal(read('US-101')?.type, 'story');
+      assert.ok(!graph.nodes.some((node) => node.id === 'scratch'));
+      assert.ok(
+        !model.diagnostics.some((entry) => entry.sourcePath.startsWith('sprints/Sprint-004/')),
+      );
     },
   ],
   [

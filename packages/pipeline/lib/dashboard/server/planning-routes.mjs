@@ -107,15 +107,15 @@ export function handlePlanningGraph(context) {
   return planningJson(context.res, 200, context.dashboard.planning.graphEnvelope(binding));
 }
 
-/** Source paths are display text: control characters become U+FFFD and long paths end in `…`. */
-function displaySourcePath(path) {
-  const characters = Array.from(path, (character) => {
+/** Display text: control characters become U+FFFD and text over the limit ends in `…`. */
+function displayText(value, limit) {
+  const characters = Array.from(value, (character) => {
     const code = character.codePointAt(0);
     return code < 32 || code === 127 ? '\uFFFD' : character;
   });
   let text = characters.join('');
-  if (text.length <= PLANNING_FILE_PATH_LIMIT) return text;
-  while (text.length > PLANNING_FILE_PATH_LIMIT - 1) text = text.slice(0, -characters.pop().length);
+  if (text.length <= limit) return text;
+  while (text.length > limit - 1) text = text.slice(0, -characters.pop().length);
   return `${text}\u2026`;
 }
 
@@ -177,7 +177,11 @@ export function handlePlanningDiagnostics(context) {
       return key(left) < key(right) ? -1 : key(left) > key(right) ? 1 : 0;
     })
     .slice(0, PLANNING_DIAGNOSTICS_MAX_COUNT)
-    .map((entry) => ({ ...entry, sourcePath: displaySourcePath(`.planr/${entry.sourcePath}`) }));
+    .map((entry) => ({
+      ...entry,
+      nodeId: displayText(entry.nodeId, 256),
+      sourcePath: displayText(`.planr/${entry.sourcePath}`, PLANNING_FILE_PATH_LIMIT),
+    }));
   const result = {
     ...base,
     state: 'available',

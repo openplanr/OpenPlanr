@@ -50,8 +50,13 @@ export interface ReadGraphOptions {
 }
 
 const AGILE_DIRS = ['epics', 'features', 'stories', 'tasks', 'backlog', 'quick', 'sprints', 'adrs'];
-/** `sprints/SPRINT-NNN/` holds refinement notes, not artifacts. */
+/** `sprints/<sprint id>/` holds refinement notes, not artifacts. */
 const SPRINT_NOTES_DIR = /^SPRINT-\d+/u;
+// The CLI writer names ids `<prefix>-<number>` for any configured prefix, and files `<id>-<slug>.md`.
+const ARTIFACT_ID = /^\p{L}[^/]*-\d+$/u;
+const ARTIFACT_STEM = /^\p{L}[^/]*?-\d+(?:-[^/]*)?$/u;
+// Notes the tools write beside artifacts; they are never nodes and never findings.
+const TOOL_NOTES = new Set(['README.md', 'qa-report.md', 'clarifications.md', 'refinement.md']);
 const PARENT_FIELDS = ['epicId', 'featureId', 'storyId', 'specId'] as const;
 const DONE_STATES = new Set(['done', 'closed', 'completed', 'shipped', 'released']);
 const ADDRESSED_STATES = new Set(['promoted', 'superseded']);
@@ -73,7 +78,7 @@ function isArtifactFile(name: string): boolean {
   return name.endsWith('.md');
 }
 
-function walkAgileDir(dir: string, acc: string[]): string[] {
+function walkAgileDir(dir: string, acc: string[], sprintsRoot = false): string[] {
   let entries: Dirent[];
   try {
     entries = readdirSync(dir, { withFileTypes: true });
@@ -84,7 +89,11 @@ function walkAgileDir(dir: string, acc: string[]): string[] {
   for (const entry of entries) {
     const fullPath = path.join(dir, entry.name);
     if (entry.isDirectory()) {
-      if (!entry.name.startsWith('.') && !SPRINT_NOTES_DIR.test(entry.name))
+      if (
+        !entry.name.startsWith('.') &&
+        !SPRINT_NOTES_DIR.test(entry.name) &&
+        !(sprintsRoot && ARTIFACT_ID.test(entry.name))
+      )
         walkAgileDir(fullPath, acc);
     } else if (entry.isFile() && isArtifactFile(entry.name)) {
       acc.push(fullPath);
@@ -125,7 +134,7 @@ function collectSpecDir(specDir: string, acc: string[]): string[] {
 function collectArtifacts(planrDir: string): string[] {
   const acc: string[] = [];
   for (const dir of AGILE_DIRS) {
-    walkAgileDir(path.join(planrDir, dir), acc);
+    walkAgileDir(path.join(planrDir, dir), acc, dir === 'sprints');
   }
 
   const specsRoot = path.join(planrDir, 'specs');
@@ -218,7 +227,12 @@ function legacyAdrMetadata(filename: string, body: string): Record<string, strin
   return metadata;
 }
 
-function buildNode(absPath: string, planrDir: string, includeBody: boolean): GraphNode | null {
+function buildNode(
+  absPath: string,
+  planrDir: string,
+  includeBody: boolean,
+  onSkip: (stem: string) => void = () => {},
+): GraphNode | null {
   let raw: string;
   try {
     raw = readFileSync(absPath, 'utf-8');
@@ -247,13 +261,16 @@ function buildNode(absPath: string, planrDir: string, includeBody: boolean): Gra
   const scope = specScopeOf(relativeDir);
   const prefix = scope ? (type === 'story' ? 'US-' : type === 'task' ? 'T-' : 'SPEC-') : '';
   const filename = path.basename(absPath);
-  const hasArtifactFilename =
-    filename.startsWith(prefix) && /^[A-Z][A-Z0-9]*-\d+(?:-[^/]*)?\.md$/u.test(filename);
+  const stem = path.basename(absPath, '.md');
+  const hasArtifactFilename = filename.startsWith(prefix) && ARTIFACT_STEM.test(stem);
   const hasArtifactId =
     typeof frontmatter.id === 'string' &&
     frontmatter.id.startsWith(prefix) &&
-    /^[A-Z][A-Z0-9]*-\d+$/u.test(frontmatter.id);
-  if (!hasArtifactFilename && !hasArtifactId) return null;
+    ARTIFACT_ID.test(frontmatter.id);
+  if (!hasArtifactFilename && !hasArtifactId) {
+    if (!TOOL_NOTES.has(filename)) onSkip(stem);
+    return null;
+  }
   const id = scope && type !== 'spec' ? `${scope}/${localId}` : localId;
   const authoredTitle = frontmatter.title ?? frontmatter.name;
   const title =
@@ -318,9 +335,18 @@ function readGraphData(
 
   const entries: SourcedNode[] = [];
   for (const file of collectArtifacts(planrDir)) {
-    const node = buildNode(file, planrDir, opts.includeBody === true);
+    const sourcePath = path.relative(planrDir, file).split(path.sep).join('/');
+    const node = buildNode(file, planrDir, opts.includeBody === true, (stem) =>
+      diagnostics.push({
+        nodeId: stem,
+        sourcePath,
+        field: 'id',
+        reason: 'unrecognized-identity',
+        classification: 'source-data',
+      }),
+    );
     if (!node?.id) continue;
-    entries.push({ node, sourcePath: path.relative(planrDir, file).split(path.sep).join('/') });
+    entries.push({ node, sourcePath });
   }
   const winners = new Map<string, SourcedNode>();
   for (const entry of entries) {
@@ -406,12 +432,12 @@ export interface DuplicateIdentity {
   skippedPath: string;
 }
 
-/** The project graph plus every duplicate id the reader skipped, with both source paths. */
+/** The project graph plus every file the reader skipped: duplicate ids and files with no id. */
 export function readProjectGraphReport(
   projectDir: string,
   config: OpenPlanrConfig,
   opts: ReadGraphOptions = {},
-): { graph: ProjectGraph; duplicates: DuplicateIdentity[] } {
+): { graph: ProjectGraph; duplicates: DuplicateIdentity[]; unrecognized: string[] } {
   const sourcePaths = new Map<string, string>();
   const diagnostics: PlanningDiagnostic[] = [];
   const planrDir = path.join(projectDir, config.outputPaths.agile);
@@ -424,5 +450,8 @@ export function readProjectGraphReport(
         throw new Error(`Duplicate id ${diagnostic.nodeId} has no kept source path.`);
       return { id: diagnostic.nodeId, keptPath, skippedPath: diagnostic.sourcePath };
     });
-  return { graph, duplicates };
+  const unrecognized = diagnostics
+    .filter((diagnostic) => diagnostic.reason === 'unrecognized-identity')
+    .map((diagnostic) => diagnostic.sourcePath);
+  return { graph, duplicates, unrecognized };
 }
