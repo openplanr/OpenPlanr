@@ -16,6 +16,7 @@ export function ReviewReceipt({
   return (
     <section
       className="op-review__section op-review__receipt"
+      data-receipt-state="recorded"
       aria-labelledby="op-review-receipt-title"
     >
       <div className="op-review__section-heading">

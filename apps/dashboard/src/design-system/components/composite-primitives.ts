@@ -1,4 +1,9 @@
-import { AlertDialog as RadixAlertDialog, Tabs as RadixTabs } from 'radix-ui';
+import {
+  AlertDialog as RadixAlertDialog,
+  Dialog as RadixDialog,
+  Tabs as RadixTabs,
+} from 'radix-ui';
+import './governed-controls.css';
 
 /** Closed, reviewed composite primitives available to dashboard feature code. */
 export const AlertDialog = Object.freeze({
@@ -9,6 +14,16 @@ export const AlertDialog = Object.freeze({
   Title: RadixAlertDialog.Title,
   Description: RadixAlertDialog.Description,
   Cancel: RadixAlertDialog.Cancel,
+});
+
+export const Dialog = Object.freeze({
+  Root: RadixDialog.Root,
+  Trigger: RadixDialog.Trigger,
+  Portal: RadixDialog.Portal,
+  Overlay: RadixDialog.Overlay,
+  Content: RadixDialog.Content,
+  Title: RadixDialog.Title,
+  Close: RadixDialog.Close,
 });
 
 export const Tabs = Object.freeze({

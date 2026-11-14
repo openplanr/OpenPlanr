@@ -43,8 +43,11 @@ function emit(): void {
 }
 
 /** Select a record for the inspector and ask the shell to open it. */
-export function selectInspector(selection: InspectorNodeSnapshot | InspectorActionSnapshot): void {
-  store = Object.freeze({ selection, openTick: store.openTick + 1 });
+export function selectInspector(
+  selection: InspectorNodeSnapshot | InspectorActionSnapshot,
+  open = true,
+): void {
+  store = Object.freeze({ selection, openTick: store.openTick + (open ? 1 : 0) });
   emit();
 }
 

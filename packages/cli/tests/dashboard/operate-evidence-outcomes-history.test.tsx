@@ -467,6 +467,22 @@ function runAxeClean(html: string): Promise<axe.AxeResults> {
 }
 
 describe('T-019 Evidence Outcomes and History UI', () => {
+  it('keeps the event record and view key that left Today on Evidence', () => {
+    const binding = identityFor('evidence');
+    const html = renderToStaticMarkup(
+      <EvidencePage
+        currentBinding={binding}
+        current={stateFor(binding, selectDisplay(binding, 'evidence'), 'evidence')}
+      />,
+    );
+    const head = binding.eventHead;
+    if (!head || !binding.viewHash) throw new Error('Expected a bound Evidence query.');
+    expect(html).toContain('Event record');
+    expect(html).toContain(`${head.sequence} · ${head.hash ?? 'genesis'}`);
+    expect(html).toContain('View key');
+    expect(html).toContain(binding.viewHash);
+  });
+
   it('renders owner-issued classification, insufficient evidence, and replay proof', () => {
     const evidenceBinding = identityFor('evidence');
     const evidenceHtml = renderToStaticMarkup(

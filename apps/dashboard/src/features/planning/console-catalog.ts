@@ -1,7 +1,7 @@
 /**
  * Static catalog of the planr-* capabilities for the operator Console view.
  * Descriptions mirror the skill registry; `view` is a no-param dashboard hash
- * route (or null when a capability has no dashboard home). Reference only — the
+ * route (or null when a capability has no dashboard home). Reference only: the
  * Console never runs a capability or writes `.planr`.
  */
 
@@ -23,7 +23,7 @@ const cap = (id: string, summary: string, view: string | null): PlanrCapability 
   id,
   summary,
   view,
-  command: `/${id}`,
+  command: `/planr:${id.slice(6)}`,
 });
 
 export const PLANR_CAPABILITY_GROUPS: readonly PlanrCapabilityGroup[] = Object.freeze([
@@ -32,6 +32,7 @@ export const PLANR_CAPABILITY_GROUPS: readonly PlanrCapabilityGroup[] = Object.f
     title: 'Plan & deliver',
     description: 'Shape intent into work, review it, implement it, and land it.',
     capabilities: Object.freeze([
+      cap('planr-openplanr', 'Route a planning or delivery request to the right workflow.', null),
       cap(
         'planr-spec',
         'Shape vague intent into a measurable, Protocol-compatible specification.',
@@ -52,11 +53,22 @@ export const PLANR_CAPABILITY_GROUPS: readonly PlanrCapabilityGroup[] = Object.f
         'Implement a plan, specification, task, or clearly stated request.',
         '#/board',
       ),
-      cap('planr-land', 'Assess release readiness and prepare a landing sequence.', '#/overview'),
+      cap(
+        'planr-sprint',
+        'Select a sprint against code, capacity, and the release cut.',
+        '#/sprints',
+      ),
+      cap(
+        'planr-delegate',
+        'Coordinate an implementation with another coding agent and review its changes.',
+        null,
+      ),
+      cap('planr-release', 'Choose versions and prepare user-facing release notes.', null),
+      cap('planr-land', 'Assess release readiness and prepare a landing sequence.', '#/home'),
       cap(
         'planr-status',
         "Inspect project or one feature's delivery status without changing state.",
-        '#/overview',
+        '#/home',
       ),
     ]),
   },
@@ -136,6 +148,7 @@ export const PLANR_CAPABILITY_GROUPS: readonly PlanrCapabilityGroup[] = Object.f
         null,
       ),
       cap('planr-artifact', 'Open, share, import, or export an HTML artifact review.', null),
+      cap('planr-share', 'Share a local artifact through an explicit review workflow.', null),
     ]),
   },
   {
@@ -160,10 +173,90 @@ export const PLANR_CAPABILITY_GROUPS: readonly PlanrCapabilityGroup[] = Object.f
       ),
       cap('planr-sync', 'Audit planning artifacts for graph and protocol drift.', '#/activity'),
       cap(
-        'planr-dashboard',
-        'Start or inspect this loopback-only planning dashboard.',
-        '#/overview',
+        'planr-connect',
+        'Inspect host connections and guide connecting a missing service.',
+        null,
       ),
+      cap('planr-dashboard', 'Start or inspect this loopback-only planning dashboard.', '#/home'),
+    ]),
+  },
+]);
+
+export type PlanrCommandGroup = Readonly<{
+  id: string;
+  title: string;
+  description: string;
+  commands: readonly PlanrCapability[];
+}>;
+
+export const CLI_COMMAND_GROUPS: readonly PlanrCommandGroup[] = Object.freeze([
+  {
+    id: 'planning-commands',
+    title: 'Planning commands',
+    description:
+      'Replace placeholders with exact artifact identities. Run commands from the project folder.',
+    commands: Object.freeze([
+      {
+        id: 'planning-status',
+        summary: 'Read the parent specification status for a scoped task.',
+        view: '#/list',
+        command: 'openplanr status <spec-id> --md',
+      },
+      {
+        id: 'backlog-show',
+        summary: 'Read a backlog item before changing its status.',
+        view: '#/list',
+        command: 'openplanr backlog show <backlog-id>',
+      },
+      {
+        id: 'backlog-update',
+        summary: 'Update a backlog status explicitly in the CLI.',
+        view: '#/list',
+        command: 'openplanr backlog update <backlog-id> --status <status>',
+      },
+    ]),
+  },
+  {
+    id: 'operate-commands',
+    title: 'Operate commands',
+    description:
+      'Supplemental CLI templates. Existing ownership, preview, confirmation, and receipt checks still apply.',
+    commands: Object.freeze([
+      {
+        id: 'operate-planning-preview',
+        summary: 'Preview a planning handoff as the exact authorized Action owner.',
+        view: '#/operate/actions',
+        command: 'openplanr operate planning preview <action-id> --actor <actor-id>',
+      },
+      {
+        id: 'operate-planning-create-spec',
+        summary:
+          'Create a specification using the exact proposal and confirmation digest from preview.',
+        view: '#/operate/actions',
+        command:
+          'openplanr operate planning create-spec <proposal-id> --actor <actor-id> --confirm <preview-digest>',
+      },
+      {
+        id: 'operate-review',
+        summary: 'Read the latest Review and its exact choice identities before deciding.',
+        view: '#/operate/cycles',
+        command:
+          'openplanr operate review <review-id> --actor <actor-id> --cycle <cycle-id> --scope <scope-id> --domain <domain-id> --domain-version <version>',
+      },
+      {
+        id: 'operate-decide',
+        summary:
+          'Record an authorized decision using the choice identity and hash from the latest Review read.',
+        view: '#/operate/cycles',
+        command:
+          'openplanr operate decide <review-id> --actor <actor-id> --cycle <cycle-id> --scope <scope-id> --domain <domain-id> --domain-version <version> --choice <choice-id> --choice-hash <choice-digest>',
+      },
+      {
+        id: 'operate-assignment-submit',
+        summary: 'Submit a validated result file for an exact issued Assignment packet.',
+        view: '#/operate/cycles',
+        command: 'openplanr operate assignment submit <packet-id> --content-file <result-path>',
+      },
     ]),
   },
 ]);

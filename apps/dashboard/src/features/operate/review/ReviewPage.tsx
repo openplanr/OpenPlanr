@@ -442,7 +442,7 @@ export function ReviewPage({
           title="Blind retry is locked"
           description="A Review event may have committed. Inspect canonical recovery state before taking another action."
           actions={
-            <a className="op-inline-action" href="#/operate/recovery">
+            <a className="pc-button op-inline-action" href="#/operate/recovery">
               Open Recovery
             </a>
           }

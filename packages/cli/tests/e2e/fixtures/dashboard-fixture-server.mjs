@@ -1,4 +1,8 @@
+import { createRequire } from 'node:module';
+import { dirname, resolve } from 'node:path';
+import { pathToFileURL } from 'node:url';
 import { sha256Jcs } from 'planr-pipeline/dashboard/verified-json';
+import { brandGalleryDocument } from '../../../../../apps/dashboard/tests/helpers/brand-gallery-fixture.mjs';
 import {
   createDashboardApiFixture,
   createDashboardReviewTerminal,
@@ -10,8 +14,22 @@ import {
   DASHBOARD_FIXTURE_PROJECT_ID,
   DASHBOARD_FIXTURE_REVIEW_ID,
 } from './dashboard-api-fixture.mjs';
+import { deliveryPlanningGraph } from './dashboard-delivery-graph.js';
+import { sprintPlanningGraph } from './dashboard-sprint-graph.js';
+import {
+  premiumRequestState,
+  productionManifest,
+  servePremiumFixture,
+} from './premium-dashboard-server.ts';
 
 const fixture = createDashboardApiFixture();
+const pipelineRoot =
+  process.env.OPENPLANR_PACKED_PIPELINE_ROOT ??
+  dirname(createRequire(import.meta.url).resolve('planr-pipeline/package.json'));
+const { handlePlanningDetail } = await import(
+  /* @vite-ignore */
+  pathToFileURL(resolve(pipelineRoot, 'lib/dashboard/server/planning-routes.mjs')).href
+);
 const streams = new Map();
 const liveListScenarios = new Map();
 let activeLocator = null;
@@ -39,28 +57,37 @@ function refuse(response, status = 400) {
 }
 
 function bootstrapForRequest(request) {
+  let referer;
   try {
-    const referer = new URL(request.headers.referer ?? DASHBOARD_FIXTURE_ORIGIN);
-    const name = referer.searchParams.get('project');
-    const localOperate = referer.searchParams.get('localOperate') === '1';
-    const bootstrap = localOperate
-      ? {
-          ...fixture.bootstrap,
-          capabilities: {
-            ...fixture.bootstrap.capabilities,
-            operateCommands: {
-              ...fixture.bootstrap.capabilities.operateCommands,
-              available: false,
-            },
-          },
-          queryRoots: { ...fixture.bootstrap.queryRoots, operate: null },
-        }
-      : fixture.bootstrap;
-    if (name === null) return bootstrap;
-    return { ...bootstrap, project: { ...bootstrap.project, name } };
+    referer = new URL(request.headers.referer ?? DASHBOARD_FIXTURE_ORIGIN);
   } catch {
     return fixture.bootstrap;
   }
+  const name = referer.searchParams.get('project');
+  const production = referer.pathname.startsWith('/__production/');
+  const manifest = production ? productionManifest() : null;
+  const base = manifest
+    ? {
+        ...fixture.bootstrap,
+        ui: {
+          ...fixture.bootstrap.ui,
+          buildId: manifest.buildId,
+          expectedBuildId: manifest.buildId,
+        },
+      }
+    : fixture.bootstrap;
+  const bootstrap = localReviewRequest(request)
+    ? {
+        ...base,
+        capabilities: {
+          ...base.capabilities,
+          operateCommands: { ...base.capabilities.operateCommands, available: false },
+        },
+        queryRoots: { ...base.queryRoots, operate: null },
+      }
+    : base;
+  if (name === null) return bootstrap;
+  return { ...bootstrap, project: { ...bootstrap.project, name } };
 }
 
 function liveListScenario(request) {
@@ -141,88 +168,25 @@ function emitLiveListPatch(request, response) {
 }
 
 function planningForRequest(request) {
+  const premium = premiumRequestState(request, fixture.planning.binding);
+  if (premium) return premium.snapshot;
   const live = liveListScenario(request);
   if (live) return live.snapshot;
+  let scenario = null;
   try {
-    const referer = new URL(request.headers.referer ?? DASHBOARD_FIXTURE_ORIGIN);
-    if (referer.searchParams.get('planningScenario') !== 'delivery') return fixture.planning;
+    scenario = new URL(request.headers.referer ?? DASHBOARD_FIXTURE_ORIGIN).searchParams.get(
+      'planningScenario',
+    );
   } catch {
     return fixture.planning;
   }
-  const graph = {
-    nodes: [
-      {
-        id: 'EPIC-009',
-        type: 'epic',
-        title: 'Reliable registration operations',
-        status: 'in-progress',
-        frontmatter: { id: 'EPIC-009', updated: '2026-09-08' },
-      },
-      {
-        id: 'QT-070',
-        type: 'quick',
-        title: 'Configure the dedicated CRM flow',
-        status: 'done',
-        frontmatter: { id: 'QT-070', updated: '2026-09-03' },
-      },
-      {
-        id: 'QT-071',
-        type: 'quick',
-        title: 'Make failed CRM registrations visible and replayable',
-        status: 'in-progress',
-        frontmatter: {
-          id: 'QT-071',
-          dependsOn: ['QT-070'],
-          updated: '2026-09-08',
-          githubIssue: 162,
-        },
-      },
-      {
-        id: 'T-072',
-        type: 'task',
-        title: 'Add structured logs and correlation IDs',
-        status: 'outstanding',
-        frontmatter: { id: 'T-072', dependsOn: ['QT-071'], updated: '2026-09-09' },
-      },
-      {
-        id: 'T-073',
-        type: 'task',
-        title: 'Verify alerting and replay outcomes',
-        status: 'blocked',
-        frontmatter: { id: 'T-073', dependsOn: ['T-072'], updated: '2026-09-10' },
-      },
-      {
-        id: 'SPRINT-009',
-        type: 'sprint',
-        title: 'SPRINT-009',
-        status: 'outstanding',
-        frontmatter: {
-          id: 'SPRINT-009',
-          name: 'CRM recovery and observability',
-          status: 'active',
-          startDate: '2026-09-08',
-          endDate: '2026-09-22',
-          goal: 'Recover failed registrations and prove the path is observable.',
-          taskIds: ['QT-071', 'T-072', 'T-073'],
-        },
-      },
-      ...Array.from({ length: 32 }, (_, index) => ({
-        id: `QT-${String(index + 100).padStart(3, '0')}`,
-        type: 'quick',
-        title: `Completed maintenance item ${index + 1}`,
-        status: 'done',
-        frontmatter: {
-          id: `QT-${String(index + 100).padStart(3, '0')}`,
-          updated: '2026-09-01',
-        },
-      })),
-    ],
-    edges: [
-      { from: 'QT-071', to: 'QT-070', kind: 'depends_on' },
-      { from: 'T-072', to: 'QT-071', kind: 'depends_on' },
-      { from: 'T-073', to: 'T-072', kind: 'depends_on' },
-    ],
-  };
+  const graph =
+    scenario === 'delivery'
+      ? deliveryPlanningGraph
+      : scenario === 'sprint' || scenario === 'sprint-bare'
+        ? sprintPlanningGraph(scenario === 'sprint-bare')
+        : null;
+  if (!graph) return fixture.planning;
   return {
     ...fixture.planning,
     cursor: { ...fixture.planning.cursor, viewHash: sha256Jcs(graph) },
@@ -399,10 +363,122 @@ const LOCAL_REVIEW_DETAIL = Object.freeze({
   markdown: LOCAL_REVIEW_MARKDOWN,
 });
 
+const TODAY_REVIEW_ID = '2026-W43';
+const TODAY_REVIEW_ITEM = Object.freeze({
+  cycleId: TODAY_REVIEW_ID,
+  title: 'Operating board report — week 43',
+  summary: 'Hold the release until the redesign ships.',
+  signal: 'hold',
+  updatedAt: '2026-10-25T09:00:00.000Z',
+  counts: Object.freeze({ decisions: 2, actions: 1, gaps: 2, issues: 0 }),
+  href: `#/operate/cycles/${TODAY_REVIEW_ID}`,
+});
+const todayDecision = (fields) =>
+  Object.freeze({
+    priority: 'P1',
+    recommendation: '',
+    whyNow: '',
+    owner: 'Chair',
+    confidence: 'Medium',
+    firstStep: '',
+    expectedResult: '',
+    check: '',
+    dependencies: 'None',
+    revisitWhen: '',
+    sources: '',
+    dissent: '',
+    ...fields,
+  });
+// Mirrors the Operate Today canvas so the page can be measured against it.
+const TODAY_REVIEW_DETAIL = Object.freeze({
+  ...LOCAL_REVIEW_DETAIL,
+  ...TODAY_REVIEW_ITEM,
+  decisions: Object.freeze([
+    todayDecision({
+      id: 'D-031',
+      title: 'Hold the next release until the dashboard redesign ships?',
+      whyNow: 'Four fixes already merged stay unreleased for about two weeks.',
+      expectedResult:
+        'One release with the approved screens, re-approved baselines and runner trace budgets.',
+      dissent: 'CTO: ship the fixes now as a patch; the redesign is a minor on its own.',
+    }),
+    todayDecision({
+      id: 'D-032',
+      title: 'Keep the CLI-bundled plugin channel or rename it',
+    }),
+  ]),
+  actions: Object.freeze([
+    Object.freeze({
+      id: 'A-014',
+      priority: 'P1',
+      action: 'Rotate the Cloudflare deploy token before it expires',
+      owner: 'COO',
+      firstStep: 'Create the new token',
+      successMeasure: 'Deploys use the new token',
+      check: 'Run one deploy',
+      dependencies: 'None',
+      state: 'proposed',
+    }),
+  ]),
+  gaps: Object.freeze([
+    Object.freeze({
+      id: 'G-001',
+      title: 'Linux screenshot baselines',
+      detail: 'Not captured yet.',
+    }),
+    Object.freeze({
+      id: 'Q-009',
+      title: 'Is the share-key flow in scope for this cycle?',
+      detail: 'No owner has answered.',
+    }),
+  ]),
+  risks: Object.freeze([]),
+  issues: Object.freeze([]),
+  lenses: Object.freeze(
+    [
+      ['CEO', true, 'action'],
+      ['CTO', true, 'dissent'],
+      ['CPO', true, 'action'],
+      ['CMO', false, ''],
+      ['COO', true, 'action'],
+      ['Challenger', true, 'holds'],
+      ['Chair', true, 'reported'],
+    ].map(([name, present, signal]) =>
+      Object.freeze({
+        name,
+        filename: `${String(name).toLowerCase()}.md`,
+        present,
+        outcome: present ? `reported (signal: ${signal})` : 'missing',
+        signal,
+        informed: 'D-031',
+        findings: present ? 3 : 0,
+        recommendation: '',
+      }),
+    ),
+  ),
+  evidence: Object.freeze([
+    Object.freeze({
+      id: 'E-001',
+      reference: 'Staging receipt for 0.55.1',
+      kind: 'receipt',
+      freshness: 'checkpoint',
+    }),
+  ]),
+});
+
+function todayScenario(request) {
+  try {
+    const referer = new URL(request.headers.referer ?? DASHBOARD_FIXTURE_ORIGIN);
+    return referer.searchParams.get('operateScenario') === 'today';
+  } catch {
+    return false;
+  }
+}
+
 function localReviewRequest(request) {
   try {
     const referer = new URL(request.headers.referer ?? DASHBOARD_FIXTURE_ORIGIN);
-    return referer.searchParams.get('localOperate') === '1';
+    return ['1', 'empty'].includes(referer.searchParams.get('localOperate'));
   } catch {
     return false;
   }
@@ -643,6 +719,17 @@ function openStream(request, response) {
   response.setHeader('connection', 'keep-alive');
   response.flushHeaders();
   response.write(': owner fixture stream ready\n\n');
+  const premium =
+    new URL(request.url, DASHBOARD_FIXTURE_ORIGIN).pathname === '/api/planning/events'
+      ? premiumRequestState(request, fixture.planning.binding)
+      : null;
+  if (premium) {
+    premium.streams.add(response);
+    response.write(
+      `event: ready\ndata: ${JSON.stringify({ kind: 'planning-live-event', schemaVersion: '1.0.0', event: 'ready', binding: premium.snapshot.binding, cursor: premium.snapshot.cursor, payload: { readOnly: true, reasonCodes: [] } })}\n\n`,
+    );
+    request.once('close', () => premium.streams.delete(response));
+  }
   streams.set(
     response,
     new URL(request.url, DASHBOARD_FIXTURE_ORIGIN).pathname === '/api/planning/events'
@@ -785,6 +872,35 @@ async function commandResponse(request, response, pathname) {
 async function routeApi(request, response, next) {
   const url = new URL(request.url, DASHBOARD_FIXTURE_ORIGIN);
   const { pathname } = url;
+  if (pathname === '/__fixture/brand-gallery') {
+    try {
+      if (request.method !== 'GET') throw new TypeError('Gallery fixture is GET-only.');
+      const html = await brandGalleryDocument({
+        theme: url.searchParams.get('theme') ?? 'dark',
+        state: url.searchParams.get('state') ?? 'normal',
+      });
+      response.writeHead(200, {
+        'content-type': 'text/html; charset=utf-8',
+        'cache-control': 'no-store',
+      });
+      response.end(html);
+    } catch (error) {
+      responseJson(response, 500, {
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+    return;
+  }
+  if (pathname.startsWith('/__production/') || pathname.startsWith('/__fixture/')) {
+    try {
+      servePremiumFixture(request, response, fixture.planning.binding);
+    } catch (error) {
+      responseJson(response, 500, {
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+    return;
+  }
   if (!pathname.startsWith('/api/')) return next();
   try {
     if (pathname === '/api/fixture/planning/patch' && exactQuery(url, {})) {
@@ -808,6 +924,26 @@ async function routeApi(request, response, next) {
         });
       return valid ? responseJson(response, 200, planningForRequest(request)) : refuse(response);
     }
+    if (pathname.startsWith('/api/planning/detail/')) {
+      if (request.method !== 'GET') return refuse(response, 405);
+      const snapshot = planningForRequest(request);
+      // Reuse the installed server's binding, subject and summary checks for fixture reads too.
+      return handlePlanningDetail({
+        dashboard: {
+          project: { projectId: snapshot.binding.projectId },
+          planningActorId: snapshot.binding.actorId,
+          planning: {
+            ensureGraph: () => snapshot.graph,
+            readNode: (id) => snapshot.graph.nodes.find((node) => node.id === id) ?? null,
+            cursor: () => snapshot.cursor,
+          },
+        },
+        req: request,
+        res: response,
+        url,
+        pathname,
+      });
+    }
     if (pathname === '/api/planning/events') {
       const valid =
         request.method === 'GET' &&
@@ -822,6 +958,10 @@ async function routeApi(request, response, next) {
       return valid ? openStream(request, response) : refuse(response);
     }
     if (pathname === '/api/operate/local-reviews') {
+      const empty =
+        new URL(request.headers.referer ?? DASHBOARD_FIXTURE_ORIGIN).searchParams.get(
+          'localOperate',
+        ) === 'empty';
       const embeddedRequest = exactQuery(url, { page: '1', pageSize: '1' });
       const routeRequest =
         localReviewRequest(request) && exactQuery(url, { page: '1', pageSize: '12' });
@@ -835,9 +975,19 @@ async function routeApi(request, response, next) {
               page: 1,
               pageSize: embeddedRequest ? 1 : 12,
               pageCount: 1,
-              total: 1,
+              total: empty ? 0 : 1,
             },
-            items: [LOCAL_REVIEW_ITEM],
+            items: empty ? [] : [todayScenario(request) ? TODAY_REVIEW_ITEM : LOCAL_REVIEW_ITEM],
+          })
+        : refuse(response);
+    }
+    if (pathname === `/api/operate/local-reviews/${TODAY_REVIEW_ID}`) {
+      return request.method === 'GET' && exactQuery(url, {}) && todayScenario(request)
+        ? responseJson(response, 200, {
+            kind: 'local-operate-review',
+            schemaVersion: '1.0.0',
+            readOnly: true,
+            item: TODAY_REVIEW_DETAIL,
           })
         : refuse(response);
     }

@@ -124,7 +124,8 @@
       // Component identities are created once per imperative mount or test, outside React renders.
       "includes": [
         "packages/artifact/lib/artifact/ui/studio-shell-mount-impl.tsx",
-        "packages/canvas/tests/react/**"
+        "packages/canvas/tests/react/**",
+        "packages/cli/tests/dashboard/**"
       ],
       "linter": {
         "rules": {

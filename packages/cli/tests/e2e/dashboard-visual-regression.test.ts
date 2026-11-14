@@ -8,7 +8,7 @@
  * source-text constants or a blank page.
  */
 
-import { readFileSync } from 'node:fs';
+import { readFileSync, writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { performance } from 'node:perf_hooks';
 import { fileURLToPath } from 'node:url';
@@ -24,6 +24,7 @@ import axe from 'axe-core';
 import {
   assertOperateReviewDisplayWorkspaceV1,
   assertOperatingReviewReceiptV2,
+  type OperateReviewDisplayWorkspaceV1,
 } from 'planr-pipeline/dashboard/operate-review-contract';
 import {
   dashboardRouteDefinition,
@@ -37,11 +38,64 @@ import {
 } from '../../../../apps/dashboard/src/features/planning/planning-api.js';
 import { createDashboardQueryIdentity } from '../../../../apps/dashboard/src/lib/binding/query-identity.js';
 import {
+  assertBrandGalleryEvidence,
+  brandGalleryStates,
+  recordBrandGalleryEvidence,
+} from '../../../../apps/dashboard/tests/helpers/brand-gallery-fixture.mjs';
+import {
+  activityParityRows,
+  assertParityRow,
+  boardParityRows,
+  detailParityRows,
+  homeParityRows,
+  listParityRows,
+  paletteParityRows,
+  sprintsParityRows,
+  todayParityRows,
+} from '../../../../apps/dashboard/tests/helpers/redesign-parity-rows.mjs';
+import { installDashboardLayoutShifts } from '../dashboard/fixtures/dashboard-layout-shifts.js';
+import { ARTBOARD_FIXTURE_CLOCK } from '../dashboard/fixtures/premium-artboard-fixture.js';
+import { registerDashboardPerformanceTraceTests } from './fixtures/dashboard-performance-trace.js';
+import {
   DASHBOARD_FIXTURE_CYCLE_ID,
   DASHBOARD_FIXTURE_REVIEW_ID,
   DASHBOARD_ROUTE_FIXTURES,
   dashboardRouteFixture,
 } from './fixtures/dashboard-route-catalog.js';
+import { SPRINT_SCENARIO_NOW } from './fixtures/dashboard-sprint-graph.js';
+
+registerDashboardPerformanceTraceTests();
+
+test('records fixture-only Tokens, Components and States in both themes', async ({
+  page,
+}, testInfo) => {
+  const errors: string[] = [];
+  page.on('pageerror', (error) => errors.push(error.message));
+  for (const theme of ['dark', 'light']) {
+    for (const state of brandGalleryStates) {
+      await page.emulateMedia({
+        reducedMotion: state === 'reduced-motion' ? 'reduce' : 'no-preference',
+      });
+      const response = await page.goto(
+        `/__fixture/brand-gallery?${new URLSearchParams({ theme, state })}`,
+      );
+      expect(response?.ok()).toBe(true);
+      await expect(page.locator('[data-brand-gallery]')).toBeVisible();
+      await page.evaluate(() => document.fonts.ready);
+      const evidence = await recordBrandGalleryEvidence(page, { theme, state });
+      await testInfo.attach(`brand-gallery-${theme}-${state}.json`, {
+        body: Buffer.from(JSON.stringify(evidence, null, 2)),
+        contentType: 'application/json',
+      });
+      assertBrandGalleryEvidence(evidence);
+    }
+    await page.screenshot({
+      path: testInfo.outputPath(`brand-gallery-${theme}.png`),
+      fullPage: true,
+    });
+  }
+  expect(errors).toEqual([]);
+});
 
 const TEST_ROOT = dirname(fileURLToPath(import.meta.url));
 const FIXTURE_ORIGIN = `http://127.0.0.1:${process.env.OPENPLANR_DASHBOARD_FIXTURE_PORT ?? '4173'}`;
@@ -79,6 +133,40 @@ function fixtureUrl(
 ): string {
   const query = new URLSearchParams({ route, ...options });
   return `/?${query.toString()}`;
+}
+
+/** Reads the palette's focus ring and whether its nearest scroller clips it. */
+function readPaletteRing(page: Page) {
+  return page.evaluate(async () => {
+    for (let frame = 0; frame < 2; frame += 1)
+      await new Promise((resolve) => requestAnimationFrame(resolve));
+    // Focus also selects the row, which restarts the reduced-motion transition.
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    const focused = document.querySelector<HTMLElement>('dialog.pc-palette :focus-visible');
+    if (!focused) return null;
+    const style = getComputedStyle(focused);
+    const box = focused.getBoundingClientRect();
+    const reach = parseFloat(style.outlineWidth) + parseFloat(style.outlineOffset);
+    let clipped = false;
+    for (let parent = focused.parentElement; parent; parent = parent.parentElement) {
+      const overflow = getComputedStyle(parent);
+      if (![overflow.overflowX, overflow.overflowY].some((value) => value !== 'visible')) continue;
+      const frame = parent.getBoundingClientRect();
+      if (
+        box.left - reach < frame.left - 0.5 ||
+        box.right + reach > frame.right + 0.5 ||
+        box.top - reach < frame.top - 0.5 ||
+        box.bottom + reach > frame.bottom + 0.5
+      )
+        clipped = true;
+      break;
+    }
+    return {
+      element: `${focused.tagName.toLowerCase()}.${focused.className}`,
+      ring: [style.outlineStyle, style.outlineWidth, style.outlineOffset],
+      clipped,
+    };
+  });
 }
 
 async function openFixture(page: Page, route = '#/overview', options = {}) {
@@ -151,6 +239,50 @@ async function layoutReport(page: Page) {
   }, ACTIVE_TARGET_SELECTOR);
 }
 
+async function expectControlsHitTestable(page: Page, scope = page.locator('#main-content')) {
+  const controls = scope.locator(
+    `${ACTIVE_TARGET_SELECTOR}, [tabindex]:not([tabindex="-1"]), [contenteditable="true"]`,
+  );
+  let checked = 0;
+  for (const control of await controls.all()) {
+    if (
+      !(await control.isVisible()) ||
+      (await control.isDisabled()) ||
+      (await control.getAttribute('aria-disabled')) === 'true'
+    )
+      continue;
+    await control.scrollIntoViewIfNeeded();
+    const report = await control.evaluate((element) => {
+      const rect = element.getBoundingClientRect();
+      const hit = document.elementFromPoint(rect.x + rect.width / 2, rect.y + rect.height / 2);
+      return {
+        target: element.outerHTML,
+        hit: hit?.outerHTML,
+        reachable: hit !== null && (hit === element || element.contains(hit)),
+      };
+    });
+    expect(report.reachable, `Control is covered: ${JSON.stringify(report)}`).toBe(true);
+    checked++;
+  }
+  expect(checked).toBeGreaterThan(0);
+}
+
+async function expectGovernedDialogFocusTrapped(page: Page, dialog: Locator, cancel: Locator) {
+  await expect(cancel).toBeFocused();
+  const controls = dialog.locator(ACTIVE_TARGET_SELECTOR);
+  const steps = (await controls.count()) + 1;
+  for (const direction of ['Tab', 'Shift+Tab']) {
+    for (let step = 0; step < steps; step++) {
+      await page.keyboard.press(direction);
+      expect(
+        await dialog.evaluate((element) => element.contains(document.activeElement)),
+        `Governed dialog must retain focus after ${direction}`,
+      ).toBe(true);
+    }
+  }
+  await cancel.focus();
+}
+
 async function touchTap(page: Page, target: Locator): Promise<void> {
   await expect(target).toBeVisible();
   await target.scrollIntoViewIfNeeded();
@@ -195,8 +327,9 @@ async function attachScreenshot(
   await attach(name, { body: screenshot, contentType: 'image/png' });
 }
 
+// Soft, so a test with several goldens compares and records every one.
 async function expectGoldenScreenshot(page: Page, name: string) {
-  await expect(page).toHaveScreenshot([process.platform, name], {
+  await expect.soft(page).toHaveScreenshot([process.platform, name], {
     animations: 'disabled',
     caret: 'hide',
     fullPage: true,
@@ -253,8 +386,8 @@ test.describe('dashboard real-browser quality', () => {
       if (route === '#/graph') {
         const graph = page.locator('[data-route-kind="planning.graph"]');
         await expect(graph.getByRole('heading', { level: 1, name: 'Graph' })).toBeVisible();
-        await expect(graph).toContainText('0 nodes · 0 edges');
-        await expect(graph).toContainText('No depends_on edges in this plan');
+        await expect(graph).toContainText('1 of 1 nodes');
+        await expect(graph).toContainText('Everything outside the focus is hidden, not deleted.');
         await expect(graph.getByRole('tab', { name: 'Graph' })).toHaveAttribute(
           'aria-selected',
           'true',
@@ -274,6 +407,168 @@ test.describe('dashboard real-browser quality', () => {
       expect(FIXTURE_ORIGIN).not.toBe('http://127.0.0.1:4173');
     }
   });
+
+  test('uses the shared presentation across every Operate route in both themes', async ({
+    page,
+  }, testInfo) => {
+    test.setTimeout(180_000);
+    await page.addInitScript(() => {
+      const theme = new URL(location.href).searchParams.get('operateTheme');
+      if (theme === 'dark' || theme === 'light') localStorage.setItem('op-theme', theme);
+    });
+    const writes: string[] = [];
+    page.on('request', (request) => {
+      if (
+        new URL(request.url()).pathname.startsWith('/api/operate/') &&
+        !['GET', 'HEAD'].includes(request.method())
+      )
+        writes.push(`${request.method()} ${new URL(request.url()).pathname}`);
+    });
+    const routes = DASHBOARD_ROUTE_FIXTURES.filter(({ kind }) => kind.startsWith('operate.'));
+    expect(routes).toHaveLength(15);
+    for (const theme of ['dark', 'light']) {
+      for (const width of [1440, 390, 320]) {
+        await page.setViewportSize({ width, height: 1000 });
+        for (const { hash, kind } of routes) {
+          await openFixture(page, hash, { operateTheme: theme });
+          const workspace = page.locator(`[data-route-kind="${kind}"]`);
+          await expect(workspace).toHaveClass(/pc-operate/u);
+          await page.evaluate(() => document.fonts.ready);
+          const typography = await workspace.evaluate((element) => {
+            const heading = element.querySelector('h1, h2');
+            if (!heading) throw new Error('Missing Operate heading.');
+            const style = getComputedStyle(heading);
+            return {
+              body: getComputedStyle(element).fontFamily,
+              heading: style.fontFamily,
+              size: parseFloat(style.fontSize),
+              isPageTitle: heading.tagName === 'H1',
+              overflow: document.documentElement.scrollWidth > document.documentElement.clientWidth,
+            };
+          });
+          expect(typography.body).toContain('DM Sans');
+          expect(typography.heading).toContain('Outfit');
+          // Today's phone title is 24 on operate-Mobile.
+          const pageTitle = kind === 'operate.today' && width < 600 ? 24 : 28;
+          expect(typography.size).toBe(typography.isPageTitle ? pageTitle : 20);
+          expect(typography.overflow, `${kind} at ${width}px in ${theme}`).toBe(false);
+          if (kind === 'operate.recovery' && width === 390) {
+            const history = workspace.getByRole('region', { name: 'Immutable recovery history' });
+            await expect(history).toHaveAttribute('tabindex', '0');
+            await history.focus();
+            await expect(history).toBeFocused();
+            await expect(history).toHaveCSS('outline-style', 'solid');
+            await expect(history).toHaveCSS('outline-width', '2px');
+          }
+          const violations = await axeViolations(page);
+          expect(violations, `${kind} accessibility at ${width}px in ${theme}`).toEqual([]);
+          if (width === 1440) {
+            await attachScreenshot(page, `${kind}-${theme}.png`, testInfo.attach.bind(testInfo));
+          }
+          if (kind === 'operate.today' && width === 1440) {
+            const focus = workspace.locator('.pc-operate-today__decision');
+            const evidence = workspace.locator('.pc-operate-today__evidence');
+            const [focusBox, evidenceBox] = await Promise.all([
+              focus.boundingBox(),
+              evidence.boundingBox(),
+            ]);
+            if (!focusBox || !evidenceBox) throw new Error('Missing decision or evidence card.');
+            expect(evidenceBox.x - focusBox.x - focusBox.width).toBeCloseTo(24, 0);
+            await expect(focus).toHaveCSS('border-radius', '12px');
+            await expect(evidence).toHaveCSS('border-radius', '12px');
+          }
+        }
+      }
+    }
+    expect(writes).toEqual([]);
+  });
+
+  for (const theme of ['dark', 'light']) {
+    for (const width of [1440, 320]) {
+      test(`shows the truthful first-run Operate page with a copyable host command (${theme}, ${width}px)`, async ({
+        page,
+      }, testInfo) => {
+        await page.addInitScript(installDashboardLayoutShifts);
+        await page.context().grantPermissions(['clipboard-read', 'clipboard-write']);
+        await page.addInitScript(() => {
+          const theme = new URL(location.href).searchParams.get('operateTheme');
+          if (theme === 'dark' || theme === 'light') localStorage.setItem('op-theme', theme);
+        });
+        await page.setViewportSize({ width, height: 1000 });
+        const [bootstrapResponse, indexResponse] = await Promise.all([
+          page.waitForResponse(
+            (response) =>
+              new URL(response.url()).pathname === '/api/bootstrap' && response.status() === 200,
+          ),
+          page.waitForResponse((response) => {
+            const url = new URL(response.url());
+            return (
+              url.pathname === '/api/operate/local-reviews' &&
+              url.searchParams.get('pageSize') === '12' &&
+              response.status() === 200
+            );
+          }),
+          page.goto(fixtureUrl('#/operate/today', { localOperate: 'empty', operateTheme: theme })),
+        ]);
+        expect(bootstrapResponse.ok()).toBe(true);
+        expect(indexResponse.ok()).toBe(true);
+        // API request bodies survive replacement of the document that issued the observed requests.
+        const [bootstrapRead, indexRead] = await Promise.all([
+          page.request.get(bootstrapResponse.url(), {
+            headers: bootstrapResponse.request().headers(),
+          }),
+          page.request.get(indexResponse.url(), {
+            headers: indexResponse.request().headers(),
+          }),
+        ]);
+        expect(bootstrapRead.ok()).toBe(true);
+        expect(await bootstrapRead.json()).toMatchObject({
+          queryRoots: { operate: null },
+          capabilities: { operateCommands: { available: false } },
+        });
+        expect(indexRead.ok()).toBe(true);
+        expect(await indexRead.json()).toMatchObject({ pagination: { total: 0 }, items: [] });
+        const workspace = page.locator('[data-route-kind="operate.today"]');
+        await expect(
+          workspace.getByRole('heading', { name: 'Operate is not set up in this project' }),
+        ).toBeVisible();
+        await expect(workspace.getByText('Proposed', { exact: true })).toHaveCount(0);
+        if (width === 1440) {
+          await expect(page.locator('.pc-shell-inspector, .pc-inspector-sheet')).toHaveCount(0);
+          await expect(
+            page.getByRole('button', {
+              name: 'Show inspector: select an item first',
+              exact: true,
+            }),
+          ).toBeDisabled();
+          const main = page.locator('#main-content');
+          const [content, column] = await Promise.all([
+            main.boundingBox(),
+            page.locator('.pc-shell__column').boundingBox(),
+          ]);
+          if (!content || !column) throw new Error('Missing main content or shell column.');
+          expect(content.width).toBe(column.width);
+          await expectControlsHitTestable(page);
+        }
+
+        await expect(
+          workspace.locator(
+            '.op-today-focus, .pc-local-review__signal, .pc-operate-today__decision',
+          ),
+        ).toHaveCount(0);
+        await workspace.getByRole('button', { name: 'Copy command', exact: true }).click();
+        await expect(workspace.getByRole('button', { name: 'Copied', exact: true })).toBeVisible();
+        expect(await page.evaluate(() => navigator.clipboard.readText())).toBe('/planr:operate');
+        expect((await layoutReport(page)).horizontalOverflow).toBe(false);
+        expect(await axeViolations(page)).toEqual([]);
+        await attachScreenshot(
+          page,
+          `operate-first-run-${theme}-${width}.png`,
+          testInfo.attach.bind(testInfo),
+        );
+      });
+    }
+  }
 
   test('shows completed local operating reviews and keeps cycle and history routes distinct', async ({
     page,
@@ -298,16 +593,20 @@ test.describe('dashboard real-browser quality', () => {
     await expect(detail).toContainText('Run the CRM smoke test');
     await expect(detail.getByRole('heading', { name: 'Review coverage' })).toBeVisible();
     await expect(detail.getByRole('heading', { name: 'Decision record' })).toBeVisible();
-    await expect(detail.getByText('Read-only')).toBeVisible();
+    await expect(detail.getByText('Governed actions')).toBeVisible();
     await expect(detail).not.toContainText('No command gateway in this build');
 
     const navigation = page.getByRole('navigation', { name: 'Dashboard navigation' });
 
     await navigation.getByRole('link', { name: 'Today', exact: true }).click();
     const today = page.locator('[data-route-kind="operate.today"]');
-    await expect(today.getByRole('heading', { level: 1, name: 'Operate today' })).toBeVisible();
-    await expect(today.getByRole('heading', { name: 'Lens coverage' })).toBeVisible();
-    await expect(today).toContainText('Board signal · act now');
+    await expect(
+      today.getByRole('heading', { level: 1, name: 'One decision needs you' }),
+    ).toBeVisible();
+    await expect(today.getByRole('region', { name: 'Executive seats' })).toBeVisible();
+    await expect(
+      today.getByRole('heading', { level: 2, name: 'Verify the CRM flow' }),
+    ).toBeVisible();
 
     await navigation.getByRole('link', { name: 'Inbox', exact: true }).click();
     const inbox = page.locator('[data-route-kind="operate.inbox"]');
@@ -364,11 +663,11 @@ test.describe('dashboard real-browser quality', () => {
     await page.goto(fixtureUrl('#/operate/today', { localOperate: '1' }));
     const compactToday = page.locator('[data-route-kind="operate.today"]');
     await expect(
-      compactToday.getByRole('heading', { level: 1, name: 'Operate today' }),
+      compactToday.getByRole('heading', { level: 1, name: 'One decision needs you' }),
     ).toBeVisible();
     expect(
       await compactToday
-        .locator('.pc-local-review__signal')
+        .locator('.pc-operate-today__decision')
         .evaluate((element) => element.scrollHeight <= element.clientHeight + 1),
     ).toBe(true);
     expect((await layoutReport(page)).horizontalOverflow).toBe(false);
@@ -379,6 +678,74 @@ test.describe('dashboard real-browser quality', () => {
     expect(errors).toEqual([]);
     expect((await layoutReport(page)).horizontalOverflow).toBe(false);
     expect(await axeViolations(page)).toEqual([]);
+  });
+
+  test('shows the latest local review on Today with its decision, actions and gaps', async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 1440, height: 1120 });
+    await page.goto(fixtureUrl('#/operate/today', { localOperate: '1' }));
+    const today = page.locator('[data-route-kind="operate.today"] .pc-operate-today');
+    const cycle = today.locator('.pc-operate-today__eyebrow a');
+    await expect(cycle).toBeVisible();
+    await expect(cycle).toHaveText('cycle 2026-09-14-modul-events');
+    await expect(cycle).toHaveAttribute('href', '#/operate/cycles/2026-09-14-modul-events');
+    await expect(
+      today.getByRole('heading', { level: 2, name: 'Verify the CRM flow' }),
+    ).toBeVisible();
+    const gaps = today.locator('.pc-operate-today__tile', { hasText: 'Evidence gaps' });
+    await expect(gaps).toBeVisible();
+    await expect(gaps.locator('dd')).toHaveText('1');
+    await expect(today.getByRole('link', { name: /Run the CRM smoke test/u })).toBeVisible();
+    await expect(today.getByRole('link', { name: /Live flow state/u })).toBeVisible();
+    await expect(today.locator('.pc-operate-today__summary')).toHaveText(
+      '7 of 7 seats reported. 1 action and 1 open question are waiting.',
+    );
+    const text = await page.locator('#main-content').innerText();
+    expect(text).not.toMatch(/\bnone\b|Not recorded|Unassigned/iu);
+    expect(text).not.toContain('Depends on');
+    for (const width of [1200, 1279, 1280]) {
+      await page.setViewportSize({ width, height: 900 });
+      const actions = await page.locator('.pc-topbar__actions').boundingBox();
+      expect((actions?.x ?? 0) + (actions?.width ?? 0), `top bar at ${width}`).toBeLessThanOrEqual(
+        width,
+      );
+      await expect(page.locator('.pc-operate-places'), `tabs at ${width}`)[
+        width < 1280 ? 'toBeHidden' : 'toBeVisible'
+      ]();
+    }
+    for (const route of ['#/operate/inbox/D1', '#/operate/outcomes/D1']) {
+      await page.goto(fixtureUrl(route, { localOperate: '1' }));
+      await expect(page.locator('.pc-operate-today__title')).toBeVisible();
+      await expect(page.locator('#main-content h1'), route).toHaveCount(1);
+    }
+  });
+
+  test('keeps the top bar unchanged when the route tabs slot is empty', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    for (const [route, query] of [
+      ['#/home', {}],
+      ['#/operate/inbox', { localOperate: '1' }],
+    ] as const) {
+      await page.goto(fixtureUrl(route, query));
+      await expect(page.locator('.pc-topbar__palette')).toBeVisible();
+      await page.evaluate(() => document.fonts.ready);
+      const slot = page.locator('.pc-topbar__route-tabs');
+      expect(await slot.evaluate((element) => element.childElementCount)).toBe(0);
+      await expect(slot).toBeHidden();
+      const boxes = () =>
+        page.evaluate(() =>
+          [...document.querySelectorAll('.pc-topbar *')]
+            .filter((element) => !element.classList.contains('pc-topbar__route-tabs'))
+            .map((element) => {
+              const box = element.getBoundingClientRect();
+              return [box.x, box.y, box.width, box.height].map(Math.round).join(',');
+            }),
+        );
+      const withSlot = await boxes();
+      await slot.evaluate((element) => element.remove());
+      expect(await boxes(), route).toEqual(withSlot);
+    }
   });
 
   test('renders the pending Review from exact GET-only reads without mutation or private custody', async ({
@@ -524,9 +891,16 @@ test.describe('dashboard real-browser quality', () => {
       await page.keyboard.press('Enter');
       const dialog = page.getByRole('alertdialog');
       await expect(dialog).toBeVisible();
-      expect(await dialog.evaluate((element) => element.contains(document.activeElement))).toBe(
-        true,
-      );
+      await expect(dialog).toHaveAccessibleName('Record “Reject recommendation”?');
+      const cancel = dialog.getByRole('button', { name: 'Keep reviewing', exact: true });
+      await expectGovernedDialogFocusTrapped(page, dialog, cancel);
+      await expect(
+        dialog.getByText(
+          'Records owner rejection and applies only the listed work dispositions; it does not delete evidence or execute Actions.',
+          { exact: true },
+        ),
+      ).toBeVisible();
+      await expectControlsHitTestable(page, dialog);
       await expect(dialog.getByText('project-write')).toBeVisible();
       expect(
         requests.filter(
@@ -602,6 +976,10 @@ test.describe('dashboard real-browser quality', () => {
       await trigger.click();
       const dialog = page.getByRole('alertdialog');
       await expect(dialog).toBeVisible();
+      await expect(dialog).toHaveAccessibleName(`Record “${proof.label}”?`);
+      const cancel = dialog.getByRole('button', { name: 'Keep reviewing', exact: true });
+      await expectGovernedDialogFocusTrapped(page, dialog, cancel);
+      await expectControlsHitTestable(page, dialog);
       await expect(dialog.getByRole('heading', { name: `Record “${proof.label}”?` })).toBeVisible();
       await expect(dialog.getByText(proof.consequence, { exact: true })).toBeVisible();
       await expect(dialog.getByText('project-write')).toBeVisible();
@@ -631,7 +1009,9 @@ test.describe('dashboard real-browser quality', () => {
       const envelope = (await response.json()) as Record<string, unknown>;
       const data = envelope.data as Record<string, unknown>;
       const receipt = assertOperatingReviewReceiptV2(data.receipt);
-      const workspace = assertOperateReviewDisplayWorkspaceV1(data.workspace);
+      const workspace = assertOperateReviewDisplayWorkspaceV1(
+        data.workspace,
+      ) as OperateReviewDisplayWorkspaceV1;
       expect(envelope).toMatchObject({
         ok: true,
         operation: 'operate.review.submit',
@@ -683,8 +1063,8 @@ test.describe('dashboard real-browser quality', () => {
 
       const graph = page.locator('[data-route-kind="planning.graph"]');
       await expect(graph.getByRole('heading', { level: 1, name: 'Graph' })).toBeVisible();
-      await expect(graph).toContainText('No depends_on edges in this plan');
-      await expect(graph).toContainText('an artifact without an edge of this kind is not shown');
+      await expect(graph).toContainText('Everything outside the focus is hidden, not deleted.');
+      await expect(graph).toContainText('Arrows move to connected neighbours.');
       expect((await layoutReport(page)).horizontalOverflow).toBe(false);
 
       if (viewport.width >= 1024) {
@@ -700,59 +1080,151 @@ test.describe('dashboard real-browser quality', () => {
   test('turns a real delivery plan into staged graph, bounded board, and sprint intelligence', async ({
     page,
   }) => {
+    await page.addInitScript(installDashboardLayoutShifts);
     await page.setViewportSize({ width: 1440, height: 900 });
     await openFixture(page, '#/graph', { planningScenario: 'delivery' });
 
     const graph = page.locator('[data-route-kind="planning.graph"]');
+    await expect(graph.getByRole('button', { name: 'Dependencies', exact: true })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
     await expect(graph.locator('.pc-graph-node')).toHaveCount(4);
+    const fittedNodes = await graph.locator('.pc-graph-node').evaluateAll((nodes) =>
+      nodes.map((node) => {
+        const canvas = node.closest('.pc-graph');
+        if (!canvas) throw new Error('Missing graph viewport.');
+        const bounds = canvas.getBoundingClientRect();
+        const rect = node.getBoundingClientRect();
+        return {
+          id: node.getAttribute('data-canonical-id'),
+          fits:
+            rect.left >= bounds.left - 2 &&
+            rect.right <= bounds.right + 2 &&
+            rect.top >= bounds.top - 2 &&
+            rect.bottom <= bounds.bottom + 2,
+        };
+      }),
+    );
+    expect(fittedNodes.filter((node) => !node.fits)).toEqual([]);
     await expect(graph.locator('.pc-graph__rank')).toHaveCount(4);
     const nodePositions = await graph
       .locator('.pc-graph-node')
       .evaluateAll((nodes) => nodes.map((node) => Math.round(node.getBoundingClientRect().x)));
     expect(new Set(nodePositions).size).toBe(4);
-    expect(Math.max(...nodePositions) - Math.min(...nodePositions)).toBeGreaterThan(500);
+    const canvasBounds = await graph.locator('.pc-graph').boundingBox();
+    if (!canvasBounds) throw new Error('Missing fitted graph viewport.');
+    // Stage spacing follows the available canvas at each viewport.
+    expect(Math.max(...nodePositions) - Math.min(...nodePositions)).toBeGreaterThan(
+      canvasBounds.width * 0.6,
+    );
 
-    await graph.getByRole('button', { name: /QT-071:/u }).click();
-    const inspector = page.getByRole('complementary', { name: 'Inspector' });
+    await expect(page.locator('.pc-shell-inspector, .pc-inspector-sheet')).toHaveCount(0);
+    await expectControlsHitTestable(page, graph);
+    const main = page.locator('#main-content');
+    const scroll = page.locator('.pc-shell__scroll');
+    const before = { main: await main.boundingBox(), scroll: await scroll.boundingBox() };
+    if (!before.main || !before.scroll) throw new Error('Missing main or scroll region.');
+    await page.evaluate(() => window.__dashboardLayoutShifts.markPhase('inspector-toggle'));
+    const selectedNode = graph.getByRole('button', {
+      name: 'QT-071 Make failed CRM registrations visible and replayable',
+      exact: true,
+    });
+    await selectedNode.click();
+    const inspector = page.getByRole('dialog', { name: 'Inspector', exact: true });
     await expect(inspector).toContainText('Make failed CRM registrations visible and replayable');
-    await expect(inspector).toContainText('Dependencies');
-    await expect(inspector.getByRole('button', { name: /Open artifact/u })).toBeVisible();
+    expect(await main.boundingBox()).toEqual(before.main);
+    expect(await scroll.boundingBox()).toEqual(before.scroll);
+    const overlay = await inspector.boundingBox();
+    if (!overlay) throw new Error('Missing inspector overlay.');
+    expect(overlay.x).toBeLessThan(before.main.x + before.main.width);
+    expect(overlay.x + overlay.width).toBeGreaterThan(before.main.x + before.main.width - 1);
+    await expect(inspector.locator('[data-artifact-id="QT-071"]')).toHaveAttribute(
+      'data-detail-state',
+      'ready',
+    );
+    const dependencies = inspector.getByRole('region', { name: 'Depends on', exact: true });
+    await expect(dependencies.getByRole('link', { name: /QT-070/u })).toBeVisible();
+    await expect(dependencies).toContainText('Done');
+    await expect(
+      inspector.getByRole('button', { name: 'Open full page', exact: true }),
+    ).toBeVisible();
     expect(await inspector.evaluate((node) => getComputedStyle(node).animationName)).toBe(
       'pc-inspector-enter',
     );
+
+    await page.keyboard.press('Escape');
+    await expect(inspector).toHaveCount(0);
+    await expect(selectedNode).toBeFocused();
+    expect(await main.boundingBox()).toEqual(before.main);
+    await selectedNode.click();
+    await expect(inspector).toBeVisible();
+    await main.click({ position: { x: 8, y: 8 } });
+    await expect(inspector).toHaveCount(0);
+    await expect(selectedNode).toBeFocused();
+    expect(await main.boundingBox()).toEqual(before.main);
+    expect(await scroll.boundingBox()).toEqual(before.scroll);
+    await expectControlsHitTestable(page, graph);
+    const shifts = await page.evaluate(() =>
+      window.__dashboardLayoutShifts
+        .snapshot()
+        .shifts.filter((entry) => entry.phase === 'inspector-toggle'),
+    );
+    expect(shifts.reduce((sum, shift) => sum + shift.value, 0)).toBe(0);
+
+    await selectedNode.click();
+    await expect(inspector).toBeVisible();
 
     await page.evaluate(() => {
       window.location.hash = '#/list';
     });
     await expect(page.locator('[data-route-kind="planning.list"]')).toBeVisible();
+    await expect(inspector).toHaveCount(0);
+    await page.getByRole('button', { name: 'Show inspector', exact: true }).click();
+    await expect(inspector).toContainText('Make failed CRM registrations visible and replayable');
     expect(await inspector.evaluate((node) => getComputedStyle(node).animationName)).toBe(
       'pc-inspector-enter',
     );
 
     await openFixture(page, '#/board', { planningScenario: 'delivery' });
-    const doneCards = page
-      .locator('.pc-status-board__column')
-      .filter({ hasText: 'done' })
-      .locator('.pc-status-board__cards');
-    await expect(doneCards.locator('.pc-status-board__card')).toHaveCount(33);
+    const doneCards = page.locator('[data-keyboard-column="done"] .pc-status-board__cards');
+    await expect(doneCards.locator('.pc-status-board__card')).toHaveCount(0);
+    await page.getByRole('checkbox', { name: 'Hide done', exact: true }).click();
+    await page
+      .locator('[data-keyboard-column="done"]')
+      .getByRole('button', { name: /^Show \d+ more$/u })
+      .click();
+    await expect(doneCards.locator('li[aria-setsize="33"]').first()).toBeAttached();
+    expect(await doneCards.locator('.pc-status-board__card').count()).toBeLessThan(10);
+    await doneCards.evaluate((element) => {
+      element.scrollTop = element.scrollHeight;
+    });
+    await expect(doneCards.locator('li[aria-posinset="33"]')).toBeAttached();
     const boardScroll = await doneCards.evaluate((element) => ({
       overflowY: getComputedStyle(element).overflowY,
       scrolls: element.scrollHeight > element.clientHeight,
     }));
     expect(boardScroll).toEqual({ overflowY: 'auto', scrolls: true });
 
+    const operateReads: string[] = [];
+    page.on('request', (request) => {
+      if (new URL(request.url()).pathname.startsWith('/api/operate/local-reviews'))
+        operateReads.push(request.url());
+    });
     await openFixture(page, '#/sprints', { planningScenario: 'delivery' });
     const sprint = page.locator('[data-route-kind="planning.sprints"]');
     await expect(
       sprint.getByRole('heading', { name: 'CRM recovery and observability' }),
     ).toBeVisible();
-    await expect(sprint.getByRole('table', { name: 'Members of SPRINT-009' })).toContainText(
-      'QT-071',
-    );
-    await expect(sprint).toContainText('3 items');
-    await expect(sprint).toContainText('Latest operating review');
-    await expect(sprint).toContainText('1 reference this scope');
-    await expect(sprint).toContainText('Submit one test registration before dispatching QT-071');
+    const members = sprint.getByRole('tabpanel', { name: 'SPRINT-009 items' });
+    await expect(members).toContainText('QT-071');
+    await expect(members.getByRole('listitem')).toHaveCount(3);
+    await expect(sprint).toContainText('Recover failed registrations');
+    await expect(members.locator('.pc-sprints__last[data-kind="blocker"]')).toHaveText([
+      'by T-072',
+      'by QT-071',
+    ]);
+    expect(operateReads).toEqual([]);
     expect((await layoutReport(page)).horizontalOverflow).toBe(false);
     expect(await axeViolations(page)).toEqual([]);
   });
@@ -781,10 +1253,15 @@ test.describe('dashboard real-browser quality', () => {
     const initial = parsePlanningGraphEnvelope(initialWire, identity);
     const list = page.locator('[data-route-kind="planning.list"]');
     await list.getByRole('textbox', { name: 'Filter by id or title' }).fill('Live list artifact');
-    await list.getByRole('combobox', { name: 'Filter by type' }).selectOption('task');
-    await list.getByRole('combobox', { name: 'Filter by status' }).selectOption('outstanding');
-    await list.locator('label.pc-switch', { hasText: 'Compact' }).click();
-    await expect(list.getByRole('switch', { name: 'Compact' })).toBeChecked();
+    await list.getByRole('combobox', { name: /^Type:/u }).click();
+    await page.getByRole('option', { name: 'Task', exact: true }).click();
+    await page.keyboard.press('Escape');
+    await list.getByRole('combobox', { name: /^Status:/u }).click();
+    await page.getByRole('option', { name: 'Outstanding', exact: true }).click();
+    await page.keyboard.press('Escape');
+    const compact = list.getByRole('button', { name: 'Compact', exact: true });
+    await compact.click();
+    await expect(compact).toHaveAttribute('aria-pressed', 'true');
     await list.getByRole('button', { name: 'Updated', exact: true }).click();
     await expect(list.getByRole('columnheader', { name: 'Updated', exact: true })).toHaveAttribute(
       'aria-sort',
@@ -794,7 +1271,7 @@ test.describe('dashboard real-browser quality', () => {
     const selected = list.getByRole('row').filter({ hasText: 'list-item-101' });
     await selected.click();
     await expect(selected).toHaveAttribute('data-selected', 'true');
-    await expect(list.locator('.pc-list__page-status')).toHaveText('Page 2 of 2 · 101–125 of 125');
+    await expect(list.locator('.pc-list__page-status')).toContainText('Showing 101–');
 
     await page.evaluate(() => {
       const state = { pending: false, removedList: false, notice: false };
@@ -806,7 +1283,9 @@ test.describe('dashboard real-browser quality', () => {
           Array.from(record.addedNodes).some((node) => contains(node, '[data-route-pending]')),
         );
         state.notice ||= records.some((record) =>
-          Array.from(record.addedNodes).some((node) => contains(node, '.op-planning-notice')),
+          Array.from(record.addedNodes).some((node) =>
+            contains(node, '.op-planning-notice:not(.pc-visually-hidden)'),
+          ),
         );
         state.removedList ||= records.some((record) =>
           Array.from(record.removedNodes).some((node) =>
@@ -844,7 +1323,7 @@ test.describe('dashboard real-browser quality', () => {
       await refreshStarted;
       await expect(list).toBeVisible();
       await expect(page.locator('[data-route-pending]')).toHaveCount(0);
-      await expect(list.locator('.op-planning-notice')).toHaveCount(0);
+      await expect(list.locator('.op-planning-notice:not(.pc-visually-hidden)')).toHaveCount(0);
       await expect(selected).toHaveAttribute('data-selected', 'true');
 
       const checkpoint = encodePlanningCheckpoint(event.cursor);
@@ -860,20 +1339,18 @@ test.describe('dashboard real-browser quality', () => {
       await expect(list.getByRole('textbox', { name: 'Filter by id or title' })).toHaveValue(
         'Live list artifact',
       );
-      await expect(list.getByRole('combobox', { name: 'Filter by type' })).toHaveValue('task');
-      await expect(list.getByRole('combobox', { name: 'Filter by status' })).toHaveValue(
-        'outstanding',
+      await expect(list.getByRole('combobox', { name: /^Type:/u })).toHaveText('Type: task');
+      await expect(list.getByRole('combobox', { name: /^Status:/u })).toHaveText(
+        'Status: outstanding',
       );
-      await expect(list.getByRole('switch', { name: 'Compact' })).toBeChecked();
+      await expect(compact).toHaveAttribute('aria-pressed', 'true');
       await expect(
         list.getByRole('columnheader', { name: 'Updated', exact: true }),
       ).toHaveAttribute('aria-sort', 'ascending');
-      await expect(list.locator('.pc-list__page-status')).toHaveText(
-        'Page 2 of 2 · 101–125 of 125',
-      );
+      await expect(list.locator('.pc-list__page-status')).toContainText('Showing 101–');
       await expect(selected).toHaveAttribute('data-selected', 'true');
       await expect(page.locator('[data-route-pending]')).toHaveCount(0);
-      await expect(list.locator('.op-planning-notice')).toHaveCount(0);
+      await expect(list.locator('.op-planning-notice:not(.pc-visually-hidden)')).toHaveCount(0);
       const observation = await page.evaluate(() => {
         const value = Reflect.get(window, '__fixtureListObservation') as {
           state: { pending: boolean; removedList: boolean; notice: boolean };
@@ -918,7 +1395,7 @@ test.describe('dashboard real-browser quality', () => {
     expect(transition).toEqual({ route: '#/graph', showedPlanningRefusal: false });
     await expect(page.locator('[data-route-kind="planning.graph"]')).toBeVisible();
     await expect(page.locator('[data-route-kind="planning.graph"]')).toContainText(
-      'No depends_on edges in this plan',
+      'Everything outside the focus is hidden, not deleted.',
     );
   });
 
@@ -929,19 +1406,30 @@ test.describe('dashboard real-browser quality', () => {
     }
   });
 
-  test('keeps Planning Overview bounded and decision-focused', async ({ page }) => {
+  test('keeps Planning Home bounded and decision-focused through the Overview alias', async ({
+    page,
+  }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
     await openFixture(page, '#/overview');
 
     const overview = page.locator('[data-route-kind="planning.overview"]');
-    await expect(overview.getByRole('heading', { level: 1, name: 'Overview' })).toBeVisible();
-    await expect(overview).toContainText('1 artifact');
-    await expect(overview).toContainText('Nothing is blocked');
-    await expect(overview.getByRole('table', { name: 'Artifacts in progress' })).toContainText(
-      'Improve appointment reminder delivery',
-    );
-    await expect(overview).not.toContainText('Highest planning attention');
-    await expect(overview).not.toContainText('Needs attention');
+    await expect(page).toHaveURL(/#\/home$/u);
+    await expect(
+      overview.getByRole('heading', { level: 1, name: 'Needs attention', exact: true }),
+    ).toBeVisible();
+    await expect(overview).toContainText(/\d+ items? needs? you\./u);
+    await expect(
+      overview.getByRole('heading', { name: /^Waiting on a dependency/u }),
+    ).toBeVisible();
+    await expect(
+      overview.getByRole('heading', { name: /^In progress, gone quiet/u }),
+    ).toBeVisible();
+    await expect(
+      overview.getByRole('heading', { name: /^High priority, not started/u }),
+    ).toBeVisible();
+    await expect(overview).not.toContainText('Phase 2');
+    await expect(overview).toContainText('No active sprint');
+    expect((await layoutReport(page)).horizontalOverflow).toBe(false);
     await expectGoldenScreenshot(page, 'console-planning-overview-wide.png');
   });
 
@@ -953,18 +1441,1716 @@ test.describe('dashboard real-browser quality', () => {
       await page.setViewportSize(viewport);
       await openFixture(page, '#/board');
 
+      const phone = viewport.width < 900;
+      const workspace = page.locator('[data-route-kind="planning.board"]');
       const board = page.locator('.pc-status-board');
       const columns = board.locator('.pc-status-board__column');
-      await expect(columns).toHaveCount(5);
-      const inProgress = columns.filter({ hasText: 'in progress' });
+      await expect(columns).toHaveCount(phone ? 1 : 5);
+      if (phone) await workspace.getByRole('tab', { name: /^In progress/u }).click();
+      const inProgress = board.locator('[data-keyboard-column="in-progress"]');
       await expect(inProgress).toContainText('Improve appointment reminder delivery');
-      await expect(columns.filter({ hasText: 'blocked' })).toContainText('empty');
+      for (const label of ['Outstanding', 'Blocked', 'Addressed', 'Done']) {
+        if (phone) await workspace.getByRole('tab', { name: new RegExp(`^${label}`, 'u') }).click();
+        const emptySlot = board
+          .getByRole('region', { name: label, exact: true })
+          .getByRole('button', { name: `Nothing is ${label.toLowerCase()}.`, exact: true });
+        await expect(emptySlot).toBeVisible();
+        await emptySlot.focus();
+        await expect(emptySlot).toBeFocused();
+      }
       expect((await layoutReport(page)).horizontalOverflow).toBe(false);
 
       if (viewport.width >= 1024) {
         await expectSurfaceToUseRouteFrame(page, '[data-route-kind="planning.board"]');
       }
     }
+  });
+
+  test('keeps Board status lanes read-only and keyboard reachable in both themes and sizes', async ({
+    page,
+  }, testInfo) => {
+    const writes: string[] = [];
+    page.on('request', (request) => {
+      if (new URL(request.url()).pathname.startsWith('/api/') && request.method() !== 'GET')
+        writes.push(`${request.method()} ${request.url()}`);
+    });
+    await page.addInitScript(() => {
+      const theme = new URL(window.location.href).searchParams.get('boardTheme');
+      if (theme === 'dark' || theme === 'light') localStorage.setItem('op-theme', theme);
+    });
+    for (const theme of ['dark', 'light']) {
+      for (const width of [1440, 390]) {
+        await page.setViewportSize({ width, height: 960 });
+        await openFixture(page, '#/board', { planningScenario: 'delivery', boardTheme: theme });
+        await page.evaluate(() => document.fonts.ready);
+        expect(await page.evaluate(() => localStorage.getItem('op-theme'))).toBe(theme);
+        const board = page.locator('[data-route-kind="planning.board"]');
+        await expect(board.getByRole('checkbox', { name: 'Hide done', exact: true })).toBeChecked();
+        const card = board.locator('.pc-status-board__card [data-keyboard-item]').first();
+        await card.focus();
+        await page.keyboard.press('Enter');
+        await expect(
+          page.getByRole('dialog', {
+            name: 'Inspector',
+            exact: true,
+          }),
+        ).toBeVisible();
+        await page.keyboard.press('Escape');
+        await expect(card).toBeFocused();
+        await page.keyboard.press('ArrowRight');
+        await expect(board.locator('[data-keyboard-item]:focus')).toHaveCount(1);
+        await board.getByRole('button', { name: /^Lanes/u }).click();
+        await expect(board.locator('.pc-status-board__lane')).not.toHaveCount(0);
+        expect(await board.locator('[draggable="true"]').count()).toBe(0);
+        await board.locator('.pc-status-board__card').first().dispatchEvent('dragstart');
+        await board.locator('.pc-status-board__column').last().dispatchEvent('drop');
+        await expect(board).not.toContainText('Phase 2');
+        expect((await layoutReport(page)).horizontalOverflow).toBe(false);
+        expect(await axeViolations(page)).toEqual([]);
+        await attachScreenshot(
+          page,
+          `planning-board-${theme}-${width}.png`,
+          testInfo.attach.bind(testInfo),
+        );
+      }
+    }
+    expect(writes).toEqual([]);
+  });
+
+  test('matches the Board to its canvas parity rows in both themes', async ({ page }, testInfo) => {
+    const results: unknown[] = [];
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    const viewports = {
+      D: { width: 1440, height: 900 },
+      T: { width: 768, height: 1024 },
+      M: { width: 390, height: 844 },
+    } as const;
+    for (const theme of ['dark', 'light'] as const) {
+      for (const viewport of ['D', 'M'] as const) {
+        await page.setViewportSize(viewports[viewport]);
+        for (const setup of [null, 'select', 'lanes'] as const) {
+          const rows = boardParityRows.filter(
+            (row) => row.viewport === viewport && row.setup === setup,
+          );
+          if (!rows.length) continue;
+          const dataset = setup === 'lanes' ? 'artboard' : 'representative';
+          await page.goto(fixtureUrl('#/board', { dataset, theme }));
+          await page.evaluate(() => localStorage.removeItem('op-board-view:v1'));
+          await page.reload();
+          await page.evaluate(() => document.fonts.ready);
+          const board = page.locator('[data-route-kind="planning.board"]');
+          await expect(board.locator('.pc-status-board__card').first()).toBeVisible();
+          if (setup === 'select') await board.locator('.pc-status-board__open').first().focus();
+          if (setup === 'lanes') {
+            await board.getByRole('button', { name: /^Lanes/u }).click();
+            await expect(board.locator('.pc-status-board__lane').first()).toBeVisible();
+          }
+          for (const row of rows) results.push(...(await assertParityRow(page, row, theme)));
+          if (setup === null) {
+            const text = await page.locator('#main-content').innerText();
+            for (const banned of ['Unknown', 'Not recorded', 'None declared', 'Phase 2'])
+              expect(text, `S-21 ${banned}`).not.toContain(banned);
+            expect(text, 'S-21 none').not.toMatch(/\bnone\b/u);
+          }
+          if (setup === 'select') {
+            const accents = await page.evaluate(() => {
+              const accent = getComputedStyle(document.documentElement)
+                .getPropertyValue('--op-accent')
+                .trim();
+              const probe = document.createElement('span');
+              probe.style.backgroundColor = accent;
+              document.body.append(probe);
+              const resolved = getComputedStyle(probe).backgroundColor;
+              probe.remove();
+              return [...document.querySelectorAll<HTMLElement>('#main-content *')].filter(
+                (node) =>
+                  getComputedStyle(node).backgroundColor === resolved &&
+                  !node.closest(
+                    'nav, :focus, [aria-pressed="true"], [data-selected="true"], [data-status="in-progress"]',
+                  ) &&
+                  !node.matches('.pc-checkbox__box'),
+              ).length;
+            });
+            expect(accents, 'S-22 accent backgrounds').toBeLessThanOrEqual(1);
+            await page.keyboard.press('Tab');
+            await page.keyboard.press('Shift+Tab');
+            const outline = await page.evaluate(async () => {
+              for (let frame = 0; frame < 2; frame += 1)
+                await new Promise((resolve) => requestAnimationFrame(resolve));
+              await new Promise((resolve) => setTimeout(resolve, 50));
+              const focused = document.querySelector(':focus-visible');
+              const style = focused ? getComputedStyle(focused) : null;
+              return style && [style.outlineStyle, style.outlineWidth, style.outlineOffset];
+            });
+            expect(outline, 'S-20 focus outline').toEqual(['solid', '2px', '2px']);
+          }
+        }
+      }
+      for (const [viewport, size] of Object.entries(viewports)) {
+        await page.setViewportSize(size);
+        for (const view of ['columns', 'lanes']) {
+          await page.goto(fixtureUrl('#/board', { dataset: 'artboard', theme }));
+          await page.evaluate((value) => localStorage.setItem('op-board-view:v1', value), view);
+          await page.reload();
+          await page.evaluate(() => document.fonts.ready);
+          await expect(page.locator('.pc-status-board__card').first()).toBeVisible();
+          await page.screenshot({
+            path: testInfo.outputPath(`board-${view}-${viewport}-${theme}.png`),
+          });
+        }
+      }
+    }
+    const parity = testInfo.outputPath('board-parity.json');
+    writeFileSync(parity, JSON.stringify(results, null, 2));
+    await testInfo.attach('board-parity.json', { path: parity, contentType: 'application/json' });
+  });
+
+  test('matches Home to its canvas parity rows in both themes', async ({ page }, testInfo) => {
+    const results: unknown[] = [];
+    await page.context().grantPermissions(['clipboard-read', 'clipboard-write']);
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    const viewports = {
+      D: { width: 1440, height: 900 },
+      T: { width: 768, height: 1024 },
+      M: { width: 390, height: 844 },
+    } as const;
+    for (const theme of ['dark', 'light'] as const) {
+      for (const viewport of ['D', 'M'] as const) {
+        await page.setViewportSize(viewports[viewport]);
+        await page.goto(fixtureUrl('#/home', { dataset: 'representative', theme }));
+        await page.evaluate(() => document.fonts.ready);
+        const home = page.locator('[data-route-kind="planning.overview"]');
+        await expect(home.locator('.pc-home__row').first()).toBeVisible();
+        for (const row of homeParityRows.filter((entry) => entry.viewport === viewport))
+          results.push(...(await assertParityRow(page, row, theme)));
+        const text = await page.locator('#main-content').innerText();
+        for (const banned of ['Unknown', 'Not recorded', 'None declared', 'Phase 2'])
+          expect(text, `S-21 ${banned}`).not.toContain(banned);
+        expect(text, 'S-21 none').not.toMatch(/\bnone\b/u);
+        await home.locator('.pc-home__row .pc-artifact-row__link').first().focus();
+        const bar = page.locator('.pc-selection-bar');
+        await expect(bar).toBeVisible();
+        const accents = await page.evaluate(() => {
+          const accent = getComputedStyle(document.documentElement)
+            .getPropertyValue('--op-accent')
+            .trim();
+          const probe = document.createElement('span');
+          probe.style.backgroundColor = accent;
+          document.body.append(probe);
+          const resolved = getComputedStyle(probe).backgroundColor;
+          probe.remove();
+          return [...document.querySelectorAll<HTMLElement>('#main-content *')].filter(
+            (node) =>
+              getComputedStyle(node).backgroundColor === resolved &&
+              !node.closest('nav, :focus, [data-selected="true"], .pc-home__progress'),
+          ).length;
+        });
+        expect(accents, 'S-22 accent backgrounds').toBeLessThanOrEqual(1);
+        const command = await bar.locator('code').textContent();
+        expect(command).toMatch(/^(?:\/planr:|openplanr )/u);
+        await page.keyboard.press('c');
+        await expect(bar.locator('.pc-selection-bar__copy')).toContainText('Copied');
+        expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(command);
+      }
+      for (const [viewport, size] of Object.entries(viewports)) {
+        await page.setViewportSize(size);
+        await page.goto(fixtureUrl('#/home', { dataset: 'artboard', theme }));
+        await page.evaluate(() => document.fonts.ready);
+        await expect(page.locator('.pc-home__card').first()).toBeVisible();
+        await page.screenshot({
+          path: testInfo.outputPath(`home-${viewport}-${theme}.png`),
+          fullPage: true,
+        });
+      }
+    }
+    const parity = testInfo.outputPath('home-parity.json');
+    writeFileSync(parity, JSON.stringify(results, null, 2));
+    await testInfo.attach('home-parity.json', { path: parity, contentType: 'application/json' });
+  });
+
+  test('matches the List to its canvas parity rows in both themes', async ({ page }, testInfo) => {
+    const results: unknown[] = [];
+    const emptyView =
+      '#/list?v=eyJzY2hlbWFWZXJzaW9uIjoiMS4wLjAiLCJyb3V0ZSI6Imxpc3QiLCJmaWx0ZXJzIjp7InR5cGUiOltdLCJzdGF0dXMiOlsiYmxvY2tlZCJdLCJwcmlvcml0eSI6W10sImxhYmVsIjpbInNlY3VyaXR5Il0sInF1ZXJ5IjoiZW50cmEiLCJjcmVhdGVkV2l0aGluRGF5cyI6bnVsbCwidXBkYXRlZFdpdGhpbkRheXMiOm51bGx9LCJncm91cEJ5Ijoic3BlYyIsInNvcnQiOnsiZmllbGQiOiJ1cGRhdGVkIiwiZGlyZWN0aW9uIjoiZGVzYyJ9LCJkZW5zaXR5IjoiY29tZm9ydGFibGUiLCJmb2N1c0lkIjpudWxsfQ';
+    await page.context().grantPermissions(['clipboard-read', 'clipboard-write']);
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await page.setViewportSize({ width: 1440, height: 900 });
+    // The canvases draw the compact rail.
+    await page.addInitScript(() => localStorage.setItem('op-rail-compact:v1', 'true'));
+    const list = page.locator('[data-route-kind="planning.list"]');
+    for (const theme of ['dark', 'light'] as const) {
+      const open = async (hash: string, dataset = 'representative') => {
+        await page.goto(fixtureUrl(hash, { dataset, theme }));
+        await page.evaluate(() => document.fonts.ready);
+        await expect(list.locator('.pc-list__toolbar')).toBeVisible();
+      };
+      // Specs head their own groups, so item rows start below the spec-only groups.
+      const revealRows = async () => {
+        await list.locator('.pc-list__group-header').last().scrollIntoViewIfNeeded();
+        await expect(list.locator('tbody tr[data-keyboard-item]').first()).toBeVisible();
+      };
+      const check = async (setup: string | null) => {
+        // Reduced motion still runs a 0.01ms transition; read styles once it has settled.
+        await page.evaluate(
+          () => new Promise((done) => requestAnimationFrame(() => requestAnimationFrame(done))),
+        );
+        for (const row of listParityRows.filter((entry) => (entry.setup ?? null) === setup))
+          results.push(...(await assertParityRow(page, row, theme)));
+      };
+      await open('#/list');
+      await list.getByRole('tab', { name: /^Open by spec/u }).click();
+      await revealRows();
+      await check(null);
+      const text = await list.innerText();
+      for (const banned of ['Unknown', 'Not recorded', 'None declared', 'Phase 2'])
+        expect(text, `S-21 ${banned}`).not.toContain(banned);
+      expect(text, 'S-21 none').not.toMatch(/\bnone\b/u);
+      const first = list.locator('tbody tr[data-keyboard-item]').first();
+      await first.locator('.pc-list__check').click();
+      const bar = page.locator('.pc-selection-bar');
+      await expect(bar).toBeVisible();
+      await expect(first).toHaveAttribute('aria-selected', 'true');
+      await check('list-select');
+      const command = await bar.locator('code').textContent();
+      expect(command).toMatch(/^(?:\/planr:|openplanr )/u);
+      await first.focus();
+      await page.keyboard.press('c');
+      await expect(bar.locator('.pc-selection-bar__copy')).toContainText('Copied');
+      expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(command);
+      await bar.getByRole('button', { name: 'Clear selection' }).click();
+      await page.evaluate(() => {
+        // The fixtures carry no labels, so one cell takes drawn label markup to measure its recipe.
+        const cell = document.querySelector('[data-route-kind="planning.list"] .pc-list__labels');
+        if (!cell) throw new Error('Missing List labels cell.');
+        cell.innerHTML =
+          '<span>dashboard</span><span>ci</span><span class="pc-list__labels-more" title="cli, docs">+2</span>';
+      });
+      await check('list-labels');
+      await list.getByRole('button', { name: 'Compact', exact: true }).click();
+      await expect(list.locator('table')).toHaveAttribute('data-compact', 'true');
+      await revealRows();
+      await check('list-compact');
+      await list.getByRole('button', { name: 'Comfortable', exact: true }).click();
+      await list.getByRole('combobox', { name: /^Status:/u }).click();
+      await expect(page.locator('.pc-chip-menu__popup')).toBeVisible();
+      await check('list-menu');
+      await page.keyboard.press('Escape');
+      await open(emptyView);
+      await expect(list.locator('.pc-list__empty')).toBeVisible();
+      await check('list-empty');
+      await open('#/list', 'artboard');
+      await page.screenshot({ path: testInfo.outputPath(`list-D-${theme}.png`) });
+      await page.setViewportSize({ width: 768, height: 1024 });
+      await open('#/list');
+      await expect(list).toHaveAttribute('data-list-layout', 'tablet');
+      await revealRows();
+      await check('list-T');
+      await open('#/list', 'artboard');
+      await page.screenshot({ path: testInfo.outputPath(`list-T-${theme}.png`) });
+      await page.setViewportSize({ width: 390, height: 844 });
+      await open('#/list');
+      await expect(list).toHaveAttribute('data-list-layout', 'phone');
+      await revealRows();
+      await check('list-M');
+      const overflow = await list
+        .locator('.pc-list__window')
+        .evaluate((node) => node.getBoundingClientRect().right - innerWidth);
+      expect(overflow).toBeLessThanOrEqual(0);
+      await list.getByRole('button', { name: /^Filters/u }).click();
+      await expect(page.getByRole('dialog', { name: 'Filters' })).toBeVisible();
+      await expect(page.locator('.pc-list-sheet__apply')).toHaveText(/^Show \d+ items?$/u);
+      await check('list-sheet');
+      await page.keyboard.press('Escape');
+      await open('#/list', 'artboard');
+      await page.screenshot({ path: testInfo.outputPath(`list-M-${theme}.png`) });
+      await page.setViewportSize({ width: 1440, height: 900 });
+    }
+    const parity = testInfo.outputPath('list-parity.json');
+    writeFileSync(parity, JSON.stringify(results, null, 2));
+    await testInfo.attach('list-parity.json', { path: parity, contentType: 'application/json' });
+  });
+
+  test('matches Detail to its canvas parity rows in both themes', async ({ page }, testInfo) => {
+    const results: unknown[] = [];
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await page.setViewportSize({ width: 1440, height: 1276 });
+    await page.addInitScript(() => localStorage.setItem('op-rail-compact:v1', 'true'));
+    const routes = {
+      'detail-task': '#/detail/SPEC-026%2FT-112',
+      'detail-missing': '#/detail/SPEC-026%2FT-112',
+      'detail-spec': '#/detail/SPEC-026',
+    } as const;
+    const banned = ['Unknown', 'Not recorded', 'None declared', 'Phase 2', 'Source:'];
+    for (const theme of ['dark', 'light'] as const) {
+      for (const [setup, hash] of Object.entries(routes)) {
+        await page.goto(fixtureUrl(hash, { dataset: 'artboard', theme }));
+        await page.evaluate(() => document.fonts.ready);
+        const detail = page.locator('[data-route-kind="planning.detail"]');
+        await expect(
+          detail.locator('[data-detail-state="ready"] .pc-detail__columns'),
+        ).toBeVisible();
+        if (setup === 'detail-missing')
+          // No fixture item declares a missing reference; measure the drawn chip recipe.
+          await detail
+            .locator('.pc-detail__properties dd')
+            .first()
+            .evaluate((dd) => {
+              const chip = document.createElement('span');
+              chip.className = 'pc-detail__property-reference';
+              chip.dataset.missing = '';
+              chip.innerHTML = '<code>T-301</code> not found';
+              dd.append(chip);
+            });
+        for (const row of detailParityRows.filter((entry) => entry.setup === setup))
+          results.push(...(await assertParityRow(page, row, theme)));
+        const text = await page.locator('#main-content').innerText();
+        for (const word of banned) expect(text, `S-21 ${word}`).not.toContain(word);
+        expect(text, 'S-21 none').not.toMatch(/\bnone\b/u);
+        if (setup !== 'detail-task') continue;
+        await expect(page.locator('.pc-rail')).toBeVisible();
+        expect(await page.locator('.pc-topbar__breadcrumbs').innerText()).toMatch(
+          /^Plan\s*\/\s*List\s*\/\s*SPEC-026\s*\/\s*T-112$/u,
+        );
+        expect((await detail.locator('.pc-detail__header').boundingBox())?.x).toBeCloseTo(97, -1);
+        expect((await layoutReport(page)).horizontalOverflow).toBe(false);
+        await page.screenshot({
+          path: testInfo.outputPath(`detail-D-${theme}.png`),
+          fullPage: true,
+        });
+      }
+      await page.goto(fixtureUrl('#/list', { dataset: 'artboard', theme }));
+      const row = page.locator('.pc-list tbody [data-keyboard-item]').first();
+      await row.click();
+      const inspector = page.getByRole('dialog', { name: 'Inspector', exact: true });
+      await expect(inspector.locator('[data-detail-state="ready"]')).toBeVisible();
+      const inspectorText = await inspector.innerText();
+      for (const word of banned)
+        expect(inspectorText, `S-21 Inspector ${word}`).not.toContain(word);
+      expect(inspectorText, 'S-21 Inspector none').not.toMatch(/\bnone\b/u);
+    }
+    const parity = testInfo.outputPath('detail-parity.json');
+    writeFileSync(parity, JSON.stringify(results, null, 2));
+    await testInfo.attach('detail-parity.json', { path: parity, contentType: 'application/json' });
+  });
+
+  test('fits Detail to phone width with selection and focus rings in both themes', async ({
+    page,
+  }, testInfo) => {
+    const results: unknown[] = [];
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await page.context().grantPermissions(['clipboard-read', 'clipboard-write']);
+    const focusRings = async (presses: number) => {
+      const rings: unknown[] = [];
+      for (let press = 0; press < presses; press += 1) {
+        await page.keyboard.press('Tab');
+        rings.push(
+          await page.evaluate(async () => {
+            for (let frame = 0; frame < 2; frame += 1)
+              await new Promise((resolve) => requestAnimationFrame(resolve));
+            const focused = document.querySelector(':focus-visible');
+            if (!focused) return null;
+            const style = getComputedStyle(focused);
+            return {
+              element: `${focused.tagName.toLowerCase()}.${focused.className}`,
+              ring: [style.outlineStyle, style.outlineWidth, style.outlineOffset],
+            };
+          }),
+        );
+      }
+      return rings.filter(Boolean) as { element: string; ring: string[] }[];
+    };
+    for (const theme of ['dark', 'light'] as const) {
+      await page.setViewportSize({ width: 390, height: 844 });
+      await page.goto(fixtureUrl('#/detail/SPEC-026%2FT-112', { dataset: 'artboard', theme }));
+      await page.evaluate(() => document.fonts.ready);
+      const detail = page.locator('[data-route-kind="planning.detail"]');
+      await expect(detail.locator('[data-detail-state="ready"] .pc-detail__columns')).toBeVisible();
+      for (const row of detailParityRows.filter((entry) => entry.setup === 'detail-M'))
+        results.push(...(await assertParityRow(page, row, theme)));
+      const header = page.locator('.pc-topbar[data-detail-header]');
+      await expect(header.getByRole('link', { name: 'Back to List' })).toHaveAttribute(
+        'href',
+        '#/list',
+      );
+      await expect(header.locator('[aria-current="page"]')).toHaveText('T-112');
+      await expect(header.getByRole('button', { name: 'Copy link' })).toBeVisible();
+      await expect(header.getByRole('button', { name: /^Jump to a view/u })).toHaveCount(0);
+      await expect(header.locator('.pc-topbar__end')).toHaveCount(0);
+      await expect(detail.locator('.pc-detail__navigation')).toHaveCount(0);
+      expect((await layoutReport(page)).horizontalOverflow).toBe(false);
+      const dock = page.getByRole('region', { name: 'Next step command' });
+      await expect(dock).toBeVisible();
+      const dockBox = await dock.boundingBox();
+      const navBox = await page.locator('.pc-mobile-nav').boundingBox();
+      expect(Math.round((dockBox?.y ?? 0) + (dockBox?.height ?? 0))).toBe(
+        Math.round(navBox?.y ?? -1),
+      );
+      await page.screenshot({ path: testInfo.outputPath(`detail-M-${theme}.png`) });
+      const spec = detail
+        .locator('.pc-detail__trace a.pc-detail__step')
+        .filter({ hasText: 'SPEC-026' });
+      await spec.click();
+      await expect(spec).toHaveAttribute('data-selected', 'true');
+      await expect(dock).toHaveCount(0);
+      const bar = page.getByRole('region', { name: 'Selected items' });
+      const command = (await bar.locator('.pc-selection-bar__command').textContent()) ?? '';
+      expect(command).toContain('SPEC-026');
+      await page.screenshot({ path: testInfo.outputPath(`detail-M-selected-${theme}.png`) });
+      await page.keyboard.press('c');
+      await expect.poll(() => page.evaluate(() => navigator.clipboard.readText())).toBe(command);
+      await page.keyboard.press('Escape');
+      await expect(bar).toHaveCount(0);
+      await expect(dock).toBeVisible();
+      for (const { element, ring } of await focusRings(24))
+        expect(ring, `S-20 ${element} at 390`).toEqual(['solid', '2px', '2px']);
+      await page.setViewportSize({ width: 768, height: 1024 });
+      await expect(header.getByRole('link', { name: 'Back to List' })).toBeVisible();
+      await expect(header.locator('.pc-topbar__end')).toContainText('Live');
+      const palette = header.getByRole('button', { name: /^Jump to a view/u });
+      await expect(palette).toBeVisible();
+      expect((await palette.boundingBox())?.width).toBe(44);
+      await expect(header.getByRole('button', { name: 'Copy link' })).toBeVisible();
+      expect((await layoutReport(page)).horizontalOverflow).toBe(false);
+      await page.screenshot({ path: testInfo.outputPath(`detail-T-${theme}.png`) });
+      await page.setViewportSize({ width: 1440, height: 1276 });
+      await page.goto(fixtureUrl('#/detail/SPEC-026%2FT-112', { dataset: 'artboard', theme }));
+      await expect(detail.locator('[data-detail-state="ready"] .pc-detail__columns')).toBeVisible();
+      await detail.locator('.pc-detail__trace a.pc-detail__step').first().click();
+      for (const { element, ring } of await focusRings(20))
+        expect(ring, `S-20 ${element} at 1440`).toEqual(['solid', '2px', '2px']);
+    }
+    const parity = testInfo.outputPath('detail-m-parity.json');
+    writeFileSync(parity, JSON.stringify(results, null, 2));
+    await testInfo.attach('detail-m-parity.json', {
+      path: parity,
+      contentType: 'application/json',
+    });
+  });
+
+  test('matches Sprints to its canvas parity rows in both themes', async ({ page }, testInfo) => {
+    test.setTimeout(90_000);
+    const results: unknown[] = [];
+    await page.context().grantPermissions(['clipboard-read', 'clipboard-write']);
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await page.setViewportSize({ width: 1440, height: 1400 });
+    await page.addInitScript(() => localStorage.setItem('op-rail-compact:v1', 'true'));
+    await page.clock.setFixedTime(new Date(SPRINT_SCENARIO_NOW));
+    const scenarios = {
+      'sprints-active': { planningScenario: 'sprint' },
+      'sprints-bare': { planningScenario: 'sprint-bare' },
+      'sprints-none': { dataset: 'artboard' },
+    } as const;
+    const banned = ['Unknown', 'Not recorded', 'None declared', 'Phase 2', 'Release cut:'];
+    for (const theme of ['dark', 'light'] as const) {
+      for (const [setup, query] of Object.entries(scenarios)) {
+        await page.goto(fixtureUrl('#/sprints', { ...query, theme }));
+        await page.evaluate(() => document.fonts.ready);
+        const sprints = page.locator('[data-route-kind="planning.sprints"]');
+        await expect(
+          sprints.locator(setup === 'sprints-none' ? '.pc-sprints__none' : '.pc-sprints__active'),
+        ).toBeVisible();
+        for (const row of sprintsParityRows.filter((entry) => entry.setup === setup))
+          results.push(...(await assertParityRow(page, row, theme)));
+        const text = await page.locator('#main-content').innerText();
+        for (const word of banned) expect(text, `S-21 ${word}`).not.toContain(word);
+        expect(text, 'S-21 none').not.toMatch(/\bnone\b/u);
+        expect((await sprints.locator('.pc-sprints__header').boundingBox())?.x).toBeCloseTo(97, -1);
+        expect((await layoutReport(page)).horizontalOverflow).toBe(false);
+        await page.screenshot({
+          path: testInfo.outputPath(`${setup}-D-${theme}.png`),
+          fullPage: true,
+        });
+        if (setup === 'sprints-none') {
+          const primary = sprints.getByRole('button', { name: 'Copy /planr:sprint' });
+          // "Copied" shows for two seconds, so record every label rather than poll for it.
+          await primary.evaluate((button) => {
+            const labels: string[] = [];
+            const read = () => {
+              const label = button.querySelector('.pc-copy-label > [data-active="true"]');
+              const text = label?.textContent ?? '';
+              if (labels.at(-1) !== text) labels.push(text);
+              document.documentElement.dataset.copyLabels = labels.join('|');
+            };
+            read();
+            new MutationObserver(read).observe(button, {
+              subtree: true,
+              attributes: true,
+              attributeFilter: ['data-active'],
+            });
+          });
+          await primary.click();
+          await expect
+            .poll(async () => {
+              const labels = await page.evaluate(
+                () => document.documentElement.dataset.copyLabels?.split('|') ?? [],
+              );
+              return (
+                labels.includes('Copying') && labels.indexOf('Copied') > labels.indexOf('Copying')
+              );
+            })
+            .toBe(true);
+          await expect(primary).toBeVisible();
+          expect(await page.evaluate(() => navigator.clipboard.readText())).toBe('/planr:sprint');
+          continue;
+        }
+        if (setup !== 'sprints-active') continue;
+        const row = sprints.locator('.pc-sprints__item-link').first();
+        await row.click();
+        await expect(row).toHaveAttribute('aria-current', 'true');
+        const bar = page.locator('.pc-selection-bar');
+        await expect(bar).toBeVisible();
+        const command = await bar.locator('code').textContent();
+        expect(command).toMatch(/^(?:\/planr:|openplanr )/u);
+        await page.keyboard.press('Escape');
+        await row.focus();
+        await page.keyboard.press('c');
+        await expect(bar.locator('.pc-selection-bar__copy')).toContainText('Copied');
+        expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(command);
+        await page.screenshot({ path: testInfo.outputPath(`sprints-selected-D-${theme}.png`) });
+        await page.goto(fixtureUrl('#/sprints', { ...query, theme }));
+        await expect(sprints.locator('.pc-sprints__active')).toBeVisible();
+        await page.locator('body').click({ position: { x: 1, y: 1 } });
+        const rings: { element: string; ring: string[] }[] = [];
+        for (let press = 0; press < 30; press += 1) {
+          await page.keyboard.press('Tab');
+          const ring = await page.evaluate(async () => {
+            for (let frame = 0; frame < 2; frame += 1)
+              await new Promise((resolve) => requestAnimationFrame(resolve));
+            // Focus also selects the row, which restarts the reduced-motion transition.
+            await new Promise((resolve) => setTimeout(resolve, 50));
+            const focused = document.querySelector(
+              '[data-route-kind="planning.sprints"] :focus-visible',
+            );
+            if (!focused) return null;
+            const style = getComputedStyle(focused);
+            return {
+              element: `${focused.tagName.toLowerCase()}.${focused.className}`,
+              ring: [style.outlineStyle, style.outlineWidth, style.outlineOffset],
+            };
+          });
+          if (ring) rings.push(ring);
+        }
+        expect(rings.length).toBeGreaterThan(10);
+        for (const { element, ring } of rings)
+          expect(ring, `S-20 ${element} at 1440`).toEqual(['solid', '2px', '2px']);
+      }
+    }
+    const parity = testInfo.outputPath('sprints-parity.json');
+    writeFileSync(parity, JSON.stringify(results, null, 2));
+    await testInfo.attach('sprints-parity.json', { path: parity, contentType: 'application/json' });
+  });
+
+  test('matches Today to its canvas parity rows in both themes', async ({ page }, testInfo) => {
+    test.setTimeout(90_000);
+    const results: unknown[] = [];
+    const deltas: unknown[] = [];
+    await page.context().grantPermissions(['clipboard-read', 'clipboard-write']);
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await page.setViewportSize({ width: 1440, height: 1120 });
+    await page.addInitScript(() => localStorage.setItem('op-rail-compact:v1', 'true'));
+    // Offsets from the header's top-left in operate-Main, for the blocks the scenario fills as drawn.
+    const canvas = {
+      '.pc-operate-today__eyebrow': [0, 0],
+      '.pc-operate-today__heading h1': [0, 21],
+      '.pc-operate-today__summary': [0, 63],
+      '.pc-operate-today__decision': [0, 105],
+      '.pc-operate-today__pill': [21, 121],
+      '.pc-operate-today__decision-body h2': [21, 183],
+      '.pc-operate-today__tiles': [21, 231],
+      '.pc-operate-today__tile dd': [38, 246],
+      '.pc-operate-today__brief': [21, 326],
+      '.pc-operate-today__next': [1, 436],
+      '.pc-operate-today__waiting': [0, 534],
+      '.pc-operate-today__seats': [890, 105],
+      '.pc-operate-today__seat': [891, 167],
+      '.pc-operate-today__evidence': [890, 504],
+    } as const;
+    for (const theme of ['dark', 'light'] as const) {
+      await page.goto(
+        fixtureUrl('#/operate/today', { localOperate: '1', operateScenario: 'today', theme }),
+      );
+      await page.evaluate(() => document.fonts.ready);
+      const today = page.locator('[data-route-kind="operate.today"] .pc-operate-today');
+      await expect(today.locator('.pc-operate-today__decision')).toBeVisible();
+      // The canvas has no scrollbar; widen by the stable gutter a classic scrollbar reserves.
+      const gutter = await page
+        .locator('.pc-shell__scroll')
+        .evaluate((scroll: HTMLElement) => scroll.offsetWidth - scroll.clientWidth);
+      await page.setViewportSize({ width: 1440 + gutter, height: 1120 });
+      for (const row of todayParityRows.filter((entry) => entry.setup === 'today-local'))
+        results.push(...(await assertParityRow(page, row, theme)));
+      const origin = await today.locator('.pc-operate-today__header').boundingBox();
+      if (!origin) throw new Error('Today header has no box');
+      for (const [selector, [x, y]] of Object.entries(canvas)) {
+        const box = await today.locator(selector).first().boundingBox();
+        if (!box) throw new Error(`${selector} has no box`);
+        const actual = [Math.round(box.x - origin.x), Math.round(box.y - origin.y)];
+        deltas.push({ theme, selector, canvas: [x, y], actual });
+        expect(Math.abs(actual[0] - x), `${selector} x`).toBeLessThanOrEqual(2);
+        expect(Math.abs(actual[1] - y), `${selector} y`).toBeLessThanOrEqual(2);
+      }
+      await expect(today.getByRole('heading', { level: 1 })).toHaveText('2 decisions need you');
+      const text = await page.locator('#main-content').innerText();
+      expect(text).not.toMatch(/\bnone\b|Not recorded|Unassigned/iu);
+      expect((await layoutReport(page)).horizontalOverflow).toBe(false);
+      await page.screenshot({
+        path: testInfo.outputPath(`today-local-D-${theme}.png`),
+        fullPage: true,
+      });
+      const row = today.locator('.pc-operate-today__row-link').first();
+      await row.focus();
+      await expect(row).toHaveAttribute('aria-current', 'true');
+      const bar = page.locator('.pc-selection-bar');
+      await expect(bar.getByRole('button', { name: /Copy ID and title/u })).toBeVisible();
+      await expect(bar.locator('code')).toHaveCount(0);
+      await page.keyboard.press('c');
+      await expect(bar.locator('.pc-selection-bar__copy')).toContainText('Copied');
+      expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(
+        'D-031 Hold the next release until the dashboard redesign ships?',
+      );
+      await page.screenshot({ path: testInfo.outputPath(`today-local-selected-D-${theme}.png`) });
+
+      await page.goto(fixtureUrl('#/operate/today', { theme }));
+      await page.evaluate(() => document.fonts.ready);
+      await expect(today.locator('.pc-operate-today__decision')).toBeVisible();
+      for (const row of todayParityRows.filter((entry) => entry.setup === 'today'))
+        results.push(...(await assertParityRow(page, row, theme)));
+      const gatewayOrigin = await today.locator('.pc-operate-today__header').boundingBox();
+      if (!gatewayOrigin) throw new Error('Gateway Today header has no box');
+      for (const selector of [
+        '.pc-operate-today__eyebrow',
+        '.pc-operate-today__heading h1',
+        '.pc-operate-today__summary',
+        '.pc-operate-today__decision',
+        '.pc-operate-today__pill',
+        '.pc-operate-today__decision-body h2',
+      ] as const) {
+        const [x, y] = canvas[selector];
+        const box = await today.locator(selector).first().boundingBox();
+        if (!box) throw new Error(`Gateway ${selector} has no box`);
+        const actual = [Math.round(box.x - gatewayOrigin.x), Math.round(box.y - gatewayOrigin.y)];
+        deltas.push({ theme, path: 'gateway', selector, canvas: [x, y], actual });
+        expect(Math.abs(actual[0] - x), `gateway ${selector} x`).toBeLessThanOrEqual(2);
+        expect(Math.abs(actual[1] - y), `gateway ${selector} y`).toBeLessThanOrEqual(2);
+      }
+      const governed = today.locator('.pc-operate-today__next .op-governed-button');
+      await expect(governed).toHaveAttribute('data-variant', 'secondary');
+      await expect(today.locator('.pc-operate-today__next .op-governed-reason')).toBeVisible();
+      expect((await layoutReport(page)).horizontalOverflow).toBe(false);
+      await page.screenshot({
+        path: testInfo.outputPath(`today-gateway-D-${theme}.png`),
+        fullPage: true,
+      });
+
+      await page.goto(fixtureUrl('#/operate/today', { localOperate: 'empty', theme }));
+      await page.evaluate(() => document.fonts.ready);
+      const setup = today.locator('.pc-operate-setup');
+      await expect(setup).toBeVisible();
+      for (const row of todayParityRows.filter((entry) => entry.setup === 'today-setup'))
+        results.push(...(await assertParityRow(page, row, theme)));
+      const main = page.locator('#main-content');
+      await expect(main.getByText('Proposed', { exact: true })).toHaveCount(0);
+      await expect(main.locator('.pc-section-header')).toHaveCount(0);
+      await expect(main.locator('.pc-local-review__footnote')).toHaveCount(0);
+      const [card, code, copy] = await Promise.all(
+        ['', ' .pc-command-hint__command', ' .pc-command-hint__copy'].map((part) =>
+          page.locator(`.pc-operate-setup${part}`).boundingBox(),
+        ),
+      );
+      if (!card || !code || !copy) throw new Error('Setup card parts have no box');
+      const setupActual = {
+        height: Math.round(card.height),
+        code: [Math.round(card.x + card.width - code.x - code.width), Math.round(code.y - card.y)],
+        gap: Math.round(copy.y - code.y - code.height),
+      };
+      deltas.push({
+        theme,
+        path: 'setup',
+        canvas: { height: 135, code: [26, 25], gap: 8 },
+        setupActual,
+      });
+      expect(Math.abs(setupActual.height - 135), 'setup card height').toBeLessThanOrEqual(2);
+      expect(Math.abs(setupActual.code[0] - 26), 'setup command right inset').toBeLessThanOrEqual(
+        2,
+      );
+      expect(Math.abs(setupActual.code[1] - 25), 'setup command top').toBeLessThanOrEqual(2);
+      expect(setupActual.gap).toBe(8);
+      expect((await layoutReport(page)).horizontalOverflow).toBe(false);
+      await page.screenshot({
+        path: testInfo.outputPath(`today-setup-D-${theme}.png`),
+        fullPage: true,
+      });
+    }
+    const parity = testInfo.outputPath('today-parity.json');
+    writeFileSync(parity, JSON.stringify({ results, deltas }, null, 2));
+    await testInfo.attach('today-parity.json', { path: parity, contentType: 'application/json' });
+  });
+
+  test('matches Today to its canvas on tablets and phones in both themes', async ({
+    page,
+  }, testInfo) => {
+    test.setTimeout(240_000);
+    const results: unknown[] = [];
+    const deltas: unknown[] = [];
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    const today = page.locator('[data-route-kind="operate.today"] .pc-operate-today');
+    const next = today.locator('.pc-operate-today__next');
+    const local = { localOperate: '1', operateScenario: 'today' };
+    const open = async (query: Readonly<Record<string, string>>, theme: string) => {
+      await page.goto(fixtureUrl('#/operate/today', { ...query, theme }));
+      await page.evaluate(() => document.fonts.ready);
+    };
+    const boxOf = async (locator: Locator) => {
+      const box = await locator.boundingBox();
+      if (!box) throw new Error(`No box for ${locator}`);
+      return box;
+    };
+    // Scrolls the shell to its end; how far the last `last` runs past the top of `cover` (≤ 0 is clear).
+    const overlap = (last: string, cover: string) =>
+      page.evaluate(
+        ([lastSelector, coverSelector]) => {
+          const scroller = document.querySelector<HTMLElement>('.pc-shell__scroll');
+          const target = [...document.querySelectorAll(lastSelector)].at(-1);
+          const top = document.querySelector(coverSelector);
+          if (!scroller || !target || !top) throw new Error(`Missing ${lastSelector}`);
+          scroller.style.scrollBehavior = 'auto';
+          scroller.scrollTop = scroller.scrollHeight;
+          return target.getBoundingClientRect().bottom - top.getBoundingClientRect().top;
+        },
+        [last, cover] as const,
+      );
+    const reviewDetail = (url: URL) => /^\/api\/operate\/local-reviews\/[^/]+$/u.test(url.pathname);
+    // Serves the local review detail with the named lists emptied, or as a failed read.
+    const detail = async (change: 'unread' | readonly ('decisions' | 'actions' | 'gaps')[]) => {
+      await page.unroute(reviewDetail);
+      await page.route(reviewDetail, async (route) => {
+        if (change === 'unread') {
+          await route.fulfill({ status: 500, json: { ok: false } });
+          return;
+        }
+        const response = await route.fetch();
+        const body = await response.json();
+        for (const field of change) body.item[field] = [];
+        await route.fulfill({ response, json: body });
+      });
+    };
+    const rings = async (count: number) => {
+      await page.locator('body').click({ position: { x: 1, y: 1 } });
+      await page.locator('#main-content').focus();
+      const read: { element: string; ring: string[] }[] = [];
+      for (let press = 0; press < count; press += 1) {
+        await page.keyboard.press('Tab');
+        const ring = await page.evaluate(async () => {
+          for (let frame = 0; frame < 2; frame += 1)
+            await new Promise((resolve) => requestAnimationFrame(resolve));
+          await new Promise((resolve) => setTimeout(resolve, 50));
+          const focused = document.querySelector(
+            '[data-route-kind="operate.today"] :focus-visible',
+          );
+          if (!focused) return null;
+          const style = getComputedStyle(focused);
+          return {
+            // The eyebrow link has no class of its own, so it is named by its parent.
+            element: `${focused.tagName.toLowerCase()}.${focused.className || focused.parentElement?.className}`,
+            ring: [style.outlineStyle, style.outlineWidth, style.outlineOffset],
+          };
+        });
+        if (ring) read.push(ring);
+      }
+      return read;
+    };
+    const inset = /pc-operate-today__(row-link|disclosure)/u;
+    const expectRings = (read: { element: string; ring: string[] }[], width: number) => {
+      for (const { element, ring } of read)
+        expect(ring, `S-20 ${element} at ${width}`).toEqual([
+          'solid',
+          '2px',
+          inset.test(element) ? '-2px' : '2px',
+        ]);
+    };
+    // operate-Mobile: offsets inside the decision card, the disclosure row, and the bar.
+    const canvas = { pill: [17, 17], title: [17, 55], tiles: [17, 115], row: 54, bar: 69 };
+
+    for (const theme of ['dark', 'light'] as const) {
+      for (const width of [390, 320]) {
+        await page.setViewportSize({ width, height: width === 390 ? 844 : 568 });
+        await open(local, theme);
+        await expect(next).toHaveCSS('position', 'fixed');
+        await expect(today.locator('.pc-operate-today__waiting')).toBeHidden();
+        await expect(
+          today.locator('.pc-operate-today__header .pc-operate-today__command'),
+        ).toBeHidden();
+        await expect(today.locator('.pc-operate-today__owner-line')).toBeHidden();
+        await expect(today.locator('.pc-operate-today__summary')).toBeVisible();
+        await expect(today.getByText('If we wait', { exact: true })).toBeVisible();
+        await expect(today.locator('.pc-operate-today__eyebrow')).toHaveText('cycle 2026-W43');
+        const [title, bar, navigation] = await Promise.all(
+          [
+            today.locator('.pc-operate-today__decision-body h2'),
+            next,
+            page.locator('.pc-mobile-nav'),
+          ].map(boxOf),
+        );
+        expect(
+          title.y + title.height,
+          `decision title clear of the bar at ${width}`,
+        ).toBeLessThanOrEqual(bar.y);
+        expect(
+          Math.abs(bar.y + bar.height - navigation.y),
+          'bar on the navigation',
+        ).toBeLessThanOrEqual(1);
+        if (width === 390) {
+          for (const row of todayParityRows.filter((entry) => entry.setup === 'today-M'))
+            results.push(...(await assertParityRow(page, row, theme)));
+          const card = await boxOf(today.locator('.pc-operate-today__decision'));
+          const actual = {
+            pill: await boxOf(today.locator('.pc-operate-today__pill')),
+            title,
+            tiles: await boxOf(today.locator('.pc-operate-today__tiles')),
+          };
+          for (const part of ['pill', 'title', 'tiles'] as const) {
+            const box = actual[part];
+            const [x, y] = canvas[part];
+            const offset = [Math.round(box.x - card.x), Math.round(box.y - card.y)];
+            deltas.push({ theme, part, canvas: [x, y], actual: offset });
+            expect(Math.abs(offset[0] - x), `${part} x`).toBeLessThanOrEqual(2);
+            expect(Math.abs(offset[1] - y), `${part} y`).toBeLessThanOrEqual(2);
+          }
+          const seatsRow = await boxOf(today.locator('.pc-operate-today__seats'));
+          deltas.push({ theme, part: 'row', canvas: canvas.row, actual: seatsRow.height });
+          deltas.push({ theme, part: 'bar', canvas: canvas.bar, actual: bar.height });
+          expect(Math.abs(seatsRow.height - canvas.row)).toBeLessThanOrEqual(2);
+          expect(await axeViolations(page)).toEqual([]);
+          await page.screenshot({ path: testInfo.outputPath(`today-local-M-${theme}.png`) });
+        }
+        expect(
+          await overlap('.pc-operate-today__side > *', '.pc-operate-today__next'),
+        ).toBeLessThanOrEqual(0);
+        expect((await layoutReport(page)).horizontalOverflow).toBe(false);
+
+        // The gateway's governed next step stays in its card on a phone.
+        await open({}, theme);
+        await expect(today.locator('.pc-operate-today__decision')).toBeVisible();
+        await expect(next).toHaveCSS('position', 'static');
+        await expect(next.locator('.op-governed-button')).toHaveCSS('height', '44px');
+        // With no copy bar, Run a review stays in the header as the way to copy the command.
+        const header = today.locator('.pc-operate-today__header');
+        await expect(header.locator('.pc-operate-today__command')).toBeVisible();
+        expect(
+          await header.evaluate((element) => element.scrollWidth <= element.clientWidth),
+          `gateway header fits at ${width}`,
+        ).toBe(true);
+        await expect(today.getByRole('button', { name: 'Evidence 1', exact: true })).toBeVisible();
+        expect(await overlap('.pc-operate-today__side > *', '.pc-mobile-nav')).toBeLessThanOrEqual(
+          0,
+        );
+        expect((await layoutReport(page)).horizontalOverflow).toBe(false);
+        if (width === 390)
+          await page.screenshot({ path: testInfo.outputPath(`today-gateway-M-${theme}.png`) });
+
+        // States: setup, nothing waiting, no decision card, could not read.
+        await open({ localOperate: 'empty' }, theme);
+        await expect(today.locator('.pc-operate-setup')).toBeVisible();
+        await expect(next).toHaveCount(0);
+        expect(await overlap('.pc-operate-setup__seats', '.pc-mobile-nav')).toBeLessThanOrEqual(0);
+        if (width === 390)
+          await page.screenshot({ path: testInfo.outputPath(`today-setup-M-${theme}.png`) });
+        await detail(['decisions', 'actions', 'gaps']);
+        await open(local, theme);
+        const heading = today.getByRole('heading', { level: 1, name: 'Nothing needs you today' });
+        await expect(heading).toBeVisible();
+        await expect(heading).toHaveCSS('font-size', '24px');
+        expect(await overlap('.pc-operate-today__side > *', '.pc-mobile-nav')).toBeLessThanOrEqual(
+          0,
+        );
+        if (width === 390)
+          await page.screenshot({ path: testInfo.outputPath(`today-nothing-M-${theme}.png`) });
+        await detail(['decisions']);
+        await open(local, theme);
+        await expect(
+          today.getByRole('heading', { level: 1, name: 'No decision is waiting' }),
+        ).toBeVisible();
+        await expect(today.locator('.pc-operate-today__decision')).toHaveCount(0);
+        await expect(today.locator('.pc-operate-today__waiting')).toBeVisible();
+        await expect(today.getByRole('button', { name: 'Run a review' })).toBeVisible();
+        expect(await overlap('.pc-operate-today__side > *', '.pc-mobile-nav')).toBeLessThanOrEqual(
+          0,
+        );
+        expect((await layoutReport(page)).horizontalOverflow).toBe(false);
+        if (width === 390) {
+          // A row selects on a phone here; the shared clearance keeps the last card above the bar.
+          await today.locator('.pc-operate-today__row-link').first().click();
+          await expect(page.locator('.pc-selection-bar')).toBeVisible();
+          await expect
+            .poll(() => overlap('.pc-operate-today__side > *', '.pc-selection-bar'))
+            .toBeLessThanOrEqual(0);
+        }
+        await detail('unread');
+        await open(local, theme);
+        const unread = today.locator('.pc-operate-today__unread');
+        await expect(unread).toBeVisible();
+        await expect(unread).toHaveCSS('padding-top', '16px');
+        expect(await overlap('.pc-operate-today__unread', '.pc-mobile-nav')).toBeLessThanOrEqual(0);
+        if (width === 390)
+          await page.screenshot({ path: testInfo.outputPath(`today-unread-M-${theme}.png`) });
+        await page.unroute(reviewDetail);
+      }
+
+      // Tablets: one column, Seats and Evidence side by side, the next step in its card.
+      for (const width of [768, 1024]) {
+        await page.setViewportSize({ width, height: 1024 });
+        await open(local, theme);
+        // Both boxes come from one frame, so a scroll or layout change cannot fall between them.
+        const [seats, evidence] = await today.evaluate((root) =>
+          ['.pc-operate-today__seats', '.pc-operate-today__evidence'].map((selector) => {
+            const box = root.querySelector(selector)?.getBoundingClientRect();
+            if (!box) throw new Error(`No box for ${selector}`);
+            return { x: box.x, y: box.y, width: box.width };
+          }),
+        );
+        expect(Math.abs(seats.y - evidence.y)).toBeLessThanOrEqual(1);
+        expect(evidence.x - seats.x - seats.width).toBeCloseTo(24, 0);
+        await expect(next).toHaveCSS('position', 'static');
+        await expect(today.locator('.pc-operate-today__waiting')).toBeVisible();
+        await expect(today.locator('.pc-operate-today__tile')).toHaveCount(3);
+        expect((await layoutReport(page)).horizontalOverflow).toBe(false);
+        expect(await axeViolations(page)).toEqual([]);
+        await page.screenshot({
+          path: testInfo.outputPath(`today-local-T${width}-${theme}.png`),
+          fullPage: true,
+        });
+        await open({ localOperate: 'empty' }, theme);
+        await expect(today.locator('.pc-operate-setup')).toBeVisible();
+        expect((await layoutReport(page)).horizontalOverflow).toBe(false);
+      }
+
+      // S-20: outset rings, inset only on rows and disclosures inside clipping cards.
+      for (const width of [390, 768, 1440]) {
+        await page.setViewportSize({ width, height: 1000 });
+        await open(local, theme);
+        const read = await rings(width === 390 ? 14 : 16);
+        const kinds = read.map(({ element }) => element).join(' | ');
+        expect(kinds, `S-20 reach at ${width}`).toContain('pc-operate-today__eyebrow');
+        expect(kinds, `S-20 reach at ${width}`).toContain('pc-operate-today__command');
+        expect(kinds, `S-20 reach at ${width}`).toContain(
+          width === 390 ? 'pc-operate-today__disclosure' : 'pc-operate-today__row-link',
+        );
+        expectRings(read, width);
+      }
+    }
+
+    // Disclosures: named, controlling their lists, toggled from the keyboard.
+    await page.setViewportSize({ width: 390, height: 844 });
+    await open(local, 'dark');
+    const seats = today.getByRole('button', { name: 'Executive seats 6/7', exact: true });
+    const evidence = today.getByRole('button', { name: 'Evidence 2 not proven', exact: true });
+    const listOf = async (button: Locator) =>
+      page.locator(`[id="${await button.getAttribute('aria-controls')}"]`);
+    for (const button of [seats, evidence]) {
+      await expect(button).toHaveAttribute('aria-expanded', 'false');
+      await expect(await listOf(button)).toBeHidden();
+    }
+    await seats.focus();
+    await page.keyboard.press('Enter');
+    await expect(seats).toHaveAttribute('aria-expanded', 'true');
+    await expect((await listOf(seats)).locator('.pc-operate-today__seat')).toHaveCount(7);
+    await expect(await listOf(seats)).toBeVisible();
+    await page.keyboard.press('Space');
+    await expect(seats).toHaveAttribute('aria-expanded', 'false');
+    await expect(await listOf(seats)).toBeHidden();
+    await page.keyboard.press('Tab');
+    await expect(evidence).toBeFocused();
+    await page.keyboard.press('Enter');
+    await expect((await listOf(evidence)).getByText('Not proven yet').first()).toBeVisible();
+
+    // Inbox item and Outcome reuse the Today layout, so they take the phone layout too.
+    for (const route of ['#/operate/inbox/D1', '#/operate/outcomes/D1']) {
+      await page.goto(fixtureUrl(route, { localOperate: '1', theme: 'dark' }));
+      await page.evaluate(() => document.fonts.ready);
+      await expect(page.locator('.pc-operate-today__next'), route).toHaveCSS('position', 'fixed');
+      expect(
+        await overlap(
+          '#main-content .pc-operate-today__side > *, #main-content .pc-local-review__footnote',
+          '.pc-operate-today__next',
+        ),
+        route,
+      ).toBeLessThanOrEqual(0);
+      expect((await layoutReport(page)).horizontalOverflow, route).toBe(false);
+    }
+
+    // A selected row at 768: the shared clearance keeps the last card above the selection bar.
+    await page.setViewportSize({ width: 768, height: 1024 });
+    await open(local, 'dark');
+    await today.locator('.pc-operate-today__row-link').first().click();
+    await expect(page.locator('.pc-selection-bar')).toBeVisible();
+    await expect
+      .poll(() => overlap('.pc-operate-today__side > *', '.pc-selection-bar'))
+      .toBeLessThanOrEqual(0);
+
+    const parity = testInfo.outputPath('today-M-parity.json');
+    writeFileSync(parity, JSON.stringify({ results, deltas }, null, 2));
+    await testInfo.attach('today-M-parity.json', { path: parity, contentType: 'application/json' });
+  });
+
+  test('matches Activity to its canvas parity rows in both themes', async ({ page }, testInfo) => {
+    test.setTimeout(90_000);
+    const results: unknown[] = [];
+    await page.context().grantPermissions(['clipboard-read', 'clipboard-write']);
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await page.setViewportSize({ width: 1440, height: 1100 });
+    await page.addInitScript(() => localStorage.setItem('op-rail-compact:v1', 'true'));
+    await page.clock.setFixedTime(new Date(ARTBOARD_FIXTURE_CLOCK));
+    const banned = ['Unknown', 'Not recorded', 'None declared', 'Phase 2'];
+    for (const theme of ['dark', 'light'] as const) {
+      expect((await page.request.post('/__fixture/reset?dataset=artboard')).ok()).toBe(true);
+      await page.goto(fixtureUrl('#/activity', { dataset: 'artboard', theme }));
+      await page.evaluate(() => document.fonts.ready);
+      const activity = page.locator('[data-route-kind="planning.activity"]');
+      await expect(activity.locator('.pc-activity__connection')).toContainText('Watching');
+      await expect(activity.locator('.pc-activity__row').first()).toBeVisible();
+      for (const kind of ['title', 'status', 'remove'])
+        expect(
+          (await page.request.post(`/__fixture/patch?dataset=artboard&kind=${kind}`)).ok(),
+        ).toBe(true);
+      await expect(activity.locator('.pc-activity__live-row')).toHaveCount(3);
+      for (const row of activityParityRows.filter((entry) => entry.setup === 'activity'))
+        results.push(...(await assertParityRow(page, row, theme)));
+      const text = await page.locator('#main-content').innerText();
+      for (const word of banned) expect(text, `S-21 ${word}`).not.toContain(word);
+      expect(text, 'S-21 none').not.toMatch(/\bnone\b/u);
+      expect((await activity.locator('.pc-activity__header h1').boundingBox())?.x).toBeCloseTo(
+        97,
+        -1,
+      );
+      expect((await layoutReport(page)).horizontalOverflow).toBe(false);
+      expect(await axeViolations(page)).toEqual([]);
+      await page.screenshot({
+        path: testInfo.outputPath(`activity-D-${theme}.png`),
+        fullPage: true,
+      });
+      const row = activity.locator('a.pc-activity__cells').first();
+      await row.click();
+      await expect(row).toHaveAttribute('aria-current', 'true');
+      const bar = page.locator('.pc-selection-bar');
+      await expect(bar).toBeVisible();
+      const command = await bar.locator('code').textContent();
+      expect(command).toMatch(/^(?:\/planr:|openplanr )/u);
+      await page.screenshot({ path: testInfo.outputPath(`activity-selected-D-${theme}.png`) });
+      await page.keyboard.press('Escape');
+      await row.focus();
+      await page.keyboard.press('c');
+      await expect(bar.locator('.pc-selection-bar__copy')).toContainText('Copied');
+      expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(command);
+      await page.goto(fixtureUrl('#/activity', { dataset: 'artboard', theme }));
+      await expect(activity.locator('.pc-activity__row').first()).toBeVisible();
+      await page.locator('body').click({ position: { x: 1, y: 1 } });
+      const rings: { element: string; ring: string[] }[] = [];
+      for (let press = 0; press < 30; press += 1) {
+        await page.keyboard.press('Tab');
+        const ring = await page.evaluate(async () => {
+          for (let frame = 0; frame < 2; frame += 1)
+            await new Promise((resolve) => requestAnimationFrame(resolve));
+          // Focus also selects the row, which restarts the reduced-motion transition.
+          await new Promise((resolve) => setTimeout(resolve, 50));
+          const focused = document.querySelector(
+            '[data-route-kind="planning.activity"] :focus-visible',
+          );
+          if (!focused) return null;
+          const style = getComputedStyle(focused);
+          return {
+            element: `${focused.tagName.toLowerCase()}.${focused.className}`,
+            ring: [style.outlineStyle, style.outlineWidth, style.outlineOffset],
+          };
+        });
+        if (ring) rings.push(ring);
+      }
+      expect(rings.length).toBeGreaterThan(10);
+      for (const { element, ring } of rings)
+        expect(ring, `S-20 ${element} at 1440`).toEqual(['solid', '2px', '2px']);
+    }
+    const parity = testInfo.outputPath('activity-parity.json');
+    writeFileSync(parity, JSON.stringify(results, null, 2));
+    await testInfo.attach('activity-parity.json', {
+      path: parity,
+      contentType: 'application/json',
+    });
+  });
+
+  test.describe('Sprints below 1200px', () => {
+    test.use({ hasTouch: true });
+    test('matches Sprints on tablets and phones in both themes', async ({ page }, testInfo) => {
+      test.setTimeout(90_000);
+      const results: unknown[] = [];
+      await page.emulateMedia({ reducedMotion: 'reduce' });
+      await page.addInitScript(() => localStorage.setItem('op-rail-compact:v1', 'true'));
+      await page.clock.setFixedTime(new Date(SPRINT_SCENARIO_NOW));
+      const sprints = page.locator('[data-route-kind="planning.sprints"]');
+      const rings = async (count: number) => {
+        await page.locator('body').click({ position: { x: 1, y: 1 } });
+        const read: { element: string; ring: string[] }[] = [];
+        for (let press = 0; press < count; press += 1) {
+          await page.keyboard.press('Tab');
+          const ring = await page.evaluate(async () => {
+            for (let frame = 0; frame < 2; frame += 1)
+              await new Promise((resolve) => requestAnimationFrame(resolve));
+            await new Promise((resolve) => setTimeout(resolve, 50));
+            const focused = document.querySelector(
+              '[data-route-kind="planning.sprints"] :focus-visible',
+            );
+            if (!focused) return null;
+            const style = getComputedStyle(focused);
+            return {
+              element: `${focused.tagName.toLowerCase()}.${focused.className}`,
+              ring: [style.outlineStyle, style.outlineWidth, style.outlineOffset],
+            };
+          });
+          if (ring) read.push(ring);
+        }
+        return read;
+      };
+      for (const theme of ['dark', 'light'] as const) {
+        for (const width of [1024, 768, 390, 320]) {
+          await page.setViewportSize({ width, height: 1000 });
+          await page.goto(fixtureUrl('#/sprints', { planningScenario: 'sprint', theme }));
+          await page.evaluate(() => document.fonts.ready);
+          await expect(sprints.locator('.pc-sprints__active')).toBeVisible();
+          const widths = await page.evaluate(() => {
+            const main = document.querySelector('#main-content');
+            const root = document.querySelector('[data-route-kind="planning.sprints"]');
+            return [main, root].map((node) => (node ? node.scrollWidth - node.clientWidth : -1));
+          });
+          expect(widths, `no clipped overflow at ${width}`).toEqual([0, 0]);
+          expect((await layoutReport(page)).horizontalOverflow).toBe(false);
+          await page.screenshot({
+            path: testInfo.outputPath(`sprints-${width}-${theme}.png`),
+            fullPage: true,
+          });
+          if (width < 600) {
+            const boxes = await sprints.locator('.pc-sprints__item-link').evaluateAll((links) =>
+              links.map((link) =>
+                ['.pc-artifact-tag', '.pc-sprints__item-status', '.pc-sprints__last'].map(
+                  (selector) => {
+                    const box = link.querySelector(selector)?.getBoundingClientRect();
+                    return box ? [box.left, box.right] : [0, 0];
+                  },
+                ),
+              ),
+            );
+            expect(boxes).toHaveLength(4);
+            for (const [tag, status, last] of boxes) {
+              expect(tag[1]).toBeLessThanOrEqual(status[0]);
+              if (last[1] > last[0]) expect(status[1]).toBeLessThanOrEqual(last[0]);
+            }
+            const head = await sprints.locator('.pc-sprints__active-head').boundingBox();
+            const day = await sprints.locator('.pc-sprints__day').boundingBox();
+            expect((day?.x ?? 0) + (day?.width ?? 0)).toBeLessThanOrEqual(
+              (head?.x ?? 0) + (head?.width ?? 0),
+            );
+            await expect(sprints.getByRole('tab')).toHaveCount(0);
+            await expect(sprints.locator('.pc-sprints__timeline')).toBeHidden();
+          }
+          if (width === 390) {
+            for (const row of sprintsParityRows.filter((entry) => entry.setup === 'sprints-M'))
+              results.push(...(await assertParityRow(page, row, theme)));
+            const active = await sprints.locator('.pc-sprints__active').boundingBox();
+            const past = sprints.getByRole('button', { name: 'Past sprints 3', exact: true });
+            const pastBox = await past.boundingBox();
+            expect(pastBox?.height).toBeCloseTo(54, 0);
+            expect((pastBox?.y ?? 0) - ((active?.y ?? 0) + (active?.height ?? 0))).toBeCloseTo(
+              16,
+              0,
+            );
+            const read = await rings(24);
+            const kinds = read.map(({ element }) => element).join(' | ');
+            for (const part of [
+              'a.pc-sprints__item-link',
+              'button.pc-sprints__all',
+              'button.pc-sprints__past',
+            ])
+              expect(kinds, `S-20 reach ${part}`).toContain(part);
+            for (const { element, ring } of read)
+              expect(ring, `S-20 ${element} at 390`).toEqual(['solid', '2px', '2px']);
+          }
+          if (width === 768) {
+            const read = await rings(20);
+            expect(read.some(({ element }) => element.includes('pc-tabs__tab'))).toBe(true);
+            expect(read.some(({ element }) => element.includes('pc-sprints__item-link'))).toBe(
+              true,
+            );
+            for (const { element, ring } of read)
+              expect(ring, `S-20 ${element} at 768`).toEqual(['solid', '2px', '2px']);
+          }
+        }
+      }
+
+      // A row under the selection bar's Open: the tap selects it and the Inspector stays closed.
+      await page.setViewportSize({ width: 390, height: 1000 });
+      await page.goto(fixtureUrl('#/sprints', { planningScenario: 'sprint', theme: 'dark' }));
+      await sprints.getByRole('button', { name: 'All 18 items', exact: true }).tap();
+      const rows = sprints.locator('.pc-sprints__item-link');
+      await expect(rows).toHaveCount(18);
+      await rows.first().tap();
+      const bar = page.locator('.pc-selection-bar');
+      const open = bar.getByRole('button', { name: 'Open', exact: true });
+      const openBox = await open.boundingBox();
+      if (!openBox) throw new Error('Expected the selection bar Open button.');
+      await bar.getByRole('button', { name: 'Clear selection', exact: true }).tap();
+      await expect(bar).toBeHidden();
+      const target = rows.nth(9);
+      await target.evaluate(
+        (link, y) => {
+          const box = link.getBoundingClientRect();
+          const scroller = link.closest('.pc-shell__scroll') ?? document.scrollingElement;
+          scroller?.scrollBy(0, box.top + box.height / 2 - y);
+        },
+        openBox.y + openBox.height / 2,
+      );
+      const targetBox = await target.boundingBox();
+      if (!targetBox) throw new Error('Expected the target row.');
+      expect(
+        Math.abs(targetBox.y + targetBox.height / 2 - (openBox.y + openBox.height / 2)),
+      ).toBeLessThan(4);
+      await page.touchscreen.tap(openBox.x + openBox.width / 2, openBox.y + openBox.height / 2);
+      await expect(target).toHaveAttribute('aria-current', 'true');
+      await expect(open).toBeVisible();
+      await expect(page.getByRole('dialog', { name: 'Inspector', exact: true })).toBeHidden();
+
+      // With a selection, the page still scrolls its last content clear of the bar.
+      await expect
+        .poll(() =>
+          page.evaluate(() => {
+            const scroller = document.querySelector<HTMLElement>('.pc-shell__scroll');
+            const past = document.querySelector('.pc-sprints__past');
+            const bar = document.querySelector('.pc-selection-bar');
+            if (!scroller || !past || !bar) return Number.POSITIVE_INFINITY;
+            scroller.style.scrollBehavior = 'auto';
+            scroller.scrollTop = scroller.scrollHeight;
+            return past.getBoundingClientRect().bottom - bar.getBoundingClientRect().top;
+          }),
+        )
+        .toBeLessThanOrEqual(0);
+
+      const parity = testInfo.outputPath('sprints-M-parity.json');
+      writeFileSync(parity, JSON.stringify(results, null, 2));
+      await testInfo.attach('sprints-M-parity.json', {
+        path: parity,
+        contentType: 'application/json',
+      });
+    });
+  });
+
+  test.describe('Activity below 1200px', () => {
+    test.use({ hasTouch: true });
+    test('matches Activity on tablets and phones in both themes', async ({ page }, testInfo) => {
+      test.setTimeout(120_000);
+      const results: unknown[] = [];
+      await page.emulateMedia({ reducedMotion: 'reduce' });
+      await page.addInitScript(() => localStorage.setItem('op-rail-compact:v1', 'true'));
+      await page.clock.setFixedTime(new Date(ARTBOARD_FIXTURE_CLOCK));
+      const activity = page.locator('[data-route-kind="planning.activity"]');
+      const open = async (theme: 'dark' | 'light') => {
+        expect((await page.request.post('/__fixture/reset?dataset=artboard')).ok()).toBe(true);
+        await page.goto(fixtureUrl('#/activity', { dataset: 'artboard', theme }));
+        await page.evaluate(() => document.fonts.ready);
+        await expect(activity.locator('.pc-activity__connection')).toContainText('Watching');
+        for (const kind of ['title', 'status', 'remove'])
+          expect(
+            (await page.request.post(`/__fixture/patch?dataset=artboard&kind=${kind}`)).ok(),
+          ).toBe(true);
+        await expect(activity.locator('.pc-activity__live-row')).toHaveCount(3);
+        await expect(activity.locator('.pc-activity__row[data-gone]').first()).toBeVisible();
+      };
+      const rings = async (count: number) => {
+        await page.locator('body').click({ position: { x: 1, y: 1 } });
+        const read: { element: string; ring: string[] }[] = [];
+        for (let press = 0; press < count; press += 1) {
+          await page.keyboard.press('Tab');
+          const ring = await page.evaluate(async () => {
+            for (let frame = 0; frame < 2; frame += 1)
+              await new Promise((resolve) => requestAnimationFrame(resolve));
+            await new Promise((resolve) => setTimeout(resolve, 50));
+            const focused = document.querySelector(
+              '[data-route-kind="planning.activity"] :focus-visible',
+            );
+            if (!focused) return null;
+            const style = getComputedStyle(focused);
+            return {
+              element: `${focused.tagName.toLowerCase()}.${focused.className}`,
+              ring: [style.outlineStyle, style.outlineWidth, style.outlineOffset],
+            };
+          });
+          if (ring) read.push(ring);
+        }
+        return read;
+      };
+      for (const theme of ['dark', 'light'] as const) {
+        for (const width of [1024, 768, 390, 320]) {
+          await page.setViewportSize({ width, height: 1000 });
+          await open(theme);
+          const widths = await page.evaluate(() => {
+            // The filter row bleeds into the shell gutter by design; the scroller is what clips.
+            const main = document.querySelector('#main-content');
+            const scroller = document.querySelector('.pc-shell__scroll');
+            return [main, scroller].map((node) =>
+              node ? node.scrollWidth - node.clientWidth : -1,
+            );
+          });
+          expect(widths, `no clipped overflow at ${width}`).toEqual([0, 0]);
+          expect((await layoutReport(page)).horizontalOverflow).toBe(false);
+          expect(await axeViolations(page)).toEqual([]);
+          await page.screenshot({
+            path: testInfo.outputPath(`activity-${width}-${theme}.png`),
+            fullPage: true,
+          });
+          const chart = activity.locator('.pc-activity__chart');
+          if (width >= 600) {
+            const feed = await activity.locator('.pc-activity__main').boundingBox();
+            const live = await activity.locator('.pc-activity__live').boundingBox();
+            const busiest = await activity.locator('.pc-activity__busiest').boundingBox();
+            if (!feed || !live || !busiest) throw new Error(`Missing Activity column at ${width}`);
+            expect(live.y, 'feed first').toBeGreaterThan(feed.y + feed.height - 1);
+            if (width >= 900) {
+              expect(busiest.y, 'side cards paired').toBeCloseTo(live.y, 0);
+              await expect(chart).toBeVisible();
+            } else {
+              expect(busiest.y, 'side cards stacked').toBeGreaterThan(live.y + live.height - 1);
+              await expect(chart).toBeHidden();
+              const tracks = await activity
+                .locator('a.pc-activity__cells')
+                .first()
+                .evaluate((element) => getComputedStyle(element).gridTemplateColumns.split(' '));
+              expect(tracks[3]).toBe('160px');
+            }
+          } else {
+            const header = activity.locator('.pc-activity__header');
+            expect((await header.boundingBox())?.width).toBe(1);
+            await expect(header.getByRole('heading', { level: 1 })).toHaveText(/^Activity/u);
+            await expect(activity.getByRole('tab', { name: 'Removed', exact: true })).toBeVisible();
+            await expect(activity.locator('.pc-activity__side')).toBeHidden();
+            await expect(chart).toBeHidden();
+          }
+          if (width === 390) {
+            for (const row of activityParityRows.filter((entry) => entry.setup === 'activity-M'))
+              results.push(...(await assertParityRow(page, row, theme)));
+            const read = await rings(24);
+            const kinds = read.map(({ element }) => element).join(' | ');
+            for (const part of ['a.pc-activity__cells', 'pc-tabs__tab', 'pc-activity__more'])
+              expect(kinds, `S-20 reach ${part}`).toContain(part);
+            for (const { element, ring } of read)
+              expect(ring, `S-20 ${element} at 390`).toEqual(
+                element.startsWith('a.pc-activity__cells')
+                  ? ['solid', '2px', '-2px']
+                  : ['solid', '2px', '2px'],
+              );
+            const more = activity.locator('.pc-activity__more');
+            await more.tap();
+            const sheet = page.getByRole('dialog', { name: 'Filters', exact: true });
+            await expect(sheet).toBeVisible();
+            await sheet.getByRole('button', { name: 'Last 30 days', exact: true }).tap();
+            await expect(more).toHaveText('More filters 1');
+            await sheet.locator('.pc-list-sheet__apply').tap();
+            await expect(sheet).toBeHidden();
+            await expect(activity).toContainText('in 30 days');
+          }
+          if (width === 768) {
+            const read = await rings(20);
+            expect(read.some(({ element }) => element.includes('pc-tabs__tab'))).toBe(true);
+            expect(read.some(({ element }) => element.startsWith('a.pc-activity__cells'))).toBe(
+              true,
+            );
+            for (const { element, ring } of read)
+              expect(ring, `S-20 ${element} at 768`).toEqual(['solid', '2px', '2px']);
+          }
+        }
+      }
+
+      // Below 900 a tap selects the row; the selection bar's Open opens the Inspector.
+      await page.setViewportSize({ width: 390, height: 1000 });
+      await open('dark');
+      const inspector = page.getByRole('dialog', { name: 'Inspector', exact: true });
+      const row = activity.locator('a.pc-activity__cells').nth(4);
+      await row.tap();
+      await expect(row).toHaveAttribute('aria-current', 'true');
+      await expect(inspector).toBeHidden();
+      const bar = page.locator('.pc-selection-bar');
+      await bar.getByRole('button', { name: 'Open', exact: true }).tap();
+      await expect(inspector).toBeVisible();
+      await page.keyboard.press('Escape');
+      await expect(inspector).toBeHidden();
+      await expect(row).toHaveAttribute('aria-current', 'true');
+
+      // With a selection, the page still scrolls its last row clear of the bar.
+      await expect
+        .poll(() =>
+          page.evaluate(() => {
+            const scroller = document.querySelector<HTMLElement>('.pc-shell__scroll');
+            const rows = document.querySelectorAll('.pc-activity__row');
+            const last = rows[rows.length - 1];
+            const bar = document.querySelector('.pc-selection-bar');
+            if (!scroller || !last || !bar) return Number.POSITIVE_INFINITY;
+            scroller.style.scrollBehavior = 'auto';
+            scroller.scrollTop = scroller.scrollHeight;
+            return last.getBoundingClientRect().bottom - bar.getBoundingClientRect().top;
+          }),
+        )
+        .toBeLessThanOrEqual(0);
+
+      const parity = testInfo.outputPath('activity-M-parity.json');
+      writeFileSync(parity, JSON.stringify(results, null, 2));
+      await testInfo.attach('activity-M-parity.json', {
+        path: parity,
+        contentType: 'application/json',
+      });
+    });
+  });
+
+  test.describe('List under a coarse pointer', () => {
+    test.use({ hasTouch: true });
+    test('keeps compact List rows at the 44px touch height', async ({ page }) => {
+      await page.emulateMedia({ reducedMotion: 'reduce' });
+      await page.setViewportSize({ width: 1440, height: 900 });
+      await page.addInitScript(() => localStorage.setItem('op-rail-compact:v1', 'true'));
+      const list = page.locator('[data-route-kind="planning.list"]');
+      await page.goto(fixtureUrl('#/list', { dataset: 'representative', theme: 'dark' }));
+      expect(await page.evaluate(() => matchMedia('(pointer: coarse)').matches)).toBe(true);
+      await list.getByRole('button', { name: 'Compact', exact: true }).click();
+      await expect(list.locator('table')).toHaveAttribute('data-compact', 'true');
+      await list.locator('.pc-list__group-header').last().scrollIntoViewIfNeeded();
+      await expect(list.locator('tbody tr[data-keyboard-item]').first()).toBeVisible();
+      for (const row of listParityRows.filter((entry) => entry.setup === 'list-coarse'))
+        await assertParityRow(page, row, 'dark');
+    });
+  });
+
+  test.describe('sprint and activity evidence', () => {
+    test.use({ hasTouch: true });
+    test('renders sprint evidence and honest Activity states in both themes and touch sizes', async ({
+      page,
+    }, testInfo) => {
+      test.setTimeout(90_000);
+      await page.addInitScript(() => {
+        const theme = new URL(location.href).searchParams.get('evidenceTheme');
+        if (theme === 'light' || theme === 'dark') localStorage.setItem('op-theme', theme);
+      });
+      const writes: string[] = [];
+      page.on('request', (request) => {
+        if (new URL(request.url()).pathname.startsWith('/api/') && request.method() !== 'GET')
+          writes.push(`${request.method()} ${request.url()}`);
+      });
+      for (const theme of ['dark', 'light']) {
+        for (const width of [1440, 390, 320]) {
+          await page.setViewportSize({ width, height: 1000 });
+          expect((await page.request.post('/__fixture/reset?dataset=artboard')).ok()).toBe(true);
+          await page.goto(fixtureUrl('#/sprints', { dataset: 'artboard', evidenceTheme: theme }));
+          await page.evaluate(() => document.fonts.ready);
+          const sprints = page.locator('[data-route-kind="planning.sprints"]');
+          await expect(
+            sprints.getByRole('region', { name: 'No active sprint', exact: true }),
+          ).toBeVisible();
+          if (width < 600) {
+            const past = sprints.getByRole('button', { name: 'Past sprints 3', exact: true });
+            await expect(past).toHaveAttribute('aria-expanded', 'false');
+            await past.tap();
+            await expect(past).toHaveAttribute('aria-expanded', 'true');
+          }
+          const launch = sprints.getByRole('article', {
+            name: 'SPRINT-001: Launch sprint 1',
+            exact: true,
+          });
+          await expect(launch).toContainText('78 of 82 done');
+          await expect(launch).toContainText('4 carried over');
+          await expect(sprints).toContainText('closed-before-start');
+          expect((await layoutReport(page)).horizontalOverflow).toBe(false);
+          expect(await axeViolations(page)).toEqual([]);
+          await testInfo.attach(`sprints-${theme}-${width}.png`, {
+            body: await page.screenshot({ fullPage: true }),
+            contentType: 'image/png',
+          });
+          // Carried items stay reachable through the closed sprint's Detail.
+          await launch.getByRole('link').click();
+          const detail = page.locator('[data-route-kind="planning.detail"]');
+          await expect(detail.locator('[data-detail-state="ready"]')).toBeVisible();
+          for (const href of [
+            '#/detail/QT-006',
+            '#/detail/BL-007',
+            '#/detail/QT-005',
+            '#/detail/SPEC-015%2FT-055',
+          ])
+            await expect(detail.locator(`a[href="${href}"]`).first()).toBeAttached();
+
+          await page.clock.setFixedTime(new Date(SPRINT_SCENARIO_NOW));
+          await page.goto(
+            fixtureUrl('#/sprints', { planningScenario: 'sprint', evidenceTheme: theme }),
+          );
+          const row = sprints.locator('.pc-sprints__item-link').filter({ hasText: 'T-159' });
+          await expect(row.locator('.pc-sprints__last')).toHaveText('carried from SPRINT-003');
+          const inspector = page.getByRole('dialog', { name: 'Inspector', exact: true });
+          if (width < 900) {
+            // A tap selects the row; the bar's Open opens the Inspector.
+            await row.tap();
+            const open = page.locator('.pc-selection-bar').getByRole('button', {
+              name: 'Open',
+              exact: true,
+            });
+            await expect(row).toHaveAttribute('aria-current', 'true');
+            await expect(open).toBeVisible();
+            await expect(inspector).toBeHidden();
+            await open.tap();
+            await expect(inspector).toBeVisible();
+            await page.keyboard.press('Escape');
+            await expect(inspector).toBeHidden();
+            await expect(row).toBeFocused();
+            await expect(row).toHaveAttribute('aria-current', 'true');
+          } else {
+            await row.focus();
+            await page.keyboard.press('Enter');
+            await expect(inspector).toBeVisible();
+            await page.keyboard.press('Escape');
+            await expect(row).toBeFocused();
+          }
+          expect((await layoutReport(page)).horizontalOverflow).toBe(false);
+          expect(await axeViolations(page)).toEqual([]);
+
+          // The Sprints scenario clock above would put the artboard history inside the window.
+          await page.clock.setFixedTime(Date.now());
+          await page.goto(fixtureUrl('#/activity', { dataset: 'artboard', evidenceTheme: theme }));
+          const activity = page.locator('[data-route-kind="planning.activity"]');
+          await expect(activity).toContainText('Nothing changed in the last 14 days');
+          await expect(activity).toContainText(
+            'Changes saved to the plan appear here as they happen.',
+          );
+          await expect(activity).toContainText('This session only');
+          await expect(activity.locator('[data-keyboard-item]')).toHaveCount(0);
+          expect((await layoutReport(page)).horizontalOverflow).toBe(false);
+          expect(await axeViolations(page)).toEqual([]);
+          await testInfo.attach(`activity-${theme}-${width}.png`, {
+            body: await page.screenshot({ fullPage: true }),
+            contentType: 'image/png',
+          });
+        }
+      }
+      // The header's sprint command is hidden on phones, so the last checks run on desktop.
+      await page.setViewportSize({ width: 1440, height: 1000 });
+      await openFixture(page, '#/sprints');
+      await expect(page.locator('[data-route-kind="planning.sprints"]')).toContainText(
+        'No sprints yet',
+      );
+      await openFixture(page, '#/sprints', { planningScenario: 'delivery' });
+      await expect(page.getByRole('button', { name: /Plan the next sprint/ })).toBeVisible();
+      expect(writes).toEqual([]);
+    });
+
+    test('retains session-only accepted Activity patches, focus and scroll on disconnect without layout shift', async ({
+      page,
+    }, testInfo) => {
+      expect((await page.request.post('/__fixture/reset?dataset=artboard')).ok()).toBe(true);
+      await page.setViewportSize({ width: 1440, height: 1000 });
+      await page.goto(fixtureUrl('#/activity', { dataset: 'artboard' }));
+      await page.evaluate(() => document.fonts.ready);
+      const activity = page.locator('[data-route-kind="planning.activity"]');
+      await expect(activity).toContainText('Watching');
+      await page.evaluate(installDashboardLayoutShifts);
+      await page.evaluate(() => window.__dashboardLayoutShifts.markPhase('activity-patches'));
+      expect((await page.request.post('/__fixture/patch?dataset=artboard')).ok()).toBe(true);
+      const row = activity.locator('[data-keyboard-item]').first();
+      await expect(row).toBeVisible();
+      await row.focus();
+      // Both patches retitle one item, so the focused row is held by element identity.
+      const focused = await row.elementHandle();
+      if (!focused) throw new Error('Activity row is unavailable');
+      const feed = activity.getByRole('region', { name: 'Live patches from this session' });
+      await feed.evaluate((element) => {
+        element.scrollTop = 0;
+      });
+      // New rows land where the current first rows are; everything above that must hold still.
+      // A shift rect includes the focused row's ring: 2px wide at a 2px offset.
+      const FOCUS_RING_INK = 4;
+      const insertion = await activity.evaluate((root) => {
+        const rect = (selector: string) => {
+          const target = root.querySelector(selector);
+          if (!target) throw new Error(`Missing Activity insertion point: ${selector}`);
+          return target.getBoundingClientRect();
+        };
+        return {
+          side: rect('.pc-activity__side').left,
+          feed: rect('[data-keyboard-item]').top,
+          card: rect('.pc-activity__live-row').top,
+        };
+      });
+      expect((await page.request.post('/__fixture/patch?dataset=artboard')).ok()).toBe(true);
+      await expect(activity.locator('[data-keyboard-item]')).toHaveCount(2);
+      expect(await focused.evaluate((element) => element === document.activeElement)).toBe(true);
+      expect(await feed.evaluate((element) => element.scrollTop)).toBe(0);
+      const indicator = activity.locator('.pc-activity__connection');
+      const badge = indicator.locator('.pc-badge');
+      const indicatorBefore = await indicator.boundingBox();
+      const badgeBefore = await badge.boundingBox();
+      expect(indicatorBefore).not.toBeNull();
+      expect(badgeBefore).not.toBeNull();
+      expect(badgeBefore?.height).toBe(26);
+      await page.evaluate(() => window.__dashboardLayoutShifts.markPhase('activity-disconnect'));
+      await page.context().setOffline(true);
+      await expect(
+        activity.getByRole('region', { name: 'Live session activity', exact: true }),
+      ).toContainText('Reconnecting');
+      await expect(
+        activity.getByRole('region', { name: 'Live session activity', exact: true }),
+      ).toContainText('changes so far are kept');
+      await expect(
+        activity.getByRole('region', { name: 'Live session activity', exact: true }),
+      ).not.toContainText('Watching');
+      await expect(activity).toContainText('This session only');
+      await expect(activity.locator('[data-keyboard-item]')).toHaveCount(2);
+      await page.evaluate(
+        () =>
+          new Promise<void>((resolve) =>
+            requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
+          ),
+      );
+      const report = await page.evaluate(() => window.__dashboardLayoutShifts.snapshot());
+      const shifts = report.shifts.filter(
+        (shift) =>
+          !shift.hadRecentInput &&
+          ['activity-patches', 'activity-disconnect'].includes(shift.phase),
+      );
+      if (shifts.length > 0)
+        await testInfo.attach('activity-layout-shifts.json', {
+          body: JSON.stringify(report, null, 2),
+          contentType: 'application/json',
+        });
+      // Newest-first rows push down what sits below a live insert; nothing above it may move.
+      const patchShifts = shifts.filter((shift) => shift.phase === 'activity-patches');
+      const aboveInsertion = [
+        ...patchShifts.filter((shift) => shift.sources.length === 0).map(() => 'unattributed'),
+        ...patchShifts.flatMap((shift) =>
+          shift.sources
+            .filter(
+              (source) =>
+                source.previousRect.top + FOCUS_RING_INK <
+                (source.previousRect.left >= insertion.side ? insertion.card : insertion.feed),
+            )
+            .map((source) => source.selector ?? source.nodeKind),
+        ),
+      ];
+      expect(
+        aboveInsertion,
+        `Activity shifts above a live insert ${JSON.stringify(insertion)}: ${JSON.stringify(shifts, null, 2)}`,
+      ).toEqual([]);
+      const disconnectShift = shifts
+        .filter((shift) => shift.phase === 'activity-disconnect')
+        .reduce((sum, shift) => sum + shift.value, 0);
+      expect(
+        disconnectShift,
+        `Activity disconnect shifts: ${JSON.stringify(shifts, null, 2)}`,
+      ).toBe(0);
+      expect(await indicator.boundingBox()).toEqual(indicatorBefore);
+      const badgeAfter = await badge.boundingBox();
+      expect(badgeAfter?.height).toBe(badgeBefore?.height);
+      expect(badgeAfter?.y).toBe(badgeBefore?.y);
+      if (!badgeBefore || !badgeAfter) throw new Error('Activity badge geometry is unavailable');
+      expect(badgeAfter.x).toBe(badgeBefore.x);
+      await page.context().setOffline(false);
+    });
   });
 
   test('keeps Planning workspaces aligned to one shared application frame', async ({ page }) => {
@@ -1007,6 +3193,471 @@ test.describe('dashboard real-browser quality', () => {
     );
   });
 
+  test('keeps palette preview named, reachable and trapped across themes and widths', async ({
+    page,
+  }, testInfo) => {
+    test.setTimeout(90_000);
+    await page.addInitScript(() => {
+      const theme = new URL(location.href).searchParams.get('evidenceTheme');
+      if (theme === 'light' || theme === 'dark') localStorage.setItem('op-theme', theme);
+    });
+    const writes: string[] = [];
+    page.on('request', (request) => {
+      const path = new URL(request.url()).pathname;
+      if (path.startsWith('/api/') && request.method() !== 'GET')
+        writes.push(`${request.method()} ${path}`);
+    });
+    for (const theme of ['dark', 'light']) {
+      for (const width of [1440, 390, 320]) {
+        await page.setViewportSize({ width, height: width === 320 ? 568 : 1000 });
+        expect((await page.request.post('/__fixture/reset?dataset=artboard')).ok()).toBe(true);
+        await page.goto(fixtureUrl('#/list', { dataset: 'artboard', evidenceTheme: theme }));
+        await expect(page.locator('.pc-list')).toBeVisible();
+        await page.evaluate(() => document.fonts.ready);
+        const launcher = page.getByRole('button', { name: 'Jump to a view or an artifact' });
+        await launcher.focus();
+        await page.keyboard.press('Control+K');
+        const palette = page.getByRole('dialog', { name: 'Command palette', exact: true });
+        const input = palette.getByRole('searchbox', { name: 'Search views and artifacts' });
+        await expect(input).toBeFocused();
+        await input.fill('SPEC-014/T-046');
+        const first = palette.locator('[data-search-result]').first();
+        await expect(first).toHaveAttribute('data-search-result', 'planning:SPEC-014/T-046');
+        if (width === 1440) {
+          const preview = palette.getByRole('complementary', { name: 'Search result preview' });
+          await expect(preview).toHaveAttribute('data-preview-id', 'SPEC-014/T-046');
+          await expect(preview).toHaveAttribute('data-preview-state', 'ready');
+          await expect(preview).toContainText('Connect Plan Ship company sync and release proof');
+          await expect(preview).toContainText('SPEC-014');
+          await expect(preview).toContainText('T-045');
+        } else {
+          await expect(palette.locator('[data-preview-id]')).toBeHidden();
+          await expect(first).toContainText('T-046');
+          await expect(first).toContainText('Connect Plan Ship company sync and release proof');
+        }
+        await expect(page).toHaveURL(/#\/list$/u);
+        for (const control of await palette.locator(ACTIVE_TARGET_SELECTOR).all()) {
+          if (await control.isVisible()) await expect(control).toHaveAccessibleName(/\S/u);
+        }
+        await expectControlsHitTestable(page, palette);
+        await input.focus();
+        const steps = (await palette.locator(ACTIVE_TARGET_SELECTOR).count()) + 1;
+        for (const direction of ['Tab', 'Shift+Tab']) {
+          for (let step = 0; step < steps; step++) {
+            await page.keyboard.press(direction);
+            expect(
+              await palette.evaluate((element) => element.contains(document.activeElement)),
+              `Palette must retain focus after ${direction}`,
+            ).toBe(true);
+          }
+        }
+        await input.focus();
+        expect((await layoutReport(page)).horizontalOverflow).toBe(false);
+        expect(await axeViolations(page)).toEqual([]);
+        await attachScreenshot(
+          page,
+          `palette-${theme}-${width}.png`,
+          testInfo.attach.bind(testInfo),
+        );
+        await page.keyboard.press('Escape');
+        await expect(palette).not.toBeVisible();
+        await expect(launcher).toBeFocused();
+        await expect(page).toHaveURL(/#\/list$/u);
+      }
+    }
+    expect(writes).toEqual([]);
+  });
+
+  test('matches the command palette to its canvas parity rows in both themes', async ({
+    page,
+  }, testInfo) => {
+    test.setTimeout(120_000);
+    const results: unknown[] = [];
+    const heights: Record<string, number[]> = {};
+    await page.context().grantPermissions(['clipboard-read', 'clipboard-write']);
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await page.addInitScript(() => localStorage.setItem('op-rail-compact:v1', 'true'));
+    const rowsFor = (setup: string) => paletteParityRows.filter((entry) => entry.setup === setup);
+    const settle = () =>
+      page.evaluate(async () => {
+        for (let frame = 0; frame < 2; frame += 1)
+          await new Promise((resolve) => requestAnimationFrame(resolve));
+      });
+    for (const theme of ['dark', 'light'] as const) {
+      await page.setViewportSize({ width: 1440, height: 900 });
+      expect((await page.request.post('/__fixture/reset?dataset=artboard')).ok()).toBe(true);
+      await page.goto(fixtureUrl('#/list', { dataset: 'artboard', theme }));
+      await expect(page.locator('.pc-list')).toBeVisible();
+      await page.evaluate(() => document.fonts.ready);
+      const palette = page.getByRole('dialog', { name: 'Command palette', exact: true });
+      const input = palette.getByRole('searchbox', { name: 'Search views and artifacts' });
+      const panel = palette.locator('.pc-palette__panel');
+
+      await page.keyboard.press('Control+K');
+      await input.fill('SPEC-014/T-046');
+      await expect(palette.locator('[data-search-result]').first()).toHaveAttribute(
+        'data-search-result',
+        'planning:SPEC-014/T-046',
+      );
+      await input.press('Enter');
+      await expect(palette).not.toBeVisible();
+      await page.keyboard.press('Escape');
+      await page.keyboard.press('Control+K');
+      await expect(input).toHaveValue('');
+      await settle();
+      for (const row of rowsFor('palette-open'))
+        results.push(...(await assertParityRow(page, row, theme)));
+      await expect(palette.getByRole('list', { name: 'Recent' })).toContainText('T-046');
+      const opened = (await panel.boundingBox())?.height ?? 0;
+      expect(opened).toBeLessThan(600);
+      await page.screenshot({ path: testInfo.outputPath(`palette-open-1440-${theme}.png`) });
+
+      heights[theme] = [opened];
+      for (const prefix of ['f', 'fi', 'fin', 'find']) {
+        await input.fill(prefix);
+        await settle();
+        heights[theme].push((await panel.boundingBox())?.height ?? 0);
+      }
+      await expect(palette.locator('.pc-palette__match').first()).toBeVisible();
+      for (const row of rowsFor('palette'))
+        results.push(...(await assertParityRow(page, row, theme)));
+      expect((await layoutReport(page)).horizontalOverflow).toBe(false);
+      expect(await axeViolations(page)).toEqual([]);
+      await page.screenshot({ path: testInfo.outputPath(`palette-find-1440-${theme}.png`) });
+
+      const selected = palette.locator('.pc-palette__result[data-selected="true"]');
+      await selected.hover();
+      await settle();
+      const layers = await selected.evaluate((item) => {
+        const fill = getComputedStyle(item, '::before');
+        return {
+          painted: [item, ...item.querySelectorAll(':not(.pc-palette__match)')]
+            .map((node) => getComputedStyle(node).backgroundColor)
+            .filter((color) => color !== 'rgba(0, 0, 0, 0)'),
+          fill: fill.backgroundColor,
+          inset: [fill.top, fill.bottom],
+        };
+      });
+      expect(layers.painted, 'one background on the hovered selected row').toEqual([]);
+      expect(layers.fill).not.toBe('rgba(0, 0, 0, 0)');
+      expect(layers.inset, 'a 2px gap between adjacent highlights').toEqual(['1px', '1px']);
+      await page.screenshot({
+        path: testInfo.outputPath(`palette-hover-selected-1440-${theme}.png`),
+        clip: { x: 240, y: 96, width: 960, height: 400 },
+      });
+
+      const rings: { element: string; ring: string[]; clipped: boolean }[] = [];
+      const ringOf = () => readPaletteRing(page);
+      await input.focus();
+      for (let step = 0; step < 12; step += 1) {
+        await page.keyboard.press('Tab');
+        const ring = await ringOf();
+        if (ring) rings.push(ring);
+      }
+      const results1440 = palette.locator('[data-search-result]');
+      await results1440.first().focus();
+      await page.keyboard.press('Tab');
+      await page.keyboard.press('Shift+Tab');
+      for (let step = 0; step < 40; step += 1) await page.keyboard.press('ArrowDown');
+      await expect(results1440.last()).toBeFocused();
+      const lastRing = await ringOf();
+      if (lastRing) rings.push(lastRing);
+      expect(rings.some((ring) => ring.element.includes('pc-palette__row'))).toBe(true);
+      expect(rings.some((ring) => ring.element.includes('pc-palette__scope'))).toBe(true);
+      for (const { element, ring, clipped } of rings) {
+        expect(ring, `S-20 ${theme} ${element} ${JSON.stringify(rings)}`).toEqual([
+          'solid',
+          '2px',
+          '2px',
+        ]);
+        expect(clipped, `S-20 ${element} clipped`).toBe(false);
+      }
+
+      await input.fill('SPEC-014/T-046');
+      await expect(palette.locator('[data-search-result]').first()).toHaveAttribute(
+        'data-active',
+        'true',
+      );
+      await input.press('End');
+      await input.press('Control+C');
+      const copied = palette.locator('.pc-palette__copy');
+      await expect(copied).toContainText('✓ Copied');
+      const command = await copied.locator('code').textContent();
+      expect(command).toBe('/planr:ship SPEC-014/T-046');
+      expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(command);
+      await page.screenshot({ path: testInfo.outputPath(`palette-copied-1440-${theme}.png`) });
+
+      await input.fill('qzxqzx');
+      await settle();
+      for (const row of rowsFor('palette-empty'))
+        results.push(...(await assertParityRow(page, row, theme)));
+      expect((await panel.boundingBox())?.height ?? 600).toBeLessThan(260);
+      await page.screenshot({ path: testInfo.outputPath(`palette-empty-1440-${theme}.png`) });
+
+      await page.setViewportSize({ width: 1024, height: 768 });
+      await input.fill('find');
+      await settle();
+      expect((await panel.boundingBox())?.width).toBe(960);
+      expect((await layoutReport(page)).horizontalOverflow).toBe(false);
+      await page.screenshot({ path: testInfo.outputPath(`palette-find-1024-${theme}.png`) });
+      await input.fill('');
+      await settle();
+      await page.screenshot({ path: testInfo.outputPath(`palette-open-1024-${theme}.png`) });
+      await page.keyboard.press('Escape');
+      await expect(palette).not.toBeVisible();
+      await page.setViewportSize({ width: 1440, height: 900 });
+      let release: (() => void) | undefined;
+      const held = new Promise<void>((resolve) => {
+        release = resolve;
+      });
+      await page.route('**/api/operate/search**', async (route) => {
+        await held;
+        await route.continue();
+      });
+      await page.goto(fixtureUrl('#/operate/today', { dataset: 'artboard', theme }));
+      await expect(page.locator('[data-route-kind="operate.today"]')).toBeVisible();
+      await page.keyboard.press('Control+K');
+      await input.fill('handoff');
+      const busy = palette.locator('.pc-palette__group[aria-busy="true"]');
+      await expect(busy).toBeVisible();
+      for (const row of rowsFor('palette-operate'))
+        results.push(...(await assertParityRow(page, row, theme)));
+      const before = await palette.locator('[data-search-result]').first().boundingBox();
+      release?.();
+      await expect(busy).toHaveCount(0);
+      const after = await palette.locator('[data-search-result]').first().boundingBox();
+      expect(after?.y, 'P-14 planning rows stay put').toBe(before?.y);
+      await page.unroute('**/api/operate/search**');
+      await page.keyboard.press('Escape');
+      await expect(palette).not.toBeVisible();
+    }
+    const parity = testInfo.outputPath('palette-parity.json');
+    writeFileSync(parity, JSON.stringify({ results, heights }, null, 2));
+    await testInfo.attach('palette-parity.json', { path: parity, contentType: 'application/json' });
+  });
+
+  test('leaves Ctrl+C to the browser when preview text is selected with the palette input focused', async ({
+    page,
+  }) => {
+    await page.context().grantPermissions(['clipboard-read', 'clipboard-write']);
+    await page.setViewportSize({ width: 1440, height: 900 });
+    expect((await page.request.post('/__fixture/reset?dataset=artboard')).ok()).toBe(true);
+    await page.goto(fixtureUrl('#/list', { dataset: 'artboard' }));
+    await expect(page.locator('.pc-list')).toBeVisible();
+    await page.keyboard.press('Control+K');
+    const palette = page.getByRole('dialog', { name: 'Command palette', exact: true });
+    await palette.getByRole('searchbox').fill('SPEC-014/T-046');
+    const preview = palette.getByRole('complementary', { name: 'Search result preview' });
+    await expect(preview).toHaveAttribute('data-preview-state', 'ready');
+    await page.evaluate(() => navigator.clipboard.writeText('before'));
+    const selected = await page.evaluate(() => {
+      const title = document.querySelector('[data-preview-id] h3');
+      const selection = document.getSelection();
+      if (!title || !selection) return null;
+      const range = document.createRange();
+      range.selectNodeContents(title);
+      selection.removeAllRanges();
+      selection.addRange(range);
+      return {
+        text: selection.toString(),
+        inputFocused: document.activeElement?.classList.contains('pc-palette__input') ?? false,
+      };
+    });
+    expect(selected?.text).toBe('Connect Plan Ship company sync and release proof');
+    expect(selected?.inputFocused).toBe(true);
+    await page.keyboard.press('Control+C');
+    // Chromium's own copy acts on the focused input's empty selection, so the clipboard keeps its value.
+    const clipboard = await page.evaluate(async () => {
+      for (let frame = 0; frame < 2; frame += 1)
+        await new Promise((resolve) => requestAnimationFrame(resolve));
+      await new Promise((resolve) => setTimeout(resolve, 200));
+      return navigator.clipboard.readText();
+    });
+    expect(clipboard).toBe('before');
+    await expect(palette.locator('.pc-palette__copy')).toHaveCount(0);
+  });
+
+  test('opens the Operate cycle menu inside the palette and selects a cycle', async ({ page }) => {
+    for (const size of [
+      { width: 1440, height: 900 },
+      { width: 390, height: 844 },
+    ]) {
+      await page.setViewportSize(size);
+      expect((await page.request.post('/__fixture/reset?dataset=artboard')).ok()).toBe(true);
+      await page.goto(fixtureUrl('#/list', { dataset: 'artboard' }));
+      await expect(page.locator('.pc-list')).toBeVisible();
+      await page.keyboard.press('Control+K');
+      const palette = page.getByRole('dialog', { name: 'Command palette', exact: true });
+      const operateScope = palette
+        .getByRole('group', { name: 'Result scope' })
+        .getByRole('button', { name: /^Operate/u });
+      await expect(operateScope).toHaveCount(0);
+      const cycle = palette.getByRole('combobox', { name: /^Operate Cycle for search results/u });
+      await cycle.click();
+      const listbox = page.getByRole('listbox', { name: 'Operate Cycle for search results' });
+      await expect(listbox).toBeVisible();
+      const placement = await page.evaluate(() => {
+        const dialog = document.querySelector('dialog.pc-palette');
+        const popup = document.querySelector('.pc-chip-menu__popup');
+        const anchor = document.querySelector('.pc-palette__cycle .pc-chip');
+        const option = popup?.querySelector('[role="option"]:last-child');
+        if (!dialog || !popup || !anchor || !option) return null;
+        const box = option.getBoundingClientRect();
+        const hit = document.elementFromPoint(box.left + box.width / 2, box.top + box.height / 2);
+        return {
+          insideDialog: dialog.contains(popup),
+          optionHit: hit !== null && option.contains(hit),
+          belowAnchor: popup.getBoundingClientRect().top >= anchor.getBoundingClientRect().bottom,
+          inViewport: box.bottom <= window.innerHeight && box.right <= window.innerWidth,
+          label: option.getAttribute('aria-label') ?? '',
+        };
+      });
+      expect(placement, `cycle menu at ${size.width}`).toMatchObject({
+        insideDialog: true,
+        optionHit: true,
+        belowAnchor: true,
+        inViewport: true,
+      });
+      const label = placement?.label ?? '';
+      expect(label).toMatch(/cycle/u);
+      await listbox.getByRole('option', { name: label }).click();
+      await expect(listbox).toBeHidden();
+      await expect(cycle).toHaveAccessibleName(`Operate Cycle for search results: ${label}`);
+      await expect(palette).toBeVisible();
+      if (size.width === 1440) await expect(operateScope).toBeVisible();
+      else
+        await expect(palette.locator('.pc-palette__scope', { hasText: 'Operate' })).toHaveCount(1);
+      await page.keyboard.press('Escape');
+      await expect(palette).not.toBeVisible();
+    }
+  });
+
+  test('fits the command palette to tablets and phones in both themes', async ({
+    page,
+  }, testInfo) => {
+    test.setTimeout(120_000);
+    const results: unknown[] = [];
+    const rings: unknown[] = [];
+    await page.context().grantPermissions(['clipboard-read', 'clipboard-write']);
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    const palette = page.getByRole('dialog', { name: 'Command palette', exact: true });
+    const input = palette.getByRole('searchbox', { name: 'Search views and artifacts' });
+    const panel = palette.locator('.pc-palette__panel');
+    const rows = palette.locator('[data-search-result]');
+    const open = async (width: number, height: number, theme: string) => {
+      await page.setViewportSize({ width, height });
+      expect((await page.request.post('/__fixture/reset?dataset=artboard')).ok()).toBe(true);
+      await page.goto(fixtureUrl('#/list', { dataset: 'artboard', theme }));
+      await expect(page.locator('.pc-list')).toBeVisible();
+      await page.evaluate(() => document.fonts.ready);
+      await page.keyboard.press('Control+K');
+      await expect(input).toBeFocused();
+      await page.screenshot({ path: testInfo.outputPath(`palette-open-${width}-${theme}.png`) });
+      await input.fill('find');
+      await expect(rows.first()).toBeVisible();
+    };
+    const firstAndLastRings = async (width: number, theme: string) => {
+      await rows.first().focus();
+      await page.keyboard.press('Tab');
+      await page.keyboard.press('Shift+Tab');
+      const first = await readPaletteRing(page);
+      for (let step = 0; step < 40; step += 1) await page.keyboard.press('ArrowDown');
+      await expect(rows.last()).toBeFocused();
+      const last = await readPaletteRing(page);
+      for (const ring of [first, last]) {
+        rings.push({ width, theme, ...ring });
+        expect(ring?.element, `S-20 ${width} ${theme}`).toContain('pc-palette__row');
+        expect(ring?.ring, `S-20 ${width} ${theme}`).toEqual(['solid', '2px', '2px']);
+        expect(ring?.clipped, `S-20 ${width} ${theme} clipped`).toBe(false);
+      }
+      await input.focus();
+    };
+    for (const theme of ['dark', 'light'] as const) {
+      await open(768, 1024, theme);
+      expect((await panel.boundingBox())?.width).toBe(736);
+      await expect(palette.locator('.pc-palette__preview')).toBeHidden();
+      await expect(palette.getByRole('group', { name: 'Result scope' })).toBeVisible();
+      await expect(palette.locator('.pc-palette__key').first()).toBeVisible();
+      await expect(palette.getByRole('button', { name: 'Cancel' })).toBeHidden();
+      expect((await palette.locator('.pc-palette__results').boundingBox())?.width).toBe(734);
+      await firstAndLastRings(768, theme);
+      expect((await layoutReport(page)).horizontalOverflow).toBe(false);
+      expect(await axeViolations(page)).toEqual([]);
+      await page.screenshot({ path: testInfo.outputPath(`palette-find-768-${theme}.png`) });
+      await page.keyboard.press('Escape');
+
+      await open(390, 844, theme);
+      for (const row of paletteParityRows.filter((entry) => entry.setup === 'palette-M'))
+        results.push(...(await assertParityRow(page, row, theme)));
+      const cycleRow = await palette.locator('.pc-palette__cycle .pc-chip').boundingBox();
+      const inputRow = await palette.locator('.pc-palette__input-row').boundingBox();
+      expect(cycleRow?.height).toBe(44);
+      expect(
+        Math.abs((cycleRow?.y ?? 0) - ((inputRow?.y ?? 0) + (inputRow?.height ?? 0) + 1)),
+      ).toBeLessThanOrEqual(1);
+      await firstAndLastRings(390, theme);
+      expect((await layoutReport(page)).horizontalOverflow).toBe(false);
+      expect(await axeViolations(page)).toEqual([]);
+      await page.screenshot({ path: testInfo.outputPath(`palette-find-390-${theme}.png`) });
+      const command = palette
+        .locator('.pc-palette__result[data-source="command"] [data-search-result]')
+        .first();
+      await command.click();
+      const status = palette.locator('.pc-palette__foot');
+      await expect(status.getByRole('status')).toContainText('✓ Copied');
+      const copied = await status.locator('code').textContent();
+      expect(copied).toBeTruthy();
+      expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(copied);
+      const line = await status.evaluate((node) => ({
+        height: getComputedStyle(node).height,
+        bottom: node.getBoundingClientRect().bottom,
+        panelBottom: node.closest('.pc-palette__panel')?.getBoundingClientRect().bottom ?? 0,
+      }));
+      expect(line.height, 'B6 status line').toBe('44px');
+      expect(Math.abs(line.bottom - line.panelBottom)).toBeLessThanOrEqual(1);
+      await page.screenshot({ path: testInfo.outputPath(`palette-copied-390-${theme}.png`) });
+      await expect(status).toBeHidden({ timeout: 4_000 });
+      await expect(palette).toBeVisible();
+      await palette.getByRole('button', { name: 'Cancel' }).click();
+      await expect(palette).not.toBeVisible();
+
+      await open(320, 568, theme);
+      expect((await layoutReport(page)).horizontalOverflow).toBe(false);
+      await page.screenshot({ path: testInfo.outputPath(`palette-find-320-${theme}.png`) });
+      await page.keyboard.press('Escape');
+    }
+    const parity = testInfo.outputPath('palette-narrow-parity.json');
+    writeFileSync(parity, JSON.stringify({ results, rings }, null, 2));
+    await testInfo.attach('palette-narrow-parity.json', {
+      path: parity,
+      contentType: 'application/json',
+    });
+  });
+
+  test('starts the handoff trace through palette search and promotes only on full-page activation', async ({
+    page,
+  }) => {
+    expect((await page.request.post('/__fixture/reset?dataset=artboard')).ok()).toBe(true);
+    await page.goto(fixtureUrl('#/list', { dataset: 'artboard' }));
+    await expect(page.locator('.pc-list')).toBeVisible();
+    await page.keyboard.press('Control+K');
+    const palette = page.getByRole('dialog', { name: 'Command palette', exact: true });
+    const input = palette.getByRole('searchbox', { name: 'Search views and artifacts' });
+    await input.fill('handoff');
+    const result = palette.getByRole('button', { name: /Design-to-Delivery Handoff Center/u });
+    await result.focus();
+    const preview = palette.getByRole('complementary', { name: 'Search result preview' });
+    await expect(preview).toHaveAttribute('data-preview-id', 'SPEC-014');
+    await expect(preview).toContainText('openplanr status SPEC-014 --md');
+    await expect(page).toHaveURL(/#\/list$/u);
+    await page.keyboard.press('Control+Enter');
+    await expect(palette).not.toBeVisible();
+    await expect(page).toHaveURL(/#\/detail\/SPEC-014$/u);
+    await expect(page.locator('[data-route-kind="planning.detail"]')).toContainText(
+      'Design-to-Delivery Handoff Center',
+    );
+  });
+
   test('returns focus after cancelling a runtime-issued governed Action preview', async ({
     page,
   }, testInfo) => {
@@ -1019,6 +3670,8 @@ test.describe('dashboard real-browser quality', () => {
       name: 'Confirm Restore the previous reminder settings',
     });
     await expect(dialog).toBeVisible();
+    const cancel = dialog.getByRole('button', { name: 'Cancel', exact: true });
+    await expect(cancel).toBeFocused();
     await expect(dialog).toContainText(
       'You are about to Restore the previous reminder settings. Review the reminder setting rollback before confirming.',
     );
@@ -1043,7 +3696,9 @@ test.describe('dashboard real-browser quality', () => {
     );
     await expectGoldenScreenshot(page, 'console-operate-governed-action-dialog.png');
 
-    await dialog.getByRole('button', { name: 'Cancel' }).click();
+    await expectGovernedDialogFocusTrapped(page, dialog, cancel);
+    await expectControlsHitTestable(page, dialog);
+    await cancel.click();
     await expect(dialog).not.toBeVisible();
     await expect(trigger).toBeFocused();
   });
@@ -1064,18 +3719,21 @@ test.describe('dashboard real-browser quality', () => {
       expect(await page.evaluate(() => navigator.maxTouchPoints)).toBeGreaterThan(0);
 
       const mobileNavigation = page.getByRole('navigation', { name: 'Mobile Operate navigation' });
-      await touchTap(page, mobileNavigation.getByRole('link', { name: 'Inbox' }));
-      await expect(page.locator('[data-route-kind="operate.inbox"]')).toBeVisible();
-
       const more = mobileNavigation.locator('summary[aria-label="More Operate destinations"]');
-      await touchTap(page, more);
       const moreSheet = mobileNavigation.locator('details.pc-mobile-more');
+      await touchTap(page, more);
+      await expect(moreSheet).toHaveAttribute('open', '');
+      await touchTap(page, moreSheet.getByRole('link', { name: 'Inbox', exact: true }));
+      await expect(page.locator('[data-route-kind="operate.inbox"]')).toBeVisible();
+      await expect(moreSheet).not.toHaveAttribute('open', '');
+
+      await touchTap(page, more);
       await expect(moreSheet).toHaveAttribute('open', '');
       await touchTap(page, moreSheet.getByRole('link', { name: 'Evidence' }));
       await expect(page.locator('[data-route-kind="operate.evidence"]')).toBeVisible();
       await expect(moreSheet).not.toHaveAttribute('open', '');
 
-      await touchTap(page, mobileNavigation.getByRole('link', { name: 'Planning' }));
+      await touchTap(page, mobileNavigation.getByRole('link', { name: 'Home', exact: true }));
       await expect(page.locator('[data-route-kind="planning.overview"]')).toBeVisible();
       const planningNavigation = page.getByRole('navigation', {
         name: 'Mobile Planning navigation',
@@ -1111,12 +3769,16 @@ test.describe('dashboard real-browser quality', () => {
     }
   });
 
-  test('keeps compact-rail destinations legible at tablet widths', async ({ page }) => {
-    for (const width of [801, 1024, 1120]) {
+  test('keeps desktop-rail destinations legible at tablet widths', async ({ page }) => {
+    for (const width of [900, 1024, 1120]) {
       await page.setViewportSize({ width, height: 768 });
       await openFixture(page, '#/operate/today');
 
       const navigation = page.getByRole('navigation', { name: 'Dashboard navigation' });
+      await expect(navigation).toBeVisible();
+      await expect(
+        page.getByRole('navigation', { name: 'Mobile Operate navigation' }),
+      ).not.toBeVisible();
       const labels = await navigation
         .locator('.pc-rail__item > span:last-child')
         .evaluateAll((elements) =>
@@ -1131,7 +3793,15 @@ test.describe('dashboard real-browser quality', () => {
           }),
         );
 
+      // Expanded navigation keeps both product groups available (M2).
       expect(labels.map(({ text }) => text)).toEqual([
+        'Home',
+        'List',
+        'Graph',
+        'Board',
+        'Sprints',
+        'Activity',
+        'Search',
         'Today',
         'Inbox',
         'Actions',
@@ -1152,6 +3822,48 @@ test.describe('dashboard real-browser quality', () => {
     }
   });
 
+  test('exposes every omitted destination in the mobile menu below the desktop breakpoint', async ({
+    page,
+  }) => {
+    for (const width of [801, 899]) {
+      await page.setViewportSize({ width, height: 768 });
+      await openFixture(page, '#/operate/today');
+      await expect(
+        page.getByRole('navigation', { name: 'Dashboard navigation' }),
+      ).not.toBeVisible();
+      const navigation = page.getByRole('navigation', { name: 'Mobile Operate navigation' });
+      await expect(navigation).toBeVisible();
+      expect(await navigation.getByRole('link').allTextContents()).toEqual([
+        'Home',
+        'List',
+        'Activity',
+        'Operate',
+      ]);
+      await navigation.locator('summary[aria-label="More Operate destinations"]').click();
+      const more = navigation.locator('details.pc-mobile-more');
+      await expect(more).toHaveAttribute('open', '');
+      expect(await more.getByRole('link').allTextContents()).toEqual([
+        'Graph',
+        'Board',
+        'Sprints',
+        'Search',
+        'Inbox',
+        'Actions',
+        'Cycles',
+        'Evidence',
+        'Outcomes',
+        'History',
+        'Recovery',
+        'Console',
+        'Diagnostics',
+      ]);
+      await more.getByRole('link', { name: 'Inbox', exact: true }).click();
+      await expect(page.locator('[data-route-kind="operate.inbox"]')).toBeVisible();
+      await expect(more).not.toHaveAttribute('open', '');
+      expect((await layoutReport(page)).horizontalOverflow).toBe(false);
+    }
+  });
+
   test('uses a concise visible live status at responsive widths', async ({ page }) => {
     for (const width of [1120, 1024, 801, 800, 768, 480, 390, 320]) {
       await page.setViewportSize({ width, height: 768 });
@@ -1159,20 +3871,22 @@ test.describe('dashboard real-browser quality', () => {
 
       const status = page.getByRole('status', { name: 'watcher connected' });
       await expect(status).toBeVisible();
-      await expect(status.locator('.pc-watcher__label')).toHaveText('watcher connected');
+      // The mobile live pill uses its concise label (M3).
+      await expect(status.locator('.pc-watcher__label')).toHaveCount(1);
+      await expect(status.locator('.pc-watcher__label')).toBeVisible();
+      await expect(status.locator('.pc-watcher__label')).toHaveText(
+        width < 900 ? 'Live' : 'watcher connected',
+      );
       expect((await status.boundingBox())?.width ?? 0).toBeGreaterThan(0);
     }
   });
 
-  test('keeps the minimum-width Today heading and current lifecycle state clear of bottom navigation', async ({
-    page,
-  }) => {
+  test('keeps the minimum-width Today heading clear of bottom navigation', async ({ page }) => {
     await page.setViewportSize({ width: 320, height: 568 });
     await openFixture(page, '#/operate/today');
 
     const navigation = page.getByRole('navigation', { name: 'Mobile Operate navigation' });
     const title = page.getByRole('heading', { name: 'Confirm appointment reminders are arriving' });
-    const currentStage = page.locator('.op-cycle-spine li[aria-current="step"]');
     const [navigationBox, titleBox] = await Promise.all([
       navigation.boundingBox(),
       title.boundingBox(),
@@ -1186,22 +3900,7 @@ test.describe('dashboard real-browser quality', () => {
     expect((titleBox?.y ?? Number.POSITIVE_INFINITY) + (titleBox?.height ?? 0)).toBeLessThanOrEqual(
       navigationBox?.y ?? Number.NEGATIVE_INFINITY,
     );
-
-    await currentStage.scrollIntoViewIfNeeded();
-    const [headerBox, currentStageBox, currentNavigationBox] = await Promise.all([
-      page.locator('.pc-topbar').boundingBox(),
-      currentStage.boundingBox(),
-      navigation.boundingBox(),
-    ]);
-    expect(headerBox).not.toBeNull();
-    expect(currentStageBox).not.toBeNull();
-    expect(currentNavigationBox).not.toBeNull();
-    expect(currentStageBox?.y ?? Number.NEGATIVE_INFINITY).toBeGreaterThanOrEqual(
-      (headerBox?.y ?? 0) + (headerBox?.height ?? 0),
-    );
-    expect(
-      (currentStageBox?.y ?? Number.POSITIVE_INFINITY) + (currentStageBox?.height ?? 0),
-    ).toBeLessThanOrEqual(currentNavigationBox?.y ?? Number.NEGATIVE_INFINITY);
+    await expect(page.locator('.op-cycle-spine')).toHaveCount(0);
   });
 
   for (const viewport of VIEWPORTS) {
@@ -1283,7 +3982,10 @@ test.describe('dashboard real-browser quality', () => {
   }) => {
     const hostile = '<img src=x onerror="window.__fixtureXssFired=1"> Fixture';
     await openFixture(page, '#/overview', { project: hostile });
-    await expect(page.locator('.pc-topbar__crumb').first()).toHaveText(hostile);
+    // The breadcrumb displays Plan; project identity remains in its escaped title (T6).
+    const identity = page.locator('.pc-topbar__crumb').first();
+    await expect(identity).toHaveText('Plan');
+    await expect(identity).toHaveAttribute('title', hostile);
     expect(await page.locator('img[src="x"]').count()).toBe(0);
     expect(
       await page.evaluate(() =>

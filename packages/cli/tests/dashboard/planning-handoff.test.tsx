@@ -14,6 +14,7 @@ import {
   callablePlanningTraceHref,
   normalizePlanningDeliveryTrace,
 } from '../../../../apps/dashboard/src/features/planning/planning-trace-model.js';
+import { nameFailures } from './control-name-guard.js';
 import {
   createPlanningHandoffModelFixture,
   isExactPlanningSpecPreview,
@@ -205,6 +206,7 @@ describe('planning handoff UI', () => {
       'The canonical SPEC preview is current for these exact human-owned framing fields.',
     );
     fireEvent.click(screen.getByRole('button', { name: 'Create SPEC draft' }));
+    expect(await nameFailures(screen.getByRole('dialog'))).toEqual([]);
     fireEvent.click(screen.getByRole('button', { name: 'Confirm Create SPEC draft' }));
     expect(createSpec).toHaveBeenCalledWith('oprop_planning_release_0001', HASH_C);
     await screen.findByText(/SPEC-042 is durable with status shaping/u);

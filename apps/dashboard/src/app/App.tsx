@@ -8,6 +8,7 @@ import {
 } from '../features/diagnostics/compatibility-model.js';
 import { UnifiedShell } from '../features/shell/UnifiedShell.js';
 import { type DashboardBootstrap, loadDashboardBootstrapEnvelope } from '../lib/api/bootstrap.js';
+import { createBrowserShellAdapters } from './browser-preferences.js';
 import type { DashboardBootPhase, DashboardConnection, DashboardIdentity } from './providers.js';
 import { DashboardProviders } from './providers.js';
 import {
@@ -25,6 +26,7 @@ export type AppProps = {
   bootstrap?: DashboardBootstrap | null;
   bootPhase?: DashboardBootPhase;
   bootDetail?: string | null;
+  fontLoadFailed?: boolean;
 };
 
 function currentHash(initialHash?: string): string {
@@ -47,12 +49,14 @@ export function App({
   bootstrap: bootstrapOverride,
   bootPhase: bootPhaseOverride,
   bootDetail: bootDetailOverride,
+  fontLoadFailed = false,
 }: AppProps) {
   const hash = useSyncExternalStore(
     (onChange) => subscribeToHashChange(initialHash, onChange),
     () => currentHash(initialHash),
     () => currentHash(initialHash),
   );
+  const [shellAdapters] = useState(createBrowserShellAdapters);
   const managedBootstrap = bootstrapOverride === undefined && connectionOverride === undefined;
   const [bootstrap, setBootstrap] = useState<DashboardBootstrap | null>(bootstrapOverride ?? null);
   const [bootPhase, setBootPhase] = useState<DashboardBootPhase>(
@@ -109,13 +113,14 @@ export function App({
       binding={runtime.binding}
       projection={runtime.projection}
       planningProjection={runtime.planningProjection}
+      planningLive={runtime.planningLive}
       operateCyclesProjection={runtime.operateCyclesProjection}
       operateSearchBindings={runtime.operateSearchBindings}
       operateReviewNavigation={runtime.operateReviewNavigation}
       refetchCurrent={runtime.refetchCurrent}
     >
       <RouteAnnouncer />
-      <UnifiedShell />
+      <UnifiedShell fontLoadFailed={fontLoadFailed} adapters={shellAdapters} />
     </DashboardProviders>
   );
 }

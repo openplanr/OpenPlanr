@@ -1,0 +1,5 @@
+---
+"openplanr": patch
+---
+
+Give the dashboard Sprints page a new desktop layout. The active sprint gets one card: its ID, title, dates and current day, then its goal, done count and capacity when the sprint file sets them, and a status bar split into done, in progress, outstanding and blocked, ending at the release cut. Tabs filter the sprint's items to Open, Blocked, Done or All. Each row shows the item's status and priority, and its last column says what blocks it, that it was carried over from an earlier sprint, or how long ago it was updated. Select a row to see its command and press C to copy it. The timeline lists sprints in the order they started, with each bar filled by the share that is done, a diamond at the release cut and a line for today. Closed sprints show as cards with their done and carried-over counts. When no sprint is running, one panel names the last closed sprint and copies `/planr:sprint`. The carry-over, unresolved and per-sprint commitment lists and the operating review panel are gone: a sprint's items are on its Detail page, broken references are in Data Health, and the review is on Operate Today.

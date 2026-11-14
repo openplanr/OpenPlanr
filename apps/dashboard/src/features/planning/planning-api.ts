@@ -8,6 +8,17 @@
  */
 
 import { deepFreeze, sha256Jcs } from '@openplanr/protocol/canonical-json';
+import {
+  assertPlanningDiagnosticsEnvelope,
+  PLANNING_DIAGNOSTICS_MAX_BYTES,
+  type PlanningDiagnosticsEnvelope,
+} from '@openplanr/protocol/dashboard/planning-diagnostics-contracts.mjs';
+import {
+  assertPlanningFileLinkEnvelope,
+  PLANNING_FILE_LINK_MAX_BYTES,
+  type PlanningFileLinkEnvelope,
+  validPlanningFilePath,
+} from '@openplanr/protocol/dashboard/planning-file-link-contracts.mjs';
 import { DashboardValidationError } from '../../lib/api/validation.js';
 import type {
   DashboardEventHead,
@@ -682,10 +693,29 @@ function equalNodeSummary(detail: PlanningNode, summary: PlanningNode): boolean 
   return sha256Jcs(withoutBody as never) === sha256Jcs(summary as never);
 }
 
+function planningReadNodeId(
+  identity: DashboardQueryIdentity,
+  snapshot: PlanningGraphEnvelope,
+  selectedNodeId?: string,
+): string {
+  const routed =
+    identity.subjectId === null ? null : planningNodeIdFromRouteSubject(identity.subjectId);
+  const selected = selectedNodeId ?? routed;
+  if (
+    !selected ||
+    (identity.subjectId !== null && routed !== selected) ||
+    !sameBinding(snapshot.binding, identity) ||
+    !snapshot.graph.nodes.some((entry) => entry.id === selected)
+  )
+    return invalid('$', 'The selected artifact does not belong to this Planning read');
+  return selected;
+}
+
 export function parsePlanningDetailEnvelope(
   value: unknown,
   identity: DashboardQueryIdentity,
   snapshot: PlanningGraphEnvelope,
+  selectedNodeId?: string,
 ): PlanningDetailEnvelope {
   const record = exactRecord(
     value,
@@ -698,8 +728,7 @@ export function parsePlanningDetailEnvelope(
   const acceptedBinding = requireBinding(record.binding, identity);
   const acceptedCursor = cursor(record.cursor, '$.cursor');
   const subjectId = subject(record.subjectId, '$.subjectId');
-  const expectedNodeId =
-    identity.subjectId === null ? null : planningNodeIdFromRouteSubject(identity.subjectId);
+  const expectedNodeId = planningReadNodeId(identity, snapshot, selectedNodeId);
   const acceptedNode = node(record.node, '$.node', true);
   const nodeHash = exactString(record.nodeHash, '$.nodeHash', HASH);
   const summary = snapshot.graph.nodes.find((entry) => entry.id === subjectId);
@@ -729,8 +758,9 @@ export function parsePlanningDetailJson(
   text: string,
   identity: DashboardQueryIdentity,
   snapshot: PlanningGraphEnvelope,
+  selectedNodeId?: string,
 ): PlanningDetailEnvelope {
-  return parsePlanningDetailEnvelope(parseWireJson(text), identity, snapshot);
+  return parsePlanningDetailEnvelope(parseWireJson(text), identity, snapshot, selectedNodeId);
 }
 
 function patchSignal(value: unknown, expectedCursor: PlanningCursor): PlanningPatchSignal {
@@ -1128,13 +1158,12 @@ export async function fetchPlanningDetail(
     origin: string;
     identity: DashboardQueryIdentity;
     snapshot: PlanningGraphEnvelope;
+    nodeId?: string;
     signal?: AbortSignal;
     fetcher?: typeof fetch;
   }>,
 ): Promise<PlanningDetailEnvelope> {
-  if (!options.identity.subjectId) return invalid('$.identity.subjectId', 'is required');
-  const nodeId = planningNodeIdFromRouteSubject(options.identity.subjectId);
-  if (!nodeId) return invalid('$.identity.subjectId', 'is not a canonical Planning subject');
+  const nodeId = planningReadNodeId(options.identity, options.snapshot, options.nodeId);
   const url = planningUrl(
     options.origin,
     `/api/planning/detail/${encodeURIComponent(nodeId)}`,
@@ -1149,6 +1178,123 @@ export async function fetchPlanningDetail(
     await readResponse(response, 'application/json'),
     options.identity,
     options.snapshot,
+    nodeId,
+  );
+}
+
+export function parsePlanningDiagnosticsJson(
+  text: string,
+  identity: DashboardQueryIdentity,
+  snapshot: PlanningGraphEnvelope,
+): PlanningDiagnosticsEnvelope {
+  if (
+    !sameBinding(snapshot.binding, identity) ||
+    new TextEncoder().encode(text).byteLength > PLANNING_DIAGNOSTICS_MAX_BYTES
+  )
+    return invalid('$', 'Diagnostics do not belong to this Planning read');
+  try {
+    return assertPlanningDiagnosticsEnvelope(parseWireJson(text), {
+      binding: snapshot.binding,
+      cursor: snapshot.cursor,
+    });
+  } catch {
+    return invalid('$', 'Planning diagnostics could not be verified');
+  }
+}
+
+export async function fetchPlanningDiagnostics(
+  options: Readonly<{
+    origin: string;
+    identity: DashboardQueryIdentity;
+    snapshot: PlanningGraphEnvelope;
+    signal?: AbortSignal;
+    fetcher?: typeof fetch;
+  }>,
+): Promise<PlanningDiagnosticsEnvelope> {
+  if (!sameBinding(options.snapshot.binding, options.identity))
+    return invalid('$', 'A current Planning graph is required');
+  const url = planningUrl(options.origin, '/api/planning/diagnostics', options.identity);
+  url.searchParams.set('sourceViewHash', options.snapshot.cursor.viewHash);
+  const response = await (options.fetcher ?? fetch)(url, {
+    method: 'GET',
+    headers: { accept: 'application/json', 'x-openplanr-actor': options.identity.actorId },
+    cache: 'no-store',
+    signal: options.signal,
+  });
+  return parsePlanningDiagnosticsJson(
+    await readResponse(response, 'application/json'),
+    options.identity,
+    options.snapshot,
+  );
+}
+
+export function parsePlanningFileLinkJson(
+  text: string,
+  identity: DashboardQueryIdentity,
+  snapshot: PlanningGraphEnvelope,
+  path: string,
+  selectedNodeId?: string,
+): PlanningFileLinkEnvelope {
+  const nodeId = planningReadNodeId(identity, snapshot, selectedNodeId);
+  if (
+    !nodeId ||
+    !sameBinding(snapshot.binding, identity) ||
+    !snapshot.graph.nodes.some((entry) => entry.id === nodeId) ||
+    !validPlanningFilePath(path) ||
+    new TextEncoder().encode(text).byteLength > PLANNING_FILE_LINK_MAX_BYTES
+  )
+    return invalid('$', 'File link does not belong to this Planning read');
+  try {
+    return assertPlanningFileLinkEnvelope(parseWireJson(text), {
+      binding: snapshot.binding,
+      cursor: snapshot.cursor,
+      nodeId,
+      path,
+    });
+  } catch {
+    return invalid('$', 'Planning file link could not be verified');
+  }
+}
+
+export async function fetchPlanningFileLink(
+  options: Readonly<{
+    origin: string;
+    identity: DashboardQueryIdentity;
+    snapshot: PlanningGraphEnvelope;
+    path: string;
+    nodeId?: string;
+    signal?: AbortSignal;
+    fetcher?: typeof fetch;
+  }>,
+): Promise<PlanningFileLinkEnvelope> {
+  const nodeId = planningReadNodeId(options.identity, options.snapshot, options.nodeId);
+  if (
+    !nodeId ||
+    !sameBinding(options.snapshot.binding, options.identity) ||
+    !options.snapshot.graph.nodes.some((entry) => entry.id === nodeId) ||
+    !validPlanningFilePath(options.path) ||
+    encodeURIComponent(options.path).length > 1024
+  )
+    return invalid('$', 'A current item and repository-relative file path are required');
+  const url = planningUrl(
+    options.origin,
+    `/api/planning/file-link/${encodeURIComponent(nodeId)}`,
+    options.identity,
+  );
+  url.searchParams.set('file', options.path);
+  url.searchParams.set('sourceViewHash', options.snapshot.cursor.viewHash);
+  const response = await (options.fetcher ?? fetch)(url, {
+    method: 'GET',
+    headers: { accept: 'application/json', 'x-openplanr-actor': options.identity.actorId },
+    cache: 'no-store',
+    signal: options.signal,
+  });
+  return parsePlanningFileLinkJson(
+    await readResponse(response, 'application/json'),
+    options.identity,
+    options.snapshot,
+    options.path,
+    nodeId,
   );
 }
 

@@ -47,9 +47,10 @@ test('the dashboard entry never loads the package root', () => {
 
 test('the package root never loads the dashboard server', () => {
   const graph = staticImportGraph('lib/pipeline/index.mjs');
-  // The engine and the operating-origin reader parse planning files with these two modules.
+  // Pure planning reads remain available without loading the dashboard server.
   assert.deepEqual(graph.filter((file) => file.startsWith('lib/dashboard/')).sort(), [
     'lib/dashboard/graph-engine.mjs',
+    'lib/dashboard/graph-read-model.mjs',
     'lib/dashboard/graph-reader.mjs',
   ]);
 });

@@ -1,7 +1,10 @@
 import {
   Absent,
+  ArtifactRowMeta,
   ArtifactStatus,
+  ArtifactTag,
   type DataTableColumn,
+  PriorityChip,
   WorkItemChip,
 } from '../../design-system/components/index.js';
 import {
@@ -9,6 +12,8 @@ import {
   type PlanningModelNode,
   planningDisplayId,
 } from './planning-model.js';
+
+import { authoredTimestamp, planningLabels } from './presentation-view.js';
 
 /* Column recipes shared by the planning tables. Every cell renders a real field or Absent. */
 
@@ -112,3 +117,104 @@ export function dependencyCountColumn(
     },
   });
 }
+
+const LIST_LABELS_SHOWN = 2;
+
+const TAG_TYPES = {
+  spec: 'spec',
+  story: 'us',
+  task: 't',
+  backlog: 'bl',
+  adr: 'adr',
+  epic: 'epic',
+  feature: 'epic',
+  sprint: 'sprint',
+  quick: 'qt',
+} as const;
+
+export const LIST_COLUMNS: readonly Column[] = [
+  {
+    key: 'id',
+    label: 'ID',
+    width: 112,
+    sortable: true,
+    render: (node) => (
+      <ArtifactTag type={TAG_TYPES[node.type]}>{planningDisplayId(node)}</ArtifactTag>
+    ),
+  },
+  {
+    key: 'title',
+    label: 'Title',
+    sortable: true,
+    render: (node) => (
+      <span className="pc-list__title" title={node.title}>
+        {node.title}
+      </span>
+    ),
+  },
+  {
+    ...STATUS_COLUMN,
+    width: 132,
+    sortable: true,
+    render: (node) => <ArtifactStatus status={node.status} variant="legend" />,
+  },
+  {
+    key: 'priority',
+    label: 'Priority',
+    width: 96,
+    sortable: true,
+    render: (node) => (
+      <PriorityChip priority={frontmatterString(node, 'priority') ?? undefined} variant="text" />
+    ),
+  },
+  {
+    key: 'labels',
+    label: 'Labels',
+    width: 200,
+    render: (node) => {
+      const labels = planningLabels(node);
+      const hidden = labels.slice(LIST_LABELS_SHOWN);
+      return (
+        <span className="pc-list__labels">
+          {labels.slice(0, LIST_LABELS_SHOWN).map((label) => (
+            <span key={label} title={label}>
+              {label}
+            </span>
+          ))}
+          {hidden.length ? (
+            <span className="pc-list__labels-more" title={hidden.join(', ')}>
+              +{hidden.length}
+            </span>
+          ) : null}
+        </span>
+      );
+    },
+  },
+  {
+    ...UPDATED_COLUMN,
+    width: 88,
+    sortable: true,
+    render: (node) => {
+      const timestamp = authoredTimestamp(node.frontmatter.updated);
+      if (timestamp === null) return null;
+      const date = new Date(timestamp);
+      return (
+        <ArtifactRowMeta label={`Updated ${date.toISOString().slice(0, 10)}`}>
+          {date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', timeZone: 'UTC' })}
+        </ArtifactRowMeta>
+      );
+    },
+  },
+];
+
+const NARROW_WIDTHS: Readonly<Record<string, number | undefined>> = {
+  id: 80,
+  title: undefined,
+  status: 120,
+  updated: 64,
+};
+
+/** Tablet and phone columns: ID, title, status and updated, without sorting. */
+export const LIST_NARROW_COLUMNS: readonly Column[] = LIST_COLUMNS.filter(
+  (column) => column.key in NARROW_WIDTHS,
+).map((column) => ({ ...column, width: NARROW_WIDTHS[column.key], sortable: false }));

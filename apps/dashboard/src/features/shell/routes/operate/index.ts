@@ -15,4 +15,5 @@ export const operateRouteRegistry = Object.freeze({
   today: todayRoute,
 });
 
+export { CouldNotRead } from '../../../operate/today/TodayStates.js';
 export type { OperateReviewNavigation } from './review.js';

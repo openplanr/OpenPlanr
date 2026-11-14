@@ -79,6 +79,36 @@
       "mode": "644"
     },
     {
+      "source": "packages/protocol/lib/dashboard/planning-attention.d.mts",
+      "target": "lib/dashboard/planning-attention.d.mts",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/lib/dashboard/planning-attention.mjs",
+      "target": "lib/dashboard/planning-attention.mjs",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/lib/dashboard/planning-diagnostics-contracts.d.mts",
+      "target": "lib/dashboard/planning-diagnostics-contracts.d.mts",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/lib/dashboard/planning-diagnostics-contracts.mjs",
+      "target": "lib/dashboard/planning-diagnostics-contracts.mjs",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/lib/dashboard/planning-file-link-contracts.d.mts",
+      "target": "lib/dashboard/planning-file-link-contracts.d.mts",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/lib/dashboard/planning-file-link-contracts.mjs",
+      "target": "lib/dashboard/planning-file-link-contracts.mjs",
+      "mode": "644"
+    },
+    {
       "source": "packages/protocol/projections/pipeline/lib/protocol/bounded-json-data.d.mts",
       "target": "lib/protocol/bounded-json-data.d.mts",
       "mode": "644"

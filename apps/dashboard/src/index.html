@@ -4,6 +4,17 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>OpenPlanr</title>
+    <script>
+      document.documentElement.setAttribute('data-theme', 'dark');
+      try {
+        const theme = localStorage.getItem('op-theme');
+        if (theme === 'light' || theme === 'dark' || theme === 'system') {
+          document.documentElement.setAttribute('data-theme', theme);
+        }
+      } catch {
+        document.documentElement.setAttribute('data-theme-storage-error', 'unavailable');
+      }
+    </script>
   </head>
   <body>
     <div id="root"></div>

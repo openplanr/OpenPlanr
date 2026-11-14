@@ -403,7 +403,7 @@ describe('complete dashboard query identity', () => {
     const hostile = createDashboardQueryIdentity({
       ...identity(),
       [field]: replacement,
-      ...(field === 'productArea' ? { route: '#/overview', subjectId: null } : {}),
+      ...(field === 'productArea' ? { route: '#/home', subjectId: null } : {}),
       ...(field === 'route' ? { subjectId: 'action-2' } : {}),
       ...(field === 'subjectId' ? { route: '#/operate/actions/action-foreign' } : {}),
     });
