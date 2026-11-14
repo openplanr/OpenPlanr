@@ -88,12 +88,17 @@ jobs:
           retention-days: 14
 
   dashboard:
-    name: Dashboard Chromium
+    name: Dashboard Chromium ${{ matrix.shard }}/3
     needs: changes
     if: needs.changes.outputs.dashboard == 'true'
     runs-on: ubuntu-24.04
     container: mcr.microsoft.com/playwright:v1.64.1-noble
-    timeout-minutes: 25
+    timeout-minutes: 12
+    # Every shard reports its own failures and diagnostics.
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       # The workspace belongs to the runner user and the container runs as root.
@@ -108,18 +113,19 @@ jobs:
       - name: Generate workspace package assets
         run: npm run generate
       - name: Run the dashboard brand and shared-pattern browser tests
+        if: matrix.shard == 1
         run: npm run test:brand:browser --workspace=@openplanr/dashboard-app
-      # A step timeout fails the step, so the diagnostics upload below still runs.
+      # The suite is one file, so shards split by test; a step timeout still uploads diagnostics.
       - name: Run dashboard browser verification against local workspace packages
-        timeout-minutes: 20
-        run: npm run test:browser --workspace=openplanr -- --grep-invert=performance
+        timeout-minutes: 8
+        run: npm run test:browser --workspace=openplanr -- --grep-invert=performance --fully-parallel --shard=${{ matrix.shard }}/3
         env:
           CI: 'true'
       - name: Preserve browser diagnostics on failure
         if: failure()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: dashboard-browser-diagnostics
+          name: dashboard-browser-diagnostics-${{ matrix.shard }}
           path: packages/cli/test-results/
           if-no-files-found: ignore
           retention-days: 14
