@@ -357,6 +357,8 @@ async function expectSurfaceToUseRouteFrame(page: Page, selector: string) {
 test.describe('dashboard real-browser quality', () => {
   test('mounts the exact fixture state on every typed public route', async ({ page }, testInfo) => {
     test.setTimeout(90_000);
+    // Home shows today's date, so its golden needs a fixed clock.
+    await page.clock.setFixedTime(new Date(SPRINT_SCENARIO_NOW));
     for (const fixture of DASHBOARD_ROUTE_FIXTURES) {
       const { hash: route } = fixture;
       await openFixture(page, route);
@@ -1409,6 +1411,7 @@ test.describe('dashboard real-browser quality', () => {
   test('keeps Planning Home bounded and decision-focused through the Overview alias', async ({
     page,
   }) => {
+    await page.clock.setFixedTime(new Date(SPRINT_SCENARIO_NOW));
     await page.setViewportSize({ width: 1440, height: 900 });
     await openFixture(page, '#/overview');
 
