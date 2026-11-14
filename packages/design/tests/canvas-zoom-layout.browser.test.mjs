@@ -70,6 +70,8 @@ async function forcedZoomLayouts({ minimap, zoom }) {
     const box = await page.locator('.planr-stage-scroll').boundingBox();
     const center = { x: Math.round(box.x + box.width / 2), y: Math.round(box.y + box.height / 2) };
     await page.mouse.move(center.x, center.y);
+    // The sandbox frame guard reports its size 80 ms after a resize; let a pending report land first.
+    await page.evaluate(() => new Promise((resolve) => setTimeout(resolve, 160)));
     const cdp = await page.context().newCDPSession(page);
     const { frameTree } = await cdp.send('Page.getFrameTree');
     await cdp.send('Tracing.start', {
