@@ -169,11 +169,7 @@ function sessionRow(
   return { ...base, kind: 'edited', ...editedChange(entry.fields, node), status: null };
 }
 
-function historyRow(node: PlanningModelNode, today: string): ActivityRow | null {
-  const created = authoredDay(node.frontmatter.created);
-  const day = authoredDay(node.frontmatter.updated) ?? created;
-  if (!day || day > today) return null;
-  const kind = created === day ? 'created' : 'edited';
+function historyRow(node: PlanningModelNode, kind: 'created' | 'edited', day: string): ActivityRow {
   return {
     key: `authored:${node.id}:${day}`,
     kind,
@@ -187,6 +183,17 @@ function historyRow(node: PlanningModelNode, today: string): ActivityRow | null 
     session: false,
     spec: planningSpecOf(node),
   };
+}
+
+/** Created on the created day and Edited on a later updated day; an update before creation is ignored. */
+function historyRows(node: PlanningModelNode, today: string): ActivityRow[] {
+  const created = authoredDay(node.frontmatter.created);
+  const updated = authoredDay(node.frontmatter.updated);
+  const rows: ActivityRow[] = [];
+  if (created && created <= today) rows.push(historyRow(node, 'created', created));
+  if (updated && updated <= today && (!created || updated > created))
+    rows.push(historyRow(node, 'edited', updated));
+  return rows;
 }
 
 function specTitles(nodes: readonly PlanningModelNode[]) {
@@ -224,13 +231,12 @@ export function activityModel(
   const history: ActivityRow[] = [];
   let last: { id: string; day: string } | null = null;
   let oldest: string | null = null;
-  for (const node of nodes) {
-    const row = historyRow(node, today);
-    if (!row) continue;
-    if (!last || row.day > last.day) last = { id: planningDisplayId(node), day: row.day };
-    if (!oldest || row.day < oldest) oldest = row.day;
-    if (!sessionDays.has(`${node.id}:${row.day}`)) history.push(row);
-  }
+  for (const node of nodes)
+    for (const row of historyRows(node, today)) {
+      if (!last || row.day > last.day) last = { id: planningDisplayId(node), day: row.day };
+      if (!oldest || row.day < oldest) oldest = row.day;
+      if (!sessionDays.has(`${node.id}:${row.day}`)) history.push(row);
+    }
   const reach = Math.max(filters.days, CHART_DAYS);
   const start = shiftDay(today, -(filters.days - 1));
   const chartStart = shiftDay(today, -(CHART_DAYS - 1));

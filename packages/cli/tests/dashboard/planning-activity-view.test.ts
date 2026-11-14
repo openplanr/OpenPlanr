@@ -72,6 +72,59 @@ describe('Activity view model', () => {
     expect(model.last).toEqual({ id: 'T-1', day: '2026-10-22' });
   });
 
+  it('shows Created on the created day and Edited on a later updated day, never Edited before Created', () => {
+    const model = activityModel(
+      [
+        node('SPEC-1/T-1', { created: '2026-10-20', updated: '2026-10-22' }),
+        node('SPEC-2/T-2', { created: '2026-10-22', updated: '2026-10-22' }),
+        node('SPEC-1/T-3', { created: '2026-10-22', updated: '2026-10-20' }),
+      ],
+      [],
+      all,
+      now,
+    );
+    expect(
+      model.days.map((day) => [day.label, day.rows.map((row) => [row.node.id, row.kind, row.key])]),
+    ).toEqual([
+      [
+        'Yesterday · Thu 22 Oct',
+        [
+          ['SPEC-1/T-1', 'edited', 'authored:SPEC-1/T-1:2026-10-22'],
+          ['SPEC-2/T-2', 'created', 'authored:SPEC-2/T-2:2026-10-22'],
+          ['SPEC-1/T-3', 'created', 'authored:SPEC-1/T-3:2026-10-22'],
+        ],
+      ],
+      ['Tue 20 Oct', [['SPEC-1/T-1', 'created', 'authored:SPEC-1/T-1:2026-10-20']]],
+    ]);
+    expect(model.total).toBe(4);
+    expect(model.counts).toEqual({ all: 4, created: 3, status: 0, edited: 1, removed: 0 });
+    expect(model.chart.filter((bar) => bar.count > 0)).toEqual([
+      { day: '2026-10-20', count: 1, today: false },
+      { day: '2026-10-22', count: 3, today: false },
+    ]);
+    expect(model.busiest.map((spec) => [spec.spec, spec.count])).toEqual([
+      ['SPEC-1', 3],
+      ['SPEC-2', 1],
+    ]);
+    expect(model.last).toEqual({ id: 'T-1', day: '2026-10-22' });
+  });
+
+  it('lets a session row hide only the history row of its own day', () => {
+    const task = node('SPEC-1/T-1', { created: '2026-10-20', updated: '2026-10-23' });
+    const model = activityModel(
+      [task],
+      [entry('a', 'updated', task, { fields: ['title'] })],
+      all,
+      now,
+    );
+    expect(
+      model.days.map((day) => [day.label, day.rows.map((row) => [row.kind, row.session])]),
+    ).toEqual([
+      ['Today · Fri 23 Oct', [['edited', true]]],
+      ['Tue 20 Oct', [['created', false]]],
+    ]);
+  });
+
   it('turns session patches into status, field, creation and removal rows without a duplicate history row', () => {
     const blocked = node('SPEC-1/T-1', { updated: '2026-10-23' }, { status: 'blocked' });
     const priority = node('SPEC-2/T-2', { updated: '2026-10-23', priority: 'medium' });
