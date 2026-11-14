@@ -2518,6 +2518,22 @@ test.describe('dashboard real-browser quality', () => {
       await expect(activity.locator('.pc-activity__live-row')).toHaveCount(3);
       for (const row of activityParityRows.filter((entry) => entry.setup === 'activity'))
         results.push(...(await assertParityRow(page, row, theme)));
+      // The patches add no item, so every Created row in the feed comes from authored history.
+      const created = activity.locator('.pc-activity__feed .pc-activity__row[data-kind="created"]');
+      for (const change of ['Created', 'Added to backlog']) {
+        const row = created.filter({
+          has: page.locator('.pc-activity__change', { hasText: new RegExp(`^${change}$`, 'u') }),
+        });
+        expect(await row.count(), `Created history row "${change}"`).toBeGreaterThan(0);
+        await expect(row.first().locator('.pc-activity__time')).toHaveText('');
+        await expect(row.first().locator('.pc-activity__kind .pc-icon')).toHaveAttribute(
+          'data-icon',
+          'plus',
+        );
+        await expect(row.first().locator('a.pc-activity__cells')).toHaveAccessibleName(
+          /^Created\b/u,
+        );
+      }
       const text = await page.locator('#main-content').innerText();
       for (const word of banned) expect(text, `S-21 ${word}`).not.toContain(word);
       expect(text, 'S-21 none').not.toMatch(/\bnone\b/u);
