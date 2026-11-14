@@ -3466,14 +3466,14 @@ test.describe('dashboard real-browser quality', () => {
     expect(selected?.text).toBe('Connect Plan Ship company sync and release proof');
     expect(selected?.inputFocused).toBe(true);
     await page.keyboard.press('Control+C');
-    // Chromium's own copy acts on the focused input's empty selection, so the clipboard keeps its value.
+    // Ctrl+C is not a copy shortcut on macOS; elsewhere Chromium copies the document selection.
     const clipboard = await page.evaluate(async () => {
       for (let frame = 0; frame < 2; frame += 1)
         await new Promise((resolve) => requestAnimationFrame(resolve));
       await new Promise((resolve) => setTimeout(resolve, 200));
       return navigator.clipboard.readText();
     });
-    expect(clipboard).toBe('before');
+    expect(clipboard).toBe(process.platform === 'darwin' ? 'before' : selected?.text);
     await expect(palette.locator('.pc-palette__copy')).toHaveCount(0);
   });
 
