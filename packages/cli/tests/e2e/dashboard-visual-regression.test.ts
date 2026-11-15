@@ -4095,6 +4095,8 @@ test.describe('dashboard real-browser quality', () => {
     for (const viewport of [
       { width: 768, height: 1024 },
       { width: 844, height: 390 },
+      { width: 600, height: 900 },
+      { width: 899, height: 900 },
     ]) {
       await page.setViewportSize(viewport);
       await page.goto(fixtureUrl('#/home', { dataset: 'representative' }));
@@ -4106,19 +4108,20 @@ test.describe('dashboard real-browser quality', () => {
       const report = await page.evaluate(() => {
         const rail = document.querySelector('nav.pc-rail')?.getBoundingClientRect();
         const box = document.querySelector('.pc-selection-bar')?.getBoundingClientRect();
-        if (!rail || !box) throw new Error('Missing rail or selection bar');
+        const status = document.querySelector('.pc-statusbar')?.getBoundingClientRect();
+        if (!rail || !box || !status) throw new Error('Missing rail, selection bar or status bar');
         const hit = document.elementFromPoint(rail.left + rail.width / 2, box.top + box.height / 2);
         return {
           left: box.left,
           railRight: rail.right,
-          bottom: Math.round(window.innerHeight - box.bottom),
+          clearance: Math.round(status.top - box.bottom),
           railOnTop: Boolean(hit?.closest('nav.pc-rail')),
         };
       });
       const context = `${viewport.width}x${viewport.height}`;
       expect(report.left, `bar left of ${context}`).toBeGreaterThanOrEqual(report.railRight);
       expect(report.railOnTop, `rail reachable beside the bar at ${context}`).toBe(true);
-      expect(report.bottom, `bar bottom offset at ${context}`).toBe(24);
+      expect(report.clearance, `bar above the status bar at ${context}`).toBeGreaterThanOrEqual(24);
     }
   });
 
