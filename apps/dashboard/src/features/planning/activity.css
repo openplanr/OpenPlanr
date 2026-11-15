@@ -639,3 +639,11 @@ a.pc-activity__live-title:hover {
     margin: 16px 16px 0;
   }
 }
+
+/* The rail inset at 600-899 is the shell padding alone (console-shell.css). */
+@media (600px <= width < 900px) {
+  .pc-shell .pc-activity {
+    --pc-activity-gutter: 0px;
+    --pc-activity-bleed: 24px;
+  }
+}

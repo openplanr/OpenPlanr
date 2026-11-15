@@ -582,3 +582,9 @@ a.pc-home__change-title:hover,
     padding-inline: 2px;
   }
 }
+
+@media (600px <= width < 900px) {
+  .pc-shell .pc-overview {
+    padding-inline: 0;
+  }
+}

@@ -20,7 +20,7 @@ import {
 } from '../../../design-system/components/index.js';
 import './local-operate-reviews.css';
 import { OperateSetup } from '../OperateSetup.js';
-import { TodayLayout } from '../today/TodayParts.js';
+import { PlaceTabs, TodayLayout } from '../today/TodayParts.js';
 import { CouldNotRead } from '../today/TodayStates.js';
 import { todayViewFromLocalReview } from '../today/today-view.js';
 import '../operate.css';
@@ -1261,6 +1261,7 @@ export function LocalOperateReviews({
     return (
       <div className="pc-shell__scroll">
         <div className="pc-local-review pc-operate" data-route-kind={route.kind}>
+          <PlaceTabs />
           <CouldNotRead title={todayFailure.title} reason={todayFailure.reason} />
         </div>
       </div>
@@ -1270,6 +1271,7 @@ export function LocalOperateReviews({
   return (
     <div className="pc-shell__scroll">
       <div className="pc-local-review pc-operate" data-route-kind={route.kind}>
+        {showSetup ? <PlaceTabs /> : null}
         {!showSetup && !todayReady ? (
           <SectionHeader
             headingLevel={1}

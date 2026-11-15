@@ -274,7 +274,7 @@ function assertLauncherNames(container: HTMLElement, width: number, compact: boo
   );
   expect(buttons.length).toBe(2);
   for (const button of buttons) {
-    if (width < 900 && button.matches('.pc-rail__palette')) {
+    if (width < 600 && button.matches('.pc-rail__palette')) {
       expect(visibleText(button)).toBe('');
       expect(getComputedStyle(button.closest('nav') as HTMLElement).display).toBe('none');
       continue;

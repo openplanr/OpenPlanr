@@ -2335,7 +2335,10 @@ test.describe('dashboard real-browser quality', () => {
         await open({}, theme);
         await expect(today.locator('.pc-operate-today__decision')).toBeVisible();
         await expect(next).toHaveCSS('position', 'static');
-        await expect(next.locator('.op-governed-button')).toHaveCSS('height', '44px');
+        // The button keeps the 44px target and grows when its label wraps.
+        expect((await boxOf(next.locator('.op-governed-button'))).height).toBeGreaterThanOrEqual(
+          44,
+        );
         // With no copy bar, Run a review stays in the header as the way to copy the command.
         const header = today.locator('.pc-operate-today__header');
         await expect(header.locator('.pc-operate-today__command')).toBeVisible();
@@ -3841,10 +3844,10 @@ test.describe('dashboard real-browser quality', () => {
     }
   });
 
-  test('exposes every omitted destination in the mobile menu below the desktop breakpoint', async ({
+  test('exposes every omitted destination in the mobile menu below the tablet breakpoint', async ({
     page,
   }) => {
-    for (const width of [801, 899]) {
+    for (const width of [390, 599]) {
       await page.setViewportSize({ width, height: 768 });
       await openFixture(page, '#/operate/today');
       await expect(
@@ -3880,6 +3883,328 @@ test.describe('dashboard real-browser quality', () => {
       await expect(page.locator('[data-route-kind="operate.inbox"]')).toBeVisible();
       await expect(more).not.toHaveAttribute('open', '');
       expect((await layoutReport(page)).horizontalOverflow).toBe(false);
+    }
+  });
+
+  test('frames every width with the canvas top bar and phone navigation heights', async ({
+    page,
+  }) => {
+    for (const route of ['#/list', '#/operate/today']) {
+      for (const width of [1440, 1024, 768, 390, 320]) {
+        await page.setViewportSize({ width, height: 900 });
+        await openFixture(page, route);
+        const topbar = await page.locator('header.pc-topbar').boundingBox();
+        expect(topbar?.height, `${route} top bar at ${width}`).toBe(57);
+        if (width < 600) {
+          const navigation = await page.locator('.pc-mobile-nav').boundingBox();
+          expect(navigation?.height, `${route} phone navigation at ${width}`).toBe(65);
+        }
+      }
+    }
+  });
+
+  test('keeps the collapsed search shortcut inside its pill beside the place tabs', async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 1280, height: 720 });
+    await openFixture(page, '#/operate/today');
+    await expect(page.locator('.pc-operate-places')).toBeVisible();
+    const palette = page.getByRole('button', { name: 'Jump to a view or an artifact' });
+    await expect(palette).toBeVisible();
+    const outside = await palette.evaluate((pill) => {
+      const frame = pill.getBoundingClientRect();
+      return [...pill.querySelectorAll('*')]
+        .filter((part) => part.getClientRects().length > 0)
+        .map((part) => ({ part: part.className.toString(), box: part.getBoundingClientRect() }))
+        .filter(({ box }) => box.left < frame.left - 0.5 || box.right > frame.right + 0.5)
+        .map(({ part }) => part);
+    });
+    expect(outside).toEqual([]);
+  });
+
+  test('ellipsizes the status bar build id instead of clipping it at the edge', async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 1024, height: 768 });
+    await openFixture(page, '#/operate/today');
+    const report = await page.locator('.pc-statusbar').evaluate((bar) => {
+      const frame = bar.getBoundingClientRect();
+      const inset = parseFloat(getComputedStyle(bar).paddingRight);
+      const text = bar.querySelector('.pc-statusbar__end .pc-statusbar__text');
+      if (!text) throw new Error('Status bar has no build id');
+      const box = text.getBoundingClientRect();
+      return { right: box.right, limit: frame.right - inset, title: text.getAttribute('title') };
+    });
+    expect(report.right).toBeLessThanOrEqual(report.limit + 0.5);
+    expect(report.title).toBe('dashboard-browser-fixture');
+  });
+
+  test('keeps the Today action label in its button and the action id whole on a phone', async ({
+    page,
+  }) => {
+    for (const width of [390, 320]) {
+      await page.setViewportSize({ width, height: 844 });
+      await openFixture(page, '#/operate/today');
+      const button = page.locator('.pc-operate-today__next .op-governed-button').first();
+      await expect(button).toBeVisible();
+      const label = await button.evaluate((element) => {
+        const frame = element.getBoundingClientRect();
+        const range = document.createRange();
+        range.selectNodeContents(element);
+        const lines = [...range.getClientRects()];
+        return {
+          fits: lines.every(
+            (line) => line.top >= frame.top - 0.5 && line.bottom <= frame.bottom + 0.5,
+          ),
+          height: frame.height,
+        };
+      });
+      expect(label.fits, `button label inside its box at ${width}`).toBe(true);
+      expect(label.height).toBeGreaterThanOrEqual(44);
+      const id = await page.locator('.pc-operate-today__id').evaluate((element) => {
+        const range = document.createRange();
+        range.selectNodeContents(element);
+        const tops = new Set([...range.getClientRects()].map((line) => Math.round(line.top)));
+        const card = element.closest('.pc-operate-today__card')?.getBoundingClientRect();
+        const box = element.getBoundingClientRect();
+        return {
+          lines: tops.size,
+          inside: card ? box.right <= card.right + 0.5 && box.bottom <= card.bottom + 0.5 : false,
+        };
+      });
+      expect(id, `action id at ${width}`).toEqual({ lines: 1, inside: true });
+      expect((await layoutReport(page)).horizontalOverflow).toBe(false);
+    }
+  });
+
+  test('shows the compact rail with a More entry between 600 and 899', async ({ page }) => {
+    for (const width of [600, 768, 899]) {
+      await page.setViewportSize({ width, height: 1024 });
+      await openFixture(page, '#/operate/today');
+      const rail = page.getByRole('navigation', { name: 'Dashboard navigation' });
+      await expect(rail).toBeVisible();
+      expect((await rail.boundingBox())?.width, `rail at ${width}`).toBe(64);
+      await expect(page.locator('.pc-mobile-nav')).toBeHidden();
+      await expect(rail.getByRole('button', { name: /Expand navigation/u })).toHaveCount(0);
+      const more = rail.locator('details.pc-mobile-more');
+      await more.locator('summary[aria-label="More Operate destinations"]').click();
+      await expect(more).toHaveAttribute('open', '');
+      expect(await more.getByRole('link').allTextContents()).toEqual([
+        'Home',
+        'List',
+        'Graph',
+        'Board',
+        'Sprints',
+        'Activity',
+        'Search',
+        'Console',
+        'Diagnostics',
+      ]);
+      const sheet = await more.locator('.pc-mobile-more__sheet').boundingBox();
+      expect((sheet?.y ?? -1) >= 0 && (sheet?.x ?? 0) >= 64, `sheet in view at ${width}`).toBe(
+        true,
+      );
+      await more.getByRole('link', { name: 'Console', exact: true }).click();
+      await expect(page.locator('[data-route-kind="planning.console"]')).toBeVisible();
+      await expect(more).not.toHaveAttribute('open', '');
+      expect((await layoutReport(page)).horizontalOverflow).toBe(false);
+    }
+    await page.setViewportSize({ width: 599, height: 900 });
+    await openFixture(page, '#/operate/today');
+    await expect(page.getByRole('navigation', { name: 'Dashboard navigation' })).toBeHidden();
+    await expect(page.locator('.pc-mobile-nav')).toBeVisible();
+  });
+
+  test('shows the List count beside the top bar title from 600 to 1199', async ({ page }) => {
+    for (const width of [1440, 1199, 768, 600, 599, 390]) {
+      await page.setViewportSize({ width, height: 900 });
+      await openFixture(page, '#/list');
+      const count = page.locator('header.pc-topbar .pc-topbar__count');
+      if (width >= 600 && width < 1200) {
+        await expect(count, `top bar count at ${width}`).toBeVisible();
+        await expect(count).toHaveText(/^\d+ of \d+$/u);
+      } else {
+        await expect(count, `top bar count at ${width}`).toBeHidden();
+      }
+    }
+  });
+
+  test('links Today to the Inbox from the phone top bar with its count', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await openFixture(page, '#/operate/today');
+    const tabCount = await page
+      .locator('.pc-operate-places .pc-operate-places__count')
+      .textContent();
+    for (const width of [390, 320]) {
+      await page.setViewportSize({ width, height: 844 });
+      await openFixture(page, '#/operate/today');
+      const link = page.locator('header.pc-topbar a.pc-operate-places__phone');
+      await expect(link).toBeVisible();
+      await expect(link).toHaveText(`Inbox${tabCount}`);
+      await expect(link).toHaveAttribute('href', '#/operate/inbox');
+      const box = await link.boundingBox();
+      expect(box?.width ?? 0).toBeGreaterThanOrEqual(44);
+      expect(box?.height ?? 0).toBeGreaterThanOrEqual(44);
+      await expect(
+        page.getByRole('button', { name: 'Jump to a view or an artifact' }),
+      ).toBeVisible();
+      // The link leads the trailing cluster: after the title, directly before Live.
+      const [title, live] = await Promise.all([
+        page.locator('header.pc-topbar .pc-topbar__view').boundingBox(),
+        page
+          .locator('header.pc-topbar .pc-topbar__end')
+          .getByText('Live', { exact: true })
+          .boundingBox(),
+      ]);
+      if (!box || !title || !live) throw new Error('Phone top bar parts have no box');
+      expect(box.x, `link after the title at ${width}`).toBeGreaterThanOrEqual(
+        title.x + title.width,
+      );
+      expect(live.x - (box.x + box.width), `link before Live at ${width}`).toBeGreaterThanOrEqual(
+        0,
+      );
+      expect(live.x - (box.x + box.width), `link beside Live at ${width}`).toBeLessThanOrEqual(24);
+      expect((await layoutReport(page)).horizontalOverflow).toBe(false);
+    }
+    await page.setViewportSize({ width: 768, height: 1024 });
+    await expect(page.locator('a.pc-operate-places__phone')).toBeHidden();
+  });
+
+  test('aligns every phone navigation item on one icon and one label line', async ({ page }) => {
+    for (const width of [390, 320]) {
+      await page.setViewportSize({ width, height: 844 });
+      await openFixture(page, '#/operate/today');
+      const rows = await page.locator('nav.pc-mobile-nav').evaluate((navigation) =>
+        [...navigation.querySelectorAll('.pc-mobile-nav__item')]
+          .filter((item) => !item.closest('.pc-mobile-more__sheet'))
+          .map((item) => ({
+            text: item.textContent?.trim(),
+            icon: Math.round(item.querySelector('.pc-icon')?.getBoundingClientRect().top ?? -1),
+            label: Math.round(item.querySelector('span')?.getBoundingClientRect().top ?? -1),
+          })),
+      );
+      expect(rows.map(({ text }) => text)).toEqual(['Home', 'List', 'Activity', 'Operate', 'More']);
+      for (const row of rows) {
+        expect(row.icon, `${row.text} icon top at ${width}`).toBe(rows[0]?.icon);
+        expect(row.label, `${row.text} label top at ${width}`).toBe(rows[0]?.label);
+      }
+    }
+  });
+
+  test('keeps the selection bar clear of the tablet rail', async ({ page }) => {
+    for (const viewport of [
+      { width: 768, height: 1024 },
+      { width: 844, height: 390 },
+      { width: 600, height: 900 },
+      { width: 899, height: 900 },
+    ]) {
+      await page.setViewportSize(viewport);
+      await page.goto(fixtureUrl('#/home', { dataset: 'representative' }));
+      const home = page.locator('[data-route-kind="planning.overview"]');
+      await expect(home.locator('.pc-home__row').first()).toBeVisible();
+      await home.locator('.pc-home__row .pc-artifact-row__link').first().focus();
+      const bar = page.locator('.pc-selection-bar');
+      await expect(bar).toBeVisible();
+      const report = await page.evaluate(() => {
+        const rail = document.querySelector('nav.pc-rail')?.getBoundingClientRect();
+        const box = document.querySelector('.pc-selection-bar')?.getBoundingClientRect();
+        const status = document.querySelector('.pc-statusbar')?.getBoundingClientRect();
+        if (!rail || !box || !status) throw new Error('Missing rail, selection bar or status bar');
+        const hit = document.elementFromPoint(rail.left + rail.width / 2, box.top + box.height / 2);
+        return {
+          left: box.left,
+          railRight: rail.right,
+          clearance: Math.round(status.top - box.bottom),
+          railOnTop: Boolean(hit?.closest('nav.pc-rail')),
+        };
+      });
+      const context = `${viewport.width}x${viewport.height}`;
+      expect(report.left, `bar left of ${context}`).toBeGreaterThanOrEqual(report.railRight);
+      expect(report.railOnTop, `rail reachable beside the bar at ${context}`).toBe(true);
+      expect(report.clearance, `bar above the status bar at ${context}`).toBeGreaterThanOrEqual(24);
+    }
+  });
+
+  test('keeps the place tabs on the local setup and could-not-read states', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto(fixtureUrl('#/operate/today', { localOperate: 'empty' }));
+    await expect(page.locator('.pc-operate-setup')).toBeVisible();
+    const places = page.getByRole('navigation', { name: 'Operate places' });
+    await expect(places).toBeVisible();
+    await expect(places.getByRole('link', { name: 'Inbox', exact: true })).toBeVisible();
+    await page.route('**/api/operate/local-reviews**', (route) =>
+      route.fulfill({ status: 500, contentType: 'application/json', body: '{}' }),
+    );
+    await page.goto(fixtureUrl('#/operate/today', { localOperate: '1' }));
+    await expect(page.getByText('Local reviews could not be read')).toBeVisible();
+    await expect(places).toBeVisible();
+    await expect(places.getByRole('link', { name: 'Inbox', exact: true })).toBeVisible();
+  });
+
+  test('insets route content 24px from the rail at 768', async ({ page }) => {
+    await page.setViewportSize({ width: 768, height: 1024 });
+    for (const route of ['#/list', '#/operate/today', '#/overview', '#/sprints', '#/activity']) {
+      await openFixture(page, route);
+      await page.evaluate(() => document.fonts.ready);
+      const inset = await page.evaluate(() => {
+        const rail = document.querySelector('nav.pc-rail')?.getBoundingClientRect();
+        const root = document.querySelector('[data-route-kind]');
+        if (!rail || !root) throw new Error('Missing rail or route root');
+        const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+        let left = Number.POSITIVE_INFINITY;
+        for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+          const parent = node.parentElement;
+          if (!node.textContent?.trim() || !parent || parent.closest('.pc-visually-hidden'))
+            continue;
+          if (getComputedStyle(parent).visibility === 'hidden') continue;
+          const range = document.createRange();
+          range.selectNodeContents(node);
+          for (const box of range.getClientRects())
+            if (box.width > 0 && box.height > 0) left = Math.min(left, box.left);
+        }
+        return Math.floor(left - rail.right);
+      });
+      expect(inset, `${route} content inset`).toBe(24);
+    }
+  });
+
+  test('fits the rail at 1440x900 and shows a scroll cue only while items are hidden', async ({
+    page,
+  }) => {
+    const bottomStrip = async () => {
+      const box = await page.locator('.pc-rail__sections').boundingBox();
+      if (!box) throw new Error('Rail sections have no box');
+      return page.screenshot({
+        clip: { x: box.x, y: box.y + box.height - 8, width: box.width, height: 8 },
+      });
+    };
+    const cue = async () => {
+      const shown = await bottomStrip();
+      await page.addStyleTag({ content: '.pc-rail__sections{background:none!important}' });
+      const hidden = await bottomStrip();
+      return !shown.equals(hidden);
+    };
+    for (const route of ['#/overview', '#/operate/today']) {
+      await page.setViewportSize({ width: 1440, height: 900 });
+      await openFixture(page, route);
+      const last = await page.evaluate(() => {
+        const scroller = document.querySelector('.pc-rail__sections');
+        const items = scroller?.querySelectorAll('.pc-rail__item');
+        const item = items?.[items.length - 1];
+        if (!scroller || !item) throw new Error('Rail has no items');
+        const frame = scroller.getBoundingClientRect();
+        const box = item.getBoundingClientRect();
+        return { inside: box.top >= frame.top - 0.5 && box.bottom <= frame.bottom + 0.5 };
+      });
+      expect(last, `${route} last rail item at 900`).toEqual({ inside: true });
+      for (const [height, expected] of [
+        [720, true],
+        [1000, false],
+      ] as const) {
+        await page.setViewportSize({ width: 1440, height });
+        await openFixture(page, route);
+        expect(await cue(), `${route} scroll cue at ${height}`).toBe(expected);
+      }
     }
   });
 

@@ -1,5 +1,4 @@
-import { type ReactNode, useId, useLayoutEffect, useState } from 'react';
-import { createPortal } from 'react-dom';
+import { type ReactNode, useId, useState } from 'react';
 import {
   CopyLabels,
   PcIcon,
@@ -9,7 +8,7 @@ import {
 } from '../../../design-system/components/index.js';
 import { useHomePhoneWidth } from '../../planning/planning-home-view.js';
 import { useTapSelectWith } from '../../planning/planning-tap-select.js';
-import { TOPBAR_ROUTE_TABS_ID } from '../../shell/shell-navigation.js';
+import { TOPBAR_ROUTE_TABS_ID, TopBarPortal } from '../../shell/shell-navigation.js';
 import {
   TODAY_COMMAND,
   type TodayDecision,
@@ -66,28 +65,32 @@ const PLACES = [
   ['History', '#/operate/history'],
 ] as const;
 
-/** Today, Inbox, Cycles and History in the top bar's route slot. */
-function PlaceTabs({ inboxCount }: { inboxCount?: number }) {
-  const [slot, setSlot] = useState<HTMLElement | null>(null);
-  useLayoutEffect(() => setSlot(document.getElementById(TOPBAR_ROUTE_TABS_ID)), []);
-  if (!slot) return null;
-  return createPortal(
-    <nav className="pc-operate-places" aria-label="Operate places">
-      {PLACES.map(([label, href]) => (
-        <a
-          key={label}
-          href={href}
-          className="pc-operate-places__tab"
-          aria-current={label === 'Today' ? 'page' : undefined}
-        >
-          {label}
-          {label === 'Inbox' && inboxCount !== undefined ? (
-            <span className="pc-operate-places__count">{inboxCount}</span>
-          ) : null}
-        </a>
-      ))}
-    </nav>,
-    slot,
+/** Today, Inbox, Cycles and History in the top bar's route slot; phones keep only the Inbox link. */
+export function PlaceTabs({ inboxCount }: { inboxCount?: number }) {
+  const count =
+    inboxCount === undefined ? null : (
+      <span className="pc-operate-places__count">{inboxCount}</span>
+    );
+  return (
+    <TopBarPortal slotId={TOPBAR_ROUTE_TABS_ID}>
+      <nav className="pc-operate-places" aria-label="Operate places">
+        {PLACES.map(([label, href]) => (
+          <a
+            key={label}
+            href={href}
+            className="pc-operate-places__tab"
+            aria-current={label === 'Today' ? 'page' : undefined}
+          >
+            {label}
+            {label === 'Inbox' ? count : null}
+          </a>
+        ))}
+      </nav>
+      <a className="pc-operate-places__phone" href="#/operate/inbox">
+        Inbox
+        {count}
+      </a>
+    </TopBarPortal>
   );
 }
 

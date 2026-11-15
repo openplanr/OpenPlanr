@@ -301,9 +301,9 @@
   background: var(--op-panel);
 }
 
-@media (width < 900px) {
+@media (width < 600px) {
   .op-planning-notice:not(.pc-visually-hidden) {
-    bottom: calc(72px + env(safe-area-inset-bottom));
+    bottom: calc(var(--pc-mobile-nav-height) + 14px + env(safe-area-inset-bottom));
   }
 }
 

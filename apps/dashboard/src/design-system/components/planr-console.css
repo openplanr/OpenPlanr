@@ -3286,3 +3286,10 @@ button.pc-work-item:disabled {
     display: none;
   }
 }
+/* The tablet rail sits beside the bar, and only the status bar sits below it. */
+@media (min-width: 600px) and (max-width: 899px) {
+  .pc-selection-bar {
+    left: calc(var(--pc-rail-width) + 8px);
+    bottom: calc(var(--pc-statusbar-height) + 24px);
+  }
+}

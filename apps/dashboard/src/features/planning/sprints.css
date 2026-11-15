@@ -822,3 +822,9 @@
     outline: 2px solid Highlight;
   }
 }
+
+@media (600px <= width < 900px) {
+  .pc-shell .pc-sprints {
+    padding-inline: 0;
+  }
+}
