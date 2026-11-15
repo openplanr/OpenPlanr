@@ -1031,6 +1031,7 @@
   }
 
   .pc-mobile-more > summary {
+    height: 100%;
     list-style: none;
   }
 

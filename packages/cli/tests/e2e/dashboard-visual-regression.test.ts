@@ -4048,10 +4048,47 @@ test.describe('dashboard real-browser quality', () => {
       await expect(
         page.getByRole('button', { name: 'Jump to a view or an artifact' }),
       ).toBeVisible();
+      // The link leads the trailing cluster: after the title, directly before Live.
+      const [title, live] = await Promise.all([
+        page.locator('header.pc-topbar .pc-topbar__view').boundingBox(),
+        page
+          .locator('header.pc-topbar .pc-topbar__end')
+          .getByText('Live', { exact: true })
+          .boundingBox(),
+      ]);
+      if (!box || !title || !live) throw new Error('Phone top bar parts have no box');
+      expect(box.x, `link after the title at ${width}`).toBeGreaterThanOrEqual(
+        title.x + title.width,
+      );
+      expect(live.x - (box.x + box.width), `link before Live at ${width}`).toBeGreaterThanOrEqual(
+        0,
+      );
+      expect(live.x - (box.x + box.width), `link beside Live at ${width}`).toBeLessThanOrEqual(24);
       expect((await layoutReport(page)).horizontalOverflow).toBe(false);
     }
     await page.setViewportSize({ width: 768, height: 1024 });
     await expect(page.locator('a.pc-operate-places__phone')).toBeHidden();
+  });
+
+  test('aligns every phone navigation item on one icon and one label line', async ({ page }) => {
+    for (const width of [390, 320]) {
+      await page.setViewportSize({ width, height: 844 });
+      await openFixture(page, '#/operate/today');
+      const rows = await page.locator('nav.pc-mobile-nav').evaluate((navigation) =>
+        [...navigation.querySelectorAll('.pc-mobile-nav__item')]
+          .filter((item) => !item.closest('.pc-mobile-more__sheet'))
+          .map((item) => ({
+            text: item.textContent?.trim(),
+            icon: Math.round(item.querySelector('.pc-icon')?.getBoundingClientRect().top ?? -1),
+            label: Math.round(item.querySelector('span')?.getBoundingClientRect().top ?? -1),
+          })),
+      );
+      expect(rows.map(({ text }) => text)).toEqual(['Home', 'List', 'Activity', 'Operate', 'More']);
+      for (const row of rows) {
+        expect(row.icon, `${row.text} icon top at ${width}`).toBe(rows[0]?.icon);
+        expect(row.label, `${row.text} label top at ${width}`).toBe(rows[0]?.label);
+      }
+    }
   });
 
   test('keeps the place tabs on the local setup and could-not-read states', async ({ page }) => {
