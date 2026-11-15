@@ -4091,6 +4091,37 @@ test.describe('dashboard real-browser quality', () => {
     }
   });
 
+  test('keeps the selection bar clear of the tablet rail', async ({ page }) => {
+    for (const viewport of [
+      { width: 768, height: 1024 },
+      { width: 844, height: 390 },
+    ]) {
+      await page.setViewportSize(viewport);
+      await page.goto(fixtureUrl('#/home', { dataset: 'representative' }));
+      const home = page.locator('[data-route-kind="planning.overview"]');
+      await expect(home.locator('.pc-home__row').first()).toBeVisible();
+      await home.locator('.pc-home__row .pc-artifact-row__link').first().focus();
+      const bar = page.locator('.pc-selection-bar');
+      await expect(bar).toBeVisible();
+      const report = await page.evaluate(() => {
+        const rail = document.querySelector('nav.pc-rail')?.getBoundingClientRect();
+        const box = document.querySelector('.pc-selection-bar')?.getBoundingClientRect();
+        if (!rail || !box) throw new Error('Missing rail or selection bar');
+        const hit = document.elementFromPoint(rail.left + rail.width / 2, box.top + box.height / 2);
+        return {
+          left: box.left,
+          railRight: rail.right,
+          bottom: Math.round(window.innerHeight - box.bottom),
+          railOnTop: Boolean(hit?.closest('nav.pc-rail')),
+        };
+      });
+      const context = `${viewport.width}x${viewport.height}`;
+      expect(report.left, `bar left of ${context}`).toBeGreaterThanOrEqual(report.railRight);
+      expect(report.railOnTop, `rail reachable beside the bar at ${context}`).toBe(true);
+      expect(report.bottom, `bar bottom offset at ${context}`).toBe(24);
+    }
+  });
+
   test('keeps the place tabs on the local setup and could-not-read states', async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto(fixtureUrl('#/operate/today', { localOperate: 'empty' }));
