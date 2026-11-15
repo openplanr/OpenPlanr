@@ -10,6 +10,7 @@ import {
   Tabs,
 } from '../../design-system/components/index.js';
 import type { PlanningView } from '../../lib/routing/planning-view-codec.js';
+import { TOPBAR_ROUTE_COUNT_ID, TopBarPortal } from '../shell/shell-navigation.js';
 import { ClearableChip, ListFiltersSheet } from './ListFiltersSheet.js';
 import { LIST_PRESETS, listPreset } from './planning-list-filter.js';
 import {
@@ -89,12 +90,19 @@ export function ListTitle({
 }) {
   if (layout !== 'desktop')
     return (
-      <div className="pc-visually-hidden">
-        <h1>List</h1>
-        <span>
-          {shown} of {total}
-        </span>
-      </div>
+      <>
+        <div className="pc-visually-hidden">
+          <h1>List</h1>
+          <span>
+            {shown} of {total}
+          </span>
+        </div>
+        {layout === 'tablet' ? (
+          <TopBarPortal slotId={TOPBAR_ROUTE_COUNT_ID}>
+            {shown} of {total}
+          </TopBarPortal>
+        ) : null}
+      </>
     );
   return (
     <div className="pc-list__head">

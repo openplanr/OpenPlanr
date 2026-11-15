@@ -89,6 +89,7 @@ export function UnifiedShell({
     () => SERVER_VIEWPORT_WIDTH,
   );
   const narrow = width < 900;
+  const tablet = narrow && width >= 600;
   const [inspectorOpen, setInspectorOpen] = useState(false);
 
   // Selection overlays belong to their originating route, never a reserved layout column.
@@ -205,11 +206,12 @@ export function UnifiedShell({
         route={route}
         operateAvailable={!operateOffline}
         onOpenPalette={search.show}
-        compact={compactRail}
-        onToggleCompact={toggleRail}
+        compact={tablet || compactRail}
+        onToggleCompact={tablet ? undefined : toggleRail}
         preferenceError={railPreferenceError}
         counts={railCounts}
         branch={bootstrap?.project.branch ?? null}
+        tablet={tablet}
       />
       <div className="pc-shell__column">
         <TopBar

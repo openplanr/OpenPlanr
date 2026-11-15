@@ -40,9 +40,10 @@ const styles = await readFile(
 test('the responsive shell keeps the approved desktop and touch geometry', () => {
   assert.match(styles, /--pc-sidebar-width: 236px/u);
   assert.match(styles, /--pc-rail-width: 64px/u);
-  assert.match(styles, /--pc-topbar-height: 60px/u);
+  assert.match(styles, /--pc-topbar-height: 57px/u);
+  assert.match(styles, /--pc-mobile-nav-height: 65px/u);
   assert.match(styles, /@media \(max-width: 899px\)/u);
-  assert.match(styles, /--pc-topbar-height: 56px/u);
+  assert.match(styles, /@media \(max-width: 599px\)\s*\{\s*\.pc-rail\s*\{\s*display: none/u);
   assert.match(styles, /\.pc-inspector-sheet\s*\{[^}]*height: 100dvh/u);
   assert.match(styles, /\.pc-mobile-more__sheet\s*\{[^}]*overflow-y: auto/u);
   assert.match(styles, /\.pc-mobile-nav__item:focus-visible/u);

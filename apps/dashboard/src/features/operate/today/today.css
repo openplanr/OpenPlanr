@@ -146,6 +146,9 @@
   color: var(--op-dim);
   font: 600 12px / 15px var(--op-font-technical);
 }
+.pc-operate .pc-operate-today .pc-operate-today__id {
+  white-space: nowrap;
+}
 .pc-operate .pc-operate-today .pc-operate-today__count {
   font-weight: 500;
 }
@@ -632,6 +635,37 @@
   color: var(--op-dim);
   font: 500 11px / 14px var(--op-font-technical);
 }
+.pc-operate-places__phone {
+  display: none;
+}
+@media (max-width: 599px) {
+  .pc-topbar .pc-topbar__route-tabs:not(:empty) {
+    display: flex;
+    margin-left: auto;
+  }
+  .pc-topbar__route-tabs .pc-operate-places {
+    display: none;
+  }
+  .pc-operate-places__phone {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    min-width: 44px;
+    height: 44px;
+    color: var(--op-accent);
+    font: 400 13px / 17px var(--op-font-ui);
+    text-decoration: none;
+  }
+  .pc-operate-places__phone .pc-operate-places__count {
+    font-size: 12px;
+    line-height: 15px;
+  }
+  .pc-operate-places__phone:focus-visible {
+    outline: 2px solid var(--op-accent);
+    outline-offset: 2px;
+  }
+}
 
 /* Below 1200 the page stacks into one column; Seats and Evidence pair up from 600. */
 @media (max-width: 1199px) {
@@ -723,6 +757,7 @@
 
   /* Decision card */
   .pc-operate .pc-operate-today .pc-operate-today__decision-head {
+    flex-wrap: wrap;
     gap: 8px;
     height: auto;
     padding: 16px 16px 0;
@@ -776,7 +811,7 @@
   .pc-operate .pc-operate-today .pc-operate-today__next:has(> code) {
     position: fixed;
     right: 0;
-    bottom: calc(58px + env(safe-area-inset-bottom, 0px));
+    bottom: calc(var(--pc-mobile-nav-height) + env(safe-area-inset-bottom, 0px));
     left: 0;
     z-index: 70;
     align-items: center;
@@ -804,7 +839,8 @@
   .pc-operate .pc-operate-today .pc-operate-today__next .pc-operate-today__command[data-variant],
   .pc-operate .pc-operate-today .pc-operate-today__next .op-governed-button {
     min-height: 44px;
-    height: 44px;
+    height: auto;
+    padding-block: 13px;
     font-size: 14px;
     line-height: 18px;
   }

@@ -711,7 +711,7 @@ a.pc-detail__property-reference:focus-visible {
 .pc-detail__next-bar {
   position: fixed;
   right: 0;
-  bottom: calc(58px + env(safe-area-inset-bottom, 0px));
+  bottom: calc(var(--pc-mobile-nav-height) + env(safe-area-inset-bottom, 0px));
   left: 0;
   z-index: 79;
   box-sizing: border-box;

@@ -1520,9 +1520,9 @@ a {
   background: var(--op-accent);
 }
 
-@media (width < 900px) {
+@media (width < 600px) {
   .pc-live-feedback {
-    bottom: calc(72px + env(safe-area-inset-bottom));
+    bottom: calc(var(--pc-mobile-nav-height) + 14px + env(safe-area-inset-bottom));
   }
 }
 

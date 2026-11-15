@@ -3,7 +3,8 @@
 .pc-shell {
   --pc-sidebar-width: 236px;
   --pc-rail-width: 64px;
-  --pc-topbar-height: 60px;
+  --pc-topbar-height: 57px;
+  --pc-mobile-nav-height: 65px;
   position: relative;
   display: flex;
   height: 100vh;
@@ -163,6 +164,7 @@
 }
 .pc-rail__keys {
   display: inline-flex;
+  flex-shrink: 0;
   margin-left: auto;
 }
 .pc-rail__sections {
@@ -170,8 +172,12 @@
   flex: 1;
   min-height: 0;
   flex-direction: column;
-  gap: 20px;
+  gap: 14px;
   overflow-y: auto;
+  /* The local layer covers the shadow once the last item is in view. */
+  background:
+    linear-gradient(transparent, var(--pc-surface-panel) 60%) 0 100% / 100% 24px no-repeat local,
+    linear-gradient(transparent, var(--pc-border-default)) 0 100% / 100% 10px no-repeat scroll;
 }
 .pc-rail__label {
   padding: 0 10px 6px;
@@ -297,6 +303,15 @@
   gap: 4px;
   margin-left: 20px;
 }
+.pc-topbar__count {
+  flex: none;
+  font: 500 12px / 15px var(--op-font-technical);
+  color: var(--op-dim);
+  white-space: nowrap;
+}
+.pc-topbar__count:empty {
+  display: none;
+}
 .pc-topbar__route-tabs:empty {
   display: none;
 }
@@ -368,6 +383,22 @@
   border-radius: 10px;
   cursor: pointer;
   transition: var(--pc-transition-ui);
+  container-type: inline-size;
+}
+/* A narrow pill keeps its placeholder as the accessible name but shows only the icon. */
+@container (width < 120px) {
+  .pc-topbar__placeholder {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    clip-path: inset(50%);
+  }
+  .pc-topbar__palette .pc-rail__keys {
+    display: none;
+  }
+  .pc-topbar__palette .pc-icon {
+    margin-inline: auto;
+  }
 }
 .pc-topbar__placeholder {
   min-width: 0;
@@ -501,7 +532,8 @@
 }
 .pc-statusbar__end {
   display: inline-flex;
-  flex: 0 0 auto;
+  flex: 0 1 auto;
+  min-width: 0;
   align-items: center;
   gap: 7px;
   margin-left: auto;
@@ -723,24 +755,49 @@
   }
 }
 
-@media (max-width: 899px) {
-  .pc-shell {
-    --pc-topbar-height: 56px;
-    height: 100dvh;
+@media (min-width: 600px) and (max-width: 899px) {
+  .pc-shell__scroll {
+    padding-right: 24px;
+    padding-left: 24px;
   }
+  .pc-topbar .pc-topbar__logo {
+    display: none;
+  }
+  .pc-topbar .pc-topbar__view {
+    flex: 0 1 auto;
+  }
+  .pc-rail .pc-mobile-more__sheet {
+    position: fixed;
+    right: auto;
+    bottom: 16px;
+    left: 72px;
+    z-index: 90;
+    max-height: calc(100dvh - 32px);
+  }
+}
 
+@media (max-width: 599px) {
   .pc-rail {
     display: none;
   }
 
   .pc-shell__column {
-    min-width: 0;
-    padding-bottom: calc(58px + env(safe-area-inset-bottom, 0px));
+    padding-bottom: calc(var(--pc-mobile-nav-height) + env(safe-area-inset-bottom, 0px));
   }
 
   .pc-shell__scroll {
     padding-right: 14px;
     padding-left: 14px;
+  }
+}
+
+@media (max-width: 899px) {
+  .pc-shell {
+    height: 100dvh;
+  }
+
+  .pc-shell__column {
+    min-width: 0;
   }
 
   .pc-topbar {
@@ -917,7 +974,7 @@
     z-index: 80;
     display: grid;
     grid-template-columns: repeat(5, minmax(0, 1fr));
-    height: calc(58px + env(safe-area-inset-bottom, 0px));
+    height: calc(var(--pc-mobile-nav-height) + env(safe-area-inset-bottom, 0px));
     padding-bottom: env(safe-area-inset-bottom, 0px);
     color: var(--pc-text-secondary);
     background: color-mix(in srgb, var(--pc-surface-panel) 96%, transparent);
@@ -1031,7 +1088,7 @@
   }
 }
 
-@media (min-width: 900px) {
+@media (min-width: 600px) {
   .pc-rail[data-compact="true"] {
     width: var(--pc-rail-width);
     gap: 6px;
@@ -1073,6 +1130,9 @@
     padding: 0;
     border-radius: 10px;
   }
+}
+
+@media (min-width: 900px) {
   .pc-inspector-sheet:has(.pc-shell-inspector__content) {
     width: min(33.333vw, 560px);
     min-width: 420px;

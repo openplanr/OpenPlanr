@@ -1,7 +1,7 @@
 import type { DashboardQueryIdentity } from '../../../lib/binding/query-identity.js';
 import { OperateSetup } from '../OperateSetup.js';
 import { DecisionFocus, type OperateTodayContinuation } from './DecisionFocus.js';
-import { TodayLayout } from './TodayParts.js';
+import { PlaceTabs, TodayLayout } from './TodayParts.js';
 import { CouldNotRead, NothingWaiting } from './TodayStates.js';
 import { type OperateTodayModelSources, resolveOperateTodayModel } from './today-model.js';
 import { todayViewFromSurface } from './today-view.js';
@@ -19,6 +19,7 @@ export function TodayPage({ currentBinding, sources, onContinuation }: TodayPage
   if (!model) {
     return (
       <div className="op-workspace pc-operate" data-route-kind="operate.today">
+        <PlaceTabs />
         <CouldNotRead
           title="Today could not be read"
           reason="What came back did not match this project's current Operate session, so none of it is shown."
@@ -30,6 +31,7 @@ export function TodayPage({ currentBinding, sources, onContinuation }: TodayPage
   if (model.kind !== 'surface') {
     return (
       <div className="op-workspace pc-operate" data-route-kind="operate.today">
+        <PlaceTabs />
         {model.kind === 'first-use' ? (
           <OperateSetup />
         ) : (

@@ -36,6 +36,15 @@ const RAIL_PALETTE_LABEL = 'Search or jump';
 const TOPBAR_PALETTE_LABEL = 'Jump to a view or an artifact…';
 /** Top-bar slot a route may portal its own place tabs into; empty and hidden otherwise. */
 export const TOPBAR_ROUTE_TABS_ID = 'topbar-route-tabs';
+/** Top-bar slot beside the view title for a route's item count; empty and hidden otherwise. */
+export const TOPBAR_ROUTE_COUNT_ID = 'topbar-route-count';
+
+/** Renders children into a top-bar slot once the shell has mounted it. */
+export function TopBarPortal({ slotId, children }: { slotId: string; children: ReactNode }) {
+  const [slot, setSlot] = useState<HTMLElement | null>(null);
+  useLayoutEffect(() => setSlot(document.getElementById(slotId)), [slotId]);
+  return slot ? createPortal(children, slot) : null;
+}
 
 function BrandMark({ className, size }: { className: string; size: number }) {
   return (
@@ -184,10 +193,6 @@ function MobileNavigation({
   route: ParsedDashboardRoute;
   operateAvailable: boolean;
 }>) {
-  const [moreOpen, setMoreOpen] = useState(false);
-  const moreId = useId();
-  // biome-ignore lint/correctness/useExhaustiveDependencies: every route change closes the secondary sheet.
-  useEffect(() => setMoreOpen(false), [route.kind]);
   const primary: readonly RailItem[] = [
     { kind: 'planning.overview', icon: 'house' },
     { kind: 'planning.list', icon: 'list' },
@@ -227,41 +232,67 @@ function MobileNavigation({
         <PcIcon name="gauge" size={16} />
         <span>Operate</span>
       </a>
-      <details
-        className="pc-mobile-more"
-        open={moreOpen}
-        onToggle={(event) => setMoreOpen(event.currentTarget.open)}
-      >
-        <summary
-          className="pc-mobile-nav__item"
-          aria-label={`More ${productLabel} destinations`}
-          aria-controls={moreId}
-        >
-          <PcIcon name="layers" size={16} />
-          <span>More</span>
-        </summary>
-        <div className="pc-mobile-more__sheet" id={moreId}>
-          <div id="mobile-shell-controls" className="pc-mobile-more__controls" />
-          {secondary.map((section) => (
-            <section
-              className="pc-mobile-more__section"
-              key={section.label}
-              aria-label={section.label}
-            >
-              <div className="pc-rail__label">{section.label}</div>
-              {section.items.map((item) => (
-                <MobileRailLink
-                  key={item.kind}
-                  item={item}
-                  route={route}
-                  onNavigate={() => setMoreOpen(false)}
-                />
-              ))}
-            </section>
-          ))}
-        </div>
-      </details>
+      <MoreMenu
+        productLabel={productLabel}
+        route={route}
+        sections={secondary}
+        summaryClassName="pc-mobile-nav__item"
+      />
     </nav>
+  );
+}
+
+/** The More sheet: every destination the visible navigation leaves out, plus the shell utilities. */
+function MoreMenu({
+  productLabel,
+  route,
+  sections,
+  summaryClassName,
+}: Readonly<{
+  productLabel: string;
+  route: ParsedDashboardRoute;
+  sections: readonly RailSection[];
+  summaryClassName: string;
+}>) {
+  const [moreOpen, setMoreOpen] = useState(false);
+  const moreId = useId();
+  // biome-ignore lint/correctness/useExhaustiveDependencies: every route change closes the secondary sheet.
+  useEffect(() => setMoreOpen(false), [route.kind]);
+  return (
+    <details
+      className="pc-mobile-more"
+      open={moreOpen}
+      onToggle={(event) => setMoreOpen(event.currentTarget.open)}
+    >
+      <summary
+        className={summaryClassName}
+        aria-label={`More ${productLabel} destinations`}
+        aria-controls={moreId}
+      >
+        <PcIcon name="layers" size={16} />
+        <span>More</span>
+      </summary>
+      <div className="pc-mobile-more__sheet" id={moreId}>
+        <div id="mobile-shell-controls" className="pc-mobile-more__controls" />
+        {sections.map((section) => (
+          <section
+            className="pc-mobile-more__section"
+            key={section.label}
+            aria-label={section.label}
+          >
+            <div className="pc-rail__label">{section.label}</div>
+            {section.items.map((item) => (
+              <MobileRailLink
+                key={item.kind}
+                item={item}
+                route={route}
+                onNavigate={() => setMoreOpen(false)}
+              />
+            ))}
+          </section>
+        ))}
+      </div>
+    </details>
   );
 }
 
@@ -275,6 +306,8 @@ export type NavRailProps = Readonly<{
   preferenceError?: string | null;
   counts?: Partial<Record<DashboardRouteKind, number>>;
   branch?: string | null;
+  /** Between the phone and desktop widths: the rail carries a More sheet in place of the bottom bar. */
+  tablet?: boolean;
 }>;
 
 export function NavRail({
@@ -287,6 +320,7 @@ export function NavRail({
   preferenceError,
   counts,
   branch = null,
+  tablet = false,
 }: NavRailProps) {
   const sections = compact
     ? product === 'operate'
@@ -372,11 +406,37 @@ export function NavRail({
           ) : null}
           {!compact &&
             REFERENCE_ITEMS.map((item) => <RailLink key={item.kind} item={item} route={route} />)}
+          {tablet ? (
+            <MoreMenu
+              productLabel={product === 'operate' ? 'Operate' : 'Planning'}
+              route={route}
+              sections={omittedSections(sections)}
+              summaryClassName="pc-rail__item"
+            />
+          ) : null}
         </div>
       </nav>
-      <MobileNavigation product={product} route={route} operateAvailable={operateAvailable} />
+      {tablet ? null : (
+        <MobileNavigation product={product} route={route} operateAvailable={operateAvailable} />
+      )}
     </>
   );
+}
+
+/** Every destination section, less the items the rail already shows. */
+function omittedSections(shown: readonly RailSection[]): readonly RailSection[] {
+  const visible = new Set(shown.flatMap((section) => section.items.map((item) => item.kind)));
+  return [
+    { label: 'Plan', items: PLANNING_SECTIONS[0]?.items ?? [] },
+    { label: 'Operate', items: OPERATE_SECTIONS[0]?.items ?? [] },
+    { label: 'Record', items: OPERATE_SECTIONS[1]?.items ?? [] },
+    { label: 'Reference', items: REFERENCE_ITEMS },
+  ]
+    .map((section) => ({
+      ...section,
+      items: section.items.filter((item) => !visible.has(item.kind)),
+    }))
+    .filter((section) => section.items.length > 0);
 }
 
 // ---------------------------------------------------------------- connection
@@ -644,9 +704,10 @@ export function TopBar({
   const product = route.product ?? 'system';
   const subject = !showSubject || route.kind === 'not-found' ? null : route.subjectId;
   const [mobileControls, setMobileControls] = useState<HTMLElement | null>(null);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: the sheet holding the controls moves between the bottom bar and the rail at 600px.
   useLayoutEffect(() => {
     setMobileControls(mobile ? document.getElementById('mobile-shell-controls') : null);
-  }, [mobile]);
+  }, [mobile, phone]);
   const utilities = (
     <div className="pc-topbar__utilities">
       <Tooltip
@@ -740,7 +801,10 @@ export function TopBar({
             </span>
           </>
         ) : (
-          <span className="pc-topbar__view">{definition?.label ?? 'Closed route'}</span>
+          <>
+            <span className="pc-topbar__view">{definition?.label ?? 'Closed route'}</span>
+            <span id={TOPBAR_ROUTE_COUNT_ID} className="pc-topbar__count" aria-hidden="true" />
+          </>
         )}
         {subject && !detailTrail ? (
           <>
@@ -815,7 +879,9 @@ export function StatusBar({
       </span>
       <WatcherDot state={connectionState} compact={compact} />
       <span className="pc-statusbar__end" title="Served build">
-        <span className="pc-statusbar__text">{buildId}</span>
+        <span className="pc-statusbar__text" title={buildId}>
+          {buildId}
+        </span>
       </span>
     </footer>
   );
