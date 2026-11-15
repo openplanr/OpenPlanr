@@ -1,3 +1,5 @@
+import { useId } from 'react';
+import { Card } from '../../design-system/components/index.js';
 import { DeliveryTrace } from './DeliveryTrace.js';
 import {
   normalizePlanningOperatingOrigin,
@@ -55,6 +57,7 @@ function OriginIntegrity({ origin }: { origin: PlanningOperatingOrigin }) {
 
 /** Read-only operating origin and delivery trace for Planning detail surfaces. */
 export function OperatingOriginPanel({ envelope, title, summary }: OperatingOriginPanelProps) {
+  const traceHeading = useId();
   const record =
     envelope && typeof envelope === 'object' ? (envelope as Record<string, unknown>) : {};
   const origin = normalizePlanningOperatingOrigin(record.origin ?? envelope);
@@ -63,48 +66,48 @@ export function OperatingOriginPanel({ envelope, title, summary }: OperatingOrig
     title ??
     (origin.spec.specId ? `Why ${origin.spec.specId} exists` : 'Why this Planning work exists');
   return (
-    <section
-      className="op-planning-origin planning-operating-origin"
-      aria-label="Operating origin and delivery trace"
-      data-origin-state={origin.status}
-    >
-      <header className="op-planning-origin__header">
-        <div>
-          <p className="op-eyebrow">Operating origin</p>
-          <h2>{heading}</h2>
-          <p>
-            {summary ??
-              'The sidecar preserves exact Operate custody while Planning remains independently authoritative.'}
-          </p>
-        </div>
-        {operateHref ? (
-          <a className="op-cycle-link" href={operateHref}>
-            Open in Operate
-          </a>
-        ) : null}
-      </header>
-      <dl className="op-cycle-custody">
-        <Fact label="SPEC" value={origin.spec.specId} />
-        <Fact label="Status" value={origin.spec.status} />
-        <Fact label="Decision" value={origin.decision.id} />
-        <Fact label="Action" value={origin.action.id} />
-        <Fact label="Correlation" value={origin.correlationId} />
-      </dl>
-      <OriginIntegrity origin={origin} />
+    <Card padding={16}>
       <section
-        className="op-planning-origin__trace"
-        aria-labelledby="op-planning-delivery-trace-title"
+        className="planning-operating-origin"
+        aria-label="Operating origin and delivery trace"
+        data-origin-state={origin.status}
       >
-        <header className="op-cycle-section-heading">
+        <header className="op-planning-origin__header">
           <div>
-            <h3 id="op-planning-delivery-trace-title">Delivery and value trace</h3>
+            <p className="op-eyebrow">Operating origin</p>
+            <h2>{heading}</h2>
             <p>
-              Each state belongs to its own ledger. Delivery is evidence; it is not Outcome success.
+              {summary ??
+                'The sidecar preserves exact Operate custody while Planning remains independently authoritative.'}
             </p>
           </div>
+          {operateHref ? (
+            <a className="op-cycle-link" href={operateHref}>
+              Open in Operate
+            </a>
+          ) : null}
         </header>
-        <DeliveryTrace progress={record.progress ?? { nodes: [] }} />
+        <dl className="op-cycle-custody">
+          <Fact label="Spec" value={origin.spec.specId} />
+          <Fact label="Status" value={origin.spec.status} />
+          <Fact label="Decision" value={origin.decision.id} />
+          <Fact label="Action" value={origin.action.id} />
+          <Fact label="Correlation" value={origin.correlationId} />
+        </dl>
+        <OriginIntegrity origin={origin} />
+        <section className="op-planning-origin__trace" aria-labelledby={traceHeading}>
+          <header className="op-cycle-section-heading">
+            <div>
+              <h3 id={traceHeading}>Delivery and value trace</h3>
+              <p>
+                Each state belongs to its own ledger. Delivery is evidence; it is not Outcome
+                success.
+              </p>
+            </div>
+          </header>
+          <DeliveryTrace progress={record.progress ?? { nodes: [] }} />
+        </section>
       </section>
-    </section>
+    </Card>
   );
 }

@@ -23,6 +23,7 @@ type OperateRecoveryDisplaySurfaceV1 = operateComposition.OperateRecoveryDisplay
 type OperateReviewDisplayWorkspaceV1 = operateComposition.OperateReviewDisplayWorkspaceV1;
 type OperateReviewNavigation = operateComposition.OperateReviewNavigation;
 type PlanningGraphEnvelope = planningComposition.PlanningGraphEnvelope;
+type PlanningSessionActivity = planningComposition.PlanningSessionActivity;
 type DashboardBootstrap = dashboardComposition.DashboardBootstrap;
 type DashboardProductState<T> = dashboardComposition.DashboardProductState<T>;
 type DashboardProductStateKind = dashboardComposition.DashboardProductStateKind;
@@ -41,10 +42,17 @@ export type DashboardRuntimeComposition = Readonly<{
   binding: DashboardQueryIdentity | null;
   projection: RuntimeProjection;
   planningProjection: RuntimeProjection;
+  planningLive: DashboardPlanningLive;
   operateCyclesProjection: RuntimeProjection;
   operateSearchBindings: readonly DashboardQueryIdentity[];
   operateReviewNavigation: OperateReviewNavigation | null;
   refetchCurrent: () => Promise<RuntimeProjection>;
+}>;
+
+export type DashboardPlanningLive = Readonly<{
+  activity?: PlanningSessionActivity;
+  state: 'connecting' | 'connected' | 'paused';
+  attempt: number;
 }>;
 
 type OwnerRead<T> = Readonly<{
@@ -57,6 +65,7 @@ type OwnerRead<T> = Readonly<{
 
 const PRESENTATIONS = new Set<DashboardProductStateKind>([
   'ready',
+  'refreshing',
   'read-only',
   'stale',
   'partial',
@@ -73,7 +82,7 @@ const BOOTING = dashboardRuntime.projection.parseState({
   mutationEnabled: false,
   policy: dashboardRuntime.projection.statePolicy('booting'),
 });
-const PLANNING_HOME_ROUTE = dashboardRuntime.routing.parse('#/overview');
+const PLANNING_HOME_ROUTE = dashboardRuntime.routing.parse('#/home');
 
 function productStateReason(kind: DashboardProductStateKind): string {
   return `DASHBOARD_${kind.toUpperCase().replace('-', '_')}`;
@@ -112,7 +121,7 @@ function unavailable(
   );
 }
 
-function projectionFailure(error: unknown, retained = false): DashboardSafeError {
+function projectionFailure(error: unknown, _retained = false): DashboardSafeError {
   const candidate =
     error !== null && typeof error === 'object' && !Array.isArray(error)
       ? (error as Record<string, unknown>)
@@ -121,7 +130,7 @@ function projectionFailure(error: unknown, retained = false): DashboardSafeError
     candidate.code === 'DASHBOARD_RESPONSE_INVALID' ||
     error instanceof dashboardRuntime.projection.ValidationError;
   return dashboardRuntime.projection.parseSafeError({
-    code: retained || !invalid ? 'DASHBOARD_READ_FAILED' : 'DASHBOARD_RESPONSE_INVALID',
+    code: invalid ? 'DASHBOARD_RESPONSE_INVALID' : 'DASHBOARD_READ_FAILED',
     retryable: false,
     context: { operation: 'dashboard.projection.read' },
   });
@@ -157,9 +166,7 @@ function verifiedState<T>(
   mutationEnabled = false,
   error: DashboardSafeError | null = null,
 ): DashboardProductState<T> {
-  if (!PRESENTATIONS.has(kind) && !(kind === 'refreshing' && binding.productArea === 'planning')) {
-    throw new Error('Unsupported owner presentation state.');
-  }
+  if (!PRESENTATIONS.has(kind)) throw new Error('Unsupported owner presentation state.');
   return dashboardRuntime.projection.parseState<T>(
     {
       kind,
@@ -202,6 +209,27 @@ function retainVerifiedProjectionAsStale(
   );
 }
 
+function sameProjectionCustody(
+  retained: DashboardQueryIdentity,
+  current: DashboardQueryIdentity | null,
+): boolean {
+  if (current === null) return false;
+  return (
+    [
+      'productArea',
+      'actorId',
+      'projectId',
+      'scopeId',
+      'domainId',
+      'domainVersion',
+      'cycleId',
+      'route',
+      'subjectId',
+      'generation',
+    ] as const
+  ).every((field) => retained[field] === current[field]);
+}
+
 function contextState(
   kind: 'first-use' | 'empty',
   binding: DashboardQueryIdentity,
@@ -223,7 +251,6 @@ function contextState(
 function useOwnerRead<T>(
   key: string | null,
   read: (signal: AbortSignal) => Promise<T>,
-  retainPreviousRevision = false,
 ): OwnerRead<T> {
   const readRef = useRef(read);
   readRef.current = read;
@@ -345,7 +372,8 @@ function useOwnerRead<T>(
 
   const isCurrent = snapshot.key === key && snapshot.revision === revision;
   const phase = isCurrent ? snapshot.phase : key === null ? 'idle' : 'loading';
-  const data = isCurrent || (retainPreviousRevision && snapshot.key === key) ? snapshot.data : null;
+  // A revision invalidates freshness, while a different key invalidates custody.
+  const data = snapshot.key === key ? snapshot.data : null;
   const error = isCurrent ? snapshot.error : null;
   return useMemo(
     () => Object.freeze({ phase, data, error, refetch, reconcile }),
@@ -638,6 +666,208 @@ function boundDisplayState(
   );
 }
 
+const REPLAY_SETTLE_MS = 250;
+
+function usePlanningLiveConnection(
+  origin: string | null,
+  base: DashboardQueryIdentity | null,
+  read: OwnerRead<PlanningGraphEnvelope>,
+): DashboardPlanningLive {
+  const key = origin && base ? JSON.stringify([origin, base]) : null;
+  const activityScope = origin && base ? planningRuntime.activityScope(base) : null;
+  const [activity, setActivity] = useState<PlanningSessionActivity>(
+    planningRuntime.emptySessionActivity,
+  );
+  useEffect(() => {
+    setActivity((current) =>
+      current.scope === activityScope ? current : planningRuntime.emptySessionActivity,
+    );
+  }, [activityScope]);
+  const [status, setStatus] = useState<{
+    key: string | null;
+    live: DashboardPlanningLive;
+  }>({ key: null, live: { state: 'connecting', attempt: 0 } });
+  const { data, refetch, reconcile } = read;
+
+  useEffect(() => {
+    if (!origin || !base || !data) return undefined;
+    let active = true;
+    let current = data;
+    let attempt = 0;
+    let lease = 0;
+    let stream: ReturnType<typeof planningRuntime.connectSse> | null = null;
+    let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+    let patchTimer: ReturnType<typeof setTimeout> | null = null;
+    let reconciliationRequired = false;
+    let reconciling = false;
+    const publish = (state: DashboardPlanningLive['state']) => {
+      if (active) setStatus({ key, live: { state, attempt } });
+    };
+    const close = () => {
+      lease += 1;
+      stream?.close();
+      stream = null;
+    };
+    const connected = () => {
+      attempt = 0;
+      publish('connected');
+    };
+    const scheduleReconnect = () => {
+      if (!active || reconnectTimer !== null) return;
+      attempt += 1;
+      publish('paused');
+      reconnectTimer = setTimeout(
+        () => {
+          reconnectTimer = null;
+          if (reconciliationRequired) void reconcileRead();
+          else connect();
+        },
+        Math.min(500 * 2 ** Math.min(attempt - 1, 5), 10_000),
+      );
+    };
+    const reconcileRead = async () => {
+      if (!active || reconciling) return;
+      if (navigator.onLine === false) {
+        scheduleReconnect();
+        return;
+      }
+      reconciling = true;
+      try {
+        const next = await reconcile();
+        if (!active) return;
+        current = next;
+        reconciliationRequired = false;
+        if (next === data) connect();
+      } catch {
+        scheduleReconnect();
+      } finally {
+        reconciling = false;
+      }
+    };
+    const requireRead = () => {
+      if (!active || reconciliationRequired) return;
+      reconciliationRequired = true;
+      publish('paused');
+      if (patchTimer !== null) clearTimeout(patchTimer);
+      patchTimer = null;
+      close();
+      void reconcileRead();
+    };
+    const connect = () => {
+      if (!active) return;
+      if (navigator.onLine === false) {
+        scheduleReconnect();
+        return;
+      }
+      close();
+      const currentLease = lease;
+      // A resumed stream opens with the patches it missed; their real times are unknown.
+      let replaying = attempt > 0;
+      let lastReplayAt = 0;
+      const arrival = () => {
+        const at = Date.now();
+        if (replaying && lastReplayAt > 0 && at - lastReplayAt >= REPLAY_SETTLE_MS)
+          replaying = false;
+        if (!replaying) return at;
+        lastReplayAt = at;
+        return null;
+      };
+      const identity = dashboardRuntime.identity.create({
+        ...base,
+        eventHead: current.cursor.eventHead,
+        viewHash: current.cursor.viewHash,
+      });
+      const reconciler = planningRuntime.createSseReconciler({
+        identity,
+        initial: current,
+        isCurrent: () => active && lease === currentLease,
+        onSnapshot: (next) => {
+          replaying = false;
+          current = next;
+          connected();
+        },
+        onReady: () => {
+          replaying = false;
+          connected();
+        },
+        onPatch: (next, signal) => {
+          const receivedAt = arrival();
+          if (activityScope) {
+            const before = current;
+            setActivity((retained) =>
+              planningRuntime.appendSessionPatch(
+                retained,
+                activityScope,
+                before,
+                signal,
+                receivedAt,
+              ),
+            );
+          }
+          if (next) current = next;
+          connected();
+          // A burst publishes one owner read while the accepted stream keeps its checkpoint.
+          if (patchTimer === null) {
+            patchTimer = setTimeout(() => {
+              patchTimer = null;
+              if (active) refetch();
+            }, 500);
+          }
+        },
+        onRefetch: requireRead,
+      });
+      try {
+        stream = planningRuntime.connectSse({
+          origin,
+          identity,
+          reconciler,
+          lastEventId: planningRuntime.encodeCheckpoint(current.cursor),
+        });
+        const disconnected = () => {
+          if (!active || lease !== currentLease) return;
+          close();
+          scheduleReconnect();
+        };
+        void stream.completion.then(disconnected, disconnected);
+      } catch {
+        close();
+        scheduleReconnect();
+      }
+    };
+    setStatus((previous) =>
+      previous.key === key ? previous : { key, live: { state: 'connecting', attempt: 0 } },
+    );
+    // An open stream can stay pending after the browser goes offline.
+    const offline = () => requireRead();
+    const online = () => {
+      if (reconnectTimer !== null) clearTimeout(reconnectTimer);
+      reconnectTimer = null;
+      if (reconciliationRequired) void reconcileRead();
+      else requireRead();
+    };
+    window.addEventListener('offline', offline);
+    window.addEventListener('online', online);
+    if (navigator.onLine === false) offline();
+    else connect();
+    return () => {
+      active = false;
+      window.removeEventListener('offline', offline);
+      window.removeEventListener('online', online);
+      close();
+      if (reconnectTimer !== null) clearTimeout(reconnectTimer);
+      if (patchTimer !== null) clearTimeout(patchTimer);
+    };
+  }, [activityScope, base, data, key, origin, reconcile, refetch]);
+
+  return {
+    ...(status.key === key ? status.live : { state: 'connecting' as const, attempt: 0 }),
+    activity: {
+      ...(activity.scope === activityScope ? activity : planningRuntime.emptySessionActivity),
+      connection: status.key === key ? status.live.state : 'connecting',
+    },
+  };
+}
+
 /** Production owner-bound composition. Every slot keeps its own identity, read and lifecycle. */
 export function useDashboardRuntimeComposition(
   bootstrap: DashboardBootstrap | null,
@@ -674,8 +904,8 @@ export function useDashboardRuntimeComposition(
       if (!origin || !planningReadBase) throw new Error('Planning query root is unavailable.');
       return planningRuntime.fetchGraph({ origin, identity: planningReadBase, signal });
     },
-    true,
   );
+  const planningLive = usePlanningLiveConnection(origin, planningReadBase, planningRead);
 
   const operateKey = rootKey(operateRoot);
   const todayRead = useOwnerRead<OperateExperienceDisplaySurfaceV1>(operateKey, (signal) => {
@@ -1001,6 +1231,7 @@ export function useDashboardRuntimeComposition(
     if (
       retainedRoute !== null &&
       retainedRoute.routeKey === routeKey &&
+      sameProjectionCustody(retainedRoute.binding, routeComposition.binding) &&
       (!dashboardRuntime.projection.isValidatedState(routeComposition.projection) ||
         routeComposition.projection.data === null)
     ) {
@@ -1011,38 +1242,6 @@ export function useDashboardRuntimeComposition(
     }
     return routeComposition;
   }, [retainedRoute, routeComposition, routeKey]);
-
-  useEffect(() => {
-    if (!origin || !planningRead.data || planningRead.phase !== 'ready' || !planningReadBase) {
-      return undefined;
-    }
-    const identity = dashboardRuntime.identity.create({
-      ...planningReadBase,
-      eventHead: planningRead.data.cursor.eventHead,
-      viewHash: planningRead.data.cursor.viewHash,
-    });
-    let active = true;
-    const reconciler = planningRuntime.createSseReconciler({
-      identity,
-      initial: planningRead.data,
-      isCurrent: () => active,
-      onSnapshot: () => undefined,
-      onPatch: () => planningRead.refetch(),
-      onRefetch: () => planningRead.refetch(),
-      onStale: () => planningRead.refetch(),
-    });
-    const stream = planningRuntime.connectSse({
-      origin,
-      identity,
-      reconciler,
-      lastEventId: planningRuntime.encodeCheckpoint(planningRead.data.cursor),
-    });
-    void stream.completion.catch(() => undefined);
-    return () => {
-      active = false;
-      stream.close();
-    };
-  }, [origin, planningReadBase, planningRead]);
 
   useEffect(() => {
     if (!origin || !operateRoot || !today || !todayBase) return undefined;
@@ -1185,6 +1384,7 @@ export function useDashboardRuntimeComposition(
     binding: effectiveRouteComposition.binding,
     projection: effectiveRouteComposition.projection,
     planningProjection,
+    planningLive,
     operateCyclesProjection,
     operateSearchBindings,
     operateReviewNavigation,

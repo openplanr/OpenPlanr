@@ -94,7 +94,7 @@ export function CycleDetailRoute({
 
   if (fetchBoard && executiveBoard === undefined) {
     return (
-      <div className="op-workspace op-cycle-detail" data-route-kind="operate.cycle">
+      <div className="op-workspace op-cycle-detail pc-operate" data-route-kind="operate.cycle">
         <StatePanel
           state="booting"
           eyebrow="Executive board"

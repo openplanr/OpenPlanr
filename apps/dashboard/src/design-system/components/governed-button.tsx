@@ -1,4 +1,3 @@
-import { Tooltip } from 'radix-ui';
 import {
   type AriaAttributes,
   forwardRef,
@@ -8,6 +7,7 @@ import {
   useRef,
   useState,
 } from 'react';
+import { Tooltip } from './tooltip.js';
 
 type SharedProps = Readonly<{
   children: ReactNode;
@@ -58,6 +58,7 @@ export const GovernedButton = forwardRef<HTMLButtonElement, GovernedButtonProps>
     const inFlight = useRef(false);
     const mounted = useRef(true);
     const [pending, setPending] = useState(false);
+    const [failure, setFailure] = useState<string>();
 
     useEffect(() => {
       mounted.current = true;
@@ -68,13 +69,18 @@ export const GovernedButton = forwardRef<HTMLButtonElement, GovernedButtonProps>
 
     const visibleReason = pending ? pendingLabel : disabledReason;
     const unavailable = disabled || pending;
+    const descriptionId = pending ? `${reasonId}-pending` : disabledReason ? reasonId : undefined;
 
     async function invoke() {
       if (unavailable || inFlight.current || !onInvoke) return;
       inFlight.current = true;
       setPending(true);
+      setFailure(undefined);
       try {
         await onInvoke();
+      } catch {
+        if (mounted.current)
+          setFailure('The action could not complete. Check its current state before continuing.');
       } finally {
         inFlight.current = false;
         if (mounted.current) setPending(false);
@@ -91,40 +97,48 @@ export const GovernedButton = forwardRef<HTMLButtonElement, GovernedButtonProps>
         title={title}
         tabIndex={tabIndex}
         disabled={unavailable}
-        aria-label={ariaLabel}
+        aria-disabled={unavailable || undefined}
+        aria-label={pending ? pendingLabel : ariaLabel}
         aria-controls={ariaControls}
         aria-expanded={ariaExpanded}
         aria-haspopup={ariaHasPopup}
         aria-busy={pending || undefined}
-        aria-describedby={visibleReason ? reasonId : undefined}
+        aria-describedby={descriptionId}
         onClick={invoke}
       >
-        {pending ? <span className="op-governed-button__spinner" aria-hidden="true" /> : null}
-        <span>{pending ? pendingLabel : children}</span>
+        <span className="op-governed-button__spinner" data-pending={pending} aria-hidden="true" />
+        <span>{children}</span>
       </button>
     );
 
     return (
-      <div className="op-governed-action" data-governed-action-state={pending ? 'pending' : 'idle'}>
-        {visibleReason ? (
-          <Tooltip.Provider delayDuration={300}>
-            <Tooltip.Root>
-              <Tooltip.Trigger asChild>
-                <span>{control}</span>
-              </Tooltip.Trigger>
-              <Tooltip.Portal>
-                <Tooltip.Content className="op-governed-tooltip" sideOffset={8}>
-                  {visibleReason}
-                </Tooltip.Content>
-              </Tooltip.Portal>
-            </Tooltip.Root>
-          </Tooltip.Provider>
-        ) : (
-          control
-        )}
-        {visibleReason ? (
+      <div
+        className="op-governed-action"
+        data-governed-action-state={pending ? 'pending' : 'idle'}
+        data-unavailable={unavailable || undefined}
+      >
+        <Tooltip content={visibleReason} disabled={!visibleReason}>
+          <span
+            className="op-governed-action__trigger"
+            tabIndex={unavailable ? 0 : undefined}
+            aria-describedby={unavailable ? descriptionId : undefined}
+          >
+            {control}
+          </span>
+        </Tooltip>
+        {failure ? (
+          <p className="op-governed-reason" role="alert">
+            {failure}
+          </p>
+        ) : null}
+        {disabledReason ? (
           <p className="op-governed-reason" id={reasonId}>
-            {visibleReason}
+            {disabledReason}
+          </p>
+        ) : null}
+        {pending ? (
+          <p className="pc-visually-hidden" id={`${reasonId}-pending`} role="status">
+            {pendingLabel}
           </p>
         ) : null}
       </div>

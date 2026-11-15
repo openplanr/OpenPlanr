@@ -144,7 +144,11 @@ const ERROR_CODES_BY_KIND: Readonly<
   empty: errorCodes(),
   'read-only': errorCodes(),
   refreshing: errorCodes(),
-  stale: errorCodes('DASHBOARD_STALE_RESPONSE', 'DASHBOARD_READ_FAILED'),
+  stale: errorCodes(
+    'DASHBOARD_STALE_RESPONSE',
+    'DASHBOARD_READ_FAILED',
+    'DASHBOARD_RESPONSE_INVALID',
+  ),
   degraded: errorCodes('DASHBOARD_ERROR_UNAVAILABLE', 'DASHBOARD_READ_FAILED'),
   blocked: errorCodes(),
   unavailable: errorCodes('DASHBOARD_ERROR_UNAVAILABLE', 'DASHBOARD_READ_FAILED'),

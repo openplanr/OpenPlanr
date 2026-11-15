@@ -59,7 +59,9 @@ describe('dashboard shell binding summary', () => {
     );
 
     expect(container.querySelector('.op-binding-passport')).toBeNull();
-    expect(container.querySelector('.pc-topbar__end')?.textContent).toContain('connected');
+    expect(container.querySelector('.pc-topbar__end')?.textContent).toContain(
+      'Live · watching .planr/',
+    );
     expect(container.textContent).not.toContain('Ready to review');
     expect(container.textContent).not.toContain('Workspace details');
     expect(container.textContent).not.toContain('owner-bound');
@@ -75,7 +77,7 @@ describe('dashboard shell binding summary', () => {
       domainId: 'planning',
       domainVersion: '1.0.0',
       cycleId: null,
-      route: '#/overview',
+      route: '#/home',
       subjectId: null,
       generation: 4,
       eventHead: { sequence: 1, hash: `sha256:${'e'.repeat(64)}` },
@@ -112,7 +114,7 @@ describe('dashboard shell binding summary', () => {
     );
 
     expect(container.querySelector('.pc-plane-banner')).not.toBeNull();
-    expect(container.textContent).toContain('Offline');
+    expect(container.textContent).toContain('The file watcher disconnected');
     expect(container.querySelector('main')?.getAttribute('aria-busy')).not.toBe('true');
   });
 
@@ -129,7 +131,7 @@ describe('dashboard shell binding summary', () => {
 
     expect(container.querySelector('.pc-plane-banner')).not.toBeNull();
     expect(container.querySelector('main')?.getAttribute('aria-busy')).not.toBe('true');
-    expect(container.textContent).toContain('Offline — the watcher is not reachable');
+    expect(container.textContent).toContain('The file watcher disconnected');
   });
 
   it.each([
@@ -141,7 +143,7 @@ describe('dashboard shell binding summary', () => {
       ...planning.binding,
       ...planning.cursor,
       productArea: 'planning',
-      route: '#/overview',
+      route: '#/home',
       cycleId: null,
       subjectId: null,
     });
@@ -180,10 +182,10 @@ describe('dashboard shell binding summary', () => {
       expect(pending?.dataset.routePending).toBe(kind);
       expect(pending?.getAttribute('aria-busy')).toBe('true');
       expect(pending?.textContent).toContain(status);
-      expect(pending?.querySelector('h1')?.textContent).toBe('Overview');
+      expect(pending?.querySelector('h1')?.textContent).toBe('Home');
     } else {
       expect(pending).toBeNull();
-      expect(container.querySelector('h1')?.textContent).toBe('Overview');
+      expect(container.querySelector('h1')?.textContent).toBe('Needs attention');
       expect(container.textContent).toContain('Improve appointment reminder delivery');
     }
     expect(container.querySelector('.op-state-panel')).toBeNull();

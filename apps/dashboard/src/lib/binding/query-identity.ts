@@ -1,5 +1,6 @@
 import { parseDashboardRoute, serializeDashboardRoute } from '../../app/router.js';
 import { DashboardValidationError, exactRecord, exactString } from '../api/validation.js';
+import { isCanonicalPlanningId } from '../routing/planning-view-codec.js';
 
 const IDENTITY = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,159}$/u;
 const SHA256 = /^sha256:[a-f0-9]{64}$/u;
@@ -73,7 +74,13 @@ export function createDashboardQueryIdentity(value: unknown): DashboardQueryIden
     throw new DashboardValidationError('$.route', 'does not belong to the selected product area');
   }
   const cycleId = nullableIdentity(record.cycleId, '$.cycleId');
-  const subjectId = nullableIdentity(record.subjectId, '$.subjectId');
+  const subjectId =
+    record.productArea === 'planning' &&
+    typeof record.subjectId === 'string' &&
+    record.subjectId.length <= 160 &&
+    isCanonicalPlanningId(record.subjectId)
+      ? record.subjectId
+      : nullableIdentity(record.subjectId, '$.subjectId');
   if (parsedRoute.subjectId !== subjectId) {
     throw new DashboardValidationError('$.subjectId', 'does not equal the canonical route subject');
   }

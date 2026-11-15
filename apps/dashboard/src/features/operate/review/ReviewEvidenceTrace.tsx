@@ -238,7 +238,7 @@ function TraceMatrix({ model }: { model: OperateReviewModel }) {
       {visible < matrix.edges.length ? (
         <button
           type="button"
-          className="op-inline-action"
+          className="pc-button op-inline-action"
           onClick={() => setVisible((count) => count + TRACE_PAGE)}
         >
           Show the next {Math.min(TRACE_PAGE, matrix.edges.length - visible)} relationships

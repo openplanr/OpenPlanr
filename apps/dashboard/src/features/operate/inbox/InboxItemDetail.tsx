@@ -172,17 +172,17 @@ export function InboxItemDetail({
 
       <footer className="op-inbox-item__actions">
         {showDeepLink ? (
-          <a className="op-inbox-item__link" href={itemHref(item.itemId)}>
+          <a className="pc-button op-inbox-item__link" href={itemHref(item.itemId)}>
             View item
           </a>
         ) : (
-          <a className="op-inbox-item__link" href="#/operate/inbox">
+          <a className="pc-button op-inbox-item__link" href="#/operate/inbox">
             Back to Inbox
           </a>
         )}
         {reviewNavigation ? (
           <a
-            className="op-inbox-item__link"
+            className="pc-button op-inbox-item__link"
             data-review-navigation=""
             data-review-read-action-digest={reviewNavigation.readActionDigest}
             href={reviewNavigation.deepLink}

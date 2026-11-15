@@ -73,13 +73,13 @@ export async function fetchOperateSearchHits(
   } catch {
     throw new Error('Search response is not JSON.');
   }
-  if (!response.ok) return Object.freeze([]);
+  if (!response.ok) throw new Error('OPERATE_SEARCH_READ_FAILED');
   try {
     const display = assertOperateExperienceAuditDisplaySurfaceV1(payload);
     const surface = display.payload;
     const auditEventHead = exactAuditEventHead(identity.eventHead);
     if (surface.surface !== 'search' || auditEventHead === null) {
-      return Object.freeze([]);
+      throw new Error('OPERATE_SEARCH_RESPONSE_INVALID');
     }
     const expected: OperateAuditDisplayBindingV1 = Object.freeze({
       actorId: identity.actorId,
@@ -98,6 +98,6 @@ export async function fetchOperateSearchHits(
     assertOperateExperienceAuditDisplaySurfaceV1(display, expected);
     return projectAccessSafeOperateSearchHits(surface.data.results);
   } catch {
-    return Object.freeze([]);
+    throw new Error('OPERATE_SEARCH_RESPONSE_INVALID');
   }
 }

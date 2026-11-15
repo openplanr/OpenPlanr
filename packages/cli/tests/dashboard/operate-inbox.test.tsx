@@ -39,6 +39,7 @@ import {
   createDashboardQueryIdentity,
   type DashboardQueryIdentity,
 } from '../../../../apps/dashboard/src/lib/binding/query-identity.js';
+import { nameFailures } from './control-name-guard.js';
 
 type RecordValue = Record<string, unknown>;
 type Display = Readonly<OperateExperienceDisplaySurfaceV1>;
@@ -952,6 +953,7 @@ describe('T-015 governed preview lifecycle', () => {
     expect(dialog.textContent).not.toContain('CAPABILITY_DENIED');
     expect(dialog.textContent).not.toContain('operate.review.submit');
 
+    expect(await nameFailures(dialog)).toEqual([]);
     const confirm = within(dialog).getByRole('button', { name: 'Confirm exact transition' });
     fireEvent.click(confirm);
     fireEvent.click(confirm);

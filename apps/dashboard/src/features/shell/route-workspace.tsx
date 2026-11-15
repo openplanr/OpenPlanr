@@ -13,7 +13,11 @@ import {
 import { isCurrentDashboardQuery } from '../../lib/binding/query-identity.js';
 import type { DashboardSearchSources } from '../search/search-index.js';
 import { ProjectionBoundary } from './ProjectionBoundary.js';
-import { type OperateReviewNavigation, operateRouteRegistry } from './routes/operate/index.js';
+import {
+  CouldNotRead,
+  type OperateReviewNavigation,
+  operateRouteRegistry,
+} from './routes/operate/index.js';
 import {
   PLANNING_FOLDER,
   PlanningSearchWorkspace,
@@ -32,6 +36,7 @@ type RouteWorkspaceProps = Readonly<{
   binding: DashboardContext['binding'];
   connectionState: string;
   searchSources: DashboardSearchSources;
+  onCopy?: (text: string) => Promise<void>;
   operateSearchBindings: readonly NonNullable<DashboardContext['binding']>[];
   operateReviewNavigation: OperateReviewNavigation | null;
   refetchCurrent: () => Promise<DashboardProductState<unknown>>;
@@ -56,13 +61,13 @@ export function hasCurrentRouteSubject({
 function isPendingRouteProjection(
   projection: DashboardProductState<unknown>,
   binding: DashboardContext['binding'],
-  retainValidatedData = false,
 ): boolean {
   if (
     !isValidatedDashboardProductState(projection) ||
+    projection.data !== null ||
     (projection.kind !== 'booting' &&
       projection.kind !== 'loading' &&
-      (projection.kind !== 'refreshing' || (retainValidatedData && projection.data !== null)))
+      projection.kind !== 'refreshing')
   ) {
     return false;
   }
@@ -184,12 +189,14 @@ function PlanningRouteWorkspace({
   binding,
   connectionState,
   searchSources,
+  onCopy,
   operateSearchBindings,
 }: RouteWorkspaceProps) {
   if (route.kind === 'planning.search') {
     return (
       <PlanningSearchWorkspace
         sources={searchSources}
+        onCopy={onCopy}
         operateBindings={operateSearchBindings}
         connectionState={connectionState}
       />
@@ -197,7 +204,7 @@ function PlanningRouteWorkspace({
   }
 
   const Page = resolvePlanningRoutePage<PlanningPageProps>(route);
-  if (isPendingRouteProjection(projection, binding, true)) {
+  if (isPendingRouteProjection(projection, binding)) {
     return <PendingRouteFrame route={route} projection={projection} />;
   }
   if (Page && binding && isValidatedDashboardProductState<Record<string, unknown>>(projection)) {
@@ -255,8 +262,8 @@ export function RouteWorkspace(props: RouteWorkspaceProps) {
         <p className="op-eyebrow">Closed route</p>
         <h1>Destination not available</h1>
         <p>This address is not part of the OpenPlanr dashboard route contract.</p>
-        <a className="op-inline-action" href="#/overview">
-          Return to Planning overview
+        <a className="op-inline-action" href="#/home">
+          Return to Planning Home
         </a>
       </div>
     );
@@ -280,13 +287,25 @@ export function RouteWorkspace(props: RouteWorkspaceProps) {
         />
       );
     }
+    const reason =
+      'The Operate session returned a state this page could not verify, so none of it is shown.';
+    if (
+      isPendingRouteProjection(projection, binding) ||
+      (isValidatedDashboardProductState(projection) && projection.data === null)
+    ) {
+      return (
+        <RouteProjectionFallback
+          {...props}
+          eyebrow="Today projection"
+          title="Today could not be read"
+          description={reason}
+        />
+      );
+    }
     return (
-      <RouteProjectionFallback
-        {...props}
-        eyebrow="Today projection"
-        title="Today cannot be trusted"
-        description="The current state is not a parser-verified owner-issued Today projection."
-      />
+      <div className="op-workspace pc-operate" data-route-kind={route.kind}>
+        <CouldNotRead title="Today could not be read" reason={reason} />
+      </div>
     );
   }
 

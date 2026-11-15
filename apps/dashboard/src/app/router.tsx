@@ -1,3 +1,10 @@
+import {
+  type PlanningView,
+  parsePlanningSubject,
+  parsePlanningViewToken,
+  serializePlanningSubject,
+} from '../lib/routing/planning-view-codec.js';
+
 export type DashboardProduct = 'planning' | 'operate';
 
 export const DASHBOARD_COMMAND_PALETTE_SHORTCUT = 'Meta+K Control+K';
@@ -76,9 +83,9 @@ const ROUTE_DEFINITIONS = [
   {
     kind: 'planning.overview',
     product: 'planning',
-    label: 'Overview',
+    label: 'Home',
     description: 'Project progress and the highest planning attention.',
-    href: '#/overview',
+    href: '#/home',
     navigation: 'primary',
   },
   {
@@ -318,6 +325,8 @@ function validSubject(subject: string): boolean {
     subject === '..' ||
     subject.length === 0 ||
     subject.length > 256 ||
+    /:2f/iu.test(subject) ||
+    /%(?:25)*(?:2f|5c|2e|3a)/iu.test(subject) ||
     [...subject].some((character) => {
       const codePoint = character.codePointAt(0) ?? 0;
       return codePoint <= 31 || codePoint === 127 || character === '/' || character === '\\';
@@ -335,6 +344,15 @@ function parseSubject(segment: string): string | null {
   }
 }
 
+function parsePlanningRouteSubject(segment: string): string | null {
+  const scoped = parsePlanningSubject(segment);
+  if (scoped) return scoped;
+  // Existing unscoped opaque identities remain aliases, without accepting encoded slash paths.
+  const subject = parseSubject(segment);
+  if (!subject || /%(?:2f|5c|2e)/iu.test(subject)) return null;
+  return subject;
+}
+
 const UNKNOWN_ROUTE: UnknownDashboardRoute = Object.freeze({
   kind: 'not-found',
   product: null,
@@ -342,7 +360,7 @@ const UNKNOWN_ROUTE: UnknownDashboardRoute = Object.freeze({
 });
 
 /** Parse only the documented public dashboard grammar. Unknown paths never coerce to Today. */
-export function parseDashboardRoute(hash: string): ParsedDashboardRoute {
+function parseBaseDashboardRoute(hash: string): ParsedDashboardRoute {
   if (hash === '' || hash === '#') return collection('planning.overview', 'planning');
   if (!hash.startsWith('#/') || hash.includes('?') || hash.indexOf('#', 1) !== -1) {
     return UNKNOWN_ROUTE;
@@ -354,6 +372,7 @@ export function parseDashboardRoute(hash: string): ParsedDashboardRoute {
   if (parts.length === 1) {
     if (parts[0] === 'diagnostics') return DASHBOARD_DIAGNOSTICS_ROUTE;
     const planning = new Map<string, DashboardRouteKind>([
+      ['home', 'planning.overview'],
       ['overview', 'planning.overview'],
       ['graph', 'planning.graph'],
       ['board', 'planning.board'],
@@ -367,12 +386,12 @@ export function parseDashboardRoute(hash: string): ParsedDashboardRoute {
   }
 
   if (parts.length === 2 && parts[0] === 'detail') {
-    const subjectId = parseSubject(parts[1]);
+    const subjectId = parsePlanningRouteSubject(parts[1]);
     return subjectId ? detail('planning.detail', 'planning', subjectId) : UNKNOWN_ROUTE;
   }
 
   if (parts.length === 3 && parts[0] === 'plan' && parts[1] === 'specs') {
-    const subjectId = parseSubject(parts[2]);
+    const subjectId = parsePlanningRouteSubject(parts[2]);
     return subjectId ? detail('planning.spec', 'planning', subjectId) : UNKNOWN_ROUTE;
   }
 
@@ -418,6 +437,42 @@ export function parseDashboardRoute(hash: string): ParsedDashboardRoute {
   return UNKNOWN_ROUTE;
 }
 
+export type DashboardLocation = Readonly<{
+  route: ParsedDashboardRoute;
+  presentationView: PlanningView | null;
+  invalidView: boolean;
+}>;
+
+/** Only the single documented presentation query may cross the route boundary. */
+export function parseDashboardLocation(hash: string): DashboardLocation {
+  const queryIndex = hash.indexOf('?');
+  if (queryIndex === -1)
+    return { route: parseBaseDashboardRoute(hash), presentationView: null, invalidView: false };
+  const base = hash.slice(0, queryIndex);
+  const query = hash.slice(queryIndex + 1);
+  const route = parseBaseDashboardRoute(base);
+  if (
+    !['planning.list', 'planning.graph', 'planning.board', 'planning.activity'].includes(
+      route.kind,
+    ) ||
+    !query.startsWith('v=') ||
+    query.includes('&') ||
+    query.includes('?') ||
+    query.includes('#')
+  ) {
+    return { route: UNKNOWN_ROUTE, presentationView: null, invalidView: false };
+  }
+  const presentationView = parsePlanningViewToken(query.slice(2));
+  if (!presentationView || `planning.${presentationView.route}` !== route.kind) {
+    return { route, presentationView: null, invalidView: true };
+  }
+  return { route, presentationView, invalidView: false };
+}
+
+export function parseDashboardRoute(hash: string): ParsedDashboardRoute {
+  return parseDashboardLocation(hash).route;
+}
+
 export function serializeDashboardRoute(route: DashboardRoute): string {
   const definition = DEFINITION_BY_KIND.get(route.kind);
   if (!definition) throw new Error(`Unknown dashboard route kind: ${String(route.kind)}`);
@@ -431,7 +486,13 @@ export function serializeDashboardRoute(route: DashboardRoute): string {
   }
   if (definition.href.includes(':subjectId')) {
     const subjectId = route.subjectId;
-    if (typeof subjectId !== 'string' || !validSubject(subjectId)) {
+    if (typeof subjectId !== 'string') {
+      throw new Error('Dashboard detail routes require a valid opaque subject identity.');
+    }
+    if (route.product === 'planning' && subjectId.includes('/')) {
+      return definition.href.replace(':subjectId', serializePlanningSubject(subjectId));
+    }
+    if (!validSubject(subjectId)) {
       throw new Error('Dashboard detail routes require a valid opaque subject identity.');
     }
     return definition.href.replace(':subjectId', encodeURIComponent(subjectId));

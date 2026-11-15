@@ -1,4 +1,5 @@
 import { createHash } from 'node:crypto';
+import { createRequire } from 'node:module';
 import {
   lstatSync, readFileSync, readdirSync, writeFileSync,
 } from 'node:fs';
@@ -15,6 +16,29 @@ const tsconfigPath = resolve(repositoryRoot, 'tsconfig.json');
 const dashboardTsconfigPath = resolve(repositoryRoot, 'tsconfig.json');
 const dashboardConfigPath = fileURLToPath(import.meta.url);
 const dashboardSourceRoot = resolve(repositoryRoot, 'src');
+const require = createRequire(import.meta.url);
+const fontPackages = [
+  '@fontsource/outfit',
+  '@fontsource-variable/dm-sans',
+  '@fontsource/source-code-pro',
+];
+
+function localFontLicenses(): Plugin {
+  return {
+    name: 'openplanr-local-font-licenses',
+    apply: 'build',
+    buildStart() {
+      for (const name of fontPackages) {
+        const packageRoot = dirname(require.resolve(`${name}/package.json`));
+        this.emitFile({
+          type: 'asset',
+          fileName: `licenses/${name.split('/')[1]}-OFL.txt`,
+          source: readFileSync(join(packageRoot, 'LICENSE'), 'utf8'),
+        });
+      }
+    },
+  };
+}
 
 function dashboardSourceFiles(directory = dashboardSourceRoot): string[] {
   return readdirSync(directory, { withFileTypes: true })
@@ -64,6 +88,7 @@ export function dashboardSourceBuildId(
   const version = typeof packageJson.version === 'string' ? packageJson.version : '0.0.0';
   const dependencyVersions = Object.fromEntries(
     [
+      ...fontPackages,
       '@tailwindcss/vite',
       '@openplanr/protocol',
       '@tanstack/react-query',
@@ -150,6 +175,7 @@ export default defineConfig(() => {
     plugins: [
       react(),
       tailwindcss(),
+      localFontLicenses(),
       stableDashboardManifest(buildId),
     ].filter(Boolean) as Plugin[],
     resolve: {

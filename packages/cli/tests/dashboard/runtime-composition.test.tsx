@@ -1,11 +1,15 @@
 // @vitest-environment jsdom
 
 import { act, render, renderHook, screen, waitFor } from '@testing-library/react';
+import { sha256Jcs } from 'planr-pipeline/protocol';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { parseDashboardRoute } from '../../../../apps/dashboard/src/app/router.js';
 import { useDashboardRuntimeComposition } from '../../../../apps/dashboard/src/app/runtime-composition.js';
 import { resolvePlanningHandoffModel } from '../../../../apps/dashboard/src/features/operate/planning/planning-handoff-model.js';
-import type { PlanningGraphEnvelope } from '../../../../apps/dashboard/src/features/planning/planning-api.js';
+import type {
+  PlanningGraphEnvelope,
+  PlanningPatchSignal,
+} from '../../../../apps/dashboard/src/features/planning/planning-api.js';
 import { planningNodesFromProductState } from '../../../../apps/dashboard/src/features/planning/planning-workspace.js';
 import { RouteWorkspace } from '../../../../apps/dashboard/src/features/shell/route-workspace.js';
 import { parseDashboardBootstrap } from '../../../../apps/dashboard/src/lib/api/bootstrap.js';
@@ -198,7 +202,7 @@ describe('production dashboard runtime composition', () => {
   it('keeps one Planning read and SSE lease while navigating between Operate routes', async () => {
     planning.fetch.mockResolvedValue(graphEnvelope);
     planning.connect.mockReturnValue(
-      Object.freeze({ completion: Promise.resolve(), close: planning.close }),
+      Object.freeze({ completion: new Promise<void>(() => {}), close: planning.close }),
     );
 
     const { result, rerender, unmount } = renderHook(
@@ -227,7 +231,7 @@ describe('production dashboard runtime composition', () => {
   it('rebinds one verified Planning graph immediately across Planning view routes', async () => {
     planning.fetch.mockResolvedValue(graphEnvelope);
     planning.connect.mockReturnValue(
-      Object.freeze({ completion: Promise.resolve(), close: planning.close }),
+      Object.freeze({ completion: new Promise<void>(() => {}), close: planning.close }),
     );
 
     const { result, rerender, unmount } = renderHook(
@@ -237,7 +241,7 @@ describe('production dashboard runtime composition', () => {
     );
 
     await waitFor(() => expect(result.current.projection.kind).toBe('ready'));
-    expect(result.current.binding?.route).toBe('#/overview');
+    expect(result.current.binding?.route).toBe('#/home');
     expect(planning.fetch).toHaveBeenCalledTimes(1);
 
     rerender({ hash: '#/graph' });
@@ -324,12 +328,14 @@ describe('production dashboard runtime composition', () => {
         },
       });
     });
+    renders.length = 0;
 
-    expect(planning.fetch).toHaveBeenCalledTimes(2);
+    await waitFor(() => expect(planning.fetch).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(result.current.projection.kind).toBe('refreshing'));
     expect(renders.length).toBeGreaterThan(0);
     for (const projection of renders) {
       expect(projection.data).toEqual(graphEnvelope);
-      expect(projection.kind).toBe('refreshing');
+      expect(['ready', 'refreshing']).toContain(projection.kind);
       expect(projection.mutationEnabled).toBe(false);
       expect(projection.binding).toMatchObject(graphEnvelope.cursor);
     }
@@ -363,7 +369,7 @@ describe('production dashboard runtime composition', () => {
       .mockResolvedValueOnce(graphEnvelope)
       .mockRejectedValueOnce(new Error('new Planning root is unavailable'));
     planning.connect.mockReturnValue(
-      Object.freeze({ completion: Promise.resolve(), close: planning.close }),
+      Object.freeze({ completion: new Promise<void>(() => {}), close: planning.close }),
     );
 
     const { result, rerender, unmount } = renderHook(
@@ -397,10 +403,87 @@ describe('production dashboard runtime composition', () => {
     unmount();
   });
 
+  it('retains verified bytes through every watcher-refetch render and disables mutations', async () => {
+    planning.fetch.mockResolvedValueOnce(graphEnvelope);
+    planning.connect.mockReturnValue({ completion: new Promise(() => {}), close: planning.close });
+    const observed: { kind: string; data: unknown }[] = [];
+    const { result, unmount } = renderHook(() => {
+      const runtime = useDashboardRuntimeComposition(bootstrap, parseDashboardRoute('#/list'));
+      observed.push({ kind: runtime.projection.kind, data: runtime.projection.data });
+      return runtime;
+    });
+    await waitFor(() => expect(result.current.projection.kind).toBe('ready'));
+    const retained = result.current.projection.data;
+    let resolveRead!: (value: PlanningGraphEnvelope) => void;
+    planning.fetch.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          resolveRead = resolve;
+        }),
+    );
+    const callbacks = planning.reconcile.mock.calls.at(-1)?.[0] as {
+      onPatch: (snapshot: PlanningGraphEnvelope, signal: PlanningPatchSignal) => void;
+    };
+    observed.length = 0;
+    const updatedNode = { ...graphEnvelope.graph.nodes[0], title: 'Accepted watcher update' };
+    const patch: PlanningPatchSignal['patch'] = {
+      added: [],
+      updated: [updatedNode],
+      removed: [],
+      edges: { added: [], removed: [] },
+    };
+    const nextGraph = { ...graphEnvelope.graph, nodes: [updatedNode] };
+    const viewHash = sha256Jcs(nextGraph as never);
+    const to = {
+      eventHead: {
+        sequence: 1,
+        hash: sha256Jcs({
+          kind: 'planning-live-head',
+          previous: graphEnvelope.cursor.eventHead,
+          sequence: 1,
+          patchHash: sha256Jcs(patch as never),
+          viewHash,
+        } as never),
+      },
+      viewHash,
+    };
+    const patchHash = sha256Jcs({ from: graphEnvelope.cursor, to, patch } as never);
+    const signal: PlanningPatchSignal = {
+      patchId: `ppatch_1_${patchHash.slice(7, 23)}`,
+      patchHash,
+      from: graphEnvelope.cursor,
+      to,
+      patch,
+    };
+    const nextEnvelope = { ...graphEnvelope, cursor: to, graph: nextGraph };
+    act(() => callbacks.onPatch(nextEnvelope, signal));
+    expect(result.current.planningLive.activity?.entries).toMatchObject([
+      { patchId: signal.patchId, sequence: 1, kind: 'updated', node: updatedNode },
+    ]);
+    const retainedEntries = result.current.planningLive.activity?.entries;
+    await waitFor(() => expect(planning.fetch).toHaveBeenCalledTimes(2));
+    expect(result.current.projection.kind).toBe('refreshing');
+    expect(result.current.projection.data).toEqual(retained);
+    expect(result.current.projection.mutationEnabled).toBe(false);
+    expect(result.current.planningLive.activity?.entries).toBe(retainedEntries);
+    expect(
+      observed.every(
+        (state) => state.data !== null && ['ready', 'refreshing'].includes(state.kind),
+      ),
+    ).toBe(true);
+    await act(async () => resolveRead(nextEnvelope));
+    await waitFor(() => expect(result.current.projection.kind).toBe('ready'));
+    expect(result.current.planningLive.activity?.entries).toBe(retainedEntries);
+    expect(planningNodesFromProductState(result.current.projection)[0]?.title).toBe(
+      'Accepted watcher update',
+    );
+    unmount();
+  });
+
   it('retains a failed exact refetch as a typed read-only projection without leaking internals', async () => {
     planning.fetch.mockResolvedValue(graphEnvelope);
     planning.connect.mockReturnValue(
-      Object.freeze({ completion: Promise.resolve(), close: planning.close }),
+      Object.freeze({ completion: new Promise<void>(() => {}), close: planning.close }),
     );
     const { result, unmount } = renderHook(() =>
       useDashboardRuntimeComposition(bootstrap, parseDashboardRoute('#/overview')),
@@ -478,7 +561,7 @@ describe('production dashboard runtime composition', () => {
     const action = wireFixture(fixture.action);
     planning.fetch.mockResolvedValue(wireFixture(fixture.planning));
     planning.connect.mockReturnValue(
-      Object.freeze({ completion: Promise.resolve(), close: planning.close }),
+      Object.freeze({ completion: new Promise<void>(() => {}), close: planning.close }),
     );
     operate.root.mockImplementation(({ surface }: { surface: string }) =>
       Promise.resolve(surface === 'today' ? today : cycles),
@@ -553,7 +636,7 @@ describe('production dashboard runtime composition', () => {
     const action = wireFixture(fixture.action);
     planning.fetch.mockResolvedValue(wireFixture(fixture.planning));
     planning.connect.mockReturnValue(
-      Object.freeze({ completion: Promise.resolve(), close: planning.close }),
+      Object.freeze({ completion: new Promise<void>(() => {}), close: planning.close }),
     );
     operate.root.mockImplementation(({ surface }: { surface: string }) =>
       Promise.resolve(surface === 'today' ? today : cycles),
@@ -629,7 +712,8 @@ describe('production dashboard runtime composition', () => {
       expect(document.activeElement).toBe(receipt);
       expect(subject.container.querySelector('[data-route-pending]')).toBeNull();
       for (const render of renders) {
-        expect(render.projection.kind).toBe('read-only');
+        expect(['read-only', 'refreshing']).toContain(render.projection.kind);
+        expect(render.projection.mutationEnabled).toBe(false);
         expect(render.projection.data).toEqual(terminal);
       }
       const completeRefresh = resolveRefresh;

@@ -297,7 +297,12 @@ describe('T-037 verified Cycle display consumption', () => {
       }
       expect(collectionHtml).toContain(`href="#/operate/cycles/${fixture.cycleId}"`);
       expect(detailHtml).toContain('What is happening now');
-      expect(todayHtml).toContain('Observe through Learn operating spine');
+      const eyebrowLink = todayHtml.match(
+        /class="pc-operate-today__eyebrow">(?:[^<]*)<a href="([^"]+)">cycle /u,
+      )?.[1];
+      expect(eyebrowLink).toBe(`#/operate/cycles/${fixture.cycleId}`);
+      expect(todayHtml).not.toContain('Observe through Learn operating spine');
+      expect(detailHtml).toContain('Observe through Learn operating spine');
     }
   });
 

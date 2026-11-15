@@ -1,213 +1,136 @@
-/*
- * Planr Console design tokens (Planning console vertical slice).
- * Namespaced --pc-* so they never collide with the legacy --op-* system or
- * Tailwind v4's @theme vars. Warm ink neutrals + an acid-lime signal.
- * Geist and Geist Mono are self-hosted through exact pinned Fontsource packages.
- */
+/* Keep existing console consumers on the shared brand primitives. */
 :root {
-  /* raw ramp — warm ink (brown-black), acid lime, and semantic hues */
-  --pc-ink-950: #141210;
-  --pc-ink-900: #1b1815;
-  --pc-ink-850: #221f1b;
-  --pc-ink-800: #2a2622;
-  --pc-ink-700: #3a342f;
-  --pc-ink-600: #544c45;
-  --pc-ink-500: #6f665d;
-  --pc-ink-400: #968c81;
-  --pc-ink-300: #b9afa3;
-  --pc-ink-200: #d9d2c7;
-  --pc-ink-150: #e5dfd5;
-  --pc-ink-100: #eee9e0;
-  --pc-ink-50: #f6f3ec;
-  --pc-paper: #fcfbf8;
-  --pc-white: #ffffff;
-  --pc-lime-100: #f0fbce;
-  --pc-lime-200: #e2f79e;
-  --pc-lime-300: #d2f26a;
-  --pc-lime-400: #bce633;
-  --pc-lime-500: #a3ce12;
-  --pc-lime-600: #7ea00e;
-  --pc-lime-700: #5c750c;
-  --pc-lime-800: #3f5109;
-  --pc-amber-100: #fdf0d6;
-  --pc-amber-300: #f5c563;
-  --pc-amber-500: #de9410;
-  --pc-amber-700: #94600a;
-  --pc-verm-100: #fce4de;
-  --pc-verm-300: #f4a392;
-  --pc-verm-500: #de4526;
-  --pc-verm-700: #9c2c15;
-  --pc-teal-100: #dcf0e9;
-  --pc-teal-300: #8fcfbb;
-  --pc-teal-500: #2c8a70;
-  --pc-teal-700: #1d6152;
-  --pc-indigo-300: #a5afee;
-  --pc-indigo-500: #4356ce;
-  --pc-indigo-700: #2c3a93;
-
-  /* type + geometry */
-  --pc-font-sans: "Geist Variable", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
-  --pc-font-mono: "Geist Mono Variable", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
-  --pc-text-2xs: 11px;
+  --pc-ink-950: var(--op-bg);
+  --pc-ink-900: var(--op-text);
+  --pc-ink-850: var(--op-card);
+  --pc-ink-800: var(--op-raised);
+  --pc-ink-700: var(--op-line-strong);
+  --pc-ink-600: var(--op-body);
+  --pc-ink-500: var(--op-dim);
+  --pc-ink-400: var(--op-muted);
+  --pc-ink-300: var(--op-muted);
+  --pc-ink-200: var(--op-line);
+  --pc-ink-150: var(--op-line);
+  --pc-ink-100: var(--op-raised);
+  --pc-ink-50: var(--op-bg);
+  --pc-paper: var(--op-panel);
+  --pc-white: var(--op-card);
+  --pc-lime-100: var(--op-accent-soft);
+  --pc-lime-200: var(--op-accent);
+  --pc-lime-300: var(--op-accent);
+  --pc-lime-400: var(--op-accent);
+  --pc-lime-500: var(--op-accent);
+  --pc-lime-600: var(--op-accent);
+  --pc-lime-700: var(--op-accent);
+  --pc-lime-800: var(--op-accent);
+  --pc-amber-100: var(--op-raised);
+  --pc-amber-300: var(--op-warning);
+  --pc-amber-500: var(--op-warning);
+  --pc-amber-700: var(--op-warning);
+  --pc-verm-100: var(--op-raised);
+  --pc-verm-300: var(--op-danger);
+  --pc-verm-500: var(--op-danger);
+  --pc-verm-700: var(--op-danger);
+  --pc-teal-100: var(--op-accent-soft);
+  --pc-teal-300: var(--op-accent);
+  --pc-teal-500: var(--op-accent);
+  --pc-teal-700: var(--op-accent);
+  --pc-indigo-300: var(--op-addressed);
+  --pc-indigo-500: var(--op-addressed);
+  --pc-indigo-700: var(--op-addressed);
+  --pc-font-sans: var(--op-font-ui);
+  --pc-font-mono: var(--op-font-technical);
+  --pc-text-2xs: 12px;
   --pc-text-xs: 12px;
   --pc-text-sm: 13px;
   --pc-text-base: 14px;
   --pc-text-md: 15px;
   --pc-text-lg: 18px;
-  --pc-text-xl: 22px;
+  --pc-text-xl: 20px;
   --pc-weight-regular: 400;
   --pc-weight-medium: 500;
   --pc-weight-semibold: 600;
   --pc-tracking-snug: -0.01em;
   --pc-tracking-wide: 0.04em;
-  --pc-radius-xs: 3px;
-  --pc-radius-sm: 5px;
-  --pc-radius-md: 7px;
+  --pc-radius-xs: 6px;
+  --pc-radius-sm: 8px;
+  --pc-radius-md: 12px;
   --pc-radius-pill: 999px;
   --pc-row-height: 34px;
   --pc-row-height-compact: 28px;
-
-  /* semantic — light */
-  --pc-surface-app: var(--pc-ink-50);
-  --pc-surface-panel: var(--pc-paper);
-  --pc-surface-card: var(--pc-white);
-  --pc-surface-sunken: var(--pc-ink-100);
-  --pc-surface-hover: rgba(20, 18, 16, 0.04);
-  --pc-surface-selected: var(--pc-lime-100);
-  --pc-row-stripe: rgba(20, 18, 16, 0.022);
-  --pc-text-primary: var(--pc-ink-900);
-  --pc-text-secondary: var(--pc-ink-600);
-  --pc-text-tertiary: var(--pc-ink-500);
-  --pc-border-subtle: var(--pc-ink-150);
-  --pc-border-default: var(--pc-ink-200);
-  --pc-border-strong: var(--pc-ink-400);
-  --pc-accent: var(--pc-lime-400);
-  --pc-accent-hover: var(--pc-lime-500);
-  --pc-accent-ink: var(--pc-lime-700);
-  --pc-on-accent: var(--pc-ink-950);
-  --pc-focus-ring: var(--pc-ink-900);
-  --pc-focus-halo: var(--pc-lime-300);
-
-  /* real artifact statuses (done | in-progress | blocked | outstanding | addressed) */
-  --pc-status-outstanding-fg: var(--pc-amber-700);
-  --pc-status-outstanding-bg: var(--pc-amber-100);
-  --pc-status-outstanding-border: var(--pc-amber-300);
-  --pc-status-in-progress-fg: var(--pc-lime-800);
-  --pc-status-in-progress-bg: var(--pc-lime-100);
-  --pc-status-in-progress-border: var(--pc-lime-400);
-  --pc-status-blocked-fg: var(--pc-verm-700);
-  --pc-status-blocked-bg: var(--pc-verm-100);
-  --pc-status-blocked-border: var(--pc-verm-300);
-  --pc-status-done-fg: var(--pc-teal-700);
-  --pc-status-done-bg: var(--pc-teal-100);
-  --pc-status-done-border: var(--pc-teal-300);
-  --pc-status-addressed-fg: var(--pc-ink-600);
-  --pc-status-addressed-bg: var(--pc-ink-100);
-  --pc-status-addressed-border: var(--pc-ink-200);
-
-  /* capability accents — planr-{name} */
-  --pc-planr-plan: var(--pc-indigo-500);
-  --pc-planr-ship: var(--pc-lime-600);
-  --pc-planr-operate: var(--pc-amber-500);
-  --pc-planr-diagram: var(--pc-teal-500);
-  --pc-planr-status: var(--pc-ink-600);
-
-  /* artifact type accents (epic → spec) */
-  --pc-type-epic: var(--pc-indigo-500);
-  --pc-type-feature: var(--pc-teal-500);
-  --pc-type-story: var(--pc-lime-600);
-  --pc-type-task: var(--pc-ink-500);
-  --pc-type-spec: var(--pc-amber-500);
-  --pc-type-other: var(--pc-ink-400);
-}
-
-/* semantic — dark: first-class, keyed on the dashboard's [data-theme] convention */
-:root[data-theme="dark"] {
-  --pc-surface-app: var(--pc-ink-950);
-  --pc-surface-panel: var(--pc-ink-900);
-  --pc-surface-card: var(--pc-ink-850);
-  --pc-surface-sunken: #0e0c0b;
-  --pc-surface-hover: rgba(246, 243, 236, 0.05);
-  --pc-surface-selected: rgba(188, 230, 51, 0.14);
-  --pc-row-stripe: rgba(246, 243, 236, 0.02);
-  --pc-text-primary: var(--pc-ink-50);
-  --pc-text-secondary: var(--pc-ink-300);
-  --pc-text-tertiary: var(--pc-ink-400);
-  --pc-border-subtle: var(--pc-ink-850);
-  --pc-border-default: var(--pc-ink-700);
-  --pc-border-strong: var(--pc-ink-500);
-  --pc-accent: var(--pc-lime-400);
-  --pc-accent-hover: var(--pc-lime-300);
-  --pc-accent-ink: var(--pc-lime-300);
-  --pc-on-accent: var(--pc-ink-950);
-  --pc-focus-ring: var(--pc-lime-300);
-  --pc-focus-halo: rgba(188, 230, 51, 0.35);
-  --pc-status-outstanding-fg: var(--pc-amber-300);
-  --pc-status-outstanding-bg: rgba(222, 148, 16, 0.16);
-  --pc-status-outstanding-border: rgba(245, 197, 99, 0.45);
-  --pc-status-in-progress-fg: var(--pc-lime-300);
-  --pc-status-in-progress-bg: rgba(188, 230, 51, 0.16);
-  --pc-status-in-progress-border: rgba(188, 230, 51, 0.5);
-  --pc-status-blocked-fg: var(--pc-verm-300);
-  --pc-status-blocked-bg: rgba(222, 69, 38, 0.18);
-  --pc-status-blocked-border: rgba(244, 163, 146, 0.42);
-  --pc-status-done-fg: var(--pc-teal-300);
-  --pc-status-done-bg: rgba(44, 138, 112, 0.18);
-  --pc-status-done-border: rgba(143, 207, 187, 0.4);
-  --pc-status-addressed-fg: var(--pc-ink-300);
-  --pc-status-addressed-bg: rgba(246, 243, 236, 0.07);
-  --pc-status-addressed-border: var(--pc-ink-700);
-  --pc-planr-plan: var(--pc-indigo-300);
-  --pc-planr-ship: var(--pc-lime-400);
-  --pc-planr-operate: var(--pc-amber-300);
-  --pc-planr-diagram: var(--pc-teal-300);
-  --pc-planr-status: var(--pc-ink-300);
-  --pc-type-epic: var(--pc-indigo-300);
-  --pc-type-feature: var(--pc-teal-300);
-  --pc-type-story: var(--pc-lime-400);
-  --pc-type-task: var(--pc-ink-400);
-  --pc-type-spec: var(--pc-amber-300);
-  --pc-type-other: var(--pc-ink-500);
-}
-
-/* ===== Full prototype alignment: extended tokens (theme-invariant) ===== */
-:root {
-  /* raw ramp steps the prototype semantic layer needs beyond the slice subset */
-  --pc-indigo-100: #e2e6fa;
-  --pc-amber-900: #4e3305;
-  --pc-verm-900: #54180b;
-  --pc-teal-900: #0f332c;
-  --pc-indigo-900: #171e4e;
-
-  /* type ramp + named roles */
+  --pc-surface-app: var(--op-bg);
+  --pc-surface-panel: var(--op-panel);
+  --pc-surface-card: var(--op-card);
+  --pc-surface-sunken: var(--op-bg);
+  --pc-surface-hover: var(--op-raised);
+  --pc-surface-selected: var(--op-accent-soft);
+  --pc-row-stripe: var(--op-panel);
+  --pc-text-primary: var(--op-text);
+  --pc-text-secondary: var(--op-body);
+  --pc-text-tertiary: var(--op-dim);
+  --pc-border-subtle: var(--op-line);
+  --pc-border-default: var(--op-line);
+  --pc-border-strong: var(--op-control-border);
+  --pc-accent: var(--op-accent);
+  --pc-accent-hover: var(--op-accent);
+  --pc-accent-ink: var(--op-accent);
+  --pc-on-accent: var(--op-on-accent);
+  --pc-focus-ring: var(--op-accent);
+  --pc-focus-halo: color-mix(in srgb, var(--op-accent) 35%, transparent);
+  --pc-status-outstanding-fg: var(--op-status-outstanding-fg);
+  --pc-status-outstanding-bg: var(--op-status-outstanding-bg);
+  --pc-status-outstanding-border: var(--op-info);
+  --pc-status-in-progress-fg: var(--op-status-in-progress-fg);
+  --pc-status-in-progress-bg: var(--op-status-in-progress-bg);
+  --pc-status-in-progress-border: var(--op-accent);
+  --pc-status-blocked-fg: var(--op-status-blocked-fg);
+  --pc-status-blocked-bg: var(--op-status-blocked-bg);
+  --pc-status-blocked-border: var(--op-danger);
+  --pc-status-done-fg: var(--op-status-done-fg);
+  --pc-status-done-bg: var(--op-status-done-bg);
+  --pc-status-done-border: var(--op-dim);
+  --pc-status-addressed-fg: var(--op-status-addressed-fg);
+  --pc-status-addressed-bg: var(--op-status-addressed-bg);
+  --pc-status-addressed-border: var(--op-addressed);
+  --pc-planr-plan: var(--op-addressed);
+  --pc-planr-ship: var(--op-accent);
+  --pc-planr-operate: var(--op-warning);
+  --pc-planr-diagram: var(--op-info);
+  --pc-planr-status: var(--op-muted);
+  --pc-type-epic: var(--op-type-epic);
+  --pc-type-feature: var(--op-type-spec);
+  --pc-type-story: var(--op-type-us);
+  --pc-type-task: var(--op-type-t);
+  --pc-type-spec: var(--op-type-spec);
+  --pc-type-other: var(--op-type-qt);
+  --pc-indigo-100: var(--op-raised);
+  --pc-amber-900: var(--op-warning);
+  --pc-verm-900: var(--op-danger);
+  --pc-teal-900: var(--op-accent);
+  --pc-indigo-900: var(--op-addressed);
   --pc-text-2xl: 28px;
-  --pc-text-3xl: 36px;
-  --pc-text-4xl: 48px;
+  --pc-text-3xl: 40px;
+  --pc-text-4xl: 40px;
   --pc-leading-tight: 1.15;
   --pc-leading-snug: 1.3;
   --pc-leading-normal: 1.45;
   --pc-leading-relaxed: 1.6;
-  --pc-weight-light: 300;
+  --pc-weight-light: 400;
   --pc-weight-bold: 700;
   --pc-tracking-tight: -0.02em;
   --pc-tracking-normal: 0;
   --pc-tracking-caps: 0.09em;
-  --pc-type-display:
-    var(--pc-weight-semibold) var(--pc-text-3xl) / var(--pc-leading-tight) var(--pc-font-sans);
-  --pc-type-title:
-    var(--pc-weight-semibold) var(--pc-text-xl) / var(--pc-leading-snug) var(--pc-font-sans);
-  --pc-type-section:
-    var(--pc-weight-semibold) var(--pc-text-md) / var(--pc-leading-snug) var(--pc-font-sans);
+  --pc-type-display: 800 40px / 1.05 var(--pc-font-display);
+  --pc-type-title: 700 28px / 1.15 var(--pc-font-display);
+  --pc-type-section: 600 16px / 1.3 var(--pc-font-sans);
   --pc-type-body:
     var(--pc-weight-regular) var(--pc-text-base) / var(--pc-leading-normal) var(--pc-font-sans);
   --pc-type-body-sm:
     var(--pc-weight-regular) var(--pc-text-sm) / var(--pc-leading-normal) var(--pc-font-sans);
-  --pc-type-label: var(--pc-weight-medium) var(--pc-text-xs) / 1.2 var(--pc-font-sans);
-  --pc-type-mono: var(--pc-weight-regular) var(--pc-text-xs) / 1.35 var(--pc-font-mono);
+  --pc-type-label: 500 13px / 1.2 var(--pc-font-sans);
+  --pc-type-mono: 500 12px / 1.35 var(--pc-font-mono);
   --pc-type-mono-sm: var(--pc-weight-regular) var(--pc-text-2xs) / 1.3 var(--pc-font-mono);
   --pc-type-key: var(--pc-weight-medium) var(--pc-text-2xs) / 1 var(--pc-font-mono);
-
-  /* 4px spacing grid with dense half-steps */
   --pc-space-0-5: 2px;
   --pc-space-1: 4px;
   --pc-space-1-5: 6px;
@@ -221,259 +144,193 @@
   --pc-space-12: 48px;
   --pc-space-16: 64px;
   --pc-space-20: 80px;
-
-  /* shell geometry */
   --pc-rail-width: 52px;
   --pc-sidebar-width: 248px;
   --pc-inspector-width: 344px;
   --pc-topbar-height: 48px;
-  --pc-statusbar-height: 28px;
+  --pc-statusbar-height: 40px;
   --pc-content-max: 1600px;
   --pc-gutter: 20px;
-
-  /* extra radii */
   --pc-radius-none: 0;
-  --pc-radius-lg: 10px;
+  --pc-radius-lg: 16px;
   --pc-radius-xl: 14px;
-
-  /* elevation (light) — hairline borders do most of the work */
   --pc-shadow-none: none;
   --pc-shadow-hairline: 0 0 0 1px var(--pc-border-subtle);
-  --pc-shadow-sm: 0 1px 2px rgba(20, 18, 16, 0.06), 0 0 0 1px rgba(20, 18, 16, 0.05);
-  --pc-shadow-md: 0 4px 12px -2px rgba(20, 18, 16, 0.1), 0 0 0 1px rgba(20, 18, 16, 0.06);
-  --pc-shadow-lg: 0 18px 44px -12px rgba(20, 18, 16, 0.22), 0 0 0 1px rgba(20, 18, 16, 0.07);
-
-  /* motion — fast, mechanical */
-  --pc-dur-instant: 80ms;
-  --pc-dur-fast: 120ms;
-  --pc-dur-base: 180ms;
-  --pc-dur-slow: 260ms;
-  --pc-dur-pulse: 1600ms;
-  --pc-ease-out: cubic-bezier(0.2, 0.7, 0.3, 1);
-  --pc-ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
+  --pc-shadow-sm: none;
+  --pc-shadow-md: var(--op-shadow-menu);
+  --pc-shadow-lg: var(--op-shadow-float);
+  --pc-dur-instant: var(--op-motion-duration);
+  --pc-dur-fast: var(--op-motion-duration);
+  --pc-dur-base: var(--op-motion-panel-duration);
+  --pc-dur-slow: var(--op-motion-panel-duration);
+  --pc-dur-pulse: var(--op-motion-live-duration);
+  --pc-ease-out: ease-out;
+  --pc-ease-in-out: var(--op-motion-ease);
   --pc-transition-ui:
     background-color var(--pc-dur-fast) var(--pc-ease-out),
     border-color var(--pc-dur-fast) var(--pc-ease-out), color var(--pc-dur-fast) var(--pc-ease-out);
-
-  /* governed action states — proposed/running/closed/failed/blocked (light) */
-  --pc-astate-proposed-fg: var(--pc-amber-700);
-  --pc-astate-proposed-bg: var(--pc-amber-100);
-  --pc-astate-proposed-border: var(--pc-amber-300);
-  --pc-astate-proposed-solid: var(--pc-amber-500);
-  --pc-astate-running-fg: var(--pc-lime-800);
-  --pc-astate-running-bg: var(--pc-lime-100);
-  --pc-astate-running-border: var(--pc-lime-400);
-  --pc-astate-running-solid: var(--pc-lime-400);
-  --pc-astate-closed-fg: var(--pc-teal-700);
-  --pc-astate-closed-bg: var(--pc-teal-100);
-  --pc-astate-closed-border: var(--pc-teal-300);
-  --pc-astate-closed-solid: var(--pc-teal-500);
-  --pc-astate-failed-fg: var(--pc-verm-700);
-  --pc-astate-failed-bg: var(--pc-verm-100);
-  --pc-astate-failed-border: var(--pc-verm-300);
-  --pc-astate-failed-solid: var(--pc-verm-500);
-  --pc-astate-blocked-fg: var(--pc-ink-700);
-  --pc-astate-blocked-bg: var(--pc-ink-100);
-  --pc-astate-blocked-border: var(--pc-ink-300);
-  --pc-astate-blocked-solid: var(--pc-ink-500);
-
-  /* dependency graph (light) */
-  --pc-graph-canvas: var(--pc-ink-50);
-  --pc-graph-grid: var(--pc-ink-150);
-  --pc-graph-edge: var(--pc-ink-300);
-  --pc-graph-edge-active: var(--pc-lime-500);
-  --pc-graph-edge-blocked: var(--pc-verm-500);
-  --pc-graph-node-epic: var(--pc-indigo-500);
-  --pc-graph-node-feature: var(--pc-teal-500);
-  --pc-graph-node-story: var(--pc-lime-600);
-  --pc-graph-node-task: var(--pc-ink-500);
-  --pc-graph-node-spec: var(--pc-amber-500);
-}
-
-/* extended tokens that vary by theme — explicit dark, then system-dark */
-:root[data-theme="dark"] {
-  --pc-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(246, 243, 236, 0.06);
-  --pc-shadow-md: 0 6px 16px -4px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(246, 243, 236, 0.07);
-  --pc-shadow-lg: 0 22px 50px -14px rgba(0, 0, 0, 0.75), 0 0 0 1px rgba(246, 243, 236, 0.09);
-  --pc-astate-proposed-fg: var(--pc-amber-300);
-  --pc-astate-proposed-bg: rgba(222, 148, 16, 0.16);
-  --pc-astate-proposed-border: rgba(245, 197, 99, 0.45);
-  --pc-astate-running-fg: var(--pc-lime-300);
-  --pc-astate-running-bg: rgba(188, 230, 51, 0.16);
-  --pc-astate-running-border: rgba(188, 230, 51, 0.5);
-  --pc-astate-closed-fg: var(--pc-teal-300);
-  --pc-astate-closed-bg: rgba(44, 138, 112, 0.18);
-  --pc-astate-closed-border: rgba(143, 207, 187, 0.4);
-  --pc-astate-failed-fg: var(--pc-verm-300);
-  --pc-astate-failed-bg: rgba(222, 69, 38, 0.18);
-  --pc-astate-failed-border: rgba(244, 163, 146, 0.42);
-  --pc-astate-blocked-fg: var(--pc-ink-300);
-  --pc-astate-blocked-bg: rgba(246, 243, 236, 0.07);
-  --pc-astate-blocked-border: var(--pc-ink-700);
-  --pc-graph-canvas: var(--pc-ink-950);
-  --pc-graph-grid: var(--pc-ink-850);
-  --pc-graph-edge: var(--pc-ink-700);
-  --pc-graph-edge-active: var(--pc-lime-400);
-  --pc-graph-edge-blocked: var(--pc-verm-300);
-  --pc-graph-node-epic: var(--pc-indigo-300);
-  --pc-graph-node-feature: var(--pc-teal-300);
-  --pc-graph-node-story: var(--pc-lime-400);
-  --pc-graph-node-task: var(--pc-ink-400);
-  --pc-graph-node-spec: var(--pc-amber-300);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    --pc-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(246, 243, 236, 0.06);
-    --pc-shadow-md: 0 6px 16px -4px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(246, 243, 236, 0.07);
-    --pc-shadow-lg: 0 22px 50px -14px rgba(0, 0, 0, 0.75), 0 0 0 1px rgba(246, 243, 236, 0.09);
-    --pc-astate-proposed-fg: var(--pc-amber-300);
-    --pc-astate-proposed-bg: rgba(222, 148, 16, 0.16);
-    --pc-astate-proposed-border: rgba(245, 197, 99, 0.45);
-    --pc-astate-running-fg: var(--pc-lime-300);
-    --pc-astate-running-bg: rgba(188, 230, 51, 0.16);
-    --pc-astate-running-border: rgba(188, 230, 51, 0.5);
-    --pc-astate-closed-fg: var(--pc-teal-300);
-    --pc-astate-closed-bg: rgba(44, 138, 112, 0.18);
-    --pc-astate-closed-border: rgba(143, 207, 187, 0.4);
-    --pc-astate-failed-fg: var(--pc-verm-300);
-    --pc-astate-failed-bg: rgba(222, 69, 38, 0.18);
-    --pc-astate-failed-border: rgba(244, 163, 146, 0.42);
-    --pc-astate-blocked-fg: var(--pc-ink-300);
-    --pc-astate-blocked-bg: rgba(246, 243, 236, 0.07);
-    --pc-astate-blocked-border: var(--pc-ink-700);
-    --pc-graph-canvas: var(--pc-ink-950);
-    --pc-graph-grid: var(--pc-ink-850);
-    --pc-graph-edge: var(--pc-ink-700);
-    --pc-graph-edge-active: var(--pc-lime-400);
-    --pc-graph-edge-blocked: var(--pc-verm-300);
-    --pc-graph-node-epic: var(--pc-indigo-300);
-    --pc-graph-node-feature: var(--pc-teal-300);
-    --pc-graph-node-story: var(--pc-lime-400);
-    --pc-graph-node-task: var(--pc-ink-400);
-    --pc-graph-node-spec: var(--pc-amber-300);
-  }
-}
-
-/* ===== Planr App v1: remaining semantic aliases from the design system ===== */
-:root {
-  --pc-row-height: 32px;
-  --pc-row-height-compact: 28px;
-  --pc-surface-raised: var(--pc-white);
-  --pc-surface-inverse: var(--pc-ink-900);
-  --pc-surface-active: rgba(20, 18, 16, 0.08);
-  --pc-surface-scrim: rgba(20, 18, 16, 0.42);
-  --pc-text-disabled: var(--pc-ink-400);
-  --pc-text-inverse: var(--pc-paper);
-  --pc-text-link: var(--pc-indigo-700);
-  --pc-text-link-hover: var(--pc-indigo-500);
-  --pc-border-inverse: var(--pc-ink-700);
-  --pc-border-accent: var(--pc-lime-500);
-  --pc-accent-press: var(--pc-lime-600);
-  --pc-accent-quiet: var(--pc-lime-100);
+  --pc-astate-proposed-fg: var(--op-warning);
+  --pc-astate-proposed-bg: color-mix(in srgb, var(--op-warning) 8%, var(--op-panel) 92%);
+  --pc-astate-proposed-border: var(--op-warning);
+  --pc-astate-proposed-solid: var(--op-warning);
+  --pc-astate-running-fg: var(--op-accent);
+  --pc-astate-running-bg: color-mix(in srgb, var(--op-accent) 8%, var(--op-panel) 92%);
+  --pc-astate-running-border: var(--op-accent);
+  --pc-astate-running-solid: var(--op-accent);
+  --pc-astate-closed-fg: var(--op-dim);
+  --pc-astate-closed-bg: color-mix(in srgb, var(--op-dim) 8%, var(--op-panel) 92%);
+  --pc-astate-closed-border: var(--op-dim);
+  --pc-astate-closed-solid: var(--op-dim);
+  --pc-astate-failed-fg: var(--op-danger);
+  --pc-astate-failed-bg: color-mix(in srgb, var(--op-danger) 8%, var(--op-panel) 92%);
+  --pc-astate-failed-border: var(--op-danger);
+  --pc-astate-failed-solid: var(--op-danger);
+  --pc-astate-blocked-fg: var(--op-danger);
+  --pc-astate-blocked-bg: color-mix(in srgb, var(--op-danger) 8%, var(--op-panel) 92%);
+  --pc-astate-blocked-border: var(--op-danger);
+  --pc-astate-blocked-solid: var(--op-danger);
+  --pc-graph-canvas: var(--op-bg);
+  --pc-graph-grid: var(--op-graph-dot-grid);
+  --pc-graph-edge: var(--op-line-strong);
+  --pc-graph-edge-active: var(--op-accent);
+  --pc-graph-edge-blocked: var(--op-danger);
+  --pc-graph-node-epic: var(--op-type-epic);
+  --pc-graph-node-feature: var(--op-type-spec);
+  --pc-graph-node-story: var(--op-type-us);
+  --pc-graph-node-task: var(--op-type-t);
+  --pc-graph-node-spec: var(--op-type-spec);
+  --pc-surface-raised: var(--op-raised);
+  --pc-surface-inverse: var(--op-text);
+  --pc-surface-active: var(--op-accent-soft);
+  --pc-surface-scrim: color-mix(in srgb, var(--op-bg) 62%, transparent);
+  --pc-text-disabled: var(--op-muted);
+  --pc-text-inverse: var(--op-bg);
+  --pc-text-link: var(--op-accent);
+  --pc-text-link-hover: var(--op-accent);
+  --pc-border-inverse: var(--op-line-strong);
+  --pc-border-accent: var(--op-accent);
+  --pc-accent-press: var(--op-accent);
+  --pc-accent-quiet: var(--op-accent-soft);
   --pc-focus-width: 2px;
   --pc-focus-offset: 2px;
   --pc-blur-overlay: blur(6px);
-  --pc-table-header-bg: var(--pc-ink-50);
+  --pc-table-header-bg: var(--op-bg);
   --pc-ease-exit: cubic-bezier(0.4, 0, 1, 1);
-  --pc-shadow-hairline: 0 0 0 1px var(--pc-border-subtle);
-
-  /* artifact status as a dot + label (ArtifactStatus). Distinct from the chip tokens above. */
-  --pc-artifact-done-solid: var(--pc-teal-500);
-  --pc-artifact-done-fg: var(--pc-text-secondary);
-  --pc-artifact-in-progress-solid: var(--pc-lime-600);
-  --pc-artifact-in-progress-fg: var(--pc-text-primary);
-  --pc-artifact-blocked-solid: var(--pc-verm-500);
-  --pc-artifact-blocked-fg: var(--pc-verm-700);
-  --pc-artifact-outstanding-solid: var(--pc-ink-400);
-  --pc-artifact-outstanding-fg: var(--pc-text-tertiary);
-  --pc-artifact-addressed-solid: var(--pc-indigo-500);
-  --pc-artifact-addressed-fg: var(--pc-text-secondary);
-}
-
-:root[data-theme="dark"] {
-  --pc-surface-raised: var(--pc-ink-800);
-  --pc-surface-inverse: var(--pc-ink-50);
-  --pc-surface-active: rgba(246, 243, 236, 0.09);
-  --pc-surface-scrim: rgba(10, 9, 8, 0.62);
-  --pc-text-disabled: var(--pc-ink-600);
-  --pc-text-inverse: var(--pc-ink-950);
-  --pc-text-link: var(--pc-indigo-300);
-  --pc-text-link-hover: #c3cbf6;
-  --pc-border-inverse: var(--pc-ink-200);
-  --pc-accent-press: var(--pc-lime-500);
-  --pc-accent-quiet: rgba(188, 230, 51, 0.16);
-  --pc-table-header-bg: var(--pc-ink-900);
-  --pc-artifact-done-solid: var(--pc-teal-300);
-  --pc-artifact-in-progress-solid: var(--pc-lime-400);
-  --pc-artifact-blocked-solid: var(--pc-verm-300);
-  --pc-artifact-blocked-fg: var(--pc-verm-300);
-  --pc-artifact-outstanding-solid: var(--pc-ink-600);
-  --pc-artifact-addressed-solid: var(--pc-indigo-300);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    --pc-surface-raised: var(--pc-ink-800);
-    --pc-surface-inverse: var(--pc-ink-50);
-    --pc-surface-active: rgba(246, 243, 236, 0.09);
-    --pc-surface-scrim: rgba(10, 9, 8, 0.62);
-    --pc-text-disabled: var(--pc-ink-600);
-    --pc-text-inverse: var(--pc-ink-950);
-    --pc-text-link: var(--pc-indigo-300);
-    --pc-text-link-hover: #c3cbf6;
-    --pc-border-inverse: var(--pc-ink-200);
-    --pc-accent-press: var(--pc-lime-500);
-    --pc-accent-quiet: rgba(188, 230, 51, 0.16);
-    --pc-table-header-bg: var(--pc-ink-900);
-    --pc-artifact-done-solid: var(--pc-teal-300);
-    --pc-artifact-in-progress-solid: var(--pc-lime-400);
-    --pc-artifact-blocked-solid: var(--pc-verm-300);
-    --pc-artifact-blocked-fg: var(--pc-verm-300);
-    --pc-artifact-outstanding-solid: var(--pc-ink-600);
-    --pc-artifact-addressed-solid: var(--pc-indigo-300);
-  }
-}
-
-/* honor system dark unless the user pinned light, matching the --op-* system */
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    --pc-surface-app: var(--pc-ink-950);
-    --pc-surface-panel: var(--pc-ink-900);
-    --pc-surface-card: var(--pc-ink-850);
-    --pc-surface-sunken: #0e0c0b;
-    --pc-surface-hover: rgba(246, 243, 236, 0.05);
-    --pc-surface-selected: rgba(188, 230, 51, 0.14);
-    --pc-row-stripe: rgba(246, 243, 236, 0.02);
-    --pc-text-primary: var(--pc-ink-50);
-    --pc-text-secondary: var(--pc-ink-300);
-    --pc-text-tertiary: var(--pc-ink-400);
-    --pc-border-subtle: var(--pc-ink-850);
-    --pc-border-default: var(--pc-ink-700);
-    --pc-border-strong: var(--pc-ink-500);
-    --pc-accent-ink: var(--pc-lime-300);
-    --pc-focus-ring: var(--pc-lime-300);
-    --pc-focus-halo: rgba(188, 230, 51, 0.35);
-    --pc-status-outstanding-fg: var(--pc-amber-300);
-    --pc-status-outstanding-bg: rgba(222, 148, 16, 0.16);
-    --pc-status-outstanding-border: rgba(245, 197, 99, 0.45);
-    --pc-status-in-progress-fg: var(--pc-lime-300);
-    --pc-status-in-progress-bg: rgba(188, 230, 51, 0.16);
-    --pc-status-in-progress-border: rgba(188, 230, 51, 0.5);
-    --pc-status-blocked-fg: var(--pc-verm-300);
-    --pc-status-blocked-bg: rgba(222, 69, 38, 0.18);
-    --pc-status-blocked-border: rgba(244, 163, 146, 0.42);
-    --pc-status-done-fg: var(--pc-teal-300);
-    --pc-status-done-bg: rgba(44, 138, 112, 0.18);
-    --pc-status-done-border: rgba(143, 207, 187, 0.4);
-    --pc-status-addressed-fg: var(--pc-ink-300);
-    --pc-status-addressed-bg: rgba(246, 243, 236, 0.07);
-    --pc-status-addressed-border: var(--pc-ink-700);
-    --pc-type-epic: var(--pc-indigo-300);
-    --pc-type-feature: var(--pc-teal-300);
-    --pc-type-story: var(--pc-lime-400);
-    --pc-type-task: var(--pc-ink-400);
-    --pc-type-spec: var(--pc-amber-300);
-    --pc-type-other: var(--pc-ink-500);
-  }
+  --pc-artifact-done-solid: var(--op-dim);
+  --pc-artifact-done-fg: var(--op-dim);
+  --pc-artifact-in-progress-solid: var(--op-accent);
+  --pc-artifact-in-progress-fg: var(--op-accent);
+  --pc-artifact-blocked-solid: var(--op-danger);
+  --pc-artifact-blocked-fg: var(--op-danger);
+  --pc-artifact-outstanding-solid: var(--op-info);
+  --pc-artifact-outstanding-fg: var(--op-info);
+  --pc-artifact-addressed-solid: var(--op-addressed);
+  --pc-artifact-addressed-fg: var(--op-addressed);
+  --pc-text-heading: var(--op-heading);
+  --pc-bg: var(--op-bg);
+  --pc-panel: var(--op-panel);
+  --pc-card: var(--op-card);
+  --pc-raised: var(--op-raised);
+  --pc-line: var(--op-line);
+  --pc-line-strong: var(--op-line-strong);
+  --pc-line3: var(--op-line3);
+  --pc-text: var(--op-text);
+  --pc-heading: var(--op-heading);
+  --pc-body: var(--op-body);
+  --pc-muted: var(--op-muted);
+  --pc-dim: var(--op-dim);
+  --pc-accent-soft: var(--op-accent-soft);
+  --pc-info: var(--op-info);
+  --pc-danger: var(--op-danger);
+  --pc-warning: var(--op-warning);
+  --pc-addressed: var(--op-addressed);
+  --pc-type-us: var(--op-type-us);
+  --pc-type-t: var(--op-type-t);
+  --pc-type-bl: var(--op-type-bl);
+  --pc-type-adr: var(--op-type-adr);
+  --pc-type-sprint: var(--op-type-sprint);
+  --pc-type-qt: var(--op-type-qt);
+  --pc-graph-dot-grid: var(--op-graph-dot-grid);
+  --pc-shadow-menu: var(--op-shadow-menu);
+  --pc-shadow-float: var(--op-shadow-float);
+  --pc-shadow-accent-edge: var(--op-shadow-accent-edge);
+  --pc-control-border: var(--op-control-border);
+  --pc-font-display: var(--op-font-display);
+  --pc-weight-extrabold: 800;
+  --pc-radius-tag: 6px;
+  --pc-radius-control: 8px;
+  --pc-radius-card: 12px;
+  --pc-radius-sheet: 16px;
+  --pc-type-heading: 600 20px / 1.3 var(--pc-font-display);
+  --pc-status-outstanding-bg-bg: var(--op-status-outstanding-bg-bg);
+  --pc-status-outstanding-bg-panel: var(--op-status-outstanding-bg-panel);
+  --pc-status-outstanding-bg-card: var(--op-status-outstanding-bg-card);
+  --pc-status-outstanding-bg-raised: var(--op-status-outstanding-bg-raised);
+  --pc-status-in-progress-bg-bg: var(--op-status-in-progress-bg-bg);
+  --pc-status-in-progress-bg-panel: var(--op-status-in-progress-bg-panel);
+  --pc-status-in-progress-bg-card: var(--op-status-in-progress-bg-card);
+  --pc-status-in-progress-bg-raised: var(--op-status-in-progress-bg-raised);
+  --pc-status-blocked-bg-bg: var(--op-status-blocked-bg-bg);
+  --pc-status-blocked-bg-panel: var(--op-status-blocked-bg-panel);
+  --pc-status-blocked-bg-card: var(--op-status-blocked-bg-card);
+  --pc-status-blocked-bg-raised: var(--op-status-blocked-bg-raised);
+  --pc-status-addressed-bg-bg: var(--op-status-addressed-bg-bg);
+  --pc-status-addressed-bg-panel: var(--op-status-addressed-bg-panel);
+  --pc-status-addressed-bg-card: var(--op-status-addressed-bg-card);
+  --pc-status-addressed-bg-raised: var(--op-status-addressed-bg-raised);
+  --pc-status-done-bg-bg: var(--op-status-done-bg-bg);
+  --pc-status-done-bg-panel: var(--op-status-done-bg-panel);
+  --pc-status-done-bg-card: var(--op-status-done-bg-card);
+  --pc-status-done-bg-raised: var(--op-status-done-bg-raised);
+  --pc-status-quiet-fg: var(--op-status-quiet-fg);
+  --pc-status-quiet-border: var(--op-warning);
+  --pc-status-quiet-bg: var(--op-status-quiet-bg);
+  --pc-status-quiet-bg-bg: var(--op-status-quiet-bg-bg);
+  --pc-status-quiet-bg-panel: var(--op-status-quiet-bg-panel);
+  --pc-status-quiet-bg-card: var(--op-status-quiet-bg-card);
+  --pc-status-quiet-bg-raised: var(--op-status-quiet-bg-raised);
+  --pc-artifact-quiet-solid: var(--op-warning);
+  --pc-artifact-quiet-fg: var(--op-warning);
+  --pc-type-backlog: var(--op-type-bl);
+  --pc-type-quick-task: var(--op-type-qt);
+  --pc-type-spec-bg: var(--op-type-spec-bg);
+  --pc-type-spec-bg-bg: var(--op-type-spec-bg-bg);
+  --pc-type-spec-bg-panel: var(--op-type-spec-bg-panel);
+  --pc-type-spec-bg-card: var(--op-type-spec-bg-card);
+  --pc-type-spec-bg-raised: var(--op-type-spec-bg-raised);
+  --pc-type-us-bg: var(--op-type-us-bg);
+  --pc-type-us-bg-bg: var(--op-type-us-bg-bg);
+  --pc-type-us-bg-panel: var(--op-type-us-bg-panel);
+  --pc-type-us-bg-card: var(--op-type-us-bg-card);
+  --pc-type-us-bg-raised: var(--op-type-us-bg-raised);
+  --pc-type-t-bg: var(--op-type-t-bg);
+  --pc-type-t-bg-bg: var(--op-type-t-bg-bg);
+  --pc-type-t-bg-panel: var(--op-type-t-bg-panel);
+  --pc-type-t-bg-card: var(--op-type-t-bg-card);
+  --pc-type-t-bg-raised: var(--op-type-t-bg-raised);
+  --pc-type-bl-bg: var(--op-type-bl-bg);
+  --pc-type-bl-bg-bg: var(--op-type-bl-bg-bg);
+  --pc-type-bl-bg-panel: var(--op-type-bl-bg-panel);
+  --pc-type-bl-bg-card: var(--op-type-bl-bg-card);
+  --pc-type-bl-bg-raised: var(--op-type-bl-bg-raised);
+  --pc-type-adr-bg: var(--op-type-adr-bg);
+  --pc-type-adr-bg-bg: var(--op-type-adr-bg-bg);
+  --pc-type-adr-bg-panel: var(--op-type-adr-bg-panel);
+  --pc-type-adr-bg-card: var(--op-type-adr-bg-card);
+  --pc-type-adr-bg-raised: var(--op-type-adr-bg-raised);
+  --pc-type-epic-bg: var(--op-type-epic-bg);
+  --pc-type-epic-bg-bg: var(--op-type-epic-bg-bg);
+  --pc-type-epic-bg-panel: var(--op-type-epic-bg-panel);
+  --pc-type-epic-bg-card: var(--op-type-epic-bg-card);
+  --pc-type-epic-bg-raised: var(--op-type-epic-bg-raised);
+  --pc-type-sprint-bg: var(--op-type-sprint-bg);
+  --pc-type-sprint-bg-bg: var(--op-type-sprint-bg-bg);
+  --pc-type-sprint-bg-panel: var(--op-type-sprint-bg-panel);
+  --pc-type-sprint-bg-card: var(--op-type-sprint-bg-card);
+  --pc-type-sprint-bg-raised: var(--op-type-sprint-bg-raised);
+  --pc-type-qt-bg: var(--op-type-qt-bg);
+  --pc-type-qt-bg-bg: var(--op-type-qt-bg-bg);
+  --pc-type-qt-bg-panel: var(--op-type-qt-bg-panel);
+  --pc-type-qt-bg-card: var(--op-type-qt-bg-card);
+  --pc-type-qt-bg-raised: var(--op-type-qt-bg-raised);
 }

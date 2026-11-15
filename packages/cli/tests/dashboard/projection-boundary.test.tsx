@@ -52,7 +52,7 @@ const cycle = createDashboardQueryIdentity({
 const planning = createDashboardQueryIdentity({
   ...today,
   productArea: 'planning',
-  route: '#/overview',
+  route: '#/home',
   actorId: 'planning-owner',
   cycleId: null,
   subjectId: null,

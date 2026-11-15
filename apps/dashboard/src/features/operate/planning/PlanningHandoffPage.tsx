@@ -180,11 +180,11 @@ function CreatedView({
           </p>
         </div>
         <div className="op-planning-handoff__actions">
-          <a className="op-cycle-link" href={actionHref(actionId)}>
+          <a className="pc-button op-cycle-link" href={actionHref(actionId)}>
             Return to source Action
           </a>
           {planningHref ? (
-            <a className="op-cycle-link op-cycle-link--primary" href={planningHref}>
+            <a className="pc-button op-cycle-link op-cycle-link--primary" href={planningHref}>
               Open in Planning
             </a>
           ) : null}
@@ -539,7 +539,7 @@ export function PlanningHandoffPage({
             Review the context, shape the draft, and confirm it before creating a Planning SPEC.
           </p>
         </div>
-        <a className="op-cycle-link" href={actionHref(model.action.actionId)}>
+        <a className="pc-button op-cycle-link" href={actionHref(model.action.actionId)}>
           Return to source Action
         </a>
       </header>
@@ -801,14 +801,16 @@ export function PlanningHandoffPage({
 
       <AlertDialog.Root open={dialogOpen} onOpenChange={setDialogOpen}>
         <AlertDialog.Portal>
-          <AlertDialog.Overlay className="op-planning-handoff__overlay" />
+          <AlertDialog.Overlay className="op-planning-handoff__overlay op-governed-overlay" />
           <AlertDialog.Content
-            className="op-planning-handoff__dialog"
+            className="op-planning-handoff__dialog op-governed-dialog"
             role="dialog"
             aria-modal="true"
           >
-            <AlertDialog.Title>Create one shaping SPEC draft?</AlertDialog.Title>
-            <AlertDialog.Description>
+            <AlertDialog.Title className="op-inbox-dialog__title">
+              Create one shaping SPEC draft?
+            </AlertDialog.Title>
+            <AlertDialog.Description className="op-inbox-dialog__description">
               This confirms the exact proposal, Event head, human framing, preview digest, and
               expiry shown in this workspace.
             </AlertDialog.Description>
@@ -824,7 +826,7 @@ export function PlanningHandoffPage({
               <Fact label="Expires" value={stringValue(record(proposal?.preview).expiresAt)} />
             </dl>
             <div className="op-planning-handoff__dialog-actions">
-              <AlertDialog.Cancel className="op-governed-button" type="button">
+              <AlertDialog.Cancel className="pc-button" type="button">
                 Cancel
               </AlertDialog.Cancel>
               <GovernedButton onInvoke={runCreate}>Confirm Create SPEC draft</GovernedButton>

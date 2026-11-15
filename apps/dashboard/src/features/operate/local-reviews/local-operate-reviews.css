@@ -135,7 +135,6 @@
   outline: 2px solid var(--pc-focus-ring);
   outline-offset: 2px;
 }
-.pc-local-review__split,
 .pc-local-review__recovery-grid {
   display: grid;
   grid-template-columns: minmax(0, 1.15fr) minmax(320px, 0.85fr);
@@ -286,7 +285,7 @@
   position: relative;
   z-index: 1;
   outline: 2px solid var(--pc-focus-ring);
-  outline-offset: -2px;
+  outline-offset: 2px;
 }
 .pc-local-review__action-copy {
   display: grid;
@@ -637,7 +636,7 @@
   position: relative;
   z-index: 1;
   outline: 2px solid var(--pc-focus-ring);
-  outline-offset: -2px;
+  outline-offset: 2px;
 }
 .pc-local-review__item-glyph {
   display: grid;
@@ -787,7 +786,6 @@
   .pc-local-review__metric:nth-child(-n + 2) {
     border-bottom: 1px solid var(--pc-border-subtle);
   }
-  .pc-local-review__split,
   .pc-local-review__recovery-grid {
     grid-template-columns: 1fr;
   }
@@ -850,5 +848,54 @@
   }
   .pc-local-review__section > header {
     align-items: flex-start;
+  }
+}
+
+.pc-local-review.pc-operate
+  :is(.pc-local-review__signal, .pc-local-review__section, .pc-local-review__outcomes article) {
+  border-radius: 14px;
+  background: var(--pc-surface-panel);
+}
+
+.pc-local-review.pc-operate .pc-local-review__signal::before {
+  content: none;
+}
+
+.pc-local-review.pc-operate .pc-local-review__signal h2 {
+  font-family: var(--op-font-display);
+  font-size: 24px;
+  font-weight: 700;
+}
+
+.pc-local-review.pc-operate .pc-local-review__metric strong {
+  font-family: var(--op-font-display);
+}
+
+.pc-local-review.pc-operate
+  :is(.pc-local-review__section > header h2, .pc-local-review__report h2) {
+  font-family: var(--op-font-display);
+  font-size: 17px;
+}
+
+.pc-local-review.pc-operate
+  :is(
+    .pc-local-review__next-step a,
+    .pc-local-review__section > header a,
+    .pc-local-review__cycle-nav a
+  ) {
+  min-height: var(--op-density-control);
+}
+
+.pc-local-review.pc-operate :is(.pc-local-review__item, .pc-local-review__action):active {
+  background: var(--pc-surface-active);
+}
+
+@media (max-width: 480px) {
+  .pc-local-review.pc-operate .pc-local-review__integrity {
+    grid-template-columns: 42px minmax(0, 1fr);
+  }
+
+  .pc-local-review.pc-operate .pc-local-review__integrity > :last-child {
+    grid-column: 2;
   }
 }

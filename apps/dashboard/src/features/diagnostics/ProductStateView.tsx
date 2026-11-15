@@ -1,4 +1,4 @@
-import { type ReactNode, useEffect, useId, useRef } from 'react';
+import { Fragment, type ReactNode, useEffect, useId, useRef } from 'react';
 import { StatePanel, type StatePanelState } from '../../design-system/components/index.js';
 import {
   type DashboardProductState,
@@ -259,24 +259,48 @@ export function ProductStateView<T>({ state, currentBinding, children }: Product
   const mutationAllowed =
     stateIsValidated && bindingIsCurrent && productStateAllowsMutation(state, currentBinding);
   const previousFocusKey = useRef<string | null>(null);
+  const previousContentScope = useRef<string | null>(null);
   const previousMutationAllowed = useRef<boolean | null>(null);
   const effectiveFocus =
     stateIsValidated && bindingIsCurrent ? state.policy.focus : 'state-heading';
   const focusKey = `${stateIsValidated && bindingIsCurrent ? state.kind : 'state-rejected'}:${effectiveFocus}:${mutationAllowed ? 'mutable' : 'safe'}`;
+
+  const contentScope =
+    stateIsValidated && bindingIsCurrent && state.data !== null && state.binding
+      ? JSON.stringify([
+          state.binding.actorId,
+          state.binding.projectId,
+          state.binding.scopeId,
+          state.binding.domainId,
+          state.binding.domainVersion,
+          state.binding.route,
+          state.binding.cycleId,
+          state.binding.subjectId,
+          state.binding.generation,
+        ])
+      : null;
+  const keepsLiveFocus =
+    stateIsValidated &&
+    ['ready', 'refreshing', 'stale', 'offline', 'read-only'].includes(state.kind);
 
   useEffect(() => {
     const root = rootRef.current;
     if (!root) return;
     if (!mutationAllowed && previousMutationAllowed.current !== false) closeUnsafeControls(root);
     previousMutationAllowed.current = mutationAllowed;
-    if (previousFocusKey.current === focusKey) return;
+    const retainedContent = contentScope !== null && previousContentScope.current === contentScope;
+    previousContentScope.current = contentScope;
+    if ((keepsLiveFocus && retainedContent) || previousFocusKey.current === focusKey) {
+      previousFocusKey.current = focusKey;
+      return;
+    }
     const target = focusTarget(root, effectiveFocus);
     if (target) {
       if (!target.hasAttribute('tabindex')) target.setAttribute('tabindex', '-1');
       target.focus({ preventScroll: true });
     }
     previousFocusKey.current = focusKey;
-  }, [effectiveFocus, focusKey, mutationAllowed]);
+  }, [contentScope, effectiveFocus, focusKey, keepsLiveFocus, mutationAllowed]);
 
   if (!stateIsValidated || !bindingIsCurrent) {
     return (
@@ -306,7 +330,9 @@ export function ProductStateView<T>({ state, currentBinding, children }: Product
         data-product-state="ready"
         data-product-state-mutation={mutationAllowed ? 'allowed' : 'disabled'}
       >
-        {state.data !== null && children ? children(state.data, state.kind, mutationAllowed) : null}
+        {state.data !== null && children ? (
+          <Fragment key="content">{children(state.data, state.kind, mutationAllowed)}</Fragment>
+        ) : null}
         <p className="op-authority-note" data-product-state-authority>
           {mutationAllowed
             ? 'Mutation remains limited to exact runtime-issued allowed actions for this binding.'
@@ -331,7 +357,9 @@ export function ProductStateView<T>({ state, currentBinding, children }: Product
         detail={state.reasonCodes.length > 0 ? state.reasonCodes.join(' · ') : undefined}
         headingId={stateHeadingId}
       />
-      {state.data !== null && children ? children(state.data, state.kind, mutationAllowed) : null}
+      {state.data !== null && children ? (
+        <Fragment key="content">{children(state.data, state.kind, mutationAllowed)}</Fragment>
+      ) : null}
 
       <RecoveryGuidance
         state={state}
