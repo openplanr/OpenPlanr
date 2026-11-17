@@ -55,6 +55,7 @@ import {
 } from '../../../../apps/dashboard/tests/helpers/redesign-parity-rows.mjs';
 import { installDashboardLayoutShifts } from '../dashboard/fixtures/dashboard-layout-shifts.js';
 import { ARTBOARD_FIXTURE_CLOCK } from '../dashboard/fixtures/premium-artboard-fixture.js';
+import { registerFocusClearanceBrowserTests } from './fixtures/dashboard-focus-clearance.js';
 import { registerGraphCanvasBrowserTests } from './fixtures/dashboard-graph-canvas.js';
 import { registerDashboardPerformanceTraceTests } from './fixtures/dashboard-performance-trace.js';
 import {
@@ -67,6 +68,7 @@ import { SPRINT_SCENARIO_NOW } from './fixtures/dashboard-sprint-graph.js';
 
 registerDashboardPerformanceTraceTests();
 registerGraphCanvasBrowserTests((page, route, options) => openFixture(page, route, options));
+registerFocusClearanceBrowserTests((page, route, options) => openFixture(page, route, options));
 
 // The desktop parity canvases predate the floating chrome and drew a 64 px rail beside the
 // content, so their measurements use a viewport narrower by that rail.

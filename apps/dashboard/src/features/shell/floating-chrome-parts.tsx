@@ -1,5 +1,6 @@
 import { type ChromeShortcut, formatShortcut, useChrome } from '@openplanr/canvas/react';
 import { Fragment, type RefObject, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { clearFocus, releaseExtended } from './focus-clearance.js';
 import { HELP_SHORTCUT, PALETTE_SHORTCUT } from './keyboard-coordinator.js';
 
 export const NAVIGATION_PANEL = 'navigation';
@@ -34,14 +35,14 @@ export function useCloseUnpinnedPanels(): () => boolean {
 // Shared single-line ellipsis rule; reused so the help card adds no stylesheet bytes.
 const FACT = 'pc-palette__row-title';
 
-const OUTSIDE_IGNORED = [
+const FOCUS_IGNORED = [
   '.canvas-chrome-root',
-  '[data-keyboard-item]',
   '[role="dialog"]',
   '[role="menu"]',
   '[role="listbox"]',
   '[data-radix-popper-content-wrapper]',
 ].join(', ');
+const OUTSIDE_IGNORED = `${FOCUS_IGNORED}, [data-keyboard-item]`;
 const FOCUSABLE =
   'a[href], button, input, select, textarea, summary, [contenteditable], [tabindex]:not([tabindex="-1"])';
 
@@ -93,7 +94,11 @@ export function usePageChromeBehavior({
   useEffect(() => {
     if (canvas) return;
     let closedByPress = false;
+    let pressed: Element | null = null;
+    let focusCount = 0;
+    const extended = new Map<HTMLElement, string>();
     const pointerdown = (event: PointerEvent) => {
+      pressed = event.target instanceof Element ? event.target : null;
       closedByPress =
         event.target instanceof Element &&
         !event.target.closest(OUTSIDE_IGNORED) &&
@@ -105,35 +110,48 @@ export function usePageChromeBehavior({
         event.preventDefault();
       closedByPress = false;
     };
-    // Focus never stays hidden under an unpinned panel; reaching covered content closes it.
+    const keydown = () => {
+      pressed = null;
+    };
     const focusin = (event: FocusEvent) => {
       const target = event.target;
       if (
         !(target instanceof HTMLElement) ||
         target === main.current ||
-        target.closest(OUTSIDE_IGNORED)
+        target.closest(FOCUS_IGNORED)
       )
         return;
-      const box = target.getBoundingClientRect();
-      for (const [id, panel] of Object.entries(latest.current.panels)) {
-        if (!panel.open || panel.pinned) continue;
-        const slot = document.querySelector(`[data-chrome-slot="${id}"]`)?.getBoundingClientRect();
-        if (
-          slot &&
-          box.left < slot.right &&
-          box.right > slot.left &&
-          box.top < slot.bottom &&
-          box.bottom > slot.top
-        )
-          latest.current.setPanelOpen(id, false);
-      }
+      releaseExtended(extended, target);
+      // A pointer focus stays with what was pressed, so a click that opens the inspector keeps it.
+      if (pressed && target.contains(pressed)) return;
+      const openAtFocus = new Set(
+        Object.entries(latest.current.panels)
+          .filter(([, panel]) => panel.open)
+          .map(([id]) => id),
+      );
+      const focus = ++focusCount;
+      const run = () => {
+        if (focus === focusCount && document.activeElement === target)
+          clearFocus(target, latest.current.panels, openAtFocus, extended, (id) => {
+            latest.current.setPanelOpen(id, false);
+            // Closing returns focus to the panel's opener; focus that reached the content stays.
+            if (document.activeElement !== target) target.focus({ preventScroll: true });
+          });
+      };
+      // Once after the focusing script has scrolled, again after the browser's own focus scroll.
+      queueMicrotask(run);
+      requestAnimationFrame(run);
     };
     document.addEventListener('pointerdown', pointerdown, true);
     document.addEventListener('mousedown', mousedown, true);
+    document.addEventListener('keydown', keydown, true);
     document.addEventListener('focusin', focusin);
     return () => {
+      focusCount += 1;
+      releaseExtended(extended, null);
       document.removeEventListener('pointerdown', pointerdown, true);
       document.removeEventListener('mousedown', mousedown, true);
+      document.removeEventListener('keydown', keydown, true);
       document.removeEventListener('focusin', focusin);
     };
   }, [main, canvas]);
