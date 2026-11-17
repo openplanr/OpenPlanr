@@ -1,5 +1,61 @@
 # @openplanr/dashboard-app
 
+## 0.1.26
+
+### Patch Changes
+
+- 3de6110: Screen readers announce Board columns by their status label, such as "In progress", and in lanes mode by lane and status.
+- 3de6110: Expose a read-only, actor-bound Planning diagnostics endpoint with an exact graph revision, safe source errors and explicit response limits. Add the shared diagnostics contract and connect the Data health tab to verified findings, with loading, empty, error and stale states that retain filters, focus and scroll during refresh.
+- 3de6110: Items written with a custom id prefix, such as `Task-001` or `my_bl-001`, appear again in `openplanr graph`, the dashboard and Home. A planning file with no id is now reported in Data health and on `openplanr graph` stderr instead of disappearing silently.
+- 3de6110: Refresh the dashboard shell's navigation, typography and controls. Show the inspector only for a selection as an overlay, preserve content geometry and keyboard focus, default dense views to the compact rail, and give Detail the full content width while retaining saved navigation preferences.
+- 04436ca: The dashboard follows your operating system's light or dark setting until you choose a theme. A theme you chose earlier is kept.
+- 3de6110: Detail shows "N of M met" and a progress bar when every acceptance criterion is marked `[x]` or `[ ]`.
+- 3de6110: Data health now lists a finding whose item id or source path contains a colon or a percent sign, with the path as written, instead of failing the whole read. A backslash in a file name is shown as a replacement character. A file without an id whose name would give an id with a backslash or a control character is listed as an unrecognized identity, and Board, List and Detail keep working.
+- 3de6110: Open Graph on a focused spec lineage with dependency and whole-project lenses, type and edge filters, unresolved-reference diagnostics, and the shared inspector. Add keyboard neighbour navigation, pan, zoom, fit, minimap, and a cycle-safe structural list.
+  
+  Cache immutable graph projections and layouts across revisits and cull off-screen nodes and edges.
+  
+  Use full Graph node text for accessible names and measure the viewport before admitting nodes. Preserve painted node geometry during culling and request operating-origin traces only for specs that declare an origin in verified content.
+  
+  Cache List filtering, sorting, preset counts and grouping across bound route revisits. Window each page with overscan and retain focused rows, keyboard positions and live scroll anchors. Cache Board projections across revisits.
+  
+  Open plans without specs on an active work item’s dependency component, including quick tasks.
+- 3de6110: Apply shared confirmation, custody, and receipt styling to governed Operate actions. Keep pending controls and proofs readable in both themes, reduced motion, forced colors, and narrow layouts while preserving the existing confirmation lifecycle.
+- 3de6110: Home stays available when an item's `dependsOn` is a single id, empty or not a list. A single id counts as one dependency in Home, Detail and the inspector. In Home and Data health, a value that is not an id shows as an unresolved dependency.
+- 3de6110: List shows its pager whenever there are more than 100 rows, so label grouping no longer hides rows past 100 in smaller projects.
+- 3de6110: Apply shared dashboard typography, cards, navigation states, and responsive layouts across Operate. Add an honest first-run review command while preserving governed confirmations and receipts. Keep overflowing tables keyboard reachable with named regions and visible focus.
+  
+  Open the inspector only for a selected item, as an overlay on desktop and a sheet on narrow screens, preserving access to main-content controls.
+  
+  Fit focused graph components to the measured canvas and retain their nodes when the inspector reduces available space.
+- 3de6110: Preview planning status, structural lineage, dependencies and copyable next commands in global search without leaving the current page. Rank exact scoped IDs first, preserve focus and scroll through live refreshes, retain normal Tab navigation and provide full Search recovery. Measure palette preview latency in the existing performance harness and extend responsive accessibility and hit-test coverage.
+  
+  Find scoped graph artifacts by canonical or display ID, including artifacts available only through the inspector.
+- 3de6110: Add grouped planning List presets, relative-date filters, local density and keyboard navigation across bounded pages. Preserve canonical selection and scroll across live changes.
+- 3de6110: Restyle the Console skill and CLI command catalogue, full Search and Diagnostics with shared controls, keyboard navigation and safe recovery guidance. Verify host invocations and CLI templates against the shipped registry and command registrations.
+  
+  Add a read-only Data health tab with filtered source findings, safe item links and distinct unavailable and empty states.
+- 3de6110: The dashboard selection bar copies the item's next command, `/planr:ship` for a task and `openplanr status` for other items, instead of a backlog status command that left the item unchanged.
+- 3de6110: Show authored sprint windows, the release cut and closed-on dates, completion across all items, and items still open after their sprint closed. Missing or invalid sprint dates are announced to screen readers on the timeline.
+  
+  Retain Activity selection, scroll and this session's changes during refresh and disconnect, and extend accessible control-name coverage to Sprints and Activity.
+- 3de6110: Compare planning work in status columns with optional spec swimlanes, artifact counts and task progress. Keep Addressed distinct from Done, start Done collapsed, and open cards in the shared inspector.
+  
+  Window long columns and page spec lanes while retaining keyboard positions, selection, scroll anchors and presentation across live updates and navigation. Copy an item's next command, its status report or ship command, without running it; explain unavailable writers and clipboard failures.
+  
+  Keep the visible Done expansion label as its accessible name and check control names across shared controls and planning views.
+- 3de6110: Share a verified artifact detail view between the inspector and full page, with linked structural lineage, acceptance criteria, declared files, dependencies, source status and authored dates. Add copy-only continuations, canonical item links and safe bound editor links with manual-copy recovery. Keep missing references explicit while retaining source-list context through promotion and live updates.
+  
+  Use shared status glyphs and readable labels throughout detail views. Cache verified detail projections, page large traces, defer closed and off-screen content, and preserve list scroll anchors without repeated synchronous layout reads.
+- Updated dependencies [3de6110]
+- Updated dependencies [3aa8c4e]
+- Updated dependencies [3de6110]
+- Updated dependencies [3de6110]
+- Updated dependencies [3de6110]
+- Updated dependencies [3de6110]
+- Updated dependencies [3de6110]
+  - @openplanr/protocol@0.19.0
+
 ## 0.1.25
 
 ### Patch Changes

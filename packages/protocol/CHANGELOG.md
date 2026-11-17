@@ -1,5 +1,17 @@
 # @openplanr/protocol
 
+## 0.19.0
+
+### Minor Changes
+
+- 3de6110: Expose a read-only, actor-bound Planning diagnostics endpoint with an exact graph revision, safe source errors and explicit response limits. Add the shared diagnostics contract and connect the Data health tab to verified findings, with loading, empty, error and stale states that retain filters, focus and scroll during refresh.
+- 3aa8c4e: Add Protocol 1.25.0 command and skill catalog contracts and export `CATALOG_PROTOCOL_VERSION` from `@openplanr/protocol/browser-contracts`. `registries/commands.json` and `registries/skills.json` now declare `protocolVersion` 1.25.0 and no longer carry a whole-document `documentDigest`; per-entry digests are unchanged. Protocol 1.5.0 catalogs remain accepted.
+- 3de6110: Add the `unrecognized-identity` Planning diagnostic reason for a planning file read without an artifact id.
+- 3de6110: Planning diagnostics accept colons and percent signs in item ids and source paths. Add `validPlanningSourcePath`.
+- 3de6110: `deriveAttention` reads a scalar or empty `dependsOn` instead of throwing. Add `planningReferenceValues`.
+- 3de6110: Add the Planning file-link contract: `assertPlanningFileLinkEnvelope`, `validPlanningFilePath` and its error codes.
+- 3de6110: Add a browser-safe planning attention projection with distinct status totals, dependency readiness and downstream ordering, authored-date stale and changed-today lists, and per-spec task counts.
+
 ## 0.18.0
 
 ### Minor Changes
