@@ -648,7 +648,9 @@ describe('Planning detail shell navigation', () => {
           .map((heading) => heading.textContent),
       ).toEqual(['Focus', 'Edges']);
       const initial = graphNode(view.container, 'QT-071');
+      // A click previews the node; Enter opens the inspector, which then follows the selection.
       await user.click(initial);
+      await user.keyboard('{Enter}');
       expect(initial.getAttribute('aria-pressed')).toBe('true');
       expect(document.activeElement).toBe(initial);
       await complete('QT-071');
@@ -685,6 +687,7 @@ describe('Planning detail shell navigation', () => {
         route === 'Graph' ? graphNode(view.container, 'QT-071') : rows(view.container)[0];
       const id = route === 'Graph' ? 'QT-071' : taskIds[0];
       await user.click(owner);
+      if (route === 'Graph') await user.keyboard('{Enter}');
       await complete(id);
       // Pages close panels from any blank press; the Graph leaves it to the kit's empty-stage press.
       const background =

@@ -152,6 +152,7 @@ export function registerGraphCanvasBrowserTests(openFixture: OpenFixture) {
       await settleGraph(page);
       const node = page.locator('.pc-graph-node[data-canonical-id="T-073"]');
       await node.click();
+      await page.keyboard.press('Enter');
       await expect(page.getByRole('region', { name: 'Inspector', exact: true })).toBeVisible();
       await page.mouse.move(400, 400);
       await page.mouse.wheel(-900, 600);
@@ -306,7 +307,23 @@ export function registerGraphCanvasBrowserTests(openFixture: OpenFixture) {
           'data-open',
           'true',
         );
-        await page.locator('.pc-graph-node').first().click();
+        const node = page.locator('.pc-graph-node').first();
+        await node.click();
+        await settleGraph(page);
+        // A click previews the node; pan it back under the panel before inspecting it.
+        const navigation = required(
+          await page.locator('[data-chrome-slot="navigation"]').boundingBox(),
+          'navigation panel',
+        );
+        const card = required(await node.boundingBox(), 'selected node');
+        await page.mouse.move(720, 500);
+        await page.mouse.wheel(card.x + card.width / 2 - (navigation.x + navigation.width - 60), 0);
+        await settleGraph(page);
+        const under = required(await node.boundingBox(), 'panned node');
+        expect(under.x + under.width / 2).toBeLessThan(navigation.x + navigation.width);
+        await expect(node).toBeFocused();
+        // Enter inspects the selection, which refocuses the node as the sidebar opens.
+        await page.keyboard.press('Enter');
         await expect(page.locator('[data-chrome-slot="sidebar"]')).toHaveAttribute(
           'data-open',
           'true',
@@ -315,6 +332,59 @@ export function registerGraphCanvasBrowserTests(openFixture: OpenFixture) {
         expect(Object.values(camera).every(Number.isFinite)).toBe(true);
       }
       expect(errors).toEqual([]);
+    });
+
+    test('previews a clicked node with panels closed and inspects it from the preview', async ({
+      page,
+    }) => {
+      await page.setViewportSize({ width: 1440, height: 1000 });
+      await openFixture(page, '#/graph', { dataset: 'artboard' });
+      await settleGraph(page);
+      const node = page.locator('.pc-graph-node:not([data-selected])').first();
+      const id = await node.getAttribute('data-canonical-id');
+      const clicked = page.locator(`.pc-graph-node[data-canonical-id="${id}"]`);
+      await clicked.click();
+      await expect(clicked).toHaveAttribute('aria-pressed', 'true');
+      for (const slot of ['navigation', 'sidebar'])
+        await expect(page.locator(`[data-chrome-slot="${slot}"]`)).toHaveAttribute(
+          'data-open',
+          'false',
+        );
+      const preview = page.getByRole('region', { name: 'Graph selection preview' });
+      await expect(preview).toBeVisible();
+      await expect(preview).toContainText(`${id}:`);
+      const card = required(await clicked.boundingBox(), 'clicked node');
+      const shown = required(await preview.boundingBox(), 'preview');
+      expect(shown.y).toBeGreaterThan(card.y + card.height);
+      await preview.getByRole('button', { name: 'Open inspector' }).click();
+      await expect(page.getByRole('region', { name: 'Inspector', exact: true })).toBeVisible();
+      await expect(clicked).toBeFocused();
+      await expect(preview).toBeHidden();
+    });
+
+    test('docks the phone selection preview above the zoom pill and opens the sheet from it', async ({
+      page,
+    }) => {
+      await page.setViewportSize({ width: 390, height: 844 });
+      await openFixture(page, '#/graph', { dataset: 'artboard' });
+      await settleGraph(page);
+      // The phone fit draws other cards on the overview canvas; the selection keeps its card.
+      const node = page.locator('.pc-graph-node').first();
+      const id = await node.getAttribute('data-canonical-id');
+      await node.click();
+      const preview = page.getByRole('region', { name: 'Graph selection preview' });
+      await expect(preview).toContainText(`${id}:`);
+      await expect(page.getByRole('dialog')).toHaveCount(0);
+      const card = required(await preview.boundingBox(), 'phone preview');
+      const zoom = required(
+        await page.getByRole('group', { name: 'Zoom', exact: true }).boundingBox(),
+        'phone zoom pill',
+      );
+      // As drawn: 16 px gutters and 12 px above the zoom pill.
+      expect({ left: card.x, right: 390 - card.x - card.width }).toEqual({ left: 16, right: 16 });
+      expect(zoom.y - (card.y + card.height)).toBeCloseTo(12, 0);
+      await preview.getByRole('button', { name: 'Open inspector' }).click();
+      await expect(page.getByRole('dialog')).toBeVisible();
     });
 
     test('fits the longest dependency chain of the 5,000-node fixture', async ({ page }) => {
@@ -422,6 +492,7 @@ export function registerGraphCanvasBrowserTests(openFixture: OpenFixture) {
       await settleGraph(page);
       const selected = page.locator('.pc-graph-node[data-canonical-id="QT-071"]');
       await selected.click();
+      await page.keyboard.press('Enter');
       await expect(page.getByRole('region', { name: 'Inspector', exact: true })).toBeVisible();
       await page.keyboard.press('Escape');
       await expect(page.locator('[data-chrome-slot="sidebar"]')).toHaveAttribute(

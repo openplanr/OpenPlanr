@@ -327,9 +327,9 @@ function FocusedWorkspace({
           onController={(controller) => {
             canvas.current = controller;
           }}
-          onSelect={(id) => {
+          onSelect={(id, inspect) => {
             const node = index.byId.get(id);
-            if (node) inspectPlanningNode(node);
+            if (node) inspectPlanningNode(node, inspect);
           }}
           onFocusSelect={(id) => {
             const node = index.byId.get(id);
@@ -344,7 +344,18 @@ function FocusedWorkspace({
                 </strong>
                 <ArtifactStatus status={selected.status} />
                 <p>{graphBlockerReason(model.graph, selected.id)}</p>
-                <Button variant="ghost" onClick={() => inspectPlanningNode(selected)}>
+                <Button
+                  variant="ghost"
+                  onClick={() => {
+                    // The preview hides once the inspector opens, so focus moves to its node first.
+                    Array.from(
+                      rootRef.current?.querySelectorAll<HTMLElement>('.pc-graph-node') ?? [],
+                    )
+                      .find((node) => node.dataset.canonicalId === selected.id)
+                      ?.focus({ preventScroll: true });
+                    inspectPlanningNode(selected);
+                  }}
+                >
                   Open inspector
                 </Button>
               </section>

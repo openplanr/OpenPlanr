@@ -3,7 +3,7 @@
 import { readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { act, cleanup, fireEvent, render, waitFor } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type {
   GraphLayout,
@@ -24,7 +24,10 @@ import {
   type PlanningGraphEnvelope,
   parsePlanningGraphEnvelope,
 } from '../../../../apps/dashboard/src/features/planning/planning-api.js';
-import { clearInspector } from '../../../../apps/dashboard/src/features/shell/inspector-selection.js';
+import {
+  clearInspector,
+  useInspectorStore,
+} from '../../../../apps/dashboard/src/features/shell/inspector-selection.js';
 import { installKeyboardCoordinator } from '../../../../apps/dashboard/src/features/shell/keyboard-coordinator.js';
 import {
   dashboardProductStatePolicy,
@@ -93,6 +96,11 @@ afterEach(() => {
 function required<T>(value: T | null | undefined): T {
   if (value === null || value === undefined) throw new Error('Required fixture value unavailable');
   return value;
+}
+
+/** Counts the shell's requests to open the inspector. */
+function InspectorRequests() {
+  return <output data-testid="inspector-requests">{useInspectorStore().openTick}</output>;
 }
 
 function engineEdge(edge: Readonly<{ from: string; to: string; style: string }>): string {
@@ -266,6 +274,59 @@ describe('Graph on the canvas engine', () => {
     expect(
       rendered.getByRole('button', { name: 'Lineage', exact: true }).getAttribute('aria-pressed'),
     ).toBe('true');
+  });
+
+  it('previews a clicked node and opens the inspector on Enter or Open inspector', async () => {
+    captureCanvasControllers();
+    stubStageSize({ width: 1440, height: 1000 });
+    const { binding, state } = representativeState();
+    const rendered = render(
+      <section>
+        <RouteToolProbe />
+        <InspectorRequests />
+        <GraphPage currentBinding={binding} current={state} />
+      </section>,
+    );
+    disposers.push(
+      installKeyboardCoordinator(document, () => ({
+        root: rendered.container,
+        singleLetters: true,
+        paletteOpen: false,
+        togglePalette: vi.fn(),
+        openHelp: vi.fn(),
+        navigate: vi.fn(),
+        closeInspector: () => false,
+        selectedId: () => null,
+        copy: async () => undefined,
+        announce: vi.fn(),
+      })),
+    );
+    await settleFrames();
+    const requests = () => Number(rendered.getByTestId('inspector-requests').textContent);
+    const before = requests();
+    const id = required(
+      rendered.container.querySelector<HTMLElement>('.pc-graph-node:not([data-selected])')?.dataset
+        .canonicalId,
+    );
+    const node = () =>
+      required(
+        rendered.container.querySelector<HTMLElement>(`.pc-graph-node[data-canonical-id="${id}"]`),
+      );
+    fireEvent.click(node(), { detail: 1 });
+    await settleFrames();
+    expect(node().getAttribute('aria-pressed')).toBe('true');
+    expect(document.activeElement).toBe(node());
+    expect(requests()).toBe(before);
+    const preview = rendered.getByRole('region', { name: 'Graph selection preview' });
+    expect(preview.textContent).toContain(id);
+    fireEvent.keyDown(node(), { key: 'Enter' });
+    expect(requests()).toBe(before + 1);
+    fireEvent.click(within(preview).getByRole('button', { name: 'Open inspector' }), {
+      detail: 1,
+    });
+    expect(requests()).toBe(before + 2);
+    // The preview hides once the inspector opens, so focus goes back to the node first.
+    expect(document.activeElement).toBe(node());
   });
 
   it('moves between connected neighbours by direction, vertical order and canonical ID', () => {

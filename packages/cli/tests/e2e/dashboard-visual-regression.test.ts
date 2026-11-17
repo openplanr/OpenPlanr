@@ -1172,7 +1172,9 @@ test.describe('dashboard real-browser quality', () => {
       name: 'QT-071 Make failed CRM registrations visible and replayable',
       exact: true,
     });
+    // A click previews the node; Enter opens the inspector.
     await selectedNode.click();
+    await page.keyboard.press('Enter');
     const inspector = page.getByRole('region', { name: 'Inspector', exact: true });
     await expect(inspector).toContainText('Make failed CRM registrations visible and replayable');
     expect(await main.boundingBox()).toEqual(before.main);
@@ -1203,6 +1205,7 @@ test.describe('dashboard real-browser quality', () => {
     await expect(selectedNode).toBeFocused();
     expect(await main.boundingBox()).toEqual(before.main);
     await selectedNode.click();
+    await page.keyboard.press('Enter');
     await expect(inspector).toBeVisible();
     await main.click({ position: { x: 8, y: 8 } });
     await expect(inspector).toHaveCount(0);
@@ -1218,6 +1221,7 @@ test.describe('dashboard real-browser quality', () => {
     expect(shifts.reduce((sum, shift) => sum + shift.value, 0)).toBe(0);
 
     await selectedNode.click();
+    await page.keyboard.press('Enter');
     await expect(inspector).toBeVisible();
 
     await page.evaluate(() => {

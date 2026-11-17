@@ -13,6 +13,7 @@ import {
   WorldNodes,
 } from '@openplanr/canvas/react';
 import {
+  type CSSProperties,
   type MouseEvent,
   type ReactNode,
   useCallback,
@@ -240,6 +241,16 @@ function renderNode(_id: string, item: GraphItem | undefined, level: CanvasLevel
   return <GraphNodeContent node={item.node} />;
 }
 
+/** The phone docks the preview across the stage, 12 px above the 40 px zoom pill. */
+const PHONE_PREVIEW: CSSProperties = {
+  position: 'fixed',
+  zIndex: 1,
+  right: 16,
+  bottom: 'calc(var(--pc-mobile-nav-height) + 11px + env(safe-area-inset-bottom) + 52px)',
+  left: 16,
+  width: 'auto',
+};
+
 export type GraphCanvasProps = Readonly<{
   nodes: readonly GraphNode[];
   edges: readonly GraphEdge[];
@@ -247,7 +258,8 @@ export type GraphCanvasProps = Readonly<{
   /** Changing the scope fits the new layout into the safe area; live patches keep the camera. */
   scope: string;
   selectedId: string | null;
-  onSelect: (id: string) => void;
+  /** A pointer click previews the node; keyboard activation also asks for the inspector. */
+  onSelect: (id: string, inspect: boolean) => void;
   onFocusSelect: (id: string) => void;
   /** Receives the live controller for route tools such as Fit, then null on unmount. */
   onController?: (controller: CanvasController | null) => void;
@@ -304,7 +316,7 @@ export function GraphCanvas({
     const unregister = registerCanvasKeys((event) => controller.handleKey(event));
     const selectionOff = controller.on('selection', (ids) => {
       const [id] = ids;
-      if (id !== undefined && id !== latest.current.selected) latest.current.onSelect(id);
+      if (id !== undefined && id !== latest.current.selected) latest.current.onSelect(id, true);
     });
     const focusOff = controller.on('focus', (id) => {
       if (id !== null && id !== latest.current.selected) latest.current.onFocusSelect(id);
@@ -368,7 +380,8 @@ export function GraphCanvas({
     const id = node?.dataset.canvasNodeId;
     if (!node || !id) return;
     node.focus({ preventScroll: true });
-    latest.current.onSelect(id);
+    // The keyboard coordinator activates a node with a click that carries no pointer detail.
+    latest.current.onSelect(id, event.detail === 0);
   }, []);
   const activateOutline = useCallback(
     async (id: string) => {
@@ -417,7 +430,7 @@ export function GraphCanvas({
             renderNode={renderNode}
             nodeAttributes={nodeAttributes}
           />
-          {preview && anchor ? (
+          {preview && anchor && !phoneZoom ? (
             <div
               className="pc-graph-preview"
               style={{ transform: `translate(${anchor.x}px, ${anchor.y + GRAPH_NODE_H + 12}px)` }}
@@ -428,6 +441,11 @@ export function GraphCanvas({
         </CanvasStage>
         <GraphOutline layout={layout} onActivate={activateOutline} />
       </CanvasProvider>
+      {preview && phoneZoom ? (
+        <div className="pc-graph-preview" style={PHONE_PREVIEW}>
+          {preview}
+        </div>
+      ) : null}
       {controller && chrome ? (
         <GraphMinimap
           controller={controller}
