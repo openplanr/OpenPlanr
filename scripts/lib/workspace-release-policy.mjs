@@ -33,7 +33,7 @@ const internalDependencies = Object.freeze({
   },
   'packages/skill-runtime': { dependencies: ['@openplanr/protocol'] },
   'packages/integrations': {},
-  'apps/dashboard': { dependencies: ['@openplanr/protocol'] },
+  'apps/dashboard': { dependencies: ['@openplanr/canvas', '@openplanr/protocol'] },
 });
 
 export function validateWorkspaceManifests(rootManifest, manifestByPath) {

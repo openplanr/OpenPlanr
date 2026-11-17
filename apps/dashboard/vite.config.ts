@@ -90,6 +90,7 @@ export function dashboardSourceBuildId(
     [
       ...fontPackages,
       '@tailwindcss/vite',
+      '@openplanr/canvas',
       '@openplanr/protocol',
       '@tanstack/react-query',
       '@vitejs/plugin-react',

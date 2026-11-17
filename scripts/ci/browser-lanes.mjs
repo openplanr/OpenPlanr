@@ -32,6 +32,7 @@ export const LANES = Object.freeze({
   ],
   dashboard: [
     'apps/dashboard/',
+    'packages/canvas/',
     'packages/cli/tests/dashboard/',
     'packages/cli/tests/e2e/',
     'packages/cli/scripts/run-dashboard-browser-tests.mjs',

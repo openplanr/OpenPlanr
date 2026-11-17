@@ -92,7 +92,7 @@ const allowedInternalImports = Object.freeze({
   'packages/design': new Set(['@openplanr/artifact', '@openplanr/canvas', '@openplanr/protocol']),
   'packages/skill-runtime': new Set(['@openplanr/protocol']),
   'packages/integrations': new Set(),
-  'apps/dashboard': new Set(['@openplanr/protocol']),
+  'apps/dashboard': new Set(['@openplanr/canvas', '@openplanr/protocol']),
 });
 
 let scannedFiles = 0;
