@@ -28,13 +28,6 @@
     --pc-gutter: 16px;
   }
 }
-.pc-shell[data-navigation-inset] .pc-shell__scroll {
-  padding-left: calc(
-    var(--canvas-chrome-inset) +
-    var(--canvas-chrome-navigation-width) +
-    var(--pc-gutter)
-  );
-}
 .pc-shell[data-shell-layout="floating"] .pc-plane-banner {
   top: 64px;
 }

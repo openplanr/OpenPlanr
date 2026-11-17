@@ -141,9 +141,8 @@ describe('responsive navigation', () => {
           true,
         );
       }
-      expect(container.querySelector('.pc-shell')?.hasAttribute('data-navigation-inset')).toBe(
-        false,
-      );
+      for (const inset of ['data-navigation-inset', 'data-sidebar-inset'])
+        expect(container.querySelector('.pc-shell')?.hasAttribute(inset), inset).toBe(false);
     },
   );
 
@@ -464,6 +463,30 @@ describe('route-independent floating chrome', () => {
     rerender(shell('#/board'));
     expect(navigation.getAttribute('data-open')).toBe('false');
   });
+
+  it.each([1440, 1024])(
+    'pins the sidebar, insets the content only on that toggle and keeps it across routes at %i px',
+    async (width) => {
+      vi.stubGlobal('innerWidth', width);
+      const user = userEvent.setup();
+      const { container, rerender } = render(shell('#/list'));
+      const frame = container.querySelector<HTMLElement>('.pc-shell');
+      const sidebar = container.querySelector<HTMLElement>('[data-chrome-slot="sidebar"]');
+      if (!frame || !sidebar) throw new Error('Missing shell frame or sidebar');
+      await user.click(screen.getByRole('button', { name: 'Sidebar' }));
+      expect(sidebar.getAttribute('data-open')).toBe('true');
+      expect(frame.hasAttribute('data-sidebar-inset')).toBe(false);
+      await user.click(within(sidebar).getByRole('button', { name: 'Pin sidebar' }));
+      expect(frame.hasAttribute('data-sidebar-inset')).toBe(true);
+      for (const hash of ['#/board', '#/home', '#/list']) {
+        rerender(shell(hash));
+        expect(sidebar.getAttribute('data-open')).toBe('true');
+        expect(frame.hasAttribute('data-sidebar-inset')).toBe(true);
+      }
+      await user.click(within(sidebar).getByRole('button', { name: 'Pin sidebar' }));
+      expect(frame.hasAttribute('data-sidebar-inset')).toBe(false);
+    },
+  );
 
   it('keeps the menu, tool and action pills mounted through bootstrap', () => {
     vi.stubGlobal('innerWidth', 1440);

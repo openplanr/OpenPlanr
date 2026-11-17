@@ -48,6 +48,11 @@ const CHROME_STORAGE_NOTICE = {
   set: 'Panel layout could not be saved in this browser. It applies until this page is closed.',
 } as const;
 
+/** Page padding that keeps content beside a pinned panel of the given width variable. */
+function panelInset(width: string): string {
+  return `calc(var(--canvas-chrome-inset) + var(${width}) + var(--pc-gutter))`;
+}
+
 function subscribeToResize(onChange: () => void): () => void {
   if (typeof window === 'undefined') return () => undefined;
   window.addEventListener('resize', onChange);
@@ -266,8 +271,9 @@ function ShellFrame({
   }, [graph, attentionNow]);
   const detailRoute = route.kind === 'planning.detail' || route.kind === 'planning.spec';
   const navigationPanel = chrome.panels[NAVIGATION_PANEL];
-  const navigationInset =
-    !phone && chrome.layout === 'desktop' && navigationPanel?.open && navigationPanel.pinned;
+  // A pinned panel reserves its width beside the page, so it never covers content.
+  const navigationInset = Boolean(!phone && navigationPanel?.open && navigationPanel.pinned);
+  const sidebarInset = Boolean(!phone && sidebar?.open && sidebar.pinned);
   const skipLink = useRef<HTMLAnchorElement>(null);
   const canvasRoute = useCanvasRoute();
   useChromeRegions(!phone, interactions.rootRef, skipLink, canvasRoute);
@@ -297,6 +303,7 @@ function ShellFrame({
         data-dashboard-build-id={buildId}
         data-shell-layout={phone ? 'phone' : 'floating'}
         data-navigation-inset={navigationInset || undefined}
+        data-sidebar-inset={sidebarInset || undefined}
         data-product={route.product ?? 'system'}
         data-detail-route={detailRoute || undefined}
       >
@@ -419,7 +426,18 @@ function ShellFrame({
                       onRetry={refetchCurrent}
                     />
                   ) : null}
-                  <div className="pc-shell__scroll" ref={interactions.scrollRef}>
+                  <div
+                    className="pc-shell__scroll"
+                    ref={interactions.scrollRef}
+                    style={{
+                      paddingLeft: navigationInset
+                        ? panelInset('--canvas-chrome-navigation-width')
+                        : undefined,
+                      paddingRight: sidebarInset
+                        ? panelInset('--canvas-chrome-sidebar-width')
+                        : undefined,
+                    }}
+                  >
                     {invalidView ? (
                       <p role="status">
                         This view link is invalid or unsupported. Default filters are shown.

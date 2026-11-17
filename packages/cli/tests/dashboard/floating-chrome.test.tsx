@@ -195,10 +195,12 @@ describe('floating panels', () => {
     expect(panelOpen('sidebar')).toBe(true);
     expect(panelOpen('navigation')).toBe(false);
     await user.click(within(slot('sidebar')).getByRole('button', { name: 'Pin sidebar' }));
+    expect(document.querySelector('.pc-shell')?.hasAttribute('data-sidebar-inset')).toBe(true);
     await user.click(screen.getByRole('button', { name: 'List: show navigation' }));
     expect(panelOpen('navigation')).toBe(true);
     expect(panelOpen('sidebar')).toBe(false);
     expect(document.querySelector('.pc-shell')?.hasAttribute('data-navigation-inset')).toBe(false);
+    expect(document.querySelector('.pc-shell')?.hasAttribute('data-sidebar-inset')).toBe(false);
   });
 
   it('persists open and pinned state per project through the browser adapter', async () => {

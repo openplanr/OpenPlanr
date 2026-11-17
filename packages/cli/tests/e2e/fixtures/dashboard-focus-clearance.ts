@@ -80,6 +80,28 @@ async function pinSidebar(page: Page): Promise<void> {
   await expect(pin).toHaveAttribute('aria-pressed', 'true');
 }
 
+/** Opens the sidebar without pinning it, so it overlays the page. */
+async function openSidebar(page: Page): Promise<void> {
+  const sidebar = page.locator('[data-chrome-slot="sidebar"]');
+  const pin = sidebar.getByRole('button', { name: 'Pin sidebar' });
+  if ((await sidebar.getAttribute('data-open')) !== 'true') {
+    await page.keyboard.press('Alt+BracketRight');
+    await expect(sidebar).toHaveAttribute('data-open', 'true');
+  }
+  // Pinned panels persist per project, so an earlier test may have left it pinned.
+  if ((await pin.getAttribute('aria-pressed')) === 'true') await pin.click();
+  await expect(pin).toHaveAttribute('aria-pressed', 'false');
+}
+
+async function expectSidebarOverlay(page: Page): Promise<void> {
+  const sidebar = page.locator('[data-chrome-slot="sidebar"]');
+  await expect(sidebar).toHaveAttribute('data-open', 'true');
+  await expect(sidebar.getByRole('button', { name: 'Pin sidebar' })).toHaveAttribute(
+    'aria-pressed',
+    'false',
+  );
+}
+
 async function expectSidebarPinned(page: Page): Promise<void> {
   const sidebar = page.locator('[data-chrome-slot="sidebar"]');
   await expect(sidebar).toHaveAttribute('data-open', 'true');
@@ -148,16 +170,60 @@ function underSidebar(target: Locator): Promise<boolean> {
   });
 }
 
+/** Whether `target` sits entirely within the open sidebar's columns, measured now. */
+function hiddenBySidebar(target: Locator): Promise<boolean> {
+  return target.evaluate((element) => {
+    const sidebar = document.querySelector('[data-chrome-slot="sidebar"]');
+    if (!sidebar) throw new Error('Missing sidebar.');
+    const box = element.getBoundingClientRect();
+    const panel = sidebar.getBoundingClientRect();
+    return box.left >= panel.left && box.right <= panel.right;
+  });
+}
+
+/** Content focus stops that overlap the open sidebar, tabbing from the main content once round. */
+function stopsUnderSidebar(page: Page): Promise<string[]> {
+  return page.evaluate(async () => {
+    const sidebar = document.querySelector('[data-chrome-slot="sidebar"]');
+    const main = document.querySelector<HTMLElement>('#main-content');
+    if (!sidebar || !main) throw new Error('Missing sidebar or main content.');
+    const panel = sidebar.getBoundingClientRect();
+    const stops = Array.from(
+      main.querySelectorAll<HTMLElement>(
+        'a[href], button:not(:disabled), input:not(:disabled), select, textarea, summary, [tabindex="0"]',
+      ),
+    ).filter((element) => element.checkVisibility() && !element.closest('[inert]'));
+    const covered: string[] = [];
+    for (const stop of stops) {
+      stop.focus();
+      for (let frame = 0; frame < 2; frame += 1)
+        await new Promise((resolve) => requestAnimationFrame(resolve));
+      const box = stop.getBoundingClientRect();
+      if (
+        box.width > 0 &&
+        box.left < panel.right &&
+        box.right > panel.left &&
+        box.top < panel.bottom &&
+        box.bottom > panel.top
+      )
+        covered.push(
+          stop.getAttribute('aria-label') ?? stop.textContent?.trim().slice(0, 40) ?? '',
+        );
+    }
+    return covered;
+  });
+}
+
 /** Browser coverage that keyboard focus stays clear of the floating chrome. */
 export function registerFocusClearanceBrowserTests(openFixture: OpenFixture) {
   test.describe('focus clear of floating chrome', () => {
     for (const width of WIDTHS) {
-      test(`scrolls a nested horizontal scroller clear of a pinned sidebar on the preventScroll arrow path at ${width}`, async ({
+      test(`scrolls a nested horizontal scroller clear of an open sidebar on the preventScroll arrow path at ${width}`, async ({
         page,
       }) => {
         await page.setViewportSize({ width, height: 900 });
         await openFixture(page, '#/list');
-        await pinSidebar(page);
+        await openSidebar(page);
         await injectScroller(page);
         const row = page.locator('[data-test-scroller]');
         const reports = await walkScroller(page);
@@ -165,15 +231,16 @@ export function registerFocusClearanceBrowserTests(openFixture: OpenFixture) {
         // The last items sit under the sidebar at the row's end, so they needed extra range.
         expect(await row.evaluate((element) => element.style.paddingInlineEnd)).not.toBe('');
         expect(await row.evaluate((element) => element.scrollLeft)).toBeGreaterThan(0);
+        // Scrolling cleared every item, so the sidebar that was open before focus stayed open.
+        await expectSidebarOverlay(page);
         await page
           .locator('[data-route-kind="planning.list"] [data-keyboard-item]')
           .first()
           .focus();
         await expect.poll(() => row.evaluate((element) => element.style.paddingInlineEnd)).toBe('');
-        await expectSidebarPinned(page);
       });
 
-      test(`keeps the last List row visible under a pinned sidebar at ${width}`, async ({
+      test(`keeps the last List row fully visible beside a pinned sidebar at ${width}`, async ({
         page,
       }) => {
         await page.setViewportSize({ width, height: 900 });
@@ -194,35 +261,103 @@ export function registerFocusClearanceBrowserTests(openFixture: OpenFixture) {
         }
         const report = await focusReport(page);
         expect(report.id).toBe(previous);
-        expect(report.covered).toBe(true);
-        expect(report.visible).toBeGreaterThan(FOCUS_HIDDEN_SHARE);
+        expect(report).toMatchObject({ covered: false, visible: 1 });
+        const edge = await page
+          .locator('[data-chrome-slot="sidebar"]')
+          .evaluate((sidebar) => sidebar.getBoundingClientRect().left);
+        const row = await page.locator(`[data-keyboard-item="${previous}"]`).boundingBox();
+        if (!row) throw new Error('Missing last List row box.');
+        expect(row.x + row.width).toBeLessThanOrEqual(edge);
         await expectSidebarPinned(page);
+      });
+
+      test(`keeps content focus stops clear of a pinned sidebar at ${width}`, async ({ page }) => {
+        await page.setViewportSize({ width, height: 900 });
+        for (const route of ['#/list', '#/board', '#/sprints', '#/overview']) {
+          await openFixture(page, route);
+          await pinSidebar(page);
+          expect({ route, covered: await stopsUnderSidebar(page) }).toEqual({ route, covered: [] });
+        }
+      });
+
+      test(`shifts nothing across route changes with the sidebar pinned and unpinned at ${width}`, async ({
+        page,
+      }) => {
+        await page.addInitScript(installDashboardLayoutShifts);
+        await page.setViewportSize({ width, height: 900 });
+        const shifts = () =>
+          page.evaluate(() =>
+            window.__dashboardLayoutShifts.snapshot().shifts.map((shift) => ({
+              phase: shift.phase,
+              value: shift.value,
+              input: shift.hadRecentInput,
+            })),
+          );
+        const visit = async (route: string, kind: string) => {
+          await page.evaluate((hash) => {
+            window.__dashboardLayoutShifts.markPhase(`route ${hash}`);
+            window.location.hash = hash;
+          }, route);
+          await expect(page.locator(`[data-route-kind="${kind}"]`)).toBeVisible();
+          await page.evaluate(
+            () =>
+              new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))),
+          );
+        };
+        await openFixture(page, '#/list');
+        await page.evaluate(() => window.__dashboardLayoutShifts.markPhase('pin'));
+        await pinSidebar(page);
+        await visit('#/board', 'planning.board');
+        await visit('#/overview', 'planning.overview');
+        await page.evaluate(() => window.__dashboardLayoutShifts.markPhase('unpin'));
+        await page
+          .locator('[data-chrome-slot="sidebar"]')
+          .getByRole('button', { name: 'Pin sidebar' })
+          .click();
+        await visit('#/sprints', 'planning.sprints');
+        await visit('#/list', 'planning.list');
+        const recorded = await shifts();
+        // Pinning and unpinning move the page only as the direct result of that press.
+        expect(recorded.filter((shift) => shift.phase.startsWith('route') || !shift.input)).toEqual(
+          [],
+        );
+        expect(recorded.some((shift) => shift.phase === 'pin')).toBe(true);
+        // A persisted pin is in place at first paint.
+        await page.evaluate(() => window.__dashboardLayoutShifts.markPhase('pin'));
+        await pinSidebar(page);
+        await openFixture(page, '#/list');
+        await expectSidebarPinned(page);
+        expect(await shifts()).toEqual([]);
       });
     }
 
     for (const width of WIDTHS) {
-      test(`clears focus returning from a dialog to an item under the pinned sidebar at ${width}`, async ({
+      test(`clears focus returning from a dialog to an item under the open sidebar at ${width}`, async ({
         page,
       }) => {
         await page.setViewportSize({ width, height: 900 });
         await openFixture(page, '#/list');
-        await pinSidebar(page);
+        await openSidebar(page);
         await injectScroller(page);
         await walkScroller(page);
         const origin = page.locator('[data-keyboard-item="probe-12"]');
         await page.keyboard.press('ControlOrMeta+KeyK');
         const palette = page.locator('dialog.pc-palette');
         await expect(palette).toBeVisible();
-        // A layout change while the dialog is open puts the origin back under the sidebar.
+        // A layout change while the dialog is open moves the origin entirely under the sidebar.
         await page.locator('[data-test-scroller]').evaluate((element) => {
-          element.scrollLeft = 0;
+          const sidebar = document.querySelector('[data-chrome-slot="sidebar"]');
+          const item = element.querySelector('[data-keyboard-item="probe-12"]');
+          if (!sidebar || !item) throw new Error('Missing sidebar or origin.');
+          element.scrollLeft -=
+            sidebar.getBoundingClientRect().left + 8 - item.getBoundingClientRect().left;
         });
-        expect(await underSidebar(origin)).toBe(true);
+        expect(await hiddenBySidebar(origin)).toBe(true);
         await page.keyboard.press('Escape');
         await expect(palette).not.toBeVisible();
         await expect(origin).toBeFocused();
-        expect((await focusReport(page)).visible).toBeGreaterThan(FOCUS_HIDDEN_SHARE);
-        await expectSidebarPinned(page);
+        expect((await focusReport(page)).visible).toBe(1);
+        await expectSidebarOverlay(page);
       });
 
       test(`reveals a focused Graph node into the safe area through the engine without zooming at ${width}`, async ({
@@ -252,7 +387,7 @@ export function registerFocusClearanceBrowserTests(openFixture: OpenFixture) {
         await expectSidebarPinned(page);
       });
 
-      test(`moves no layout while clearing and releasing focus under a pinned sidebar at ${width}`, async ({
+      test(`moves no layout while clearing and releasing focus beside the sidebar at ${width}`, async ({
         page,
       }) => {
         await page.addInitScript(installDashboardLayoutShifts);
@@ -289,6 +424,7 @@ export function registerFocusClearanceBrowserTests(openFixture: OpenFixture) {
         ).toEqual([]);
 
         await openFixture(page, '#/list');
+        await openSidebar(page);
         await injectScroller(page);
         await page.evaluate(() => window.__dashboardLayoutShifts.markPhase('focus-clearance'));
         await walkScroller(page);

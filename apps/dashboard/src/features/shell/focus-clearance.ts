@@ -107,14 +107,6 @@ export function entirelyHidden(box: Box, covers: readonly Box[]): boolean {
   return visibleFraction(box, covers) <= FOCUS_HIDDEN_SHARE;
 }
 
-/**
- * Where the owner's decision for a pinned panel over focus plugs in. Returns true once handled;
- * until decided, a pinned panel stays put and the page does not reflow.
- */
-export function pinnedPanelCoversFocus(_panelId: string, _target: HTMLElement): boolean {
-  return false;
-}
-
 function scrolls(element: HTMLElement, horizontal: boolean): boolean {
   const style = getComputedStyle(element);
   const overflow = horizontal ? style.overflowX : style.overflowY;
@@ -218,7 +210,7 @@ export function scrollClear(
 
 /**
  * Clears focus that chrome hides entirely: scrolls it clear, else closes an unpinned panel that
- * was open before focus moved, else hands a pinned panel to its branch point.
+ * was open before focus moved. A pinned panel insets the page instead, so it is left open.
  */
 export function clearFocus(
   target: HTMLElement,
@@ -242,7 +234,6 @@ export function clearFocus(
     if (scrollClear(target, cover, extended) || !cover.panel) continue;
     // A panel that opened with this focus, such as the inspector for the focused row, stays.
     if (!cover.panel.pinned && openAtFocus.has(cover.panel.id)) closePanel(cover.panel.id);
-    else if (cover.panel.pinned) pinnedPanelCoversFocus(cover.panel.id, target);
   }
 }
 

@@ -5,7 +5,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { DashboardProviders } from '../../../../apps/dashboard/src/app/providers.js';
 import {
   entirelyHidden,
-  pinnedPanelCoversFocus,
   visibleFraction,
 } from '../../../../apps/dashboard/src/features/shell/focus-clearance.js';
 import {
@@ -212,7 +211,7 @@ describe('focus under floating chrome', () => {
     expect(document.activeElement).toBe(target);
   });
 
-  it('leaves a pinned sidebar to its branch point without reflowing the page', async () => {
+  it('leaves a pinned sidebar open without scrolling or padding the page further', async () => {
     const target = renderWithTarget(UNDER_SIDEBAR);
     openSidebar();
     act(() => within(slot('sidebar')).getByRole('button', { name: 'Pin sidebar' }).click());
@@ -223,7 +222,6 @@ describe('focus under floating chrome', () => {
     expect(sidebarOpen()).toBe(true);
     expect(document.activeElement).toBe(target);
     expect(scroll?.getAttribute('style') ?? null).toBe(before);
-    expect(pinnedPanelCoversFocus('sidebar', target)).toBe(false);
   });
 
   it('does not flap: a pressed item and a panel opened with the focus keep the panel open', async () => {
