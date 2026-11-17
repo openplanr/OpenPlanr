@@ -1,10 +1,10 @@
 import type { ChromePanelState } from '@openplanr/canvas/react';
 
 /**
- * Share of a focused element that must stay visible beside floating chrome before a remedy runs.
- * Matches the kit, which reveals a selection once more than half of it is covered.
+ * Visible share at or below which chrome hides focus entirely, the failure WCAG 2.4.11 names.
+ * Far above the rounding the union-area sum leaves, far below one pixel of a full-window box.
  */
-export const FOCUS_VISIBLE_THRESHOLD = 0.5;
+export const FOCUS_HIDDEN_SHARE = 1e-9;
 
 /** Gap kept between a revealed element and the chrome, the kit's safe-area inset. */
 const CLEARANCE = 12;
@@ -100,6 +100,11 @@ export function visibleFraction(box: Box, covers: readonly Box[]): number {
     }
   }
   return 1 - covered / area;
+}
+
+/** Whether the union of `covers` leaves no part of `box` visible. */
+export function entirelyHidden(box: Box, covers: readonly Box[]): boolean {
+  return visibleFraction(box, covers) <= FOCUS_HIDDEN_SHARE;
 }
 
 /**
@@ -212,8 +217,8 @@ export function scrollClear(
 }
 
 /**
- * Clears focus that chrome leaves less than the threshold visible: scrolls it clear, else closes an
- * unpinned panel that was open before focus moved, else hands a pinned panel to its branch point.
+ * Clears focus that chrome hides entirely: scrolls it clear, else closes an unpinned panel that
+ * was open before focus moved, else hands a pinned panel to its branch point.
  */
 export function clearFocus(
   target: HTMLElement,
@@ -224,13 +229,13 @@ export function clearFocus(
 ): void {
   const box = target.getBoundingClientRect();
   const covers = chromeCovers(panels).filter(({ rect }) => overlaps(box, rect));
-  // Acting only below the threshold while clearing fully keeps small shifts from re-triggering.
+  // Acting only on hidden focus while clearing fully keeps small shifts from re-triggering.
   if (
     covers.length === 0 ||
-    visibleFraction(
+    !entirelyHidden(
       box,
       covers.map(({ rect }) => rect),
-    ) >= FOCUS_VISIBLE_THRESHOLD
+    )
   )
     return;
   for (const cover of covers) {

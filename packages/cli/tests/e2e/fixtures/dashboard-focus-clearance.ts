@@ -1,5 +1,5 @@
 import { expect, type Locator, type Page, test } from '@playwright/test';
-import { FOCUS_VISIBLE_THRESHOLD } from '../../../../../apps/dashboard/src/features/shell/focus-clearance.js';
+import { FOCUS_HIDDEN_SHARE } from '../../../../../apps/dashboard/src/features/shell/focus-clearance.js';
 import { installDashboardLayoutShifts } from '../../dashboard/fixtures/dashboard-layout-shifts.js';
 import { settleGraph } from './dashboard-graph-canvas.js';
 
@@ -161,7 +161,7 @@ export function registerFocusClearanceBrowserTests(openFixture: OpenFixture) {
         await injectScroller(page);
         const row = page.locator('[data-test-scroller]');
         const reports = await walkScroller(page);
-        expect(reports.filter((report) => report.visible < FOCUS_VISIBLE_THRESHOLD)).toEqual([]);
+        expect(reports.filter((report) => report.visible <= FOCUS_HIDDEN_SHARE)).toEqual([]);
         // The last items sit under the sidebar at the row's end, so they needed extra range.
         expect(await row.evaluate((element) => element.style.paddingInlineEnd)).not.toBe('');
         expect(await row.evaluate((element) => element.scrollLeft)).toBeGreaterThan(0);
@@ -195,7 +195,7 @@ export function registerFocusClearanceBrowserTests(openFixture: OpenFixture) {
         const report = await focusReport(page);
         expect(report.id).toBe(previous);
         expect(report.covered).toBe(true);
-        expect(report.visible).toBeGreaterThanOrEqual(FOCUS_VISIBLE_THRESHOLD);
+        expect(report.visible).toBeGreaterThan(FOCUS_HIDDEN_SHARE);
         await expectSidebarPinned(page);
       });
     }
@@ -221,7 +221,7 @@ export function registerFocusClearanceBrowserTests(openFixture: OpenFixture) {
         await page.keyboard.press('Escape');
         await expect(palette).not.toBeVisible();
         await expect(origin).toBeFocused();
-        expect((await focusReport(page)).visible).toBeGreaterThanOrEqual(FOCUS_VISIBLE_THRESHOLD);
+        expect((await focusReport(page)).visible).toBeGreaterThan(FOCUS_HIDDEN_SHARE);
         await expectSidebarPinned(page);
       });
 
@@ -248,7 +248,7 @@ export function registerFocusClearanceBrowserTests(openFixture: OpenFixture) {
         const box = await node.boundingBox();
         if (!box) throw new Error('Missing revealed node box.');
         expect(box.x + box.width).toBeLessThanOrEqual(edge);
-        expect((await focusReport(page)).visible).toBeGreaterThanOrEqual(FOCUS_VISIBLE_THRESHOLD);
+        expect((await focusReport(page)).visible).toBeGreaterThan(FOCUS_HIDDEN_SHARE);
         await expectSidebarPinned(page);
       });
 

@@ -4,7 +4,7 @@ import { act, cleanup, fireEvent, render, within } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { DashboardProviders } from '../../../../apps/dashboard/src/app/providers.js';
 import {
-  FOCUS_VISIBLE_THRESHOLD,
+  entirelyHidden,
   pinnedPanelCoversFocus,
   visibleFraction,
 } from '../../../../apps/dashboard/src/features/shell/focus-clearance.js';
@@ -47,6 +47,7 @@ type Rect = Readonly<{ left: number; top: number; right: number; bottom: number 
 const SIDEBAR: Rect = { left: 1100, top: 16, right: 1424, bottom: 884 };
 const UNDER_SIDEBAR: Rect = { left: 1120, top: 400, right: 1300, bottom: 440 };
 const MOSTLY_CLEAR: Rect = { left: 600, top: 400, right: 1200, bottom: 440 };
+const MOSTLY_COVERED: Rect = { left: 1090, top: 400, right: 1300, bottom: 440 };
 
 function slot(name: string): HTMLElement {
   const element = document.querySelector<HTMLElement>(`[data-chrome-slot="${name}"]`);
@@ -133,7 +134,7 @@ afterEach(() => {
 });
 
 describe('visible area of focus beside chrome', () => {
-  it('counts overlapping covers once against the exported threshold', () => {
+  it('counts overlapping covers once', () => {
     const box = { left: 0, top: 0, right: 100, bottom: 10 };
     const covers = [
       { left: 50, top: -10, right: 200, bottom: 20 },
@@ -141,7 +142,20 @@ describe('visible area of focus beside chrome', () => {
     ];
     expect(visibleFraction(box, covers)).toBe(0.5);
     expect(visibleFraction(box, [])).toBe(1);
-    expect(visibleFraction(box, covers)).toBeLessThanOrEqual(FOCUS_VISIBLE_THRESHOLD);
+    expect(entirelyHidden(box, covers)).toBe(false);
+  });
+
+  it('counts focus as hidden only when no part of it is visible', () => {
+    const box = { left: 10.1, top: 0.1, right: 110.7, bottom: 40.3 };
+    // Two covers meeting at a fractional edge leave rounding, not area, uncovered.
+    const halves = [
+      { left: 0, top: 0, right: 33.7, bottom: 60 },
+      { left: 33.7, top: 0, right: 200, bottom: 60 },
+    ];
+    expect(visibleFraction(box, halves)).toBeGreaterThan(0);
+    expect(entirelyHidden(box, halves)).toBe(true);
+    // A one-pixel sliver is still visible focus.
+    expect(entirelyHidden(box, [{ left: 11.1, top: 0, right: 200, bottom: 60 }])).toBe(false);
   });
 });
 
@@ -233,10 +247,13 @@ describe('focus under floating chrome', () => {
     expect(sidebarOpen()).toBe(true);
   });
 
-  it('leaves the panel open while the focused item stays visible above the threshold', async () => {
-    const clear = renderWithTarget(MOSTLY_CLEAR);
+  it.each([
+    ['mostly clear', MOSTLY_CLEAR],
+    ['mostly covered', MOSTLY_COVERED],
+  ])('leaves the panel open while part of the focused item stays visible: %s', async (_, box) => {
+    const target = renderWithTarget(box);
     openSidebar();
-    act(() => clear.focus({ preventScroll: true }));
+    act(() => target.focus({ preventScroll: true }));
     await nextFrame();
     expect(sidebarOpen()).toBe(true);
   });
