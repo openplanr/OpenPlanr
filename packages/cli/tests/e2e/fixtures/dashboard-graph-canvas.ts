@@ -106,6 +106,21 @@ export function registerGraphCanvasBrowserTests(openFixture: OpenFixture) {
       await (await tool(page, 'Whole project')).click();
       const camera = await settleGraph(page);
       const minimap = page.locator('.pc-graph-minimap');
+      // The artboard's 200 x 128 minimap with a 12 px radius and a neutral viewport outline.
+      expect(required(await minimap.boundingBox(), 'minimap')).toMatchObject({
+        width: 200,
+        height: 128,
+      });
+      await expect(minimap).toHaveCSS('border-radius', '12px');
+      const outline = await minimap.locator('.pc-graph-minimap__viewport').evaluate((element) => {
+        const accent = document.createElement('span');
+        accent.style.color = 'var(--op-accent)';
+        document.body.append(accent);
+        const colors = [getComputedStyle(element).borderTopColor, getComputedStyle(accent).color];
+        accent.remove();
+        return colors;
+      });
+      expect(outline[0]).not.toBe(outline[1]);
       const canvas = required(await minimap.locator('canvas').boundingBox(), 'minimap canvas');
       const frame = required(
         await minimap.locator('.pc-graph-minimap__viewport').boundingBox(),
@@ -118,7 +133,8 @@ export function registerGraphCanvasBrowserTests(openFixture: OpenFixture) {
         x: frame.x - canvas.x - camera.x * scale,
         y: frame.y - canvas.y - camera.y * scale,
       };
-      const click = { x: canvas.width * 0.8, y: canvas.height * 0.3 };
+      // Whole pixels: a click reports integer client coordinates.
+      const click = { x: Math.round(canvas.width * 0.8), y: Math.round(canvas.height * 0.3) };
       const world = { x: (click.x - offset.x) / scale, y: (click.y - offset.y) / scale };
       await page.mouse.click(canvas.x + click.x, canvas.y + click.y);
       const moved = await settleGraph(page);

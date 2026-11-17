@@ -19,8 +19,14 @@
   z-index: 0;
 }
 .pc-shell[data-shell-layout="floating"] .pc-shell__scroll {
+  --pc-gutter: 24px;
   padding-block: 64px;
   scroll-padding-block: 64px;
+}
+@media (max-width: 899px) {
+  .pc-shell[data-shell-layout="floating"] .pc-shell__scroll {
+    --pc-gutter: 16px;
+  }
 }
 .pc-shell[data-navigation-inset] .pc-shell__scroll {
   padding-left: calc(
@@ -33,6 +39,9 @@
   top: 64px;
 }
 
+.pc-chrome .canvas-chrome-panel-surface {
+  border-radius: 14px;
+}
 /* Live patches that grow the inspector must not reflow it when its scrollbar appears. */
 .pc-chrome .canvas-chrome-panel-body {
   scrollbar-gutter: stable;
@@ -104,19 +113,20 @@
   position: fixed;
   top: auto;
   right: 12px;
-  bottom: 60px;
+  bottom: 64px;
   left: auto;
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  gap: 8px;
+  gap: 1px;
   width: 300px;
-  padding: 14px;
+  padding: 6px;
 }
 .pc-help-card dl {
   display: grid;
   grid-template-columns: 72px minmax(0, 1fr);
-  gap: 6px 12px;
+  gap: 8px 12px;
   margin: 0;
+  padding: 0 10px 10px;
 }
 .pc-help-card dd {
   margin: 0;
@@ -125,6 +135,17 @@
 .pc-help-card li {
   display: flex;
   justify-content: space-between;
+  align-items: center;
+  min-height: 34px;
+  padding: 0 10px;
+}
+.pc-help-card header {
+  min-height: 40px;
+}
+.pc-help-card ul {
+  gap: 1px;
+  padding-block: 4px;
+  border-block: 1px solid var(--op-line);
 }
 .pc-chrome-list {
   display: grid;

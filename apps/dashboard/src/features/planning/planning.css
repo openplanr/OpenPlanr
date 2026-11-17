@@ -364,7 +364,7 @@
   padding: 5px;
   background: var(--pc-surface-panel);
   border: 1px solid var(--pc-border-strong);
-  border-radius: var(--pc-radius-sm);
+  border-radius: 12px;
   box-shadow: var(--pc-shadow-sm);
   cursor: crosshair;
 }
@@ -379,8 +379,7 @@
   box-sizing: border-box;
   top: 5px;
   left: 5px;
-  border: 2px solid var(--pc-accent);
-  background: var(--pc-focus-halo);
+  border: 2px solid var(--op-muted);
   pointer-events: none;
 }
 .pc-graph-minimap:focus-visible {

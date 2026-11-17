@@ -399,21 +399,14 @@
   padding: 16px 0 4px;
 }
 
-@media (min-width: 600px) and (max-width: 899px) {
-  .pc-shell__scroll {
-    padding-right: 24px;
-    padding-left: 24px;
-  }
-}
-
 @media (max-width: 599px) {
   .pc-shell__column {
     padding-bottom: calc(var(--pc-mobile-nav-height) + env(safe-area-inset-bottom, 0px));
   }
 
   .pc-shell__scroll {
-    padding-right: 14px;
-    padding-left: 14px;
+    padding-right: 16px;
+    padding-left: 16px;
   }
 
   .pc-mobile-more__controls .pc-topbar__utilities {

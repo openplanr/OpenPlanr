@@ -217,7 +217,7 @@ function assertChrome(actual, baseline, pinned, context) {
   assert.equal(actual.column.x, 0, `${context}: content column spans the window`);
   assert.equal(
     actual.inset,
-    pinned ? '296px' : '20px',
+    pinned ? '300px' : '24px',
     `${context}: content insets only for pinned navigation`,
   );
   assert.deepEqual(actual.palette, baseline.palette, `${context}: palette stays fixed`);

@@ -2120,10 +2120,13 @@ test.describe('dashboard real-browser quality', () => {
       await page.evaluate(() => document.fonts.ready);
       const today = page.locator('[data-route-kind="operate.today"] .pc-operate-today');
       await expect(today.locator('.pc-operate-today__decision')).toBeVisible();
-      // The canvas has no scrollbar; widen by the stable gutter a classic scrollbar reserves.
-      const gutter = await page
-        .locator('.pc-shell__scroll')
-        .evaluate((scroll: HTMLElement) => scroll.offsetWidth - scroll.clientWidth);
+      // The canvas has no scrollbar and 20 px content gutters; widen by the stable gutter a
+      // classic scrollbar reserves and by any wider shell gutter.
+      const gutter = await page.locator('.pc-shell__scroll').evaluate((scroll: HTMLElement) => {
+        const style = getComputedStyle(scroll);
+        const padding = parseFloat(style.paddingLeft) + parseFloat(style.paddingRight);
+        return scroll.offsetWidth - scroll.clientWidth + padding - 40;
+      });
       await page.setViewportSize({ width: 1440 - PARITY_RAIL_WIDTH + gutter, height: 1120 });
       for (const row of todayParityRows.filter((entry) => entry.setup === 'today-local'))
         results.push(...(await assertParityRow(page, row, theme)));
@@ -4371,6 +4374,38 @@ test.describe('dashboard real-browser quality', () => {
     }
   });
 
+  test('insets content and draws panels and help as the chrome artboards', async ({ page }) => {
+    for (const [width, height, gutter] of [
+      [1440, 1000, 24],
+      [1024, 768, 24],
+      [768, 1024, 16],
+      [390, 844, 16],
+    ] as const) {
+      await page.setViewportSize({ width, height });
+      await page.goto(fixtureUrl('#/home', { dataset: 'artboard' }));
+      const frame = page.locator('#main-content .op-route-frame');
+      await expect(frame).toBeVisible();
+      const box = await frame.evaluate((element) => {
+        const rect = element.getBoundingClientRect();
+        return { left: rect.left, right: window.innerWidth - rect.right };
+      });
+      expect(box, `content gutters at ${width}`).toEqual({ left: gutter, right: gutter });
+    }
+    await page.setViewportSize({ width: 1440, height: 1000 });
+    await page.goto(fixtureUrl('#/home', { dataset: 'artboard' }));
+    await page.locator('#main-content').focus();
+    await page.keyboard.press('Alt+BracketRight');
+    const surface = page.locator('[data-chrome-slot="sidebar"] .canvas-chrome-panel-surface');
+    await expect(surface).toHaveCSS('border-radius', '14px');
+    await page.locator('[data-chrome-slot="help"] button').click();
+    const help = page.getByRole('dialog', { name: 'Help and status' });
+    await expect(help).toBeVisible();
+    const bottom = await help.evaluate(
+      (element) => window.innerHeight - element.getBoundingClientRect().bottom,
+    );
+    expect(bottom).toBe(64);
+  });
+
   test('opens the phone inspector and More as bottom sheets', async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto(fixtureUrl('#/list', { dataset: 'artboard' }));
@@ -4419,7 +4454,7 @@ test.describe('dashboard real-browser quality', () => {
     await expect(places.getByRole('link', { name: 'Inbox', exact: true })).toBeVisible();
   });
 
-  test('insets route content 24px from the window edge at 768', async ({ page }) => {
+  test('insets route content 16px from the window edge at 768', async ({ page }) => {
     await page.setViewportSize({ width: 768, height: 1024 });
     for (const route of ['#/list', '#/operate/today', '#/overview', '#/sprints', '#/activity']) {
       await openFixture(page, route);
@@ -4441,7 +4476,7 @@ test.describe('dashboard real-browser quality', () => {
         }
         return Math.floor(left);
       });
-      expect(inset, `${route} content inset`).toBe(24);
+      expect(inset, `${route} content inset`).toBe(16);
     }
   });
 

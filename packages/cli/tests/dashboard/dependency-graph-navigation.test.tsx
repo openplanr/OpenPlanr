@@ -271,7 +271,7 @@ describe('dependency graph on the canvas engine', () => {
     const controller = liveController(created);
     const minimap = rendered.getByRole('button', { name: 'Graph minimap, center viewport' });
     const canvas = required(minimap.querySelector('canvas'));
-    vi.spyOn(canvas, 'getBoundingClientRect').mockReturnValue(new DOMRect(500, 400, 200, 120));
+    vi.spyOn(canvas, 'getBoundingClientRect').mockReturnValue(new DOMRect(500, 400, 188, 116));
     const transform = drawMinimap(
       required(document.createElement('canvas').getContext('2d')),
       {
@@ -281,7 +281,7 @@ describe('dependency graph on the canvas engine', () => {
         style: () => ({ fill: '#000', stroke: '#000' }),
         viewport: { x: 0, y: 0, width: 0, height: 0 },
       },
-      { width: 200, height: 120, devicePixelRatio: 1 },
+      { width: 188, height: 116, devicePixelRatio: 1 },
     );
     vi.spyOn(HTMLElement.prototype, 'clientWidth', 'get').mockReturnValue(1000);
     vi.spyOn(HTMLElement.prototype, 'clientHeight', 'get').mockReturnValue(600);

@@ -10,8 +10,9 @@ import { useChrome } from '@openplanr/canvas/react';
 import { type RefObject, useCallback, useEffect, useLayoutEffect, useRef } from 'react';
 import { SIDEBAR_PANEL } from '../shell/floating-chrome-parts.js';
 
-const MINIMAP_WIDTH = 200;
-const MINIMAP_HEIGHT = 120;
+// The drawing inside the 200 x 128 minimap, less its 5 px padding and 1 px border.
+const MINIMAP_WIDTH = 188;
+const MINIMAP_HEIGHT = 116;
 const EMPTY_VIEWPORT = Object.freeze({ x: 0, y: 0, width: 0, height: 0 });
 
 /**
