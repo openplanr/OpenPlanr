@@ -11,7 +11,7 @@ import { SelectionBar } from '../../design-system/components/index.js';
 import { usePlanningCopy, usePlanningShortcuts } from '../../lib/routing/planning-presentation.js';
 import { NextStepDocked, nextStep } from './DetailNextStep.js';
 import { CopyDetailValue } from './PlanningDetailActions.js';
-import { boardSelectionItems, useBoardPhoneWidth } from './planning-board-view.js';
+import { boardSelectionItems } from './planning-board-view.js';
 import { useListLayout } from './planning-list-window.js';
 import { type PlanningModelNode, planningDetailHref } from './planning-model.js';
 import type { StructuralDetailModel } from './planning-structural-model.js';
@@ -39,8 +39,8 @@ export function useDetailPhone(): boolean {
   return useListLayout() === 'phone';
 }
 
-/** True below 900px, where the top bar carries the back link, ID and Copy link. */
-export const useDetailNarrow = useBoardPhoneWidth;
+/** True below 600px, where the phone top bar carries the back link, ID and Copy link. */
+export const useDetailNarrow = useDetailPhone;
 
 /** Click and Space select a linked item; Enter and double-click open it. Outside a scope links navigate. */
 export function useDetailSelectable(node: PlanningModelNode) {

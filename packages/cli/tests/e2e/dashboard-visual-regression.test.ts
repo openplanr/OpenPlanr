@@ -66,6 +66,10 @@ import { SPRINT_SCENARIO_NOW } from './fixtures/dashboard-sprint-graph.js';
 
 registerDashboardPerformanceTraceTests();
 
+// The desktop parity canvases predate the floating chrome and drew a 64 px rail beside the
+// content, so their measurements use a viewport narrower by that rail.
+const PARITY_RAIL_WIDTH = 64;
+
 test('records fixture-only Tokens, Components and States in both themes', async ({
   page,
 }, testInfo) => {
@@ -336,10 +340,20 @@ async function expectGoldenScreenshot(page: Page, name: string) {
   });
 }
 
+/** The phone inspector sheet below 600 px, otherwise the floating sidebar's Inspector tab. */
+function inspectorPanel(page: Page): Locator {
+  return page
+    .getByRole('dialog', { name: 'Inspector', exact: true })
+    .or(page.getByRole('region', { name: 'Inspector', exact: true }));
+}
+
 async function expectTodayWorkspaceStatus(page: Page) {
   const passport = page.locator('.op-binding-passport');
   await expect(passport).toHaveCount(0);
-  await expect(page.getByRole('status', { name: 'watcher connected' })).toBeVisible();
+  const live = page.locator('output[aria-live="polite"] .pc-conn--watcher');
+  await expect(live).toHaveCount(1);
+  await expect(live).toBeVisible();
+  await expect(live).toHaveAttribute('title', 'connection: connected');
   await expect(page.locator('.op-rail .op-binding')).toHaveCount(0);
 }
 
@@ -536,13 +550,12 @@ test.describe('dashboard real-browser quality', () => {
         ).toBeVisible();
         await expect(workspace.getByText('Proposed', { exact: true })).toHaveCount(0);
         if (width === 1440) {
-          await expect(page.locator('.pc-shell-inspector, .pc-inspector-sheet')).toHaveCount(0);
-          await expect(
-            page.getByRole('button', {
-              name: 'Show inspector: select an item first',
-              exact: true,
-            }),
-          ).toBeDisabled();
+          await expect(page.getByRole('region', { name: 'Inspector', exact: true })).toHaveCount(0);
+          await expect(page.locator('[data-chrome-slot="sidebar"]')).toHaveAttribute(
+            'data-open',
+            'false',
+          );
+          await expect(page.locator('[data-inspector-pending]')).toHaveCount(0);
           const main = page.locator('#main-content');
           const [content, column] = await Promise.all([
             main.boundingBox(),
@@ -598,7 +611,12 @@ test.describe('dashboard real-browser quality', () => {
     await expect(detail.getByText('Governed actions')).toBeVisible();
     await expect(detail).not.toContainText('No command gateway in this build');
 
-    const navigation = page.getByRole('navigation', { name: 'Dashboard navigation' });
+    await page.keyboard.press('Alt+BracketLeft');
+    await page
+      .locator('[data-chrome-slot="navigation"]')
+      .getByRole('button', { name: 'Pin navigation', exact: true })
+      .click();
+    const navigation = page.getByRole('navigation', { name: 'Navigation', exact: true });
 
     await navigation.getByRole('link', { name: 'Today', exact: true }).click();
     const today = page.locator('[data-route-kind="operate.today"]');
@@ -708,13 +726,15 @@ test.describe('dashboard real-browser quality', () => {
     expect(text).not.toContain('Depends on');
     for (const width of [1200, 1279, 1280]) {
       await page.setViewportSize({ width, height: 900 });
-      const actions = await page.locator('.pc-topbar__actions').boundingBox();
-      expect((actions?.x ?? 0) + (actions?.width ?? 0), `top bar at ${width}`).toBeLessThanOrEqual(
-        width,
-      );
-      await expect(page.locator('.pc-operate-places'), `tabs at ${width}`)[
-        width < 1280 ? 'toBeHidden' : 'toBeVisible'
-      ]();
+      const actions = await page.locator('[data-chrome-slot="action"]').boundingBox();
+      expect(
+        (actions?.x ?? 0) + (actions?.width ?? 0),
+        `action pill at ${width}`,
+      ).toBeLessThanOrEqual(width);
+      await expect(
+        page.locator('[data-chrome-slot="toolbar"] .pc-operate-places'),
+        `tabs at ${width}`,
+      ).toBeVisible();
     }
     for (const route of ['#/operate/inbox/D1', '#/operate/outcomes/D1']) {
       await page.goto(fixtureUrl(route, { localOperate: '1' }));
@@ -723,22 +743,23 @@ test.describe('dashboard real-browser quality', () => {
     }
   });
 
-  test('keeps the top bar unchanged when the route tabs slot is empty', async ({ page }) => {
+  test('keeps the tool pill unchanged when the route tabs slot is empty', async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
     for (const [route, query] of [
       ['#/home', {}],
       ['#/operate/inbox', { localOperate: '1' }],
     ] as const) {
       await page.goto(fixtureUrl(route, query));
-      await expect(page.locator('.pc-topbar__palette')).toBeVisible();
+      const toolbar = page.locator('[data-chrome-slot="toolbar"]');
+      await expect(toolbar.getByRole('button', { name: /^Search or run/u })).toBeVisible();
       await page.evaluate(() => document.fonts.ready);
-      const slot = page.locator('.pc-topbar__route-tabs');
+      const slot = page.locator('.pc-chrome-route-tabs');
       expect(await slot.evaluate((element) => element.childElementCount)).toBe(0);
       await expect(slot).toBeHidden();
       const boxes = () =>
         page.evaluate(() =>
-          [...document.querySelectorAll('.pc-topbar *')]
-            .filter((element) => !element.classList.contains('pc-topbar__route-tabs'))
+          [...document.querySelectorAll('[data-chrome-slot="toolbar"] *')]
+            .filter((element) => !element.classList.contains('pc-chrome-route-tabs'))
             .map((element) => {
               const box = element.getBoundingClientRect();
               return [box.x, box.y, box.width, box.height].map(Math.round).join(',');
@@ -1121,7 +1142,7 @@ test.describe('dashboard real-browser quality', () => {
       canvasBounds.width * 0.6,
     );
 
-    await expect(page.locator('.pc-shell-inspector, .pc-inspector-sheet')).toHaveCount(0);
+    await expect(page.getByRole('region', { name: 'Inspector', exact: true })).toHaveCount(0);
     await expectControlsHitTestable(page, graph);
     const main = page.locator('#main-content');
     const scroll = page.locator('.pc-shell__scroll');
@@ -1133,14 +1154,14 @@ test.describe('dashboard real-browser quality', () => {
       exact: true,
     });
     await selectedNode.click();
-    const inspector = page.getByRole('dialog', { name: 'Inspector', exact: true });
+    const inspector = page.getByRole('region', { name: 'Inspector', exact: true });
     await expect(inspector).toContainText('Make failed CRM registrations visible and replayable');
     expect(await main.boundingBox()).toEqual(before.main);
     expect(await scroll.boundingBox()).toEqual(before.scroll);
-    const overlay = await inspector.boundingBox();
-    if (!overlay) throw new Error('Missing inspector overlay.');
+    const overlay = await page.locator('[data-chrome-slot="sidebar"]').boundingBox();
+    if (!overlay) throw new Error('Missing floating sidebar.');
     expect(overlay.x).toBeLessThan(before.main.x + before.main.width);
-    expect(overlay.x + overlay.width).toBeGreaterThan(before.main.x + before.main.width - 1);
+    expect(before.main.x + before.main.width - (overlay.x + overlay.width)).toBe(12);
     await expect(inspector.locator('[data-artifact-id="QT-071"]')).toHaveAttribute(
       'data-detail-state',
       'ready',
@@ -1151,9 +1172,12 @@ test.describe('dashboard real-browser quality', () => {
     await expect(
       inspector.getByRole('button', { name: 'Open full page', exact: true }),
     ).toBeVisible();
-    expect(await inspector.evaluate((node) => getComputedStyle(node).animationName)).toBe(
-      'pc-inspector-enter',
-    );
+    expect(
+      await inspector.evaluate(
+        (node) =>
+          getComputedStyle(node.closest('.canvas-chrome-panel-surface') ?? node).transitionProperty,
+      ),
+    ).toContain('transform');
 
     await page.keyboard.press('Escape');
     await expect(inspector).toHaveCount(0);
@@ -1182,11 +1206,14 @@ test.describe('dashboard real-browser quality', () => {
     });
     await expect(page.locator('[data-route-kind="planning.list"]')).toBeVisible();
     await expect(inspector).toHaveCount(0);
-    await page.getByRole('button', { name: 'Show inspector', exact: true }).click();
+    await page.getByRole('button', { name: 'Sidebar', exact: true }).click();
     await expect(inspector).toContainText('Make failed CRM registrations visible and replayable');
-    expect(await inspector.evaluate((node) => getComputedStyle(node).animationName)).toBe(
-      'pc-inspector-enter',
-    );
+    expect(
+      await inspector.evaluate(
+        (node) =>
+          getComputedStyle(node.closest('.canvas-chrome-panel-surface') ?? node).transitionProperty,
+      ),
+    ).toContain('transform');
 
     await openFixture(page, '#/board', { planningScenario: 'delivery' });
     const doneCards = page.locator('[data-keyboard-column="done"] .pc-status-board__cards');
@@ -1492,12 +1519,7 @@ test.describe('dashboard real-browser quality', () => {
         const card = board.locator('.pc-status-board__card [data-keyboard-item]').first();
         await card.focus();
         await page.keyboard.press('Enter');
-        await expect(
-          page.getByRole('dialog', {
-            name: 'Inspector',
-            exact: true,
-          }),
-        ).toBeVisible();
+        await expect(inspectorPanel(page)).toBeVisible();
         await page.keyboard.press('Escape');
         await expect(card).toBeFocused();
         await page.keyboard.press('ArrowRight');
@@ -1677,9 +1699,7 @@ test.describe('dashboard real-browser quality', () => {
       '#/list?v=eyJzY2hlbWFWZXJzaW9uIjoiMS4wLjAiLCJyb3V0ZSI6Imxpc3QiLCJmaWx0ZXJzIjp7InR5cGUiOltdLCJzdGF0dXMiOlsiYmxvY2tlZCJdLCJwcmlvcml0eSI6W10sImxhYmVsIjpbInNlY3VyaXR5Il0sInF1ZXJ5IjoiZW50cmEiLCJjcmVhdGVkV2l0aGluRGF5cyI6bnVsbCwidXBkYXRlZFdpdGhpbkRheXMiOm51bGx9LCJncm91cEJ5Ijoic3BlYyIsInNvcnQiOnsiZmllbGQiOiJ1cGRhdGVkIiwiZGlyZWN0aW9uIjoiZGVzYyJ9LCJkZW5zaXR5IjoiY29tZm9ydGFibGUiLCJmb2N1c0lkIjpudWxsfQ';
     await page.context().grantPermissions(['clipboard-read', 'clipboard-write']);
     await page.emulateMedia({ reducedMotion: 'reduce' });
-    await page.setViewportSize({ width: 1440, height: 900 });
-    // The canvases draw the compact rail.
-    await page.addInitScript(() => localStorage.setItem('op-rail-compact:v1', 'true'));
+    await page.setViewportSize({ width: 1440 - PARITY_RAIL_WIDTH, height: 900 });
     const list = page.locator('[data-route-kind="planning.list"]');
     for (const theme of ['dark', 'light'] as const) {
       const open = async (hash: string, dataset = 'representative') => {
@@ -1776,8 +1796,7 @@ test.describe('dashboard real-browser quality', () => {
   test('matches Detail to its canvas parity rows in both themes', async ({ page }, testInfo) => {
     const results: unknown[] = [];
     await page.emulateMedia({ reducedMotion: 'reduce' });
-    await page.setViewportSize({ width: 1440, height: 1276 });
-    await page.addInitScript(() => localStorage.setItem('op-rail-compact:v1', 'true'));
+    await page.setViewportSize({ width: 1440 - PARITY_RAIL_WIDTH, height: 1276 });
     const routes = {
       'detail-task': '#/detail/SPEC-026%2FT-112',
       'detail-missing': '#/detail/SPEC-026%2FT-112',
@@ -1810,11 +1829,11 @@ test.describe('dashboard real-browser quality', () => {
         for (const word of banned) expect(text, `S-21 ${word}`).not.toContain(word);
         expect(text, 'S-21 none').not.toMatch(/\bnone\b/u);
         if (setup !== 'detail-task') continue;
-        await expect(page.locator('.pc-rail')).toBeVisible();
-        expect(await page.locator('.pc-topbar__breadcrumbs').innerText()).toMatch(
-          /^Plan\s*\/\s*List\s*\/\s*SPEC-026\s*\/\s*T-112$/u,
+        await expect(page.locator('[data-chrome-slot="menu"]')).toBeVisible();
+        expect(await page.locator('.pc-chrome-trail').innerText()).toMatch(
+          /^List\s*\/\s*SPEC-026\s*\/\s*T-112$/u,
         );
-        expect((await detail.locator('.pc-detail__header').boundingBox())?.x).toBeCloseTo(97, -1);
+        expect((await detail.locator('.pc-detail__header').boundingBox())?.x).toBeCloseTo(33, -1);
         expect((await layoutReport(page)).horizontalOverflow).toBe(false);
         await page.screenshot({
           path: testInfo.outputPath(`detail-D-${theme}.png`),
@@ -1824,7 +1843,7 @@ test.describe('dashboard real-browser quality', () => {
       await page.goto(fixtureUrl('#/list', { dataset: 'artboard', theme }));
       const row = page.locator('.pc-list tbody [data-keyboard-item]').first();
       await row.click();
-      const inspector = page.getByRole('dialog', { name: 'Inspector', exact: true });
+      const inspector = page.getByRole('region', { name: 'Inspector', exact: true });
       await expect(inspector.locator('[data-detail-state="ready"]')).toBeVisible();
       const inspectorText = await inspector.innerText();
       for (const word of banned)
@@ -1907,12 +1926,21 @@ test.describe('dashboard real-browser quality', () => {
       for (const { element, ring } of await focusRings(24))
         expect(ring, `S-20 ${element} at 390`).toEqual(['solid', '2px', '2px']);
       await page.setViewportSize({ width: 768, height: 1024 });
-      await expect(header.getByRole('link', { name: 'Back to List' })).toBeVisible();
-      await expect(header.locator('.pc-topbar__end')).toContainText('Live');
-      const palette = header.getByRole('button', { name: /^Jump to a view/u });
+      await expect(header).toHaveCount(0);
+      const menu = page.locator('[data-chrome-slot="menu"]');
+      await expect(menu.getByRole('link', { name: 'List', exact: true })).toHaveAttribute(
+        'href',
+        '#/list',
+      );
+      await expect(menu.locator('[aria-current="page"]')).toHaveText('T-112');
+      await expect(page.locator('[data-chrome-slot="action"] .pc-chrome-live')).toContainText(
+        'Live',
+      );
+      const palette = page
+        .locator('[data-chrome-slot="toolbar"]')
+        .getByRole('button', { name: /^Search or run/u });
       await expect(palette).toBeVisible();
-      expect((await palette.boundingBox())?.width).toBe(44);
-      await expect(header.getByRole('button', { name: 'Copy link' })).toBeVisible();
+      await expect(detail.getByRole('button', { name: 'Copy link' })).toBeVisible();
       expect((await layoutReport(page)).horizontalOverflow).toBe(false);
       await page.screenshot({ path: testInfo.outputPath(`detail-T-${theme}.png`) });
       await page.setViewportSize({ width: 1440, height: 1276 });
@@ -1935,8 +1963,7 @@ test.describe('dashboard real-browser quality', () => {
     const results: unknown[] = [];
     await page.context().grantPermissions(['clipboard-read', 'clipboard-write']);
     await page.emulateMedia({ reducedMotion: 'reduce' });
-    await page.setViewportSize({ width: 1440, height: 1400 });
-    await page.addInitScript(() => localStorage.setItem('op-rail-compact:v1', 'true'));
+    await page.setViewportSize({ width: 1440 - PARITY_RAIL_WIDTH, height: 1400 });
     await page.clock.setFixedTime(new Date(SPRINT_SCENARIO_NOW));
     const scenarios = {
       'sprints-active': { planningScenario: 'sprint' },
@@ -1957,7 +1984,7 @@ test.describe('dashboard real-browser quality', () => {
         const text = await page.locator('#main-content').innerText();
         for (const word of banned) expect(text, `S-21 ${word}`).not.toContain(word);
         expect(text, 'S-21 none').not.toMatch(/\bnone\b/u);
-        expect((await sprints.locator('.pc-sprints__header').boundingBox())?.x).toBeCloseTo(97, -1);
+        expect((await sprints.locator('.pc-sprints__header').boundingBox())?.x).toBeCloseTo(33, -1);
         expect((await layoutReport(page)).horizontalOverflow).toBe(false);
         await page.screenshot({
           path: testInfo.outputPath(`${setup}-D-${theme}.png`),
@@ -2049,8 +2076,7 @@ test.describe('dashboard real-browser quality', () => {
     const deltas: unknown[] = [];
     await page.context().grantPermissions(['clipboard-read', 'clipboard-write']);
     await page.emulateMedia({ reducedMotion: 'reduce' });
-    await page.setViewportSize({ width: 1440, height: 1120 });
-    await page.addInitScript(() => localStorage.setItem('op-rail-compact:v1', 'true'));
+    await page.setViewportSize({ width: 1440 - PARITY_RAIL_WIDTH, height: 1120 });
     // Offsets from the header's top-left in operate-Main, for the blocks the scenario fills as drawn.
     const canvas = {
       '.pc-operate-today__eyebrow': [0, 0],
@@ -2079,7 +2105,7 @@ test.describe('dashboard real-browser quality', () => {
       const gutter = await page
         .locator('.pc-shell__scroll')
         .evaluate((scroll: HTMLElement) => scroll.offsetWidth - scroll.clientWidth);
-      await page.setViewportSize({ width: 1440 + gutter, height: 1120 });
+      await page.setViewportSize({ width: 1440 - PARITY_RAIL_WIDTH + gutter, height: 1120 });
       for (const row of todayParityRows.filter((entry) => entry.setup === 'today-local'))
         results.push(...(await assertParityRow(page, row, theme)));
       const origin = await today.locator('.pc-operate-today__header').boundingBox();
@@ -2434,6 +2460,15 @@ test.describe('dashboard real-browser quality', () => {
       for (const width of [390, 768, 1440]) {
         await page.setViewportSize({ width, height: 1000 });
         await open(local, theme);
+        // Tab from main reaches the page only once it has rendered; otherwise focus wraps into
+        // the chrome and the presses run out before the rows.
+        await expect(
+          today
+            .locator(
+              width === 390 ? '.pc-operate-today__disclosure' : '.pc-operate-today__row-link',
+            )
+            .first(),
+        ).toBeVisible();
         const read = await rings(width === 390 ? 14 : 16);
         const kinds = read.map(({ element }) => element).join(' | ');
         expect(kinds, `S-20 reach at ${width}`).toContain('pc-operate-today__eyebrow');
@@ -2503,8 +2538,7 @@ test.describe('dashboard real-browser quality', () => {
     const results: unknown[] = [];
     await page.context().grantPermissions(['clipboard-read', 'clipboard-write']);
     await page.emulateMedia({ reducedMotion: 'reduce' });
-    await page.setViewportSize({ width: 1440, height: 1100 });
-    await page.addInitScript(() => localStorage.setItem('op-rail-compact:v1', 'true'));
+    await page.setViewportSize({ width: 1440 - PARITY_RAIL_WIDTH, height: 1100 });
     await page.clock.setFixedTime(new Date(ARTBOARD_FIXTURE_CLOCK));
     const banned = ['Unknown', 'Not recorded', 'None declared', 'Phase 2'];
     for (const theme of ['dark', 'light'] as const) {
@@ -2541,7 +2575,7 @@ test.describe('dashboard real-browser quality', () => {
       for (const word of banned) expect(text, `S-21 ${word}`).not.toContain(word);
       expect(text, 'S-21 none').not.toMatch(/\bnone\b/u);
       expect((await activity.locator('.pc-activity__header h1').boundingBox())?.x).toBeCloseTo(
-        97,
+        33,
         -1,
       );
       expect((await layoutReport(page)).horizontalOverflow).toBe(false);
@@ -2604,7 +2638,6 @@ test.describe('dashboard real-browser quality', () => {
       test.setTimeout(90_000);
       const results: unknown[] = [];
       await page.emulateMedia({ reducedMotion: 'reduce' });
-      await page.addInitScript(() => localStorage.setItem('op-rail-compact:v1', 'true'));
       await page.clock.setFixedTime(new Date(SPRINT_SCENARIO_NOW));
       const sprints = page.locator('[data-route-kind="planning.sprints"]');
       const rings = async (count: number) => {
@@ -2735,7 +2768,7 @@ test.describe('dashboard real-browser quality', () => {
       await page.touchscreen.tap(openBox.x + openBox.width / 2, openBox.y + openBox.height / 2);
       await expect(target).toHaveAttribute('aria-current', 'true');
       await expect(open).toBeVisible();
-      await expect(page.getByRole('dialog', { name: 'Inspector', exact: true })).toBeHidden();
+      await expect(inspectorPanel(page)).toBeHidden();
 
       // With a selection, the page still scrolls its last content clear of the bar.
       await expect
@@ -2767,7 +2800,6 @@ test.describe('dashboard real-browser quality', () => {
       test.setTimeout(120_000);
       const results: unknown[] = [];
       await page.emulateMedia({ reducedMotion: 'reduce' });
-      await page.addInitScript(() => localStorage.setItem('op-rail-compact:v1', 'true'));
       await page.clock.setFixedTime(new Date(ARTBOARD_FIXTURE_CLOCK));
       const activity = page.locator('[data-route-kind="planning.activity"]');
       const open = async (theme: 'dark' | 'light') => {
@@ -2889,7 +2921,7 @@ test.describe('dashboard real-browser quality', () => {
       // Below 900 a tap selects the row; the selection bar's Open opens the Inspector.
       await page.setViewportSize({ width: 390, height: 1000 });
       await open('dark');
-      const inspector = page.getByRole('dialog', { name: 'Inspector', exact: true });
+      const inspector = inspectorPanel(page);
       const row = activity.locator('a.pc-activity__cells').nth(4);
       await row.tap();
       await expect(row).toHaveAttribute('aria-current', 'true');
@@ -2931,7 +2963,6 @@ test.describe('dashboard real-browser quality', () => {
     test('keeps compact List rows at the 44px touch height', async ({ page }) => {
       await page.emulateMedia({ reducedMotion: 'reduce' });
       await page.setViewportSize({ width: 1440, height: 900 });
-      await page.addInitScript(() => localStorage.setItem('op-rail-compact:v1', 'true'));
       const list = page.locator('[data-route-kind="planning.list"]');
       await page.goto(fixtureUrl('#/list', { dataset: 'representative', theme: 'dark' }));
       expect(await page.evaluate(() => matchMedia('(pointer: coarse)').matches)).toBe(true);
@@ -3006,7 +3037,7 @@ test.describe('dashboard real-browser quality', () => {
           );
           const row = sprints.locator('.pc-sprints__item-link').filter({ hasText: 'T-159' });
           await expect(row.locator('.pc-sprints__last')).toHaveText('carried from SPRINT-003');
-          const inspector = page.getByRole('dialog', { name: 'Inspector', exact: true });
+          const inspector = inspectorPanel(page);
           if (width < 900) {
             // A tap selects the row; the bar's Open opens the Inspector.
             await row.tap();
@@ -3236,7 +3267,13 @@ test.describe('dashboard real-browser quality', () => {
         await page.goto(fixtureUrl('#/list', { dataset: 'artboard', evidenceTheme: theme }));
         await expect(page.locator('.pc-list')).toBeVisible();
         await page.evaluate(() => document.fonts.ready);
-        const launcher = page.getByRole('button', { name: 'Jump to a view or an artifact' });
+        const launcher = page
+          .getByRole('button', { name: 'Jump to a view or an artifact' })
+          .or(
+            page
+              .locator('[data-chrome-slot="toolbar"]')
+              .getByRole('button', { name: /^Search or run/u }),
+          );
         await launcher.focus();
         await page.keyboard.press('Control+K');
         const palette = page.getByRole('dialog', { name: 'Command palette', exact: true });
@@ -3298,7 +3335,6 @@ test.describe('dashboard real-browser quality', () => {
     const heights: Record<string, number[]> = {};
     await page.context().grantPermissions(['clipboard-read', 'clipboard-write']);
     await page.emulateMedia({ reducedMotion: 'reduce' });
-    await page.addInitScript(() => localStorage.setItem('op-rail-compact:v1', 'true'));
     const rowsFor = (setup: string) => paletteParityRows.filter((entry) => entry.setup === setup);
     const settle = () =>
       page.evaluate(async () => {
@@ -3791,18 +3827,110 @@ test.describe('dashboard real-browser quality', () => {
     }
   });
 
-  test('keeps desktop-rail destinations legible at tablet widths', async ({ page }) => {
-    for (const width of [900, 1024, 1120]) {
+  test('routes floating chrome keys once and never leaves focus under chrome', async ({ page }) => {
+    const region = () =>
+      page.evaluate(() => {
+        const active = document.activeElement;
+        return (
+          active?.closest<HTMLElement>('[data-chrome-slot]')?.dataset.chromeSlot ??
+          (active?.id || active?.className || active?.tagName)
+        );
+      });
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await openFixture(page, '#/list');
+    const sidebar = page.locator('[data-chrome-slot="sidebar"]');
+    const navigation = page.locator('[data-chrome-slot="navigation"]');
+    await page.keyboard.press('Alt+BracketRight');
+    await expect(sidebar).toHaveAttribute('data-open', 'true');
+    await page.keyboard.press('Alt+BracketRight');
+    await expect(sidebar).toHaveAttribute('data-open', 'false');
+    await page.keyboard.press('Alt+BracketLeft');
+    await expect(navigation).toHaveAttribute('data-open', 'true');
+    await page.keyboard.press('Alt+BracketLeft');
+    await expect(navigation).toHaveAttribute('data-open', 'false');
+    await page.keyboard.press('Alt+BracketRight');
+    await page.getByRole('link', { name: 'Skip to main content' }).focus();
+    const order = [await region()];
+    for (let index = 0; index < 6; index += 1) {
+      await page.keyboard.press('F6');
+      order.push(await region());
+    }
+    expect(order).toEqual([
+      'pc-skip-link',
+      'menu',
+      'toolbar',
+      'action',
+      'main-content',
+      'sidebar',
+      'help',
+    ]);
+    await page.keyboard.press('Escape');
+    const list = page.locator('[data-route-kind="planning.list"]');
+    const toggle = list.locator('[data-keyboard-group] [aria-expanded]').first();
+    await list.locator('[data-keyboard-item]').first().focus();
+    await expect(toggle).toHaveAttribute('aria-expanded', 'true');
+    await page.keyboard.press('[');
+    await expect(toggle).toHaveAttribute('aria-expanded', 'false');
+    await expect(navigation).toHaveAttribute('data-open', 'false');
+    await page.keyboard.press(']');
+    await expect(toggle).toHaveAttribute('aria-expanded', 'true');
+    const filter = page.getByRole('textbox', { name: 'Filter by id or title', exact: true });
+    await filter.focus();
+    await page.keyboard.type('[2d');
+    await page.keyboard.press('Alt+BracketRight');
+    await expect(filter).toHaveValue('[2d');
+    await expect(sidebar).toHaveAttribute('data-open', 'false');
+    await filter.fill('');
+    await expect(toggle).toHaveAttribute('aria-expanded', 'true');
+    await expect(
+      page.locator('[data-chrome-slot="toolbar"]').getByRole('button', { name: 'Spec 1' }),
+    ).toHaveAttribute('aria-pressed', 'true');
+
+    for (const width of [768, 1024, 1440]) {
+      await page.setViewportSize({ width, height: 900 });
+      await openFixture(page, '#/list');
+      await page.keyboard.press('Alt+BracketRight');
+      await expect(sidebar).toHaveAttribute('data-open', 'true');
+      await page.locator('#main-content').focus();
+      const hidden: string[] = [];
+      for (let press = 0; press < 40; press += 1) {
+        await page.keyboard.press('Tab');
+        const report = await page.evaluate(() => {
+          const active = document.activeElement;
+          if (!(active instanceof HTMLElement) || !active.closest('#main-content')) return null;
+          const box = active.getBoundingClientRect();
+          const points = [
+            [box.left + 2, box.top + box.height / 2],
+            [box.left + box.width / 2, box.top + box.height / 2],
+            [box.right - 2, box.top + box.height / 2],
+          ];
+          const visible = points.some(([x, y]) => {
+            const hit = document.elementFromPoint(x, y);
+            return Boolean(hit && (hit === active || active.contains(hit)));
+          });
+          return visible ? null : active.outerHTML.slice(0, 120);
+        });
+        if (report) hidden.push(report);
+      }
+      expect(hidden, `focus hidden under chrome at ${width}`).toEqual([]);
+    }
+  });
+
+  test('keeps navigation panel destinations legible at tablet widths', async ({ page }) => {
+    for (const width of [600, 900, 1024, 1120]) {
       await page.setViewportSize({ width, height: 768 });
       await openFixture(page, '#/operate/today');
-
-      const navigation = page.getByRole('navigation', { name: 'Dashboard navigation' });
+      await expect(page.getByRole('navigation', { name: 'Mobile Operate navigation' })).toHaveCount(
+        0,
+      );
+      const panel = page.locator('[data-chrome-slot="navigation"]');
+      await expect(panel).toHaveAttribute('data-open', 'false');
+      await page.getByRole('button', { name: 'Today: show navigation', exact: true }).click();
+      await expect(panel).toHaveAttribute('data-open', 'true');
+      const navigation = page.getByRole('navigation', { name: 'Navigation', exact: true });
       await expect(navigation).toBeVisible();
-      await expect(
-        page.getByRole('navigation', { name: 'Mobile Operate navigation' }),
-      ).not.toBeVisible();
       const labels = await navigation
-        .locator('.pc-rail__item > span:last-child')
+        .locator('.pc-nav-item > span:first-of-type')
         .evaluateAll((elements) =>
           elements.map((element) => {
             const rect = element.getBoundingClientRect();
@@ -3815,7 +3943,7 @@ test.describe('dashboard real-browser quality', () => {
           }),
         );
 
-      // Expanded navigation keeps both product groups available (M2).
+      // The panel keeps both product groups available (M2).
       expect(labels.map(({ text }) => text)).toEqual([
         'Home',
         'List',
@@ -3850,9 +3978,7 @@ test.describe('dashboard real-browser quality', () => {
     for (const width of [390, 599]) {
       await page.setViewportSize({ width, height: 768 });
       await openFixture(page, '#/operate/today');
-      await expect(
-        page.getByRole('navigation', { name: 'Dashboard navigation' }),
-      ).not.toBeVisible();
+      await expect(page.locator('.canvas-chrome-root')).toHaveCount(0);
       const navigation = page.getByRole('navigation', { name: 'Mobile Operate navigation' });
       await expect(navigation).toBeVisible();
       expect(await navigation.getByRole('link').allTextContents()).toEqual([
@@ -3886,16 +4012,36 @@ test.describe('dashboard real-browser quality', () => {
     }
   });
 
-  test('frames every width with the canvas top bar and phone navigation heights', async ({
+  test('frames every width with floating pills or the phone top bar and navigation', async ({
     page,
   }) => {
     for (const route of ['#/list', '#/operate/today']) {
-      for (const width of [1440, 1024, 768, 390, 320]) {
+      for (const width of [1440, 1024, 768, 600, 599, 390, 320]) {
         await page.setViewportSize({ width, height: 900 });
         await openFixture(page, route);
-        const topbar = await page.locator('header.pc-topbar').boundingBox();
-        expect(topbar?.height, `${route} top bar at ${width}`).toBe(57);
-        if (width < 600) {
+        if (width >= 600) {
+          await expect(page.locator('header.pc-topbar')).toHaveCount(0);
+          await expect(page.locator('.pc-mobile-nav')).toHaveCount(0);
+          const boxes = await page.evaluate(() =>
+            Object.fromEntries(
+              ['menu', 'toolbar', 'action', 'help'].map((slot) => {
+                const box = document
+                  .querySelector(`[data-chrome-slot="${slot}"]`)
+                  ?.getBoundingClientRect();
+                return [slot, box && { x: box.x, y: box.y, w: box.width, h: box.height }];
+              }),
+            ),
+          );
+          expect(boxes.menu, `${route} menu at ${width}`).toMatchObject({ x: 12, y: 12, h: 40 });
+          expect(boxes.toolbar, `${route} tool pill at ${width}`).toMatchObject({ y: 12, h: 44 });
+          expect(boxes.action?.h, `${route} action pill at ${width}`).toBe(40);
+          expect((boxes.action?.x ?? 0) + (boxes.action?.w ?? 0)).toBe(width - 12);
+          expect(boxes.help, `${route} help at ${width}`).toMatchObject({ w: 40, h: 40 });
+          expect((boxes.help?.y ?? 0) + (boxes.help?.h ?? 0)).toBe(900 - 12);
+        } else {
+          await expect(page.locator('.canvas-chrome-root')).toHaveCount(0);
+          const topbar = await page.locator('header.pc-topbar').boundingBox();
+          expect(topbar?.height, `${route} top bar at ${width}`).toBe(57);
           const navigation = await page.locator('.pc-mobile-nav').boundingBox();
           expect(navigation?.height, `${route} phone navigation at ${width}`).toBe(65);
         }
@@ -3903,13 +4049,12 @@ test.describe('dashboard real-browser quality', () => {
     }
   });
 
-  test('keeps the collapsed search shortcut inside its pill beside the place tabs', async ({
-    page,
-  }) => {
+  test('keeps the search shortcut hint inside its tool beside the place tabs', async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 720 });
     await openFixture(page, '#/operate/today');
-    await expect(page.locator('.pc-operate-places')).toBeVisible();
-    const palette = page.getByRole('button', { name: 'Jump to a view or an artifact' });
+    const toolbar = page.locator('[data-chrome-slot="toolbar"]');
+    await expect(toolbar.locator('.pc-operate-places')).toBeVisible();
+    const palette = toolbar.getByRole('button', { name: /^Search or run/u });
     await expect(palette).toBeVisible();
     const outside = await palette.evaluate((pill) => {
       const frame = pill.getBoundingClientRect();
@@ -3922,21 +4067,33 @@ test.describe('dashboard real-browser quality', () => {
     expect(outside).toEqual([]);
   });
 
-  test('ellipsizes the status bar build id instead of clipping it at the edge', async ({
+  test('shows the build id, branch and totals in the help card without clipping', async ({
     page,
   }) => {
     await page.setViewportSize({ width: 1024, height: 768 });
     await openFixture(page, '#/operate/today');
-    const report = await page.locator('.pc-statusbar').evaluate((bar) => {
-      const frame = bar.getBoundingClientRect();
-      const inset = parseFloat(getComputedStyle(bar).paddingRight);
-      const text = bar.querySelector('.pc-statusbar__end .pc-statusbar__text');
-      if (!text) throw new Error('Status bar has no build id');
-      const box = text.getBoundingClientRect();
-      return { right: box.right, limit: frame.right - inset, title: text.getAttribute('title') };
+    await page.getByRole('button', { name: 'Help', exact: true }).click();
+    const card = page.getByRole('dialog', { name: 'Help and status' });
+    await expect(card).toBeVisible();
+    await expect(card.locator('header').getByTitle('dashboard-browser-fixture')).toHaveText(
+      'dashboard-browser-fixture',
+    );
+    const report = await card.evaluate((element) => {
+      const frame = element.getBoundingClientRect();
+      return {
+        inside: [...element.querySelectorAll('*')].every((part) => {
+          const box = part.getBoundingClientRect();
+          return box.right <= frame.right + 0.5 && box.left >= frame.left - 0.5;
+        }),
+        right: frame.right,
+        bottom: frame.bottom,
+      };
     });
-    expect(report.right).toBeLessThanOrEqual(report.limit + 0.5);
-    expect(report.title).toBe('dashboard-browser-fixture');
+    expect(report.inside).toBe(true);
+    expect(report.right).toBeLessThanOrEqual(1024 - 12);
+    await page.keyboard.press('Escape');
+    await expect(card).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Help', exact: true })).toBeFocused();
   });
 
   test('keeps the Today action label in its button and the action id whole on a phone', async ({
@@ -3977,54 +4134,62 @@ test.describe('dashboard real-browser quality', () => {
     }
   });
 
-  test('shows the compact rail with a More entry between 600 and 899', async ({ page }) => {
+  test('shows compact floating chrome with one side panel between 600 and 899', async ({
+    page,
+  }) => {
     for (const width of [600, 768, 899]) {
       await page.setViewportSize({ width, height: 1024 });
       await openFixture(page, '#/operate/today');
-      const rail = page.getByRole('navigation', { name: 'Dashboard navigation' });
-      await expect(rail).toBeVisible();
-      expect((await rail.boundingBox())?.width, `rail at ${width}`).toBe(64);
-      await expect(page.locator('.pc-mobile-nav')).toBeHidden();
-      await expect(rail.getByRole('button', { name: /Expand navigation/u })).toHaveCount(0);
-      const more = rail.locator('details.pc-mobile-more');
-      await more.locator('summary[aria-label="More Operate destinations"]').click();
-      await expect(more).toHaveAttribute('open', '');
-      expect(await more.getByRole('link').allTextContents()).toEqual([
-        'Home',
-        'List',
-        'Graph',
-        'Board',
-        'Sprints',
-        'Activity',
-        'Search',
-        'Console',
-        'Diagnostics',
-      ]);
-      const sheet = await more.locator('.pc-mobile-more__sheet').boundingBox();
-      expect((sheet?.y ?? -1) >= 0 && (sheet?.x ?? 0) >= 64, `sheet in view at ${width}`).toBe(
-        true,
+      await expect(page.locator('.pc-mobile-nav, header.pc-topbar')).toHaveCount(0);
+      const action = page.locator('[data-chrome-slot="action"]');
+      const capability = action.getByRole('button', { name: 'Governed actions', exact: true });
+      await expect(capability).toBeVisible();
+      await expect(capability).toHaveText('');
+      await expect(action.locator('.pc-chrome-live .pc-conn > .pc-visually-hidden')).toHaveText(
+        'Live',
       );
-      await more.getByRole('link', { name: 'Console', exact: true }).click();
+      await expect(action.locator('.pc-chrome-live')).toContainText('Live');
+      await page.getByRole('button', { name: 'Today: show navigation', exact: true }).click();
+      await expect(page.locator('[data-chrome-slot="navigation"]')).toHaveAttribute(
+        'data-open',
+        'true',
+      );
+      await action.getByRole('button', { name: 'Sidebar', exact: true }).click();
+      await expect(page.locator('[data-chrome-slot="sidebar"]')).toHaveAttribute(
+        'data-open',
+        'true',
+      );
+      await expect(page.locator('[data-chrome-slot="navigation"]')).toHaveAttribute(
+        'data-open',
+        'false',
+      );
+      await page.getByRole('button', { name: 'Menu', exact: true }).click();
+      const menu = page.getByRole('menu', { name: 'Main menu' });
+      await expect(menu).toBeVisible();
+      for (const name of ['Home', 'Graph', 'Inbox', 'Evidence', 'Console', 'Diagnostics'])
+        await expect(menu.getByRole('menuitem', { name, exact: true })).toBeVisible();
+      await menu.getByRole('menuitem', { name: 'Console', exact: true }).click();
       await expect(page.locator('[data-route-kind="planning.console"]')).toBeVisible();
-      await expect(more).not.toHaveAttribute('open', '');
+      await expect(menu).toBeHidden();
       expect((await layoutReport(page)).horizontalOverflow).toBe(false);
     }
     await page.setViewportSize({ width: 599, height: 900 });
     await openFixture(page, '#/operate/today');
-    await expect(page.getByRole('navigation', { name: 'Dashboard navigation' })).toBeHidden();
+    await expect(page.locator('.canvas-chrome-root')).toHaveCount(0);
     await expect(page.locator('.pc-mobile-nav')).toBeVisible();
   });
 
-  test('shows the List count beside the top bar title from 600 to 1199', async ({ page }) => {
+  test('shows the List count beside the view name from 600 to 1199', async ({ page }) => {
     for (const width of [1440, 1199, 768, 600, 599, 390]) {
       await page.setViewportSize({ width, height: 900 });
       await openFixture(page, '#/list');
-      const count = page.locator('header.pc-topbar .pc-topbar__count');
+      const count = page.locator('[data-chrome-slot="menu"] .pc-topbar__count');
       if (width >= 600 && width < 1200) {
-        await expect(count, `top bar count at ${width}`).toBeVisible();
+        await expect(count, `view count at ${width}`).toBeVisible();
         await expect(count).toHaveText(/^\d+ of \d+$/u);
       } else {
-        await expect(count, `top bar count at ${width}`).toBeHidden();
+        await expect(count, `view count at ${width}`).toBeHidden();
+        await expect(page.locator('header.pc-topbar .pc-topbar__count')).toBeHidden();
       }
     }
   });
@@ -4033,7 +4198,7 @@ test.describe('dashboard real-browser quality', () => {
     await page.setViewportSize({ width: 1440, height: 900 });
     await openFixture(page, '#/operate/today');
     const tabCount = await page
-      .locator('.pc-operate-places .pc-operate-places__count')
+      .locator('[data-chrome-slot="toolbar"] .pc-operate-places .pc-operate-places__count')
       .textContent();
     for (const width of [390, 320]) {
       await page.setViewportSize({ width, height: 844 });
@@ -4091,7 +4256,7 @@ test.describe('dashboard real-browser quality', () => {
     }
   });
 
-  test('keeps the selection bar clear of the tablet rail', async ({ page }) => {
+  test('keeps the selection bar clear of the floating help button on tablets', async ({ page }) => {
     for (const viewport of [
       { width: 768, height: 1024 },
       { width: 844, height: 390 },
@@ -4106,22 +4271,24 @@ test.describe('dashboard real-browser quality', () => {
       const bar = page.locator('.pc-selection-bar');
       await expect(bar).toBeVisible();
       const report = await page.evaluate(() => {
-        const rail = document.querySelector('nav.pc-rail')?.getBoundingClientRect();
+        const help = document.querySelector('[data-chrome-slot="help"]')?.getBoundingClientRect();
         const box = document.querySelector('.pc-selection-bar')?.getBoundingClientRect();
-        const status = document.querySelector('.pc-statusbar')?.getBoundingClientRect();
-        if (!rail || !box || !status) throw new Error('Missing rail, selection bar or status bar');
-        const hit = document.elementFromPoint(rail.left + rail.width / 2, box.top + box.height / 2);
+        if (!help || !box) throw new Error('Missing help button or selection bar');
+        const hit = document.elementFromPoint(
+          help.left + help.width / 2,
+          help.top + help.height / 2,
+        );
         return {
-          left: box.left,
-          railRight: rail.right,
-          clearance: Math.round(status.top - box.bottom),
-          railOnTop: Boolean(hit?.closest('nav.pc-rail')),
+          right: box.right,
+          helpLeft: help.left,
+          bottom: window.innerHeight - box.bottom,
+          helpOnTop: Boolean(hit?.closest('[data-chrome-slot="help"]')),
         };
       });
       const context = `${viewport.width}x${viewport.height}`;
-      expect(report.left, `bar left of ${context}`).toBeGreaterThanOrEqual(report.railRight);
-      expect(report.railOnTop, `rail reachable beside the bar at ${context}`).toBe(true);
-      expect(report.clearance, `bar above the status bar at ${context}`).toBeGreaterThanOrEqual(24);
+      expect(report.right, `bar left of help at ${context}`).toBeLessThanOrEqual(report.helpLeft);
+      expect(report.helpOnTop, `help reachable beside the bar at ${context}`).toBe(true);
+      expect(report.bottom, `bar inset from the bottom at ${context}`).toBeGreaterThanOrEqual(12);
     }
   });
 
@@ -4141,15 +4308,14 @@ test.describe('dashboard real-browser quality', () => {
     await expect(places.getByRole('link', { name: 'Inbox', exact: true })).toBeVisible();
   });
 
-  test('insets route content 24px from the rail at 768', async ({ page }) => {
+  test('insets route content 24px from the window edge at 768', async ({ page }) => {
     await page.setViewportSize({ width: 768, height: 1024 });
     for (const route of ['#/list', '#/operate/today', '#/overview', '#/sprints', '#/activity']) {
       await openFixture(page, route);
       await page.evaluate(() => document.fonts.ready);
       const inset = await page.evaluate(() => {
-        const rail = document.querySelector('nav.pc-rail')?.getBoundingClientRect();
         const root = document.querySelector('[data-route-kind]');
-        if (!rail || !root) throw new Error('Missing rail or route root');
+        if (!root) throw new Error('Missing route root');
         const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
         let left = Number.POSITIVE_INFINITY;
         for (let node = walker.nextNode(); node; node = walker.nextNode()) {
@@ -4162,66 +4328,67 @@ test.describe('dashboard real-browser quality', () => {
           for (const box of range.getClientRects())
             if (box.width > 0 && box.height > 0) left = Math.min(left, box.left);
         }
-        return Math.floor(left - rail.right);
+        return Math.floor(left);
       });
       expect(inset, `${route} content inset`).toBe(24);
     }
   });
 
-  test('fits the rail at 1440x900 and shows a scroll cue only while items are hidden', async ({
+  test('fits the navigation panel at 1440x1000 and scrolls it when items are hidden', async ({
     page,
   }) => {
-    const bottomStrip = async () => {
-      const box = await page.locator('.pc-rail__sections').boundingBox();
-      if (!box) throw new Error('Rail sections have no box');
-      return page.screenshot({
-        clip: { x: box.x, y: box.y + box.height - 8, width: box.width, height: 8 },
-      });
-    };
-    const cue = async () => {
-      const shown = await bottomStrip();
-      await page.addStyleTag({ content: '.pc-rail__sections{background:none!important}' });
-      const hidden = await bottomStrip();
-      return !shown.equals(hidden);
-    };
     for (const route of ['#/overview', '#/operate/today']) {
-      await page.setViewportSize({ width: 1440, height: 900 });
-      await openFixture(page, route);
-      const last = await page.evaluate(() => {
-        const scroller = document.querySelector('.pc-rail__sections');
-        const items = scroller?.querySelectorAll('.pc-rail__item');
-        const item = items?.[items.length - 1];
-        if (!scroller || !item) throw new Error('Rail has no items');
-        const frame = scroller.getBoundingClientRect();
-        const box = item.getBoundingClientRect();
-        return { inside: box.top >= frame.top - 0.5 && box.bottom <= frame.bottom + 0.5 };
-      });
-      expect(last, `${route} last rail item at 900`).toEqual({ inside: true });
-      for (const [height, expected] of [
-        [720, true],
+      for (const [height, scrolls] of [
         [1000, false],
+        [600, true],
       ] as const) {
         await page.setViewportSize({ width: 1440, height });
         await openFixture(page, route);
-        expect(await cue(), `${route} scroll cue at ${height}`).toBe(expected);
+        await page.keyboard.press('Alt+BracketLeft');
+        const panel = page.locator('[data-chrome-slot="navigation"]');
+        await expect(panel).toHaveAttribute('data-open', 'true');
+        const report = await panel.evaluate((slot) => {
+          const scroller = slot.querySelector<HTMLElement>('.canvas-chrome-panel-body');
+          const items = slot.querySelectorAll('.pc-nav-item');
+          const item = items[items.length - 1];
+          if (!scroller || !item) throw new Error('Navigation panel has no items');
+          const frame = scroller.getBoundingClientRect();
+          const box = item.getBoundingClientRect();
+          return {
+            inside: box.top >= frame.top - 0.5 && box.bottom <= frame.bottom + 0.5,
+            scrolls: scroller.scrollHeight > scroller.clientHeight,
+            overflow: getComputedStyle(scroller).overflowY,
+          };
+        });
+        expect(report, `${route} navigation panel at ${height}`).toEqual({
+          inside: !scrolls,
+          scrolls,
+          overflow: 'auto',
+        });
       }
     }
   });
 
   test('uses a concise visible live status at responsive widths', async ({ page }) => {
-    for (const width of [1120, 1024, 801, 800, 768, 480, 390, 320]) {
+    for (const width of [1120, 1024, 901, 900, 899, 768, 600, 480, 390, 320]) {
       await page.setViewportSize({ width, height: 768 });
       await openFixture(page, '#/operate/today');
 
-      const status = page.getByRole('status', { name: 'watcher connected' });
-      await expect(status).toBeVisible();
-      // The mobile live pill uses its concise label (M3).
-      await expect(status.locator('.pc-watcher__label')).toHaveCount(1);
-      await expect(status.locator('.pc-watcher__label')).toBeVisible();
-      await expect(status.locator('.pc-watcher__label')).toHaveText(
-        width < 900 ? 'Live' : 'watcher connected',
+      const live = page.locator(
+        width < 600 ? 'header.pc-topbar .pc-topbar__end' : '[data-chrome-slot="action"] output',
       );
-      expect((await status.boundingBox())?.width ?? 0).toBeGreaterThan(0);
+      await expect(live).toHaveAttribute('aria-live', 'polite');
+      await expect(live.locator('.pc-conn--watcher')).toHaveCount(1);
+      await expect(live.locator('.pc-conn--watcher')).toHaveAttribute(
+        'title',
+        'connection: connected',
+      );
+      // Compact floating chrome keeps Live as an icon with a hidden label (T1/T2).
+      await expect(live.locator('.pc-conn--watcher > .pc-visually-hidden')).toHaveCount(
+        width >= 600 && width < 900 ? 1 : 0,
+      );
+      await expect(live).toContainText('Live');
+      expect((await live.boundingBox())?.width ?? 0).toBeGreaterThan(0);
     }
   });
 
@@ -4326,9 +4493,9 @@ test.describe('dashboard real-browser quality', () => {
   }) => {
     const hostile = '<img src=x onerror="window.__fixtureXssFired=1"> Fixture';
     await openFixture(page, '#/overview', { project: hostile });
-    // The breadcrumb displays Plan; project identity remains in its escaped title (T6).
-    const identity = page.locator('.pc-topbar__crumb').first();
-    await expect(identity).toHaveText('Plan');
+    // The view picker displays the view; project identity remains in its escaped title (T6).
+    const identity = page.locator('[data-chrome-slot="menu"] .canvas-chrome-view-picker button');
+    await expect(identity).toHaveText('Home');
     await expect(identity).toHaveAttribute('title', hostile);
     expect(await page.locator('img[src="x"]').count()).toBe(0);
     expect(

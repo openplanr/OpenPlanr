@@ -1,4 +1,13 @@
-import { type ReactNode, useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
+import {
+  createContext,
+  type ReactNode,
+  useContext,
+  useEffect,
+  useId,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from 'react';
 import { createPortal } from 'react-dom';
 import type { DashboardConnection } from '../../app/providers.js';
 import {
@@ -32,17 +41,22 @@ import './console-shell.css';
 
 type ConnectionState = DashboardConnection['state'];
 
-const RAIL_PALETTE_LABEL = 'Search or jump';
+const NAVIGATION_PALETTE_LABEL = 'Search or run';
 const TOPBAR_PALETTE_LABEL = 'Jump to a view or an artifact…';
-/** Top-bar slot a route may portal its own place tabs into; empty and hidden otherwise. */
+/** Shell slot a route may portal its own place tabs into; empty and hidden otherwise. */
 export const TOPBAR_ROUTE_TABS_ID = 'topbar-route-tabs';
-/** Top-bar slot beside the view title for a route's item count; empty and hidden otherwise. */
+/** Shell slot beside the view name for a route's item count; empty and hidden otherwise. */
 export const TOPBAR_ROUTE_COUNT_ID = 'topbar-route-count';
 
-/** Renders children into a top-bar slot once the shell has mounted it. */
+/** Changes whenever the shell swaps the element that owns its route slots. */
+export const RouteSlotLayout = createContext('document');
+
+/** Renders children into a shell route slot, following it between the phone and floating shells. */
 export function TopBarPortal({ slotId, children }: { slotId: string; children: ReactNode }) {
+  const layout = useContext(RouteSlotLayout);
   const [slot, setSlot] = useState<HTMLElement | null>(null);
-  useLayoutEffect(() => setSlot(document.getElementById(slotId)), [slotId]);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: a layout change replaces the slot element.
+  useLayoutEffect(() => setSlot(document.getElementById(slotId)), [slotId, layout]);
   return slot ? createPortal(children, slot) : null;
 }
 
@@ -130,35 +144,6 @@ function navigationIsCurrent(
   return COLLECTION_FOR_DETAIL[route.kind] === definition.kind;
 }
 
-export function defaultCompactRail(route: ParsedDashboardRoute): boolean {
-  return ['planning.graph', 'planning.board', 'planning.sprints', 'planning.activity'].includes(
-    route.kind,
-  );
-}
-
-function RailLink({
-  item,
-  route,
-  count,
-  compact = false,
-}: Readonly<{ item: RailItem; route: ParsedDashboardRoute; count?: number; compact?: boolean }>) {
-  const definition = DEFINITION_BY_KIND.get(item.kind);
-  if (!definition) return null;
-  return (
-    <a
-      className="pc-rail__item"
-      aria-label={compact ? definition.label : undefined}
-      title={definition.label}
-      href={definition.href}
-      aria-current={navigationIsCurrent(definition, route) ? 'page' : undefined}
-    >
-      <PcIcon name={item.icon} size={16} />
-      <span>{definition.label}</span>
-      {count === undefined ? null : <span className="pc-rail__count">{count}</span>}
-    </a>
-  );
-}
-
 function MobileRailLink({
   item,
   route,
@@ -184,7 +169,7 @@ function MobileRailLink({
   );
 }
 
-function MobileNavigation({
+export function MobileNavigation({
   product,
   route,
   operateAvailable,
@@ -280,7 +265,7 @@ function MoreMenu({
             key={section.label}
             aria-label={section.label}
           >
-            <div className="pc-rail__label">{section.label}</div>
+            <div className="pc-chrome-label">{section.label}</div>
             {section.items.map((item) => (
               <MobileRailLink
                 key={item.kind}
@@ -296,147 +281,90 @@ function MoreMenu({
   );
 }
 
-export type NavRailProps = Readonly<{
-  product: DashboardProduct;
-  route: ParsedDashboardRoute;
-  operateAvailable: boolean;
-  onOpenPalette: () => void;
-  compact?: boolean;
-  onToggleCompact?: () => void;
-  preferenceError?: string | null;
-  counts?: Partial<Record<DashboardRouteKind, number>>;
-  branch?: string | null;
-  /** Between the phone and desktop widths: the rail carries a More sheet in place of the bottom bar. */
-  tablet?: boolean;
+export type NavigationDestination = Readonly<{
+  kind: DashboardRouteKind;
+  icon: PcIconName;
+  label: string;
+  href: string;
+  current: boolean;
+}>;
+export type NavigationSection = Readonly<{
+  label: string;
+  items: readonly NavigationDestination[];
 }>;
 
-export function NavRail({
-  product,
-  route,
-  operateAvailable,
-  onOpenPalette,
-  compact = defaultCompactRail(route),
-  onToggleCompact,
-  preferenceError,
-  counts,
-  branch = null,
-  tablet = false,
-}: NavRailProps) {
-  const sections = compact
-    ? product === 'operate'
-      ? OPERATE_SECTIONS
-      : PLANNING_SECTIONS.map((section) => ({
-          ...section,
-          items: section.items.filter((item) => item.kind !== 'planning.search'),
-        }))
-    : [
-        ...PLANNING_SECTIONS,
-        { label: 'Operate', items: OPERATE_SECTIONS[0]?.items ?? [] },
-        ...OPERATE_SECTIONS.slice(1),
-      ];
-  return (
-    <>
-      <nav
-        className="pc-rail"
-        data-compact={compact || undefined}
-        aria-label="Dashboard navigation"
-      >
-        <div className="pc-rail__brand">
-          <BrandMark className="pc-rail__tile" size={28} />
-          <div className="pc-rail__identity">
-            <span className="pc-rail__wordmark">OpenPlanr</span>
-            <span className="pc-rail__branch">
-              {branch === null ? null : `${branch} · .planr/`}
-            </span>
-          </div>
-        </div>
-        <button
-          type="button"
-          className="pc-rail__palette"
-          onClick={onOpenPalette}
-          aria-keyshortcuts="Meta+K Control+K"
-          aria-label={compact ? RAIL_PALETTE_LABEL : undefined}
-        >
-          <PcIcon name="search" size={15} />
-          {!compact ? (
-            <>
-              <span>{RAIL_PALETTE_LABEL}</span>
-              <span className="pc-rail__keys">
-                <Kbd>⌘K</Kbd>
-              </span>
-            </>
-          ) : null}
-        </button>
-        <div className="pc-rail__sections">
-          {sections.map((section) => (
-            <section className="pc-rail__section" key={section.label} aria-label={section.label}>
-              <div className="pc-rail__label">{section.label}</div>
-              <div className="pc-rail__items">
-                {section.items.map((item) => (
-                  <RailLink
-                    key={item.kind}
-                    item={item}
-                    route={route}
-                    count={counts?.[item.kind]}
-                    compact={compact}
-                  />
-                ))}
-              </div>
-            </section>
-          ))}
-        </div>
-        <div className="pc-rail__footer">
-          {onToggleCompact ? (
-            <button
-              type="button"
-              className="pc-rail__toggle"
-              aria-label={compact ? 'Expand navigation' : 'Collapse navigation'}
-              aria-expanded={!compact}
-              onClick={onToggleCompact}
-              title={compact ? 'Expand navigation' : 'Collapse navigation'}
-            >
-              <PcIcon name={compact ? 'chevron-right' : 'chevron-left'} size={14} />
-              <span>{compact ? 'Expand navigation' : 'Collapse navigation'}</span>
-            </button>
-          ) : null}
-          {preferenceError ? (
-            <p role="status" className="pc-rail__preference-error">
-              {preferenceError}
-            </p>
-          ) : null}
-          {!compact &&
-            REFERENCE_ITEMS.map((item) => <RailLink key={item.kind} item={item} route={route} />)}
-          {tablet ? (
-            <MoreMenu
-              productLabel={product === 'operate' ? 'Operate' : 'Planning'}
-              route={route}
-              sections={omittedSections(sections)}
-              summaryClassName="pc-rail__item"
-            />
-          ) : null}
-        </div>
-      </nav>
-      {tablet ? null : (
-        <MobileNavigation product={product} route={route} operateAvailable={operateAvailable} />
-      )}
-    </>
-  );
+/** Every Plan, Operate and Reference destination, marking the one the route belongs to. */
+export function navigationSections(route: ParsedDashboardRoute): readonly NavigationSection[] {
+  return [
+    ...PLANNING_SECTIONS,
+    { label: 'Operate', items: OPERATE_SECTIONS[0]?.items ?? [] },
+    ...OPERATE_SECTIONS.slice(1),
+    { label: 'Reference', items: REFERENCE_ITEMS },
+  ].map((section) => ({
+    label: section.label,
+    items: section.items.flatMap((item) => {
+      const definition = DEFINITION_BY_KIND.get(item.kind);
+      return definition
+        ? [
+            {
+              kind: item.kind,
+              icon: item.icon,
+              label: definition.label,
+              href: definition.href,
+              current: navigationIsCurrent(definition, route),
+            },
+          ]
+        : [];
+    }),
+  }));
 }
 
-/** Every destination section, less the items the rail already shows. */
-function omittedSections(shown: readonly RailSection[]): readonly RailSection[] {
-  const visible = new Set(shown.flatMap((section) => section.items.map((item) => item.kind)));
-  return [
-    { label: 'Plan', items: PLANNING_SECTIONS[0]?.items ?? [] },
-    { label: 'Operate', items: OPERATE_SECTIONS[0]?.items ?? [] },
-    { label: 'Record', items: OPERATE_SECTIONS[1]?.items ?? [] },
-    { label: 'Reference', items: REFERENCE_ITEMS },
-  ]
-    .map((section) => ({
-      ...section,
-      items: section.items.filter((item) => !visible.has(item.kind)),
-    }))
-    .filter((section) => section.items.length > 0);
+/** The floating navigation panel's body: palette launcher, then each section with counts. */
+export function NavigationSections({
+  route,
+  counts,
+  onOpenPalette,
+  paletteKeys,
+}: Readonly<{
+  route: ParsedDashboardRoute;
+  counts?: Partial<Record<DashboardRouteKind, number>>;
+  onOpenPalette: () => void;
+  paletteKeys: string;
+}>) {
+  return (
+    <div>
+      <button
+        type="button"
+        className="canvas-chrome-menu-item"
+        onClick={onOpenPalette}
+        aria-keyshortcuts="Meta+K Control+K"
+      >
+        <PcIcon name="search" size={15} />
+        <span>{NAVIGATION_PALETTE_LABEL}</span>
+        <Kbd>{paletteKeys}</Kbd>
+      </button>
+      {navigationSections(route).map((section) => (
+        <section key={section.label} aria-label={section.label}>
+          <div className="pc-chrome-label">{section.label}</div>
+          {section.items.map((item) => {
+            const count = counts?.[item.kind];
+            return (
+              <a
+                key={item.kind}
+                className="pc-nav-item"
+                href={item.href}
+                aria-current={item.current ? 'page' : undefined}
+              >
+                <PcIcon name={item.icon} size={16} />
+                <span>{item.label}</span>
+                {count === undefined ? null : <Kbd>{count}</Kbd>}
+              </a>
+            );
+          })}
+        </section>
+      ))}
+    </div>
+  );
 }
 
 // ---------------------------------------------------------------- connection
@@ -503,9 +431,18 @@ export const CONNECTION_STATES: Readonly<Record<ConnectionState, ConnectionRecip
 export function ConnectionChip({
   state,
   compact = false,
-}: Readonly<{ state: ConnectionState; compact?: boolean }>) {
+  labelHidden = false,
+}: Readonly<{ state: ConnectionState; compact?: boolean; labelHidden?: boolean }>) {
   const recipe = CONNECTION_STATES[state];
   const live = state === 'connected' || state === 'read-only';
+  const label =
+    state === 'booting'
+      ? null
+      : live
+        ? compact
+          ? 'Live'
+          : 'Live · watching .planr/'
+        : recipe.label;
   return (
     <span
       className="pc-conn pc-conn--watcher"
@@ -517,36 +454,7 @@ export function ConnectionChip({
       ) : (
         <PcIcon name={recipe.icon} size={13} spin={state === 'booting'} />
       )}
-      {state === 'booting'
-        ? null
-        : live
-          ? compact
-            ? 'Live'
-            : 'Live · watching .planr/'
-          : recipe.label}
-    </span>
-  );
-}
-
-export function WatcherDot({
-  state,
-  compact = false,
-}: Readonly<{ state: ConnectionState; compact?: boolean }>) {
-  const recipe = CONNECTION_STATES[state];
-  return (
-    <span className="pc-watcher" role="status" aria-label={recipe.dotLabel}>
-      <span className="pc-watcher__dot" data-dot={recipe.dot} aria-hidden="true" />
-      <span className="pc-watcher__label" aria-hidden="true">
-        {state === 'booting'
-          ? null
-          : !compact
-            ? recipe.dotLabel
-            : state === 'connected' || state === 'read-only'
-              ? 'Live'
-              : state === 'incompatible'
-                ? 'Stopped'
-                : recipe.label}
-      </span>
+      {labelHidden && label !== null ? <span className="pc-visually-hidden">{label}</span> : label}
     </span>
   );
 }
@@ -574,7 +482,8 @@ function applyTheme(choice: ThemeChoice): void {
   document.documentElement.setAttribute('data-theme', choice);
 }
 
-export function ThemeToggle({ preference }: Readonly<{ preference?: ThemePreferenceAdapter }>) {
+/** The current theme choice, cycling system, light and dark through the injected adapter. */
+export function useThemeChoice(preference?: ThemePreferenceAdapter) {
   const [choice, setChoice] = useState<ThemeChoice>(() => {
     const current =
       typeof document === 'undefined' ? null : document.documentElement.getAttribute('data-theme');
@@ -583,27 +492,33 @@ export function ThemeToggle({ preference }: Readonly<{ preference?: ThemePrefere
       : (preference?.initialChoice ?? 'system');
   });
   const [storageError, setStorageError] = useState(preference?.initialStorageError ?? false);
+  const cycle = () => {
+    const next = NEXT_THEME[choice];
+    setChoice(next);
+    applyTheme(next);
+    try {
+      preference?.save(next);
+      setStorageError(false);
+    } catch {
+      setStorageError(true);
+    }
+  };
+  return { choice, next: NEXT_THEME[choice], icon: THEME_ICON[choice], storageError, cycle };
+}
+
+export const THEME_STORAGE_ERROR = 'Theme preference could not be saved in this browser.';
+
+export function ThemeToggle({ preference }: Readonly<{ preference?: ThemePreferenceAdapter }>) {
+  const theme = useThemeChoice(preference);
   return (
     <>
       <IconButton
-        icon={THEME_ICON[choice]}
-        label={`Theme: ${choice}. Switch to ${NEXT_THEME[choice]}.`}
+        icon={theme.icon}
+        label={`Theme: ${theme.choice}. Switch to ${theme.next}.`}
         size="sm"
-        onClick={() => {
-          const next = NEXT_THEME[choice];
-          setChoice(next);
-          applyTheme(next);
-          try {
-            preference?.save(next);
-            setStorageError(false);
-          } catch {
-            setStorageError(true);
-          }
-        }}
+        onClick={theme.cycle}
       />
-      {storageError && (
-        <span role="status">Theme preference could not be saved in this browser.</span>
-      )}
+      {theme.storageError && <span role="status">{THEME_STORAGE_ERROR}</span>}
     </>
   );
 }
@@ -613,13 +528,9 @@ export function ThemeToggle({ preference }: Readonly<{ preference?: ThemePrefere
 export type TopBarProps = Readonly<{
   projectName?: string;
   themePreference?: ThemePreferenceAdapter;
-  paletteIconOnly?: boolean;
-  mobile?: boolean;
   shortcutHelp?: ReactNode;
-  showSubject?: boolean;
   detailTrail?: DetailTrail | null;
   onCopy?: (text: string) => Promise<void>;
-  phone?: boolean;
   route: ParsedDashboardRoute;
   connectionState: ConnectionState;
   inspectorOpen: boolean;
@@ -682,17 +593,13 @@ function DetailHeader({
   );
 }
 
-/** Breadcrumb, palette field, connection chips, theme and inspector controls. */
+/** The phone top bar: view title, Live and search; the remaining utilities live in More. */
 export function TopBar({
   projectName,
   themePreference,
-  paletteIconOnly = false,
-  mobile = false,
   shortcutHelp,
-  showSubject = false,
   detailTrail = null,
   onCopy,
-  phone = false,
   route,
   connectionState,
   inspectorOpen,
@@ -702,28 +609,13 @@ export function TopBar({
 }: TopBarProps) {
   const definition = dashboardRouteDefinition(route);
   const product = route.product ?? 'system';
-  const subject = !showSubject || route.kind === 'not-found' ? null : route.subjectId;
   const [mobileControls, setMobileControls] = useState<HTMLElement | null>(null);
-  // biome-ignore lint/correctness/useExhaustiveDependencies: the sheet holding the controls moves between the bottom bar and the rail at 600px.
   useLayoutEffect(() => {
-    setMobileControls(mobile ? document.getElementById('mobile-shell-controls') : null);
-  }, [mobile, phone]);
+    setMobileControls(document.getElementById('mobile-shell-controls'));
+  }, []);
   const utilities = (
     <div className="pc-topbar__utilities">
-      <Tooltip
-        content={
-          product === 'operate'
-            ? 'Operate actions require confirmation and an authorized command gateway. Receipts record every governed change.'
-            : 'Plan is read-only. Planning commands copy a continuation without changing project files.'
-        }
-      >
-        <button type="button" className="pc-conn">
-          <PcIcon name={product === 'operate' ? 'shield' : 'lock'} size={13} />
-          <span className="pc-capability-label">
-            {product === 'operate' ? 'Governed actions' : 'Read-only'}
-          </span>
-        </button>
-      </Tooltip>
+      <CapabilityChip product={product} />
       {shortcutHelp}
       <ThemeToggle preference={themePreference} />
       <span data-inspector-toggle style={{ display: 'contents' }}>
@@ -744,146 +636,62 @@ export function TopBar({
       </span>
     </div>
   );
-  if (detailTrail && mobile)
+  const controls = mobileControls ? createPortal(utilities, mobileControls) : null;
+  if (detailTrail)
     return (
       <header className="pc-topbar" data-product={product} data-detail-header>
-        <DetailHeader trail={detailTrail} onCopy={onCopy}>
-          {phone ? null : (
-            <>
-              <output className="pc-topbar__end" aria-live="polite">
-                <ConnectionChip state={connectionState} compact />
-              </output>
-              <button
-                type="button"
-                className="pc-topbar__palette"
-                aria-label={TOPBAR_PALETTE_LABEL}
-                onClick={onOpenPalette}
-                aria-keyshortcuts="Meta+K Control+K"
-              >
-                <PcIcon name="search" size={15} />
-              </button>
-            </>
-          )}
-        </DetailHeader>
-        {mobileControls ? createPortal(utilities, mobileControls) : null}
+        <DetailHeader trail={detailTrail} onCopy={onCopy} />
+        {controls}
       </header>
     );
   return (
     <header className="pc-topbar" data-product={product}>
       <div className="pc-topbar__breadcrumbs">
         <BrandMark className="pc-topbar__logo" size={24} />
-        <span className="pc-topbar__crumb" title={projectName}>
-          {product === 'planning' ? 'Plan' : product === 'operate' ? 'Operate' : 'Reference'}
+        <span className="pc-topbar__view" title={projectName}>
+          {definition?.label ?? 'Closed route'}
         </span>
-        <span className="pc-topbar__separator" aria-hidden="true">
-          /
-        </span>
-        {detailTrail ? (
-          <>
-            <a className="pc-topbar__crumb-link" href={detailTrail.origin}>
-              {dashboardRouteDefinition(parseDashboardRoute(detailTrail.origin))?.label ?? 'List'}
-            </a>
-            {detailTrail.spec ? (
-              <>
-                <span className="pc-topbar__separator" aria-hidden="true">
-                  /
-                </span>
-                <a className="pc-topbar__crumb-link" href={detailTrail.spec.href}>
-                  {detailTrail.spec.label}
-                </a>
-              </>
-            ) : null}
-            <span className="pc-topbar__separator" aria-hidden="true">
-              /
-            </span>
-            <span className="pc-topbar__view" aria-current="page">
-              {detailTrail.current}
-            </span>
-          </>
-        ) : (
-          <>
-            <span className="pc-topbar__view">{definition?.label ?? 'Closed route'}</span>
-            <span id={TOPBAR_ROUTE_COUNT_ID} className="pc-topbar__count" aria-hidden="true" />
-          </>
-        )}
-        {subject && !detailTrail ? (
-          <>
-            <span className="pc-topbar__separator" aria-hidden="true">
-              /
-            </span>
-            <span className="pc-topbar__subject" title={subject}>
-              {subject}
-            </span>
-          </>
-        ) : null}
+        <span id={TOPBAR_ROUTE_COUNT_ID} className="pc-topbar__count" aria-hidden="true" />
         <div id={TOPBAR_ROUTE_TABS_ID} className="pc-topbar__route-tabs" />
       </div>
       <button
         type="button"
         className="pc-topbar__palette"
-        aria-label={paletteIconOnly ? TOPBAR_PALETTE_LABEL : undefined}
+        aria-label={TOPBAR_PALETTE_LABEL}
         onClick={onOpenPalette}
         aria-keyshortcuts="Meta+K Control+K"
       >
         <PcIcon name="search" size={15} />
-        {!paletteIconOnly ? (
-          <>
-            <span className="pc-topbar__placeholder">{TOPBAR_PALETTE_LABEL}</span>
-            <span className="pc-rail__keys">
-              <Kbd>⌘K</Kbd>
-            </span>
-          </>
-        ) : null}
       </button>
       <div className="pc-topbar__actions">
         <output className="pc-topbar__end" aria-live="polite">
-          <ConnectionChip state={connectionState} compact={mobile} />
+          <ConnectionChip state={connectionState} compact />
         </output>
-        {mobile ? (mobileControls ? createPortal(utilities, mobileControls) : null) : utilities}
+        {controls}
       </div>
     </header>
   );
 }
 
-// ---------------------------------------------------------------- status bar
-
-export type StatusBarProps = Readonly<{
-  branch: string | null;
-  nodeCount: number | null;
-  edgeCount: number | null;
-  connectionState: ConnectionState;
-  buildId: string;
-  compact?: boolean;
-}>;
-
-export function StatusBar({
-  branch,
-  nodeCount,
-  edgeCount,
-  connectionState,
-  buildId,
-  compact,
-}: StatusBarProps) {
+/** Read-only in Plan, governed actions in Operate, with the rule behind each in a tooltip. */
+export function CapabilityChip({
+  product,
+  iconOnly = false,
+}: Readonly<{ product: DashboardProduct | 'system'; iconOnly?: boolean }>) {
+  const label = product === 'operate' ? 'Governed actions' : 'Read-only';
   return (
-    <footer className="pc-statusbar">
-      <span className="pc-statusbar__item pc-statusbar__item--branch">
-        <PcIcon name="git-branch" size={13} />
-        <span className="pc-statusbar__text">{branch}</span>
-      </span>
-      <span className="pc-statusbar__item pc-statusbar__item--totals">
-        <span className="pc-statusbar__text">
-          {nodeCount === null || edgeCount === null
-            ? null
-            : `${nodeCount} nodes · ${edgeCount} edges`}
-        </span>
-      </span>
-      <WatcherDot state={connectionState} compact={compact} />
-      <span className="pc-statusbar__end" title="Served build">
-        <span className="pc-statusbar__text" title={buildId}>
-          {buildId}
-        </span>
-      </span>
-    </footer>
+    <Tooltip
+      content={
+        product === 'operate'
+          ? 'Operate actions require confirmation and an authorized command gateway. Receipts record every governed change.'
+          : 'Plan is read-only. Planning commands copy a continuation without changing project files.'
+      }
+    >
+      <button type="button" className="pc-conn" aria-label={iconOnly ? label : undefined}>
+        <PcIcon name={product === 'operate' ? 'shield' : 'lock'} size={13} />
+        {iconOnly ? null : <span className="pc-capability-label">{label}</span>}
+      </button>
+    </Tooltip>
   );
 }
 
@@ -894,7 +702,6 @@ const SKELETON_FIELDS = Object.freeze(['type', 'sprintId', 'updated', 'dependsOn
 export type InspectorProps = Readonly<{
   mode: 'skeleton' | 'stub' | 'selection';
   selection: InspectorSelection;
-  floating: boolean;
   modal?: boolean;
   onClose?: () => void;
   onRestoreFocus?: () => void;
@@ -910,22 +717,13 @@ function navigateTo(href: string): void {
  * The global inspector reads the same graph the plane does. While that read is in flight
  * it shows the shape of an artifact, never a resolved one.
  */
-export function Inspector({
+export function InspectorContent({
   mode,
   selection,
-  floating,
-  modal = true,
-  onClose,
-  onRestoreFocus,
   onPromote,
   planningContent,
-}: InspectorProps) {
-  const opener = useRef<HTMLElement | null>(
-    typeof document === 'undefined' ? null : (document.activeElement as HTMLElement | null),
-  );
-  if (floating && selection === null) return null;
-
-  const content = (
+}: Pick<InspectorProps, 'mode' | 'selection' | 'onPromote' | 'planningContent'>) {
+  return (
     <>
       {mode === 'skeleton' ? (
         <>
@@ -1029,30 +827,41 @@ export function Inspector({
       )}
     </>
   );
-  if (floating) {
-    return (
-      <InspectorSheet
-        open
-        modal={modal}
-        onOpenChange={(open) => {
-          if (!open) onClose?.();
-        }}
-        onRestoreFocus={onRestoreFocus ?? (() => opener.current?.focus({ preventScroll: true }))}
-        title="Inspector"
-        description="Selected item details. Open the item to continue on its full page."
-      >
-        <div className="pc-shell-inspector__content">{content}</div>
-      </InspectorSheet>
-    );
-  }
+}
+
+/** The phone inspector: a full-height sheet over the current route. */
+export function Inspector({
+  mode,
+  selection,
+  modal = true,
+  onClose,
+  onRestoreFocus,
+  onPromote,
+  planningContent,
+}: InspectorProps) {
+  const opener = useRef<HTMLElement | null>(
+    typeof document === 'undefined' ? null : (document.activeElement as HTMLElement | null),
+  );
+  if (selection === null) return null;
   return (
-    <aside className="pc-shell-inspector" aria-label="Inspector">
-      <div className="pc-shell-inspector__controls">
-        {onClose ? (
-          <IconButton icon="x" label="Close inspector" size="sm" onClick={onClose} />
-        ) : null}
+    <InspectorSheet
+      open
+      modal={modal}
+      onOpenChange={(open) => {
+        if (!open) onClose?.();
+      }}
+      onRestoreFocus={onRestoreFocus ?? (() => opener.current?.focus({ preventScroll: true }))}
+      title="Inspector"
+      description="Selected item details. Open the item to continue on its full page."
+    >
+      <div className="pc-shell-inspector__content">
+        <InspectorContent
+          mode={mode}
+          selection={selection}
+          onPromote={onPromote}
+          planningContent={planningContent}
+        />
       </div>
-      {content}
-    </aside>
+    </InspectorSheet>
   );
 }

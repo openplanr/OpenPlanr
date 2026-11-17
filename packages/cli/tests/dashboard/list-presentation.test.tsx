@@ -715,7 +715,13 @@ describe('List live refetch retention', () => {
   it('uses a persistent changed dot under reduced motion until viewed', () => {
     vi.stubGlobal(
       'matchMedia',
-      vi.fn(() => ({ matches: true, addListener: vi.fn(), removeListener: vi.fn() })),
+      vi.fn(() => ({
+        matches: true,
+        addListener: vi.fn(),
+        removeListener: vi.fn(),
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+      })),
     );
     const { container, rerender } = render(<LiveShell current={fixture()} />);
     const patched = FIXTURE_NODES.map((node) =>

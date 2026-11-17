@@ -4,7 +4,7 @@ export default defineConfig({
   test: {
     globals: true,
     root: '.',
-    setupFiles: ['tests/setup/isolate-user-state.ts'],
+    setupFiles: ['tests/setup/isolate-user-state.ts', 'tests/setup/dashboard-dom.ts'],
     include: [
       // Packs and installs a real tarball, then runs the real `bin/openplanr.js`
       // against it — the SPEC-006 Trap-A proof that `openplanr upgrade status`

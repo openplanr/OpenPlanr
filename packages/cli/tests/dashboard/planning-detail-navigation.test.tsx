@@ -122,7 +122,6 @@ const adapters = {
   loadSingleLetters: () => true,
   saveSingleLetters: () => {},
   copy: async () => {},
-  railPreference: { initialCompact: false, save: () => {} },
 };
 
 function ShellHarness({ snapshot }: { snapshot: PlanningGraphEnvelope }) {
@@ -204,8 +203,12 @@ function rows(container: HTMLElement): HTMLElement[] {
   ];
 }
 
+/** The phone inspector sheet below 600 px, otherwise the floating sidebar's Inspector tab. */
 function inspector() {
-  return screen.getByRole('dialog', { name: 'Inspector', exact: true });
+  return (
+    screen.queryByRole('dialog', { name: 'Inspector', exact: true }) ??
+    screen.getByRole('region', { name: 'Inspector', exact: true })
+  );
 }
 
 afterEach(() => {
@@ -284,8 +287,8 @@ describe('Planning detail shell navigation', () => {
       render(<ShellHarness snapshot={snapshot} />);
       const main = screen.getByRole('main');
       await within(main).findByRole('heading', { name: 'Review artifact 2', level: 1 });
-      const topBar = document.querySelector<HTMLElement>('.pc-topbar');
-      if (!topBar) throw new Error('Missing top bar');
+      const topBar = document.querySelector<HTMLElement>('.canvas-chrome-menu');
+      if (!topBar) throw new Error('Missing menu pill');
       expect(
         within(topBar).getByRole('link', { name: 'List', exact: true }).getAttribute('href'),
       ).toBe('#/list');
@@ -338,12 +341,12 @@ describe('Planning detail shell navigation', () => {
     );
   });
 
-  it('keeps search and the live state in the narrow Detail header between 600 and 899px', async () => {
+  it('keeps the trail, search and the live state in floating chrome between 600 and 899px', async () => {
     vi.stubGlobal('innerWidth', 768);
     vi.stubGlobal(
       'matchMedia',
       vi.fn((query: string) => ({
-        matches: /max-width: (899|1199)px/u.test(query),
+        matches: /max-width: (899|1199|1099\.97)px/u.test(query),
         addEventListener: vi.fn(),
         removeEventListener: vi.fn(),
       })),
@@ -358,13 +361,18 @@ describe('Planning detail shell navigation', () => {
       }),
     );
     render(<ShellHarness snapshot={snapshot} />);
-    await findDetailReady(screen.getByRole('main'));
-    const topBar = document.querySelector<HTMLElement>('.pc-topbar[data-detail-header]');
-    if (!topBar) throw new Error('Missing narrow Detail header');
-    expect(within(topBar).getByRole('link', { name: 'Back to List' })).toBeTruthy();
-    expect(within(topBar).getByRole('button', { name: /^Jump to a view/u })).toBeTruthy();
-    expect(topBar.querySelector('.pc-topbar__end')).not.toBeNull();
-    expect(within(topBar).getByRole('button', { name: 'Copy link' })).toBeTruthy();
+    const main = screen.getByRole('main');
+    await findDetailReady(main);
+    expect(document.querySelector('.pc-topbar')).toBeNull();
+    const menu = document.querySelector<HTMLElement>('.canvas-chrome-menu');
+    if (!menu) throw new Error('Missing menu pill');
+    expect(within(menu).getByRole('link', { name: 'List', exact: true })).toBeTruthy();
+    expect(
+      screen.getByRole('toolbar').querySelector('[aria-label^="Search or run"]'),
+    ).not.toBeNull();
+    const action = document.querySelector<HTMLElement>('.canvas-chrome-action');
+    expect(action?.textContent).toContain('Live');
+    expect(within(main).getByRole('button', { name: 'Copy link' })).toBeTruthy();
   });
 
   it('moves between real List artifacts with J/K from the shared desktop inspector', async () => {
@@ -399,16 +407,19 @@ describe('Planning detail shell navigation', () => {
     latestCopy.focus();
     fireEvent.keyDown(latestCopy, { key: 'Escape' });
     await waitFor(() => {
-      expect(screen.queryByRole('dialog', { name: 'Inspector', exact: true })).toBeNull();
+      expect(screen.queryByRole('region', { name: 'Inspector', exact: true })).toBeNull();
       expect(document.activeElement).toBe(tableRows[1]);
     });
     await act(async () => new Promise((resolve) => setTimeout(resolve, 0)));
     expect(document.activeElement).toBe(tableRows[1]);
     const user = userEvent.setup();
-    await user.click(screen.getByRole('button', { name: 'Show inspector', exact: true }));
+    const toggle = screen.getByRole('button', { name: 'Sidebar', exact: true });
+    expect(toggle.getAttribute('aria-pressed')).toBe('false');
+    await user.click(toggle);
+    expect(toggle.getAttribute('aria-pressed')).toBe('true');
     expect(inspector()).toBeTruthy();
-    await user.click(screen.getByRole('button', { name: 'Hide inspector', exact: true }));
-    expect(screen.queryByRole('dialog', { name: 'Inspector', exact: true })).toBeNull();
+    await user.click(toggle);
+    expect(screen.queryByRole('region', { name: 'Inspector', exact: true })).toBeNull();
     expect(window.location.hash).toBe(sourceHref);
   });
 
@@ -459,8 +470,8 @@ describe('Planning detail shell navigation', () => {
           'Current verified criterion for SPEC-026/T-002.',
         ),
       ).toBeTruthy();
-      const topBar = document.querySelector<HTMLElement>('.pc-topbar');
-      if (!topBar) throw new Error('Missing top bar');
+      const topBar = document.querySelector<HTMLElement>('.canvas-chrome-menu');
+      if (!topBar) throw new Error('Missing menu pill');
       const list = within(topBar).getByRole('link', { name: 'List', exact: true });
       expect(list.getAttribute('href')).toBe(sourceHref);
       expect(within(main).queryByRole('navigation', { name: 'Detail navigation' })).toBeNull();
@@ -627,12 +638,9 @@ describe('Planning detail shell navigation', () => {
       act(() => copy.focus());
       expect(document.activeElement).toBe(copy);
       if (method === 'Escape') await user.keyboard('{Escape}');
-      else
-        await user.click(
-          within(panel).getByRole('button', { name: 'Close inspector', exact: true }),
-        );
+      else await user.click(screen.getByRole('button', { name: 'Close sidebar', exact: true }));
       await settleInspectorDismissal();
-      expect(screen.queryByRole('dialog', { name: 'Inspector', exact: true })).toBeNull();
+      expect(screen.queryByRole('region', { name: 'Inspector', exact: true })).toBeNull();
       expect(document.activeElement).toBe(latest);
     },
   );
@@ -666,12 +674,9 @@ describe('Planning detail shell navigation', () => {
       act(() => copy.focus());
       expect(document.activeElement).toBe(copy);
       if (method === 'Escape') await user.keyboard('{Escape}');
-      else
-        await user.click(
-          within(panel).getByRole('button', { name: 'Close inspector', exact: true }),
-        );
+      else await user.click(screen.getByRole('button', { name: 'Close sidebar', exact: true }));
       await settleInspectorDismissal();
-      expect(screen.queryByRole('dialog', { name: 'Inspector', exact: true })).toBeNull();
+      expect(screen.queryByRole('region', { name: 'Inspector', exact: true })).toBeNull();
       expect(document.activeElement).toBe(latest);
     },
   );
@@ -691,7 +696,7 @@ describe('Planning detail shell navigation', () => {
       const background = screen.getByRole('main');
       await user.click(background);
       await settleInspectorDismissal();
-      expect(screen.queryByRole('dialog', { name: 'Inspector', exact: true })).toBeNull();
+      expect(screen.queryByRole('region', { name: 'Inspector', exact: true })).toBeNull();
       expect(document.activeElement).toBe(owner);
       expect(owner.isConnected).toBe(true);
     },
@@ -727,7 +732,7 @@ describe('Planning detail shell navigation', () => {
     currentTarget: () => HTMLElement,
   ) {
     await user.pointer({ target, keys: '[MouseLeft>]' });
-    expect(screen.queryByRole('dialog', { name: 'Inspector', exact: true })).toBeNull();
+    expect(screen.queryByRole('region', { name: 'Inspector', exact: true })).toBeNull();
     expect(target.isConnected).toBe(true);
     expect(currentTarget()).toBe(target);
     await user.pointer({ keys: '[/MouseLeft]' });
@@ -748,7 +753,7 @@ describe('Planning detail shell navigation', () => {
         screen.getByRole('combobox', { name: new RegExp(`^${label}:`, 'u') }),
       );
       await settleInspectorDismissal();
-      expect(screen.queryByRole('dialog', { name: 'Inspector', exact: true })).toBeNull();
+      expect(screen.queryByRole('region', { name: 'Inspector', exact: true })).toBeNull();
       expect(trigger.getAttribute('aria-expanded')).toBe('true');
       expect(document.activeElement).toBe(trigger);
       const list = screen.getByRole('listbox', { name: label, exact: true });
@@ -776,7 +781,7 @@ describe('Planning detail shell navigation', () => {
     const type = screen.getByRole('combobox', { name: /^Type:/u });
     await user.click(type);
     await settleInspectorDismissal();
-    expect(screen.queryByRole('dialog', { name: 'Inspector', exact: true })).toBeNull();
+    expect(screen.queryByRole('region', { name: 'Inspector', exact: true })).toBeNull();
     expect(initial.dataset.selected).toBe('true');
     expect(initial.dataset.keyboardItem).toBe(taskIds[0]);
     await user.click(screen.getByRole('option', { name: 'Task', exact: true }));
@@ -788,7 +793,7 @@ describe('Planning detail shell navigation', () => {
     expect(row.dataset.keyboardItem).toBe(taskIds[0]);
     act(() => row.focus());
     expect(document.activeElement).toBe(row);
-    expect(screen.queryByRole('dialog', { name: 'Inspector', exact: true })).toBeNull();
+    expect(screen.queryByRole('region', { name: 'Inspector', exact: true })).toBeNull();
     await user.keyboard('{Enter}');
     const panel = inspector();
     await findDetailReady(panel);
@@ -808,7 +813,7 @@ describe('Planning detail shell navigation', () => {
       screen.getByRole('button', { name: 'ID', exact: true }),
     );
     await settleInspectorDismissal();
-    expect(screen.queryByRole('dialog', { name: 'Inspector', exact: true })).toBeNull();
+    expect(screen.queryByRole('region', { name: 'Inspector', exact: true })).toBeNull();
     expect(sort.closest('th')?.getAttribute('aria-sort')).toBe('ascending');
     expect(rows(view.container).map((row) => row.dataset.keyboardItem)).toEqual(
       [...taskIds].reverse(),
@@ -823,7 +828,7 @@ describe('Planning detail shell navigation', () => {
       screen.getByRole('textbox', { name: 'Filter by id or title', exact: true }),
     );
     await settleInspectorDismissal();
-    expect(screen.queryByRole('dialog', { name: 'Inspector', exact: true })).toBeNull();
+    expect(screen.queryByRole('region', { name: 'Inspector', exact: true })).toBeNull();
     expect(document.activeElement).toBe(input);
     await user.type(input, ' artifact 1', { skipClick: true });
     expect((input as HTMLInputElement).value).toBe('Review artifact 1');
@@ -862,9 +867,11 @@ describe('Planning detail shell navigation', () => {
   });
 
   it('switches the real inspector selection with one click on another List row', async () => {
-    const { user, view, tableRows } = await openListInspector();
-    await clickOutsideInspector(user, tableRows[1], () => rows(view.container)[1]);
-    const panel = await screen.findByRole('dialog', { name: 'Inspector', exact: true });
+    const { user, tableRows } = await openListInspector();
+    const open = inspector();
+    await user.click(tableRows[1]);
+    const panel = await screen.findByRole('region', { name: 'Inspector', exact: true });
+    expect(panel).toBe(open);
     await within(panel).findByRole('heading', { name: 'Review artifact 2', exact: true });
     await findDetailReady(panel);
     await settleInspectorDismissal();
@@ -877,17 +884,17 @@ describe('Planning detail shell navigation', () => {
 
   it('navigates through the rail with one click outside the real inspector', async () => {
     const { user, view } = await openListInspector();
-    const rail = screen.getByRole('navigation', { name: 'Dashboard navigation', exact: true });
+    await user.click(screen.getByRole('button', { name: 'List: show navigation', exact: true }));
+    expect(inspector()).toBeTruthy();
+    const rail = screen.getByRole('navigation', { name: 'Navigation', exact: true });
     const board = within(rail).getByRole('link', { name: /^Board(?:\s|$)/u });
     expect(board.getAttribute('href')).toBe('#/board');
-    await clickOutsideInspector(user, board, () =>
-      within(rail).getByRole('link', { name: /^Board(?:\s|$)/u }),
-    );
+    await user.click(board);
     await waitFor(() => expect(window.location.hash).toBe('#/board'));
     await waitFor(() =>
       expect(view.container.querySelector('[data-route-kind="planning.board"]')).toBeTruthy(),
     );
-    expect(screen.queryByRole('dialog', { name: 'Inspector', exact: true })).toBeNull();
+    expect(screen.queryByRole('region', { name: 'Inspector', exact: true })).toBeNull();
   });
 
   it('keeps the base inspector mounted while changing keyboard help and restores its focus on Escape', async () => {

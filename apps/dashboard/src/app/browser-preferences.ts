@@ -8,13 +8,42 @@ export type ShellAdapters = Readonly<{
     initialStorageError?: boolean;
     save: (choice: ThemeChoice) => void;
   }>;
-  railPreference?: Readonly<{
-    initialCompact?: boolean;
-    initialStorageError?: boolean;
-    save: (compact: boolean) => void;
-  }>;
+  chromePreference?: ChromePreference;
   recentItems?: RecentItemsPreference;
 }>;
+
+/** Key/value store the floating chrome persists panel and hint state through. */
+export type ChromePreferenceStorage = Readonly<{
+  get: (key: string) => unknown;
+  set: (key: string, value: unknown) => void;
+}>;
+
+/** Per-project floating-chrome state, kept as one browser entry per project. */
+export type ChromePreference = Readonly<{
+  storage: (projectId: string) => ChromePreferenceStorage;
+}>;
+
+export function chromePreferenceKey(projectId: string): string {
+  return `op-chrome:v1:${projectId}`;
+}
+
+/** Throws when the stored value is not a JSON object, so the chrome reports it and starts closed. */
+export function parseChromePreference(value: string | null): Readonly<Record<string, unknown>> {
+  if (value === null) return {};
+  const parsed: unknown = JSON.parse(value);
+  if (parsed === null || typeof parsed !== 'object' || Array.isArray(parsed))
+    throw new Error(`Invalid chrome preference: ${value.slice(0, 80)}`);
+  return parsed as Readonly<Record<string, unknown>>;
+}
+
+function writableChromeRecord(value: string | null): Readonly<Record<string, unknown>> {
+  try {
+    return parseChromePreference(value);
+  } catch {
+    // The chrome's read already reported this corrupt record; the write replaces it.
+    return {};
+  }
+}
 
 /** Browser-local list of item IDs last opened from the palette, per project. */
 export type RecentItemsPreference = Readonly<{
@@ -45,17 +74,6 @@ export function rememberRecentItem(ids: readonly string[], id: string): readonly
 export function createBrowserShellAdapters(): ShellAdapters {
   const theme =
     typeof document === 'undefined' ? null : document.documentElement.getAttribute('data-theme');
-  let initialCompact: boolean | undefined;
-  let initialRailStorageError = false;
-  try {
-    const stored =
-      typeof localStorage === 'undefined' ? null : localStorage.getItem('op-rail-compact:v1');
-    if (stored === 'true') initialCompact = true;
-    else if (stored === 'false') initialCompact = false;
-    else if (stored !== null) initialRailStorageError = true;
-  } catch {
-    initialRailStorageError = true;
-  }
   return {
     loadSingleLetters: () => {
       if (typeof localStorage === 'undefined') return true;
@@ -78,10 +96,18 @@ export function createBrowserShellAdapters(): ShellAdapters {
         document.documentElement.hasAttribute('data-theme-storage-error'),
       save: (choice) => localStorage.setItem('op-theme', choice),
     },
-    railPreference: {
-      initialCompact,
-      initialStorageError: initialRailStorageError,
-      save: (compact) => localStorage.setItem('op-rail-compact:v1', JSON.stringify(compact)),
+    chromePreference: {
+      storage: (projectId) => {
+        const key = chromePreferenceKey(projectId);
+        return {
+          get: (name) => parseChromePreference(localStorage.getItem(key))[name],
+          set: (name, value) =>
+            localStorage.setItem(
+              key,
+              JSON.stringify({ ...writableChromeRecord(localStorage.getItem(key)), [name]: value }),
+            ),
+        };
+      },
     },
     recentItems: {
       load: (projectId) => parseRecentItems(localStorage.getItem(recentItemsKey(projectId))),

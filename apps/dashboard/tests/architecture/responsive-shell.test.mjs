@@ -18,8 +18,9 @@ const navigation = await readFile(
 test('small viewports keep the real application shell available', () => {
   assert.doesNotMatch(shell, /TooNarrow|SHELL_MIN_WIDTH/u);
   assert.doesNotMatch(planes, /TooNarrow|Use a wider window|desktop-only/u);
-  assert.match(shell, /\bfloating\s+modal=\{narrow\}/u);
-  assert.match(shell, /<NavRail/u);
+  assert.match(shell, /<Inspector\b[^>]*\bmodal\b/u);
+  assert.match(shell, /<MobileNavigation\b/u);
+  assert.match(shell, /<FloatingChrome\b/u);
   assert.match(shell, /<RouteWorkspace/u);
 });
 
@@ -27,7 +28,7 @@ test('mobile navigation preserves product switching and closes its secondary she
   assert.match(navigation, /kind: 'planning\.activity'/u);
   assert.match(navigation, /label: 'Record'/u);
   assert.match(navigation, /href="#\/operate\/today"/u);
-  assert.match(navigation, /operateAvailable=\{operateAvailable\}/u);
+  assert.match(shell, /operateAvailable=\{!operateOffline\}/u);
   assert.match(navigation, /onNavigate=\{\(\) => setMoreOpen\(false\)\}/u);
   assert.match(navigation, /useEffect\(\(\) => setMoreOpen\(false\), \[route\.kind\]\)/u);
 });
@@ -36,18 +37,29 @@ const styles = await readFile(
   new URL('../../src/features/shell/console-shell.css', import.meta.url),
   'utf8',
 );
+const chrome = await readFile(
+  new URL('../../src/features/shell/floating-chrome.tsx', import.meta.url),
+  'utf8',
+);
+const chromeStyles = await readFile(
+  new URL('../../src/features/shell/floating-chrome.css', import.meta.url),
+  'utf8',
+);
 
-test('the responsive shell keeps the approved desktop and touch geometry', () => {
-  assert.match(styles, /--pc-sidebar-width: 236px/u);
-  assert.match(styles, /--pc-rail-width: 64px/u);
+test('the responsive shell keeps the approved floating and touch geometry', () => {
   assert.match(styles, /--pc-topbar-height: 57px/u);
   assert.match(styles, /--pc-mobile-nav-height: 65px/u);
-  assert.match(styles, /@media \(max-width: 899px\)/u);
-  assert.match(styles, /@media \(max-width: 599px\)\s*\{\s*\.pc-rail\s*\{\s*display: none/u);
+  assert.match(styles, /@media \(max-width: 599px\)/u);
+  assert.doesNotMatch(styles, /\.pc-rail|\.pc-statusbar|\.pc-shell-inspector\s*\{/u);
   assert.match(styles, /\.pc-inspector-sheet\s*\{[^}]*height: 100dvh/u);
   assert.match(styles, /\.pc-mobile-more__sheet\s*\{[^}]*overflow-y: auto/u);
   assert.match(styles, /\.pc-mobile-nav__item:focus-visible/u);
-  assert.match(styles, /@media \(min-width: 900px\)/u);
+  assert.match(shell, /PHONE_MAX_WIDTH/u);
+  assert.match(chrome, /export const PHONE_MAX_WIDTH = 599;/u);
+  assert.match(chrome, /const ONE_PANEL_WIDTH = 1100;/u);
+  for (const token of ['background', 'foreground', 'border', 'accent', 'focus', 'shadow'])
+    assert.match(chromeStyles, new RegExp(`--canvas-chrome-${token}: var\\(--op-`, 'u'));
+  assert.match(chromeStyles, /--canvas-chrome-shadow: var\(--op-shadow-float\)/u);
 });
 
 test('theme persistence is supplied by an adapter outside the shell', () => {

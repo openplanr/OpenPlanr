@@ -522,7 +522,7 @@ describe('dashboard keyboard coordinator', () => {
     context.selectedId = vi.fn(() => 'b');
     document.body.insertAdjacentHTML(
       'beforeend',
-      '<aside class="pc-shell-inspector"><button>Close inspector</button></aside>',
+      '<aside class="canvas-chrome-sidebar"><button>Close sidebar</button></aside>',
     );
     const button = document.querySelector('aside button') as HTMLButtonElement;
     const activate = vi.fn();

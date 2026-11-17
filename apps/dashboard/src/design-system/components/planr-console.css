@@ -3286,10 +3286,11 @@ button.pc-work-item:disabled {
     display: none;
   }
 }
-/* The tablet rail sits beside the bar, and only the status bar sits below it. */
+/* Tablets have no bottom navigation; the bar keeps clear of the round help button. */
 @media (min-width: 600px) and (max-width: 899px) {
   .pc-selection-bar {
-    left: calc(var(--pc-rail-width) + 8px);
-    bottom: calc(var(--pc-statusbar-height) + 24px);
+    right: 64px;
+    bottom: 12px;
+    left: 12px;
   }
 }

@@ -1,3 +1,8 @@
+import { defaultChromeKeymap, formatShortcut } from '@openplanr/canvas/react';
+import { LIST_TOOL_SHORTCUTS, type RouteToolShortcut, runRouteTool } from './route-tools.js';
+
+export { LIST_TOOL_SHORTCUTS } from './route-tools.js';
+
 export type KeyboardContext = Readonly<{
   root: HTMLElement;
   selectionScope?: string;
@@ -11,6 +16,28 @@ export type KeyboardContext = Readonly<{
   copy: (text: string) => Promise<void>;
   announce: (message: string) => void;
 }>;
+
+/** The palette chord; Ctrl replaces Meta outside Apple platforms. */
+export const PALETTE_SHORTCUT: RouteToolShortcut = Object.freeze({
+  code: 'KeyK',
+  key: 'k',
+  metaKey: true,
+});
+export const HELP_SHORTCUT: RouteToolShortcut = Object.freeze({
+  code: 'Slash',
+  key: '?',
+  shiftKey: true,
+});
+
+const LIST_TOOL_IDS: Readonly<Record<string, string>> = Object.freeze({
+  [LIST_TOOL_SHORTCUTS.groupSpec.key]: 'list.group.spec',
+  [LIST_TOOL_SHORTCUTS.groupStatus.key]: 'list.group.status',
+  [LIST_TOOL_SHORTCUTS.groupType.key]: 'list.group.type',
+  [LIST_TOOL_SHORTCUTS.density.key]: 'list.density',
+});
+
+const chromeKeys = (action: keyof typeof defaultChromeKeymap) =>
+  formatShortcut(defaultChromeKeymap[action]);
 
 export const SHORTCUT_MAP = [
   ['Cmd/Ctrl-K', 'Toggle search and focus its query'],
@@ -26,9 +53,19 @@ export const SHORTCUT_MAP = [
     'Home, List, Graph, Board, Sprints, Activity, Operate within one second',
   ],
   ['[ / ]', 'Collapse or expand the active List group'],
+  ['1 / 2 / 3', 'Group the List by spec, status or type'],
+  ['F on List', 'Focus the List filter'],
+  ['D', 'Switch List density'],
   ['F', 'Focus the selected Graph node'],
   ['Left/Right, Up/Down', 'Board columns/cards; Graph connected neighbours'],
   ['?', 'Open this shortcut help'],
+  [
+    `${chromeKeys('nextRegion')} / ${chromeKeys('previousRegion')}`,
+    'Move to the next or previous region',
+  ],
+  [chromeKeys('menu'), 'Open the menu or navigation panel'],
+  [chromeKeys('sidebar'), 'Show or hide the sidebar'],
+  [chromeKeys('hideChrome'), 'Focus mode: hide or show the floating chrome'],
   ['Esc', 'Close the top layer, then inspector, then clear Graph focus or selection'],
   ['Tab/Shift-Tab, Home/End', 'Normal traversal; roving menus and tabs retain their own keys'],
   ['Space, Shift-Up/Down', 'Toggle a List row or extend the contiguous selection'],
@@ -125,7 +162,7 @@ type KeyStroke = Readonly<{
   command: boolean;
 }>;
 
-const INSPECTOR = '.pc-shell-inspector, .pc-inspector-sheet:not([aria-modal="true"])';
+const INSPECTOR = '.canvas-chrome-sidebar, .pc-inspector-sheet:not([aria-modal="true"])';
 const ARROWS = ['ArrowDown', 'ArrowUp', 'ArrowLeft', 'ArrowRight'];
 
 function consume(event: KeyboardEvent): void {
@@ -164,7 +201,12 @@ function topKeyboardLayer(document: Document): HTMLElement | undefined {
 }
 
 function paletteChord(stroke: KeyStroke): boolean {
-  return stroke.command && !stroke.event.altKey && !stroke.event.shiftKey && stroke.key === 'k';
+  return (
+    stroke.command &&
+    !stroke.event.altKey &&
+    !stroke.event.shiftKey &&
+    stroke.key === PALETTE_SHORTCUT.key
+  );
 }
 
 function targetOwnsKeys(stroke: KeyStroke, layer: HTMLElement | undefined): boolean {
@@ -207,14 +249,19 @@ function navigateSequence(stroke: KeyStroke, state: CoordinatorState): boolean {
   return true;
 }
 
-function focusFilter(context: KeyboardContext): void {
+/** Focuses the current view's filter field, or opens search when the view has none. */
+export function focusViewFilter(root: HTMLElement, openSearch: () => void): void {
   const filter = Array.from(
-    context.root.querySelectorAll<HTMLInputElement>(
+    root.querySelectorAll<HTMLInputElement>(
       'input[type="search"], input[aria-label*="Filter"], input[aria-label*="filter"], input[aria-label="Search query"]',
     ),
   ).find(visible);
   if (filter) filter.focus();
-  else context.togglePalette();
+  else openSearch();
+}
+
+function focusFilter(context: KeyboardContext): void {
+  focusViewFilter(context.root, context.togglePalette);
 }
 
 function focusedCanonicalId(target: Element | null): string | null {
@@ -292,7 +339,7 @@ function globalShortcut(stroke: KeyStroke, state: CoordinatorState): boolean {
       consume(stroke.event);
       state.goAt = stroke.event.timeStamp;
       return true;
-    case '?':
+    case HELP_SHORTCUT.key:
       consume(stroke.event);
       stroke.context.openHelp();
       return true;
@@ -339,7 +386,10 @@ function toggleGroup(stroke: KeyStroke, current: HTMLElement | undefined): void 
     current?.closest<HTMLElement>('[data-keyboard-group]') ??
     stroke.context.root.querySelector<HTMLElement>('[data-keyboard-group]');
   const toggle = group?.querySelector<HTMLButtonElement>('[aria-expanded]');
-  if (toggle && toggle.getAttribute('aria-expanded') !== String(stroke.key === ']')) {
+  if (
+    toggle &&
+    toggle.getAttribute('aria-expanded') !== String(stroke.key === LIST_TOOL_SHORTCUTS.expand.key)
+  ) {
     toggle.click();
     toggle.focus({ preventScroll: true });
   }
@@ -375,9 +425,24 @@ function viewShortcut(
     focusGraph(stroke, current);
     return true;
   }
-  if ((stroke.key === '[' || stroke.key === ']') && routeIs(stroke.context, 'list')) {
-    toggleGroup(stroke, current);
-    return true;
+  if (routeIs(stroke.context, 'list')) {
+    if (
+      stroke.key === LIST_TOOL_SHORTCUTS.collapse.key ||
+      stroke.key === LIST_TOOL_SHORTCUTS.expand.key
+    ) {
+      toggleGroup(stroke, current);
+      return true;
+    }
+    if (stroke.key === LIST_TOOL_SHORTCUTS.filter.key) {
+      consume(stroke.event);
+      focusFilter(stroke.context);
+      return true;
+    }
+    const tool = LIST_TOOL_IDS[stroke.key];
+    if (tool && runRouteTool(tool)) {
+      consume(stroke.event);
+      return true;
+    }
   }
   return rowActivation(stroke, state, current);
 }

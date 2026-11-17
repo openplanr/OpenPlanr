@@ -13,6 +13,7 @@ export { PlanningDetailInspector, planningDetailTrail } from '../planning/Detail
 export { selectPlanningAttention } from '../planning/planning-model.js';
 export { CommandPalette } from '../search/CommandPalette.js';
 export { useSearchCoordinator } from '../search/search-coordinator.js';
+export { clearInspector, useInspectorStore } from './inspector-selection.js';
 
 const MEMORY_ADAPTERS: ShellAdapters = {
   loadSingleLetters: () => true,
@@ -47,6 +48,8 @@ type InteractionProps = {
   togglePalette: () => void;
   inspectorOpen: boolean;
   setInspectorOpen: (open: boolean) => void;
+  /** Closes open, unpinned floating panels in place of the phone inspector; true when one closed. */
+  closeChromePanels?: () => boolean;
 };
 
 export function useShellInteractions({
@@ -58,6 +61,7 @@ export function useShellInteractions({
   togglePalette,
   inspectorOpen,
   setInspectorOpen,
+  closeChromePanels,
 }: InteractionProps) {
   const [singleLetters, setSingleLetters] = useState(true);
   const [preferenceError, setPreferenceError] = useState<string | null>(null);
@@ -192,11 +196,16 @@ export function useShellInteractions({
       });
     };
   }, [contextKey]);
+  const openHelp = () => {
+    launcher.current = document.activeElement as HTMLElement;
+    setHelpOpen(true);
+  };
   const restoreInspectorFocus = () => {
     const item = originItem.current;
     if (item?.isConnected) item.focus({ preventScroll: true });
   };
   const closeInspector = () => {
+    if (closeChromePanels) return closeChromePanels();
     if (!inspectorOpen) return false;
     setInspectorOpen(false);
     restoreInspectorFocus();
@@ -209,10 +218,7 @@ export function useShellInteractions({
     singleLetters,
     paletteOpen,
     togglePalette,
-    openHelp: () => {
-      launcher.current = document.activeElement as HTMLElement;
-      setHelpOpen(true);
-    },
+    openHelp,
     navigate,
     closeInspector,
     selectedId: () => selectedId,
@@ -239,17 +245,8 @@ export function useShellInteractions({
     return () => document.removeEventListener('focusin', remember);
   }, []);
 
-  const help = (
+  const helpDialog = (
     <>
-      <IconButton
-        icon="info"
-        label="Keyboard shortcuts"
-        size="sm"
-        onClick={() => {
-          launcher.current = document.activeElement as HTMLElement;
-          setHelpOpen(true);
-        }}
-      />
       <span className="pc-visually-hidden" role="status" aria-live="polite">
         {announcement}
       </span>
@@ -291,8 +288,16 @@ export function useShellInteractions({
       </Inspector>
     </>
   );
+  const help = (
+    <>
+      <IconButton icon="info" label="Keyboard shortcuts" size="sm" onClick={openHelp} />
+      {helpDialog}
+    </>
+  );
   return {
     help,
+    helpDialog,
+    openHelp,
     navigate,
     scrollRef,
     rootRef,

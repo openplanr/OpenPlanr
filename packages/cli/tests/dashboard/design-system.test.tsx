@@ -43,6 +43,10 @@ const dashboardRoot = resolve(testRoot, '../../../../apps/dashboard/src');
 const tokens = readFileSync(resolve(dashboardRoot, 'design-system/tokens.css'), 'utf8');
 const typography = readFileSync(resolve(dashboardRoot, 'design-system/typography.css'), 'utf8');
 const shell = readFileSync(resolve(dashboardRoot, 'features/shell/unified-shell.css'), 'utf8');
+const floatingChrome = readFileSync(
+  resolve(dashboardRoot, 'features/shell/floating-chrome.css'),
+  'utf8',
+);
 const consoleShell = readFileSync(
   resolve(dashboardRoot, 'features/shell/console-shell.css'),
   'utf8',
@@ -172,11 +176,11 @@ describe('OpenPlanr design system', () => {
       expect(consoleShell).toContain(`var(--pc-${token})`);
     }
     expect(consoleShell).not.toMatch(/font-size:\s*\d/u);
-    expect(consoleShell).toMatch(/\.pc-rail__palette\s*\{[^}]*border-radius: 10px/u);
-    expect(consoleShell).toMatch(/\.pc-rail__item\s*\{[^}]*border-radius: 8px/u);
+    expect(floatingChrome).toMatch(/\.pc-nav-item\s*\{[^}]*border-radius: 8px/u);
     expect(consoleShell).toMatch(/\.pc-conn\s*\{[^}]*border-radius: 999px/u);
-    expect(consoleShell).toContain('.pc-watcher__dot');
-    expect(consoleShell).toContain('.pc-watcher__label');
+    expect(consoleShell).toContain('.pc-conn__dot');
+    for (const token of ['background', 'foreground', 'border', 'accent', 'focus', 'shadow'])
+      expect(floatingChrome).toMatch(new RegExp(`--canvas-chrome-${token}: var\\(--op-`, 'u'));
   });
 
   it('renders every honest boot and first-use state with text beyond color', () => {

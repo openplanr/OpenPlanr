@@ -121,7 +121,6 @@ function fixture(dataset: FixtureDataset) {
 const adapters = {
   loadSingleLetters: () => true,
   saveSingleLetters: () => {},
-  railPreference: { initialCompact: false, save: () => {} },
 };
 
 afterEach(() => {
@@ -175,15 +174,15 @@ describe('Planning detail render work', () => {
         </Profiler>
       );
       const rendered = render(shell(0));
-      expect(screen.queryByRole('dialog', { name: 'Inspector', exact: true })).toBeNull();
+      expect(screen.queryByRole('region', { name: 'Inspector', exact: true })).toBeNull();
       fireEvent.change(screen.getByRole('textbox', { name: 'Filter by id or title' }), {
         target: { value: current.selectedId },
       });
       const row = rendered.container.querySelector<HTMLElement>('.pc-list tbody tr[tabindex]');
       if (!row) throw new Error('Missing selected performance row');
       await act(async () => row.click());
-      await findDetailReady(screen.getByRole('dialog', { name: 'Inspector', exact: true }));
-      const panel = screen.getByRole('dialog', { name: 'Inspector', exact: true });
+      await findDetailReady(screen.getByRole('region', { name: 'Inspector', exact: true }));
+      const panel = screen.getByRole('region', { name: 'Inspector', exact: true });
       const initial = {
         projectionSelects: projectionSpy.mock.calls.length,
         markdown: markdownSpy.mock.calls.length,
@@ -209,15 +208,10 @@ describe('Planning detail render work', () => {
       markdownSpy.mockClear();
       phase = 'reopen';
       for (let iteration = 0; iteration < 5; iteration++) {
-        fireEvent.click(
-          within(screen.getByRole('dialog', { name: 'Inspector', exact: true })).getByRole(
-            'button',
-            { name: 'Close inspector', exact: true },
-          ),
-        );
-        expect(screen.queryByRole('dialog', { name: 'Inspector', exact: true })).toBeNull();
+        fireEvent.click(screen.getByRole('button', { name: 'Close sidebar', exact: true }));
+        expect(screen.queryByRole('region', { name: 'Inspector', exact: true })).toBeNull();
         await act(async () => row.click());
-        await findDetailReady(screen.getByRole('dialog', { name: 'Inspector', exact: true }));
+        await findDetailReady(screen.getByRole('region', { name: 'Inspector', exact: true }));
       }
       const reopenedProjections = projectionSpy.mock.results
         .filter((result) => result.type === 'return')

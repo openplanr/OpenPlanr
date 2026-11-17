@@ -160,8 +160,9 @@ async function palettePaintLatencies(page: Page, id: string, title: string) {
 }
 
 async function warmRoute(page: Page, route: string, kind: string) {
-  const rail = page.getByRole('navigation', { name: 'Dashboard navigation', exact: true });
-  await expect(rail).toHaveCSS('width', '236px');
+  const menu = page.locator('[data-chrome-slot="menu"]');
+  const before = await menu.boundingBox();
+  if (!before) throw new Error('Missing floating menu pill.');
   const durationMs = await page.evaluate(
     async ({ route, kind }) => {
       window.__dashboardLayoutShifts.markPhase(`route-load ${route}`);
@@ -176,7 +177,10 @@ async function warmRoute(page: Page, route: string, kind: string) {
     },
     { route, kind },
   );
-  await expect(rail).toHaveCSS('width', '236px');
+  expect({ ...(await menu.boundingBox()), width: undefined }).toEqual({
+    ...before,
+    width: undefined,
+  });
   return durationMs;
 }
 
@@ -310,7 +314,7 @@ async function selectionSample(page: Page, id: string): Promise<SelectionSample>
     const focused = document.activeElement;
     const canonicalId =
       document.querySelector<HTMLElement>(
-        '.pc-shell-inspector [data-artifact-id], .pc-inspector-sheet [data-artifact-id]',
+        '.canvas-chrome-sidebar [data-artifact-id], .pc-inspector-sheet [data-artifact-id]',
       )?.dataset.artifactId ?? null;
     const matching = canonicalId === id && selected?.getAttribute('data-keyboard-item') === id;
     let scrollTop = window.scrollY;
@@ -429,12 +433,10 @@ export function registerDashboardPerformanceTraceTests() {
       const row = rows.first();
       for (let index = 0; index < 20; index += 1) {
         await markPhase(page, `inspector ${index + 1}`);
-        const closeInspector = page
-          .getByRole('dialog', { name: 'Inspector', exact: true })
-          .getByRole('button', { name: 'Close inspector', exact: true });
-        if (await closeInspector.count()) {
-          await closeInspector.click();
-          await expect(page.locator('.pc-inspector-sheet')).toHaveCount(0);
+        const inspector = page.getByRole('region', { name: 'Inspector', exact: true });
+        if (await inspector.count()) {
+          await page.getByRole('button', { name: 'Close sidebar', exact: true }).click();
+          await expect(inspector).toHaveCount(0);
         }
         const latency = await row.evaluate(async (element) => {
           const started = performance.now();
@@ -443,7 +445,7 @@ export function registerDashboardPerformanceTraceTests() {
           const selectedId = element.dataset.keyboardItem;
           if (!selectedId) throw new Error('Artifact row is missing its canonical identity.');
           while (true) {
-            const inspector = document.querySelector('.pc-shell-inspector, .pc-inspector-sheet');
+            const inspector = document.querySelector('.canvas-chrome-sidebar, .pc-inspector-sheet');
             const artifact = inspector?.querySelector<HTMLElement>('[data-artifact-id]');
             if (artifact?.dataset.artifactId === selectedId) {
               if (artifact.dataset.detailState === 'ready') break;
@@ -470,7 +472,7 @@ export function registerDashboardPerformanceTraceTests() {
       await selectedRow.focus();
       await selectedRow.press('Enter');
       const selectedDetail = page
-        .getByRole('dialog', { name: 'Inspector', exact: true })
+        .getByRole('region', { name: 'Inspector', exact: true })
         .locator('[data-artifact-id]');
       await expect(selectedDetail).toHaveAttribute('data-artifact-id', fixture.manifest.selectedId);
       await expect(selectedDetail).toHaveAttribute('data-detail-state', 'ready');
