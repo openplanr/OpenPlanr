@@ -353,6 +353,25 @@ function toolItem(tool: RouteTool): ReactNode {
   );
 }
 
+/** The active lens name, sized to the longest name so switching lenses never resizes the pill. */
+function LensLabels({
+  tools,
+  active,
+}: Readonly<{ tools: readonly RouteTool[]; active: RouteTool }>) {
+  return (
+    <span style={{ display: 'inline-grid' }}>
+      {tools.map((tool) => (
+        <span
+          key={tool.id}
+          style={{ gridArea: '1 / 1', visibility: tool === active ? 'visible' : 'hidden' }}
+        >
+          {tool.label}
+        </span>
+      ))}
+    </span>
+  );
+}
+
 /** Tool pill forms, widest first: every tool; groups and plain toggles folded; all folded. */
 const TOOLBAR_FORMS = 3;
 
@@ -473,7 +492,7 @@ function RouteToolbar({
       {form > 0 && active && next ? (
         <ToolbarItem
           label={`${active.groupLabel ?? 'Group'}: ${active.label}. Switch to ${next.label}`}
-          icon={active.label}
+          icon={<LensLabels tools={grouped} active={active} />}
           active
           onClick={next.run}
         />

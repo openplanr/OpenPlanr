@@ -273,6 +273,21 @@ export function registerGraphCanvasBrowserTests(openFixture: OpenFixture) {
       expect(wrapped).toEqual([]);
     });
 
+    test('keeps the folded tool pill still while cycling lenses', async ({ page }) => {
+      await page.setViewportSize({ width: 1024, height: 900 });
+      await openFixture(page, '#/graph', { dataset: 'artboard' });
+      const toolbar = page.locator('[data-chrome-slot="toolbar"]');
+      const lens = toolbar.getByRole('button', { name: /^Lens: .*\. Switch to / });
+      await expect(lens).toBeVisible();
+      const before = await toolbar.boundingBox();
+      for (let step = 0; step < 3; step += 1) {
+        const name = await lens.getAttribute('aria-label');
+        await lens.click();
+        await expect(lens).not.toHaveAttribute('aria-label', name ?? '');
+        expect(await toolbar.boundingBox()).toEqual(before);
+      }
+    });
+
     test('opens the inspector on a node under the navigation panel without a NaN camera', async ({
       page,
     }) => {
