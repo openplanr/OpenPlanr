@@ -428,12 +428,12 @@
     min-width: 44px;
   }
 
+  /* Bottom sheets: the inspector rises to 72 px from the top, More stops at the navigation. */
   .pc-inspector-sheet {
     z-index: 100;
-    inset: 0;
+    inset: 72px 0 0;
     width: 100vw;
-    height: 100dvh;
-    border-radius: 0;
+    border-radius: 16px 16px 0 0;
     padding-bottom: max(20px, env(safe-area-inset-bottom));
   }
 
@@ -501,7 +501,6 @@
   }
 
   .pc-mobile-more {
-    position: relative;
     min-width: 0;
   }
 
@@ -516,17 +515,22 @@
 
   .pc-mobile-more__sheet {
     position: absolute;
-    right: 8px;
-    bottom: calc(100% + 8px);
+    right: 0;
+    bottom: 100%;
+    left: 0;
     display: grid;
-    width: min(320px, calc(100vw - 16px));
-    max-height: calc(100dvh - 82px - env(safe-area-inset-bottom, 0px));
+    max-height: calc(
+      100dvh -
+      72px -
+      var(--pc-mobile-nav-height) -
+      env(safe-area-inset-bottom, 0px)
+    );
     overflow-y: auto;
     padding: 6px;
     color: var(--pc-text-secondary);
     background: var(--pc-surface-card);
     border: 1px solid var(--pc-border-default);
-    border-radius: var(--pc-radius-md);
+    border-radius: 16px 16px 0 0;
     box-shadow: var(--pc-shadow-lg);
   }
 

@@ -15,7 +15,6 @@ import {
 import {
   type MouseEvent,
   type ReactNode,
-  type RefObject,
   useCallback,
   useContext,
   useEffect,
@@ -40,7 +39,7 @@ import { registerCanvasKeys } from '../shell/keyboard-coordinator.js';
 import { type RouteTool, usePublishCanvasRoute, useRouteSlot } from '../shell/route-tools.js';
 import { RouteSlotLayout } from '../shell/shell-navigation.js';
 import { GraphMinimap, useGraphColors } from './graph-minimap.js';
-import { GraphPhoneTools } from './graph-phone-tools.js';
+import { GraphPhoneTools, GraphZoom } from './graph-phone-tools.js';
 
 export type { CanvasController } from '@openplanr/canvas';
 export { type RouteTool, usePublishRouteTools } from '../shell/route-tools.js';
@@ -203,23 +202,15 @@ function GraphOutline({
 /** Renders into the chrome's left panel, the phone tool bar's More, or in place without a shell. */
 export function GraphFocusPanel({
   tools,
-  canvas,
   children,
 }: Readonly<{
   tools: readonly RouteTool[];
-  canvas: RefObject<CanvasController | null>;
   children: ReactNode;
 }>) {
   const slot = useRouteSlot('panel');
   const phone = useContext(RouteSlotLayout) === 'phone';
   if (slot) return createPortal(children, slot);
-  return phone ? (
-    <GraphPhoneTools tools={tools} canvas={canvas}>
-      {children}
-    </GraphPhoneTools>
-  ) : (
-    children
-  );
+  return phone ? <GraphPhoneTools tools={tools}>{children}</GraphPhoneTools> : children;
 }
 
 function nodeAttributes(id: string, item: GraphItem | undefined, level: CanvasLevel) {
@@ -391,6 +382,7 @@ export function GraphCanvas({
   // The floating chrome owns the panel slot; without it (phone, bare tests) there is no minimap.
   const chrome = useRouteSlot('panel') !== null;
   const phoneMinimap = useRouteSlot('minimap');
+  const phoneZoom = useRouteSlot('zoom');
   return (
     // biome-ignore lint/a11y/noStaticElementInteractions: node wrappers are the engine's buttons; this delegates their clicks.
     // biome-ignore lint/a11y/useKeyWithClickEvents: Enter and Space reach nodes through the keyboard coordinator and engine.
@@ -457,6 +449,9 @@ export function GraphCanvas({
             />,
             phoneMinimap,
           )
+        : null}
+      {controller && phoneZoom
+        ? createPortal(<GraphZoom controller={controller} />, phoneZoom)
         : null}
     </div>
   );

@@ -51,7 +51,10 @@ test('the responsive shell keeps the approved floating and touch geometry', () =
   assert.match(styles, /--pc-mobile-nav-height: 65px/u);
   assert.match(styles, /@media \(max-width: 599px\)/u);
   assert.doesNotMatch(styles, /\.pc-rail|\.pc-statusbar|\.pc-shell-inspector\s*\{/u);
-  assert.match(styles, /\.pc-inspector-sheet\s*\{[^}]*height: 100dvh/u);
+  assert.match(
+    styles,
+    /\.pc-inspector-sheet\s*\{[^}]*inset: 72px 0 0;[^}]*border-radius: 16px 16px 0 0/u,
+  );
   assert.match(styles, /\.pc-mobile-more__sheet\s*\{[^}]*overflow-y: auto/u);
   assert.match(styles, /\.pc-mobile-nav__item:focus-visible/u);
   assert.match(shell, /PHONE_MAX_WIDTH/u);

@@ -92,8 +92,8 @@ export function runRouteTool(id: string): boolean {
   return true;
 }
 
-/** Chrome places a route may render into: the left panel, the Outline tab and a phone minimap. */
-export type RouteSlotName = 'panel' | 'outline' | 'minimap';
+/** Chrome places a route may render into: the left panel, the Outline tab, phone minimap and zoom. */
+export type RouteSlotName = 'panel' | 'outline' | 'minimap' | 'zoom';
 
 const slots = new Map<RouteSlotName, HTMLElement>();
 let canvasMounted = false;

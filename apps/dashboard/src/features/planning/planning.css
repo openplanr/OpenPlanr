@@ -387,16 +387,19 @@
   outline: 2px solid var(--pc-focus-ring);
   outline-offset: 2px;
 }
+/* One 44 px row under the top bar; the zoom pill reuses it above the bottom navigation. */
 .pc-graph-phone {
   position: fixed;
   z-index: 1;
-  top: calc(var(--pc-topbar-height) + 8px);
+  top: calc(var(--pc-topbar-height) + 11px);
   right: 16px;
   left: 16px;
   display: flex;
-  flex-wrap: wrap;
+  align-items: center;
   gap: 4px;
-  padding: 4px;
+  box-sizing: border-box;
+  height: 44px;
+  padding: 1px;
   background: var(--op-panel);
   border: 1px solid var(--op-line);
   border-radius: 12px;
@@ -405,8 +408,8 @@
 .pc-graph-phone > button,
 .pc-graph-phone summary,
 .pc-graph-phone__more > button {
-  min-width: 44px;
-  min-height: 44px;
+  min-width: 40px;
+  min-height: 40px;
   padding: 0 10px;
   font: inherit;
   color: var(--op-text);
@@ -420,6 +423,22 @@
 .pc-graph-phone summary {
   display: flex;
   align-items: center;
+  justify-content: center;
+}
+.pc-graph-phone details {
+  margin-left: auto;
+}
+.pc-graph-phone.pc-graph-phone__zoom {
+  top: auto;
+  right: auto;
+  bottom: calc(var(--pc-mobile-nav-height) + 11px + env(safe-area-inset-bottom));
+  left: 12px;
+  justify-content: space-between;
+  width: 144px;
+  height: 40px;
+}
+.pc-graph-phone__zoom > button {
+  min-height: 36px;
 }
 .pc-graph-phone .pc-graph-minimap {
   position: relative;

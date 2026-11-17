@@ -4371,6 +4371,38 @@ test.describe('dashboard real-browser quality', () => {
     }
   });
 
+  test('opens the phone inspector and More as bottom sheets', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto(fixtureUrl('#/list', { dataset: 'artboard' }));
+    const row = page.locator('[data-route-kind="planning.list"] [data-keyboard-item]').first();
+    await row.focus();
+    await page.keyboard.press('Enter');
+    const sheet = inspectorPanel(page);
+    await expect(sheet).toBeVisible();
+    const geometry = (element: Element) => {
+      const box = element.getBoundingClientRect();
+      return {
+        x: box.x,
+        y: box.y,
+        width: box.width,
+        bottom: window.innerHeight - box.bottom,
+        radius: getComputedStyle(element).borderRadius,
+      };
+    };
+    await expect
+      .poll(() => sheet.evaluate(geometry))
+      .toEqual({ x: 0, y: 72, width: 390, bottom: 0, radius: '16px 16px 0px 0px' });
+    await page.keyboard.press('Escape');
+    await expect(sheet).toBeHidden();
+    await page.locator('.pc-mobile-nav .pc-mobile-more > summary').click();
+    const more = page.locator('.pc-mobile-more__sheet');
+    await expect(more).toBeVisible();
+    const { y, ...box } = await more.evaluate(geometry);
+    expect(box).toEqual({ x: 0, width: 390, bottom: 64, radius: '16px 16px 0px 0px' });
+    // The sheet is as tall as its destinations, up to the inspector's 72 px top.
+    expect(y).toBeGreaterThanOrEqual(72);
+  });
+
   test('keeps the place tabs on the local setup and could-not-read states', async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto(fixtureUrl('#/operate/today', { localOperate: 'empty' }));

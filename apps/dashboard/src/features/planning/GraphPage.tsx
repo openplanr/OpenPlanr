@@ -212,7 +212,7 @@ function FocusedWorkspace({
           description="Explore lineage and dependencies. Select a node to inspect its record."
         />
       </div>
-      <GraphFocusPanel tools={tools} canvas={canvas}>
+      <GraphFocusPanel tools={tools}>
         <section className="op-focused-graph__panel" aria-label="Graph focus">
           <h2>Focus</h2>
           <Select

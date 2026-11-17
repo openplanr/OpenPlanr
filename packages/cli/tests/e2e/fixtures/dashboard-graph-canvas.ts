@@ -155,7 +155,16 @@ export function registerGraphCanvasBrowserTests(openFixture: OpenFixture) {
         .evaluateAll((elements) => elements.map((element) => element.getBoundingClientRect().top));
       expect(nodes.length).toBeGreaterThan(0);
       expect(Math.min(...nodes)).toBeGreaterThanOrEqual(toolbar.y + toolbar.height);
-      await bar.getByText('More', { exact: true }).click();
+      // One row under the 57 px top bar, as the phone artboard draws it.
+      expect(toolbar).toEqual({ x: 16, y: 68, width: 358, height: 44 });
+      const zoom = required(
+        await page.getByRole('group', { name: 'Zoom', exact: true }).boundingBox(),
+        'phone zoom pill',
+      );
+      const navigation = required(await page.locator('.pc-mobile-nav').boundingBox(), 'navigation');
+      expect(zoom).toEqual({ x: 12, y: navigation.y - 11 - 40, width: 144, height: 40 });
+      expect(Math.max(...nodes)).toBeLessThan(zoom.y);
+      await bar.getByLabel('More', { exact: true }).click();
       const minimap = bar.getByRole('button', { name: 'Graph minimap, center viewport' });
       await expect(minimap).toBeVisible();
       await expect(bar.getByRole('listbox', { name: 'Graph nodes' })).toBeVisible();
