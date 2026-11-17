@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { useDashboard } from '../../app/providers.js';
 import { CompatibilityPage } from '../diagnostics/CompatibilityPage.js';
 import { LocalOperateReviews } from '../operate/local-reviews/LocalOperateReviews.js';
@@ -128,7 +128,9 @@ function ShellFrame({
     setPhoneInspectorOpen(false);
   }, [phone, route]);
   const requestedInspectorTick = useRef(0);
-  useEffect(() => {
+  // Runs in the selecting event's task: a later refocus restarts the canvas's 0 ms focus reveal
+  // after the next frame's timestamp, which the engine turns into a NaN camera.
+  useLayoutEffect(() => {
     if (requestedInspectorTick.current !== inspectorStore.openTick) {
       requestedInspectorTick.current = inspectorStore.openTick;
       if (inspectorStore.selection === null) return;

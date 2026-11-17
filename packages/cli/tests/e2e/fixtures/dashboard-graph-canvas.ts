@@ -222,6 +222,35 @@ export function registerGraphCanvasBrowserTests(openFixture: OpenFixture) {
       await expect(page.getByRole('menuitem', { name: 'Dim done items: off' })).toBeVisible();
     });
 
+    test('opens the inspector on a node under the navigation panel without a NaN camera', async ({
+      page,
+    }) => {
+      const errors: string[] = [];
+      page.on('pageerror', (error) => errors.push(error.message));
+      page.on('console', (message) => {
+        if (message.type() === 'error') errors.push(message.text());
+      });
+      await page.setViewportSize({ width: 1440, height: 1000 });
+      // The failure depends on frame timing, so the sequence runs from a fresh load three times.
+      for (let attempt = 0; attempt < 3; attempt += 1) {
+        await openFixture(page, '#/graph', { dataset: 'artboard' });
+        await settleGraph(page);
+        await page.keyboard.press('Alt+BracketLeft');
+        await expect(page.locator('[data-chrome-slot="navigation"]')).toHaveAttribute(
+          'data-open',
+          'true',
+        );
+        await page.locator('.pc-graph-node').first().click();
+        await expect(page.locator('[data-chrome-slot="sidebar"]')).toHaveAttribute(
+          'data-open',
+          'true',
+        );
+        const camera = await settleGraph(page);
+        expect(Object.values(camera).every(Number.isFinite)).toBe(true);
+      }
+      expect(errors).toEqual([]);
+    });
+
     test('fits the longest dependency chain of the 5,000-node fixture', async ({ page }) => {
       test.setTimeout(120_000);
       const reset = await page.request.post('/__fixture/reset?dataset=scaling');
