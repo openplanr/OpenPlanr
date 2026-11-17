@@ -188,7 +188,7 @@ test('typography and geometry expose the brand scale and safe motion preferences
   }
 });
 
-test('saved themes apply synchronously in the head, including an explicit system choice', () => {
+test('saved themes apply synchronously in the head and the default follows the system', () => {
   const html = source('index.html');
   const script = html.match(/<script>([\s\S]*?)<\/script>/u)?.[1];
   assert(script);
@@ -206,7 +206,7 @@ test('saved themes apply synchronously in the head, including an explicit system
     });
     assert.equal(
       attributes.get('data-theme'),
-      ['light', 'system'].includes(stored) ? stored : 'dark',
+      ['light', 'dark', 'system'].includes(stored) ? stored : 'system',
     );
   }
   const attributes = new Map();
@@ -218,6 +218,6 @@ test('saved themes apply synchronously in the head, including an explicit system
       },
     },
   });
-  assert.equal(attributes.get('data-theme'), 'dark');
+  assert.equal(attributes.get('data-theme'), 'system');
   assert.equal(attributes.get('data-theme-storage-error'), 'unavailable');
 });

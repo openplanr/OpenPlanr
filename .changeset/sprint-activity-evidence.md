@@ -3,6 +3,6 @@
 "@openplanr/dashboard-app": patch
 ---
 
-Show authored sprint windows and close markers, all-item completion, and still-open-after-close carry-over with scoped navigation. Keep unresolved references, addressed items, invalid dates and missing evidence explicit.
+Show authored sprint windows, the release cut and closed-on dates, completion across all items, and items still open after their sprint closed. Missing or invalid sprint dates are announced to screen readers on the timeline.
 
-Restyle Activity with a bounded session-only feed of accepted watcher patches and an honest unavailable durable-history state. Retain selection, scroll and accepted entries during refresh and disconnect, and extend accessible control-name coverage to both views.
+Retain Activity selection, scroll and this session's changes during refresh and disconnect, and extend accessible control-name coverage to Sprints and Activity.
