@@ -165,6 +165,63 @@ export function registerGraphCanvasBrowserTests(openFixture: OpenFixture) {
       expect((await settleGraph(page)).x).not.toBe(before.x);
     });
 
+    test('keeps the tool pill clear of the other chrome from 1024 to 1440 px', async ({ page }) => {
+      await page.setViewportSize({ width: 1024, height: 900 });
+      await openFixture(page, '#/graph', { planningScenario: 'delivery' });
+      for (const width of [1024, 1100, 1200, 1440]) {
+        await page.setViewportSize({ width, height: 900 });
+        await settleGraph(page);
+        const report = await page.evaluate(() => {
+          const boxes = [
+            ...document.querySelectorAll<HTMLElement>(
+              '.canvas-chrome-root [data-chrome-slot]:not([data-open="false"])',
+            ),
+            ...document.querySelectorAll<HTMLElement>('.pc-graph-minimap'),
+          ]
+            .filter((element) => element.checkVisibility())
+            .map((element) => ({
+              name: element.dataset.chromeSlot ?? 'minimap',
+              rect: element.getBoundingClientRect(),
+            }));
+          const overlaps = boxes.flatMap((first, index) =>
+            boxes.slice(index + 1).flatMap((second) => {
+              const width =
+                Math.min(first.rect.right, second.rect.right) -
+                Math.max(first.rect.left, second.rect.left);
+              const height =
+                Math.min(first.rect.bottom, second.rect.bottom) -
+                Math.max(first.rect.top, second.rect.top);
+              return width > 0 && height > 0 ? [`${first.name}/${second.name}`] : [];
+            }),
+          );
+          const hidden = [
+            ...document.querySelectorAll<HTMLElement>('[data-chrome-slot="toolbar"] button'),
+          ]
+            .filter((button) => button.checkVisibility())
+            .filter((button) => {
+              const rect = button.getBoundingClientRect();
+              const hit = document.elementFromPoint(
+                rect.left + rect.width / 2,
+                rect.top + rect.height / 2,
+              );
+              return !hit || !button.contains(hit);
+            })
+            .map((button) => button.getAttribute('aria-label') ?? '');
+          return { overlaps, hidden };
+        });
+        expect(report, `${width} px`).toEqual({ overlaps: [], hidden: [] });
+        await expect(await tool(page, 'Fit selection F')).toBeVisible();
+      }
+      // Widening again restores every tool in the pill.
+      await expect(await tool(page, 'Whole project')).toBeVisible();
+      await page.setViewportSize({ width: 1024, height: 900 });
+      await expect(await tool(page, 'Whole project')).toBeHidden();
+      await page.getByRole('button', { name: 'More tools' }).click();
+      await page.getByRole('menuitem', { name: 'Dim done items: on' }).click();
+      await page.getByRole('button', { name: 'More tools' }).click();
+      await expect(page.getByRole('menuitem', { name: 'Dim done items: off' })).toBeVisible();
+    });
+
     test('fits the longest dependency chain of the 5,000-node fixture', async ({ page }) => {
       test.setTimeout(120_000);
       const reset = await page.request.post('/__fixture/reset?dataset=scaling');

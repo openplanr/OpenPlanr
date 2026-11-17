@@ -15,7 +15,14 @@ import {
   useChrome,
   ZoomPill,
 } from '@openplanr/canvas/react';
-import { type ReactNode, type RefObject, useMemo, useState } from 'react';
+import {
+  type ReactNode,
+  type RefObject,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useState,
+} from 'react';
 import type { ChromePreference } from '../../app/browser-preferences.js';
 import type { DashboardConnection } from '../../app/providers.js';
 import {
@@ -346,6 +353,48 @@ function toolItem(tool: RouteTool): ReactNode {
   );
 }
 
+/** Tool pill forms, widest first: every tool; groups and plain toggles folded; all folded. */
+const TOOLBAR_FORMS = 3;
+
+/**
+ * The tool pill's form: the widest that leaves a gap to the menu and action pills, measured
+ * before paint whenever the window, the neighbouring pills or the route's tools change.
+ */
+function useToolbarForm(minimum: number, toolsKey: string): number {
+  const [form, setForm] = useState(minimum);
+  const [measure, setMeasure] = useState(0);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: a new measure, tool set or minimum restarts from the widest allowed form.
+  useLayoutEffect(() => setForm(minimum), [minimum, toolsKey, measure]);
+  useLayoutEffect(() => {
+    const slot = (name: string) =>
+      document.querySelector(`.canvas-chrome-root [data-chrome-slot="${name}"]`);
+    const toolbar = slot('toolbar')?.getBoundingClientRect();
+    if (!toolbar || form >= TOOLBAR_FORMS - 1) return;
+    const gap = 12;
+    const menu = slot('menu')?.getBoundingClientRect();
+    const action = slot('action')?.getBoundingClientRect();
+    if (
+      (menu && menu.width > 0 && toolbar.left < menu.right + gap) ||
+      (action && action.width > 0 && toolbar.right > action.left - gap)
+    )
+      setForm(form + 1);
+  });
+  useEffect(() => {
+    const remeasure = () => setMeasure((count) => count + 1);
+    const observer = new ResizeObserver(remeasure);
+    for (const name of ['menu', 'action']) {
+      const element = document.querySelector(`.canvas-chrome-root [data-chrome-slot="${name}"]`);
+      if (element) observer.observe(element);
+    }
+    window.addEventListener('resize', remeasure);
+    return () => {
+      observer.disconnect();
+      window.removeEventListener('resize', remeasure);
+    };
+  }, []);
+  return form;
+}
+
 function RouteToolbar({
   compact,
   onOpenPalette,
@@ -353,10 +402,17 @@ function RouteToolbar({
 }: Readonly<{ compact: boolean; onOpenPalette: () => void; main: RefObject<HTMLElement | null> }>) {
   const tools = useRouteTools();
   const chrome = useChrome();
+  const form = useToolbarForm(
+    compact ? 1 : 0,
+    tools.map((tool) => `${tool.id}:${tool.label}:${tool.active === true}`).join(','),
+  );
   const grouped = tools.filter((tool) => tool.group);
   const active = grouped.find((tool) => tool.active) ?? grouped[0];
   const next = active ? grouped[(grouped.indexOf(active) + 1) % grouped.length] : undefined;
   const ungrouped = tools.filter((tool) => !tool.group);
+  // Folded tools move into More; tools with a shortcut stay in the pill until the last form.
+  const folded = ungrouped.filter((tool) => form >= 2 || (form === 1 && !tool.shortcut));
+  const shown = ungrouped.filter((tool) => !folded.includes(tool));
   return (
     <FloatingToolbar>
       {/* Route tools follow the shared tools so changing routes never moves search or More. */}
@@ -367,7 +423,7 @@ function RouteToolbar({
         onClick={onOpenPalette}
       />
       <ToolbarMore>
-        {compact
+        {form > 0
           ? grouped.map((tool) => (
               <MenuItem key={tool.id} shortcut={tool.shortcut} onClick={tool.run}>
                 {tool.groupLabel
@@ -376,6 +432,18 @@ function RouteToolbar({
               </MenuItem>
             ))
           : null}
+        {folded.map((tool) => (
+          <MenuItem
+            key={tool.id}
+            icon={tool.icon ? <PcIcon name={tool.icon} size={15} /> : undefined}
+            shortcut={tool.shortcut}
+            onClick={tool.run}
+          >
+            {tool.active === undefined
+              ? tool.label
+              : `${tool.label}: ${tool.active ? 'on' : 'off'}`}
+          </MenuItem>
+        ))}
         <MenuItem
           icon={<PcIcon name="filter" size={15} />}
           onClick={() =>
@@ -396,8 +464,13 @@ function RouteToolbar({
         </MenuItem>
       </ToolbarMore>
       {tools.length > 0 ? <span className="pc-chrome-divider" aria-hidden="true" /> : null}
-      <div id={TOPBAR_ROUTE_TABS_ID} className="pc-chrome-route-tabs" />
-      {compact && active && next ? (
+      {/* The narrowest form drops route tabs; the menu and navigation panel list the same places. */}
+      <div
+        id={TOPBAR_ROUTE_TABS_ID}
+        className="pc-chrome-route-tabs"
+        hidden={form === TOOLBAR_FORMS - 1}
+      />
+      {form > 0 && active && next ? (
         <ToolbarItem
           label={`${active.groupLabel ?? 'Group'}: ${active.label}. Switch to ${next.label}`}
           icon={active.label}
@@ -407,11 +480,11 @@ function RouteToolbar({
       ) : (
         grouped.map(toolItem)
       )}
-      {grouped.length > 0 && ungrouped.length > 0 ? (
+      {grouped.length > 0 && shown.length > 0 ? (
         // Keyed by the route's tools so a route change replaces the divider instead of moving it.
         <span key={grouped[0]?.id} className="pc-chrome-divider" aria-hidden="true" />
       ) : null}
-      {ungrouped.map(toolItem)}
+      {shown.map(toolItem)}
     </FloatingToolbar>
   );
 }
