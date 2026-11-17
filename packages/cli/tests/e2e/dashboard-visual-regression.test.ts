@@ -4448,6 +4448,24 @@ test.describe('dashboard real-browser quality', () => {
     expect(await paint(home.locator('.pc-icon'))).toBe('neutral');
   });
 
+  test('marks pressed toggles beyond text colour in forced colours', async ({ page }) => {
+    await page.emulateMedia({ forcedColors: 'active' });
+    await page.setViewportSize({ width: 1440, height: 1000 });
+    await page.goto(fixtureUrl('#/list', { dataset: 'artboard' }));
+    const toolbar = page.locator('[data-chrome-slot="toolbar"]');
+    const pressed = toolbar.getByRole('button', { name: 'Spec 1', exact: true });
+    await expect(pressed).toHaveAttribute('aria-pressed', 'true');
+    const fills = await pressed.evaluate((element) => {
+      const highlight = document.createElement('span');
+      highlight.style.cssText = 'forced-color-adjust: none; background: Highlight';
+      document.body.append(highlight);
+      const expected = getComputedStyle(highlight).backgroundColor;
+      highlight.remove();
+      return { actual: getComputedStyle(element).backgroundColor, expected };
+    });
+    expect(fills.actual).toBe(fills.expected);
+  });
+
   test('opens the phone inspector and More as bottom sheets', async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto(fixtureUrl('#/list', { dataset: 'artboard' }));

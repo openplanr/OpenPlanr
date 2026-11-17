@@ -174,3 +174,13 @@
 .pc-chrome .canvas-chrome-toolbar {
   width: max-content;
 }
+
+/* Forced colours drop the accent fill, so pressed toggles take the system highlight. */
+@media (forced-colors: active) {
+  .canvas-chrome-root.pc-chrome button[aria-pressed="true"],
+  .pc-graph-phone [aria-pressed="true"] {
+    forced-color-adjust: none;
+    color: HighlightText;
+    background: Highlight;
+  }
+}
