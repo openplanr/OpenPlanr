@@ -25,7 +25,7 @@ import {
   FIXTURE_CLOCK,
   fixtureHash,
 } from '../../dashboard/fixtures/premium-dashboard-fixtures.js';
-import { graphCamera, settleGraph } from './dashboard-graph-canvas.js';
+import { graphCamera, graphLensControl, settleGraph } from './dashboard-graph-canvas.js';
 import { productionManifest } from './premium-dashboard-server.js';
 
 type BrowserMetrics = {
@@ -567,8 +567,9 @@ export function registerDashboardPerformanceTraceTests() {
           routeLoadCls,
           'Routes must settle without layout shifts before the lens changes.',
         ).toBe(0);
+      const wholeProject = await graphLensControl(page, 'Whole project');
       await markInputAction(page, 'graph-lens whole project');
-      await page.getByRole('button', { name: 'Whole project', exact: true }).click();
+      await wholeProject.click();
       await settlePaint(page);
       const graph = await interactionTrace(page, 'graph', async (events) =>
         testInfo.attach('graph-renderer-trace.json', {

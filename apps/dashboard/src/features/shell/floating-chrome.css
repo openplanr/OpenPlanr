@@ -133,3 +133,7 @@
   padding: 0;
   list-style: none;
 }
+/* Centring halves the room the pill may shrink into; tool labels stay on one line instead. */
+.pc-chrome .canvas-chrome-toolbar {
+  width: max-content;
+}

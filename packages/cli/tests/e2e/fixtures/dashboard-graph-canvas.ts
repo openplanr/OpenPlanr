@@ -43,6 +43,18 @@ export async function settleGraph(page: Page): Promise<Camera> {
   return graphCamera(page);
 }
 
+/**
+ * The control that applies a Graph lens: its tool when the pill shows every tool, otherwise its
+ * item in More, which this opens.
+ */
+export async function graphLensControl(page: Page, lens: string): Promise<Locator> {
+  const toolbar = page.locator('[data-chrome-slot="toolbar"]');
+  const button = toolbar.getByRole('button', { name: lens, exact: true });
+  if (await button.isVisible()) return button;
+  await toolbar.getByRole('button', { name: 'More tools' }).click();
+  return page.getByRole('menuitem', { name: `Lens: ${lens}`, exact: true });
+}
+
 function required(box: Box | null, name: string): Box {
   if (!box) throw new Error(`Missing ${name}.`);
   return box;
@@ -231,6 +243,20 @@ export function registerGraphCanvasBrowserTests(openFixture: OpenFixture) {
       await expect(page.getByRole('menuitem', { name: 'Dim done items: off' })).toBeVisible();
     });
 
+    test('keeps every tool label on one line in the full tool pill', async ({ page }) => {
+      await page.setViewportSize({ width: 1440, height: 1000 });
+      await openFixture(page, '#/graph', { dataset: 'artboard' });
+      await expect(await tool(page, 'Whole project')).toBeVisible();
+      const wrapped = await page
+        .locator('[data-chrome-slot="toolbar"] .canvas-chrome-tool .canvas-chrome-glyph')
+        .evaluateAll((glyphs) =>
+          glyphs
+            .filter((glyph) => glyph.getClientRects().length > 1)
+            .map((glyph) => glyph.closest('button')?.getAttribute('aria-label')),
+        );
+      expect(wrapped).toEqual([]);
+    });
+
     test('opens the inspector on a node under the navigation panel without a NaN camera', async ({
       page,
     }) => {
@@ -266,7 +292,7 @@ export function registerGraphCanvasBrowserTests(openFixture: OpenFixture) {
       expect(reset.ok(), await reset.text()).toBe(true);
       await page.goto('/__production/?dataset=scaling#/graph');
       await expect(page.getByRole('group', { name: 'Dependency graph' })).toBeVisible();
-      await (await tool(page, 'Whole project')).click();
+      await (await graphLensControl(page, 'Whole project')).click();
       const camera = await settleGraph(page);
       expect(camera.zoom).toBeGreaterThanOrEqual(0.0001);
       expect(camera.zoom).toBeLessThan(0.01);
