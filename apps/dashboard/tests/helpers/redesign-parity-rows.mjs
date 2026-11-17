@@ -45,7 +45,7 @@ export const redesignParityRows = [
   ...row('S-04', bar, { 'border-color': '--op-line3' }),
   ...row('S-05', bar, { 'bottom-distance': '12px' }),
   ...row('S-06', bar, { 'max-width': 'calc(100vw - 128px)' }),
-  ...row('S-07', copy, { height: '32px', 'background-color': '--op-accent' }),
+  ...row('S-07', copy, { height: '32px', 'background-color': '--op-accent-soft' }),
   ...row('S-08', `${bar} .pc-selection-bar__command`, {
     'font-family': 'Source Code Pro',
     'font-size': '12px',

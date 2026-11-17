@@ -2985,9 +2985,8 @@ button.pc-work-item:disabled {
   cursor: pointer;
 }
 .pc-selection-bar .pc-selection-bar__copy {
-  border-color: var(--op-accent);
-  background: var(--op-accent);
-  color: var(--op-on-accent);
+  border-color: var(--op-accent-soft);
+  background: var(--op-accent-soft);
 }
 .pc-selection-bar .pc-selection-bar__clear {
   width: 40px;

@@ -60,6 +60,22 @@
 .pc-chrome .pc-detail__header > * {
   margin: 0;
 }
+/* Accent marks state: pressed pins, the menu while navigation is open, the active place. */
+.pc-chrome .canvas-chrome-panel-surface header button[aria-pressed="true"],
+.pc-chrome .canvas-chrome-view-picker > button[aria-expanded="true"],
+.pc-chrome .pc-operate-places__tab[aria-current="page"] {
+  color: var(--canvas-chrome-on-accent);
+  background: var(--canvas-chrome-accent);
+}
+/* Inspector content stays neutral; the selection itself carries the accent. */
+.pc-shell-inspector__content
+  .pc-detail__artifact[data-compact]
+  .pc-detail__trace
+  > li[data-current]
+  .pc-detail__step {
+  background: var(--op-raised);
+  box-shadow: inset 2px 0 0 var(--op-heading);
+}
 .pc-chrome-label {
   display: block;
   padding: 8px 10px 4px;

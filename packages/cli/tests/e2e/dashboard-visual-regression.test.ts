@@ -4406,6 +4406,48 @@ test.describe('dashboard real-browser quality', () => {
     expect(bottom).toBe(64);
   });
 
+  test('keeps accent for active and pressed controls only', async ({ page }) => {
+    const paint = (locator: Locator) =>
+      locator.evaluate((element) => {
+        const resolve = (token: string) => {
+          const probe = document.createElement('span');
+          probe.style.color = `var(${token})`;
+          document.body.append(probe);
+          const value = getComputedStyle(probe).color;
+          probe.remove();
+          return value;
+        };
+        const style = getComputedStyle(element);
+        const accents = [resolve('--op-accent'), resolve('--op-accent-soft')];
+        return accents.includes(style.backgroundColor) || accents.includes(style.color)
+          ? 'accent'
+          : 'neutral';
+      });
+    await page.setViewportSize({ width: 1440, height: 1000 });
+    await page.goto(fixtureUrl('#/list', { dataset: 'artboard' }));
+    await page
+      .locator('[data-route-kind="planning.list"] tbody [data-keyboard-item]')
+      .first()
+      .click();
+    await expect(page.locator('[data-chrome-slot="sidebar"]')).toHaveAttribute('data-open', 'true');
+    await page.locator('#main-content').focus();
+    await page.keyboard.press('Alt+BracketLeft');
+    const pin = page.getByRole('button', { name: 'Pin navigation' });
+    await pin.click();
+    await expect(pin).toHaveAttribute('aria-pressed', 'true');
+    expect(await paint(pin)).toBe('accent');
+    expect(await paint(page.locator('.canvas-chrome-view-picker > button'))).toBe('accent');
+    expect(await paint(page.locator('.pc-selection-bar__copy'))).toBe('accent');
+    const current = page.locator('.pc-shell-inspector__content li[data-current] .pc-detail__step');
+    await expect(current).toBeVisible();
+    expect(await paint(current)).toBe('neutral');
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto(fixtureUrl('#/home', { dataset: 'artboard' }));
+    const home = page.locator('.pc-mobile-nav__item[aria-current="page"]');
+    await expect(home).toBeVisible();
+    expect(await paint(home.locator('.pc-icon'))).toBe('neutral');
+  });
+
   test('opens the phone inspector and More as bottom sheets', async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto(fixtureUrl('#/list', { dataset: 'artboard' }));

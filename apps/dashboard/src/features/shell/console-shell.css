@@ -476,16 +476,14 @@
   }
 
   .pc-mobile-nav__item[aria-current="page"] {
-    color: var(--pc-text-secondary);
+    color: var(--pc-text-primary);
+    font-weight: 600;
     background: transparent;
   }
 
   .pc-mobile-nav__item > .pc-icon {
     width: 20px;
     height: 20px;
-  }
-  .pc-mobile-nav__item[aria-current="page"] > .pc-icon {
-    color: var(--pc-accent);
   }
 
   .pc-mobile-nav__item:focus-visible {

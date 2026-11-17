@@ -736,8 +736,10 @@ it('shows the logo, page title, Live indicator and one search control in the mob
   const tab = container.querySelector<HTMLElement>('.pc-mobile-nav__item[aria-current="page"]');
   if (!tab) throw new Error('Missing active mobile tab');
   expect(getComputedStyle(tab).backgroundColor).toBe('rgba(0, 0, 0, 0)');
-  expect(getComputedStyle(tab).color).not.toBe(
-    getComputedStyle(tab.querySelector('svg') as Element).color,
+  // Weight, not an accent icon, marks the current tab.
+  expect(getComputedStyle(tab).fontWeight).toBe('600');
+  expect(getComputedStyle(tab.querySelector('svg') as Element).color).toBe(
+    getComputedStyle(tab).color,
   );
   expect(container.querySelector('.canvas-chrome-root')).toBeNull();
   expect(container.querySelectorAll('.pc-conn--watcher')).toHaveLength(1);
