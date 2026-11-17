@@ -2920,18 +2920,20 @@ button.pc-work-item:disabled {
   background: var(--op-card);
 }
 
+/* Content-sized and centred under the floating panels, clear of the round help button. */
 .pc-selection-bar {
-  position: sticky;
+  position: fixed;
   z-index: 100;
-  bottom: 24px;
-  margin-inline: auto;
+  bottom: 12px;
+  left: 50%;
+  transform: translateX(-50%);
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
   box-sizing: border-box;
-  width: min(800px, calc(100% - 128px));
-  height: 56px;
-  padding: 7px 8px 7px 16px;
+  max-width: calc(100vw - 128px);
+  height: 40px;
+  padding: 0 6px 0 12px;
   border: 1px solid var(--op-line3);
   border-radius: 12px;
   background: var(--op-raised);
@@ -2973,8 +2975,8 @@ button.pc-work-item:disabled {
   align-items: center;
   justify-content: center;
   gap: 8px;
-  height: 40px;
-  padding: 0 12px;
+  height: 32px;
+  padding: 0 10px;
   border: 1px solid var(--op-line3);
   border-radius: 8px;
   background: transparent;
@@ -3039,14 +3041,18 @@ button.pc-work-item:disabled {
   width: 10px;
   height: 10px;
 }
-@media (max-width: 899px), (pointer: coarse) {
+@media (pointer: coarse) {
+  .pc-selection-bar .pc-selection-bar__open {
+    display: inline-flex;
+  }
+}
+@media (max-width: 599px) {
   .pc-selection-bar {
-    position: fixed;
     left: 8px;
     right: 8px;
     bottom: 72px;
     transform: none;
-    width: auto;
+    max-width: none;
     height: auto;
     padding: 16px;
     border-radius: 16px;
@@ -3083,13 +3089,5 @@ button.pc-work-item:disabled {
   }
   .pc-selection-bar__copy kbd {
     display: none;
-  }
-}
-/* Tablets have no bottom navigation; the bar keeps clear of the round help button. */
-@media (min-width: 600px) and (max-width: 899px) {
-  .pc-selection-bar {
-    right: 64px;
-    bottom: 12px;
-    left: 12px;
   }
 }

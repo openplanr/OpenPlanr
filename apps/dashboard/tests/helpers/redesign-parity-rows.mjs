@@ -39,13 +39,13 @@ const row = (id, selector, properties, viewport = 'D') =>
   }));
 // S-20 to S-22 require route adoption and are checked in later screen work.
 export const redesignParityRows = [
-  ...row('S-01', bar, { height: '56px' }),
+  ...row('S-01', bar, { height: '40px' }),
   ...row('S-02', bar, { 'border-radius': '--op-radius-surface' }),
   ...row('S-03', bar, { 'background-color': '--op-raised' }),
   ...row('S-04', bar, { 'border-color': '--op-line3' }),
-  ...row('S-05', bar, { 'bottom-distance': '24px' }),
-  ...row('S-06', bar, { width: 'min(800px, content - 128px)' }),
-  ...row('S-07', copy, { height: '40px', 'background-color': '--op-accent' }),
+  ...row('S-05', bar, { 'bottom-distance': '12px' }),
+  ...row('S-06', bar, { 'max-width': 'calc(100vw - 128px)' }),
+  ...row('S-07', copy, { height: '32px', 'background-color': '--op-accent' }),
   ...row('S-08', `${bar} .pc-selection-bar__command`, {
     'font-family': 'Source Code Pro',
     'font-size': '12px',
@@ -1115,11 +1115,6 @@ function sampleRows(nodes, { property, expected, items }) {
     };
     if (property in distances)
       return { actual: distances[property], expected: parseFloat(expected) };
-    if (expected.startsWith('min('))
-      return {
-        actual: rect.width,
-        expected: Math.min(800, node.parentElement.getBoundingClientRect().width - 128),
-      };
     const probe = document.createElement('span');
     probe.style.setProperty(property, expected);
     document.body.append(probe);

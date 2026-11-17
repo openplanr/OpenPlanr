@@ -4311,6 +4311,66 @@ test.describe('dashboard real-browser quality', () => {
     }
   });
 
+  test('centres a one-row selection bar below open panels from 768 to 1440 px', async ({
+    page,
+  }) => {
+    for (const [width, height, panels] of [
+      [1440, 1000, ['navigation', 'sidebar']],
+      [1024, 768, ['sidebar']],
+      [768, 1024, ['sidebar']],
+    ] as const) {
+      await page.setViewportSize({ width, height });
+      await page.goto(fixtureUrl('#/list', { dataset: 'artboard' }));
+      await page
+        .locator('[data-route-kind="planning.list"] tbody [data-keyboard-item]')
+        .first()
+        .click();
+      for (const panel of panels) {
+        const slot = page.locator(`[data-chrome-slot="${panel}"]`);
+        if ((await slot.getAttribute('data-open')) !== 'true') {
+          await page.locator('#main-content').focus();
+          await page.keyboard.press(panel === 'sidebar' ? 'Alt+BracketRight' : 'Alt+BracketLeft');
+        }
+        await expect(slot).toHaveAttribute('data-open', 'true');
+      }
+      const bar = page.getByRole('region', { name: 'Selected items' });
+      await expect(bar).toBeVisible();
+      const report = await bar.evaluate((element) => {
+        const box = element.getBoundingClientRect();
+        const covered = [
+          ...document.querySelectorAll('[data-open="true"] .canvas-chrome-panel-surface'),
+        ].some((surface) => {
+          const panel = surface.getBoundingClientRect();
+          return panel.bottom > box.top && panel.left < box.right && panel.right > box.left;
+        });
+        const hidden = [...element.querySelectorAll('button')]
+          .filter((button) => button.checkVisibility())
+          .filter((button) => {
+            const rect = button.getBoundingClientRect();
+            const hit = document.elementFromPoint(
+              rect.left + rect.width / 2,
+              rect.top + rect.height / 2,
+            );
+            return !hit || !button.contains(hit);
+          }).length;
+        return {
+          height: box.height,
+          bottom: window.innerHeight - box.bottom,
+          centred: Math.abs(box.left - (window.innerWidth - box.right)) <= 1,
+          covered,
+          hidden,
+        };
+      });
+      expect(report, `${width}x${height}`).toEqual({
+        height: 40,
+        bottom: 12,
+        centred: true,
+        covered: false,
+        hidden: 0,
+      });
+    }
+  });
+
   test('keeps the place tabs on the local setup and could-not-read states', async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto(fixtureUrl('#/operate/today', { localOperate: 'empty' }));

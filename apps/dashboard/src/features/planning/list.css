@@ -658,10 +658,6 @@ a.pc-list__group-id:hover {
   outline-offset: 2px;
 }
 
-.pc-list > .pc-selection-bar {
-  margin-top: -96px;
-}
-
 @media (max-width: 899px), (pointer: coarse) {
   /* Room inside the scroll window for the header's 44px touch targets. */
   .pc-list__window {
